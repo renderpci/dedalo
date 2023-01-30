@@ -2870,110 +2870,110 @@ class search {
 
 
 	/**
-	* GET_PRESET
+	* GET_PRESET (!) Deactivated 01-30-2023 because nobody uses it
 	* Find requested preset section_id (in presets list or temp presets)
 	* @param int $user_id
 	* @param string $target_section_tipo
 	* @param string $preset_section_tipo
 	* @return object|null $preset_obj
 	*/
-	public static function get_preset(int $user_id, string $target_section_tipo, string $preset_section_tipo) : ?object {
+		// private static function get_preset(int $user_id, string $target_section_tipo, string $preset_section_tipo) : ?object {
 
-		$preset_obj = null;
+		// 	$preset_obj = null;
 
-		// $matrix_table = 'matrix_list';
+		// 	// $matrix_table = 'matrix_list';
 
-		// $user_locator = new locator();
-		// 	$user_locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
-		// 	$user_locator->set_section_id($user_id);
-		// 	$user_locator->set_from_component_tipo('dd654');
-		// 	$user_locator->set_type(DEDALO_RELATION_TYPE_LINK);
-		// $filter_user = 'datos#>\'{relations}\' @> \'['.json_encode($user_locator).']\'';
+		// 	// $user_locator = new locator();
+		// 	// 	$user_locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
+		// 	// 	$user_locator->set_section_id($user_id);
+		// 	// 	$user_locator->set_from_component_tipo('dd654');
+		// 	// 	$user_locator->set_type(DEDALO_RELATION_TYPE_LINK);
+		// 	// $filter_user = 'datos#>\'{relations}\' @> \'['.json_encode($user_locator).']\'';
 
-		// $filter_target_section = 'datos#>\'{components,dd642,dato,lg-nolan}\' = \'["'.$target_section_tipo.'"]\'';
+		// 	// $filter_target_section = 'datos#>\'{components,dd642,dato,lg-nolan}\' = \'["'.$target_section_tipo.'"]\'';
 
-		// // Find existing preset
-		// $strQuery	 = 'SELECT section_id, datos#>\'{components,dd625,dato,lg-nolan}\' as json_filter FROM '.$matrix_table.PHP_EOL;
-		// $strQuery	.= 'WHERE (section_tipo = \''.$preset_section_tipo.'\') '.PHP_EOL;
-		// $strQuery	.= 'AND '.$filter_user.' '.PHP_EOL.'AND '.$filter_target_section.' '.PHP_EOL;
-		// $strQuery	.= 'LIMIT 1;';
-		// $result		 = JSON_RecordObj_matrix::search_free($strQuery);
-		// if ($result===false) {
-		// 	trigger_error("Error Processing Request : Sorry cannot execute non resource query: ".PHP_EOL."<hr> $strQuery");
-		// 	return $preset_obj; // is null
-		// }
-		// while ($rows = pg_fetch_assoc($result)) {
+		// 	// // Find existing preset
+		// 	// $strQuery	 = 'SELECT section_id, datos#>\'{components,dd625,dato,lg-nolan}\' as json_filter FROM '.$matrix_table.PHP_EOL;
+		// 	// $strQuery	.= 'WHERE (section_tipo = \''.$preset_section_tipo.'\') '.PHP_EOL;
+		// 	// $strQuery	.= 'AND '.$filter_user.' '.PHP_EOL.'AND '.$filter_target_section.' '.PHP_EOL;
+		// 	// $strQuery	.= 'LIMIT 1;';
+		// 	// $result		 = JSON_RecordObj_matrix::search_free($strQuery);
+		// 	// if ($result===false) {
+		// 	// 	trigger_error("Error Processing Request : Sorry cannot execute non resource query: ".PHP_EOL."<hr> $strQuery");
+		// 	// 	return $preset_obj; // is null
+		// 	// }
+		// 	// while ($rows = pg_fetch_assoc($result)) {
 
-		// 	$section_id		= $rows['section_id'];
-		// 	$json_filter	= json_decode($rows['json_filter']);
+		// 	// 	$section_id		= $rows['section_id'];
+		// 	// 	$json_filter	= json_decode($rows['json_filter']);
 
-		// 	$preset_obj = new stdClass();
-		// 		$preset_obj->section_id		= (int)$section_id;
-		// 		$preset_obj->json_filter	= is_array($json_filter) ? reset($json_filter) : $json_filter; // Note that real dato is a STRING json_encoded. Because this, first json_decode returns a STRING instead direct object
-		// 	break; // Only one expected
-		// }
+		// 	// 	$preset_obj = new stdClass();
+		// 	// 		$preset_obj->section_id		= (int)$section_id;
+		// 	// 		$preset_obj->json_filter	= is_array($json_filter) ? reset($json_filter) : $json_filter; // Note that real dato is a STRING json_encoded. Because this, first json_decode returns a STRING instead direct object
+		// 	// 	break; // Only one expected
+		// 	// }
 
-		// search with standard sqo
-			$sqo = json_decode('{
-				"section_tipo" : ["'.$preset_section_tipo.'"],
-				"limit": 1,
-				"filter": {
-					"$and": [
-						{
-							"q": [
-								"'.$target_section_tipo.'"
-							],
-							"path": [
-								{
-									"name": "Name",
-									"model": "component_input_text",
-									"section_tipo": "'.$preset_section_tipo.'",
-									"component_tipo": "dd642"
-								}
-							],
-							"type": "jsonb"
-						}
-					]
-				}
-			}');
-			$search = search::get_instance($sqo);
-			$result = $search->search();
+		// 	// search with standard sqo
+		// 		$sqo = json_decode('{
+		// 			"section_tipo" : ["'.$preset_section_tipo.'"],
+		// 			"limit": 1,
+		// 			"filter": {
+		// 				"$and": [
+		// 					{
+		// 						"q": [
+		// 							"'.$target_section_tipo.'"
+		// 						],
+		// 						"path": [
+		// 							{
+		// 								"name": "Name",
+		// 								"model": "component_input_text",
+		// 								"section_tipo": "'.$preset_section_tipo.'",
+		// 								"component_tipo": "dd642"
+		// 							}
+		// 						],
+		// 						"type": "jsonb"
+		// 					}
+		// 				]
+		// 			}
+		// 		}');
+		// 		$search = search::get_instance($sqo);
+		// 		$result = $search->search();
 
-			if (!empty($result->ar_records) && !empty($result->ar_records[0])) {
-				// success, preset record exists
+		// 		if (!empty($result->ar_records) && !empty($result->ar_records[0])) {
+		// 			// success, preset record exists
 
-				$section_id = $result->ar_records[0]->section_id;
+		// 			$section_id = $result->ar_records[0]->section_id;
 
-				// component_json dd625
-					$tipo		= 'dd625';
-					$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-					$component	= component_common::get_instance(
-						$model, // string model
-						$tipo, // string tipo
-						$section_id, // string section_id
-						'list', // string mode
-						DEDALO_DATA_NOLAN, // string lang
-						$preset_section_tipo // string section_tipo
-					);
-					$dato = $component->get_dato();
+		// 			// component_json dd625
+		// 				$tipo		= 'dd625';
+		// 				$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		// 				$component	= component_common::get_instance(
+		// 					$model, // string model
+		// 					$tipo, // string tipo
+		// 					$section_id, // string section_id
+		// 					'list', // string mode
+		// 					DEDALO_DATA_NOLAN, // string lang
+		// 					$preset_section_tipo // string section_tipo
+		// 				);
+		// 				$dato = $component->get_dato();
 
-					if (!empty($dato)) {
+		// 				if (!empty($dato)) {
 
-						$preset_obj = (object)[
-							'section_id'	=> (int)$section_id,
-							'json_filter'	=> reset($dato)
-						];
-					}
-			}
+		// 					$preset_obj = (object)[
+		// 						'section_id'	=> (int)$section_id,
+		// 						'json_filter'	=> reset($dato)
+		// 					];
+		// 				}
+		// 		}
 
 
-		return $preset_obj;
-	}//end get_preset
+		// 	return $preset_obj;
+		// }//end get_preset
 
 
 
 	/**
-	* SAVE_TEMP_PRESET
+	* SAVE_TEMP_PRESET (!) Deactivated 01-30-2023 because nobody uses it
 	* Saves current search panel configuration for persistence
 	* Saves filter in section list (dd655) a private list for temporal data
 	* @param int $user_id
@@ -2981,132 +2981,131 @@ class search {
 	* @param object $filter_object
 	* @return array $result
 	*/
-	public static function save_temp_preset(int $user_id, string $target_section_tipo, object $filter_object) : array {
+		// public static function save_temp_preset(int $user_id, string $target_section_tipo, object $filter_object) : array {
 
-		$section_tipo	= DEDALO_TEMP_PRESET_SECTION_TIPO; // 'dd655'; // presets temp
-		$matrix_table	= 'matrix_list';
+		// 	$section_tipo = DEDALO_TEMP_PRESET_SECTION_TIPO; // 'dd655'; // presets temp
 
-		// Find existing preset (returns section_id if exists or null if not)
-		$preset_obj = search::get_preset($user_id, $target_section_tipo, $section_tipo);
-		if (empty($preset_obj)) {
-			# Create new section if not exists
-			$section	= section::get_instance(null, $section_tipo);
-			$preset_id	= $section->Save();
-		}else{
-			#$section	= section::get_instance($preset_id, $section_tipo);
-			$preset_id	= $preset_obj->section_id;
-		}
+		// 	// Find existing preset (returns section_id if exists or null if not)
+		// 	$preset_obj = search::get_preset($user_id, $target_section_tipo, $section_tipo);
+		// 	if (empty($preset_obj)) {
+		// 		# Create new section if not exists
+		// 		$section	= section::get_instance(null, $section_tipo);
+		// 		$preset_id	= $section->Save();
+		// 	}else{
+		// 		#$section	= section::get_instance($preset_id, $section_tipo);
+		// 		$preset_id	= $preset_obj->section_id;
+		// 	}
 
-		$result = [];
+		// 	$result = [];
 
-		#
-		# FILTER. COMPONENT_JSON
-			$tipo		= 'dd625'; // component_json
-			$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$component	= component_common::get_instance(
-				$model_name,
-				$tipo,
-				$preset_id,
-				'edit',
-				DEDALO_DATA_NOLAN,
-				$section_tipo
-			);
-			$component->set_dato([$filter_object]);
-			#$component->save_to_database = false;
-			$result[] = $component->Save();
+		// 	#
+		// 	# FILTER. COMPONENT_JSON
+		// 		$tipo		= 'dd625'; // component_json
+		// 		$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		// 		$component	= component_common::get_instance(
+		// 			$model_name,
+		// 			$tipo,
+		// 			$preset_id,
+		// 			'edit',
+		// 			DEDALO_DATA_NOLAN,
+		// 			$section_tipo
+		// 		);
+		// 		$component->set_dato([$filter_object]);
+		// 		#$component->save_to_database = false;
+		// 		$result[] = $component->Save();
 
-		#
-		# SECTION_TIPO
-			$tipo		= 'dd642'; // component_input_text
-			$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$component	= component_common::get_instance(
-				$model_name,
-				$tipo,
-				$preset_id,
-				'edit',
-				DEDALO_DATA_NOLAN,
-				$section_tipo
-			);
-			$component->set_dato( array($target_section_tipo) );
-			#$component->save_to_database = false;
-			$result[] = $component->Save();
+		// 	#
+		// 	# SECTION_TIPO
+		// 		$tipo		= 'dd642'; // component_input_text
+		// 		$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		// 		$component	= component_common::get_instance(
+		// 			$model_name,
+		// 			$tipo,
+		// 			$preset_id,
+		// 			'edit',
+		// 			DEDALO_DATA_NOLAN,
+		// 			$section_tipo
+		// 		);
+		// 		$component->set_dato( array($target_section_tipo) );
+		// 		#$component->save_to_database = false;
+		// 		$result[] = $component->Save();
 
-		#
-		# USER
-			$tipo		= 'dd654'; // component_select
-			$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$component	= component_common::get_instance(
-				$model_name,
-				$tipo,
-				$preset_id,
-				'edit',
-				DEDALO_DATA_NOLAN,
-				$section_tipo
-			);
-			$user_locator = new locator();
-				$user_locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
-				$user_locator->set_section_id($user_id);
-				$user_locator->set_from_component_tipo($tipo);
-				$user_locator->set_type(DEDALO_RELATION_TYPE_LINK);
-			$component->set_dato( array($user_locator) );
-			#$component->save_to_database = false;
-			$result[] = $component->Save();
+		// 	#
+		// 	# USER
+		// 		$tipo		= 'dd654'; // component_select
+		// 		$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		// 		$component	= component_common::get_instance(
+		// 			$model_name,
+		// 			$tipo,
+		// 			$preset_id,
+		// 			'edit',
+		// 			DEDALO_DATA_NOLAN,
+		// 			$section_tipo
+		// 		);
+		// 		$user_locator = new locator();
+		// 			$user_locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
+		// 			$user_locator->set_section_id($user_id);
+		// 			$user_locator->set_from_component_tipo($tipo);
+		// 			$user_locator->set_type(DEDALO_RELATION_TYPE_LINK);
+		// 		$component->set_dato( array($user_locator) );
+		// 		#$component->save_to_database = false;
+		// 		$result[] = $component->Save();
 
 
-		# Real save
-		#$section->Save();
+		// 	# Real save
+		// 	#$section->Save();
 
-		return $result;
-	}//end save_temp_preset
+		// 	return $result;
+		// }//end save_temp_preset
 
 
 
 	/**
-	* GET_SEARCH_SELECT_FROM_SECTION
+	* GET_SEARCH_SELECT_FROM_SECTION (!) Deactivated 01-30-2023 because nobody uses it
 	* Temporal method to obtain search select paths to build a search_json_object
 	* @param object $section_obj
 	* @param array|null $layout_map = null
 	* @return array $path
 	*/
-	public static function get_search_select_from_section(object $section_obj, array $layout_map=null) : array {
+		// public static function get_search_select_from_section(object $section_obj, array $layout_map=null) : array {
 
-		$select = [];
+		// 	$select = [];
 
-		$section_tipo 	= $section_obj->get_tipo();
+		// 	$section_tipo 	= $section_obj->get_tipo();
 
-		// ar_components_tipo
-			if (empty($layout_map)) {
-				// we obtain target components from section layout map
-				$layout_map = component_layout::get_layout_map_from_section( $section_obj );
-			}
+		// 	// ar_components_tipo
+		// 		if (empty($layout_map)) {
+		// 			// we obtain target components from section layout map
+		// 			$layout_map = component_layout::get_layout_map_from_section( $section_obj );
+		// 		}
 
-		$ar_values = reset($layout_map);
-		// foreach ($ar_values as $current_tipo) {
-		$ar_values_length = sizeof($ar_values);
-		for ($i=0; $i < $ar_values_length; $i++) {
+		// 	$ar_values = reset($layout_map);
+		// 	// foreach ($ar_values as $current_tipo) {
+		// 	$ar_values_length = sizeof($ar_values);
+		// 	for ($i=0; $i < $ar_values_length; $i++) {
 
-			$current_tipo = $ar_values[$i];
+		// 		$current_tipo = $ar_values[$i];
 
-			$path = new stdClass();
-				$path->section_tipo		= $section_tipo;
-				$path->component_tipo	= $current_tipo;
-				$path->model			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-				$path->name				= RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_DATA_LANG , true, true);
+		// 		$path = new stdClass();
+		// 			$path->section_tipo		= $section_tipo;
+		// 			$path->component_tipo	= $current_tipo;
+		// 			$path->model			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+		// 			$path->name				= RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_DATA_LANG , true, true);
 
-			$current_element = new stdClass();
-				$current_element->path[] = $path;
+		// 		$current_element = new stdClass();
+		// 			$current_element->path[] = $path;
 
-			$select[] = $current_element;
-		}
+		// 		$select[] = $current_element;
+		// 	}
 
-		return $select;
-	}//end get_search_select_from_section
+		// 	return $select;
+		// }//end get_search_select_from_section
 
 
 
 	/**
 	* SEARCH_OPTIONS_TITLE
-	* Creates the HTML of the components in search mode to draw the tool tip
+	* Creates the search_operators_info of the components in search mode to draw the tool tip
 	* @param array $search_operators_info
 	*	Array of operator => label like: ... => between
 	* @return string $search_options_title

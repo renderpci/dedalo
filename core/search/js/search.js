@@ -885,9 +885,8 @@ search.prototype.get_search_group_operator = function(search_group) {
 
 		// save temp preset if changed
 			if (state==='changed') {
-				const section_tipo = search_container_selection_presets.dataset.section_tipo
 				// Save temp preset
-				await save_temp_preset(self, section_tipo)
+				await save_temp_preset(self)
 			}
 
 
