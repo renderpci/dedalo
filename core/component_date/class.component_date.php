@@ -559,84 +559,84 @@ class component_date extends component_common {
 	*/
 	public static function resolve_query_object_sql( object $request_query_object) : object {
 
-		// query_object clone
-		$query_object = clone $request_query_object;
+		// query_object clone to prevent unwanted changes in the original object
+			$query_object = clone $request_query_object;
 
-		// Note that $query_object->q v6 is array (before was string) but only one element is expected. So select the first one
-		$query_object->q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
-
-		if (empty($query_object->q) && empty($query_object->q_operator)) {
-			return $query_object;
-		}
-
-		// q_object
-		$q_object = $query_object->q ?? null;
-
-		// Case search with plain text like from autocomplete
-		if (!is_object($q_object)) {
-			// Check for operators and date elements
-
-			// Note that here the order is inverse: YY-MM-DD (in component is DD-MM-YY)
-			#preg_match("/^(>=|<=|>|<)?([0-9]{1,10})(-(1[0-2]|[1-9]))?(-(3[01]|[12][0-9]|[1-9]))?$/", $query_object->q, $matches);
-			preg_match("/^(\W{1,2})?([0-9]{1,10})-?([0-9]{1,2})?-?([0-9]{1,2})?$/", $query_object->q, $matches);
-			if (isset($matches[0])) {
-
-				$key_op 	= 1;
-				$key_year 	= 2;
-				$key_month 	= 3;
-				$key_day 	= 4;
-
-				$op = $matches[$key_op];
-
-				$base_date = new stdClass();
-					$base_date->year = $matches[$key_year];
-					if(!empty($matches[$key_month]) && $matches[$key_month]<=12){
-						$base_date->month 	= $matches[$key_month];
-						if (!empty($matches[$key_day]) && $matches[$key_day]<=31) {
-							$base_date->day 	= $matches[$key_day];
-						}
-					}
-
-				$dd_date  	= new dd_date($base_date);
-				$time 		= dd_date::convert_date_to_seconds($dd_date);
-				$dd_date->set_time($time);
-				$dd_date->set_op($op);
-
-				// Encapsulate object in start property to follow new date format (2018-09-19)
-				$date_default_obj = new stdClass();
-					$date_default_obj->start = $dd_date;
-
-				// Replace q_object
-				$q_object 	= $date_default_obj;
-				#debug_log(__METHOD__." Created new q_object from: $query_object->q  ->  ".to_string($q_object), logger::WARNING);
-			}else if (empty($query_object->q_operator)) {
-
-				$query_object->operator = '=';
-				$query_object->q_parsed	= "'INVALID VALUE!'";
+		// q array safe. Note that $query_object->q v6 is array (before was string) but only one element is expected. So select the first one
+			$query_object->q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
+			if (empty($query_object->q) && empty($query_object->q_operator)) {
 				return $query_object;
 			}
-		}
 
-		$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
+		// q_object
+			$q_object = $query_object->q ?? null;
 
-		$component_tipo	= end($query_object->path)->component_tipo;
-		$RecordObj		= new RecordObj_dd($component_tipo);
-		$properties		= $RecordObj->get_properties();
-		$date_mode		= isset($properties->date_mode) ? $properties->date_mode : 'date';
-			#dump($query_object, ' date_mode ++ '.to_string($date_mode));
+		// plain text case
+			if (!is_object($q_object)) {
+				// Check for operators and date elements
 
-		$query_object->component_path = ['components',$component_tipo,'dato',DEDALO_DATA_NOLAN];
-		$query_object->type 		  = 'jsonb';
+				// Note that here the order is inverse: YY-MM-DD (in component is DD-MM-YY)
+				#preg_match("/^(>=|<=|>|<)?([0-9]{1,10})(-(1[0-2]|[1-9]))?(-(3[01]|[12][0-9]|[1-9]))?$/", $query_object->q, $matches);
+				preg_match("/^(\W{1,2})?([0-9]{1,10})-?([0-9]{1,2})?-?([0-9]{1,2})?$/", $query_object->q, $matches);
+				if (isset($matches[0])) {
 
+					$key_op 	= 1;
+					$key_year 	= 2;
+					$key_month 	= 3;
+					$key_day 	= 4;
+
+					$op = $matches[$key_op];
+
+					$base_date = new stdClass();
+						$base_date->year = $matches[$key_year];
+						if(!empty($matches[$key_month]) && $matches[$key_month]<=12){
+							$base_date->month 	= $matches[$key_month];
+							if (!empty($matches[$key_day]) && $matches[$key_day]<=31) {
+								$base_date->day 	= $matches[$key_day];
+							}
+						}
+
+					$dd_date  	= new dd_date($base_date);
+					$time 		= dd_date::convert_date_to_seconds($dd_date);
+					$dd_date->set_time($time);
+					$dd_date->set_op($op);
+
+					// Encapsulate object in start property to follow new date format (2018-09-19)
+					$date_default_obj = new stdClass();
+						$date_default_obj->start = $dd_date;
+
+					// Replace q_object
+					$q_object 	= $date_default_obj;
+					#debug_log(__METHOD__." Created new q_object from: $query_object->q  ->  ".to_string($q_object), logger::WARNING);
+				}else if (empty($query_object->q_operator)) {
+
+					$query_object->operator = '=';
+					$query_object->q_parsed	= "'INVALID VALUE!'";
+					return $query_object;
+				}
+			}
+
+		// short vars
+			$q_operator						= isset($query_object->q_operator) ? $query_object->q_operator : null;
+			$component_tipo					= end($query_object->path)->component_tipo;
+			$RecordObj						= new RecordObj_dd($component_tipo);
+			$properties						= $RecordObj->get_properties();
+			$date_mode						= isset($properties->date_mode) ? $properties->date_mode : 'date';
+			$query_object->component_path	= ['components',$component_tipo,'dato',DEDALO_DATA_NOLAN];
+			$query_object->type				= 'jsonb';
+
+		// date_mode cases
 		switch ($date_mode) {
 			case 'date':
 			case 'range':
 
-				# SEARCH_OBJECT 1
+				// search_object 1
 					// Extract directly from calculated time in javascript
-						$q_clean  = !empty($q_object->start->time) ? $q_object->start->time : 0;
-						$operator = !empty($q_operator) ? trim($q_operator) : '=';
-						$dd_date  = isset($q_object->start) ? new dd_date($q_object->start) : null;
+					$operator = !empty($q_operator) ? trim($q_operator) : '=';
+					$dd_date  = isset($q_object->start) ? new dd_date($q_object->start) : null;
+					$q_clean  = !empty($q_object->start->time)
+						? $q_object->start->time
+						: (isset($dd_date) ? dd_date::convert_date_to_seconds($dd_date) : 0);
 
 					switch ($operator) {
 						case '<':
@@ -734,55 +734,52 @@ class component_date extends component_common {
 
 							$final_range = self::get_final_search_range_seconds($dd_date);
 
-							# ARRAY ELEMENTS SUBGROUPS
-							# ARRAY ELEMENTS SUB_GROUP1
+							// array elements subgroups
+							// array elements sub_group1
 								$query1 = new stdClass();
-									$query1->component_path 	= ['start','time'];
-									$query1->operator 			= '<=';
-									$query1->q_parsed			= '\''.$q_clean.'\'';
-									$query1->type 				= 'jsonb';
+									$query1->component_path	= ['start','time'];
+									$query1->operator		= '<=';
+									$query1->q_parsed		= '\''.$q_clean.'\'';
+									$query1->type			= 'jsonb';
 
 								$query2 = new stdClass();
-									$query2->component_path 	= ['end','time'];
-									$query2->operator 			= '>=';
-									$query2->q_parsed			= '\''.$q_clean.'\'';
-									$query2->type 				= 'jsonb';
+									$query2->component_path	= ['end','time'];
+									$query2->operator		= '>=';
+									$query2->q_parsed		= '\''.$q_clean.'\'';
+									$query2->type			= 'jsonb';
 
 								# Add to sub_group1
 								$sub_group1 = new stdClass();
 									$sub_name1 = '$and';
 									$sub_group1->$sub_name1 = [$query1,$query2];
-										#dump($sub_group1, ' sub_group1 ++ '.to_string());
 
-							# ARRAY ELEMENTS SUB_GROUP2
+							// array elements sub_group2
 								$query1 = new stdClass();
-									$query1->component_path 	= ['start','time'];
-									$query1->operator 			= '>=';
-									$query1->q_parsed			= '\''.$q_clean.'\'';
-									$query1->type 				= 'jsonb';
+									$query1->component_path	= ['start','time'];
+									$query1->operator		= '>=';
+									$query1->q_parsed		= '\''.$q_clean.'\'';
+									$query1->type			= 'jsonb';
 
 								$query2 = new stdClass();
-									$query2->component_path 	= ['start','time'];
-									$query2->operator 			= '<=';
-									$query2->q_parsed			= '\''.$final_range.'\'';
-									$query2->type 				= 'jsonb';
+									$query2->component_path	= ['start','time'];
+									$query2->operator		= '<=';
+									$query2->q_parsed		= '\''.$final_range.'\'';
+									$query2->type			= 'jsonb';
 
-								# Add to sub_group2
+								// Add to sub_group2
 								$sub_group2 = new stdClass();
 									$sub_name2 = '$and';
 									$sub_group2->$sub_name2 = [$query1,$query2];
-										#dump($sub_group2, ' sub_group2 ++ '.to_string());
 
-							# Group array elements
+							// Group array elements
 							$group_op_name = '$or';
 							$group_array_elements = new stdClass();
 								$group_array_elements->{$group_op_name} = [$sub_group1,$sub_group2];
 
-
-							# query_object config
+							// query_object config
 							$query_object->q_parsed			= null;
-							$query_object->format 			= 'array_elements';
-							$query_object->array_elements  	= $group_array_elements;
+							$query_object->format			= 'array_elements';
+							$query_object->array_elements	= $group_array_elements;
 							break;
 					}
 
@@ -817,16 +814,19 @@ class component_date extends component_common {
 			case 'time':
 
 				// Extract directly from calculated time in javascript
-				$q_clean  = !empty($q_object->time) ? $q_object->time : 0;
 				$operator = !empty($q_operator) ? trim($q_operator) : '=';
+				$dd_date  = isset($q_object->time) ? new dd_date($q_object->time) : null;
+				$q_clean  = !empty($q_object->time)
+					? $q_object->time
+					: (isset($dd_date) ? dd_date::convert_date_to_seconds($dd_date) : 0);
 
-				if ($operator!=="=") {
+				if ($operator!=='=') {
 
 					$query1 = new stdClass();
-					$query1->component_path 	= ['start','time'];
-					$query1->operator 			= $operator;
-					$query1->q_parsed			= '\''.$q_clean.'\'';
-					$query1->type 				= 'jsonb';
+					$query1->component_path	= ['start','time'];
+					$query1->operator		= $operator;
+					$query1->q_parsed		= '\''.$q_clean.'\'';
+					$query1->type			= 'jsonb';
 
 					$group_op_name = '$or';
 					$group_array_elements = new stdClass();
@@ -835,29 +835,29 @@ class component_date extends component_common {
 				}else{
 
 					$query1 = new stdClass();
-						$query1->component_path 	= ['start','time'];
-						$query1->operator 			= '>=';
-						$query1->q_parsed 			= '\''.$q_clean.'\'';
-						$query1->type 				= 'jsonb';
+						$query1->component_path	= ['start','time'];
+						$query1->operator		= '>=';
+						$query1->q_parsed		= '\''.$q_clean.'\'';
+						$query1->type			= 'jsonb';
 
 					$dd_date = new dd_date($q_object);
 					$final_range = self::get_final_search_range_seconds($dd_date);
 					$query2 = new stdClass();
-						$query2->component_path 	= ['start','time'];
-						$query2->operator 			= '<=';
-						$query2->q_parsed			= '\''.$final_range.'\'';
-						$query2->type 				= 'jsonb';
+						$query2->component_path	= ['start','time'];
+						$query2->operator		= '<=';
+						$query2->q_parsed		= '\''.$final_range.'\'';
+						$query2->type			= 'jsonb';
 
 					$group_op_name = '$and';
 					$group_array_elements = new stdClass();
 						$group_array_elements->{$group_op_name} = [$query1,$query2];
 				}
 
-				# query_object config
-				$query_object->q_info 			= '';
+				// query_object config
+				$query_object->q_info			= '';
 				$query_object->q_parsed			= null;
-				$query_object->format 			= 'array_elements';
-				$query_object->array_elements 	= $group_array_elements;
+				$query_object->format			= 'array_elements';
+				$query_object->array_elements	= $group_array_elements;
 
 				$final_query_object = $query_object;
 				break;
