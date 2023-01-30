@@ -45,9 +45,11 @@
 			# When term time_machine is loaded, inspector load fixed time_machine_list for current section record
 			# Load button to open dialog tool window and list of records of time_machine to current section
 			$time_machine_button_html = '';
-			$model_required_tm = array('time_machine_list');
-			$time_machine_tipo = section::get_ar_childrens_by_model($section_tipo, $model_required_tm);
-			$time_machine_name = RecordObj_dd::get_termino_by_tipo($time_machine_tipo, DEDALO_APPLICATION_LANG);
+			$model_required_tm		= array('time_machine_list');
+			$time_machine_tipo		= section::get_ar_childrens_by_model($section_tipo, $model_required_tm);
+			$time_machine_name		= RecordObj_dd::get_termino_by_tipo($time_machine_tipo, DEDALO_APPLICATION_LANG);
+			// default permissions to show component history
+			$tm_history_permisions	= 0;
 			if($time_machine_tipo){
 				$time_machine_list			= new time_machine_list($time_machine_tipo, $section_id, $section_tipo, $modo='button');
 				$time_machine_button_html	= $time_machine_list->get_html();
