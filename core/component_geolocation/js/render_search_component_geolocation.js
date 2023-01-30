@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global */
 /*eslint no-undef: "error"*/
 
 
@@ -12,6 +12,7 @@
 		get_content_data_edit
 	}
 	from './view_default_edit_geolocation.js'
+
 
 
 /**
@@ -38,7 +39,7 @@ render_search_component_geolocation.prototype.search = async function(options) {
 		const render_level = options.render_level || 'full'
 
 	// content_data
-		const content_data = get_content_data_edit(self)
+		const content_data = await get_content_data_edit(self)
 		if (render_level==='content') {
 			return content_data
 		}

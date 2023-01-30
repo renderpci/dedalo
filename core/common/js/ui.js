@@ -574,7 +574,8 @@ export const ui = {
 				const label			= instance.label // instance.context.label
 				const element_css	= instance.context.css || {}
 
-			const fragment = new DocumentFragment()
+			// DocumentFragment
+				const fragment = new DocumentFragment()
 
 			// label. If node label received, it is placed at first. Else a new one will be built from scratch (default)
 				if (label===null || items.label===null) {
@@ -596,40 +597,6 @@ export const ui = {
 						component_label.classList.add(...ar_css)
 				}
 
-			// top
-				// if (items.top) {
-				// 	fragment.appendChild(items.top)
-				// }
-
-			// buttons
-				// if (items.buttons) {
-				// 	fragment.appendChild(items.buttons)
-				// }
-
-			// filter
-				// if (instance.filter) {
-				// 	const filter = ui.create_dom_element({
-				// 		element_type	: 'div',
-				// 		class_name		: 'filter',
-				// 		parent			: fragment
-				// 	})
-				// 	instance.filter.render().then(filter_wrapper =>{
-				// 		filter.appendChild(filter_wrapper)
-				// 	})
-				// }
-
-			// paginator
-				// if (instance.paginator) {
-				// 	const paginator = ui.create_dom_element({
-				// 		element_type	: 'div',
-				// 		class_name		: 'paginator',
-				// 		parent			: fragment
-				// 	})
-				// 	instance.paginator.render().then(paginator_wrapper =>{
-				// 		paginator.appendChild(paginator_wrapper)
-				// 	})
-				// }
-
 			// content_data
 				if (items.content_data) {
 					fragment.appendChild(items.content_data)
@@ -638,7 +605,7 @@ export const ui = {
 			// tooltip
 				if (instance.context.search_options_title) {
 					//fragment.classList.add("tooltip_toggle")
-					const tooltip = ui.create_dom_element({
+					ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'tooltip hidden_tooltip',
 						inner_html		: instance.context.search_options_title || '',

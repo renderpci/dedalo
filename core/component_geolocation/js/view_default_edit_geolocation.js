@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, iro, L */
+/*global get_label, L */
 /*eslint no-undef: "error"*/
 
 
@@ -22,17 +22,16 @@ export const view_default_edit_geolocation = function() {
 
 
 /**
-* EDIT
-* Render node for use in modes: edit, edit_in_list
+* RENDER
+* Render node for use in current view
+* @param object self
+* @param object options
 * @return DOM node wrapper
 */
 view_default_edit_geolocation.render = async function(self, options) {
 
 	// options
 		const render_level = options.render_level || 'full'
-
-	// fix non value scenarios
-		// self.data.value = (self.data.value.length<1) ? [null] : self.data.value
 
 	// content_data
 		const content_data = await get_content_data_edit(self)
@@ -51,13 +50,15 @@ view_default_edit_geolocation.render = async function(self, options) {
 		// set pointers
 		wrapper.content_data = content_data
 
+
 	return wrapper
-}//end edit
+}//end render
 
 
 
 /**
 * GET_CONTENT_DATA_EDIT
+* @param object self
 * @return DOM node content_data
 */
 export const get_content_data_edit = async function(self) {
@@ -111,7 +112,7 @@ export const get_input_element_edit = (i, current_value, self) =>{
 		// label field latitude
 			ui.create_dom_element({
 				element_type	: 'label',
-				inner_html		: get_label['latitud'],
+				inner_html		: get_label.latitud || 'Lat',
 				parent			: inputs_container
 			})
 
@@ -137,7 +138,7 @@ export const get_input_element_edit = (i, current_value, self) =>{
 		// label field longitude
 			ui.create_dom_element({
 				element_type	: 'label',
-				inner_html		: get_label.longitud,
+				inner_html		: get_label.longitud || 'Lon',
 				parent			: inputs_container
 			})
 
@@ -163,7 +164,7 @@ export const get_input_element_edit = (i, current_value, self) =>{
 		// label field zoom
 			ui.create_dom_element({
 				element_type	: 'label',
-				inner_html		: get_label.mapa_zoom,
+				inner_html		: get_label.mapa_zoom || 'Zoom',
 				parent			: inputs_container
 			})
 
@@ -189,7 +190,7 @@ export const get_input_element_edit = (i, current_value, self) =>{
 		// label field altitude
 			ui.create_dom_element({
 				element_type	: 'label',
-				inner_html		: get_label.altitude,
+				inner_html		: get_label.altitude || 'Alt',
 				parent			: inputs_container
 			})
 
@@ -281,7 +282,6 @@ export const get_input_element_edit = (i, current_value, self) =>{
 				}
 			)
 		}
-
 
 	return content_value
 }//end get_input_element_edit
