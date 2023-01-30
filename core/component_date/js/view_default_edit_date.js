@@ -1,4 +1,4 @@
-/* global get_label, page_globals, SHOW_DEBUG, flatpickr */
+/* global  */
 /*eslint no-undef: "error"*/
 
 
