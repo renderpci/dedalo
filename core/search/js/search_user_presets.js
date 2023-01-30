@@ -107,10 +107,12 @@ export const get_editing_preset_json_filter = async function(self) {
 
 		// editing_preset
 			if (api_response.result) {
-
 				const data = api_response.result.data
 				const component_json_data = data.find(el => el.tipo===presets_component_json_tipo)
 				if (component_json_data) {
+
+					// fix value
+					self.component_json_data = component_json_data
 
 					const json_filter = component_json_data.value && component_json_data.value[0]
 						? component_json_data.value[0]
@@ -445,10 +447,9 @@ export const create_new_search_preset = function(options) {
 
 /**
 * SAVE_PRESET
-* Creates preset data given
+* Saves preset data given
 * @param object options
-* @return promise
-* 	Resolve section_id
+* @return api_response
 */
 export const save_preset = async function(options) {
 
@@ -501,23 +502,21 @@ export const save_preset = async function(options) {
 
 /**
 * SAVE_TEMP_PRESET
-* @param string section_tipo
+* Alias of save_preset
+* @param object self
 * @return object api_response
 */
-export const save_temp_preset = async function(self, section_tipo) {
+export const save_temp_preset = async function(self) {
 
-	// Recalculate filter_obj from DOM in default mode (include components with empty values)
-		const filter_obj = await self.parse_dom_to_json_filter({}).filter
+	// check self.component_json_data
+		if (!self.component_json_data) {
+			console.error('Invalid component_json_data:', self.component_json_data );
+			return
+		}
 
-	// save editing preset
-		const api_response = await data_manager.request({
-			body : {
-				action			: 'filter_set_editing_preset',
-				section_tipo	: section_tipo, // self.section_tipo,
-				filter_obj		: filter_obj
-			}
-		})
-
-
-	return api_response
+	return save_preset({
+		self			: self,
+		section_tipo	: self.component_json_data.section_tipo,
+		section_id		: self.component_json_data.section_id
+	})
 }//end save_temp_preset
