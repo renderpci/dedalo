@@ -1,4 +1,4 @@
-/* global get_label, page_globals, SHOW_DEBUG, flatpickr */
+/* global get_label, page_globals */
 /*eslint no-undef: "error"*/
 
 
@@ -512,7 +512,13 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 			if (self.mode==='search') {
 
 				// parsed_value
-					const parsed_value = (input.value.length>0) ? input.value : null
+					// const parsed_value = (input.value.length>0) ? input.value : null
+					const new_value = (response.result.year)
+						? response.result
+						: ''
+					const parsed_value = {
+						start : new_value
+					}
 
 				// changed_data
 					const changed_data_item = Object.freeze({
