@@ -398,6 +398,10 @@ page.prototype.add_events = function() {
 							if (top_node) {
 								return
 							}
+							// when the event is fired by paginator stop it
+							if(document.activeElement.classList.contains('input_go_to_page')){
+								return
+							}
 						}
 					// search with current section filter
 						const section = self.ar_instances.find(el => el.model==='section')
