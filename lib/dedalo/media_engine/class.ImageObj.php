@@ -9,6 +9,9 @@ class ImageObj extends MediaObj {
 	
 	protected $image_id ;			# image_id
 	protected $quality ;			# like 'A2,A4,A0..'
+
+	# php 8.2 added
+	protected $external_source;
 			
 	function __construct($image_id, $quality=false, $aditional_path=false, $initial_media_path='', $external_source=false) {
 		

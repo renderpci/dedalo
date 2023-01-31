@@ -67,6 +67,14 @@ class search_development2 {
 		protected $having_ar_sql_joins;
 		protected $having_search_objects;
 
+		# list of sections (php 8.2 added)
+		protected $main_section_tipo;
+		protected $ar_section_tipo;
+		protected $main_section_tipo_alias;
+		protected $filter_join;
+		protected $filter_join_where;
+		protected $sql_query_order_custom;
+
 
 	/**
 	* __CONSTRUCT

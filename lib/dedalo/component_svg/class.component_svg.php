@@ -7,6 +7,9 @@
 class component_svg extends component_common {
 
 
+	# php 8.2 added
+	protected $svg_id;
+	protected $aditional_path;
 
 	/**
 	* GET VALOR

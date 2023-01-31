@@ -39,6 +39,8 @@ class tool_time_machine extends tool_common {
 	const NOTES_TM_CODE_TIPO		= 'rsc835';
 	const NOTES_TM_ANNOTATION_TIPO	= 'rsc329';
 
+	# php 8.2 added
+	protected $component_obj;
 
 	/*
 	* Queda unificar el comportamiento con tool lang ... <-----------------------

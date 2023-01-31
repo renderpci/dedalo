@@ -56,6 +56,9 @@ class section extends common {
 		public $save_modified; # Default is true
 
 		public $layout_map;
+		
+		# php 8.2 added
+		protected $parent;
 
 
 	# DIFFUSION INFO

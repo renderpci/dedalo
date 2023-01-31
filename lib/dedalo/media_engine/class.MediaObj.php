@@ -21,6 +21,9 @@ abstract class MediaObj extends Accessors {
 	protected $file_size ;			# like '630MB'
 	protected $file_exists ;		# verify file exists
 
+	# php 8.2 added
+	protected $media_path_server;
+	protected $media_file_exists;
 	
 	
 	# MANDATORY DEFINITIONS METHODS

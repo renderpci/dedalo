@@ -24,7 +24,8 @@ class component_relation_related extends component_relation_common {
 	# sql query stored for debug only
 	static $get_inverse_related_query;
 
-
+	# php 8.2 added
+	protected $tipo_to_search;
 
 	/**
 	* __CONSTRUCT

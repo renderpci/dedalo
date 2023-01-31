@@ -19,6 +19,15 @@ class widget {
 
 	public $dato;
 
+	# php 8.2 added
+	protected $component_info;
+	protected $transcription;
+	protected $indexation;
+	protected $structuration;
+	protected $translation;
+	protected $data_source_list;
+	protected $path;
+	protected $ipo;
 
 	/**
 	 * Returns the *widget* instance of this class.

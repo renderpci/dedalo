@@ -32,6 +32,13 @@ abstract class common {
 	# public propiedades
 	public $propiedades;
 
+	# php 8.2 added
+	protected $RecordObj_dd;
+	protected $norden;
+	protected $required;
+	protected $traducible;
+	protected $label;
+
 	# REQUIRED METHODS
 	#abstract protected function define_id($id);
 	#abstract protected function define_tipo();

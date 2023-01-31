@@ -17,6 +17,9 @@ class login extends common {
 
 	protected static $login_matrix_table = 'matrix';
 
+	# php 8.2 added
+	protected $is_logged;
+	
 	const SU_DEFAULT_PASSWORD = '';
 
 	/**

@@ -18,6 +18,10 @@ class component_state extends component_common {
 	# Options NO is a locator only a object with the infor for filter the dato
 	public $options;
 
+	# php 8.2 added
+	protected $ar_state;
+
+
 
 	public function __construct($tipo=NULL, $parent=NULL, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null) {
 

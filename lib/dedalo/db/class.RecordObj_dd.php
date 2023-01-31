@@ -30,6 +30,9 @@ class RecordObj_dd extends RecordDataBoundObject {
 	#protected $ar_parents_cache 				= array();
 	#protected $ar_reels_of_this 				= array();
 
+	# php 8.2 added
+	protected $ar_recursive_childrens_of_this;
+
 
 	/**
 	* __CONSTRUCT

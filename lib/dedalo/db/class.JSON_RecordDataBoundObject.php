@@ -26,6 +26,9 @@ abstract class JSON_RecordDataBoundObject {
 	abstract protected function defineRelationMap();
 	abstract protected function definePrimaryKeyName();
 
+	# php 8.2 added
+	protected $dato;
+
 
 
 	# __CONSTRUCT

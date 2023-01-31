@@ -32,7 +32,10 @@ class component_portal extends component_relation_common {
 	public $max_records = null;
 	public $offset = null;
 
-
+	# php 8.2 added
+	protected $exclude_elements;
+	protected $edit_view_options;
+	protected $component_state_tipo;
 
 	/**
 	* __CONSTRUCT

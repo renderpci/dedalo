@@ -20,6 +20,10 @@ class dataframe extends component_relation_common {
 	public $caller_section_tipo;
 	public $caller_section_id;
 
+	# php 8.2 added
+	protected $type;
+
+
 	/**
 	* __CONSTRUCT 
 	* @param object $component_obj (can be 'component')

@@ -65,7 +65,11 @@ abstract class component_common extends common {
 		# Component definition. Used in component label
 		public $def;
 
-
+		# php 8.2 added
+		protected $ar_target_section_tipo;
+		protected $start_time;
+		protected $referenced_tipo;
+		protected $semantic_nodes;
 
 	/**
 	* GET_INSTANCE

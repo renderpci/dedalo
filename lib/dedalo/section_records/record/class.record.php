@@ -23,7 +23,7 @@ class record {
 		include ( get_called_class().'.php' );
 		$html =  ob_get_clean();
 
-		$this->section_records_obj->rows_obj = isset($this->section_records_obj->rows_obj) ? $this->section_records_obj->rows_obj : new stdClass();
+		// add record
 		$this->section_records_obj->rows_obj->generated_time['record'] = round(microtime(1)-$start_time,6);
 
 		return $html;
@@ -32,4 +32,4 @@ class record {
 
 
 }#end class
-?>
+

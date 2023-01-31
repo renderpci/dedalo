@@ -27,6 +27,8 @@ class security {
 
 	private $filename_user_ar_permissions_table;
 
+	# php 8.2 added
+	protected $permissions_root;
 
 
 	#  CONSTRUCT

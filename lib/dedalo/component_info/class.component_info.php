@@ -6,7 +6,8 @@
 */
 class component_info extends component_common {
 
-
+	# php 8.2 added
+	protected $widgets;
 
 	/**
 	* GET_DATO

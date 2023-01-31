@@ -20,6 +20,12 @@ class section_records extends common {
 	# propiedades of current sectin list
 	public $propiedades;
 
+	# php 8.2 added
+	protected $search_query_object_preparse;
+	protected $section_list_tipo;
+
+	public $rows_obj;
+
 
 
 	function __construct($tipo, $search_options) {
@@ -33,6 +39,8 @@ class section_records extends common {
 
 		# Fix options
 		$this->search_options = $search_options;
+
+		$this->rows_obj = new stdClass();
 
 		return true;
 	}//end __construct

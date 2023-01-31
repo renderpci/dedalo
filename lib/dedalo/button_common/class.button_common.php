@@ -16,6 +16,9 @@ class button_common extends common {
 
 	public $context_tipo; //dependiendo de quien realice la llamada (area, seccion...) enviará su tipo, independiente de modelo, el tipo será el contexto de la llamada (dd12, dd323...)
 	
+	# php 8.2 added
+	protected $id;
+
 	function __construct($tipo, $target, $section_tipo) {
 		
 		$this->tipo 		= $tipo;

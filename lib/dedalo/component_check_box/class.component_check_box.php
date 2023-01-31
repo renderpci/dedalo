@@ -12,6 +12,8 @@ class component_check_box extends component_relation_common {
 	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
 
 
+	# php 8.2 added
+	public $caller_dataset;
 
 	/**
 	* GET VALOR
