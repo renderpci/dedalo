@@ -8441,6 +8441,9 @@ dd-modal .footer.distribute {
   display: flex;
   align-items: center;
 }
+.component_date > .content_data > .content_value > .input-group.period {
+  width: unset;
+}
 .component_date > .content_data > .content_value > .input-group > a {
   position: absolute;
   right: 0.5rem;
@@ -8450,9 +8453,7 @@ dd-modal .footer.distribute {
 }
 .component_date > .content_data > .content_value > .input-group .input_period {
   width: 3.5em;
-}
-.component_date > .content_data > .content_value > .input-group .input_period > label {
-  margin-right: 0.1em;
+  text-align: center;
 }
 .component_date > .content_data > .content_value > .input-group .input_date {
   letter-spacing: 0.05em;
@@ -8460,6 +8461,14 @@ dd-modal .footer.distribute {
 }
 .component_date > .content_data > .content_value > .input-group .input_time {
   letter-spacing: 0.1em;
+}
+.component_date > .content_data > .content_value > .input-group > label {
+  margin-right: 1rem;
+  display: inline-block;
+  opacity: 0.7;
+}
+.component_date > .content_data > .content_value > .input-group > label:last-of-type {
+  margin-right: 0;
 }
 @font-face {
   font-family: 'date_separator';
@@ -8473,6 +8482,7 @@ dd-modal .footer.distribute {
 }
 .component_date > .content_data > .content_value > .remove {
   position: initial;
+  margin-right: 0px;
 }
 .component_date > .content_data input::placeholder {
   font-size: 0.86rem;
