@@ -130,7 +130,7 @@ const get_value_element = (i, data, values_container, self) => {
 	// total_missing_tags
 		const total_missing_tags_node = item_value_factory(
 			'total_missing_tags',
-			(get_label.etiquetas_borradas || 'Removed tags'),
+			(get_label.deleted_tags || 'Deleted tags'),
 			data
 		)
 		li.appendChild(total_missing_tags_node)
@@ -139,7 +139,7 @@ const get_value_element = (i, data, values_container, self) => {
 	// total_to_review_tags
 		const total_to_review_tags_node = item_value_factory(
 			'total_to_review_tags',
-			get_label.etiqueta_revisar,
+			get_label.label_to_review || 'To review',
 			data
 		)
 		li.appendChild(total_to_review_tags_node)

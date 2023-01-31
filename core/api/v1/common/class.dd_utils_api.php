@@ -860,7 +860,7 @@ final class dd_utils_api {
 		// response
 			$response = new stdClass();
 				$response->result	= false;
-				$response->msg		= 'Error. '.label::get_label('error_al_subir_el_archivo');
+				$response->msg		= 'Error. '.label::get_label('error_on_upload_file');
 
 		// debug
 			debug_log(__METHOD__." --> received request_options: ".to_string($request_options), logger::DEBUG);
@@ -1032,7 +1032,7 @@ final class dd_utils_api {
 						// all is OK response
 						$response->result		= true;
 						$response->file_data	= $file_data;
-						$response->msg			= 'OK. '.label::get_label('fichero_subido_con_exito');
+						$response->msg			= 'OK. '.label::get_label('file_uploaded_successfully');
 						break;
 				}
 
@@ -1254,17 +1254,17 @@ final class dd_utils_api {
 
 		if( $f_error_number===0 ) {
 						 # all is OK
-						 $f_error_text = label::get_label('archivo_subido_con_exito');
+						 $f_error_text = label::get_label('file_uploaded_successfully');
 		}else{
 			switch($f_error_number) {
 						 # Error by number
-				case 1 : $f_error_text = label::get_label('el_archivo_subido_excede_de_la_directiva');	break;
-				case 2 : $f_error_text = label::get_label('el_archivo_subido_excede_el_tamano_maximo');	break;
-				case 3 : $f_error_text = label::get_label('el_archivo_subido_fue_solo_parcialmente_cargado');	break;
-				case 4 : $f_error_text = label::get_label('ningun_archivo_fue_subido');	break;
-				case 6 : $f_error_text = label::get_label('carpeta_temporal_no_accesible');	break;
-				case 7 : $f_error_text = label::get_label('no_se_pudo_escribir_el_archivo_en_el_disco');	break;
-				case 8 : $f_error_text = label::get_label('una_extension_de_php_detuvo_la_carga_de_archivos');	break;
+				case 1 : $f_error_text = label::get_label('uploaded_file_exceeds_the_directive');	break;
+				case 2 : $f_error_text = label::get_label('uploaded_file_exceeds_the_maximum_size');	break;
+				case 3 : $f_error_text = label::get_label('uploaded_file_was_only_partially_uploaded');	break;
+				case 4 : $f_error_text = label::get_label('no_file_was_uploaded');	break;
+				case 6 : $f_error_text = label::get_label('temp_dir_not_accessible');	break;
+				case 7 : $f_error_text = label::get_label('failed_to_writte_file_to_disk');	break;
+				case 8 : $f_error_text = label::get_label('php_extension_stopped_the_upload_file');	break;
 			}
 		}
 

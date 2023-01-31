@@ -317,9 +317,10 @@ export const render_column_id = function(options) {
 
 			// modal attach to document
 				const modal_container = ui.attach_to_modal({
-					header	: get_label.presets_de_busqueda || 'User search preset',
+					header	: get_label.search_presets || 'User search preset',
 					body	: body,
-					footer	: null
+					footer	: null,
+					size 	: 'small'
 				})
 				modal_container.on_close = function(){
 					// nothing to do

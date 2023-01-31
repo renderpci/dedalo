@@ -833,7 +833,7 @@ const get_buttons = (self) => {
 		const button_save = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'primary save button_save folding hide',
-			inner_html		: get_label.salvar || 'Save',
+			inner_html		: get_label.save || 'Save',
 			parent			: buttons_fold
 		})
 		button_save.addEventListener("click", async function(e){
@@ -856,7 +856,7 @@ const get_buttons = (self) => {
 				ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'warning_label_text blink',
-					inner_html		: get_label.sin_salvar || 'Unsaved changes!',
+					inner_html		: get_label.unsaved_changes || 'Unsaved changes!',
 					parent			: label
 				})
 			}

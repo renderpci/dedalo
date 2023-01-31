@@ -61,7 +61,7 @@ export function render_node_info(options) {
 				// ok response
 
 				node_info.classList.add('ok')
-				const text = `${instance.label} ${get_label.guardado || 'Saved'}`
+				const text = `${instance.label} ${get_label.saved || 'Saved'}`
 				node_info.insertAdjacentHTML('afterbegin', text)
 
 				// remove node on timeout
