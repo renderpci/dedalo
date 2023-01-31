@@ -25,6 +25,11 @@
 				width: 8.75rem;
 				display: flex;
 				align-items: center;
+
+				&.period {
+					width: unset;
+				}
+
 				>a { // icon calendar
 					position: absolute;
 					right: 0.5rem;
@@ -34,10 +39,7 @@
 				}
 				.input_period{
 					width: 3.5em;
-					>label{
-						margin-right: 0.1em;
-					}
-
+					text-align: center;
 				}
 				.input_date {
 					letter-spacing: 0.05em;
@@ -45,6 +47,16 @@
 				}
 				.input_time{
 					letter-spacing: 0.1em;
+				}
+
+				>label {
+					margin-right: 1rem;
+					display: inline-block;
+					opacity: 0.7;
+
+					&:last-of-type {
+						margin-right: 0;
+					}
 				}
 
   				@font-face {
@@ -65,6 +77,7 @@
 			>.remove {
 				// margin-left: 0.75rem;
 				position: initial;
+				margin-right: 0px;
 			}
 
 		}

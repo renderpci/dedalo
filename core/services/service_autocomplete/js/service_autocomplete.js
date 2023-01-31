@@ -495,7 +495,7 @@ service_autocomplete.prototype.split_q = function(q) {
 	}
 
 	return result
-};//end split_q
+}//end split_q
 
 
 

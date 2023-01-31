@@ -14,9 +14,8 @@
 * @see this.get_section_elements_context
 * @param object options
 *	string options.section_tipo (section to load components and render)
-*	dom element options.target_div (Target dom element on new data will be added)
+*	DOM element options.target_div (Target dom element on new data will be added)
 *	array path (Cumulative array of component path objects)
-*
 * @return array ar_components
 */
 export const render_components_list = function(options) {
@@ -25,16 +24,11 @@ export const render_components_list = function(options) {
 	const ar_components = []
 
 	// options
-		const self				= options.self
-		const section_tipo		= options.section_tipo
-		const target_div		= options.target_div
-		const path				= options.path
-		const section_elements	= options.section_elements
-
-	// load components from API. this function could be defined by the caller or use the standard function in common.js
-		// const section_elements = await self.get_section_elements_context({
-		// 	section_tipo : section_tipo
-		// })
+		const self					= options.self
+		const section_tipo			= options.section_tipo
+		const target_div			= options.target_div
+		const path					= options.path
+		const section_elements		= options.section_elements
 
 	// clean target_div
 		while (target_div.hasChildNodes()) {
@@ -160,7 +154,8 @@ export const render_components_list = function(options) {
 						component.addEventListener('click', async function(){
 							// section_elements_context
 								const current_section_elements = await self.get_section_elements_context({
-									section_tipo : target_section
+									section_tipo			: target_section,
+									ar_components_exclude	: null // use defaults from server
 								})
 							// recursion render_components_list
 								render_components_list({
