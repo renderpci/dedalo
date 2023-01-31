@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_ROOT_WEB */
+/*global get_label, page_globals, DEDALO_ROOT_WEB */
 /*eslint no-undef: "error"*/
 
 
@@ -79,30 +79,31 @@ export const component_date = function(){
 /**
 * LOAD_EDITOR
 * load the libraries and specific css
-* @return promise load_promise
+* @return bool
 */
 component_date.prototype.load_editor = async function() {
 
-	const self = this
 
-	// flatpickr calendar. load dependencies js/css
-		const load_promises = []
+	// flatpickr calendar. load dependencies js/css if not already loaded
+		if (typeof flatpickr==='undefined') {
 
-		// css file load
-			const lib_css_file = DEDALO_ROOT_WEB + '/lib/flatpickr/dist/flatpickr.min.css'
-			load_promises.push( common.prototype.load_style(lib_css_file) )
+			const load_promises = []
 
-
-		// js module import
-			// const js_file_load = DEDALO_ROOT_WEB + '/lib/flatpickr/dist/flatpickr.js'
-			const js_file_load = import('../../../lib/flatpickr/dist/flatpickr.min.js') // used minified version for now
-			load_promises.push( js_file_load )
+			// css file load
+				const lib_css_file = DEDALO_ROOT_WEB + '/lib/flatpickr/dist/flatpickr.min.css'
+				load_promises.push( common.prototype.load_style(lib_css_file) )
 
 
-	const load_promise = Promise.all(load_promises)
+			// js module import
+				// const js_file_load = DEDALO_ROOT_WEB + '/lib/flatpickr/dist/flatpickr.js'
+				const js_file_load = import('../../../lib/flatpickr/dist/flatpickr.min.js') // used minified version for now
+				load_promises.push( js_file_load )
+
+			await Promise.all(load_promises)
+		}
 
 
-	return load_promise
+	return true
 }//end load_editor
 
 
@@ -460,25 +461,34 @@ component_date.prototype.get_placeholder_value = function() {
 
 /**
 * TIME_TO_STRING
+* Converts object time to flat string with time_separator as '13:54:00'
+* @param object time
+* sample:
+* {
+*	hour: 14
+*	minute: 46
+*	second: 0
+*	time: 53160
+* }
 * @return string string_time
-*	 sample: '25/02/1988'
+*	 sample: '13:54:00'
 */
 component_date.prototype.time_to_string = function(time) {
 
 	const self	= this
 
-	const hour 		= (time.hour)
+	const hour		= (time.hour)
 		? `${time.hour}`.padStart(2, '0')
 		: '00'
-	const minute 	= (time.minute)
+	const minute	= (time.minute)
 		? `${time.minute}`.padStart(2, '0')
 		: '00'
-	const second 	= (time.second)
+	const second	= (time.second)
 		? `${time.second}`.padStart(2, '0')
 		: '00'
-	const ms 		= (time.ms)
-		? `${time.ms}`.padStart(3, '0')
-		: '000'
+	// const ms		= (time.ms)
+	// 	? `${time.ms}`.padStart(3, '0')
+	// 	: '000'
 
 	const ar_time		= [hour, minute, second]
 	const string_time	= ar_time.join(self.time_separator)
