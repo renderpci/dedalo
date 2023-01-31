@@ -1854,9 +1854,9 @@ abstract class component_common extends common {
 					$section->set_dato($current_row);
 
 					// create the component of tool_simple_object_tipo and get his data
-					$component_tool_simple_object_tipo = 'dd1353';
-					$model_name = RecordObj_dd::get_modelo_name_by_tipo($component_tool_simple_object_tipo);
-					$component_tool_name = component_common::get_instance(
+					$component_tool_simple_object_tipo	= 'dd1353';
+					$model_name							= RecordObj_dd::get_modelo_name_by_tipo($component_tool_simple_object_tipo);
+					$component_tool_name				= component_common::get_instance(
 						$model_name, // string model
 						$component_tool_simple_object_tipo, // string tipo
 						$current_row->section_id, // string section_id
@@ -1868,12 +1868,12 @@ abstract class component_common extends common {
 
 					// add to the datalist the name and always_active
 					$item->tool_name		= $data[0]->name;
-					$item->always_active	= $data[0]->always_active;
+					$item->always_active	= $data[0]->always_active ?? false;
 				}
 
 			$result[] = $item;
 		}
-		# Sort result for easy user select
+		// Sort result for easy user select
 			if(isset($this->properties->sort_by)){
 				$custom_sort = reset($this->properties->sort_by); // Only one at this time
 				if ($custom_sort->direction==='DESC') {
