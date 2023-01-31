@@ -157,6 +157,151 @@ export const get_ar_raw_data_value = (self) => {
 
 
 /**
+* GET_INPUT_DATE_NODE
+* @return DOM node input_wrap
+*/
+export const get_input_date_node = (i, mode, input_value, self) => {
+
+	// create div end
+		const input_wrap = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'input-group'
+		})
+
+	// input field
+		const input = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'text',
+			class_name		: 'input_date',
+			value			: input_value,
+			placeholder		: self.get_placeholder_value(),
+			parent			: input_wrap
+		})
+		input.addEventListener('focus', function() {
+			// force activate on input focus (tabulating case)
+			if (!self.active) {
+				ui.component.activate(self)
+			}
+		})
+		input.addEventListener('keyup', function(e) {
+			keyup_handler(e, i, self, input, input_wrap, mode)
+		})
+		input.addEventListener('change', function() {
+
+			return change_handler({
+				self		: self,
+				input		: input,
+				key			: i,
+				input_wrap	: input_wrap,
+				mode		: mode,
+				type		: 'date'
+			})
+
+			// DES (Unified in change_handler function)
+				// // parse value
+				// 	const response = self.parse_string_date(input.value)
+
+				// // invalid value case
+				// 	if(response.error){
+				// 		alert(response.error[0].msg)
+				// 		ui.component.error(true, input_wrap)
+				// 		return false
+				// 	}
+
+				// // error style rest
+				// 	ui.component.error(false, input_wrap)
+
+
+				// if (self.mode==='search') {
+
+				// 	// parsed_value
+				// 		// const parsed_value = (input.value.length>0) ? input.value : null
+				// 		const new_value = (response.result.year)
+				// 			? response.result
+				// 			: ''
+				// 		const parsed_value = {
+				// 			start : new_value
+				// 		}
+
+				// 	// changed_data
+				// 		const changed_data_item = Object.freeze({
+				// 			action	: 'update',
+				// 			key		: i,
+				// 			value	: parsed_value
+				// 		})
+
+				// 	// update the instance data (previous to save)
+				// 		self.update_data_value(changed_data_item)
+				// 	// set data.changed_data. The change_data to the instance
+				// 		// self.data.changed_data = changed_data
+				// 	// publish search. Event to update the DOM elements of the instance
+				// 		event_manager.publish('change_search_element', self)
+
+				// }else{
+
+				// 	const value = self.data.value[i]
+				// 		? JSON.parse(JSON.stringify(self.data.value[i]))
+				// 		: {mode}
+
+				// 	const new_value = (response.result.year)
+				// 		? response.result
+				// 		: ''
+
+				// 	value[mode] = new_value
+
+				// 	const changed_data = [Object.freeze({
+				// 		action	: 'update',
+				// 		key		: i,
+				// 		value	: value
+				// 	})]
+				// 	self.change_value({
+				// 		changed_data	: changed_data,
+				// 		refresh			: false
+				// 	})
+				// }
+		})
+
+	// button_calendar
+		const button_calendar = ui.create_dom_element({
+			element_type	: 'a',
+			class_name		: 'input-group-addon button calendar hidden_button ',
+			parent			: input_wrap
+		})
+		button_calendar.addEventListener('mouseup', function() {
+			const dd_date_format = page_globals.DEDALO_DATE_ORDER  || 'dmy'
+
+			const ar_date_format = (dd_date_format === 'dmy')
+				? ['d','m','Y']
+				: (dd_date_format === 'ymd')
+					? ['Y','m','d']
+					: (dd_date_format === 'mdy')
+						? ['m','d','Y']
+						: ''
+			const date_format = ar_date_format.join(self.date_separator)
+			const default_date = input.value
+
+			// datePicker
+				const datePicker = flatpickr(button_calendar, {
+					dateFormat	: date_format,
+					defaultDate	: default_date,
+					allowInput	: true,
+					// onClose 	  : close_flatpickr,
+					onValueUpdate : function(selectedDates, dateStr){
+						ui.component.error(false, input_wrap)
+						input.value = dateStr
+						input.dispatchEvent(new Event('change'))
+					}
+				})
+				datePicker.open()
+		})
+
+
+	return input_wrap
+}//end get_input_date_node
+
+
+
+/**
 * INPUT_ELEMENT_DATE
 * @return DOM node node
 */
@@ -400,32 +545,15 @@ export const input_element_time = (i, current_value, self) => {
 		input.addEventListener('keyup', function(e) {
 			keyup_handler(e, i, self)
 		})
-		input.addEventListener('change', function(){
-
-			// parse value
-			const response = self.parse_string_time(input.value)
-
-			// error case
-				if(response.error){
-					alert(response.error[0].msg)
-					ui.component.error(true, input_wrap)
-					return false
-				}
-
-			// success. reset component error styles
-				ui.component.error(false, input_wrap)
-
-			// changed_data
-				const value = {start:response.result}
-				const changed_data = [Object.freeze({
-					action	: 'update',
-					key		: i,
-					value	: value
-				})]
-				self.change_value({
-					changed_data	: changed_data,
-					refresh			: false
-				})
+		input.addEventListener('change', function(e){
+			change_handler({
+				self		: self,
+				input		: input,
+				key			: i,
+				input_wrap	: input_wrap,
+				mode		: 'start',
+				type		: 'time'
+			})
 		})
 
 	// button_calendar
@@ -467,141 +595,6 @@ export const input_element_time = (i, current_value, self) => {
 
 	return input_wrap
 }//end input_element_time
-
-
-
-/**
-* GET_INPUT_DATE_NODE
-* @return DOM node input_wrap
-*/
-export const get_input_date_node = (i, mode, input_value, self) => {
-
-	// create div end
-		const input_wrap = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'input-group'
-		})
-
-	// input field
-		const input = ui.create_dom_element({
-			element_type	: 'input',
-			type			: 'text',
-			class_name		: 'input_date',
-			value			: input_value,
-			placeholder		: self.get_placeholder_value(),
-			parent			: input_wrap
-		})
-		input.addEventListener('focus', function() {
-			// force activate on input focus (tabulating case)
-			if (!self.active) {
-				ui.component.activate(self)
-			}
-		})
-		input.addEventListener('keyup', function(e) {
-			keyup_handler(e, i, self, input, input_wrap, mode)
-		})
-		input.addEventListener('change', function() {
-
-			// parse value
-				const response = self.parse_string_date(input.value)
-
-			// invalid value case
-				if(response.error){
-					alert(response.error[0].msg)
-					ui.component.error(true, input_wrap)
-					return false
-				}
-
-			// error style rest
-				ui.component.error(false, input_wrap)
-
-
-			if (self.mode==='search') {
-
-				// parsed_value
-					// const parsed_value = (input.value.length>0) ? input.value : null
-					const new_value = (response.result.year)
-						? response.result
-						: ''
-					const parsed_value = {
-						start : new_value
-					}
-
-				// changed_data
-					const changed_data_item = Object.freeze({
-						action	: 'update',
-						key		: i,
-						value	: parsed_value
-					})
-
-				// update the instance data (previous to save)
-					self.update_data_value(changed_data_item)
-				// set data.changed_data. The change_data to the instance
-					// self.data.changed_data = changed_data
-				// publish search. Event to update the DOM elements of the instance
-					event_manager.publish('change_search_element', self)
-
-			}else{
-
-				const value = self.data.value[i]
-					? JSON.parse(JSON.stringify(self.data.value[i]))
-					: {mode}
-
-				const new_value = (response.result.year)
-					? response.result
-					: ''
-
-				value[mode] = new_value
-
-				const changed_data = [Object.freeze({
-					action	: 'update',
-					key		: i,
-					value	: value
-				})]
-				self.change_value({
-					changed_data	: changed_data,
-					refresh			: false
-				})
-			}
-		})
-
-	// button_calendar
-		const button_calendar = ui.create_dom_element({
-			element_type	: 'a',
-			class_name		: 'input-group-addon button calendar hidden_button ',
-			parent			: input_wrap
-		})
-		button_calendar.addEventListener('mouseup', function() {
-			const dd_date_format = page_globals.DEDALO_DATE_ORDER  || 'dmy'
-
-			const ar_date_format = (dd_date_format === 'dmy')
-				? ['d','m','Y']
-				: (dd_date_format === 'ymd')
-					? ['Y','m','d']
-					: (dd_date_format === 'mdy')
-						? ['m','d','Y']
-						: ''
-			const date_format = ar_date_format.join(self.date_separator)
-			const default_date = input.value
-
-			// datePicker
-				const datePicker = flatpickr(button_calendar, {
-					dateFormat	: date_format,
-					defaultDate	: default_date,
-					allowInput	: true,
-					// onClose 	  : close_flatpickr,
-					onValueUpdate : function(selectedDates, dateStr){
-						ui.component.error(false, input_wrap)
-						input.value = dateStr
-						input.dispatchEvent(new Event('change'))
-					}
-				})
-				datePicker.open()
-		})
-
-
-	return input_wrap
-}//end get_input_date_node
 
 
 
@@ -707,3 +700,75 @@ export const keyup_handler = function(e, key, self, input, input_wrap, mode) {
 	*/
 	return true
 }//end keyup_handler
+
+
+
+/**
+* CHANGE_HANDLER
+*
+* @return bool
+*/
+export const change_handler = function(options) {
+
+	// options
+		// const e			= options.e // event
+		const self			= options.self // instance
+		const input			= options.input
+		const key			= options.key
+		const input_wrap	= options.input_wrap
+		const mode			= options.mode // like 'start'
+		const type			= options.type // date|time
+
+	// parse value
+		const response = type==='time'
+			? self.parse_string_time(input.value)
+			: self.parse_string_date(input.value)
+
+	// error case
+		if(response.error){
+			alert(response.error[0].msg)
+			ui.component.error(true, input_wrap)
+			return false
+		}
+
+	// success format. reset component error styles
+		ui.component.error(false, input_wrap)
+
+	// new value. New parsed value
+		const new_value = response.result
+
+	// data_value. Current data value for current key
+		const data_value = self.data.value[key]
+			? JSON.parse(JSON.stringify(self.data.value[key]))
+			: {mode}
+
+	// replace value only in current mode
+		data_value[mode] = new_value
+
+	// changed_data_item
+		const changed_data_item = Object.freeze({
+			action	: 'update',
+			key		: key,
+			value	: data_value
+		})
+
+	if (self.mode==='search') {
+
+		// update the instance data (previous to save)
+			self.update_data_value(changed_data_item)
+		// set data.changed_data. The change_data to the instance
+			// self.data.changed_data = changed_data
+		// publish search. Event to update the DOM elements of the instance
+			event_manager.publish('change_search_element', self)
+
+	}else{
+
+		// change_value
+			self.change_value({
+				changed_data	: [changed_data_item],
+				refresh			: false
+			})
+	}
+
+	return true
+}//end change_handler

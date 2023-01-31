@@ -1,4 +1,4 @@
-/* global get_label, SHOW_DEBUG */
+/* global  */
 /*eslint no-undef: "error"*/
 
 
@@ -53,6 +53,7 @@ render_search_component_date.prototype.search = async function(options) {
 		})
 		// set pointers
 		wrapper.content_data = content_data
+
 
 	return wrapper
 }//end search
