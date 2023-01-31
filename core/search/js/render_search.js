@@ -15,7 +15,8 @@
 		edit_user_search_preset,
 		save_preset,
 		save_temp_preset,
-		load_user_search_presets
+		load_user_search_presets,
+		presets_section_tipo
 	} from './search_user_presets.js'
 
 
@@ -213,7 +214,8 @@ render_search.prototype.render_base = function() {
 				e.stopPropagation()
 
 				const section_id = await create_new_search_preset({
-					self : self
+					self			: self,
+					section_tipo	: presets_section_tipo
 				})
 
 				// launch the editor
