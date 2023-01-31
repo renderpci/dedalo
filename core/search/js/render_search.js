@@ -46,7 +46,8 @@ render_search.prototype.list = async function() {
 
 	// components_list. render section component list [left]
 		const section_elements = await self.get_section_elements_context({
-			section_tipo : self.target_section_tipo
+			section_tipo			: self.target_section_tipo,
+			ar_components_exclude	: self.ar_components_exclude
 		})
 		render_components_list({
 			self				: self,
@@ -933,7 +934,8 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 					}
 
 					const section_elements = await self.get_section_elements_context({
-						section_tipo : self.target_section_tipo
+						section_tipo			: self.target_section_tipo,
+						ar_components_exclude	: self.ar_components_exclude
 					})
 					self.render_components_list({
 						section_tipo		: self.target_section_tipo,
