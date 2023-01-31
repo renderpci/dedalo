@@ -477,6 +477,10 @@ component_date.prototype.time_to_string = function(time) {
 
 	const self	= this
 
+	if (!time) {
+		return ''
+	}
+
 	const hour		= (time.hour)
 		? `${time.hour}`.padStart(2, '0')
 		: '00'
