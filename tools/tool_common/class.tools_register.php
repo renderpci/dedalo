@@ -234,35 +234,35 @@ class tools_register {
 
 		// search by tool name
 			$sqo = json_decode('{
-				   "typo": "sqo",
-				   "id": "temp",
-				   "section_tipo": [
-				      "'.$section_tipo.'"
-				   ],
-				   "filter": {
-				      "$and": [
-				         {
-				            "q": [
-				               "'.$tool_name.'"
-				            ],
-				            "q_operator": "=",
-				            "path": [
-				               {
+				"typo": "sqo",
+				"id": "temp",
+				"section_tipo": [
+					"'.$section_tipo.'"
+				],
+				"filter": {
+					"$and": [
+						{
+							"q": [
+								"'.$tool_name.'"
+							],
+							"q_operator": "=",
+							"path": [
+								{
 									"section_tipo"		: "'.$section_tipo.'",
 									"component_tipo"	: "'.self::$tipo_tool_name.'",
 									"model"				: "component_input_text",
 									"name"				: "Tool name"
-				               }
-				            ],
-				            "type": "jsonb"
-				         }
-				      ]
-				   },
-				   "select": [],
-				   "limit": 1,
-				   "offset": 0,
-				   "full_count": false
-			   }');
+								}
+							],
+							"type": "jsonb"
+						}
+					]
+				},
+				"select": [],
+				"limit": 1,
+				"offset": 0,
+				"full_count": false
+			}');
 			$search	= search::get_instance($sqo);
 			$result	= $search->search();
 
@@ -287,65 +287,73 @@ class tools_register {
 
 		$tool_object = new stdClass();
 
-			$tool_object->section_tipo 	= $section_tipo;
-			$tool_object->section_id 	= $section_id;
+			$tool_object->section_tipo	= $section_tipo;
+			$tool_object->section_id	= $section_id;
 
 		// name
-			$component_tipo = self::$tipo_tool_name; // 'dd1326';
-			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			$component 		= component_common::get_instance($model,
-															 $component_tipo,
-															 $section_id,
-															 'list',
-															 DEDALO_DATA_LANG,
-															 $section_tipo);
-			$dato 	= $component->get_dato();
-			$value 	= reset($dato);
+			$component_tipo	= self::$tipo_tool_name; // 'dd1326';
+			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component		= component_common::get_instance(
+				$model,
+				$component_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_LANG,
+				$section_tipo
+			);
+			$dato    = $component->get_dato();
+			$value	= reset($dato);
 			$tool_object->name = $value;
 
 		// label
-			$component_tipo = self::$tipo_tool_label; // 'dd799';
-			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			$component 		= component_common::get_instance($model,
-															 $component_tipo,
-															 $section_id,
-															 'list',
-															 DEDALO_DATA_LANG,
-															 $section_tipo);
-			$dato 			= $component->get_dato_full();
-			$value 			= [];
+			$component_tipo	= self::$tipo_tool_label; // 'dd799';
+			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component		= component_common::get_instance(
+				$model,
+				$component_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_LANG,
+				$section_tipo
+			);
+			$dato    = $component->get_dato_full();
+			$value	= [];
 			if (!empty($dato)) {
 				foreach ($dato as $curent_lang => $current_value) {
 					$value[] = (object)[
-						'lang'  => $curent_lang,
-						'value' => reset($current_value)
+						'lang'	=> $curent_lang,
+						'value'	=> reset($current_value)
 					];
 				}
 			}
 			$tool_object->label = $value;
 
 		// version
-			$component_tipo = self::$tipo_version; //  'dd1327';
-			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			$component 		= component_common::get_instance($model,
-															 $component_tipo,
-															 $section_id,
-															 'list',
-															 DEDALO_DATA_LANG,
-															 $section_tipo);
-			$dato 	= $component->get_dato();
-			$value 	= reset($dato);
+			$component_tipo	= self::$tipo_version; //  'dd1327';
+			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component		= component_common::get_instance(
+				$model,
+				$component_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_LANG,
+				$section_tipo
+			);
+			$dato	= $component->get_dato();
+			$value	= reset($dato);
 			$tool_object->vesion = $value;
 
-		// dedalo version (minimal requeriment)
-			$component_tipo = self::$tipo_dedalo_version_minimal; // 'dd1328';
-			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			$component 		= component_common::get_instance($model,
-															 $component_tipo,
-															 $section_id,
-															 'list',
-															 DEDALO_DATA_LANG,
-															 $section_tipo);
+		// dedalo version (minimal requirement)
+			$component_tipo	= self::$tipo_dedalo_version_minimal; // 'dd1328';
+			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component		= component_common::get_instance(
+				$model,
+				$component_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_LANG,
+				$section_tipo
+			);
 			$dato 	= $component->get_dato();
 			$value 	= reset($dato);
 			$tool_object->dd_version = $value;
@@ -361,13 +369,13 @@ class tools_register {
 				DEDALO_DATA_LANG,
 				$section_tipo
 			);
-			$dato			= $component->get_dato_full();
-			$value			= [];
+			$dato	= $component->get_dato_full();
+			$value	= [];
 			if (!empty($dato)) {
 				foreach ($dato as $curent_lang => $current_value) {
 					$value[] = (object)[
-						'lang'  => $curent_lang,
-						'value' => $current_value
+						'lang'	=> $curent_lang,
+						'value'	=> $current_value
 					];
 				}
 			}
@@ -413,39 +421,42 @@ class tools_register {
 			$tool_object->affected_tipos = $value; // array
 
 		// show in inspector
-			$component_tipo = 'dd1331';
-			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			$component_lang = RecordObj_dd::get_translatable($component_tipo)===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-			$component 		= component_common::get_instance($model,
-															 $component_tipo,
-															 $section_id,
-															 'list',
-															 $component_lang,
-															 $section_tipo);
-			$dato 			= $component->get_dato();
-			$dato_ref 		= !empty($dato)
+			$component_tipo	= 'dd1331';
+			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component_lang	= RecordObj_dd::get_translatable($component_tipo)===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+			$component		= component_common::get_instance(
+				$model,
+				$component_tipo,
+				$section_id,
+				'list',
+				$component_lang,
+				$section_tipo
+			);
+			$dato        = $component->get_dato();
+			$dato_ref	= !empty($dato)
 				? reset($dato)->section_id
 				: null;
-			$value 			= $dato_ref == '1' ? true : false;
+			$value		= $dato_ref == '1' ? true : false;
 			$tool_object->show_in_inspector = $value; // bool
 
 		// show in component
-			$component_tipo = 'dd1332';
-			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			$component_lang = RecordObj_dd::get_translatable($component_tipo)===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-			$component 		= component_common::get_instance($model,
-															 $component_tipo,
-															 $section_id,
-															 'list',
-															 $component_lang,
-															 $section_tipo);
-			$dato 			= $component->get_dato();
-			$dato_ref 		= !empty($dato)
+			$component_tipo	= 'dd1332';
+			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component_lang	= RecordObj_dd::get_translatable($component_tipo)===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+			$component		= component_common::get_instance(
+				$model,
+				$component_tipo,
+				$section_id,
+				'list',
+				$component_lang,
+				$section_tipo
+			);
+			$dato		= $component->get_dato();
+			$dato_ref	= !empty($dato)
 				? reset($dato)->section_id
 				: null;
-			$value 			= $dato_ref == '1' ? true : false;
+			$value		= $dato_ref == '1' ? true : false;
 			$tool_object->show_in_component = $value;
-
 
 		// Always active
 			$component_tipo	= 'dd1601';
@@ -458,41 +469,44 @@ class tools_register {
 				DEDALO_DATA_LANG,
 				$section_tipo
 			);
-			$dato	= (array)$component->get_dato();
-			$dato_ref 		= !empty($dato)
+			$dato		= (array)$component->get_dato();
+			$dato_ref	= !empty($dato)
 				? reset($dato)->section_id
 				: null;
-			$value 			= $dato_ref == '1' ? true : false;
-
-			$tool_object->always_active = $value; // array
+			$value		= $dato_ref=='1' ? true : false;
+			$tool_object->always_active = $value;
 
 
 		// requirement translatable
-			$component_tipo = 'dd1333';
-			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			$component_lang = RecordObj_dd::get_translatable($component_tipo)===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-			$component 		= component_common::get_instance($model,
-															 $component_tipo,
-															 $section_id,
-															 'list',
-															 $component_lang,
-															 $section_tipo);
-			$dato 			= $component->get_dato();
-			$dato_ref 		= empty($dato) ? '0' : (reset($dato)->section_id);
-			$value 			= $dato_ref == '1' ? true : false;
+			$component_tipo	= 'dd1333';
+			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component_lang	= RecordObj_dd::get_translatable($component_tipo)===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+			$component		= component_common::get_instance(
+				$model,
+				$component_tipo,
+				$section_id,
+				'list',
+				$component_lang,
+				$section_tipo
+			);
+			$dato		= $component->get_dato();
+			$dato_ref	= empty($dato) ? '0' : (reset($dato)->section_id);
+			$value		= $dato_ref=='1' ? true : false;
 			$tool_object->requirement_translatable = $value;
 
 		// ontology
 			$component_tipo	= self::$tipo_ontology; // 'dd1334';
 			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			$component		= component_common::get_instance($model,
-															 $component_tipo,
-															 $section_id,
-															 'list',
-															 DEDALO_DATA_LANG,
-															 $section_tipo);
-			$dato			= (array)$component->get_dato();
-			$value			= $dato[0] ?? null;
+			$component		= component_common::get_instance(
+				$model,
+				$component_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_LANG,
+				$section_tipo
+			);
+			$dato	= (array)$component->get_dato();
+			$value	= $dato[0] ?? null;
 			// empty object case check
 			if (empty((array)$value)) {
 				$value = null;
@@ -502,14 +516,16 @@ class tools_register {
 		// properties
 			$component_tipo	= self::$tipo_properties; // 'dd1335';
 			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			$component		= component_common::get_instance($model,
-															 $component_tipo,
-															 $section_id,
-															 'list',
-															 DEDALO_DATA_LANG,
-															 $section_tipo);
-			$dato			= (array)$component->get_dato();
-			$value			= $dato[0] ?? null;
+			$component		= component_common::get_instance(
+				$model,
+				$component_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_LANG,
+				$section_tipo
+			);
+			$dato	= (array)$component->get_dato();
+			$value	= $dato[0] ?? null;
 			// empty object case check
 			if (empty((array)$value)) {
 				$value = null;
@@ -517,16 +533,18 @@ class tools_register {
 			$tool_object->properties = $value;
 
 		// labels
-			$component_tipo = 'dd1372';
-			$model 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			$component 		= component_common::get_instance($model,
-															 $component_tipo,
-															 $section_id,
-															 'list',
-															 DEDALO_DATA_LANG,
-															 $section_tipo);
-			$dato			= (array)$component->get_dato();
-			$value			= $dato[0] ?? null;
+			$component_tipo	= 'dd1372';
+			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component		= component_common::get_instance(
+				$model,
+				$component_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_LANG,
+				$section_tipo
+			);
+			$dato	= (array)$component->get_dato();
+			$value	= $dato[0] ?? null;
 			// empty object case check
 			if (empty((array)$value)) {
 				$value = null;
@@ -680,52 +698,52 @@ class tools_register {
 				if (!empty($reg_result->ar_records)) {
 
 					$reg_record = reset($reg_result->ar_records);
-						// dump($reg_record, ' reg_record ++ '.to_string($tool_name));
 
+					// set section data from DDBB record
 					$reg_section = section::get_instance($reg_record->section_id, $reg_record->section_tipo);
 					$reg_section->set_dato($reg_record->datos);
-					// get the default config of the register
-					$component_tipo		= $tools_configuration; // 'dd999';
-					$component_model	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-					$reg_component		= component_common::get_instance(
-						$component_model,
-						$component_tipo,
-						$reg_record->section_id,
-						'list',
-						DEDALO_DATA_NOLAN,
-						$section_tools_reg_tipo
-					);
-					$reg_dato = $reg_component->get_dato();
-					if(empty($reg_dato)) return false;
 
-					// create the config component in the config section
-					$config_section = section::get_instance(null, $section_tools_config_tipo);
-					$config_section->forced_create_record();
+					// reg_component. get the default config of the register
+						$component_tipo		= $tools_configuration; // 'dd999';
+						$component_model	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+						$reg_component		= component_common::get_instance(
+							$component_model,
+							$component_tipo,
+							$reg_record->section_id,
+							'list',
+							DEDALO_DATA_NOLAN,
+							$section_tools_reg_tipo
+						);
+						$reg_dato = $reg_component->get_dato();
+						if(empty($reg_dato)) return false;
 
-					$config_component = component_common::get_instance(
-						$component_model,
-						$component_tipo,
-						$config_section->get_section_id(),
-						'list',
-						DEDALO_DATA_NOLAN,
-						$section_tools_config_tipo
-					);
+					// config_component. create the config component in the config section
+						$config_section = section::get_instance(null, $section_tools_config_tipo);
+						$config_section->forced_create_record();
 
-					$config_component->set_dato($reg_dato);
-					$config_component->Save();
-					// create the name component in the config section
-					$config_name_component_model	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-					$config_name_component			= component_common::get_instance(
-						$component_model,
-						$component_tipo_tool_name,
-						$config_section->get_section_id(),
-						'list',
-						DEDALO_DATA_NOLAN,
-						$section_tools_config_tipo
-					);
+						$config_component = component_common::get_instance(
+							$component_model,
+							$component_tipo,
+							$config_section->get_section_id(),
+							'list',
+							DEDALO_DATA_NOLAN,
+							$section_tools_config_tipo
+						);
+						$config_component->set_dato($reg_dato);
+						$config_component->Save();
 
-					$config_name_component->set_dato([$tool_name]);
-					$config_name_component->Save();
+					// config_name_component. create the name component in the config section
+						$config_name_component_model	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo_tool_name,true);
+						$config_name_component			= component_common::get_instance(
+							$config_name_component_model,
+							$component_tipo_tool_name,
+							$config_section->get_section_id(),
+							'list',
+							DEDALO_DATA_NOLAN,
+							$section_tools_config_tipo
+						);
+						$config_name_component->set_dato([$tool_name]);
+						$config_name_component->Save();
 				}else{
 					return false;
 				}

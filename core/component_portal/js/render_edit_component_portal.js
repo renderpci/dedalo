@@ -1,4 +1,4 @@
-/*global get_label, Promise, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
 
@@ -63,31 +63,25 @@ render_edit_component_portal.prototype.edit = async function(options) {
 
 			case 'text':
 				return view_text_list_portal.render(self, options)
-				break;
 
 			case 'line':
 				return view_line_edit_portal.render(self, options)
-				break;
 
 			case 'tree':
 				return view_tree_edit_portal.render(self, options)
-				break;
 
 			case 'mosaic':
 				return view_mosaic_edit_portal.render(self, options)
-				break;
 
 			case 'indexation':
 				return view_indexation_edit_portal.render(self, options)
-				break;
 
 			case 'content':
 				return view_content_edit_portal.render(self, options)
-				break;
 
 			default:
 				// dynamic try
-					const render_view = self.render_views.find(el => el.view === view && el.mode === self.mode)
+					const render_view = self.render_views.find(el => el.view===view && el.mode===self.mode)
 					if (render_view) {
 						const path			= render_view.path || './' + render_view.render +'.js'
 						const render_method	= await import (path)
@@ -95,7 +89,6 @@ render_edit_component_portal.prototype.edit = async function(options) {
 					}
 
 				return view_default_edit_portal.render(self, options)
-				break;
 		}
 
 	return null
@@ -342,7 +335,7 @@ const render_drag_node = function(options) {
 							? last_key
 							: user_target_key
 					// if the user enter the same position didn't nothing and close
-					if(paginated_key === target_key){
+					if(paginated_key===target_key){
 						modal.close()
 						return false
 					}
@@ -371,7 +364,7 @@ const render_drag_node = function(options) {
 			target_key_input.addEventListener('keyup',function(evt){
 				switch(true) {
 					// Enter
-					case evt.code === 'Enter' || evt.code === 'NumpadEnter':
+					case evt.code==='Enter' || evt.code==='NumpadEnter':
 						change_order_modal()
 					break;
 				}
@@ -598,7 +591,7 @@ export const render_column_remove = function(options) {
 
 			const delete_dataframe_record = async function() {
 				// check if the show has any ddo that call to any dataframe section.
-				const ddo_dataframe = self.request_config_object.show.ddo_map.find(el => el.is_dataframe === true)
+				const ddo_dataframe = self.request_config_object.show.ddo_map.find(el => el.is_dataframe===true)
 
 				if(!ddo_dataframe){
 					return
@@ -652,7 +645,7 @@ export const render_column_remove = function(options) {
 					// set the focus to the button_unlink
 					button_unlink_record.focus()
 					button_unlink_record.addEventListener('keyup',(e)=>{
-						if(e.key === 'Enter'){
+						if(e.key==='Enter'){
 							button_unlink_record.click()
 						}
 					})
@@ -715,7 +708,7 @@ export const get_buttons = (self) => {
 			})
 
 		// button_update_data_external
-			if( self.show_interface.button_external === true){
+			if( self.show_interface.button_external===true){
 
 				// button_update data external
 					const button_update_data_external = ui.create_dom_element({
@@ -738,7 +731,7 @@ export const get_buttons = (self) => {
 			}//end button external
 
 	// button_add
-		if( self.show_interface.button_add === true){
+		if( self.show_interface.button_add===true){
 			const button_add = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button add',
@@ -787,7 +780,7 @@ export const get_buttons = (self) => {
 		}//end button_add
 
 	// button_link
-		if( self.show_interface.button_link === true){
+		if( self.show_interface.button_link===true){
 			const button_link = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button link',
@@ -864,7 +857,7 @@ export const get_buttons = (self) => {
 		}//end button_link
 
 	// button tree terms selector
-		if( self.show_interface.button_tree === true){
+		if( self.show_interface.button_tree===true){
 			const button_tree_selector = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button gear',
@@ -877,7 +870,7 @@ export const get_buttons = (self) => {
 		}//end button_external
 
 	// buttons tools
-		if( self.show_interface.tools === true){
+		if( self.show_interface.tools===true){
 			if (!is_inside_tool && self.mode==='edit') {
 				ui.add_tools(self, buttons_fold)
 			}

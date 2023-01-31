@@ -10,14 +10,14 @@ class area extends area_common  {
 	static $ar_ts_children_all_areas_hierarchized;
 
 	# CHILDREN AREAS CRITERION
-	static $ar_children_include_model_name = array('area','section','section_tool');
+	static $ar_children_include_model_name	= array('area','section','section_tool');
 	static $ar_children_exclude_modelo_name	= array('login','tools','section_list','filter');
 
 
 
 	/**
 	* GET AREAS RECURSIVE IN JSON FORMAT OF ALL MAJOR AREAS
-	* Iterate all major existing area tipes (area_root,area_resource,area_admin, ...)
+	* Iterate all major existing area types (area_root,area_resource,area_admin, ...)
 	* and get all tipos of every one mixed in one full ontology JSON array
 	* Used in menu and security access
 	* @see menu, component_security_access
@@ -27,7 +27,7 @@ class area extends area_common  {
 
 		// gc_disable();
 
-		// /session_start();
+		// session_start();
 
 		if(SHOW_DEBUG===true) {
 			$start_time = start_time();
@@ -96,7 +96,7 @@ class area extends area_common  {
 					}
 			}//end foreach ($ar_root_areas as $area_tipo)
 
-		# cache session. Store in session for speed
+		// cache session. Store in session for speed
 			// $_SESSION['dedalo']['ontology']['all_areas'][DEDALO_APPLICATION_LANG] = $areas;
 
 		// debug
@@ -117,11 +117,12 @@ class area extends area_common  {
 	* GET AR CHILDREN AREAS RECURSIVE
 	* Get all children areas (and sections) of current area (example: area_root)
 	* Look structure thesaurus for find children with valid model name
-	* @param $terminoID
-	*	tipo recursive. First tipo is null
-	* @return $ar_ts_children_areas
-	*	array recursive of thesaurus structure children filtered by acepted model name
 	* @see get_ar_ts_children_areas
+	*
+	* @param $terminoID
+	*	tipo (First tipo is null in recursion)
+	* @return $ar_ts_children_areas
+	*	array recursive of thesaurus structure children filtered by accepted model name
 	*/
 	protected static function get_ar_children_areas_recursive(string $terminoID) : array {
 
@@ -166,7 +167,7 @@ class area extends area_common  {
 	public static function get_config_areas() : object {
 
 		if( !include(DEDALO_CONFIG_PATH . '/config_areas.php') ) {
-			debug_log(__METHOD__." ERROR ON LOAD FILE config4_areas . Using empy values as default ".to_string(), logger::ERROR);
+			debug_log(__METHOD__." ERROR ON LOAD FILE config4_areas . Using empty values as default ".to_string(), logger::ERROR);
 			if(SHOW_DEBUG===true) {
 				throw new Exception("Error Processing Request. config4_areas file not found", 1);;
 			}
@@ -236,7 +237,7 @@ class area extends area_common  {
 	* to obtain hierarchically the structure children of current area component (example: area_root)
 	* Method common for all area objects (area_root, area_resource, area_admin)
 	* @param $include_main_tipo
-	*	bool(true) default true. Case 'false', current tipo is omited as parent in results
+	*	bool(true) default true. Case 'false', current tipo is omitted as parent in results
 	* @see menu
 	*/
 	public function get_ar_ts_children_areas(bool $include_main_tipo=true) : array {
@@ -293,7 +294,7 @@ class area extends area_common  {
 				$model			= RecordObj_dd::get_modelo_name_by_tipo($children_terminoID,true);
 				$visible		= $RecordObj_dd->get_visible();
 
-				# Test if modelo name is accepted or not (more restrictive)
+				# Test if model name is accepted or not (more restrictive)
 				if( $visible!=='no' && in_array($model, $this->ar_children_include_model_name) && !in_array($model, $this->ar_children_exclude_modelo_name) ) {
 
 					$ar_temp = $this->get_ar_ts_children_areas_recursive($children_terminoID);
@@ -310,5 +311,3 @@ class area extends area_common  {
 
 
 }//end area class
-
-
