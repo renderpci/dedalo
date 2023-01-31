@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, ddEditor */
+/*global  */
 /*eslint no-undef: "error"*/
 
 
@@ -175,6 +175,9 @@ export const on_dragend = function(node, event) {
 /**
 * ON_DROP
 * Get data path from event.dataTransfer and call to build required component html
+* @param DOM node
+* @param event event
+* @param object options
 * @return bool true
 */
 export const on_drop = function(node, event, options) {
@@ -201,11 +204,12 @@ export const on_drop = function(node, event, options) {
 	// sort data with the old and new position
 	// the locator will be checked in server to be sure that the source position
 	// is the same that the data in the server, if not the server will send a error
-	const sort_data_options = {
-		value		: data_parse.locator,
-		source_key	: data_parse.paginated_key,
-		target_key	: options.paginated_key
-	}
+		const offset = self.paginator.offset || 0
+		const sort_data_options = {
+			value		: data_parse.locator,
+			source_key	: data_parse.locator.paginated_key,
+			target_key	: options.paginated_key + offset
+		}
 
 	// exec async sort_data (call to API)
 		self.sort_data(sort_data_options)
