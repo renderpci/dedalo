@@ -2825,6 +2825,8 @@
 		Fix z-index issue in ontology tree mark tag
 	Released version 5.9.4
 		Check tm permissions to show or hide tm_list and component_history in inspector
+		Added default_section for users to go specific section after login
+		Final master version of v5
 	[/HISTORY]
 
 
@@ -2848,13 +2850,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.9.3a';
+	$DEDALO_VERSION = '5.9.4';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '24-01-2023T20:48:00');
+	define('DEDALO_BUILD'	, '31-01-2023T20:48:00');
 
 
 
