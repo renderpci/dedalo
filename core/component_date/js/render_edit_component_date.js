@@ -1,4 +1,4 @@
-/* global get_label, page_globals */
+/* global get_label, page_globals, flatpickr */
 /*eslint no-undef: "error"*/
 
 
@@ -250,10 +250,7 @@ export const input_element_period = (i, current_value, self) => {
 				}
 			})
 			input_year.addEventListener('keyup', function(e) {
-				if (e.key==='Enter') {
-					e.preventDefault()
-					this.dispatchEvent(new Event('change'));
-				}
+				keyup_handler(e, i, self)
 			})
 			input_year.addEventListener('change', function(){
 				collect_data(input_year, input_month, input_day)
@@ -281,9 +278,7 @@ export const input_element_period = (i, current_value, self) => {
 				}
 			})
 			input_month.addEventListener('keyup', function(e) {
-				if (e.key==='Enter') {
-					this.dispatchEvent(new Event('change'));
-				}
+				keyup_handler(e, i, self)
 			})
 			input_month.addEventListener('change', function(){
 				collect_data(input_year, input_month, input_day)
@@ -311,9 +306,7 @@ export const input_element_period = (i, current_value, self) => {
 				}
 			})
 			input_day.addEventListener('keyup', function(e) {
-				if (e.key==='Enter') {
-					this.dispatchEvent(new Event('change'));
-				}
+				keyup_handler(e, i, self)
 			})
 			input_day.addEventListener('change', function(){
 				collect_data(input_year, input_month, input_day)
@@ -378,58 +371,62 @@ export const input_element_period = (i, current_value, self) => {
 */
 export const input_element_time = (i, current_value, self) => {
 
-	// const date_mode = self.get_date_mode()
+	// input_value
+		const input_value = (current_value)
+			? self.time_to_string(current_value.start)
+			: ''
 
-	const input_value = (current_value)
-		? self.time_to_string(current_value.start)
-		: ''
-
-	// create div end
-	const input_wrap = ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'flatpickr input-group',
-	})
-
-	const input = ui.create_dom_element({
-		element_type	: 'input',
-		type			: 'text',
-		class_name		: 'input_time',
-		value			: input_value,
-		placeholder		: self.get_placeholder_value(),
-		parent			: input_wrap
-	})
-	input.addEventListener('focus', function() {
-		// force activate on input focus (tabulating case)
-		if (!self.active) {
-			ui.component.activate(self)
-		}
-	})
-	input.addEventListener('keyup', function(e) {
-		if (e.key==='Enter') {
-			this.dispatchEvent(new Event('change'));
-		}
-	})
-	input.addEventListener('change', function(){
-		const response = self.parse_string_time(input.value)
-		if(response.error){
-			alert(response.error[0].msg)
-			ui.component.error(true, input_wrap)
-			return false
-		}
-		ui.component.error(false, input_wrap)
-
-		const value = {start:response.result}
-
-		const changed_data = [Object.freeze({
-			action	: 'update',
-			key		: i,
-			value	: value
-		})]
-		self.change_value({
-			changed_data	: changed_data,
-			refresh			: false
+	// input_wrap. create div end
+		const input_wrap = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'flatpickr input-group',
 		})
-	})
+
+	// input
+		const input = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'text',
+			class_name		: 'input_time',
+			value			: input_value,
+			placeholder		: self.get_placeholder_value(),
+			parent			: input_wrap
+		})
+		input.addEventListener('focus', function() {
+			// force activate on input focus (tabulating case)
+			if (!self.active) {
+				ui.component.activate(self)
+			}
+		})
+		input.addEventListener('keyup', function(e) {
+			keyup_handler(e, i, self)
+		})
+		input.addEventListener('change', function(){
+
+			// parse value
+			const response = self.parse_string_time(input.value)
+
+			// error case
+				if(response.error){
+					alert(response.error[0].msg)
+					ui.component.error(true, input_wrap)
+					return false
+				}
+
+			// success. reset component error styles
+				ui.component.error(false, input_wrap)
+
+			// changed_data
+				const value = {start:response.result}
+				const changed_data = [Object.freeze({
+					action	: 'update',
+					key		: i,
+					value	: value
+				})]
+				self.change_value({
+					changed_data	: changed_data,
+					refresh			: false
+				})
+		})
 
 	// button_calendar
 		const button_calendar = ui.create_dom_element({
@@ -439,27 +436,32 @@ export const input_element_time = (i, current_value, self) => {
 		})
 		button_calendar.addEventListener('mouseup', function() {
 
-			const default_time		= input.value
-			const ar_time_format	= ['H','i','S']
-			const time_format		= ar_time_format.join(self.time_separator)
+			// short vars
+				const default_time		= input.value
+				const ar_time_format	= ['H','i','S']
+				const time_format		= ar_time_format.join(self.time_separator)
 
-			const datePicker = flatpickr(button_calendar, {
-				enableTime		: true,
-				noCalendar		: true,
-				time_24hr		: true,
-				enableSeconds	: true,
-				dateFormat		: time_format,
-				defaultDate		: default_time,
-				// onClose		: close_flatpickr,
-				// onValueUpdate
-				onClose			: function(selectedDates, dateStr, instance){
-					ui.component.error(false, input_wrap)
-					input.value = dateStr
-					input.dispatchEvent(new Event('change'))
-					// self.update_value_flatpickr(selectedDates, dateStr, instance, self, e.target)
-				}
-			})
-			datePicker.open()
+			// datePicker
+				const datePicker = flatpickr(button_calendar, {
+					enableTime		: true,
+					noCalendar		: true,
+					time_24hr		: true,
+					enableSeconds	: true,
+					dateFormat		: time_format,
+					defaultDate		: default_time,
+					// onClose		: close_flatpickr,
+					// onValueUpdate
+					onClose			: function(selectedDates, dateStr){
+						// reset style error
+						ui.component.error(false, input_wrap)
+						// set input value
+						input.value = dateStr
+						// fire change event
+						input.dispatchEvent(new Event('change'))
+						// self.update_value_flatpickr(selectedDates, dateStr, instance, self, e.target)
+					}
+				})
+				datePicker.open()
 		})
 
 
@@ -496,19 +498,23 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 			}
 		})
 		input.addEventListener('keyup', function(e) {
-			if (e.key==='Enter') {
-				this.dispatchEvent(new Event('change'));
-			}
+			keyup_handler(e, i, self, input, input_wrap, mode)
 		})
 		input.addEventListener('change', function() {
 
-			const response = self.parse_string_date(input.value)
-			if(response.error){
-				alert(response.error[0].msg)
-				ui.component.error(true, input_wrap)
-				return false
-			}
-			ui.component.error(false, input_wrap)
+			// parse value
+				const response = self.parse_string_date(input.value)
+
+			// invalid value case
+				if(response.error){
+					alert(response.error[0].msg)
+					ui.component.error(true, input_wrap)
+					return false
+				}
+
+			// error style rest
+				ui.component.error(false, input_wrap)
+
 
 			if (self.mode==='search') {
 
@@ -578,20 +584,126 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 			const date_format = ar_date_format.join(self.date_separator)
 			const default_date = input.value
 
-			const datePicker = flatpickr(button_calendar, {
-				dateFormat	: date_format,
-				defaultDate	: default_date,
-				allowInput	: true,
-				// onClose 	  : close_flatpickr,
-				onValueUpdate : function(selectedDates, dateStr, instance){
-					ui.component.error(false, input_wrap)
-					input.value = dateStr
-					input.dispatchEvent(new Event('change'))
-				}
-			})
-			datePicker.open()
+			// datePicker
+				const datePicker = flatpickr(button_calendar, {
+					dateFormat	: date_format,
+					defaultDate	: default_date,
+					allowInput	: true,
+					// onClose 	  : close_flatpickr,
+					onValueUpdate : function(selectedDates, dateStr){
+						ui.component.error(false, input_wrap)
+						input.value = dateStr
+						input.dispatchEvent(new Event('change'))
+					}
+				})
+				datePicker.open()
 		})
 
 
 	return input_wrap
 }//end get_input_date_node
+
+
+
+/**
+* KEYUP_HANDLER
+* Store current value in self.data.changed_data
+* If key pressed is 'Enter', force save the value
+* @param event e
+* @param int key
+* @param object self
+* @return bool
+*/
+export const keyup_handler = function(e, key, self, input, input_wrap, mode) {
+	e.preventDefault()
+
+	/* 31-01-2023 working here to unify component keyup_handler and save with component_input_text model
+
+	// parse value
+		const response = self.parse_string_date(input.value)
+
+	// invalid value case
+		if(response.error){
+			// alert(response.error[0].msg)
+			// ui.component.error(true, input_wrap)
+			// return false
+		}
+
+	// error style reset
+		ui.component.error(false, input_wrap)
+
+	// Enter key force to save changes
+		if (e.key==='Enter') {
+
+			// force to save current input if changed
+				// const changed_data = self.data.changed_data || []
+				// // change_value (save data)
+				// self.change_value({
+				// 	changed_data	: changed_data,
+				// 	refresh			: false
+				// })
+		}else{
+
+			if (self.mode==='search') {
+
+				// parsed_value
+					// const parsed_value = (input.value.length>0) ? input.value : null
+					const new_value = (response.result.year)
+						? response.result
+						: ''
+					const parsed_value = {
+						start : new_value
+					}
+
+				// changed_data
+					const changed_data_item = Object.freeze({
+						action	: 'update',
+						key		: i,
+						value	: parsed_value
+					})
+
+				// update the instance data (previous to save)
+					self.update_data_value(changed_data_item)
+				// set data.changed_data. The change_data to the instance
+					// self.data.changed_data = changed_data
+				// publish search. Event to update the DOM elements of the instance
+					event_manager.publish('change_search_element', self)
+
+			}else{
+
+				const value = self.data.value[key]
+					? JSON.parse(JSON.stringify(self.data.value[key]))
+					: {mode}
+
+				const new_value = (response.result.year)
+					? response.result
+					: ''
+
+				value[mode] = new_value
+
+				// const changed_data = [Object.freeze({
+				// 	action	: 'update',
+				// 	key		: i,
+				// 	value	: value
+				// })]
+				// self.change_value({
+				// 	changed_data	: changed_data,
+				// 	refresh			: false
+				// })
+				console.log('value:', value);
+
+				// change data
+					const changed_data_item = Object.freeze({
+						action	: 'update',
+						key		: key,
+						value	: value
+					})
+
+				// fix instance changed_data
+					self.set_changed_data(changed_data_item)
+			}
+		}
+
+	*/
+	return true
+}//end keyup_handler
