@@ -210,7 +210,7 @@ const drag_and_drop = function(options) {
 	drag_node.addEventListener('drop',function(e){on_drop(this, e, options)})
 
 	return true
-};//end drag_and_drop
+}//end drag_and_drop
 
 
 
