@@ -174,7 +174,7 @@ const get_3d_control_buttons =  (self) =>{
 		const threeD_begin_button = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: btn_class,
-			inner_html		: get_label.inicio || 'Beginning',
+			inner_html		: get_label.beginning || 'Beginning',
 			parent			: fragment
 		})
 		threeD_begin_button.addEventListener('mouseup', () =>{

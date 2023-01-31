@@ -49,7 +49,7 @@ var button_delete = new function() {
 			// h4 <h4 class="modal-title">Modal title</h4>
 			const h4 = document.createElement("h4")
 				h4.classList.add('modal-title')
-				t = document.createTextNode(get_label.esta_seguro_de_borrar_este_registro)
+				t = document.createTextNode(get_label.are_you_sure_to_delete_this_record) || 'Are you sure to delete this record?'
 				// Add
 				h4.appendChild(t)
 				header.appendChild(h4)
