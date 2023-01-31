@@ -198,7 +198,7 @@ render_search.prototype.render_base = function() {
 		const component_presets_label = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'component_presets_label',
-			inner_html		: get_label.presets_de_busqueda,
+			inner_html		: get_label.search_presets || 'User search preset',
 			parent			: self.search_container_selection_presets
 		})
 
@@ -229,9 +229,10 @@ render_search.prototype.render_base = function() {
 						body.appendChild(section_node)
 						// modal attach
 						const modal_container =ui.attach_to_modal({
-							header	: 'User search preset',
+							header	: get_label.search_presets || 'User search preset',
 							body	: body,
-							footer	: null
+							footer	: null,
+							size 	: 'small'
 						})
 						modal_container.on_close = function(){
 							self.user_presets_section.refresh()
@@ -243,7 +244,7 @@ render_search.prototype.render_base = function() {
 			const button_save_preset = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'button_save_preset hide',
-				inner_html		: get_label.salvar +' '+ get_label.cambios,
+				inner_html		: get_label.save +' '+ get_label.cambios,
 				parent			: search_container_selection_presets
 			})
 			button_save_preset.addEventListener('click', function(e) {

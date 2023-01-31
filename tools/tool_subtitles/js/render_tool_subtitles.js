@@ -651,7 +651,7 @@ const get_custom_buttons = (self, text_editor, i) => {
 			}
 		})
 	// button_save
-		const save_label = get_label.salvar.replace(/<\/?[^>]+(>|$)/g, "") || "Save"
+		const save_label = get_label.save.replace(/<\/?[^>]+(>|$)/g, "") || "Save"
 		custom_buttons.push({
 			name			: "button_save",
 			manager_editor	: false,

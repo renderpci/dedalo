@@ -258,7 +258,7 @@ const get_buttons = function(self) {
 			const filter_button	= ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'warning search',
-				inner_html		: get_label.buscar || 'Search',
+				inner_html		: get_label.find || 'Search',
 				parent			: buttons_container
 			})
 			filter_button.addEventListener('mousedown', function(e) {

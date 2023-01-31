@@ -120,7 +120,7 @@ const get_content_value = (key, current_value, self) => {
 					const button_save = ui.create_dom_element({
 						element_type	: 'button',
 						class_name		: 'warning save button_save',
-						inner_html		: get_label.salvar || 'Save',
+						inner_html		: get_label.save || 'Save',
 						parent			: content_value
 					})
 					button_save.addEventListener('click', function(e) {

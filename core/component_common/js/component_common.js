@@ -415,7 +415,7 @@ component_common.prototype.save = async function(changed_data) {
 					event_manager.publish('save', {
 						instance		: self,
 						api_response	: null,
-						msg				: get_label.dato_no_modificado || 'The data was not modified. Canceled save'
+						msg				: get_label.data_was_not_modified_save_canceled || 'The data was not modified. Canceled save'
 					})
 
 				// page unload event

@@ -92,7 +92,7 @@ view_note_text_area.render = async function(self, options) {
 					button_delete.addEventListener('click', async function(e) {
 						e.stopPropagation()
 
-						if (!confirm(get_label.seguro || 'Sure?')) {
+						if (!confirm(get_label.sure || 'Sure?')) {
 							return
 						}
 

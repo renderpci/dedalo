@@ -127,7 +127,7 @@ const get_content_data = function(self) {
 			const button_search = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'light search',
-				title			: get_label.buscar || "Search",
+				title			: get_label.find || "Search",
 				parent			: buttons_container
 			})
 			button_search.addEventListener('click', function(e){
