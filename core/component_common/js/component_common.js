@@ -1198,9 +1198,9 @@ component_common.prototype.set_changed_data = function(changed_data_item) {
 		const new_value			= changed_data_item.value
 
 		// debug
-			// console.log('original_value:', original_value);
-			// console.log('new_value:', new_value);
-			// console.log('is_equal:', is_equal(new_value, original_value));
+			// console.log('original_value (DDBB):', clone(original_value));
+			// console.log('new_value (changed_data_item):', clone(new_value));
+			// console.log('is_equal:', is_equal(clone(new_value), clone(original_value)));
 
 		if (is_equal(new_value, original_value)) {
 			set_before_unload(false)

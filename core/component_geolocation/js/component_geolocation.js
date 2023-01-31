@@ -158,7 +158,7 @@ component_geolocation.prototype.init = async function(options) {
 				)
 
 			await Promise.all(load_promises)
-			.then(async function(response){
+			.then(async function(){
 				// console.log('All component_geolocation items are loaded:', response);
 			})
 
@@ -205,11 +205,12 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 				alt		: field_alt,
 			  }
 			: {
-				x		: default_lat,
-				y		: default_lon,
-				zoom	: default_zoom,
-				alt		: default_alt
+				x		: self.default_value.lat,
+				y		: self.default_value.lon,
+				zoom	: self.default_value.zoom,
+				alt		: self.default_value.alt
 			 }
+
 
 	// new map vars
 		let arcgis		= null
@@ -343,7 +344,7 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 	// if (self.map.tap) self.map.tap.disable();
 
 	// map move listeners
-		self.map.on('dragend', function(e){
+		self.map.on('dragend', function(){
 
 			// Update input values
 			self.update_input_values(
@@ -356,7 +357,7 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 				map_container
 			)
 		});
-		self.map.on('zoomend', function(e){
+		self.map.on('zoomend', function(){
 			// Update input values
 			self.update_input_values(
 				key,
@@ -369,7 +370,7 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 				map_container
 			)
 		});
-		self.map.on('click', function(e){
+		self.map.on('click', function(){
 
 			for (let feature in self.FeatureGroup) {
 				const feature_group = self.FeatureGroup[feature]
@@ -547,12 +548,12 @@ component_geolocation.prototype.load_layer = function(layer){
 	const self = this
 
 	// set the layer data
-		const layer_id			= layer.layer_id
-		const layer_data		= layer.layer_data
-		const layer_name		= 'layer_' +layer_id
-		const user_layer_name	= typeof(layer.user_layer_name)!=='undefined'
-			? layer.user_layer_name
-			: layer_name
+		const layer_id				= layer.layer_id
+		const layer_data			= layer.layer_data
+		// const layer_name			= 'layer_' +layer_id
+		// const user_layer_name	= typeof(layer.user_layer_name)!=='undefined'
+		// 	? layer.user_layer_name
+		// 	: layer_name
 
 	// FEATUREGROUP BUILD : Verify if exist FeatureGroup, else create it. map is global var
 	// if( self.map.hasLayer(self.FeatureGroup[layer_id])===false ) {
@@ -681,9 +682,11 @@ component_geolocation.prototype.load_tag_into_geo_editor = async function(option
 }//end load_tag_into_geo_editor
 
 
+
 /**
 * GET_DATA_TAG
 * Send the data_tag to the text_area when it need create a new tag
+* @return object data_tag
 */
 component_geolocation.prototype.get_data_tag = function() {
 
@@ -725,7 +728,7 @@ component_geolocation.prototype.get_lib_data = function() {
 
 	const self = this
 
-	const lib_data = typeof (self.data.value[0]) !== 'undefined' && typeof (self.data.value[0].lib_data) !== 'undefined'
+	const lib_data = typeof (self.data.value[0])!=='undefined' && typeof (self.data.value[0].lib_data)!=='undefined'
 		? self.data.value[0].lib_data
 		: [{
 				layer_id 		: 1,
@@ -795,9 +798,10 @@ component_geolocation.prototype.get_popup_content = function(layer, layer_id) {
 
 	// Rectangle/Polygon - area
 	} else if (layer instanceof L.Polygon) {
-		const latlngs	= layer._defaultShape ? layer._defaultShape() : layer.getLatLngs()
-		const geojson	= layer.toGeoJSON()
-		const area		= turf.area(geojson)
+
+		// const latlngs	= layer._defaultShape ? layer._defaultShape() : layer.getLatLngs()
+		const geojson		= layer.toGeoJSON()
+		const area			= turf.area(geojson)
 
 		ar_mesures.push(
 			{
@@ -848,6 +852,7 @@ component_geolocation.prototype.get_popup_content = function(layer, layer_id) {
 
 /**
 * STR_LAT_LNG
+* @param object latlng
 * @return string
 * 	Helper method to format LatLng object (x.xxxxxx, y.yyyyyy)
 */
@@ -855,7 +860,9 @@ component_geolocation.prototype.str_lat_lng = function(latlng) {
 
 	const self = this
 
-	return "("+self.round_coordinate(latlng.lat, 6)+", "+self.round_coordinate(latlng.lng, 6)+")";
+	const lat_lng = "("+self.round_coordinate(latlng.lat, 6)+", "+self.round_coordinate(latlng.lng, 6)+")"
+
+	return lat_lng
 }//end str_lat_lng
 
 
@@ -923,7 +930,7 @@ component_geolocation.prototype.init_draw_editor = function() {
 		});
 
 		// Listener for delete the draw editor to "deleted mode" for save the current data of the editable_FeatureGroup
-		map.on('pm:remove', (e) => {
+		map.on('pm:remove', () => {
 			// Update draw_data
 			self.update_draw_data(self.active_layer_id);
 		});
@@ -974,8 +981,8 @@ component_geolocation.prototype.update_draw_data = function(layer_id) {
 			}
 
 			if (layer instanceof L.Circle) {
-				json.properties.shape		= "circle";
-				json.properties.radius		= layer.getRadius();
+				json.properties.shape	= 'circle';
+				json.properties.radius	= layer.getRadius();
 			}
 			features.push(json)
 		});
@@ -1060,12 +1067,12 @@ component_geolocation.prototype.map_update_coordinates = async function(options)
 	// check if the caller has defined 'target_geolocation_tipo' in his properties
 	const tipo = caller.context.properties.target_geolocation_tipo
 		? caller.context.properties.target_geolocation_tipo
-		: "hierarchy31" // Default geolocation map in thesarus
+		: 'hierarchy31' // Default geolocation map in thesarus
 
 	// create the component to get the data
 	// source object
 		const source = {
-			typo			: "source",
+			typo			: 'source',
 			type			: self.type,
 			action			: 'get_data',
 			model			: self.model,
@@ -1123,23 +1130,24 @@ component_geolocation.prototype.map_update_coordinates = async function(options)
 * 	tag_id : 1
 * 	type : 'geo'
 * }
-* @return
+* @return bool
 */
 component_geolocation.prototype.layer_data_change = function(change) {
 
 	const self = this
 
 	// set the layer data
-		const action 		= change.action
+		const action		= change.action
 		const layer_id		= parseInt(change.tag_id)
-		const layer_name	= 'layer_' +layer_id
-		const key = 0; // fixed key (only one element is allowed)
+		const key			= 0; // fixed key (only one element is allowed)
+		// const layer_name	= 'layer_' +layer_id
 
 		switch(action) {
 			case 'insert':
+
 				const layer_loaded = self.ar_layer_loaded.find((item) => item.layer_id===layer_id)
 				if(layer_loaded){
-					return
+					return true
 				}
 				const recover_layer = self.ar_data_buffer[layer_id] ||
 					{
@@ -1164,7 +1172,7 @@ component_geolocation.prototype.layer_data_change = function(change) {
 				.then(()=>{
 					self.db_data.value[key] = clone(self.current_value[key])
 				})
-			break;
+				break;
 
 			case 'remove':
 
@@ -1177,7 +1185,7 @@ component_geolocation.prototype.layer_data_change = function(change) {
 				self.ar_data_buffer[layer_id] = layer;
 				// remove the data of the FeatureGroup
 				if(!self.FeatureGroup[layer_id]){
-					return
+					return false
 				}
 				self.FeatureGroup[layer_id].remove();
 				self.FeatureGroup[layer_id].clearLayers();
@@ -1215,17 +1223,18 @@ component_geolocation.prototype.layer_data_change = function(change) {
 						self.load_layer(next_layer)
 					}
 				})
-
-			break;
+				break;
 		}
 
+	return true
+}//end layer_data_change
 
-};//end layer_data_change
 
 
 /**
 * CREATE_POINT
-* @param point object with the coordinates of the new point
+* @param object point
+* with the coordinates of the new point
 * {
 *	lat : 39.46861766020243, //float
 *	lng : -0.40077683642303136 //float
@@ -1246,19 +1255,21 @@ component_geolocation.prototype.create_point = function(point) {
 	self.update_draw_data(self.active_layer_id)
 
 	return true
-};//end create_point
+}//end create_point
+
 
 
 /**
 * INIT_FEATURE
 * private function
-* @param options object with instance data_layer and layer_id
+* @param object options
+* with instance data_layer and layer_id
 * {
 * 	self  // current instance with all properties
 *	data_layer // object, the feature data (new or loaded)
 *	layer_id // the int of the layer of the feature
 * }
-* @return
+* @return void
 */
 const init_feature = function(options) {
 
@@ -1285,7 +1296,7 @@ const init_feature = function(options) {
 				});
 			}//end if(content)
 		// Click. Listener for each layer, when the user click into one layer, activate it and your feature, deactivate rest of the features and layers
-			data_layer.on('click', function(e) {
+			data_layer.on('click', function() {
 				// ACTIVE_LAYER_ID : Set the current active layer id will be editable with the actual FeatureGroup
 					self.active_layer_id = layer_id;
 
@@ -1327,15 +1338,17 @@ const init_feature = function(options) {
 			self.FeatureGroup[layer_id].addLayer(data_layer)
 	}// end if (data_layer)
 
-};//end init_feature
+}//end init_feature
 
 
 
 
 /**
+* READABLE_AREA
 * @method readable_area(area, metric ): string
 * @return Returns a readable area string in yards or metric.
 * The value will be rounded as defined by the precision option object.
+* @return string area_string
 */
 const readable_area = function (area, metric=true) {
 
@@ -1372,7 +1385,4 @@ const readable_area = function (area, metric=true) {
 	}
 
 	return area_string;
-};//end readable_area
-
-
-
+}//end readable_area
