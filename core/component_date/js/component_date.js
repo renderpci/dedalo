@@ -607,6 +607,92 @@ component_date.prototype.parse_string_time = function(string_time) {
 
 
 /**
+* PARSE_STRING_PERIOD
+* @param object values
+* sample:
+* {
+* 	year : 1987,
+* 	month : 5,
+* 	day : 1
+* }
+* @return object response
+* 	Sample:
+* {
+*	result : dd_date
+* }
+*/
+component_date.prototype.parse_string_period = function(values) {
+
+	// values
+		const year = values.year
+			? parseInt(values.year)
+			: null
+
+		const month = values.month
+			? parseInt(values.month)
+			: null
+
+		const day = values.day
+			? parseInt(values.day)
+			: null
+
+	// final dd_date
+		const dd_date = {}
+
+	// errors
+		const error = []
+
+	// month check
+		if(month){
+			dd_date.month = month
+			// if (month<13) {
+			// 	dd_date.month = month
+			// }else{
+			// 	const error_msg			= get_label.error_invalid_date_format || 'Error: Date format is invalid'
+			// 	const error_msg_second	= get_label.month || 'month'
+			// 	error.push({
+			// 		msg		: error_msg +'. '+ error_msg_second +': '+ month,
+			// 		type	: 'month'
+			// 	})
+			// }
+		}
+
+	// day check
+		if(day){
+			dd_date.day = day
+			// if (day<31) {
+			// 	dd_date.day = day
+			// }else{
+			// 	const error_msg			= get_label.error_invalid_date_format || 'Error: Date format is invalid'
+			// 	const error_msg_second	= get_label.day || 'day'
+			// 	error.push({
+			// 		msg		: error_msg +'. '+ error_msg_second +': '+ day,
+			// 		type	: 'day'
+			// 	})
+			// }
+		}
+
+	// year check
+		if(year){
+			dd_date.year = year
+		}
+
+
+	// response
+		const response = {
+			result : dd_date
+		}
+		if (error.length>0) {
+			response.error = error
+		}
+
+
+	return response
+}//end parse_string_period
+
+
+
+/**
 * FORMAT_DATE (DES)
 * @param string date_value
 * @return object result
