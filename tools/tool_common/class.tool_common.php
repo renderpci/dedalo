@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS TOOL_COMMON
 * Add basic methods for general use in tools
 *
@@ -664,7 +664,7 @@ class tool_common {
 						if(in_array($tool->section_id, $ar_allowed_id)) {
 							$user_tools[] = $tool;
 						}
-						if($tool->always_active){
+						if(isset($tool->always_active)){
 							$user_tools[] = $tool;
 						}
 					}

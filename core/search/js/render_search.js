@@ -15,7 +15,8 @@
 		edit_user_search_preset,
 		save_preset,
 		save_temp_preset,
-		load_user_search_presets
+		load_user_search_presets,
+		presets_section_tipo
 	} from './search_user_presets.js'
 
 
@@ -45,7 +46,8 @@ render_search.prototype.list = async function() {
 
 	// components_list. render section component list [left]
 		const section_elements = await self.get_section_elements_context({
-			section_tipo : self.target_section_tipo
+			section_tipo			: self.target_section_tipo,
+			ar_components_exclude	: self.ar_components_exclude
 		})
 		render_components_list({
 			self				: self,
@@ -213,7 +215,8 @@ render_search.prototype.render_base = function() {
 				e.stopPropagation()
 
 				const section_id = await create_new_search_preset({
-					self : self
+					self			: self,
+					section_tipo	: presets_section_tipo
 				})
 
 				// launch the editor
@@ -932,7 +935,8 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 					}
 
 					const section_elements = await self.get_section_elements_context({
-						section_tipo : self.target_section_tipo
+						section_tipo			: self.target_section_tipo,
+						ar_components_exclude	: self.ar_components_exclude
 					})
 					self.render_components_list({
 						section_tipo		: self.target_section_tipo,

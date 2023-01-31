@@ -47,7 +47,7 @@ export const tool_subtitles = function () {
 	this.service_text_editor_instance	= []
 
 	return true
-};//end page
+}//end page
 
 
 /**
@@ -83,7 +83,7 @@ tool_subtitles.prototype.init = async function(options) {
 	self.service_text_editor = service_ckeditor
 
 	return common_init
-};//end init
+}//end init
 
 
 
@@ -119,7 +119,7 @@ tool_subtitles.prototype.build = async function(autoload=false) {
 
 
 	return common_build
-};//end build_custom
+}//end build_custom
 
 
 /**
@@ -183,7 +183,7 @@ tool_subtitles.prototype.get_subtitles_data = async function(lang) {
 		console.log("self.ar_value:-------------",self.ar_value);
 
 	return true
-};//end get_subtitles_data
+}//end get_subtitles_data
 
 
 
@@ -214,7 +214,7 @@ const proces_ar_data = function(self) {
 		console.log("ar_raw_data:",ar_raw_data);
 
 	return []
-};//end proces_ar_data
+}//end proces_ar_data
 
 
 
@@ -267,7 +267,7 @@ tool_subtitles.prototype.save_value = function() {
 
 
 
-};//end save_value
+}//end save_value
 
 
 

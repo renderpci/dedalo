@@ -1,4 +1,4 @@
-/* global get_label, SHOW_DEBUG */
+/* global  */
 /*eslint no-undef: "error"*/
 
 
@@ -53,6 +53,7 @@ render_search_component_date.prototype.search = async function(options) {
 		})
 		// set pointers
 		wrapper.content_data = content_data
+
 
 	return wrapper
 }//end search
@@ -128,27 +129,23 @@ const get_input_element = (i, current_value, self) => {
 		})
 
 	// input node
-		let input_node = ''
-		// build date base on date_mode
-		switch(date_mode) {
+		const input_node = (() => {
+			// build date input  base don date_mode
+			switch(date_mode) {
+				case 'range':
+					return input_element_range(i, current_value, self)
 
-			case 'range':
-				input_node = input_element_range(i, current_value, self)
-				break;
+				case 'period':
+					return input_element_period(i, current_value, self)
 
-			case 'period':
-				input_node = input_element_period(i, current_value, self)
-				break;
+				case 'time':
+					return input_element_time(i, current_value, self)
 
-			case 'time':
-				input_node = input_element_time(i, current_value, self)
-				break;
-
-			case 'date':
-			default:
-				input_node = input_element_date(i, current_value, self)
-				break;
-		}
+				case 'date':
+				default:
+					return input_element_date(i, current_value, self)
+			}
+		})()
 
 	// add input_node to the content_value
 		content_value.appendChild(input_node)

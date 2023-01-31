@@ -117,6 +117,7 @@ tool_export.prototype.init = async function(options) {
 
 /**
 * BUILD
+* @param autoload = bool
 * @param bool autoload
 */
 tool_export.prototype.build = async function(autoload=false) {
@@ -124,14 +125,10 @@ tool_export.prototype.build = async function(autoload=false) {
 	const self = this
 
 	// call generic common tool build
-		const common_build = await tool_common.prototype.build.call(this, true);
+		const common_build = await tool_common.prototype.build.call(this, autoload);
 
 	try {
 
-		// // get_section_elements_context
-		// 	const section_elements = await self.get_section_elements_context({
-		// 		section_tipo : self.caller.section_tipo
-		// 	})
 
 	} catch (error) {
 		self.error = error

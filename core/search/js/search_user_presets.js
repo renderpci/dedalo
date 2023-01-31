@@ -1,4 +1,4 @@
-/*global page_globals, */
+/*global page_globals, SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
 
@@ -10,8 +10,8 @@
 
 
 // vars
-	const presets_section_tipo							= 'dd623'
-	const temp_presets_section_tipo						= 'dd655'
+	export const presets_section_tipo					= 'dd623'
+	export const temp_presets_section_tipo				= 'dd655'
 	// component_json_preset_tipo. Where preset filter is stored (component_json)
 	const presets_component_json_tipo					= 'dd625'
 	// component_section_value_tipo. Where section_tipo is stored (component_input_text)
@@ -42,7 +42,6 @@ export const get_editing_preset_json_filter = async function(self) {
 		const source				= create_source(self, 'search')
 			  source.tipo			= temp_presets_section_tipo
 			  source.section_tipo	= temp_presets_section_tipo
-
 	// sqo
 		const sqo = {
 			section_tipo	: [temp_presets_section_tipo],
@@ -105,22 +104,46 @@ export const get_editing_preset_json_filter = async function(self) {
 				body : rqo
 			})
 
+		// debug
+			if(SHOW_DEBUG===true) {
+				console.log('))) api_response [get_editing_preset_json_filter]:', api_response);
+			}
+
 		// editing_preset
 			if (api_response.result) {
-				const data = api_response.result.data
-				const component_json_data = data.find(el => el.tipo===presets_component_json_tipo)
+
+				const data					= api_response.result.data || []
+				const component_json_data	= data.find(el => el.tipo===presets_component_json_tipo)
 				if (component_json_data) {
 
 					// fix value
 					self.component_json_data = component_json_data
 
+					// json_filter . component_json_data dato is array, select the first value
 					const json_filter = component_json_data.value && component_json_data.value[0]
 						? component_json_data.value[0]
 						: null
 
 					resolve(json_filter)
 				}else{
-					resolve(null)
+
+					// no section exist case. Create a new one and get new the section_id
+					const section_id = await create_new_search_preset({
+						self			: self,
+						section_tipo	: temp_presets_section_tipo
+					})
+
+					const default_json_filter = {"$and":[]}
+
+					// fix fake value
+					self.component_json_data = {
+						tipo			: presets_component_json_tipo,
+						section_tipo	: temp_presets_section_tipo,
+						section_id		: section_id,
+						value			: [default_json_filter]
+					}
+
+					resolve(default_json_filter)
 				}
 			}else{
 				reject(null)
@@ -378,10 +401,10 @@ export const load_search_preset = async function(options) {
 export const create_new_search_preset = function(options) {
 
 	// options
-		const self = options.self
+		const self			= options.self
+		const section_tipo	= options.section_tipo // temp or user preset section
 
 	// short vars
-		const section_tipo	= self.section_tipo
 		const locator_user	= {
 			section_id		: page_globals.user_id,
 			section_tipo	: 'dd128'
@@ -393,7 +416,7 @@ export const create_new_search_preset = function(options) {
 			const rqo = {
 				action	: 'create',
 				source	: {
-					section_tipo : presets_section_tipo // 'dd623'
+					section_tipo : section_tipo
 				}
 			}
 			const api_response = await data_manager.request({
@@ -408,7 +431,7 @@ export const create_new_search_preset = function(options) {
 					const component_instance_section_tipo = await instances.get_instance({
 						tipo			: presets_component_section_value_tipo, // 'dd642',
 						model			: 'component_input_text',
-						section_tipo	: presets_section_tipo, // 'dd623'
+						section_tipo	: section_tipo,
 						section_id		: new_section_id,
 						mode			: 'edit'
 					})
@@ -416,7 +439,7 @@ export const create_new_search_preset = function(options) {
 					const changed_data_section = [{
 						action	: 'insert',
 						key		: 0,
-						value	: section_tipo
+						value	: self.section_tipo
 					}]
 					await component_instance_section_tipo.save(changed_data_section)
 
@@ -424,7 +447,7 @@ export const create_new_search_preset = function(options) {
 					const component_instance_user = await instances.get_instance({
 						tipo			: presets_component_user_id_value_tipo, // 'dd654',
 						model			: 'component_select',
-						section_tipo	: presets_section_tipo, // 'dd623'
+						section_tipo	: section_tipo,
 						section_id		: new_section_id,
 						mode			: 'edit'
 					})
@@ -439,6 +462,7 @@ export const create_new_search_preset = function(options) {
 				resolve(new_section_id)
 			}else{
 				console.error('Error on create new preset section. api_response: ', api_response);
+				resolve(false)
 			}
 	})
 }//end create_new_search_preset

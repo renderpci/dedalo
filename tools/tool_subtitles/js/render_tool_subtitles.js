@@ -19,7 +19,7 @@
 export const render_tool_subtitles = function() {
 
 	return true
-};//end render_tool_subtitles
+}//end render_tool_subtitles
 
 
 
@@ -56,7 +56,7 @@ render_tool_subtitles.prototype.edit = async function(options={render_level:'ful
 
 
 	return wrapper
-};//end render_tool_subtitles
+}//end render_tool_subtitles
 
 
 
@@ -320,7 +320,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-};//end get_content_data_edit
+}//end get_content_data_edit
 
 
 
@@ -397,7 +397,7 @@ const render_subtitles_options = async function(self, content_data) {
 		}
 
 	return fragment
-};//end render_subtitles_options
+}//end render_subtitles_options
 
 
 
@@ -428,7 +428,7 @@ const render_activity_info = function(self) {
 
 
 	return fragment
-};//end render_activity_info
+}//end render_activity_info
 
 
 
@@ -784,7 +784,7 @@ const get_custom_events = (self, i, text_editor) => {
 
 
 // 	return contenteditable_buttons
-// };//end get_contenteditable_buttons
+// }//end get_contenteditable_buttons
 
 
 

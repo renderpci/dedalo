@@ -128,6 +128,20 @@ search.prototype.init = async function(options) {
 		self.id									= 'search'
 		self.section_id							= 0
 
+		// ar_components_exclude. Custom list of elements to exclude in the left list (section fields)
+		self.ar_components_exclude = [
+			'component_password',
+			'component_image',
+			'component_av',
+			'component_pdf',
+			'component_security_administrator',
+			'component_geolocation',
+			'component_info',
+			'component_state',
+			'component_semantic_node',
+			'section_tab'
+		];
+
 	// events subscription
 		// change_search_element. Update value, subscription to the changes: if the DOM input value was changed,
 		// observers DOM elements will be changed own value with the observable value
@@ -201,7 +215,7 @@ search.prototype.build = async function() {
 				// debug
 					if(SHOW_DEBUG===true) {
 						if (!json_filter) {
-							console.log("[search.build] No preset was found (search editing_preset):", self.section_tipo, json_filter);
+							console.log("[search.build] No preset was found (search editing_preset). Using default filter:", self.section_tipo, json_filter);
 						}
 					}
 				// fix value
@@ -215,7 +229,8 @@ search.prototype.build = async function() {
 		ar_promises.push( new Promise(function(resolve){
 
 			self.get_section_elements_context({
-				section_tipo : self.section_tipo
+				section_tipo			: self.section_tipo,
+				ar_components_exclude	: self.ar_components_exclude
 			})
 			.then(function(response){
 				resolve(response)
@@ -232,107 +247,6 @@ search.prototype.build = async function() {
 
 	return true
 }//end build
-
-
-
-/**
-* DES RENDER
-* @return promise resolve DOM element filter_wrapper
-*/
-	// search.prototype.render = async function() {
-
-	// 	const self = this
-
-	// 	// render base html bounds
-	// 		const filter_wrapper = await self.render_base()
-
-	// 	// render section component list [left]
-	// 		await self.render_components_list({
-	// 			section_tipo	: self.target_section_tipo,
-	// 			target_div		: self.search_container_selector,
-	// 			path			: []
-	// 		})
-
-	// 	// render components from temp preset [center]
-	// 		await self.render_filter({
-	// 			editing_preset		: self.json_filter,
-	// 			allow_duplicates	: true
-	// 		})
-
-	// 	// render buttons
-	// 		await self.render_search_buttons()
-
-	// 	// search_panel cookie state track
-	// 		if(self.cookie_track("search_panel")===true) {
-	// 			// Open search panel
-	// 			toggle_search_panel(self) // toggle to open from defult state close
-	// 		}
-	// 	// fields_panel cookie state track
-	// 		if(self.cookie_track("fields_panel")===true) {
-	// 			// Open search panel
-	// 			toggle_fields(self) // toggle to open from defult state close
-	// 		}
-	// 	// presets_panel cookie state track
-	// 		if(self.cookie_track("presets_panel")===true) {
-	// 			// Open search panel
-	// 			toggle_presets(self) // toggle to open from defult state close
-	// 		}
-
-	// 	// Set initial state as unchanged
-	// 	//self.update_state({state:'unchanged'})
-
-
-	// 	// status update
-	// 		self.status = 'rendered'
-
-
-	// 	return filter_wrapper
-	// }//end render
-
-
-
-/**
-* DES GET_SECTION_ELEMENTS_CONTEXT
-* Call to dd_core_api to obtain the list of components associated to current options section_tipo
-* @param object options
-*	string options.section_tipo
-* @return promise
-*/
-	// search.prototype.get_section_elements_context = async function(options) {
-
-	// 	const self = this
-
-	// 	// section_tipo (string|array)
-	// 		const section_tipo 	= options.section_tipo
-
-	// 	// components
-	// 		const get_components = async () => {
-	// 			if (self.components_list[section_tipo]) {
-
-	// 				return self.components_list[section_tipo]
-
-	// 			}else{
-
-	// 				// load data
-	// 					const api_response = await data_manager.request({
-	// 						body : {
-	// 							action			: "get_section_elements_context",
-	// 							context_type	: 'simple',
-	// 							ar_section_tipo	: section_tipo
-	// 						}
-	// 					})
-
-	// 				// fix
-	// 					self.components_list[section_tipo] = api_response.result
-
-	// 				return api_response.result
-	// 			}
-	// 		}
-	// 		const components = get_components()
-
-
-	// 	return components
-	// }//end get_section_elements_context
 
 
 

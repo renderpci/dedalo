@@ -1,4 +1,4 @@
-/*global get_label, Promise, SHOW_DEBUG */
+/*global  */
 /*eslint no-undef: "error"*/
 
 
@@ -51,7 +51,7 @@ view_mosaic_edit_portal.render = async function(self, options) {
 		const render_level 	= options.render_level || 'full'
 
 	// alt_list_body. Alternative table view node with all ddo in table mode
-		const alt_list_body = await (async ()=>{
+		await (async ()=>{
 
 			// alt_list_body
 				const alt_list_body = ui.create_dom_element({
@@ -107,7 +107,7 @@ view_mosaic_edit_portal.render = async function(self, options) {
 		})()
 
 	// hover_body. Alternative section_record with selected ddo to show when user hover the mosaic
-		const hover_body = await (async ()=>{
+		await (async ()=>{
 
 			// hover_body
 				const hover_body = ui.create_dom_element({
@@ -278,8 +278,7 @@ const get_content_data = async function(self, ar_section_record) {
 							caller 				: self
 						})
 
-						// mouseover event
-							// section_record_node.addEventListener('mouseover',function(e){
+						// mouseenter event
 							section_record_node.addEventListener('mouseenter',function(e){
 								e.stopPropagation()
 								const event_id = `mosaic_hover_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
@@ -347,7 +346,7 @@ const drag_and_drop = function(options) {
 	drag_node.addEventListener('drop',function(e){on_drop(this, e, options)})
 
 	return true
-};//end drag_and_drop
+}//end drag_and_drop
 
 
 
@@ -442,6 +441,7 @@ const render_alternative_table_view = async function(self, ar_section_record, al
 			fragment.appendChild(references_node)
 		}
 
+
 	return fragment
 }//end render_alternative_table_view
 
@@ -478,7 +478,7 @@ const render_hover_view = async function(self, ar_section_record, hover_body) {
 						class_name		: 'button_alt_container',
 						parent			: section_record_node
 					})
-					const button_alt = ui.create_dom_element({
+					ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'button info with_bg',
 						parent			: button_alt_container

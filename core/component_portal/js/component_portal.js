@@ -1,4 +1,4 @@
-/* global get_label, page_globals, SHOW_DEBUG */
+/* global get_label, SHOW_DEBUG, SHOW_DEVELOPER */
 /* eslint no-undef: "error" */
 
 
@@ -988,8 +988,14 @@ component_portal.prototype.delete_locator = function(locator, ar_properties) {
 
 
 /**
-* ORDER_DATA
-* @return
+* SORT_DATA
+* Create ad saves new sorted values
+* Used by on_drop method
+* @see on_drop
+*
+* @param object options
+* @return object
+*  API request response
 */
 component_portal.prototype.sort_data = async function(options) {
 
@@ -1009,14 +1015,14 @@ component_portal.prototype.sort_data = async function(options) {
 		})]
 
 	// exec async change_value
-		const result = self.change_value({
+		const result = await self.change_value({
 			changed_data	: changed_data,
 			refresh			: true
 		})
 
 
 	return result
-};//end order_data
+}//end sort_data
 
 
 
