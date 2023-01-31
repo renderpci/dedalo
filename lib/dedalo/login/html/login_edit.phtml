@@ -113,8 +113,8 @@
 			// js
 				$html_content .= '<script>';
 				$init_options = new stdClass();
-					$init_options->development_server  		= DEVELOPMENT_SERVER;
-					$init_options->dedalo_maintenance_mode 	= DEDALO_MAINTENANCE_MODE;
+					$init_options->development_server		= DEVELOPMENT_SERVER;
+					$init_options->dedalo_maintenance_mode	= DEDALO_MAINTENANCE_MODE;
 				$html_content .= "login.init(".json_encode($init_options).");";
 				$html_content .= '</script>';
 

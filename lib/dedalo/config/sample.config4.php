@@ -243,7 +243,7 @@
 	]));
 
 	# Fallback section
-	define('MAIN_FALLBACK_SECTION',				'oh1'); # go after login (tipo inventory)
+	define('MAIN_FALLBACK_SECTION',				'oh1'); # go after login (tipo inventory) forbidden 'dd242'!
 	# NUMERICAL MATRIX VALUES. List of values 'yes/no' : used in login secuence before enter to system
 	define('NUMERICAL_MATRIX_VALUE_YES',		1);
 	define('NUMERICAL_MATRIX_VALUE_NO',			2);

@@ -263,17 +263,28 @@ class login extends common {
 
 					// Full_username
 						$full_username = login::get_full_username($user_id);
+						$result 	= new stdClass();
+							$result->login = false;
 
 					// Login (all is ok) - init login secuence when all is ok
 						$init_user_login_secuence = login::init_user_login_secuence($user_id, $username, $full_username);
 						if ($init_user_login_secuence->result===false) {
 							# RETURN FALSE
-							$response->result = false;
+							$response->result = $result;
 							$response->msg 	  = $init_user_login_secuence->msg;
 							$response->errors = isset($init_user_login_secuence->errors) ? $init_user_login_secuence->errors : [];
 						}else if($init_user_login_secuence->result===true) {
 							# RETURN OK AND RELOAD PAGE
-							$response->result = true;
+							$default_section = login::get_default_section($user_id);
+
+							$safe_tipo = !empty($default_section) && true===valid_tipo($default_section)
+								? $default_section
+								: MAIN_FALLBACK_SECTION;
+
+							$result->login 	= true;
+							$result->default_section = $default_section;
+
+							$response->result = $result;
 							$response->msg 	  = " Login.. ";
 							$response->errors = isset($init_user_login_secuence->errors) ? $init_user_login_secuence->errors : [];
 						}
@@ -574,6 +585,27 @@ class login extends common {
 		return (bool)$user_have_projects;
 	}//end user_have_projects_check
 
+
+	/**
+	* GET_DEFAULT_SECTION
+	* @param int $section_id (is user section id)
+	* @return string $default_section (tipo as oh1)
+	*/
+	public static function get_default_section($section_id) {
+
+		$component = component_common::get_instance('component_input_text',
+													DEDALO_USER_COMPONENT_DEFAULT_SECTION,
+													$section_id,
+													'list',
+													DEDALO_DATA_NOLAN,
+													DEDALO_SECTION_USERS_TIPO);
+		$default_section = $component->get_dato();
+		$default_section = !empty($default_section)
+			? reset($default_section)
+			: null;
+
+		return $default_section;
+	}//end get_default_section
 
 
 	/**

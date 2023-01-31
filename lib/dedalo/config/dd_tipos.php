@@ -28,6 +28,7 @@ define('DEDALO_USER_COMPONENT_FILTER_RECORDS_TIPO'		, 'dd478');
 define('DEDALO_USER_DEVELOPER_TIPO'						, 'dd515');
 define('DEDALO_USER_EMAIL_TIPO'							, 'dd134');
 define('DEDALO_USER_IMAGE_TIPO'							, 'dd522');
+define('DEDALO_USER_COMPONENT_DEFAULT_SECTION'			, 'dd1603');// Set default section after login to user
 
 // Profiles
 define('DEDALO_SECTION_PROFILES_TIPO'					, 'dd234');
