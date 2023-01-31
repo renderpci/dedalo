@@ -2848,13 +2848,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.9.3a';
+	$DEDALO_VERSION = '5.9.3b';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '24-01-2023T20:48:00');
+	define('DEDALO_BUILD'	, '31-01-2023T12:14:00');
 
 
 
