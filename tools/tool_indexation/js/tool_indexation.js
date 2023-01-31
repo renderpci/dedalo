@@ -94,9 +94,18 @@ tool_indexation.prototype.init = async function(options) {
 
 	// label_states
 		self.label_states = [
-			{ label	: get_label.etiqueta_normal,	value : 'n' },
-			{ label	: get_label.etiqueta_borrada,	value : 'd' },
-			{ label	: get_label.etiqueta_revisar,	value : 'r' }
+			{
+				label	: get_label.label_normal || 'Normal',
+				value	: 'n'
+			},
+			{
+				label	: get_label.label_deleted || 'Deleted',
+				value	: 'd'
+			},
+			{
+				label	: get_label.label_to_review || 'To review',
+				value	: 'r'
+			}
 		]
 
 	// id_base from transcription_component. Needed to set event subscriptions on init

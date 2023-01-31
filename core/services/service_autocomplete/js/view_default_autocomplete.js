@@ -182,7 +182,7 @@ const render_source_selector = function(self) {
 		ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: 'css_label label',
-			inner_html		: get_label.origen || 'Source',
+			inner_html		: get_label.source || 'Source',
 			parent			: source_selector
 		})
 		// select
@@ -265,7 +265,7 @@ const render_search_input = function(self) {
 			class_name		: 'autocomplete_input'
 		})
 		search_input.setAttribute('list', self.list_name)
-		search_input.setAttribute('placeholder', get_label.buscar + '...')
+		search_input.setAttribute('placeholder', get_label.find + '...')
 		// search_input.setAttribute('autocomplete', 'off')
 		search_input.setAttribute('autocorrect', 'off')
 
@@ -399,7 +399,7 @@ const render_filters_selector = function(self) {
 			}
 
 			const filter_id		= self.list_name
-			const filter_label	= get_label.secciones
+			const filter_label	= get_label.sections || "Sections"
 			const filter_node	= build_filter(self, filter_items, filter_label, filter_id)
 			filters_container.appendChild(filter_node)
 		}
@@ -505,9 +505,10 @@ const build_filter = function(self, filter_items, filter_name, filter_id) {
 			class_name		: 'all_selector', // css_autocomplete_hi_search_field
 			parent			: filter_node
 		})
+		cosnt label = get_label.all || 'All'
 		const all_section_label = ui.create_dom_element({
 			element_type	: 'label',
-			inner_html		: get_label.todos + ' ' + filter_name, //ddo_section.label ||
+			inner_html		: label + ' ' + filter_name, //ddo_section.label ||
 			parent			: all_selector
 		})
 		all_section_label.setAttribute('for', filter_id + '_all')
@@ -731,7 +732,7 @@ const render_operator_selector = function(self) {
 		ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: 'css_label label',
-			inner_html		: get_label.operadores_de_busqueda || 'Search operators',
+			inner_html		: get_label.search_operators || 'Search operators',
 			parent			: operator_selector,
 		})
 		const select = ui.create_dom_element({
@@ -749,13 +750,13 @@ const render_operator_selector = function(self) {
 		const option_or = ui.create_dom_element({
 			element_type	: 'option',
 			value			: '$or',
-			inner_html		: get_label.o || 'o',
+			inner_html		: get_label.or || 'or',
 			parent			: select
 		})
 		const option_and = ui.create_dom_element({
 			element_type	: 'option',
 			value			: '$and',
-			inner_html		: get_label.y || 'y',
+			inner_html		: get_label.and || 'and',
 			parent			: select
 		})
 		if (operator==='$or') {
