@@ -184,13 +184,15 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 			}
 		})
 		input.addEventListener('keyup', function(e) {
-			keyup_handler(e, i, self, input, input_wrap, mode)
+			keyup_handler({
+				e : e
+			})
 		})
 		input.addEventListener('change', function() {
 
 			return change_handler({
 				self		: self,
-				input		: input,
+				input_value	: input.value,
 				key			: i,
 				input_wrap	: input_wrap,
 				mode		: mode,
@@ -363,20 +365,25 @@ export const input_element_range = (i, current_value, self) => {
 */
 export const input_element_period = (i, current_value, self) => {
 
-	const period = (current_value && current_value.period) ? current_value.period : null
+	// period
+		const period = (current_value && current_value.period)
+			? current_value.period
+			: null
 
-	const year	= (period) ? period.year : ''
-	const month	= (period) ? period.month : ''
-	const day	= (period) ? period.day : ''
+	// parts
+		const year	= (period) ? period.year : ''
+		const month	= (period) ? period.month : ''
+		const day	= (period) ? period.day : ''
 
-	const label_year	= (year!=='' && year>1) 	? get_label.years : get_label.year
-	const label_month	= (month!=='' && month>1) 	? get_label.months : get_label.month
-	const label_day		= (day!=='' && day>1) 		? get_label.days : get_label.day
+	// labels
+		const label_year	= (year!=='' && year>1) 	? get_label.years : get_label.year
+		const label_month	= (month!=='' && month>1) 	? get_label.months : get_label.month
+		const label_day		= (day!=='' && day>1) 		? get_label.days : get_label.day
 
-	// create div end
+	// input-group. create div grouper
 		const input_wrap = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'input-group',
+			class_name		: 'input-group period',
 		})
 
 		// year
@@ -395,11 +402,11 @@ export const input_element_period = (i, current_value, self) => {
 				}
 			})
 			input_year.addEventListener('keyup', function(e) {
-				keyup_handler(e, i, self)
+				keyup_handler({
+					e : e
+				})
 			})
-			input_year.addEventListener('change', function(){
-				collect_data(input_year, input_month, input_day)
-			})
+			input_year.addEventListener('change', call_change_handler)
 			// year label
 			ui.create_dom_element({
 				element_type	: 'label',
@@ -423,11 +430,11 @@ export const input_element_period = (i, current_value, self) => {
 				}
 			})
 			input_month.addEventListener('keyup', function(e) {
-				keyup_handler(e, i, self)
+				keyup_handler({
+					e : e
+				})
 			})
-			input_month.addEventListener('change', function(){
-				collect_data(input_year, input_month, input_day)
-			})
+			input_month.addEventListener('change', call_change_handler)
 			// month label
 			ui.create_dom_element({
 				element_type	: 'label',
@@ -451,11 +458,11 @@ export const input_element_period = (i, current_value, self) => {
 				}
 			})
 			input_day.addEventListener('keyup', function(e) {
-				keyup_handler(e, i, self)
+				keyup_handler({
+					e : e
+				})
 			})
-			input_day.addEventListener('change', function(){
-				collect_data(input_year, input_month, input_day)
-			})
+			input_day.addEventListener('change', call_change_handler)
 			// day label
 			ui.create_dom_element({
 				element_type	: 'label',
@@ -463,46 +470,21 @@ export const input_element_period = (i, current_value, self) => {
 				parent			: input_wrap
 			})
 
-
-	// collect_data function. Mix all fields data and saves
-		const collect_data = function(input_year, input_month, input_day) {
-
-			const new_year = (input_year.value)
-				? input_year.value
-				: null
-
-			const new_month = (input_month.value)
-				? input_month.value
-				: null
-
-			const new_day = (input_day.value)
-				? input_day.value
-				: null
-
-			const value = {
-				period: {}
+		// call_change_handler. Unified change_handler caller
+			function call_change_handler() {
+				change_handler({
+					self		: self,
+					input_value	: {
+						day		: input_day.value || null,
+						month	: input_month.value || null,
+						year	: input_year.value || null
+					},
+					key			: i,
+					input_wrap	: input_wrap,
+					mode		: 'period',
+					type		: 'period'
+				})
 			}
-
-			if(new_year){
-				value.period.year = new_year
-			}
-			if(new_month){
-				value.period.month = new_month
-			}
-			if(new_day){
-				value.period.day = new_day
-			}
-
-			const changed_data = [Object.freeze({
-				action	: 'update',
-				key		: i,
-				value	: value
-			})]
-			self.change_value({
-				changed_data	: changed_data,
-				refresh			: false
-			})
-		}
 
 
 	return input_wrap
@@ -543,12 +525,14 @@ export const input_element_time = (i, current_value, self) => {
 			}
 		})
 		input.addEventListener('keyup', function(e) {
-			keyup_handler(e, i, self)
+			keyup_handler({
+				e : e
+			})
 		})
-		input.addEventListener('change', function(e){
+		input.addEventListener('change', function(){
 			change_handler({
 				self		: self,
-				input		: input,
+				input_value	: input.value,
 				key			: i,
 				input_wrap	: input_wrap,
 				mode		: 'start',
@@ -607,97 +591,15 @@ export const input_element_time = (i, current_value, self) => {
 * @param object self
 * @return bool
 */
-export const keyup_handler = function(e, key, self, input, input_wrap, mode) {
+export const keyup_handler = function(options) {
+
+	// options
+		const e = options.e
+
+
 	e.preventDefault()
 
-	/* 31-01-2023 working here to unify component keyup_handler and save with component_input_text model
 
-	// parse value
-		const response = self.parse_string_date(input.value)
-
-	// invalid value case
-		if(response.error){
-			// alert(response.error[0].msg)
-			// ui.component.error(true, input_wrap)
-			// return false
-		}
-
-	// error style reset
-		ui.component.error(false, input_wrap)
-
-	// Enter key force to save changes
-		if (e.key==='Enter') {
-
-			// force to save current input if changed
-				// const changed_data = self.data.changed_data || []
-				// // change_value (save data)
-				// self.change_value({
-				// 	changed_data	: changed_data,
-				// 	refresh			: false
-				// })
-		}else{
-
-			if (self.mode==='search') {
-
-				// parsed_value
-					// const parsed_value = (input.value.length>0) ? input.value : null
-					const new_value = (response.result.year)
-						? response.result
-						: ''
-					const parsed_value = {
-						start : new_value
-					}
-
-				// changed_data
-					const changed_data_item = Object.freeze({
-						action	: 'update',
-						key		: i,
-						value	: parsed_value
-					})
-
-				// update the instance data (previous to save)
-					self.update_data_value(changed_data_item)
-				// set data.changed_data. The change_data to the instance
-					// self.data.changed_data = changed_data
-				// publish search. Event to update the DOM elements of the instance
-					event_manager.publish('change_search_element', self)
-
-			}else{
-
-				const value = self.data.value[key]
-					? JSON.parse(JSON.stringify(self.data.value[key]))
-					: {mode}
-
-				const new_value = (response.result.year)
-					? response.result
-					: ''
-
-				value[mode] = new_value
-
-				// const changed_data = [Object.freeze({
-				// 	action	: 'update',
-				// 	key		: i,
-				// 	value	: value
-				// })]
-				// self.change_value({
-				// 	changed_data	: changed_data,
-				// 	refresh			: false
-				// })
-				console.log('value:', value);
-
-				// change data
-					const changed_data_item = Object.freeze({
-						action	: 'update',
-						key		: key,
-						value	: value
-					})
-
-				// fix instance changed_data
-					self.set_changed_data(changed_data_item)
-			}
-		}
-
-	*/
 	return true
 }//end keyup_handler
 
@@ -705,7 +607,8 @@ export const keyup_handler = function(e, key, self, input, input_wrap, mode) {
 
 /**
 * CHANGE_HANDLER
-*
+* manages change event in unified way
+* @param object options
 * @return bool
 */
 export const change_handler = function(options) {
@@ -713,16 +616,30 @@ export const change_handler = function(options) {
 	// options
 		// const e			= options.e // event
 		const self			= options.self // instance
-		const input			= options.input
+		const input_value	= options.input_value // string|object
 		const key			= options.key
 		const input_wrap	= options.input_wrap
 		const mode			= options.mode // like 'start'
 		const type			= options.type // date|time
 
 	// parse value
-		const response = type==='time'
-			? self.parse_string_time(input.value)
-			: self.parse_string_date(input.value)
+		// const response = type==='time'
+		// 	? self.parse_string_time(input.value)
+		// 	: self.parse_string_date(input.value)
+
+		const response = (()=>{
+			switch (type) {
+				case 'time':
+					return self.parse_string_time(input_value)
+
+				case 'period':
+					return self.parse_string_period(input_value)
+
+				default:
+					return self.parse_string_date(input_value)
+			}
+		})()
+		console.log('response:', response);
 
 	// error case
 		if(response.error){
