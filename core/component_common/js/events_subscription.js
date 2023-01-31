@@ -46,9 +46,22 @@ export const events_subscription = function(self) {
 			)
 			function fn_update_value (options) {
 
-				if(options.caller.id === self.id){
-					return
-				}
+				// self case
+					if(options.caller.id === self.id){
+						return
+					}
+
+				// service_time_machine case
+					if (self.caller) {
+						const callers_avoid_update = [
+							'service_time_machine'
+						]
+						if (callers_avoid_update.includes(self.caller.model) ||
+							(self.caller.caller && callers_avoid_update.includes(self.caller.caller.model))
+							) {
+							return
+						}
+					}
 
 				const changed_data_item = options.changed_data
 
