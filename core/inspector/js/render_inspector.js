@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, SHOW_DEVELOPER, DEDALO_CORE_URL */
+/*global get_label, page_globals, SHOW_DEVELOPER, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -150,6 +150,25 @@ const get_content_data = function(self) {
 				})
 			}
 
+		// button_duplicate . Call API to duplicate current record
+		// use the section_button_new, if it's defined user can create or duplicate the section
+			if (section_button_new) {
+				const button_duplicate = ui.create_dom_element({
+					element_type	: 'button',
+					class_name		: 'light duplicate',
+					title			: get_label.duplicar || "Duplicate",
+					parent			: buttons_container
+				})
+				button_duplicate.addEventListener('click', (e) => {
+					e.stopPropagation()
+					event_manager.publish('duplicate_section_' + self.caller.id, {
+						section_tipo	: self.section_tipo,
+						section_id		: self.section_id,
+						caller			: self.caller // section
+					})
+				})
+			}
+
 		// button_delete . Call API to delete current record
 			const section_button_delete = section_buttons.find(el => el.model==='button_delete')
 			if (section_button_delete) {
@@ -168,24 +187,7 @@ const get_content_data = function(self) {
 					})
 				})
 			}
-		// button_duplicate . Call API to duplicate current record
-		// use th section_button_new, if it's defined user can create or duplicate the section
-			if (section_button_new) {
-				const button_duplicate = ui.create_dom_element({
-					element_type	: 'button',
-					class_name		: 'light duplicate',
-					title			: get_label.duplicar || "Duplicate",
-					parent			: buttons_container
-				})
-				button_duplicate.addEventListener('click', (e) => {
-					e.stopPropagation()
-					event_manager.publish('duplicate_section_' + self.caller.id, {
-						section_tipo	: self.section_tipo,
-						section_id		: self.section_id,
-						caller			: self.caller // section
-					})
-				})
-			}
+
 
 	// element_info
 		const element_info = render_element_info(self)
@@ -288,7 +290,7 @@ const get_content_data = function(self) {
 					text_content	: 'Download register file',
 					parent			: buttons_bottom_container
 				})
-				register_download.addEventListener("click", (e)=>{
+				register_download.addEventListener('click', (e)=>{
 					e.preventDefault()
 
 					const file_name = 'register.json'
@@ -336,12 +338,12 @@ const get_content_data = function(self) {
 */
 export const render_section_info = function(self) {
 
-	const container		= self.element_info_container
-	const section		= self.caller
-	const section_data	= section.data.value && section.data.value[0]
-		? section.data.value[0]
-		: {}
-
+	// short vars
+		const container		= self.element_info_container
+		const section		= self.caller
+		const section_data	= section.data.value && section.data.value[0]
+			? section.data.value[0]
+			: {}
 
 	// values from caller (section)
 		const section_tipo			= section.section_tipo
@@ -351,7 +353,8 @@ export const render_section_info = function(self) {
 		const created_by_user_name	= section_data.created_by_user_name
 		const modified_by_user_name	= section_data.modified_by_user_name
 
-	const fragment = new DocumentFragment();
+	// DocumentFragment
+		const fragment = new DocumentFragment();
 
 	// section name
 		// label
@@ -793,7 +796,7 @@ export const update_project_container_body = function(self) {
 * RENDER_INDEXATION_LIST
 * @return DOM node indexation_list_container
 */
-const render_indexation_list = function(self) {
+const render_indexation_list = function() {
 
 	// wrapper
 		const indexation_list_container = ui.create_dom_element({
@@ -1007,7 +1010,7 @@ export const render_time_machine_list = function(self) {
 * Get section time_machine history records
 * @param object self
 * 	inspector instance
-* @return DOM node|null component_history_wrap
+* @return DOM node|null container
 */
 export const load_time_machine_list = async function(self) {
 
@@ -1081,7 +1084,7 @@ export const load_time_machine_list = async function(self) {
 * to locate the target node when is invoked
 * @param object self
 * 	inspector instance
-* @return DOM node element_info_wrap
+* @return DOM node component_history_wrap
 */
 const render_component_history = function(self) {
 
@@ -1253,7 +1256,7 @@ export const load_component_history = async function(self, component) {
 * Show component save and error messages
 * @param object self
 * 	inspector instance
-* @return DOM node time_machine_list_wrap
+* @return DOM node wrapper
 */
 const render_activity_info = function(self) {
 
@@ -1308,7 +1311,7 @@ const render_activity_info = function(self) {
 * 	inspector instance
 * @param object options
 * 	event save subscription received options
-* @return DOM node|null activity_info_wrap
+* @return DOM node|null container
 */
 export const load_activity_info = async function(self, options) {
 
