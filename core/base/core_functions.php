@@ -27,7 +27,7 @@ function dump($val, string $var_name=null, array $arguments=[]) : string {
 	$html .= " DUMP ".PHP_EOL."  Caller: ".str_replace(DEDALO_ROOT_PATH,'',$bt[0]['file']);
 	$html .= PHP_EOL ." Line: ".@$bt[0]['line'];
 
-	# NIVEL 1
+	# LEVEL 1
 
 		# FUNCTION
 		if (isset($bt[1]['function']))
@@ -42,9 +42,9 @@ function dump($val, string $var_name=null, array $arguments=[]) : string {
 		//	$html .= PHP_EOL . " val expected: <em> $expected </em>";
 
 		# EXEC_TIME
-		if(isset($start_time)) {
-			$html .= PHP_EOL . " exec_time: <em> ".exec_time_unit($start_time)." </em>";
-		}
+		// if(isset($start_time)) {
+		// 	$html .= PHP_EOL . ' exec_time: <em> ' . exec_time_unit($start_time) . ' </em>';
+		// }
 
 		# arguments (optional)
 		if(isset($arguments) && is_array($arguments)) foreach ($arguments as $key => $value) {
@@ -83,7 +83,7 @@ function dump($val, string $var_name=null, array $arguments=[]) : string {
 		$html .= PHP_EOL . " type: ".gettype($val)."";
 
 
-	# NIVEL 2
+	# LEVEL 2
 
 		# CALLER FUNCTION
 		if (isset($bt[2]) && isset($bt[2]['file'])) {
@@ -92,7 +92,6 @@ function dump($val, string $var_name=null, array $arguments=[]) : string {
 			$html .= PHP_EOL . " Function: ". print_r($bt[2]['function'],true);
 			$html .= " [Line: ". print_r($bt[2]['line'],true)."]";
 		}
-
 
 	# PRINT
 	if(SHOW_DEBUG===true) {
@@ -121,7 +120,7 @@ function dump($val, string $var_name=null, array $arguments=[]) : string {
 */
 function wrap_pre(string $string, bool $add_header_html=true) : string {
 	$html='';
-	#$html .= "\n<html xmlns=\"http://www.w3.org/1999/xhtml\" ><body>";
+	// $html .= "\n<html xmlns=\"http://www.w3.org/1999/xhtml\" ><body>";
 	if ($add_header_html) {
 		$html .= '<!DOCTYPE html>';
 		$html .= '<html lang="en">';
@@ -224,48 +223,6 @@ function debug_log(string $info, int $level=logger::DEBUG) : bool {
 
 	return true;
 }//end debug_log
-
-
-
-/**
-* FILE_GET_CONTENTS_CURL
-* @param string $url
-* @return mixed $data
-*/
-	// function file_get_contents_curl(string $url) {
-
-	// 	$ch = curl_init();
-	// 	curl_setopt($ch, CURLOPT_HEADER, 0);
-	// 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-	// 	curl_setopt($ch, CURLOPT_URL, $url);
-	// 	curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
-
-	// 	// Prevent to verify ssl certificates (very slow)
-	// 	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-
-	// 	// A given cURL operation should only take XXX seconds max.
-	// 	curl_setopt($ch, CURLOPT_TIMEOUT, 10); // int default 10
-
-	// 	$data = curl_exec($ch);
-
-	// 	// Check if any error occurred
-	// 		if (!curl_errno($ch)) {
-	// 			// no errors
-	// 			$info = curl_getinfo($ch);
-	// 			// echo 'Took ', $info['total_time'], ' seconds to send a request to ', $info['url'], "\n";
-	// 			debug_log(__METHOD__.' Success on get_contents_curl: '.to_string($info), logger::INFO);
-
-	// 		}else{
-	// 			// errors found
-	// 			$info = curl_getinfo($ch);
-	// 			debug_log(__METHOD__.' Error on get_contents_curl: '.to_string($info), logger::ERROR);
-	// 		}
-
-
-	// 	curl_close($ch);
-
-	// 	return $data;
-	// }//end file_get_contents_curl
 
 
 
@@ -801,89 +758,6 @@ function is_associative(array $inpt_arr) : bool {
 
 
 /**
-* CLEAN_URL_VARS : Elimina variables no deseadas del query en la url
-*/
-	// function clean_url_vars(array $current_var=[]) : string {
-
-	// 	$qs = '';
-
-	// 	$queryString = $_SERVER['QUERY_STRING']; # like max=10
-
-	// 	$search  = array('&&',	'&=',	'=&',	'??',	);
-	// 	$replace = array('&',	'&',	'&',	'?',	);
-	// 	$queryString = str_replace($search, $replace, $queryString);
-
-	// 	$posAND 	= strpos($queryString, '&');
-	// 	$posEQUAL 	= strpos($queryString, '=');
-
-	// 	$ar_excluded_vars = array(	'pageNum',
-	// 								'search',
-	// 								'reset'
-	// 								);
-	// 	foreach ($current_var as $current_value) {
-	// 		$ar_excluded_vars[] = $current_value;
-	// 	}
-
-	// 	if($posAND !== false) { # query tipo ?m=list&t=dd334&pageNum=3
-
-	// 		$ar_pares = explode('&', $queryString);
-	// 		if(is_array($ar_pares)) foreach ($ar_pares as $par){
-
-	// 			$troz		= @ explode('=',$par) ;
-	// 			if($troz) {
-	// 				$varName	= NULL;
-	// 				if (isset($troz[0])) {
-	// 					$varName = $troz[0];
-	// 				}
-
-	// 				$varValue 	= NULL;
-	// 				if (isset($troz[1])) {
-	// 					$varValue= $troz[1];
-	// 				}
-
-	// 				#if($varName !='pageNum' && $varName !='accion' && $varName !='reset' ){
-	// 				if (!in_array($varName, $ar_excluded_vars)) {
-	// 					$qs .= $varName . '=' . $varValue .'&';
-	// 				}
-	// 			}
-	// 		}
-	// 	}else if($posAND === false && $posEQUAL !== false) { # query tipo ?m=list&t=dd334
-
-	// 		$qs = $queryString ;
-	// 	}
-
-	// 	$qs = str_replace($search, $replace, $qs);
-
-	// 	# if last char is & delete it
-	// 	if(substr($qs, -1)=='&') $qs = substr($qs, 0, -1);
-
-	// 	return $qs ;
-	// }//end clean_url_vars
-
-
-
-/**
-* SANITIZE_OUTPUT
-*/
-	// function sanitize_output($buffer) {
-
-	// 	$search = array(
-	// 		'/\>[^\S ]+/s', //strip whitespaces after tags, except space
-	// 		'/[^\S ]+\</s', //strip whitespaces before tags, except space
-	// 		'/(\s)+/s'  // shorten multiple whitespace sequences
-	// 		);
-	// 	$replace = array(
-	// 		'>',
-	// 		'<',
-	// 		'\\1'
-	// 		);
-	// 	$buffer = preg_replace($search, $replace, $buffer);
-	// 	return $buffer;
-	// }
-
-
-
-/**
 * SANITIZE_QUERY
 */
 function sanitize_query(string $strQuery) : string {
@@ -952,23 +826,6 @@ function verify_dedalo_prefix_tipos(string $tipo=null) : bool {
 
 
 /**
-* BUILD_SORTER
-* @param string key
-* @return function order
-*/
-function build_sorter(string $key) {
-	return function ($a, $b) use ($key) {
-		if (!isset($a[$key]) || !isset($b[$key])) {
-			return;
-		}
-
-		return strnatcmp($a[$key], $b[$key]);
-	};
-}//end build_sorter
-
-
-
-/**
 * SEARCH_STRING_IN_ARRAY
 * Search with preg_match a string match in array of strings
 * @return array $matches
@@ -1030,35 +887,6 @@ function array_get_by_key_r(array $array, $key, &$results) {
 		array_get_by_key_r($subarray, $key, $results);
 	}
 }//end array_get_by_key_r
-
-
-
-/*
- * ip_in_range.php - Function to determine if an IP is located in a
- *                   specific range as specified via several alternative
- *                   formats.
- *
- * Network ranges can be specified as:
- * 1. Wildcard format:     1.2.3.*
- * 2. CIDR format:         1.2.3/24  OR  1.2.3.4/255.255.255.0
- * 3. Start-End IP format: 1.2.3.0-1.2.3.255
- *
- * Return value BOOLEAN : ip_in_range($ip, $range);
- *
- * Copyright 2008: Paul Gregg <pgregg@pgregg.com>
- * 10 January 2008
- * Version: 1.2
- *
- * Source website: http://www.pgregg.com/projects/php/ip_in_range/
- * Version 1.2
- *
- * This software is Donationware - if you feel you have benefited from
- * the use of this tool then please consider a donation. The value of
- * which is entirely left up to your discretion.
- * http://www.pgregg.com/donate/
- *
- * Please do not remove this header, or source attribution from this file.
- */
 
 
 
@@ -1416,7 +1244,7 @@ function session_start_manager(array $request_options) : bool {
 			$options->cookie_secure			= false;
 			$options->cookie_samesite		= null;
 			$options->save_path				= false; # /tmp/php
-			$options->aditional_save_path	= false; # /session_custom_sec
+			$options->additional_save_path	= false; # /session_custom_sec
 			$options->session_name			= false;
 			$options->prevent_session_lock	= false;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
@@ -1454,14 +1282,14 @@ function session_start_manager(array $request_options) : bool {
 					session_name($options->session_name);
 				}
 
-			// aditional_save_path
-				if ($options->aditional_save_path!==false) {
+			// additional_save_path
+				if ($options->additional_save_path!==false) {
 					// Change the save path. Sessions stored in the same path
 					// all share the same lifetime; the lowest lifetime will be
 					// used for all. Therefore, for this to work, the session
 					// must be stored in a directory where only sessions sharing
 					// it's lifetime are. Best to just dynamically create on.
-					$path = ini_get('session.save_path') . $options->aditional_save_path;
+					$path = ini_get('session.save_path') . $options->additional_save_path;
 					if(!file_exists($path)) {
 						if(!mkdir($path, 0700)) {
 							trigger_error("Failed to create session save path directory '$path'. Check permissions.", E_USER_ERROR);
@@ -1517,10 +1345,10 @@ function session_start_manager(array $request_options) : bool {
 					];
 
 					// setcookie(
-						// 	$cookie_values->name,			// string $name
+						// 	$cookie_values->name,		// string $name
 						// 	$cookie_values->value,		// string $value = ""
 						// 	$cookie_values->expires,	// int $expires = 0
-						// 	$cookie_values->path,			// string $path = ""
+						// 	$cookie_values->path,		// string $path = ""
 						// 	$cookie_values->domain,		// string $domain = ""
 						// 	$cookie_values->secure,		// bool $secure = false
 						// 	$cookie_values->httponly	// bool $httponly = false
@@ -1548,7 +1376,7 @@ function session_start_manager(array $request_options) : bool {
 
 		case 'postgresql':
 			#
-			# manejador de sesiones
+			# session manager
 			#
 			require_once 'session/PGSessions.php';
 			$connectionString = 'pgsql:host='.DEDALO_HOSTNAME_CONN.' port='.DEDALO_DB_PORT_CONN.' dbname='.DEDALO_DATABASE_CONN.' user='.DEDALO_USERNAME_CONN.' password='.DEDALO_PASSWORD_CONN;
@@ -1683,7 +1511,7 @@ function encodeURIComponent(string $str) : string {
 
 /**
 * SHOW_MSG
-* Decore msg with error, warning, etc. css
+* Decors msg with error, warning, etc. css
 */
 function show_msg(string $msg, string $type='ERROR') {
 
@@ -1704,7 +1532,7 @@ function show_msg(string $msg, string $type='ERROR') {
 
 
 /**
-* GET_CURRENT_VERION
+* GET_CURRENT_VERSION_IN_DB
 * Get the version of the data into the DB
 * The data version need to be compatible with the program files, but,
 * when Dédalo program change (for update), the data and the program is un-sync before admin run the update
@@ -1901,17 +1729,18 @@ function write_session_value(array $session_keys, $value) {
 * like $_SESSION['dedalo']['config']['ddo'][$section_tipo][$ddo_key]
 */
 function insert_into(&$array, array $keys, $value) {
-	 $last = array_pop($keys);
+	$last = array_pop($keys);
 
-	 foreach($keys as $key) {
-		  if(!array_key_exists($key, $array) ||
-			  array_key_exists($key, $array) && !is_array($array[$key])) {
-				  $array[$key] = array();
+	foreach($keys as $key) {
+		if(!array_key_exists($key, $array) ||
+			array_key_exists($key, $array) && !is_array($array[$key])) {
+				$array[$key] = array();
+		}
+		$array = &$array[$key];
+	}
+	$array[$last] = $value;
 
-		  }
-		  $array = &$array[$key];
-	 }
-	 $array[$last] = $value;
+	return $array;
 }//end insert_into
 
 
@@ -1950,7 +1779,6 @@ function get_legacy_constant_value(string $constant_name) {
 	// check constant exists
 		if(!defined($constant_name)) {
 			throw new Exception("Error Processing Request. Constant '$constant_name' does not exists!", 1);
-			return false;
 		}
 
 	// get constant value
@@ -1976,15 +1804,15 @@ function get_legacy_constant_value(string $constant_name) {
 /**
 * TEST_PHP_VERSION_SUPPORTED
 * Test if PHP version is supported
-* @param string $minimun_php_version = '8.1.0'
+* @param string $minimum_php_version = '8.1.0'
 * @return bool
 */
-function test_php_version_supported(string $minimun_php_version='8.1.0') : bool {
+function test_php_version_supported(string $minimum_php_version='8.1.0') : bool {
 
-	if (version_compare(PHP_VERSION, $minimun_php_version) >= 0) {
+	if (version_compare(PHP_VERSION, $minimum_php_version) >= 0) {
 		return true;
 	}else{
-		debug_log(__METHOD__." This PHP version (".PHP_VERSION.") is not supported ! Please update your PHP to $minimun_php_version or higher ASAP ", logger::ERROR);
+		debug_log(__METHOD__." This PHP version (".PHP_VERSION.") is not supported ! Please update your PHP to $minimum_php_version or higher ASAP ", logger::ERROR);
 		return false;
 	}
 }//end test_php_version_supported

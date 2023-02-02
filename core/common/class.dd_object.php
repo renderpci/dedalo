@@ -188,7 +188,7 @@ class dd_object extends stdClass {
 
 
 	/**
-	* SET  METHODDS
+	* SET  METHODS
 	* Verify values and set property to current object
 	*/
 

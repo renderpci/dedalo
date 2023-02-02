@@ -108,9 +108,9 @@ final class dd_ts_api {
 
 			// 	// end line info
 			// 		$text			= 'TRIGGER TS_OBJECT REQUEST '.$section_tipo.'_'.$section_id.' END';
-			// 		$text_lenght	= strlen($text) +1;
+			// 		$text_length	= strlen($text) +1;
 			// 		$nchars			= 200;
-			// 		$line			= $text .' '. str_repeat("<", $nchars - $text_lenght);
+			// 		$line			= $text .' '. str_repeat("<", $nchars - $text_length);
 			// 		debug_log(__METHOD__ . ' '.$debug->exec_time.PHP_EOL . $line, logger::DEBUG);
 			// }
 
@@ -149,7 +149,7 @@ final class dd_ts_api {
 			$source					= $rqo->source;
 			$section_tipo			= $source->section_tipo;
 			$section_id				= $source->section_id;
-			// target_section_tipo. (!) Note that when hild_from_hierarchy is added, this value is different
+			// target_section_tipo. (!) Note that when child_from_hierarchy is added, this value is different
 			// else is the same value as section_tipo
 			$target_section_tipo	= $source->target_section_tipo;
 			$tipo					= $source->tipo;
@@ -158,8 +158,8 @@ final class dd_ts_api {
 			$new_section	= section::get_instance(null, $target_section_tipo);
 			$new_section_id	= $new_section->Save();
 			if (empty($new_section_id)) {
-				#debug_log(__METHOD__." Error on create new section from parent. Stoped add_child process !".to_string(), logger::ERROR);
-				$response->msg = 'Error on create new section from parent. Stoped add_child process !';
+				#debug_log(__METHOD__." Error on create new section from parent. Stopped add_child process !".to_string(), logger::ERROR);
+				$response->msg = 'Error on create new section from parent. Stopped add_child process !';
 				debug_log(__METHOD__." $response->msg ", logger::ERROR);
 				return $response;
 			}
@@ -477,7 +477,7 @@ final class dd_ts_api {
 			$parent_node_type			= $source->parent_node_type;
 			$tipo						= $source->tipo;
 
-		// Remove current element as children from previous parent (old parentt)
+		// Remove current element as children from previous parent (old parent)
 			$locator = new locator();
 				$locator->set_section_tipo($old_parent_section_tipo);
 				$locator->set_section_id($old_parent_section_id);
@@ -558,7 +558,7 @@ final class dd_ts_api {
 		// 	$html 				= $diffusion_index_ts->get_html();
 
 		// 	$response->result 	= $html;
-		// 	$response->msg 		= "Request done successufully";
+		// 	$response->msg 		= "Request done successfully";
 
 		// 	# Debug
 		// 	if(SHOW_DEBUG===true) {

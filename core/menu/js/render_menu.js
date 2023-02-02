@@ -13,6 +13,7 @@
 	// import {instances} from '../../common/js/instances.js'
 
 
+
 /**
 * RENDER_MENU
 * Manages the component's logic and appearance in client side
@@ -114,14 +115,14 @@ render_menu.prototype.edit = async function() {
 					open_ul.style.left = (main_li.getBoundingClientRect().left+'px')
 
 					for (let i = len - 1; i >= 0; i--) {
-						//inactived all li nodes
-						nodes_li[i].classList.add("menu_li_inactive");
-						nodes_li[i].classList.remove("menu_li_active");
+						// inactive all li nodes
+						nodes_li[i].classList.add('menu_li_inactive');
+						nodes_li[i].classList.remove('menu_li_active');
 
 						// active only the selected li node
 						if(nodes_li[i] == main_li){
-							nodes_li[i].classList.add("menu_li_active");
-							nodes_li[i].classList.remove("menu_li_inactive");
+							nodes_li[i].classList.add('menu_li_active');
+							nodes_li[i].classList.remove('menu_li_inactive');
 						}
 					}
 					self.menu_active = true
@@ -362,7 +363,7 @@ render_menu.prototype.edit = async function() {
 /**
 * GET_DEBUG_INFO_BAR
 * @param object instance self
-* @return dom node debug_info_bar
+* @return DOM node debug_info_bar
 */
 const get_debug_info_bar = (self) => {
 
@@ -371,47 +372,52 @@ const get_debug_info_bar = (self) => {
 		class_name		: 'debug_info_bar'
 	})
 
-	const dedalo_version = ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'dedalo_version',
-		text_content	: 'Dédalo v. ' + page_globals.dedalo_version,
-		parent			: debug_info_bar
-	})
+	// dedalo_version
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'dedalo_version',
+			text_content	: 'Dédalo v. ' + page_globals.dedalo_version,
+			parent			: debug_info_bar
+		})
 
-	const dedalo_db_name = ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'dedalo_db_name',
-		text_content	: 'Database: ' + page_globals.dedalo_db_name,
-		parent			: debug_info_bar
-	})
+	// dedalo_db_name
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'dedalo_db_name',
+			text_content	: 'Database: ' + page_globals.dedalo_db_name,
+			parent			: debug_info_bar
+		})
 
-	const pg_version = ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'pg_version',
-		text_content	: 'PG v. ' + page_globals.pg_version,
-		parent			: debug_info_bar
-	})
+	// pg_version
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'pg_version',
+			text_content	: 'PG v. ' + page_globals.pg_version,
+			parent			: debug_info_bar
+		})
 
-	const php_version = ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'php_version',
-		text_content	: 'PHP v. ' + page_globals.php_version,
-		parent			: debug_info_bar
-	})
+	// php_version
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'php_version',
+			text_content	: 'PHP v. ' + page_globals.php_version,
+			parent			: debug_info_bar
+		})
 
-	const php_memory = ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'php_memory',
-		text_content	: 'PHP memory: ' + page_globals.php_memory,
-		parent			: debug_info_bar
-	})
-
-	const php_sapi_name = ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'php_sapi_name',
-		text_content	: 'PHP sapi. ' + self.data.info_data.php_sapi_name,
-		parent			: debug_info_bar
-	})
+	// php_memory
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'php_memory',
+			text_content	: 'PHP memory: ' + page_globals.php_memory,
+			parent			: debug_info_bar
+		})
+	// php_sapi_name
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'php_sapi_name',
+			text_content	: 'PHP sapi. ' + self.data.info_data.php_sapi_name,
+			parent			: debug_info_bar
+		})
 
 
 	return debug_info_bar
@@ -463,6 +469,8 @@ const level_hierarchy = (options) => {
 
 /**
 * ITEM_HIERARCHY
+* Render li hierarchy node
+* @param object options
 * @return DOM element li
 */
 const item_hierarchy = (options) => {
@@ -485,8 +493,7 @@ const item_hierarchy = (options) => {
 		self.li_nodes.push(li)
 
 	// events
-		// mouseover
-			// li.addEventListener('mouseover', (e) => {
+		// mouseenter
 			li.addEventListener('mouseenter', (e) => {
 
 				//e.stopPropagation();
@@ -502,8 +509,8 @@ const item_hierarchy = (options) => {
 				for (let i = len - 1; i >= 0; i--) {
 
 					// inactive all nodes
-					nodes_li[i].classList.add("menu_li_inactive")
-					nodes_li[i].classList.remove("menu_li_active")
+					nodes_li[i].classList.add('menu_li_inactive')
+					nodes_li[i].classList.remove('menu_li_active')
 
 					// close all ul nodes dependent of the current li
 					const close_id = nodes_li[i].dataset.children
@@ -513,8 +520,8 @@ const item_hierarchy = (options) => {
 					if(nodes_li[i]===active_li){
 
 						// active the current li
-						nodes_li[i].classList.add("menu_li_active");
-						nodes_li[i].classList.remove("menu_li_inactive");
+						nodes_li[i].classList.add('menu_li_active');
+						nodes_li[i].classList.remove('menu_li_inactive');
 						// if the active li has children
 						const open_id = active_li.dataset.children
 
@@ -523,8 +530,8 @@ const item_hierarchy = (options) => {
 							//get the ul node and active it
 							const open_ul = document.getElementById(open_id)
 
-							open_ul.classList.remove("menu_ul_hidden");
-							open_ul.classList.add("menu_ul_displayed");
+							open_ul.classList.remove('menu_ul_hidden');
+							open_ul.classList.add('menu_ul_displayed');
 
 							//first menu li nodes has parent 'dd1' and the position in the screen is calculated by the end of the parent li node
 							if(active_li.parentNode.id === 'dd1'){
@@ -548,22 +555,19 @@ const item_hierarchy = (options) => {
 
 					}//end if(nodes_li[i] == active_li)
 				}//end for
-			});//end mouseover
+			})//end mouseenter
 
-		// mouseout
-			// li.addEventListener('mouseout', (e) => {
+		// mouseleave
 			li.addEventListener('mouseleave', (e) => {
-
-				// e.stopPropagation();
 				if (e.clientY<0 || e.srcElement.id==='menu_wrapper') {
 					close_all_drop_menu(self);
 				}
 
 				return true
-			});//end mouseout
+			})//end mouseleave
 
 
-		// remove the html <mark> sended by the server
+		// remove the html <mark> sent by the server
 		// when the label is not in the current language
 		// and get the label with fallback
 		// and replace it for italic style
@@ -626,8 +630,8 @@ const item_hierarchy = (options) => {
 				current_tipo	: item.tipo,
 				parent_tipo		: current_tipo
 			})
-
 		}//end children_item
+
 
 	return li
 }//end item_hierarchy
@@ -637,6 +641,7 @@ const item_hierarchy = (options) => {
 /**
 * CLOSE_ALL_DROP_MENU
 * Select all nodes in the menu instance and set the css to remove the visualization
+* @para object
 * @return bool
 */
 const close_all_drop_menu = function(self) {
@@ -680,8 +685,8 @@ const close_all_children = function(tipo){
 	if(tipo){
 		//get the children nodes of the sent tipo and add/remove the css
 		const close_ul = document.getElementById(tipo)
-			  close_ul.classList.remove("menu_ul_displayed");
-			  close_ul.classList.add("menu_ul_hidden");
+			  close_ul.classList.remove('menu_ul_displayed');
+			  close_ul.classList.add('menu_ul_hidden');
 
 		// get the child nodes of the current ul
 		const ar_children_nodes	= close_ul.childNodes
@@ -701,6 +706,8 @@ const close_all_children = function(tipo){
 
 /**
 * CHANGE_LANG
+* Exec API request of selected lang (e.target.value)
+* @param event e
 * @return promise
 * 	API request response
 */

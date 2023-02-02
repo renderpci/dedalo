@@ -203,7 +203,7 @@ class area_development extends area_common {
 					$file_path		= 'Source: '.(defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : STRUCTURE_DOWNLOAD_DIR) . '/' . $file_name;
 					// $file_url	= DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . DEDALO_LIB_BASE_URL . '/backup/backups_structure/srt_download' . '/' . $file_name;
 					$item->body		= $file_path;
-					$confirm_text	= label::get_label('sure'); || 'Sure?'
+					$confirm_text	= label::get_label('sure') ?? 'Sure?';
 
 					$item->run[]	= (object)[
 						'fn'		=> 'init_form',
