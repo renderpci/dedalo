@@ -82,6 +82,11 @@ class security {
 				return 1;
 			}
 
+		// allow logged user access to search temp section (dd655)
+			if ($parent_tipo===DEDALO_TEMP_PRESET_SECTION_TIPO) {
+				return 2;
+			}
+
 		// permissions_table
 			$permissions_table = security::get_permissions_table();
 
