@@ -3885,6 +3885,7 @@ class section extends common {
 				return 1;
 			}
 
+
 		return $this->permissions;
 	}//end get_permissions
 

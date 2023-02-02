@@ -163,7 +163,7 @@ define('DEDALO_TS_REFERENCES_COMPONENT_TIPO'			, 'rsc426');
 // Section default components (information about section, created, modify, etc)
 define('DEDALO_SECTION_INFO_SECTION_GROUP'				, 'dd196');
 
-define('DEDALO_TEXTAREA_FIX_BROQUEN_TAGS_TIPOS'			, serialize( array(DEDALO_COMPONENT_RESOURCES_TR_TIPO)) );
+define('DEDALO_TEXTAREA_FIX_BROQUEN_TAGS_TIPOS'			, serialize([DEDALO_COMPONENT_RESOURCES_TR_TIPO]));
 
 // LANGS
 define('DEDALO_LANGS_SECTION_TIPO'						, 'lg1');

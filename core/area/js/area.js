@@ -60,8 +60,9 @@ export const area = function() {
 
 /**
 * BUILD
-* @return promise
-*	bool true
+* Load and parse necessary data to create a full ready instance
+* @param bool autoload = false
+* @return bool
 */
 area.prototype.build = async function(autoload=true) {
 	const t0 = performance.now()
@@ -71,21 +72,53 @@ area.prototype.build = async function(autoload=true) {
 	// status update
 		self.status = 'building'
 
-	// request_config_object
-		self.request_config_object	= self.context.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
+	// self.datum. On building, if datum is not created, creation is needed
+		self.datum = self.datum || {
+			data	: [],
+			context	: []
+		}
+		self.data	= self.data || {}
 
-	// rqo build
-		self.rqo = self.rqo || await self.build_rqo_show(self.request_config_object, 'get_data')
-		self.rqo.prevent_lock = true
+	// rqo
+		const generate_rqo = async function(){
 
-	// debug
-		// const rqo_original = clone(self.rqo)
+			if (!self.context) {
+				// request_config_object. get the request_config_object from request_config
+				self.request_config_object = self.request_config
+					? self.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
+					: {}
+			}else{
+				// request_config_object. get the request_config_object from context
+				self.request_config_object	= self.context && self.context.request_config
+					? self.context.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
+					: {}
+			}
+
+			// rqo build
+			const action	= 'search'
+			const add_show	= self.add_show ? self.add_show : self.mode==='tm' ? true : false
+			self.rqo = self.rqo || await self.build_rqo_show(
+				self.request_config_object, // object request_config_object
+				action,  // string action like 'search'
+				add_show // bool add_show
+			)
+		}
+		await generate_rqo()
 
 	// load from DDBB
 		if (autoload===true) {
 
 			// load data
-				const api_response = await data_manager.request({body:self.rqo})
+				const api_response = await data_manager.request({
+					body : self.rqo
+				})
+				if (!api_response || !api_response.result) {
+					self.running_with_errors = [
+						'area build autoload api_response: '+ (api_response.error || api_response.msg)
+					]
+					console.error("Error: area build autoload api_response:", api_response);
+					return false
+				}
 
 			// set the result to the datum
 				self.datum	= api_response.result

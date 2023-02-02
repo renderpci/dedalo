@@ -5,6 +5,9 @@
 */
 
 
+@tool_color: #17a2b8;
+
+
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
@@ -215,6 +218,8 @@
 
 				>button {
 					margin-right: 1rem;
+					background-color: @tool_color;
+					border-color: darken(@tool_color, 5%);
 				}
 
 				>label {
@@ -230,5 +235,5 @@
 
 // modal header tool modification
 	.tool_header.tool_import_dedalo_csv {
-		background-color: #17a2b8;
+		background-color: @tool_color;
 	}

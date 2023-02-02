@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
 
@@ -30,9 +30,9 @@ export const view_default_list_pdf = function() {
 view_default_list_pdf.render = async function(self, options) {
 
 	// short vars
-		const data		= self.data || {}
-		const datalist	= data.datalist || []
-		const value		= data.value
+		const data			= self.data || {}
+		const value			= data.value
+		// const datalist	= data.datalist || []
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {})
@@ -41,9 +41,9 @@ view_default_list_pdf.render = async function(self, options) {
 		const url = value
 			? DEDALO_CORE_URL + '/themes/default/pdf_icon.png'
 			: null // page_globals.fallback_image
-
 		const image = ui.create_dom_element({
 			element_type	: 'img',
+			class_name		: 'icon_pdf',
 			src				: url,
 			parent			: wrapper
 		})

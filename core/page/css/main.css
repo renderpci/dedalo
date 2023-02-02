@@ -3950,6 +3950,7 @@ dd-modal .footer.distribute {
 .list_body {
   display: grid;
   height: 100%;
+  position: relative;
 }
 @media screen and (max-width: 1024px) {
   .list_body {
@@ -3962,6 +3963,10 @@ dd-modal .footer.distribute {
 .list_body > .content_data {
   display: contents;
   outline: 1px solid #f0f0f0;
+}
+.list_body > .content_data .no_records {
+  position: absolute;
+  top: 2rem;
 }
 .list_body .list_body .column {
   display: flex;
@@ -3990,7 +3995,7 @@ dd-modal .footer.distribute {
 .hilite_row {
   background-color: #dedede42;
   display: block;
-  position: absolute;
+  position: fixed;
   z-index: 1;
   box-shadow: 0px 2px 4px 0px #8e8e8e;
   pointer-events: none;
@@ -7062,11 +7067,25 @@ dd-modal .footer.distribute {
 * Included from main.less file
 */
 .wrapper_area.area {
-  background-color: pink;
   display: table;
   width: 100%;
   padding: 1rem;
-  min-height: 80vh;
+  min-height: calc(100vh - 4.2rem);
+}
+.wrapper_area.area:before {
+  background-image: url('../../themes/default/dedalo_icon_big.png');
+  background-position: 0px top;
+  background-repeat: no-repeat;
+  background-size: 527px 1024px;
+  content: '';
+  position: fixed;
+  height: 100%;
+  width: 100%;
+  z-index: -1;
+  transform: scaleX(-1);
+  top: 0px;
+  left: 0px;
+  background-color: rgba(255, 255, 255, 0.89);
 }
 /**
 * area_development
@@ -9571,6 +9590,10 @@ dd-modal .footer.distribute {
   display: flex;
   justify-content: center;
   align-items: center;
+}
+.component_pdf.list > .icon_pdf {
+  height: 3rem;
+  margin: 0.33rem;
 }
 .component_pdf.view_viewer .content_data {
   height: 100vh;

@@ -16,8 +16,8 @@
 			background-color: #faf6f7;
 			width: 100%;
 			min-height: 90vh;
-				display: grid;
-			grid-template-columns: auto 1fr 200px;
+			display: grid;
+			grid-template-columns: 1fr minmax(25rem, auto) 200px;
 
 			h1 {
 				margin-bottom: 1em;
@@ -121,7 +121,6 @@
 							}
 						}
 
-
 						>.component_label {
 							width: 100%;
 							padding: 0.4rem;
@@ -153,9 +152,8 @@
 						font-weight: 400;
 					}
 
-					>.total_records {
-
-					}
+					// >.total_records {
+					// }
 
 					>.data_format {
 						padding-top: 1rem;
@@ -171,6 +169,8 @@
 						width: calc(100% - 1rem);
 						margin-left: 0;
 						margin-bottom: 2rem;
+						background-color: @tool_color;
+						border-color: darken(@tool_color, 10%);
 					}
 
 					.activation {
@@ -189,6 +189,12 @@
 					grid-column-start: 1;
 					grid-column-end: 4;
 					margin-top: 1em;
+
+					// buttons
+					.processing_import {
+						background-color: @tool_color;
+						border-color: darken(@tool_color, 10%);
+					}
 				}
 
 			// export_data_container. Grid / table of result record values to save
