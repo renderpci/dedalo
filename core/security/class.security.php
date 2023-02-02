@@ -72,7 +72,7 @@ class security {
 	public static function get_security_permissions(string $parent_tipo, string $tipo) : int {
 
 		// logged root user id
-			$user_id = $_SESSION['dedalo']['auth']['user_id'];
+			$user_id = navigator::get_user_id();
 			if ((int)$user_id===DEDALO_SUPERUSER) {
 				return 3;
 			}

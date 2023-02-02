@@ -1,4 +1,4 @@
-/*global get_label, SHOW_DEBUG, SHOW_DEVELOPER, DEDALO_TOOLS_URL, Promise */
+/*global get_label, SHOW_DEBUG, SHOW_DEVELOPER, DEDALO_TOOLS_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -25,7 +25,7 @@
 */
 export const section = function() {
 
-	this.id				= null
+	this.id						= null
 
 	// element properties declare
 	this.model					= null
@@ -384,8 +384,7 @@ section.prototype.build = async function(autoload=false) {
 			data	: [],
 			context	: []
 		}
-		self.data		= self.data || {}
-		// self.context	= self.context || {}
+		self.data	= self.data || {}
 
 	// rqo
 		const generate_rqo = async function(){
@@ -412,11 +411,6 @@ section.prototype.build = async function(autoload=false) {
 			)
 		}
 		await generate_rqo()
-
-	// debug check
-		if(SHOW_DEBUG===true) {
-			// console.log("SECTION self.rqo before load:", clone(self.rqo) );
-		}
 
 	// filter search
 		if (self.filter===null && self.mode!=='tm') {

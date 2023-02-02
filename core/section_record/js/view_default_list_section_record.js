@@ -1,13 +1,13 @@
-/*global get_label, page_globals, SHOW_DEBUG*/
+/*global  SHOW_DEBUG*/
 /*eslint no-undef: "error"*/
 
 
 
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
-	// import {clone} from '../../common/js/utils/index.js'
 	// import {data_manager} from '../../common/js/data_manager.js'
-	import {when_in_dom,when_in_viewport} from '../../common/js/events.js'
+	import {pause} from '../../common/js/utils/index.js'
+	import {when_in_dom} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	// import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 
@@ -57,6 +57,9 @@ view_default_list_section_record.render = async function(self, options) {
 		// Note that only is activated when self.caller is a section to prevent deep portals issues
 			if (add_hilite_row===true && self.caller.model==='section' || self.caller.model==='service_time_machine') { //  || self.caller.model==='service_time_machine'
 				when_in_dom(wrapper, function(){
+
+					// pause 100 ms to prevent redraw issues on slow machines
+						pause(100)
 
 					let hilite_row
 
