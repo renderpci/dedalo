@@ -22,10 +22,10 @@
 
 
 // PHP VERSION
-	$minimun = '8.1.0';
+	$minimum = '8.1.0';
 	if (test_php_version_supported()===false) {
 
-		$init_response->msg[]	= 'Error. This php version '.PHP_VERSION.' is not supported by Dédalo. Update PHP to '.$minimun.' or higher ASAP';
+		$init_response->msg[]	= 'Error. This php version '.PHP_VERSION.' is not supported by Dédalo. Update PHP to '.$minimum.' or higher ASAP';
 		$init_response->errors	= true;
 		debug_log(__METHOD__."  ".implode(PHP_EOL, $init_response->msg), logger::ERROR);
 
@@ -522,7 +522,7 @@
 // DEFAULT PROJECT
 	if (!defined('DEDALO_DEFAULT_PROJECT') || !defined('DEDALO_FILTER_SECTION_TIPO_DEFAULT')) {
 
-		$init_response->msg[]	= 'Error Processing Request. Please define congif DEDALO_DEFAULT_PROJECT and DEDALO_FILTER_SECTION_TIPO_DEFAULT';
+		$init_response->msg[]	= 'Error Processing Request. Please define config DEDALO_DEFAULT_PROJECT and DEDALO_FILTER_SECTION_TIPO_DEFAULT';
 		$init_response->errors	= true;
 		debug_log(__METHOD__."  ".implode(PHP_EOL, $init_response->msg), logger::ERROR);
 

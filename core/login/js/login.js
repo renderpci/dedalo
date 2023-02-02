@@ -240,6 +240,7 @@ login.prototype.action_dispatch = async function(api_response) {
 						// raspa_loading Development local only
 						if (location.host.indexOf('127.0.0.1')===0 ||
 							location.host.indexOf('localhost')===0 ||
+							location.host.indexOf(':8443')!==-1 ||
 							location.host.indexOf('v6.mib.numisdata.org')===0
 							) {
 							self.node.classList.add('raspa_loading')

@@ -26,7 +26,7 @@ export const view_default_autocomplete = function() {
 /**
 * RENDER
 * Render node for use like button
-* @return DOM node
+* @return DOM node wrapper
 */
 view_default_autocomplete.render = async function (self, options) {
 
@@ -55,7 +55,7 @@ view_default_autocomplete.render = async function (self, options) {
 
 
 	return wrapper
-}//end view_default_autocomplete
+}//end render
 
 
 
@@ -505,7 +505,7 @@ const build_filter = function(self, filter_items, filter_name, filter_id) {
 			class_name		: 'all_selector', // css_autocomplete_hi_search_field
 			parent			: filter_node
 		})
-		cosnt label = get_label.all || 'All'
+		const label = get_label.all || 'All'
 		const all_section_label = ui.create_dom_element({
 			element_type	: 'label',
 			inner_html		: label + ' ' + filter_name, //ddo_section.label ||

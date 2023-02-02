@@ -33,9 +33,9 @@ final class dd_manager {
 			// dump($rqo, ' MANAGE_REQUEST rqo ++++++++++++++++++++++++++++++ '.to_string());
 			if(SHOW_DEBUG===true) {
 				$text			= 'API REQUEST ' . $rqo->action;
-				$text_lenght	= strlen($text) +1;
+				$text_length	= strlen($text) +1;
 				$nchars			= 200;
-				$line			= $text .' '. str_repeat(">", $nchars - $text_lenght).PHP_EOL.json_encode($rqo, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES).PHP_EOL.str_repeat("<", $nchars).PHP_EOL;
+				$line			= $text .' '. str_repeat(">", $nchars - $text_length).PHP_EOL.json_encode($rqo, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES).PHP_EOL.str_repeat("<", $nchars).PHP_EOL;
 				debug_log(__METHOD__ . PHP_EOL . $line, logger::DEBUG);
 			}
 
@@ -121,9 +121,9 @@ final class dd_manager {
 				// end line info
 					$id = $rqo->id ?? $rqo->source->tipo ?? '';
 					$text			= 'API REQUEST ' . $rqo->action . ' ' . $id . ' END IN '.$total_time_api_exec;
-					$text_lenght	= strlen($text) +1;
+					$text_length	= strlen($text) +1;
 					$nchars			= 200;
-					$line			= $text .' '. str_repeat(">", $nchars - $text_lenght).PHP_EOL;
+					$line			= $text .' '. str_repeat(">", $nchars - $text_length).PHP_EOL;
 					debug_log(__METHOD__ . PHP_EOL . $line, logger::DEBUG);
 			}
 

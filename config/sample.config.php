@@ -156,7 +156,7 @@
 			'save_handler'				=> 'files',
 			'timeout_seconds'			=> $timeout_seconds,
 			// 'save_path'				=> '/tmp', string optional
-			// 'aditional_save_path'	=> false, bool optional
+			// 'additional_save_path'	=> false, bool optional
 			'prevent_session_lock'		=> defined('PREVENT_SESSION_LOCK') ? PREVENT_SESSION_LOCK : false,
 			'session_name'				=> 'dedalo_'.DEDALO_ENTITY,
 			// cookie params

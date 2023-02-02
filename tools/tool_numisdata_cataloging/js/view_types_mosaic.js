@@ -1,4 +1,4 @@
-/*global get_label, Promise, SHOW_DEBUG */
+/*global  */
 /*eslint no-undef: "error"*/
 
 
@@ -8,7 +8,8 @@
 	import {get_section_records} from '../../../core/section/js/section.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {
-		render_column_id
+		render_column_id,
+		activate_autocomplete
 	} from '../../../core/component_portal/js/render_edit_component_portal.js'
 	import {
 		on_dragstart_mosaic,
@@ -61,7 +62,7 @@ view_types_mosaic.render = async function(self, options) {
 				})
 				// store to allow destroy later
 				self.ar_instances.push(...hover_ar_section_record)
-				const hover_view	= await render_hover_view(self, hover_ar_section_record, hover_body)
+				const hover_view = await render_hover_view(self, hover_ar_section_record, hover_body)
 				hover_body.appendChild(hover_view)
 
 			return hover_body
@@ -69,7 +70,6 @@ view_types_mosaic.render = async function(self, options) {
 
 	// content_data. Create the mosaic with only the marked ddo as "mosaic" with true value
 		// columns_map
-
 			const base_columns_map	= self.columns_map.filter(el => el.in_mosaic===true)
 			const columns_map		= rebuild_columns_map(base_columns_map, self, true)
 
@@ -115,6 +115,7 @@ view_types_mosaic.render = async function(self, options) {
 			activate_autocomplete(self, wrapper)
 		})
 
+
 	return wrapper
 }//end edit
 
@@ -147,7 +148,7 @@ const get_content_data = async function(self, ar_section_record) {
 							caller 				: self
 						})
 
-						// mouseover event
+						// mouseenter event
 							section_record_node.addEventListener('mouseenter',function(e){
 								e.stopPropagation()
 								const event_id = `mosaic_hover_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
@@ -417,13 +418,19 @@ const rebuild_columns_map = function(base_columns_map, self, view_mosaic) {
 
 
 
+/**
+* RENDER_COLUMN_ORIGINAL_COPY
+* @param options
+* @return DocumentFragment
+*/
 const render_column_original_copy = function(options){
 
-	// DocumentFragment
-	const fragment = new DocumentFragment()
+	// options
+		// const tool_caller	= options.caller.caller
+		// const locator		= options.locator
 
-	const tool_caller	= options.caller.caller
-	const locator		= options.locator
+	// DocumentFragment
+		const fragment = new DocumentFragment()
 
 	// const orderer_data	= options.caller.caller.ordered_coins.datum.data
 	// const used_coin		= orderer_data.find(el => el.section_tipo===locator.section_tipo && el.section_id === locator.section_id)
@@ -432,13 +439,16 @@ const render_column_original_copy = function(options){
 
 	// columns drag indication
 		const used_coin_class = used_coin
-			? 'used'
+			? ' used'
 			: ''
-		const drag_item  = ui.create_dom_element({
+
+	// drag_item
+		ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: "drag"+' '+used_coin_class,
+			class_name		: 'drag' + used_coin_class,
 			parent			: fragment
 		})
 
+
 	return fragment
-}
+}//end render_column_original_copy

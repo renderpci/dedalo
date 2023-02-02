@@ -235,7 +235,7 @@ final class dd_utils_api {
 	public static function make_backup(object $request_options=null) : object {
 		$start_time = start_time();
 
-		// ssession_write_close();
+		// session_write_close();
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -486,7 +486,7 @@ final class dd_utils_api {
 
 
 	/**
-	* BUILD_STRUCTURE_CSS *DEPERECATED*
+	* BUILD_STRUCTURE_CSS *DEPRECATED*
 	* @return object $response
 	*/
 	public static function build_structure_css(object $request_options=null) : object {
@@ -534,7 +534,7 @@ final class dd_utils_api {
 	* UPDATE_VERSION
 	* Updates Dédalo data version.
 	* Allow change components data format or add new tables or index
-	* Triggered by Area Development button 'UPADTE DATA'
+	* Triggered by Area Development button 'UPDATE DATA'
 	* Sample: Current data version: 5.8.2 -----> 6.0.0
 	* @param object@null $request_options
 	* @return object $response
@@ -668,7 +668,7 @@ final class dd_utils_api {
 		$response = (object)login::Login( $options );
 
 		// force to calculate user permissions useful for menu etc.
-			// $ar_permisions_areas	= security::get_ar_authorized_areas_for_user();
+			// $ar_permissions_areas	= security::get_ar_authorized_areas_for_user();
 			// $areas					= area::get_areas();
 			// $ar_label				= label::get_ar_label();
 
@@ -790,20 +790,6 @@ final class dd_utils_api {
 
 
 
-	// /**
-	// * GET_TIME_MACHILE_LIST
-	// * Return an array of records of current section
-	// * @return
-	// */
-	// public function get_time_machile_list($request_options=null) {
-
-	// 	$options = new stdClass();
-	// 		$options->section_tipo = null;
-	// 		foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-	// }//end get_time_machile_list
-
-
-
 	/**
 	* REGENERATE_RELATIONS
 	* @return object $response
@@ -889,13 +875,14 @@ final class dd_utils_api {
 				switch ($fileToUpload['error']) {
 					case UPLOAD_ERR_OK:
 						break;
+					
 					case UPLOAD_ERR_NO_FILE:
 						// throw new RuntimeException('No file sent.');
 						$msg = ' upload: No file sent.';
 						error_log($msg);
 						$response->msg .= $msg;
 						return $response;
-						break;
+
 					case UPLOAD_ERR_INI_SIZE:
 					case UPLOAD_ERR_FORM_SIZE:
 						// throw new RuntimeException('Exceeded filesize limit.');
@@ -903,14 +890,13 @@ final class dd_utils_api {
 						error_log($msg);
 						$response->msg .= $msg;
 						return $response;
-						break;
+
 					default:
 						// throw new RuntimeException('Unknown errors.');
 						$msg = ' upload: Unknown errors.';
 						error_log($msg);
 						$response->msg .= $msg;
 						return $response;
-						break;
 				}
 
 			// You should also check filesize here.
@@ -1263,7 +1249,7 @@ final class dd_utils_api {
 				case 3 : $f_error_text = label::get_label('uploaded_file_was_only_partially_uploaded');	break;
 				case 4 : $f_error_text = label::get_label('no_file_was_uploaded');	break;
 				case 6 : $f_error_text = label::get_label('temp_dir_not_accessible');	break;
-				case 7 : $f_error_text = label::get_label('failed_to_writte_file_to_disk');	break;
+				case 7 : $f_error_text = label::get_label('failed_to_write_file_to_disk');	break;
 				case 8 : $f_error_text = label::get_label('php_extension_stopped_the_upload_file');	break;
 			}
 		}

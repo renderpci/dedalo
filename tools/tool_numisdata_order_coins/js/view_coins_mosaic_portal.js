@@ -1,4 +1,4 @@
-/*global get_label, Promise, SHOW_DEBUG */
+/*global  */
 /*eslint no-undef: "error"*/
 
 
@@ -9,8 +9,8 @@
 	import {ui} from '../../../core/common/js/ui.js'
 	import {
 		render_column_id,
-		render_column_component_info,
-		render_column_remove,
+		// render_column_component_info,
+		// render_column_remove,
 		get_buttons,
 		activate_autocomplete,
 		render_references
