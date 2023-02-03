@@ -9472,7 +9472,7 @@ dd-modal .footer.distribute {
   background-color: #949494;
   border: none;
 }
-.component_json.view_default > .content_data {
+.component_json.view_default > .content_data.edit {
   min-height: 392px;
 }
 .component_json.view_default > .content_data > .content_value {
