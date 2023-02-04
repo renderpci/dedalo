@@ -371,12 +371,12 @@
 		// quality folders array (sort desc quality)
 		define('DEDALO_3D_AR_QUALITY'				, [DEDALO_3D_QUALITY_ORIGINAL]);
 
-		// dedalo_3d_gltfpack_path normally /usr/bin/gltfpack (converts and compresses .obj/.gltf to .glb/.gltf)
-		define('DEDALO_3D_GLTFPACK_PATH'			, '/usr/bin/gltfpack');
-		// dedalo_3d_fbx2gltf_path normally /usr/bin/FBX2glTF (converts .fbx to .glb/.gltf)
-		define('DEDALO_3D_FBX2GLTF_PATH'			, '/usr/bin/FBX2glTF');
-		// dedalo_3d_collada2gltf_path normally /usr/bin/COLLADA2GLTF-bin (converts .fbx to .glb/.gltf)
-		define('DEDALO_3D_COLLADA2GLTF_PATH'		, '/usr/bin/COLLADA2GLTF-bin');
+		// dedalo_3d_gltfpack_path normally /usr/local/bin/gltfpack or /opt/gltfpack (converts and compresses .obj/.gltf to .glb/.gltf)
+		define('DEDALO_3D_GLTFPACK_PATH'			, '/usr/local/bin/gltfpack');
+		// dedalo_3d_fbx2gltf_path normally /usr/local/bin/FBX2glTF or /opt/FBX2glTF (converts .fbx to .glb/.gltf)
+		define('DEDALO_3D_FBX2GLTF_PATH'			, '/usr/local/bin/FBX2glTF');
+		// dedalo_3d_collada2gltf_path normally /usr/local/bin/COLLADA2GLTF-bin or /opt/COLLADA2GLTF-bin (converts .dae to .glb/.gltf)
+		define('DEDALO_3D_COLLADA2GLTF_PATH'		, '/usr/local/bin/COLLADA2GLTF-bin');
 
 	// image media
 		// image_folder. Default: '/image'
