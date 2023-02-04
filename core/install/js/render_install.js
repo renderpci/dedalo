@@ -722,7 +722,8 @@ const render_set_root_password_block = function(self) {
 			class_name		: 'description',
 			inner_html		: get_label.type_root_password || `Type and retype your desired superuser password and keep it in a safe place.
 							  Use a strong password from 8 to 32 characters containing, at least, an upper-case letter, a lower-case
-							  letter, and a number. Identical characters in sequential order are not allowed ('aa', '11', 'BB', etc.).`,
+							  letter, and a number. Identical characters in sequential order are not allowed ('aa', '11', 'BB', etc.).
+							  Numerical ('123', '345', etc.) nor alphabetical ('aBC', 'hIjK', etc.) order are allowed.`,
 			parent			: fragment
 		})
 
