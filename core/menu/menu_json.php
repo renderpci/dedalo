@@ -54,8 +54,8 @@
 			$item->tree_datalist	= $tree_datalist;
 			$item->langs_datalist	= $langs_datalist;
 			$item->info_data		= $info_data;
-			$item->show_ontology	= SHOW_DEVELOPER; // boolean from config file
-			$item->username			= $_SESSION['dedalo']['auth']['username'] ?? null;
+			$item->show_ontology	= security::is_global_admin(CURRENT_LOGGED_USED_ID); //  SHOW_DEVELOPER; // boolean from config file
+			$item->username			= navigator::get_username();
 
 		$data[] = $item;
 	}//end if($options->get_data===true && $permissions>0)
