@@ -27,7 +27,7 @@ class menu extends common {
 		$this->tipo			= 'dd85'; // string class menu (dd85)
 		$this->lang			= DEDALO_DATA_LANG;
 		$this->mode			= $mode;
-		$this->section_tipo	= 'dd1';
+		$this->section_tipo	= DEDALO_ROOT_TIPO; // 'dd1';
 
 		parent::load_structure_data();
 	}//end __construct
@@ -91,33 +91,15 @@ class menu extends common {
 				return !in_array($item->tipo, DEDALO_ENTITY_MENU_SKIP_TIPOS);
 			});
 			// rearrange the array to remunerate the arrays
-			$skip_parents	= array_values($skip_parents);
-			$acces_areas	= array_values($acces_areas);
-
-			// get parents recursively to get the show parent
-			if (!function_exists('get_my_parent')) {
-				function get_my_parent($area, $skip_parents){
-					// find if the my parent is in skip parents
-					$current_parent = array_find($skip_parents, function($item) use ($area){
-						return $area->parent === $item->tipo;
-					});
-					// if my parent is in skip recursion to search if his parent is in skip parents
-					// else the parent is the current area->parent, the last parent in the chain
-					if(!empty($current_parent)){
-						return get_my_parent($current_parent, $skip_parents);
-					}else{
-						return $area->parent;
-					}
-				}
-			}
-
-			$ar_areas_length = sizeof($acces_areas);
+			$skip_parents		= array_values($skip_parents);
+			$acces_areas		= array_values($acces_areas);
+			$ar_areas_length	= sizeof($acces_areas);
 			for ($i=0; $i < $ar_areas_length ; $i++) {
 
 				$current_area = $acces_areas[$i];
 
 				// get my parent recursively
-				$parent = get_my_parent($current_area, $skip_parents);
+				$parent = self::get_my_parent($current_area, $skip_parents);
 
 				// item
 					$datalist_item = (object)[
@@ -130,8 +112,7 @@ class menu extends common {
 				// section_tool case
 					if($current_area->model==='section_tool') {
 
-						$section_tool_tipo	= $current_area->tipo;
-						$properties			= $current_area->properties;
+						$properties	= $current_area->properties;
 
 						// tool_context
 							$tool_name = isset($properties->tool_config) && is_object($properties->tool_config)
@@ -171,6 +152,42 @@ class menu extends common {
 
 		return $tree_datalist;
 	}//end get_tree_datalist
+
+
+
+	/**
+	* GET_MY_PARENT
+	* Recursive find parent area function
+	* @param object $area
+	* @param array $skip_parents
+	* @return object $parent
+	* Sample:
+	* {
+	*	"tipo": "test1",
+	*	"model": "area",
+	*	"parent": "dd770",
+	*	"properties": {
+	*		"mykey2": 2
+	*	},
+	*	"label": "<mark>AREA DE PRUEBAS (TESTS) YYYY</mark>"
+	* }
+	*/
+	private static function get_my_parent($area, $skip_parents) {
+
+		// find if the my parent is in skip parents
+		$current_parent = array_find($skip_parents, function($item) use ($area){
+			return $area->parent === $item->tipo;
+		});
+		// if my parent is in skip recursion to search if his parent is in skip parents
+		// else the parent is the current area->parent, the last parent in the chain
+		if(!empty($current_parent)){
+			return self::get_my_parent($current_parent, $skip_parents);
+		}
+
+		$parent = $area->parent;
+
+		return $parent;
+	}//end get_my_parent
 
 
 
@@ -218,12 +235,22 @@ class menu extends common {
 			$tools_list	= $this->get_tools();
 
 			foreach ($tools_list as $tool_object) {
-				$tool_config	= isset($properties->tool_config->{$tool_object->name})
+
+				$properties		= $tool_object->properties;
+				$tool_config	= !empty($properties) && isset($properties->tool_config->{$tool_object->name})
 					? $properties->tool_config->{$tool_object->name}
 					: null;
-				$current_tool_section_tipo = $this->section_tipo ?? $this->tipo;
-				$tool_context	= tool_common::create_tool_simple_context($tool_object, $tool_config, $this->tipo, $current_tool_section_tipo);
-				$tools[]		= $tool_context;
+
+				$current_tool_section_tipo	= $this->section_tipo ?? $this->tipo;
+				$tool_context				= tool_common::create_tool_simple_context(
+					$tool_object,
+					$tool_config,
+					$this->tipo,
+					$current_tool_section_tipo
+				);
+
+				// add tool
+				$tools[] = $tool_context;
 			}//end foreach ($tools_list as $item)
 
 		// dd_object

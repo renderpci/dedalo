@@ -348,8 +348,6 @@ class security {
 	*/
 	public static function is_global_admin(int $user_id) : bool {
 
-		$user_id = (int)$user_id;
-
 		// dedalo superuser case
 			if ($user_id===DEDALO_SUPERUSER) {
 				return true;
