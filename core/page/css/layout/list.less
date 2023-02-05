@@ -133,7 +133,7 @@
 		@line_color : #acacac; // #f78a1c
 		background-color: #dedede42;
 		display: block;
-		position: fixed;
+		position: absolute;
 
 		z-index: 1;
 		box-shadow: 0px 2px 4px 0px #8e8e8e;
@@ -399,7 +399,8 @@
 		align-content: flex-start; // vertical distribution
 
 		// cell outline
-		outline: 1px solid @color_grey_light;
+		// outline: 1px solid @color_grey_light;
+		box-shadow: 0px 1px 0px 0px #e6e6e6;
 
 		// mobile custom
 		@media screen and (max-width: @width_break_point_0) {
@@ -439,7 +440,6 @@
 		}
 
 		&.component_portal {
-
 		}
 
 		.mini & {
@@ -495,7 +495,15 @@
 		&:has(>.section_record) {
 			padding: 0.25rem;
 		}
-	}
+
+		// columns inside another list_body do not have box-shadow (https://developer.mozilla.org/en-US/docs/Web/CSS/:has)
+		&:has(.list_body) {
+			.column {
+				box-shadow: none;
+			}
+		}
+	}//end .column
+
 
 	// rows in section in list mode must be min-height: 3rem;
 	.wrapper_section.list {

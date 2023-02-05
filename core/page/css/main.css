@@ -3995,7 +3995,7 @@ dd-modal .footer.distribute {
 .hilite_row {
   background-color: #dedede42;
   display: block;
-  position: fixed;
+  position: absolute;
   z-index: 1;
   box-shadow: 0px 2px 4px 0px #8e8e8e;
   pointer-events: none;
@@ -4153,7 +4153,7 @@ dd-modal .footer.distribute {
   align-items: flex-start;
   justify-content: flex-start;
   align-content: flex-start;
-  outline: 1px solid #f0f0f0;
+  box-shadow: 0px 1px 0px 0px #e6e6e6;
 }
 @media screen and (max-width: 1024px) {
 }
@@ -4205,6 +4205,9 @@ dd-modal .footer.distribute {
 }
 .column:has(>.section_record) {
   padding: 0.25rem;
+}
+.column:has(.list_body) .column {
+  box-shadow: none;
 }
 .wrapper_section.list .column.column_section_id {
   min-width: 70px;
@@ -5600,7 +5603,7 @@ dd-modal .footer.distribute {
   cursor: pointer;
 }
 .menu > .logged_user_name {
-  color: #c9c9c9;
+  color: #a6a6a6;
   cursor: pointer;
 }
 .menu > .logged_user_name:hover {
@@ -7679,6 +7682,24 @@ dd-modal .footer.distribute {
 }
 .section_record.list {
   display: contents;
+}
+.section_record.list > .column:first-of-type {
+  --box_display: 'none';
+  --box_width: 0px;
+}
+.section_record.list > .column:first-of-type:after {
+  content: " ";
+  display: var(--box_display);
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  z-index: 1;
+  background-color: transparent;
+  box-shadow: 0px 0px 5px 0px #717171;
+  pointer-events: none;
+  border-radius: 3px;
+  width: var(--box_width);
+  height: 100%;
 }
 .section_record.mini {
   display: contents;
