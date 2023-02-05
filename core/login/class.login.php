@@ -236,7 +236,11 @@ class login extends common {
 
 		// Login (all is ok) - init login sequence when all is ok
 			$full_username				= login::get_full_username($user_id);
-			$init_user_login_sequence	= login::init_user_login_sequence($user_id, $username, $full_username);
+			$init_user_login_sequence	= login::init_user_login_sequence(
+				$user_id,
+				$username,
+				$full_username
+			);
 			if ($init_user_login_sequence->result===false) {
 
 				// return false
@@ -247,11 +251,12 @@ class login extends common {
 
 			}else if($init_user_login_sequence->result===true) {
 
-				// return ok and reload page
+				// return OK and reload page
 				$response->result			= true;
 				$response->msg				= " Login.. ";
 				$response->errors			= isset($init_user_login_sequence->errors) ? $init_user_login_sequence->errors : [];
 				$response->result_options	= $init_user_login_sequence->result_options;
+				$response->default_section	= login::get_default_section($user_id);
 			}
 
 
@@ -562,13 +567,38 @@ class login extends common {
 
 
 	/**
+	* GET_DEFAULT_SECTION
+	* @param string|int $section_id (is user section id)
+	* @return string $full_username
+	*/
+	private static function get_default_section($section_id) : ?string {
+
+		$component = component_common::get_instance(
+			'component_input_text',
+			'dd1603',
+			$section_id,
+			'list',
+			DEDALO_DATA_NOLAN,
+			DEDALO_SECTION_USERS_TIPO
+		);
+		$dato				= $component->get_dato();
+		$default_section	= !empty($dato) && !empty($dato[0])
+			? $dato[0]
+			: null;
+
+		return $default_section;
+	}//end get_default_section
+
+
+
+	/**
 	* INIT_USER_LOGIN_SEqUENCE
 	* init login sequence when all is OK
-	* @param string|int $user_id
+	* @param int $user_id
 	* @param string $username
 	* @return object $response
 	*/
-	private static function init_user_login_sequence($user_id, string $username, string $full_username, bool $init_test=true, string $login_type='default') : object {
+	private static function init_user_login_sequence(int $user_id, string $username, string $full_username, bool $init_test=true, string $login_type='default') : object {
 
 		$response = new stdClass();
 			$response->result			= false;
@@ -576,12 +606,7 @@ class login extends common {
 			$response->errors			= [];
 			$response->result_options	= null;
 
-		#ob_implicit_flush(true);
-
-		# RESET ALL SESSION VARS BEFORE INIT
-		#if(isset($_SESSION)) foreach ($_SESSION as $key => $value) {
-			# Nothing to delete
-		#}
+		// ob_implicit_flush(true);
 
 		// dedalo init test sequence
 			if ($init_test===true) {
@@ -635,10 +660,10 @@ class login extends common {
 				# Close script session
 				session_write_close();
 				require_once DEDALO_CORE_PATH.'/backup/class.backup.php';
-				$backup_secuence_response = backup::init_backup_secuence($user_id, $username);
-				$backup_info = $backup_secuence_response->msg;
+				$backup_secuence_response	= backup::init_backup_secuence($user_id, $username);
+				$backup_info				= $backup_secuence_response->msg;
 			}else{
-				$backup_info = 'Deactivated "on login backup" for this domain';
+				$backup_info				= 'Deactivated "on login backup" for this domain';
 			}
 
 		// remove lock_components elements
@@ -677,7 +702,7 @@ class login extends common {
 			$activity_datos['browser']		= $browser;
 			$activity_datos['DB-backup']	= $backup_info;
 
-		// login activity report
+			// login activity report
 			self::login_activity_report(
 				"User $user_id is logged. Hello $username",
 				'LOG IN',
