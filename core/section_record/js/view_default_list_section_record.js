@@ -57,54 +57,10 @@ view_default_list_section_record.render = async function(self, options) {
 		// Note that only is activated when self.caller is a section to prevent deep portals issues
 			if (add_hilite_row===true && self.caller.model==='section' || self.caller.model==='service_time_machine') { //  || self.caller.model==='service_time_machine'
 				when_in_dom(wrapper, function(){
-
-					// pause 100 ms to prevent redraw issues on slow machines
-						pause(100)
-
-					let hilite_row
-
-					// fn_remove_hilite (if is set)
-						const fn_remove_hilite = () => {
-							if (hilite_row) {
-								hilite_row.remove()
-								hilite_row = null
-							}
-						}
-						wrapper.addEventListener('mouseleave', fn_remove_hilite);
-						wrapper.addEventListener('mousedown', fn_remove_hilite);
-
-					// fn_hilite. Add hilite
-						const fn_hilite = (e) => {
-							// remove previous hilite if exist
-								fn_remove_hilite(e)
-
-							// small screen case. Do not add hilite
-								const width = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
-								if (width<960) {
-									return
-								}
-
-							// row_style
-								const wrapper_first_column	= wrapper.firstChild
-								const wrapper_last_column	= wrapper.lastChild
-								const firstChild_el_rect	= wrapper_first_column.getBoundingClientRect();
-								const lastChild_el_rect		= wrapper_last_column.getBoundingClientRect();
-								const row_style = {
-									left	: parseFloat(firstChild_el_rect.x) + 'px',
-									top		: parseFloat(firstChild_el_rect.y + window.pageYOffset) + 'px',
-									height	: parseFloat(firstChild_el_rect.height) + 'px',
-									width	: parseFloat(lastChild_el_rect.x + lastChild_el_rect.width - firstChild_el_rect.x) + 'px'
-								}
-
-							// hilite_row. create and append
-								hilite_row = ui.create_dom_element({
-									element_type	: 'div',
-									class_name		: 'hilite_row',
-									style			: row_style
-								})
-								wrapper.prepend(hilite_row)
-						}
-						wrapper.addEventListener('mouseenter', fn_hilite);
+					// pause 200 ms to prevent redraw issues on slow machines
+					// setTimeout(function(){
+						hilite_row(wrapper)
+					// }, 200)
 				})
 			}//end if (self.caller.model==='section' || self.caller.model==='time_machine')
 
@@ -138,6 +94,77 @@ view_default_list_section_record.render = async function(self, options) {
 
 	return wrapper
 }//end render
+
+
+
+/**
+* HILITE_ROW
+*
+* @param DON node wrapper
+* 	section_record wrapper node
+* @return bool
+*/
+const hilite_row = function(wrapper) {
+
+	let hilite_row_node
+
+	// fn_remove_hilite (if is set)
+		const fn_remove_hilite = () => {
+			// first column set vars. This affect ::after pseudo element
+			wrapper.firstChild.style.setProperty('--box_display', 'none');
+
+			// if (hilite_row_node) {
+			// 	hilite_row_node.remove()
+			// 	hilite_row_node = null
+			// }
+		}
+
+	// events
+		wrapper.addEventListener('mouseleave', fn_remove_hilite);
+		// wrapper.addEventListener('mousedown', fn_remove_hilite);
+		wrapper.addEventListener('mouseenter', fn_hilite);
+		// fn_hilite. Add hilite
+		function fn_hilite() {
+			if (hilite_row_node) {
+				return
+			}
+
+			// remove previous hilite if exist
+				fn_remove_hilite()
+
+			// small screen case. Do not add hilite. (Place here because user can resize the window)
+				const width = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+				if (width<960) {
+					return
+				}
+
+			// row_style
+				const wrapper_first_column	= wrapper.firstChild
+				const wrapper_last_column	= wrapper.lastChild
+				const firstChild_el_rect	= wrapper_first_column.getBoundingClientRect();
+				const lastChild_el_rect		= wrapper_last_column.getBoundingClientRect();
+				const row_style = {
+					// left		: parseFloat(firstChild_el_rect.x) + 'px',
+					// top		: parseFloat(firstChild_el_rect.y + window.pageYOffset) + 'px',
+					// height	: parseFloat(firstChild_el_rect.height) + 'px',
+					width		: parseFloat(lastChild_el_rect.x + lastChild_el_rect.width - firstChild_el_rect.x) + 'px'
+				}
+
+			// hilite_row_node. Create and append node
+				// hilite_row_node = ui.create_dom_element({
+				// 	element_type	: 'div',
+				// 	class_name		: 'hilite_row',
+				// 	style			: row_style
+				// })
+				// wrapper.prepend(hilite_row_node)
+
+			// hilite_row_node. First column set vars. This affect ::after pseudo element
+				wrapper_first_column.style.setProperty('--box_display', 'block');
+				wrapper_first_column.style.setProperty('--box_width', row_style.width);
+		}
+
+	return true
+}//end hilite_row
 
 
 
