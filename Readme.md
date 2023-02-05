@@ -118,7 +118,7 @@ Then, install Dédalo manually (provisional installation instructions for V6 bet
 13. Log out and log in with the admin user.
 14. Create Users and Projects as you need.
 
-Note: the beta state does not have cache control. Hence, we recommend opening the web browser console and deleting the browser cache during the beta period.
+**Note:** the beta state does not have cache control. Hence, we recommend opening the web browser console and deleting the browser cache during the beta period.
 
 ## 6. Update
 
