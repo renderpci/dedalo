@@ -193,7 +193,7 @@ Any other Linux will probably be compatible, but we offer NO GUARANTEES.
 
 Windows: Dédalo might run, but we HAVE NOT TESTED IT.
 
-## 9. Usage
+## 9. Compatible browsers
 
 Dédalo version V6+ is only tested in chromium and webkit browsers (Chrome, Safari, Edge 77+, ...).<br>
 Firefox situation: from Dédalo V4.8 onwards, it is fully compatible with Firefox and can be used in production. However, we need more feedback from the users; please share your experience!
