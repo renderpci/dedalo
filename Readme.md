@@ -4,7 +4,7 @@
 *Starting 21-05-2020, the ontology in V4 and V5 needs to be updated with a new `properties` column in the `jer_dd` table. For compatibility with the upcoming V6, this new column will not affect the functionality of V4 or V5. However, new exported ontology files from master will include this column in copy files. If you do not add this column to `jer_dd`, Dédalo will not import the new files and you will lose the ontology data. Note that you can re-build `jer_dd` carrying out the import process manually.
 Read the update V5.6.0.*
 
-**ATENTION! The `v6_developer` branch is in beta state. Do NOT use it in production**
+**ATENTION! The `v6_developer` branch is in beta state. Do NOT use it in production.**
 
 ## 1. What is Dédalo?
 
@@ -54,14 +54,14 @@ Here are some projects that use Dédalo to manage their Cultural Heritage and/or
 
 ## 4. Dependencies
 
-#### 4.1. Services required for the OS
+### 4.1. Services required for the OS
 
 - PHP 8.1+
 - Apache 2.4.6+
 - Postgres 12.1+
 - MySQL 5.6+ (NOT REQUIRED unless you want use Dédalo for publication).
 
-#### 4.2. Libraries required for Dédalo
+### 4.2. Libraries required for Dédalo
 
 - flatpickr 4.6.3
 - geoip2 (!)
@@ -80,8 +80,8 @@ Here are some projects that use Dédalo to manage their Cultural Heritage and/or
 - ckeditor 5+
 - wexflow 1.2
 
-#### 4.3. OS libraries
-*To be installed directly in the OS (Ubuntu, Debian, MacOs X, etc.).*
+### 4.3. Libraries required for the OS
+<!-- *To be installed directly in the OS (Ubuntu, Debian, MacOs X, etc.).* -->
 
 - FFmpeg 4.0+
 - FFprobe 2.6.1+ (part of FFmpeg)
@@ -93,15 +93,15 @@ Here are some projects that use Dédalo to manage their Cultural Heritage and/or
 
 ## 5. Installation
 
-#### 5.1. You do not want to install
+### 5.1. You do not want to install
 Then, you can use our V5 ready-to-use Virtual Machine for development:
 <p><a href="https://dedalo.dev/v5" target="_blank">Dedalo V5</a></p>
 
-#### 5.2. You like videos
+### 5.2. You like videos
 Then, you can follow the steps in the V5 installation video (similar for V6):
 <p><a href="https://dedalo.dev/v5_install" target="_blank">Dedalo V5 installation video on CentOS</a></p>
 
-#### 5.3. You want control
+### 5.3. You want control
 Then, install Dédalo manually (provisional installation instructions for V6 beta):
 1. Download Dédalo and place it under the httpdocs directory of the web server.
 2. Create a database in PostgreSQL named `dedalo_xx` (you can change the `xx` as you please).
