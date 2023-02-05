@@ -2495,6 +2495,25 @@ class section extends common {
 	public function diffusion_info_propagate_changes() : bool {
 		$start_time = start_time();
 
+		// exclude some matrix_table records to propagate diffusion info
+			$exclude_tables = [
+				'matrix_users',
+				'matrix_projects',
+				'matrix_profiles',
+				'matrix_activity',
+				'matrix_dd',
+				'matrix_list',
+				'matrix_hierarchy_main',
+				'matrix_indexations',
+				'matrix_langs',
+				'matrix_layout',
+				'matrix_tools'
+			];
+			$matrix_table = common::get_matrix_table_from_tipo($this->tipo);
+			if (in_array($matrix_table, $exclude_tables)) {
+				return true;
+			}
+
 		// inverse_locators
 		$inverse_locators = $this->get_inverse_locators();
 		foreach($inverse_locators as $locator) {
