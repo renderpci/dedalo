@@ -263,10 +263,15 @@ login.prototype.action_dispatch = async function(api_response) {
 				// it's defined in dd_init_test to force to go to the development area to control the DDBB and ontology version
 				if (api_response.result_options && api_response.result_options.redirect) {
 					setTimeout(function(){
-						window.location.replace(api_response.result_options.redirect)
+						window.location.replace( api_response.result_options.redirect )
 					}, 1)
 				}else{
-					window.location.reload(false);
+					if (api_response.default_section) {
+						// user defined default_section case
+						window.location.replace( DEDALO_CORE_URL + '/page/?t=' + api_response.default_section );
+					}else{
+						window.location.reload(false);
+					}
 				}
 			}
 		}
