@@ -198,9 +198,9 @@ class tool_common {
 				})->value ?? reset($tool_object->label)->value;
 
 			// description. (text_area) Try match current lang else use the first lang value
-				$description = array_find((array)$tool_object->description, function($el){
-					return $el->lang===DEDALO_DATA_LANG;
-				})->value[0] ?? reset($tool_object->description)->value[0];
+				// $description = array_find((array)$tool_object->description, function($el){
+				// 	return $el->lang===DEDALO_DATA_LANG;
+				// })->value[0] ?? reset($tool_object->description)->value[0];
 
 			// css
 				$css = (object)[
@@ -299,7 +299,7 @@ class tool_common {
 
 		// if(isset($_SESSION['dedalo']['registered_tools'])) {
 		// 	return $_SESSION['dedalo']['registered_tools'];
-		// } this
+		// }
 
 		// client_registered_tools_records
 			static $client_registered_tools_records;
@@ -307,7 +307,7 @@ class tool_common {
 
 				// get all active and registered tools
 					$sqo_tool_active = json_decode('{
-						"section_tipo": "dd1324",
+						"section_tipo": "'.DEDALO_REGISTER_TOOLS_SECTION_TIPO.'",
 						"limit": 0,
 						"filter": {
 							"$and": [
@@ -316,9 +316,9 @@ class tool_common {
 									"q_operator": null,
 									"path": [
 										{
-											"section_tipo": "dd1324",
+											"section_tipo": "'.DEDALO_REGISTER_TOOLS_SECTION_TIPO.'",
 											"component_tipo": "dd1354",
-											"modelo": "component_radio_button",
+											"model": "component_radio_button",
 											"name": "Active"
 										}
 									]
@@ -418,7 +418,7 @@ class tool_common {
 
 		$ar_data = array();
 
-		// scan dir
+		// scan directory
 			try {
 				$root = is_dir($dir)
 					? scandir($dir)
@@ -457,9 +457,9 @@ class tool_common {
 					// }
 			}
 
-		# SORT ARRAY (By custom core function build_sorter)
-		#usort($ar_data, build_sorter('numero_recurso'));
-		#dump($ar_data,'$ar_data');
+		// SORT ARRAY (By custom core function build_sorter)
+			// usort($ar_data, build_sorter('numero_recurso'));
+
 
 		return $ar_data;
 	}//end read_files
@@ -516,7 +516,7 @@ class tool_common {
 						$line = [$line];
 					}
 
-				// encoding check . Only UFT-8 is valid. Another encodings will be conteverted to UTF-8
+				// encoding check . Only UFT-8 is valid. Another encodings will be converted to UTF-8
 					// $sample = reset($line);
 					$sample = is_array($line) ? implode(', ', $line) : (string)$line;
 					if ($convert_to_utf8===true || !mb_check_encoding($sample, 'UTF-8')) {
@@ -631,6 +631,7 @@ class tool_common {
 			if ($user_id==DEDALO_SUPERUSER) {
 
 				$user_tools = $registered_tools;
+
 			}else{
 
 				// tool permissions (DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO)
@@ -661,10 +662,10 @@ class tool_common {
 
 				// filter user authorized tools
 					foreach ($registered_tools as $tool) {
-						if(in_array($tool->section_id, $ar_allowed_id)) {
-							$user_tools[] = $tool;
-						}
-						if(isset($tool->always_active)){
+
+						if( isset($tool->always_active) ||
+							in_array($tool->section_id, $ar_allowed_id)
+							) {
 							$user_tools[] = $tool;
 						}
 					}
