@@ -4,7 +4,7 @@
 *Starting 21-05-2020, the ontology in V4 and V5 needs to be updated with a new `properties` column in the `jer_dd` table. For compatibility with the upcoming V6, this new column will not affect the functionality of V4 or V5. However, new exported ontology files from master will include this column in copy files. If you do not add this column to `jer_dd`, Dédalo will not import the new files and you will lose the ontology data. Note that you can re-build `jer_dd` carrying out the import process manually.
 Read the update V5.6.0.*
 
-**ATENTION! The `v6_developer` branch is in beta state. Do NOT use it in production**
+**ATENTION! The `v6_developer` branch is in beta state. Do NOT use it in production.**
 
 ## 1. What is Dédalo?
 
