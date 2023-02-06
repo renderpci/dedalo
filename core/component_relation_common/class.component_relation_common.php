@@ -805,7 +805,7 @@ class component_relation_common extends component_common {
 			if(SHOW_DEBUG===true) {
 				throw new Exception("Error Processing Request. var 'locator' not contains property 'type' ", 1);
 			}
-			debug_log(__METHOD__." Invalid locator is received to add. Locator was ignored (type:".gettype($locator).") ".to_string($locator), logger::WARNING);
+			debug_log(__METHOD__." Invalid locator is received to add. Locator was ignored (type:".gettype($locator).") ".to_string($locator), logger::ERROR);
 			return false;
 		}
 
@@ -834,7 +834,7 @@ class component_relation_common extends component_common {
 
 			$added = true;
 		}else{
-			debug_log(__METHOD__." Ignored add locator action: locator ".json_encode($locator)." already exists. Tested properties: ".to_string(), logger::DEBUG);
+			debug_log(__METHOD__." Ignored add locator action: locator ".json_encode($locator)." already exists. Tested properties: ".to_string(), logger::ERROR);
 		}
 
 		# Updates current dato
