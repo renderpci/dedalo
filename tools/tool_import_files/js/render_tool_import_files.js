@@ -126,12 +126,12 @@ const get_content_data_edit = async function(self) {
 			? ddo_option_components
 			: [
 				{
-					role: "component_option",
-					tipo: self.caller.tipo,
-					map_name: null,
-					section_id: "self",
-					section_tipo: self.caller.tipo,
-					target_section_tipo: self.tool_config.ddo_map.find(el => el.role === 'target_component').section_tipo
+					role				: "component_option",
+					tipo				: self.caller.tipo,
+					map_name			: null,
+					section_id			: "self",
+					section_tipo		: self.caller.tipo,
+					target_section_tipo	: self.tool_config.ddo_map.find(el => el.role === 'target_component').section_tipo
 				}
 			]
 
@@ -425,6 +425,7 @@ const get_content_data_edit = async function(self) {
 				const current_instance = ar_instances[i]
 				components_temp_data.push(current_instance.data)
 			}
+
 			// get the global configuration (to apply in the server)
 			self.tool_config.import_file_name_mode = (self.tool_config.import_mode === 'section' && control_section_id_check_box.checked)
 				? 'enumerate'
