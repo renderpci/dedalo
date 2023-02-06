@@ -22,6 +22,40 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 
 	public $datos_time_machine;
 
+	# static cache for RecordObj_matrix instances
+	static $ar_JSON_RecordObj_matrix_instances;
+
+
+
+	/**
+	* GET_INSTANCE
+	* Cache JSON_RecordObj_matrix  instances (singleton pattern)
+	* @param string $matrix_table = null
+	* @param string|int|null $section_id = null
+	* @param string $tipo = null
+	* @param bool $cache = true
+	*
+	* @return instance JSON_RecordObj_matrix
+	*/
+	public static function get_instance(string $matrix_table=null, int $section_id=null, string $section_tipo=null, bool $cache=true) : JSON_RecordObj_matrix {
+
+		// key for cache
+			$key = $matrix_table.'_'.$section_id .'_'. $section_tipo;
+
+		// Not cache new sections (without section_id)
+			if (empty($section_id) || $cache===false) {
+				return new JSON_RecordObj_matrix($matrix_table, $section_id, $section_tipo);
+			}
+
+		// find current instance in cache
+			if ( !array_key_exists($key, (array)self::$ar_JSON_RecordObj_matrix_instances) ) {
+				self::$ar_JSON_RecordObj_matrix_instances[$key] = new JSON_RecordObj_matrix($matrix_table, $section_id, $section_tipo);
+			}
+
+
+		return self::$ar_JSON_RecordObj_matrix_instances[$key];
+	}//end get_instance
+
 
 
 	/**
