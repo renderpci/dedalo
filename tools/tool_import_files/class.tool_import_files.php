@@ -197,40 +197,26 @@ class tool_import_files extends tool_common {
 		string $target_section_tipo,
 		int $current_section_id,
 		string $target_component_tipo,
-		?string $custom_target_quality
+		?string $custom_target_quality=null
 		) : bool {
 
 		$model = RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo, true);
 		switch ($model) {
 			case 'component_image':
 
-				// component_image (Is auto saved with defaults on create)
-					$component = component_common::get_instance(
-						$model,
-						$target_component_tipo,
-						$current_section_id,
-						'list',
-						DEDALO_DATA_NOLAN,
-						$target_section_tipo
-					);
-				// get_image_id
-					$image_id			= $component->get_id();
-					$additional_path	= $component->get_additional_path();
-					// $image_path		= $component->get_image_path();
-
 				// custom_target_quality
 					$custom_target_quality = $custom_target_quality ?? DEDALO_IMAGE_QUALITY_ORIGINAL;
 
 				// file vars
-					# Path of file like '/Users/my_user/Dedalo/media/media_mupreva/image/temp/files/user_1/'
+					// Path of file like '/Users/my_user/Dedalo/media/media_mupreva/image/temp/files/user_1/'
 					$source_path		= $media_file['dir_path'];
-					# Full path to file located in temporal files uploads like '/Users/my_user/Dedalo/media/media_mupreva/image/temp/files/user_1/1253-2.jpg'
+					// Full path to file located in temporal files uploads like '/Users/my_user/Dedalo/media/media_mupreva/image/temp/files/user_1/1253-2.jpg'
 					$source_full_path	= $media_file['file_path'];
-					# File current extension like 'jpg'
+					// File current extension like 'jpg'
 					$extension			= $media_file['extension'];
-					# File name full like '1253-2.jpg'
+					// File name full like '1253-2.jpg'
 					$file_name_full		= $media_file['file_name_full'];
-					# File name without extension
+					// File name without extension
 					$file_name			= $media_file['file_name'];
 
 				// safe paths check
@@ -243,6 +229,20 @@ class tool_import_files extends tool_common {
 						debug_log(__METHOD__." Error Processing Request. Unauthorized path ".to_string(), logger::ERROR);
 						return false;
 					}
+
+				// component_image
+					$component = component_common::get_instance(
+						$model,
+						$target_component_tipo,
+						$current_section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$target_section_tipo
+					);
+
+				// get_image_id
+					$image_id			= $component->get_id();
+					$additional_path	= $component->get_additional_path();
 
 				// original image desired store
 					$original_path		= DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER .'/'. $custom_target_quality .''. $additional_path;
