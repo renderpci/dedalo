@@ -170,10 +170,10 @@ class component_filter extends component_relation_common {
 	*/
 	public function propagate_filter() : bool {
 
-		$section_id		= $this->get_parent();
+		$section_id		= $this->get_section_id();
 		$section_tipo	= $this->get_section_tipo();
 		// $section		= section::get_instance($section_id, $section_tipo);
-		$section		= $this->get_my_section();
+		// $section		= $this->get_my_section();
 
 		$component_dato_filter  = $this->get_dato();
 
