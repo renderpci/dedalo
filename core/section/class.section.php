@@ -114,17 +114,17 @@ class section extends common {
 				return new section(null, $tipo, $mode);
 			}
 
-		return new section($section_id, $tipo, $mode);
+		// return new section($section_id, $tipo, $mode);
 
 		// removed cache features temporally (!) Verify real speed benefits
-			// // Direct construct without cache instance
-			// // Use this config in imports
-			// 	if ($cache===false) {
-			// 		return new section($section_id, $tipo, $mode);
-			// 	}
+			// Direct construct without cache instance
+			// Use this config in imports
+				if ($cache===false) {
+					return new section($section_id, $tipo, $mode);
+				}
 
-			// # key for cache
-			// $key = $section_id .'_'. $tipo.'_'.$mode;
+			# key for cache
+			$key = $section_id .'_'. $tipo.'_'.$mode;
 
 			// $max_cache_instances = 300*3; // Default 300
 			// $cache_slice_on 	 = 100*3; // Default 100
@@ -142,12 +142,12 @@ class section extends common {
 			// 	time_nanosleep(0, 2000000); // 02 ms
 			// }
 
-			// # FIND CURRENT INSTANCE IN CACHE
-			// if ( !array_key_exists($key, (array)self::$ar_section_instances) ) {
-			// 	self::$ar_section_instances[$key] = new section($section_id, $tipo, $mode);
-			// }
+			# FIND CURRENT INSTANCE IN CACHE
+			if ( !array_key_exists($key, (array)self::$ar_section_instances) ) {
+				self::$ar_section_instances[$key] = new section($section_id, $tipo, $mode);
+			}
 
-			// return self::$ar_section_instances[$key];
+			return self::$ar_section_instances[$key];
 	}//end get_instance
 
 
