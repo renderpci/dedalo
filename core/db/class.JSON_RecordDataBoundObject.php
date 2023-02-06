@@ -116,6 +116,9 @@ abstract class JSON_RecordDataBoundObject {
 
 		# CACHE RUN-IN
 		$use_cache = $this->use_cache;
+		if ($use_cache===true) {
+			throw new Exception("Error Processing Request. cache is activated. Don't use cache here!!!!!!!", 1);
+		}
 		if($use_cache===true && isset($ar_JSON_RecordDataObject_load_query_cache[$strQuery])) {	// USING CACHE RUN-IN
 
 			$dato = $ar_JSON_RecordDataObject_load_query_cache[$strQuery];
@@ -227,7 +230,7 @@ abstract class JSON_RecordDataBoundObject {
 		}
 
 		// datos : JSON ENCODE ALWAYS !!!
-			$datos = json_handler::encode($this->datos);
+			$datos = json_handler::encode($this->dato);
 
 		// prevent null encoded errors
 			$datos = str_replace(['\\u0000','\u0000'], ' ', $datos);
