@@ -49,10 +49,6 @@ class sections extends common {
 
 	/**
 	* CONSTRUCT
-	* Extends parent abstract class common
-	* La sección, a diferencia de los componentes, se comporta de un mode particular:
-	* Si se le pasa sólo el tipo, se espera un listado (mode list)
-	* Si se le pasa sólo el section_id, se espera una ficha (mode edit)
 	*/
 	private function __construct(?array $ar_locators, object $search_query_object, string $caller_tipo, string $mode, string $lang) {
 
