@@ -112,6 +112,19 @@
 				$section_tipo	= $current_record->section_tipo;
 				$section_id		= $current_record->section_id;
 
+				// load data into JSON_RecordObj_matrix (used by section to get his data)
+				$matrix_table 	= common::get_matrix_table_from_tipo($this->caller_tipo);
+				$JSON_RecordObj_matrix = JSON_RecordObj_matrix::get_instance(
+					$matrix_table,
+					$section_id,
+					$section_tipo,
+					true // bool cache
+				);
+				$datos = $current_record->datos ?? null;
+				if (!is_null($datos)) {
+					$JSON_RecordObj_matrix->set_dato($datos);
+				}
+
 				// section instance
 					$section = $section_class::get_instance(
 						$section_id,
@@ -137,17 +150,18 @@
 				// set dato
 					if ($mode==='tm') {
 						$section->set_record($current_record); // inject whole db record as var
-					}else{
-						// inject dato to section when the dato come from db and set as loaded
-						$datos = $current_record->datos ?? null;
-						if (!is_null($datos)) {
-							$section->set_dato($datos);
-							$section->set_bl_loaded_matrix_data(true);
-						}else{
-							// inject dato when the dato come from ar_locators
-							$section->set_dato($current_record);
-						}
 					}
+					// else{
+						// inject dato to section when the dato come from db and set as loaded
+						// $datos = $current_record->datos ?? null;
+						// if (!is_null($datos)) {
+						// 	$section->set_dato($datos);
+						// 	$section->set_bl_loaded_matrix_data(true);
+						// }else{
+						// 	// inject dato when the dato comes from ar_locators
+						// 	// $section->set_dato($current_record);
+						// }
+					// }
 
 				// get the instance JSON context and data
 					$section_json = $section->get_json();
