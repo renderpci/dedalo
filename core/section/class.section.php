@@ -233,7 +233,7 @@ class section extends common {
 			}
 
 		// data is not loaded. Load once
-			if($this->bl_loaded_matrix_data!==true) {
+			// if($this->bl_loaded_matrix_data!==true) {
 
 				// dataframe case, the section doesn't has his own data in DDBB
 				if (   $this->source==='caller_section'
@@ -277,7 +277,8 @@ class section extends common {
 					// JSON_RecordObj_matrix
 						$section_tipo			= $this->tipo;
 						$matrix_table			= common::get_matrix_table_from_tipo($section_tipo);
-						$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table, $this->section_id, $tipo);
+						// $JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table, $this->section_id, $tipo);
+						$JSON_RecordObj_matrix	= JSON_RecordObj_matrix::get_instance($matrix_table, $this->section_id, $tipo);
 
 					// load dato from db
 						$dato = $JSON_RecordObj_matrix->get_dato();
@@ -287,8 +288,8 @@ class section extends common {
 					$this->dato = (object)$dato;
 
 				// set as loaded
-					$this->bl_loaded_matrix_data = true;
-			}//end if($this->bl_loaded_matrix_data!==true)
+					// $this->bl_loaded_matrix_data = true;
+			// }//end if($this->bl_loaded_matrix_data!==true)
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -756,11 +757,13 @@ class section extends common {
 			if($this->source === 'caller_section') {
 
 				// time machine. Save component data only
-					$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix(
-						'dataframe', // fake table
-						(int)$this->section_id,
-						$tipo // string section_tipo
-					);
+					// $JSON_RecordObj_matrix	= new JSON_RecordObj_matrix(
+					// 	'dataframe', // fake table
+					// 	(int)$this->section_id,
+					// 	$tipo // string section_tipo
+					// );
+
+					$JSON_RecordObj_matrix	= JSON_RecordObj_matrix::get_instance('dataframe', (int)$this->section_id, $tipo);
 					$JSON_RecordObj_matrix->save_time_machine($options);
 
 				return $this->section_id;
@@ -796,8 +799,10 @@ class section extends common {
 			}
 
 			# Save section dato
-				$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix( (string)$matrix_table, (int)$this->section_id, (string)$tipo );
-				$JSON_RecordObj_matrix->set_datos($section_dato);
+				// $JSON_RecordObj_matrix	= new JSON_RecordObj_matrix( (string)$matrix_table, (int)$this->section_id, (string)$tipo );
+
+				$JSON_RecordObj_matrix	= JSON_RecordObj_matrix::get_instance( (string)$matrix_table, (int)$this->section_id, (string)$tipo );
+				$JSON_RecordObj_matrix->set_dato($section_dato);
 				$saved_id_matrix		= $JSON_RecordObj_matrix->Save( $options );
 				if (false===$saved_id_matrix || $saved_id_matrix < 1) { //  && $tipo!==DEDALO_ACTIVITY_SECTION_TIPO
 					debug_log(__METHOD__." Error on trying save->update record. Nothing is saved! ".to_string(), logger::ERROR);
@@ -903,7 +908,7 @@ class section extends common {
 
 
 					// Set as loaded
-						$this->bl_loaded_matrix_data = true;
+						// $this->bl_loaded_matrix_data = true;
 
 			// Real data save
 				// Time machine data. We save only current new section in time machine once (section info not change, only components changes)
@@ -917,8 +922,9 @@ class section extends common {
 						$save_options->new_record		 = true;
 
 				// Save JSON_RecordObj
-					$JSON_RecordObj_matrix = new JSON_RecordObj_matrix((string)$matrix_table, (int)$this->section_id, (string)$tipo);
-					$JSON_RecordObj_matrix->set_datos($section_dato);
+					// $JSON_RecordObj_matrix = new JSON_RecordObj_matrix((string)$matrix_table, (int)$this->section_id, (string)$tipo);
+					$JSON_RecordObj_matrix = JSON_RecordObj_matrix::get_instance((string)$matrix_table, (int)$this->section_id, (string)$tipo);
+					$JSON_RecordObj_matrix->set_dato($section_dato);
 					#$JSON_RecordObj_matrix->set_section_id($this->section_id);
 					#$JSON_RecordObj_matrix->set_section_tipo($tipo);
 					$saved_id_matrix = $JSON_RecordObj_matrix->Save( $save_options );
@@ -1270,7 +1276,8 @@ class section extends common {
 						}
 
 					// section delete. Delete matrix record
-						$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table, $this->section_id, $section_tipo);
+						// $JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table, $this->section_id, $section_tipo);
+						$JSON_RecordObj_matrix	= JSON_RecordObj_matrix::get_instance($matrix_table, $this->section_id, $section_tipo);
 						$JSON_RecordObj_matrix->MarkForDeletion();
 
 					// inverse references. Remove all inverse references to this section
