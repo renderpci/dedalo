@@ -19,7 +19,7 @@ Dédalo uses the structured Ontology in order to:
 2. Build the programing objects during execution time.
 3. Interpret the code and the data to translate it to multiple formats (RDF, JSON-LD, SQL, CSV, XML, Dublin Core, HTML, PDF, etc.).
 
-The ontology can be modified, subsequently changing the data and the code. You can (1) develop new functionalities without changing the data and (2) alter the metadata without touching the code and the data.
+The ontology can be modified, subsequently changing the data and the code. You can (1) develop new functionalities without changing the data and (2) alter the metadata independently of the code and the data.
 
 Dédalo is based on a linked data model and uses a relative, multi-reference, universal locator. Such locator can find
 entities, sections, components, and tags. In other words, it can locate archives (in others entities), records, fields, and part of the fields (sub-field data).
@@ -193,7 +193,7 @@ Any other Linux will probably be compatible, but we offer NO GUARANTEES.
 
 Windows: Dédalo might run, but we HAVE NOT TESTED IT.
 
-## 9. Usage
+## 9. Compatible browsers
 
 Dédalo version V6+ is only tested in chromium and webkit browsers (Chrome, Safari, Edge 77+, ...).<br>
 Firefox situation: from Dédalo V4.8 onwards, it is fully compatible with Firefox and can be used in production. However, we need more feedback from the users; please share your experience!
