@@ -189,13 +189,29 @@ class component_filter extends component_relation_common {
 			}
 		}
 
-		$ar_children_objects = $section->get_ar_children_objects_by_model_name_in_section('component_portal');
-			#dump($ar_children_objects,"ar_children_objects");
-		foreach ($ar_children_objects as $component_portal) {
-			if (!empty($component_portal->dato)) {
-				$component_portal->propagate_filter($dato_filter);
-					#dump($component_portal,'$component_portal propagando filtro....');
-			}
+		$ar_model_name_required = ['component_portal'];
+		$ar_children = section::get_ar_children_tipo_by_model_name_in_section(
+			$section_tipo,
+			$ar_model_name_required,
+			$from_cache=true,
+			$resolve_virtual=true, // (!) keep default resolve_virtual=false
+			$recursive=true,
+			$search_exact=true,
+			$ar_tipo_exclude_elements=false,
+			$ar_exclude_models=null
+		);
+		foreach ($ar_children as $child_tipo) {
+
+			$component_portal = component_common::get_instance(
+				'component_portal',
+				$child_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo,
+				false
+			);
+			$component_portal->propagate_filter($dato_filter);
 		}
 
 		return true;
