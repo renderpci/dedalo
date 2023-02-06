@@ -4209,6 +4209,9 @@ dd-modal .footer.distribute {
 .column:has(.list_body) .column {
   box-shadow: none;
 }
+.autocomplete_data .column {
+  box-shadow: none;
+}
 .wrapper_section.list .column.column_section_id {
   min-width: 70px;
   font-size: 1.2rem;
