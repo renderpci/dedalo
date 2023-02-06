@@ -282,7 +282,7 @@ abstract class component_common extends common {
 			}//end if(SHOW_DEBUG===true)
 
 		// no cache. Direct construct without cache instance. Use this config in imports
-			if ($cache===false) {
+			if ($cache===false || empty($section_id)) {
 				return new $component_name($tipo, $section_id, $mode, $lang, $section_tipo);
 			}
 
@@ -306,6 +306,7 @@ abstract class component_common extends common {
 
 			// new instance. If not already exists, create a new one and store in cache
 				if ( !isset($ar_component_instances) || !array_key_exists($cache_key, $ar_component_instances) ) {
+				// if ( !isset($ar_component_instances) || !isset($ar_component_instances[$cache_key]) ) {
 
 					// __CONSTRUCT : Store new component in static array var
 						$ar_component_instances[$cache_key] = new $component_name(
@@ -315,7 +316,6 @@ abstract class component_common extends common {
 							$lang,
 							$section_tipo
 						);
-
 				}
 				// else{
 
