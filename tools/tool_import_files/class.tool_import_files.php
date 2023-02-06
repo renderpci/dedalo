@@ -653,20 +653,25 @@ class tool_import_files extends tool_common {
 					// when the component stored the filename, get the filename and save it
 					foreach ($ar_ddo_map as $ddo) {
 
-						$RecordObj_dd	= new RecordObj_dd($ddo->tipo);
-						$current_lang	= $RecordObj_dd->get_traducible()!=='si' ? DEDALO_DATA_NOLAN :  DEDALO_DATA_LANG;
+						if($ddo->role === 'component_option'){
+							continue;
+						}
 
-						$destination_section_id = ($ddo->section_tipo===$section_tipo)
+						$model					= RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
+						$current_lang			= RecordObj_dd::get_translatable($ddo->tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+						$destination_section_id	= ($ddo->section_tipo===$section_tipo)
 							? $section_id
 							: $target_section_id;
 
-						$model		= RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
-						$component	= component_common::get_instance($model,
-																	 $ddo->tipo,
-																	 $destination_section_id,
-																	 'list',
-																	 $current_lang,
-																	 $ddo->section_tipo);
+						$component	= component_common::get_instance(
+							$model,
+							$ddo->tipo,
+							$destination_section_id,
+							'list',
+							$current_lang,
+							$ddo->section_tipo
+						);
+
 						switch ($ddo->role) {
 							case 'target_filename':
 
