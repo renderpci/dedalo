@@ -192,8 +192,8 @@ class component_portal extends component_relation_common {
 
 			if($new_section_id<1) {
 				$msg = __METHOD__." Error on create new section: new section_id is not valid ! ";
-				trigger_error($msg);
 				$response->msg .= $msg;
+				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
 				return $response;
 			}
 
@@ -208,9 +208,8 @@ class component_portal extends component_relation_common {
 
 			$added = $this->add_locator_to_dato($locator);
 			if ($added!==true) {
-				$msg = __METHOD__." Error add_locator_to_dato. New locator is not added ! ";
-				trigger_error($msg);
-				$response->msg .= $msg;
+				$response->msg .= 'Error add_locator_to_dato. New locator is not added !';
+				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
 				return $response;
 			}
 
