@@ -435,7 +435,7 @@ abstract class JSON_RecordDataBoundObject {
 	* Perform a simple free SQL query and exec in db return result resource
 	* @param string $strQuery Full SQL query like "SELECT id FROM table WHERE id>0"
 	* @param bool $wait to set syc/async exec. Default us true
-	* @return @return resource|PgSql\Result|bool $result
+	* @return resource|PgSql\Result|bool $result
 	*   resource (PHP<8) OR object (PHP>=8) | false $result
 	* 	Database resource/object from exec query
 	*/
