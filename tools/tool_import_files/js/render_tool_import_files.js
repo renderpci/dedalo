@@ -70,6 +70,7 @@ render_tool_import_files.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
+* @param object self
 * @return DOM node content_data
 */
 const get_content_data_edit = async function(self) {
@@ -82,7 +83,6 @@ const get_content_data_edit = async function(self) {
 			class_name 		: 'component options',
 			parent 			: fragment
 		})
-
 
 	// filter processor options of the files, it could be defined in the preferences or could be the caller
 		const ar_file_processor = self.tool_config.file_processor || null

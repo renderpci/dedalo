@@ -157,9 +157,10 @@ service_time_machine.prototype.build = async function(autoload=false) {
 				}
 
 			// set the result to the datum
-				self.datum		= api_response.result
+				self.datum		= api_response.result || []
 				self.data		= self.datum.data.find(el => el.tipo===self.tipo && el.typo==='sections')
 				self.context	= self.datum.context.find(el => el.type==='section')
+
 
 			// count rows
 				if (!self.total) {
