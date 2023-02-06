@@ -625,6 +625,7 @@ class tool_import_files extends tool_common {
 					if ($portal_response->result===false) {
 						$response->result 	= false;
 						$response->msg 		= "Error on create portal children: ".$portal_response->msg;
+						debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
 						return $response;
 					}
 					// save portal if all is all ok
