@@ -113,8 +113,8 @@
 				$section_id		= $current_record->section_id;
 
 				// load data into JSON_RecordObj_matrix (used by section to get his data)
-				$matrix_table 	= common::get_matrix_table_from_tipo($this->caller_tipo);
-				$JSON_RecordObj_matrix = JSON_RecordObj_matrix::get_instance(
+				$matrix_table			= common::get_matrix_table_from_tipo($section_tipo);
+				$JSON_RecordObj_matrix	= JSON_RecordObj_matrix::get_instance(
 					$matrix_table,
 					$section_id,
 					$section_tipo,
