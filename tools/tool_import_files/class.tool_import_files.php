@@ -220,11 +220,11 @@ class tool_import_files extends tool_common {
 						$target_component_tipo,
 						$current_section_id,
 						'list',
-						DEDALO_DATA_LANG,
+						DEDALO_DATA_NOLAN,
 						$target_section_tipo
 					);
 				// get_image_id
-					$image_id			= $component->get_image_id();
+					$image_id			= $component->get_id();
 					$image_path			= $component->get_image_path();
 					$additional_path	= $component->get_additional_path();
 
@@ -523,6 +523,7 @@ class tool_import_files extends tool_common {
 
 				// Check file exists
 					$file_full_path = $files_dir . $current_file_name;
+
 					if (!file_exists($file_full_path)) {
 						$msg = "File ignored (not found) $current_file_name";
 						if(SHOW_DEVELOPER===true) { $msg .= " - $file_full_path"; }
@@ -606,12 +607,14 @@ class tool_import_files extends tool_common {
 					}
 
 				// component portal. Component (expected portal)
-					$component_portal = component_common::get_instance( $target_ddo->model,
-																		$target_ddo->tipo,
-																		$section_id,
-																		'edit',
-																		DEDALO_DATA_NOLAN,
-																		$target_ddo->section_tipo);
+					$component_portal = component_common::get_instance(
+						$target_ddo->model,
+						$target_ddo->tipo,
+						$section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$target_ddo->section_tipo
+					);
 					// Portal target_section_tipo
 					$target_section_tipo = $target_ddo->target_section_tipo ?? $component_portal->get_ar_target_section_tipo()[0];
 
