@@ -398,7 +398,7 @@ class section extends common {
 
 		// set self section_obj to component. (!) Important to prevent cached and not cached versions of
 		// current section conflicts (and for speed)
-			$component_obj->set_section_obj($this);
+			// $component_obj->set_section_obj($this);
 
 		// component_global_dato : Extract the component portion from the section's global object
 			$component_tipo				= $component_obj->get_tipo();
