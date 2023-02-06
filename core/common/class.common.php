@@ -3796,7 +3796,7 @@ abstract class common {
 		$tools = [];
 
 		// user_tools
-			$user_id	= (int)navigator::get_user_id();
+			$user_id	= navigator::get_user_id();
 			$user_tools	= tool_common::get_user_tools($user_id);
 
 		// short vars

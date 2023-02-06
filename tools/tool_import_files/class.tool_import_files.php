@@ -13,23 +13,17 @@ class tool_import_files extends tool_common {
 
 
 	/**
-	* __CONSTRUCT
-	* @return bool true
-	*/
-		// public function __construct() {
-
-		// 	return true;
-		// }//end __construct
-
-
-
-	/**
 	* SET_UP
+	* @param string $key_dir=null
+	* @return bool
 	*/
 	public function set_up(string $key_dir=null) : bool {
 
 		# VERIFY USER IS LOGGED
-			if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
+			if(login::is_logged()!==true) {
+				debug_log(__METHOD__."  Auth error: please login ".to_string(), logger::ERROR);
+				return false;
+			}
 
 		// user_id. Currently logged user
 			$user_id = navigator::get_user_id();
