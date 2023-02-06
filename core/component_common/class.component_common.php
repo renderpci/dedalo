@@ -510,7 +510,7 @@ abstract class component_common extends common {
 
 				if ( strpos($this->section_id, DEDALO_SECTION_ID_TEMP)===false ) {
 					try{
-						$this->id = $this->Save();
+						$this->Save();
 					} catch (Exception $e) {
     					// echo 'Caught exception: ',  $e->getMessage(), "\n";
     					debug_log(__METHOD__.PHP_EOL." ERROR on set_dato_default. Unable to save data. ".$e->getMessage().to_string(), logger::ERROR);
@@ -3070,6 +3070,7 @@ abstract class component_common extends common {
 			return $string;
 		}
 
+
 		#$string = trim($string,'"\'');
 		$string = trim($string,'"');
 
@@ -3081,6 +3082,7 @@ abstract class component_common extends common {
 	################################## //end SEARCH 2 ########################################################
 
 
+
 	/**
 	* GET_MY_SECTION
 	* Creates or get from memory the component section object
@@ -3088,14 +3090,17 @@ abstract class component_common extends common {
 	*/
 	public function get_my_section() : object {
 
-		if (isset($this->section_obj)) {
-			return $this->section_obj;
-		}
+		// Removed 6-02-2022 because the section cache has not conflicts with same instance in list or edit modes
+		// now the JSON_RecordObj_matrix has the cache of section data. (same data for list and edit)
+		// if (isset($this->section_obj)) {
+		// 	return $this->section_obj;
+		// }
 
-		$this->section_obj = section::get_instance($this->section_id, $this->section_tipo, $this->mode, true);
+		$section = section::get_instance($this->section_id, $this->section_tipo, 'edit', true);
+		$this->section_obj = $section;
 		// caller_dataframe
 			if (isset($this->caller_dataframe)) {
-				$this->section_obj->caller_dataframe	= $this->caller_dataframe;
+				$this->section_obj->caller_dataframe = $this->caller_dataframe;
 			}
 
 
