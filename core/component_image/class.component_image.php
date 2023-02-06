@@ -513,7 +513,7 @@ class component_image extends component_media_common {
 		# Target folder verify (EXISTS AND PERMISSIONS)
 			$target_dir = $this->get_media_path($target_quality) ;
 			if( !is_dir($target_dir) ) {
-				if(!mkdir($target_dir, 0777,true)) throw new Exception(" Error on read or create directory \"$target_quality\". Permission denied $target_dir (2)");
+				if(!mkdir($target_dir, 0775, true)) throw new Exception(" Error on read or create directory \"$target_quality\". Permission denied $target_dir (2)");
 			}
 
 		# Avoid enlarge images
@@ -792,7 +792,7 @@ class component_image extends component_media_common {
 				// delete dir
 					$folder_path_del = $this->get_target_dir($current_quality)  . '/deleted';
 					if( !is_dir($folder_path_del) ) {
-						if( !mkdir($folder_path_del, 0777,true) ) {
+						if( !mkdir($folder_path_del, 0775, true) ) {
 							trigger_error(" Error on read or create directory \"deleted\". Permission denied");
 							return false;
 						}
@@ -1274,7 +1274,7 @@ class component_image extends component_media_common {
 
 		// check target folder is accessible (EXISTS AND PERMISSIONS)
 			if( !is_dir($media_path) ) {
-				if( !mkdir($media_path, 0777, true) ) {
+				if( !mkdir($media_path, 0775,  true) ) {
 					debug_log(
 						__METHOD__." Failed to create directory for default SVG file in media_path: " .$media_path,
 						logger::ERROR
