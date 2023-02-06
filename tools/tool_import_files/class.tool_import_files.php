@@ -74,11 +74,11 @@ class tool_import_files extends tool_common {
 
 	/**
 	* FIND_ALL_FILES
-	* Read dir (must be accessible)
+	* Read directory (must be accessible)
+	* @param string $dir
+	* @return array $ar_data
 	*/
 	public function find_all_files(string $dir) : array {
-
-		#$dir = str_replace('//', '/', $dir);
 
 		$ar_data = [];
 
@@ -89,45 +89,35 @@ class tool_import_files extends tool_common {
 			}
 			$root = scandir($dir);
 		} catch (Exception $e) {
-			//return($e);
+			debug_log(__METHOD__." Caught exception: ".$e->getMessage(), logger::ERROR);
 		}
 		if (!$root) {
 			return $ar_data;
 		}
 
-		natsort($root);
-		foreach($root as $value) {
+		// sort in natural order
+			natsort($root);
 
-			# Skip non valid extensions
-			$file_parts = pathinfo($value);
-			if(empty($file_parts['extension']) || !in_array(strtolower($file_parts['extension']), $this->valid_extensions)) continue;
+		// filter available files in directory
+			foreach($root as $value) {
 
-			# Case file
-			if(is_file("$dir/$value")) {
+				// Skip non valid extensions
+					$file_parts = pathinfo($value);
+					if(empty($file_parts['extension']) || !in_array(strtolower($file_parts['extension']), $this->valid_extensions)) {
+						continue;
+					}
 
-				$ar_data[] = $this->get_file_data($dir, $value);
-				continue;
+				// Case file. Add
+					if(is_file("$dir/$value")) {
+						$ar_data[] = $this->get_file_data($dir, $value);
+					}
 			}
-		}
 
-		# SORT ARRAY (By custom core function build_sorter)
-		# usort($ar_data, build_sorter('numero_recurso'));
+		// SORT ARRAY (By custom core function build_sorter)
+			// usort($ar_data, build_sorter('numero_recurso'));
 
 		return $ar_data;
 	}//end find_all_files
-
-
-
-	/**
-	* SET_COMPONENT
-	* @return bool
-	*/
-	public function set_component(object $component_obj) : bool{
-		# Fix current component/section
-		$this->component_obj = $component_obj;
-
-		return true;
-	}//end set_component
 
 
 
@@ -154,7 +144,7 @@ class tool_import_files extends tool_common {
 			$ar_data['file_path']		= $dir.$file;			# /Users/dedalo/media/media_mupreva/image/temp/files/user_1/45001-1.jpg
 			$ar_data['file_name']		= $file_name;			# 04582_01_EsCuieram_Terracota_AD_ORIG
 			$ar_data['file_name_full']	= $file;				# $ar_value[0]; # 04582_01_EsCuieram_Terracota_AD_ORIG.JPG
-			$ar_data['extension']		= $extension;			# JPG (respetamos mayúsculas/minúsculas)
+			$ar_data['extension']		= $extension;			# JPG (we respect upper/lower case)
 			$ar_data['file_size']		= number_format(filesize($ar_data['file_path'])/1024/1024,3)." MB"; # 1.7 MB
 
 		// des
@@ -199,12 +189,18 @@ class tool_import_files extends tool_common {
 	* @param string tipo $target_section_tipo
 	* @param int section_id $current_section_id
 	* @param string tipo $target_component
-	* @return (bool)
+	* @param string|null $custom_target_quality
+	* @return bool
 	*/
-	public static function set_media_file($media_file, string $target_section_tipo, int $current_section_id, string $target_component_tipo) : bool {
+	public static function set_media_file(
+		$media_file,
+		string $target_section_tipo,
+		int $current_section_id,
+		string $target_component_tipo,
+		?string $custom_target_quality
+		) : bool {
 
 		$model = RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo, true);
-
 		switch ($model) {
 			case 'component_image':
 
@@ -219,13 +215,16 @@ class tool_import_files extends tool_common {
 					);
 				// get_image_id
 					$image_id			= $component->get_id();
-					$image_path			= $component->get_image_path();
 					$additional_path	= $component->get_additional_path();
+					// $image_path		= $component->get_image_path();
+
+				// custom_target_quality
+					$custom_target_quality = $custom_target_quality ?? DEDALO_IMAGE_QUALITY_ORIGINAL;
 
 				// file vars
-					# Path of file like '/Users/pepe/Dedalo/media/media_mupreva/image/temp/files/user_1/'
+					# Path of file like '/Users/my_user/Dedalo/media/media_mupreva/image/temp/files/user_1/'
 					$source_path		= $media_file['dir_path'];
-					# Full path to file located in temporal files uploads like '/Users/pepe/Dedalo/media/media_mupreva/image/temp/files/user_1/1253-2.jpg'
+					# Full path to file located in temporal files uploads like '/Users/my_user/Dedalo/media/media_mupreva/image/temp/files/user_1/1253-2.jpg'
 					$source_full_path	= $media_file['file_path'];
 					# File current extension like 'jpg'
 					$extension			= $media_file['extension'];
@@ -241,65 +240,81 @@ class tool_import_files extends tool_common {
 						strpos($file_name_full, '../')!==false ||
 						strpos($file_name, '../')!==false
 						) {
-						throw new Exception("Error Processing Request. Unauthorized path", 1);
+						debug_log(__METHOD__." Error Processing Request. Unauthorized path ".to_string(), logger::ERROR);
 						return false;
 					}
 
 				// original image desired store
-					$original_path		= DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER .'/'. DEDALO_IMAGE_QUALITY_ORIGINAL .''. $additional_path;
-					$original_file_path	= $original_path .'/'. $image_id . '.'.strtolower($extension);
+					$original_path		= DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER .'/'. $custom_target_quality .''. $additional_path;
+					$original_file_path	= $original_path .'/'. $image_id . '.'. strtolower($extension);
 					if( !is_dir($original_path) ) {
-						if(!mkdir($original_path, 0777,true)) {
-							throw new Exception(" Error on read or create directory. Permission denied $original_path");
+						if(!mkdir($original_path, 0775, true)) {
+							debug_log(__METHOD__." Error on read or create directory. Permission denied $original_path ".to_string(), logger::ERROR);
+							return false;
 						}
 					}
 
 				// copy the original
 					if (!copy($source_full_path, $original_file_path)) {
-						throw new Exception("<div class=\"info_line\">ERROR al copiar ".$source_full_path." a ".$original_file_path."</div>");
+						debug_log(__METHOD__." Error on copy source_full_path to original_file_path ", logger::ERROR);
+						debug_log(__METHOD__." source_full_path ".to_string($source_full_path), logger::ERROR);
+						debug_log(__METHOD__." original_file_path ".to_string($original_file_path), logger::ERROR);
+						return false;
 					}
 
 				// Delete the thumbnail copy
 					$original_file_thumb = $source_path .'/thumbnail/'. $file_name_full;
-					if(!unlink($original_file_thumb)){
-						throw new Exception("Thumb Delete ERROR of: ".$original_file_thumb);
+					if (file_exists($original_file_thumb)) {
+						if(!unlink($original_file_thumb)){
+							debug_log(__METHOD__." Thumb Delete ERROR of: ".to_string($original_file_thumb), logger::ERROR);
+							return false;
+						}
 					}
 
 				// extension unify. convert JPG to jpg
 					if (strtolower($extension)!=strtolower(DEDALO_IMAGE_EXTENSION)) {
-						$original_file_path_jpg = DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER .'/'. DEDALO_IMAGE_QUALITY_ORIGINAL .''. $additional_path .'/'. $image_id .'.'. DEDALO_IMAGE_EXTENSION;
+						$original_file_path_jpg = DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER .'/'. $custom_target_quality .''. $additional_path .'/'. $image_id .'.'. DEDALO_IMAGE_EXTENSION;
 						ImageMagick::convert($original_file_path, $original_file_path_jpg );
 					}
 
-				// default quality
-					// Generate dedalo default quality version (usually 1.5MB) and thumb image
-					// $default_quality_image = DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER .'/'. DEDALO_IMAGE_QUALITY_DEFAULT .'/'. $image_id  .'.'. DEDALO_IMAGE_EXTENSION;
-					$source_image	= $original_file_path;
-					$source_quality	= DEDALO_IMAGE_QUALITY_ORIGINAL;
-					$target_quality	= DEDALO_IMAGE_QUALITY_DEFAULT;
-
-					$component->convert_quality( $source_quality, $target_quality );
-
-					$value = new stdClass();
-						$value->original_file_name		= $file_name_full;
-						$value->original_upload_date	= component_date::get_date_now();
-					$component->set_dato([$value]);
-					$component->Save();
+				// convert to default quality
+					// QUALITY_DEFAULT. Generate dedalo default quality version (usually 1.5MB) and thumb image
+					if ($custom_target_quality!==DEDALO_IMAGE_QUALITY_DEFAULT) {
+						$component->convert_quality(
+							$custom_target_quality, // source_quality
+							DEDALO_IMAGE_QUALITY_DEFAULT // target_quality
+						);
+					}
+					// THUMB_DEFAULT. Convert to thumb quality
+					$component->convert_quality(
+						DEDALO_IMAGE_QUALITY_DEFAULT, // source_quality
+						DEDALO_IMAGE_THUMB_DEFAULT // target_quality
+					);
 
 				// generate the svg file
 					$svg_string_node = $component->create_default_svg_string_node(); // return string|null
 					if (empty($svg_string_node)) {
 						debug_log(__METHOD__." File not found on create_default_svg_string_node. Ignored 'create_svg_file' ".to_string(), logger::ERROR);
 					}else{
-						$create_svg_file_result	= $component->create_svg_file($svg_string_node);
+						$created_svg_file = $component->create_svg_file($svg_string_node);
+						if ($created_svg_file!==true) {
+							debug_log(__METHOD__." Error creating svg file ".to_string($svg_string_node), logger::ERROR);
+						}
 					}
 
-				// remove original image after import
+				// save
+					$value = new stdClass();
+						$value->original_file_name		= $file_name_full;
+						$value->original_upload_date	= component_date::get_date_now();
+					$component->set_dato([$value]);
+					$component->Save();
+
+				// remove original uploaded image after import
 					unlink(	$source_full_path );
 				break;
 
 			default:
-				trigger_error("Error. Media type not allowed");
+				debug_log(__METHOD__." Error. Media type not allowed ".to_string(), logger::ERROR);
 				break;
 		}
 
@@ -323,20 +338,18 @@ class tool_import_files extends tool_common {
 
 		switch ($model) {
 			case 'component_image':
-
-				# EXIF try to get date from file metadata
+				// EXIF try to get date from file metadata
 				$DateTimeOriginal=false;
 				try {
 					$command			= MAGICK_PATH . 'identify -format "%[EXIF:DateTimeOriginal]" ' .'"'.$source_full_path.'"';
 					$DateTimeOriginal	= shell_exec($command);
-					$regex   = "/^(-?[0-9]+)[-:\/.]?([0-9]+)?[-:\/.]?([0-9]+)? ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?$/";
+					$regex				= "/^(-?[0-9]+)[-:\/.]?([0-9]+)?[-:\/.]?([0-9]+)? ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?$/";
 
 					if(empty($DateTimeOriginal)){
 						$command			= MAGICK_PATH . 'identify -format "%[date:modify]" ' .'"'.$source_full_path.'"';
 						$DateTimeOriginal	= shell_exec($command);
 						$regex   = "/^(\d{4})[-:\/.]?(\d{2})[-:\/.]?(\d{2})T?(\d{2}):(\d{2}):(\d{2})[.]?(\d+)?[\+]?(\d{2})?[-:\/.]?(\d{2})?/";
 					}
-
 
 				} catch (Exception $e) {
 					if(SHOW_DEBUG) {
@@ -364,9 +377,10 @@ class tool_import_files extends tool_common {
 				break;
 
 			default:
-				trigger_error("Error. Model is not defined");
+				debug_log(__METHOD__." Error. get_media_file_date . Model is not defined ".to_string(), logger::ERROR);
 				break;
-		}
+		}//end switch ($model)
+
 
 		return $dd_date;
 	}//end get_media_file_date
@@ -429,7 +443,7 @@ class tool_import_files extends tool_common {
 
 
 		$response->result 	= true;
-		$response->msg 		= 'Ok. Request done';
+		$response->msg 		= 'OK. Request done';
 
 
 		return (object)$response;
@@ -441,38 +455,29 @@ class tool_import_files extends tool_common {
 	* IMPORT_FILES
 	* Process previously uploaded images
 	*/
-	public static function import_files(object $request_options) : object {
+	public static function import_files(object $options) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// options
-			$options = new stdClass();
-				$options->tipo					= null;
-				$options->section_tipo			= null;
-				$options->section_id			= null;
-				$options->tool_config			= null;
-				$options->files_data			= null;
-				$options->components_temp_data	= null;
-				$options->key_dir				= null;
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-		// short vars
 			// tipo. string component tipo like 'oh17'
-			$tipo						= $options->tipo;
+			$tipo						= $options->tipo ?? null;
 			// section_tipo. string current section tipo like 'oh1'
-			$section_tipo				= $options->section_tipo;
+			$section_tipo				= $options->section_tipo ?? null;
 			// section_id. int current section id like '5'
-			$section_id					= $options->section_id;
-			 // key_dir. string like: 'oh17_oh1' (contraction section_tipo + component tipo)
-			$key_dir					= $options->key_dir;
-			// files data. array of objects like: '[{"name":"_290000_rsc29_rsc170_290437.jpg","previewTemplate":{},"previewElement":{},"size":734061,"component_option":""}]'
-			$files_data					= $options->files_data;
-			// components_temp_data. array of objects like: '[{"section_id":"tmp","section_tipo":"rsc170","tipo":"rsc23","lang":"lg-eng","from_component_tipo":"rsc23","value":[],"parent_tipo":"rsc23","parent_section_id":"tmp","fallback_value":[null],"debug":{"exec_time":"0.740 ms"},"debug_model":"component_input_text","debug_label":"Title","debug_mode":"edit"}]'
-			$components_temp_data		= $options->components_temp_data;
+			$section_id					= $options->section_id ?? null;
 			// tool_config. object like: '{"ddo_map":[{"role":"target_component","tipo":"rsc29","section_id":"self","section_tipo":"rsc170","model":"component_image","label":"Image"}],"import_file_name_mode":null}'
-			$tool_config				= $options->tool_config;
+			$tool_config				= $options->tool_config ?? null;
+			// files data. array of objects like: '[{"name":"_290000_rsc29_rsc170_290437.jpg","previewTemplate":{},"previewElement":{},"size":734061,"component_option":""}]'
+			$files_data					= $options->files_data ?? null;
+			// components_temp_data. array of objects like: '[{"section_id":"tmp","section_tipo":"rsc170","tipo":"rsc23","lang":"lg-eng","from_component_tipo":"rsc23","value":[],"parent_tipo":"rsc23","parent_section_id":"tmp","fallback_value":[null],"debug":{"exec_time":"0.740 ms"},"debug_model":"component_input_text","debug_label":"Title","debug_mode":"edit"}]'
+			$components_temp_data		= $options->components_temp_data ?? null;
+			// key_dir. string like: 'oh17_oh1' (contraction section_tipo + component tipo)
+			$key_dir					= $options->key_dir ?? null;
+			// custom_target_quality. Optional media quality to store uploaded files
+			$custom_target_quality		= $options->custom_target_quality ?? null;
 
 		// tool_import_files setup
 			$tool_import_files = new tool_import_files(
@@ -497,9 +502,6 @@ class tool_import_files extends tool_common {
 
 		// file_processor_properties
 			$file_processor_properties = $tool_config->file_processor ?? null;
-
-		// user_id
-			$user_id = navigator::get_user_id();
 
 		// init vars
 			$ar_msg							= [];	// messages for response info
@@ -760,7 +762,13 @@ class tool_import_files extends tool_common {
 					}//end if (!empty($file_processor_properties))
 
 				// set_media_file. Move uploaded file to media folder and create default versions
-					tool_import_files::set_media_file($file_data, $target_section_tipo, $target_section_id, $target_component_tipo);
+					tool_import_files::set_media_file(
+						$file_data,
+						$target_section_tipo,
+						$target_section_id,
+						$target_component_tipo,
+						$custom_target_quality
+					);
 
 				// ar_processed. Add as processed
 					$processed_info = new stdClass();
@@ -800,7 +808,7 @@ class tool_import_files extends tool_common {
 			$response->msg		= 'Import files done successfully. Total: '.$total ." of " .count($files_data);
 
 
-		return (object)$response;
+		return $response;
 	}//end if ($mode=='import_files')
 
 
@@ -881,7 +889,7 @@ class tool_import_files extends tool_common {
 	* @param object $request_options
 	* 	Object like { file_name: 'my_photo_452.jpg', key_dir: 'rsc29_rsc176' }
 	* @return object $response
-	* 	reponse->result
+	* 	response->result
 	* 	Returns false if file do not exists or the unlink call do not return true
 	*/
 	public static function delete_uploaded_file(object $request_options) : object {
