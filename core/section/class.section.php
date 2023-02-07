@@ -46,8 +46,6 @@ class section extends common {
 		// injected whole database record, with all columns
 		public $record;
 
-		public $pagination;
-
 		// tm_context. Array
 		public $tm_context;
 
