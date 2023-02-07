@@ -397,12 +397,12 @@ const get_content_data_edit = async function(self) {
 					const csv_string	= await dd_grid.render()
 
 				// Download it
-					const filename	= filename + '.csv';
-					const link		= document.createElement('a');
+					const file	= filename + '.csv';
+					const link	= document.createElement('a');
 					link.style.display = 'none';
 					link.setAttribute('target', '_blank');
 					link.setAttribute('href', 'data	:text/csv;charset=utf-8,' + encodeURIComponent(csv_string));
-					link.setAttribute('download', filename);
+					link.setAttribute('download', file);
 					document.body.appendChild(link);
 					link.click();
 					document.body.removeChild(link);
@@ -424,12 +424,12 @@ const get_content_data_edit = async function(self) {
 					const tsv_string	= await dd_grid.render()
 
 				// Download it
-					const filename	= filename + '.tsv';
-					const link		= document.createElement('a');
+					const file	= filename + '.tsv';
+					const link	= document.createElement('a');
 					link.style.display = 'none';
 					link.setAttribute('target', '_blank');
 					link.setAttribute('href', 'data	:text/tsv;charset=utf-8,' + encodeURIComponent(tsv_string));
-					link.setAttribute('download', filename);
+					link.setAttribute('download', file);
 					document.body.appendChild(link);
 					link.click();
 					document.body.removeChild(link);
@@ -445,12 +445,12 @@ const get_content_data_edit = async function(self) {
 			button_export_excel.addEventListener('click', function() {
 
 				// Download it
-					const filename	= filename+ '.xls';
-					const link		= document.createElement('a');
+					const file	= filename+ '.xls';
+					const link	= document.createElement('a');
 					link.style.display = 'none';
 					link.setAttribute('target', '_blank');
 					link.setAttribute('href', 'data	:text/html;charset=utf-8,' +  export_data_container.innerHTML);
-					link.setAttribute('download', filename);
+					link.setAttribute('download', file);
 					document.body.appendChild(link);
 					link.click();
 					document.body.removeChild(link);
@@ -466,12 +466,12 @@ const get_content_data_edit = async function(self) {
 			button_export_html.addEventListener('click', function() {
 
 				// Download it
-					const filename	= filename + '.html';
-					const link		= document.createElement('a');
+					const file	= filename + '.html';
+					const link	= document.createElement('a');
 					link.style.display = 'none';
 					link.setAttribute('target', '_blank');
 					link.setAttribute('href', 'data	:text/html;charset=utf-8,' +  export_data_container.innerHTML);
-					link.setAttribute('download', filename);
+					link.setAttribute('download', file);
 					document.body.appendChild(link);
 					link.click();
 					document.body.removeChild(link);
