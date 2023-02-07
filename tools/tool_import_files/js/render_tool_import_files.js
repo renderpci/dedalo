@@ -46,6 +46,8 @@ render_tool_import_files.prototype.edit = async function(options) {
 			content_data : content_data
 		})
 
+	wrapper.content_data	= content_data
+
 	// modal tool container
 		// if (!window.opener) {
 		// 	const header					= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
@@ -61,7 +63,6 @@ render_tool_import_files.prototype.edit = async function(options) {
 		// 		self.destroy(true, true, true)
 		// 	}
 		// }
-
 
 	return wrapper
 }//end render_tool_import_files
@@ -87,11 +88,26 @@ const get_content_data_edit = async function(self) {
 	// filter processor options of the files, it could be defined in the preferences or could be the caller
 		const ar_file_processor = self.tool_config.file_processor || null
 		if(ar_file_processor){
+
+			const processor = ui.create_dom_element({
+				element_type	: 'span',
+				class_name 		: 'processor',
+				parent 			: options_wrapper
+			})
+
+			// label
+			const label = self.get_tool_label('file_processor') || 'Processor'
+				ui.create_dom_element({
+					element_type	: 'label',
+					class_name		: 'processor label',
+					inner_html		: label + ': ',
+					parent			: processor
+				})
 			// options process
 				const select_process = ui.create_dom_element({
 					element_type	: 'select',
 					class_name 		: 'component select',
-					parent 			: options_wrapper
+					parent 			: processor
 				})
 
 				select_process.addEventListener('change', function(){
@@ -135,11 +151,26 @@ const get_content_data_edit = async function(self) {
 				}
 			]
 
+			const target_componet = ui.create_dom_element({
+				element_type	: 'span',
+				class_name 		: 'target_componet',
+				parent 			: options_wrapper
+			})
+
+			// label
+			const target_componet_label = self.get_tool_label('target_componet') || 'Target field'
+				ui.create_dom_element({
+					element_type	: 'label',
+					class_name		: 'target_componet label',
+					inner_html		: target_componet_label + ': ',
+					parent			: target_componet
+				})
+
 		// select_options
 			const select_options = ui.create_dom_element({
 				element_type	: 'select',
 				class_name 		: 'component select',
-				parent 			: options_wrapper
+				parent 			: target_componet
 			})
 			select_options.addEventListener('change', function(){
 				const option_component_nodes = document.querySelectorAll('select.option_component_select')
@@ -331,6 +362,7 @@ const get_content_data_edit = async function(self) {
 						inner_html		: get_label.same_name_same_record || 'Same name same record',
 						parent			: same_name_same_section
 					})
+
 
 
 	// components container
