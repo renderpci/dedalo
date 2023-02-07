@@ -6095,8 +6095,10 @@ dd-modal .footer.distribute {
   object-fit: contain;
   object-position: center;
 }
-.wrapper_dd_grid.view_mini .index {
-  height: 1em;
+.wrapper_dd_grid.view_mini .index,
+.wrapper_dd_grid.view_mini .tc {
+  max-height: 1rem;
+  vertical-align: text-bottom;
 }
 /**
 * TOOL_COMMON
@@ -6738,6 +6740,7 @@ dd-modal .footer.distribute {
 }
 .service_time_machine.view_history .content_data > .section_record .column:nth-child(3) img {
   max-height: 1rem;
+  vertical-align: text-bottom;
 }
 .service_time_machine.view_history .content_data > .section_record .column:nth-child(3) img.view_text {
   max-height: 4rem;
