@@ -259,9 +259,9 @@ const get_content_data_edit = async function(self) {
 
 		// tool_configuration_options
 			const tool_configuration_options = ui.create_dom_element({
-				element_type	: 'div',
+				element_type	: 'span',
 				class_name		: 'tool_configuration_options'+class_name_configuration,
-				parent			: fragment
+				parent			: options_wrapper
 			})
 
 			// name_control_field
@@ -271,15 +271,27 @@ const get_content_data_edit = async function(self) {
 					parent			: tool_configuration_options
 				})
 
+				// switcher
+					const control_field_switcher = ui.create_dom_element({
+						element_type	: 'label',
+						class_name		: 'switcher text_unselectable',
+						parent			: name_control_field
+					})
+
 				// check_box
 					const control_field_check_box = ui.create_dom_element({
 						element_type	: 'input',
 						type			: 'checkbox',
-						class_name		: 'ios-toggle',
-						parent			: name_control_field
+						parent			: control_field_switcher
 					})
 					control_field_check_box.addEventListener('change', function(e) {
 						set_import_mode(self, this.checked)
+					})
+
+					// switch_label
+					ui.create_dom_element({
+						element_type	: 'i',
+						parent			: control_field_switcher
 					})
 
 					const label_field_check_box = ui.create_dom_element({
@@ -314,19 +326,36 @@ const get_content_data_edit = async function(self) {
 					class_name		: 'name_control name_control_section_id',
 					parent			: tool_configuration_options
 				})
-
-				// check_box
-					const control_section_id_check_box = ui.create_dom_element({
-						element_type	: 'input',
-						type			: 'checkbox',
-						class_name		: 'ios-toggle',
+				// switcher
+					const control_section_id_switcher = ui.create_dom_element({
+						element_type	: 'label',
+						class_name		: 'switcher text_unselectable',
 						parent			: name_control_section_id
 					})
-					control_section_id_check_box.addEventListener('change', function(e) {
-						if(same_name_check_box.checked){
-							same_name_check_box.checked = false
-						}
-					})
+					// check_box
+						const control_section_id_check_box = ui.create_dom_element({
+							element_type	: 'input',
+							type			: 'checkbox',
+							class_name		: 'ios-toggle',
+							parent			: control_section_id_switcher
+						})
+						control_section_id_check_box.addEventListener('change', function(e) {
+							if(control_section_id_check_box.checked){
+								template_container.classList.add('name_id')
+							}else{
+								template_container.classList.remove('name_id')
+							}
+							if(same_name_check_box.checked){
+								same_name_check_box.checked = false
+								template_container.classList.remove('same_name_section')
+							}
+						})
+						// switch_label
+						ui.create_dom_element({
+							element_type	: 'i',
+							parent			: control_section_id_switcher
+						})
+
 
 					const label_section_id_check_box = ui.create_dom_element({
 						element_type	: 'span',
@@ -335,7 +364,6 @@ const get_content_data_edit = async function(self) {
 						parent			: name_control_section_id
 					})
 
-
 			// same_name_same_section
 				const same_name_same_section = ui.create_dom_element({
 					element_type	: 'div',
@@ -343,18 +371,39 @@ const get_content_data_edit = async function(self) {
 					parent 			: tool_configuration_options
 				})
 
-				// check_box
-					const same_name_check_box = ui.create_dom_element({
-						element_type	: 'input',
-						type			: 'checkbox',
-						class_name		: 'ios-toggle',
+				// switcher
+					const same_name_same_section_switcher = ui.create_dom_element({
+						element_type	: 'label',
+						class_name		: 'switcher text_unselectable',
 						parent			: same_name_same_section
 					})
-					same_name_check_box.addEventListener('change', function(e) {
-						if(control_section_id_check_box.checked){
-							control_section_id_check_box.checked = false
-						}
-					})
+
+					// check_box
+						const same_name_check_box = ui.create_dom_element({
+							element_type	: 'input',
+							type			: 'checkbox',
+							class_name		: 'ios-toggle',
+							parent			: same_name_same_section_switcher
+						})
+						same_name_check_box.addEventListener('change', function(e) {
+							if(control_section_id_check_box.checked){
+								control_section_id_check_box.checked = false
+								template_container.classList.remove('name_id')
+							}
+							if(same_name_check_box.checked){
+								template_container.classList.add('same_name_section')
+							}else{
+								template_container.classList.remove('same_name_section')
+							}
+
+
+						})
+
+						// switch_label
+						ui.create_dom_element({
+							element_type	: 'i',
+							parent			: same_name_same_section_switcher
+						})
 
 					const label_same_name_check_box = ui.create_dom_element({
 						element_type	: 'span',
@@ -398,8 +447,15 @@ const get_content_data_edit = async function(self) {
 			parent			: inputs_container
 		})
 
+		// inputs components container
+		const components_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'components_container',
+			parent			: inputs_container
+		})
+
 		const inputs_nodes = await get_temp_sections(self)
-		inputs_container.appendChild(inputs_nodes)
+		components_container.appendChild(inputs_nodes)
 
 	// buttons_bottom_container
 		const buttons_bottom_container = ui.create_dom_element({
