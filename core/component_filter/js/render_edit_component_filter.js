@@ -127,7 +127,7 @@ export const get_input_element = (element, self) => {
 		const value				= self.data.value || []
 		const value_length		= value.length
 		const datalist_value	= element.value
-		const label				= element.label
+		const label				= element.label || ''
 		const section_id		= element.section_id
 		const section_tipo		= element.section_tipo
 
@@ -140,7 +140,9 @@ export const get_input_element = (element, self) => {
 		})
 
 	// label
-		const label_string = (SHOW_DEBUG===true) ? label + ' [' + section_id + ']' : label
+		const label_string = (SHOW_DEBUG===true)
+			? label + ' [' + section_id + ']'
+			: label
 		const label_node = ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: 'item_label',
