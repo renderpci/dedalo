@@ -472,6 +472,12 @@ const get_content_data_edit = async function(self) {
 			parent			: buttons_bottom_container
 		})
 		button_process_import.addEventListener('click', function(){
+			if(self.files_data.length < 1){
+				return
+			}
+			// add loading class to wrapper to block all actions for the user
+				self.node.classList.add('loading')
+
 			// get the options from the every file uploaded
 			for (let i = self.files_data.length - 1; i >= 0; i--) {
 				const current_value = self.files_data[i]
@@ -524,13 +530,28 @@ const get_content_data_edit = async function(self) {
 						body : rqo
 					})
 					.then(function(response){
-						console.warn("-> API response:",response);
-						if(response.result===true) {
-							// if(self.caller){
-							// 	self.caller.refresh()
-							// }
-							// self.tool_container.close()
+
+						if(SHOW_DEBUG===true) {
+							console.warn("-> API response:",response);
 						}
+						// change the loading to content_data to show message
+						self.node.classList.remove('loading')
+						self.node.content_data.classList.add('loading')
+						// get message
+						const msg = (response.result===true)
+							? self.get_tool_label('upload_done') || 'Files imported successfully'
+							: self.get_tool_label('upload_error') || 'Files no imported!'
+						// add the message to wrapper (outside content_data that has loading class)
+						const msg_container = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'msg_container',
+							inner_html 		: msg,
+							parent			: self.node
+						})
+						// when user click reload the tool
+						self.node.addEventListener('click',function(){
+							window.location.reload();
+						})
 						resolve(response)
 					})
 				})
