@@ -47,7 +47,8 @@ abstract class common {
 		// variant. Modifier of identificador_unico
 		public $variant;
 
-
+		// pagination. object used to paginate sections, portals, etc.
+		public $pagination;
 
 		// bl_loaded_structure_data. Set to true when element structure data is loaded. Avoid reload structure data again
 		protected $bl_loaded_structure_data;
@@ -2202,11 +2203,9 @@ abstract class common {
 			$requested_source	= dd_core_api::$rqo->source ?? null;
 			$requested_sqo		= dd_core_api::$rqo->sqo ?? null;
 
-		// if(false!==$requested_source) { // && $requested_source->tipo===$this->tipo
-		if( isset($requested_source)
-			&& (	$requested_source->tipo===$this->tipo
-				|| (isset($requested_sqo) && in_array($this->tipo, (array)$requested_sqo->section_tipo))
-			   )
+		if( isset($requested_source) &&
+			($requested_source->tipo===$this->tipo ||
+				(isset($requested_sqo) && in_array($this->tipo, (array)$requested_sqo->section_tipo)))
 			) {
 
 			// set the request_config with the API rqo sent by client
@@ -2215,7 +2214,6 @@ abstract class common {
 			$requested_show = isset(dd_core_api::$rqo) && isset(dd_core_api::$rqo->show)
 				? unserialize(serialize(dd_core_api::$rqo->show))
 				: false;
-					// dump($requested_show, ' requested_show ++ '.to_string($this->tipo));
 
 			if (!empty($requested_show)) {
 

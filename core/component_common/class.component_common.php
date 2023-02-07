@@ -18,7 +18,6 @@ abstract class component_common extends common {
 		// string section_tipo. Component's section tipo
 		protected $section_tipo;
 		protected $valor_lang;				// string language of the final value of the component (if it is a list of values, the language of the field it points to that can be translated even if the component is not data "1" value: "Si" or "yes"
-		// protected $traducible;			// string defined in thesaurus (si/no)
 		protected $dato;					// object dato (JSON encoded in db)
 		protected $valor;					// string usually dato
 		protected $dataframe;				// object dataframe
@@ -45,7 +44,7 @@ abstract class component_common extends common {
 		// parent section obj (optional, useful for component_av...)
 		public $section_obj;
 
-		// referenced section tipo (used by component_autocomplete, compoent_radio_button.. for set target section_tipo (properties) - aditional to referenced component tipo (TR)- )
+		// referenced section tipo (used by component_autocomplete, compoent_radio_button.. for set target section_tipo (properties) - additional to referenced component tipo (TR)- )
 		public $referenced_section_tipo;
 
 		// cache components instances
@@ -63,7 +62,7 @@ abstract class component_common extends common {
 		public $diffusion_properties;
 
 		// update_diffusion_info_propagate_changes bool
-		// To optimize save process in scripts of importation, you can dissable (false) this option if is not really necessary
+		// To optimize save process in scripts of importation, you can disable (false) this option if is not really necessary
 		public $update_diffusion_info_propagate_changes;
 
 		// Component definition. Used in component label
@@ -75,14 +74,8 @@ abstract class component_common extends common {
 		// matrix_id
 		public $matrix_id;
 
-		// pagination. object used to paginate portals, etc.
-		public $pagination;
-
 		// observable data, used for propagate to other components that are seeing this component changes.
 		public $observable_dato;
-
-		// context
-		// public $context;
 
 		// string from_section_tipo
 		public $from_section_tipo;
