@@ -57,15 +57,15 @@ view_text_list_portal.render = async function(self, options) {
 		const ar_section_record_length = ar_section_record.length
 		for (let i = 0; i < ar_section_record_length; i++) {
 
-			// child.
-			const child_item = await ar_section_record[i].render()
-			fragment.appendChild(child_item)
+			// child
+				const child_item = await ar_section_record[i].render()
+				fragment.appendChild(child_item)
 
 			// records_separator
-			if(i < ar_section_record_length-1) {
-				const node_records_separator = document.createTextNode(self.context.records_separator)
-				fragment.appendChild(node_records_separator)
-			}
+				if(i < ar_section_record_length-1) {
+					const node_records_separator = document.createTextNode(self.context.records_separator)
+					fragment.appendChild(node_records_separator)
+				}
 		}
 
 	return fragment
