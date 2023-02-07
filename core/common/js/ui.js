@@ -265,7 +265,8 @@ export const ui = {
 						class_name		: 'paginator_container',
 						parent			: wrapper
 					})
-					instance.paginator.render().then(paginator_wrapper => {
+					instance.paginator.render()
+					.then(paginator_wrapper => {
 						paginator.appendChild(paginator_wrapper)
 					})
 				}

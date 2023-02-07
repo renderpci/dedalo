@@ -4772,6 +4772,13 @@ dd-modal .footer.distribute {
   padding-bottom: 0.5em;
   padding-left: 0.5em;
 }
+.paginator > .content_data .view_all {
+  margin-right: 0.5rem;
+  cursor: pointer;
+}
+.paginator > .content_data .view_all:hover {
+  color: #000000;
+}
 .paginator > .content_data .btn.paginator_first_icon {
   background-color: #000000;
   cursor: pointer;
