@@ -44,7 +44,7 @@ export const view_mosaic_edit_portal = function() {
 
 /**
 * RENDER
-* Manages the component's logic and appearance in client side
+* Manages the component's appearance in client side
 */
 view_mosaic_edit_portal.render = async function(self, options) {
 	// options
@@ -133,7 +133,7 @@ view_mosaic_edit_portal.render = async function(self, options) {
 				})
 				// store to allow destroy later
 				self.ar_instances.push(...hover_ar_section_record)
-				const hover_view	= await render_hover_view(self, hover_ar_section_record, hover_body)
+				const hover_view = await render_hover_view(self, hover_ar_section_record, hover_body)
 				hover_body.appendChild(hover_view)
 
 			return hover_body

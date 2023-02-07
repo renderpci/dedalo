@@ -4625,13 +4625,12 @@ dd-modal .footer.distribute {
 				*/
 }
 .inspector > .inspector_content_data > .element_info_wrap > .element_info {
-  font-size: 0.8rem;
   display: grid;
   grid-gap: 2px;
   grid-template-columns: minmax(min-content, 35%) minmax(65%, 80%);
   margin-top: 0.15rem;
   margin-bottom: 0.25rem;
-  font-size: 0.86rem;
+  font-size: 0.88rem;
 }
 .inspector > .inspector_content_data > .element_info_wrap > .element_info .link,
 .inspector > .inspector_content_data > .element_info_wrap > .element_info .pen,
@@ -4772,6 +4771,13 @@ dd-modal .footer.distribute {
   padding-top: 0.5em;
   padding-bottom: 0.5em;
   padding-left: 0.5em;
+}
+.paginator > .content_data .view_all {
+  margin-right: 0.5rem;
+  cursor: pointer;
+}
+.paginator > .content_data .view_all:hover {
+  color: #000000;
 }
 .paginator > .content_data .btn.paginator_first_icon {
   background-color: #000000;
@@ -6746,6 +6752,10 @@ dd-modal .footer.distribute {
 .service_time_machine.view_history .list_body {
   display: contents;
 }
+.service_time_machine.view_history .no_records {
+  position: relative;
+  top: 0px;
+}
 .service_time_machine.view_history .content_data > .section_record {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr 2.65rem;
@@ -7631,6 +7641,7 @@ dd-modal .footer.distribute {
   width: 18rem;
   position: fixed;
   left: calc(100vw - 18rem - 0.75rem);
+  z-index: 1;
   overflow-y: overlay;
   padding-right: 13px;
 }
@@ -7745,6 +7756,9 @@ dd-modal .footer.distribute {
 }
 .section_record.view_text .view_line .button_exit_edit {
   display: none !important;
+}
+.section_record.view_text .content_data {
+  display: contents;
 }
 .inline_common {
   display: inline-table;

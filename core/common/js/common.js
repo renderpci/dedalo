@@ -1418,7 +1418,7 @@ common.prototype.build_rqo_show = async function(request_config_object, action, 
 		if (sqo.limit===undefined) {
 			sqo.limit = (sqo_config && sqo_config.limit!==undefined)
 				? sqo_config.limit
-				: null; // force to generate default limit from server (!)
+				: self.mode==='edit' ? 1 : null; // force to generate default limit from server (!)
 		}
 		// sqo.offset
 		if (sqo.offset===undefined) {

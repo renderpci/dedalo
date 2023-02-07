@@ -63,7 +63,7 @@ render_paginator_micro.prototype.micro = async function(options) {
 const add_events = (wrapper, self) => {
 
 	// mousedown
-		wrapper.addEventListener("mousedown", function(e){
+		wrapper.addEventListener('mousedown', function(e){
 			e.stopPropagation()
 			//e.preventDefault()
 			// prevent bubble event to container element
@@ -114,7 +114,20 @@ const get_content_data = async function(self) {
 			return wrap_rows_paginator
 		}
 
-	const fragment = new DocumentFragment()
+	// DocumentFragment
+		const fragment = new DocumentFragment()
+
+	// view_all
+		const view_all = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'view_all',
+			inner_html		: get_label.ver_todos || 'View all',
+			parent			: fragment
+		})
+		view_all.addEventListener('click', function(e) {
+			e.stopPropagation(),
+			self.view_all()
+		})
 
 	// nav_buttons
 		const paginator_div_links = ui.create_dom_element({
