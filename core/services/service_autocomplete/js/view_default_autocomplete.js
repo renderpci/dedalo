@@ -831,7 +831,7 @@ const render_datalist = async function(self, api_response) {
 		const ar_section_record	= await get_section_records({
 			caller				: self,
 			mode				: 'list',
-			view				: 'default',
+			view				: 'text',
 			datum				: result,
 			value				: data.value,
 			request_config		: [self.rqo_search],
