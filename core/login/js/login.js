@@ -6,9 +6,7 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	// import * as instances from '../../common/js/instances.js'
 	import {common,create_source} from '../../common/js/common.js'
-	// import {pause} from '../../common/js/utils/util.js'
 	import {render_login, render_files_loader} from './render_login.js'
 
 
@@ -57,6 +55,7 @@ export const login = function() {
 
 /**
 * INIT
+* @param object options
 * @return bool
 */
 login.prototype.init = async function(options) {
@@ -166,7 +165,7 @@ export const quit = async function(options) {
 		if (api_response.result===true) {
 
 			// SAML redirection check
-			if (typeof api_response.saml_redirect!=="undefined" && api_response.saml_redirect.length>2) {
+			if (typeof api_response.saml_redirect!=='undefined' && api_response.saml_redirect.length>2) {
 
 				window.location.href = api_response.saml_redirect
 
@@ -266,7 +265,13 @@ login.prototype.action_dispatch = async function(api_response) {
 						window.location.replace( api_response.result_options.redirect )
 					}, 1)
 				}else{
-					if (api_response.default_section) {
+
+					// has_tipo in url
+						const queryString	= window.location.search
+						const urlParams		= new URLSearchParams(queryString);
+						const has_tipo		= urlParams.has('t')
+
+					if (api_response.default_section && !has_tipo) {
 						// user defined default_section case
 						window.location.replace( DEDALO_CORE_URL + '/page/?t=' + api_response.default_section );
 					}else{
