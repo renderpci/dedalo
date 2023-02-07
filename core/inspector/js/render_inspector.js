@@ -11,6 +11,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {render_node_info} from '../../common/js/utils/notifications.js'
 	import * as instances from '../../common/js/instances.js'
+	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 
 
 
@@ -188,6 +189,24 @@ const get_content_data = function(self) {
 				})
 			}
 
+		// button_diffusion
+			const tool_diffusion = self.caller.tools.find(el => el.name==='tool_diffusion')
+			if (tool_diffusion) {
+				const button_diffusion = ui.create_dom_element({
+					element_type	: 'button',
+					class_name		: 'light diffusion',
+					title			: get_label.diffusion || 'Diffusion',
+					parent			: buttons_container
+				})
+				button_diffusion.addEventListener('click', (e) => {
+					e.stopPropagation()
+					// open_tool (tool_common)
+					open_tool({
+						tool_context	: tool_diffusion, // tool context
+						caller			: self.caller // section instance
+					})
+				})
+			}
 
 	// element_info
 		const element_info = render_element_info(self)

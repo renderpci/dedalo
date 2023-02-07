@@ -164,7 +164,9 @@ const get_content_data = async function(self) {
 		fragment.appendChild(publication_items)
 
 	// info_text
-		const total = self.caller.total
+		const total = self.caller.mode==='edit'
+			? 1
+			: self.caller.total
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'info_text',
