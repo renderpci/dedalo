@@ -395,7 +395,7 @@ export function array_equals(source, array) {
 	// 		}
 	// 	}
 	// }//end object_equals
-export function  object_equals (o1, o2){
+export function object_equals (o1, o2){
 
 	// check if the o1 is object
 	// null is a object but it's not possible check his keys, so use the ===
