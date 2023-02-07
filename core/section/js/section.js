@@ -401,6 +401,12 @@ section.prototype.build = async function(autoload=false) {
 					: {}
 			}
 
+			// check request_config_object misconfigured issues (type = 'main' missed in request_config cases)
+				if (self.request_config && !self.request_config_object) {
+					console.warn('Warning: no request_config was found into the request_config. Maybe the request_config type is not set to "main" ');
+					console.warn('self.request_config:', self.request_config);
+				}
+
 			// rqo build
 			const action	= 'search'
 			const add_show	= self.add_show ? self.add_show : self.mode==='tm' ? true : false
@@ -650,7 +656,7 @@ section.prototype.build = async function(autoload=false) {
 							() => { // callback
 								// fix new offset value
 									self.request_config_object.sqo.offset	= offset
-									self.rqo.sqo.offset			= offset
+									self.rqo.sqo.offset						= offset
 								// set_local_db_data updated rqo
 									if (self.mode==='list') {
 										const rqo = self.rqo
