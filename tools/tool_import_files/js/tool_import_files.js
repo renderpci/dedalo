@@ -5,7 +5,7 @@
 
 // import
 	// import {clone, dd_console} from '../../../core/common/js/utils/index.js'
-	// import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {data_manager} from '../../../core/common/js/data_manager.js'
 	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {common} from '../../../core/common/js/common.js'
@@ -89,7 +89,6 @@ tool_import_files.prototype.build = async function(autoload=false) {
 
 	const self = this
 
-
 	try {
 
 		// load_input_ddo_map
@@ -137,10 +136,31 @@ tool_import_files.prototype.build = async function(autoload=false) {
 			return true
 		}//end load_input_ddo_map
 
+		// load_target_component
+		const load_target_component_context = async function() {
+
+			// ddo_map load all role 'input_component' elements inside ddo_map
+			const ar_promises			= []
+			const target_component		= self.tool_config.ddo_map.find(el => el.role==='target_component')
+
+			const element_context_response = await data_manager.get_element_context({
+				tipo			: target_component.tipo,
+				section_tipo	: target_component.section_tipo,
+				section_id		: 'tmp',
+			})
+
+			self.target_component_context = element_context_response.result[0]
+
+			return true
+		}//end load_target_component_context
+
+		load_target_component_context()
+
 		// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(this, autoload, {
 			load_ddo_map : load_input_ddo_map // will be executed as callback in tool_common
 		});
+
 		return common_build
 
 	} catch (error) {
