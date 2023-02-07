@@ -47,7 +47,8 @@ abstract class common {
 		// variant. Modifier of identificador_unico
 		public $variant;
 
-
+		// pagination. object used to paginate sections, portals, etc.
+		public $pagination;
 
 		// bl_loaded_structure_data. Set to true when element structure data is loaded. Avoid reload structure data again
 		protected $bl_loaded_structure_data;
@@ -2202,11 +2203,9 @@ abstract class common {
 			$requested_source	= dd_core_api::$rqo->source ?? null;
 			$requested_sqo		= dd_core_api::$rqo->sqo ?? null;
 
-		// if(false!==$requested_source) { // && $requested_source->tipo===$this->tipo
-		if( isset($requested_source)
-			&& (	$requested_source->tipo===$this->tipo
-				|| (isset($requested_sqo) && in_array($this->tipo, (array)$requested_sqo->section_tipo))
-			   )
+		if( isset($requested_source) &&
+			($requested_source->tipo===$this->tipo ||
+				(isset($requested_sqo) && in_array($this->tipo, (array)$requested_sqo->section_tipo)))
 			) {
 
 			// set the request_config with the API rqo sent by client
@@ -2215,7 +2214,6 @@ abstract class common {
 			$requested_show = isset(dd_core_api::$rqo) && isset(dd_core_api::$rqo->show)
 				? unserialize(serialize(dd_core_api::$rqo->show))
 				: false;
-					// dump($requested_show, ' requested_show ++ '.to_string($this->tipo));
 
 			if (!empty($requested_show)) {
 
@@ -2242,45 +2240,49 @@ abstract class common {
 						$new_show_ddo_map[] = $new_ddo;
 					}//end foreach ($requested_show->ddo_map as $key => $current_ddo)
 
-					// create the new request_config with the caller
-					$request_config = new stdClass();
-						$request_config->api_engine		= 'dedalo';
-						$request_config->type			= 'main';
-						$request_config->show			= new stdClass();
-						$request_config->show->ddo_map	= $new_show_ddo_map;
+				// request_config_object. Create the new request_config_object with the caller
+					$request_config_object = new request_config_object();
+						$request_config_object->api_engine		= 'dedalo';
+						$request_config_object->type			= 'main';
+						$request_config_object->show			= new stdClass();
+						$request_config_object->show->ddo_map	= $new_show_ddo_map;
 
-					$requested_search = isset(dd_core_api::$rqo) && isset(dd_core_api::$rqo->search)
-						? unserialize(serialize(dd_core_api::$rqo->search))
-						: false;
+					// requested_search
+						$requested_search = isset(dd_core_api::$rqo) && isset(dd_core_api::$rqo->search)
+							? unserialize(serialize(dd_core_api::$rqo->search))
+							: false;
+						if (!empty($requested_search)) {
 
-					if (!empty($requested_search)) {
+							$new_search_ddo_map = [];
+							// consolidate ddo items properties
+							foreach ($requested_search->ddo_map as $key => $current_ddo) {
 
-						$new_search_ddo_map = [];
-						// consolidate ddo items properties
-						foreach ($requested_search->ddo_map as $key => $current_ddo) {
-							//get the direct ddo linked by the source
-							$new_ddo = unserialize(serialize($current_ddo));
-							if ($new_ddo->parent===$requested_source->tipo || $new_ddo->parent==='self') {
-								// check if the section_tipo of the current_ddo, is compatible with the section_tipo of the current instance
-								if(in_array($this->tipo, (array)$new_ddo->section_tipo) || $new_ddo->section_tipo==='self'){
-									$new_ddo->parent		= $this->tipo;
-									$new_ddo->section_tipo	= $this->tipo;
-								}
-							}
+								// new_ddo. Get the direct ddo linked by the source
+									$new_ddo = unserialize(serialize($current_ddo));
+									if ($new_ddo->parent===$requested_source->tipo || $new_ddo->parent==='self') {
+										// check if the section_tipo of the current_ddo, is compatible with the section_tipo of the current instance
+										if(in_array($this->tipo, (array)$new_ddo->section_tipo) || $new_ddo->section_tipo==='self'){
+											$new_ddo->parent		= $this->tipo;
+											$new_ddo->section_tipo	= $this->tipo;
+										}
+									}
 
-							// added label & mode if not are already defined
-							if(!isset($new_ddo->label)) {
-								$new_ddo->label = RecordObj_dd::get_termino_by_tipo($new_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
-							}
-							if(!isset($new_ddo->mode)) {
-								$new_ddo->mode = $this->mode;
-							}
-							$new_search_ddo_map[] = $new_ddo;
-						}//end foreach ($requested_show->ddo_map as $key => $current_ddo)
+								// label add if not are already defined
+									if(!isset($new_ddo->label)) {
+										$new_ddo->label = RecordObj_dd::get_termino_by_tipo($new_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
+									}
+								// mode add if not are already defined
+									if(!isset($new_ddo->mode)) {
+										$new_ddo->mode = $this->mode;
+									}
 
-						$request_config->search				= new stdClass();
-						$request_config->search->ddo_map	= $new_search_ddo_map;
-					}//end if (!empty($requested_search))
+								// add to search ddo_map
+									$new_search_ddo_map[] = $new_ddo;
+							}//end foreach ($requested_show->ddo_map as $key => $current_ddo)
+
+							$request_config_object->search			= new stdClass();
+							$request_config_object->search->ddo_map	= $new_search_ddo_map;
+						}//end if (!empty($requested_search))
 
 					// sqo add
 						if (isset(dd_core_api::$rqo->sqo)) {
@@ -2290,28 +2292,29 @@ abstract class common {
 									'tipo' => $el
 								];
 							}, $sqo->section_tipo);
-							$request_config->sqo = $sqo;
+							$request_config_object->sqo = $sqo;
 						}
 
-				// fix request_config
-					$this->request_config = [$request_config];
+					// fix request_config
+						$this->request_config = [$request_config_object];
 
-				// merge ddo elements
-					dd_core_api::$ddo_map = array_merge(dd_core_api::$ddo_map, $request_config->show->ddo_map);
-					// dump($this->request_config, ' this->request_config +--------------------------------+ '.to_string($this->tipo));
-					// dump(dd_core_api::$ddo_map, 'dd_core_api::$ddo_map ++ '.to_string());
+					// merge and set ddo elements
+						dd_core_api::$ddo_map = array_merge(
+							dd_core_api::$ddo_map,
+							$request_config_object->show->ddo_map
+						);
 
 				return $this->request_config; // we have finished ! Note we stop here (!)
 			}//end if (!empty($requested_show))
-		}//end if(!empty($requested_show))
+		}//end if( isset($requested_source) &&...
+
+		// create a new fresh request_config with fallback options
 
 		// short vars
-			// $records_mode	= $this->get_records_mode();
-			$mode				= $this->get_mode();
-			$tipo				= $this->get_tipo();
-			$section_tipo		= $this->get_section_tipo();
-			$section_id			= $this->get_section_id();
-			$user_id			= navigator::get_user_id();
+			$mode			= $this->get_mode();
+			$tipo			= $this->get_tipo();
+			$section_tipo	= $this->get_section_tipo();
+			$user_id		= navigator::get_user_id();
 
 		// 1. From user preset
 			$user_preset = layout_map::search_user_preset_layout_map(
@@ -2324,72 +2327,57 @@ abstract class common {
 			// dump($user_preset, ' user_preset ++ '." tipo:$tipo, section_tipo:$section_tipo, user_id:$user_id, mode:$mode ".to_string());
 			if (!empty($user_preset)) {
 
-				$request_config = $user_preset;
+				// fix request_config value
+					$request_config = $user_preset;
 
-				// $request_config = array_filter($user_preset, function($item){
-				// 	return $item->typo==='rqo';
-				// });
-				// dump($request_config, ' request_config ++ [1] '.to_string());
-				debug_log(__METHOD__." request_query_objects calculated from user preset [$section_tipo-$tipo] ", logger::DEBUG);
+				debug_log(__METHOD__." request_config calculated from user preset [$section_tipo-$tipo] ", logger::DEBUG);
 			}
 
 		// 2. From structure
 			if (empty($request_config)) {
 
-				// $options = new stdClass();
-				// 	$options->tipo			= $tipo;
-				// 	$options->external		= false;
-				// 	$options->section_tipo	= $section_tipo;
-				// 	$options->mode			= $mode;
-				// 	$options->section_id	= $section_id;
-				// 	$options->limit			= $limit;
-
 				$request_config = $this->get_ar_request_config();
 			}
 
+		// fix request_config value
+			$this->request_config = $request_config;
 
-		// request_config value
-			// $request_config = array_merge([$source], $request_config);
+		// ddo_map (dd_core_api static var)
+			$dedalo_request_config = array_find($request_config, function($el){
+				return $el->api_engine==='dedalo';
+			});
+			if (!empty($dedalo_request_config)) {
 
-			// fix request_config value
-				$this->request_config = $request_config;
-
-			// ddo_map (dd_core_api static var)
-				$dedalo_request_config = array_find($request_config, function($el){
-					return $el->api_engine==='dedalo';
-				});
-				if (!empty($dedalo_request_config)) {
-
-					// sqo. Preserves filter across calls using session sqo if exists
-						$model	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-						$sqo_id	= ($model==='section') ? implode('_', ['section', $tipo]) : null; // cache key sqo_id
-						if ($model==='section' && isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
-							// replace default sqo with the already stored in session (except section_tipo to prevent to
-							// loose labels and limit to avoid overwrite list in edit and vice-versa)
-							foreach ($_SESSION['dedalo']['config']['sqo'][$sqo_id] as $key => $value) {
-								if($key==='section_tipo' || $key==='generated_time') continue;
-								// limit. Do no t apply null value. instead leave to calculate defaults
-								if ($key==='limit' && $value===null) {
-									continue;
-								}
-								if (!isset($dedalo_request_config->sqo)) {
-									$dedalo_request_config->sqo = new stdClass();
-								}
-								$dedalo_request_config->sqo->{$key} = $value;
-							}
-							if(SHOW_DEBUG===true) {
-								// dump($dedalo_request_config->sqo->filter, ' dedalo_request_config->sqo->filter ++++++++++ CHANGED !!!!!!!!!!!!!!!! '.to_string($sqo_id));
-								// dump($dedalo_request_config->sqo, ' dedalo_request_config->sqo ++ '.to_string());
-							}
+				// sqo. Preserves filter across calls using session sqo if exists
+				$model	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				$sqo_id	= ($model==='section') ? implode('_', ['section', $tipo]) : null; // cache key sqo_id
+				if ($model==='section' && isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
+					// replace default sqo with the already stored in session (except section_tipo to prevent to
+					// loose labels and limit to avoid overwrite list in edit and vice-versa)
+					foreach ($_SESSION['dedalo']['config']['sqo'][$sqo_id] as $key => $value) {
+						if($key==='section_tipo' || $key==='generated_time') continue;
+						// limit. Do no t apply null value. instead leave to calculate defaults
+						if ($key==='limit' && $value===null) {
+							continue;
 						}
+						if (!isset($dedalo_request_config->sqo)) {
+							$dedalo_request_config->sqo = new stdClass();
+						}
+						$dedalo_request_config->sqo->{$key} = $value;
+					}
 				}
+			}
 
-				$request_config_len = sizeof($request_config);
-				for ($i=0; $i < $request_config_len; $i++) {
-					$current_request = $request_config[$i];
-					// add ddo_map
-						dd_core_api::$ddo_map = array_merge(dd_core_api::$ddo_map, $current_request->show->ddo_map);
-				}
+			$request_config_len = sizeof($request_config);
+			for ($i=0; $i < $request_config_len; $i++) {
+				$current_request = $request_config[$i];
+				// add ddo_map
+				dd_core_api::$ddo_map = array_merge(
+					dd_core_api::$ddo_map,
+					$current_request->show->ddo_map
+				);
+			}
+
 		// des
 			// // request_ddo. Insert into the global dd_objects storage the current dd_objects that will needed
 			// 	// received request_ddo
@@ -2564,9 +2552,10 @@ abstract class common {
 							}
 
 						// limit. Add default if not already set
-							if (!isset($parsed_item->sqo->limit)) {
-								$parsed_item->sqo->limit = $limit;
-							}
+							// if (!isset($parsed_item->sqo->limit)) {
+							// 	$parsed_item->sqo->limit = $limit;
+							// }
+							$parsed_item->sqo->limit = $limit;
 
 					// show (mandatory). In list mode it's possible to create specific ddo_map in a section_list term child of the portal or section.
 
@@ -2723,7 +2712,16 @@ abstract class common {
 										? $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit
 										: $parsed_item->show->sqo_config->limit;
 								}else{
-									$parsed_item->sqo->limit = $parsed_item->show->sqo_config->limit;
+									// check received limit from dd_core_api::$rqo
+									$requested_source	= dd_core_api::$rqo->source ?? null;
+									$requested_sqo		= dd_core_api::$rqo->sqo ?? null;
+									if ($requested_source && $requested_source->tipo===$this->tipo && isset($requested_sqo->limit)) {
+										// from API request
+										$parsed_item->sqo->limit = $requested_sqo->limit;
+									}else{
+										// default
+										$parsed_item->sqo->limit = $parsed_item->show->sqo_config->limit;
+									}
 								}
 							}
 

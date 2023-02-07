@@ -77,9 +77,6 @@ render_inspector.prototype.edit = async function(options) {
 		wrapper.addEventListener('click', function(e) {
 			// prevents deactivate selected component when user clicks the inspector
 			e.stopPropagation()
-			if (page_globals.component_active) {
-				event_manager.publish('deactivate_component', page_globals.component_active)
-			}
 		})
 
 	// add elements

@@ -461,17 +461,32 @@ component_portal.prototype.build = async function(autoload=false) {
 					})
 					await self.paginator.build()
 
-					self.events_tokens.push(
-						event_manager.subscribe('paginator_goto_'+self.paginator.id, fn_paginator_goto)
-					)//end events push
-					function fn_paginator_goto(offset) {
-						// navigate
-						self.navigate(
-							() => {
-								self.rqo.sqo.offset = offset
-							}
-						)
-					}//end fn_paginator_goto
+					// paginator_goto_ event
+						self.events_tokens.push(
+							event_manager.subscribe('paginator_goto_'+self.paginator.id, fn_paginator_goto)
+						)//end events push
+						function fn_paginator_goto(offset) {
+							// navigate
+							self.navigate(
+								() => {
+									self.rqo.sqo.offset = offset
+								}
+							)
+						}//end fn_paginator_goto
+
+					// paginator_show_all_
+						self.events_tokens.push(
+							event_manager.subscribe('paginator_show_all_'+self.paginator.id, fn_paginator_show_all)
+						)//end events push
+						function fn_paginator_show_all(total) {
+							// navigate
+							self.navigate(
+								() => {
+									self.rqo.sqo.offset	= 0
+									self.rqo.sqo.limit	= total
+								}
+							)
+						}//end fn_paginator_goto
 
 				}else{
 					// refresh existing
