@@ -1618,9 +1618,12 @@ common.prototype.build_rqo_search = async function(request_config_object, action
 		// 	: false
 
 	// fields_separator
-		const fields_separator = sqo_config.fields_separator
-			? sqo_config.fields_separator
-			: ', '
+		const fields_separator = request_config_object.choose && request_config_object.choose.fields_separator
+				? request_config_object.choose.fields_separator
+				: request_config_object.show && request_config_object.show.fields_separator
+					? request_config_object.show.fields_separator
+					: ', '
+
 
 	// optional configuration to use when the search will be built
 		const sqo_options = {
