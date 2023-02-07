@@ -512,7 +512,8 @@ const get_content_data_edit = async function(self) {
 					tool_config				: self.tool_config,
 					files_data				: self.files_data,
 					components_temp_data	: components_temp_data,
-					key_dir					: self.key_dir
+					key_dir					: self.key_dir,
+					custom_target_quality 	: self.custom_target_quality
 				}
 
 			// process the images in the server (uploaded previously)
