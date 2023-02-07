@@ -1,24 +1,26 @@
 <?php
 // Loads parent class diffusion_sql
 include_once(DEDALO_CORE_PATH . '/diffusion/class.diffusion_sql.php');
-/*
+/**
 * CLASS DIFFUSION_MYSQL
-* Se encarga de gestionar la comunicación y el trasvase de datos desde Dédalo 4 hacia bases de datos de diffusión
-* basados en modelos sql convencionales (tipo dedalo3)
+* It is in charge of managing the communication and the transfer of data from Dédalo
+* to diffusion databases based on conventional MYSQL models
 */
 class diffusion_mysql extends diffusion_sql  {
+
 
 
 	static $insert_id;
 
 
+
 	/**
 	* CONSTRUCT
-	* @param object $options . Default null
+	* @param object $options = null
 	*/
-	function __construct($options=null) {
+	function __construct(?object $options=null) {
 
-		parent::__construct($options=null);
+		parent::__construct($options);
 	}//end __construct
 
 
@@ -524,7 +526,7 @@ class diffusion_mysql extends diffusion_sql  {
 	* Insert / Update one MySQL row (one for lang)
 	* @return object $response
 	*/
-	public static function save_record( $request_options ) : OBJECT {
+	public static function save_record( $request_options ) : object {
 		if(SHOW_DEBUG===true) $start_time=microtime(1);
 
 		$response = new stdClass();
@@ -590,22 +592,30 @@ class diffusion_mysql extends diffusion_sql  {
 					#}
 
 					// table create
-						self::create_table( 	array('database_name'	=> $database_name,
-													  'table_name'		=> $table_name,
-													  'engine'			=> $engine,
-													  'ar_fields'		=> $create_table_ar_fields['ar_fields'],
-													  'table_type'		=> 'default'
-													  ), true);
+						self::create_table(
+							[
+								'database_name'	=> $database_name,
+								'table_name'	=> $table_name,
+								'engine'		=> $engine,
+								'ar_fields'		=> $create_table_ar_fields['ar_fields'],
+								'table_type'	=> 'default'
+							],
+							true
+						);
 
 					// table dedalo_diffusion_tm create
 						if(defined('DEDALO_DIFFUSION_TM') && DEDALO_DIFFUSION_TM){
-							#create the BBDD clone version for store all publications versions (time marks with unix time stamp)
-							self::create_table( array('database_name'	=> $database_name,
-													  'table_name'		=> 'tm_'.$table_name,
-													  'engine'			=> $engine,
-													  'ar_fields'		=> $create_table_ar_fields['ar_fields'],
-													  'table_type'		=> 'tm'
-													  ), false);
+							// create the BBDD clone version for store all publications versions (time marks with UNIX time stamp)
+							self::create_table(
+								[
+									'database_name'	=> $database_name,
+									'table_name'	=> 'tm_'.$table_name,
+									'engine'		=> $engine,
+									'ar_fields'		=> $create_table_ar_fields['ar_fields'],
+									'table_type'	=> 'tm'
+								],
+								false
+							);
 						}
 				}else{
 

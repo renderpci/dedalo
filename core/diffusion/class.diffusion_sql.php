@@ -1,24 +1,31 @@
 <?php
-// Loads parent class diffusion
-include_once(DEDALO_CORE_PATH . '/diffusion/class.diffusion.php');
-/*
+/**
 * CLASS DIFFUSION_SQL
+*
+*
 */
 class diffusion_sql extends diffusion  {
 
+
+
+	/**
+	* @var
+	*/
 	public static $database_name;
 	public static $database_tipo;
 	public static $ar_table;
 	public static $ar_table_data;
 
 
+
 	/**
 	* CONSTRUCT
-	* @param object $options . Default null
+	* @param object $options = null
+	*  Default null
 	*/
-	function __construct($options=null) {
+	function __construct(?object $options=null) {
 
-		parent::__construct($options=null);
+		parent::__construct($options);
 	}//end __construct
 
 
@@ -496,7 +503,7 @@ class diffusion_sql extends diffusion  {
 						$ar_result[] = array($object->section_tipo => $object->section_id);
 					}
 				}else{
-					# Buscamos TODOS los registros de esta sección
+					// We look for ALL records in this section
 					$result = section::get_resource_all_section_records_unfiltered($section_tipo);
 					while ($rows = pg_fetch_assoc($result)) {
 						$current_id = $rows['section_id'];
@@ -915,17 +922,17 @@ class diffusion_sql extends diffusion  {
 				}
 			}
 
-		if(SHOW_DEBUG===true) {
-			// $time_complete = round(start_time()-$start_time,3);
-			// debug_log(__METHOD__." /////////////////////////////// build_table_columns_data complete time: $time_complete ms. ".to_string(), logger::ERROR);
-		}
+		// debug
+			if(SHOW_DEBUG===true) {
+				// $time_complete = round(start_time()-$start_time,3);
+				// debug_log(__METHOD__." /////////////////////////////// build_table_columns_data complete time: $time_complete ms. ".to_string(), logger::ERROR);
+			}
 
 
-		# ASIGN VAR (If not empty ar_fields)
-		# After iterate all records and create the current section array fields, set to static class var (self::$ar_table_data)
+		// return var (If not empty ar_fields)
+		// After iterate all records and create the current section array fields, set to static class var (self::$ar_table_data)
 		if (!empty($ar_field_data['ar_fields'])) {
-			#self::$ar_table_data[$database_name][$table_tipo] = $ar_field_data; // Fix in class static var if not empty
-			#
+			// self::$ar_table_data[$database_name][$table_tipo] = $ar_field_data; // Fix in class static var if not empty
 			return $ar_field_data;
 		}else{
 			return null;

@@ -339,7 +339,7 @@ export const render_publication_items = function(self) {
 								diffusion_element_tipo : current_diffusion_element_tipo
 							})
 							.then(function(api_response){
-								console.log('api_response:', api_response);
+								console.log('export api_response:', api_response);
 
 								response_message.innerHTML = api_response.msg || 'Unknown error'
 								if (api_response.result===false) {

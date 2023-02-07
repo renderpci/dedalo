@@ -12,7 +12,7 @@
 
 
 /**
-* view_default_edit_section
+* VIEW_DEFAULT_EDIT_SECTION
 * Manages the component's logic and appearance in client side
 */
 export const view_default_edit_section = function() {
@@ -38,7 +38,7 @@ view_default_edit_section.render = async function(self, options) {
 			);
 		}
 
-	// ar_section_record. section_record instances (initied and built)
+	// ar_section_record. section_record instances (initiated and built)
 		self.ar_instances = self.ar_instances && self.ar_instances.length>0
 			? self.ar_instances
 			: await get_section_records({caller: self})
@@ -69,7 +69,7 @@ view_default_edit_section.render = async function(self, options) {
 					// inspector_wrapper append
 						inspector_container.appendChild(inspector_wrapper)
 
-					// paginatior inside
+					// paginator inside
 						if (self.paginator) {
 							self.paginator.build().then(()=>{
 								self.paginator.render().then(paginator_wrapper =>{
@@ -229,10 +229,8 @@ const no_records_node = () => {
 	const node = ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'no_records',
-		inner_html		: get_label.no_records || "No records found"
+		inner_html		: get_label.no_records || 'No records found'
 	})
 
 	return node
 }//end no_records_node
-
-

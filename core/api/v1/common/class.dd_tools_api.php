@@ -109,7 +109,9 @@ final class dd_tools_api {
 
 			} catch (Exception $e) { // For PHP 5
 
+				debug_log(__METHOD__." Exception caught [tool_request] : ". $e->getMessage(), logger::ERROR);
 				trigger_error($e->getMessage());
+
 
 				$fn_result = new stdClass();
 					$fn_result->result	= false;

@@ -1,8 +1,8 @@
 <?php
 if (defined('DIFFUSION_CUSTOM') && DIFFUSION_CUSTOM!==false) {
-	include(DIFFUSION_CUSTOM);
+	include_once(DIFFUSION_CUSTOM);
 }
-/*
+/**
 * CLASS DIFUSSION
 */
 abstract class diffusion  {
@@ -25,9 +25,9 @@ abstract class diffusion  {
 
 	/**
 	* CONSTRUCT
-	* @param object $options . Default null
+	* @param object $options = null
 	*/
-	function __construct($options=null) {
+	function __construct( ?object $options=null ) {
 
 		$this->domain = DEDALO_DIFFUSION_DOMAIN;
 
@@ -39,8 +39,9 @@ abstract class diffusion  {
 	/**
 	* UPDATE_RECORD
 	* All extended classes must to implement this method (mandatory)
+	* @param object $options
 	*/
-	public function update_record( $request_options, $resolve_references=false ) {
+	public function update_record( object $options ) {
 		// Override in every heritage class
 		throw new Exception("Error Processing Request. Please, call from correct class", 1);
 	}//end update_record
@@ -49,13 +50,17 @@ abstract class diffusion  {
 
 	/**
 	* GET_DIFFUSION_DOMAINS
-	* Get array of ALL diffusion domains in struture
+	* Get array of ALL diffusion domains in structure
+	* @return array $diffusion_domains
 	*/
-	public static function get_diffusion_domains() {
+	public static function get_diffusion_domains() : array {
 
-		$diffusion_domains = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(DEDALO_DIFFUSION_TIPO,
-																						$model_name='diffusion_domain',
-																						$relation_type='children');
+		$diffusion_domains = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+			DEDALO_DIFFUSION_TIPO,
+			'diffusion_domain', // string model_name=
+			'children' // string relation_type=
+		);
+
 		return $diffusion_domains;
 	}//end get_diffusion_domains
 
@@ -67,9 +72,9 @@ abstract class diffusion  {
 	* Note: Define 'class_name' in properties of current desired diffusion element like {"class_name":"diffusion_index_ts"}
 	* @param string $diffusion_domain_name like 'dedalo'
 	* @param string $current_children like 'diffusion_index_ts'
-	* @return string $current_children like 'dd15'
+	* @return string|null $current_children like 'dd15'
 	*/
-	public static function get_my_diffusion_domain($diffusion_domain_name, $caller_class_name) {
+	public static function get_my_diffusion_domain( string$diffusion_domain_name, string $caller_class_name) : ?string {
 
 		# Array of all diffusion domains
 		$diffusion_domains = (array)diffusion::get_diffusion_domains();
@@ -108,13 +113,14 @@ abstract class diffusion  {
 	}//end get_my_diffusion_domain
 
 
+
 	/**
 	* GET_AR_DIFFUSION_MAP
 	* Get and set diffusion_map of current domain ($this->domain)
 	* @param string $diffusion_domain_name . Like 'aup'
 	* @return object $entity_diffusion_tables
 	*/
-	public static function get_diffusion_map( $diffusion_domain_name=DEDALO_DIFFUSION_DOMAIN ) : object {
+	public static function get_diffusion_map( string $diffusion_domain_name=DEDALO_DIFFUSION_DOMAIN ) : object {
 
 		// cache
 			static $diffusion_map;
@@ -224,9 +230,10 @@ abstract class diffusion  {
 
 	/**
 	* GET_AR_DIFFUSION_MAP_ELEMENTS
+	* @param string $diffusion_domain_name = DEDALO_DIFFUSION_DOMAIN
 	* @return array $ar_diffusion_map_elements
 	*/
-	public static function get_ar_diffusion_map_elements( $diffusion_domain_name=DEDALO_DIFFUSION_DOMAIN ) {
+	public static function get_ar_diffusion_map_elements( string $diffusion_domain_name=DEDALO_DIFFUSION_DOMAIN ) : array {
 
 		$diffusion_map = self::get_diffusion_map($diffusion_domain_name);
 
@@ -245,7 +252,7 @@ abstract class diffusion  {
 	* DIFFUSION_COMPLETE_DUMP
 	* @return
 	*/
-	public function diffusion_complete_dump($diffusion_element, $resolve_references = true) {
+	public function diffusion_complete_dump($diffusion_element, bool $resolve_references=true) {
 		// Override in every heritage class
 		throw new Exception("Error Processing Request", 1);
 	}//end diffusion_complete_dump
@@ -259,12 +266,14 @@ abstract class diffusion  {
 	/**
 	* BUILD_ID
 	* @param string $section_tipo
-	* @param int $section_id
+	* @param string|int $section_id
 	* @return string $id like 'oh_1'
+	* @return string $id
 	*/
-	public static function build_id($section_tipo, $section_id, $lang) {
+	public static function build_id(string $section_tipo, string|int $section_id, string $lang) {
 
 		$id = $section_tipo .'_'. $section_id .'_'. $lang ;
+
 		return $id;
 	}//end build_id
 
@@ -276,7 +285,7 @@ abstract class diffusion  {
 	* @return object $json_row
 	*	JSON object with all field : field_value in given lang
 	*/
-	public static function build_json_row($request_options) {
+	public static function build_json_row(object $request_options) {
 
 		// options
 			$options = new stdClass();
@@ -356,7 +365,7 @@ abstract class diffusion  {
 	* @param string $lang
 	*	Current lang like 'lg-eng'
 	* @param object $request_options
-	*	Is passthrough update record request_options param
+	*	Is pass-through update record request_options param
 	*
 	* @return mixed $field_value
 	*	Is the diffusion value of component called by field. Can be null, array, string, int
@@ -984,15 +993,18 @@ abstract class diffusion  {
 
 	/**
 	* UPDATE_PUBLICATION_DATA
+	*
+	* @param string $section_tipo
+	* @param string|int $section_id
 	* @return bool
 	*/
-	public static function update_publication_data($section_tipo, $section_id) {
+	public static function update_publication_data(string $section_tipo, string|int $section_id) : bool {
 
 		// tipos
-			$publication_first_tipo 		= diffusion::$publication_first_tipo;
-			$publication_last_tipo 			= diffusion::$publication_last_tipo;
-			$publication_first_user_tipo 	= diffusion::$publication_first_user_tipo;
-			$publication_last_user_tipo 	= diffusion::$publication_last_user_tipo;
+			$publication_first_tipo			= diffusion::$publication_first_tipo;
+			$publication_last_tipo			= diffusion::$publication_last_tipo;
+			$publication_first_user_tipo	= diffusion::$publication_first_user_tipo;
+			$publication_last_user_tipo		= diffusion::$publication_last_user_tipo;
 
 		// current date in dd_date format (usable as dato)
 			$current_date_dato = new stdClass();
@@ -1000,7 +1012,6 @@ abstract class diffusion  {
 
 		// current user dato
 			$user_id = navigator::get_user_id();
-
 
 		// first . component publication first. save if not exist
 			// date
@@ -1086,8 +1097,9 @@ abstract class diffusion  {
 					$section->save_modified = false;
 				$component->Save();
 
+		// debug
+			debug_log(__METHOD__." Updated publication date in section: $section_tipo, $section_id ".to_string(), logger::DEBUG);
 
-		debug_log(__METHOD__." Updated publication date in section: $section_tipo, $section_id ".to_string(), logger::DEBUG);
 
 		return true;
 	}//end update_publication_data
