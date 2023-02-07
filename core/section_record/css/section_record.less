@@ -99,4 +99,14 @@
 	&.mini {
 		display: contents;
 	}
+
+	&.view_text {
+
+		// inside components on view line, button_remove will never be displayed
+		.view_line {
+			.button_exit_edit {
+				display: none !important;
+			}
+		}
+	}
 }
