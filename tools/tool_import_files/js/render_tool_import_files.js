@@ -166,6 +166,59 @@ const get_content_data_edit = async function(self) {
 					option_node.value = option.tipo
 			}
 
+	// Define the quality target to upload the files
+		const features = self.target_component_context.features || null
+		if(features){
+
+			const ar_quality				= features.ar_quality || ['original']
+			const default_target_quality	= features.default_target_quality || 'original'
+			self.custom_target_quality 		= default_target_quality || null
+
+			const target_componet = ui.create_dom_element({
+				element_type	: 'span',
+				class_name 		: 'target_componet',
+				parent 			: options_wrapper
+			})
+
+			// label
+			const quality_label = self.get_tool_label('quality') || 'Quality'
+				ui.create_dom_element({
+					element_type	: 'label',
+					class_name		: 'quality label',
+					inner_html		: quality_label + ': ',
+					parent			: target_componet
+				})
+
+			// options process
+				const select_quality = ui.create_dom_element({
+					element_type	: 'select',
+					class_name 		: 'component select',
+					parent 			: target_componet
+				})
+
+				select_quality.addEventListener('change', function(){
+					self.custom_target_quality = select_quality.value
+				})
+
+			const default_option_node = new Option(default_target_quality, default_target_quality, true, true);
+				select_quality.appendChild(default_option_node)
+
+			for (let i = 0; i < ar_quality.length; i++) {
+				const option = ar_quality[i]
+				if(option===default_target_quality){
+					continue
+				}
+				const option_procesor_node = ui.create_dom_element({
+					element_type	: 'option',
+					class_name		: 'component select',
+					inner_html		: option,
+					parent			: select_quality
+				})
+				option_procesor_node.value = option
+			}// end for
+		}// end if(ar_quality)
+
+
 
 	// file name control
 		// hide the options when the tool is caller by components, the import_mode is defined in preferences.
