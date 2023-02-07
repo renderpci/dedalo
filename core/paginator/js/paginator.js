@@ -281,7 +281,6 @@ paginator.prototype.paginate = async function(offset) {
 	// publish event (section is listen this event to refresh)
 		event_manager.publish('paginator_goto_'+self.id, offset)
 
-		// self.status = 'rendered'
 	// paginator content data update
 		self.refresh()
 
@@ -402,3 +401,29 @@ paginator.prototype.navigate_to_previous_page = function() {
 
 	return self.go_to_page_json(page)
 }//end navigate_to_previous_page
+
+
+
+/**
+* VIEW_ALL
+* Trigger event paginator_show_all_.. that caller is listen
+* to set total and refresh
+* @return bool
+*/
+paginator.prototype.view_all = function() {
+
+	const self = this
+
+	// publish event (section is listen this event to refresh)
+		event_manager.publish(
+			'paginator_show_all_' + self.id,
+			self.total
+		)
+
+	// paginator content data update
+		self.refresh()
+
+
+	return true
+}//end view_all
+
