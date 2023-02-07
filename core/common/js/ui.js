@@ -870,6 +870,11 @@ export const ui = {
 
 				// remove previous save_success classes
 					if (self.node.classList.contains('save_success')) {
+
+						// animationPlayState. Allow restart animation. Not set state pause before animation ends (2 secs)
+						self.node.style.animationPlayState			= 'paused';
+						self.node.style.webkitAnimationPlayState	= 'paused';
+
 						self.node.classList.remove('save_success')
 					}
 
@@ -878,16 +883,19 @@ export const ui = {
 					// success. add save_success class to component wrappers (green line animation)
 						if (self.node) {
 							self.node.classList.add('save_success')
+							// animationPlayState.
+							self.node.style.animationPlayState			= 'running';
+							self.node.style.webkitAnimationPlayState	= 'running';
 						}
 
 					// remove save_success. after 2000ms, remove wrapper class to avoid issues on refresh
 						setTimeout(()=>{
 
 							if (self.node) {
-								// item.classList.remove('save_success')
-								// allow restart animation. Not set state pause before animation ends (2 secs)
-								self.node.style.animationPlayState = 'paused';
-								self.node.style.webkitAnimationPlayState = 'paused';
+
+								// animationPlayState. Allow restart animation. Not set state pause before animation ends (2 secs)
+								self.node.style.animationPlayState			= 'paused';
+								self.node.style.webkitAnimationPlayState	= 'paused';
 
 								// remove animation style
 								if (self.node.classList.contains('save_success')) {

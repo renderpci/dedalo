@@ -902,7 +902,12 @@ const render_datalist = async function(self, api_response) {
 					}
 				}else{
 					// default action
-					self.caller.add_value(value)
+					await self.caller.add_value(value)
+
+					// clean the last list
+					while (datalist.firstChild) {
+						datalist.removeChild(datalist.firstChild)
+					}
 				}
 			});
 			// mouseenter event

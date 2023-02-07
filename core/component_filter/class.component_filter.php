@@ -458,7 +458,11 @@ class component_filter extends component_relation_common {
 
 		// sort by label asc
 			usort($datalist, function($a, $b) {
-				return strcasecmp($a->label, $b->label);
+
+				$a_label = !empty($a->label) ? $a->label : '';
+				$b_label = !empty($b->label) ? $b->label : '';
+
+				return strcasecmp($a_label, $b_label);
 			});
 
 		// debug

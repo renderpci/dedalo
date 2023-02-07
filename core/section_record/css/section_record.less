@@ -99,4 +99,19 @@
 	&.mini {
 		display: contents;
 	}
+
+	&.view_text {
+
+		// inside components on view line, button_remove will never be displayed
+		.view_line {
+			.button_exit_edit {
+				display: none !important;
+			}
+		}
+
+		// prevent to give too much space to inside components like check_box in numisdata30
+		.content_data {
+			display: contents;
+		}
+	}
 }
