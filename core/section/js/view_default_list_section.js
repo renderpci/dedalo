@@ -40,7 +40,8 @@ export const view_default_list_section = function() {
 */
 view_default_list_section.render = async function(self, options) {
 
-	const render_level = options.render_level || 'full'
+	// options
+		const render_level = options.render_level || 'full'
 
 	// running_with_errors case
 		if (self.running_with_errors) {
@@ -53,7 +54,7 @@ view_default_list_section.render = async function(self, options) {
 		const columns_map	= await rebuild_columns_map(self)
 		self.columns_map	= columns_map
 
-	// ar_section_record. section_record instances (initied and built)
+	// ar_section_record. section_record instances (initiated and built)
 		self.ar_instances = self.ar_instances && self.ar_instances.length>0
 			? self.ar_instances
 			: await get_section_records({caller: self})
@@ -177,6 +178,8 @@ view_default_list_section.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA
+* @param array ar_section_record
+* @para object self
 * @return DOM node content_data
 */
 const get_content_data = async function(ar_section_record, self) {
@@ -210,8 +213,8 @@ const get_content_data = async function(ar_section_record, self) {
 		}
 
 	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.mode, self.type) // ,"nowrap","full_width"
+		const content_data = document.createElement('div')
+			  content_data.classList.add('content_data', self.mode, self.type)
 			  content_data.appendChild(fragment)
 
 
@@ -223,6 +226,7 @@ const get_content_data = async function(ar_section_record, self) {
 /**
 * REBUILD_COLUMNS_MAP
 * Adding control columns to the columns_map that will processed by section_recods
+* @param object self
 * @return obj columns_map
 */
 const rebuild_columns_map = async function(self) {
@@ -271,7 +275,6 @@ const rebuild_columns_map = async function(self) {
 /**
 * GET_BUTTONS
 * @param object self
-* 	area instance
 * @return DOM node fragment
 */
 const get_buttons = function(self) {
@@ -282,7 +285,8 @@ const get_buttons = function(self) {
 			return null;
 		}
 
-	const fragment = new DocumentFragment()
+	// DocumentFragment
+		const fragment = new DocumentFragment()
 
 	// buttons_container
 		const buttons_container = ui.create_dom_element({
@@ -331,19 +335,20 @@ const get_buttons = function(self) {
 						case 'button_new':
 							event_manager.publish('new_section_' + self.id)
 							break;
-						case 'button_delete':
 
+						case 'button_delete':
+							// sqo conform
 							const delete_sqo = clone(self.rqo.sqo)
 							delete_sqo.limit = null
 							delete delete_sqo.offset
 
 							// delete_record
-								self.delete_record({
-									section			: self,
-									section_id		: null,
-									section_tipo	: self.section_tipo,
-									sqo				: delete_sqo
-								})
+							self.delete_record({
+								section			: self,
+								section_id		: null,
+								section_tipo	: self.section_tipo,
+								sqo				: delete_sqo
+							})
 
 							// event_manager.publish('delete_section_' + self.id, {
 							// 	section_tipo	: self.section_tipo,
@@ -352,15 +357,13 @@ const get_buttons = function(self) {
 							// 	sqo				: delete_sqo
 							// })
 							break;
+
 						case 'button_import':
-
 							// open_tool (tool_common)
-								open_tool({
-									tool_context	: current_button.tools[0],
-									caller			: self
-								})
-
-
+							open_tool({
+								tool_context	: current_button.tools[0],
+								caller			: self
+							})
 							break;
 						default:
 							event_manager.publish('click_' + current_button.model)

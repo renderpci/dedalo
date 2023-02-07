@@ -175,7 +175,7 @@ const get_content_data = function(self) {
 				const button_delete = ui.create_dom_element({
 					element_type	: 'button',
 					class_name		: 'light remove',
-					title			: section_button_delete.label || "Delete",
+					title			: section_button_delete.label || 'Delete',
 					parent			: buttons_container
 				})
 				button_delete.addEventListener('click', (e) => {
