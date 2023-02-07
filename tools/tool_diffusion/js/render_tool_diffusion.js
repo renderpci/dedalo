@@ -164,7 +164,9 @@ const get_content_data = async function(self) {
 		fragment.appendChild(publication_items)
 
 	// info_text
-		const total = self.caller.total
+		const total = self.caller.mode==='edit'
+			? 1
+			: self.caller.total
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'info_text',
@@ -339,7 +341,7 @@ export const render_publication_items = function(self) {
 								diffusion_element_tipo : current_diffusion_element_tipo
 							})
 							.then(function(api_response){
-								console.log('api_response:', api_response);
+								console.log('export api_response:', api_response);
 
 								response_message.innerHTML = api_response.msg || 'Unknown error'
 								if (api_response.result===false) {

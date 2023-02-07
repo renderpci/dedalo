@@ -29,9 +29,7 @@ class tool_diffusion extends tool_common {
 			$section_tipo = $options->section_tipo ?? null;
 
 		// levels default from config
-			$resolve_levels = isset($_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS'])
-				? $_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS']
-				: (defined('DEDALO_DIFFUSION_RESOLVE_LEVELS') ? DEDALO_DIFFUSION_RESOLVE_LEVELS : 2);
+			$resolve_levels = self::get_resolve_levels();
 
 		// diffusion_map
 			$diffusion_map = diffusion::get_diffusion_map(DEDALO_DIFFUSION_DOMAIN);
@@ -83,31 +81,43 @@ class tool_diffusion extends tool_common {
 
 	/**
 	* EXPORT
+	* Redirects to proper export manager based on mode (edit/list)
+	* @param object $options
 	* @return object $response
-	* 	->result = array of objects
 	*/
 	public static function export(object $options) : object {
 
 		// options
+			$mode					= $options->mode ?? 'edit';
 			$section_tipo			= $options->section_tipo ?? null;
 			$section_id				= $options->section_id ?? null;
-			$mode					= $options->mode ?? 'edit';
 			$diffusion_element_tipo	= $options->diffusion_element_tipo;
 			$resolve_levels			= $options->resolve_levels ?? 1;
 
-		// records
-			$response_export = ($mode==='list')
-				? tool_diffusion::export_list( $options ) // list mode (based on session sqo)
-				: tool_diffusion::export_edit( $options ); // edit mode only one record
+		// export_options
+			$export_options = (object)[
+				'section_tipo'				=> $section_tipo ?? null,
+				'section_id'				=> $section_id ?? null,
+				'diffusion_element_tipo'	=> $diffusion_element_tipo,
+				'resolve_levels'			=> $resolve_levels ?? 1
+			];
+
+		// response
+			$response = ($mode==='list')
+				? tool_diffusion::export_list( $export_options ) // list mode (based on session sqo)
+				: tool_diffusion::export_edit( $export_options ); // edit mode only one record
 
 
-		return (object)$response_export;
+		return $response;
 	}//end export
 
 
 
 	/**
 	* EXPORT_EDIT
+	* Export selected record
+	* @param object $options
+	* @return object $response
 	*/
 	public static function export_edit(object $options) : object {
 
@@ -119,9 +129,8 @@ class tool_diffusion extends tool_common {
 		// options
 			$section_tipo			= $options->section_tipo;
 			$section_id				= $options->section_id;
-			$mode					= $options->mode;
 			$diffusion_element_tipo	= $options->diffusion_element_tipo;
-			$resolve_levels			= $options->resolve_levels ?? null;
+			$resolve_levels			= $options->resolve_levels;
 
 		// fix levels on each call
 			$_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS'] = isset($resolve_levels)
@@ -140,23 +149,23 @@ class tool_diffusion extends tool_common {
 			try{
 
 				// exec export from current record
-				$result = tool_diffusion::export_record(
+				$export_result = tool_diffusion::export_record(
 					$section_tipo,
 					$section_id,
 					$diffusion_element_tipo,
-					true // bool resolve_references
+					true, // bool resolve_references
 					[] // array ar_records
 				);
 
-				$response->result = $result->result;
-				$response->msg 	  = $result->msg;
+				$response->result = $export_result->result;
+				$response->msg 	  = $export_result->msg;
 
 				// Update schema data always
 				// $publication_schema_result = tool_diffusion::update_publication_schema($diffusion_element_tipo);
 
 			}catch (Exception $e) {
 				$response->result = false;
-				$response->msg 	  = 'EXCEPTION: ' . $e->getMessage();
+				$response->msg 	  = 'EXCEPTION [export_edit]: ' . $e->getMessage();
 			}
 
 
@@ -167,6 +176,9 @@ class tool_diffusion extends tool_common {
 
 	/**
 	* EXPORT_LIST
+	* Export all SQO filtered records
+	* @param object $options
+	* @return object $response
 	*/
 	public static function export_list(object $options) : object {
 
@@ -178,9 +190,8 @@ class tool_diffusion extends tool_common {
 		// options
 			$section_tipo			= $options->section_tipo;
 			$section_id				= $options->section_id ?? null;
-			$mode					= $options->mode;
 			$diffusion_element_tipo	= $options->diffusion_element_tipo;
-			$resolve_levels			= $options->resolve_levels ?? null;
+			$resolve_levels			= $options->resolve_levels;
 
 		// fix levels on each call
 			$_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS'] = !empty($resolve_levels)
@@ -190,7 +201,7 @@ class tool_diffusion extends tool_common {
 		// time_limit set
 			$minutes = 15;
 			$seconds = 60 * $minutes;
-			set_time_limit($seconds); // Avoid some infinite loop cases when data is bad formed
+			set_time_limit($seconds); // Prevent some infinite loop cases when data is bad formed
 
 		// Write session to unlock session file
 			session_write_close();
@@ -279,8 +290,8 @@ class tool_diffusion extends tool_common {
 				// $publication_schema_result = tool_diffusion::update_publication_schema($diffusion_element_tipo);
 
 			}catch (Exception $e) {
-				$response->result = false;
-				$response->msg 	  = 'EXCEPTION: ' . $e->getMessage();
+				$response->result	= false;
+				$response->msg		= 'EXCEPTION caught [export_list]: ' . $e->getMessage();
 			}
 
 		// debug
@@ -307,7 +318,7 @@ class tool_diffusion extends tool_common {
 	* @param int $section_id
 	* @param string $diffusion_element_tipo
 	* @param bool $resolve_references = true
-	*
+	* @param array $ar_records = []
 	* @return object $response
 	*/
 	public static function export_record(string $section_tipo, int $section_id, string $diffusion_element_tipo, bool $resolve_references=true, array $ar_records=[]) : object {
@@ -317,6 +328,12 @@ class tool_diffusion extends tool_common {
 			$response = new stdClass();
 				$response->result	= false;
 				$response->msg		= 'Error on export_record '.$section_tipo;
+
+		// empty records case
+			// if (empty($ar_records)) {
+			// 	$response->msg .= ' Empty records received!';
+			// 	return $response;
+			// }
 
 		// ar_diffusion_map_elements
 			$ar_diffusion_map_elements = diffusion::get_ar_diffusion_map_elements(DEDALO_DIFFUSION_DOMAIN);
@@ -328,28 +345,26 @@ class tool_diffusion extends tool_common {
 
 		// obj_diffusion_element
 			$obj_diffusion_element = $ar_diffusion_map_elements[$diffusion_element_tipo];
-			// dump($obj_diffusion_element, ' obj_diffusion_element ++ '.to_string($diffusion_element_tipo)); die();
-
 
 		// diffusion class. Each diffusion element is managed with their own class that extends the main diffusion class
 			$diffusion_class_name = $obj_diffusion_element->class_name;
+
 			// include class file
-			require_once(DEDALO_CORE_PATH . '/diffusion/class.'.$diffusion_class_name.'.php');
+				require_once(DEDALO_CORE_PATH . '/diffusion/class.'.$diffusion_class_name.'.php');
 
 			// class instance
-			$diffusion_options = new stdClass();
-				$diffusion_options->section_tipo			= (string)$section_tipo;
-				$diffusion_options->section_id				= (int)$section_id;
-				$diffusion_options->diffusion_element_tipo	= (string)$diffusion_element_tipo;
-
-			$diffusion				= new $diffusion_class_name();
-			$diffusion->ar_records	= $ar_records;
+				$diffusion				= new $diffusion_class_name();
+				$diffusion->ar_records	= $ar_records;
 
 			// update record
-			$update_record_result = $diffusion->update_record(
-				$diffusion_options, // object diffusion_options
-				$resolve_references // bool resolve_references
-			);
+				$diffusion_options = new stdClass();
+					$diffusion_options->section_tipo			= $section_tipo;
+					$diffusion_options->section_id				= (int)$section_id;
+					$diffusion_options->diffusion_element_tipo	= $diffusion_element_tipo;
+					$diffusion_options->resolve_references		= $resolve_references;
+
+				$update_record_result = $diffusion->update_record($diffusion_options);
+
 			// check result
 			if ($update_record_result && $update_record_result->result) {
 
@@ -452,6 +467,21 @@ class tool_diffusion extends tool_common {
 
 		return $ar_diffusion_sections;
 	}//end get_diffusion_sections_from_diffusion_element
+
+
+
+	/**
+	* GET_RESOLVE_LEVELS
+	* @return int $resolve_levels
+	*/
+	public static function get_resolve_levels() : int {
+
+		$resolve_levels = isset($_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS'])
+			? $_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS']
+			: (defined('DEDALO_DIFFUSION_RESOLVE_LEVELS') ? DEDALO_DIFFUSION_RESOLVE_LEVELS : 2);
+
+		return $resolve_levels;
+	}//end get_resolve_levels
 
 
 

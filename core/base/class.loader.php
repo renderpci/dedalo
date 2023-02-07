@@ -21,7 +21,7 @@ include(DEDALO_CORE_PATH . '/common/class.filter.php');
 include(DEDALO_CORE_PATH . '/common/class.counter.php');
 include(DEDALO_CORE_PATH . '/common/class.tools.php');
 include(DEDALO_CORE_PATH . '/common/class.label.php');
-#include(DEDALO_CORE_PATH . '/common/class.operator.php');
+// include(DEDALO_CORE_PATH . '/common/class.operator.php');
 include(DEDALO_CORE_PATH . '/common/class.locator.php');
 include(DEDALO_CORE_PATH . '/common/class.dd_date.php');
 include(DEDALO_CORE_PATH . '/common/class.layout_map.php');# new 12-06-2019
@@ -49,6 +49,10 @@ include(DEDALO_CORE_PATH . '/search/class.search.php');
 include(DEDALO_CORE_PATH . '/search/class.search_tm.php');
 include(DEDALO_CORE_PATH . '/search/class.search_related.php');
 // include(DEDALO_CORE_PATH . '/widgets/class.widget_common.php');
+// diffusion
+include(DEDALO_CORE_PATH . '/diffusion/class.diffusion.php');
+// include(DEDALO_CORE_PATH . '/diffusion/class.diffusion_sql.php');
+// include(DEDALO_CORE_PATH . '/diffusion/class.diffusion_mysql.php');
 // API
 include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_core_api.php');
 include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_utils_api.php');
@@ -56,10 +60,10 @@ include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_tools_api.php');
 include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_ts_api.php');
 include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_component_text_area_api.php');
 include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_component_portal_api.php');
-
+// others
 include(DEDALO_CORE_PATH . '/ontology/class.ontology.php');
 include(DEDALO_CORE_PATH . '/lock_components/class.lock_components.php');
-# include the shared classes
+// include the shared classes
 include(DEDALO_SHARED_PATH . '/class.TR.php');
 include(DEDALO_SHARED_PATH . '/class.OptimizeTC.php');
 include(DEDALO_SHARED_PATH . '/class.subtitles.php');
@@ -151,9 +155,9 @@ class class_loader {
 				break;
 
 			// diffusion
-			case (strpos($className, 'diffusion_')!==false):
-				$file_path	= DEDALO_CORE_PATH . '/diffusion/' . $className . '/class.' . $className . '.php';
-				break;
+				// case (strpos($className, 'diffusion_')!==false):
+				// 	$file_path	= DEDALO_CORE_PATH . '/diffusion/class.' . $className . '.php';
+				// 	break;
 
 			// components, areas, etc. (first level directory inside DEDALO_CORE_PATH)
 			default:

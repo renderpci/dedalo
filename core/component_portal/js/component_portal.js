@@ -594,21 +594,21 @@ component_portal.prototype.add_value = async function(value) {
 
 	const self = this
 
-	// get the current_value of the component
-	const current_value	= self.data.value || []
+	// current_value. Get the current_value of the component
+		const current_value	= self.data.value || []
 
-	// check if the component has a data_limit (it could be defined in properties as data_limit with int value)
+	// data_limit. Check if the component has a data_limit (it could be defined in properties as data_limit with int value)
 		const data_limit = self.context.properties.data_limit
-
-		if(data_limit, current_value.length>=data_limit){
-			console.log("[add_value] Data limit is surpass!");
+		if(data_limit && current_value.length>=data_limit){
+			console.log("[add_value] Data limit is exceeded!");
 			// notify to user about the limit
 			const data_limit_label = (get_label.exceeded_limit || 'The maximum number of values for this field has been exceeded. Limit =') + ' ' + data_limit
 			window.alert(data_limit_label)
 			// stop the process
 			return false
 		}
-	// check if value already exists. (!) Note that only current loaded paginated values are available for compare, not the whole portal data
+
+	// exists. Check if value already exists. (!) Note that only current loaded paginated values are available for compare, not the whole portal data
 		const exists = current_value.find(item => item.section_tipo===value.section_tipo && item.section_id==value.section_id)
 		if (typeof exists!=="undefined") {
 			console.log("[add_value] Value already exists (1) !");
@@ -648,7 +648,7 @@ component_portal.prototype.add_value = async function(value) {
 			refresh			: false // not refresh here (!)
 		})
 
-	// total (after save)
+	// total check (after save)
 		const current_data = api_response.result.data.find(el => el.tipo===self.tipo)
 		const total = current_data
 			? current_data.pagination.total
@@ -704,13 +704,14 @@ component_portal.prototype.add_value = async function(value) {
 			case 'search' :
 				// publish change. Event to update the DOM elements of the instance
 				event_manager.publish('change_search_element', self)
-				self.node.classList.remove("active")
+				self.node.classList.remove('active')
 
 				break;
 			default:
 
 				break;
 		}
+
 
 	return true
 }//end add_value

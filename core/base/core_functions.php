@@ -219,7 +219,9 @@ function debug_log(string $info, int $level=logger::DEBUG) : bool {
 		$msg		= 'DEBUG_LOG ['.logger::level_to_string($level).'] '. $info;
 	}
 
-	error_log($msg);
+	// error log print
+		error_log($msg);
+
 
 	return true;
 }//end debug_log

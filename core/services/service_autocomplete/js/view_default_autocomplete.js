@@ -485,7 +485,7 @@ const render_filters_selector = function(self) {
 
 /**
 * BUILD_FILTER
-*
+* Reder filter node checkbox items
 * @param object self
 * @param array filter_items
 * @param string filter_name
@@ -499,12 +499,14 @@ const build_filter = function(self, filter_items, filter_name, filter_id) {
 		class_name		: 'filter_node' // css_autocomplete_hi_search_field
 	})
 
-	// select all
+	// all_selector li
 		const all_selector = ui.create_dom_element({
 			element_type	: 'li',
 			class_name		: 'all_selector', // css_autocomplete_hi_search_field
 			parent			: filter_node
 		})
+
+	// label
 		const label = get_label.all || 'All'
 		const all_section_label = ui.create_dom_element({
 			element_type	: 'label',
@@ -513,19 +515,21 @@ const build_filter = function(self, filter_items, filter_name, filter_id) {
 		})
 		all_section_label.setAttribute('for', filter_id + '_all')
 
-		const all_section_input = ui.create_dom_element({
+	// all_section_checkbox
+		const all_section_checkbox = ui.create_dom_element({
 			element_type	: 'input',
-			id				: filter_id + '_all',
 			type			: 'checkbox',
+			id				: filter_id + '_all',
 			parent			: all_selector
 		})
-		all_section_input.checked = false
-		all_section_input.addEventListener('change', function(e){
+		all_section_checkbox.checked = false
+		all_section_checkbox.addEventListener('change', function(e){
+
 			const checked_value	= e.target.checked
 			const container		= e.target.parentNode.parentNode
 			const inputs		= container.querySelectorAll('input')
 			for (let i = 0; i < inputs.length; i++) {
-				if (inputs[i]==all_section_input) continue;
+				if (inputs[i]==all_section_checkbox) continue;
 				if (inputs[i].checked!==checked_value) {
 					inputs[i].checked = checked_value
 					inputs[i].dispatchEvent(new Event('change'));
@@ -539,6 +543,7 @@ const build_filter = function(self, filter_items, filter_name, filter_id) {
 			filter_node.appendChild(chekbox_node)
 		}
 
+
 	return filter_node
 }//end build_filter
 
@@ -546,6 +551,8 @@ const build_filter = function(self, filter_items, filter_name, filter_id) {
 
 /**
 * RENDER_OPTION_CHEKBOX
+*
+* @param object self
 * @param object datalist_item
 * @return DOM node li
 */
@@ -569,7 +576,7 @@ const render_option_chekbox = function(self, datalist_item) {
 		})
 		section_label.setAttribute('for', id)
 
-	// input
+	// input_checkbox
 		const input_checkbox = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'checkbox',
@@ -609,6 +616,7 @@ const render_option_chekbox = function(self, datalist_item) {
 					const api_response	= await self.autocomplete_search()
 					render_datalist(self, api_response)
 
+				// des
 					// if (self.search_fired===false) {
 					// 	// search fire is delayed to enable multiple simultaneous selections
 					// 	// get final value (input events are fired one by one)
@@ -836,7 +844,8 @@ const render_datalist = async function(self, api_response) {
 	// iterate the section_records
 		for (let i = 0; i < ar_section_record.length; i++) {
 
-			const current_section_record = ar_section_record[i]
+			// section_record
+				const current_section_record = ar_section_record[i]
 
 			// locator
 				const locator = current_section_record.locator
@@ -863,17 +872,18 @@ const render_datalist = async function(self, api_response) {
 			// click event. When the user do click in one row send the data to the caller_instance for save it.
 			li_node.addEventListener('click', async function(e){
 				e.stopPropagation()
+
+				// value
 				const value = this.locator
 
-				// if(self.caller.mode==='search'){
-					// self.caller.datum.data.push({value: current_locator})
-				// }
+				// events
 				const events = self.properties.events || null
 				if(events){
 					const add_value = events.find(el => el.event === 'add_value')
 					// caller is refreshed after add value
 					if(add_value){
 						if(typeof view_default_autocomplete[add_value.perform.function] === 'function'){
+
 							const params	= add_value.perform.params
 							const grid_node	= await view_default_autocomplete[add_value.perform.function](self, current_section_record , params)
 							if(!self.node.grid_choose_container){
@@ -890,16 +900,19 @@ const render_datalist = async function(self, api_response) {
 						}
 						return
 					}
+				}else{
+					// default action
+					self.caller.add_value(value)
 				}
-				// default action
-				self.caller.add_value(value)
 			});
 			// mouseenter event
 			li_node.addEventListener('mouseenter', async function(e){
-				const children = e.target.parentNode.children;
-				await [...children].map((el)=>{
-					if(el.classList.contains('selected')) el.classList.remove('selected')
-				})
+				// reset
+					const children = e.target.parentNode.children;
+					await [...children].map((el)=>{
+						if(el.classList.contains('selected')) el.classList.remove('selected')
+					})
+				// set as selected
 				e.target.classList.add('selected')
 			});
 			// mouseleave event
