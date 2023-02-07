@@ -139,9 +139,9 @@ const get_input_element_edit = (i, current_value, self) => {
 		input_checkbox.addEventListener('change', function(e){
 
 			// add style modified to wrapper node
-				if (!self.node.classList.contains('modified')) {
-					self.node.classList.add('modified')
-				}
+				// if (!self.node.classList.contains('modified')) {
+				// 	self.node.classList.add('modified')
+				// }
 
 			// DES
 				// const action		= (input_checkbox.checked===true) ? 'insert' : 'remove'
