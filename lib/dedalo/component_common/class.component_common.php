@@ -70,6 +70,7 @@ abstract class component_common extends common {
 		protected $start_time;
 		protected $referenced_tipo;
 		protected $semantic_nodes;
+		protected $id;
 
 	/**
 	* GET_INSTANCE

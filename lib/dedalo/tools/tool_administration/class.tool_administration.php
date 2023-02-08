@@ -97,7 +97,7 @@ class tool_administration extends tool_common {
 	* SHOW_INFO
 	* @return string $html
 	*/
-	public function show_info($name, $value, $body) {
+	public static function show_info($name, $value, $body) {
 
 		$html='';
 		$html .= "<li class=\"list-group-item\">";
