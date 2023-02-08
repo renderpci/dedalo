@@ -139,31 +139,59 @@ class component_filter extends component_relation_common {
 
 		$default_dato = [];
 
-		// optional properties dato_default. It is appended to already set dato if defined
-			$propiedades = $this->get_propiedades();
-			if (isset($propiedades->dato_default)) {
-
-				// legacy format of default dato:
-				// { "41": "2" }
-				$section_id = null;
-				foreach($propiedades->dato_default as $key => $value) {
-				    $section_id = $key;
-				    break;
-				}
-
-				$filter_locator = new locator();
-					$filter_locator->set_section_tipo(DEDALO_FILTER_SECTION_TIPO_DEFAULT);
-					$filter_locator->set_section_id($section_id);
-					$filter_locator->set_type(DEDALO_RELATION_TYPE_FILTER);
-					$filter_locator->set_from_component_tipo($this->tipo);
-
-				$default_dato[] = $filter_locator;
-
-				// info log
-					if(SHOW_DEBUG===true) {
-						$msg = " Created ".get_called_class()." \"$this->label\" id:$this->parent, tipo:$this->tipo, section_tipo:$this->section_tipo, modo:$this->modo with default data from 'propiedades': ".json_encode($propiedades->dato_default);
-						debug_log(__METHOD__.$msg, logger::DEBUG);
+		// optional defaults for config_defaults file
+			if (defined('CONFIG_DEFAULT_FILE_PATH')) {
+				// config_default_file is a JSON array value
+				$contents = file_get_contents(CONFIG_DEFAULT_FILE_PATH);
+				$defaults = json_decode($contents);
+				if (!empty($defaults)) {
+					if (!is_array($defaults)) {
+						debug_log(__METHOD__." Ignored config_default_file value. Expected type was array but received is ". gettype($defaults), logger::ERROR);
+					}else{
+						$found = array_find($defaults, function($el){
+							return $el->tipo===$this->tipo; // Note that match only uses component tipo (case hierarchy25 problem)
+						});
+						if (!empty($found)) {
+							$default_dato = is_array($found->value)
+								? $found->value
+								: [$found->value];
+						}
 					}
+				}else{
+					debug_log(__METHOD__." Ignored empty defaults file contents ! (Check if JSON is valid) ".to_string($defaults), logger::ERROR);
+				}
+			}
+
+		// optional properties dato_default. It is appended to already set dato if defined
+			if (empty($default_dato)) {
+
+				// 2º try . Only for compatibility with old installations
+
+				$propiedades = $this->get_propiedades();
+				if (isset($propiedades->dato_default)) {
+
+					// legacy format of default dato:
+					// { "41": "2" }
+					$section_id = null;
+					foreach($propiedades->dato_default as $key => $value) {
+					    $section_id = $key;
+					    break;
+					}
+
+					$filter_locator = new locator();
+						$filter_locator->set_section_tipo(DEDALO_FILTER_SECTION_TIPO_DEFAULT);
+						$filter_locator->set_section_id($section_id);
+						$filter_locator->set_type(DEDALO_RELATION_TYPE_FILTER);
+						$filter_locator->set_from_component_tipo($this->tipo);
+
+					$default_dato[] = $filter_locator;
+
+					// info log
+						if(SHOW_DEBUG===true) {
+							$msg = " Created ".get_called_class()." \"$this->label\" id:$this->parent, tipo:$this->tipo, section_tipo:$this->section_tipo, modo:$this->modo with default data from 'propiedades': ".json_encode($propiedades->dato_default);
+							debug_log(__METHOD__.$msg, logger::DEBUG);
+						}
+				}
 			}
 
 		// user access to default check
@@ -203,7 +231,7 @@ class component_filter extends component_relation_common {
 
 				// properties default data exists case
 
-				if($is_global_admin!==true) {
+				if($is_global_admin===true) {
 
 					// check current added project is accessible for my user
 					$in_my_projects = false;
