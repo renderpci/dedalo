@@ -4773,11 +4773,11 @@ dd-modal .footer.distribute {
   padding-bottom: 0.5em;
   padding-left: 0.5em;
 }
-.paginator > .content_data .view_all {
+.paginator > .content_data .show_all {
   margin-right: 0.5rem;
   cursor: pointer;
 }
-.paginator > .content_data .view_all:hover {
+.paginator > .content_data .show_all:hover {
   color: #000000;
 }
 .paginator > .content_data .btn.paginator_first_icon {
@@ -9116,6 +9116,10 @@ dd-modal .footer.distribute {
 .component_image.view_default > .content_data > .content_value .canvas[resize],
 .component_image.view_line > .content_data > .content_value .canvas[resize] {
   height: 100%;
+}
+.component_image.view_default > .buttons_container,
+.component_image.view_line > .buttons_container {
+  white-space: unset !important;
 }
 .component_image.view_default > .buttons_container .vector_editor,
 .component_image.view_line > .buttons_container .vector_editor {

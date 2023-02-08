@@ -478,7 +478,7 @@ export const render_column_remove = function(options) {
 					text_content	: get_label.delete_resource_and_links || 'Delete resource and all links',
 					parent			: footer
 				})
-				button_unlink_and_delete.addEventListener("click", function(){
+				button_unlink_and_delete.addEventListener('click', function(){
 					// stop if the user don't confirm
 					if (!confirm(get_label.sure)) {
 						return
@@ -495,7 +495,7 @@ export const render_column_remove = function(options) {
 					text_content 	: get_label.delete_only_the_link || 'Delete only the link',
 					parent			: footer
 				})
-				button_unlink_record.addEventListener("click", function(){
+				button_unlink_record.addEventListener('click', function(){
 					// stop if the user don't confirm
 					if (!confirm(get_label.sure)) {
 						return
@@ -684,21 +684,14 @@ export const render_column_remove = function(options) {
 export const get_buttons = (self) => {
 
 	// short vars
-		const is_inside_tool = self.caller && self.caller.type==='tool'
+		const is_inside_tool		= self.caller && self.caller.type==='tool'
 		const target_section		= self.target_section
 		const target_section_lenght	= target_section.length
 			  // sort section by label ascendant
 			  target_section.sort((a, b) => (a.label > b.label) ? 1 : -1)
 
-		// if (is_inside_tool===true){
-		// 	// fragment
-		// 		const fragment = new DocumentFragment()
-		// 	return fragment
-		// }
-
 		// buttons container
 			const buttons_container = ui.component.build_buttons_container(self)
-			  // buttons_container.appendChild(fragment)
 
 		// buttons_fold (allow sticky position on large components)
 			const buttons_fold = ui.create_dom_element({
@@ -746,7 +739,7 @@ export const get_buttons = (self) => {
 						? false
 						: target_section[0].tipo
 					if (!target_section_tipo) {
-						alert("Error. Empty target_section");
+						alert('Error. Empty target_section');
 						return
 					}
 
@@ -782,13 +775,13 @@ export const get_buttons = (self) => {
 		}//end button_add
 
 	// button_link
-		if( self.show_interface.button_link===true){
+		if(self.show_interface.button_link===true) {
 			const button_link = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button link',
 				parent			: buttons_fold
 			})
-			button_link.addEventListener("click", async function(e){
+			button_link.addEventListener('click', async function(e){
 				e.stopPropagation()
 
 				// const section_tipo	= select_section.value
@@ -816,7 +809,7 @@ export const get_buttons = (self) => {
 								element_type	: 'select',
 								class_name		: 'select_section' + (target_section_lenght===1 ? ' mono' : '')
 							})
-							select_section.addEventListener("change", function(){
+							select_section.addEventListener('change', function(){
 								iframe.src = iframe_url(this.value)
 							})
 							// options for select_section
@@ -825,7 +818,7 @@ export const get_buttons = (self) => {
 									ui.create_dom_element({
 										element_type	: 'option',
 										value			: item.tipo,
-										inner_html		: item.label + " [" + item.tipo + "]",
+										inner_html		: item.label + ' [' + item.tipo + ']',
 										parent			: select_section
 									})
 								}
@@ -859,7 +852,7 @@ export const get_buttons = (self) => {
 		}//end button_link
 
 	// button tree terms selector
-		if( self.show_interface.button_tree===true){
+		if(self.show_interface.button_tree===true) {
 			const button_tree_selector = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button gear',
@@ -872,11 +865,12 @@ export const get_buttons = (self) => {
 		}//end button_external
 
 	// buttons tools
-		if( self.show_interface.tools===true){
+		if(self.show_interface.tools===true) {
 			if (!is_inside_tool && self.mode==='edit') {
 				ui.add_tools(self, buttons_fold)
 			}
 		}//end add tools
+
 
 	return buttons_container
 }//end get_buttons
@@ -945,7 +939,7 @@ export const build_header = function(columns_map, ar_section_record, self) {
 
 	// hide list_header_node if no records found
 		if (ar_section_record.length<1) {
-			list_header_node.classList.add("hide")
+			list_header_node.classList.add('hide')
 		}
 
 	return list_header_node;
@@ -991,7 +985,7 @@ export const render_references = function(ar_references) {
 					class_name		: 'button link',
 					parent			: li
 				})
-				button_link.addEventListener("click", function(e){
+				button_link.addEventListener('click', function(e){
 					e.stopPropagation()
 					window.location.href = DEDALO_CORE_URL + '/page/?tipo=' + reference.value.section_tipo + '&id='+ reference.value.section_id
 					// window.open(url,'ref_edit')
