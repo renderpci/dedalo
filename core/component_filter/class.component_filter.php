@@ -54,16 +54,15 @@ class component_filter extends component_relation_common {
 					// filter always save default project.
 						$user_id				= navigator::get_user_id();
 						$default_dato_for_user	= $this->get_default_dato_for_user($user_id);
-					// set current user projects default
-						$this->set_dato($default_dato_for_user);
-						$this->Save();
+						// set current user projects default
+						if (!empty($default_dato_for_user)) {
+							$this->set_dato($default_dato_for_user);
+							$this->Save();
+						}
 
 					debug_log(__METHOD__." Saved component filter (tipo:$tipo, section_id:$section_id, section_tipo:$section_tipo) DEDALO_DEFAULT_PROJECT as ".json_encode($default_dato_for_user), logger::DEBUG);
 				}
 			}
-
-
-		return true;
 	}//end __construct
 
 
@@ -96,6 +95,20 @@ class component_filter extends component_relation_common {
 
 
 
+	/**
+	* SET_DATO_DEFAULT
+	* Overwrite component common method
+	* @return bool true
+	*/
+	public function set_dato_default() {
+
+		// nothing to do here. Action is delegated to method set_default_dato_for_user
+
+		return true;
+	}//end set_dato_default
+
+
+
 
 	/**
 	* GET_DEFAULT_DATO_FOR_USER
@@ -104,32 +117,158 @@ class component_filter extends component_relation_common {
 	public function get_default_dato_for_user(int $user_id) : array {
 
 		$is_global_admin = security::is_global_admin($user_id);
-		if ($is_global_admin===true) {
-			$user_projects 	= null;
-		}else{
-			$user_projects 	= filter::get_user_projects($user_id);
-		}
+		$user_projects = ($is_global_admin===true)
+			? null // no filter is needed for global_admin
+			: filter::get_user_projects($user_id);
 
-		if (!empty($user_projects)) {
-			# First user project
-			foreach ($user_projects as $user_projects_locator) {
-				$filter_locator = new locator();
-					$filter_locator->set_section_tipo($user_projects_locator->section_tipo);
-					$filter_locator->set_section_id($user_projects_locator->section_id);
-					$filter_locator->set_type(DEDALO_RELATION_TYPE_FILTER);
-					$filter_locator->set_from_component_tipo($this->tipo);
-				break;
+		$default_dato = [];
+
+		// optional defaults for config_defaults file
+			if (defined('CONFIG_DEFAULT_FILE_PATH')) {
+				// config_default_file is a JSON array value
+				$contents = file_get_contents(CONFIG_DEFAULT_FILE_PATH);
+				$defaults = json_decode($contents);
+				if (!empty($defaults)) {
+					if (!is_array($defaults)) {
+						debug_log(__METHOD__." Ignored config_default_file value. Expected type was array but received is ". gettype($defaults), logger::ERROR);
+					}else{
+						$found = array_find($defaults, function($el){
+							return $el->tipo===$this->tipo; // Note that match only uses component tipo (case hierarchy25 problem)
+						});
+						if (!empty($found)) {
+							$default_dato = is_array($found->value)
+								? $found->value
+								: [$found->value];
+						}
+					}
+				}else{
+					debug_log(__METHOD__." Ignored empty defaults file contents ! (Check if JSON is valid) ".to_string($defaults), logger::ERROR);
+				}
 			}
-			$default_dato = [$filter_locator];
-		}else{
-			# Default project defined in config
-			$filter_locator = new locator();
-				$filter_locator->set_section_tipo(DEDALO_FILTER_SECTION_TIPO_DEFAULT);
-				$filter_locator->set_section_id(DEDALO_DEFAULT_PROJECT);
-				$filter_locator->set_type(DEDALO_RELATION_TYPE_FILTER);
-				$filter_locator->set_from_component_tipo($this->tipo);
-			$default_dato = [$filter_locator];
-		}
+
+		// optional properties dato_default. It is appended to already set dato if defined
+			if (empty($default_dato)) {
+
+				// 2º try . Only for compatibility with old installations
+
+				$properties = $this->get_properties();
+				if (isset($properties->dato_default)) {
+
+					// TO DO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+					// legacy format of default dato:
+					// { "41": "2" }
+					$section_id = null;
+					foreach($properties->dato_default as $key => $value) {
+					    $section_id = $key;
+					    break;
+					}
+
+					$filter_locator = new locator();
+						$filter_locator->set_section_tipo(DEDALO_FILTER_SECTION_TIPO_DEFAULT);
+						$filter_locator->set_section_id($section_id);
+						$filter_locator->set_type(DEDALO_RELATION_TYPE_FILTER);
+						$filter_locator->set_from_component_tipo($this->tipo);
+
+					$default_dato[] = $filter_locator;
+
+					// info log
+						if(SHOW_DEBUG===true) {
+							$msg = " Created ".get_called_class()." \"$this->label\" section_id:$this->section_id, tipo:$this->tipo, section_tipo:$this->section_tipo, mode:$this->mode with default data from 'properties': ".json_encode($properties->dato_default);
+							debug_log(__METHOD__.$msg, logger::DEBUG);
+						}
+				}
+			}
+
+		// user access to default check
+			if (empty($default_dato)) {
+
+				// NO properties default data is defined case
+
+				if ($is_global_admin===true) {
+
+					// Global admin do not have projects, so add the global default project
+
+					// Default project defined in config
+					$filter_locator = new locator();
+						$filter_locator->set_section_tipo(DEDALO_FILTER_SECTION_TIPO_DEFAULT);
+						$filter_locator->set_section_id(DEDALO_DEFAULT_PROJECT);
+						$filter_locator->set_type(DEDALO_RELATION_TYPE_FILTER);
+						$filter_locator->set_from_component_tipo($this->tipo);
+
+					$default_dato[] = $filter_locator;
+
+				}else{
+
+					// Common users have projects, so add first project to prevent no access situation
+
+					// First user project
+					$user_projects_first_locator = reset($user_projects);
+
+					$filter_locator = new locator();
+						$filter_locator->set_section_tipo($user_projects_first_locator->section_tipo);
+						$filter_locator->set_section_id($user_projects_first_locator->section_id);
+						$filter_locator->set_type(DEDALO_RELATION_TYPE_FILTER);
+						$filter_locator->set_from_component_tipo($this->tipo);
+
+					$default_dato[] = $filter_locator;
+				}
+			}else{
+
+				// properties default data exists case
+
+				if($is_global_admin===true) {
+
+					// check current added project is accessible for my user
+					$in_my_projects = false;
+					foreach ($default_dato as $current_locator) {
+						$in_my_projects = locator::in_array_locator(
+							$current_locator,
+							$user_projects,
+							['section_tipo','section_id'] // array ar_properties
+						);
+						if ($in_my_projects===true) {
+							break; // user have access to assigned default. We have finished
+						}
+					}
+					// If not, add the first one to prevent no access situation
+					if ($in_my_projects===false) {
+
+						// First user project
+						$user_projects_first_locator = reset($user_projects);
+
+						$filter_locator = new locator();
+							$filter_locator->set_section_tipo($user_projects_first_locator->section_tipo);
+							$filter_locator->set_section_id($user_projects_first_locator->section_id);
+							$filter_locator->set_type(DEDALO_RELATION_TYPE_FILTER);
+							$filter_locator->set_from_component_tipo($this->tipo);
+
+						$default_dato[] = $filter_locator;
+					}
+				}
+			}
+
+
+		// if (!empty($user_projects)) {
+		// 	# First user project
+		// 	foreach ($user_projects as $user_projects_locator) {
+		// 		$filter_locator = new locator();
+		// 			$filter_locator->set_section_tipo($user_projects_locator->section_tipo);
+		// 			$filter_locator->set_section_id($user_projects_locator->section_id);
+		// 			$filter_locator->set_type(DEDALO_RELATION_TYPE_FILTER);
+		// 			$filter_locator->set_from_component_tipo($this->tipo);
+		// 		break;
+		// 	}
+		// 	$default_dato = [$filter_locator];
+		// }else{
+		// 	# Default project defined in config
+		// 	$filter_locator = new locator();
+		// 		$filter_locator->set_section_tipo(DEDALO_FILTER_SECTION_TIPO_DEFAULT);
+		// 		$filter_locator->set_section_id(DEDALO_DEFAULT_PROJECT);
+		// 		$filter_locator->set_type(DEDALO_RELATION_TYPE_FILTER);
+		// 		$filter_locator->set_from_component_tipo($this->tipo);
+		// 	$default_dato = [$filter_locator];
+		// }
 
 		return $default_dato;
 	}//end get_default_dato_for_user
