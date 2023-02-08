@@ -287,7 +287,7 @@ const get_buttons = (self) => {
 					// header label
 						const header = ui.create_dom_element({
 							element_type	: 'span',
-							inner_html		: get_label.seccion,
+							inner_html		: get_label.section,
 							class_name		: 'label'
 						})
 

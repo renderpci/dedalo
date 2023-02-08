@@ -113,11 +113,6 @@ const get_value_element = (i, data, values_container, self) => {
 		li.appendChild(total_tc)
 		reactive_items.push(total_tc)
 
-	// ar_tc_wrong
-		// const ar_tc_wrong = item_value_factory('ar_tc_wrong', get_label.etiqueta_revisar, data)
-		// li.appendChild(ar_tc_wrong)
-		// reactive_items.push(ar_tc_wrong)
-
 	// total_index
 		const total_index = item_value_factory(
 			'total_index',

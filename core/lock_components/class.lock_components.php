@@ -108,7 +108,7 @@ class lock_components {
 							$update_lock_elements = false;
 
 							$response->result = false;
-							$response->msg 	  = sprintf(label::get_label('componente_en_uso'),''.$current_event_element->full_username.'');
+							$response->msg 	  = sprintf(label::get_label('component_in_use'),''.$current_event_element->full_username.'');
 							$response->dato   = $dato;
 							break;
 						}
@@ -161,7 +161,7 @@ class lock_components {
 						$current_event_element->component_tipo==$event_element->component_tipo
 						) {
 						//$response = "Error. User ".$event_element->full_username." is using this field. Please wait to finish";
-						$response = sprintf(label::get_label('componente_en_uso'),$event_element->full_username);
+						$response = sprintf(label::get_label('component_in_use'),$event_element->full_username);
 						return $response;
 					}
 				}

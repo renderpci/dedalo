@@ -50,7 +50,7 @@ class area_development extends area_common {
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->parent	= $this->tipo;
-				$item->label	= label::get_label('hacer_backup');
+				$item->label	= label::get_label('make_backup') || 'Make backup';
 				$item->info		= null;
 				$file_name		= date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $_SESSION['dedalo']['auth']['user_id'] .'_forced_dbv' . implode('-', get_current_version_in_db()).'.custom.backup';
 				$item->body		= 'Force to make a full backup now like:<br><br><div>'.DEDALO_BACKUP_PATH_DB.'/<br>'.$file_name.'</div>';
@@ -154,14 +154,14 @@ class area_development extends area_common {
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->parent	= $this->tipo;
-				$item->label	= label::get_label('exportar_estructura_json');
+				$item->label	= label::get_label('export_json_ontology');
 				$item->info		= null;
 
 				$file_name		= 'structure.json';
 				$file_path		= 'Target: '.(defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : STRUCTURE_DOWNLOAD_DIR) . '/' . $file_name;
 				// $file_url		= DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . DEDALO_LIB_BASE_URL . '/backup/backups_structure/srt_download' . '/' . $file_name;
 				$item->body		= $file_path;
-				$confirm_text	= label::get_label('seguro');
+				$confirm_text	= label::get_label('sure') || 'Sure?';
 				$item->run[]	= (object)[
 					'fn'		=> 'init_form',
 					'options'	=> (object)[
@@ -193,7 +193,7 @@ class area_development extends area_common {
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->parent	= $this->tipo;
-				$item->label	= label::get_label('importar_estructura_json');
+				$item->label	= label::get_label('import_json_ontology') || 'Import JSON ontology';
 				$item->info		= null;
 
 				if (defined('ONTOLOGY_DB')) {
@@ -236,7 +236,7 @@ class area_development extends area_common {
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->parent	= $this->tipo;
-				$item->label	= label::get_label('registrar_herramientas');
+				$item->label	= label::get_label('register_tools');
 				$list = array_map(function($path){
 					// ignore folders with name different from pattern 'tool_*'
 					if (1!==preg_match('/tools\/tool_*/', $path, $output_array) || 1===preg_match('/tools\/tool_dev_template/', $path, $output_array)) {
@@ -339,7 +339,7 @@ class area_development extends area_common {
 					$item->typo		= 'widget';
 					$item->tipo		= $this->tipo;
 					$item->parent	= $this->tipo;
-					$item->label	= label::get_label('actualizar').' '.label::get_label('datos');
+					$item->label	= label::get_label('update').' '.label::get_label('data');
 					$item->info		= null;
 					$item->body		= '<span style="color:green">Data format is updated: '.implode(".", get_current_version_in_db()).'</span>';
 					$item->trigger	= (object)[
@@ -359,7 +359,7 @@ class area_development extends area_common {
 					$item->typo		= 'widget';
 					$item->tipo		= $this->tipo;
 					$item->parent	= $this->tipo;
-					$item->label	= label::get_label('actualizar').' '.label::get_label('datos');
+					$item->label	= label::get_label('update').' '.label::get_label('data');
 					// $item->info		= 'Click to update dedalo data version';
 					$item->body		= '<span style="color:red">Current data version: '.$current_version_in_db . '</span> -----> '. implode('.', $update_version);
 					// Actions list

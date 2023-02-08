@@ -155,7 +155,7 @@ const render_text_process_options = function(self, content_data) {
 		const lang_label = ui.create_dom_element({
 			element_type	: 'div',
 			class_name 		: 'lang_label',
-			inner_html 		: get_label.idioma || 'Language',
+			inner_html 		: get_label.language || 'Language',
 			parent 			: lang_container
 		})
 		// the lang selector use the content_data pointer .right_container to remove the transcription text_area and rebuild the new node
@@ -213,7 +213,7 @@ const render_text_process_options = function(self, content_data) {
 		const header_option_label = ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: 'header_option_label',
-			inner_html		: get_label.cabecera || 'Header',
+			inner_html		: get_label.head || 'Header',
 			parent			: header_option_container
 		})
 
@@ -271,7 +271,7 @@ const render_text_process_options = function(self, content_data) {
 			const persons_option_label = ui.create_dom_element({
 				element_type	: 'label',
 				class_name 		: 'persons_option_label',
-				inner_html 		: get_label.personas || 'Persons',
+				inner_html 		: get_label.persons || 'Persons',
 				parent 			: persons_option_container
 			})
 

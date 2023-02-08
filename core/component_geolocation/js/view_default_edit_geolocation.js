@@ -112,7 +112,7 @@ export const get_input_element_edit = (i, current_value, self) =>{
 		// label field latitude
 			ui.create_dom_element({
 				element_type	: 'label',
-				inner_html		: get_label.latitud || 'Lat',
+				inner_html		: get_label.latitude || 'Latitude',
 				parent			: inputs_container
 			})
 
@@ -138,7 +138,7 @@ export const get_input_element_edit = (i, current_value, self) =>{
 		// label field longitude
 			ui.create_dom_element({
 				element_type	: 'label',
-				inner_html		: get_label.longitud || 'Lon',
+				inner_html		: get_label.Longitude || 'Longitude',
 				parent			: inputs_container
 			})
 
@@ -164,7 +164,7 @@ export const get_input_element_edit = (i, current_value, self) =>{
 		// label field zoom
 			ui.create_dom_element({
 				element_type	: 'label',
-				inner_html		: get_label.mapa_zoom || 'Zoom',
+				inner_html		: get_label.zoom || 'Zoom',
 				parent			: inputs_container
 			})
 

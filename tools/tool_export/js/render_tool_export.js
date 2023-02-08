@@ -122,7 +122,7 @@ const get_content_data_edit = async function(self) {
 			ui.create_dom_element({
 				element_type	: 'h1',
 				class_name		: 'list_title',
-				inner_html		: get_label.elementos_activos || 'Active elements',
+				inner_html		: get_label.active_elements || 'Active elements',
 				parent			: user_selection_list
 			})
 
@@ -193,7 +193,7 @@ const get_content_data_edit = async function(self) {
 			const data_format = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'data_format',
-				inner_html		: (get_label.formato || 'Format'),
+				inner_html		: (get_label.format || 'Format'),
 				parent			: export_buttons_config
 			})
 			// select
@@ -212,7 +212,7 @@ const get_content_data_edit = async function(self) {
 				// select_option_standard
 				ui.create_dom_element({
 					element_type	: 'option',
-					inner_html		: get_label.estandar || 'standard',
+					inner_html		: get_label.standard || 'standard',
 					value			: 'standard',
 					parent			: select_data_format_export
 				})
@@ -226,14 +226,14 @@ const get_content_data_edit = async function(self) {
 				// select_option_breakdown
 				ui.create_dom_element({
 					element_type	: 'option',
-					inner_html		: get_label.desglose || 'breakdown',
+					inner_html		: get_label.breakdown || 'breakdown',
 					value			: 'breakdown',
 					parent			: select_data_format_export
 				})
 				// select_option_breakdown_html
 				ui.create_dom_element({
 					element_type	: 'option',
-					inner_html		: (get_label.desglose || 'breakdown' ) + ' ' +(get_label.html || 'HTML'),
+					inner_html		: (get_label.breakdown || 'breakdown' ) + ' ' +(get_label.html || 'HTML'),
 					value			: 'breakdown_html',
 					parent			: select_data_format_export
 				})
@@ -305,7 +305,7 @@ const get_content_data_edit = async function(self) {
 			const activate_all_columns = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'activation light activate_all_columns',
-				inner_html		: get_label.activar_todas_las_columnas || 'Activate all columns',
+				inner_html		: get_label.activate_all_columns || 'Activate all columns',
 				parent			: export_buttons_config
 			})
 			activate_all_columns.addEventListener('click', function(e) {
@@ -360,7 +360,7 @@ const get_content_data_edit = async function(self) {
 			const deactivate_all_columns = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'activation light deactivate_all_columns',
-				inner_html		: get_label.desactivar_todas_las_columnas || 'Disable all columns',
+				inner_html		: get_label.disable_all_columns || 'Disable all columns',
 				parent			: export_buttons_config
 			})
 			deactivate_all_columns.addEventListener('click', function(e) {
@@ -385,7 +385,7 @@ const get_content_data_edit = async function(self) {
 			const button_export_csv = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'processing_import success',
-				inner_html		: (get_label.descargar || 'Export') + ' csv',
+				inner_html		: (get_label.download || 'Download') + ' csv',
 				parent			: export_buttons_options
 			})
 			button_export_csv.addEventListener('click', async function() {
@@ -412,7 +412,7 @@ const get_content_data_edit = async function(self) {
 			const button_export_tsv = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'processing_import success',
-				inner_html		: (get_label.descargar || 'Export') + ' tsv',
+				inner_html		: (get_label.download || 'Export') + ' tsv',
 				parent			: export_buttons_options
 			})
 			button_export_tsv.addEventListener('click', async function() {
@@ -439,7 +439,7 @@ const get_content_data_edit = async function(self) {
 			const button_export_excel = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'processing_import success',
-				inner_html		: (get_label.descargar || 'Export') + ' Excel',
+				inner_html		: (get_label.download || 'Export') + ' Excel',
 				parent			: export_buttons_options
 			})
 			button_export_excel.addEventListener('click', function() {
@@ -460,7 +460,7 @@ const get_content_data_edit = async function(self) {
 			const button_export_html = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'processing_import success',
-				inner_html		: (get_label.descargar || 'Export') + ' html',
+				inner_html		: (get_label.download || 'Export') + ' html',
 				parent			: export_buttons_options
 			})
 			button_export_html.addEventListener('click', function() {
@@ -481,7 +481,7 @@ const get_content_data_edit = async function(self) {
 			const button_export_print = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'processing_import success',
-				inner_html		: get_label.imprimir || 'Print',
+				inner_html		: get_label.print || 'Print',
 				parent			: export_buttons_options
 			})
 			button_export_print.addEventListener('click', function(e) {

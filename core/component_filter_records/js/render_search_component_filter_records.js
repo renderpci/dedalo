@@ -149,19 +149,19 @@ const get_content_data = function(self) {
 			const header_tipo = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'tipo',
-				inner_html		: get_label.tipo || 'Tipo',
+				inner_html		: 'tipo',
 				parent			: header_li
 			})
 			const header_label = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'label',
-				inner_html		: get_label.seccion || 'Section',
+				inner_html		: get_label.section || 'Section',
 				parent			: header_li
 			})
 			const header_value = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'value',
-				inner_html		: get_label.valor || 'Value',
+				inner_html		: get_label.value || 'Value',
 				parent			: header_li
 			})
 

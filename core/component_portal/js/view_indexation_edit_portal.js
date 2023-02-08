@@ -210,7 +210,7 @@ const render_column_id = function(options){
 		const button_edit = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'button_edit',
-			title_label		: get_label.abrir || 'Open',
+			title_label		: get_label.open || 'Open',
 			parent			: fragment
 		})
 		button_edit.addEventListener('click', function(){
@@ -273,7 +273,7 @@ const render_tag_column = function(options){
 	// tag_id
 		const tag_id	= locator.tag_id ?? null
 		const tag_label	= tag_id
-			// ? '- '+ (get_label.etiqueta || 'Tag') + ': ' + tag_id
+			// ? '- '+ (get_label.tag || 'Tag') + ': ' + tag_id
 			// : ''
 
 	const tag_node = ui.create_dom_element({

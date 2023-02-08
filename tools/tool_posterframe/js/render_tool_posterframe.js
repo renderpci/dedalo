@@ -160,7 +160,7 @@ const get_buttons = function(self) {
 			const button_create_identifying_image = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'light create_identifying_image',
-				inner_html		: get_label.crear_imagen_identificativa || 'Create identifying image',
+				inner_html		: get_label.create_identify_image || 'Create identifying image',
 				parent			: identifying_image_block
 			})
 			button_create_identifying_image.addEventListener('click', async function(){
@@ -206,7 +206,7 @@ const get_buttons = function(self) {
 			const button_create_posterframe = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'warning gear create_posterframe',
-				inner_html		: get_label.crear || 'Create',
+				inner_html		: get_label.create || 'Create',
 				parent			: manage_posterframe_block
 			})
 			button_create_posterframe.addEventListener('click', async function(){
@@ -225,7 +225,7 @@ const get_buttons = function(self) {
 			const button_delete_posterframe = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'light delete delete_posterframe',
-				inner_html		: get_label.borrar || 'Delete',
+				inner_html		: get_label.delete || 'Delete',
 				parent			: manage_posterframe_block
 			})
 			button_delete_posterframe.addEventListener('click', async function(){
