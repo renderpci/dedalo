@@ -1020,19 +1020,19 @@ class component_text_area extends component_common {
 		// response messages
 			if ($added_tags>0 || $changed_tags>0) {
 
-				$response->msg 	  = strtoupper(label::get_label('atencion')).": ";	// WARNING
+				$response->msg 	  = strtoupper(label::get_label('warning')).": ";	// WARNING
 
 				if($added_tags>0) {
 					// deleted index tags was created at beginning of text.
-					$response->msg .= sprintf(" %s ".label::get_label('etiquetas_index_borradas'),$added_tags);
+					$response->msg .= sprintf(" %s ".label::get_label('index_tags_deleted'),$added_tags);
 				}
 
 				if($changed_tags>0) {
 					// broken index tags was fixed.
-					$response->msg .= sprintf(" %s ".label::get_label('etiquetas_index_fijadas'),$changed_tags);
+					$response->msg .= sprintf(" %s ".label::get_label('index_tags_fixed'),$changed_tags);
 				}
 
-				$response->msg .= ' '.label::get_label('etiquetas_revisar'); // Please review position of blue tags
+				$response->msg .= ' '.label::get_label('review_tags'); // Please review position of blue tags
 
 				$response->total = round(start_time()-$start_time,4)*1000 .' ms';
 			}

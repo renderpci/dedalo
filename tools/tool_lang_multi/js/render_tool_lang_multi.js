@@ -85,7 +85,7 @@ const get_content_data_edit = async function(self) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'automatic_label',
-			inner_html		: get_label.traduccion_automatica || 'Automatic translation',
+			inner_html		: get_label.automatic_translation || 'Automatic translation',
 			parent			: top_container
 		})
 		const translator_engine = (self.context.config)
@@ -187,7 +187,7 @@ export const create_target_component = (lang, self) => {
 									const current_value	= component.data.value
 									const is_empty		= (!current_value || current_value.length<1 || current_value[0]==='')
 									if (is_empty===false) {
-										if(!confirm(get_label.esta_seguro_de_sobreescribir_el_texto || 'Are you sure to overwrite the current value?')) {
+										if(!confirm(get_label.are_you_sure_to_overwrite_text || 'Are you sure to overwrite the current value?')) {
 											return
 										}
 									}
@@ -239,7 +239,7 @@ const build_automatic_translation = (options) => {
 
 		// // const button_automatic_translation = document.createElement('button');
 		// // 	  button_automatic_translation.type = 'button'
-		// // 	  button_automatic_translation.textContent = get_label['traduccion_automatica'] || "Automatic translation"
+		// // 	  button_automatic_translation.textContent = get_label['automatic_translation'] || "Automatic translation"
 		// // 	  automatic_translation_container.appendChild(button_automatic_translation)
 		// button_automatic_translation.addEventListener("click", () => {
 

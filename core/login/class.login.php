@@ -219,7 +219,7 @@ class login extends common {
 				# PROFILE
 					$user_have_profile = login::user_have_profile_check($user_id);
 					if ($user_have_profile!==true) {
-						$response->msg = label::get_label('error_usuario_sin_perfil');
+						$response->msg = label::get_label('user_without_profile_error');
 						return $response;
 					}
 
@@ -227,7 +227,7 @@ class login extends common {
 				# PROJECTS : TEST FILTER MASTER VALUES
 					$user_have_projects = login::user_have_projects_check($user_id);
 					if ($user_have_projects!==true) {
-						$response->msg = label::get_label('error_usuario_sin_proyectos');
+						$response->msg = label::get_label('user_without_projects_error');
 						return $response;
 					}
 
@@ -368,7 +368,7 @@ class login extends common {
 							# PROJECTS : TEST FILTER MASTER VALUES
 								$user_have_projects = login::user_have_projects_check($section_id);
 								if ($user_have_projects!==true) {
-									$response->msg = label::get_label('error_usuario_sin_proyectos');
+									$response->msg = label::get_label('user_without_projects_error');
 									return $response;
 								}
 
@@ -423,7 +423,7 @@ class login extends common {
 
 					# delay failed output after 2 seconds to prevent brute force attacks
 			        sleep(2);
-					$response->msg = label::get_label('error_el_codigo_de_usuario_no_existe'); # "Error: User Code not exists! Please try again";
+					$response->msg = label::get_label('user_code_does_not_exist_error'); # "Error: User Code not exists! Please try again";
 					error_log("[Login_SAML] DEDALO LOGIN ERROR : Invalid saml code");
 					return $response;
 			}

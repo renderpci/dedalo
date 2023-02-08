@@ -121,7 +121,7 @@ const get_content_data = async function(self) {
 		const view_all = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'view_all',
-			inner_html		: get_label.ver_todos || 'View all',
+			inner_html		: get_label.show_all || 'Show all',
 			parent			: fragment
 		})
 		view_all.addEventListener('click', function(e) {

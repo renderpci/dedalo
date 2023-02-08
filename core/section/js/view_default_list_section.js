@@ -376,7 +376,7 @@ const get_buttons = function(self) {
 		ui.add_tools(self, other_buttons_block)
 
 	// show_other_buttons_button
-		const show_other_buttons_label	= get_label.mostrar_botones || 'Show buttons'
+		const show_other_buttons_label	= get_label.show_buttons || 'Show buttons'
 		const show_other_buttons_button	= ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'icon_arrow show_other_buttons_button',

@@ -221,7 +221,7 @@ export const upload = async function(options) {
 
 		// upload_error
 			const upload_error = function() {
-				// response_msg.innerHTML = `<span class="error">${get_label.error_al_subir_el_archivo} ${file.name}</span>`
+				// response_msg.innerHTML = `<span class="error">${get_label.error_on_upload_file} ${file.name}</span>`
 				event_manager.publish('upload_file_status_'+id, {
 					value	: false,
 					msg		: `${get_label.error_on_upload_file} ${file.name}`

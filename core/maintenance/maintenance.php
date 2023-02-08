@@ -19,7 +19,7 @@
 
 
 		$cwd = basename(__DIR__);
-		$page_title = label::get_label('sitio_en_mantenimiento');
+		$page_title = label::get_label('site_under_maintenance') || 'Site under maintenance';
 
 
 		# CURRENT CSS / JS MAIN FILES
@@ -46,6 +46,6 @@
 
 	# NOTICE TO ADMIN ONLY
 	if ( isset($_SESSION['dedalo']['auth']['user_id']) && $_SESSION['dedalo']['auth']['user_id']==DEDALO_SUPERUSER ) {
-		// $GLOBALS['log_messages'][] = "<span class=\"warning\">".label::get_label('sitio_en_mantenimiento')."</span>";
+		// $GLOBALS['log_messages'][] = "<span class=\"warning\">".label::get_label('site_under_maintenance')."</span>";
 	}
 

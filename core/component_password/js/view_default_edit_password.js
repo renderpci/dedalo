@@ -106,7 +106,7 @@ const get_content_value = function(i, self) {
 			e.preventDefault()
 
 			// user confirm. Prevents Safari auto-fill save
-				// if (!confirm(get_label.seguro + " [edit password]")) {
+				// if (!confirm(get_label.sure + " [edit password]")) {
 				// 	return false
 				// }
 

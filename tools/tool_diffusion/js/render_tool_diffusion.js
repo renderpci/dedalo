@@ -114,7 +114,7 @@ const get_content_data = async function(self) {
 		ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: '',
-			inner_html		: get_label.niveles || 'Levels',
+			inner_html		: get_label.levels || 'Levels',
 			parent			: resolve_levels_container
 		})
 		// resolve_levels_input
@@ -239,7 +239,7 @@ export const render_publication_items = function(self) {
 			// name
 				const name_label = ui.create_dom_element({
 					element_type	: 'span',
-					inner_html		: get_label.nombre || 'Name',
+					inner_html		: get_label.name || 'Name',
 					class_name		: 'label',
 					parent			: publication_items_grid
 				})
@@ -253,7 +253,7 @@ export const render_publication_items = function(self) {
 			// type
 				const type_label = ui.create_dom_element({
 					element_type	: 'span',
-					inner_html		: get_label.tipo || 'Type',
+					inner_html		: get_label.type || 'Type',
 					class_name		: 'label',
 					parent			: publication_items_grid
 				})
@@ -311,7 +311,7 @@ export const render_publication_items = function(self) {
 					const publication_button = ui.create_dom_element({
 						element_type	: 'button',
 						class_name		: 'warning publication_button',
-						inner_html		: get_label.publicar || 'Publish',
+						inner_html		: get_label.publish || 'Publish',
 						parent			: container_bottom
 					})
 					publication_button.addEventListener('click', function(e) {
