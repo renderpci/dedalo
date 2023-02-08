@@ -2428,13 +2428,15 @@ abstract class common {
 	*/
 	public function get_ar_request_config() : array {
 
-		// options fix
-			$tipo			= $this->get_tipo();
-			$external		= false;
-			$section_tipo	= $this->get_section_tipo();
-			$mode			= $this->get_mode();
-			$section_id		= $this->get_section_id();
-			$model			= get_called_class();
+		// short vars
+			$tipo				= $this->get_tipo();
+			$external			= false;
+			$section_tipo		= $this->get_section_tipo();
+			$mode				= $this->get_mode();
+			$section_id			= $this->get_section_id();
+			$model				= get_called_class();
+			$requested_source	= dd_core_api::$rqo->source ?? null;
+			$requested_sqo		= dd_core_api::$rqo->sqo ?? null;
 
 		// debug
 			// if (to_string($section_tipo)==='self') {
@@ -2552,10 +2554,17 @@ abstract class common {
 							}
 
 						// limit. Add default if not already set
-							// if (!isset($parsed_item->sqo->limit)) {
-							// 	$parsed_item->sqo->limit = $limit;
-							// }
-							$parsed_item->sqo->limit = $limit;
+							if (!isset($parsed_item->sqo->limit)) {
+								$parsed_item->sqo->limit = $limit;
+							}
+							// overwrite with $this->pagination->limit if exists
+							if (isset($this->pagination->limit)) {
+								$parsed_item->sqo->limit = $this->pagination->limit;
+							}
+							// overwrite from API request. Check received limit from dd_core_api::$rqo
+							if ($requested_source && $requested_source->tipo===$this->tipo && isset($requested_sqo->limit)) {
+								$parsed_item->sqo->limit = $requested_sqo->limit;
+							}
 
 					// show (mandatory). In list mode it's possible to create specific ddo_map in a section_list term child of the portal or section.
 
@@ -2712,15 +2721,15 @@ abstract class common {
 										? $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit
 										: $parsed_item->show->sqo_config->limit;
 								}else{
-									// check received limit from dd_core_api::$rqo
-									$requested_source	= dd_core_api::$rqo->source ?? null;
-									$requested_sqo		= dd_core_api::$rqo->sqo ?? null;
+									// default
+									$parsed_item->sqo->limit = $parsed_item->show->sqo_config->limit;
+									// overwrite with $this->pagination->limit if exists
+									if (isset($this->pagination->limit)) {
+										$parsed_item->sqo->limit = $this->pagination->limit;
+									}
+									// overwrite from API request. Check received limit from dd_core_api::$rqo
 									if ($requested_source && $requested_source->tipo===$this->tipo && isset($requested_sqo->limit)) {
-										// from API request
 										$parsed_item->sqo->limit = $requested_sqo->limit;
-									}else{
-										// default
-										$parsed_item->sqo->limit = $parsed_item->show->sqo_config->limit;
 									}
 								}
 							}
