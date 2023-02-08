@@ -500,7 +500,7 @@ const render_header_options = async function(self, content_data) {
 		const lang_label = ui.create_dom_element({
 			element_type	: 'div',
 			class_name 		: 'lang_label',
-			inner_html 		: get_label.idioma || 'Language',
+			inner_html 		: get_label.language || 'Language',
 			parent 			: lang_container
 		})
 		// the lang selector use the content_data pointer .left_container to remove the transcription text_area and rebuild the new node

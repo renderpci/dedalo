@@ -3116,7 +3116,7 @@ class search {
 
 		if (!empty($search_operators_info)) {
 
-			$search_options_title .= '<b>' . label::get_label('opciones_de_busqueda') . ':</b>';
+			$search_options_title .= '<b>' . label::get_label('search_options') . ':</b>';
 			foreach ($search_operators_info as $ikey => $ivalue) {
 
 				$search_options_title .= '<div class="search_options_title_item">';

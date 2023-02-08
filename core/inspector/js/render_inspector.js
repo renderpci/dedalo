@@ -157,7 +157,7 @@ const get_content_data = function(self) {
 				const button_duplicate = ui.create_dom_element({
 					element_type	: 'button',
 					class_name		: 'light duplicate',
-					title			: get_label.duplicar || "Duplicate",
+					title			: get_label.duplicate || "Duplicate",
 					parent			: buttons_container
 				})
 				button_duplicate.addEventListener('click', (e) => {
@@ -380,7 +380,7 @@ export const render_section_info = function(self) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			inner_html		: get_label.seccion || 'Section',
+			inner_html		: get_label.section || 'Section',
 			parent			: fragment
 		})
 		// value
@@ -396,7 +396,7 @@ export const render_section_info = function(self) {
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'key',
-				inner_html		: get_label.tipo || 'Tipo',
+				inner_html		: 'tipo',
 				parent			: fragment
 			})
 		// value
@@ -450,7 +450,7 @@ export const render_section_info = function(self) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			inner_html		: get_label.creado || 'Created',
+			inner_html		: get_label.created || 'Created',
 			parent			: fragment
 		})
 		// value
@@ -466,7 +466,7 @@ export const render_section_info = function(self) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			inner_html		: get_label.modificado || 'Modified',
+			inner_html		: get_label.modified || 'Modified',
 			parent			: fragment
 		})
 		// value
@@ -520,7 +520,7 @@ export const render_component_info = function(self, component) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			inner_html		: get_label.componente || 'Component',
+			inner_html		: get_label.component || 'Component',
 			parent			: fragment
 		})
 		// value
@@ -536,7 +536,7 @@ export const render_component_info = function(self, component) {
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'key',
-				inner_html		: get_label.tipo || 'Tipo',
+				inner_html		: 'tipo',
 				parent			: fragment
 			})
 		// value
@@ -591,7 +591,7 @@ export const render_component_info = function(self, component) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			inner_html		: get_label.modelo || 'Model',
+			inner_html		: get_label.model || 'Model',
 			parent			: fragment
 		})
 		// value
@@ -607,7 +607,7 @@ export const render_component_info = function(self, component) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			inner_html		: get_label.traducible || 'Translatable',
+			inner_html		: get_label.translatable || 'Translatable',
 			parent			: fragment
 		})
 		// value
@@ -623,7 +623,7 @@ export const render_component_info = function(self, component) {
 		const value_label_node = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key wide icon_arrow',
-			inner_html		: get_label.dato || 'Data',
+			inner_html		: get_label.data || 'Data',
 			parent			: fragment
 		})
 		// value
@@ -755,7 +755,7 @@ const render_project_block = function(self) {
 		const project_head = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'project_head icon_arrow up',
-			inner_html		: get_label.proyecto || "Project",
+			inner_html		: get_label.project || "Project",
 			parent			: project_wrap
 		})
 
@@ -827,7 +827,7 @@ const render_indexation_list = function() {
 		const indexation_list_head = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'indexation_list_head icon_arrow',
-			inner_html		: get_label.indexaciones || 'Indexations',
+			inner_html		: get_label.indexings || 'Indexations',
 			parent			: indexation_list_container
 		})
 
@@ -877,7 +877,7 @@ const render_relation_list = function(self) {
 		const relation_list_head = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'relation_list_head icon_arrow',
-			inner_html		: get_label.relaciones || "Relations",
+			inner_html		: get_label.relations || "Relations",
 			parent			: relation_list_container
 		})
 
@@ -1289,7 +1289,7 @@ const render_activity_info = function(self) {
 		const activity_info_head = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'activity_info_head icon_arrow',
-			inner_html		: get_label.actividad || 'Activity',
+			inner_html		: get_label.activity || 'Activity',
 			parent			: wrapper
 		})
 

@@ -256,7 +256,7 @@ const get_line_file_exists = function(ar_quality, self) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'label',
-			inner_html		: get_label.fichero || 'File',
+			inner_html		: get_label.file || 'File',
 			parent			: fragment
 		})
 
@@ -323,7 +323,7 @@ const get_line_file_size = function(ar_quality, self) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'label',
-			inner_html		: get_label.tamano || 'Size',
+			inner_html		: get_label.size || 'Size',
 			parent			: fragment
 		})
 
@@ -379,7 +379,7 @@ const get_line_file_upload = function(ar_quality, self) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'label',
-			inner_html		: get_label.subir || 'Upload',
+			inner_html		: get_label.upload || 'Upload',
 			parent			: fragment
 		})
 
@@ -458,7 +458,7 @@ const get_line_file_download = function(ar_quality, self) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'label',
-			inner_html		: get_label.descargar || 'Download',
+			inner_html		: get_label.download || 'Download',
 			parent			: fragment
 		})
 
@@ -506,12 +506,12 @@ const get_line_file_download = function(ar_quality, self) {
 						const url = self.trigger_url + '?' + pairs.join('&')
 
 					// confirm dialog
-						if ( !confirm( (get_label.descargar || 'Download') + ' ['+quality+']' ) ) {
+						if ( !confirm( (get_label.download || 'Download') + ' ['+quality+']' ) ) {
 							return false
 						}
 
 					// open new window
-						window.open(url, get_label.descargar)
+						window.open(url, get_label.download)
 						// const download_window = window.open(url, get_label.descargar)
 						// download_window.focus()
 				})
@@ -536,7 +536,7 @@ const get_line_file_delete = function(ar_quality, self) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'label',
-			inner_html		: get_label.borrar || 'Delete',
+			inner_html		: get_label.delete || 'Delete',
 			parent			: fragment
 		})
 
@@ -599,7 +599,7 @@ const get_line_build_version = function(ar_quality, self) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'label',
-			inner_html		: (get_label.generar || 'Build') + ' ' + (get_label.version || 'version'),
+			inner_html		: (get_label.build || 'Build') + ' ' + (get_label.version || 'version'),
 			parent			: fragment
 		})
 
@@ -645,7 +645,7 @@ const get_line_build_version = function(ar_quality, self) {
 					ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'blink',
-						inner_html		: get_label.procesando || 'Processing',
+						inner_html		: get_label.procesing || 'Processing',
 						parent			: file_info_node
 					})
 
@@ -697,7 +697,7 @@ const get_line_conform_headers = function(ar_quality, self) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'label',
-			inner_html		: (get_label.conformar_cabeceras || 'Conform headers'),
+			inner_html		: (get_label.conform_headers || 'Conform headers'),
 			parent			: fragment
 		})
 
@@ -759,7 +759,7 @@ const get_line_rotate = function(ar_quality, self) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'label',
-			inner_html		: (get_label.rotar || 'Rotate'),
+			inner_html		: (get_label.rotate || 'Rotate'),
 			parent			: fragment
 		})
 

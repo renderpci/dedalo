@@ -491,7 +491,7 @@ export const build_form = function(widget_object) {
 		})
 		button_submit.addEventListener('click', function(){
 
-			// if (confirm( (get_label["seguro"] || "Sure?") )) {
+			// if (confirm( (get_label["sure"] || "Sure?") )) {
 			// 	for (let i = 0; i < input_nodes.length; i++) {
 			// 		if(input_nodes[i].classList.contains("mandatory") && input_nodes[i].value.length<1) {
 			// 			input_nodes[i].focus()

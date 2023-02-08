@@ -190,7 +190,7 @@ const get_content_data = async function(self) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'page_info',
-			inner_html		: (get_label.pagina || 'Page') + ` ${page_number} ` + (get_label.de || 'of') + ` ${total_pages} `,
+			inner_html		: (get_label.page || 'Page') + ` ${page_number} ` + (get_label.of || 'of') + ` ${total_pages} `,
 			parent			: paginator_info
 		})
 		// displayed_records

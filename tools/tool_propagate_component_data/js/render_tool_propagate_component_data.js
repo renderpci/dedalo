@@ -188,7 +188,7 @@ const get_content_data = async function(self) {
 		const button_delete = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'warning remove button_delete',
-			// inner_html	: get_label.elminar_contenido || 'Remove',
+			// inner_html	: get_label.delete_content || 'Remove',
 			inner_html		: self.get_tool_label('tool_do_delete') || 'Delete',
 			parent			: buttons_container
 		})

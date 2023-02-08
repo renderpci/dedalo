@@ -171,7 +171,7 @@ const render_relation_list = function(options) {
 		const relation_list_head = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'relation_list_head icon_arrow',
-			inner_html		: get_label.relaciones || "Relations",
+			inner_html		: get_label.relations || "Relations",
 			parent			: relation_list_container
 		})
 

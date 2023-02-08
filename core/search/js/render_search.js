@@ -130,7 +130,7 @@ render_search.prototype.render_base = function() {
 		// ui.create_dom_element({
 		// 	element_type	: 'button',
 		// 	class_name		: 'button_save_preset hide99',
-		// 	inner_html		: get_label.salvar +' '+ get_label.cambios,
+		// 	inner_html		: get_label.save +' '+ get_label.changes,
 		// 	parent			: search_global_container
 		// })
 		// .addEventListener('click',function(e) {
@@ -144,7 +144,7 @@ render_search.prototype.render_base = function() {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'toggle_container_selector',
-			inner_html		: get_label.campos,
+			inner_html		: get_label.fields || 'Fields',
 			parent			: search_global_container
 		})
 		.addEventListener('click',function(e){
@@ -247,7 +247,7 @@ render_search.prototype.render_base = function() {
 			const button_save_preset = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'button_save_preset hide',
-				inner_html		: get_label.save +' '+ get_label.cambios,
+				inner_html		: get_label.save +' '+ get_label.changes,
 				parent			: search_container_selection_presets
 			})
 			button_save_preset.addEventListener('click', function(e) {
@@ -410,7 +410,7 @@ render_search.prototype.render_search_buttons = function(){
 		const reset_button = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'button reload',
-			title			: get_label.recargar || 'Reload',
+			title			: get_label.reload || 'Reload',
 			parent			: reset_group
 
 		})
@@ -439,7 +439,7 @@ render_search.prototype.render_search_buttons = function(){
 		const show_all_button = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'button show_all',
-			inner_html		: get_label.mostrar_todos || 'Show all',
+			inner_html		: get_label.show_all || 'Show all',
 			parent			: reset_group
 		})
 		show_all_button.addEventListener('click', function(e){
@@ -453,7 +453,7 @@ render_search.prototype.render_search_buttons = function(){
 			element_type	: 'button',
 			id				: 'button_submit',
 			class_name		: 'button submit',
-			inner_html		: get_label.aplicar || 'Submit',
+			inner_html		: get_label.apply || 'Apply',
 			parent			: search_buttons_container
 		})
 		submit_button.addEventListener('click', function(e){
@@ -812,7 +812,7 @@ const render_sections_selector = (self) => {
 		// const toggle_container_selector = ui.create_dom_element({
 		// 	element_type	: 'div',
 		// 	class_name		: 'toggle_container_selector',
-		// 	inner_html		: get_label.campos,
+		// 	inner_html		: get_label.fields,
 		// 	parent			: search_global_container
 		// })
 		// .addEventListener('click',function(){
@@ -1134,8 +1134,8 @@ const localize_operator = (operator) => {
 	// Remove '$' (first char)
 	const clean_operator = operator.slice(1)
 
-	const name = (clean_operator==='and') ? 'y' :
-				 (clean_operator==='or') ? 'o' :
+	const name = (clean_operator==='and') ? 'and' :
+				 (clean_operator==='or') ? 'or' :
 				 clean_operator
 
 	const localized = get_label[name] || ''

@@ -154,7 +154,7 @@ const get_content_data = async function(self) {
 		const button_apply = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'success button_apply',
-			inner_html		: get_label.actualizar || 'Update',
+			inner_html		: get_label.update || 'Update',
 			parent			: buttons_container
 		})
 		button_apply.addEventListener('click', function(e){
@@ -166,7 +166,7 @@ const get_content_data = async function(self) {
 				const checked_list_length	= checked_list.length
 			// empty case
 				if (checked_list_length<1) {
-					alert(get_label.seleccion_vacia || 'Empty selection');
+					alert(get_label.empty_selection || 'Empty selection');
 					return
 				}
 			// update_cache
