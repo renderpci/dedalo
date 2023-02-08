@@ -105,11 +105,11 @@ const get_content_data = async function(self) {
 			// console.log(`++++++++++++++++++++++ total_pages: ${total_pages}, page_number: ${page_number}, offset: ${offset}, offset_first: ${offset_first}, model: ${model} `);
 		}
 
-	// display none with empty case, or when pages are <2
-		if (!total_pages || total_pages<2) {
+	// display none with empty case, or when pages are <2 and show_all_status is not set
+		if((!total_pages || total_pages<2) && !self.show_all_status) {
 			const wrap_rows_paginator = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'content_data paginator display_none ' +total_pages
+				class_name		: 'content_data paginator display_none ' + total_pages
 			})
 			return wrap_rows_paginator
 		}
@@ -117,17 +117,44 @@ const get_content_data = async function(self) {
 	// DocumentFragment
 		const fragment = new DocumentFragment()
 
-	// view_all
-		const view_all = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'view_all',
-			inner_html		: get_label.show_all || 'Show all',
-			parent			: fragment
-		})
-		view_all.addEventListener('click', function(e) {
-			e.stopPropagation(),
-			self.view_all()
-		})
+	// show_all_button. Don't show in mosaics of 1 item (limit 1)
+		if (self.limit>1) {
+			if (!self.show_all_status && total_pages>1) {
+
+				const show_all_button = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'show_all',
+					inner_html		: get_label.show_all || 'Show all',
+					parent			: fragment
+				})
+				show_all_button.addEventListener('click', function(e) {
+					e.stopPropagation()
+					// fix show_all_status (store the previous limit value to use wen reset)
+					self.show_all_status = {
+						limit : self.limit
+					}
+					// trigger show_all (publish a event listened by the section)
+					self.show_all( self.total )
+				})
+
+			}else if(self.show_all_status){
+
+				const reset_show_all_button = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'show_all',
+					inner_html		: get_label.reset || 'Reset',
+					parent			: fragment
+				})
+				reset_show_all_button.addEventListener('click', function(e) {
+					e.stopPropagation()
+					// trigger show_all (publish a event listened by the section)
+					self.show_all( self.show_all_status.limit )
+					// reset show_all_status
+					self.show_all_status = null
+				})
+			}
+		}
+
 
 	// nav_buttons
 		const paginator_div_links = ui.create_dom_element({
