@@ -2827,6 +2827,10 @@
 		Check tm permissions to show or hide tm_list and component_history in inspector
 		Added default_section for users to go specific section after login
 		Final master version of v5
+		Valencia 08-02-2023T13:01:00
+		Fixed default project (component_filter) bug were the assignation sequence order was review because was wrong (global default project was set always, instead the properties default data
+
+
 	[/HISTORY]
 
 
@@ -2856,7 +2860,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '31-01-2023T20:48:00');
+	define('DEDALO_BUILD'	, '08-02-2023T13:01:00');
 
 
 
