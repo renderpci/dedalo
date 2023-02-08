@@ -3159,6 +3159,7 @@ input:-moz-placeholder {
 .wrapper_component.search.active > .buttons_container,
 .wrapper_component.player.active > .buttons_container {
   display: block !important;
+  white-space: nowrap;
 }
 .wrapper_component.edit.active > .buttons_container .button:last-of-type,
 .wrapper_component.search.active > .buttons_container .button:last-of-type,
@@ -3263,7 +3264,7 @@ dd-modal .wrapper_component > .buttons_container,
   flex: 0 1 1em;
   position: absolute;
   z-index: 1;
-  box-shadow: 0px -1px 0px 1px #f49d46;
+  box-shadow: 0px 0px 0px 1px #f49d46;
   right: 0px;
   width: auto;
   padding: 0px;
@@ -6253,9 +6254,11 @@ dd-modal .footer.distribute {
   cursor: pointer;
   width: 1.4rem;
   height: 1.4rem;
+  transition: transform 0.25s ease-in-out;
 }
 .tool_header > .button.close:hover {
   background-color: #000000 !important;
+  transform: rotate(90deg);
 }
 .tool_header > .button.close:active {
   background-color: #ffffff !important;
@@ -9748,6 +9751,7 @@ dd-modal .footer.distribute {
   grid-template-rows: 1.8rem auto;
   min-height: 2.66rem;
   position: relative;
+  height: fit-content;
 }
 .component_portal.view_default.edit > .list_body .button_edit,
 .portal.view_default.edit > .list_body .button_edit {
