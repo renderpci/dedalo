@@ -72,10 +72,46 @@ class component_filter extends component_relation_common {
 	*/
 	public function set_dato( $dato ) {
 
-		# For safe compatibility backwards
-		$dato = self::convert_dato_pre_490( $dato, $this->tipo );
+		// For safe compatibility backwards. Removed 08-02-2023 because is not needed in current version
+			// $dato = self::convert_dato_pre_490( $dato, $this->tipo );
 
-		return parent::set_dato($dato);
+		// preserve projects that user do not have access
+			$user_id			= navigator::get_user_id();
+			$is_global_admin	= security::is_global_admin($user_id);
+			if ($is_global_admin===true) {
+
+				// do not modify dato
+				$final_dato = $dato;
+
+			}else{
+
+				// user projects
+				$user_projects	= filter::get_user_projects( $user_id );
+				// actual dato in DDBB
+				$current_dato	= $this->dato;
+				// filter
+				$non_access_locators = [];
+				if (!empty($current_dato)) {
+					foreach ($current_dato as $current_locator) {
+						$in_my_projects = locator::in_array_locator(
+							$current_locator,
+							$user_projects,
+							['section_tipo','section_id'] // array ar_properties
+						);
+						if ($in_my_projects===false) {
+							$non_access_locators[] = $current_locator;
+						}
+					}
+				}
+
+				// merge final data
+				$final_dato = empty($dato)
+					? $non_access_locators
+					: array_merge( (array)$dato, $non_access_locators );
+			}
+
+
+		return parent::set_dato( $final_dato );
 	}//end set_dato
 
 
