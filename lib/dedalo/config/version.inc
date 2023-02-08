@@ -2823,10 +2823,10 @@
 		Fixed redundancy data in class ontology->get_children_recursive when section is virtual
 		Removed tool_import_files limitConcurrentUploads param that block normal uploads when value is more than 1 (tool_import_files_dcnav too)
 		Fix z-index issue in ontology tree mark tag
-	Released version 5.9.4
 		Check tm permissions to show or hide tm_list and component_history in inspector
 		Added default_section for users to go specific section after login
 		Final master version of v5
+		Released version 5.9.4
 	[/HISTORY]
 
 
