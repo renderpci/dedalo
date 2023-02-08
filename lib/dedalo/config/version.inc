@@ -2829,6 +2829,9 @@
 		Final master version of v5
 		Valencia 08-02-2023T13:01:00
 		Fixed default project (component_filter) bug were the assignation sequence order was review because was wrong (global default project was set always, instead the properties default data
+		Increased section cache default max from 1200 to 2100
+		Added set_default dato optional CONFIG_DEFAULT_FILE_PATH JSON file with precedence from properties defaults: component_common->set_dato_default(), component_filter->set_default-dato_for_user()
+		Fixed component_filter set_dato method bug were non global_admin user saving projects delete the data not accessible to itself (other projects not accessible)
 
 
 	[/HISTORY]
@@ -2860,7 +2863,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '08-02-2023T13:01:00');
+	define('DEDALO_BUILD'	, '08-02-2023T16:49:00');
 
 
 
