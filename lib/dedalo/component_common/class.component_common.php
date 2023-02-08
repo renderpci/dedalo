@@ -346,7 +346,7 @@ abstract class component_common extends common {
 	/**
 	* SET_DATO_DEFAULT
 	* Set dato default when propiedades->dato_default exists and current component dato is empty
-	* propiedades are loaded always (structure data) at begining of build component. Because this
+	* propiedades are loaded always (structure data) at beginning of build component. Because this
 	* is more fast verify if is set 'dato_default' and not load component data always as before
 	* @return bool true
 	*/
@@ -385,35 +385,36 @@ abstract class component_common extends common {
 
 		if (!empty($default_dato)) {
 
-			# MATRIX DATA : Load matrix data
-			$this->load_component_dato();
+			// matrix data : load matrix data
+				$this->load_component_dato();
 
-			$dato = $this->dato;
-			if (empty($dato)) {
+			// current dato check
+				$dato = $this->dato;
+				if (empty($dato)) {
 
-				// set dato only when own dato is empty
-					$this->set_dato($default_dato);
+					// set dato only when own dato is empty
+						$this->set_dato($default_dato);
 
-				// Method Used. (!) Only to remember this option like cases as date 'today'
-					// if(isset($propiedades->dato_default->method)) {
-					// 	$dato_default = $this->get_method( (string)$propiedades->dato_default->method );
-					// }
+					// Method Used. (!) Only to remember this option like cases as date 'today'
+						// if(isset($propiedades->dato_default->method)) {
+						// 	$dato_default = $this->get_method( (string)$propiedades->dato_default->method );
+						// }
 
-				// temp section cases no not save anything
-					if ( strpos($this->parent, DEDALO_SECTION_ID_TEMP)===false ) {
-						$this->id = $this->Save();
-					}
+					// temp section cases no not save anything
+						if ( strpos($this->parent, DEDALO_SECTION_ID_TEMP)===false ) {
+							$this->id = $this->Save();
+						}
 
-				// info log
-					if(SHOW_DEBUG===true) {
-						$msg = " Created ".get_called_class()." \"$this->label\" id:$this->parent, tipo:$this->tipo, section_tipo:$this->section_tipo, modo:$this->modo with default data";
-						debug_log(__METHOD__.$msg);
-					}
+					// info log
+						if(SHOW_DEBUG===true) {
+							$msg = " Created ".get_called_class()." \"$this->label\" id:$this->parent, tipo:$this->tipo, section_tipo:$this->section_tipo, modo:$this->modo with default data";
+							debug_log(__METHOD__.$msg);
+						}
 
-				// MATRIX DATA : Reload matrix data again
-					$this->load_component_dato();
-			}
-		}
+					// matrix data : load matrix data again
+						$this->load_component_dato();
+				}
+		}//end if (!empty($default_dato))
 
 
 		return true;
