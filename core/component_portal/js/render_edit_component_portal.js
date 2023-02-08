@@ -708,30 +708,32 @@ export const get_buttons = (self) => {
 			})
 
 		// button_update_data_external
-			if( self.show_interface.button_external===true){
-
+			if(self.show_interface.button_external===true) {
 				// button_update data external
 					const button_update_data_external = ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'button sync',
 						parent			: buttons_fold
 					})
-					button_update_data_external.addEventListener("click", async function(){
-
+					button_update_data_external.addEventListener('click', async function(){
+						// force server data to calculate external data
 						const source = self.rqo.source
 						source.build_options = {
 							get_dato_external : true
 						}
-						const built = await self.build(true)
-						// render
-						if (built) {
-							self.render({render_level : 'content'})
-						}
+						// const built = await self.build(true)
+						// if (built) {
+						// 	self.render({render_level : 'content'})
+						// }
+						self.refresh({
+							build_autoload	: true,
+							render_level	: 'content'
+						})
 					})
 			}//end button external
 
 	// button_add
-		if( self.show_interface.button_add===true){
+		if(self.show_interface.button_add===true) {
 			const button_add = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button add',
