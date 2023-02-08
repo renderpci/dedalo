@@ -142,7 +142,7 @@ const get_content_data = async function(self) {
 			const import_button = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'warning import_button',
-				inner_html		: get_label.importar || 'Import',
+				inner_html		: get_label.import || 'Import',
 				parent			: submit_container
 			})
 			import_button.addEventListener('click', function(){
@@ -150,7 +150,7 @@ const get_content_data = async function(self) {
 				// selected files
 					const selected_files = self.csv_files_list.filter(el => el.checked===true)
 					if (selected_files.length<1) {
-						alert( get_label.seleccione_un_fichero || 'Select a file');
+						alert( get_label.select_a_file || 'Select a file');
 						return
 					}
 				// loading

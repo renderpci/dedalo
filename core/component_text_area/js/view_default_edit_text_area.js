@@ -1034,14 +1034,14 @@ const render_page_selector = function(self, data_tag, tag_id, text_editor) {
 		const user_option_cancel = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'user_option ',
-			inner_html		: get_label.cancelar || 'Cancel',
+			inner_html		: get_label.cancel || 'Cancel',
 			parent			: footer
 		})
 
 		const user_option_ok = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'user_option',
-			inner_html		: get_label.insertar_etiqueta || 'Insert label',
+			inner_html		: get_label.insert_tag || 'Insert tag',
 			parent			: footer
 		})
 

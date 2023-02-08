@@ -320,7 +320,7 @@ const get_tag_info = function(self) {
 		// fragment_id_label
 		ui.create_dom_element({
 			element_type	: 'span',
-			inner_html		: get_label.etiqueta || 'Tag',
+			inner_html		: get_label.tag || 'Tag',
 			parent			: fragment_id_info
 		})
 		const fragment_id_tag_id = ui.create_dom_element({
@@ -334,7 +334,7 @@ const get_tag_info = function(self) {
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'wrap_tag_state_selector',
-				inner_html		: get_label.estado || 'State',
+				inner_html		: get_label.state || 'State',
 				parent			: tag_info_container
 			})
 		// state selector
@@ -410,7 +410,7 @@ const get_tag_info = function(self) {
 		// label delete
 			const button_delete_label = ui.create_dom_element({
 				element_type	: 'label',
-				inner_html		: get_label.borrar || 'Delete',
+				inner_html		: get_label.delete || 'Delete',
 				parent			: wrap_delete_tag
 			})
 
@@ -419,7 +419,7 @@ const get_tag_info = function(self) {
 
 			tag_id							= value // update current tag_id var (let)
 			fragment_id_tag_id.textContent	= value // update fragment label
-			button_delete_label.textContent	= get_label.borrar //  + ' ' + value // update delete label
+			button_delete_label.textContent	= get_label.delete || 'Delete' //  + ' ' + value // update delete label
 
 			// show/hide info_container
 				if (self.tag_info_container.classList.contains('hide')) {
@@ -500,7 +500,7 @@ const render_related_list = function(self){
 		const related_list_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'related_list_container',
-			inner_html		: (get_label.enfoque || 'Aproch') + ': &nbsp;',
+			inner_html		: (get_label.approach || 'Aproch') + ': &nbsp;',
 			parent			: fragment
 		})
 

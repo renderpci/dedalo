@@ -171,14 +171,14 @@ tool_upload.prototype.build = async function(autoload=false) {
 	// 	// check file extension
 	// 		const file_extension = file.name.split('.').pop().toLowerCase();
 	// 		if (!allowed_extensions.includes(file_extension)) {
-	// 			alert( get_label.extension_no_valida + ": \n" + file_extension + "\nUse any of: \n" + JSON.stringify(allowed_extensions) );
+	// 			alert( get_label.invalid_extension + ": \n" + file_extension + "\nUse any of: \n" + JSON.stringify(allowed_extensions) );
 	// 			return false
 	// 		}
 
 	// 	// check max file size
 	// 		const file_size_bytes = file.size
 	// 		if (file_size_bytes>self.max_size_bytes) {
-	// 			alert( get_label.fichero_demasiado_grande + " Max file size is " + Math.floor(self.max_size_bytes / (1024*1024)) + " MB and current file is " + Math.floor(file_size_bytes / (1024*1024)));
+	// 			alert( get_label.filesize_is_too_big + " Max file size is " + Math.floor(self.max_size_bytes / (1024*1024)) + " MB and current file is " + Math.floor(file_size_bytes / (1024*1024)));
 	// 			return false
 	// 		}
 
@@ -222,7 +222,7 @@ tool_upload.prototype.build = async function(autoload=false) {
 
 	// 		// upload_error
 	// 			const upload_error = function() {
-	// 				response_msg.innerHTML = `<span class="error">${get_label.error_al_subir_el_archivo} ${file.name}</span>`
+	// 				response_msg.innerHTML = `<span class="error">${get_label.error_on_upload_file} ${file.name}</span>`
 	// 			}//end upload_error
 
 	// 		// upload_abort

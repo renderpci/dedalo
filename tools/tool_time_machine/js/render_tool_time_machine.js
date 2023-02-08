@@ -75,7 +75,7 @@ const get_content_data = async function(self) {
 				self, // tool instance
 				current_component_container, // DOM node container
 				self.main_element.lang, // string lang
-				get_label.ahora || 'Now', // string label 'Now'
+				get_label.now || 'Now', // string label 'Now'
 				'edit', // string mode = 'edit'
 				null // int|null  matrix_id (time machine variant)
 			)
@@ -105,7 +105,7 @@ const get_content_data = async function(self) {
 					// label
 					ui.create_dom_element({
 						element_type	: 'label',
-						inner_html		: get_label.idioma,
+						inner_html		: get_label.language,
 						parent			: tool_bar
 					})
 					// selector

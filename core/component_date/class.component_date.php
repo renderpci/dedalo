@@ -342,15 +342,15 @@ class component_date extends component_common {
 
 					// year
 					$ar_string_period[] = isset($dd_date->year)
-						? $dd_date->year .' '. label::get_label('anyos')
+						? $dd_date->year .' '. label::get_label('years')
 						: '';
 					// month
 					$ar_string_period[] = isset($dd_date->month)
-						? $dd_date->month .' '. label::get_label('meses')
+						? $dd_date->month .' '. label::get_label('months')
 						: '';
 					// day
 					$ar_string_period[] = isset($dd_date->day)
-						? $dd_date->day .' '. label::get_label('dias')
+						? $dd_date->day .' '. label::get_label('days')
 						: '';
 
 					$item_value = implode(' ', $ar_string_period);
@@ -1135,13 +1135,13 @@ class component_date extends component_common {
 						# $days = ceil($seconds/3600/24);
 						$ar_string_period = [];
 						if (isset($dato->period->year)) {
-							$ar_string_period[] = $dato->period->year .' '. label::get_label('anyos', $lang);
+							$ar_string_period[] = $dato->period->year .' '. label::get_label('years', $lang);
 						}
 						if (isset($dato->period->month)) {
-							$ar_string_period[] = $dato->period->month .' '. label::get_label('meses', $lang);
+							$ar_string_period[] = $dato->period->month .' '. label::get_label('months', $lang);
 						}
 						if (isset($dato->period->day)) {
-							$ar_string_period[] = $dato->period->day .' '. label::get_label('dias', $lang);
+							$ar_string_period[] = $dato->period->day .' '. label::get_label('days', $lang);
 						}
 						$ar_diffusion_values[] = implode(' ',$ar_string_period);
 					}

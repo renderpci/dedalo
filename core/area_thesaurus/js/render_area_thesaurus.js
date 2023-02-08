@@ -270,7 +270,7 @@ const get_buttons = function(self) {
 			// 	class_name		: 'button white search',
 			// 	parent			: filter_button
 			// })
-			// filter_button.insertAdjacentHTML('beforeend', get_label.buscar)
+			// filter_button.insertAdjacentHTML('beforeend', get_label.find)
 
 		const ar_buttons_length = ar_buttons.length;
 		for (let i = 0; i < ar_buttons_length; i++) {

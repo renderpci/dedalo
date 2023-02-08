@@ -237,7 +237,7 @@ export const render_filedrag = function(self) {
 		const filedrag = ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: 'filedrag'
-			// text_content	: 'Select a file to upload or drop it here', // get_label.seleccione_un_fichero ||
+			// text_content	: 'Select a file to upload or drop it here', // get_label.select_a_file ||
 			// parent		: form
 		})
 		filedrag.setAttribute('for','file_to_upload')

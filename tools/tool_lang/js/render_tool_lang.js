@@ -359,7 +359,7 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 
 		// const button_automatic_translation = document.createElement('button');
 		// 	  button_automatic_translation.type = 'button'
-		// 	  button_automatic_translation.textContent = get_label['traduccion_automatica'] || "Automatic translation"
+		// 	  button_automatic_translation.textContent = get_label['automatic_translation'] || "Automatic translation"
 		// 	  automatic_translation_container.appendChild(button_automatic_translation)
 		button_automatic_translation.addEventListener('click', () => {
 
