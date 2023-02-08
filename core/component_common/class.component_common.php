@@ -10,6 +10,7 @@ abstract class component_common extends common {
 
 	/**
 	* CLASS VARS
+	* @var
 	*/
 		// string section_id. Component's section section_id
 		protected $section_id;
@@ -93,6 +94,7 @@ abstract class component_common extends common {
 		public $save_to_database;
 
 
+
 	/**
 	* GET_INSTANCE
 	* Singleton pattern
@@ -108,7 +110,7 @@ abstract class component_common extends common {
 	* @return object|null
 	*/
 	final public static function get_instance(string $component_name=null, string $tipo=null, $section_id=null, string $mode='edit', string $lang=DEDALO_DATA_LANG, string $section_tipo=null, bool $cache=true) : ?object {
-		$start_time = start_time();
+		// $start_time = start_time();
 
 		// tipo check. Is mandatory
 			if (empty($tipo)) {
@@ -422,55 +424,56 @@ abstract class component_common extends common {
 			$this->pagination->offset = 0;
 			$this->pagination->limit = null;
 
-			// $request_config = ( isset($properties->source->request_config) )
-			// 	? $properties->source->request_config
-			// 	: [];
-			// $found = array_find($request_config, function($el){
-			// 	return isset($el->api_engine) && $el->api_engine==='dedalo';
-			// });
-			// $rqo = !empty($found)
-			// 	? $found
-			// 	: (isset($request_config[0])
-			// 		? $request_config[0]
-			// 		: null);
+			// DES
+				// $request_config = ( isset($properties->source->request_config) )
+				// 	? $properties->source->request_config
+				// 	: [];
+				// $found = array_find($request_config, function($el){
+				// 	return isset($el->api_engine) && $el->api_engine==='dedalo';
+				// });
+				// $rqo = !empty($found)
+				// 	? $found
+				// 	: (isset($request_config[0])
+				// 		? $request_config[0]
+				// 		: null);
 
-			// if (empty($rqo)) {
-			// 	// v5 config
-			// 	// limit
-			// 		// $this->pagination->limit = isset($properties->max_records)
-			// 		// 	? (int)$properties->max_records
-			// 		// 	: 5;
+				// if (empty($rqo)) {
+				// 	// v5 config
+				// 	// limit
+				// 		// $this->pagination->limit = isset($properties->max_records)
+				// 		// 	? (int)$properties->max_records
+				// 		// 	: 5;
 
-			// 		$this->pagination->limit = $this->mode==='edit'
-			// 			? 10
-			// 			: 1;
+				// 		$this->pagination->limit = $this->mode==='edit'
+				// 			? 10
+				// 			: 1;
 
-			// 	// offset
-			// 		$this->pagination->offset = isset($properties->offset)
-			// 			? (int)$properties->offset
-			// 			: 0;
+				// 	// offset
+				// 		$this->pagination->offset = isset($properties->offset)
+				// 			? (int)$properties->offset
+				// 			: 0;
 
-			// }else{
-			// 	// v6 config
-			// 	// limit
-			// 		$this->pagination->limit = (isset($rqo->sqo) && isset($rqo->sqo->limit))
-			// 			? (int)$rqo->sqo->limit
-			// 			: ((isset($rqo->show) && isset($rqo->show->sqo_config->limit))
-			// 				// show limit
-			// 				? (int)$rqo->show->sqo_config->limit
-			// 				: 1);
+				// }else{
+				// 	// v6 config
+				// 	// limit
+				// 		$this->pagination->limit = (isset($rqo->sqo) && isset($rqo->sqo->limit))
+				// 			? (int)$rqo->sqo->limit
+				// 			: ((isset($rqo->show) && isset($rqo->show->sqo_config->limit))
+				// 				// show limit
+				// 				? (int)$rqo->show->sqo_config->limit
+				// 				: 1);
 
-			// 		if($this->mode==='list'){
-			// 			$this->pagination->limit = 1;
-			// 		}
+				// 		if($this->mode==='list'){
+				// 			$this->pagination->limit = 1;
+				// 		}
 
-			// 	// offset
-			// 		$this->pagination->offset = (isset($rqo->sqo) && isset($rqo->sqo->offset))
-			// 			? (int)$rqo->sqo->offset
-			// 			: ((isset($rqo->show) && isset($rqo->show->sqo_config->offset))
-			// 				? (int)$rqo->show->sqo_config->offset
-			// 				: 0);
-			// }
+				// 	// offset
+				// 		$this->pagination->offset = (isset($rqo->sqo) && isset($rqo->sqo->offset))
+				// 			? (int)$rqo->sqo->offset
+				// 			: ((isset($rqo->show) && isset($rqo->show->sqo_config->offset))
+				// 				? (int)$rqo->show->sqo_config->offset
+				// 				: 0);
+				// }
 
 
 		return true;

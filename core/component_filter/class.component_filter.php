@@ -32,7 +32,6 @@ class component_filter extends component_relation_common {
 
 	/**
 	* __CONSTRUCT
-	* @return bool
 	*/
 	function __construct(string $tipo=null, $section_id=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
 

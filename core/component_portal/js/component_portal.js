@@ -481,7 +481,7 @@ component_portal.prototype.build = async function(autoload=false) {
 						function fn_paginator_show_all(total) {
 							// navigate
 							self.navigate(
-								() => {
+								async () => {
 									self.rqo.sqo.offset	= 0
 									self.rqo.sqo.limit	= total
 								}
