@@ -16,6 +16,7 @@ class area_thesaurus extends area_common {
 	// protected $hierarchy_children_tipo	= DEDALO_HIERARCHY_CHILDREN_TIPO;
 
 	public $search_action			= null;
+	public $thesaurus_mode			= null;
 
 
 	/**
