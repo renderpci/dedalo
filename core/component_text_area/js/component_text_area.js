@@ -211,10 +211,11 @@ component_text_area.prototype.init = async function(options) {
 				return true
 			}//end fn_show_button_create_fragment
 
-		// create_note_tag_
-			self.events_tokens.push(
-				event_manager.subscribe('create_note_tag_'+ self.id_base, self.create_note_tag)
-			)
+		// create_note_tag_ .
+			// (!) Removed 09-02-2023 because is already direct called from render note click event
+			// self.events_tokens.push(
+			// 	event_manager.subscribe('create_note_tag_'+ self.id_base, self.create_note_tag)
+			// )
 
 		// create_geo_tag_
 			self.events_tokens.push(
