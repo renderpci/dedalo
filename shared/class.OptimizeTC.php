@@ -390,7 +390,7 @@ abstract class OptimizeTC {
 	* @return float $total_secs
 	*	Like '0.1'
 	*/
-	public static function TC2seg(string $tc) : float {
+	public static function TC2seg(?string $tc) : float {
 
 		$total_secs = 0;
 
