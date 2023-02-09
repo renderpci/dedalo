@@ -831,7 +831,6 @@ const get_custom_events = (self, i, text_editor) => {
 * BUILD_NODE_TAG
 * Create a DOM node from tag info (type, state, label, data, id)
 * @param object view_data
-* @param int tag_id
 * @return DOM node node_tag
 */
 export const build_node_tag = function(view_data) {
@@ -1130,7 +1129,6 @@ const render_note = async function(options) {
 		// when the component_publication change it will change the tag note state, showing if the note is private or public
 		const publication_id_base = note_section_tipo+'_'+note_section_id+'_'+self.context.features.notes_publication_tipo
 		event_manager.subscribe('change_publication_value_'+publication_id_base, fn_change_publication_state)
-
 		function fn_change_publication_state(changed_value) {
 			// change the state of the note with the data of the component_publication (section_id = 2 means no publishable)
 			const state = changed_value.section_id=='2' // no active value
@@ -1192,8 +1190,20 @@ const render_note = async function(options) {
 	// footer
 		const footer = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'footer content'
+			class_name		: 'footer content distribute'
 		})
+
+		// section info
+			const date_label			= get_label.date.toLowerCase() || 'date'
+			const created_date			= note_section.data.value[0].created_date || ''
+			const created_date_label	= created_label + ' ' + date_label + ': '+created_date
+			// section_info
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'section_info',
+				inner_html		: created_date_label,
+				parent			: footer
+			})
 
 		// button remove
 			const button_remove = ui.create_dom_element({
@@ -1243,18 +1253,6 @@ const render_note = async function(options) {
 				}
 			})
 
-		// section info
-			const date_label			= get_label.date.toLowerCase() || 'date'
-			const created_date			= note_section.data.value[0].created_date || ''
-			const created_date_label	= created_label + ' ' + date_label + ': '+created_date
-			// section_info
-			ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'section_info',
-				inner_html		: created_date_label,
-				parent			: footer
-			})
-
 	// save editor changes to prevent conflicts with modal components changes
 		// text_editor.save()
 
@@ -1262,13 +1260,16 @@ const render_note = async function(options) {
 		const modal = ui.attach_to_modal({
 			header	: header,
 			body	: body,
-			footer	: footer,
-			size	: 'normal' // string size big|normal
+			footer	: footer
+			// size	: 'normal' // string size big|normal|small
 		})
 		// when the modal is closed the section instance of the note need to be destroyed with all events and components
 		modal.on_close = () => {
 			note_section.destroy(true,true,true)
 		}
+		// resize modal content
+		const modal_content = modal.get_modal_content()
+			  modal_content.style.width = '600px'
 
 
 	return true

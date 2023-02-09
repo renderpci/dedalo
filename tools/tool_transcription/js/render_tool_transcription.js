@@ -26,14 +26,15 @@ export const render_tool_transcription = function() {
 
 /**
 * EDIT
-* Render node
-* @return DOM node
+* Render tool main node
+* @param object options = {}
+* @return DOM node wrapper
 */
-render_tool_transcription.prototype.edit = async function(options={render_level:'full'}) {
+render_tool_transcription.prototype.edit = async function(options={}) {
 
 	const self = this
 
-	// render level
+	// options
 		const render_level = options.render_level || 'full'
 
 	// content_data
@@ -47,21 +48,31 @@ render_tool_transcription.prototype.edit = async function(options={render_level:
 			content_data : content_data
 		})
 
-	// transcription_options are the buttons to get access to other tools (buttons in the header)
-		const tanscription_options = await render_tanscription_options(self, content_data)
-		wrapper.tool_buttons_container.appendChild(tanscription_options)
-
-	// status, render the status components for users and admins to control the process of the tool
-		const status_container = await render_status(self)
-		wrapper.tool_buttons_container.appendChild(status_container)
+	// headers items
+		const promises = []
+		// transcription_options are the buttons to get access to other tools (buttons in the header)
+		promises.push(
+			render_tanscription_options(self)
+		)
+		// process status, render the status components for users and admins to control the process of the tool
+		promises.push(
+			render_process_status(self)
+		)
+		// rendered in parallel but in the proper order
+		Promise.all(promises)
+		.then((nodes) => {
+			nodes.forEach(function (node, index) {
+				wrapper.tool_buttons_container.appendChild(node)
+			})
+		})
 
 	// render_activity_info are the information of the activity as "Save"
-		const activity_info = render_activity_info(self)
-		wrapper.activity_info_container.appendChild(activity_info)
+		const activity_info_node = await render_activity_info(self)
+		wrapper.activity_info_container.appendChild(activity_info_node)
 
 
 	return wrapper
-}//end render_tool_transcription
+}//end edit
 
 
 
@@ -81,7 +92,7 @@ const get_content_data_edit = async function(self) {
 		})
 
 	// component_text_area. render another node of component caller and append to container
-		const component_text_area = self.transcription_component || await self.get_component(self.lang)
+		const component_text_area = self.transcription_component
 		// set auto_init_editor for convenience
 		component_text_area.auto_init_editor = true
 		component_text_area.render()
@@ -99,7 +110,6 @@ const get_content_data_edit = async function(self) {
 	// media_component
 		self.media_component.mode			= 'edit'
 		self.media_component.context.view	= 'player'
-		console.log('self---------/////////---------------:', self);
 		await self.media_component.build(false)
 		const media_component_node = await self.media_component.render();
 		right_container.appendChild(media_component_node)
@@ -138,10 +148,10 @@ const get_content_data_edit = async function(self) {
 						type 			: 'range',
 						parent 			: slider
 					})
-					range.value = output.value
-					range.min = 0
-					range.max = 2
-					range.step = 0.1
+					range.value	= output.value
+					range.min	= 0
+					range.max	= 2
+					range.step	= 0.1
 					range.addEventListener('change', function(){
 						output.value = range.value
 						self.media_component.set_playback_rate(range.value)
@@ -171,20 +181,19 @@ const get_content_data_edit = async function(self) {
 							parent 			: playpause_key
 						})
 						// get the cookie of the key
-						const av_playpause_key_value = localStorage.getItem('av_playpause_key')
-
-						const av_playpause_keyboard_code						= av_playpause_key_value ? av_playpause_key_value : 'Escape' // Default 'Escape'
+						const av_playpause_key_value		= localStorage.getItem('av_playpause_key')
+						const av_playpause_keyboard_code	= av_playpause_key_value ? av_playpause_key_value : 'Escape' // Default 'Escape'
 						// get the user friendly name of the key code based in specific object imported form /common/utils/js/keyborad.js
-						const av_playpause_keyboard_key							= keyboard_codes[av_playpause_keyboard_code]
+						const av_playpause_keyboard_key										= keyboard_codes[av_playpause_keyboard_code]
 						component_text_area.context.features.av_player.av_play_pause_code	= av_playpause_keyboard_code
-						playpause_key_input.value								= av_playpause_keyboard_key
+						playpause_key_input.value											= av_playpause_keyboard_key
 
 						playpause_key_input.addEventListener('keyup', function(event){
-							const keyborard_code					= event.code
-							const keyborard_key						= event.key
+							const keyborard_code	= event.code
+							const keyborard_key		= event.key
 							// set the cookie of the key
 							localStorage.setItem('av_playpause_key', keyborard_code);
-							playpause_key_input.value								= keyborard_key
+							playpause_key_input.value											= keyborard_key
 							component_text_area.context.features.av_player.av_play_pause_code	= keyborard_code
 						})
 					// rewind value is the time that the av rewind when is paused by the play/pause key
@@ -356,8 +365,8 @@ const render_related_list = function(self){
 		})
 
 	// select -> options
-		const sections		= data.find(el => el.typo==='sections')
-		//if the section is not called by other sections (related sections) return empty node
+		const sections = data.find(el => el.typo==='sections')
+		// if the section is not called by other sections (related sections) return empty node
 		if(!sections){
 			return fragment
 		}
@@ -399,10 +408,11 @@ const render_related_list = function(self){
 
 		}//end for
 
-	// event . Change
-		select.addEventListener("change", async function(e){
+	// event change
+		select.addEventListener('change', async function(e){
 			self.top_locator = this.options[this.selectedIndex].locator
 		})
+
 
 	return fragment
 }//end render_related_list
@@ -412,9 +422,10 @@ const render_related_list = function(self){
 /**
 * RENDER_TANSCRIPTION_OPTIONS
 * This is used to build a optional buttons inside the header
+* @param object self
 * @return DOM node fragment
 */
-const render_tanscription_options = async function(self, content_data) {
+const render_tanscription_options = async function(self) {
 
 	const fragment = new DocumentFragment()
 
@@ -439,17 +450,9 @@ const render_tanscription_options = async function(self, content_data) {
 			selected	: self.lang,
 			class_name	: 'dd_input selector',
 			action		: async function(e){
-				// create new one
-				const component = await self.get_component(e.target.value)
-				self.lang = e.target.value
-				component.render().then(function(node){
-					// remove previous nodes
-					while (content_data.left_container.lastChild) {//} && content_data.left_container.lastChild.id!==lang_selector.id) {
-						content_data.left_container.removeChild(content_data.left_container.lastChild)
-					}
-					// add the new one
-					content_data.left_container.appendChild(node)
-				})
+				const lang = e.target.value
+				self.transcription_component.lang = lang
+				self.transcription_component.refresh()
 			}
 		})
 		lang_container.appendChild(lang_selector)
@@ -514,14 +517,14 @@ const render_tanscription_options = async function(self, content_data) {
 
 
 /**
-* RENDER_STATUS
+* RENDER_PROCESS_STATUS
 * Render the status components to get control of the process of the tool
 * the components are defined in ontology as tool_config->name_of_the_tool->ddo_map
 * @param object self
 * 	instance of current tool
 * @return DOM node fragment
 */
-const render_status = async function(self) {
+const render_process_status = async function(self) {
 
 	const fragment = new DocumentFragment()
 
@@ -545,7 +548,7 @@ const render_status = async function(self) {
 
 
 	return fragment
-}//end render_status
+}//end render_process_status
 
 
 
@@ -556,7 +559,7 @@ const render_status = async function(self) {
 * 	instance of current tool
 * @return DOM node activity_info_body
 */
-const render_activity_info = function(self) {
+const render_activity_info = async function(self) {
 
 	// activity alert
 		const activity_info_body = ui.create_dom_element({
@@ -570,8 +573,8 @@ const render_activity_info = function(self) {
 		)
 		function fn_saved(options) {
 
-			// recived options contains an object with instance and api_response
-			const node_info_options = Object.assign(options,{
+			// revived options contains an object with instance and api_response
+			const node_info_options = Object.assign(options, {
 				container : activity_info_body
 			})
 
