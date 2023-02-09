@@ -1190,8 +1190,20 @@ const render_note = async function(options) {
 	// footer
 		const footer = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'footer content'
+			class_name		: 'footer content distribute'
 		})
+
+		// section info
+			const date_label			= get_label.date.toLowerCase() || 'date'
+			const created_date			= note_section.data.value[0].created_date || ''
+			const created_date_label	= created_label + ' ' + date_label + ': '+created_date
+			// section_info
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'section_info',
+				inner_html		: created_date_label,
+				parent			: footer
+			})
 
 		// button remove
 			const button_remove = ui.create_dom_element({
@@ -1241,18 +1253,6 @@ const render_note = async function(options) {
 				}
 			})
 
-		// section info
-			const date_label			= get_label.date.toLowerCase() || 'date'
-			const created_date			= note_section.data.value[0].created_date || ''
-			const created_date_label	= created_label + ' ' + date_label + ': '+created_date
-			// section_info
-			ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'section_info',
-				inner_html		: created_date_label,
-				parent			: footer
-			})
-
 	// save editor changes to prevent conflicts with modal components changes
 		// text_editor.save()
 
@@ -1260,13 +1260,16 @@ const render_note = async function(options) {
 		const modal = ui.attach_to_modal({
 			header	: header,
 			body	: body,
-			footer	: footer,
-			size	: 'normal' // string size big|normal
+			footer	: footer
+			// size	: 'normal' // string size big|normal|small
 		})
 		// when the modal is closed the section instance of the note need to be destroyed with all events and components
 		modal.on_close = () => {
 			note_section.destroy(true,true,true)
 		}
+		// resize modal content
+		const modal_content = modal.get_modal_content()
+			  modal_content.style.width = '600px'
 
 
 	return true
