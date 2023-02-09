@@ -165,7 +165,7 @@ component_text_area.prototype.init = async function(options) {
 					}
 
 				// called by another text_area case. Sample: component history notes
-					if (caller && caller.model===self.model) {
+					if (caller && caller.model===self.caller.model) {
 						return
 					}
 
