@@ -2948,6 +2948,11 @@ button.diffusion:before {
   text-transform: uppercase;
   color: #353535;
 }
+@media screen and (max-width: 960px) {
+  .label_top {
+    padding: 1rem;
+  }
+}
 .dd_input {
   font-size: 1em;
   height: 2em;
@@ -4574,6 +4579,7 @@ dd-modal .footer.distribute {
 .inspector {
   display: block;
   margin: 0px;
+  margin-bottom: 0.5rem;
   padding: 0px;
   width: 100%;
   background-color: #fcfcfc;
@@ -4647,6 +4653,7 @@ dd-modal .footer.distribute {
   padding: 0.25rem;
   text-align: right;
   text-transform: capitalize;
+  font-size: 0.8rem;
 }
 .inspector > .inspector_content_data > .element_info_wrap > .element_info .key.wide {
   grid-column-start: 1;
@@ -4744,6 +4751,11 @@ dd-modal .footer.distribute {
   cursor: pointer;
   text-transform: uppercase;
   color: #353535;
+}
+@media screen and (max-width: 960px) {
+  .inspector > .label {
+    padding: 1rem;
+  }
 }
 .inspector .nav_buttons {
   padding-bottom: 0.5em;
@@ -6849,6 +6861,11 @@ dd-modal .footer.distribute {
   max-width: 24em;
   padding: 2em;
 }
+@media screen and (max-width: 960px) {
+  .login > .content_data {
+    width: 70vw;
+  }
+}
 .login > .content_data > .top {
   text-align: center;
 }
@@ -7623,6 +7640,7 @@ dd-modal .footer.distribute {
 }
 .section.edit {
   width: calc(100vw - 18rem - 0.25rem);
+  margin-bottom: 10rem;
 }
 .section.edit.no_inspector {
   width: 100%;
@@ -7647,6 +7665,7 @@ dd-modal .footer.distribute {
   z-index: 1;
   overflow-y: overlay;
   padding-right: 13px;
+  padding-left: 1px;
 }
 @media screen and (max-width: 1024px) {
   .section.edit > .inspector_container {
@@ -8171,6 +8190,11 @@ dd-modal .footer.distribute {
   cursor: pointer;
   text-transform: uppercase;
   color: #353535;
+}
+@media screen and (max-width: 960px) {
+  .section_record.edit .section_group.edit > .label {
+    padding: 1rem;
+  }
 }
 .section_record.edit .section_group.edit > .content_data {
   /* FLEX MODEL
