@@ -167,7 +167,7 @@ export const get_input_element = (element, self) => {
 
 			// check all values
 				const checked_items = []
-				const all_inputs = li.parentNode.querySelectorAll('.item_input')
+				const all_inputs = self.node.content_data.querySelectorAll('.item_input')
 				for (let i = 0; i < all_inputs.length; i++) {
 					if(all_inputs[i].checked) {
 						checked_items.push(all_inputs[i])
