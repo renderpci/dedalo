@@ -457,7 +457,7 @@ export const render_section_info = function(self) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			inner_html		: created_date + ' ' + created_by_user_name,
+			inner_html		: created_date + '<br>' + created_by_user_name,
 			parent			: fragment
 		})
 
@@ -473,7 +473,7 @@ export const render_section_info = function(self) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			inner_html		: modified_date + ' ' + modified_by_user_name,
+			inner_html		: modified_date + '<br>' + modified_by_user_name,
 			parent			: fragment
 		})
 
@@ -506,12 +506,15 @@ export const render_component_info = function(self, component) {
 		const tipo			= component.tipo
 		const label			= component.label
 		const model			= component.model
+		const mode			= component.mode
+		const view			= component.view || 'default'
 		const translatable	= component.context.translatable
 			? JSON.stringify(component.context.translatable)
 			: 'no'
 		// const value			= component.data && component.data.value
 		// 	? JSON.stringify(component.data.value, null, 1)
 		// 	: ''
+			console.log('view:', view);
 
 	const fragment = new DocumentFragment();
 
@@ -598,7 +601,7 @@ export const render_component_info = function(self, component) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			inner_html	: model,
+			inner_html		: model,
 			parent			: fragment
 		})
 
@@ -615,6 +618,22 @@ export const render_component_info = function(self, component) {
 			element_type	: 'span',
 			class_name		: 'value',
 			inner_html		: translatable,
+			parent			: fragment
+		})
+
+	// view
+		// label
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'key',
+			inner_html		: 'View',
+			parent			: fragment
+		})
+		// value
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'value',
+			inner_html		: view + ' - ' + mode,
 			parent			: fragment
 		})
 
