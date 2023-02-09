@@ -319,3 +319,27 @@ area_thesaurus.prototype.get_sections_selector_data = function() {
 }//end get_sections_selector_data
 
 
+
+/**
+* GET_SECTIONS_SELECTOR_DATA
+* @return array of objects sections_selector_data
+*/
+area_thesaurus.prototype.navigate = async function(callback, navigation_history=false) {
+
+	const self = this
+
+	// callback execute
+		if (callback) {
+			await callback()
+
+			if(SHOW_DEBUG===true) {
+				// console.log("-> Executed section navigate received callback:", callback);
+			}
+		}
+
+	// refresh
+		await self.refresh()
+
+	return true
+}//end get_sections_selector_data
+

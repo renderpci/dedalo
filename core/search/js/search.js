@@ -821,16 +821,16 @@ search.prototype.get_search_group_operator = function(search_group) {
 		// source search_action
 			self.source.search_action = 'search'
 
-		// section
-			const section = self.caller
+		// section || area thesaurus
+			const caller = self.caller
 
 		// json_query_obj. Recalculate json_query_obj from DOM in default mode (include components with empty values)
 			const json_query_obj = self.parse_dom_to_json_filter({
 				mode : "search"
 			})
 
-		const js_promise = update_section(
-			section,
+		const js_promise = update_caller(
+			caller,
 			json_query_obj,
 			null, // filter_by_locator
 			self
@@ -861,9 +861,9 @@ search.prototype.get_search_group_operator = function(search_group) {
 				filter : {$and:[]}
 			}
 
-		// update_section
-			const js_promise = await update_section(
-				self.caller, // section_instance,
+		// update_caller
+			const js_promise = await update_caller(
+				self.caller, // section_instance || area_thesaurus_instance,
 				json_query_obj, // json_query_obj
 				null, // filter_by_locators,
 				self
@@ -878,10 +878,11 @@ search.prototype.get_search_group_operator = function(search_group) {
 
 
 	/**
-	* UPDATE_SECTION
+	* UPDATE_CALLER
+	* caller could be section or area_thesaurus
 	* @return promise
 	*/
-	const update_section = async function(section_instance, json_query_obj, filter_by_locators, self) {
+	const update_caller = async function(caller_instance, json_query_obj, filter_by_locators, self) {
 
 		// limit
 			const limit = self.limit && self.limit>0
@@ -889,38 +890,59 @@ search.prototype.get_search_group_operator = function(search_group) {
 				: 10
 
 		// pagination
-			section_instance.total						= null
-			section_instance.rqo.sqo.limit				= limit
-			section_instance.rqo.sqo.offset				= 0
-			section_instance.rqo.sqo.filter				= json_query_obj.filter || null
-			section_instance.rqo.sqo.filter_by_locators	= filter_by_locators
-			section_instance.rqo.sqo.children_recursive	= json_query_obj.children_recursive || false
+			caller_instance.total						= null
+			caller_instance.rqo.sqo.limit				= limit
+			caller_instance.rqo.sqo.offset				= 0
+			caller_instance.rqo.sqo.filter				= json_query_obj.filter || null
+			caller_instance.rqo.sqo.filter_by_locators	= filter_by_locators
+			caller_instance.rqo.sqo.children_recursive	= json_query_obj.children_recursive || false
 
-		// paginator_node (could exist or not --area_thesaurus case--)
-			const paginator_node = section_instance?.paginator?.node || null
-			if (paginator_node) {
-				paginator_node.classList.add('hide')
-			}
 
-		// section. refresh current section and set history navigation
-			const js_promise = section_instance.navigate(
-				null, // callback
-				true // navigation_history
-			)
-			js_promise.then(()=>{
-				// loading css remove
-					// section_node.classList.remove('loading')
-				// refresh section paginator
+		switch (caller_instance.model) {
+			case 'area_thesaurus':
+
+				const area_ts_promise = caller_instance.navigate(
+						null, // callback
+						false // navigation_history
+					)
+
+				break;
+
+			case 'section':
+
+				// paginator_node (could exist or not --area_thesaurus case--)
+					const paginator_node = caller_instance?.paginator?.node || null
 					if (paginator_node) {
-						section_instance.paginator.refresh()
-						.then(function(){
-							paginator_node.classList.remove('hide')
-						})
+						paginator_node.classList.add('hide')
 					}
-			})
 
-		return js_promise
-	}//end update_section
+				// section. refresh current section and set history navigation
+					const section_promise = caller_instance.navigate(
+						null, // callback
+						true // navigation_history
+					)
+					section_promise.then(()=>{
+						// loading css remove
+							// section_node.classList.remove('loading')
+						// refresh section paginator
+							if (paginator_node) {
+								caller_instance.paginator.refresh()
+								.then(function(){
+									paginator_node.classList.remove('hide')
+								})
+							}
+					})
+
+				return section_promise
+
+				break;
+
+			default:
+
+				break;
+		}
+
+	}//end update_caller
 
 
 
