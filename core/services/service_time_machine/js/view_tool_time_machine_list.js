@@ -8,6 +8,7 @@
 	import {get_section_records} from '../../../../core/section/js/section.js'
 	import {set_element_css} from '../../../../core/page/js/css.js'
 	import {event_manager} from '../../../../core/common/js/event_manager.js'
+	import {when_in_dom} from '../../../../core/common/js/events.js'
 	import {
 		get_content_data
 	} from './render_service_time_machine_list.js'
@@ -291,6 +292,7 @@ const render_column_id = function(options) {
 						}
 					})
 			}else{
+
 				// component case
 
 				// publish event
@@ -302,6 +304,18 @@ const render_column_id = function(options) {
 						mode		: 'tm'
 					}
 					event_manager.publish('tm_edit_record', data)
+			}
+		})
+		// siblings can use click too to easy set preview value
+		when_in_dom(button_view, () => {
+			const children = button_view.parentNode.parentNode.children
+			for (let i = children.length - 1; i >= 0; i--) {
+				if(children[i]!==button_view) {
+					children[i].classList.add('link')
+					children[i].addEventListener('click', function(e) {
+						button_view.click()
+					})
+				}
 			}
 		})
 

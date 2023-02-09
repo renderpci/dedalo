@@ -6,6 +6,7 @@
 // component configuration vars
 	$permissions	= $this->get_component_permissions();
 	$mode			= $this->get_mode();
+	$quality		= $this->get_quality();
 
 
 
@@ -58,6 +59,9 @@
 					break;
 			}
 
+		// $quality
+
+
 		// item
 			$item = $this->get_data_item($value);
 			// add useful properties
@@ -68,7 +72,7 @@
 					false // avoid_cache
 				);
 			// default quality video URL (usually from 404)
-				$item->video_url		= $this->file_exist()
+				$item->video_url		= $this->file_exist( $quality )
 					? $this->get_url(false)
 					: null;
 			// files info datalist. Used for tools to know available quality versions and characteristics (size, URL, etc.)
@@ -78,7 +82,7 @@
 			if($mode==='edit') {
 
 				// media info
-					$item->media_info = $this->get_media_streams();
+					$item->media_info = $this->get_media_streams( $quality );
 
 				// subtitles info
 					$item->subtitles = (object)[

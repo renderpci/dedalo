@@ -220,9 +220,10 @@ class component_av extends component_media_common {
 
 	/**
 	* GET_ORIGINAL_FILE_PATH
-	* Returns the full path of the original file if exists
-	* Si se sube un archivo de extensión distinta a DEDALO_IMAGE_EXTENSION, se convierte a DEDALO_IMAGE_EXTENSION. Los archivos originales
-	* se guardan renombrados pero conservando la terminación. Se usa esta función para localizarlos comprobando si hay mas de uno.
+	* Returns the full path of the original file (with no default extension) if exists
+	* If a file with an extension other than DEDALO_xxx_EXTENSION is uploaded, it is converted to DEDALO_xxx_EXTENSION.
+	* The original files are saved renamed but keeping the ending. This function is used to locate them by checking if
+	* there is more than one.
 	* @param string $quality
 	* @return string|null $result
 	*/
@@ -629,6 +630,10 @@ class component_av extends component_media_common {
 	*/
 	public function file_exist(string $quality=null) : bool {
 
+		if(empty($quality)) {
+			$quality = $this->get_default_quality();
+		}
+
 		$video_path		= $this->get_video_path($quality);
 		$file_exists	= file_exists($video_path);
 
@@ -994,11 +999,12 @@ class component_av extends component_media_common {
 	/**
 	* GET_MEDIA_STREAMS
 	* Check the file to get the head streams of the video file
-	* @return mixed
+	* @param string $quality
+	* @return mixed $media_streams
 	*/
-	public function get_media_streams(?string $quality=null) {
+	public function get_media_streams(string $quality) : mixed {
 
-		//get the video file path
+		// get the video file path
 			$video_path = $this->get_video_path($quality);
 
 		// get_media_streams from av file
@@ -1007,6 +1013,20 @@ class component_av extends component_media_common {
 
 		return $media_streams;
 	}//end get_media_streams
+
+
+
+	/**
+	* GET_VIDEO_PATH
+	* Get full file path. Alias of media common get_local_full_path
+	* @return string $video_path
+	*/
+	public function get_video_path(string $quality) : string {
+
+		$video_path = $this->get_local_full_path($quality);
+
+		return $video_path;
+	}//end get_video_path
 
 
 

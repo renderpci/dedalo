@@ -8,7 +8,7 @@
 	// import {tool_common} from '../../tool_common/js/tool_common.js'
 	import * as instances from '../../../core/common/js/instances.js'
 	import {ui} from '../../../core/common/js/ui.js'
-
+	// import {pause} from '../../../core/common/js/utils/index.js'
 
 
 /**
@@ -81,10 +81,18 @@ const get_content_data = async function(self) {
 		})
 
 	// section
-		self.user_section.render()
-		.then(function(section_node){
-			components_container.appendChild(section_node)
-
+		ui.load_item_with_spinner({
+			container	: components_container,
+			label		: 'User',
+			style : {
+				height : '458px'
+			},
+			callback	: async function() {
+				// section load
+				await self.user_section.build(true)
+				const section_node = await self.user_section.render()
+				return section_node
+			}
 		})
 
 	// content_data

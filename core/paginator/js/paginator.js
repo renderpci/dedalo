@@ -405,25 +405,26 @@ paginator.prototype.navigate_to_previous_page = function() {
 
 
 /**
-* VIEW_ALL
+* SHOW_ALL
 * Trigger event paginator_show_all_.. that caller is listen
 * to set total and refresh
 * @return bool
 */
-paginator.prototype.view_all = function() {
+paginator.prototype.show_all = function(limit) {
 
 	const self = this
 
 	// publish event (section is listen this event to refresh)
 		event_manager.publish(
 			'paginator_show_all_' + self.id,
-			self.total
+			limit
 		)
 
 	// paginator content data update
-		self.refresh()
+		setTimeout(function(){
+			self.refresh()
+		}, 300)
 
 
 	return true
-}//end view_all
-
+}//end show_all

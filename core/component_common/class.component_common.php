@@ -10,6 +10,7 @@ abstract class component_common extends common {
 
 	/**
 	* CLASS VARS
+	* @var
 	*/
 		// string section_id. Component's section section_id
 		protected $section_id;
@@ -93,6 +94,7 @@ abstract class component_common extends common {
 		public $save_to_database;
 
 
+
 	/**
 	* GET_INSTANCE
 	* Singleton pattern
@@ -108,7 +110,7 @@ abstract class component_common extends common {
 	* @return object|null
 	*/
 	final public static function get_instance(string $component_name=null, string $tipo=null, $section_id=null, string $mode='edit', string $lang=DEDALO_DATA_LANG, string $section_tipo=null, bool $cache=true) : ?object {
-		$start_time = start_time();
+		// $start_time = start_time();
 
 		// tipo check. Is mandatory
 			if (empty($tipo)) {
@@ -422,55 +424,56 @@ abstract class component_common extends common {
 			$this->pagination->offset = 0;
 			$this->pagination->limit = null;
 
-			// $request_config = ( isset($properties->source->request_config) )
-			// 	? $properties->source->request_config
-			// 	: [];
-			// $found = array_find($request_config, function($el){
-			// 	return isset($el->api_engine) && $el->api_engine==='dedalo';
-			// });
-			// $rqo = !empty($found)
-			// 	? $found
-			// 	: (isset($request_config[0])
-			// 		? $request_config[0]
-			// 		: null);
+			// DES
+				// $request_config = ( isset($properties->source->request_config) )
+				// 	? $properties->source->request_config
+				// 	: [];
+				// $found = array_find($request_config, function($el){
+				// 	return isset($el->api_engine) && $el->api_engine==='dedalo';
+				// });
+				// $rqo = !empty($found)
+				// 	? $found
+				// 	: (isset($request_config[0])
+				// 		? $request_config[0]
+				// 		: null);
 
-			// if (empty($rqo)) {
-			// 	// v5 config
-			// 	// limit
-			// 		// $this->pagination->limit = isset($properties->max_records)
-			// 		// 	? (int)$properties->max_records
-			// 		// 	: 5;
+				// if (empty($rqo)) {
+				// 	// v5 config
+				// 	// limit
+				// 		// $this->pagination->limit = isset($properties->max_records)
+				// 		// 	? (int)$properties->max_records
+				// 		// 	: 5;
 
-			// 		$this->pagination->limit = $this->mode==='edit'
-			// 			? 10
-			// 			: 1;
+				// 		$this->pagination->limit = $this->mode==='edit'
+				// 			? 10
+				// 			: 1;
 
-			// 	// offset
-			// 		$this->pagination->offset = isset($properties->offset)
-			// 			? (int)$properties->offset
-			// 			: 0;
+				// 	// offset
+				// 		$this->pagination->offset = isset($properties->offset)
+				// 			? (int)$properties->offset
+				// 			: 0;
 
-			// }else{
-			// 	// v6 config
-			// 	// limit
-			// 		$this->pagination->limit = (isset($rqo->sqo) && isset($rqo->sqo->limit))
-			// 			? (int)$rqo->sqo->limit
-			// 			: ((isset($rqo->show) && isset($rqo->show->sqo_config->limit))
-			// 				// show limit
-			// 				? (int)$rqo->show->sqo_config->limit
-			// 				: 1);
+				// }else{
+				// 	// v6 config
+				// 	// limit
+				// 		$this->pagination->limit = (isset($rqo->sqo) && isset($rqo->sqo->limit))
+				// 			? (int)$rqo->sqo->limit
+				// 			: ((isset($rqo->show) && isset($rqo->show->sqo_config->limit))
+				// 				// show limit
+				// 				? (int)$rqo->show->sqo_config->limit
+				// 				: 1);
 
-			// 		if($this->mode==='list'){
-			// 			$this->pagination->limit = 1;
-			// 		}
+				// 		if($this->mode==='list'){
+				// 			$this->pagination->limit = 1;
+				// 		}
 
-			// 	// offset
-			// 		$this->pagination->offset = (isset($rqo->sqo) && isset($rqo->sqo->offset))
-			// 			? (int)$rqo->sqo->offset
-			// 			: ((isset($rqo->show) && isset($rqo->show->sqo_config->offset))
-			// 				? (int)$rqo->show->sqo_config->offset
-			// 				: 0);
-			// }
+				// 	// offset
+				// 		$this->pagination->offset = (isset($rqo->sqo) && isset($rqo->sqo->offset))
+				// 			? (int)$rqo->sqo->offset
+				// 			: ((isset($rqo->show) && isset($rqo->show->sqo_config->offset))
+				// 				? (int)$rqo->show->sqo_config->offset
+				// 				: 0);
+				// }
 
 
 		return true;
@@ -487,40 +490,70 @@ abstract class component_common extends common {
 	*/
 	private function set_dato_default() : bool {
 
-		# properties is object or null
-		$properties = $this->get_properties();
-		if(isset($properties->dato_default)) {
+		$default_dato = null;
 
-			# MATRIX DATA : Load matrix data
-			$this->load_component_dato();
-
-			$dato = $this->dato;
-			if (empty($dato)) {
-
-				$dato_default = $properties->dato_default;
-
-				$this->set_dato($dato_default);
-
-				if ( strpos($this->section_id, DEDALO_SECTION_ID_TEMP)===false ) {
-					try{
-						$this->Save();
-					} catch (Exception $e) {
-    					// echo 'Caught exception: ',  $e->getMessage(), "\n";
-    					debug_log(__METHOD__.PHP_EOL." ERROR on set_dato_default. Unable to save data. ".$e->getMessage().to_string(), logger::ERROR);
-    					return false;
+		// optional defaults for config_defaults file
+			if (defined('CONFIG_DEFAULT_FILE_PATH')) {
+				// config_default_file is a JSON array value
+				$contents = file_get_contents(CONFIG_DEFAULT_FILE_PATH);
+				$defaults = json_decode($contents);
+				if (!empty($defaults)) {
+					if (!is_array($defaults)) {
+						debug_log(__METHOD__." Ignored config_default_file value. Expected type was array but received is ". gettype($defaults), logger::ERROR);
+					}else{
+						$found = array_find($defaults, function($el){
+							return $el->tipo===$this->tipo; // Note that match only uses component tipo (case hierarchy25 problem)
+						});
+						if (!empty($found)) {
+							$default_dato = $found->value;
+						}
 					}
+				}else{
+					debug_log(__METHOD__." Ignored empty defaults file contents ! (Check if JSON is valid) ".to_string($defaults), logger::ERROR);
 				}
-
-				# INFO LOG
-				if(SHOW_DEBUG===true) {
-					$msg = " Created ".get_called_class()." \"$this->label\" id:$this->section_id, tipo:$this->tipo, section_tipo:$this->section_tipo, mode:$this->mode with default data from 'properties': ".json_encode($properties->dato_default);
-					debug_log(__METHOD__.$msg);
-				}
-
-				# MATRIX DATA : Reload matrix data again
-				$this->load_component_dato();
 			}
-		}
+
+		// properties try
+			if (empty($default_dato)) {
+				$properties = $this->get_properties();
+				if(isset($properties->dato_default)) {
+					// Method fallback. Remember method option like cases as date 'today'
+					$default_dato = isset($properties->dato_default->method)
+						? $this->get_method( $properties->dato_default->method )
+						: $properties->dato_default;
+				}
+			}
+
+		// set default dato (only when own dato is empty)
+			if (!empty($default_dato)) {
+
+				// matrix data : load matrix data
+					$this->load_component_dato();
+
+				// current dato check
+					$dato = $this->dato;
+					if (empty($dato)) {
+
+						// set dato only when own dato is empty
+							$this->set_dato($default_dato);
+
+						// temp section cases no not save anything
+							if ( strpos($this->section_id, DEDALO_SECTION_ID_TEMP)===false ) {
+								$this->Save();
+							}
+
+						// debug
+							debug_log(__METHOD__ .
+								" Created ".get_called_class()." \"$this->label\" id:$this->section_id, tipo:$this->tipo, section_tipo:$this->section_tipo, mode:$this->mode with default data from 'properties':" .
+								PHP_EOL . to_string($properties->dato_defaul),
+								logger::DEBUG
+							);
+
+						// matrix data : load matrix data again
+							$this->load_component_dato();
+					}
+			}//end if (!empty($default_dato))
+
 
 		return true;
 	}//end set_dato_default

@@ -1412,7 +1412,7 @@ vector_editor.prototype.render_layer_row = function(self, layer) {
 				// footer
 					const footer = ui.create_dom_element({
 						element_type	: 'div',
-						class_name		: 'footer'
+						class_name		: 'content footer'
 					})
 
 					// button_delete
