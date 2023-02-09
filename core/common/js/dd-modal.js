@@ -481,6 +481,9 @@ class DDModal extends HTMLElement {
 	get_modal_node() {
 		return this._modal
 	}
+	get_modal_content() {
+		return this.shadowRoot.querySelector(".modal-content")
+	}
 }
 customElements.define('dd-modal',DDModal);
 }
