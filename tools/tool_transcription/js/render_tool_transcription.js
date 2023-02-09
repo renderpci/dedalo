@@ -450,17 +450,9 @@ const render_tanscription_options = async function(self) {
 			selected	: self.lang,
 			class_name	: 'dd_input selector',
 			action		: async function(e){
-				// create new one
-				const component = await self.get_component(e.target.value)
-				self.lang = e.target.value
-				component.render().then(function(node){
-					// remove previous nodes
-					while (content_data.left_container.lastChild) {//} && content_data.left_container.lastChild.id!==lang_selector.id) {
-						content_data.left_container.removeChild(content_data.left_container.lastChild)
-					}
-					// add the new one
-					content_data.left_container.appendChild(node)
-				})
+				const lang = e.target.value
+				self.transcription_component.lang = lang
+				self.transcription_component.refresh()
 			}
 		})
 		lang_container.appendChild(lang_selector)
