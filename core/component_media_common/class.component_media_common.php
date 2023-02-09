@@ -1173,7 +1173,7 @@ class component_media_common extends component_common {
 	/**
 	* LOCAL PATH
 	* @return string $path
-	* complete absolute file path like '/Users/myuser/works/Dedalo/images/dd152-1.jpg'
+	* 	complete absolute file path like '/Users/myuser/works/Dedalo/images/dd152-1.jpg'
 	*/
 	public function get_local_full_path(string $quality) : string {
 

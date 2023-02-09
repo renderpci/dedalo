@@ -6,7 +6,7 @@
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	// import {get_content_data_edit} from './render_edit_view_default.js'
+
 
 
 /**
@@ -16,13 +16,14 @@
 export const view_player_edit_av = function() {
 
 	return true
-}//end  view_player_edit_av
+}//end view_player_edit_av
 
 
 
 /**
 * RENDER
 * Render node for use in modes: edit, edit_in_list
+* @param object self
 * @param object options
 * @return DOM node wrapper
 */
@@ -141,7 +142,7 @@ export const get_content_data_player = function(options) {
 				self.video = video
 				fragment.appendChild(video)
 		}
-console.log('self.video:', self.video);
+
 	// av_control_buttons
 		if (with_control_buttons) {
 			const av_control_buttons = get_av_control_buttons(self)
@@ -160,10 +161,10 @@ console.log('self.video:', self.video);
 
 /**
 * GET_AV_CONTROL_BUTTONS
-* @param object instance
+* @param object self
 * @return DOM node av_control_buttons
 */
-const get_av_control_buttons =  (self) =>{
+const get_av_control_buttons = (self) =>{
 
 	const fragment = new DocumentFragment()
 
@@ -256,8 +257,8 @@ const get_av_control_buttons =  (self) =>{
 		av_minus_1_frame.addEventListener('mouseup', () =>{
 			// get the r_frame_rate of the video stream and get the time for 1 frame
 			const r_frame_rate				= self.data.media_info.streams[0].r_frame_rate
-			const ar_frame_rate_opeartor	= r_frame_rate.split('/')
-			const frame_rate				=  parseInt(ar_frame_rate_opeartor[0]) / parseInt(ar_frame_rate_opeartor[1])
+			const ar_frame_rate_operator	= r_frame_rate.split('/')
+			const frame_rate				=  parseInt(ar_frame_rate_operator[0]) / parseInt(ar_frame_rate_operator[1])
 			const time_for_frame			= 1 / frame_rate
 			const seconds					= (self.video.currentTime - time_for_frame).toFixed(3)
 			self.go_to_time({
@@ -275,11 +276,10 @@ const get_av_control_buttons =  (self) =>{
 			parent			: fragment
 		})
 		av_plus_1_frame.addEventListener('mouseup', () =>{
-
-			//get the r_frame_rate of the video stream and get the time for 1 frame
+			// get the r_frame_rate of the video stream and get the time for 1 frame
 			const r_frame_rate				= self.data.media_info.streams[0].r_frame_rate
-			const ar_frame_rate_opeartor	= r_frame_rate.split('/')
-			const frame_rate				=  parseInt(ar_frame_rate_opeartor[0]) / parseInt(ar_frame_rate_opeartor[1])
+			const ar_frame_rate_operator	= r_frame_rate.split('/')
+			const frame_rate				=  parseInt(ar_frame_rate_operator[0]) / parseInt(ar_frame_rate_operator[1])
 			const time_for_frame			= (1 / frame_rate)
 			const seconds					= (self.video.currentTime + time_for_frame).toFixed(3)
 			self.go_to_time({
@@ -330,7 +330,7 @@ const get_av_control_buttons =  (self) =>{
 
 /**
 * BUILD_VIDEO_HTML5
-* @return dom element video
+* @return DOM element video
 */
 	// const build_video_html5 = function(request_options) {
 
