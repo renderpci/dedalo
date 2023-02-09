@@ -75,25 +75,20 @@ export const get_content_data = function(self) {
 			})
 
 		// get tree nodes with children recursively
-		const get_children_node = function(element){
+		const get_children_node = function(element) {
 
 			const children_elements = datalist.filter(
 				el => el.parent && el.parent.section_tipo === element.section_tipo
 				&& el.parent.section_id === element.section_id
 			)
 			const children_elements_len = children_elements.length
-
-			const has_children = (children_elements_len > 0)
-				? true
-				: false
-
-			element.has_children = has_children
+			element.has_children = (children_elements_len > 0)
 
 			const element_node = get_input_element(element, self)
 			if(children_elements_len > 0) {
 				for (let i = 0; i < children_elements_len; i++) {
-					const current_child = children_elements[i]
-					const child_node = get_children_node(current_child)
+					const current_child	= children_elements[i]
+					const child_node	= get_children_node(current_child)
 					element_node.branch.appendChild(child_node)
 				}
 			}
@@ -108,7 +103,6 @@ export const get_content_data = function(self) {
 			const current_element = root_elements[i]
 			const element_node = get_children_node(current_element)
 			ul_branch.appendChild(element_node)
-
 		}
 
 
@@ -130,7 +124,6 @@ export const get_input_element = (element, self) => {
 		const label				= element.label || ''
 		const section_id		= element.section_id
 		const section_tipo		= element.section_tipo
-
 
 	// li container
 		const li_class_name = (element.has_children) ? ' grouper' : ''
@@ -171,6 +164,21 @@ export const get_input_element = (element, self) => {
 
 			// // fix instance changed_data
 			// 	self.set_changed_data(changed_data_item)
+
+			// check all values
+				const checked_items = []
+				const all_inputs = li.parentNode.querySelectorAll('.item_input')
+				for (let i = 0; i < all_inputs.length; i++) {
+					if(all_inputs[i].checked) {
+						checked_items.push(all_inputs[i])
+					}
+				}
+				if (checked_items.length<1) {
+					// restore checked
+					input_node.checked = true
+					alert( get_label.select_one_project || 'You must select at least one project' );
+					return
+				}
 
 			self.change_handler({
 				self			: self,
