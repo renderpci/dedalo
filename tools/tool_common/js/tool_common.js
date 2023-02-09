@@ -541,17 +541,17 @@ tool_common.prototype.load_component = async function(options) {
 	const self = this
 
 	// options
-		const model			= options.model
-		const mode			= options.mode
-		const tipo			= options.tipo
-		const section_tipo	= options.section_tipo
-		const section_lang	= options.section_lang
-		const lang			= options.lang
-		const type			= options.type
-		const section_id	= options.section_id || null
-		const matrix_id		= options.matrix_id || null
-		const data_source	= options.data_source || null
-		const id_variant	= self.model
+		const model					= options.model
+		const mode					= options.mode
+		const tipo					= options.tipo
+		const section_tipo			= options.section_tipo
+		const section_lang			= options.section_lang
+		const lang					= options.lang
+		const type					= options.type
+		const section_id			= options.section_id || null
+		const matrix_id				= options.matrix_id || null
+		const data_source			= options.data_source || null
+		const id_variant			= self.model
 		const to_delete_instances	= options.to_delete_instances
 
 	// component instance_options

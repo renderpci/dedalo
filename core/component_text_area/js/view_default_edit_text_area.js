@@ -831,7 +831,6 @@ const get_custom_events = (self, i, text_editor) => {
 * BUILD_NODE_TAG
 * Create a DOM node from tag info (type, state, label, data, id)
 * @param object view_data
-* @param int tag_id
 * @return DOM node node_tag
 */
 export const build_node_tag = function(view_data) {
@@ -1130,7 +1129,6 @@ const render_note = async function(options) {
 		// when the component_publication change it will change the tag note state, showing if the note is private or public
 		const publication_id_base = note_section_tipo+'_'+note_section_id+'_'+self.context.features.notes_publication_tipo
 		event_manager.subscribe('change_publication_value_'+publication_id_base, fn_change_publication_state)
-
 		function fn_change_publication_state(changed_value) {
 			// change the state of the note with the data of the component_publication (section_id = 2 means no publishable)
 			const state = changed_value.section_id=='2' // no active value

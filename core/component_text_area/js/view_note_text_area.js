@@ -28,6 +28,8 @@ export const view_note_text_area = function() {
 /**
 * RENDER
 * Render node to be used by service autocomplete or any datalist
+* @param object self
+* @param object options
 * @return DOM node
 */
 view_note_text_area.render = async function(self, options) {
