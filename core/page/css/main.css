@@ -4156,6 +4156,8 @@ dd-modal .footer.distribute {
   white-space: nowrap;
   width: 100%;
   margin-right: 0.1rem;
+  font-size: 0.95rem;
+  line-height: 1.15rem;
 }
 .header_wrapper_list .head_column > .order {
   width: 13px;
@@ -4215,6 +4217,9 @@ dd-modal .footer.distribute {
 }
 .mini .column img {
   height: 3rem;
+}
+.column svg {
+  height: 0.9rem;
 }
 .column > .media,
 .column > .portal,
@@ -8311,7 +8316,7 @@ dd-modal .footer.distribute {
   margin-right: 0px;
 }
 .component_av .av_control_buttons .smpte {
-  color: #fd7f26;
+  color: #f78a1c;
   padding: 0px;
   margin-left: 1rem;
   margin-right: 1rem;
@@ -8321,7 +8326,7 @@ dd-modal .footer.distribute {
   height: 1em;
   display: inline-block;
   vertical-align: baseline;
-  text-shadow: 1px 2px 2px #b9b9b9;
+  text-shadow: 1px 1px 2px #c3c3c3;
 }
 .component_av.view_default.list,
 .component_av.view_player.list {
@@ -8368,7 +8373,6 @@ dd-modal .footer.distribute {
 }
 .component_av.view_default > .content_data .posterframe,
 .component_av.view_player > .content_data .posterframe {
-  height: 100%;
   max-height: 100%;
   width: 100%;
   max-width: 100%;
@@ -8510,10 +8514,18 @@ dd-modal .footer.distribute {
   flex: 1 0 auto;
   padding-left: 0px;
   padding-right: 0px;
+  line-height: 1.1rem;
 }
 .component_check_box.view_mini .content_data {
   padding-bottom: 0px;
   padding-right: 0px;
+}
+.component_check_box.view_mini .content_data .content_value label {
+  display: flex;
+}
+.component_check_box.view_mini .content_data .content_value label > input {
+  margin-right: 0.33rem;
+  cursor: pointer;
 }
 .component_check_box.view_tools > .content_data {
   display: grid;
@@ -11031,11 +11043,11 @@ dd-modal .footer.distribute {
   border-top: 0.5px solid #777777;
 }
 .component_text_area.list {
-  max-height: 10em;
+  max-height: 9.3rem;
   overflow: hidden;
 }
 .component_text_area.list img {
-  height: 1rem;
+  height: 0.9rem;
 }
 .component_text_area.search .input_value {
   width: calc(100% - 4rem);
