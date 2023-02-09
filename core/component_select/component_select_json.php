@@ -27,13 +27,19 @@
 						false // bool add_request_config
 					);
 				// target_sections add
-					$target_sections = array_map(function($tipo) {
-						return [
-							'tipo'	=> $tipo,
-							'label'	=> RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true)
-						];
-					}, $this->get_ar_target_section_tipo());
-					$item_context->set_target_sections($target_sections);
+					$target_sections		= [];
+					$ar_target_section_tipo	= $this->get_ar_target_section_tipo() ?? [];
+					foreach ($ar_target_section_tipo as $current_section_tipo) {
+						$current_section_tipo_permissions = common::get_permissions($current_section_tipo, $current_section_tipo);
+						if ($current_section_tipo_permissions>0) {
+							$target_sections[] = [
+								'tipo'			=> $tipo,
+								'label'			=> RecordObj_dd::get_termino_by_tipo($current_section_tipo, DEDALO_DATA_LANG, true, true),
+								'permissions'	=> $current_section_tipo_permissions
+							];
+						}
+					}
+					$item_context->target_sections = $target_sections;
 				break;
 		}
 
