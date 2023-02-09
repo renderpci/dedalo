@@ -33,7 +33,7 @@
 						$current_section_tipo_permissions = common::get_permissions($current_section_tipo, $current_section_tipo);
 						if ($current_section_tipo_permissions>0) {
 							$target_sections[] = [
-								'tipo'			=> $tipo,
+								'tipo'			=> $current_section_tipo,
 								'label'			=> RecordObj_dd::get_termino_by_tipo($current_section_tipo, DEDALO_DATA_LANG, true, true),
 								'permissions'	=> $current_section_tipo_permissions
 							];
