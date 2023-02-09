@@ -1759,7 +1759,12 @@ abstract class common {
 
 				// skip empty ddo_map
 				if(empty($request_config_object->show->ddo_map)) {
-					debug_log(__METHOD__." Ignored empty show ddo_map ($this->tipo) in request_config_object:".to_string($request_config_object), logger::ERROR);
+					debug_log(__METHOD__." Ignored empty show ddo_map ($this->tipo - ".
+						RecordObj_dd::get_termino_by_tipo($this->tipo).
+						") in request_config_object (It may be due to a lack of permissions in their children):".
+						PHP_EOL.to_string($request_config_object),
+						logger::ERROR
+					);
 					continue;
 				}
 				// merge all ddo of all request_config
@@ -1895,7 +1900,7 @@ abstract class common {
 									$current_lang,
 									$current_section_tipo
 								);
-								// get limit from component calculation or if it's defined from ddo
+								// pagination->limit. Get limit from component calculation or if it's defined from ddo
 								if(isset($dd_object->limit)){
 									$related_element->pagination->limit = $dd_object->limit;
 								}
@@ -1909,50 +1914,48 @@ abstract class common {
 								// the current component has the configuration to all children components,
 								// and it's necessary calculate the new request_config that will be use in the next loop
 								// the main component has all config, his children has specific config (only his own part)
-
 									// get the component rqo to be updated with the current config
 									$component_request_config = $related_element->build_request_config();
 									foreach ($request_config as $request_config_object) {
 
 										// use the current api_engine to ensure the inheritance has correct relation dd_engine -> dd_engine, zenon - >zenon
-										$api_engine			= $request_config_object->api_engine;
-										$children_show		= isset($request_config_object->show)
-											? get_children_recursive($request_config_object->show->ddo_map, $dd_object)
-											: null;
-										$children_search	= isset($request_config_object->search)
-											? get_children_recursive($request_config_object->search->ddo_map, $dd_object)
-											: null;
-										$children_choose	= isset($request_config_object->choose)
-											? get_children_recursive($request_config_object->choose->ddo_map, $dd_object)
-											: null;
+											$api_engine			= $request_config_object->api_engine;
+											$children_show		= isset($request_config_object->show)
+												? get_children_recursive($request_config_object->show->ddo_map, $dd_object)
+												: null;
+											$children_search	= isset($request_config_object->search)
+												? get_children_recursive($request_config_object->search->ddo_map, $dd_object)
+												: null;
+											$children_choose	= isset($request_config_object->choose)
+												? get_children_recursive($request_config_object->choose->ddo_map, $dd_object)
+												: null;
 
 										// select the current api_engine
-										$new_request_config_object = array_find($component_request_config, function($el) use($api_engine){
-											return $el->api_engine===$api_engine;
-										});
+											$new_request_config_object = array_find($component_request_config, function($el) use($api_engine){
+												return $el->api_engine===$api_engine;
+											});
 
 										// set the ddo_map with the new config
-										if (!empty($children_show)) {
-											$new_request_config_object->show->ddo_map  = $children_show;
-
-										}
-										if (!empty($children_search)) {
-											if (empty($new_request_config_object->search)) {
-												$new_request_config_object->search = (object)[
-													'ddo_map' => []
-												];
+											if (!empty($children_show)) {
+												$new_request_config_object->show->ddo_map  = $children_show;
 											}
-											$new_request_config_object->search->ddo_map  = $children_search;
-										}
-										if (!empty($children_choose)) {
-											if (empty($new_request_config_object->choose)) {
-												$new_request_config_object->choose = (object)[
-													'ddo_map' => []
-												];
+											if (!empty($children_search)) {
+												if (empty($new_request_config_object->search)) {
+													$new_request_config_object->search = (object)[
+														'ddo_map' => []
+													];
+												}
+												$new_request_config_object->search->ddo_map  = $children_search;
 											}
-											$new_request_config_object->choose->ddo_map  = $children_choose;
-										}
-									}
+											if (!empty($children_choose)) {
+												if (empty($new_request_config_object->choose)) {
+													$new_request_config_object->choose = (object)[
+														'ddo_map' => []
+													];
+												}
+												$new_request_config_object->choose->ddo_map  = $children_choose;
+											}
+									}//end foreach ($request_config as $request_config_object)
 
 								// Inject the request_config inside the component
 									$related_element->request_config = $component_request_config;
@@ -1990,7 +1993,10 @@ abstract class common {
 
 							// others case
 							default:
-								debug_log(__METHOD__ ." Ignored model '$model' - current_tipo: '$current_tipo' ".to_string(), logger::WARNING);
+								debug_log(__METHOD__ ." Ignored model '$model' - current_tipo: '$current_tipo'  - ".
+									RecordObj_dd::get_termino_by_tipo($current_tipo),
+									logger::WARNING
+								);
 								break;
 						}//end switch (true)
 
@@ -2428,13 +2434,15 @@ abstract class common {
 	*/
 	public function get_ar_request_config() : array {
 
-		// options fix
-			$tipo			= $this->get_tipo();
-			$external		= false;
-			$section_tipo	= $this->get_section_tipo();
-			$mode			= $this->get_mode();
-			$section_id		= $this->get_section_id();
-			$model			= get_called_class();
+		// short vars
+			$tipo				= $this->get_tipo();
+			$external			= false;
+			$section_tipo		= $this->get_section_tipo();
+			$mode				= $this->get_mode();
+			$section_id			= $this->get_section_id();
+			$model				= get_called_class();
+			$requested_source	= dd_core_api::$rqo->source ?? null;
+			$requested_sqo		= dd_core_api::$rqo->sqo ?? null;
 
 		// debug
 			// if (to_string($section_tipo)==='self') {
@@ -2552,10 +2560,17 @@ abstract class common {
 							}
 
 						// limit. Add default if not already set
-							// if (!isset($parsed_item->sqo->limit)) {
-							// 	$parsed_item->sqo->limit = $limit;
-							// }
-							$parsed_item->sqo->limit = $limit;
+							if (!isset($parsed_item->sqo->limit)) {
+								$parsed_item->sqo->limit = $limit;
+							}
+							// overwrite with $this->pagination->limit if exists
+							if (isset($this->pagination->limit)) {
+								$parsed_item->sqo->limit = $this->pagination->limit;
+							}
+							// overwrite from API request. Check received limit from dd_core_api::$rqo
+							if ($requested_source && $requested_source->tipo===$this->tipo && isset($requested_sqo->limit)) {
+								$parsed_item->sqo->limit = $requested_sqo->limit;
+							}
 
 					// show (mandatory). In list mode it's possible to create specific ddo_map in a section_list term child of the portal or section.
 
@@ -2712,15 +2727,15 @@ abstract class common {
 										? $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit
 										: $parsed_item->show->sqo_config->limit;
 								}else{
-									// check received limit from dd_core_api::$rqo
-									$requested_source	= dd_core_api::$rqo->source ?? null;
-									$requested_sqo		= dd_core_api::$rqo->sqo ?? null;
+									// default
+									$parsed_item->sqo->limit = $parsed_item->show->sqo_config->limit;
+									// overwrite with $this->pagination->limit if exists
+									if (isset($this->pagination->limit)) {
+										$parsed_item->sqo->limit = $this->pagination->limit;
+									}
+									// overwrite from API request. Check received limit from dd_core_api::$rqo
 									if ($requested_source && $requested_source->tipo===$this->tipo && isset($requested_sqo->limit)) {
-										// from API request
 										$parsed_item->sqo->limit = $requested_sqo->limit;
-									}else{
-										// default
-										$parsed_item->sqo->limit = $parsed_item->show->sqo_config->limit;
 									}
 								}
 							}
@@ -2864,13 +2879,12 @@ abstract class common {
 				// V5 model
 
 				// if (in_array($model, component_relation_common::get_components_with_relations()) ) {
-
 				// ar_related
 					switch ($mode) {
 						case 'edit':
 							if ($model==='section') {
 								// section
-								$table						= common::get_matrix_table_from_tipo($tipo);
+								$table					= common::get_matrix_table_from_tipo($tipo);
 								$ar_model_name_required	= [
 									'component_',
 									'section_group',
@@ -2880,7 +2894,7 @@ abstract class common {
 									// 'section_group_relation',
 									// 'section_group_portal',
 								];
-								$ar_related					= section::get_ar_children_tipo_by_model_name_in_section(
+								$ar_related				= section::get_ar_children_tipo_by_model_name_in_section(
 									$tipo,
 									$ar_model_name_required,
 									true, // bool from_cache
@@ -2895,7 +2909,11 @@ abstract class common {
 								$ar_related = (array)RecordObj_dd::get_ar_childrens($tipo);
 							}else{
 								// components
-								$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);
+								$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados(
+									$tipo,
+									true, // bool cache
+									true // bool simple
+								);
 								// semantic node
 								$ds_component = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
 									$tipo,
@@ -2955,16 +2973,29 @@ abstract class common {
 								// groupers
 								$ar_related = (array)RecordObj_dd::get_ar_childrens($tipo);
 							}else{
-								# portal cases
-								# case section list is defined
-								$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section_list', 'children', true);
+								// portal cases
+								// case section list is defined
+								$ar_terms = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+									$tipo, //string tipo
+									'section_list', // string model
+									'children', // string relation_type
+									true // bool search_exact
+								);
 								if(isset($ar_terms[0])) {
-									# Use found related terms as new list
-									$current_term = $ar_terms[0];
-									$ar_related   = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
+									// Use found section_list related terms as new list
+									$current_term	= $ar_terms[0];
+									$ar_related		= RecordObj_dd::get_ar_terminos_relacionados(
+										$current_term,
+										true, // bool cache
+										true // bool simple
+									);
 								}else{
-									# Fallback related when section list is not defined; portal case.
-									$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);
+									// Fallback related when section list is not defined; portal case.
+									$ar_related = RecordObj_dd::get_ar_terminos_relacionados(
+										$tipo,
+										true, // bool cache
+										true // bool simple
+									);
 								}
 							}
 							break;
@@ -2975,16 +3006,16 @@ abstract class common {
 					$target_section_tipo = $section_tipo;
 
 					if (!empty($ar_related)) {
-						foreach ((array)$ar_related as $key => $current_tipo) {
+						foreach ((array)$ar_related as $current_tipo) {
 							$current_model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 							if ($current_model==='section') {
 								$target_section_tipo = $current_tipo; // Overwrite
 								continue;
 							}else if ($current_model==='section' || $current_model==='exclude_elements') {
 								continue;
-							}else if($current_tipo === DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO){
-								continue; //'component_security_areas' removed in v6 but the component will stay in ontology, PROVISIONAL, only in the alpha state of V6 for compatibility of the ontology of V5.
-							}else if($model==='section' && $current_model==='component_semantic_node'){
+							}else if($current_tipo===DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO) {
+								continue; // 'component_security_areas' removed in v6 but the component will stay in ontology, PROVISIONAL, only in the alpha state of V6 for compatibility of the ontology of V5.
+							}else if($model==='section' && $current_model==='component_semantic_node') {
 								continue; // remove the semantic node in the section ddo_map, but maintain when is called by the portal
 							}else if($current_model==='component_filter' && isset($table) && ($table==='matrix_dd' || $table==='matrix_list')) {
 								continue; // exclude component_filter from private list like 'yes/no'
@@ -3044,7 +3075,7 @@ abstract class common {
 						? $tipo_properties->children_view
 						: null;
 
-				// auth. Check the permissions of each element
+				// authorized items. Check the permissions of each element
 					$ar_related_clean_auth = (function() use($ar_related_clean, $target_section_tipo){
 						// check each element permissions
 						$result = [];

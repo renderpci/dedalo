@@ -944,6 +944,10 @@ final class dd_core_api {
 					if (isset($data->pagination) && isset($data->pagination->offset)) {
 						$component->pagination->offset = $data->pagination->offset;
 					}
+					if (isset($data->pagination) && isset($data->pagination->limit)) {
+						$component->pagination->limit = $data->pagination->limit;
+					}
+						dump($component->pagination, ' component->pagination ++ '.to_string());
 
 				// datalist. if is received, inject to the component for recycle
 					if (isset($data->datalist)) {

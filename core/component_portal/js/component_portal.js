@@ -364,7 +364,7 @@ component_portal.prototype.build = async function(autoload=false) {
 				})
 				// console.log("COMPONENT PORTAL api_response:",self.id, api_response);
 				if(SHOW_DEVELOPER===true) {
-					dd_console(`[component_portal.build] COMPONENT ${self.model} build autoload api_response:`, 'DEBUG', [api_response.debug.real_execution_time, api_response])
+					dd_console(`api_response [component_portal.build] COMPONENT ${self.model} build autoload:`, 'DEBUG', [api_response.debug.real_execution_time, api_response])
 				}
 			// set Context
 				// context is only set when it's empty the origin context,
@@ -478,12 +478,13 @@ component_portal.prototype.build = async function(autoload=false) {
 						self.events_tokens.push(
 							event_manager.subscribe('paginator_show_all_'+self.paginator.id, fn_paginator_show_all)
 						)//end events push
-						function fn_paginator_show_all(total) {
+						function fn_paginator_show_all(limit) {
 							// navigate
 							self.navigate(
-								() => {
-									self.rqo.sqo.offset	= 0
-									self.rqo.sqo.limit	= total
+								async () => {
+									// rqo and request_config_object set offset and limit
+									self.rqo.sqo.offset	= self.request_config_object.sqo.offset = 0
+									self.rqo.sqo.limit	= self.request_config_object.sqo.limit 	= limit
 								}
 							)
 						}//end fn_paginator_goto

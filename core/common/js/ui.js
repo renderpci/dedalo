@@ -300,11 +300,22 @@ export const ui = {
 			// debug
 				if(SHOW_DEBUG===true) {
 					wrapper.addEventListener('click', function(e){
+						if (e.metaKey && e.altKey) {
+							e.stopPropagation()
+							e.preventDefault()
+							console.log('/// refreshing instance:', instance);
+							instance.refresh({
+								build_autoload : true,
+								render_level : 'content'
+							})
+							return
+						}
 						if (e.altKey) {
 							e.stopPropagation()
 							e.preventDefault()
 							// common.render_tree_data(instance, document.getElementById('debug'))
 							console.log('/// selected instance:', instance);
+							return
 						}
 					})
 

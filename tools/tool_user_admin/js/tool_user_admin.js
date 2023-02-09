@@ -13,8 +13,9 @@
 	import {render_tool_user_admin} from './render_tool_user_admin.js' // self tool rendered (called from render common)
 
 
+
 /**
-* tool_user_admin
+* TOOL_USER_ADMIN
 * Tool to make interesting things
 */
 export const tool_user_admin = function () {
@@ -223,8 +224,9 @@ tool_user_admin.prototype.get_ddo_map = function() {
 
 
 /**
-* BUILD_user_section
-* Build a new custom request config
+* BUILD_USER_SECTION
+* Initiate a new custom request config
+* Note that, for speed, is built only when render is called
 */
 tool_user_admin.prototype.build_user_section = async function() {
 
@@ -266,8 +268,6 @@ tool_user_admin.prototype.build_user_section = async function() {
 			section.filter = false
 		// inspector disallow
 			section.inspector = false
-		// build
-			await section.build(true)
 
 
 	return section

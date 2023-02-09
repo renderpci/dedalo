@@ -98,7 +98,17 @@ class security {
 			// 	dump($permissions_table, ' permissions_table ++ '.to_string($parent_tipo .' - '. $tipo));
 			// }
 
+		// permissions
 			$permissions = $found->value ?? 0;
+
+		// access to list of values
+			if ($permissions===0) {
+				$matrix_table = common::get_matrix_table_from_tipo($parent_tipo);
+				if ($matrix_table==='matrix_list') {
+					$permissions = 1;
+				}
+			}
+
 
 		return (int)$permissions;
 	}//end get_security_permissions

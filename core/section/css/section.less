@@ -28,6 +28,7 @@
 
 	&.edit {
 		width: calc(100vw - @inspector_width - 0.25rem);
+		margin-bottom: 10rem;
 
 		&.no_inspector {
 			width: 100%;
@@ -59,6 +60,7 @@
 			// prevent content from shifting left when the vertical scrollbar appears
 			overflow-y: overlay;
 			padding-right: 13px;
+			padding-left: 1px;
 
 			@media screen and (max-width: @width_break_point_0) {
 				display: contents;

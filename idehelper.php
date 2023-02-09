@@ -6,3 +6,4 @@ define('INIT_COOKIE_AUTH_ADDONS','');
 define('DEDALO_VERSION','');
 define('DEDALO_BUILD','');
 define('DEDALO_ENTITY', '');
+define('CONFIG_DEFAULT_FILE_PATH', '');

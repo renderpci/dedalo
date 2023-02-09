@@ -1,5 +1,5 @@
 <?php
-include_once(dirname(dirname(__FILE__)).'/component_filter/class.component_filter.php');
+include_once( DEDALO_CORE_PATH . '/component_filter/class.component_filter.php' );
 /*
 * CLASS COMPONENT FILTER MASTER
 *
@@ -30,8 +30,6 @@ class component_filter_master extends component_filter {
 		// if(!empty($parent)) {
 		// 	$this->caller_id = $parent;
 		// }
-
-		return true;
 	}//end __construct
 
 
