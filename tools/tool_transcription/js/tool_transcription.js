@@ -94,28 +94,29 @@ tool_transcription.prototype.build = async function(autoload=false) {
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 
 	try {
-		const roles = [
-			'media_component',
-			'transcription_component',
-			'status_user_component',
-			'status_admin_component'
-		];
-		const roles_length = roles.length
-		for (let i = 0; i < roles_length; i++) {
-			const role = roles[i]
 
-			// fix media_component for convenience
-			const ddo = self.tool_config.ddo_map.find(el => el.role===role)
-			if (!ddo) {
-				console.warn(`Warning: \n\tThe role '${role}' it's not defined in Ontology and will be ignored`);
-				continue;
+		// fix components instances for convenience
+			const roles = [
+				'media_component',
+				'transcription_component',
+				'status_user_component',
+				'status_admin_component'
+			];
+			const roles_length = roles.length
+			for (let i = 0; i < roles_length; i++) {
+
+				const role	= roles[i]
+				const ddo	= self.tool_config.ddo_map.find(el => el.role===role)
+				if (!ddo) {
+					console.warn(`Warning: \n\tThe role '${role}' it's not defined in Ontology and will be ignored`);
+					continue;
+				}
+				self[role] = self.ar_instances.find(el => el.tipo===ddo.tipo)
 			}
-			self[role] = self.ar_instances.find(el => el.tipo===ddo.tipo)
-		}
 
-		// relation_list. load_relation_list. Get the relation list.
+		// relation_list. Load relation_list from API
 			// This is used to build a select element to allow
-			// user select the top_section_tipo and top_section_id of current transcription
+			// user to select the top_section_tipo and top_section_id of current transcription
 			self.relation_list = await self.load_relation_list()
 
 	} catch (error) {
@@ -130,49 +131,8 @@ tool_transcription.prototype.build = async function(autoload=false) {
 
 
 /**
-* GET_COMPONENT
-* Load transcriptions component (text area) configured with the given lang
-* @param string lang
-* Create / recover and build a instance of current component in the desired lang
-* @return object instance
-*/
-tool_transcription.prototype.get_component = async function(lang) {
-
-	const self = this
-
-
-	// to_delete_instances. Select current self.transcription_component
-		const to_delete_instances = self.ar_instances.filter(el => el===self.transcription_component)
-
-
-	// context (clone and edit)
-		const context = Object.assign(clone(self.transcription_component.context),{
-			lang		: lang,
-			mode		: 'edit',
-			section_id	: self.transcription_component.section_id
-		})
-
-	// options
-		const options = {
-			context				: context, // reference context ...
-			to_delete_instances	: to_delete_instances // array of instances to delete after create the new one
-		}
-
-	// call generic common tool build
-		const component_instance = await tool_common.prototype.load_component.call(self, options);
-
-	// fix instance (overwrite)
-		self.transcription_component = component_instance
-
-
-	return component_instance
-}//end get_component
-
-
-
-/**
-* LOAD_RELATion_LIST
-* Get the list of related sections with the actual resource
+* LOAD_RELATION_LIST
+* Call API and get the list of related sections with the actual resource
 * @return object datum
 */
 tool_transcription.prototype.load_relation_list = async function() {
@@ -266,7 +226,7 @@ tool_transcription.prototype.get_user_tools = async function(ar_requested_tools)
 */
 tool_transcription.prototype.build_subtitles = async function() {
 
-	const component_text_area = self.transcription_component || await self.get_component(self.lang)
+	const component_text_area = self.transcription_component
 
 	// get instance and init
 		self.service_subtitles = await get_instance({
