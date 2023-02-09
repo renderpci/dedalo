@@ -46,7 +46,6 @@
 				}
 
 				>div, button {
-
 					margin: 0rem;
 					margin-left: 0.5rem;
 					margin-right: 0rem;
@@ -116,6 +115,14 @@
 						margin-right: 0.33rem;
 					}
 				}
+
+				>.wrapper_component {
+					background-color: transparent;
+
+					>.label, label {
+						color: #ffffff;
+					}
+				}
 			}
 		}//end >.tool_header
 
@@ -146,7 +153,16 @@
 			.left_container {
 				>.wrapper_component {
 					height: 100%;
+
+					>.move_top {
+						visibility: hidden;
+					}
+					>.buttons_container {
+						visibility: hidden;
+					}
+
 					>.content_data {
+						height: unset;
 
 						@media screen and (max-width: @width_break_point_0) {
 							min-height: 50vh;
@@ -158,7 +174,7 @@
 			.right_container {
 				>.wrapper_component {
 					height: 100%; // calc(100vh - 8rem);
-					min-height: 472px; // prevents to cut component_av player
+					min-height: 525px; // prevents to cut component_av player
 
 					// addons. Additional elements like video slider, keys map, etc.
 					&.with_addons {
@@ -177,6 +193,7 @@
 						// overflow: auto;
 						height: 100%;
 						// min-height: 528px;
+						display: block;
 					}
 				}
 
