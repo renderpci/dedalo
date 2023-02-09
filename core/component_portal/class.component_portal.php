@@ -611,7 +611,9 @@ class component_portal extends component_relation_common {
 			if (empty($show)) {
 
 				debug_log(__METHOD__.
-					" Ignored empty request_config_item->show (mode:$this->mode) [$this->section_tipo - $this->tipo]",
+					" Ignored empty request_config_item->show (mode:$this->mode) [$this->section_tipo - $this->tipo - ".
+					RecordObj_dd::get_termino_by_tipo($this->tipo).
+					"]",
 					logger::ERROR
 				);
 
@@ -620,8 +622,13 @@ class component_portal extends component_relation_common {
 				$first_item	= $show->ddo_map[0] ?? null;
 
 				if (empty($first_item)) {
-					debug_log(__METHOD__." Ignored show empty first_item (mode:$this->mode) [$this->section_tipo - $this->tipo]", logger::ERROR);
-					dump($show, ' show empty first_item ++++++++ '.to_string($this->tipo));
+					debug_log(__METHOD__.
+						" Ignored show empty first_item (mode:$this->mode) [$this->section_tipo - $this->tipo - ".
+						RecordObj_dd::get_termino_by_tipo($this->tipo).
+						"]. It may be due to a lack of permissions.",
+						logger::WARNING
+					);
+					// dump($show, ' show empty first_item ++++++++ '.to_string($this->tipo));
 				}else{
 					// target component
 					$path[] = (object)[
