@@ -128,24 +128,24 @@ const get_content_value = (i, current_value, self) => {
 				const value = this.value
 					? JSON.parse(this.value)
 					: null
-				// if (value) {
-				// 	button_edit.classList.remove('hide')
-				// }else{
-				// 	button_edit.classList.add('hide')
-				// }
 
-				const parsed_value = (select.value.length>0) ? JSON.parse(select.value) : null
+				const parsed_value	= (select.value.length>0)
+					? JSON.parse(select.value)
+					: null
 
-				const changed_data = [Object.freeze({
-					action	: (parsed_value != null) ? 'update' : 'remove',
-					key		: (parsed_value != null) ? i : false,
-					value	: parsed_value
-				})]
+				// change data
+					const changed_data_item	= Object.freeze({
+						action	: (parsed_value != null) ? 'update' : 'remove',
+						key		: (parsed_value != null) ? i : false,
+						value	: parsed_value
+					})
+
 				// fix instance changed_data
-					self.data.changed_data = changed_data
+					self.set_changed_data(changed_data_item)
+
 				// force to save on every change
 					self.change_value({
-						changed_data	: changed_data,
+						changed_data	: [changed_data_item],
 						refresh			: false,
 						remove_dialog	: false
 					})
