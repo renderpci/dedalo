@@ -70,6 +70,7 @@ abstract class component_common extends common {
 		protected $start_time;
 		protected $referenced_tipo;
 		protected $semantic_nodes;
+		protected $id;
 
 	/**
 	* GET_INSTANCE
@@ -345,46 +346,76 @@ abstract class component_common extends common {
 	/**
 	* SET_DATO_DEFAULT
 	* Set dato default when propiedades->dato_default exists and current component dato is empty
-	* propiedades are loaded always (structure data) at begining of build component. Because this
+	* propiedades are loaded always (structure data) at beginning of build component. Because this
 	* is more fast verify if is set 'dato_default' and not load component data always as before
 	* @return bool true
 	*/
 	protected function set_dato_default() {
 
-		# propiedades is object or null
-		$propiedades = $this->get_propiedades();
+		$default_dato = null;
 
-		if(isset($propiedades->dato_default)) {
-
-			# MATRIX DATA : Load matrix data
-			$this->load_component_dato();
-
-			$dato = $this->dato;
-			if (empty($dato)) {
-
-				$dato_default = $propiedades->dato_default;
-
-				# Method Used
-				if(isset($propiedades->dato_default->method)) {
-					$dato_default = $this->get_method( (string)$propiedades->dato_default->method );
+		// optional defaults for config_defaults file
+			if (defined('CONFIG_DEFAULT_FILE_PATH')) {
+				// config_default_file is a JSON array value
+				$contents = file_get_contents(CONFIG_DEFAULT_FILE_PATH);
+				$defaults = json_decode($contents);
+				if (!empty($defaults)) {
+					if (!is_array($defaults)) {
+						debug_log(__METHOD__." Ignored config_default_file value. Expected type was array but received is ". gettype($defaults), logger::ERROR);
+					}else{
+						$found = array_find($defaults, function($el){
+							return $el->tipo===$this->tipo; // Note that match only uses component tipo (case hierarchy25 problem)
+						});
+						if (!empty($found)) {
+							$default_dato = $found->value;
+						}
+					}
+				}else{
+					debug_log(__METHOD__." Ignored empty defaults file contents ! (Check if JSON is valid) ".to_string($defaults), logger::ERROR);
 				}
-
-				$this->set_dato($dato_default);
-
-				if ( strpos($this->parent, DEDALO_SECTION_ID_TEMP)===false ) {
-					$this->id = $this->Save();
-				}
-
-				# INFO LOG
-				if(SHOW_DEBUG===true) {
-					$msg = " Created ".get_called_class()." \"$this->label\" id:$this->parent, tipo:$this->tipo, section_tipo:$this->section_tipo, modo:$this->modo with default data from 'propiedades': ".json_encode($propiedades->dato_default);
-					debug_log(__METHOD__.$msg);
-				}
-
-				# MATRIX DATA : Reload matrix data again
-				$this->load_component_dato();
 			}
-		}
+
+		// propiedades try
+			if (empty($default_dato)) {
+				$propiedades = $this->get_propiedades();
+				if(isset($propiedades->dato_default)) {
+					$default_dato = $propiedades->dato_default;
+				}
+			}
+
+		if (!empty($default_dato)) {
+
+			// matrix data : load matrix data
+				$this->load_component_dato();
+
+			// current dato check
+				$dato = $this->dato;
+				if (empty($dato)) {
+
+					// set dato only when own dato is empty
+						$this->set_dato($default_dato);
+
+					// Method Used. (!) Only to remember this option like cases as date 'today'
+						// if(isset($propiedades->dato_default->method)) {
+						// 	$dato_default = $this->get_method( (string)$propiedades->dato_default->method );
+						// }
+
+					// temp section cases no not save anything
+						if ( strpos($this->parent, DEDALO_SECTION_ID_TEMP)===false ) {
+							$this->id = $this->Save();
+						}
+
+					// info log
+						if(SHOW_DEBUG===true) {
+							$msg = " Created ".get_called_class()." \"$this->label\" id:$this->parent, tipo:$this->tipo, section_tipo:$this->section_tipo, modo:$this->modo with default data";
+							debug_log(__METHOD__.$msg);
+						}
+
+					// matrix data : load matrix data again
+						$this->load_component_dato();
+				}
+		}//end if (!empty($default_dato))
+
 
 		return true;
 	}//end set_dato_default
