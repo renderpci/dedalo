@@ -268,7 +268,7 @@ class component_filter extends component_relation_common {
 
 				// properties default data exists case
 
-				if($is_global_admin===true) {
+				if($is_global_admin===false) {
 
 					// check current added project is accessible for my user
 					$in_my_projects = false;
