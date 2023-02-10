@@ -2189,8 +2189,8 @@ export const ts_object = new function() {
 	*/
 	this.current_main_div = null;
 	var ar_resolved = [];
-	this.parse_search_result = async function( data, main_div, is_recursion ) {
-		//console.log("data:",data,is_recursion, main_div);
+	this.parse_search_result = function( data, main_div, is_recursion ) {
+		// console.log("data:",data,is_recursion, main_div);
 		const self = this
 
 		/*
@@ -2357,7 +2357,7 @@ export const ts_object = new function() {
 				}
 
 				// dom_parse_children (returns a promise)
-				await ts_object.dom_parse_children(ar_children_data, main_div, options)
+				ts_object.dom_parse_children(ar_children_data, main_div, options)
 			}
 
 			// des
