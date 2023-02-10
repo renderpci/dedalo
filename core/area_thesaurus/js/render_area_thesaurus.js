@@ -85,7 +85,7 @@ render_area_thesaurus.prototype.list = async function(options) {
 			label			: null
 		})
 		wrapper.prepend(fragment)
-
+		wrapper.content_data = content_data
 	// ts_search case
 		if (data.ts_search) {
 			event_manager.subscribe('render_'+self.filter.id, exec_search)
