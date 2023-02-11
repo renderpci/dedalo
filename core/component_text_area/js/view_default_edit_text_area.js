@@ -57,21 +57,21 @@ view_default_edit_text_area.render = async function(self, options) {
 		// set pointers
 		wrapper.content_data = content_data
 
-	// label custom style based on activate/deactivate events
-		event_manager.subscribe('activate_component', fn_activate_component)
-		function fn_activate_component(component) {
-			if (component.id===self.id) {
-				wrapper.label.classList.add('move_top')
-			}
-		}
-		event_manager.subscribe('deactivate_component', fn_deactivate_component)
-		function fn_deactivate_component(component) {
-			if (component.id===self.id) {
-				if(wrapper.label.classList.contains('move_top')) {
-					wrapper.label.classList.remove('move_top')
-				}
-			}
-		}
+	// label custom style based on activate/deactivate events. (!) Deactivated 11-02-2023. Moved to inspector)
+		// event_manager.subscribe('activate_component', fn_activate_component)
+		// function fn_activate_component(component) {
+		// 	if (component.id===self.id) {
+		// 		wrapper.label.classList.add('move_top')
+		// 	}
+		// }
+		// event_manager.subscribe('deactivate_component', fn_deactivate_component)
+		// function fn_deactivate_component(component) {
+		// 	if (component.id===self.id) {
+		// 		if(wrapper.label.classList.contains('move_top')) {
+		// 			wrapper.label.classList.remove('move_top')
+		// 		}
+		// 	}
+		// }
 
 	// fix editor height. This guarantees that content_data grow to the maximum possible height
 		// when_in_viewport(wrapper, ()=> {

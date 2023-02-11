@@ -208,6 +208,10 @@ const get_content_data = function(self) {
 				})
 			}
 
+	// selection info
+		const selection_info = render_selection_info(self)
+		content_data.appendChild(selection_info)
+
 	// element_info
 		const element_info = render_element_info(self)
 		content_data.appendChild(element_info)
@@ -345,6 +349,28 @@ const get_content_data = function(self) {
 
 	return content_data
 }//end get_content_data
+
+
+
+/**
+* RENDER_SELECTION_INFO
+* Display current selected element name like 'Description'
+* @param object self
+* @return DOM node selection_info_node
+*/
+const render_selection_info = function(self) {
+
+	// selection_info_node
+		const selection_info_node = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'selection_info'
+		})
+		// fix pointer
+		self.selection_info_node = selection_info_node
+
+
+	return selection_info_node
+}//end render_selection_info
 
 
 
@@ -518,21 +544,21 @@ export const render_component_info = function(self, component) {
 
 	const fragment = new DocumentFragment();
 
-	// section name
-		// label
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'key',
-			inner_html		: get_label.component || 'Component',
-			parent			: fragment
-		})
-		// value
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'value',
-			inner_html		: label,
-			parent			: fragment
-		})
+	// component label
+		// // label
+		// ui.create_dom_element({
+		// 	element_type	: 'span',
+		// 	class_name		: 'key',
+		// 	inner_html		: get_label.component || 'Component',
+		// 	parent			: fragment
+		// })
+		// // value
+		// ui.create_dom_element({
+		// 	element_type	: 'span',
+		// 	class_name		: 'value',
+		// 	inner_html		: label,
+		// 	parent			: fragment
+		// })
 
 	// tipo
 		// label

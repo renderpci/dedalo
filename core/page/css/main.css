@@ -3101,13 +3101,6 @@ input:-moz-placeholder {
 .error.wrapper_component.player > .label {
   color: white !important;
 }
-.wrapper_component.edit > .label.move_top,
-.wrapper_component.search > .label.move_top,
-.wrapper_component.player > .label.move_top {
-  margin-top: -2rem;
-  background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0), #ffffff);
-  height: 2rem;
-}
 .wrapper_component.edit .button_exit_edit,
 .wrapper_component.search .button_exit_edit,
 .wrapper_component.player .button_exit_edit {
@@ -4636,6 +4629,11 @@ dd-modal .footer.distribute {
 				}
 				*/
 }
+.inspector > .inspector_content_data > .selection_info {
+  color: #f78a1c;
+  padding: 0.33rem;
+  font-size: 1.12rem;
+}
 .inspector > .inspector_content_data > .element_info_wrap > .element_info {
   display: grid;
   grid-gap: 2px;
@@ -4986,6 +4984,7 @@ dd-modal .footer.distribute {
   min-height: 1.5rem;
   margin-right: 0px;
   margin-left: 0px;
+  background-color: #b9b9b9;
   mask-size: contain;
 }
 .paginator > .content_data > .nav_buttons > .btn.inactive {
@@ -10946,6 +10945,7 @@ dd-modal .footer.distribute {
   vertical-align: text-bottom;
 }
 .component_text_area.edit > .content_data > .content_value > .editor_container .person,
+.component_text_area.edit > .content_data > .content_value > .editor_container .lang,
 .component_text_area.edit > .content_data > .content_value > .editor_container .note,
 .component_text_area.edit > .content_data > .content_value > .editor_container .index,
 .component_text_area.edit > .content_data > .content_value > .editor_container .tc,
@@ -10959,7 +10959,9 @@ dd-modal .footer.distribute {
   height: 15px;
   vertical-align: text-bottom;
 }
-.component_text_area.edit > .content_data > .content_value > .editor_container .note {
+.component_text_area.edit > .content_data > .content_value > .editor_container .note,
+.component_text_area.edit > .content_data > .content_value > .editor_container .lang,
+.component_text_area.edit > .content_data > .content_value > .editor_container .person {
   margin-left: 2px;
   margin-right: 2px;
 }
