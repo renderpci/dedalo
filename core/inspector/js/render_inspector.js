@@ -55,7 +55,7 @@ render_inspector.prototype.edit = async function(options) {
 		ui.collapse_toggle_track({
 			toggler				: label,
 			container			: content_data,
-			collapsed_id		: 'inspector_element_info_block',
+			collapsed_id		: 'inspector_main_block',
 			collapse_callback	: collapse,
 			expose_callback		: expose
 		})
