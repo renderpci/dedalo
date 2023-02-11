@@ -103,7 +103,7 @@ self.onmessage = async function(e) {
 		// mime: text/javascript
 		headers.append('Content-Type', 'text/javascript');
 
-	// fetch each file
+	// fetch each file. Force cache reload (https://hacks.mozilla.org/2016/03/referrer-and-cache-control-apis-for-fetch/)
 		const ar_promises = []
 		for (let i = 0; i < api_response_result_length; i++) {
 
@@ -112,7 +112,7 @@ self.onmessage = async function(e) {
 				fetch(item.url, {
 					headers		: headers,
 					method		: 'GET',
-					cache		: 'no-cache',
+					cache		: 'reload', // "no-store","reload","no-cache","force-cache"
 					credentials	: 'same-origin',
 					credentials	: 'omit'
 				})
