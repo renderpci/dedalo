@@ -688,7 +688,7 @@ export const open_tool = async (options) => {
 const view_modal = async function(options) {
 
 	// options
-		const tool_context	= options.tool_context
+		const tool_context	= options.tool_context || {}
 		const caller		= options.caller
 
 	// (!) Moved yo tool_common init unified parse

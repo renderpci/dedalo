@@ -545,7 +545,7 @@ abstract class component_common extends common {
 						// debug
 							debug_log(__METHOD__ .
 								" Created ".get_called_class()." \"$this->label\" id:$this->section_id, tipo:$this->tipo, section_tipo:$this->section_tipo, mode:$this->mode with default data from 'properties':" .
-								PHP_EOL . to_string($properties->dato_defaul),
+								PHP_EOL . to_string($default_dato),
 								logger::DEBUG
 							);
 
@@ -3118,11 +3118,16 @@ abstract class component_common extends common {
 
 		// Removed 6-02-2022 because the section cache has not conflicts with same instance in list or edit modes
 		// now the JSON_RecordObj_matrix has the cache of section data. (same data for list and edit)
-		// if (isset($this->section_obj)) {
-		// 	return $this->section_obj;
-		// }
+		if (isset($this->section_obj)) {
+			return $this->section_obj;
+		}
 
-		$section = section::get_instance($this->section_id, $this->section_tipo, 'edit', true);
+		$section = section::get_instance(
+			$this->section_id,
+			$this->section_tipo,
+			'edit',
+			true
+		);
 		$this->section_obj = $section;
 		// caller_dataframe
 			if (isset($this->caller_dataframe)) {

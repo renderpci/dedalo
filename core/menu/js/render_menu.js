@@ -86,9 +86,8 @@ render_menu.prototype.edit = async function() {
 			current_tipo	: 'dd1',
 			parent_tipo		: 'dd1'
 		})
-
 		// click . Manages global click action on the menu items
-			hierarchy.addEventListener('click', (e) => {
+		hierarchy.addEventListener('click', (e) => {
 				// e.stopPropagation()
 				// e.preventDefault()
 
@@ -177,8 +176,12 @@ render_menu.prototype.edit = async function() {
 			logged_user_name.addEventListener('click', (e) => {
 				e.stopPropagation();
 
-				// get the user_admin tool to be fired
-					const tool_user_admin = self.context.tools.find(el => el.model === 'tool_user_admin')
+				// tool_user_admin Get the user_admin tool to be fired
+				const tool_user_admin = self.context.tools.find(el => el.model==='tool_user_admin')
+				if (!tool_user_admin) {
+					console.error('Tool user admin is not available in tools:', self.context.tools);
+					return
+				}
 
 				// open_tool (tool_common)
 					open_tool({

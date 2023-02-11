@@ -122,7 +122,7 @@ class section extends common {
 				}
 
 			# key for cache
-			$key = $section_id .'_'. $tipo.'_'.$mode;
+			$key = $section_id .'_'. $tipo .'_'. $mode;
 
 			// $max_cache_instances = 300*3; // Default 300
 			// $cache_slice_on 	 = 100*3; // Default 100
@@ -140,12 +140,15 @@ class section extends common {
 			// 	time_nanosleep(0, 2000000); // 02 ms
 			// }
 
-			# FIND CURRENT INSTANCE IN CACHE
+		// find current instance in cache
 			if ( !array_key_exists($key, (array)self::$ar_section_instances) ) {
 				self::$ar_section_instances[$key] = new section($section_id, $tipo, $mode);
+			}else{
+				// debug_log(__METHOD__." Getting section instance from cache ".to_string($key), logger::ERROR);
 			}
 
-			return self::$ar_section_instances[$key];
+
+		return self::$ar_section_instances[$key];
 	}//end get_instance
 
 
@@ -275,8 +278,11 @@ class section extends common {
 					// JSON_RecordObj_matrix
 						$section_tipo			= $this->tipo;
 						$matrix_table			= common::get_matrix_table_from_tipo($section_tipo);
-						// $JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table, $this->section_id, $tipo);
-						$JSON_RecordObj_matrix	= JSON_RecordObj_matrix::get_instance($matrix_table, $this->section_id, $tipo);
+						$JSON_RecordObj_matrix	= JSON_RecordObj_matrix::get_instance(
+							$matrix_table,
+							(int)$this->section_id, // int section_id
+							$tipo // string section tipo
+						);
 
 					// load dato from db
 						$dato = $JSON_RecordObj_matrix->get_dato();
@@ -501,49 +507,45 @@ class section extends common {
 				throw new Exception("Error Processing Request. Section Dato is not as expected type (object). type: ".gettype($dato), 1);
 			}
 
-		# SELECT COMPONENT IN SECTION DATO
-		if (isset($dato->components->{$component_tipo})) {
+		// component_global_dato. Select component in section dato
+			if (isset($dato->components->{$component_tipo})) {
 
-			// component dato already exists in section object. Only select it
-				$component_global_dato = $dato->components->{$component_tipo};
+				// component dato already exists in section object. Only select it
+					$component_global_dato = $dato->components->{$component_tipo};
 
-		}else{
+			}else{
 
-			// component dato NOT exists in section object. We build a new one with current info
-				#$obj_global 						= new stdClass();
-				#$obj_global->$component_tipo 		= new stdClass();
-				#$component_global_dato 			= new stdClass();
-				#$component_global_dato				= $obj_global->$component_tipo;
+				// component dato NOT exists in section object. We build a new one with current info
+					#$obj_global 						= new stdClass();
+					#$obj_global->$component_tipo 		= new stdClass();
+					#$component_global_dato 			= new stdClass();
+					#$component_global_dato				= $obj_global->$component_tipo;
 
-				$component_global_dato = new stdClass();
+					$component_global_dato = new stdClass();
 
-					// INFO : We create the info of the current component
-						// $component_global_dato->info 		= new stdClass();
-						// 	$component_global_dato->info->label = RecordObj_dd::get_termino_by_tipo($component_tipo,null,true);
-						// 	$component_global_dato->info->model= $component_model_name;
-						$inf = RecordObj_dd::get_termino_by_tipo($component_tipo,null,true) .' ['.$component_model_name.']';
-						$component_global_dato->inf = $inf;
+						// INFO : We create the info of the current component
+							// $component_global_dato->info 		= new stdClass();
+							// 	$component_global_dato->info->label = RecordObj_dd::get_termino_by_tipo($component_tipo,null,true);
+							// 	$component_global_dato->info->model= $component_model_name;
+							$inf = RecordObj_dd::get_termino_by_tipo($component_tipo,null,true) .' ['.$component_model_name.']';
+							$component_global_dato->inf = $inf;
 
+						$component_global_dato->dato = new stdClass();
+						// $component_global_dato->valor		= new stdClass();
+						// $component_global_dato->valor_list	= new stdClass();
+						// $component_global_dato->dataframe	= new stdClass();
+			}
 
-					$component_global_dato->dato = new stdClass();
-					// $component_global_dato->valor		= new stdClass();
-					// $component_global_dato->valor_list	= new stdClass();
-					// $component_global_dato->dataframe	= new stdClass();
-		}
-
-		# DATO OBJ
+		// component_lang
 			if (!isset($component_global_dato->dato->{$component_lang})) {
 				$component_global_dato->dato->{$component_lang} = new stdClass();
 			}
 
-		#
-		# DATO : We update the data in the current language
+		// dato_unchanged : We update the data in the current language
 			$component_dato = $component_obj->get_dato_unchanged(); ## IMPORTANT !!!!! (NO usar get_dato() aquí ya que puede cambiar el tipo fijo establecido por set_dato)
 				$component_global_dato->dato->{$component_lang} = $component_dato;
 
-
-
-		# DATAFRAME
+		// dataframe
 			$dataframe = $component_obj->get_dataframe();
 			if (isset($component_global_dato->dataframe)) {
 				// already exists property dataframe. Add always
@@ -555,9 +557,7 @@ class section extends common {
 				}
 			}
 
-
-		#
-		# REPLACE COMPONENT PORTION OF GLOBAL OBJECT :  We update the entire component in the global object
+		// replace component portion of global object :  we update the entire component in the global object
 			if (!isset($dato->components->{$component_tipo})) {
 				if (!isset($dato->components)) {
 					$dato->components = new stdClass();
@@ -820,7 +820,6 @@ class section extends common {
 					return null;
 				}
 
-			##
 			# COUNTER : Counter table. Default is ¡matrix_counter¡
 			# Prepare the id of the counter based on the table we are working on (matrix, matrix_dd, etc.)
 			# By default it will be 'matrix_counter', but if our section table is different from 'matrix' we will use a counter table distinct
@@ -845,7 +844,6 @@ class section extends common {
 					$this->section_id = (int)$section_id_counter;
 				}
 
-			##
 			# SECTION JSON DATA
 			# Store section dato
 
@@ -2638,7 +2636,7 @@ class section extends common {
 		if (isset($locator->component_tipo)) 		$ar_properties[] = 'component_tipo';
 		if (isset($locator->section_top_tipo))		$ar_properties[] = 'section_top_tipo';
 		if (isset($locator->section_top_id)) 		$ar_properties[] = 'section_top_id';*/
-		$object_exists = locator::in_array_locator( $locator, $ar_locator=$relations);
+		$object_exists = locator::in_array_locator( $locator, $relations);
 		if ($object_exists===false) {
 
 			array_push($relations, $locator);
