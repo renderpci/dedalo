@@ -669,7 +669,6 @@ class component_filter extends component_relation_common {
 		// section. inject alrady calculated data to the section to avoid reconnect to database
 			$section = section::get_instance($section_id, $section_tipo);
 			$section->set_dato($datos);
-			$section->set_bl_loaded_matrix_data(true);
 
 		// name
 			$model_name	= RecordObj_dd::get_modelo_name_by_tipo($name_tipo,true);
