@@ -43,21 +43,83 @@ class babel_transcriber {
 		return (object)$response;
 	}//end transcribe
 
+
+	/**
+	* CHECK_TRANSCRIPTION
+	* launch execution of sh file to check status of babel process
+	* @return object $response
+	*/
+	public function check_transcription($pid) : object {
+
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->msg		= 'Error. Request failed';
 
-		// Options
-			$url			= $options->url;
-			$key			= $options->key		?? null;
-			$lang			= $options->lang	?? null;
-			$av_url			= $options->av_url;
-			$engine			= $options->engine;
-			$user_id		= $options->user_id;
-			$entity_name	= $options->entity_name;
+		// process_file
+			$process_file	= DEDALO_CORE_PATH.'/base/process_runner.php';
+
+		// sh_data
+			$sh_data = [
+				'server' => [
+					'HTTP_HOST'		=> $_SERVER['HTTP_HOST'],
+					'REQUEST_URI'	=> $_SERVER['REQUEST_URI'],
+					'SERVER_NAME'	=> $_SERVER['SERVER_NAME']
+				],
+				'session_id'	=> session_id(),
+				'user_id'		=> $this->user_id
+			];
+
+		// additional data
+			$params = (object)[
+				'key'				=> $this->key,
+				'url'				=> $this->url,
+				'lang'				=> $this->lang,
+				'av_url'			=> $this->av_url,
+				'engine'			=> $this->engine,
+				'user_id'			=> $this->user_id,
+				'entity_name'		=> $this->entity_name,
+				'transcription_ddo'	=> $this->transcription_ddo,
+				'pid'				=> $pid
+			];
+			$data = [
+				'class_name'	=> 'babel_transcriber',
+				'method_name'	=> 'check_transcriber_status',
+				'file'			=> __FILE__,
+				'params'		=> $params
+			];
+			foreach ($data as $key => $value) {
+				$sh_data[$key] = $value;
+			}
+
+		// server_vars
+			$server_vars = json_encode($sh_data, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
+
+		// output. $output = '> /dev/null &';
+			// $output = '> /dev/null &';
+
+		// command
+			$php_command = PHP_BIN_PATH ." $process_file '$server_vars'";
+
+		// final command
+			$command = 'nohup '.$php_command.' > /dev/null 2>&1 & echo $!';
+
+		// debug
+			debug_log(__METHOD__.
+				" ------> COMMAND CHECK_TRANSCRIPTION: $process_file --------------------------------------------------------:"
+				.PHP_EOL.PHP_EOL. $command .PHP_EOL,
+				logger::DEBUG
+			);
+
+		// exec command
+			exec($command);
+
+		// response
+			$response->result	= true;
+			$response->msg		= 'OK, command executing';
 
 
-		// http query vars
+		return $response;
+	}//end check_transcription
 			$fields = [
 				'key'			=> $key,
 				'lang'			=> $lang,
