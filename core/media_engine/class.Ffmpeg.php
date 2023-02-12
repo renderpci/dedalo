@@ -211,17 +211,25 @@ final class Ffmpeg {
 	* @param $setting
 	*	ffmpeg_settings to apply like '404_pal_16x9' (in folder /media_engine/class/ffmpeg_settings)
 	*
-	* @return string|null $av_alternate_command_exc
-	*	Terminal command response
+	* @return object $response
 	*/
-	public function create_av_alternate(AVObj $AVObj, string $setting) : ?string {
+	public function create_av_alternate(AVObj $AVObj, string $setting) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
 
 		// load ar_settings
 			$this->ar_settings = $this->get_ar_settings();
 
 		// verify setting exists
 			if( !in_array($setting, $this->ar_settings) ) {
-				die("Error: setting: '$setting' not exits! (create_av_alternate). Please contact with your admin to create");
+				// die("Error: setting: '$setting' not exits! (create_av_alternate). Please contact with your admin to create");
+				debug_log(__METHOD__.
+					" Error: setting: '$setting' not exits! (create_av_alternate). Please contact with your admin to create ".to_string(),
+					logger::DEBUG
+				);
+				return $response;
 			}
 
 		// import vars from settings file
@@ -376,7 +384,8 @@ final class Ffmpeg {
 				case ($source_with_audio===false):
 					#
 					# SOURCE NOT CONTAINS ANY AUDIO TRACK
-					return null;
+					$response->msg .= 'Source does not contains audio';
+					return $response;
 					break;
 
 				default:
@@ -459,24 +468,25 @@ final class Ffmpeg {
 		}
 		#$av_alternate_command_exc = exec_::exec_command($command);
 
-		# SH FILE
-		#if(is_resource($prgfile)) chmod($prgfile, 0755);
-		$fp = fopen($prgfile, "w");
-		fwrite($fp, "#!/bin/bash\n");
-		fwrite($fp, "$command\n");
-		fclose($fp);
+		// SH FILE
+			$fp = fopen($prgfile, "w");
+			fwrite($fp, "#!/bin/bash\n");
+			fwrite($fp, "$command\n");
+			fclose($fp);
+			// check the file and permissions
+			if(file_exists($prgfile)) {
+				chmod($prgfile, 0755);
+			}else{
+				throw new Exception("Error Processing Media. Script file not exists or is not accessible", 1);
+				#trigger_error("Error Processing Media. Script file not exists or is not accessible");
+			}
 
-		if(file_exists($prgfile)) {
-			chmod($prgfile, 0755);
-		}else{
-			throw new Exception("Error Processing Media. Script file not exists or is not accessible", 1);
-			#trigger_error("Error Processing Media. Script file not exists or is not accessible");
-		}
-
-		$av_alternate_command_exc = exec_::exec_sh_file($prgfile);
+		$response = new stdClass();
+			$response->command	= $command;
+			$response->prgfile	= $prgfile;
 
 
-		return $av_alternate_command_exc;
+		return $response;
 	}//end create_av_alternate
 
 
