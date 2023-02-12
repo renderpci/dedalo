@@ -154,6 +154,7 @@ class babel_transcriber {
 		return $response;
 	}//end check_transcription
 
+
 	/**
 	* CHECK_TRANSCRIBER_STATUS
 	* Ask to babel server if the process is working or was finished
@@ -227,11 +228,34 @@ class babel_transcriber {
 
 
 
+	/**
+	* PROCESS_FILE
+	*
+	* @param object $options
+	* 	Returns last line on success or false on failure.
+	*/
+	public static function process_file(object $options) {
 
-		return (object)$response;
-	}//end transcribe
+		$lang				= $options->lang;
+		$transcription_ddo	= $options->transcription_ddo;
+		$transcription_data	= $options->transcription_data;
+
+		$model = RecordObj_dd::get_modelo_name_by_tipo($transcription_ddo->component_tipo);
+
+		$component_transcription = component_common::get_instance(
+			$model, // string model
+			$transcription_ddo->component_tipo, // string tipo
+			$transcription_ddo->section_id, // string section_id
+			'list', // string modo
+			$lang, // string lang
+			$transcription_ddo->section_tipo // string section_tipo
+		);
 
 
+		$component_transcription->set_dato(json_encode($transcription_data));
+		$component_transcription->Save();
+
+	}//end process_file
 
 
 }//end class babel
