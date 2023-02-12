@@ -8,6 +8,36 @@ class babel_transcriber {
 
 
 
+	protected $url; // string babel engine uri
+	protected $key; // string
+	protected $lang; // string dedalo lang
+	protected $lang_tld2; // string tld2
+	protected $av_url; // string full absolute
+	protected $engine; // string babel_transcription
+	protected $user_id; //int
+	protected $entity_name; // string
+	protected $transcription_ddo; // object
+
+
+
+	/**
+	* __CONSTRUCT
+	* @param object $options
+	*/
+	public function __construct(object $options) {
+
+		// options
+		$this->url					= $options->url;
+		$this->key					= $options->key		?? null;
+		$this->lang					= $options->lang	?? null;
+		$this->lang_tld2			= $options->lang_tld2	?? null;
+		$this->av_url				= $options->av_url;
+		$this->engine				= $options->engine;
+		$this->user_id				= $options->user_id;
+		$this->entity_name			= $options->entity_name;
+		$this->transcription_ddo	= $options->transcription_ddo;
+	}//end __construct
+
 	/**
 	* transcribe
 	* Connect with BABEL API across CURL to get transcription result as text
