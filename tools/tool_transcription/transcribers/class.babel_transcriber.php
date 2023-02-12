@@ -14,7 +14,34 @@ class babel_transcriber {
 	* @param object $request_options
 	* @return object $response
 	*/
-	public static function transcribe(object $options): object {
+	public function transcribe(): object {
+
+		// http query vars
+			$fields = [
+				'key'			=> $this->key,
+				'lang_tld2'		=> $this->lang_tld2,
+				'av_url'		=> $this->av_url,
+				'engine'		=> $this->engine,
+				'method_name'	=> 'transcribe',
+				'user_id'		=> $this->user_id,
+				'entity_name'	=> $this->entity_name
+			];
+
+		// curl request (core functions)
+			$request_response = curl_request((object)[
+				'url'			=> $this->url,
+				'postfields'	=> $fields,
+				'header'		=> false
+			]);
+
+			$response = json_decode($request_response->result);
+
+		// result
+			debug_log(__METHOD__." babel:transcribe ----> raw_result ".PHP_EOL.to_string($response), logger::DEBUG);
+
+
+		return (object)$response;
+	}//end transcribe
 
 		$response = new stdClass();
 			$response->result	= false;
