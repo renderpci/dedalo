@@ -166,13 +166,12 @@ class relation_list extends common {
 			$datos = $current_record->datos ?? null;
 			if (!is_null($datos)) {
 				$section->set_dato($datos);
-				$section->set_bl_loaded_matrix_data(true);
 			}
 
 		$current_id = new stdClass;
-					$current_id->section_tipo 		= $section_tipo;
-					$current_id->section_id 		= $section_id;
-					$current_id->component_tipo		= 'id';
+			$current_id->section_tipo	= $section_tipo;
+			$current_id->section_id		= $section_id;
+			$current_id->component_tipo	= 'id';
 
 		$data[] = $current_id;
 

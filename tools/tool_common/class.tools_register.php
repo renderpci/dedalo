@@ -8,9 +8,9 @@ class tools_register {
 
 
 
-	static $section_tools_tipo				= 'dd1324'; // Tools register section
+	static $section_registered_tools_tipo	= 'dd1324'; // Tools register section
 	static $simple_tool_obj_component_tipo	= 'dd1353';
-	static $tipo_tool_name					= 'dd1326';
+	static $tipo_tool_name					= 'dd1326'; // tool name like 'tool_transcription'
 	static $tipo_tool_label					= 'dd799';
 	static $tipo_ontology					= 'dd1334';
 	static $tipo_version					= 'dd1327';
@@ -66,15 +66,15 @@ class tools_register {
 
 				// info object (JSON encoded)
 					if( !$info_object = json_decode( file_get_contents($info_file) ) ){
-						debug_log(__METHOD__." ERROR. Wrong file register.json . Is not json valid file ".to_string(), logger::ERROR);
+						debug_log(__METHOD__." ERROR. Wrong file register.json . Is not JSON valid file ".to_string(), logger::ERROR);
 						continue;
 					}
 
 					$new_info_object = clone $info_object;
 
 				// ontology from info object
-					$current_ontology = (isset($new_info_object->components->{$tipo_ontology}->dato->{'lg-nolan'}))
-						? $new_info_object->components->{$tipo_ontology}->dato->{'lg-nolan'}
+					$current_ontology = (isset($new_info_object->components->{$tipo_ontology}->dato->{DEDALO_DATA_NOLAN}))
+						? $new_info_object->components->{$tipo_ontology}->dato->{DEDALO_DATA_NOLAN}
 						: null;
 
 					if(!empty($current_ontology)){
@@ -89,7 +89,7 @@ class tools_register {
 						$ar_ontologies[] = $new_ontology;
 
 						// update ontology
-						$new_info_object->components->{$tipo_ontology}->dato->{'lg-nolan'} = $new_ontology;
+						$new_info_object->components->{$tipo_ontology}->dato->{DEDALO_DATA_NOLAN} = $new_ontology;
 
 					}else{
 
@@ -137,11 +137,11 @@ class tools_register {
 			// section
 			if (!empty($info_objects_parsed)) {
 
-				// Clean. remove tools section records in the database
+				// Clean. remove tools section records in the database. (!) Removed to allow recycle records
 					// tools_register::clean_section_tools_data();
 
 				// import record (section tool) in db matrix_tools
-					$section_id_counter = 1; // first section_id to use
+					// $section_id_counter = 1; // first section_id to use
 					foreach ($info_objects_parsed as $current_tool_section_data) {
 
 						// section save raw data
@@ -152,27 +152,31 @@ class tools_register {
 								debug_log(__METHOD__." Ignored tool ! ".to_string($current_tool_section_data->section_id), logger::ERROR);
 								continue;
 							}
-
 							if (empty($tool_name)) {
 								debug_log(__METHOD__." Error. tool name is empty ! ".to_string($current_tool_section_data->section_id), logger::ERROR);
 								continue;
 							}
-							$tool_found			= self::get_tool_by_name($tool_name, self::$section_tools_tipo); // return section record raw data or null
+
+						// look for already existing tools
+							$tool_found			= self::get_tool_by_name($tool_name, self::$section_registered_tools_tipo); // return section record raw data or null
 							$current_section_id	= !empty($tool_found->section_id)
 								? (int)$tool_found->section_id
 								: null;
-							$section = section::get_instance(
-								$current_section_id, // null if not found existing by name
-								self::$section_tools_tipo, // dd1324
-								'edit',
-								true // cache (!) it's important set true to prevent re-create later when a component saves)
-							);
 
-							// change section data
-								$current_tool_section_data->section_tipo = self::$section_tools_tipo; // Set dd1324 instead 'dd1340'
+							// section
+								$section = section::get_instance(
+									$current_section_id, // null if not found existing by name
+									self::$section_registered_tools_tipo, // dd1324
+									'edit',
+									true // cache (!) it's important set true to prevent re-create later when a component saves)
+								);
+
+							// change section data. Set dd1324 (register) instead 'dd1340' (development)
+								$current_tool_section_data->section_tipo	= self::$section_registered_tools_tipo;
+								$current_tool_section_data->section_id		= $current_section_id;
 
 							// section save
-								$section->set_dato($current_tool_section_data);
+								$section->set_dato( $current_tool_section_data );
 								$created_section_id = $section->Save();
 
 						// info_file_processed. Added info
@@ -187,8 +191,11 @@ class tools_register {
 						// save new record with serialized section_id
 							// $created_section_id = tools_register::import_info_object($current_tool_section_data, $section_id_counter);
 
-						// build tool_object (simple)
-							$tool_object = tools_register::create_simple_tool_object(self::$section_tools_tipo, $created_section_id);
+						// build tool_object (simple). Collect data from created section to create a imple_tool_object
+							$tool_object = tools_register::create_simple_tool_object(
+								$section->get_tipo(), // section_tools_tipo
+								$section->get_section_id()
+							);
 
 						// tool_obj . Set and save updated section
 							$component_tipo	= self::$simple_tool_obj_component_tipo; // 'dd1353'; // component_json (Simple tool object)
@@ -199,7 +206,7 @@ class tools_register {
 								$created_section_id,
 								'list',
 								DEDALO_DATA_NOLAN,
-								self::$section_tools_tipo,
+								self::$section_registered_tools_tipo,
 								true // cache
 							);
 							$component->set_dato([$tool_object]);
@@ -568,13 +575,13 @@ class tools_register {
 		// 	$info_object->section_id = $section_id_counter;
 		// 	$info_object->label 	 = 'Tools register';
 		// 	$datos 	 				 = json_handler::encode($info_object);
-		// 	$section_tools_tipo 	 = tools_register::$section_tools_tipo; //  'dd1324';
+		// 	$section_registered_tools_tipo 	 = tools_register::$section_registered_tools_tipo; //  'dd1324';
 
 		// 	$strQuery = 'INSERT INTO "matrix_tools" (section_id, section_tipo, datos) VALUES ($1, $2, $3) RETURNING section_id';
-		// 	$result   = pg_query_params(DBi::_getConnection(), $strQuery, array( $section_id_counter, $section_tools_tipo, $datos ));
+		// 	$result   = pg_query_params(DBi::_getConnection(), $strQuery, array( $section_id_counter, $section_registered_tools_tipo, $datos ));
 
 		// 	// update counter on every imported record
-		// 	counter::update_counter($section_tools_tipo, $matrix_table='matrix_counter', $current_value=$section_id_counter);
+		// 	counter::update_counter($section_registered_tools_tipo, $matrix_table='matrix_counter', $current_value=$section_id_counter);
 
 		// 	// if all is ok, update counter value
 		// 	$section_id_counter++;
@@ -593,12 +600,12 @@ class tools_register {
 		// private static function clean_section_tools_data() {
 
 		// 	// section
-		// 		$section_tools_tipo 	= 'dd1324';
-		// 		$sql_query 				= 'DELETE FROM "matrix_tools" WHERE "section_tipo" = \''.$section_tools_tipo.'\';';
+		// 		$section_registered_tools_tipo 	= 'dd1324';
+		// 		$sql_query 				= 'DELETE FROM "matrix_tools" WHERE "section_tipo" = \''.$section_registered_tools_tipo.'\';';
 		// 		$result_delete_section 	= pg_query(DBi::_getConnection(), $sql_query);
 
 		// 		// reset counter
-		// 		$sql_reset_counter 	  	= 'DELETE FROM "matrix_counter" WHERE "tipo" = \''.$section_tools_tipo.'\';';
+		// 		$sql_reset_counter 	  	= 'DELETE FROM "matrix_counter" WHERE "tipo" = \''.$section_registered_tools_tipo.'\';';
 		// 		$result_reset_counter 	= pg_query(DBi::_getConnection(), $sql_reset_counter);
 
 		// 	return true;
@@ -659,7 +666,7 @@ class tools_register {
 		// empty result case
 			if(empty($tool_by_name)) {
 
-				$section_tools_reg_tipo		= self::$section_tools_tipo; // 'dd1324';
+				$section_tools_reg_tipo		= self::$section_registered_tools_tipo; // 'dd1324';
 				$component_tipo_tool_name	= self::$tipo_tool_name; // 'dd1326';
 				// get the register tool
 				$reg_sqo = json_decode('{

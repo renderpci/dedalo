@@ -2159,13 +2159,12 @@ class component_relation_common extends component_common {
 								$datos = $current_record->datos ?? null;
 								if (!is_null($datos)) {
 									$section->set_dato($datos);
-									$section->set_bl_loaded_matrix_data(true);
 								}
 								$component = component_common::get_instance(
 									$model_name,
 									$current_component_tipo,
 									$current_record->section_id,
-									$mode='list',
+									'list', // string mode
 									$current_lang,// $lang=DEDALO_DATA_LANG,
 									$current_record->section_tipo
 								);

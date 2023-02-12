@@ -7,6 +7,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import * as instances from '../../common/js/instances.js'
+	// import {pause} from '../../common/js/utils/index.js'
 	// import {when_in_viewport} from '../../common/js/events.js'
 
 
@@ -56,21 +57,21 @@ view_default_edit_text_area.render = async function(self, options) {
 		// set pointers
 		wrapper.content_data = content_data
 
-	// label custom style based on activate/deactivate events
-		event_manager.subscribe('activate_component', fn_activate_component)
-		function fn_activate_component(component) {
-			if (component.id===self.id) {
-				wrapper.label.classList.add('move_top')
-			}
-		}
-		event_manager.subscribe('deactivate_component', fn_deactivate_component)
-		function fn_deactivate_component(component) {
-			if (component.id===self.id) {
-				if(wrapper.label.classList.contains('move_top')) {
-					wrapper.label.classList.remove('move_top')
-				}
-			}
-		}
+	// label custom style based on activate/deactivate events. (!) Deactivated 11-02-2023. Moved to inspector)
+		// event_manager.subscribe('activate_component', fn_activate_component)
+		// function fn_activate_component(component) {
+		// 	if (component.id===self.id) {
+		// 		wrapper.label.classList.add('move_top')
+		// 	}
+		// }
+		// event_manager.subscribe('deactivate_component', fn_deactivate_component)
+		// function fn_deactivate_component(component) {
+		// 	if (component.id===self.id) {
+		// 		if(wrapper.label.classList.contains('move_top')) {
+		// 			wrapper.label.classList.remove('move_top')
+		// 		}
+		// 	}
+		// }
 
 	// fix editor height. This guarantees that content_data grow to the maximum possible height
 		// when_in_viewport(wrapper, ()=> {
@@ -1103,27 +1104,29 @@ const render_note = async function(options) {
 		// replace the ' to " stored in the html data to JSON "
 		const data				= data_string.replace(/\'/g, '"')
 		const locator			= JSON.parse(data)
-
 		const note_section_id	= locator.section_id
 		const note_section_tipo	= locator.section_tipo
 
-	// section
-		// create the instance of the note section, it will render without inspector or filter and with edit mode
-		const instance_options = {
-			model			: 'section',
-			tipo			: note_section_tipo,
-			section_tipo	: note_section_tipo,
-			section_id		: note_section_id,
-			mode			: 'edit',
-			lang			: self.lang,
-			caller			: self,
-			inspector		: false,
-			filter			: false
+	// note section
+		const get_note_section = async function(){
+			// create the instance of the note section, it will render without inspector or filter and with edit mode
+			const instance_options = {
+				model			: 'section',
+				tipo			: note_section_tipo,
+				section_tipo	: note_section_tipo,
+				section_id		: note_section_id,
+				mode			: 'edit',
+				lang			: self.lang,
+				caller			: self,
+				inspector		: false,
+				filter			: false
+			}
+			// get the instance, built and render
+			const note_section		=	await instances.get_instance(instance_options)
+										await note_section.build(true)
+
+			return note_section
 		}
-		// get the instance, built and render
-		const note_section		=	await instances.get_instance(instance_options)
-									await note_section.build(true)
-		const note_section_node	=	await note_section.render()
 
 		// subscribe to the change publication of the component_publication of the section node
 		// when the component_publication change it will change the tag note state, showing if the note is private or public
@@ -1167,16 +1170,11 @@ const render_note = async function(options) {
 			element_type	: 'div',
 			class_name		: 'header'
 		})
-		// header_label. created label with Title case (first letter to uppercase)
-			// const created_label		= get_label.created.replace(/\b(\S)/, function(t) { return t.toUpperCase() }) || 'Create'
-			const created_label		= get_label.created || 'created'
-			const by_user_label		= get_label.by_user || 'by user'
-			const created_by_user	= note_section.data.value[0].created_by_user_name || 'undefined'
-			const header_label		= (get_label.note || 'Note') + ' ' + created_label+' '+ by_user_label + ': '+created_by_user
-			ui.create_dom_element({
+		// header_label_node
+			const header_label_node = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'label',
-				inner_html		: header_label,
+				inner_html		: (get_label.note || 'Note') + ' ' + note_section_id,
 				parent			: header
 			})
 
@@ -1185,30 +1183,23 @@ const render_note = async function(options) {
 			element_type	: 'div',
 			class_name		: 'body'
 		})
-		body.appendChild(note_section_node)
 
 	// footer
 		const footer = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'footer content distribute'
 		})
-
 		// section info
-			const date_label			= get_label.date.toLowerCase() || 'date'
-			const created_date			= note_section.data.value[0].created_date || ''
-			const created_date_label	= created_label + ' ' + date_label + ': '+created_date
-			// section_info
-			ui.create_dom_element({
+			const section_info = ui.create_dom_element({
 				element_type	: 'span',
-				class_name		: 'section_info',
-				inner_html		: created_date_label,
+				class_name		: 'section_info hide',
+				inner_html		: 'Loading',
 				parent			: footer
 			})
-
 		// button remove
 			const button_remove = ui.create_dom_element({
 				element_type	: 'button',
-				class_name		: 'danger remove',
+				class_name		: 'danger remove hide',
 				text_content	: get_label.delete || 'Delete',
 				parent			: footer
 			})
@@ -1263,13 +1254,46 @@ const render_note = async function(options) {
 			footer	: footer
 			// size	: 'normal' // string size big|normal|small
 		})
-		// when the modal is closed the section instance of the note need to be destroyed with all events and components
-		modal.on_close = () => {
-			note_section.destroy(true,true,true)
-		}
 		// resize modal content
 		const modal_content = modal.get_modal_content()
-			  modal_content.style.width = '600px'
+				modal_content.style.width	= '600px'
+				modal_content.style.height	= '765px';
+
+	// load note section and render. On finish, add to body node and fill header and footer info
+		ui.load_item_with_spinner({
+			container : body,
+			callback : async function() {
+
+				const note_section		= await get_note_section()
+				const note_section_node	= await note_section.render()
+				body.appendChild(note_section_node)
+
+				// on_close modal. when the modal is closed the section instance of the note need to be destroyed with all events and components
+					modal.on_close = () => {
+						note_section.destroy(true,true,true)
+					}
+
+				if (!note_section.data.value) {
+					section_info.remove()
+					button_remove.remove()
+					return false
+				}
+
+				// header_label. Created label with Title case (first letter to uppercase)
+					const created_label			= get_label.created || 'created'
+					const by_user_label			= get_label.by_user || 'by user'
+					const created_by_user		= note_section.data.value[0].created_by_user_name || 'undefined'
+					const header_label			= (get_label.note || 'Note') + ' ' + created_label +' '+ by_user_label + ': ' + created_by_user
+					header_label_node.innerHTML	= header_label
+
+				// section info (bottom)
+					const date_label			= get_label.date.toLowerCase() || 'date'
+					const created_date			= note_section.data.value[0].created_date || ''
+					section_info.innerHTML		= created_label + ' ' + date_label + ': '+ created_date
+					section_info.classList.remove('hide')
+					button_remove.classList.remove('hide')
+			}
+		})
 
 
 	return true

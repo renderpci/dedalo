@@ -50,14 +50,14 @@ class area_development extends area_common {
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->parent	= $this->tipo;
-				$item->label	= label::get_label('make_backup') || 'Make backup';
+				$item->label	= label::get_label('make_backup') ?? 'Make backup';
 				$item->info		= null;
 				$file_name		= date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $_SESSION['dedalo']['auth']['user_id'] .'_forced_dbv' . implode('-', get_current_version_in_db()).'.custom.backup';
 				$item->body		= 'Force to make a full backup now like:<br><br><div>'.DEDALO_BACKUP_PATH_DB.'/<br>'.$file_name.'</div>';
 				$item->run[]	= (object)[
 					'fn'		=> 'init_form',
 					'options'	=> (object)[
-						'confirm_text' => label::get_label('sure') || 'Sure?'
+						'confirm_text' => label::get_label('sure') ?? 'Sure?'
 					]
 				];
 				$item->trigger 	= (object)[
@@ -89,7 +89,7 @@ class area_development extends area_common {
 								'mandatory'	=> true
 							]
 						],
-						'confirm_text' => label::get_label('sure') || 'Sure?'
+						'confirm_text' => label::get_label('sure') ?? 'Sure?'
 					]
 				];
 				$item->trigger 	= (object)[
@@ -161,7 +161,7 @@ class area_development extends area_common {
 				$file_path		= 'Target: '.(defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : STRUCTURE_DOWNLOAD_DIR) . '/' . $file_name;
 				// $file_url		= DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . DEDALO_LIB_BASE_URL . '/backup/backups_structure/srt_download' . '/' . $file_name;
 				$item->body		= $file_path;
-				$confirm_text	= label::get_label('sure') || 'Sure?';
+				$confirm_text	= label::get_label('sure') ?? 'Sure?';
 				$item->run[]	= (object)[
 					'fn'		=> 'init_form',
 					'options'	=> (object)[
@@ -193,7 +193,7 @@ class area_development extends area_common {
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->parent	= $this->tipo;
-				$item->label	= label::get_label('import_json_ontology') || 'Import JSON ontology';
+				$item->label	= label::get_label('import_json_ontology') ?? 'Import JSON ontology';
 				$item->info		= null;
 
 				if (defined('ONTOLOGY_DB')) {
@@ -246,17 +246,14 @@ class area_development extends area_common {
 						// skip tool common
 						if ($tool_name==='tool_common') return null;
 						// check file register is ready
-						if(!$register_contents = file_get_contents($path.'/register.json')) {
+						$register_contents = file_get_contents($path.'/register.json');
+						if($register_contents===false) {
 							debug_log(__METHOD__." Invalid register.json file from tool ".to_string($tool_name), logger::ERROR);
 							$tool_name .= ' <danger>(!) Invalid register.json file from tool</danger>';
 						}else{
 							// compare register.json file. WORKING HERE (!)
-							$ar_tool_info	= tool_common::get_client_registered_tools([$tool_name]);
-							if(isset($ar_tool_info[0])) {
-								$tool_info = $ar_tool_info[0];
-								// dump($tool_info, ' tool_info ++ '.to_string($tool_name));
-								// dump($register_contents, ' register_contents ++ '.to_string());
-							}else{
+							$ar_tool_info = tool_common::get_client_registered_tools([$tool_name]);
+							if(!isset($ar_tool_info[0])) {
 								debug_log(__METHOD__." Tool '$tool_name' not found in client_registered_tools.".to_string(), logger::WARNING);
 								$tool_name .= ' <danger>(!) Not registered tool</danger>';
 							}
@@ -270,7 +267,7 @@ class area_development extends area_common {
 				$item->run[]	= (object)[
 					'fn' 	  => 'init_form',
 					'options' => (object)[
-						'confirm_text' => label::get_label('sure') || 'Sure?'
+						'confirm_text' => label::get_label('sure') ?? 'Sure?'
 					]
 				];
 				$item->trigger 	= (object)[
@@ -293,7 +290,7 @@ class area_development extends area_common {
 				$item->run[]	= (object)[
 					'fn'		=> 'init_form',
 					'options'	=> (object)[
-						'confirm_text' => label::get_label('sure') || 'Sure?'
+						'confirm_text' => label::get_label('sure') ?? 'Sure?'
 					]
 				];
 				$item->trigger 	= (object)[
@@ -316,7 +313,7 @@ class area_development extends area_common {
 				$item->run[]	= (object)[
 					'fn'		=> 'init_form',
 					'options'	=> (object)[
-						'confirm_text' => label::get_label('sure') || 'Sure?'
+						'confirm_text' => label::get_label('sure') ?? 'Sure?'
 					]
 				];
 				$item->trigger 	= (object)[
@@ -382,7 +379,7 @@ class area_development extends area_common {
 					$item->run[]	= (object)[
 						'fn' 	  => 'init_form',
 						'options' => (object)[
-							'confirm_text' => label::get_label('sure') || 'Sure?'
+							'confirm_text' => label::get_label('sure') ?? 'Sure?'
 						]
 					];
 					$item->trigger 	= (object)[
@@ -526,7 +523,7 @@ class area_development extends area_common {
 					'fn' 	  => 'init_form',
 					'options' => (object)[
 						'submit_label' => 'Create new empty test record',
-						'confirm_text' => label::get_label('sure') || 'Sure?'
+						'confirm_text' => label::get_label('sure') ?? 'Sure?'
 					]
 				];
 				$item->trigger 	= (object)[

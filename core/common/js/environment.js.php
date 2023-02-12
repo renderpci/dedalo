@@ -185,8 +185,15 @@ echo implode(',', array_map(function ($v, $k) {
 	return sprintf('%s=%s', $k, json_encode($v, JSON_UNESCAPED_SLASHES));
 }, $plain_vars, array_keys($plain_vars))) .';'. PHP_EOL;
 // Lang labels
+$lang_path = '/common/js/lang/'.DEDALO_APPLICATION_LANG.'.js';
 echo 'const get_label=';
-include dirname(__FILE__) . '/lang/'.DEDALO_APPLICATION_LANG.'.js';
+if (!include DEDALO_CORE_PATH . $lang_path) {
+	$msg = 'Invalid lang file: ' . $lang_path;
+	debug_log(__METHOD__.' '.$msg, logger::ERROR);
+	echo '{
+		"invalid_lang_file" : "Error on get current lang file. '.$msg.'"
+	}';
+}
 // json_elements_data array
 // echo ';'.PHP_EOL.js::get_json_elements_data();
 // debug_log('exec_time: ' .exec_time_unit($global_start_time,'ms').' ms', logger::DEBUG);

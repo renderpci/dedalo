@@ -219,6 +219,8 @@ class menu extends common {
 
 	/**
 	* GET_STRUCTURE_CONTEXT
+	* @param int $permissions = 1
+	* @param bool $add_request_config = false
 	* @return dd_object $dd_object
 	*/
 	public function get_structure_context(int $permissions=1, bool $add_request_config=false) : dd_object {
@@ -233,7 +235,6 @@ class menu extends common {
 		// tools
 			$tools		= [];
 			$tools_list	= $this->get_tools();
-
 			foreach ($tools_list as $tool_object) {
 
 				$properties		= $tool_object->properties;

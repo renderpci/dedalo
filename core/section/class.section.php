@@ -73,6 +73,8 @@ class section extends common {
 		public $source;
 		public $caller_dataframe;
 
+		protected $JSON_RecordObj_matrix;
+
 
 
 	# DIFFUSION INFO
@@ -122,7 +124,7 @@ class section extends common {
 				}
 
 			# key for cache
-			$key = $section_id .'_'. $tipo.'_'.$mode;
+			$key = $section_id .'_'. $tipo .'_'. $mode;
 
 			// $max_cache_instances = 300*3; // Default 300
 			// $cache_slice_on 	 = 100*3; // Default 100
@@ -140,12 +142,15 @@ class section extends common {
 			// 	time_nanosleep(0, 2000000); // 02 ms
 			// }
 
-			# FIND CURRENT INSTANCE IN CACHE
+		// find current instance in cache
 			if ( !array_key_exists($key, (array)self::$ar_section_instances) ) {
 				self::$ar_section_instances[$key] = new section($section_id, $tipo, $mode);
+			}else{
+				// debug_log(__METHOD__." Getting section instance from cache ".to_string($key), logger::ERROR);
 			}
 
-			return self::$ar_section_instances[$key];
+
+		return self::$ar_section_instances[$key];
 	}//end get_instance
 
 
@@ -195,6 +200,39 @@ class section extends common {
 
 
 	/**
+	* SET_BL_LOADED_MATRIX_DATA
+	* Pass bl_loaded_matrix_data to own $JSON_RecordObj_matrix instance
+	* only when value is 'false' to force reload data from DDBB
+	* When value is 'true' is ignored because the section manages this value
+	* on set_dato
+	* @see $this->set_dato()
+	* @param bool $value
+	* @return bool
+	*/
+	public function set_bl_loaded_matrix_data(bool $value) {
+
+		if ($value===false) {
+
+			if (empty($this->section_id)) {
+				return false;
+			}
+
+			$matrix_table			= common::get_matrix_table_from_tipo($this->tipo);
+			$JSON_RecordObj_matrix	= isset($this->JSON_RecordObj_matrix)
+				? $this->JSON_RecordObj_matrix
+				: JSON_RecordObj_matrix::get_instance(
+					$matrix_table,
+					(int)$this->section_id, // int section_id
+					$this->tipo // string section tipo
+				);
+			$this->JSON_RecordObj_matrix = $JSON_RecordObj_matrix;
+			$JSON_RecordObj_matrix->set_bl_loaded_matrix_data(false);
+		}
+	}//end set_bl_loaded_matrix_data
+
+
+
+	/**
 	* GET DATO
 	* @return object $dato
 	*/
@@ -211,17 +249,17 @@ class section extends common {
 				throw new Exception("Error Processing Request. get_component_data of section section_id <1 is not allowed (section_id:'$this->section_id')", 1);
 			}
 
-		// save_handler. If section_id have a temporal string the save handier will be 'session' the section will save into the memory NOT to database
+		// save_handler session case
+			// If section_id have a temporal string, the save handier will be 'session'
+			// the section will be saved in memory, NOT in the database and you will get the data from there
 			if( strpos($this->section_id, DEDALO_SECTION_ID_TEMP)!==false ){
 				$this->save_handler = 'session';
 			}
-
-		// save_handler session
 			// Sometimes we need use section as temporal element without save real data to database. Is this case
 			// data is saved to session as temporal data and can be recovered from $_SESSION['dedalo']['section_temp_data'] using key '$this->tipo.'_'.$this->section_id'
 			if (isset($this->save_handler) && $this->save_handler==='session') {
 				if (!isset($this->dato)) {
-					$temp_data_uid = $this->tipo.'_'.$this->section_id;
+					$temp_data_uid = $this->tipo .'_'. $this->section_id;
 					# Fix dato as object
 					$this->dato = isset($_SESSION['dedalo']['section_temp_data'][$temp_data_uid])
 						? clone $_SESSION['dedalo']['section_temp_data'][$temp_data_uid]
@@ -230,70 +268,60 @@ class section extends common {
 				return $this->dato;
 			}
 
-		// data is not loaded. Load once
-			// if($this->bl_loaded_matrix_data!==true) {
+		// data is loaded once
+			// dataframe case, the section doesn't has his own data in DDBB
+			if (   $this->source==='caller_section'
+				&& !empty($this->caller_dataframe)
+				&& strpos($this->caller_dataframe->section_id, 'search')===false // ignore when in search scenario like section_id 'search_45'
+				) {
 
-				// dataframe case, the section doesn't has his own data in DDBB
-				if (   $this->source==='caller_section'
-					&& !empty($this->caller_dataframe)
-					&& strpos($this->caller_dataframe->section_id, 'search')===false // ignore when in search scenario like section_id 'search_45'
-					) {
+				// create the section of the caller
+					$caller_section	= section::get_instance(
+						$this->caller_dataframe->section_id,
+						$this->caller_dataframe->section_tipo,
+						$this->mode,
+						true // bool cache
+					);
 
-					// create the section of the caller
-						$caller_section	= section::get_instance(
-							$this->caller_dataframe->section_id,
-							$this->caller_dataframe->section_tipo,
-							$this->mode,
-							true // bool cache
+				// get the data of the caller section from database
+					$caller_dato = $caller_section->get_dato();
+
+				// relations. Get the data with matching the section_id of the current section with the section_id_key of the data of the caller
+				// section_id === section_id_key
+				// 4 === 4
+					$section_id_key		= (int)$this->section_id;
+					$filtered_relations	= array_filter($caller_dato->relations, function($el) use ($section_id_key){
+						return isset($el->section_id_key) && $el->section_id_key===$section_id_key;
+					});
+
+				// dato. Create the final data with filtered values and empty components (literals are not compatible for now)
+					$new_section_dato = new stdClass();
+						$new_section_dato->relations	= array_values($filtered_relations);
+						$new_section_dato->components	= new stdClass();
+
+				$dato = $new_section_dato;
+
+			}else{
+
+				// default case
+
+				// JSON_RecordObj_matrix
+					$matrix_table			= common::get_matrix_table_from_tipo($this->tipo);
+					$JSON_RecordObj_matrix	= isset($this->JSON_RecordObj_matrix)
+						? $this->JSON_RecordObj_matrix
+						: JSON_RecordObj_matrix::get_instance(
+							$matrix_table,
+							(int)$this->section_id, // int section_id
+							$this->tipo // string section tipo
 						);
+					$this->JSON_RecordObj_matrix = $JSON_RecordObj_matrix;
 
-					// get the data of the caller section from database
-						$caller_dato = $caller_section->get_dato();
-
-					// relations. Get the data with matching the section_id of the current section with the section_id_key of the data of the caller
-					// section_id === section_id_key
-					// 4 === 4
-						$section_id_key		= (int)$this->section_id;
-						$filtered_relations	= array_filter($caller_dato->relations, function($el) use ($section_id_key){
-							return isset($el->section_id_key) && $el->section_id_key===$section_id_key;
-						});
-
-					// dato. Create the final data with filtered values and empty components (literals are not compatible for now)
-						$new_section_dato = new stdClass();
-							$new_section_dato->relations	= array_values($filtered_relations);
-							$new_section_dato->components	= new stdClass();
-
-					$dato = $new_section_dato;
-
-				}else{
-
-					// tipo. If virtual section have section_tipo "real" in properties, change the tipo of the section to the real
-						$tipo = (isset($this->properties->section_tipo) && $this->properties->section_tipo==='real')
-							? $this->get_section_real_tipo()
-							: $this->tipo;
-
-					// JSON_RecordObj_matrix
-						$section_tipo			= $this->tipo;
-						$matrix_table			= common::get_matrix_table_from_tipo($section_tipo);
-						// $JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table, $this->section_id, $tipo);
-						$JSON_RecordObj_matrix	= JSON_RecordObj_matrix::get_instance($matrix_table, $this->section_id, $tipo);
-
-					// load dato from db
-						$dato = $JSON_RecordObj_matrix->get_dato();
-				}
-
-				// fix dato (force object)
-					$this->dato = (object)$dato;
-
-				// set as loaded
-					// $this->bl_loaded_matrix_data = true;
-			// }//end if($this->bl_loaded_matrix_data!==true)
-
-		// debug
-			if(SHOW_DEBUG===true) {
-				#$start_time = start_time();
-				#global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->mode.'_'.start_time()]=start_time();
+				// load dato from db
+					$dato = $JSON_RecordObj_matrix->get_dato();
 			}
+
+		// fix dato (force object)
+			$this->dato = (object)$dato;
 
 
 		return $this->dato;
@@ -310,7 +338,27 @@ class section extends common {
 	public function set_dato($dato) {
 
 		// call common->set_dato (!) fix var 'bl_loaded_matrix_data' as true
-		return parent::set_dato($dato);
+			$result = parent::set_dato($dato);
+
+		// update JSON_RecordObj_matrix cached data
+			if (!empty($this->section_id)) {
+				$matrix_table			= common::get_matrix_table_from_tipo($this->tipo);
+				$JSON_RecordObj_matrix	= isset($this->JSON_RecordObj_matrix)
+					? $this->JSON_RecordObj_matrix
+					: JSON_RecordObj_matrix::get_instance(
+						$matrix_table, // string matrix_table
+						(int)$this->section_id, // int section_id
+						$this->tipo // string tipo
+					);
+				$JSON_RecordObj_matrix->set_dato($dato);
+				$JSON_RecordObj_matrix->set_blIsLoaded(true);
+			}
+
+		// set as loaded
+			// $this->bl_loaded_matrix_data = true;
+
+
+		return $result;
 	}//end set_dato
 
 
@@ -501,49 +549,45 @@ class section extends common {
 				throw new Exception("Error Processing Request. Section Dato is not as expected type (object). type: ".gettype($dato), 1);
 			}
 
-		# SELECT COMPONENT IN SECTION DATO
-		if (isset($dato->components->{$component_tipo})) {
+		// component_global_dato. Select component in section dato
+			if (isset($dato->components->{$component_tipo})) {
 
-			// component dato already exists in section object. Only select it
-				$component_global_dato = $dato->components->{$component_tipo};
+				// component dato already exists in section object. Only select it
+					$component_global_dato = $dato->components->{$component_tipo};
 
-		}else{
+			}else{
 
-			// component dato NOT exists in section object. We build a new one with current info
-				#$obj_global 						= new stdClass();
-				#$obj_global->$component_tipo 		= new stdClass();
-				#$component_global_dato 			= new stdClass();
-				#$component_global_dato				= $obj_global->$component_tipo;
+				// component dato NOT exists in section object. We build a new one with current info
+					#$obj_global 						= new stdClass();
+					#$obj_global->$component_tipo 		= new stdClass();
+					#$component_global_dato 			= new stdClass();
+					#$component_global_dato				= $obj_global->$component_tipo;
 
-				$component_global_dato = new stdClass();
+					$component_global_dato = new stdClass();
 
-					// INFO : We create the info of the current component
-						// $component_global_dato->info 		= new stdClass();
-						// 	$component_global_dato->info->label = RecordObj_dd::get_termino_by_tipo($component_tipo,null,true);
-						// 	$component_global_dato->info->model= $component_model_name;
-						$inf = RecordObj_dd::get_termino_by_tipo($component_tipo,null,true) .' ['.$component_model_name.']';
-						$component_global_dato->inf = $inf;
+						// INFO : We create the info of the current component
+							// $component_global_dato->info 		= new stdClass();
+							// 	$component_global_dato->info->label = RecordObj_dd::get_termino_by_tipo($component_tipo,null,true);
+							// 	$component_global_dato->info->model= $component_model_name;
+							$inf = RecordObj_dd::get_termino_by_tipo($component_tipo,null,true) .' ['.$component_model_name.']';
+							$component_global_dato->inf = $inf;
 
+						$component_global_dato->dato = new stdClass();
+						// $component_global_dato->valor		= new stdClass();
+						// $component_global_dato->valor_list	= new stdClass();
+						// $component_global_dato->dataframe	= new stdClass();
+			}
 
-					$component_global_dato->dato = new stdClass();
-					// $component_global_dato->valor		= new stdClass();
-					// $component_global_dato->valor_list	= new stdClass();
-					// $component_global_dato->dataframe	= new stdClass();
-		}
-
-		# DATO OBJ
+		// component_lang
 			if (!isset($component_global_dato->dato->{$component_lang})) {
 				$component_global_dato->dato->{$component_lang} = new stdClass();
 			}
 
-		#
-		# DATO : We update the data in the current language
+		// dato_unchanged : We update the data in the current language
 			$component_dato = $component_obj->get_dato_unchanged(); ## IMPORTANT !!!!! (NO usar get_dato() aquí ya que puede cambiar el tipo fijo establecido por set_dato)
 				$component_global_dato->dato->{$component_lang} = $component_dato;
 
-
-
-		# DATAFRAME
+		// dataframe
 			$dataframe = $component_obj->get_dataframe();
 			if (isset($component_global_dato->dataframe)) {
 				// already exists property dataframe. Add always
@@ -555,9 +599,7 @@ class section extends common {
 				}
 			}
 
-
-		#
-		# REPLACE COMPONENT PORTION OF GLOBAL OBJECT :  We update the entire component in the global object
+		// replace component portion of global object :  we update the entire component in the global object
 			if (!isset($dato->components->{$component_tipo})) {
 				if (!isset($dato->components)) {
 					$dato->components = new stdClass();
@@ -782,6 +824,7 @@ class section extends common {
 
 			}else{
 				// update_modified_section_data . Resolve and add modification date and user to current section dato
+				// (!) Note that this method changes $this->dato (add relations and components)
 					$this->update_modified_section_data((object)[
 						'mode' => 'update_record'
 					]);
@@ -799,7 +842,13 @@ class section extends common {
 			# Save section dato
 				// $JSON_RecordObj_matrix	= new JSON_RecordObj_matrix( (string)$matrix_table, (int)$this->section_id, (string)$tipo );
 
-				$JSON_RecordObj_matrix	= JSON_RecordObj_matrix::get_instance( (string)$matrix_table, (int)$this->section_id, (string)$tipo );
+				$JSON_RecordObj_matrix = isset($this->JSON_RecordObj_matrix)
+					? $this->JSON_RecordObj_matrix
+					: JSON_RecordObj_matrix::get_instance(
+						$matrix_table,
+						(int)$this->section_id,
+						$tipo
+					);
 				$JSON_RecordObj_matrix->set_dato($section_dato);
 				$saved_id_matrix		= $JSON_RecordObj_matrix->Save( $options );
 				if (false===$saved_id_matrix || $saved_id_matrix < 1) { //  && $tipo!==DEDALO_ACTIVITY_SECTION_TIPO
@@ -820,7 +869,6 @@ class section extends common {
 					return null;
 				}
 
-			##
 			# COUNTER : Counter table. Default is ¡matrix_counter¡
 			# Prepare the id of the counter based on the table we are working on (matrix, matrix_dd, etc.)
 			# By default it will be 'matrix_counter', but if our section table is different from 'matrix' we will use a counter table distinct
@@ -845,7 +893,6 @@ class section extends common {
 					$this->section_id = (int)$section_id_counter;
 				}
 
-			##
 			# SECTION JSON DATA
 			# Store section dato
 
@@ -878,18 +925,13 @@ class section extends common {
 					// diffusion_info
 						$section_dato->diffusion_info 	 = array(); // Empty array by default
 
-					// Update modified section data . Resolve and add creation date and user to current section dato
-						$this->update_modified_section_data((object)[
-							'mode' => 'new_record'
-						]);
-
 					// Components container
 						if (!empty($options->main_components_obj)) {
 							// Main components obj : When creating a section, you can optionally pass the component data directly
 							$section_dato->components = $options->main_components_obj;	// Add the data of all the components at once (activity)
 						}else{
 							// components container (empty when insert)
-							$section_dato->components = isset($this->dato->components) ? $this->dato->components : new stdClass();
+							$section_dato->components = $this->dato->components ?? new stdClass();
 						}
 
 					// Relations container
@@ -898,19 +940,24 @@ class section extends common {
 							$section_dato->relations = $options->main_relations; // Add the data of all relationships at once (activity)
 						}else{
 							// relations container
-							$section_dato->relations = isset($this->dato->relations) ? (array)$this->dato->relations : [];
+							$section_dato->relations = $this->dato->relations ?? [];
 						}
 
 					// update section dato with final object. Important
 						$this->dato = $section_dato;
 
+					// Update modified section data. After set section dato, resolve and add creation date and user to current section dato
+					// (!) Note that this method changes $this->dato (add relations and components)
+						$this->update_modified_section_data((object)[
+							'mode' => 'new_record'
+						]);
 
 					// Set as loaded
 						// $this->bl_loaded_matrix_data = true;
 
 			// Real data save
 				// Time machine data. We save only current new section in time machine once (section info not change, only components changes)
-					$time_machine_data = clone $section_dato;
+					$time_machine_data = clone $this->dato;
 						unset($time_machine_data->components); 	// Remove unnecessary empty 'components' object
 						unset($time_machine_data->relations); 	// Remove unnecessary empty 'relations' object
 					$save_options = new stdClass();
@@ -920,9 +967,14 @@ class section extends common {
 						$save_options->new_record		 = true;
 
 				// Save JSON_RecordObj
-					// $JSON_RecordObj_matrix = new JSON_RecordObj_matrix((string)$matrix_table, (int)$this->section_id, (string)$tipo);
-					$JSON_RecordObj_matrix = JSON_RecordObj_matrix::get_instance((string)$matrix_table, (int)$this->section_id, (string)$tipo);
-					$JSON_RecordObj_matrix->set_dato($section_dato);
+					$JSON_RecordObj_matrix = isset($this->JSON_RecordObj_matrix)
+						? $this->JSON_RecordObj_matrix
+						: JSON_RecordObj_matrix::get_instance(
+							$matrix_table, // string matrix_table
+							(int)$this->section_id, // int section_id
+							$tipo // string tipo
+						);
+					$JSON_RecordObj_matrix->set_dato($this->dato);
 					#$JSON_RecordObj_matrix->set_section_id($this->section_id);
 					#$JSON_RecordObj_matrix->set_section_tipo($tipo);
 					$saved_id_matrix = $JSON_RecordObj_matrix->Save( $save_options );
@@ -932,7 +984,6 @@ class section extends common {
 							// throw new Exception("Error Processing Request. Returned id_matrix on save section is mandatory. Received id_matrix: $saved_id_matrix ", 1);
 						}
 					}
-
 
 			if($this->tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
 
@@ -1275,7 +1326,13 @@ class section extends common {
 
 					// section delete. Delete matrix record
 						// $JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table, $this->section_id, $section_tipo);
-						$JSON_RecordObj_matrix	= JSON_RecordObj_matrix::get_instance($matrix_table, $this->section_id, $section_tipo);
+						$JSON_RecordObj_matrix = isset($this->JSON_RecordObj_matrix)
+							? $this->JSON_RecordObj_matrix
+							: JSON_RecordObj_matrix::get_instance(
+								$matrix_table,
+								(int)$this->section_id,
+								$section_tipo
+							);
 						$JSON_RecordObj_matrix->MarkForDeletion();
 
 					// inverse references. Remove all inverse references to this section
@@ -2638,7 +2695,7 @@ class section extends common {
 		if (isset($locator->component_tipo)) 		$ar_properties[] = 'component_tipo';
 		if (isset($locator->section_top_tipo))		$ar_properties[] = 'section_top_tipo';
 		if (isset($locator->section_top_id)) 		$ar_properties[] = 'section_top_id';*/
-		$object_exists = locator::in_array_locator( $locator, $ar_locator=$relations);
+		$object_exists = locator::in_array_locator( $locator, $relations);
 		if ($object_exists===false) {
 
 			array_push($relations, $locator);
@@ -2928,12 +2985,12 @@ class section extends common {
 	/**
 	* UPDATE_MODIFIED_SECTION_DATA
 	* @param object $options
-	* @return bool
+	* @return object $this->dato
 	*/
-	public function update_modified_section_data(object $options) : bool {
+	public function update_modified_section_data(object $options) : object {
 
 		if ($this->tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
-			return false;
+			return $this->dato;
 		}
 
 		// options
@@ -2941,15 +2998,16 @@ class section extends common {
 
 		// Fixed private tipos
 			$modified_section_tipos = section::get_modified_section_tipos();
-				$created_by_user 	= array_filter($modified_section_tipos, function($item){ return $item['name']==='created_by_user'; }); 	// array('tipo'=>'dd200', 'model'=>'component_select');
-				$created_date 		= array_filter($modified_section_tipos, function($item){ return $item['name']==='created_date'; }); 		// array('tipo'=>'dd199', 'model'=>'component_date');
-				$modified_by_user 	= array_filter($modified_section_tipos, function($item){ return $item['name']==='modified_by_user'; }); 	// array('tipo'=>'dd197', 'model'=>'component_select');
-				$modified_date 		= array_filter($modified_section_tipos, function($item){ return $item['name']==='modified_date'; }); 		// array('tipo'=>'dd201', 'model'=>'component_date');
+				$created_by_user 	= array_find($modified_section_tipos, function($item){ return $item['name']==='created_by_user'; }); 	// array('tipo'=>'dd200', 'model'=>'component_select');
+				$created_date 		= array_find($modified_section_tipos, function($item){ return $item['name']==='created_date'; }); 		// array('tipo'=>'dd199', 'model'=>'component_date');
+				$modified_by_user 	= array_find($modified_section_tipos, function($item){ return $item['name']==='modified_by_user'; }); 	// array('tipo'=>'dd197', 'model'=>'component_select');
+				$modified_date 		= array_find($modified_section_tipos, function($item){ return $item['name']==='modified_date'; }); 		// array('tipo'=>'dd201', 'model'=>'component_date');
 
 		// Current user locator
-			$user_locator = new locator();
+			$user_id		= navigator::get_user_id();
+			$user_locator	= new locator();
 				$user_locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO); // dd128
-				$user_locator->set_section_id($_SESSION['dedalo']['auth']['user_id']); // logged user
+				$user_locator->set_section_id($user_id); // logged user
 				$user_locator->set_type(DEDALO_RELATION_TYPE_LINK);
 
 		// Current date
@@ -2960,31 +3018,23 @@ class section extends common {
 			$date_now 	= new stdClass();
 				$date_now->start = $dd_date;
 
-
 		switch ($mode) {
 
 			case 'new_record': // new record
 
 				// Created by user
-					$created_by_user	= reset($created_by_user);
-					$component			= component_common::get_instance(
-						$created_by_user['model'],
-						$created_by_user['tipo'],
-						$this->section_id,
-						'list',
-						DEDALO_DATA_NOLAN,
-						$this->tipo // section_tipo
-					);
-					$component->set_dato($user_locator);
-					#$dato = $component->get_dato();
-					#$this->add_relation( reset($dato) );
-					$this->set_component_relation_dato($component);
-					#$component->save_to_database = false; // Avoid exec db real save
-					#$component->Save(); // Only updates section data
+					// set value with safe path
+						if (!isset($this->dato->relations)) {
+							$this->dato->relations = [];
+						}
+						$user_locator->set_from_component_tipo($created_by_user['tipo']);
+						$object_exists = locator::in_array_locator( $user_locator, $this->dato->relations );
+						if ($object_exists===false) {
+							array_push($this->dato->relations, $user_locator);
+						}
 
 				// Creation date
-					$created_date 	= reset($created_date);
-					$component 		= component_common::get_instance(
+					$component = component_common::get_instance(
 						$created_date['model'],
 						$created_date['tipo'],
 						$this->section_id,
@@ -2992,34 +3042,35 @@ class section extends common {
 						DEDALO_DATA_NOLAN,
 						$this->tipo // section_tipo
 					);
-					$component->set_dato($date_now);
-					#$component->save_to_database = false; // Avoid exec db real save
-					#$component->Save(); // Only updates section data
-					$this->set_component_direct_dato($component);
-					#$dato = $component->get_dato();
-					#$this->add_relation( reset($dato) );
+					$component->set_dato( $date_now );
+					// $this->set_component_direct_dato( $component ); // (!) removed 11-02-2023 : interact with section save flow (tool register case)
+					$component_dato = $component->get_dato_unchanged(); ## IMPORTANT !!!!! (NO usar get_dato() aquí ya que puede cambiar el tipo fijo establecido por set_dato)
+
+					// set value with safe path
+						if (!isset($this->dato->components)) {
+							$this->dato->components = new stdClass();
+						}
+						if (!isset($this->dato->components->{$created_date['tipo']})) {
+							$this->dato->components->{$created_date['tipo']} = new stdClass();
+						}
+						$this->dato->components->{$created_date['tipo']}->{DEDALO_DATA_NOLAN} = $component_dato;
 				break;
 
 			case 'update_record': // update_record (record already exists)
 
 				// Modified by user
-					$modified_by_user	= reset($modified_by_user);
-					$component			= component_common::get_instance(
-						$modified_by_user['model'],
-						$modified_by_user['tipo'],
-						$this->section_id,
-						'list',
-						DEDALO_DATA_NOLAN,
-						$this->tipo // section_tipo
-					);
-					$component->set_dato($user_locator);
-					#$component->save_to_database = false; // Avoid exec db real save
-					#$component->Save(); // Only updates section data
-					$this->set_component_relation_dato($component);
+					// set value with safe path
+						if (!isset($this->dato->relations)) {
+							$this->dato->relations = [];
+						}
+						$user_locator->set_from_component_tipo($modified_by_user['tipo']);
+						$object_exists = locator::in_array_locator( $user_locator, $this->dato->relations );
+						if ($object_exists===false) {
+							array_push($this->dato->relations, $user_locator);
+						}
 
 				// Modification date
-					$modified_date	= reset($modified_date);
-					$component		= component_common::get_instance(
+					$component = component_common::get_instance(
 						$modified_date['model'],
 						$modified_date['tipo'],
 						$this->section_id,
@@ -3028,14 +3079,22 @@ class section extends common {
 						$this->tipo // section_tipo
 					);
 					$component->set_dato($date_now);
-					#$component->save_to_database = false; // Avoid exec db real save
-					#$component->Save(); // Only updates section data
-					$this->set_component_direct_dato($component);
+					// $this->set_component_direct_dato($component); // (!) removed 11-02-2023 : interact with section save flow (tool register case)
+					$component_dato = $component->get_dato_unchanged(); ## IMPORTANT !!!!! (NO usar get_dato() aquí ya que puede cambiar el tipo fijo establecido por set_dato)
+
+					// set value with safe path
+						if (!isset($this->dato->components)) {
+							$this->dato->components = new stdClass();
+						}
+						if (!isset($this->dato->components->{$modified_date['tipo']})) {
+							$this->dato->components->{$modified_date['tipo']} = new stdClass();
+						}
+						$this->dato->components->{$modified_date['tipo']}->{DEDALO_DATA_NOLAN} = $component_dato;
 				break;
 		}
 
 
-		return true;
+		return $this->dato;
 	}//end update_modified_section_data
 
 
