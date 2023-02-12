@@ -5,6 +5,7 @@
 
 // imports
 	import {event_manager} from '../../../core/common/js/event_manager.js'
+	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {keyboard_codes} from '../../../core/common/js/utils/keyboard.js'
 	import {render_node_info} from '../../../core/common/js/utils/notifications.js'
@@ -326,6 +327,28 @@ const get_content_data_edit = async function(self) {
 						input_characters_per_line.value				= value
 						// component_text_area.av_rewind_seconds	= value
 					})
+
+			// automatic_transcription block
+				const automatic_transcription_block = ui.create_dom_element({
+					element_type	: 'div',
+					class_name 		: 'automatic_transcription_block',
+					parent 			: right_container
+				})
+				const transcriber_engine = (self.context.config)
+					? self.context.config.transcriber_engine.value
+					: false
+					console.log("transcriber_engine:",transcriber_engine, self);
+				if (transcriber_engine) {
+					const automatic_transcription_node = build_automatic_transcription({
+						self					: self,
+						transcriber_engine		: transcriber_engine,
+						source_select_lang		: self.transcription_component.lang,
+						transcripton_container	: component_text_area_node
+					})
+					automatic_transcription_block.appendChild(automatic_transcription_node)
+				}//end if (transcriber_engine)
+
+
 		}//end if (self.media_component.model==='component_av') {
 
 	// content_data
@@ -586,3 +609,85 @@ const render_activity_info = async function(self) {
 
 	return activity_info_body
 }//end render_activity_info
+
+
+
+/**
+* BUILD_AUTOMATIC_TRANSCRIPTION
+*/
+const build_automatic_transcription = (options) => {
+
+
+	const self						= options.self
+	const transcriber_engine		= options.transcriber_engine
+	const source_select_lang		= options.source_select_lang
+	const transcripton_container	= options.transcripton_container
+
+	// container
+		const automatic_transcription_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'automatic_transcription_container'
+		})
+
+	// button
+		const button_automatic_transcription = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'warning button_automatic_transcription',
+			inner_html		: self.get_tool_label.automatic_transcription || "Automatic translation",
+			parent			: automatic_transcription_container
+		})
+
+		button_automatic_transcription.addEventListener('click', () => {
+
+			transcripton_container.classList.add('loading')
+
+			self.automatic_transcription({
+					transcriber_engine	: self.transcriber_engine_select.value,
+					source_lang			: source_select_lang
+			})
+			.then((response)=>{
+				transcripton_container.classList.remove('loading')
+				// user messages
+				const msg_type = (response.result===false) ? 'error' : 'ok'
+				ui.show_message(automatic_transcription_container, response.msg, msg_type)
+
+				// reload target lang
+					// const target_component = self.ar_instances.find(el => el.tipo===self.main_element.tipo && el.lang===target_lang)
+					// target_component.refresh()
+					// if(SHOW_DEVELOPER===true) {
+					// 	dd_console('target_component', 'DEBUG', target_component)
+					// }
+			})
+		})
+
+	// select
+		self.transcriber_engine_select = ui.create_dom_element({
+			element_type	: 'select',
+			parent 			: automatic_transcription_container
+		})
+		for (let i = 0; i < transcriber_engine.length; i++) {
+
+			const engine = transcriber_engine[i]
+
+			const option = ui.create_dom_element({
+				element_type	: 'option',
+				value			: engine.name,
+				inner_html		: engine.label,
+				parent			: self.transcriber_engine_select
+			})
+			if (self.target_transcriber===engine.name) {
+				option.selected = true
+			}
+		}
+		self.transcriber_engine_select.addEventListener('change', function(){
+			data_manager.set_local_db_data({
+				id		: 'transcriber_engine_select',
+				value	: self.transcriber_engine_select.value
+			}, 'status')
+		})
+
+
+	return automatic_transcription_container
+}//end build_automatic_transcription
+
+
