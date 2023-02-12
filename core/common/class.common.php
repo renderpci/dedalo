@@ -511,7 +511,6 @@ abstract class common {
 	public function set_lang(string $lang) {
 
 		#if($lang!==DEDALO_DATA_LANG) {
-
 			# FORCE reload dato from database when dato is requested again
 			$this->set_to_force_reload_dato();
 		#}
