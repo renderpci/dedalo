@@ -363,14 +363,12 @@ const print_response = (container, api_response) => {
 */
 export const build_form = function(widget_object) {
 
-	// const self = this
-
 	// widget_object
 		// const trigger		= widget_object.trigger
 		const body_info			= widget_object.body_info
 		const body_response		= widget_object.body_response
 		const print_response	= widget_object.print_response
-		const confirm_text		= widget_object.confirm_text
+		const confirm_text		= widget_object.confirm_text || get_label.sure || 'Sure?'
 		const inputs			= widget_object.inputs || []
 		const submit_label		= widget_object.submit_label || 'OK'
 
@@ -384,7 +382,7 @@ export const build_form = function(widget_object) {
 		form_container.addEventListener('submit', async function(e){
 			e.preventDefault()
 
-			if ( confirm( (confirm_text || get_label.sure || 'Sure?') ) ) {
+			if ( confirm(confirm_text) ) {
 
 				// check mandatory values
 					for (let i = 0; i < input_nodes.length; i++) {
