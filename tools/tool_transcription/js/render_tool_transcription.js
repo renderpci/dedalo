@@ -96,10 +96,8 @@ const get_content_data_edit = async function(self) {
 		const component_text_area = self.transcription_component
 		// set auto_init_editor for convenience
 		component_text_area.auto_init_editor = true
-		component_text_area.render()
-		.then(function(node){
-			left_container.appendChild(node)
-		})
+		const component_text_area_node = await component_text_area.render()
+		left_container.appendChild(component_text_area_node)
 
 	// right_container
 		const right_container = ui.create_dom_element({
