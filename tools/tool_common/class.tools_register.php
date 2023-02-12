@@ -844,6 +844,7 @@ class tools_register {
 
 	/**
 	* GET_ALL_CONFIG_TOOL_CLIENT
+	* filter the client part of the config defined with the "client" property to true
 	* @return array $ar_client_config
 	*/
 	public static function get_all_config_tool_client() : array {
