@@ -874,6 +874,7 @@ component_common.prototype.change_value = async function(options) {
 		const build_autoload		= typeof options.build_autoload!=='undefined' ? options.build_autoload : false
 		const custom_remove_dialog	= options.remove_dialog // undefined|function|bool
 
+	// check changed_data valid format
 		if (!Array.isArray(changed_data)) {
 			throw `Exception: changed_data is not as expected (array). ` + typeof changed_data;
 		}

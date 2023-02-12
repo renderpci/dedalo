@@ -334,13 +334,14 @@ abstract class common {
 	*/
 	public static function get_matrix_table_from_tipo(string $tipo) : ?string {
 
-		if (empty($tipo)) {
-			trigger_error("Error Processing Request. tipo is empty");
-			return null;
-		}elseif ($tipo==='matrix') {
-			trigger_error("Error Processing Request. tipo is invalid (tipo:$tipo)");
-			return null;
-		}
+		// check valid tipo
+			if (empty($tipo)) {
+				debug_log(__METHOD__." Error Processing Request. tipo is empty ".to_string($tipo), logger::ERROR);
+				return null;
+			}elseif ($tipo==='matrix') {
+				debug_log(__METHOD__." Error Processing Request. tipo is invalid ".to_string($tipo), logger::ERROR);
+				return null;
+			}
 
 		// cache
 			static $matrix_table_from_tipo;
@@ -348,79 +349,62 @@ abstract class common {
 				return $matrix_table_from_tipo[$tipo];
 			}
 
-		// matrix_table. Default value
-			$matrix_table = 'matrix';
-
 		// model
 			$model_name = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+			// empty model case
 			if (empty($model_name)) {
-				debug_log(__METHOD__." Current tipo ($tipo) model name is empty. Default table 'matrix' was used.".to_string(), logger::ERROR);
+				debug_log(__METHOD__.
+					" Current tipo ($tipo) model name is empty. Default table 'matrix' was used.".to_string(),
+					logger::ERROR
+				);
+				return null;
+			}
+			// non section model case
+			if ($model_name!=='section') {
+				debug_log(__METHOD__.
+					" Error Processing Request. Don't use non section tipo ($tipo - $model_name) to calculate matrix_table. Use always section_tipo ",
+					logger::ERROR
+				);
+				return null;
 			}
 
-		if ($model_name==='section') {
-
-			# SECTION CASE
+		// section cases
 			switch (true) {
+
 				case ($tipo===DEDALO_SECTION_PROJECTS_TIPO):
 					$matrix_table = 'matrix_projects';
-					#error_log("Error. Table for section projects tipo is not defined. Using default table: '$matrix_table'");
 					break;
+
 				case ($tipo===DEDALO_SECTION_USERS_TIPO):
 					$matrix_table = 'matrix_users';
-					#error_log("Error. Table for section users tipo is not defined. Using default table: '$matrix_table'");
 					break;
+
 				default:
-
-					$table_is_resolved = false;
-
-					# SECTION : If section have TR of model name 'matrix_table' takes its matrix_table value
-					$ar_related = common::get_ar_related_by_model('matrix_table', $tipo);
-					if ( isset($ar_related[0]) ) {
-						// REAL OR VIRTUAL SECTION
-						# Set custom matrix table
-						$matrix_table = RecordObj_dd::get_termino_by_tipo($ar_related[0],DEDALO_STRUCTURE_LANG,true);
-							#if (SHOW_DEBUG===true) dump($matrix_table,"INFO: Switched table to: $matrix_table for tipo:$tipo ");
-						$table_is_resolved = true;
-					}
-					// CASE VIRTUAL SECTION
-					if ($table_is_resolved===false) {
-						$tipo 		= section::get_section_real_tipo_static($tipo);
+					// try related. If section have TR of model name 'matrix_table' takes its matrix_table value
 						$ar_related = common::get_ar_related_by_model('matrix_table', $tipo);
 						if ( isset($ar_related[0]) ) {
-							// REAL SECTION
-							# Set custom matrix table
-							$matrix_table = RecordObj_dd::get_termino_by_tipo($ar_related[0],DEDALO_STRUCTURE_LANG,true);
-								#if (SHOW_DEBUG===true) dump($matrix_table,"INFO: Switched table to: $matrix_table for tipo:$tipo ");
-							$table_is_resolved = true;
+							// real or virtual section
+							$matrix_table = RecordObj_dd::get_termino_by_tipo($ar_related[0], DEDALO_STRUCTURE_LANG, true);
 						}
-					}
+
+					// try resolve virtual section fallback
+						if ( empty($matrix_table) ) {
+							// try real section
+							$real_tipo = section::get_section_real_tipo_static($tipo);
+							if ($real_tipo!==$tipo) {
+								$ar_related	= common::get_ar_related_by_model('matrix_table', $real_tipo);
+								if ( isset($ar_related[0]) ) {
+									// real section
+									$matrix_table = RecordObj_dd::get_termino_by_tipo($ar_related[0], DEDALO_STRUCTURE_LANG, true);
+								}
+							}
+						}
+
+					// fallback to default
+						if (!isset($matrix_table)) {
+							$matrix_table = 'matrix';
+						}
 			}//end switch
-
-		}else{
-
-			$matrix_table = null;
-
-			if(SHOW_DEBUG===true) {
-				// dump(debug_backtrace(), 'debug_backtrace() ++ '.to_string());;
-			}
-			debug_log(
-				__METHOD__
-				." Error Processing Request. Don't use non section tipo ($tipo - $model_name) to calculate matrix_table. Use always section_tipo "
-				, logger::ERROR
-			);
-
-			// # COMPONENT CASE
-			// # Heredamos la tabla de la sección parent (si la hay)
-			// $ar_parent_section = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, $model_name='section', $relation_type='parent');
-			// if (isset($ar_parent_section[0])) {
-			// 	$parent_section_tipo = $ar_parent_section[0];
-			// 	$ar_related = common::get_ar_related_by_model('matrix_table', $parent_section_tipo);
-			// 	if ( isset($ar_related[0]) ) {
-			// 		# Set custom matrix table
-			// 		$matrix_table = RecordObj_dd::get_termino_by_tipo($ar_related[0],DEDALO_STRUCTURE_LANG,true);
-			// 	}
-			// }
-		}
 
 		// cache
 			$matrix_table_from_tipo[$tipo] = $matrix_table;
@@ -483,20 +467,11 @@ abstract class common {
 	*/
 	public function set_dato($dato) {
 
-		// UNSET previous calculated valor
-		if (isset($this->valor)) {
-			unset($this->valor);
-		}
-		// UNSET previous calculated ar_list_of_values
-		if (isset($this->ar_list_of_values)) {
-			unset($this->ar_list_of_values);
-		}
-
 		// set
 		$this->dato = $dato;
 
 		// loaded. Fix this element as data loaded to prevent overwrite current fixed dato, with database dato
-		$this->bl_loaded_matrix_data = true;
+		$this->set_bl_loaded_matrix_data(true);
 
 		return true;
 	}//end set_dato
@@ -511,7 +486,6 @@ abstract class common {
 	public function set_lang(string $lang) {
 
 		#if($lang!==DEDALO_DATA_LANG) {
-
 			# FORCE reload dato from database when dato is requested again
 			$this->set_to_force_reload_dato();
 		#}
@@ -523,17 +497,17 @@ abstract class common {
 
 	/**
 	* SET_TO_FORCE_RELOAD_DATO
+	* @return void
 	*/
 	public function set_to_force_reload_dato() {
 
-		# UNSET previous calculated valor
-		unset($this->valor);
+		// unset previous calculated valor
+			if (isset($this->valor)) {
+				unset($this->valor);
+			}
 
-		#$this->dato_resolved = false;
-		#unset($this->dato);
-
-		# FORCE reload dato from database when dato is requested again
-		$this->bl_loaded_matrix_data = false;
+		// force reload dato from database when dato is requested again
+			$this->set_bl_loaded_matrix_data(false);
 	}//end set_to_force_reload_dato
 
 
@@ -1880,7 +1854,6 @@ abstract class common {
 									$datos = isset($current_locator->datos) ? json_decode($current_locator->datos) : null;
 									if (!is_null($datos)) {
 										$section->set_dato($datos);
-										$section->set_bl_loaded_matrix_data(true);
 									}
 
 								// get component JSON (include context and data)

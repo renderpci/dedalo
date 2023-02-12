@@ -33,8 +33,9 @@
 		switch ($mode) {
 			case 'edit':
 			default:
+				// tree_datalist
 				$tree_datalist 	= $this->get_tree_datalist();
-
+				// langs_datalist
 				$langs_datalist = [];
 				foreach(DEDALO_APPLICATION_LANGS as $key => $value) {
 					$obj_langs = new stdClass();
@@ -42,7 +43,7 @@
 						$obj_langs->label	= $value;
 					$langs_datalist[] = $obj_langs;
 				}
-
+				// info_data
 				$info_data		= $this->get_info_data();
 				break;
 		}

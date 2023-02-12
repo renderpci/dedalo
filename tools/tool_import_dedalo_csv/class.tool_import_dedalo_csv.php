@@ -246,9 +246,11 @@ class tool_import_dedalo_csv extends tool_common {
 					$import_response[] = $current_file_response;
 					continue;
 				}
-				$ar_csv_data = tool_common::read_csv_file_as_array($file, $skip_header=false, ';');
-					#dump($ar_csv_data, ' $ar_csv_data ++ '.to_string($file)); die();
-					#debug_log(__METHOD__." ar_csv_data ".to_string($ar_csv_data), logger::DEBUG);
+				$ar_csv_data = tool_common::read_csv_file_as_array(
+					$file, // string file
+					false, // bool skip_header
+					';' // string csv delimiter
+				);
 
 				// counter. Consolidate counter. Set counter value to last section_id in section
 				counter::consolidate_counter( $section_tipo, common::get_matrix_table_from_tipo($section_tipo) );
@@ -362,7 +364,10 @@ class tool_import_dedalo_csv extends tool_common {
 			// section_id (cast to int the section_id of the row)
 				$section_id = !empty($row[$section_id_key]) ? (int)$row[$section_id_key] : null;
 				if (empty($section_id)) {
-					debug_log(__METHOD__." ERROR on get section_id . SKIPPED record (section_tipo:$section_tipo - rkey:$rkey) ".to_string($section_id), logger::ERROR);
+					debug_log(__METHOD__.
+						" ERROR on get MANDATORY section_id. SKIPPED record (section_tipo:$section_tipo - rkey:$rkey) ".to_string($section_id),
+						logger::ERROR
+					);
 					continue;
 				}
 
@@ -386,25 +391,34 @@ class tool_import_dedalo_csv extends tool_common {
 				if ($column_map->model==='created_by_user' || $column_map->map_to===$created_by_user['tipo']) {
 
 					$user_locator = self::build_user_locator($value, $created_by_user['tipo']);
-
 					if (!empty($user_locator)) {
-						// component build and set dato
-							$component = component_common::get_instance(
-								$created_by_user['model'],
-								$created_by_user['tipo'],
-								$section_id,
-								'list',
-								DEDALO_DATA_NOLAN,
-								$section_tipo
-							);
-							$component->set_dato($user_locator);
-							$section->set_component_relation_dato($component);
+						// // component build and set dato
+						// 	$component = component_common::get_instance(
+						// 		$created_by_user['model'],
+						// 		$created_by_user['tipo'],
+						// 		$section_id,
+						// 		'list',
+						// 		DEDALO_DATA_NOLAN,
+						// 		$section_tipo
+						// 	);
+						// 	$component->set_dato($user_locator);
+						// 	$section->set_component_relation_dato($component);
+
+						// set value with safe path
+							$section_dato = $section->get_dato();
+							if (!isset($section_dato->relations)) {
+								$section_dato->relations = [];
+							}
+							$object_exists = locator::in_array_locator( $user_locator, $section_dato->relations );
+							if ($object_exists===false) {
+								array_push($section_dato->relations, $user_locator);
+							}
 
 						// Set direct property also
-							$dato = (object)$section->get_dato();
-							$dato->created_by_userID = (int)$user_locator->section_id;
+							$section_dato->created_by_userID = (int)$user_locator->section_id;
 
 						// Save section
+							$section->set_dato($section_dato);
 							$section->Save();
 					}
 					continue;
@@ -412,13 +426,11 @@ class tool_import_dedalo_csv extends tool_common {
 				}elseif ($column_map->model==='created_date' || $column_map->map_to===$created_date['tipo']) {
 
 					$current_date = self::build_date_from_value($value);
-
 					# Format
 					# $current_date = array(
 					# 	'component_dato' => $value_obj,
 					# 	'timestamp' 	 => $timestamp
 					# );
-
 					if (!empty($current_date)) {
 						// component build and set dato
 							$component = component_common::get_instance(
@@ -430,41 +442,59 @@ class tool_import_dedalo_csv extends tool_common {
 								$section_tipo
 							);
 							$component->set_dato($current_date->component_dato);
-							$section->set_component_direct_dato($component);
+							// $section->set_component_direct_dato($component);
+							$component_dato = $component->get_dato_unchanged();
+							$section_dato	= $section->get_dato();
+
+						// set value with safe path
+							if (!isset($section_dato->components)) {
+								$section_dato->components = new stdClass();
+							}
+							if (!isset($section_dato->components->{$created_date['tipo']})) {
+								$section_dato->components->{$created_date['tipo']} = new stdClass();
+							}
+							$section_dato->components->{$created_date['tipo']}->{DEDALO_DATA_NOLAN} = $component_dato;
 
 						// Set direct property also
-							$dato = (object)$section->get_dato();
-							$dato->created_date = $current_date->timestamp;
+							$section_dato->created_date = $current_date->timestamp;
 
 						// Save
+							$section->set_dato($section_dato);
 							$section->Save();
 					}
 					continue;
 				# modified_by_user
 				}elseif ($column_map->model==='modified_by_user' || $column_map->map_to===$modified_by_user['tipo']) {
 
-					$user_locator 	 = self::build_user_locator($value, $modified_by_user['tipo']);
-						#dump($user_locator, ' user_locator ++ '.to_string());
-
+					$user_locator = self::build_user_locator($value, $modified_by_user['tipo']);
 					if (!empty($user_locator)) {
-						// component build and set dato
-							$component = component_common::get_instance(
-								$modified_by_user['model'],
-								$modified_by_user['tipo'],
-								$section_id,
-								'list',
-								DEDALO_DATA_NOLAN,
-								$section_tipo
-							);
-							$component->set_dato($user_locator);
-							$section->set_component_relation_dato($component);
+						// // component build and set dato
+						// 	$component = component_common::get_instance(
+						// 		$modified_by_user['model'],
+						// 		$modified_by_user['tipo'],
+						// 		$section_id,
+						// 		'list',
+						// 		DEDALO_DATA_NOLAN,
+						// 		$section_tipo
+						// 	);
+						// 	$component->set_dato($user_locator);
+						// 	$section->set_component_relation_dato($component);
+
+						// set value with safe path
+							$section_dato = $section->get_dato();
+							if (!isset($section_dato->relations)) {
+								$section_dato->relations = [];
+							}
+							$object_exists = locator::in_array_locator( $user_locator, $section_dato->relations );
+							if ($object_exists===false) {
+								array_push($section_dato->relations, $user_locator);
+							}
 
 						// Set direct property also
-							$section_dato = (object)$section->get_dato();
 							$section_dato->modified_by_userID = (int)$user_locator->section_id;
-							$section->set_dato($section_dato);
 
 						// Save section
+							$section->set_dato($section_dato);
 							$section->save_modified = false;
 							$section->Save();
 					}
@@ -473,13 +503,11 @@ class tool_import_dedalo_csv extends tool_common {
 				}elseif ($column_map->model==='modified_date' || $column_map->map_to===$modified_date['tipo']) {
 
 					$current_date = self::build_date_from_value($value);
-
 					# Format
 					# $current_date = array(
 					# 	'component_dato' => $value_obj,
 					# 	'timestamp' 	 => $timestamp
 					# );
-
 					if (!empty($current_date)) {
 						// component build and set dato
 							$component = component_common::get_instance(
@@ -491,14 +519,24 @@ class tool_import_dedalo_csv extends tool_common {
 								$section_tipo
 							);
 							$component->set_dato($current_date->component_dato);
-							$section->set_component_direct_dato($component);
+							// $section->set_component_direct_dato($component);
+							$component_dato	= $component->get_dato_unchanged(); ## IMPORTANT !!!!! (NO usar get_dato() aquí ya que puede cambiar el tipo fijo establecido por set_dato)
+							$section_dato	= $section->get_dato();
+
+						// set value with safe path
+							if (!isset($section_dato->components)) {
+								$section_dato->components = new stdClass();
+							}
+							if (!isset($section_dato->components->{$modified_date['tipo']})) {
+								$section_dato->components->{$modified_date['tipo']} = new stdClass();
+							}
+							$section_dato->components->{$modified_date['tipo']}->{DEDALO_DATA_NOLAN} = $component_dato;
 
 						// Set direct property also
-							$section_dato = (object)$section->get_dato();
 							$section_dato->modified_date = $current_date->timestamp;
-							$section->set_dato($section_dato);
 
 						// Save
+							$section->set_dato($section_dato);
 							$section->save_modified = false;
 							$section->Save();
 					}
@@ -514,7 +552,6 @@ class tool_import_dedalo_csv extends tool_common {
 
 				// component
 					$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
-					$mode			= 'list';
 					$RecordObj_dd	= new RecordObj_dd($component_tipo);
 					$translate		= RecordObj_dd::get_translatable($component_tipo); //==='si' ? true : false;
 					$lang			= $translate===false ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
@@ -522,7 +559,7 @@ class tool_import_dedalo_csv extends tool_common {
 						$model_name,
 						$component_tipo,
 						$section_id,
-						$mode,
+						'list',
 						$lang,
 						$section_tipo,
 						false
@@ -540,8 +577,7 @@ class tool_import_dedalo_csv extends tool_common {
 					# No component time machine data will be saved when section saves later
 					$component->save_to_database = ((bool)$time_machine_save===true)
 						? true
-						: false; // default is false. To activate, select checkbox on tool import dedalo CSV
-
+						: false;
 
 				# If value is JSON encoded, decode and set
 				# Note: json_decode returns null when no is possible decode the value

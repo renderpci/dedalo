@@ -156,7 +156,6 @@
 						// $datos = $current_record->datos ?? null;
 						// if (!is_null($datos)) {
 						// 	$section->set_dato($datos);
-						// 	$section->set_bl_loaded_matrix_data(true);
 						// }else{
 						// 	// inject dato when the dato comes from ar_locators
 						// 	// $section->set_dato($current_record);
