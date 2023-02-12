@@ -195,14 +195,15 @@ tool_common.prototype.init = async function(options) {
 							}
 					}
 			}
-			// parse ddo_map section_id
-				if (self.tool_config && self.tool_config.ddo_map) {
-					self.tool_config.ddo_map.map(el => {
-						if (el.section_id==='self' && el.section_tipo===self.caller.section_tipo) {
-							el.section_id = self.caller.section_id || self.caller.section_id_selected
-						}
-					})
-				}
+
+		// parse ddo_map section_id
+			if (self.tool_config && self.tool_config.ddo_map) {
+				self.tool_config.ddo_map.map(el => {
+					if (el.section_id==='self' && el.section_tipo===self.caller.section_tipo) {
+						el.section_id = self.caller.section_id || self.caller.section_id_selected
+					}
+				})
+			}
 
 	// set some common vars
 		self.node			= null
