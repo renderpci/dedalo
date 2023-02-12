@@ -148,6 +148,145 @@ class tool_transcription extends tool_common {
 
 
 
+	/**
+	* AUTOMATIC_TRANScription
+	* Exec a translation request against the transcriber service given (babel, google, etc.)
+	* and save the result to the target component in the target lang.
+	* Note that transcriber config is stored in the tool section data (tools_register)
+	* @param object $options
+	* @return object $response
+	*/
+	public static function automatic_transcription(object $options) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		// component to use
+			$source_lang				= $options->source_lang;
+			$transcription_component	= $options->transcription_component;
+			$media_component			= $options->media_component;
+			$transcriber_engine 		= $options->transcriber_engine;
+			$config 					= $options->config;
+			$user_id					= navigator::get_user_id();
+			$entity_name 				= DEDALO_ENTITY;
+
+		// config
+			// get all tools config sections
+				$ar_config = tools_register::get_all_config_tool();
+			// select current from all tool config matching tool name
+				$tool_name	= get_called_class(); // tool_lang
+				$config		= array_find($ar_config, function($el) use($tool_name) {
+					return $el->name===$tool_name;
+				});
+
+		// config JSON . Must be compatible with tool properties transcriber_engine data
+			$ar_transcriber_configs	= $config->config->transcriber_config->value;
+			$transcriber_name		= $transcriber_engine;
+			// search current transcriber config in tool config (stored in database, section 'dd996' Tools configuration)
+			$transcriber_config = array_find($ar_transcriber_configs, function($item) use($transcriber_name) {
+				return $item->name===$transcriber_name;
+			});
+
+		// data from transcriber
+			$url	= $transcriber_config->uri;
+			$key	= $transcriber_config->key;
+
+		// Source text . Get source text from component (source_lang)
+			$model		= RecordObj_dd::get_modelo_name_by_tipo($media_component->component_tipo,true);
+			$component	= component_common::get_instance(
+				$model,
+				$media_component->component_tipo,
+				$media_component->section_id,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				$media_component->section_tipo
+			);
+			$quality	= $component->get_quality();
+			$audio_file	= $component->file_exist( 'audio' );
+			if($audio_file===false){
+				$component->build_version('audio', $async=false);
+			}
+			$audio_file	= $component->file_exist( 'audio' );
+
+			if($audio_file===false){
+				$response->msg		= 'Error. Audio file is not available.';
+				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
+				return $response;
+			}
+
+			$av_url = DEDALO_PROTOCOL . DEDALO_HOST . $component->get_url('audio');
+
+		// iterate component array data
+			switch ($transcriber_name) {
+				case 'google_translation':
+					// Not implemented yet
+					$response->msg = "Sorry. '{$transcriber_name}' is not implemented yet"; // error msg
+					return $response;
+					break;
+				case 'local':
+					$transcriber_engine = 'babel_transcriber';
+				case 'babel_transcriber':
+				default:
+					include_once(dirname(__FILE__) . '/transcribers/class.babel_transcriber.php');
+
+					// babel use tld2 instead tld3
+					$lang_tld2	 = lang::get_alpha2_from_code($source_lang);
+
+					$transcription = babel_transcriber::transcribe((object)[
+						'engine'		=> $transcriber_engine,
+						'user_id'		=> $user_id,
+						'entity_name'	=> $entity_name,
+						'url'			=> $url,
+						'key'			=> $key,
+						'lang'			=> $lang_tld2,
+						'av_url'		=> $av_url
+					]);
+					$result	= $transcription->result;
+					if ($result===false) {
+						$msg = strlen($transcription->msg)>512 ? substr($transcription->msg, 0, 512).'..' : $transcription->msg;
+						$response->msg = $msg; // error msg
+						return $response;
+					}
+					break;
+			}
+
+			$transcribed_data[] = $result ?? null;
+
+			return $response;
+
+		// Save result on target component (target_lang)
+			if (empty($transcribed_data)) {
+				// skip save empty values
+				debug_log(__METHOD__." Skipt empty received value ".to_string(), logger::ERROR);
+				$response->msg		= 'Ignored empty result. Nothing is saved!';
+			}else{
+				$component = component_common::get_instance($model,
+					$options->component_tipo,
+					$options->section_id,
+					'list',
+					$options->target_lang,
+					$options->section_tipo
+				);
+				$component->set_dato($transcribed_data);
+				$component->Save(false); // (!) Important: send argument 'false' to save to prevent alter other langs tags (propagate)
+
+				// response OK
+					$response->result	= true;
+					$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
+			}
+
+		//  debug
+			if(SHOW_DEBUG===true) {
+				$response->debug = new stdClass();
+				$response->debug->transcribed_data	= $transcribed_data;
+				$response->debug->raw_result		= $transcriber->raw_result;
+			}
+
+
+		return (object)$response;
+	}//end automatic_transcription
+
 }//end class tool_transcription
 
 
