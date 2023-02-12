@@ -92,6 +92,8 @@ abstract class component_common extends common {
 		public $fields_separator = ' | ';
 		// save_to_database, used for controlled if the component save his data to database. bool. default: true.
 		public $save_to_database;
+		// array ar_list_of_values
+		public $ar_list_of_values;
 
 
 
@@ -585,27 +587,39 @@ abstract class component_common extends common {
 	*/
 	public function set_dato($dato) {
 
-		if (!is_null($dato) && !is_array($dato)) {
+		// dato format check
+			if (!is_null($dato) && !is_array($dato)) {
 
-			$matrix_table = common::get_matrix_table_from_tipo($this->section_tipo);
-			if ($matrix_table==='matrix_dd') {
-				// v5 matrix_dd list compatibility
-				// nothing to do here
-			}else{
-				debug_log(__METHOD__ . ' '
-					. '[SET] RECEIVED DATO IS NOT AS EXPECTED TYPE array|null. type: '. gettype($dato) .' - dato: '. to_string($dato) . PHP_EOL
-					. 'model: '. get_called_class() .PHP_EOL
-					. 'tipo: ' . $this->tipo . ' - section_tipo: ' . $this->section_tipo . ' - section_id: ' . $this->section_id . PHP_EOL
-					. 'table: '. $matrix_table
-					, logger::ERROR
-				);
+				$matrix_table = common::get_matrix_table_from_tipo($this->section_tipo);
+				if ($matrix_table==='matrix_dd') {
+					// v5 matrix_dd list compatibility
+					// nothing to do here
+				}else{
+					debug_log(__METHOD__ . ' '
+						. '[SET] RECEIVED DATO IS NOT AS EXPECTED TYPE array|null. type: '. gettype($dato) .' - dato: '. to_string($dato) . PHP_EOL
+						. 'model: '. get_called_class() .PHP_EOL
+						. 'tipo: ' . $this->tipo . ' - section_tipo: ' . $this->section_tipo . ' - section_id: ' . $this->section_id . PHP_EOL
+						. 'table: '. $matrix_table
+						, logger::ERROR
+					);
+				}
 			}
-		}
+
+		// unset previous calculated valor
+			if (isset($this->valor)) {
+				unset($this->valor);
+			}
+		// unset previous calculated ar_list_of_values
+			if (isset($this->ar_list_of_values)) {
+				unset($this->ar_list_of_values);
+			}
 
 		// call common->set_dato (!) fix var 'bl_loaded_matrix_data' as true
-		parent::set_dato($dato);
+			parent::set_dato($dato);
 
-		$this->dato_resolved = $dato;
+		// resolved set
+			$this->dato_resolved = $dato;
+
 
 		return true;
 	}//end set_dato
