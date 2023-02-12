@@ -158,18 +158,19 @@ class tool_transcription extends tool_common {
 	*/
 	public static function automatic_transcription(object $options) : object {
 
+
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// component to use
-			$source_lang				= $options->source_lang;
-			$transcription_component	= $options->transcription_component;
-			$media_component			= $options->media_component;
-			$transcriber_engine 		= $options->transcriber_engine;
-			$config 					= $options->config;
-			$user_id					= navigator::get_user_id();
-			$entity_name 				= DEDALO_ENTITY;
+			$source_lang		= $options->source_lang;
+			$transcription_ddo	= $options->transcription_ddo;
+			$media_ddo			= $options->media_ddo;
+			$transcriber_engine	= $options->transcriber_engine;
+			$config				= $options->config;
+			$user_id			= navigator::get_user_id();
+			$entity_name		= DEDALO_ENTITY;
 
 		// config
 			// get all tools config sections
@@ -193,14 +194,14 @@ class tool_transcription extends tool_common {
 			$key	= $transcriber_config->key;
 
 		// Source text . Get source text from component (source_lang)
-			$model		= RecordObj_dd::get_modelo_name_by_tipo($media_component->component_tipo,true);
+			$model		= RecordObj_dd::get_modelo_name_by_tipo($media_ddo->component_tipo,true);
 			$component	= component_common::get_instance(
 				$model,
-				$media_component->component_tipo,
-				$media_component->section_id,
+				$media_ddo->component_tipo,
+				$media_ddo->section_id,
 				'edit',
 				DEDALO_DATA_NOLAN,
-				$media_component->section_tipo
+				$media_ddo->section_tipo
 			);
 			$quality	= $component->get_quality();
 			$audio_file	= $component->file_exist( 'audio' );
@@ -233,21 +234,28 @@ class tool_transcription extends tool_common {
 					// babel use tld2 instead tld3
 					$lang_tld2	 = lang::get_alpha2_from_code($source_lang);
 
-					$transcription = babel_transcriber::transcribe((object)[
-						'engine'		=> $transcriber_engine,
-						'user_id'		=> $user_id,
-						'entity_name'	=> $entity_name,
-						'url'			=> $url,
-						'key'			=> $key,
-						'lang'			=> $lang_tld2,
-						'av_url'		=> $av_url
+					$babel_transcriber = new babel_transcriber((object)[
+						'engine'			=> $transcriber_engine,
+						'user_id'			=> $user_id,
+						'entity_name'		=> $entity_name,
+						'url'				=> $url,
+						'key'				=> $key,
+						'lang'				=> $source_lang,
+						'lang_tld2'			=> $lang_tld2,
+						'av_url'			=> $av_url,
+						'transcription_ddo'	=> $transcription_ddo
 					]);
-					$result	= $transcription->result;
+
+					$transcriber_response = $babel_transcriber->transcribe();
+					$result	= $transcriber_response->result;
 					if ($result===false) {
-						$msg = strlen($transcription->msg)>512 ? substr($transcription->msg, 0, 512).'..' : $transcription->msg;
-						$response->msg = $msg; // error msg
-						return $response;
+						return $transcriber_response;
 					}
+					$pid = $transcriber_response->result->pid;
+
+					// check background process to check if the transcriber had done.
+					$babel_transcriber->check_transcription($pid);
+
 					break;
 			}
 
