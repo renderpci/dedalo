@@ -40,7 +40,7 @@ class tool_lang extends tool_common {
 			// select current from all tool config matching tool name
 				$tool_name	= get_called_class(); // tool_lang
 				$config		= array_find($ar_config, function($el) use($tool_name) {
-					return $el->name===$tool_name;
+					include_once $el->name===$tool_name;
 				});
 
 		// config JSON . Must be compatible with tool properties translator_engine data
