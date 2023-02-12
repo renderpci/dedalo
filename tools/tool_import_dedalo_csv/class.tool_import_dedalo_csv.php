@@ -246,9 +246,11 @@ class tool_import_dedalo_csv extends tool_common {
 					$import_response[] = $current_file_response;
 					continue;
 				}
-				$ar_csv_data = tool_common::read_csv_file_as_array($file, $skip_header=false, ';');
-					#dump($ar_csv_data, ' $ar_csv_data ++ '.to_string($file)); die();
-					#debug_log(__METHOD__." ar_csv_data ".to_string($ar_csv_data), logger::DEBUG);
+				$ar_csv_data = tool_common::read_csv_file_as_array(
+					$file, // string file
+					false, // bool skip_header
+					';' // string csv delimiter
+				);
 
 				// counter. Consolidate counter. Set counter value to last section_id in section
 				counter::consolidate_counter( $section_tipo, common::get_matrix_table_from_tipo($section_tipo) );
@@ -362,7 +364,10 @@ class tool_import_dedalo_csv extends tool_common {
 			// section_id (cast to int the section_id of the row)
 				$section_id = !empty($row[$section_id_key]) ? (int)$row[$section_id_key] : null;
 				if (empty($section_id)) {
-					debug_log(__METHOD__." ERROR on get section_id . SKIPPED record (section_tipo:$section_tipo - rkey:$rkey) ".to_string($section_id), logger::ERROR);
+					debug_log(__METHOD__.
+						" ERROR on get MANDATORY section_id. SKIPPED record (section_tipo:$section_tipo - rkey:$rkey) ".to_string($section_id),
+						logger::ERROR
+					);
 					continue;
 				}
 
