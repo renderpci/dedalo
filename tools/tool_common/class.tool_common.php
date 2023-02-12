@@ -342,7 +342,6 @@ class tool_common {
 				$section		= section::get_instance($record->section_id, $record->section_tipo);
 				$section_dato	= $record->datos;
 				$section->set_dato($section_dato);
-				$section->set_bl_loaded_matrix_data(true);
 
 				$component_tipo	= 'dd1353';
 				$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
