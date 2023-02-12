@@ -72,6 +72,16 @@ tool_transcription.prototype.init = async function(options) {
 				: null
 			self.target_lang	= null
 
+		// target transcriber. When user changes it, a local DB var is stored as 'transcriber_engine_select' in table 'status'
+			const transcriber_engine_select_object = await data_manager.get_local_db_data(
+				'transcriber_engine_select',
+				'status'
+			)
+			if (transcriber_engine_select_object) {
+				self.target_transcriber = transcriber_engine_select_object.value
+			}
+
+
 	} catch (error) {
 		self.error = error
 		console.error(error)
@@ -242,3 +252,69 @@ tool_transcription.prototype.build_subtitles = async function() {
 
 	// ....
 }// end build_subtitles
+
+
+
+
+
+/**
+* AUTOMATIC_TRANSCRIPTION
+* Call the API to transcribe the audiovisual component with the source lang
+* using a online service like babel or Google transcribe and save the resulting value
+* (!) Tool transcription config transcriber must to be exists in register_tools section
+*
+* @para string transcriber (name like 'babel' must to be defined in tool config)
+* @param string source_lang (like 'lg-eng')
+*
+* @return promise response
+*/
+tool_transcription.prototype.automatic_transcription = async function(options) {
+
+	const self = this
+
+	const transcriber_engine	= options.transcriber_engine
+	const source_lang			= self.transcription_component.lang
+
+
+	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
+	// this generates a call as my_tool_name::my_function_name(arguments)
+		const source = create_source(self, 'automatic_transcription')
+		// add the necessary arguments used in the given function
+		source.arguments = {
+			source_lang			: source_lang,
+			transcription_component : {
+				component_tipo		: self.transcription_component.tipo,
+				section_id			: self.transcription_component.section_id,
+				section_tipo		: self.transcription_component.section_tipo
+			},
+			media_component : {
+				component_tipo		: self.media_component.tipo,
+				section_id			: self.media_component.section_id,
+				section_tipo		: self.media_component.section_tipo
+			},
+			transcriber_engine	: transcriber_engine,
+			config				: self.context.config
+		}
+
+	// rqo
+		const rqo = {
+			dd_api	: 'dd_tools_api',
+			action	: 'tool_request',
+			source	: source
+		}
+
+	// call to the API, fetch data and get response
+		return new Promise(function(resolve){
+
+			data_manager.request({
+				body : rqo
+			})
+			.then(function(response){
+				if(SHOW_DEVELOPER===true) {
+					dd_console("-> automatic_transcription API response:",'DEBUG',response);
+				}
+
+				resolve(response)
+			})
+		})
+}//end automatic_transcription

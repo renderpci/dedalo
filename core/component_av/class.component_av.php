@@ -1191,9 +1191,10 @@ class component_av extends component_media_common {
 	* BUILD_VERSION
 	* Creates a new version using FFMEPG conversion using settings based on target quality
 	* @param string $quality
+	* @param bool $async = true
 	* @return object $response
 	*/
-	public function build_version(string $quality) : object {
+	public function build_version(string $quality, bool $async=true) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1207,14 +1208,29 @@ class component_av extends component_media_common {
 			$AVObj = new AVObj($id, $source_quality);
 
 		// Ffmpeg
-			$Ffmpeg				= new Ffmpeg();
-			$setting_name		= $Ffmpeg->get_setting_name_from_quality($AVObj, $quality);
-			$command_response	= $Ffmpeg->create_av_alternate($AVObj, $setting_name);
+			$Ffmpeg					= new Ffmpeg();
+			$setting_name			= $Ffmpeg->get_setting_name_from_quality($AVObj, $quality);
+			$av_alternate_response	= $Ffmpeg->create_av_alternate($AVObj, $setting_name);
+
+			if($async==false){
+
+				// exec command and wait
+				$command = $av_alternate_response->command;
+				$command_response  = shell_exec( $command );
+
+			}else{
+
+				// launch a background process
+				$prgfile = $av_alternate_response->prgfile;
+				exec_::exec_sh_file($prgfile);
+			}
 
 		// response
-			$response->result			= true;
-			$response->msg				= 'Building av file in background';
-			$response->command_response	= $command_response;
+			$response->result	= true;
+			$response->msg		= ($async===true)
+				? 'Building av file in background'
+				: 'File built';
+			$response->command_response	= $command_response ?? null;
 
 		// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
 			logger::$obj['activity']->log_message(
