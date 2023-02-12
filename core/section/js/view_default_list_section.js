@@ -115,10 +115,10 @@ view_default_list_section.render = async function(self, options) {
 			const selector = `${self.section_tipo}_${self.tipo}.list`
 
 		// custom properties defined css
-			if (self.context.css) {
+			// if (self.context.css) {
 				// use defined section css
-				set_element_css(selector, self.context.css)
-			}
+				// set_element_css(selector, self.context.css)
+			// }
 			// flat columns create a sequence of grid widths taking care of sub-column space
 			// like 1fr 1fr 1fr 3fr 1fr
 			const items				= ui.flat_column_items(columns_map)
@@ -145,6 +145,12 @@ view_default_list_section.render = async function(self, options) {
 			const css_object = {
 				'.list_body' : {
 					'grid-template-columns' : template_columns
+				}
+			}
+			if (self.context.css) {
+				// use defined section css
+				for(const property in self.context.css) {
+					css_object[property] = self.context.css[property]
 				}
 			}
 			// use calculated css
