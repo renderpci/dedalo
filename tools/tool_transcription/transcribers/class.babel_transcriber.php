@@ -38,6 +38,8 @@ class babel_transcriber {
 		$this->transcription_ddo	= $options->transcription_ddo;
 	}//end __construct
 
+
+
 	/**
 	* transcribe
 	* Connect with BABEL API across CURL to get transcription result as text
@@ -72,6 +74,7 @@ class babel_transcriber {
 
 		return (object)$response;
 	}//end transcribe
+
 
 
 	/**
@@ -150,47 +153,79 @@ class babel_transcriber {
 
 		return $response;
 	}//end check_transcription
+
+	/**
+	* CHECK_TRANSCRIBER_STATUS
+	* Ask to babel server if the process is working or was finished
+	* If Babel is working try to call every X seconds doing a recursion by itself
+	* Babel send 3 status
+	* 	1 - the pid and the file do not exist and nothing can do
+	* 	2 - the pid is active, the process is working, try call later
+	* 	3 - the pid is not active but the file with the result exist, process is done so call to process the result with process_file()
+	* @param object $options
+	* 	Returns last line on success or false on failure.
+	* @return void
+	*/
+	public static function check_transcriber_status(object $options) : void {
+
+		// options
+			$transcription_ddo	= $options->transcription_ddo;
+			// http query vars
 			$fields = [
-				'key'			=> $key,
-				'lang'			=> $lang,
-				'av_url'		=> $av_url,
-				'engine'		=> $engine,
-				'user_id'		=> $user_id,
-				'entity_name'	=> $entity_name
+				'key'				=> $options->key,
+				'url'				=> $options->url,
+				'lang'				=> $options->lang,
+				'av_url'			=> $options->av_url,
+				'engine'			=> $options->engine,
+				'method_name'		=> 'check_status',
+				'user_id'			=> $options->user_id,
+				'entity_name'		=> $options->entity_name,
+				'pid'				=> $options->pid
 			];
 
 		// curl request (core functions)
-			$request = curl_request((object)[
-				'url'			=> $url,
+			$request_response = curl_request((object)[
+				'url'			=> $options->url,
 				'postfields'	=> $fields,
 				'header'		=> false
 			]);
-			$result = $request->result;
+			$response	= json_decode($request_response->result);
+			$result		= $response->result;
 
-		// raw result
-			$raw_result = $result;
-			debug_log(__METHOD__." babel:transcribe ----> raw_result ".PHP_EOL.to_string($raw_result), logger::DEBUG);
+		// debug
+			debug_log(__METHOD__." babel: ----> result ".PHP_EOL.to_string($response), logger::DEBUG);
 
-		// check invalild response or error
-			$ar_invalid_respone = array('Error: Mode','Error. You need authorization');
-			foreach ($ar_invalid_respone as $invalid_respone) {
-				if( strpos($result, $invalid_respone)!==false ) {
-					$response->msg = 'Trigger Error: ['.__FUNCTION__.'] '.$result;
-					return $response;
-				}
+		// status switch
+			switch ($result->status) {
+				case 1:
+					// no pid, no file to get data
+					debug_log(__METHOD__." Babel: no pid, no file to get data: ".to_string($result->status), logger::DEBUG);
+					break;
+
+				case 2:
+					// processing try later
+					$seconds = 4;
+					sleep($seconds);
+					babel_transcriber::check_transcriber_status($options);
+					break;
+
+				case 3:
+					// process done get the json data and save it.
+					babel_transcriber::process_file((object)[
+						'lang'					=> $options->lang,
+						'transcription_ddo'		=> $transcription_ddo,
+						'transcription_data'	=> $result->transcription_data
+					]);
+					break;
+
+				default:
+					debug_log(__METHOD__." Error. status not valid: ".to_string($result->status), logger::ERROR);
+					break;
 			}
-
-		// decode html entities. Babel returns the special characters encoded as html entities.
-		// To reverse the format we use html_entity_decode converting double quotes to
-		// simple (flag ENT_COMPAT) and forcing the final format to UTF-8
-			$result = html_entity_decode($result, ENT_COMPAT, 'UTF-8');
+	}//end check_transcriber_status
 
 
-		// response object
-			$response = new stdClass();
-				$response->result		= $result;
-				$response->msg			= 'Ok. Request done ['.__FUNCTION__.']';
-				$response->raw_result	= $raw_result;
+
 
 
 		return (object)$response;
