@@ -277,7 +277,7 @@ const get_content_data_edit = async function(self) {
 			// subtitles_block
 				const subtitles_block = ui.create_dom_element({
 					element_type	: 'div',
-					class_name 		: 'subtitles_block',
+					class_name 		: 'subtitles_block block_separator',
 					parent 			: right_container
 				})
 
@@ -624,13 +624,13 @@ const build_automatic_transcription = (options) => {
 	// container
 		const automatic_transcription_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'automatic_transcription_container'
+			class_name		: 'automatic_transcription_container block_separator'
 		})
 
 	// button
 		const button_automatic_transcription = ui.create_dom_element({
 			element_type	: 'button',
-			class_name		: 'warning button_automatic_transcription',
+			class_name		: 'light button_automatic_transcription',
 			inner_html		: self.get_tool_label.automatic_transcription || "Automatic translation",
 			parent			: automatic_transcription_container
 		})
@@ -683,6 +683,32 @@ const build_automatic_transcription = (options) => {
 				value	: self.transcriber_engine_select.value
 			}, 'status')
 		})
+
+	// select quality of transcriber
+		// self.transcriber_engine_quality = ui.create_dom_element({
+		// 	element_type	: 'select',
+		// 	parent 			: automatic_transcription_container
+		// })
+		// for (let i = 0; i < transcriber_engine.length; i++) {
+
+		// 	const engine = transcriber_engine[i]
+
+		// 	const option = ui.create_dom_element({
+		// 		element_type	: 'option',
+		// 		value			: engine.name,
+		// 		inner_html		: engine.label,
+		// 		parent			: self.transcriber_engine_quality
+		// 	})
+		// 	if (self.target_transcriber===engine.name) {
+		// 		option.selected = true
+		// 	}
+		// }
+		// self.transcriber_engine_quality.addEventListener('change', function(){
+		// 	data_manager.set_local_db_data({
+		// 		id		: 'transcriber_engine_quality',
+		// 		value	: self.transcriber_engine_quality.value
+		// 	}, 'status')
+		// })
 
 
 	return automatic_transcription_container

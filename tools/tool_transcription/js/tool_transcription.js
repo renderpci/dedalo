@@ -282,12 +282,12 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 		// add the necessary arguments used in the given function
 		source.arguments = {
 			source_lang			: source_lang,
-			transcription_component : {
+			transcription_ddo : {
 				component_tipo		: self.transcription_component.tipo,
 				section_id			: self.transcription_component.section_id,
 				section_tipo		: self.transcription_component.section_tipo
 			},
-			media_component : {
+			media_ddo : {
 				component_tipo		: self.media_component.tipo,
 				section_id			: self.media_component.section_id,
 				section_tipo		: self.media_component.section_tipo
