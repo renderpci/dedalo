@@ -8360,7 +8360,6 @@ dd-modal .footer.distribute {
 .component_av.view_default > .content_data > .content_value,
 .component_av.view_player > .content_data > .content_value {
   background-color: #faf8fc;
-  height: 404px;
   width: 100%;
 }
 @media screen and (max-width: 960px) {
