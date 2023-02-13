@@ -20,7 +20,7 @@ class component_pdf extends component_common {
 	public $PdfObj ; # Instance of PdfObj with current data
 
 	# php 8.2 added
-	protected $aditional_path;
+	public $aditional_path;
 
 	# COMPONENT_PDF COSNTRUCT
 	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null) {
