@@ -52,7 +52,7 @@ describe("COMPONENTS DATA CHANGES", async function() {
 
 						// save
 							const changed_data = [Object.freeze({
-								action	: 'insert',
+								action	: 'update',
 								key		: 0,
 								value	: new_value
 							})]

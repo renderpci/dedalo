@@ -197,6 +197,11 @@ const get_input_element = (i, current_value, self) => {
 	// init_current_service_text_editor
 		const init_current_service_text_editor = async function() {
 
+			// permissions check
+				if (!self.permissions || parseInt(self.permissions)<2) {
+					return
+				}
+
 			// service_editor. Fixed on init
 				const current_service_text_editor = new self.service_text_editor()
 
@@ -236,6 +241,13 @@ const get_input_element = (i, current_value, self) => {
 
 			// fix current_service_text_editor when is ready
 				self.text_editor[i] = current_service_text_editor
+
+			// permissions <2 turn editor read only
+				// if (!self.permissions || parseInt(self.permissions)<2) {
+				// 	current_service_text_editor.editor.enableReadOnlyMode(
+				// 		current_service_text_editor.editor.id
+				// 	)
+				// }
 
 			// event ready
 				event_manager.publish(
@@ -1272,7 +1284,6 @@ const render_note = async function(options) {
 					body.innerHTML = (get_label.no_access || 'Not access here') + ' ' + note_section.tipo
 					return false
 				}
-
 
 				const note_section_node	= await note_section.render()
 				body.appendChild(note_section_node)
