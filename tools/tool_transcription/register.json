@@ -77,12 +77,12 @@
         {
           "start": {
             "day": 13,
-            "hour": 13,
-            "time": 65024600776,
+            "hour": 14,
+            "time": 65024606328,
             "year": 2023,
             "month": 2,
-            "minute": 6,
-            "second": 16
+            "minute": 38,
+            "second": 48
           }
         }
       ]
@@ -632,33 +632,63 @@
             },
             {
               "lang": "lg-eng",
-              "name": "play_spped",
+              "name": "play_speed",
               "value": "Play speed"
             },
             {
               "lang": "lg-ita",
-              "name": "play_spped",
+              "name": "play_speed",
               "value": "Velocità di riproduzione"
             },
             {
               "lang": "lg-spa",
-              "name": "play_spped",
+              "name": "play_speed",
               "value": "Velocidad de reproducción"
             },
             {
               "lang": "lg-cat",
-              "name": "play_spped",
+              "name": "play_speed",
               "value": "Velocitat de reproducció"
             },
             {
               "lang": "lg-deu",
-              "name": "play_spped",
+              "name": "play_speed",
               "value": "Spielgeschwindigkeit"
             },
             {
               "lang": "lg-ell",
-              "name": "play_spped",
+              "name": "play_speed",
               "value": "Ταχύτητα αναπαραγωγής"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "seconds_abbr",
+              "value": "Seg."
+            },
+            {
+              "lang": "lg-cat",
+              "name": "seconds_abbr",
+              "value": "Seg."
+            },
+            {
+              "lang": "lg-eng",
+              "name": "seconds_abbr",
+              "value": "Sec."
+            },
+            {
+              "lang": "lg-deu",
+              "name": "seconds_abbr",
+              "value": "Sek."
+            },
+            {
+              "lang": "lg-ita",
+              "name": "seconds_abbr",
+              "value": "Sec."
+            },
+            {
+              "lang": "lg-ell",
+              "name": "seconds_abbr",
+              "value": "Δεύτερος"
             }
           ]
         ]
@@ -668,7 +698,7 @@
   "section_id": 15,
   "created_date": "2021-08-06 17:27:08",
   "section_tipo": "dd1340",
-  "modified_date": "2023-02-13 13:06:16",
+  "modified_date": "2023-02-13 14:38:48",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",
