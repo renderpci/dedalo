@@ -332,14 +332,15 @@ const get_content_data_edit = async function(self) {
 					class_name 		: 'automatic_transcription_block',
 					parent 			: right_container
 				})
+
+				// check if tool has transcriber engine configuration
 				const transcriber_engine = (self.context.config)
 					? self.context.config.transcriber_engine.value
 					: false
-					console.log("transcriber_engine:",transcriber_engine, self);
+
 				if (transcriber_engine) {
 					const automatic_transcription_node = build_automatic_transcription({
 						self					: self,
-						transcriber_engine		: transcriber_engine,
 						source_select_lang		: self.transcription_component.lang,
 						transcripton_container	: component_text_area_node
 					})
@@ -617,9 +618,16 @@ const build_automatic_transcription = (options) => {
 
 
 	const self						= options.self
-	const transcriber_engine		= options.transcriber_engine
 	const source_select_lang		= options.source_select_lang
 	const transcripton_container	= options.transcripton_container
+
+	const transcriber_engine = (self.context.config)
+		? self.context.config.transcriber_engine.value
+		: false
+
+	const transcriber_quality = (self.context.config)
+		? self.context.config.transcriber_quality
+		: false
 
 	// container
 		const automatic_transcription_container = ui.create_dom_element({
@@ -641,6 +649,9 @@ const build_automatic_transcription = (options) => {
 
 			self.automatic_transcription({
 					transcriber_engine	: self.transcriber_engine_select.value,
+					transcriber_quality	: self.transcriber_engine_quality  && self.transcriber_engine_quality.value
+						? self.transcriber_engine_quality.value
+						: false,
 					source_lang			: source_select_lang
 			})
 			.then((response)=>{
@@ -648,17 +659,10 @@ const build_automatic_transcription = (options) => {
 				// user messages
 				const msg_type = (response.result===false) ? 'error' : 'ok'
 				ui.show_message(automatic_transcription_container, response.msg, msg_type)
-
-				// reload target lang
-					// const target_component = self.ar_instances.find(el => el.tipo===self.main_element.tipo && el.lang===target_lang)
-					// target_component.refresh()
-					// if(SHOW_DEVELOPER===true) {
-					// 	dd_console('target_component', 'DEBUG', target_component)
-					// }
 			})
 		})
 
-	// select
+	// select engine
 		self.transcriber_engine_select = ui.create_dom_element({
 			element_type	: 'select',
 			parent 			: automatic_transcription_container
@@ -685,30 +689,34 @@ const build_automatic_transcription = (options) => {
 		})
 
 	// select quality of transcriber
-		// self.transcriber_engine_quality = ui.create_dom_element({
-		// 	element_type	: 'select',
-		// 	parent 			: automatic_transcription_container
-		// })
-		// for (let i = 0; i < transcriber_engine.length; i++) {
+		if(transcriber_quality){
+			self.transcriber_engine_quality = ui.create_dom_element({
+				element_type	: 'select',
+				parent 			: automatic_transcription_container
+			})
+			const quality_value = transcriber_quality.value
+			for (let i = 0; i < quality_value.length; i++) {
 
-		// 	const engine = transcriber_engine[i]
+				const quality	= quality_value[i]
+				const label		= self.get_tool_label(quality.label) || quality.label
 
-		// 	const option = ui.create_dom_element({
-		// 		element_type	: 'option',
-		// 		value			: engine.name,
-		// 		inner_html		: engine.label,
-		// 		parent			: self.transcriber_engine_quality
-		// 	})
-		// 	if (self.target_transcriber===engine.name) {
-		// 		option.selected = true
-		// 	}
-		// }
-		// self.transcriber_engine_quality.addEventListener('change', function(){
-		// 	data_manager.set_local_db_data({
-		// 		id		: 'transcriber_engine_quality',
-		// 		value	: self.transcriber_engine_quality.value
-		// 	}, 'status')
-		// })
+				const option = ui.create_dom_element({
+					element_type	: 'option',
+					value			: quality.name,
+					inner_html		: label,
+					parent			: self.transcriber_engine_quality
+				})
+				if (transcriber_quality.default===quality.name) {
+					option.selected = true
+				}
+			}
+			self.transcriber_engine_quality.addEventListener('change', function(){
+				data_manager.set_local_db_data({
+					id		: 'transcriber_engine_quality',
+					value	: self.transcriber_engine_quality.value
+				}, 'status')
+			})
+		}// end if(transcriber_quality)
 
 
 	return automatic_transcription_container
