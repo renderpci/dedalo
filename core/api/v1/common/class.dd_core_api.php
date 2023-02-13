@@ -903,7 +903,11 @@ final class dd_core_api {
 
 				// permissions. Get the component permissions and check if the user can update the component
 					$permissions = $component->get_component_permissions();
-					if($permissions < 2) return $response;
+					if($permissions < 2) {
+						$response->error	= 1;
+						$response->msg		= 'Error. You don\'t have enough permissions to edit this component ('.$tipo.'). permissions:'.to_string($permissions);
+						return $response;
+					}
 
 				// changed_data is array always. Check to safe value
 					if (!is_array($changed_data)) {
@@ -927,7 +931,7 @@ final class dd_core_api {
 							// update the dato with the changed data sent by the client
 							$update_result = (bool)$component->update_data_value($changed_data_item);
 							if ($update_result===false) {
-								$response->error	 = 1;
+								$response->error	 = 2;
 								$response->msg		.= ' Error on update_data_value. New data it\'s not saved! ';
 								return $response;
 							}
@@ -947,7 +951,6 @@ final class dd_core_api {
 					if (isset($data->pagination) && isset($data->pagination->limit)) {
 						$component->pagination->limit = $data->pagination->limit;
 					}
-						dump($component->pagination, ' component->pagination ++ '.to_string());
 
 				// datalist. if is received, inject to the component for recycle
 					if (isset($data->datalist)) {
