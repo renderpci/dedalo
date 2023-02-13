@@ -362,7 +362,7 @@ class DDModal extends HTMLElement {
 		if (e.target.matches('.close_modal')) {
 			this.mini = false
 		}
-		// only click over base modal or button close are aceppted
+		// only click over base modal or button close are accepted
 		if (e.target.matches('.modal') || e.target.matches('.close_modal')) {
 			this._closeModal()
 		}
@@ -426,11 +426,29 @@ class DDModal extends HTMLElement {
 
 		// unsaved_data check
 			if (window.unsaved_data===true) {
-				if (!confirm(get_label.discard_changes || 'Discard unsaved changes?')) {
-					return false
-				}else{
-					window.unsaved_data===false
-				}
+
+				// check if the modified components is inside the modal
+					let unsaved_component_data = false
+					const components = this.querySelectorAll('.wrapper_component')
+					if (components) {
+						const components_length = components.length
+						for (let i = 0; i < components_length; i++) {
+							const item = components[i]
+							if (item.classList.contains('modified')) {
+								unsaved_component_data = true
+								break
+							}
+						}
+					}
+
+				// if true, confirm exit by user
+					if (unsaved_component_data===true) {
+						if (!confirm(get_label.discard_changes || 'Discard unsaved changes?')) {
+							return false
+						}else{
+							window.unsaved_data===false
+						}
+					}
 			}
 
 		this._modalVisible = false;
