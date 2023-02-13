@@ -446,7 +446,7 @@ render_search.prototype.render_search_buttons = function(){
 			e.stopPropagation()
 			self.show_all(this)
 			// Close search div
-			//self.toggle_search_panel()
+				toggle_search_panel(self) // toggle to open from default state close
 		})
 	// Submit button
 		const submit_button = ui.create_dom_element({
@@ -459,9 +459,11 @@ render_search.prototype.render_search_buttons = function(){
 		submit_button.addEventListener('click', function(e){
 			e.stopPropagation()
 			// always blur active component to force set dato (!)
-			document.activeElement.blur()
+				document.activeElement.blur()
 			// exec search command
-			self.exec_search()
+				self.exec_search()
+			// toggle filter container
+				toggle_search_panel(self) // toggle to open from default state close
 		})
 
 
