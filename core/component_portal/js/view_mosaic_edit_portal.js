@@ -405,14 +405,20 @@ const render_alternative_table_view = async function(self, ar_section_record, al
 						// header
 							const header = ui.create_dom_element({
 								element_type	: 'div',
-								// class_name	: 'header label',
-								inner_html		: "Editing inline"
+								inner_html		: 'Editing mosaic inline'
 							})
+
+						// body
+							const body = ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'body content'
+							})
+							body.appendChild(alt_list_body)
 
 						// modal way
 							const modal = ui.attach_to_modal({
 								header	: header,
-								body	: alt_list_body,
+								body	: body,
 								footer	: null,
 								size	: 'normal'
 							})

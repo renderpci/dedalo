@@ -163,10 +163,6 @@ section.prototype.init = async function(options) {
 			)
 			async function fn_create_new_section() {
 
-				if (!confirm(get_label.sure || 'Sure?')) {
-					return false
-				}
-
 				// data_manager. create
 				const rqo = {
 					action	: 'create',

@@ -462,7 +462,8 @@ export const render_column_remove = function(options) {
 			// body
 				const body = ui.create_dom_element({
 					element_type	: 'div',
-					class_name		: 'body content'
+					class_name		: 'body content',
+					inner_html		: ' '
 				})
 
 			// footer
@@ -550,7 +551,7 @@ export const render_column_remove = function(options) {
 					// modal. Close modal if it's set
 						modal.on_close()
 				})
-			}
+			}//end unlink_record
 
 			const delete_linked_record = async function() {
 
@@ -587,7 +588,7 @@ export const render_column_remove = function(options) {
 				.then(function(){
 					modal.on_close()
 				})
-			}
+			}//end delete_linked_record
 
 			const delete_dataframe_record = async function() {
 				// check if the show has any ddo that call to any dataframe section.
@@ -625,9 +626,7 @@ export const render_column_remove = function(options) {
 						delete_mode			: 'delete_dataframe',
 						caller_dataframe	: caller_dataframe
 					})
-
-
-			}
+			}//end delete_dataframe_record
 
 			// modal
 				const modal = ui.attach_to_modal({
@@ -886,6 +885,11 @@ export const get_buttons = (self) => {
 * @return bool
 */
 export const activate_autocomplete = async function(self, wrapper) {
+
+	// permissions check
+		if (self.permissions<2) {
+			return
+		}
 
 	// Default source external buttons configuration,
 	// if show.interface is defined in properties used the definition, else use this default
