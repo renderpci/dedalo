@@ -273,6 +273,7 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 	const self = this
 
 	const transcriber_engine	= options.transcriber_engine
+	const transcriber_quality 	= options.transcriber_quality
 	const source_lang			= self.transcription_component.lang
 
 
@@ -293,6 +294,7 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 				section_tipo		: self.media_component.section_tipo
 			},
 			transcriber_engine	: transcriber_engine,
+			transcriber_quality : transcriber_quality,
 			config				: self.context.config
 		}
 

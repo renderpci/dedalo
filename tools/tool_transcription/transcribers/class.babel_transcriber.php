@@ -14,6 +14,7 @@ class babel_transcriber {
 	protected $lang_tld2; // string tld2
 	protected $av_url; // string full absolute
 	protected $engine; // string babel_transcription
+	protected $quality; // string quality for transcription engine || false
 	protected $user_id; //int
 	protected $entity_name; // string
 	protected $transcription_ddo; // object
@@ -33,6 +34,7 @@ class babel_transcriber {
 		$this->lang_tld2			= $options->lang_tld2	?? null;
 		$this->av_url				= $options->av_url;
 		$this->engine				= $options->engine;
+		$this->quality				= $options->quality;
 		$this->user_id				= $options->user_id;
 		$this->entity_name			= $options->entity_name;
 		$this->transcription_ddo	= $options->transcription_ddo;
@@ -51,12 +53,13 @@ class babel_transcriber {
 		// http query vars
 			$fields = [
 				'key'			=> $this->key,
+				'engine'		=> $this->engine,
+				'quality'		=> $this->quality,
+				'user_id'		=> $this->user_id,
+				'entity_name'	=> $this->entity_name,
 				'lang_tld2'		=> $this->lang_tld2,
 				'av_url'		=> $this->av_url,
-				'engine'		=> $this->engine,
-				'method_name'	=> 'transcribe',
-				'user_id'		=> $this->user_id,
-				'entity_name'	=> $this->entity_name
+				'method_name'	=> 'transcribe'
 			];
 
 		// curl request (core functions)

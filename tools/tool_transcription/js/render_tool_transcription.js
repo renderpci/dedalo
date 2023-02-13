@@ -127,7 +127,7 @@ const get_content_data_edit = async function(self) {
 				const slider_label = ui.create_dom_element({
 					element_type	: 'div',
 					class_name 		: 'slider_label',
-					inner_html 		: get_label.play_speed || 'Play speed',
+					inner_html 		: self.get_tool_label('play_speed') || 'Play speed',
 					parent 			: slider_container
 				})
 				const slider = ui.create_dom_element({
@@ -171,7 +171,7 @@ const get_content_data_edit = async function(self) {
 						const playpause_key_label = ui.create_dom_element({
 							element_type	: 'div',
 							class_name		: 'label',
-							inner_html		: get_label.play_pause_key || 'Play/pause key',
+							inner_html		: self.get_tool_label('play_pause') || 'Play/pause key',
 							parent			: playpause_key
 						})
 						const playpause_key_input = ui.create_dom_element({
@@ -205,7 +205,7 @@ const get_content_data_edit = async function(self) {
 						const av_rewind_secs_label = ui.create_dom_element({
 							element_type	: 'div',
 							class_name		: 'label',
-							inner_html		: get_label.auto_rewind || 'Auto-rewind',
+							inner_html		: self.get_tool_label('auto_rewind') || 'Auto-rewind',
 							parent			: av_rewind_secs
 						})
 						const av_rewind_secs_input = ui.create_dom_element({
@@ -216,7 +216,7 @@ const get_content_data_edit = async function(self) {
 						const av_rewind_secs_name = ui.create_dom_element({
 							element_type	: 'span',
 							parent 			: av_rewind_secs,
-							inner_html		: get_label.seconds_abbr || 'sec/s.'
+							inner_html		: self.get_tool_label('seconds_abbr') || 'sec/s.'
 						})
 						// get the cookie of the key
 						const av_rewind_secs_value = localStorage.getItem('av_rewind_secs')
@@ -248,7 +248,7 @@ const get_content_data_edit = async function(self) {
 						const tag_insert_key_label = ui.create_dom_element({
 							element_type	: 'div',
 							class_name		: 'label',
-							inner_html		: get_label.insert_tag || 'Insert tag',
+							inner_html		: self.get_tool_label('insert_tag') || 'Insert tag',
 							parent			: tag_insert_key
 						})
 						const tag_insert_key_input = ui.create_dom_element({
@@ -285,7 +285,7 @@ const get_content_data_edit = async function(self) {
 					const button_build_subtitles = ui.create_dom_element({
 						element_type	: 'button',
 						class_name		: 'light btn_subtitles',
-						inner_html		: get_label.build_subtitles || 'Build subtitles',
+						inner_html		: self.get_tool_label('build_subtitles') || 'Build subtitles',
 						parent			: subtitles_block
 					})
 					button_build_subtitles.addEventListener('click', function(evt) {
@@ -303,7 +303,7 @@ const get_content_data_edit = async function(self) {
 					ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'label',
-						inner_html		: get_label.characters_per_line || 'Characters per line',
+						inner_html		: self.get_tool_label('chars_per_line') || 'Characters per line',
 						parent			: subtitles_block
 					})
 
@@ -332,14 +332,15 @@ const get_content_data_edit = async function(self) {
 					class_name 		: 'automatic_transcription_block',
 					parent 			: right_container
 				})
+
+				// check if tool has transcriber engine configuration
 				const transcriber_engine = (self.context.config)
 					? self.context.config.transcriber_engine.value
 					: false
-					console.log("transcriber_engine:",transcriber_engine, self);
+
 				if (transcriber_engine) {
 					const automatic_transcription_node = build_automatic_transcription({
 						self					: self,
-						transcriber_engine		: transcriber_engine,
 						source_select_lang		: self.transcription_component.lang,
 						transcripton_container	: component_text_area_node
 					})
@@ -617,9 +618,16 @@ const build_automatic_transcription = (options) => {
 
 
 	const self						= options.self
-	const transcriber_engine		= options.transcriber_engine
 	const source_select_lang		= options.source_select_lang
 	const transcripton_container	= options.transcripton_container
+
+	const transcriber_engine = (self.context.config)
+		? self.context.config.transcriber_engine.value
+		: false
+
+	const transcriber_quality = (self.context.config)
+		? self.context.config.transcriber_quality
+		: false
 
 	// container
 		const automatic_transcription_container = ui.create_dom_element({
@@ -631,7 +639,7 @@ const build_automatic_transcription = (options) => {
 		const button_automatic_transcription = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'light button_automatic_transcription',
-			inner_html		: self.get_tool_label.automatic_transcription || "Automatic translation",
+			inner_html		: self.get_tool_label('automatic_transcription') || "Automatic transcription",
 			parent			: automatic_transcription_container
 		})
 
@@ -641,6 +649,9 @@ const build_automatic_transcription = (options) => {
 
 			self.automatic_transcription({
 					transcriber_engine	: self.transcriber_engine_select.value,
+					transcriber_quality	: self.transcriber_engine_quality  && self.transcriber_engine_quality.value
+						? self.transcriber_engine_quality.value
+						: false,
 					source_lang			: source_select_lang
 			})
 			.then((response)=>{
@@ -648,17 +659,17 @@ const build_automatic_transcription = (options) => {
 				// user messages
 				const msg_type = (response.result===false) ? 'error' : 'ok'
 				ui.show_message(automatic_transcription_container, response.msg, msg_type)
-
-				// reload target lang
-					// const target_component = self.ar_instances.find(el => el.tipo===self.main_element.tipo && el.lang===target_lang)
-					// target_component.refresh()
-					// if(SHOW_DEVELOPER===true) {
-					// 	dd_console('target_component', 'DEBUG', target_component)
-					// }
 			})
 		})
 
-	// select
+	// select engine
+		// label
+		ui.create_dom_element({
+			element_type	: 'span',
+			inner_html		: self.get_tool_label('engine') || 'Quality',
+			parent 			: automatic_transcription_container
+		})
+
 		self.transcriber_engine_select = ui.create_dom_element({
 			element_type	: 'select',
 			parent 			: automatic_transcription_container
@@ -685,30 +696,41 @@ const build_automatic_transcription = (options) => {
 		})
 
 	// select quality of transcriber
-		// self.transcriber_engine_quality = ui.create_dom_element({
-		// 	element_type	: 'select',
-		// 	parent 			: automatic_transcription_container
-		// })
-		// for (let i = 0; i < transcriber_engine.length; i++) {
+		if(transcriber_quality){
+			// label
+			ui.create_dom_element({
+				element_type	: 'span',
+				inner_html		: self.get_tool_label('quality') || 'Quality',
+				parent 			: automatic_transcription_container
+			})
 
-		// 	const engine = transcriber_engine[i]
+			self.transcriber_engine_quality = ui.create_dom_element({
+				element_type	: 'select',
+				parent 			: automatic_transcription_container
+			})
+			const quality_value = transcriber_quality.value
+			for (let i = 0; i < quality_value.length; i++) {
 
-		// 	const option = ui.create_dom_element({
-		// 		element_type	: 'option',
-		// 		value			: engine.name,
-		// 		inner_html		: engine.label,
-		// 		parent			: self.transcriber_engine_quality
-		// 	})
-		// 	if (self.target_transcriber===engine.name) {
-		// 		option.selected = true
-		// 	}
-		// }
-		// self.transcriber_engine_quality.addEventListener('change', function(){
-		// 	data_manager.set_local_db_data({
-		// 		id		: 'transcriber_engine_quality',
-		// 		value	: self.transcriber_engine_quality.value
-		// 	}, 'status')
-		// })
+				const quality	= quality_value[i]
+				const label		= self.get_tool_label(quality.label) || quality.label
+
+				const option = ui.create_dom_element({
+					element_type	: 'option',
+					value			: quality.name,
+					inner_html		: label,
+					parent			: self.transcriber_engine_quality
+				})
+				if (transcriber_quality.default===quality.name) {
+					option.selected = true
+				}
+			}
+			self.transcriber_engine_quality.addEventListener('change', function(){
+				data_manager.set_local_db_data({
+					id		: 'transcriber_engine_quality',
+					value	: self.transcriber_engine_quality.value
+				}, 'status')
+			})
+		}// end if(transcriber_quality)
 
 
 	return automatic_transcription_container
