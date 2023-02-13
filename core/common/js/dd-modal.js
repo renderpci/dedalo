@@ -41,6 +41,7 @@ class DDModal extends HTMLElement {
 					margin: auto;
 					margin-top: 3.5vh;
 					padding: 0;
+					padding-bottom: 1.5rem;
 					width: 80%;
 					/*min-width: 390px;*/
 					min-width: 15rem;
@@ -125,6 +126,11 @@ class DDModal extends HTMLElement {
 					margin: 20px 2px;
 					overflow: auto;
 					*/
+				}
+
+			/* modal footer */
+				.modal-footer {
+
 				}
 
 			/* modal_big version */
