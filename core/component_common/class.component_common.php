@@ -1697,23 +1697,25 @@ abstract class component_common extends common {
 	/**
 	* GET_AR_LIST_OF_VALUES
 	* Calculate all values list for component_select, component_check_box, component_radio_button ..
-	* @param string|null $lang = DEDALO_DATA_LANG
+	* @param string $lang = DEDALO_DATA_LANG
 	* @param bool $include_negative = false
 	*
 	* @return object $response
 	*/
-	public function get_ar_list_of_values(?string $lang=DEDALO_DATA_LANG, bool $include_negative=false) : object {
+	public function get_ar_list_of_values(string $lang=DEDALO_DATA_LANG, bool $include_negative=false) : object {
 
 		$start_time = start_time();
 
-		$response = new stdClass();
-			$response->result	= [];
-			$response->msg		= __METHOD__ . ' Error. Request failed';
+		// response
+			$response = new stdClass();
+				$response->result	= [];
+				$response->msg		= __METHOD__ . ' Error. Request failed';
 
 		// short vars
-			$fields_separator = ', ';
+			$fields_separator			= ', ';
+			$components_with_relations	= component_relation_common::get_components_with_relations();
 
-		// cases
+		// search_query_object cases
 			switch (true) {
 
 				case isset($this->properties->filtered_by_search_dynamic) || isset($this->properties->filtered_by_search):
@@ -1779,12 +1781,12 @@ abstract class component_common extends common {
 		// cache
 			static $ar_list_of_values_data = [];
 			$uid = isset($target_section_tipo)
-				? $target_section_tipo.'_'.$lang. $hash_id
-				: $this->tipo.'_'.$lang. $hash_id;
+				? $target_section_tipo .'_'. $lang . $hash_id
+				: $this->tipo .'_'. $lang . $hash_id;
 			if (isset($ar_list_of_values_data[$uid])) {
-				#debug_log(__METHOD__." Return cached item for ar_list_of_values: ".to_string($uid), logger::DEBUG);
+				// debug_log(__METHOD__." Return cached item for ar_list_of_values: ".to_string($uid), logger::DEBUG);
 
-				// response ok from cache
+				// response OK from cache
 					$response = $ar_list_of_values_data[$uid];
 
 				return $response;
@@ -1793,26 +1795,30 @@ abstract class component_common extends common {
 		// ar_componets_related. get_ar_related_by_model: $model_name, $tipo, $strict=true
 			$ar_componets_related = common::get_ar_related_by_model('component_', $this->tipo, false);
 
-		// Build query select
+		// search_query_object select. Build query select
 			$query_select = [];
 			foreach ($ar_componets_related as $related_tipo) {
 
-				// path . search::get_query_path($tipo, $section_tipo, $resolve_related=true)
-				$path = search::get_query_path($related_tipo, $target_section_tipo, $resolve_related=true);
+				// path
+					$path = search::get_query_path(
+						$related_tipo, // string tipo
+						$target_section_tipo, // string section_tipo
+						true // bool resolve_related
+					);
+					// add selector lag 'all' to last element of path
+					$end_path = end($path);
+					$end_path->lang = 'all';
 
-				// add selector lag 'all' to last element of path
-				$end_path = end($path);
-				$end_path->lang = 'all';
-
-				$item = new stdClass();
-					$item->path = $path;
+				// select item
+					$item = new stdClass();
+						$item->path = $path;
 
 				$query_select[] = $item;
 			}
-			$search_query_object->select = $query_select;
-			$search_query_object->allow_sub_select_by_id = false;
+			$search_query_object->select					= $query_select;
+			$search_query_object->allow_sub_select_by_id	= false;
 
-		// Search
+		// search exec
 			$search = search::get_instance($search_query_object);
 			// include_negative values to include root user in list
 				if ($include_negative===true) {
@@ -1823,7 +1829,6 @@ abstract class component_common extends common {
 
 
 		$result = [];
-		// foreach ($ar_current_dato as $key => $current_row) {
 		$ar_current_dato_size = sizeof($ar_current_dato);
 		for ($i=0; $i < $ar_current_dato_size; $i++) {
 
@@ -1848,9 +1853,9 @@ abstract class component_common extends common {
 
 					$model_name = RecordObj_dd::get_modelo_name_by_tipo($related_tipo,true);
 					// if ($model_name==='component_autocomplete_hi') {
-					if (in_array($model_name, component_relation_common::get_components_with_relations())) {
-						// resolve
-						// ar_current_label array|null
+					if (in_array($model_name, $components_with_relations)) {
+
+						// resolve locator_value
 						$ar_current_label = component_relation_common::get_locator_value(
 							$value, // object locator
 							$lang, // string lang
@@ -1862,8 +1867,11 @@ abstract class component_common extends common {
 							? implode($fields_separator, $ar_current_label)
 							: $ar_current_label; // null case
 					}elseif ($model_name==='component_section_id') {
+
+						// direct value
 						$current_label = $current_row->{$related_tipo};
 					}else{
+
 						// use query select value
 						$dato_full_json	= $current_row->{$related_tipo};
 						$current_label	= self::get_value_with_fallback_from_dato_full(
@@ -1871,6 +1879,8 @@ abstract class component_common extends common {
 							true // bool decore_untranslated
 						);
 					}
+
+					// add if no empty
 					if (!empty($current_label)) {
 						$ar_label[] = $current_label;
 					}
@@ -1885,17 +1895,11 @@ abstract class component_common extends common {
 			// add tool information when the component is component_security_tools
 			// the component_security_tools is built as component_check_box and rendered as view
 			// this information is required to get specific tool information
-				if($this->tipo === DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO){
-					// create the section of the tool and inject his data ($current_row) to avoid call to DDBB
-					$section = section::get_instance(
-						$current_row->section_id, // string|null section_id
-						$current_row->section_tipo // string section_tipo
-					);
-					$section->set_dato($current_row);
+				if($this->tipo===DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO) {
 
 					// create the component of tool_simple_object_tipo and get his data
-					$component_tool_simple_object_tipo	= 'dd1353';
-					$model_name							= RecordObj_dd::get_modelo_name_by_tipo($component_tool_simple_object_tipo);
+					$component_tool_simple_object_tipo	= tools_register::$simple_tool_obj_component_tipo; // 'dd1353'
+					$model_name							= RecordObj_dd::get_modelo_name_by_tipo($component_tool_simple_object_tipo, true);
 					$component_tool_name				= component_common::get_instance(
 						$model_name, // string model
 						$component_tool_simple_object_tipo, // string tipo
@@ -1907,7 +1911,7 @@ abstract class component_common extends common {
 					$data = $component_tool_name->get_dato();
 
 					// add to the datalist the name and always_active
-					$item->tool_name		= $data[0]->name;
+					$item->tool_name		= $data[0]->name ?? '';
 					$item->always_active	= $data[0]->always_active ?? false;
 				}
 
@@ -1926,19 +1930,18 @@ abstract class component_common extends common {
 					});
 				}
 			}else{
-				// Default. Alphabetic ascendant
+				// Default. Alphabetic ascendant label
 				usort($result, function($a,$b){
 					return strnatcmp($a->label, $b->label);
 				});
 			}
 
-		// response ok
+		// response OK
 			$response->result	= (array)$result;
 			$response->msg		= 'Ok';
 			if(SHOW_DEBUG===true) {
 				$response->search_query_object	= json_encode($search_query_object, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 				$response->debug				= 'Total time: ' . exec_time_unit($start_time,'ms').' ms';
-				// debug_log(__METHOD__." $response->debug +++++++++++++++++++++++++++++++++++ ".to_string(), logger::DEBUG);
 			}
 
 		// cache
