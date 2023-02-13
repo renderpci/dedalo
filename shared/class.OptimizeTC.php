@@ -442,29 +442,29 @@ abstract class OptimizeTC {
 
 		$floor_seg = floor($seg);
 
-		$horas = $floor_seg / 3600 ;
-		if($horas<1){
-			$horas = 0 ;
+		$hours = $floor_seg / 3600 ;
+		if($hours<1){
+			$hours = 0 ;
 		}else{
-			$horas 		= floor($horas);
-			$floor_seg  = $floor_seg - ($horas * 3600);
+			$hours 		= floor($hours);
+			$floor_seg  = $floor_seg - ($hours * 3600);
 		}
-		$minutos = ($floor_seg / 60) ;
-		if($minutos<1){
-			$minutos = 0 ;
+		$minutes = ($floor_seg / 60) ;
+		if($minutes<1){
+			$minutes = 0 ;
 		}else{
-			$minutos 	= floor($minutos);
-			$floor_seg	= $floor_seg - ($minutos * 60);
+			$minutes 	= floor($minutes);
+			$floor_seg	= $floor_seg - ($minutes * 60);
 		}
-		$segundos = $floor_seg;
+		$seconds = $floor_seg;
 		$mseconds = round((($seg - floor($seg))*1000));
 		# format 00
-		$horas 		= str_pad($horas, 2, '0', STR_PAD_LEFT);
-		$minutos 	= str_pad($minutos, 2, '0', STR_PAD_LEFT);
-		$segundos 	= str_pad($segundos, 2, '0', STR_PAD_LEFT);
+		$hours 		= str_pad($hours, 2, '0', STR_PAD_LEFT);
+		$minutes 	= str_pad($minutes, 2, '0', STR_PAD_LEFT);
+		$seconds 	= str_pad($seconds, 2, '0', STR_PAD_LEFT);
 		$mseconds 	= str_pad($mseconds, 3, '0', STR_PAD_LEFT);
 
-		$tc = $horas .':'. $minutos. ':'. $segundos . '.' . $mseconds;
+		$tc = $hours .':'. $minutes. ':'. $seconds . '.' . $mseconds;
 
 		return $tc;
 	}//end seg2tc
