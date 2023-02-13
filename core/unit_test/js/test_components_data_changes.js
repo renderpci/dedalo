@@ -77,7 +77,7 @@ describe("COMPONENTS DATA CHANGES", async function() {
 								// console.log('api_returned_value:', api_returned_value);
 
 							assert.deepEqual( new_value, api_returned_value,
-								`api_returned_value: Not equal values (new_value, api_returned_value): \n ${JSON.stringify(new_value)}, \n ${JSON.stringify(api_returned_value)}\n`
+								`api_returned_value: Not equal values 1 (new_value, api_returned_value): \n ${JSON.stringify(new_value)}, \n ${JSON.stringify(api_returned_value)}\n`
 							)
 
 						// component_data_value
@@ -86,7 +86,7 @@ describe("COMPONENTS DATA CHANGES", async function() {
 								: undefined
 
 							assert.deepEqual( new_value, component_data_value,
-								`component_data_value: Not equal values (new_value, component_data_value): \n ${JSON.stringify(new_value)}, \n ${JSON.stringify(component_data_value)}\n`
+								`component_data_value: Not equal values 2 (new_value, component_data_value): \n ${JSON.stringify(new_value)}, \n ${JSON.stringify(component_data_value)}\n`
 							)
 
 						// destroy instances
@@ -134,7 +134,7 @@ describe("COMPONENTS DATA CHANGES", async function() {
 					assert.isOk( Array.isArray(new_instance.datum.context), `new_instance.datum.context is NOT as expected type (array): \n ${JSON.stringify(new_instance.datum.context)}, \n ${typeof new_instance.datum.context}\n` )
 					assert.isOk( Array.isArray(new_instance.datum.data), `new_instance.datum.data is NOT as expected type (array): \n ${JSON.stringify(new_instance.datum.data)}, \n ${typeof new_instance.datum.data}\n` )
 					// compare values
-					assert.deepEqual( new_value, read_value, `Not equal values (new_value, read_value): \n ${JSON.stringify(new_value)}, \n ${JSON.stringify(read_value)}\n` )
+					assert.deepEqual( new_value, read_value, `Not equal values 3 (new_value, read_value): \n ${JSON.stringify(new_value)}, \n ${JSON.stringify(read_value)}\n` )
 					// check type of data is object
 					assert.isOk( typeof new_instance.data==='object', `instance.data is NOT as expected type (object): \n ${JSON.stringify(new_instance.data)}, \n ${typeof new_instance.data}\n` )
 					// check type of data value is array
