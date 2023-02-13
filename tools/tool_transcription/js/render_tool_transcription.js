@@ -127,7 +127,7 @@ const get_content_data_edit = async function(self) {
 				const slider_label = ui.create_dom_element({
 					element_type	: 'div',
 					class_name 		: 'slider_label',
-					inner_html 		: get_label.play_speed || 'Play speed',
+					inner_html 		: self.get_tool_label('play_speed') || 'Play speed',
 					parent 			: slider_container
 				})
 				const slider = ui.create_dom_element({
@@ -171,7 +171,7 @@ const get_content_data_edit = async function(self) {
 						const playpause_key_label = ui.create_dom_element({
 							element_type	: 'div',
 							class_name		: 'label',
-							inner_html		: get_label.play_pause_key || 'Play/pause key',
+							inner_html		: self.get_tool_label('play_pause') || 'Play/pause key',
 							parent			: playpause_key
 						})
 						const playpause_key_input = ui.create_dom_element({
@@ -205,7 +205,7 @@ const get_content_data_edit = async function(self) {
 						const av_rewind_secs_label = ui.create_dom_element({
 							element_type	: 'div',
 							class_name		: 'label',
-							inner_html		: get_label.auto_rewind || 'Auto-rewind',
+							inner_html		: self.get_tool_label('auto_rewind') || 'Auto-rewind',
 							parent			: av_rewind_secs
 						})
 						const av_rewind_secs_input = ui.create_dom_element({
@@ -216,7 +216,7 @@ const get_content_data_edit = async function(self) {
 						const av_rewind_secs_name = ui.create_dom_element({
 							element_type	: 'span',
 							parent 			: av_rewind_secs,
-							inner_html		: get_label.seconds_abbr || 'sec/s.'
+							inner_html		: self.get_tool_label('seconds_abbr') || 'sec/s.'
 						})
 						// get the cookie of the key
 						const av_rewind_secs_value = localStorage.getItem('av_rewind_secs')
@@ -248,7 +248,7 @@ const get_content_data_edit = async function(self) {
 						const tag_insert_key_label = ui.create_dom_element({
 							element_type	: 'div',
 							class_name		: 'label',
-							inner_html		: get_label.insert_tag || 'Insert tag',
+							inner_html		: self.get_tool_label('insert_tag') || 'Insert tag',
 							parent			: tag_insert_key
 						})
 						const tag_insert_key_input = ui.create_dom_element({
@@ -285,7 +285,7 @@ const get_content_data_edit = async function(self) {
 					const button_build_subtitles = ui.create_dom_element({
 						element_type	: 'button',
 						class_name		: 'light btn_subtitles',
-						inner_html		: get_label.build_subtitles || 'Build subtitles',
+						inner_html		: self.get_tool_label('build_subtitles') || 'Build subtitles',
 						parent			: subtitles_block
 					})
 					button_build_subtitles.addEventListener('click', function(evt) {
@@ -303,7 +303,7 @@ const get_content_data_edit = async function(self) {
 					ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'label',
-						inner_html		: get_label.characters_per_line || 'Characters per line',
+						inner_html		: self.get_tool_label('chars_per_line') || 'Characters per line',
 						parent			: subtitles_block
 					})
 
