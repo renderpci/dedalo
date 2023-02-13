@@ -2823,17 +2823,16 @@
 		Fixed redundancy data in class ontology->get_children_recursive when section is virtual
 		Removed tool_import_files limitConcurrentUploads param that block normal uploads when value is more than 1 (tool_import_files_dcnav too)
 		Fix z-index issue in ontology tree mark tag
-	Released version 5.9.4
 		Check tm permissions to show or hide tm_list and component_history in inspector
 		Added default_section for users to go specific section after login
 		Final master version of v5
+	Released version 5.9.4
 		Valencia 08-02-2023T13:01:00
 		Fixed default project (component_filter) bug were the assignation sequence order was review because was wrong (global default project was set always, instead the properties default data
 		Increased section cache default max from 1200 to 2100
 		Added set_default dato optional CONFIG_DEFAULT_FILE_PATH JSON file with precedence from properties defaults: component_common->set_dato_default(), component_filter->set_default-dato_for_user()
 		Fixed component_filter set_dato method bug were non global_admin user saving projects delete the data not accessible to itself (other projects not accessible)
 		Fixed # php 8.2 added protected vars error (documents $aditional_path case)
-
 
 	[/HISTORY]
 
@@ -2865,7 +2864,6 @@
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
 	define('DEDALO_BUILD'	, '13-02-2023T10:53:00');
-
 
 
 
