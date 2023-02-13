@@ -639,7 +639,7 @@ const build_automatic_transcription = (options) => {
 		const button_automatic_transcription = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'light button_automatic_transcription',
-			inner_html		: self.get_tool_label.automatic_transcription || "Automatic translation",
+			inner_html		: self.get_tool_label('automatic_transcription') || "Automatic transcription",
 			parent			: automatic_transcription_container
 		})
 
@@ -663,6 +663,13 @@ const build_automatic_transcription = (options) => {
 		})
 
 	// select engine
+		// label
+		ui.create_dom_element({
+			element_type	: 'span',
+			inner_html		: self.get_tool_label('engine') || 'Quality',
+			parent 			: automatic_transcription_container
+		})
+
 		self.transcriber_engine_select = ui.create_dom_element({
 			element_type	: 'select',
 			parent 			: automatic_transcription_container
@@ -690,6 +697,13 @@ const build_automatic_transcription = (options) => {
 
 	// select quality of transcriber
 		if(transcriber_quality){
+			// label
+			ui.create_dom_element({
+				element_type	: 'span',
+				inner_html		: self.get_tool_label('quality') || 'Quality',
+				parent 			: automatic_transcription_container
+			})
+
 			self.transcriber_engine_quality = ui.create_dom_element({
 				element_type	: 'select',
 				parent 			: automatic_transcription_container
