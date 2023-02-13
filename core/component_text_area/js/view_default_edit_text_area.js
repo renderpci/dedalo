@@ -1265,6 +1265,15 @@ const render_note = async function(options) {
 			callback : async function() {
 
 				const note_section		= await get_note_section()
+
+				// permissions check
+				if (!note_section.permissions || parseInt(note_section.permissions)<1) {
+					body.classList.add('content')
+					body.innerHTML = (get_label.no_access || 'Not access here') + ' ' + note_section.tipo
+					return false
+				}
+
+
 				const note_section_node	= await note_section.render()
 				body.appendChild(note_section_node)
 
@@ -1273,7 +1282,7 @@ const render_note = async function(options) {
 						note_section.destroy(true,true,true)
 					}
 
-				if (!note_section.data.value) {
+				if (!note_section.data.value || !note_section.data.value[0]) {
 					section_info.remove()
 					button_remove.remove()
 					return false
