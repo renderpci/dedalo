@@ -356,7 +356,12 @@ class component_select_lang extends component_relation_common {
 				$datalist[] = $item_value;
 			}
 
-		// response ok
+		// sort the list for easy access
+			usort($datalist, function($a, $b) {
+				return strcmp($a->label, $b->label);
+			});
+
+		// response OK
 			$response = new stdClass();
 				$response->result	= $datalist;
 				$response->msg		= 'OK';
