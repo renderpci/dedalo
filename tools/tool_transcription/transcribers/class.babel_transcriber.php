@@ -79,7 +79,11 @@ class babel_transcriber {
 
 	/**
 	* CHECK_TRANSCRIPTION
-	* launch execution of sh file to check status of babel process
+	* launch execution in background of sh file to check status of Babel server process
+	* Use common process_runner to launch background process in /core/base
+	* the check will be independent of the current thread.
+	* Use the PID of the process sent by Babel server called by transcribe()
+	* @param int $pid
 	* @return object $response
 	*/
 	public function check_transcription($pid) : object {
@@ -230,18 +234,62 @@ class babel_transcriber {
 
 	/**
 	* PROCESS_FILE
+	* Get automatic transcription and format it with Dédalo tags.
+	* transcription_data comes as JSON format with every segment identify as object
+	* use the start time to create the TC tag and join to the text segment
+	* input format
+	* {
+	* 	text : "Can you say me..."
+	* 	segments: [
+	* 		{
+	* 			start: 1.85
+	* 			text : "Can you say me..."
+	* 		},
+	* 		{
+	* 			start: 3.45
+	* 			text : "blah blah..."
+	* 		}
+	* 	]
+	* }
+	* output format
+	* 	[TC_00:00:01.850_TC] Can you say me... <p>
+	* 	[TC_00:00:03.450_TC] blah blah...
+	*
+	* the output data is set to component_text_area data if it is not empty
 	*
 	* @param object $options
-	* 	Returns last line on success or false on failure.
 	*/
 	public static function process_file(object $options) {
 
 		$lang				= $options->lang;
 		$transcription_ddo	= $options->transcription_ddo;
 		$transcription_data	= $options->transcription_data;
+		// get the fragments of transcription
+		$segments = $transcription_data->segments;
+		// if the transcription doesn't has any segment stop the process
+		if(empty($segments)){
+			return false;
+		}
+		// create data with formatted tc tags
+		$ar_data = [];
+		foreach ($segments as $current_segment) {
+			// get the start in seconds
+			$start	= $current_segment->start;
+			// convert to TC
+			$tc		= OptimizeTC::seg2tc($start);
+			// add TC marks, enclose the tc with the pattern
+			// [TC_00:00:00.000_TC]
+			$tag = '[TC_'.$tc.'_TC]';
+			$text	= $current_segment->text;
+			// join the TC with the text of the fragment
+			$segment_text_with_tc = $tag.$text;
+			$ar_data[] = $segment_text_with_tc;
+		}
+		// join all segments whith paragraph between them.
+		$data = implode('<p>', $ar_data);
 
+		// create the text_area component
 		$model = RecordObj_dd::get_modelo_name_by_tipo($transcription_ddo->component_tipo);
-
 		$component_transcription = component_common::get_instance(
 			$model, // string model
 			$transcription_ddo->component_tipo, // string tipo
@@ -251,8 +299,15 @@ class babel_transcriber {
 			$transcription_ddo->section_tipo // string section_tipo
 		);
 
+		// check if the component has any data to avoid delete user changes in data.
+		// if the user want re-create the automatic transcription first need to delete previous data.
+		$current_data = $component_transcription->get_dato();
 
-		$component_transcription->set_dato(json_encode($transcription_data));
+		if(!empty($current_data) && !empty($current_data[0])){
+			return false;
+		}
+
+		$component_transcription->set_dato($data);
 		$component_transcription->Save();
 
 	}//end process_file
