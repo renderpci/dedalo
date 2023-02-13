@@ -666,7 +666,7 @@ class component_filter extends component_relation_common {
 		$name_tipo		= 'dd1320';
 		$parent_tipo	= 'dd169';
 
-		// section. inject alrady calculated data to the section to avoid reconnect to database
+		// section. inject already calculated data to the section to avoid reconnect to database
 			$section = section::get_instance($section_id, $section_tipo);
 			$section->set_dato($datos);
 

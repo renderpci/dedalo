@@ -124,7 +124,7 @@ view_default_edit_portal.render = async function(self, options) {
 		wrapper.list_body		= list_body
 		wrapper.content_data	= content_data
 
-	// autocomplete
+	// service autocomplete
 		wrapper.addEventListener('click', function(e) {
 			e.stopPropagation()
 			activate_autocomplete(self, wrapper)
