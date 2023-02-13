@@ -1264,8 +1264,8 @@ button.delete:before {
   opacity: 1;
   vertical-align: baseline;
   width: 1em;
-  -webkit-mask-image: url('../../themes/default/icons/trash.svg');
-  mask-image: url('../../themes/default/icons/trash.svg');
+  -webkit-mask-image: url('../../themes/default/icons/trash_light.svg');
+  mask-image: url('../../themes/default/icons/trash_light.svg');
   -webkit-mask-size: contain;
   mask-size: contain;
   -webkit-mask-repeat: no-repeat;
@@ -1279,8 +1279,8 @@ button.delete:before {
   }
 }
 .button.delete {
-  -webkit-mask-image: url('../../themes/default/icons/trash.svg');
-  mask-image: url('../../themes/default/icons/trash.svg');
+  -webkit-mask-image: url('../../themes/default/icons/trash_light.svg');
+  mask-image: url('../../themes/default/icons/trash_light.svg');
   -webkit-mask-size: contain;
   mask-size: contain;
   -webkit-mask-repeat: no-repeat;
@@ -1297,8 +1297,8 @@ button.delete_light:before {
   opacity: 1;
   vertical-align: baseline;
   width: 1em;
-  -webkit-mask-image: url('../../themes/default/icons/delete.svg');
-  mask-image: url('../../themes/default/icons/delete.svg');
+  -webkit-mask-image: url('../../themes/default/icons/trash_light.svg');
+  mask-image: url('../../themes/default/icons/trash_light.svg');
   -webkit-mask-size: contain;
   mask-size: contain;
   -webkit-mask-repeat: no-repeat;
@@ -1312,8 +1312,8 @@ button.delete_light:before {
   }
 }
 .button.delete_light {
-  -webkit-mask-image: url('../../themes/default/icons/delete.svg');
-  mask-image: url('../../themes/default/icons/delete.svg');
+  -webkit-mask-image: url('../../themes/default/icons/trash_light.svg');
+  mask-image: url('../../themes/default/icons/trash_light.svg');
   -webkit-mask-size: contain;
   mask-size: contain;
   -webkit-mask-repeat: no-repeat;
@@ -1363,8 +1363,8 @@ button.remove:before {
   opacity: 1;
   vertical-align: baseline;
   width: 1em;
-  -webkit-mask-image: url('../../themes/default/icons/trash.svg');
-  mask-image: url('../../themes/default/icons/trash.svg');
+  -webkit-mask-image: url('../../themes/default/icons/trash_light.svg');
+  mask-image: url('../../themes/default/icons/trash_light.svg');
   -webkit-mask-size: contain;
   mask-size: contain;
   -webkit-mask-repeat: no-repeat;
@@ -1378,8 +1378,8 @@ button.remove:before {
   }
 }
 .button.remove {
-  -webkit-mask-image: url('../../themes/default/icons/trash.svg');
-  mask-image: url('../../themes/default/icons/trash.svg');
+  -webkit-mask-image: url('../../themes/default/icons/trash_light.svg');
+  mask-image: url('../../themes/default/icons/trash_light.svg');
   -webkit-mask-size: contain;
   mask-size: contain;
   -webkit-mask-repeat: no-repeat;
@@ -1397,8 +1397,8 @@ button.new:before {
   opacity: 1;
   vertical-align: baseline;
   width: 1em;
-  -webkit-mask-image: url('../../themes/default/icons/add.svg');
-  mask-image: url('../../themes/default/icons/add.svg');
+  -webkit-mask-image: url('../../themes/default/icons/add_light.svg');
+  mask-image: url('../../themes/default/icons/add_light.svg');
   -webkit-mask-size: contain;
   mask-size: contain;
   -webkit-mask-repeat: no-repeat;
@@ -1414,8 +1414,8 @@ button.new:before {
 }
 .button.add,
 .button.new {
-  -webkit-mask-image: url('../../themes/default/icons/add.svg');
-  mask-image: url('../../themes/default/icons/add.svg');
+  -webkit-mask-image: url('../../themes/default/icons/add_light.svg');
+  mask-image: url('../../themes/default/icons/add_light.svg');
   -webkit-mask-size: contain;
   mask-size: contain;
   -webkit-mask-repeat: no-repeat;
@@ -1588,7 +1588,7 @@ button.align_justify:before {
   -webkit-mask-position: center;
   mask-position: center;
 }
-button.search:before {
+button.find:before {
   background-color: #3f3f3f;
   content: ' ';
   display: inline-block;
@@ -1607,13 +1607,46 @@ button.search:before {
   mask-position: center;
 }
 @media screen and (max-width: 960px) {
+  button.find:before {
+    margin-right: 0px;
+  }
+}
+.button.find {
+  -webkit-mask-image: url('../../themes/default/icons/find.svg');
+  mask-image: url('../../themes/default/icons/find.svg');
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+button.search:before {
+  background-color: #3f3f3f;
+  content: ' ';
+  display: inline-block;
+  height: 1em;
+  margin-right: 0.25em;
+  opacity: 1;
+  vertical-align: baseline;
+  width: 1em;
+  -webkit-mask-image: url('../../themes/default/icons/search_light.svg');
+  mask-image: url('../../themes/default/icons/search_light.svg');
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+@media screen and (max-width: 960px) {
   button.search:before {
     margin-right: 0px;
   }
 }
 .button.search {
-  -webkit-mask-image: url('../../themes/default/icons/find.svg');
-  mask-image: url('../../themes/default/icons/find.svg');
+  -webkit-mask-image: url('../../themes/default/icons/search_light.svg');
+  mask-image: url('../../themes/default/icons/search_light.svg');
   -webkit-mask-size: contain;
   mask-size: contain;
   -webkit-mask-repeat: no-repeat;
@@ -1878,39 +1911,6 @@ button.download:before {
 .button.download {
   -webkit-mask-image: url('../../themes/default/icons/download.svg');
   mask-image: url('../../themes/default/icons/download.svg');
-  -webkit-mask-size: contain;
-  mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
-}
-button.find:before {
-  background-color: #3f3f3f;
-  content: ' ';
-  display: inline-block;
-  height: 1em;
-  margin-right: 0.25em;
-  opacity: 1;
-  vertical-align: baseline;
-  width: 1em;
-  -webkit-mask-image: url('../../themes/default/icons/find.svg');
-  mask-image: url('../../themes/default/icons/find.svg');
-  -webkit-mask-size: contain;
-  mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
-}
-@media screen and (max-width: 960px) {
-  button.find:before {
-    margin-right: 0px;
-  }
-}
-.button.find {
-  -webkit-mask-image: url('../../themes/default/icons/find.svg');
-  mask-image: url('../../themes/default/icons/find.svg');
   -webkit-mask-size: contain;
   mask-size: contain;
   -webkit-mask-repeat: no-repeat;
@@ -2722,8 +2722,8 @@ button.diffusion:before {
   opacity: 1;
   vertical-align: baseline;
   width: 1em;
-  -webkit-mask-image: url('../../themes/default/icons/diffusion.svg');
-  mask-image: url('../../themes/default/icons/diffusion.svg');
+  -webkit-mask-image: url('../../themes/default/icons/diffusion_light.svg');
+  mask-image: url('../../themes/default/icons/diffusion_light.svg');
   -webkit-mask-size: contain;
   mask-size: contain;
   -webkit-mask-repeat: no-repeat;
@@ -2737,8 +2737,8 @@ button.diffusion:before {
   }
 }
 .button.diffusion {
-  -webkit-mask-image: url('../../themes/default/icons/diffusion.svg');
-  mask-image: url('../../themes/default/icons/diffusion.svg');
+  -webkit-mask-image: url('../../themes/default/icons/diffusion_light.svg');
+  mask-image: url('../../themes/default/icons/diffusion_light.svg');
   -webkit-mask-size: contain;
   mask-size: contain;
   -webkit-mask-repeat: no-repeat;
@@ -11043,6 +11043,9 @@ dd-modal .footer.distribute {
 }
 .component_text_area.edit .layer_selector > ul.layer_ul > li:first-child {
   border-top: 0.5px solid #777777;
+}
+.component_text_area.edit.disabled_component .content_data.component {
+  pointer-events: unset;
 }
 .component_text_area.list {
   max-height: 9.3rem;
