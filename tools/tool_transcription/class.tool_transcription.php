@@ -164,13 +164,14 @@ class tool_transcription extends tool_common {
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// component to use
-			$source_lang		= $options->source_lang;
-			$transcription_ddo	= $options->transcription_ddo;
-			$media_ddo			= $options->media_ddo;
-			$transcriber_engine	= $options->transcriber_engine;
-			$config				= $options->config;
-			$user_id			= navigator::get_user_id();
-			$entity_name		= DEDALO_ENTITY;
+			$source_lang			= $options->source_lang;
+			$transcription_ddo		= $options->transcription_ddo;
+			$media_ddo				= $options->media_ddo;
+			$transcriber_engine		= $options->transcriber_engine;
+			$transcriber_quality	= $options->transcriber_quality;
+			$config					= $options->config;
+			$user_id				= navigator::get_user_id();
+			$entity_name			= DEDALO_ENTITY;
 
 		// config
 			// get all tools config sections
@@ -235,11 +236,12 @@ class tool_transcription extends tool_common {
 					$lang_tld2	 = lang::get_alpha2_from_code($source_lang);
 
 					$babel_transcriber = new babel_transcriber((object)[
+						'key'				=> $key,
 						'engine'			=> $transcriber_engine,
+						'quality'			=> $transcriber_quality,
 						'user_id'			=> $user_id,
 						'entity_name'		=> $entity_name,
 						'url'				=> $url,
-						'key'				=> $key,
 						'lang'				=> $source_lang,
 						'lang_tld2'			=> $lang_tld2,
 						'av_url'			=> $av_url,
