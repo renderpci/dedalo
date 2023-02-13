@@ -50,7 +50,7 @@ class component_json extends component_common {
 			$dato = $new_data;
 		}
 
-		return $dato;
+		return (array)$dato;
 	}//end get_dato
 
 
