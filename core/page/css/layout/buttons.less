@@ -296,12 +296,12 @@
 
 // generic recyclable icons for buttons
 	.delete {
-		@icon_name : 'trash.svg';
+		@icon_name : 'trash_light.svg'; // trash.svg
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
 	.delete_light {
-		@icon_name : 'delete.svg';
+		@icon_name : 'trash_light.svg'; // delete
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
@@ -311,12 +311,12 @@
 		.button& { .fn_add_mask(@icon_name); }
 	}
 	.remove {
-		@icon_name : 'trash.svg';
+		@icon_name : 'trash_light.svg';
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
 	.add, .new {
-		@icon_name : 'add.svg';
+		@icon_name : 'add_light.svg'; // add_light, add
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
@@ -345,8 +345,13 @@
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
-	.search {
+	.find {
 		@icon_name : 'find.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.search {
+		@icon_name : 'search_light.svg'; // search
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
@@ -387,11 +392,6 @@
 	}
 	.download {
 		@icon_name : 'download.svg';
-		button&  { .fn_append_icon(@icon_name); }
-		.button& { .fn_add_mask(@icon_name); }
-	}
-	.find {
-		@icon_name : 'find.svg';
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
@@ -520,7 +520,7 @@
 		.button& { .fn_add_mask(@icon_name); }
 	}
 	.diffusion {
-		@icon_name : 'diffusion.svg';
+		@icon_name : 'diffusion_light.svg'; // diffusion
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
