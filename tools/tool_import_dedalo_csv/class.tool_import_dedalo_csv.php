@@ -392,27 +392,19 @@ class tool_import_dedalo_csv extends tool_common {
 
 					$user_locator = self::build_user_locator($value, $created_by_user['tipo']);
 					if (!empty($user_locator)) {
-						// // component build and set dato
-						// 	$component = component_common::get_instance(
-						// 		$created_by_user['model'],
-						// 		$created_by_user['tipo'],
-						// 		$section_id,
-						// 		'list',
-						// 		DEDALO_DATA_NOLAN,
-						// 		$section_tipo
-						// 	);
-						// 	$component->set_dato($user_locator);
-						// 	$section->set_component_relation_dato($component);
 
 						// set value with safe path
 							$section_dato = $section->get_dato();
 							if (!isset($section_dato->relations)) {
 								$section_dato->relations = [];
 							}
-							$object_exists = locator::in_array_locator( $user_locator, $section_dato->relations );
-							if ($object_exists===false) {
-								array_push($section_dato->relations, $user_locator);
-							}
+							$temp_relations = array_filter($section_dato->relations, function($el) use($user_locator){
+								return !isset($el->from_component_tipo) || $el->from_component_tipo!==$user_locator->from_component_tipo;
+							});
+							// add current locator
+							$temp_relations[] = $user_locator;
+							// update relations container
+							$section_dato->relations = array_values($temp_relations);
 
 						// Set direct property also
 							$section_dato->created_by_userID = (int)$user_locator->section_id;
@@ -468,27 +460,18 @@ class tool_import_dedalo_csv extends tool_common {
 
 					$user_locator = self::build_user_locator($value, $modified_by_user['tipo']);
 					if (!empty($user_locator)) {
-						// // component build and set dato
-						// 	$component = component_common::get_instance(
-						// 		$modified_by_user['model'],
-						// 		$modified_by_user['tipo'],
-						// 		$section_id,
-						// 		'list',
-						// 		DEDALO_DATA_NOLAN,
-						// 		$section_tipo
-						// 	);
-						// 	$component->set_dato($user_locator);
-						// 	$section->set_component_relation_dato($component);
-
 						// set value with safe path
 							$section_dato = $section->get_dato();
 							if (!isset($section_dato->relations)) {
 								$section_dato->relations = [];
 							}
-							$object_exists = locator::in_array_locator( $user_locator, $section_dato->relations );
-							if ($object_exists===false) {
-								array_push($section_dato->relations, $user_locator);
-							}
+							$temp_relations = array_filter($section_dato->relations, function($el) use($user_locator){
+								return !isset($el->from_component_tipo) || $el->from_component_tipo!==$user_locator->from_component_tipo;
+							});
+							// add current locator
+							$temp_relations[] = $user_locator;
+							// update relations container
+							$section_dato->relations = array_values($temp_relations);
 
 						// Set direct property also
 							$section_dato->modified_by_userID = (int)$user_locator->section_id;

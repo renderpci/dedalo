@@ -3023,15 +3023,18 @@ class section extends common {
 			case 'new_record': // new record
 
 				// Created by user
+					$user_locator->set_from_component_tipo($created_by_user['tipo']);
 					// set value with safe path
 						if (!isset($this->dato->relations)) {
 							$this->dato->relations = [];
 						}
-						$user_locator->set_from_component_tipo($created_by_user['tipo']);
-						$object_exists = locator::in_array_locator( $user_locator, $this->dato->relations );
-						if ($object_exists===false) {
-							array_push($this->dato->relations, $user_locator);
-						}
+						$temp_relations = array_filter($this->dato->relations, function($el) use($user_locator){
+							return !isset($el->from_component_tipo) || $el->from_component_tipo!==$user_locator->from_component_tipo;
+						});
+						// add current locator
+						$temp_relations[] = $user_locator;
+						// update relations container
+						$this->dato->relations = array_values($temp_relations);
 
 				// Creation date
 					$component = component_common::get_instance(
@@ -3059,15 +3062,18 @@ class section extends common {
 			case 'update_record': // update_record (record already exists)
 
 				// Modified by user
+					$user_locator->set_from_component_tipo($modified_by_user['tipo']);
 					// set value with safe path
 						if (!isset($this->dato->relations)) {
 							$this->dato->relations = [];
 						}
-						$user_locator->set_from_component_tipo($modified_by_user['tipo']);
-						$object_exists = locator::in_array_locator( $user_locator, $this->dato->relations );
-						if ($object_exists===false) {
-							array_push($this->dato->relations, $user_locator);
-						}
+						$temp_relations = array_filter($this->dato->relations, function($el) use($user_locator){
+							return !isset($el->from_component_tipo) || $el->from_component_tipo!==$user_locator->from_component_tipo;
+						});
+						// add current locator
+						$temp_relations[] = $user_locator;
+						// update relations container
+						$this->dato->relations = array_values($temp_relations);
 
 				// Modification date
 					$component = component_common::get_instance(
