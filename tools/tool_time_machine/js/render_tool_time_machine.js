@@ -208,6 +208,9 @@ export const add_component = async (self, component_container, lang_value, label
 						? self.main_element
 						: await self.load_component(lang_value, mode, matrix_id)
 
+				// set permissions as read
+					component.context.permissions = 1
+
 				// render node
 					const node = await component.render({
 						render_mode : 'edit'//mode // 'edit'
