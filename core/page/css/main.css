@@ -1401,8 +1401,8 @@ button.new:before {
   opacity: 1;
   vertical-align: baseline;
   width: 1em;
-  -webkit-mask-image: url('../../themes/default/icons/add_light.svg');
-  mask-image: url('../../themes/default/icons/add_light.svg');
+  -webkit-mask-image: url('../../themes/default/icons/add.svg');
+  mask-image: url('../../themes/default/icons/add.svg');
   -webkit-mask-size: contain;
   mask-size: contain;
   -webkit-mask-repeat: no-repeat;
@@ -1418,6 +1418,39 @@ button.new:before {
 }
 .button.add,
 .button.new {
+  -webkit-mask-image: url('../../themes/default/icons/add.svg');
+  mask-image: url('../../themes/default/icons/add.svg');
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+button.add_light:before {
+  background-color: #3f3f3f;
+  content: ' ';
+  display: inline-block;
+  height: 1em;
+  margin-right: 0.25em;
+  opacity: 1;
+  vertical-align: baseline;
+  width: 1em;
+  -webkit-mask-image: url('../../themes/default/icons/add_light.svg');
+  mask-image: url('../../themes/default/icons/add_light.svg');
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+@media screen and (max-width: 960px) {
+  button.add_light:before {
+    margin-right: 0px;
+  }
+}
+.button.add_light {
   -webkit-mask-image: url('../../themes/default/icons/add_light.svg');
   mask-image: url('../../themes/default/icons/add_light.svg');
   -webkit-mask-size: contain;
@@ -10197,6 +10230,10 @@ dd-modal .footer.distribute {
   display: inline-block;
   display: contents;
 }
+.component_portal.view_line > .content_data .section_record .column .ddinfo_value *,
+.portal.view_line > .content_data .section_record .column .ddinfo_value * {
+  display: contents;
+}
 .component_portal.view_line.list > .content_data,
 .portal.view_line.list > .content_data {
   display: flex;
@@ -10263,6 +10300,7 @@ dd-modal .footer.distribute {
 .portal.view_line.edit > .content_data > .section_record.view_text .button_edit {
   width: 0.75rem;
   margin-left: 0.66rem;
+  margin-top: 0.12rem;
 }
 .component_portal.view_line.edit > .content_data .references > li,
 .portal.view_line.edit > .content_data .references > li {
