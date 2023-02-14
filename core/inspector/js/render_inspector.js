@@ -470,6 +470,20 @@ export const render_section_info = function(self) {
 					open_ontology_window(section_tipo, custom_url)
 				})
 			}
+		// local ontology tree search
+			if (SHOW_DEVELOPER===true) {
+				const local_ontology_search = ui.create_dom_element({
+					element_type	: 'a',
+					class_name		: 'button tree',
+					title			: 'Local Ontology tree search',
+					parent			: tipo_info
+				})
+				local_ontology_search.addEventListener('click', function(e){
+					e.stopPropagation()
+					const custom_url = DEDALO_CORE_URL + `/ontology/trigger.dd.php?modo=tesauro_edit&terminoID=${section_tipo}&accion=searchTSform`
+					open_ontology_window(section_tipo, custom_url)
+				})
+			}
 
 	// section created
 		// label
@@ -611,6 +625,20 @@ export const render_component_info = function(self, component) {
 				master_ontology.addEventListener('click', function(e){
 					e.stopPropagation()
 					const custom_url = 'https://master.render.es/dedalo/lib/dedalo/ontology/dd_edit.php?terminoID=' + tipo
+					open_ontology_window(tipo, custom_url)
+				})
+			}
+		// local ontology tree search
+			if (SHOW_DEVELOPER===true) {
+				const local_ontology_search = ui.create_dom_element({
+					element_type	: 'a',
+					class_name		: 'button tree',
+					title			: 'Local Ontology tree search',
+					parent			: tipo_info
+				})
+				local_ontology_search.addEventListener('click', function(e){
+					e.stopPropagation()
+					const custom_url = DEDALO_CORE_URL + `/ontology/trigger.dd.php?modo=tesauro_edit&terminoID=${tipo}&accion=searchTSform`
 					open_ontology_window(tipo, custom_url)
 				})
 			}
