@@ -155,7 +155,7 @@ tool_lang.prototype.load_component = async function(lang) {
 
 	// instance_options (clone and edit)
 		const source_context	= clone(self.main_element.context)
-		const instance_options			= Object.assign(source_context, {
+		const instance_options	= Object.assign(source_context, {
 			lang				: lang,
 			mode				: 'edit',
 			section_id			: self.main_element.section_id,

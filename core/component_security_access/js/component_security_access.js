@@ -73,6 +73,7 @@ export const component_security_access = function(){
 
 /**
 * INIT
+* @param object options
 * @return promise bool
 */
 component_security_access.prototype.init = async function(options) {
@@ -84,7 +85,7 @@ component_security_access.prototype.init = async function(options) {
 
 	// check worker support. Manages get_children and get_parents expensive recursive functions mainly
 		if(!window.Worker) {
-			console.error('Your browser doesn\'t support web workers.');
+			console.error('Your browser does not support web workers..');
 			// throw new Error('Unable to continue. workers are needed');
 		}
 		self.worker_path = '../component_security_access/js/worker_security_access.js'
@@ -179,6 +180,7 @@ component_security_access.prototype.update_value = function(item, input_value) {
 		tipo: "mht55"
 		section_tipo: "mht5"
 	}
+* @param array datalist
 * @return array ar_parents
 */
 component_security_access.prototype.get_parents = function(item, datalist) {
@@ -222,6 +224,7 @@ component_security_access.prototype.get_parents = function(item, datalist) {
 		tipo: "mht55"
 		section_tipo: "mht5"
 	}
+* @param array datalist
 * @return array ar_children
 */
 component_security_access.prototype.get_children = function(item, datalist) {
@@ -285,35 +288,45 @@ component_security_access.prototype.update_parents_radio_butons = async function
 
 		const current_parent = parents[i]
 
-		if(diff_value===false) {
-			// check values of every child finding a different value from last value found
-			const current_children = await self.get_children(current_parent)
-			const current_children_length = current_children.length
-			for (let k = current_children_length - 1; k >= 0; k--) {
+		// different value case
+			if(diff_value===false) {
 
-				const child = current_children[k]
+				// check values of every child finding a different value from last value found
+				const current_children			= await self.get_children(current_parent)
+				const current_children_length	= current_children.length
+				for (let k = current_children_length - 1; k >= 0; k--) {
 
-				// exclude sections and areas
-				if(child.tipo===child.section_tipo) continue
+					const child = current_children[k]
 
-				const data_found = self.data.value.find(el => el.tipo===child.tipo && el.section_tipo===child.section_tipo)
-				if (!data_found) {
-					diff_value = true
-					break
+					// exclude sections and areas
+					if(child.tipo===child.section_tipo) {
+						continue
+					}
+
+					const data_found = self.data.value.find(el => el.tipo===child.tipo && el.section_tipo===child.section_tipo)
+					if (!data_found) {
+						diff_value = true
+						break
+					}
+					if(data_found.value!==input_value) {
+						diff_value = true
+						break
+					}
 				}
-				if(data_found.value !== input_value) {
-					diff_value = true
-					break
-				}
-			}
-		}//end if(diff_value===false)
+			}//end if(diff_value===false)
 
-		const value_to_propagete = (diff_value===false)
-			? input_value
-			: null
+		// value_to_propagete
+			const value_to_propagete = (diff_value===false)
+				? input_value
+				: null
+
 		// parent target value update
-		event_manager.publish('update_area_radio_' + self.id + '_' + current_parent.tipo + '_' + current_parent.section_tipo, value_to_propagete)
+			event_manager.publish(
+				'update_area_radio_' + self.id + '_' + current_parent.tipo + '_' + current_parent.section_tipo,
+				value_to_propagete
+			)
 	}//end for
+
 
 	return diff_value
 }//end update_parents_radio_butons
@@ -324,6 +337,7 @@ component_security_access.prototype.update_parents_radio_butons = async function
 * SAVE_CHANGES
 * Rebuild self.data.value removing empty zero values and save result
 * @return promise
+* Resolve bool|object (API response) from change_value()
 */
 component_security_access.prototype.save_changes = async function() {
 
@@ -339,8 +353,9 @@ component_security_access.prototype.save_changes = async function() {
 			}
 		}
 
-	// changed_data build. (!) Note that action is 'set_data' instead 'insert' or 'update', to save whole array data as raw
-		const changed_data = [Object.freeze({
+	// changed_data build
+	// (!) Note that action is 'set_data' instead 'insert' or 'update', to save whole array data as raw value
+		const changed_data_item = [Object.freeze({
 			action	: 'set_data',
 			value	: clean_changed_value
 		})]
