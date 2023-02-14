@@ -26,6 +26,7 @@ export const render_edit_component_select = function() {
 /**
 * EDIT
 * Render node for use in edit
+* @param object options
 * @return DOM node
 */
 render_edit_component_select.prototype.edit = async function(options) {
@@ -40,7 +41,6 @@ render_edit_component_select.prototype.edit = async function(options) {
 			// default is false
 			self.show_interface.button_edit = true
 		}
-		console.log('self.show_interface:', self.show_interface);
 
 	switch(view) {
 

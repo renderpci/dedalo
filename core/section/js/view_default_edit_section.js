@@ -190,8 +190,8 @@ const get_content_data = async function(self, ar_section_record) {
 		}
 
 	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add('content_data', self.mode) // ,"nowrap","full_width"
+		const content_data = document.createElement('div')
+			  content_data.classList.add('content_data', self.mode) // ,'nowrap','full_width'
 			  content_data.appendChild(fragment)
 
 	// debug
