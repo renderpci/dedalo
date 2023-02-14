@@ -5,20 +5,7 @@
 */
 .component_3d {
 
-	&.edit, &.view_player {
-
-		&.view_player {
-			box-shadow: none;
-			display: block;
-
-			.label {
-				display: none;
-			}
-			>.content_data {
-				display: grid;
-				height: 100%;
-			}
-		}
+	&.edit {
 
 		>.content_data {
 			justify-content: center;
@@ -32,12 +19,12 @@
 			// video_container
 			>.content_value {
 				background-color: #faf8fc;
-				height: 404px;
+				height: 600px;
 				width: 100%;
 
 				@media screen and (max-width: @width_break_point_1) {
 					height: unset;
-					max-height: 404px;
+					max-height: 600px;
 				}
 			}
 
@@ -60,7 +47,7 @@
 				object-position: center;
 				align-self: center;
 
-				// on focus adds a soft shadow and outline
+				on focus adds a soft shadow and outline
 				&:focus {
 					.hilite_mixin(-1px);
 				}
