@@ -427,6 +427,7 @@
     "created": "creat",
     "procesando_media_en_background": "Processant el material en segon pla. Aquest procés pot portar un temps, però vostè pot continuar treballant.",
     "default_lang_of_file_to_import": "Idioma per defecte del fitxer a importar. Dades sense idioma especificat seran importades a:",
+    "select_search_section": "Seleccioneu una secció de cerca.",
     "days": "dies",
     "months": "mesos",
     "year": "any",

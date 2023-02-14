@@ -427,6 +427,7 @@
     "created": "erstellt",
     "procesando_media_en_background": "Hintergrundmedien werden verarbeitet. Dieser Prozess kann etwas dauern, aber Sie dürfen weiterarbeiten.",
     "default_lang_of_file_to_import": "Standardsprache der zu importierenden Datei. Daten ohne festgelegte Sprache werden importiert in:",
+    "select_search_section": "Wählen Sie einen Suchbereich aus.",
     "days": "Tage",
     "months": "Monate",
     "year": "Jahr",
