@@ -97,6 +97,7 @@ robots.txt
 
 # Ignore some special files
 config.codekit3
+prepros.config
 .jsbeautifyrc
 
 # various minified

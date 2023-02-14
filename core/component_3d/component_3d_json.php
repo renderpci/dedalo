@@ -1,5 +1,5 @@
 <?php
-// JSON data component controller
+// JSON data component controller (this controls the context and the data, coming from the PHP class, that are sent to client -> JS object)
 
 
 
@@ -40,6 +40,8 @@
 	}//end if($options->get_context===true)
 
 
+	dump($context, "No tengo una rana cantora de contexto".to_string());
+
 
 // data
 	$data = [];
@@ -64,7 +66,7 @@
 			// posterframe_url
 				$item->posterframe_url	= $this->get_posterframe_url(true, false, false, false); // $test_file=true, $absolute=false, $avoid_cache=false
 			// default quality video URL (usually from 404)
-				$item->video_url		= $this->file_exist()
+				$item->model_url		= $this->file_exist()
 					? $this->get_url(false)
 					: null;
 			//  files info datalist. Used for tools to know available quality versions and characteristics (size, URL, etc.)
@@ -77,17 +79,13 @@
 				// media info
 					$item->media_info = $this->get_media_streams();
 
-				// subtitles info
-					$item->subtitles = (object)[
-						'subtitles_url'	=> $this->get_subtitles_url(),
-						'lang_name'		=> lang::get_name_from_code(DEDALO_DATA_LANG),
-						'lang'			=> lang::get_alpha2_from_code(DEDALO_DATA_LANG)
-					];
 			}
 
-		$data[] = $item;
+		$data[] = $item;  // append to the end of the array
 	}//end if($options->get_data===true && $permissions>0)
 
+
+	dump($data, "No tengo una rana cantora de datos".to_string());
 
 
 // JSON string
