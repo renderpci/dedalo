@@ -25,6 +25,7 @@ export const view_default_edit_security_access = function() {
 /**
 * RENDER
 * Render node for use in modes: edit, edit_in_list
+* @param object self
 * @param object options
 * @return DOM node wrapper
 */
@@ -58,6 +59,7 @@ view_default_edit_security_access.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA
+* @param object self
 * @return DOM node content_data
 */
 const get_content_data = async function(self) {
@@ -145,7 +147,7 @@ const render_tree_items = function(items, datalist, value, self) {
 	// tree_object . Object with all li nodes rendered sequentially
 		const tree_object = {}
 
-	// render nodes
+	// render nodes. Every area/section node
 		const items_length = items.length
 		for (let i = 0; i < items_length; i++) {
 
@@ -181,7 +183,7 @@ const render_tree_items = function(items, datalist, value, self) {
 			const parent_key = item.parent
 
 			if(tree_object[parent_key]) {
-				// add to parent branch
+				// move node to parent branch
 				tree_object[parent_key].branch.appendChild(tree_node)
 				// console.log("Added to parent branch:", key, parent_key);
 			}else{
@@ -189,6 +191,7 @@ const render_tree_items = function(items, datalist, value, self) {
 				fragment.appendChild(tree_node)
 			}
 		}
+
 
 	return fragment
 }//end render_tree_items
@@ -201,7 +204,7 @@ const render_tree_items = function(items, datalist, value, self) {
 * @param object item
 * @param array datalist
 * @param array value
-* @param instance self
+* @param object self
 *
 * @return DOM node tree_item_node
 */
@@ -212,13 +215,13 @@ const render_tree_item = function(item, datalist, value, self) {
 			? render_area_item
 			: render_permissions_item
 
-		// create node and add to tree_object
+	// create node and add to tree_object
 		const tree_item_node = fn_render(
 			item,
 			datalist,
 			value,
 			self
-		) // return li node
+		)
 		// attach item object as pointer
 		tree_item_node.item = item
 
@@ -379,9 +382,10 @@ const render_area_item = function(item, datalist, value, self) {
 			}
 		}
 		// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
-			const name = 'update_value_' + self.id + '_' + tipo + '_' + section_tipo
 			self.events_tokens.push(
-				event_manager.subscribe(name, fn_update_value)
+				event_manager.subscribe(
+					'update_value_' + self.id + '_' + tipo + '_' + section_tipo,
+					fn_update_value)
 			)
 			function fn_update_value(changed_data) {
 				// console.log("-------------- - event update_value changed_data:", changed_data);
@@ -401,26 +405,27 @@ const render_area_item = function(item, datalist, value, self) {
 			input_checkbox.addEventListener('change', async function(e) {
 				e.preventDefault()
 
-				const input_value = input_checkbox.checked
-						? 2
-						: input_checkbox.indeterminate
-							? 1
-							: 0
+				// input_value
+					const input_value = input_checkbox.checked
+							? 2
+							: input_checkbox.indeterminate
+								? 1
+								: 0
 
 				// parents. get the all parents of the item
-				const parents = await self.get_parents(input_checkbox.item)
-				// set the data of the parents and change the DOM node with update_value event
-				const parents_length = parents.length
-				for (let i = parents_length - 1; i >= 0; i--) {
-					const current_parent = parents[i]
-					self.update_value(current_parent, input_value)
-				}
+					const parents = await self.get_parents(input_checkbox.item)
+					// set the data of the parents and change the DOM node with update_value event
+					const parents_length = parents.length
+					for (let i = parents_length - 1; i >= 0; i--) {
+						const current_parent = parents[i]
+						self.update_value(current_parent, input_value)
+					}
 
 				// update self item data
 					self.update_value(item, input_value)
 
 				// show_save_button_
-					event_manager.publish('show_save_button_'+self.id)
+					event_manager.publish( 'show_save_button_' + self.id )
 			})//end input_checkbox.addEventListener("change", async function(e) {
 
 	// label
@@ -594,13 +599,18 @@ const render_permissions_item = function(item, datalist, value, self) {
 /**
 * CREATE_PERMISSIONS_RADIO_GROUP
 * Creates a triple radio group options (x,r,rw)
+* @param object self
+* @param object $item
+* @param int permissions
 * @return DocumentFragment
 */
 const create_permissions_radio_group = function(self, item, permissions) {
 
-	const fragment = new DocumentFragment()
+	// DocumentFragment
+		const fragment = new DocumentFragment()
 
-	const create_radio = (radio_value, title) => {
+	// create_radio function
+		const create_radio = (radio_value, title) => {
 
 		// radio_input
 			const radio_input = ui.create_dom_element({
@@ -616,16 +626,21 @@ const create_permissions_radio_group = function(self, item, permissions) {
 			if(permissions===radio_value) {
 				radio_input.checked = true
 			}
-		/* DESACTIVO TEMPORALMENTE (!)*/
-		// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
+
+		// update value subscription
+		// If the DOM input value was changed, observers DOM elements will change self value with the observable value
 			self.events_tokens.push(
-				event_manager.subscribe('update_value_' + self.id + '_' + item.tipo + '_' + item.section_tipo, fn_update_value)
+				event_manager.subscribe(
+					'update_value_' + self.id + '_' + item.tipo + '_' + item.section_tipo,
+					fn_update_value
+				)
 			)
 			function fn_update_value(changed_data) {
 				// console.log("-------------- - event update_value changed_data:", changed_data);
-				// change the value of the current dom element
+				// change the value of the current DOM element
 				if (changed_data===radio_value) {
 					radio_input.checked = true
+					console.log('+++ changed value:', changed_data);
 				}
 			}
 

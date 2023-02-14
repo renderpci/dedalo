@@ -30,6 +30,7 @@
 	.wrapper_tool.tool_transcription {
 
 		>.tool_header {
+			background-color: @color_bg_tool;
 			position: relative;
 
 			@media screen and (max-width: @width_break_point_0) {
@@ -298,8 +299,8 @@
 						margin: 1rem;
 						height: 3em;
 						&:hover{
-							background-color: #f78a1c;
-							border-color: #f78512;
+							background-color: @color_bg_tool;
+							border-color: darken(@color_bg_tool, 10%);
 							color: #ffffff;
 						}
 					}
@@ -318,8 +319,8 @@
 						margin: 1rem;
 						height: 3em;
 						&:hover{
-							background-color: #f78a1c;
-							border-color: #f78512;
+							background-color: @color_bg_tool;
+							border-color: darken(@color_bg_tool, 10%);
 							color: #ffffff;
 						}
 					}

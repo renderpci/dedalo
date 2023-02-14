@@ -473,7 +473,6 @@ export const ui = {
 						'list',
 						'view_' + view
 					]
-					if (view) {ar_css.push('view_'+view)}
 					wrapper.classList.add(...ar_css)
 
 				// properties CSS of view

@@ -32,8 +32,6 @@
 		// width: 100%;
 		// height: calc(100vh - 20%);
 
-		@header_height: 5rem;
-
 		>.tool_header {
 			background-color: @color_bg_tool;
 			position: relative;
@@ -63,21 +61,25 @@
 					}
 				}
 
+				select {
+					opacity: 1;
+					padding: 0.33rem;
+					background-color: #f8f9fa;
+					border-radius: 3px;
+					margin-right: 0px;
+					max-width: 20rem;
+					min-width: 7rem;
+
+					@media screen and (max-width: @width_break_point_0) {
+						// max-width: unset;
+					}
+				}
+
 				// select top tipo / id
 				>.related_list_container {
 
 					>select {
-						opacity: 1;
-						padding: 0.33rem;
-						background-color: #f8f9fa;
-						border-radius: 3px;
-						margin-right: 0px;
-						max-width: 22rem;
 
-						@media screen and (max-width: @width_break_point_0) {
-							max-width: unset;
-							width: 100%;
-						}
 					}
 				}
 
@@ -95,35 +97,7 @@
 						padding-right: 0.33rem;
 					}
 					>select {
-						opacity: 1;
-						padding: 0.33rem;
-						background-color: #f8f9fa;
-						border-radius: 3px;
-						margin-right: 0px;
-						max-width: 22rem;
 
-						@media screen and (max-width: @width_break_point_0) {
-							max-width: unset;
-						}
-					}
-				}
-				.wrapper_component{
-
-					margin-left: 2.5rem;
-
-					&.active{
-						background-color: unset;
-						box-shadow: unset;
-						color: unset;
-					}
-					.content_data .content_value input[type="checkbox"]{
-						margin-right: 0.2em;
-					}
-					.buttons_container{
-						display: none !important;;
-					}
-					.label{
-						color: #ffffff;
 					}
 				}
 
@@ -135,14 +109,32 @@
 						margin-right: 0.33rem;
 					}
 				}
+
+				.wrapper_component {
+					background-color: transparent;
+					margin-left: 2.5rem;
+
+					&.active {
+						background-color: unset;
+						box-shadow: unset;
+						color: unset;
+					}
+					.content_data .content_value input[type="checkbox"] {
+						margin-right: 0.2em;
+					}
+					.buttons_container {
+						display: none !important;;
+					}
+					>.label, label {
+						color: #ffffff;
+					}
+				}
 			}
-		}
+		}//end >.tool_header
 
 		>.content_data {
 			// background-color: #f9eae0;
 			width: 100%;
-			// min-height: calc(100vh - @header_height);
-			// min-height: calc(100vh - @header_height + 0.5rem);
 			height: calc(100vh - 4.8rem);
 			overflow: hidden;
 			// display: grid;

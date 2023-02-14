@@ -399,6 +399,7 @@
 		align-items: flex-start; // vertical alignment
 		justify-content: flex-start; // vertical distribution
 		align-content: flex-start; // vertical distribution
+		height: auto;
 
 		// cell outline
 		// outline: 1px solid @color_grey_light;
@@ -478,7 +479,7 @@
 			height: inherit;
 
 			>span {
-				padding: 0.25rem;
+				padding: 0.3rem;
 				display: inline-block;
 				word-break: break-word;
 
@@ -618,9 +619,10 @@
 			justify-content: flex-end;
 
 			&.link_button {
-				height: 3rem;
 				// padding-right: 0.33rem;
 				font-size: 1.25rem;
+				height: 3rem;
+				height: 100%;
 			}
 
 			&.button_edit {
@@ -688,7 +690,7 @@
 			width: 100%;
 			margin: 0px;
 			padding: 0.5em;
-			padding-top: 0.75rem;
+			// padding-top: 0.75rem;
 			padding-bottom: 0.75rem;
 			border-radius: 0px;
 			justify-content: space-between;

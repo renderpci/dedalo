@@ -316,6 +316,11 @@
 		.button& { .fn_add_mask(@icon_name); }
 	}
 	.add, .new {
+		@icon_name : 'add.svg'; // add_light, add
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.add_light {
 		@icon_name : 'add_light.svg'; // add_light, add
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
@@ -521,6 +526,11 @@
 	}
 	.diffusion {
 		@icon_name : 'diffusion_light.svg'; // diffusion
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.tree {
+		@icon_name : 'tree.svg';
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
