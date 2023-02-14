@@ -427,6 +427,7 @@
     "created": "creado",
     "procesando_media_en_background": "Procesando media en segundo plano. Este proceso puede tardar, pero puede continuar trabajando.",
     "default_lang_of_file_to_import": "Idioma por defecto del archivo a importar. Datos sin idioma especificado serán importados en:",
+    "select_search_section": "Seleccione una sección de búsqueda.",
     "days": "días",
     "months": "meses",
     "year": "año",
