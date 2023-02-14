@@ -74,8 +74,25 @@
 				}
 			}
 		}
+
+		&.list {
+
+		}
 	}//end .view_default
 
+	&.view_collapse {
+		cursor: ns-resize;
+		line-height: 1.1rem;
+
+		&:hover {
+			background-color: #faf7df;
+		}
+
+		&.collapsed {
+			height: 2.5rem;
+			overflow: hidden;
+		}
+	}
 
 	&.search {
 		>.content_data {

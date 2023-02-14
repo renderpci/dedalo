@@ -21,7 +21,7 @@ export const view_default_list_json = function() {
 
 
 /**
-* LIST
+* RENDER
 * Render node for use in list
 * @return DOM node
 */
@@ -37,7 +37,7 @@ view_default_list_json.render = async function(self, options) {
 
 
 	return wrapper
-}//end list
+}//end render
 
 
 
@@ -52,22 +52,20 @@ export const get_value_string = function(self) {
 		const data	= self.data
 		const value	= data.value || []
 
-	// value_string
-		if(self.section_tipo==='dd542'){
-
-			// activity section case
-			const ar_values	= []
-			const value_len	= value.length
-			for (let i = 0; i < value_len; i++) {
-				const value_map = new Map(Object.entries(value[i]))
-				for (let [key, value] of value_map) {
-					ar_values.push( key + ': ' + value )
-				}
-			}
-			const value_string = ar_values.join('<br>')
-
-			return value_string
-		}
+	// value_string Activity. Moved to view 'collapse' (view_collapse_list_json)
+		// if(self.section_tipo==='dd542'){
+		// 	// activity section case
+		// 	const ar_values	= []
+		// 	const value_len	= value.length
+		// 	for (let i = 0; i < value_len; i++) {
+		// 		const value_map = new Map(Object.entries(value[i]))
+		// 		for (let [key, value] of value_map) {
+		// 			ar_values.push( key + ': ' + value )
+		// 		}
+		// 	}
+		// 	const value_string = ar_values.join('<br>')
+		// 	return value_string
+		// }
 
 	// default cases
 		const list_show_key = typeof self.context.properties!=='undefined'
