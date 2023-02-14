@@ -1269,7 +1269,7 @@ const render_note = async function(options) {
 		// resize modal content
 		const modal_content = modal.get_modal_content()
 				modal_content.style.width	= '600px'
-				modal_content.style.height	= '765px';
+				modal_content.style.height	= '515px';
 
 	// load note section and render. On finish, add to body node and fill header and footer info
 		ui.load_item_with_spinner({
