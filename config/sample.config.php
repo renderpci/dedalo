@@ -288,7 +288,8 @@
 		'hierarchy',
 		'lg',
 		'oh',
-		'ich'
+		'ich',
+		'test'
 	]);
 	// main_fallback_section. Default section tipo to go when it's not defined any
 	define('MAIN_FALLBACK_SECTION', 'oh1'); # go after login (tipo inventory)

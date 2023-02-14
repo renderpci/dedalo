@@ -7,6 +7,7 @@
 	import {view_default_list_json} from './view_default_list_json.js'
 	import {view_mini_json} from './view_mini_json.js'
 	import {view_text_json} from './view_text_json.js'
+	import {view_collapse_list_json} from './view_collapse_list_json.js'
 
 
 
@@ -40,6 +41,9 @@ render_list_component_json.prototype.list = async function(options) {
 
 		case 'text':
 			return view_text_json.render(self, options)
+
+		case 'collapse':
+			return view_collapse_list_json.render(self, options)
 
 		case 'default':
 		default:

@@ -2043,6 +2043,10 @@ class install extends common {
 		$response->result	= $hierarchy_files;
 		$response->msg		= 'OK. Request done '.__METHOD__;
 
+		if (empty($hierarchy_files)) {
+			error_log('Dédalo Error: directory "'.$dir_path.'" is not accessible or empty!');
+		}
+
 
 		return $response;
 	}//end get_available_hierarchy_files

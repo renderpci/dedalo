@@ -4272,8 +4272,7 @@ dd-modal .footer.distribute {
   outline: 1px solid #f0f0f0;
 }
 .list_body > .content_data .no_records {
-  position: absolute;
-  top: 2rem;
+  grid-column: 1/-1;
 }
 .list_body .list_body .column {
   display: -webkit-box;
@@ -4391,6 +4390,10 @@ dd-modal .footer.distribute {
 }
 .header_wrapper_list .head_column.section_id {
   border-top-left-radius: 5px;
+  text-align: right;
+}
+.header_wrapper_list .head_column.section_id > .name {
+  margin-right: 0.25rem;
 }
 .header_wrapper_list .head_column:last-of-type {
   border-right: 0px;
@@ -4452,7 +4455,6 @@ dd-modal .footer.distribute {
 }
 .header_wrapper_list .head_column > .order {
   width: 13px;
-  min-width: 13px;
   height: 15px;
   margin-left: 0px;
   vertical-align: text-bottom;
@@ -4716,6 +4718,12 @@ dd-modal .footer.distribute {
   width: 1.3rem;
   margin-right: -2px;
   pointer-events: none;
+}
+.column.column_section_id > .section_id_container {
+  padding: 0.75rem;
+  font-size: 0.95rem;
+  text-align: right;
+  width: 100%;
 }
 .column.column_remove {
   display: -webkit-box;
@@ -9657,6 +9665,20 @@ on focus adds a soft shadow and outline .component_3d.edit > .content_data .post
   opacity: 0.7;
   font-size: 0.82em;
 }
+.component_filter.view_collapse,
+.component_filter_master.view_collapse {
+  cursor: ns-resize;
+  line-height: 1.1rem;
+}
+.component_filter.view_collapse:hover,
+.component_filter_master.view_collapse:hover {
+  background-color: #faf7df;
+}
+.component_filter.view_collapse.collapsed,
+.component_filter_master.view_collapse.collapsed {
+  height: 2.5rem;
+  overflow: hidden;
+}
 .wrapper_inspector .component_filter > .content_data {
   font-size: 0.85rem;
 }
@@ -10569,6 +10591,17 @@ on focus adds a soft shadow and outline .component_3d.edit > .content_data .post
   width: 100%;
   position: relative;
   z-index: 0;
+}
+.component_json.view_collapse {
+  cursor: ns-resize;
+  line-height: 1.1rem;
+}
+.component_json.view_collapse:hover {
+  background-color: #faf7df;
+}
+.component_json.view_collapse.collapsed {
+  height: 2.5rem;
+  overflow: hidden;
 }
 .component_json.search > .content_data > .q_operator {
   width: 3rem;

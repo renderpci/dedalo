@@ -25,8 +25,9 @@
 			outline: 1px solid @color_grey_light;
 
 			.no_records {
-				position: absolute;
-				top: 2rem;
+				// position: absolute;
+				// top: 2rem;
+				grid-column: 1/-1; // expand across all empty columns
 			}
 
 			// DES
@@ -248,6 +249,10 @@
 
 			&.section_id {
 				border-top-left-radius: 5px;
+				text-align: right;
+				>.name {
+					margin-right: 0.25rem;
+				}
 			}
 
 			&:last-of-type {
@@ -324,7 +329,7 @@
 			// order. column_order_group
 			>.order {
 				width: 13px;
-				min-width: 13px;
+				// min-width: 13px;
 				height: 15px;
 				margin-left: 0px;
 				vertical-align: text-bottom;
@@ -674,6 +679,14 @@
 				pointer-events: none;
 			}
 		}//end >button
+
+		>.section_id_container {
+			padding: 0.75rem;
+			font-size: 0.95rem;
+			text-align: right;
+			width: 100%;
+		}
+
 	}//end .column_section_id
 
 

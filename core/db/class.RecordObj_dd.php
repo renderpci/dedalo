@@ -300,11 +300,12 @@ class RecordObj_dd extends RecordDataBoundObject {
 		$result		= JSON_RecordDataBoundObject::search_free($strQuery);
 		$value		= pg_fetch_assoc($result);
 		if ($value===false) {
-			debug_log(__METHOD__." Error on get counter ".to_string($strQuery), logger::ERROR);
+			// false is not only error only. If the counter do not exists, false is returned too
+			debug_log(__METHOD__." Warning on get counter. The counter no is available or does not exists yet. Returning zero as value. ".to_string($strQuery), logger::WARNING);
 			return 0;
 		}
 
-		$counter_value	=  $value['counter'] ?? null;
+		$counter_value = $value['counter'] ?? null;
 		if (empty($counter_value)) {
 			if(SHOW_DEBUG===true) {
 				//debug_log(__METHOD__." Error on get_counter_value 'RecordObj_dd_edit'. counter for tld not found. ".to_string(), logger::WARNING);
