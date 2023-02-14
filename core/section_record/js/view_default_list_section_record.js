@@ -41,9 +41,17 @@ view_default_list_section_record.render = async function(self, options) {
 	// wrapper.  section_record wrapper
 		const wrapper = ui.create_dom_element({
 			element_type	: 'div',
-			id				: self.id,
-			class_name		: self.model + ' ' + self.tipo + ' ' + self.mode + (self.mode==='tm' ? ' list' : '')
+			id				: self.id
+			// class_name	: self.model + ' ' + self.tipo + ' ' + self.mode + (self.mode==='tm' ? ' list' : '')
 		})
+		const ar_css = [
+			self.model,
+			self.tipo,
+			self.mode,
+			// (self.mode==='tm' ? ' list' : ''),
+			'view_'+self.context.view
+		]
+		wrapper.classList.add(...ar_css)
 
 		// click event
 			// wrapper.addEventListener("click", (e) => {

@@ -34,7 +34,8 @@ view_default_edit_section_record.render = async function(self, options) {
 	// options
 		const render_level = options.render_level || 'full'
 
-	const ar_instances = await self.get_ar_instances_edit()
+	// ar_instances calculate
+		const ar_instances = await self.get_ar_instances_edit()
 
 	// content_data
 		const content_data = await get_content_data_edit(self, ar_instances)
@@ -42,22 +43,18 @@ view_default_edit_section_record.render = async function(self, options) {
 			return content_data
 		}
 
-	// wrapper. ui build_edit returns component wrapper
-		// const wrapper =	ui.component.build_wrapper_edit(self, {
-		// 	label			: null,
-		// 	content_data	: content_data
-		// })
-		const wrapper = document.createElement('div')
-			  wrapper.classList.add(
-			  	'wrapper_section_record',
-			  	'section_record',
-			  	self.tipo,
-			  	self.mode,
-			  	self.view
-			  )
-			  wrapper.appendChild(content_data)
-
-	// wrapper_section_record section_record numisdata3 numisdata3_numisdata3 edit view_default disabled_component
+	// section_record wrapper
+		const wrapper = ui.create_dom_element({
+			element_type : 'div'
+		})
+		const ar_css = [
+			self.model,
+			self.tipo,
+			self.mode,
+			'view_'+self.context.view
+		]
+		wrapper.classList.add(...ar_css)
+		wrapper.appendChild(content_data)
 
 	// debug
 		if(SHOW_DEBUG===true) {
