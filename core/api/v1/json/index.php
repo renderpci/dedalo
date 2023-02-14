@@ -43,9 +43,27 @@ $global_start_time = hrtime(true);
 
 	// CORS preflight OPTIONS requests
 		if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD']==='OPTIONS') {
-			error_log('Ignored '.print_r($_SERVER['REQUEST_METHOD'], true));
+			// error_log('Ignored '.print_r($_SERVER['REQUEST_METHOD'], true));
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Ignored call ' . $_SERVER['REQUEST_METHOD'];
+			error_log('Error: '.$response->msg);
+			echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 			exit( 0 );
 		}
+
+
+
+// php version check
+	$version = explode('.', phpversion());
+	if ($version[0]<8 || ($version[0]==8 && $version[1]<1)) {
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed. This PHP version is not supported ('.phpversion().'). You need: >=8.1';
+		error_log('Error: '.$response->msg);
+		echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+		die();
+	}
 
 
 

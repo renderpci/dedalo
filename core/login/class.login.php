@@ -573,20 +573,22 @@ class login extends common {
 	*/
 	private static function get_default_section($section_id) : ?string {
 
-		$component = component_common::get_instance(
-			'component_input_text',
-			'dd1603',
-			$section_id,
-			'list',
-			DEDALO_DATA_NOLAN,
-			DEDALO_SECTION_USERS_TIPO
-		);
-		$dato				= $component->get_dato();
-		$default_section	= !empty($dato) && !empty($dato[0])
-			? $dato[0]
-			: null;
+		return null;
 
-		return $default_section;
+		// $component = component_common::get_instance(
+		// 	'component_input_text',
+		// 	'dd1603',
+		// 	$section_id,
+		// 	'list',
+		// 	DEDALO_DATA_NOLAN,
+		// 	DEDALO_SECTION_USERS_TIPO
+		// );
+		// $dato				= $component->get_dato();
+		// $default_section	= !empty($dato) && !empty($dato[0])
+		// 	? $dato[0]
+		// 	: null;
+
+		// return $default_section;
 	}//end get_default_section
 
 
