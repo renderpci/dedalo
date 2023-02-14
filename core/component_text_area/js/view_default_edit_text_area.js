@@ -260,7 +260,7 @@ const get_input_element = (i, current_value, self) => {
 
 
 	// user click in the wrapper and init the editor. When it's not read only
-		if (self.show_interface.read_only!==true) {
+		if (self.show_interface.read_only!==true && self.permissions >1) {
 
 			const auto_init_editor = self.auto_init_editor!==undefined
 				? self.auto_init_editor
