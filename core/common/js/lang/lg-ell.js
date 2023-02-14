@@ -427,6 +427,7 @@
     "created": "δημιουργήθηκε",
     "procesando_media_en_background": "Μέσων φόντο επεξεργασία. Αυτή η διαδικασία μπορεί να διαρκέσει, αλλά μπορεί να συνεχίσει να εργάζεται.",
     "default_lang_of_file_to_import": "<mark>Idioma por defecto del archivo a importar. Datos sin idioma especificado serán importados en:<\/mark>",
+    "select_search_section": "Επιλέξτε μια ενότητα αναζήτησης.",
     "days": "ημέρες",
     "months": "μήνες",
     "year": "έτος",
