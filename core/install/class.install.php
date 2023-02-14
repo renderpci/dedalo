@@ -154,7 +154,7 @@ class install extends common {
 			'matrix',				// main table
 			'matrix_activities',	// activities (exhibitions, visits, etc)
 			'matrix_activity',		// Dédalo activity log data
-			// 'matrix_dataframe',		// Dédalo data-frames data
+			'matrix_dataframe',		// Dédalo data-frames data
 			'matrix_hierarchy',		// thesaurus data
 			'matrix_hierarchy_main',// hierarchy data
 			'matrix_indexations',	// indexation data
@@ -170,7 +170,7 @@ class install extends common {
 			'matrix_time_machine',	// data versions table
 			'matrix_users',			// users table (user 'root' will be re-created later)
 			'relations',			// search relations table
-			'sessions'				// optional sessions table
+			// 'sessions'			// optional sessions table
 		];
 
 		$install_checked_default = [
@@ -1480,7 +1480,7 @@ class install extends common {
 			}
 
 		// terminal command pg_dump
-			$command  = 'pg_dump '.$config->host_line.' '.$config->port_line.' -U '.DEDALO_USERNAME_CONN.' -F p -b -v --no-owner --no-privileges --role='.DEDALO_USERNAME_CONN.' '.$db_install_name; //.' > '.$target_file_path.'.psql';
+			$command  = DB_BIN_PATH . 'pg_dump '.$config->host_line.' '.$config->port_line.' -U '.DEDALO_USERNAME_CONN.' -F p -b -v --no-owner --no-privileges --role='.DEDALO_USERNAME_CONN.' '.$db_install_name; //.' > '.$target_file_path.'.psql';
 			// $command .= ' | zip '.$target_file_path_compress.' -foo'; // redirects output to zip compressed file
 			$command .=' | gzip > '.$target_file_path_compress;
 
