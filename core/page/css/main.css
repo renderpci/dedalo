@@ -4187,6 +4187,7 @@ dd-modal .footer.distribute {
   align-items: flex-start;
   justify-content: flex-start;
   align-content: flex-start;
+  height: auto;
   box-shadow: 0px 1px 0px 0px #e6e6e6;
 }
 @media screen and (max-width: 1024px) {
@@ -4227,7 +4228,7 @@ dd-modal .footer.distribute {
   height: inherit;
 }
 .column .wrapper_component > span {
-  padding: 0.25rem;
+  padding: 0.3rem;
   display: inline-block;
   word-break: break-word;
 }
@@ -4321,8 +4322,9 @@ dd-modal .footer.distribute {
 .column.column_section_id > button.button_edit.link_button,
 .column.column_section_id > button.button_delete.link_button,
 .column.column_section_id > button.link_button.link_button {
-  height: 3rem;
   font-size: 1.25rem;
+  height: 3rem;
+  height: 100%;
 }
 @media screen and (max-width: 1024px) {
   .column.column_section_id > button.button_edit.button_edit,
@@ -10434,6 +10436,9 @@ dd-modal .footer.distribute {
 }
 .component_publication.view_line > .content_data > .content_value {
   margin: 0.25rem;
+}
+.component_publication.view_line > .content_data .button_exit_edit.show_on_active {
+  display: none;
 }
 .component_publication.search > .content_data > .q_operator {
   width: 3rem;
