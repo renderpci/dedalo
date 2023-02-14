@@ -624,7 +624,7 @@ h3 {
 }
 .no_access {
   display: inline-block;
-  padding: 1rem;
+  padding: 0.5rem;
 }
 .icon_arrow {
   padding: 0.33rem;
@@ -4219,6 +4219,7 @@ dd-modal .footer.distribute {
   white-space: nowrap;
   width: 100%;
   margin-right: 0.1rem;
+  margin-left: 0px;
   font-size: 0.95rem;
   line-height: 1.15rem;
 }
@@ -9871,7 +9872,7 @@ dd-modal .footer.distribute {
 .component_portal.view_default.edit > .list_body,
 .portal.view_default.edit > .list_body {
   display: grid;
-  grid-template-rows: 1.8rem auto;
+  grid-template-rows: 1.65rem auto;
   min-height: 2.66rem;
   position: relative;
   height: fit-content;
