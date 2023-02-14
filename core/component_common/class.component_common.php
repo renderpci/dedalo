@@ -94,6 +94,8 @@ abstract class component_common extends common {
 		public $save_to_database;
 		// array ar_list_of_values
 		public $ar_list_of_values;
+		// bool updating_dato. Used by updater script
+		public $updating_dato;
 
 
 
