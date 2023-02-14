@@ -4067,8 +4067,7 @@ dd-modal .footer.distribute {
   outline: 1px solid #f0f0f0;
 }
 .list_body > .content_data .no_records {
-  position: absolute;
-  top: 2rem;
+  grid-column: 1/-1;
 }
 .list_body .list_body .column {
   display: flex;
