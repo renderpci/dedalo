@@ -38,7 +38,7 @@ test
 .smbdelete*
 * copy.*
 
-install/import/hierarchy
+# install/import/hierarchy
 str_data*
 
 # lib ignore all except dedalo
