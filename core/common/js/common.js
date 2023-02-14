@@ -139,16 +139,17 @@ export const set_context_vars = function(self) {
 		// of some common component behaviors
 		// if show_interface is defined in properties used the definition, else use this default
 			const default_show_interface = {
-				read_only 			: false, // bool false
-				save_animation		: true, // bool true
+				read_only				: false, // bool false
+				save_animation			: true, // bool true
 				// buttons_container	: true, // bool false
-				value_buttons		: true,  // bool true
-				button_add			: true, // bool true
-				button_link			: true, // bool true
-				tools				: true, // bool true
-				button_external		: false, // bool false
-				button_tree			: false, // bool false
-				show_autocomplete 	: true // bool true
+				value_buttons			: true,  // bool true
+				button_add				: true, // bool true
+				button_link				: true, // bool true
+				button_edit				: false, // bool false. Ex. component_select User profile (dd1725)
+				tools					: true, // bool true
+				button_external			: false, // bool false
+				button_tree				: false, // bool false
+				show_autocomplete		: true // bool true
 			}
 			// set the instance show_interface
 			self.show_interface = (!self.context.properties?.show_interface && !self.request_config_object?.show?.interface)
@@ -230,12 +231,15 @@ common.prototype.render = async function (options={}) {
 	// permissions
 		const permissions = parseInt(self.permissions)
 		if(permissions<1){
+			const label = (get_label.no_access || 'You don\'t have access here')
+						+ ' : ' + self.tipo
 			const node = ui.create_dom_element({
 				element_type	: 'span',
-				class_name		: 'no_access'
+				class_name		: 'no_access',
+				inner_html		: label
 			})
 			self.node = node
-
+console.log('self:', self, self.permissions, node);
 			return node
 		}
 

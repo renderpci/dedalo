@@ -25,6 +25,7 @@ export const render_list_section = function() {
 /**
 * LIST
 * Render node for use in list
+* @param object options
 * @return DOM node
 */
 render_list_section.prototype.list = async function(options) {
@@ -107,115 +108,113 @@ export const render_column_id = function(options) {
 							section_id		: section_id
 						})
 					})
+					link_button.appendChild(section_id_node)
 					// link_icon
-						ui.create_dom_element({
-							element_type	: 'span',
-							class_name		: 'button link icon',
-							parent			: link_button
-						})
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'button link icon',
+						parent			: link_button
+					})
 
-				if (permissions>1) {
-					// button_edit
-						const button_edit = ui.create_dom_element({
-							element_type	: 'button',
-							class_name		: 'button_edit',
-							parent			: fragment
-						})
-						button_edit.addEventListener('click', async function(){
-							// navigate link
-								// const user_navigation_options = {
-								// 	tipo		: section_tipo,
-								// 	section_id	: section_id,
-								// 	model		: self.model,
-								// 	mode		: 'edit'
-								// }
-								const user_navigation_rqo = {
-									caller_id	: self.id,
-									source		: {
-										action			: 'search',
-										model			: 'section',
-										tipo			: section_tipo,
-										section_tipo	: section_tipo,
-										mode			: 'edit',
-										lang			: self.lang
-									},
-									sqo : {
-										section_tipo		: [{tipo : section_tipo}],
-										limit				: 1,
-										offset				: 0,
-										filter_by_locators	: [{
-											section_tipo : section_tipo,
-											section_id : section_id
-										}]
-									}
-								}
+				// button_edit
+					// const button_edit = ui.create_dom_element({
+					// 	element_type	: 'button',
+					// 	class_name		: 'button_edit',
+					// 	parent			: fragment
+					// })
+					// button_edit.addEventListener('click', async function(){
+					// 	// navigate link
+					// 		// const user_navigation_options = {
+					// 		// 	tipo		: section_tipo,
+					// 		// 	section_id	: section_id,
+					// 		// 	model		: self.model,
+					// 		// 	mode		: 'edit'
+					// 		// }
+					// 		const user_navigation_rqo = {
+					// 			caller_id	: self.id,
+					// 			source		: {
+					// 				action			: 'search',
+					// 				model			: 'section',
+					// 				tipo			: section_tipo,
+					// 				section_tipo	: section_tipo,
+					// 				mode			: 'edit',
+					// 				lang			: self.lang
+					// 			},
+					// 			sqo : {
+					// 				section_tipo		: [{tipo : section_tipo}],
+					// 				limit				: 1,
+					// 				offset				: 0,
+					// 				filter_by_locators	: [{
+					// 					section_tipo : section_tipo,
+					// 					section_id : section_id
+					// 				}]
+					// 			}
+					// 		}
 
-								if(SHOW_DEBUG===true) {
-									console.log("// section_record build_id_column user_navigation_rqo initiator component:", user_navigation_rqo);
-								}
-								event_manager.publish('user_navigation', user_navigation_rqo)
+					// 		if(SHOW_DEBUG===true) {
+					// 			console.log("// section_record build_id_column user_navigation_rqo initiator component:", user_navigation_rqo);
+					// 		}
+					// 		event_manager.publish('user_navigation', user_navigation_rqo)
 
-							// detail_section
-								// ( async () => {
-								// 	const options = {
-								// 		model 			: 'section',
-								// 		type 			: 'section',
-								// 		tipo  			: self.section_tipo,
-								// 		section_tipo  	: self.section_tipo,
-								// 		section_id 		: self.section_id,
-								// 		mode 			: 'edit',
-								// 		lang 			: page_globals.dedalo_data_lang
-								// 	}
-								// 	const page_element_call	= await data_manager.get_page_element(options)
-								// 	const page_element		= page_element_call.result
+					// 	// detail_section
+					// 		// ( async () => {
+					// 		// 	const options = {
+					// 		// 		model 			: 'section',
+					// 		// 		type 			: 'section',
+					// 		// 		tipo  			: self.section_tipo,
+					// 		// 		section_tipo  	: self.section_tipo,
+					// 		// 		section_id 		: self.section_id,
+					// 		// 		mode 			: 'edit',
+					// 		// 		lang 			: page_globals.dedalo_data_lang
+					// 		// 	}
+					// 		// 	const page_element_call	= await data_manager.get_page_element(options)
+					// 		// 	const page_element		= page_element_call.result
 
-								// 	// detail_section instance. Create target section page element and instance
-								// 		const detail_section = await get_instance(page_element)
+					// 		// 	// detail_section instance. Create target section page element and instance
+					// 		// 		const detail_section = await get_instance(page_element)
 
-								// 		// set self as detail_section caller (!)
-								// 			detail_section.caller = initiator
+					// 		// 		// set self as detail_section caller (!)
+					// 		// 			detail_section.caller = initiator
 
-								// 		// load data and render wrapper
-								// 			await detail_section.build(true)
-								// 			const detail_section_wrapper = await detail_section.render()
+					// 		// 		// load data and render wrapper
+					// 		// 			await detail_section.build(true)
+					// 		// 			const detail_section_wrapper = await detail_section.render()
 
-								// 	// modal container (header, body, footer, size)
-								// 		const header = ui.create_dom_element({
-								// 			element_type	: 'div',
-								// 			text_content 	: detail_section.label
-								// 		})
-								// 		const modal = ui.attach_to_modal(header, detail_section_wrapper, null, 'big')
-								// 		modal.on_close = () => {
-								// 			detail_section.destroy(true, true, true)
-								// 		}
-								// })()
+					// 		// 	// modal container (header, body, footer, size)
+					// 		// 		const header = ui.create_dom_element({
+					// 		// 			element_type	: 'div',
+					// 		// 			text_content 	: detail_section.label
+					// 		// 		})
+					// 		// 		const modal = ui.attach_to_modal(header, detail_section_wrapper, null, 'big')
+					// 		// 		modal.on_close = () => {
+					// 		// 			detail_section.destroy(true, true, true)
+					// 		// 		}
+					// 		// })()
 
-							// iframe
-								// ( async () => {
-								// 	const iframe = ui.create_dom_element({
-								// 		element_type	: 'iframe',
-								// 		src 			: DEDALO_CORE_URL + '/page/?tipo=' + self.section_tipo + '&section_id=' + self.section_id + '&mode=edit'
-								// 	})
-								// 	// modal container (header, body, footer, size)
-								// 		const header = ui.create_dom_element({
-								// 			element_type	: 'div',
-								// 			text_content 	: detail_section.label
-								// 		})
-								// 		const modal = ui.attach_to_modal(header, iframe, null, 'big')
-								// 		modal.on_close = () => {
-								// 			detail_section.destroy(true, true, true)
-								// 	}
-								// })()
-						})
-						button_edit.appendChild(section_id_node)
-
-					// edit_icon
-						ui.create_dom_element({
-							element_type	: 'span',
-							class_name		: 'button edit icon',
-							parent			: button_edit
-						})
-				}
+					// 	// iframe
+					// 		// ( async () => {
+					// 		// 	const iframe = ui.create_dom_element({
+					// 		// 		element_type	: 'iframe',
+					// 		// 		src 			: DEDALO_CORE_URL + '/page/?tipo=' + self.section_tipo + '&section_id=' + self.section_id + '&mode=edit'
+					// 		// 	})
+					// 		// 	// modal container (header, body, footer, size)
+					// 		// 		const header = ui.create_dom_element({
+					// 		// 			element_type	: 'div',
+					// 		// 			text_content 	: detail_section.label
+					// 		// 		})
+					// 		// 		const modal = ui.attach_to_modal(header, iframe, null, 'big')
+					// 		// 		modal.on_close = () => {
+					// 		// 			detail_section.destroy(true, true, true)
+					// 		// 	}
+					// 		// })()
+					// })
+					// button_edit.appendChild(section_id_node)
+					// // edit_icon
+					// 	ui.create_dom_element({
+					// 		element_type	: 'span',
+					// 		class_name		: 'button edit icon',
+					// 		parent			: button_edit
+					// 	})
 				break
 
 			// case (self.initiator && self.initiator.indexOf('tool_time_machine')!==-1):
