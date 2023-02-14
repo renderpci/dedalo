@@ -35,6 +35,13 @@ render_edit_component_select.prototype.edit = async function(options) {
 	// view
 		const view	= self.context.view || 'default'
 
+	// show_interface.button_edit
+		if (page_globals.is_global_admin===true) {
+			// default is false
+			self.show_interface.button_edit = true
+		}
+		console.log('self.show_interface:', self.show_interface);
+
 	switch(view) {
 
 		case 'line':
@@ -59,8 +66,8 @@ render_edit_component_select.prototype.edit = async function(options) {
 export const get_content_data = function(self) {
 
 	// short vars
-		const data		= self.data || {}
-		const value		= data.value || []
+		const data	= self.data || {}
+		const value	= data.value || []
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
@@ -191,75 +198,76 @@ const get_content_value = (i, current_value, self) => {
 				// }
 		}//end for (let i = 0; i < datalist_length; i++)
 
-	// button_edit
-		// const button_edit = ui.create_dom_element({
-		// 	element_type	: 'span',
-		// 	class_name		: 'button edit show_on_active',
-		// 	parent			: content_value
-		// })
-		// button_edit.addEventListener('click', function(e) {
-		// 	e.stopPropagation()
+	// button_edit. Default is hidden
+		if(self.show_interface.button_edit===true) {
+			const button_edit = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button edit show_on_active',
+				parent			: content_value
+			})
+			button_edit.addEventListener('click', function(e) {
+				e.stopPropagation()
 
-		// 	try {
+				try {
 
-		// 		if (!select.value) {
-		// 			return false
-		// 		}
+					if (!select.value) {
+						return false
+					}
 
-		// 		// short vars
-		// 			const selected_locator		= JSON.parse(select.value)
-		// 			const target_section_tipo	= selected_locator.section_tipo
-		// 			const target_section_id		= selected_locator.section_id
+					// short vars
+						const selected_locator		= JSON.parse(select.value)
+						const target_section_tipo	= selected_locator.section_tipo
+						const target_section_id		= selected_locator.section_id
 
-		// 		// open a new window
-		// 			const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
-		// 				tipo			: target_section_tipo,
-		// 				id				: target_section_id,
-		// 				mode			: 'edit',
-		// 				menu			: false
-		// 			})
-		// 			const new_window = open_window({
-		// 				url		: url,
-		// 				name	: 'record_view',
-		// 				width	: 1280,
-		// 				height	: 740
-		// 			})
-		// 			new_window.addEventListener('blur', function() {
-		// 				// refresh current instance
-		// 				self.refresh({
-		// 					build_autoload : true
-		// 				})
-		// 			})
+					// open a new window
+						// const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
+						// 	tipo			: target_section_tipo,
+						// 	id				: target_section_id,
+						// 	mode			: 'edit',
+						// 	menu			: false
+						// })
+						// const new_window = open_window({
+						// 	url		: url,
+						// 	name	: 'record_view',
+						// 	width	: 1280,
+						// 	height	: 740
+						// })
+						// new_window.addEventListener('blur', function() {
+						// 	// refresh current instance
+						// 	self.refresh({
+						// 		build_autoload : true
+						// 	})
+						// })
 
-		// 		// navigation
-		// 			// const user_navigation_options = {
-		// 			// 	source		: {
-		// 			// 		action			: 'search',
-		// 			// 		model			: 'section',
-		// 			// 		tipo			: target_section_tipo,
-		// 			// 		section_tipo	: target_section_tipo,
-		// 			// 		mode			: 'edit',
-		// 			// 		lang			: self.lang
-		// 			// 	},
-		// 			// 	sqo : {
-		// 			// 		section_tipo		: [{tipo : target_section_tipo}],
-		// 			// 		filter				: null,
-		// 			// 		limit				: 1,
-		// 			// 		filter_by_locators	: [{
-		// 			// 			section_tipo	: target_section_tipo,
-		// 			// 			section_id		: target_section_id
-		// 			// 		}]
-		// 			// 	}
-		// 			// }
-		// 			// event_manager.publish('user_navigation', user_navigation_options)
-		// 	} catch (error) {
-		// 		console.error('ERROR on component_select.get_content_value.button_edit:'. error)
-		// 	}
-		// })
-		// // console.log("current_value:", self.tipo, current_value);
-		// if (!current_value) {
-		// 	button_edit.classList.add('hide')
-		// }
+					// navigation
+						const user_navigation_options = {
+							source		: {
+								action			: 'search',
+								model			: 'section',
+								tipo			: target_section_tipo,
+								section_tipo	: target_section_tipo,
+								mode			: 'edit',
+								lang			: self.lang
+							},
+							sqo : {
+								section_tipo		: [{tipo : target_section_tipo}],
+								filter				: null,
+								limit				: 1,
+								filter_by_locators	: [{
+									section_tipo	: target_section_tipo,
+									section_id		: target_section_id
+								}]
+							}
+						}
+						event_manager.publish('user_navigation', user_navigation_options)
+				} catch (error) {
+					console.error('ERROR on component_select.get_content_value.button_edit:'. error)
+				}
+			})
+			if (!current_value) {
+				button_edit.classList.add('hide')
+			}
+		}
 
 
 	return content_value
