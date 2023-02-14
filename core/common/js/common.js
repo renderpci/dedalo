@@ -231,12 +231,15 @@ common.prototype.render = async function (options={}) {
 	// permissions
 		const permissions = parseInt(self.permissions)
 		if(permissions<1){
+			const label = (get_label.no_access || 'You don\'t have access here')
+						+ ' : ' + self.tipo
 			const node = ui.create_dom_element({
 				element_type	: 'span',
-				class_name		: 'no_access'
+				class_name		: 'no_access',
+				inner_html		: label
 			})
 			self.node = node
-
+console.log('self:', self, self.permissions, node);
 			return node
 		}
 
