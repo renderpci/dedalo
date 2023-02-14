@@ -427,6 +427,7 @@
     "created": "<mark>creado<\/mark>",
     "procesando_media_en_background": "<mark>Procesando media en segundo plano. Este proceso puede tardar, pero puede continuar trabajando.<\/mark>",
     "default_lang_of_file_to_import": "<mark>Idioma por defecto del archivo a importar. Datos sin idioma especificado serán importados en:<\/mark>",
+    "select_search_section": "<mark>Seleccione una sección de búsqueda.<\/mark>",
     "days": "<mark>días<\/mark>",
     "months": "<mark>meses<\/mark>",
     "year": "<mark>año<\/mark>",

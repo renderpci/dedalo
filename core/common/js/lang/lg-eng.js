@@ -427,6 +427,7 @@
     "created": "created",
     "procesando_media_en_background": "Processing background media. This may take a while, but you can continue working.",
     "default_lang_of_file_to_import": "Default language of the file to import. Data without specified language will be imported in:",
+    "select_search_section": "Select a search section.",
     "days": "days",
     "months": "months",
     "year": "year",
