@@ -253,8 +253,13 @@ component_text_area.prototype.init = async function(options) {
 		// self.service_text_editor	= service_tinymce
 		self.service_text_editor	= service_ckeditor
 
+	// self.show_interface.read_only
+		if (self.permissions < 2) {
+			self.show_interface.read_only = true
+		}
+
 	// auto_init_editor
-		if (options.auto_init_editor) {
+		if (options.auto_init_editor && self.permissions > 1) {
 			self.auto_init_editor = options.auto_init_editor
 		}
 

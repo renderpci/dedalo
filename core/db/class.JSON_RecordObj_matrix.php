@@ -342,8 +342,10 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 						// clean previous component dato to prevent infinite loop
 						$new_options->previous_component_dato = null;
 						// date
-						$created_date = $this->datos->created_date;
-						$new_options->time_machine_date = $created_date;
+						if (isset($this->datos) && isset($this->datos->created_date)) {
+							$created_date = $this->datos->created_date;
+							$new_options->time_machine_date = $created_date;
+						}
 					$this->save_time_machine( $new_options );
 					debug_log(
 						__METHOD__." Saved time machine NOT already saved component dato. tipo: $tipo, section_tipo: $section_tipo, section_id: $section_id".PHP_EOL.to_string($previous_component_dato),

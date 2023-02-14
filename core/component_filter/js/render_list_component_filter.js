@@ -7,10 +7,11 @@
 	import {view_default_list_filter} from './view_default_list_filter.js'
 	import {view_mini_list_filter} from './view_mini_list_filter.js'
 	import {view_text_list_filter} from './view_text_list_filter.js'
+	import {view_collapse_list_filter} from './view_collapse_list_filter.js'
 
 
 /**
-* render_list_component_filter
+* RENDER_LIST_COMPONENT_FILTER
 * Manage the components logic and appearance in client side
 */
 export const render_list_component_filter = function() {
@@ -39,6 +40,9 @@ render_list_component_filter.prototype.list = async function(options) {
 
 		case 'text':
 			return view_text_list_filter.render(self, options)
+
+		case 'collapse':
+			return view_collapse_list_filter.render(self, options)
 
 		case 'default':
 		default:
