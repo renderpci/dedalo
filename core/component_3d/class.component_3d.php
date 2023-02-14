@@ -216,31 +216,6 @@ class component_3d extends component_media_common {
 
 
 	/**
-	* GET_SUBTITLES_PATH
-	*/
-	public function get_subtitles_path( string $lang=DEDALO_DATA_LANG ) : string  {
-
-		$subtitles_path = DEDALO_MEDIA_PATH . DEDALO_3D_FOLDER . DEDALO_SUBTITLES_FOLDER.'/'. $this->get_id().'_'.$lang.'.'.DEDALO_AV_SUBTITLES_EXTENSION;
-
-		return $subtitles_path;
-	}//end get_subtitles_path
-
-
-
-	/**
-	* GET_SUBTITLES_URL
-	* @return string $subtitles_url
-	*/
-	public function get_subtitles_url( string $lang=DEDALO_DATA_LANG ) : string {
-
-		$subtitles_url = DEDALO_MEDIA_URL . DEDALO_3D_FOLDER . DEDALO_SUBTITLES_FOLDER. '/'. $this->get_id().'_'.$lang .'.'.DEDALO_AV_SUBTITLES_EXTENSION;
-
-		return $subtitles_url;
-	}//end get_subtitles_url
-
-
-
-	/**
 	* GET_ORIGINAL_FILE_PATH
 	* Returns the full path of the original file if exists
 	* Si se sube un archivo de extensión distinta a DEDALO_IMAGE_EXTENSION, se convierte a DEDALO_IMAGE_EXTENSION. Los archivos originales
@@ -812,6 +787,7 @@ class component_3d extends component_media_common {
 
 	/**
 	* PROCESS_UPLOADED_FILE
+	* TODO: modify this to transform input file into .glb
 	* @param object $file_data
 	*	Data from trigger upload file
 	* Format:
@@ -897,7 +873,7 @@ class component_3d extends component_media_common {
 					}//end if (defined('DEDALO_AV_RECOMPRESS_ALL') && DEDALO_AV_RECOMPRESS_ALL==1)
 
 
-				// posterframe. Create posterframe of current video if not exists
+				// posterframe. Create posterframe of current video if it does not exist
 					$PosterFrameObj = new PosterFrameObj($id);
 					if(Ffmpeg::get_ffmpeg_installed_path() && !$PosterFrameObj->get_file_exists()) {
 						$timecode	= '00:00:05';
@@ -1246,57 +1222,8 @@ class component_3d extends component_media_common {
 
 
 	/**
-	* CONFORM_HEADERS
-	* Creates a new version from original in given quality rebuilding headers
-	* @param string $quality
-	* @return object $response
-	*/
-	public function conform_headers(string $quality) : object {
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed';
-
-		// short vars
-			$id = $this->get_id();
-
-		// AVObj
-			$AVObj = new AVObj($id, $quality);
-
-		// Ffmpeg
-			$Ffmpeg				= new Ffmpeg();
-			$command_response	= $Ffmpeg->conform_header($AVObj);
-
-		// response
-			$response->result			= true;
-			$response->msg				= 'Rebuilding av file headers in background';
-			$response->command_response	= $command_response;
-
-		// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
-			logger::$obj['activity']->log_message(
-				'NEW VERSION',
-				logger::INFO,
-				$this->tipo,
-				NULL,
-				[
-					'msg'		=> 'conform_header av file',
-					'tipo'		=> $this->tipo,
-					'parent'	=> $this->section_id,
-					'top_id'	=> TOP_ID ?? null,
-					'top_tipo'	=> TOP_TIPO ?? null,
-					'id'		=> $id,
-					'quality'	=> $quality
-				]
-			);
-				dump($response, ' response ++ '.to_string());
-
-		return $response;
-	}//end conform_headers
-
-
-
-	/**
 	* CREATE_POSTERFRAME
+	* TODO: ya veremos
 	* Creates a image 'posterframe' from the default quality of current video file
 	*
 	* @param float $current_time
