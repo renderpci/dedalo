@@ -141,8 +141,8 @@ const get_content_data = function(self) {
 			if (section_button_new) {
 				const button_new = ui.create_dom_element({
 					element_type	: 'button',
-					class_name		: 'light add',
-					title			: section_button_new.label || "New",
+					class_name		: 'light add_light',
+					title			: section_button_new.label || 'New',
 					parent			: buttons_container
 				})
 				button_new.addEventListener('click', (e) => {
