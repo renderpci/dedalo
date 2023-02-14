@@ -4453,6 +4453,12 @@ dd-modal .footer.distribute {
   margin-right: -2px;
   pointer-events: none;
 }
+.column.column_section_id > .section_id_container {
+  padding: 0.75rem;
+  font-size: 0.95rem;
+  text-align: right;
+  width: 100%;
+}
 .column.column_remove {
   display: flex;
   flex-direction: column;

@@ -299,6 +299,19 @@ export const render_column_id = function(options) {
 					}
 				break;
 
+			case (self.tipo==='dd542') :
+
+				// activity case
+
+				const button_edit = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'section_id_container',
+					parent			: fragment
+				})
+
+				button_edit.appendChild(section_id_node)
+				break;
+
 			default:
 
 				// edit button (pen)
