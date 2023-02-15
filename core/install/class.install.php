@@ -89,6 +89,9 @@ class install extends common {
 				$properties->db_config->port		= DEDALO_DB_PORT_CONN;
 				$properties->db_config->socket		= DEDALO_SOCKET_CONN;
 
+		// get_db_data_version. Version of DDBB data ( 5.8.2 expected ). array|null
+			$properties->db_data_version =	install::get_db_data_version();
+
 		// dedalo version
 			$properties->version = DEDALO_VERSION . ' - Build ' . DEDALO_BUILD;
 
@@ -115,6 +118,7 @@ class install extends common {
 		// max_execution_time
 			$max_execution_time = ini_get('max_execution_time');
 			$properties->max_execution_time	= $max_execution_time;
+
 
 		// dd_object
 			$dd_object->set_properties($properties);
@@ -278,7 +282,6 @@ class install extends common {
 				DEDALO_SOCKET_CONN
 			);
 
-
 			$db_connection_check = $db_connection !== false
 				? true
 				: false;
@@ -306,6 +309,40 @@ class install extends common {
 
 		return $db_status;
 	}//end get_db_status
+
+
+
+	/**
+	* GET_DB_DATA_VERSION
+	* @return object $response
+	*/
+	public function get_db_data_version() : ?array {
+
+		try {
+			$current_version_in_db = get_current_version_in_db();
+		} catch (Exception $e) {
+			debug_log(__METHOD__." Caught exception: ".$e->getMessage(), logger::WARNING);
+
+			$current_version_in_db = null;
+		}
+
+
+		return $current_version_in_db;
+	}//end get_db_data_version
+
+
+
+	/**
+	* TO_UPDATE
+	* @return object $response
+	*/
+	public static function to_update() {
+
+		$response = install::set_install_status('installed');
+
+
+		return $response;
+	}//end to_update
 
 
 
