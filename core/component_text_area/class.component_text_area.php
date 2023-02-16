@@ -2180,29 +2180,25 @@ class component_text_area extends component_common {
 
 	/**
 	* UPDATE_DATO_VERSION
-	* @param object $request_options
+	* @param object $options
 	* @return object $response
 	*	$response->result = 0; // the component don't have the function "update_dato_version"
 	*	$response->result = 1; // the component do the update"
 	*	$response->result = 2; // the component try the update but the dato don't need change"
 	*/
-	public static function update_dato_version(object $request_options) : object {
+	public static function update_dato_version(object $options) : object {
 
-		$options = new stdClass();
-			$options->update_version	= null;
-			$options->dato_unchanged	= null;
-			$options->reference_id		= null;
-			$options->tipo				= null;
-			$options->section_id		= null;
-			$options->section_tipo		= null;
-			$options->context			= 'update_component_dato';
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+		// options
+			$update_version	= $options->update_version ?? null;
+			$dato_unchanged	= $options->dato_unchanged ?? null;
+			$reference_id	= $options->reference_id ?? null;
+			$tipo			= $options->tipo ?? null;
+			$section_id		= $options->section_id ?? null;
+			$section_tipo	= $options->section_tipo ?? null;
+			$context		= $options->context ?? 'update_component_dato';
 
-			$update_version	= $options->update_version;
-			$dato_unchanged	= $options->dato_unchanged;
-			$reference_id	= $options->reference_id;
 
-		$update_version = implode(".", $update_version);
+		$update_version = implode('.', $update_version);
 		switch ($update_version) {
 
 			case '6.0.0':
@@ -2216,53 +2212,55 @@ class component_text_area extends component_common {
 					//  	(!) change the img tags to new format into the image related component.
 
 					// new dato
-						$dato = $dato_unchanged;
+					$dato = $dato_unchanged;
 
-					$ar_realated_tipo = RecordObj_dd::get_ar_terminos_relacionados($options->tipo, false, true);
+					$ar_realated_tipo = RecordObj_dd::get_ar_terminos_relacionados($tipo, false, true);
 					foreach ($ar_realated_tipo as $current_tipo) {
 
-						$model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+						$model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true);
 						switch (true) {
-							case $model === 'component_image':
 
-								$lib_data = [];
+							case $model==='component_image':
 
-								// create the component relation for save the layers
-								$image_component = component_common::get_instance(
-									$model,
-									$current_tipo,
-									$options->section_id,
-									'edit',
-									DEDALO_DATA_NOLAN,
-									$options->section_tipo
-								);
-								$image_dato = $image_component->get_dato();
+								// image_component. Create the component relation for save the layers
+									$image_component = component_common::get_instance(
+										$model,
+										$current_tipo,
+										$section_id,
+										'edit',
+										DEDALO_DATA_NOLAN,
+										$section_tipo
+									);
 
-								if(empty($image_dato[0]->lib_data)){
-									$raster_layer = new stdClass();
-										$raster_layer->layer_id			= 0;
-										$raster_layer->user_layer_name	= 'raster';
-										$raster_layer->layer_data		= [];
+								// lib_data
+									$lib_data	= [];
+									$image_dato	= $image_component->get_dato();
+									if(empty($image_dato[0]->lib_data)){
+										$raster_layer = new stdClass();
+											$raster_layer->layer_id			= 0;
+											$raster_layer->user_layer_name	= 'raster';
+											$raster_layer->layer_data		= [];
 
-									$lib_data[] = $raster_layer;
-								}else{
-									$lib_data = $image_dato[0]->lib_data;
-								}
+										$lib_data[] = $raster_layer;
+									}else{
+										$lib_data = $image_dato[0]->lib_data;
+									}
 
-								$ar_draw_tags = NULL;
-								//get the draw pattern
-								$pattern = TR::get_mark_pattern($mark='draw',$standalone=true);
-
-								# Search math patern tags
-								preg_match_all($pattern,  $dato, $ar_draw_tags, PREG_PATTERN_ORDER);
-
-								if(empty($ar_draw_tags)){
-									continue 2;
-								}
+								// draw_tags
+									$ar_draw_tags = null;
+									// get the draw pattern
+									$pattern = TR::get_mark_pattern(
+										'draw', // string mark
+										true // bool standalone
+									);
+									// Search math pastern tags
+									preg_match_all($pattern,  $dato, $ar_draw_tags, PREG_PATTERN_ORDER);
+									if(empty($ar_draw_tags)){
+										continue 2;
+									}
 
 								// Array result key 7 is the layer into the data stored in the result of the preg_match_all
 								// The layer data inside the tag are with ' and is necessary change to "
-
 								foreach ($ar_draw_tags[4] as $match_key => $layer_id) {
 									$layer_id	= (int)$layer_id;
 									$tag_data	= new stdClass();
@@ -2270,7 +2268,7 @@ class component_text_area extends component_common {
 										$tag_data->user_layer_name	= 'layer_'.$layer_id;
 										$tag_data->layer_data		= json_decode( str_replace('\'', '"', $ar_draw_tags[7][$match_key]) );
 									$ar_layer_key = array_filter($lib_data, function($layer_item, $layer_key) use($layer_id){
-										if(isset($layer_item->layer_id) && $layer_item->layer_id === $layer_id){
+										if(isset($layer_item->layer_id) && $layer_item->layer_id==$layer_id){
 											return $layer_key;
 										}
 									},ARRAY_FILTER_USE_BOTH);
@@ -2288,10 +2286,11 @@ class component_text_area extends component_common {
 								$image_component->set_dato($image_dato);
 								$image_component->save();
 
+								// re-create tags with the new simple format
 								$dato = preg_replace($pattern, "[$2-$3-$4--data:[$4]:data]", $dato);
 								break;
 
-							case $model === 'component_geolocation':
+							case $model==='component_geolocation':
 
 								$lib_data = [];
 
@@ -2305,35 +2304,37 @@ class component_text_area extends component_common {
 									$options->section_tipo
 								);
 								$geo_dato = $geo_component->get_dato();
-
 								if(!empty($geo_dato[0]->lib_data)){
 									$lib_data = $geo_dato[0]->lib_data;
 								}
 
-								$ar_geo_tags = NULL;
-								//get the geo pattern
-								$pattern = TR::get_mark_pattern($mark='geo',$standalone=true);
-
-								# Search math patern tags
+								$ar_geo_tags = null;
+								$pattern = TR::get_mark_pattern(
+									'geo', // string mark
+									true // bool standalone
+								);
+								// Search math pattern tags
 								preg_match_all($pattern,  $dato, $ar_geo_tags, PREG_PATTERN_ORDER);
-
 								if(empty($ar_geo_tags)){
 									continue 2;
 								}
 
 								// Array result key 7 is the layer into the data stored in the result of the preg_match_all
 								// The layer data inside the tag are with ' and is necessary change to "
-
 								foreach ($ar_geo_tags[4] as $match_key => $layer_id) {
-									$layer_id = (int)$layer_id;
+
+									$layer_id			= (int)$layer_id;
+									$layer_data_string	= str_replace('\'', '"', $ar_geo_tags[7][$match_key]);
+
 									$tag_data = new stdClass();
-										$tag_data->layer_id 	= $layer_id;
-										$tag_data->layer_data 	= json_decode( str_replace('\'', '"', $ar_geo_tags[7][$match_key]) );
+										$tag_data->layer_id		= $layer_id;
+										$tag_data->layer_data	= json_decode( $layer_data_string );
+
 									$ar_layer_key = array_filter($lib_data, function($layer_item, $layer_key) use($layer_id){
-										if(isset($layer_item->layer_id) && $layer_item->layer_id === $layer_id){
+										if(isset($layer_item->layer_id) && $layer_item->layer_id==$layer_id){
 											return $layer_key;
 										}
-									},ARRAY_FILTER_USE_BOTH);
+									}, ARRAY_FILTER_USE_BOTH);
 									if(empty($ar_layer_key[0])){
 										$lib_data[] = $tag_data;
 									}else{
@@ -2346,6 +2347,7 @@ class component_text_area extends component_common {
 								$geo_component->set_dato($geo_dato);
 								$geo_component->save();
 
+								// re-create tags with the new simple format
 								$dato = preg_replace($pattern, "[$2-$3-$4--data:[$4]:data]", $dato);
 								break;
 						}
@@ -2353,7 +2355,7 @@ class component_text_area extends component_common {
 
 					// update the <br> tag to <p> and </p>, the new editor, ckeditor, it doesn't use <br> as return. (<br> tags are deprecated)
 						$format_dato	= '<p>'.$dato.'</p>';
-						$dato	= preg_replace('/(<\/? ?br>)/i', '</p><p>', $format_dato);
+						$dato			= preg_replace('/(<\/? ?br>)/i', '</p><p>', $format_dato);
 
 					// fix final dato with new format as array
 						$new_dato = [$dato];
@@ -2380,6 +2382,7 @@ class component_text_area extends component_common {
 
 		return $response;
 	}//end update_dato_version
+
 
 
 	/**
@@ -2428,7 +2431,7 @@ class component_text_area extends component_common {
 	* GET_FALLBACK_LIST_VALUE
 	* Used by component_text_area and component_html_text to
 	* generate fallback versions of current empty values
-	* @param object $options
+	* @param object $options = null
 	* @return array|null $list_value
 	*/
 	public function get_fallback_list_value(object $options=null) : ?array {
@@ -2452,20 +2455,29 @@ class component_text_area extends component_common {
 
 				$value = null;
 
-				if(!empty($html_value)){
-					$html_value = TR::add_tag_img_on_the_fly($current_value);
-					$value = common::truncate_html($max_chars, $html_value, true); // $maxLength, $html, $isUtf8=true
-				}
+				if(!empty($html_value)) {
+					// replace Dédalo tags by html image tags
+						$html_value	= TR::add_tag_img_on_the_fly($current_value);
 
-				// add final ... when is truncated
-					if (!empty($value) && strlen($value)<strlen($html_value)) {
-						$value .= ' ...';
-					}
+					// truncate long text to use in list mode
+						$value		= common::truncate_html(
+							(int)$max_chars, // int maxLength
+							$html_value, // string html
+							true // bool isUtf8
+						);
+
+					// add final ... when is truncated
+						if (!empty($value) && strlen($value)<strlen($html_value)) {
+							$value .= ' ...';
+						}
+				}
 
 				$list_value[] = $value;
 			}
 
 		return $list_value;
 	}//end get_fallback_list_value
+
+
 
 }//end class component_text_area
