@@ -204,7 +204,7 @@ class security_v5_to_v6 {
 						})();
 
 						// find tool by name in registered tools
-						$target_section_tipo	= tools_register::$section_tools_tipo; // dd1324
+						$target_section_tipo	= 'dd1324'; // $section_registered_tools_tipo	= 'dd1324'; // Tools register section
 						$tool_found				= tools_register::get_tool_by_name($new_name, $target_section_tipo); // return section record raw data or null
 						if (empty($tool_found)) {
 							$msg = 'Error on import tool permissions. Tool: '.$tool_name.' not found in tools_register section [Ignored]';
