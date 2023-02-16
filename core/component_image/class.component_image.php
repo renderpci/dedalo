@@ -1932,11 +1932,11 @@ class component_image extends component_media_common {
 		// svg file
 			$svg_file_path = $this->get_svg_file_path();
 			if (!file_exists($svg_file_path)) {
-				// create the svg default file
+				// If default quality file exists, svg_string_node will be generated, else null
 				$svg_string_node = $this->create_default_svg_string_node();
-				$created = $this->create_svg_file($svg_string_node);
-				if ($created===false) {
-					debug_log(__METHOD__." Error on create svg file ".to_string($svg_file_path), logger::ERROR);
+				if (!empty($svg_string_node)) {
+					// create the svg default file
+					$this->create_svg_file($svg_string_node);
 				}
 			}
 

@@ -109,6 +109,35 @@ component_image.prototype.init = async function(options) {
 
 
 
+
+/**
+* BUILD (CUSTOM)
+* @param bool autoload
+* @return promise bool
+*/
+	// component_image.prototype.build = async function(autoload=false) {
+
+	// 	const self = this
+
+	// 	// call generic common build
+	// 		const common_build = await component_common.prototype.build.call(self, autoload);
+
+	// 	// custom build options
+	// 		try {
+
+
+	// 		} catch (error) {
+	// 			self.error = error
+	// 			console.error(error)
+	// 		}
+
+
+	// 	return common_build
+	// }//end build_custom
+
+
+
+
 /**
 * GET_DATA_TAG
 * Send the data_tag to the text_area when it need create a new tag

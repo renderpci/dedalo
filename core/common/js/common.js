@@ -239,7 +239,7 @@ common.prototype.render = async function (options={}) {
 				inner_html		: label
 			})
 			self.node = node
-console.log('self:', self, self.permissions, node);
+
 			return node
 		}
 

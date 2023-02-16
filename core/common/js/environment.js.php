@@ -178,7 +178,7 @@ session_write_close();
 const page_globals=<?php
 	echo (SHOW_DEBUG===true)
 		? json_encode($page_globals, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)
-		: json_encode($page_globals, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+		: json_encode($page_globals, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)
 ?>;
 const <?php // plain_vars
 echo implode(',', array_map(function ($v, $k) {
