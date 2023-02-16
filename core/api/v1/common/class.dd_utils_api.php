@@ -754,6 +754,13 @@ final class dd_utils_api {
 					$response = (object)install::install_db_from_default_file();
 
 				break;
+
+			case 'to_update':
+
+				//exec
+					$response = (object)install::to_update();
+				break;
+
 			case 'install_hierarchies':
 
 				// check login for security
@@ -875,7 +882,7 @@ final class dd_utils_api {
 				switch ($fileToUpload['error']) {
 					case UPLOAD_ERR_OK:
 						break;
-					
+
 					case UPLOAD_ERR_NO_FILE:
 						// throw new RuntimeException('No file sent.');
 						$msg = ' upload: No file sent.';
