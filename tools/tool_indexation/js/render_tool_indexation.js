@@ -595,6 +595,12 @@ const render_related_list = function(self){
 				select.value = db_data.value
 				// select.dispatchEvent(new Event('change'))
 			}
+
+			// select first options if no value
+				if (!select.value && value_length===1) {
+					select.selectedIndex = 0
+				}
+
 			select.classList.remove('hidden')
 		})
 
