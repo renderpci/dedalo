@@ -485,9 +485,10 @@ class Ffmpeg {
 
 		$aspect_ratio = strtolower($AVObj->get_aspect_ratio());
 		if($aspect_ratio == '4x3') {
-			$aspect_ratio = '-vf scale=540:404:force_original_aspect_ratio' ;
+			// $aspect_ratio = '-vf scale=540:404:force_original_aspect_ratio';
+			$aspect_ratio = '540x404';
 		}else{
-			$aspect_ratio = '';
+			$aspect_ratio = '720x404';
 		}
 
 		# SI NO EXISTE EL DEFAULT, BUSCAMOS OTRO DE MAYOR A MENOR
@@ -547,7 +548,7 @@ class Ffmpeg {
 
 		# paso 1 sólo video
 		#$command	.= DEDALO_AV_FFMPEG_PATH . " -itsoffset -$timecode -i $src_file -y -vframes 1 -f rawvideo -an -vcodec mjpeg $target_file > /dev/null  ";
-		$command	.= DEDALO_AV_FFMPEG_PATH . " -ss $timecode -i $src_file -y -vframes 1 -f rawvideo -an -vcodec mjpeg $aspect_ratio $target_file ";
+		$command	.= DEDALO_AV_FFMPEG_PATH . " -ss $timecode -i $src_file -y -vframes 1 -f rawvideo -an -vcodec mjpeg -s $aspect_ratio $target_file ";
 
 
 		# EXEC COMMAND
