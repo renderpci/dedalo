@@ -21,13 +21,13 @@
 
 
 /**
-* VIEW_DEFAULT_DD_GRID
+* VIEW_INDEXATION_DD_GRID
 * Manage the components logic and appearance in client side
 */
-export const view_default_dd_grid = function() {
+export const view_indexation_dd_grid = function() {
 
 	return true
-}//end view_default_dd_grid
+}//end view_indexation_dd_grid
 
 
 
@@ -36,7 +36,7 @@ export const view_default_dd_grid = function() {
 * Render node for use in this view
 * @return DOM node wrapper
 */
-view_default_dd_grid.render = async function(self, options) {
+view_indexation_dd_grid.render = async function(self, options) {
 
 	// data
 		const data = self.data
@@ -72,6 +72,7 @@ const get_grid_nodes = function(data) {
 
 		const cell_nodes = []
 		if (current_data && current_data.type) {
+
 			const node = get_div_container(current_data)
 
 			// label
@@ -118,7 +119,7 @@ const get_grid_nodes = function(data) {
 						default:
 							const column_node = get_text_column(
 								current_data,
-								false // bool use fallback value
+								true // bool use fallback value
 							)
 							node.appendChild(column_node)
 							break;
@@ -152,7 +153,7 @@ const get_grid_nodes = function(data) {
 * @return DOM node div_container
 */
 const get_div_container = function(current_data) {
-
+console.log('current_data:', current_data);
 	const class_list = (current_data.class_list)
 		? current_data.type + ' ' + current_data.class_list
 		: current_data.type

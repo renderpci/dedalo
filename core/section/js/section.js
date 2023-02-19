@@ -521,8 +521,10 @@ section.prototype.build = async function(autoload=false) {
 								body : rqo_count
 							})
 							.then(function(api_count_response){
+								if (!api_count_response.result || api_count_response.error) {
+									console.error('Error on count total : api_count_response:', api_count_response);
+								}
 								self.total = api_count_response.result.total
-								console.log('api_count_response:', api_count_response);
 								resolve(self.total)
 							})
 						})

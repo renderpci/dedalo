@@ -346,7 +346,7 @@ class AVObj extends MediaObj {
 					default		: $aspect = '16x9';
 				}
 		}
-			dump($aspect, ' aspect ++ '.to_string($media_streams));
+
 
 		return $aspect; // default 16x9
 	}//end get_aspect_ratio
