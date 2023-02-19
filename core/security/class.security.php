@@ -213,6 +213,7 @@ class security {
 				? $component_security_access->get_dato()
 				: [];
 
+
 		return $dato_access;
 	}//end get_ar_permissions_in_matrix_for_current_user
 

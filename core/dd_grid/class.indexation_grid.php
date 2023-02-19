@@ -151,7 +151,7 @@ class indexation_grid {
 
 			$section_grid->set_value($section_grid_values);
 
-			// sum the total rows for the sectiona and add the total rows to the section row
+			// sum the total rows for the section and add the total rows to the section row
 			$section_grid_row->set_row_count(array_sum($ar_section_rows_count));
 
 			// add row
@@ -323,7 +323,7 @@ class indexation_grid {
 
 	/**
 	* GET_AR_SECTION_TOP_TIPO
-	* Map/group ar_locators (indexations of current term) as formated array section[id] = ar_data
+	* Map/group ar_locators (indexations of current term) as formatted array section[id] = ar_data
 	* Filter locators for current user (by project)
 	* @return array $ar_section_top_tipo
 	*/
@@ -399,7 +399,7 @@ class indexation_grid {
 						}
 					}
 					if ($in_user_projects===false) {
-						debug_log(__METHOD__." Removed row from thesaurus index_ts list (project not mathc with user projects) ".to_string($ar_section_top_tipo[$section_top_tipo][$current_id_section]), logger::DEBUG);
+						debug_log(__METHOD__." Removed row from thesaurus index_ts list (project not match with user projects) ".to_string($ar_section_top_tipo[$section_top_tipo][$current_id_section]), logger::DEBUG);
 						unset($ar_section_top_tipo[$section_top_tipo][$current_id_section]);
 					}
 				}

@@ -1173,7 +1173,7 @@ abstract class common {
 					// $full_text .= $tag;
 
 					if ($openingTag!==$tagName) {
-						// error_log("Error. openingTag ($openingTag) is different to expected tagName ($tagName)");
+						debug_log(__METHOD__." Error. openingTag ($openingTag) is different to expected tagName ($tagName)".to_string(), logger::ERROR);
 					}else{
 						 $full_text .= $tag;
 					}
@@ -1328,9 +1328,12 @@ abstract class common {
 						// $bt = debug_backtrace()[0];
 						// dump($json->data, ' json->data ++ '.to_string($bt));
 					}
-				// error_log('--- get_json $exec_time '.$called_model.' - '.$called_tipo.' : '.$exec_time);
-				// error_log('------------------- get_structure_context -------- '. $called_tipo .' - '. $exec_time .' ms ---- '. $called_model);
-				error_log('------------------- get_json --------------------- '. $called_tipo .' ---------- '. $exec_time .' ---- '. $called_model.' - '.($this->section_tipo ?? $this->tipo ?? '').'.'.($this->section_id ?? ''));
+				$current_section_tipo	= $this->section_tipo ?? $this->tipo ?? '';
+				$current_section_id		= $this->section_id ?? '';
+				debug_log(
+					'------------------- get_json --------------------- '. $called_tipo .' ---------- '. $exec_time .' ---- '. $called_model.' - '.$current_section_tipo.'.'.$current_section_id,
+					logger::DEBUG
+				);
 			}
 
 		// cache
@@ -1383,7 +1386,10 @@ abstract class common {
 							? (14 - $len)
 							: 0;
 						$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
-						error_log("------------------- get_structure_context CACHED - $tipo_line ". exec_time_unit($start_time,'ms')." ms" . " ---- $model ". json_encode($add_request_config));
+						debug_log(
+							"------------------- get_structure_context CACHED - $tipo_line ". exec_time_unit($start_time,'ms')." ms" . " ---- $model ". json_encode($add_request_config),
+							logger::DEBUG
+						);
 					}
 					return self::$structure_context_cache[$ddo_key];
 				}
@@ -1593,7 +1599,6 @@ abstract class common {
 					$dd_object->time_machine_list	= $this->get_time_machine_list_tipo();
 					$dd_object->section_map 		= section::get_section_map( $section_tipo );
 				}
-				// error_log('+++++++++++++++++++++++++++++++++++ Time A : '.exec_time_unit($start_time) );
 
 		// cache. fix context dd_object
 			self::$structure_context_cache[$ddo_key] = $dd_object;
@@ -1617,7 +1622,6 @@ abstract class common {
 					? (14 - $len)
 					: 0;
 				$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
-				// error_log('+++++++++++++++++++++++++++++++++++ Time C : '.exec_time_unit($start_time) );
 				// error_log("------------------- get_structure_context -------- $tipo_line $time_string ms" . " ---- $model - parent:". $parent .' '.json_encode($add_request_config));
 			}
 
@@ -1681,8 +1685,10 @@ abstract class common {
 					? (14 - $len)
 					: 0;
 				$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
-				$log = "------------------- get_subdatum start ----------- $tipo_line ---- ". get_class($this) .' -- '. ($this->section_tipo ?? $this->tipo).'-'.$this->section_id ; //  .' '.json_encode($ar_locators, JSON_PRETTY_PRINT)
-				error_log($log);
+				debug_log(
+					"------------------- get_subdatum start ----------- $tipo_line ---- ". get_class($this) .' -- '. ($this->section_tipo ?? $this->tipo).'-'.$this->section_id,
+					logger::DEBUG
+				);
 			}
 
 		// dump(null, ' get_ar_subcontext call this **************************** '.to_string($this->tipo).' - $from_parent: '.$from_parent);
@@ -2044,8 +2050,10 @@ abstract class common {
 					// add calculated subcontext
 						// $ar_subcontext_calculated[] = $cid;
 
-					$log = "------------------- resolve ddo ------------------ $dd_object->tipo ---------- ".exec_time_unit($ddo_start_time,'ms')." ms ";
-					error_log($log);
+					debug_log(
+						"------------------- resolve ddo ------------------ $dd_object->tipo ---------- ".exec_time_unit($ddo_start_time,'ms')." ms ",
+						logger::DEBUG
+					);
 				}//end foreach ($layout_map as $section_tipo => $ar_list_tipos) foreach ($ar_list_tipos as $current_tipo)
 			}//end foreach($ar_locators as $current_locator)
 
@@ -2068,8 +2076,10 @@ abstract class common {
 					? (14 - $len)
 					: 0;
 				$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
-				$log = "------------------- get_subdatum ----------------- $tipo_line $time_string ms ---- ". get_class($this) .' -- '. ($this->section_tipo ?? $this->tipo).'-'.$this->section_id ; //  .' '.json_encode($ar_locators, JSON_PRETTY_PRINT)
-				error_log($log);
+				debug_log(
+					"------------------- get_subdatum ----------------- $tipo_line $time_string ms ---- ". get_class($this) .' -- '. ($this->section_tipo ?? $this->tipo).'-'.$this->section_id,
+					logger::DEBUG
+				);
 			}
 
 
