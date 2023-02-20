@@ -412,13 +412,47 @@ const render_area_item = function(item, datalist, value, self) {
 								? 1
 								: 0
 
-				// parents. get the all parents of the item
+				// parents. propagate value to parents
 					const parents = await self.get_parents(input_checkbox.item)
-					// set the data of the parents and change the DOM node with update_value event
 					const parents_length = parents.length
-					for (let i = parents_length - 1; i >= 0; i--) {
-						const current_parent = parents[i]
-						self.update_value(current_parent, input_value)
+
+					if (input_value===2) {
+
+						for (let i = 0; i < parents_length; i++) {
+
+							const current_parent = parents[i]
+
+							// update parent item data
+								self.update_value(current_parent, 2)
+						}
+
+					}else{
+
+						parents_loop : for (let i = 0; i < parents_length; i++) {
+
+							const current_parent = parents[i]
+
+							// children
+							const current_children			= datalist.filter(el => el.parent===current_parent.tipo)
+							const current_children_length	= current_children.length
+							for (let j = 0; j < current_children_length; j++) {
+
+								const child = current_children[j]
+
+								// exclude self
+									if (child.tipo===input_checkbox.item.tipo) {
+										continue;
+									}
+
+								const found = self.data.value.find(el => el.tipo===child.tipo)
+								if (found && found.value===2) {
+									break parents_loop;
+								}
+							}
+
+							// update parent item data
+								self.update_value(current_parent, input_value)
+						}
 					}
 
 				// update self item data
@@ -612,73 +646,73 @@ const create_permissions_radio_group = function(self, item, permissions) {
 	// create_radio function
 		const create_radio = (radio_value, title) => {
 
-		// radio_input
-			const radio_input = ui.create_dom_element({
-				element_type	: 'input',
-				type			: 'radio',
-				class_name		: 'radio_value val_'+radio_value,
-				value			: radio_value,
-				name			: item.section_tipo +'_'+ item.tipo
-			})
-			// radio_input.item = item
+			// radio_input
+				const radio_input = ui.create_dom_element({
+					element_type	: 'input',
+					type			: 'radio',
+					class_name		: 'radio_value val_'+radio_value,
+					value			: radio_value,
+					name			: item.section_tipo +'_'+ item.tipo
+				})
+				// radio_input.item = item
 
-		// checked value match
-			if(permissions===radio_value) {
-				radio_input.checked = true
-			}
-
-		// update value subscription
-		// If the DOM input value was changed, observers DOM elements will change self value with the observable value
-			self.events_tokens.push(
-				event_manager.subscribe(
-					'update_value_' + self.id + '_' + item.tipo + '_' + item.section_tipo,
-					fn_update_value
-				)
-			)
-			function fn_update_value(changed_data) {
-				// console.log("-------------- - event update_value changed_data:", changed_data);
-				// change the value of the current DOM element
-				if (changed_data===radio_value) {
+			// checked value match
+				if(permissions===radio_value) {
 					radio_input.checked = true
-					console.log('+++ changed value:', changed_data);
 				}
-			}
 
-		// change event
-			radio_input.addEventListener('change', async function() {
-
-				const input_value = parseInt(radio_input.value)
-				// get the all parents of the item
-
-				// set the data of the parents and change the DOM node with update_value event
-					const children			= await self.get_children(item)
-					const children_length	= children.length
-					for (let i = children_length - 1; i >= 0; i--) {
-						const current_child = children[i]
-						self.update_value(current_child, input_value)
+			// update value subscription
+			// If the DOM input value was changed, observers DOM elements will change self value with the observable value
+				self.events_tokens.push(
+					event_manager.subscribe(
+						'update_value_' + self.id + '_' + item.tipo + '_' + item.section_tipo,
+						fn_update_value
+					)
+				)
+				function fn_update_value(changed_data) {
+					// console.log("-------------- - event update_value changed_data:", changed_data);
+					// change the value of the current DOM element
+					if (changed_data===radio_value) {
+						radio_input.checked = true
 					}
+				}
 
-				// update self item data
-					self.update_value(item, input_value)
+			// change event
+				radio_input.addEventListener('change', async function() {
 
-				// parents_radio_butons. update the state of all parents, checking his children state
-					self.update_parents_radio_butons(item, input_value)
+					const input_value = parseInt(radio_input.value)
+					// get the all parents of the item
 
-				// show_save_button
-					event_manager.publish('show_save_button_'+self.id)
-			})//end radio_input.addEventListener("change", async function(e)
+					// set the data of the parents and change the DOM node with update_value event
+						const children			= await self.get_children(item)
+						const children_length	= children.length
+						for (let i = children_length - 1; i >= 0; i--) {
+							const current_child = children[i]
+							self.update_value(current_child, input_value)
+						}
+
+					// update self item data
+						self.update_value(item, input_value)
+
+					// parents_radio_butons. update the state of all parents, checking his children state
+						self.update_parents_radio_butons(item, input_value)
+
+					// show_save_button
+						event_manager.publish('show_save_button_'+self.id)
+						// await self.save_changes()
+				})//end radio_input.addEventListener("change", async function(e)
 
 
-		// radio_input_label
-			const radio_input_label = ui.create_dom_element({
-				element_type	: 'label',
-				class_name		: 'radio_label',
-				inner_html		: title
-			})
-			radio_input_label.prepend(radio_input)
+			// radio_input_label
+				const radio_input_label = ui.create_dom_element({
+					element_type	: 'label',
+					class_name		: 'radio_label',
+					inner_html		: title
+				})
+				radio_input_label.prepend(radio_input)
 
-		return radio_input_label
-	}
+			return radio_input_label
+		}//end create_radio
 
 	// render 3 radio button nodes
 		fragment.appendChild( create_radio(0, 'x') )
@@ -731,9 +765,9 @@ const create_global_radio_group = function(self, item, permissions, datalist, co
 			const radio_input = ui.create_dom_element({
 				element_type	: 'input',
 				type			: 'radio',
-				class_name		: 'radio_value global val_'+radio_value,
+				class_name		: 'radio_value global val_' + radio_value,
 				value			: radio_value,
-				name			: item.section_tipo +'_'+ item.tipo
+				name			: item.section_tipo + '_' + item.tipo
 			})
 
 		// checked status set
@@ -741,13 +775,16 @@ const create_global_radio_group = function(self, item, permissions, datalist, co
 				radio_input.checked = true
 			}
 
-		// update_area_radio event. Update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
+		// update_area_radio event. Update value, subscription to the changes: if the DOM input value was changed, observers DOM elements will be changed own value with the observable value
 			self.events_tokens.push(
-				event_manager.subscribe('update_area_radio_' + self.id + '_' + item.tipo + '_' + item.section_tipo, fn_update_value)
+				event_manager.subscribe(
+					'update_area_radio_' + self.id + '_' + item.tipo + '_' + item.section_tipo,
+					fn_update_value
+				)
 			)
 			function fn_update_value(changed_data) {
 				// console.log("-------------- - event update_value changed_data:", changed_data, radio_value);
-				// change the value of the current dom element
+				// change the value of the current DOM element
 				if (changed_data===radio_value && !radio_input.checked) {
 					radio_input.checked = true
 				}
@@ -774,12 +811,16 @@ const create_global_radio_group = function(self, item, permissions, datalist, co
 					// console.log('children:', children);
 					// return
 
-				for (let i = children_length - 1; i >= 0; i--) {
-					const child = children[i]
+				// for (let j = children_length - j; j >= 0; j--) {
+				for (let j = 0; j < children_length; j++) {
+
+					const child = children[j]
 					if(child.tipo===child.section_tipo){
 						// areas case
-						const name = 'update_area_radio_' + self.id + '_' + child.tipo + '_' + child.section_tipo
-						event_manager.publish(name, input_value)
+						event_manager.publish(
+							'update_area_radio_' + self.id + '_' + child.tipo + '_' + child.section_tipo,
+							input_value
+						)
 					}else{
 						// components case
 						self.update_value(child, input_value)
@@ -791,6 +832,7 @@ const create_global_radio_group = function(self, item, permissions, datalist, co
 
 				// show_save_button
 					event_manager.publish('show_save_button_'+self.id)
+					// await self.save_changes()
 			})//end radio_input.addEventListener("change", async function(e)
 
 		// radio_input_label
