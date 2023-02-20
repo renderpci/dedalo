@@ -106,27 +106,46 @@ class component_security_access extends component_common {
 			}
 
 		// short vars
-			$is_global_admin	= security::is_global_admin($user_id);
-			$ar_areas			= [];
+			$is_global_admin = security::is_global_admin($user_id);
+
+		// full areas and sections list
+			$ar_areas = area::get_areas();
 
 		// areas (including sections)
 			if($user_id===DEDALO_SUPERUSER || $is_global_admin===true){
 
-				// full areas and sections list
-				$ar_areas = area::get_areas();
+				// unfiltered case
 
 			}else{
 
+				// filtered by user data case
+
 				// only areas and sections already included into the dato
-				$dato = $this->get_dato();
+					// $dato = $this->get_dato();
+					// $ar_permissions_areas = array_filter($dato, function($item) {
+					// 	return (isset($item->type) && $item->type==='area') ? $item : null;
+					// 	// return ($item->tipo===$item->section_tipo) ? $item : null;
+					// });
+					// foreach ($ar_permissions_areas as $item) {
+					// 	$ar_areas[]	= ontology::tipo_to_json_item($item->tipo);
+					// }
 
-				$ar_permisions_areas = array_filter($dato, function($item) {
-					return (isset($item->type) && $item->type==='area') ? $item : null;
-				});
+				$user_component_security_access	= security::get_user_security_access($user_id);
+				$user_dato						= $user_component_security_access->get_dato();
 
-				foreach ($ar_permisions_areas as $item) {
-					$ar_areas[]	= ontology::tipo_to_json_item($item->tipo);
+				$ar_auth_areas = [];
+				foreach ($ar_areas as $current_area) {
+
+					$found = array_find($user_dato, function($el) use($current_area){
+						return $el->tipo===$current_area->tipo;
+					});
+					if ($found!==null) {
+						$ar_auth_areas[] = $current_area;
+					}
 				}
+
+				// replace
+				$ar_areas = $ar_auth_areas;
 			}
 
 		// duplicates check
