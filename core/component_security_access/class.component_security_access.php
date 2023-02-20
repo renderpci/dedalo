@@ -120,16 +120,6 @@ class component_security_access extends component_common {
 
 				// filtered by user data case
 
-				// only areas and sections already included into the dato
-					// $dato = $this->get_dato();
-					// $ar_permissions_areas = array_filter($dato, function($item) {
-					// 	return (isset($item->type) && $item->type==='area') ? $item : null;
-					// 	// return ($item->tipo===$item->section_tipo) ? $item : null;
-					// });
-					// foreach ($ar_permissions_areas as $item) {
-					// 	$ar_areas[]	= ontology::tipo_to_json_item($item->tipo);
-					// }
-
 				$user_component_security_access	= security::get_user_security_access($user_id);
 				$user_dato						= $user_component_security_access->get_dato();
 
@@ -144,7 +134,7 @@ class component_security_access extends component_common {
 					}
 				}
 
-				// replace
+				// replace whole list by user authorized areas
 				$ar_areas = $ar_auth_areas;
 			}
 

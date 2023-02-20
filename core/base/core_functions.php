@@ -1679,6 +1679,8 @@ function check_basic_system() : object {
 /**
 * ARRAY_FIND
 * Equivalent of JAVASCRIPT find
+* @param array $ar_value = null
+* @param function $n
 * @return mixed
 * Return null when nothing is found
 */
