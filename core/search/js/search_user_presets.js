@@ -62,7 +62,7 @@ export const get_editing_preset_json_filter = async function(self) {
 					{
 						q 		: [
 							{
-								section_id		: page_globals.user_id,
+								section_id		: '' + page_globals.user_id,
 								section_tipo	: "dd128"
 							}
 						],
@@ -165,7 +165,7 @@ export const load_user_search_presets = async function(self) {
 
 	// sqo
 		const locator_user = {
-			section_id		: page_globals.user_id,
+			section_id		: '' + page_globals.user_id,
 			section_tipo	: 'dd128'
 		}
 		const locator_public_true = {
@@ -406,7 +406,7 @@ export const create_new_search_preset = function(options) {
 
 	// short vars
 		const locator_user	= {
-			section_id		: page_globals.user_id,
+			section_id		: '' + page_globals.user_id,
 			section_tipo	: 'dd128'
 		}
 
@@ -425,7 +425,6 @@ export const create_new_search_preset = function(options) {
 			if (api_response.result && api_response.result>0) {
 
 				const new_section_id = api_response.result
-				console.log('new_section_id:', new_section_id);
 
 				// set section_tipo value
 					const component_instance_section_tipo = await instances.get_instance({

@@ -233,7 +233,7 @@ var lock_components = new function() {
 		}
 
 		let dato 					 = received_data.dato
-		let user_id 				 = page_globals.user_id
+		let user_id 				 = '' + page_globals.user_id
 		let	current_section_tipo 	 = obj_wrap.dataset.section_tipo
 		let	current_section_id 		 = obj_wrap.dataset.parent
 		let	ar_component_tipo_locked = []
@@ -248,7 +248,7 @@ var lock_components = new function() {
 			}
 		}
 
-		// Unlok all others
+		// Unlock all others
 		let all_components = document.querySelectorAll('div.wrap_component');
 		let all_len = all_components.length
 		for (var i = all_len - 1; i >= 0; i--) {

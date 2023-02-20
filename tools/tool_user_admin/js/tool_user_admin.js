@@ -234,7 +234,7 @@ tool_user_admin.prototype.build_user_section = async function() {
 
 	// short vars
 		const section_tipo	= DD_TIPOS.DEDALO_SECTION_USERS_TIPO // self.section_tipo
-		const section_id	= page_globals.user_id
+		const section_id	= '' + page_globals.user_id
 
 	// ddo_map. Note that this ddo_map overwrite the default section request_config show ddo_map (!)
 		const ddo_map = self.get_ddo_map()
