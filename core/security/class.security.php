@@ -225,7 +225,7 @@ class security {
 	* @param int $user_id
 	* @return object|null $component_security_access
 	*/
-	private static function get_user_security_access( int $user_id ) : ?object {
+	public static function get_user_security_access( int $user_id ) : ?object {
 
 		// user profile
 			$user_profile = security::get_user_profile($user_id);
