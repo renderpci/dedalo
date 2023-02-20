@@ -92,6 +92,44 @@ const get_content_data = async function(self) {
 		// // set pointers
 		// content_data[i] = content_value
 
+	// button_save
+		const button_save = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'primary save button_save folding hide',
+			inner_html		: get_label.save || 'Save',
+			parent			: content_data
+		})
+		button_save.addEventListener("click", async function(e){
+			e.stopPropagation()
+			await self.save_changes()
+			button_save.classList.add('hide')
+			const warning_label_text = self.node.querySelector('.warning_label_text')
+			if (warning_label_text) {
+				warning_label_text.remove()
+			}
+		})
+		self.events_tokens.push(
+			event_manager.subscribe('show_save_button_'+self.id, fn_show_save_button)
+		)
+		function fn_show_save_button() {
+			button_save.classList.remove('hide')
+			const label = self.node.querySelector('.label')
+			if (label && !label.querySelector('.warning_label_text')) {
+				// warning_label_text
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'warning_label_text blink',
+					inner_html		: get_label.unsaved_changes || 'Unsaved changes!',
+					parent			: label
+				})
+			}
+
+			// page unload event
+				// set_before_unload (bool) add
+				set_before_unload(true)
+		}
+
+
 	// tree
 		// ul tree_root
 			const ul = ui.create_dom_element({
@@ -885,43 +923,6 @@ const get_buttons = (self) => {
 			parent			: buttons_container
 		})
 		buttons_fold.appendChild(fragment)
-
-	// button_save
-		const button_save = ui.create_dom_element({
-			element_type	: 'button',
-			class_name		: 'primary save button_save folding hide',
-			inner_html		: get_label.save || 'Save',
-			parent			: buttons_fold
-		})
-		button_save.addEventListener("click", async function(e){
-			e.stopPropagation()
-			await self.save_changes()
-			button_save.classList.add('hide')
-			const warning_label_text = self.node.querySelector('.warning_label_text')
-			if (warning_label_text) {
-				warning_label_text.remove()
-			}
-		})
-		self.events_tokens.push(
-			event_manager.subscribe('show_save_button_'+self.id, fn_show_save_button)
-		)
-		function fn_show_save_button() {
-			button_save.classList.remove('hide')
-			const label = self.node.querySelector('.label')
-			if (label && !label.querySelector('.warning_label_text')) {
-				// warning_label_text
-				ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'warning_label_text blink',
-					inner_html		: get_label.unsaved_changes || 'Unsaved changes!',
-					parent			: label
-				})
-			}
-
-			// page unload event
-				// set_before_unload (bool) add
-				set_before_unload(true)
-		}
 
 
 	return buttons_container
