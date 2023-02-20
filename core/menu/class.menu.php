@@ -48,33 +48,34 @@ class menu extends common {
 		$user_id			= navigator::get_user_id();
 		$is_global_admin	= security::is_global_admin($user_id);
 
-		if($user_id===DEDALO_SUPERUSER || $is_global_admin===true){
-
-			// get all areas of the current installation
-			$ar_areas = area::get_areas();
-
-		}else{
-
-			// ar_full_areas. Is needed to preserve the order of elements
+		// get all areas of the current installation
 			$ar_full_areas = area::get_areas();
 
-			// get authorized areas for the current user with the data of component_security_access
-			$ar_permisions_areas = security::get_ar_authorized_areas_for_user();
+		// filter areas to non root users
+			if($user_id===DEDALO_SUPERUSER){
 
-			// foreach ($ar_full_areas as $area_item) {
-			$ar_full_areas_length = sizeof($ar_full_areas);
-			for ($i=0; $i < $ar_full_areas_length ; $i++) {
+				// unfiltered areas
+				$ar_areas = $ar_full_areas;
 
-				$area_item = $ar_full_areas[$i];
+			}else{
 
-				$found = array_find($ar_permisions_areas, function($permisions_item) use($area_item){
-					return $permisions_item->tipo===$area_item->tipo;
-				});
-				if (!is_null($found)) {
-					$ar_areas[] = $area_item;
+				// get authorized areas for the current user with the data of component_security_access
+				$ar_permisions_areas = security::get_ar_authorized_areas_for_user();
+
+				// foreach ($ar_full_areas as $area_item) {
+				$ar_full_areas_length = sizeof($ar_full_areas);
+				for ($i=0; $i < $ar_full_areas_length ; $i++) {
+
+					$area_item = $ar_full_areas[$i];
+
+					$found = array_find($ar_permisions_areas, function($permisions_item) use($area_item){
+						return $permisions_item->tipo===$area_item->tipo;
+					});
+					if (!is_null($found)) {
+						$ar_areas[] = $area_item;
+					}
 				}
 			}
-		}
 
 		// section_tool case
 		// section_tool is an alias of the section that will be use to load the information to the specific tool
