@@ -649,23 +649,32 @@ section.prototype.build = async function(autoload=false) {
 					event_manager.subscribe('paginator_goto_'+self.paginator.id, fn_paginator_goto)
 				)
 				async function fn_paginator_goto(offset) {
+
+					// fix new offset value
+						self.request_config_object.sqo.offset	= offset
+						self.rqo.sqo.offset						= offset
+
 					// navigate section rows
-						self.navigate(
-							() => { // callback
-								// fix new offset value
-									self.request_config_object.sqo.offset	= offset
-									self.rqo.sqo.offset						= offset
-								// set_local_db_data updated rqo
-									if (self.mode==='list') {
-										const rqo = self.rqo
-										data_manager.set_local_db_data(
-											rqo,
-											'rqo'
-										)
-									}
+						self.navigate({
+							callback			: () => { // callback
+
+								// (!) This code is unified in function 'navigate' ⬇︎
+
+								// // fix new offset value
+								// 	self.request_config_object.sqo.offset	= offset
+								// 	self.rqo.sqo.offset						= offset
+								// // set_local_db_data updated rqo
+								// 	if (self.mode==='list') {
+								// 		const rqo = self.rqo
+								// 		data_manager.set_local_db_data(
+								// 			rqo,
+								// 			'rqo'
+								// 		)
+								// 	}
 							},
-							true // bool navigation_history save
-						)
+							navigation_history	: true, // bool navigation_history save
+							action				: 'paginate'
+						})
 				}
 		}//end if (!self.paginator)
 
@@ -942,12 +951,19 @@ section.prototype.delete_section = async function (options) {
 * NAVIGATE
 * Refresh the section instance with new sqo params creating a
 * history footprint. Used to paginate and sort records
-* @param function callback
+* @param object options
 * @return promise
 */
-section.prototype.navigate = async function(callback, navigation_history=false) {
+section.prototype.navigate = async function(options) {
+
+	// options
+		const callback				= options.callback
+		const navigation_history	= navigation_history!==undefined ? navigation_history : false
+		const action				= options.action || 'paginate'
+
 
 	const self = this
+	console.log('>> navigate self:', self);
 
 	// unsaved_data check
 		if (window.unsaved_data===true) {
