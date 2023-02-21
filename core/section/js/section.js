@@ -1006,7 +1006,13 @@ section.prototype.navigate = async function(options) {
 			)
 			if (saved_rqo) {
 				// reset offset to allow section to go first page when change to list mode
-				saved_rqo.sqo.offset = 0
+				const rqo = clone(self.rqo)
+				// replace sqo with the new one
+				saved_rqo.sqo			= rqo.sqo
+				// restore list pagination defaults
+				saved_rqo.sqo.offset	= 0
+				saved_rqo.sqo.limit		= 10
+
 				await data_manager.set_local_db_data(
 					saved_rqo,
 					'rqo'
