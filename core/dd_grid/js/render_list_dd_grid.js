@@ -12,6 +12,7 @@
 	import {view_table_dd_grid} from './view_table_dd_grid.js'
 	import {view_default_dd_grid} from './view_default_dd_grid.js'
 	import {view_mini_dd_grid} from './view_mini_dd_grid.js'
+	import {view_indexation_dd_grid} from './view_indexation_dd_grid.js'
 	import {
 		render_links_list
 	} from '../../component_iri/js/render_list_component_iri.js'
@@ -56,6 +57,9 @@ render_list_dd_grid.prototype.list = async function(options) {
 
 		case 'mini':
 			return view_mini_dd_grid.render(self, options)
+
+		case 'indexation':
+			return view_indexation_dd_grid.render(self, options)
 
 		case 'default':
 		default:
