@@ -862,6 +862,7 @@ export const get_section_records = async function(options){
 
 /**
 * LOAD_SECTION_TOOL_FILES
+* Used by section_tool
 * @return promise
 */
 section.prototype.load_section_tool_files = function() {
@@ -950,7 +951,7 @@ section.prototype.navigate = async function(callback, navigation_history=false) 
 
 	// unsaved_data check
 		if (window.unsaved_data===true) {
-			if (!confirm('section: ' +get_label.discard_changes || 'Discard unsaved changes?')) {
+			if (!confirm('section: '+get_label.discard_changes || 'Discard unsaved changes?')) {
 				return false
 			}
 			// reset unsaved_data state by the user

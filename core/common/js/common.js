@@ -231,7 +231,7 @@ common.prototype.render = async function (options={}) {
 	// permissions
 		const permissions = parseInt(self.permissions)
 		if(permissions<1){
-			console.log('self:', self);
+
 			const label = (get_label.no_access || 'You don\'t have access here')
 						+ ' [' + self.tipo + ']'
 			const node = ui.create_dom_element({
@@ -1339,14 +1339,17 @@ export const get_ar_inverted_paths = function(full_ddo_map){
 
 /**
 * BUILD_RQO_SHOW
+* @param object _request_config_object
+* @param string action
+* @param bool add_show = false
 * @return object rqo
 */
-common.prototype.build_rqo_show = async function(request_config_object, action, add_show=false){
+common.prototype.build_rqo_show = async function(_request_config_object, action, add_show=false){
 
 	const self = this
 
 	// clone request_config_object
-		request_config_object = clone(request_config_object)
+		const request_config_object = clone(_request_config_object)
 
 	// local_db_data. get value if exists.
 	// Allow, for example, to return to the last paginated list preserving the user's
@@ -1414,8 +1417,9 @@ common.prototype.build_rqo_show = async function(request_config_object, action, 
 				? sqo_config.section_tipo.map(el=>el.tipo)
 				: [self.section_tipo]
 
-	sqo.section_tipo = ar_sections
+		sqo.section_tipo = ar_sections
 
+	// pagination
 	// Get the limit, offset, full count, and filter by locators.
 	// When these options comes with the sqo it passed to the final sqo, if not, it get the show.sqo_config parameters
 	// and finally if the request_config_object don't has sqo or sqo_config, set the default parameter to each.
@@ -1440,26 +1444,25 @@ common.prototype.build_rqo_show = async function(request_config_object, action, 
 			// 		? sqo_config.full_count
 			// 		: false
 
-		// filter_by_locators
-			const filter_by_locators = (sqo.filter_by_locators)
-				? sqo.filter_by_locators
-				: (sqo_config && sqo_config.filter_by_locators)
-					? sqo_config.filter_by_locators
-					: null
-			if (filter_by_locators) {
-				sqo.filter_by_locators = filter_by_locators
-			}else if(self.section_id && self.section_tipo){
-				sqo.filter_by_locators = [{
-					section_tipo	:self.section_tipo,
-					section_id		: self.section_id
-				}]
+	// filter_by_locators
+		const filter_by_locators = (sqo.filter_by_locators)
+			? sqo.filter_by_locators
+			: (sqo_config && sqo_config.filter_by_locators)
+				? sqo_config.filter_by_locators
+				: null
+		if (filter_by_locators) {
+			sqo.filter_by_locators = filter_by_locators
+		}else if(self.section_id && self.section_tipo){
+			sqo.filter_by_locators = [{
+				section_tipo	:self.section_tipo,
+				section_id		: self.section_id
+			}]
 
-			}
+		}
 
 	// sqo clean
 		delete sqo.generated_time
 		delete sqo.parsed
-
 
 	// build the rqo
 		const rqo = {

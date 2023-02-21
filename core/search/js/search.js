@@ -1020,13 +1020,15 @@ search.prototype.get_panels_status = async function() {
 	// 	const section_tipo = self.section_tipo // search.prototype.section_tipo
 
 
-
 	// 	// // Read cookie to auto open search_panel
 	// 	// const cookie_obj 	= JSON.parse( read_cookie("search") || '{"'+section_tipo+'":{}}' )
 	// 	// const cookie_track 	= (cookie_obj[section_tipo]) ? cookie_obj[section_tipo][name] : false
 
-	// 	// local_db_data. get value if exists
-	// 		const saved_search_state = await data_manager.get_local_db_data(self.id, 'context')
+	// // local_db_data. get value if exists
+	// 	const saved_search_state = await data_manager.get_local_db_data(
+	// 		self.id,
+	// 		'context'
+	// 	)
 
 	// 		const cookie_track = saved_search_state
 	// 			? ((saved_search_state.value[name] && saved_search_state.value[name].is_open) || false)
