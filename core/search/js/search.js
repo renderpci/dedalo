@@ -901,11 +901,10 @@ search.prototype.get_search_group_operator = function(search_group) {
 		switch (caller_instance.model) {
 			case 'area_thesaurus':
 
-				const area_ts_promise = caller_instance.navigate(
-						null, // callback
-						false // navigation_history
-					)
-
+				const area_ts_promise = caller_instance.navigate({
+					callback			: null,
+					navigation_history	: false
+				})
 				break;
 
 			case 'section':
@@ -917,10 +916,10 @@ search.prototype.get_search_group_operator = function(search_group) {
 					}
 
 				// section. refresh current section and set history navigation
-					const section_promise = caller_instance.navigate(
-						null, // callback
-						true // navigation_history
-					)
+					const section_promise = caller_instance.navigate({
+						callback			: null, // callback
+						navigation_history	: true // navigation_history
+					})
 					section_promise.then(()=>{
 						// loading css remove
 							// section_node.classList.remove('loading')

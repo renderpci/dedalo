@@ -2456,13 +2456,13 @@ export const ui = {
 
 				// update rqo (removed way. navigate from page directly wit a user_navigation event bellow)
 				// note that navigate only refresh current instance content_data, not the whole page
-					self.navigate(
-						() => { // callback
+					self.navigate({
+						callback : () => { // callback
 							self.request_config_object.sqo.order	= order
 							self.rqo.sqo.order						= order
 						},
-						true // bool navigation_history save
-					)
+						navigation_history : true // bool navigation_history save
+					})
 
 				// update current_direction
 					current_direction = direction

@@ -322,11 +322,18 @@ area_thesaurus.prototype.get_sections_selector_data = function() {
 
 /**
 * GET_SECTIONS_SELECTOR_DATA
+* @param object options
 * @return array of objects sections_selector_data
 */
-area_thesaurus.prototype.navigate = async function(callback, navigation_history=false) {
+area_thesaurus.prototype.navigate = async function(options) {
 
 	const self = this
+
+	// options
+		const callback				= options.callback
+		const navigation_history	= options.navigation_history!==undefined
+			? options.navigation_history
+			: false
 
 	// callback execute
 		if (callback) {
@@ -342,4 +349,3 @@ area_thesaurus.prototype.navigate = async function(callback, navigation_history=
 
 	return true
 }//end get_sections_selector_data
-
