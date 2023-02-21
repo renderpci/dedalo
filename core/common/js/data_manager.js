@@ -346,6 +346,7 @@ data_manager.set_local_db_data = async function(data, table) {
 * GET_LOCAL_DB_DATA
 * @param string id
 * @param string table
+* @param bool cache = false
 * Calling sample:
 *	current_data_manager.get_local_db_data('tool_export_config', 'data')
 * @return promise

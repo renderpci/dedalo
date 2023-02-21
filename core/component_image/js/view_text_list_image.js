@@ -22,7 +22,7 @@ export const view_text_list_image = function() {
 
 /**
 * RENDER
-* Render node to be used by service autocomplete or any datalist
+* Render node as text. URL is return as text node
 * @return DOM node
 */
 view_text_list_image.render = function(self, options) {
@@ -33,17 +33,14 @@ view_text_list_image.render = function(self, options) {
 	// url
 		const quality		= 'thumb'
 		const url_object	= datalist.find(item => item.quality===quality)
-		const url			= url_object
+		const default_image	= DEDALO_CORE_URL + '/themes/default/0.jpg'
+		const url			= url_object && url_object.file_url
 			? url_object.file_url
-			: DEDALO_CORE_URL + '/themes/default/0.jpg'
+			: default_image
 
-	// image
-		const image_node = ui.create_dom_element({
-			element_type	: 'img',
-			class_name		: 'component_image view_' + self.view,
-			src				: url
-		})
+	// node
+		const node = document.createTextNode(url)
 
 
-	return image_node
+	return node
 }//end render

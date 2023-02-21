@@ -467,11 +467,11 @@ component_portal.prototype.build = async function(autoload=false) {
 						)//end events push
 						function fn_paginator_goto(offset) {
 							// navigate
-							self.navigate(
-								() => {
+							self.navigate({
+								callback : () => {
 									self.rqo.sqo.offset = offset
 								}
-							)
+							})
 						}//end fn_paginator_goto
 
 					// paginator_show_all_
@@ -480,13 +480,13 @@ component_portal.prototype.build = async function(autoload=false) {
 						)//end events push
 						function fn_paginator_show_all(limit) {
 							// navigate
-							self.navigate(
-								async () => {
+							self.navigate({
+								callback : async () => {
 									// rqo and request_config_object set offset and limit
 									self.rqo.sqo.offset	= self.request_config_object.sqo.offset = 0
 									self.rqo.sqo.limit	= self.request_config_object.sqo.limit 	= limit
 								}
-							)
+							})
 						}//end fn_paginator_goto
 
 				}else{
@@ -929,12 +929,15 @@ component_portal.prototype.get_search_value = function() {
 * NAVIGATE
 * Refresh the portal instance with new sqo params.
 * Used to paginate and sort records
-* @param function callback
+* @param object options
 * @return promise
 */
-component_portal.prototype.navigate = async function(callback) {
+component_portal.prototype.navigate = async function(options) {
 
 	const self = this
+
+	// options
+		const callback = options.callback
 
 	// unsaved_data check
 		// if (window.unsaved_data===true) {

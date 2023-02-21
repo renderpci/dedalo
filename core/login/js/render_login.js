@@ -201,6 +201,14 @@ const get_content_data = function(self) {
 				button_enter.classList.add('white')
 				button_enter.blur()
 
+			// check status
+				if (self.status==='login') {
+					return
+				}
+
+			// status update
+				self.status = 'login'
+
 			// data_manager API call
 				data_manager.request({
 					body : {
@@ -241,6 +249,9 @@ const get_content_data = function(self) {
 
 						self.action_dispatch(api_response)
 					}
+
+					// status update
+						self.status = 'rendered'
 				})
 		})//end button_enter.addEventListener('click', function(e)
 

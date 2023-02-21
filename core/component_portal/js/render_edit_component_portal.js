@@ -428,9 +428,9 @@ export const render_column_remove = function(options) {
 		const self			= options.caller
 		const row_key		= options.row_key
 		const paginated_key	= options.paginated_key
-		const section_id 	= options.section_id
+		const section_id	= options.section_id
 		const section_tipo	= options.section_tipo
-		// const locator		= options.locator
+		// const locator	= options.locator
 
 	const fragment = new DocumentFragment()
 
@@ -473,21 +473,25 @@ export const render_column_remove = function(options) {
 				})
 
 			// button_unlink_and_delete
-				const button_unlink_and_delete = ui.create_dom_element({
-					element_type	: 'button',
-					class_name		: 'danger remove',
-					text_content	: get_label.delete_resource_and_links || 'Delete resource and all links',
-					parent			: footer
-				})
-				button_unlink_and_delete.addEventListener('click', function(){
-					// stop if the user don't confirm
-					if (!confirm(get_label.sure)) {
-						return
-					}
-					delete_linked_record()
-					unlink_record()
-					delete_dataframe_record()
-				})
+				console.log('options.caller.view:', options.caller.view);
+				const display_delete_record = options.caller.view!=='indexation'
+				if (display_delete_record) {
+					const button_unlink_and_delete = ui.create_dom_element({
+						element_type	: 'button',
+						class_name		: 'danger remove',
+						text_content	: get_label.delete_resource_and_links || 'Delete resource and all links',
+						parent			: footer
+					})
+					button_unlink_and_delete.addEventListener('click', function(){
+						// stop if the user don't confirm
+						if (!confirm(get_label.sure)) {
+							return
+						}
+						delete_linked_record()
+						unlink_record()
+						delete_dataframe_record()
+					})
+				}
 
 			// button_unlink_record
 				const button_unlink_record = ui.create_dom_element({

@@ -554,7 +554,6 @@ export const render_component_info = function(self, component) {
 		// const value			= component.data && component.data.value
 		// 	? JSON.stringify(component.data.value, null, 1)
 		// 	: ''
-			console.log('view:', view);
 
 	const fragment = new DocumentFragment();
 

@@ -479,6 +479,34 @@ class login extends common {
 
 
 	/**
+	* GET_USER_IMAGE
+	* @param string|int $section_id (is user section id)
+	* @return string|null $user_image
+	* 	Local url of user image path as /v6/media/media_development/image/1.5MB/dd522_dd128_1.jpg
+	*/
+	public static function get_user_image($section_id) : ?string {
+
+		$component = component_common::get_instance(
+			'component_image',
+			DEDALO_USER_IMAGE_TIPO, // 'dd522'
+			$section_id,
+			'list',
+			DEDALO_DATA_NOLAN,
+			DEDALO_SECTION_USERS_TIPO
+		);
+		$user_image = $component->get_url(
+			DEDALO_IMAGE_QUALITY_DEFAULT,
+			true, // test_file
+			false, // absolute
+			false // default_add
+		);
+
+		return $user_image;
+	}//end get_user_image
+
+
+
+	/**
 	* ACTIVE_ACCOUNT_CHECK
 	* @param string|int $section_id
 	* @return bool
@@ -573,22 +601,25 @@ class login extends common {
 	*/
 	private static function get_default_section($section_id) : ?string {
 
-		return null;
+		// root user case
+			if ($section_id==-1) {
+				return DEDALO_AREA_DEVELOPMENT_TIPO;
+			}
 
-		// $component = component_common::get_instance(
-		// 	'component_input_text',
-		// 	'dd1603',
-		// 	$section_id,
-		// 	'list',
-		// 	DEDALO_DATA_NOLAN,
-		// 	DEDALO_SECTION_USERS_TIPO
-		// );
-		// $dato				= $component->get_dato();
-		// $default_section	= !empty($dato) && !empty($dato[0])
-		// 	? $dato[0]
-		// 	: null;
+		$component = component_common::get_instance(
+			'component_input_text',
+			'dd1603',
+			$section_id,
+			'list',
+			DEDALO_DATA_NOLAN,
+			DEDALO_SECTION_USERS_TIPO
+		);
+		$dato				= $component->get_dato();
+		$default_section	= !empty($dato) && !empty($dato[0])
+			? $dato[0]
+			: null;
 
-		// return $default_section;
+		return $default_section;
 	}//end get_default_section
 
 
@@ -693,6 +724,14 @@ class login extends common {
 				'file_name'		=> 'cache_tree.json'
 			]);
 			debug_log(__METHOD__." Generating security access datalist in background... ".to_string($status), logger::DEBUG);
+
+		// user image
+			$user_image = login::get_user_image($user_id);
+			if (!isset($response->result_options)) {
+				$response->result_options = new stdClass();
+			}
+			$response->result_options->user_image	= $user_image;
+			$response->result_options->user_id		= $user_id;
 
 		// log : Prepare and save login action
 			$browser = $_SERVER['HTTP_USER_AGENT'];

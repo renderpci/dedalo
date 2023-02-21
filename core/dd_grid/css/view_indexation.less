@@ -1,0 +1,242 @@
+/*
+	indexation grids
+*/
+
+
+// view_indexation
+	.wrapper_dd_grid.view_indexation {
+
+		@padding_left: 140px;
+		@color_grey_light: #bfbfbf;
+
+		// column
+			.column {
+				// background-color: #a3dfac8c;
+				display: flex;
+				flex-wrap: wrap;
+				flex: 1 1 auto;
+				outline: 1px solid @color_grey_light;
+				max-height: 100%;
+				// overflow: hidden;
+			}
+
+
+		>.row {
+			display: flex;
+			flex-wrap: wrap;
+			width: 100%;
+			height: inherit;
+
+			&.head {
+				// oral history
+				&.oh {
+					background-color: #dde1e8;
+					display: grid;
+					grid-template-columns: @padding_left 1fr 1fr 1fr 1fr;
+				}
+				// publications (bibliography)
+				&.publication {
+					background-color: #f89292;
+					display: grid;
+					grid-template-columns: @padding_left 1fr 1fr 1fr 1fr 1fr;
+				}
+			}
+
+			>.caption {
+				color: #ffffff;
+				font-weight: 400;
+				outline: none;
+				padding: 0px;
+				margin: 0.5em;
+				margin-left: 90px;
+
+				>label {
+					background-color: #424242;
+					border-top-left-radius: 4px;
+					border-top-right-radius: 4px;
+					line-height: 0.8em;
+				}
+
+				.column {
+					// height: unset;
+					// outline: unset;
+					// box-shadow: none;
+
+					span {
+						padding-bottom: 0;
+					}
+				}
+				>.row.head.oh {
+					background-color: #f8fdff;
+					// height: 5rem;
+					display: grid;
+					grid-template-columns: 102px 5rem 20rem minmax(25rem, auto) 30%;
+
+					>.column {
+						 // height: 5rem;
+					}
+
+					// column image
+					>.column:nth-of-type(1) {
+
+					}
+
+					// column code
+					>.column:nth-of-type(2) {
+
+					}
+
+					// column project
+					>.column:nth-of-type(3) {
+
+					}
+
+					// column people (informants)
+					.column:nth-of-type(4) {
+						>.row {
+							display: grid;
+							grid-template-columns: 1fr 1fr;
+							height: auto;
+						}
+					}
+
+					// column municipality
+					>.column:nth-of-type(5) {
+						* {
+							display: inline;
+							box-shadow: none;
+							outline: 0;
+							width: unset;
+							padding: 0;
+						}
+						.row:not(:first-child, :last-child) {
+							&:after {
+								content: ", ";
+								display: inline-block;
+								height: 1rem;
+								color: #000000;
+								padding-right: 0.25rem;
+							}
+						}
+					}
+
+				}
+
+				>.row.oh {
+					background-color: #a7efc7;
+
+					.column.oh.indexation {
+						display: grid;
+						grid-template-columns: repeat(10, auto);
+						background-color: #dfed72;
+
+						// column av section_id (reel)
+						>.column:nth-of-type(1) {
+							background-color: #fa7a44;
+							width: 5rem;
+						}
+
+						// column interview section_id
+						>.column:nth-of-type(2) {
+							background-color: #baf069;
+							width: 5rem;
+						}
+
+						// button indexation
+						>.column:nth-of-type(3) {
+							background-color: #4ff46d;
+							padding: 0.75rem;
+							width: 4rem;
+						}
+
+						// button tr
+						>.column:nth-of-type(4) {
+							background-color: #4bf2c8;
+							padding: 0.75rem;
+							width: 4rem;
+						}
+
+						// button film
+						>.column:nth-of-type(5) {
+							background-color: #35c4f0;
+							padding: 0.75rem;
+							width: 4rem;
+						}
+
+						// fragment text
+						>.column:nth-of-type(6) {
+							background-color: #eed9c5;
+							max-height: 5.5rem;
+							overflow: auto;
+							width: auto;
+						}
+
+						// tc-in
+						>.column:nth-of-type(7) {
+							background-color: #c8edd5;
+						}
+
+						// tc-ou
+						>.column:nth-of-type(8) {
+							background-color: #c8edd5;
+						}
+
+						// tc-duration
+						>.column:nth-of-type(9) {
+							background-color: #c8edd5;
+						}
+
+						// button download
+						>.column:nth-of-type(10) {
+							background-color: #f5b0d2;
+							padding: 0.75rem;
+						}
+					}
+				}
+			}
+		}
+
+
+
+		// label
+		label {
+			// background-color: #343434;
+			width: 100%;
+			display: block;
+			font-size: 0.95rem;
+			padding: 0.5em;
+		}
+
+		// value (text values)
+		span {
+			// background-color: #e6e6e6;
+			color: #000000;
+			padding: 0.5em;
+			display: inline-block;
+			width: 100%;
+			font-size: 0.94em;
+			line-height: 1em;
+		}
+
+		// img
+		img {
+			background-color: #e6e6e6;
+			object-fit: cover;
+			object-position: center;
+			width: 100%;
+			height: 5em;
+			padding: 0px;
+			margin: 0px;
+		}
+
+		// button
+		img.button {
+			background-color: #e6e6e6;
+			display: inline-block;
+			object-fit: contain;
+			object-position: center;
+			height: 100%;
+			padding: 0px;
+			margin: 0px;
+		}
+	}//end view_indexation

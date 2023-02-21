@@ -93,15 +93,15 @@ Here are some projects that use Dédalo to manage their Cultural Heritage and/or
 
 ## 5. Installation
 
-### 5.1. You do not want to install
+### 5.1. Ready-to-use Virtual Machine for V5
 Then, you can use our V5 ready-to-use Virtual Machine for development:
 <p><a href="https://dedalo.dev/v5" target="_blank">Dedalo V5</a></p>
 
-### 5.2. You like videos
+### 5.2. Video-guide for V5 installation
 Then, you can follow the steps in the V5 installation video (similar for V6):
 <p><a href="https://dedalo.dev/v5_install" target="_blank">Dedalo V5 installation video on CentOS</a></p>
 
-### 5.3. You want control
+### 5.3. Manual installation
 Then, install Dédalo manually (provisional installation instructions for V6 beta):
 1. Download Dédalo and place it under the httpdocs directory of the web server.
 2. Create a database in PostgreSQL named `dedalo_xx` (you can change the `xx` as you please).

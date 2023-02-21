@@ -1014,9 +1014,8 @@ component_common.prototype.update_node_contents = async (current_node, new_node)
 * Render a fresh full element node in the new mode
 * Replace every old placed DOM node with the new one
 * Active element (using event manager publish)
-* @param string new_node
-* @param bool autoload
-* @return bool true
+* @param object options
+* @return bool
 */
 component_common.prototype.change_mode = async function(options) {
 

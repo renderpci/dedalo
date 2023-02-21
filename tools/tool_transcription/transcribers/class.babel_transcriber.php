@@ -28,24 +28,23 @@ class babel_transcriber {
 	public function __construct(object $options) {
 
 		// options
-		$this->url					= $options->url;
-		$this->key					= $options->key		?? null;
-		$this->lang					= $options->lang	?? null;
-		$this->lang_tld2			= $options->lang_tld2	?? null;
-		$this->av_url				= $options->av_url;
-		$this->engine				= $options->engine;
-		$this->quality				= $options->quality;
-		$this->user_id				= $options->user_id;
-		$this->entity_name			= $options->entity_name;
-		$this->transcription_ddo	= $options->transcription_ddo;
+			$this->url					= $options->url;
+			$this->key					= $options->key ?? null;
+			$this->lang					= $options->lang ?? null;
+			$this->lang_tld2			= $options->lang_tld2 ?? null;
+			$this->av_url				= $options->av_url;
+			$this->engine				= $options->engine;
+			$this->quality				= $options->quality;
+			$this->user_id				= $options->user_id;
+			$this->entity_name			= $options->entity_name;
+			$this->transcription_ddo	= $options->transcription_ddo;
 	}//end __construct
 
 
 
 	/**
-	* transcribe
+	* TRANSCRIBE
 	* Connect with BABEL API across CURL to get transcription result as text
-	* @param object $request_options
 	* @return object $response
 	*/
 	public function transcribe(): object {
@@ -96,7 +95,7 @@ class babel_transcriber {
 			$response->msg		= 'Error. Request failed';
 
 		// process_file
-			$process_file	= DEDALO_CORE_PATH.'/base/process_runner.php';
+			$process_file = DEDALO_CORE_PATH.'/base/process_runner.php';
 
 		// sh_data
 			$sh_data = [
@@ -234,7 +233,6 @@ class babel_transcriber {
 
 
 
-
 	/**
 	* PROCESS_FILE
 	* Get automatic transcription and format it with Dédalo tags.
@@ -261,8 +259,9 @@ class babel_transcriber {
 	* the output data is set to component_text_area data if it is not empty
 	*
 	* @param object $options
+	* @return bool
 	*/
-	public static function process_file(object $options) {
+	public static function process_file(object $options) : bool {
 
 		$lang				= $options->lang;
 		$transcription_ddo	= $options->transcription_ddo;
@@ -313,7 +312,9 @@ class babel_transcriber {
 		$component_transcription->set_dato($data);
 		$component_transcription->Save();
 
+		return true;
 	}//end process_file
+
 
 
 }//end class babel

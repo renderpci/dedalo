@@ -89,6 +89,9 @@ class install extends common {
 				$properties->db_config->port		= DEDALO_DB_PORT_CONN;
 				$properties->db_config->socket		= DEDALO_SOCKET_CONN;
 
+		// get_db_data_version. Version of DDBB data ( 5.8.2 expected ). array|null
+			$properties->db_data_version =	install::get_db_data_version();
+
 		// dedalo version
 			$properties->version = DEDALO_VERSION . ' - Build ' . DEDALO_BUILD;
 
@@ -115,6 +118,7 @@ class install extends common {
 		// max_execution_time
 			$max_execution_time = ini_get('max_execution_time');
 			$properties->max_execution_time	= $max_execution_time;
+
 
 		// dd_object
 			$dd_object->set_properties($properties);
@@ -154,7 +158,7 @@ class install extends common {
 			'matrix',				// main table
 			'matrix_activities',	// activities (exhibitions, visits, etc)
 			'matrix_activity',		// Dédalo activity log data
-			// 'matrix_dataframe',		// Dédalo data-frames data
+			'matrix_dataframe',		// Dédalo data-frames data
 			'matrix_hierarchy',		// thesaurus data
 			'matrix_hierarchy_main',// hierarchy data
 			'matrix_indexations',	// indexation data
@@ -170,7 +174,7 @@ class install extends common {
 			'matrix_time_machine',	// data versions table
 			'matrix_users',			// users table (user 'root' will be re-created later)
 			'relations',			// search relations table
-			'sessions'				// optional sessions table
+			// 'sessions'			// optional sessions table
 		];
 
 		$install_checked_default = [
@@ -278,7 +282,6 @@ class install extends common {
 				DEDALO_SOCKET_CONN
 			);
 
-
 			$db_connection_check = $db_connection !== false
 				? true
 				: false;
@@ -306,6 +309,40 @@ class install extends common {
 
 		return $db_status;
 	}//end get_db_status
+
+
+
+	/**
+	* GET_DB_DATA_VERSION
+	* @return object $response
+	*/
+	public function get_db_data_version() : ?array {
+
+		try {
+			$current_version_in_db = get_current_version_in_db();
+		} catch (Exception $e) {
+			debug_log(__METHOD__." Caught exception: ".$e->getMessage(), logger::WARNING);
+
+			$current_version_in_db = null;
+		}
+
+
+		return $current_version_in_db;
+	}//end get_db_data_version
+
+
+
+	/**
+	* TO_UPDATE
+	* @return object $response
+	*/
+	public static function to_update() {
+
+		$response = install::set_install_status('installed');
+
+
+		return $response;
+	}//end to_update
 
 
 
@@ -1480,7 +1517,7 @@ class install extends common {
 			}
 
 		// terminal command pg_dump
-			$command  = 'pg_dump '.$config->host_line.' '.$config->port_line.' -U '.DEDALO_USERNAME_CONN.' -F p -b -v --no-owner --no-privileges --role='.DEDALO_USERNAME_CONN.' '.$db_install_name; //.' > '.$target_file_path.'.psql';
+			$command  = DB_BIN_PATH . 'pg_dump '.$config->host_line.' '.$config->port_line.' -U '.DEDALO_USERNAME_CONN.' -F p -b -v --no-owner --no-privileges --role='.DEDALO_USERNAME_CONN.' '.$db_install_name; //.' > '.$target_file_path.'.psql';
 			// $command .= ' | zip '.$target_file_path_compress.' -foo'; // redirects output to zip compressed file
 			$command .=' | gzip > '.$target_file_path_compress;
 

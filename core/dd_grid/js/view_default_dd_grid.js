@@ -39,7 +39,7 @@ export const view_default_dd_grid = function() {
 view_default_dd_grid.render = async function(self, options) {
 
 	// data
-		const data	= self.data
+		const data = self.data
 
 	// wrapper
 		const wrapper = ui.create_dom_element({
@@ -118,7 +118,7 @@ const get_grid_nodes = function(data) {
 						default:
 							const column_node = get_text_column(
 								current_data,
-								false // use fallback value
+								false // bool use fallback value
 							)
 							node.appendChild(column_node)
 							break;

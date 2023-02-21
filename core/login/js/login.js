@@ -212,6 +212,16 @@ login.prototype.action_dispatch = async function(api_response) {
 	// default behavior
 		if (api_response.result===true) {
 
+			// user image load
+				const bg_image = (api_response.result_options && api_response.result_options.user_image)
+					? api_response.result_options.user_image
+					: api_response.result_options.user_id==-1
+						? '../../themes/default/raspas/raspa_pantalla_1.jpg'
+						: '../../themes/default/icons/dedalo_icon_grey.svg'
+				if (bg_image) {
+					self.node.style.setProperty('--user_login_image', `url('${bg_image}')`);
+				}
+
 			// files loader. Circle with progressive fill draw based on percentage of loaded files by worker (by messages info)
 				const files_loader = render_files_loader({
 					on_load_finish : load_finish
@@ -237,13 +247,7 @@ login.prototype.action_dispatch = async function(api_response) {
 						self.node.content_data.top.classList.remove('hide')
 
 						// raspa_loading Development local only
-						if (location.host.indexOf('127.0.0.1')===0 ||
-							location.host.indexOf('localhost')===0 ||
-							location.host.indexOf(':8443')!==-1 ||
-							location.host.indexOf('v6.mib.numisdata.org')===0
-							) {
-							self.node.classList.add('raspa_loading')
-						}
+						self.node.classList.add('raspa_loading')
 					}
 
 					// send message data to files_loader function
@@ -251,7 +255,9 @@ login.prototype.action_dispatch = async function(api_response) {
 
 					if (e.data.status==='finish') {
 						// login continue
-						load_finish()
+						setTimeout(function(){
+							load_finish()
+						}, 500)
 					}
 				}
 				// load_finish()

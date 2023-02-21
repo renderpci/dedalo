@@ -901,11 +901,11 @@ search.prototype.get_search_group_operator = function(search_group) {
 		switch (caller_instance.model) {
 			case 'area_thesaurus':
 
-				const area_ts_promise = caller_instance.navigate(
-						null, // callback
-						false // navigation_history
-					)
-
+				const area_ts_promise = caller_instance.navigate({
+					callback			: null,
+					navigation_history	: false,
+					action				: 'search'
+				})
 				break;
 
 			case 'section':
@@ -917,10 +917,11 @@ search.prototype.get_search_group_operator = function(search_group) {
 					}
 
 				// section. refresh current section and set history navigation
-					const section_promise = caller_instance.navigate(
-						null, // callback
-						true // navigation_history
-					)
+					const section_promise = caller_instance.navigate({
+						callback			: null,
+						navigation_history	: true,
+						action				: 'search'
+					})
 					section_promise.then(()=>{
 						// loading css remove
 							// section_node.classList.remove('loading')
@@ -1020,13 +1021,15 @@ search.prototype.get_panels_status = async function() {
 	// 	const section_tipo = self.section_tipo // search.prototype.section_tipo
 
 
-
 	// 	// // Read cookie to auto open search_panel
 	// 	// const cookie_obj 	= JSON.parse( read_cookie("search") || '{"'+section_tipo+'":{}}' )
 	// 	// const cookie_track 	= (cookie_obj[section_tipo]) ? cookie_obj[section_tipo][name] : false
 
-	// 	// local_db_data. get value if exists
-	// 		const saved_search_state = await data_manager.get_local_db_data(self.id, 'context')
+	// // local_db_data. get value if exists
+	// 	const saved_search_state = await data_manager.get_local_db_data(
+	// 		self.id,
+	// 		'context'
+	// 	)
 
 	// 		const cookie_track = saved_search_state
 	// 			? ((saved_search_state.value[name] && saved_search_state.value[name].is_open) || false)
