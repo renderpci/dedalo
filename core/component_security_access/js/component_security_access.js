@@ -111,8 +111,10 @@ component_security_access.prototype.build = async function(options) {
 	// fill value zero on data.
 	// Note that items with value 0 will not be saved in DDBB, but they will need to be added to data
 	// to be processed by client interface (to propagate values)
-		const filled_value = []
-		const datalist_length = self.data.datalist.length
+		const filled_value		= []
+		const data				= self.data || {}
+		const datalist			= data.datalist || []
+		const datalist_length	= datalist.length
 		for (let i = datalist_length - 1; i >= 0; i--) {
 
 			const item = self.data.datalist[i]
