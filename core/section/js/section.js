@@ -956,14 +956,14 @@ section.prototype.delete_section = async function (options) {
 */
 section.prototype.navigate = async function(options) {
 
+	const self = this
+
 	// options
 		const callback				= options.callback
-		const navigation_history	= navigation_history!==undefined ? navigation_history : false
+		const navigation_history	= options.navigation_history!==undefined
+			? options.navigation_history
+			: false
 		const action				= options.action || 'paginate'
-
-
-	const self = this
-	console.log('>> navigate self:', self);
 
 	// unsaved_data check
 		if (window.unsaved_data===true) {
@@ -980,6 +980,36 @@ section.prototype.navigate = async function(options) {
 
 			if(SHOW_DEBUG===true) {
 				// console.log("-> Executed section navigate received callback:", callback);
+			}
+		}
+
+	// set_local_db_data updated rqo.
+		// This is used to locate last navigation offset of this section
+		// when the user moves from edit to list mode form menu link
+		if (self.mode==='list') {
+
+			// list. Save current rqo to get offset when return
+			const rqo = clone(self.rqo)
+			data_manager.set_local_db_data(
+				rqo,
+				'rqo'
+			)
+		}else if(self.mode==='edit' && action==='search') {
+
+			// edit. note that user search in edit mode must to rest offset always
+			// to prevent inconsistent navigation offset between edit and list mode
+			const list_id_expected	= self.id.replace('_edit_','_list_')
+			const saved_rqo			= await data_manager.get_local_db_data(
+				list_id_expected,
+				'rqo'
+			)
+			if (saved_rqo) {
+				// reset offset to allow section to go first page when change to list mode
+				saved_rqo.sqo.offset = 0
+				await data_manager.set_local_db_data(
+					saved_rqo,
+					'rqo'
+				)
 			}
 		}
 
