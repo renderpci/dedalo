@@ -730,7 +730,8 @@ class login extends common {
 			if (!isset($response->result_options)) {
 				$response->result_options = new stdClass();
 			}
-			$response->result_options->user_image = $user_image;
+			$response->result_options->user_image	= $user_image;
+			$response->result_options->user_id		= $user_id;
 
 		// log : Prepare and save login action
 			$browser = $_SERVER['HTTP_USER_AGENT'];
