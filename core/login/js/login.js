@@ -212,6 +212,14 @@ login.prototype.action_dispatch = async function(api_response) {
 	// default behavior
 		if (api_response.result===true) {
 
+			// user image load
+				const bg_image = (api_response.result_options && api_response.result_options.user_image)
+					? api_response.result_options.user_image
+					: '../../themes/default/raspas/raspa_pantalla_1.jpg'
+				if (bg_image) {
+					self.node.style.setProperty('--user_login_image', `url('${bg_image}')`);
+				}
+
 			// files loader. Circle with progressive fill draw based on percentage of loaded files by worker (by messages info)
 				const files_loader = render_files_loader({
 					on_load_finish : load_finish
@@ -251,7 +259,9 @@ login.prototype.action_dispatch = async function(api_response) {
 
 					if (e.data.status==='finish') {
 						// login continue
-						load_finish()
+						setTimeout(function(){
+							load_finish()
+						}, 500)
 					}
 				}
 				// load_finish()

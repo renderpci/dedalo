@@ -11,6 +11,8 @@
 	height: 100%;
 	width: 100%;
 
+	--user_login_image : ''; // Added on login, like url('../../themes/default/raspas/raspa_pantalla_1.jpg');
+
 	// background image big Dédalo
 	&:before {
 		background-image: url('../../themes/default/dedalo_icon_big.png');
@@ -30,7 +32,7 @@
 	}
 
 	&:before {
-		background-image: url('../../themes/default/raspas/raspa_pantalla_1.jpg');
+		background-image: var(--user_login_image);
 		background-size: cover;
 		content: '';
 		transform: unset;
