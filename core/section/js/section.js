@@ -890,6 +890,7 @@ section.prototype.load_section_tool_files = function() {
 			// }
 			const model = self.config.tool_context.model
 			const url = DEDALO_TOOLS_URL + '/' + model + '/css/' + model + '.css'
+			console.warn(')))))))))))) (((((((((( url:', url, self);
 			const js_promise = common.prototype.load_style(url)
 
 	// const js_promise = Promise.all(load_promises)
@@ -1041,3 +1042,77 @@ section.prototype.navigate = async function(options) {
 
 	return true
 }//end navigate
+
+
+
+/**
+* CHANGE_MODE
+* Destroy current instance and dependencies without remove HTML nodes (used to get target parent node placed in DOM)
+* Create a new instance in the new mode (for example, from list to edit) and view (ex, from default to line )
+* Render a fresh full element node in the new mode
+* Replace every old placed DOM node with the new one
+* @param object options
+* @return bool
+*/
+section.prototype.change_mode = async function(options) {
+
+	/*
+		under construction !
+	*/
+
+	const self = this
+
+	// options vars
+		// mode check. When mode is undefined, fallback to 'list'. From 'list', change to 'edit'
+		const mode = (options.mode)
+			? options.mode
+			: self.mode==='list' ? 'edit' : 'list'
+		const autoload = (typeof options.autoload!=='undefined')
+			? options.autoload
+			: true
+		const view = options.view ?? null
+
+	// short vars
+		// set
+		const current_context		= self.context
+		const section_lang			= self.section_lang
+		const old_node				= self.node
+		const id_variant			= self.id_variant
+
+	// set the new view to context
+		current_context.view = view
+		current_context.mode = mode
+
+	// element. Create the instance options for build it. The instance is reflect of the context and section_id
+		const new_instance = await instances.get_instance({
+			model			: current_context.model,
+			tipo			: current_context.tipo,
+			section_tipo	: current_context.section_tipo,
+			mode			: mode,
+			lang			: current_context.lang,
+			section_lang	: section_lang,
+			type			: current_context.type,
+			id_variant		: id_variant
+		})
+
+	// build
+		await new_instance.build(autoload)
+
+	// render
+		const new_node = await new_instance.render({
+			render_level : 'full'
+		})
+
+	// replace the node with the new render
+		// old_node.parentNode.replaceChild(new_node, old_node)
+		old_node.replaceWith(new_node);
+
+	// destroy self instance (delete_self=true, delete_dependencies=false, remove_dom=false)
+		self.destroy(
+			true, // delete_self
+			true, // delete_dependencies
+			true // remove_dom
+		)
+
+	return true
+}//end change_mode
