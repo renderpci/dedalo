@@ -40,7 +40,8 @@ render_menu.prototype.edit = async function() {
 	// username
 		const username = self.data.username
 
-	const fragment = new DocumentFragment()
+	// DocumentFragment
+		const fragment = new DocumentFragment()
 
 	// quit_button
 		const quit_button = ui.create_dom_element({
@@ -165,7 +166,7 @@ render_menu.prototype.edit = async function() {
 			})
 		}
 
-	// user name link (go to list)
+	// user name link (open tool_user_admin)
 		const logged_user_name = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'logged_user_name',
@@ -346,7 +347,7 @@ render_menu.prototype.edit = async function() {
 		}
 
 	// menu_wrapper
-		const menu_wrapper = document.createElement("div")
+		const menu_wrapper = document.createElement('div')
 			  menu_wrapper.classList.add('menu_wrapper','menu')
 			  menu_wrapper.appendChild(fragment)
 		// menu left band
@@ -365,7 +366,7 @@ render_menu.prototype.edit = async function() {
 
 /**
 * GET_DEBUG_INFO_BAR
-* @param object instance self
+* @param object self
 * @return DOM node debug_info_bar
 */
 const get_debug_info_bar = (self) => {
@@ -430,6 +431,7 @@ const get_debug_info_bar = (self) => {
 
 /**
 * LEVEL HIERARCHY
+* @param object options
 * @return bool
 */
 const level_hierarchy = (options) => {
@@ -474,7 +476,7 @@ const level_hierarchy = (options) => {
 * ITEM_HIERARCHY
 * Render li hierarchy node
 * @param object options
-* @return DOM element li
+* @return DOM node li
 */
 const item_hierarchy = (options) => {
 
@@ -543,7 +545,7 @@ const item_hierarchy = (options) => {
 								// the node is totally visible and don't need move to the top
 								open_ul.style.top = active_li.getBoundingClientRect().top+'px'
 								// normal calculation for the hierarchy menus
-								// get the botton positon of the ul and remove the height of the window
+								// get the bottom position of the ul and remove the height of the window
 								const ul_bottom_dif = open_ul.getBoundingClientRect().bottom - window.innerHeight//document.documentElement.clientHeight
 								// if the position is outside of the window (>0)
 								if (ul_bottom_dif>0) {
@@ -644,7 +646,7 @@ const item_hierarchy = (options) => {
 /**
 * CLOSE_ALL_DROP_MENU
 * Select all nodes in the menu instance and set the css to remove the visualization
-* @para object
+* @para object self
 * @return bool
 */
 const close_all_drop_menu = function(self) {
@@ -683,7 +685,7 @@ const close_all_drop_menu = function(self) {
 * @param string tipo
 * @return bool
 */
-const close_all_children = function(tipo){
+const close_all_children = function(tipo) {
 
 	if(tipo){
 		//get the children nodes of the sent tipo and add/remove the css
