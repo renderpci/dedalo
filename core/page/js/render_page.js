@@ -143,6 +143,9 @@ const get_content_data = async function(self) {
 								current_context // object is used as source
 							)
 
+							// set caller
+							current_instance.caller = self
+
 							self.ar_instances.push(current_instance)
 
 							// build (load data)
