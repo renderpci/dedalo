@@ -144,7 +144,7 @@ const get_content_data = async function(self) {
 							)
 
 							// set caller
-							current_instance.caller = self
+							// current_instance.caller = self
 
 							self.ar_instances.push(current_instance)
 
