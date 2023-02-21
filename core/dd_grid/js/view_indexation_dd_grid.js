@@ -153,7 +153,7 @@ const get_grid_nodes = function(data) {
 * @return DOM node div_container
 */
 const get_div_container = function(current_data) {
-console.log('current_data:', current_data);
+
 	const class_list = (current_data.class_list)
 		? current_data.type + ' ' + current_data.class_list
 		: current_data.type
