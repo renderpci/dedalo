@@ -233,14 +233,74 @@ render_menu.prototype.edit = async function() {
 			class_name		: 'section_label',
 			parent			: fragment
 		})
-		// update value, subscription to the changes: if the section or area was changed, observers dom elements will be changed own value with the observable value
-			let current_instance
+		let current_instance = null // expected section instance assignation when section render finish
+		// click event
+			section_label.addEventListener('click', async (e) => {
+				e.stopPropagation()
+				e.preventDefault()
+
+				if (!current_instance) {
+					return
+				}
+
+				// navigate browser from edit to list
+				// Note that internal navigation (based on injected browser history) uses the stored local database
+				// saved_rqo if exists. Page real navigation (reload page for instance) uses server side sessions to
+				// preserve offset and order
+				if (current_instance.mode==='edit') {
+
+					// local_db_data. On section paginate, local_db_data is saved. Recover saved rqo here to
+					// go to list mode in the same position (offset) that the user saw
+						const list_id_expected	= current_instance.id.replace('_edit_','_list_')
+						const saved_rqo			= await data_manager.get_local_db_data(
+							list_id_expected,
+							'rqo'
+						)
+
+					// sqo. Note that we are changing from edit to list mode and current offset it's not applicable
+					// The list offset will be get from server session if exists
+						const sqo = saved_rqo && saved_rqo.sqo
+							? saved_rqo.sqo
+							: {
+								filter	: current_instance.rqo.sqo.filter,
+								order	: current_instance.rqo.sqo.order || null,
+								offset	: current_instance.offset_list || 0
+							 }
+						sqo.section_tipo = current_instance.request_config_object.sqo.section_tipo // always use request_config_object format
+						if(SHOW_DEBUG===true) {
+							// console.log("---- fn_update_section_label sqo:", sqo.offset, sqo);
+							// console.log("---- fn_update_section_label current_instance:", current_instance);
+						}
+
+					// source
+						const source = saved_rqo && saved_rqo.source
+							? saved_rqo.source
+							: {
+								action			: 'search',
+								model			: current_instance.model, // section
+								tipo			: current_instance.tipo,
+								section_tipo	: current_instance.section_tipo,
+								mode			: 'list',
+								lang			: current_instance.lang
+							 }
+
+					// navigation
+						const user_navigation_rqo = {
+							caller_id	: self.id,
+							source		: source,
+							sqo			: sqo  // new sqo to use in list mode
+						}
+						event_manager.publish('user_navigation', user_navigation_rqo)
+				}
+				self.menu_active = false
+			})
+		// update value
+			// subscription to the changes: if the section or area was changed,
+			// observed DOM elements will be changed own value with the observable value
 			self.events_tokens.push(
 				event_manager.subscribe('render_instance', fn_update_section_label)
 			)
 			function fn_update_section_label(instance) {
-				// console.log("------ fn_update_section_label instance:",instance);
-				// console.log("------ instances:", instances.filter(el => el.type==='section'));
 				if((instance.type==='section' || instance.type==='area') && instance.mode!=='tm'){
 
 					// search presets section case
@@ -271,65 +331,8 @@ render_menu.prototype.edit = async function() {
 						toggle_inspector.classList.add('hide')
 					}
 				}
-			}
-			section_label.addEventListener('click', async (e) => {
-				e.stopPropagation()
-				e.preventDefault()
+			}//end fn_update_section_label
 
-				// navigate browser from edit to list
-				// Note that internal navigation (based on injected browser history) uses the stored local database
-				// saved_rqo if exists. Page real navigation (reload page for instance) uses server side sessions to
-				// preserve offset and order
-				if (current_instance.mode==='edit') {
-
-					// local_db_data. On section paginate, local_db_data is saved. Recover saved rqo here to
-					// go to list mode in the same position (offset) that the user saw
-						const list_id_expected	= current_instance.id.replace('_edit_','_list_')
-						const saved_rqo			= await data_manager.get_local_db_data(
-							list_id_expected,
-							'rqo'
-						)
-						if(SHOW_DEBUG===true) {
-							// console.log('-------------- saved_rqo:', list_id_expected, saved_rqo);
-						}
-
-					// sqo. Note that we are changing from edit to list mode and current offset it's not applicable
-					// The list offset will be get from server session if exists
-						const sqo = saved_rqo && saved_rqo.sqo
-							? saved_rqo.sqo
-							: {
-								filter	: current_instance.rqo.sqo.filter,
-								order	: current_instance.rqo.sqo.order || null,
-								offset	: current_instance.offset_list
-							 }
-						sqo.section_tipo = current_instance.request_config_object.sqo.section_tipo // always use request_config_object format
-						if(SHOW_DEBUG===true) {
-							// console.log("---- fn_update_section_label sqo:", sqo.offset, sqo);
-							// console.log("---- fn_update_section_label current_instance:", current_instance);
-						}
-
-					// source
-						const source = saved_rqo && saved_rqo.source
-							? saved_rqo.source
-							: {
-								action			: 'search',
-								model			: current_instance.model, // section
-								tipo			: current_instance.tipo,
-								section_tipo	: current_instance.section_tipo,
-								mode			: 'list',
-								lang			: current_instance.lang
-							 }
-
-					// navigation
-						const user_navigation_rqo = {
-							caller_id	: self.id,
-							source		: source,
-							sqo			: sqo  // new sqo to use in list mode
-						}
-						event_manager.publish('user_navigation', user_navigation_rqo)
-				}
-				self.menu_active = false
-			})
 
 	// inspector button toggle
 		const toggle_inspector = ui.create_dom_element({

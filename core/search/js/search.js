@@ -903,7 +903,8 @@ search.prototype.get_search_group_operator = function(search_group) {
 
 				const area_ts_promise = caller_instance.navigate({
 					callback			: null,
-					navigation_history	: false
+					navigation_history	: false,
+					action				: 'search'
 				})
 				break;
 
@@ -917,8 +918,9 @@ search.prototype.get_search_group_operator = function(search_group) {
 
 				// section. refresh current section and set history navigation
 					const section_promise = caller_instance.navigate({
-						callback			: null, // callback
-						navigation_history	: true // navigation_history
+						callback			: null,
+						navigation_history	: true,
+						action				: 'search'
 					})
 					section_promise.then(()=>{
 						// loading css remove
