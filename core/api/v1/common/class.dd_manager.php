@@ -40,15 +40,16 @@ final class dd_manager {
 			}
 
 		// logged check
-			$no_loggin_needed_actions = [
+			$no_login_needed_actions = [
 				'start',
 				'change_lang',
 				'login',
 				'get_login_context',
 				'install',
-				'get_install_context'
+				'get_install_context',
+				'get_environment'
 			];
-			if (true===in_array($rqo->action, $no_loggin_needed_actions)) {
+			if (true===in_array($rqo->action, $no_login_needed_actions)) {
 				// do not check login here
 			}else{
 				if (login::is_logged()!==true) {
