@@ -12,6 +12,7 @@ common::trigger_manager();
 * @param $target_tipo
 * @param $section_id
 * @param $section_tipo
+* @return object $response
 */
 function pdf_automatic_transcription(object $json_data) : object {
 	global $start_time;

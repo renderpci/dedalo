@@ -158,7 +158,6 @@ class tool_transcription extends tool_common {
 	*/
 	public static function automatic_transcription(object $options) : object {
 
-
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
@@ -268,7 +267,7 @@ class tool_transcription extends tool_common {
 		// Save result on target component (target_lang)
 			if (empty($transcribed_data)) {
 				// skip save empty values
-				debug_log(__METHOD__." Skipt empty received value ".to_string(), logger::ERROR);
+				debug_log(__METHOD__." Skip empty received value ".to_string(), logger::ERROR);
 				$response->msg		= 'Ignored empty result. Nothing is saved!';
 			}else{
 				$component = component_common::get_instance($model,
@@ -296,6 +295,8 @@ class tool_transcription extends tool_common {
 
 		return (object)$response;
 	}//end automatic_transcription
+
+
 
 }//end class tool_transcription
 

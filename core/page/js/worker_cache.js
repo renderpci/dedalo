@@ -97,17 +97,40 @@ self.onmessage = async function(e) {
 		});
 
 	// headers
-		const headers = new Headers();
-		// time: on week = 604800
-		headers.append('Cache-Control', 'stale-while-revalidate=604800');
-		// mime: text/javascript
-		headers.append('Content-Type', 'text/javascript');
+		const get_headers = (item) => {
+
+			const headers = new Headers();
+
+			switch (item.type) {
+				case 'js':
+					// time: on week = 604800 (7 x 24 x 60 x 60)
+					headers.append('Cache-Control', 'stale-while-revalidate=604800');
+					// mime: text/javascript
+					headers.append('Content-Type', 'text/javascript');
+					break;
+
+				case 'css':
+					// time: on day = 86400 (1 x 24 x 60 x 60)
+					headers.append('Cache-Control', 'stale-while-revalidate=86400');
+					// mime: text/css
+					headers.append('Content-Type', 'text/css');
+					break;
+				default:
+
+					break;
+			}
+
+			return headers
+		}
 
 	// fetch each file. Force cache reload (https://hacks.mozilla.org/2016/03/referrer-and-cache-control-apis-for-fetch/)
 		const ar_promises = []
 		for (let i = 0; i < api_response_result_length; i++) {
 
 			const item = api_response.result[i]
+
+			const headers = get_headers(item)
+
 			ar_promises.push(
 				fetch(item.url, {
 					headers		: headers,

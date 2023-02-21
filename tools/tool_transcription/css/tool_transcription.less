@@ -174,12 +174,13 @@
 
 			.right_container {
 				>.wrapper_component {
-					height: 100%; // calc(100vh - 8rem);
-					min-height: 525px; // prevents to cut component_av player
+					// height: 100%; // calc(100vh - 8rem);
+					// min-height: 525px; // prevents to cut component_av player
 
 					// addons. Additional elements like video slider, keys map, etc.
 					&.with_addons {
-						height: 50%;
+						// max-height: 50%;
+						// padding-bottom: 3.5rem;
 						@media screen and (max-width: @width_break_point_1) {
 							height: unset;
 						}
@@ -194,6 +195,7 @@
 						// overflow: auto;
 						height: 100%;
 						// min-height: 528px;
+						// max-height: 404px;
 						display: block;
 					}
 				}

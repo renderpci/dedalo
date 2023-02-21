@@ -40,7 +40,8 @@ render_menu.prototype.edit = async function() {
 	// username
 		const username = self.data.username
 
-	const fragment = new DocumentFragment()
+	// DocumentFragment
+		const fragment = new DocumentFragment()
 
 	// quit_button
 		const quit_button = ui.create_dom_element({
@@ -165,7 +166,7 @@ render_menu.prototype.edit = async function() {
 			})
 		}
 
-	// user name link (go to list)
+	// user name link (open tool_user_admin)
 		const logged_user_name = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'logged_user_name',
@@ -232,14 +233,74 @@ render_menu.prototype.edit = async function() {
 			class_name		: 'section_label',
 			parent			: fragment
 		})
-		// update value, subscription to the changes: if the section or area was changed, observers dom elements will be changed own value with the observable value
-			let current_instance
+		let current_instance = null // expected section instance assignation when section render finish
+		// click event
+			section_label.addEventListener('click', async (e) => {
+				e.stopPropagation()
+				e.preventDefault()
+
+				if (!current_instance) {
+					return
+				}
+
+				// navigate browser from edit to list
+				// Note that internal navigation (based on injected browser history) uses the stored local database
+				// saved_rqo if exists. Page real navigation (reload page for instance) uses server side sessions to
+				// preserve offset and order
+				if (current_instance.mode==='edit') {
+
+					// local_db_data. On section paginate, local_db_data is saved. Recover saved rqo here to
+					// go to list mode in the same position (offset) that the user saw
+						const list_id_expected	= current_instance.id.replace('_edit_','_list_')
+						const saved_rqo			= await data_manager.get_local_db_data(
+							list_id_expected,
+							'rqo'
+						)
+
+					// sqo. Note that we are changing from edit to list mode and current offset it's not applicable
+					// The list offset will be get from server session if exists
+						const sqo = saved_rqo && saved_rqo.sqo
+							? saved_rqo.sqo
+							: {
+								filter	: current_instance.rqo.sqo.filter,
+								order	: current_instance.rqo.sqo.order || null,
+								offset	: current_instance.offset_list || 0
+							 }
+						sqo.section_tipo = current_instance.request_config_object.sqo.section_tipo // always use request_config_object format
+						if(SHOW_DEBUG===true) {
+							// console.log("---- fn_update_section_label sqo:", sqo.offset, sqo);
+							// console.log("---- fn_update_section_label current_instance:", current_instance);
+						}
+
+					// source
+						const source = saved_rqo && saved_rqo.source
+							? saved_rqo.source
+							: {
+								action			: 'search',
+								model			: current_instance.model, // section
+								tipo			: current_instance.tipo,
+								section_tipo	: current_instance.section_tipo,
+								mode			: 'list',
+								lang			: current_instance.lang
+							 }
+
+					// navigation
+						const user_navigation_rqo = {
+							caller_id	: self.id,
+							source		: source,
+							sqo			: sqo  // new sqo to use in list mode
+						}
+						event_manager.publish('user_navigation', user_navigation_rqo)
+				}
+				self.menu_active = false
+			})
+		// update value
+			// subscription to the changes: if the section or area was changed,
+			// observed DOM elements will be changed own value with the observable value
 			self.events_tokens.push(
 				event_manager.subscribe('render_instance', fn_update_section_label)
 			)
 			function fn_update_section_label(instance) {
-				// console.log("------ fn_update_section_label instance:",instance);
-				// console.log("------ instances:", instances.filter(el => el.type==='section'));
 				if((instance.type==='section' || instance.type==='area') && instance.mode!=='tm'){
 
 					// search presets section case
@@ -270,65 +331,8 @@ render_menu.prototype.edit = async function() {
 						toggle_inspector.classList.add('hide')
 					}
 				}
-			}
-			section_label.addEventListener('click', async (e) => {
-				e.stopPropagation()
-				e.preventDefault()
+			}//end fn_update_section_label
 
-				// navigate browser from edit to list
-				// Note that internal navigation (based on injected browser history) uses the stored local database
-				// saved_rqo if exists. Page real navigation (reload page for instance) uses server side sessions to
-				// preserve offset and order
-				if (current_instance.mode==='edit') {
-
-					// local_db_data. On section paginate, local_db_data is saved. Recover saved rqo here to
-					// go to list mode in the same position (offset) that the user saw
-						const list_id_expected	= current_instance.id.replace('_edit_','_list_')
-						const saved_rqo			= await data_manager.get_local_db_data(
-							list_id_expected,
-							'rqo'
-						)
-						if(SHOW_DEBUG===true) {
-							// console.log('-------------- saved_rqo:', list_id_expected, saved_rqo);
-						}
-
-					// sqo. Note that we are changing from edit to list mode and current offset it's not applicable
-					// The list offset will be get from server session if exists
-						const sqo = saved_rqo && saved_rqo.sqo
-							? saved_rqo.sqo
-							: {
-								filter	: current_instance.rqo.sqo.filter,
-								order	: current_instance.rqo.sqo.order || null,
-								offset	: current_instance.offset_list
-							 }
-						sqo.section_tipo = current_instance.request_config_object.sqo.section_tipo // always use request_config_object format
-						if(SHOW_DEBUG===true) {
-							// console.log("---- fn_update_section_label sqo:", sqo.offset, sqo);
-							// console.log("---- fn_update_section_label current_instance:", current_instance);
-						}
-
-					// source
-						const source = saved_rqo && saved_rqo.source
-							? saved_rqo.source
-							: {
-								action			: 'search',
-								model			: current_instance.model, // section
-								tipo			: current_instance.tipo,
-								section_tipo	: current_instance.section_tipo,
-								mode			: 'list',
-								lang			: current_instance.lang
-							 }
-
-					// navigation
-						const user_navigation_rqo = {
-							caller_id	: self.id,
-							source		: source,
-							sqo			: sqo  // new sqo to use in list mode
-						}
-						event_manager.publish('user_navigation', user_navigation_rqo)
-				}
-				self.menu_active = false
-			})
 
 	// inspector button toggle
 		const toggle_inspector = ui.create_dom_element({
@@ -346,7 +350,7 @@ render_menu.prototype.edit = async function() {
 		}
 
 	// menu_wrapper
-		const menu_wrapper = document.createElement("div")
+		const menu_wrapper = document.createElement('div')
 			  menu_wrapper.classList.add('menu_wrapper','menu')
 			  menu_wrapper.appendChild(fragment)
 		// menu left band
@@ -365,7 +369,7 @@ render_menu.prototype.edit = async function() {
 
 /**
 * GET_DEBUG_INFO_BAR
-* @param object instance self
+* @param object self
 * @return DOM node debug_info_bar
 */
 const get_debug_info_bar = (self) => {
@@ -430,6 +434,7 @@ const get_debug_info_bar = (self) => {
 
 /**
 * LEVEL HIERARCHY
+* @param object options
 * @return bool
 */
 const level_hierarchy = (options) => {
@@ -474,7 +479,7 @@ const level_hierarchy = (options) => {
 * ITEM_HIERARCHY
 * Render li hierarchy node
 * @param object options
-* @return DOM element li
+* @return DOM node li
 */
 const item_hierarchy = (options) => {
 
@@ -543,7 +548,7 @@ const item_hierarchy = (options) => {
 								// the node is totally visible and don't need move to the top
 								open_ul.style.top = active_li.getBoundingClientRect().top+'px'
 								// normal calculation for the hierarchy menus
-								// get the botton positon of the ul and remove the height of the window
+								// get the bottom position of the ul and remove the height of the window
 								const ul_bottom_dif = open_ul.getBoundingClientRect().bottom - window.innerHeight//document.documentElement.clientHeight
 								// if the position is outside of the window (>0)
 								if (ul_bottom_dif>0) {
@@ -644,7 +649,7 @@ const item_hierarchy = (options) => {
 /**
 * CLOSE_ALL_DROP_MENU
 * Select all nodes in the menu instance and set the css to remove the visualization
-* @para object
+* @para object self
 * @return bool
 */
 const close_all_drop_menu = function(self) {
@@ -683,7 +688,7 @@ const close_all_drop_menu = function(self) {
 * @param string tipo
 * @return bool
 */
-const close_all_children = function(tipo){
+const close_all_children = function(tipo) {
 
 	if(tipo){
 		//get the children nodes of the sent tipo and add/remove the css

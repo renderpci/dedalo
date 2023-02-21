@@ -2059,8 +2059,13 @@ export const ts_object = new function() {
 			}
 			// already loaded. toggle visible
 			if (target_div.firstChild) {
-				target_div.classList.toggle('hide')
-				return false
+				if (SHOW_DEBUG===true) {
+					console.log('reloading indexations...');
+					target_div.classList.toggle('hide')
+				}else{
+					target_div.classList.toggle('hide')
+					return false
+				}
 			}
 
 		// rqo. create
@@ -2081,7 +2086,7 @@ export const ts_object = new function() {
 				section_id		: section_id,
 				tipo			: component_tipo,
 				mode			: 'list',
-				view			: 'default',
+				view			: 'indexation',
 				lang			: page_globals.dedalo_data_lang,
 				rqo				: rqo
 			})

@@ -511,9 +511,13 @@ final class Ffmpeg {
 
 		// aspect_ratio_cmd
 			$aspect_ratio = strtolower($AVObj->get_aspect_ratio());
-			$aspect_ratio_cmd = ($aspect_ratio==='4x3')
-				? '-vf scale=540:404:force_original_aspect_ratio'
-				: '';
+			if($aspect_ratio==='4x3') {
+				// $aspect_ratio = '-vf scale=540:404:force_original_aspect_ratio';
+				$aspect_ratio = '540x404';
+			}else{
+				$aspect_ratio = '720x404';
+			}
+			$aspect_ratio_cmd = '-s ' . $aspect_ratio;
 
 		// src_file. If the default does not exist, we look for another from higher to lower
 			if(!file_exists($src_file)) {

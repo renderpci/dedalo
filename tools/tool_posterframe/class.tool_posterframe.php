@@ -37,12 +37,14 @@ class tool_posterframe extends tool_common {
 
 		// component
 			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$component	= component_common::get_instance($model,
-														 $tipo,
-														 $section_id,
-														 'list',
-														 DEDALO_DATA_NOLAN,
-														 $section_tipo);
+			$component	= component_common::get_instance(
+				$model,
+				$tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
 
 			$result = $component->create_posterframe($current_time);
 
@@ -80,12 +82,14 @@ class tool_posterframe extends tool_common {
 
 		// component
 			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$component	= component_common::get_instance($model,
-														 $tipo,
-														 $section_id,
-														 'list',
-														 DEDALO_DATA_NOLAN,
-														 $section_tipo);
+			$component	= component_common::get_instance(
+				$model,
+				$tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
 
 			$result = $component->delete_posterframe();
 
@@ -102,40 +106,34 @@ class tool_posterframe extends tool_common {
 	* CREATE_IDENTIFYING_IMAGE
 	* Build a image file from a posterframe of default quality video
 	* Is assigned to target portal from a list of inverse references
-	* @param object $request_options
+	* @param object $options
 	* @return object $response
 	*/
-	public static function create_identifying_image(object $request_options) : object {
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+	public static function create_identifying_image(object $options) : object {
 
 		// options
-			$options = new stdClass();
-				$options->tipo			= null;
-				$options->section_tipo	= null;
-				$options->section_id	= null;
-				$options->item_value	= null;
-				$options->current_time	= null;
-				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+			$tipo			= $options->tipo ?? null;
+			$section_tipo	= $options->section_tipo ?? null;
+			$section_id		= $options->section_id	?? null;
+			$item_value		= $options->item_value	?? null;
+			$current_time	= $options->current_time ?? null;
 
-		// short vars
-			$tipo			= $options->tipo;
-			$section_tipo	= $options->section_tipo;
-			$section_id		= $options->section_id;
-			$item_value		= $options->item_value;
-			$current_time	= $options->current_time;
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// component_portal
 		// Create a new section and attach it to the target portal
 			$component_portal_model	= RecordObj_dd::get_modelo_name_by_tipo($item_value->component_portal, true);
-			$component_portal		= component_common::get_instance($component_portal_model,
-																	 $item_value->component_portal,
-																	 $item_value->section_id,
-																	 'edit',
-																	 DEDALO_DATA_NOLAN,
-																	 $item_value->section_tipo);
+			$component_portal		= component_common::get_instance(
+				$component_portal_model,
+				$item_value->component_portal,
+				$item_value->section_id,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				$item_value->section_tipo
+			);
 			// portal_section_target_tipo
 				$ar_portal_section_target_tipo = $component_portal->get_ar_target_section_tipo(); // First only
 				if (empty($ar_portal_section_target_tipo)) {
@@ -147,7 +145,7 @@ class tool_posterframe extends tool_common {
 				$portal_section_target_tipo = reset($ar_portal_section_target_tipo);
 
 			// add_new_element
-				$new_element_response = $component_portal->add_new_element([
+				$new_element_response = $component_portal->add_new_element((object)[
 					'target_section_tipo' => $portal_section_target_tipo
 				]);
 				if ($new_element_response->result===false) {
@@ -159,13 +157,12 @@ class tool_posterframe extends tool_common {
 				// save portal if all is all ok
 				$component_portal->Save();
 
-				$new_section_id = $new_element_response->section_id;
-				$added_locator 	= $new_element_response->added_locator;
+				$new_section_id		= $new_element_response->section_id;
+				// $added_locator	= $new_element_response->added_locator;
 				// check valid new_section_id
-				if($new_section_id<1) {
-					$msg = " Invalid new portal record";
-					trigger_error($msg);
+				if( (int)$new_section_id<1 ) {
 					$response->msg .= ' Error. Unable to create portal record';
+					debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
 					return $response;
 				}
 
@@ -173,17 +170,19 @@ class tool_posterframe extends tool_common {
 		// component_image
 		// Gets the proper path and filename where to save the posterframe file
 			$component_image_model	= RecordObj_dd::get_modelo_name_by_tipo($item_value->component_image, true);
-			$component_image		= component_common::get_instance($component_image_model,
-																	 $item_value->component_image,
-																	 $new_section_id,
-																	 'edit',
-																	 DEDALO_DATA_LANG,
-																	 $portal_section_target_tipo);
+			$component_image		= component_common::get_instance(
+				$component_image_model,
+				$item_value->component_image,
+				$new_section_id,
+				'edit',
+				DEDALO_DATA_LANG,
+				$portal_section_target_tipo
+			);
 			// desired image is 'original' quality
 				$component_image->set_quality(DEDALO_IMAGE_QUALITY_ORIGINAL);
 
 			// image from video. custom_ar_target
-				$target_path		= $component_image->get_target_dir();
+				$target_path        = $component_image->get_target_dir();
 				$target_file		= $component_image->get_image_path();
 				$custom_ar_target	= [
 					'target_path'	=> $target_path, // Absolute path to image dir
@@ -193,14 +192,16 @@ class tool_posterframe extends tool_common {
 		// component_av
 		// Generates the posterframe with name and target from component image values
 			$component_av_model	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$component_av		= component_common::get_instance($component_av_model,
-																 $tipo,
-																 $section_id,
-																 'list',
-																 DEDALO_DATA_NOLAN,
-																 $section_tipo);
+			$component_av		= component_common::get_instance(
+				$component_av_model,
+				$tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
 
-			// posterframen file create. returns result boolean value
+			// posterframe file create. returns result boolean value
 				$target_quality	= $component_av->get_quality_default();
 				$result			= $component_av->create_posterframe(
 					$current_time,
@@ -296,16 +297,16 @@ class tool_posterframe extends tool_common {
 			$ar_portals_tipo = section::get_ar_children_tipo_by_model_name_in_section(
 				$section_tipo,
 				['component_portal'],
-				$from_cache=true,
-				$resolve_virtual=true
+				true, // bool from_cache
+				true // bool resolve_virtual
 			);
 
 		// section label
 			$label = RecordObj_dd::get_termino_by_tipo(
 				$section_tipo,
-				$lang=DEDALO_APPLICATION_LANG,
-				$from_cache=true,
-				$fallback=true
+				DEDALO_APPLICATION_LANG, // string lang
+				true, // bool from_cache
+				true // bool fallback
 			);
 
 		// match properties->identifying_image with portal_tipo

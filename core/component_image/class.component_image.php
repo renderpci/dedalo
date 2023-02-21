@@ -586,34 +586,42 @@ class component_image extends component_media_common {
 	*/
 	public function generate_default_from_original_real(bool $overwrite=true) : bool {
 
-		# common data
-		$id 			 = $this->get_id();
-		$additional_path 	 = $this->get_additional_path();
-		$initial_media_path  = $this->get_initial_media_path();
+		// common data
+			// $id					= $this->get_id();
+			// $additional_path		= $this->get_additional_path();
+			// $initial_media_path	= $this->get_initial_media_path();
 
-		# source data (default quality is source)
-		$original_image_path = $this->get_local_full_path(DEDALO_IMAGE_QUALITY_ORIGINAL);
+		// source data (default quality is source)
+			$original_image_path		= $this->get_local_full_path(DEDALO_IMAGE_QUALITY_ORIGINAL);
+			$path						= pathinfo($original_image_path);
+			$original_image_extension	= $this->get_original_extension(
+				true // bool exclude_converted
+			);
+			$original_image_path_real = $path['dirname'] . '/' .  $path['filename'] . '.' . $original_image_extension;
+			if (!file_exists($original_image_path_real)) {
+				debug_log(__METHOD__." Original image path does not exists ".to_string($original_image_path_real), logger::WARNING);
+				return false;
+			}
 
-		$path = pathinfo($original_image_path);
+		// target data (target quality is thumb)
+			$image_default_path = $this->get_local_full_path(DEDALO_IMAGE_QUALITY_DEFAULT);
 
-		$original_image_extension = $this->get_original_extension(
-			true // bool exclude_converted
-		);
-		$original_image_path_real = $path['dirname'] . '/' .  $path['filename'] . '.' . $original_image_extension;
-			#dump($original_image_path, ' $original_image_path ++ '.to_string(DEDALO_IMAGE_QUALITY_ORIGINAL));
+		// conversion
+			if ($overwrite===true) {
 
-		if (!file_exists($original_image_path_real)) {
-			return false;
-		}
+				// original quality create
+					Imagemagick::convert(
+						$original_image_path_real,
+						$original_image_path
+					);
 
-		# target data (target quality is thumb)
-		$image_default_path  = $this->get_local_full_path(DEDALO_IMAGE_QUALITY_DEFAULT);
+				// default quality create
+					Imagemagick::convert(
+						$original_image_path,
+						$image_default_path
+					);
+			}
 
-		if ($overwrite===true ) { //|| !file_exists($image_default_path)
-			#$this->convert_quality( DEDALO_IMAGE_QUALITY_ORIGINAL, DEDALO_IMAGE_QUALITY_DEFAULT );
-			Imagemagick::convert($original_image_path_real, $original_image_path);
-			Imagemagick::convert($original_image_path, $image_default_path);
-		}
 
 		return true;
 	}//end generate_default_from_original_real
@@ -630,8 +638,8 @@ class component_image extends component_media_common {
 
 		// common data
 			$id					= $this->get_id();
-			// $additional_path	= $this->get_additional_path();
 			$initial_media_path	= $this->get_initial_media_path();
+			// $additional_path	= $this->get_additional_path();
 
 		// source data (default quality is source)
 			$default_image_path	= $this->get_local_full_path(DEDALO_IMAGE_QUALITY_DEFAULT);
@@ -651,13 +659,13 @@ class component_image extends component_media_common {
 				false // bool default_add
 			);
 			if(file_exists($image_thumb_path)) {
-				#unlink($image_thumb_path);
+				// unlink($image_thumb_path);
 				$image_thumb_path_des = $image_thumb_path.'_DES';
 				shell_exec("mv $image_thumb_path $image_thumb_path_des");
 			}
 
 		// thumb generate
-			$dd_thumb = ImageMagick::dd_thumb(
+			ImageMagick::dd_thumb(
 				'list',
 				$default_image_path,
 				$image_thumb_path,
@@ -666,7 +674,7 @@ class component_image extends component_media_common {
 			);
 
 		// debug
-			debug_log(__METHOD__." dd_thumb function called and executed. ".to_string($image_thumb_path), logger::DEBUG);
+			debug_log(__METHOD__." dd_thumb function called and executed. Created thumb file: ".to_string($image_thumb_path), logger::DEBUG);
 
 		// result
 			$result = (object)[
@@ -1201,10 +1209,11 @@ class component_image extends component_media_common {
 	public function create_default_svg_string_node() : ?string {
 
 		// short vars
-			$id					= $this->get_id();
-			$additional_path	= $this->get_additional_path();
-			$initial_media_path	= $this->get_initial_media_path();
-			$source_quality		= $this->get_default_quality(); // DEDALO_IMAGE_QUALITY_DEFAULT;
+			$id						= $this->get_id();
+			$source_quality			= $this->get_default_quality(); // DEDALO_IMAGE_QUALITY_DEFAULT;
+			// $additional_path		= $this->get_additional_path();
+			// $initial_media_path	= $this->get_initial_media_path();
+
 
 		// default quality check file
 			$file_path = $this->get_path($source_quality);
@@ -1243,7 +1252,7 @@ class component_image extends component_media_common {
 	*/
 	public function get_svg_file_path() {
 
-		$id			= $this->get_id();
+		$id					= $this->get_id();
 		$additional_path	= $this->get_additional_path();
 		$initial_media_path	= $this->get_initial_media_path();
 
@@ -1279,9 +1288,6 @@ class component_image extends component_media_common {
 						__METHOD__." Failed to create directory for default SVG file in media_path: " .$media_path,
 						logger::ERROR
 					);
-					if(SHOW_DEBUG===true) {
-						// throw new Exception(" Error on read or create directory: svg. Permission denied $media_path (2)");
-					}
 					return false;
 				}
 			}
@@ -1292,11 +1298,11 @@ class component_image extends component_media_common {
 					__METHOD__." Failed to create file for default SVG file: " .$file_path,
 					logger::ERROR
 				);
-				if(SHOW_DEBUG===true) {
-					// throw new Exception(" Error on create file: ".$file_path);
-				}
 				return false;
 			}
+
+		// debug
+			debug_log(__METHOD__." Created svg file ".to_string($file_path), logger::DEBUG);
 
 
 		return true;
@@ -1922,6 +1928,17 @@ class component_image extends component_media_common {
 
 		// re-create thumb
 			$this->generate_thumb();
+
+		// svg file
+			$svg_file_path = $this->get_svg_file_path();
+			if (!file_exists($svg_file_path)) {
+				// If default quality file exists, svg_string_node will be generated, else null
+				$svg_string_node = $this->create_default_svg_string_node();
+				if (!empty($svg_string_node)) {
+					// create the svg default file
+					$this->create_svg_file($svg_string_node);
+				}
+			}
 
 
 		return true;

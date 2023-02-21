@@ -95,6 +95,49 @@ component_security_access.prototype.init = async function(options) {
 }//end  init
 
 
+
+/**
+* BUILD
+* @return promise bool
+* 	Resolve bool
+*/
+component_security_access.prototype.build = async function(options) {
+
+	const self = this
+
+	// call the generic common method
+		const common_build = await component_common.prototype.build.call(self, options);
+
+	// fill value zero on data.
+	// Note that items with value 0 will not be saved in DDBB, but they will need to be added to data
+	// to be processed by client interface (to propagate values)
+		const filled_value		= []
+		const data				= self.data || {}
+		const datalist			= data.datalist || []
+		const datalist_length	= datalist.length
+		for (let i = datalist_length - 1; i >= 0; i--) {
+
+			const item = self.data.datalist[i]
+			const found = self.data.value.find(el => el.tipo===item.tipo && el.section_tipo===item.section_tipo)
+			if (found) {
+				filled_value.push(found)
+			}else{
+				filled_value.push({
+					tipo			: item.tipo,
+					section_tipo	: item.section_tipo,
+					value			: 0
+				})
+			}
+		}
+		// replace value
+		self.data.value = filled_value
+
+
+	return common_build
+}//end build
+
+
+
 /**
 * UPDATE_VALUE
 * Update component var self.changed_value with received value

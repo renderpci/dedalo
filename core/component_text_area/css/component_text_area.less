@@ -105,6 +105,11 @@
 					// 	}
 					// }
 
+
+					p {
+						min-height: 1.3rem;
+					}
+
 					// images are inside span .dd_tag
 					.person,
 					.lang,
@@ -143,17 +148,18 @@
 					}
 				}//end >.value_container
 
-				// >.editor_container {
-				// 	margin-top: 0.5rem;
-				// 	padding-top: 0px;
+				// editor_container
+					// >.editor_container {
+					// 	margin-top: 0.5rem;
+					// 	padding-top: 0px;
 
-				// 	// background-color: antiquewhite;
-				// 	// width: inherit;
-				// 	// min-width: 28rem;
-				// 	// margin: 0;
-				// 	// padding: 0;
-				// 	height: 100%;
-				// }
+					// 	// background-color: antiquewhite;
+					// 	// width: inherit;
+					// 	// min-width: 28rem;
+					// 	// margin: 0;
+					// 	// padding: 0;
+					// 	height: 100%;
+					// }
 
 				// source ckeditor
 				>.ck-source-editing-area {
@@ -257,7 +263,7 @@
 		// disabled_component
 		&.disabled_component {
 			.content_data.component {
-				pointer-events: unset;
+				pointer-events: unset !important;
 			}
 			// .toolbar_container {
 			// 	pointer-events: none;

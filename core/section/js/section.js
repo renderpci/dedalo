@@ -521,8 +521,10 @@ section.prototype.build = async function(autoload=false) {
 								body : rqo_count
 							})
 							.then(function(api_count_response){
+								if (!api_count_response.result || api_count_response.error) {
+									console.error('Error on count total : api_count_response:', api_count_response);
+								}
 								self.total = api_count_response.result.total
-								console.log('api_count_response:', api_count_response);
 								resolve(self.total)
 							})
 						})
@@ -647,23 +649,32 @@ section.prototype.build = async function(autoload=false) {
 					event_manager.subscribe('paginator_goto_'+self.paginator.id, fn_paginator_goto)
 				)
 				async function fn_paginator_goto(offset) {
+
+					// fix new offset value
+						self.request_config_object.sqo.offset	= offset
+						self.rqo.sqo.offset						= offset
+
 					// navigate section rows
-						self.navigate(
-							() => { // callback
-								// fix new offset value
-									self.request_config_object.sqo.offset	= offset
-									self.rqo.sqo.offset						= offset
-								// set_local_db_data updated rqo
-									if (self.mode==='list') {
-										const rqo = self.rqo
-										data_manager.set_local_db_data(
-											rqo,
-											'rqo'
-										)
-									}
+						self.navigate({
+							callback			: () => { // callback
+
+								// (!) This code is unified in function 'navigate' ⬇︎
+
+								// // fix new offset value
+								// 	self.request_config_object.sqo.offset	= offset
+								// 	self.rqo.sqo.offset						= offset
+								// // set_local_db_data updated rqo
+								// 	if (self.mode==='list') {
+								// 		const rqo = self.rqo
+								// 		data_manager.set_local_db_data(
+								// 			rqo,
+								// 			'rqo'
+								// 		)
+								// 	}
 							},
-							true // bool navigation_history save
-						)
+							navigation_history	: true, // bool navigation_history save
+							action				: 'paginate'
+						})
 				}
 		}//end if (!self.paginator)
 
@@ -860,6 +871,7 @@ export const get_section_records = async function(options){
 
 /**
 * LOAD_SECTION_TOOL_FILES
+* Used by section_tool
 * @return promise
 */
 section.prototype.load_section_tool_files = function() {
@@ -878,6 +890,7 @@ section.prototype.load_section_tool_files = function() {
 			// }
 			const model = self.config.tool_context.model
 			const url = DEDALO_TOOLS_URL + '/' + model + '/css/' + model + '.css'
+			console.warn(')))))))))))) (((((((((( url:', url, self);
 			const js_promise = common.prototype.load_style(url)
 
 	// const js_promise = Promise.all(load_promises)
@@ -939,16 +952,23 @@ section.prototype.delete_section = async function (options) {
 * NAVIGATE
 * Refresh the section instance with new sqo params creating a
 * history footprint. Used to paginate and sort records
-* @param function callback
+* @param object options
 * @return promise
 */
-section.prototype.navigate = async function(callback, navigation_history=false) {
+section.prototype.navigate = async function(options) {
 
 	const self = this
 
+	// options
+		const callback				= options.callback
+		const navigation_history	= options.navigation_history!==undefined
+			? options.navigation_history
+			: false
+		const action				= options.action || 'paginate'
+
 	// unsaved_data check
 		if (window.unsaved_data===true) {
-			if (!confirm('section: ' +get_label.discard_changes || 'Discard unsaved changes?')) {
+			if (!confirm('section: '+get_label.discard_changes || 'Discard unsaved changes?')) {
 				return false
 			}
 			// reset unsaved_data state by the user
@@ -961,6 +981,42 @@ section.prototype.navigate = async function(callback, navigation_history=false) 
 
 			if(SHOW_DEBUG===true) {
 				// console.log("-> Executed section navigate received callback:", callback);
+			}
+		}
+
+	// set_local_db_data updated rqo.
+		// This is used to locate last navigation offset of this section
+		// when the user moves from edit to list mode form menu link
+		if (self.mode==='list') {
+
+			// list. Save current rqo to get offset when return
+			const rqo = clone(self.rqo)
+			data_manager.set_local_db_data(
+				rqo,
+				'rqo'
+			)
+		}else if(self.mode==='edit' && action==='search') {
+
+			// edit. note that user search in edit mode must to rest offset always
+			// to prevent inconsistent navigation offset between edit and list mode
+			const list_id_expected	= self.id.replace('_edit_','_list_')
+			const saved_rqo			= await data_manager.get_local_db_data(
+				list_id_expected,
+				'rqo'
+			)
+			if (saved_rqo) {
+				// reset offset to allow section to go first page when change to list mode
+				const rqo = clone(self.rqo)
+				// replace sqo with the new one
+				saved_rqo.sqo			= rqo.sqo
+				// restore list pagination defaults
+				saved_rqo.sqo.offset	= 0
+				saved_rqo.sqo.limit		= 10
+
+				await data_manager.set_local_db_data(
+					saved_rqo,
+					'rqo'
+				)
 			}
 		}
 
@@ -992,3 +1048,77 @@ section.prototype.navigate = async function(callback, navigation_history=false) 
 
 	return true
 }//end navigate
+
+
+
+/**
+* CHANGE_MODE
+* Destroy current instance and dependencies without remove HTML nodes (used to get target parent node placed in DOM)
+* Create a new instance in the new mode (for example, from list to edit) and view (ex, from default to line )
+* Render a fresh full element node in the new mode
+* Replace every old placed DOM node with the new one
+* @param object options
+* @return bool
+*/
+section.prototype.change_mode = async function(options) {
+
+	/*
+		under construction !
+	*/
+
+	const self = this
+
+	// options vars
+		// mode check. When mode is undefined, fallback to 'list'. From 'list', change to 'edit'
+		const mode = (options.mode)
+			? options.mode
+			: self.mode==='list' ? 'edit' : 'list'
+		const autoload = (typeof options.autoload!=='undefined')
+			? options.autoload
+			: true
+		const view = options.view ?? null
+
+	// short vars
+		// set
+		const current_context		= self.context
+		const section_lang			= self.section_lang
+		const old_node				= self.node
+		const id_variant			= self.id_variant
+
+	// set the new view to context
+		current_context.view = view
+		current_context.mode = mode
+
+	// element. Create the instance options for build it. The instance is reflect of the context and section_id
+		const new_instance = await instances.get_instance({
+			model			: current_context.model,
+			tipo			: current_context.tipo,
+			section_tipo	: current_context.section_tipo,
+			mode			: mode,
+			lang			: current_context.lang,
+			section_lang	: section_lang,
+			type			: current_context.type,
+			id_variant		: id_variant
+		})
+
+	// build
+		await new_instance.build(autoload)
+
+	// render
+		const new_node = await new_instance.render({
+			render_level : 'full'
+		})
+
+	// replace the node with the new render
+		// old_node.parentNode.replaceChild(new_node, old_node)
+		old_node.replaceWith(new_node);
+
+	// destroy self instance (delete_self=true, delete_dependencies=false, remove_dom=false)
+		self.destroy(
+			true, // delete_self
+			true, // delete_dependencies
+			true // remove_dom
+		)
+
+	return true
+}//end change_mode

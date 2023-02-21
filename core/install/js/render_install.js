@@ -555,6 +555,83 @@ const render_config_block = function(self) {
 			this.remove();
 		})//end mouse_up event
 
+	// db_data_version. Update option
+		const db_data_version = (self.context.properties && self.context.properties.db_data_version)
+			? self.context.properties.db_data_version
+			: null
+		if (db_data_version && db_data_version[0] && parseInt(db_data_version[0])<6) {
+
+			const update_button = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'primary update_button',
+				inner_html		: get_label.to_update || 'To update',
+				parent			: fragment
+			})
+			update_button.addEventListener('mouseup', async function() {
+
+				// lock button
+					update_button.classList.add('loading')
+
+				// remove other options
+					install_button.remove()
+
+				// add spinner
+				const spinner = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'spinner',
+					parent			: to_update_status
+				})
+
+				// data_manager API call
+					const api_response = await data_manager.request({
+						body : {
+							action	: 'install',
+							dd_api	: 'dd_utils_api',
+							options	: {
+								action : 'to_update'
+							}
+						}
+					})
+
+				// manage result
+					if (api_response.result===false) {
+
+						// fail case
+
+						console.error("to_update api_response:", api_response);
+
+					}else{
+
+						// all is OK case
+
+						console.log("to_update api_response:", api_response);
+
+						let counter = 5;
+						const interval = setInterval(() => {
+							to_update_status.innerHTML = 'Initializing in ' + counter
+							counter--;
+							if (counter < 0 ) {
+								spinner.remove()
+								clearInterval(interval);
+								location.reload()
+							}
+						}, 1000);
+
+						update_button.remove()
+					}
+
+				// unlock button
+					update_button.classList.remove('loading')
+			})//end mouse_up event
+
+			const to_update_status = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'msg',
+				parent			: fragment
+			})
+		}
+
+
 
 	return fragment;
 }//end render_config_block
