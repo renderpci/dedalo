@@ -216,11 +216,11 @@ class component_pdf extends component_media_common {
 			$id = $this->get_id();
 
 		// url
-			$url = $this->get_media_dir($quality) .'/'. $id .'.'. $this->get_extension();
+			$url = $this->get_media_url_dir($quality) .'/'. $id .'.'. $this->get_extension();
 
 		// File exists test : If not, show '0' dedalo image logo
 			if($test_file===true) {
-				$file = $this->get_local_full_path($quality);
+				$file = $this->get_media_filepath($quality);
 				if(!file_exists($file)) {
 					if ($default_add===false) {
 						return null;
@@ -255,7 +255,7 @@ class component_pdf extends component_media_common {
 		// 	$ar_quality = DEDALO_PDF_AR_QUALITY;
 		// 	foreach ($ar_quality as $current_quality) {
 		// 		# media_path
-		// 		$media_path = $this->get_path($current_quality);
+		// 		$media_path = $this->get_media_filepath($current_quality);
 
 		// 		if (!file_exists($media_path)) continue; # Skip
 
@@ -300,7 +300,7 @@ class component_pdf extends component_media_common {
 		foreach ($ar_quality as $current_quality) {
 
 			// media_path
-			$media_path = $this->get_media_path($current_quality) . '/deleted';
+			$media_path = $this->get_media_path_dir($current_quality) . '/deleted';
 			$id 	= $this->get_id();
 
 			$file_pattern 	= $media_path .'/'. $id .'_*.'. $extension;
@@ -312,7 +312,7 @@ class component_pdf extends component_media_common {
 
 			natsort($ar_files);	# sort the files from newest to oldest
 			$last_file_path	= end($ar_files);
-			$new_file_path	= $this->get_local_full_path($current_quality);
+			$new_file_path	= $this->get_media_filepath($current_quality);
 
 			// move file
 			if( !rename($last_file_path, $new_file_path) ) {
@@ -369,7 +369,7 @@ class component_pdf extends component_media_common {
 
 		// thumb not exists case: generate from PDF
 			$quality	= $this->get_default_quality();
-			$path		= $this->get_local_full_path($quality);
+			$path		= $this->get_media_filepath($quality);
 			if (file_exists($path)) {
 
 				// dimensions . Like "102x57"
@@ -514,7 +514,7 @@ class component_pdf extends component_media_common {
 				$related_component_text_area_tipo	= reset($ar_related_component_text_area_tipo);
 				$related_component_text_area_model	= RecordObj_dd::get_modelo_name_by_tipo($related_component_text_area_tipo,true);
 				$quality							= $this->get_default_quality();
-				$target_pdf_path					= $this->get_local_full_path($quality);
+				$target_pdf_path					= $this->get_media_filepath($quality);
 
 				try {
 					$options = new stdClass();

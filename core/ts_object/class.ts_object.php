@@ -299,7 +299,7 @@ class ts_object {
 					}else if ($model_name==='component_svg'){
 
 						# file exists check
-						$file_path	= $component->get_path();
+						$file_path	= $component->get_media_filepath();
 						$file_url	= (file_exists($file_path)===true)
 							? $component->get_url() . '?' . start_time()
 							: '';

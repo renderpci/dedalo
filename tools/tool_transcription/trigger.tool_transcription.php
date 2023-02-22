@@ -118,13 +118,15 @@ function pdf_automatic_transcription(object $json_data) : object {
 		}
 	}
 
-	$component_pdf  = component_common::get_instance("component_pdf",
-													 $source_tipo,
-													 $section_id,
-													 "edit",
-													 DEDALO_DATA_LANG,
-													 $section_tipo);
-	$path_pdf 		= $component_pdf->get_path();
+	$component_pdf  = component_common::get_instance(
+		"component_pdf",
+		$source_tipo,
+		$section_id,
+		"edit",
+		DEDALO_DATA_LANG,
+		$section_tipo
+	);
+	$path_pdf 		= $component_pdf->get_media_filepath();
 
 	#
 	# FILE TEXT FROM PDF
