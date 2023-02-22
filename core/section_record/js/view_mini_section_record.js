@@ -105,7 +105,7 @@ view_mini_section_record.render = async function(self, options) {
 							console.error("Undefined current_instance:", current_instance, j, ar_instances);
 							continue;
 						}
-						// check if the current_instance has column_id if not a error was done by the common creating the columns.
+					// check if the current_instance has column_id if not a error was done by the common creating the columns.
 						if (current_instance.column_id) {
 
 							const ar_sub_columns_map = current_instance.columns_map || ar_instances
