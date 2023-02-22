@@ -158,7 +158,7 @@ class tools_register {
 							}
 
 						// look for already existing tools
-							$tool_found			= self::get_tool_by_name($tool_name, self::$section_registered_tools_tipo); // return section record raw data or null
+							$tool_found			= self::get_tool_data_by_name($tool_name, self::$section_registered_tools_tipo); // return section record raw data or null
 							$current_section_id	= !empty($tool_found->section_id)
 								? (int)$tool_found->section_id
 								: null;
@@ -231,13 +231,13 @@ class tools_register {
 
 
 	/**
-	* GET_TOOL_BY_NAME
-	* Gets current tool from the tool name
+	* GET_TOOL_DATA_BY_NAME
+	* Gets current tool data from the tool name
 	* Note that this function can search in any virtual of section 'Tools' (dd73)
 	* @param string $tool_name
 	* @return object|null $tool_full_data
 	*/
-	public static function get_tool_by_name(string $tool_name, string $section_tipo) : ?object {
+	public static function get_tool_data_by_name(string $tool_name, string $section_tipo) : ?object {
 
 		// search by tool name
 			$sqo = json_decode('{
@@ -277,7 +277,7 @@ class tools_register {
 		$tool_full_data = $result->ar_records[0] ?? null;
 
 		return $tool_full_data;
-	}//end get_tool_by_name
+	}//end get_tool_data_by_name
 
 
 
@@ -661,7 +661,7 @@ class tools_register {
 			$tools_configuration		= self::$tools_configuration; // 'dd999'
 
 		// search by tool name. (!) Note that section_tipo is dd996 (Tools configuration) a virtual of 'dd73'
-			$tool_by_name = self::get_tool_by_name($tool_name, $section_tools_config_tipo);
+			$tool_by_name = self::get_tool_data_by_name($tool_name, $section_tools_config_tipo);
 
 		// empty result case
 			if(empty($tool_by_name)) {
