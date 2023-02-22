@@ -440,6 +440,7 @@ final class dd_core_api {
 		// validate input data
 			if (empty($rqo->source->section_tipo)) {
 				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty source \'section_tipo\' (is mandatory)';
+				debug_log(__METHOD__." $response->msg ".PHP_EOL.to_string($rqo), logger::ERROR);
 				return $response;
 			}
 
