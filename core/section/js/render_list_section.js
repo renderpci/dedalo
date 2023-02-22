@@ -7,6 +7,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
+	import {clone} from '../../common/js/utils/index.js'
 	import {view_default_list_section} from './view_default_list_section.js'
 
 
@@ -325,7 +326,7 @@ export const render_column_id = function(options) {
 							button_edit.addEventListener('click', function(){
 
 								// sqo. Note that sqo will be used as request_config.sqo on navigate
-									const sqo = self.request_config_object.sqo
+									const sqo = clone(self.request_config_object.sqo)
 									// set updated filter
 									sqo.filter = self.rqo.sqo.filter
 									// reset pagination

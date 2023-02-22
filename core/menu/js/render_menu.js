@@ -249,7 +249,7 @@ render_menu.prototype.edit = async function() {
 				// preserve offset and order
 				if (current_instance.mode==='edit') {
 
-					// local_db_data. On section paginate, local_db_data is saved. Recover saved sqo here to
+					// saved_sqo from local_db_data. On section paginate, local_db_data is saved. Recover saved sqo here to
 					// go to list mode in the same position (offset) that the user saw
 						const section_tipo	= current_instance.tipo
 						const sqo_id		= ['section', section_tipo].join('_')
@@ -280,12 +280,12 @@ render_menu.prototype.edit = async function() {
 						 }
 
 					// navigation
-						const navigation_rqo = {
+						const user_navigation_rqo = {
 							caller_id	: self.id,
 							source		: source,
 							sqo			: sqo  // new sqo to use in list mode
 						}
-						event_manager.publish('user_navigation', navigation_rqo)
+						event_manager.publish('user_navigation', user_navigation_rqo)
 				}
 				self.menu_active = false
 			})
