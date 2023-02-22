@@ -136,7 +136,7 @@ service_autocomplete.prototype.build = async function(options={}) {
 	// engine. get the search_engine sended or set the default value
 		self.search_engine = (self.request_config_object) ? self.request_config_object.api_engine : 'dedalo';
 
-	// rqo_search, it's necesary do it by caller, because rqo is dependent of the source.
+	// rqo_search, it's necessary do it by caller, because rqo is dependent of the source.
 	// API get rqo to do the search as the caller.
 		self.rqo_search	= await self.caller.build_rqo_search(self.request_config_object, 'search')
 
