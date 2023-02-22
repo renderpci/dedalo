@@ -701,7 +701,7 @@ class component_media_common extends component_common {
 			foreach ($ar_quality as $current_quality) {
 
 				// media_path is full path of file like '/www/dedalo/media_test/media_development/svg/standard/rsc29_rsc170_77.svg'
-					$media_path = $this->get_local_full_path($current_quality);
+					$media_path = $this->get_media_filepath($current_quality);
 					if (!file_exists($media_path)) continue; # Skip
 
 				// delete directory
@@ -854,7 +854,7 @@ class component_media_common extends component_common {
 
 
 		// file path
-			$file_path = $this->get_local_full_path($quality);
+			$file_path = $this->get_media_filepath($quality);
 			// original could override default path
 			if ($quality==='original') {
 				$raw_path = $this->get_original_file_path($quality);
@@ -1171,11 +1171,11 @@ class component_media_common extends component_common {
 
 
 	/**
-	* GET_LOCAL_FULL_PATH
+	* GET_media_filepath
 	* @return string $path
 	* 	complete absolute file path like '/Users/myuser/works/Dedalo/images/dd152-1.jpg'
 	*/
-	public function get_local_full_path(?string $quality) : string {
+	public function get_media_filepath(?string $quality) : string {
 
 		if(empty($quality)) {
 			$quality = $this->get_quality();
@@ -1184,7 +1184,7 @@ class component_media_common extends component_common {
 		$path = $this->get_media_path_dir($quality) .'/'. $this->get_name() . '.' . $this->get_extension();
 
 		return	$path;
-	}//end get_local_full_path
+	}//end get_media_filepath
 
 
 
