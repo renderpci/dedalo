@@ -9,43 +9,6 @@ final class dd_utils_api {
 
 
 	/**
-	* GET_MENU (Moved to unified call to read->get-data !)
-	* @return object $response
-	*/
-		// public static function get_menu($request_options=null) {
-		// 	$start_time = start_time();
-
-		// 	// session_write_close();
-
-		// 	$response = new stdClass();
-		// 		$response->result	= false;
-		// 		$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-
-		// 	$menu = new menu();
-
-		// 	// menu json
-		// 		$get_json_options = new stdClass();
-		// 			$get_json_options->get_context	= true;
-		// 			$get_json_options->get_data		= true;
-		// 		$menu_json = $menu->get_json($get_json_options);
-
-		// 	$response->msg		= 'Ok. Request done';
-		// 	$response->result	= $menu_json;
-
-		// 	// Debug
-		// 		if(SHOW_DEBUG===true) {
-		// 			$debug = new stdClass();
-		// 				$debug->exec_time		= exec_time_unit($start_time,'ms').' ms';
-		// 				$debug->request_options	= $request_options;
-		// 			$response->debug = $debug;
-		// 		}
-
-		// 	return $response;
-		// }//end get_menu
-
-
-
-	/**
 	* GET_LOGIN_CONTEXT
 	* This function is not used in normal login behavior (login is called directly in start API).
 	* It could be called when the instance of the login has been build with autoload in true.
@@ -84,7 +47,7 @@ final class dd_utils_api {
 	/**
 	* GET_INSTALL_CONTEXT
 	* This function is an alias of get_element_context and does not need to login before
-	* @param object $request_options
+	* @param object $rqo
 	* @return object $response
 	*/
 	public static function get_install_context(object $rqo) : object {
@@ -116,9 +79,10 @@ final class dd_utils_api {
 
 	/**
 	* DEDALO_VERSION
+	* @param object $rqo
 	* @return object $response
 	*/
-	public static function dedalo_version(object $request_options=null) : object {
+	public static function dedalo_version(object $rqo) : object {
 		$start_time = start_time();
 
 		session_write_close();
@@ -142,9 +106,10 @@ final class dd_utils_api {
 
 	/**
 	* DATABASE_INFO
+	* @param object $rqo
 	* @return object $response
 	*/
-	public static function database_info(object $request_options=null) : object {
+	public static function database_info(object $rqo) : object {
 		$start_time = start_time();
 
 		session_write_close();
@@ -166,9 +131,10 @@ final class dd_utils_api {
 
 	/**
 	* GET_SYSTEM_INFO
+	* @param object $rqo
 	* @return object response
 	*/
-	public static function get_system_info(object $request_options=null) : object {
+	public static function get_system_info(object $rqo) : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -230,10 +196,10 @@ final class dd_utils_api {
 
 	/**
 	* MAKE_BACKUP
+	* @param object $rqo
 	* @return object $response
 	*/
-	public static function make_backup(object $request_options=null) : object {
-		$start_time = start_time();
+	public static function make_backup(object $rqo) : object {
 
 		// session_write_close();
 
@@ -243,7 +209,7 @@ final class dd_utils_api {
 
 
 		$response->result	= backup::make_backup();
-		$response->msg		= 'Ok. Request done';
+		$response->msg		= 'OK. Request done';
 
 
 		return $response;
@@ -253,9 +219,10 @@ final class dd_utils_api {
 
 	/**
 	* UPDATE_ONTOLOGY
+	* @param object $rqo
 	* @return object $response
 	*/
-	public static function update_ontology(object $request_options=null) : object {
+	public static function update_ontology(object $rqo) : object {
 		$start_time = start_time();
 
 		// session_write_close();
@@ -265,7 +232,7 @@ final class dd_utils_api {
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// dedalo_prefix_tipos
-			$dedalo_prefix_tipos = array_find((array)$request_options->options, function($item){
+			$dedalo_prefix_tipos = array_find((array)$rqo->options, function($item){
 				return $item->name==='dedalo_prefix_tipos';
 			})->value;
 			$ar_dedalo_prefix_tipos = array_map(function($item){
@@ -340,14 +307,13 @@ final class dd_utils_api {
 		# Delete session permissions table (force to recalculate)
 		#unset($_SESSION['dedalo']['auth']['permissions_table']);
 
-		# Delete all session data except auth
+		// delete all session data except auth
 			foreach ($_SESSION['dedalo'] as $key => $value) {
 				if ($key==='auth') continue;
 				unset($_SESSION['dedalo'][$key]);
 			}
 
-		#
-		# UPDATE JAVASCRIPT LABELS
+		// update javascript labels
 			$ar_langs = DEDALO_APPLICATION_LANGS;
 			foreach ($ar_langs as $lang => $label) {
 				$label_path	= '/common/js/lang/' . $lang . '.js';
@@ -356,8 +322,7 @@ final class dd_utils_api {
 				debug_log(__METHOD__." Generated js labels file for lang: $lang - $label_path ".to_string(), logger::DEBUG);
 			}
 
-		#
-		# UPDATE STRUCTURE CSS
+		// update structure css
 			$build_structure_css_response = (object)css::build_structure_css();
 			if ($build_structure_css_response->result===false) {
 				debug_log(__METHOD__." Error on build_structure_css: ".to_string($build_structure_css_response), logger::ERROR);
@@ -367,9 +332,8 @@ final class dd_utils_api {
 				return $response;
 			}
 
-
 		$response->result	= true;
-		$response->msg		= 'Ok. Request done ['.__FUNCTION__.']';
+		$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
 
 
 		return $response;
@@ -379,10 +343,10 @@ final class dd_utils_api {
 
 	/**
 	* STRUCTURE_TO_JSON
+	* @param object $rqo
 	* @return object $response
 	*/
-	public static function structure_to_json(object $request_options=null) : object {
-		$start_time = start_time();
+	public static function structure_to_json(object $rqo) : object {
 
 		// session_write_close();
 
@@ -391,7 +355,7 @@ final class dd_utils_api {
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// dedalo_prefix_tipos
-			$dedalo_prefix_tipos = array_find((array)$request_options->options, function($item){
+			$dedalo_prefix_tipos = array_find((array)$rqo->options, function($item){
 				return $item->name==='dedalo_prefix_tipos';
 			})->value;
 			$ar_dedalo_prefix_tipos = array_map(function($item){
@@ -401,7 +365,6 @@ final class dd_utils_api {
 				$response->msg .= ' - Empty dedalo_prefix_tipos value!';
 				return $response;
 			}
-
 
 		$ar_tld		= $ar_dedalo_prefix_tipos;
 		$json_data	= backup::structure_to_json($ar_tld);
@@ -417,7 +380,7 @@ final class dd_utils_api {
 		}
 
 		$response->result	= true;
-		$response->msg		= 'Ok. Request done ['.__FUNCTION__.']';
+		$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
 
 
 		return $response;
@@ -427,10 +390,10 @@ final class dd_utils_api {
 
 	/**
 	* IMPORT_STRUCTURE_FROM_JSON
+	* @param object $rqo
 	* @return object $response
 	*/
-	public static function import_structure_from_json(object $request_options=null) : object {
-		$start_time = start_time();
+	public static function import_structure_from_json(object $rqo) : object {
 
 		// session_write_close();
 
@@ -439,7 +402,7 @@ final class dd_utils_api {
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// dedalo_prefix_tipos
-			$dedalo_prefix_tipos = array_find((array)$request_options->options, function($item){
+			$dedalo_prefix_tipos = array_find((array)$rqo->options, function($item){
 				return $item->name==='dedalo_prefix_tipos';
 			})->value;
 			$ar_dedalo_prefix_tipos = array_map(function($item){
@@ -456,7 +419,7 @@ final class dd_utils_api {
 		$response	= backup::import_structure_json_data($data, $ar_tld);
 
 		$response->result	= true;
-		$response->msg		= 'Ok. Request done ['.__FUNCTION__.']';
+		$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
 
 
 		return $response;
@@ -466,10 +429,10 @@ final class dd_utils_api {
 
 	/**
 	* REGISTER_TOOLS
+	* @param object $rqo
 	* @return object $response
 	*/
-	public static function register_tools(object $request_options=null) : object {
-		$start_time = start_time();
+	public static function register_tools(object $rqo) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -477,7 +440,7 @@ final class dd_utils_api {
 
 
 		$response->result	= tools_register::import_tools();
-		$response->msg		= 'Ok. Request done';
+		$response->msg		= 'OK. Request done';
 
 
 		return $response;
@@ -486,11 +449,11 @@ final class dd_utils_api {
 
 
 	/**
-	* BUILD_STRUCTURE_CSS *DEPRECATED*
+	* BUILD_STRUCTURE_CSS **** DEPRECATED ! ****
+	* @param object $rqo
 	* @return object $response
 	*/
-	public static function build_structure_css(object $request_options=null) : object {
-		$start_time = start_time();
+	public static function build_structure_css(object $rqo) : object {
 
 		// session_write_close();
 
@@ -500,7 +463,7 @@ final class dd_utils_api {
 
 
 		$response->result	= css::build_structure_css();
-		$response->msg		= 'Ok. Request done';
+		$response->msg		= 'OK. Request done';
 
 
 		return $response;
@@ -510,9 +473,10 @@ final class dd_utils_api {
 
 	/**
 	* BUILD_INSTALL_VERSION
+	* @param object $rqo
 	* @return object $response
 	*/
-	public static function build_install_version(object $request_options=null) : object {
+	public static function build_install_version(object $rqo) : object {
 
 		// session_write_close();
 
@@ -536,11 +500,10 @@ final class dd_utils_api {
 	* Allow change components data format or add new tables or index
 	* Triggered by Area Development button 'UPDATE DATA'
 	* Sample: Current data version: 5.8.2 -----> 6.0.0
-	* @param object@null $request_options
+	* @param object $rqo
 	* @return object $response
 	*/
-	public static function update_version(object $request_options=null) : object {
-		$start_time = start_time();
+	public static function update_version(object $rqo) : object {
 
 		// set time limit
 			set_time_limit ( 259200 );  // 3 days
@@ -565,10 +528,10 @@ final class dd_utils_api {
 
 	/**
 	* CONVERT_SEARCH_OBJECT_TO_SQL_QUERY
+	* @param object $rqo
 	* @return object $response
 	*/
-	public static function convert_search_object_to_sql_query(object $request_options=null) : object {
-		$start_time = start_time();
+	public static function convert_search_object_to_sql_query(object $rqo) : object {
 
 		// session_write_close();
 
@@ -579,14 +542,14 @@ final class dd_utils_api {
 
 		set_time_limit ( 259200 );  // 3 days
 
-		if($search_query_object = json_decode($request_options->options)) {
+		if($search_query_object = json_decode($rqo->options)) {
 
 			$search = search::get_instance($search_query_object);
 
 			// search exec
 				$rows = $search->search();
 
-			// sql string query
+			// SQL string query
 				$sql_query = $rows->strQuery;
 
 				$ar_lines = explode(PHP_EOL, $sql_query);
@@ -613,17 +576,17 @@ final class dd_utils_api {
 
 	/**
 	* CHANGE_LANG
+	* @param object $rqo
 	* @return object $response
 	*/
-	public static function change_lang(object $request_options) : object {
-		$start_time = start_time();
+	public static function change_lang(object $rqo) : object {
 
 		$response = new stdClass();
 			$response->result	= true;
 			$response->msg		= 'Ok. Request done ['.__METHOD__.']';
 
 		// options
-			$options					= $request_options->options;
+			$options					= $rqo->options;
 			$dedalo_data_lang			= $options->dedalo_data_lang ?? null;
 			$dedalo_application_lang	= $options->dedalo_application_lang ?? null;
 
@@ -656,21 +619,16 @@ final class dd_utils_api {
 
 	/**
 	* LOGIN
+	* @param object $rqo
 	* @return object $response
 	*/
-	public static function login(object $request_options) : object {
-		$start_time = start_time();
+	public static function login(object $rqo) : object {
 
 		$options = new stdClass();
-			$options->username	= $request_options->options->username;
-			$options->password	= $request_options->options->auth;
+			$options->username	= $rqo->options->username;
+			$options->password	= $rqo->options->auth;
 
 		$response = (object)login::Login( $options );
-
-		// force to calculate user permissions useful for menu etc.
-			// $ar_permissions_areas	= security::get_ar_authorized_areas_for_user();
-			// $areas					= area::get_areas();
-			// $ar_label				= label::get_ar_label();
 
 
 		return $response;
@@ -680,27 +638,29 @@ final class dd_utils_api {
 
 	/**
 	* QUIT
+	* @param object $rqo
 	* @return object $response
 	*/
-	public static function quit(object $request_options) : object {
-		$start_time = start_time();
+	public static function quit(object $rqo) : object {
 
 		$response = new stdClass();
 			$response->result	= true;
-			$response->msg		= 'Ok. Request done ['.__METHOD__.']';
+			$response->msg		= 'OK. Request done ['.__METHOD__.']';
 
 		// Login type . Get before unset session
-			$login_type = isset($_SESSION['dedalo']['auth']['login_type']) ? $_SESSION['dedalo']['auth']['login_type'] : 'default';
+			$login_type = isset($_SESSION['dedalo']['auth']['login_type'])
+				? $_SESSION['dedalo']['auth']['login_type']
+				: 'default';
 
 		// Quit action
-			$result = login::Quit( $request_options->options );
+			$result = login::Quit( $rqo->options );
 
 		// Close script session
 			session_write_close();
 
 		// Response
 			$response->result	= $result;
-			$response->msg		= 'Ok. Request done ['.__FUNCTION__.']';
+			$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
 
 			// saml logout
 				if ($login_type==='saml' && defined('SAML_CONFIG') && SAML_CONFIG['active']===true && isset(SAML_CONFIG['logout_url'])) {
@@ -716,12 +676,12 @@ final class dd_utils_api {
 	/**
 	* INSTALL
 	* Control the install process calls to be re-direct to the correct actions
-	* @param object $request_options
+	* @param object $rqo
 	* @return object $response
 	*/
-	public static function install(object $request_options) : object {
+	public static function install(object $rqo) : object {
 
-		$action	= $request_options->options->action;
+		$action	= $rqo->options->action;
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -769,7 +729,7 @@ final class dd_utils_api {
 						return $response;
 					}
 
-				$install_hierarchies_options = $request_options->options;
+				$install_hierarchies_options = $rqo->options;
 
 				// exec
 					$response = (object)install::install_hierarchies( $install_hierarchies_options );
@@ -778,7 +738,7 @@ final class dd_utils_api {
 			case 'set_root_pw':
 
 				//exec
-					$response = (object)install::set_root_pw($request_options->options);
+					$response = (object)install::set_root_pw($rqo->options);
 				break;
 
 			case 'install_finish':
@@ -799,10 +759,10 @@ final class dd_utils_api {
 
 	/**
 	* REGENERATE_RELATIONS
+	* @param object $rqo
 	* @return object $response
 	*/
-	public static function regenerate_relations(object $request_options) : object {
-		$start_time = start_time();
+	public static function regenerate_relations(object $rqo) : object {
 
 		$response = new stdClass();
 			$response->result	= true;
@@ -811,7 +771,7 @@ final class dd_utils_api {
 		session_write_close();
 
 		// tables value
-			$item_tables = array_find($request_options->options, function($item){
+			$item_tables = array_find($rqo->options, function($item){
 				return $item->name==='tables';
 			});
 
@@ -845,10 +805,10 @@ final class dd_utils_api {
 	*	}
 	*	"prevent_lock": true
 	* }
+	* @param object $rqo
 	* @return object $response
 	*/
-	public static function upload(object $request_options) : object {
-		$start_time = start_time();
+	public static function upload(object $rqo) : object {
 
 		// response
 			$response = new stdClass();
@@ -856,11 +816,11 @@ final class dd_utils_api {
 				$response->msg		= 'Error. '.label::get_label('error_on_upload_file');
 
 		// debug
-			debug_log(__METHOD__." --> received request_options: ".to_string($request_options), logger::DEBUG);
+			debug_log(__METHOD__." --> received rqo: ".to_string($rqo), logger::DEBUG);
 
-		// request_options
-			$fileToUpload	= $request_options->fileToUpload ?? $request_options->upload;	// assoc array Added from PHP input '$_FILES'
-			$resource_type	= $request_options->resource_type; // string like 'tool_upload'
+		// rqo
+			$fileToUpload	= $rqo->fileToUpload ?? $rqo->upload;	// assoc array Added from PHP input '$_FILES'
+			$resource_type	= $rqo->resource_type; // string like 'tool_upload'
 
 		// check for upload issues
 		try {
@@ -1045,9 +1005,10 @@ final class dd_utils_api {
 	* UPDATE_LOCK_COMPONENTS_STATE
 	* Connects to database and updates user lock components state
 	* on focus or blur user actions
+	* @param object $rqo
 	* @return object $response
 	*/
-	public static function update_lock_components_state(object $request_options) : object {
+	public static function update_lock_components_state(object $rqo) : object {
 
 		// Ignore user abort load page
 		ignore_user_abort(true);
@@ -1057,10 +1018,10 @@ final class dd_utils_api {
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// short vars
-			$section_id		= $request_options->section_id;
-			$section_tipo	= $request_options->section_tipo;
-			$component_tipo	= $request_options->component_tipo;
-			$action			= $request_options->action;
+			$section_id		= $rqo->section_id;
+			$section_tipo	= $rqo->section_tipo;
+			$component_tipo	= $rqo->component_tipo;
+			$action			= $rqo->action;
 			$user_id		= (int)navigator::get_user_id();
 			$full_username	= ($user_id<0)
 				? 'Debug user'
@@ -1089,9 +1050,10 @@ final class dd_utils_api {
 	* GET_DEDALO_FILES
 	* Connects to database and updates user lock components state
 	* on focus or blur user actions
+	* @param object $rqo
 	* @return object $response
 	*/
-	public static function get_dedalo_files(object $request_options=null) : object {
+	public static function get_dedalo_files(object $rqo) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1148,9 +1110,10 @@ final class dd_utils_api {
 	* CREATE_TEST_RECORD
 	* This record it's necessary to run unit_test checks
 	* Table 'matrix_test' must to exists
+	* @param object $rqo
 	* @return object $response
 	*/
-	public static function create_test_record(object $request_options=null) : object {
+	public static function create_test_record(object $rqo) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
