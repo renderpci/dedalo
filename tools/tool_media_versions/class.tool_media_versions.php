@@ -119,7 +119,7 @@ class tool_media_versions extends tool_common {
 			$section_tipo	= $options->section_tipo;
 			$section_id		= $options->section_id;
 			$quality		= $options->quality;
-
+			
 		// component
 			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			$component	= component_common::get_instance($model,
