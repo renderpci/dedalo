@@ -7,8 +7,9 @@
 class indexation_grid {
 
 
+
 	/**
-	* VARS
+	* @var
 	*/
 		protected $tipo;
 		protected $section_id;

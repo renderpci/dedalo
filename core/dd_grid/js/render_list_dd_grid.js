@@ -195,7 +195,7 @@ export const get_button_column = function(current_data) {
 
 	// image
 		const button = ui.create_dom_element({
-			element_type	: "img",
+			element_type	: 'img',
 			class_name		: class_list
 		})
 
