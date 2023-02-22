@@ -249,40 +249,35 @@ render_menu.prototype.edit = async function() {
 				// preserve offset and order
 				if (current_instance.mode==='edit') {
 
-					// local_db_data. On section paginate, local_db_data is saved. Recover saved rqo here to
+					// saved_sqo from local_db_data. On section paginate, local_db_data is saved. Recover saved sqo here to
 					// go to list mode in the same position (offset) that the user saw
-						const list_id_expected	= current_instance.id.replace('_edit_','_list_')
-						const saved_rqo			= await data_manager.get_local_db_data(
-							list_id_expected,
-							'rqo'
+						const section_tipo	= current_instance.tipo
+						const sqo_id		= ['section', section_tipo].join('_')
+						const saved_sqo		= await data_manager.get_local_db_data(
+							sqo_id,
+							'sqo'
 						)
 
 					// sqo. Note that we are changing from edit to list mode and current offset it's not applicable
 					// The list offset will be get from server session if exists
-						const sqo = saved_rqo && saved_rqo.sqo
-							? saved_rqo.sqo
+						const sqo = saved_sqo
+							? saved_sqo.value
 							: {
 								filter	: current_instance.rqo.sqo.filter,
-								order	: current_instance.rqo.sqo.order || null,
-								offset	: current_instance.offset_list || 0
+								order	: current_instance.rqo.sqo.order || null
 							 }
-						sqo.section_tipo = current_instance.request_config_object.sqo.section_tipo // always use request_config_object format
-						if(SHOW_DEBUG===true) {
-							// console.log("---- fn_update_section_label sqo:", sqo.offset, sqo);
-							// console.log("---- fn_update_section_label current_instance:", current_instance);
-						}
+						// always use section request_config_object format instead parsed sqo format
+						sqo.section_tipo = current_instance.request_config_object.sqo.section_tipo
 
 					// source
-						const source = saved_rqo && saved_rqo.source
-							? saved_rqo.source
-							: {
-								action			: 'search',
-								model			: current_instance.model, // section
-								tipo			: current_instance.tipo,
-								section_tipo	: current_instance.section_tipo,
-								mode			: 'list',
-								lang			: current_instance.lang
-							 }
+						const source = {
+							action			: 'search',
+							model			: current_instance.model, // section
+							tipo			: current_instance.tipo,
+							section_tipo	: current_instance.section_tipo,
+							mode			: 'list',
+							lang			: current_instance.lang
+						 }
 
 					// navigation
 						const user_navigation_rqo = {
