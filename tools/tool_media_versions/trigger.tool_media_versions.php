@@ -57,7 +57,7 @@ function download_file($json_data) {
 	// file path
 		$file_path = ($quality==='original')
 			? $component_av->get_original_file_path($quality)
-			: $component_av->get_path($quality);
+			: $component_av->get_local_full_path($quality);
 
 	// extension
 		$extension = pathinfo($file_path, PATHINFO_EXTENSION);

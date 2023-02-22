@@ -124,38 +124,6 @@ class component_3d extends component_media_common {
 	}//end get_url
 
 
-
-	/**
-	* GET_VIDEO_PATH
-	* @param string|null $quality = null
-	* @return string $video_path
-	*/
-	public function get_video_path( ?string $quality=null ) : string {
-
-		if(empty($quality)) {
-			$quality = $this->get_quality();
-		}
-
-		$id = $this->get_id();
-
-		$video_path = DEDALO_MEDIA_PATH . DEDALO_3D_FOLDER .'/'. $quality . '/'. $id .'.'. $this->get_extension();
-
-		return $video_path;
-	}//end get_video_path
-
-
-
-	/**
-	* GET_PATH
-	* Alias of get_video_path
-	*/
-	public function get_path($quality=false) : string {
-
-		return $this->get_video_path($quality);
-	}//end get_path
-
-
-
 	/**
 	* GET_POSTERFRAME_FILE_NAME
 	*  like 'rsc35_rsc167_1.jpg'
@@ -401,7 +369,7 @@ class component_3d extends component_media_common {
 			$quality = $quality ?? $this->get_quality();
 
 		// read file
-			$path				= $this->get_path($quality);
+			$path				= $this->get_media_filepath($quality);
 			$media_attributes	= $this->get_media_attributes($path);
 			// expected result sample:
 				// {
@@ -856,9 +824,9 @@ class component_3d extends component_media_common {
 						debug_log(__METHOD__." RECOMPRESSING AV FROM '$quality' PLEASE WAIT.. ".to_string(), logger::DEBUG);
 
 						# If default quality file not exists, generate default quality version now
-						# $target_file  = $AVObj->get_local_full_path(); ???????????????????????????????? SURE ???????
+						# $target_file  = $AVObj->get_media_filepath(); ???????????????????????????????? SURE ???????
 						$quality_default_AVObj 		 = new AVObj($id, DEDALO_3D_QUALITY_DEFAULT);
-						$quality_default_target_file = $quality_default_AVObj->get_local_full_path();
+						$quality_default_target_file = $quality_default_AVObj->get_media_filepath();
 						if (!file_exists($quality_default_target_file)) {
 							$source_file = $full_file_path; // actually full original path and name
 							if (!file_exists($source_file)) {
@@ -897,7 +865,7 @@ class component_3d extends component_media_common {
 
 					# Audio conversion
 					$AVObj_target = new AVObj($id, 'audio');
-					$target_file  = $AVObj_target->get_local_full_path();
+					$target_file  = $AVObj_target->get_media_filepath();
 					if (!file_exists($target_file)) {
 						$source_file = $full_file_path;
 						if (!file_exists($source_file)) {
@@ -1085,7 +1053,7 @@ class component_3d extends component_media_common {
 			// // file_path
 			// 	$file_path = ($quality==='original')
 			// 			? $this->get_original_file_path($quality)
-			// 			: $this->get_path($quality);
+			// 			: $this->get_media_filepath($quality);
 
 			// if(!file_exists($file_path)) {
 

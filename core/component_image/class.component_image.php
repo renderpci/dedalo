@@ -261,35 +261,6 @@ class component_image extends component_media_common {
 
 
 
-	/**
-	* GET_IMAGE_PATH
-	* Get complete absolute file path like '/Users/myuser/works/Dedalo/images/1.5MB/dd152-1.jpg'
-	* @param string $quality optional default (bool)false
-	* @return string $image_path
-	*/
-	public function get_image_path(string $quality=null) : ?string {
-
-		if(empty($quality)) {
-			$quality = $this->get_quality();
-		}
-
-		$image_path = $this->get_local_full_path($quality);
-
-		return $image_path;
-	}//end get_image_path
-
-
-
-	/**
-	* GET_PATH
-	* Alias of get_image_path
-	*/
-	public function get_path(?string $quality) : ?string {
-
-		return $this->get_image_path($quality);
-	}//end get_path
-
-
 
 	/**
 	* GET_URL
@@ -322,11 +293,11 @@ class component_image extends component_media_common {
 			$id = $this->get_id();
 
 		// url
-			$url = $this->get_media_dir($quality) .'/'. $id .'.'. $this->get_extension();
+			$url = $this->get_media_url_dir($quality) .'/'. $id .'.'. $this->get_extension();
 
 		// File exists test : If not, show '0' dedalo image logo
 			if($test_file===true) {
-				$file = $this->get_local_full_path($quality);
+				$file = $this->get_media_filepath($quality);
 				if(!file_exists($file)) {
 					if ($default_add===false) {
 						return null;
@@ -430,7 +401,7 @@ class component_image extends component_media_common {
 		// 		$quality = $this->get_quality();
 		// 	}
 
-		// 	$target_dir = $this->get_media_path($quality);
+		// 	$target_dir = $this->get_media_path_dir($quality);
 
 		// 	return $target_dir;
 		// }//end get_target_dir
@@ -478,11 +449,11 @@ class component_image extends component_media_common {
 			$initial_media_path	= $this->get_initial_media_path();
 
 		// original_file check (normalized Dédalo original viewable). If not exist, create it
-			$original_file = $this->get_local_full_path($source_quality); //  $this->get_original_file_path('original');
+			$original_file = $this->get_media_filepath($source_quality); //  $this->get_original_file_path('original');
 			if ($original_file===false) {
 
 				# source data (default quality is source)
-				$original_image_path = $this->get_local_full_path(DEDALO_IMAGE_QUALITY_ORIGINAL);
+				$original_image_path = $this->get_media_filepath(DEDALO_IMAGE_QUALITY_ORIGINAL);
 
 				$path = pathinfo($original_image_path);
 				$original_image_extension = $this->get_original_extension(
@@ -494,14 +465,14 @@ class component_image extends component_media_common {
 			}
 
 		// Image source
-			$source_image			= $this->get_local_full_path($source_quality);
+			$source_image			= $this->get_media_filepath($source_quality);
 			$image_dimensions		= $this->get_image_dimensions($source_quality);
 
 			$source_pixels_width	= $image_dimensions[0] ?? null;
 			$source_pixels_height	= $image_dimensions[1] ?? null;
 
 		// Image target
-			$target_image			= $this->get_local_full_path($target_quality);
+			$target_image			= $this->get_media_filepath($target_quality);
 			$ar_target				= component_image::get_target_pixels_to_quality_conversion(
 				$source_pixels_width,
 				$source_pixels_height,
@@ -511,7 +482,7 @@ class component_image extends component_media_common {
 			$target_pixels_height	= $ar_target[1] ?? null;
 
 		# Target folder verify (EXISTS AND PERMISSIONS)
-			$target_dir = $this->get_media_path($target_quality) ;
+			$target_dir = $this->get_media_path_dir($target_quality) ;
 			if( !is_dir($target_dir) ) {
 				if(!mkdir($target_dir, 0775, true)) throw new Exception(" Error on read or create directory \"$target_quality\". Permission denied $target_dir (2)");
 			}
@@ -552,14 +523,14 @@ class component_image extends component_media_common {
 		// quality retouched
 			if (defined('DEDALO_IMAGE_QUALITY_RETOUCHED') && DEDALO_IMAGE_QUALITY_RETOUCHED!==false) {
 				# source data (modified is source)
-				$original_image_path	= $this->get_local_full_path(DEDALO_IMAGE_QUALITY_RETOUCHED);
+				$original_image_path	= $this->get_media_filepath(DEDALO_IMAGE_QUALITY_RETOUCHED);
 				$real_orig_quality		= DEDALO_IMAGE_QUALITY_RETOUCHED;	// Modified
 			}
 
 		// quality original
 			if (!isset($original_image_path) || !file_exists($original_image_path)) {
 				# source data (default quality is source)
-				$original_image_path	= $this->get_local_full_path(DEDALO_IMAGE_QUALITY_ORIGINAL);
+				$original_image_path	= $this->get_media_filepath(DEDALO_IMAGE_QUALITY_ORIGINAL);
 				$real_orig_quality		= DEDALO_IMAGE_QUALITY_ORIGINAL; // Original
 			}
 			// check original file again
@@ -569,7 +540,7 @@ class component_image extends component_media_common {
 			}
 
 		// quality default
-			$image_default_path	= $this->get_local_full_path(DEDALO_IMAGE_QUALITY_DEFAULT);
+			$image_default_path	= $this->get_media_filepath(DEDALO_IMAGE_QUALITY_DEFAULT);
 			// overwrite or create default quality image version
 			if ($overwrite===true || !file_exists($image_default_path)) {
 				$this->convert_quality( $real_orig_quality, DEDALO_IMAGE_QUALITY_DEFAULT );
@@ -592,7 +563,7 @@ class component_image extends component_media_common {
 			// $initial_media_path	= $this->get_initial_media_path();
 
 		// source data (default quality is source)
-			$original_image_path		= $this->get_local_full_path(DEDALO_IMAGE_QUALITY_ORIGINAL);
+			$original_image_path		= $this->get_media_filepath(DEDALO_IMAGE_QUALITY_ORIGINAL);
 			$path						= pathinfo($original_image_path);
 			$original_image_extension	= $this->get_original_extension(
 				true // bool exclude_converted
@@ -604,7 +575,7 @@ class component_image extends component_media_common {
 			}
 
 		// target data (target quality is thumb)
-			$image_default_path = $this->get_local_full_path(DEDALO_IMAGE_QUALITY_DEFAULT);
+			$image_default_path = $this->get_media_filepath(DEDALO_IMAGE_QUALITY_DEFAULT);
 
 		// conversion
 			if ($overwrite===true) {
@@ -642,7 +613,7 @@ class component_image extends component_media_common {
 			// $additional_path	= $this->get_additional_path();
 
 		// source data (default quality is source)
-			$default_image_path	= $this->get_local_full_path(DEDALO_IMAGE_QUALITY_DEFAULT);
+			$default_image_path	= $this->get_media_filepath(DEDALO_IMAGE_QUALITY_DEFAULT);
 
 		// check default quality image
 			if (!file_exists($default_image_path)) {
@@ -651,7 +622,7 @@ class component_image extends component_media_common {
 			}
 
 		// old thumb rename
-			$image_thumb_path	= $this->get_local_full_path(DEDALO_IMAGE_THUMB_DEFAULT);
+			$image_thumb_path	= $this->get_media_filepath(DEDALO_IMAGE_THUMB_DEFAULT);
 			$image_thumb_url	= $this->get_url(
 				DEDALO_IMAGE_THUMB_DEFAULT,
 				false,  // bool test_file
@@ -719,7 +690,7 @@ class component_image extends component_media_common {
 		$initial_media_path  = $this->get_initial_media_path();
 
 		# target data (target quality is thumb)
-		$image_thumb_path 	 = $this->get_local_full_path(DEDALO_IMAGE_THUMB_DEFAULT);
+		$image_thumb_path 	 = $this->get_media_filepath(DEDALO_IMAGE_THUMB_DEFAULT);
 
 		return $image_thumb_path;
 	}//end get_thumb_path
@@ -1216,7 +1187,7 @@ class component_image extends component_media_common {
 
 
 		// default quality check file
-			$file_path = $this->get_path($source_quality);
+			$file_path = $this->get_media_filepath($source_quality);
 			if (!file_exists($file_path)) {
 				debug_log(
 					__METHOD__." Unable to create create_default_svg_string_node. Default quality file does not exists: ". PHP_EOL . $file_path,
@@ -1226,7 +1197,7 @@ class component_image extends component_media_common {
 			}
 
 		// string_node
-			$image_url			= $this->get_media_dir($source_quality) .'/'. $id .'.'. $this->get_extension(); // relative path
+			$image_url			= $this->get_media_url_dir($source_quality) .'/'. $id .'.'. $this->get_extension(); // relative path
 			$image_dimensions	= $this->get_image_dimensions($source_quality);
 			$width				= $image_dimensions[0];
 			$height				= $image_dimensions[1];
@@ -1599,7 +1570,7 @@ class component_image extends component_media_common {
 	*/
 	public function rotate($degrees, ?string $quality=null) : ?string {
 
-		$source = $this->get_path($quality);
+		$source = $this->get_media_filepath($quality);
 
 		$result = ImageMagick::rotate($source, $degrees);
 
@@ -1751,11 +1722,11 @@ class component_image extends component_media_common {
 
 
 	/**
-	* GET_MEDIA_PATH
+	* GET_MEDIA_PATH_DIR
 	* @param string $quality
 	* @return string $media_path
 	*/
-	public function get_media_path(string $quality) : string {
+	public function get_media_path_dir(string $quality) : string {
 
 		if (empty($quality)) {
 			// $bt = debug_backtrace();
@@ -1780,7 +1751,7 @@ class component_image extends component_media_common {
 		debug_log(__METHOD__." media_path - quality: '$quality' - media_path: ".to_string($media_path), logger::DEBUG);
 
 		return $media_path;
-	}//end get_media_path
+	}//end get_media_path_dir
 
 
 
@@ -1797,7 +1768,7 @@ class component_image extends component_media_common {
 		}else{
 
 			$id				= $this->id;
-			$media_path_abs	= $this->get_media_path($quality);
+			$media_path_abs	= $this->get_media_path_dir($quality);
 			$filename		= rtrim($media_path_abs, '/') .'/'. $id .'.'. DEDALO_IMAGE_EXTENSION;
 		}
 
@@ -1886,7 +1857,7 @@ class component_image extends component_media_common {
 	*/
 	public function pixel_to_centimeters(string $quality, int $dpi=DEDALO_IMAGE_PRINT_DPI) : array {
 
-		$image_path = $this->get_local_full_path($quality);
+		$image_path = $this->get_media_filepath($quality);
 
 		$size = getimagesize($image_path);
 		$x = $size[0];

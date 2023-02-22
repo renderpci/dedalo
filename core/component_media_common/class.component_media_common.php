@@ -379,7 +379,7 @@ class component_media_common extends component_common {
 			$file_extension	= strtolower(pathinfo($name, PATHINFO_EXTENSION));
 			$file_name		= $this->get_name();
 			// $folder_path	= $this->get_target_dir_abs($quality);
-			$folder_path	= $this->get_media_path($quality);
+			$folder_path	= $this->get_media_path_dir($quality);
 			$full_file_name	= $file_name . '.' . $file_extension;
 			$full_file_path	= $folder_path .'/'. $full_file_name;
 
@@ -1080,14 +1080,14 @@ class component_media_common extends component_common {
 
 
 	/**
-	* GET_MEDIA_PATH
+	* GET_MEDIA_PATH_dir
 	* 	Creates the absolute path to the media in current quality as:
 	* 	'/user/myuser/httpddocs/dedalo//media/pd/standard'
 	* @param string $quality
 	* @return string $media_path
 	* 	Absolute media path
 	*/
-	public function get_media_path(string $quality) : string {
+	public function get_media_path_dir(string $quality) : string {
 
 		$initial_media_path	= $this->initial_media_path ?? '';
 		$additional_path	= $this->additional_path ?? '';
@@ -1096,18 +1096,18 @@ class component_media_common extends component_common {
 		$media_path			= DEDALO_MEDIA_PATH . $base_path;
 
 		return $media_path;
-	}//end get_media_path
+	}//end get_media_path_dir
 
 
 
 	/**
-	* GET_MEDIA_DIR
-	* 	Creates the relative url path in current quality as
+	* GET_MEDIA_url_DIR
+	* 	Creates the relative URL path in current quality as
 	* 	'/dedalo/media/pd/standard'
 	* @param string $quality
 	* @return string $media_path
 	*/
-	public function get_media_dir(string $quality) : string {
+	public function get_media_url_dir(string $quality) : string {
 
 		$initial_media_path	= $this->initial_media_path;
 		$additional_path	= $this->additional_path;
@@ -1116,7 +1116,7 @@ class component_media_common extends component_common {
 		$media_dir			= DEDALO_MEDIA_URL . $base_path;
 
 		return $media_dir;
-	}//end get_media_dir
+	}//end get_media_url_dir
 
 
 
@@ -1132,7 +1132,7 @@ class component_media_common extends component_common {
 			$quality = $this->get_quality();
 		}
 
-		$target_dir = $this->get_media_path($quality);
+		$target_dir = $this->get_media_path_dir($quality);
 
 		return $target_dir;
 	}//end get_target_dir
@@ -1171,13 +1171,17 @@ class component_media_common extends component_common {
 
 
 	/**
-	* LOCAL PATH
+	* GET_LOCAL_FULL_PATH
 	* @return string $path
 	* 	complete absolute file path like '/Users/myuser/works/Dedalo/images/dd152-1.jpg'
 	*/
-	public function get_local_full_path(string $quality) : string {
+	public function get_local_full_path(?string $quality) : string {
 
-		$path = $this->get_media_path($quality) .'/'. $this->get_name() . '.' . $this->get_extension();
+		if(empty($quality)) {
+			$quality = $this->get_quality();
+		}
+
+		$path = $this->get_media_path_dir($quality) .'/'. $this->get_name() . '.' . $this->get_extension();
 
 		return	$path;
 	}//end get_local_full_path
@@ -1213,7 +1217,7 @@ class component_media_common extends component_common {
 	*/
 	public function get_size(string $quality) : ?string {
 
-		$filename = $this->get_media_path($quality) . $this->get_name() . '.' . $this->get_extension() ;
+		$filename = $this->get_media_path_dir($quality) . $this->get_name() . '.' . $this->get_extension() ;
 
 		try {
 
