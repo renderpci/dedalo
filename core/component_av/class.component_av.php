@@ -324,7 +324,7 @@ class component_av extends component_media_common {
 				if(empty($quality)) {
 					$quality = $this->get_quality();
 				}
-				$filename = $this->get_local_full_path($quality);
+				$filename = $this->get_media_filepath($quality);
 			}
 
 		// file do not exists case
@@ -387,7 +387,7 @@ class component_av extends component_media_common {
 			$quality = $quality ?? $this->get_quality();
 
 		// read file
-			$path				= $this->get_path($quality);
+			$path				= $this->get_media_filepath($quality);
 			$media_attributes	= $this->get_media_attributes($path);
 			// expected result sample:
 				// {
@@ -827,7 +827,7 @@ class component_av extends component_media_common {
 				if (in_array($file_ext, $ar_audio_only_ext)) {
 					// Audio conversion
 					// output_file_path is the final target file
-					$output_file_path	= $this->get_local_full_path($quality);
+					$output_file_path	= $this->get_media_filepath($quality);
 					// uploaded_file_path is the current uploaded file path
 					$uploaded_file_path	= $full_file_path;
 					Ffmpeg::convert_audio( (object)[
@@ -851,9 +851,9 @@ class component_av extends component_media_common {
 
 						// If default quality file do not exists, generate default quality version now
 						// $quality_default_AVObj 		 = new AVObj($id, DEDALO_AV_QUALITY_DEFAULT);
-						// $quality_default_target_file = $quality_default_AVObj->get_local_full_path();
+						// $quality_default_target_file = $quality_default_AVObj->get_media_filepath();
 						$default_quality				= $this->get_default_quality();
-						$quality_default_target_file	= $this->get_local_full_path($default_quality);
+						$quality_default_target_file	= $this->get_media_filepath($default_quality);
 						if ( !file_exists($quality_default_target_file) ) {
 							$source_file = $full_file_path; // actually full original path and name
 							if (!file_exists($source_file)) {
@@ -893,7 +893,7 @@ class component_av extends component_media_common {
 				if (in_array($file_ext, $ar_audio_only_ext) && $quality===DEDALO_AV_QUALITY_ORIGINAL) {
 
 					// Audio conversion
-					$target_file = $this->get_local_full_path($quality);
+					$target_file = $this->get_media_filepath($quality);
 					if (!file_exists($target_file)) {
 						$source_file = $full_file_path;
 						if (!file_exists($source_file)) {
@@ -1018,12 +1018,12 @@ class component_av extends component_media_common {
 
 	/**
 	* GET_VIDEO_PATH
-	* Get full file path. Alias of media common get_local_full_path
+	* Get full file path. Alias of media common get_media_filepath
 	* @return string $video_path
 	*/
 	public function get_video_path(string $quality) : string {
 
-		$video_path = $this->get_local_full_path($quality);
+		$video_path = $this->get_media_filepath($quality);
 
 		return $video_path;
 	}//end get_video_path
@@ -1103,7 +1103,7 @@ class component_av extends component_media_common {
 			// // file_path
 			// 	$file_path = ($quality==='original')
 			// 			? $this->get_original_file_path($quality)
-			// 			: $this->get_path($quality);
+			// 			: $this->get_media_filepath($quality);
 
 			// if(!file_exists($file_path)) {
 
