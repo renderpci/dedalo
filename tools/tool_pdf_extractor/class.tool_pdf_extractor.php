@@ -28,13 +28,15 @@ class tool_pdf_extractor extends tool_common {
 
 		// create the component to get the file path
 			$model		= RecordObj_dd::get_modelo_name_by_tipo($component_options->component_tipo,true);
-			$component	= component_common::get_instance($model,
-														 $component_options->component_tipo,
-														 $component_options->section_id,
-														 'list',
-														 DEDALO_DATA_NOLAN,
-														 $component_options->section_tipo);
-			$pdf_path = $component->get_path();
+			$component	= component_common::get_instance(
+				$model,
+				$component_options->component_tipo,
+				$component_options->section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$component_options->section_tipo
+			);
+			$pdf_path = $component->get_media_filepath();
 
 		// pdf_path error on missing properties
 			if (empty($pdf_path) || !file_exists($pdf_path)) {
