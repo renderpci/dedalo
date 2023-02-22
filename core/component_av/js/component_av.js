@@ -6,6 +6,8 @@
 // imports
 	import {dd_console} from '../../common/js/utils/index.js'
 	// import {data_manager} from '../../common/js/data_manager.js'
+	import * as instances from '../../common/js/instances.js'
+	import {object_to_url_vars} from '../../common/js/utils/index.js'
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_edit_component_av} from '../../component_av/js/render_edit_component_av.js'
@@ -49,7 +51,7 @@ export const component_av = function(){
 
 	return true
 }//end  component_av
-
+export default component_av
 
 
 /**
@@ -310,4 +312,66 @@ component_av.prototype.set_playback_rate = function(rate) {
 		self.video.playbackRate = rate;
 
 	return rate
-}//end  set_playback_rate
+}//end set_playback_rate
+
+
+
+/**
+* OPEN_AV_PLAYER
+* static method called by dd_grid_indexation
+* Creates a new component_av instance and render a player view
+* @param object options
+*/
+component_av.open_av_player = async function(options) {
+
+	// options
+		const component_tipo	= options.component_tipo
+		const section_id		= options.section_id
+		const section_tipo		= options.section_tipo
+		const tc_in				= options.tc_in ?? 0 // as seconds
+		const tc_out			= options.tc_out ?? null // as seconds
+
+	// open new window. Let page collect url params and create a new instance of component_av
+		const url_vars = {
+			tipo			: component_tipo,
+			section_tipo	: section_tipo,
+			id				: section_id,
+			mode			: 'edit',
+			view			: 'viewer',
+			menu			: false,
+			tc_in			: tc_in,
+			tc_out			: tc_out
+		}
+		const url			= DEDALO_CORE_URL + '/page/?' + object_to_url_vars(url_vars)
+		const new_window	= window.open(url, 'av_viewer', 'width=1024,height=860')
+		new_window.focus()
+
+
+	return true
+}//end  open_av_player
+
+
+
+/**
+* DOWNLOAD_AV_FRAGMENT
+* static method called by dd_grid_indexation
+*
+* @param object options
+*/
+component_av.download_av_fragment = async function(options) {
+
+	// options
+		const component_tipo	= options.component_tipo
+		const section_id		= options.section_id
+		const section_tipo		= options.section_tipo
+		const tc_in				= options.tc_in ?? 0 // as time-code
+		const tc_out			= options.tc_out ?? null // as time-code
+
+
+	console.log('--> download_av_fragment options:', options);
+
+
+	return true
+}//end  download_av_fragment
+
+
