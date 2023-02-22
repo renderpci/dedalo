@@ -987,35 +987,39 @@ section.prototype.navigate = async function(options) {
 	// set_local_db_data updated rqo.
 		// This is used to locate last navigation offset of this section
 		// when the user moves from edit to list mode form menu link
+		const sqo_id = ['section', self.tipo].join('_')
 		if (self.mode==='list') {
 
-			// list. Save current rqo to get offset when return
-			const rqo = clone(self.rqo)
+			// list. Save current sqo to allow get offset when return from edit mode
+			const sqo = clone(self.rqo.sqo)
 			data_manager.set_local_db_data(
-				rqo,
-				'rqo'
+				{
+					id		: sqo_id,
+					value	: sqo
+				},
+				'sqo'
 			)
+
 		}else if(self.mode==='edit' && action==='search') {
 
-			// edit. note that user search in edit mode must to rest offset always
+			// edit. note that user search in edit mode must to reset offset always
 			// to prevent inconsistent navigation offset between edit and list mode
-			const list_id_expected	= self.id.replace('_edit_','_list_')
-			const saved_rqo			= await data_manager.get_local_db_data(
-				list_id_expected,
-				'rqo'
+			const saved_sqo = await data_manager.get_local_db_data(
+				sqo_id,
+				'sqo'
 			)
-			if (saved_rqo) {
+			if (saved_sqo && saved_sqo.value) {
 				// reset offset to allow section to go first page when change to list mode
-				const rqo = clone(self.rqo)
-				// replace sqo with the new one
-				saved_rqo.sqo			= rqo.sqo
+				const new_sqo = clone(self.rqo.sqo)
 				// restore list pagination defaults
-				saved_rqo.sqo.offset	= 0
-				saved_rqo.sqo.limit		= 10
-
+				new_sqo.offset	= 0
+				new_sqo.limit	= 10
 				await data_manager.set_local_db_data(
-					saved_rqo,
-					'rqo'
+					{
+						id		: sqo_id,
+						value	: new_sqo
+					},
+					'sqo'
 				)
 			}
 		}
