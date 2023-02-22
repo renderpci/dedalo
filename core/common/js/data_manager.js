@@ -209,11 +209,12 @@ data_manager.get_local_db = async function() {
 			console.error("Your browser doesn't support a stable version of IndexedDB. Such and such feature will not be available.");
 		}
 
-	// open db. Let us open our database (name, version)
-		const db_request = current_indexedDB.open("dedalo", 6);
 
 
 	return new Promise(function(resolve, reject){
+
+		// open db. Let us open our database (name, version)
+			const db_request = current_indexedDB.open('dedalo', 7);
 
 		// error case
 			db_request.onerror = function(event) {
@@ -238,18 +239,15 @@ data_manager.get_local_db = async function() {
 				console.log("-> get_local_db onupgradeneeded:", event.target);
 
 				const db = event.target.result;
+				console.log(`Upgrading to version ${db.version}`);
 
 				// objectStore
-				// Create an objectStore to hold information about our customers. We're
-				// going to use "ssn" as our key path because it's guaranteed to be
-				// unique - or at least that's what I was told during the kickoff meeting.
-					db.createObjectStore('rqo', { keyPath: "id" });
-					// context. Context information about some elements like 'search'
-					db.createObjectStore('context', { keyPath: "id" });
-					// status. Collapse status of section groups, inspector blocks,etc.
-					db.createObjectStore('status', { keyPath: "id" });
-					db.createObjectStore('data', { keyPath: "id" });
-					db.createObjectStore('ontology', { keyPath: "id" });
+				db.objectStoreNames.contains('rqo') || db.createObjectStore('rqo', { keyPath:'id' });
+				db.objectStoreNames.contains('context') || db.createObjectStore('context', { keyPath:'id' });
+				db.objectStoreNames.contains('status') || db.createObjectStore('status', { keyPath:'id' });
+				db.objectStoreNames.contains('data') || db.createObjectStore('data', { keyPath:'id' });
+				db.objectStoreNames.contains('ontology') || db.createObjectStore('ontology', { keyPath:'id' });
+				db.objectStoreNames.contains('sqo') || db.createObjectStore('sqo', { keyPath:'id' });
 
 				// index
 				// Create an index to search customers by name. We may have duplicates
@@ -329,8 +327,6 @@ data_manager.set_local_db_data = async function(data, table) {
 			const request = objectStore.put(data);
 
 			request.onsuccess = function(event) {
-				// event.target.result === customer.ssn;
-				// console.log("Yuppiii:", event.target);
 				resolve(event.target.result)
 			};
 			request.onerror = function(event) {
@@ -398,8 +394,6 @@ data_manager.get_local_db_data = async function(id, table, cache=false) {
 			const request		= objectStore.get(id);
 
 			request.onsuccess = function(event) {
-				// event.target.result === customer.ssn;
-				// console.log("Yuppiii:", event.target);
 				resolve(event.target.result)
 			};
 			request.onerror = function(event) {
