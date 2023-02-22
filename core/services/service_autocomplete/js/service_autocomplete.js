@@ -9,6 +9,9 @@
 	import {clone} from '../../../common/js/utils/index.js'
 	import {common, get_columns_map} from '../../../common/js/common.js'
 	import {view_default_autocomplete} from './view_default_autocomplete.js'
+	import {
+		render_column_component_info
+	} from '../../../component_portal/js/render_edit_component_portal.js'
 
 
 
@@ -143,6 +146,15 @@ service_autocomplete.prototype.build = async function(options={}) {
 	// columns_map
 	// use the rqo_search as request_config, and the columns of rqo_search as columns_maps
 		self.columns_map = await get_columns_map(self.context)
+
+	// column component_info
+		if (self.caller.add_component_info===true) {
+			self.columns_map.push({
+				id			: 'ddinfo',
+				label		: 'Info',
+				callback	: render_column_component_info
+			})
+		}
 
 	// status update
 		self.status = 'built'
