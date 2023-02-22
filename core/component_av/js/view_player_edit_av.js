@@ -88,7 +88,9 @@ export const get_content_data_player = function(options) {
 			const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
 			const video_url	= file_info
 				? file_info.file_url
-				: null
+				: datalist.find(el => el.file_exist===true)
+					?  datalist.find(el => el.file_exist===true).file_url
+					: null
 
 	// player
 		if (video_url) {
@@ -144,7 +146,7 @@ export const get_content_data_player = function(options) {
 		}
 
 	// av_control_buttons
-		if (with_control_buttons) {
+		if (with_control_buttons && self.video) {
 			const av_control_buttons = get_av_control_buttons(self)
 			fragment.appendChild(av_control_buttons)
 		}
