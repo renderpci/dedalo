@@ -135,7 +135,7 @@ self.onmessage = async function(e) {
 				fetch(item.url, {
 					headers		: headers,
 					method		: 'GET',
-					cache		: 'reload', // "no-store","reload","no-cache","force-cache"
+					cache		: 'no-cache', // "no-store","reload","no-cache","force-cache"
 					credentials	: 'same-origin',
 					credentials	: 'omit'
 				})
