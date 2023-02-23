@@ -875,7 +875,7 @@ class component_av extends component_media_common {
 				// posterframe. Create posterframe of current video if not exists
 					$posterframe_path = $this->get_posterframe_path();
 					if( !file_exists($posterframe_path) ) {
-						$timecode	= '00:00:05';
+						$timecode	= '00:00:10';
 						$Ffmpeg		= new Ffmpeg();
 						$Ffmpeg->create_posterframe($AVObj, $timecode);
 					}else{
