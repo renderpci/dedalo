@@ -360,7 +360,7 @@ class component_relation_common extends component_common {
 				$translatable			= RecordObj_dd::get_translatable($ddo->tipo);
 				$current_lang			= $translatable===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 				$component_model		= RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
-				// dump($component_model,'$component_model');
+					// dump($component_model,'$component_model +++++++++++++++  tipo: '.$ddo->tipo.' - lang: '.$current_lang);
 				$current_component 	= component_common::get_instance(
 					$component_model,
 					$ddo->tipo,
@@ -407,7 +407,7 @@ class component_relation_common extends component_common {
 				$current_component->column_obj = $current_column_obj;
 
 				// get the value and fallback_value of the component and stored to be joined
-				$current_column		= $current_component->get_value($lang, $ddo);
+				$current_column		= $current_component->get_value($current_lang, $ddo);
 				$sub_row_count		= $current_column->row_count ?? 0;
 				// if (in_array($component_model, $components_with_relations)) {
 				// 	$current_column = get_last_column_recursive([$current_column]);
