@@ -12,6 +12,7 @@
 
 
 
+
 /**
 * VIEW_DEFAULT_AUTOCOMPLETE
 * Manages the service's logic and appearance in client side
@@ -798,6 +799,11 @@ const render_datalist = async function(self, api_response) {
 	// get the result from the API response
 		const result = api_response.result
 
+	// added result as datum because will be necessary to render ddinfo column
+	// ddinfo will get data from autocomplete service instead the section_record
+	// ddinfo column is dependent of the caller (component_portal or in these case service autocomplete)
+		self.datum = result
+
 	// data. if the api doesn't send any data, do not continue, return empty datalist
 		const data = result.data.find(el=> el.tipo ===self.tipo && el.typo==='sections')
 		if(!data){
@@ -817,8 +823,6 @@ const render_datalist = async function(self, api_response) {
 	const fields_separator = (rqo_search.show.fields_separator)
 		? rqo_search.show.fields_separator
 		: ' | '
-
-	// const columns = rqo_search.show.columns
 
 	// get the ar_locator founded in sections
 		// const data_locator	= data.find((item)=> item.tipo === rqo_search.source.tipo && item.typo === 'sections');
@@ -861,6 +865,7 @@ const render_datalist = async function(self, api_response) {
 			// create the li node container
 			const li_node = ui.create_dom_element({
 				element_type	: 'li',
+				class_name		: 'autocomplete_data_li',
 				class_name		: 'autocomplete_data_li',
 				title			: ' [' + locator.section_tipo + '-' + locator.section_id + ']',
 				parent			: datalist
@@ -1041,6 +1046,7 @@ const render_datalist = async function(self, api_response) {
 
 	return datalist
 }//end render_datalist
+
 
 
 

@@ -400,7 +400,7 @@ export const render_column_component_info = function(options) {
 		)
 		if (component_info) {
 
-			const info_value = component_info.value.join(' ')
+			const info_value = component_info.value.join(', ')
 
 			ui.create_dom_element({
 				element_type	: 'span',

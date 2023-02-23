@@ -440,7 +440,8 @@ class component_av extends component_media_common {
 			if($target_quality===DEDALO_AV_QUALITY_ORIGINAL) continue;
 
 			// Current file
-			$filename		= $this->get_original_file_path($current_quality);
+			$filename		= $this->get_media_filepath($current_quality);
+
 			$file_exists	= empty($filename)
 				? false
 				: file_exists($filename);
