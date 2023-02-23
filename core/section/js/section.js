@@ -501,7 +501,7 @@ section.prototype.build = async function(autoload=false) {
 				}
 
 			// count rows
-				if (!self.total) {
+				// if (!self.total) { // (!) Removed to force calculate paginator totals always that section is built
 					const count_sqo = clone(self.rqo.sqo )
 					delete count_sqo.limit
 					delete count_sqo.offset
@@ -529,14 +529,7 @@ section.prototype.build = async function(autoload=false) {
 							})
 						})
 					}
-
-					// set_local_db_data updated rqo
-						// const rqo = self.rqo
-						// data_manager.set_local_db_data(
-						// 	rqo,
-						// 	'rqo'
-						// )
-				}
+				// }
 
 			// set_local_db_data updated rqo
 				// const rqo = self.rqo
