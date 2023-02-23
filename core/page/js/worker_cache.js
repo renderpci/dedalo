@@ -129,13 +129,16 @@ self.onmessage = async function(e) {
 
 			const item = api_response.result[i]
 
-			const headers = get_headers(item)
+			const headers	= get_headers(item)
+			const cache		= item.type==='css'
+				? 'no-cache'
+				: 'reload'
 
 			ar_promises.push(
 				fetch(item.url, {
 					headers		: headers,
 					method		: 'GET',
-					cache		: 'no-cache', // "no-store","reload","no-cache","force-cache"
+					cache		: cache, // "no-store","reload","no-cache","force-cache"
 					credentials	: 'same-origin',
 					credentials	: 'omit'
 				})
