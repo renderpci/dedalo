@@ -438,6 +438,7 @@ export const download_av_fragment = async function(options) {
 				// error case
 				const msg = api_response.msg || 'Error on create fragment'
 				console.error(msg)
+				alert(msg);
 
 			}else{
 
