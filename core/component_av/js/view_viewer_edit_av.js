@@ -5,7 +5,7 @@
 
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
-	import {url_vars_to_object} from '../../common/js/utils/index.js'
+	import {url_vars_to_object, download_file} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {
 		get_content_data_player
@@ -27,7 +27,9 @@ export const view_viewer_edit_av = function() {
 /**
 * RENDER
 * Render node to be used by service autocomplete or any datalist
-* @return DOM node
+* @param object self
+* @param object options
+* @return DOM node wrapper
 */
 view_viewer_edit_av.render = async function(self, options) {
 
@@ -37,7 +39,7 @@ view_viewer_edit_av.render = async function(self, options) {
 	// wrapper
 		const wrapper = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'wrapper_component component_av viewer'
+			class_name		: 'wrapper_component component_av view_viewer'
 		})
 
 	// url
@@ -123,16 +125,10 @@ const download_original_av = function (options) {
 	const download_url	= options.download_url
 	const name			= options.name
 
-	// Create a temporal 'a' element and click it
-	const download_image_temp = document.createElement('a');
-		  download_image_temp.href = download_url
-		  download_image_temp.setAttribute('download', name);
-		  download_image_temp.style.display = 'none';
-	document.body.appendChild(download_image_temp);
-	// do click to the image to be downloaded
-	download_image_temp.click();
-	// remove the temp node
-	document.body.removeChild(download_image_temp);
+	download_file({
+		url			: download_url,
+		file_name	: `dedalo_download_` + name
+	})
 
 	return true
 }// end download_original_av
