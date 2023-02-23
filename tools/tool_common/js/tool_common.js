@@ -802,6 +802,7 @@ const view_window = async function(options) {
 
 	// caller_ddo. Minimum caller data to re-build it from tool
 		const caller_ddo = {
+			id_variant			: caller.id_variant || null,
 			tipo				: caller.tipo,
 			section_tipo		: caller.section_tipo,
 			section_id			: caller.section_id,
