@@ -8,6 +8,7 @@
 
 		@padding_left: 140px;
 		@color_grey_light: #bfbfbf;
+		--icon_height: 1.05rem;
 
 		// column
 			.column {
@@ -146,8 +147,8 @@
 							outline: none;
 
 							.icon {
-								height: 1.05rem;
-								width: 1.05rem;
+								// height: 1.05rem;
+								height: var(--icon_height)
 							}
 						}
 
@@ -238,6 +239,11 @@
 						// column button_download_av
 						>.column.button_download_av {
 							// background-color: #f5b0d2;
+
+							.icon {
+								// width: 1.05rem; // prevent loading spinner deformation
+								width: var(--icon_height); // prevent loading spinner deformation
+							}
 
 							&.watermark {
 								.icon {
