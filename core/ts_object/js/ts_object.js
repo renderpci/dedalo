@@ -2041,7 +2041,7 @@ export const ts_object = new function() {
 	* 	resolve object dd_grid
 	*/
 	this.show_indexations = async function(options) {
-
+		console.log('options:', options);
 		// options
 			const section_tipo		= options.section_tipo
 			const section_id		= options.section_id
@@ -2049,22 +2049,24 @@ export const ts_object = new function() {
 			const container_id		= options.container_id
 			const value				= options.value || null
 			// const button_obj		= options.button_obj // not used
-			// const event			= options.event // not used
+			// const event			= options.event
 
 		// target_div
 			const target_div = document.getElementById(container_id);
 			if (!target_div) {
-				alert('show_indexations. Target div not exist for section_id: '+section_id+' !')
+				alert('show_indexations. Target div do not exist for section_id: '+section_id+' !')
 				return false
 			}
 			// already loaded. toggle visible
 			if (target_div.firstChild) {
-				if (SHOW_DEBUG===true) {
-					console.log('reloading indexations...');
-					target_div.classList.toggle('hide')
+
+				if (!target_div.classList.contains('hide')) {
+					// hide only
+					target_div.classList.add('hide')
+					return
 				}else{
-					target_div.classList.toggle('hide')
-					return false
+					// force reload again
+					target_div.classList.remove('hide')
 				}
 			}
 

@@ -991,8 +991,8 @@ component_portal.prototype.delete_locator = function(locator, ar_properties) {
 
 	return data_manager.request({
 		body : {
-			action	: "delete_locator",
-			dd_api	: 'dd_'+self.model+'_api', // component_portal
+			action	: 'delete_locator',
+			dd_api	: 'dd_component_portal_api', // component_portal
 			source	: {
 				section_tipo	: self.section_tipo, // current component_text_area section_tipo
 				section_id		: self.section_id, // component_text_area section_id

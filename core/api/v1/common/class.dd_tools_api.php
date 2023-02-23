@@ -11,10 +11,10 @@ final class dd_tools_api {
 	/**
 	* USER_TOOLS
 	* Get user authorized tools filtered by custom list (optional)
-	* @param object $request_options
+	* @param object $rqo
 	* @return object $response
 	*/
-	public static function user_tools(object $request_options) : object {
+	public static function user_tools(object $rqo) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -22,7 +22,7 @@ final class dd_tools_api {
 			$response->error	= null;
 
 		// list of requested tools
-			$ar_requested_tools	= $request_options->ar_requested_tools ?? null;
+			$ar_requested_tools	= $rqo->ar_requested_tools ?? null;
 
 		// all user authorized tools
 			$user_id	= (int)navigator::get_user_id();
@@ -58,7 +58,7 @@ final class dd_tools_api {
 	* Method must be static and accept a only one object argument
 	* Method must return an object like { result: mixed, msg: string }
 	*
-	* @param object $request_options
+	* @param object $rqo
 	* sample:
 	* {
 	* 	action: "tool_request"
@@ -74,7 +74,7 @@ final class dd_tools_api {
 	* }
 	* @return object response { result: mixed, msg: string }
 	*/
-	public static function tool_request(object $request_options) : object {
+	public static function tool_request(object $rqo) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -82,7 +82,7 @@ final class dd_tools_api {
 			$response->error	= null;
 
 		// short vars
-			$source			= $request_options->source;
+			$source			= $rqo->source;
 			$tool_name		= $source->model;
 			$tool_method	= $source->action;
 			$arguments		= $source->arguments ?? [];

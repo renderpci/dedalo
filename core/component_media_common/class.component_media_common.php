@@ -1081,7 +1081,7 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_MEDIA_PATH_dir
-	* 	Creates the absolute path to the media in current quality as:
+	* 	Get the absolute path to the media in current quality as:
 	* 	'/user/myuser/httpddocs/dedalo//media/pd/standard'
 	* @param string $quality
 	* @return string $media_path
@@ -1171,7 +1171,8 @@ class component_media_common extends component_common {
 
 
 	/**
-	* GET_media_filepath
+	* GET_MEDIA_FILEPATH
+	* Get full file path in local media
 	* @return string $path
 	* 	complete absolute file path like '/Users/myuser/works/Dedalo/images/dd152-1.jpg'
 	*/

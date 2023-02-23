@@ -1,8 +1,8 @@
 <?php
 /**
 * DD_COMPONENT_TEXT_AREA_API
-* Manage API REST data flow of component_text_area with Dédalo
-* This class is a collection of component exposed methods to the API across
+* Manage API REST data flow of the component with Dédalo
+* This class is a collection of component exposed methods to the API using
 * a normalized RQO (Request Query Object)
 *
 */

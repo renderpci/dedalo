@@ -42,17 +42,48 @@ class indexation_grid {
 
 		$ar_indexation_grid = [];
 
-		$ar_section_top_tipo = $this->get_ar_section_top_tipo();
+		// ar_section_top_tipo
+			$ar_section_top_tipo = $this->get_ar_section_top_tipo();
+			// result sample
+			// {
+			//     "oh1": {
+			//         "4": [
+			//             {
+			//                 "type": "dd96",
+			//                 "section_tipo": "rsc167",
+			//                 "section_id": "227",
+			//                 "tag_id": "1",
+			//                 "section_top_id": "4",
+			//                 "section_top_tipo": "oh1",
+			//                 "from_component_top_tipo": "rsc860",
+			//                 "from_component_tipo": "hierarchy40"
+			//             }
+			//         ],
+			//         "128": [
+			//             {
+			//                 "type": "dd96",
+			//                 "section_tipo": "rsc167",
+			//                 "section_id": "231",
+			//                 "tag_id": "1",
+			//                 "section_top_id": "128",
+			//                 "section_top_tipo": "oh1",
+			//                 "from_component_top_tipo": "rsc860",
+			//                 "from_component_tipo": "hierarchy40"
+			//             }
+			//         ]
+			//     }
+			// }
+
 		foreach ($ar_section_top_tipo as $current_section_tipo => $ar_values) {
 
-			// dd_grid_cell_object. Create the row of the section
+			// section_grid_row: dd_grid_cell_object. Create the row of the section
 				$section_grid_row = new dd_grid_cell_object();
 					$section_grid_row->set_type('row');
 
-			// get the label of the current section
+			// label. Get the label of the current section
 				$label = RecordObj_dd::get_termino_by_tipo($current_section_tipo, DEDALO_APPLICATION_LANG, true, true);
 
-			// create the grid cell of the section
+			// section_grid. Create the grid cell of the section
 				$section_grid = new dd_grid_cell_object();
 					$section_grid->set_type('column');
 					$section_grid->set_label($label);
@@ -63,31 +94,32 @@ class indexation_grid {
 			// add the column to the row
 				$section_grid_row->set_value([$section_grid]);
 
-			// get the term in the section that has the indexation_list information
-				$indexation_list = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+			// indexation_list. Get the term in the section that has the indexation_list information
+				$ar_found = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
 					$current_section_tipo,
-					'indexation_list',
-					'children'
+					'indexation_list', // string model
+					'children' // string relation_type
 				);
-				// debug
-					if(SHOW_DEBUG===true) {
-						// dump($indexation_list, ' indexation_list ++ '.to_string($current_section_tipo));
-					}
-
+				$indexation_list = $ar_found[0] ?? null;
 				// check empty cases (misconfigured Ontology indexation_list children)
 					if (empty($indexation_list)) {
-						debug_log(__METHOD__." Error. Ignored empty indexation_list. A config problem was detected. Fix ASAP. (misconfigured Ontology indexation_list children) section_tipo: ".to_string($current_section_tipo), logger::ERROR);
+						debug_log(__METHOD__.
+							" Error. Ignored empty indexation_list. A config problem was detected. Fix ASAP. (misconfigured Ontology indexation_list children) section_tipo: ".to_string($current_section_tipo),
+							logger::ERROR
+						);
 						continue;
 					}
+					// if (!isset($indexation_list[0])) {
+					// 	$msg  = "Error Processing Request build_indexation_grid:  section indexation_list is empty. Please configure structure for ($current_section_tipo) ";
+					// 	$msg .= "Please check the consistency and model for 'relation_list'.";
+					// 	debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
+					// 	// throw new Exception($msg, 1);
+					// 	continue;
+					// }
 
-				if (!isset($indexation_list[0])) {
-					$msg  = "Error Processing Request build_indexation_grid:  section indexation_list is empty. Please configure structure for ($current_section_tipo) ";
-					$msg .= "Please check the consistency and model for 'relation_list'.";
-					throw new Exception($msg, 1);
-				}
 			// get the properties of the indexation_list with all ddo_map
 			// the ddo_map need to be processed to get a full ddo_map with all section_tipo resolved.
-				$RecordObj_dd	= new RecordObj_dd($indexation_list[0]);
+				$RecordObj_dd	= new RecordObj_dd($indexation_list);
 				$properties		= $RecordObj_dd->get_properties();
 
 				$head_ddo_map = isset($properties->head)
@@ -106,13 +138,12 @@ class indexation_grid {
 				$head_render_label	= $properties->head->render_label ?? false;
 				$row_render_label	= $properties->row->render_label ?? false;
 
-
-			# get the section values
+			// section_grid_values.Get the section values
 			$section_grid_values	= [];
-			// store the rows count for every portal inside the section
+			// ar_section_rows_count. Store the rows count for every portal inside the section
 			$ar_section_rows_count	= [];
 			foreach ($ar_values as $current_section_id => $ar_locators) {
-				// dump($ar_locators, ' current_section_id ++ '.to_string());
+
 				$ar_head_value = $this->get_value($head_ddo_map, $ar_locators[0]);
 				// take the maximum number of rows (the columns can has 1, 2, 55 rows and we need the highest value, 55)
 				$head_row_count = max($ar_head_value->ar_row_count);
@@ -351,9 +382,7 @@ class indexation_grid {
 
 			# AR_SECTION_TOP_TIPO MAP
 			$ar_section_top_tipo[$section_top_tipo][$section_top_id][] = $current_locator;
-
 		}
-		// dump($ar_section_top_tipo,'$ar_section_top_tipo');
 
 		#
 		# FILTER RESULT BY USER PROJECTS
