@@ -134,22 +134,32 @@ view_text_section_record.render = async function(self, options) {
 								for (let c = 0; c < children_length; c++) {
 									const current_child = children[c];
 									wrapper.appendChild(current_child)
+
+									add_fields_separator()
 								}
 								break;
 							default:
 								wrapper.appendChild(current_instance_node)
+								add_fields_separator()
 								break;
 						}
 
-					// add values separator, between values of the same column ["value1","value2"]
-						if(j < ar_instances_length-1) {
-							const next_node_text = ar_instances[j+1].node
-							if(next_node_text.textContent.length > 1){
-								const value_separator = self.context.fields_separator || ' | '
-								const node_fields_separator = document.createTextNode(value_separator)
-								wrapper.appendChild(node_fields_separator)
+						// ADD_FIELDS_SEPARATOR
+						// check the node position and add fields separator
+						// add values separator between values of the same column
+						// sometimes the column could have more than 1 component (component_portal with 1 column that call more than 1 component)
+						// sometimes the column colul have more than 1 value as component_input_tex with more than 1 value ["value1","value2"]
+						function add_fields_separator() {
+							if(j < ar_instances_length-1) {
+								const next_node_text = ar_instances[j+1].node
+								if(next_node_text.textContent.length > 1){
+									const value_separator = self.context.fields_separator || ' | '
+									const node_fields_separator = document.createTextNode(value_separator)
+									wrapper.appendChild(node_fields_separator)
+								}
 							}
 						}
+
 				}//end for (let j = 0; j < ar_instances_length; j++)
 			// columns separator (between components inside the same column)
 				if(i < columns_map_length-1 && columns_map[i+1].id!=='remove' && columns_map[i+1].id!=='section_id') {
