@@ -15,7 +15,7 @@
 				display: flex;
 				flex-wrap: wrap;
 				flex: 1 1 auto;
-				outline: 1px solid @color_grey_light;
+				// outline: 1px solid @color_grey_light;
 				max-height: 100%;
 				// overflow: hidden;
 			}
@@ -49,6 +49,7 @@
 				padding: 0px;
 				margin: 0.5em;
 				margin-left: 90px;
+				box-shadow: none;
 
 				>label {
 					background-color: #424242;
@@ -67,13 +68,16 @@
 					}
 				}
 				>.row.head.oh {
-					background-color: #f8fdff;
+					background-color: lighten(@color_orange_dedalo, 44%);
 					// height: 5rem;
 					display: grid;
-					grid-template-columns: 102px 5rem 20rem minmax(25rem, auto) 30%;
+					grid-template-columns: 102px 8rem 20rem minmax(25rem, auto) 30%;
+					width: 100%;
 
-					>.column {
-						 // height: 5rem;
+					.column {
+						// height	: 5rem;
+						box-shadow	: none;
+						outline		: none;
 					}
 
 					// column image
@@ -108,6 +112,7 @@
 							outline: 0;
 							width: unset;
 							padding: 0;
+							padding: 0.25rem;
 						}
 						.row:not(:first-child, :last-child) {
 							&:after {
@@ -119,77 +124,126 @@
 							}
 						}
 					}
-
 				}
 
 				>.row.oh {
-					background-color: #a7efc7;
+					// background-color: #a7efc7;
+
+					&:not(.head)>.column {
+						margin-left: 8rem;
+					}
 
 					.column.oh.indexation {
 						display: grid;
-						grid-template-columns: repeat(10, auto);
-						background-color: #dfed72;
+						grid-template-columns: repeat(11, auto);
+						// padding-left: 8rem;
+
+						>.column {
+							// height: 2.3rem;
+							display: table;
+							overflow: visible;
+							box-shadow: none;
+							outline: none;
+
+							.icon {
+								height: 1.05rem;
+								width: 1.05rem;
+							}
+						}
 
 						// column av section_id (reel)
-						>.column:nth-of-type(1) {
-							background-color: #fa7a44;
-							width: 5rem;
-						}
-
-						// column interview section_id
-						>.column:nth-of-type(2) {
-							background-color: #baf069;
-							width: 5rem;
-						}
-
-						// button indexation
-						>.column:nth-of-type(3) {
-							background-color: #4ff46d;
-							padding: 0.75rem;
+						>.column.section_id {
+							// background-color: #fa7a44;
 							width: 4rem;
+							text-align: center;
 						}
 
-						// button tr
-						>.column:nth-of-type(4) {
-							background-color: #4bf2c8;
-							padding: 0.75rem;
-							width: 4rem;
+						// column tag_id
+						>.column.tag_id {
+							// background-color: #baf069;
+							width: 3.5rem;
+
+							>.tag_id {
+								display: flex;
+								align-items: center;
+								justify-content: center;
+								background-image: radial-gradient(30% 50%ellipse at 109% 50%,#fff 22px,transparent 10px,#fa0 0);
+								border-bottom-left-radius: 8px;
+								border-top-left-radius: 8px;
+								color: #fff;
+								padding: 0 5px;
+								min-width: 20px;
+								margin-top: 0.5rem;
+								height: 0.8rem;
+								width: 3rem;
+								padding: 7px;
+							}
 						}
 
-						// button film
-						>.column:nth-of-type(5) {
-							background-color: #35c4f0;
-							padding: 0.75rem;
-							width: 4rem;
+						// column button indexation
+						>.column.button_indexation {
+							// background-color: #4ff46d;
+							// padding: 0.75rem;
+							width: 3.5rem;
 						}
 
-						// fragment text
-						>.column:nth-of-type(6) {
-							background-color: #eed9c5;
-							max-height: 5.5rem;
-							overflow: auto;
+						// column button_transcription
+						>.column.button_transcription {
+							// background-color: #4bf2c8;
+							// padding: 0.75rem;
+							width: 3.5rem;
+						}
+
+						// column button_av_player
+						>.column.button_av_player {
+							// background-color: #35c4f0;
+							// padding: 0.75rem;
+							width: 3.5rem;
+						}
+
+						// column text_fragment
+						>.column.text_fragment {
+							// background-color: #eed9c5;
 							width: auto;
+
+							>.text_fragment {
+								// padding-top: 0.3rem;
+								padding-bottom: 0.3rem;
+								max-height: 1.5rem;
+								overflow: hidden;
+								cursor: s-resize;
+
+								&.full {
+									max-height: unset;
+									cursor: n-resize;
+								}
+							}
 						}
 
-						// tc-in
-						>.column:nth-of-type(7) {
-							background-color: #c8edd5;
+						// column tc_in
+						>.column.tc_in {
+							// background-color: #c8edd5;
 						}
 
-						// tc-ou
-						>.column:nth-of-type(8) {
-							background-color: #c8edd5;
+						// column tc_out
+						>.column.tc_out {
+							// background-color: #c8edd5;
 						}
 
-						// tc-duration
-						>.column:nth-of-type(9) {
-							background-color: #c8edd5;
+						// column duration_tc
+						>.column.duration_tc {
+							// background-color: #c8edd5;
 						}
 
-						// button download
-						>.column:nth-of-type(10) {
-							background-color: #f5b0d2;
-							padding: 0.75rem;
+						// column button_download_av
+						>.column.button_download_av {
+							// background-color: #f5b0d2;
+
+							&.watermark {
+								.icon {
+									background-color: @color_green_success;
+								}
+							}
 						}
 					}
 				}
