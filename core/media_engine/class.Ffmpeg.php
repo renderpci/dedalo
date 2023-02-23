@@ -706,7 +706,7 @@ final class Ffmpeg {
 			$ffmpeg_bin = DEDALO_AV_FFMPEG_PATH;
 
 		// debug
-			debug_log(__METHOD__." Building fragment duration secs: ".$duration_secs, logger::WARNING);
+			debug_log(__METHOD__." Building fragment '$target_filename'. Duration secs: ".$duration_secs, logger::WARNING);
 
 		// command
 			if ($watermark===true) {

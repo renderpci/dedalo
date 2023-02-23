@@ -1335,6 +1335,9 @@ class section extends common {
 							);
 						$JSON_RecordObj_matrix->MarkForDeletion();
 
+						// force JSON_RecordObj_matrix destruct to real deletion exec
+							$JSON_RecordObj_matrix->__destruct();
+
 					// inverse references. Remove all inverse references to this section
 						$this->remove_all_inverse_references();
 
