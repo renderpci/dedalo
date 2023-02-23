@@ -47,7 +47,7 @@ import * as fn from './data.js'
 	// component_check_box
 		elements.push({
 			model				: 'component_check_box',
-			tipo				: 'test146',
+			tipo				: 'test88',
 			section_tipo		: section_tipo,
 			section_id			: section_id,
 			mode				: mode,
@@ -130,17 +130,6 @@ import * as fn from './data.js'
 
 	// component grouper/sync ?????? (WORKING HERE)
 
-	// component_html_text (called as model 'component_text_area' to work)
-		elements.push({
-			model			: 'component_text_area',
-			tipo			: 'test135',
-			section_tipo	: section_tipo,
-			section_id		: section_id,
-			mode			: mode,
-			lang			: lang,
-			new_value		: fn.random_string
-		})
-
 	// component_image
 		elements.push({
 			model				: 'component_image',
@@ -184,7 +173,7 @@ import * as fn from './data.js'
 	// component_json
 		elements.push({
 			model			: 'component_json',
-			tipo			: 'test150',
+			tipo			: 'test18',
 			section_tipo	: section_tipo,
 			section_id		: section_id,
 			mode			: mode,
@@ -195,7 +184,7 @@ import * as fn from './data.js'
 	// component_number
 		elements.push({
 			model			: 'component_number',
-			tipo			: 'test139',
+			tipo			: 'test211',
 			section_tipo	: section_tipo,
 			section_id		: section_id,
 			mode			: mode,
@@ -254,7 +243,7 @@ import * as fn from './data.js'
 	// component_radio_button
 		elements.push({
 			model				: 'component_radio_button',
-			tipo				: 'test144',
+			tipo				: 'test87',
 			section_tipo		: section_tipo,
 			section_id			: section_id,
 			mode				: mode,
@@ -351,18 +340,6 @@ import * as fn from './data.js'
 			new_value			: fn.random_security_access
 		})
 
-	// component_select_lang
-		elements.push({
-			model				: 'component_select_lang',
-			tipo				: 'test89',
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: lang,
-			new_value			: fn.random_locator,
-			new_value_params	: ['lg1','test89']
-		})
-
 	// component_select
 		elements.push({
 			model				: 'component_select',
@@ -373,6 +350,18 @@ import * as fn from './data.js'
 			lang				: lang,
 			new_value			: fn.random_locator,
 			new_value_params	: ['es1','test91']
+		})
+
+	// component_select_lang
+		elements.push({
+			model				: 'component_select_lang',
+			tipo				: 'test89',
+			section_tipo		: section_tipo,
+			section_id			: section_id,
+			mode				: mode,
+			lang				: lang,
+			new_value			: fn.random_locator,
+			new_value_params	: ['lg1','test89']
 		})
 
 	// component_semantic_node -render portal column- (WORKING HERE)
@@ -398,3 +387,14 @@ import * as fn from './data.js'
 			lang			: lang,
 			new_value		: fn.random_string
 		})
+
+	// component_html_text (called as model 'component_text_area' to work)
+		// elements.push({
+		// 	model			: 'component_text_area',
+		// 	tipo			: 'test135',
+		// 	section_tipo	: section_tipo,
+		// 	section_id		: section_id,
+		// 	mode			: mode,
+		// 	lang			: lang,
+		// 	new_value		: fn.random_string
+		// })
