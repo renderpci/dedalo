@@ -620,6 +620,9 @@ const create_template = async function(self) {
 				inner_html		: get_label.cancel_upload || 'Cancel upload',
 				parent			: column_left
 			})
+			button_cancel_upload.addEventListener('click', function() {
+				current_dropzone.removeAllFiles(true);
+			});
 
 		// button_delete
 			const button_delete = ui.create_dom_element({
