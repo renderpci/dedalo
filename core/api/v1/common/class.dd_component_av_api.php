@@ -33,9 +33,6 @@ final class dd_component_av_api {
 	*/
 	public static function download_fragment( object $rqo ) : object {
 
-			dump($rqo, ' download_fragment rqo ++ '.to_string());
-
-			sleep(5);
 
 		// source
 			$source			= $rqo->source;
