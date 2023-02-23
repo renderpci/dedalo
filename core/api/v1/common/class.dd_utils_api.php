@@ -110,7 +110,6 @@ final class dd_utils_api {
 	* @return object $response
 	*/
 	public static function database_info(object $rqo) : object {
-		$start_time = start_time();
 
 		session_write_close();
 
@@ -122,7 +121,7 @@ final class dd_utils_api {
 		$info['host']	= to_string(DEDALO_HOSTNAME_CONN);
 
 		$response->result	= $info;
-		$response->msg		= 'Ok. Request done';
+		$response->msg		= 'OK. Request done';
 
 
 		return $response;

@@ -51,7 +51,7 @@ export const component_av = function(){
 
 	return true
 }//end  component_av
-export default component_av
+// export default component_av
 
 
 /**
