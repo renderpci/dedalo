@@ -501,7 +501,7 @@ section.prototype.build = async function(autoload=false) {
 				}
 
 			// count rows
-				if (!self.total) {
+				// if (!self.total) { // (!) Removed to force calculate paginator totals always that section is built
 					const count_sqo = clone(self.rqo.sqo )
 					delete count_sqo.limit
 					delete count_sqo.offset
@@ -529,14 +529,7 @@ section.prototype.build = async function(autoload=false) {
 							})
 						})
 					}
-
-					// set_local_db_data updated rqo
-						// const rqo = self.rqo
-						// data_manager.set_local_db_data(
-						// 	rqo,
-						// 	'rqo'
-						// )
-				}
+				// }
 
 			// set_local_db_data updated rqo
 				// const rqo = self.rqo
@@ -908,7 +901,7 @@ section.prototype.load_section_tool_files = function() {
 * 	sqo : object,
 * 	delete_mode : string
 * }
-* @return promise
+* @return bool
 */
 section.prototype.delete_section = async function (options) {
 
@@ -941,7 +934,10 @@ section.prototype.delete_section = async function (options) {
 		if (api_response.result && api_response.result.length>0) {
 			// const ar_section_id = api_response.result
 			self.refresh()
+		}else{
+			console.error( api_response.msg || 'Error on delete records!');
 		}
+
 
 	return true
 }//end delete_section

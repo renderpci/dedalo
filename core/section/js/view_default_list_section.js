@@ -62,6 +62,12 @@ view_default_list_section.render = async function(self, options) {
 	// content_data
 		const content_data = await get_content_data(self.ar_instances, self)
 		if (render_level==='content') {
+
+			// force to refresh paginator
+			if (self.paginator) {
+				self.paginator.refresh()
+			}
+
 			return content_data
 		}
 
