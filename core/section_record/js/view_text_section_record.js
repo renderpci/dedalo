@@ -142,7 +142,7 @@ view_text_section_record.render = async function(self, options) {
 						}
 
 					// add values separator, between values of the same column ["value1","value2"]
-						if(j>0 && j < ar_instances_length-1) {
+						if(j < ar_instances_length-1) {
 							const next_node_text = ar_instances[j+1].node
 							if(next_node_text.textContent.length > 1){
 								const value_separator = self.context.fields_separator || ' | '
@@ -151,9 +151,9 @@ view_text_section_record.render = async function(self, options) {
 							}
 						}
 				}//end for (let j = 0; j < ar_instances_length; j++)
-
 			// columns separator (between components inside the same column)
 				if(i < columns_map_length-1 && columns_map[i+1].id!=='remove' && columns_map[i+1].id!=='section_id') {
+
 					const fields_separator = self.context.fields_separator || ', '
 					const node_fields_separator = document.createTextNode(fields_separator)
 					wrapper.appendChild(node_fields_separator)
