@@ -491,6 +491,30 @@ export function open_window(options) {
 
 
 /**
+* DOWNLOAD_FILE
+* Unified download files function
+* @return object new_window
+*/
+export function download_file(options) {
+
+	// options
+		const url		= options.url
+		const file_name	= options.file_name || url.substring(url.lastIndexOf('/')+1)
+
+	// anchor pseudo-link
+		const anchor	= document.createElement('a');
+		anchor.href		= url
+		anchor.target	= '_blank'
+		anchor.download	= file_name
+		anchor.click();
+		anchor.remove()
+
+	return true
+}//end download_file
+
+
+
+/**
 * FIND_UP_NODE
 * Search parent node recursively until reach the target
 * @param DOM node el

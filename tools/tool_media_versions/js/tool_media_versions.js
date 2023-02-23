@@ -71,9 +71,6 @@ tool_media_versions.prototype.init = async function(options) {
 	// call the generic common tool init
 		const common_init = await tool_common.prototype.init.call(this, options);
 
-	// set the self specific vars not defined by the generic init (in tool_common)
-		self.trigger_url = `${DEDALO_TOOLS_URL}/${self.model}/trigger.${self.model}.php`;
-
 
 	return common_init
 }//end init
