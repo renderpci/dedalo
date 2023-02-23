@@ -15,6 +15,9 @@ class tool_upload extends tool_common {
 	public static function process_uploaded_file(object $options) : object {
 		$start_time=start_time();
 
+		// session close not block user interface
+		session_write_close();
+
 		// response
 			$response = new stdClass();
 				$response->result	= false;
