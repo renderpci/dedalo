@@ -182,8 +182,8 @@ class tool_posterframe extends tool_common {
 				$component_image->set_quality(DEDALO_IMAGE_QUALITY_ORIGINAL);
 
 			// image from video. custom_ar_target
-				$target_path        = $component_image->get_target_dir();
-				$target_file		= $component_image->get_image_path();
+				$target_path        = $component_image->get_media_path_dir(DEDALO_IMAGE_QUALITY_ORIGINAL);
+				$target_file		= $component_image->get_media_filepath(DEDALO_IMAGE_QUALITY_ORIGINAL);
 				$custom_ar_target	= [
 					'target_path'	=> $target_path, // Absolute path to image dir
 					'target_file'	=> $target_file  // Absolute final path of file (included target_path)
@@ -200,7 +200,6 @@ class tool_posterframe extends tool_common {
 				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
-
 			// posterframe file create. returns result boolean value
 				$target_quality	= $component_av->get_quality_default();
 				$result			= $component_av->create_posterframe(

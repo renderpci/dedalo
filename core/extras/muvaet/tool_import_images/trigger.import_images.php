@@ -286,7 +286,7 @@ if ($mode=='renum_digital') {
 				$component_image 	= component_common::get_instance($model_name, $component_tipo, $resource_section_id, 'edit', DEDALO_DATA_NOLAN, MUPREVA_SECTION_TIPO_IMAGENES);
 				$ar_quality 		= DEDALO_IMAGE_AR_QUALITY;
 				foreach ($ar_quality as $quality) {
-					$file_path = $component_image->get_image_path($quality);
+					$file_path = $component_image->get_media_filepath($quality);
 					$ar_source[$quality] = $file_path;
 				}//end foreach ($ar_quality as $quality)
 				#dump($ar_source, " ar_source ".to_string()); continue;
@@ -324,7 +324,7 @@ if ($mode=='renum_digital') {
 				foreach ($ar_source as $quality => $file_path) {
 					if (!file_exists($file_path)) continue;
 
-					$target_file_path = $component_image->get_image_path($quality);
+					$target_file_path = $component_image->get_media_filepath($quality);
 						#dump($file_path, " source file_path ".to_string($additional_path));
 						#dump($target_file_path, " target_file_path ".to_string($additional_path));
 

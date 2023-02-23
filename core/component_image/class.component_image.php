@@ -765,7 +765,7 @@ class component_image extends component_media_common {
 			foreach ($ar_quality as $current_quality) {
 
 				// media_path is full path of file like '/www/dedalo/media_test/media_development/image/thumb/rsc29_rsc170_77.jpg'
-					$media_path = $this->get_image_path($current_quality);
+					$media_path = $this->get_media_filepath($current_quality);
 					if (!file_exists($media_path)) continue; # Skip
 
 				// delete dir
@@ -828,7 +828,7 @@ class component_image extends component_media_common {
 		foreach ($ar_quality as $current_quality) {
 
 			# media_path
-			$media_path 	 = $this->get_image_path($current_quality);
+			$media_path 	 = $this->get_media_filepath($current_quality);
 			$folder_path_del = pathinfo($media_path,PATHINFO_DIRNAME).'/deleted';
 			$id 		 = $this->get_id();
 			if(SHOW_DEBUG===true) {
@@ -845,7 +845,7 @@ class component_image extends component_media_common {
 			}
 			natsort($ar_files);	# sort the files from newest to oldest
 			$last_file_path = end($ar_files);
-			$new_file_path 	= $this->get_image_path($current_quality);
+			$new_file_path 	= $this->get_media_filepath($current_quality);
 			if( !rename($last_file_path, $new_file_path) ) throw new Exception(" Error on move files to restore folder. Permission denied . Nothing was restored (2)");
 
 
@@ -914,7 +914,7 @@ class component_image extends component_media_common {
 	public function get_deleted_image( string $quality ) {
 
 		# media_path
-		$media_path			= $this->get_image_path($quality);
+		$media_path			= $this->get_media_filepath($quality);
 		$folder_path_del	= pathinfo($media_path,PATHINFO_DIRNAME).'/deleted';
 		$id			= $this->get_id();
 
