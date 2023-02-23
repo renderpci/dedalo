@@ -671,7 +671,8 @@ final class dd_core_api {
 			$model			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			if($model!=='section') {
 				$response->error = 1;
-				$response->msg 	.= 'Model is not expected section: '.$model;
+				$response->msg 	.= '[1] Model is not expected section: '.$model;
+				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
 				return $response;
 			}
 			$caller_dataframe 		= $ddo_source->caller_dataframe ?? null;
@@ -681,7 +682,8 @@ final class dd_core_api {
 			debug_log(__METHOD__." permissions: $permissions ".to_string($section_tipo), logger::DEBUG);
 			if ($permissions<2) {
 				$response->error = 2;
-				$response->msg 	.= 'Insufficient permissions: '.$permissions;
+				$response->msg 	.= '[2] Insufficient permissions: '.$permissions;
+				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
 				return $response;
 			}
 
@@ -702,8 +704,10 @@ final class dd_core_api {
 				$response->error		= !empty($errors) ? $errors : null;
 				$response->delete_mode	= $delete_mode;
 				$response->msg			= !empty($errors)
-					? 'Some errors occurred when delete sections.'
+					? 'Some errors occurred when delete sections. delete_mode:' . $delete_mode
 					: 'OK. Request done successfully.';
+
+				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
 
 				return $response;
 			}
@@ -716,29 +720,31 @@ final class dd_core_api {
 				// section_id check (is mandatory when no sqo is received)
 					if (empty($section_id)) {
 						$response->error = 3;
-						$response->msg 	.= 'section_id = null and $sqo = null, impossible to determinate the sections to delete. ';
+						$response->msg 	.= '[3] section_id = null and $sqo = null, impossible to determinate the sections to delete. ';
+						debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
 						return $response;
 					}
 
 				// sqo to create new one
-					$limit			= null; // overwrite the default 10 records
-					$self_locator	= new locator();
+					$self_locator = new locator();
 						$self_locator->set_section_tipo($section_tipo);
 						$self_locator->set_section_id($section_id);
 					$sqo = new search_query_object();
 						$sqo->set_section_tipo([$section_tipo]);
-						$sqo->set_limit($limit);
 						$sqo->set_filter_by_locators([$self_locator]);
 			}
 
 		// search the sections to delete
-			$search		= search::get_instance($sqo);
-			$rows_data	= $search->search();
-			$ar_records = $rows_data->ar_records;
+			$sqo->offset	= 0;
+			$sqo->limit		= 0; // prevent pagination affects to deleted records
+			$search			= search::get_instance($sqo);
+			$rows_data		= $search->search();
+			$ar_records		= $rows_data->ar_records;
 			// check empty records
 			if (empty($ar_records)) {
 				$response->result = [];
 				$response->msg 	.= 'No records found to delete ';
+				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
 				return $response;
 			}
 
@@ -751,7 +757,6 @@ final class dd_core_api {
 				# Delete method
 				$section 	= section::get_instance($current_section_id, $current_section_tipo);
 				$deleted 	= $section->Delete($delete_mode);
-
 				if ($deleted!==true) {
 					$errors[] = (object)[
 						'section_tipo'	=> $current_section_tipo,
@@ -778,7 +783,8 @@ final class dd_core_api {
 					}, $check_ar_records);
 
 					$response->error = 4;
-					$response->msg 	.= 'Some records were not deleted: '.json_encode($check_ar_section_id, JSON_PRETTY_PRINT);
+					$response->msg 	.= '[4] Some records were not deleted: '.json_encode($check_ar_section_id, JSON_PRETTY_PRINT);
+					debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
 					return $response;
 				}
 			}
