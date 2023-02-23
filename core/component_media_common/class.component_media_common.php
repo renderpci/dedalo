@@ -1126,11 +1126,7 @@ class component_media_common extends component_common {
 	* @param string|null $quality
 	* @return string $target_dir
 	*/
-	public function get_target_dir(?string $quality) : string {
-
-		if(empty($quality)) {
-			$quality = $this->get_quality();
-		}
+	public function get_target_dir(string $quality) : string {
 
 		$target_dir = $this->get_media_path_dir($quality);
 
