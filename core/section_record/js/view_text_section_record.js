@@ -6,7 +6,6 @@
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	import {render_column_node_callback} from './view_default_list_section_record.js'
 
 
 /**
@@ -59,9 +58,6 @@ view_text_section_record.render = async function(self, options) {
 			// (!) Note that many colum_id are callbacks (like tool_time_machine id column)
 				if(current_column.callback && typeof current_column.callback==='function'){
 
-					// column_node (standard section_record empty column to be filled with content_node)
-						const column_node = render_column_node_callback(current_column, self)
-
 					// content_node
 						const content_node = current_column.callback({
 							section_tipo		: self.section_tipo,
@@ -74,11 +70,8 @@ view_text_section_record.render = async function(self, options) {
 							modification_date	: self.modification_date || null, // tm var
 							locator				: self.locator
 						})
-						if (content_node) {
-							column_node.appendChild(content_node)
-						}
 
-					wrapper.appendChild(column_node)
+					wrapper.appendChild(content_node)
 					continue;
 				}
 
@@ -148,11 +141,12 @@ view_text_section_record.render = async function(self, options) {
 								break;
 						}
 
-					// add fields_separator
+					// add values separator, between values of the same column ["value1","value2"]
 						if(j>0 && j < ar_instances_length-1) {
 							const next_node_text = ar_instances[j+1].node
 							if(next_node_text.textContent.length > 1){
-								const node_fields_separator = document.createTextNode(self.context.fields_separator)
+								const value_separator = self.context.fields_separator || ' | '
+								const node_fields_separator = document.createTextNode(value_separator)
 								wrapper.appendChild(node_fields_separator)
 							}
 						}
@@ -160,7 +154,8 @@ view_text_section_record.render = async function(self, options) {
 
 			// columns separator (between components inside the same column)
 				if(i < columns_map_length-1 && columns_map[i+1].id!=='remove' && columns_map[i+1].id!=='section_id') {
-					const node_fields_separator = document.createTextNode(', ')
+					const fields_separator = self.context.fields_separator || ', '
+					const node_fields_separator = document.createTextNode(fields_separator)
 					wrapper.appendChild(node_fields_separator)
 				}
 		}//end for (let i = 0; i < columns_map_length; i++)
