@@ -1857,7 +1857,7 @@ export const ui = {
 				const option = ui.create_dom_element({
 					element_type	: 'option',
 					value			: ar_langs[i].value,
-					text_content	: ar_langs[i].label,
+					inner_html		: ar_langs[i].label,
 					parent			: fragment
 				})
 				// selected options set on match
