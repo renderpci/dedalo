@@ -5,12 +5,13 @@
 
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
+	import {download_file} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 
 
 
 /**
-* view_viewer_image
+* VIEW_VIEWER_IMAGE
 * Manage the components logic and appearance in client side
 */
 export const view_viewer_image = function() {
@@ -34,7 +35,7 @@ view_viewer_image.render = function(self, options) {
 		// const wrapper = ui.component.build_wrapper_mini(self)
 		const wrapper = document.createElement('div')
 			  wrapper.classList.add('component_image')
-			  wrapper.classList.add('viewer')
+			  wrapper.classList.add('view_viewer')
 
 	// url
 		const quality		= page_globals.dedalo_image_quality_default // '1.5MB'
@@ -172,19 +173,10 @@ const download_original_image = function (options) {
 	const download_url	= options.download_url
 	const name			= options.name
 
-	// Create a temporal 'a' element and click it
-	const download_image_temp = document.createElement('a');
-		  download_image_temp.href = download_url
-		  download_image_temp.setAttribute('download', name);
-		  download_image_temp.style.display = 'none';
-
-	document.body.appendChild(download_image_temp);
-
-	// do click to the image to be downloaded
-	download_image_temp.click();
-
-	// remove the temp node
-	document.body.removeChild(download_image_temp);
+	download_file({
+		url			: download_url,
+		file_name	: `dedalo_download_` + name
+	})
 
 	return true
 }//end download_original_image

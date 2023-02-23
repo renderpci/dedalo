@@ -7,7 +7,7 @@
 	import {dd_console} from '../../common/js/utils/index.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import * as instances from '../../common/js/instances.js'
-	import {object_to_url_vars} from '../../common/js/utils/index.js'
+	import {object_to_url_vars, download_file} from '../../common/js/utils/index.js'
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_edit_component_av} from '../../component_av/js/render_edit_component_av.js'
@@ -447,12 +447,10 @@ export const download_av_fragment = async function(options) {
 				const url		= api_response.result;
 				const file_name	= `dedalo_download_${quality}_` + url.substring(url.lastIndexOf('/')+1);
 
-				// anchor pseudo-link
-					const anchor	= document.createElement('a');
-					anchor.href		= url
-					anchor.target	= '_blank'
-					anchor.download	= file_name
-					anchor.click();
+				download_file({
+					url			: url,
+					file_name	: file_name
+				})
 			}
 
 			resolve(api_response)

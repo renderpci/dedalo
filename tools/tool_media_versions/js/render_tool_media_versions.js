@@ -6,7 +6,7 @@
 // imports
 	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
-	import {bytes_format} from '../../../core/common/js/utils/index.js'
+	import {bytes_format, download_file} from '../../../core/common/js/utils/index.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 
 
@@ -490,32 +490,16 @@ const get_line_file_download = function(ar_quality, self) {
 					class_name		: 'button download',
 					parent			: file_info_node
 				})
-				button_file_download.addEventListener('click', function(){
-					// open trigger call in new window
+				button_file_download.addEventListener('click', function(e){
+					e.stopPropagation()
 
-					// url
-						const url_vars = {
-							mode			: 'download_file',
-							quality			: quality,
-							tipo			: self.caller.tipo,
-							section_tipo	: self.caller.section_tipo,
-							section_id		: self.caller.section_id
-						}
-						const pairs = []
-						for (const key in url_vars) {
-							pairs.push( key+'='+url_vars[key] )
-						}
-						const url = self.trigger_url + '?' + pairs.join('&')
+					const url		= file_info.file_url;
+					const file_name	= `dedalo_download_${quality}_` + url.substring(url.lastIndexOf('/')+1);
 
-					// confirm dialog
-						if ( !confirm( (get_label.download || 'Download') + ' ['+quality+']' ) ) {
-							return false
-						}
-
-					// open new window
-						window.open(url, get_label.download)
-						// const download_window = window.open(url, get_label.descargar)
-						// download_window.focus()
+					download_file({
+						url			: url,
+						file_name	: file_name
+					})
 				})
 			}
 		}//end if (file_info.file_exist===true)
