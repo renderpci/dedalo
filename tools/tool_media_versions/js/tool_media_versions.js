@@ -15,7 +15,7 @@
 
 
 /**
-* tool_media_versions
+* TOOL_MEDIA_VERSIONS
 * Tool to make interesting things
 */
 export const tool_media_versions = function () {
@@ -38,7 +38,7 @@ export const tool_media_versions = function () {
 
 
 	return true
-}//end page
+}//end tool_media_versions
 
 
 
@@ -61,6 +61,8 @@ export const tool_media_versions = function () {
 /**
 * INIT
 * Custom tool init
+* @param object options
+* @return bool
 */
 tool_media_versions.prototype.init = async function(options) {
 
@@ -82,8 +84,7 @@ tool_media_versions.prototype.init = async function(options) {
 * BUILD
 * Custom tool build
 * @param bool autoload = false
-* @return promise
-* 	resolve: bool
+* @return bool
 */
 tool_media_versions.prototype.build = async function(autoload=false) {
 

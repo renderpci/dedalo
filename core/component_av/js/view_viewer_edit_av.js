@@ -5,6 +5,7 @@
 
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
+	import {url_vars_to_object} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {
 		get_content_data_player
@@ -56,6 +57,15 @@ view_viewer_edit_av.render = async function(self, options) {
 		function set_bg_color() {
 			this.removeEventListener('load', set_bg_color, false)
 			ui.set_background_image(this, wrapper)
+		}
+
+	// fragment. if url params contains tc_in, set a fragment
+		const url_vars = url_vars_to_object(window.location.search)
+		if (url_vars && url_vars.tc_in) {
+			self.fragment = {
+				tc_in	: url_vars.tc_in,
+				tc_out	: url_vars.tc_out
+			}
 		}
 
 	// media_component player

@@ -112,6 +112,23 @@
 
 
 
+// icon
+	.icon {
+		&.loading {
+			// spinner
+			border: 1px solid #d1d5db;
+			border-top-color: @color_orange_dedalo;
+			border-radius: 50%;
+			mask: unset !important;
+			-webkit-mask: unset !important;
+			background-color: transparent !important;
+
+			animation: run_spinner 800ms linear infinite;
+		}
+	}
+
+
+
 // button tag. explicit buttons (dialog box etc.)
 	button {
 		// appearance: none;
@@ -285,8 +302,6 @@
 		// 	padding-left: 2em !important;
 		// }
 
-
-
 		&:active {
 			opacity: 0.5;
 		}
@@ -416,7 +431,12 @@
 		.button& { .fn_add_mask(@icon_name); }
 	}
 	.label {
-		@icon_name : 'label.svg';
+		@icon_name : 'tag.svg'; // label
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.document {
+		@icon_name : 'document.svg';
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
@@ -467,6 +487,11 @@
 	}
 	.media {
 		@icon_name : 'media.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.film {
+		@icon_name : 'film.svg';
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}

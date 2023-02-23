@@ -802,6 +802,7 @@ const view_window = async function(options) {
 
 	// caller_ddo. Minimum caller data to re-build it from tool
 		const caller_ddo = {
+			id_variant			: caller.id_variant || null,
 			tipo				: caller.tipo,
 			section_tipo		: caller.section_tipo,
 			section_id			: caller.section_id,
@@ -812,8 +813,7 @@ const view_window = async function(options) {
 		}
 
 	// caller_dataframe . Used for dataframe
-
-		if (caller.context.is_dataframe ) {
+		if (caller.context && caller.context.is_dataframe) {
 			if(caller.caller && caller.caller.model==='section_record'){
 				if(caller.caller.caller){
 					caller_ddo.caller_dataframe = {
@@ -926,8 +926,11 @@ const view_window = async function(options) {
 			// remove window.callers pointer
 			// delete window.callers[caller.id] /* (!) TEMPORAL DEACTIVATED ! */
 
-			// refresh caller
-			caller.refresh()
+			// refresh caller.
+			// Note that in some situations, caller is not an instance like in grid_dd indexation button
+			if (caller && typeof caller.refresh==='function') {
+				caller.refresh()
+			}
 
 			// close opened window if is open
 			// if (tool_window) {

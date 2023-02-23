@@ -1,8 +1,8 @@
 <?php
 /**
-* DD_COMPONENT_portal_API
-* Manage API REST data flow of component with Dédalo
-* This class is a collection of component exposed methods to the API across
+* DD_COMPONENT_PORTAL_API
+* Manage API REST data flow of the component with Dédalo
+* This class is a collection of component exposed methods to the API using
 * a normalized RQO (Request Query Object)
 *
 */

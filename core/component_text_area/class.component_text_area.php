@@ -169,10 +169,9 @@ class component_text_area extends component_common {
 	/**
 	* GET_VALUE
 	* Get the value of the components.
-	* if the mode is "relation_list" create the fragments of the indexation
+	* If the mode is "indexation_list", create the fragments of the indexation
 	* @param string $lang = DEDALO_DATA_LANG
-	* @param object|null $ddo = null
-	*
+	* @param object $ddo = null
 	* @return dd_grid_cell_object $value
 	*/
 	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : dd_grid_cell_object {
@@ -184,31 +183,31 @@ class component_text_area extends component_common {
 			$class_list			= $ddo->class_list ?? null;
 
 		// column_obj
-			if(isset($this->column_obj)){
-				$column_obj = $this->column_obj;
-			}else{
-				$column_obj = new stdClass();
-					$column_obj->id = $this->section_tipo.'_'.$this->tipo;
-			}
+			$column_obj = $this->column_obj ?? (object)[
+				'id' => $this->section_tipo.'_'.$this->tipo
+			];
 
 		// data
 			$data = $this->get_dato();
 
-			$procesed_data = [];
-			foreach ($data as $current_value) {
-				$current_value = trim($current_value);
-				if (!empty($current_value)) {
-					$procesed_data[] = TR::add_tag_img_on_the_fly($current_value);
-				}
-			}
+		// procesed_data
+			switch ($this->mode) {
+				case 'indexation_list':
+					// process data to build the indexation custom columns
+					$procesed_data	= include 'component_text_area_value.php';
+					$cell_type		= null;
+					break;
 
-			$cell_type = 'text';
-
-			if($this->mode === 'indexation_list'){
-
-				// process data for build the columns
-					$procesed_data = include 'component_text_area_value.php';
-					$cell_type = null;
+				default:
+					$procesed_data = [];
+					foreach ($data as $current_value) {
+						$current_value = trim($current_value);
+						if (!empty($current_value)) {
+							$procesed_data[] = TR::add_tag_img_on_the_fly($current_value);
+						}
+					}
+					$cell_type = 'text'; // default
+					break;
 			}
 
 		// label
@@ -638,8 +637,13 @@ class component_text_area extends component_common {
 
 	/**
 	* GET FRAGMENT TEXT FROM TAG
-	* @param $tag (String like '[index-n-5]' or '[/index-n-5]' or [index-r-5]...)
-	* @return array|null $fragment_text (String like 'texto englobado por las etiquetas xxx a /xxx')
+	* @param string $tag_id
+	* 	(String like '[index-n-5]' or '[/index-n-5]' or [index-r-5]...)
+	* @param string $tag_type
+	* 	Like: 'index'
+	* @param string $raw_text
+	* @return array|null $fragment_text
+	* 	(String like 'texto englobado por las etiquetas xxx a /xxx')
 	*/
 	public static function get_fragment_text_from_tag(string $tag_id, string $tag_type, string $raw_text) : ?array {
 
