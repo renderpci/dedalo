@@ -933,8 +933,8 @@ component_text_area.prototype.delete_tag = function(tag_id, type, key=0) {
 
 		data_manager.request({
 			body : {
-				action	: "delete_tag",
-				dd_api	: 'dd_'+self.model+'_api', // component_text_area
+				action	: 'delete_tag',
+				dd_api	: 'dd_component_text_area_api', // component_text_area
 				source	: {
 					section_tipo	: self.section_tipo,
 					section_id		: self.section_id,

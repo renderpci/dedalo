@@ -47,17 +47,6 @@ render_tool_media_versions.prototype.edit = async function(options) {
 			content_data : content_data
 		})
 
-	// modal container
-		// if (!window.opener) {
-		// 	const header	= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
-		// 	const modal		= ui.attach_to_modal(header, wrapper, null)
-		// 	modal.on_close	= () => {
-		// 		self.caller.refresh()
-		// 		// when closing the modal, common destroy is called to remove tool and elements instances
-		// 		self.destroy(true, true, true)
-		// 	}
-		// }
-
 
 	return wrapper
 }//end tool_media_versions
@@ -72,7 +61,8 @@ render_tool_media_versions.prototype.edit = async function(options) {
 */
 const get_content_data = async function(self) {
 
-	const fragment = new DocumentFragment()
+	// DocumentFragment
+		const fragment = new DocumentFragment()
 
 	// main_element_container
 		const main_element_container = ui.create_dom_element({
@@ -197,10 +187,13 @@ const render_versions_grid = function(self) {
 
 /**
 * GET_LINE_LABELS
+* @param array ar_quality
+* @param object self
 * @return DOM node fragment
 */
 const get_line_labels = function(ar_quality, self) {
 
+	// DocumentFragment
  	const fragment = new DocumentFragment()
 
  	// main label
@@ -246,11 +239,14 @@ const get_line_labels = function(ar_quality, self) {
 
 /**
 * GET_LINE_FILE_EXISTS
+* @param array ar_quality
+* @param object self
 * @return DOM node fragment
 */
 const get_line_file_exists = function(ar_quality, self) {
 
- 	const fragment = new DocumentFragment()
+	// DocumentFragment
+ 		const fragment = new DocumentFragment()
 
  	// main label
 		ui.create_dom_element({
@@ -313,11 +309,14 @@ const get_line_file_exists = function(ar_quality, self) {
 
 /**
 * GET_LINE_FILE_SIZE
+* @param array ar_quality
+* @param object self
 * @return DOM node fragment
 */
 const get_line_file_size = function(ar_quality, self) {
 
- 	const fragment = new DocumentFragment()
+	// DocumentFragment
+ 		const fragment = new DocumentFragment()
 
  	// main label
 		ui.create_dom_element({
@@ -369,11 +368,14 @@ const get_line_file_size = function(ar_quality, self) {
 
 /**
 * GET_LINE_FILE_UPLOAD
+* @param array ar_quality
+* @param object self
 * @return DOM node fragment
 */
 const get_line_file_upload = function(ar_quality, self) {
 
- 	const fragment = new DocumentFragment()
+	// DocumentFragment
+ 		const fragment = new DocumentFragment()
 
  	// main label
 		ui.create_dom_element({
@@ -447,12 +449,15 @@ const get_line_file_upload = function(ar_quality, self) {
 
 
 /**
-* GET_LINE_FILE_downLOAD
+* GET_LINE_FILE_DOWNLOAD
+* @param array ar_quality
+* @param object self
 * @return DOM node fragment
 */
 const get_line_file_download = function(ar_quality, self) {
 
- 	const fragment = new DocumentFragment()
+	// DocumentFragment
+ 		const fragment = new DocumentFragment()
 
  	// main label
 		ui.create_dom_element({
@@ -471,15 +476,12 @@ const get_line_file_download = function(ar_quality, self) {
 			// file_info
 				const file_info = self.files_info.find(el => el.quality===quality)
 
-				// 'file_exist'
-				// 'file_size'
-				// 'url'
-
-			const file_info_node = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'file_info' + (quality===self.caller.context.features.default_quality ? ' default' : ''),
-				parent			: fragment
-			})
+			// file_info_node
+				const file_info_node = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'file_info' + (quality===self.caller.context.features.default_quality ? ' default' : ''),
+					parent			: fragment
+				})
 
 			if (file_info.file_exist===true) {
 
@@ -526,11 +528,14 @@ const get_line_file_download = function(ar_quality, self) {
 
 /**
 * GET_LINE_FILE_DELETE
+* @param array ar_quality
+* @param object self
 * @return DOM node fragment
 */
 const get_line_file_delete = function(ar_quality, self) {
 
- 	const fragment = new DocumentFragment()
+	// DocumentFragment
+ 		const fragment = new DocumentFragment()
 
  	// main label
 		ui.create_dom_element({
@@ -593,7 +598,8 @@ const get_line_file_delete = function(ar_quality, self) {
 */
 const get_line_build_version = function(ar_quality, self) {
 
- 	const fragment = new DocumentFragment()
+	// DocumentFragment
+ 		const fragment = new DocumentFragment()
 
  	// main label
 		ui.create_dom_element({
@@ -687,11 +693,14 @@ const get_line_build_version = function(ar_quality, self) {
 /**
 * GET_LINE_CONFORM_HEADERS
 * 	Specific component_av feature
+* @param array ar_quality
+* @param object self
 * @return DOM node fragment
 */
 const get_line_conform_headers = function(ar_quality, self) {
 
- 	const fragment = new DocumentFragment()
+	// DocumentFragment
+ 		const fragment = new DocumentFragment()
 
  	// main label
 		ui.create_dom_element({
@@ -710,15 +719,12 @@ const get_line_conform_headers = function(ar_quality, self) {
 			// file_info
 				const file_info = self.files_info.find(el => el.quality===quality)
 
-				// 'file_exist'
-				// 'file_size'
-				// 'url'
-
-			const file_info_node = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'file_info' + (quality===self.caller.context.features.default_quality ? ' default' : ''),
-				parent			: fragment
-			})
+			// file_info_node
+				const file_info_node = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'file_info' + (quality===self.caller.context.features.default_quality ? ' default' : ''),
+					parent			: fragment
+				})
 
 			if (quality!=='original' && file_info.file_exist===true) {
 
@@ -749,11 +755,14 @@ const get_line_conform_headers = function(ar_quality, self) {
 /**
 * GET_LINE_ROTATE
 * 	Specific component_image feature
+* @param array ar_quality
+* @param object self
 * @return DOM node fragment
 */
 const get_line_rotate = function(ar_quality, self) {
 
- 	const fragment = new DocumentFragment()
+	// DocumentFragment
+ 		const fragment = new DocumentFragment()
 
  	// main label
 		ui.create_dom_element({
@@ -823,5 +832,3 @@ const get_line_rotate = function(ar_quality, self) {
 
 	return fragment
 }//end get_line_rotate
-
-
