@@ -588,74 +588,174 @@ final class Ffmpeg {
 
 
 	/**
-	* BUILD_FRAGMENT
+	* BUILD_FRAGMENT_OLD
 	* @return string $file_url
 	*/
-	public function build_fragment(AVObj $AVObj, string $tcin, string $tcout, string $target_filename, int $watermark=0) : string {
+		// public function build_fragment_OLD(AVObj $AVObj, string $tcin, string $tcout, string $target_filename, int $watermark=0) : string {
 
-		$ffmpeg_installed_path	= DEDALO_AV_FFMPEG_PATH;
-		$reelID					= $AVObj->get_reelID();
-		$source_file			= $AVObj->get_media_path_abs() . $reelID .'.'. $AVObj->get_extension();
-		$target_filename_path	= $AVObj->get_media_path_abs() . 'fragments/' . $target_filename;
+		// 	$ffmpeg_installed_path	= DEDALO_AV_FFMPEG_PATH;
+		// 	$reelID					= $AVObj->get_reelID();
+		// 	$source_file			= $AVObj->get_media_path_abs() . $reelID .'.'. $AVObj->get_extension();
+		// 	$target_filename_path	= $AVObj->get_media_path_abs() . 'fragments/' . $target_filename;
 
-		$tcin_secs	= OptimizeTC::TC2seg($tcin);
-		$tcout_secs	= OptimizeTC::TC2seg($tcout);
-		$duration	= $tcout_secs - $tcin_secs;
-		# duration is float like 538.521 and need to be converted to tc like 00:06:53.734
-		$duration	= OptimizeTC::seg2tc($duration);
+		// 	$tcin_secs	= OptimizeTC::TC2seg($tcin);
+		// 	$tcout_secs	= OptimizeTC::TC2seg($tcout);
+		// 	$duration	= $tcout_secs - $tcin_secs;
+		// 	# duration is float like 538.521 and need to be converted to tc like 00:06:53.734
+		// 	$duration	= OptimizeTC::seg2tc($duration);
 
-		debug_log(__METHOD__." ++ build_fragment duration ".$duration, logger::WARNING);
+		// 	debug_log(__METHOD__." ++ build_fragment duration ".$duration, logger::WARNING);
 
-		$watermark_file = DEDALO_AV_WATERMARK_FILE;
+		// 	$watermark_file = DEDALO_AV_WATERMARK_FILE;
 
-			# fragments dir exists
-			$fragments_folder = $AVObj->get_media_path_abs() . 'fragments';
-			if( !is_dir($fragments_folder) ) {
-				$create_dir = mkdir($fragments_folder, 0777);
-				if(!$create_dir) {
-					if(SHOW_DEBUG===true) {
-						debug_log(__METHOD__." Error trying to create: $fragments_folder ".to_string(), logger::ERROR);
-					}
-					throw new Exception("Error on read or create directory for \"fragments\" folder. Permission denied ! ", 1);
+		// 		# fragments dir exists
+		// 		$fragments_folder = $AVObj->get_media_path_abs() . 'fragments';
+		// 		if( !is_dir($fragments_folder) ) {
+		// 			$create_dir = mkdir($fragments_folder, 0777);
+		// 			if(!$create_dir) {
+		// 				if(SHOW_DEBUG===true) {
+		// 					debug_log(__METHOD__." Error trying to create: $fragments_folder ".to_string(), logger::ERROR);
+		// 				}
+		// 				throw new Exception("Error on read or create directory for \"fragments\" folder. Permission denied ! ", 1);
+		// 			}
+		// 		}
+
+		// 		# fragments dir set permissions 0777
+		// 		$wantedPerms = 0777;
+		// 		$actualPerms = fileperms($fragments_folder);
+		// 		if($actualPerms < $wantedPerms) {
+		// 			$chmod = chmod($fragments_folder, $wantedPerms);
+		// 			if(!$chmod) die(" Sorry. Error on set valid permissions to directory for \"fragments\".  ") ;
+		// 		}
+
+		// 	if ($watermark==1) {
+
+		// 		$target_filename_path_temp = $AVObj->get_media_path_abs() .'fragments/temp_'. $target_filename;
+
+		// 		#$command = "nice -n 19 $ffmpeg_installed_path -i $source_file -ss $tcin -t $duration -vcodec copy -acodec copy -y $target_filename_path_temp";
+		// 		$command  = "nice -n 19 $ffmpeg_installed_path -ss $tcin  -i $source_file -t ".$duration." -vcodec copy -acodec copy -y $target_filename_path_temp";
+
+		// 		$command .= " && nice -n 19 $ffmpeg_installed_path -i $target_filename_path_temp -vf 'movie=$watermark_file [watermark]; [in][watermark] overlay=main_w-overlay_w-10:10 [out]' -y $target_filename_path";
+
+		// 		# EXEC COMMAND
+		// 		#$command_exc = Exec::exec_command($command);
+		// 		$command_exc = shell_exec( $command );
+
+		// 	}else{
+
+		// 		# nice -n 19
+		// 		#$command = "$ffmpeg_installed_path -i $source_file -ss $tcin -t $duration -vcodec copy -acodec copy -y $target_filename_path";
+		// 		$command = "$ffmpeg_installed_path -ss $tcin -i $source_file -t ".$duration." -vcodec copy -acodec copy -y $target_filename_path";
+
+		// 		# EXEC COMMAND
+		// 		$command_exc = exec_::exec_command($command);
+
+		// 		error_log($command);
+		// 	}
+
+		// 	$file_url = 'http://' . $_SERVER['HTTP_HOST'] . $AVObj->get_media_path() .'fragments/'. $target_filename;
+
+		// 	return $file_url;
+		// }//end build_fragment
+
+
+
+	/**
+	* BUILD_FRAGMENT
+	* Process a av fragment based on given time codes in and out
+	* @param object $options
+	* @return object $response
+	*/
+	public static function build_fragment(object $options) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+
+		// options
+			$source_file_path	= $options->source_file_path;
+			$target_filename	= $options->target_filename;
+			$fragments_dir_path	= $options->fragments_dir_path;
+			$tc_in_secs			= $options->tc_in_secs;
+			$tc_out_secs		= $options->tc_out_secs;
+			$watermark			= $options->watermark;
+
+		// duration
+			$duration_secs = $tc_out_secs - $tc_in_secs;
+			// duration_secs is float like 538.521 and need to be converted to time-code like 00:06:53.734
+			$duration_tc	= OptimizeTC::seg2tc($duration_secs);
+			$tc_in			= OptimizeTC::seg2tc($tc_in_secs); // as time code like 00:00:03.125
+
+		// watermark_file path
+			$watermark_file = DEDALO_AV_WATERMARK_FILE;
+
+		// fragments_dir_path
+			if (!is_dir($fragments_dir_path)) {
+				debug_log(__METHOD__." fragments directory do not exists. Trying to create a new one in: ".to_string($fragments_dir_path), logger::WARNING);
+				if(!mkdir($fragments_dir_path, 0755)) {
+					$response->msg .= " Error trying to create fragments_dir ";
+					debug_log(__METHOD__." $response->msg ".to_string($fragments_dir_path), logger::ERROR);
+					return $response;
 				}
 			}
 
-			# fragments dir set permissions 0777
-			$wantedPerms = 0777;
-			$actualPerms = fileperms($fragments_folder);
-			if($actualPerms < $wantedPerms) {
-				$chmod = chmod($fragments_folder, $wantedPerms);
-				if(!$chmod) die(" Sorry. Error on set valid permissions to directory for \"fragments\".  ") ;
+		// target_file_path
+			$target_file_path = $fragments_dir_path . '/' . $target_filename;
+
+		// ffmpeg bin path
+			$ffmpeg_bin = DEDALO_AV_FFMPEG_PATH;
+
+		// debug
+			debug_log(__METHOD__." Building fragment duration secs: ".$duration_secs, logger::WARNING);
+
+		// command
+			if ($watermark===true) {
+
+				// check watermark file
+					if (!file_exists($watermark_file)) {
+						$response->msg .= " Error. watermark file do not exists! ";
+						debug_log(__METHOD__.
+							" $response->msg. Check your config file and make sure the watermark file exists and is accessible. watermark_file: ".to_string($watermark_file),
+							logger::ERROR
+						);
+						return $response;
+					}
+
+				// temporal fragment file
+				$target_file_path_temp = $fragments_dir_path .'/temp_'. $target_filename;
+
+				$command  = "   nice -n 19 $ffmpeg_bin -ss $tc_in  -i $source_file_path -t ".$duration_tc." -vcodec copy -acodec copy -y $target_file_path_temp ";
+				$command .= "&& nice -n 19 $ffmpeg_bin -i $target_file_path_temp -vf 'movie=$watermark_file [watermark]; [in][watermark] overlay=main_w-overlay_w-10:10 [out]' -y $target_file_path";
+
+			}else{
+
+				$command = "$ffmpeg_bin -ss $tc_in -i $source_file_path -t ".$duration_tc." -vcodec copy -acodec copy -y $target_file_path";
 			}
 
-		if ($watermark==1) {
+		// exec command and wait to finish
+			$command_exc = exec($command, $output, $result_code);
+			if ($command_exc===false) {
+				$response->msg .= " Error executing command to build fragment ";
+				debug_log(__METHOD__." $response->msg . output: ".to_string($output).' - result_code: '.to_string($result_code), logger::ERROR);
+				return $response;
+			}
 
-			$target_filename_path_temp = $AVObj->get_media_path_abs() .'fragments/temp_'. $target_filename;
+		// response. command result code is 0 for success and 1 for errors
+			if ($result_code===0 && file_exists($target_file_path)) {
 
-			#$command = "nice -n 19 $ffmpeg_installed_path -i $source_file -ss $tcin -t $duration -vcodec copy -acodec copy -y $target_filename_path_temp";
-			$command  = "nice -n 19 $ffmpeg_installed_path -ss $tcin  -i $source_file -t ".$duration." -vcodec copy -acodec copy -y $target_filename_path_temp";
+				$response->result	= true;
+				$response->msg		= 'OK. Created fragment successfully. file name: '.$target_filename;
+				debug_log(__METHOD__." $response->msg ".to_string(), logger::DEBUG);
 
-			$command .= " && nice -n 19 $ffmpeg_installed_path -i $target_filename_path_temp -vf 'movie=$watermark_file [watermark]; [in][watermark] overlay=main_w-overlay_w-10:10 [out]' -y $target_filename_path";
+			}else{
 
-			# EXEC COMMAND
-			#$command_exc = Exec::exec_command($command);
-			$command_exc = shell_exec( $command );
+				$response->msg		= 'Error on create av fragment. file name: '.$target_filename;
+				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
+				debug_log(__METHOD__." command: ". PHP_EOL. $command, logger::DEBUG);
+			}
 
-		}else{
 
-			# nice -n 19
-			#$command = "$ffmpeg_installed_path -i $source_file -ss $tcin -t $duration -vcodec copy -acodec copy -y $target_filename_path";
-			$command = "$ffmpeg_installed_path -ss $tcin -i $source_file -t ".$duration." -vcodec copy -acodec copy -y $target_filename_path";
-
-			# EXEC COMMAND
-			$command_exc = exec_::exec_command($command);
-
-			error_log($command);
-		}
-
-		$file_url = 'http://' . $_SERVER['HTTP_HOST'] . $AVObj->get_media_path() .'fragments/'. $target_filename;
-
-		return $file_url;
+		return $response;
 	}//end build_fragment
 
 
