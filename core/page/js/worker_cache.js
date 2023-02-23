@@ -130,7 +130,7 @@ self.onmessage = async function(e) {
 			const item = api_response.result[i]
 
 			const headers	= get_headers(item)
-			const cache		= tem.type==='css'
+			const cache		= item.type==='css'
 				? 'no-cache'
 				: 'reload'
 
