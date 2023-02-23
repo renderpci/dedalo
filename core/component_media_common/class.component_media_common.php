@@ -1172,7 +1172,7 @@ class component_media_common extends component_common {
 	* @return string $path
 	* 	complete absolute file path like '/Users/myuser/works/Dedalo/images/dd152-1.jpg'
 	*/
-	public function get_media_filepath(?string $quality) : string {
+	public function get_media_filepath(?string $quality=null) : string {
 
 		if(empty($quality)) {
 			$quality = $this->get_quality();
