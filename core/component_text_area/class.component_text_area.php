@@ -2485,4 +2485,54 @@ class component_text_area extends component_common {
 
 
 
+	/**
+	* GET_FALLBACK_edit_VALUE
+	* Used by component_text_area and component_html_text to
+	* generate fallback versions of current empty values
+	* @param object $options = null
+	* @return array|null $list_value
+	*/
+	public function get_fallback_edit_value(object $options=null) : ?array {
+
+		// options
+			$max_chars = $options->max_chars ?? 700;
+
+		// dato_fallback. array of each dato array element using fallback
+			$dato_fallback = component_common::extract_component_dato_fallback(
+				$this,
+				DEDALO_DATA_LANG, // lang
+				DEDALO_DATA_LANG_DEFAULT // main_lang
+			);
+
+			if (empty($dato_fallback)) {
+				return null;
+			}
+
+		// list_value. Iterate dato_fallback and truncate long text
+			$edit_value = [];
+			foreach ($dato_fallback as $current_value) {
+
+				$value = null;
+
+				if(!empty($current_value)) {
+					// delete all Dédalo tags
+						$string_value = TR::deleteMarks($current_value);
+
+					// delete every tag as paragraph tags
+						$string_value = strip_tags($string_value);
+
+					// truncate long text to be used
+						$value = common::truncate_text(
+							$string_value, // string html
+							(int)$max_chars // int maxLength
+						);
+				}
+				$edit_value[] = $value;
+			}
+
+		return $edit_value;
+	}//end get_fallback_edit_value
+
+
+
 }//end class component_text_area

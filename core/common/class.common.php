@@ -1106,7 +1106,12 @@ abstract class common {
 				$final_string = $string_fragment;
 			}
 
-		return $final_string . $pad;
+		// add final "..."" when is truncated
+			if (!empty($final_string) && strlen($final_string)<strlen($string)) {
+				$final_string = $final_string . $pad;
+			}
+
+		return $final_string;
 	}//end truncate_text
 
 

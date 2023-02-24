@@ -171,10 +171,20 @@ const get_buttons = (self) => {
 */
 const get_input_element = (i, current_value, self) => {
 
-		const data				= self.data
-		const ar_fallback_value	= data.fallback_value || []
-		const fallback			= get_fallback_value(data.value, ar_fallback_value)
-		const fallback_value	= fallback[i]
+	// get fallback when current_value is empty
+	// clean fallback to only text
+		const data					= self.data
+		const ar_fallback_value		= data.fallback_value || []
+		const fallback				= get_fallback_value(data.value, ar_fallback_value)
+		const dirty_fallback_value	= fallback[i]
+	// clean fallback of any tag
+		const fallback_fragment = document.createDocumentFragment();
+		const fb_content_value = ui.create_dom_element({
+			element_type	: 'div',
+			inner_html 		: dirty_fallback_value,
+			parent  		: fallback_fragment
+		})
+		const fallback_value = fallback_fragment.firstChild.innerText;
 
 	// value is a raw html without parse into nodes (txt format)
 		const value = self.tags_to_html(current_value)
