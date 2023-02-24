@@ -2485,7 +2485,7 @@ abstract class component_common extends common {
 
 				// Try all projects langs sequence
 					if (empty($dato_fb[$key])) {
-						$data_langs = common::get_ar_all_langs(); # Langs from config projects
+						$data_langs = common::get_ar_all_langs(); // Langs from config projects
 						foreach ($data_langs as $current_lang) {
 							if ($current_lang===$lang || $current_lang===$main_lang) {
 								continue; // Already checked
