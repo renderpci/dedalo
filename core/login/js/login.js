@@ -257,7 +257,7 @@ login.prototype.action_dispatch = async function(api_response) {
 						// login continue
 						setTimeout(function(){
 							load_finish()
-						}, 700)
+						}, 450)
 					}
 				}
 				// load_finish()
