@@ -2449,6 +2449,7 @@ class component_text_area extends component_common {
 				DEDALO_DATA_LANG, // lang
 				DEDALO_DATA_LANG_DEFAULT // main_lang
 			);
+
 			if (empty($dato_fallback)) {
 				return null;
 			}
@@ -2459,7 +2460,7 @@ class component_text_area extends component_common {
 
 				$value = null;
 
-				if(!empty($html_value)) {
+				if(!empty($current_value)) {
 					// replace Dédalo tags by html image tags
 						$html_value	= TR::add_tag_img_on_the_fly($current_value);
 
