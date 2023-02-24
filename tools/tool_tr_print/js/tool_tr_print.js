@@ -111,35 +111,35 @@ tool_tr_print.prototype.build = async function(autoload=false) {
 * Create / recover and build a instance of current component in the desired lang
 * @return object instance
 */
-tool_tr_print.prototype.get_component = async function(lang) {
+	// tool_tr_print.prototype.get_component = async function(lang) {
 
-	const self = this
+	// 	const self = this
 
-	// to_delete_instances. Select current self.transcription_component
-		const to_delete_instances = self.ar_instances.filter(el => el===self.transcription_component)
+	// 	// to_delete_instances. Select current self.transcription_component
+	// 		const to_delete_instances = self.ar_instances.filter(el => el===self.transcription_component)
 
-	// context (clone and edit)
-		const context = Object.assign(clone(self.transcription_component.context),{
-			lang		: lang,
-			mode		: 'edit',
-			section_id	: self.transcription_component.section_id
-		})
+	// 	// context (clone and edit)
+	// 		const context = Object.assign(clone(self.transcription_component.context),{
+	// 			lang		: lang,
+	// 			mode		: 'edit',
+	// 			section_id	: self.transcription_component.section_id
+	// 		})
 
-	// options
-		const options = {
-			context				: context, // reference context ...
-			to_delete_instances	: to_delete_instances // array of instances to delete after create the new one
-		}
+	// 	// options
+	// 		const options = {
+	// 			context				: context, // reference context ...
+	// 			to_delete_instances	: to_delete_instances // array of instances to delete after create the new one
+	// 		}
 
-	// call generic common tool build
-		const component_instance = await tool_common.prototype.load_component.call(self, options);
+	// 	// call generic common tool build
+	// 		const component_instance = await tool_common.prototype.load_component.call(self, options);
 
-	// fix instance (overwrite)
-		self.transcription_component = component_instance
+	// 	// fix instance (overwrite)
+	// 		self.transcription_component = component_instance
 
 
-	return component_instance
-}//end get_component
+	// 	return component_instance
+	// }//end get_component
 
 
 
