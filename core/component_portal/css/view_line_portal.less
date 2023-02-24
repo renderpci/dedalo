@@ -149,6 +149,8 @@
 					flex-wrap: nowrap;
 					justify-content: flex-start;
 
+					--default_height: 1.1rem;
+
 					.column { // , button
 						display: contents;
 					}
@@ -157,6 +159,14 @@
 						width: 0.75rem;
 						margin-left: 0.66rem;
 						margin-top: 0.12rem;
+						height: var(--default_height);
+					}
+
+					.button_remove {
+						height: var(--default_height);
+						.icon {
+							margin-top: 4px;
+						}
 					}
 
 					// .button.delete_bold {
