@@ -7,6 +7,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import * as instances from '../../common/js/instances.js'
+	import {get_fallback_value} from '../../common/js/common.js'
 	// import {pause} from '../../common/js/utils/index.js'
 	// import {when_in_viewport} from '../../common/js/events.js'
 
@@ -170,6 +171,11 @@ const get_buttons = (self) => {
 */
 const get_input_element = (i, current_value, self) => {
 
+		const data				= self.data
+		const ar_fallback_value	= data.fallback_value || []
+		const fallback			= get_fallback_value(data.value, ar_fallback_value)
+		const fallback_value	= fallback[i]
+
 	// value is a raw html without parse into nodes (txt format)
 		const value = self.tags_to_html(current_value)
 
@@ -232,6 +238,7 @@ const get_input_element = (i, current_value, self) => {
 					value_container		: value_container,
 					toolbar_container	: toolbar_container,
 					value				: value,
+					fallback_value 		: fallback_value,
 					key					: i,
 					editor_config		: editor_config,
 					editor_class		: self.context.view === 'html_text'
