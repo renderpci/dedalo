@@ -28,6 +28,7 @@ export const service_ckeditor = function() {
 		this.options
 		this.key
 		this.editor
+		this.fallback_value
 
 
 
@@ -52,6 +53,8 @@ export const service_ckeditor = function() {
 			const value_container	= options.value_container // dom node to be used as value container (empty when is set by the caller)
 			const toolbar_container	= options.toolbar_container // dom node for the toolbar
 			// const value			= options.value // the html data to be incorporated to the editor
+			const fallback_value	= options.fallback_value // the html data to be showed as placeholder when value is empty
+
 
 			const key				= options.key // array key of the value of the caller data
 			const editor_config		= options.editor_config // options for build custom buttons in the toolbar or custom events
@@ -63,6 +66,7 @@ export const service_ckeditor = function() {
 			self.toolbar_container	= toolbar_container
 			self.options			= options
 			self.key				= key
+			self.fallback_value		= fallback_value
 
 		// add component_text_area value
 			// value_container.innerHTML = value
@@ -216,7 +220,8 @@ export const service_ckeditor = function() {
 				simpleUpload: {
 					 // The URL that the images are uploaded to.
 					uploadUrl: DEDALO_API_URL + '?resource_type=web'
-				}
+				},
+				placeholder: self.fallback_value
 			})
 			.then( editor => {
 
@@ -312,6 +317,7 @@ export const service_ckeditor = function() {
 		// ckEditor is initiated without user interface
 			const editor = await ckeditor.ddEditor.create( self.value_container, {
 				// initialData: value
+				placeholder: self.fallback_value
 			})
 
 		// fix the instance
