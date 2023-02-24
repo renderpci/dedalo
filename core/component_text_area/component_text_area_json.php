@@ -164,7 +164,7 @@
 
 					// fallback_value. Is used to create a placeholder to display a reference data to the user
 						$fallback_value	= (empty($value[0]) || ($value[0]==='<br data-mce-bogus="1">'))
-							? $this->get_fallback_list_value((object)['max_chars'=>700])
+							? $this->get_fallback_edit_value((object)['max_chars'=>700])
 							: null;
 					break;
 			}
@@ -177,6 +177,7 @@
 				$item->parent_tipo			= $this->get_tipo();
 				$item->parent_section_id	= $this->get_section_id();
 				$item->fallback_value		= $fallback_value;
+					dump($fallback_value, '$fallback_value +----------------------- '.to_string());
 				// optional data to add
 				if(isset($properties->tags_persons) && $mode==='edit') {
 					$item->related_sections	= $related_sections;
