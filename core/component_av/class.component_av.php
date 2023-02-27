@@ -238,9 +238,12 @@ class component_av extends component_media_common {
 			// $this->set_quality($quality);
 
 		// directory do not exists case
-			$target_dir = $this->get_media_path($quality);
+			$target_dir = $this->get_media_path_dir($quality);
 			if( !file_exists($target_dir) ) {
-				debug_log(__METHOD__." Directory '$target_dir' do not exists !. quality: ".to_string($quality), logger::ERROR);
+				debug_log(__METHOD__.
+					" Directory '$target_dir' do not exists !. quality: ".to_string($quality),
+					logger::ERROR
+				);
 				return null;
 			}
 
@@ -778,7 +781,7 @@ class component_av extends component_media_common {
 	* PROCESS_UPLOADED_FILE
 	* @param object $file_data
 	*	Data from trigger upload file
-	* Format:
+	* 	Format:
 	* {
 	*     "original_file_name": "my_video.mp4",
 	*     "full_file_name": "test81_test65_2.mp4",
@@ -820,7 +823,7 @@ class component_av extends component_media_common {
 
 		try {
 
-			# AUDIO CASE
+			// audio case
 			if ($quality==='audio') {
 
 				// audio extensions supported
@@ -840,7 +843,7 @@ class component_av extends component_media_common {
 					debug_log(__METHOD__." Error Processing Request. Current audio extension [$file_ext] is not supported (q:$quality)".to_string(), logger::ERROR);
 				}
 
-			# VIDEO CASE
+			// video case
 			}else{
 
 				// dedalo_av_recompress_all
@@ -909,39 +912,50 @@ class component_av extends component_media_common {
 					}//end if (!file_exists($target_file))
 				}
 
+			// properties
+				$properties = $this->get_properties();
 
 			// target_filename. Save original file name in a component_input_text
-				$properties = $this->get_properties();
 				if (isset($properties->target_filename)) {
-
-					$current_section_id		= $this->get_parent();
-					$target_section_tipo	= $this->get_section_tipo();
 
 					$model_name_target_filename	= RecordObj_dd::get_modelo_name_by_tipo($properties->target_filename, true);
 					$component_target_filename	= component_common::get_instance(
 						$model_name_target_filename, // model
 						$properties->target_filename, // tipo
-						$current_section_id, // seciton_id
+						$this->get_section_id(), // section_id
 						'edit', // mode
 						DEDALO_DATA_NOLAN, // lang
-						$target_section_tipo // section_tipo
+						$this->get_section_tipo() // section_tipo
 					);
 					$component_target_filename->set_dato($original_file_name);
 					$component_target_filename->Save();
-					debug_log(__METHOD__." Saved original filename: ".to_string($original_file_name), logger::DEBUG);
+					debug_log(__METHOD__.
+						' Saved original filename to '.$properties->target_filename.' : '.to_string($original_file_name),
+						logger::DEBUG
+					);
 				}
 
-			// add data with the file uploaded
-				// if ($quality===DEDALO_AV_QUALITY_ORIGINAL) {
-				// 	$dato			= $this->get_dato();
-				// 	$value			= empty($dato) ? new stdClass() : reset($dato);
-				// 	$media_value	= $this->build_media_value((object)[
-				// 		'value'		=> $value,
-				// 		'file_name'	=> $original_file_name
-				// 	]);
-				// 	$this->set_dato([$media_value]);
-				// 	$this->Save();
-				// }
+			// target_duration. Save duration (time-code) in a component_input_text, usually to 'rsc54'
+				if (isset($properties->target_duration)) {
+
+					$model_name_target_duration	= RecordObj_dd::get_modelo_name_by_tipo($properties->target_duration, true);
+					$component_target_duration	= component_common::get_instance(
+						$model_name_target_duration, // model
+						$properties->target_duration, // tipo
+						$this->get_section_id(), // section_id
+						'edit', // mode
+						DEDALO_DATA_NOLAN, // lang
+						$this->get_section_tipo() // section_tipo
+					);
+					$secs		= $this->get_duration($quality); // float secs
+					$duration	= OptimizeTC::seg2tc($secs); // string TimeCode as '00:05:20:125'
+					$component_target_duration->set_dato([$duration]);
+					$component_target_duration->Save();
+					debug_log(__METHOD__.
+						' Saved av duration to '.$properties->target_duration.' : '.to_string($duration).' - secs: '.to_string($secs),
+						logger::DEBUG
+					);
+				}
 
 			// get files info
 				$files_info	= [];
@@ -980,6 +994,7 @@ class component_av extends component_media_common {
 					$this->set_dato($dato);
 					$this->Save();
 				}
+
 
 			// all is OK
 				$response->result	= true;

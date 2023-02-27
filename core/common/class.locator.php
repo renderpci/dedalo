@@ -340,7 +340,7 @@ class locator extends stdClass {
 
 		$locator = json_encode($locator);
 		$locator = json_decode($locator);
-		
+
 		return $locator;
 
 		// $std_object = new stdClass();
@@ -469,6 +469,10 @@ class locator extends stdClass {
 
 	/**
 	* IN_ARRAY_LOCATOR
+	* Search given locator into array of locators matching the properties given
+	* @param object $locator
+	* @param array $ar_locator
+	* @param array $ar_properties = []
 	* @return bool $found
 	*/
 	public static function in_array_locator(object $locator, array $ar_locator, array $ar_properties=[]) : bool {

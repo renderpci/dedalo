@@ -335,14 +335,14 @@ class component_select_lang extends component_relation_common {
 	* GET_AR_LIST_OF_VALUES
 	* @param string|null $lang = DEDALO_DATA_LANG
 	* @param bool $include_negative = false
-	* @return array $ar_list_of_values
+	* @return object $response
 	*/
 	public function get_ar_list_of_values(?string $lang=DEDALO_DATA_LANG, bool $include_negative=false) : object {
 
 		// datalist
 			$ar_all_project_select_langs = DEDALO_PROJECTS_DEFAULT_LANGS;
 			$datalist = [];
-			foreach ((array)$ar_all_project_select_langs as $key => $item) {
+			foreach ((array)$ar_all_project_select_langs as $item) {
 
 				$label		= lang::get_name_from_code($item);
 				$code		= $item;
@@ -369,6 +369,92 @@ class component_select_lang extends component_relation_common {
 
 		return $response;
 	}//end get_ar_list_of_values
+
+
+
+	/**
+	* GET_LIST_VALUE
+	* Unified value list output
+	* By default, list value is equivalent to dato. Override in other cases.
+	* Note that empty array or string are returned as null
+	* A param '$options' is added only to allow future granular control of the output
+	* @param object $options = null
+	* 	Optional way to modify result. Avoid using it if it is not essential
+	* @return array|null $list_value
+	*/
+	public function get_list_value(object $options=null) : ?array {
+
+		$dato = $this->get_dato();
+		if (empty($dato)) {
+			return null;
+		}
+
+		$list_value = [];
+		$ar_list_of_values = $this->get_ar_list_of_values(DEDALO_DATA_LANG);
+		foreach ($ar_list_of_values->result as $item) {
+
+			$locator = $item->value;
+			if ( true===locator::in_array_locator($locator, $dato, array('section_id','section_tipo')) ) {
+				$list_value[] = $item->label;
+			}
+		}
+
+		// check value is contained into list of values. If not, add as missing lang
+			if (!empty($dato) && empty($list_value) && !empty($ar_list_of_values->result)) {
+
+				$missing_lang = component_select_lang::get_missing_lang(
+					$dato[0], // object locator
+					$ar_list_of_values->result // array list_of_values
+				);
+				if (!empty($missing_lang)) {
+					// resolve
+					$list_value[] = $missing_lang->label;
+				}
+			}
+
+		return $list_value;
+	}//end get_list_value
+
+
+
+	/**
+	* GET_MISSING_LANG
+	* @param object $locator
+	* 	Data locator
+	* @param array $list_of_values
+	*  Array of values in ara_list_of_values result format
+	* @return object $missing_lang
+	*/
+	public static function get_missing_lang(object $locator, array $list_of_values) : ?object {
+
+		$missing_lang = null;
+
+		// check value is contained into list of values
+			$contained	= false;
+			foreach ($list_of_values as $item) {
+				if ($item->value->section_tipo===$locator->section_tipo &&
+					$item->value->section_id==$locator->section_id) {
+					$contained = true;
+					break;
+				}
+			}
+			if ($contained===false) {
+				// resolve lang
+				$code	= lang::get_code_from_locator($locator); // as 'lg-fra'
+				$name	= lang::get_lang_name_by_locator($locator); // as 'France'
+
+				$missing_lang = (object)[
+					'value'			=> (object)[
+						'section_tipo'	=> $locator->section_tipo,
+						'section_id'	=> $locator->section_id
+					],
+					'label'			=> $name . ' *',
+					'section_id'	=> $code
+				];
+			}
+
+		return $missing_lang;
+	}//end get_missing_lang
 
 
 }//end class component_select_lang

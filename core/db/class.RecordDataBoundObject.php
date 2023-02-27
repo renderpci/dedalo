@@ -78,21 +78,29 @@ abstract class RecordDataBoundObject {
 					ONTOLOGY_DB['DEDALO_SOCKET_CONN'], // socket
 					false // use cache
 				);
-				if($ontology_pg_conn===false){
+				if($ontology_pg_conn===false) {
+					debug_log(__METHOD__." Invalid DDBB connection. Unable to connect (52-2)".to_string(), logger::ERROR);
 					throw new Exception("Error. Could not connect to database (52-2)", 1);
 				}
 
 				return $ontology_pg_conn;
 			}
 
-		return DBi::_getConnection(
-			$host=DEDALO_HOSTNAME_CONN,
-			$user=DEDALO_USERNAME_CONN,
-			$password=DEDALO_PASSWORD_CONN,
-			$database=DEDALO_DATABASE_CONN,
-			$port=DEDALO_DB_PORT_CONN,
-			$socket=DEDALO_SOCKET_CONN
+		$connection = DBi::_getConnection(
+			DEDALO_HOSTNAME_CONN, // string host
+			DEDALO_USERNAME_CONN, // string user
+			DEDALO_PASSWORD_CONN, // string password
+			DEDALO_DATABASE_CONN, // string database
+			DEDALO_DB_PORT_CONN, // ?string port
+			DEDALO_SOCKET_CONN // ?string socket
 		);
+		// check valid connection
+		if ($connection===false) {
+			debug_log(__METHOD__." Invalid DDBB connection. Unable to connect (52-1)".to_string(), logger::ERROR);
+		}
+
+
+		return $connection;
 	}//end get_connection
 
 
@@ -171,7 +179,12 @@ abstract class RecordDataBoundObject {
 		}else{
 
 			// exec query
-				$result = pg_query($this->get_connection(), $strQuery) ;//or die("Cannot (2) execute query: $strQuery <br>\n". pg_last_error(DBi::_getConnection()));
+				$connection = $this->get_connection();
+				if ($connection===false) {
+					debug_log(__METHOD__." Connection error. Return false ".to_string(), logger::ERROR);
+					return false;
+				}
+				$result = pg_query($connection, $strQuery) ;//or die("Cannot (2) execute query: $strQuery <br>\n". pg_last_error(DBi::_getConnection()));
 				if ($result===false) {
 					debug_log(__METHOD__." Error: DDBB query error ". PHP_EOL . pg_last_error(DBi::_getConnection()) .PHP_EOL . to_string($strQuery), logger::ERROR);
 					// if(SHOW_DEBUG===true) {
@@ -646,6 +659,11 @@ abstract class RecordDataBoundObject {
 
 			# DATA IS NOT IN CACHE . Searching real data in DB
 
+			$connection = $this->get_connection();
+			if ($connection===false) {
+				debug_log(__METHOD__." Connection error. Return empty array ".to_string(), logger::ERROR);
+				return [];
+			}
 			$result = pg_query($this->get_connection(), $strQuery);
 			if ($result===false) {
 				if(SHOW_DEBUG===true) {

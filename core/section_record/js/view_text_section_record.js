@@ -148,7 +148,7 @@ view_text_section_record.render = async function(self, options) {
 						// check the node position and add fields separator
 						// add values separator between values of the same column
 						// sometimes the column could have more than 1 component (component_portal with 1 column that call more than 1 component)
-						// sometimes the column colul have more than 1 value as component_input_tex with more than 1 value ["value1","value2"]
+						// sometimes the column could have more than 1 value as component_input_tex with more than 1 value ["value1","value2"]
 						function add_fields_separator() {
 							if(j < ar_instances_length-1) {
 								const next_node_text = ar_instances[j+1].node

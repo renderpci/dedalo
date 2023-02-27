@@ -58,6 +58,19 @@
 				default:
 					$value				= $this->get_dato();
 					$ar_list_of_values	= $this->get_ar_list_of_values();
+
+					// check value is contained into list of values
+					if (!empty($value) && !empty($ar_list_of_values->result)) {
+
+						$missing_lang = component_select_lang::get_missing_lang(
+							$value[0], // object locator
+							$ar_list_of_values->result // array list_of_values
+						);
+						if (!empty($missing_lang)) {
+							// add missing lang to list (case France (fr) in MURAPA Hierarchy for example)
+							$ar_list_of_values->result[] = $missing_lang;
+						}
+					}
 					break;
 			}
 
