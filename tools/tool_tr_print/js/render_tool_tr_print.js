@@ -64,11 +64,13 @@ render_tool_tr_print.prototype.edit = async function(options={render_level:'full
 
 /**
 * GET_CONTENT_DATA_EDIT
+* @param object self
 * @return DOM node content_data
 */
 const get_content_data_edit = async function(self) {
 
-	const fragment = new DocumentFragment()
+	// DocumentFragment
+		const fragment = new DocumentFragment()
 
 	// left_container
 		const left_container = ui.create_dom_element({
@@ -78,33 +80,34 @@ const get_content_data_edit = async function(self) {
 		})
 
 	// right_container
-
 		const right_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'right_container',
 			parent			: fragment
 		})
-			const right_container_head = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'right_container_head',
-				parent			: right_container
-			})
-			const header_node = render_header(self)
-			if(header_node){
-				right_container_head.appendChild(header_node)
-			}
-			const right_container_text = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'right_container_text',
-				parent			: right_container
-			})
+		// right_container_head
+		const right_container_head = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'right_container_head',
+			parent			: right_container
+		})
+		const header_node = render_header(self)
+		if(header_node){
+			right_container_head.appendChild(header_node)
+		}
+		// right_container_text
+		const right_container_text = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'right_container_text',
+			parent			: right_container
+		})
 
 		// value is a raw html without parse into nodes (txt format)
 		const node_len 	= self.ar_raw_data.length
-		for (var i = 0; i < node_len; i++) {
+		for (let i = 0; i < node_len; i++) {
 			const raw_data	= self.ar_raw_data[i]
 			const text_node	= self.tags_to_html(raw_data)
-			right_container_text.insertAdjacentHTML("beforeend", text_node);
+			right_container_text.insertAdjacentHTML('beforeend', text_node);
 			// right_container.appendChild(node)
 		}
 
@@ -112,7 +115,7 @@ const get_content_data_edit = async function(self) {
 		const content_data = ui.tool.build_content_data(self)
 		content_data.appendChild(fragment)
 
-		// save the pointers of the content_data nodes, to used by the buttons to access to the components
+		// save the pointers of the content_data nodes, to be used by the buttons to access to the components
 		content_data.left_container			= left_container
 		content_data.right_container		= right_container
 		content_data.right_container_text	= right_container_text
@@ -144,55 +147,80 @@ const render_head_options = async function(self, content_data) {
 */
 const render_text_process_options = function(self, content_data) {
 
-	const fragment = new DocumentFragment()
+	// DocumentFragment
+		const fragment = new DocumentFragment()
 
 	// lang selector
 		const lang_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'lang_selector',
+			class_name		: 'lang_container',
 			parent			: fragment
 		})
-		const lang_label = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'lang_label',
-			inner_html 		: get_label.language || 'Language',
-			parent 			: lang_container
-		})
+		// lang_label
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name 		: 'lang_label',
+				inner_html 		: get_label.language || 'Language',
+				parent 			: lang_container
+			})
 		// the lang selector use the content_data pointer .right_container to remove the transcription text_area and rebuild the new node
 			const lang_selector = ui.build_select_lang({
 				selected	: self.lang,
 				class_name	: 'dd_input selector',
 				action		: async function(e){
-					// create new one
-					self.transcription_component	= await self.get_component(e.target.value)
-					self.lang						= e.target.value
-					self.ar_raw_data				= self.transcription_component.data.value
+
+					// user selected lang
+						self.lang = e.target.value
+
+					// loading
+						content_data.right_container_text.classList.add('loading')
+
+					// change lang and refresh the component
+						self.transcription_component.lang = self.lang
+						// note that this component do not render in this tool, therefore, force render to allow refresh()
+						await self.transcription_component.render()
+						await self.transcription_component.refresh({
+							build_autoload : true
+						})
+
+					// fix vars
+						self.ar_raw_data = self.transcription_component.data.value
 
 					// remove previous nodes
 						while (content_data.right_container_text.lastChild) {//} && content_data.left_container.lastChild.id!==lang_selector.id) {
 							content_data.right_container_text.removeChild(content_data.right_container_text.lastChild)
 						}
 
-					const node_len 	= self.ar_raw_data.length
-					for (let i = 0; i < node_len; i++) {
-						const raw_data = self.ar_raw_data[i]
-						const text_node = self.tags_to_html(raw_data)
-						// add the new one
-						content_data.right_container_text.insertAdjacentHTML("beforeend", text_node);
-					}
+					// re-create nodes
+						const node_len 	= self.ar_raw_data.length
+						for (let i = 0; i < node_len; i++) {
+							const raw_data	= self.ar_raw_data[i]
+							const text_node	= self.tags_to_html(raw_data)
+							// add the new one
+							content_data.right_container_text.insertAdjacentHTML('beforeend', text_node);
+						}
 
+					// loading
+						content_data.right_container_text.classList.remove('loading')
 				}
 			})
 			lang_container.appendChild(lang_selector)
 
 	// OPTIONS
+
 	// header_option_container
 		const header_option_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'option_container',
 			parent			: fragment
 		})
-		header_option_container.addEventListener('change', async function(){
+		// header option
+		const header_option = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'checkbox'
+		})
+		header_option.checked = true // default checked
+		header_option.addEventListener('change', async function(){
 			const header_elements = content_data.querySelector('.right_container_head')
 			if(!header_elements){
 				return
@@ -201,21 +229,13 @@ const render_text_process_options = function(self, content_data) {
 				? ''
 				: 'none'
 		})
-
-		const header_option = ui.create_dom_element({
-			element_type	: 'input',
-			type			: 'checkbox',
-			class_name		: 'header_option',
-			parent			: header_option_container
-		})
-		header_option.checked = true
-
 		const header_option_label = ui.create_dom_element({
 			element_type	: 'label',
-			class_name		: 'header_option_label',
+			class_name		: 'option_label header_option_label',
 			inner_html		: get_label.head || 'Header',
 			parent			: header_option_container
 		})
+		header_option_label.insertAdjacentElement('afterbegin', header_option)
 
 	// timecodes_option_container
 		const timecodes_option_container = ui.create_dom_element({
@@ -223,26 +243,15 @@ const render_text_process_options = function(self, content_data) {
 			class_name		: 'option_container',
 			parent			: fragment
 		})
-			const timecodes_option = ui.create_dom_element({
-				element_type	: 'input',
-				type 			: 'checkbox',
-				class_name 		: 'timecodes_option',
-				parent 			: timecodes_option_container
-			})
-			// default checked
-			timecodes_option.checked = true
-			const timecodes_option_label = ui.create_dom_element({
-				element_type	: 'label',
-				class_name 		: 'timecodes_option_label',
-				inner_html 		: get_label.timecodes || 'Time Codes',
-				parent 			: timecodes_option_container
-			})
-
+		// timecodes_option
+		const timecodes_option = ui.create_dom_element({
+			element_type	: 'input',
+			type 			: 'checkbox'
+		})
+		timecodes_option.checked = true // default checked
 		timecodes_option_container.addEventListener('change',function(){
 			const tc_elements = content_data.querySelectorAll('.tc')
 			const len = tc_elements.length
-			//console.log(tc_elements);
-
 			if (timecodes_option.checked===true) {
 				for (let i = len - 1; i >= 0; i--) {
 					tc_elements[i].style.display = ''
@@ -253,6 +262,13 @@ const render_text_process_options = function(self, content_data) {
 				}
 			}
 		})
+		const timecodes_option_label = ui.create_dom_element({
+			element_type	: 'label',
+			class_name 		: 'option_label timecodes_option_label',
+			inner_html 		: get_label.timecodes || 'Time Codes',
+			parent 			: timecodes_option_container
+		})
+		timecodes_option_label.insertAdjacentElement('afterbegin', timecodes_option)
 
 	// persons_option_container
 		const persons_option_container = ui.create_dom_element({
@@ -260,22 +276,13 @@ const render_text_process_options = function(self, content_data) {
 			class_name		: 'option_container',
 			parent			: fragment
 		})
-			const persons_option = ui.create_dom_element({
-				element_type	: 'input',
-				type 			: 'checkbox',
-				class_name 		: 'persons_option',
-				parent 			: persons_option_container
-			})
-			// default checked
-			persons_option.checked = true
-			const persons_option_label = ui.create_dom_element({
-				element_type	: 'label',
-				class_name 		: 'persons_option_label',
-				inner_html 		: get_label.persons || 'Persons',
-				parent 			: persons_option_container
-			})
-
-		persons_option_container.addEventListener('change',function(){
+		// persons_option
+		const persons_option = ui.create_dom_element({
+			element_type	: 'input',
+			type 			: 'checkbox'
+		})
+		persons_option.checked = true // default checked
+		persons_option.addEventListener('change',function(){
 			const person_elements = content_data.querySelectorAll('.person')
 			const len = person_elements.length
 			//console.log(tc_elements);
@@ -290,6 +297,13 @@ const render_text_process_options = function(self, content_data) {
 				}
 			}
 		})
+		const persons_option_label = ui.create_dom_element({
+			element_type	: 'label',
+			class_name 		: 'persons_option_label',
+			inner_html 		: get_label.persons || 'Persons',
+			parent 			: persons_option_container
+		})
+		persons_option_label.insertAdjacentElement('afterbegin', persons_option)
 
 	// indexations_option_container
 		const indexations_option_container = ui.create_dom_element({
@@ -297,22 +311,13 @@ const render_text_process_options = function(self, content_data) {
 			class_name		: 'option_container',
 			parent			: fragment
 		})
-			const indexations_option = ui.create_dom_element({
-				element_type	: 'input',
-				type 			: 'checkbox',
-				class_name 		: 'indexations_option',
-				parent 			: indexations_option_container
-			})
-			// default checked
-			indexations_option.checked = true
-			const indexations_option_label = ui.create_dom_element({
-				element_type	: 'label',
-				class_name 		: 'indexations_option_label',
-				inner_html 		: get_label.indexations || 'Indexations',
-				parent 			: indexations_option_container
-			})
-
-		indexations_option_container.addEventListener('change',function(){
+		// indexations_option
+		const indexations_option = ui.create_dom_element({
+			element_type	: 'input',
+			type 			: 'checkbox'
+		})
+		indexations_option.checked = true // default checked
+		indexations_option.addEventListener('change',function(){
 			const index_elements = content_data.querySelectorAll('.index')
 			const len = index_elements.length
 			//console.log(tc_elements);
@@ -327,6 +332,14 @@ const render_text_process_options = function(self, content_data) {
 				}
 			}
 		})
+		const indexations_option_label = ui.create_dom_element({
+			element_type	: 'label',
+			class_name 		: 'indexations_option_label',
+			inner_html 		: get_label.indexations || 'Indexations',
+			parent 			: indexations_option_container
+		})
+		indexations_option_label.insertAdjacentElement('afterbegin', indexations_option)
+
 
 	// indexations_info_option_container
 		const indexations_info_option_container = ui.create_dom_element({
@@ -334,22 +347,13 @@ const render_text_process_options = function(self, content_data) {
 			class_name		: 'option_container',
 			parent			: fragment
 		})
-			const indexations_info_option = ui.create_dom_element({
-				element_type	: 'input',
-				type 			: 'checkbox',
-				class_name 		: 'indexations_info_option',
-				parent 			: indexations_info_option_container
-			})
-			// default checked
-			indexations_info_option.checked = true
-			const indexations_info_option_label = ui.create_dom_element({
-				element_type	: 'label',
-				class_name 		: 'indexations_info_option_label',
-				inner_html 		: get_label.indexations_info || 'Indexations info',
-				parent 			: indexations_info_option_container
-			})
-
-		indexations_info_option_container.addEventListener('change',function(){
+		// indexations_info_option
+		const indexations_info_option = ui.create_dom_element({
+			element_type	: 'input',
+			type 			: 'checkbox',
+		})
+		indexations_info_option.checked = true // default checked
+		indexations_info_option.addEventListener('change',function(){
 
 			const data_block = content_data.querySelector('.data_block')
 			if (!data_block){
@@ -377,29 +381,28 @@ const render_text_process_options = function(self, content_data) {
 				}
 			}
 		})
+		const indexations_info_option_label = ui.create_dom_element({
+			element_type	: 'label',
+			class_name 		: 'indexations_info_option_label',
+			inner_html 		: get_label.indexations_info || 'Indexations info',
+			parent 			: indexations_info_option_container
+		})
+		indexations_info_option_label.insertAdjacentElement('afterbegin', indexations_info_option)
 
-	// Annotations_option_container
+
+	// annotations_option_container
 		const annotations_option_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'option_container',
 			parent			: fragment
 		})
-			const annotations_option = ui.create_dom_element({
-				element_type	: 'input',
-				type 			: 'checkbox',
-				class_name 		: 'annotations_option',
-				parent 			: annotations_option_container
-			})
-			// default checked
-			annotations_option.checked = true
-			const annotations_option_label = ui.create_dom_element({
-				element_type	: 'label',
-				class_name 		: 'annotations_option_label',
-				inner_html 		: get_label.annotations || 'Annotations',
-				parent 			: annotations_option_container
-			})
-
-		annotations_option_container.addEventListener('change',function(){
+		// annotations_option
+		const annotations_option = ui.create_dom_element({
+			element_type	: 'input',
+			type 			: 'checkbox'
+		})
+		annotations_option.checked = true // default checked
+		annotations_option_container.addEventListener('change', function(){
 
 			const note_elements = content_data.querySelectorAll('.note')
 			const len = note_elements.length
@@ -415,6 +418,14 @@ const render_text_process_options = function(self, content_data) {
 				}
 			}
 		})
+		const annotations_option_label = ui.create_dom_element({
+			element_type	: 'label',
+			class_name 		: 'annotations_option_label',
+			inner_html 		: get_label.annotations || 'Annotations',
+			parent 			: annotations_option_container
+		})
+		annotations_option_label.insertAdjacentElement('afterbegin', annotations_option)
+
 
 	// Lang_option_container
 		const lang_option_container = ui.create_dom_element({
@@ -422,26 +433,15 @@ const render_text_process_options = function(self, content_data) {
 			class_name		: 'option_container',
 			parent			: fragment
 		})
-			const lang_option = ui.create_dom_element({
-				element_type	: 'input',
-				type 			: 'checkbox',
-				class_name 		: 'lang_option',
-				parent 			: lang_option_container
-			})
-			// default checked
-			lang_option.checked = true
-			const lang_option_label = ui.create_dom_element({
-				element_type	: 'label',
-				class_name 		: 'lang_option_label',
-				inner_html 		: get_label.languages || 'Languages',
-				parent 			: lang_option_container
-			})
+		const lang_option = ui.create_dom_element({
+			element_type	: 'input',
+			type 			: 'checkbox'
+		})
+		lang_option.checked = true // default checked
+		lang_option.addEventListener('change',function(){
 
-		lang_option_container.addEventListener('change',function(){
-
-			const lang_elements = content_data.querySelectorAll('.lang')
-			const len = lang_elements.length
-			//console.log(tc_elements);
+			const lang_elements	= content_data.querySelectorAll('.lang')
+			const len			= lang_elements.length
 
 			if (lang_option.checked===true) {
 				for (let i = len - 1; i >= 0; i--) {
@@ -453,61 +453,67 @@ const render_text_process_options = function(self, content_data) {
 				}
 			}
 		})
+		const lang_option_label = ui.create_dom_element({
+			element_type	: 'label',
+			class_name 		: 'lang_option_label',
+			inner_html 		: get_label.languages || 'Languages',
+			parent 			: lang_option_container
+		})
+		lang_option_label.insertAdjacentElement('afterbegin', lang_option)
+
 
 	// lines_option_container
 		const lines_option_container = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'option_container',
-				parent			: fragment
-			})
-			const lines_option = ui.create_dom_element({
-				element_type	: 'input',
-				type 			: 'checkbox',
-				class_name 		: 'lines_option',
-				parent 			: lines_option_container
-			})
-			// default checked
-			lines_option.checked = false
-			const lines_option_label = ui.create_dom_element({
-				element_type	: 'label',
-				class_name 		: 'lines_option_label',
-				inner_html 		: get_label.lines || 'Lines',
-				parent 			: lines_option_container
-			})
-			lines_option_container.addEventListener('change',function(){
+			element_type	: 'div',
+			class_name		: 'option_container',
+			parent			: fragment
+		})
+		const lines_option = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'checkbox'
+		})
+		lines_option.checked = false // default non checked
+		lines_option.addEventListener('change', function(){
 
-				function get_parent_block(current_node) {
-					if(current_node.classList.contains('right_container_text')){
-						return null
-					}
-					if(current_node.classList.contains('right_block')){
-						return current_node
-					}
-					return get_parent_block(current_node.parentNode)
+			function get_parent_block(current_node) {
+				if(current_node.classList.contains('right_container_text')){
+					return null
 				}
-
-				const fragment_elements = content_data.querySelectorAll('.tc')
-				const len = fragment_elements.length
-
-				if(!fragment_elements){
-					return
+				if(current_node.classList.contains('right_block')){
+					return current_node
 				}
+				return get_parent_block(current_node.parentNode)
+			}
 
-				if (lines_option.checked===true) {
-					for (let i = len - 1; i >= 0; i--) {
-						const right_block = get_parent_block(fragment_elements[i].parentNode)
-						if(right_block && i > 0){
-							right_block.classList.add('border_top')}
-						}
-				}else{
-					for (let i = len - 1; i >= 0; i--) {
-						const right_block = get_parent_block(fragment_elements[i].parentNode)
-						if(right_block){
-							right_block.classList.remove('border_top')
-						}
+			const fragment_elements = content_data.querySelectorAll('.tc')
+			const len = fragment_elements.length
+
+			if(!fragment_elements){
+				return
+			}
+
+			if (lines_option.checked===true) {
+				for (let i = len - 1; i >= 0; i--) {
+					const right_block = get_parent_block(fragment_elements[i].parentNode)
+					if(right_block && i > 0){
+						right_block.classList.add('border_top')}
+					}
+			}else{
+				for (let i = len - 1; i >= 0; i--) {
+					const right_block = get_parent_block(fragment_elements[i].parentNode)
+					if(right_block){
+						right_block.classList.remove('border_top')
 					}
 				}
-			})
+			}
+		})
+		const lines_option_label = ui.create_dom_element({
+			element_type	: 'label',
+			class_name 		: 'lines_option_label',
+			inner_html 		: get_label.lines || 'Lines',
+			parent 			: lines_option_container
+		})
+		lines_option_label.insertAdjacentElement('afterbegin', lines_option)
 
 	// text options container
 		const text_selector = ui.create_dom_element({
@@ -515,26 +521,24 @@ const render_text_process_options = function(self, content_data) {
 			class_name		: 'text_selector',
 			parent			: fragment
 		})
-			const default_view_option = ui.create_dom_element({
-				element_type	: 'option',
-				inner_html		: get_label.default || 'Default',
-				parent			: text_selector
-			})
-
-			const original_view_option = ui.create_dom_element({
-				element_type	: 'option',
-				inner_html		: get_label.original || 'Original',
-				parent			: text_selector
-			})
-			// default checked
-			original_view_option.selected = true
-
-			const source_view_option = ui.create_dom_element({
-				element_type	: 'option',
-				inner_html 		: get_label.source || 'Source',
-				parent 			: text_selector
-			})
-
+		const default_view_option = ui.create_dom_element({
+			element_type	: 'option',
+			inner_html		: get_label.default || 'Default',
+			parent			: text_selector
+		})
+		const original_view_option = ui.create_dom_element({
+			element_type	: 'option',
+			inner_html		: get_label.original || 'Original',
+			parent			: text_selector
+		})
+		// default checked
+		original_view_option.selected = true
+		const source_view_option = ui.create_dom_element({
+			element_type	: 'option',
+			inner_html 		: get_label.source || 'Source',
+			parent 			: text_selector
+		})
+		// change event
 		text_selector.addEventListener('change', function(event) {
 			// reset all options to default
 				header_option.checked			= true

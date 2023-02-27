@@ -1,7 +1,7 @@
 <?php
 /**
 * LANG CLASS
-* To manage dedalo lang resolutions
+* Manages dedalo lang resolutions
 * Complements thesaurus langs
 */
 class lang {
@@ -25,8 +25,6 @@ class lang {
 	* @return object|null $response
 	*/
 	private static function resolve( string $lang_tld, string $lang=DEDALO_DATA_LANG ) : ?object {
-
-		$name = null;
 
 		// lang tld formatting
 			if (strpos($lang_tld, 'lg-')===0) {
@@ -83,12 +81,17 @@ class lang {
 
 	/**
 	* GET_SECTION_ID_FROM_CODE
+	* @param string $code
+	*	like 'lg-spa'
 	* @return int|null $section_id
 	*/
 	public static function get_section_id_from_code( string $code ) : ?int {
 
-		$result 	 = lang::resolve( $code, $lang=DEDALO_DATA_LANG );
-		$section_id  = $result->section_id;
+		$result = lang::resolve(
+			$code, // string $code
+			DEDALO_DATA_LANG // string $lang
+		);
+		$section_id = $result->section_id;
 
 		return $section_id;
 	}//end get_section_id_from_code
@@ -98,6 +101,7 @@ class lang {
 	/**
 	* GET_LANG_LOCATOR_FROM_CODE
 	* @param string $code
+	*	like 'lg-spa'
 	* @return locator $locator
 	*/
 	public static function get_lang_locator_from_code( string $code ) : locator {
@@ -139,15 +143,15 @@ class lang {
 
 	/**
 	* GET_NAME_FROM_CODE
-	* @return string $name
+	* @param string $code
+	*	like 'lg-spa'
+	* @param string $lang = DEDALO_DATA_LANG
+	* @param bool $from_cache = true
+	* @return string|null $name
 	*/
 	public static function get_name_from_code( string $code, string $lang=DEDALO_DATA_LANG, bool $from_cache=true ) : ?string {
 
-		if(SHOW_DEBUG===true) {
-			$start_time = start_time();
-		}
-
-		# NO LANG : When lang code is lg-nolan, null is returned
+		// NO LANG : When lang code is lg-nolan, null is returned
 		if ($code===DEDALO_DATA_NOLAN) {
 			return null;
 		}
@@ -158,11 +162,11 @@ class lang {
 			return $_SESSION['dedalo']['config']['lang_name_from_code'][$cache_uid];
 		}
 
-		# RESOLVE
+		// RESOLVE
 		$result = lang::resolve( $code, $lang );
 			#dump($total=round(start_time()-$start_time,3)*1000, '$total=round(start_time()-$start_time,3)*1000 ++ '.to_string($result));
 
-		# NOT FOUNDED NAME
+		// NOT FOUNDED NAME
 		if(!isset($result->names)) {
 			if(SHOW_DEBUG===true) {
 				#dump($result, ' result ++ '.to_string($code));
@@ -170,10 +174,10 @@ class lang {
 			return null;
 		}
 
-		# Set names from object result
+		// Set names from object result
 		$names  = $result->names;
 
-		# Fallback
+		// Fallback
 		if (!empty($names->$lang)) {
 
 			$name = to_string($names->$lang);
@@ -189,8 +193,6 @@ class lang {
 				return null;
 			}
 		}
-		#dump($name, ' name ++ '.to_string());
-		#dump($total=round(start_time()-$start_time,3)*1000, '$total=round(start_time()-$start_time,3)*1000 ++ '.to_string());
 
 		if($from_cache===true){
 			$_SESSION['dedalo']['config']['lang_name_from_code'][$cache_uid] = $name;
@@ -204,6 +206,9 @@ class lang {
 
 	/**
 	* GET_LANG_NAME_BY_LOCATOR
+	* @param object $locator
+	* @param string $lang = DEDALO_APPLICATION_LANG
+	* @param bool $from_cache = false
 	* @return string|null $lang_name
 	*/
 	public static function get_lang_name_by_locator(object $locator, string $lang=DEDALO_APPLICATION_LANG, bool $from_cache=false) : ?string {
@@ -217,6 +222,8 @@ class lang {
 
 	/**
 	* GET_CODE_FROM_LOCATOR
+	* @param object $locator
+	* @param bool $add_prefix = true
 	* @return string|null $code
 	*/
 	public static function get_code_from_locator(object $locator, bool $add_prefix=true) : ?string {
@@ -258,10 +265,10 @@ class lang {
 
 			}
 
-		$tipo 			 = DEDALO_THESAURUS_CODE_TIPO;
-		$model_name 	 = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
-		$parent 		 = $locator->section_id;
-		$component 		 = component_common::get_instance(
+		$tipo		= DEDALO_THESAURUS_CODE_TIPO;
+		$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+		$parent		= $locator->section_id;
+		$component	= component_common::get_instance(
 			$model_name,
 			$tipo,
 			$parent,
@@ -283,6 +290,7 @@ class lang {
 
 	/**
 	* GET_LANG_CODE_FROM_ALPHA2
+	* @param string $lang_apha2
 	* @return string $lang_code
 	*/
 	public static function get_lang_code_from_alpha2( string $lang_apha2 ) : string {
@@ -502,6 +510,7 @@ class lang {
 
 	/**
 	* GET_ALPHA2_FROM_CODE
+	* @param string $lang_code
 	* @return string|null $alpha2
 	*	Like 'en' from lg-eng
 	*/
@@ -725,6 +734,7 @@ class lang {
 
 	/**
 	* GET_LOCALE_FROM_CODE
+	* @param string $lang_code
 	* @return string $locale
 	*	Like 'en-EN' from lg-eng
 	*/
