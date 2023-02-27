@@ -46,6 +46,15 @@
 							$this->context->toolbar_buttons[] = 'button_note';
 					}
 
+				// lang
+					$related_component_lang = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+						$this->tipo, // tipo
+						'component_select_lang', // model name
+						'termino_relacionado', // relation_type
+						true // search_exact
+					);
+
+
 				// geo
 					$related_component_geolocation = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
 						$this->tipo, // tipo
@@ -177,7 +186,7 @@
 				$item->parent_tipo			= $this->get_tipo();
 				$item->parent_section_id	= $this->get_section_id();
 				$item->fallback_value		= $fallback_value;
-					dump($fallback_value, '$fallback_value +----------------------- '.to_string());
+
 				// optional data to add
 				if(isset($properties->tags_persons) && $mode==='edit') {
 					$item->related_sections	= $related_sections;
