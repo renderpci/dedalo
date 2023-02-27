@@ -6,7 +6,7 @@ global $updates;
 $updates = new stdClass();
 
 
-/// UPDATE 6 PROVISIONAL WITH THE PARTIAL UPDATES THAN WILL BE NECESARY
+/// UPDATE 6 PROVISIONAL WITH THE PARTIAL UPDATES THAT WILL BE REQUIRED
 
 $v=600; #####################################################################################
 $updates->$v = new stdClass();
@@ -20,6 +20,15 @@ $updates->$v = new stdClass();
 	$updates->$v->update_from_major		= 5;
 	$updates->$v->update_from_medium	= 8;
 	$updates->$v->update_from_minor		= 2;
+
+	// alert
+		$alert					= new stdClass();
+		$alert->notification	= 'V '.$v;
+		$alert->command			= ' WARNING!
+									<br>Before run this update, make sure that your Ontology is updated to the latest version!
+									<br>(Several required properties are defined only in recent Ontology versions)
+								  ';
+		$updates->$v->alert_update[] = $alert;
 
 	// DATABASE UPDATES
 		// alter the null option of the parent column in jer_dd (NULL is now allowed)

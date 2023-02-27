@@ -189,7 +189,6 @@ class area_development extends area_common {
 		// import_structure_from_json
 			$item = new stdClass();
 				$item->id		= 'import_structure_from_json';
-				$item->class	= 'danger';
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->parent	= $this->tipo;
@@ -333,6 +332,7 @@ class area_development extends area_common {
 
 				$item = new stdClass();
 					$item->id		= 'update_data_version';
+					$item->class	= 'success';
 					$item->typo		= 'widget';
 					$item->tipo		= $this->tipo;
 					$item->parent	= $this->tipo;
@@ -353,6 +353,7 @@ class area_development extends area_common {
 
 				$item = new stdClass();
 					$item->id		= 'update_data_version';
+					$item->class	= 'danger';
 					$item->typo		= 'widget';
 					$item->tipo		= $this->tipo;
 					$item->parent	= $this->tipo;
@@ -367,11 +368,16 @@ class area_development extends area_common {
 								if (is_object($value) || is_array($value)) {
 									$i=0;
 									foreach ($value as $vkey => $vvalue) {
-										if($key==='alert_update') continue;
-										if($i===0) $item->body .= "<h6>$key</h6>";
-										if(is_string($vvalue)) $vvalue = trim($vvalue);
-										$item->body .= '<div class="command"><span class="vkey">'.($vkey+1).'</span><span class="vkey_value">'. print_r($vvalue, true) .'</span></div>';
-										$i++;
+										if($key==='alert_update') {
+
+											$item->body .= '<div class="alert_update"><h2 class="vkey_value">'. $vvalue->command . '</h2></div>';
+											// continue;
+										}else{
+											if($i===0) $item->body .= "<h6>$key</h6>";
+											if(is_string($vvalue)) $vvalue = trim($vvalue);
+											$item->body .= '<div class="command"><span class="vkey">'.($vkey+1).'</span><span class="vkey_value">'. print_r($vvalue, true) .'</span></div>';
+											$i++;
+										}
 									}
 								}
 							}
@@ -596,6 +602,7 @@ class area_development extends area_common {
 		// widget
 			$widget = new stdClass();
 				$widget->id			= $item->id;
+				$widget->class		= $item->class ?? null;
 				$widget->typo		= 'widget';
 				$widget->tipo		= $item->tipo ?? $this->tipo;
 				$widget->parent		= $item->parent ?? $this->tipo;
