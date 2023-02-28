@@ -9,7 +9,7 @@
 	import {ui} from '../../../core/common/js/ui.js'
 	// import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
-	import {tool_common} from '../../tool_common/js/tool_common.js'
+	import {tool_common, load_component} from '../../tool_common/js/tool_common.js'
 	import {render_tool_lang_multi} from './render_tool_lang_multi.js'
 
 
@@ -120,17 +120,18 @@ tool_lang_multi.prototype.build = async function(autoload=false) {
 
 
 /**
-* LOAD_COMPONENT
+* get_COMPONENT
 */
-tool_lang_multi.prototype.load_component = async function(lang) {
+tool_lang_multi.prototype.get_component = async function(lang) {
 
 	const self = this
 
 	// to_delete_instances. Select instances with different lang to main_element
 		const to_delete_instances = null // self.ar_instances.filter(el => el.lang!==self.main_element.lang)
 
-	// instance_options (clone and edit)
-		const instance_options = Object.assign(clone(self.main_element.context),{
+	// instance_options (clone context and edit)
+		const options = Object.assign(clone(self.main_element.context),{
+			self 				: self,
 			lang				: lang,
 			mode				: 'edit',
 			section_id			: self.main_element.section_id,
@@ -138,11 +139,11 @@ tool_lang_multi.prototype.load_component = async function(lang) {
 		})
 
 	// call generic common tool build
-		const component_instance = await tool_common.prototype.load_component.call(self, instance_options);
+		const component_instance = await load_component(options);
 
 
 	return component_instance
-}//end load_component
+}//end get_component
 
 
 

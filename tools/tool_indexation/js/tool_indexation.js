@@ -9,7 +9,7 @@
 	// import {instances, get_instance, delete_instance} from '../../../core/common/js/instances.js'
 	import {common} from '../../../core/common/js/common.js'
 	// import {ui} from '../../../core/common/js/ui.js'
-	import {tool_common} from '../../tool_common/js/tool_common.js'
+	import {tool_common, load_component} from '../../tool_common/js/tool_common.js'
 	import {render_tool_indexation} from './render_tool_indexation.js'
 	import {event_manager} from '../../../core/common/js/event_manager.js'
 
@@ -348,21 +348,17 @@ tool_indexation.prototype.get_component = async function(lang) {
 		const to_delete_instances = self.ar_instances.filter(el => el===self.transcription_component)
 
 
-	// context (clone and edit)
-		const context = Object.assign(clone(self.transcription_component.context),{
-			lang		: lang,
-			mode		: 'edit',
-			section_id	: self.transcription_component.section_id
+	// options (clone and edit)
+		const options = Object.assign(clone(self.transcription_component.context),{
+			self				: self,
+			lang				: lang,
+			mode				: 'edit',
+			section_id			: self.transcription_component.section_id,
+			to_delete_instances	: to_delete_instances // array of instances to delete after create the new one
 		})
 
-	// options
-		const options = {
-			context				: context, // reference context ...
-			to_delete_instances	: to_delete_instances // array of instances to delete after create the new one
-		}
-
 	// call generic common tool build
-		const component_instance = await tool_common.prototype.load_component.call(self, options);
+		const component_instance = await load_component(options);
 
 	// fix instance (overwrite)
 		self.transcription_component = component_instance

@@ -206,7 +206,7 @@ export const add_component = async (self, component_container, lang_value, label
 				// component load
 					const component = matrix_id===null
 						? self.main_element
-						: await self.load_component(lang_value, mode, matrix_id)
+						: await self.get_component(lang_value, mode, matrix_id)
 
 				// set permissions as read
 					component.context.permissions = 1

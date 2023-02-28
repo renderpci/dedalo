@@ -225,7 +225,7 @@ export const add_component = async (self, component_container, lang) => {
 		}
 
 	// instance
-		const component = await self.load_component(lang)
+		const component = await self.get_component(lang)
 
 	// render
 		const node = await component.render()

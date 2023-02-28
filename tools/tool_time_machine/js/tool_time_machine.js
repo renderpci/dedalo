@@ -9,7 +9,7 @@
 	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
-	import {tool_common} from '../../tool_common/js/tool_common.js'
+	import {tool_common, load_component} from '../../tool_common/js/tool_common.js'
 	import {render_tool_time_machine, add_component} from './render_tool_time_machine.js'
 	// import {render_time_machine_view} from './render_time_machine_view.js'
 	// import {paginator} from '../../../core/paginator/js/paginator.js'
@@ -225,19 +225,20 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 
 
 /**
-* LOAD_COMPONENT
+* get_component
 * Loads component to place in respective containers: current preview and preview version
 */
-tool_time_machine.prototype.load_component = async function(lang, mode, matrix_id=null) {
-	// console.log("load_component:",lang, mode, matrix_id);
+tool_time_machine.prototype.get_component = async function(lang, mode, matrix_id=null) {
+	// console.log("get_component:",lang, mode, matrix_id);
 
 	const self = this
 
 	// to_delete_instances. Select instances with same tipo and property matrix_id not empty
 		const to_delete_instances = self.ar_instances.filter(el => el.tipo===self.main_element.tipo && el.matrix_id)
 
-	// instance_options (clone and edit)
-		const instance_options = Object.assign(clone(self.main_element.context), {
+	// instance_options (clone context and edit)
+		const options = Object.assign(clone(self.main_element.context), {
+			self 				: self,
 			lang				: lang,
 			mode				: 'edit', // mode,
 			section_id			: self.main_element.section_id,
@@ -247,11 +248,11 @@ tool_time_machine.prototype.load_component = async function(lang, mode, matrix_i
 		})
 
 	// call generic common tool build
-		const component_instance = await tool_common.prototype.load_component.call(self, instance_options);
+		const component_instance = await load_component(options);
 
 
 	return component_instance
-}//end load_component
+}//end get_component
 
 
 

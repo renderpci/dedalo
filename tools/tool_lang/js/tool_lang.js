@@ -9,7 +9,7 @@
 	// import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import {ui} from '../../../core/common/js/ui.js'
-	import {tool_common} from '../../tool_common/js/tool_common.js'
+	import {tool_common, load_component} from '../../tool_common/js/tool_common.js'
 	import {render_tool_lang} from './render_tool_lang.js'
 
 
@@ -129,6 +129,19 @@ tool_lang.prototype.build = async function(autoload=false) {
 			)
 			if (tool_lang_target_lang_object) {
 				self.target_lang = tool_lang_target_lang_object.value
+
+				self.target_component = await load_component({
+					self 			: self,
+					model			: main_element_ddo.model,
+					mode			: main_element_ddo.mode,
+					tipo			: main_element_ddo.tipo,
+					section_tipo	: main_element_ddo.section_tipo,
+					section_lang	: main_element_ddo.section_lang,
+					lang			: self.target_lang,
+					type			: main_element_ddo.type,
+					section_id		: main_element_ddo.section_id,
+					id_variant		: 'target_component'
+				})
 			}
 
 
