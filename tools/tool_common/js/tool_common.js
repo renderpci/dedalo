@@ -406,7 +406,7 @@ export const load_component = async function(options) {
 		const section_id			= options.section_id || null
 		const matrix_id				= options.matrix_id || null
 		const data_source			= options.data_source || null
-		const id_variant			= self.model
+		const id_variant			= options.id_variant || self.model
 		const to_delete_instances	= options.to_delete_instances
 
 	// component instance_options
