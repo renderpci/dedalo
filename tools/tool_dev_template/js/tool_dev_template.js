@@ -16,7 +16,7 @@
 // import common to use destroy, render, refresh and other useful methods
 	import {common, create_source} from '../../../core/common/js/common.js'
 // tool_common, basic methods used by all the tools
-	import {tool_common} from '../../tool_common/js/tool_common.js'
+	import {tool_common, load_component} from '../../tool_common/js/tool_common.js'
 // specific render of the tool
 	import {render_tool_dev_template} from './render_tool_dev_template.js' // self tool rendered (called from render common)
 
@@ -167,22 +167,20 @@ tool_dev_template.prototype.load_component_sample = async function(options) {
 			self.main_element.context = api_response.result.context
 
 	// second when you have the context you could load full component with full datum (context and data)
-		// context (clone and edit)
-			const context = Object.assign(clone(self.main_element.context),{
+		// use the main_elemetn context (clone and edit) and change the properties
+		// it's possible use other needs doing this function generic
+			const options = Object.assign(clone(self.main_element.context),{
+				self 		: self, // added tool instance, it will be used to assign the instance built to ar_instaces of the current tool
 				lang		: lang,
 				mode		: 'edit',
 				section_id	: self.main_element.section_id
 			})
 
-		// options
-			const options = {
-				context : context
-			}
-
 		// call generic tool common load_component
-			const component_instance = await tool_common.prototype.load_component.call(self, options);
+			const component_instance = await load_component(options);
 
-	// optional create the instance by your own instead use the tool_common load_component
+	// optional: It's possible to create the instance by your own instead use the tool_common.load_component()
+	// in this way
 			const instance_options = {
 				model			: main_element.model,
 				mode			: main_element.mode,
@@ -198,5 +196,6 @@ tool_dev_template.prototype.load_component_sample = async function(options) {
 			const own_component_instance = await get_instance(instance_options)
 
 	// at this point component_instance and own_component_instance should be the same, the component initiated and ready to be build and render
+	// in this example we use only one of this: component_instance
 	return component_instance
 }//end load_component_sample
