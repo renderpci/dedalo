@@ -93,33 +93,6 @@ tool_import_rdf.prototype.build = async function(autoload=false) {
 
 
 /**
-* LOAD_COMPONENT
-*/
-tool_import_rdf.prototype.load_component = async function(lang) {
-
-	const self = this
-
-	// to_delete_instances. Select instances with different lang to main_element
-		const to_delete_instances = self.ar_instances.filter(el => el.lang!==self.main_element.lang)
-
-	// instance_options (clone and edit)
-		const instance_options = Object.assign(clone(self.main_element.context),{
-			lang		: lang,
-			mode		: 'edit',
-			section_id	: self.main_element.section_id,
-			to_delete_instances	: to_delete_instances
-		})
-
-	// call generic common tool build
-		const component_instance = await tool_common.prototype.load_component.call(self, instance_options);
-
-
-	return component_instance
-}//end load_component
-
-
-
-/**
 * GET_RDF_DATA
 * Call the API to get process the source component_iri and transform to Dédalo model
 * the correspondence is in external ontology.

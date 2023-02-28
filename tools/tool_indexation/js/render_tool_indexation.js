@@ -450,36 +450,6 @@ const get_tag_info = function(self) {
 
 
 
-/**
-* ADD_COMPONENT
-*/
-	// export const add_component = async (self, component_container, value) => {
-
-	// 	// user select blank value case
-	// 		if (!value) {
-	// 			while (component_container.firstChild) {
-	// 				// remove node from dom (not component instance)
-	// 				component_container.removeChild(component_container.firstChild)
-	// 			}
-	// 			return false
-	// 		}
-
-	// 	const component	= await self.load_component(value)
-	// 	const node		= await component.render()
-
-	// 	// clean container
-	// 		while (component_container.firstChild) {
-	// 			component_container.removeChild(component_container.firstChild)
-	// 		}
-
-	// 	// append node
-	// 		component_container.appendChild(node)
-
-
-	// 	return true
-	// }//end add_component
-
-
 
 /**
 * RENDER_RELATED_LIST

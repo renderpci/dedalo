@@ -110,35 +110,6 @@ tool_common.prototype.init = async function(options) {
 					}else{
 						console.error('Error. Unable to get caller_ddo from URL:', window.location.href);
 					}
-
-				// DES
-					// // caller_id
-					// 	const caller_id = searchParams.has('caller_id')
-					// 		? searchParams.get('caller_id') // string from url
-					// 		: null
-					// if (caller_id) {
-					// 	// fallback to opener window caller. Removed 13-10-2022 (Do not use this way anymore)
-					// 		if (window.opener && window.opener.callers && window.opener.callers[caller_id]) {
-					// 			self.caller = window.opener.callers[caller_id]
-					// 			if(SHOW_DEBUG===true) {
-					// 				console.warn("//////////// assigned self.caller from opener by caller_id:", self.caller);
-					// 			}
-					// 		}
-
-					// 	// fallback to local data base. Removed 13-10-2022 (Do not use this way anymore)
-					// 		if (!self.caller) {
-					// 			const db_data = await data_manager.get_local_db_data(caller_id+'_'+self.model, 'context', true)
-					// 			if (!db_data) {
-					// 				alert("Error. Unable to get data from local db. Make sure your browser is not in private mode");
-					// 			}
-					// 			const caller_context	= db_data.value.caller_context
-					// 			self.caller = await get_instance(caller_context)
-					// 			// await self.caller.build()
-					// 			if(SHOW_DEBUG===true) {
-					// 				console.warn("//////////// assigned self.caller from local_db_data by caller_id:", self.caller);
-					// 			}
-					// 		}
-					// }
 			}
 			if (!self.caller) {
 				self.error = `Warning. Empty caller !`
@@ -280,42 +251,6 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 								return
 							}
 
-						// context. If not provided, it is obtained from the caller or requested from the API
-							// const context = el.context
-							// 	? el.context
-							// 	: null
-
-								// await (async function(){
-
-								// 	// only component_portal needs to calculate the context (for proper pagination limit resolution)
-								// 		if (el.model!=='component_portal') {
-								// 			return {}
-								// 		}
-
-								// 	// caller context
-								// 		const caller_context = (self.caller && self.caller.context) ? clone(self.caller.context) : null
-								// 		if (caller_context && caller_context.tipo===el.tipo && caller_context.section_tipo===el.section_tipo) {
-								// 			// get context from available caller
-								// 			return caller_context
-								// 		}
-
-								// 	// resolve whole context from API (init event observer problem..)
-								// 	// (!) This is mandatory now because some components (e.g. component_portal) need
-								// 	// the request_config_object to generate rqo correctly
-								// 		const api_response = await data_manager.get_element_context(el)
-
-								// 	return api_response.result[0] || null
-								//  })()
-								 // console.log('context:', context);
-
-						// generic try
-							// const element_instance = load_component_generic({
-							// 	self				: self,
-							// 	context				: context,
-							// 	to_delete_instances	: null
-							// })
-							// resolve(element_instance)
-
 						const element_options = {
 							model			: el.model,
 							mode			: el.mode,
@@ -325,7 +260,6 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 							lang			: current_el_lang,
 							type			: el.type,
 							properties 		: el.properties || null,
-							// context			: context,
 							id_variant		: self.model,  // id_variant prevents id conflicts
 							caller			: self // set tool as caller of the component :-)
 						}
@@ -369,18 +303,6 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 
 	// load data if is not already received as option
 		if (autoload===true && !self.context) {
-
-			// mandatory vars check. (!) Not mandatory anymore
-				// if (!self.section_tipo || self.section_tipo.lenght<2) {
-				// 	console.warn("[tool_common.build] Error. Undefined mandatory self.section_tipo:", self.section_tipo);
-				// 	self.status = previous_status
-				// 	return false
-				// }
-				// if (!self.section_id || self.section_id.lenght<1) {
-				// 	console.warn("[tool_common.build] Warning. stopped autoload because undefined self.section_id:", self.section_id);
-				// 	self.status = previous_status
-				// 	return false
-				// }
 
 			// rqo. Create the basic rqo to load tool config data stored in component_json tipo 'dd1353'
 				const rqo = {
@@ -452,96 +374,28 @@ tool_common.prototype.render = async function(options={}) {
 
 
 
-// /**
-// * LOAD_DEFAULT_DDO_MAP ---> (!) NO USADA EN NINGÚN SITIO !
-// */
-// const load_default_ddo_map = async function() {
-
-// 	const self = this
-
-// 	const ar_promises		= []
-// 	const ddo_map			= self.tool_config.ddo_map || []
-// 	const ddo_map_length	= ddo_map.length
-// 	for (let i = 0; i < ddo_map_length; i++) {
-
-// 		const el = ddo_map[i]
-
-// 		ar_promises.push( new Promise(async (resolve) => {
-
-// 			// context. In is not given get from caller or request to the API
-// 				const context = el.context
-// 					? el.context
-// 					: await (async function(){
-// 						// caller context
-// 						const caller_context = (self.caller && self.caller.context) ? clone(self.caller.context) : null
-// 						if (caller_context && caller_context.tipo===el.tipo && caller_context.section_tipo===el.section_tipo) {
-// 							// get context from available caller
-// 							return caller_context
-// 						}
-// 						// resolve whole context from API (init event observer problem..)
-// 						// const api_response	= await data_manager.get_element_context(el)
-// 						// return api_response.result[0]
-// 						return {}
-// 					  })()
-
-// 			// generic try
-// 				// const element_instance = load_component_generic({
-// 				// 	self				: self,
-// 				// 	context				: context,
-// 				// 	to_delete_instances	: null
-// 				// })
-// 				// resolve(element_instance)
-
-// 			const element_options = {
-// 				model			: el.model,
-// 				mode			: el.mode,
-// 				tipo			: el.tipo,
-// 				section_tipo	: el.section_tipo,
-// 				section_id		: el.section_id,
-// 				lang			: self.lang,
-// 				type			: el.type,
-// 				context			: context,
-// 				id_variant		: self.model,  // id_variant prevents id conflicts
-// 				caller			: self // set tool as caller of the component :-)
-// 			}
-// 			// init and build instance
-// 				get_instance(element_options) // load and init
-// 				.then(function(element_instance){
-// 					const load_data = el.model.indexOf('component')!==-1
-// 					element_instance.build( load_data ) // build, loading data
-// 					.then(function(){
-// 						resolve(element_instance)
-// 					})
-// 				})
-// 		}))
-// 	}//end for (let i = 0; i < ddo_map.length; i++)
-
-// 	// set on finish
-// 	await Promise.all(ar_promises).then((ar_instances) => {
-// 		// dd_console(`ar_instances`, 'DEBUG', ar_instances)
-// 		self.ar_instances = ar_instances
-// 	})
-
-// 	return true
-// }//end load_default_ddo_map
-
-
-
 /**
 * LOAD_COMPONENT
 * Loads component to place it in respective containers: current preview and preview version
 * @param object options
-* 	context: object
-* 	to_delete_instances: array of instance object
+* 	self				: instance of the caller
+* 	model				: model of the component to load
+* 	mode				: mode of the component to load
+* 	tipo				: tipo of the component to load
+* 	section_tipo		: section_tipo of the component to load
+* 	section_lang		: section_lang of the component to load
+* 	lang				: lang of the component to load
+* 	type				: type of the component to load
+* 	section_id			: section_id of the component to load
+* 	data_source			: data_source of the component to load
+* 	id_variant			: id_variant of the component to load, if not set use the model of the tool
+* 	to_delete_instances	: array of instance object
 * @return promise: object component_instance
 */
-tool_common.prototype.load_component = async function(options) {
-	// console.log("load_component options:", options);
-	// console.log("this:",this);
-
-	const self = this
+export const load_component = async function(options) {
 
 	// options
+		const self 					= options.self
 		const model					= options.model
 		const mode					= options.mode
 		const tipo					= options.tipo
