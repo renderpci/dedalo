@@ -516,9 +516,9 @@ class component_image extends component_media_common {
 	public function generate_default_quality_file(bool $overwrite=true) : bool {
 
 		// short vars
-			$id			= $this->get_name();
-			$additional_path	= $this->get_additional_path();
-			$initial_media_path	= $this->get_initial_media_path();
+			// $id					= $this->get_name();
+			// $additional_path		= $this->get_additional_path();
+			// $initial_media_path	= $this->get_initial_media_path();
 
 		// quality retouched
 			if (defined('DEDALO_IMAGE_QUALITY_RETOUCHED') && DEDALO_IMAGE_QUALITY_RETOUCHED!==false) {
@@ -540,11 +540,13 @@ class component_image extends component_media_common {
 			}
 
 		// quality default
-			$image_default_path	= $this->get_media_filepath(DEDALO_IMAGE_QUALITY_DEFAULT);
+			$default_quality	= $this->get_default_quality();
+			$image_default_path	= $this->get_media_filepath($default_quality);
 			// overwrite or create default quality image version
 			if ($overwrite===true || !file_exists($image_default_path)) {
-				$this->convert_quality( $real_orig_quality, DEDALO_IMAGE_QUALITY_DEFAULT );
+				$this->convert_quality( $real_orig_quality, $default_quality );
 			}
+
 
 		return true;
 	}//end generate_default_quality_file
@@ -606,6 +608,7 @@ class component_image extends component_media_common {
 	* 	url	path of thumb file path OR null if default quality file does not exists
 	*/
 	public function generate_thumb() : ?object {
+		$start_time = start_time();
 
 		// common data
 			$id					= $this->get_id();
@@ -645,7 +648,9 @@ class component_image extends component_media_common {
 			);
 
 		// debug
-			debug_log(__METHOD__." dd_thumb function called and executed. Created thumb file: ".to_string($image_thumb_path), logger::DEBUG);
+			debug_log(__METHOD__." dd_thumb function called and executed in ".
+				exec_time_unit($start_time,'ms').' ms'.
+				". Created thumb file: ".to_string($image_thumb_path), logger::DEBUG);
 
 		// result
 			$result = (object)[
@@ -1893,22 +1898,62 @@ class component_image extends component_media_common {
 	*/
 	public function regenerate_component() : bool {
 
-		// exec media common method
-			parent::regenerate_component();
+		// files check
+			// create default quality file if not exists
+				$default_quality		= $this->get_default_quality();
+				$image_default_filepath	= $this->get_media_filepath( $default_quality );
+				if (!file_exists($image_default_filepath)) {
+					$this->generate_default_quality_file();
+				}
 
-		// re-create thumb
-			$this->generate_thumb();
+			// re-create thumb always
+				$this->generate_thumb();
 
-		// svg file
-			$svg_file_path = $this->get_svg_file_path();
-			if (!file_exists($svg_file_path)) {
-				// If default quality file exists, svg_string_node will be generated, else null
-				$svg_string_node = $this->create_default_svg_string_node();
-				if (!empty($svg_string_node)) {
-					// create the svg default file
-					$this->create_svg_file($svg_string_node);
+			// svg file. Create file if not exists
+				$svg_file_path = $this->get_svg_file_path();
+				if (!file_exists($svg_file_path)) {
+					// If default quality file exists, svg_string_node will be generated, else null
+					$svg_string_node = $this->create_default_svg_string_node();
+					if (!empty($svg_string_node)) {
+						// create the svg default file
+						$this->create_svg_file($svg_string_node);
+					}
+				}
+
+		// get files info
+			$files_info	= $this->get_files_info(
+				false // bool include_empty. Prevent to store empty quality files
+			);
+
+		// lib_data add
+			$current_dato = $this->get_dato();
+			if (empty($current_dato)) {
+
+				// create a new dato from scratch
+				$dato_item = (object)[
+					'files_info' => $files_info
+				];
+				$dato_item->lib_data = null;
+				$new_dato = [$dato_item];
+
+			}else{
+
+				$new_dato = [];
+				foreach ($current_dato as $current_value) {
+					// create a new dato from scratch
+					$dato_item = (object)[
+						'files_info' => $files_info
+					];
+					$dato_item->lib_data = $current_value->lib_data ?? null;
+					$new_dato[] = $dato_item;
 				}
 			}
+
+		// replace existing dato
+			$this->set_dato($new_dato);
+
+		// save
+			$this->Save();
 
 
 		return true;
