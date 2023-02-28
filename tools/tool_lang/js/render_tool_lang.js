@@ -101,7 +101,11 @@ const get_content_data_edit = async function(self) {
 				})
 				source_select_lang.addEventListener("change", function(e){
 					const lang = e.target.value
-					add_component(self, source_component_container, lang)
+					add_component({
+						self				: self,
+						component			: self.main_element,
+						lang				: lang
+					})
 				})
 				top_left.appendChild(source_select_lang)
 
@@ -114,7 +118,7 @@ const get_content_data_edit = async function(self) {
 				})
 
 		// source component
-			self.main_element.show_interface.read_only = true
+			// self.main_element.show_interface.read_only = true
 			const source_component_container = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'source_component_container',
@@ -148,10 +152,10 @@ const get_content_data_edit = async function(self) {
 				})
 				target_select_lang.addEventListener("change", async function(e){
 					const lang = e.target.value
-					// self.target_component = await add_component(self, target_component_container, lang)
-					add_component(self, target_component_container, lang)
-					.then(function(response){
-						self.target_component = response
+					add_component({
+						self				: self,
+						component			: self.target_component,
+						lang				: lang
 					})
 
 					const data = {
@@ -174,17 +178,19 @@ const get_content_data_edit = async function(self) {
 				})
 
 		// target component
+		// if the target component has the same lang than source component block the edition to avoid errors
+		// ck-editor can not manage 2 instances of the same component in edit
+			const read_only = (self.target_lang === self.source_lang)
+				? true
+				: false
+			self.target_component.show_interface.read_only = read_only
+			const target_component_node = await self.target_component.render()
 			const target_component_container = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'target_component_container',
 				parent			: right_block
 			})
-			if (target_select_lang.value) {
-				add_component(self, target_component_container, target_select_lang.value)
-				.then(function(response){
-					self.target_component = response
-				})
-			}
+			target_component_container.appendChild(target_component_node)
 
 	// buttons container
 		const buttons_container = ui.create_dom_element({
@@ -410,42 +416,37 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 /**
 * ADD_COMPONENT
 * Load and render a new component for translate
+* @param property object
+* 	self		: instance of the tool
+* 	component	: instance of the component to change, it could be source or target component
+* 	lang		: the lang selected by user
 * @return DOM node|bool
 * 	component wrapper node
 */
-export const add_component = async (self, component_container, lang) => {
+export const add_component = async (options) => {
 
-	// user select blank lang case
-		if (!lang) {
-			// remove node from DOM (not component instance)
-			while (component_container.firstChild) {
-				component_container.removeChild(component_container.firstChild)
-			}
-			return false
+	const self					= options.self
+	const component				= options.component
+	const lang					= options.lang
+
+	// check if source component or target component has the lang selected to lock the component edition
+	// if not release read_only property
+		if (lang===self.main_element.lang || lang===self.target_component.lang) {
+			// node.classList.add('disabled_component')
+			component.show_interface.read_only = true
+		}else{
+			component.show_interface.read_only = false
 		}
 
 	// render component
-		const component	= await self.load_component(lang)
+		component.lang = lang
 		// set auto_init_editor for convenience
 		component.auto_init_editor = true
-		const node		= await component.render()
 
-	// source lang lock
-		if (lang===self.source_lang || component_container.classList.contains('source_component_container')) {
-			// node.classList.add('disabled_component')
-			component.show_interface.read_only = true
-		}
+		await component.refresh()
+		// const node		= await component.render()
 
-	// clean container before append
-		while (component_container.firstChild) {
-			component_container.removeChild(component_container.firstChild)
-		}
-
-	// append node
-		component_container.appendChild(node)
-
-
-	return component
+	return true
 }//end add_component
 
 
