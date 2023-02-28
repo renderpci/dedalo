@@ -1517,7 +1517,7 @@ abstract class common {
 				$tool_config	= isset($properties->tool_config->{$tool_object->name})
 					? $properties->tool_config->{$tool_object->name}
 					: null;
-				$current_tool_section_tipo = $this->section_tipo ?? $this->tipo;
+				$current_tool_section_tipo = $this->get_section_tipo() ?? $this->tipo;
 				$tool_context	= tool_common::create_tool_simple_context($tool_object, $tool_config, $this->tipo, $current_tool_section_tipo);
 				$tools[]		= $tool_context;
 			}//end foreach ($tools_list as $item)
@@ -1566,7 +1566,7 @@ abstract class common {
 					// Calculate array of elements to show in filter. Resolve self section items
 						$filter_list = array_map(function($item){
 							$item->section_tipo = ($item->section_tipo==='self')
-								? $this->section_tipo
+								? $this->get_section_tipo()
 								: $item->section_tipo;
 							return $item;
 						}, $properties->source->filter_by_list);
@@ -1617,9 +1617,9 @@ abstract class common {
 
 				$dd_object->debug = $debug;
 
-				$time_string = $time>15
-					? sprintf("\033[31m%s\033[0m", $time)
-					: $time;
+				// $time_string = $time>15
+				// 	? sprintf("\033[31m%s\033[0m", $time)
+				// 	: $time;
 				$len = !empty($this->tipo)
 					? strlen($this->tipo)
 					: 0;
@@ -1691,7 +1691,7 @@ abstract class common {
 					: 0;
 				$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
 				debug_log(
-					"------------------- get_subdatum start ----------- $tipo_line ---- ". get_class($this) .' -- '. ($this->section_tipo ?? $this->tipo).'-'.$this->section_id,
+					"------------------- get_subdatum start ----------- $tipo_line ---- ". get_class($this) .' -- '. ($this->get_section_tipo() ?? $this->tipo).'-'.$this->get_section_id(),
 					logger::DEBUG
 				);
 			}
@@ -1948,20 +1948,20 @@ abstract class common {
 									$source_model = get_called_class();
 									if (strpos($source_model, 'component_')===0){
 										$related_element->from_component_tipo	= $this->tipo;
-										$related_element->from_section_tipo		= $this->section_tipo;
+										$related_element->from_section_tipo		= $this->get_section_tipo();
 
 										// caller_dataframe obj, inject the caller section_tipo and section_id
 										$caller_dataframe = new stdClass();
-											$caller_dataframe->section_tipo	= $this->section_tipo;
-											$caller_dataframe->section_id	= $this->section_id;
+											$caller_dataframe->section_tipo	= $this->get_section_tipo();
+											$caller_dataframe->section_id	= $this->get_section_id();
 										$related_element->set_caller_dataframe($caller_dataframe);
 									}
 
 								// Inject data for component_semantic_node
 									if($model==='component_semantic_node'){
 										$related_element->set_row_locator($current_locator);
-										$related_element->set_parent_section_tipo($this->section_tipo);
-										$related_element->set_parent_section_id($this->section_id);
+										$related_element->set_parent_section_tipo($this->get_section_tipo());
+										$related_element->set_parent_section_id($this->get_section_id());
 									}
 
 								// inject view
@@ -2082,7 +2082,7 @@ abstract class common {
 					: 0;
 				$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
 				debug_log(
-					"------------------- get_subdatum ----------------- $tipo_line $time_string ms ---- ". get_class($this) .' -- '. ($this->section_tipo ?? $this->tipo).'-'.$this->section_id,
+					"------------------- get_subdatum ----------------- $tipo_line $time_string ms ---- ". get_class($this) .' -- '. ($this->get_section_tipo() ?? $this->tipo).'-'.$this->get_section_id(),
 					logger::DEBUG
 				);
 			}
