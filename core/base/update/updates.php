@@ -144,14 +144,14 @@ $updates->$v = new stdClass();
 
 	// UPDATE COMPONENTS
 		$updates->$v->components_update = [
-			'component_portal',
-			'component_text_area',
-			'component_json',
 			'component_av',
 			'component_image',
 			'component_pdf',
 			'component_svg',
-			'component_number'
+			'component_portal',
+			'component_json',
+			'component_number',
+			'component_text_area', // (!) Run this at end because affect image and av data
 		];	// Force convert from string to array
 
 	// update time machine data. Update 'data' of time_machine

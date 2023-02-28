@@ -2236,9 +2236,11 @@ class component_text_area extends component_common {
 										$section_tipo
 									);
 
-								// lib_data
-									$lib_data	= [];
+								// image_dato
 									$image_dato	= $image_component->get_dato();
+
+								// lib_data
+									$lib_data = [];
 									if(empty($image_dato[0]->lib_data)){
 										$raster_layer = new stdClass();
 											$raster_layer->layer_id			= 0;
@@ -2251,7 +2253,7 @@ class component_text_area extends component_common {
 									}
 
 								// draw_tags
-									$ar_draw_tags = null;
+									$ar_draw_tags = [];
 									// get the draw pattern
 									$pattern = TR::get_mark_pattern(
 										'draw', // string mark
@@ -2285,6 +2287,11 @@ class component_text_area extends component_common {
 
 								if (isset($image_dato[0])) {
 									$image_dato[0]->lib_data = $lib_data;
+								}else{
+									$image_dato = [(object)[
+										'lib_data'		=> $lib_data, // to preserve lib data even when not file is available
+										'section_id'	=> $section_id // (!) only to force update when update_dato_version component_image
+									]];
 								}
 
 								$image_component->set_dato($image_dato);

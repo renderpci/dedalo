@@ -90,7 +90,7 @@ class relation_index_v5_to_v6 extends v5_to_v6 {
 
 					$target_component_tipo = $component_tipo[$locator->component_tipo] ?? null;
 					if (empty($target_component_tipo)) {
-						trigger_error('Error getting component_tipo from locator: ' . json_encode($locator));
+						debug_log(__METHOD__." Warning: Issue getting target_component_tipo from locator (ignored) : ".to_string($locator), logger::ERROR);
 						continue;
 					}
 
