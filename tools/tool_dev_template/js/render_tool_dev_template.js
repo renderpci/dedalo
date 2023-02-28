@@ -115,7 +115,10 @@ export const add_component_sample = async (self, component_container, lang) => {
 			return false
 		}
 
-	const component = await self.load_component(lang)
+	const component = await self.load_component_sample({
+		lang	: self,
+		ddo		: self.main_element
+	})
 	const node 		= await component.render()
 
 	// clean container
