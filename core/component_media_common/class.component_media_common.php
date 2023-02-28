@@ -1196,7 +1196,7 @@ class component_media_common extends component_common {
 
 		if(!in_array($quality, $ar_valid)) {
 			#$quality = $default ;		#dump($ar_valid, "$quality NO IS IN ARRAY !!!!!");
-			debug_log(__METHOD__." $quality is not accepted value as quality. Please configure media options in config.php".to_string(), logger::ERROR);
+			debug_log(__METHOD__." $quality is not accepted value as quality (ignored set action). ".get_called_class().". Please configure media options in config.php ".to_string($this->tipo), logger::ERROR);
 			return false;
 		}
 
