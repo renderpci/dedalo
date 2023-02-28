@@ -41,6 +41,7 @@ export const descriptors = function(){
 	descriptors.prototype.build		= widget_common.prototype.build
 	descriptors.prototype.destroy	= widget_common.prototype.destroy
 	descriptors.prototype.render	= widget_common.prototype.render
+	descriptors.prototype.refresh	= widget_common.prototype.refresh
 	// render
 	descriptors.prototype.edit		= render_descriptors.prototype.edit
 	descriptors.prototype.list		= render_descriptors.prototype.list
