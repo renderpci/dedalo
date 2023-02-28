@@ -104,38 +104,3 @@ const get_content_data = async function(self) {
 }//end get_content_data
 
 
-
-/**
-* ADD_COMPONENT_SAMPLE
-* @param instance self
-* @param DOM node component_container
-* @param string lang
-* @return bool true
-*/
-export const add_component_sample = async (self, component_container, lang) => {
-
-	// user select blank lang case
-		if (!lang) {
-			while (component_container.firstChild) {
-				// remove node from DOM (not component instance)
-				component_container.removeChild(component_container.firstChild)
-			}
-			return false
-		}
-
-	const component = await self.load_component(lang)
-	const node 		= await component.render()
-
-	// clean container
-		while (component_container.firstChild) {
-			component_container.removeChild(component_container.firstChild)
-		}
-
-	// append node
-		component_container.appendChild(node)
-
-
-	return true
-}//end add_component_sample
-
-
