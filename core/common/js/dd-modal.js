@@ -59,7 +59,7 @@ class DDModal extends HTMLElement {
 					animation-duration: 0.4s;
 					*/
 					display: grid;
-					grid-template-rows: minmax(4rem, 4rem) auto minmax(4rem, 4rem);
+					/*grid-template-rows: minmax(4rem, 4rem) auto minmax(4rem, 4rem);*/
 				}
 				.dragging {
 					cursor: move;
