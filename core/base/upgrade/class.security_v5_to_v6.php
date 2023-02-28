@@ -207,8 +207,8 @@ class security_v5_to_v6 {
 						$target_section_tipo	= 'dd1324'; // $section_registered_tools_tipo	= 'dd1324'; // Tools register section
 						$tool_found				= tools_register::get_tool_data_by_name($new_name, $target_section_tipo); // return section record raw data or null
 						if (empty($tool_found)) {
-							$msg = 'Error on import tool permissions. Tool: '.$tool_name.' not found in tools_register section [Ignored]';
-							trigger_error($msg);
+							$msg = 'WARNING on import tool permissions. Tool: '.$tool_name.' not found in tools_register section [Ignored]';
+							debug_log(__METHOD__." $msg ".to_string(), logger::WARNING);
 							continue;
 						}
 

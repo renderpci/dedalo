@@ -1370,29 +1370,25 @@ class component_image extends component_media_common {
 
 	/**
 	* UPDATE_DATO_VERSION
-	* @param object $request_options
+	* @param object $options
 	* @return object $response
 	*	$response->result = 0; // the component don't have the function "update_dato_version"
 	*	$response->result = 1; // the component do the update"
 	*	$response->result = 2; // the component try the update but the dato don't need change"
 	*/
-	public static function update_dato_version(object $request_options) : object {
+	public static function update_dato_version(object $options) : object {
 
-		$options = new stdClass();
-			$options->update_version	= null;
-			$options->dato_unchanged	= null;
-			$options->reference_id		= null;
-			$options->tipo				= null;
-			$options->section_id		= null;
-			$options->section_tipo		= null;
-			$options->context			= 'update_component_dato';
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+		// options
+			$update_version	= $options->update_version ?? '';
+			$dato_unchanged	= $options->dato_unchanged ?? null;
+			$reference_id	= $options->reference_id ?? null;
+			$tipo			= $options->tipo ?? null;
+			$section_id		= $options->section_id ?? null;
+			$section_tipo	= $options->section_tipo ?? null;
+			$context		= $options->context ?? 'update_component_dato';
 
-		// short vars
-			$update_version	= implode('.', $options->update_version);
-			$dato_unchanged	= $options->dato_unchanged;
-			$reference_id	= $options->reference_id;
 
+		$update_version	= implode('.', $update_version);
 		switch ($update_version) {
 
 			case '6.0.0':
@@ -1408,11 +1404,11 @@ class component_image extends component_media_common {
 						$model		= RecordObj_dd::get_modelo_name_by_tipo($options->tipo,true);
 						$component	= component_common::get_instance(
 							$model, // string 'component_image'
-							$options->tipo,
-							$options->section_id,
+							$tipo,
+							$section_id,
 							'list',
 							DEDALO_DATA_NOLAN,
-							$options->section_tipo
+							$section_tipo
 						);
 
 					// get existing files data
@@ -1450,9 +1446,12 @@ class component_image extends component_media_common {
 					// create the svg_file if not already exists
 						$svg_file_path = $component->get_svg_file_path();
 						if (!file_exists($svg_file_path)) {
-							$svg_string_node		= $component->create_default_svg_string_node();
+							$svg_string_node = $component->create_default_svg_string_node();
 							if (!empty($svg_string_node)) {
 								$create_svg_file_result	= $component->create_svg_file($svg_string_node);
+								if ($create_svg_file_result===false) {
+									debug_log(__METHOD__." Error creating svg file form svg_string_node ".PHP_EOL. to_string($svg_string_node), logger::ERROR);
+								}
 							}
 						}
 
@@ -1476,10 +1475,10 @@ class component_image extends component_media_common {
 							$original_name_component = component_common::get_instance(
 								$original_name_model,
 								$original_name_tipo,
-								$options->section_id,
+								$section_id,
 								'list',
 								DEDALO_DATA_NOLAN,
-								$options->section_tipo
+								$section_tipo
 							);
 							$name_component_dato	= $original_name_component->get_dato();
 							$source_file_name		= isset($name_component_dato[0]) ? $name_component_dato[0] : $name_component_dato;
@@ -1492,10 +1491,10 @@ class component_image extends component_media_common {
 							$previous_code_component	= component_common::get_instance(
 								$previous_code_model, // expected 'component_input_text'
 								$previous_code_tipo, // rsc22
-								$options->section_id,
+								$section_id,
 								'list',
 								DEDALO_DATA_NOLAN,
-								$options->section_tipo
+								$section_tipo
 							);
 							$code_component_dato	= $previous_code_component->get_dato();
 							$source_file_name		= isset($code_component_dato[0]) ? $code_component_dato[0] : $code_component_dato;

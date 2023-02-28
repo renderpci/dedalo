@@ -695,6 +695,12 @@ vector_editor.prototype.init_tools = function(self) {
 */
 vector_editor.prototype.render_tools_buttons = function(self) {
 
+	// check vector_editor_tools
+		if (!self.vector_editor_tools) {
+			console.error('Error: vector_editor_tools is not available:', self.vector_editor_tools);
+			return
+		}
+
 	// Tool buttons. Show
 		// const view			= self.current_paper.view
 		const buttons_container	= self.vector_editor_tools
