@@ -357,7 +357,7 @@ export const init_events_subscription = function(self) {
 * SAVE
 * Exec a save action calling the API
 * Returns the updated data after save (useful to re-assign data value array keys)
-* @param object changed_data
+* @param array changed_data
 * [{
 * 	action : "update",
 * 	key : 0,

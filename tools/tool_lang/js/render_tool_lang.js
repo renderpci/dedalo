@@ -241,11 +241,11 @@ const get_content_data_edit = async function(self) {
 
 				// save value. (Expected only one value in the array)
 					for (let i = 0; i < source_value.length; i++) {
-						self.target_component.save({
+						self.target_component.save([{
 							action	: 'update',
 							key		: i,
 							value	: source_value[i]
-						})
+						}])
 					}
 
 				// refresh the target component
