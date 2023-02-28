@@ -9,6 +9,7 @@ class widget_common {
 
 	public $section_tipo;
 	public $section_id;
+	public $mode;
 	public $lang;
 	public $ipo;
 
@@ -23,6 +24,7 @@ class widget_common {
 
 		$this->section_tipo	= $options->section_tipo;
 		$this->section_id	= $options->section_id;
+		$this->mode			= $options->mode;
 		$this->lang			= $options->lang;
 		$this->ipo			= $options->ipo;
 	}//end __construct
