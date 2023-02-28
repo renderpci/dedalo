@@ -46,12 +46,14 @@ class descriptors extends widget_common {
 						$source_component_tipo = $current_source->component_tipo;
 
 						$source_model_name	= RecordObj_dd::get_modelo_name_by_tipo($source_component_tipo,true);
-						$source_component	= component_common::get_instance($source_model_name,
-														   $source_component_tipo,
-														   $source_section_id,
-														   'list',
-														   DEDALO_DATA_LANG,
-														   $source_section_tipo);
+						$source_component	= component_common::get_instance(
+							$source_model_name,
+							$source_component_tipo,
+							$source_section_id,
+							'list',
+							DEDALO_DATA_LANG,
+							$source_section_tipo
+						);
 						$source_dato = $source_component->get_dato();
 						// locator will use to get the label of the components that has the information, only 1 locator is necessary
 						$locator = reset($source_dato);
@@ -76,12 +78,14 @@ class descriptors extends widget_common {
 				foreach ($ar_locator as $locator) {
 
 					$model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-					$component	= component_common::get_instance($model_name,
-																	   $component_tipo,
-																	   $locator->section_id,
-																	   'list',
-																	   DEDALO_DATA_NOLAN,
-																	   $locator->section_tipo);
+					$component	= component_common::get_instance(
+						$model_name,
+						$component_tipo,
+						$locator->section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$locator->section_tipo
+					);
 
 
 					$component_dato		= $component->get_dato();
