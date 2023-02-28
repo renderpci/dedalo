@@ -16,9 +16,15 @@ class descriptors extends widget_common {
 
 		$section_tipo 	= $this->section_tipo;
 		$section_id 	= $this->section_id;
+		$mode 			= $this->mode;
 		$ipo 			= $this->ipo;
 
 		$dato = [];
+
+		if($mode=== 'list'){
+			return $dato;
+		}
+
 		$project_langs = common::get_ar_all_langs();
 
 		// every state has a ipo that come from structure (input, process , output).
