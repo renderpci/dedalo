@@ -92,7 +92,7 @@ const get_content_data_list = async function(self) {
 		const button_display = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'button_display',
-			inner_html 		: get_label.descriptors || 'Terms',
+			inner_html 		: get_label.terms || 'Terms',
 			parent			: fragment
 		})
 		button_display.addEventListener('mouseup', async function(){
@@ -172,7 +172,7 @@ const get_value_element = async (i, data, values_container, self) => {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'label',
-			inner_html		: 'Terms:',
+			inner_html 		: get_label.terms || 'Terms',
 			parent			: li
 		})
 
