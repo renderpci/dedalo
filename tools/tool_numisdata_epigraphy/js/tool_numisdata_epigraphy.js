@@ -9,7 +9,7 @@
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
 	// import {ui} from '../../../core/common/js/ui.js'
-	import {tool_common} from '../../tool_common/js/tool_common.js'
+	import {tool_common, load_component} from '../../tool_common/js/tool_common.js'
 	import {render_tool_numisdata_epigraphy} from './render_tool_numisdata_epigraphy.js'
 
 
@@ -153,7 +153,8 @@ tool_numisdata_epigraphy.prototype.get_component = async function(options) {
 
 	const ddo	= self.tool_config.ddo_map.find(el => el.role===role)
 
-	const instance_options	= {
+	const options	= {
+		self 			: self,
 		model			: ddo.model,
 		mode 			: ddo.mode,
 		tipo			: ddo.tipo,
@@ -167,7 +168,7 @@ tool_numisdata_epigraphy.prototype.get_component = async function(options) {
 	}
 
 	// call generic common tool build
-		const component_instance = await tool_common.prototype.load_component.call(self, instance_options);
+		const component_instance = await load_component(options);
 
 	// set auto_init_editor if the ddo has his definition
 		if(ddo.auto_init_editor){

@@ -161,7 +161,7 @@ export const create_target_component = (lang, self) => {
 		})
 		target_component_title.classList.add('bold')
 	}else{
-		self.load_component(lang.value)
+		self.get_component(lang.value)
 		.then(function(component){
 			component.render()
 				.then(function(node){
