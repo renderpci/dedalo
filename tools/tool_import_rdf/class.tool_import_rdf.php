@@ -11,7 +11,7 @@ class tool_import_rdf extends tool_common {
 
 
 	# component
-	protected $section_tipo;
+	public $section_tipo;
 
 
 
