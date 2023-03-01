@@ -322,14 +322,14 @@ final class dd_utils_api {
 			}
 
 		// update structure css
-			$build_structure_css_response = (object)css::build_structure_css();
-			if ($build_structure_css_response->result===false) {
-				debug_log(__METHOD__." Error on build_structure_css: ".to_string($build_structure_css_response), logger::ERROR);
+			// $build_structure_css_response = (object)css::build_structure_css();
+			// if ($build_structure_css_response->result===false) {
+			// 	debug_log(__METHOD__." Error on build_structure_css: ".to_string($build_structure_css_response), logger::ERROR);
 
-				$response->result	= false;
-				$response->msg		= __METHOD__." Error on build_structure_css: ".to_string($build_structure_css_response);
-				return $response;
-			}
+			// 	$response->result	= false;
+			// 	$response->msg		= __METHOD__." Error on build_structure_css: ".to_string($build_structure_css_response);
+			// 	return $response;
+			// }
 
 		$response->result	= true;
 		$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
@@ -1153,6 +1153,166 @@ final class dd_utils_api {
 
 		return $response;
 	}//end create_test_record
+
+
+
+	/**
+	* UPDATE_CODE
+	* Download code in zip format file from the GIT repository defined in config
+	* @param object $rqo
+	* @return object $response
+	*/
+	public static function update_code(object $rqo) : object {
+		$start_time = start_time();
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed '.__METHOD__;
+
+		try {
+
+			$result = new stdClass();
+
+			debug_log(__METHOD__." Start downloading file ".DEDALO_SOURCE_VERSION_URL, logger::DEBUG);
+
+			// Download zip file from server (master)
+				// $contents = file_get_contents(DEDALO_SOURCE_VERSION_URL);
+				$contents = (defined('SERVER_PROXY') && !empty(SERVER_PROXY))
+					? (function(){
+
+						// regular contaxt
+							$aContext = [
+								'http' => [
+									'proxy'				=> 'tcp://' . SERVER_PROXY,
+									'request_fulluri'	=> true
+								]
+							];
+							$context = stream_context_create($aContext);
+
+						// HTTPS fixed bug context
+							// $path		= DEDALO_SOURCE_VERSION_URL;
+							// $hostname	= parse_url($path, PHP_URL_HOST);
+							// $opts = array(
+							// 	'http' => array(
+							// 		'method'	=> 'GET',
+							// 		'proxy'		=> 'tcp://' . DEDALO_SOURCE_VERSION_URL,
+							// 	),
+							// 	'ssl' => array(
+							// 		'SNI_server_name'	=> $hostname,
+							// 		'SNI_enabled'		=> true
+							// 	)
+							// );
+							// $context = stream_context_create($opts);
+
+						return file_get_contents(DEDALO_SOURCE_VERSION_URL, false, $context);
+					  })()
+					: file_get_contents(DEDALO_SOURCE_VERSION_URL);
+
+				if (!$contents) {
+					$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Contents from Dédalo code repository fail to download from: '.DEDALO_SOURCE_VERSION_URL;
+					debug_log(__METHOD__." $response->msg", logger::ERROR);
+					return $response;
+				}
+				$result->download_file = [
+					"Downloaded file: " . DEDALO_SOURCE_VERSION_URL,
+					"Time: " . exec_time_unit($start_time,'secs')." secs"
+				];
+				debug_log(__METHOD__." Downloaded file (".DEDALO_SOURCE_VERSION_URL.") in ".exec_time_unit($start_time,'secs'), logger::DEBUG);
+
+			// Save contents to local dir
+				if (!is_dir(DEDALO_SOURCE_VERSION_LOCAL_DIR)) {
+					if( !mkdir(DEDALO_SOURCE_VERSION_LOCAL_DIR,  0775) ) {
+						$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Unable to create dir: '.DEDALO_SOURCE_VERSION_LOCAL_DIR;
+						debug_log(__METHOD__." $response->msg", logger::ERROR);
+						return $response;
+					}
+				}
+				$file_name		= 'dedalo6_code.zip';
+				$target_file	= DEDALO_SOURCE_VERSION_LOCAL_DIR . '/' . $file_name;
+				$put_contents	= file_put_contents($target_file, $contents);
+				if (!$put_contents) {
+					$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Contents from Dédalo code repository fail to write on : '.$target_file;
+					debug_log(__METHOD__." $response->msg", logger::ERROR);
+					return $response;
+				}
+				$result->write_file = [
+					"Written file: ". $target_file,
+					"File size: "	. format_size_units( filesize($target_file) )
+				];
+
+			// extract files from zip. (!) Note that 'ZipArchive' need to be installed in PHP to allow work
+				$zip = new ZipArchive;
+				$res = $zip->open($target_file);
+				if ($res!==true) {
+					$response->msg = 'Error. Request failed ['.__FUNCTION__.']. ERROR ON ZIP file extraction to '.DEDALO_SOURCE_VERSION_LOCAL_DIR;
+					debug_log(__METHOD__." $response->msg", logger::ERROR);
+					return $response;
+				}
+				$zip->extractTo(DEDALO_SOURCE_VERSION_LOCAL_DIR);
+				$zip->close();
+				$result->extract = [
+					"Extracted ZIP file to: " . DEDALO_SOURCE_VERSION_LOCAL_DIR
+				];
+				debug_log(__METHOD__." ZIP file extracted successfully to ".DEDALO_SOURCE_VERSION_LOCAL_DIR, logger::DEBUG);
+
+			// rsync
+				$source		= (strpos(DEDALO_SOURCE_VERSION_URL, 'github.com'))
+					? DEDALO_SOURCE_VERSION_LOCAL_DIR .'/dedalo-master' // like 'dedalo-master'
+					: DEDALO_SOURCE_VERSION_LOCAL_DIR .'/'. pathinfo($file_name)['filename']; // like 'dedalo6_code' from 'dedalo6_code.zip'
+				$target		= DEDALO_ROOT_PATH;
+				$exclude	= ' --exclude="*/config*" --exclude="media" ';
+				$aditional 	= ''; // $is_preview===true ? ' --dry-run ' : '';
+				$command	= 'rsync -avui --no-owner --no-group --no-perms --progress '. $exclude . $aditional . $source.'/ ' . $target.'/';
+				$output		= shell_exec($command);
+				$result->rsync = [
+					"command: " . $command,
+					"output: "  . str_replace(["\n","\r"], '<br>', $output),
+				];
+				debug_log(__METHOD__." RSYNC command done ". PHP_EOL .to_string($command), logger::DEBUG);
+
+			// remove temp used files and folders
+				$command_rm_dir		= "rm -R -f $source";
+				$output_rm_dir		= shell_exec($command_rm_dir);
+				$result->remove_dir	= [
+					"command_rm_dir: " . $command_rm_dir,
+					"output_rm_dir: "  . $output_rm_dir
+				];
+				$command_rm_file 	= "rm $target_file";
+				$output_rm_file		= shell_exec($command_rm_file);
+				$result->remove_file= [
+					"command_rm_file: " . $command_rm_file,
+					"output_rm_file: "  . $output_rm_file
+				];
+				debug_log(__METHOD__." Removed temp used files and folders ".to_string(), logger::DEBUG);
+
+			// update javascript labels
+				$ar_langs = DEDALO_APPLICATION_LANGS;
+				foreach ($ar_langs as $lang => $label) {
+					$label_path	= '/common/js/lang/' . $lang . '.js';
+					$ar_label	= label::get_ar_label($lang); // Get all properties
+					file_put_contents( DEDALO_CORE_PATH.$label_path, json_encode($ar_label, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+					debug_log(__METHOD__." Generated js labels file for lang: $lang - $label_path ".to_string(), logger::DEBUG);
+				}
+
+
+			// response ok
+				$response->result	= $result;
+				$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
+
+				debug_log(__METHOD__." Updated Dédalo code successfully ".to_string(), logger::DEBUG);
+
+
+		} catch (Exception $e) {
+
+			$response->msg = $e->getMessage();
+		}
+
+		$response->result	= true;
+		$response->msg		= 'OK. Request done '.__METHOD__;
+
+
+		return $response;
+	}//end update_code
 
 
 
