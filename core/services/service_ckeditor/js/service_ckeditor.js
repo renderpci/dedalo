@@ -505,9 +505,21 @@ export const service_ckeditor = function() {
 		const self		= this
 		const editor	= self.editor
 
+		// set a timer to wait until user is writing
+		// when user stop set the dirty and change data
+		let timer;              // Timer identifier
+		const waitTime = 650;   // Wait time in milliseconds
 		// the editor send a event when the data is changed and change the is_dirty state
 		editor.model.document.on( 'change:data', () => {
-			self.set_dirty(true);
+
+			// Clear timer every time than keyup
+    			clearTimeout(timer);
+
+    		// Wait for X ms and then process data and setup dirty
+				timer = setTimeout(() => {
+					self.set_dirty(true);
+				}, waitTime);
+
 		});
 	}//end init_status_changes
 
@@ -743,7 +755,7 @@ export const service_ckeditor = function() {
 				// Insert the html in the current selection location.
 				editor.model.insertContent( model_tag_node, position );
 				// Put the selection on the inserted element.
-				writer.setSelection( model_tag_node, 'on' );
+				// writer.setSelection( model_tag_node, 'on' );
 			// }
 		});
 
@@ -752,7 +764,7 @@ export const service_ckeditor = function() {
 		// const value = editor.getContent({format:'raw'})
 		const value = editor.getData();
 		// const value = self.editor.getBody()
-		self.caller.save_value(self.key, value)
+		// self.caller.save_value(self.key, value)
 
 
 		return true
