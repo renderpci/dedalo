@@ -118,6 +118,7 @@ export const render_find_and_replace = function(editor) {
 			element_type	: 'input',
 			type			: 'text',
 			class_name		: 'input_search',
+			placeholder 	: get_label.search || 'Search',
 			parent 			: body_contanier,
 		})
 		input_search.addEventListener('keyup',function(){
@@ -181,6 +182,7 @@ export const render_find_and_replace = function(editor) {
 			element_type	: 'input',
 			type			: 'text',
 			class_name		: 'input_replace',
+			placeholder 	: get_label.replace || 'Replace',
 			parent 			: replace_contanier,
 		})
 			const button_replace = ui.create_dom_element({
