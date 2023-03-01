@@ -1,5 +1,5 @@
 <?php
-// ontology custon config file
+// ontology custom config file
 require_once( dirname(__FILE__) .'/config/config_ontology.php');
 
 /*
@@ -63,7 +63,7 @@ class dd extends dd_elements {
 	protected function set_mode(string $modo) : void {
 		$this->valid_modes = array('tesauro_list','tesauro_edit','modelo_edit','tesauro_rel');
 		if( !in_array($modo, $this->valid_modes) ) {
-			die(__METHOD__." DD Tesauro Error: mode not valid! [<b>$mode</b>] <br> Use a valid mode to access.");
+			die(__METHOD__." DD Tesauro Error: mode not valid! [<b>$modo</b>] <br> Use a valid mode to access.");
 		}
 
 		# set value "esmodelo" for filter when build tree
@@ -372,6 +372,7 @@ class dd extends dd_elements {
 	        $html .= 'Ontology';
 
 			$parent0 = (string)$this->prefijo.'0';
+
 			if($this->modo==='tesauro_rel')
 			{
 				# caso indexación
@@ -399,7 +400,7 @@ class dd extends dd_elements {
 	*/
 	function existeEsteTermino(string $termino, string $terminoID) : ?string {
 
-		$exists		= RecordObj_decriptors::termino_exists($termino,$terminoID);
+		$exists		= RecordObj_decriptors::termino_exists($termino, $terminoID);
 		if($exists) {
 			global 	$el_termino_ya_existe_title ;
 			$html	= "<div class=\"error\"> $el_termino_ya_existe_title: <b>$termino</b> </div>";
