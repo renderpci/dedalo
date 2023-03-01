@@ -106,12 +106,6 @@ function build_version_from_git_master($json_data) : object {
 	// rsync trigger code HEAD from master git
 		function update_head_code(object $response, int $version) : string {
 
-			// temp
-			define('DEDALO_CODE_SERVER_GIT_DIR', 'DEDALO_CODE_SERVER_GIT_DIR');
-			define('DEDALO_CODE_FILES_DIR', 'DEDALO_CODE_FILES_DIR');
-			define('DEDALO_6_CODE_SERVER_GIT_DIR', 'DEDALO_6_CODE_SERVER_GIT_DIR');
-			define('DEDALO_6_CODE_FILES_DIR', 'DEDALO_6_CODE_FILES_DIR');
-
 			if ($version==6) {
 				// source
 				$source		= DEDALO_6_CODE_SERVER_GIT_DIR;
