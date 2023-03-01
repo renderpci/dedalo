@@ -578,6 +578,20 @@
 
 
 
+// dedalo_code
+	// server side (master)
+		// server git files (master) like /home/dedalo/master_dedalo.git
+		// define('DEDALO_CODE_SERVER_GIT_DIR',	'/home/dedalo/master_dedalo.git');
+		// target dir where git command send the compressed file like 'dedalo5_code.zip'
+		// define('DEDALO_CODE_FILES_DIR',			DEDALO_ROOT . '/code');
+	// client side
+		// target dir where git command send the compressed file like 'https://master.render.es/dedalo/code/dedalo5_code.zip'
+		define('DEDALO_SOURCE_VERSION_URL',			'https://master.render.es/dedalo/code/dedalo6_code.zip');
+		// target dir where git command send the compressed file like 'https://master.render.es/dedalo/code/dedalo5_code.zip'
+		define('DEDALO_SOURCE_VERSION_LOCAL_DIR',	'/tmp/'.DEDALO_ENTITY);
+
+
+
 // login init_cookie_auth
 	// Deprecated. Not used here.
 
