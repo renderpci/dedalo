@@ -322,7 +322,7 @@ class component_filter extends component_relation_common {
 			$parent_save_result = parent::Save();
 
 		// activity case logger only
-			if( $this->tipo===logger_backend_activity::$_COMPONENT_PROYECTOS['tipo'] ) {
+			if( $this->tipo===logger_backend_activity::$_COMPONENT_PROJECTS['tipo'] ) {
 				return $parent_save_result;
 			}
 
@@ -785,7 +785,7 @@ class component_filter extends component_relation_common {
 
 		$caller_component	= get_called_class();
 
-		$proyectos_tipo		= logger_backend_activity::$_COMPONENT_PROYECTOS['tipo'] ;
+		$proyectos_tipo		= logger_backend_activity::$_COMPONENT_PROJECTS['tipo'] ;
 
 		$current_component	= component_common::get_instance($caller_component,$proyectos_tipo,NULL,'stats');
 

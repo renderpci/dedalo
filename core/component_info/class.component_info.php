@@ -1,5 +1,4 @@
 <?php
-include_once dirname(dirname(__FILE__)). '/widgets/widget_common/class.widget_common.php';
 /*
 * CLASS COMPONENT_INFO
 *
