@@ -113,7 +113,8 @@ abstract class common {
 				// map from old model => new model
 				'component_autocomplete_hi'	=> 'component_portal',
 				'component_autocomplete'	=> 'component_portal',
-				'section_group_div'			=> 'section_group'
+				'section_group_div'			=> 'section_group',
+				'component_calculation' 	=> 'component_info'
 			];
 			public static $ar_temp_exclude_models = [
 				// v5
@@ -122,7 +123,7 @@ abstract class common {
 				// v6
 				// 'component_autocomplete'
 				// 'component_av'
-				'component_calculation',
+				// 'component_calculation',
 				// 'component_check_box'
 				// 'component_date'
 				// 'component_email'
