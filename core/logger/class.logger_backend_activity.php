@@ -1,88 +1,101 @@
 <?php
-require_once( DEDALO_CORE_PATH .'/logger/class.logger_backend.php' );
 /**
 * LOGGER BACKEND ACTIVITY CLASS
 *
 */
 class logger_backend_activity extends logger_backend {
 
-	private $log_level;
-	private $h_conn;
-	private static $activity_matrix_table = 'matrix_activity';
+	// private $log_level;
+	// private $h_conn;
+	// private static $activity_matrix_table = 'matrix_activity';
 
 
-	// what var
-	static $what = [
-		'LOG IN'			=>	1,	// dd696 login module
-		'LOG OUT'			=>	2,	// dd697 login module
-		'NEW'				=>	3, 	// dd695 section
-		'DELETE'			=>	4,	// dd698 section
-		'SAVE'				=>	5,	// dd700 component
-		'LOAD EDIT'			=>	6,	// dd694 page
-		'LOAD LIST'			=>	7,	// dd693 page
-		'SEARCH'			=>	8,	// dd699 component
-		'UPLOAD'			=>	9, 	// dd1090 upload file by tool upload
-		'DOWNLOAD'			=>	10, // dd1080 download file by tool av / image / pdf
-		'UPLOAD COMPLETE'	=>	11, // dd1094 upload file by tool upload
-		'DELETE FILE'		=>	12, // dd1095 delete file by tool
-		'RECOVER SECTION'	=>	13, // dd1092 recuperar sección
-		'RECOVER COMPONENT'	=>	14, // dd1091 recuperar componente
-		'STATS'				=>	15, // dd1098 estadisticas
-		'NEW VERSION'		=>	16  // dd1081 new version file
-	];
+	/**
+	* @var
+	*/
+		// what var
+		static $what = [
+			'LOG IN'			=>	1,	// dd696 login module
+			'LOG OUT'			=>	2,	// dd697 login module
+			'NEW'				=>	3, 	// dd695 section
+			'DELETE'			=>	4,	// dd698 section
+			'SAVE'				=>	5,	// dd700 component
+			'LOAD EDIT'			=>	6,	// dd694 page
+			'LOAD LIST'			=>	7,	// dd693 page
+			'SEARCH'			=>	8,	// dd699 component
+			'UPLOAD'			=>	9, 	// dd1090 upload file by tool upload
+			'DOWNLOAD'			=>	10, // dd1080 download file by tool av / image / pdf
+			'UPLOAD COMPLETE'	=>	11, // dd1094 upload file by tool upload
+			'DELETE FILE'		=>	12, // dd1095 delete file by tool
+			'RECOVER SECTION'	=>	13, // dd1092 recuperar sección
+			'RECOVER COMPONENT'	=>	14, // dd1091 recuperar componente
+			'STATS'				=>	15, // dd1098 estadisticas
+			'NEW VERSION'		=>	16  // dd1081 new version file
+		];
 
+		// tipos
+		static $_SECTION_TIPO = [
+			'tipo'			=>'dd542',
+			'model_name'	=>'section'
+		];
+		static $_COMPONENT_IP = [
+			'tipo'			=>'dd544', // (v5 former component_ip)
+			'model_name'	=>'component_input_text'
+		];
+		static $_COMPONENT_WHO = [
+			'tipo'			=>'dd543',
+			'model_name'	=>'component_autocomplete'
+		];
+		static $_COMPONENT_WHAT = [
+			'tipo'			=> 'dd545',
+			'model_name'	=> 'component_select' // (v5 former component_input_text)
+		];
+		static $_COMPONENT_WHERE = [
+			'tipo'			=>'dd546', // (v5 former component_autocomplete_ts)
+			'model_name'	=>'component_input_text'
+		];
+		static $_COMPONENT_WHEN	= [
+			'tipo'			=>'dd547',
+			'model_name'	=>'component_date'
+		];
+		static $_COMPONENT_PROJECTS	= [
+			'tipo'			=>'dd550',
+			'model_name'	=>'component_filter'
+		];
+		static $_COMPONENT_DATOS = [
+			'tipo'			=>'dd551',
+			'model_name'	=>'component_json' // (v5 former component_input_text)
+			// in Ontology appears as component_input_text fro v5 compatibility, but mapped to component_json in 'get_modelo_name()'
+		];
 
-	// vars
-		static $_SECTION_TIPO 		= ['tipo'=>'dd542','model_name'=>'section'];
-		static $_COMPONENT_IP 		= ['tipo'=>'dd544','model_name'=>'component_ip'];
-		static $_COMPONENT_QUIEN 	= ['tipo'=>'dd543','model_name'=>'component_autocomplete'];
-		static $_COMPONENT_QUE 		= ['tipo'=>'dd545','model_name'=>'component_input_text'];
-		static $_COMPONENT_DONDE 	= ['tipo'=>'dd546','model_name'=>'component_input_text'];
-		static $_COMPONENT_CUANDO 	= ['tipo'=>'dd547','model_name'=>'component_date'];
-		static $_COMPONENT_PROYECTOS= ['tipo'=>'dd550','model_name'=>'component_filter'];
-		static $_COMPONENT_DATOS 	= ['tipo'=>'dd551','model_name'=>'component_input_text'];
-
-	// ar_elements_activity_tipo
+		// ar_elements_activity_tipo
 		static $ar_elements_activity_tipo;
 
-	// enable_log static
-	public static $enable_log = true;
-
-
-
-	# CONSTRUCT
-	# Require url_data string like: 'mysql://user:password@host/database?tabe=matrix_activity' for caompatibity
-	public function __construct(array $url_data) {
-		#parent::__construct($url_data);
-
-		# FIX ARRAY ar_elements_activity_tipo
-		logger_backend_activity::$ar_elements_activity_tipo = array(
-			self::$_SECTION_TIPO['tipo'],
-			self::$_COMPONENT_IP['tipo'],
-			self::$_COMPONENT_QUIEN['tipo'],
-			self::$_COMPONENT_QUE['tipo'],
-			self::$_COMPONENT_DONDE['tipo'],
-			self::$_COMPONENT_CUANDO['tipo'],
-			self::$_COMPONENT_PROYECTOS['tipo'],
-			self::$_COMPONENT_DATOS['tipo']
-		);
-	}//end __construct
+		// enable_log static
+		public static $enable_log = true;
 
 
 
 	/**
-	* BUILD_COMPONENT_ACTIVITY_OBJECT
-	* @return object $component_obj
+	* __CONSTRUCT
+	* Require url_data string like: 'mysql://user:password@host/database?tabe=matrix_activity' for caompatibity
+	* @param array|null $url_data
 	*/
-	public static function build_component_activity_object($dato) : object {
+	public function __construct(?array $url_data) {
 
-		$component_obj = new stdClass();
-			$component_obj->dato = new stdClass();
-			$component_obj->dato->{DEDALO_DATA_NOLAN}	= new stdClass();
-			$component_obj->dato->{DEDALO_DATA_NOLAN}	= [$dato];
+		// FIX ARRAY ar_elements_activity_tipo
+		logger_backend_activity::$ar_elements_activity_tipo = [
+			self::$_SECTION_TIPO['tipo'],
+			self::$_COMPONENT_IP['tipo'],
+			self::$_COMPONENT_WHO['tipo'],
+			self::$_COMPONENT_WHAT['tipo'],
+			self::$_COMPONENT_WHERE['tipo'],
+			self::$_COMPONENT_WHEN['tipo'],
+			self::$_COMPONENT_PROJECTS['tipo'],
+			self::$_COMPONENT_DATOS['tipo']
+		];
+	}//end __construct
 
-		return $component_obj;
-	}//end build_component_activity_object
 
 
 	/**
@@ -91,187 +104,245 @@ class logger_backend_activity extends logger_backend {
 	*	MODULE  TIME  USER  IP  REFERRER  MESSAGE  SEVERITY_LEVEL  OPERATIONS
 	*	IP_ADDRESS 	QUIEN 	QUE 	DONDE 	CUANDO 	DATOS
 	*	QUE(like 'LOAD EDIT'), LOGLEVEL(INFO), TIPO(like 'dd120'), DATOS(array of related info)
+	*
+	* @param string $message
+	* 	sample: 'SAVE'
+	* @param int $log_level = logger::INFO
+	* 	sample: 75
+	* @param string|null $tipo_where = null
+	* 	sample: 'oh32'
+	* @param string|null $operations = null
+	* 	sample: null
+	* @param array|null $datos = null
+	* 	sample: [
+		*		"msg"				=> "Saved component data",
+		*		"tipo"				=> "oh32",
+		*		"section_id"		=> "1",
+		*		"lang"				=> "lg-nolan",
+		*		"top_id"			=> "1",
+		*		"top_tipo"			=> "oh1",
+		*		"component_name"	=> "component_publication",
+		*		"table"				=> "matrix",
+		*		"section_tipo"		=> "oh1"
+		*	]
 	* @return int|null section_id
 	*/
 	public function log_message(
 		string $message,
 		int $log_level=logger::INFO,
-		string $tipo_donde=null,
+		string $tipo_where=null,
 		string $operations=null,
 		array $datos=null
 	) : ?int {
 
-		// Creation log exceptions
+		// check values
 
-			# ENABLE LOG : OPTIONAL
-			if(logger_backend_activity::$enable_log === false) return null;
+			// disable log
+				if(logger_backend_activity::$enable_log===false) {
+					return null;
+				}
 
-			# if tipo of activity is not sended is not possible generate log
-			if (empty($tipo_donde)) {
-				trigger_error("Error on log_message (var 'tipo_donde' is empty) ".__METHOD__);
-				return null;
-			}
+			// if tipo of activity is not senT is not possible generate log
+				if (empty($tipo_where)) {
+					debug_log(__METHOD__." Error on log_message (var 'tipo_donde' is empty) ".to_string(), logger::ERROR);
+					return null;
+				}
 
-			# AUTOLOG STOP
-			# Prevent infinite loop saving self
-			if (in_array($tipo_donde, self::$ar_elements_activity_tipo)) {
-				trigger_error("Error on log_message (infinite loop stopped) ".__METHOD__);
-				return null;
-			}
-			#dump($datos,"$message, $log_level, $tipo_donde ".self::$_SECTION_TIPO['tipo']); return null;
+			// auto-log stop. Prevent infinite loop saving self
+				if (in_array($tipo_where, self::$ar_elements_activity_tipo)) {
+					debug_log(__METHOD__." Error on log_message (infinite loop stopped) ".to_string(), logger::ERROR);
+					return null;
+				}
 
-
-		// DEBUG : Time
+		// debug
 			if(SHOW_DEBUG===true) {
-				$start_time = start_time();
-				// global$TIMER;$TIMER[get_called_class().'_IN_'.$tipo_donde.'_'.start_time()]=start_time();
+				// $start_time = start_time();
 			}
 
+		// section record. Create the components directly into the current format without create real components.
+			$components	= new stdClass();
+			$relations	= [];
 
-		// SECTION RECORD . Create the components directly into the current format without create real components.
-			$main_components_obj  = new stdClass();
-			$relations 			  = [];
+		// IP ADDRESS (user source IP) ##############################################################
+			$component_tipo = self::$_COMPONENT_IP['tipo']; // dd544 component_input_text (for now)
 
-				# IP ADDRESS (user source ip) #############################################################
-					$ip_address	= 'unknow';
-					if (isset($_SERVER['REMOTE_ADDR']))
-					$ip_address	= $_SERVER["REMOTE_ADDR"];
-					if($ip_address==='::1') $ip_address = 'localhost';
+			// value
+				$ip_address = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+				// normalize localhost
+				if($ip_address==='::1') {
+					$ip_address = 'localhost';
+				}
+			// add value
+				$components->{$component_tipo} = (object)[
+					'dato' => (object)[
+						DEDALO_DATA_NOLAN => [$ip_address]
+					]
+				];
 
-					$component_tipo = self::$_COMPONENT_IP['tipo'];
-					$component_obj  = self::build_component_activity_object($ip_address);
-					$main_components_obj->$component_tipo = $component_obj;
+		// WHO (store user section id_matrix and calculate name on view) ############################
+			$component_tipo = self::$_COMPONENT_WHO['tipo']; // dd543 component_autocomplete
 
-
-
-				# WHO (store user section id_matrix and calculate name on view) ###########################
-					$user_id = isset($_SESSION['dedalo']['auth']['user_id']) ? $_SESSION['dedalo']['auth']['user_id'] : '-666';
-					$locator_user_id = new locator();
-						$locator_user_id->set_section_id($user_id);
-						$locator_user_id->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
-
-					$component_tipo = self::$_COMPONENT_QUIEN['tipo'];
-
-					# Switch data version
+			// value
+				$user_id = $_SESSION['dedalo']['auth']['user_id'] ?? '-666';
+				$locator_user_id = new locator();
+					$locator_user_id->set_section_id($user_id);
+					$locator_user_id->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
 					$locator_user_id->set_type(DEDALO_RELATION_TYPE_LINK);
 					$locator_user_id->set_from_component_tipo($component_tipo);
-					$relations[] = $locator_user_id; // Direct to relations container
+			// add value
+				$relations[] = $locator_user_id;
 
+		// WHAT (msg) # Message #####################################################################
+			$component_tipo = self::$_COMPONENT_WHAT['tipo']; // dd545 component_select
 
-				# WHAT (msg) # Message ###########################################################################
-					$message 	= str_replace("\t", ' ', $message);
-					$message 	= str_replace("\n", ' ', $message);
-					$message 	= trim($message);
-
-
-					if (isset(self::$what[$message])) {
-						$what_section_id = self::$what[$message];
-					}
-					if (empty($what_section_id)) {
-						throw new Exception("locator_what (from log message) is empty", 1);
-					}
+			// value
+				$message 	= str_replace("\t", ' ', $message);
+				$message 	= str_replace("\n", ' ', $message);
+				$message 	= trim($message);
+				if (isset(self::$what[$message])) {
+					$what_section_id = self::$what[$message];
+				}
+				if (empty($what_section_id)) {
+					// throw new Exception("locator_what (from log message) is empty", 1);
+					debug_log(__METHOD__.
+						PHP_EOL.'ACTIVITY LOG ERROR'.
+						" Unable to resolve locator_what from log message. what_section_id is empty. What info will NOT be saved!".
+						PHP_EOL.'message: '.to_string($message),
+						logger::ERROR
+					);
+				}else{
 					$locator_what = new locator();
 						$locator_what->set_section_id($what_section_id);
 						$locator_what->set_section_tipo('dd42');
 						$locator_what->set_type(DEDALO_RELATION_TYPE_LINK);
-						$locator_what->set_from_component_tipo('dd545');
+						$locator_what->set_from_component_tipo($component_tipo);
+					// add value
+						$relations[] = $locator_what;
+				}
 
-					$relations[] = $locator_what;
+		// WHERE (tipo) #############################################################################
+			$component_tipo = self::$_COMPONENT_WHERE['tipo']; // dd546 component_input_text
 
+			// value
+				if(!strlen($tipo_where)) {
+					$tipo_where = 'unknown';
+				}
+			// add value
+				$components->{$component_tipo} = (object)[
+					'dato' => (object)[
+						DEDALO_DATA_NOLAN => [$tipo_where]
+					]
+				];
 
-				# WHERE (tipo) ##################################################################################
-					$donde 		= $tipo_donde;
-					if(!strlen($tipo_donde)) $donde = 'unknow';
+		// WHEN (Time. timestamp formatted) #########################################################
+			$component_tipo = self::$_COMPONENT_WHEN['tipo']; // dd547 component_date
 
-					$component_tipo = self::$_COMPONENT_DONDE['tipo'];
-					$component_obj  = self::build_component_activity_object($tipo_donde);
-					$main_components_obj->$component_tipo = $component_obj;
+			// value
+				$time_value = new stdClass();
+					$time_value->start = component_date::get_date_now();
+			// add value
+				$components->{$component_tipo} = (object)[
+					'dato' => (object)[
+						DEDALO_DATA_NOLAN => [$time_value]
+					]
+				];
 
+		// PROJECTS #################################################################################
+			$component_tipo = self::$_COMPONENT_PROJECTS['tipo']; // dd550 component_filter
+			if ( !empty($user_id) && $user_id!=='unknown' ) {
+				// value
+				$projects_dato = filter::get_user_projects($user_id);
+				if (!empty($projects_dato)) {
 
-				# WHEN (Time. timestamp formated) #############################################################
-					$current_time		= component_date::get_date_now();
-
-					$time = new stdClass();
-						$time->start 	= $current_time;
-					$component_tipo = self::$_COMPONENT_CUANDO['tipo'];
-					$component_obj  = self::build_component_activity_object($time);
-					$main_components_obj->$component_tipo = $component_obj;
-
-
-				# PROJECTS (param 'datos' + url's ...)	#########################################################
-					if ( !empty($user_id) && $user_id!=='unknow' ) {
-						$projects_dato = filter::get_user_projects($user_id);
-						$project_relations = [];
-						if (!empty($projects_dato)) {
-
-							foreach ((array)$projects_dato as $project_locator) {
-								if (isset($project_locator->from_component_tipo)) {
-									# Override from_component_tipo
-									$project_locator_safe = clone $project_locator;
-									$project_locator_safe->from_component_tipo = self::$_COMPONENT_PROYECTOS['tipo'];
-									$project_relations[] = $project_locator_safe;
-								}
-							}
-							# Add to relations container
-							$relations = array_merge($relations, $project_relations);
+					$project_relations = [];
+					foreach ((array)$projects_dato as $project_locator) {
+						if (isset($project_locator->from_component_tipo)) {
+							// Override from_component_tipo
+							$project_locator_safe = clone $project_locator;
+							$project_locator_safe->from_component_tipo = $component_tipo;
+							$project_relations[] = $project_locator_safe;
 						}
 					}
-
-				# DATA (param 'datos' + url's ...)	#############################################################
-					$dato_array = !is_array($datos)
-						? [$datos]
-						: $datos;
-
-					# When msg is load, include datos of urls
-					if (strpos($message, 'LOAD')!==false) {
-						# URL
-						$url 			= 'unknow';
-						if (isset($_SERVER['REQUEST_URI'])) {
-							$request_uri= safe_xss($_SERVER['REQUEST_URI']);
-							# Remove possible attack chars like: ', %27, ;
-							$request_uri= str_replace(array('\'','%27',';'), '', $request_uri);
-							$request_uri= pg_escape_string(DBi::_getConnection(), $request_uri);
-							$url 		= urldecode( DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . $request_uri );
+					// add value
+					if (empty($project_relations)) {
+						foreach ($project_relations as $current_locator) {
+							$relations[] = $current_locator;
 						}
-						$dato_array['url'] = tools::build_link($url, array('url'=>$url,'css'=>'list_link'));
-						# Referrer
-						$referrer 		= 'unknow';
-						if (isset($_SERVER['HTTP_REFERER'])) {
-							$referrer 	= safe_xss($_SERVER['HTTP_REFERER']);
-							$referrer 	= str_replace('\'', '', $referrer);
-						}
-						$dato_array['ref'] = tools::build_link($referrer, array('url'=>$referrer,'css'=>'list_link'));
 					}
+				}
+			}
 
-					$component_tipo = self::$_COMPONENT_DATOS['tipo'];
-					$component_obj  = self::build_component_activity_object($dato_array);
-					$main_components_obj->$component_tipo = $component_obj;
+		// DATA (param 'datos' + URL's ...)	#########################################################
+			$component_tipo = self::$_COMPONENT_DATOS['tipo']; // dd551 component_input_text
+			// value
+				$dato_array = !is_array($datos)
+					? [$datos]
+					: $datos;
+				// When msg is load, include datos of urls
+				if (strpos($message, 'LOAD')!==false) {
+					// URL
+					$url = 'unknown';
+					if (isset($_SERVER['REQUEST_URI'])) {
+						$request_uri = safe_xss($_SERVER['REQUEST_URI']);
+						// Remove possible attack chars like: ', %27, ;
+						$request_uri = str_replace(array('\'','%27',';'), '', $request_uri);
+						$request_uri = pg_escape_string(DBi::_getConnection(), $request_uri);
+						$url 		 = urldecode( DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . $request_uri );
+					}
+					$dato_array['url'] = tools::build_link($url, array('url'=>$url,'css'=>'list_link'));
+					// Referrer
+					$referrer = 'unknown';
+					if (isset($_SERVER['HTTP_REFERER'])) {
+						$referrer 	= safe_xss($_SERVER['HTTP_REFERER']);
+						$referrer 	= str_replace('\'', '', $referrer);
+					}
+					$dato_array['ref'] = tools::build_link($referrer, array('url'=>$referrer,'css'=>'list_link'));
+				}
+			// add value
+				$components->{$component_tipo} = (object)[
+					'dato' => (object)[
+						DEDALO_DATA_NOLAN => [$dato_array]
+					]
+				];
 
+		// SECTION ##################################################################################
+			$section = section::get_instance(
+				null,
+				DEDALO_ACTIVITY_SECTION_TIPO,
+				'edit', // string mode
+				false // bool cache
+			);
 
-				# SECTION #############################################################
-					$section = section::get_instance(null, DEDALO_ACTIVITY_SECTION_TIPO, 'edit');
+			// save options
+				$save_options = new stdClass();
+					$save_options->main_components_obj	= $components;
+					$save_options->main_relations		= $relations;
 
-					$save_options = new stdClass();
-						$save_options->main_components_obj 	= $main_components_obj;
-						$save_options->main_relations 		= $relations;
-							#dump($save_options,"save_options");die();
+			// Save. Returns created section_id (auto created by table sequence 'matrix_activity_section_id_seq')
+				$id_section = $section->Save( $save_options );
 
-					# Save. Returns created section_id (auto created by table sequence 'matrix_activity_section_id_seq')
-					$id_section = $section->Save( $save_options );
+			// post save actions
+				if (!empty($project_relations)) {
 
-					#
-					# POST SAVE ACTIONS
-						if (!empty($project_relations)) {
+					// (!) Note that here no relations are written to relations table automatically, we need launch action manually
+					// without pass by component
+					$relation_options = new stdClass();
+						$relation_options->section_tipo			= DEDALO_ACTIVITY_SECTION_TIPO;
+						$relation_options->section_id			= $id_section;
+						$relation_options->from_component_tipo	= self::$_COMPONENT_PROJECTS['tipo'];
+						$relation_options->ar_locators			= $project_relations;
+					search::propagate_component_dato_to_relations_table($relation_options);
+				}
 
-							# (!) Note that here no relations are written to relations table automatically, we need launch action manually
-							# without pass by component
-							$relation_options = new stdClass();
-								$relation_options->section_tipo			= DEDALO_ACTIVITY_SECTION_TIPO;
-								$relation_options->section_id			= $id_section;
-								$relation_options->from_component_tipo	= self::$_COMPONENT_PROYECTOS['tipo'];
-								$relation_options->ar_locators			= $project_relations;
-							$propagate_response = search::propagate_component_dato_to_relations_table($relation_options);
-						}
+		// debug
+			if(SHOW_DEBUG===true) {
+				// $total_time = exec_time_unit($start_time,'ms').' ms';
+				// debug_log(__METHOD__.
+				// 	' Activity log total time:  '.
+				// 	exec_time_unit($start_time,'ms').' ms',
+				// 	logger::DEBUG
+				// );
+			}
 
 
 		return $id_section;
@@ -279,4 +350,4 @@ class logger_backend_activity extends logger_backend {
 
 
 
-}//end class
+}//end class logger_backend_activity
