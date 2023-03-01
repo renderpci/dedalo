@@ -24,7 +24,7 @@ class widget_common {
 
 		$this->section_tipo	= $options->section_tipo;
 		$this->section_id	= $options->section_id;
-		$this->mode			= $options->mode;
+		$this->mode			= $options->mode ?? null;
 		$this->lang			= $options->lang;
 		$this->ipo			= $options->ipo;
 	}//end __construct

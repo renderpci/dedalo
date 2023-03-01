@@ -841,7 +841,7 @@ const get_custom_events = (self, i, text_editor) => {
 			const ar_changes = options
 			const changes_len = ar_changes.length
 
-			for (var i = changes_len - 1; i >= 0; i--) {
+			for (let i = changes_len - 1; i >= 0; i--) {
 				const change = ar_changes[i]
 				// create the event name as:
 				// editor_tag_geo_change_
