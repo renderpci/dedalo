@@ -40,6 +40,7 @@ class component_info extends component_common {
 				$widget_options->widget_name		= $widget_obj->widget_name;
 				$widget_options->path				= $widget_obj->path;
 				$widget_options->ipo				= $widget_obj->ipo;
+				$widget_options->mode				= $this->get_mode();
 
 			// instance the current widget
 			$widget = widget_common::get_instance($widget_options);
