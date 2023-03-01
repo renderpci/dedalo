@@ -99,27 +99,27 @@ export const render_find_and_replace = function(editor) {
 
 	self.results 		= 0
 
-	const title_contanier = ui.create_dom_element({
+	const title_container = ui.create_dom_element({
 		element_type	: 'div',
-		class_name		: 'title_contanier',
+		class_name		: 'title_container',
 	})
 		const title_label = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'title_label',
 			inner_html 		: get_label.find_and_replace || 'Find and replace',
-			parent 			: title_contanier,
+			parent 			: title_container,
 		})
 
-	const body_contanier = ui.create_dom_element({
+	const body_container = ui.create_dom_element({
 		element_type	: 'div',
-		class_name		: 'body_contanier',
+		class_name		: 'body content find_and_replace',
 	})
 		const input_search = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'text',
 			class_name		: 'input_search',
 			placeholder 	: get_label.search || 'Search',
-			parent 			: body_contanier,
+			parent 			: body_container,
 		})
 		input_search.addEventListener('keyup',function(){
 			state.clear( editor.model );
@@ -130,7 +130,7 @@ export const render_find_and_replace = function(editor) {
 			element_type	: 'button',
 			class_name		: 'warning button_search',
 			inner_html		: get_label.search || 'Search',
-			parent 			: body_contanier,
+			parent 			: body_container,
 		})
 		button_search.addEventListener('click',() => {
 
@@ -151,7 +151,7 @@ export const render_find_and_replace = function(editor) {
 			element_type	: 'button',
 			class_name		: 'light button_previous',
 			inner_html		: get_label.previous || 'Previous',
-			parent 			: body_contanier,
+			parent 			: body_container,
 		})
 		button_previous.addEventListener('click',() => {
 			editor.execute( 'findPrevious' );
@@ -160,7 +160,7 @@ export const render_find_and_replace = function(editor) {
 			element_type	: 'button',
 			class_name		: 'light button_next',
 			inner_html		: get_label.next || 'Next',
-			parent 			: body_contanier,
+			parent 			: body_container,
 		})
 		button_next.addEventListener('click',() => {
 			editor.execute( 'findNext' );
@@ -170,26 +170,26 @@ export const render_find_and_replace = function(editor) {
 			element_type	: 'span',
 			class_name		: 'result_label',
 			inner_html		: self.result,
-			parent 			: body_contanier,
+			parent 			: body_container,
 		})
 
-	const replace_contanier = ui.create_dom_element({
+	const replace_container = ui.create_dom_element({
 		element_type	: 'div',
-		class_name		: 'replace_contanier',
-		parent 			: body_contanier,
+		class_name		: 'replace_container',
+		parent 			: body_container,
 	})
 		const input_replace = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'text',
 			class_name		: 'input_replace',
 			placeholder 	: get_label.replace || 'Replace',
-			parent 			: replace_contanier,
+			parent 			: replace_container,
 		})
 			const button_replace = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'light button_replace',
 				inner_html		: get_label.replace || 'Replace',
-				parent 			: replace_contanier,
+				parent 			: replace_container,
 			})
 			button_replace.addEventListener('click',() => {
 
@@ -202,28 +202,28 @@ export const render_find_and_replace = function(editor) {
 				element_type	: 'button',
 				class_name		: 'light button_replace_all',
 				inner_html		: get_label.replace_all || 'Replace All',
-				parent 			: replace_contanier,
+				parent 			: replace_container,
 			})
 			button_replace_all.addEventListener('click',() => {
 				editor.execute( 'replaceAll', input_replace.value, input_search.value );
 			})
 
-	const options_contanier = ui.create_dom_element({
-		element_type	: 'span',
-		class_name		: 'options_contanier',
-		parent 			: replace_contanier,
+	const options_container = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'options_container',
+		parent 			: replace_container,
 	})
 
 		const label_match_case = ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: 'label_match_case',
 			inner_html		: get_label.match_case  || 'Match case',
-			parent 			: options_contanier,
+			parent 			: options_container,
 		})
 		const match_case = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'check',
-				parent 			: options_contanier,
+				parent 			: options_container,
 		})
 			const button_match_case = ui.create_dom_element({
 				element_type	: 'input',
@@ -252,12 +252,12 @@ export const render_find_and_replace = function(editor) {
 			element_type	: 'label',
 			class_name		: 'label_whole_words',
 			inner_html		: get_label.whole_words  || 'Whole words',
-			parent 			: options_contanier,
+			parent 			: options_container,
 		})
 		const whole_words = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'check',
-				parent 			: options_contanier,
+				parent 			: options_container,
 		})
 			const button_whole_words = ui.create_dom_element({
 				element_type	: 'input',
@@ -284,8 +284,8 @@ export const render_find_and_replace = function(editor) {
 
 
 	const modal = ui.attach_to_modal({
-		header			: title_contanier,
-		body			: body_contanier,
+		header			: title_container,
+		body			: body_container,
 		size			: 'small',
 		remove_overlay	: true
 	})
