@@ -596,6 +596,7 @@ component_text_area.prototype.preprocess_text_to_save = async function(html_valu
 
 /**
 * UPDATE_CHANGED_DATA
+* @param object options
 * @return bool
 */
 component_text_area.prototype.update_changed_data = function (options) {
@@ -621,7 +622,7 @@ component_text_area.prototype.update_changed_data = function (options) {
 				// console.log('self.db_data.value[i]:', self.db_data.value[i]);
 				// console.log('parsed_value:', parsed_value);
 		})
-}// end update_changed_data
+}//end update_changed_data
 
 
 
