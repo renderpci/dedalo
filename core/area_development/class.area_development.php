@@ -279,26 +279,26 @@ class area_development extends area_common {
 
 
 		// build_structure_css
-			$item = new stdClass();
-				$item->id		= 'build_structure_css';
-				$item->typo		= 'widget';
-				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
-				$item->label	= label::get_label('build_structure_css');
-				$item->body		= 'Regenerate css from actual structure (Ontology)';
-				$item->run[]	= (object)[
-					'fn'		=> 'init_form',
-					'options'	=> (object)[
-						'confirm_text' => label::get_label('sure') ?? 'Sure?'
-					]
-				];
-				$item->trigger 	= (object)[
-					'dd_api'	=> 'dd_utils_api',
-					'action'	=> 'build_structure_css',
-					'options'	=> null
-				];
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
+			// $item = new stdClass();
+			// 	$item->id		= 'build_structure_css';
+			// 	$item->typo		= 'widget';
+			// 	$item->tipo		= $this->tipo;
+			// 	$item->parent	= $this->tipo;
+			// 	$item->label	= label::get_label('build_structure_css');
+			// 	$item->body		= 'Regenerate css from actual structure (Ontology)';
+			// 	$item->run[]	= (object)[
+			// 		'fn'		=> 'init_form',
+			// 		'options'	=> (object)[
+			// 			'confirm_text' => label::get_label('sure') ?? 'Sure?'
+			// 		]
+			// 	];
+			// 	$item->trigger 	= (object)[
+			// 		'dd_api'	=> 'dd_utils_api',
+			// 		'action'	=> 'build_structure_css',
+			// 		'options'	=> null
+			// 	];
+			// $widget = $this->widget_factory($item);
+			// $ar_widgets[] = $widget;
 
 
 		// build_install_version
@@ -397,6 +397,28 @@ class area_development extends area_common {
 				$widget = $this->widget_factory($item);
 				$ar_widgets[] = $widget;
 			}
+
+		// update_code
+			$item = new stdClass();
+				$item->id		= 'update_code';
+				$item->typo		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->parent	= $this->tipo;
+				$item->label	= label::get_label('update') .' '. label::get_label('code');
+				$item->body		= 'Update Dédalo code to the latest version';
+				$item->run[]	= (object)[
+					'fn'		=> 'init_form',
+					'options'	=> (object)[
+						'confirm_text' => label::get_label('sure') ?? 'Sure?'
+					]
+				];
+				$item->trigger 	= (object)[
+					'dd_api'	=> 'dd_utils_api',
+					'action'	=> 'update_code',
+					'options'	=> null
+				];
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
 
 
 		// Dédalo API test environment
