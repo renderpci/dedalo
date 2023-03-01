@@ -38,7 +38,8 @@ class data_v5_to_v6 extends v5_to_v6 {
 			'matrix_projects',
 			'matrix_structurations',
 			'matrix_tools',
-			'matrix_users'
+			'matrix_users',
+			'matrix_stats'
 		];
 		$action = 'parse_properties';
 
