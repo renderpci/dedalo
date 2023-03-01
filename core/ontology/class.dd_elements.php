@@ -122,18 +122,23 @@ class dd_elements {
 	}//end makeTSline
 
 
+
 	/**
 	* RENDERBTNMAS. crea el botón Mas (añádir termino hijo)
+	* @param string $terminoID
+	* @param string|null $hijosD
+	* @param string $parent
+	* @return string $node
 	*/
 	protected static function renderBtnMas(string $terminoID, ?string $hijosD, $parent) : string {
 		global $anyadir_hijo_al_descriptor_title;
 
-		$obj  = '';
-		$obj .= ' <div class="bullet_mas" title="'.$anyadir_hijo_al_descriptor_title.'" ';
-		$obj .= 'onmousedown="dd.insertTS(\''.$terminoID.'\',\''.$hijosD.'\',\''.$parent.'\')" ';
-		$obj .= '></div>';
+		$node  = '';
+		$node .= ' <div class="bullet_mas" title="'.$anyadir_hijo_al_descriptor_title.'" ';
+		$node .= 'onmousedown="dd.insertTS(\''.$terminoID.'\',\''.$hijosD.'\',\''.$parent.'\')" ';
+		$node .= '></div>';
 
-		return $obj ;
+		return $node;
 	}//end renderBtnMas
 
 
@@ -202,18 +207,21 @@ class dd_elements {
 
 
 	/**
-	* RENDERBTNADDINDEXACION. crea el botón de añadir indexación en modo index o el de relacionar los términos en modo ts edit
+	* RENDERBTNADDINDEXACION.
+	* Crea el botón de añadir indexación en modo index o el de relacionar los términos en modo ts edit
+	* @param string $terminoID
+	* @param string $termino
+	* @return string $node
 	*/
 	protected static function renderBtnAddIndexacion(string $terminoID, string $termino) : string {
 		global $anyadir_title, $asociar_descriptor_title;
 
-		$obj = '';
+		$node = '';
+		$node .= " <div class=\"add_index_btn \" data-termino_id=\"$terminoID\" data-termino=\"$termino\" title=\"$asociar_descriptor_title $terminoID\" ";
+		$node .= "onmousedown=\"dd.add_index_common(this)\" ";
+		$node .= '></div>';
 
-		$obj .= " <div class=\"add_index_btn \" data-termino_id=\"$terminoID\" data-termino=\"$termino\" title=\"$asociar_descriptor_title $terminoID\" ";
-		$obj .= "onmousedown=\"dd.add_index_common(this)\" ";
-		$obj .= '></div>';
-
-		return $obj ;
+		return $node;
 	}//end renderBtnAddIndexacion
 
 
@@ -610,11 +618,6 @@ class dd_elements {
 	*/
 	protected static function renderDiv_properties(string $terminoID, $properties) : string {
 		$add_class='';
-		// $ob = json_decode($properties);
-		// if($ob === null) {
-		// 	// $ob is null because the json cannot be decoded
-		// 	$add_class = 'json_bad_alert';
-		// }
 
 		$properties_text = !empty($properties)
 			? json_encode($properties, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
