@@ -1041,6 +1041,9 @@ class login extends common {
 				lock_components::force_unlock_all_components($user_id);
 			}
 
+		// user activity update stats
+			diffusion_section_stats::update_user_activity_stats( (int)$user_id );
+
 		// login activity report
 			self::login_activity_report(
 				"User $user_id was logout. Bye $username",
