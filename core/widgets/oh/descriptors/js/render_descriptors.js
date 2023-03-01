@@ -43,6 +43,8 @@ render_descriptors.prototype.edit = async function(options) {
 			content_data : content_data
 		})
 
+	wrapper.content_data = content_data
+
 
 	return wrapper
 }//end edit
@@ -61,7 +63,7 @@ render_descriptors.prototype.list = async function(options) {
 	const render_level = options.render_level
 
 	// content_data
-		const content_data = await get_content_data_edit(self)
+		const content_data = await get_content_data_list(self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -71,9 +73,42 @@ render_descriptors.prototype.list = async function(options) {
 			content_data : content_data
 		})
 
+	wrapper.content_data = content_data
 
 	return wrapper
 }//end list
+
+
+
+/**
+* GET_CONTENT_DATA_list
+* @return DOM node content_data
+*/
+const get_content_data_list = async function(self) {
+
+	const fragment = new DocumentFragment()
+
+	// values container
+		const button_display = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'button_display',
+			inner_html 		: get_label.terms || 'Terms',
+			parent			: fragment
+		})
+		button_display.addEventListener('mouseup', async function(){
+			self.mode = 'edit'
+			await self.refresh()
+		})
+
+	// content_data
+		const content_data = ui.create_dom_element({
+			element_type : 'div'
+		})
+		content_data.appendChild(fragment)
+
+
+	return content_data
+}//end get_content_data_list
 
 
 
@@ -117,7 +152,7 @@ const get_content_data_edit = async function(self) {
 * GET_VALUE_ELEMENT
 * @return DOM node li
 */
-const get_value_element = (i, data, values_container, self) => {
+const get_value_element = async (i, data, values_container, self) => {
 
 	const indexation	= data.find(el => el.id==='indexation')
 	const value			= indexation.value
@@ -137,7 +172,7 @@ const get_value_element = (i, data, values_container, self) => {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'label',
-			inner_html		: 'Terms:',
+			inner_html 		: get_label.terms || 'Terms',
 			parent			: li
 		})
 
@@ -153,25 +188,8 @@ const get_value_element = (i, data, values_container, self) => {
 			e.preventDefault();
 
 			// toggle visibility when is already loaded
-				if (descriptors_list_container.hasChildNodes()) {
-					descriptors_list_container.classList.toggle('hide')
-					return
-				}
+			descriptors_list_container.classList.toggle('hide')
 
-			// dd_grid build
-				const dd_grid_data	= [data.find(el => el.id==='terms').value]
-				const dd_grid		= await instances.get_instance({
-					model			: 'dd_grid',
-					section_tipo	: self.section_tipo,
-					section_id		: self.section_id,
-					tipo			: self.section_tipo,
-					mode			: 'list',
-					lang			: page_globals.dedalo_data_lang,
-					data			: dd_grid_data
-				})
-				await dd_grid.build(false)
-				const node = await dd_grid.render()
-				descriptors_list_container.appendChild(node)
 		})
 
 	// descriptors_list_container
@@ -181,6 +199,20 @@ const get_value_element = (i, data, values_container, self) => {
 			parent			: li
 		})
 
+	// dd_grid build
+		const dd_grid_data	= [data.find(el => el.id==='terms').value]
+		const dd_grid		= await instances.get_instance({
+			model			: 'dd_grid',
+			section_tipo	: self.section_tipo,
+			section_id		: self.section_id,
+			tipo			: self.section_tipo,
+			mode			: 'list',
+			lang			: page_globals.dedalo_data_lang,
+			data			: dd_grid_data
+		})
+		await dd_grid.build(false)
+		const node = await dd_grid.render()
+		descriptors_list_container.appendChild(node)
 
 	return li
 }//end get_value_element

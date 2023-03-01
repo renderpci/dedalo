@@ -16,9 +16,15 @@ class descriptors extends widget_common {
 
 		$section_tipo 	= $this->section_tipo;
 		$section_id 	= $this->section_id;
+		$mode 			= $this->mode;
 		$ipo 			= $this->ipo;
 
 		$dato = [];
+
+		if($mode=== 'list'){
+			return $dato;
+		}
+
 		$project_langs = common::get_ar_all_langs();
 
 		// every state has a ipo that come from structure (input, process , output).
@@ -75,6 +81,8 @@ class descriptors extends widget_common {
 				$component_tipo = $last_path->component_tipo;
 
 				// create items with the every locator
+				$ar_component_dato	= [];
+				$ar_component_value	= [];
 				foreach ($ar_locator as $locator) {
 
 					$model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
@@ -86,38 +94,40 @@ class descriptors extends widget_common {
 						DEDALO_DATA_NOLAN,
 						$locator->section_tipo
 					);
-
-
 					$component_dato		= $component->get_dato();
 					$component_value	= $component->get_value();
 
-					// output, use the ipo output for create the items to send to compoment_info and client side
-					foreach ($output as $data_map) {
+					$ar_component_dato	= array_merge($ar_component_dato, $component_dato);
+					$ar_component_value	= array_merge($ar_component_value, $component_value->value);
 
-						switch ($data_map->id) {
-							case 'indexation':
-								$value = sizeof($component_dato);
-								break;
+				}
+				$component_value->value = $ar_component_value;
 
-							case 'terms':
-							default:
-								$value = $component_value;
-						}
+				// output, use the ipo output for create the items to send to compoment_info and client side
+				foreach ($output as $data_map) {
 
-						// get the current row id and the items into the $result
-						$current_id = $data_map->id;
+					switch ($data_map->id) {
+						case 'indexation':
+							$value = sizeof($ar_component_dato);
+							break;
 
-							$current_data = new stdClass();
-								$current_data->widget		= get_class($this);
-								$current_data->key			= $key;
-								$current_data->id			= $data_map->id;
-								$current_data->value		= $value;
-								$current_data->locator		= $locator;
-
-							// set the final data to the widget
-							$dato[] = $current_data;
+						case 'terms':
+						default:
+							$value = $component_value;
 					}
 
+					// get the current row id and the items into the $result
+					$current_id = $data_map->id;
+
+						$current_data = new stdClass();
+							$current_data->widget		= get_class($this);
+							$current_data->key			= $key;
+							$current_data->id			= $data_map->id;
+							$current_data->value		= $value;
+							$current_data->locator		= $locator;
+
+						// set the final data to the widget
+						$dato[] = $current_data;
 				}
 			}//end foreach ($ar_paths as $path)
 		}//foreach $ipo

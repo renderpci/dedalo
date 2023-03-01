@@ -5,9 +5,10 @@
 
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
-	// import {data_manager} from '../../common/js/data_manager.js'
+	import {data_manager} from '../../common/js/data_manager.js'
 	// import * as instances from '../../common/js/instances.js'
 	import {common} from '../../common/js/common.js'
+
 	// import {ui} from '../../common/js/ui.js'
 
 
@@ -18,6 +19,15 @@ export const widget_common = function(){
 }//end widget_common
 
 
+/**
+* COMMON FUNCTIONS
+* extend functions from common
+*/
+// prototypes assign
+	// lifecycle
+	widget_common.prototype.destroy	= common.prototype.destroy
+	widget_common.prototype.refresh	= common.prototype.refresh
+	widget_common.prototype.render	= common.prototype.render
 
 /**
 * INIT
@@ -42,6 +52,7 @@ widget_common.prototype.init = async function(options) {
 		self.name			= options.name
 		self.properties		= options.properties
 		self.caller			= options.caller
+		self.ar_instances	= [] // array of children instances of current instance (used for autocomplete, etc.)
 
 	// status update
 		self.status = 'initiated'
@@ -71,7 +82,25 @@ widget_common.prototype.build = async function(autoload=false) {
 
 	// autoload
 		if (autoload===true) {
-			// nothing to do now
+
+			const rqo = {
+				action	: "get_widget_dato",
+				dd_api	: 'dd_component_info',
+				source	: {
+					tipo			: self.caller.tipo,
+					section_tipo	: self.caller.section_tipo,
+					section_id		: self.caller.section_id,
+					mode			: self.mode,
+					widget_name		: self.name
+				}
+			}
+			const api_response = await data_manager.request({
+				body: rqo
+			});
+
+			if(api_response.result){
+				self.value = api_response.result
+			}
 		}
 
 	// status update
@@ -81,51 +110,3 @@ widget_common.prototype.build = async function(autoload=false) {
 	return true
 }//end build
 
-
-
-/**
-* RENDER
-* Generic widget render function
-* @param object options
-* @return DOM node
-*/
-widget_common.prototype.render = async function(options={}) {
-
-	const self = this
-
-	const render_level	= options.render_level || 'full'
-	const render_mode	= self.mode || 'edit'
-
-	const node = await self[render_mode]({
-		render_level : render_level
-	})
-
-	self.node = node
-
-	return node
-}//end render
-
-
-
-/**
-* DESTROY
-* Generic widget destroy function
-* @param bool autoload
-* @return promise bool
-*/
-widget_common.prototype.destroy = async function() {
-
-	const self = this
-
-	// status update
-		self.status = 'destroying'
-
-	// call generic common tool build. params (delete_self=true, delete_dependencies=false, remove_dom=false)
-		await common.prototype.destroy.call(self, true, false, false);
-
-	// status update
-		self.status = 'destroyed'
-
-
-	return true
-}//end destroy

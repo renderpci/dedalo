@@ -63,6 +63,7 @@ include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_ts_api.php');
 include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_component_text_area_api.php');
 include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_component_portal_api.php');
 include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_component_av_api.php');
+include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_component_info.php');
 // others
 include(DEDALO_CORE_PATH . '/ontology/class.ontology.php');
 include(DEDALO_CORE_PATH . '/lock_components/class.lock_components.php');
