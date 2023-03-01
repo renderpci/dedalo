@@ -178,6 +178,11 @@ class activity_v5_to_v6 extends v5_to_v6 {
 					// overwrite old value
 					$dato->components->dd551->dato->{DEDALO_DATA_NOLAN}[0] = $new_value;
 				}
+
+
+			// date column
+
+
 		}//end if($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO)
 
 

@@ -5,6 +5,7 @@
 include(DEDALO_CORE_PATH . '/base/class.Error.php');
 include(DEDALO_CORE_PATH . '/base/class.dd_cache.php');
 include(DEDALO_CORE_PATH . '/logger/class.logger.php');
+include(DEDALO_CORE_PATH . '/logger/class.logger_backend.php');
 include(DEDALO_CORE_PATH . '/db/class.DBi.php');
 include(DEDALO_CORE_PATH . '/db/class.RecordDataBoundObject.php');
 include(DEDALO_CORE_PATH . '/db/class.RecordObj_matrix.php');
@@ -48,9 +49,10 @@ include(DEDALO_CORE_PATH . '/component_relation_common/class.component_relation_
 include(DEDALO_CORE_PATH . '/search/class.search.php');
 include(DEDALO_CORE_PATH . '/search/class.search_tm.php');
 include(DEDALO_CORE_PATH . '/search/class.search_related.php');
-// include(DEDALO_CORE_PATH . '/widgets/class.widget_common.php');
+include(DEDALO_CORE_PATH . '/widgets/widget_common/class.widget_common.php');
 // diffusion
 include(DEDALO_CORE_PATH . '/diffusion/class.diffusion.php');
+include(DEDALO_CORE_PATH . '/diffusion/class.diffusion_section_stats.php');
 // include(DEDALO_CORE_PATH . '/diffusion/class.diffusion_sql.php');
 // include(DEDALO_CORE_PATH . '/diffusion/class.diffusion_mysql.php');
 // API
