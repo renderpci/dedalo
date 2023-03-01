@@ -1625,7 +1625,10 @@ class search {
 
 		// add NULLS LAST for convenience
 			if (!empty($sql_query_order)) {
-				$sql_query_order .= ' NULLS LAST, section_id ASC';
+				$sql_query_order .= ' NULLS LAST';
+				if (strpos($sql_query_order, 'section_id')===false) {
+					$sql_query_order .= ' , section_id ASC';
+				}
 			}
 		// debug
 			// if(SHOW_DEBUG===true) {
