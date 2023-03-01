@@ -1,5 +1,4 @@
 <?php
-require_once( DEDALO_CORE_PATH .'/logger/class.logger_backend.php' );
 /**
 * LOGGER BACKEND FILE CLASS
 *
@@ -135,4 +134,4 @@ class logger_backend_file extends logger_backend  {
 
 
 
-}//end class logger_backend
+}//end class logger_backend_file

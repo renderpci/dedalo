@@ -45,7 +45,7 @@ class v5_to_v6 {
 
 				$strQuery 	= "SELECT id, datos FROM $table WHERE id = $i ORDER BY id ASC";
 				$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
-				if(!$result) {
+				if($result===false) {
 					$msg = "Failed Search id $i. Data is not found.";
 					debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
 					continue;
