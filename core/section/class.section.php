@@ -725,7 +725,7 @@ class section extends common {
 	/**
 	* SAVE
 	* Create or update a section record in matrix
-	* @param object $save_options
+	* @param object $save_options = null
 	* @return int|null $section_id
 	*/
 	public function Save( object $save_options=null ) : ?int {
@@ -755,22 +755,23 @@ class section extends common {
 			}
 
 		// tipo. Current section tipo
-			$tipo = $this->get_tipo();
+			$tipo = (isset($this->properties->section_tipo) && $this->properties->section_tipo==='real')
+				? $this->get_section_real_tipo()
+				: $this->get_tipo();
 
-			# If the section virtual have the section_tipo "real" in properties, change the tipo of the section to the real
-			if(isset($this->properties->section_tipo) && $this->properties->section_tipo==='real'){
-				$tipo = $this->get_section_real_tipo();
-			}
+			// Verify tipo is structure data
+				if( !(bool)verify_dedalo_prefix_tipos($tipo) ) {
+					$msg = "EXCEPTION. Current tipo is not valid for save section: '$tipo'. Nothing will be saved!";
+					debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
+					throw new Exception("Current tipo is not valid: $tipo", 1);
+				}
 
-			# Verify tipo is structure data
-			if( !(bool)verify_dedalo_prefix_tipos($tipo) ) throw new Exception("Current tipo is not valid: $tipo", 1);
-
-			# SECTION VIRTUAL . Correct tipo
-			# If we are in a virtual section, we will clear the real type (the destination section) and
-			# we will work with the real type from now on
-			$section_real_tipo = ($tipo===DEDALO_ACTIVITY_SECTION_TIPO)
-				? $tipo
-				: $this->get_section_real_tipo();
+			// section virtual . Correct tipo
+			// If we are in a virtual section, we will clear the real type (the destination section) and
+			// we will work with the real type from now on
+				$section_real_tipo = ($tipo===DEDALO_ACTIVITY_SECTION_TIPO)
+					? $tipo
+					: $this->get_section_real_tipo();
 
 		// user id. Current logged user id
 			$user_id  = (int)navigator::get_user_id();
@@ -794,7 +795,7 @@ class section extends common {
 			}
 
 		// caller_section. When the section get data from other section (his source is the caller section instead DDBB)
-			if($this->source === 'caller_section') {
+			if($this->source==='caller_section') {
 
 				// time machine. Save component data only
 					// $JSON_RecordObj_matrix	= new JSON_RecordObj_matrix(
@@ -802,15 +803,18 @@ class section extends common {
 					// 	(int)$this->section_id,
 					// 	$tipo // string section_tipo
 					// );
-
-					$JSON_RecordObj_matrix	= JSON_RecordObj_matrix::get_instance('dataframe', (int)$this->section_id, $tipo);
+					$JSON_RecordObj_matrix = JSON_RecordObj_matrix::get_instance(
+						'dataframe', // string matrix_table
+						(int)$this->section_id, // int section_id
+						$tipo // string section_tipo
+					);
 					$JSON_RecordObj_matrix->save_time_machine($options);
 
 				return $this->section_id;
 			}
 
-		// matrix table
-			$matrix_table = common::get_matrix_table_from_tipo($tipo); // This function fallback to real section if virtual section don't have table defined
+		// matrix table. Note that this function fallback to real section if virtual section don't have table defined
+			$matrix_table = common::get_matrix_table_from_tipo($tipo);
 
 
 		if (!empty($this->section_id) && (int)$this->section_id>=1 && $options->forced_create_record===false) { # UPDATE RECORD
@@ -819,10 +823,12 @@ class section extends common {
 			# UPDATE RECORD : Update current matrix section record triggered by one component
 
 			if ($this->save_modified===false) {
-				// section dato only
+
+				// section dato only. Do not change existing modified_section_data
 					$section_dato = (object)$this->get_dato();
 
 			}else{
+
 				// update_modified_section_data . Resolve and add modification date and user to current section dato
 				// (!) Note that this method changes $this->dato (add relations and components)
 					$this->update_modified_section_data((object)[
@@ -839,9 +845,7 @@ class section extends common {
 					$section_dato->modified_date		= (string)$date_now;	# Format 2012-11-05 19:50:44
 			}
 
-			# Save section dato
-				// $JSON_RecordObj_matrix	= new JSON_RecordObj_matrix( (string)$matrix_table, (int)$this->section_id, (string)$tipo );
-
+			// Save section dato
 				$JSON_RecordObj_matrix = isset($this->JSON_RecordObj_matrix)
 					? $this->JSON_RecordObj_matrix
 					: JSON_RecordObj_matrix::get_instance(
@@ -850,12 +854,13 @@ class section extends common {
 						$tipo
 					);
 				$JSON_RecordObj_matrix->set_dato($section_dato);
-				$saved_id_matrix		= $JSON_RecordObj_matrix->Save( $options );
+				$saved_id_matrix = $JSON_RecordObj_matrix->Save( $options );
 				if (false===$saved_id_matrix || $saved_id_matrix < 1) { //  && $tipo!==DEDALO_ACTIVITY_SECTION_TIPO
 					debug_log(__METHOD__." Error on trying save->update record. Nothing is saved! ".to_string(), logger::ERROR);
 					if(SHOW_DEBUG===true) {
 						// throw new Exception("Section: Error Processing Request. Returned id_matrix on save (update) section is mandatory. Received id_matrix: ".to_string($saved_id_matrix), 1);
 					}
+					return null;
 				}
 
 		}else{ # NEW RECORD
@@ -864,7 +869,7 @@ class section extends common {
 			# NEW RECORD . Create and save matrix section record in correct table
 
 			// prevent to save non authorized/valid section_id
-				if ($this->section_id=='-1') {
+				if (!empty($this->section_id) && (int)$this->section_id < 1) {
 					debug_log(__METHOD__." Trying to save invalid section_id: ".to_string($this->section_id), logger::ERROR);
 					return null;
 				}
@@ -887,10 +892,10 @@ class section extends common {
 							$current_id_counter = (int)counter::get_counter_value($tipo, $matrix_table_counter);
 						}
 
-					$section_id_counter = $current_id_counter+1;
+					$new_section_id_counter = $current_id_counter+1;
 
-					# section_id. Fix section_id (Non return point, next calls to Save will be updates)
-					$this->section_id = (int)$section_id_counter;
+					# section_id. Fix section_id (point of no return, next calls to Save will be updates)
+					$this->section_id = (int)$new_section_id_counter;
 				}
 
 			# SECTION JSON DATA
@@ -927,7 +932,7 @@ class section extends common {
 
 					// Components container
 						if (!empty($options->main_components_obj)) {
-							// Main components obj : When creating a section, you can optionally pass the component data directly
+							// Main components obj : When creating a section, you can optionally pass the full component data directly
 							$section_dato->components = $options->main_components_obj;	// Add the data of all the components at once (activity)
 						}else{
 							// components container (empty when insert)
@@ -936,7 +941,7 @@ class section extends common {
 
 					// Relations container
 						if (!empty($options->main_relations)) {
-							// Main relations : When creating a section, you can optionally pass the data of the relationships directly
+							// Main relations : When creating a section, you can optionally pass the full data of the relationships directly
 							$section_dato->relations = $options->main_relations; // Add the data of all relationships at once (activity)
 						}else{
 							// relations container
@@ -992,17 +997,19 @@ class section extends common {
 
 			}else{
 
-				// Counter update : If all is ok, update section counter (counter +1) in structure 'properties:section_id_counter'
+				// Counter update : If all is OK, update section counter (counter +1) in structure 'properties:section_id_counter'
 				if ($saved_id_matrix > 0) {
-					if ($options->forced_create_record!==false) {
-						# CONSOLIDATE COUNTER VALUE
-						# Search last section_id for current section and set counter to this value (when user later create a new record manually, counter will be ok)
-						counter::consolidate_counter($tipo, $matrix_table);
 
-					}else{
-						# Counter update
+					if ($options->forced_create_record===false) {
+						// Counter update
 						counter::update_counter($tipo, $matrix_table_counter, $current_id_counter);
+					}else{
+						// consolidate counter value
+						// Search last section_id for current section and set counter to this value (when user later create a new record manually, counter will be ok)
+						counter::consolidate_counter($tipo, $matrix_table);
 					}
+				}else{
+					debug_log(__METHOD__." ERROR. Invalid saved_id_matrix: ".to_string($saved_id_matrix), logger::ERROR);
 				}
 
 				// Store in cached sections . (!) Important
@@ -1012,11 +1019,11 @@ class section extends common {
 
 				// Logger activity
 					logger::$obj['activity']->log_message(
-						'NEW',
-						logger::INFO,
-						$this->tipo,
-						null,
-						array(
+						'NEW', // string $message
+						logger::INFO, // int $log_level
+						$this->tipo, // string $tipo_where
+						null, // string $operations
+						[ // associative array datos
 							'msg'			=> 'Created section record',
 							'section_id'	=> $this->section_id,
 							'section_tipo'	=> $this->tipo,
@@ -1027,7 +1034,7 @@ class section extends common {
 							// "top_tipo"	=> TOP_TIPO,
 							// "tm_id"		=> 'desactivo',#$time_machine_last_id,
 							// "counter"	=> counter::get_counter_value($this->tipo, $matrix_table_counter),
-						)
+						]
 					);
 
 				##
@@ -1062,8 +1069,7 @@ class section extends common {
 				}else{
 
 					# Filter defaults. Note that portal already saves inherited project to new created section
-					# To avoid saves twice, only set default project when not is a portal call to create new record
-
+					# To prevent to saves twice, only set default project when not is a portal call to create new record
 
 					##
 					# DEFAULT PROJECT FOR CREATE STANDARD SECTIONS
@@ -1078,14 +1084,15 @@ class section extends common {
 					);
 					if (empty($ar_tipo_component_filter[0])) {
 
-						if(SHOW_DEBUG===true) {
-							#throw new Exception("Error Processing Request. Too much component_filter elements found", 1);
-						}
+						// section without filter case (list of values mainly)
 						debug_log(__METHOD__." Ignored set filter default in section without filter: $this->tipo ".to_string(), logger::WARNING);
 
 					}else{
 
 						if (!empty($options->component_filter_dato)) {
+
+							// custom projects dato passed
+
 							// set the component_filter with the dato sent by the caller (portals)
 							$component_filter 	= component_common::get_instance(
 								'component_filter',
@@ -1095,12 +1102,15 @@ class section extends common {
 								DEDALO_DATA_NOLAN,
 								$tipo
 							);
-							$component_filter->set_dato($options->component_filter_dato);
+							$component_filter->set_dato( $options->component_filter_dato );
 							$component_filter->Save();
 
 						}else{
-							# When component_filter is called in edit mode, the component check if dato is empty and if is,
-							# add default user project and save it
+
+							// default case
+
+							// When component_filter is called in edit mode, the component check if dato is empty and if is,
+							// add default user project and save it
 							// (!) Note that construct component_filter in edit mode, saves default value too. Here, current section is saved again
 							$component_filter = component_common::get_instance(
 								'component_filter',
@@ -1148,7 +1158,7 @@ class section extends common {
 			}
 
 
-		return $this->section_id;
+		return (int)$this->section_id;
 	}//end Save
 
 
