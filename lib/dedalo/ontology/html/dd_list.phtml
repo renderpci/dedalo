@@ -54,10 +54,11 @@ print js::build_tag('js/app_utils.js', 'defer');
 			<img class="logo_dedalo" src="images/logo_dedalo_white.svg">
 			<h2 class="title">Dédalo Ontology</h2>
 
-			<?php if (defined('STRUCTURE_IS_MASTER') && STRUCTURE_IS_MASTER===true) { # EXPORT BUTTON (ADMIN) ?>
+			<?php //if (defined('STRUCTURE_IS_MASTER') && STRUCTURE_IS_MASTER===true) { # EXPORT BUTTON (ADMIN) ?>
 				<a href="javascript:void(0)" class="export" onclick="common.export_str(this)">EXPORT</a>
-				<a href="javascript:void(0)" class="export" onclick="common.build_version_from_git_master(this)">BUILD CODE VERSION</a>
-			<?php } ?>
+				<a href="javascript:void(0)" class="export" onclick="common.build_version_from_git_master(this, 5)">BUILD CODE VERSION 5</a>
+				<a href="javascript:void(0)" class="export" onclick="common.build_version_from_git_master(this, 6)">BUILD CODE VERSION 6</a>
+			<?php //} ?>
 
 			<div class="spacer"></div>
 			<ul class="select_mode">
