@@ -148,6 +148,55 @@ class area_development extends area_common {
 			$ar_widgets[] = $widget;
 
 
+		// register_tools
+			$item = new stdClass();
+				$item->id		= 'register_tools';
+				$item->typo		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->parent	= $this->tipo;
+				$item->label	= label::get_label('register_tools');
+				$list = array_map(function($path){
+					// ignore folders with name different from pattern 'tool_*'
+					if (1!==preg_match('/tools\/tool_*/', $path, $output_array) || 1===preg_match('/tools\/tool_dev_template/', $path, $output_array)) {
+						return null;
+					}else{
+						$tool_name = str_replace(DEDALO_TOOLS_PATH.'/', '', $path);
+						// skip tool common
+						if ($tool_name==='tool_common') return null;
+						// check file register is ready
+						$register_contents = file_get_contents($path.'/register.json');
+						if($register_contents===false) {
+							debug_log(__METHOD__." Invalid register.json file from tool ".to_string($tool_name), logger::ERROR);
+							$tool_name .= ' <danger>(!) Invalid register.json file from tool</danger>';
+						}else{
+							// compare register.json file. WORKING HERE (!)
+							$ar_tool_info = tool_common::get_client_registered_tools([$tool_name]);
+							if(!isset($ar_tool_info[0])) {
+								debug_log(__METHOD__." Tool '$tool_name' not found in client_registered_tools.".to_string(), logger::WARNING);
+								$tool_name .= ' <danger>(!) Not registered tool</danger>';
+							}
+						}
+
+						return $tool_name;
+					}
+				}, glob(DEDALO_TOOLS_PATH . '/*', GLOB_ONLYDIR));
+				$item->body		= '<strong>Read tools folder and update the tools register in database</strong><br><br>';
+				$item->body		.= implode('<br>', array_filter($list));
+				$item->run[]	= (object)[
+					'fn' 	  => 'init_form',
+					'options' => (object)[
+						'confirm_text' => label::get_label('sure') ?? 'Sure?'
+					]
+				];
+				$item->trigger 	= (object)[
+					'dd_api'	=> 'dd_utils_api',
+					'action'	=> 'register_tools',
+					'options'	=> null
+				];
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
+
+
 		// export_structure_to_json
 			$item = new stdClass();
 				$item->id		= 'export_structure_to_json';
@@ -229,55 +278,6 @@ class area_development extends area_common {
 			$ar_widgets[] = $widget;
 
 
-		// register_tools
-			$item = new stdClass();
-				$item->id		= 'register_tools';
-				$item->typo		= 'widget';
-				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
-				$item->label	= label::get_label('register_tools');
-				$list = array_map(function($path){
-					// ignore folders with name different from pattern 'tool_*'
-					if (1!==preg_match('/tools\/tool_*/', $path, $output_array) || 1===preg_match('/tools\/tool_dev_template/', $path, $output_array)) {
-						return null;
-					}else{
-						$tool_name = str_replace(DEDALO_TOOLS_PATH.'/', '', $path);
-						// skip tool common
-						if ($tool_name==='tool_common') return null;
-						// check file register is ready
-						$register_contents = file_get_contents($path.'/register.json');
-						if($register_contents===false) {
-							debug_log(__METHOD__." Invalid register.json file from tool ".to_string($tool_name), logger::ERROR);
-							$tool_name .= ' <danger>(!) Invalid register.json file from tool</danger>';
-						}else{
-							// compare register.json file. WORKING HERE (!)
-							$ar_tool_info = tool_common::get_client_registered_tools([$tool_name]);
-							if(!isset($ar_tool_info[0])) {
-								debug_log(__METHOD__." Tool '$tool_name' not found in client_registered_tools.".to_string(), logger::WARNING);
-								$tool_name .= ' <danger>(!) Not registered tool</danger>';
-							}
-						}
-
-						return $tool_name;
-					}
-				}, glob(DEDALO_TOOLS_PATH . '/*', GLOB_ONLYDIR));
-				$item->body		= '<strong>Read tools folder and update the tools register in database</strong><br><br>';
-				$item->body		.= implode('<br>', array_filter($list));
-				$item->run[]	= (object)[
-					'fn' 	  => 'init_form',
-					'options' => (object)[
-						'confirm_text' => label::get_label('sure') ?? 'Sure?'
-					]
-				];
-				$item->trigger 	= (object)[
-					'dd_api'	=> 'dd_utils_api',
-					'action'	=> 'register_tools',
-					'options'	=> null
-				];
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
-
-
 		// build_structure_css
 			// $item = new stdClass();
 			// 	$item->id		= 'build_structure_css';
@@ -332,7 +332,7 @@ class area_development extends area_common {
 
 				$item = new stdClass();
 					$item->id		= 'update_data_version';
-					$item->class	= 'success';
+					$item->class	= 'success with_100';
 					$item->typo		= 'widget';
 					$item->tipo		= $this->tipo;
 					$item->parent	= $this->tipo;
@@ -353,7 +353,7 @@ class area_development extends area_common {
 
 				$item = new stdClass();
 					$item->id		= 'update_data_version';
-					$item->class	= 'danger';
+					$item->class	= 'danger with_100';
 					$item->typo		= 'widget';
 					$item->tipo		= $this->tipo;
 					$item->parent	= $this->tipo;
@@ -398,14 +398,17 @@ class area_development extends area_common {
 				$ar_widgets[] = $widget;
 			}
 
+
 		// update_code
 			$item = new stdClass();
 				$item->id		= 'update_code';
+				$item->class	= 'with_100';
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->parent	= $this->tipo;
 				$item->label	= label::get_label('update') .' '. label::get_label('code');
-				$item->body		= 'Update Dédalo code to the latest version';
+				$item->body		= 'Current version: <b>'.DEDALO_VERSION.'</b> - build: <b>'.DEDALO_BUILD.'</b>.';
+				$item->body		.= ' Update Dédalo code to the latest version';
 				$item->run[]	= (object)[
 					'fn'		=> 'init_form',
 					'options'	=> (object)[
