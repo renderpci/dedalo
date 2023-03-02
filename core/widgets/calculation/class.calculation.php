@@ -605,7 +605,7 @@ class calculation extends widget_common {
 		$file 	= DEDALO_WIDGETS_PATH . $process->file;
 		// function name, defined in structure
 		$fn		= $process->fn;
-		// merge the process->options defined in structure and the pre-procesed data
+		// merge the process->options defined in structure and the pre-processed data
 		// in a unique object, for simplify the call
 		$arg 	= (object)[
 			'data'		=> $data,
@@ -615,25 +615,14 @@ class calculation extends widget_common {
 		switch ($process->engine) {
 			case 'php':
 			default:
-				// stringify the arguments
-				$arg	= json_encode($arg);
-				// escape the json slashes, " will be convert to \" it's necessary because the call will be inside a " string
-				$arg	= addslashes($arg);
-				// escape the total arguments string, \' will be added at begin and end
-				$arg	= escapeshellarg($arg);
 
-				// command
-					// require load the file with the functions in the path
-					// echo json_encode stringify the result of the method $fn($arg)
-					$command = 'php -r "require(\''.$file.'\'); echo json_encode('.$fn.'('.$arg.'));"';
-
-				// result
-					$result = shell_exec($command);
-
-				// parse the string result to json.
-					$result = !empty($result)
-						? json_decode($result)
-						: null;
+				// require load the file with the functions in the path
+					include_once($file);
+				// execute the function in the $file (as summarize in formulas.php)
+					if(!function_exists($fn)){
+						return null;
+					}
+					$result = $fn($arg);
 
 				break;
 		}//end switch ($process->engine)
