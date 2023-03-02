@@ -84,6 +84,7 @@ class descriptors extends widget_common {
 				// create items with the every locator
 				$ar_component_dato	= [];
 				$ar_component_value	= [];
+				$component_value = new stdClass();
 				foreach ($ar_locator as $locator) {
 
 					$model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
