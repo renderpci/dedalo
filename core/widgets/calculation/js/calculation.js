@@ -22,6 +22,8 @@ export const calculation = function(){
 
 	this.node = null
 
+	this.events_tokens = []
+
 	this.status
 
 	return true
