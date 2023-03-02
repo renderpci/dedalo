@@ -5,6 +5,7 @@
 
 // imports
 	import {view_default_edit_info} from './view_default_edit_info.js'
+	import {view_line_edit_info} from './view_line_edit_info.js'
 	import {view_mini_info} from './view_mini_info.js'
 
 
@@ -37,6 +38,9 @@ render_edit_component_info.prototype.edit = async function(options) {
 
 		case 'mini':
 			return view_mini_info.render(self, options)
+
+		case 'line':
+			return view_line_edit_info.render(self, options)
 
 		case 'default':
 		default:
