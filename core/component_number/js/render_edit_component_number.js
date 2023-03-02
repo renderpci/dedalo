@@ -108,6 +108,10 @@ const get_content_value = (i, current_value, self) => {
 		})//end keyup
 		input.step = self.get_steps()
 
+		input.addEventListener('blur', function(e) {
+			blur_handler(e, i, self)
+		})//end blur
+
 	// button remove
 		const mode				= self.mode
 		const is_inside_tool	= self.is_inside_tool
@@ -222,9 +226,14 @@ export const get_buttons = (self) => {
 export const keyup_handler = function(e, key, self) {
 	e.preventDefault()
 
+	// when tab is pressed the node and self is the target component,
+	// so the change data is not for the source component and user has enter (and don't changed nothing)
+		if (e.key==='Tab') {
+			return false
+		}
+
 	// Enter key force to save changes
 		if (e.key==='Enter') {
-
 			// force to save current input if changed
 				const changed_data = self.data.changed_data || []
 				// change_value (save data)
@@ -238,7 +247,9 @@ export const keyup_handler = function(e, key, self) {
 				? self.fix_number_format(e.target.value)
 				: null
 
-			e.target.value = safe_value
+			if(safe_value!==e.target.value) {
+				e.target.value = safe_value
+			}
 
 			// change data
 				const changed_data_item = Object.freeze({
@@ -254,6 +265,31 @@ export const keyup_handler = function(e, key, self) {
 
 	return true
 }//end keyup_handler
+
+
+
+/**
+* BLUR_HANDLER
+* Store current value in self.data.changed_data
+* If key pressed is 'Enter', force save the value
+* @param event e
+* @param int key
+* @param object self
+* @return bool
+*/
+export const blur_handler = function(e, key, self) {
+	e.preventDefault()
+
+	// force to save current input if changed
+		const changed_data = self.data.changed_data || []
+		// change_value (save data)
+		self.change_value({
+			changed_data	: changed_data,
+			refresh			: false
+		})
+
+	return true
+}//end blur_handler
 
 
 
