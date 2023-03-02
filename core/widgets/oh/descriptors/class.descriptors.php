@@ -13,6 +13,7 @@ class descriptors extends widget_common {
 	* @return array $dato
 	*/
 	public function get_dato() : array {
+		$start_time=start_time();
 
 		$section_tipo 	= $this->section_tipo;
 		$section_id 	= $this->section_id;
@@ -21,11 +22,10 @@ class descriptors extends widget_common {
 
 		$dato = [];
 
-		if($mode=== 'list'){
-			return $dato;
-		}
-
-		$project_langs = common::get_ar_all_langs();
+		// list mode does not compute result for speed
+			if($mode==='list') {
+				return $dato;
+			}
 
 		// every state has a ipo that come from structure (input, process , output).
 		foreach ($ipo as $key => $current_ipo) {
@@ -39,7 +39,8 @@ class descriptors extends widget_common {
 			// check the type for input,
 			// if it's a filter will use search_query_object to find data
 			$type 		= $input->type;
-			switch ($type) {
+			switch($type) {
+
 				case 'component_data':
 					$ar_locator = [];
 					foreach ($source as $current_source) {
@@ -131,6 +132,12 @@ class descriptors extends widget_common {
 				}
 			}//end foreach ($ar_paths as $path)
 		}//foreach $ipo
+
+		// debug
+			if(SHOW_DEVELOPER===true) {
+				debug_log(__METHOD__." Total time get_dato widget descriptors: ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
+			}
+
 
 		return $dato;
 	}//end get_dato
