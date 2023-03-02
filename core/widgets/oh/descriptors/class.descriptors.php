@@ -100,14 +100,21 @@ class descriptors extends widget_common {
 
 					$ar_component_dato	= array_merge($ar_component_dato, $component_dato);
 					$ar_component_value	= array_merge($ar_component_value, $component_value->value);
-
 				}
-				$component_value->value = $ar_component_value;
 
-				// output, use the ipo output for create the items to send to compoment_info and client side
+				// prevent empty locators value continue execution generating errors
+					if (!isset($component_value)) {
+						continue;
+					}
+
+				// set value. Using last created component
+					$component_value->value = $ar_component_value;
+
+				// output, use the IPO output for create the items to send to compoment_info and client side
 				foreach ($output as $data_map) {
 
 					switch ($data_map->id) {
+
 						case 'indexation':
 							$value = sizeof($ar_component_dato);
 							break;
