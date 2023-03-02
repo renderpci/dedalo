@@ -39,13 +39,15 @@ view_default_list_date.render = async function(self, options) {
 		const wrapper = ui.component.build_wrapper_list(self, {
 			value_string : value_string
 		})
-		wrapper.addEventListener('click', function(e){
-			e.stopPropagation()
-			self.change_mode({
-				mode	: 'edit',
-				view	: 'line'
+		if (self.show_interface.read_only!==true) {
+			wrapper.addEventListener('click', function(e){
+				e.stopPropagation()
+				self.change_mode({
+					mode	: 'edit',
+					view	: 'line'
+				})
 			})
-		})
+		}
 
 
 	return wrapper
