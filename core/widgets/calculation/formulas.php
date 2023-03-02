@@ -3,8 +3,15 @@
 * Calculation generic formulas
 */
 
-
-function sumarize($request_options) : array {
+/**
+* SUMMARIZE
+* @param object $request_options
+* 	{
+* 		data: object with var and value as { "number": 23.5}
+* 		options: object with some other params
+* 	}
+*/
+function summarize($request_options) : array {
 
 	$options = is_string($request_options)
 		? json_decode($request_options)
