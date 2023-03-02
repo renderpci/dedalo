@@ -459,9 +459,20 @@ class component_portal extends component_relation_common {
 
 					}else{
 
-						$response = new stdClass();
+						$legacy_model_name = RecordObj_dd::get_legacy_model_name_by_tipo($options->tipo);
+						if ($legacy_model_name==='component_autocomplete_hi') {
+							// force save to regenerate search relations
+							$response = new stdClass();
+								$response->result	= 3;
+								$response->new_dato	= $dato_unchanged;
+								$response->msg		= "[$reference_id] Dato is forced to save to regenerate search relations from ".to_string($dato_unchanged).".<br />";
+
+						}else{
+
+							$response = new stdClass();
 							$response->result	= 2;
 							$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+						}
 					}// end if($need_to_be_updated === true)
 				}else{
 
