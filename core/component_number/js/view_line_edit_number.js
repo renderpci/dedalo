@@ -7,6 +7,7 @@
 	import {ui} from '../../common/js/ui.js'
 	import {
 		keyup_handler,
+		blur_handler,
 		remove_handler
 	} from './render_edit_component_number.js'
 
@@ -111,6 +112,10 @@ const get_content_value = (i, current_value, self) => {
 			// page unload event
 				keyup_handler(e, i, self)
 		})//end keyup
+
+		input.addEventListener('blur', function(e) {
+				blur_handler(e, i, self)
+		})//end blur
 
 	return content_value
 }//end get_content_value
