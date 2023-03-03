@@ -128,7 +128,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 				#dump($tipo,"tipo received ");
 				dump(debug_backtrace()[0]," debug_backtrace Invalid tipo received ". json_encode($tipo));
 			}
-			error_log(__METHOD__." Error: Invalid tipo received. Impossible get_prefix_from_tipo this tipo : ". json_encode($tipo)." " );
+			debug_log(__METHOD__." Error: Invalid tipo received. Impossible get_prefix_from_tipo this tipo :  ".to_string($tipo), logger::ERROR);
 			return false;
 		}
 

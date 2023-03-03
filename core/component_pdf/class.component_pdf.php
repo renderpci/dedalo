@@ -698,7 +698,7 @@ class component_pdf extends component_media_common {
 		# Test is valid utf8
 		$test_utf8 = self::valid_utf8($pdf_text);
 		if (!$test_utf8) {
-			error_log("WARNING: Current string is NOT utf8 valid. Anyway continue ...");
+			debug_log(__METHOD__." WARNING: Current string is NOT utf8 valid. Anyway continue ... ".to_string(), logger::WARNING);
 		}
 
 		# Remove non utf8 chars

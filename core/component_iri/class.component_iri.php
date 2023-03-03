@@ -129,9 +129,9 @@ class component_iri extends component_common {
 		// dato candidate to save
 			$dato = $this->dato;
 
-		// deleting iri
+		// deleting IRI
 			if (empty($dato)) {
-				# Save in standar empty format
+				# Save in standard empty format
 				return parent::Save();
 			}
 
@@ -140,12 +140,12 @@ class component_iri extends component_common {
 				if(SHOW_DEBUG===true) {
 					#dump($dato,'$dato');
 					#throw new Exception("Dato is not string!", 1);
-					error_log("Bad iri format:".to_string($dato));
+					debug_log(__METHOD__." Bad IRI format: ".to_string($dato), logger::ERROR);
 				}
 				return false;
 			}
 
-		// Save in standar format
+		// Save in standard format
 		return parent::Save();
 	}//end Save
 
