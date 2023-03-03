@@ -102,13 +102,13 @@ const get_content_value = (i, current_value, self) => {
 			value			: current_value,
 			parent			: content_value
 		})
+		input.step = self.get_steps()
 		input.addEventListener('keyup', function(e) {
 			// page unload event
 			keyup_handler(e, i, self)
 		})//end keyup
-		input.step = self.get_steps()
-
 		input.addEventListener('blur', function(e) {
+			// saves changed data
 			blur_handler(e, i, self)
 		})//end blur
 
@@ -271,7 +271,6 @@ export const keyup_handler = function(e, key, self) {
 /**
 * BLUR_HANDLER
 * Store current value in self.data.changed_data
-* If key pressed is 'Enter', force save the value
 * @param event e
 * @param int key
 * @param object self

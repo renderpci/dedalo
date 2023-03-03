@@ -110,12 +110,13 @@ const get_content_value = (i, current_value, self) => {
 		input.step = self.get_steps()
 		input.addEventListener('keyup', function(e) {
 			// page unload event
-				keyup_handler(e, i, self)
+			keyup_handler(e, i, self)
 		})//end keyup
-
 		input.addEventListener('blur', function(e) {
-				blur_handler(e, i, self)
+			// saves changed data
+			blur_handler(e, i, self)
 		})//end blur
+
 
 	return content_value
 }//end get_content_value

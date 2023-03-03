@@ -136,8 +136,16 @@ export const get_ar_raw_data_value = (self) => {
 				const input_time_value = (current_value)
 					? self.time_to_string(current_value.start)
 					: ''
-
 				ar_raw_value.push(input_time_value)
+				break;
+
+			case 'datetime':
+				{
+				const input_time_value = (current_value)
+					? self.datetime_to_string(current_value.start)
+					: ''
+				ar_raw_value.push(input_time_value)
+				}
 				break;
 
 			case 'date':

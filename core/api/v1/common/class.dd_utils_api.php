@@ -832,7 +832,7 @@ final class dd_utils_api {
 				) {
 					// throw new RuntimeException('Invalid parameters. (1)');
 					$msg = ' upload: Invalid parameters. (1)';
-					error_log($msg);
+					debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
 					$response->msg .= $msg;
 					return $response;
 				}
@@ -845,7 +845,7 @@ final class dd_utils_api {
 					case UPLOAD_ERR_NO_FILE:
 						// throw new RuntimeException('No file sent.');
 						$msg = ' upload: No file sent.';
-						error_log($msg);
+						debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
 						$response->msg .= $msg;
 						return $response;
 
@@ -853,14 +853,14 @@ final class dd_utils_api {
 					case UPLOAD_ERR_FORM_SIZE:
 						// throw new RuntimeException('Exceeded filesize limit.');
 						$msg = ' upload: Exceeded filesize limit.';
-						error_log($msg);
+						debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
 						$response->msg .= $msg;
 						return $response;
 
 					default:
 						// throw new RuntimeException('Unknown errors.');
 						$msg = ' upload: Unknown errors.';
-						error_log($msg);
+						debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
 						$response->msg .= $msg;
 						return $response;
 				}

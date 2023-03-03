@@ -278,7 +278,7 @@ class component_media_common extends component_common {
 			$section_id = $this->get_section_id();
 			if (!isset($section_id)) {
 				if(SHOW_DEBUG===true) {
-					error_log(__METHOD__." Component dato (parent:$this->section_id,section_tipo:$this->section_tipo) is empty for: ".to_string(''));
+					debug_log(__METHOD__." Component dato (parent:$this->section_id,section_tipo:$this->section_tipo) is empty for:".to_string(), logger::WARNING);
 				}
 				return null;
 			}

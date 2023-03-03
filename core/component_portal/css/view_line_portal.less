@@ -23,7 +23,8 @@
 			.column {
 				height: inherit;
 				width: auto;
-				display: contents;
+				// display: contents;
+				display: inline-block;
 				vertical-align: middle;
 				align-items: center;
 				word-break: break-word;
@@ -97,6 +98,9 @@
 			display: flex;
 			padding: 0px;
 
+			// === TEMP
+			display: contents;
+
 			>.section_record {
 				display: flex;
 				flex-wrap: nowrap;
@@ -111,6 +115,7 @@
 					flex: 0 0 100%;
 					display: block;
 					margin-left: 0rem;
+					padding: 0.3rem;
 					padding-right: 0.5rem;
 				}
 			}
