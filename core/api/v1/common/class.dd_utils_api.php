@@ -794,7 +794,7 @@ final class dd_utils_api {
 	* Sample expected $json_data:
 	* {
 	*	"action": "upload",
-	*	"fileToUpload": { 	(assoc array)
+	*	"file_to_upload": { 	(assoc array)
 	*		"name"			: "exported_plantillas-web_-1-dd477.csv",
 	*		"full_path"		: "exported_plantillas-web_-1-dd477.csv",
 	*		"type"			: "text/csv",
@@ -808,7 +808,7 @@ final class dd_utils_api {
 	* @return object $response
 	*/
 	public static function upload(object $rqo) : object {
-
+	// dump($rqo, ' rqo +--file upload---+ '.to_string());
 		// response
 			$response = new stdClass();
 				$response->result	= false;
@@ -818,7 +818,7 @@ final class dd_utils_api {
 			debug_log(__METHOD__." --> received rqo: ".to_string($rqo), logger::DEBUG);
 
 		// rqo
-			$fileToUpload	= $rqo->fileToUpload ?? $rqo->upload;	// assoc array Added from PHP input '$_FILES'
+			$file_to_upload	= $rqo->file_to_upload ?? $rqo->upload;	// assoc array Added from PHP input '$_FILES'
 			$resource_type	= $rqo->resource_type; // string like 'tool_upload'
 
 		// check for upload issues
@@ -827,8 +827,8 @@ final class dd_utils_api {
 			// Undefined | Multiple Files | $_FILES Corruption Attack
 			// If this request falls under any of them, treat it invalid.
 				if (
-					!isset($fileToUpload['error']) ||
-					is_array($fileToUpload['error'])
+					!isset($file_to_upload['error']) ||
+					is_array($file_to_upload['error'])
 				) {
 					// throw new RuntimeException('Invalid parameters. (1)');
 					$msg = ' upload: Invalid parameters. (1)';
@@ -837,8 +837,8 @@ final class dd_utils_api {
 					return $response;
 				}
 
-			// Check $fileToUpload['error'] value.
-				switch ($fileToUpload['error']) {
+			// Check $file_to_upload['error'] value.
+				switch ($file_to_upload['error']) {
 					case UPLOAD_ERR_OK:
 						break;
 
@@ -866,29 +866,52 @@ final class dd_utils_api {
 				}
 
 			// You should also check filesize here.
-				// if ($fileToUpload['size'] > 1000000) {
+				// if ($file_to_upload['size'] > 1000000) {
 				// 	throw new RuntimeException('Exceeded filesize limit.');
 				// }
 
-			// Do not trust $fileToUpload['mime'] VALUE !!
+			// chunked
+				$chunked = json_decode($rqo->chunked);
+
+			// filename
+				$file_name 		= $file_to_upload['name'];
+
+			// extension
+				$extension = strtolower( pathinfo($file_to_upload['name'], PATHINFO_EXTENSION) );
+
+			// Do not trust $file_to_upload['mime'] VALUE !!
 			// Check MIME Type by yourself.
 				$finfo				= new finfo(FILEINFO_MIME_TYPE);
-				$file_mime			= $finfo->file($fileToUpload['tmp_name']); // ex. string 'text/plain'
-				$known_mime_types	= self::get_known_mime_types();
-				if (false===array_search(
-					$file_mime,
-					$known_mime_types,
-					true
-					)) {
-					// throw new RuntimeException('Invalid file format.');
-					debug_log(__METHOD__." Error. Stopped upload unknown file mime type: ".to_string($file_mime).' - name: '.to_string($fileToUpload['tmp_name']), logger::ERROR);
-					$msg = ' upload: Invalid file format. (mime: '.$file_mime.')';
-					$response->msg .= $msg;
-					return $response;
+				$file_mime			= $finfo->file($file_to_upload['tmp_name']); // ex. string 'text/plain'
+
+			// name
+				$name = basename($file_to_upload['tmp_name']);
+				if($chunked){
+					$file_name 		= $rqo->file_name;
+					$total_chunks	= $rqo->total_chunks;
+					$chunk_index	= $rqo->chunk_index;
+					$extension		= 'blob';
+					$name			= "{$chunk_index}-{$name}.{$extension}";
+					$file_mime		= 'application/octet-stream';
 				}
 
+			// CHECKING
+				//Check MIME
+					$known_mime_types	= self::get_known_mime_types();
+					if (false===array_search(
+						$file_mime,
+						$known_mime_types,
+						true
+						)) {
+						// throw new RuntimeException('Invalid file format.');
+						debug_log(__METHOD__." Error. Stopped upload unknown file mime type: ".to_string($file_mime).' - name: '.to_string($file_to_upload['tmp_name']), logger::ERROR);
+						$msg = ' upload: Invalid file format. (mime: '.$file_mime.')';
+						$response->msg .= $msg;
+						return $response;
+					}
+
 				// check for upload server errors
-					$uploaded_file_error		= $fileToUpload['error'];
+					$uploaded_file_error		= $file_to_upload['error'];
 					$uploaded_file_error_text	= self::error_number_to_text($uploaded_file_error);
 					if ($uploaded_file_error!==0) {
 						$response->msg .= ' - '.$uploaded_file_error_text;
@@ -896,14 +919,13 @@ final class dd_utils_api {
 					}
 
 				// check file is available in temp dir
-					if(!file_exists($fileToUpload['tmp_name'])) {
-						debug_log(__METHOD__." Error on locate temporary file ".$fileToUpload['tmp_name'], logger::ERROR);
+					if(!file_exists($file_to_upload['tmp_name'])) {
+						debug_log(__METHOD__." Error on locate temporary file ".$file_to_upload['tmp_name'], logger::ERROR);
 						$response->msg .= "Uploaded file not found in temporary folder";
 						return $response;
 					}
 
 				// check extension
-					$extension			= strtolower( pathinfo($fileToUpload['name'], PATHINFO_EXTENSION) );
 					$allowed_extensions	= array_keys($known_mime_types);
 					if (!in_array($extension, $allowed_extensions)) {
 						$response->msg .= "Error. Invalid file extension ".$extension;
@@ -911,13 +933,14 @@ final class dd_utils_api {
 						return $response;
 					}
 
-			// manage uploaded file
-				if (!defined('DEDALO_UPLOAD_TMP_DIR')) {
-					debug_log(__METHOD__." DEDALO_UPLOAD_TMP_DIR is not defined. Please, define constant 'DEDALO_UPLOAD_TMP_DIR' in config file. (Using fallback value instead: DEDALO_MEDIA_PATH . '/import/file') ".to_string(), logger::ERROR);
-					$response->msg .= " Config constant 'DEDALO_UPLOAD_TMP_DIR' is mandatory!";
-					return $response;
-				}
-				$dir = DEDALO_UPLOAD_TMP_DIR . '/' . $resource_type;
+			// Manage uploaded file
+				// check tmp upload dir
+					if (!defined('DEDALO_UPLOAD_TMP_DIR')) {
+						debug_log(__METHOD__." DEDALO_UPLOAD_TMP_DIR is not defined. Please, define constant 'DEDALO_UPLOAD_TMP_DIR' in config file. (Using fallback value instead: DEDALO_MEDIA_PATH . '/import/file') ".to_string(), logger::ERROR);
+						$response->msg .= " Config constant 'DEDALO_UPLOAD_TMP_DIR' is mandatory!";
+						return $response;
+					}
+					$dir = DEDALO_UPLOAD_TMP_DIR . '/' . $resource_type;
 
 				// Check the target_dir, if it's not created will be make to be used.
 					// Target folder exists test
@@ -929,14 +952,13 @@ final class dd_utils_api {
 						debug_log(__METHOD__." CREATED DIR: $dir  ".to_string(), logger::DEBUG);
 					}
 				// move file to target path
-					$name			= basename($fileToUpload['tmp_name']);
 					$target_path	= $dir . '/' . $name;
-					$moved			= move_uploaded_file($fileToUpload['tmp_name'], $target_path);
+					$moved			= move_uploaded_file($file_to_upload['tmp_name'], $target_path);
 					// verify move file is successful
 					if ($moved!==true) {
 						debug_log(__METHOD__.PHP_EOL
 							.'Error on get/move temp file to target_path '.PHP_EOL
-							.'source: '.$fileToUpload['tmp_name'].PHP_EOL
+							.'source: '.$file_to_upload['tmp_name'].PHP_EOL
 							.'target: '.$target_path,
 							 logger::ERROR
 						);
@@ -946,7 +968,7 @@ final class dd_utils_api {
 
 			// file_data to client. POST file (sent across $_FILES) info and some additions
 				// Example of received data:
-				// "fileToUpload": {
+				// "file_to_upload": {
 				//		"name": "exported_plantillas-web_-1-dd477.csv",
 				//		"full_path": "exported_plantillas-web_-1-dd477.csv",
 				//		"type": "text/csv",
@@ -955,21 +977,27 @@ final class dd_utils_api {
 				//		"size": 29892
 				// }
 				$file_data = new stdClass();
-					$file_data->name			= $fileToUpload['name']; // like 'My Picture 1.jpg'
-					$file_data->type			= $fileToUpload['type']; // like 'image\/jpeg'
+					$file_data->name			= $file_name; // like 'My Picture 1.jpg'
+					$file_data->type			= $file_to_upload['type']; // like 'image\/jpeg'
 					// $file_data->tmp_name		= $target_path; // do not include for safety
 					$file_data->tmp_dir			= 'DEDALO_UPLOAD_TMP_DIR'; // like DEDALO_MEDIA_PATH . '/upload/service_upload/tmp'
 					$file_data->resource_type	= $resource_type; // like 'tool_upload'
 					$file_data->tmp_name		= $name; // like 'phpv75h2K'
-					$file_data->error			= $fileToUpload['error']; // like 0
-					$file_data->size			= $fileToUpload['size']; // like 878860 (bytes)
+					$file_data->error			= $file_to_upload['error']; // like 0
+					$file_data->size			= $file_to_upload['size']; // like 878860 (bytes)
 					$file_data->extension		= $extension;
+					$file_data->chunked 		= $chunked;
+
+					if($chunked){
+						$file_data->total_chunks	= $total_chunks;
+						$file_data->chunk_index		= $chunk_index;
+					}
 
 			// resource_type cases response
 				switch ($resource_type) {
 
 					case 'web': // uploading images from text editor
-						$safe_file_name	= sanitize_file_name($fileToUpload['name']); // clean file name
+						$safe_file_name	= sanitize_file_name($file_to_upload['name']); // clean file name
 						$file_path		= DEDALO_MEDIA_PATH . '/image' . DEDALO_IMAGE_WEB_FOLDER . '/' . $safe_file_name;
 						$file_url		= DEDALO_MEDIA_URL  . '/image' . DEDALO_IMAGE_WEB_FOLDER . '/' . $safe_file_name;
 						$current_path	= $target_path;
@@ -997,6 +1025,75 @@ final class dd_utils_api {
 
 		return $response;
 	}//end upload
+
+
+
+	/**
+	* GET_SYSTEM_INFO
+	* @param object $rqo
+	* @return object response
+	*/
+	public static function join_chunked_files_uploaded(object $rqo) : object {
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed';
+
+		// variables
+			$files_chunked	= $rqo->files_chunked;
+			$file_data		= $rqo->file_data;
+
+		$chunk_total = count($files_chunked);
+
+		$file_path = DEDALO_UPLOAD_TMP_DIR . '/' . $file_data->resource_type;
+
+		$tmp_joined_file = 'tmp_'.$file_data->name;
+		// loop through temp files and grab the content
+		foreach ($files_chunked as $chunk_filename) {
+
+			// copy chunk
+			$temp_file_path = "{$file_path}/{$chunk_filename}";
+			$chunk = file_get_contents($temp_file_path);
+			if ( empty($chunk) ){
+				$response->msg = "Chunks are uploading as empty strings.";
+				return $response;
+			}
+
+			// add chunk to main file
+			file_put_contents("{$file_path}/{$tmp_joined_file}", $chunk, FILE_APPEND | LOCK_EX);
+
+			// delete chunk
+			unlink($temp_file_path);
+			if ( file_exists($temp_file_path) ) {
+				$response->msg = "Your temp files could not be deleted.";
+				return $response;
+			}
+		}
+
+		// extension
+			$extension = strtolower( pathinfo($tmp_joined_file, PATHINFO_EXTENSION) );
+
+		// check extension
+			$known_mime_types	= self::get_known_mime_types();
+			$allowed_extensions	= array_keys($known_mime_types);
+			if (!in_array($extension, $allowed_extensions)) {
+				$response->msg .= "Error. Invalid file extension ".$extension;
+				debug_log(__METHOD__.PHP_EOL.$response->msg, logger::ERROR);
+				return $response;
+			}
+
+		// set the file values
+			$file_data->tmp_name		= $tmp_joined_file; // like 'phpv75h2K'
+			$file_data->extension		= $extension;
+
+		// response
+		// all is OK response
+			$response->result		= true;
+			$response->file_data	= $file_data;
+			$response->msg			= 'OK. '.label::get_label('file_uploaded_successfully');
+
+		return $response;
+	}//end get_system_info
 
 
 
@@ -1425,6 +1522,7 @@ final class dd_utils_api {
 			// archives
 			'zip'	=> 'application/zip',
 			'rar'	=> 'application/x-rar-compressed',
+			'blob' 	=> 'application/octet-stream',
 			'exe'	=> 'application/x-msdownload',
 			'msi'	=> 'application/x-msdownload',
 			'cab'	=> 'application/vnd.ms-cab-compressed',
