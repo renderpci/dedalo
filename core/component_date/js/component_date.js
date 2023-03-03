@@ -416,6 +416,7 @@ component_date.prototype.is_leap_year = function(year) {
 /**
 * GET_DATE_MODE
 * @return string date_mode
+* 	default: 'date'
 */
 component_date.prototype.get_date_mode = function() {
 
@@ -500,6 +501,44 @@ component_date.prototype.time_to_string = function(time) {
 
 	return string_time
 }//end time_to_string
+
+
+
+/**
+* DATETIME_TO_STRING
+* Converts object dd_date to flat string
+* mixing time_to_string and date_to_string results
+* @param object time
+* sample:
+* {
+* 	day: 25,
+* 	month 4,
+* 	year: 2022
+*	hour: 14
+*	minute: 46
+*	second: 0
+*	time: 53160
+* }
+* @return string string_time
+*	 sample: '22/07/2023 13:54:00'
+*/
+component_date.prototype.datetime_to_string = function(time) {
+
+	const self	= this
+
+	if (!time) {
+		return ''
+	}
+
+	const string_date	= self.date_to_string(time)
+	const string_time	= self.time_to_string(time)
+
+
+	const string_datetime = string_date + ' ' + string_time
+
+
+	return string_datetime
+}//end datetime_to_string
 
 
 

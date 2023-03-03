@@ -520,7 +520,7 @@ class area_development extends area_common {
 						];
 					}
 				} catch (Exception $e) {
-					error_log('Exception: '.$e->getMessage());
+					debug_log(__METHOD__." Exception:".$e->getMessage(), logger::ERROR);
 				}
 				return $info;
 			})();

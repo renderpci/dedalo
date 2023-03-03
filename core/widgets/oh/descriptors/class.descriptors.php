@@ -13,6 +13,7 @@ class descriptors extends widget_common {
 	* @return array $dato
 	*/
 	public function get_dato() : array {
+		$start_time=start_time();
 
 		$section_tipo 	= $this->section_tipo;
 		$section_id 	= $this->section_id;
@@ -21,11 +22,10 @@ class descriptors extends widget_common {
 
 		$dato = [];
 
-		if($mode=== 'list'){
-			return $dato;
-		}
-
-		$project_langs = common::get_ar_all_langs();
+		// list mode does not compute result for speed
+			if($mode==='list') {
+				return $dato;
+			}
 
 		// every state has a ipo that come from structure (input, process , output).
 		foreach ($ipo as $key => $current_ipo) {
@@ -39,7 +39,8 @@ class descriptors extends widget_common {
 			// check the type for input,
 			// if it's a filter will use search_query_object to find data
 			$type 		= $input->type;
-			switch ($type) {
+			switch($type) {
+
 				case 'component_data':
 					$ar_locator = [];
 					foreach ($source as $current_source) {
@@ -100,14 +101,21 @@ class descriptors extends widget_common {
 
 					$ar_component_dato	= array_merge($ar_component_dato, $component_dato);
 					$ar_component_value	= array_merge($ar_component_value, $component_value->value);
-
 				}
-				$component_value->value = $ar_component_value;
 
-				// output, use the ipo output for create the items to send to compoment_info and client side
+				// prevent empty locators value continue execution generating errors
+					if (!isset($component_value)) {
+						continue;
+					}
+
+				// set value. Using last created component
+					$component_value->value = $ar_component_value;
+
+				// output, use the IPO output for create the items to send to compoment_info and client side
 				foreach ($output as $data_map) {
 
 					switch ($data_map->id) {
+
 						case 'indexation':
 							$value = sizeof($ar_component_dato);
 							break;
@@ -132,6 +140,12 @@ class descriptors extends widget_common {
 				}
 			}//end foreach ($ar_paths as $path)
 		}//foreach $ipo
+
+		// debug
+			if(SHOW_DEVELOPER===true) {
+				debug_log(__METHOD__." Total time get_dato widget descriptors: ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
+			}
+
 
 		return $dato;
 	}//end get_dato
