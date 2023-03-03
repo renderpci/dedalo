@@ -36,6 +36,7 @@ $global_start_time = hrtime(true);
 		'Content-Type',
 		// 'Access-Control-Request-Method',
 		// 'Access-Control-Request-Headers'
+		"Content-Range",
 	];
 	header("Access-Control-Allow-Headers: ". implode(', ', $allow_headers));
 

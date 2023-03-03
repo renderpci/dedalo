@@ -192,12 +192,12 @@ export const upload = async function(options) {
 			return false
 		}
 
-	// FormData build
-		const fd = new FormData();
-		fd.append('resource_type',		resource_type);
-		// fd.append('allowed_extensions', 	JSON.stringify(allowed_extensions));
-		// file
-		fd.append('fileToUpload', file);
+	// // FormData build
+	// 	const fd = new FormData();
+	// 	fd.append('resource_type',		resource_type);
+	// 	// fd.append('allowed_extensions', 	JSON.stringify(allowed_extensions));
+	// 	// file
+	// 	fd.append('fileToUpload', file);
 
 
 		// upload_loadstart
@@ -211,7 +211,7 @@ export const upload = async function(options) {
 			}//end upload_loadstart
 
 		// upload_load.(finished)
-			const upload_load = function() {
+			const upload_load = function(evt) {
 				// response_msg.innerHTML = '<span class="blink">Processing file '+file.name+'</span>'
 				event_manager.publish('upload_file_status_'+id, {
 					value	: 100,
@@ -251,11 +251,13 @@ export const upload = async function(options) {
 			}//end upload_progress
 
 		// xhr_load
+			const files_chunked		= []
+			const count_uploaded	= []
 			const xhr_load = function(evt) {
 
 				// parse response string as JSON
 					// let response = null
-					try {
+					// try {
 						const api_response = JSON.parse(evt.target.response);
 
 						if (!api_response) {
@@ -265,61 +267,186 @@ export const upload = async function(options) {
 						}
 						// debug
 							if(SHOW_DEBUG===true) {
-								console.log("upload_file.XMLHttpRequest load response:", api_response);
+								// console.log("upload_file.XMLHttpRequest load response:", api_response);
 							}
 
+						// check if the file uploaded is a chunk
+						const file_data = api_response.file_data
+						// if upload is chunked is necessary join the files in the server before resolve the upload
+						if(file_data.chunked){
+							// get the index
+							const chunk_index = file_data.chunk_index
 
-						resolve(api_response) //api_response
-						return true
+							files_chunked[chunk_index] = file_data.tmp_name
+							count_uploaded.push(file_data.chunk_index)
+							// get filename of every chunk
+							const total_chunks = parseInt( file_data.total_chunks)
+							// finished upload all chunks
+							if(count_uploaded.length === total_chunks){
 
-					} catch (error) {
-						alert(evt.target.response)
-						console.warn("response:",evt.target.response);
-						console.error(error)
+								service_upload.prototype.join_chunked_files({
+									file_data		: file_data,
+									files_chunked	: files_chunked
+								}).then(function(api_response){
 
-						resolve(response)
-						return false
-					}
+									resolve(api_response) //api_response
+									return true
+								})
+							}
+
+						}else{
+							resolve(api_response) //api_response
+							return true
+						}
+
+
+					// } catch (error) {
+						// alert(evt.target.response)
+						// console.warn("response:",evt.target.response);
+						// console.error(error)
+
+						// resolve(response)
+						// return false
+					// }
 
 				// print message
 					// response_msg.innerHTML = response.msg
 
 			}//end xhr_load
 
+		const process_file = function (file) {
 
-		// XMLHttpRequest
+			const file_size = file.size;
+			//break into 5 MB chunks fat minimum
+			const chunk_size	= 90*1024*1024;
+			let start			= 0;
+			const total_chunks	= Math.ceil(file_size / chunk_size);
+
+			for (let i = 0; i < total_chunks; i++) {
+
+				const check_end = start + chunk_size
+				const end = (file_size - check_end < 0)
+					? file_size
+					: check_end;
+				const chunk = slice(file, start, end);
+
+				send({
+					chunk			: chunk,
+					chunk_index		: i,
+					total_chunks	: total_chunks,
+					start			: start,
+					end				: end,
+					file_size		: file_size,
+				});
+
+				start += chunk_size;
+				// if (end < file_size) {
+				// 	start += chunk_size;
+				// 	chunk_index++
+				// 	setTimeout(loop, 1);
+				// }
+			}
+		}
+
+		function slice(file, start, end) {
+			const slice = file.mozSlice
+				? file.mozSlice
+				: file.webkitSlice
+					? file.webkitSlice
+					: file.slice
+						? file.slice
+						: function(){};
+
+			return slice.bind(file)(start, end);
+		}
+
+		function send(options) {
+
+			const chunk			= options.chunk
+			const chunk_index	= options.chunk_index
+			const total_chunks	= options.total_chunks
+			const start			= options.start
+			const end			= options.end
+			const file_size		= options.file_size
+
+			const formdata = new FormData();
 			const xhr = new XMLHttpRequest();
 
-			// upload
-				// upload_loadstart (the upload begins)
-				xhr.upload.addEventListener("loadstart", upload_loadstart, false);
+			xhr.open('POST', api_url, true);
 
-				// upload_load file (the upload ends successfully)
+			const chunk_end = end-1;
+
+			// Content-Range: bytes 0-999999/4582884
+			const contentRange = "bytes "+ start +"-"+ chunk_end +"/"+ file_size;
+			xhr.setRequestHeader("Content-Range",contentRange);
+
+			// request header
+			xhr.setRequestHeader("X-File-Name", encodeURIComponent(file.name));
+
+				formdata.append('resource_type', resource_type);
+				formdata.append('file_name', file.name);
+				formdata.append('start', start);
+				formdata.append('end', end);
+				formdata.append('chunked', true);
+				formdata.append('chunk_index', chunk_index);
+				formdata.append('total_chunks', total_chunks);
+				formdata.append('file_to_upload', chunk);
+
+			// upload_load file (the upload ends successfully)
 				xhr.upload.addEventListener("load", upload_load, false);
 
-				// upload_error (the upload ends in error)
-				xhr.upload.addEventListener("error", upload_error, false);
+			// upload_loadstart (the upload begins)
+				xhr.upload.addEventListener("loadstart", upload_loadstart, false);
 
-				// upload_abort (the upload has been aborted by the user)
-				xhr.upload.addEventListener("abort", upload_abort, false);
-
-				// progress
-				xhr.upload.addEventListener("progress", upload_progress, false);
-
-			// hxr
-				// xhr_load (the XMLHttpRequest ends successfully)
+			// xhr_load (the XMLHttpRequest ends successfully)
 				xhr.addEventListener("load", xhr_load, false);
 
-				// open connection
-				xhr.open("POST", api_url, true);
+			// upload_error (the upload ends in error)
+				xhr.upload.addEventListener("error", upload_error, false);
 
-				// request header
-				xhr.setRequestHeader("X-File-Name", encodeURIComponent(file.name));
+			// upload_abort (the upload has been aborted by the user)
+				xhr.upload.addEventListener("abort", upload_abort, false);
 
-			// send data
-				xhr.send(fd);
+			// progress
+				xhr.upload.addEventListener("progress", upload_progress, false);
 
-	})
+			xhr.send(formdata);
+		}
+
+			process_file(file, resource_type)
+	// 	// XMLHttpRequest
+	// 		const xhr = new XMLHttpRequest();
+
+	// 		// upload
+	// 			// upload_loadstart (the upload begins)
+	// 			xhr.upload.addEventListener("loadstart", upload_loadstart, false);
+
+	// 			// upload_load file (the upload ends successfully)
+	// 			xhr.upload.addEventListener("load", upload_load, false);
+
+	// 			// upload_error (the upload ends in error)
+	// 			xhr.upload.addEventListener("error", upload_error, false);
+
+	// 			// upload_abort (the upload has been aborted by the user)
+	// 			xhr.upload.addEventListener("abort", upload_abort, false);
+
+	// 			// progress
+	// 			xhr.upload.addEventListener("progress", upload_progress, false);
+
+	// 		// hxr
+	// 			// xhr_load (the XMLHttpRequest ends successfully)
+	// 			xhr.addEventListener("load", xhr_load, false);
+
+	// 			// open connection
+	// 			xhr.open("POST", api_url, true);
+
+	// 			// request header
+	// 			xhr.setRequestHeader("X-File-Name", encodeURIComponent(file.name));
+
+	// 		// send data
+	// 			xhr.send(fd);
+
+	})//end promise
 }//end upload
 
 
@@ -368,6 +495,43 @@ service_upload.prototype.upload_file = async function(options) {
 
 	return api_response
 }//end upload_file
+
+
+
+
+/**
+* GET_SYSTEM_INFO
+* Call API to obtain useful system info
+*/
+service_upload.prototype.join_chunked_files = async function(options) {
+
+	// options
+		const file_data		= options.file_data
+		const files_chunked	= options.files_chunked
+
+	// rqo
+		const rqo = {
+			dd_api			: 'dd_utils_api',
+			action			: 'join_chunked_files_uploaded',
+			file_data		: file_data,
+			files_chunked	: files_chunked
+		}
+
+	// call to the API, fetch data and get response
+		return new Promise(function(resolve){
+
+			data_manager.request({
+				body : rqo
+			})
+			.then(function(response){
+				if(SHOW_DEVELOPER===true) {
+					dd_console("-> get_system_info API response:",'DEBUG',response);
+				}
+				resolve(response)
+			})
+		})
+}//end get_system_info
+
 
 
 
