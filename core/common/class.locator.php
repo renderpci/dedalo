@@ -566,7 +566,7 @@ class locator extends stdClass {
 			}
 		}else{
 			if (!isset($this->section_tipo) || !isset($this->section_id)) {
-				error_log("ERROR: wrong locator format detected. Please fix this ASAP : ".to_string($this));
+				debug_log(__METHOD__." ERROR: wrong locator format detected. Please fix this ASAP : ".to_string($this), logger::DEBUG);
 			}
 		}
 	}//end __destruct
