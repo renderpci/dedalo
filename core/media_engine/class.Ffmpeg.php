@@ -464,7 +464,7 @@ final class Ffmpeg {
 
 
 		if(SHOW_DEBUG===true) {
-			debug_log(__METHOD__." Creating AV version:\n ".to_string($command), logger::DEBUG);
+			debug_log(__METHOD__." Creating AV version:".PHP_EOL.$command, logger::DEBUG);
 		}
 		#$av_alternate_command_exc = exec_::exec_command($command);
 
@@ -815,7 +815,10 @@ final class Ffmpeg {
 		#$conform_header_command_exc = Exec::exec_command($command);
 
 		if(SHOW_DEBUG===true) {
-			debug_log(__METHOD__." Exec command conform headers: sudo -u _www $command .".to_string($result), logger::DEBUG);
+			debug_log(__METHOD__." Exec command conform headers:".PHP_EOL.
+				" sudo -u _www $command .".to_string($result),
+				logger::DEBUG
+			);
 		}
 
 		return $result;
@@ -864,7 +867,12 @@ final class Ffmpeg {
 			// $conform_header_command_exc = Exec::exec_command($command);
 
 		// debug
-			debug_log(__METHOD__." Executed command: $command . result: ".to_string($result), logger::DEBUG);
+			debug_log(__METHOD__." Executed command: ".
+				PHP_EOL.$command .
+				PHP_EOL." result: " .
+				to_string($result),
+				logger::DEBUG
+			);
 
 
 		return $result;
@@ -900,7 +908,7 @@ final class Ffmpeg {
 		# Processed command only fast start
 		#$command = "nice $qt_faststart_path $source_file $target_file";
 
-		debug_log(__METHOD__." command: $command ", logger::DEBUG);
+		debug_log(__METHOD__." command:".PHP_EOL. $command, logger::DEBUG);
 
 		if ($async) {
 			# Exec without wait finish
