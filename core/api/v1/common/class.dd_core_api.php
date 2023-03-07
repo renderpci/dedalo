@@ -1678,6 +1678,23 @@ final class dd_core_api {
 			$result->context	= $context;
 			$result->data		= $data;
 
+		// permissions check. Prevent mistaken data resolutions
+			$permissions = common::get_permissions($tipo, $section_tipo);
+			if (!empty($result->data) && $permissions<1 && $element->get_model()!=='menu') {
+
+				$result->data = [];
+
+				debug_log(__METHOD__.
+					' Catching non enough permissions call' .PHP_EOL.
+					' User: '. navigator::get_user_id().PHP_EOL.
+					' tipo: '. $tipo.PHP_EOL.
+					' section_tipo: '. $section_tipo.PHP_EOL.
+					' Permissions: ' .$permissions.PHP_EOL.
+					' rqo: '.to_string($rqo),
+					logger::ERROR
+				);
+			}
+
 		// debug
 			if(SHOW_DEBUG===true) {
 				// dump($context, ' context ++ '.to_string());
