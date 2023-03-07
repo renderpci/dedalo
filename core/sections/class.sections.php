@@ -76,6 +76,7 @@ class sections extends common {
 
 		// sqo. Use sqo.mode to define the search class manager to run your search
 			$search_query_object = $this->search_query_object;
+			// $search_query_object = clone($this->search_query_object);
 
 		// search
 			$search		= search::get_instance($search_query_object);
