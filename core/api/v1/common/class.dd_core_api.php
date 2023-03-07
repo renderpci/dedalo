@@ -1431,6 +1431,8 @@ final class dd_core_api {
 							}
 				}
 			}//end if (!empty($rqo->sqo))
+			// safe fix sqo limit when is not defined
+			$sqo->limit = $sqo->limit ?? ($mode==='edit' ? 1 : 10);
 
 		// DATA
 			switch ($action) {
