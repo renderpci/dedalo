@@ -23,6 +23,7 @@ export const render_tool_pdf_extractor = function() {
 /**
 * EDIT
 * Render node
+* @param object options
 * @return DOM node
 */
 render_tool_pdf_extractor.prototype.edit = async function (options) {

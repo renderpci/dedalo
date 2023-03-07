@@ -360,6 +360,10 @@ abstract class common {
 				);
 				return null;
 			}
+			// area model case
+			if ( strpos($model_name, 'area')===0 ) {
+				return null;
+			}
 			// non section model case
 			if ($model_name!=='section') {
 				debug_log(__METHOD__.

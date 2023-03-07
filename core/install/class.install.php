@@ -67,7 +67,8 @@ class install extends common {
 					// failed. Stop here
 					$dd_object->set_properties($properties);
 
-					debug_log(__METHOD__." Init test error: ".$init_test_response->msg.to_string(), logger::ERROR);
+					$msg = $init_test_response->msg ?? 'Unknown error msg';
+					debug_log(__METHOD__." Init test error: " . to_string($msg), logger::ERROR);
 
 					return $dd_object;
 				}
