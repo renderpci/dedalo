@@ -46,7 +46,7 @@ render_area_development.prototype.edit = async function(options) {
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper =	ui.area.build_wrapper_edit(self, {
-			content_data : content_data,
+			content_data : content_data
 			// buttons 	 : current_buttons
 		})
 		// set pointers
@@ -72,6 +72,7 @@ render_area_development.prototype.list = async function(options) {
 
 /**
 * CONTENT_DATA
+* @param object self
 * @return DOM node content_data
 */
 const get_content_data = function(self) {
@@ -131,6 +132,7 @@ const get_content_data = function(self) {
 * @param object item
 * @param object self
 * 	Instance of current area
+* @return DOM node container
 */
 const build_widget = (item, self) => {
 
@@ -339,19 +341,6 @@ const print_response = (container, api_response) => {
 
 	return container
 }//end print_response
-
-
-
-/**
-* BUTTONS
-* @return DOM node buttons
-*/
-	// const buttons = async function(self) {
-
-	// 	const buttons = []
-
-	// 	return buttons
-	// }//end buttons
 
 
 
