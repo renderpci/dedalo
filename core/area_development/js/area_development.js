@@ -109,22 +109,29 @@ area_development.prototype.build = async function(autoload=true) {
 					if (!context) {
 						console.error("context not found in api_response:", api_response);
 					}else{
-						self.context = context
+						self.context = context || {}
 					}
 				}
 				self.data		= self.datum.data.find(el => el.tipo===el.section_tipo)
-				self.widgets	= self.datum.context.filter(el => el.parent===self.tipo && el.typo==='widget')
+				// self.widgets	= self.datum.context.filter(el => el.parent===self.tipo && el.typo==='widget')
+				self.widgets	= self.data && self.data.datalist
+					? self.data.datalist
+					: []
 
 			// rebuild the request_config_object and rqo in the instance
 			// request_config_object
-				self.request_config_object	= self.context.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
+				self.request_config_object	= self.context
+					? self.context.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
+					: null
 
 			// rqo build
 				self.rqo = await self.build_rqo_show(self.request_config_object, 'get_data')
 		}//end if (autoload===true)
 
-		self.label = self.context.label
-
+	// label
+		self.label = self.context
+			? self.context.label
+			: 'Area Development'
 
 	// debug
 		if(SHOW_DEBUG===true) {
