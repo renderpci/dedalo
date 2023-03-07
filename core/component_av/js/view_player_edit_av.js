@@ -32,9 +32,6 @@ view_player_edit_av.render = async function(self, options) {
 	// options
 		const render_level = options.render_level || 'full'
 
-	// fix non value scenarios
-		// self.data.value = (self.data.value.length<1) ? [null] : self.data.value
-
 	// content_data
 		const content_data = get_content_data_player({
 			self					: self,

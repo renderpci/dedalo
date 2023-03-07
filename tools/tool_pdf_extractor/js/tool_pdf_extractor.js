@@ -13,8 +13,8 @@
 
 
 /**
-* TOOL_UPLOAD
-* Tool to translate contents from one language to other in any text component
+* TOOL_PDF_EXTRACTOR
+* Tool to convert PDF file content to an continuous string like transcription
 */
 export const tool_pdf_extractor = function () {
 
@@ -29,7 +29,7 @@ export const tool_pdf_extractor = function () {
 	this.caller			= null
 
 	return true
-}//end page
+}//end tool_pdf_extractor
 
 
 

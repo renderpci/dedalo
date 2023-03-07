@@ -949,7 +949,7 @@ export const ui = {
 				const tipo			= instance.tipo 	// like 'rsc26'
 				const section_tipo	= instance.section_tipo 	// like 'rsc26'
 				const mode			= instance.mode 	// like 'edit'
-				const view			= instance.view || instance.context.view || null
+				const view			= instance.view || null
 				const label			= instance.label 	// instance.context.label
 				const content_data	= items.content_data || null
 
@@ -1017,7 +1017,7 @@ export const ui = {
 					wrapper.classList.add(...ar_css)
 
 				// context css new way v6
-					if (instance.context.css) {
+					if (instance.context && instance.context.css) {
 						const selector = `${section_tipo}_${tipo}.edit`
 						set_element_css(selector, instance.context.css)
 						// add_class

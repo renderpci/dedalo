@@ -302,9 +302,11 @@ export const init_events_subscription = function(self) {
 			const observe_length = observe.length
 			for (let i = observe_length - 1; i >= 0; i--) {
 
+				// Ignore non client events (server events for example)
 				if(!observe[i].client){
 					continue;
 				}
+
 				const component_tipo	= observe[i].component_tipo // string target event component tipo
 				const event_name		= observe[i].client.event || null // string event name as 'update_data'
 				const perform			= observe[i].client.perform || null // string action to exec like 'update_data'
@@ -312,6 +314,7 @@ export const init_events_subscription = function(self) {
 					? perform.function
 					: null
 				if(perform && perform_function && typeof self[perform_function]==='function'){
+
 					// the event will listen the id_base ( section_tipo +'_'+ section_id +'_'+ component_tipo)
 					// the id_base is built when the component is instantiated
 					// this event can be fired by:
