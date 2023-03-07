@@ -39,6 +39,7 @@ render_edit_component_pdf.prototype.edit = async function(options) {
 		case 'mini':
 			return view_mini_pdf.render(self, options)
 
+		case 'player':
 		case 'viewer':
 			return view_viewer_pdf.render(self, options)
 

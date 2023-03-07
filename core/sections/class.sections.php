@@ -29,21 +29,21 @@ class sections extends common {
 
 	/**
 	* GET_INSTANCE
-    * Singleton pattern
-    * @param array|null $ar_locators
-    * @param object $search_query_object = null
-    * @param string $caller_tipo = null
-    * @param string $mode = list
-    * @param string $lang = DEDALO_DATA_NOLAN
-    * @return object $instance
-    * 	Instance of sections class
-    */
-    public static function get_instance(?array $ar_locators, object $search_query_object=null, string $caller_tipo=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN) {
+	* Singleton pattern
+	* @param array|null $ar_locators
+	* @param object $search_query_object = null
+	* @param string $caller_tipo = null
+	* @param string $mode = list
+	* @param string $lang = DEDALO_DATA_NOLAN
+	* @return object $instance
+	* 	Instance of sections class
+	*/
+	public static function get_instance(?array $ar_locators, object $search_query_object=null, string $caller_tipo=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN) {
 
 		$instance = new sections($ar_locators, $search_query_object, $caller_tipo, $mode, $lang);
 
-        return $instance;
-    }//end get_instance
+		return $instance;
+	}//end get_instance
 
 
 
@@ -76,6 +76,7 @@ class sections extends common {
 
 		// sqo. Use sqo.mode to define the search class manager to run your search
 			$search_query_object = $this->search_query_object;
+			// $search_query_object = clone($this->search_query_object);
 
 		// search
 			$search		= search::get_instance($search_query_object);

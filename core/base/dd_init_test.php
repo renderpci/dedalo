@@ -677,7 +677,7 @@
 			]);
 			// check file data
 			if (empty($cache_data)) {
-				$init_response->msg[]	= 'Warning: cache data stream fails. Check your DEDALO_CACHE_MANAGER config to fix it';
+				$init_response->msg[]	= 'Warning: cache data stream fails. Check your DEDALO_CACHE_MANAGER config or your PHP bin path (config_db.php PHP_BIN_PATH) to fix it';
 				$init_response->errors	= true;
 				debug_log(__METHOD__."  ".implode(PHP_EOL, $init_response->msg), logger::ERROR);
 
