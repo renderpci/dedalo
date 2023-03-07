@@ -322,13 +322,16 @@ export const init_events_subscription = function(self) {
 					// or the sort format with the id_base of the observable component:
 					// 		event_manager.publish(event +'_'+ self.id_base, data_to_send)
 					const id_base = self.section_tipo +'_'+ self.section_id +'_'+ component_tipo
+
 					// debug
-						// console.log('SUBSCRIBE [init_events_subscription] event:', event_name +'_'+ id_base);
-						// console.log("SUBSCRIBE info ",
-						// 	'self.id:', self.id,
-						// 	'id_base:', id_base,
-						// 	'perform:', perform
-						// );
+						if(SHOW_DEBUG===true) {
+							console.log('SUBSCRIBE [init_events_subscription] event:', event_name +'_'+ id_base);
+							// console.log("SUBSCRIBE info ",
+							// 	'self.id:', self.id,
+							// 	'id_base:', id_base,
+							// 	'perform:', perform
+							// );
+						}
 
 					self.events_tokens.push(
 						event_manager.subscribe(event_name +'_'+ id_base, self[perform_function].bind(self))
