@@ -2347,6 +2347,9 @@ abstract class common {
 			});
 			if (!empty($dedalo_request_config)) {
 
+				// fix missing type
+				$dedalo_request_config->type = $dedalo_request_config->type ?? 'main';
+
 				// sqo. Preserves filter across calls using session sqo if exists
 				$model	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 				$sqo_id	= ($model==='section') ? implode('_', ['section', $tipo]) : null; // cache key sqo_id
