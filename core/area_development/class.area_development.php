@@ -308,7 +308,7 @@ class area_development extends area_common {
 				$item->tipo		= $this->tipo;
 				$item->parent	= $this->tipo;
 				$item->label	= label::get_label('build_install_version');
-				$item->body		= 'Clone the current database '.DEDALO_DATABASE_CONN.' to "dedalo_install_v6" and export it to file: /install/db/dedalo_install_v6.pgsql.gz ';
+				$item->body		= 'Clone the current database '.DEDALO_DATABASE_CONN.' to "'.install::$db_install_name.'" and export it to file: /install/db/'.install::$db_install_name.'.pgsql.gz ';
 				$item->run[]	= (object)[
 					'fn'		=> 'init_form',
 					'options'	=> (object)[
