@@ -2463,7 +2463,7 @@ abstract class common {
 					// And sometimes the portals don't has section_list defined.
 					// In these cases get the properties from the current tipo
 					$properties = $this->get_properties();
-					if($model === 'section' && isset($properties->source->request_config)){
+					if($model==='section' && isset($properties->source->request_config)){
 						break;
 					}
 
