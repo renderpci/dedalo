@@ -25,12 +25,6 @@
 				true // add_rqo
 			);
 
-		// subcontext from element layout_map items
-			$ar_subcontext = $this->get_ar_widgets();
-			foreach ($ar_subcontext as $current_context) {
-				$context[] = $current_context;
-			}
-
 	}//end if($options->get_context===true)
 
 
@@ -43,10 +37,16 @@
 		// value
 			$value = []; // $this->get_data_items();
 
-		// subdata add
-			 $data = $value;
+		// item value
+			$item = $this->get_data_item($value);
 
-	}// end if $permissions > 0
+		// datalist (list of widgets)
+			$item->datalist	= $this->get_ar_widgets();
+
+		// data add
+			 $data[] = $item;
+
+	}//end if $permissions > 0
 
 
 

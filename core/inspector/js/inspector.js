@@ -81,7 +81,8 @@ inspector.prototype.init = async function(options) {
 				// component_history remove content id exists
 				load_component_history(self, null)
 				// selection info. Display current selected component label as 'Description'
-				self.selection_info_node.innerHTML = self.caller.label
+				self.selection_info_node.innerHTML	= self.caller.label
+				self.selection_info_node.caller		= self.caller
 			}
 		// activate_component (when user focus it in DOM)
 			self.events_tokens.push(
@@ -90,7 +91,8 @@ inspector.prototype.init = async function(options) {
 			function fn_activate_component(actived_component) {
 				self.actived_component = actived_component
 				// selection info. Display current selected component label as 'Description'
-				self.selection_info_node.innerHTML = actived_component.label
+				self.selection_info_node.innerHTML	= actived_component.label
+				self.selection_info_node.caller		= actived_component
 				// component_info. Render tipo, model, translatable, etc.
 				render_component_info(self, actived_component)
 				// component_history. Load component history changes list

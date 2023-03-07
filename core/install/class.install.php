@@ -6,10 +6,13 @@
 class install extends common {
 
 
+
 	/**
 	* CLASS VARS
+	* @var
 	*/
 		protected $id;
+		public static $db_install_name	= 'dedalo6_install';
 
 
 
@@ -64,7 +67,8 @@ class install extends common {
 					// failed. Stop here
 					$dd_object->set_properties($properties);
 
-					debug_log(__METHOD__." Init test error: ".$init_test_response->msg.to_string(), logger::ERROR);
+					$msg = $init_test_response->msg ?? 'Unknown error msg';
+					debug_log(__METHOD__." Init test error: " . to_string($msg), logger::ERROR);
 
 					return $dd_object;
 				}
@@ -135,7 +139,7 @@ class install extends common {
 	*/
 	public static function get_config() {
 
-		$db_install_name	= 'dedalo_install_v6';
+		$db_install_name	= install::$db_install_name;
 		$host_line			= (!empty(DEDALO_HOSTNAME_CONN)) ? ('-h '.DEDALO_HOSTNAME_CONN) : 'localhost';
 		$port_line			= (!empty(DEDALO_DB_PORT_CONN)) ? ('-p '.DEDALO_DB_PORT_CONN) : '';
 		$to_preserve_tld	= [
@@ -385,6 +389,12 @@ class install extends common {
 
 		// clean general tables ($to_clean_tables)
 			$call_response = install::clean_tables();
+			if ($call_response->result===false) {
+				return $call_response;
+			}
+
+		// create extensions (unaccent, pg_trgm ..)
+			$call_response = install::create_extensions();
 			if ($call_response->result===false) {
 				return $call_response;
 			}
@@ -1049,6 +1059,51 @@ class install extends common {
 
 		return $response;
 	}//end create_root_user
+
+
+
+	/**
+	* CREATE_EXTENSIONS
+	* Add Dédalo mandatory PostgreSQL extensions and functions
+	* to current install database
+	* @return object $response
+	*/
+	private static function create_extensions() {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed '.__METHOD__;
+
+		// short vars
+			$db_install_conn	= install::get_db_install_conn();
+
+
+		$sql = '
+			CREATE EXTENSION IF NOT EXISTS unaccent;
+			CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+			CREATE OR REPLACE FUNCTION f_unaccent(text)
+			RETURNS text AS
+			$func$
+			SELECT public.unaccent(\'public.unaccent\', $1)
+			$func$  LANGUAGE sql IMMUTABLE;
+		';
+		debug_log(__METHOD__." Executing DB query ".to_string($sql), logger::WARNING);
+		$result   = pg_query($db_install_conn, $sql);
+		if ($result===false) {
+			$msg = " Error on db execution (create_extensions): ".pg_last_error(DBi::_getConnection());
+			debug_log(__METHOD__.$msg, logger::ERROR);
+			$response->msg = $msg;
+			return $response;
+		}
+
+
+		$response->result	= true;
+		$response->msg		= 'OK. Request done '.__METHOD__;
+
+
+		return $response;
+	}//end create_extensions
 
 
 
@@ -2240,20 +2295,20 @@ class install extends common {
 	* GET_INSTALLED_HIERARCHIES
 	* @return object $response
 	*/
-	public static function get_installed_hierarchies() {
+		// public static function get_installed_hierarchies() {
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed '.__METHOD__;
+		// 	$response = new stdClass();
+		// 		$response->result	= false;
+		// 		$response->msg		= 'Error. Request failed '.__METHOD__;
 
 
-		$hierarchy_sections = area_thesaurus::get_all_hierarchy_sections();
+		// 	$hierarchy_sections = area_thesaurus::get_all_hierarchy_sections();
 
-		$response->result	= $hierarchy_sections;
-		$response->msg		= 'OK. Request done '.__METHOD__;
+		// 	$response->result	= $hierarchy_sections;
+		// 	$response->msg		= 'OK. Request done '.__METHOD__;
 
-		return $response;
-	}//end get_installed_hierarchies
+		// 	return $response;
+		// }//end get_installed_hierarchies
 
 
 
@@ -2360,7 +2415,7 @@ class install extends common {
 			if (defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS===$status) {
 
 				$response->result	= true;
-				$response->msg		= 'Ok. Dédalo status is already: '.$status;
+				$response->msg		= 'OK. Dédalo status is already: '.$status;
 				return $response;
 
 			}else{

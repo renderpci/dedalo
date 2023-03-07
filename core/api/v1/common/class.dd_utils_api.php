@@ -808,18 +808,18 @@ final class dd_utils_api {
 	* @return object $response
 	*/
 	public static function upload(object $rqo) : object {
-	// dump($rqo, ' rqo +--file upload---+ '.to_string());
+
 		// response
 			$response = new stdClass();
 				$response->result	= false;
 				$response->msg		= 'Error. '.label::get_label('error_on_upload_file');
 
-		// debug
-			debug_log(__METHOD__." --> received rqo: ".to_string($rqo), logger::DEBUG);
-
 		// rqo
 			$file_to_upload	= $rqo->file_to_upload ?? $rqo->upload;	// assoc array Added from PHP input '$_FILES'
 			$resource_type	= $rqo->resource_type; // string like 'tool_upload'
+			$chunked		= isset($rqo->chunked) // received as string 'true'|'false'
+				? (bool)json_decode($rqo->chunked)
+				: false;
 
 		// check for upload issues
 		try {
@@ -870,6 +870,7 @@ final class dd_utils_api {
 				// 	throw new RuntimeException('Exceeded filesize limit.');
 				// }
 
+
 			// chunked
 				$chunked	= json_decode($rqo->chunked);
 
@@ -879,15 +880,17 @@ final class dd_utils_api {
 				// extension
 				$extension	= strtolower( pathinfo($file_to_upload['name'], PATHINFO_EXTENSION) );
 
+
 				// Do not trust $file_to_upload['mime'] VALUE !!
 				// Check MIME Type by yourself.
+
 				$finfo		= new finfo(FILEINFO_MIME_TYPE);
 				$file_mime	= $finfo->file($file_to_upload['tmp_name']); // ex. string 'text/plain'
 
 			// name
 				$name = basename($file_to_upload['tmp_name']);
 				if($chunked){
-					$file_name 		= $rqo->file_name;
+					$file_name		= $rqo->file_name;
 					$total_chunks	= $rqo->total_chunks;
 					$chunk_index	= $rqo->chunk_index;
 					$extension		= 'blob';
@@ -896,7 +899,7 @@ final class dd_utils_api {
 				}
 
 			// CHECKING
-				//Check MIME
+				// Check MIME
 					$known_mime_types	= self::get_known_mime_types();
 					if (false===array_search(
 						$file_mime,
@@ -986,7 +989,7 @@ final class dd_utils_api {
 					$file_data->error			= $file_to_upload['error']; // like 0
 					$file_data->size			= $file_to_upload['size']; // like 878860 (bytes)
 					$file_data->extension		= $extension;
-					$file_data->chunked 		= $chunked;
+					$file_data->chunked			= $chunked;
 
 					if($chunked){
 						$file_data->total_chunks	= $total_chunks;
@@ -1039,36 +1042,39 @@ final class dd_utils_api {
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed';
 
-		// variables
+		// rqo variables
 			$files_chunked	= $rqo->files_chunked;
 			$file_data		= $rqo->file_data;
 
-		$chunk_total = count($files_chunked);
+		// file_path
+			$file_path = DEDALO_UPLOAD_TMP_DIR . '/' . $file_data->resource_type;
 
-		$file_path = DEDALO_UPLOAD_TMP_DIR . '/' . $file_data->resource_type;
+		// tmp_joined_file
+			$tmp_joined_file = 'tmp_'.$file_data->name;
 
-		$tmp_joined_file = 'tmp_'.$file_data->name;
 		// loop through temp files and grab the content
-		foreach ($files_chunked as $chunk_filename) {
+			foreach ($files_chunked as $chunk_filename) {
 
-			// copy chunk
-			$temp_file_path = "{$file_path}/{$chunk_filename}";
-			$chunk = file_get_contents($temp_file_path);
-			if ( empty($chunk) ){
-				$response->msg = "Chunks are uploading as empty strings.";
-				return $response;
+				// copy chunk
+				$temp_file_path	= "{$file_path}/{$chunk_filename}";
+				$chunk			= file_get_contents($temp_file_path);
+				if ( empty($chunk) ){
+					$response->msg = "Chunks are uploading as empty strings.";
+					debug_log(__METHOD__.PHP_EOL.$response->msg, logger::ERROR);
+					return $response;
+				}
+
+				// add chunk to main file
+				file_put_contents("{$file_path}/{$tmp_joined_file}", $chunk, FILE_APPEND | LOCK_EX);
+
+				// delete chunk
+				unlink($temp_file_path);
+				if ( file_exists($temp_file_path) ) {
+					$response->msg = "Your temp files could not be deleted.";
+					debug_log(__METHOD__.PHP_EOL.$response->msg, logger::ERROR);
+					return $response;
+				}
 			}
-
-			// add chunk to main file
-			file_put_contents("{$file_path}/{$tmp_joined_file}", $chunk, FILE_APPEND | LOCK_EX);
-
-			// delete chunk
-			unlink($temp_file_path);
-			if ( file_exists($temp_file_path) ) {
-				$response->msg = "Your temp files could not be deleted.";
-				return $response;
-			}
-		}
 
 		// extension
 			$extension = strtolower( pathinfo($tmp_joined_file, PATHINFO_EXTENSION) );
@@ -1091,6 +1097,7 @@ final class dd_utils_api {
 			$response->result		= true;
 			$response->file_data	= $file_data;
 			$response->msg			= 'OK. '.label::get_label('file_uploaded_successfully');
+
 
 		return $response;
 	}//end get_system_info

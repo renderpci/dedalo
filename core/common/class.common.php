@@ -360,6 +360,10 @@ abstract class common {
 				);
 				return null;
 			}
+			// area model case
+			if ( strpos($model_name, 'area')===0 ) {
+				return null;
+			}
 			// non section model case
 			if ($model_name!=='section') {
 				debug_log(__METHOD__.
@@ -2343,6 +2347,9 @@ abstract class common {
 			});
 			if (!empty($dedalo_request_config)) {
 
+				// fix missing type
+				$dedalo_request_config->type = $dedalo_request_config->type ?? 'main';
+
 				// sqo. Preserves filter across calls using session sqo if exists
 				$model	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 				$sqo_id	= ($model==='section') ? implode('_', ['section', $tipo]) : null; // cache key sqo_id
@@ -2456,7 +2463,7 @@ abstract class common {
 					// And sometimes the portals don't has section_list defined.
 					// In these cases get the properties from the current tipo
 					$properties = $this->get_properties();
-					if($model === 'section' && isset($properties->source->request_config)){
+					if($model==='section' && isset($properties->source->request_config)){
 						break;
 					}
 
