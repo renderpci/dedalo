@@ -211,7 +211,7 @@ export const upload = async function(options) {
 			}//end upload_loadstart
 
 		// upload_load.(finished)
-			const upload_load = function(evt) {
+			const upload_load = function() {
 				// response_msg.innerHTML = '<span class="blink">Processing file '+file.name+'</span>'
 				event_manager.publish('upload_file_status_'+id, {
 					value	: 100,
@@ -238,16 +238,26 @@ export const upload = async function(options) {
 			}//end upload_abort
 
 		// upload_progress
-			const upload_progress = function(evt) {
-				const percent = parseInt(evt.loaded/evt.total*100);
+			const loaded = []
+			const upload_progress = function(options) {
+
+				const event			= options.event
+				const chunk_index	= options.chunk_index
+				const total_chunks	= options.total_chunks
+
+				const current_chunk_loaded = parseInt(event.loaded/event.total*100);
+				loaded[chunk_index] = current_chunk_loaded;
+				const sum = loaded.reduce((first, second) => first + second);
+
+				const percent = Math.round(sum/total_chunks);
 				// info line show numerical percentage of load
-			    // progress_info.innerHTML = 'Upload progress: ' + percent + ' %'
-			    // progress line show graphic percentage of load
-			    // progress_line.value = percent
 			    event_manager.publish('upload_file_status_'+id, {
 					value	: percent,
 					msg		: `Upload progress: ${percent} %`
 				})
+				if(percent === 100){
+					upload_load()
+				}
 			}//end upload_progress
 
 		// xhr_load
@@ -314,106 +324,165 @@ export const upload = async function(options) {
 
 			}//end xhr_load
 
-		const process_file = function (file) {
+		// proces_file
+			const process_file = function (file) {
 
-			const file_size = file.size;
-			//break into 5 MB chunks fat minimum
-			const chunk_size	= 90*1024*1024;
-			let start			= 0;
-			const total_chunks	= Math.ceil(file_size / chunk_size);
+				const file_size		= file.size;
+				//break into xMB chunks
+				const size = DEDALO_UPLOAD_SERVICE_CHUNK_FILES || 80; // maximum size for chunks
+				const chunk_size	= size*1024*1024;
+				let start			= 0;
+				const total_chunks	= Math.ceil(file_size / chunk_size);
 
-			for (let i = 0; i < total_chunks; i++) {
+				for (let i = 0; i < total_chunks; i++) {
 
-				const check_end = start + chunk_size
-				const end = (file_size - check_end < 0)
-					? file_size
-					: check_end;
-				const chunk = slice(file, start, end);
+					const check_end = start + chunk_size
+					const end = (file_size - check_end < 0)
+						? file_size
+						: check_end;
+					const chunk = slice(file, start, end);
 
-				send({
-					chunk			: chunk,
-					chunk_index		: i,
-					total_chunks	: total_chunks,
-					start			: start,
-					end				: end,
-					file_size		: file_size,
-				});
+					send_chunk({
+						chunk			: chunk,
+						chunk_index		: i,
+						total_chunks	: total_chunks,
+						start			: start,
+						end				: end,
+						file_size		: file_size,
+					});
 
-				start += chunk_size;
-				// if (end < file_size) {
-				// 	start += chunk_size;
-				// 	chunk_index++
-				// 	setTimeout(loop, 1);
-				// }
+					start += chunk_size;
+				}
 			}
+
+		// slice the file
+			function slice(file, start, end) {
+				const slice = file.mozSlice
+					? file.mozSlice
+					: file.webkitSlice
+						? file.webkitSlice
+						: file.slice
+							? file.slice
+							: function(){};
+
+				return slice.bind(file)(start, end);
+			}
+
+		// send the chunk files to server
+			function send_chunk(options) {
+
+				const chunked 		= true
+				const chunk			= options.chunk
+				const chunk_index	= options.chunk_index
+				const total_chunks	= options.total_chunks
+				const start			= options.start
+				const end			= options.end
+				const file_size		= options.file_size
+
+				const formdata = new FormData();
+				const xhr = new XMLHttpRequest();
+
+				xhr.open('POST', api_url, true);
+
+				const chunk_end = end-1;
+
+				// Content-Range: bytes 0-999999/4582884
+				const contentRange = "bytes "+ start +"-"+ chunk_end +"/"+ file_size;
+				xhr.setRequestHeader("Content-Range",contentRange);
+
+				// request header
+				xhr.setRequestHeader("X-File-Name", encodeURIComponent(file.name));
+
+					formdata.append('resource_type', resource_type);
+					formdata.append('file_name', file.name);
+					formdata.append('chunked', chunked);
+					formdata.append('start', start);
+					formdata.append('end', end);
+					formdata.append('chunk_index', chunk_index);
+					formdata.append('total_chunks', total_chunks);
+					formdata.append('file_to_upload', chunk);
+
+				// upload_loadstart (the upload begins)
+					xhr.upload.addEventListener("loadstart", upload_loadstart, false);
+
+				// upload_error (the upload ends in error)
+					xhr.upload.addEventListener("error", upload_error, false);
+
+				// upload_abort (the upload has been aborted by the user)
+					xhr.upload.addEventListener("abort", upload_abort, false);
+
+				// progress
+					xhr.upload.addEventListener("progress", function(event){
+						 upload_progress({
+							event			: event,
+							chunk_index		: chunk_index,
+							total_chunks	: total_chunks
+						 })
+					}, false);
+
+				// xhr_load (the XMLHttpRequest ends successfully)
+					xhr.addEventListener("load", xhr_load, false);
+
+				xhr.send(formdata);
+			}
+
+		// send the entire file to server
+			function send(options) {
+
+				const chunked = false
+
+				const formdata = new FormData();
+				const xhr = new XMLHttpRequest();
+
+				xhr.open('POST', api_url, true);
+
+				// request header
+				xhr.setRequestHeader("X-File-Name", encodeURIComponent(file.name));
+
+					formdata.append('resource_type', resource_type);
+					formdata.append('file_name', file.name);
+					formdata.append('chunked', chunked);
+					formdata.append('file_to_upload', file);
+
+				// upload_load file (the upload ends successfully)
+					// xhr.upload.addEventListener("load", upload_load, false);
+
+				// upload_loadstart (the upload begins)
+					xhr.upload.addEventListener("loadstart", upload_loadstart, false);
+
+				// upload_error (the upload ends in error)
+					xhr.upload.addEventListener("error", upload_error, false);
+
+				// upload_abort (the upload has been aborted by the user)
+					xhr.upload.addEventListener("abort", upload_abort, false);
+
+				// progress
+					xhr.upload.addEventListener("progress", function(event){
+						 upload_progress({
+							event			: event,
+							chunk_index		: 1,
+							total_chunks	: 1
+						 })
+					}, false);
+
+				// xhr_load (the XMLHttpRequest ends successfully)
+					xhr.addEventListener("load", xhr_load, false);
+
+				xhr.send(formdata);
+			}
+
+		switch (true) {
+			case DEDALO_UPLOAD_SERVICE_CHUNK_FILES > 0:
+				process_file(file, resource_type)
+				break;
+
+			default:
+				send()
+				break;
 		}
 
-		function slice(file, start, end) {
-			const slice = file.mozSlice
-				? file.mozSlice
-				: file.webkitSlice
-					? file.webkitSlice
-					: file.slice
-						? file.slice
-						: function(){};
 
-			return slice.bind(file)(start, end);
-		}
 
-		function send(options) {
-
-			const chunk			= options.chunk
-			const chunk_index	= options.chunk_index
-			const total_chunks	= options.total_chunks
-			const start			= options.start
-			const end			= options.end
-			const file_size		= options.file_size
-
-			const formdata = new FormData();
-			const xhr = new XMLHttpRequest();
-
-			xhr.open('POST', api_url, true);
-
-			const chunk_end = end-1;
-
-			// Content-Range: bytes 0-999999/4582884
-			const contentRange = "bytes "+ start +"-"+ chunk_end +"/"+ file_size;
-			xhr.setRequestHeader("Content-Range",contentRange);
-
-			// request header
-			xhr.setRequestHeader("X-File-Name", encodeURIComponent(file.name));
-
-				formdata.append('resource_type', resource_type);
-				formdata.append('file_name', file.name);
-				formdata.append('start', start);
-				formdata.append('end', end);
-				formdata.append('chunked', true);
-				formdata.append('chunk_index', chunk_index);
-				formdata.append('total_chunks', total_chunks);
-				formdata.append('file_to_upload', chunk);
-
-			// upload_load file (the upload ends successfully)
-				xhr.upload.addEventListener("load", upload_load, false);
-
-			// upload_loadstart (the upload begins)
-				xhr.upload.addEventListener("loadstart", upload_loadstart, false);
-
-			// xhr_load (the XMLHttpRequest ends successfully)
-				xhr.addEventListener("load", xhr_load, false);
-
-			// upload_error (the upload ends in error)
-				xhr.upload.addEventListener("error", upload_error, false);
-
-			// upload_abort (the upload has been aborted by the user)
-				xhr.upload.addEventListener("abort", upload_abort, false);
-
-			// progress
-				xhr.upload.addEventListener("progress", upload_progress, false);
-
-			xhr.send(formdata);
-		}
-
-			process_file(file, resource_type)
 	// 	// XMLHttpRequest
 	// 		const xhr = new XMLHttpRequest();
 
