@@ -871,18 +871,18 @@ final class dd_utils_api {
 				// }
 
 			// chunked
-				$chunked = json_decode($rqo->chunked);
+				$chunked	= json_decode($rqo->chunked);
 
-			// filename
-				$file_name 		= $file_to_upload['name'];
+				// filename
+				$file_name	= $file_to_upload['name'];
 
-			// extension
-				$extension = strtolower( pathinfo($file_to_upload['name'], PATHINFO_EXTENSION) );
+				// extension
+				$extension	= strtolower( pathinfo($file_to_upload['name'], PATHINFO_EXTENSION) );
 
-			// Do not trust $file_to_upload['mime'] VALUE !!
-			// Check MIME Type by yourself.
-				$finfo				= new finfo(FILEINFO_MIME_TYPE);
-				$file_mime			= $finfo->file($file_to_upload['tmp_name']); // ex. string 'text/plain'
+				// Do not trust $file_to_upload['mime'] VALUE !!
+				// Check MIME Type by yourself.
+				$finfo		= new finfo(FILEINFO_MIME_TYPE);
+				$file_mime	= $finfo->file($file_to_upload['tmp_name']); // ex. string 'text/plain'
 
 			// name
 				$name = basename($file_to_upload['tmp_name']);
