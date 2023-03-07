@@ -368,6 +368,12 @@ const render_selection_info = function(self) {
 		// fix pointer
 		self.selection_info_node = selection_info_node
 
+		selection_info_node.addEventListener('click', function(e) {
+			if (selection_info_node.caller) {
+				console.log('node info caller:', selection_info_node.caller);
+			}
+		})
+
 
 	return selection_info_node
 }//end render_selection_info
