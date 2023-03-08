@@ -1431,10 +1431,6 @@ final class dd_core_api {
 							}
 				}
 			}//end if (!empty($rqo->sqo))
-			// safe fix sqo limit when is not defined in edit mode
-			if ($mode==='edit') {
-				$sqo->limit = $sqo->limit ?? 1;
-			}
 
 		// DATA
 			switch ($action) {
