@@ -897,6 +897,9 @@ search.prototype.get_search_group_operator = function(search_group) {
 			caller_instance.rqo.sqo.filter_by_locators	= filter_by_locators
 			caller_instance.rqo.sqo.children_recursive	= json_query_obj.children_recursive || false
 
+			caller_instance.request_config_object.sqo = caller_instance.rqo.sqo
+
+
 
 		switch (caller_instance.model) {
 			case 'area_thesaurus':
@@ -927,10 +930,11 @@ search.prototype.get_search_group_operator = function(search_group) {
 							// section_node.classList.remove('loading')
 						// refresh section paginator
 							if (paginator_node) {
-								caller_instance.paginator.refresh()
-								.then(function(){
-									paginator_node.classList.remove('hide')
-								})
+								// caller_instance.paginator.refresh()
+								// .then(function(){
+								// 	paginator_node.classList.remove('hide')
+								// })
+								paginator_node.classList.remove('hide')
 							}
 					})
 
