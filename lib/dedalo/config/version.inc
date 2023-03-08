@@ -2836,6 +2836,9 @@
 		Valencia 17-02-2023T10:40:00
 		Fixed tool_posterframe issues with aspect video aspect calculations from FFMEG
 		Fixed Ontology link issue (added final slash)
+		Valencia 01-03-2023T21:15:00
+		Fixed Ontology compatibility issues with v5
+		Added basic support to v6 GIT version in build_version_from_git_master
 
 
 	[/HISTORY]
@@ -2867,7 +2870,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '17-02-2023T10:40:00');
+	define('DEDALO_BUILD'	, '01-03-2023T21:15:00');
 
 
 

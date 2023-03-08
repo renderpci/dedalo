@@ -96,13 +96,33 @@ function build_version_from_git_master($json_data) : object {
 		$response->result	= false;
 		$response->msg		= '';
 
-	// rsync trigger code HEAD from master git
-		function update_head_code(object $response) : string {
+	// options
+		$version = $json_data->version;
+		if (empty($version)) {
+			$response->msg = 'Version is mandatory!';
+			return $response;
+		}
 
-			$source		= DEDALO_CODE_SERVER_GIT_DIR;
-			$target		= DEDALO_CODE_FILES_DIR .'/dedalo5_code.zip';
-			// $command	= "cd $source; git archive --format=zip --prefix=dedalo5_code/ HEAD > $target 2>&1"; // @see https://git-scm.com/docs/git-archive
-			$command	= "cd $source; git archive --verbose --format=zip --prefix=dedalo5_code/ HEAD > $target ";
+	// rsync trigger code HEAD from master git
+		function update_head_code(object $response, int $version) : string {
+
+			if ($version==6) {
+				// source
+				$source		= DEDALO_6_CODE_SERVER_GIT_DIR;
+				// target
+				$target		= DEDALO_6_CODE_FILES_DIR .'/dedalo'.$version.'_code.zip';
+				// command
+				$command	= "cd $source; git archive --verbose --format=zip --prefix=dedalo{$version}_code/ v6_developer > $target ";
+
+			}else{
+				// source
+				$source		= DEDALO_CODE_SERVER_GIT_DIR;
+				// target
+				$target		= DEDALO_CODE_FILES_DIR .'/dedalo'.$version.'_code.zip';
+				// command
+				// $command	= "cd $source; git archive --format=zip --prefix=dedalo5_code/ HEAD > $target 2>&1"; // @see https://git-scm.com/docs/git-archive
+				$command	= "cd $source; git archive --verbose --format=zip --prefix=dedalo{$version}_code/ HEAD > $target ";
+			}
 
 			$msg = "Called Dédalo update_head_code with command: " .PHP_EOL. to_string($command);
 			debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);
@@ -122,7 +142,7 @@ function build_version_from_git_master($json_data) : object {
 	// try exec
 		try{
 
-			$output = update_head_code($response);
+			$output = update_head_code($response, $version);
 
 			# Append msg
 			$msg = PHP_EOL ."update_head_code shell_exec output: ". PHP_EOL. to_string($output);
