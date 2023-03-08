@@ -127,23 +127,21 @@ tool_lang.prototype.build = async function(autoload=false) {
 				'tool_lang_target_lang',
 				'status'
 			)
-			if (tool_lang_target_lang_object) {
-				self.target_lang = tool_lang_target_lang_object.value
-
-				self.target_component = await load_component({
-					self 			: self,
-					model			: main_element_ddo.model,
-					mode			: main_element_ddo.mode,
-					tipo			: main_element_ddo.tipo,
-					section_tipo	: main_element_ddo.section_tipo,
-					section_lang	: main_element_ddo.section_lang,
-					lang			: self.target_lang,
-					type			: main_element_ddo.type,
-					section_id		: main_element_ddo.section_id,
-					id_variant		: 'target_component'
-				})
-			}
-
+			self.target_lang = (tool_lang_target_lang_object)
+				? tool_lang_target_lang_object.value
+				: self.lang
+			self.target_component = await load_component({
+				self 			: self,
+				model			: main_element_ddo.model,
+				mode			: main_element_ddo.mode,
+				tipo			: main_element_ddo.tipo,
+				section_tipo	: main_element_ddo.section_tipo,
+				section_lang	: main_element_ddo.section_lang,
+				lang			: self.target_lang,
+				type			: main_element_ddo.type,
+				section_id		: main_element_ddo.section_id,
+				id_variant		: 'target_component'
+			})
 
 	} catch (error) {
 		self.error = error

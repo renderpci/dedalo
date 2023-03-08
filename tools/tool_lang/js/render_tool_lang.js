@@ -180,17 +180,20 @@ const get_content_data_edit = async function(self) {
 		// target component
 		// if the target component has the same lang than source component block the edition to avoid errors
 		// ck-editor can not manage 2 instances of the same component in edit
-			const read_only = (self.target_lang === self.source_lang)
-				? true
-				: false
-			self.target_component.show_interface.read_only = read_only
-			const target_component_node = await self.target_component.render()
-			const target_component_container = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'target_component_container',
-				parent			: right_block
-			})
-			target_component_container.appendChild(target_component_node)
+			if (self.target_component) {
+				const read_only = (self.target_lang === self.source_lang)
+					? true
+					: false
+					console.log('self.target_component:', self.target_component);
+				self.target_component.show_interface.read_only = read_only
+				const target_component_node = await self.target_component.render()
+				const target_component_container = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'target_component_container',
+					parent			: right_block
+				})
+				target_component_container.appendChild(target_component_node)
+			}
 
 	// buttons container
 		const buttons_container = ui.create_dom_element({
