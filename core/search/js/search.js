@@ -897,8 +897,9 @@ search.prototype.get_search_group_operator = function(search_group) {
 			caller_instance.rqo.sqo.filter_by_locators	= filter_by_locators
 			caller_instance.rqo.sqo.children_recursive	= json_query_obj.children_recursive || false
 
-			caller_instance.request_config_object.sqo = caller_instance.rqo.sqo
-
+		// request_config_object. Copy rqo.sqo pagination values to request_config_object
+			caller_instance.request_config_object.sqo.limit		= caller_instance.rqo.sqo.limit
+			caller_instance.request_config_object.sqo.offset	= caller_instance.rqo.sqo.offset
 
 
 		switch (caller_instance.model) {
