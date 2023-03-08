@@ -2506,7 +2506,17 @@ abstract class common {
 				: 0;
 			$limit	= isset($this->pagination->limit)
 				? $this->pagination->limit
-				: (function() use($model, $mode){
+				: (function() use($model, $mode, $properties){
+					// from properties try
+					if (isset($properties->source) && isset($properties->source->request_config)) {
+						$found = array_find($properties->source->request_config, function($el){
+							return isset($el->api_engine) && $el->api_engine==='dedalo';
+						});
+						if (!empty($found) && isset($found->sqo) && isset($found->sqo->limit)) {
+							return $found->sqo->limit;
+						}
+					}
+
 					if ($model==='section') {
 						return $mode==='list' ? 10 : 1;
 					}else{

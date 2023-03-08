@@ -78,6 +78,31 @@ class sections extends common {
 			$search_query_object = $this->search_query_object;
 			// $search_query_object = clone($this->search_query_object);
 
+		// limit check
+			if (!isset($search_query_object->limit)) {
+
+				if ($this->model==='edit') {
+
+					$search_query_object->limit = 1;
+
+				}else{
+
+					$section = section::get_instance(
+						null, // string|null section_id
+						$this->caller_tipo // string section_tipo
+					);
+					$request_config = $section->build_request_config();
+					$found = array_find($request_config, function($el){
+						return isset($el->api_engine) && $el->api_engine==='dedalo';
+					});
+					if (!empty($found)) {
+						if (isset($found->sqo) && isset($found->sqo->limit)) {
+							$search_query_object->limit = $found->sqo->limit;
+						}
+					}
+				}
+			}
+
 		// search
 			$search		= search::get_instance($search_query_object);
 			$rows_data	= $search->search();
