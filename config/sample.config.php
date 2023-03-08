@@ -476,7 +476,7 @@
 	// values supported:
 	// bool: false -> the files will not chunked
 	// int: 95 -> files will be chunked in xMB fragments. 95MB files
-	define('DEDALO_UPLOAD_SERVICE_CHUNK_FILES'			, false); // 5 = 5MB
+	define('DEDALO_UPLOAD_SERVICE_CHUNK_FILES', false); // 5 = 5MB
 
 
 

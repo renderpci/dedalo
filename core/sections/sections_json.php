@@ -134,7 +134,7 @@
 					);
 
 				// permissions check
-					$permissions	= $section->get_section_permissions();
+					$permissions = $section->get_section_permissions();
 					if($permissions<1){
 						continue;
 					}
