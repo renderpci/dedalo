@@ -113,17 +113,17 @@
 				$section_id		= $current_record->section_id;
 
 				// load data into JSON_RecordObj_matrix (used by section to get his data)
-				$matrix_table			= common::get_matrix_table_from_tipo($section_tipo);
-				$JSON_RecordObj_matrix	= JSON_RecordObj_matrix::get_instance(
-					$matrix_table,
-					$section_id,
-					$section_tipo,
-					true // bool cache
-				);
-				$datos = $current_record->datos ?? null;
-				if (!is_null($datos)) {
-					$JSON_RecordObj_matrix->set_dato($datos);
-				}
+					$matrix_table			= common::get_matrix_table_from_tipo($section_tipo);
+					$JSON_RecordObj_matrix	= JSON_RecordObj_matrix::get_instance(
+						$matrix_table,
+						$section_id,
+						$section_tipo,
+						true // bool cache
+					);
+					$datos = $current_record->datos ?? null;
+					if (!is_null($datos)) {
+						$JSON_RecordObj_matrix->set_dato($datos);
+					}
 
 				// section instance
 					$section = $section_class::get_instance(
