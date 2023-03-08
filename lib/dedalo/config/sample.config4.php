@@ -465,7 +465,12 @@
 # UPLOADER CONFIG
 	define('DEDALO_UPLOADER_DIR',	DEDALO_ROOT		. '/lib/jquery/jQuery-File-Upload');
 	define('DEDALO_UPLOADER_URL',	DEDALO_ROOT_WEB	. '/lib/jquery/jQuery-File-Upload');
-
+	// DEDALO_UPLOAD_SERVICE_CHUNK_FILES
+	// split files into chunks before upload at max size defined
+	// values supported:
+	// bool: false -> the files will not chunked
+	// int: 95 -> files will be chunked in xMB fragments. 95MB files
+	define('DEDALO_UPLOAD_SERVICE_CHUNK_FILES'			, false); // 5 = 5MB
 
 
 ################################################################
