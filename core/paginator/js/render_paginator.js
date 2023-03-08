@@ -48,6 +48,17 @@ render_paginator.prototype.edit = async function(options) {
 		// set pointers
 		wrapper.content_data = content_data
 
+		if(SHOW_DEBUG===true) {
+			wrapper.addEventListener('click', function(e) {
+				if (e.altKey) {
+					e.stopPropagation()
+					e.preventDefault()
+					console.log('/// selected instance:', self);
+					return
+				}
+			})
+		}
+
 
 	return wrapper
 }//end edit
