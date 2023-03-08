@@ -1666,7 +1666,7 @@ final class dd_core_api {
 			$result->data		= $data;
 
 		// permissions check. Prevent mistaken data resolutions
-			$permissions = common::get_permissions($tipo, $section_tipo);
+			$permissions = common::get_permissions($section_tipo, $tipo);
 			if (!empty($result->data) && $permissions<1 && $element->get_model()!=='menu') {
 
 				$result->data = [];
