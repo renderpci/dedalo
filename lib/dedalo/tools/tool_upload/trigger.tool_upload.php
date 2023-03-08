@@ -8,7 +8,7 @@ require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.Ffmpeg.php');
 
 
 // set vars
-	$vars = array('mode','SID','quality','tipo','parent','section_tipo');
+	$vars = array('mode','SID','quality','tipo','parent','section_tipo','chunked');
 		foreach($vars as $name) $$name = common::setVar($name);
 
 
@@ -57,6 +57,21 @@ require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.Ffmpeg.php');
 				exit();
 			}
 
+			$chunked = json_decode($chunked);
+
+			$options = new stdClass();
+				$options->quality = $quality;
+				$options->chunked = $chunked;
+
+
+			if($chunked === true){
+				$options->file_name		= $_POST['file_name'];
+				$options->start			= $_POST['start'];
+				$options->end			= $_POST['end'];
+				$options->chunk_index	= $_POST['chunk_index'];
+				$options->total_chunks	= $_POST['total_chunks'];
+			}
+
 		// Write session to unlock session file
 			session_write_close();
 			debug_log(__METHOD__." Uploading file ($SID) - Session is write and closed ".to_string(), logger::DEBUG);
@@ -74,7 +89,7 @@ require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.Ffmpeg.php');
 
 		// upload_file response
 			$tool_upload	= new tool_upload($component_obj);
-			$response		= $tool_upload->upload_file($quality);
+			$response		= $tool_upload->upload_file($options);
 
 		// Save component to force to update component 'valor_list'
 			// $component_obj->Save(); // (!) already saved by upload_file method
@@ -83,6 +98,41 @@ require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.Ffmpeg.php');
 		echo json_encode($response);
 		exit();
 	}//end upload_file
+
+
+	if( $mode === 'join_chunked_files' ) {
+
+		$vars_string = file_get_contents('php://input');
+		$vars = json_decode($vars_string);
+
+		//vars
+		$tipo			= $vars->tipo;
+		$parent			= $vars->parent;
+		$section_tipo	= $vars->section_tipo;
+
+		// component
+			$component_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+			$component_obj	= component_common::get_instance(
+				$component_name,
+				$tipo,
+				$parent,
+				'edit',
+				DEDALO_DATA_LANG,
+				$section_tipo
+			);
+
+		$options = new stdClass();
+			$options->file_data		= $vars->file_data;
+			$options->files_chunked	= $vars->files_chunked;
+
+		$tool_upload	= new tool_upload($component_obj);
+		$response		= $tool_upload->join_chunked_files_uploaded($options);
+
+		echo json_encode($response);
+		exit();
+	}//end //end upload_file
+
+
 
 
 

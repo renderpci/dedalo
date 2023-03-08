@@ -41,7 +41,7 @@ class tool_upload extends tool_common {
 	* @param $quality string
 	* @return object $response
 	*/
-	public function upload_file( $quality ) {
+	public function upload_file( $options ) {
 
 		$start_time = start_time();
 
@@ -50,6 +50,8 @@ class tool_upload extends tool_common {
 			$response->html 			 = null;
 			$response->update_components = [];
 
+		$quality = $options->quality;
+		$chunked = $options->chunked;
 
 		# Current component name
 		$component_name = get_class( $this->component_obj );
@@ -105,13 +107,28 @@ class tool_upload extends tool_common {
 
 
 		// verificamos si el archivo es válido
-			$f_name 		= $_FILES["fileToUpload"]['name'];
-			$f_type 		= $_FILES["fileToUpload"]['type'];
-			$f_temp_name	= $_FILES["fileToUpload"]['tmp_name'];
-			$f_size			= $_FILES["fileToUpload"]['size'];
-			$f_error		= $_FILES["fileToUpload"]['error'];
+			$f_name 		= $_FILES["file_to_upload"]['name'];
+			$f_type 		= $_FILES["file_to_upload"]['type'];
+			$f_temp_name	= $_FILES["file_to_upload"]['tmp_name'];
+			$f_size			= $_FILES["file_to_upload"]['size'];
+			$f_error		= $_FILES["file_to_upload"]['error'];
 			$f_error_text 	= tool_upload::error_number_to_text($f_error);
 			$f_extension 	= strtolower(pathinfo($f_name, PATHINFO_EXTENSION));
+
+
+		// nombre_archivo : nombre final del archivo
+			$nombre_archivo = $SID . '.' . $f_extension ;
+
+			if($chunked === true){
+				$name 					= basename($f_temp_name);
+				$f_name					= $options->file_name;
+				$total_chunks			= $options->total_chunks;
+				$chunk_index			= $options->chunk_index;
+				$f_extension			= 'blob';
+				$nombre_archivo			= "{$chunk_index}-{$name}.{$f_extension}";
+				$file_mime				= 'application/octet-stream';
+				$ar_allowed_extensions	= ['blob'];
+			}
 
 		// file_obj f_name fix
 			$this->file_obj->f_name = $f_name;
@@ -121,9 +138,6 @@ class tool_upload extends tool_common {
 			if ($is_valid_extension !== true) {
 				return (string)$is_valid_extension; // msg html
 			}
-
-		// nombre_archivo : nombre final del archivo
-			$nombre_archivo = $SID . '.' . $f_extension ;
 
 		# LOG UPLOAD BEGINS
 			$tipo 			= $this->component_obj->get_tipo();
@@ -152,7 +166,11 @@ class tool_upload extends tool_common {
 
 		# Verificamos que NO hay ya un fichero anterior con ese nombre. Si lo hay, lo renombramos y movemos a deleted files
 		# Recorremos todas las extensiones válidas (recordar que los ficheros de tipo 'tif', etc. se guardan también)
-		$this->rename_old_files_if_exists( $SID, $folder_path, $ar_allowed_extensions );
+		if($chunked === false){
+			$this->rename_old_files_if_exists( $SID, $folder_path, $ar_allowed_extensions );
+		}
+
+
 
 		# Add / if need
 		if(substr($folder_path, -1)!='/') $folder_path .= '/';
@@ -255,7 +273,6 @@ class tool_upload extends tool_common {
 				}
 			$html .= "</div>";
 
-			$response->result 	= 0; # result set to false
 
 			$time_sec 	= exec_time_unit($start_time,'sec');
 
@@ -279,6 +296,10 @@ class tool_upload extends tool_common {
 						'f_error'			=> $f_error
 					]
 				);
+			$response->result 	= 0; # result set to false
+			$response->html		= $html;
+
+			return $response;
 
 		#
 		# OK : FILE FOUND
@@ -286,7 +307,59 @@ class tool_upload extends tool_common {
 
 			$fileUploadOK = 1;	# OK
 
-			# AJUSTAMOS LOS PERMISOS
+			$file_data = new stdClass();
+				$file_data->name			= $f_name; // like 'My Picture 1.jpg'
+				$file_data->tmp_dir			= $folder_path; // like DEDALO_MEDIA_PATH . '/upload/service_upload/tmp'
+				$file_data->tmp_name		= $nombre_archivo; // like 'phpv75h2K'
+				$file_data->error			= $f_error; // like 0
+				$file_data->size			= $f_size; // like 878860 (bytes)
+				$file_data->extension		= $f_extension;
+				$file_data->chunked			= $chunked;
+				$file_data->file_size_mb	= $file_size_mb;
+				$file_data->component_name	= $component_name;
+				$file_data->SID				= $SID;
+				$file_data->quality			= $quality;
+
+				if($chunked){
+					$file_data->total_chunks	= $total_chunks;
+					$file_data->chunk_index		= $chunk_index;
+				}
+		}
+
+		// Save component refresh 'valor_list'
+			$this->component_obj->Save();
+
+		$response->result		= 1; # result set to true
+		$response->file_data	= $file_data;
+		$response->html			= ($chunked=== false)
+			? $this->get_response_html($file_data)
+			: null;
+
+		return $response;
+	}//end upload_file
+
+
+	/**
+	* GET_RESPONSE_HTML
+	* @return
+	*/
+	public function get_response_html($file_data) {
+
+		$start_time = start_time();
+
+		$file_size_mb	= $file_data->file_size_mb;
+		$component_name	= $file_data->component_name;
+		$SID			= $file_data->SID;
+		$quality		= $file_data->quality;
+		$f_error		= $file_data->error;
+		$nombre_archivo = $file_data->name;
+
+		$tipo 			= $this->component_obj->get_tipo();
+		$parent 		= $this->component_obj->get_parent();
+
+
+		$html = '';
+		# AJUSTAMOS LOS PERMISOS
 			/*
 				try{
 					$ajust_permissions = chmod($this->file_obj->uploaded_file_path, 0775);
@@ -318,7 +391,7 @@ class tool_upload extends tool_common {
 
 				#
 				# POSTPROCESSING_FILE : Procesos a activar tras la carga del archivo
-				$postprocessing_result = $this->postprocessing_file($component_name, $SID, $quality, $response) ?? '';
+				$postprocessing_result = $this->postprocessing_file($component_name, $SID, $quality) ?? '';
 				# POSTPROCESSING_FILE NOTIFICATIONS
 				if ( strpos( strtolower($postprocessing_result), 'error')!==false || strpos( strtolower($postprocessing_result), 'exception')!==false ) {
 					$html .= "<div class=\"warning\">";
@@ -335,7 +408,6 @@ class tool_upload extends tool_common {
 			$html .= " <a class=\"cerrar_link\" onclick=\"tool_upload.cerrar()\">".label::get_label('cerrar')."</a>";
 			$html .= "\n</div>";
 
-			$response->result 	= 1; # result set to true
 
 			$time_sec 	= exec_time_unit($start_time,'sec');
 
@@ -358,16 +430,112 @@ class tool_upload extends tool_common {
 							"f_error"			=> $f_error
 						)
 				);
-		}
 
-		// Save component refresh 'valor_list'
-			$this->component_obj->Save();
+	}//end get_response_html
 
-		$response->html = $html;
+
+
+	/**
+	* JOIN_CHUNKED_FILES_UPLOADED
+	* @param object $options
+	* @return object response
+	*/
+	public function join_chunked_files_uploaded(object $options) : object {
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed';
+
+		// options variables
+			$files_chunked	= $options->files_chunked;
+			$file_data		= $options->file_data;
+			// $tmp_dir		= $options->tmp_dir;
+
+		// file_path
+			$file_path	= $file_data->tmp_dir; //$tmp_dir . '/' . $file_data->resource_type;
+			$SID		= $file_data->SID;
+			$quality	= $file_data->quality;
+			$extension	= strtolower( pathinfo($file_data->name, PATHINFO_EXTENSION) );
+		// tmp_joined_file
+		// tmp_joined_file : nombre final del archivo
+			$joined_filename = $SID . '.' . $extension ;
+			// $joined_filename = 'tmp_'.$file_data->name;
+
+		// component_name
+			$component_name = $file_data->component_name;
+
+		// set quality
+			$this->component_obj->set_quality($quality);
+			$folder_path	= $this->component_obj->get_target_dir();
+		// check extension
+		// main vars : Fix
+			switch ($component_name) {
+				case 'component_av' :
+						$ar_allowed_extensions	= unserialize(DEDALO_AV_EXTENSIONS_SUPPORTED);
+						break;
+				case 'component_image' :
+						$ar_allowed_extensions 	= unserialize(DEDALO_IMAGE_EXTENSIONS_SUPPORTED);
+						break;
+				case 'component_svg' :
+						$ar_allowed_extensions 	= unserialize(DEDALO_SVG_EXTENSIONS_SUPPORTED);
+						break;
+				case 'component_pdf' :
+						$ar_allowed_extensions 	= unserialize(DEDALO_PDF_EXTENSIONS_SUPPORTED);
+
+						break;
+			}
+
+		$this->rename_old_files_if_exists( $SID, $folder_path, $ar_allowed_extensions );
+
+		// loop through temp files and grab the content
+			foreach ($files_chunked as $chunk_filename) {
+
+				// copy chunk
+				$temp_file_path	= "{$file_path}/{$chunk_filename}";
+				$chunk			= file_get_contents($temp_file_path);
+				if ( empty($chunk) ){
+					$response->msg = "Chunks are uploading as empty strings.";
+					debug_log(__METHOD__.PHP_EOL.$response->msg, logger::ERROR);
+					return $response;
+				}
+
+				// add chunk to main file
+				file_put_contents("{$file_path}/{$joined_filename}", $chunk, FILE_APPEND | LOCK_EX);
+
+				// delete chunk
+				unlink($temp_file_path);
+				if ( file_exists($temp_file_path) ) {
+					$response->msg = "Your temp files could not be deleted.";
+					debug_log(__METHOD__.PHP_EOL.$response->msg, logger::ERROR);
+					return $response;
+				}
+			}
+
+			$this->file_obj->uploaded_file_path	= "{$file_path}/{$joined_filename}";
+			$this->file_obj->f_name				= $joined_filename;
+
+		// check extension
+			if (!in_array($extension, $ar_allowed_extensions)) {
+				$response->msg .= "Error. Invalid file extension ".$extension;
+				debug_log(__METHOD__.PHP_EOL.$response->msg, logger::ERROR);
+				return $response;
+			}
+
+		// set the file values
+			$file_data->tmp_name		= $joined_filename; // like 'phpv75h2K'
+			$file_data->extension		= $extension;
+
+		// response
+		// all is OK response
+			$response->result		= 1; # result set to true
+			$response->html			= $this->get_response_html($file_data);
+			$response->file_data	= $file_data;
+			$response->msg			= 'OK. '.label::get_label('file_uploaded_successfully');
 
 
 		return $response;
-	}//end upload_file
+	}//end get_system_info
+
 
 
 
@@ -510,7 +678,7 @@ class tool_upload extends tool_common {
 	* @param $SID string
 	* @param $quality string
 	*/
-	protected function postprocessing_file($component_name, $SID, $quality, $response) {
+	protected function postprocessing_file($component_name, $SID, $quality) {
 		$result=null;
 
 		switch ($component_name) {
