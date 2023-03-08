@@ -19,21 +19,21 @@ class media_icons extends widget_common {
 		$ipo			= $this->ipo;
 
 		$dato = [];
-		$project_langs = common::get_ar_all_langs();
 
-		// every state has a ipo that come from structure (input, process , output).
+		// every state has a IPO that come from structure (input, process , output).
 		foreach ($ipo as $key => $current_ipo) {
 
-			$input 		= $current_ipo->input;
+			$input		= $current_ipo->input;
 			$output		= $current_ipo->output;
 			// get the paths to the source data
-			$source 	= $input->source;
-			$ar_paths 	= $input->paths;
+			$source		= $input->source;
+			$ar_paths	= $input->paths;
 
 			// check the type for input,
 			// if it's a filter will use search_query_object to find data
 			$type 		= $input->type;
 			switch($type) {
+
 				case 'component_data':
 					$ar_locator = [];
 					foreach ($source as $current_source) {
@@ -89,13 +89,11 @@ class media_icons extends widget_common {
 				// get the section pointed by the last component_tipo
 				$component_tipo = $last_path->component_tipo;
 
-
-
 				// create items with the every locator
 				foreach ($ar_locator as $locator) {
 
 					$model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-					$component		= component_common::get_instance(
+					$component	= component_common::get_instance(
 						$model_name,
 						$component_tipo,
 						$locator->section_id,
@@ -106,7 +104,7 @@ class media_icons extends widget_common {
 
 					$object_value = new stdClass();
 
-					// output, use the ipo output for create the items to send to compoment_info and client side
+					// output, use the IPO output for create the items to send to compoment_info and client side
 					foreach ($output as $data_map) {
 
 						// begin with empty tool_context
@@ -120,9 +118,37 @@ class media_icons extends widget_common {
 								break;
 
 							case 'tc':
-								$duration_seconds	= $component->get_duration();
-								$tc					= OptimizeTC::seg2tc($duration_seconds);
-								$value				= $tc;
+								// component that store duration (rsc54). Updated on file upload post-processing
+									$duration_tipo			= 'rsc54';
+									$duration_model_name	= RecordObj_dd::get_modelo_name_by_tipo($duration_tipo,true);
+									$duration_component		= component_common::get_instance(
+										$duration_model_name,
+										$duration_tipo,
+										$locator->section_id,
+										'list',
+										DEDALO_DATA_NOLAN,
+										$locator->section_tipo
+									);
+									$duration_dato = $duration_component->get_dato();
+									if (isset($duration_dato[0])) {
+
+										// use already stored value from DDBB
+										$tc	= $duration_dato[0];
+
+									}else{
+
+										// fallback to real calculation from av file
+										$duration_seconds	= $component->get_duration();
+										$tc					= OptimizeTC::seg2tc($duration_seconds);
+										debug_log(__METHOD__. PHP_EOL .
+											' Falling back to real file duration calculation '. PHP_EOL .
+											'section_tipo: ' . $locator->section_tipo. PHP_EOL .
+											'section_id: ' . $locator->section_id. PHP_EOL .
+											'tc: ' . to_string($tc),
+											logger::ERROR);
+									}
+
+								$value = $tc;
 								break;
 
 							case 'transcription':
