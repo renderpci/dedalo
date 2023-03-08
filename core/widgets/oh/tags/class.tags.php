@@ -23,6 +23,7 @@ class tags extends widget_common {
 		$mode			= 'list';
 
 		$dato = [];
+
 		foreach ($ipo as $ipo_key => $current_ipo) {
 
 			$input	= $current_ipo->input;
