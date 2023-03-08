@@ -1431,60 +1431,49 @@ final class dd_core_api {
 							}
 				}
 			}//end if (!empty($rqo->sqo))
-			// safe fix sqo limit when is not defined
-			$sqo->limit = $sqo->limit ?? ($mode==='edit' ? 1 : 10);
+			// safe fix sqo limit when is not defined in edit mode
+			if ($mode==='edit') {
+				$sqo->limit = $sqo->limit ?? 1;
+			}
 
 		// DATA
 			switch ($action) {
 
 				case 'search': // Used by section and service autocomplete
 
-					// if ($model==='section'){
+					// DES resolve limit before use sqo
+						// if ( (property_exists($sqo, 'limit') && $sqo->limit===null)
+						// 	&& isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])
+						// 	&& isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit)
+						// ) {
+						// 	$sqo->limit = $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit;
+						// 	debug_log(__METHOD__." Set limit from session to $sqo->limit ".to_string(), logger::DEBUG);
+						// }
 
-						// resolve limit before use sqo
-							// if ( (property_exists($sqo, 'limit') && $sqo->limit===null)
-							// 	&& isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])
-							// 	&& isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit)
-							// ) {
-							// 	$sqo->limit = $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit;
-							// 	debug_log(__METHOD__." Set limit from session to $sqo->limit ".to_string(), logger::DEBUG);
-							// }
+					// sections instance
+						$element = sections::get_instance(
+							null, // ?array $ar_locators
+							$sqo, // object $search_query_object = null
+							$tipo, //  string $caller_tipo = null
+							$mode, // string $mode = 'list'
+							$lang // string $lang = DEDALO_DATA_NOLAN
+						);
 
-						// sections
-							$element = sections::get_instance(
-								null, // ?array $ar_locators
-								$sqo, // object $search_query_object = null
-								$tipo, //  string $caller_tipo = null
-								$mode, // string $mode = 'list'
-								$lang // string $lang = DEDALO_DATA_NOLAN
-							);
+					// store sqo section in session
+						if ($model==='section' && ($mode==='edit' || $mode==='list')) {
+							$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $sqo;
+							debug_log(__METHOD__." -> saved in session sqo sqo_id: '$sqo_id'".PHP_EOL. to_string($sqo), logger::DEBUG);
+						}
 
-						// store sqo section in session
-							if ($model==='section' && ($mode==='edit' || $mode==='list')) {
-								$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $sqo;
-								debug_log(__METHOD__." -> saved in session sqo sqo_id: '$sqo_id'".PHP_EOL. to_string($sqo), logger::DEBUG);
-							}
+					// data_source. Used by time machine as 'tm' to force component to load data from different sources. data_source='tm'
+						if (isset($ddo_source->data_source)) {
+							$element->data_source = $ddo_source->data_source;
+						}
 
-						// data_source. Used by time machine as 'tm' to force component to load data from different sources. data_source='tm'
-							if (isset($ddo_source->data_source)) {
-								$element->data_source = $ddo_source->data_source;
-							}
-
-						// properties optional
-							if (!empty($properties)){
-								$element->set_properties($properties);
-							}
-
-					// }else if ($model==='area_thesaurus'){
-						// IN PROCESS TO IMPLEMENT
-						// // area_thesaurus
-						// 	$element = area::get_instance($model, $tipo, $mode);
-
-						// // search_action
-						// 	$obj = new stdClass();
-						// 		$obj->sqo	 = $sqo;
-						// 	$element->set_search_action($obj);
-					// }
+					// properties optional. If received, overwrite element properties
+						if (!empty($properties)){
+							$element->set_properties($properties);
+						}
 					break;
 
 				case 'related_search': // Used to get the related sections that call to the source section
