@@ -2329,7 +2329,10 @@ abstract class common {
 				// fix request_config value
 					$request_config = $user_preset;
 
-				debug_log(__METHOD__." request_config calculated from user preset [$section_tipo-$tipo] ", logger::DEBUG);
+				debug_log(__METHOD__.
+					" request_config calculated from user preset [$section_tipo-$tipo] ",
+					logger::DEBUG
+				);
 			}
 
 		// 2. From structure
@@ -2468,18 +2471,25 @@ abstract class common {
 					}
 
 					# in the case that section_list is defined
-					$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section_list', 'children', true);
+					$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+						$tipo,
+						'section_list',
+						'children',
+						true // bool search exact
+					);
 					if(isset($ar_terms[0])) {
-						# Use found related terms as new list
+
+						// section_list. Use properties from section list instead self properties
+
 						$current_term	= $ar_terms[0];
 						$RecordObj_dd	= new RecordObj_dd($current_term);
 						$properties		= $RecordObj_dd->get_properties();
-					}
-					else{
 
-						// $RecordObj_dd	= new RecordObj_dd($tipo);
-						// $properties		= $RecordObj_dd->get_properties();
-						$properties			= $this->get_properties();
+					}else{
+
+						// section. Use self section properties if no section list is defined
+
+						$properties = $this->get_properties();
 					}
 					break;
 				default:
