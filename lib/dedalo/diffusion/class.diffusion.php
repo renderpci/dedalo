@@ -11,6 +11,7 @@ abstract class diffusion  {
 	// class vars
 		protected $domain;
 		public $ar_diffusion_map;
+		public $ar_records;
 
 		public static $update_record_actions = [];
 

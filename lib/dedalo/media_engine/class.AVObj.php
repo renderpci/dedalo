@@ -17,6 +17,9 @@ class AVObj extends MediaObj {
 
 	protected $header_data ;		# from read movie header
 
+	public $tcin_var_name;
+	public $tcout_var_name;
+
 
 	function __construct($reelID, $quality=false, $tcin=NULL, $tcout=NULL) {
 
@@ -414,11 +417,8 @@ class AVObj extends MediaObj {
 		$this->header_data = $ar_data ;	#var_dump($ar_data);
 
 		return $ar_data ;
-	}
+	}//end get_ar_movie_header_info
 
 
 
-
-
-}
-?>
+}//end class AVObj

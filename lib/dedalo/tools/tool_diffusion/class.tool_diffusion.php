@@ -1,7 +1,7 @@
 <?php
 /**
 * TOOL_DIFFUSION
-* Export current section data to mysql database with defined 'difission' options
+* Export current section data to mysql database with defined 'diffusion' options
 *
 */
 class tool_diffusion {
@@ -11,6 +11,7 @@ class tool_diffusion {
 	public $section_id;
 	public $modo;
 	public $options;
+	public $ar_records;
 	public static $debug_response;
 
 
@@ -43,7 +44,7 @@ class tool_diffusion {
 
 	/**
 	* GET_AR_THESAURUS_TABLES
-	* @return array Formated array as prefix => name
+	* @return array Formatted array as prefix => name
 	*/
 	public function get_ar_thesaurus_tables() {
 
@@ -133,7 +134,7 @@ class tool_diffusion {
 			$response->msg = "Error. Error on publish record $section_id";
 		}
 
-		// Add especific msg
+		// Add specific msg
 			if (isset($update_record_result->msg)) {
 				$update_record_result_msg = array_reduce((array)$update_record_result->msg, function($carry, $item){
 					if (!empty($item)) {
@@ -259,7 +260,7 @@ class tool_diffusion {
 		$ar_de_result=array();
 		foreach ($ar_diffusion_map_elements as $diffusion_element_tipo => $value_obj) {
 
-			# Diffusiion classname (diffusion_mysql, diffusion_rdf, etc..)
+			# Diffusion class name (diffusion_mysql, diffusion_rdf, etc..)
 			$class_name = $value_obj->class_name;
 
 			include_once(DEDALO_LIB_BASE_PATH .'/diffusion/class.'.$class_name.'.php' );
