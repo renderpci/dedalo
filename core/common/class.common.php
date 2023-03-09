@@ -4166,7 +4166,7 @@ abstract class common {
 				case 'component_relation_children':
 				case 'component_relation_parent':
 				case 'component_relation_index':
-				case 'component_relation_model':
+				// case 'component_relation_model':
 				case 'component_relation_related':
 				case 'component_autocomplete':
 				case 'component_autocomplete_hi':
