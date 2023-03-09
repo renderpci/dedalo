@@ -261,6 +261,7 @@ export const ts_object = new function() {
 					ar_children_data				: ar_children_data,
 					target_section_tipo				: target_section_tipo,
 					children_container				: children_container,
+					parent_nd_container				: parent_nd_container,
 					children_container_is_loaded	: children_container_is_loaded,
 					node_type						: node_type,
 					next_node_type					: next_node_type,
