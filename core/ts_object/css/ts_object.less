@@ -210,6 +210,7 @@
 
 			// list_thesaurus commons
 			.list_thesaurus_element {
+				position: relative;
 				display: table-cell;
 				min-width: 24px;
 				padding: 2px;
@@ -247,6 +248,32 @@
 				opacity: 1;
 				text-align: left;
 				white-space: nowrap;
+
+				&.loading {
+					background-color: transparent;
+					>span {
+						opacity: 0.12;
+					}
+
+					&:after {
+						content: " ";
+						display: block;
+						position: absolute;
+						top: 2px;
+						left: 0px;
+						width: 1.1rem;
+						height: 1.1rem;
+
+						// background: url('../../themes/default/icons/spinner.svg');
+						// background-repeat: no-repeat;
+
+						border: 2px solid #d1d5db;
+						border-top-color: @color_orange_dedalo;
+						border-radius: 50%;
+
+						animation: run_spinner 800ms linear infinite;
+					}
+				}
 			}
 
 			.element_hilite > span {
@@ -266,12 +293,13 @@
 				position: relative;
 				top: -1px;
 				padding-left: 5px;
-				padding-right: 10px;
+				padding-right: 0.25rem;
 				user-select: auto;
 			}
 
-			.list_thesaurus_element[data-tipo='hierarchy40'],
-			.list_thesaurus_element[data-tipo='hierarchy91'] {
+			// indexations
+			.list_thesaurus_element.show_indexations,
+			.list_thesaurus_element.default	{
 				background-color: @color_grey_medium;
 				opacity: 0.8;
 				border: 0px;
@@ -279,13 +307,21 @@
 				padding-right: 3px;
 				color: #717171;
 				border-radius: 3px;
-				display: inline-block;
+				// display: inline-block;
 				margin: 0px;
 				height: 19px;
 				width: initial;
 				font-size: 12px;
 				margin-right: 5px;
 				line-height: 1.2rem;
+
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+
+				&.default {
+					background-color: transparent;
+				}
 
 				&:hover {
 					background-color: #ffb666;
@@ -295,6 +331,32 @@
 					background-color: @color_grey_medium;
 					color: #717171 !important;
 					// opacity: 0.5;
+				}
+
+				&.loading {
+					background-color: transparent;
+					>span {
+						opacity: 0;
+					}
+
+					&:after {
+						content: " ";
+						display: block;
+						position: absolute;
+						top: 2px;
+						left: 32%;
+						width: 1.1rem;
+						height: 1.1rem;
+
+						// background: url('../../themes/default/icons/spinner.svg');
+						// background-repeat: no-repeat;
+
+						border: 2px solid #d1d5db;
+						border-top-color: @color_orange_dedalo;
+						border-radius: 50%;
+
+						animation: run_spinner 800ms linear infinite;
+					}
 				}
 			}
 
@@ -334,15 +396,40 @@
 			}
 
 			.arrow_spinner {
-				background: url('../../themes/default/icons/spinner.svg');
-				background-repeat: no-repeat;
-				border: 0px;
-				height: 18px;
-				width: 20px;
-				top: 0px;
-				left: 0px;
-				padding: 0px;
+				// background: url('../../themes/default/icons/spinner.svg');
+				// background-repeat: no-repeat;
+				// border: 0px;
+				// height: 18px;
+				// width: 20px;
+				// top: 0px;
+				// left: 0px;
+				// padding: 0px;
+				// margin: 0px;
+
+				border: none;
 				margin: 0px;
+				padding: 0px;
+				opacity: 1;
+				position: relative;
+
+				&:after {
+					content: " ";
+					display: block;
+					position: absolute;
+					top: 0;
+					left: 0;
+					width: 1.1rem;
+					height: 1.1rem;
+
+					// background: url('../../themes/default/icons/spinner.svg');
+					// background-repeat: no-repeat;
+
+					border: 2px solid #d1d5db;
+					border-top-color: @color_orange_dedalo;
+					border-radius: 50%;
+
+					animation: run_spinner 800ms linear infinite;
+				}
 			}
 
 			.arrow_unactive {
@@ -374,23 +461,36 @@
 
 		// data_container
 		.data_container {
-			background-color: rgba(156, 156, 156, 0.15);
-			.inline_common ;
+			// background-color: rgba(156, 156, 156, 0.15);
+			// .inline_common ;
+			// height: 0px;
 			width: 100%;
-			height: 0px;
 
-			 // only first level of inside divs
-			> div {
-				padding: 10px;
-				border-bottom: 1px solid #c2c2c2;
-				float: left;
-				width: 100%;
-			}
-			 // all components showed inside
-			.wrap_component {
+			display: block;
+			height: auto;
+			margin-top: 1rem;
+			margin-bottom: 1rem;
+
+
+			// only first level of inside divs
+			// > div {
+			// 	padding: 1rem;
+			// 	// border-bottom: 1px solid #c2c2c2;
+			// 	float: left;
+			// 	width: 100%;
+			// }
+
+			// all components showed inside
+			.wrapper_component {
 				min-height: initial;
-				padding: 0px;
+				padding: 1rem;
+				width: 100%;
+				margin-top: 0.5rem;
+				margin-bottom: 0.5rem;
+				float: left;
+				// background-color: #dc9ebd;
 			}
+
 		}//end .data_container
 
 
@@ -469,22 +569,22 @@
 		}
 
 		// loading
-		.loading_list_thesaurus_data {
-			min-height: 42px;
-			//background-color: transparent !important;
+			// .loading_list_thesaurus_data {
+			// 	min-height: 42px;
+			// 	//background-color: transparent !important;
 
-			&:after {
-				background: url('../../themes/default/icons/spinner.svg');
-				background-position: 10px;
-				background-repeat: no-repeat;
-				background-size: 30px;
-				content: ' loading... ';
-				display: table-cell;
-				margin-left: 50px;
-				padding: 10px;
-				padding-left: 45px;
-			}
-		}
+			// 	&:after {
+			// 		background: url('../../themes/default/icons/spinner.svg');
+			// 		background-position: 10px;
+			// 		background-repeat: no-repeat;
+			// 		background-size: 30px;
+			// 		content: ' loading... ';
+			// 		display: table-cell;
+			// 		margin-left: 50px;
+			// 		padding: 10px;
+			// 		padding-left: 45px;
+			// 	}
+			// }
 
 		.visible_element {
 			background-color: #81c943;

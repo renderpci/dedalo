@@ -72,7 +72,8 @@
 					background-color: lighten(@color_orange_dedalo, 44%);
 					// height: 5rem;
 					display: grid;
-					grid-template-columns: 102px 8rem 20rem minmax(25rem, auto) 30%;
+					// grid-template-columns: 102px 8rem 20rem minmax(25rem, auto) 30%;
+					grid-template-columns: 102px 8rem 20rem 26rem 1fr;
 					width: 100%;
 
 					.column {
@@ -99,9 +100,11 @@
 					// column people (informants)
 					.column:nth-of-type(4) {
 						>.row {
-							display: grid;
-							grid-template-columns: 1fr 1fr;
 							height: auto;
+							display: grid;
+							// grid-template-columns: 1fr 1fr;
+							grid-template-columns: 1fr 2fr;
+							width: 100%;
 						}
 					}
 
@@ -136,7 +139,8 @@
 
 					.column.oh.indexation {
 						display: grid;
-						grid-template-columns: repeat(11, auto);
+						// grid-template-columns: repeat(11, auto);
+						grid-template-columns: 1fr 1fr 1fr 1fr 1fr 15fr 1fr 1fr 1fr 1fr 1fr;
 						// padding-left: 8rem;
 
 						>.column {
@@ -217,6 +221,8 @@
 								&.full {
 									max-height: unset;
 									cursor: n-resize;
+									line-height: 1.2rem;
+									margin-top: -2px;
 								}
 							}
 						}
