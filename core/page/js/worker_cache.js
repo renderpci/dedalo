@@ -130,9 +130,11 @@ self.onmessage = async function(e) {
 			const item = api_response.result[i]
 
 			const headers	= get_headers(item)
-			const cache		= item.type==='css'
-				? 'no-cache'
-				: 'reload'
+			// const cache	= item.type==='css'
+			// 	? 'no-cache'
+			// 	: 'reload'
+			// @see https://developer.mozilla.org/en-US/docs/Web/API/Request/cache
+			const cache = 'reload';
 
 			ar_promises.push(
 				fetch(item.url, {
