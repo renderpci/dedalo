@@ -100,15 +100,19 @@ require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.Ffmpeg.php');
 	}//end upload_file
 
 
-	if( $mode === 'join_chunked_files' ) {
 
-		$vars_string = file_get_contents('php://input');
-		$vars = json_decode($vars_string);
+// join_chunked_files
+	if( $mode==='join_chunked_files' ) {
 
-		//vars
-		$tipo			= $vars->tipo;
-		$parent			= $vars->parent;
-		$section_tipo	= $vars->section_tipo;
+		$vars_string	= file_get_contents('php://input');
+		$input_vars		= json_decode($vars_string);
+
+		// vars
+			$tipo			= $input_vars->tipo;
+			$parent			= $input_vars->parent;
+			$section_tipo	= $input_vars->section_tipo;
+			$file_data		= $input_vars->file_data;
+			$files_chunked	= $input_vars->files_chunked;
 
 		// component
 			$component_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
@@ -122,8 +126,8 @@ require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.Ffmpeg.php');
 			);
 
 		$options = new stdClass();
-			$options->file_data		= $vars->file_data;
-			$options->files_chunked	= $vars->files_chunked;
+			$options->file_data		= $file_data;
+			$options->files_chunked	= $files_chunked;
 
 		$tool_upload	= new tool_upload($component_obj);
 		$response		= $tool_upload->join_chunked_files_uploaded($options);
@@ -131,9 +135,6 @@ require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.Ffmpeg.php');
 		echo json_encode($response);
 		exit();
 	}//end //end upload_file
-
-
-
 
 
 

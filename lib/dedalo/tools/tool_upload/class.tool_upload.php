@@ -105,7 +105,6 @@ class tool_upload extends tool_common {
 				return $response;
 			}
 
-
 		// verificamos si el archivo es válido
 			$f_name 		= $_FILES["file_to_upload"]['name'];
 			$f_type 		= $_FILES["file_to_upload"]['type'];
@@ -114,7 +113,6 @@ class tool_upload extends tool_common {
 			$f_error		= $_FILES["file_to_upload"]['error'];
 			$f_error_text 	= tool_upload::error_number_to_text($f_error);
 			$f_extension 	= strtolower(pathinfo($f_name, PATHINFO_EXTENSION));
-
 
 		// nombre_archivo : nombre final del archivo
 			$nombre_archivo = $SID . '.' . $f_extension ;
@@ -163,21 +161,18 @@ class tool_upload extends tool_common {
 					]
 				);
 
-
-		# Verificamos que NO hay ya un fichero anterior con ese nombre. Si lo hay, lo renombramos y movemos a deleted files
-		# Recorremos todas las extensiones válidas (recordar que los ficheros de tipo 'tif', etc. se guardan también)
-		if($chunked === false){
-			$this->rename_old_files_if_exists( $SID, $folder_path, $ar_allowed_extensions );
-		}
-
+		// Verificamos que NO hay ya un fichero anterior con ese nombre. Si lo hay, lo renombramos y movemos a deleted files
+		// Recorremos todas las extensiones válidas (recordar que los ficheros de tipo 'tif', etc. se guardan también)
+			if($chunked === false){
+				$this->rename_old_files_if_exists( $SID, $folder_path, $ar_allowed_extensions );
+			}
 
 
-		# Add / if need
-		if(substr($folder_path, -1)!='/') $folder_path .= '/';
+		// uploaded_file_path. Add / if need
+			if(substr($folder_path, -1)!='/') $folder_path .= '/';
+			$this->file_obj->uploaded_file_path = $folder_path . $nombre_archivo;
 
-		$this->file_obj->uploaded_file_path = $folder_path . $nombre_archivo;
-
-		# DEBUG MSG
+		// DEBUG MSG
 		debug_log(__METHOD__." Uploading file $component_name - quality: $quality - path: ".$this->file_obj->uploaded_file_path .to_string(), logger::DEBUG);
 
 		# Move temp uploaded file to final dir
@@ -192,7 +187,7 @@ class tool_upload extends tool_common {
 				$res = $zip->open($f_temp_name);
 
 				if ($res === TRUE) {
-					# Create the directorys
+					// Create the directory
 					if( !is_dir($folder_path.'/'.$SID) ) {
 						$create_dir = mkdir($folder_path.'/'.$SID, 0777);
 						$create_dir = mkdir($folder_path.'/'.$SID.'/VIDEO_TS/', 0777);
@@ -234,7 +229,6 @@ class tool_upload extends tool_common {
 						}
 					}
 					$zip->close();
-
 				}
 
 			}else{
@@ -246,6 +240,7 @@ class tool_upload extends tool_common {
 				}
 			}
 		}else{
+
 			$msg = "Error[upload_trigger]: temporal file $f_temp_name not exists. I can't move the file to final location.";
 			trigger_error($msg);
 			exit($msg);
@@ -329,33 +324,37 @@ class tool_upload extends tool_common {
 		// Save component refresh 'valor_list'
 			$this->component_obj->Save();
 
-		$response->result		= 1; # result set to true
-		$response->file_data	= $file_data;
-		$response->html			= ($chunked=== false)
-			? $this->get_response_html($file_data)
-			: null;
+		// response
+			$response->result		= 1; # result set to true
+			$response->file_data	= $file_data;
+			$response->html			= ($chunked===false)
+				? $this->get_response_html($file_data)
+				: null;
+
 
 		return $response;
 	}//end upload_file
 
 
+
 	/**
 	* GET_RESPONSE_HTML
-	* @return
+	* @return string $html
 	*/
 	public function get_response_html($file_data) {
-
 		$start_time = start_time();
 
-		$file_size_mb	= $file_data->file_size_mb;
-		$component_name	= $file_data->component_name;
-		$SID			= $file_data->SID;
-		$quality		= $file_data->quality;
-		$f_error		= $file_data->error;
-		$nombre_archivo = $file_data->name;
+		// file_data vars
+			$file_size_mb	= $file_data->file_size_mb;
+			$component_name	= $file_data->component_name;
+			$SID			= $file_data->SID;
+			$quality		= $file_data->quality;
+			$f_error		= $file_data->error;
+			$nombre_archivo = $file_data->name;
 
-		$tipo 			= $this->component_obj->get_tipo();
-		$parent 		= $this->component_obj->get_parent();
+		// short vars
+			$tipo	= $this->component_obj->get_tipo();
+			$parent	= $this->component_obj->get_parent();
 
 
 		$html = '';
@@ -381,7 +380,7 @@ class tool_upload extends tool_common {
 
 			if (defined('DEDALO_AV_RECOMPRESS_ALL') && DEDALO_AV_RECOMPRESS_ALL==1) {
 				if ($file_size_mb>10) {
-					$html .= "<hr> The uploaded file is transcoding in background now. Please, wait some minutes before play your media file.";
+					$html .= "<hr> The uploaded file is trans-coding in background now. Please, wait some minutes before play your media file.";
 					if(SHOW_DEBUG) {
 						$html .= " MB:$file_size_mb";
 					}
@@ -403,14 +402,15 @@ class tool_upload extends tool_common {
 
 
 			# FILE EXISTS BUT ERROR OCURRED
-			if($f_error>0) $html .= "Error {$f_error}: $f_error_text. Notify this error to your administrator<br />";
+			if($f_error>0) {
+				$html .= "Error {$f_error}: ". ($f_error_text ?? '') . " Notify this error to your administrator<br />";
+			}
 
 			$html .= " <a class=\"cerrar_link\" onclick=\"tool_upload.cerrar()\">".label::get_label('cerrar')."</a>";
 			$html .= "\n</div>";
 
 
-			$time_sec 	= exec_time_unit($start_time,'sec');
-
+			$time_sec = exec_time_unit($start_time,'sec');
 			// logger activity : que(action normalized like 'load edit'), log level(default 'logger::info'), tipo(like 'dd120'), datos(array of related info)
 				logger::$obj['activity']->log_message(
 					'UPLOAD COMPLETE',
@@ -431,6 +431,7 @@ class tool_upload extends tool_common {
 						)
 				);
 
+		return $html;
 	}//end get_response_html
 
 
