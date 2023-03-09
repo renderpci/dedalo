@@ -120,6 +120,7 @@ abstract class common {
 				// v5
 				'component_security_areas',
 				'component_autocomplete_ts', // ?
+				'button_trigger',
 				// v6
 				// 'component_autocomplete'
 				// 'component_av'
@@ -3934,6 +3935,10 @@ abstract class common {
 
 				// model
 					$model = RecordObj_dd::get_modelo_name_by_tipo($current_button_tipo, true);
+
+					if(in_array($model, common::$ar_temp_exclude_models)){
+						continue;
+					}
 
 				// label $terminoID, $lang=NULL, $from_cache=false, $fallback=true
 					$button_label = RecordObj_dd::get_termino_by_tipo($current_button_tipo, DEDALO_APPLICATION_LANG, true, true);
