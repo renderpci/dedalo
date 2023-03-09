@@ -2839,6 +2839,11 @@
 		Valencia 01-03-2023T21:15:00
 		Fixed Ontology compatibility issues with v5
 		Added basic support to v6 GIT version in build_version_from_git_master
+		Valencia 09-03-2023T11:50:00
+		Update ontology in json format
+		Added chunked files to be upload by tool_upload
+		Added DEDALO_UPLOAD_SERVICE_CHUNK_FILES constant to sample_config
+		Fixed tool_upload errors and issues about upload finish managing
 
 
 	[/HISTORY]
@@ -2870,7 +2875,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '01-03-2023T21:15:00');
+	define('DEDALO_BUILD'	, '09-03-2023T11:50:00');
 
 
 
