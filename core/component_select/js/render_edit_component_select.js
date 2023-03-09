@@ -34,7 +34,7 @@ render_edit_component_select.prototype.edit = async function(options) {
 	const self = this
 
 	// view
-		const view	= self.context.view || 'default'
+		const view = self.context.view || 'default'
 
 	// show_interface.button_edit
 		if (page_globals.is_global_admin===true) {
@@ -46,12 +46,10 @@ render_edit_component_select.prototype.edit = async function(options) {
 
 		case 'line':
 			return view_line_edit_select.render(self, options)
-			break;
 
 		case 'default':
 		default:
 			return view_default_edit_select.render(self, options)
-			break;
 	}
 
 	return null
