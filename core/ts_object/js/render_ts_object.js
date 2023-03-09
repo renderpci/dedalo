@@ -370,6 +370,7 @@ export const render_ts_list = function(options) {
 		let next_node_type					= options.next_node_type
 		const target_section_tipo			= options.target_section_tipo
 		const children_container			= options.children_container
+		const parent_nd_container			= options.parent_nd_container
 		const children_container_is_loaded	= options.children_container_is_loaded
 		const show_arrow_opened				= options.show_arrow_opened
 
