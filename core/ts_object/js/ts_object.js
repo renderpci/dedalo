@@ -1694,18 +1694,21 @@ export const ts_object = new function() {
 				})
 
 				// term edit case
-					if(type==='term'){
+					if(type==='term') {
+						console.log('current_component:', current_component);
 
 						// delete the previous registered events
-							this.events_tokens.map(current_token => event_manager.unsubscribe(current_token))
+							self.events_tokens.map(current_token => event_manager.unsubscribe(current_token))
 
-						// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
-							this.events_tokens.push(
+						// update value, subscription to the changes: if the DOM input value was changed, observers dom elements will be changed own value with the observable value
+							self.events_tokens.push(
 								event_manager.subscribe('update_value_'+current_component.id_base, fn_update_value)
 							)
 							function fn_update_value(options) {
-								// change the value of the current dom element
-								button_obj.firstChild.innerHTML = options.changed_data.value
+								console.log('options:', options);
+								const value = options.caller.data.value.join(', ')
+								// change the value of the current DOM element
+								button_obj.firstChild.innerHTML = value
 							}
 					}
 
@@ -2343,7 +2346,7 @@ export const ts_object = new function() {
 	* TOGGLE_ND
 	* @return bool
 	*/
-	this.toggle_nd = function(button_obj) {
+	this.toggle_nd = async function(button_obj) {
 
 		// nd_container
 			const nd_container = ts_object.get_my_parent_container(button_obj, 'nd_container')

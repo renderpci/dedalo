@@ -221,13 +221,18 @@
 				cursor: pointer;
 				border-left: 1px solid #c3c3c3;
 
+				//padding-top: 4px;
+				//font-family: 'Menlo',monospace;
+				opacity: 0.3;
+
 				// En pruebas
 				width: 29px;
 				vertical-align: top;
 
-				//padding-top: 4px;
-				//font-family: 'Menlo',monospace;
-				opacity: 0.3;
+				&.term_img {
+					height: 1.3rem;
+					opacity: 1;
+				}
 
 				&:hover {
 					color: #ef7d00 !important;
@@ -237,6 +242,40 @@
 				mark {
 					color: #333333 !important;
 					font-style: italic;
+				}
+
+				img {
+					height: 100%;
+				}
+
+				&.loading {
+					background-color: transparent;
+					>span {
+						opacity: 0.12;
+					}
+
+					img {
+						opacity: 0;
+					}
+
+					&:after {
+						content: " ";
+						display: block;
+						position: absolute;
+						top: 2px;
+						left: 30%;
+						width: 1.1rem;
+						height: 1.1rem;
+
+						// background: url('../../themes/default/icons/spinner.svg');
+						// background-repeat: no-repeat;
+
+						border: 2px solid #d1d5db;
+						border-top-color: @color_orange_dedalo;
+						border-radius: 50%;
+
+						animation: run_spinner 800ms linear infinite;
+					}
 				}
 			}
 
@@ -465,7 +504,7 @@
 			// .inline_common ;
 			// height: 0px;
 			width: 100%;
-
+			padding-left: 7rem;
 			display: block;
 			height: auto;
 			margin-top: 1rem;
@@ -516,6 +555,14 @@
 			height: 0px;
 			margin-left: 50px;
 			width: 100%;
+
+			>.wrap_ts_object {
+				width: calc(100% - 4rem);
+			}
+
+			.data_container {
+				padding-left: 3rem;
+			}
 		}
 
 		// indexations_container
@@ -555,7 +602,7 @@
 		}
 
 		.wrap_ts_object_nd {
-			background-color: #f5f5f5;
+			// background-color: #f5f5f5;
 			color: #797979;
 			padding: 2px;
 			padding-left: 0px;
