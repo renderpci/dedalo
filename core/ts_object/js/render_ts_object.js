@@ -109,13 +109,20 @@ export const render_ts_line = function(options) {
 				const element_children_nd	= ui.create_dom_element({
 					element_type	: 'div',
 					parent			: fragment,
-					class_name		: class_for_all + ' nd',
+					class_name		: class_for_all + ' default term nd',
 					data_set		: children_dataset,
 					text_node		: child_data.ar_elements[j].value
 				})
 				element_children_nd.addEventListener('mousedown', (e)=>{
 					e.stopPropagation()
+
+					element_children_nd.classList.add('loading')
+
 					self.toggle_nd(element_children_nd, e)
+					.then(function(response){
+
+						element_children_nd.classList.remove('loading')
+					})
 				})
 				break;
 
@@ -209,7 +216,13 @@ export const render_ts_line = function(options) {
 					})
 					element_img.addEventListener('mousedown', (e)=>{
 						e.stopPropagation()
+
+						element_img.classList.add('loading')
+
 						self.show_component_in_ts_object(element_img, e)
+						.then(function(response){
+							element_img.classList.remove('loading')
+						})
 					})
 					// image
 					ui.create_dom_element({
@@ -308,7 +321,7 @@ export const render_ts_pagination = function(options) {
 					offset	: pagination.limit + pagination.offset
 				}
 			}
-			ts_object.get_json(trigger_vars)
+			self.get_json(trigger_vars)
 			.then(function(response) {
 				if(SHOW_DEBUG===true) {
 					console.log("[ts_object.get_childrens] response",response);
@@ -608,7 +621,7 @@ export const render_ts_list = function(options) {
 												this.dataset.mode = (node_type==='hierarchy_node') ? "add_child_from_hierarchy" : "add_child"
 
 											// add_child
-												ts_object.add_child(this)
+												self.add_child(this)
 												.then(function(response){
 
 													// vars from response
@@ -619,16 +632,16 @@ export const render_ts_list = function(options) {
 														// button_obj. button plus that user clicks
 															const button_obj 		= response.button_obj
 														// children_element. list_thesaurus_element of current wrapper
-															const children_element 	= ts_object.get_link_children_from_wrap(response.wrap)
+															const children_element 	= self.get_link_children_from_wrap(response.wrap)
 															if(!children_element) {
 																return console.log("[ts_object.add_child] Error on find children_element 'link_children'");
 															}
 
 													// refresh children container
-														ts_object.get_children(children_element)
+														self.get_children(children_element)
 														.then(function(){
 															// Open editor in new window
-															ts_object.edit(button_obj, null, new_section_id, section_tipo)
+															self.edit(button_obj, null, new_section_id, section_tipo)
 														})
 												})
 										})//end link_add.addEventListener("click", function(e)
