@@ -2821,8 +2821,34 @@ abstract class component_common extends common {
 			// logged user id
 				$user_id = navigator::get_user_id();
 
+
+			// check global admin
+
+				if($this->section_tipo === DEDALO_SECTION_USERS_TIPO &&
+					$this->section_id == $user_id &&
+					$this->tipo === DEDALO_SECURITY_ADMINISTRATOR_TIPO
+				){
+
+					$this->permissions = 1;
+				}
+			// check profile
+			// check developer
+			// check if the section is the user_id section and remove write permissions
+			// the user can not set permissions by itself
+				if($this->section_tipo === DEDALO_SECTION_USERS_TIPO &&
+					$this->section_id == $user_id &&
+					( 	$this->tipo === DEDALO_SECURITY_ADMINISTRATOR_TIPO ||
+						$this->tipo === DEDALO_USER_PROFILE_TIPO ||
+						$this->tipo === DEDALO_USER_DEVELOPER_TIPO
+					) &&
+					security::is_global_admin($user_id) === false
+				){
+
+					$this->permissions = 1;
+				}
+
 			// user section . Allow user edit self data (used by tool_user_admin)
-				if ($this->permissions<2 &&
+				if ($this->permissions < 2 &&
 					$this->section_tipo===DEDALO_SECTION_USERS_TIPO &&
 					$this->section_id==$user_id) {
 
