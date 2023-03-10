@@ -748,6 +748,17 @@ final class dd_core_api {
 				return $response;
 			}
 
+		// check delete multiple
+		// only global admins can perform multiple deletes
+			$records_len = count($ar_records);
+			if($records_len > 1 && security::is_global_admin(navigator::get_user_id()) === false){
+				$response->result = [];
+				$response->msg 	.= 'forbidden delete multiple for this user';
+				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
+				return $response;
+			}
+
+		// normal delete use
 			$errors = [];
 			foreach ($ar_records as $record) {
 

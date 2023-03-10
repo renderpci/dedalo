@@ -332,6 +332,11 @@ const get_buttons = function(self) {
 
 			const current_button = ar_buttons[i]
 
+			// check if user is global admin to activate the button delete (avoid users to delete multiple sections)
+			if(current_button.model === 'button_delete' && page_globals.is_global_admin===false){
+				continue
+			}
+
 			// button node
 				const class_name	= 'warning ' + current_button.model.replace('button_', '')
 				const button_node	= ui.create_dom_element({
@@ -362,12 +367,6 @@ const get_buttons = function(self) {
 								sqo				: delete_sqo
 							})
 
-							// event_manager.publish('delete_section_' + self.id, {
-							// 	section_tipo	: self.section_tipo,
-							// 	section_id		: null,
-							// 	caller			: self,
-							// 	sqo				: delete_sqo
-							// })
 							break;
 
 						case 'button_import':
