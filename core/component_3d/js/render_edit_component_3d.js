@@ -33,6 +33,10 @@ render_edit_component_3d.prototype.edit = async function(options) {
 
 	switch(view) {
 
+		case 'print':
+			// for print we need to use read of the content_value and it's necessary force permissions to use read only element render
+			self.permissions = 1
+
 		case 'default':
 		default:
 			return view_default_edit_3d.render(self, options)
