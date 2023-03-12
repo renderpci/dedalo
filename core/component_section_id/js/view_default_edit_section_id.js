@@ -68,7 +68,7 @@ const get_content_data_edit = function(self) {
 	// section_id value
 		ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'section_id',
+			class_name		: 'content_value section_id',
 			inner_html		: value,
 			parent			: content_data
 		})
