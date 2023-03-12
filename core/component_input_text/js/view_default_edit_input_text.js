@@ -73,7 +73,9 @@ const get_content_data_edit = function(self) {
 		const value_length	= inputs_value.length
 
 		for (let i = 0; i < value_length; i++) {
-			const input_element_node = get_content_value(i, inputs_value[i], self)
+			const input_element_node = (self.permissions===1)
+				? get_content_value_read(i, inputs_value[i], self)
+				: get_content_value(i, inputs_value[i], self)
 			// set the pointer
 			content_data[i] = input_element_node
 			// add node to content_data
@@ -258,3 +260,25 @@ const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
+
+
+
+/**
+* GET_CONTENT_VALUE_READ
+* Creates the current value DOM node
+* @param int i
+* @param string current_value
+* @param object self
+* @return HTMLElement content_value
+*/
+const get_content_value_read = (i, current_value, self) => {
+
+	// content_value node
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value read',
+			inner_html		: current_value
+		})
+
+	return content_value
+}//end get_content_value_read
