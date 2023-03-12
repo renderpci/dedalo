@@ -15,7 +15,7 @@
 
 
 /**
-* view_default_EDIT_SELECT
+* VIEW_DEFAULT_EDIT_SELECT
 * Manages the component's logic and appearance in client side
 */
 export const view_default_edit_select = function() {
@@ -28,7 +28,9 @@ export const view_default_edit_select = function() {
 /**
 * RENDER
 * Render node for view
-* @return DOM node
+* @param object self
+* @param object options
+* @return HTMLElement wrapper
 */
 view_default_edit_select.render = async function(self, options) {
 
