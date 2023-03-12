@@ -36,6 +36,7 @@ render_edit_component_radio_button.prototype.edit = async function(options) {
 	// view
 		const view	= self.context.view || 'default'
 
+
 	switch(view) {
 
 		case 'line':
@@ -163,17 +164,32 @@ const get_input_element_edit = (i, datalist_item, self) => {
 				changed_data	: changed_data,
 				refresh			: false
 			})
-		})//end change event
 
-	// checked input set on match
-		for (let j = 0; j < value_length; j++) {
-			if (value[j] && datalist_value &&
-				value[j].section_id===datalist_value.section_id &&
-				value[j].section_tipo===datalist_value.section_tipo
-				) {
-					input.checked = 'checked'
+			// update label checked status
+			update_status(this)
+		})//end change event
+		// permissions. Set disabled on low permissions
+		if (self.permissions<2) {
+			input.disabled = 'disabled'
+		}
+
+	// update status checked input set on match
+		function update_status(input) {
+			for (let j = 0; j < value_length; j++) {
+				if (value[j] && datalist_value &&
+					value[j].section_id===datalist_value.section_id &&
+					value[j].section_tipo===datalist_value.section_tipo
+					) {
+						input.checked = 'checked'
+						input_label.classList.add('checked')
+				}
+				else{
+					input_label.classList.remove('checked')
+				}
 			}
 		}
+	// initial status checked input set on match
+		update_status(input)
 
 
 	return content_value
