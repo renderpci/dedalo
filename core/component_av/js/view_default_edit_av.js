@@ -25,7 +25,7 @@ export const view_default_edit_av = function() {
 /**
 * RENDER
 * Render node for use in modes: edit, edit_in_list
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_default_edit_av.render = async function(self, options) {
 
@@ -57,7 +57,8 @@ view_default_edit_av.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return DOM node content_data
+* @param object self
+* @return HTMLElement content_data
 */
 const get_content_data_edit = function(self) {
 
@@ -72,7 +73,9 @@ const get_content_data_edit = function(self) {
 		const inputs_value	= (value.length>0) ? value : [null] // force one empty input at least
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			const content_value = get_content_value(i, inputs_value[i], self)
+			const content_value = (self.permissions===1)
+				? get_content_value_read(i, inputs_value[i], self)
+				: get_content_value(i, inputs_value[i], self)
 			content_data.appendChild(content_value)
 			// set pointer
 			content_data[i] = content_value
@@ -80,13 +83,16 @@ const get_content_data_edit = function(self) {
 
 
 	return content_data
-}//end  get_content_data_edit
+}//end get_content_data_edit
 
 
 
 /**
 * GET_CONTENT_VALUE
-* @return DOM node content_value
+* @param int i
+* @param string current_value
+* @param object self
+* @return HTMLElement content_value
 */
 const get_content_value = (i, current_value, self) => {
 
@@ -168,10 +174,46 @@ const get_content_value = (i, current_value, self) => {
 
 
 /**
+* GET_CONTENT_VALUE_READ
+* @param int i
+* @param string current_value
+* @param object self
+* @return HTMLElement content_value
+*/
+const get_content_value_read = (i, current_value, self) => {
+
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'content_value read_only'
+		})
+
+	// posterframe
+		const posterframe_url	= self.data.posterframe_url
+		const posterframe		= ui.create_dom_element({
+			element_type	: 'img',
+			class_name		: 'posterframe',
+			src				: posterframe_url,
+			parent			: content_value
+		})
+		// image background color
+		posterframe.addEventListener('load', set_bg_color, false)
+		function set_bg_color() {
+			this.removeEventListener('load', set_bg_color, false)
+			ui.set_background_image(this, content_value)
+		}
+
+
+	return content_value
+}//end get_content_value_read
+
+
+
+/**
 * BUILD_VIDEO_NODE
 *
 * @param string|null posterframe_url
-* @return DOM node video
+* @return HTMLElement video
 */
 const build_video_node = (posterframe_url) => {
 
@@ -213,7 +255,7 @@ const build_video_node = (posterframe_url) => {
 * GET_QUALITY_SELECTOR
 *
 * @param object content_value
-* @return DOM node select
+* @return HTMLElement select
 */
 const get_quality_selector = (content_value, self) => {
 
@@ -265,7 +307,7 @@ const get_quality_selector = (content_value, self) => {
 /**
 * GET_BUTTONS
 * @param object instance
-* @return DOM node buttons_container
+* @return HTMLElement buttons_container
 */
 const get_buttons = (self) => {
 
@@ -348,7 +390,7 @@ const get_buttons = (self) => {
 
 /**
 * BUILD_VIDEO_HTML5
-* @return DOM node video
+* @return HTMLElement video
 */
 	// const build_video_html5 = function(request_options) {
 

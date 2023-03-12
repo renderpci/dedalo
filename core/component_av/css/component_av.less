@@ -31,6 +31,30 @@
 		}
 	}
 
+	// posterframe
+	.posterframe {
+		// height: 100%;
+		max-height: 100%;
+		width: 100%;
+		height: 100%;
+		max-width: 100%;
+
+		//min-height: 14em;
+		//background-position: initial;
+		//background-size: cover;
+		background-repeat: no-repeat;
+		background-size: contain;
+		background-position: center;
+		object-fit: contain;
+		object-position: center;
+		align-self: center;
+
+		// on focus adds a soft shadow and outline
+		&:focus {
+			.hilite_mixin(-1px);
+		}
+	}
+
 	// shared player av_control_buttons
 	.av_control_buttons {
 		display: flex;
@@ -75,24 +99,15 @@
 		}
 	}
 
-	&.view_default, &.view_player {
+	&.list {
+		height: 5rem;
 
-		&.list {
-			height: 5rem;
+		img {
+			cursor: zoom-in;
 		}
+	}
 
-		&.view_player {
-			box-shadow: none;
-			display: block;
-
-			.label {
-				display: none;
-			}
-			>.content_data {
-				display: grid;
-				height: 100%;
-			}
-		}
+	&.edit {
 
 		>.content_data {
 			justify-content: center;
@@ -118,38 +133,32 @@
 
 			// posterframe
 			.posterframe {
-				// height: 100%;
-				max-height: 100%;
-				width: 100%;
-				height: 100%;
-				max-width: 100%;
-
-				//min-height: 14em;
-				//background-position: initial;
-				//background-size: cover;
-				background-repeat: no-repeat;
-				background-size: contain;
-				background-position: center;
-				object-fit: contain;
-				object-position: center;
-				align-self: center;
-
-				// on focus adds a soft shadow and outline
-				&:focus {
-					.hilite_mixin(-1px);
-				}
+				// specific styles here
 			}
 		}
+	}
 
-		&.search {
-			>.content_data {
-				min-height: unset;
-				>.content_value {
-					height: unset;
-				}
+	&.search {
+		>.content_data {
+			min-height: unset;
+			>.content_value {
+				height: unset;
 			}
 		}
-	}//end .edit
+	}
+
+	&.view_player {
+		box-shadow: none;
+		display: block;
+
+		.label {
+			display: none;
+		}
+		>.content_data {
+			display: grid;
+			height: 100%;
+		}
+	}
 
 	&.view_line {
 		&.list {
@@ -160,12 +169,6 @@
 			text-align: center;
 		}
 	}
-
-	&.list {
-		img {
-			cursor: zoom-in;
-		}
-	}//end .list
 
 	&.view_viewer {
 		background-color: #000000;
@@ -206,10 +209,6 @@
 		}
 	}//end &.viewer
 
-	// &.view_text {
-	// 	height: 3rem;
-	// }
-
 	// with suffix _mini like 'component_av_mini'
 	&_mini {
 		img {
@@ -219,6 +218,10 @@
 
 	&.view_text {
 		height: 2rem;
+	}
+
+	&.view_print {
+
 	}
 
 }//end .component_av
