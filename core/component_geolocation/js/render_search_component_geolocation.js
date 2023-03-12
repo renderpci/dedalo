@@ -9,7 +9,7 @@
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {
-		get_content_data_edit
+		get_content_data
 	}
 	from './view_default_edit_geolocation.js'
 
@@ -39,7 +39,7 @@ render_search_component_geolocation.prototype.search = async function(options) {
 		const render_level = options.render_level || 'full'
 
 	// content_data
-		const content_data = await get_content_data_edit(self)
+		const content_data = await get_content_data(self)
 		if (render_level==='content') {
 			return content_data
 		}
