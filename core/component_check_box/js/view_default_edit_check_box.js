@@ -27,7 +27,9 @@ export const view_default_edit_check_box = function() {
 /**
 * RENDER
 * Render node for use in edit
-* @return DOM node
+* @param object self
+* @param object options
+* @return HTMLElement wrapper
 */
 view_default_edit_check_box.render = async function(self, options) {
 

@@ -25,9 +25,9 @@ export const view_default_edit_filter = function() {
 
 
 /**
-* EDIT
-* Render node for use in edit
-* @return DOM node
+* RENDER
+* Render node for use in current view
+* @return HTMLElement wrapper
 */
 view_default_edit_filter.render = async function(self, options) {
 
@@ -48,9 +48,9 @@ view_default_edit_filter.render = async function(self, options) {
 			content_data	: content_data,
 			buttons			: buttons
 		})
-		// set pointer s
+		// set pointers
 		wrapper.content_data = content_data
 
 
 	return wrapper
-}//end edit
+}//end render

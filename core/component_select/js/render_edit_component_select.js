@@ -27,7 +27,7 @@ export const render_edit_component_select = function() {
 * EDIT
 * Render node for use in edit
 * @param object options
-* @return DOM node
+* @return HTMLElement
 */
 render_edit_component_select.prototype.edit = async function(options) {
 
@@ -67,29 +67,64 @@ render_edit_component_select.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @param instance self
+* @return HTMLElement content_data
 */
 export const get_content_data = function(self) {
 
 	// short vars
-		const data	= self.data || {}
-		const value	= data.value || []
+		const data				= self.data || {}
+		const datalist			= data.datalist || []
+		const datalist_length	= datalist.length
+		const value				= data.value || []
+		const permissions		= self.permissions
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 
-	// values (inputs)
-		const inputs_value	= value.length>0 ? value : [null]
-		const value_length	= inputs_value.length
-		for (let i = 0; i < value_length; i++) {
-			// get the content_value
-			const content_value = (self.permissions===1)
-				? get_content_value_read(i, inputs_value[i], self)
-				: get_content_value(i, inputs_value[i], self)
-			// add node to content_data
-			content_data.appendChild(content_value)
-			// set pointers
-			content_data[i] = content_value
+	// permissions switch
+		if (permissions===1) {
+
+			// filtered_datalist. Datalist values that exists into component value
+				for (let i = 0; i < value.length; i++) {
+					const data_value = value[i]
+					const current_datalist_item	= datalist.find(el =>
+						el.value &&
+						el.value.section_id==data_value.section_id &&
+						el.value.section_tipo===data_value.section_tipo
+					)
+					if(current_datalist_item){
+						const current_value = current_datalist_item.label || ''
+						// build options
+						const content_value_node = get_content_value_read(0, current_value, self)
+						content_data.appendChild(content_value_node)
+						// set pointers
+						content_data[i] = content_value_node
+					}
+				}
+
+			// fill empty value cases with one empty content_value node
+				if(!content_data[0]) {
+					const current_value = '';
+					const content_value_node = get_content_value_read(0, current_value, self)
+					content_data.appendChild(content_value_node)
+					// set pointers
+					content_data[0] = content_value_node
+				}
+
+		}else{
+
+			// build options. Only one value is expected
+				const inputs_value	= value.length>0 ? value : [null]
+				const value_length	= inputs_value.length
+				for (let i = 0; i < value_length; i++) {
+					// get the content_value
+					const content_value = get_content_value(i, inputs_value[i], self)
+					// add node to content_data
+					content_data.appendChild(content_value)
+					// set pointers
+					content_data[i] = content_value
+				}
 		}
 
 
@@ -106,7 +141,7 @@ export const get_content_data = function(self) {
 * 	Current locator value as {section_id: '2', section_tipo: 'rsc740'}
 * @param object self
 * 	Component instance pointer
-* @return DOM node content_value
+* @return HTMLElement content_value
 */
 const get_content_value = (i, current_value, self) => {
 
@@ -286,9 +321,34 @@ const get_content_value = (i, current_value, self) => {
 
 
 /**
+* GET_CONTENT_VALUE_READ
+* @param int i
+* 	Value key like 0
+* @param object|null current_value
+* 	Current locator value as {section_id: '2', section_tipo: 'rsc740'}
+* @param object self
+* 	Component instance pointer
+* @return HTMLElement content_value
+*/
+const get_content_value_read = (i, current_value, self) => {
+
+	// create content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value read_only',
+			inner_html		: current_value
+		})
+
+
+	return content_value
+}//end get_content_value_read
+
+
+
+/**
 * GET_BUTTONS
 * @param object instance
-* @return DOM node buttons_container
+* @return HTMLElement buttons_container
 */
 export const get_buttons = (self) => {
 
@@ -372,64 +432,3 @@ export const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
-
-
-
-/**
-* GET_CONTENT_VALUE_READ
-* @param int i
-* 	Value key like 0
-* @param object|null current_value
-* 	Current locator value as {section_id: '2', section_tipo: 'rsc740'}
-* @param object self
-* 	Component instance pointer
-* @return DOM node content_value
-*/
-const get_content_value_read = (i, current_value, self) => {
-
-	// short vars
-		const data		= self.data || {}
-		const datalist	= data.datalist || []
-		// add empty option at beginning of the datalist array
-		const empty_option = {
-			label	: '',
-			value	: null
-		}
-		datalist.unshift(empty_option);
-
-		// get value
-		const value = []
-		const datalist_length = datalist.length
-		for (let i = datalist_length - 1; i >= 0; i--) {
-			const datalist_item = datalist[i]
-
-			if(!current_value || !datalist_item.value){
-				continue
-			}
-
-			// selected options set on match
-			if (current_value.section_id!==datalist_item.value.section_id ||
-				current_value.section_tipo!==datalist_item.value.section_tipo ){
-				continue
-			}
-
-			const current_section_id = typeof datalist_item.section_id!=='undefined'
-				? datalist_item.section_id
-				: null
-
-			const current_label = (SHOW_DEBUG===true)
-				? datalist_item.label + (current_section_id ? " [" + current_section_id + "]" : '')
-				: datalist_item.label
-
-			value.push(current_label)
-		}//end for (let i = 0; i < datalist_length; i++)
-
-		// content_value
-		const content_value = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'content_value',
-			inner_html		: value.join(', ')
-		})
-
-	return content_value
-}//end get_content_value_read
