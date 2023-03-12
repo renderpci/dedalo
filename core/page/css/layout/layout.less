@@ -804,18 +804,33 @@
 			display: none !important;
 		}
 
-		.buttons_container {
+		.buttons_container, .button {
 			display: none !important;
 		}
 
-		// lock icon at top right
-		&:after {
-			content: " ";
-			.fn_build_button('lock.svg', red, 1);
-			position: absolute;
-			top: 4px;
-			right: 4px;
-			// color: #fd0000;
+		input, select {
+			outline: none;
+		}
+
+		select {
+			-webkit-appearance: none;
+			-moz-appearance: none;
+			text-indent: 1px;
+			text-overflow: '';
+		}
+
+		&.active {
+
+			// lock icon at top right
+			&:after {
+				content: " ";
+				.fn_build_button('lock.svg', red, 1);
+				position: absolute;
+				top: 4px;
+				right: 4px;
+				opacity: 0.5;
+				// color: #fd0000;
+			}
 		}
 	}
 
