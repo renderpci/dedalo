@@ -61,7 +61,7 @@
 
 
 // button : generic to apply to span elements and get a icon button without text
-	.button { // @icon_name:null, @color:black, @opacity:0.7, @size:1em
+	.button, .icon_button { // @icon_name:null, @color:black, @opacity:0.7, @size:1em
 		background-color: #000000;
 		cursor: pointer;
 		// display: inline-block;
@@ -107,6 +107,9 @@
 		&.grey {
 			background-color: #949494;
 			opacity: 0.5;
+		}
+		&.transparent {
+			background-color: transparent !important;
 		}
 	}//end .button
 
@@ -558,6 +561,12 @@
 		@icon_name : 'tree.svg';
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
+	}
+	.check {
+		@icon_name : 'check.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+		.icon_button& { .fn_add_mask(@icon_name); }
 	}
 
 
