@@ -42,7 +42,7 @@ render_edit_component_svg.prototype.edit = async function(options) {
 		case 'print':
 			// view print use the same view as default, except it will use read only to render content_value
 			// as different view as default it will set in the class of the wrapper
-			// sample: <div class="wrapper_component component_input_text oh14 oh1_oh14 edit view_print disabled_component">...</div>
+			// sample: <div class="class="wrapper_component component_svg rsc855 rsc170_rsc855 edit view_default disabled_component active">...</div>
 			// take account that to change the css when the component will render in print context
 			// for print we need to use read of the contect_value and it's necessary force permissions to use read only element render
 			self.permissions = 1
