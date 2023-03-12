@@ -273,8 +273,13 @@ const rebuild_columns_map = async function(self) {
 				width 		: 'auto',
 				callback	: render_column_remove
 			})
+		}else{
+			columns_map.push({
+				id			: 'empty',
+				label		: '',
+				width 		: 'auto',
+			})
 		}
-
 
 	return columns_map
 }//end rebuild_columns_map
