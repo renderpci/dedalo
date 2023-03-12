@@ -73,13 +73,14 @@ const get_content_data_edit = function(self) {
 		const value_length	= inputs_value.length
 
 		for (let i = 0; i < value_length; i++) {
-			const input_element_node = (self.permissions===1)
+			// get the content_value
+			const content_value = (self.permissions===1)
 				? get_content_value_read(i, inputs_value[i], self)
 				: get_content_value(i, inputs_value[i], self)
 			// set the pointer
-			content_data[i] = input_element_node
+			content_data[i] = content_value
 			// add node to content_data
-			content_data.appendChild(input_element_node)
+			content_data.appendChild(content_value)
 		}
 
 	return content_data
