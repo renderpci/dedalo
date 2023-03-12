@@ -29,11 +29,13 @@ export const render_edit_component_check_box = function() {
 * EDIT
 * Chose the view render module to generate DOM nodes
 * @param object options
-* @return DOM node wrapper | null
+* @return HTMLElement wrapper | null
 */
 render_edit_component_check_box.prototype.edit = async function(options) {
 
 	const self = this
+
+	self.context.view = 'print'
 
 	// view
 		const view	= self.context.view || 'default'
@@ -43,16 +45,25 @@ render_edit_component_check_box.prototype.edit = async function(options) {
 		// case 'mini':
 			// return render_view_mini.render(self, options)
 
+		case 'tools':
+			return view_tools_edit_check_box.render(self, options)
+
 		case 'line':
 			return view_line_edit_check_box.render(self, options)
 
-		case 'tools':
-			return view_tools_edit_check_box.render(self, options)
+		case 'print':
+			// view print use the same view as default, except it will use read only to render content_value
+			// as different view as default it will set in the class of the wrapper
+			// sample: <div class="wrapper_component component_input_text oh14 oh1_oh14 edit view_print disabled_component">...</div>
+			// take account that to change the css when the component will render in print context
+			// for print we need to use read of the content_value and it's necessary force permissions to use read only element render
+			self.permissions = 1
 
 		case 'default':
 		default:
 			return view_default_edit_check_box.render(self, options)
 	}
+
 
 	return null
 }//end edit
@@ -62,26 +73,59 @@ render_edit_component_check_box.prototype.edit = async function(options) {
 /**
 * GET_CONTENT_DATA_EDIT
 * @param instance self
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 export const get_content_data_edit = function(self) {
 
 	// short vars
-		const datalist = self.data.datalist || []
+		const data				= self.data || {}
+		const datalist			= data.datalist || []
+		const datalist_length	= datalist.length
+		const value				= data.value || []
+		const permissions		= self.permissions
 
 	// content_data
-		const content_data = ui.component.build_content_data(self, {
-			autoload : true
-		})
-		// content_data.classList.add('nowrap')
+		const content_data = ui.component.build_content_data(self)
 
-	// build options
-		const datalist_length = datalist.length
-		for (let i = 0; i < datalist_length; i++) {
-			const input_element_node = get_input_element_edit(i, datalist[i], self)
-			content_data.appendChild(input_element_node)
-			// set the pointer
-			content_data[i] = input_element_node
+	// permissions switch
+		if (permissions===1) {
+
+			// filtered_datalist. Datalist values that exists into component value
+				for (let i = 0; i < value.length; i++) {
+					const data_value = value[i]
+					const current_datalist_item	= datalist.find(el =>
+						el.value &&
+						el.value.section_id==data_value.section_id &&
+						el.value.section_tipo===data_value.section_tipo
+					)
+					if(current_datalist_item){
+						const current_value = current_datalist_item.label || ''
+						// build options
+						const content_value_node = get_content_value_read(0, current_value, self)
+						content_data.appendChild(content_value_node)
+						// set the pointer
+						content_data[i] = content_value_node
+					}
+				}
+
+			// fill empty value cases with one empty content_value node
+				if(!content_data[0]) {
+					const current_value = '';
+					const content_value_node = get_content_value_read(0, current_value, self)
+					content_data.appendChild(content_value_node)
+					// set the pointer
+					content_data[0] = content_value_node
+				}
+
+		}else{
+
+			// build options
+				for (let i = 0; i < datalist_length; i++) {
+					const input_element_node = get_content_value(i, datalist[i], self)
+					content_data.appendChild(input_element_node)
+					// set the pointer
+					content_data[i] = input_element_node
+				}
 		}
 
 
@@ -91,16 +135,16 @@ export const get_content_data_edit = function(self) {
 
 
 /**
-* GET_INPUT_ELEMENT_EDIT
+* GET_CONTENT_VALUE
 * Render a input element based on passed value
 * @param int i
 * 	data.value array key
 * @param object current_value
 * @param object self
 *
-* @return DOM node content_value
+* @return HTMLElement content_value
 */
-const get_input_element_edit = (i, current_value, self) => {
+const get_content_value = (i, current_value, self) => {
 
 	// short vars
 		const value				= self.data.value || []
@@ -233,14 +277,39 @@ const get_input_element_edit = (i, current_value, self) => {
 
 
 	return content_value
-}//end get_input_element_edit
+}//end get_content_value
+
+
+
+/**
+* GET_CONTENT_VALUE_READ
+* Render a element based on passed value
+* @param int i
+* 	data.value array key
+* @param string current_value
+* 	label from datalist item that match current data value
+* @param object self
+*
+* @return HTMLElement content_value
+*/
+const get_content_value_read = (i, current_value, self) => {
+
+	// create content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value read_only',
+			inner_html		: current_value
+		})
+
+	return content_value
+}//end get_content_value_read
 
 
 
 /**
 * GET_BUTTONS
 * @param object instance
-* @return DOM node buttons_container
+* @return HTMLElement buttons_container
 */
 export const get_buttons = (self) => {
 
