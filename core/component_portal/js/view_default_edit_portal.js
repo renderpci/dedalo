@@ -80,21 +80,9 @@ view_default_edit_portal.render = async function(self, options) {
 			class_name		: 'list_body'
 		})
 
-		// const n_columns = list_header_node.children.length
-		// // id (auto), repeat x columns, delete (25px)
-		// const template_columns = (self.permissions>1)
-		// 	? "auto repeat("+(n_columns-2)+", 1fr) auto"
-		// 	: "auto repeat("+(n_columns-1)+", 1fr)"
-
 		const items				= ui.flat_column_items(columns_map);
 		const template_columns	= items.join(' ')
-		// old way inline
-			// Object.assign(
-			// 	list_body.style,
-			// 	{
-			// 		"grid-template-columns": template_columns
-			// 	}
-			// )
+
 		// new way on-the-fly css
 			const css_object = {
 				".list_body" : {
@@ -109,9 +97,6 @@ view_default_edit_portal.render = async function(self, options) {
 
 	// buttons
 		const buttons = get_buttons(self)
-
-	// top
-		// const top = get_top(self)
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {

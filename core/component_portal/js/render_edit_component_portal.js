@@ -79,6 +79,14 @@ render_edit_component_portal.prototype.edit = async function(options) {
 			case 'content':
 				return view_content_edit_portal.render(self, options)
 
+			case 'print':
+			// view print use the same view as default, except it will use read only to render content_value
+			// as different view as default it will set in the class of the wrapper
+			// sample: <div class="wrapper_component component_portal oh24 oh1_oh24 edit view_print disabled_component">...</div>
+			// take account that to change the css when the component will render in print context
+			// for print we need to use read of the content_value and it's necessary force permissions to use read only element render
+			self.permissions = 1
+
 			case 'default':
 			default:
 				// dynamic try
