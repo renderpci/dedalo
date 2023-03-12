@@ -79,6 +79,7 @@ render_edit_component_portal.prototype.edit = async function(options) {
 			case 'content':
 				return view_content_edit_portal.render(self, options)
 
+			case 'default':
 			default:
 				// dynamic try
 					const render_view = self.render_views.find(el => el.view===view && el.mode===self.mode)
