@@ -25,7 +25,7 @@ export const view_default_edit_input_text = function() {
 /**
 * EDIT
 * Render node for use in modes: edit, edit_in_list
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_default_edit_input_text.render = async function(self, options) {
 
@@ -57,7 +57,7 @@ view_default_edit_input_text.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data_edit = function(self) {
 
@@ -189,9 +189,31 @@ const get_content_value = (i, current_value, self) => {
 
 
 /**
+* GET_CONTENT_VALUE_READ
+* Creates the current value DOM node
+* @param int i
+* @param string current_value
+* @param object self
+* @return HTMLElement content_value
+*/
+const get_content_value_read = (i, current_value, self) => {
+
+	// content_value node
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value read_only',
+			inner_html		: current_value
+		})
+
+	return content_value
+}//end get_content_value_read
+
+
+
+/**
 * GET_BUTTONS
 * @param object instance
-* @return DOM node buttons_container
+* @return HTMLElement buttons_container
 */
 const get_buttons = (self) => {
 
@@ -261,25 +283,3 @@ const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
-
-
-
-/**
-* GET_CONTENT_VALUE_READ
-* Creates the current value DOM node
-* @param int i
-* @param string current_value
-* @param object self
-* @return HTMLElement content_value
-*/
-const get_content_value_read = (i, current_value, self) => {
-
-	// content_value node
-		const content_value = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'content_value read',
-			inner_html		: current_value
-		})
-
-	return content_value
-}//end get_content_value_read
