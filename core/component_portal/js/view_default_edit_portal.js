@@ -80,21 +80,9 @@ view_default_edit_portal.render = async function(self, options) {
 			class_name		: 'list_body'
 		})
 
-		// const n_columns = list_header_node.children.length
-		// // id (auto), repeat x columns, delete (25px)
-		// const template_columns = (self.permissions>1)
-		// 	? "auto repeat("+(n_columns-2)+", 1fr) auto"
-		// 	: "auto repeat("+(n_columns-1)+", 1fr)"
-
 		const items				= ui.flat_column_items(columns_map);
 		const template_columns	= items.join(' ')
-		// old way inline
-			// Object.assign(
-			// 	list_body.style,
-			// 	{
-			// 		"grid-template-columns": template_columns
-			// 	}
-			// )
+
 		// new way on-the-fly css
 			const css_object = {
 				".list_body" : {
@@ -109,9 +97,6 @@ view_default_edit_portal.render = async function(self, options) {
 
 	// buttons
 		const buttons = get_buttons(self)
-
-	// top
-		// const top = get_top(self)
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
@@ -273,134 +258,14 @@ const rebuild_columns_map = async function(self) {
 				width 		: 'auto',
 				callback	: render_column_remove
 			})
+		}else{
+			columns_map.push({
+				id			: 'empty',
+				label		: '',
+				width 		: 'auto',
+			})
 		}
-
 
 	return columns_map
 }//end rebuild_columns_map
 
-
-
-/**
-* RENDER_COLUMN_ID
-* @return DocumentFragment
-*/
-	// view_default_edit_portal.render_column_id = function(options){
-
-	// 	// options
-	// 		const self			= options.caller
-	// 		const section_id	= options.section_id
-	// 		const section_tipo	= options.section_tipo
-
-	// 	const fragment = new DocumentFragment()
-
-	// 	// section_id
-	// 		ui.create_dom_element({
-	// 			element_type	: 'span',
-	// 			class_name		: 'section_id',
-	// 			text_content	: section_id,
-	// 			parent			: fragment
-	// 		})
-
-	// 	// edit_button
-	// 		const edit_button = ui.create_dom_element({
-	// 			element_type	: 'span',
-	// 			class_name		: 'button edit',
-	// 			parent			: fragment
-	// 		})
-	// 		edit_button.addEventListener("click", function(){
-	// 			const user_navigation_rqo = {
-	// 				caller_id	: self.id,
-	// 				source		: {
-	// 					action			: 'search',
-	// 					model			: 'section',
-	// 					tipo			: section_tipo,
-	// 					section_tipo	: section_tipo,
-	// 					mode			: 'edit',
-	// 					lang			: self.lang
-	// 				},
-	// 				sqo : {
-	// 					section_tipo		: [{tipo : section_tipo}],
-	// 					filter				: null,
-	// 					limit				: 1,
-	// 					filter_by_locators	: [{
-	// 						section_tipo	: section_tipo,
-	// 						section_id		: section_id,
-	// 					}]
-	// 				}
-	// 			}
-	// 			event_manager.publish('user_navigation', user_navigation_rqo)
-	// 		})
-
-	// 	return fragment
-	// }// end render_column_id()
-
-
-
-/**
-* GET_INPUT_ELEMENT
-* @return dom element li
-*/
-	// const get_input_element = function(current_section_record){
-
-	// 	 // key. when portal is in search mode, is undefined, fallback to zero
-	// 	const key = current_section_record.paginated_key || 0
-
-	// 	// li
-	// 		const li = ui.create_dom_element({
-	// 			element_type	: 'li',
-	// 			dataset			: { key : key }
-	// 		})
-
-	// 	// input field
-	// 		current_section_record.render()
-	// 		.then(function(section_record_node){
-
-	// 			// section_record_node append
-	// 				li.appendChild(section_record_node)
-
-	// 			// button remove
-	// 				const button_remove = ui.create_dom_element({
-	// 					element_type	: 'span',
-	// 					class_name		: 'button remove',
-	// 					dataset			: { key : key },
-	// 					parent			: li
-	// 				})
-	// 		})
-
-
-	// 	return li
-	// }//end get_input_element
-
-
-
-/**
-* GET_INPUT_ELEMENT_AWAIT
-* @return dom element li
-*/
-	// const get_input_element_await = async function(current_section_record){
-
-	// 	 // key. when portal is in search mode, is undefined, fallback to zero
-	// 	const key = current_section_record.paginated_key || 0
-
-	// 	// li
-	// 		const li = ui.create_dom_element({
-	// 			element_type	: 'li',
-	// 			dataset			: { key : key }
-	// 		})
-
-	// 	// input field
-	// 		const section_record_node = await current_section_record.render()
-	// 		// section_record_node append
-	// 			li.appendChild(section_record_node)
-	// 		// button remove
-	// 			const button_remove = ui.create_dom_element({
-	// 				element_type	: 'span',
-	// 				class_name		: 'button remove',
-	// 				dataset			: { key : key },
-	// 				parent			: li
-	// 			})
-
-
-	// 	return li
-	// }//end get_input_element_await
