@@ -83,6 +83,7 @@ const get_content_data_edit = function(self) {
 			content_data.appendChild(content_value)
 		}
 
+
 	return content_data
 }//end get_content_data_edit
 
