@@ -105,7 +105,11 @@ const get_content_data_edit = function(self) {
 		const inputs_value	= value // is array
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			const content_value = get_input_element(i, inputs_value[i], self, is_inside_tool)
+			// get the content_value
+			const content_value = (self.permissions===1)
+				? get_content_value_read(i, inputs_value[i], self, is_inside_tool)
+				: get_content_value(i, inputs_value[i], self, is_inside_tool)
+			// add node to content_data
 			content_data.appendChild(content_value)
 			// set pointers
 			content_data[i] = content_value
@@ -166,10 +170,10 @@ const get_buttons = (self) => {
 
 
 /**
-* GET_INPUT_ELEMENT
+* GET_CONTENT_VALUE
 * @return DOM node content_value
 */
-const get_input_element = (i, current_value, self) => {
+const get_content_value = (i, current_value, self) => {
 
 	// get fallback when current_value is empty
 	// clean fallback to only text
@@ -324,7 +328,7 @@ const get_input_element = (i, current_value, self) => {
 
 
 	return content_value
-}//end get_input_element
+}//end get_content_value
 
 
 
@@ -1602,3 +1606,24 @@ const render_langs_list = function(self, text_editor, i) {
 
 	return true
 }//end render_langs_list
+
+
+/**
+* GET_CONTENT_VALUE_READ
+* @return DOM node content_value
+*/
+const get_content_value_read = (i, current_value, self) => {
+
+	// value is a raw html without parse into nodes (txt format)
+		const value = self.tags_to_html(current_value)
+
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value editor_container read_only',
+			inner_html 		: value
+		})
+
+	return content_value
+}//end get_content_value_read
+
