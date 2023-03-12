@@ -47,6 +47,14 @@ render_edit_component_select.prototype.edit = async function(options) {
 		case 'line':
 			return view_line_edit_select.render(self, options)
 
+		case 'print':
+			// view print use the same view as default, except it will use read only to render content_value
+			// as different view as default it will set in the class of the wrapper
+			// sample: <div class="wrapper_component component_select oh21 oh1_oh21 edit view_default disabled_component active">...</div>
+			// take account that to change the css when the component will render in print context
+			// for print we need to use read of the contect_value and it's necessary force permissions to use read only element render
+			self.permissions = 1
+
 		case 'default':
 		default:
 			return view_default_edit_select.render(self, options)
@@ -74,7 +82,11 @@ export const get_content_data = function(self) {
 		const inputs_value	= value.length>0 ? value : [null]
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			const content_value = get_content_value(i, inputs_value[i], self)
+			// get the content_value
+			const content_value = (self.permissions===1)
+				? get_content_value_read(i, inputs_value[i], self)
+				: get_content_value(i, inputs_value[i], self)
+			// add node to content_data
 			content_data.appendChild(content_value)
 			// set pointers
 			content_data[i] = content_value
@@ -360,3 +372,64 @@ export const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
+
+
+
+/**
+* GET_CONTENT_VALUE_READ
+* @param int i
+* 	Value key like 0
+* @param object|null current_value
+* 	Current locator value as {section_id: '2', section_tipo: 'rsc740'}
+* @param object self
+* 	Component instance pointer
+* @return DOM node content_value
+*/
+const get_content_value_read = (i, current_value, self) => {
+
+	// short vars
+		const data		= self.data || {}
+		const datalist	= data.datalist || []
+		// add empty option at beginning of the datalist array
+		const empty_option = {
+			label	: '',
+			value	: null
+		}
+		datalist.unshift(empty_option);
+
+		// get value
+		const value = []
+		const datalist_length = datalist.length
+		for (let i = datalist_length - 1; i >= 0; i--) {
+			const datalist_item = datalist[i]
+
+			if(!current_value || !datalist_item.value){
+				continue
+			}
+
+			// selected options set on match
+			if (current_value.section_id!==datalist_item.value.section_id ||
+				current_value.section_tipo!==datalist_item.value.section_tipo ){
+				continue
+			}
+
+			const current_section_id = typeof datalist_item.section_id!=='undefined'
+				? datalist_item.section_id
+				: null
+
+			const current_label = (SHOW_DEBUG===true)
+				? datalist_item.label + (current_section_id ? " [" + current_section_id + "]" : '')
+				: datalist_item.label
+
+			value.push(current_label)
+		}//end for (let i = 0; i < datalist_length; i++)
+
+		// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value',
+			inner_html		: value.join(', ')
+		})
+
+	return content_value
+}//end get_content_value_read

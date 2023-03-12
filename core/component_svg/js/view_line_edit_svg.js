@@ -8,7 +8,7 @@
 	import {ui} from '../../common/js/ui.js'
 	import {
 		get_content_data
-	} from './render_edit_component_svg.js'
+	} from './view_default_edit_svg.js'
 
 
 /**
