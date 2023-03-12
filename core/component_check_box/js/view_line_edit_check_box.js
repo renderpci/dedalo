@@ -25,8 +25,10 @@ export const view_line_edit_check_box = function() {
 
 /**
 * RENDER
-* Render node for use in edit
-* @return DOM node
+* Render node for use in current view
+* @param object self
+* @param object options
+* @return HTMLElement wrapper
 */
 view_line_edit_check_box.render = async function(self, options) {
 
