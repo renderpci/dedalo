@@ -23,7 +23,8 @@ export const render_edit_component_input_text = function() {
 /**
 * EDIT
 * Render node for use in modes: edit, edit_in_list
-* @return HTMLElement wrapper
+* @param object options
+* @return HTMLElement|null
 */
 render_edit_component_input_text.prototype.edit = async function(options) {
 
