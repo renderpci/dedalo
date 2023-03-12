@@ -91,6 +91,7 @@ render_edit_component_portal.prototype.edit = async function(options) {
 				return view_default_edit_portal.render(self, options)
 		}
 
+
 	return null
 }//end edit
 
