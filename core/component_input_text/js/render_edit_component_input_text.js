@@ -30,22 +30,35 @@ render_edit_component_input_text.prototype.edit = async function(options) {
 	const self = this
 
 	// view
-		const view	= self.context.view || 'default'
+		const view = self.context.view || 'default'
 
 
 	switch(view) {
 
 		case 'mini':
+			// used by service_autocomplete
+			// one span with class as '<span class="component_input_text_mini">CODE 2, CODDE 2-b</span>'
 			return view_mini_input_text.render(self, options)
 
 		case 'text':
+			// one span clean as '<span>CODE 2, CODDE 2-b</span>'
 			return view_text_input_text.render(self, options)
 
 		case 'line':
+			// same as default but without label
 			return view_line_edit_input_text.render(self, options)
+
+		case 'print':
+			// view print use the same view as default, except it will use read only to render content_value
+			// as different view as default it will set in the class of the wrapper
+			// sample: <div class="wrapper_component component_input_text oh14 oh1_oh14 edit view_print disabled_component">...</div>
+			// take account that to change the css when the component will render in print context
+			// for print we need to use read of the contect_value and it's necessary force permissions to use read only element render
+			self.permissions = 1
 
 		case 'default':
 		default:
+			// full with wrapper, label, buttons and content_data
 			return view_default_edit_input_text.render(self, options)
 	}
 
