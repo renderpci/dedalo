@@ -24,7 +24,7 @@ export const render_edit_component_av = function() {
 /**
 * EDIT
 * Render node for use in modes: edit
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_edit_component_av.prototype.edit = async function(options) {
 
@@ -40,6 +40,10 @@ render_edit_component_av.prototype.edit = async function(options) {
 
 		case 'viewer':
 			return view_viewer_edit_av.render(self, options)
+
+		case 'print':
+			// for print we need to use read of the content_value and it's necessary force permissions to use read only element render
+			self.permissions = 1
 
 		case 'default':
 		default:
