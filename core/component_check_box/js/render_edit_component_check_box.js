@@ -29,7 +29,7 @@ export const render_edit_component_check_box = function() {
 * EDIT
 * Chose the view render module to generate DOM nodes
 * @param object options
-* @return HTMLElement wrapper | null
+* @return HTMLElement wrapper|null
 */
 render_edit_component_check_box.prototype.edit = async function(options) {
 
@@ -103,7 +103,7 @@ export const get_content_data_edit = function(self) {
 						// build options
 						const content_value_node = get_content_value_read(0, current_value, self)
 						content_data.appendChild(content_value_node)
-						// set the pointer
+						// set pointers
 						content_data[i] = content_value_node
 					}
 				}
@@ -113,7 +113,7 @@ export const get_content_data_edit = function(self) {
 					const current_value = '';
 					const content_value_node = get_content_value_read(0, current_value, self)
 					content_data.appendChild(content_value_node)
-					// set the pointer
+					// set pointers
 					content_data[0] = content_value_node
 				}
 
@@ -123,7 +123,7 @@ export const get_content_data_edit = function(self) {
 				for (let i = 0; i < datalist_length; i++) {
 					const input_element_node = get_content_value(i, datalist[i], self)
 					content_data.appendChild(input_element_node)
-					// set the pointer
+					// set pointers
 					content_data[i] = input_element_node
 				}
 		}
