@@ -26,8 +26,10 @@ export const view_default_edit_radio_button = function() {
 
 /**
 * RENDER
-* Render node for use in modes: edit, edit_in_list
-* @return DOM node
+* Render node for use in current view
+* @param object self
+* @param object options
+* @return HTMLElement wrapper
 */
 view_default_edit_radio_button.render = async function(self, options) {
 

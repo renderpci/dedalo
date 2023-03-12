@@ -27,7 +27,9 @@ export const view_line_edit_select = function() {
 /**
 * RENDER
 * Render node for view
-* @return DOM node
+* @param object self
+* @param object options
+* @return HTMLElement wrapper
 */
 view_line_edit_select.render = async function(self, options) {
 

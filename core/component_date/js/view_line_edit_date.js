@@ -5,7 +5,8 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-		import {
+	import {
+		get_content_value_read,
 		input_element_date,
 		input_element_range,
 		input_element_period,
@@ -32,7 +33,7 @@ export const view_line_edit_date = function() {
 * @param object self
 * 	component instance
 * @param object options
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_line_edit_date.render = async function(self, options) {
 
@@ -46,7 +47,7 @@ view_line_edit_date.render = async function(self, options) {
 		await self.load_editor()
 
 	// content_data
-		const content_data = get_content_data_edit(self)
+		const content_data = get_content_data(self)
 
 	// button_exit_edit
 		const button_exit_edit = ui.component.build_button_exit_edit(self)
@@ -74,32 +75,35 @@ view_line_edit_date.render = async function(self, options) {
 
 
 /**
-* GET_CONTENT_DATA_EDIT
+* GET_CONTENT_DATA
 * @param object self
 * 	component instance
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
-const get_content_data_edit = function(self) {
+export const get_content_data = function(self) {
 
-	const value	= self.data.value
+	// short vars
+		const data	= self.data || {}
+		const value	= data.value || []
 
 	// content_data
-		const content_data = ui.component.build_content_data(self, {
-			autoload : true
-		})
+		const content_data = ui.component.build_content_data(self)
 
 	// build values
 		const inputs_value	= (value.length<1) ? [''] : value
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			const input_element_edit = get_content_value(i, inputs_value[i], self)
+			const input_element_edit = (self.permissions===1)
+				? get_content_value_read(i, inputs_value[i], self)
+				: get_content_value(i, inputs_value[i], self)
 			content_data.appendChild(input_element_edit)
-			// set the pointer
+			// set pointers
 			content_data[i] = input_element_edit
 		}
 
+
 	return content_data
-}//end get_content_data_edit
+}//end get_content_data
 
 
 
@@ -108,11 +112,9 @@ const get_content_data_edit = function(self) {
 * @param int i
 * @param object|null current_value
 * @param object self
-* @return DOM node content_value
+* @return HTMLElement content_value
 */
 const get_content_value = (i, current_value, self) => {
-
-	const date_mode	= self.get_date_mode()
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -121,27 +123,27 @@ const get_content_value = (i, current_value, self) => {
 		})
 
 	// input node
-		let input_node = ''
-		// build date base on date_mode
-		switch(date_mode) {
+		const input_node = (()=>{
 
-			case 'range':
-				input_node = input_element_range(i, current_value, self)
-				break;
+			// date mode
+			const date_mode	= self.get_date_mode()
 
-			case 'period':
-				input_node = input_element_period(i, current_value, self)
-				break;
+			// build date base on date_mode
+			switch(date_mode) {
+				case 'range':
+					return input_element_range(i, current_value, self)
 
-			case 'time':
-				input_node = input_element_time(i, current_value, self)
-				break;
+				case 'period':
+					return input_element_period(i, current_value, self)
 
-			case 'date':
-			default:
-				input_node = input_element_date(i, current_value, self)
-				break;
-		}
+				case 'time':
+					return input_element_time(i, current_value, self)
+
+				case 'date':
+				default:
+					return input_element_date(i, current_value, self)
+			}
+		})()
 
 	// add input_node to the content_value
 		content_value.appendChild(input_node)

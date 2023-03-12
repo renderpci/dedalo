@@ -732,6 +732,79 @@ component_date.prototype.parse_string_period = function(values) {
 
 
 /**
+* VALUE_TO_STRING_VALUE
+* Convert standard value item to string date based on
+* current date_mode (range, period, time, date)
+* Used by get_content_value_read to unify print and read only output
+* It is necessary because edit mode do no send values resolved as string like list mode do
+* @param string current_value
+* 	Sample:
+	{
+	    "mode": "start",
+	    "start": {
+	        "day": 12,
+	        "time": 65027145600,
+	        "year": 2023,
+	        "month": 3
+	    }
+	}
+* @return string
+*/
+component_date.prototype.value_to_string_value = function(current_value) {
+
+	const self	= this
+
+	// date mode
+	const date_mode	= self.get_date_mode()
+
+	// build date base on date_mode
+	switch(date_mode) {
+
+		case 'range':
+			const input_value_start	= (current_value && current_value.start)
+				? self.date_to_string(current_value.start)
+				: ''
+			const input_value_end	= (current_value && current_value.end)
+				? self.date_to_string(current_value.end)
+				: ''
+
+			return input_value_start +'<>'+ input_value_end
+
+		case 'period':
+			// period
+				const period = (current_value && current_value.period)
+					? current_value.period
+					: null
+			// parts
+				const year	= (period) ? period.year : ''
+				const month	= (period) ? period.month : ''
+				const day	= (period) ? period.day : ''
+			// labels
+				const label_year	= (year!=='' && year>1) 	? get_label.years : get_label.year
+				const label_month	= (month!=='' && month>1) 	? get_label.months : get_label.month
+				const label_day		= (day!=='' && day>1) 		? get_label.days : get_label.day
+
+			return  label_year 	+': '+ year +', '+
+					label_month +': '+ month +', '+
+					label_day 	+': '+ day
+
+		case 'time':
+
+			return (current_value)
+				? self.time_to_string(current_value.start)
+				: ''
+
+		case 'date':
+		default:
+
+			return (current_value && current_value.start)
+				? self.date_to_string(current_value.start)
+				: ''
+	}
+}//end value_to_string_value
+
+
+/**
 * FORMAT_DATE (DES)
 * @param string date_value
 * @return object result

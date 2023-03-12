@@ -26,14 +26,14 @@ export const render_edit_component_email = function() {
 * EDIT
 * Render node for use in edit
 * @param object options
-* @return DOM node
+* @return HTMLElement|null
 */
 render_edit_component_email.prototype.edit = async function(options) {
 
 	const self = this
 
 	// view
-		const view	= self.context.view || 'default'
+		const view = self.context.view || 'default'
 
 	switch(view) {
 
@@ -42,6 +42,14 @@ render_edit_component_email.prototype.edit = async function(options) {
 
 		case 'mini':
 			return view_mini_email.render(self, options)
+
+		case 'print':
+			// view print use the same view as default, except it will use read only to render content_value
+			// as different view as default it will set in the class of the wrapper
+			// sample: <div class="wrapper_component component_input_text oh14 oh1_oh14 edit view_print disabled_component">...</div>
+			// take account that to change the css when the component will render in print context
+			// for print we need to use read of the content_value and it's necessary force permissions to use read only element render
+			self.permissions = 1
 
 		case 'default':
 		default:
@@ -55,7 +63,7 @@ render_edit_component_email.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 export const get_content_data = function(self) {
 
@@ -70,7 +78,9 @@ export const get_content_data = function(self) {
 		const inputs_value = value
 		const value_length = inputs_value.length || 1
 		for (let i = 0; i < value_length; i++) {
-			const input_element_node = get_content_value(i, inputs_value[i], self)
+			const input_element_node = (self.permissions===1)
+				? get_content_value_read(i, inputs_value[i], self)
+				: get_content_value(i, inputs_value[i], self)
 			content_data.appendChild(input_element_node)
 			// set the pointer
 			content_data[i] = input_element_node
@@ -83,7 +93,7 @@ export const get_content_data = function(self) {
 
 /**
 * GET_CONTENT_VALUE
-* @return DOM element content_value
+* @return HTMLElement content_value
 */
 const get_content_value = (i, current_value, self) => {
 
@@ -108,7 +118,7 @@ const get_content_value = (i, current_value, self) => {
 			value			: current_value,
 			parent			: content_value
 		})
-		// event focus
+		// focus event
 			input_email.addEventListener('focus', function() {
 				// force activate on input focus (tabulating case)
 				if (!self.active) {
@@ -127,7 +137,7 @@ const get_content_value = (i, current_value, self) => {
 			// 		})
 			// 	}
 			// })
-		// event change
+		// change event
 			input_email.addEventListener('change',function(e) {
 				e.preventDefault();
 
@@ -162,7 +172,7 @@ const get_content_value = (i, current_value, self) => {
 						input_email.classList.add('mandatory')
 					}
 			})//end change
-		// event keyup
+		// keyup event
 			input_email.addEventListener('keyup', async function(e) {
 
 				// Enter key force to save changes
@@ -188,42 +198,42 @@ const get_content_value = (i, current_value, self) => {
 					self.set_changed_data(changed_data_item)
 			})//end keyup
 
-
 	// add buttons to the email row
 		if((mode==='edit') && !is_inside_tool) {
-			const button_remove = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'button remove hidden_button',
-				parent			: content_value
-			})
-			// button remove
-			button_remove.addEventListener('mouseup',function(e){
-				// force possible input change before remove
-				document.activeElement.blur()
 
-				const changed_data = [Object.freeze({
-					action	: 'remove',
-					key		: i,
-					value	: null
-				})]
-				self.change_value({
-					changed_data	: changed_data,
-					label			: current_value || ' ',
-					refresh			: true
+			// button_remove
+				const button_remove = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'button remove hidden_button',
+					parent			: content_value
 				})
-				.then(()=>{
+				button_remove.addEventListener('mouseup', function(e) {
+					// force possible input change before remove
+					document.activeElement.blur()
+
+					const changed_data = [Object.freeze({
+						action	: 'remove',
+						key		: i,
+						value	: null
+					})]
+					self.change_value({
+						changed_data	: changed_data,
+						label			: current_value || ' ',
+						refresh			: true
+					})
+					.then(()=>{
+					})
 				})
-			})
 
 			// button email
-			const button_email = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'button email hidden_button',
-				parent			: content_value
-			})
-			button_email.addEventListener('mouseup',function(e) {
-				self.send_email(current_value)
-			})
+				const button_email = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'button email hidden_button',
+					parent			: content_value
+				})
+				button_email.addEventListener('mouseup', function(e) {
+					self.send_email(current_value)
+				})
 		}
 
 
@@ -233,9 +243,33 @@ const get_content_value = (i, current_value, self) => {
 
 
 /**
+* GET_CONTENT_VALUE_READ
+* Render a element based on passed value
+* @param int i
+* 	data.value array key
+* @param string current_value
+* @param object self
+*
+* @return HTMLElement content_value
+*/
+const get_content_value_read = (i, current_value, self) => {
+
+	// create content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value read_only',
+			inner_html		: current_value
+		})
+
+	return content_value
+}//end get_content_value_read
+
+
+
+/**
 * GET_BUTTONS
 * @param object instance
-* @return DOM node buttons_container
+* @return HTMLElement buttons_container
 */
 export const get_buttons = (self) => {
 

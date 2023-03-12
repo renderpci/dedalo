@@ -11,6 +11,7 @@
 	} from './render_edit_component_filter.js'
 
 
+
 /**
 * VIEW_LINE_EDIT_FILTER
 * Manage the components logic and appearance in client side
@@ -23,9 +24,9 @@ export const view_line_edit_filter = function() {
 
 
 /**
-* EDIT
-* Render node for use in edit
-* @return DOM node
+* RENDER
+* Render node for use in current view
+* @return HTMLElement wrapper
 */
 view_line_edit_filter.render = async function(self, options) {
 
@@ -48,11 +49,11 @@ view_line_edit_filter.render = async function(self, options) {
 			content_data	: content_data,
 			label			: null
 		})
-		// set pointer s
+		// set pointers
 		wrapper.content_data = content_data
 
 
 
 
 	return wrapper
-}//end edit
+}//end render
