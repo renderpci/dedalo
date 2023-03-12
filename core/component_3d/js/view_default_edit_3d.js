@@ -89,7 +89,7 @@ const get_content_data_edit = function(self) {
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 			const content_value = (self.permissions===1)
-				: get_content_value_read(i, inputs_value[i], self)
+				? get_content_value_read(i, inputs_value[i], self)
 				: get_content_value(i, inputs_value[i], self)
 			content_data.appendChild(content_value)
 			// set pointer
@@ -427,7 +427,7 @@ const get_content_value_read = (i, current_value, self) => {
 	// content_value
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'content_value',
+			class_name		: 'content_value read_only',
 			inner_html		: 'Working in this view ' + self.view
 		})
 
