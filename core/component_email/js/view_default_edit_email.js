@@ -13,6 +13,7 @@
 	} from './render_edit_component_email.js'
 
 
+
 /**
 * VIEW_DEFAULT_EDIT_EMAIL
 * Manage the components logic and appearance in client side
@@ -27,7 +28,9 @@ export const view_default_edit_email = function() {
 /**
 * RENDER
 * Render node for use in current view
-* @return DOM node
+* @param object self
+* @param object options
+* @return HTMLElement wrapper
 */
 view_default_edit_email.render = async function(self, options) {
 
