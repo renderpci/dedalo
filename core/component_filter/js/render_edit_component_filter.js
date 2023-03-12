@@ -33,8 +33,6 @@ render_edit_component_filter.prototype.edit = async function(options) {
 
 	const self = this
 
-	self.context.view = 'print'
-
 	// view
 		const view = self.context.view || 'default'
 
