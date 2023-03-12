@@ -82,55 +82,10 @@ const get_content_data = async function(self) {
 		const content_data = ui.component.build_content_data(self)
 			  content_data.classList.add('nowrap')
 
-	// content_value
-		// const i = 0;
-		// const content_value = ui.create_dom_element({
-		// 	element_type	: 'div',
-		// 	class_name		: 'content_value',
-		// 	parent			: content_data
-		// })
-		// // set pointers
-		// content_data[i] = content_value
+	// root level nodes. Filtered form full datalist
+		const root_level_items = datalist.filter(el => el.parent==='dd1')
 
-	// button_save
-		const button_save = ui.create_dom_element({
-			element_type	: 'button',
-			class_name		: 'primary save button_save folding hide',
-			inner_html		: get_label.save || 'Save',
-			parent			: content_data
-		})
-		button_save.addEventListener("click", async function(e){
-			e.stopPropagation()
-			await self.save_changes()
-			button_save.classList.add('hide')
-			const warning_label_text = self.node.querySelector('.warning_label_text')
-			if (warning_label_text) {
-				warning_label_text.remove()
-			}
-		})
-		self.events_tokens.push(
-			event_manager.subscribe('show_save_button_'+self.id, fn_show_save_button)
-		)
-		function fn_show_save_button() {
-			button_save.classList.remove('hide')
-			const label = self.node.querySelector('.label')
-			if (label && !label.querySelector('.warning_label_text')) {
-				// warning_label_text
-				ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'warning_label_text blink',
-					inner_html		: get_label.unsaved_changes || 'Unsaved changes!',
-					parent			: label
-				})
-			}
-
-			// page unload event
-				// set_before_unload (bool) add
-				set_before_unload(true)
-		}
-
-
-	// tree
+	// Tree
 		// ul tree_root
 			const ul = ui.create_dom_element({
 				element_type	: 'ul',
@@ -138,30 +93,79 @@ const get_content_data = async function(self) {
 				parent			: content_data
 			})
 
-		// root level nodes. Filtered form full datalist
-			const root_level_items = datalist.filter(el => el.parent==='dd1')
-
-		// debug
-			// value.push({
-			// 	tipo			: 'numisdata1017',
-			// 	section_tipo	: 'numisdata1016',
-			// 	value			: 1
-			// })
-			//
-			// console.log('numisdata1016 section item:', datalist.filter(el => el.tipo==='numisdata1016'));
-			// const found = datalist.find(el => el.tipo==='numisdata1017')
-			// found.section_tipo = 'numisdata3'
-			// console.log('numisdata1017 item:', datalist.filter(el => el.tipo==='numisdata1017'));
-			// console.log('numisdata1017 value:', value.filter(el => el.tipo==='numisdata1017'));
-
-		// tree_nodes. create nodes and add to tree_object
-			const tree_nodes = await render_tree_items(
+	// Read only
+		 if(self.permissions === 1){
+		 	// tree_nodes. create nodes and add to tree_object
+			const tree_nodes = await render_tree_items_read(
 				root_level_items, // array of objects as [{"label":"Inventory","model":"area_root","parent":"dd1","section_tipo":"dd242","tipo":"dd242"},...]
 				datalist, // array of objects. Full items list
 				value, // array of objects. Full list of data as [{"section_tipo":"mupi2","tipo":"mupi23","value":2},...]
 				self // object this instance
 			)// return DocumentFragment with li nodes
 			ul.appendChild(tree_nodes)
+
+			return content_data
+		 }
+
+	// Read and write
+		// button_save
+			const button_save = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'primary save button_save folding hide',
+				inner_html		: get_label.save || 'Save',
+				parent			: content_data
+			})
+			button_save.addEventListener("click", async function(e){
+				e.stopPropagation()
+				await self.save_changes()
+				button_save.classList.add('hide')
+				const warning_label_text = self.node.querySelector('.warning_label_text')
+				if (warning_label_text) {
+					warning_label_text.remove()
+				}
+			})
+			self.events_tokens.push(
+				event_manager.subscribe('show_save_button_'+self.id, fn_show_save_button)
+			)
+			function fn_show_save_button() {
+				button_save.classList.remove('hide')
+				const label = self.node.querySelector('.label')
+				if (label && !label.querySelector('.warning_label_text')) {
+					// warning_label_text
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'warning_label_text blink',
+						inner_html		: get_label.unsaved_changes || 'Unsaved changes!',
+						parent			: label
+					})
+				}
+
+				// page unload event
+					// set_before_unload (bool) add
+					set_before_unload(true)
+			}
+
+			// debug
+				// value.push({
+				// 	tipo			: 'numisdata1017',
+				// 	section_tipo	: 'numisdata1016',
+				// 	value			: 1
+				// })
+				//
+				// console.log('numisdata1016 section item:', datalist.filter(el => el.tipo==='numisdata1016'));
+				// const found = datalist.find(el => el.tipo==='numisdata1017')
+				// found.section_tipo = 'numisdata3'
+				// console.log('numisdata1017 item:', datalist.filter(el => el.tipo==='numisdata1017'));
+				// console.log('numisdata1017 value:', value.filter(el => el.tipo==='numisdata1017'));
+
+			// tree_nodes. create nodes and add to tree_object
+				const tree_nodes = await render_tree_items(
+					root_level_items, // array of objects as [{"label":"Inventory","model":"area_root","parent":"dd1","section_tipo":"dd242","tipo":"dd242"},...]
+					datalist, // array of objects. Full items list
+					value, // array of objects. Full list of data as [{"section_tipo":"mupi2","tipo":"mupi23","value":2},...]
+					self // object this instance
+				)// return DocumentFragment with li nodes
+				ul.appendChild(tree_nodes)
 
 
 	return content_data
@@ -266,90 +270,6 @@ const render_tree_item = function(item, datalist, value, self) {
 
 	return tree_item_node
 }//end render_tree_item
-
-
-
-/**
-* RENDER_TREE_ITEM_OLD
-* Recursive function to render tree items
-* @param object item
-* @param array datalist
-* @param array value
-* @param instance self
-*
-* @return DOM node tree_item_node
-*/
-	// const render_tree_item_OLD = function(item, datalist, value, self) {
-
-	// 	// multi item case. render each node and hierarchize all
-	// 		if (Array.isArray(item)) {
-
-	// 			const items = item
-
-	// 			// tree_object . Object with all li nodes rendered sequentially
-	// 				const tree_object = {}
-
-	// 			// render nodes
-	// 				const items_length = item.length
-	// 				for (let i = 0; i < items_length; i++) {
-
-	// 					const current_item = items[i]
-
-	// 					// recursion render_tree_item
-	// 					const tree_node	= render_tree_item(
-	// 						current_item,
-	// 						datalist,
-	// 						value,
-	// 						self
-	// 					)// li node
-
-	// 					// store in the tree_object
-	// 					const key = current_item.tipo +'_'+ current_item.section_tipo
-	// 					tree_object[key] = tree_node
-	// 				}
-
-	// 			// hierarchize nodes
-	// 				const fragment = new DocumentFragment()
-	// 				for(const key in tree_object) {
-
-	// 					const tree_node	= tree_object[key]
-
-	// 					// const parent	= tree_node.parent
-	// 					const parent_key = (tree_node.item.tipo===tree_node.item.section_tipo)
-	// 						? tree_node.item.parent + '_' + tree_node.item.parent // sections/areas case
-	// 						: tree_node.item.parent + '_' + tree_node.item.section_tipo // others (components, section_groups, ...)
-
-	// 					if(tree_object[parent_key]) {
-	// 						// add to parent branch
-	// 						tree_object[parent_key].branch.appendChild(tree_node)
-	// 						// console.log("Added to parent branch:", key, parent_key);
-	// 					}else{
-	// 						// add to root level
-	// 						fragment.appendChild(tree_node)
-	// 					}
-	// 				}
-
-	// 			return fragment
-	// 		}
-
-	// 	// single item case.
-	// 		const fn_render = (item.tipo===item.section_tipo)
-	// 			? render_area_item
-	// 			: render_permissions_item
-
-	// 		// create node and add to tree_object
-	// 		const tree_item_node = fn_render(
-	// 			item,
-	// 			datalist,
-	// 			value,
-	// 			self
-	// 		) // return li node
-	// 		// attach item object
-	// 		tree_item_node.item = item
-
-
-	// 	return tree_item_node
-	// }//end render_tree_item_OLD
 
 
 
@@ -927,3 +847,256 @@ const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
+
+
+
+
+/**
+* RENDER_TREE_ITEMS_READ
+* Render given tree items hierarchically
+* @param array items
+* @param array datalist
+* @param array value
+*
+* @return DocumentFragment
+* 	Containing li nodes
+*/
+const render_tree_items_read = function(items, datalist, value) {
+
+	// tree_object . Object with all li nodes rendered sequentially
+		const tree_object = {}
+
+	// render nodes. Every area/section node
+		const items_length = items.length
+		for (let i = 0; i < items_length; i++) {
+
+			const current_item = items[i]
+
+			// render_tree_item_read (with pointer to their item)
+				const tree_node	= render_tree_item_read(
+					current_item,
+					datalist,
+					value
+				)// li node
+
+			// store in the tree_object
+				const key = current_item.tipo
+				tree_object[key] = tree_node
+		}
+
+	// hierarchize nodes
+		const fragment = new DocumentFragment()
+		for(const key in tree_object) {
+
+			const tree_node	= tree_object[key]
+			const item		= tree_node.item
+
+			const parent_key = item.parent
+
+			if(tree_object[parent_key]) {
+				// move node to parent branch
+				tree_object[parent_key].branch.appendChild(tree_node)
+				// console.log("Added to parent branch:", key, parent_key);
+			}else{
+				// add to root level
+				fragment.appendChild(tree_node)
+			}
+		}
+
+
+	return fragment
+}//end render_tree_items_read
+
+
+
+/**
+* RENDER_TREE_ITEM_READ
+* Recursive function to render tree items
+* @param object item
+* @param array datalist
+* @param array value
+*
+* @return DOM node tree_item_node
+*/
+const render_tree_item_read = function(item, datalist, value) {
+
+	// single item case.
+		const fn_render = (item.tipo===item.section_tipo)
+			? render_area_item_read
+			: render_permissions_item_read
+
+	// create node and add to tree_object
+		const tree_item_node = fn_render(
+			item,
+			datalist,
+			value
+		)
+		// attach item object as pointer
+		tree_item_node.item = item
+
+
+	return tree_item_node
+}//end render_tree_item_read
+
+
+
+/**
+* RENDER_AREA_ITEM_READ
+* Create default tree item node (section, area)
+* @param object item
+* 	datalist current item
+* @param array datalist
+* 	full list of section elements from ontology
+* @param array value
+* 	full list of elements in self.data (DB) at key zero (this component has only one value but format is array)
+* @return DOM node li
+*/
+const render_area_item_read = function(item, datalist, value) {
+
+	// direct_children check and set
+		const tipo					= item.tipo
+		const section_tipo			= item.section_tipo
+		const direct_children		= item.model==='section'
+			? datalist.filter(el => el.section_tipo===tipo && el.tipo!==tipo)
+			: datalist.filter(el => el.parent===tipo)
+		// add children subsections (dataframe cases)
+		if (item.model==='section') {
+			const direct_children_length = direct_children.length
+			for (let i = 0; i < direct_children_length; i++) {
+				const item = direct_children[i]
+				if (item.model==='section') {
+					const sub_children = datalist.filter(el => el.parent===item.tipo)
+					// console.log('sub_children:', item.tipo, sub_children);
+					direct_children.push(...sub_children)
+				}
+			}
+		}
+
+	// item_value. get the current item value
+		const item_value	= value.find(el => el.section_tipo===section_tipo && el.tipo===tipo)
+		const permissions	= item_value && item_value.value
+			? parseInt(item_value.value)
+			: 0
+
+		const permissions_label = (permissions===2)
+			? 'rw-'
+			: (permissions===1)
+				? 'r--'
+				: '---'
+
+	// li DOM node
+		const li = ui.create_dom_element({
+			element_type	: 'li',
+			class_name		: 'li_item',
+		})
+
+	// label
+		const label = ui.create_dom_element({
+			element_type	: 'label',
+			class_name		: 'area_label' + (direct_children ? ' icon_arrow' : ''),
+			inner_html		: permissions_label + ' ' + item.label,
+			parent			: li
+		})
+
+	// with children case
+		const direct_children_length = direct_children.length
+		if (direct_children_length>0) {
+			// branch (ul container for children)
+				const branch = ui.create_dom_element({
+					element_type	: 'ul',
+					class_name		: 'ul_item branch hide'
+				})
+				li.branch = branch
+
+			// track collapse toggle state of content
+				const collapse = function() {
+					label.classList.remove('up')
+				}
+				const expose = function() {
+					label.classList.add('up')
+					if (!branch.hasChildNodes()) {
+						// direct_children render (return hierarchized children nodes)
+						const tree_node = render_tree_items_read(
+							direct_children,
+							datalist,
+							value
+						) // return li node
+						branch.appendChild(tree_node)
+					}
+				}
+				ui.collapse_toggle_track({
+					toggler				: label,
+					container			: branch,
+					collapsed_id		: 'security_acccess_' + item.tipo,
+					collapse_callback	: collapse,
+					expose_callback		: expose,
+					default_state		: 'closed'
+				})
+
+			// add branch at last position
+			li.appendChild(branch)
+		}//end direct_children
+
+	return li
+}//end render_area_item_read
+
+
+
+/**
+* render_permissions_item_read
+* Create tree item node to check permissions (components, section_groups, buttons, etc.)
+* @param object item
+* 	datalist current item
+* @param array datalist
+* 	full list of section elements from ontology
+* @param array value
+* 	full list of elements in self.data (DB) at key zero (this component has only one value but format is array)
+* @return DOM node li
+*/
+const render_permissions_item_read = function(item, datalist, value) {
+
+	// short vars
+		const section_tipo			= item.section_tipo
+		const tipo					= item.tipo
+		const direct_children		= datalist.find(el => el.parent===tipo)
+
+	// item_value (permissions). get the item value
+		const item_value	= value.find(el => el.section_tipo===section_tipo && el.tipo===item.tipo)
+		const permissions	= item_value && item_value.value
+			? parseInt(item_value.value)
+			: 0
+
+	// li DOM node
+		const li = ui.create_dom_element({
+			element_type	: 'li',
+			class_name		: 'li_item permissions'
+		})
+
+		const permissions_label = (permissions===2)
+			? 'rw-'
+			: (permissions===1)
+				? 'r--'
+				: '---'
+
+	// label
+		const label = ui.create_dom_element({
+			element_type	: 'label',
+			class_name		: 'area_label',
+			inner_html		: permissions_label + ' ' + item.label,
+			parent			: li
+		})
+
+	// with children case
+		if (direct_children) {
+			// branch (ul container for children)
+				const branch = ui.create_dom_element({
+					element_type	: 'ul',
+					class_name		: 'ul_item branch',
+					parent			: li
+				})
+				li.branch = branch
+		}//end direct_children
+
+	return li
+}//end render_permissions_item_read
+
