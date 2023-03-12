@@ -370,13 +370,16 @@ export const ui = {
 				const content_data = document.createElement('div')
 
 			// css
-				const content_data_structure_css = typeof component_css.content_data!=='undefined' ? component_css.content_data : []
+				const content_data_structure_css = typeof component_css.content_data!=='undefined'
+					? component_css.content_data
+					: []
 				const ar_css = [
 					'content_data',
 					type,
 					...content_data_structure_css
 				]
 				content_data.classList.add(...ar_css)
+
 
 			return content_data
 		},//end build_content_data
