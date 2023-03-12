@@ -27,20 +27,30 @@ export const render_edit_component_filter = function() {
 * EDIT
 * Render node for use in edit
 * @param object options
-* @return DOM node
+* @return HTMLElement
 */
 render_edit_component_filter.prototype.edit = async function(options) {
 
 	const self = this
 
+	self.context.view = 'print'
+
 	// view
-		const view	= self.context.view || 'default'
+		const view = self.context.view || 'default'
 
 	switch(view) {
 
 		case 'line':
 			return view_line_edit_filter.render(self, options)
 			break;
+
+		case 'print':
+			// view print use the same view as default, except it will use read only to render content_value
+			// as different view as default it will set in the class of the wrapper
+			// sample: <div class="wrapper_component component_input_text oh14 oh1_oh14 edit view_print disabled_component">...</div>
+			// take account that to change the css when the component will render in print context
+			// for print we need to use read of the content_value and it's necessary force permissions to use read only element render
+			self.permissions = 1
 
 		case 'default':
 		default:
@@ -54,7 +64,8 @@ render_edit_component_filter.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @param object self
+* @return HTMLElement content_data
 */
 export const get_content_data = function(self) {
 
@@ -65,12 +76,11 @@ export const get_content_data = function(self) {
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
-			  // content_data.classList.add('nowrap')
 
 		// ul
 			const ul_branch = ui.create_dom_element({
 				element_type	: 'ul',
-				class_name		: 'branch',
+				class_name		: 'content_value branch',
 				parent			: content_data
 			})
 
@@ -84,7 +94,11 @@ export const get_content_data = function(self) {
 			const children_elements_len = children_elements.length
 			element.has_children = (children_elements_len > 0)
 
-			const element_node = get_input_element(element, self)
+			// element_node
+			const element_node = (self.permissions===1)
+				? get_input_element_read(element, self)
+				: get_input_element(element, self)
+
 			if(children_elements_len > 0) {
 				for (let i = 0; i < children_elements_len; i++) {
 					const current_child	= children_elements[i]
@@ -113,7 +127,7 @@ export const get_content_data = function(self) {
 
 /**
 * GET_INPUT_ELEMENT
-* @return DOM node li
+* @return HTMLElement li
 */
 export const get_input_element = (element, self) => {
 
@@ -240,9 +254,72 @@ export const get_input_element = (element, self) => {
 
 
 /**
+* GET_INPUT_ELEMENT_read
+* @return HTMLElement li
+*/
+export const get_input_element_read = (element, self) => {
+
+	// short vars
+		const value				= self.data.value || []
+		const value_length		= value.length
+		const datalist_value	= element.value
+		const label				= element.label || ''
+		const section_id		= element.section_id
+		const section_tipo		= element.section_tipo
+
+	// li container
+		const li_class_name = (element.has_children) ? ' grouper' : ''
+		const li = ui.create_dom_element({
+			element_type	: 'li',
+			class_name		: 'item_li' + li_class_name
+		})
+
+	// label
+		const label_node = ui.create_dom_element({
+			element_type	: 'label',
+			class_name		: 'item_label',
+			inner_html		: label,
+			parent			: li
+		})
+
+	// icon_node check
+		const icon_node = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'icon_button icon check transparent'
+		})
+		label_node.prepend(icon_node)
+
+	// has_children case
+		if(element.has_children) {
+			// branch
+				const branch = ui.create_dom_element({
+					element_type	: 'ul',
+					class_name		: 'branch',
+					parent 			: li
+				})
+				li.branch = branch
+		}
+
+	// checked option set on match
+		for (let j = 0; j < value_length; j++) {
+			if (value[j] && datalist_value &&
+				value[j].section_id===datalist_value.section_id &&
+				value[j].section_tipo===datalist_value.section_tipo
+				) {
+					icon_node.classList.remove('transparent')
+			}
+		}
+
+
+	return li
+}//end get_input_element_read
+
+
+
+/**
 * GET_BUTTONS
 * @param object instance
-* @return DOM node buttons_container
+* @return HTMLElement buttons_container
 */
 export const get_buttons = (self) => {
 
