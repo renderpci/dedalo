@@ -36,7 +36,7 @@ export const view_mini_dd_grid = function() {
 * Render node for use in this view
 * @param object options
 * 	Sample: {render_level: 'full'}
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_mini_dd_grid.render = async function(self, options) {
 

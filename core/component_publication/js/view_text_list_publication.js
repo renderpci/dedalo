@@ -23,7 +23,7 @@ export const view_text_list_publication = function() {
 /**
 * RENDER
 * Render node to be used in current mode
-* @return DOM node
+* @return HTMLElement text_node
 */
 view_text_list_publication.render = async function(self, options) {
 

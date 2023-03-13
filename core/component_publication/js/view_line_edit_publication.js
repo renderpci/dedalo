@@ -26,7 +26,7 @@ export const view_line_edit_publication = function() {
 /**
 * RENDER
 * Render node for use in edit mode
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_line_edit_publication.render = async function(self, options) {
 

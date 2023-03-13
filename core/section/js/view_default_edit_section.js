@@ -25,7 +25,7 @@ export const view_default_edit_section = function() {
 /**
 * EDIT
 * Render node for use in edit
-* @return DOM node
+* @return HTMLElement wrapper
 */
 view_default_edit_section.render = async function(self, options) {
 
@@ -154,7 +154,7 @@ view_default_edit_section.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = async function(self, ar_section_record) {
 	// const t0 = performance.now()
@@ -208,7 +208,7 @@ const get_content_data = async function(self, ar_section_record) {
 
 /**
 * GET_BUTTONS
-* @return DOM node buttons
+* @return HTMLElement buttons
 */
 const get_buttons = function(self) {
 
@@ -222,7 +222,7 @@ const get_buttons = function(self) {
 
 /**
 * NO_RECORDS_NODE
-* @return DOM node
+* @return HTMLElement node
 */
 const no_records_node = () => {
 

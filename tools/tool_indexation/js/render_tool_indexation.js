@@ -25,7 +25,7 @@ export const render_tool_indexation = function() {
 /**
 * EDIT
 * Render node for use like button
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_tool_indexation.prototype.edit = async function (options={render_level:'full'}) {
 
@@ -65,14 +65,14 @@ render_tool_indexation.prototype.edit = async function (options={render_level:'f
 
 
 	return wrapper
-}//end render_tool_indexation
+}//end edit
 
 
 
 /**
 * GET_CONTENT_DATA_EDIT
 * Render tool content_data
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data_edit = async function(self) {
 
@@ -703,7 +703,7 @@ const render_viewer_selector = function(self, wrapper){
 * the components are defined in ontology as tool_config->name_of_the_tool->ddo_map
 * @param object self
 * 	instance of current tool
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const render_status = async function(self) {
 

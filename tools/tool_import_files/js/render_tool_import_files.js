@@ -26,7 +26,7 @@ export const render_tool_import_files = function() {
 /**
 * EDIT
 * Render node for use in current mode
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_tool_import_files.prototype.edit = async function(options) {
 
@@ -72,7 +72,7 @@ render_tool_import_files.prototype.edit = async function(options) {
 /**
 * GET_CONTENT_DATA_EDIT
 * @param object self
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data_edit = async function(self) {
 
@@ -1120,7 +1120,7 @@ const create_template = async function(self) {
 
 /**
 * GET_TEMP_SECTIONS
-* @return DOM node DocumentFragment
+* @return HTMLElement DocumentFragment
 */
 const get_temp_sections = async function(self){
 

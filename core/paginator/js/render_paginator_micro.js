@@ -22,7 +22,7 @@ export const render_paginator_micro = function() {
 /**
 * MICRO
 * Render node for use in current mode
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_paginator_micro.prototype.micro = async function(options) {
 
@@ -78,7 +78,7 @@ const add_events = (wrapper, self) => {
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = async function(self) {
 

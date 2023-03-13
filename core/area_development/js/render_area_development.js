@@ -27,7 +27,7 @@ export const render_area_development = function() {
 * EDIT
 * Render node for use in edit
 * @param object options
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_area_development.prototype.edit = async function(options) {
 
@@ -61,7 +61,7 @@ render_area_development.prototype.edit = async function(options) {
 /**
 * LIST
 * Alias of edit
-* @return DOM node
+* @return HTMLElement
 */
 render_area_development.prototype.list = async function(options) {
 
@@ -73,7 +73,7 @@ render_area_development.prototype.list = async function(options) {
 /**
 * CONTENT_DATA
 * @param object self
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 
@@ -132,7 +132,7 @@ const get_content_data = function(self) {
 * @param object item
 * @param object self
 * 	Instance of current area
-* @return DOM node container
+* @return HTMLElement container
 */
 const build_widget = (item, self) => {
 
@@ -348,7 +348,7 @@ const print_response = (container, api_response) => {
 * BUILD_FORM
 * Render a form for given widget_object
 * @param object widget_object
-* @return DOM node form_container
+* @return HTMLElement form_container
 */
 export const build_form = function(widget_object) {
 

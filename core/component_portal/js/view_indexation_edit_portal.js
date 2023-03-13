@@ -84,7 +84,7 @@ view_indexation_edit_portal.render = async function(self, options) {
 /**
 * GET_CONTENT_DATA
 * Render all received section records and place it into a new div 'content_data'
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = async function(self, ar_section_record) {
 
@@ -263,7 +263,7 @@ const render_column_id = function(options){
 /**
 * RENDER_TAG_COLUMN
 * @param object options
-* @return DOM node tag_node
+* @return HTMLElement tag_node
 */
 const render_tag_column = function(options){
 
@@ -290,7 +290,7 @@ const render_tag_column = function(options){
 /**
 * RENDER_INFO_COLUMN
 * @param object options
-* @return DOM node info_node|null
+* @return HTMLElement info_node|null
 */
 const render_info_column = function(options){
 

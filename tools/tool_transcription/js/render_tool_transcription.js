@@ -29,7 +29,7 @@ export const render_tool_transcription = function() {
 * EDIT
 * Render tool main node
 * @param object options = {}
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_tool_transcription.prototype.edit = async function(options={}) {
 
@@ -79,7 +79,7 @@ render_tool_transcription.prototype.edit = async function(options={}) {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data_edit = async function(self) {
 
@@ -445,7 +445,7 @@ const render_related_list = function(self){
 * RENDER_TANSCRIPTION_OPTIONS
 * This is used to build a optional buttons inside the header
 * @param object self
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const render_tanscription_options = async function(self) {
 
@@ -544,7 +544,7 @@ const render_tanscription_options = async function(self) {
 * the components are defined in ontology as tool_config->name_of_the_tool->ddo_map
 * @param object self
 * 	instance of current tool
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const render_process_status = async function(self) {
 
@@ -579,7 +579,7 @@ const render_process_status = async function(self) {
 * This is used to build a optional buttons inside the header
 * @param object self
 * 	instance of current tool
-* @return DOM node activity_info_body
+* @return HTMLElement activity_info_body
 */
 const render_activity_info = async function(self) {
 

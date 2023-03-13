@@ -23,7 +23,7 @@ export const view_mini_portal = function() {
 /**
 * RENDER
 * Render node for use in list
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_mini_portal.render = async function(self) {
 

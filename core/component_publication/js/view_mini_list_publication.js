@@ -23,7 +23,7 @@ export const view_mini_list_publication = function() {
 /**
 * RENDER
 * Render node to be used in current mode
-* @return DOM node
+* @return HTMLElement wrapper
 */
 view_mini_list_publication.render = async function(self, options) {
 

@@ -23,7 +23,7 @@ export const render_list_component_external = function() {
 /**
 * MINI
 * Render node to be used in current mode
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_list_component_external.prototype.list = async function() {
 

@@ -23,7 +23,7 @@ export const render_list_component_geolocation = function() {
 /**
 * LIST
 * Render node for use in list
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_list_component_geolocation.prototype.list = async function(options) {
 

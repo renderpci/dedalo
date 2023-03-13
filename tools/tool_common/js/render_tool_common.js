@@ -10,7 +10,7 @@
 /**
 * RENDER_ERROR
 * Render generic error node
-* @return DOM node
+* @return HTMLElement wrapper
 */
 export const render_error = async function(self, options) {
 

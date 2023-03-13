@@ -25,7 +25,7 @@ export const view_column_list_3d = function() {
 /**
 * RENDER
 * Render node for use in list as column
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_column_list_3d.render = async function(self, options) {
 

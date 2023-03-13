@@ -23,7 +23,7 @@ export const render_search_component_radio_button = function() {
 /**
 * SEARCH
 * Render node for use in search
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_search_component_radio_button.prototype.search = async function(options) {
 
@@ -52,7 +52,7 @@ render_search_component_radio_button.prototype.search = async function(options) 
 
 /**
 * GET_CONTENT_DATA_SEARCH
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data_search = function(self) {
 

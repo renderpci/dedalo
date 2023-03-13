@@ -23,7 +23,7 @@ export const render_tool_tc = function() {
 /**
 * EDIT
 * Render node
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_tool_tc.prototype.edit = async function (options={render_level:'full'}) {
 
@@ -56,13 +56,13 @@ render_tool_tc.prototype.edit = async function (options={render_level:'full'}) {
 
 
 	return wrapper
-}//end render_tool_tc
+}//end edit
 
 
 
 /**
 * CONTENT_DATA_EDIT
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const content_data_edit = async function(self) {
 

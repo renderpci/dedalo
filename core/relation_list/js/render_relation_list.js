@@ -22,7 +22,7 @@ export const render_relation_list = function() {
 /**
 * EDIT
 * Render node for use in edit
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_relation_list.prototype.edit = async function(options={render_level:'full'}) {
 
@@ -53,7 +53,7 @@ render_relation_list.prototype.edit = async function(options={render_level:'full
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 

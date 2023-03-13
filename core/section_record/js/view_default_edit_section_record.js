@@ -27,7 +27,7 @@ export const view_default_edit_section_record = function() {
 * Render the node to use in edit mode
 * @param object self
 * @param object options
-* @return DOM node
+* @return HTMLElement wrapper
 */
 view_default_edit_section_record.render = async function(self, options) {
 
@@ -82,7 +82,7 @@ view_default_edit_section_record.render = async function(self, options) {
 * 	Component instance pointer
 * @param array ar_instances
 * 	Initialized and built instances
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data_edit = async function(self, ar_instances) {
 

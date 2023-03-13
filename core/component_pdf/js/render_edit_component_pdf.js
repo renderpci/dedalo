@@ -25,14 +25,14 @@ export const render_edit_component_pdf = function() {
 * EDIT
 * Render node for use in edit
 * @param object options
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_edit_component_pdf.prototype.edit = async function(options) {
 
 	const self = this
 
 	// view
-		const view	= self.context.view || 'default'
+		const view = self.context.view || 'default'
 
 	switch(view) {
 
@@ -47,6 +47,4 @@ render_edit_component_pdf.prototype.edit = async function(options) {
 		default:
 			return view_default_edit_pdf.render(self, options)
 	}
-
-	return null
 }//end edit

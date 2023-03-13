@@ -28,7 +28,7 @@ export const render_menu = function() {
 /**
 * EDIT
 * Render node for use in edit
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_menu.prototype.edit = async function() {
 
@@ -365,7 +365,7 @@ render_menu.prototype.edit = async function() {
 /**
 * GET_DEBUG_INFO_BAR
 * @param object self
-* @return DOM node debug_info_bar
+* @return HTMLElement debug_info_bar
 */
 const get_debug_info_bar = (self) => {
 
@@ -474,7 +474,7 @@ const level_hierarchy = (options) => {
 * ITEM_HIERARCHY
 * Render li hierarchy node
 * @param object options
-* @return DOM node li
+* @return HTMLElement li
 */
 const item_hierarchy = (options) => {
 

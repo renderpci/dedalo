@@ -22,7 +22,7 @@ export const render_list_component_input_text = function() {
 /**
 * LIST
 * Render component node to use in list
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_list_component_input_text.prototype.list = async function(options) {
 

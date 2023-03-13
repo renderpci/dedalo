@@ -28,7 +28,7 @@ export const render_install = function() {
 * RENDER
 * Render node for use in install mode
 * @param object options
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_install.prototype.render = async function(options) {
 
@@ -60,7 +60,7 @@ render_install.prototype.render = async function(options) {
 /**
 * GET_CONTENT_DATA
 * @param instance self
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 
@@ -336,7 +336,7 @@ const render_help_block = function(self) {
 * RENDER_INIT_TEST_BLOCK
 * Creates contents nodes for current block
 * @param object self
-* @return DOM node
+* @return HTMLElement
 */
 const render_init_test_block = function(self) {
 
@@ -392,7 +392,7 @@ const render_init_test_block = function(self) {
 * RENDER_CONFIG_BLOCK
 * Creates contents nodes for current block
 * @param object self
-* @return DOM node
+* @return HTMLElement
 */
 const render_config_block = function(self) {
 
@@ -772,7 +772,7 @@ const render_install_db_block = function(self) {
 /**
 * RENDER_SET_ROOT_PASSWORD_BLOCK
 * @param object self
-* @return DOM node content_value
+* @return HTMLElement content_value
 */
 const render_set_root_password_block = function(self) {
 
@@ -1039,7 +1039,7 @@ const render_set_root_password_block = function(self) {
 /**
 * RENDER_LOGIN_BLOCK
 * @param object self
-* @return DOM node content_value
+* @return HTMLElement content_value
 */
 const render_login_block = async function(self) {
 
@@ -1130,7 +1130,7 @@ const render_login_block = async function(self) {
 /**
 * RENDER_HIERARCHIES_IMPORT_BLOCK
 * @param object self
-* @return DOM node content_value
+* @return HTMLElement content_value
 */
 const render_hierarchies_import_block = function(self) {
 
@@ -1307,7 +1307,7 @@ const render_hierarchies_import_block = function(self) {
 /**
 * RENDER_INSTALL_FINISH_BLOCK
 * @param object self
-* @return DOM node content_value
+* @return HTMLElement content_value
 */
 const render_install_finish_block = function(self) {
 

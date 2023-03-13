@@ -26,7 +26,7 @@ export const render_list_component_radio_button = function() {
 * LIST
 * Render node for use in current mode
 * @param object options
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_list_component_radio_button.prototype.list = async function(options) {
 

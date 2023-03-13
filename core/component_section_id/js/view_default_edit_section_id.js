@@ -23,7 +23,7 @@ export const view_default_edit_section_id = function() {
 /**
 * RENDER
 * Render node for use in edit
-* @return DOM node
+* @return HTMLElement wrapper
 */
 view_default_edit_section_id.render = async function(self, options) {
 
@@ -56,7 +56,7 @@ view_default_edit_section_id.render = async function(self, options) {
 /**
 * CONTENT_DATA_EDIT
 * Note that this component it's editable only in search mode
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data_edit = function(self) {
 
@@ -81,7 +81,7 @@ const get_content_data_edit = function(self) {
 /**
 * GET_BUTTONS
 * @param object instance
-* @return DOM node buttons_container
+* @return HTMLElement buttons_container
 */
 const get_buttons = (self) => {
 

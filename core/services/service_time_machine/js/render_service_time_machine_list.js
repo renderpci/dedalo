@@ -12,6 +12,8 @@
 	import {view_tool_time_machine_list} from './view_tool_time_machine_list.js'
 	import {view_history_time_machine_list} from './view_history_time_machine_list.js'
 
+
+
 /**
 * RENDER_SERVICE_TIME_MACHINE_LIST
 * Manages the component's logic and appearance in client side
@@ -26,7 +28,7 @@ export const render_service_time_machine_list = function() {
 /**
 * LIST
 * Render node for use in list
-* @return DOM node|null wrapper
+* @return HTMLElement wrapper
 */
 render_service_time_machine_list.prototype.list = async function(options) {
 
@@ -53,8 +55,6 @@ render_service_time_machine_list.prototype.list = async function(options) {
 		default:
 			return view_default_time_machine_list.render(self, options)
 	}
-
-	return null
 }//end list
 
 
@@ -64,7 +64,7 @@ render_service_time_machine_list.prototype.list = async function(options) {
 * Renders main element wrapper for current view
 * @param object self
 * @param object options
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 export const common_render = async function(self, options) {
 
@@ -160,7 +160,7 @@ export const common_render = async function(self, options) {
 * 	Array of section_record instances
 * @param object self
 * 	service_time_machine instance
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 export const get_content_data = async function(ar_section_record, self) {
 

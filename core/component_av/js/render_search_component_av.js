@@ -23,7 +23,7 @@ export const render_search_component_av = function() {
 /**
 * search
 * Render node for use in modes: search
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_search_component_av.prototype.search = async function(options) {
 
@@ -54,7 +54,7 @@ render_search_component_av.prototype.search = async function(options) {
 /**
 * GET_CONTENT_DATA
 * @param object self
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 
@@ -83,7 +83,7 @@ const get_content_data = function(self) {
 
 /**
 * GET_CONTENT_VALUE
-* @return DOM node content_value
+* @return HTMLElement content_value
 */
 const get_content_value = (i, current_value, self) => {
 

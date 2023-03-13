@@ -27,7 +27,7 @@ export const render_list_section = function() {
 * LIST
 * Render node for use in list
 * @param object options
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_list_section.prototype.list = async function(options) {
 
@@ -53,10 +53,7 @@ render_list_section.prototype.list = async function(options) {
 					}
 
 				return view_default_list_section.render(self, options)
-				break;
 		}
-
-	return null
 }//end list
 
 
