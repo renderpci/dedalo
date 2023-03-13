@@ -27,7 +27,7 @@ export const render_list_component_portal = function() {
 /**
 * LIST
 * Render node for use in list
-* @return DOM node|null wrapper
+* @return HTMLElement|null
 */
 // render_list_component_portal.prototype.list = render_edit_component_portal.prototype.edit
 render_list_component_portal.prototype.list = async function(options) {
@@ -52,6 +52,7 @@ render_list_component_portal.prototype.list = async function(options) {
 		default:
 			return view_default_list_portal.render(self, options)
 	}
+
 
 	return null
 }//end list
