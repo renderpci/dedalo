@@ -30,7 +30,7 @@ export const render_search_component_portal = function() {
 * SEARCH
 * Render node for use in search
 * @param object options
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_search_component_portal.prototype.search = async function(options) {
 
@@ -81,9 +81,9 @@ render_search_component_portal.prototype.search = async function(options) {
 * Used too in search mode
 * @param object self
 * @param array ar_section_record
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
-export const build_content_data = async function(self, ar_section_record) {
+const build_content_data = async function(self, ar_section_record) {
 
 	const fragment = new DocumentFragment()
 
