@@ -6,9 +6,6 @@
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import {tr} from '../../common/js/tr.js'
-	// import {event_manager} from '../../common/js/event_manager.js'
-	// import {service_tinymce} from '../../services/service_tinymce/js/service_tinymce.js'
-	// import {clone,dd_console} from '../../common/js/utils/index.js'
 
 
 
@@ -26,7 +23,7 @@ export const view_mini_text_area = function() {
 /**
 * RENDER
 * Render node to be used by service autocomplete or any datalist
-* @return DOM node
+* @return HTMLElement wrapper
 */
 view_mini_text_area.render = async function(self, options) {
 

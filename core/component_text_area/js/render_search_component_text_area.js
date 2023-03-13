@@ -24,7 +24,7 @@ export const render_search_component_text_area = function() {
 /**
 * SEARCH
 * Render node for use in current mode
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_search_component_text_area.prototype.search = async function(options) {
 
@@ -114,7 +114,7 @@ const add_events = function(self, wrapper) {
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 

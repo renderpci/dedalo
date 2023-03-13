@@ -12,6 +12,7 @@
 	import {view_text_list_svg} from './view_text_list_svg.js'
 
 
+
 /**
 * RENDER_LIST_COMPONENT_SVG
 * Manage the components logic and appearance in client side
@@ -26,7 +27,7 @@ export const render_list_component_svg = function() {
 /**
 * LIST
 * Render node for use in list
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_list_component_svg.prototype.list = async function(options) {
 
@@ -39,20 +40,15 @@ render_list_component_svg.prototype.list = async function(options) {
 
 		case 'mini':
 			return view_mini_list_svg.render(self, options)
-			break;
 
 		case 'text':
 			return view_text_list_svg.render(self, options)
-			break;
 
 		case 'tag':
 			return view_tag_list_svg.render(self, options)
-			break;
 
 		case 'default':
 		default:
 			return view_default_list_svg.render(self, options)
 	}
-
-	return null
 }//end list

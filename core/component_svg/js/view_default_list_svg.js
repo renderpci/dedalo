@@ -24,7 +24,7 @@ export const view_default_list_svg = function() {
 /**
 * RENDER
 * Render node for use in list
-* @return DOM node
+* @return HTMLElement wrapper
 */
 view_default_list_svg.render = function(self, options) {
 
@@ -35,7 +35,6 @@ view_default_list_svg.render = function(self, options) {
 		const wrapper = ui.component.build_wrapper_list(self, {
 
 		})
-
 		wrapper.appendChild(fragment)
 
 
@@ -47,7 +46,7 @@ view_default_list_svg.render = function(self, options) {
 /**
 * GET_VALUE_FRAGMENT
 * @param instance self
-* @return DOM DocumentFragment
+* @return DocumentFragment
 */
 export const get_value_fragment = function(self) {
 

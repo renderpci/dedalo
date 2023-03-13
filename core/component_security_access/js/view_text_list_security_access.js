@@ -24,7 +24,7 @@ export const view_text_list_security_access = function() {
 /**
 * RENDER
 * Output component value to use as raw text
-* @return DOM node
+* @return HTMLElement text_node
 */
 view_text_list_security_access.render = async function(self, options) {
 
@@ -37,4 +37,4 @@ view_text_list_security_access.render = async function(self, options) {
 	const text_node = document.createTextNode(value_string)
 
 	return text_node
-}//end mini
+}//end render

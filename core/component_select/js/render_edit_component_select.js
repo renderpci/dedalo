@@ -27,7 +27,7 @@ export const render_edit_component_select = function() {
 * EDIT
 * Render node for use in edit
 * @param object options
-* @return HTMLElement
+* @return HTMLElement wrapper
 */
 render_edit_component_select.prototype.edit = async function(options) {
 
@@ -59,8 +59,6 @@ render_edit_component_select.prototype.edit = async function(options) {
 		default:
 			return view_default_edit_select.render(self, options)
 	}
-
-	return null
 }//end edit
 
 
