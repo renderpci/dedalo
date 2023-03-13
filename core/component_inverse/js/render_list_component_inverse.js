@@ -22,7 +22,7 @@ export const render_list_component_inverse = function() {
 /**
 * LIST
 * Render node for use in list
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_list_component_inverse.prototype.list = async function(options) {
 
@@ -36,11 +36,11 @@ render_list_component_inverse.prototype.list = async function(options) {
 		case 'mini':
 			return view_mini_inverse.render(self, options)
 
-
 		case 'default':
 		default:
 			return view_default_list_inverse.render(self, options)
 	}
+
 
 	return null
 }//end list

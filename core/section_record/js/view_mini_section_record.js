@@ -26,7 +26,7 @@ export const view_mini_section_record = function() {
 * MINI
 * Render node for use in list
 * @param array ar_instances
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_mini_section_record.render = async function(self, options) {
 

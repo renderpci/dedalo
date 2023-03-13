@@ -2170,7 +2170,7 @@ common.prototype.build_rqo_search = async function(request_config_object, action
 * 	API request response from current section/area
 * @param object rqo_show_original
 * 	Request query object sent to the API by current section/area
-* @return DOM node document fragment
+* @return HTMLElement document fragment
 */
 export const load_data_debug = async function(self, load_data_promise, rqo_show_original) {
 

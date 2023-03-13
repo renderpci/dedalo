@@ -23,7 +23,7 @@ export const view_mini_list_check_box = function() {
 /**
 * MINI
 * Render node to be used by service autocomplete or any datalist
-* @return DOM node
+* @return HTMLElement
 */
 view_mini_list_check_box.render = async function(self, options) {
 

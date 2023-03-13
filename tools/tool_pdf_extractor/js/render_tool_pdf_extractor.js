@@ -24,7 +24,7 @@ export const render_tool_pdf_extractor = function() {
 * EDIT
 * Render node
 * @param object options
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_tool_pdf_extractor.prototype.edit = async function (options) {
 
@@ -53,7 +53,7 @@ render_tool_pdf_extractor.prototype.edit = async function (options) {
 /**
 * GET_CONTENT_DATA
 * @param object self
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = async function(self) {
 

@@ -26,8 +26,9 @@ export const render_edit_component_iri = function() {
 
 /**
 * EDIT
-* Render node for use in modes: edit, edit_in_list
-* @return DOM node
+* Render node for use in current mode
+* @param object options
+* @return HTMLElement|null
 */
 render_edit_component_iri.prototype.edit = async function(options) {
 
@@ -44,10 +45,19 @@ render_edit_component_iri.prototype.edit = async function(options) {
 		case 'mini':
 			return view_mini_iri.render(self, options)
 
+		case 'print':
+			// view print use the same view as default, except it will use read only to render content_value
+			// as different view as default it will set in the class of the wrapper
+			// sample: <div class="wrapper_component component_input_text oh14 oh1_oh14 edit view_print disabled_component">...</div>
+			// take account that to change the css when the component will render in print context
+			// for print we need to use read of the content_value and it's necessary force permissions to use read only element render
+			self.permissions = 1
+
 		case 'default':
 		default:
 			return view_default_edit_iri.render(self, options)
 	}
+
 
 	return null
 }//end edit
@@ -56,13 +66,14 @@ render_edit_component_iri.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @param object self
+* @return HTMLElement content_data
 */
 export const get_content_data = function(self) {
 
-	const value				= self.data.value
-	// const mode			= self.mode
-	// const is_inside_tool	= self.is_inside_tool
+	// short vars
+		const data	= self.data || {}
+		const value	= data.value || []
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
@@ -72,10 +83,12 @@ export const get_content_data = function(self) {
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 			const current_value = inputs_value[i]
-			const content_value = get_content_value(i, current_value, self)
-			content_data.appendChild(content_value)
+			const content_value_node = (self.permissions===1)
+				? get_content_value_read(i, current_value, self)
+				: get_content_value(i, current_value, self)
+			content_data.appendChild(content_value_node)
 			// set pointers
-			content_data[i] = content_value
+			content_data[i] = content_value_node
 		}
 
 
@@ -86,7 +99,10 @@ export const get_content_data = function(self) {
 
 /**
 * GET_CONTENT_VALUE
-* @return DOM node content_value
+* @param int i
+* @param object current_value
+* @param object self
+* @return HTMLElement content_value
 */
 const get_content_value = (i, current_value, self) => {
 
@@ -267,9 +283,54 @@ const get_content_value = (i, current_value, self) => {
 
 
 /**
+* GET_CONTENT_VALUE_READ
+* @param int i
+* @param object current_value
+* @param object self
+* @return HTMLElement content_value
+*/
+const get_content_value_read = (i, current_value, self) => {
+
+	// current_value. (!) Fallback to {} because could be null when new blank value is added
+		current_value = current_value || {}
+
+	// short vars
+		const mode	= self.mode
+		const title	= current_value.title || ''
+		const iri	= current_value.iri || ''
+
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value read_only'
+		})
+
+	// title
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'title',
+			inner_html		: title,
+			parent			: content_value
+		})
+
+	// iri
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'iri',
+			inner_html		: iri,
+			parent			: content_value
+		})
+
+
+	return content_value
+}//end get_content_value_read
+
+
+
+/**
 * GET_BUTTONS
-* @param object instance
-* @return DOM node buttons_container
+* @param object self
+* @return HTMLElement buttons_container
 */
 export const get_buttons = (self) => {
 

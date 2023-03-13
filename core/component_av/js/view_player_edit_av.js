@@ -25,7 +25,7 @@ export const view_player_edit_av = function() {
 * Render node for use in modes: edit, edit_in_list
 * @param object self
 * @param object options
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_player_edit_av.render = async function(self, options) {
 
@@ -61,7 +61,7 @@ view_player_edit_av.render = async function(self, options) {
 /**
 * GET_CONTENT_DATA_PLAYER
 * @param instance self
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 export const get_content_data_player = function(options) {
 
@@ -161,7 +161,7 @@ export const get_content_data_player = function(options) {
 /**
 * GET_AV_CONTROL_BUTTONS
 * @param object self
-* @return DOM node av_control_buttons
+* @return HTMLElement av_control_buttons
 */
 const get_av_control_buttons = (self) =>{
 

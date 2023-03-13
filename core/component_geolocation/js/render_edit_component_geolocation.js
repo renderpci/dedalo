@@ -66,7 +66,7 @@ render_edit_component_geolocation.prototype.edit = async function(options) {
 /**
 * RENDER_POPUP_TEXT
 * @param array ar_text_obj
-* @return DOM node text_container
+* @return HTMLElement text_container
 */
 export const render_popup_text = function(ar_text_obj) {
 
@@ -107,7 +107,7 @@ export const render_popup_text = function(ar_text_obj) {
 
 /**
 * RENDER_COLOR_PICKER
-* @return DOM node color_container
+* @return HTMLElement color_container
 */
 export const render_color_picker = function(self, layer, layer_id) {
 

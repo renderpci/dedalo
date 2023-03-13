@@ -24,7 +24,7 @@ export const view_default_list_security_access = function() {
 /**
 * RENDER
 * Render node for use in list
-* @return DOM node
+* @return HTMLElement wrapper
 */
 view_default_list_security_access.render = async function(self, options) {
 

@@ -39,7 +39,9 @@ view_default_edit_input_text.render = async function(self, options) {
 		}
 
 	// buttons
-		const buttons = get_buttons(self)
+		const buttons = (self.permissions > 1)
+			? get_buttons(self)
+			: null
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
@@ -51,12 +53,13 @@ view_default_edit_input_text.render = async function(self, options) {
 
 
 	return wrapper
-}//end edit
+}//end render
 
 
 
 /**
 * GET_CONTENT_DATA_EDIT
+* @param object self
 * @return HTMLElement content_data
 */
 const get_content_data_edit = function(self) {

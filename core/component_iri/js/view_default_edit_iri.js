@@ -29,11 +29,11 @@ export const view_default_edit_iri = function() {
 /**
 * RENDER
 * Render node for use in current view
-* @return DOM node
+* @param object self
+* @param object options
+* @return HTMLElement wrapper
 */
 view_default_edit_iri.render = async function(self, options) {
-
-	self.data.value = self.data.value || []
 
 	// options
 		const render_level = options.render_level || 'full'
@@ -45,7 +45,9 @@ view_default_edit_iri.render = async function(self, options) {
 		}
 
 	// buttons
-		const buttons = get_buttons(self)
+		const buttons = (self.permissions > 1)
+			? get_buttons(self)
+			: null
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
@@ -58,6 +60,3 @@ view_default_edit_iri.render = async function(self, options) {
 
 	return wrapper
 }//end render
-
-
-

@@ -23,7 +23,7 @@ import {data_manager} from '../../../core/common/js/data_manager.js'
 * If tag contains valid note data (expected locator pseudostringified) renders
 * components node. Else button new is rendered
 * @param object tag
-* @return DOM node|null tag_note_node
+* @return HTMLElement|null tag_note_node
 */
 tool_indexation.prototype.render_indexation_note = async function(tag) {
 
@@ -76,7 +76,7 @@ tool_indexation.prototype.render_indexation_note = async function(tag) {
 * RENDER_EMPTY_NOTE
 * When tag have no data, a empty container with a new button is created
 * @param object tag
-* @return DOM node empty_note_container
+* @return HTMLElement empty_note_container
 */
 tool_indexation.prototype.render_empty_note = function(tag) {
 
@@ -163,7 +163,7 @@ tool_indexation.prototype.render_empty_note = function(tag) {
 * RENDER_NOTE
 * Render title and descriptions nodes after init and build the both instances
 * @param object options
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 tool_indexation.prototype.render_note = async function(options) {
 

@@ -24,7 +24,7 @@ export const view_mini_input_text = function() {
 /**
 * RENDER
 * Render node to be used in current mode
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_mini_input_text.render = async function(self, options) {
 

@@ -33,7 +33,7 @@ export const render_list_dd_grid = function() {
 /**
 * LIST
 * Render node to use in list
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_list_dd_grid.prototype.list = async function(options) {
 
@@ -76,7 +76,7 @@ render_list_dd_grid.prototype.list = async function(options) {
 * Render a span DOM node with given value
 * @param object data_item
 * @param bool use_fallback
-* @return DOM node text_node (span)
+* @return HTMLElement text_node (span)
 */
 export const get_text_column = function(data_item, use_fallback) {
 
@@ -108,7 +108,7 @@ export const get_text_column = function(data_item, use_fallback) {
 /**
 * GET_AV_COLUMN
 * @param object data_item
-* @return DOM node image (img)
+* @return HTMLElement image (img)
 */
 export const get_av_column = function(data_item) {
 
@@ -139,7 +139,7 @@ export const get_av_column = function(data_item) {
 /**
 * GET_IMG_COLUMN
 * @param object data_item
-* @return DOM node image (img)
+* @return HTMLElement image (img)
 */
 export const get_img_column = function(data_item) {
 
@@ -169,7 +169,7 @@ export const get_img_column = function(data_item) {
 /**
 * GET_LABEL_COLUMN
 * @param object current_data
-* @return DOM node label_node (label)
+* @return HTMLElement label_node (label)
 */
 export const get_label_column = function(current_data) {
 
@@ -186,7 +186,7 @@ export const get_label_column = function(current_data) {
 /**
 * GET_BUTTON_COLUMN
 * @param object current_data
-* @return DOM node button (img)
+* @return HTMLElement button (img)
 */
 export const get_button_column = function(current_data) {
 
@@ -219,7 +219,7 @@ export const get_button_column = function(current_data) {
 /**
 * GET_JSON_COLUMN
 * @param object current_data
-* @return DOM node text_json (span)
+* @return HTMLElement text_json (span)
 */
 export const get_json_column = function(current_data) {
 
@@ -239,7 +239,7 @@ export const get_json_column = function(current_data) {
 /**
 * GET_SECTION_ID_COLUMN
 * @param object current_data
-* @return DOM node text_node (span)
+* @return HTMLElement text_node (span)
 */
 export const get_section_id_column = function(current_data) {
 
@@ -259,7 +259,7 @@ export const get_section_id_column = function(current_data) {
 /**
 * GET_IRI_COLUMN
 * @param object current_data
-* @return DOM node text_node (span)
+* @return HTMLElement text_node (span)
 */
 export const get_iri_column = function(current_data) {
 

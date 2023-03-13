@@ -23,7 +23,7 @@ export const render_search_component_publication = function() {
 /**
 * SEARCH
 * Render node for use in current mode
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_search_component_publication.prototype.search = async function(options) {
 
@@ -52,7 +52,7 @@ render_search_component_publication.prototype.search = async function(options) {
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 
@@ -99,15 +99,14 @@ const get_content_data = function(self) {
 
 /**
 * GET_CONTENT_VALUE
-* Render the current value DOM nodes
+* Render the current value HTMLElements
 * @param int i
 * 	Value key
 * @param object current_value
 * 	Current locator value as:
 * 	{type: 'dd151', section_id: '1', section_tipo: 'dd64', from_component_tipo: 'rsc20'}
 * @param object self
-*
-* @return DOM element content_value
+* @return HTMLElement content_value
 */
 const get_content_value = (i, current_value, self) => {
 

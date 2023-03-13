@@ -24,7 +24,7 @@ export const view_table_dd_grid = function() {
 /**
 * RENDER
 * Render node for use in table
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_table_dd_grid.render = function(self, options) {
 
@@ -107,7 +107,8 @@ const get_table_nodes = function(data) {
 * GET_PORTAL_ROWS
 * @param row; array of objects; all information of the row, the main row
 * @param ar_columns_object; array of object; the column map with all columns to be matched with the data
-* @return DOM node with the tr of the table
+* @return DocumentFragment
+* With the tr of the table
 * This method calculate the rows when the main row has sub rows that comes from portals
 * sometime the row don't has portal information, but the calculation will be the same, because the server use a row_count to identify the amount rows that will be necessary to build
 * if the row don't has portals the row_count will be 1, if has portals have multiple locators, the row_count will be the total locators of the first level, sub-levels of information are calculated as section_id columns
@@ -146,7 +147,7 @@ const get_portal_rows = function(row, ar_columns_obj){
 * if the component is a relation component, portals, it could has other rows or portal columns with "sub-columns" of the final components
 * in the case of column has rows, extract the row with parent_row_key and star again
 * in the case of the column of a portal, extract his value and star again
-* @return DOM node with the td of the table
+* @return HTMLElement with the td of the table
 */
 const get_columns = function(column_data, ar_columns_obj, parent_row_key) {
 
@@ -287,7 +288,7 @@ const get_table_columns = function(current_data) {
 /**
 * GET_DIV_CONTAINER
 * @param string class_name
-* @return DOM node row_container
+* @return HTMLElement row_container
 */
 const get_row_container = function(class_name=null) {
 
@@ -304,7 +305,7 @@ const get_row_container = function(class_name=null) {
 /**
 * GET_HEADER_COLUMN
 * @param object current_data
-* @return DOM node label_node (label)
+* @return HTMLElement label_node (label)
 */
 const get_header_column = function(current_data) {
 
@@ -323,7 +324,7 @@ const get_header_column = function(current_data) {
 /**
 * GET_TEXT_COLUMN
 * @param object current_data
-* @return DOM node text_node (span)
+* @return HTMLElement text_node (span)
 */
 const get_text_column = function(current_data) {
 	// console.log("---> get_text_column current_data.value:", current_data.value);
@@ -353,7 +354,7 @@ const get_text_column = function(current_data) {
 /**
 * GET_AV_COLUMN
 * @param object current_data
-* @return DOM node image (img)
+* @return HTMLElement image (img)
 */
 const get_av_column = function(current_data) {
 
@@ -384,7 +385,7 @@ const get_av_column = function(current_data) {
 /**
 * GET_IMG_COLUMN
 * @param object current_data
-* @return DOM node image (img)
+* @return HTMLElement image (img)
 */
 const get_img_column = function(current_data){
 
@@ -413,7 +414,7 @@ const get_img_column = function(current_data){
 /**
 * GET_BUTTON_COLUMN
 * @param object current_data
-* @return DOM node button (img)
+* @return HTMLElement button (img)
 */
 const get_button_column = function(current_data){
 
@@ -452,7 +453,7 @@ const get_button_column = function(current_data){
 /**
 * GET_JSON_COLUMN
 * @param object current_data
-* @return DOM node text_json (span)
+* @return HTMLElement text_json (span)
 */
 const get_json_column = function(current_data) {
 
@@ -475,7 +476,7 @@ const get_json_column = function(current_data) {
 /**
 * GET_SECTION_ID_COLUMN
 * @param object current_data
-* @return DOM node text_node (span)
+* @return HTMLElement text_node (span)
 */
 const get_section_id_column = function(current_data) {
 

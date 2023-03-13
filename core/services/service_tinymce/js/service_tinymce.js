@@ -398,7 +398,7 @@ export const service_tinymce = function() {
 
 	/**
 	* GET_EDITOR_CONTENT_DATA
-	* @return DOM node | false
+	* @return HTMLElement | false
 	*/
 	this.get_editor_content_data = function() {
 
@@ -483,7 +483,7 @@ export const service_tinymce = function() {
 	/**
 	* DOM_SELECT
 	* @param string selector_str (CSS selector like .greyhound, #greyhound, etc.)
-	* @return DOM node (one or more)
+	* @return HTMLElement (one or more)
 	*/
 	this.dom_select = function(selector_str) {
 

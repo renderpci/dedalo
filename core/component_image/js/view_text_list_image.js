@@ -23,7 +23,7 @@ export const view_text_list_image = function() {
 /**
 * RENDER
 * Render node as text. URL is return as text node
-* @return DOM node
+* @return HTMLElement text_node
 */
 view_text_list_image.render = function(self, options) {
 
@@ -38,9 +38,9 @@ view_text_list_image.render = function(self, options) {
 			? url_object.file_url
 			: default_image
 
-	// node
-		const node = document.createTextNode(url)
+	// text_node
+		const text_node = document.createTextNode(url)
 
 
-	return node
+	return text_node
 }//end render

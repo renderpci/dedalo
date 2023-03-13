@@ -24,7 +24,7 @@ export const render_tool_dd_label = function() {
 * EDIT
 * Render tool main node
 * @param object options = {}
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_tool_dd_label.prototype.edit = async function (options={}) {
 
@@ -54,7 +54,7 @@ render_tool_dd_label.prototype.edit = async function (options={}) {
 * GET_CONTENT_DATA
 * Render tool content_data node and children
 * @param object self
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = async function(self) {
 
@@ -117,7 +117,7 @@ const get_content_data = async function(self) {
 * @param bool header
 * @param string name
 * @param int key
-* @return DOM node li
+* @return HTMLElement li
 */
 const render_row = async function(self, ar_langs, header, name, key) {
 
@@ -248,7 +248,7 @@ const render_row = async function(self, ar_langs, header, name, key) {
 /**
 * RENDER_LANGUAGE_LABEL
 * Create each language_label node
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const render_language_label = async function(self, current_lang, header, name, key) {
 

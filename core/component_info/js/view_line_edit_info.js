@@ -6,6 +6,10 @@
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {
+		get_content_data,
+		get_content_value
+	} from './render_edit_component_info.js'
 
 
 
@@ -21,9 +25,11 @@ export const view_line_edit_info = function() {
 
 
 /**
-* EDIT
-* Render node for use in modes: edit, edit_in_list
-* @return DOM node wrapper
+* RENDER
+* Render node for use in current view
+* @param object self
+* @param object options
+* @return HTMLElement wrapper
 */
 view_line_edit_info.render = async function(self, options) {
 
@@ -34,7 +40,7 @@ view_line_edit_info.render = async function(self, options) {
 		await self.get_widgets()
 
 	// content_data
-		const content_data = get_content_data_edit(self)
+		const content_data = get_content_data(self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -49,58 +55,4 @@ view_line_edit_info.render = async function(self, options) {
 
 
 	return wrapper
-}//end edit
-
-
-
-/**
-* GET_CONTENT_DATA_EDIT
-* @return DOM node content_data
-*/
-export const get_content_data_edit = function(self) {
-
-	// sort vars
-		// const is_inside_tool = self.is_inside_tool
-
-	// content_data
-		const content_data = ui.component.build_content_data(self)
-
-	// values (inputs)
-		const widgets			= self.ar_instances
-		const widgets_length	= widgets.length
-		for (let i = 0; i < widgets_length; i++) {
-			const content_value = get_content_value(i, widgets[i])
-			content_data.appendChild(content_value)
-			// set pointers
-			content_data[i] = content_value
-		}
-
-
-	return content_data
-}//end get_content_data_edit
-
-
-
-/**
-* GET_CONTENT_VALUE
-* @return DOM node content_value
-*/
-const get_content_value = (i, current_widget) => {
-
-	// content_value
-		const content_value = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'content_value ' + 'widget_item_' + current_widget.name
-		})
-
-	// widget
-		current_widget.build()
-		.then(async function(){
-			const widget_node = await current_widget.render()
-			content_value.appendChild(widget_node)
-		})
-
-
-	return content_value
-}//end get_content_value
-
+}//end render

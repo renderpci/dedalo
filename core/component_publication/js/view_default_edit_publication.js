@@ -27,7 +27,7 @@ export const view_default_edit_publication = function() {
 /**
 * RENDER
 * Render node for use in edit mode
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_default_edit_publication.render = async function(self, options) {
 
@@ -41,9 +41,9 @@ view_default_edit_publication.render = async function(self, options) {
 		}
 
 	// buttons
-		const buttons = self.mode==='edit_in_list'
-			? null
-			: get_buttons(self)
+		const buttons = (self.permissions > 1)
+			? get_buttons(self)
+			: null
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {

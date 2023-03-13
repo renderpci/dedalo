@@ -23,7 +23,7 @@ export const view_default_list_filter_records = function() {
 /**
 * RENDER
 * Render node for use in list
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_default_list_filter_records.render = async function(self, options) {
 

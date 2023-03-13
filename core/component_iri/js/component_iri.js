@@ -12,6 +12,7 @@
 	import {output_component_iri} from '../../component_iri/js/output_component_iri.js'
 
 
+
 export const component_iri = function(){
 
 

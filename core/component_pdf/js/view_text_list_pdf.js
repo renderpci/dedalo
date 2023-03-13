@@ -23,7 +23,7 @@ export const view_text_list_pdf = function() {
 /**
 * RENDER
 * Render node to be used by service autocomplete or any datalist
-* @return DOM node
+* @return HTMLElement image_node
 */
 view_text_list_pdf.render = async function(self, options) {
 

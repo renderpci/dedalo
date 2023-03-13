@@ -22,7 +22,7 @@ export const view_mini_list_radio_button = function() {
 /**
 * RENDER
 * Render node to be used in current mode
-* @return DOM node
+* @return HTMLElement wrapper
 */
 view_mini_list_radio_button.render = async function(self, options) {
 

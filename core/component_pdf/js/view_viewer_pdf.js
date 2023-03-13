@@ -26,7 +26,7 @@ export const view_viewer_pdf = function() {
 /**
 * RENDER
 * Render node to be used by in current view
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_viewer_pdf.render = async function(self, options) {
 

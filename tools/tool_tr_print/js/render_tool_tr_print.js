@@ -28,7 +28,7 @@ export const render_tool_tr_print = function() {
 * EDIT
 * Render node
 * @param object options = {render_level:'full'}
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_tool_tr_print.prototype.edit = async function(options={render_level:'full'}) {
 
@@ -58,14 +58,14 @@ render_tool_tr_print.prototype.edit = async function(options={render_level:'full
 
 
 	return wrapper
-}//end render_tool_tr_print
+}//end edit
 
 
 
 /**
 * GET_CONTENT_DATA_EDIT
 * @param object self
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data_edit = async function(self) {
 

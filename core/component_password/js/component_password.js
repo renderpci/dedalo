@@ -1,9 +1,16 @@
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*eslint no-undef: "error"*/
+
+
+
 // imports
 	// import {data_manager} from '../../common/js/data_manager.js'
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_edit_component_password} from '../../component_password/js/render_edit_component_password.js'
 	import {render_list_component_password} from '../../component_password/js/render_list_component_password.js'
+
+
 
 export const component_password = function(){
 

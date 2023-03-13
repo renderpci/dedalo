@@ -27,7 +27,7 @@ export const view_line_edit_number = function() {
 /**
 * RENDER
 * Render node for use in modes: edit, edit_in_list
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_line_edit_number.render = async function(self, options) {
 
@@ -38,7 +38,7 @@ view_line_edit_number.render = async function(self, options) {
 		const button_exit_edit = ui.component.build_button_exit_edit(self)
 
 	// content_data
-		const content_data = get_content_data_edit(self)
+		const content_data = get_content_data(self)
 		content_data.appendChild(button_exit_edit)
 		if (render_level==='content') {
 			return content_data
@@ -59,10 +59,10 @@ view_line_edit_number.render = async function(self, options) {
 
 
 /**
-* GET_CONTENT_DATA_EDIT
-* @return DOM node content_data
+* GET_CONTENT_DATA
+* @return HTMLElement content_data
 */
-const get_content_data_edit = function(self) {
+const get_content_data = function(self) {
 
 	// short vars
 		const data	= self.data || {}
@@ -83,13 +83,13 @@ const get_content_data_edit = function(self) {
 
 
 	return content_data
-}//end get_content_data_edit
+}//end get_content_data
 
 
 
 /**
 * GET_CONTENT_VALUE
-* @return DOM element content_value
+* @return HTMLElement content_value
 */
 const get_content_value = (i, current_value, self) => {
 

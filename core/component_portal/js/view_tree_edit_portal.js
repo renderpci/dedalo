@@ -139,7 +139,7 @@ export const add_events = function(self, wrapper) {
 /**
 * GET_CONTENT_DATA
 * Render all received section records and place it into a new div 'content_data'
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = async function(self, ar_section_record) {
 
@@ -216,7 +216,7 @@ const rebuild_columns_map = async function(self) {
 /**
 * GET_BUTTONS
 * @param object self instance
-* @return DOM node buttons_container
+* @return HTMLElement buttons_container
 */
 const get_buttons = (self) => {
 
@@ -408,7 +408,7 @@ const get_buttons = (self) => {
 
 /**
 * RENDER_REFERENCES
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const render_references = function(ar_references) {
 

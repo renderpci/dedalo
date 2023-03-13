@@ -25,7 +25,7 @@ export const view_default_list_radio_button = function() {
 * Render node for use in current mode
 * @param object self
 * @param object options
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_default_list_radio_button.render = async function(self, options) {
 

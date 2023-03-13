@@ -186,7 +186,7 @@ tool_subtitles.prototype.get_subtitles_data = async function(lang) {
 /**
 * PROCES_AR_DATA
 * Create the subtitles ar_data value from the original text_area data
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const proces_ar_data = function(self) {
 

@@ -11,6 +11,7 @@
 	import {view_mini_number} from './view_mini_number.js'
 
 
+
 /**
 * RENDER_EDIT_COMPONENT_NUMBER
 * Manage the components logic and appearance in client side
@@ -26,14 +27,14 @@ export const render_edit_component_number = function() {
 * EDIT
 * Render node for use in edit
 * @param object options
-* @return DOM node
+* @return HTMLElement|null
 */
 render_edit_component_number.prototype.edit = async function(options) {
 
 	const self = this
 
 	// view
-		const view	= self.context.view || 'default'
+		const view = self.context.view || 'default'
 
 	switch(view) {
 
@@ -43,10 +44,19 @@ render_edit_component_number.prototype.edit = async function(options) {
 		case 'mini':
 			return view_mini_number.render(self, options)
 
+		case 'print':
+			// view print use the same view as default, except it will use read only to render content_value
+			// as different view as default it will set in the class of the wrapper
+			// sample: <div class="wrapper_component component_input_text oh14 oh1_oh14 edit view_print disabled_component">...</div>
+			// take account that to change the css when the component will render in print context
+			// for print we need to use read of the content_value and it's necessary force permissions to use read only element render
+			self.permissions = 1
+
 		case 'default':
 		default:
 			return view_default_edit_number.render(self, options)
 	}
+
 
 	return null
 }//end edit
@@ -54,10 +64,11 @@ render_edit_component_number.prototype.edit = async function(options) {
 
 
 /**
-* GET_CONTENT_DATA_EDIT
-* @return DOM node content_data
+* GET_CONTENT_DATA
+* @param object self
+* @return HTMLElement content_data
 */
-export const get_content_data_edit = function(self) {
+export const get_content_data = function(self) {
 
 	// short vars
 		const data	= self.data || {}
@@ -70,21 +81,26 @@ export const get_content_data_edit = function(self) {
 		const inputs_value	= (value.length<1) ? [null] : value // force one empty input at least
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			const content_value = get_content_value(i, inputs_value[i], self)
-			content_data.appendChild(content_value)
+			const content_value_node = (self.permissions===1)
+				? get_content_value_read(i, inputs_value[i], self)
+				: get_content_value(i, inputs_value[i], self)
+			content_data.appendChild(content_value_node)
 			// set pointers
-			content_data[i] = content_value
+			content_data[i] = content_value_node
 		}
 
 
 	return content_data
-}//end get_content_data_edit
+}//end get_content_data
 
 
 
 /**
 * GET_CONTENT_VALUE
-* @return DOM element content_value
+* @param int i
+* @param int|null current_value
+* @param object self
+* @return HTMLElement content_value
 */
 const get_content_value = (i, current_value, self) => {
 
@@ -148,9 +164,31 @@ const get_content_value = (i, current_value, self) => {
 
 
 /**
+* GET_CONTENT_VALUE_READ
+* @param int i
+* @param int|null current_value
+* @param object self
+* @return HTMLElement content_value
+*/
+const get_content_value_read = (i, current_value, self) => {
+
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value read_only',
+			inner_html		: current_value
+		})
+
+
+	return content_value
+}//end get_content_value_read
+
+
+
+/**
 * GET_BUTTONS
 * @param object instance
-* @return DOM node buttons_container
+* @return HTMLElement buttons_container
 */
 export const get_buttons = (self) => {
 

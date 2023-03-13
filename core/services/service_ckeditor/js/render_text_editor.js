@@ -12,7 +12,7 @@
 * RENDER_TOOLBAR
 * Called from services to render generic toolbar
 * @para object options
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 	// export const render_toolbar = function() {
 
@@ -30,7 +30,7 @@
 * RENDER_BUTTON
 * @param object button_config
 * 	Defined in render_edit function 'get_custom_buttons'
-* @return DOM node button_node
+* @return HTMLElement button_node
 */
 export const render_button = function(button_config) {
 
@@ -83,7 +83,7 @@ export const render_button = function(button_config) {
 * RENDER_FIND_AND_REPLACE
 * @param object button_config
 * 	Defined in render_edit function 'get_custom_buttons'
-* @return DOM node button_node
+* @return HTMLElement button_node
 */
 export const render_find_and_replace = function(editor) {
 

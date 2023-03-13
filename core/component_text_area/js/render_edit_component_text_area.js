@@ -8,6 +8,7 @@
 	import {view_mini_text_area} from './view_mini_text_area.js'
 
 
+
 /**
 * RENDER_EDIT_COMPONENT_text_area
 * Manage the components logic and appearance in client side
@@ -23,14 +24,14 @@ export const render_edit_component_text_area = function() {
 * EDIT
 * Render node for use in edit
 * @param object options
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_edit_component_text_area.prototype.edit = async function(options) {
 
 	const self = this
 
 	// view
-		const view	= self.context.view || 'default'
+		const view = self.context.view || 'default'
 
 	switch(view) {
 
@@ -49,6 +50,4 @@ render_edit_component_text_area.prototype.edit = async function(options) {
 		default:
 			return view_default_edit_text_area.render(self, options)
 	}
-
-	return null
 }//end edit

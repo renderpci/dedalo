@@ -4,7 +4,7 @@
 
 
 /**
-* view_text_list_filter
+* VIEW_TEXT_LIST_FILTER
 * Manage the components logic and appearance in client side
 */
 export const view_text_list_filter = function() {
@@ -17,7 +17,7 @@ export const view_text_list_filter = function() {
 /**
 * RENDER
 * Render node to be used by service autocomplete or any datalist
-* @return DOM node
+* @return HTMLElement wrapper
 */
 view_text_list_filter.render = async function(self) {
 

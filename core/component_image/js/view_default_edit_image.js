@@ -7,6 +7,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
+	import {get_quality_selector} from './render_edit_component_image.js'
 
 
 
@@ -24,7 +25,7 @@ export const view_default_edit_image = function() {
 /**
 * RENDER
 * Render node for use in current mode and view
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_default_edit_image.render = function(self, options) {
 
@@ -32,7 +33,7 @@ view_default_edit_image.render = function(self, options) {
 		const render_level = options.render_level || 'full'
 
 	// content_data
-		const content_data = get_content_data_edit(self)
+		const content_data = get_content_data(self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -50,15 +51,15 @@ view_default_edit_image.render = function(self, options) {
 
 
 	return wrapper
-}//end edit
+}//end render
 
 
 
 /**
-* GET_CONTENT_DATA_EDIT
-* @return DOM node content_data
+* GET_CONTENT_DATA
+* @return HTMLElement content_data
 */
-const get_content_data_edit = function(self) {
+const get_content_data = function(self) {
 
 	// short vars
 		const data	= self.data || {}
@@ -71,7 +72,9 @@ const get_content_data_edit = function(self) {
 		const inputs_value	= (value.length>0) ? value : [null] // force one empty input at least
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			const content_value = get_content_value(i, inputs_value[i], self)
+			const content_value = (self.permissions===1)
+				? get_content_value_read(i, inputs_value[i], self)
+				: get_content_value(i, inputs_value[i], self)
 			content_data.appendChild(content_value)
 			// set the pointer
 			content_data[i] = content_value
@@ -79,13 +82,16 @@ const get_content_data_edit = function(self) {
 
 
 	return content_data
-}//end get_content_data_edit
+}//end get_content_data
 
 
 
 /**
 * GET_CONTENT_VALUE
-* @return DOM node content_value
+* @param int i
+* @param object value
+* @object self
+* @return HTMLElement content_value
 */
 const get_content_value = function(i, value, self) {
 
@@ -106,20 +112,64 @@ const get_content_value = function(i, value, self) {
 
 	// render the image when the source is external, image from URI
 		if(file_info && file_info.external){
-			const img_node = ui.create_dom_element({
-				element_type	: 'img',
-				class_name		: 'image',
-				parent			: content_value,
-				src 			: file_info.file_url
-			})
+			const image_external_node = render_image_external(file_info.file_url)
+			content_value.appendChild(image_external_node)
+
+			return content_value
+		}
+
+	// render image node
+		const image_node = render_image_node(self, file_info, content_value)
+		content_value.appendChild(image_node)
+
+	// quality_selector
+		const quality_selector = get_quality_selector(self)
+		content_value.appendChild(quality_selector)
+
+
+	return content_value
+}//end get_content_value
+
+
+
+/**
+* GET_CONTENT_VALUE_read
+* @param int i
+* @param object value
+* @object self
+* @return HTMLElement content_value
+*/
+const get_content_value_read = function(i, value, self) {
+
+	// short vars
+		const quality	= self.quality || self.context.features.quality
+		const data		= self.data || {}
+		const datalist	= data.datalist || []
+
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value read_only'
+		})
+
+	// file_info
+		const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
+
+	// render the image when the source is external, image from URI
+		if(file_info && file_info.external) {
+
+			const img_node = render_image_external(file_info.file_url)
+			content_value.appendChild(img_node)
+
 			return content_value
 		}
 
 	// render de image in Dédalo media
+
+	// url
 		let url = file_info && file_info.file_url
 			? file_info.file_url
 			: null // DEDALO_CORE_URL + '/themes/default/0.jpg'
-
 		// fallback to default (when not already in default)
 		if (!url && quality!==self.context.features.default_quality) {
 			const file_info_dq	= datalist.find(el => el.quality===self.context.features.default_quality && el.file_exist===true)
@@ -168,6 +218,110 @@ const get_content_value = function(i, value, self) {
 			// base_svg_url_default. Replace default image extension from '0.jpg' to '0.svg'
 			const base_svg_url_default	= page_globals.fallback_image.substr(0, page_globals.fallback_image.lastIndexOf('.')) + '.svg'
 			object_node.data			= base_svg_url_default
+		}
+		// set pointer
+		self.object_node = object_node
+
+		// auto-change url the first time
+		object_node.onload = async function() {
+			if (quality!==self.context.features.default_quality) {
+				await fn_img_quality_change(url)
+			}
+			content_value.classList.remove('hide')
+		}
+
+
+	return content_value
+}//end get_content_value_read
+
+
+
+/**
+* RENDER_IMAGE_EXTERNAL
+* @param object file_info
+* @return HTMLElement image_external_node
+*/
+const render_image_external = function(file_url) {
+
+	const image_external_node = ui.create_dom_element({
+		element_type	: 'img',
+		class_name		: 'image',
+		src 			: file_url
+	})
+
+
+	return image_external_node
+}//end render_image_external
+
+
+
+/**
+* RENDER_IMAGE_NODE
+* Creates an object of type 'image/svg+xml' with svg file and image
+* cropped by the svg
+* @param object self
+* @param object file_info
+* @return HTMLElement object_node
+*/
+const render_image_node = function(self, file_info, content_value) {
+
+	// short vars
+		const quality	= self.quality || self.context.features.quality
+		const data		= self.data || {}
+		const datalist	= data.datalist || []
+
+	// render de image in Dédalo media
+		let url = file_info && file_info.file_url
+			? file_info.file_url
+			: null // DEDALO_CORE_URL + '/themes/default/0.jpg'
+
+		// fallback to default (when not already in default)
+		if (!url && quality!==self.context.features.default_quality) {
+			const file_info_dq	= datalist.find(el => el.quality===self.context.features.default_quality && el.file_exist===true)
+			url = file_info_dq
+				? file_info_dq.file_url
+				: null
+			if (url) {
+				// change the quality
+				self.quality = self.context.features.default_quality
+			}
+		}
+
+	// image. (!) Only to get background color and apply to li node
+		const bg_reference_image_url = url || page_globals.fallback_image
+		if (bg_reference_image_url) {
+			const image = ui.create_dom_element({
+				element_type	: 'img',
+				class_name 		: 'hide'
+			})
+			// image background color
+			image.addEventListener('load', set_bg_color, false)
+			function set_bg_color() {
+				this.removeEventListener('load', set_bg_color, false)
+				ui.set_background_image(this, content_value)
+				image.classList.remove('hide')
+			}
+			// image.addEventListener('error', function(){
+			// 	console.warn('Error on load image:', bg_reference_image_url, image);
+			// }, false)
+			image.src = bg_reference_image_url
+		}
+
+	// object_node <object type="image/svg+xml" data="image.svg"></object>
+		const object_node = ui.create_dom_element({
+			element_type	: 'object',
+			class_name		: 'image'
+		})
+		object_node.type = "image/svg+xml"
+
+		if (data.base_svg_url) {
+			// svg file already exists
+			object_node.data = data.base_svg_url
+		}else{
+			// fallback to default svg file
+			// base_svg_url_default. Replace default image extension from '0.jpg' to '0.svg'
+			const base_svg_url_default	= page_globals.fallback_image.substr(0, page_globals.fallback_image.lastIndexOf('.')) + '.svg'
+			object_node.data			= base_svg_url_default
 			content_value.addEventListener('mouseup', function(e) {
 				e.stopPropagation();
 				// tool_upload. Get the tool context to be opened
@@ -199,7 +353,7 @@ const get_content_value = function(i, value, self) {
 			self.img_src = img_src
 
 			// svg document inside the object_node tag
-			const svg_doc 	= object_node.contentDocument;
+			const svg_doc = object_node.contentDocument;
 			// Get one of the svg items by ID;
 			const image_node = svg_doc
 				? await svg_doc.querySelector('image')
@@ -226,20 +380,16 @@ const get_content_value = function(i, value, self) {
 			return true
 		}
 
-	// quality_selector
-		const quality_selector = get_quality_selector(self)
-		content_value.appendChild(quality_selector)
 
-
-	return content_value
-}//end get_content_value
+	return object_node
+}//end render_image_node
 
 
 
 /**
 * GET_BUTTONS
 * @param object instance
-* @return DOM node buttons_container
+* @return HTMLElement buttons_container
 */
 const get_buttons = (self) => {
 
@@ -310,51 +460,3 @@ const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
-
-
-
-/**
-* GET_QUALITY_SELECTOR
-* @return DOM node select
-*/
-const get_quality_selector = (self) => {
-
-	// short vars
-		const data		= self.data || {}
-		const datalist	= data.datalist || []
-		const quality	= self.quality || self.context.features.quality
-
-	const fragment = new DocumentFragment()
-
-	// create the quality selector
-		const quality_selector = ui.create_dom_element({
-			element_type	: 'select',
-			class_name		: 'quality_selector',
-			parent			: fragment
-		})
-		quality_selector.addEventListener('change', (e) =>{
-			const img_src = e.target.value
-			event_manager.publish('image_quality_change_'+self.id, img_src)
-		})
-
-		const quality_list		= datalist.filter(el => el.file_exist===true)
-		const quality_list_len	= quality_list.length
-		for (let i = 0; i < quality_list_len; i++) {
-			// create the node with the all qualities sended by server
-			const value = (typeof quality_list[i].file_url==='undefined')
-				? DEDALO_CORE_URL + '/themes/default/0.jpg'
-				: quality_list[i].file_url
-
-			const select_option = ui.create_dom_element({
-				element_type	: 'option',
-				value			: value,
-				text_node		: quality_list[i].quality,
-				parent			: quality_selector
-			})
-			//set the default quality_list to config variable dedalo_image_quality_default
-			select_option.selected = quality_list[i].quality===quality ? true : false
-		}
-
-
-	return quality_selector
-}//end get_quality_selector

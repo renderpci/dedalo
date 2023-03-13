@@ -36,7 +36,7 @@ export const view_default_edit_3d = function() {
 /**
 * RENDER
 * Render node for use in modes: edit, edit_in_list
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_default_edit_3d.render = async function(self, options) {
 
@@ -70,7 +70,7 @@ view_default_edit_3d.render = async function(self, options) {
 * GET_CONTENT_DATA_EDIT
 * This renders the data
 * @param self the component_3d instance
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data_edit = function(self) {
 
@@ -106,7 +106,7 @@ const get_content_data_edit = function(self) {
 
 /**
 * GET_CONTENT_VALUE
-* @return DOM node content_value
+* @return HTMLElement content_value
 */
 const get_content_value = (i, current_value, self) => {
 
@@ -456,7 +456,7 @@ function dumpObject(obj, lines = [], isLast = true, prefix = '') {
 * BUILD_3D_NODE
 *
 * @param string|null posterframe_url
-* @return DOM node video
+* @return HTMLElement video
 */
 const build_3d_node = (posterframe_url) => {
 
@@ -498,7 +498,7 @@ const build_3d_node = (posterframe_url) => {
 * GET_QUALITY_SELECTOR
 *
 * @param object content_value
-* @return DOM node select
+* @return HTMLElement select
 */
 const get_quality_selector = (content_value, self) => {
 
@@ -550,7 +550,7 @@ const get_quality_selector = (content_value, self) => {
 /**
 * GET_BUTTONS
 * @param object instance
-* @return DOM node buttons_container
+* @return HTMLElement buttons_container
 */
 const get_buttons = (self) => {
 

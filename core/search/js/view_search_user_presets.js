@@ -34,7 +34,7 @@ export const view_search_user_presets = function() {
 * Render wrapper node
 * @param object self
 * @param object options
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_search_user_presets.render = async function(self, options) {
 
@@ -136,7 +136,7 @@ view_search_user_presets.render = async function(self, options) {
 * Render content data
 * @param array ar_section_record
 * @param object self
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = async function(ar_section_record, self) {
 
@@ -241,7 +241,7 @@ const rebuild_columns_map = async function(self) {
 /**
 * RENDER_COLUMN_APPLY_PRESET
 * @param object options
-* @return DOM node button_apply
+* @return HTMLElement button_apply
 */
 export const render_column_apply_preset = function(options) {
 
@@ -293,7 +293,7 @@ export const render_column_apply_preset = function(options) {
 /**
 * RENDER_COLUMN_ID
 * @param object options
-* @return DOM node button_edit
+* @return HTMLElement button_edit
 */
 export const render_column_id = function(options) {
 
@@ -351,7 +351,7 @@ export const render_column_id = function(options) {
 /**
 * RENDER_COLUMN_REMOVE
 * @param object options
-* @return DOM node delete_button
+* @return HTMLElement delete_button
 */
 export const render_column_remove = function(options) {
 

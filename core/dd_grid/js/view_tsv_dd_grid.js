@@ -308,7 +308,7 @@ const get_table_columns = function(current_data) {
 /**
 * GET_DIV_CONTAINER
 * @param object
-* @return DOM node div_container (div)
+* @return HTMLElement div_container
 */
 	// const get_row_container = function() {
 

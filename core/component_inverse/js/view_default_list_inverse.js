@@ -3,6 +3,7 @@
 	// import {common} from '../../common/js/common.js'
 
 
+
 /**
 * VIEW_DEFAULT_LIST_INVERSE
 * Manage the components logic and appearance in client side
@@ -15,9 +16,9 @@ export const view_default_list_inverse = function() {
 
 
 /**
-* LIST
+* RENDER
 * Render node for use in list
-* @return DOM node
+* @return HTMLElement wrapper
 */
 view_default_list_inverse.render = async function(self, options) {
 
@@ -37,4 +38,4 @@ view_default_list_inverse.render = async function(self, options) {
 
 
 	return wrapper
-}//end list
+}//end render

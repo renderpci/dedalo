@@ -24,7 +24,7 @@ export const view_viewer_image = function() {
 /**
 * RENDER
 * Render node to be used by service autocomplete or any datalist
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_viewer_image.render = function(self, options) {
 
@@ -44,9 +44,6 @@ view_viewer_image.render = function(self, options) {
 			? url_object.file_url
 			: page_globals.fallback_image
 
-	// thumb
-		// const thumb_url = datalist.find(item => item.quality==='thumb').file_url
-
 	// image
 		const image = ui.create_dom_element({
 			element_type	: 'img',
@@ -55,6 +52,11 @@ view_viewer_image.render = function(self, options) {
 			parent			: wrapper
 		})
 		// ui.component.add_image_fallback(image)
+
+		// mousedown event
+			image.addEventListener('mousedown', function() {
+				window.close()
+			})
 
 		// image background color
 			image.addEventListener('load', set_bg_color, false)
@@ -104,11 +106,6 @@ view_viewer_image.render = function(self, options) {
 			})
 		})
 
-	// close window when the user click in the image
-		image.addEventListener('mousedown', function() {
-			window.close()
-		})
-
 
 	return wrapper
 }//end render
@@ -120,7 +117,7 @@ view_viewer_image.render = function(self, options) {
 * create a temp <a> node with the original quality or default quality if the original file is missing
 * set the node to be downloadable with the original filename uploaded by user
 * download the file
-* @param DOM node image
+* @param HTMLElement image
 * @return boo
 */
 const resize_window_to_image_size = function(image) {

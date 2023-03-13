@@ -24,7 +24,7 @@ export const render_search_component_filter = function() {
 /**
 * SEARCH
 * Render node for use in search
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_search_component_filter.prototype.search = async function(options) {
 

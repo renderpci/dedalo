@@ -11,7 +11,7 @@
 
 
 /**
-* render_tool_dev_template
+* RENDER_TOOL_DEV_TEMPLATE
 * Manages the component's logic and appearance in client side
 */
 export const render_tool_dev_template = function() {
@@ -26,7 +26,7 @@ export const render_tool_dev_template = function() {
 * Render tool DOM nodes
 * This function is called by render common attached in 'tool_dummy.js'
 * @param object options
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_tool_dev_template.prototype.edit = async function(options) {
 
@@ -56,7 +56,7 @@ render_tool_dev_template.prototype.edit = async function(options) {
 * GET_CONTENT_DATA
 * Render tool body or 'content_data'
 * @param instance self
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = async function(self) {
 

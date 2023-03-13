@@ -34,7 +34,7 @@ render_edit_component_radio_button.prototype.edit = async function(options) {
 	const self = this
 
 	// view
-		const view	= self.context.view || 'default'
+		const view = self.context.view || 'default'
 
 	switch(view) {
 

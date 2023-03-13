@@ -2818,12 +2818,53 @@ abstract class component_common extends common {
 			// permissions
 				$this->permissions = common::get_permissions($permissions_section_tipo, $this->tipo);
 
-			// logged user id
-				$user_id = navigator::get_user_id();
+			// DEDALO_SECTION_USERS_TIPO
+				if ($this->section_tipo===DEDALO_SECTION_USERS_TIPO) {
 
+					// logged user id
+						$user_id = navigator::get_user_id();
+
+					// his own section
+						if($this->section_id==$user_id) {
+
+							switch (true) {
+								// Admin General. Former component_security_administrator. Always read only for self user
+								case ($this->tipo===DEDALO_SECURITY_ADMINISTRATOR_TIPO) :
+									$this->permissions = 1;
+									break;
+
+								// check profile
+								// check developer
+								// check if the section is the user_id section and remove write permissions
+								// the user can not set permissions by itself
+								case (security::is_global_admin($user_id)===false &&
+									($this->tipo===DEDALO_USER_PROFILE_TIPO || $this->tipo===DEDALO_USER_DEVELOPER_TIPO)) :
+
+									$this->permissions = 1;
+									break;
+
+								default:
+
+									break;
+							}
+						}
+
+					// check global admin
+						if($this->section_id==$user_id && $this->tipo===DEDALO_SECURITY_ADMINISTRATOR_TIPO){
+							$this->permissions = 1;
+						}
+						else if($this->section_id == $user_id &&
+							( 	$this->tipo === DEDALO_SECURITY_ADMINISTRATOR_TIPO ||
+								$this->tipo === DEDALO_USER_PROFILE_TIPO ||
+								$this->tipo === DEDALO_USER_DEVELOPER_TIPO
+							) &&
+							security::is_global_admin($user_id) === false) {
+
+							$this->permissions = 1;
+						}
+				}
 
 			// check global admin
-
 				if($this->section_tipo === DEDALO_SECTION_USERS_TIPO &&
 					$this->section_id == $user_id &&
 					$this->tipo === DEDALO_SECURITY_ADMINISTRATOR_TIPO

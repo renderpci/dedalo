@@ -29,7 +29,7 @@ export const render_edit_section_record = function() {
 * EDIT
 * Render the node to use in edit mode using current context view
 * @param object options
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_edit_section_record.prototype.edit = async function(options) {
 

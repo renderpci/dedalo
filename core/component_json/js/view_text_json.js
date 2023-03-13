@@ -14,7 +14,7 @@
 
 
 /**
-* VIEW_text_JSON
+* VIEW_TEXT_JSON
 * Manage the components logic and appearance in client side
 */
 export const view_text_json = function() {
@@ -27,7 +27,7 @@ export const view_text_json = function() {
 /**
 * RENDER
 * Render node to be used by service autocomplete or any datalist
-* @return DOM node
+* @return HTMLElement wrapper
 */
 view_text_json.render = async function(self, options) {
 

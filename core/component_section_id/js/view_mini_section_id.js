@@ -22,7 +22,7 @@ export const view_mini_section_id = function() {
 /**
 * RENDER
 * Render node to be used by service autocomplete or any datalist
-* @return DOM node
+* @return HTMLElement wrapper
 */
 view_mini_section_id.render = function(self, options) {
 

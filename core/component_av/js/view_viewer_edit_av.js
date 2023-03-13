@@ -29,7 +29,7 @@ export const view_viewer_edit_av = function() {
 * Render node to be used by service autocomplete or any datalist
 * @param object self
 * @param object options
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_viewer_edit_av.render = async function(self, options) {
 

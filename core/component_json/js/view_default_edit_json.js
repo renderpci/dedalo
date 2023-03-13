@@ -16,7 +16,7 @@
 export const view_default_edit_json = function() {
 
 	return true
-}; //end view_default_edit_json
+}//end view_default_edit_json
 
 
 
@@ -25,17 +25,12 @@ export const view_default_edit_json = function() {
 * Render node for use in edit
 * @param object self
 * @param object options
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_default_edit_json.render = async function(self, options) {
 
 	// options
 		const render_level = options.render_level || 'full'
-
-	// fix non value scenarios
-		self.data.value = (!self.data.value || self.data.value.length<1)
-			? [null]
-			: self.data.value
 
 	// content_data
 		const content_data = get_content_data(self)
@@ -44,7 +39,9 @@ view_default_edit_json.render = async function(self, options) {
 		}
 
 	// buttons
-		const buttons = get_buttons(self)
+		const buttons = (self.permissions > 1)
+			? get_buttons(self)
+			: null
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
@@ -63,7 +60,7 @@ view_default_edit_json.render = async function(self, options) {
 /**
 * GET_CONTENT_DATA
 * @param object self
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 
@@ -71,7 +68,6 @@ const get_content_data = function(self) {
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
-			  content_data.classList.add('nowrap')
 
 	// values (inputs)
 		const inputs_value	= value
@@ -80,10 +76,12 @@ const get_content_data = function(self) {
 			console.warn('More than one value in component_json is not allowed at now. Ignored next values. N values: ', value_length);
 		}
 		for (let i = 0; i < value_length; i++) {
-			const content_value = get_content_value(i, inputs_value[i], self)
-			content_data.appendChild(content_value)
+			const content_value_node = (self.permissions===1)
+				? get_content_value_read(i, inputs_value[i], self)
+				: get_content_value(i, inputs_value[i], self)
+			content_data.appendChild(content_value_node)
 			// set pointers
-			content_data[i] = content_value
+			content_data[i] = content_value_node
 			break; // only one is used for the time being
 		}
 
@@ -99,7 +97,7 @@ const get_content_data = function(self) {
 * @param int key
 * @param mixed current_value
 * @param object self
-* @return DOM node content_value
+* @return HTMLElement content_value
 */
 const get_content_value = (key, current_value, self) => {
 
@@ -196,14 +194,48 @@ const get_content_value = (key, current_value, self) => {
 
 
 	return content_value
-}; //end get_content_value
+}//end get_content_value
+
+
+
+/**
+* GET_CONTENT_VALUE_read
+* Render JSON editor for current value
+* @param int key
+* @param mixed current_value
+* @param object self
+* @return HTMLElement content_value
+*/
+const get_content_value_read = (key, current_value, self) => {
+
+	const parsed_value = current_value
+		? JSON.stringify(current_value, null, 2)
+		: ''
+
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value read_only'
+		})
+
+	// value
+		ui.create_dom_element({
+			element_type	: 'pre',
+			class_name		: 'value',
+			inner_html		: parsed_value,
+			parent			: content_value
+		})
+
+
+	return content_value
+}//end get_content_value_read
 
 
 
 /**
 * GET_BUTTONS
 * @param object self
-* @return DOM node buttons_container
+* @return HTMLElement buttons_container
 */
 const get_buttons = (self) => {
 
