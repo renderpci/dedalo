@@ -22,7 +22,7 @@ export const view_mini_date = function() {
 /**
 * RENDER
 * Render node to be used in current view
-* @return DOM node
+* @return HTMLElement wrapper
 */
 view_mini_date.render = async function(self, options) {
 

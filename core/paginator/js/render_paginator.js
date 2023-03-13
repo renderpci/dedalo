@@ -23,7 +23,7 @@ export const render_paginator = function() {
 * EDIT
 * Render node for use in edit
 * @param object options
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_paginator.prototype.edit = async function(options) {
 
@@ -67,7 +67,7 @@ render_paginator.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = async function(self) {
 

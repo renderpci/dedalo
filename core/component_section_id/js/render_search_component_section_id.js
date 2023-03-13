@@ -24,7 +24,7 @@ export const render_search_component_section_id = function() {
 * SEARCH
 * Render node for use in current mode
 * @param object options
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_search_component_section_id.prototype.search = async function(options) {
 
@@ -57,7 +57,7 @@ render_search_component_section_id.prototype.search = async function(options) {
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 

@@ -24,7 +24,7 @@ export const view_default_list_info = function() {
 /**
 * RENDER
 * Render component node to use in list
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_default_list_info.render = async function(self, options) {
 

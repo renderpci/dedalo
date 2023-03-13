@@ -31,7 +31,7 @@ export const view_tool_time_machine_list = function() {
 * Renders main element wrapper for current view
 * @param object self
 * @param object options
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_tool_time_machine_list.render = async function(self, options) {
 
@@ -119,7 +119,7 @@ view_tool_time_machine_list.render = async function(self, options) {
 * 	Array of section_record instances
 * @param object self
 * 	service_time_machine instance
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 	// const get_content_data = async function(ar_section_record, self) {
 

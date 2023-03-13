@@ -27,7 +27,7 @@ export const render_tool_propagate_component_data = function() {
 * Render tool DOM nodes
 * This function is called by render common attached in 'tool_propagate_component_data.js'
 * @param object options
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_tool_propagate_component_data.prototype.edit = async function(options) {
 
@@ -68,7 +68,7 @@ render_tool_propagate_component_data.prototype.edit = async function(options) {
 * GET_CONTENT_DATA
 * Render tool body or 'content_data'
 * @param instance self
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = async function(self) {
 

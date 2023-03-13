@@ -30,7 +30,7 @@ export const render_inspector = function() {
 * EDIT
 * Render node for use in this mode
 * @param object options
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_inspector.prototype.edit = async function(options) {
 
@@ -94,7 +94,7 @@ render_inspector.prototype.edit = async function(options) {
 * Renders the whole content_data node
 * @param object self
 * 	inspector instance
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 
@@ -356,7 +356,7 @@ const get_content_data = function(self) {
 * RENDER_SELECTION_INFO
 * Display current selected element name like 'Description'
 * @param object self
-* @return DOM node selection_info_node
+* @return HTMLElement selection_info_node
 */
 const render_selection_info = function(self) {
 
@@ -765,7 +765,7 @@ export const render_component_info = function(self, component) {
 * RENDER_ELEMENT_INFO
 * Note that self.element_info_containe is fixed to allow inspector init event
 * to locate the target node when is invoked
-* @return DOM node element_info_wrap
+* @return HTMLElement element_info_wrap
 */
 const render_element_info = function(self) {
 
@@ -819,7 +819,7 @@ const render_element_info = function(self) {
 * to allow user configure section projects
 * @param object self
 * 	inspector instance
-* @return DOM node project_wrap
+* @return HTMLElement project_wrap
 */
 const render_project_block = function(self) {
 
@@ -891,7 +891,7 @@ export const update_project_container_body = function(self) {
 
 /**
 * RENDER_INDEXATION_LIST
-* @return DOM node indexation_list_container
+* @return HTMLElement indexation_list_container
 */
 const render_indexation_list = function() {
 
@@ -941,7 +941,7 @@ const render_indexation_list = function() {
 
 /**
 * RENDER_RELATION_LIST
-* @return DOM node relation_list_container
+* @return HTMLElement relation_list_container
 */
 const render_relation_list = function(self) {
 
@@ -1040,7 +1040,7 @@ const render_relation_list = function(self) {
 * Show whole section recent activity (component value changes) list
 * @param object self
 * 	inspector instance
-* @return DOM node time_machine_list_wrap
+* @return HTMLElement time_machine_list_wrap
 */
 export const render_time_machine_list = function(self) {
 
@@ -1107,7 +1107,7 @@ export const render_time_machine_list = function(self) {
 * Get section time_machine history records
 * @param object self
 * 	inspector instance
-* @return DOM node|null container
+* @return HTMLElement|null container
 */
 export const load_time_machine_list = async function(self) {
 
@@ -1181,7 +1181,7 @@ export const load_time_machine_list = async function(self) {
 * to locate the target node when is invoked
 * @param object self
 * 	inspector instance
-* @return DOM node component_history_wrap
+* @return HTMLElement component_history_wrap
 */
 const render_component_history = function(self) {
 
@@ -1237,7 +1237,7 @@ const render_component_history = function(self) {
 * 	inspector instance
 * @param object|null component
 * 	component instance
-* @return DOM node|null component_history_wrap
+* @return HTMLElement|null component_history_wrap
 */
 export const load_component_history = async function(self, component) {
 
@@ -1353,7 +1353,7 @@ export const load_component_history = async function(self, component) {
 * Show component save and error messages
 * @param object self
 * 	inspector instance
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 const render_activity_info = function(self) {
 
@@ -1408,7 +1408,7 @@ const render_activity_info = function(self) {
 * 	inspector instance
 * @param object options
 * 	event save subscription received options
-* @return DOM node|null container
+* @return HTMLElement|null container
 */
 export const load_activity_info = async function(self, options) {
 

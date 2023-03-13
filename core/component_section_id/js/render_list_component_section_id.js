@@ -24,7 +24,7 @@ export const render_list_component_section_id = function() {
 /**
 * LIST
 * Render node for use in list
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_list_component_section_id.prototype.list = function(options) {
 

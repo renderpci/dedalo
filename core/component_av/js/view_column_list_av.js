@@ -25,7 +25,7 @@ export const view_column_list_av = function() {
 /**
 * RENDER
 * Render node for use in list as column
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_column_list_av.render = async function(self, options) {
 

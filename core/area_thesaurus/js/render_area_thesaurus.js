@@ -23,7 +23,7 @@ export const render_area_thesaurus = function() {
 /**
 * LIST
 * Alias of edit
-* @return DOM node
+* @return HTMLElement
 */
 render_area_thesaurus.prototype.list = async function(options) {
 
@@ -101,7 +101,7 @@ render_area_thesaurus.prototype.list = async function(options) {
 
 /**
 * RENDER_CONTENT_DATA
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const render_content_data = function(self) {
 
@@ -235,7 +235,7 @@ const render_content_data = function(self) {
 * GET_BUTTONS
 * @param object self
 * 	area instance
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const get_buttons = function(self) {
 

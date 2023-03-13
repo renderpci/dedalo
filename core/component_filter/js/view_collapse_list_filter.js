@@ -23,7 +23,7 @@ export const view_collapse_list_filter = function() {
 /**
 * RENDER
 * Render node for use in current view
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_collapse_list_filter.render = async function(self, options) {
 

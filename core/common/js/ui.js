@@ -35,7 +35,7 @@ export const ui = {
 	* @param string message_node = 'component_message'
 	* @param bool clean = false
 	*
-	* @return DOM node message_wrap
+	* @return HTMLElement message_wrap
 	*/
 	message_timeout : null,
 	show_message : (wrapper, message, msg_type='error', message_node='component_message', clean=false) => {
@@ -121,7 +121,7 @@ export const ui = {
 		* @param object instance (self component instance)
 		* @param object options = {}
 		* 	Specific objects to place into the wrapper, like 'label', 'top', buttons, filter, paginator, content_data)
-		* @return DOM node wrapper
+		* @return HTMLElement wrapper
 		*/
 		build_wrapper_edit : (instance, options={}) => {
 
@@ -358,7 +358,7 @@ export const ui = {
 		* Component
 		* @param object instance
 		* @param object options = {}
-		* @return DOM node content_data
+		* @return HTMLElement content_data
 		*/
 		build_content_data : (instance, options={}) => {
 
@@ -389,7 +389,7 @@ export const ui = {
 		/**
 		* BUILD_BUTTON_EXIT_EDIT
 		* @param object options = {}
-		* @return DOM node content_data
+		* @return HTMLElement content_data
 		*/
 		build_button_exit_edit : (instance, options={}) => {
 
@@ -432,7 +432,7 @@ export const ui = {
 		/**
 		* BUILD_BUTTONS_CONTAINER
 		* @param object instance
-		* @return DOM node buttons_container
+		* @return HTMLElement buttons_container
 		*/
 		build_buttons_container : (instance) => {
 
@@ -451,7 +451,7 @@ export const ui = {
 		* Render a unified version of component wrapper in list mode
 		* @param object instance
 		* @param object options = {}
-		* @return DOM node wrapper
+		* @return HTMLElement wrapper
 		*/
 		build_wrapper_list : (instance, options={}) => {
 
@@ -542,7 +542,7 @@ export const ui = {
 		* BUILD_WRAPPER_MINI
 		* @param object instance
 		* @param object options = {}
-		* @return DOM node wrapper
+		* @return HTMLElement wrapper
 		*/
 		build_wrapper_mini : (instance, options={}) => {
 
@@ -573,7 +573,7 @@ export const ui = {
 		* @param object instance (self component instance)
 		* @param object items
 		* 	Specific objects to place into the wrapper, like 'label', 'top', buttons, filter, paginator, content_data)
-		* @return DOM node wrapper
+		* @return HTMLElement wrapper
 		*/
 		build_wrapper_search : (instance, items={}) => {
 
@@ -942,7 +942,7 @@ export const ui = {
 		/**
 		* BUILD_WRAPPER_EDIT
 		* Common method to create element wrapper in current mode
-		* @return DOM node wrapper
+		* @return HTMLElement wrapper
 		*/
 		build_wrapper_edit : (instance, items={}) => {
 
@@ -1205,7 +1205,7 @@ export const ui = {
 		/**
 		* BUILD_CONTENT_DATA
 		* @param object tool instance
-		* @return DOM node content_data
+		* @return HTMLElement content_data
 		*/
 		build_content_data : (instance, options) => {
 
@@ -1406,7 +1406,7 @@ export const ui = {
 	* CREATE_DOM_ELEMENT
 	* Builds a DOM node based on received options
 	* @param object options
-	* @return DOM node element
+	* @return HTMLElement element
 	*/
 	create_dom_element : function(options){
 
@@ -1819,7 +1819,7 @@ export const ui = {
 	* Render a lang selector with a given array of langs or the default
 	* page_globals.dedalo_projects_default_langs list
 	* @param object options
-	* @return DOM node select_lang
+	* @return HTMLElement select_lang
 	*/
 	build_select_lang : (options) => {
 
@@ -1902,7 +1902,7 @@ export const ui = {
 
 	/**
 	* GET_CONTENTEDITABLE_BUTTONS
-	* @return DOM node contenteditable_buttons
+	* @return HTMLElement contenteditable_buttons
 	*/
 	get_contenteditable_buttons : () => {
 
@@ -1990,7 +1990,7 @@ export const ui = {
 	* 	size	: string
 	* 	remove_overlay : bool
 	* }
-	* @return DOM node modal_container
+	* @return HTMLElement modal_container
 	*/
 	attach_to_modal : (options) => {
 
@@ -2234,7 +2234,7 @@ export const ui = {
 	* 	Parsed columns_map array as [{id: 'oh87', label: 'Information'}]
 	* @param object self
 	* 	Instance of section/component_portal
-	* @return DOM node header_wrapper
+	* @return HTMLElement header_wrapper
 	*/
 	render_list_header : (columns_map, self) =>{
 
@@ -2398,7 +2398,7 @@ export const ui = {
 	* @param DOM node header_item
 	* 	Container where place the sort buttons
 	* @param object column
-	* @return DOM node sort_node
+	* @return HTMLElement sort_node
 	*/
 	add_column_order_set(self, column, header_wrapper) {
 
@@ -2796,7 +2796,7 @@ export const ui = {
 
 	/**
 	* GET_ONTOLY_TERM_LINK
-	* @return DOM node ontoly_link
+	* @return HTMLElement ontoly_link
 	*/
 	get_ontoly_term_link(tipo) {
 

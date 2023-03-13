@@ -28,7 +28,7 @@ export const render_tool_numisdata_epigraphy = function() {
 /**
 * EDIT
 * Render node
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_tool_numisdata_epigraphy.prototype.edit = async function(options={render_level:'full'}) {
 
@@ -62,13 +62,13 @@ render_tool_numisdata_epigraphy.prototype.edit = async function(options={render_
 
 
 	return wrapper
-}//end render_tool_numisdata_epigraphy
+}//end edit
 
 
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data_edit = async function(self) {
 
@@ -485,7 +485,7 @@ const render_related_list = function(self){
 /**
 * RENDER_HEADER_OPTIONS
 * This is used to build a optional buttons inside the header
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const render_header_options = async function(self, content_data) {
 
@@ -534,7 +534,7 @@ const render_header_options = async function(self, content_data) {
 * the components are defined in ontology as tool_config->name_of_the_tool->ddo_map
 * @param object self
 * 	instance of current tool
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const render_status = async function(self) {
 
@@ -569,7 +569,7 @@ const render_status = async function(self) {
 * This is used to build a optional buttons inside the header
 * @param object self
 * 	instance of current tool
-* @return DOM node activity_info_body
+* @return HTMLElement activity_info_body
 */
 const render_activity_info = function(self) {
 

@@ -23,7 +23,7 @@ export const view_text_list_av = function() {
 /**
 * RENDER
 * Render node to be used by service autocomplete or any datalist
-* @return DOM node
+* @return HTMLElement
 */
 view_text_list_av.render = async function(self) {
 

@@ -24,7 +24,7 @@ export const render_edit_section = function() {
 * EDIT
 * Render node for use in edit
 * @param object options
-* @return DOM node|null
+* @return HTMLElement wrapper
 */
 render_edit_section.prototype.edit = async function(options) {
 
@@ -33,26 +33,22 @@ render_edit_section.prototype.edit = async function(options) {
 	// view
 		const view	= self.context.view
 
-
 	// wrapper
-		switch(view) {
+	switch(view) {
 
-			// case 'mosaic':
-			// 	return view_mosaic_edit_portal.render(self, options)
-			// 	break;
+		// case 'mosaic':
+		// 	return view_mosaic_edit_portal.render(self, options)
+		// 	break;
 
-			default:
-				// dynamic try
-					const render_view = self.render_views.find(el => el.view === view && el.mode === self.mode)
-					if (render_view) {
-						const path			= render_view.path || './' + render_view.render +'.js'
-						const render_method	= await import (path)
-						return render_method[render_view.render].render(self, options)
-					}
+		default:
+			// dynamic try
+				const render_view = self.render_views.find(el => el.view === view && el.mode === self.mode)
+				if (render_view) {
+					const path			= render_view.path || './' + render_view.render +'.js'
+					const render_method	= await import (path)
+					return render_method[render_view.render].render(self, options)
+				}
 
-				return view_default_edit_section.render(self, options)
-				break;
-		}
-
-	return null
+			return view_default_edit_section.render(self, options)
+	}
 }//end edit

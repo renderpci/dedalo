@@ -23,7 +23,7 @@ export const view_mini_email = function() {
 /**
 * RENDER
 * Render node to be used by this view
-* @return DOM node
+* @return HTMLElement wrapper
 */
 view_mini_email.render = async function(self, options) {
 

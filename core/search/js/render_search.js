@@ -35,7 +35,7 @@ export const render_search = function() {
 /**
 * LIST
 * Render whole search in list mode
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_search.prototype.list = async function() {
 
@@ -101,7 +101,7 @@ render_search.prototype.list = async function() {
 /**
 * RENDER_BASE
 * Render basic nodes
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_search.prototype.render_base = function() {
 
@@ -345,7 +345,7 @@ export const render_filter = function(options) {
 /**
 * RENDER_SEARCH_BUTTONS
 * Creates search buttons group: max, show all, apply
-* @return DOM node search_buttons_container
+* @return HTMLElement search_buttons_container
 */
 render_search.prototype.render_search_buttons = function(){
 
@@ -478,7 +478,7 @@ render_search.prototype.render_search_buttons = function(){
 * 	operator, button add, search_component wrapper
 * @param DOM node parent_div
 * @param object options = {}
-* @return DOM node search_group
+* @return HTMLElement search_group
 */
 render_search.prototype.render_search_group = function(parent_div, options={}) {
 

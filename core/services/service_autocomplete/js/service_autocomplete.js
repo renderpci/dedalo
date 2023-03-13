@@ -246,7 +246,7 @@ service_autocomplete.prototype.service_autocomplete_keys = function(e) {
 * {
 * 	render_level : string full|autocomplete_wrapper
 * }
-* @return DOM node wrapper | null
+* @return HTMLElement wrapper
 */
 service_autocomplete.prototype.render = async function(options={}) {
 
@@ -260,15 +260,10 @@ service_autocomplete.prototype.render = async function(options={}) {
 
 			case 'grid_chooser':
 				return view_default_autocomplete.render(self, options)
-				break;
-
 
 			default:
 				return view_default_autocomplete.render(self, options)
-				break;
 		}
-
-	return null
 }//end render
 
 

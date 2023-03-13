@@ -24,7 +24,7 @@ export const view_default_edit_pdf = function() {
 /**
 * RENDER
 * Render node for use in current view
-* @return DOM node
+* @return HTMLElement wrapper
 */
 view_default_edit_pdf.render = async function(self, options) {
 
@@ -63,7 +63,7 @@ view_default_edit_pdf.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 export const get_content_data_edit = function(self) {
 
@@ -113,7 +113,7 @@ export const get_content_data_edit = function(self) {
       "second": 1
     }
   }
-* @return DOM node content_value
+* @return HTMLElement content_value
 */
 const get_content_value = function(i, current_value, self) {
 
@@ -279,7 +279,7 @@ const get_content_value = function(i, current_value, self) {
 /**
 * GET_BUTTONS
 * @param object instance
-* @return DOM node buttons_container
+* @return HTMLElement buttons_container
 */
 const get_buttons = (self) => {
 
@@ -331,7 +331,7 @@ const get_buttons = (self) => {
       "second": 1
     }
   }
-* @return DOM node content_value
+* @return HTMLElement content_value
 */
 const get_content_value_read = function(i, current_value, self) {
 

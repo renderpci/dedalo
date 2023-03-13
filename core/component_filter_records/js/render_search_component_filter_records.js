@@ -23,7 +23,7 @@ export const render_search_component_filter_records = function() {
 /**
 * SEARCH
 * Render node for use in edit
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_search_component_filter_records.prototype.search = async function(options) {
 
@@ -202,7 +202,7 @@ const get_content_data = function(self) {
 
 /**
 * GET_INPUT_ELEMENT
-* @return DOM node li
+* @return HTMLElement li
 */
 const get_input_element = (i, datalist_item, self) => {
 

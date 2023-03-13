@@ -853,7 +853,7 @@ export const service_ckeditor = function() {
 	/**
 	* GET_EDITOR_CONTENT_DATA
 	* get the full data of the editor in html format to be saved
-	* @return DOM node | false
+	* @return HTMLElement | false
 	*/
 	this.get_editor_content_data = function() {
 
@@ -1301,7 +1301,7 @@ export const service_ckeditor = function() {
 	* 	custom_events : [{name:..},{name:..}],
 	* 	toolbar : ['bold','italic',..]
 	* }
-	* @return DOM node toolbar_node
+	* @return HTMLElement toolbar_node
 	*/
 	this.build_toolbar = function(editor_config) {
 

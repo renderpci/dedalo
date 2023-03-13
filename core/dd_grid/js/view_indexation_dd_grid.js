@@ -32,7 +32,7 @@ export const view_indexation_dd_grid = function() {
 /**
 * RENDER
 * Render node for use in this view
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_indexation_dd_grid.render = async function(self, options) {
 
@@ -148,7 +148,7 @@ const get_grid_nodes = function(data) {
 /**
 * GET_DIV_CONTAINER
 * @param object current_data
-* @return DOM node div_container
+* @return HTMLElement div_container
 */
 const get_div_container = function(current_data) {
 
@@ -169,7 +169,7 @@ const get_div_container = function(current_data) {
 /**
 * GET_BUTTON_COLUMN
 * @param object current_data
-* @return DOM node button (img)
+* @return HTMLElement button (img)
 */
 export const get_button_column = function(current_data) {
 
@@ -247,7 +247,7 @@ export const get_button_column = function(current_data) {
 * Render a span DOM node with given value
 * @param object data_item
 * @param bool use_fallback
-* @return DOM node text_node (span)
+* @return HTMLElement text_node (span)
 */
 export const get_text_column = function(data_item, use_fallback) {
 

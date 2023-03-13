@@ -8,6 +8,7 @@
 	import {event_manager} from '../../../common/js/event_manager.js'
 
 
+
 /**
 * RENDER_COMPONENT_CALCULATION
 * Manage the components logic and appearance in client side
@@ -21,7 +22,7 @@ export const render_calculation = function() {
 /**
 * EDIT
 * Render node for use in edit
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_calculation.prototype.edit = async function(options) {
 
@@ -47,16 +48,20 @@ render_calculation.prototype.edit = async function(options) {
 	return wrapper
 }//end edit
 
+
+
 /**
 * LIST
 * Render component node to use in list
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_calculation.prototype.list = render_calculation.prototype.edit
 
+
+
 /**
 * GET_CONTENT_DATA_EDIT
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data_edit = async function(self) {
 
@@ -96,7 +101,7 @@ const get_content_data_edit = async function(self) {
 
 /**
 * INPUT_ELEMENT
-* @return DOM node li
+* @return HTMLElement li
 */
 const get_value_element = (i, data, inputs_container, self) => {
 

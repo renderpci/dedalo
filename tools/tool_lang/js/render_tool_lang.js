@@ -26,7 +26,7 @@ export const render_tool_lang = function() {
 * EDIT
 * Render node for use in edit mode
 * @param object options
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_tool_lang.prototype.edit = async function(options) {
 
@@ -51,14 +51,15 @@ render_tool_lang.prototype.edit = async function(options) {
 		const status_container = await render_status(self)
 		wrapper.tool_buttons_container.appendChild(status_container)
 
+
 	return wrapper
-}//end render_tool_lang
+}//end edit
 
 
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data_edit = async function(self) {
 
@@ -275,7 +276,7 @@ const get_content_data_edit = async function(self) {
 /**
 * RENDER_PROPAGATE_MARKS_BLOCK
 * (!) WORKING HERE. Note that this functionality it's not finished in v5
-* @return DOM node propagate_marks_container
+* @return HTMLElement propagate_marks_container
 */
 const render_propagate_marks_block = function(self) {
 
@@ -423,7 +424,7 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 * 	self		: instance of the tool
 * 	component	: instance of the component to change, it could be source or target component
 * 	lang		: the lang selected by user
-* @return DOM node|bool
+* @return HTMLElement|bool
 * 	component wrapper node
 */
 export const add_component = async (options) => {
@@ -460,7 +461,7 @@ export const add_component = async (options) => {
 * the components are defined in ontology as tool_config->name_of_the_tool->ddo_map
 * @param object self
 * 	instance of current tool
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const render_status = async function(self) {
 

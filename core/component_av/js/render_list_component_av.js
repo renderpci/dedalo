@@ -27,7 +27,7 @@ export const render_list_component_av = function() {
 /**
 * LIST
 * Render node for use in modes: list
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_list_component_av.prototype.list = async function(options) {
 

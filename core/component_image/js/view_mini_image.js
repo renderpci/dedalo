@@ -23,7 +23,7 @@ export const view_mini_image = function() {
 /**
 * RENDER
 * Render node to be used by service autocomplete or any datalist
-* @return DOM node
+* @return HTMLElement wrapper
 */
 view_mini_image.render = function(self, options) {
 

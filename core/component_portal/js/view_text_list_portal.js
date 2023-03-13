@@ -25,7 +25,7 @@ export const view_text_list_portal = function() {
 /**
 * RENDER
 * Render node as text view
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_text_list_portal.render = async function(self, options) {
 

@@ -28,7 +28,7 @@ export const render_tool_export = function() {
 /**
 * EDIT
 * Render DOM nodes of the tool
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_tool_export.prototype.edit = async function (options) {
 
@@ -71,7 +71,7 @@ render_tool_export.prototype.edit = async function (options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data_edit = async function(self) {
 
@@ -509,7 +509,7 @@ const get_content_data_edit = async function(self) {
 * BUILD_EXPORT_COMPONENT
 * Creates export_component DOM item
 * @param object ddo
-* @return DOM node export_component
+* @return HTMLElement export_component
 */
 render_tool_export.prototype.build_export_component = async function(ddo) {
 

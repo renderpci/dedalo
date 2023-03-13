@@ -29,7 +29,7 @@ export const render_search_component_geolocation = function() {
 /**
 * SEARCH
 * Render node for use in edit
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_search_component_geolocation.prototype.search = async function(options) {
 

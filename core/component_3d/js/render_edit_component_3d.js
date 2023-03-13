@@ -22,7 +22,7 @@ export const render_edit_component_3d = function() {
 /**
 * EDIT
 * Render node for use in modes: edit
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_edit_component_3d.prototype.edit = async function(options) {
 

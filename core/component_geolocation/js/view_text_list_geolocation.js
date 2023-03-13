@@ -19,7 +19,7 @@ export const view_text_list_geolocation = function() {
 * Render node to be used by service autocomplete or any datalist
 * @param object self
 * @param object options
-* @return DOM node
+* @return HTMLElement text_node
 */
 view_text_list_geolocation.render = async function(self) {
 

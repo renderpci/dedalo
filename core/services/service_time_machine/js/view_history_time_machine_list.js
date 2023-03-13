@@ -29,7 +29,7 @@ export const view_history_time_machine_list = function() {
 * Renders main element wrapper for current view
 * @param object self
 * @param object options
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_history_time_machine_list.render = async function(self, options) {
 

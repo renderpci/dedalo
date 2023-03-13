@@ -23,7 +23,7 @@ export const render_tool_import_rdf = function() {
 /**
 * RENDER_TOOL_IMPORT_RDF
 * Render node for use like button
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_tool_import_rdf.prototype.edit = async function(options={render_level:'full'}) {
 
@@ -51,7 +51,7 @@ render_tool_import_rdf.prototype.edit = async function(options={render_level:'fu
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data_edit = async function(self) {
 

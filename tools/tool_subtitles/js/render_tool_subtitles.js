@@ -12,9 +12,10 @@
 	// import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 
 
+
 /**
 * RENDER_TOOL_SUBTITLES
-* Manages the component's logic and apperance in client side
+* Manages the component's logic and appearance in client side
 */
 export const render_tool_subtitles = function() {
 
@@ -26,7 +27,7 @@ export const render_tool_subtitles = function() {
 /**
 * EDIT
 * Render node
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_tool_subtitles.prototype.edit = async function(options={render_level:'full'}) {
 
@@ -56,13 +57,13 @@ render_tool_subtitles.prototype.edit = async function(options={render_level:'ful
 
 
 	return wrapper
-}//end render_tool_subtitles
+}//end edit
 
 
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data_edit = async function(self) {
 
@@ -327,7 +328,7 @@ const get_content_data_edit = async function(self) {
 /**
 * RENDER_SUBTITLES_OPTIONS
 * This is used to build a optional buttons inside the header
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const render_subtitles_options = async function(self, content_data) {
 
@@ -406,7 +407,7 @@ const render_subtitles_options = async function(self, content_data) {
 * This is used to build a optional buttons inside the header
 * @param object self
 * 	instance of current tool
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const render_activity_info = function(self) {
 
@@ -436,7 +437,7 @@ const render_activity_info = function(self) {
 /**
 * RENDER_SUBTITLES
 * This is used to build a optional buttons inside the header
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const render_subtitles = async function(self) {
 
