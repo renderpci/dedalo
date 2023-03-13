@@ -74,7 +74,7 @@ const get_content_data_edit = function(self) {
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 			const content_value = (self.permissions===1)
-				? get_content_value_read(i, inputs_value[i], self)
+				? get_content_value(i, inputs_value[i], self)
 				: get_content_value(i, inputs_value[i], self)
 			content_data.appendChild(content_value)
 			// set pointer
@@ -123,6 +123,11 @@ const get_content_value = (i, current_value, self) => {
 		function set_bg_color() {
 			this.removeEventListener('load', set_bg_color, false)
 			ui.set_background_image(this, content_value)
+		}
+
+	// view_print case. No video is generated
+		if (self.view==='print') {
+			return content_value
 		}
 
 	// video
@@ -180,32 +185,32 @@ const get_content_value = (i, current_value, self) => {
 * @param object self
 * @return HTMLElement content_value
 */
-const get_content_value_read = (i, current_value, self) => {
+	// const get_content_value_read = (i, current_value, self) => {
 
-	// content_value
-		const content_value = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'content_value read_only'
-		})
+	// 	// content_value
+	// 		const content_value = ui.create_dom_element({
+	// 			element_type	: 'div',
+	// 			class_name 		: 'content_value read_only'
+	// 		})
 
-	// posterframe
-		const posterframe_url	= self.data.posterframe_url
-		const posterframe		= ui.create_dom_element({
-			element_type	: 'img',
-			class_name		: 'posterframe',
-			src				: posterframe_url,
-			parent			: content_value
-		})
-		// image background color
-		posterframe.addEventListener('load', set_bg_color, false)
-		function set_bg_color() {
-			this.removeEventListener('load', set_bg_color, false)
-			ui.set_background_image(this, content_value)
-		}
+	// 	// posterframe
+	// 		const posterframe_url	= self.data.posterframe_url
+	// 		const posterframe		= ui.create_dom_element({
+	// 			element_type	: 'img',
+	// 			class_name		: 'posterframe',
+	// 			src				: posterframe_url,
+	// 			parent			: content_value
+	// 		})
+	// 		// image background color
+	// 		posterframe.addEventListener('load', set_bg_color, false)
+	// 		function set_bg_color() {
+	// 			this.removeEventListener('load', set_bg_color, false)
+	// 			ui.set_background_image(this, content_value)
+	// 		}
 
 
-	return content_value
-}//end get_content_value_read
+	// 	return content_value
+	// }//end get_content_value_read
 
 
 
