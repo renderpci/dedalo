@@ -21,7 +21,7 @@ export const view_default_edit_svg = function() {
 /**
 * RENDER
 * Render node for use in edit
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_default_edit_svg.render = async function(self, options) {
 
@@ -35,7 +35,9 @@ view_default_edit_svg.render = async function(self, options) {
 		}
 
 	// buttons
-		const buttons = get_buttons(self)
+		const buttons = (self.permissions > 1)
+			? get_buttons(self)
+			: null
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
@@ -53,7 +55,7 @@ view_default_edit_svg.render = async function(self, options) {
 
 /**
 * CONTENT_DATA_EDIT
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 export const get_content_data = function(self) {
 
@@ -86,7 +88,7 @@ export const get_content_data = function(self) {
 
 /**
 * GET_CONTENT_VALUE
-* @return DOM node content_value
+* @return HTMLElement content_value
 */
 const get_content_value = function(i, value, self) {
 
@@ -124,44 +126,8 @@ const get_content_value = function(i, value, self) {
 
 
 /**
-* GET_BUTTONS
-* @param object instance
-* @return DOM node buttons_container
-*/
-const get_buttons = (self) => {
-
-	const fragment = new DocumentFragment()
-
-	// prevent show buttons inside a tool
-		if (self.caller && self.caller.type==='tool') {
-			return fragment
-		}
-
-	// buttons tools
-		if( self.show_interface.tools === true){
-			ui.add_tools(self, fragment)
-		}
-
-	// buttons container
-		const buttons_container = ui.component.build_buttons_container(self)
-			// buttons_container.appendChild(fragment)
-
-	// buttons_fold (allow sticky position on large components)
-		const buttons_fold = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'buttons_fold',
-			parent			: buttons_container
-		})
-		buttons_fold.appendChild(fragment)
-
-
-	return buttons_container
-}//end get_buttons
-
-
-/**
 * GET_CONTENT_VALUE_READ
-* @return DOM node content_value
+* @return HTMLElement content_value
 */
 const get_content_value_read = function(i, value, self) {
 
@@ -194,3 +160,40 @@ const get_content_value_read = function(i, value, self) {
 
 	return content_value
 }//end get_content_value_read
+
+
+
+/**
+* GET_BUTTONS
+* @param object instance
+* @return HTMLElement buttons_container
+*/
+const get_buttons = (self) => {
+
+	const fragment = new DocumentFragment()
+
+	// prevent show buttons inside a tool
+		if (self.caller && self.caller.type==='tool') {
+			return fragment
+		}
+
+	// buttons tools
+		if( self.show_interface.tools === true){
+			ui.add_tools(self, fragment)
+		}
+
+	// buttons container
+		const buttons_container = ui.component.build_buttons_container(self)
+			// buttons_container.appendChild(fragment)
+
+	// buttons_fold (allow sticky position on large components)
+		const buttons_fold = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'buttons_fold',
+			parent			: buttons_container
+		})
+		buttons_fold.appendChild(fragment)
+
+
+	return buttons_container
+}//end get_buttons

@@ -96,7 +96,9 @@ view_default_edit_portal.render = async function(self, options) {
 		list_body.appendChild(content_data)
 
 	// buttons
-		const buttons = get_buttons(self)
+		const buttons = (self.permissions > 1)
+			? get_buttons(self)
+			: null
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {

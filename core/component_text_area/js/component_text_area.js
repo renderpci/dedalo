@@ -88,8 +88,8 @@ export const component_text_area = function(){
 
 /**
 * INIT
-* @return promise bool
-* 	Resolve bool
+* @return bool
+* 	Promise resolve bool
 */
 component_text_area.prototype.init = async function(options) {
 
@@ -271,8 +271,8 @@ component_text_area.prototype.init = async function(options) {
 
 /**
 * BUILD
-* @return promise bool
-* 	Resolve bool
+* @return bool
+* 	Promise resolve bool
 */
 component_text_area.prototype.build = async function(options) {
 
@@ -296,8 +296,8 @@ component_text_area.prototype.build = async function(options) {
 
 /**
 * DESTROY
-* @return promise bool
-* 	Resolve bool
+* @return bool
+* 	Promise resolve bool
 */
 component_text_area.prototype.destroy = async function(delete_self=true, delete_dependencies=false, remove_dom=false) {
 
@@ -324,6 +324,7 @@ component_text_area.prototype.destroy = async function(delete_self=true, delete_
 * TAGS_TO_HTML
 * Parses Dédalo server side tags to html tags
 * i.e. '[TC_00:15:12:01.000]' => '<img id="[TC_00:00:25.684_TC]" class="tc" src="" ... />'
+* @return string html
 */
 component_text_area.prototype.tags_to_html = function(value) {
 
@@ -369,6 +370,7 @@ component_text_area.prototype.set_value = function(value) {
 *	defined in container dataset key
 * @param string value
 *	value from active text editor
+* @return promise
 */
 component_text_area.prototype.save_value = async function(key, value) {
 

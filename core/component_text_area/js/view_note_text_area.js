@@ -9,8 +9,6 @@
 	import * as instances from '../../common/js/instances.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	// import {service_tinymce} from '../../services/service_tinymce/js/service_tinymce.js'
-	// import {clone,dd_console} from '../../common/js/utils/index.js'
 
 
 
@@ -30,7 +28,7 @@ export const view_note_text_area = function() {
 * Render node to be used by service autocomplete or any datalist
 * @param object self
 * @param object options
-* @return DOM node
+* @return HTMLElement wrapper
 */
 view_note_text_area.render = async function(self, options) {
 

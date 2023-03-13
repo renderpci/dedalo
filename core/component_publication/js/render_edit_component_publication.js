@@ -25,14 +25,15 @@ export const render_edit_component_publication = function() {
 /**
 * EDIT
 * Render node for use in edit mode
-* @return DOM node wrapper
+* @param object options
+* @return HTMLElement|null
 */
 render_edit_component_publication.prototype.edit = async function(options) {
 
 	const self = this
 
 	// view
-		const view	= self.context.view || 'default'
+		const view = self.context.view || 'default'
 
 	switch(view) {
 
@@ -59,7 +60,8 @@ render_edit_component_publication.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @param object self
+* @return HTMLElement content_data
 */
 export const get_content_data = function(self) {
 
@@ -94,15 +96,14 @@ export const get_content_data = function(self) {
 
 /**
 * GET_CONTENT_VALUE
-* Render the current value DOM nodes
+* Render the current value HTMLElements
 * @param int i
 * 	Value key
 * @param object current_value
 * 	Current locator value as:
 * 	{type: 'dd151', section_id: '1', section_tipo: 'dd64', from_component_tipo: 'rsc20'}
 * @param object self
-*
-* @return DOM element content_value
+* @return HTMLElement content_value
 */
 const get_content_value = (i, current_value, self) => {
 
@@ -165,9 +166,38 @@ const get_content_value = (i, current_value, self) => {
 
 
 /**
+* GET_CONTENT_VALUE_READ
+* Render the current value HTMLElements
+* @param int i
+* 	Value key
+* @param object current_value
+* 	Current locator value as:
+* 	{type: 'dd151', section_id: '1', section_tipo: 'dd64', from_component_tipo: 'rsc20'}
+* @param object self
+*
+* @return HTMLElement content_value
+*/
+const get_content_value_read = (i, current_value, self) => {
+
+	// get current datalist item that match with current_value to get the label to show it
+		const datalist_item = self.data.datalist.find(item => item.section_id==current_value.section_id)
+
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value read_only',
+			inner_html 		: datalist_item.label || ''
+		})
+
+	return content_value
+}//end get_content_value_read
+
+
+
+/**
 * GET_BUTTONS
 * @param object instance
-* @return DOM node buttons_container
+* @return HTMLElement buttons_container
 */
 export const get_buttons = (self) => {
 
@@ -191,33 +221,3 @@ export const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
-
-
-/**
-* GET_CONTENT_VALUE_READ
-* Render the current value DOM nodes
-* @param int i
-* 	Value key
-* @param object current_value
-* 	Current locator value as:
-* 	{type: 'dd151', section_id: '1', section_tipo: 'dd64', from_component_tipo: 'rsc20'}
-* @param object self
-*
-* @return DOM element content_value
-*/
-const get_content_value_read = (i, current_value, self) => {
-
-	// get current datalist item that match with current_value to get the label to show it
-	const datalit_item	= self.data.datalist.find(item => item.section_id===current_value.section_id)
-
-	// content_value
-		const content_value = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'content_value',
-			inner_html 		: datalit_item.label
-		})
-
-	return content_value
-}//end get_content_value_read
-
-

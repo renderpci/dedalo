@@ -24,7 +24,7 @@ export const view_mini_list_security_access = function() {
 /**
 * RENDER
 * Render node to be used by service autocomplete or any datalist
-* @return DOM node
+* @return HTMLElement wrapper
 */
 view_mini_list_security_access.render = async function(self) {
 

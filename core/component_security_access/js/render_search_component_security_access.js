@@ -23,7 +23,7 @@ export const render_search_component_security_access = function() {
 /**
 * SEARCH
 * Render node for use in edit
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_search_component_security_access.prototype.search = async function(options) {
 
@@ -46,6 +46,7 @@ render_search_component_security_access.prototype.search = async function(option
 		wrapper.content_data	= content_data
 		wrapper.id				= self.id
 
+
 	return wrapper
 }//end search
 
@@ -53,7 +54,7 @@ render_search_component_security_access.prototype.search = async function(option
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 

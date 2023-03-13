@@ -27,7 +27,7 @@ export const view_default_edit_security_access = function() {
 * Render node for use in modes: edit, edit_in_list
 * @param object self
 * @param object options
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_default_edit_security_access.render = async function(self, options) {
 
@@ -41,7 +41,9 @@ view_default_edit_security_access.render = async function(self, options) {
 		}
 
 	// buttons
-		const buttons = get_buttons(self)
+		const buttons = (self.permissions > 1)
+			? get_buttons(self)
+			: null
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
@@ -60,7 +62,7 @@ view_default_edit_security_access.render = async function(self, options) {
 /**
 * GET_CONTENT_DATA
 * @param object self
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = async function(self) {
 
@@ -248,7 +250,7 @@ const render_tree_items = function(items, datalist, value, self) {
 * @param array value
 * @param object self
 *
-* @return DOM node tree_item_node
+* @return HTMLElement tree_item_node
 */
 const render_tree_item = function(item, datalist, value, self) {
 
@@ -284,7 +286,7 @@ const render_tree_item = function(item, datalist, value, self) {
 * 	full list of elements in self.data (DB) at key zero (this component has only one value but format is array)
 * @param object self
 * 	self component instance
-* @return DOM node li
+* @return HTMLElement li
 */
 const render_area_item = function(item, datalist, value, self) {
 
@@ -313,7 +315,7 @@ const render_area_item = function(item, datalist, value, self) {
 			? parseInt(item_value.value)
 			: 0
 
-	// li DOM node
+	// li HTMLElement
 		const li = ui.create_dom_element({
 			element_type	: 'li',
 			class_name		: 'li_item'
@@ -494,7 +496,7 @@ const render_area_item = function(item, datalist, value, self) {
 							item,
 							permissions,
 							datalist,
-							branch, // DOM node components_container
+							branch, // HTMLElement components_container
 							children // array of nodes
 						)
 						permissions_global.appendChild(radio_group)
@@ -521,7 +523,7 @@ const render_area_item = function(item, datalist, value, self) {
 * 	full list of elements in self.data (DB) at key zero (this component has only one value but format is array)
 * @param object self
 * 	self component instance
-* @return DOM node li
+* @return HTMLElement li
 */
 const render_permissions_item = function(item, datalist, value, self) {
 
@@ -818,7 +820,7 @@ const create_global_radio_group = function(self, item, permissions, datalist, co
 /**
 * GET_BUTTONS
 * @param object instance
-* @return DOM node buttons_container
+* @return HTMLElement buttons_container
 */
 const get_buttons = (self) => {
 
@@ -916,7 +918,7 @@ const render_tree_items_read = function(items, datalist, value) {
 * @param array datalist
 * @param array value
 *
-* @return DOM node tree_item_node
+* @return HTMLElement tree_item_node
 */
 const render_tree_item_read = function(item, datalist, value) {
 
@@ -949,7 +951,7 @@ const render_tree_item_read = function(item, datalist, value) {
 * 	full list of section elements from ontology
 * @param array value
 * 	full list of elements in self.data (DB) at key zero (this component has only one value but format is array)
-* @return DOM node li
+* @return HTMLElement li
 */
 const render_area_item_read = function(item, datalist, value) {
 
@@ -1051,7 +1053,7 @@ const render_area_item_read = function(item, datalist, value) {
 * 	full list of section elements from ontology
 * @param array value
 * 	full list of elements in self.data (DB) at key zero (this component has only one value but format is array)
-* @return DOM node li
+* @return HTMLElement li
 */
 const render_permissions_item_read = function(item, datalist, value) {
 
@@ -1099,4 +1101,3 @@ const render_permissions_item_read = function(item, datalist, value) {
 
 	return li
 }//end render_permissions_item_read
-

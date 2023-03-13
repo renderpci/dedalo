@@ -26,7 +26,7 @@ export const render_list_component_text_area = function() {
 * LIST
 * Render node for use in list
 * @param object options
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_list_component_text_area.prototype.list = async function(options) {
 
@@ -50,6 +50,4 @@ render_list_component_text_area.prototype.list = async function(options) {
 		default:
 			return view_default_list_text_area.render(self, options)
 	}
-
-	return null
 }//end list

@@ -24,7 +24,7 @@ export const view_text_list_text_area = function() {
 * Render node to be used in current view
 * @param object self
 * @param object options
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_text_list_text_area.render = async function(self, options) {
 
