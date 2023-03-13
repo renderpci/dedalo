@@ -22,8 +22,10 @@ export const view_collapse_list_json = function() {
 
 /**
 * RENDER
-* Render node for use in list
-* @return DOM node
+* Render node for use in this view
+* @param object self
+* @param object options
+* @return HTMLElement wrapper
 */
 view_collapse_list_json.render = async function(self, options) {
 
