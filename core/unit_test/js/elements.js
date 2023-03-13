@@ -155,7 +155,16 @@ import * as fn from './data.js'
 			new_value		: fn.random_string
 		})
 
-	// component_inverse -section_id from caller- (WORKING HERE)
+	// component_inverse -section_id from caller-
+		elements.push({
+			model			: 'component_inverse',
+			tipo			: 'test68',
+			section_tipo	: section_tipo,
+			section_id		: section_id,
+			mode			: mode,
+			lang			: lang,
+			test_save		: false
+		})
 
 	// component_ip -to disappear- (WORKING HERE)
 
