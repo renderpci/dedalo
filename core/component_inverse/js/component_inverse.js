@@ -10,6 +10,7 @@
 	import {render_list_component_inverse} from '../../component_inverse/js/render_list_component_inverse.js'
 
 
+
 export const component_inverse = function(){
 
 	// element properties declare
