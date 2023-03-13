@@ -57,6 +57,7 @@ view_default_edit_input_text.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
+* @param object self
 * @return HTMLElement content_data
 */
 const get_content_data_edit = function(self) {
