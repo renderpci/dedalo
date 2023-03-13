@@ -22,18 +22,26 @@
 			}
 		}
 
+
+
 		>.content_value {
 			display: contents;
+
+			.label {
+				padding: 0.5rem;
+				height: 100%;
+				border-bottom: 1px solid #e5e5e5;
+			}
+
+			.section_tipo {
+				font-weight: 600;
+			}
 
 			.body_item {
 				padding: 0.5rem;
 				height: 100%;
 				background-color: #f4f4f4;
 				border-bottom: 1px solid #e5e5e5;
-
-				&.section_tipo {
-					font-weight: 600;
-				}
 
 				&.input_value {
 					// margin-top: 2px;
@@ -59,19 +67,9 @@
 			}
 
 			>.content_value {
-				span {
-					padding: 0.5rem;
-					height: 100%;
-					border-bottom: 1px solid #e5e5e5;
-
+				.label {
 					&.section_tipo {
-						font-weight: 600;
-					}
-
-					&.input_value {
-						padding-top: 0.2rem;
-						padding-bottom: 0.2rem;
-						outline: none;
+						// font-weight: 600;
 					}
 				}
 			}

@@ -186,7 +186,9 @@ const get_content_value_read = (i, current_value, self) => {
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'content_value read_only',
-			inner_html 		: datalist_item.label || ''
+			inner_html 		: datalist_item
+				? datalist_item.label || ''
+				: ''
 		})
 
 	return content_value
