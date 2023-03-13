@@ -21,9 +21,9 @@ export const view_mini_info = function() {
 
 
 /**
-* MINI
+* RENDER
 * Render node to be used by service autocomplete or any datalist
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_mini_info.render = async function(self, options) {
 
@@ -42,4 +42,4 @@ view_mini_info.render = async function(self, options) {
 
 
 	return wrapper
-}//end mini
+}//end render
