@@ -21,9 +21,11 @@ export const view_default_list_iri = function() {
 
 
 /**
-* LIST
-* Render node for use in list
-* @return DOM node wrapper
+* RENDER
+* Render node for use in this view
+* @param object self
+* @param object options
+* @return HTMLElement wrapper
 */
 view_default_list_iri.render = async function(self, options) {
 
@@ -49,7 +51,6 @@ view_default_list_iri.render = async function(self, options) {
 				ar_value_string.push(ar_line.join(' | '))
 			}
 		}
-
 		const value_string = (ar_value_string && ar_value_string.length)
 			? ar_value_string.join('<br>')
 			: null
@@ -69,4 +70,4 @@ view_default_list_iri.render = async function(self, options) {
 
 
 	return wrapper
-}//end list
+}//end render

@@ -22,9 +22,9 @@ export const view_text_list_iri = function() {
 
 /**
 * RENDER
-* get_raw_string
+* Get raw string
 * Output component value to use as raw text
-* @return DOM text node text_node
+* @return HTMLElement text_node
 */
 view_text_list_iri.render = async function(self, options) {
 
