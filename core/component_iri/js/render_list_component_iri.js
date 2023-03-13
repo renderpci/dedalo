@@ -24,8 +24,9 @@ export const render_list_component_iri = function() {
 
 /**
 * LIST
-* Render node for use in list
-* @return DOM node wrapper
+* Render node for use in current view
+* @param object options
+* @return HTMLElement|null
 */
 render_list_component_iri.prototype.list = async function(options) {
 
