@@ -25,14 +25,15 @@ export const render_list_component_json = function() {
 /**
 * LIST
 * Render node for use in list
-* @return DOM node wrapper
+* @param object options
+* @return HTMLElement|null
 */
 render_list_component_json.prototype.list = async function(options) {
 
 	const self = this
 
 	// view
-		const view	= self.context.view || 'default'
+		const view = self.context.view || 'default'
 
 	switch(view) {
 
@@ -49,6 +50,7 @@ render_list_component_json.prototype.list = async function(options) {
 		default:
 			return view_default_list_json.render(self, options)
 	}
+
 
 	return null
 }//end list

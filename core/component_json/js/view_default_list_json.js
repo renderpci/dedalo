@@ -22,8 +22,8 @@ export const view_default_list_json = function() {
 
 /**
 * RENDER
-* Render node for use in list
-* @return DOM node
+* Render node for use in this view
+* @return HTMLElement wrapper
 */
 view_default_list_json.render = async function(self, options) {
 
@@ -43,7 +43,7 @@ view_default_list_json.render = async function(self, options) {
 
 /**
 * GET_VALUE_STRING
-* Get component value as string
+* Get component value as limited length string for list mode uses
 * @return string value_string
 */
 export const get_value_string = function(self) {
