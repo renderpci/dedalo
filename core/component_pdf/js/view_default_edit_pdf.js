@@ -78,7 +78,11 @@ export const get_content_data_edit = function(self) {
 		const inputs_value	= (value.length<1) ? [null] : value // force one empty element at least
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			const content_value = get_content_value(i, inputs_value[i], self)
+			// get the content_value
+			const content_value = (self.permissions===1)
+				? get_content_value_read(i, inputs_value[i], self)
+				: get_content_value(i, inputs_value[i], self)
+			// add node to content_data
 			content_data.appendChild(content_value)
 			// set the pointer
 			content_data[i] = content_value
@@ -188,6 +192,7 @@ const get_content_value = function(i, current_value, self) {
 						pdf_viewer_options.set('defaultUrl', '');
 						// set correct locale
 						pdf_viewer_options.set('locale', locale_code);
+						pdf_viewer_options.set("enablePermissions", true); //allow PDF documents to disable copying in the viewer
 					}
 
 				// pdf_viewer
@@ -305,3 +310,188 @@ const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
+
+
+/**
+* GET_CONTENT_VALUE_READ
+*
+* @param int i
+* 	Value key
+* @param object current_value
+* 	Object value as
+* {
+    "original_file_name": "rsc209_rsc205_524_lg-spa.pdf",
+    "original_upload_date": {
+      "day": 21,
+      "hour": 13,
+      "time": 65009224561,
+      "year": 2022,
+      "month": 8,
+      "minute": 56,
+      "second": 1
+    }
+  }
+* @return DOM node content_value
+*/
+const get_content_value_read = function(i, current_value, self) {
+
+	// short vars
+		const quality		= self.quality || self.context.features.quality
+		const datalist		= self.data.datalist || []
+		const offset_value	= current_value && current_value.lib_data && current_value.lib_data.offset!=='undefined' && current_value.lib_data.offset!==null
+			? current_value.lib_data.offset
+			: 1
+
+	// content_value node
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value'
+		})
+
+	// pdf_url
+		const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
+		const pdf_url	= file_info
+			? file_info.file_url
+			: null
+		// no PDF file url available case
+		if (!pdf_url) {
+			return content_value
+		}
+
+		const iframe = ui.create_dom_element({
+			element_type	: 'embed',
+			class_name		: 'pdf_viewer_frame',
+			parent			: content_value,
+			src 			: pdf_url +'#toolbar=0&navpanes=0' // #toolbar=0&navpanes=0&scrollbar=0&page=5
+		})
+
+	// DES
+		// const pdf_viewer = ui.create_dom_element({
+		//    	element_type	: "div",
+		//    	class_name 		: 'pdf_viewer_frame',
+		//    	parent 			: li
+		// })
+		//
+		// const shadow = pdf_viewer.attachShadow({mode: 'open'});
+		//
+		// const response =  await fetch(viewer_url)
+		// // console.log("response", response);
+		// // .then(response => response.text())
+		// // .then( txt =>  new DOMParser().parseFromString(txt, 'text/html'))
+		// const txt = await response.text();
+		// // console.log("txt", txt);
+		// const html =  new DOMParser().parseFromString(txt, 'text/html');
+		//
+		// console.log("html", html);
+		//
+		// shadow.appendChild(html.querySelector('html') )// = txt;
+
+	// iframe. PDF viewer (pdfjs) is loaded inside a iframe
+		// const iframe = ui.create_dom_element({
+		// 	element_type	: 'iframe',
+		// 	class_name		: 'pdf_viewer_frame',
+		// 	parent			: content_value
+		// })
+		// // iframe.setAttribute('allowfullscreen',true)
+
+		// // webviewerloaded event. When the standard html of pdf.js is loaded, it is possible to get the library and set the PDF file
+		// 	top.document.addEventListener('webviewerloaded', fn_webviewerloaded, false)
+		// 	async function fn_webviewerloaded() {
+		// 		// console.log("webviewerloaded e:",e);
+
+		// 		// shadow.addEventListener('load', (e) =>{
+		// 		const locale_code = page_globals.locale || 'es-ES'
+		// 		// Libraries are loaded via <script> tag, create shortcut to access PDF.js exports.
+		// 		// the pdf_js is not necessary load here, we will use only the viewer
+		// 		// self.pdf_js 						= iframe.contentWindow['pdfjs-dist/build/pdf'];
+
+		// 		if (!iframe.contentWindow) {
+		// 			console.warn('! Ignored not found iframe contentWindow:', 'fn_webviewerloaded');
+		// 			return
+		// 		}
+
+		// 		// options
+		// 			const pdf_viewer_options = await iframe.contentWindow['PDFViewerApplicationOptions'];
+		// 			if (pdf_viewer_options) {
+		// 				// remove the first page / default page of the library
+		// 				pdf_viewer_options.set('defaultUrl', '');
+		// 				// set correct locale
+		// 				pdf_viewer_options.set('locale', locale_code);
+		// 			}
+
+		// 		// pdf_viewer
+		// 			self.pdf_viewer = await iframe.contentWindow['PDFViewerApplication'];
+		// 			if (!self.pdf_viewer) {
+		// 				return
+		// 			}
+
+		// 		// load the pdf in the viewer
+		// 		self.pdf_viewer.open(pdf_url)
+		// 		.then(function() {
+		// 			// PDFViewerApplicationOptions.document.webL10n.setLanguage(locale_code)
+		// 			// PDFViewerApplicationOptions.set('locale', locale_code);
+		// 			// PDFViewerApplicationOptions.locale = locale_code
+		// 			// PDFViewerApplicationOptions.set('locale', locale_code);
+		// 			// console.log("PDFViewerApplication.pagesCount", self.pdf_viewer.pagesCount);
+		// 		});
+
+		// 		// listener. Remove the listener to prevent navigation problems
+		// 		top.document.removeEventListener('webviewerloaded', fn_webviewerloaded, false)
+		// 	}//end fn_webviewerloaded
+
+		// // viewer_url. the standard html viewer of the pdf.js library
+		// 	const viewer_url = DEDALO_ROOT_WEB + '/lib/pdfjs/web/viewer.html'
+
+		// // set iframe url on DOM entry
+		// 	when_in_viewport(
+		// 		iframe, // node to observe
+		// 		() => { // callback function
+		// 			iframe.src = viewer_url // load URL to iframe
+		// 		}
+		// 	)
+
+	// fields. Bottom line with input offset options
+		const fields = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'fields',
+			parent			: content_value
+		})
+		// offset label
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'label',
+			text_node		: 'offset',
+			parent			: fields
+		})
+		// offset_input field
+		const offset_input = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'number',
+			class_name		: '',
+			value			: offset_value,
+			parent			: fields
+		})
+		offset_input.addEventListener('change', function() {
+
+			if (this.value.length>0) {
+
+				current_value[i].lib_data = current_value[i].lib_data || {}
+				// add/update offset
+				current_value[i].lib_data.offset = parseInt(this.value)
+
+				const changed_data = [Object.freeze({
+					action	: 'update',
+					key		: i,
+					value	: current_value
+				})]
+				self.change_value({
+					changed_data	: changed_data,
+					refresh			: false
+				})
+			}
+		})
+
+
+	return content_value
+}//end get_content_value_read
+
