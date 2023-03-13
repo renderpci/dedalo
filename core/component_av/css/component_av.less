@@ -99,14 +99,6 @@
 		}
 	}
 
-	&.list {
-		height: 5rem;
-
-		img {
-			cursor: zoom-in;
-		}
-	}
-
 	&.edit {
 
 		>.content_data {
@@ -135,6 +127,18 @@
 			.posterframe {
 				// specific styles here
 			}
+		}
+	}
+
+	&.list {
+		img {
+			cursor: zoom-in;
+		}
+	}
+
+	&.view_default {
+		&.list {
+			height: @view_line_height; // 5rem;
 		}
 	}
 

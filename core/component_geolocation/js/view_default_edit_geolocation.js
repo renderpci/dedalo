@@ -299,7 +299,7 @@ export const get_content_value_read = (i, current_value, self) =>{
 	// content_value
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'content_value read_only99'
+			class_name		: 'content_value read_only'
 		})
 
 	// map container
