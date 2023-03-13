@@ -24,7 +24,7 @@ export const view_text_list_password = function() {
 * RENDER
 * Render node to be used by service autocomplete or any datalist
 * It shouldn't be use but just in case someone added it to a list the page would work properly
-* @return DOM node
+* @return HTMLElement text_node
 */
 view_text_list_password.render = async function(self, options) {
 

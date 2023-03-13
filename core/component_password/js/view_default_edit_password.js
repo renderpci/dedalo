@@ -23,7 +23,7 @@ export const view_default_edit_password = function() {
 /**
 * EDIT
 * Render node for use in modes: edit, edit_in_list
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_default_edit_password.render = async function(self, options) {
 
@@ -37,7 +37,9 @@ view_default_edit_password.render = async function(self, options) {
 		}
 
 	// buttons
-		const buttons = get_buttons(self)
+		const buttons = (self.permissions > 1)
+			? get_buttons(self)
+			: null
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
@@ -55,7 +57,8 @@ view_default_edit_password.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return DOM node content_data
+* @param object self
+* @return HTMLElement content_data
 */
 const get_content_data_edit = function(self) {
 
@@ -63,13 +66,14 @@ const get_content_data_edit = function(self) {
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
-			  content_data.classList.add('nowrap')
 
 	// value (input)
-		const content_value	= get_content_value(key, self)
-		content_data.appendChild(content_value)
+		const content_value_node = (self.permissions===1)
+			? get_content_value_read(key, self)
+			: get_content_value(key, self)
+		content_data.appendChild(content_value_node)
 		// set pointers
-		content_data[key] = content_value
+		content_data[key] = content_value_node
 
 
 	return content_data
@@ -83,7 +87,7 @@ const get_content_data_edit = function(self) {
 * 	Value array key
 * @param object
 * 	component instance
-* @return DOM node content_value
+* @return HTMLElement content_value
 */
 const get_content_value = function(i, self) {
 
@@ -98,7 +102,7 @@ const get_content_value = function(i, self) {
 			element_type	: 'input',
 			type			: 'password',
 			class_name		: 'password_value',
-			value			: 'XXXXXXXXX', // default value
+			value			: '****************', // default value
 			parent			: content_value
 		})
 		input.autocomplete = 'new-password'
@@ -137,9 +141,31 @@ const get_content_value = function(i, self) {
 
 
 /**
+* GET_CONTENT_VALUE_READ
+* @param int i
+* 	Value array key
+* @param object
+* 	component instance
+* @return HTMLElement content_value
+*/
+const get_content_value_read = function(i, self) {
+
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value read_only',
+			inner_html		: '****************'
+		})
+
+	return content_value
+}//end get_content_value_read
+
+
+
+/**
 * GET_BUTTONS
 * @param object instance
-* @return DOM node buttons_container
+* @return HTMLElement buttons_container
 */
 const get_buttons = (self) => {
 

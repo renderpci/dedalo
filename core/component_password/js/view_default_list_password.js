@@ -21,9 +21,9 @@ export const view_default_list_password = function() {
 
 
 /**
-* LIST
+* RENDER
 * Render node for use in list. It shouldn't be use but just in case someone added it to a list the page would work properly
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_default_list_password.render = async function(self, options) {
 
@@ -40,4 +40,4 @@ view_default_list_password.render = async function(self, options) {
 
 
 	return wrapper
-}//end list
+}//end render
