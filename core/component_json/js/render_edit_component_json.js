@@ -25,7 +25,7 @@ export const render_edit_component_json = function() {
 * EDIT
 * Render node for use in edit
 * @param object options
-* @return HTMLElement|null
+* @return HTMLElement wrapper
 */
 render_edit_component_json.prototype.edit = async function(options) {
 
@@ -50,11 +50,9 @@ render_edit_component_json.prototype.edit = async function(options) {
 			// for print we need to use read of the content_value and it's necessary force permissions to use read only element render
 			self.permissions = 1
 
+		case 'line':
 		case 'default':
 		default:
 			return view_default_edit_json.render(self, options)
 	}
-
-
-	return null
 }//end edit

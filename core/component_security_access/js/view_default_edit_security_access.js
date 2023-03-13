@@ -46,10 +46,14 @@ view_default_edit_security_access.render = async function(self, options) {
 			: null
 
 	// wrapper. ui build_edit returns component wrapper
-		const wrapper = ui.component.build_wrapper_edit(self, {
+		const wrapper_options = {
 			content_data : content_data,
 			buttons 	 : buttons
-		})
+		}
+		if (self.view==='line') {
+			wrapper_options.label = null // prevent to create label node
+		}
+		const wrapper = ui.component.build_wrapper_edit(self, wrapper_options)
 		// set pointers
 		wrapper.content_data = content_data
 
@@ -91,7 +95,7 @@ const get_content_data = async function(self) {
 		// ul tree_root
 			const ul = ui.create_dom_element({
 				element_type	: 'ul',
-				class_name		: 'ul_item tree_root', // former 'inputs_container'
+				class_name		: 'ul_item content_value tree_root', // former 'inputs_container'
 				parent			: content_data
 			})
 

@@ -101,10 +101,11 @@ view_default_edit_portal.render = async function(self, options) {
 			: null
 
 	// wrapper. ui build_edit returns component wrapper
-		const wrapper = ui.component.build_wrapper_edit(self, {
-			buttons		: buttons,
-			list_body	: list_body
-		})
+		const wrapper_options = {
+			list_body	: list_body,
+			buttons		: buttons
+		}
+		const wrapper = ui.component.build_wrapper_edit(self, wrapper_options)
 		wrapper.classList.add('portal', 'view_'+self.context.view)
 
 	// set pointers

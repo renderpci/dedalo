@@ -58,49 +58,46 @@ render_edit_component_portal.prototype.edit = async function(options) {
 		const view = self.context.view
 
 	// wrapper
-		switch(view) {
+	switch(view) {
 
-			case 'text':
-				return view_text_list_portal.render(self, options)
+		case 'text':
+			return view_text_list_portal.render(self, options)
 
-			case 'line':
-				return view_line_edit_portal.render(self, options)
+		case 'line':
+			return view_line_edit_portal.render(self, options)
 
-			case 'tree':
-				return view_tree_edit_portal.render(self, options)
+		case 'tree':
+			return view_tree_edit_portal.render(self, options)
 
-			case 'mosaic':
-				return view_mosaic_edit_portal.render(self, options)
+		case 'mosaic':
+			return view_mosaic_edit_portal.render(self, options)
 
-			case 'indexation':
-				return view_indexation_edit_portal.render(self, options)
+		case 'indexation':
+			return view_indexation_edit_portal.render(self, options)
 
-			case 'content':
-				return view_content_edit_portal.render(self, options)
+		case 'content':
+			return view_content_edit_portal.render(self, options)
 
-			case 'print':
-				// view print use the same view as default, except it will use read only to render content_value
-				// as different view as default it will set in the class of the wrapper
-				// sample: <div class="wrapper_component component_portal oh24 oh1_oh24 edit view_print disabled_component">...</div>
-				// take account that to change the css when the component will render in print context
-				// for print we need to use read of the content_value and it's necessary force permissions to use read only element render
-				self.permissions = 1
+		case 'print':
+			// view print use the same view as default, except it will use read only to render content_value
+			// as different view as default it will set in the class of the wrapper
+			// sample: <div class="wrapper_component component_portal oh24 oh1_oh24 edit view_print disabled_component">...</div>
+			// take account that to change the css when the component will render in print context
+			// for print we need to use read of the content_value and it's necessary force permissions to use read only element render
+			self.permissions = 1
 
-			case 'default':
-			default:
-				// dynamic try
-					const render_view = self.render_views.find(el => el.view===view && el.mode===self.mode)
-					if (render_view) {
-						const path			= render_view.path || './' + render_view.render +'.js'
-						const render_method	= await import (path)
-						return render_method[render_view.render].render(self, options)
-					}
+		case 'default':
+		default:
+			// dynamic try
+				const render_view = self.render_views.find(el => el.view===view && el.mode===self.mode)
+				if (render_view) {
+					const path			= render_view.path || './' + render_view.render +'.js'
+					const render_method	= await import (path)
+					return render_method[render_view.render].render(self, options)
+				}
 
-				return view_default_edit_portal.render(self, options)
-		}
-
-
-	return null
+			return view_default_edit_portal.render(self, options)
+	}
 }//end edit
 
 

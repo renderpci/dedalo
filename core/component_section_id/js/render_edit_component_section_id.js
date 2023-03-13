@@ -43,6 +43,7 @@ render_edit_component_section_id.prototype.edit = async function(options) {
 			// for print we need to use read of the content_value and it's necessary force permissions to use read only element render
 			self.permissions = 1
 
+		case 'line':
 		case 'default':
 		default:
 			return view_default_edit_section_id.render(self, options)

@@ -33,7 +33,8 @@ view_default_list_security_access.render = async function(self, options) {
 		const value	= data.value || []
 
 	// Value as string
-		const value_string = JSON.stringify(value, null, 2)
+		// const value_string = JSON.stringify(value, null, 2)
+		const value_string = 'View list unavailable'
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {

@@ -8,6 +8,7 @@
 	import {view_mini_inverse} from './view_mini_inverse.js'
 
 
+
 /**
 * RENDER_EDIT_COMPONENT_INVERSE
 * Manage the components logic and appearance in client side
@@ -23,7 +24,7 @@ export const render_edit_component_inverse = function() {
 * EDIT
 * Render node for use in edit
 * @param object options
-* @return HTMLElement|null
+* @return HTMLElement wrapper
 */
 render_edit_component_inverse.prototype.edit = async function(options) {
 
@@ -49,7 +50,4 @@ render_edit_component_inverse.prototype.edit = async function(options) {
 		default:
 			return view_default_edit_inverse.render(self, options)
 	}
-
-
-	return null
 }//end edit

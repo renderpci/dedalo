@@ -33,7 +33,7 @@ view_mini_password.render = async function(self, options) {
 		const value	= data.value || []
 
 	// Value as string
-		const value_string = value
+		const value_string = '****************' // value
 
 
 	// wrapper

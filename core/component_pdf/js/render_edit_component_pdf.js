@@ -43,6 +43,7 @@ render_edit_component_pdf.prototype.edit = async function(options) {
 		case 'viewer':
 			return view_viewer_pdf.render(self, options)
 
+		case 'line':
 		case 'default':
 		default:
 			return view_default_edit_pdf.render(self, options)
