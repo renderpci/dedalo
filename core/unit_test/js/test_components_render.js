@@ -64,7 +64,7 @@ async function fn_change_search_element(instance) {
 	const pairs_length		= pairs.length
 
 	// DOM containers
-	const content			= document.getElementById('content');
+	const content = document.getElementById('content');
 	for (let i = 0; i < pairs_length; i++) {
 
 		const pair = pairs[i]

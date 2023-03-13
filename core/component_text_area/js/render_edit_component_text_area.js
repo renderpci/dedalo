@@ -46,6 +46,7 @@ render_edit_component_text_area.prototype.edit = async function(options) {
 			// for print we need to use read of the contect_value and it's necessary force permissions to use read only element render
 			self.permissions = 1
 
+		case 'line':
 		case 'default':
 		default:
 			return view_default_edit_text_area.render(self, options)

@@ -65,12 +65,15 @@ view_line_edit_portal.render = async function(self, options) {
 		}
 
 	// buttons
-		const buttons = get_buttons(self)
+		const buttons = (self.permissions > 1)
+			? get_buttons(self)
+			: null
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
 			content_data	: content_data,
-			buttons			: buttons
+			buttons			: buttons,
+			label			: null
 		})
 		wrapper.classList.add('portal')
 		// set pointers

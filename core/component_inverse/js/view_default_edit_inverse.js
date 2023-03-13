@@ -31,9 +31,13 @@ view_default_edit_inverse.render = async function(self, options) {
 			return content_data
 		}
 
+	// buttons
+		const buttons_container = ui.component.build_buttons_container(self)
+
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : content_data
+			content_data	: content_data,
+			buttons			: buttons_container
 		})
 		// set pointers
 		wrapper.content_data = content_data
@@ -61,11 +65,13 @@ const get_content_data = function(self) {
 		const inputs_value	= value
 		const value_length	= inputs_value.length || 1
 		for (let i = 0; i < value_length; i++) {
+
 			const current_value = inputs_value[i] || {}
-			const content_value = get_content_value(i, current_value, self)
-			content_data.appendChild(content_value)
+
+			const content_value_node = get_content_value(i, current_value, self)
+			content_data.appendChild(content_value_node)
 			// set the pointer
-			content_data[i] = content_value
+			content_data[i] = content_value_node
 		}
 
 

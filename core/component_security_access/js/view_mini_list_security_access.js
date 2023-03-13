@@ -32,7 +32,8 @@ view_mini_list_security_access.render = async function(self) {
 		const data = self.data
 
 	// Value as string
-		const value_string = data.value.join(self.context.fields_separator)
+		// const value_string = data.value.join(self.context.fields_separator)
+		const value_string = 'View mini unavailable'
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self, {

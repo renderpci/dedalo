@@ -35,8 +35,6 @@ render_edit_component_check_box.prototype.edit = async function(options) {
 
 	const self = this
 
-	self.context.view = 'print'
-
 	// view
 		const view	= self.context.view || 'default'
 

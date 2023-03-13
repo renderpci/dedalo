@@ -48,6 +48,4 @@ render_list_component_input_text.prototype.list = async function(options) {
 		default:
 			return view_default_list_input_text.render(self, options)
 	}
-
-	return null
 }//end list

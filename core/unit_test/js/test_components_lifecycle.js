@@ -10,7 +10,8 @@ import {clone} from '../../common/js/utils/util.js'
 
 // vars
 	const ar_view_edit = [
-		'line_edit'
+		'line_edit',
+		'print'
 	]
 	const ar_view_list = [
 		'mini',
@@ -197,8 +198,8 @@ async function life_cycle_test(element, view) {
 						null,
 						`label must be a DOM node on edit mode. (view: ${new_instance.view} - mode: ${new_instance.mode})`
 					);
-
-					assert.notEqual(new_instance.node.querySelector('.buttons_container'), null);
+					const buttons_container = new_instance.node.querySelector('.buttons_container')
+					assert.notEqual(buttons_container, null);
 					assert.notEqual(new_instance.node.querySelector('.content_data'), null);
 				}
 				else if(new_instance.mode==='list') {

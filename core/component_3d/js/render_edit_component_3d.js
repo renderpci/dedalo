@@ -42,7 +42,4 @@ render_edit_component_3d.prototype.edit = async function(options) {
 			return view_default_edit_3d.render(self, options)
 
 	}
-
-
-	return null
 }//end edit
