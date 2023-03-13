@@ -1045,7 +1045,7 @@ export const ts_object = new function() {
 	* TOGGLE_VIEW_CHILDREN
 	* @param DOM object link_children_element
 	* @param event
-	* @return DOM node|null
+	* @return HTMLElement|null
 	*/
 	this.toggle_view_children = function(link_children_element, event) {
 		//var jsPromise = Promise.resolve(function(){
@@ -2430,7 +2430,7 @@ export const ts_object = new function() {
 	/**
 	* GET_LINK_CHILDREN_FROM_WRAP
 	* @param DON node wrap
-	* @return DOM node link_children
+	* @return HTMLElement link_children
 	*/
 	this.get_link_children_from_wrap = function(wrap) {
 

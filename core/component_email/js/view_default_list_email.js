@@ -23,7 +23,7 @@ export const view_default_list_email = function() {
 /**
 * LIST
 * Render node for use in list
-* @return DOM node
+* @return HTMLElement wrapper
 */
 view_default_list_email.render = async function(self, options) {
 

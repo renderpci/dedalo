@@ -28,11 +28,11 @@ export const view_line_edit_iri = function() {
 /**
 * RENDER
 * Render node for use in current view
-* @return DOM node
+* @param object self
+* @param object options
+* @return HTMLElement wrapper
 */
 view_line_edit_iri.render = async function(self, options) {
-
-	self.data.value = self.data.value || []
 
 	// options
 		const render_level = options.render_level || 'full'

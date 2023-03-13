@@ -24,9 +24,9 @@ export const view_mini_iri = function() {
 
 
 /**
-* MINI
+* RENDER
 * Render node to be used by service autocomplete or any datalist
-* @return DOM node
+* @return HTMLElement wrapper
 */
 view_mini_iri.render = async function(self, options) {
 
@@ -44,4 +44,4 @@ view_mini_iri.render = async function(self, options) {
 
 
 	return wrapper
-}//end mini
+}//end render

@@ -23,7 +23,7 @@ export const render_tool_upload = function() {
 /**
 * EDIT
 * Render node for use like button
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_tool_upload.prototype.edit = async function (options) {
 
@@ -108,7 +108,7 @@ render_tool_upload.prototype.edit = async function (options) {
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 export const get_content_data = function(self) {
 
@@ -211,7 +211,7 @@ render_tool_upload.prototype.upload_done = async function (options) {
 
 /**
 * RENDER_FILEDRAG
-* @return DOM node filedrag
+* @return HTMLElement filedrag
 */
 	// export const render_filedrag = function(self) {
 

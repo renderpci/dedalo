@@ -27,7 +27,7 @@ export const view_mini_json = function() {
 /**
 * RENDER
 * Render node to be used by service autocomplete or any datalist
-* @return DOM node
+* @return HTMLElement wrapper
 */
 view_mini_json.render = async function(self, options) {
 

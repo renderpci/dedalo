@@ -25,7 +25,7 @@ export const render_section_tab = function() {
 /**
 * EDIT
 * Render node for use in edit
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_section_tab.prototype.edit = async function(options) {
 
@@ -109,7 +109,7 @@ render_section_tab.prototype.edit = async function(options) {
 					const ui_status		= await data_manager.get_local_db_data(status_id, status_table)
 					const selected_tipo	= ui_status && ui_status.value
 						? ui_status.value
-						: children[0].tipo // fisrt tab tipo fallback
+						: children[0].tipo // first tab tipo fallback
 					active_tab( children_object[selected_tipo] )
 
 				break;
@@ -124,7 +124,7 @@ render_section_tab.prototype.edit = async function(options) {
 /**
 * GET_WRAPPER
 * Render node for use in edit
-* @return DOM node
+* @return HTMLElement wrapper
 */
 const get_wrapper = function(self) {
 
@@ -170,7 +170,7 @@ const get_wrapper = function(self) {
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 	// const get_content_data = function(self) {
 

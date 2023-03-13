@@ -34,7 +34,7 @@ export const view_default_dd_grid = function() {
 /**
 * RENDER
 * Render node for use in this view
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_default_dd_grid.render = async function(self, options) {
 
@@ -149,7 +149,7 @@ const get_grid_nodes = function(data) {
 /**
 * GET_DIV_CONTAINER
 * @param object current_data
-* @return DOM node div_container
+* @return HTMLElement div_container
 */
 const get_div_container = function(current_data) {
 

@@ -25,7 +25,7 @@ export const view_default_list_pdf = function() {
 /**
 * RENDER
 * Render node for use in list
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_default_list_pdf.render = async function(self, options) {
 
@@ -84,6 +84,5 @@ view_default_list_pdf.render = async function(self, options) {
 		})
 
 
-
 	return wrapper
-}//end list
+}//end render

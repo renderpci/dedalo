@@ -374,7 +374,7 @@ const load_json_editor_files = function() {
 
 /**
 * INIT_FORM
-* @return DOM node form
+* @return HTMLElement form
 */
 area_development.prototype.init_form = async function(widget_object) {
 

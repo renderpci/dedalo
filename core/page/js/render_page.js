@@ -25,7 +25,7 @@ export const render_page = function() {
 /**
 * EDIT
 * Render node for use in section
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_page.prototype.edit = async function(options) {
 
@@ -59,13 +59,13 @@ render_page.prototype.edit = async function(options) {
 
 
  	return wrapper
-}//end render_page.prototype.edit
+}//end edit
 
 
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = async function(self) {
 
@@ -211,7 +211,7 @@ const get_content_data = async function(self) {
 
 /**
 * RENDER_MENU
-* @return DOM node render_menu
+* @return HTMLElement render_menu
 */
 	// const render_menu = async function(self) {
 
@@ -233,7 +233,7 @@ const get_content_data = async function(self) {
 * RENDER_SERVER_RESPONSE_ERROR
 * Render generic page error (Raspa background)
 * @param string msg
-* @return DOM node wrapper|error_container
+* @return HTMLElement wrapper|error_container
 */
 render_page.render_server_response_error = function(msg, add_wrapper=true) {
 

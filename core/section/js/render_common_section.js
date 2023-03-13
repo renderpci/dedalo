@@ -148,7 +148,7 @@ render_common_section.prototype.delete_record = (options) => {
 
 /**
 * RENDER_RELATION_LIST
-* @return DOM node relation_list_container
+* @return HTMLElement relation_list_container
 */
 const render_relation_list = function(options) {
 
@@ -241,7 +241,7 @@ const render_relation_list = function(options) {
 * RENDER_SERVER_RESPONSE_ERROR
 * Render generic page error (Raspa background)
 * @param string msg
-* @return DOM node wrapper|error_container
+* @return HTMLElement wrapper|error_container
 */
 export const render_server_response_error = function(msg, add_wrapper=false) {
 
@@ -295,7 +295,7 @@ export const render_server_response_error = function(msg, add_wrapper=false) {
 
 /**
 * NO_RECORDS_NODE
-* @return DOM node
+* @return HTMLElement node
 */
 export const no_records_node = () => {
 

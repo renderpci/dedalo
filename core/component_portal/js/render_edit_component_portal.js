@@ -48,15 +48,14 @@ export const render_edit_component_portal = function() {
 * {
 * 	render_level : string full|content_data
 * }
-* @return DOM node wrapper | null
+* @return HTMLElement|null
 */
 render_edit_component_portal.prototype.edit = async function(options) {
 
 	const self = this
 
 	// view
-		const view	= self.context.view
-
+		const view = self.context.view
 
 	// wrapper
 		switch(view) {
@@ -80,12 +79,12 @@ render_edit_component_portal.prototype.edit = async function(options) {
 				return view_content_edit_portal.render(self, options)
 
 			case 'print':
-			// view print use the same view as default, except it will use read only to render content_value
-			// as different view as default it will set in the class of the wrapper
-			// sample: <div class="wrapper_component component_portal oh24 oh1_oh24 edit view_print disabled_component">...</div>
-			// take account that to change the css when the component will render in print context
-			// for print we need to use read of the content_value and it's necessary force permissions to use read only element render
-			self.permissions = 1
+				// view print use the same view as default, except it will use read only to render content_value
+				// as different view as default it will set in the class of the wrapper
+				// sample: <div class="wrapper_component component_portal oh24 oh1_oh24 edit view_print disabled_component">...</div>
+				// take account that to change the css when the component will render in print context
+				// for print we need to use read of the content_value and it's necessary force permissions to use read only element render
+				self.permissions = 1
 
 			case 'default':
 			default:
@@ -116,12 +115,9 @@ render_edit_component_portal.prototype.edit = async function(options) {
 export const render_column_id = function(options){
 
 	// options
-		const self				= options.caller
-		const section_id		= options.section_id
-		const section_tipo		= options.section_tipo
-		// const paginated_key	= options.paginated_key
-		// const locator		= options.locator
-		// const total_records	= self.total
+		const self			= options.caller
+		const section_id	= options.section_id
+		const section_tipo	= options.section_tipo
 
 	// DocumentFragment
 		const fragment = new DocumentFragment()
@@ -238,7 +234,8 @@ export const render_column_id = function(options){
 
 /**
 * RENDER_DRAG_NODE
-* @return DOM node
+* @param object options
+* @return HTMLElement
 */
 const render_drag_node = function(options) {
 
@@ -391,7 +388,7 @@ const render_drag_node = function(options) {
 * RENDER_COLUMN_COMPONENT_INFO
 * Render node for use in edit
 * @param object options
-* @return DOM DocumentFragment
+* @return DocumentFragment
 */
 export const render_column_component_info = function(options) {
 
@@ -430,7 +427,7 @@ export const render_column_component_info = function(options) {
 * Render column_remov node
 * Shared across views
 * @param object options
-* @return DOM DocumentFragment
+* @return DocumentFragment
 */
 export const render_column_remove = function(options) {
 
@@ -440,9 +437,9 @@ export const render_column_remove = function(options) {
 		const paginated_key	= options.paginated_key
 		const section_id	= options.section_id
 		const section_tipo	= options.section_tipo
-		// const locator	= options.locator
 
-	const fragment = new DocumentFragment()
+	// DocumentFragment
+		const fragment = new DocumentFragment()
 
 	// button_remove
 		const button_remove = ui.create_dom_element({
@@ -692,7 +689,7 @@ export const render_column_remove = function(options) {
 * GET_BUTTONS
 * Render buttons DOM node
 * @param object self instance
-* @return DOM node buttons_container
+* @return HTMLElement buttons_container
 */
 export const get_buttons = (self) => {
 
@@ -895,7 +892,7 @@ export const get_buttons = (self) => {
 * Shared across views
 * Activate service autocomplete. Enable the service_autocomplete when the user do click
 * @param object self
-* @param DOM node wrapper
+* @param HTMLElement wrapper
 * @return bool
 */
 export const activate_autocomplete = async function(self, wrapper) {
@@ -911,27 +908,29 @@ export const activate_autocomplete = async function(self, wrapper) {
 			self.show_interface.show_autocomplete = false
 		}//end if external
 
-	if( self.show_interface.show_autocomplete===true
-		&& self.autocomplete!==false
-		&& self.autocomplete_active!==undefined
-		&& self.autocomplete_active===false ){
+	// service_autocomplete instance
+		if( self.show_interface.show_autocomplete===true
+			&& self.autocomplete!==false
+			&& self.autocomplete_active!==undefined
+			&& self.autocomplete_active===false ){
 
-		self.autocomplete = new service_autocomplete()
-		await self.autocomplete.init({
-			caller			: self,
-			tipo			: self.tipo,
-			section_tipo	: self.section_tipo,
-			request_config	: self.context.request_config,
-			properties		: self.context.properties.service_autocomplete || null
-		})
+			self.autocomplete = new service_autocomplete()
+			await self.autocomplete.init({
+				caller			: self,
+				tipo			: self.tipo,
+				section_tipo	: self.section_tipo,
+				request_config	: self.context.request_config,
+				properties		: self.context.properties.service_autocomplete || null
+			})
 
-		await self.autocomplete.build()
-		// render. Build_autocomplete_input nodes
-		const autocomplete_node = await self.autocomplete.render()
-		wrapper.appendChild(autocomplete_node)
-		self.autocomplete_active = true
-		self.autocomplete.search_input.focus({preventScroll:true});
-	}//end if(self.autocomplete_active!==undefined && self.autocomplete_active===false)
+			await self.autocomplete.build()
+			// render. Build_autocomplete_input nodes
+			const autocomplete_node = await self.autocomplete.render()
+			wrapper.appendChild(autocomplete_node)
+			self.autocomplete_active = true
+			self.autocomplete.search_input.focus({preventScroll:true});
+		}//end if(self.autocomplete_active!==undefined && self.autocomplete_active===false)
+
 
 	return true
 }//end activate_autocomplete
@@ -948,7 +947,7 @@ export const activate_autocomplete = async function(self, wrapper) {
 * @param object columns_map
 * @param array ar_section_record
 * @param instance self
-* @return DOM node content_data
+* @return HTMLElement list_header_node
 */
 export const build_header = function(columns_map, ar_section_record, self) {
 
@@ -967,6 +966,7 @@ export const build_header = function(columns_map, ar_section_record, self) {
 
 /**
 * RENDER_REFERENCES
+* @param array ar_references
 * @return DocumentFragment
 */
 export const render_references = function(ar_references) {
@@ -997,25 +997,25 @@ export const render_references = function(ar_references) {
 				element_type	: 'li',
 				parent			: ul
 			})
-			// button_link
-				const button_link = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'button link',
-					parent			: li
-				})
-				button_link.addEventListener('click', function(e){
-					e.stopPropagation()
-					window.location.href = DEDALO_CORE_URL + '/page/?tipo=' + reference.value.section_tipo + '&id='+ reference.value.section_id
-					// window.open(url,'ref_edit')
-				})
-			// label
-				const button_edit = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'label',
-					inner_html		: reference.label,
-					parent			: li
-				})
-	}//end for
+		// button_link
+			const button_link = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button link',
+				parent			: li
+			})
+			button_link.addEventListener('click', function(e){
+				e.stopPropagation()
+				window.location.href = DEDALO_CORE_URL + '/page/?tipo=' + reference.value.section_tipo + '&id='+ reference.value.section_id
+				// window.open(url,'ref_edit')
+			})
+		// label
+			const button_edit = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'label',
+				inner_html		: reference.label,
+				parent			: li
+			})
+	}//end for (let i = 0; i < ref_length; i++)
 
 
 	return fragment

@@ -25,7 +25,7 @@ export const view_default_list_image = function() {
 /**
 * RENDER
 * Render node for use in list
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_default_list_image.render = function(self, options) {
 

@@ -11,7 +11,7 @@
 
 
 /**
-* view_tag_list_svg
+* VIEW_TAG_LIST_SVG
 * Manage the components logic and appearance in client side
 */
 export const view_tag_list_svg = function() {
@@ -24,7 +24,7 @@ export const view_tag_list_svg = function() {
 /**
 * RENDER
 * Render node for use in list
-* @return DOM node
+* @return HTMLElement wrapper
 */
 view_tag_list_svg.render = function(self, options) {
 

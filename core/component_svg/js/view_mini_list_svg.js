@@ -27,7 +27,7 @@ export const view_mini_list_svg = function() {
 /**
 * RENDER
 * Render node to be used by this view
-* @return DOM node
+* @return HTMLElement wrapper
 */
 view_mini_list_svg.render = function(self, options) {
 

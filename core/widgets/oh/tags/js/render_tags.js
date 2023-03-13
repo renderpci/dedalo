@@ -23,7 +23,7 @@ export const render_tags= function() {
 /**
 * EDIT
 * Render node for use in modes: edit, edit_in_list
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_tags.prototype.edit = async function(options) {
 
@@ -50,7 +50,7 @@ render_tags.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data_edit = async function(self) {
 
@@ -90,7 +90,7 @@ const get_content_data_edit = async function(self) {
 
 /**
 * GET_VALUE_ELEMENT
-* @return DOM node li
+* @return HTMLElement li
 */
 const get_value_element = (i, data, values_container, self) => {
 
@@ -218,7 +218,7 @@ const get_value_element = (i, data, values_container, self) => {
 * @param string id (like 'total_real_chars')
 * @param string label (like 'CHARS REAL')
 * @param array data
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 * 	ready to update using wrapper.value.innerHTML = 'my value'
 */
 const item_value_factory = function(id, label, data) {

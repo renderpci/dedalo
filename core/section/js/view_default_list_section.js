@@ -36,7 +36,7 @@ export const view_default_list_section = function() {
 * Render node for use current view
 * @param object self
 * @para object options
-* @return DOM node
+* @return HTMLElement wrapper
 */
 view_default_list_section.render = async function(self, options) {
 
@@ -192,7 +192,7 @@ view_default_list_section.render = async function(self, options) {
 * GET_CONTENT_DATA
 * @param array ar_section_record
 * @para object self
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = async function(ar_section_record, self) {
 
@@ -287,7 +287,7 @@ const rebuild_columns_map = async function(self) {
 /**
 * GET_BUTTONS
 * @param object self
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const get_buttons = function(self) {
 

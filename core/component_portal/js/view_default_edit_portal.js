@@ -35,7 +35,7 @@ export const view_default_edit_portal = function() {
 * Manages the component's logic and appearance in client side
 * @param object self
 * @param object options
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_default_edit_portal.render = async function(self, options) {
 
@@ -96,7 +96,9 @@ view_default_edit_portal.render = async function(self, options) {
 		list_body.appendChild(content_data)
 
 	// buttons
-		const buttons = get_buttons(self)
+		const buttons = (self.permissions > 1)
+			? get_buttons(self)
+			: null
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
@@ -223,7 +225,8 @@ const get_content_data = async function(self, ar_section_record) {
 /**
 * REBUILD_COLUMNS_MAP
 * Adding control columns to the columns_map that will processed by section_recods
-* @return obj columns_map
+* @param object options
+* @return array columns_map
 */
 const rebuild_columns_map = async function(self) {
 
@@ -268,4 +271,3 @@ const rebuild_columns_map = async function(self) {
 
 	return columns_map
 }//end rebuild_columns_map
-

@@ -14,7 +14,7 @@
 * RENDER_REFERENCE
 *
 * @param object options
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 export const render_reference = async function(options) {
 

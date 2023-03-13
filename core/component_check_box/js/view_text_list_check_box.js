@@ -25,7 +25,7 @@ export const view_text_list_check_box = function() {
 * Render node to be used by service autocomplete or any datalist
 * @param object self
 * 	Instance of current component
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_text_list_check_box.render = async function(self) {
 

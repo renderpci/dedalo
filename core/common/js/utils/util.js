@@ -521,7 +521,7 @@ export function download_file(options) {
 * @param string target_tag
 * 	Sample: 'div'
 * @param function compare
-* @return DOM node|null
+* @return HTMLElement|null
 */
 export function find_up_node(el, target_tag, compare) {
 

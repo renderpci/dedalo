@@ -1194,7 +1194,7 @@ vector_editor.prototype.activate_layer = function(self, layer, load='full') {
 
 /**
 * RENDER_LAYER_SELECTOR
-* @return DOM node layer_selector
+* @return HTMLElement layer_selector
 */
 vector_editor.prototype.render_layer_selector = function(self) {
 
@@ -1257,7 +1257,7 @@ vector_editor.prototype.render_layer_selector = function(self) {
 
 /**
 * RENDER_LAYER_ROW
-* @return DOM node layer_li
+* @return HTMLElement layer_li
 */
 vector_editor.prototype.render_layer_row = function(self, layer) {
 

@@ -24,7 +24,7 @@ export const render_tool_lang_multi = function() {
 
 /**
 * EDIT
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_tool_lang_multi.prototype.edit = async function (options={render_level:'full'}) {
 
@@ -55,13 +55,13 @@ render_tool_lang_multi.prototype.edit = async function (options={render_level:'f
 
 
 	return wrapper
-}//end render_tool_lang_multi
+}//end edit
 
 
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data_edit = async function(self) {
 

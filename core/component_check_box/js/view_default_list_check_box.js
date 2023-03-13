@@ -23,7 +23,7 @@ export const view_default_list_check_box = function() {
 /**
 * RENDER
 * Render node for use in this view
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_default_list_check_box.render = async function(self) {
 

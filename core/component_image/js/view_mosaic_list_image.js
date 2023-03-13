@@ -25,7 +25,7 @@ export const view_mosaic_list_image = function() {
 /**
 * RENDER
 * Render node for use in list
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_mosaic_list_image.render = function(self, options) {
 

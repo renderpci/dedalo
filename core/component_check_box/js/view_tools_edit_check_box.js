@@ -24,7 +24,7 @@ export const view_tools_edit_check_box = function() {
 /**
 * RENDER
 * Render node for use in edit
-* @return DOM node
+* @return HTMLElement
 */
 view_tools_edit_check_box.render = async function(self, options) {
 
@@ -59,7 +59,7 @@ view_tools_edit_check_box.render = async function(self, options) {
 * GET_CONTENT_DATA
 * Render content_data node with all included contents
 * @param instance object self
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 
@@ -94,7 +94,7 @@ const get_content_data = function(self) {
 
 /**
 * GET_INPUT_ELEMENT
-* @return DOM node content_value
+* @return HTMLElement content_value
 */
 const get_input_element = (i, current_value, self) => {
 

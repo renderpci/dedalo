@@ -27,7 +27,7 @@ export const view_default_autocomplete = function() {
 /**
 * RENDER
 * Render node for use like button
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_default_autocomplete.render = async function (self, options) {
 
@@ -167,7 +167,7 @@ const get_content_data = function(self) {
 /**
 * RENDER_SOURCE_SELECTOR
 * @param object self
-* @return DOM node source_selector
+* @return HTMLElement source_selector
 */
 const render_source_selector = function(self) {
 
@@ -255,7 +255,7 @@ const render_source_selector = function(self) {
 * RENDER_SEARCH_INPUT
 * Create the HTML of input search autocomplete
 * @param object self
-* @return DOM node search_input
+* @return HTMLElement search_input
 */
 const render_search_input = function(self) {
 
@@ -348,7 +348,7 @@ const render_search_input = function(self) {
 /**
 * RENDER_FILTERS_SELECTOR
 * @param object self
-* @return DOM node filters_container
+* @return HTMLElement filters_container
 */
 const render_filters_selector = function(self) {
 
@@ -491,7 +491,7 @@ const render_filters_selector = function(self) {
 * @param array filter_items
 * @param string filter_name
 * @param string filter_id
-* @return DOM node filter_node
+* @return HTMLElement filter_node
 */
 const build_filter = function(self, filter_items, filter_name, filter_id) {
 
@@ -555,7 +555,7 @@ const build_filter = function(self, filter_items, filter_name, filter_id) {
 *
 * @param object self
 * @param object datalist_item
-* @return DOM node li
+* @return HTMLElement li
 */
 const render_option_chekbox = function(self, datalist_item) {
 
@@ -668,7 +668,7 @@ const render_option_chekbox = function(self, datalist_item) {
 /**
 * RENDER_INPUTS_LIST
 * @param object self
-* @return DOM node inputs_list
+* @return HTMLElement inputs_list
 */
 const render_inputs_list = function(self) {
 
@@ -724,7 +724,7 @@ const render_inputs_list = function(self) {
 /**
 * RENDER_OPERATOR_SELECTOR
 * @param object self
-* @return DOM node operator_selector
+* @return HTMLElement operator_selector
 */
 const render_operator_selector = function(self) {
 
@@ -784,7 +784,7 @@ const render_operator_selector = function(self) {
 * Render result data as DOM nodes and place it into self.datalist container
 * @param object self
 * @param object api_response
-* @return DOM node datalist
+* @return HTMLElement datalist
 */
 const render_datalist = async function(self, api_response) {
 
@@ -1099,7 +1099,7 @@ const get_last_ddo_data_value = function(current_path, value, data) {
 * @param object selected_instance
 * 	Current section_record
 * @param object params
-* @return DOM node grid_choose_container
+* @return HTMLElement grid_choose_container
 */
 view_default_autocomplete.render_grid_choose = async function( self, selected_instance, params ) {
 

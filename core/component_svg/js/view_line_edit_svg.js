@@ -11,6 +11,7 @@
 	} from './view_default_edit_svg.js'
 
 
+
 /**
 * VIEW_LINE_EDIT_SVG
 * Manage the components logic and appearance in client side
@@ -25,7 +26,7 @@ export const view_line_edit_svg = function() {
 /**
 * RENDER
 * Render node for use in edit
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_line_edit_svg.render = async function(self, options) {
 

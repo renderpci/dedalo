@@ -356,7 +356,7 @@ search.prototype.get_section_id = function() {
 
 /**
 * BUILD_DOM_GROUP
-* @return DOM node dom_group
+* @return HTMLElement dom_group
 */
 search.prototype.ar_resolved_elements = []
 search.prototype.build_dom_group = function(filter, dom_element, options={}) {

@@ -43,7 +43,9 @@ view_default_edit_radio_button.render = async function(self, options) {
 		}
 
 	// buttons
-		const buttons = get_buttons(self)
+		const buttons = (self.permissions > 1)
+			? get_buttons(self)
+			: null
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {

@@ -23,7 +23,7 @@ export const render_edit_state = function() {
 /**
 * EDIT
 * Render node for use in modes: edit, edit_in_list
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_edit_state.prototype.edit = async function(options) {
 
@@ -53,7 +53,7 @@ render_edit_state.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data_edit = async function(self) {
 
@@ -90,7 +90,7 @@ const get_content_data_edit = async function(self) {
 
 /**
 * GET_VALUE_ELEMENT
-* @return DOM node value_element
+* @return HTMLElement value_element
 */
 const get_value_element = (i, data, self) => {
 

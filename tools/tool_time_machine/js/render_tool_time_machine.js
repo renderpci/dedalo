@@ -22,7 +22,7 @@ export const render_tool_time_machine = function() {
 /**
 * EDIT
 * Render node for use like button
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_tool_time_machine.prototype.edit = async function (options) {
 
@@ -46,7 +46,7 @@ render_tool_time_machine.prototype.edit = async function (options) {
 
 
 	return wrapper
-}//end render_tool_time_machine
+}//end edit
 
 
 
@@ -55,7 +55,7 @@ render_tool_time_machine.prototype.edit = async function (options) {
 * Renders the whole content_data node
 * @param instance self
 * 	Tool instance pointer
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = async function(self) {
 
@@ -184,7 +184,7 @@ const get_content_data = async function(self) {
 * @param string mode
 * @param string|int matrix_id = null
 *
-* @return DOM node|bool
+* @return HTMLElement|bool
 */
 export const add_component = async (self, component_container, lang_value, label, mode, matrix_id=null) => {
 

@@ -26,8 +26,7 @@ export const view_default_list_portal = function() {
 * Render component nodes in current view
 * @param component_portal instance self
 * @param object options
-* @return promise
-* 	DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_default_list_portal.render = async function(self, options) {
 
@@ -126,7 +125,7 @@ view_default_list_portal.render = async function(self, options) {
 /**
 * GET_CONTENT_DATA
 * Render all received section records and place it into a new div 'content_data'
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = async function(self, ar_section_record) {
 

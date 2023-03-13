@@ -27,7 +27,7 @@ export const render_tool_media_versions = function() {
 * Render tool DOM nodes
 * This function is called by render common attached in 'tool_media_versions.js'
 * @param object options
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_tool_media_versions.prototype.edit = async function(options) {
 
@@ -49,7 +49,7 @@ render_tool_media_versions.prototype.edit = async function(options) {
 
 
 	return wrapper
-}//end tool_media_versions
+}//end edit
 
 
 
@@ -57,7 +57,7 @@ render_tool_media_versions.prototype.edit = async function(options) {
 * GET_CONTENT_DATA
 * Render tool body or 'content_data'
 * @param instance self
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = async function(self) {
 
@@ -94,7 +94,7 @@ const get_content_data = async function(self) {
 /**
 * RENDER_VERSIONS_GRID
 * @param object self
-* @return DOM node
+* @return HTMLElement
 */
 const render_versions_grid = function(self) {
 
@@ -189,7 +189,7 @@ const render_versions_grid = function(self) {
 * GET_LINE_LABELS
 * @param array ar_quality
 * @param object self
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const get_line_labels = function(ar_quality, self) {
 
@@ -241,7 +241,7 @@ const get_line_labels = function(ar_quality, self) {
 * GET_LINE_FILE_EXISTS
 * @param array ar_quality
 * @param object self
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const get_line_file_exists = function(ar_quality, self) {
 
@@ -311,7 +311,7 @@ const get_line_file_exists = function(ar_quality, self) {
 * GET_LINE_FILE_SIZE
 * @param array ar_quality
 * @param object self
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const get_line_file_size = function(ar_quality, self) {
 
@@ -370,7 +370,7 @@ const get_line_file_size = function(ar_quality, self) {
 * GET_LINE_FILE_UPLOAD
 * @param array ar_quality
 * @param object self
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const get_line_file_upload = function(ar_quality, self) {
 
@@ -452,7 +452,7 @@ const get_line_file_upload = function(ar_quality, self) {
 * GET_LINE_FILE_DOWNLOAD
 * @param array ar_quality
 * @param object self
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const get_line_file_download = function(ar_quality, self) {
 
@@ -514,7 +514,7 @@ const get_line_file_download = function(ar_quality, self) {
 * GET_LINE_FILE_DELETE
 * @param array ar_quality
 * @param object self
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const get_line_file_delete = function(ar_quality, self) {
 
@@ -578,7 +578,7 @@ const get_line_file_delete = function(ar_quality, self) {
 * GET_LINE_BUILD_VERSION
 * @param array ar_quality
 * @param object self
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const get_line_build_version = function(ar_quality, self) {
 
@@ -679,7 +679,7 @@ const get_line_build_version = function(ar_quality, self) {
 * 	Specific component_av feature
 * @param array ar_quality
 * @param object self
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const get_line_conform_headers = function(ar_quality, self) {
 
@@ -741,7 +741,7 @@ const get_line_conform_headers = function(ar_quality, self) {
 * 	Specific component_image feature
 * @param array ar_quality
 * @param object self
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const get_line_rotate = function(ar_quality, self) {
 

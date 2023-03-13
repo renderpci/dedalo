@@ -27,7 +27,7 @@ export const view_default_edit_text_area = function() {
 /**
 * RENDER
 * Render node for use in modes: edit, edit_in_list
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_default_edit_text_area.render = async function(self, options) {
 
@@ -48,7 +48,9 @@ view_default_edit_text_area.render = async function(self, options) {
 		}
 
 	// buttons
-		const buttons = get_buttons(self)
+		const buttons = (self.permissions > 1)
+			? get_buttons(self)
+			: null
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
@@ -90,7 +92,8 @@ view_default_edit_text_area.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return DOM node content_data
+* @param object self
+* @return HTMLElement content_data
 */
 const get_content_data_edit = function(self) {
 
@@ -121,57 +124,8 @@ const get_content_data_edit = function(self) {
 
 
 /**
-* GET_BUTTONS
-* @param object instance
-* @return DOM node buttons_container
-*/
-const get_buttons = (self) => {
-
-	// short vars
-		const is_inside_tool	= self.is_inside_tool // (self.caller && self.caller.type==='tool')
-		const mode				= self.mode
-		const fragment			= new DocumentFragment()
-
-
-	if (!is_inside_tool && mode==='edit') {
-
-		// button_fullscreen
-			const button_fullscreen = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'button full_screen',
-				parent			: fragment
-			})
-			button_fullscreen.addEventListener('click', function() {
-				ui.enter_fullscreen(self.node)
-			})
-
-		// buttons tools
-			if( self.show_interface.tools === true){
-				ui.add_tools(self, fragment)
-			}
-	}
-
-	// buttons container
-		const buttons_container = ui.component.build_buttons_container(self)
-		// buttons_container.appendChild(fragment)
-
-	// buttons_fold (allow sticky position on large components)
-		const buttons_fold = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'buttons_fold',
-			parent			: buttons_container
-		})
-		buttons_fold.appendChild(fragment)
-
-
-	return buttons_container
-}//end get_buttons
-
-
-
-/**
 * GET_CONTENT_VALUE
-* @return DOM node content_value
+* @return HTMLElement content_value
 */
 const get_content_value = (i, current_value, self) => {
 
@@ -329,6 +283,76 @@ const get_content_value = (i, current_value, self) => {
 
 	return content_value
 }//end get_content_value
+
+
+
+/**
+* GET_CONTENT_VALUE_READ
+* @return HTMLElement content_value
+*/
+const get_content_value_read = (i, current_value, self) => {
+
+	// value is a raw html without parse into nodes (txt format)
+		const value = self.tags_to_html(current_value)
+
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value editor_container read_only',
+			inner_html 		: value
+		})
+
+	return content_value
+}//end get_content_value_read
+
+
+
+/**
+* GET_BUTTONS
+* @param object instance
+* @return HTMLElement buttons_container
+*/
+const get_buttons = (self) => {
+
+	// short vars
+		const is_inside_tool	= self.is_inside_tool // (self.caller && self.caller.type==='tool')
+		const mode				= self.mode
+		const fragment			= new DocumentFragment()
+
+
+	if (!is_inside_tool && mode==='edit') {
+
+		// button_fullscreen
+			const button_fullscreen = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button full_screen',
+				parent			: fragment
+			})
+			button_fullscreen.addEventListener('click', function() {
+				ui.enter_fullscreen(self.node)
+			})
+
+		// buttons tools
+			if( self.show_interface.tools === true){
+				ui.add_tools(self, fragment)
+			}
+	}
+
+	// buttons container
+		const buttons_container = ui.component.build_buttons_container(self)
+		// buttons_container.appendChild(fragment)
+
+	// buttons_fold (allow sticky position on large components)
+		const buttons_fold = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'buttons_fold',
+			parent			: buttons_container
+		})
+		buttons_fold.appendChild(fragment)
+
+
+	return buttons_container
+}//end get_buttons
 
 
 
@@ -865,7 +889,7 @@ const get_custom_events = (self, i, text_editor) => {
 * BUILD_NODE_TAG
 * Create a DOM node from tag info (type, state, label, data, id)
 * @param object view_data
-* @return DOM node node_tag
+* @return HTMLElement node_tag
 */
 export const build_node_tag = function(view_data) {
 
@@ -903,7 +927,7 @@ export const build_node_tag = function(view_data) {
 /**
 * RENDER_LAYER_SELECTOR
 * Used from component_image
-* @return DOM node layer_selector
+* @return HTMLElement layer_selector
 */
 const render_layer_selector = function(self, data_tag, tag_id, text_editor){
 
@@ -1121,7 +1145,7 @@ const render_page_selector = function(self, data_tag, tag_id, text_editor) {
 * RENDER_NOTE
 * Creates a modal dialog with note options
 * @param object options
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const render_note = async function(options) {
 
@@ -1345,7 +1369,7 @@ const render_note = async function(options) {
 /**
 * RENDER_PERSONS_LIST
 * Creates a modal dialog with persons_list options
-* @return DOM node fragment|null
+* @return HTMLElement fragment|null
 */
 const render_persons_list = function(self, text_editor, i) {
 
@@ -1505,7 +1529,7 @@ const render_persons_list = function(self, text_editor, i) {
 /**
 * RENDER_LANGS_LIST
 * Creates a modal dialog with langs_list options
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const render_langs_list = function(self, text_editor, i) {
 
@@ -1606,24 +1630,3 @@ const render_langs_list = function(self, text_editor, i) {
 
 	return true
 }//end render_langs_list
-
-
-/**
-* GET_CONTENT_VALUE_READ
-* @return DOM node content_value
-*/
-const get_content_value_read = (i, current_value, self) => {
-
-	// value is a raw html without parse into nodes (txt format)
-		const value = self.tags_to_html(current_value)
-
-	// content_value
-		const content_value = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'content_value editor_container read_only',
-			inner_html 		: value
-		})
-
-	return content_value
-}//end get_content_value_read
-

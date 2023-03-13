@@ -22,7 +22,7 @@ export const view_mini_list_select = function() {
 /**
 * RENDER
 * Render node to be used by service autocomplete or any datalist
-* @return DOM node
+* @return HTMLElement wrapper
 */
 view_mini_list_select.render = async function(self, options) {
 

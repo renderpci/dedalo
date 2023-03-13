@@ -25,7 +25,7 @@ export const render_section_group = function() {
 /**
 * EDIT
 * Render node for use in edit
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_section_group.prototype.edit = async function(options) {
 
@@ -106,7 +106,7 @@ render_section_group.prototype.edit = async function(options) {
 /**
 * LIST
 * Alias of edit
-* @return DOM node
+* @return HTMLElement
 */
 render_section_group.prototype.list = render_section_group.prototype.edit;
 
@@ -115,7 +115,7 @@ render_section_group.prototype.list = render_section_group.prototype.edit;
 /**
 * GET_WRAPPER
 * Render node for use in edit
-* @return DOM node
+* @return HTMLElement
 */
 const get_wrapper = function(self) {
 
@@ -139,7 +139,7 @@ const get_wrapper = function(self) {
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 

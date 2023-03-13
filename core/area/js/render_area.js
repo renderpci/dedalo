@@ -26,7 +26,7 @@ export const render_area = function() {
 /**
 * EDIT
 * Render node for use in edit
-* @return DOM node
+* @return HTMLElement
 */
 render_area.prototype.edit = async function(options) {
 
@@ -88,7 +88,7 @@ render_area.prototype.edit = async function(options) {
 /**
 * LIST
 * Alias of edit
-* @return DOM node
+* @return HTMLElement
 */
 render_area.prototype.list = async function(options={render_level:'full'}) {
 
@@ -99,7 +99,7 @@ render_area.prototype.list = async function(options={render_level:'full'}) {
 
 /**
 * CONTENT_DATA
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 

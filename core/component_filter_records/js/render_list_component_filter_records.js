@@ -24,7 +24,7 @@ export const render_list_component_filter_records = function() {
 /**
 * LIST
 * Render node for use in list
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_list_component_filter_records.prototype.list = async function(options) {
 
