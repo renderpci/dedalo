@@ -8,7 +8,7 @@
 	// import {set_before_unload} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	import {
-		get_content_data_edit,
+		get_content_data,
 		get_buttons
 	} from './render_edit_component_number.js'
 
@@ -36,13 +36,15 @@ view_default_edit_number.render = async function(self, options) {
 		const render_level = options.render_level || 'full'
 
 	// content_data
-		const content_data = get_content_data_edit(self)
+		const content_data = get_content_data(self)
 		if (render_level==='content') {
 			return content_data
 		}
 
 	// buttons
-		const buttons = get_buttons(self)
+		const buttons = (self.permissions > 1)
+			? get_buttons(self)
+			: null
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {

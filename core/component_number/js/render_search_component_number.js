@@ -23,7 +23,7 @@ export const render_search_component_number = function() {
 /**
 * SEARCH
 * Render node for use in modes: edit, edit_in_list
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_search_component_number.prototype.search = async function(options) {
 
@@ -53,7 +53,7 @@ render_search_component_number.prototype.search = async function(options) {
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 
@@ -102,7 +102,7 @@ const get_content_data = function(self) {
 * @param int i
 * @param number current_value
 * @param object self
-* @return DOM node input
+* @return HTMLElement input
 */
 const get_input_element = (i, current_value, self) => {
 
