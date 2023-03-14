@@ -32,13 +32,19 @@ view_default_edit_inverse.render = async function(self, options) {
 		}
 
 	// buttons
-		const buttons_container = ui.component.build_buttons_container(self)
+		const buttons = (self.permissions > 1)
+			? get_buttons(self)
+			: null
 
 	// wrapper. ui build_edit returns component wrapper
-		const wrapper = ui.component.build_wrapper_edit(self, {
+		const wrapper_options = {
 			content_data	: content_data,
-			buttons			: buttons_container
-		})
+			buttons			: buttons
+		}
+		if (self.view==='line') {
+			wrapper_options.label = null // prevent to crate label node
+		}
+		const wrapper = ui.component.build_wrapper_edit(self, wrapper_options)
 		// set pointers
 		wrapper.content_data = content_data
 
@@ -127,3 +133,14 @@ const get_content_value = (i, current_value, self) => {
 
 	return content_value
 }//end get_content_value
+
+
+
+/**
+* get_buttons
+* Alias of build_buttons_container from ui
+*/
+const get_buttons = (self) => {
+
+	return ui.component.build_buttons_container(self)
+}//end get_buttons

@@ -39,19 +39,25 @@ view_default_edit_av.render = async function(self, options) {
 		}
 
 	// buttons
-		const buttons = get_buttons(self)
+		const buttons = (self.permissions > 1)
+			? get_buttons(self)
+			: null
 
 	// wrapper. ui build_edit returns component wrapper
-		const wrapper = ui.component.build_wrapper_edit(self, {
+		const wrapper_options = {
 			content_data : content_data,
 			buttons 	 : buttons
-		})
+		}
+		if (self.view==='line') {
+			wrapper_options.label = null // prevent to create label node
+		}
+		const wrapper = ui.component.build_wrapper_edit(self, wrapper_options)
 		// set pointers to content_data
 		wrapper.content_data = content_data
 
 
 	return wrapper
-}//end view_default_edit_av
+}//end render
 
 
 
@@ -98,7 +104,8 @@ const get_content_value = (i, current_value, self) => {
 
 	// media url from data.datalist based on selected context quality
 		const quality	= self.quality || self.context.features.quality
-		const datalist	= self.data.datalist
+		const data		= self.data || {}
+		const datalist	= data.datalist || []
 		const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
 		const video_url	= file_info && file_info.file_exist===true
 			? file_info.file_url
@@ -265,7 +272,8 @@ const build_video_node = (posterframe_url) => {
 const get_quality_selector = (content_value, self) => {
 
 	// short vars
-		const data		= self.data
+		const data		= self.data || {}
+		const datalist	= data.datalist || []
 		const quality	= self.quality || self.context.features.quality
 		const video		= content_value.video
 
@@ -285,7 +293,7 @@ const get_quality_selector = (content_value, self) => {
 			console.log("src:",src);
 		})
 
-		const quality_list		= data.datalist.filter(el => el.file_exist===true)
+		const quality_list		= datalist.filter(el => el.file_exist===true)
 		const quality_list_len	= quality_list.length
 		for (let i = 0; i < quality_list_len; i++) {
 			// create the node with the all qualities sent by server

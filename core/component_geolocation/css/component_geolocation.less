@@ -34,6 +34,17 @@
 		}
 	}//end .leaflet_map
 
+	&.disabled_component {
+		// tool bar at right
+		.leaflet-pm-toolbar {
+			display: none !important;
+		}
+		// zoom buttons
+		.leaflet-top.leaflet-left {
+			display: none !important;
+		}
+	}
+
 
 	// &.view_default, &.view_line {
 	&.edit {
@@ -79,6 +90,8 @@
 			.leaflet_map.leaflet-container {
 
 			}//end .leaflet_map
+
+
 
 		}//end >.content_data
 
@@ -235,13 +248,17 @@
 
 
 	&.view_line {
-		&.edit {
+		display: inline-block;
+		width: 100%;
+
+		// &.edit {
 			height: 30.5rem;
+			// height: 14.5rem;
 
 			>.content_data {
 				height: 100% !important;
 			}
-		}
+		// }
 	}
 
 	&.view_print {
