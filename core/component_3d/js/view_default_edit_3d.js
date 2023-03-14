@@ -11,6 +11,7 @@
 
 	// used a importmap define in page/index.html to resolve directories
 	// the main addons is /lib/threejs/jsm/ has to be mapped as three/
+	// (!) Safari compatibility ??? : https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script/type/importmap#browser_compatibility
 	import * as THREE from 'three'
 	import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 	import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
