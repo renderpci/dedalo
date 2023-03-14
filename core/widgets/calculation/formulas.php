@@ -26,6 +26,20 @@ function summarize($request_options) : array {
 	}
 	$total = array_sum($ar_values);
 
+	if(isset($opt->type)){
+		switch ($opt->type) {
+
+			case 'float':
+				$total = round($total, $opt->resolution);
+				break;
+
+			case 'int':
+			default:
+				$total = round($total, 0);
+				break;
+		}
+	}
+
 	$result[] = (object)[
 		'id' => 'total',
 		'value' => $total,
