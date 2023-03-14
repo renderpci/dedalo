@@ -113,7 +113,7 @@ const get_content_value = (i, current_value, self) => {
 	// input field
 		const input = ui.create_dom_element({
 			element_type	: 'input',
-			type			: 'number',
+			type			: 'text',
 			class_name		: 'input_value',
 			value			: current_value,
 			parent			: content_value
@@ -270,36 +270,10 @@ export const keyup_handler = function(e, key, self) {
 			return false
 		}
 
-	// Enter key force to save changes
+	// Enter key force to save changes as the same way that blur
 		if (e.key==='Enter') {
-			// force to save current input if changed
-				const changed_data = self.data.changed_data || []
-				// change_value (save data)
-				self.change_value({
-					changed_data	: changed_data,
-					refresh			: false
-				})
-		}else{
-
-			const safe_value = (e.target.value.length>0)
-				? self.fix_number_format(e.target.value)
-				: null
-
-			if(safe_value!==e.target.value) {
-				e.target.value = safe_value
-			}
-
-			// change data
-				const changed_data_item = Object.freeze({
-					action	: 'update',
-					key		: key,
-					value	: safe_value || ''
-				})
-
-			// fix instance changed_data
-				self.set_changed_data(changed_data_item)
+			blur_handler(e, key, self)
 		}
-
 
 	return true
 }//end keyup_handler
@@ -316,6 +290,26 @@ export const keyup_handler = function(e, key, self) {
 */
 export const blur_handler = function(e, key, self) {
 	e.preventDefault()
+
+	// fix value to valid format as '5.21' from '5,21'
+	const safe_value = (e.target.value.length>0)
+		? self.fix_number_format(e.target.value)
+		: null
+	// console.log("safe_value:----------->>",e.target.value); return
+	// if the safe_value is different than the value of user had enter set the safe_value
+	if(safe_value!==e.target.value) {
+		e.target.value = safe_value
+	}
+
+	// change data
+		const changed_data_item = Object.freeze({
+			action	: 'update',
+			key		: key,
+			value	: safe_value || ''
+		})
+
+	// fix instance changed_data
+		self.set_changed_data(changed_data_item)
 
 	// force to save current input if changed
 		const changed_data = self.data.changed_data || []
