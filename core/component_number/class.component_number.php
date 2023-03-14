@@ -303,11 +303,11 @@ class component_number extends component_common {
 	public function search_operators_info() : array {
 
 		$ar_operators = [
-			'...' 	=> 'entre',
-			'>=' 	=> 'mayor_o_igual_que',
-			'<='	=> 'menor_o_igual_que',
-			'>' 	=> 'mayor_que',
-			'<'		=> 'menor_que'
+			'...' 	=> 'between',
+			'>=' 	=> 'greater_than_or_equal',
+			'<='	=> 'less_than_or_equal',
+			'>' 	=> 'greater_than',
+			'<'		=> 'less_than'
 		];
 
 		return $ar_operators;
