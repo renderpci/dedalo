@@ -69,17 +69,19 @@ export const component_number = function(){
 * GET_FORMAT_NUMBER
 * Get number formatted as properties say int || float.
 * By default the number is a int
-* When float is defined, it say the resolution of the decimals; float:2
+* When float is defined, it say the precision of the decimals; float:2
 * Example with int: input 85,35 | output 85
 * Example with float:2 : input 85.3568 | output 85.36
 * @return number format_number
 */
 const get_format_number = function ( self, number ) {
 
-	const type = self.context.properties.type || 'int'
+	// get properties or default values
+	const type		= self.context.properties.type || 'float'
+	const precision	= self.context.properties.precision || 2
 
-	const format_number = (type.float)
-		? number.toFixed(type.float )
+	const format_number = (type === 'float')
+		? number.toFixed( precision )
 		: number.toFixed();
 
 	return Number( format_number )
@@ -112,12 +114,15 @@ component_number.prototype.fix_number_format = function( number ) {
 component_number.prototype.get_steps = function() {
 
 	const self = this
-	const type = self.context.properties.type || 'int'
+
+	// get properties or default values
+	const type		= self.context.properties.type || 'float'
+	const precision	= self.context.properties.precision || 2
 
 	const base = 0
 
-	const string_steps = (type.float)
-		? base.toFixed( type.float -1 )
+	const string_steps = (type === 'float')
+		? base.toFixed( precision -1 )
 		: base.toFixed();
 
 	const steps = string_steps+'1'
