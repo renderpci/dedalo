@@ -3,12 +3,35 @@
 * 	To check Dédalo elements basic functionalities
 */
 
-
-	import {url_vars_to_object} from '../../common/js/utils/index.js'
-
+import {url_vars_to_object} from '../../common/js/utils/index.js'
 // check url vars
 	const url_vars = url_vars_to_object(window.location.search)
-	console.log('window.location.search:', url_vars);
+
+
+
+// login check
+	if (page_globals.is_logged!==true) {
+
+		// user is not logged
+
+		import ('../../common/js/instances.js')
+		.then(async function(instances){
+
+			// login instance add
+				instances.get_instance({
+					model	: 'login',
+					tipo	: 'dd229',
+					mode	: 'edit',
+					lang	: page_globals.dedalo_application_lang
+				})
+				.then(instance => instance.build(true))
+				.then(instance => instance.render())
+				.then(wrapper => {
+					document.body.appendChild(wrapper)
+				})
+		})
+		throw 'Login is required';
+	}
 
 
 
@@ -24,12 +47,16 @@
 
 	const area = url_vars.area
 	try {
-		// load test
+
+		// load test file
 		await import(`./${area}.js`)
 		// exec mocha
 		import('./exec.js')
+
 	} catch (error) {
-		console.log(error)
+		if (area!==undefined) {
+			console.log(error)
+		}
 
 		// list
 		import('./list.js')
