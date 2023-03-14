@@ -3152,9 +3152,7 @@ abstract class component_common extends common {
 	*/
 	public function search_operators_info() : array {
 
-		$ar_operators = [
-			#'=' 	=> 'igual'
-		];
+		$ar_operators = [];
 
 		return $ar_operators;
 	}//end search_operators_info

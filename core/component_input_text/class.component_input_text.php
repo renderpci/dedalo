@@ -521,14 +521,14 @@ class component_input_text extends component_common {
 	public function search_operators_info() : array {
 
 		$ar_operators = [
-			'*'			=> 'no_vacio', // not null
-			'!*'		=> 'campo_vacio', // null
-			'='			=> 'similar_a',
-			'!='		=> 'distinto_de',
-			'-'			=> 'no_contiene',
-			'*text*'	=> 'contiene',
-			'text*'		=> 'empieza_con',
-			'*text'		=> 'acaba_con',
+			'*'			=> 'no_empty', // not null
+			'!*'		=> 'empty', // null
+			'='			=> 'similar_to',
+			'!='		=> 'different_from',
+			'-'			=> 'does_not_contain',
+			'*text*'	=> 'contains',
+			'text*'		=> 'begins_with',
+			'*text'		=> 'end_with',
 			'\'text\''	=> 'literal'
 		];
 

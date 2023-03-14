@@ -878,12 +878,12 @@ class component_date extends component_common {
 	public function search_operators_info() : array {
 
 		$ar_operators = [
-			'>=' 	=> 'mayor_o_igual_que',
-			'<='	=> 'menor_o_igual_que',
-			'>' 	=> 'mayor_que',
-			'<'		=> 'menor_que',
-			'*' 	=> 'no_vacio', // not null
-			'!*' 	=> 'campo_vacio', // null
+			'>=' 	=> 'greater_than_or_equal',
+			'<='	=> 'less_than_or_equal',
+			'>' 	=> 'greater_than',
+			'<'		=> 'less_than',
+			'*' 	=> 'no_empty', // not null
+			'!*' 	=> 'empty', // null
 		];
 
 		return $ar_operators;
