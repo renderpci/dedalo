@@ -102,7 +102,7 @@ const get_content_value = (i, current_value, self) => {
 	// input field
 		const input = ui.create_dom_element({
 			element_type	: 'input',
-			type			: 'number',
+			type			: 'text',
 			class_name		: 'input_value',
 			value			: current_value,
 			parent			: content_value

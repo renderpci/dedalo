@@ -1,6 +1,6 @@
 <?php
 /**
-* Calculation generic formulas
+* Formulas used by Calculation
 */
 
 /**
@@ -25,6 +25,21 @@ function summarize($request_options) : array {
 		$ar_values[] = $value;
 	}
 	$total = array_sum($ar_values);
+
+	if(isset($opt->type)){
+		switch ($opt->type) {
+
+			case 'float':
+				$precision = $opt->precision ?? 2;
+				$total = round($total, $precision);
+				break;
+
+			case 'int':
+			default:
+				$total = round($total, 0);
+				break;
+		}
+	}
 
 	$result[] = (object)[
 		'id' => 'total',

@@ -1320,9 +1320,9 @@ class component_relation_common extends component_common {
 	public function search_operators_info() : array {
 
 		$ar_operators = [
-			'!='	=> 'distinto_de',
-			'!*'	=> 'vacio',
-			'*'		=> 'no_vacio' // not null
+			'!='	=> 'different_from',
+			'!*'	=> 'empty',
+			'*'		=> 'no_empty' // not null
 		];
 
 		return $ar_operators;
