@@ -51,8 +51,10 @@ view_default_edit_3d.render = async function(self, options) {
 			return content_data
 		}
 
-	// buttons
-		const buttons = get_buttons(self)
+	/// buttons
+		const buttons = (self.permissions > 1)
+			? get_buttons(self)
+			: null
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {

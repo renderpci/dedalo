@@ -142,18 +142,18 @@
 		}
 	}
 
-	&.view_default {
-		&.list {
-			height: @view_line_height; // 5rem;
-		}
-	}
-
 	&.search {
 		>.content_data {
 			min-height: unset;
 			>.content_value {
 				height: unset;
 			}
+		}
+	}
+
+	&.view_default {
+		&.list {
+			height: @view_line_height; // 5rem;
 		}
 	}
 
@@ -171,10 +171,10 @@
 	}
 
 	&.view_line {
+		display: inline-block;
 		&.list {
 			height: 5rem;
 		}
-
 		.content_value {
 			text-align: center;
 		}

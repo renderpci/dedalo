@@ -26,7 +26,7 @@ export const render_edit_component_geolocation = function() {
 * EDIT
 * Render node for use in edit
 * @param object options
-* @return HTMLElement|null
+* @return HTMLElement wrapper
 */
 render_edit_component_geolocation.prototype.edit = async function(options) {
 
@@ -56,9 +56,6 @@ render_edit_component_geolocation.prototype.edit = async function(options) {
 		default:
 			return view_default_edit_geolocation.render(self, options)
 	}
-
-
-	return null
 }//end edit
 
 
