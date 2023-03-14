@@ -73,7 +73,7 @@ view_line_edit_portal.render = async function(self, options) {
 		const wrapper = ui.component.build_wrapper_edit(self, {
 			content_data	: content_data,
 			buttons			: buttons,
-			label			: null
+			// label			: null
 		})
 		wrapper.classList.add('portal')
 		// set pointers
