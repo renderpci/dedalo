@@ -1,6 +1,6 @@
 <?php
 /**
-* Calculation generic formulas
+* Formulas used by Calculation
 */
 
 /**
@@ -30,7 +30,8 @@ function summarize($request_options) : array {
 		switch ($opt->type) {
 
 			case 'float':
-				$total = round($total, $opt->resolution);
+				$precision = $opt->precision ?? 2;
+				$total = round($total, $precision);
 				break;
 
 			case 'int':
