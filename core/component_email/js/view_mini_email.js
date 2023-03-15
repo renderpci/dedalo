@@ -28,7 +28,8 @@ export const view_mini_email = function() {
 view_mini_email.render = async function(self, options) {
 
 	// short vars
-		const data = self.data
+		const data	= self.data || {}
+		const value	= data.value || []
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self, {
@@ -36,7 +37,7 @@ view_mini_email.render = async function(self, options) {
 		})
 
 	// Value as string
-		const value_string = data.value.join(self.context.fields_separator)
+		const value_string = value.join(self.context.fields_separator)
 
 	// Set value
 		wrapper.insertAdjacentHTML('afterbegin', value_string)

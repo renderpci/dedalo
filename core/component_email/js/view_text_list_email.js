@@ -4,7 +4,7 @@
 
 
 /**
-* VIEW_TEXT_list_EMAIL
+* VIEW_TEXT_LIST_EMAIL
 * Manages the component's logic to get the values of the data without DOM elements or structure
 */
 export const view_text_list_email = function() {
@@ -22,10 +22,11 @@ export const view_text_list_email = function() {
 view_text_list_email.render = async function(self, options) {
 
 	// short vars
-		const data = self.data
+		const data	= self.data || {}
+		const value	= data.value || []
 
 	// Value as string
-		const value_string = data.value.join(self.context.fields_separator)
+		const value_string = value.join(self.context.fields_separator)
 
 		const text_node = document.createTextNode(value_string)
 
