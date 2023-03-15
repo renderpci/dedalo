@@ -339,6 +339,8 @@ section.prototype.init = async function(options) {
 		}
 
 	// render_views
+		// Definition of the rendering views that could de used.
+		// Tools or another components could add specific views dynamically
 		self.render_views = [
 			{
 				view	: 'default',
