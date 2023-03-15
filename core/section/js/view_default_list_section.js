@@ -368,14 +368,18 @@ const get_buttons = function(self) {
 							})
 
 							break;
-
+						// button_import and button_trigger cases for compatibility with v5 ontology
+						// in future version will be merge both with new model button_tool
+						// in the mid-time use button_trigger for general cases to dispatch tools.
 						case 'button_import':
+						case 'button_trigger':
 							// open_tool (tool_common)
 							open_tool({
 								tool_context	: current_button.tools[0],
 								caller			: self
 							})
 							break;
+
 						default:
 							event_manager.publish('click_' + current_button.model)
 							break;
