@@ -536,15 +536,17 @@
 
 
 	// rows in section in list mode must be min-height: 3rem;
-	.wrapper_section.list {
-		.column {
+	// .wrapper_section.list {
+	// 	.column {
 
-			&.column_section_id {
-				min-width: 70px;
-				font-size: 1.2rem;
-			}
-		}
-	}
+	// 		&.column_section_id {
+	// 			min-width: 70px;
+
+	// 			--font_size : 1.1vw;
+	// 			font-size: var(--font_size);
+	// 		}
+	// 	}
+	// }
 
 
 	// view_line case
@@ -668,10 +670,13 @@
 			}
 
 			>.section_id {
-				font-size: 1.25rem;
+				// font-size: 1.25rem;
 				padding-right: 3px;
 				padding-left: 2px;
 				pointer-events: none;
+
+				--font_size: 1.07vw;
+				font-size: var(--font_size);
 
 				&.small {
 					font-size: 1rem;
