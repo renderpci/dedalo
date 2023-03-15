@@ -558,3 +558,28 @@ export function pause(milliseconds) {
 		}, milliseconds)
 	})
 }//end pause
+
+
+
+/**
+* GET_FONT_FIT_SIZE
+* Calculate the convenient font size based on text length
+* and threshold. Usually vw units are used.
+* The idea is to apply a reduction factor to size when the string
+* size exceed the desired font base size
+* Used mainly by section_id column font size fit
+* @param string text
+* @param float base_size = 1.07
+* @param int threshold = 4
+* @return float font_size
+*/
+export const get_font_fit_size = (text, base_size=1.7, threshold=4) => {
+
+	const text_length = String(text).length
+
+	const font_size = (text_length > Math.floor(base_size + threshold) )
+		? base_size - (text_length * 0.023)
+		: base_size
+
+	return font_size
+}//end get_font_fit_size

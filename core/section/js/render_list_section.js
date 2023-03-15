@@ -7,7 +7,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
-	import {clone} from '../../common/js/utils/index.js'
+	import {clone, get_font_fit_size} from '../../common/js/utils/index.js'
 	import {view_default_list_section} from './view_default_list_section.js'
 
 
@@ -60,6 +60,8 @@ render_list_section.prototype.list = async function(options) {
 
 /**
 * RENDER_COLUMN_ID
+* Custom render to generate the section list column id.
+* Is called as callback from section_record
 * @param object options
 * @return DOM DocumentFragment
 */
@@ -85,6 +87,14 @@ export const render_column_id = function(options) {
 		})
 		if(SHOW_DEBUG===true) {
 			section_id_node.title = 'paginated_key: ' + paginated_key
+		}
+		// adjust the font size to fit it into the column
+		// use viewport height units as x.vw
+		// @see https://www.freecodecamp.org/news/learn-css-units-em-rem-vh-vw-with-code-examples/#what-are-vw-units
+		const base_size = 1.07 // defined as --font_size: 1.07vw; into CSS (list.less)
+		const font_size	= get_font_fit_size(section_id, base_size, 4)
+		if (font_size!==base_size) {
+			section_id_node.style.setProperty('--font_size', `${font_size}vw`);
 		}
 
 	// buttons
@@ -312,7 +322,7 @@ export const render_column_id = function(options) {
 
 			default:
 
-				// edit button (pen)
+				// button_edit (pen)
 					if (permissions>1) {
 						// button_edit
 							const button_edit = ui.create_dom_element({
@@ -360,7 +370,7 @@ export const render_column_id = function(options) {
 							})
 					}
 
-				// remove button
+				// button_delete (trash can)
 					const button_delete = self.context.buttons
 						? self.context.buttons.find(el => el.model==='button_delete')
 						: null
