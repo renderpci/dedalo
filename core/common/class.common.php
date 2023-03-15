@@ -120,7 +120,7 @@ abstract class common {
 				// v5
 				'component_security_areas',
 				'component_autocomplete_ts', // ?
-				'button_trigger',
+				// 'button_trigger',
 				// v6
 				// 'component_autocomplete'
 				// 'component_av'
@@ -3947,9 +3947,11 @@ abstract class common {
 					$RecordObj_dd		= new RecordObj_dd($current_button_tipo);
 					$button_properties	= $RecordObj_dd->get_properties();
 
-				// button_import. tool_context
+				// button_import and button_trigger cases for compatibility with v5 ontology
+				// in future version will be merge both with new model button_tool
+				// in the mid-time use button_trigger for general cases to dispatch tools.
 					$tools = null;
-					if($model==='button_import'){
+					if($model==='button_import' || $model==='button_trigger'){
 
 						// tools_list
 						$tools_list	= tool_common::get_client_registered_tools();
