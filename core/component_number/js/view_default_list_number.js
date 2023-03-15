@@ -33,7 +33,7 @@ view_default_list_number.render = async function(self, options) {
 		const value_string	= value.join(self.context.fields_separator)
 
 	// wrapper
-		const wrapper = ui.component.build_wrapper_mini(self, {
+		const wrapper = ui.component.build_wrapper_list(self, {
 			value_string : value_string
 		})
 		wrapper.addEventListener('click', function(e){

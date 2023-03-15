@@ -26,7 +26,7 @@ export const render_edit_component_publication = function() {
 * EDIT
 * Render node for use in edit mode
 * @param object options
-* @return HTMLElement|null
+* @return HTMLElement wrapper
 */
 render_edit_component_publication.prototype.edit = async function(options) {
 
@@ -52,8 +52,6 @@ render_edit_component_publication.prototype.edit = async function(options) {
 		default:
 			return view_default_edit_publication.render(self, options)
 	}
-
-	return null
 }//end edit
 
 
@@ -180,14 +178,16 @@ const get_content_value = (i, current_value, self) => {
 const get_content_value_read = (i, current_value, self) => {
 
 	// get current datalist item that match with current_value to get the label to show it
-		const datalist_item = self.data.datalist.find(item => item.section_id==current_value.section_id)
+		const data			= self.data || {}
+		const datalist		= data.datalist || []
+		const datalist_item	= datalist.find(item => item.section_id==current_value.section_id)
 
 	// content_value
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'content_value read_only',
-			inner_html 		: datalist_item
-				? datalist_item.label || ''
+			inner_html 		: datalist_item && datalist_item.label
+				? datalist_item.label
 				: ''
 		})
 

@@ -33,7 +33,7 @@ view_default_list_password.render = async function(self, options) {
 		const value_string	= value.join(' | ')
 
 	// wrapper
-		const wrapper = ui.component.build_wrapper_mini(self, {
+		const wrapper = ui.component.build_wrapper_list(self, {
 			value_string : '****************'
 		})
 		wrapper.type = 'password'
