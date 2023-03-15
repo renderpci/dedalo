@@ -7,7 +7,8 @@
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {
-		get_content_data
+		get_content_data,
+		get_buttons
 	} from './render_edit_component_filter.js'
 
 
@@ -43,16 +44,19 @@ view_line_edit_filter.render = async function(self, options) {
 			return content_data
 		}
 
+	// buttons
+		const buttons = (self.permissions > 1)
+			? get_buttons(self)
+			: null
 
 	// ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
 			content_data	: content_data,
+			buttons			: buttons,
 			label			: null
 		})
 		// set pointers
 		wrapper.content_data = content_data
-
-
 
 
 	return wrapper

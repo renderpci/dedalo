@@ -57,15 +57,15 @@ import {elements} from './elements.js'
 		})
 		const elements_length = elements.length
 		for (let i = 0; i < elements_length; i++) {
-			const item = elements[i]
-			console.log('item:', item);
+
+			const element = elements[i]
 
 			// link
 			ui.create_dom_element({
 				element_type	: 'a',
-				href			: `./?area=component_full_test&model=${item.model}`,
-				class_name		: 'list_of_test_item link',
-				inner_html		: item.model + ` [${item.tipo}]`,
+				href			: `./?area=component_full_test&model=${element.model}`,
+				class_name		: 'list_of_test_element link',
+				inner_html		: element.model + ` [${element.tipo}]`,
 				parent			: container
 			})
 		}
