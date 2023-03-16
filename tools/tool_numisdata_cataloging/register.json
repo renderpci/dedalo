@@ -3,21 +3,15 @@
   "relations": [
     {
       "type": "dd151",
-      "section_id": "-1",
-      "section_tipo": "dd128",
-      "from_component_tipo": "dd200"
+      "section_id": "1",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1354"
     },
     {
       "type": "dd675",
       "section_id": "1",
       "section_tipo": "dd153",
       "from_component_tipo": "dd1337"
-    },
-    {
-      "type": "dd151",
-      "section_id": "1",
-      "section_tipo": "dd64",
-      "from_component_tipo": "dd1354"
     },
     {
       "type": "dd151",
@@ -39,9 +33,9 @@
     },
     {
       "type": "dd151",
-      "section_id": "2",
-      "section_tipo": "dd1342",
-      "from_component_tipo": "dd1330"
+      "section_id": "-1",
+      "section_tipo": "dd128",
+      "from_component_tipo": "dd200"
     },
     {
       "type": "dd151",
@@ -52,39 +46,39 @@
   ],
   "components": {
     "dd199": {
-      "inf": "Fecha de creación [component_date]",
-      "dato": {
-        "lg-nolan": [
-          {
-            "start": {
-              "day": 12,
-              "hour": 18,
-              "time": 65021854469,
-              "year": 2023,
-              "month": 1,
-              "minute": 14,
-              "second": 29
-            }
+      "lg-nolan": [
+        {
+          "start": {
+            "day": 12,
+            "hour": 18,
+            "time": 65021854469,
+            "year": 2023,
+            "month": 1,
+            "minute": 14,
+            "second": 29
           }
-        ]
-      }
+        }
+      ]
     },
     "dd201": {
-      "inf": "Fecha de modificación [component_date]",
-      "dato": {
-        "lg-nolan": [
-          {
-            "start": {
-              "day": 13,
-              "hour": 22,
-              "time": 65021956810,
-              "year": 2023,
-              "month": 1,
-              "minute": 40,
-              "second": 10
-            }
+      "lg-nolan": [
+        {
+          "start": {
+            "day": 15,
+            "hour": 10,
+            "time": 65027441842,
+            "year": 2023,
+            "month": 3,
+            "minute": 17,
+            "second": 22
           }
-        ]
+        }
+      ]
+    },
+    "dd271": {
+      "inf": "Primera publicación [component_date]",
+      "dato": {
+        "lg-nolan": []
       }
     },
     "dd612": {
@@ -104,6 +98,12 @@
         "lg-spa": [
           "Catalogación de tipos numismáticos"
         ]
+      }
+    },
+    "dd1223": {
+      "inf": "Última publicación [component_date]",
+      "dato": {
+        "lg-nolan": []
       }
     },
     "dd1326": {
@@ -130,13 +130,23 @@
         ]
       }
     },
+    "dd1334": {
+      "inf": "Ontologia [component_json]",
+      "dato": {
+        "lg-nolan": [
+          {}
+        ]
+      }
+    },
     "dd1335": {
       "inf": "Propiedades [component_json]",
       "dato": {
         "lg-nolan": [
           {
             "view": "types_mosaic",
-            "source": {
+            "open_as": "window",
+            "windowFeatures": null,
+            "source_DESACTIVE": {
               "request_config": [
                 {
                   "sqo": {
@@ -216,9 +226,7 @@
                   "api_engine": "dedalo"
                 }
               ]
-            },
-            "open_as": "window",
-            "windowFeatures": null
+            }
           }
         ]
       }
@@ -227,9 +235,15 @@
       "inf": "Afecta a tipos: [component_json]",
       "dato": {
         "lg-nolan": [
-          [
-            "numisdata3"
-          ]
+          []
+        ]
+      }
+    },
+    "dd1362": {
+      "inf": "Dev info [component_text_area]",
+      "dato": {
+        "lg-nolan": [
+          ""
         ]
       }
     },
@@ -242,10 +256,10 @@
       }
     }
   },
-  "section_id": 6,
+  "section_id": 16,
   "created_date": "2023-01-12 18:14:29",
   "section_tipo": "dd1340",
-  "modified_date": "2023-01-13 22:40:10",
+  "modified_date": "2023-03-15 10:17:22",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",
