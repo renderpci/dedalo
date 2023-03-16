@@ -1214,7 +1214,8 @@ const render_component_history = function(self) {
 			container			: component_history_body,
 			collapsed_id		: 'inspector_component_history_block',
 			collapse_callback	: collapse,
-			expose_callback		: expose
+			expose_callback		: expose,
+			default_state		: 'closed'
 		})
 		function collapse() {
 			component_history_head.classList.remove('up')
