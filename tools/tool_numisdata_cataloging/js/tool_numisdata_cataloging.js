@@ -77,6 +77,67 @@ tool_numisdata_cataloging.prototype.init = async function(options) {
 	}
 
 
+	// listen the thesaurus to update the data of the component_portal when the locator drag by user
+	// the cataloging section has a portal that point to any other section to be ordered
+	// when the user drag the section to be placed in the thesaurus the thesaurus create new term (new section)
+	// this new section has a portal that need to be updated with the locator received
+	const token = event_manager.subscribe('ts_add_child_tool_cataloging', add_data_to_ts_component)
+	self.events_tokens.push(token)
+
+	async function add_data_to_ts_component(options) {
+		// get the thesaurus value defined in properties
+		const set_new_thesaurus_value = self.tool_config.set_new_thesaurus_value
+
+		// check if the tool_config has the new thesaurus value
+		if(!set_new_thesaurus_value){
+			console.error('Error, set_new_thesaurus_value is not present in properties.tool_config of the tool_cataloging ontology');
+		}
+		// the new section created by the thesaurus
+		const new_ts_section	= options.new_ts_section
+		// the locator drag by the user (the section as the term of the ts)
+		const locator			= options.locator
+		// component to inject the locator
+		const component_options = {
+			model			: 'component_portal',
+			mode 			: 'edit',
+			tipo			: set_new_thesaurus_value.tipo,
+			section_tipo	: set_new_thesaurus_value.section_tipo,
+			section_id		: new_ts_section.section_id,
+			lang			: page_globals.dedalo_data_nolan,
+			type			: 'component'
+		}
+
+		const component = await get_instance(component_options)
+		await component.build(true);
+
+		// insert the locator in the data of the componet
+			const changed_data = [{
+				action	: 'insert',
+				key		: null,
+				value	: {
+					section_id		: locator.section_id,
+					section_tipo	: locator.section_tipo
+				}
+			}]
+
+		// change_value (implies saves too)
+			component.change_value({
+				changed_data	: changed_data,
+				refresh			: false
+			})
+			.then(async (response)=>{
+				// the user has selected cancel from delete dialog
+					if (response===false) {
+						return
+					}
+				// dispatch the callback to the thesaurus to update the node in the thesaurus tree
+				options.callback(response)
+			})
+
+		return true;
+
+	}
+
 	return common_init
 }//end init
 
