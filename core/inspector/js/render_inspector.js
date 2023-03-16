@@ -1214,7 +1214,8 @@ const render_component_history = function(self) {
 			container			: component_history_body,
 			collapsed_id		: 'inspector_component_history_block',
 			collapse_callback	: collapse,
-			expose_callback		: expose
+			expose_callback		: expose,
+			default_state		: 'closed'
 		})
 		function collapse() {
 			component_history_head.classList.remove('up')
@@ -1438,9 +1439,10 @@ export const load_activity_info = async function(self, options) {
 * Opens Dédalo Ontology page in a new window
 * @param string tipo
 * @param string|null custom_url
+* @param bool focus = true
 * @return bool
 */
-const open_ontology_window = function(tipo, custom_url) {
+export const open_ontology_window = function(tipo, custom_url, focus=true) {
 
 	window.docu_window = window.docu_window || null
 
@@ -1452,7 +1454,9 @@ const open_ontology_window = function(tipo, custom_url) {
 
 	if (window.docu_window && !window.docu_window.closed) {
 		window.docu_window.location = url
-		window.docu_window.focus()
+		if (focus===true) {
+			window.docu_window.focus()
+		}
 	}else{
 		const window_width	= 1001
 		const screen_width	= window.screen.width

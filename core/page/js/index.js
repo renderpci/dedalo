@@ -10,16 +10,16 @@ const t0 = performance.now()
 	import {get_instance} from '../../common/js/instances.js'
 	import {url_vars_to_object, JSON_parse_safely} from '../../common/js/utils/index.js'
 	import {render_page} from '../js/render_page.js'
-	// import {config_client} from '../../../config/config_client.js'
+	// import {config_client} from '../../../config/config_client.js' // working here !
 
 
 	( async () => {
 
 		// environment from API
 			// // config_client. Set vars as global
-			// 	for (const [key, value] of Object.entries(config_client)) {
-			// 		window[key] = value
-			// 	}
+			// 	// for (const [key, value] of Object.entries(config_client)) {
+			// 	// 	window[key] = value
+			// 	// }
 			// // dedalo_environment
 			// 	const rqo_environment = { // rqo (request query object)
 			// 		action			: 'get_environment',
@@ -33,7 +33,6 @@ const t0 = performance.now()
 			// 	for (const [key, value] of Object.entries(api_response_environment.result)) {
 			// 		window[key] = value
 			// 	}
-
 
 		// main events init
 			events_init()

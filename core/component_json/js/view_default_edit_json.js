@@ -75,7 +75,7 @@ const get_content_data = function(self) {
 
 	// values (inputs)
 		const inputs_value	= value
-		const value_length	= inputs_value.length
+		const value_length	= inputs_value.length || 1
 		if (value_length>1) {
 			console.warn('More than one value in component_json is not allowed at now. Ignored next values. N values: ', value_length);
 		}

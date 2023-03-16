@@ -26,7 +26,7 @@ export const render_edit_component_info = function() {
 * EDIT
 * Render node for use in edit
 * @param object options
-* @return HTMLElement|null
+* @return HTMLElement wrapper
 */
 render_edit_component_info.prototype.edit = async function(options) {
 
@@ -55,9 +55,6 @@ render_edit_component_info.prototype.edit = async function(options) {
 		default:
 			return view_default_edit_info.render(self, options)
 	}
-
-
-	return null
 }//end edit
 
 
@@ -109,9 +106,11 @@ export const get_content_value = (i, current_widget, self) => {
 
 	// widget
 		current_widget.build()
-		.then(async function(){
-			const widget_node = await current_widget.render()
-			content_value.appendChild(widget_node)
+		.then(function(){
+			current_widget.render()
+			.then(function(widget_node){
+				content_value.appendChild(widget_node)
+			})
 		})
 
 

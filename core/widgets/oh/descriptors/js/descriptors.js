@@ -20,7 +20,7 @@ export const descriptors = function(){
 
 	this.value
 
-	this.node = []
+	this.node
 
 	this.events_tokens = []
 

@@ -20,7 +20,7 @@ export const tags = function(){
 
 	this.value
 
-	this.node = []
+	this.node
 
 	this.status
 
