@@ -115,10 +115,23 @@ export const set_context_vars = function(self) {
 					return self.context.view
 						? self.context.view
 						: null
-					// return self.context.view || self.view;
 				},
 				set : function(value) {
 					return self.context.view = value;
+				}
+			});
+
+		// properties. Swaps the value with the context value and makes it a getter/setter of the context value
+		// this allow sync self.properties and self.context.properties after building the instance
+			self.properties = self.context.properties || self.properties
+			Object.defineProperty(self, 'properties', {
+				get : function() {
+					return self.context.properties
+						? self.context.properties
+						: null
+				},
+				set : function(value) {
+					return self.context.properties = value;
 				}
 			});
 
