@@ -934,6 +934,12 @@ component_common.prototype.change_value = async function(options) {
 				self.data.changed_data = []
 			}
 
+		// update datum
+			if(self.model==='component_portal' && self.standalone===true){
+				self.datum.context	= api_response.result.context
+				self.datum.data		= api_response.result.data
+			}
+
 		// refresh
 			if (refresh===true) {
 				await self.refresh({
