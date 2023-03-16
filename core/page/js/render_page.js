@@ -146,12 +146,21 @@ const get_content_data = async function(self) {
 							// set caller
 							// current_instance.caller = self
 
+							// store instance to locate on destroy
 							self.ar_instances.push(current_instance)
 
 							// build (load data)
 							const autoload = true // Note that it's necessary to load data here (in addition to context)
 							await current_instance.build(autoload)
-							return current_instance.render()
+
+							// render node
+							const node = current_instance.render()
+
+							return node || ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'error',
+								inner_html		: 'Error on render element ' + current_instance.model
+							})
 						}
 					})
 				/*

@@ -31,7 +31,7 @@ render_edit_section.prototype.edit = async function(options) {
 	const self = this
 
 	// view
-		const view	= self.context.view
+		const view	= self.context?.view
 
 	// wrapper
 	switch(view) {
