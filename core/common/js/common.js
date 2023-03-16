@@ -389,7 +389,7 @@ common.prototype.render = async function (options={}) {
 								// console.log('self.node:', self.node);
 								// console.log('self.node.nodeType:', self.node.nodeType);
 								// console.log('node:', node);
-								console.warn('Ignored node replacement for: non ELEMENT_NODE', self.node.nodeType);
+								console.warn('Ignored node replacement for: non ELEMENT_NODE', self.node, 'nodeType:', self.node.nodeType);
 							}else{
 								self.node.replaceWith(node);
 							}

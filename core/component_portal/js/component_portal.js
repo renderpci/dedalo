@@ -557,13 +557,13 @@ component_portal.prototype.build = async function(autoload=false) {
 		self.db_data = clone(self.data)
 
 	// set fields_separator
-		self.context.fields_separator = self.context.fields_separator
-									|| self.request_config_object.show.fields_separator
+		self.context.fields_separator = self.context?.fields_separator
+									|| self.request_config_object?.show.fields_separator
 									|| ' | '
 
 	// set records_separator
-		self.context.records_separator = self.context.records_separator
-									|| self.request_config_object.show.records_separator
+		self.context.records_separator = self.context?.records_separator
+									|| self.request_config_object?.show.records_separator
 									|| ' | '
 
 	// self.show_interface is defined in component_comom init()

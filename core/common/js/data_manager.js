@@ -19,10 +19,9 @@ export const data_manager = function() {
 * @return promise api_response
 */
 data_manager.request = async function(options) {
-	// console.log("// request options:",options);
 
 	// options
-		this.url			= options.url || DEDALO_API_URL
+		this.url			= options.url || (typeof DEDALO_API_URL!=='undefined' ? DEDALO_API_URL : '../api/v1/json/')
 		this.method			= options.method || 'POST' // *GET, POST, PUT, DELETE, etc.
 		this.mode			= options.mode || 'cors' // no-cors, cors, *same-origin
 		this.cache			= options.cache || 'no-cache' // *default, no-cache, reload, force-cache, only-if-cached
@@ -78,7 +77,8 @@ data_manager.request = async function(options) {
 		.then(response => {
 			// console.log("-> json response 1 ok:",response);
 			// return Promise.reject("*** PHP file not found");
-			const json_parsed = response.json().then((result)=>{
+			const json_parsed = response.json()
+			.then((result)=>{
 				// console.log("-> json result 2:",result);
 				if (result.error) {
 
