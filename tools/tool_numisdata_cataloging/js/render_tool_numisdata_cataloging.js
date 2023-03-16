@@ -82,8 +82,8 @@ const get_content_data_edit = async function(self) {
 			parent			: fragment
 		})
 
-	// main_element section. render another node of component caller and append to container
-		self.main_element.render_views.push(
+	// section_to_cataloging section. render another node of component caller and append to container
+		self.section_to_cataloging.render_views.push(
 			{
 				view	: 'types_mosaic',
 				mode	: 'list',
@@ -91,8 +91,8 @@ const get_content_data_edit = async function(self) {
 				path 	: '../../../tools/tool_numisdata_cataloging/js/view_types_mosaic.js'
 			}
 		)
-		const coins_node = await self.main_element.render()
-		left_container.appendChild(coins_node)
+		const section_node = await self.section_to_cataloging.render()
+		left_container.appendChild(section_node)
 
 
 	// right_container
