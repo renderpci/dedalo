@@ -205,6 +205,41 @@ const drag_and_drop = function(options) {
 
 
 /**
+* ON_DRAGSTART
+* Get element dataset path as event.dataTransfer from selected component
+* @param DOM node
+*	Its a section record (only in mosaic mode)
+* @param event
+* @param object options
+* @return bool true
+*/
+const on_dragstart_mosaic = function(node, event, options) {
+	// event.preventDefault();
+	event.stopPropagation();
+
+	// will be necessary the original locator of the section_record and the paginated_key (the position in the array of data)
+	const transfer_data = {
+		locator			: options.locator,
+		paginated_key	: options.paginated_key,
+		caller			: "tool_cataloging",
+	}
+
+	// the data will be transfer to drop in text format
+	const data = JSON.stringify(transfer_data)
+
+	event.dataTransfer.effectAllowed = 'move';
+	event.dataTransfer.setData('text/plain', data);
+
+	// style the drag element to be showed in drag mode
+	// node.classList.add('dragging')
+
+	return true
+}//end ondrag_start
+
+
+
+
+/**
 * RENDER_ALTERNATIVE_TABLE_VIEW
 * Render all received section records and place it into a DocumentFragment
 * @param instance self
