@@ -80,11 +80,13 @@ render_media_icons.prototype.list = async function(options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
+* @param object self
 * @return HTMLElement content_data
 */
 const get_content_data_edit = async function(self) {
 
-	const fragment = new DocumentFragment()
+	// DocumentFragment
+		const fragment = new DocumentFragment()
 
 	// values container
 		const values_container = ui.create_dom_element({
