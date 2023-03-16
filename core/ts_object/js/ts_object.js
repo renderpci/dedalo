@@ -885,9 +885,10 @@ export const ts_object = new function() {
 			}
 
 		// data_transfer_json case
-			const data_transfer_json = event.dataTransfer.getData("application/json")
-			if (data_transfer_json.length>0) {
+		// used by tool_cataloging to add data to the ts
+			const data_transfer_json = event.dataTransfer.getData("text/plain")
 
+			if (data_transfer_json && data_transfer_json.length>0) {
 				// parse from event.dataTransfer
 					const data_obj = JSON.parse(data_transfer_json)
 
@@ -899,27 +900,53 @@ export const ts_object = new function() {
 						// console.log("ts_object.on_drop event called !!!!! with data_obj:", data_obj);
 					}
 
-				// add children
-					const button_obj = event.target
+				// add children, create new section and his node in the tree
+				// go deep in the tree to point base to getback into the wrap by the add_child method
+				// (it will use parentNode.parentNode to find the wrap)
+					const button_obj = obj.firstChild.firstChild
 					// set mode to button for add_child
 					button_obj.dataset.mode = (wrap_target.dataset.section_tipo==='hierarchy1')
 						? 'add_child_from_hierarchy'
 						: 'add_child';
-					// request
+					// request to create the section and node
 					ts_object.add_child(button_obj)
 					.then(function(response){
 
-						// fallback
-							if (typeof data_obj.manager!=="undefined" && typeof data_obj.fallback!=="undefined") {
+						// callback
+							if (data_obj.caller) {
 
-								// set_new_thesaurus_value on finish add_child
-								if (typeof window[data_obj.manager][data_obj.fallback]==="function") {
-									// call fallback
-									window[data_obj.manager][data_obj.fallback](response, data_obj, wrap_target)
-								}else{
-									// error notification
-									console.error("Error on exec callback. Method not available: ", data_obj.manager, data_obj.fallback);
-								}
+							// new_section_id . Generated as response by the trigger add_child
+								const new_section_id 	= response.result
+							// section_tipo. When dataset target_section_tipo exists, is hierarchy_node. Else is normal node
+								const section_tipo 	  	= response.wrap.dataset.target_section_tipo || response.wrap.dataset.section_tipo
+								// fire the event to update the component used as term in the new section
+								event_manager.publish('ts_add_child_' + data_obj.caller, {
+									locator			: data_obj.locator,
+									new_ts_section	: {
+										section_id		: new_section_id,
+										section_tipo	: section_tipo
+									},
+									callback : function() {
+
+										// link_children_element. list_thesaurus_element of current wrapper
+										const link_children_element = ts_object.get_link_children_from_wrap(wrap_target)
+										if(!link_children_element) {
+											console.warn("[tool_cataloging.set_new_thesaurus_value] Error on find link_children_element 'link_childrens'");
+											return false
+										}
+
+										ts_object.update_arrow_state(link_children_element, true)
+
+									// refresh children container
+										ts_object.get_children(link_children_element).then(function(){
+
+											// update parent arrow button
+												ts_object.update_arrow_state(link_children_element, true)
+										})
+
+									}
+								})
+
 							}
 					 })
 
@@ -1299,7 +1326,7 @@ export const ts_object = new function() {
 				return false
 			}
 
-		// check mandatory vars fallback
+		// check mandatory vars callback
 			if (typeof section_id==="undefined") {
 				section_id = wrap.dataset.section_id
 			}
@@ -1351,6 +1378,7 @@ export const ts_object = new function() {
 
 		// wrap
 			const wrap = button_obj.parentNode.parentNode;
+
 			//const wrap = find_ancestor(button_obj, "wrap_ts_object")
 			if(!wrap || !wrap.classList.contains('wrap_ts_object')) {
 				console.log("[add_child] Error on find wrap");
