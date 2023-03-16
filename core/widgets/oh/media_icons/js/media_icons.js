@@ -9,10 +9,8 @@
 
 
 
-
 /**
 * MEDIA_ICONS
-*
 */
 export const media_icons = function(){
 
@@ -25,7 +23,7 @@ export const media_icons = function(){
 
 	this.value
 
-	this.node = []
+	this.node
 
 	this.events_tokens	= []
 	this.ar_instances	= []

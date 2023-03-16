@@ -20,7 +20,7 @@ export const get_archive_weights = function(){
 
 	this.value
 
-	this.node = null
+	this.node
 
 	this.events_tokens = []
 
