@@ -32,9 +32,9 @@ export const tool_numisdata_cataloging = function () {
 	this.target_lang				= null
 	this.langs						= null
 	this.caller						= null
-	this.media_component			= null // component av that will be transcribed (it could be the caller)
-	this.epigraphy	= null // component text area where we are working into the tool
-	this.relation_list				= null // datum of relation_list (to obtaim list of top_section_tipo/id)
+
+	this.section_to_cataloging		= null // main section to be cataloging
+	this.area_thesaurus 			= null
 
 	return true
 }//end page
@@ -64,7 +64,6 @@ tool_numisdata_cataloging.prototype.init = async function(options) {
 		const common_init = await tool_common.prototype.init.call(this, options);
 
 	try {
-
 		// set the self specific vars not defined by the generic init (in tool_common)
 			self.langs			= page_globals.dedalo_projects_default_langs
 			self.source_lang	= self.caller && self.caller.lang
@@ -93,9 +92,28 @@ tool_numisdata_cataloging.prototype.build = async function(autoload=false) {
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 
-		await self.load_section()
+	try {
 
-		await self.main_element.build(true)
+		// load section to cataloging
+		// do not use the tool_common because the section to be load could be the caller and it's avoided in tool_common
+			const section_to_cataloging	= self.tool_config.ddo_map.find(el => el.role==='section_to_cataloging')
+			await self.load_section( section_to_cataloging )
+			await self.section_to_cataloging.build(true)
+
+
+		// area_thesaurus. fix area_thesaurus for convenience
+			const area_thesaurus_ddo	= self.tool_config.ddo_map.find(el => el.role==='area_thesaurus')
+			self.area_thesaurus			= self.ar_instances.find(el => el.tipo===area_thesaurus_ddo.tipo)
+			// set instance in thesaurus mode 'relation'
+			// self.area_thesaurus.context.thesaurus_mode	= 'relation'
+			self.area_thesaurus.caller					= self
+			self.area_thesaurus.linker					= self.indexing_component
+
+
+	} catch (error) {
+		self.error = error
+		console.error(error)
+	}
 
 	return common_build
 }//end build_custom
@@ -109,26 +127,29 @@ tool_numisdata_cataloging.prototype.build = async function(autoload=false) {
 * @param ar_copies array of nodes
 * @return change object api_response
 */
-tool_numisdata_cataloging.prototype.load_section = async function(options){
+tool_numisdata_cataloging.prototype.load_section = async function(section_to_cataloging){
 
 	const self = this
 
-	const request_config = self.context.properties.source.request_config
+	const request_config = section_to_cataloging.properties.source.request_config
 
 	const section_options = {
 		model			: 'section',
-		mode			: 'list',
-		tipo			: self.caller.tipo,
-		section_tipo	: self.caller.section_tipo,
-		section_id		: null,
-		lang			: self.caller.lang,
-		section_lang	: self.caller.section_lang,
+		mode			: section_to_cataloging.mode || 'list',
+		tipo			: section_to_cataloging.tipo || self.caller.tipo,
+		section_tipo	: section_to_cataloging.section_tipo || self.caller.section_tipo,
+		section_id		: section_to_cataloging.section_id || null,
+		lang			: section_to_cataloging.lang || self.caller.lang,
+		section_lang	: section_to_cataloging.section_lang || self.caller.section_lang,
 		type			: 'section'
 	}
-	self.main_element = await get_instance(section_options)
+	self.section_to_cataloging = await get_instance(section_options)
 
-	self.main_element.properties	= self.context.properties
-	self.main_element.buttons		= false
+	self.section_to_cataloging.properties	= section_to_cataloging.properties
+	// self.section_to_cataloging.buttons		= false
+
+
+	self.ar_instances.push(self.section_to_cataloging)
 
 	return true
 }//end assign_element
