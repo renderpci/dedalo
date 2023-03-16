@@ -102,6 +102,14 @@ const get_content_data_edit = async function(self) {
 			parent 			: fragment
 		})
 
+		// thesaurus render
+			self.area_thesaurus.render()
+			.then(function(node){
+				right_container.appendChild(node)
+				// fix pointer
+				right_container.area_thesaurus_node = node
+			})
+
 
 	// content_data
 		const content_data = ui.tool.build_content_data(self)
