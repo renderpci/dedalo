@@ -11,13 +11,6 @@
 		render_column_id,
 		activate_autocomplete
 	} from '../../../core/component_portal/js/render_edit_component_portal.js'
-	import {
-		on_dragstart_mosaic,
-		on_dragover,
-		on_dragleave,
-		on_drop
-	} from '../../../core/component_portal/js/drag_and_drop.js'
-
 
 
 /**
@@ -38,7 +31,6 @@ export const view_types_mosaic = function() {
 view_types_mosaic.render = async function(self, options) {
 	// options
 		const render_level 	= options.render_level || 'full'
-
 
 	// hover_body. Alternative section_record with selected ddo to show when user hover the mosaic
 		const hover_body = await (async ()=>{
@@ -206,9 +198,6 @@ const drag_and_drop = function(options) {
 	drag_node.draggable = true
 	drag_node.classList.add('draggable')
 	drag_node.addEventListener('dragstart',function(e){on_dragstart_mosaic(this, e, options)})
-	drag_node.addEventListener('dragover',function(e){on_dragover(this, e)})
-	drag_node.addEventListener('dragleave',function(e){on_dragleave(this, e)})
-	drag_node.addEventListener('drop',function(e){on_drop(this, e, options)})
 
 	return true
 }//end drag_and_drop
