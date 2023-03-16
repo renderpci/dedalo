@@ -20,7 +20,7 @@ export const calculation = function(){
 
 	this.value
 
-	this.node = null
+	this.node
 
 	this.events_tokens = []
 

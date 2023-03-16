@@ -21,7 +21,7 @@ export const state = function(){
 
 	this.value
 
-	this.node = null
+	this.node
 
 	this.status
 

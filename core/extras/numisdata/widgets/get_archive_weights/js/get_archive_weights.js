@@ -21,7 +21,7 @@ export const get_archive_weights = function(){
 
 	this.value
 
-	this.node = []
+	this.node
 
 	this.status
 
