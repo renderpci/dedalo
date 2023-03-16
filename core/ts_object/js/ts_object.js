@@ -1659,7 +1659,6 @@ export const ts_object = new function() {
 	* @param object button_obj
 	* @return promise
 	*/
-	this.editing_component_instance = null
 	this.show_component_in_ts_object = async function(button_obj) {
 
 		const self = this
@@ -1676,47 +1675,51 @@ export const ts_object = new function() {
 			const role			= section_tipo + '_' + section_id + '_' + tipo
 
 		// component instance
-			let current_component, component_node
-			if (self.editing_component_instance && self.editing_component_instance.tipo===tipo && self.editing_component_instance.section_id===section_id) {
+			const current_component = await instances.get_instance({
+				section_tipo	: section_tipo,
+				section_id		: section_id,
+				tipo			: tipo,
+				lang			: lang,
+				mode			: 'edit', // mode,
+				view			: 'default',
+				id_variant		: new Date().getTime()
+			})
 
-				current_component	= self.editing_component_instance
-				component_node		= current_component.node
+		// term edit case
+			if(type==='term') {
 
-			}else{
+				// delete the previous registered events
+					self.events_tokens.map(current_token => event_manager.unsubscribe(current_token))
 
-				current_component = await instances.get_instance({
-					section_tipo	: section_tipo,
-					section_id		: section_id,
-					tipo			: tipo,
-					lang			: lang,
-					mode			: 'edit', // mode,
-					view			: 'default'
-				})
+				// update value, subscription to the changes: if the DOM input value was changed, observers dom elements will be changed own value with the observable value
+					self.events_tokens.push(
+						event_manager.subscribe('update_value_'+current_component.id_base, fn_update_value)
+					)
+					function fn_update_value(options) {
 
-				// term edit case
-					if(type==='term') {
-						console.log('current_component:', current_component);
+						const caller = options.caller
 
-						// delete the previous registered events
-							self.events_tokens.map(current_token => event_manager.unsubscribe(current_token))
+						const ar_values = []
+						switch (caller.model) {
+							case 'component_portal':
+								const data = caller.datum.data.filter(el => el.tipo !== caller.tipo)
+								ar_values.push(...data.map(el => el.value))
+								break;
 
-						// update value, subscription to the changes: if the DOM input value was changed, observers dom elements will be changed own value with the observable value
-							self.events_tokens.push(
-								event_manager.subscribe('update_value_'+current_component.id_base, fn_update_value)
-							)
-							function fn_update_value(options) {
-								console.log('options:', options);
-								const value = options.caller.data.value.join(', ')
-								// change the value of the current DOM element
-								button_obj.firstChild.innerHTML = value
-							}
+							default:
+								ar_values.push(...caller.data.value)
+								break;
+						}
+
+						const value = ar_values.join(' ')
+						// change the value of the current DOM element
+						button_obj.firstChild.innerHTML = value
 					}
-
-				// build and render component
-					await current_component.build(true)
-					component_node = await current_component.render()
 			}
 
+		// build and render component
+			await current_component.build(true)
+			const component_node = await current_component.render()
 
 		// data_contanier
 			const element_data_contanier = wrap.querySelector(':scope > [data-role="data_container"]')
@@ -1738,17 +1741,6 @@ export const ts_object = new function() {
 					all_element_data_div[i].remove()
 				}
 
-				// // get the events that the instance was created
-				// 	const events_tokens = this.events_tokens
-
-				// // delete the registered events
-				// 	const delete_events = events_tokens.map(current_token => event_manager.unsubscribe(current_token))
-
-				// current_component.destroy(true,true)
-
-				// destroy the old instance
-				self.editing_component_instance.destroy(true,true)
-
 				// add the new one
 				element_data_contanier.appendChild(component_node)
 
@@ -1757,13 +1749,6 @@ export const ts_object = new function() {
 				for (let i = all_element_data_div_len - 1; i >= 0; i--) {
 					all_element_data_div[i].remove()
 				}
-
-				// // get the events that the instance was created
-				// 	const events_tokens = this.events_tokens
-
-				// // delete the registered events
-				// 	const delete_events = events_tokens.map(current_token => event_manager.unsubscribe(current_token))
-				// 	current_component.destroy(true,true)
 			}
 
 		}else{ // if the data element is empty (first click to show)
@@ -1771,10 +1756,6 @@ export const ts_object = new function() {
 			// add node
 				element_data_contanier.appendChild(component_node)
 		}
-
-		// fix current instance for re-use
-			self.editing_component_instance = current_component
-
 
 		return component_node;
 	}//end show_component_in_ts_object
