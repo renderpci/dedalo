@@ -56,6 +56,7 @@ area_common.prototype.init = async function(options) {
 	self.section_tipo 		= options.section_tipo || self.tipo
 	self.mode 				= options.mode
 	self.lang 				= options.lang
+	self.properties			= options.properties
 
 	// DOM
 	self.node 				= null

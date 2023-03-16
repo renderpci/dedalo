@@ -464,19 +464,21 @@ export const instantiate_page_element = function(self, source) {
 		const section_id		= source.section_id || null
 		const mode				= source.mode
 		const lang				= source.lang
-		const config			= source.config || null
+		const properties		= source.properties
+
+		const config			= source.config || null // used by tools to config section_tool
 		const request_config	= source.request_config
 		const view				= source.view
+
 
 	// instance options
 		const instance_options = {
 			model			: model,
 			tipo			: tipo,
 			section_tipo	: section_tipo,
-			section_id		: section_id ,
+			section_id		: section_id,
 			mode			: mode,
 			lang			: lang
-			// context		: source // note that context is injected here because start API function returns the full context (login case, for example)
 		}
 
 		// id_variant . Propagate a custom instance id to children
@@ -484,7 +486,7 @@ export const instantiate_page_element = function(self, source) {
 				instance_options.id_variant = self.id_variant
 			}
 
-		// config
+		// config. Used by section tools
 			if (config && config.source_section_tipo) {
 				instance_options.id_variant	= config.source_section_tipo
 				instance_options.config		= config
@@ -498,6 +500,11 @@ export const instantiate_page_element = function(self, source) {
 		// view
 			if (view) {
 				instance_options.view = view
+			}
+
+		// properties
+			if (properties) {
+				instance_options.properties = properties
 			}
 
 	// page_element instance (load file)

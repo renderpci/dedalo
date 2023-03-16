@@ -7,7 +7,7 @@
 	$tipo			= $this->get_tipo();
 	$permissions	= common::get_permissions($tipo, $tipo);
 	$mode			= $this->get_mode();
-	$search_action	= $this->search_action;
+	$properties 	= $this->get_properties() ?? new stdClass();
 
 
 // context
@@ -30,7 +30,7 @@
 			$current_context->section_tipo = $tipo;
 
 		// thesaurus_mode
-			$current_context->thesaurus_mode = $this->thesaurus_mode ?? 'default';
+			$current_context->thesaurus_mode = $properties->thesaurus_mode ?? 'default';
 
 
 		$context[] = $current_context;
@@ -45,10 +45,11 @@
 	if($options->get_data===true && $permissions>0){
 
 		// hierarchy_sections - get the hierarchy configuration nodes to build the root terms
-			$hierarchy_sections_filter	= $search_action->hierarchy_sections ?? null;
+			$hierarchy_types_filter		= $properties->hierarchy_types ?? null;
+			$hierarchy_sections_filter	= $properties->hierarchy_sections ?? null;
 			$terms_are_model			= $this->build_options->terms_are_model ?? false;
 			$hierarchy_sections			= $this->get_hierarchy_sections(
-				null, // hierarchy_types_filter
+				$hierarchy_types_filter, // hierarchy_types_filter
 				$hierarchy_sections_filter, // hierarchy_sections_filter
 				$terms_are_model // terms_are_model bool
 			); // $this->get_data_items();
@@ -77,17 +78,17 @@
 			$item->value	= $value;
 
 		// hierarchy_terms
-			$hierarchy_terms = $search_action->hierarchy_terms ?? null;
+			$hierarchy_terms = $properties->hierarchy_terms ?? null;
 			if(!empty($hierarchy_terms)) {
 				$sqo	= $this->get_hierarchy_terms_sqo($hierarchy_terms);
 				$result	= $this->search_thesaurus( $sqo );
 				$item->ts_search = $result;
 			}
 
-		// search_action
-			if (!empty($search_action) && $search_action->action==='search') {
+		// properties
+			if (!empty($properties) && $properties->action==='search') {
 				// search rows
-				$result = $this->search_thesaurus( $search_action->sqo );
+				$result = $this->search_thesaurus( $properties->sqo );
 				$item->ts_search = $result;
 			}
 

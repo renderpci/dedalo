@@ -271,17 +271,18 @@ final class dd_core_api {
 							// add to page context
 								$current_context = $area->get_structure_context(1, true);
 
+							// set properties with received vars
 								if (isset($search_obj->thesaurus_mode)) {
-									$current_context->thesaurus_mode = $search_obj->thesaurus_mode;
+									$current_context->properties->thesaurus_mode = $search_obj->thesaurus_mode;
 								}
 								if (isset($search_obj->hierarchy_types)) {
-									$current_context->hierarchy_types = json_decode($search_obj->hierarchy_types);
+									$current_context->properties->hierarchy_types = json_decode($search_obj->hierarchy_types);
 								}
 								if (isset($search_obj->hierarchy_sections)) {
-									$current_context->hierarchy_sections = json_decode($search_obj->hierarchy_sections);
+									$current_context->properties->hierarchy_sections = json_decode($search_obj->hierarchy_sections);
 								}
 								if (isset($search_obj->hierarchy_terms)) {
-									$current_context->hierarchy_terms = json_decode($search_obj->hierarchy_terms);
+									$current_context->properties->hierarchy_terms = json_decode($search_obj->hierarchy_terms);
 								}
 
 							// add to page context
@@ -1559,25 +1560,27 @@ final class dd_core_api {
 
 						// areas
 							$element = area::get_instance($model, $tipo, $mode);
+							$element->properties = $element->get_properties() ?? new stdClass();
 
 						// thesaurus_mode
-							if (isset($ddo_source->thesaurus_mode)) {
-								$element->thesaurus_mode = $ddo_source->thesaurus_mode;
+							if (isset($ddo_source->properties->thesaurus_mode)) {
+								$element->properties->thesaurus_mode = $ddo_source->properties->thesaurus_mode;
 							}
 
 						// search_action
 							$search_action = $ddo_source->search_action ?? 'show_all';
 
-							$obj = new stdClass();
-								$obj->action = $search_action;
-								$obj->sqo	 = $sqo;
-								if (isset($ddo_source->hierarchy_sections)) {
-									$obj->hierarchy_sections = $ddo_source->hierarchy_sections;
+								$element->properties->action = $search_action;
+								$element->properties->sqo	 = $sqo;
+								if (isset($ddo_source->properties->hierarchy_types)) {
+									$element->properties->hierarchy_types = $ddo_source->properties->hierarchy_types;
 								}
-								if (isset($ddo_source->hierarchy_terms)) {
-									$obj->hierarchy_terms = $ddo_source->hierarchy_terms;
+								if (isset($ddo_source->properties->hierarchy_sections)) {
+									$element->properties->hierarchy_sections = $ddo_source->properties->hierarchy_sections;
 								}
-							$element->set_search_action($obj);
+								if (isset($ddo_source->properties->hierarchy_terms)) {
+									$element->properties->hierarchy_terms = $ddo_source->properties->hierarchy_terms;
+								}
 
 					}else if ($model==='section') {
 
