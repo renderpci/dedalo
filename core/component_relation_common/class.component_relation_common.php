@@ -2128,38 +2128,49 @@ class component_relation_common extends component_common {
 				case 'field_value':
 					// this case is used in component_relation_children in the hierarchy section
 					// in these case the array of sections will get from the value of specific field
-					$target_values = $source_item->value;
-					foreach ((array)$target_values as $key => $current_component_tipo) {
+					$target_values = $source_item->value; // target thesaurus like ['hierarchy53']
+					foreach ((array)$target_values as $current_component_tipo) {
 
-						$sqo = new stdClass();
-							$sqo->section_tipo			= $retrieved_section_tipo;
-							$sqo->limit					= 0;
-							$sqo->offset				= 0;
-							$sqo->order					= false;
-							$sqo->skip_projects_filter	= true;
-
-						// sections
-							$sections = sections::get_instance(
-								null,
-								$sqo,
-								$retrieved_section_tipo,
-								'list',
-								DEDALO_DATA_LANG
-							);
-							$dato = $sections->get_dato();
+						// short vars
 							$model_name		= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
 							$current_lang	= common::get_element_lang($current_component_tipo, DEDALO_DATA_LANG);
 
-						// data
-							foreach ($dato as $current_record) {
+						// sections (all hierarchy sections -hierarchy1- normally)
+							if (!isset($records)) {
+								// calculate once
+								$sqo = new stdClass();
+									$sqo->section_tipo			= $retrieved_section_tipo;
+									$sqo->limit					= 0;
+									$sqo->offset				= 0;
+									$sqo->order					= false;
+									$sqo->skip_projects_filter	= true;
+								$sections = sections::get_instance(
+									null,
+									$sqo,
+									$retrieved_section_tipo,
+									'list',
+									DEDALO_DATA_LANG
+								);
+								$records = $sections->get_dato();
+							}
 
-								$section = section::get_instance($current_record->section_id, $current_record->section_tipo, 'list', $cache=true);
+						// data
+							foreach ($records as $current_record) {
+
+								$section = section::get_instance(
+									$current_record->section_id,
+									$current_record->section_tipo,
+									'list',
+									true
+								);
 
 								// inject datos to section and set as loaded
 								$datos = $current_record->datos ?? null;
 								if (!is_null($datos)) {
 									$section->set_dato($datos);
 								}
+
+								// component
 								$component = component_common::get_instance(
 									$model_name,
 									$current_component_tipo,
@@ -2170,7 +2181,6 @@ class component_relation_common extends component_common {
 								);
 
 								$component_dato = $component->get_dato();
-
 
 								foreach ($component_dato as $current_section_tipo) {
 									if (!empty($current_section_tipo)) {
