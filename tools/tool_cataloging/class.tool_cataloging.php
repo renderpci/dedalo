@@ -4,7 +4,7 @@
 *
 *
 */
-class tool_numisdata_cataloging extends tool_common {
+class tool_cataloging extends tool_common {
 
 
 }//end class tool_numisdata_cataloging
