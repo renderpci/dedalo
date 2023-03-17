@@ -86,6 +86,7 @@ render_area_thesaurus.prototype.list = async function(options) {
 		})
 		wrapper.prepend(fragment)
 		wrapper.content_data = content_data
+
 	// ts_search case
 		if (data.ts_search) {
 			event_manager.subscribe('render_'+self.filter.id, exec_search)
@@ -263,7 +264,7 @@ const get_buttons = function(self) {
 			})
 			filter_button.addEventListener('mousedown', function(e) {
 				e.stopPropagation()
-				event_manager.publish('toggle_search_panel', this)
+				event_manager.publish('toggle_search_panel_'+self.id)
 			})
 			// ui.create_dom_element({
 			// 	element_type	: 'span',

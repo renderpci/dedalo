@@ -314,7 +314,8 @@ const get_buttons = function(self) {
 		})
 		filter_button.addEventListener('mousedown', function(e) {
 			e.stopPropagation()
-			event_manager.publish('toggle_search_panel', this)
+			// Note that self section is who is observing this event (init)
+			event_manager.publish('toggle_search_panel_'+self.id)
 		})
 
 	// other_buttons_block

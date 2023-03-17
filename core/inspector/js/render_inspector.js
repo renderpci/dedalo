@@ -133,7 +133,8 @@ const get_content_data = function(self) {
 			})
 			button_search.addEventListener('click', function(e){
 				e.stopPropagation()
-				event_manager.publish('toggle_search_panel', this)
+				const section_id = self.caller.id
+				event_manager.publish('toggle_search_panel_'+section_id)
 			})
 
 		// button_new . Call API to create new section and navigate to the new record
