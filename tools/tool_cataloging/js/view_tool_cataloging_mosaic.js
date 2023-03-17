@@ -81,7 +81,6 @@ view_tool_cataloging_mosaic.render = async function(self, options) {
 			const columns_map		= await rebuild_columns_map(base_columns_map, self, true)
 			self.columns_map		= columns_map
 
-
 		// ar_section_record. section_record instances (initiated and built)
 			const ar_section_record	= await get_section_records({
 				caller		: self,
@@ -106,8 +105,16 @@ view_tool_cataloging_mosaic.render = async function(self, options) {
 	// DocumentFragment
 		const fragment = new DocumentFragment()
 
+	// buttons add
+		if (self.buttons) {
+			const buttons_node = get_buttons(self);
+			if(buttons_node){
+				fragment.appendChild(buttons_node)
+			}
+		}
+
 	// search filter node
-		if (self.filter && self.mode!=='tm') {
+		if (self.filter) {
 			const search_container = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'search_container',
@@ -403,7 +410,7 @@ const rebuild_columns_map = function(base_columns_map, self, view_mosaic) {
 	// column info and remove
 		if(view_mosaic) {
 			full_columns_map.push({
-				id			: 'original',
+				id			: 'drag',
 				label		: 'Info',
 				callback	: render_column_original_copy
 			})
@@ -429,23 +436,55 @@ const render_column_original_copy = function(options){
 	// DocumentFragment
 		const fragment = new DocumentFragment()
 
-	// const orderer_data	= options.caller.caller.ordered_coins.datum.data
-	// const used_coin		= orderer_data.find(el => el.section_tipo===locator.section_tipo && el.section_id === locator.section_id)
-
-	 const used_coin = false
-
-	// columns drag indication
-		const used_coin_class = used_coin
+	// already used columns drag indication
+		const used			= false
+		const used_class	= used
 			? ' used'
 			: ''
 
 	// drag_item
 		ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'drag' + used_coin_class,
+			class_name		: 'dragger' + used_class,
 			parent			: fragment
 		})
 
 
 	return fragment
 }//end render_column_original_copy
+
+
+
+/**
+* GET_BUTTONS
+* @param object self
+* @return HTMLElement fragment
+*/
+const get_buttons = function(self) {
+
+	// DocumentFragment
+		const fragment = new DocumentFragment()
+
+	// buttons_container
+		const buttons_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'buttons_container',
+			parent			: fragment
+		})
+
+	// filter button (search) . Show and hide all search elements
+		const filter_button	= ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'warning search',
+			inner_html		: get_label.find || 'Search',
+			parent			: buttons_container
+		})
+		filter_button.addEventListener('mousedown', function(e) {
+			e.stopPropagation()
+
+			event_manager.publish('toggle_search_panel_'+self.id)
+		})
+
+
+	return fragment
+}//end get_buttons
