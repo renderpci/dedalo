@@ -149,12 +149,30 @@
 						display: grid;
 						grid-template-columns: 1fr;
 
+						.column  {
+							display: flex;
+							align-items: center;
+							box-shadow: none;
+						}
+
+						.column_drag {
+							height: 100%;
+						}
+
 						>.content_data {
 							cursor: pointer;
 
 							.section_record {
 								background-color:#ffffff;
-								height: 12rem;
+								height: 9rem;
+								display: flex;
+								align-items: center;
+
+								// .column_numisdata27, .column_numisdata30 {
+								.component_input_text_mini {
+									padding-left: 1rem;
+									font-size: 1.3rem;
+								}
 
 								.column_section_id {
 									position: absolute;
@@ -170,11 +188,15 @@
 									box-shadow: 2px 2px 12px rgba(128, 128, 128, 0.1);
 								}
 
-								.component_image >.content_data {
-									height: 12rem;
+								.component_image {
+									// height: 12rem;
+									img {
+										height: 9rem;
+										width: 9rem;
+									}
 								}
 
-								.column_original {
+								.column_drag {
 									justify-content: space-between;
 									.options_left_contaniner{
 										display: flex;
@@ -183,20 +205,19 @@
 										label{
 											margin: 0.3em;
 										}
-										.label_original{
+										.label_drag{
 											background-color: #bff8bc;
 										}
 										.label_copy{
 											background-color: #f8bcbc;
 										}
 
-
-										.row_snap{
+										.row_snap {
 											padding-top: 2em;
 										}
 									}
 
-									.drag{
+									.dragger {
 										background-image: url(../img/drag.svg);
 										background-position: center;
 										background-repeat: no-repeat;
@@ -347,7 +368,7 @@
 						>.content_data >.section_record {
 							position: relative;
 							display: grid;
-							grid-template-columns: 1fr 1fr 2fr 1fr;
+							grid-template-columns: auto 1.5fr 1fr 34px;
 							height: 100%;
 							overflow-y: hidden;
 
@@ -392,7 +413,7 @@
 
 						// first level co
 						>.column {
-							height: inherit;
+							// height: inherit;
 						}
 
 						.column {
