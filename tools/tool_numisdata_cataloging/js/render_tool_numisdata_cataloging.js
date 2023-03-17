@@ -82,17 +82,19 @@ const get_content_data_edit = async function(self) {
 			parent			: fragment
 		})
 
-	// section_to_cataloging section. render another node of component caller and append to container
-		self.section_to_cataloging.render_views.push(
-			{
-				view	: 'types_mosaic',
-				mode	: 'list',
-				render	: 'view_types_mosaic',
-				path 	: '../../../tools/tool_numisdata_cataloging/js/view_types_mosaic.js'
-			}
-		)
-		const section_node = await self.section_to_cataloging.render()
-		left_container.appendChild(section_node)
+		// section_to_cataloging section. render another node of component caller and append to container
+			self.section_to_cataloging.render_views.push(
+				{
+					view	: 'types_mosaic',
+					mode	: 'list',
+					render	: 'view_types_mosaic',
+					path 	: '../../../tools/tool_numisdata_cataloging/js/view_types_mosaic.js'
+				}
+			)
+			// view . Note that view is set in properties, but it set again to clarify the code
+			self.section_to_cataloging.view = 'types_mosaic'
+			const section_node = await self.section_to_cataloging.render()
+			left_container.appendChild(section_node)
 
 
 	// right_container
