@@ -83,7 +83,6 @@ tool_numisdata_cataloging.prototype.init = async function(options) {
 	// this new section has a portal that need to be updated with the locator received
 	const token = event_manager.subscribe('ts_add_child_tool_cataloging', add_data_to_ts_component)
 	self.events_tokens.push(token)
-
 	async function add_data_to_ts_component(options) {
 		// get the thesaurus value defined in properties
 		const set_new_thesaurus_value = self.tool_config.set_new_thesaurus_value
@@ -135,7 +134,6 @@ tool_numisdata_cataloging.prototype.init = async function(options) {
 			})
 
 		return true;
-
 	}
 
 	return common_init
@@ -161,15 +159,13 @@ tool_numisdata_cataloging.prototype.build = async function(autoload=false) {
 			await self.load_section( section_to_cataloging )
 			await self.section_to_cataloging.build(true)
 
-
 		// area_thesaurus. fix area_thesaurus for convenience
 			const area_thesaurus_ddo	= self.tool_config.ddo_map.find(el => el.role==='area_thesaurus')
 			self.area_thesaurus			= self.ar_instances.find(el => el.tipo===area_thesaurus_ddo.tipo)
 			// set instance in thesaurus mode 'relation'
 			// self.area_thesaurus.context.thesaurus_mode	= 'relation'
-			self.area_thesaurus.caller					= self
-			self.area_thesaurus.linker					= self.indexing_component
-
+			self.area_thesaurus.caller						= self
+			self.area_thesaurus.linker						= self.indexing_component
 
 	} catch (error) {
 		self.error = error
@@ -207,11 +203,10 @@ tool_numisdata_cataloging.prototype.load_section = async function(section_to_cat
 	self.section_to_cataloging = await get_instance(section_options)
 
 	self.section_to_cataloging.properties	= section_to_cataloging.properties
-	// self.section_to_cataloging.buttons		= false
+	// self.section_to_cataloging.buttons	= false
 
 
 	self.ar_instances.push(self.section_to_cataloging)
 
 	return true
 }//end assign_element
-

@@ -1,6 +1,4 @@
 <?php
-// includes. Include another files if need
-	// include( dirname(__FILE__) . '/additional/class.additional.php');
 
 
 
