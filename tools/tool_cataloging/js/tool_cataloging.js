@@ -10,15 +10,15 @@
 	import {common, create_source} from '../../../core/common/js/common.js'
 	// import {ui} from '../../../core/common/js/ui.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
-	import {render_tool_numisdata_cataloging} from './render_tool_numisdata_cataloging.js'
+	import {render_tool_cataloging} from './render_tool_cataloging.js'
 
 
 
 /**
-* tool_numisdata_cataloging
+* TOOL_CATALOGING
 * Tool to translate contents from one language to other in any text component
 */
-export const tool_numisdata_cataloging = function () {
+export const tool_cataloging = function () {
 
 	this.id							= null
 	this.model						= null
@@ -46,17 +46,17 @@ export const tool_numisdata_cataloging = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	tool_numisdata_cataloging.prototype.render	= tool_common.prototype.render
-	tool_numisdata_cataloging.prototype.destroy	= common.prototype.destroy
-	tool_numisdata_cataloging.prototype.refresh	= common.prototype.refresh
-	tool_numisdata_cataloging.prototype.edit	= render_tool_numisdata_cataloging.prototype.edit
+	tool_cataloging.prototype.render	= tool_common.prototype.render
+	tool_cataloging.prototype.destroy	= common.prototype.destroy
+	tool_cataloging.prototype.refresh	= common.prototype.refresh
+	tool_cataloging.prototype.edit	= render_tool_cataloging.prototype.edit
 
 
 
 /**
 * INIT
 */
-tool_numisdata_cataloging.prototype.init = async function(options) {
+tool_cataloging.prototype.init = async function(options) {
 
 	const self = this
 
@@ -144,7 +144,7 @@ tool_numisdata_cataloging.prototype.init = async function(options) {
 /**
 * BUILD
 */
-tool_numisdata_cataloging.prototype.build = async function(autoload=false) {
+tool_cataloging.prototype.build = async function(autoload=false) {
 
 	const self = this
 
@@ -184,7 +184,7 @@ tool_numisdata_cataloging.prototype.build = async function(autoload=false) {
 * @param ar_copies array of nodes
 * @return change object api_response
 */
-tool_numisdata_cataloging.prototype.load_section = async function(section_to_cataloging){
+tool_cataloging.prototype.load_section = async function(section_to_cataloging){
 
 	const self = this
 

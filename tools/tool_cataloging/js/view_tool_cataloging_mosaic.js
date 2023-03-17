@@ -15,15 +15,15 @@
 
 
 /**
-* VIEW_TYPES_MOSAIC
+* VIEW_TOOL_CATALOGING_MOSAIC
 * Section additional view. Is added by the tool to generate a custom render
 * of the section.
 * Manage the components logic and appearance in client side
 */
-export const view_types_mosaic = function() {
+export const view_tool_cataloging_mosaic = function() {
 
 	return true
-}//end view_types_mosaic
+}//end view_tool_cataloging_mosaic
 
 
 
@@ -35,7 +35,7 @@ export const view_types_mosaic = function() {
 * @para object options
 * @return HTMLElement wrapper
 */
-view_types_mosaic.render = async function(self, options) {
+view_tool_cataloging_mosaic.render = async function(self, options) {
 
 	// options
 		const render_level = options.render_level || 'full'

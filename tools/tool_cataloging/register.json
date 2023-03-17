@@ -1,0 +1,216 @@
+{
+  "label": "Desarrollo de herramientas",
+  "relations": [
+    {
+      "type": "dd151",
+      "section_id": "1",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1354"
+    },
+    {
+      "type": "dd675",
+      "section_id": "1",
+      "section_tipo": "dd153",
+      "from_component_tipo": "dd1337"
+    },
+    {
+      "type": "dd151",
+      "section_id": "2",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1331"
+    },
+    {
+      "type": "dd151",
+      "section_id": "2",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1332"
+    },
+    {
+      "type": "dd151",
+      "section_id": "2",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1333"
+    },
+    {
+      "type": "dd151",
+      "section_id": "-1",
+      "section_tipo": "dd128",
+      "from_component_tipo": "dd200"
+    },
+    {
+      "type": "dd151",
+      "section_id": "-1",
+      "section_tipo": "dd128",
+      "from_component_tipo": "dd197"
+    }
+  ],
+  "components": {
+    "dd199": {
+      "lg-nolan": [
+        {
+          "start": {
+            "day": 12,
+            "hour": 18,
+            "time": 65021854469,
+            "year": 2023,
+            "month": 1,
+            "minute": 14,
+            "second": 29
+          }
+        }
+      ]
+    },
+    "dd201": {
+      "lg-nolan": [
+        {
+          "start": {
+            "day": 17,
+            "hour": 12,
+            "time": 65027621076,
+            "year": 2023,
+            "month": 3,
+            "minute": 4,
+            "second": 36
+          }
+        }
+      ]
+    },
+    "dd271": {
+      "inf": "Primera publicación [component_date]",
+      "dato": {
+        "lg-nolan": []
+      }
+    },
+    "dd612": {
+      "inf": "Descripción [component_text_area]",
+      "dato": {
+        "lg-cat": [
+          "Agrupació i jerarquització de béns culturals."
+        ],
+        "lg-deu": [
+          "<p>Gruppierung und Hierarchie von Kulturgütern.</p>"
+        ],
+        "lg-ell": [
+          "<p>Ομαδοποίηση και ιεράρχηση πολιτιστικών αγαθών.</p>"
+        ],
+        "lg-eng": [
+          "<p>Grouping and hierarchy of cultural properties.</p>"
+        ],
+        "lg-fra": [
+          "Groupement et hiérarchisation de biens culturels."
+        ],
+        "lg-spa": [
+          "<p>Agrupación y jerarquización de bienes culturales.</p>"
+        ]
+      }
+    },
+    "dd799": {
+      "inf": "Etiqueta [component_input_text]",
+      "dato": {
+        "lg-cat": [
+          "Catalogació de bens culturals"
+        ],
+        "lg-deu": [
+          "Katalogisierung von Kulturgütern"
+        ],
+        "lg-ell": [
+          "Καταλογογράφηση πολιτιστικών αγαθών"
+        ],
+        "lg-eng": [
+          "Cataloging cultural properties."
+        ],
+        "lg-fra": [
+          "Catalogage des biens culturels"
+        ],
+        "lg-ita": [
+          "Catalogazione dei beni culturali"
+        ],
+        "lg-spa": [
+          "Catalogación de bienes"
+        ]
+      }
+    },
+    "dd1223": {
+      "inf": "Última publicación [component_date]",
+      "dato": {
+        "lg-nolan": []
+      }
+    },
+    "dd1326": {
+      "inf": "Nombre de la herramienta [component_input_text]",
+      "dato": {
+        "lg-nolan": [
+          "tool_cataloging"
+        ]
+      }
+    },
+    "dd1327": {
+      "inf": "Versión [component_input_text]",
+      "dato": {
+        "lg-nolan": [
+          "2.0.0"
+        ]
+      }
+    },
+    "dd1328": {
+      "inf": "Versión Dédalo mínima [component_input_text]",
+      "dato": {
+        "lg-nolan": [
+          "6.0.0"
+        ]
+      }
+    },
+    "dd1334": {
+      "inf": "Ontologia [component_json]",
+      "dato": {
+        "lg-nolan": [
+          {}
+        ]
+      }
+    },
+    "dd1335": {
+      "inf": "Propiedades [component_json]",
+      "dato": {
+        "lg-nolan": [
+          {
+            "view": "tool_cataloging_mosaic",
+            "open_as": "window",
+            "windowFeatures": null
+          }
+        ]
+      }
+    },
+    "dd1350": {
+      "inf": "Afecta a tipos: [component_json]",
+      "dato": {
+        "lg-nolan": [
+          []
+        ]
+      }
+    },
+    "dd1362": {
+      "inf": "Dev info [component_text_area]",
+      "dato": {
+        "lg-nolan": [
+          "<p>Use this tool to create a thesaurus with differente data from differente sections, as types or mints to create a tree catalog, ex: types inside mints.</p><p>&nbsp;</p><p>Define the tool config and assing with the 2 ddo list to view in the rigth and left.</p><p>&nbsp;</p><p>for the rigth pane: define a ddo of the main section with the &nbsp;compoents to show.</p><p>the role property need to be: \"section_to_cataloging\"</p><p>&nbsp;</p><p>for the left pane: define the ddo with the area_thesarurs (filtered by hierarche_types or other concept):</p><p>the role property need to be: \"area_thesaurus\",</p><p>{</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"mode\": \"relation\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"role\": \"area_thesaurus\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"tipo\": \"dd100\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"properties\": {</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"hierarchy_types\": [</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;8</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;]</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;},</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_id\": null,</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_tipo\": \"dd100\"</p><p>}</p><p>&nbsp;</p><p>The catalog tool create new section when the user drag any record from section to the thesaurus and it's necessary define where will be storage the locator drag as:</p><p>&nbsp;</p><p>\"set_new_thesaurus_value\": {</p><p>&nbsp; &nbsp; &nbsp; &nbsp;\"tipo\": \"numisdata656\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp;\"section_tipo\": \"numisdata665\"</p><p>}</p>"
+        ]
+      }
+    },
+    "dd1372": {
+      "inf": "Etiquetas [component_json]",
+      "dato": {
+        "lg-nolan": [
+          []
+        ]
+      }
+    }
+  },
+  "section_id": 16,
+  "created_date": "2023-01-12 18:14:29",
+  "section_tipo": "dd1340",
+  "modified_date": "2023-03-17 12:04:36",
+  "diffusion_info": null,
+  "created_by_userID": -1,
+  "section_real_tipo": "dd73",
+  "modified_by_userID": -1
+}

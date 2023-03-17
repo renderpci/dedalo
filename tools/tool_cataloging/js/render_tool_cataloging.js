@@ -14,13 +14,13 @@
 
 
 /**
-* RENDER_tool_numisdata_cataloging
+* RENDER_TOOL_CATALOGING
 * Manages the component's logic and appearance in client side
 */
-export const render_tool_numisdata_cataloging = function() {
+export const render_tool_cataloging = function() {
 
 	return true
-}//end render_tool_numisdata_cataloging
+}//end render_tool_cataloging
 
 
 
@@ -29,7 +29,7 @@ export const render_tool_numisdata_cataloging = function() {
 * Render node
 * @return HTMLElement wrapper
 */
-render_tool_numisdata_cataloging.prototype.edit = async function(options={render_level:'full'}) {
+render_tool_cataloging.prototype.edit = async function(options={render_level:'full'}) {
 
 	const self = this
 
@@ -85,14 +85,14 @@ const get_content_data_edit = async function(self) {
 		// section_to_cataloging section. render another node of component caller and append to container
 			self.section_to_cataloging.render_views.push(
 				{
-					view	: 'types_mosaic',
+					view	: 'tool_cataloging_mosaic',
 					mode	: 'list',
-					render	: 'view_types_mosaic',
-					path 	: '../../../tools/tool_numisdata_cataloging/js/view_types_mosaic.js'
+					render	: 'view_tool_cataloging_mosaic',
+					path 	: '../../../tools/tool_cataloging/js/view_tool_cataloging_mosaic.js'
 				}
 			)
 			// view . Note that view is set in properties, but it set again to clarify the code
-			self.section_to_cataloging.view = 'types_mosaic'
+			self.section_to_cataloging.view = 'tool_cataloging_mosaic'
 			const section_node = await self.section_to_cataloging.render()
 			left_container.appendChild(section_node)
 
