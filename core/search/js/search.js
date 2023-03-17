@@ -171,15 +171,7 @@ search.prototype.init = async function(options) {
 			})
 		}
 
-		// toggle_search_panel. Triggered by button 'search' placed into section inspector buttons
-			// self.events_tokens.push(
-			// 	event_manager.subscribe('toggle_search_panel', fn_toggle_search_panel)
-			// )
-			// function fn_toggle_search_panel(button_node) {
-			// 	toggle_search_panel(self)
-			// }
-
-	//permissions
+	// permissions
 		self.permissions = 2
 
 	// status update

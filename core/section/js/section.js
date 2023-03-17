@@ -279,9 +279,10 @@ section.prototype.init = async function(options) {
 
 		// toggle_search_panel event. Triggered by button 'search' placed into section inspector buttons
 			self.events_tokens.push(
-				event_manager.subscribe('toggle_search_panel', fn_toggle_search_panel)
+				event_manager.subscribe('toggle_search_panel_'+self.id, fn_toggle_search_panel)
 			)
 			async function fn_toggle_search_panel() {
+
 				if (!self.search_container || !self.filter) {
 					console.log('stop event no filter 1:', this);
 					return

@@ -413,7 +413,7 @@ page.prototype.add_events = function() {
 									section.filter.exec_search()
 							}
 							// toggle filter container
-								event_manager.publish('toggle_search_panel', section)
+								event_manager.publish('toggle_search_panel_'+section.id)
 						}
 					break;
 
