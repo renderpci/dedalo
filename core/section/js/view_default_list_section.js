@@ -60,7 +60,7 @@ view_default_list_section.render = async function(self, options) {
 			: await get_section_records({caller: self})
 
 	// content_data
-		const content_data = await get_content_data(self.ar_instances, self)
+		const content_data = await get_content_data(self, self.ar_instances)
 		if (render_level==='content') {
 
 			// force to refresh paginator
@@ -173,8 +173,6 @@ view_default_list_section.render = async function(self, options) {
 		const wrapper = ui.create_dom_element({
 			element_type	: 'section',
 			id				: self.id,
-			//class_name	: self.model + ' ' + self.tipo + ' ' + self.mode
-			// class_name	: 'wrapper_' + self.type + ' ' + self.model + ' ' + self.tipo + ' ' + self.mode
 			class_name		: `wrapper_${self.type} ${self.model} ${self.tipo} ${self.section_tipo+'_'+self.tipo} list`
 		})
 		wrapper.appendChild(fragment)
@@ -184,7 +182,7 @@ view_default_list_section.render = async function(self, options) {
 
 
 	return wrapper
-}//end list
+}//end render
 
 
 
@@ -194,7 +192,7 @@ view_default_list_section.render = async function(self, options) {
 * @para object self
 * @return HTMLElement content_data
 */
-const get_content_data = async function(ar_section_record, self) {
+const get_content_data = async function(self, ar_section_record) {
 
 	const fragment = new DocumentFragment()
 

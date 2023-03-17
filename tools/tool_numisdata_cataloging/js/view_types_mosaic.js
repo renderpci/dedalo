@@ -13,8 +13,11 @@
 	} from '../../../core/component_portal/js/render_edit_component_portal.js'
 
 
+
 /**
-* view_types_mosaic
+* VIEW_TYPES_MOSAIC
+* Section additional view. Is added by the tool to generate a custom render
+* of the section.
 * Manage the components logic and appearance in client side
 */
 export const view_types_mosaic = function() {

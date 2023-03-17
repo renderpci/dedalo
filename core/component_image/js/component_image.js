@@ -109,35 +109,6 @@ component_image.prototype.init = async function(options) {
 
 
 
-
-/**
-* BUILD (CUSTOM)
-* @param bool autoload
-* @return promise bool
-*/
-	// component_image.prototype.build = async function(autoload=false) {
-
-	// 	const self = this
-
-	// 	// call generic common build
-	// 		const common_build = await component_common.prototype.build.call(self, autoload);
-
-	// 	// custom build options
-	// 		try {
-
-
-	// 		} catch (error) {
-	// 			self.error = error
-	// 			console.error(error)
-	// 		}
-
-
-	// 	return common_build
-	// }//end build_custom
-
-
-
-
 /**
 * GET_DATA_TAG
 * Send the data_tag to the text_area when it need create a new tag
@@ -220,7 +191,8 @@ component_image.prototype.get_last_layer_id = function() {
 
 
 /**
-* LOAD_VECTOR_EDITOR
+* LOAD_VECTOR_EDITOR-
+* @param object options
 * @return bool true
 */
 component_image.prototype.load_vector_editor = async function(options) {
@@ -302,6 +274,7 @@ component_image.prototype.load_vector_editor = async function(options) {
 /**
 * LOAD_TAG_INTO_VECTOR_EDITOR
 * usually fire with 'click_tag_draw' event
+* @param object options
 * @return bool true
 */
 component_image.prototype.load_tag_into_vector_editor = function(options) {
@@ -315,7 +288,6 @@ component_image.prototype.load_tag_into_vector_editor = function(options) {
 	try {
 
 		const ar_layer_id			= JSON.parse(tag.data)
-		console.log("---> ar_layer_id:",ar_layer_id);
 		const ar_layer_id_length	= ar_layer_id.length
 		for (let i = 0; i < ar_layer_id_length; i++) {
 

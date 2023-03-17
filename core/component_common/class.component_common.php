@@ -3388,7 +3388,7 @@ abstract class component_common extends common {
 
 		switch ($changed_data->action) {
 
-			// updates given value selected by key in dato
+			// insert given value in dato
 			case 'insert':
 				$dato[] = $changed_data->value;
 
