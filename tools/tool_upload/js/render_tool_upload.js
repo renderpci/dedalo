@@ -199,6 +199,13 @@ render_tool_upload.prototype.upload_done = async function (options) {
 						self.preview_image.src = response.preview_url
 					}
 
+				// event to update the DOM elements of the instance
+					// console.log('self.caller.data:', self.caller);
+					// event_manager.publish('update_value_'+self.caller.id_base, {
+					// 	caller			: self.caller,
+					// 	changed_data	: self.caller.data.changed_data
+					// })
+
 				// caller update. (usually media component like component_image)
 					// self.caller.refresh() (!) Unnecessary because on close this tool window, component is refresh too
 			}

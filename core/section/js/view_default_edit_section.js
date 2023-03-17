@@ -23,7 +23,7 @@ export const view_default_edit_section = function() {
 
 
 /**
-* EDIT
+* RENDER
 * Render node for use in edit
 * @return HTMLElement wrapper
 */
@@ -89,14 +89,6 @@ view_default_edit_section.render = async function(self, options) {
 				parent			: fragment
 			})
 			self.search_container = search_container
-			// if (self.filter.search_panel_is_open===true) {
-			// 	event_manager.publish('toggle_search_panel')
-			// }
-			// self.filter.build().then(()=>{
-			// 	self.filter.render().then(filter_wrapper =>{
-			// 		search_container.appendChild(filter_wrapper)
-			// 	})
-			// })
 		}
 
 	// content_data add to fragment
@@ -148,7 +140,7 @@ view_default_edit_section.render = async function(self, options) {
 
 
 	return wrapper
-}//end edit
+}//end render
 
 
 
