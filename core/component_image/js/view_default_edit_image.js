@@ -75,12 +75,10 @@ const get_content_data = function(self) {
 		const content_data = ui.component.build_content_data(self)
 
 	// values (images)
-		const inputs_value	= (value.length>0) ? value : [null] // force one empty input at least
-		const value_length	= inputs_value.length
+		const inputs_value	= value
+		const value_length	= inputs_value.length || 1
 		for (let i = 0; i < value_length; i++) {
-			const content_value = (self.permissions===1)
-				? get_content_value_read(i, inputs_value[i], self)
-				: get_content_value(i, inputs_value[i], self)
+			const content_value = get_content_value(i, inputs_value[i], self)
 			content_data.appendChild(content_value)
 			// set the pointer
 			content_data[i] = content_value
@@ -145,100 +143,100 @@ const get_content_value = function(i, value, self) {
 * @object self
 * @return HTMLElement content_value
 */
-const get_content_value_read = function(i, value, self) {
+	// const get_content_value_read = function(i, value, self) {
 
-	// short vars
-		const quality	= self.quality || self.context.features.quality
-		const data		= self.data || {}
-		const datalist	= data.datalist || []
+	// 	// short vars
+	// 		const quality	= self.quality || self.context.features.quality
+	// 		const data		= self.data || {}
+	// 		const datalist	= data.datalist || []
 
-	// content_value
-		const content_value = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'content_value read_only'
-		})
+	// 	// content_value
+	// 		const content_value = ui.create_dom_element({
+	// 			element_type	: 'div',
+	// 			class_name		: 'content_value read_only'
+	// 		})
 
-	// file_info
-		const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
+	// 	// file_info
+	// 		const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
 
-	// render the image when the source is external, image from URI
-		if(file_info && file_info.external) {
+	// 	// render the image when the source is external, image from URI
+	// 		if(file_info && file_info.external) {
 
-			const img_node = render_image_external(file_info.file_url)
-			content_value.appendChild(img_node)
+	// 			const img_node = render_image_external(file_info.file_url)
+	// 			content_value.appendChild(img_node)
 
-			return content_value
-		}
+	// 			return content_value
+	// 		}
 
-	// render de image in Dédalo media
+	// 	// render de image in Dédalo media
 
-	// url
-		let url = file_info && file_info.file_url
-			? file_info.file_url
-			: null // DEDALO_CORE_URL + '/themes/default/0.jpg'
-		// fallback to default (when not already in default)
-		if (!url && quality!==self.context.features.default_quality) {
-			const file_info_dq	= datalist.find(el => el.quality===self.context.features.default_quality && el.file_exist===true)
-			url = file_info_dq
-				? file_info_dq.file_url
-				: null
-			if (url) {
-				// change the quality
-				self.quality = self.context.features.default_quality
-			}
-		}
+	// 	// url
+	// 		let url = file_info && file_info.file_url
+	// 			? file_info.file_url
+	// 			: null // DEDALO_CORE_URL + '/themes/default/0.jpg'
+	// 		// fallback to default (when not already in default)
+	// 		if (!url && quality!==self.context.features.default_quality) {
+	// 			const file_info_dq	= datalist.find(el => el.quality===self.context.features.default_quality && el.file_exist===true)
+	// 			url = file_info_dq
+	// 				? file_info_dq.file_url
+	// 				: null
+	// 			if (url) {
+	// 				// change the quality
+	// 				self.quality = self.context.features.default_quality
+	// 			}
+	// 		}
 
-	// image. (!) Only to get background color and apply to li node
-		const bg_reference_image_url = url || page_globals.fallback_image
-		if (bg_reference_image_url) {
-			const image = ui.create_dom_element({
-				element_type	: 'img',
-				class_name 		: 'hide'
-			})
-			// image background color
-			image.addEventListener('load', set_bg_color, false)
-			function set_bg_color() {
-				this.removeEventListener('load', set_bg_color, false)
-				ui.set_background_image(this, content_value)
-				image.classList.remove('hide')
-			}
-			// image.addEventListener('error', function(){
-			// 	console.warn('Error on load image:', bg_reference_image_url, image);
-			// }, false)
-			image.src = bg_reference_image_url
-		}
+	// 	// image. (!) Only to get background color and apply to li node
+	// 		const bg_reference_image_url = url || page_globals.fallback_image
+	// 		if (bg_reference_image_url) {
+	// 			const image = ui.create_dom_element({
+	// 				element_type	: 'img',
+	// 				class_name 		: 'hide'
+	// 			})
+	// 			// image background color
+	// 			image.addEventListener('load', set_bg_color, false)
+	// 			function set_bg_color() {
+	// 				this.removeEventListener('load', set_bg_color, false)
+	// 				ui.set_background_image(this, content_value)
+	// 				image.classList.remove('hide')
+	// 			}
+	// 			// image.addEventListener('error', function(){
+	// 			// 	console.warn('Error on load image:', bg_reference_image_url, image);
+	// 			// }, false)
+	// 			image.src = bg_reference_image_url
+	// 		}
 
-	// object_node <object type="image/svg+xml" data="image.svg"></object>
-		const object_node = ui.create_dom_element({
-			element_type	: 'object',
-			class_name		: 'image',
-			parent			: content_value
-		})
-		object_node.type = "image/svg+xml"
+	// 	// object_node <object type="image/svg+xml" data="image.svg"></object>
+	// 		const object_node = ui.create_dom_element({
+	// 			element_type	: 'object',
+	// 			class_name		: 'image',
+	// 			parent			: content_value
+	// 		})
+	// 		object_node.type = "image/svg+xml"
 
-		if (data.base_svg_url) {
-			// svg file already exists
-			object_node.data = data.base_svg_url
-		}else{
-			// fallback to default svg file
-			// base_svg_url_default. Replace default image extension from '0.jpg' to '0.svg'
-			const base_svg_url_default	= page_globals.fallback_image.substr(0, page_globals.fallback_image.lastIndexOf('.')) + '.svg'
-			object_node.data			= base_svg_url_default
-		}
-		// set pointer
-		self.object_node = object_node
+	// 		if (data.base_svg_url) {
+	// 			// svg file already exists
+	// 			object_node.data = data.base_svg_url
+	// 		}else{
+	// 			// fallback to default svg file
+	// 			// base_svg_url_default. Replace default image extension from '0.jpg' to '0.svg'
+	// 			const base_svg_url_default	= page_globals.fallback_image.substr(0, page_globals.fallback_image.lastIndexOf('.')) + '.svg'
+	// 			object_node.data			= base_svg_url_default
+	// 		}
+	// 		// set pointer
+	// 		self.object_node = object_node
 
-		// auto-change url the first time
-		object_node.onload = async function() {
-			if (quality!==self.context.features.default_quality) {
-				await fn_img_quality_change(url)
-			}
-			content_value.classList.remove('hide')
-		}
+	// 		// auto-change url the first time
+	// 		object_node.onload = async function() {
+	// 			if (quality!==self.context.features.default_quality) {
+	// 				await fn_img_quality_change(url)
+	// 			}
+	// 			content_value.classList.remove('hide')
+	// 		}
 
 
-	return content_value
-}//end get_content_value_read
+	// 	return content_value
+	// }//end get_content_value_read
 
 
 
@@ -328,16 +326,20 @@ const render_image_node = function(self, file_info, content_value) {
 			// base_svg_url_default. Replace default image extension from '0.jpg' to '0.svg'
 			const base_svg_url_default	= page_globals.fallback_image.substr(0, page_globals.fallback_image.lastIndexOf('.')) + '.svg'
 			object_node.data			= base_svg_url_default
-			content_value.addEventListener('mouseup', function(e) {
-				e.stopPropagation();
-				// tool_upload. Get the tool context to be opened
-				const tool_upload = self.tools.find(el => el.model==='tool_upload')
-				// open_tool (tool_common)
-				open_tool({
-					tool_context	: tool_upload,
-					caller			: self
+
+			if (self.permissions>1) {
+				// upload tool is open on click
+				content_value.addEventListener('mouseup', function(e) {
+					e.stopPropagation();
+					// tool_upload. Get the tool context to be opened
+					const tool_upload = self.tools.find(el => el.model==='tool_upload')
+					// open_tool (tool_common)
+					open_tool({
+						tool_context	: tool_upload,
+						caller			: self
+					})
 				})
-			})
+			}
 		}
 		// set pointer
 		self.object_node = object_node
