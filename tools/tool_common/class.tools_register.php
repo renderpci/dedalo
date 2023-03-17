@@ -93,11 +93,11 @@ class tools_register {
 
 					}else{
 
-						// debug_log(__METHOD__." The current register.json don't have ontology data ".to_string($current_dir_tool), logger::WARNING);
+						// debug_log(__METHOD__." The current register.json don't have ontology data ".to_string($current_dir_tool), logger::ERROR);
 					}
 
 				// add info_objects_parsed
-					$info_objects_parsed[] = $new_info_object;
+					$info_objects_parsed[$basename] = $new_info_object;
 
 				// info_file_processed
 					$name = isset($info_object->components->{$tipo_name})
@@ -142,7 +142,16 @@ class tools_register {
 
 				// import record (section tool) in db matrix_tools
 					// $section_id_counter = 1; // first section_id to use
-					foreach ($info_objects_parsed as $current_tool_section_data) {
+					foreach ($info_objects_parsed as $basename => $current_tool_section_data) {
+
+						// check file placeholder
+							if (isset($current_tool_section_data->type) && $current_tool_section_data->type==='placeholder') {
+								$msg = isset($current_tool_section_data->info)
+									? $current_tool_section_data->info
+									: 'This file must be downloaded from current tool Dédalo Tools Development record using the button \'Download register file\' ';
+								debug_log(__METHOD__." Error. tool register file of '$basename' is a placeholder !".PHP_EOL.$msg, logger::ERROR);
+								continue;
+							}
 
 						// section save raw data
 							try {
