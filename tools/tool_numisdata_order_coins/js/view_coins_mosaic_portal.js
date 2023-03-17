@@ -447,7 +447,7 @@ const render_column_original_copy = function(options){
 	const fragment = new DocumentFragment()
 
 	const tool_caller = options.caller.caller
-	console.log("tool_caller:",tool_caller);
+
 	const locator = options.locator
 
 	const discard_data		= options.caller.datum.data.find(item => item.section_id === locator.section_id && item.tipo === 'numisdata157')
