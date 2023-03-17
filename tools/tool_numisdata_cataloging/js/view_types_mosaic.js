@@ -29,11 +29,23 @@ export const view_types_mosaic = function() {
 
 /**
 * RENDER
+* Custom section view injected by the tool
 * Manages the component's logic and appearance in client side
+* @param object self
+* @para object options
+* @return HTMLElement wrapper
 */
 view_types_mosaic.render = async function(self, options) {
+
 	// options
-		const render_level 	= options.render_level || 'full'
+		const render_level = options.render_level || 'full'
+
+	// running_with_errors case
+		if (self.running_with_errors) {
+			return render_server_response_error(
+				self.running_with_errors
+			);
+		}
 
 	// hover_body. Alternative section_record with selected ddo to show when user hover the mosaic
 		const hover_body = await (async ()=>{
@@ -45,7 +57,7 @@ view_types_mosaic.render = async function(self, options) {
 				})
 
 			// columns
-				const hover_columns	= self.columns_map.filter(el => el.hover===true)
+				const hover_columns		= self.columns_map.filter(el => el.hover===true)
 				const hover_columns_map	= rebuild_columns_map(hover_columns, self, false)
 
 			// hover_view (body)
@@ -66,9 +78,11 @@ view_types_mosaic.render = async function(self, options) {
 	// content_data. Create the mosaic with only the marked ddo as "mosaic" with true value
 		// columns_map
 			const base_columns_map	= self.columns_map.filter(el => el.in_mosaic===true)
-			const columns_map		= rebuild_columns_map(base_columns_map, self, true)
+			const columns_map		= await rebuild_columns_map(base_columns_map, self, true)
+			self.columns_map		= columns_map
 
-		// content_data
+
+		// ar_section_record. section_record instances (initiated and built)
 			const ar_section_record	= await get_section_records({
 				caller		: self,
 				mode		: 'list',
@@ -77,42 +91,90 @@ view_types_mosaic.render = async function(self, options) {
 			// store to allow destroy later
 			self.ar_instances.push(...ar_section_record)
 
+		// content_data
 			const content_data = await get_content_data(self, ar_section_record)
-
-
-		// render_level
 			if (render_level==='content') {
+
+				// force to refresh paginator
+				if (self.paginator) {
+					self.paginator.refresh()
+				}
+
 				return content_data
 			}
 
-		// list_body
-			const list_body = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'list_body ' + self.mode +  ' view_'+self.view,
-			})
+	// DocumentFragment
+		const fragment = new DocumentFragment()
 
-			list_body.appendChild(content_data)
+	// search filter node
+		if (self.filter && self.mode!=='tm') {
+			const search_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'search_container',
+				parent			: fragment
+			})
+			// set pointers
+			self.search_container = search_container
+		}
+
+	// paginator container node
+		if (self.paginator) {
+			const paginator_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'paginator_container',
+				parent			: fragment
+			})
+			self.paginator.build()
+			.then(function(){
+				self.paginator.render().then(paginator_wrapper =>{
+					paginator_container.appendChild(paginator_wrapper)
+				})
+			})
+		}
+
+	// list_body
+		const list_body = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'list_body ' + self.mode +  ' view_'+self.view,
+			parent			: fragment
+		})
+		// fix last list_body (for pagination selection)
+		self.node_body = list_body
+		// content_data append
+		list_body.appendChild(content_data)
 
 	// wrapper. ui build_edit returns component wrapper
-		const wrapper = ui.component.build_wrapper_edit(self, {
-			// content_data	: content_data,
-			list_body		: list_body
-			// top			: top
+		// const wrapper = ui.component.build_wrapper_edit(self, {
+		// 	// content_data	: content_data,
+		// 	list_body		: list_body
+		// 	// top			: top
+		// })
+		// wrapper.classList.add('portal', 'view_'+self.context.view)
+		// // set pointers
+		// wrapper.list_body		= list_body
+		// wrapper.content_data	= content_data
+
+	// wrapper
+		const wrapper = ui.create_dom_element({
+			element_type	: 'section',
+			class_name		: `wrapper_${self.type} ${self.model} ${self.tipo} ${self.section_tipo+'_'+self.tipo} view_${self.context.view}`
 		})
-		wrapper.classList.add('portal', 'view_'+self.context.view)
+		wrapper.appendChild(fragment)
 		// set pointers
-		wrapper.list_body		= list_body
 		wrapper.content_data	= content_data
+		wrapper.list_body		= list_body
+
+
 
 	// autocomplete
-		wrapper.addEventListener('click', function(e) {
-			e.stopPropagation()
-			activate_autocomplete(self, wrapper)
-		})
+		// wrapper.addEventListener('click', function(e) {
+		// 	e.stopPropagation()
+		// 	activate_autocomplete(self, wrapper)
+		// })
 
 
 	return wrapper
-}//end edit
+}//end render
 
 
 
