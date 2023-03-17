@@ -404,94 +404,19 @@
 				}
 			}
 		}//end content_data
+
+		// split
+		.gutter {
+			background-color: #eee;
+			background-repeat: no-repeat;
+			background-position: 50%;
+		}
+		.gutter.gutter-horizontal {
+			background-image: url('../img/grips/vertical.png');
+			cursor: col-resize;
+		}
+		.gutter.gutter-vertical {
+			background-image: url('../img/grips/horizontal.png');
+			cursor: row-resize;
+		}
 	}//end wrapper_tool
-
-
-
-// header
-	// .tool_header.tool_indexation {
-	// 	background-color: @color_bg_tool;
-	// }
-
-
-
-// split
-	.gutter {
-		background-color: #eee;
-		background-repeat: no-repeat;
-		background-position: 50%;
-	}
-
-	.gutter.gutter-horizontal {
-		background-image: url('../img/grips/vertical.png');
-		cursor: col-resize;
-	}
-
-	.gutter.gutter-vertical {
-		background-image: url('../img/grips/horizontal.png');
-		cursor: row-resize;
-	}
-
-
-
-/*
-// select style
-	.select_style {
-		width: fit-content;
-		height: 2em;
-		font-size: 0.80em;
-	}
-
-
-
-// components_container
-	.components_container {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		grid-gap: 1em;
-		//background-color: #D6F737;
-
-		>select {
-			.select_style;
-		}
-
-		>div {
-
-		}
-	}
-
-
-
-// buttons_container
-	.buttons_container {
-		padding-top: 1em;
-		padding-bottom: 1em;
-	}
-
-
-
-// automatic_translation_container
-	.automatic_translation_container {
-		position: relative;
-
-		>button {
-			// .select_style;
-			// font-size: .9em;
-			// background-color: #a6a6a6;
-			// border-radius: 0.30em;
-			// cursor: pointer;
-			// color: #ffff;
-			// border: none;
-			// padding-left: 0.75em;
-			// padding-right: 0.75em;
-		}
-
-		>select {
-			margin-left: 0.75em;
-			// .select_style;
-			width: fit-content;
-			height: 2.75em;
-			font-size: 0.80em;
-		}
-	}
-*/
