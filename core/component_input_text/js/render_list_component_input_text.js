@@ -8,6 +8,8 @@
 	import {view_mini_input_text} from './view_mini_input_text.js'
 	import {view_text_input_text} from './view_text_input_text.js'
 
+
+
 /**
 * RENDER_LIST_COMPONENT_INPUT_TEXT
 * Manages the component's logic and appearance in client side

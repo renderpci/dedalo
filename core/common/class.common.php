@@ -1831,7 +1831,6 @@ abstract class common {
 						$current_section_tipo	= $section_tipo; //$dd_object->section_tipo ?? $dd_object->tipo;
 						$mode					= $dd_object->mode ?? $this->get_mode();
 						$model					= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-						$label					= $dd_object->label ?? '';
 						$view					= $dd_object->view ?? null;
 
 					// ar_subcontext_calculated
