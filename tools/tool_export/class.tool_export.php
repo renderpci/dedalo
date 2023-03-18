@@ -290,6 +290,7 @@ class tool_export extends tool_common {
 				}
 				$column_obj->ar_labels	= $column_labels;
 				$column_obj->label_tipo	= end($column_tipos);
+				$column_obj->ar_tipos 	= $column_tipos;
 
 				// create the grid cell of the section
 					$section_grid = new dd_grid_cell_object();

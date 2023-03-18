@@ -301,13 +301,27 @@ const get_row_container = function(class_name=null) {
 * @param object current_data
 * @return HTMLElement label_node (label)
 */
-const get_header_column = function(current_data) {
+const get_header_column = function(self, current_data) {
+	console.log("self.show_tipo_in_label:",self.show_tipo_in_label);
+	const labels = []
+	const len = current_data.ar_columns_obj.ar_labels.length
+	for (let i = 0; i < len; i++) {
+		if(i % 2 !== 1){
+			continue
+		}
+		const current_label = current_data.ar_columns_obj.ar_labels[i] || ''
+		const current_tipo 	= current_data.ar_columns_obj.ar_tipos[i]  || ''
+		const label = (self.show_tipo_in_label === true)
+			? current_label + " ["+current_tipo+"]"
+			: current_label
+		labels.push(label)
+	}
+	// const ar_labels		= current_data.ar_columns_obj.ar_labels || []
+	// const even_labels	= ar_labels.filter((label, index) => index % 2 === 1)
 
-	const ar_labels		= current_data.ar_columns_obj.ar_labels || []
-	const even_labels	= ar_labels.filter((label, index) => index % 2 === 1)
 	const label_node 	= ui.create_dom_element({
 		element_type	: 'th',
-		inner_html		:  even_labels.join(' | ')
+		inner_html		:  labels.join(' | ')
 	})
 
 	return label_node
