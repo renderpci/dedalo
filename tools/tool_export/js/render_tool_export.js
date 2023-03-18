@@ -224,19 +224,19 @@ const get_content_data_edit = async function(self) {
 					parent			: select_data_format_export
 				})
 				// select_option_breakdown
-				ui.create_dom_element({
-					element_type	: 'option',
-					inner_html		: get_label.breakdown || 'breakdown',
-					value			: 'breakdown',
-					parent			: select_data_format_export
-				})
-				// select_option_breakdown_html
-				ui.create_dom_element({
-					element_type	: 'option',
-					inner_html		: (get_label.breakdown || 'breakdown' ) + ' ' +(get_label.html || 'HTML'),
-					value			: 'breakdown_html',
-					parent			: select_data_format_export
-				})
+				// ui.create_dom_element({
+				// 	element_type	: 'option',
+				// 	inner_html		: get_label.breakdown || 'breakdown',
+				// 	value			: 'breakdown',
+				// 	parent			: select_data_format_export
+				// })
+				// // select_option_breakdown_html
+				// ui.create_dom_element({
+				// 	element_type	: 'option',
+				// 	inner_html		: (get_label.breakdown || 'breakdown' ) + ' ' +(get_label.html || 'HTML'),
+				// 	value			: 'breakdown_html',
+				// 	parent			: select_data_format_export
+				// })
 				// select_option_dedalo
 				ui.create_dom_element({
 					element_type	: 'option',
