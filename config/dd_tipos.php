@@ -185,6 +185,7 @@ define('DEDALO_REGISTER_TOOLS_SECTION_TIPO'				, 'dd1324');
 // section info
 define('DEDALO_SECTION_INFO_MODIFIED_BY_USER'			, 'dd197');
 define('DEDALO_SECTION_INFO_MODIFIED_DATE'				, 'dd201');
+define('DEDALO_SECTION_INFO_INVERSE_RELATIONS'			, 'dd1596');
 
 // ontology section tipos
 define('ONTOLOGY_SECTION_TIPOS', [
