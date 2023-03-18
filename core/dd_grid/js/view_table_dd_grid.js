@@ -223,12 +223,6 @@ const get_table_columns = function(self, current_data) {
 
 	if (current_data && current_data.type) {
 
-		// label head
-			// if(current_data.type==='column' && current_data.render_label){
-			// 	const label_node = get_header_column(current_data)
-			// 	column_nodes.push(label_node)
-			// }
-
 		// column
 			if(current_data.type==='column' && current_data.cell_type){
 

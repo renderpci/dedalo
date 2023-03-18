@@ -164,9 +164,10 @@ tool_export.prototype.get_export_grid = async function(options) {
 	const self = this
 
 	// options
-		const data_format		= options.data_format
-		const ar_ddo_to_export	= options.ar_ddo_to_export
-		const view				= options.view || 'table'
+		const data_format			= options.data_format
+		const ar_ddo_to_export		= options.ar_ddo_to_export
+		const view					= options.view || 'table'
+		const show_tipo_in_label	= options.show_tipo_in_label
 
 	// sqo
 		const sqo = clone(self.sqo)
@@ -204,6 +205,8 @@ tool_export.prototype.get_export_grid = async function(options) {
 			self.dd_grid.data = api_response.result
 			// reset view
 			self.dd_grid.view = view
+			// reset show_tipo_in_label
+			self.dd_grid.show_tipo_in_label = show_tipo_in_label
 			// build
 			await self.dd_grid.build(false)
 			// reset node
@@ -220,13 +223,14 @@ tool_export.prototype.get_export_grid = async function(options) {
 
 	// dd_grid. Init instance
 		const dd_grid = self.dd_grid || await instances.get_instance({
-			model			: 'dd_grid',
-			section_tipo	: self.caller.section_tipo,
-			tipo			: self.caller.section_tipo,
-			mode			: 'list',
-			view			: view, // 'table',
-			lang			: page_globals.dedalo_data_lang,
-			data			: api_response.result
+			model				: 'dd_grid',
+			section_tipo		: self.caller.section_tipo,
+			tipo				: self.caller.section_tipo,
+			mode				: 'list',
+			view				: view, // 'table',
+			show_tipo_in_label	: show_tipo_in_label, // true of false
+			lang				: page_globals.dedalo_data_lang,
+			data				: api_response.result
 		})
 
 	// build. Do not autoload
