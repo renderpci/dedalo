@@ -64,7 +64,7 @@ class relation_list extends common {
 
 	/**
 	* GET_RELATION_LIST_OBJ
-	* @retutn object $json
+	* @return object $json
 	*/
 	public function get_relation_list_obj(array $ar_inverse_references) : object {
 
@@ -113,7 +113,7 @@ class relation_list extends common {
 					$ar_relation_components[$current_section_tipo] = $recordObjdd->get_relaciones();
 					if(isset($ar_relation_components[$current_section_tipo])){
 						foreach ($ar_relation_components[$current_section_tipo] as $current_relation_component) {
-							foreach ($current_relation_component as $modelo => $tipo) {
+							foreach ($current_relation_component as $tipo) {
 
 								$current_relation_list = new stdClass;
 									$current_relation_list->section_tipo 	= $current_section_tipo;
@@ -148,7 +148,7 @@ class relation_list extends common {
 
 
 	/**
-	* GET_DATA
+	* GET_AR_DATA
 	* @param object $current_record
 	* @param array $ar_components
 	* @return array $data
