@@ -100,7 +100,7 @@ tool_cataloging.prototype.init = async function(options) {
 			model			: 'component_portal',
 			mode 			: 'edit',
 			tipo			: set_new_thesaurus_value.tipo,
-			section_tipo	: set_new_thesaurus_value.section_tipo,
+			section_tipo	: new_ts_section.section_tipo,
 			section_id		: new_ts_section.section_id,
 			lang			: page_globals.dedalo_data_nolan,
 			type			: 'component'
