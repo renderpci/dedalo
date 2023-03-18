@@ -3215,7 +3215,7 @@ abstract class common {
 		// debug
 			if(SHOW_DEBUG===true) {
 				// if ($this->tipo=='oh17') {
-				// 	dump($ar_request_query_objects, ' ar_request_query_objects ++ '.to_string($this->pagination));
+					// dump($ar_request_query_objects, ' ar_request_query_objects ++ '.to_string($this->tipo));
 				// }
 			}
 
@@ -3569,7 +3569,7 @@ abstract class common {
 	*/
 	public function get_section_id() {
 
-		return $this->section_id;
+		return $this->section_id ?? null;
 	}//end get_section_id
 
 

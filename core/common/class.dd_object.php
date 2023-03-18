@@ -162,7 +162,7 @@ class dd_object extends stdClass {
 				$type = 'section';
 			}elseif (in_array($model, section::get_ar_grouper_models())) {
 				$type = 'grouper';
-			}elseif (strpos($model, 'button_')===0) {
+			}elseif (strpos($model, 'button')===0) {
 				$type = 'button';
 			}elseif (strpos($model, 'area')===0) {
 				$type = 'area';

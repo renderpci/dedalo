@@ -724,7 +724,7 @@ class hierarchy {
 
 		$mode ='edit';
 		$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-		$component		= component_common::get_instance( 
+		$component		= component_common::get_instance(
 			$model_name,
 			$tipo,
 			$parent,
