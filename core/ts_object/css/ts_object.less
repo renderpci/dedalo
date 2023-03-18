@@ -1,5 +1,5 @@
 // Import general vars
-// @import '../../page/css/layout/vars.less';
+@import '../../page/css/layout/vars.less';
 
 
 @ts_object_line_height: 20px;
@@ -289,7 +289,7 @@
 				white-space: nowrap;
 
 				&.loading {
-					background-color: transparent;
+					// background-color: transparent;
 					>span {
 						opacity: 0.12;
 					}
@@ -339,12 +339,14 @@
 			// indexations
 			.list_thesaurus_element.show_indexations,
 			.list_thesaurus_element.default	{
-				background-color: @color_grey_medium;
+				// background-color: @color_grey_medium;
+				background-color: @color_orange_dedalo;
 				opacity: 0.8;
 				border: 0px;
 				padding-left: 4px;
 				padding-right: 3px;
-				color: #717171;
+				// color: #717171;
+				color: #ffffff;
 				border-radius: 3px;
 				// display: inline-block;
 				margin: 0px;
@@ -359,12 +361,13 @@
 				justify-content: center;
 
 				&.default {
-					background-color: transparent;
+					// background-color: transparent;
 				}
 
 				&:hover {
-					background-color: #ffb666;
+					// background-color: #ffb666;
 					color: #ffffff !important;
+					opacity: 1;
 				}
 				&:active {
 					background-color: @color_grey_medium;
@@ -400,7 +403,7 @@
 			}
 
 			// ts_object_children_arrow_icon mixins
-			@triangle_color:#ff8600;
+			@triangle_color: @color_orange_dedalo; // #ff8600;
 			.triangle_down {
 				width: 0px;
 				height: 0px;
@@ -435,16 +438,6 @@
 			}
 
 			.arrow_spinner {
-				// background: url('../../themes/default/icons/spinner.svg');
-				// background-repeat: no-repeat;
-				// border: 0px;
-				// height: 18px;
-				// width: 20px;
-				// top: 0px;
-				// left: 0px;
-				// padding: 0px;
-				// margin: 0px;
-
 				border: none;
 				margin: 0px;
 				padding: 0px;
@@ -481,9 +474,9 @@
 			}
 
 			// nd_button
-			.list_thesaurus_element[data-type='link_children_nd'] {
+			// .list_thesaurus_element[data-type='link_children_nd'] {
 				//background-color: #E1F01B
-			}
+			// }
 
 		}//end .elements_container
 
@@ -499,7 +492,7 @@
 
 
 		// data_container
-		.data_container {
+		>.data_container {
 			// background-color: rgba(156, 156, 156, 0.15);
 			// .inline_common ;
 			// height: 0px;
@@ -520,7 +513,7 @@
 			// }
 
 			// all components showed inside
-			.wrapper_component {
+			>.wrapper_component {
 				min-height: initial;
 				padding: 1rem;
 				width: 100%;
@@ -534,7 +527,7 @@
 
 
 		// children_container
-		.children_container {
+		>.children_container {
 			//background-color: rgba(248, 182, 175, 0.49);
 			.inline_common ;
 			height: 0px;
