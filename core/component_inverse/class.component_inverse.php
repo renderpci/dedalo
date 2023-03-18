@@ -23,9 +23,15 @@ class component_inverse extends component_common {
 
 
 
-				if (is_null($item->datalist)) {
-					$item->datalist = [];
-				}
+	/**
+	* GET_DATO_FULL
+	* Alias of get_dato
+	* @return array $dato
+	*/
+	public function get_dato_full() {
+
+		return $this->get_dato();
+	}//end get_dato_full
 
 				$dato[] = $item;
 			}
