@@ -109,7 +109,7 @@ tool_cataloging.prototype.init = async function(options) {
 		const component = await get_instance(component_options)
 		await component.build(true);
 
-		// insert the locator in the data of the componet
+		// insert the locator in the data of the component
 			const changed_data = [{
 				action	: 'insert',
 				key		: null,

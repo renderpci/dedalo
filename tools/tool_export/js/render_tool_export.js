@@ -224,19 +224,19 @@ const get_content_data_edit = async function(self) {
 					parent			: select_data_format_export
 				})
 				// select_option_breakdown
-				ui.create_dom_element({
-					element_type	: 'option',
-					inner_html		: get_label.breakdown || 'breakdown',
-					value			: 'breakdown',
-					parent			: select_data_format_export
-				})
-				// select_option_breakdown_html
-				ui.create_dom_element({
-					element_type	: 'option',
-					inner_html		: (get_label.breakdown || 'breakdown' ) + ' ' +(get_label.html || 'HTML'),
-					value			: 'breakdown_html',
-					parent			: select_data_format_export
-				})
+				// ui.create_dom_element({
+				// 	element_type	: 'option',
+				// 	inner_html		: get_label.breakdown || 'breakdown',
+				// 	value			: 'breakdown',
+				// 	parent			: select_data_format_export
+				// })
+				// // select_option_breakdown_html
+				// ui.create_dom_element({
+				// 	element_type	: 'option',
+				// 	inner_html		: (get_label.breakdown || 'breakdown' ) + ' ' +(get_label.html || 'HTML'),
+				// 	value			: 'breakdown_html',
+				// 	parent			: select_data_format_export
+				// })
 				// select_option_dedalo
 				ui.create_dom_element({
 					element_type	: 'option',
@@ -244,6 +244,21 @@ const get_content_data_edit = async function(self) {
 					value			: 'dedalo',
 					parent			: select_data_format_export
 				})
+
+
+		// show labels check
+			const show_tipo_in_label = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'show_tipo_in_label',
+				inner_html		: get_label.show_tipo_in_label || 'Show ontology tipo',
+				parent			: export_buttons_config
+			})
+			const show_tipo_in_label_check = ui.create_dom_element({
+				element_type	: 'input',
+				type			: 'checkbox',
+				class_name		: 'show_tipo_in_label_check',
+				parent			: show_tipo_in_label
+			})
 
 		// button_export
 			const button_export = ui.create_dom_element({
@@ -280,11 +295,13 @@ const get_content_data_edit = async function(self) {
 						class_name		: 'spinner',
 						parent			: export_buttons_config
 					})
+					const show_tipo_in_label = show_tipo_in_label_check.checked
 
 				// export_grid
 					const export_grid_options = {
 						data_format			: self.data_format,
 						ar_ddo_to_export	: self.ar_ddo_to_export,
+						show_tipo_in_label	: show_tipo_in_label,
 						view				: 'table'
 					}
 					const dd_grid				= await self.get_export_grid(export_grid_options)

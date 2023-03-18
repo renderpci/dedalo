@@ -339,14 +339,14 @@ class component_relation_common extends component_common {
 			});
 
 		$components_with_relations	= component_relation_common::get_components_with_relations();
-
-		if(empty($data)){
-			$pseudo_locator = new stdClass();
-				$pseudo_locator->type			= DEDALO_RELATION_TYPE_LINK; // 'dd151';
-				$pseudo_locator->section_tipo	= null;
-				$pseudo_locator->section_id		= null;
-			$data[] = $pseudo_locator;
-		}
+		// removed at 18-03-2023 because portal error, it's not possible resolve section_tipo here
+		// if(empty($data)){
+		// 	$pseudo_locator = new stdClass();
+		// 		$pseudo_locator->type			= DEDALO_RELATION_TYPE_LINK; // 'dd151';
+		// 		$pseudo_locator->section_tipo	= null;
+		// 		$pseudo_locator->section_id		= null;
+		// 	$data[] = $pseudo_locator;
+		// }
 		foreach($data as $current_key => $locator){
 			$locator_column_obj	= [];
 			$ar_columns = [];

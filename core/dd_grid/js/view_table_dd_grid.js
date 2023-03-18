@@ -38,7 +38,7 @@ view_table_dd_grid.render = function(self, options) {
 		})
 
 	// grid. Value as string
-		const grid = get_table_nodes(data)
+		const grid = get_table_nodes(self, data)
 		wrapper.appendChild(grid)
 
 
@@ -54,7 +54,7 @@ view_table_dd_grid.render = function(self, options) {
 * @return DocumentFragment
 * 	DOM node with the table
 */
-const get_table_nodes = function(data) {
+const get_table_nodes = function(self, data) {
 
 	// the root node
 		const fragment = new DocumentFragment()
@@ -79,7 +79,7 @@ const get_table_nodes = function(data) {
 		const ar_columns_len = ar_columns.length
 		for (let i = 0; i < ar_columns_len; i++) {
 			const column		= ar_columns[i]
-			const column_nodes	= get_table_columns(column)
+			const column_nodes	= get_table_columns(self, column)
 			const node_len		= column_nodes.length
 			for (let j = 0; j < node_len; j++) {
 				row_header_node.appendChild(column_nodes[j])
@@ -93,7 +93,7 @@ const get_table_nodes = function(data) {
 		for (let i = 1; i < data_len; i++) {
 			// the current row
 			const row_data = data[i]
-			const nodes = get_portal_rows(row_data, ar_columns_obj)
+			const nodes = get_portal_rows(self, row_data, ar_columns_obj)
 			fragment.appendChild(nodes)
 		}
 
@@ -113,7 +113,7 @@ const get_table_nodes = function(data) {
 * sometime the row don't has portal information, but the calculation will be the same, because the server use a row_count to identify the amount rows that will be necessary to build
 * if the row don't has portals the row_count will be 1, if has portals have multiple locators, the row_count will be the total locators of the first level, sub-levels of information are calculated as section_id columns
 */
-const get_portal_rows = function(row, ar_columns_obj){
+const get_portal_rows = function(self, row, ar_columns_obj){
 
 	const fragment = new DocumentFragment()
 
@@ -128,7 +128,7 @@ const get_portal_rows = function(row, ar_columns_obj){
 		const row_node = get_row_container()
 		fragment.appendChild(row_node)
 		// process the data column to get the cells
-		const nodes = get_columns(column_data, ar_columns_obj, row_key)
+		const nodes = get_columns(self, column_data, ar_columns_obj, row_key)
 		row_node.appendChild(nodes)
 	}
 
@@ -149,7 +149,7 @@ const get_portal_rows = function(row, ar_columns_obj){
 * in the case of the column of a portal, extract his value and star again
 * @return HTMLElement with the td of the table
 */
-const get_columns = function(column_data, ar_columns_obj, parent_row_key) {
+const get_columns = function(self, column_data, ar_columns_obj, parent_row_key) {
 
 	const fragment = new DocumentFragment()
 
@@ -171,7 +171,7 @@ const get_columns = function(column_data, ar_columns_obj, parent_row_key) {
 		// if the column is the last column with data, identify by cell_type property, render the node
 		if(column_value && column_value.type === 'column' && column_value.cell_type){
 
-			const column_nodes = get_table_columns(column_value)
+			const column_nodes = get_table_columns(self, column_value)
 			const node_len = column_nodes.length
 			for (let j = 0; j < node_len; j++) {
 				fragment.appendChild(column_nodes[j])
@@ -195,13 +195,13 @@ const get_columns = function(column_data, ar_columns_obj, parent_row_key) {
 						value		: '',
 						class_list	: 'empty_value'
 					}]
-				const sub_portal_nodes = get_columns(sub_values, current_ar_columns_obj, parent_row_key)
+				const sub_portal_nodes = get_columns(self, sub_values, current_ar_columns_obj, parent_row_key)
 				fragment.appendChild(sub_portal_nodes)
 
 			// else, the column don't has rows and is section_id column (portal inside portal doesn't create rows, it only create columns)
 			}else{
 				const current_ar_columns_obj = [column]
-				const sub_nodes = get_columns(sub_portal_values, current_ar_columns_obj, parent_row_key)
+				const sub_nodes = get_columns(self, sub_portal_values, current_ar_columns_obj, parent_row_key)
 				fragment.appendChild(sub_nodes)
 			}
 		}
@@ -217,24 +217,18 @@ const get_columns = function(column_data, ar_columns_obj, parent_row_key) {
 * @param current_data; object; the full column data
 * use the column_data to create the right node
 */
-const get_table_columns = function(current_data) {
+const get_table_columns = function(self, current_data) {
 
 	const column_nodes = []
 
 	if (current_data && current_data.type) {
-
-		// label head
-			// if(current_data.type==='column' && current_data.render_label){
-			// 	const label_node = get_header_column(current_data)
-			// 	column_nodes.push(label_node)
-			// }
 
 		// column
 			if(current_data.type==='column' && current_data.cell_type){
 
 				switch(current_data.cell_type) {
 					case 'header':
-						const header_node = get_header_column(current_data)
+						const header_node = get_header_column(self, current_data)
 						column_nodes.push(header_node)
 						break;
 					case 'av':
@@ -307,13 +301,27 @@ const get_row_container = function(class_name=null) {
 * @param object current_data
 * @return HTMLElement label_node (label)
 */
-const get_header_column = function(current_data) {
+const get_header_column = function(self, current_data) {
+	console.log("self.show_tipo_in_label:",self.show_tipo_in_label);
+	const labels = []
+	const len = current_data.ar_columns_obj.ar_labels.length
+	for (let i = 0; i < len; i++) {
+		if(i % 2 !== 1){
+			continue
+		}
+		const current_label = current_data.ar_columns_obj.ar_labels[i] || ''
+		const current_tipo 	= current_data.ar_columns_obj.ar_tipos[i]  || ''
+		const label = (self.show_tipo_in_label === true)
+			? current_label + " ["+current_tipo+"]"
+			: current_label
+		labels.push(label)
+	}
+	// const ar_labels		= current_data.ar_columns_obj.ar_labels || []
+	// const even_labels	= ar_labels.filter((label, index) => index % 2 === 1)
 
-	const ar_labels		= current_data.ar_columns_obj.ar_labels || []
-	const even_labels	= ar_labels.filter((label, index) => index % 2 === 1)
 	const label_node 	= ui.create_dom_element({
 		element_type	: 'th',
-		inner_html		:  even_labels.join(' | ')
+		inner_html		:  labels.join(' | ')
 	})
 
 	return label_node
