@@ -40,8 +40,8 @@
 				}
 
 			#
-			# LOCATORS (If empty, return '') if we sent the ar_locator property to resolve it, the resolution will be directly wihtout check the structure of the component.
-			# if the caller is a component that send your own dato is necesary calculate the component structure.
+			# LOCATORS (If empty, return '') if we sent the ar_locator property to resolve it, the resolution will be directly without check the structure of the component.
+			# if the caller is a component that send your own dato is necessary calculate the component structure.
 			if($options->ar_locators === false){
 				$ar_locators = (array)$this->get_dato();
 				if (empty($ar_locators)) {
