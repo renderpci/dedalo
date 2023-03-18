@@ -150,17 +150,6 @@ view_tool_cataloging_mosaic.render = async function(self, options) {
 		// content_data append
 		list_body.appendChild(content_data)
 
-	// wrapper. ui build_edit returns component wrapper
-		// const wrapper = ui.component.build_wrapper_edit(self, {
-		// 	// content_data	: content_data,
-		// 	list_body		: list_body
-		// 	// top			: top
-		// })
-		// wrapper.classList.add('portal', 'view_'+self.context.view)
-		// // set pointers
-		// wrapper.list_body		= list_body
-		// wrapper.content_data	= content_data
-
 	// wrapper
 		const wrapper = ui.create_dom_element({
 			element_type	: 'section',
@@ -170,14 +159,6 @@ view_tool_cataloging_mosaic.render = async function(self, options) {
 		// set pointers
 		wrapper.content_data	= content_data
 		wrapper.list_body		= list_body
-
-
-
-	// autocomplete
-		// wrapper.addEventListener('click', function(e) {
-		// 	e.stopPropagation()
-		// 	activate_autocomplete(self, wrapper)
-		// })
 
 
 	return wrapper
