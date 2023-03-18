@@ -15,16 +15,13 @@ class component_inverse extends component_common {
 	*/
 	public function get_dato() {
 
-		// $section	= section::get_instance($this->parent, $this->section_tipo);
 		$section	= $this->get_my_section();
+		$dato		= $section->get_inverse_locators();
 
-		$ar_locators = $section->get_inverse_locators();
+		return $dato;
+	}//end get_dato
 
-			foreach ($ar_locators as $key => $locator_item) {
 
-				$item = new stdClass();
-				$item->locator = $locator_item;
-				$item->datalist = $this->get_inverse_value($locator_item);
 
 				if (is_null($item->datalist)) {
 					$item->datalist = [];
