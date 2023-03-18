@@ -1215,11 +1215,43 @@ abstract class component_common extends common {
 
 	/**
 	* UPDATE_OBSERVER_DATO
-	*
-	* @param object $observer
-	* @param object $locator
-	* @param mixed $observable_dato
-	* @param string $observable_tipo
+	* Update the observer data using the config server in the observer component
+	* set in properties the config of the observer
+	* ex:
+	*  {
+    *	"info": "our own comments to info of the event",
+    *	"server": {
+    *		"config": {
+	*			"use_inverse_relations"	: bool,
+	* 			"use_observable_dato"	: bool,
+	* 			"use_inverse_relations"	: bool,
+	* 			"filter"				: sqo
+    *		},
+    *		"perform": {
+    *			"params": {
+    *				"xx": bool,
+    * 				"yy": int    *
+    *			},
+    *		"function": "set_dato_xxx"
+    *		}
+    * 	},
+    *	"component_tipo": "ddxx"
+    * }
+    * component_tipo: the component that is observed his changes. the component that fire the event.
+    * config options:
+	* 	use_self_section: use the $locator (the section that made the change) because the component is in the same section that observable
+	* 	use_observable_dato: use the $observable_dato (the section has added, deleted, changed in portal) because the component to update is in the target section of the portal
+	* 	use_inverse_relations: use all inverse relations of the section, because the component to update is not in the same or target section of portal
+	* 	filter: define a sqo to get specific locators defined by a search.
+	* perform options:
+	* 	function:
+	* 		define the function to be executed when the event is fired
+	* 	params:
+	* 		the options that will be passed to the function
+	* @param object $observer 		// component to update
+	* @param object $locator 		// section that made the change
+	* @param mixed $observable_dato // data that has changed
+	* @param string $observable_tipo // tipo of the component that made the change
 	*
 	* @return array $ar_data
 	*/
@@ -1239,7 +1271,8 @@ abstract class component_common extends common {
 		if(!isset($current_observer->server)){
 			return []; // nothing to do
 		}
-
+		// used to search some data with one criteria defined by filter
+		// see numisdata595, it get the data of portal numisdata77 to be used as main data.
 		if(isset($current_observer->server->filter) && $current_observer->server->filter!==false) {
 
 			// from_component_tipo. Get the from_component_tipo of the filter to set at observable locator
@@ -1309,13 +1342,33 @@ abstract class component_common extends common {
 					$ar_section = $observable_dato;
 					break;
 
+				// when the section is not the observer section ($locator) or the section of the observable dato ($observable_dato)
+				// use the inverse relations to get all sections that call to the observable section
+				case(isset($config->use_inverse_relations) && $config->use_inverse_relations===true):
+					$section_observable = section::get_instance(
+						$locator->section_id,
+						$locator->section_tipo,
+						'edit',
+						true
+					);
+					$inverse_locators = $section_observable->get_inverse_locators();
+
+					$ar_section = [];
+					foreach ($inverse_locators as $inv_locator) {
+							// create the locator of the current component, this locator will be use to search, from the observer section, the component that are changed.
+							$current_locator = new locator();
+								$current_locator->set_section_tipo($inv_locator->from_section_tipo);
+								$current_locator->set_section_id($inv_locator->from_section_id);
+						$ar_section[] = $current_locator;
+					}
+
+					break;
 				default:
 					break;
 			}
 		}
 
 		$component_name = RecordObj_dd::get_modelo_name_by_tipo($observer->component_tipo,true);
-
 
 		// ar_data. Collect all observer components data
 		// with all locators collected by the different methods, it will create the observable components to be updated.
@@ -3666,7 +3719,7 @@ abstract class component_common extends common {
 			      "direction": "DESC",
 			      "path": [
 			        {
-			          "component_tipo": "id"
+					 "component_tipo": "id"
 			        }
 			      ]
 			    }
