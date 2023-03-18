@@ -918,7 +918,7 @@ export const ts_object = new function() {
 							// new_section_id . Generated as response by the trigger add_child
 								const new_section_id 	= response.result
 							// section_tipo. When dataset target_section_tipo exists, is hierarchy_node. Else is normal node
-								const section_tipo 	  	= response.wrap.dataset.target_section_tipo || response.wrap.dataset.section_tipo
+								const section_tipo 	  	= wrap_target.dataset.target_section_tipo || wrap_target.dataset.section_tipo
 								// fire the event to update the component used as term in the new section
 								event_manager.publish('ts_add_child_' + data_obj.caller, {
 									locator			: data_obj.locator,
