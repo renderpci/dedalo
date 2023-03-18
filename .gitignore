@@ -130,3 +130,6 @@ core/common/css/structure.css
 .phpintel
 .vscode
 libs_dev
+
+package-lock.json
+package.json
