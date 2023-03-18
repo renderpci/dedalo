@@ -73,7 +73,7 @@ const get_content_data = function(self) {
 		for (let i = 0; i < value_length; i++) {
 
 			const current_value = inputs_value[i] || {}
-
+			
 			const content_value_node = get_content_value(i, current_value, self)
 			content_data.appendChild(content_value_node)
 			// set the pointer
@@ -96,8 +96,7 @@ const get_content_data = function(self) {
 const get_content_value = (i, current_value, self) => {
 
 	// short vars
-		const locator	= current_value.locator
-		const datalist	= current_value.datalist
+		const locator	= current_value
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -114,22 +113,6 @@ const get_content_value = (i, current_value, self) => {
 				parent			: content_value
 			})
 		}
-
-	// build span fields with other values from related inverse section
-		if (datalist) {
-			const span_datalist_length = datalist.length
-			for (let j = 0; j < span_datalist_length; j++) {
-				// span_value
-				const parsed_value = datalist[j].label.concat(': ', datalist[j].value)
-				ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'inverse_show_values',
-					text_node		: parsed_value,
-					parent			: content_value
-				})
-			}
-		}
-
 
 	return content_value
 }//end get_content_value
