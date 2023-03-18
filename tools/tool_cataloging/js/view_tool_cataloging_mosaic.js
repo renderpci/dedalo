@@ -441,7 +441,7 @@ const render_column_drag = function(options){
 	}
 	// if current section_record has relations, it has value, check with hierarchies
 	// else it doesn't has value and set use as false
-		const used = relation_data.value
+		const used = relation_data && relation_data.value
 			? get_related_hierarchy(relation_data.value)
 			: false
 
