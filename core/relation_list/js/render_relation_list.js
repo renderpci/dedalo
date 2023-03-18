@@ -43,7 +43,7 @@ render_relation_list.prototype.edit = async function(options={render_level:'full
 		})
 		wrapper.appendChild(current_content_data)
 
-	// add the paginator to the warpper
+	// add the paginator to the wrapper
 		parse_paginator_html(self, wrapper)
 
 	return wrapper
@@ -58,8 +58,8 @@ render_relation_list.prototype.edit = async function(options={render_level:'full
 const get_content_data = function(self) {
 
 	// content_data
-	const content_data = document.createElement("div")
-		  content_data.classList.add("content_data", self.type)
+	const content_data = document.createElement('div')
+		  content_data.classList.add('content_data', self.type)
 
 	// Render the data html
 		parse_html(self.datum, content_data)
@@ -77,7 +77,7 @@ const parse_html = function(datum, content_data_node){
 
 	if(!datum) return false
 
-	// get the context and the data information of the JSON recived
+	// get the context and the data information of the JSON received
 		const context		= datum.context;
 		const data			= datum.data;
 		const context_id	= context.filter(main_header => main_header.component_tipo === 'id');
@@ -153,7 +153,7 @@ const build_grid_html = function(context, columns, data, count_data, CSS_style_s
 			parent			: grid
 		})
 
-		//create a labels colums info header, the name of the componets of the related sections
+		//create a labels columns info header, the name of the components of the related sections
 		columns.forEach(function(column){
 
 			const class_name = (column.component_label==='id')
@@ -200,7 +200,7 @@ const build_grid_html = function(context, columns, data, count_data, CSS_style_s
 				})
 
 			}else{
-				// the information colums of the components of the section
+				// the information columns of the components of the section
 				const data_row = ui.create_dom_element({
 					element_type	: 'li',
 					//class_name	: 'relation_list_data_hearder',
@@ -343,7 +343,7 @@ const next_records = function(self){
 */
 const edit_relation = function(self, current_data){
 
-	//get the locator of the related secion
+	//get the locator of the related section
 	const section_id	= current_data.section_id
 	const section_tipo	= current_data.section_tipo
 
@@ -379,5 +379,3 @@ const edit_relation = function(self, current_data){
 
 	return true
 }//end edit_relation
-
-

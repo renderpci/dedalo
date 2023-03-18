@@ -514,6 +514,8 @@ class component_portal extends component_relation_common {
 		// $_get_valor = Closure::bind($_get_valor, $this);
 		// $lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false, $fields_separator='<br> '
 
+		$data_to_be_used = 'dato';
+
 		$valor =  Closure::bind($_get_valor, $this)($lang, $format, $fields_separator, $records_separator, $ar_related_terms, $data_to_be_used);
 
 		return $valor;

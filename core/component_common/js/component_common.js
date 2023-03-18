@@ -63,15 +63,12 @@ component_common.prototype.init = async function(options) {
 	// var containers
 		self.events_tokens	= [] // array of events of current component
 		self.ar_instances	= [] // array of children instances of current instance (used for autocomplete, etc.)
-		// self.tools		= []
-		//rqo
-		// self.rqo			= {}
 
 	// view
 		self.view = options.view
 
 	// caller pointer
-		self.caller = options.caller
+		self.caller			= options.caller
 
 	// standalone
 		// Set the component to manage his data by itself, calling to the database and it doesn't share his data with other through datum

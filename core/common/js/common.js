@@ -48,22 +48,36 @@ common.prototype.init = async function(options) {
 	// type
 		self.type 			= options.type
 
-	// RQO - optional, used to define specific rqo for the instance, used in dd_grid (every dd_grind is loaded with specific rqo)
+	// optional vars
+		self.context		= options.context	|| null // structure context of current component (include properties, tools, etc.)
+		self.data			= options.data		|| null // current specific data of this component
+		self.datum			= options.datum		|| null // global data including dependent data (used in portals, etc.)
+
+	// rqo - optional, used to define specific rqo for the instance, used in dd_grid (every dd_grind is loaded with specific rqo)
 		self.rqo			= options.rqo
+
+	// properties
+		self.properties		= options.properties
+
+	// var containers
+		self.events_tokens	= [] // array of events of current component
+		self.ar_instances	= [] // array of children instances of current instance (used for autocomplete, etc.)
 
 	// DOM
 		self.node			= null // component node place in light DOM
 
-		self.events_tokens	= [] // array of events of current component
-		self.ar_instances	= [] // array of children instances of current instance (used for autocomplete, etc.)
+	// view
+		self.view			= options.view
 
+	// render_level
 		self.render_level	= null
 
-	// caller
-		self.caller = options.caller
+	// caller pointer
+		self.caller			= options.caller
 
 	// status update
 		self.status = 'initiated'
+
 
 	return true
 }//end common.prototype.init
