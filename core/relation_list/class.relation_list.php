@@ -39,20 +39,7 @@ class relation_list extends common {
 	* @return array $inverse_locators
 	*/
 	public function get_inverse_references(object $sqo) : array {
-
-		// if (empty($this->section_id)) {
-		// 	# Section not exists yet. Return empty $arrayName = array('' => , );
-		// 	return array();
-		// }
-
-		// # Create a minimal locator based on current section
-		// $reference_locator = new locator();
-		// 	$reference_locator->set_section_tipo($this->section_tipo);
-		// 	$reference_locator->set_section_id($this->section_id);
-
-		# Get calculated inverse locators for all matrix tables
-		//$inverse_locators = search::calculate_inverse_locators( $reference_locator, $limit, $offset, $count);
-
+		
 		// sections
 			$sections			= sections::get_instance(null, $sqo, $this->section_tipo, $this->mode);
 			$inverse_sections	= $sections->get_dato();
@@ -139,8 +126,8 @@ class relation_list extends common {
 		}// end foreach
 
 		// $context = 'context';
-		$json->context = $ar_context;
-		$json->data 	= $ar_data;
+		$json->context	= $ar_context;
+		$json->data		= $ar_data;
 
 		return $json;
 	}//get_relation_list_obj

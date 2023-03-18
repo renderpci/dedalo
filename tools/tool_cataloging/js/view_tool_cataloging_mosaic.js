@@ -150,17 +150,6 @@ view_tool_cataloging_mosaic.render = async function(self, options) {
 		// content_data append
 		list_body.appendChild(content_data)
 
-	// wrapper. ui build_edit returns component wrapper
-		// const wrapper = ui.component.build_wrapper_edit(self, {
-		// 	// content_data	: content_data,
-		// 	list_body		: list_body
-		// 	// top			: top
-		// })
-		// wrapper.classList.add('portal', 'view_'+self.context.view)
-		// // set pointers
-		// wrapper.list_body		= list_body
-		// wrapper.content_data	= content_data
-
 	// wrapper
 		const wrapper = ui.create_dom_element({
 			element_type	: 'section',
@@ -170,14 +159,6 @@ view_tool_cataloging_mosaic.render = async function(self, options) {
 		// set pointers
 		wrapper.content_data	= content_data
 		wrapper.list_body		= list_body
-
-
-
-	// autocomplete
-		// wrapper.addEventListener('click', function(e) {
-		// 	e.stopPropagation()
-		// 	activate_autocomplete(self, wrapper)
-		// })
 
 
 	return wrapper
@@ -412,7 +393,7 @@ const rebuild_columns_map = function(base_columns_map, self, view_mosaic) {
 			full_columns_map.push({
 				id			: 'drag',
 				label		: 'Info',
-				callback	: render_column_original_copy
+				callback	: render_column_drag
 			})
 		}
 
@@ -423,35 +404,76 @@ const rebuild_columns_map = function(base_columns_map, self, view_mosaic) {
 
 
 /**
-* RENDER_COLUMN_ORIGINAL_COPY
+* RENDER_COLUMN_DRAG
 * @param options
 * @return DocumentFragment
 */
-const render_column_original_copy = function(options){
+const render_column_drag = function(options){
 
 	// options
-		// const tool_caller	= options.caller.caller
-		// const locator		= options.locator
+		const tool_caller		= options.caller.caller
+		const section_record	= options.caller
+		const locator			= options.locator
+
+		const area_thesaurus = tool_caller.area_thesaurus
+
+	// get hierarchy sections
+	const data			= area_thesaurus.data.find(item => item.tipo==='dd100')
+	const hierarchies	= data.value.filter(node => node.type==='hierarchy')
+
+	// get inverser_realatins data
+		const inverse_relations_tipo = DD_TIPOS.DEDALO_SECTION_INFO_INVERSE_RELATIONS
+		const relation_data = section_record.datum.data.find(el => el.tipo === inverse_relations_tipo
+			&& el.section_tipo === locator.section_tipo
+			&& el.section_id === locator.section_id)
+
+	// check if the hierarchies of catalog loaded in area_thesarurs has relation with current locator.
+	function get_related_hierarchy(relation_value) {
+		// get every target_section_tipo loaded as possible catalog hierarchy
+		for (var i = hierarchies.length - 1; i >= 0; i--) {
+			const current_tipo = hierarchies[i].target_section_tipo
+			const found = relation_value.find(el => el.from_section_tipo === current_tipo)
+			if(found){
+				return true
+			}
+		}
+		return false
+	}
+	// if current section_record has relations, it has value, check with hierarchies
+	// else it doesn't has value and set use as false
+		const used = relation_data.value
+			? get_related_hierarchy(relation_data.value)
+			: false
 
 	// DocumentFragment
 		const fragment = new DocumentFragment()
 
 	// already used columns drag indication
-		const used			= false
 		const used_class	= used
 			? ' used'
 			: ''
 
 	// drag_item
-		ui.create_dom_element({
+		const draged_node = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'dragger' + used_class,
 			parent			: fragment
 		})
+	// when the user drop a node in thesaurus, it send an event
+	// use it to change the class of the dragged
+	event_manager.subscribe('ts_add_child_tool_cataloging', add_data_to_ts_component)
+	async function add_data_to_ts_component(options) {
+		// the locator drag by the user (the section as the term of the ts)
+		const added_locator = options.locator
+
+		if(added_locator.section_id === locator.section_id && added_locator.section_tipo===locator.section_tipo){
+			draged_node.classList.add('used')
+		}
+	}
 
 
 	return fragment
-}//end render_column_original_copy
+}//end render_column_drag
 
 
 
