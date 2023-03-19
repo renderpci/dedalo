@@ -1047,34 +1047,16 @@ component_portal.prototype.sort_data = async function(options) {
 
 
 /**
-* GET_LAST_OFFSET
+* GET_TOTAL
+* this function is for compatibility with section and paginator
+* total is resolved in server and comes in data, so it's not necessary call to server to get it
+*
+* @return int
 */
-	// component_portal.prototype.get_last_offset = function() {
-	// 	//console.log("[get_last_offset] self:",self);
+component_portal.prototype.get_total = async function() {
 
-	// 	const self = this
+	const self = this
 
-	// 	const total = self.pagination.total
-	// 	const limit = self.pagination.limit
+	return self.total
+}//end get_total
 
-	// 	const _calculate = () => {
-
-	// 		if (total>0 && limit>0) {
-
-	// 			const total_pages = Math.ceil(total / limit)
-
-	// 			return parseInt( limit * (total_pages -1) )
-
-	// 		}else{
-
-	// 			return 0
-	// 		}
-	// 	}
-	// 	const offset_last = _calculate()
-
-	// 	if(SHOW_DEBUG===true) {
-	// 		console.log("====get_last_offset offset_last:",offset_last, "total",total, "limit",limit);
-	// 	}
-
-	// 	return offset_last
-	// }//end  get_last_offset
