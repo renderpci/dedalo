@@ -175,7 +175,7 @@ const get_content_data_edit = async function(self) {
 			})
 			const total_records_label = ui.create_dom_element({
 				element_type	: 'span',
-				class_name		: 'total_records',
+				class_name		: 'total_records_label',
 				inner_html		: (get_label.total_records || 'Total records:') + ': ',
 				parent			: export_buttons_config
 			})
