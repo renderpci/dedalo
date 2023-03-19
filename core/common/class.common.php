@@ -2715,7 +2715,7 @@ abstract class common {
 									}
 
 								// permissions check
-									if($model === 'section') {
+									if($model==='section') {
 										$check_section_tipo = is_array($current_ddo->section_tipo) ? reset($current_ddo->section_tipo) : $current_ddo->section_tipo;
 										$permissions = common::get_permissions($check_section_tipo, $current_ddo->tipo);
 										if($permissions<1){
@@ -3091,7 +3091,7 @@ abstract class common {
 						? $tipo_properties->children_view
 						: null;
 
-				// authorized items. Check the permissions of each element
+				// authorized ddo items. Check the permissions of each element and discard non accessibles
 					$ar_related_clean_auth = (function() use($ar_related_clean, $target_section_tipo){
 						// check each element permissions
 						$result = [];
