@@ -28,7 +28,7 @@ export const render_common_section = function() {
 * @param object options
 * @return bool
 */
-render_common_section.prototype.delete_record = (options) => {
+render_common_section.prototype.delete_record = async (options) => {
 
 	// options
 		const section		= options.section
@@ -37,7 +37,7 @@ render_common_section.prototype.delete_record = (options) => {
 		const sqo			= options.sqo
 
 	// short vars
-		const total			= section.total
+		const total			= await section.get_total()
 		const label 		= section.label || section_tipo
 
 		const id_label 		= section_id
