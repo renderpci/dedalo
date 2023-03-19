@@ -2881,6 +2881,7 @@ abstract class component_common extends common {
 						if($this->section_id==$user_id) {
 
 							switch (true) {
+
 								// Admin General. Former component_security_administrator. Always read only for self user
 								case ($this->tipo===DEDALO_SECURITY_ADMINISTRATOR_TIPO) :
 									$this->permissions = 1;
@@ -2889,75 +2890,35 @@ abstract class component_common extends common {
 								// check profile
 								// check developer
 								// check if the section is the user_id section and remove write permissions
-								// the user can not set permissions by itself
-								case (security::is_global_admin($user_id)===false &&
-									($this->tipo===DEDALO_USER_PROFILE_TIPO || $this->tipo===DEDALO_USER_DEVELOPER_TIPO)) :
-
+								// the user can not set more permissions to itself
+								case (  in_array($this->tipo, [
+											DEDALO_USER_PROFILE_TIPO, // profile selector
+											DEDALO_USER_DEVELOPER_TIPO, // developer radio button
+											DEDALO_USER_NAME_TIPO,  // username input_text
+											'dd330' // section_id
+										]) && security::is_global_admin($user_id)===false) :
 									$this->permissions = 1;
 									break;
 
-								default:
+								// Allow user edit self data name, email, password and image (used by tool_user_admin)
+								case (  in_array($this->tipo, [
+											DEDALO_FULL_USER_NAME_TIPO,
+											DEDALO_USER_EMAIL_TIPO,
+											DEDALO_USER_PASSWORD_TIPO,
+											DEDALO_USER_IMAGE_TIPO
+										]) :
+									$this->permissions = 2;
+									break;
 
+								default :
+									// Nothing to change
 									break;
 							}
-						}
-
-					// check global admin
-						if($this->section_id==$user_id && $this->tipo===DEDALO_SECURITY_ADMINISTRATOR_TIPO){
-							$this->permissions = 1;
-						}
-						else if($this->section_id == $user_id &&
-							( 	$this->tipo === DEDALO_SECURITY_ADMINISTRATOR_TIPO ||
-								$this->tipo === DEDALO_USER_PROFILE_TIPO ||
-								$this->tipo === DEDALO_USER_DEVELOPER_TIPO
-							) &&
-							security::is_global_admin($user_id) === false) {
-
-							$this->permissions = 1;
-						}
-				}
-
-			// check global admin
-				if($this->section_tipo === DEDALO_SECTION_USERS_TIPO &&
-					$this->section_id == $user_id &&
-					$this->tipo === DEDALO_SECURITY_ADMINISTRATOR_TIPO
-				){
-
-					$this->permissions = 1;
-				}
-			// check profile
-			// check developer
-			// check if the section is the user_id section and remove write permissions
-			// the user can not set permissions by itself
-				if($this->section_tipo === DEDALO_SECTION_USERS_TIPO &&
-					$this->section_id == $user_id &&
-					( 	$this->tipo === DEDALO_SECURITY_ADMINISTRATOR_TIPO ||
-						$this->tipo === DEDALO_USER_PROFILE_TIPO ||
-						$this->tipo === DEDALO_USER_DEVELOPER_TIPO
-					) &&
-					security::is_global_admin($user_id) === false
-				){
-
-					$this->permissions = 1;
-				}
-
-			// user section . Allow user edit self data (used by tool_user_admin)
-				if ($this->permissions < 2 &&
-					$this->section_tipo===DEDALO_SECTION_USERS_TIPO &&
-					$this->section_id==$user_id) {
-
-					$allowed_self_edit = [
-						DEDALO_USER_EMAIL_TIPO,
-						DEDALO_FULL_USER_NAME_TIPO,
-						DEDALO_USER_PASSWORD_TIPO,
-						DEDALO_USER_IMAGE_TIPO
-					];
-					if (in_array($this->tipo, $allowed_self_edit)) {
-						return 2;
-					}
-					return 1;
-				}
+						}//end if($this->section_id==$user_id)
+				}//end if ($this->section_tipo===DEDALO_SECTION_USERS_TIPO)
 		}
+
+
 		return $this->permissions;
 	}//end get_component_permissions
 
