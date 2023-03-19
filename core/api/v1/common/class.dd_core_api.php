@@ -676,7 +676,7 @@ final class dd_core_api {
 				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
 				return $response;
 			}
-			$caller_dataframe 		= $ddo_source->caller_dataframe ?? null;
+			$caller_dataframe = $ddo_source->caller_dataframe ?? null;
 
 		// permissions
 			$permissions = common::get_permissions($section_tipo, $section_tipo);
