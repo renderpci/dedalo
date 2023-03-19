@@ -123,7 +123,16 @@ const get_content_data = async function(self) {
 
 	// info_text
 		const section		= self.caller.caller.caller
-		const text_string	= self.get_tool_label('content_will_be_added_removed', section.total)
+
+	// check the filter to know if the user has apply some filter or if will apply to all records
+		const filter = section.rqo && section.rqo.sqo && section.rqo.sqo.filter
+			? section.rqo.sqo.filter.$and.length > 0
+			: false
+
+		const total = await section.get_total()
+
+
+		const text_string	= self.get_tool_label('content_will_be_added_removed', total)
 			|| 'The content of the component in the current {0} records will be added or removed'
 		ui.create_dom_element({
 			element_type	: 'div',
@@ -152,6 +161,14 @@ const get_content_data = async function(self) {
 
 			await ui.component.deactivate(self.component_to_propagate)
 
+			if(filter === false){
+				const alert_replace_all = (get_label.replace_all_records || ' All record will be replaced') + ' '+
+				(get_label.total || 'Total') + ': '  + total
+
+				if (!confirm(alert_replace_all)){
+					return false
+				}
+			}
 			// propagate_component_data
 			if (confirm(get_label.sure || 'Sure?')) {
 				content_data.classList.add('loading')
