@@ -127,7 +127,6 @@ tool_propagate_component_data.prototype.build = async function(autoload=false) {
 		})]
 
 		self.component_to_propagate.save()
-			console.log("self.component_to_propagate.show_interface:------------------------<>",self.component_to_propagate.data);
 
 	return common_build
 }//end build_custom
