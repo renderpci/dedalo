@@ -2906,7 +2906,7 @@ abstract class component_common extends common {
 											DEDALO_USER_EMAIL_TIPO,
 											DEDALO_USER_PASSWORD_TIPO,
 											DEDALO_USER_IMAGE_TIPO
-										]) :
+										]) ) :
 									$this->permissions = 2;
 									break;
 
