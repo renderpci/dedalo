@@ -87,6 +87,11 @@ class security {
 				return 2;
 			}
 
+		// allow to read the global component_inverse of the section
+			if ($tipo===DEDALO_SECTION_INFO_INVERSE_RELATIONS) {
+				return 1;
+			}
+
 		// permissions_table
 			$permissions_table = security::get_permissions_table();
 

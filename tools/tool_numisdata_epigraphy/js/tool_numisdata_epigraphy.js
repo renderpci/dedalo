@@ -153,7 +153,7 @@ tool_numisdata_epigraphy.prototype.get_component = async function(options) {
 
 	const ddo	= self.tool_config.ddo_map.find(el => el.role===role)
 
-	const options	= {
+	const component_options	= {
 		self 			: self,
 		model			: ddo.model,
 		mode 			: ddo.mode,
@@ -168,7 +168,7 @@ tool_numisdata_epigraphy.prototype.get_component = async function(options) {
 	}
 
 	// call generic common tool build
-		const component_instance = await load_component(options);
+		const component_instance = await load_component(component_options);
 
 	// set auto_init_editor if the ddo has his definition
 		if(ddo.auto_init_editor){

@@ -2958,8 +2958,6 @@ abstract class component_common extends common {
 					return 1;
 				}
 		}
-
-
 		return $this->permissions;
 	}//end get_component_permissions
 
