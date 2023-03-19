@@ -42,6 +42,18 @@ import * as fn from './data.js'
 			new_value_params	: [section_tipo, section_id, 'test94']
 		})
 
+	// button
+		// elements.push({
+		// 	model			: 'button',
+		// 	tipo			: 'test212',
+		// 	section_tipo	: section_tipo,
+		// 	section_id		: section_id,
+		// 	mode			: mode,
+		// 	lang			: page_globals.dedalo_data_nolan,
+		// 	new_value		: fn.random_string,
+		// 	test_save		: false
+		// })
+
 	// component_calculation -to disappear-  (WORKING HERE)
 
 	// component_check_box
