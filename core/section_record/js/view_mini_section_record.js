@@ -8,7 +8,7 @@
 	// import {data_manager} from '../../common/js/data_manager.js'
 	// import {get_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
-
+	import {render_column_node_callback} from './view_default_list_section_record.js'
 
 
 /**
@@ -53,20 +53,48 @@ view_mini_section_record.render = async function(self, options) {
 		]
 		wrapper.classList.add(...ar_css)
 
-	// id column
-		if (self.caller.model==='section' || self.caller.mode==='edit') {
-			const id_column = build_id_column(self)
-			fragment.appendChild(id_column)
-		}
+	// // id column
+	// 	if (self.caller.model==='section' || self.caller.mode==='edit') {
+	// 		const id_column = build_id_column(self)
+	// 		fragment.appendChild(id_column)
+	// 	}
 
 	// render the columns
 		const columns_map_length = columns_map.length
 		for (let i = 0; i < columns_map_length; i++) {
 
-			const current_colum = columns_map[i]
+			const current_column = columns_map[i]
+
+			// callback column case
+			// (!) Note that many colum_id are callbacks (like tool_time_machine id column)
+				if(current_column.callback && typeof current_column.callback==='function'){
+
+					// column_node (standard section_record empty column to be filled with content_node)
+						const column_node = render_column_node_callback(current_column, self)
+
+					// content_node
+						const content_node = current_column.callback({
+							section_tipo		: self.section_tipo,
+							section_id			: self.section_id,
+							row_key				: self.row_key,
+							paginated_key		: self.paginated_key,
+							// offset				: self.offset,
+							caller				: self.caller,
+							matrix_id			: self.matrix_id, // tm var
+							modification_date	: self.modification_date || null, // tm var
+							locator				: self.locator
+						})
+						if (content_node) {
+							column_node.appendChild(content_node)
+						}
+
+					fragment.appendChild(column_node)
+					continue;
+				}
+
 
 			// instances.get the specific instances for the current column
-				const ar_instances = ar_columns_instances.filter(el => el.column_id === current_colum.id)
+				const ar_instances = ar_columns_instances.filter(el => el.column_id === current_column.id)
 
 			// loop the instances for select the parent node
 				const ar_instances_length = ar_instances.length
@@ -268,17 +296,3 @@ const build_column_node = function(column_instance, self, ar_instances){
 }// end build_column_node
 
 
-
-/**
-* DELETE_RECORD
-* Navigate to selected record in edit mode
-*/
-const delete_record = (button, self) => {
-
-	confirm(`delete_record:
-		section_tipo: ${self.section_tipo}
-		section_id: ${self.section_id}`)
-
-
-	return false
-}//end delete_record
