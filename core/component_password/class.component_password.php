@@ -188,7 +188,7 @@ class component_password extends component_common {
 	*
 	* Crypto password
 	# Change the mycript lib to OpenSSL in the 4.0.22 update
-	# we need the to encriptors for sustain the login of the user before the update to 4.0.22
+	# we need the to encryptors for sustain the login of the user before the update to 4.0.22
 	# this function will be change to only Open SSl in the 4.5.
 	*/
 	public static function encrypt_password($stringArray) {

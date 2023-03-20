@@ -57,7 +57,6 @@ class RecordObj_dd extends RecordDataBoundObject {
 			$msg = 'This record dd not exists! [terminoID:"'.$terminoID.'" - prefijo:"'.$prefijo.'"] ';
 			if(isset($_REQUEST['terminoID'])) $msg .= ' - terminoID:'.safe_xss($_REQUEST['terminoID']);
 
-			#debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
 			$bt = debug_backtrace();
 			debug_log(__METHOD__." $msg - debug_backtrace:  " . PHP_EOL . to_string($bt), logger::ERROR);
 
@@ -67,18 +66,6 @@ class RecordObj_dd extends RecordDataBoundObject {
 			trigger_error($msg);
 		}
 
-		# PREFIX TEST
-		/*
-		if(!$this->prefijo) {
-
-			$msg = " Element not defined with prefijo: $prefijo ";
-			if(SHOW_DEBUG===true) {
-				 # LOGGER
-        		logger::$obj['error']->log_message("$msg", logger::ERROR, __METHOD__);
-        		throw new Exception("Error Processing Request $msg", 1);
-			}
-			exit($msg);
-		}*/
 
 		parent::__construct($terminoID);
 	}//end __construct
@@ -87,7 +74,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 	# DEFINETABLENAME : define current table (tr for this obj)
 	protected function defineTableName() : string {
-		return 'jer_dd';	#echo ' jer_'.$this->current_table.' ';
+		return 'jer_dd';
 	}
 	# DEFINEPRIMARYKEYNAME : define PrimaryKeyName (id)
 	protected function definePrimaryKeyName() : string {

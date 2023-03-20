@@ -9,6 +9,7 @@
 	import {view_text_section_record} from './view_text_section_record.js'
 
 
+
 /**
 * RENDER_LIST_SECTION_RECORD
 * Manage the components logic and appearance in client side
@@ -24,7 +25,7 @@ export const render_list_section_record = function() {
 * LIST
 * Render node for use in list with all columns and rendered components
 * @param array ar_instances
-* @return Promise DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_list_section_record.prototype.list = async function(options={}) {
 
@@ -45,6 +46,4 @@ render_list_section_record.prototype.list = async function(options={}) {
 		default:
 			return view_default_list_section_record.render(self, options)
 	}
-
-	return null
-}//end render_list_section_record.prototype.list
+}//end list

@@ -164,29 +164,7 @@ service_time_machine.prototype.build = async function(autoload=false) {
 
 			// count rows
 				if (!self.total) {
-					const count_sqo = clone(self.rqo.sqo)
-					delete count_sqo.limit
-					delete count_sqo.offset
-					delete count_sqo.select
-					delete count_sqo.generated_time
-					const source	= create_source(self, null)
-					const rqo_count = {
-						action			: 'count',
-						sqo				: count_sqo,
-						prevent_lock	: true,
-						source			: source
-					}
-					self.total = function() {
-						return new Promise(function(resolve){
-							data_manager.request({
-								body : rqo_count
-							})
-							.then(function(api_count_response){
-								self.total = api_count_response.result.total
-								resolve(self.total)
-							})
-						})
-					}
+					self.get_total()
 				}
 		}//end if (autoload===true)
 
@@ -429,3 +407,65 @@ service_time_machine.prototype.build_request_config = function() {
 
 	return request_config
 }//end build_request_config
+
+
+
+/**
+* GET_TOTAL
+* Exec a async API call to count the current sqo records
+* @return int total
+*/
+service_time_machine.prototype.get_total = async function() {
+
+	const self = this
+
+	// already calculated case
+		if (self.total) {
+			return self.total
+		}
+
+	// queue. Prevent double resolution calls to API
+		if (self.loading_total_status==='resolving') {
+			return new Promise(function(resolve){
+				setTimeout(function(){
+					resolve( self.get_total() )
+				}, 100)
+			})
+		}
+
+	// loading status update
+		self.loading_total_status = 'resolving'
+
+	// API request
+		const count_sqo = clone(self.rqo.sqo)
+		delete count_sqo.limit
+		delete count_sqo.offset
+		delete count_sqo.select
+		delete count_sqo.generated_time
+		const source	= create_source(self, null)
+		const rqo_count = {
+			action			: 'count',
+			sqo				: count_sqo,
+			prevent_lock	: true,
+			source			: source
+		}
+		const api_count_response = await data_manager.request({
+			body : rqo_count
+		})
+
+	// API error case
+		if (!api_count_response.result || api_count_response.error) {
+			console.error('Error on count total : api_count_response:', api_count_response);
+			return
+		}
+
+	// set result
+		self.total = api_count_response.result.total
+
+
+	// loading status update
+		self.loading_total_status = 'resolved'
+
+
+	return self.total
+}//end get_total
