@@ -396,8 +396,8 @@ class tool_import_rdf extends tool_common {
 								$ar_literal_section_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($class_dd_tipo[0], 'section', 'termino_relacionado', false);
 
 								// check if the current literal has a record inside Dédalo.
-									$RecordObj_dd = new RecordObj_dd($class_dd_tipo[0]);
-									$class_properties = $RecordObj_dd->get_properties(true);
+									$class_dd_tipo_RecordObj_dd = new RecordObj_dd($class_dd_tipo[0]);
+									$class_properties = $class_dd_tipo_RecordObj_dd->get_properties(true);
 
 									if(isset($class_properties->match)){
 										$literal_section_tipo_to_check = reset($ar_literal_section_tipo);
@@ -474,11 +474,9 @@ class tool_import_rdf extends tool_common {
 									debug_log(__METHOD__." Ignored broken link in rdf ".to_string($resource_uri), logger::DEBUG);
 									continue;
 								}
-
-
 							// check if the current resource has a record inside Dédalo.
-								$RecordObj_dd = new RecordObj_dd($class_dd_tipo[0]);
-								$class_properties = $RecordObj_dd->get_properties(true);
+								$class_dd_tipo_RecordObj_dd = new RecordObj_dd($class_dd_tipo[0]);
+								$class_properties = $class_dd_tipo_RecordObj_dd->get_properties(true);
 
 								if(isset($class_properties->match)){
 									$section_tipo_to_check = reset($current_section_tipo);
@@ -619,8 +617,8 @@ class tool_import_rdf extends tool_common {
 					: $value;
 
 			// save new value
-				$RecordObj_dd	= new RecordObj_dd($component_tipo);
-				$lang			= ($RecordObj_dd->get_traducible()==='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+				$component_tipo_RecordObj_dd	= new RecordObj_dd($component_tipo);
+				$lang			= ($component_tipo_RecordObj_dd->get_traducible()==='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
 				$code_component	= component_common::get_instance($model_name,
 																 $component_tipo,
 																 $section_id,
