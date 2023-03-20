@@ -127,7 +127,7 @@ class tool_import_rdf extends tool_common {
 				$rdf_graph->load();
 			} catch (Exception $e) {
 
-				debug_log(__METHOD__." Ignored broken link in rdf ".to_string($rdf_uri), logger::DEBUG);
+				debug_log(__METHOD__." Ignored broken link in rdf ".to_string($rdf_uri), logger::ERROR);
 				continue;
 			}
 
@@ -174,6 +174,7 @@ class tool_import_rdf extends tool_common {
 				$current_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($owl_class_tipo, 'section', 'termino_relacionado', false);
 			}
 		}
+
 		$section_tipo = reset($current_section_tipo);
 		$section_tipo_label		= RecordObj_dd::get_termino_by_tipo($section_tipo);
 		//main section
@@ -588,12 +589,14 @@ class tool_import_rdf extends tool_common {
 		$ar_records		= $search_result->ar_records;
 		$count			= count($ar_records);
 
-
 		if($count>1) {
 
 			// more than one exists with same value
 				dump('', ' SQO +++++++++++++++++ '.to_string($sqo));
-				throw new Exception("Error Processing Request [get_solved_select_value]. Search in section_tipo: $section_tipo get more than one result. Only one is expected ! ($count)", 1);
+				debug_log(__METHOD__." Error Processing Request [get_solved_select_value]. Search in section_tipo: $section_tipo get more than one result. Only one is expected ! ($count) ".to_string(), logger::DEBUG);
+
+			// use the first one
+				$section_id = reset($ar_records)->section_id;
 
 		}elseif ($count===1) {
 
