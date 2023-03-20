@@ -1683,7 +1683,7 @@ final class dd_core_api {
 			$permissions = common::get_permissions($section_tipo, $tipo);
 			if (!empty($result->data) && $permissions<1 && $element->get_model()!=='menu') {
 
-				$result->data = [];
+				// $result->data = [];
 
 				debug_log(__METHOD__.
 					' Catching non enough permissions call' .PHP_EOL.
