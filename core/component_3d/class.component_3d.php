@@ -313,7 +313,7 @@ class component_3d extends component_media_common {
 		}else{
 			try {
 				$size		= @filesize($filename) ;
-				if(!$size)	throw new Exception('Unknow size!') ;
+				if(!$size)	throw new Exception('Unknown size!') ;
 			} catch (Exception $e) {
 				#echo '',  $e->getMessage(), "\n";
 				#trigger_error( __METHOD__ . " " . $e->getMessage() , E_USER_NOTICE) ;
@@ -780,8 +780,8 @@ class component_3d extends component_media_common {
 			// extension
 				$file_ext = pathinfo($original_file_name, PATHINFO_EXTENSION);
 				if (empty($file_ext)) {
-					// throw new Exception("Error Processing Request. File extension is unknow", 1);
-					$msg = ' Error Processing Request. File extension is unknow';
+					// throw new Exception("Error Processing Request. File extension is unknown", 1);
+					$msg = ' Error Processing Request. File extension is unknown';
 					debug_log(__METHOD__.$msg, logger::ERROR);
 					$response->msg .= $msg;
 					return $response;

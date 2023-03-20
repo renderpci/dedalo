@@ -124,7 +124,7 @@ abstract class MediaObj extends stdClass {
 			}
 
 			$size		= @filesize($filename);
-			if(!$size)	throw new Exception('Unknow size!');
+			if(!$size)	throw new Exception('Unknown size!');
 		} catch (Exception $e) {
 			#echo '',  $e->getMessage(), "\n";
 			#trigger_error( __METHOD__ . " " . $e->getMessage() , E_USER_NOTICE) ;

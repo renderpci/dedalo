@@ -22,6 +22,9 @@ abstract class logger_backend {
 
 
 
+	/**
+	* LOG_MESSAGE
+	*/
 	abstract function log_message(
 		string $message,
 		int $log_level=logger::INFO,

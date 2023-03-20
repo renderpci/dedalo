@@ -132,7 +132,7 @@ final class Ffmpeg {
 			#$file = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . "/{$quality}/{$name}.{$extension}";
 
 				#
-				# Search for every possible file whit this name and unknow extension
+				# Search for every possible file whit this name and unknown extension
 				$target_dir = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . "/{$quality}";
 				if (is_dir($target_dir)) {
 

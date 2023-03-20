@@ -172,7 +172,7 @@
 	define('SHOW_DEBUG',
 		(isset($_SESSION['dedalo']['auth']['user_id']) && $_SESSION['dedalo']['auth']['user_id']==DEDALO_SUPERUSER)
 			? true
-			: false
+			: false // default false
 	);
 
 
@@ -182,7 +182,7 @@
 	define('SHOW_DEVELOPER',
 		(isset($_SESSION['dedalo']['auth']['is_developer']) && $_SESSION['dedalo']['auth']['is_developer']===true)
 			? true
-			: false // false
+			: false // default false
 	);
 
 
@@ -209,8 +209,10 @@
 
 
 
-// log and errors : Store application data info and errors
-	// logger_level. default: ERROR
+// log and errors : Store application activity data info and errors to DDBB
+	// server error log logger_level. Default: ERROR (will be ignored when SHOW_DEBUG===true)
+	// Note that log outputs to be the php.ini error_log config file like '/var/log/fpm-php.log'
+	// You can view the server log using terminal command 'tail -f /var/log/php_errors.log' with your own log path
 		// level error codes
 		// DEBUG	= 100;
 		// INFO		= 75;
@@ -218,32 +220,22 @@
 		// WARNING	= 25;
 		// ERROR	= 10;
 		// CRITICAL	= 5;
-		define('LOGGER_LEVEL', logger::DEBUG);
-	// Log messages in page
-		$log_messages = array();
-		global $log_messages;
-	// activity log db
+		define('LOGGER_LEVEL', (SHOW_DEBUG===true)
+			? logger::DEBUG // log all messages
+			: logger::ERROR // log only errors
+		);
+	// matrix_activity log db. Manages log write to the table
 		// Log application info in db
-		logger::register('activity'	, 'activity://auto:auto@auto:3306/log_data?table=matrix_activity');
+		logger::register('activity'	, 'activity://auto:auto@auto:5432/log_data?table=matrix_activity');
 		// Store object in logger static array var
 		logger::$obj['activity'] = logger::get_instance('activity');
-	// error log file
-		// Log application errors in file
-		// Logs dir (Maintain this directory inaccessible for security)
-		define('DEDALO_LOGS_DIR'  , dirname(DEDALO_ROOT_PATH) . '/temp/logs');	# !! In production mode log MUST BE out of site
-		// define('DEDALO_LOGS_DIR'  , DEDALO_LIB_PATH . '/logs');
-		// Set file. In production mode log MUST BE out of site
-		logger::register('error', 'file://'.DEDALO_LOGS_DIR.'/dedalo_errors.log');
-		// Store object in logger static array var
-		logger::$obj['error'] = logger::get_instance('error');
 
 
 
 // lang
-	# DEDALO STRUCTURE LANG (default 'lg-spa')
+	// dedalo structure lang. Ontology lang (default 'lg-spa'). Do not touch this value
 	define('DEDALO_STRUCTURE_LANG', 'lg-spa');
-
-	# APPLICATION LANG : Dedalo application lang
+	// dedalo_application_langs
 	define('DEDALO_APPLICATION_LANGS', [
 		'lg-eng'	=> 'English',
 		'lg-spa'	=> 'Castellano',

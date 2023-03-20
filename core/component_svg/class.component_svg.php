@@ -388,8 +388,8 @@ class component_svg extends component_media_common {
 		// extension
 			$file_ext = pathinfo($original_file_name, PATHINFO_EXTENSION);
 			if (empty($file_ext)) {
-				// throw new Exception("Error Processing Request. File extension is unknow", 1);
-				$msg = ' Error Processing Request. File extension is unknow';
+				// throw new Exception("Error Processing Request. File extension is unknown", 1);
+				$msg = ' Error Processing Request. File extension is unknown';
 				debug_log(__METHOD__.$msg, logger::ERROR);
 				$response->msg .= $msg;
 				return $response;

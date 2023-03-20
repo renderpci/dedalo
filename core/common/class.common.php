@@ -1806,7 +1806,7 @@ abstract class common {
 					$ddo_start_time = start_time();
 
 					if(isset($dd_object->is_dataframe) && $dd_object->is_dataframe===true){
-						$section_tipo	= is_array($dd_object->section_tipo)
+						$section_tipo = is_array($dd_object->section_tipo)
 							? reset($dd_object->section_tipo)
 							: $dd_object->section_tipo;
 					}else{
