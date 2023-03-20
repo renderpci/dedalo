@@ -341,7 +341,7 @@
     "tool_user_admin": "Administración de usuario",
     "component_history": "Historial del componente",
     "date": "Fecha",
-    "reemplazar_todas": "Recrear todas",
+    "recreate_all": "Recrear todas",
     "page": "Página",
     "delete_data_and_record": "Borrar registro completo",
     "registros_creados": "Registros creados",

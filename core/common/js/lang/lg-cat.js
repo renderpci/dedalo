@@ -341,7 +341,7 @@
     "tool_user_admin": "Administració d'usuari",
     "component_history": "Històric del component",
     "date": "Data",
-    "reemplazar_todas": "Recrear totes",
+    "recreate_all": "Recrear totes",
     "page": "Pàgina",
     "delete_data_and_record": "Esborrar registre complet",
     "registros_creados": "Registres creats",
