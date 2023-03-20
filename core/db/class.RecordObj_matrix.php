@@ -448,7 +448,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 		$id 	= $this->calculate_ID();		#var_dump($id);
 		$lang 	= $this->lang;
 
-		if(!$this->ID) die("<br><span class='error'>". __METHOD__ . " Error: id is unknow! I can't calculate current ID .</span>" );
+		if(!$this->ID) die("<br><span class='error'>". __METHOD__ . " Error: id is unknown! I can't calculate current ID .</span>" );
 
 		$ar_matrix_childrens_of_this = array();		#echo " this->id:".$this->get_ID()."<hr>";
 
