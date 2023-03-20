@@ -68,8 +68,8 @@ vendor/*
 # !vendor/leafo
 !vendor/sweetrdf
 !autoload.php
-composer.json
-composer.lock
+!composer.json
+!composer.lock
 
 # Ignore paths that contain generated content.
 /media
