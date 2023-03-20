@@ -505,7 +505,6 @@ section.prototype.build = async function(autoload=false) {
 
 			// count rows
 				if (!self.total) {
-
 					self.get_total()
 				}
 
