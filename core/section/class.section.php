@@ -1719,7 +1719,10 @@ class section extends common {
 					true // from_cache
 				);
 				if (!isset($ar_exclude_elements_tipo[0])) {
-					error_log("Warning. exclude_elements of section $this->tipo not found (2). All virtual section must has defined exclude_elements");
+					debug_log(__METHOD__
+						." Warning. exclude_elements of section $this->tipo not found (2). All virtual section must has defined exclude_elements ",
+						logger::WARNING
+					);
 				}else{
 					// locate excluded tipos (related terms) in this virtual section
 					$ar_excluded_tipo = RecordObj_dd::get_ar_terminos_relacionados(
