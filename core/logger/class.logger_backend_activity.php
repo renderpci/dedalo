@@ -1,13 +1,16 @@
 <?php
 /**
 * LOGGER BACKEND ACTIVITY CLASS
-*
+* Manages activity records write to matrix_activity table
 */
 class logger_backend_activity extends logger_backend {
+
+
 
 	// private $log_level;
 	// private $h_conn;
 	// private static $activity_matrix_table = 'matrix_activity';
+
 
 
 	/**
@@ -78,7 +81,7 @@ class logger_backend_activity extends logger_backend {
 
 	/**
 	* __CONSTRUCT
-	* Require url_data string like: 'mysql://user:password@host/database?tabe=matrix_activity' for caompatibity
+	* Require url_data string like: 'mysql://user:password@host/database?table=matrix_activity' for compatibility
 	* @param array|null $url_data
 	*/
 	public function __construct(?array $url_data) {
