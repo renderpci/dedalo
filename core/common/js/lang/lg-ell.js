@@ -341,7 +341,7 @@
     "tool_user_admin": "<mark>Administración de usuario<\/mark>",
     "component_history": "Ιστορικό συστατικών",
     "date": "ημερομηνία",
-    "reemplazar_todas": "αναδημιουργήσουν όλους",
+    "recreate_all": "αναδημιουργήσουν όλους",
     "page": "Σελίδα",
     "delete_data_and_record": "Διαγραφή πλήρες αρχείο",
     "registros_creados": "αρχεία που δημιουργήθηκαν",

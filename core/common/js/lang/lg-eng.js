@@ -341,7 +341,7 @@
     "tool_user_admin": "User administration",
     "component_history": "Component history",
     "date": "Date",
-    "reemplazar_todas": "Recreate all",
+    "recreate_all": "Recreate all",
     "page": "Page",
     "delete_data_and_record": "Delete data and record",
     "registros_creados": "Created records",

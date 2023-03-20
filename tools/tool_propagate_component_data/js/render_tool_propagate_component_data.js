@@ -162,7 +162,7 @@ const get_content_data = async function(self) {
 			await ui.component.deactivate(self.component_to_propagate)
 
 			if(filter === false){
-				const alert_replace_all = (self.get_tool_label('replace_all_records') || 'All records will be replaced') + ' '+
+				const alert_replace_all = (self.get_tool_label('will_replaced_all_records') || 'All records will be replaced') + ' '+
 				(get_label.total || 'Total') + ': '  + total
 
 				if (!confirm(alert_replace_all)){

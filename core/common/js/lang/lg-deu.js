@@ -341,7 +341,7 @@
     "tool_user_admin": "Nutzeradministration",
     "component_history": "Komponentenverlauf",
     "date": "Datum",
-    "reemplazar_todas": "Alle wiederherstellen",
+    "recreate_all": "Alle wiederherstellen",
     "page": "Seite",
     "delete_data_and_record": "Kompletten Eintrag löschen",
     "registros_creados": "erstellte Einträge",

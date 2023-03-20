@@ -341,7 +341,7 @@
     "tool_user_admin": "<mark>Administración de usuario<\/mark>",
     "component_history": "<mark>Historial del componente<\/mark>",
     "date": "<mark>Fecha<\/mark>",
-    "reemplazar_todas": "<mark>Recrear todas<\/mark>",
+    "recreate_all": "<mark>Recrear todas<\/mark>",
     "page": "<mark>Página<\/mark>",
     "delete_data_and_record": "<mark>Borrar registro completo<\/mark>",
     "registros_creados": "<mark>Registros creados<\/mark>",
