@@ -27,13 +27,8 @@ class dd_error {
 		$error_to_show['debug']	= "<span class='error'>Ops.. [Error]$number " . $message ."</span>";
 		$error_to_show['dump']	= '<pre>' . print_r($error,true) . '</pre>';
 
-		# DEDALO FILE LOGGER
-		if ( class_exists('logger') && isset(logger::$obj['error']) ) {
-			logger::$obj['error']->log_message($error_to_show['debug'].$error_to_show['dump'], logger::ERROR, __METHOD__);
-		}
-		# PHP-APACHE LOG
+		// PHP-APACHE LOG
 		error_log('ERROR: '.$error_to_show['debug'].$error_to_show['dump']);
-
 	}//end captureError
 
 
@@ -51,7 +46,6 @@ class dd_error {
 			$error_to_show['debug']	= "<span class='error'>Ops.. [Exception] " . $message ."</span>";
 			$error_to_show['dump']	= '<pre>' . print_r($exception,true) . '</pre>';
 
-			// $log_messages 	= self::wrap_error( implode('<br>', $GLOBALS['log_messages']) );
 			error_log($error_to_show['debug'].$error_to_show['dump']);
 		}
 		catch (Exception $exception2) {
@@ -64,19 +58,11 @@ class dd_error {
 			$error_to_show['debug']	= "<span class='error'>Ops.. [Exception2] " . $message ."</span>" . "<span class='error'>Ops2.. [Exception2] " . $message2 ."</span>";
 			$error_to_show['dump']	= '<pre><h1>Additional uncaught exception thrown while handling exception.</h1>'.print_r($exception,true).'<hr>'.print_r($exception2,true).'</pre>';
 
-			// $log_messages 	= self::wrap_error( implode('<br>', $GLOBALS['log_messages']) );
-			// print safe_xss($log_messages);
 			error_log('Exception 2 : '.$message2);
 		}
 
-
-		# DEDALO FILE LOGGER
-		if ( isset(logger::$obj['error']) ) {
-			logger::$obj['error']->log_message($error_to_show['debug'].$error_to_show['dump'], logger::CRITICAL, __METHOD__);
-		}
-		# PHP-APACHE LOG
+		// PHP-APACHE LOG
 		error_log($error_to_show['debug'].$error_to_show['dump']);
-
 	}//end captureException
 
 
@@ -103,13 +89,8 @@ class dd_error {
 			return true;
 		}
 
-		# DEDALO FILE LOGGER
-		if ( isset(logger::$obj['error']) ) {
-			logger::$obj['error']->log_message($error_to_show['debug'].$error_to_show['dump'], logger::CRITICAL, __METHOD__);
-		}
-		# PHP-APACHE LOG
+		// PHP-APACHE LOG
 		error_log($error_to_show['debug'].$error_to_show['dump']);
-
 	}//end captureShutdown
 
 
@@ -148,7 +129,7 @@ class dd_error {
 
 
 
-};//end class
+}//end class dd_error
 
 
 

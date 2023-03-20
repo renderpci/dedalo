@@ -171,7 +171,9 @@ function wrap_html(string $string, bool $htmlspecialchars=true) {
 function debug_log(string $info, int $level=logger::DEBUG) : bool {
 
 	// only debug mode and a minimum level generates messages
-		if(SHOW_DEBUG!==true || $level > LOGGER_LEVEL) {
+	// see config file to check minimum log level
+	// Note that if SHOW_DEBUG is true, all messages will be printed to the log file (level will be ignored)
+		if($level > LOGGER_LEVEL && SHOW_DEBUG===false) {
 			return false;
 		}
 
@@ -218,6 +220,7 @@ function debug_log(string $info, int $level=logger::DEBUG) : bool {
 	}else{
 		$msg		= 'DEBUG_LOG ['.logger::level_to_string($level).'] '. $info;
 	}
+
 
 	// error log print
 		error_log($msg);
