@@ -3595,6 +3595,7 @@ abstract class component_common extends common {
 	/**
 	* GET_DATO_PAGINATED
 	* It slices the component array of locators to allocate pagination options
+	* @param int|null $custom_limit = null
 	* @return array $dato_paginated
 	*/
 	public function get_dato_paginated(?int $custom_limit=null) : array {
@@ -3621,21 +3622,12 @@ abstract class component_common extends common {
 		// slice
 			$dato_paginated = array_slice($dato, $offset, $array_lenght);
 
-				// dump($limit, ' limit ++ '.to_string($this->tipo));
-				// dump($offset, ' offset ++ '.to_string($this->tipo));
-				// dump($dato, ' dato ++ '.to_string($this->tipo));
-				// dump($dato_paginated, ' dato_paginated ++ '.to_string($this->tipo));
-
 		// pagination keys. Set an offset relative key to each element of paginated array
 			foreach ($dato_paginated as $key => $value) {
 				$paginated_key = $key + $offset;
 				$value->paginated_key = $paginated_key;
 			}
 
-			// $dato_paginated_2 = [];
-			// foreach ($dato_paginated as $key => $value) {
-			// 	$dato_paginated_2[$key + $offset] = $value;
-			// }
 
 		return $dato_paginated;
 	}//end get_dato_paginated
@@ -3644,9 +3636,9 @@ abstract class component_common extends common {
 
 	/**
 	* GET_STRUCTURE_BUTTONS
-	* @return
+	* @return array
 	*/
-	public function get_structure_buttons($permissions=null) : array {
+	public function get_structure_buttons(int $permissions=null) : array {
 
 
 		return [];
