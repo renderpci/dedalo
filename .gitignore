@@ -56,7 +56,7 @@ core/extras/*
 !core/extras/muvaet
 
 # vendor ignore all except used public
-vendor
+vendor/*
 # !vendor/maxmind
 # !vendor/maxmind-db
 # !vendor/react
