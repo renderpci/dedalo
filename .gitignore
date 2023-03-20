@@ -66,6 +66,7 @@ vendor
 # !vendor/socrata
 # !vendor/composer
 # !vendor/leafo
+!vendor/sweetrdf
 autoload.php
 composer.json
 composer.lock
