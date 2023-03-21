@@ -341,7 +341,8 @@ class component_image extends component_media_common {
 			if(!empty($dato) && is_array($dato)){
 				$dato = reset($dato);
 			}
-
+			// used to change the iri of the image, don't use it as dataframe section
+			// only control if the uri is internal or external.
 			if(!empty($dato->dataframe)){
 				if(isset($dato->iri) && !empty($dato->iri)) {
 

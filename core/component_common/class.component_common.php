@@ -215,7 +215,7 @@ abstract class component_common extends common {
 						'edit_in_list',
 						'edit_note',
 						'tool_structuration',
-						'dataframe_edit',
+						// 'dataframe_edit',
 						'tool_description',
 						'view_tool_description',
 						'player',
@@ -1009,42 +1009,6 @@ abstract class component_common extends common {
 				// if ($this->traducible=='no') {
 				// 	$lang = DEDALO_DATA_NOLAN;
 				// }
-
-		// dataframe mode. Save caller and stop
-			// if (strpos($mode,'dataframe')===0 && isset($this->caller_dataset)) {
-
-			// 	// debug_log(__METHOD__." caller_dataset ".to_string($this->caller_dataset), logger::DEBUG);
-
-			// 	$new_tipo			= $this->caller_dataset->component_tipo;
-			// 	$new_section_tipo	= $this->caller_dataset->section_tipo;
-			// 	$new_section_id		= $this->caller_dataset->section_id;
-			// 	$new_model_name	= RecordObj_dd::get_model_name_by_tipo($new_tipo, true);
-			// 	$new_component		= component_common::get_instance(
-			// 		$new_model_name,
-			// 		$new_tipo,
-			// 		$new_section_id,
-			// 		'edit',
-			// 		$lang,
-			// 		$new_section_tipo
-			// 	);
-
-			// 	# Force load current db dato to avoid loose it
-			// 	$new_component->get_dato();
-
-			// 	# Set dataframe data
-			// 	$new_component->update_dataframe_element(
-			// 		$this->dato,
-			// 		$this->caller_dataset->caller_key,
-			// 		$this->caller_dataset->type
-			// 	);
-
-			// 	if (isset($this->save_to_database) && $this->save_to_database===false) {
-			// 		debug_log(__METHOD__." Stopped ?? dataframe save to DDBB $this->section_tipo : $new_section_tipo , $this->section_id : $new_section_id ".to_string(), logger::WARNING);
-			// 		#$new_component->save_to_database = false;
-			// 	}
-
-			// 	return $new_component->Save();
-			// }//end if (strpos($mode,'dataframe')===0 && isset($this->caller_dataset))
 
 		// check component minimum vars before save
 			if( empty($section_id) || empty($tipo) || empty($lang) ) {
@@ -2361,106 +2325,6 @@ abstract class component_common extends common {
 
 
 	/**
-	* ADD_INDEX_SEMANTIC
-	* Used by components using locators like component_portal and component_autocomplete
-	* @param string $termino_id
-	* @param string $locator_section_tipo
-	* @param string $locator_section_id
-	* @param int|string $ds_key
-	*	Dédalo semantics key
-	* @return object $response
-	*/
-	public function add_index_semantic(object $new_ds_locator, string $locator_section_tipo, $locator_section_id, $ds_key) : object {
-
-		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= '';
-
-		$dato = $this->get_dato();
-		foreach ((array)$dato as $current_locator) {
-
-			if ($current_locator->section_tipo===$locator_section_tipo && $current_locator->section_id==$locator_section_id) {
-			#if ( locator::compare_locators($current_locator, $locator, array('section_tipo','section_id')) ) {
-
-				# new ds locator is built from termino_id temporarily
-				#$new_ds_locator = component_autocomplete_ts::convert_dato_to_locator($termino_id);
-
-				# ds container add if not exits in current locator
-				if(!isset($current_locator->ds)) {
-					$current_locator->ds = new stdClass();
-				}
-				if(!isset($current_locator->ds->$ds_key)) {
-					$current_locator->ds->$ds_key = array();
-				}
-
-				# add ds locator to current portal locator removing duplicates
-				$current_locator->ds->$ds_key = component_common::add_object_to_dato((object)$new_ds_locator, (array)$current_locator->ds->$ds_key);
-
-				$this->set_dato($dato);
-				$this->Save();
-
-				$response->result 	= true;
-				$response->msg 		= "Added index semantic locator ds";
-				break;
-			}
-
-		}//end foreach ((array)$dato as $current_locator) {
-
-		return (object)$response;
-	}//end add_index_semantic
-
-
-
-	/**
-	* REMOVE_INDEX_SEMANTIC
-	* Used by components using locators like component_portal and component_autocomplete
-	* @param string $termino_id
-	* @param string $locator_section_tipo
-	* @param string $locator_section_id
-	* @param int|string $ds_key
-	*	Dédalo semantics key
-	* @return object $response
-	*/
-	public function remove_index_semantic(object $new_ds_locator, string $locator_section_tipo, $locator_section_id, $ds_key) : object {
-
-		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= '';
-
-		$dato = $this->get_dato();
-		foreach ((array)$dato as $current_locator) {
-
-			if ($current_locator->section_tipo===$locator_section_tipo && $current_locator->section_id==$locator_section_id) {
-
-				# ds container add if not exits in current locator
-				if(!isset($current_locator->ds->$ds_key)) {
-					$response->msg = 'Sorry, current index not exists. Nothing is removed';
-					return $response;
-				}
-
-				# new ds locator is built from termino_id temporarily
-				#$new_ds_locator = component_autocomplete_ts::convert_dato_to_locator($termino_id);
-
-				# add ds locator to current portal locator removing duplicates
-				$current_locator->ds->$ds_key = component_common::remove_locator_in_dato((object)$new_ds_locator, (array)$current_locator->ds->$ds_key);
-
-				$this->set_dato($dato);
-				$this->Save();
-
-				$response->result 	= true;
-				$response->msg 		= "Removed index semantic locator";
-				break;
-			}
-
-		}//end foreach ((array)$dato as $current_locator)
-
-
-		return (object)$response;
-	}//end remove_index_semantic
-
-
-
-	/**
 	* REGENERATE_COMPONENT
 	* Force the current component to re-save its data
 	* Note that the first action is always load dato to avoid save empty content
@@ -2724,107 +2588,6 @@ abstract class component_common extends common {
 	}//end get_value_with_fallback_from_dato_full
 
 
-
-	/**
-	* GET_DATAFRAME
-	* @return array $dataframe
-	*/
-	public function get_dataframe() : array {
-
-		if(!isset($this->dataframe)) {
-			# MATRIX DATA : Load matrix data
-			$this->load_component_dataframe();
-		}
-
-		return $this->dataframe;
-	}//end get_dataframe
-
-
-
-	/**
-	* UPDATE_DATAFRAME_ELEMENT
-	* Is one at one
-	* Updates component dataframe locator. Can add, update existing or delete locator in dataframe container
-	* @param object | array | null $locator optional (is not required to delete element)
-	*	Locator can be a locator object or a array of one locator object
-	*	If locator is null, then existing element with $from_key and $type will be deleted
-	* @param string $from_key
-	*	Key that point current dataframe_element
-	* @param string $type
-	*	Type of dataframe element (encoded type of uncertainty, time, space, etc.)
-	* @return bool
-	*/
-	public function update_dataframe_element($locator, $from_key, $type) : bool {
-
-		$current_dataframe 	= (array)$this->get_dataframe();
-		$final_dataframe 	= array();
-
-		# Generate a new array with all other locators (different to current requested $from_key, $type)
-		# This removes previous element
-		foreach ((array)$current_dataframe as $key => $current_locator) {
-
-			if( !is_object($current_locator) ){
-				debug_log(__METHOD__." Bad type of locator [1]. Skipped. gettype:".gettype($current_locator).", component tipo:$this->tipo, locator: ".to_string($current_locator), logger::DEBUG);
-				continue;
-			}
-
-			if ($current_locator->from_key!=$from_key && $current_locator->type!=$type) {
-				$final_dataframe[] = $current_locator;
-			}
-		}
-
-		# If no empty locator add element
-		if (!empty($locator)) {
-			if (is_array($locator)) {
-				$locator = reset($locator);
-			}
-			if( !is_object($locator) ){
-				debug_log(__METHOD__." Bad type of locator [2]. Skipped. gettype:".gettype($locator).", component tipo:$this->tipo, locator: ".to_string($locator), logger::DEBUG);
-			}else{
-				$final_dataframe[] = $locator;
-			}
-		}
-
-		# Set component dataframe
-		$this->dataframe = $final_dataframe;
-		debug_log(__METHOD__." final_dataframe ".to_string($final_dataframe)  , logger::DEBUG);
-
-		return true;
-	}//end update_dataframe_element
-
-
-
-	/**
-	* LOAD_COMPONENT_DATAFRAME
-	* set the dataframe with the information of the database
-	* it call to the section for get the full component data and select you own part.
-	* the dataframe is a array of objects (dataframes):
-	* every object (dataframe) normally will be a locator with the dataframe section that define the frame of the data
-	* with the "type" key that say the different dataframes of the dato
-	* dataframe for certainty 	- dd558	-	DEDALO_DATAFRAME_TYPE_UNCERTAINTY
-	* dataframe for time 		- dd559	-	DEDALO_DATAFRAME_TYPE_TIME
-	* dataframe for space 		- dd560	-	DEDALO_DATAFRAME_TYPE_SPACE
-	* the locator can has the "from_key" that reference to the key of the dato array that this dataframe affect or will be apply, search, etc
-	* @return bool
-	*/
-	public function load_component_dataframe() : bool {
-
-		// check vars
-			if( empty($this->section_id) || $this->mode==='dummy' || $this->mode==='search') {
-				return false;
-			}
-
-		// component dato_full includes dataframe
-			$dato_full = $this->get_dato_full();
-
-		// set dataframe if exists or default empty array
-			$this->dataframe = isset($dato_full->dataframe)
-				? (array)$dato_full->dataframe
-				: [];
-
-
-		return true;
-	}//end load_component_dataframe
 
 
 

@@ -710,9 +710,6 @@ const render_inputs_list = function(self) {
 			// add node
 			self.filter_free_nodes.push(component_input)
 		}
-		// check if the current ddo is a dataframe node,
-		//if the caller is a portal the dataframe it's necessary remove it, because dataframes nodes has his own sqo (it's outside of the portal sqo )
-			//if(current_ddo.is_dataframe && current_ddo.is_dataframe===true ) continue;
 	}//end for (let operator in filter_free)
 
 

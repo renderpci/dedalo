@@ -14,8 +14,7 @@
 *		$locator->tag_component_tipo	= (string)$tag_component_tipo; // component that has the tag, in the same section (used for component_relation_index)
 *		$locator->state					= (object)$state;
 * 		$locator->type					= (string)$type;
-*		$locator->ds					= (array)$ds;
-*		$locator->from_key				= (int)$from_key; // dataframe index array number of the data that reference
+*		$locator->section_id_key				= (int)$section_id_key; // dataframe index array number of the data that reference
 *
 *	Note that properties could exists or not (they are created on the fly). Final result object only contain set properties and locator object could be empty or partially set.
 *	For example, component portal only use section_tipo an section_id in many cases.
@@ -35,8 +34,7 @@ class locator extends stdClass {
 		private $tag_id;
 		private $tag_component_tipo;
 		private $state;
-		private $ds;
-		private $from_key;
+		private $section_id_key;
 	*/
 
 	# Mandatory and protected (use set/get to access)
@@ -195,24 +193,15 @@ class locator extends stdClass {
 		$this->type_rel = $value;
 	}
 	/**
-	* SET_SEMANTIC
-	*/
-	public function set_ds(array $value) {
-		if(!is_array($value)) {
-			throw new Exception("Error Processing Request. Invalid dedalo semantic ds:". to_string($value), 1);
-		}
-		$this->ds = $value;
-	}
-	/**
-	* SET_FROM_KEY
+	* SET_section_id_key
 	* @return
 	*/
-	public function set_from_key(int $value) {
+	public function set_section_id_key(int $value) {
 		if(int($value)<0) {
-			throw new Exception("Error Processing Request. Invalid from_key: $value", 1);
+			throw new Exception("Error Processing Request. Invalid section_id_key: $value", 1);
 		}
 		$this->type = $value;
-	}//end set_from_key
+	}//end set_section_id_key
 	/**
 	* SET_TIPO
 	*/
@@ -390,7 +379,7 @@ class locator extends stdClass {
 	* COMPARE_LOCATORS
 	* @return bool $equal
 	*/
-	public static function compare_locators(object $locator1, object $locator2, array $ar_properties=[], array $ar_exclude_properties=['dataframe','ds']) : bool {
+	public static function compare_locators(object $locator1, object $locator2, array $ar_properties=[], array $ar_exclude_properties=[]) : bool {
 
 		if (!is_object($locator1) || !is_object($locator2)) {
 			return false;

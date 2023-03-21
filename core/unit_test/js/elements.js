@@ -385,8 +385,6 @@ import * as fn from './data.js'
 			new_value_params	: ['lg1','test89']
 		})
 
-	// component_semantic_node -render portal column- (WORKING HERE)
-
 	// component_svg
 		elements.push({
 			model				: 'component_svg',

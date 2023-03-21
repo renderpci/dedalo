@@ -110,7 +110,6 @@ include(DEDALO_SHARED_PATH . '/class.subtitles.php');
 	// 	'component_security_access',
 	// 	'component_select',
 	// 	'component_select_lang',
-	// 	'component_semantic_node',
 	// 	'component_svg',
 	// 	'component_text_area'
 	// ];

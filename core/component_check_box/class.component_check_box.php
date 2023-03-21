@@ -99,20 +99,6 @@ class component_check_box extends component_relation_common {
 
 
 	/**
-	* GET_DATAFRAME_VALUE
-	* @param string $type
-	* @return string $dataframe_value
-	*/
-		// public function get_dataframe_value(string $type) : string {
-
-		// 	$dataframe_value = RecordObj_dd::get_termino_by_tipo($type, DEDALO_APPLICATION_LANG, true);
-
-		// 	return $dataframe_value;
-		// }//end get_dataframe_value
-
-
-
-	/**
 	* GET_SORTABLE
 	* @return bool
 	* 	Default is true. Override when component is sortable

@@ -477,7 +477,6 @@ export const render_column_remove = function(options) {
 				})
 
 			// button_unlink_and_delete
-				console.log('options.caller.view:', options.caller.view);
 				const display_delete_record = options.caller.view!=='indexation'
 				if (display_delete_record) {
 					const button_unlink_and_delete = ui.create_dom_element({

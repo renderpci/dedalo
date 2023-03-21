@@ -162,7 +162,7 @@ class install extends common {
 			'matrix',				// main table
 			'matrix_activities',	// activities (exhibitions, visits, etc)
 			'matrix_activity',		// Dédalo activity log data
-			'matrix_dataframe',		// Dédalo data-frames data
+			'matrix_dataframe',		// Dédalo data-frames data // DELETE IT v6 don't use it
 			'matrix_hierarchy',		// thesaurus data
 			'matrix_hierarchy_main',// hierarchy data
 			'matrix_indexations',	// indexation data
