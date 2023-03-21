@@ -45,52 +45,55 @@ abstract class counter {
 
 	/**
 	* UPDATE_COUNTER
+	* Create/update a counter for the given tipo in the given table
 	* @param string $tipo Like dd561
 	* @param string $matrix_table Like matrix_counter (default)
 	* @param int $current_value (default false)
 	* @return int $counter_dato_updated
-	* NOTA : HACERLO DIRECTO SQL, PASANDO DE LOS COMPONENTES Y DEMÁS ZARANDAJAS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	*/
 	public static function update_counter(string $tipo, string $matrix_table='matrix_counter', $current_value=false) : int {
 
-		# ACTIVITY_SECTION DON'T USE COUNTERS
+		// Activity_section don't use counters
 		if ($tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
 			return (int)0;
 		}
 
-		if ($current_value===false) {
-			$current_value = (int)counter::get_counter_value($tipo, $matrix_table);
-		}
-		$counter_dato_updated = intval($current_value)+1;
+		// counter_dato_updated
+			if ($current_value===false) {
+				$current_value = (int)counter::get_counter_value($tipo, $matrix_table);
+			}
+			$counter_dato_updated = intval($current_value)+1;
 
-		$parent = 0;
-		$dato 	= $counter_dato_updated;
-		$tipo 	= (string)$tipo;
-		$lang 	= DEDALO_DATA_NOLAN;
+		// short vars
+			$parent = 0;
+			$dato 	= $counter_dato_updated;
+			$tipo 	= (string)$tipo;
+			$lang 	= DEDALO_DATA_NOLAN;
 
 		if( intval($current_value)===0 ) {
-			$ref 	  = RecordObj_dd::get_termino_by_tipo($tipo)." [".RecordObj_dd::get_modelo_name_by_tipo($tipo,true)."]";
-			$strQuery = "INSERT INTO \"$matrix_table\" (parent, dato, tipo, lang, ref) VALUES ($1, $2, $3, $4, $5)";
-			$result   = pg_query_params(DBi::_getConnection(), $strQuery, array($parent, $dato, $tipo, $lang, $ref));
-			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__." CREATED NEW COUNTER with value: counter_number:$dato ($strQuery) ".to_string(), logger::DEBUG);
-				if (!$result) {
-					trigger_error("VARS: parent:$parent, dato:$dato, tipo:$tipo, lang:$lang, ref:$ref");
-				}
+
+			// new counter case
+
+			$ref		= RecordObj_dd::get_termino_by_tipo($tipo)." [".RecordObj_dd::get_modelo_name_by_tipo($tipo,true)."]";
+			$strQuery	= "INSERT INTO \"$matrix_table\" (parent, dato, tipo, lang, ref) VALUES ($1, $2, $3, $4, $5)";
+			$result		= pg_query_params(DBi::_getConnection(), $strQuery, array($parent, $dato, $tipo, $lang, $ref));
+			if ($result===false) {
+				throw new Exception("Error Processing Request. DB error on update counter. Insert into '$matrix_table'", 1);
 			}
+			debug_log(__METHOD__." Created new counter with value: counter_number:'$dato' ($strQuery) ", logger::DEBUG);
+
 		}else{
-			$strQuery = 'UPDATE "'.$matrix_table.'" SET dato = $1 WHERE tipo = $2';
-			$result   = pg_query_params(DBi::_getConnection(), $strQuery, array( $dato, $tipo ));
-			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__." Updated counter with value: dato:$dato, tipo:$tipo (".str_replace(array('$1','$2'), array($dato,$tipo), $strQuery).") ".to_string(), logger::DEBUG);
-				if (!$result) {
-					trigger_error("VARS: dato:$dato, tipo:$tipo");
-				}
+
+			// update already created counter case
+
+			$strQuery	= 'UPDATE "'.$matrix_table.'" SET dato = $1 WHERE tipo = $2';
+			$result		= pg_query_params(DBi::_getConnection(), $strQuery, array($dato, $tipo));
+			if ($result===false) {
+				throw new Exception("Error Processing Request. DB error on update counter. Update '$matrix_table'", 1);
 			}
+			debug_log(__METHOD__." Updated counter with value: dato:'$dato', tipo:$tipo (".str_replace(array('$1','$2'), array($dato,$tipo), $strQuery).") ", logger::DEBUG);
 		}
-		if (!$result) {
-			throw new Exception("Error Processing Request. DB error on update counter", 1);
-		}
+
 
 		return (int)$counter_dato_updated;
 	}//end update_counter
@@ -109,15 +112,16 @@ abstract class counter {
 	public static function consolidate_counter(string $section_tipo, string $matrix_table, string $counter_matrix_table='matrix_counter') : bool {
 
 		# BIGGER_SECTION_ID . Search bigger section_tipo existent
-		$strQuery = 'SELECT section_id FROM "'.$matrix_table.'" WHERE section_tipo = $1 ORDER BY section_id DESC LIMIT 1';
-		$result   = pg_query_params(DBi::_getConnection(), $strQuery, array($section_tipo));
-		if(!$result) throw new Exception("Error Processing Request. DB error on get last section_id of tipo: '$section_tipo' - table: '$matrix_table'", 1);
-		$rows 	  = (array)pg_fetch_assoc($result);
-
+		$strQuery	= 'SELECT section_id FROM "'.$matrix_table.'" WHERE section_tipo = $1 ORDER BY section_id DESC LIMIT 1';
+		$result		= pg_query_params(DBi::_getConnection(), $strQuery, array($section_tipo));
+		if($result===false) {
+			throw new Exception("Error Processing Request. DB error on get last section_id of tipo: '$section_tipo' - table: '$matrix_table'", 1);
+		}
+		$rows = (array)pg_fetch_assoc($result);
 		$bigger_section_id = reset($rows);
-			if (empty($bigger_section_id)) {
-				return false;
-			}
+		if (empty($bigger_section_id)) {
+			return false;
+		}
 
 		#
 		# UPDATE COUNTER WITH BIGGEST VALUE
@@ -129,7 +133,7 @@ abstract class counter {
 		#
 		# TEST IF COUNTER EXISTS BEFORE SET
 		$counter_created = false;
-		# When current_value is bigger than zero, test is counter exits. If not, create calling counter with zero value
+		// When current_value is bigger than zero, test is counter exits. If not, create calling counter with zero value
 		$strQuery 	= 'SELECT dato AS counter_number FROM "'.$counter_matrix_table.'" WHERE tipo = $1 LIMIT 1';
 		$result	  	= pg_query_params(DBi::_getConnection(), $strQuery, array($section_tipo));
 		if(!$result) throw new Exception("Error Processing Request. DB error on get counter value", 1);
@@ -151,7 +155,7 @@ abstract class counter {
 				debug_log(__METHOD__." Consolidated counter with value: dato:$bigger_section_id, section_tipo:$section_tipo (".str_replace(array('$1','$2'), array($bigger_section_id,$section_tipo), $strQuery).") ".to_string(), logger::DEBUG);
 			}
 		}
-		#debug_log(__METHOD__." Triggered consolidate_counter and update_counter with value: $current_value [$section_tipo - $matrix_table] ".to_string(), logger::DEBUG);
+		// debug_log(__METHOD__." Triggered consolidate_counter and update_counter with value: $current_value [$section_tipo - $matrix_table] ".to_string(), logger::DEBUG);
 
 		return true;
 	}//end consolidate_counter
@@ -160,13 +164,17 @@ abstract class counter {
 
 	/**
 	* DELETE_COUNTER
+	* @param string $tipo
+	* @param string $matrix_table = 'matrix_counter'
 	* @return bool
 	*/
 	private static function delete_counter(string $tipo, string $matrix_table='matrix_counter') : bool {
 
 		$strQuery = 'DELETE FROM "'.$matrix_table.'" WHERE tipo = $1';
 		$result	  = pg_query_params(DBi::_getConnection(), $strQuery, array($tipo));
-		if(!$result)throw new Exception("Error Processing Request. DB error on delete counter $tipo", 1);
+		if($result===false) {
+			throw new Exception("Error Processing Request. DB error on delete counter $tipo", 1);
+		}
 
 		return true;
 	}//end delete_counter
@@ -175,7 +183,8 @@ abstract class counter {
 
 	/**
 	* CHECK_COUNTERS
-	* @return stdClass object $response
+	* Test all counters in DDBB
+	* @return object $response
 	*/
 	public static function check_counters() : object {
 
@@ -192,15 +201,15 @@ abstract class counter {
 		$result = JSON_RecordObj_matrix::search_free($sql);
 
 		$t = exec_time_unit($start_time,'ms');
-		debug_log(__METHOD__." check_counters sql: $sql: $t ms".to_string(), logger::DEBUG);
+		debug_log(__METHOD__." check_counters SQL: $sql: $t ms".to_string(), logger::DEBUG);
 
 		$i=0;
 		while ($rows = pg_fetch_assoc($result)) {
 
 			$start_time = start_time();
 
-			$section_tipo 		= $rows['tipo'];
-			$counter_section_id = (int)$rows['dato'];
+			$section_tipo		= $rows['tipo'];
+			$counter_section_id	= (int)$rows['dato'];
 
 			$model_name = RecordObj_dd::get_modelo_name_by_tipo($section_tipo,true);
 			if ($model_name!=='section') {
@@ -208,18 +217,13 @@ abstract class counter {
 				continue;
 			}
 
-			# Find last id in table
-			$table_name = common::get_matrix_table_from_tipo($section_tipo);
-			$sql2 	 = 'SELECT section_id FROM "'.$table_name.'" WHERE section_tipo = \''.$section_tipo.'\' ORDER BY section_id DESC LIMIT 1 ';
-			$result2 = JSON_RecordObj_matrix::search_free($sql2);
-
-
-
-			if (pg_num_rows($result2) === 0) {
-				$last_section_id = 0;	// Skip empty tables
-			}else{
-				$last_section_id = (int)pg_fetch_result($result2, 0, 'section_id');
-			}
+			// Find last id in table
+			$table_name			= common::get_matrix_table_from_tipo($section_tipo);
+			$sql2				= 'SELECT section_id FROM "'.$table_name.'" WHERE section_tipo = \''.$section_tipo.'\' ORDER BY section_id DESC LIMIT 1 ';
+			$result2			= JSON_RecordObj_matrix::search_free($sql2);
+			$last_section_id	= (pg_num_rows($result2)===0)
+				? 0 // Skip empty tables
+				: (int)pg_fetch_result($result2, 0, 'section_id');
 
 			$section_name = RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG, true, true);
 			$response->msg .= "<hr><b>-- $section_tipo $section_name</b> - counter: $counter_section_id - last_section_id: $last_section_id ";
