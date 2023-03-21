@@ -578,7 +578,7 @@ export const get_font_fit_size = (text, base_size=1.7, threshold=4) => {
 	const text_length = String(text).length
 
 	const font_size = (text_length > Math.floor(base_size + threshold) )
-		? base_size - (text_length * 0.023)
+		? base_size - (text_length * 0.037)
 		: base_size
 
 	return font_size
