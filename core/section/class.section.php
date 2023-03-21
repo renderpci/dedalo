@@ -587,18 +587,6 @@ class section extends common {
 			$component_dato = $component_obj->get_dato_unchanged(); ## IMPORTANT !!!!! (NO usar get_dato() aquí ya que puede cambiar el tipo fijo establecido por set_dato)
 				$component_global_dato->dato->{$component_lang} = $component_dato;
 
-		// dataframe
-			$dataframe = $component_obj->get_dataframe();
-			if (isset($component_global_dato->dataframe)) {
-				// already exists property dataframe. Add always
-				$component_global_dato->dataframe = $dataframe;
-			}else{
-				// not exists property. Add only if dataframe is not empty
-				if (!empty($dataframe)) {
-					$component_global_dato->dataframe = $dataframe;
-				}
-			}
-
 		// replace component portion of global object :  we update the entire component in the global object
 			if (!isset($dato->components->{$component_tipo})) {
 				if (!isset($dato->components)) {
@@ -1675,7 +1663,6 @@ class section extends common {
 			'box elements',
 			'area',
 			'component_semantic_node' // used in v5 but unused in v6
-			// 'dataframe'
 		];
 
 		# Current elements and children are not considerate part of section and must be excluded in children results

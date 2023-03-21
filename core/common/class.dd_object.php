@@ -56,8 +56,6 @@ class dd_object extends stdClass {
 		public $view;
 		// children_view		: string like "text"
 		public $children_view;
-		// fixed_mode			: string like 'edit'
-		public $fixed_mode;
 		// section_id			: int like 1 // Used by tools
 		public $section_id;
 		// name					: string like 'tool_lang' // Used by tools
@@ -511,18 +509,6 @@ class dd_object extends stdClass {
 
 		$this->children_view = $value;
 	}//end set_view
-
-
-
-	/**
-	* SET_FIXED_MODE
-	* @param string $value
-	* @return void
-	*/
-	public function set_fixed_mode(string $value) : void {
-
-		$this->fixed_mode = $value;
-	}//end set_fixed_mode
 
 
 

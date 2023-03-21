@@ -909,13 +909,7 @@ final class dd_core_api {
 						$component_lang,
 						$section_tipo
 					);
-					// component_semantic_node case
-						if(isset($data->row_locator) && $model==='component_semantic_node'){
-							$component->set_row_locator($data->row_locator);
-							$component->set_parent_section_tipo($data->parent_section_tipo);
-							$component->set_parent_section_id($data->parent_section_id);
-						}
-
+					// dataframe case
 						if(isset($caller_dataframe)){
 							$component->set_caller_dataframe($caller_dataframe);
 						}

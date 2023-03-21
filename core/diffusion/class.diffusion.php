@@ -422,6 +422,7 @@ abstract class diffusion  {
 								*/
 							$field_value = $dato;
 							break;
+						// NEED TO BE FIXED NEW DATAFRAME
 						case 'ds':
 							$ar_term_ds = [];
 							foreach ((array)$dato as $current_locator) {
@@ -435,6 +436,7 @@ abstract class diffusion  {
 								$field_value = implode('|', $ar_term_ds);
 							}
 							break;
+						// NEED TO BE FIXED NEW DATAFRAME
 						case 'dataframe':
 							$ar_term_dataframe = [];
 							foreach ((array)$dato as $current_locator) {

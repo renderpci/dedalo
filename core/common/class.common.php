@@ -893,9 +893,6 @@ abstract class common {
 							DEDALO_RELATION_TYPE_INDEX_TIPO,
 							DEDALO_RELATION_TYPE_STRUCT_TIPO,
 							DEDALO_RELATION_TYPE_MODEL_TIPO,
-							DEDALO_DATAFRAME_TYPE_UNCERTAINTY,
-							DEDALO_DATAFRAME_TYPE_TIME,
-							DEDALO_DATAFRAME_TYPE_SPACE,
 							DEDALO_RELATION_TYPE_LINK,
 							DEDALO_RELATION_TYPE_FILTER
 							); // DEDALO_RELATION_TYPE_RECORD_TIPO
@@ -1794,11 +1791,10 @@ abstract class common {
 				$section_tipo	= $current_locator->section_tipo;
 
 				// get only the direct ddos that are compatible with the current locator. His section_tipo is the same that the current locator.
-				// but when the ddo define is_dataframe (used as sub section as data frame or semantic_node of the locator) get include it.
+				// but when the ddo define is_dataframe (used as sub section as data frame of the locator) get include it.
 				$ar_ddo = array_filter($full_ddo_map, function($ddo) use($section_tipo){
 					return 	$ddo->section_tipo===$section_tipo ||
 							(is_array($ddo->section_tipo) && in_array($section_tipo, $ddo->section_tipo)) ||
-							(isset($ddo->model) && $ddo->model==='component_semantic_node') ||
 							(isset($ddo->is_dataframe) && $ddo->is_dataframe===true);
 				});
 
@@ -1808,8 +1804,8 @@ abstract class common {
 					// when the ddo define is_dataframe (used as sub section as data frame or semantic_node of the locator)
 					// use his own section_tipo, it's totally dependent of the section_id of the locator and it's compatible.
 					// Note: it's different of the multiple section_tipo as es1, fr1, etc that every locator define his own ddo compatibles.
-					// reference: oh24 -> old semantic_node
-					// reference: numisdata161 -> old dataframe
+						// reference: oh24 -> old semantic_node
+						// reference: numisdata161 -> old dataframe
 
 					$ddo_start_time = start_time();
 
@@ -1968,13 +1964,6 @@ abstract class common {
 											$caller_dataframe->section_tipo	= $this->get_section_tipo();
 											$caller_dataframe->section_id	= $this->get_section_id();
 										$related_element->set_caller_dataframe($caller_dataframe);
-									}
-
-								// Inject data for component_semantic_node
-									if($model==='component_semantic_node'){
-										$related_element->set_row_locator($current_locator);
-										$related_element->set_parent_section_tipo($this->get_section_tipo());
-										$related_element->set_parent_section_id($this->get_section_id());
 									}
 
 								// inject view
@@ -2938,16 +2927,6 @@ abstract class common {
 									true, // bool cache
 									true // bool simple
 								);
-								// semantic node
-								$ds_component = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
-									$tipo,
-									'component_semantic_node',
-									'children',
-									true
-								);
-								if(!empty($ds_component)){
-									$ar_related = array_merge($ds_component, $ar_related );
-								}
 							}
 							break;
 						case 'related_list':
@@ -3039,8 +3018,6 @@ abstract class common {
 								continue;
 							}else if($current_tipo===DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO) {
 								continue; // 'component_security_areas' removed in v6 but the component will stay in ontology, PROVISIONAL, only in the alpha state of V6 for compatibility of the ontology of V5.
-							}else if($model==='section' && $current_model==='component_semantic_node') {
-								continue; // remove the semantic node in the section ddo_map, but maintain when is called by the portal
 							}else if($current_model==='component_filter' && isset($table) && ($table==='matrix_dd' || $table==='matrix_list')) {
 								continue; // exclude component_filter from private list like 'yes/no'
 							}
@@ -3131,26 +3108,6 @@ abstract class common {
 							? $children_view
 							: $own_view;
 
-						// component_semantic_node.The semantic node has his own section_tipo to be assigned
-							if($model==='component_semantic_node'){
-								$RecordObj_dd	= new RecordObj_dd($current_tipo);
-								$properties		= $RecordObj_dd->get_properties();
-								if(isset($properties->source->request_config)){
-									foreach ($properties->source->request_config as $item_request_config) {
-										// sqo. Add search query object property
-										$parsed_item_sqo = $item_request_config->sqo ?? new stdClass();
-										// section_tipo. get the ar_sections as ddo
-										$target_section_tipo = isset($parsed_item_sqo->section_tipo)
-											? component_relation_common::get_request_config_section_tipo($parsed_item_sqo->section_tipo)
-											: [$target_section_tipo];
-									}
-								}
-								if(isset($properties->mode)){
-									$current_mode		= $properties->mode;
-									$current_fixed_mode	= true;
-								}
-							}
-
 						$ddo = new dd_object();
 							$ddo->set_tipo($current_tipo);
 							$ddo->set_model($model);
@@ -3159,11 +3116,6 @@ abstract class common {
 							$ddo->set_mode($current_mode);
 							$ddo->set_view($view);
 							$ddo->set_label(RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_APPLICATION_LANG, true, true));
-							// fixed_mode. Used by component_semantic_node to force the render mode
-							if(isset($current_fixed_mode)){
-								$ddo->set_fixed_mode($current_fixed_mode);
-							}
-
 						return $ddo;
 					}, $ar_related_clean_auth);
 

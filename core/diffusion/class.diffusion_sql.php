@@ -1182,7 +1182,7 @@ class diffusion_sql extends diffusion  {
 						$function_name = $properties->process_dato;
 						$ar_field_data['field_value'] = call_user_func($function_name, $options, $dato);
 						break;
-
+					// NEED TO BE FIXED
 					case (is_object($properties) && property_exists($properties, 'data_to_be_used') && $properties->data_to_be_used==='ds'):
 						foreach ((array)$dato as $current_locator) {
 							if (isset($current_locator->ds)) {
@@ -1197,7 +1197,7 @@ class diffusion_sql extends diffusion  {
 							$ar_field_data['field_value'] = implode('|', $ar_term_ds);
 						}
 						break;
-
+					// NEED TO BE FIXED
 					case (is_object($properties) && property_exists($properties, 'data_to_be_used') && $properties->data_to_be_used==='dataframe'):
 						foreach ((array)$dato as $current_locator) {
 							if (isset($current_locator->dataframe)) {

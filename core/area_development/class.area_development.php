@@ -23,7 +23,6 @@ class area_development extends area_common {
 		'matrix_test',
 		'matrix_indexations',
 		'matrix_structurations',
-		'matrix_dataframe',
 		'matrix_dd',
 		'matrix_layout_dd',
 		'matrix_activity',
