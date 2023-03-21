@@ -244,7 +244,7 @@ const get_content_data = async function(self) {
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'page_info',
-				inner_html		: (get_label.of || 'of') + ` ${total_pages}`,
+				inner_html		: (get_label.of || 'of') + ` ${total_pages.toLocaleString(page_globals.locale)}`,
 				parent			: paginator_info
 			})
 
@@ -252,7 +252,7 @@ const get_content_data = async function(self) {
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'displayed_records',
-				inner_html		: `Showing ${page_row_begin}-${page_row_end} of ${total}. `,
+				inner_html		: `Showing ${page_row_begin}-${page_row_end} of ${total.toLocaleString(page_globals.locale)}`,
 				parent			: paginator_info
 			})
 
