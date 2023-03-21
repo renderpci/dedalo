@@ -218,6 +218,7 @@ abstract class common {
 
 	/**
 	* GET_PERMISSIONS
+	* Do not use this method directly to resolve component permissions
 	* @param string $tipo
 	* @return int $permissions
 	*/
@@ -246,7 +247,8 @@ abstract class common {
 				return 0;
 			}
 
-		$permissions = security::get_security_permissions($parent_tipo, $tipo);
+		// get permissions looking in calculated permissions_table
+			$permissions = security::get_security_permissions($parent_tipo, $tipo);
 
 
 		return (int)$permissions;
