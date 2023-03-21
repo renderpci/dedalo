@@ -89,12 +89,11 @@ export const render_column_id = function(options) {
 			section_id_node.title = 'paginated_key: ' + paginated_key
 		}
 		// adjust the font size to fit it into the column
-		// use viewport height units as x.vw
 		// @see https://www.freecodecamp.org/news/learn-css-units-em-rem-vh-vw-with-code-examples/#what-are-vw-units
-		const base_size = 1.07 // defined as --font_size: 1.07vw; into CSS (list.less)
+		const base_size = 1.25 // defined as --font_size: 1.25rem; into CSS (list.less)
 		const font_size	= get_font_fit_size(section_id, base_size, 4)
 		if (font_size!==base_size) {
-			section_id_node.style.setProperty('--font_size', `${font_size}vw`);
+			section_id_node.style.setProperty('--font_size', `${font_size}rem`);
 		}
 
 	// buttons
