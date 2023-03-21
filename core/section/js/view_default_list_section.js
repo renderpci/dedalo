@@ -331,10 +331,11 @@ const get_buttons = function(self) {
 
 			const current_button = ar_buttons[i]
 
+			// button_delete multiple
 			// check if user is global admin to activate the button delete (avoid users to delete multiple sections)
-			if(current_button.model === 'button_delete' && page_globals.is_global_admin===false){
-				continue
-			}
+				if(current_button.model==='button_delete' && page_globals.is_global_admin===false){
+					continue
+				}
 
 			// button node
 				const class_name	= 'warning ' + current_button.model.replace('button_', '')
