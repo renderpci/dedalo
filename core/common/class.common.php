@@ -1522,6 +1522,12 @@ abstract class common {
 			$tools		= [];
 			$tools_list	= $this->get_tools();
 			foreach ($tools_list as $tool_object) {
+
+				// mode check. If defined and is not the actual, skip tool
+				if (isset($tool_object->properties->mode) && $tool_object->properties->mode!==$mode) {
+					continue;
+				}
+
 				$tool_config	= isset($properties->tool_config->{$tool_object->name})
 					? $properties->tool_config->{$tool_object->name}
 					: null;
@@ -3936,7 +3942,7 @@ abstract class common {
 
 				// model
 					$model = RecordObj_dd::get_modelo_name_by_tipo($current_button_tipo, true);
-
+					// skip exclude_models
 					if(in_array($model, common::$ar_temp_exclude_models)){
 						continue;
 					}

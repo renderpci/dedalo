@@ -212,22 +212,22 @@ class tool_common {
 
 			// context
 				$tool_simple_context = new dd_object((object)[
-					'name'					=> $tool_object->name,
-					'label'					=> $tool_label,
-					// 'tipo'				=> $component_tipo,
-					'section_tipo'			=> $tool_object->section_tipo,
-					'section_id'			=> $tool_object->section_id,
-					'model'					=> $tool_object->name,
-					// 'lang'				=> $lang,
-					'mode'					=> 'edit',
-					'properties'			=> $tool_object->properties,
-					'css'					=> $css,
-					'icon'					=> $icon,
-					// 'labels'				=> $labels,
-					// 'description'		=> $description,
-					// 'show_in_inspector'	=> $tool_object->show_in_inspector ?? null,
-					'show_in_component'		=> $tool_object->show_in_component ?? null,
-					// 'config'				=> !empty($config_data) ? $config_data->config : null
+					'name'				=> $tool_object->name,
+					'label'				=> $tool_label,
+					// 'tipo'			=> $component_tipo,
+					'section_tipo'		=> $tool_object->section_tipo,
+					'section_id'		=> $tool_object->section_id,
+					'model'				=> $tool_object->name,
+					// 'lang'			=> $lang,
+					'mode'				=> 'edit',
+					'properties'		=> $tool_object->properties,
+					'css'				=> $css,
+					'icon'				=> $icon,
+					// 'labels'			=> $labels,
+					// 'description'	=> $description,
+					'show_in_inspector'	=> $tool_object->show_in_inspector ?? null,
+					'show_in_component'	=> $tool_object->show_in_component ?? null,
+					// 'config'			=> !empty($config_data) ? $config_data->config : null
 				]);
 
 		// new way. (!) Unification with context in progress..
