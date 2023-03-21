@@ -65,7 +65,7 @@ import * as fn from './data.js'
 			mode				: mode,
 			lang				: page_globals.dedalo_data_nolan,
 			new_value			: fn.random_locator,
-			new_value_params	: ['dd501','test146']
+			new_value_params	: ['dd501','test88']
 		})
 
 	// component_date
@@ -270,7 +270,7 @@ import * as fn from './data.js'
 			mode				: mode,
 			lang				: lang,
 			new_value			: fn.random_locator,
-			new_value_params	: ['dd501','test144']
+			new_value_params	: ['dd501','test87']
 		})
 
 	// component_relation_children
