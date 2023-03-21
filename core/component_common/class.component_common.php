@@ -3368,6 +3368,7 @@ abstract class component_common extends common {
 				$item->debug_model = $this->get_model();
 				$item->debug_label = $this->get_label();
 				$item->debug_mode = $this->get_mode();
+				$item->debug_dataframe = $this->get_caller_dataframe() ?? null;
 			}
 
 		return $item;
