@@ -1,0 +1,124 @@
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
+/*eslint no-undef: "error"*/
+
+
+
+// import needed modules
+// you can import and use your own modules or any dedalo module of section, components or other tools.
+// by default you will need the tool_common to init, build and render.
+// use tool_common is not mandatory, but it can help to do typical task as open tool window, or load the section and components defined in ontology.
+// import dd_console if you want to use dd_console with specific console.log messages
+	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
+// import data_manager if you want to access to Dédalo API
+	import {data_manager} from '../../../core/common/js/data_manager.js'
+// import get_instance to create and init sections or components.
+	import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
+// import common to use destroy, render, refresh and other useful methods
+	import {common, create_source} from '../../../core/common/js/common.js'
+// tool_common, basic methods used by all the tools
+	import {tool_common, load_component} from '../../tool_common/js/tool_common.js'
+// specific render of the tool
+	import {render_tool_hierarchy} from './render_tool_hierarchy.js' // self tool rendered (called from render common)
+
+
+
+/**
+* TOOL_HIERARCHY
+* Tool to make interesting things, but nothing in particular
+*/
+export const tool_hierarchy = function () {
+
+	this.id				= null
+	this.model			= null
+	this.mode			= null
+	this.node			= null
+	this.ar_instances	= null
+	this.events_tokens	= null
+	this.status			= null
+	this.main_element	= null
+	this.type			= null
+	this.source_lang	= null
+	this.target_lang	= null
+	this.langs			= null
+	this.caller			= null
+
+
+	return true
+}//end page
+
+
+
+/**
+* COMMON FUNCTIONS
+* extend component functions from component common
+*/
+// prototypes assign
+	// render : using common render entry point, use the tool_common render to prepare the tool to be rendered, it will call to specific render defined in render_tool_hierarchy
+	tool_hierarchy.prototype.render		= tool_common.prototype.render
+	// destroy: using common destroy method
+	tool_hierarchy.prototype.destroy	= common.prototype.destroy
+	// refresh: using common refresh method
+	tool_hierarchy.prototype.refresh	= common.prototype.refresh
+	// render mode edit (default). Set the tool custom manager to build the DOM nodes view
+	tool_hierarchy.prototype.edit		= render_tool_hierarchy.prototype.edit
+
+
+
+/**
+* INIT
+* Custom tool init
+*/
+tool_hierarchy.prototype.init = async function(options) {
+
+	const self = this
+
+	// call the generic common tool init
+	// it will assign common vars as:
+		// model
+		// section_tipo
+		// section_id
+		// lang
+		// mode
+		// etc
+	// set the caller if it was defined or create it and set the tool_config or create new one if tool_config was not defined.
+		const common_init = await tool_common.prototype.init.call(this, options);
+
+
+	return common_init
+}//end init
+
+
+
+/**
+* BUILD
+* Custom tool build
+*/
+tool_hierarchy.prototype.build = async function(autoload=false) {
+
+	const self = this
+
+	// call generic common tool build
+	// it will load the components or sections defined in ontology ddo_map.
+	// it's possible to set your own load_ddo_map adding to something as:
+	// tool_common.prototype.build.call(this, autoload, {load_ddo_map : function({
+	// 	your own code here to load components
+	// })}
+	// it will assign or create the context of the tool calling to get_element_context
+		const common_build = await tool_common.prototype.build.call(this, autoload);
+
+	try {
+		// when the tool_common load the component you could assign to the tool instance with specific actions.
+		// Like fix main_element for convenience
+		// main_element could be any component that you need to use inside the tool.
+		// use the 'role' property in ddo_map to define and locate the ddo
+			const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==='main_element')
+			self.main_element		= self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
+
+	} catch (error) {
+		self.error = error
+		console.error(error)
+	}
+
+
+	return common_build
+}//end build_custom
