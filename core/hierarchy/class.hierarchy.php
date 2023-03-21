@@ -60,7 +60,7 @@ class hierarchy {
 
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= '';
+			$response->msg		= [];
 
 		// options
 			$section_id		= $options->section_id;
@@ -85,8 +85,8 @@ class hierarchy {
 				// Error: Current hierarchy is not active. Stop here (!)
 
 				$response->result	= false;
-				$response->msg		= label::get_label('error_generate_hierarchy');
-				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
+				$response->msg[]	= label::get_label('error_generate_hierarchy');
+				debug_log(__METHOD__."  ".to_string($response->msg), logger::ERROR);
 				return $response;
 			}
 
@@ -108,7 +108,7 @@ class hierarchy {
 				// Error: TLD2 is mandatory
 
 				$response->result	= false;
-				$response->msg		= 'Error on get tld2. Empty value (tld is mandatory)';
+				$response->msg[]	= 'Error on get tld2. Empty value (tld is mandatory)';
 				return $response;
 			}
 
@@ -131,7 +131,7 @@ class hierarchy {
 				// Error: source_real_section_tipo is mandatory
 
 				$response->result	= false;
-				$response->msg		= 'Error on get source_real_section_tipo. Empty value (source_real_section_tipo is mandatory)';
+				$response->msg[]	= 'Error on get source_real_section_tipo. Empty value (source_real_section_tipo is mandatory)';
 				return $response;
 			}
 			$real_section_model_name = RecordObj_dd::get_modelo_name_by_tipo($real_section_tipo, true);
@@ -140,7 +140,7 @@ class hierarchy {
 				// Error: source_real_section_tipo is not a section !
 
 				$response->result	= false;
-				$response->msg		= 'Error on get source_real_section_tipo. Invalid model (only sections tipo are valid)';
+				$response->msg[]	= 'Error on get source_real_section_tipo. Invalid model (only sections tipo are valid)';
 				return $response;
 			}
 
@@ -168,7 +168,7 @@ class hierarchy {
 				// Error: typology (select Thematic, Toponymy, etc..) is mandatory
 
 				$response->result	= false;
-				$response->msg		= 'Error on get typology. Empty value (typology is mandatory)';
+				$response->msg[]	= 'Error on get typology. Empty value (typology is mandatory)';
 				return $response;
 			}
 
@@ -205,9 +205,9 @@ class hierarchy {
 				$create_term_options->traducible	= 'no';
 				$create_term_options->relaciones	= ($tld2==='lg')
 					? json_decode('[{"dd626":"dd443"},{"dd6":"hierarchy20"}]') // add table 'matrix_langs'
-					: (object)[
+					: [(object)[
 						'dd6' => $real_section_tipo // section. add real section. example: 'Thesaurus' hierarchy20
-					  ];
+					  ]];
 				$create_term_options->properties	= null;
 				$create_term_options->tld2			= $tld2;
 				$create_term_options->name			= $name;
@@ -216,7 +216,7 @@ class hierarchy {
 				$create_term = self::create_term( $create_term_options );
 				if ($create_term) {
 					$response->result	= $create_term->result;
-					$response->msg		.= $create_term->msg;
+					$response->msg[]	= $create_term->msg;
 				}
 
 		// only for thesaurus alias (hierarchy20)
@@ -244,7 +244,7 @@ class hierarchy {
 					$create_term = self::create_term( $options );
 					if ($create_term) {
 						$response->result	= $create_term->result;
-						$response->msg		.= $create_term->msg;
+						$response->msg[]	= $create_term->msg;
 					}
 
 			// virtual section-list . terms
@@ -267,7 +267,7 @@ class hierarchy {
 					$create_term = self::create_term( $options );
 					if ($create_term) {
 						$response->result	= $create_term->result;
-						$response->msg		.= $create_term->msg;
+						$response->msg[]	= $create_term->msg;
 					}
 
 			// virtual section-list . model . model terms
@@ -290,7 +290,7 @@ class hierarchy {
 					$create_term = self::create_term( $options );
 					if ($create_term) {
 						$response->result	= $create_term->result;
-						$response->msg		.= $create_term->msg;
+						$response->msg[]	= $create_term->msg;
 					}
 
 			// virtual section-exclude-elements . terms
@@ -311,7 +311,7 @@ class hierarchy {
 					$create_term = self::create_term( $options );
 					if ($create_term) {
 						$response->result	= $create_term->result;
-						$response->msg		.= $create_term->msg;
+						$response->msg[]	= $create_term->msg;
 					}
 
 			// virtual section-exclude-elements . model . model terms
@@ -332,7 +332,7 @@ class hierarchy {
 					$create_term = self::create_term( $options );
 					if ($create_term) {
 						$response->result	= $create_term->result;
-						$response->msg		.= $create_term->msg;
+						$response->msg[]	= $create_term->msg;
 					}
 
 			// virtual search-list . terms
@@ -353,7 +353,7 @@ class hierarchy {
 					$create_term = self::create_term( $options );
 					if ($create_term) {
 						$response->result	= $create_term->result;
-						$response->msg		.= $create_term->msg;
+						$response->msg[]	= $create_term->msg;
 					}
 
 			// virtual search-list . model . model terms
@@ -374,7 +374,7 @@ class hierarchy {
 					$create_term = self::create_term( $options );
 					if ($create_term) {
 						$response->result	= $create_term->result;
-						$response->msg		.= $create_term->msg;
+						$response->msg[]	= $create_term->msg;
 					}
 
 			// virtual section-list-thesaurus . thesaurus list
@@ -400,7 +400,7 @@ class hierarchy {
 					$create_term = self::create_term( $options );
 					if ($create_term) {
 						$response->result	= $create_term->result;
-						$response->msg		.= $create_term->msg;
+						$response->msg[]	= $create_term->msg;
 					}
 
 			// set main_dd counter. Creates a counter in main_dd with $current_value +1 (9)
@@ -423,7 +423,7 @@ class hierarchy {
 				// 	$create_term = self::create_term( $options );
 				// 		if ($create_term) {
 				// 			$response->result 	 = $create_term->result;
-				// 			$response->msg 		.= $create_term->msg;
+				// 			$response->msg[] 	= $create_term->msg;
 				// 		}
 
 		}else{
@@ -463,7 +463,7 @@ class hierarchy {
 						$create_term = self::create_term( $options );
 						if ($create_term) {
 							$response->result	= $create_term->result;
-							$response->msg		.= $create_term->msg;
+							$response->msg[]	= $create_term->msg;
 						}
 
 					// set main_dd counter. Creates a counter in main_dd with $current_value +1 (3)
@@ -682,7 +682,7 @@ class hierarchy {
 		$parent_test = $RecordObj_dd->get_parent();
 			if (!empty($parent_test)) {
 				$response->result 	= false;
-				$response->msg 		= "Current hierarchy ($options->terminoID - $options->name) already exists. Nothing is created. \n";
+				$response->msg 		= "Current hierarchy ($options->terminoID - $options->name) already exists. Nothing is created.";
 				return $response;
 			}
 
@@ -708,7 +708,7 @@ class hierarchy {
 		$created_id_ts = $RecordObj_dd->save_term_and_descriptor( $options->name );
 			if ($created_id_ts) {
 				$response->result 	= true;
-				$response->msg 		= "Created record: $created_id_ts - $options->name \n";
+				$response->msg 		= "Created record: $created_id_ts - $options->name";
 			}
 
 		return $response;

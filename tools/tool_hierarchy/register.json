@@ -21,12 +21,6 @@
     },
     {
       "type": "dd151",
-      "section_id": "1",
-      "section_tipo": "dd64",
-      "from_component_tipo": "dd1331"
-    },
-    {
-      "type": "dd151",
       "section_id": "2",
       "section_tipo": "dd64",
       "from_component_tipo": "dd1332"
@@ -42,6 +36,12 @@
       "section_id": "2",
       "section_tipo": "dd64",
       "from_component_tipo": "dd1601"
+    },
+    {
+      "type": "dd151",
+      "section_id": "1",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1331"
     },
     {
       "type": "dd151",
@@ -70,13 +70,13 @@
       "lg-nolan": [
         {
           "start": {
-            "day": 18,
-            "hour": 12,
-            "time": 65027709609,
+            "day": 21,
+            "hour": 14,
+            "time": 65027974666,
             "year": 2023,
             "month": 3,
-            "minute": 40,
-            "second": 9
+            "minute": 17,
+            "second": 46
           }
         }
       ]
@@ -109,7 +109,7 @@
       "inf": "Versión [component_input_text]",
       "dato": {
         "lg-nolan": [
-          "1.0.0."
+          "1.0.0"
         ]
       }
     },
@@ -121,11 +121,195 @@
         ]
       }
     },
+    "dd1335": {
+      "inf": "Propiedades [component_json]",
+      "dato": {
+        "lg-nolan": [
+          {
+            "mode": "edit"
+          }
+        ]
+      }
+    },
     "dd1350": {
       "inf": "Afecta a tipos: [component_json]",
       "dato": {
         "lg-nolan": [
-          null
+          [
+            "hierarchy1"
+          ]
+        ]
+      }
+    },
+    "dd1372": {
+      "inf": "Etiquetas [component_json]",
+      "dato": {
+        "lg-nolan": [
+          [
+            {
+              "name": "user_info"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "user_info",
+              "value": "Esta acción genera una nueva Ontología basada en la de referencia."
+            },
+            {
+              "lang": "lg-eng",
+              "name": "user_info",
+              "value": "This action generates a new Ontology based on the reference one."
+            },
+            {
+              "lang": "lg-por",
+              "name": "user_info",
+              "value": "Esta ação gera uma nova Ontologia baseada na referência."
+            },
+            {
+              "lang": "lg-cat",
+              "name": "user_info",
+              "value": "Aquesta acció genera una nova Ontologia basada en la de referència."
+            },
+            {
+              "lang": "lg-vlca",
+              "name": "user_info",
+              "value": "Aquesta acció genera una nova Ontologia basada en la de referència."
+            },
+            {
+              "lang": "lg-eus",
+              "name": "user_info",
+              "value": "Ekintza honek erreferentziazko Ontologia berri bat sortzen du."
+            },
+            {
+              "lang": "lg-fra",
+              "name": "user_info",
+              "value": "Cette action génère une nouvelle ontologie basée sur celle de référence."
+            },
+            {
+              "lang": "lg-ita",
+              "name": "user_info",
+              "value": "Questa azione genera una nuova Ontologia basata su quella di riferimento."
+            },
+            {
+              "lang": "lg-ara",
+              "name": "user_info",
+              "value": ""
+            },
+            {
+              "lang": "lg-ell",
+              "name": "user_info",
+              "value": "Αυτή η ενέργεια δημιουργεί μια νέα Οντολογία που βασίζεται στην αναφορά."
+            },
+            {
+              "lang": "lg-deu",
+              "name": "user_info",
+              "value": "Diese Aktion generiert eine neue Ontologie basierend auf der Referenz-Ontologie."
+            },
+            {
+              "lang": "lg-spa",
+              "name": "generate",
+              "value": "Generar"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "generate",
+              "value": "Generar"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "generate",
+              "value": "Abzug"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "generate",
+              "value": "Δώσει το έναυσμα για"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "generate",
+              "value": "Grilletto"
+            },
+            {
+              "lang": "lg-vlca",
+              "name": "generate",
+              "value": "Generar"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "generate",
+              "value": "Trigger"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "generate",
+              "value": "Generate"
+            },
+            {
+              "lang": "lg-por",
+              "name": "generate",
+              "value": "Gerar"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "generate",
+              "value": "Générer"
+            },
+            {
+              "lang": "lg-ara",
+              "name": "generate",
+              "value": ""
+            },
+            {
+              "lang": "lg-spa",
+              "name": "absolute_sure",
+              "value": "¿Está absolutamente seguro?"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "absolute_sure",
+              "value": "Està absolutament segur?"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "absolute_sure",
+              "value": "Êtes-vous absolument sûr?"
+            },
+            {
+              "lang": "lg-por",
+              "name": "absolute_sure",
+              "value": "Você tem certeza absoluta?"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "absolute_sure",
+              "value": "Are you absolutely sure?"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "absolute_sure",
+              "value": "Erabat ziur al zaude?"
+            },
+            {
+              "lang": "lg-vlca",
+              "name": "absolute_sure",
+              "value": "Està absolutament segur?"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "absolute_sure",
+              "value": "Sei assolutamente sicuro?"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "absolute_sure",
+              "value": "Είσαι απολύτως σίγουρος;"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "absolute_sure",
+              "value": "Bist du dir absolut sicher?"
+            }
+          ]
         ]
       }
     }
@@ -133,7 +317,7 @@
   "section_id": 15,
   "created_date": "2023-03-16 16:43:35",
   "section_tipo": "dd1340",
-  "modified_date": "2023-03-18 12:40:09",
+  "modified_date": "2023-03-21 14:17:46",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",

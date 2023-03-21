@@ -26,11 +26,14 @@ class tool_hierarchy extends tool_common {
 			$section_tipo	= $options->section_tipo;
 
 		// create a new virtual section from real
-			$hierarchy_response = hierarchy::generate_virtual_section( $options );
+			$hierarchy_response = hierarchy::generate_virtual_section((object)[
+				'section_id'	=> $section_id,
+				'section_tipo'	=> $section_tipo
+			]);
 
 		// response
 			$response->result	= $hierarchy_response->result;
-			$response->msg		= 'OK. Request done ['.__FUNCTION__.'] ' . $hierarchy_response->msg ;
+			$response->msg		= $hierarchy_response->msg ;
 
 
 
