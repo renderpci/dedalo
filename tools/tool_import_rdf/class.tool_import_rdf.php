@@ -67,12 +67,14 @@ class tool_import_rdf extends tool_common {
 		$lang			=  ($translatable==='no')
 			? DEDALO_DATA_NOLAN
 			: DEDALO_DATA_LANG;
-		$component_tipo = component_common::get_instance($model,
-														 $component_tipo,
-														 $section_id,
-														 'list',
-														 $lang,
-														 $this->section_tipo);
+		$component_tipo = component_common::get_instance(
+			$model,
+			$component_tipo,
+			$section_id,
+			'list',
+			$lang,
+			$this->section_tipo
+		);
 
 		$component_dato = $component_tipo->get_dato();
 
@@ -159,6 +161,8 @@ class tool_import_rdf extends tool_common {
 
 	}//end get_rdf_data
 
+
+
 	/**
 	* GET_CLASS_MAP_TO_DD
 	* @return
@@ -192,6 +196,7 @@ class tool_import_rdf extends tool_common {
 
 		return $dd_object;
 	}//end get_class_map_to_dd
+
 
 
 	/**
@@ -533,6 +538,7 @@ class tool_import_rdf extends tool_common {
 	}//end process_data
 
 
+
 	/**
 	* GET_SOLVED_SELECT_VALUE
 	* Search for received value in section. If it found, returns locator, else create the new value
@@ -659,13 +665,15 @@ class tool_import_rdf extends tool_common {
 			$RecordObj_dd	= new RecordObj_dd($component_tipo);
 			$lang			= ($RecordObj_dd->get_traducible()==='no') ? DEDALO_DATA_NOLAN : $lang;
 
-			$code_component	= component_common::get_instance($model_name,
-															 $component_tipo,
-															 $section_id,
-															 'edit',
-															 $lang,
-															 $section_tipo,
-															 false);
+			$code_component	= component_common::get_instance(
+				$model_name,
+				$component_tipo,
+				$section_id,
+				'edit',
+				$lang,
+				$section_tipo,
+				false
+			);
 
 
 			$old_data = $code_component->get_dato();
@@ -678,8 +686,8 @@ class tool_import_rdf extends tool_common {
 				if($count===0) $old_data=[];
 			};
 
-			// if($component_tipo==='numisdata98'){
-			// 		dump($value, ' value +-----------+ '.to_string(empty($old_data)));
+			// if($component_tipo==='numisdata64'){
+			// 		dump($lang, ' lang <>+-----////////////////////------+ '.to_string(empty($old_data)));
 			// }
 
 			if($model_name==='component_iri' && !empty($old_data)){
