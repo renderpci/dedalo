@@ -241,18 +241,28 @@ const get_content_data = async function(self) {
 				fit_input_go_to_page_to_value(input_go_to_page, page_number)
 
 			// page_info label
+			const total_pages_label = new Intl.NumberFormat(
+				page_globals.locale==='es-ES'
+					? 'es-CL' // updated minimumGroupingDigits to 1 ('es' is wrong: 2)
+					: page_globals.locale
+			).format(total_pages);
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'page_info',
-				inner_html		: (get_label.of || 'of') + ` ${total_pages.toLocaleString(page_globals.locale)}`,
+				inner_html		: (get_label.of || 'of') + ` ${total_pages_label}`,
 				parent			: paginator_info
 			})
 
-		// displayed_records (hidden on edit mode)
+		// displayed_records (hidden on edit mode) // page_globals.locale
+			const total_label = new Intl.NumberFormat(
+				page_globals.locale==='es-ES'
+					? 'es-CL' // updated minimumGroupingDigits to 1 ('es' is wrong: 2)
+					: page_globals.locale
+			).format(total);
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'displayed_records',
-				inner_html		: `Showing ${page_row_begin}-${page_row_end} of ${total.toLocaleString(page_globals.locale)}`,
+				inner_html		: `Showing ${page_row_begin}-${page_row_end} of ${total_label}`,
 				parent			: paginator_info
 			})
 
