@@ -369,7 +369,7 @@ class dd_date extends stdClass {
 	* GET_DATE_FROM_TIMESTAMP
 	* @return dd_date object $this
 	*/
-	public function get_date_from_timestamp( $timestamp ) {
+	public function get_date_from_timestamp( string $timestamp ) {
 
 		$regex = "/^(-?[0-9]+)-?([0-9]+)?-?([0-9]+)? ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?/";
 		preg_match($regex, $timestamp, $matches);
@@ -394,7 +394,7 @@ class dd_date extends stdClass {
 	* SET_DATE_FROM_INPUT_FIELD
 	* @return dd_date object $this
 	*/
-	public function set_date_from_input_field( $search_field_value ) {
+	public function set_date_from_input_field( string $search_field_value ) {
 
 		#$regex   = "/^(-?[0-9]+)-?([0-9]+)?-?([0-9]+)? ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?/";
 		$regex   = "/^(([0-9]{1,2})-)?(([0-9]{1,2})-)?(-?[0-9]{1,12}) ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?$/";
@@ -445,7 +445,7 @@ class dd_date extends stdClass {
 	* @param string $format
 	* @return string $date_with_format
 	*/
-	public static function get_date_with_format( $date, $format="Y-m-d H:i:s" ) {
+	public static function get_date_with_format( $date, string $format="Y-m-d H:i:s" ) {
 		$date_with_format = date($format, strtotime($date));
 		return $date_with_format;
 	}//end get_date_with_format
