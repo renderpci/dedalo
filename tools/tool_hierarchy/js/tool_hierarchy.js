@@ -16,7 +16,7 @@
 // import common to use destroy, render, refresh and other useful methods
 	import {common, create_source} from '../../../core/common/js/common.js'
 // tool_common, basic methods used by all the tools
-	import {tool_common, load_component} from '../../tool_common/js/tool_common.js'
+	import {tool_common} from '../../tool_common/js/tool_common.js'
 // specific render of the tool
 	import {render_tool_hierarchy} from './render_tool_hierarchy.js' // self tool rendered (called from render common)
 
@@ -111,8 +111,8 @@ tool_hierarchy.prototype.build = async function(autoload=false) {
 		// Like fix main_element for convenience
 		// main_element could be any component that you need to use inside the tool.
 		// use the 'role' property in ddo_map to define and locate the ddo
-			const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==='main_element')
-			self.main_element		= self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
+			// const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==='main_element')
+			// self.main_element		= self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
 
 	} catch (error) {
 		self.error = error
@@ -122,3 +122,46 @@ tool_hierarchy.prototype.build = async function(autoload=false) {
 
 	return common_build
 }//end build_custom
+
+
+
+/**
+* GENERATE_VIRTUAL_SECTION
+* Call the API to generate a new Ontology
+* @return promise response
+*/
+tool_hierarchy.prototype.generate_virtual_section = async function() {
+
+	const self = this
+
+	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
+	// this generates a call as my_tool_name::my_function_name(arguments)
+		const source = create_source(self, 'generate_virtual_section')
+		// add the necessary arguments used in the given function
+		source.arguments = {
+			section_id		: self.caller.section_id,
+			section_tipo	: self.caller.section_tipo
+		}
+
+	// rqo
+		const rqo = {
+			dd_api	: 'dd_tools_api',
+			action	: 'tool_request',
+			source	: source
+		}
+
+	// call to the API, fetch data and get response
+		return new Promise(function(resolve){
+
+			data_manager.request({
+				body : rqo
+			})
+			.then(function(response){
+				if(SHOW_DEVELOPER===true) {
+					dd_console("-> generate_virtual_section API response:",'DEBUG',response);
+				}
+
+				resolve(response)
+			})
+		})
+}//end generate_virtual_section
