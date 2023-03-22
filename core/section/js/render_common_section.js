@@ -148,6 +148,7 @@ render_common_section.prototype.delete_record = async (options) => {
 
 /**
 * RENDER_RELATION_LIST
+* @param object options
 * @return HTMLElement relation_list_container
 */
 const render_relation_list = function(options) {
@@ -184,7 +185,6 @@ const render_relation_list = function(options) {
 
 	// relation_list events
 		event_manager.subscribe('relation_list_paginator', fn_relation_list_paginator)
-
 		function fn_relation_list_paginator(relation_list) {
 			relation_list_body.classList.add('loading')
 			load_relation_list(relation_list)
@@ -241,6 +241,7 @@ const render_relation_list = function(options) {
 * RENDER_SERVER_RESPONSE_ERROR
 * Render generic page error (Raspa background)
 * @param string msg
+* @param add_wrapper = false
 * @return HTMLElement wrapper|error_container
 */
 export const render_server_response_error = function(msg, add_wrapper=false) {

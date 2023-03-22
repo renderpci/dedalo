@@ -167,8 +167,8 @@ export const render_column_id = function(options) {
 					// 		// ( async () => {
 					// 		// 	const options = {
 					// 		// 		model 			: 'section',
-					// 		// 		type 			: 'section',
-					// 		// 		tipo  			: self.section_tipo,
+					// 		// 		type			: 'section',
+					// 		// 		tipo			: self.section_tipo,
 					// 		// 		section_tipo  	: self.section_tipo,
 					// 		// 		section_id 		: self.section_id,
 					// 		// 		mode 			: 'edit',
