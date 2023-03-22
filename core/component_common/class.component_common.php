@@ -2940,11 +2940,6 @@ abstract class component_common extends common {
 			$this->caller_dataframe ?? null
 		);
 		$this->section_obj = $section;
-		// caller_dataframe
-			if (isset($this->caller_dataframe)) {
-				$this->section_obj->caller_dataframe = $this->caller_dataframe;
-			}
-
 
 		return $this->section_obj;
 	}//end get_my_section

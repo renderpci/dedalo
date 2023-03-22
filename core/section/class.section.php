@@ -292,7 +292,6 @@ class section extends common {
 
 		// data is loaded once
 			// dataframe case, the section doesn't has his own data in DDBB
-
 			if (   $this->source==='caller_section'
 				&& !empty($this->caller_dataframe)
 				&& strpos($this->caller_dataframe->section_id, 'search')===false // ignore when in search scenario like section_id 'search_45'
