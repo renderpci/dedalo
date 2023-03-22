@@ -502,9 +502,15 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 
 /**
 * GET_COMPONENT_DATA
-* Compares received section_tipo, section_id, matrix_id with elements inside datum.data for try to match.
+* Compares received section_tipo, section_id, matrix_id with elements inside datum.data trying to get match.
 * If no elements matches, a empty object is created to prevent gaps
+* @param object ddo
+* 	Could be an ddo or and full context from datum
+* @param string section_tipo
+* @param string|int section_id
+* @param string|int|null matrix_id
 * @return object component_data
+* 	If no component data is found, a special component data for empty cases is created
 */
 section_record.prototype.get_component_data = function(ddo, section_tipo, section_id, matrix_id=null) {
 
@@ -522,10 +528,22 @@ section_record.prototype.get_component_data = function(ddo, section_tipo, sectio
 				el.section_tipo===section_tipo // match section_tipo
 				) {
 
+				// dataframe case
+				// if ddo is inside a dataframe get his data matching row_section_id of ddo with the section_id of the caller and his own section_tipo and section_id
+				// ex: portal with section_tipo = numisdata3 and section_id = 1
+				// has a dataframe with section_tipo = numisdata_1016 and section_id_8
+				// the match for components inside numisdata_1016 has to be ddo row_section_id === caller (portal) section_id
+				// data of components inside dataframe sections are conditioned by his caller section_tipo and section_id and his own section_tipo and section_id
+				if (ddo.is_dataframe && el.row_section_id) {
+					return parseInt(el.row_section_id)===parseInt(self.caller.section_id)
+				}
+
+				// time machine case
 				if (el.matrix_id && matrix_id) {
 					// console.error("match matrix_id:", el.matrix_id);
 					return parseInt(el.matrix_id)===parseInt(matrix_id)
 				}
+
 				return true
 			}
 			return false
