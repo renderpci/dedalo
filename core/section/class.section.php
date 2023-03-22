@@ -101,7 +101,7 @@ class section extends common {
 	*
 	* @return instance section
 	*/
-	public static function get_instance($section_id=null, string $tipo=null, string $mode='list', bool $cache=true) : section {
+	public static function get_instance($section_id=null, string $tipo=null, string $mode='list', bool $cache=true, object $caller_dataframe=null) : section {
 
 		// check valid tipo
 			if (empty($tipo)) {
@@ -125,6 +125,9 @@ class section extends common {
 
 			# key for cache
 			$key = $section_id .'_'. $tipo .'_'. $mode;
+			if(isset($caller_dataframe)){
+				$key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->section_id;
+			}
 
 			// $max_cache_instances = 300*3; // Default 300
 			// $cache_slice_on 	 = 100*3; // Default 100
@@ -270,6 +273,7 @@ class section extends common {
 
 		// data is loaded once
 			// dataframe case, the section doesn't has his own data in DDBB
+
 			if (   $this->source==='caller_section'
 				&& !empty($this->caller_dataframe)
 				&& strpos($this->caller_dataframe->section_id, 'search')===false // ignore when in search scenario like section_id 'search_45'

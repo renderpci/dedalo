@@ -907,12 +907,10 @@ final class dd_core_api {
 						$section_id,
 						$mode,
 						$component_lang,
-						$section_tipo
+						$section_tipo,
+						true,
+						$caller_dataframe ?? null
 					);
-					// dataframe case
-						if(isset($caller_dataframe)){
-							$component->set_caller_dataframe($caller_dataframe);
-						}
 
 				// permissions. Get the component permissions and check if the user can update the component
 					$permissions = $component->get_component_permissions();
@@ -1502,6 +1500,7 @@ final class dd_core_api {
 									? $lang
 									: DEDALO_DATA_NOLAN;
 
+
 								$element = component_common::get_instance(
 									$model,
 									$tipo,
@@ -1509,7 +1508,8 @@ final class dd_core_api {
 									$mode,
 									$component_lang,
 									$section_tipo,
-									true // cache
+									true, // cache
+									$caller_dataframe ?? null
 								);
 
 							// time machine matrix_id.
@@ -1544,10 +1544,7 @@ final class dd_core_api {
 
 									$element->pagination = $pagination;
 								}
-							// dataframe. Set caller_dataframe information
-								if(isset($caller_dataframe)){
-									$element->set_caller_dataframe($caller_dataframe);
-								}
+
 						}//end if ($section_id>=1)
 
 					}else if (strpos($model, 'area')===0) {
