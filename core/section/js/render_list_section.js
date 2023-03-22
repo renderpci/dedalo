@@ -99,6 +99,7 @@ export const render_column_id = function(options) {
 	// buttons
 		switch(true){
 
+			// initiator. is a url var used in iframe containing section list to link to opener portal
 			case (self.initiator && self.initiator.indexOf('component_')!==-1):
 
 				// link_button. component portal caller (link)
@@ -109,8 +110,15 @@ export const render_column_id = function(options) {
 					})
 					link_button.addEventListener('click', function(e) {
 						e.stopPropagation()
+
+						const top_window = window.parent
+						if (!top_window.event_manager) {
+							console.error('Unable to get top_window event_manager:', top_window);
+							return
+						}
+
 						// top window event
-						top.event_manager.publish('initiator_link_' + self.initiator, {
+						top_window.event_manager.publish('initiator_link_' + self.initiator, {
 							section_tipo	: section_tipo,
 							section_id		: section_id
 						})
