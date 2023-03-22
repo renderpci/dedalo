@@ -63,6 +63,11 @@ class search_related extends search {
 							$locators_query[] = PHP_EOL.'relations_flat_fct_st_si(datos) @> \'['. json_encode($locator_index) . ']\'::jsonb';
 							break;
 
+						case isset($locator->type):
+							$locator_index = $locator->type.'_'.$base_flat_locator;
+							$locators_query[] = PHP_EOL.'relations_flat_ty_st_si(datos) @> \'['. json_encode($locator_index) . ']\'::jsonb';
+							break;
+
 						default:
 							$locators_query[] = PHP_EOL.'relations_flat_st_si(datos) @> \'['. json_encode($base_flat_locator) . ']\'::jsonb';
 							break;
@@ -84,6 +89,7 @@ class search_related extends search {
 		// final query union with all tables
 			$str_query = implode(PHP_EOL .' UNION ALL ', $ar_query);
 
+
 		// Set order to maintain results stable
 		// count and pagination optional
 			if($full_count===false) {
@@ -97,6 +103,7 @@ class search_related extends search {
 			}
 
 		$str_query .= ';';
+
 
 		return $str_query;
 	}//end parse_search_query_object
@@ -129,7 +136,7 @@ class search_related extends search {
 				$sqo->set_limit($limit);
 				$sqo->set_offset($offset);
 				$sqo->set_filter_by_locators([$reference_locator]);
-
+			dump($sqo, ' sqo +)))))+ '.to_string());
 			$search		= search::get_instance($sqo);
 			$rows_data	= $search->search();
 			// fix result ar_records as dato
@@ -137,6 +144,16 @@ class search_related extends search {
 
 			# Note that row relations contains all relations and not only searched because we need
 			# filter relations array for each records to get only desired coincidences
+
+		// debug
+			$total_records = count($result);
+			dump($total_records, ' total result ++ '.to_string());
+			// $bt = debug_backtrace();
+				// dump($bt, '$bt +*********************///////////////////+ '.to_string());
+			debug_log(__METHOD__." Calculated referenced_locators step 1 (total: $total_records) $reference_locator->section_tipo, $reference_locator->section_id "
+				. exec_time_unit($start_time).' ms'
+				, logger::DEBUG
+			);
 
 			// Compare all properties of received locator in each relations locator
 			$ar_properties = array();
@@ -162,8 +179,9 @@ class search_related extends search {
 			}
 
 		// debug
-			debug_log(__METHOD__." Calculated referenced_locators $reference_locator->section_tipo, $reference_locator->section_id "
+			debug_log(__METHOD__." Calculated referenced_locators step 2 $reference_locator->section_tipo, $reference_locator->section_id "
 				. exec_time_unit($start_time).' ms'
+				. ' - memory: ' .dd_memory_usage()
 				, logger::DEBUG
 			);
 
