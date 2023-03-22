@@ -1458,7 +1458,8 @@ export const ui = {
 		// style. Add CSS style property to element
 			if(style) {
 				for(let key in style) {
-					element.style[key] = style[key]
+					// element.style[key] = style[key]
+					element.style.setProperty(key, style[key])
 					//element.setAttribute("style", key +":"+ style[key]+";");
 				}
 			}
