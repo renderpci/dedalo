@@ -1459,7 +1459,7 @@ export const ui = {
 			if(style) {
 				for(let key in style) {
 					// element.style[key] = style[key]
-					element.style.setProperty(key, style[key])
+					element.style.setProperty(key, style[key]) // changed 22-03-2023
 					//element.setAttribute("style", key +":"+ style[key]+";");
 				}
 			}
