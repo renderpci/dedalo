@@ -12,8 +12,22 @@
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
 	.wrapper_tool.tool_hierarchy {
+		position: relative;
+
+		&:before {
+			background-image: url(../img/icon.svg);
+			background-position: right;
+			background-repeat: no-repeat;
+			content: " ";
+			position: absolute;
+			height: 250%;
+			width: 100%;
+			opacity: .1;
+		}
 
 		>.content_data {
+
+
 
 			>.components_container {
 				display: grid;
@@ -27,6 +41,11 @@
 			.buttons_container {
 				padding: 2rem;
 				padding-left: 0rem;
+
+				button {
+					background-color: @tool_color;
+					border-color: darken(@tool_color, 5%);
+				}
 			}
 
 			>.messages_container {

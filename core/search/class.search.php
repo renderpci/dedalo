@@ -265,7 +265,7 @@ class search {
 	public function search() : object {
 		$start_time=start_time();
 
-		# Converts json search_query_object to sql query string
+		# Converts JSON search_query_object to SQL query string
 		$sql_query = $this->parse_search_query_object( $full_count=false );
 			// debug_log(__METHOD__." sql_query ".to_string($sql_query), logger::DEBUG);
 
