@@ -1883,6 +1883,18 @@ abstract class common {
 
 							// component case
 							case (strpos($model, 'component_')===0):
+
+								// who call sub-datum. Could be a component_portal or a section
+								$source_model = get_called_class();
+
+								// caller_dataframe cases
+								$caller_dataframe = (strpos($source_model, 'component_')===0)
+									? (object)[
+										'section_tipo' => $this->get_section_tipo(),
+										'section_id' => $this->get_section_id()
+									  ]
+									: null;
+
 								// create the component child and inject his configuration (or use the default if the parent don't has specific request_config for it)
 								$current_lang		= $dd_object->lang ?? common::get_element_lang($current_tipo, DEDALO_DATA_LANG);
 								$related_element	= component_common::get_instance(
@@ -1891,7 +1903,9 @@ abstract class common {
 									$section_id,
 									$mode,
 									$current_lang,
-									$current_section_tipo
+									$current_section_tipo,
+									true,
+									$caller_dataframe // object|null
 								);
 								// pagination->limit. Get limit from component calculation or if it's defined from ddo
 								if(isset($dd_object->limit)){
@@ -1954,16 +1968,9 @@ abstract class common {
 									$related_element->request_config = $component_request_config;
 
 								// Inject this tipo as related component from_component_tipo
-									$source_model = get_called_class();
 									if (strpos($source_model, 'component_')===0){
 										$related_element->from_component_tipo	= $this->tipo;
 										$related_element->from_section_tipo		= $this->get_section_tipo();
-
-										// caller_dataframe obj, inject the caller section_tipo and section_id
-										$caller_dataframe = new stdClass();
-											$caller_dataframe->section_tipo	= $this->get_section_tipo();
-											$caller_dataframe->section_id	= $this->get_section_id();
-										$related_element->set_caller_dataframe($caller_dataframe);
 									}
 
 								// inject view

@@ -41,7 +41,6 @@
 	}//end if($options->get_context===true)
 
 
-
 // data
 	$data = [];
 
@@ -75,8 +74,6 @@
 
 		$data[] = $item;
 	}//end if($options->get_data===true && $permissions>0)
-
-
 
 // JSON string
 	return common::build_element_json_output($context, $data);
