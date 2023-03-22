@@ -111,7 +111,14 @@ class section extends common {
 
 		// Not cache new sections (without section_id)
 			if (empty($section_id)) {
-				return new section(null, $tipo, $mode);
+
+				$section = new section(null, $tipo, $mode);
+					//dataframe case
+					if(isset($caller_dataframe)){
+						$section->set_caller_dataframe($caller_dataframe);
+					}
+
+				return $section;
 			}
 
 		// return new section($section_id, $tipo, $mode);
@@ -120,7 +127,13 @@ class section extends common {
 			// Direct construct without cache instance
 			// Use this config in imports
 				if ($cache===false) {
-					return new section($section_id, $tipo, $mode);
+					$section = new section($section_id, $tipo, $mode);
+					//dataframe case
+					if(isset($caller_dataframe)){
+						$section->set_caller_dataframe($caller_dataframe);
+					}
+
+					return $section;
 				}
 
 			# key for cache
@@ -147,7 +160,13 @@ class section extends common {
 
 		// find current instance in cache
 			if ( !array_key_exists($key, (array)self::$ar_section_instances) ) {
-				self::$ar_section_instances[$key] = new section($section_id, $tipo, $mode);
+				$section = new section($section_id, $tipo, $mode);
+				//dataframe case
+				if(isset($caller_dataframe)){
+					$section->set_caller_dataframe($caller_dataframe);
+				}
+
+				self::$ar_section_instances[$key] = $section;
 			}else{
 				// debug_log(__METHOD__." Getting section instance from cache ".to_string($key), logger::ERROR);
 			}
