@@ -133,6 +133,10 @@ component_portal.prototype.init = async function(options) {
 				event_manager.subscribe('initiator_link_' + self.id, fn_initiator_link)
 			)
 			async function fn_initiator_link(locator) {
+				// debug
+					if(SHOW_DEBUG===true) {
+						console.log('-> event fn_initiator_link locator:', locator);
+					}
 				// add locator selected
 					const result = await self.add_value(locator)
 					if (result===false) {
