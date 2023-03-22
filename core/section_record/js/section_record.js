@@ -502,9 +502,15 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 
 /**
 * GET_COMPONENT_DATA
-* Compares received section_tipo, section_id, matrix_id with elements inside datum.data for try to match.
+* Compares received section_tipo, section_id, matrix_id with elements inside datum.data trying to get match.
 * If no elements matches, a empty object is created to prevent gaps
+* @param object ddo
+* 	Could be an ddo or and full context from datum
+* @param string section_tipo
+* @param string|int section_id
+* @param string|int|null matrix_id
 * @return object component_data
+* 	If no component data is found, a special component data for empty cases is created
 */
 section_record.prototype.get_component_data = function(ddo, section_tipo, section_id, matrix_id=null) {
 
