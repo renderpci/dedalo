@@ -925,89 +925,6 @@ abstract class component_common extends common {
 	}//end get_raw_value
 
 
-
-	/**
-	* RESOLVE_SECTION_TIPO
-	* @param string $tipo Component tipo
-	* @return string $section_tipo
-	*/
-		// public static function resolve_section_tipo(string $tipo) : string {
-
-		// 	if (defined('SECTION_TIPO')) {
-		// 		# 1 get from page globals
-		// 		$section_tipo = SECTION_TIPO;
-		// 	}else{
-		// 		# 2 calculate from structure -only useful for real sections-
-		// 		$section_tipo = component_common::get_section_tipo_from_component_tipo($tipo);
-		// 		if(SHOW_DEBUG===true) {
-		// 			debug_log(__METHOD__." WARNING: calculate_section_tipo:$section_tipo from structure for component $tipo Called by:".debug_backtrace()[0]['function']);
-		// 			if ($section_tipo===DEDALO_SECTION_USERS_TIPO || $section_tipo===DEDALO_SECTION_PROJECTS_TIPO) {
-		// 				debug_log(__METHOD__." WARNING SECTION BÁSICA!! Called by:".debug_backtrace()[0]['function'], 1);
-		// 			}
-		// 		}
-		// 	}
-
-		// 	return $section_tipo;
-		// }//end resolve_section_tipo
-
-
-
-	/**
-	* GET HTML CODE . RETURN INCLUDE FILE __CLASS__.PHP
-	* @return $html
-	*	Get standard path file "DEDALO_CORE_PATH .'/'. $class_name .'/'. $class_name .'.php'" (ob_start)
-	*	and return rendered html code
-	*/
-		// public function get_html() {
-
-		// 	$component_name = get_called_class();
-
-		// 	if(SHOW_DEBUG===true) {
-		// 		$this->start_time= start_time();
-		// 		$start_time 	 = start_time();
-		// 		// global$TIMER;$TIMER[__METHOD__.'_'.$component_name.'_IN_'.$this->tipo.'_'.start_time()]=start_time();
-		// 	}
-
-
-		// 	#
-		// 	# HTML BUFFER
-		// 	ob_start();
-		// 	switch ($this->mode) {
-		// 		case 'edit':
-		// 			# Now all components call init in edit mode, therefore, is not necessary this snippet
-		// 			#include ( DEDALO_CORE_PATH .'/component_common/html/component_common_'. $this->mode .'.phtml' );
-		// 			break;
-		// 		case 'search':
-		// 			include ( DEDALO_CORE_PATH .'/component_common/html/component_common_'. $this->mode .'.phtml' );
-		// 			break;
-		// 		default:
-		// 			# code...
-		// 			break;
-		// 	}
-		// 	include ( DEDALO_CORE_PATH .'/'. $component_name .'/'. $component_name .'.php' );
-		// 	$html = ob_get_clean();
-
-		// 	// debug
-		// 		$bt = debug_backtrace();
-		// 		dump($bt, ' bt +++++++++++++++++++++++++++++ '.to_string($component_name));
-
-
-		// 	if(SHOW_DEBUG===true) {
-		// 		// global$TIMER;$TIMER[__METHOD__.'_'.$component_name.'_OUT_'.$this->tipo.'_'.start_time()]=start_time();
-		// 		$total=round(start_time()-$this->start_time,3)*1000;
-		// 		if ($total>0.080) {
-		// 			#dump($total, ' total ++ '.$this->tipo .' '. $component_name );
-		// 		}
-		// 		if($this->mode==='edit') {
-		// 			$html = str_lreplace('</div>', "<span class=\"debug_info debug_component_total_time\">$total ms $this->mode</span></div>", $html);
-		// 		}
-		// 	}
-
-		// 	return $html;
-		// }//end get_html
-
-
-
 	/**
 	* SAVE
 	* Save component data in matrix using parent section
@@ -2124,40 +2041,40 @@ abstract class component_common extends common {
 	* GET_STATS_VALUE_RESOLVED
 	* @return array $ar_final
 	*/
-	public static function get_stats_value_resolved(string $tipo, $current_stats_value, string $stats_model, object $stats_properties=null) : array {
+	// public static function get_stats_value_resolved(string $tipo, $current_stats_value, string $stats_model, object $stats_properties=null) : array {
 
-		$caller_component = get_called_class();
+	// 	$caller_component = get_called_class();
 
-		$ar_values = [];
-		foreach ($current_stats_value as $current_dato => $value) {
+	// 	$ar_values = [];
+	// 	foreach ($current_stats_value as $current_dato => $value) {
 
-			if( empty($current_dato) ) {
+	// 		if( empty($current_dato) ) {
 
-				$current_dato = 'nd';
-				$ar_values[$current_dato] = $value;
+	// 			$current_dato = 'nd';
+	// 			$ar_values[$current_dato] = $value;
 
-			}else{
+	// 		}else{
 
-				$current_component = component_common::get_instance(
-					$caller_component,
-					$tipo,
-					null,
-					'stats'
-				);
-				$current_component->set_dato($current_dato);
+	// 			$current_component = component_common::get_instance(
+	// 				$caller_component,
+	// 				$tipo,
+	// 				null,
+	// 				'stats'
+	// 			);
+	// 			$current_component->set_dato($current_dato);
 
-				$valor = $current_component->get_valor();
+	// 			$valor = $current_component->get_valor();
 
-				$ar_values[$valor] = $value;
-			}
-		}//end foreach
+	// 			$ar_values[$valor] = $value;
+	// 		}
+	// 	}//end foreach
 
-		$label		= RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true).':'.$stats_model;
-		$ar_final	= array($label => $ar_values);
+	// 	$label		= RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true).':'.$stats_model;
+	// 	$ar_final	= array($label => $ar_values);
 
 
-		return $ar_final;
-	}//end get_stats_value_resolved
+	// 	return $ar_final;
+	// }//end get_stats_value_resolved
 
 
 
@@ -3052,70 +2969,70 @@ abstract class component_common extends common {
 	* PARSE_STATS_VALUES
 	* @return array $ar_clean
 	*/
-	public static function parse_stats_values(string $tipo, string $section_tipo, $properties, string $lang=DEDALO_DATA_LANG, string $selector='valor_list') : array {
+	// public static function parse_stats_values(string $tipo, string $section_tipo, $properties, string $lang=DEDALO_DATA_LANG, string $selector='valor_list') : array {
 
-		if (isset($properties->valor_arguments)) {
-			$selector = 'dato';
-		}
+	// 	if (isset($properties->valor_arguments)) {
+	// 		$selector = 'dato';
+	// 	}
 
-		// Search
-			if (isset($properties->stats_look_at)) {
-				$related_tipo = reset($properties->stats_look_at);
-			}else{
-				$related_tipo = false; //$current_column_tipo;
-			}
-			$path 		= search::get_query_path($tipo, $section_tipo, true, $related_tipo);
-			$end_path 	= end($path);
-			$end_path->selector = $selector;
+	// 	// Search
+	// 		if (isset($properties->stats_look_at)) {
+	// 			$related_tipo = reset($properties->stats_look_at);
+	// 		}else{
+	// 			$related_tipo = false; //$current_column_tipo;
+	// 		}
+	// 		$path 		= search::get_query_path($tipo, $section_tipo, true, $related_tipo);
+	// 		$end_path 	= end($path);
+	// 		$end_path->selector = $selector;
 
-			$search_query_object = '{
-			  "section_tipo": "'.$section_tipo.'",
-			  "allow_sub_select_by_id": false,
-			  "remove_distinct": true,
-			  "limit": 0,
-			  "select": [
-			    {
-			      "path": '.json_encode($path).'
-			    }
-			  ]
-			}';
-			#dump($search_query_object, ' search_query_object ** ++ '.to_string());
-			$search_query_object = json_decode($search_query_object);
-			$search 			 = search::get_instance($search_query_object);
-			$result 			 = $search->search();
-			#dump($result, ' result ** ++ '.to_string());
+	// 		$search_query_object = '{
+	// 		  "section_tipo": "'.$section_tipo.'",
+	// 		  "allow_sub_select_by_id": false,
+	// 		  "remove_distinct": true,
+	// 		  "limit": 0,
+	// 		  "select": [
+	// 		    {
+	// 		      "path": '.json_encode($path).'
+	// 		    }
+	// 		  ]
+	// 		}';
+	// 		#dump($search_query_object, ' search_query_object ** ++ '.to_string());
+	// 		$search_query_object = json_decode($search_query_object);
+	// 		$search 			 = search::get_instance($search_query_object);
+	// 		$result 			 = $search->search();
+	// 		#dump($result, ' result ** ++ '.to_string());
 
-		// Parse results for stats
-			$ar_clean = [];
-	        foreach ($result->ar_records as $key => $item) {
+	// 	// Parse results for stats
+	// 		$ar_clean = [];
+	//         foreach ($result->ar_records as $key => $item) {
 
-	        	$value = end($item);
+	//         	$value = end($item);
 
-	        	// Override label with custom component parse
-	        		if (isset($properties->valor_arguments)) {
-	        			$c_component_tipo = isset($properties->stats_look_at) ? reset($properties->stats_look_at) : $tipo;
-						$model_name 	  = RecordObj_dd::get_modelo_name_by_tipo($c_component_tipo, true);
-						$value 		 	  = $model_name::get_stats_value_with_valor_arguments($value, $properties->valor_arguments);
-					}
+	//         	// Override label with custom component parse
+	//         		if (isset($properties->valor_arguments)) {
+	//         			$c_component_tipo = isset($properties->stats_look_at) ? reset($properties->stats_look_at) : $tipo;
+	// 					$model_name 	  = RecordObj_dd::get_modelo_name_by_tipo($c_component_tipo, true);
+	// 					$value 		 	  = $model_name::get_stats_value_with_valor_arguments($value, $properties->valor_arguments);
+	// 				}
 
-	        	$label = strip_tags(trim($value));
-	        	$uid   = $label;
+	//         	$label = strip_tags(trim($value));
+	//         	$uid   = $label;
 
-				if(!isset($ar_clean[$uid])){
-					$ar_clean[$uid] = new stdClass();
-					$ar_clean[$uid]->count = 0;
-					$ar_clean[$uid]->tipo  = $tipo;
-				}
+	// 			if(!isset($ar_clean[$uid])){
+	// 				$ar_clean[$uid] = new stdClass();
+	// 				$ar_clean[$uid]->count = 0;
+	// 				$ar_clean[$uid]->tipo  = $tipo;
+	// 			}
 
-				$ar_clean[$uid]->count++;
-				$ar_clean[$uid]->value = $label;
+	// 			$ar_clean[$uid]->count++;
+	// 			$ar_clean[$uid]->value = $label;
 
-			}
-			#dump($ar_clean, ' ar_clean ++ ** '.to_string());
+	// 		}
+	// 		#dump($ar_clean, ' ar_clean ++ ** '.to_string());
 
 
-		return $ar_clean;
-	}//end parse_stats_values
+	// 	return $ar_clean;
+	// }//end parse_stats_values
 
 
 

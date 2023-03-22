@@ -690,8 +690,13 @@ final class dd_core_api {
 
 		// dataframe section case
 			if ($delete_mode==='delete_dataframe' && !empty($section_id)) {
-				$section 	= section::get_instance($section_id, $section_tipo);
-				$section->caller_dataframe = $caller_dataframe;
+				$section 	= section::get_instance(
+					$section_id,
+					$section_tipo,
+					'list',
+					false,
+					$caller_dataframe
+				);
 				$deleted 	= $section->Delete($delete_mode);
 
 				if ($deleted!==true) {
