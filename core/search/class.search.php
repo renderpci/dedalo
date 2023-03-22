@@ -1763,6 +1763,11 @@ class search {
 					}
 				}
 
+			// type (string)
+				if (property_exists($current_locator, 'type') && !empty($current_locator->type)) {
+					$ar_current[] = $table.'.type='.$current_locator->type;
+				}
+
 			// lang (string). time machine case (column 'lang' exists)
 				if (property_exists($current_locator, 'lang') && !empty($current_locator->lang)) {
 					if ($this->matrix_table==='matrix_time_machine') {
