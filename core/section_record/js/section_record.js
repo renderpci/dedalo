@@ -522,10 +522,22 @@ section_record.prototype.get_component_data = function(ddo, section_tipo, sectio
 				el.section_tipo===section_tipo // match section_tipo
 				) {
 
+				// dataframe case
+				// if ddo is inside a dataframe get his data matching row_section_id of ddo with the section_id of the caller and his own section_tipo and section_id
+				// ex: portal with section_tipo = numisdata3 and section_id = 1
+				// has a dataframe with section_tipo = numisdata_1016 and section_id_8
+				// the match for components inside numisdata_1016 has to be ddo row_section_id === caller (portal) section_id
+				// data of components inside dataframe sections are conditioned by his caller section_tipo and section_id and his own section_tipo and section_id
+				if (ddo.is_dataframe && el.row_section_id) {
+					return parseInt(el.row_section_id)===parseInt(self.caller.section_id)
+				}
+
+				// time machine case
 				if (el.matrix_id && matrix_id) {
 					// console.error("match matrix_id:", el.matrix_id);
 					return parseInt(el.matrix_id)===parseInt(matrix_id)
 				}
+
 				return true
 			}
 			return false

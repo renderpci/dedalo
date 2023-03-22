@@ -113,7 +113,7 @@ abstract class component_common extends common {
 	*
 	* @return object|null
 	*/
-	final public static function get_instance(string $component_name=null, string $tipo=null, $section_id=null, string $mode='edit', string $lang=DEDALO_DATA_LANG, string $section_tipo=null, bool $cache=true) : ?object {
+	final public static function get_instance(string $component_name=null, string $tipo=null, $section_id=null, string $mode='edit', string $lang=DEDALO_DATA_LANG, string $section_tipo=null, bool $cache=true, object $caller_dataframe=null) : ?object {
 		// $start_time = start_time();
 
 		// tipo check. Is mandatory
@@ -215,7 +215,7 @@ abstract class component_common extends common {
 						'edit_in_list',
 						'edit_note',
 						'tool_structuration',
-						// 'dataframe_edit',
+						'dataframe_edit',
 						'tool_description',
 						'view_tool_description',
 						'player',
@@ -282,7 +282,19 @@ abstract class component_common extends common {
 
 		// no cache. Direct construct without cache instance. Use this config in imports
 			if ($cache===false || empty($section_id)) {
-				return new $component_name($tipo, $section_id, $mode, $lang, $section_tipo);
+				// instance the component
+				$component = new $component_name(
+					$tipo,
+					$section_id,
+					$mode,
+					$lang,
+					$section_tipo
+				);
+				// dataframe
+				if(isset($caller_dataframe)){
+					$component->set_caller_dataframe($caller_dataframe);
+				}
+				return $component;
 			}
 
 		// cache. Get cache instance if it exists. Otherwise, create a new one
@@ -291,6 +303,9 @@ abstract class component_common extends common {
 			// cache key
 				// $cache_key	= $tipo .'_'. $section_tipo .'_'. $section_id .'_'. $lang .'_'. $mode;
 				$cache_key		= implode('_', [$tipo, $section_tipo, $section_id, $lang, $mode]);
+				if(isset($caller_dataframe)){
+					$cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->section_id;
+				}
 			// cache params
 				$max_cache_instances	= 160; // 500
 				$cache_slice_on			= 40;  // 200 // $max_cache_instances/2;
@@ -308,13 +323,19 @@ abstract class component_common extends common {
 				// if ( !isset($ar_component_instances) || !isset($ar_component_instances[$cache_key]) ) {
 
 					// __CONSTRUCT : Store new component in static array var
-						$ar_component_instances[$cache_key] = new $component_name(
-							$tipo,
-							$section_id,
-							$mode,
-							$lang,
-							$section_tipo
-						);
+					$component = new $component_name(
+						$tipo,
+						$section_id,
+						$mode,
+						$lang,
+						$section_tipo
+					);
+					// dataframe
+					if(isset($caller_dataframe)){
+						$component->set_caller_dataframe($caller_dataframe);
+					}
+
+					$ar_component_instances[$cache_key] = $component;
 				}
 				// else{
 
@@ -335,7 +356,6 @@ abstract class component_common extends common {
 				// }
 				// error_log("------------------------- get_instance ------- $tipo ----". exec_time_unit($start_time,'ms')." ms");
 			}
-
 
 		return $ar_component_instances[$cache_key];
 	}//end get_instance
@@ -2999,7 +3019,8 @@ abstract class component_common extends common {
 			$this->section_id,
 			$this->section_tipo,
 			'edit',
-			true
+			true,
+			$this->caller_dataframe ?? null
 		);
 		$this->section_obj = $section;
 		// caller_dataframe
