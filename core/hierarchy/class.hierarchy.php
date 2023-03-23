@@ -472,30 +472,23 @@ class hierarchy {
 		}//end if ($real_section_tipo===DEDALO_THESAURUS_SECTION_TIPO)
 
 
-		#
-		# ROOT TERMS
-		# Create first sample record in every new area (term and model)
-		/*
-		$create_records_options = new stdClass();
-			$create_records_options->section_tipo 	= $section_tipo;
-			$create_records_options->section_id 	= $section_id;
-			$create_records_options->ar_sections 	= array($default_section_tipo_term, $default_section_tipo_model);
-		hierarchy::create_root_terms( $create_records_options );
-		*/
-
-
-		#
-		# SET PERMISSIONS
-		# Allow current user access to created default sections
-		$permissions_options = new stdClass();
-			$permissions_options->section_tipo	= $section_tipo;
-			$permissions_options->section_id	= $section_id;
-			$ar_sections = (isset($default_section_tipo_model))
+		// set permissions. Allow current user access to created default sections
+			$ar_section_tipo = (isset($default_section_tipo_model))
 				? [$default_section_tipo_term, $default_section_tipo_model]
 				: [$default_section_tipo_term];
-			$permissions_options->ar_sections 	= $ar_sections;
+			$user_id = navigator::get_user_id();
 
-		hierarchy::set_hierarchy_permissions( $permissions_options );
+			$set_permissions_result = component_security_access::set_section_permissions((object)[
+				'ar_section_tipo'	=> $ar_section_tipo,
+				'user_id'			=> $user_id,
+				'permissions'		=> 2
+			]);
+			if ($set_permissions_result===false) {
+				debug_log(__METHOD__.
+					" Error: Unable to set access permissions to current user () ".to_string($ar_section_tipo),
+					logger::ERROR
+				);
+			}
 
 
 		return (object)$response;
@@ -540,7 +533,9 @@ class hierarchy {
 			debug_log(__METHOD__." Created first record of thesaurus section $current_section_tipo - $section_id ".to_string(), logger::DEBUG);
 
 			# Attach as children of current hierarchy
-			$component_relation_children_tipo = ($key===0) ? DEDALO_HIERARCHY_CHILDREN_TIPO : DEDALO_HIERARCHY_CHIDRENS_MODEL_TIPO;
+			$component_relation_children_tipo = ($key===0)
+				? DEDALO_HIERARCHY_CHILDREN_TIPO
+				: DEDALO_HIERARCHY_CHIDRENS_MODEL_TIPO;
 			$component_relation_children = component_common::get_instance(
 				'component_relation_children',
 				$component_relation_children_tipo,
@@ -563,149 +558,151 @@ class hierarchy {
 	/**
 	* SET_HIERARCHY_PERMISSIONS
 	* Allow current user access to created default sections
+	* @param object $options
 	* @return bool
 	*/
-	private static function set_hierarchy_permissions( object $request_options ) : bool {
+		// private static function set_hierarchy_permissions( object $options ) : bool {
 
-		$options = new stdClass();
-			$options->section_tipo 	= null;
-			$options->section_id 	= null;
-			$options->ar_sections 	= null;
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+		// 	// options
+		// 		$section_tipo	= $options->section_tipo ?? null;
+		// 		$section_id		= $options->section_id ?? null;
+		// 		$ar_sections	= $options->ar_sections	?? null;
 
-		# user_id
-		$user_id 	  = navigator::get_user_id();
-		if (SHOW_DEBUG===true || $user_id<1) {
-			return true;
-		}
+		// 	// user_id
+		// 		$user_id = navigator::get_user_id();
+		// 		if (SHOW_DEBUG===true || $user_id<1) {
+		// 			return true;
+		// 		}
 
-		# Profile
-		$profile_id   = component_profile::get_profile_from_user_id( $user_id );
-		$section_id   = $profile_id;
-		$permissions  = 2;
+		// 	// Profile
+		// 		$profile_id		= security::get_user_profile( $user_id );
+		// 		$section_id		= $profile_id;
+		// 		$permissions	= 2;
 
-
-		#
-		# Security areas
-		$component_security_areas = component_common::get_instance(
-			'component_security_areas',
-			DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO,
-			$section_id,
-			'edit',
-			DEDALO_DATA_NOLAN,
-			DEDALO_SECTION_PROFILES_TIPO
-		);
-			$dato_security_areas = (object)$component_security_areas->get_dato();
-
-		#
-		# Security access
-		$component_security_access = component_common::get_instance(
-			'component_security_access',
-			DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO,
-			$section_id,
-			'edit',
-			DEDALO_DATA_NOLAN,
-			DEDALO_SECTION_PROFILES_TIPO
-		);
-		$dato_security_access 	= (object)$component_security_access->get_dato();
+		// 	// Security areas
+		// 		$component_security_areas = component_common::get_instance(
+		// 			'component_security_areas',
+		// 			DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO,
+		// 			$section_id,
+		// 			'edit',
+		// 			DEDALO_DATA_NOLAN,
+		// 			DEDALO_SECTION_PROFILES_TIPO
+		// 		);
+		// 		$dato_security_areas = (object)$component_security_areas->get_dato();
 
 
-		# Iterate sections (normally like ts1,ts2)
-		foreach ((array)$options->ar_sections as $current_section_tipo) {
+		// 	// Security access
+		// 		$component_security_access = component_common::get_instance(
+		// 			'component_security_access',
+		// 			DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO,
+		// 			$section_id,
+		// 			'edit',
+		// 			DEDALO_DATA_NOLAN,
+		// 			DEDALO_SECTION_PROFILES_TIPO
+		// 		);
+		// 		$dato_security_access = (object)$component_security_access->get_dato();
 
-			# Security areas
-			$dato_security_areas->$current_section_tipo = $permissions;
+
+		// 	# Iterate sections (normally like ts1,ts2)
+		// 	foreach ((array)$ar_sections as $current_section_tipo) {
+
+		// 		# Security areas
+		// 		$dato_security_areas->$current_section_tipo = $permissions;
 
 
-			# Security access
-			# Components inside section
-			$real_section = section::get_section_real_tipo_static( $current_section_tipo );
-			$ar_children  = section::get_ar_children_tipo_by_model_name_in_section(
-				$real_section,
-				$ar_modelo_name_required=array('component','button','section_group'),
-				$from_cache=true,
-				$resolve_virtual=false,
-				$recursive=true,
-				$search_exact=false
-			);
-			$dato_security_access->$current_section_tipo = new stdClass();
-			foreach ($ar_children as $children_tipo) {
-				$dato_security_access->$current_section_tipo->$children_tipo = $permissions;
-			}
+		// 		# Security access
+		// 		# Components inside section
+		// 		$real_section = section::get_section_real_tipo_static( $current_section_tipo );
+		// 		$ar_children  = section::get_ar_children_tipo_by_model_name_in_section(
+		// 			$real_section,
+		// 			$ar_modelo_name_required=array('component','button','section_group'),
+		// 			$from_cache=true,
+		// 			$resolve_virtual=false,
+		// 			$recursive=true,
+		// 			$search_exact=false
+		// 		);
+		// 		$dato_security_access->$current_section_tipo = new stdClass();
+		// 		foreach ($ar_children as $children_tipo) {
+		// 			$dato_security_access->$current_section_tipo->$children_tipo = $permissions;
+		// 		}
 
-		}//end foreach ($ar_sections as $current_section_tipo)
+		// 	}//end foreach ($ar_sections as $current_section_tipo)
 
-		# Save calculated data once
-		$component_security_areas->set_dato($dato_security_areas);
-		$component_security_areas->Save();
+		// 	# Save calculated data once
+		// 	$component_security_areas->set_dato($dato_security_areas);
+		// 	$component_security_areas->Save();
 
-		$component_security_access->set_dato($dato_security_access);
-		$component_security_access->Save();
+		// 	$component_security_access->set_dato($dato_security_access);
+		// 	$component_security_access->Save();
 
-		# Regenerate permissions table
-		security::reset_permissions_table();
+		// 	# Regenerate permissions table
+		// 	security::reset_permissions_table();
 
-		return true;
-	}//end set_hierarchy_permissions
+		// 	return true;
+		// }//end set_hierarchy_permissions
 
 
 
 	/**
 	* CREATE_TERM
 	* Creates new structure term with request params. If term already exists, return false
+	* @param object $request_options
 	* @return object $response
 	*/
 	public static function create_term( object $request_options ) : object {
 
-		$options = new stdClass();
-			$options->terminoID 	= '';
-			$options->parent 		= '';
-			$options->modelo 		= '';
-			$options->esmodelo 		= 'no';
-			$options->esdescriptor 	= 'si';
-			$options->visible 		= 'si';
-			$options->norden 		= null;
-			$options->tld2 			= '';
-			$options->traducible 	= 'no';
-			$options->relaciones 	= null;
-			$options->properties 	= null;
-			$options->name 			= '';
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+		// options
+			$options = new stdClass();
+				$options->terminoID 	= '';
+				$options->parent 		= '';
+				$options->modelo 		= '';
+				$options->esmodelo 		= 'no';
+				$options->esdescriptor 	= 'si';
+				$options->visible 		= 'si';
+				$options->norden 		= null;
+				$options->tld2 			= '';
+				$options->traducible 	= 'no';
+				$options->relaciones 	= null;
+				$options->properties 	= null;
+				$options->name 			= '';
+				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
-		$response = new stdClass();
-				$response->result 	= false;
-				$response->msg 		= '';
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= '';
 
-
-		# STRUCTURE ELEMENT TEST . Test record exits
-		$RecordObj_dd 	= new RecordObj_dd($options->terminoID, $options->tld2);
-		$parent_test = $RecordObj_dd->get_parent();
+		// structure element test . Test record exits
+			$RecordObj_dd	= new RecordObj_dd($options->terminoID, $options->tld2);
+			$parent_test	= $RecordObj_dd->get_parent();
 			if (!empty($parent_test)) {
 				$response->result 	= false;
 				$response->msg 		= "Current hierarchy ($options->terminoID - $options->name) already exists. Nothing is created.";
 				return $response;
 			}
 
-		$ar_childrens = RecordObj_dd::get_ar_childrens($options->parent);
-		$norden 	  = (int)count($ar_childrens)+1;
+		// norden
+			$ar_children	= RecordObj_dd::get_ar_childrens($options->parent);
+			$norden			= (int)count($ar_children)+1;
 
-		# Defaults
-		$RecordObj_dd->set_terminoID($options->terminoID);
-		$RecordObj_dd->set_parent($options->parent);
-		$RecordObj_dd->set_modelo($options->modelo);
-		$RecordObj_dd->set_esmodelo($options->esmodelo);
-		$RecordObj_dd->set_esdescriptor($options->esdescriptor);
-		$RecordObj_dd->set_visible($options->visible);
-		$RecordObj_dd->set_norden($norden);
-		$RecordObj_dd->set_tld($options->tld2);
-		$RecordObj_dd->set_traducible($options->traducible);
-		$RecordObj_dd->set_relaciones($options->relaciones);
-		$RecordObj_dd->set_properties($options->properties);
+		// Defaults
+			$RecordObj_dd->set_terminoID($options->terminoID);
+			$RecordObj_dd->set_parent($options->parent);
+			$RecordObj_dd->set_modelo($options->modelo);
+			$RecordObj_dd->set_esmodelo($options->esmodelo);
+			$RecordObj_dd->set_esdescriptor($options->esdescriptor);
+			$RecordObj_dd->set_visible($options->visible);
+			$RecordObj_dd->set_norden($norden);
+			$RecordObj_dd->set_tld($options->tld2);
+			$RecordObj_dd->set_traducible($options->traducible);
+			$RecordObj_dd->set_relaciones($options->relaciones);
+			$RecordObj_dd->set_properties($options->properties);
 
-		$RecordObj_dd->set_force_insert_on_save(true); # important !
+		// force_insert_on_save
+			$RecordObj_dd->set_force_insert_on_save(true); # important !
 
-		# SAVE : After save, we can recover new created terminoID (prefix+autoIncrement)
-		$created_id_ts = $RecordObj_dd->save_term_and_descriptor( $options->name );
+		// SAVE : After save, we can recover new created terminoID (prefix+autoIncrement)
+			$created_id_ts = $RecordObj_dd->save_term_and_descriptor( $options->name );
 			if ($created_id_ts) {
 				$response->result 	= true;
 				$response->msg 		= "Created record: $created_id_ts - $options->name";
