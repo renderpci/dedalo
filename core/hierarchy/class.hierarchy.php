@@ -535,7 +535,7 @@ class hierarchy {
 			# Attach as children of current hierarchy
 			$component_relation_children_tipo = ($key===0)
 				? DEDALO_HIERARCHY_CHILDREN_TIPO
-				: DEDALO_HIERARCHY_CHIDRENS_MODEL_TIPO;
+				: DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO;
 			$component_relation_children = component_common::get_instance(
 				'component_relation_children',
 				$component_relation_children_tipo,
