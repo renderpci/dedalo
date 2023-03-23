@@ -230,7 +230,7 @@ class security {
 	* @param int $user_id
 	* @return object|null $component_security_access
 	*/
-	public static function get_user_security_access( int $user_id ) : ?object {
+	public static function get_user_security_access(int $user_id) : ?object {
 
 		// user profile
 			$user_profile = security::get_user_profile($user_id);
@@ -409,86 +409,6 @@ class security {
 
 		return $is_global_admin;
 	}//end is_global_admin
-
-
-
-	/**
-	* SET_SECTION_PERMISSIONS (NOT USED)
-	* Allow current user access to created default sections
-	* @param object $options
-	* @return bool
-	*/
-		// private static function set_section_permissions(object $options) : bool {
-
-		// 	// options
-		// 		$section_tipo	= $options->section_tipo ?? null;
-		// 		$section_id		= $options->section_id ?? null;
-		// 		$ar_sections	= $options->ar_sections ?? [];
-
-		// 	// user_id
-		// 		$user_id = navigator::get_user_id();
-		// 		if (SHOW_DEBUG===true || $user_id<1) {
-		// 			return true;
-		// 		}
-
-		// 	// Permissions
-		// 		$permissions = 2;
-
-		// 	// component_security_access
-		// 		$component_security_access			= security::get_user_security_access();
-		// 		$component_security_access_dato		= $component_security_access->get_dato() ?? [];
-		// 		// $component_security_access_dato	= security::get_ar_permissions_in_matrix_for_current_user($user_id);
-
-		// 	// Iterate sections (normally like ts1,ts2)
-		// 	// foreach ((array)$options->ar_sections as $current_section_tipo) {
-		// 		$ar_sections_length = sizeof($ar_sections);
-		// 		for ($i=0; $i < $ar_sections_length; $i++) {
-
-		// 			$current_section_tipo = $ar_sections[$i];
-
-		// 			$section_permissions = new stdClass();
-		// 				$section_permissions->tipo			= $current_section_tipo;
-		// 				// $section_permissions->parent		= $current_section_tipo;
-		// 				// $section_permissions->type		= 'area';
-		// 				$section_permissions->section_tipo	= $current_section_tipo;
-		// 				$section_permissions->value			= $permissions;
-
-		// 			$component_security_access_dato[] = $section_permissions;
-
-		// 			# Components inside section
-		// 			$real_section	= section::get_section_real_tipo_static( $current_section_tipo );
-		// 			$ar_children	= section::get_ar_children_tipo_by_model_name_in_section(
-		// 				$real_section, // section_tipo
-		// 				['component','button','section_group'], // ar_model_name_required
-		// 				true, // from_cache
-		// 				false, // resolve_virtual
-		// 				true, // recursive
-		// 				false // search_exact
-		// 			);
-
-		// 			foreach ($ar_children as $children_tipo) {
-
-		// 				$component_permissions = new stdClass();
-		// 					$component_permissions->tipo			= $children_tipo;
-		// 					// $component_permissions->parent		= $current_section_tipo;
-		// 					$component_permissions->section_tipo	= $current_section_tipo;
-		// 					$component_permissions->value			= $permissions;
-
-		// 				$component_security_access_dato[] = $component_permissions;
-		// 			}
-
-		// 		}//end foreach ($ar_sections as $current_section_tipo)
-
-		// 	// Save calculated data
-		// 		$component_security_access->set_dato($component_security_access_dato);
-		// 		$component_security_access->Save();
-
-		// 	// Regenerate permissions table
-		// 		security::reset_permissions_table();
-
-
-		// 	return true;
-		// }//end set_section_permissions
 
 
 
