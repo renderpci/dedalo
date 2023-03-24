@@ -16,17 +16,47 @@
 				min-height: unset;
 			}
 
-			// video_container
+			// 3d_container
 			>.content_value {
-				background-color: #faf8fc;
-				height: 600px;
 				width: 100%;
+				height: 100%;
+				flex-grow: 1;
+				flex-shrink: 1;
+				position: absolute;
+				top: 0;
+				// z-index: 0;
+				background-color: #faf8fc;
 
 				@media screen and (max-width: @width_break_point_1) {
 					height: unset;
 					max-height: 600px;
 				}
 			}
+			.axes {
+				width: 100px;
+				height: 100px;
+				margin: 20px;
+				padding: 0px;
+				position: absolute;
+				left: 0px;
+				bottom: 0px;
+				z-index: 10;
+				pointer-events: none;
+			}
+			// .gui-wrap {
+			// 	position: absolute;
+			// 	top: 0;
+			// 	right: 0;
+			// 	bottom: 0;
+			// 	pointer-events: none;
+			// 	z-index: 9999;
+			// }
+
+			// .gui-wrap > .main {
+			// 	pointer-events: all;
+			// 	max-height: 100%;
+			// 	overflow: auto;
+			// }
 
 			// posterframe
 			.posterframe {
