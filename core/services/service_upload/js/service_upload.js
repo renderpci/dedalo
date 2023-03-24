@@ -6,9 +6,7 @@
 // import
 	import {event_manager} from '../../../common/js/event_manager.js'
 	import {data_manager} from '../../../common/js/data_manager.js'
-	// // import {get_instance, delete_instance} from '../../../common/js/instances.js'
 	import {dd_console} from '../../../common/js/utils/index.js'
-	// import {ui} from '../../../common/js/ui.js'
 	import {common} from '../../../common/js/common.js'
 	import {render_edit_service_upload} from './render_edit_service_upload.js'
 
@@ -53,6 +51,8 @@ export const service_upload = function () {
 
 /**
 * INIT
+* @param object options
+* @return bool
 */
 service_upload.prototype.init = async function(options) {
 
@@ -107,6 +107,8 @@ service_upload.prototype.init = async function(options) {
 
 /**
 * BUILD
+* @param bool autoload
+* @return bool
 */
 service_upload.prototype.build = async function(autoload=false) {
 
@@ -115,11 +117,13 @@ service_upload.prototype.build = async function(autoload=false) {
 	// fetch system info
 		const system_info = await get_system_info(self)
 		// set as tool properties
-			self.max_size_bytes			= system_info.max_size_bytes
-			self.sys_get_temp_dir		= system_info.sys_get_temp_dir
-			self.upload_tmp_dir			= system_info.upload_tmp_dir
-			self.upload_tmp_perms		= system_info.upload_tmp_perms
-			self.session_cache_expire	= system_info.session_cache_expire
+			self.max_size_bytes				= system_info.max_size_bytes
+			self.sys_get_temp_dir			= system_info.sys_get_temp_dir
+			self.upload_tmp_dir				= system_info.upload_tmp_dir
+			self.upload_tmp_perms			= system_info.upload_tmp_perms
+			self.session_cache_expire		= system_info.session_cache_expire
+			self.upload_service_chunk_files	= system_info.upload_service_chunk_files
+
 
 	return true
 }//end build_custom
@@ -129,6 +133,8 @@ service_upload.prototype.build = async function(autoload=false) {
 /**
 * GET_SYSTEM_INFO
 * Call API to obtain useful system info
+* @return object response
+* 	API response
 */
 const get_system_info = async function() {
 
@@ -160,6 +166,8 @@ const get_system_info = async function() {
 
 /**
 * UPLOAD
+* @param object options
+* @return object response
 */
 export const upload = async function(options) {
 
@@ -170,35 +178,37 @@ export const upload = async function(options) {
 		const allowed_extensions	= options.allowed_extensions // array ['tiff', 'jpeg']
 		const max_size_bytes		= options.max_size_bytes // int 352142
 
+
 	return new Promise(function(resolve){
 
-	// short vars
-		const api_url	= DEDALO_API_URL
-		const response = {result:false}
+		// short vars
+			const api_url	= DEDALO_API_URL
+			const response	= {
+				result : false
+			}
 
-	// check file extension
-		const file_extension = file.name.split('.').pop().toLowerCase();
-		if (!allowed_extensions.includes(file_extension)) {
-			alert( get_label.invalid_extension + ": \n" + file_extension + "\nUse any of: \n" + JSON.stringify(allowed_extensions) );
-			resolve(response)
-			return false
-		}
+		// check file extension
+			const file_extension = file.name.split('.').pop().toLowerCase();
+			if (!allowed_extensions.includes(file_extension)) {
+				alert( get_label.invalid_extension + ": \n" + file_extension + "\nUse any of: \n" + JSON.stringify(allowed_extensions) );
+				resolve(response)
+				return false
+			}
 
-	// check max file size
-		const file_size_bytes = file.size
-		if (file_size_bytes>max_size_bytes) {
-			alert( get_label.filesize_is_too_big + " Max file size is " + Math.floor(max_size_bytes / (1024*1024)) + " MB and current file is " + Math.floor(file_size_bytes / (1024*1024)));
-			resolve(response)
-			return false
-		}
+		// check max file size
+			const file_size_bytes = file.size
+			if (file_size_bytes>max_size_bytes) {
+				alert( get_label.filesize_is_too_big + " Max file size is " + Math.floor(max_size_bytes / (1024*1024)) + " MB and current file is " + Math.floor(file_size_bytes / (1024*1024)));
+				resolve(response)
+				return false
+			}
 
-	// // FormData build
-	// 	const fd = new FormData();
-	// 	fd.append('resource_type',		resource_type);
-	// 	// fd.append('allowed_extensions', 	JSON.stringify(allowed_extensions));
-	// 	// file
-	// 	fd.append('fileToUpload', file);
-
+		// FormData build
+			// 	const fd = new FormData();
+			// 	fd.append('resource_type',		resource_type);
+			// 	// fd.append('allowed_extensions', 	JSON.stringify(allowed_extensions));
+			// 	// file
+			// 	fd.append('fileToUpload', file);
 
 		// upload_loadstart
 			const upload_loadstart = function() {
@@ -329,7 +339,7 @@ export const upload = async function(options) {
 
 				const file_size		= file.size;
 				//break into xMB chunks
-				const size = DEDALO_UPLOAD_SERVICE_CHUNK_FILES || 80; // maximum size for chunks
+				const size			= DEDALO_UPLOAD_SERVICE_CHUNK_FILES || 80; // maximum size for chunks
 				const chunk_size	= size*1024*1024;
 				let start			= 0;
 				const total_chunks	= Math.ceil(file_size / chunk_size);
@@ -471,50 +481,44 @@ export const upload = async function(options) {
 				xhr.send(formdata);
 			}
 
-		switch (true) {
-			case DEDALO_UPLOAD_SERVICE_CHUNK_FILES > 0:
+		// process_file on end, else send next chunk
+			if (DEDALO_UPLOAD_SERVICE_CHUNK_FILES > 0) {
 				process_file(file, resource_type)
-				break;
-
-			default:
+			}else{
 				send()
-				break;
-		}
+			}
 
+		// XMLHttpRequest
+			// 		const xhr = new XMLHttpRequest();
 
+			// 		// upload
+			// 			// upload_loadstart (the upload begins)
+			// 			xhr.upload.addEventListener("loadstart", upload_loadstart, false);
 
-	// 	// XMLHttpRequest
-	// 		const xhr = new XMLHttpRequest();
+			// 			// upload_load file (the upload ends successfully)
+			// 			xhr.upload.addEventListener("load", upload_load, false);
 
-	// 		// upload
-	// 			// upload_loadstart (the upload begins)
-	// 			xhr.upload.addEventListener("loadstart", upload_loadstart, false);
+			// 			// upload_error (the upload ends in error)
+			// 			xhr.upload.addEventListener("error", upload_error, false);
 
-	// 			// upload_load file (the upload ends successfully)
-	// 			xhr.upload.addEventListener("load", upload_load, false);
+			// 			// upload_abort (the upload has been aborted by the user)
+			// 			xhr.upload.addEventListener("abort", upload_abort, false);
 
-	// 			// upload_error (the upload ends in error)
-	// 			xhr.upload.addEventListener("error", upload_error, false);
+			// 			// progress
+			// 			xhr.upload.addEventListener("progress", upload_progress, false);
 
-	// 			// upload_abort (the upload has been aborted by the user)
-	// 			xhr.upload.addEventListener("abort", upload_abort, false);
+			// 		// hxr
+			// 			// xhr_load (the XMLHttpRequest ends successfully)
+			// 			xhr.addEventListener("load", xhr_load, false);
 
-	// 			// progress
-	// 			xhr.upload.addEventListener("progress", upload_progress, false);
+			// 			// open connection
+			// 			xhr.open("POST", api_url, true);
 
-	// 		// hxr
-	// 			// xhr_load (the XMLHttpRequest ends successfully)
-	// 			xhr.addEventListener("load", xhr_load, false);
+			// 			// request header
+			// 			xhr.setRequestHeader("X-File-Name", encodeURIComponent(file.name));
 
-	// 			// open connection
-	// 			xhr.open("POST", api_url, true);
-
-	// 			// request header
-	// 			xhr.setRequestHeader("X-File-Name", encodeURIComponent(file.name));
-
-	// 		// send data
-	// 			xhr.send(fd);
-
+			// 		// send data
+			// 			xhr.send(fd);
 	})//end promise
 }//end upload
 
@@ -525,6 +529,7 @@ export const upload = async function(options) {
 * Upload selected file to server using the API and when is done, process the target file
 * calling caller component across process_uploaded_file tool method
 * @param object options
+* @return object response
 */
 service_upload.prototype.upload_file = async function(options) {
 
@@ -534,10 +539,10 @@ service_upload.prototype.upload_file = async function(options) {
 		const file = options.file
 
 	// short vars
-		const resource_type = self.caller.context.features
+		const allowed_extensions	= self.allowed_extensions
+		const resource_type			= self.caller.context.features
 			? self.caller.context.features.resource_type
 			: (self.caller.model || null) // like 'image'
-		const allowed_extensions = self.allowed_extensions
 
 	// upload (using service upload)
 		const api_response = await upload({
@@ -548,17 +553,16 @@ service_upload.prototype.upload_file = async function(options) {
 			max_size_bytes		: self.max_size_bytes // int 352142
 		})
 		if (!api_response.result) {
-			console.log("Error on api_response:", api_response);
+			console.error("Error on api_response:", api_response);
 			return {
 				result	: false,
 				msg		: api_response.msg || 'Error on api_response'
 			}
 		}
 
-	// event
+	// event upload_file_done_
 		event_manager.publish('upload_file_done_' + self.caller.id, {
 			file_data : api_response.file_data
-			// api_response : api_response
 		})
 
 
@@ -571,6 +575,8 @@ service_upload.prototype.upload_file = async function(options) {
 /**
 * GET_SYSTEM_INFO
 * Call API to obtain useful system info
+* @param object options
+* @return object response
 */
 service_upload.prototype.join_chunked_files = async function(options) {
 
@@ -600,58 +606,3 @@ service_upload.prototype.join_chunked_files = async function(options) {
 			})
 		})
 }//end get_system_info
-
-
-
-
-/**
-* PROCESS_UPLOADED_FILE
-* @param object file_data
-* Sample:
-* {
-*	error: 0
-*	extension: "tiff"
-*	name: "proclamacio.tiff"
-*	size: 184922784
-*	tmp_name: "/hd/media/upload/service_upload/tmp/image/phpPJQvCp"
-*	type: "image/tiff"
-* }
-*/
-	// service_upload.prototype.process_uploaded_file = function(file_data) {
-
-	// 	const self = this
-
-	// 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// 	// this generates a call as my_tool_name::my_function_name(arguments)
-	// 		const source = create_source(self, 'process_uploaded_file')
-	// 		// add the necessary arguments used in the given function
-	// 		source.arguments = {
-	// 			file_data		: file_data,
-	// 			tipo			: self.caller.tipo,
-	// 			section_tipo	: self.caller.section_tipo,
-	// 			section_id		: self.caller.section_id,
-	// 			caller_type		: self.caller.context.type, // like 'tool' or 'component'. Switch different process actions on service_upload class
-	// 			quality			: self.caller.context.features.target_quality || self.caller.context.features.default_target_quality || null, // only for components
-	// 			target_dir		: self.caller.context.features.target_dir || null // optional object like {type: 'dedalo_config', value: 'DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH' // defined in config}
-	// 		}
-
-	// 	// rqo
-	// 		const rqo = {
-	// 			dd_api	: 'dd_tools_api',
-	// 			action	: 'tool_request',
-	// 			source	: source
-	// 		}
-
-	// 	// call to the API, fetch data and get response
-	// 		return new Promise(function(resolve){
-
-	// 			data_manager.request({body : rqo})
-	// 			.then(function(response){
-	// 				dd_console("-> process_uploaded_file API response:",'DEBUG', response);
-
-	// 				resolve(response)
-	// 			})
-	// 		})
-	// };
-
-
