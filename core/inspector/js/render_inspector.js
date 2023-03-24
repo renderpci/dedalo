@@ -220,26 +220,25 @@ const get_content_data = function(self) {
 				parent			: content_data
 			})
 			for (let i = 0; i < inspector_tools_length; i++) {
-
 				const tool_context = inspector_tools[i]
-				console.log('tool_context:', tool_context);
-
 				// button_tool
-				const button_tool = ui.create_dom_element({
-					element_type	: 'button',
-					class_name		: 'light',
-					inner_html		: tool_context.label,
-					parent			: tools_container
-				})
-				button_tool.addEventListener('mousedown', function(e){
-					e.stopPropagation()
-
-					// open_tool (tool_common)
-						open_tool({
-							tool_context	: tool_context,
-							caller			: self.caller
-						})
-				})
+					const button_tool = ui.create_dom_element({
+						element_type	: 'button',
+						class_name		: 'light blank',
+						style			: {
+							'--icon-path'	: "url('" +tool_context.icon +"')"
+						},
+						title			: tool_context.label,
+						parent			: tools_container
+					})
+					button_tool.addEventListener('click', function(e){
+						e.stopPropagation()
+						// open_tool (tool_common)
+							open_tool({
+								tool_context	: tool_context,
+								caller			: self.caller
+							})
+					})
 			}
 		}
 

@@ -1241,6 +1241,7 @@ final class dd_core_api {
 				$section_elements_context_options
 			);
 
+
 		// response
 			$response->result	= $filtered_components;
 			$response->msg		= 'OK. Request done';

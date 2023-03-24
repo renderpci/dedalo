@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html>
+<html xml:lang="en-US" lang="en-US">
 <head>
+	<meta charset="utf-8">
+	<title>Dédalo V6 unit test</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	<link rel="shortcut icon" href="../../favicon.ico" />
-	<title>Dédalo V6 unit test</title>
-	<meta charset="utf-8">
 	<style type="text/css">
 		.loading {
 			opacity: 0.4;
@@ -44,7 +44,15 @@
 		<link rel="stylesheet" href="../../lib/mocha/dist/mocha.css">
 	<!-- add mocha framework code  https://cdnjs.cloudflare.com/ajax/libs/mocha/3.2.0/mocha.js | https://unpkg.com/mocha/mocha.js -->
 		<script src="../../lib/mocha/dist/mocha.js"></script>
-		<script defer="defer" src="../../lib/ckeditor/build/ckeditor.js"></script>
+		<!-- <script defer="defer" src="../../lib/ckeditor/build/ckeditor.js"></script> -->
+	<script type="importmap">
+		{
+			"imports": {
+				"three"			: "../../lib/threejs/build/three.module.js",
+				"three/addons/"	: "../../lib/threejs/jsm/"
+			}
+		}
+	</script>
 	<script>
 		// minimal setup
 		// mocha.setup({

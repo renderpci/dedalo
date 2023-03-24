@@ -538,30 +538,18 @@ class login extends common {
 
 	/**
 	* USER_HAVE_PROFILE_CHECK
+	* Check if the given user id have profile data
 	* @param string|int $section_id
-	* @return bool
+	* @return bool $have_profile
 	*/
 	public static function user_have_profile_check($section_id) : bool {
 
-		$user_have_profile = false; // Default false
+		$locator		= security::get_user_profile($section_id);
+		$have_profile	= !empty($locator)
+			? true
+			: false;
 
-		$model = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_USER_PROFILE_TIPO,true);
-
-		$component_profile = component_common::get_instance(
-			$model,
-			DEDALO_USER_PROFILE_TIPO,
-			$section_id,
-			'list',
-			DEDALO_DATA_NOLAN,
-			DEDALO_SECTION_USERS_TIPO
-		);
-		$profile_dato = $component_profile->get_dato();
-		if (!empty($profile_dato)) {
-
-			$user_have_profile = true;
-		}
-
-		return (bool)$user_have_profile;
+		return (bool)$have_profile;
 	}//end user_have_profile_check
 
 

@@ -23,13 +23,18 @@
 
 			>.process_file {
 				position: relative;
-				min-height: 3rem;
-			}
+				padding-bottom: 1rem;
 
-			>img.preview_image {
-				height: 120px;
-				object-fit: contain;
-				object-position: center;
+				// response_msg
+				.info {
+
+					&.success {
+						color: green;
+					}
+					&.failed {
+						color: red;
+					}
+				}
 			}
 
 		}//end content_data

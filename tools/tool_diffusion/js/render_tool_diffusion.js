@@ -166,14 +166,18 @@ const get_content_data = async function(self) {
 	// info_text
 		const total = self.caller.mode==='edit'
 			? 1
-			: self.caller.total
+			: await self.caller.get_total()
+		const total_label = new Intl.NumberFormat(
+			page_globals.locale==='es-ES'
+				? 'es-CL' // updated minimumGroupingDigits to 1 ('es' is wrong: 2)
+				: page_globals.locale
+		).format(total);
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'info_text',
-			inner_html		: self.get_tool_label('publish_selected_records', total),
+			inner_html		: self.get_tool_label('publish_selected_records', total_label),
 			parent			: diffusion_info_container
 		})
-		diffusion_info_container
 
 	// buttons_container
 		// const buttons_container = ui.create_dom_element({

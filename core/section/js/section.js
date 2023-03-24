@@ -604,6 +604,8 @@ section.prototype.build = async function(autoload=false) {
 				: false
 		// fix initiator
 			self.initiator = initiator
+				? initiator.split('#')[0]
+				: initiator
 
 	// paginator
 		if (self.paginator===null) {
