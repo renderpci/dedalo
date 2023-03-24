@@ -828,7 +828,7 @@ class tool_import_zotero extends tool_common {
 			"filter": {
 		        "$and": [
 		            {
-		                "q": "='.$serie_name.'",
+		                "q": "\''.$serie_name.'\'",
 		                "path": [
 		                    {
 		                        "section_tipo": "'.$section_tipo.'",
