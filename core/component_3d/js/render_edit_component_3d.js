@@ -22,6 +22,7 @@ export const render_edit_component_3d = function() {
 /**
 * EDIT
 * Render node for use in modes: edit
+* @param object options
 * @return HTMLElement wrapper
 */
 render_edit_component_3d.prototype.edit = async function(options) {
@@ -40,6 +41,5 @@ render_edit_component_3d.prototype.edit = async function(options) {
 		case 'default':
 		default:
 			return view_default_edit_3d.render(self, options)
-
 	}
 }//end edit
