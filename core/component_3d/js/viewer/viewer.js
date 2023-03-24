@@ -157,9 +157,12 @@ viewer.build = function (content_value, options) {
 	self.animate = self.animate.bind(self);
 	requestAnimationFrame( self.animate );
 	window.addEventListener('resize', self.resize.bind(self), false);
-}
+}// end build
 
 
+/**
+* RENDER
+*/
 viewer.render = function() {
 
 	const self = this
@@ -170,14 +173,18 @@ viewer.render = function() {
 		self.axes_camera.lookAt(self.axes_scene.position)
 		self.axes_renderer.render( self.axes_scene, self.axes_camera );
 	}
-}
+}//end render
 
 
+/**
+* RESIZE
+* when the window is resize it's necessary to update the aspect of the camera and the size of the rendered node
+*/
 viewer.resize = function() {
 
 	const self = this
 
-	const {clientHeight, clientWidth} = self.content_value //.parentElement
+	const {clientHeight, clientWidth} = self.content_value
 
 	self.default_camera.aspect = clientWidth / clientHeight;
 	self.default_camera.updateProjectionMatrix();
@@ -186,10 +193,14 @@ viewer.resize = function() {
 	self.axes_camera.aspect = self.axes_div.clientWidth / self.axes_div.clientHeight;
 	self.axes_camera.updateProjectionMatrix();
 	self.axes_renderer.setSize(self.axes_div.clientWidth, self.axes_div.clientHeight);
-}
+}//end resize
 
 
-viewer.load = function( url ) {
+/**
+* LOAD
+* @param file_uri uri of the file to be load
+*/
+viewer.load = function( file_uri ) {
 
 	const self = this
 
@@ -204,7 +215,7 @@ viewer.load = function( url ) {
 
 		const blob_URLs = [];
 
-		loader.load(url, (gltf) => {
+		loader.load(file_uri, (gltf) => {
 
 		const scene = gltf.scene || gltf.scenes[0];
 		const clips = gltf.animations || [];
@@ -221,18 +232,16 @@ viewer.load = function( url ) {
 
 		blob_URLs.forEach(URL.revokeObjectURL);
 
-		// See: https://github.com/google/draco/issues/349
-		// DRACOLoader.releaseDecoderModule();
-
 		resolve(gltf);
 
 		}, undefined, reject);
 
 	});
-}
+}//end load
 
 
 /**
+* SET_CONTENT
 * @param {THREE.Object3D} object
 * @param {Array<THREE.AnimationClip} clips
 */
@@ -252,7 +261,7 @@ viewer.set_content = function( object, clips ) {
 	object.position.y += (object.position.y - center.y);
 	object.position.z += (object.position.z - center.z);
 	self.controls.maxDistance	= size * 10;
-	self.default_camera.near		= size / 100;
+	self.default_camera.near	= size / 100;
 	self.default_camera.far		= size * 100;
 	self.default_camera.updateProjectionMatrix();
 
@@ -302,33 +311,50 @@ viewer.set_content = function( object, clips ) {
 	self.update_GUI();
 	self.update_environment();
 	self.update_display();
-	self.print_graph(self.content);
-}
+	//
+	// self.dump_graph(self.content);
+}//end set_content
 
 
-viewer.print_graph = function(node) {
+
+/**
+* DUMP_GRAPH
+* show the object structure in console
+* @param object
+*/
+viewer.dump_graph = function(object) {
 
 	const self = this
 
-	console.group(' <' + node.type + '> ' + node.name);
-	node.children.forEach((child) => self.print_graph(child));
+	console.group(' <' + object.type + '> ' + object.name);
+	object.children.forEach((child) => self.dump_graph(child));
 	console.groupEnd();
-}
+}//end dump_graph
 
-// show mesh strucure
-viewer.dump_object = function(obj, lines = [], isLast = true, prefix = '') {
+
+/**
+* DUMP_OBJECT
+* show mesh structure in console (alternative view of dump_graph)
+* @param object
+*/
+viewer.dump_object = function(object, lines = [], isLast = true, prefix = '') {
 	const localPrefix = isLast ? '└─' : '├─';
-	lines.push(`${prefix}${prefix ? localPrefix : ''}${obj.name || '*no-name*'} [${obj.type}]`);
+	lines.push(`${prefix}${prefix ? localPrefix : ''}${object.name || '*no-name*'} [${object.type}]`);
 	const newPrefix = prefix + (isLast ? '  ' : '│ ');
-	const lastNdx = obj.children.length - 1;
-	obj.children.forEach((child, ndx) => {
+	const lastNdx = object.children.length - 1;
+	object.children.forEach((child, ndx) => {
 		const isLast = ndx === lastNdx;
 		dump_object(child, lines, isLast, newPrefix);
 	});
 	return lines;
-}
+}//end dump_object
 
 
+/**
+* ANIMATE
+* show mesh structure in console (alternative view of dump_graph)
+* @param time number
+*/
 viewer.animate = function(time) {
 
 	const self = this
@@ -343,10 +369,11 @@ viewer.animate = function(time) {
 	self.render();
 
 	self.prev_time = time;
-}
+}//end animate
 
 
 /**
+* SET_CLIPS
 * @param {Array<THREE.AnimationClip} clips
 */
 viewer.set_clips = function( clips ) {
@@ -363,9 +390,13 @@ viewer.set_clips = function( clips ) {
 	if (!clips.length) return;
 
 	self.mixer = new AnimationMixer( self.content );
-}
+}//end set_clips
 
 
+
+/**
+* PLAY_ALL_CLIPS
+*/
 viewer.play_all_clips = function() {
 
 	const self = this
@@ -374,10 +405,11 @@ viewer.play_all_clips = function() {
 		self.mixer.clipAction(clip).reset().play();
 		self.state.actionStates[clip.name] = true;
 	});
-}
+}//end play_all_clips
 
 
 /**
+* SET_CAMERA
 * @param {string} name
 */
 viewer.set_camera = function( name ) {
@@ -395,9 +427,13 @@ viewer.set_camera = function( name ) {
 		}
 		});
 	}
-}
+}//end set_camera
 
 
+
+/**
+* UPDATE_LIGHTS
+*/
 viewer.update_lights = function() {
 
 	const self = this
@@ -420,9 +456,13 @@ viewer.update_lights = function() {
 		lights[1].intensity = state.directIntensity;
 		lights[1].color.setHex(state.directColor);
 	}
-}
+}//end update_lights
 
 
+
+/**
+* UPDATE_LIGHTS
+*/
 viewer.add_lights = function() {
 
 	const self = this
@@ -430,10 +470,10 @@ viewer.add_lights = function() {
 	const state = self.state;
 
 	if (self.options.preset === self.preset.ASSET_GENERATOR) {
-		const hemiLight = new HemisphereLight();
-		hemiLight.name = 'hemi_light';
-		self.scene.add(hemiLight);
-		self.lights.push(hemiLight);
+		const hemi_light = new HemisphereLight();
+		hemi_light.name = 'hemi_light';
+		self.scene.add(hemi_light);
+		self.lights.push(hemi_light);
 		return;
 	}
 
@@ -447,7 +487,7 @@ viewer.add_lights = function() {
 	self.default_camera.add( light2 );
 
 	self.lights.push(light1, light2);
-}
+}//end add_lights
 
 
 viewer.remove_lights = function() {
@@ -675,29 +715,29 @@ viewer.update_GUI = function() {
 	self.anim_ctrls.length = 0;
 	self.anim_folder.domElement.style.display = 'none';
 
-	const cameraNames = [];
-	const morphMeshes = [];
+	const camera_names = [];
+	const morph_meshes = [];
 	self.content.traverse((node) => {
 		if (node.isMesh && node.morphTargetInfluences) {
-		morphMeshes.push(node);
+		morph_meshes.push(node);
 		}
 		if (node.isCamera) {
-		node.name = node.name || `VIEWER__camera_${cameraNames.length + 1}`;
-		cameraNames.push(node.name);
+		node.name = node.name || `VIEWER__camera_${camera_names.length + 1}`;
+		camera_names.push(node.name);
 		}
 	});
 
-	if (cameraNames.length) {
+	if (camera_names.length) {
 		self.camera_folder.domElement.style.display = '';
 		if (self.camera_ctrl) self.camera_ctrl.remove();
-		const cameraOptions = [self.DEFAULT_CAMERA].concat(cameraNames);
+		const cameraOptions = [self.DEFAULT_CAMERA].concat(camera_names);
 		self.camera_ctrl = self.camera_folder.add(self.state, 'camera', cameraOptions);
 		self.camera_ctrl.onChange((name) => self.set_camera(name));
 	}
 
-	if (morphMeshes.length) {
+	if (morph_meshes.length) {
 		self.morph_folder.domElement.style.display = '';
-		morphMeshes.forEach((mesh) => {
+		morph_meshes.forEach((mesh) => {
 		if (mesh.morphTargetInfluences.length) {
 			const nameCtrl = self.morph_folder.add({name: mesh.name || 'Untitled'}, 'name');
 			self.morph_ctrls.push(nameCtrl);
