@@ -58,8 +58,6 @@ viewer.init = function () {
 	self.DRACO_LOADER		= new DRACOLoader( self.MANAGER ).setDecoderPath( '../../lib/threejs/jsm/libs/draco/' );
 	self.KTX2_LOADER		= new KTX2Loader( self.MANAGER ).setTranscoderPath( '../../lib/threejs/jsm/libs/basis/' );
 
-	// const IS_IOS = is_IOS();
-
 	self.preset = {ASSET_GENERATOR: 'assetgenerator'};
 
 	Cache.enabled = true;
@@ -72,14 +70,14 @@ viewer.build = function (content_value, options) {
 
 	const self = this
 
-	self.content_value			= content_value;
-	self.options	= options;
+	self.content_value	= content_value;
+	self.options		= options;
 
-	self.lights		= [];
-	self.content	= null;
-	self.mixer		= null;
-	self.clips		= [];
-	// self.gui = null;
+	self.lights			= [];
+	self.content		= null;
+	self.mixer			= null;
+	self.clips			= [];
+	self.gui 			= null;
 
 	self.state = {
 		environment		: options.preset === self.preset.ASSET_GENERATOR
@@ -104,8 +102,9 @@ viewer.build = function (content_value, options) {
 		bgColor				: 0x191919,
 	};
 
-	self.prevTime = 0;
+	self.prev_time = 0;
 
+	// create the stats
 	self.stats				= new Stats();
 	self.stats.dom.height	= '48px';
 	[].forEach.call(self.stats.dom.children, (child) => (child.style.display = ''));
@@ -132,7 +131,7 @@ viewer.build = function (content_value, options) {
 	self.pmrem_generator				= new PMREMGenerator( self.renderer );
 	self.pmrem_generator.compileEquirectangularShader();
 
-	self.neutralEnvironment				= self.pmrem_generator.fromScene( new RoomEnvironment() ).texture;
+	self.neutral_environment			= self.pmrem_generator.fromScene( new RoomEnvironment() ).texture;
 
 	self.controls						= new OrbitControls( self.default_camera, self.renderer.domElement );
 	self.controls.screenSpacePanning	= true;
@@ -151,7 +150,6 @@ viewer.build = function (content_value, options) {
 
 	self.add_axes_helper();
 	self.add_GUI();
-	// if (options.kiosk) self.gui.close();
 
 	self.animate = self.animate.bind(self);
 	requestAnimationFrame( self.animate );
@@ -210,7 +208,7 @@ viewer.load = function( url ) { //, rootPath, assetMap
 		// 	if (assetMap.has(normalizedURL)) {
 		// 		const blob = assetMap.get(normalizedURL);
 		// 		const blobURL = URL.createObjectURL(blob);
-		// 		blobURLs.push(blobURL);
+		// 		blob_URLs.push(blobURL);
 		// 		return blobURL;
 		// 	}
 
@@ -224,7 +222,7 @@ viewer.load = function( url ) { //, rootPath, assetMap
 			.setKTX2Loader( self.KTX2_LOADER.detectSupport( self.renderer ) )
 			.setMeshoptDecoder( MeshoptDecoder );
 
-		const blobURLs = [];
+		const blob_URLs = [];
 
 		loader.load(url, (gltf) => {
 
@@ -243,7 +241,7 @@ viewer.load = function( url ) { //, rootPath, assetMap
 
 		self.set_content(scene, clips);
 
-		blobURLs.forEach(URL.revokeObjectURL);
+		blob_URLs.forEach(URL.revokeObjectURL);
 
 		// See: https://github.com/google/draco/issues/349
 		// DRACOLoader.releaseDecoderModule();
@@ -359,14 +357,14 @@ viewer.animate = function(time) {
 
 	requestAnimationFrame( self.animate );
 
-	const dt = (time - self.prevTime) / 1000;
+	const dt = (time - self.prev_time) / 1000;
 
 	self.controls.update();
 	self.stats.update();
 	self.mixer && self.mixer.update(dt);
 	self.render();
 
-	self.prevTime = time;
+	self.prev_time = time;
 }
 
 
@@ -506,7 +504,7 @@ viewer.get_cube_map_texture = function( environment ) {
 
 	// neutral (THREE.RoomEnvironment)
 	if ( id === 'neutral' ) {
-		return Promise.resolve( { envMap: self.neutralEnvironment } );
+		return Promise.resolve( { envMap: self.neutral_environment } );
 	}
 
 	// none
@@ -798,16 +796,3 @@ function traverse_materials (object, callback) {
 	});
 }
 
-// https://stackoverflow.com/a/9039885/1314762
-function is_IOS() {
-	return [
-	'iPad Simulator',
-	'iPhone Simulator',
-	'iPod Simulator',
-	'iPad',
-	'iPhone',
-	'iPod'
-	].includes(navigator.platform)
-	// iPad on iOS 13 detection
-	|| (navigator.userAgent.includes('Mac') && 'ontouchend' in document);
-}
