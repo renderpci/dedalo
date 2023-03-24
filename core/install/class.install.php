@@ -1803,7 +1803,7 @@ class install extends common {
 				$models_file	= $dir_path . '/' . strtolower($tld2) . '.copy.gz';
 				if (file_exists($models_file)) {
 
-					$component_tipo	= DEDALO_HIERARCHY_CHIDRENS_MODEL_TIPO;	// 'hierarchy59';
+					$component_tipo	= DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO;	// 'hierarchy59';
 					$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
 					$component		= component_common::get_instance( $model_name,
 																	  $component_tipo,
@@ -1816,7 +1816,7 @@ class install extends common {
 							"type": "dd48",
 							"section_id": "2",
 							"section_tipo": "'. $tld2.'2",
-							"from_component_tipo": "'.DEDALO_HIERARCHY_CHIDRENS_MODEL_TIPO.'"
+							"from_component_tipo": "'.DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO.'"
 						}
 					]');
 					$component->set_dato($dato);

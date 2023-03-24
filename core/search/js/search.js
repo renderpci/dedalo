@@ -139,6 +139,7 @@ search.prototype.init = async function(options) {
 			'component_info',
 			'component_state',
 			'component_semantic_node',
+			'component_inverse',
 			'section_tab'
 		];
 

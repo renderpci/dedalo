@@ -5,9 +5,7 @@
 
 // imports
 	import {event_manager} from '../../../core/common/js/event_manager.js'
-	// import {get_tool_label} from '../../../tools/tool_common/js/tool_common.js'
 	import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
-	// import ui to create DOM nodes and common html structures as wrappers or content_data compatible with the all Dédalo
 	import {ui} from '../../../core/common/js/ui.js'
 	import {pause} from '../../../core/common/js/utils/index.js'
 
@@ -67,9 +65,9 @@ const get_content_data = async function(self) {
 
 	// user_info
 		const user_info = ui.create_dom_element({
-			element_type	: 'h1',
+			element_type	: 'h2',
 			class_name		: 'user_info',
-			inner_html		: self.get_tool_label('user_info', self.labels),
+			inner_html		: self.get_tool_label('user_info'),
 			parent			: fragment
 		})
 
@@ -133,7 +131,7 @@ const get_content_data = async function(self) {
 			const button_generate = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'warning gear',
-				inner_html		: self.get_tool_label('generate', self.labels),
+				inner_html		: self.get_tool_label('generate'),
 				parent			: buttons_container
 			})
 			button_generate.addEventListener('click', async function(e){
@@ -182,7 +180,7 @@ const get_content_data = async function(self) {
 					}
 					content_data.classList.add('loading')
 					await pause(1000)
-					const warning = self.get_tool_label('absolute_sure', self.labels)
+					const warning = self.get_tool_label('absolute_sure')
 					if (!confirm(warning)) {
 						return false
 					}

@@ -649,8 +649,11 @@ export const render_column_remove = function(options) {
 				// the unlink option will be fired
 				function focus_the_button() {
 					// set the focus to the button_unlink
-					button_unlink_record.focus()
-					button_unlink_record.addEventListener('keyup',(e)=>{
+					setTimeout(function(){
+						button_unlink_record.focus()
+						button_unlink_record.classList.add('focus')
+					}, 500)
+					button_unlink_record.addEventListener('keyup', (e)=>{
 						if(e.key==='Enter'){
 							button_unlink_record.click()
 						}

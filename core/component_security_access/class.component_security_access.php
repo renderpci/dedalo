@@ -58,7 +58,7 @@ class component_security_access extends component_common {
 	* @param int $user_id
 	* @return array $datalist
 	*/
-	public function get_datalist( int $user_id ) : array {
+	public function get_datalist(int $user_id) : array {
 		$start_time = start_time();
 
 		// already resolved in current instance
@@ -469,16 +469,16 @@ class component_security_access extends component_common {
 
 	/**
 	* CALCULATE_TREE
+	* @param int $user_id
 	* @return array $datalist
 	*/
-	public static function calculate_tree( $user_id ) : array {
+	public static function calculate_tree(int $user_id) : array {
 		$start_time = start_time();
 
 		// profile_section_id
 			if($user_id===DEDALO_SUPERUSER || security::is_global_admin($user_id)===true){
 
 				$section_id = null;
-				// dump($section_id, ' IM ROOT  -section_id ++ '.to_string($is_global_admin));
 
 			}else{
 
@@ -486,13 +486,19 @@ class component_security_access extends component_common {
 				if (!empty($user_profile_locator)) {
 					$section_id = (int)$user_profile_locator->section_id;
 				}else{
-					debug_log(__METHOD__." ERROR on get user_profile_locator: user_id: ".to_string($user_id), logger::ERROR);
+					debug_log(__METHOD__.
+						" ERROR on get user_profile_locator: user_id: ".to_string($user_id),
+						logger::ERROR
+					);
 				}
 			}
 
 		// $fiber = new Fiber(function() use($section_id) : void {
 		// $fiber = new Fiber(function() use($section_id) : array {
-			debug_log(__METHOD__." (1) user_id: " .$user_id." launching datalist /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// ".to_string(), logger::ERROR);
+			debug_log(__METHOD__.
+				" (1) user_id: " .$user_id." launching datalist /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// ",
+				 logger::ERROR
+			);
 
 			$section_tipo				= DEDALO_SECTION_PROFILES_TIPO;
 			$tipo						= DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO;
@@ -508,7 +514,10 @@ class component_security_access extends component_common {
 			$datalist = $component_security_access->get_datalist( $user_id );
 
 			// Fiber::suspend();
-			debug_log(__METHOD__." (2) count: " . count($datalist) .' '. exec_time_unit($start_time).' ms launching datalist ////////////////////////////////////////////////////////////////////////////////////////////// ', logger::ERROR);
+			debug_log(__METHOD__.
+				" (2) count: " . count($datalist) .' '. exec_time_unit($start_time).' ms launching datalist ////////////////////////////////////////////////////////////////////////////////////////////// ',
+				logger::ERROR
+			);
 
 			return $datalist;
 		// });
@@ -517,6 +526,122 @@ class component_security_access extends component_common {
 
 		// return $fiber;
 	}//end calculate_tree
+
+
+
+	/**
+	* SET_SECTION_PERMISSIONS (NOT USED)
+	* Allow current user access to created default sections
+	* @param object $options
+	* @return bool
+	*/
+	public static function set_section_permissions(object $options) : bool {
+
+		// options
+			$ar_section_tipo	= $options->ar_section_tipo ?? null;
+			$permissions		= $options->permissions ?? 2; // (zero is accepted)
+			$user_id			= $options->user_id;
+
+		// user_id
+			if (empty($user_id)) {
+				debug_log(__METHOD__.
+					" Error: User id in mandatory. Unable to set permissions for ".to_string($ar_section_tipo),
+					logger::ERROR
+				);
+				return false;
+			}
+
+		// component_security_access
+			$component_security_access = security::get_user_security_access($user_id);
+			if (empty($component_security_access)) {
+				debug_log(__METHOD__.
+					" Error: Unable to get component_security_access for user id ".to_string($user_id),
+					logger::ERROR
+				);
+				return false;
+			}
+			// current DDBB dato
+			$component_security_access_dato	= $component_security_access->get_dato() ?? [];
+
+		// Iterate sections (normally like ts1,ts2)
+			$new_values = [];
+			$ar_section_tipo_length = sizeof($ar_section_tipo);
+			for ($i=0; $i < $ar_section_tipo_length; $i++) {
+
+				$current_section_tipo = $ar_section_tipo[$i];
+
+				// current section
+					// sample data:
+						// {
+						//     "tipo": "test28",
+						//     "value": 1,
+						//     "section_tipo": "test3"
+						// }
+					$new_values[] = (object)[
+						'tipo'			=> $current_section_tipo,
+						'section_tipo'	=> $current_section_tipo,
+						'value'			=> (int)$permissions
+					];
+
+				// Components inside section
+					$real_section	= section::get_section_real_tipo_static( $current_section_tipo );
+					$ar_children	= section::get_ar_children_tipo_by_model_name_in_section(
+						$real_section, // section_tipo
+						['component','button','section_group','relation_list','time_machine_list'], // ar_model_name_required
+						true, // from_cache
+						false, // resolve_virtual
+						true, // recursive
+						false // search_exact
+					);
+					foreach ($ar_children as $children_tipo) {
+
+						// new element case
+						$new_values[] = (object)[
+							'tipo'			=> $children_tipo,
+							'section_tipo'	=> $current_section_tipo,
+							'value'			=> (int)$permissions
+						];
+						debug_log(__METHOD__.
+							" Added item $children_tipo to section $current_section_tipo".to_string(),
+							logger::DEBUG
+						);
+					}
+			}//end foreach ($ar_section_tipo as $current_section_tipo)
+
+		// add values
+			$unique_values = [];
+			foreach ($new_values as $value) {
+				// check if already exists
+				$found = array_find($component_security_access_dato, function($el) use($value) {
+					return ($el->tipo===$value->tipo && $el->section_tipo===$value->section_tipo);
+				});
+				if ($found!==null) {
+					$found->permissions = $permissions;
+					debug_log(__METHOD__." Updated already existing value ".to_string($found), logger::WARNING);
+				}else{
+					$unique_values[] = $value;
+				}
+			}
+			$new_dato = array_merge($component_security_access_dato, $unique_values);
+
+		// Save calculated data
+			$component_security_access->set_dato($new_dato);
+			$component_security_access->Save();
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				$added = array_filter($new_dato, function($el) use($ar_section_tipo) {
+					return in_array($el->section_tipo, $ar_section_tipo);
+				});
+				dump($added, ' added ++ '.to_string($ar_section_tipo));
+			}
+
+		// Regenerate permissions table
+			security::reset_permissions_table();
+
+
+		return true;
+	}//end set_section_permissions
 
 
 

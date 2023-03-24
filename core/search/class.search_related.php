@@ -136,7 +136,7 @@ class search_related extends search {
 				$sqo->set_limit($limit);
 				$sqo->set_offset($offset);
 				$sqo->set_filter_by_locators([$reference_locator]);
-			dump($sqo, ' sqo +)))))+ '.to_string());
+
 			$search		= search::get_instance($sqo);
 			$rows_data	= $search->search();
 			// fix result ar_records as dato
@@ -147,10 +147,8 @@ class search_related extends search {
 
 		// debug
 			$total_records = count($result);
-			dump($total_records, ' total result ++ '.to_string());
-			// $bt = debug_backtrace();
-				// dump($bt, '$bt +*********************///////////////////+ '.to_string());
-			debug_log(__METHOD__." Calculated referenced_locators step 1 (total: $total_records) $reference_locator->section_tipo, $reference_locator->section_id "
+			debug_log(__METHOD__
+				. " Calculated referenced_locators step 1 (total: $total_records) $reference_locator->section_tipo, $reference_locator->section_id "
 				. exec_time_unit($start_time).' ms'
 				, logger::DEBUG
 			);
@@ -179,7 +177,8 @@ class search_related extends search {
 			}
 
 		// debug
-			debug_log(__METHOD__." Calculated referenced_locators step 2 $reference_locator->section_tipo, $reference_locator->section_id "
+			debug_log(__METHOD__
+				." Calculated referenced_locators step 2 $reference_locator->section_tipo, $reference_locator->section_id "
 				. exec_time_unit($start_time).' ms'
 				. ' - memory: ' .dd_memory_usage()
 				, logger::DEBUG

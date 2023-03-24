@@ -4,6 +4,7 @@
 
 // fn_add_mask . buttons with icons
 	.fn_add_mask(@icon_name) {
+
 		-webkit-mask-image: url('@{images_base_path}/icons/@{icon_name}');
 				mask-image: url('@{images_base_path}/icons/@{icon_name}');
 		-webkit-mask-size: contain;
@@ -41,6 +42,8 @@
 // fn_append_icon (used by tag element 'button')
 	.fn_append_icon(@icon_name, @color:#3f3f3f, @opacity:1) {
 
+		--icon-path : url('@{images_base_path}/icons/@{icon_name}');
+
 		&:before {
 			background-color: @color;
 			content: ' ';
@@ -50,7 +53,15 @@
 			opacity: @opacity;
 			vertical-align: baseline;
 			width: 1em;
-			.fn_add_mask(@icon_name);
+			// .fn_add_mask(@icon_name);
+			-webkit-mask-image: var(--icon-path);
+					mask-image: var(--icon-path);
+			-webkit-mask-size: contain;
+					mask-size: contain;
+			-webkit-mask-repeat: no-repeat;
+					mask-repeat: no-repeat;
+			-webkit-mask-position: center;
+					mask-position: center;
 
 			@media screen and (max-width: @width_break_point_1) {
 				margin-right: 0px;
@@ -310,11 +321,23 @@
 		&:active {
 			opacity: 0.5;
 		}
+
+		&:focus {
+			// background-color: #c45527 !important;
+			border: 1.2px solid #0059fa !important;
+			opacity: 1;
+			color: #ffffff !important;
+		}
 	}
 
 
 
 // generic recyclable icons for buttons
+	.blank {
+		@icon_name : ''; // trash.svg
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
 	.delete {
 		@icon_name : 'trash_light.svg'; // trash.svg
 		button&  { .fn_append_icon(@icon_name); }
