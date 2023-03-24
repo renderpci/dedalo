@@ -101,10 +101,8 @@ class tool_import_marc21 extends tool_common {
 
 		$ar_records = new File_MARC($file);
 		$i=1;while ($record = $ar_records->next()) {
-			#echo "<pre>";
-			#echo $record;
-			#echo "</pre><hr>";
-				#dump($record, ' record ++ '.to_string());
+			// $values_o =  $record->__toString();
+			// dump(null, '$values_o ++ '.to_string($values_o,));
 
 			$section_id   = null;
 			$section_tipo = self::MARC21_IMPORT_SECTION_TIPO;
@@ -284,7 +282,7 @@ class tool_import_marc21 extends tool_common {
 			#echo "<hr>";		
 			
 			#if ($i>=1) break;
-			#break;
+			// break;
 		$i++;}
 
 
@@ -307,17 +305,45 @@ class tool_import_marc21 extends tool_common {
 	*/
 	public static function get_value( $record, $element_vars ) {
 
-		$elementField = $record->getField($element_vars['Field']);
-			#dump($elementField, ' $elementField ++ '.to_string());
+
+		if (isset($element_vars['field_multiple']) && $element_vars['field_multiple']) {
+			$ar_elementFields = $record->getFields($element_vars['Field']);
+			$ar_values = [];
+			$row_separator = $element_vars['row_separator'] ?? ". ";
+			foreach ($ar_elementFields as $tag => $elementField) {
+
+				$ar_values[] = tool_import_marc21::get_field($elementField, $element_vars);
+			}
+			$value = implode($row_separator, $ar_values);
+
+		}else{
+			$elementField = $record->getField($element_vars['Field']);
+			$value = tool_import_marc21::get_field($elementField, $element_vars);
+
+		}
+
+		return (string)$value;
+	}//end get_value
+
+
+	/**
+	* GET_FIELD
+	* @param object $record
+	*
+	* @param array $element_vars
+	*
+	* @return string $value
+	*/
+	public static function get_field( $elementField, $element_vars ) {
+
 
 		if (empty($elementField)) {
 			return '';
 		}
-		#dump($elementField, ' elementField ++ '.to_string());
 
 
 		if (isset($element_vars['Subfield'])) {
-			
+
 			# Only for specific subfield
 			$element = $elementField->getSubfield($element_vars['Subfield']);
 				#dump($element, ' element ++ '.to_string());
@@ -328,24 +354,27 @@ class tool_import_marc21 extends tool_common {
 			}
 
 		}else{
-     
+
      		# Iterate all subfields
-			$text = '';
+			$text		= '';
+			$ar_text	= [];
+			$separator = $element_vars['Subfield_separator'] ?? " ";
 			if( property_exists($elementField, 'subfields') ) {
 				foreach ($elementField->getSubfields() as $code => $value) {
 					#dump($value, ' value ++ '.to_string());
-					$text .=  $value->getData();
-					$text .= " ";
-            	} 
+					$ar_text[] =  $value->getData();
+            	}
+            $text = implode($separator, $ar_text);
 			}else{
 				#dump($elementField, ' elementField without subfields ++ '.to_string());
 			}
 
-		}	    
+		}
 		$value = trim($text);
-	    
+
+
 	    /*
-		#$nonfiling  = $elementField->getIndicator($element_vars['Indicator']);	
+		#$nonfiling  = $elementField->getIndicator($element_vars['Indicator']);
 		if ($nonfiling) {
 		  // Sort using the subset of the $a subfield
 		  $element = substr($elementField->getSubfield($element_vars['Subfield']), $nonfiling);
@@ -353,10 +382,10 @@ class tool_import_marc21 extends tool_common {
 		  // Sort using the entire contents of the $a subfield
 		  $element = $elementField->getSubfield($element_vars['Subfield']);
 		}
-		*/		
+		*/
 
 		return (string)$value;
-	}//end get_value
+	}//end get_field
 
 
 

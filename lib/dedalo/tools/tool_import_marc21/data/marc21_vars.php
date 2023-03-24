@@ -167,6 +167,14 @@ $marc21_vars = array();
 							);
 //MEMORIAL
 
+//Topogràfic
+	$marc21_vars[] = array( "Field" 				=> "650",
+							"Subfield_separator" 	=> " - ",
+							"field_multiple" 		=> true,
+							"row_separator" 		=> "<br>",
+							"dd_component" 			=>"rsc210",
+							);
+
 
 //Topogràfic
 	$marc21_vars[] = array( "Field" 		=> "945",
