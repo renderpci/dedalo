@@ -206,8 +206,6 @@ viewer.load = function( url ) {
 
 		loader.load(url, (gltf) => {
 
-			// window.VIEWER.json = gltf;
-
 		const scene = gltf.scene || gltf.scenes[0];
 		const clips = gltf.animations || [];
 
