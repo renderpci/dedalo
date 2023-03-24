@@ -36,7 +36,6 @@
 	import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 	import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
 	import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-
 	import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 
 	// environments: pictures to be use as reflection images
@@ -65,7 +64,11 @@ viewer.init = function () {
 	return self
 }
 
-
+/**
+* BUILD
+* @param content_value html node
+* @param options object with the viewer options saved
+*/
 viewer.build = function (content_value, options) {
 
 	const self = this
@@ -81,7 +84,7 @@ viewer.build = function (content_value, options) {
 
 	self.state = {
 		environment		: options.preset === self.preset.ASSET_GENERATOR
-			? environments.find((e) => e.id === 'footprint-court').name
+			? environments.find((el) => el.id === 'footprint-court').name
 			: environments[1].name,
 		background		: false,
 		playbackSpeed	: 1.0,
@@ -579,7 +582,6 @@ viewer.update_background = function() {
 /**
 * Adds AxesHelper.
 *
-* See: https://stackoverflow.com/q/16226693/1314762
 */
 viewer.add_axes_helper = function() {
 
@@ -591,7 +593,7 @@ viewer.add_axes_helper = function() {
 
 	const {clientWidth, clientHeight} = self.axes_div;
 
-	self.axes_scene	= new Scene();
+	self.axes_scene		= new Scene();
 	self.axes_camera	= new PerspectiveCamera( 50, clientWidth / clientHeight, 0.1, 10 );
 	self.axes_scene.add( self.axes_camera );
 
@@ -611,65 +613,74 @@ viewer.add_GUI = function() {
 
 	const self = this
 
-	const gui = self.gui = new GUI({autoPlace: false, width: 260, hideable: true});
+	const gui = self.gui = new GUI({
+		autoPlace: false,
+		width: 260,
+		hideable: true
+	});
 
 	// Display controls.
-	const dispFolder = gui.addFolder('Display');
-	const envBackgroundCtrl = dispFolder.add(self.state, 'background');
-	envBackgroundCtrl.onChange(() => self.update_environment());
-	const wireframeCtrl = dispFolder.add(self.state, 'wireframe');
-	wireframeCtrl.onChange(() => self.update_display());
-	const skeletonCtrl = dispFolder.add(self.state, 'skeleton');
-	skeletonCtrl.onChange(() => self.update_display());
-	const gridCtrl = dispFolder.add(self.state, 'grid');
-	gridCtrl.onChange(() => self.update_display());
-	dispFolder.add(self.controls, 'screenSpacePanning');
-	const bgColorCtrl = dispFolder.addColor(self.state, 'bgColor');
-	bgColorCtrl.onChange(() => self.update_background());
+		const disp_folder			= gui.addFolder('Display');
+		const env_background_ctrl	= disp_folder.add(self.state, 'background');
+		env_background_ctrl.onChange(() => self.update_environment());
+
+		const wireframe_ctrl = disp_folder.add(self.state, 'wireframe');
+		wireframe_ctrl.onChange(() => self.update_display());
+
+		const skeleton_ctrl = disp_folder.add(self.state, 'skeleton');
+		skeleton_ctrl.onChange(() => self.update_display());
+
+		const grid_ctrl = disp_folder.add(self.state, 'grid');
+		grid_ctrl.onChange(() => self.update_display());
+		disp_folder.add(self.controls, 'screenSpacePanning');
+
+		const bg_color_ctrl = disp_folder.addColor(self.state, 'bgColor');
+		bg_color_ctrl.onChange(() => self.update_background());
 
 	// Lighting controls.
-	const lightFolder = gui.addFolder('Lighting');
-	const envMapCtrl = lightFolder.add(self.state, 'environment', environments.map((env) => env.name));
-	envMapCtrl.onChange(() => self.update_environment());
-	[
-		lightFolder.add(self.state, 'toneMapping', {Linear: LinearToneMapping, 'ACES Filmic': ACESFilmicToneMapping}),
-		lightFolder.add(self.state, 'exposure', -10, 10, 0.01),
-		lightFolder.add(self.state, 'punctualLights').listen(),
-		lightFolder.add(self.state, 'ambientIntensity', 0, 2),
-		lightFolder.addColor(self.state, 'ambientColor'),
-		lightFolder.add(self.state, 'directIntensity', 0, 4), // TODO(#116)
-		lightFolder.addColor(self.state, 'directColor')
-	].forEach((ctrl) => ctrl.onChange(() => self.update_lights()));
+		const light_folder = gui.addFolder('Lighting');
+		const env_map_ctrl = light_folder.add(self.state, 'environment', environments.map((env) => env.name));
+		env_map_ctrl.onChange(() => self.update_environment());
+		[
+			light_folder.add(self.state, 'toneMapping', {Linear: LinearToneMapping, 'ACES Filmic': ACESFilmicToneMapping}),
+			light_folder.add(self.state, 'exposure', -10, 10, 0.01),
+			light_folder.add(self.state, 'punctualLights').listen(),
+			light_folder.add(self.state, 'ambientIntensity', 0, 2),
+			light_folder.addColor(self.state, 'ambientColor'),
+			light_folder.add(self.state, 'directIntensity', 0, 4), // TODO(#116)
+			light_folder.addColor(self.state, 'directColor')
+		].forEach((ctrl) => ctrl.onChange(() => self.update_lights()));
 
 	// Animation controls.
-	self.anim_folder = gui.addFolder('Animation');
-	self.anim_folder.domElement.style.display = 'none';
-	const playbackSpeedCtrl = self.anim_folder.add(self.state, 'playbackSpeed', 0, 1);
-	playbackSpeedCtrl.onChange((speed) => {
-		if (self.mixer) self.mixer.timeScale = speed;
-	});
-	self.anim_folder.add({playAll: () => self.play_all_clips()}, 'playAll');
+		self.anim_folder = gui.addFolder('Animation');
+		self.anim_folder.domElement.style.display = 'none';
+		const playbackSpeedCtrl = self.anim_folder.add(self.state, 'playbackSpeed', 0, 1);
+		playbackSpeedCtrl.onChange((speed) => {
+			if (self.mixer) self.mixer.timeScale = speed;
+		});
+		self.anim_folder.add({playAll: () => self.play_all_clips()}, 'playAll');
 
 	// Morph target controls.
-	self.morph_folder = gui.addFolder('Morph Targets');
-	self.morph_folder.domElement.style.display = 'none';
+		self.morph_folder = gui.addFolder('Morph Targets');
+		self.morph_folder.domElement.style.display = 'none';
 
 	// Camera controls.
-	self.camera_folder = gui.addFolder('Cameras');
-	self.camera_folder.domElement.style.display = 'none';
+		self.camera_folder = gui.addFolder('Cameras');
+		self.camera_folder.domElement.style.display = 'none';
 
 	// Stats.
-	const perfFolder = gui.addFolder('Performance');
-	const perfLi = document.createElement('li');
-	self.stats.dom.style.position = 'static';
-	perfLi.appendChild(self.stats.dom);
-	perfLi.classList.add('gui-stats');
-	perfFolder.$children.appendChild( perfLi );
+		const perfFolder	= gui.addFolder('Performance');
+		const perfLi		= document.createElement('li');
+		self.stats.dom.style.position = 'static';
+		perfLi.appendChild(self.stats.dom);
+		perfLi.classList.add('gui-stats');
+		perfFolder.$children.appendChild( perfLi );
 
-	const guiWrap = document.createElement('div');
-	self.content_value.appendChild( guiWrap );
-	guiWrap.classList.add('gui-wrap');
-	guiWrap.appendChild(gui.domElement);
+	const gui_wrap = document.createElement('div');
+	self.content_value.appendChild( gui_wrap );
+	gui_wrap.classList.add('gui-wrap');
+	gui_wrap.appendChild(gui.domElement);
+
 	gui.open();
 }
 
@@ -779,9 +790,6 @@ viewer.clear = function() {
 		}
 	} );
 }
-
-
-
 
 
 
