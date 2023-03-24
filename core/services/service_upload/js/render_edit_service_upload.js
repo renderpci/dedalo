@@ -216,9 +216,12 @@ export const render_info = function(self) {
 			inner_html		: 'Chunk files size',
 			parent			: info
 		})
+		const chunk_text = self.upload_service_chunk_files
+			? self.upload_service_chunk_files + ' MB'
+			: JSON.stringify(self.upload_service_chunk_files)
 		ui.create_dom_element({
 			element_type	: 'div',
-			inner_html		: self.upload_service_chunk_files + ' MB',
+			inner_html		: chunk_text,
 			parent			: info
 		})
 
