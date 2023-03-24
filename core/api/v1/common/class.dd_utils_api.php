@@ -177,11 +177,12 @@ final class dd_utils_api {
 
 		// system_info
 			$system_info = new stdClass();
-				$system_info->max_size_bytes 		= file_upload_max_size();
-				$system_info->sys_get_temp_dir 		= sys_get_temp_dir();
-				$system_info->upload_tmp_dir 		= $upload_tmp_dir;
-				$system_info->upload_tmp_perms 		= fileperms($upload_tmp_dir);
-				$system_info->session_cache_expire  = (int)ini_get('session.cache_expire');
+				$system_info->max_size_bytes				= file_upload_max_size();
+				$system_info->sys_get_temp_dir				= sys_get_temp_dir();
+				$system_info->upload_tmp_dir				= $upload_tmp_dir;
+				$system_info->upload_tmp_perms				= fileperms($upload_tmp_dir);
+				$system_info->session_cache_expire			= (int)ini_get('session.cache_expire');
+				$system_info->upload_service_chunk_files	= DEDALO_UPLOAD_SERVICE_CHUNK_FILES;
 
 
 		// response

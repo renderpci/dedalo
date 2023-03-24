@@ -5,6 +5,7 @@
 
 // imports
 	// import {event_manager} from '../../../core/common/js/event_manager.js'
+	import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
 	import {ui} from '../../../core/common/js/ui.js'
 
 
@@ -23,6 +24,7 @@ export const render_tool_upload = function() {
 /**
 * EDIT
 * Render node for use like button
+* @param object options
 * @return HTMLElement wrapper
 */
 render_tool_upload.prototype.edit = async function (options) {
@@ -43,27 +45,6 @@ render_tool_upload.prototype.edit = async function (options) {
 			content_data : content_data
 		})
 
-	// buttons container
-		// 	const buttons_container = ui.create_dom_element({
-		// 		element_type	: 'div',
-		// 		class_name 		: 'buttons_container',
-		// 		parent 			: wrapper
-		// 	})
-
-	// tool_container
-		//const tool_container = document.getElementById('tool_container')
-		//if(tool_container!==null){
-		//	tool_container.appendChild(wrapper)
-		//}else{
-		//	const main = document.getElementById('main')
-		//	const new_tool_container = ui.create_dom_element({
-		//		id 				: 'tool_container',
-		//		element_type	: 'div',
-		//		parent 			: main
-		//	})
-		//	new_tool_container.appendChild(wrapper)
-		//}
-
 	// service_upload
 		// Use the service_upload to get and render the button to upload the file,
 		// get functionality defined (drag, drop, create folder, etc..)
@@ -73,7 +54,6 @@ render_tool_upload.prototype.edit = async function (options) {
 			class_name		: 'service_upload_container'
 		})
 		wrapper.tool_header.after(service_upload_container)
-		// content_data.appendChild(service_upload_container)
 		// spinner
 		const spinner = ui.create_dom_element({
 			element_type	: 'div',
@@ -90,16 +70,6 @@ render_tool_upload.prototype.edit = async function (options) {
 			})
 		})
 
-	// modal container
-		// if (!window.opener) {
-		// 	const header	= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
-		// 	const modal		= ui.attach_to_modal(header, wrapper, null)
-		// 	modal.on_close	= () => {
-		// 		// when closing the modal, common destroy is called to remove tool and elements instances
-		// 		self.destroy(true, true, true)
-		// 	}
-		// }
-
 
 	return wrapper
 }//end edit
@@ -108,6 +78,7 @@ render_tool_upload.prototype.edit = async function (options) {
 
 /**
 * GET_CONTENT_DATA
+* @param object self
 * @return HTMLElement content_data
 */
 export const get_content_data = function(self) {
@@ -122,18 +93,14 @@ export const get_content_data = function(self) {
 		})
 		self.process_file = process_file
 
-	// preview_image
-		const preview_image = ui.create_dom_element({
-			element_type	: 'img',
-			class_name		: 'preview_image',
+	// preview_component_container
+		const preview_component_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'preview_component_container',
 			parent			: fragment
 		})
-		preview_image.addEventListener("click", function(e){
-			e.stopPropagation()
-			window.open(this.src)
-		})
 		// fix
-		self.preview_image = preview_image
+		self.preview_component_container = preview_component_container
 
 	// content_data
 		const content_data = ui.tool.build_content_data(self)
@@ -176,27 +143,49 @@ render_tool_upload.prototype.upload_done = async function (options) {
 		})
 		self.process_file.appendChild(spinner)
 
-	// reset preview_image
-		self.preview_image.src = ''
-
 	// process uploaded file (move temp uploaded file to definitive location and name)
 		self.process_uploaded_file(file_data)
-		.then(function(response) {
+		.then(async function(response) {
 
 			spinner.remove()
+
+			// reset classes
+				process_file_info.classList.remove('failed')
+				process_file_info.classList.remove('success')
 
 			// process_file remove info loading
 			if (!response.result) {
 				// error case
 				process_file_info.innerHTML = response.msg || 'Error on processing file!'
+				process_file_info.classList.add('failed')
 
 			}else{
 				// OK case
 				process_file_info.innerHTML = response.msg || 'Processing file done successfully.'
+				process_file_info.classList.add('success')
 
-				// preview image update
-					if (response.preview_url) {
-						self.preview_image.src = response.preview_url
+
+				// preview_component_container
+					if (self.caller.type==='component') {
+						// get instance and init
+						const component_instance = await get_instance({
+							model			: self.caller.model,
+							mode			: 'edit',
+							view			: 'default',
+							permissions		: 1,
+							tipo			: self.caller.tipo,
+							section_tipo	: self.caller.section_tipo,
+							section_id		: self.caller.section_id,
+							lang			: self.caller.lang,
+							id_variant		: self.name, // id_variant prevents id conflicts
+							caller			: self // set current tool as component caller (to check if component is inside tool or not)
+						})
+						self.ar_instances.push(component_instance)
+						// build
+						await component_instance.build(true)
+						// render
+						const component_node = await component_instance.render()
+						self.preview_component_container.appendChild(component_node)
 					}
 
 				// event to update the DOM elements of the instance
