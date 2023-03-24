@@ -33,11 +33,13 @@ function process_file($json_data) {
 				return $response;
 			}
 		}
-	$projects_value = json_decode($projects_value);
-	$projects_dato  = array();
-	foreach ((array)$projects_value as $key => $value) {
-		$projects_dato[$value] = '2';
-	}
+	$projects_dato = !empty($projects_value)
+		? $projects_value
+		: null;
+	// $projects_dato  = array();
+	// foreach ((array)$projects_value as $key => $value) {
+	// 	$projects_dato[$value] = '2';
+	// }
 
 	$section_tipo = tool_import_marc21::MARC21_IMPORT_SECTION_TIPO;
 	$section_obj = section::get_instance(null, $section_tipo);
