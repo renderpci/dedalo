@@ -26,6 +26,8 @@ export const view_default_edit_3d = function() {
 /**
 * RENDER
 * Render node for use in modes: edit, edit_in_list
+* @param object self
+* @param object options
 * @return HTMLElement wrapper
 */
 view_default_edit_3d.render = async function(self, options) {
@@ -47,14 +49,15 @@ view_default_edit_3d.render = async function(self, options) {
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : content_data,
-			buttons 	 : buttons
+			content_data	: content_data,
+			buttons			: buttons
 		})
 		// set pointers to content_data
 		wrapper.content_data = content_data
 
+
 	return wrapper
-}//end view_default_edit_3d
+}//end render
 
 
 
@@ -130,10 +133,6 @@ const get_content_value = (i, current_value, self) => {
 				// cleanup();
 				});
 		})
-
-
-
-
 
 
 	// // urls
@@ -237,9 +236,6 @@ const get_content_value_read = (i, current_value, self) => {
 
 	return content_value
 }//end get_content_value_read
-
-
-
 
 
 
