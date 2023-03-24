@@ -189,35 +189,12 @@ viewer.resize = function() {
 }
 
 
-viewer.load = function( url ) { //, rootPath, assetMap
+viewer.load = function( url ) {
 
 	const self = this
 
-	// const baseURL = LoaderUtils.extractUrlBase(url);
-
 	// Load.
 	return new Promise((resolve, reject) => {
-
-		// // Intercept and override relative URLs.
-		// self.MANAGER.setURLModifier((url, path) => {
-
-		// 	// URIs in a glTF file may be escaped, or not. Assume that assetMap is
-		// 	// from an un-escaped source, and decode all URIs before lookups.
-		// 	// See: https://github.com/donmccurdy/three-gltf-viewer/issues/146
-		// 	const normalizedURL = rootPath + decodeURI(url)
-		// 		.replace(baseURL, '')
-		// 		.replace(/^(\.?\/)/, '');
-
-		// 	if (assetMap.has(normalizedURL)) {
-		// 		const blob = assetMap.get(normalizedURL);
-		// 		const blobURL = URL.createObjectURL(blob);
-		// 		blob_URLs.push(blobURL);
-		// 		return blobURL;
-		// 	}
-
-		// 	return (path || '') + url;
-
-		// });
 
 		const loader = new GLTFLoader( self.MANAGER )
 			.setCrossOrigin('anonymous')
