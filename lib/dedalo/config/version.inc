@@ -2844,7 +2844,11 @@
 		Added chunked files to be upload by tool_upload
 		Added DEDALO_UPLOAD_SERVICE_CHUNK_FILES constant to sample_config
 		Fixed tool_upload errors and issues about upload finish managing
-
+		Fixed import marc21 with 650 fields
+		Fixed tool_import marc21 with old data of component_filter
+		Fixed tool_import_zotero of duplicated sections.
+	Released version 5.9.5
+		Valencia 24-03-2023T16:40:00
 
 	[/HISTORY]
 
@@ -2869,7 +2873,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.9.4';
+	$DEDALO_VERSION = '5.9.5';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
