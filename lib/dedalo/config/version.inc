@@ -2844,11 +2844,12 @@
 		Added chunked files to be upload by tool_upload
 		Added DEDALO_UPLOAD_SERVICE_CHUNK_FILES constant to sample_config
 		Fixed tool_upload errors and issues about upload finish managing
-		Fixed import marc21 with 650 fields
+		Restored missing lib 'pear' in .gitignore. Used for tool_import_mark21
 		Fixed tool_import marc21 with old data of component_filter
-		Fixed tool_import_zotero of duplicated sections.
+		Added to get 650 values of marc21 to rsc210
+		Fixed search existing values in tool_import_zotero
 	Released version 5.9.5
-		Valencia 24-03-2023T16:40:00
+
 
 	[/HISTORY]
 
@@ -2879,7 +2880,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '09-03-2023T11:50:00');
+	define('DEDALO_BUILD'	, '24-03-2023T14:15:00');
 
 
 
