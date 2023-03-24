@@ -496,7 +496,9 @@ export const load_component = async function(options) {
 * 	object is a tool instance
 */
 export const open_tool = async (options) => {
-	console.warn("------ open_tool call options:",options);
+	if(SHOW_DEBUG===true) {
+		console.warn("------ open_tool call options:",options);
+	}
 
 	// options
 		const caller		= options.caller
