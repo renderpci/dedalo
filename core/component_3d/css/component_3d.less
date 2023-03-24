@@ -11,6 +11,7 @@
 			justify-content: center;
 			max-height: @media_max_height;
 			min-height: @media_min_height;
+			overflow: hidden;
 
 			@media screen and (max-width: @width_break_point_1) {
 				min-height: unset;
@@ -21,6 +22,8 @@
 				background-color: #faf8fc;
 				height: 600px;
 				width: 100%;
+				display: flex;
+				justify-content: center;
 
 				@media screen and (max-width: @width_break_point_1) {
 					height: unset;

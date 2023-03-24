@@ -37,6 +37,8 @@ export const view_default_edit_3d = function() {
 /**
 * RENDER
 * Render node for use in modes: edit, edit_in_list
+* @param object self
+* @param object options
 * @return HTMLElement wrapper
 */
 view_default_edit_3d.render = async function(self, options) {
@@ -58,14 +60,15 @@ view_default_edit_3d.render = async function(self, options) {
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : content_data,
-			buttons 	 : buttons
+			content_data	: content_data,
+			buttons			: buttons
 		})
 		// set pointers to content_data
 		wrapper.content_data = content_data
 
+
 	return wrapper
-}//end view_default_edit_3d
+}//end render
 
 
 
@@ -125,6 +128,11 @@ const get_content_value = (i, current_value, self) => {
 			// class_name 		: 'content_value',
 			parent 			: content_value
 		})
+
+		setTimeout(function(){
+			console.log('canvas:', canvas);
+			console.log('canvas.backgroundColor:', canvas.backgroundColor);
+		}, 3000)
 
 	// get file quality
 		const quality	= self.quality || self.context.features.quality
@@ -234,7 +242,7 @@ const get_content_value = (i, current_value, self) => {
 		ktx2_loader.setTranscoderPath( '../../lib/threejs/jsm/libs/basis/' );
 		loader.setKTX2Loader( ktx2_loader.detectSupport( renderer ) )
 
-		// Insatntiate a GLTF + MeshoptDecoder
+		// Instantiate a GLTF + MeshoptDecoder
 		loader.setMeshoptDecoder( MeshoptDecoder );
 		loader.load(
 			// resource URL   # TODO: change find with quality selector
@@ -440,7 +448,7 @@ const get_content_value_read = (i, current_value, self) => {
 
 
 
-// show mesh strucure
+// show mesh structure
 function dumpObject(obj, lines = [], isLast = true, prefix = '') {
 	const localPrefix = isLast ? '└─' : '├─';
 	lines.push(`${prefix}${prefix ? localPrefix : ''}${obj.name || '*no-name*'} [${obj.type}]`);

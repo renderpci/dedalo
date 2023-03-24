@@ -27,6 +27,7 @@ export const render_list_component_3d = function() {
 /**
 * LIST
 * Render node for use in modes: list
+* @param object options
 * @return HTMLElement wrapper
 */
 render_list_component_3d.prototype.list = async function(options) {
@@ -46,6 +47,4 @@ render_list_component_3d.prototype.list = async function(options) {
 		default:
 			return view_column_list_3d.render(self, options)
 	}
-
-	return null
 }//end list

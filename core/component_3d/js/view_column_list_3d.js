@@ -59,7 +59,6 @@ view_column_list_3d.render = async function(self, options) {
 			function set_bg_color() {
 				this.removeEventListener('load', set_bg_color, false)
 				ui.set_background_image(this, this)
-
 			}
 			image.addEventListener('error', () => {
 				console.log('Image load error:', image);
