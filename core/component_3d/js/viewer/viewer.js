@@ -634,13 +634,9 @@ viewer.add_GUI = function() {
 
 	const gui = self.gui = new GUI({
 		autoPlace: false,
-		// width: 260,
 		container: gui_wrap,
-		// hideable: true,
 		closeFolders: false
 	});
-
-	console.log('gui:', gui);
 
 	// Display controls.
 		const display_folder	= gui.addFolder('Display');
@@ -699,7 +695,8 @@ viewer.add_GUI = function() {
 		stats_li.classList.add('gui-stats');
 		stats_folder.$children.appendChild( stats_li );
 
-	// gui.open();
+	// by default gui will be show closed
+	gui.close();
 }
 
 
