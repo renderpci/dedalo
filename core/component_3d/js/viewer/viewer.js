@@ -628,28 +628,36 @@ viewer.add_GUI = function() {
 
 	const self = this
 
+	const gui_wrap = document.createElement('div');
+		self.content_value.appendChild( gui_wrap );
+		gui_wrap.classList.add('gui-wrapper');
+
 	const gui = self.gui = new GUI({
 		autoPlace: false,
-		width: 260,
-		hideable: true
+		// width: 260,
+		container: gui_wrap,
+		// hideable: true,
+		closeFolders: false
 	});
 
-	// Display controls.
-		const disp_folder			= gui.addFolder('Display');
-		const env_background_ctrl	= disp_folder.add(self.state, 'background');
-		env_background_ctrl.onChange(() => self.update_environment());
+	console.log('gui:', gui);
 
-		const wireframe_ctrl = disp_folder.add(self.state, 'wireframe');
+	// Display controls.
+		const display_folder	= gui.addFolder('Display');
+		const background_ctrl	= display_folder.add(self.state, 'background');
+		background_ctrl.onChange(() => self.update_environment());
+
+		const wireframe_ctrl = display_folder.add(self.state, 'wireframe');
 		wireframe_ctrl.onChange(() => self.update_display());
 
-		const skeleton_ctrl = disp_folder.add(self.state, 'skeleton');
+		const skeleton_ctrl = display_folder.add(self.state, 'skeleton');
 		skeleton_ctrl.onChange(() => self.update_display());
 
-		const grid_ctrl = disp_folder.add(self.state, 'grid');
+		const grid_ctrl = display_folder.add(self.state, 'grid');
 		grid_ctrl.onChange(() => self.update_display());
-		disp_folder.add(self.controls, 'screenSpacePanning');
+		display_folder.add(self.controls, 'screenSpacePanning');
 
-		const bg_color_ctrl = disp_folder.addColor(self.state, 'bgColor');
+		const bg_color_ctrl = display_folder.addColor(self.state, 'bgColor');
 		bg_color_ctrl.onChange(() => self.update_background());
 
 	// Lighting controls.
@@ -669,8 +677,8 @@ viewer.add_GUI = function() {
 	// Animation controls.
 		self.anim_folder = gui.addFolder('Animation');
 		self.anim_folder.domElement.style.display = 'none';
-		const playbackSpeedCtrl = self.anim_folder.add(self.state, 'playbackSpeed', 0, 1);
-		playbackSpeedCtrl.onChange((speed) => {
+		const playback_speed_ctrl = self.anim_folder.add(self.state, 'playbackSpeed', 0, 1);
+		playback_speed_ctrl.onChange((speed) => {
 			if (self.mixer) self.mixer.timeScale = speed;
 		});
 		self.anim_folder.add({playAll: () => self.play_all_clips()}, 'playAll');
@@ -684,19 +692,14 @@ viewer.add_GUI = function() {
 		self.camera_folder.domElement.style.display = 'none';
 
 	// Stats.
-		const perfFolder	= gui.addFolder('Performance');
-		const perfLi		= document.createElement('li');
+		const stats_folder	= gui.addFolder('Performance');
+		const stats_li		= document.createElement('li');
 		self.stats.dom.style.position = 'static';
-		perfLi.appendChild(self.stats.dom);
-		perfLi.classList.add('gui-stats');
-		perfFolder.$children.appendChild( perfLi );
+		stats_li.appendChild(self.stats.dom);
+		stats_li.classList.add('gui-stats');
+		stats_folder.$children.appendChild( stats_li );
 
-	const gui_wrap = document.createElement('div');
-	self.content_value.appendChild( gui_wrap );
-	gui_wrap.classList.add('gui-wrap');
-	gui_wrap.appendChild(gui.domElement);
-
-	gui.open();
+	// gui.open();
 }
 
 
@@ -707,11 +710,11 @@ viewer.update_GUI = function() {
 
 	self.camera_folder.domElement.style.display = 'none';
 
-	self.morph_ctrls.forEach((ctrl) => ctrl.remove());
+	self.morph_ctrls.forEach((ctrl) => ctrl.destroy());
 	self.morph_ctrls.length = 0;
 	self.morph_folder.domElement.style.display = 'none';
 
-	self.anim_ctrls.forEach((ctrl) => ctrl.remove());
+	self.anim_ctrls.forEach((ctrl) => ctrl.destroy());
 	self.anim_ctrls.length = 0;
 	self.anim_folder.domElement.style.display = 'none';
 
