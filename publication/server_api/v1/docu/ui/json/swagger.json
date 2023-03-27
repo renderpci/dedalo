@@ -1,19 +1,19 @@
 {
   "swagger" : "2.0",
   "info" : {
-    "version" : "1.0.9",
-    "title" : "Dédalo Web REST API 1.0.9",
-    "description" : "Builds Public Dédalo data for publication. <br>Use this online tool to test your data and remember always write your <i>Auth code</i> when executes a try call.<br> <strong>This API is focused to Oral History archives and is for general pourposes.<br>If you need special features or custom results, you are wellcome to join API develop team contacting with the source developers (aka Alex&Paco)</strong> in webmaster@render.es",
+    "version" : "1.0.25",
+    "title" : "Dédalo Publication Server REST API 1.0.25",
+    "description" : "Builds Public Dédalo data for publication. Use this online tool to test your data, and remember to always enter your authentication code when running a test call. <br>This API is focused on Oral History files and is for general purpose. If you need special functions or custom results, you can join the API development team by contacting the source developers (also known as Alex & Paco) at webmaster@render.es ",
     "license" : {
       "name" : "Apache 2.0 license",
       "url" : "http://www.apache.org/licenses/LICENSE-2.0.html"
     },
     "contact" : {
       "name" : "Aditional Dédalo publication info",
-      "url" : "http://dedalo4.antropolis.net/dedalo/lib/dedalo/publication/server_api/v1/docu/API_docu_v1.pdf"
+      "url" : "https://dedalo.dev/publication_api"
     }
   },
-  "host" : "dedalo4.antropolis.net",
+  "host" : "dedalo.render.es",
   "schemes" : [ "http", "https" ],
   "basePath" : "/dedalo/lib/dedalo/publication/server_api/v1/json",
   "produces" : [ "application/json" ],
@@ -26,6 +26,8 @@
   }, {
     "name" : "Thesaurus",
     "description" : "Specific hierarchy and thesaurus functions"
+  }, {
+    "name" : "Thesaurus Legacy (Deprecated)"
   }, {
     "name" : "Free",
     "description" : "Search functions in transcription text"
@@ -132,7 +134,7 @@
       "name" : "ar_fields",
       "in" : "query",
       "required" : false,
-      "description" : "Comma separated list of required columns in table",
+      "description" : "Comma separated list of required columns in table. Stringified array is also allowed <br>Sample:<br> [\"name\",\"surname\"] ",
       "type" : "string"
     },
     "rows_per_page" : {
@@ -148,7 +150,7 @@
     "/tables_info" : {
       "get" : {
         "summary" : "Info about tables schema",
-        "description" : "Get complete info about current disposable tables and columns.",
+        "description" : "Get complete info about current available tables and columns.",
         "parameters" : [ {
           "$ref" : "#/parameters/code"
         }, {
@@ -165,10 +167,69 @@
         }
       }
     },
+    "/publication_schema" : {
+      "get" : {
+        "summary" : "Info about automatic portal resolution map",
+        "description" : "Get complete info about current publication_schema.",
+        "parameters" : [ {
+          "$ref" : "#/parameters/code"
+        }, {
+          "$ref" : "#/parameters/db_name"
+        } ],
+        "tags" : [ "Info" ],
+        "responses" : {
+          "200" : {
+            "description" : "Successful response",
+            "schema" : {
+              "$ref" : "#/definitions/table_list"
+            }
+          }
+        }
+      }
+    },
+    "/table_thesaurus" : {
+      "get" : {
+        "summary" : "Info about table_thesaurus from server config",
+        "description" : "This is a fixed value to group tables as thesaurus to easy search (creates a UNION clause).",
+        "parameters" : [ {
+          "$ref" : "#/parameters/code"
+        } ],
+        "tags" : [ "Info" ],
+        "responses" : {
+          "200" : {
+            "description" : "Return string|null",
+            "schema" : {
+              "type" : "string",
+              "example" : "ts_chronological,ts_themes,ts_onomastic"
+            }
+          }
+        }
+      }
+    },
+    "/table_thesaurus_map" : {
+      "get" : {
+        "summary" : "Info about table_thesaurus_map from server config",
+        "description" : "This is a fixed tld to table name correspondence map",
+        "parameters" : [ {
+          "$ref" : "#/parameters/code"
+        } ],
+        "tags" : [ "Info" ],
+        "responses" : {
+          "200" : {
+            "description" : "Return object|null",
+            "schema" : {
+              "type" : "object",
+              "example" : "{\"dc1\":\"ts_chronological\",\"ts1\":\"ts_themes\",\"on1\":\"ts_onomastic\"}"
+            }
+          }
+        }
+      }
+    },
     "/records" : {
       "post" : {
-        "description" : "Search records with current params in requested table.",
+        "tags" : [ "Records" ],
         "summary" : "Get records from DDBB",
+        "description" : "Search records with current params in requested table. This is similar to a basic sql query but note that not all commands are supported or allowed for security reasons.",
         "parameters" : [ {
           "$ref" : "#/parameters/code"
         }, {
@@ -177,26 +238,27 @@
           "name" : "table",
           "in" : "query",
           "type" : "string",
+          "format" : "string",
           "default" : "interview"
         }, {
           "$ref" : "#/parameters/ar_fields"
         }, {
           "name" : "section_id",
           "in" : "query",
-          "description" : "Filter by specific section_id. Like 1",
+          "description" : "Filter by specific section_id. Like 1. Also, it is valid a sequence separated by comma, like 1,4,5",
           "required" : false,
-          "type" : "number",
-          "format" : "integer"
+          "type" : "string",
+          "format" : "string"
         }, {
           "name" : "sql_fullselect",
           "in" : "query",
-          "description" : "Custom sql select for builds query. Replaces any other columns selection option",
+          "description" : "Custom sql select for builds query. Replaces any other columns or table selection option. i.e. 'SELECT mycolumn FROM mytable'",
           "required" : false,
           "type" : "string"
         }, {
           "name" : "sql_filter",
           "in" : "query",
-          "description" : "Custom query added to standar filter",
+          "description" : "Custom query added to standard filter",
           "required" : false,
           "type" : "string",
           "format" : "string"
@@ -205,14 +267,14 @@
         }, {
           "name" : "order",
           "in" : "query",
-          "description" : "Custom order for result.Set null for no sort",
+          "description" : "Custom order for result. Set null for no sort. Sample: 'name ASC, surname ASC'",
           "required" : false,
           "type" : "string",
           "format" : "string"
         }, {
           "name" : "limit",
           "in" : "query",
-          "description" : "Maximun records returned in query. 0 for no limit",
+          "description" : "Maximum records returned in query. 0 for no limit",
           "required" : false,
           "type" : "number",
           "format" : "int",
@@ -244,23 +306,37 @@
           "description" : "Activates automatic resolution of portals option. Default is false",
           "required" : false,
           "type" : "boolean",
-          "format" : "bool"
+          "default" : false
         }, {
           "name" : "resolve_portals_custom",
           "in" : "query",
-          "description" : "Resolve requested portals only. Use json map object like '{\"audiovisual\":\"audiovisual\",\"informant\":\"informant\"}' where key is column name and value is target table. To resolve deeper, use format '{\"table.column\":\"table\"}'",
+          "description" : "Resolve requested portals only. Use a json map object like<br>{\"audiovisual\":\"audiovisual\",\"informant\":\"informant\"}<br>where key is column name and value is target table. To resolve deeper, use format '{\"table.column\":\"table\"}'",
           "required" : false,
           "type" : "string",
           "format" : "string"
         }, {
+          "name" : "resolve_dd_relations",
+          "in" : "query",
+          "description" : "Activates automatic resolution of column \"dd_relations\". This column stores all calls to current record formatted as locators array. Note that resolution map is stored in \"publication_schema\" (from Ontology definition). <br> Sample: <br> { \"diffusion\": { \"class_name\": \"diffusion_mysql\" }, \"publication_schema\": { \"dd_relations\": { \"rsc170\": \"images\", \"oh1\": \"interview\" } }, \"publication_schema_info\": \"Use format {table_name.field_name:target_table} or {field_name:target_table} for multiple map\" }",
+          "required" : false,
+          "type" : "boolean",
+          "default" : false
+        }, {
           "name" : "map",
           "in" : "query",
-          "description" : "json representation of array ob objects like [{\"table\": \"informant\",\"field\":birthplace_id\",\"function\":\"resolve_geolocation\",\"output_field\":\"birthplace_obj\"}] Default is false",
+          "description" : " Deprecated. <br>Use \"process_result\" instead <br>Call using json representation of array of objects like<br>[{ \"table\": \"informant\", \"field\":birthplace_id\", \"function\":\"resolve_geolocation\", \"output_field\":\"birthplace_obj\" }] <br> Already defined functions: <br> resolve_geolocation",
           "required" : false,
           "type" : "string",
           "format" : "string"
+        }, {
+          "name" : "process_result",
+          "in" : "query",
+          "description" : "Used to manage very specific scenarios where get_records call its not enough <br>Call using a json object like <br>{\"fn\":\"process_result::add_parents_and_children_recursive\",\"columns\": [{\"name\":\"parents\"}]} <br>Used in numisdata catalog tree to create the records hierarchy in server side <br>{\"fn\":\"process_result::break_down_totals\",\"base_column\":\"term_id\",\"total_column\":\"total\"} <br>Used for example to split interview informants place of birth when more than one informant or place exists <br>{\"fn\":\"process_result::resolve_indexation_fragments\",\"column\":\"indexation\",\"fragment_terms\":false} <br>Used to autoresolve indexation column values of \"exhibitions\" table in qdp <br>Already defined functions <br>(@see ../dedalo/lib/dedalo/publication/server_api/v1/common/class.process_result.php): <br>add_parents_and_children_recursive <br>add_parents_or_children <br>break_down_totals <br>sum_totals <br>resolve_indexation_fragments ",
+          "required" : false,
+          "default" : "",
+          "type" : "string",
+          "format" : "string"
         } ],
-        "tags" : [ "Records" ],
         "responses" : {
           "200" : {
             "description" : "Successful response",
@@ -276,6 +352,7 @@
     },
     "/reel_terms" : {
       "post" : {
+        "tags" : [ "Thesaurus" ],
         "summary" : "Get reel indexed terms",
         "description" : "Resolve all terms used in the indexation of the given reel transcription (audiovisual record).",
         "parameters" : [ {
@@ -291,7 +368,6 @@
           "type" : "string",
           "required" : true
         } ],
-        "tags" : [ "Thesaurus" ],
         "responses" : {
           "200" : {
             "description" : "Successful response",
@@ -304,6 +380,7 @@
     },
     "/fragment_from_index_locator" : {
       "post" : {
+        "tags" : [ "Thesaurus" ],
         "summary" : "Build fragment of text and video from a index locator",
         "description" : "Calculate all fragments indexed with this locator.",
         "parameters" : [ {
@@ -313,6 +390,12 @@
         }, {
           "$ref" : "#/parameters/lang"
         }, {
+          "name" : "fragment_terms",
+          "in" : "query",
+          "description" : "Calculate index tag intersections with current text fragment\nOn true, add the terms found to the result.",
+          "type" : "boolean",
+          "default" : false
+        }, {
           "name" : "index_locator",
           "in" : "query",
           "description" : "locator object encoded as json like {\"section_tipo\":\"rsc167\",\"section_id\":\"1\",\"tag_id\":\"1\"}",
@@ -320,7 +403,6 @@
           "type" : "string",
           "default" : "{\"section_tipo\":\"rsc167\",\"section_id\":\"1\",\"tag_id\":\"1\"}"
         } ],
-        "tags" : [ "Thesaurus" ],
         "responses" : {
           "200" : {
             "description" : "Successful response",
@@ -333,8 +415,9 @@
     },
     "/thesaurus_root_list" : {
       "post" : {
+        "tags" : [ "Thesaurus" ],
         "summary" : "Get first level of terms from thesaurus",
-        "description" : "Return a array of 'ts_term' objects with resolved data. You can use only the data or (in PHP) manage 'ts_term' objects to build custom html.",
+        "description" : "Return an array of 'ts_term' objects with resolved data. You can use only the data or (in PHP) manage 'ts_term' objects to build custom html.\n This functionality requires that all thesaurus tables follow the same schema. Besides, the root terms will be considered the xx1_1 terms. To able work you must configure your Dédalo thesaurus data in this way.\n For example, for thesaurus 'Themes' with tld 'ts' must be exists a root term 'Themes' with section_id 1. This will be publish as term_id 'ts1_1' to be discoberable by the API.",
         "parameters" : [ {
           "$ref" : "#/parameters/code"
         }, {
@@ -363,7 +446,6 @@
           "type" : "string",
           "format" : "string"
         } ],
-        "tags" : [ "Thesaurus" ],
         "responses" : {
           "200" : {
             "description" : "Successful response",
@@ -389,6 +471,7 @@
     },
     "/thesaurus_random_term" : {
       "post" : {
+        "tags" : [ "Thesaurus" ],
         "summary" : "A random thesaurus term name",
         "description" : "Return a random term from thesaurus tables",
         "parameters" : [ {
@@ -412,7 +495,6 @@
           "type" : "string",
           "format" : "string"
         } ],
-        "tags" : [ "Thesaurus" ],
         "responses" : {
           "200" : {
             "description" : "Successful response",
@@ -438,6 +520,7 @@
     },
     "/thesaurus_search" : {
       "post" : {
+        "tags" : [ "Thesaurus" ],
         "summary" : "Search into thesaurus term",
         "description" : "Execute a search against thesaurus tables",
         "parameters" : [ {
@@ -463,7 +546,7 @@
         }, {
           "name" : "q",
           "in" : "query",
-          "description" : "string to search in database. Minimun 3 chars for full text search",
+          "description" : "string to search in database. Minimum 3 chars for full text search",
           "required" : true,
           "type" : "string",
           "default" : "term"
@@ -484,12 +567,11 @@
         }, {
           "name" : "tree_root",
           "in" : "query",
-          "description" : "Defines first element from build the hierarchy tree when show the reults. Accepted values first_parent | last_parent . Default is last_parent",
+          "description" : "Defines first element from build the hierarchy tree when showing the results. Accepted values first_parent | last_parent . Default is last_parent",
           "required" : false,
           "type" : "string",
           "format" : "string"
         } ],
-        "tags" : [ "Thesaurus" ],
         "responses" : {
           "200" : {
             "description" : "Successful response",
@@ -515,8 +597,9 @@
     },
     "/thesaurus_autocomplete" : {
       "post" : {
+        "tags" : [ "Thesaurus Legacy (Deprecated)" ],
         "summary" : "Predictive autocomplete search",
-        "description" : "Search string in database (begings with $q) and get array of max 25 records",
+        "description" : "Search string in database (begins with $q) and get array of max 25 records",
         "parameters" : [ {
           "$ref" : "#/parameters/code"
         }, {
@@ -533,10 +616,17 @@
         }, {
           "name" : "q",
           "in" : "query",
-          "description" : "string to search in database. Minimun 3 chars for full text search",
+          "description" : "string to search in database. Minimum 3 chars for full text search",
           "required" : true,
           "type" : "string",
           "default" : "term"
+        }, {
+          "name" : "format",
+          "in" : "query",
+          "description" : "Result format ('full' for object including term_id and 'simple' for term plain text). Default is 'simple'",
+          "required" : false,
+          "type" : "string",
+          "default" : "simple"
         }, {
           "name" : "limit",
           "in" : "query",
@@ -544,7 +634,6 @@
           "type" : "integer",
           "format" : "int"
         } ],
-        "tags" : [ "Thesaurus" ],
         "responses" : {
           "200" : {
             "description" : "Successful response",
@@ -570,6 +659,7 @@
     },
     "/thesaurus_term" : {
       "post" : {
+        "tags" : [ "Thesaurus" ],
         "summary" : "Get thesaurus term objects (one or various)",
         "description" : "Resolve one or more ts_term from ar_term_id",
         "parameters" : [ {
@@ -588,11 +678,10 @@
         }, {
           "name" : "combine",
           "in" : "query",
-          "description" : "Optional combined result mode. Options: false | combined | cumulative. Default is false. When is set to combine, only indexations with intersections are returned",
+          "description" : "Experimental (!). Optional combined result mode. Options: false | combined. Default is false. When is set to combine, only indexations with intersections are returned",
           "type" : "string",
           "default" : false
         } ],
-        "tags" : [ "Thesaurus" ],
         "responses" : {
           "200" : {
             "description" : "OK"
@@ -602,6 +691,7 @@
     },
     "/thesaurus_indexation_node" : {
       "post" : {
+        "tags" : [ "Thesaurus" ],
         "summary" : "Indexation object with all required info",
         "description" : "Builds a indexation_node data object",
         "parameters" : [ {
@@ -631,7 +721,6 @@
           "type" : "string",
           "required" : false
         } ],
-        "tags" : [ "Thesaurus" ],
         "responses" : {
           "200" : {
             "description" : "OK"
@@ -641,8 +730,9 @@
     },
     "/thesaurus_video_view_data" : {
       "post" : {
+        "tags" : [ "Thesaurus Legacy (Deprecated)" ],
         "summary" : "Video player data",
-        "description" : "Gets data ued to view video fragment",
+        "description" : "Deprecated (!). Gets data needed to build video fragment",
         "parameters" : [ {
           "$ref" : "#/parameters/code"
         }, {
@@ -659,7 +749,7 @@
         }, {
           "name" : "ar_locators",
           "in" : "query",
-          "description" : "JSON ecoded array of locator objects like [{\"type\":\"dd96\",\"tag_id\":\"2\",\"section_id\":\"1\",\"section_tipo\":\"rsc167\",\"component_tipo\":\"rsc36\",\"section_top_id\":\"1\",\"section_top_tipo\":\"oh1\",\"from_component_tipo\":\"hierarchy40\"},{\"type\":\"dd96\",\"tag_id\":\"6\",\"section_id\":\"1\",\"section_tipo\":\"rsc167\",\"component_tipo\":\"rsc36\",\"section_top_id\":\"1\",\"section_top_tipo\":\"oh1\",\"from_component_tipo\":\"hierarchy40\"}]",
+          "description" : "JSON encoded array of locator objects like [{\"type\":\"dd96\",\"tag_id\":\"2\",\"section_id\":\"1\",\"section_tipo\":\"rsc167\",\"component_tipo\":\"rsc36\",\"section_top_id\":\"1\",\"section_top_tipo\":\"oh1\",\"from_component_tipo\":\"hierarchy40\"},{\"type\":\"dd96\",\"tag_id\":\"6\",\"section_id\":\"1\",\"section_tipo\":\"rsc167\",\"component_tipo\":\"rsc36\",\"section_top_id\":\"1\",\"section_top_tipo\":\"oh1\",\"from_component_tipo\":\"hierarchy40\"}]",
           "type" : "string",
           "required" : true,
           "default" : "[{\"type\":\"dd96\",\"tag_id\":\"1\",\"section_id\":\"1\",\"section_tipo\":\"rsc167\",\"component_tipo\":\"rsc36\",\"section_top_id\":\"1\",\"section_top_tipo\":\"oh1\",\"from_component_tipo\":\"hierarchy40\"},{\"type\":\"dd96\",\"tag_id\":\"1\",\"section_id\":\"4\",\"section_tipo\":\"rsc167\",\"component_tipo\":\"rsc36\",\"section_top_id\":\"3\",\"section_top_tipo\":\"oh1\",\"from_component_tipo\":\"hierarchy40\"}]"
@@ -670,7 +760,6 @@
           "type" : "integer",
           "required" : false
         } ],
-        "tags" : [ "Thesaurus" ],
         "responses" : {
           "200" : {
             "description" : "OK"
@@ -678,10 +767,10 @@
         }
       }
     },
-    "/thesaurus_childrens" : {
+    "/thesaurus_children" : {
       "post" : {
         "tags" : [ "Thesaurus" ],
-        "summary" : "Search all childrens of current term",
+        "summary" : "Search all children of current term",
         "description" : "Exec a records query in current term table to find records with data parent equal to current term_id",
         "parameters" : [ {
           "$ref" : "#/parameters/code"
@@ -695,7 +784,8 @@
           "name" : "term_id",
           "in" : "query",
           "description" : "Term id to get data like ts1_1",
-          "type" : "string"
+          "type" : "string",
+          "required" : true
         }, {
           "name" : "recursive",
           "in" : "query",
@@ -739,7 +829,8 @@
           "name" : "term_id",
           "in" : "query",
           "description" : "Term id to get data like ts1_2",
-          "type" : "string"
+          "type" : "string",
+          "required" : true
         }, {
           "name" : "recursive",
           "in" : "query",
@@ -767,16 +858,16 @@
         }, {
           "name" : "q",
           "in" : "query",
-          "description" : "String to search",
+          "description" : "String to search. This field is Full-text search (normally transcription column 'rsc36')",
           "type" : "string",
-          "required" : true,
-          "default" : "house"
+          "required" : true
         }, {
-          "name" : "search_mode",
+          "name" : "is_literal",
           "in" : "query",
-          "description" : "SQL type of search. Default is 'full_text_search'",
-          "type" : "string",
-          "required" : false
+          "description" : "Allow search literals like \"my house\" ",
+          "type" : "boolean",
+          "required" : false,
+          "default" : false
         }, {
           "name" : "rows_per_page",
           "in" : "query",
@@ -799,17 +890,17 @@
           "format" : "int",
           "required" : false
         }, {
-          "name" : "apperances_limit",
+          "name" : "appearances_limit",
           "in" : "query",
-          "description" : "Max number of apperances (matches) calculated. Default is 1",
+          "description" : "Max number of appearances (matches) calculated. Default is 1",
           "type" : "integer",
           "format" : "int",
           "required" : false
         }, {
           "name" : "match_select",
           "in" : "query",
-          "description" : "Selects specific match inside results. Default = false . Optional",
-          "type" : "boolean",
+          "description" : "Selects a specific match inside results. For example, to get only the first appearance of a word. Optional",
+          "type" : "integer",
           "required" : false
         }, {
           "name" : "count",
@@ -838,9 +929,9 @@
         }, {
           "name" : "fragment_terms",
           "in" : "query",
-          "description" : "Calculates terms (indexations) for current fragment of transcription. Default is false",
+          "description" : "Calculates terms (indexations) for current fragment of transcription.",
           "type" : "boolean",
-          "required" : false
+          "default" : false
         }, {
           "name" : "filter",
           "in" : "query",
@@ -908,7 +999,7 @@
     },
     "/global_search" : {
       "post" : {
-        "summary" : "Find word/s in table global_search. Require special server config!",
+        "summary" : "Find word/s in table global_search. Require a special server config!",
         "description" : "Exec a search against full_data column in global_search table",
         "parameters" : [ {
           "$ref" : "#/parameters/code"
@@ -979,7 +1070,7 @@
     "/combi" : {
       "post" : {
         "summary" : "Combined calls to api in one request",
-        "description" : "Exec an array of api request in only one call to server.",
+        "description" : "Exec an array of api requests in only one call to the server.",
         "parameters" : [ {
           "$ref" : "#/parameters/code"
         }, {
@@ -987,7 +1078,7 @@
         }, {
           "name" : "ar_calls",
           "in" : "query",
-          "description" : "JSON stringified array of calls to api. Will be iterated and resolved in the server side",
+          "description" : "JSON array of calls to api (stringified or not). Will be iterated and resolved in the server side. <br>Sample:<br> [ { \"id\":\"templates_all\", \"options\":{ \"dedalo_get\":\"records\", \"table\":\"template_map\", \"ar_fields\":[\"data\",\"name\"], \"lang\":\"lg-spa\" } }, { \"id\":\"menu_all\", \"options\":{ \"dedalo_get\":\"records\", \"table\":\"ts_web\", \"ar_fields\":[\"section_id\",\"term_id\",\"term\",\"web_path\",\"parent\",\"children\",\"template_name\",\"title\",\"abstract\",\"body\",\"norder\",\"image\"], \"lang\":\"lg-spa\" } } ]",
           "required" : true,
           "type" : "string",
           "format" : "string"
