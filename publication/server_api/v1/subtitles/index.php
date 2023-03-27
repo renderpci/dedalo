@@ -12,17 +12,21 @@
 
 	// Load class
 		$skip_api_web_user_code_verification = true;
-		include(dirname(dirname(__FILE__)) .'/config_api/server_config_api.php');
-		include_once(dirname(dirname(dirname(dirname(dirname(__FILE__))))).'/tools/tool_subtitles/class.subtitles.php');
+		// include(dirname(dirname(__FILE__)) .'/config_api/server_config_api.php');
+		include dirname(dirname(__FILE__)) .'/config_api/server_config_api.php';
+		// include_once(dirname(dirname(dirname(dirname(dirname(__FILE__))))).'/tools/tool_subtitles/class.subtitles.php');
+		include dirname(dirname(dirname(dirname(dirname(__FILE__))))) .'/shared/lass.subtitles.php';
 
 	// vars
-		// av_section_id . Section id of aufiovisual record tape
+		// av_section_id . Section id of audiovisual record tape
 		$av_section_id = isset($_GET['section_id']) ? (int)$_GET['section_id'] : false;
 		if (empty($av_section_id)) {
 			exit("Error on build_subtitles. section_id is mandatory");
 		}
-		// Lang is autoset by server_config_api
-		$lang 		 = isset($_GET['lang']) ? $_GET['lang'] : WEB_CURRENT_LANG_CODE;
+		// Lang is auto-set by server_config_api
+		$lang = isset($_GET['lang'])
+			? $_GET['lang']
+			: WEB_CURRENT_LANG_CODE;
 		preg_match('/^lg-[a-z]{3}$/', $lang, $lang_array);
 		if (empty($lang_array)) {
 			exit("Error on build_subtitles. Invalid lang. Use format like 'lg-spa' ");
@@ -33,12 +37,12 @@
 
 	// Get reel av data
 		$options = new stdClass();
-			$options->table 		= (string)TABLE_AUDIOVISUAL;
-			$options->ar_fields 	= array(FIELD_VIDEO, FIELD_TRANSCRIPTION, 'duration');
-			$options->sql_filter 	= 'section_id = '.(int)$av_section_id;
-			$options->lang 			= $lang;
-			$options->order 		= null;
-			$options->limit 		= 1;
+			$options->table			= (string)TABLE_AUDIOVISUAL;
+			$options->ar_fields		= array(FIELD_VIDEO, FIELD_TRANSCRIPTION, 'duration');
+			$options->sql_filter	= 'section_id = '.(int)$av_section_id;
+			$options->lang			= $lang;
+			$options->order			= null;
+			$options->limit			= 1;
 
 		$rows_data = (object)web_data::get_rows_data( $options );
 			#dump($rows_data, ' rows_data ++ '.to_string());
@@ -67,15 +71,15 @@
 
 	// build_subtitles_text
 		$options = new stdClass();
-			$options->sourceText 					= $sourceText;
-			$options->sourceText_unrestricted 		= $sourceText_unrestricted;
-			$options->total_ms 						= $total_ms;
-			$options->maxCharLine 					= 144;		# max number of char for subtitle line. Default 144
-			$options->type 							= 'srt';	# File type: srt or xml
-			$options->show_debug    				= false;	# Default false
-			$options->advice_text_subtitles_title  	= null;  	# Text like "Automatic translation"
-			$options->tc_in_secs  					= $tc_in_secs;
-			$options->tc_out_secs  					= $tc_out_secs;
+			$options->sourceText					= $sourceText;
+			$options->sourceText_unrestricted		= $sourceText_unrestricted;
+			$options->total_ms						= $total_ms;
+			$options->maxCharLine					= 144;		# max number of char for subtitle line. Default 144
+			$options->type							= 'srt';	# File type: srt or xml
+			$options->show_debug					= false;	# Default false
+			$options->advice_text_subtitles_title	= null;  	# Text like "Automatic translation"
+			$options->tc_in_secs					= $tc_in_secs;
+			$options->tc_out_secs					= $tc_out_secs;
 
 		$subtitles_text = subtitles::build_subtitles_text( $options );
 

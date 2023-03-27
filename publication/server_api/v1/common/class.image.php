@@ -69,8 +69,8 @@ class image {
 		if ($this->description_with_images===true) {			
 
 			$options = new stdClass();
-				$options->tag_url = $this->tag_url; //__CONTENT_BASE_URL__ . '/core/component_text_area/tag/?id=';
-			$this->description_with_images = TR::add_tag_img_on_the_fly($description_raw, $options);
+				$options->btn_url = $this->btn_url; //__CONTENT_BASE_URL__ . '/dedalo/inc/btn.php';
+			$this->description_with_images = TR::addTagImgOnTheFly($description_raw, $options);
 		}
 		
 		# Description clean text
@@ -109,12 +109,12 @@ class image {
 
 	/**
 	* GET_FULL_FRAGMENTS
-	* Returns an array for maintain format, but only one fragment can exists
+	* Resturns an array for maintain format, but only one fragment can exists
 	* @return array $full_fragments
 	*/
 	public function get_full_fragments( $raw_text ) {
 		
-		$fragm = TR::deleteMarks($raw_text);
+		$fragm = TR::deleteMarks($raw_text_sure);
 		
 		$full_fragments = array();
 		$obj = new stdClass();
@@ -215,7 +215,7 @@ class image {
 			case (isset($this->image_type) && $this->image_type==='posterframe'):
 			default:
 				# POSTERFRAME
-				$path = DEDALO_MEDIA_URL . DEDALO_AV_FOLDER .'/posterframe/'; // __CONTENT_BASE_URL__ .
+				$path = DEDALO_MEDIA_BASE_URL . DEDALO_AV_FOLDER .'/posterframe/'; // __CONTENT_BASE_URL__ .
 				$name = DEDALO_COMPONENT_RESOURCES_AV_TIPO .'_'. AUDIOVISUAL_SECTION_TIPO .'_'. $this->av_section_id .'.'.DEDALO_AV_POSTERFRAME_EXTENSION; 
 				$image_url = $path . $name;
 				break;

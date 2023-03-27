@@ -29,8 +29,7 @@ abstract class notes {
 			$pattern = TR::get_mark_pattern('note', true, false, false, 'b');
 			$text_clean = preg_replace($pattern, '', $text_clean);
 		}
-		
-		
+				
 
 		return $text_clean;
 	}//end remove_notes
@@ -48,18 +47,22 @@ abstract class notes {
 
 		$ar_notes = [];
 
+		return $ar_notes;
+
+		// En curso (Necesita RecordObj_dd de momento)..........................
+
 
 		preg_match_all($pattern, $raw_text, $matches);
 			#dump($matches, ' matches ++ '.to_string());		
 		$key_locator = 7;
 		$key_id 	 = 4;
 		$component_tipo = DEDALO_NOTES_TEXT_TIPO;
-		$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 		foreach ($matches[$key_locator] as $key => $locator) {
 			$locator = str_replace('\'', '"', $locator);
 			$locator = json_decode($locator);
 
-			$component 		= component_common::get_instance($model_name,
+			$component 		= component_common::get_instance($modelo_name,
 															 $component_tipo,
 															 $locator->section_id,
 															 'list',
