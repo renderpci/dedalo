@@ -291,7 +291,13 @@ abstract class JSON_RecordDataBoundObject {
 					: false;
 				// error case
 					if ($id===false) {
-						debug_log(__METHOD__." Error Processing Request: " .PHP_EOL. pg_last_error(DBi::_getConnection()), logger::ERROR);
+						debug_log(__METHOD__
+							. " !! Error Processing Request. Received response (id) is 'false'. Maybe you trying to update a non existing record".PHP_EOL
+							. "Check the existence of record section_tipo: '$section_tipo' section_id: '$section_id' "
+							. "pg_last_error: " . PHP_EOL
+							. pg_last_error(DBi::_getConnection())
+							, logger::ERROR
+						);
 						if(SHOW_DEBUG===true) {
 							$debug_strQuery = preg_replace_callback(
 								'/\$(\d+)\b/',
@@ -300,17 +306,21 @@ abstract class JSON_RecordDataBoundObject {
 								},
 								$strQuery
 							);
-							dump($result, ' Save result ++ '.$section_id .PHP_EOL. to_string($debug_strQuery));
+							dump($result, ' Save result. section_id: '.to_string($section_id) . PHP_EOL .'query:' . PHP_EOL . to_string($debug_strQuery));
 							// throw new Exception("Error Processing Request: " .PHP_EOL. pg_last_error(DBi::_getConnection()), 1);
+							// dump(debug_backtrace(), ' bt debug_backtrace ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string());
 						}
 						// return false;
 						return null;
 					}
 				// Fix new received id (id matrix)
-					if (!isset($this->ID)) {
+					if (!isset($this->ID) && !empty($id)) {
 						$this->ID = $id;
 					}elseif($this->ID!=$id) {
-						debug_log(__METHOD__.' Error. ID received after update is different from current ID. this ID: '.$this->ID.' received id: '.$id, logger::ERROR);
+						debug_log(__METHOD__
+							.' Error. ID received after update is different from current ID. this ID: '.$this->ID.' received id: '.$id
+							, logger::ERROR
+						);
 						// throw new Exception('Error. ID received after update is different from current ID. this ID: '.$this->ID.' received id: '.$id , 1);
 					}
 

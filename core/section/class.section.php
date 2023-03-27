@@ -1104,7 +1104,7 @@ class section extends common {
 							// custom projects dato passed
 
 							// set the component_filter with the dato sent by the caller (portals)
-							$component_filter 	= component_common::get_instance(
+							$component_filter = component_common::get_instance(
 								'component_filter',
 								$ar_tipo_component_filter[0],
 								$this->section_id,

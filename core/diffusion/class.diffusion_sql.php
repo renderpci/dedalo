@@ -1078,13 +1078,13 @@ class diffusion_sql extends diffusion  {
 
 				#
 				# Diffusion element
-				$diffusion_term = new RecordObj_dd($options->tipo);
-				$properties 	= $diffusion_term->get_propiedades(true);	# Format: {"data_to_be_used": "dato"}
+				$diffusion_term	= new RecordObj_dd($options->tipo);
+				$properties		= $diffusion_term->get_propiedades(true);	# Format: {"data_to_be_used": "dato"}
 
 				#
 				# Component target
 				$related_component_tipo	= self::get_field_related_component($options->tipo);
-				$model_name			= RecordObj_dd::get_modelo_name_by_tipo($related_component_tipo,true);
+				$model_name				= RecordObj_dd::get_modelo_name_by_tipo($related_component_tipo,true);
 
 				// related term info
 					$ar_field_data['related_term']  = $related_component_tipo;
@@ -1093,18 +1093,22 @@ class diffusion_sql extends diffusion  {
 				// component
 					if($model_name==='relation_list') {
 
-						$current_component	= new relation_list($related_component_tipo,
-																$options->parent,
-																$options->section_tipo,
-																'list');
+						$current_component = new relation_list(
+							$related_component_tipo,
+							$options->parent,
+							$options->section_tipo,
+							'list'
+						);
 					}else{
-						$current_component	= component_common::get_instance($model_name,
-																			 $related_component_tipo,
-																			 $options->parent,
-																			 'list', // Note that list have dato fallback (in section)
-																			 $options->lang,
-																			 $options->section_tipo,
-																			 false);
+						$current_component = component_common::get_instance(
+							$model_name,
+							$related_component_tipo,
+							$options->parent,
+							'list', // Note that list have dato fallback (in section)
+							$options->lang,
+							$options->section_tipo,
+							false
+						);
 					}
 					# Fix diffusion element properties on target component to enable configure response value
 					$current_component->set_diffusion_properties($properties);
@@ -1123,7 +1127,7 @@ class diffusion_sql extends diffusion  {
 						: $current_component->get_dato();
 				}
 
-				$diffusion_model_name 	= RecordObj_dd::get_modelo_name_by_tipo($options->tipo,true);
+				$diffusion_model_name = RecordObj_dd::get_modelo_name_by_tipo($options->tipo,true);
 
 
 				# switch cases
@@ -1178,6 +1182,7 @@ class diffusion_sql extends diffusion  {
 						break;
 
 					case (is_object($properties) && property_exists($properties, 'process_dato')):
+
 						# Process dato with function
 						$function_name = $properties->process_dato;
 						$ar_field_data['field_value'] = call_user_func($function_name, $options, $dato);
