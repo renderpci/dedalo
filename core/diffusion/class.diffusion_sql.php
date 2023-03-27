@@ -1545,13 +1545,16 @@ class diffusion_sql extends diffusion  {
 				if (!empty($found_component_relation_parent)) {
 					// this section is thesaurus
 					// locate recursive parents
-					$parents_recursive = component_relation_parent::get_parents_recursive($section_id, $section_tipo);
-
+					$parents_recursive = component_relation_parent::get_parents_recursive(
+						$section_id,
+						$section_tipo,
+						true
+					);
 					foreach ($parents_recursive as $parents_recursive_locator) {
 
 						// launch parent update record
 						$new_options = new stdClass();
-							$new_options->section_tipo				= $section_tipo;
+							$new_options->section_tipo				= $parents_recursive_locator->section_tipo;
 							$new_options->section_id				= $parents_recursive_locator->section_id;
 							$new_options->diffusion_element_tipo	= $diffusion_element_tipo;
 						$this->update_record($new_options);
