@@ -1462,6 +1462,12 @@ class component_text_area extends component_common {
 				? html_entity_decode($dato[0])
 				: null;
 
+		// remove empty paragraphs
+			if ($diffusion_value==='<p></p>') {
+				$diffusion_value = null;
+			}
+
+
 		return $diffusion_value;
 	}//end get_diffusion_value
 
