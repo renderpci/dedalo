@@ -4,7 +4,7 @@
 * Object like free node results
 * Every search free row generates an array of audiovisual rows. Each row is a free node
 */
-class image {
+class image extends stdClass {
 
 
 
@@ -13,7 +13,7 @@ class image {
 
 
 	public $section_id; 	// int like 46
-	public $description_with_images; 	// string 
+	public $description_with_images; 	// string
 
 
 	/**
@@ -25,7 +25,7 @@ class image {
 
 		foreach ($request_options as $key => $value) {
 			$this->$key = $value;
-		}		
+		}
 	}//end __construct
 
 
@@ -40,7 +40,7 @@ class image {
 		$row_image_data = $this->get_row_image_data( $this->section_id );
 		$row_image 	  	= reset($row_image_data->result);
 			#dump($row_image_data, ' row_image_data ++ '.to_string());
-				
+
 		# Set direct values
 		foreach ($row_image as $key => $value) {
 			$key = ($key==='description') ? 'description_raw' : $key;
@@ -66,18 +66,18 @@ class image {
 		}
 
 		# Description with images
-		if ($this->description_with_images===true) {			
+		if ($this->description_with_images===true) {
 
 			$options = new stdClass();
 				$options->btn_url = $this->btn_url; //__CONTENT_BASE_URL__ . '/dedalo/inc/btn.php';
 			$this->description_with_images = TR::addTagImgOnTheFly($description_raw, $options);
 		}
-		
+
 		# Description clean text
 		if ($this->description_clean===true) {
 			$this->description_clean = TR::deleteMarks($description_raw);
 		}
-		
+
 
 		return true;
 	}//end load_data
@@ -97,8 +97,8 @@ class image {
 			$options->sql_filter 	= 'section_id = ' . (int)$section_id;
 			$options->lang 			= $this->lang;
 			$options->order 		= null;
-			$options->limit 		= 1;	
-			
+			$options->limit 		= 1;
+
 			$rows_data = (object)web_data::get_rows_data( $options );
 
 
@@ -113,14 +113,14 @@ class image {
 	* @return array $full_fragments
 	*/
 	public function get_full_fragments( $raw_text ) {
-		
+
 		$fragm = TR::deleteMarks($raw_text_sure);
-		
+
 		$full_fragments = array();
 		$obj = new stdClass();
 			$obj->video_url = $this->video;
 			$obj->fragm 	= $fragm;
-			
+
 		$full_fragments[] = $obj;
 
 
@@ -132,21 +132,21 @@ class image {
 	/**
 	* GET_FRAGMENT_TERMS
 	* Search index tags intersected with current word position
-	* @return 
+	* @return
 	*/
 	public function get_fragment_terms( $av_section_id, $raw_text ) {
 
 
-		# FRAGMENT AFTER . Find index out tags on fragment_after text. 
+		# FRAGMENT AFTER . Find index out tags on fragment_after text.
 		# For speed, is used fragment_after because normally is more short than fragment_before, but the result is the same
 		$draw_pattern  = TR::get_mark_pattern('draw', $standalone=true, $id=false, $data=false);
-		
-		preg_match_all($draw_pattern, $raw_text, $indexIn_mathches);		
+
+		preg_match_all($draw_pattern, $raw_text, $indexIn_mathches);
 
 		$tag_number_key = 4;
 		if (empty($indexIn_mathches[$tag_number_key]) || empty($indexOut_mathches[$tag_number_key])) {
 			return array();
-		}		
+		}
 		$ar_indexIn_tag_id 	= $indexIn_mathches[$tag_number_key];
 		$ar_indexOut_tag_id = $indexOut_mathches[$tag_number_key];
 			#dump($ar_indexIn_tag_id, ' ar_indexIn_tag_id ++ '.to_string());
@@ -160,7 +160,7 @@ class image {
 		$AUDIOVISUAL_SECTION_TIPO 	= AUDIOVISUAL_SECTION_TIPO;
 		$ar_termns = array();
 
-		
+
 		$ar_filter= array();
 		foreach ($result as $tag_id) {
 			$line = "`indexation` LIKE '%\"type\":\"dd96\",\"tag_id\":\"$tag_id\",\"section_id\":\"$av_section_id\",\"section_tipo\":\"$AUDIOVISUAL_SECTION_TIPO\"%' ";
@@ -184,7 +184,7 @@ class image {
 			$term 		= $value[FIELD_TERM];
 			$ar_termns[$term_id] = $term;
 		}
-		
+
 
 		# Sort terms
 		natsort($ar_termns);
@@ -200,7 +200,7 @@ class image {
 	* @return string
 	*/
 	public function get_image_url() {
-	
+
 		$image_url = null;	//'../images/bg_foto_search_free.png'; // Default
 
 		switch (true) {
@@ -209,14 +209,14 @@ class image {
 				if (isset($this->image[0])) {
 					$identify_image_url = $this->image[0][FIELD_IMAGE];
 					$image_url = $identify_image_url;
-				}				
+				}
 				break;
-			
+
 			case (isset($this->image_type) && $this->image_type==='posterframe'):
 			default:
 				# POSTERFRAME
 				$path = DEDALO_MEDIA_BASE_URL . DEDALO_AV_FOLDER .'/posterframe/'; // __CONTENT_BASE_URL__ .
-				$name = DEDALO_COMPONENT_RESOURCES_AV_TIPO .'_'. AUDIOVISUAL_SECTION_TIPO .'_'. $this->av_section_id .'.'.DEDALO_AV_POSTERFRAME_EXTENSION; 
+				$name = DEDALO_COMPONENT_RESOURCES_AV_TIPO .'_'. AUDIOVISUAL_SECTION_TIPO .'_'. $this->av_section_id .'.'.DEDALO_AV_POSTERFRAME_EXTENSION;
 				$image_url = $path . $name;
 				break;
 		}
@@ -224,6 +224,6 @@ class image {
 		return $image_url;
 	}//end get_image_url
 
-	
+
 
 }//end class image

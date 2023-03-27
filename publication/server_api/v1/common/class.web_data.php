@@ -2702,7 +2702,7 @@ class web_data {
 
 		$options = new stdClass();
 			$options->table 		= (string)TABLE_THESAURUS;
-			$options->ar_fields 	= array($field_indexation,'term_id');
+			$options->ar_fields 	= ['term_id',$field_indexation];
 			$options->sql_filter 	= $filter; 	// !IMPORTANT : NEVER USE PUBLICATION FILTER HERE // ." AND lang = '".WEB_CURRENT_LANG_CODE."' "
 			$options->lang 			= WEB_CURRENT_LANG_CODE;
 			$options->order 		= null;
