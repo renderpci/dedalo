@@ -9,19 +9,8 @@
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {when_in_viewport} from '../../common/js/events.js'
 
-	// used a importmap define in page/index.html to resolve directories
-	// the main addons is /lib/threejs/jsm/ has to be mapped as three/
-	// (!) Safari compatibility ??? : https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script/type/importmap#browser_compatibility
-	import * as THREE from 'three'
-	import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
-	import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-	import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js'
-	import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
-	// import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader.js';
-	// import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
-	import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
-
-
+	// Viewer
+	import { viewer } from './viewer/viewer.js';
 
 /**
 * VIEW_DEFAULT_EDIT_3D
@@ -102,9 +91,6 @@ const get_content_data_edit = function(self) {
 			content_data[i] = content_value
 		}
 
-	console.log(content_data)
-
-
 	return content_data
 }//end  get_content_data_edit
 
@@ -123,17 +109,6 @@ const get_content_value = (i, current_value, self) => {
 			class_name 		: 'content_value'
 		})
 
-		const canvas = ui.create_dom_element({
-			element_type	: 'canvas',
-			// class_name 		: 'content_value',
-			parent 			: content_value
-		})
-
-		setTimeout(function(){
-			console.log('canvas:', canvas);
-			console.log('canvas.backgroundColor:', canvas.backgroundColor);
-		}, 3000)
-
 	// get file quality
 		const quality	= self.quality || self.context.features.quality
 		const datalist	= self.data.datalist
@@ -146,202 +121,18 @@ const get_content_value = (i, current_value, self) => {
 			return content_value
 		}
 
-		const renderer = new THREE.WebGLRenderer({canvas:canvas, antialias:true});
-		renderer.outputEncoding = THREE.sRGBEncoding;
-
-		renderer.setPixelRatio( window.devicePixelRatio );
-		renderer.setSize( 1000, 600 );
-
-		// Instantiate camera
-		const fov		= 45;
-		const aspect	= 2;  // the canvas default
-		const near		= 0.1;
-		const far		= 100;
-		const camera = new THREE.PerspectiveCamera( fov, aspect, near, far)
-		camera.position.set(0, 10, 20);
-		// self.camera = camera
-
-
-		const controls = new OrbitControls(camera, canvas);
-		controls.target.set(0, 5, 0);
-		controls.update();
-
-		// Instantiate scene
-		const scene = new THREE.Scene()
-		// self.scene = scene
-
-		// {
-		// 	const planeSize = 40;
-
-		// 	const loader = new THREE.TextureLoader();
-		// 	const texture = loader.load('https://threejs.org/manual/examples/resources/images/checker.png');
-		// 	texture.wrapS = THREE.RepeatWrapping;
-		// 	texture.wrapT = THREE.RepeatWrapping;
-		// 	texture.magFilter = THREE.NearestFilter;
-		// 	const repeats = planeSize / 2;
-		// 	texture.repeat.set(repeats, repeats);
-
-		// 	const planeGeo = new THREE.PlaneGeometry(planeSize, planeSize);
-		// 	const planeMat = new THREE.MeshPhongMaterial({
-		// 	map: texture,
-		// 	side: THREE.DoubleSide,
-		// 	});
-		// 	const mesh = new THREE.Mesh(planeGeo, planeMat);
-		// 	mesh.rotation.x = Math.PI * -.5;
-		// 	scene.add(mesh);
-		// }
-
-		// add hemisphere light
-		{
-			const skyColor = 0xB1E1FF;  // light blue
-			const groundColor = 0xB97A20;  // brownish orange
-			const intensity = 0.6;
-			const light = new THREE.HemisphereLight(skyColor, groundColor, intensity);
-			scene.add(light);
-		}
-		// add directional light
-		{
-			const color = 0xFFFFFF;
-			const intensity = 0.8;
-			const light = new THREE.DirectionalLight(color, intensity);
-			light.position.set(5, 10, 2);
-			scene.add(light);
-			scene.add(light.target);
-		}
-
-
-		// scene.add( camera );
-
-
-		// content_value.appendChild(renderer.domElement)
-		// self.renderer = renderer
-
-
-		// const geometry = new THREE.BoxGeometry( 1, 1, 1 );
-		// const material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
-		// const cube = new THREE.Mesh( geometry, material );
-		// scene.add( cube );
-
-		camera.position.z = 5;
-
-		function render() {
-			// requestAnimationFrame( animate );
-			renderer.render( scene,  camera );
-		}
-
-		const MANAGER = new THREE.LoadingManager();
-
-		// Instantiate a GLTF + DRACO loader
-		const loader = new GLTFLoader( MANAGER )
-		const dracoLoader = new DRACOLoader(MANAGER);
-		dracoLoader.setDecoderPath( '../../lib/threejs/jsm/libs/draco/' );  // path is weird
-		loader.setDRACOLoader( dracoLoader );
-
-		// Instantiate a GLTF + KTX2Loader loader
-		const ktx2_loader = new KTX2Loader( MANAGER )
-		ktx2_loader.setTranscoderPath( '../../lib/threejs/jsm/libs/basis/' );
-		loader.setKTX2Loader( ktx2_loader.detectSupport( renderer ) )
-
-		// Instantiate a GLTF + MeshoptDecoder
-		loader.setMeshoptDecoder( MeshoptDecoder );
-		loader.load(
-			// resource URL   # TODO: change find with quality selector
-				file_url,
-			// called when the resource is loaded
-			function ( gltf ) {
-
-				const object = gltf.scene
-				scene.add( object );
-				// gltf.animations; // Array<THREE.AnimationClip>
-				// gltf.scene; // THREE.Group
-				// gltf.scenes; // Array<THREE.Group>
-				// gltf.cameras; // Array<THREE.Camera>
-				// gltf.asset; // Object
-
-
-				// compute the box that contains all the stuff
-				// from root and below
-				const box = new THREE.Box3().setFromObject(object);
-
-				const boxSize	= box.getSize(new THREE.Vector3()).length();
-				const boxCenter	= box.getCenter(new THREE.Vector3());
-
-				// set the camera to frame the box
-				frameArea(boxSize * 0.5, boxSize, boxCenter, camera);
-
-				// update the Trackball controls to handle the new size
-					controls.maxDistance = boxSize * 10;
-					controls.target.copy(boxCenter);
-					controls.update();
-				// renderer.render(scene, camera)
-				console.log('FINISHED LOADING!')
-
-				 console.log(dumpObject(object).join('\n'));
-
-				// renderer.render( scene, camera );
-				render();
-			},
-			// called while loading is progressing
-			function ( xhr ) {
-				console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' )
-			},
-			// called when loading has errors
-			function ( error ) {
-				console.log( 'An error happened', error )
-			}
-		)
-
-
-		function resizeRendererToDisplaySize(renderer) {
-			const canvas = renderer.domElement;
-			const width = canvas.clientWidth;
-			const height = canvas.clientHeight;
-			const needResize = canvas.width !== width || canvas.height !== height;
-			if (needResize) {
-				renderer.setSize(width, height, false);
-			}
-				return needResize;
-		}
-
-		// Instantiate renderer
-			function render() {
-				if (resizeRendererToDisplaySize(renderer)) {
-					const canvas = renderer.domElement;
-					camera.aspect = canvas.clientWidth / canvas.clientHeight;
-					camera.updateProjectionMatrix();
-				}
-
-				renderer.render(scene, camera);
-
-				requestAnimationFrame(render);
-			}
-
-		// get ad set frameArea
-		 function frameArea(sizeToFitOnScreen, boxSize, boxCenter, camera) {
-			const halfSizeToFitOnScreen = sizeToFitOnScreen * 0.5;
-			const halfFovY = THREE.MathUtils.degToRad(camera.fov * .5);
-			const distance = halfSizeToFitOnScreen / Math.tan(halfFovY);
-			// compute a unit vector that points in the direction the camera is now
-			// in the xz plane from the center of the box
-			const direction = (new THREE.Vector3())
-				.subVectors(camera.position, boxCenter)
-				.multiply(new THREE.Vector3(1, 0, 1))
-				.normalize();
-
-			// move the camera to a position distance units way from the center
-			// in whatever direction the camera was from the center already
-			camera.position.copy(direction.multiplyScalar(distance).add(boxCenter));
-
-			// pick some near and far values for the frustum that
-			// will contain the box.
-			camera.near = boxSize / 100;
-			camera.far = boxSize * 100;
-
-			camera.updateProjectionMatrix();
-
-			// point the camera to look at the center of the box
-			camera.lookAt(boxCenter.x, boxCenter.y, boxCenter.z);
-		  }
+		when_in_viewport(content_value, function(){
+			const viewer_3d = viewer.init()
+			viewer_3d.build(content_value, {})
+			viewer_3d.load(file_url) //rootPath, fileMap
+				.catch((e) => this.onError(e))
+				.then((gltf) => {
+					// if (!this.options.kiosk) {
+						// dator.validate(fileURL, rootPath, fileMap, gltf);
+					// }
+				// cleanup();
+				});
+		})
 
 
 	// // urls
@@ -448,64 +239,7 @@ const get_content_value_read = (i, current_value, self) => {
 
 
 
-// show mesh structure
-function dumpObject(obj, lines = [], isLast = true, prefix = '') {
-	const localPrefix = isLast ? '└─' : '├─';
-	lines.push(`${prefix}${prefix ? localPrefix : ''}${obj.name || '*no-name*'} [${obj.type}]`);
-	const newPrefix = prefix + (isLast ? '  ' : '│ ');
-	const lastNdx = obj.children.length - 1;
-	obj.children.forEach((child, ndx) => {
-		const isLast = ndx === lastNdx;
-		dumpObject(child, lines, isLast, newPrefix);
-	});
-	return lines;
-}
-
-
-
-/**
-* BUILD_3D_NODE
-*
-* @param string|null posterframe_url
-* @return HTMLElement video
-*/
-const build_3d_node = (posterframe_url) => {
-
-	// source tag
-		const source	= document.createElement('source')
-		source.type		= 'video/mp4'
-		// source.src	= video_url
-
-	// video tag
-		const video		= document.createElement('video')
-		video.classList.add('hide')
-		if (posterframe_url) {
-			video.poster = posterframe_url
-		}
-		video.controls	= true
-		video.classList.add('posterframe')
-		video.setAttribute('tabindex', 0)
-		video.appendChild(source)
-
-	// keyup event
-		// video.addEventListener("timeupdate", async (e) => {
-		// 	// e.stopPropagation()
-		// 	// const frame = Math.floor(video.currentTime.toFixed(5) * 25);
-		// })
-
-	// canplay event
-		// video.addEventListener('canplay', fn_canplay)
-		// function fn_canplay() {
-		// 	// self.main_component.video.removeEventListener('canplay', fn_play);
-		// 	video.play()
-		// }
-
-	return video
-}//end build_3D_node
-
-
-
-/**
+/*
 * GET_QUALITY_SELECTOR
 *
 * @param object content_value

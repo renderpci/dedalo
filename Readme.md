@@ -203,9 +203,9 @@ Browser	|	Version |	Compatible with Dédalo
 Chrome	|	106+ | YES - recommended
 Chrome	|	100 to 105 | Deprecated (Please update as soon as possible)
 Chrome	|	0 to 100 | NO
-Safari	|	16+ | YES
-Safari	|	15 | Deprecated (Please update as soon as possible)
-Safari	|	0 to 14 | NO
+Safari	|	16.4+ | YES
+Safari	|	16.3 | Deprecated (Please update as soon as possible)
+Safari	|	0 to 15 | NO
 Firefox	|	105+ | YES
 Firefox	|	100 to 104 | Deprecated (Please update as soon as possible)
 Firefox	|	0-99 | NO
