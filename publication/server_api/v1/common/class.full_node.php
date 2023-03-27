@@ -4,7 +4,7 @@
 * Object like free node results
 * Every search free row generates an array of audiovisual rows. Each row is a free node
 */
-class full_node {
+class full_node extends stdClass {
 
 
 

@@ -4,7 +4,7 @@
 * Object for get all player data
 *
 */
-class video_view_data {
+class video_view_data extends stdClass {
 
 
 
@@ -383,6 +383,4 @@ class video_view_data {
 
 
 
-
 }//end class video_view_data
-?>

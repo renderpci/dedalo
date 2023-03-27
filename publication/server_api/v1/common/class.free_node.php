@@ -4,7 +4,7 @@
 * Object like free node results
 * Every search free row generates an array of audiovisual rows. Each row is a free node
 */
-class free_node {
+class free_node extends stdClass {
 
 
 
@@ -225,7 +225,7 @@ class free_node {
 				# TEXT_BEFORE . Buscamos el último <br /> anterior a word_position en el texto anterior
 					$pInArray			= self::str_pos_all($text_before,'<br />');
 					$n_paragraphs		= 4 ;
-					$c_key				= $pInArray && is_array($pInArray) 
+					$c_key				= $pInArray && is_array($pInArray)
 						? count($pInArray)-$n_paragraphs-1
 						: false;
 					$inicioParrafoPos	= ($c_key!==false && isset($pInArray[$c_key])) ? $pInArray[$c_key] : 0 ;
