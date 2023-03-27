@@ -2692,8 +2692,8 @@ class web_data {
 
 		// "section_id":"40","section_tipo":"rsc167","component_tipo":"rsc36"
 		// $filter = "(`index` LIKE '%\"section_tipo\":\"$section_tipo\",\"section_id\":\"$section_id\"%')";
-		$filter = "(`{$field_indexation}` LIKE '%\"section_id\":\"$section_id\",\"section_tipo\":\"$section_tipo\"%'
-					OR `{$field_indexation}` LIKE '%\"section_tipo\":\"$section_tipo\",\"section_id\":\"$section_id\"%')";
+		$filter = "(`{$field_indexation}` LIKE '%\"section_id\":\"$section_id\",\"section_tipo\":\"$section_tipo\"%')";
+					// OR `{$field_indexation}` LIKE '%\"section_tipo\":\"$section_tipo\",\"section_id\":\"$section_id\"%')";
 
 		if ($term_id) {
 			$filter = "`term_id` = '$term_id' AND $filter ";
