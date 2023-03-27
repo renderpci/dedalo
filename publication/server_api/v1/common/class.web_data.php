@@ -2675,24 +2675,25 @@ class web_data {
 	*            )
 	* @return array $ar_locators
 	*/
-	public static function get_ar_fragments_from_reel( $section_id, $term_id=false, $section_tipo=AUDIOVISUAL_SECTION_TIPO) {
+	public static function get_ar_fragments_from_reel( $section_id, $term_id=false, $section_tipo=AUDIOVISUAL_SECTION_TIPO ) {
 
 		// check vars
 			if(!empty($section_id) && !self::check_safe_value('section_id', $section_id)) {
-				die("Error. Ilegal section_id: ".$section_id);
+				die("Error. Illegal section_id: ".$section_id);
 			}
 			if(!empty($term_id) && !self::check_safe_value('term_id', $term_id)) {
-				die("Error. Ilegal term_id: ".$term_id);
+				die("Error. Illegal term_id: ".$term_id);
 			}
 			if(!empty($section_tipo) && !self::check_safe_value('section_tipo', $section_tipo)) {
-				die("Error. Ilegal section_tipo: ".$section_tipo);
+				die("Error. Illegal section_tipo: ".$section_tipo);
 			}
 
 		$field_indexation = defined('FIELD_INDEX') ? FIELD_INDEX : 'indexation';
 
 		// "section_id":"40","section_tipo":"rsc167","component_tipo":"rsc36"
-		#$filter = "(`index` LIKE '%\"section_tipo\":\"$section_tipo\",\"section_id\":\"$section_id\"%')";
-		$filter = "(`{$field_indexation}` LIKE '%\"section_id\":\"$section_id\",\"section_tipo\":\"$section_tipo\"%')";
+		// $filter = "(`index` LIKE '%\"section_tipo\":\"$section_tipo\",\"section_id\":\"$section_id\"%')";
+		$filter = "(`{$field_indexation}` LIKE '%\"section_id\":\"$section_id\",\"section_tipo\":\"$section_tipo\"%'
+					OR `{$field_indexation}` LIKE '%\"section_tipo\":\"$section_tipo\",\"section_id\":\"$section_id\"%')";
 
 		if ($term_id) {
 			$filter = "`term_id` = '$term_id' AND $filter ";
