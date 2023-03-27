@@ -493,7 +493,7 @@ class ts_term {
 		
 		$options = new stdClass();
 			$options->table 		= (string)$thesaurus_table;
-			$options->ar_fields 	= array('parent');
+			$options->ar_fields 	= array('id','parent');
 			$options->lang 			= WEB_CURRENT_LANG_CODE;
 			$options->sql_filter 	= "term_id = '$term_id'" . PUBLICACION_FILTER_SQL;
 			$options->limit 		= 1;
