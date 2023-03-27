@@ -2454,6 +2454,9 @@ class section extends common {
 	public function diffusion_info_propagate_changes() : bool {
 		$start_time = start_time();
 
+		// (!) stopped temporally 27-03-2023 by Paco to prevent unexpected errors in diffusion
+		return true;
+
 		// exclude some matrix_table records to propagate diffusion info
 			$exclude_tables = [
 				'matrix_users',
