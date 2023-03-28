@@ -233,25 +233,31 @@ class free_node extends stdClass {
 						#dump($fragment_before, ' fragment_before ++ '.to_string());
 
 				# TEXT_AFTER . Buscamos el primer </p> posterior  a palabraPos
-					$pOutArray 			= self::str_pos_all($text_after,'<br />');
-					$n_paragraphs 		= 5 ;
+					$pOutArray		= self::str_pos_all($text_after,'<br />');
+					$n_paragraphs	= 5 ;
 
 					if(isset($pOutArray[$n_paragraphs])) {
-						$finalParrafoPos = $pOutArray[$n_paragraphs];
-						$fragment_after  = mb_substr($text_after, 0, $finalParrafoPos );
+						$finalParrafoPos	= $pOutArray[$n_paragraphs];
+						$fragment_after		= mb_substr($text_after, 0, $finalParrafoPos );
 							#dump($fragment_after, ' $fragment_after ++ '.to_string());
 					}else{
-						$finalParrafoPos = $pOutArray[0];
-						$fragment_after  = $text_after; // Full
+						$finalParrafoPos	= $pOutArray[0];
+						$fragment_after		= $text_after; // Full
 					}
 
-				# TC . Localizamos los TC apropiados
-					# $texto, $indexIN, $inicioPos='', $in_margin=100
-					$tcin  = OptimizeTC::optimize_tcIN(  $raw_text, null, (int)$inicioParrafoPos, $in_margin=0 );
-					$tcout = OptimizeTC::optimize_tcOUT( $raw_text, null, (int)$word_position + $finalParrafoPos  ); // -120
-
-					#$tcin = '00:49:22.333';
-					#$tcin = '00:50:17.157';
+				// TC
+					$tcin = OptimizeTC::optimize_tc_in(
+						$raw_text, // string text
+						null, // string|null indexIN
+						(int)$inicioParrafoPos, // int|null start_position
+						0 // int in_margin
+					);
+					$tcout = OptimizeTC::optimize_tc_out(
+						$raw_text, // string text
+						null, // string|null indexOUT
+						(int)$word_position + $finalParrafoPos,  // int|null end_position
+						100 // int in_margin (default 100)
+					);
 
 				# FRAGMENT
 					$fragm = trim($fragment_before . $fragment_after);

@@ -31,24 +31,24 @@ abstract class OptimizeTC {
 
 
 	/**
-	* OPTIMIZE_TCIN
+	* OPTIMIZE_TC_IN
 	* Calculates the time code for the indexation tag given in the received raw text
 	* Adjustment of virtual time-codes calculated by averaging
 	* Once the index IN is located, if the previous and subsequent TCs are more than X additional characters, we make an approximation
 	* and create a virtual TC with the average of the duration of the characters between the previous and subsequent TCs.
 	* @param string $text
-	* @param string $indexIN
+	* @param string|null $indexIN
 	* 	tag like: '[index-n-10-label in 10-data::data]'
-	* @param int|null $inicioPos = 0
+	* @param int|null $start_position = null
 	* @param int $in_margin = 100
 	*
 	* @return string $tcin
 	* 	Time-code string as '00:00:00.000'
 	*/
-	public static function optimize_tcIN(string $text, string $indexIN, ?int $inicioPos=null, int $in_margin=100) : string {
+	public static function optimize_tc_in(string $text, ?string $indexIN, ?int $start_position=null, int $in_margin=100) : string {
 
 		// intentional zero in position case. Do not calculate nothing, only return the corresponding time code
-			if($inicioPos===0) {
+			if($start_position===0) {
 				$indexPos = 0;
 				return '00:00:00.000';
 			}
@@ -57,9 +57,9 @@ abstract class OptimizeTC {
 		mb_internal_encoding('UTF-8'); // Set in config
 
 		// If inicioPos > 0 we will be searching freely, without index or we already know the position
-		if( !empty($inicioPos) && $inicioPos!=='' ) {
+		if( !empty($start_position) && $start_position!=='' ) {
 
-			$indexPos = $inicioPos - $in_margin;
+			$indexPos = $start_position - $in_margin;
 
 		}else{
 
@@ -153,34 +153,35 @@ abstract class OptimizeTC {
 
 
 		return $tcin;
-	}//end optimize_tcIN
+	}//end optimize_tc_in
 
 
 
 	/**
-	* OPTIMIZE_TCOUT
+	* OPTIMIZE_TC_OUT
 	* Calculates the time code for the indexation tag given in the received raw text
 	* @param string $text
-	* @param string $indexOUT
+	* @param string|null $indexOUT
 	* 	tag like: '[/index-n-10-label in 10-data::data]'
-	* @param int|null $finalPos = null
+	* @param int|null $end_position = null
 	* @param int $in_margin = 100
 	*
 	* @return string $tcout
+	* 	Time-code string as '00:00:00.000'
 	*/
-	public static function optimize_tcOUT(string $text, string $indexOUT, ?int $finalPos=null, int $in_margin=100) : string {
+	public static function optimize_tc_out(string $text, ?string $indexOUT, ?int $end_position=null, int $in_margin=100) : string {
 
 		// set internal encoding for safe multi byte position locations
 		mb_internal_encoding('UTF-8'); // Set in config
 
-		if (is_null($finalPos)) {
+		if (is_null($end_position)) {
 			// absolute position of index OUT (default case)
 			$indexPos 	= mb_strpos($text, $indexOUT);
 			$indexPos 	= $indexPos + $in_margin;
 		}else{
 			// If finalPos if given, we are in search free case, do not use indexOUT here
-			$indexPos 	= mb_strpos($text, $finalPos);
-			$indexPos 	= $finalPos + $in_margin;
+			$indexPos 	= mb_strpos($text, $end_position);
+			$indexPos 	= $end_position + $in_margin;
 		}
 
 		// validation margin default
@@ -270,7 +271,7 @@ abstract class OptimizeTC {
 
 
 		return $tcout ;
-	}//end optimize_tcOUT
+	}//end optimize_tc_out
 	// ****** END ADJUSTMENT VIRTUAL TC'S CALCULATED BY MAKING THE AVERAGE ******* //
 
 

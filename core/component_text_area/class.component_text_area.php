@@ -1371,10 +1371,10 @@ class component_text_area extends component_common {
 
 		if(isset($properties['rel_locator'])) {
 
-			$rel_locator_obj= $properties['rel_locator'];
-			#$rel_locator 	= component_common::build_locator_from_obj( $rel_locator_obj );
-			$fragment_info	= component_text_area::get_fragment_text_from_rel_locator( $rel_locator_obj );
-			$texto 			= $this->get_dato()[0];
+			$rel_locator_obj	= $properties['rel_locator'];
+			#$rel_locator		= component_common::build_locator_from_obj( $rel_locator_obj );
+			$fragment_info		= component_text_area::get_fragment_text_from_rel_locator( $rel_locator_obj );
+			$texto				= $this->get_dato()[0];
 
 			# FRAGMENT
 			$diffusion_obj->columns['fragment']	= $fragment_info[0];
@@ -1392,12 +1392,22 @@ class component_text_area extends component_common {
 
 				case 'component_av':
 
-					# TC
-					$tag_in_pos  	= $fragment_info[1];
-					$tag_out_pos 	= $fragment_info[2];
-					$tc_in 		 	= OptimizeTC::optimize_tcIN($texto, false, $tag_in_pos, $in_margin=0);
-					$tc_out 	 	= OptimizeTC::optimize_tcOUT($texto, false, $tag_out_pos, $in_margin=100);
+					// TC
+					$tag_in_pos		= $fragment_info[1];
+					$tag_out_pos	= $fragment_info[2];
 
+					$tc_in = OptimizeTC::optimize_tc_in(
+						$texto, // string text
+						null, // string|null indexIN
+						(int)$tag_in_pos, // int|null start_position
+						0 // int in_margin
+					);
+					$tc_out = OptimizeTC::optimize_tc_out(
+						$texto, // string text
+						null, // string|null indexOUT
+						(int)$tag_out_pos, // int|null end_position
+						100 // int in_margin
+					);
 					$tcin_secs		= OptimizeTC::TC2seg($tc_in);
 					$tcout_secs		= OptimizeTC::TC2seg($tc_out);
 					$duracion_secs	= $tcout_secs - $tcin_secs;

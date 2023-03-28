@@ -88,11 +88,22 @@
 				// tc info
 					$tag_in_pos		= $fragment_info[1] ?? 0;
 					$tag_out_pos	= $fragment_info[2] ?? 0;
-					$tc_in			= OptimizeTC::optimize_tcIN($full_raw_text, false, $tag_in_pos, $in_margin=0);
-					$tc_out			= OptimizeTC::optimize_tcOUT($full_raw_text, false, $tag_out_pos, $in_margin=100);
+
+					$tc_in = OptimizeTC::optimize_tc_in(
+						$full_raw_text, // string text
+						null, // string|null indexIN
+						(int)$tag_in_pos, // int|null start_position
+						0 // int in_margin
+					);
+					$tc_out = OptimizeTC::optimize_tc_out(
+						$full_raw_text, // string text
+						null, // string|null indexOUT
+						(int)$tag_out_pos, // int|null end_position
+						100 // int in_margin
+					);
 
 					$tc_in_secs		= OptimizeTC::TC2seg($tc_in);
-					$tc_out_secs		= OptimizeTC::TC2seg($tc_out);
+					$tc_out_secs	= OptimizeTC::TC2seg($tc_out);
 					$duration_secs	= $tc_out_secs - $tc_in_secs;
 					$duration_tc	= OptimizeTC::seg2tc($duration_secs);
 
