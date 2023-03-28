@@ -2443,33 +2443,38 @@ class web_data {
 
 					if (isset($match[$fragment_inside_key][0])) {
 
-						$fragment_text_raw 	= $match[$fragment_inside_key][0];
+						$fragment_text_raw = $match[$fragment_inside_key][0];
 
-						$fragment_text 		= $fragment_text_raw;
+						$fragment_text = $fragment_text_raw;
 
-						# Clean fragment_text
-						$fragment_text 		= TR::deleteMarks($fragment_text);
-						#$fragment_text = self::decode_dato_html($fragment_text);
+						// Clean fragment_text
+							$fragment_text = TR::deleteMarks($fragment_text);
 
-						# tag in position
-						$tag_in_pos = $match[$tag_in_pos_key][1];
-						#$tag_in_pos = $match[$fragment_inside_key][1];
-							#dump($tag_in_pos, ' tag_in_pos ++ '.to_string());
+						// tag in position
+							$tag_in_pos = $match[$tag_in_pos_key][1];
 
-						# tag out position
-						#$tag_out_pos = $tag_in_pos + strlen($match[0][0]);
-						$tag_out_pos = $match[$tag_out_pos_key][1];
+						// tag out position
+							$tag_out_pos = $match[$tag_out_pos_key][1];
 
-						# TC . Localizamos los TC apropiados
-						#$tcin  = OptimizeTC::optimize_tcIN(  $raw_text, false, $tag_in_pos, $pos_in_margin=0  );
-						$tcin  = OptimizeTC::optimize_tcIN(  $raw_text, $match[$tag_in_pos_key][0], false, $pos_in_margin=$options->margin_chars_in  );
-						#$tcout = OptimizeTC::optimize_tcOUT( $raw_text, false, $tag_out_pos, $pos_in_margin=0 );
-						$tcout = OptimizeTC::optimize_tcOUT( $raw_text, $match[$tag_out_pos_key][0], false, $pos_in_margin=$options->margin_chars_out);
+						// TC . Time codes
+							$indexIN = $match[$tag_in_pos_key][0];
+							$tcin = OptimizeTC::optimize_tcIN(
+								$raw_text, // string text
+								$indexIN, // string indexIN
+								null, // int|null inicioPos
+								(int)$options->margin_chars_in  // int in_margin
+							);
+							$indexOUT = $match[$tag_out_pos_key][0];
+							$tcout = OptimizeTC::optimize_tcOUT(
+								$raw_text, // string text
+								$indexOUT, // string indexOUT
+								null, // int|null finalPos
+								(int)$options->margin_chars_out // int in_margin
+							);
+							// to seconds conversion
+							$tcin_secs	= OptimizeTC::TC2seg($tcin);
+							$tcout_secs	= OptimizeTC::TC2seg($tcout);
 
-						$tcin_secs 	= OptimizeTC::TC2seg($tcin);
-						$tcout_secs = OptimizeTC::TC2seg($tcout);
-
-						# TC MARGINS (Optionals)
 						// TC MARGINS (Optional)
 							if (!is_null($options->margin_seconds_in)) {
 								$tcin_secs  = OptimizeTC::tc_margin_seconds('in',  $tcin_secs,  $options->margin_seconds_in);
