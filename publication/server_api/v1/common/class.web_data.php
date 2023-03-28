@@ -2134,26 +2134,26 @@ class web_data {
 	/**
 	* GET_FRAGMENT_FROM_INDEX_LOCATOR
 	* 	Calculate all fragments indexed with this locator
-	* @param object | string $index_locator
+	* @param object $options
+	* $index_loc
 	*	$index_locator can be a PHP object or a JSON string representation of the object
 	* @return object $response
 	*/
-	public static function get_fragment_from_index_locator( $request_options ) {
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed (get_fragment_from_index_locator)';
+	public static function get_fragment_from_index_locator( $options ) {
 
 		// options
-			$options = new stdClass();
-				$options->index_locator		= null;
-				$options->lang				= WEB_CURRENT_LANG_CODE;
-				$options->fragment_terms	= false;
-				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+			$index_locator	= $options->index_locator ?? null;
+			$lang			= $options->lang ?? WEB_CURRENT_LANG_CODE;
+			$fragment_terms	= $options->fragment_terms ?? false;
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed (get_fragment_from_index_locator)';
 
 		// check vars
 			if(!empty($options->lang) && !self::check_safe_value('lang', $options->lang)) {
-				trigger_error("Error. Ilegal lang: ".$options->lang);
+				trigger_error("Error. Illegal lang: ".$options->lang);
 				$response->msg = 'Error. Invalid lang: '.$options->lang.')';
 				return $response;
 			}
@@ -2161,7 +2161,6 @@ class web_data {
 		// locator
 			// Sample:
 			// {"type":"dd96","tag_id":"1","section_id":"1","section_tipo":"rsc167","component_tipo":"rsc36","section_top_id":"1","section_top_tipo":"oh1","from_component_tipo":"hierarchy40"}
-			$index_locator = $options->index_locator;
 			if (is_array($index_locator)) {
 				$index_locator = reset($index_locator);
 			}
@@ -2182,7 +2181,7 @@ class web_data {
 			$s_options = new stdClass();
 				$s_options->table				= TABLE_AUDIOVISUAL;
 				$s_options->ar_fields			= array(FIELD_VIDEO, FIELD_TRANSCRIPTION);
-				$s_options->lang				= $options->lang;
+				$s_options->lang				= $lang;
 				$s_options->sql_filter			= '`section_id` = '.(int)$av_section_id;
 				$s_options->apply_postprocess	= false; // Avoid clean text on false
 
@@ -2194,22 +2193,21 @@ class web_data {
 				return $response;
 			}
 
-		// fragment data. Create fragment and tesaurus associated
-			$raw_text  = reset($rows_data->result)[FIELD_TRANSCRIPTION];
-			$video_url = reset($rows_data->result)[FIELD_VIDEO];
+		// fragment data. Create fragment and thesaurus associated
+			$raw_text	= reset($rows_data->result)[FIELD_TRANSCRIPTION];
+			$video_url	= reset($rows_data->result)[FIELD_VIDEO];
 
 			$f_options = new stdClass();
 				$f_options->tag_id					= $tag_id;
 				$f_options->av_section_id			= $av_section_id;
-				$f_options->lang					= $options->lang;
+				$f_options->lang					= $lang;
 				$f_options->component_tipo			= AV_TIPO;
 				$f_options->section_tipo			= $locator->section_tipo;
 				$f_options->raw_text				= $raw_text;
-				$f_options->fragment_terms_inside	= $options->fragment_terms; // bool
-				$f_options->indexation_terms		= $options->fragment_terms; // bool
+				$f_options->fragment_terms_inside	= $fragment_terms; // bool
+				$f_options->indexation_terms		= $fragment_terms; // bool
 
 			$fragments_obj = web_data::build_fragment( $f_options );
-
 
 		// remove_restricted_text in fragment
 			if (isset($fragments_obj->fragm)) {
@@ -2226,8 +2224,8 @@ class web_data {
 			}
 
 		// response ok
-			$response->result = $fragments_obj;
-			$response->msg    = 'Request done successfully';
+			$response->result	= $fragments_obj;
+			$response->msg		= 'Request done successfully';
 
 
 		return $response;
@@ -2373,13 +2371,13 @@ class web_data {
 
 		// check vars
 			if(!empty($options->lang) && !self::check_safe_value('lang', $options->lang)) {
-				// die("Error. Ilegal lang: ".$options->lang);
-				trigger_error("Error. Ilegal lang: ".$options->lang);
+				// die("Error. Illegal lang: ".$options->lang);
+				trigger_error("Error. Illegal lang: ".$options->lang);
 				return null;
 			}
 			if(!empty($options->av_section_id) && !self::check_safe_value('section_id', $options->av_section_id)) {
-				// die("Error. Ilegal av_section_id: ".$options->av_section_id);
-				trigger_error("Error. Ilegal av_section_id: ".$options->av_section_id);
+				// die("Error. Illegal av_section_id: ".$options->av_section_id);
+				trigger_error("Error. Illegal av_section_id: ".$options->av_section_id);
 				return null;
 			}
 
@@ -2396,11 +2394,11 @@ class web_data {
 
 		// posterframe_url (from server config WEB_VIDEO_BASE_URL like: '/dedalo/media/av/404')
 			$base_url			= pathinfo(WEB_VIDEO_BASE_URL)['dirname'];
-			$video_id 			= AV_TIPO.'_'.$options->section_tipo.'_'.$options->av_section_id;
+			$video_id			= AV_TIPO.'_'.$options->section_tipo.'_'.$options->av_section_id;
 			$posterframe_url	= $base_url .'/posterframe/'. $video_id .'.jpg';
 
 		// posterframe_tag_url
-			$posterframe_tag_url	= $base_url .'/posterframe/'. $video_id .'/'. $video_id .'_'. $options->tag_id.'.jpg';
+			$posterframe_tag_url = $base_url .'/posterframe/'. $video_id .'/'. $video_id .'_'. $options->tag_id.'.jpg';
 
 		// tags
 			$tag_in		= TR::get_mark_pattern('indexIn',  $standalone=false, $options->tag_id, $data=false);
@@ -2432,9 +2430,9 @@ class web_data {
 				$preg_match_all_result = preg_match_all("/$regexp/", $raw_text, $matches, PREG_OFFSET_CAPTURE | PREG_SET_ORDER );
 				#$preg_match_all_result = _mb_ereg_search_all($raw_text, "/$regexp/u", $resultOrder = 0); $matches = $preg_match_all_result;
 				#$preg_match_all_result = free_node::pregMatchCapture($matchAll=true, "/$regexp/", $raw_text, $offset=0);
-				#if(SHOW_DEBUG===true) {
-					#dump($matches, ' matches preg_match_all_result ++ '.to_string($regexp)); #die();
-				#}
+				// if(SHOW_DEBUG===true) {
+					// dump($matches, ' matches preg_match_all_result ++ '.to_string($regexp)); #die();
+				// }
 			if( !empty($preg_match_all_result) ) {
 
 				$fragment_inside_key	= 3;
@@ -2472,6 +2470,7 @@ class web_data {
 						$tcout_secs = OptimizeTC::TC2seg($tcout);
 
 						# TC MARGINS (Optionals)
+						// TC MARGINS (Optional)
 							if (!is_null($options->margin_seconds_in)) {
 								$tcin_secs  = OptimizeTC::tc_margin_seconds('in',  $tcin_secs,  $options->margin_seconds_in);
 							}
@@ -2480,8 +2479,7 @@ class web_data {
 							}
 
 						// VIDEO_URL Like: /dedalo/media/av/404/rsc35_rsc167_1.mp4?vbegin=0&vend=42
-							#$video_url = $base_url.'/'.$file_name.'?vbegin='.$tcin_secs.'&vend='.$tcout_secs;
-							$video_url 		= $av_path.'?vbegin='.floor($tcin_secs).'&vend='.ceil($tcout_secs);
+							$video_url = $av_path.'?vbegin='.floor($tcin_secs).'&vend='.ceil($tcout_secs);
 
 						// Subtitles url
 							$subtitles_url 	= subtitles::get_subtitles_url($options->av_section_id, $tcin_secs, $tcout_secs, $options->lang);
