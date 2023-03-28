@@ -411,7 +411,7 @@ class web_data {
 				if (!empty($sql_options->ar_fields)) {
 					if (!self::check_safe_value('ar_fields', $sql_options->ar_fields, $sql_options->is_literal)) {
 						$response->result = false;
-						$response->msg    = "Error on sql request. Ilegal ar_fields (1)";
+						$response->msg    = "Error on sql request. Illegal ar_fields (1)";
 						if(SHOW_DEBUG===true) {
 							$response->msg   .= " : ".to_string($sql_options->ar_fields);
 						}
@@ -423,7 +423,7 @@ class web_data {
 				if (!empty($sql_options->sql_fullselect)) {
 					if (!self::check_safe_value('sql_fullselect', $sql_options->sql_fullselect)) {
 						$response->result = false;
-						$response->msg    = "Error on sql request. Ilegal sql_fullselect option (1)";
+						$response->msg    = "Error on sql request. Illegal sql_fullselect option (1)";
 						if(SHOW_DEBUG===true) {
 							$response->msg   .= " : $sql_options->sql_fullselect";
 						}
@@ -435,7 +435,7 @@ class web_data {
 				if (!empty($sql_options->section_id)) {
 					if (!self::check_safe_value('section_id', $sql_options->section_id)) {
 						$response->result = false;
-						$response->msg    = "Error on sql request. Ilegal section_id option (1)";
+						$response->msg    = "Error on sql request. Illegal section_id option (1)";
 						if(SHOW_DEBUG===true) {
 							$response->msg   .= " : $sql_options->section_id";
 						}
@@ -452,7 +452,7 @@ class web_data {
 
 					if (!self::check_safe_value('sql_filter', $sql_options->sql_filter)) {
 						$response->result = false;
-						$response->msg    = "Error on sql request. Ilegal sql_filter option (1)";
+						$response->msg    = "Error on sql request. Illegal sql_filter option (1)";
 						if(SHOW_DEBUG===true) {
 							$response->msg   .= " : $sql_options->sql_filter";
 						}
@@ -464,7 +464,7 @@ class web_data {
 				if(!empty($sql_options->lang)) {
 					if (!self::check_safe_value('lang', $sql_options->lang)) {
 						$response->result = false;
-						$response->msg    = "Error on sql request. Ilegal lang (1)";
+						$response->msg    = "Error on sql request. Illegal lang (1)";
 						if(SHOW_DEBUG===true) {
 							$response->msg   .= " : $sql_options->lang";
 						}
@@ -476,7 +476,7 @@ class web_data {
 				if(!empty($sql_options->order)) {
 					if (!self::check_safe_value('order', $sql_options->order)) {
 						$response->result = false;
-						$response->msg    = "Error on sql request. Ilegal order (1)";
+						$response->msg    = "Error on sql request. Illegal order (1)";
 						if(SHOW_DEBUG===true) {
 							$response->msg   .= " : $sql_options->order";
 						}
@@ -488,7 +488,7 @@ class web_data {
 				if(!empty($sql_options->group)) {
 					if (!self::check_safe_value('group', $sql_options->group)) {
 						$response->result = false;
-						$response->msg    = "Error on sql request. Ilegal group (1)";
+						$response->msg    = "Error on sql request. Illegal group (1)";
 						if(SHOW_DEBUG===true) {
 							$response->msg   .= " : $sql_options->group";
 						}
@@ -500,7 +500,7 @@ class web_data {
 				if(!empty($sql_options->limit)) {
 					if (!self::check_safe_value('limit', $sql_options->limit)) {
 						$response->result = false;
-						$response->msg    = "Error on sql request. Ilegal limit (1)";
+						$response->msg    = "Error on sql request. Illegal limit (1)";
 						if(SHOW_DEBUG===true) {
 							$response->msg   .= " : $sql_options->limit";
 						}
@@ -512,7 +512,7 @@ class web_data {
 				if(!empty($sql_options->offset)) {
 					if (!self::check_safe_value('offset', $sql_options->offset)) {
 						$response->result = false;
-						$response->msg    = "Error on sql request. Ilegal offset (1)";
+						$response->msg    = "Error on sql request. Illegal offset (1)";
 						if(SHOW_DEBUG===true) {
 							$response->msg   .= " : $sql_options->offset";
 						}
@@ -524,7 +524,7 @@ class web_data {
 				if(!empty($sql_options->db_name)) {
 					if (!self::check_safe_value('db_name', $sql_options->db_name)) {
 						$response->result = false;
-						$response->msg    = "Error on sql request. Ilegal db_name (1)";
+						$response->msg    = "Error on sql request. Illegal db_name (1)";
 						if(SHOW_DEBUG===true) {
 							$response->msg   .= " : $sql_options->db_name";
 						}
@@ -855,7 +855,7 @@ class web_data {
 			// 		preg_match_all("/delete|update|insert/i", $strQuery, $output_array);
 			// 		if (!empty($output_array[0])) {
 			// 			$response->result = false;
-			// 			$response->msg    = "Error on sql request. Ilegal option";
+			// 			$response->msg    = "Error on sql request. Illegal option";
 			// 			if(SHOW_DEBUG===true) {
 			// 				$response->msg   .= " : $strQuery";
 			// 				dump($output_array[0], ' output_array[0] ++ '.to_string());
@@ -1060,7 +1060,7 @@ class web_data {
 				preg_match_all("/delete|update|insert|truncate|set names|user|mysql|localhost/i", $strQuery, $output_array);
 				if (!empty($output_array[0])) {
 					$response->result = false;
-					$response->msg    = "Error on sql request. Ilegal option (exec_query)";
+					$response->msg    = "Error on sql request. Illegal option (exec_query)";
 					if(SHOW_DEBUG===true) {
 						$response->msg   .= " : $strQuery";
 						dump($output_array[0], ' output_array[0] ++ '.to_string());
@@ -1798,7 +1798,7 @@ class web_data {
 		private static function get_table_fields( $table, $full=false ) {
 
 			if(!self::check_safe_value('table', $table)) {
-				die("Error. Ilegal table: ".$table);
+				die("Error. Illegal table: ".$table);
 			}
 
 			$strQuery = "SHOW COLUMNS FROM $table";
@@ -1918,7 +1918,7 @@ class web_data {
 
 		// check vars
 			if(!empty($options->lang) && !self::check_safe_value('lang', $options->lang)) {
-				die("Error. Ilegal lang: ".$options->lang);
+				die("Error. Illegal lang: ".$options->lang);
 			}
 			if(!empty($options->av_section_id) && !self::check_safe_value('section_id', $options->av_section_id)) {
 				die("Error. Illegal av_section_id: ".$options->av_section_id);
@@ -2025,10 +2025,10 @@ class web_data {
 
 		// check vars
 			if(!empty($options->lang) && !self::check_safe_value('lang', $options->lang)) {
-				die("Error. Ilegal lang: ".$options->lang);
+				die("Error. Illegal lang: ".$options->lang);
 			}
 			if(!empty($options->av_section_id) && !self::check_safe_value('section_id', $options->av_section_id)) {
-				die("Error. Ilegal av_section_id: ".$options->av_section_id);
+				die("Error. Illegal av_section_id: ".$options->av_section_id);
 			}
 
 		#
@@ -2613,7 +2613,7 @@ class web_data {
 
 		// check vars
 			if(!empty($av_section_id) && !self::check_safe_value('section_id', $av_section_id)) {
-				die("Error. Ilegal av_section_id: ".$av_section_id);
+				die("Error. Illegal av_section_id: ".$av_section_id);
 			}
 
 		# TRANSCRIPTION
@@ -2773,13 +2773,13 @@ class web_data {
 
 			// check vars
 				if(!empty($options->table) && !self::check_safe_value('table', $options->table)) {
-					die("Error. Ilegal table: ".$options->table);
+					die("Error. Illegal table: ".$options->table);
 				}
 				if(!empty($options->lang) && !self::check_safe_value('lang', $options->lang)) {
-					die("Error. Ilegal lang: ".$options->lang);
+					die("Error. Illegal lang: ".$options->lang);
 				}
 				if(!empty($options->order) && !self::check_safe_value('order', $options->order)) {
-					die("Error. Ilegal order: ".$options->order);
+					die("Error. Illegal order: ".$options->order);
 				}
 
 			if ($options->parents!==false) {
@@ -2947,13 +2947,13 @@ class web_data {
 
 			// check vars
 				if(!empty($options->table) && !self::check_safe_value('table', $options->table)) {
-					die("Error. Ilegal table: ".$options->table);
+					die("Error. Illegal table: ".$options->table);
 				}
 				if(!empty($options->lang) && !self::check_safe_value('lang', $options->lang)) {
-					die("Error. Ilegal lang: ".$options->lang);
+					die("Error. Illegal lang: ".$options->lang);
 				}
 				if(!empty($options->publication_filter_sql) && !self::check_safe_value('sql_filter', $options->publication_filter_sql)) {
-					die("Error. Ilegal publication_filter_sql: ".$options->publication_filter_sql);
+					die("Error. Illegal publication_filter_sql: ".$options->publication_filter_sql);
 				}
 
 			$field_term 	= FIELD_TERM;
@@ -2964,7 +2964,7 @@ class web_data {
 			foreach ($options->exclude_tld as $tld) {
 
 				if(!empty($tld) && !self::check_safe_value('term_id', $tld)) {
-					die("Error. Ilegal tld: ".$tld);
+					die("Error. Illegal tld: ".$tld);
 				}
 
 				$ar[] = "tld != '$tld'";
@@ -3019,19 +3019,19 @@ class web_data {
 
 			// check vars
 				if(!empty($options->q) && !self::check_safe_value('sql_filter', $options->q)) {
-					die("Error. Ilegal q: ".$options->q);
+					die("Error. Illegal q: ".$options->q);
 				}
 				if(!empty($options->table) && !self::check_safe_value('table', $options->table)) {
-					die("Error. Ilegal table: ".$options->table);
+					die("Error. Illegal table: ".$options->table);
 				}
 				if(!empty($options->lang) && !self::check_safe_value('lang', $options->lang)) {
-					die("Error. Ilegal lang: ".$options->lang);
+					die("Error. Illegal lang: ".$options->lang);
 				}
 				if(!empty($options->rows_per_page) && !self::check_safe_value('limit', $options->rows_per_page)) {
-					die("Error. Ilegal rows_per_page: ".$options->rows_per_page);
+					die("Error. Illegal rows_per_page: ".$options->rows_per_page);
 				}
 				if(!empty($options->publication_filter_sql) && !self::check_safe_value('sql_filter', $options->publication_filter_sql)) {
-					die("Error. Ilegal publication_filter_sql: ".$options->publication_filter_sql);
+					die("Error. Illegal publication_filter_sql: ".$options->publication_filter_sql);
 				}
 
 			$field_term = FIELD_TERM;
@@ -3182,7 +3182,7 @@ class web_data {
 
 				// check vars
 					if(!empty($term_obj->parent) && !self::check_safe_value('term_id', $term_obj->parent)) {
-						die("Error. Ilegal term_obj->parent: ".$term_obj->parent);
+						die("Error. Illegal term_obj->parent: ".$term_obj->parent);
 					}
 
 				# Term is NOT descriptor
