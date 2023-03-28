@@ -1271,6 +1271,7 @@ class component_relation_common extends component_common {
 	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
 		$dato = $this->get_dato();
+
 		$diffusion_value = !empty($dato)
 			? json_encode($dato)
 			: null;

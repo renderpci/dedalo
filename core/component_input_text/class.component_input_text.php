@@ -23,8 +23,8 @@ class component_input_text extends component_common {
 	/**
 	* SET_DATO
 	* @param array|null $dato
-	* 	Dato now is multiple. For this expected type is array
-	*	but in some cases can be an array json encoded or some rare times a plain string
+	* 	Dato now is multiple. Because this, expected type is array
+	*	but in some cases can be an array JSON encoded or some rare times a plain string
 	*/
 	public function set_dato($dato) {
 

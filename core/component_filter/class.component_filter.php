@@ -152,8 +152,8 @@ class component_filter extends component_relation_common {
 	*/
 	public function get_default_dato_for_user(int $user_id) : array {
 
-		$is_global_admin = security::is_global_admin($user_id);
-		$user_projects = ($is_global_admin===true)
+		$is_global_admin	= security::is_global_admin($user_id);
+		$user_projects		= ($is_global_admin===true)
 			? null // no filter is needed for global_admin
 			: filter::get_user_projects($user_id);
 
