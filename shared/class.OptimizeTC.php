@@ -32,130 +32,123 @@ abstract class OptimizeTC {
 
 	/**
 	* OPTIMIZE_TCIN
+	* Calculates the time code for the indexation tag given in the received raw text
 	* Adjustment of virtual time-codes calculated by averaging
-	* Once the index IN is located, if the previous and subsequent TCs are more than X characters apart, we make an approximation
+	* Once the index IN is located, if the previous and subsequent TCs are more than X additional characters, we make an approximation
 	* and create a virtual TC with the average of the duration of the characters between the previous and subsequent TCs.
-	* @param string $texto
+	* @param string $text
 	* @param string $indexIN
-	* @param int $inicioPos = 0
+	* 	tag like: '[index-n-10-label in 10-data::data]'
+	* @param int|null $inicioPos = 0
 	* @param int $in_margin = 100
 	*
 	* @return string $tcin
+	* 	Time-code string as '00:00:00.000'
 	*/
-	public static function optimize_tcIN(string $texto, string $indexIN, int $inicioPos=0, int $in_margin=100) : string {
+	public static function optimize_tcIN(string $text, string $indexIN, ?int $inicioPos=null, int $in_margin=100) : string {
 
+		// intentional zero in position case. Do not calculate nothing, only return the corresponding time code
+			if($inicioPos===0) {
+				$indexPos = 0;
+				return '00:00:00.000';
+			}
+
+		// set internal encoding for safe multi byte position locations
 		mb_internal_encoding('UTF-8'); // Set in config
 
-		$debug = false;
+		// If inicioPos > 0 we will be searching freely, without index or we already know the position
+		if( !empty($inicioPos) && $inicioPos!=='' ) {
 
-		$tc_pattern = TR::get_mark_pattern('tc',false);
-
-		// Si inicioPos > 0 estaremos buscando de forma libre, sin index o ya sabemos la posición
-		if($inicioPos===0) {
-			$indexPos = 0;
-			return '00:00:00.000';
-		}else if( !empty($inicioPos) && $inicioPos!=='' ) {
 			$indexPos = $inicioPos - $in_margin;
+
 		}else{
-			# pos absoluta de index IN
-			$indexPos = mb_strpos($texto, $indexIN);
+
+			// absolute position of indexIN
+			$indexPos = mb_strpos($text, $indexIN);
 			$indexPos = $indexPos - $in_margin;
 		}
+		// prevent negative values
 		if($indexPos<0) $indexPos = 0;
-		#dump($indexPos, ' indexPos ++ indexIN '.to_string($indexIN));
-		#dump($indexPos, ' indexPos ++ inicioPos: '.to_string($inicioPos));
 
-		# margen de validación
+		// validation margin default
 		$margen = 55 ;
 
-			# Posición del TC anterior
-			$frAnterior = mb_substr($texto, 0, $indexPos); # fr desde inicio (0) hasta la pos de indexIN
-				#dump($frAnterior, ' frAnterior ++ '.to_string());
+			// Previous TC position. fragment from start(0) to indexIN position
+			$frAnterior = mb_substr($text, 0, $indexPos);
 
-			# Find last COMPLETE tc is this fragment
-			preg_match_all( $tc_pattern, $frAnterior, $matches, PREG_SET_ORDER );
-			#dump(end($matches), 'end($matches) ++ '.to_string());
+			// time code unified pattern
+			$tc_pattern = TR::get_mark_pattern('tc', false);
+
+			// Find last COMPLETE TC in this fragment
+			preg_match_all( $tc_pattern, $frAnterior, $matches, PREG_SET_ORDER);
 
 			if (isset(end($matches)[0])) {
-				$last_tc 	= end($matches)[0];		#dump($last_tc, ' $last_tc ++ '.to_string());
-
-				$tcLastPos	= mb_strrpos($frAnterior, $last_tc); # pos abs del último tc en el fragmento anterior al indexIn (por tanto es el TC anterior al indexIN)
-				#$prevTC	= substr($frAnterior, $tcLastPos +4, 8); # valor tc (tipo 00:20:14)
-				$prevTC		= end($matches)[1];		#dump($prevTC, ' $prevTC ++ '.to_string());
-				$dif		= $indexPos - $tcLastPos ;
-
+				$last_tc	= end($matches)[0];
+				$tcLastPos	= mb_strrpos($frAnterior, $last_tc); // absolute position of the last tc in the fragment before indexIn (so it is the TC before indexIN)
+				$prevTC		= end($matches)[1];
+				$dif		= $indexPos - $tcLastPos;
 			}else{
 				$prevTC		= '00:00:00.000';
 				$dif		= 0;
 			}
-			#dump( substr($frAnterior, $tcLastPos -10, 188) , ' prevTC ++  **'.to_string());
 
 		if($dif < $margen && $dif > 0) {
 
-			$tcin = $prevTC ;
-			$debug .= "tcin anterior ($prevTC) a $dif ch. ";
+			$tcin = $prevTC;
 
 		}else{
 
-			# Posición del TC posterior
-			$frPosterior = mb_substr($texto, $indexPos ); # fr desde indexIn hasta el final
+			// Posterior TC position. fragment from indexIn to the end
+			$frPosterior = mb_substr($text, $indexPos);
 
-			# Find first COMPLETE tc is this fragment
-			preg_match_all( $tc_pattern, $frPosterior, $matches, PREG_SET_ORDER);
+			// Find first COMPLETE TC in this fragment
+			preg_match_all($tc_pattern, $frPosterior, $matches, PREG_SET_ORDER);
 			if (isset(reset($matches)[0])) {
-				$first_tc		= reset($matches)[0];		#dump($first_tc, ' $first_tc ++ '.to_string());
-
-				$tcFirstPos		= mb_strpos($frPosterior, $first_tc); # pos del primer tc encontrado
-
-				$nextTCposAbs	= $indexPos + $tcFirstPos ;
-				#$nextTC		= substr($frPosterior, $tcFirstPos +4, 8); # valor tc (tipo 00:20:14)
+				$first_tc		= reset($matches)[0];
+				$tcFirstPos		= mb_strpos($frPosterior, $first_tc); // position of the first TC found
+				$nextTCposAbs	= $indexPos + $tcFirstPos;
 				$nextTC			= reset($matches)[1];
-				$dif			= $nextTCposAbs - $indexPos ;
+				$dif			= $nextTCposAbs - $indexPos;
 			}else{
-				$dif=0;
-				$nextTC=null;
+				$dif			= 0;
+				$nextTC			= null;
 			}
-
 
 			if($dif < $margen && $dif > 0) {
 
-				$tcin = $nextTC ;
-				$debug .= "tcin posterior ($nextTC) a $dif ch. ";
+				$tcin = $nextTC;
 
 			}else{
 
-				# cálculo tc virtual
-				# calculamos cuantos caracteres hay entre prevTC y nexTC
-				$tcPrevPosAbs	= mb_strpos($texto, "[TC_".$prevTC ); # pos absoluta del tc anterior
-				$tcNextPosAbs	= mb_strpos($texto, "[TC_".$nextTC ); # pos absoluta del tc siguiente
-				$difTCchar		= $tcNextPosAbs - $tcPrevPosAbs ; # caracteres entre el tc anterior y el posterior
+				// virtual TC calculation. We calculate how many characters there are between prevTC and nextTC
+				$tcPrevPosAbs	= mb_strpos($text, "[TC_".$prevTC); // absolute position of the previous TC
+				$tcNextPosAbs	= mb_strpos($text, "[TC_".$nextTC); // absolute position of the following TC
+				$difTCchar		= $tcNextPosAbs - $tcPrevPosAbs ; // characters between the preceding and following TC
 
-				if( (!$tcPrevPosAbs && !$tcNextPosAbs) ){
-					$tcin = '' ;
+				if(!$tcPrevPosAbs && !$tcNextPosAbs){
+
+					$tcin = '';
+
 				}else{
-					#$frMedio = substr($texto, $tcPrevPosAbs+16, $difTC);
-					#$chars = mb_strlen($frMedio);
 
-					# calculamos el n de segundos entre tc anterior y posterior
+					// we calculate the n of seconds between previous and subsequent TC
 					$prevTCseg	= self::TC2seg($prevTC);
 					$nextTCseg	= self::TC2seg($nextTC);
-					$difSeg		= $nextTCseg -$prevTCseg ;
+					$difSeg		= $nextTCseg -$prevTCseg;
 
-					# calculamos cuantos segundos ocupa un caracter
-					#@ $segChar 	= $difSeg / $difTCchar ;
-					$segChar 	= $difTCchar>0 ? ($difSeg / $difTCchar) : 0 ;
+					// We calculate how many seconds a character occupies
+					$segChar	= $difTCchar>0 ? ($difSeg / $difTCchar) : 0;
 
-					# calculamos los caracteres entre en prevTC y el index IN
-					$charPrevTCindexIn =  mb_strlen( mb_substr($texto, $tcPrevPosAbs+16, ($indexPos - $tcPrevPosAbs) ) );
+					// we calculate the characters between the prevTC and the indexIN
+					$charPrevTCindexIn = mb_strlen( mb_substr($text, $tcPrevPosAbs+16, ($indexPos - $tcPrevPosAbs) ));
 
-					# hacemos la hipótesis del TC que tocaría en indexIN
-					$tcInVirtualseg	= ($charPrevTCindexIn * $segChar) +  $prevTCseg ; # en segundos
+					// we make the hypothesis of the TC that would correspond in indexIN
+					$tcInVirtualseg	= ($charPrevTCindexIn * $segChar) + $prevTCseg;
 					$tcInVirtual	= self::seg2tc($tcInVirtualseg);
 
-					$tcin	= $tcInVirtual ;
-					$debug	.= "tcin virtual ($prevTC => $tcInVirtual) segChar: $segChar  a $difTCchar ch. ";
+					$tcin = $tcInVirtual;
 				}
-			}//end if( $dif < $margen && $dif > 0)
+			}
 		}//end if($dif < $margen && $dif > 0)
 
 
@@ -166,124 +159,119 @@ abstract class OptimizeTC {
 
 	/**
 	* OPTIMIZE_TCOUT
+	* Calculates the time code for the indexation tag given in the received raw text
+	* @param string $text
+	* @param string $indexOUT
+	* 	tag like: '[/index-n-10-label in 10-data::data]'
+	* @param int|null $finalPos = null
+	* @param int $in_margin = 100
+	*
 	* @return string $tcout
 	*/
-	public static function optimize_tcOUT(string $texto, string $indexOUT, int $finalPos=null, int $in_margin=100) : string {
+	public static function optimize_tcOUT(string $text, string $indexOUT, ?int $finalPos=null, int $in_margin=100) : string {
 
+		// set internal encoding for safe multi byte position locations
 		mb_internal_encoding('UTF-8'); // Set in config
 
-		$debug = false;
-
-		$tc_pattern = TR::get_mark_pattern('tc',false);
-
-		// Si finalPos > 0 estaremos buscando de forma libre, sin index
-		if( $finalPos!==false ) {
-			$indexPos 	= mb_strpos($texto, $finalPos);
-			$indexPos 	= $finalPos + $in_margin;
-		}else{
-			# pos absoluta de index OUT
-			$indexPos 	= mb_strpos($texto, $indexOUT);
+		if (is_null($finalPos)) {
+			// absolute position of index OUT (default case)
+			$indexPos 	= mb_strpos($text, $indexOUT);
 			$indexPos 	= $indexPos + $in_margin;
+		}else{
+			// If finalPos if given, we are in search free case, do not use indexOUT here
+			$indexPos 	= mb_strpos($text, $finalPos);
+			$indexPos 	= $finalPos + $in_margin;
 		}
 
-		# margen de validación
-		$margen = 55 ;
+		// validation margin default
+			$margen = 55 ;
 
-			# Posición del TC posterior
-			$frPosterior 	= mb_substr($texto, $indexPos ); # fr desde indexIn hasta el final
-			#$tcFirstPos 	= mb_strpos($frPosterior, "[TC_" ); # pos del primer tc encontrado
+			// Posterior TC position
+			$frPosterior	= mb_substr($text, $indexPos); # fr desde indexIn hasta el final
+			// $tcFirstPos	= mb_strpos($frPosterior, "[TC_" ); # pos del primer tc encontrado
 
-			# Find first COMPLETE tc is this fragment
-			preg_match_all( $tc_pattern, $frPosterior, $matches, PREG_SET_ORDER);
-			#dump(reset($matches), 'reset($matches) ++ '.to_string());
+			// time code unified pattern
+			$tc_pattern = TR::get_mark_pattern('tc', false);
+
+			// Find first COMPLETE TC is this fragment
+			preg_match_all($tc_pattern, $frPosterior, $matches, PREG_SET_ORDER);
 			if (isset(reset($matches)[0])) {
-				$first_tc 		= reset($matches)[0];		#dump($first_tc, ' $first_tc ++ '.to_string());
-
-				$tcFirstPos 	= mb_strpos($frPosterior, $first_tc); # pos del primer tc encontrado
-				$nextTCposAbs 	= $indexPos + $tcFirstPos ;
-				#$nextTC 		= substr($frPosterior, $tcFirstPos +4, 8); # valor tc (tipo 00:20:14)
-				$nextTC 		= reset($matches)[1];
-				$dif 			= $nextTCposAbs - $indexPos ;
+				$first_tc		= reset($matches)[0];
+				$tcFirstPos		= mb_strpos($frPosterior, $first_tc); // position of the first TC found
+				$nextTCposAbs	= $indexPos + $tcFirstPos;
+				$nextTC			= reset($matches)[1];
+				$dif			= $nextTCposAbs - $indexPos ;
 			}else{
-				$dif=0;
-				$nextTC=null;
+				$dif			= 0;
+				$nextTC			= null;
 			}
 
-		if( $dif < $margen && $dif > 0) {
+		if($dif < $margen && $dif > 0) {
 
 			$tcout = $nextTC;
-			$debug .= "tcout posterior ($nextTC) a $dif ch. ";
 
 		}else{
 
-			# Posición del TC anterior
-			$frAnterior = mb_substr($texto, 0, $indexPos); # fr desde inicio (0) hasta la pos de indexIN
-			#$tcLastPos 	= strrpos($frAnterior, "[TC_" ); # pos abs del último tc en el fragmento anterior al indexIn (por tanto es el TC anterior al indexIN)
+			// Previous TC position. fragment from start(0) to indexIN position
+			$frAnterior = mb_substr($text, 0, $indexPos);
 
 			$prevTC = null;
 
-			# Find last COMPLETE tc is this fragment
-			preg_match_all( $tc_pattern, $frAnterior, $matches, PREG_SET_ORDER);		#dump(end($matches), 'end($matches) ++ '.to_string());
+			// Find last COMPLETE TC is this fragment
+			preg_match_all($tc_pattern, $frAnterior, $matches, PREG_SET_ORDER);
 			if (isset(end($matches)[0])) {
-				$last_tc 	= end($matches)[0];		#dump($last_tc, ' $last_tc ++ '.to_string());
-
-				$tcLastPos 	= mb_strrpos($frAnterior, $last_tc);
-				#$prevTC 	= substr($frAnterior, $tcLastPos +4, 8); # valor tc (tipo 00:20:14)
-				$prevTC 	= end($matches)[1];
-				$dif 		= $indexPos - $tcLastPos;
+				$last_tc	= end($matches)[0];
+				$tcLastPos	= mb_strrpos($frAnterior, $last_tc);
+				$prevTC		= end($matches)[1];
+				$dif		= $indexPos - $tcLastPos;
 			}else{
-				$dif=0;
+				$dif		= 0;
 			}
 
+			if($dif < $margen && $dif > 0) {
 
-			if( $dif  < $margen && $dif > 0) {
-
-				$tcout = $prevTC ;
-				$debug .= "tcout anterior ($nextTC) a $dif ch. ";
+				$tcout = $prevTC;
 
 			}else{
 
-				# cálculo tc virtual
-				# calculamos cuantos caracteres hay entre prevTC y nexTC
-				$tcPrevPosAbs 	= mb_strpos($texto, "[TC_".$prevTC ); # pos absoluta del tc anterior
-				$tcNextPosAbs 	= mb_strpos($texto, "[TC_".$nextTC ); # pos absoluta del tc siguiente
-				$difTCchar 		= $tcNextPosAbs - $tcPrevPosAbs ; # caracteres entre el tc anterior y el posterior
+				// virtual TC calculation. We calculate how many characters there are between prevTC and nextTC
+				$tcPrevPosAbs	= mb_strpos($text, '[TC_'.$prevTC); // absolute position of previous TC
+				$tcNextPosAbs	= mb_strpos($text, '[TC_'.$nextTC); // absolute position of the next TC
+				$difTCchar		= $tcNextPosAbs - $tcPrevPosAbs; // characters between the preceding and following TC
 
 				if(!$tcPrevPosAbs && !$tcNextPosAbs){
-					$tcout = '' ;
+
+					$tcout = '';
+
 				}else{
-					#$frMedio = substr($texto, $tcPrevPosAbs+16, $difTC);
-					#$chars = strlen($frMedio);
 
-					# calculamos el n de segundos entre tc anterior y posterior
-					$prevTCseg 	= self::TC2seg($prevTC);
-					$nextTCseg 	= self::TC2seg($nextTC);
-					$difSeg 	= $nextTCseg -$prevTCseg ;
+					// we calculate the n of seconds between previous and subsequent tc
+					$prevTCseg	= self::TC2seg($prevTC);
+					$nextTCseg	= self::TC2seg($nextTC);
+					$difSeg		= $nextTCseg -$prevTCseg ;
 
-					# calculamos cuantos segundos ocupa un caracter
+					// We calculate how many seconds a character occupies
 					$segChar = 0;
 					if ($difTCchar>0) {
 						$segChar = $difSeg / $difTCchar;
 					}
 
-					# calculamos los caracteres entre en prevTC y el index IN
-					$charPrevTCindexIn = mb_strlen( mb_substr($texto, $tcPrevPosAbs+16, ($indexPos - $tcPrevPosAbs) ) );
+					// we calculate the characters between the prevTC and the index IN
+					$charPrevTCindexIn = mb_strlen( mb_substr($text, $tcPrevPosAbs+16, ($indexPos - $tcPrevPosAbs) ));
 
-					# hacemos la hipótesis del TC que tocaría en indexIN
-					$tcInVirtualseg	 = ($charPrevTCindexIn * $segChar) +  $prevTCseg ; # en segundos
-					$tcInVirtual	 = self::seg2tc($tcInVirtualseg);
+					// we make the hypothesis of the TC that would correspond in indexIN
+					$tcInVirtualseg	= ($charPrevTCindexIn * $segChar) + $prevTCseg;
+					$tcInVirtual	= self::seg2tc($tcInVirtualseg);
 
-					$tcout = $tcInVirtual ;
-					$debug .= "tcout virtual ($prevTC => $tcInVirtual) segChar: $segChar  a $difTCchar ch. ";
+					$tcout = $tcInVirtual;
 				}
-			}//end if( $dif  < $margen && $dif > 0) {
-
-		}//end if( $dif < $margen && $dif > 0)
+			}
+		}//end if($dif < $margen && $dif > 0)
 
 
 		return $tcout ;
 	}//end optimize_tcOUT
-	// ****** FIN AJUSTE TC'S VIRTUALES CALCULADOS HACIENDO LA MEDIA   ******* //
+	// ****** END ADJUSTMENT VIRTUAL TC'S CALCULATED BY MAKING THE AVERAGE ******* //
 
 
 
