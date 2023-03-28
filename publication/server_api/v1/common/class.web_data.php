@@ -2451,24 +2451,24 @@ class web_data {
 							$fragment_text = TR::deleteMarks($fragment_text);
 
 						// tag in position
-							$tag_in_pos = $match[$tag_in_pos_key][1];
+							// $tag_in_pos = $match[$tag_in_pos_key][1];
 
 						// tag out position
-							$tag_out_pos = $match[$tag_out_pos_key][1];
+							// $tag_out_pos = $match[$tag_out_pos_key][1];
 
 						// TC . Time codes
 							$indexIN = $match[$tag_in_pos_key][0];
-							$tcin = OptimizeTC::optimize_tcIN(
+							$tcin = OptimizeTC::optimize_tc_in(
 								$raw_text, // string text
 								$indexIN, // string indexIN
-								null, // int|null inicioPos
+								null, // int|null start_position
 								(int)$options->margin_chars_in  // int in_margin
 							);
 							$indexOUT = $match[$tag_out_pos_key][0];
-							$tcout = OptimizeTC::optimize_tcOUT(
+							$tcout = OptimizeTC::optimize_tc_out(
 								$raw_text, // string text
 								$indexOUT, // string indexOUT
-								null, // int|null finalPos
+								null, // int|null end_position
 								(int)$options->margin_chars_out // int in_margin
 							);
 							// to seconds conversion
