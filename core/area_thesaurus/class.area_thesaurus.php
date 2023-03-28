@@ -164,7 +164,7 @@ class area_thesaurus extends area_common {
 	*/
 	public static function get_active_hierarchy_sections() : array {
 
-		$section_tipo	= DEDALO_HIERARCHY_TYPES_SECTION_TIPO; // hierarchy1
+		$section_tipo	= DEDALO_HIERARCHY_SECTION_TIPO; // hierarchy1
 		$active_tipo	= DEDALO_HIERARCHY_ACTIVE_TIPO; // hierarchy4
 		$order_tipo		= DEDALO_HIERARCHY_ORDER_TIPO; // hierarchy48
 
