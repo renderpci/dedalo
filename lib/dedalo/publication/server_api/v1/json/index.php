@@ -39,9 +39,9 @@
 // safe_xss
 	$safe_xss = function($value) {
 
-		if (is_string($value)) {
-			if ($decode_json=json_decode($value)) {
-				// If var is a stringify json, not verify string yet
+		if (is_string($value) && !empty($value)) {
+			if ($decode_json = json_decode($value)) {
+				// If var is a stringify JSON, not verify string yet
 			}else{
 				$value = strip_tags($value,'<br><strong><em><img>');
 				$value = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
@@ -50,6 +50,7 @@
 
 		return $value;
 	};//end safe_xss
+
 
 
 // js fetch calls try with format like
@@ -73,7 +74,7 @@
 		}
 	}
 
-// auth code . Must to be identic to server config defined code
+// auth code . Must to be identical to server config defined code
 	$code = isset($_REQUEST['code']) ? $safe_xss($_REQUEST['code']) : false;
 
 // lang
@@ -91,10 +92,10 @@
 
 // fast check vars
 	if (!empty($lang) && !web_data::check_safe_value('lang', $lang)) {
-		exit("Error. ilegal lang");
+		exit("Error. illegal lang");
 	}
 	if (!empty($db_name) && !web_data::check_safe_value('db_name', $db_name)) {
-		exit("Error. ilegal db_name");
+		exit("Error. illegal db_name");
 	}
 
 
@@ -153,12 +154,11 @@
 	}
 
 
-	#if(SHOW_DEBUG===true) {
-	#	error_log("api call ".PHP_EOL. json_encode($options, JSON_PRETTY_PRINT));
-	#	error_log("api result ".PHP_EOL. $result);
-	#
-	#	$t = time();
-	#	error_log( 'API SERVER CALL $_REQUEST: '. $t . PHP_EOL . print_r($_REQUEST,true));
-	#}
 
-
+// debug
+	// if(SHOW_DEBUG===true) {
+	// 	error_log("api call ".PHP_EOL. json_encode($options, JSON_PRETTY_PRINT));
+	// 	error_log("api result ".PHP_EOL. $result);
+	// 	$t = time();
+	// 	error_log( 'API SERVER CALL $_REQUEST: '. $t . PHP_EOL . print_r($_REQUEST,true));
+	// }
