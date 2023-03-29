@@ -89,6 +89,11 @@ area_development.prototype.build = async function(autoload=true) {
 			// load data
 				const api_response = await data_manager.request({body:self.rqo})
 
+			// debug
+				if(SHOW_DEBUG===true) {
+					console.log('area_development build api_response:', api_response);
+				}
+
 			// set the result to the datum
 				self.datum	= api_response.result
 
