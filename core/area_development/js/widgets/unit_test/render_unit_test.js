@@ -108,7 +108,7 @@ const get_content_data_edit = async function(self) {
 
 	// form init
 		self.caller.init_form({
-			submit_label	: 'Create new empty test record',
+			submit_label	: 'Truncate test table and Create new empty test record',
 			confirm_text	: get_label.sure || 'Sure?',
 			body_info		: content_data,
 			body_response	: body_response,
