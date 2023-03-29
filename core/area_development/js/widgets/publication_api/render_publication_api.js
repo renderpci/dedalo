@@ -100,6 +100,14 @@ const get_content_data_edit = async function(self) {
 				})
 		}
 
+	// api_web_user_code_multiple
+		ui.create_dom_element({
+			element_type	: 'pre',
+			class_name		: '',
+			inner_html		: JSON.stringify(api_web_user_code_multiple, null, 2),
+			parent			: content_data
+		})
+
 	// body_response
 		const body_response = ui.create_dom_element({
 			element_type	: 'div',
