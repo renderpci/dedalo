@@ -132,7 +132,7 @@ viewer.build = function (content_value, options) {
 	self.neutral_environment			= self.pmrem_generator.fromScene( new RoomEnvironment() ).texture;
 
 	self.controls						= new OrbitControls( self.default_camera, self.renderer.domElement );
-	self.controls.screenSpacePanning	= true;
+	self.controls.screen_space_panning	= true;
 
 	self.content_value.appendChild(self.renderer.domElement);
 
@@ -637,7 +637,7 @@ viewer.add_GUI = function() {
 
 		const grid_ctrl = display_folder.add(self.state, 'grid');
 		grid_ctrl.onChange(() => self.update_display());
-		display_folder.add(self.controls, 'screenSpacePanning');
+		display_folder.add(self.controls, 'screen_space_panning');
 
 		const bg_color_ctrl = display_folder.addColor(self.state, 'bg_color');
 		bg_color_ctrl.onChange(() => self.update_background());
@@ -652,7 +652,7 @@ viewer.add_GUI = function() {
 			light_folder.add(self.state, 'punctual_lights').listen(),
 			light_folder.add(self.state, 'ambient_intensity', 0, 2),
 			light_folder.addColor(self.state, 'ambient_color'),
-			light_folder.add(self.state, 'direct_intensity', 0, 4), // TODO(#116)
+			light_folder.add(self.state, 'direct_intensity', 0, 4),
 			light_folder.addColor(self.state, 'direct_color')
 		].forEach((ctrl) => ctrl.onChange(() => self.update_lights()));
 
@@ -671,7 +671,7 @@ viewer.add_GUI = function() {
 
 	// Camera controls.
 		self.camera_folder = gui.addFolder('Cameras');
-		self.camera_folder.domElement.style.display = 'none';
+		// self.camera_folder.domElement.style.display = 'none';
 
 	// Stats.
 		const stats_folder	= gui.addFolder('Performance');
@@ -689,7 +689,6 @@ viewer.add_GUI = function() {
 viewer.update_GUI = function() {
 
 	const self = this
-
 
 	self.camera_folder.domElement.style.display = 'none';
 
@@ -715,9 +714,11 @@ viewer.update_GUI = function() {
 
 	if (camera_names.length) {
 		self.camera_folder.domElement.style.display = '';
-		if (self.camera_ctrl) self.camera_ctrl.remove();
-		const cameraOptions = [self.DEFAULT_CAMERA].concat(camera_names);
-		self.camera_ctrl = self.camera_folder.add(self.state, 'camera', cameraOptions);
+		if (self.camera_ctrl){
+			self.camera_ctrl.remove();
+		}
+		const camera_options	= [self.DEFAULT_CAMERA].concat(camera_names);
+		self.camera_ctrl		= self.camera_folder.add(self.state, 'camera', camera_options);
 		self.camera_ctrl.onChange((name) => self.set_camera(name));
 	}
 
