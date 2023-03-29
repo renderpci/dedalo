@@ -57,8 +57,6 @@ viewer.init = function () {
 	self.DRACO_LOADER		= new DRACOLoader( self.MANAGER ).setDecoderPath( '../../lib/threejs/jsm/libs/draco/' );
 	self.KTX2_LOADER		= new KTX2Loader( self.MANAGER ).setTranscoderPath( '../../lib/threejs/jsm/libs/basis/' );
 
-	self.preset = {ASSET_GENERATOR: 'assetgenerator'};
-
 	Cache.enabled = true;
 
 	return self
@@ -83,43 +81,40 @@ viewer.build = function (content_value, options) {
 	self.gui 			= null;
 
 	self.state = {
-		environment		: options.preset === self.preset.ASSET_GENERATOR
-			? environments.find((el) => el.id === 'footprint-court').name
-			: environments[1].name,
-		background		: false,
-		playbackSpeed	: 1.0,
-		actionStates	: {},
-		camera			: self.DEFAULT_CAMERA,
-		wireframe		: false,
-		skeleton		: false,
-		grid			: false,
+		environment			: options.environments ||  environments.find((el) => el.id === 'neutral').name,
+		background			: options.background || false,
+		playbackSpeed		: options.playbackSpeed || 1.0,
+		actionStates		: options.actionStates || {},
+		camera				: options.camera || self.DEFAULT_CAMERA,
+		wireframe			: options.wireframe || false,
+		skeleton			: options.skeleton || false,
+		grid				: options.grid || false,
 
 		// Lights
-		punctualLights		: true,
-		exposure			: 0.0,
-		toneMapping			: LinearToneMapping,
-		ambientIntensity	: 0.3,
-		ambientColor		: 0xFFFFFF,
-		directIntensity		: 0.8 * Math.PI,
-		directColor			: 0xFFFFFF,
-		bgColor				: 0x191919,
+		punctualLights		: options.punctualLights || true,
+		exposure			: options.exposure || 0.0,
+		toneMapping			: options.toneMapping || LinearToneMapping,
+		ambientIntensity	: options.ambientIntensity || 0.3,
+		ambientColor		: options.ambientColor || 0xFFFFFF,
+		directIntensity		: options.directIntensity || 0.8 * Math.PI,
+		directColor			: options.directColor || 0xFFFFFF,
+		bgColor				: options.bgColor || 0x191919,
 	};
 
 	self.prev_time = 0;
 
 	// create the stats
 	self.stats				= new Stats();
-	self.stats.dom.height	= '48px';
-	[].forEach.call(self.stats.dom.children, (child) => (child.style.display = ''));
+	// [].forEach.call(self.stats.dom.children, (child) => (child.style.display = ''));
 
 	self.background_color	= new Color(self.state.bgColor);
 
 	self.scene				= new Scene();
 	self.scene.background	= self.background_color;
 
-	const fov = options.preset === self.preset.ASSET_GENERATOR
-		? 0.8 * 180 / Math.PI
-		: 60;
+
+	const fov =  45 //0.8 * 180 / Math.PI
+
 	self.default_camera	= new PerspectiveCamera( fov, self.content_value.clientWidth / self.content_value.clientHeight, 0.01, 1000 );
 	self.active_camera	= self.default_camera;
 	self.scene.add( self.default_camera );
@@ -469,22 +464,14 @@ viewer.add_lights = function() {
 
 	const state = self.state;
 
-	if (self.options.preset === self.preset.ASSET_GENERATOR) {
-		const hemi_light = new HemisphereLight();
-		hemi_light.name = 'hemi_light';
-		self.scene.add(hemi_light);
-		self.lights.push(hemi_light);
-		return;
-	}
-
 	const light1	= new AmbientLight(state.ambientColor, state.ambientIntensity);
-	light1.name = 'ambient_light';
-	self.default_camera.add( light1 );
+		light1.name = 'ambient_light';
+		self.default_camera.add( light1 );
 
 	const light2	= new DirectionalLight(state.directColor, state.directIntensity);
-	light2.position.set(0.5, 0, 0.866); // ~60º
-	light2.name = 'main_light';
-	self.default_camera.add( light2 );
+		light2.position.set(0.5, 0, 0.866); // ~60º
+		light2.name = 'main_light';
+		self.default_camera.add( light2 );
 
 	self.lights.push(light1, light2);
 }//end add_lights
@@ -506,7 +493,6 @@ viewer.update_environment = function() {
 	const environment = environments.filter((entry) => entry.name === self.state.environment)[0];
 
 	self.get_cube_map_texture( environment ).then(( { envMap } ) => {
-
 		self.scene.environment = envMap;
 		self.scene.background = self.state.background ? envMap : self.background_color;
 
