@@ -87,25 +87,6 @@ const get_content_data = function(self) {
 
 			const widget_dom = build_widget(widget, self);
 			fragment.appendChild(widget_dom)
-
-			// load external
-				/*
-				const load_promises = []
-				if(widget.load_style) {
-
-					for (let i = 0; i < widget.load_style.length; i++) {
-						const src = widget.load_style[i]
-						load_promises.push( common.prototype.load_style(src) )
-					}
-				}
-				if(widget.load_script) {
-
-					for (let i = 0; i < widget.load_script.length; i++) {
-						const src = widget.load_script[i]
-						load_promises.push( common.prototype.load_script(src) )
-					}
-				}
-				*/
 		}
 
 	// content_data
@@ -178,16 +159,51 @@ const build_widget = (item, self) => {
 		}
 
 
-		// item info
-			if (item.info) {
-				const widget_info = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'link',
-					inner_html		: item.info || '',
-					parent			: body
-				})
+	// widget module check. Use if exists
+		const path = './widgets/'+ item.id +'/'+ item.id + '.js'
+		import(path)
+		.then(async function(module){
 
-				// action
+			// instance widget
+				const widget = new module[item.id]()
+
+			// init widget
+				await widget.init({
+					id				: item.id,
+					section_tipo	: self.section_tipo,
+					section_id		: self.section_id,
+					lang			: self.lang,
+					mode			: self.mode, // list
+					model			: 'widget',
+					name			: item.label,
+					value			: item.value,
+					caller			: self
+				})
+			// build
+				await widget.build(false)
+			// render
+				widget.render()
+				.then(function(node){
+					if (node) {
+						node.classList.add('body_info')
+						body.appendChild(node)
+					}
+				})
+		})
+		.catch((err) => {
+			// console.error(err)
+
+			// old builder fallback
+
+			// item info
+				if (item.info) {
+					const widget_info = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'link',
+						inner_html		: item.info || '',
+						parent			: body
+					})
+					// action
 					widget_info.addEventListener('mouseup',  async function(e){
 						e.stopPropagation()
 
@@ -238,49 +254,51 @@ const build_widget = (item, self) => {
 								current_worker.terminate()
 							}
 					})
-			}//end if (item.info) {
+				}//end if (item.info) {
 
-		// body info
-			const body_info = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: "body_info",
-				parent			: body,
-				inner_html		: item.body || ''
-			})
+			// body info
+				const body_info = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: "body_info",
+					inner_html		: item.body || '',
+					parent			: body
+				})
 
-		// script (javascript code)
-			// if (item.script) {
-			// 	const script = ui.create_dom_element({
-			// 		element_type	: 'script',
-			// 		parent			: body,
-			// 		inner_html		: item.script
-			// 	})
-			// }
+			// body_response
+				const body_response = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'body_response',
+					parent			: body
+				})
 
-		// body response
-			const body_response = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'body_response',
-				parent			: body
-			})
+			// script (javascript code)
+				// if (item.script) {
+				// 	const script = ui.create_dom_element({
+				// 		element_type	: 'script',
+				// 		parent			: body,
+				// 		inner_html		: item.script
+				// 	})
+				// }
 
-	// run widget scripts
-		if(item.run) {
-			for (let i = 0; i < item.run.length; i++) {
+			// run widget scripts
+				if(item.run) {
+					for (let i = 0; i < item.run.length; i++) {
 
-				const func			= item.run[i].fn
-				const func_options	= item.run[i].options
+						const func			= item.run[i].fn
+						const func_options	= item.run[i].options
 
-				// promise
-				self[func].apply(self, [{
-					...item,
-					...func_options,
-					body_info		: body_info,
-					body_response	: body_response,
-					print_response	: print_response
-				}])
-			}
-		}
+						// promise
+						self[func].apply(self, [{
+							...item,
+							...func_options,
+							body_info		: body_info,
+							body_response	: body_response,
+							print_response	: print_response
+						}])
+					}
+				}
+		});
+
 
 
 	return container
@@ -353,10 +371,8 @@ const print_response = (container, api_response) => {
 export const build_form = function(widget_object) {
 
 	// widget_object
-		// const trigger		= widget_object.trigger
 		const body_info			= widget_object.body_info
 		const body_response		= widget_object.body_response
-		const print_response	= widget_object.print_response
 		const confirm_text		= widget_object.confirm_text || get_label.sure || 'Sure?'
 		const inputs			= widget_object.inputs || []
 		const submit_label		= widget_object.submit_label || 'OK'
