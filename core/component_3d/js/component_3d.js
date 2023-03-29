@@ -82,26 +82,3 @@ export const component_3d = function(){
 	component_3d.prototype.change_mode			= component_common.prototype.change_mode
 
 
-// /**
-// * LOAD_EDITOR_FILES
-// * @return bool
-// */
-// component_3d.prototype.load_editor_files = async function() {
-
-// 	// load JSONEditor files if not already loaded
-// 		if(typeof JSONEditor==='undefined'){
-
-// 			// load dependencies js/css
-// 				const load_promises = []
-
-// 			// js module import
-// 				const load_promise = import('../../../lib/threejs/build/three.min.js') // used minified version for now
-// 				load_promises.push( load_promise )
-// 				//self.JSONEditor = JSONEditor
-
-// 			await Promise.all(load_promises)
-// 		}
-
-
-// 	return true
-// }//end load_editor_files
