@@ -666,8 +666,19 @@ abstract class subtitles {
 	public static function get_subtitles_url($section_id, $tc_in=null, $tc_out=null, string $lang=DEDALO_DATA_LANG) : string {
 
 		// Subtitles url base
-			$TEXT_SUBTITLES_URL_BASE = DEDALO_CORE_URL . '/publication/server_api/v1/subtitles/';
-			#define('TEXT_SUBTITLES_URL_BASE', DEDALO_CORE_URL . '/publication/server_api/v1/subtitles/');
+			// define('TEXT_SUBTITLES_URL_BASE', DEDALO_CORE_URL . '/publication/server_api/v1/subtitles/');
+			// $TEXT_SUBTITLES_URL_BASE = DEDALO_CORE_URL . '/publication/server_api/v1/subtitles/';
+			$TEXT_SUBTITLES_URL_BASE = defined('TEXT_SUBTITLES_URL_BASE')
+				? TEXT_SUBTITLES_URL_BASE // defined in publication server config
+				: (defined('DEDALO_CORE_URL')
+					? DEDALO_CORE_URL . '/publication/server_api/v1/subtitles/'
+					: null);
+			if (empty($TEXT_SUBTITLES_URL_BASE)) {
+				debug_log(__METHOD__
+					." Error: Unable to get any TEXT_SUBTITLES_URL_BASE definition"
+					, logger::ERROR
+				);
+			}
 
 		// url vars
 			$url_vars = [];

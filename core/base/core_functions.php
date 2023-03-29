@@ -15,7 +15,7 @@
 *	Nothing
 *	Only print (formatted as <pre>code</pre>) the info and value or dumped var
 */
-function dump($val, string $var_name=null, array $arguments=[]) : string {
+function dump($val, string $var_name=null, array $arguments=null) : string {
 
 	$html = '';
 
@@ -29,84 +29,84 @@ function dump($val, string $var_name=null, array $arguments=[]) : string {
 
 	# LEVEL 1
 
-		# FUNCTION
-		if (isset($bt[1]['function']))
-			$html .= PHP_EOL . " Inside method: ".$bt[1]['function'];
+		// function
+			if (isset($bt[1]['function'])) {
+				$html .= PHP_EOL . " Inside method: ".$bt[1]['function'];
+			}
 
-		# VAR_NAME
-		if(isset($var_name))
-			$html .= PHP_EOL . " name: <strong>". $var_name . '</strong>';
+		// var_name
+			if(isset($var_name)) {
+				$html .= PHP_EOL . " name: <strong>". $var_name . '</strong>';
+				$html .= PHP_EOL . ' +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ // ++++++++++++++++++++++++++++++++++++++++';
+			}
 
-		# EXPECTED
-		// if(isset($expected))
-		//	$html .= PHP_EOL . " val expected: <em> $expected </em>";
+		// expected
+			// if(isset($expected))
+			//	$html .= PHP_EOL . " val expected: <em> $expected </em>";
 
-		# EXEC_TIME
-		// if(isset($start_time)) {
-		// 	$html .= PHP_EOL . ' exec_time: <em> ' . exec_time_unit($start_time) . ' </em>';
-		// }
+		// exec_time
+			// if(isset($start_time)) {
+			// 	$html .= PHP_EOL . ' exec_time: <em> ' . exec_time_unit($start_time) . ' </em>';
+			// }
 
-		# arguments (optional)
-		if(isset($arguments) && is_array($arguments)) foreach ($arguments as $key => $value) {
-			$html .= PHP_EOL . " $key: <em> $value </em>";
-		}
+		// arguments (optional)
+			if(isset($arguments) && is_array($arguments)) foreach ($arguments as $key => $value) {
+				$html .= PHP_EOL . " $key: <em> $value </em>";
+			}
 
-		# VALUE
-		$value_html='';
-		$html .= PHP_EOL . " value: " ;
-		switch (true) {
-			case is_null($val):
-				$value_html .= json_encode($val);
-				break;
-			case is_bool($val):
-				$value_html .= json_encode($val);
-				break;
-			case is_array($val):
-				#$value_html .= var_export($val, true);
-				$value_html .= json_encode($val,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
-				break;
-			case is_object($val):
-				#$value_html .= var_export($val,true);
-				$value_html .= json_encode($val,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
-				break;
-			default:
-				if(is_string($val) && $val != strip_tags($val)) {
-					$val = htmlspecialchars($val);
-				}
-				$value_html .= var_export($val, true);
-				break;
-		}
+		// value
+			$value_html = '';
+			$html .= PHP_EOL . ' value: ';
+			switch (true) {
+				case is_null($val):
+					$value_html .= json_encode($val);
+					break;
+				case is_bool($val):
+					$value_html .= json_encode($val);
+					break;
+				case is_array($val):
+					#$value_html .= var_export($val, true);
+					$value_html .= json_encode($val,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
+					break;
+				case is_object($val):
+					#$value_html .= var_export($val,true);
+					$value_html .= json_encode($val,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
+					break;
+				default:
+					if(is_string($val) && $val != strip_tags($val)) {
+						$val = htmlspecialchars($val);
+					}
+					$value_html .= var_export($val, true);
+					break;
+			}
+			$html .= trim($value_html);
 
-		$html .= trim($value_html);
-
-		# TYPE
-		$html .= PHP_EOL . " type: ".gettype($val)."";
-
+		// type
+			$html .= PHP_EOL . " type: ".gettype($val)."";
 
 	# LEVEL 2
 
-		# CALLER FUNCTION
-		if (isset($bt[2]) && isset($bt[2]['file'])) {
-			$html .= PHP_EOL . " Caller2: ";
-			$html .= " ". print_r($bt[2]['file'],true);
-			$html .= PHP_EOL . " Function: ". print_r($bt[2]['function'],true);
-			$html .= " [Line: ". print_r($bt[2]['line'],true)."]";
+		// caller function
+			if (isset($bt[2]) && isset($bt[2]['file'])) {
+				$html .= PHP_EOL . " Caller 2: ";
+				$html .= " ". print_r($bt[2]['file'],true);
+				$html .= PHP_EOL . " Function: ". print_r($bt[2]['function'],true);
+				$html .= " [Line: ". print_r($bt[2]['line'],true)."]";
+			}
+
+	// print
+		if(SHOW_DEBUG===true) {
+			// print wrap_pre($html);
+			// echo "<script>console.log('PHP: ".$html."');</script>";
+			$str_json = file_get_contents('php://input');
+			// error_log("++++>>>> ".to_string($str_json));
+			if (!$str_json && empty($_POST)) {
+				// not exists call php://input
+				print wrap_pre($html);
+			}
 		}
 
-	# PRINT
-	if(SHOW_DEBUG===true) {
-		// print wrap_pre($html);
-		// echo "<script>console.log('PHP: ".$html."');</script>";
-
-		$str_json = file_get_contents('php://input');
-		#error_log("++++>>>> ".to_string($str_json));
-		if (!$str_json && empty($_POST)) {
-			// not exists call php://input
-			print wrap_pre($html);
-		}
-	}
-
-	# CONSOLE ERROR LOG ALWAYS
+	// console error log always
 	error_log(PHP_EOL.'-->'.$html);
 
 	#return wrap_pre($html);

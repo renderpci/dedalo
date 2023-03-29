@@ -1104,7 +1104,7 @@ class section extends common {
 							// custom projects dato passed
 
 							// set the component_filter with the dato sent by the caller (portals)
-							$component_filter 	= component_common::get_instance(
+							$component_filter = component_common::get_instance(
 								'component_filter',
 								$ar_tipo_component_filter[0],
 								$this->section_id,
@@ -2453,6 +2453,9 @@ class section extends common {
 	*/
 	public function diffusion_info_propagate_changes() : bool {
 		$start_time = start_time();
+
+		// (!) stopped temporally 27-03-2023 by Paco to prevent unexpected errors in diffusion
+		return true;
 
 		// exclude some matrix_table records to propagate diffusion info
 			$exclude_tables = [

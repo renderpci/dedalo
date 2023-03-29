@@ -168,6 +168,10 @@ abstract class TR {
 				break;
 
 			# OTHERS
+			case 'br' :
+					$string = '\<br>';
+					break;
+
 			case 'p' :
 				$string = '(\<\/?p\>)';
 				break;
@@ -187,6 +191,7 @@ abstract class TR {
 				break;
 
 			default :
+				trigger_error("Error Processing Request. Error: mark: '$mark' is not valid !");
 				throw new Exception("Error Processing Request. Error: mark: '$mark' is not valid !", 1);
 		}
 

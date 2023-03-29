@@ -109,6 +109,80 @@ class component_relation_index extends component_relation_common {
 
 
 	/**
+	* GET_DIFFUSION_VALUE
+	* Overwrite component common method
+	* Calculate current component diffusion value for target field (usually a mysql field)
+	* Used for diffusion_mysql to unify components diffusion value call
+	* @return string|null $diffusion_value
+	*
+	* @see class.diffusion_mysql.php
+	*/
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
+
+		$dato = $this->get_dato();
+
+		// preserve v5 order (old webs compatibility
+		// [{"type":"dd96","tag_id":"29","section_id":"30","section_tipo":"rsc167","component_tipo":"rsc36","section_top_id":"26","section_top_tipo":"oh1","from_component_tipo":"hierarchy40"}]
+		if (empty($dato)) {
+			$diffusion_value = null;
+		}else{
+			$diffusion_dato = [];
+			foreach ($dato as $current_locator) {
+
+				$locator = new locator();
+
+				// type
+				$locator->set_type($current_locator->type ?? DEDALO_RELATION_TYPE_INDEX_TIPO);
+
+				// tag_id
+				if (isset($current_locator->tag_id)) {
+					$locator->set_tag_id($current_locator->tag_id);
+				}
+
+				// section_id
+				$locator->set_section_id($current_locator->section_id);
+
+				// section_tipo
+				$locator->set_section_tipo($current_locator->section_tipo);
+
+				// component_tipo
+				if (isset($current_locator->component_tipo)) {
+					$locator->set_component_tipo($current_locator->component_tipo);
+				}
+
+				// section_top_id
+				if (isset($current_locator->section_top_id)) {
+					$locator->set_section_top_id($current_locator->section_top_id);
+				}
+
+				// section_top_tipo
+				if (isset($current_locator->section_top_tipo)) {
+					$locator->set_section_top_tipo($current_locator->section_top_tipo);
+				}
+
+				// from_component_tipo
+				$locator->set_from_component_tipo($current_locator->from_component_tipo);
+
+				// from_component_top_tipo
+				if (isset($current_locator->from_component_top_tipo)) {
+					$locator->set_from_component_top_tipo($current_locator->from_component_top_tipo);
+				}
+
+				$diffusion_dato[] = $locator;
+			}
+
+			$diffusion_value = !empty($diffusion_dato)
+				? json_encode($diffusion_dato)
+				: null;
+		}
+
+
+		return $diffusion_value;
+	}//end get_diffusion_value
+
+
+
+	/**
 	* ADD_LOCATOR
 	* Add one locator to current 'dato'. Verify is exists to avoid duplicates
 	* NOTE: This method updates component 'dato' but NOT save

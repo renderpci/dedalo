@@ -423,6 +423,18 @@ class area_development extends area_common {
 			$ar_widgets[] = $widget;
 
 
+		// publication_api
+			$item = new stdClass();
+				$item->id		= 'publication_api';
+				$item->typo		= 'widget';
+				$item->label	= 'Publication server API';
+				$item->value 	= (object)[
+					'api_web_user_code_multiple' => API_WEB_USER_CODE_MULTIPLE
+				];
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
+
+
 		// Dédalo API test environment
 			$item = new stdClass();
 				$item->id		= 'dedalo_api_test_environment';
@@ -544,24 +556,7 @@ class area_development extends area_common {
 			$item = new stdClass();
 				$item->id		= 'unit_test';
 				$item->typo		= 'widget';
-				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
-				$item->label	= 'TEST';
-				$item->info		= null;
-				$item->body		= '<button class="light" onclick="window.open(\'../unit_test\')">Open alpha unit test</button>';
-				$item->run[]	= (object)[
-					'fn' 	  => 'init_form',
-					'options' => (object)[
-						'submit_label' => 'Create new empty test record',
-						'confirm_text' => label::get_label('sure') ?? 'Sure?'
-					]
-				];
-				$item->trigger 	= (object)[
-					'dd_api'	=> 'dd_utils_api',
-					'action'	=> 'create_test_record',
-					'options'	=> null
-				];
-
+				$item->label	= 'Unit test area';
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
@@ -635,6 +630,8 @@ class area_development extends area_common {
 				$widget->body		= $item->body  ?? null;
 				$widget->run		= $item->run ?? [];
 				$widget->trigger	= $item->trigger ?? null;
+				$widget->value		= $item->value ?? null;
+
 
 		return $widget;
 	}//end widget_factory
