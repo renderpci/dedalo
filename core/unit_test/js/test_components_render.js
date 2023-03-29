@@ -64,7 +64,7 @@ async function fn_change_search_element(instance) {
 	const pairs_length		= pairs.length
 
 	// DOM containers
-	const content = document.getElementById('content');
+	const container = document.getElementById('content');
 	for (let i = 0; i < pairs_length; i++) {
 
 		const pair = pairs[i]
@@ -72,7 +72,7 @@ async function fn_change_search_element(instance) {
 		const pair_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'pair_container',
-			parent			: content
+			parent			: container
 		})
 		pair.container = pair_container
 

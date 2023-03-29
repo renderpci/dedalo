@@ -87,6 +87,19 @@ const get_content_data_edit = async function(self) {
 			window.open(url)
 		})
 
+	// list_of_test
+		const list_of_test = ui.create_dom_element({
+			element_type	: 'pre',
+			class_name		: 'list_of_test',
+			parent			: content_data
+		})
+		const content = content_data
+		import('../../../../unit_test/js/list.js')
+		.then(function(module){
+			list_of_test.innerHTML = JSON.stringify(module.list_of_test, null, 2)
+		})
+
+
 	// body_response
 		const body_response = ui.create_dom_element({
 			element_type	: 'div',
@@ -106,7 +119,10 @@ const get_content_data_edit = async function(self) {
 			}
 		})
 
-		// add at end body_response
+
+
+
+	// add at end body_response
 		content_data.appendChild(body_response)
 
 

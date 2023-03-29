@@ -5,7 +5,6 @@
 */
 .area_development {
 	// background-color: #50f9af;
-
 	display: table;
 	width: 100%;
 	padding: 1rem;
@@ -59,7 +58,6 @@
 			// }
 		}
 
-
 		>.widget_container {
 			//background-color: #d9efd3;
 			// background-color: #fce8d2; // #fdf4ea
@@ -85,49 +83,6 @@
 				}
 				>.widget_body {
 					background-color: @color_grey_light;
-				}
-			}
-
-			&#search_query_object_test_environment, &#dedalo_api_test_environment {
-				flex: 1 1 100%;
-				// min-height: 50vh;
-				// background-color: #3883fa;
-
-				.editor_json {
-					height: 50vh;
-					min-height: 300px;
-
-					.jsoneditor {
-						z-index: 1;
-					}
-				}
-
-				>.widget_label {
-					//background-color: #3275e2;
-				}
-				>.widget_body {
-					padding: 0px;
-					// background-color: #f3f3f3;
-					>.body_info {
-						padding: 0px;
-					}
-				}
-			}//end search_query_object_test_environment
-
-			&#dedalo_api_test_environment {
-
-				>.widget_label {
-					background-color: #21984b;
-				}
-				>.widget_body {
-					background-color: #c0e4cd;
-				}
-
-				.editor_json {
-					// height: 30vh;
-				}
-				.jsoneditor-menu {
-					background-color: #21984b; // green instead default blue
 				}
 			}
 
@@ -173,7 +128,7 @@
 				overflow: auto;
 				width: 100%;
 
-				>.link {
+				.link {
 					cursor: pointer;
 					user-select: none;
 					padding-bottom: 0.25em;
@@ -198,24 +153,24 @@
 					font-size: 0.9em;
 					color: #676464;
 
-					>h6 {
+					h6 {
 						//font-weight: bold;
 						font-size: 1.2em;
 						padding: 0.5em;
 						padding-left: 0px;
 					}
 
-					>pre {
+					pre {
 						margin-top: 1em;
 					}
 
-					>.alert_update {
+					.alert_update {
 						padding: 1.55rem;
 						color: red;
 						line-height: 1.7rem;
 					}
 
-					>.command {
+					.command {
 						font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
 						font-size: 0.8em;
 						padding: 0.5em;
@@ -311,6 +266,50 @@
 					}
 				}//end .body_response
 			}//end .widget_body
+
+
+			&#search_query_object_test_environment, &#dedalo_api_test_environment {
+				flex: 1 1 100%;
+				// min-height: 50vh;
+				// background-color: #3883fa;
+
+				.editor_json {
+					height: 50vh;
+					min-height: 300px;
+
+					.jsoneditor {
+						z-index: 1;
+					}
+				}
+
+				>.widget_label {
+					//background-color: #3275e2;
+				}
+				>.widget_body {
+					padding: 0px;
+					// background-color: #f3f3f3;
+					>.body_info {
+						padding: 0px;
+					}
+				}
+			}//end search_query_object_test_environment
+
+			&#dedalo_api_test_environment {
+
+				>.widget_label {
+					background-color: #21984b;
+				}
+				>.widget_body {
+					background-color: #c0e4cd;
+				}
+
+				.editor_json {
+					// height: 30vh;
+				}
+				.jsoneditor-menu {
+					background-color: #21984b; // green instead default blue
+				}
+			}//end dedalo_api_test_environment
 
 			&#php_info {
 				flex: 1 1 100%;

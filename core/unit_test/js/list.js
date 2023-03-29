@@ -5,7 +5,7 @@ import {elements} from './elements.js'
 
 
 // list
-	const list_of_test = [
+	export const list_of_test = [
 		'test_key_instances',
 		'test_get_instance',
 		'test_delete_instance',
@@ -16,56 +16,60 @@ import {elements} from './elements.js'
 		'test_components_render'
 	]
 
-	// container
-		const content	= document.getElementById('content')
-		const container	= ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'list_of_test_container',
-			parent			: content
-		})
+	// content: (!) Note that content value is automatically set by mocha selecting page #content
+	// const content = document.getElementById('content')
+	if (typeof content!=='undefined') {
 
-	// title Test list
-		ui.create_dom_element({
-			element_type	: 'h1',
-			class_name		: '',
-			inner_html		: 'Test generic list',
-			parent			: container
-		})
+		// container
+			const container	= ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'list_of_test_container',
+				parent			: content
+			})
 
-	// links list
-		const list_of_test_length = list_of_test.length
-		for (let i = 0; i < list_of_test_length; i++) {
-
-			const test_name = list_of_test[i]
-
-			// link
+		// title Test list
 			ui.create_dom_element({
-				element_type	: 'a',
-				href			: `./?area=${test_name}`,
-				class_name		: 'list_of_test_item link',
-				inner_html		: test_name,
+				element_type	: 'h1',
+				class_name		: '',
+				inner_html		: 'Test generic list',
 				parent			: container
 			})
-		}
 
-	// title Test list
-		ui.create_dom_element({
-			element_type	: 'h1',
-			class_name		: '',
-			inner_html		: 'Test full component list',
-			parent			: container
-		})
-		const elements_length = elements.length
-		for (let i = 0; i < elements_length; i++) {
+		// links list
+			const list_of_test_length = list_of_test.length
+			for (let i = 0; i < list_of_test_length; i++) {
 
-			const element = elements[i]
+				const test_name = list_of_test[i]
 
-			// link
+				// link
+				ui.create_dom_element({
+					element_type	: 'a',
+					href			: `./?area=${test_name}`,
+					class_name		: 'list_of_test_item link',
+					inner_html		: test_name,
+					parent			: container
+				})
+			}
+
+		// title Test list
 			ui.create_dom_element({
-				element_type	: 'a',
-				href			: `./?area=component_full_test&model=${element.model}`,
-				class_name		: 'list_of_test_element link',
-				inner_html		: element.model + ` [${element.tipo}]`,
+				element_type	: 'h1',
+				class_name		: '',
+				inner_html		: 'Test full component list',
 				parent			: container
 			})
-		}
+			const elements_length = elements.length
+			for (let i = 0; i < elements_length; i++) {
+
+				const element = elements[i]
+
+				// link
+				ui.create_dom_element({
+					element_type	: 'a',
+					href			: `./?area=component_full_test&model=${element.model}`,
+					class_name		: 'list_of_test_element link',
+					inner_html		: element.model + ` [${element.tipo}]`,
+					parent			: container
+				})
+			}
+	}//end if (content)

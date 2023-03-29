@@ -21,8 +21,6 @@ const model		= url_vars.model
 
 
 
-
-
 /**
 * MAKE_ELEMENT_TEST
 * @param object options
@@ -98,7 +96,7 @@ async function make_element_test(options) {
 
 
 	// DOM containers
-	const content = document.getElementById('content');
+	const container = document.getElementById('content');
 
 	// test
 
@@ -114,7 +112,7 @@ async function make_element_test(options) {
 			view		: view,
 			permissions	: permissions,
 			element		: element,
-			content		: content,
+			content		: container,
 			fn_asserts	: async (new_instance) => {
 				// asserts
 				assert.equal(
@@ -143,7 +141,7 @@ async function make_element_test(options) {
 			view		: view,
 			permissions	: permissions,
 			element		: element,
-			content		: content,
+			content		: container,
 			fn_asserts	: async (new_instance) => {
 				// asserts
 				assert.equal(
@@ -192,7 +190,7 @@ async function make_element_test(options) {
 			view		: view,
 			permissions	: permissions,
 			element		: element,
-			content		: content,
+			content		: container,
 			fn_asserts	: async (new_instance) => {
 				// asserts
 				assert.equal(
@@ -247,7 +245,7 @@ async function make_element_test(options) {
 			view		: view,
 			permissions	: permissions,
 			element		: element,
-			content		: content,
+			content		: container,
 			fn_asserts	: async (new_instance) => {
 				// asserts
 				assert.equal(
@@ -303,7 +301,7 @@ async function make_element_test(options) {
 			view		: view,
 			permissions	: permissions,
 			element		: element,
-			content		: content,
+			content		: container,
 			fn_asserts	: async (new_instance) => {
 				// asserts
 				assert.equal(
@@ -362,7 +360,7 @@ async function make_element_test(options) {
 			view		: view,
 			permissions	: permissions,
 			element		: element,
-			content		: content,
+			content		: container,
 			fn_asserts	: async (new_instance) => {
 				// asserts
 				assert.equal(
@@ -421,7 +419,7 @@ async function make_element_test(options) {
 			view		: view,
 			permissions	: permissions,
 			element		: element,
-			content		: content,
+			content		: container,
 			fn_asserts	: async (new_instance) => {
 				// asserts
 				assert.equal(
@@ -480,7 +478,7 @@ async function make_element_test(options) {
 			view		: view,
 			permissions	: permissions,
 			element		: element,
-			content		: content,
+			content		: container,
 			fn_asserts	: async (new_instance) => {
 				// asserts
 				assert.equal(
