@@ -83,7 +83,6 @@ final class dd_utils_api {
 	* @return object $response
 	*/
 	public static function dedalo_version(object $rqo) : object {
-		$start_time = start_time();
 
 		session_write_close();
 
@@ -96,7 +95,7 @@ final class dd_utils_api {
 			'version' 	=>	DEDALO_VERSION,
 			'build'		=>	DEDALO_BUILD
 		];
-		$response->msg 	  = 'Ok. Request done';
+		$response->msg 	  = 'OK. Request done';
 
 
 		return $response;
@@ -803,12 +802,13 @@ final class dd_utils_api {
 	*		"error"			: 0,
 	*		"size"			: 29892
 	*	}
-	*	"prevent_lock": true
 	* }
 	* @param object $rqo
 	* @return object $response
 	*/
 	public static function upload(object $rqo) : object {
+
+		session_write_close();
 
 		// response
 			$response = new stdClass();
@@ -1285,7 +1285,7 @@ final class dd_utils_api {
 				$contents = (defined('SERVER_PROXY') && !empty(SERVER_PROXY))
 					? (function(){
 
-						// regular contaxt
+						// regular context
 							$aContext = [
 								'http' => [
 									'proxy'				=> 'tcp://' . SERVER_PROXY,
