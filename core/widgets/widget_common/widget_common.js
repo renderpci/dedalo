@@ -8,7 +8,6 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	// import * as instances from '../../common/js/instances.js'
 	import {common} from '../../common/js/common.js'
-
 	// import {ui} from '../../common/js/ui.js'
 
 
@@ -17,6 +16,7 @@ export const widget_common = function(){
 
 	return true
 }//end widget_common
+
 
 
 /**
@@ -28,6 +28,8 @@ export const widget_common = function(){
 	widget_common.prototype.destroy	= common.prototype.destroy
 	widget_common.prototype.refresh	= common.prototype.refresh
 	widget_common.prototype.render	= common.prototype.render
+
+
 
 /**
 * INIT
@@ -109,4 +111,3 @@ widget_common.prototype.build = async function(autoload=false) {
 
 	return true
 }//end build
-

@@ -109,6 +109,29 @@ class component_json extends component_common {
 
 
 	/**
+	* GET_DIFFUSION_VALUE
+	* Calculate current component diffusion value for target field (usually a mysql field)
+	* Used for diffusion_mysql to unify components diffusion value call
+	* @return string $diffusion_value
+	*
+	* @see class.diffusion_mysql.php
+	*/
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
+
+		# Default behavior is get value
+		$dato = $this->get_dato();
+
+		# strip_tags all values (remove untranslated mark elements)
+		$diffusion_value = isset($dato[0])
+			? json_encode($dato[0])
+			: null;
+
+		return $diffusion_value;
+	}//end get_diffusion_value
+
+
+
+	/**
 	* UPDATE_DATO_VERSION
 	* @param object $request_options
 	* @return object $response

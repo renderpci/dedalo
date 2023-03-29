@@ -1078,13 +1078,13 @@ class diffusion_sql extends diffusion  {
 
 				#
 				# Diffusion element
-				$diffusion_term = new RecordObj_dd($options->tipo);
-				$properties 	= $diffusion_term->get_propiedades(true);	# Format: {"data_to_be_used": "dato"}
+				$diffusion_term	= new RecordObj_dd($options->tipo);
+				$properties		= $diffusion_term->get_propiedades(true);	# Format: {"data_to_be_used": "dato"}
 
 				#
 				# Component target
 				$related_component_tipo	= self::get_field_related_component($options->tipo);
-				$model_name			= RecordObj_dd::get_modelo_name_by_tipo($related_component_tipo,true);
+				$model_name				= RecordObj_dd::get_modelo_name_by_tipo($related_component_tipo,true);
 
 				// related term info
 					$ar_field_data['related_term']  = $related_component_tipo;
@@ -1093,18 +1093,22 @@ class diffusion_sql extends diffusion  {
 				// component
 					if($model_name==='relation_list') {
 
-						$current_component	= new relation_list($related_component_tipo,
-																$options->parent,
-																$options->section_tipo,
-																'list');
+						$current_component = new relation_list(
+							$related_component_tipo,
+							$options->parent,
+							$options->section_tipo,
+							'list'
+						);
 					}else{
-						$current_component	= component_common::get_instance($model_name,
-																			 $related_component_tipo,
-																			 $options->parent,
-																			 'list', // Note that list have dato fallback (in section)
-																			 $options->lang,
-																			 $options->section_tipo,
-																			 false);
+						$current_component = component_common::get_instance(
+							$model_name,
+							$related_component_tipo,
+							$options->parent,
+							'list', // Note that list have dato fallback (in section)
+							$options->lang,
+							$options->section_tipo,
+							false
+						);
 					}
 					# Fix diffusion element properties on target component to enable configure response value
 					$current_component->set_diffusion_properties($properties);
@@ -1123,7 +1127,7 @@ class diffusion_sql extends diffusion  {
 						: $current_component->get_dato();
 				}
 
-				$diffusion_model_name 	= RecordObj_dd::get_modelo_name_by_tipo($options->tipo,true);
+				$diffusion_model_name = RecordObj_dd::get_modelo_name_by_tipo($options->tipo,true);
 
 
 				# switch cases
@@ -1178,6 +1182,7 @@ class diffusion_sql extends diffusion  {
 						break;
 
 					case (is_object($properties) && property_exists($properties, 'process_dato')):
+
 						# Process dato with function
 						$function_name = $properties->process_dato;
 						$ar_field_data['field_value'] = call_user_func($function_name, $options, $dato);
@@ -1545,13 +1550,16 @@ class diffusion_sql extends diffusion  {
 				if (!empty($found_component_relation_parent)) {
 					// this section is thesaurus
 					// locate recursive parents
-					$parents_recursive = component_relation_parent::get_parents_recursive($section_id, $section_tipo);
-
+					$parents_recursive = component_relation_parent::get_parents_recursive(
+						$section_id,
+						$section_tipo,
+						true
+					);
 					foreach ($parents_recursive as $parents_recursive_locator) {
 
 						// launch parent update record
 						$new_options = new stdClass();
-							$new_options->section_tipo				= $section_tipo;
+							$new_options->section_tipo				= $parents_recursive_locator->section_tipo;
 							$new_options->section_id				= $parents_recursive_locator->section_id;
 							$new_options->diffusion_element_tipo	= $diffusion_element_tipo;
 						$this->update_record($new_options);
@@ -3263,47 +3271,95 @@ class diffusion_sql extends diffusion  {
 	/**
 	* MAP_PARENT_TO_NORDER
 	* Returns number of order of current element based on parent array position of this element
+	* @param object $options
+	* sample:
+	* {
+	*    "typology": null,
+	*    "value": null,
+	*    "tipo": "dd710",
+	*    "parent": 9, // current published record
+	*    "lang": "lg-vlca",
+	*    "section_tipo": "ww1",
+	*    "caler_id": 3,
+	*    "properties": {
+	*        "process_dato": "diffusion_sql::map_parent_to_norder"
+	*    },
+	*    "diffusion_element_tipo": "murapa3",
+	*    "component": {...}
+	* }
 	* @param array $dato
 	*	Is array of parent locators
+	* sample:
+	* [
+	*    {
+	*        "section_tipo": "hierarchy1",
+	*        "section_id": "271",
+	*        "from_component_tipo": "ww28"
+	*    }
+	* ]
 	* @return int $norder
 	*/
-	public static function map_parent_to_norder($options, $dato) {
+	public static function map_parent_to_norder(object $options, $dato) : int {
 		$norder = 0;
 
-		if (!empty($dato)) {
-
-			$current_locator = new locator();
-				$current_locator->set_section_tipo($options->section_tipo);
-				$current_locator->set_section_id($options->parent);
-
-			$parent_locator = reset($dato);
-
-			if (isset($parent_locator->from_component_tipo)) {
-				$current_component_tipo = $parent_locator->from_component_tipo;
-			}elseif (isset($parent_locator->component_tipo)) {
-				$current_component_tipo = $parent_locator->component_tipo;
-				debug_log(__METHOD__." ERROR: Expected locator->from_component_tipo but found ocator->component_tipo. Please fix this data ASAP ".to_string(), logger::ERROR);
-			}else{
-				throw new Exception("Error Processing Request. Not found component tipo in locator: ".to_string($parent_locator), 1);
+		// no dato case
+			if (empty($dato)) {
+				return $norder; // zero
 			}
 
-			$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo, true); // component_relation_children
-			$component 		= component_common::get_instance($model_name,
-															 $current_component_tipo,
-															 $parent_locator->section_id,
-															 'list',
-															 DEDALO_DATA_NOLAN,
-															 $parent_locator->section_tipo);
-			$parent_dato = $component->get_dato();
-			foreach ((array)$parent_dato as $key => $children_locator) {
-				if( true===locator::compare_locators( $current_locator, $children_locator, $ar_properties=array('section_tipo','section_id') ) ) {
+		// debug
+			// dump($options, ' map_parent_to_norder options +/////'.to_string());
+			// dump($dato, ' map_parent_to_norder dato +/////'.to_string());
+			// dump(debug_backtrace(), ' bt debug_backtrace +/////'.to_string());
+
+		// options. caller
+			$caller_section_id		= $options->parent;
+			$caller_section_tipo	= $options->section_tipo;
+
+		// locator to find (current caller like from dd710)
+			$locator_to_find = new locator();
+				$locator_to_find->set_section_tipo($caller_section_tipo);
+				$locator_to_find->set_section_id($caller_section_id);
+
+		// children params
+			$section_tipo	= $dato[0]->section_tipo;
+			$section_id		= $dato[0]->section_id; // caller section_id.  $options->parent;
+
+		// children tipo from current section
+			$children_tipo = section::get_ar_children_tipo_by_model_name_in_section(
+				$section_tipo,
+				['component_relation_children'],
+				true,
+				true,
+				true,
+				true
+			);
+
+		// check found
+			if (!isset($children_tipo[0])) {
+				debug_log(__METHOD__." Error. searched component_relation_children not found in section '$section_tipo'", logger::ERROR);
+				return $norder; // zero
+			}
+
+		// component_relation_children
+			$component_relation_children = component_common::get_instance(
+				'component_relation_children', // string model
+				$children_tipo[0], // string tipo
+				$section_id, // string section_id
+				'list', // string mode
+				DEDALO_DATA_NOLAN, // string lang
+				$section_tipo // string section_tipo
+			);
+			$relation_children_dato = $component_relation_children->get_dato();
+			foreach ($relation_children_dato as $key => $children_locator) {
+				if( true===locator::compare_locators( $locator_to_find, $children_locator, ['section_tipo','section_id']) ) {
 					$norder = $key;
 					break;
 				}
 			}
-		}
 
-		return (int)$norder;
+
+		return $norder;
 	}//end map_parent_to_norder
 
 

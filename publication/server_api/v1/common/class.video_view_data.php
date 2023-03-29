@@ -4,7 +4,7 @@
 * Object for get all player data
 *
 */
-class video_view_data {
+class video_view_data extends stdClass {
 
 
 
@@ -220,16 +220,16 @@ class video_view_data {
 		$ar_subtitles = array();
 
 		// Get all diffusion langs
-		$ar_langs = DEDALO_DIFFUSION_LANGS;
+		$ar_langs = unserialize(DEDALO_DIFFUSION_LANGS);
 		foreach ($ar_langs as $current_lang) {
 
 			$name = DEDALO_COMPONENT_RESOURCES_AV_TIPO .'_'. AUDIOVISUAL_SECTION_TIPO .'_'. $av_section_id .'_'. $current_lang .'.'.DEDALO_AV_SUBTITLES_EXTENSION;
 
-			$file_full_path = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER . '/' . $name;
+			$file_full_path = DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER . '/' . $name;
 			if (!file_exists($file_full_path)) {
 				# Force create file ??
 			}else{
-				$file_url 	= DEDALO_MEDIA_URL  . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER . '/' . $name;
+				$file_url 	= DEDALO_MEDIA_BASE_URL  . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER . '/' . $name;
 
 				$lang_name = lang::get_name_from_code($current_lang, 'lg-eng');
 
@@ -371,8 +371,8 @@ class video_view_data {
 			case (isset($this->image_type) && $this->image_type==='posterframe'):
 			default:
 				# POSTERFRAME
-				$path = DEDALO_MEDIA_URL . DEDALO_AV_FOLDER .'/posterframe/'; // __CONTENT_BASE_URL__ .
-				$name = DEDALO_COMPONENT_RESOURCES_AV_TIPO .'_'. AUDIOVISUAL_SECTION_TIPO .'_'. $av_section_id .'.'.DEDALO_AV_POSTERFRAME_EXTENSION;
+				$path = DEDALO_MEDIA_BASE_URL . DEDALO_AV_FOLDER .'/posterframe/'; // __CONTENT_BASE_URL__ .
+				$name = DEDALO_COMPONENT_RESOURCES_AV_TIPO .'_'. AUDIOVISUAL_SECTION_TIPO .'_'. $av_section_id .'.jpg';
 				$image_url = $path . $name;
 				break;
 		}
@@ -383,6 +383,4 @@ class video_view_data {
 
 
 
-
 }//end class video_view_data
-?>

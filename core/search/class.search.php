@@ -260,7 +260,10 @@ class search {
 	* SEARCH
 	* Exec a SQL query search against the database
 	* @return object $records_data
-	* { ar_records : [], }
+	* {
+	* 	ar_records : [], // array
+	* 	debug properties // mixed
+	* }
 	*/
 	public function search() : object {
 		$start_time=start_time();

@@ -175,6 +175,7 @@ $updates->$v = new stdClass();
 			'component_pdf',
 			'component_svg',
 			'component_portal',
+			'component_geolocation',
 			'component_json',
 			'component_number',
 			'component_text_area', // (!) Run this at end because affect image and av data
