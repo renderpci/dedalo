@@ -2465,7 +2465,7 @@ abstract class common {
 			// of the list (for sections and portals) by default or edit mode get the properties of the term itself.
 			switch ($mode) {
 				case 'list':
-				case 'portal_list':
+				// case 'portal_list':
 					// if section or component has properties injected, use instead the section_list
 					// And sometimes the portals don't has section_list defined.
 					// In these cases get the properties from the current tipo
@@ -2969,7 +2969,7 @@ abstract class common {
 							break;
 						case 'list':
 						case 'search':
-						case 'portal_list':
+						// case 'portal_list':
 						default:
 							if ($model==='section') {
 								# case section list is defined
@@ -3971,7 +3971,7 @@ abstract class common {
 		// by default or edit mode get the properties of the term itself.
 			switch ($mode) {
 				case 'list':
-				case 'portal_list':
+				// case 'portal_list':
 					# in the case that section_list is defined
 					$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section_list', 'children', true);
 					if(isset($ar_terms[0])) {
