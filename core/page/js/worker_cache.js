@@ -103,14 +103,14 @@ self.onmessage = async function(e) {
 
 			switch (item.type) {
 				case 'js':
-					// time: on week = 604800 (7 x 24 x 60 x 60)
+					// time: one week = 604800 (7 x 24 x 60 x 60)
 					headers.append('Cache-Control', 'stale-while-revalidate=604800');
 					// mime: text/javascript
 					headers.append('Content-Type', 'text/javascript');
 					break;
 
 				case 'css':
-					// time: on day = 86400 (1 x 24 x 60 x 60)
+					// time: one day = 86400 (1 x 24 x 60 x 60)
 					headers.append('Cache-Control', 'stale-while-revalidate=86400');
 					// mime: text/css
 					headers.append('Content-Type', 'text/css');

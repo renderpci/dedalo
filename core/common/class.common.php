@@ -1524,13 +1524,20 @@ abstract class common {
 				if (isset($tool_object->properties->mode) && $tool_object->properties->mode!==$mode) {
 					continue;
 				}
-
+				// tool_config
 				$tool_config	= isset($properties->tool_config->{$tool_object->name})
 					? $properties->tool_config->{$tool_object->name}
 					: null;
-				$current_tool_section_tipo = $this->get_section_tipo() ?? $this->tipo;
-				$tool_context	= tool_common::create_tool_simple_context($tool_object, $tool_config, $this->tipo, $current_tool_section_tipo);
-				$tools[]		= $tool_context;
+				// tool context
+				$current_tool_section_tipo	= $this->get_section_tipo() ?? $this->tipo;
+				$tool_context				= tool_common::create_tool_simple_context(
+					$tool_object,
+					$tool_config,
+					$this->tipo,
+					$current_tool_section_tipo
+				);
+				// add
+				$tools[] = $tool_context;
 			}//end foreach ($tools_list as $item)
 
 		// buttons
@@ -3042,11 +3049,6 @@ abstract class common {
 						// 	);
 						// }
 
-				// target_section_tipo
-					if (!isset($target_section_tipo)) {
-						$target_section_tipo = $section_tipo;
-					}
-
 				// sqo_config
 					$sqo_config = new stdClass();
 						$sqo_config->full_count		= false;
@@ -3077,7 +3079,7 @@ abstract class common {
 						? $tipo_properties->children_view
 						: null;
 
-				// authorized ddo items. Check the permissions of each element and discard non accessibles
+				// authorized ddo items. Check the permissions of each element and discard non accessible
 					$ar_related_clean_auth = (function() use($ar_related_clean, $target_section_tipo){
 						// check each element permissions
 						$result = [];
@@ -3095,7 +3097,7 @@ abstract class common {
 					$ddo_map = array_map(function($current_tipo) use($tipo, $target_section_tipo, $current_mode, $children_view){
 
 						$model						= RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true);
-						// $legacy_model 				= RecordObj_dd::get_legacy_model_name_by_tipo($current_tipo)
+						// $legacy_model			= RecordObj_dd::get_legacy_model_name_by_tipo($current_tipo)
 						$current_tipo_RecordObj_dd	= new RecordObj_dd($current_tipo);
 						$current_tipo_properties	= $current_tipo_RecordObj_dd->get_properties();
 						$own_view					= isset($current_tipo_properties->view)
@@ -3784,7 +3786,7 @@ abstract class common {
 
 	/**
 	* GET_TOOLS
-	* Get component tools filtered by user permissions
+	* Get element (component, section, ...) tools filtered by user permissions
 	* @return array $tools
 	*/
 	public function get_tools() : array {
@@ -3813,7 +3815,7 @@ abstract class common {
 			$properties			= $this->get_properties();
 			$with_lang_versions	= isset($properties->with_lang_versions) ? $properties->with_lang_versions : false;
 
-		// component tools
+		// element tools
 			foreach ($user_tools as $tool) {
 
 				$affected_tipos				= isset($tool->affected_tipos)  ? (array)$tool->affected_tipos : [];
