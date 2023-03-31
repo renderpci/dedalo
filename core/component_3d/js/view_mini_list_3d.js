@@ -16,14 +16,14 @@
 export const view_mini_list_3d = function() {
 
 	return true
-}//end  view_mini_list_3d
+}//end view_mini_list_3d
 
 
 
 /**
 * MINI
 * Render node to be used by service autocomplete or any datalist
-* @return HTMLElement
+* @return HTMLElement wrapper
 */
 view_mini_list_3d.mini = async function() {
 
@@ -49,4 +49,4 @@ view_mini_list_3d.mini = async function() {
 
 
 	return wrapper
-}//end  mini
+}//end mini
