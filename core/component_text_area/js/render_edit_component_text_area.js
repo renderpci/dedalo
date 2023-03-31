@@ -47,6 +47,7 @@ render_edit_component_text_area.prototype.edit = async function(options) {
 			self.permissions = 1
 
 		case 'line':
+		case 'html_text':
 		case 'default':
 		default:
 			return view_default_edit_text_area.render(self, options)
