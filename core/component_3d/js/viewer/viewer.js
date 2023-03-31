@@ -88,22 +88,22 @@ viewer.build = function (content_value, options) {
 	self.state = {
 		environment			: options.environments ||  environments.find((el) => el.id==='neutral').name,
 		background			: options.background || false,
-		playbackSpeed		: options.playbackSpeed || 1.0,
-		actionStates		: options.actionStates || {},
+		playback_speed		: options.playback_speed || 1.0,
+		action_states		: options.action_states || {},
 		camera				: options.camera || self.DEFAULT_CAMERA,
 		wireframe			: options.wireframe || false,
 		skeleton			: options.skeleton || false,
 		grid				: options.grid || false,
 
 		// Lights
-		punctualLights		: options.punctualLights || true,
+		punctual_lights		: options.punctual_lights || true,
 		exposure			: options.exposure || 0.0,
-		toneMapping			: options.toneMapping || LinearToneMapping,
-		ambientIntensity	: options.ambientIntensity || 0.3,
-		ambientColor		: options.ambientColor || 0xFFFFFF,
-		directIntensity		: options.directIntensity || 0.8 * Math.PI,
-		directColor			: options.directColor || 0xFFFFFF,
-		bgColor				: options.bgColor || 0x191919
+		tone_mapping		: options.tone_mapping || LinearToneMapping,
+		ambient_intensity	: options.ambient_intensity || 0.3,
+		ambient_color		: options.ambient_color || 0xFFFFFF,
+		direct_intensity	: options.direct_intensity || 0.8 * Math.PI,
+		direct_color		: options.direct_color || 0xFFFFFF,
+		bg_color			: options.bg_color || 0x191919
 	};
 
 	self.prev_time = 0;
@@ -112,7 +112,7 @@ viewer.build = function (content_value, options) {
 	self.stats				= new Stats();
 	// [].forEach.call(self.stats.dom.children, (child) => (child.style.display = ''));
 
-	self.background_color	= new Color(self.state.bgColor);
+	self.background_color	= new Color(self.state.bg_color);
 
 	self.scene				= new Scene();
 	self.scene.background	= self.background_color;
@@ -137,7 +137,7 @@ viewer.build = function (content_value, options) {
 	self.neutral_environment			= self.pmrem_generator.fromScene( new RoomEnvironment() ).texture;
 
 	self.controls						= new OrbitControls( self.default_camera, self.renderer.domElement );
-	self.controls.screenSpacePanning	= true;
+	self.controls.screen_space_panning	= true;
 
 	self.content_value.appendChild(self.renderer.domElement);
 
@@ -293,11 +293,11 @@ viewer.set_content = function( object, clips ) {
 	self.scene.add(object);
 	self.content = object;
 
-	self.state.punctualLights = true;
+	self.state.punctual_lights = true;
 
 	self.content.traverse((node) => {
 		if (node.isLight) {
-		self.state.punctualLights = false;
+		self.state.punctual_lights = false;
 		} else if (node.isMesh) {
 		// TODO(https://github.com/mrdoob/three.js/pull/18235): Clean up.
 		node.material.depthWrite = !node.material.transparent;
@@ -403,7 +403,7 @@ viewer.play_all_clips = function() {
 
 	self.clips.forEach((clip) => {
 		self.mixer.clipAction(clip).reset().play();
-		self.state.actionStates[clip.name] = true;
+		self.state.action_states[clip.name] = true;
 	});
 }//end play_all_clips
 
@@ -441,20 +441,20 @@ viewer.update_lights = function() {
 	const state = self.state;
 	const lights = self.lights;
 
-	if (state.punctualLights && !lights.length) {
+	if (state.punctual_lights && !lights.length) {
 		self.add_lights();
-	} else if (!state.punctualLights && lights.length) {
+	} else if (!state.punctual_lights && lights.length) {
 		self.remove_lights();
 	}
 
-	self.renderer.toneMapping = Number(state.toneMapping);
+	self.renderer.toneMapping = Number(state.tone_mapping);
 	self.renderer.toneMappingExposure = Math.pow(2, state.exposure);
 
 	if (lights.length === 2) {
-		lights[0].intensity = state.ambientIntensity;
-		lights[0].color.setHex(state.ambientColor);
-		lights[1].intensity = state.directIntensity;
-		lights[1].color.setHex(state.directColor);
+		lights[0].intensity = state.ambient_intensity;
+		lights[0].color.setHex(state.ambient_color);
+		lights[1].intensity = state.direct_intensity;
+		lights[1].color.setHex(state.direct_color);
 	}
 }//end update_lights
 
@@ -469,11 +469,11 @@ viewer.add_lights = function() {
 
 	const state = self.state;
 
-	const light1	= new AmbientLight(state.ambientColor, state.ambientIntensity);
+	const light1	= new AmbientLight(state.ambient_color, state.ambient_intensity);
 		light1.name = 'ambient_light';
 		self.default_camera.add( light1 );
 
-	const light2	= new DirectionalLight(state.directColor, state.directIntensity);
+	const light2	= new DirectionalLight(state.direct_color, state.direct_intensity);
 		light2.position.set(0.5, 0, 0.866); // ~60º
 		light2.name = 'main_light';
 		self.default_camera.add( light2 );
@@ -581,7 +581,7 @@ viewer.update_background = function() {
 
 	const self = this
 
-	self.background_color.setHex(self.state.bgColor);
+	self.background_color.setHex(self.state.bg_color);
 }
 
 
@@ -642,9 +642,9 @@ viewer.add_GUI = function() {
 
 		const grid_ctrl = display_folder.add(self.state, 'grid');
 		grid_ctrl.onChange(() => self.update_display());
-		display_folder.add(self.controls, 'screenSpacePanning');
+		display_folder.add(self.controls, 'screen_space_panning');
 
-		const bg_color_ctrl = display_folder.addColor(self.state, 'bgColor');
+		const bg_color_ctrl = display_folder.addColor(self.state, 'bg_color');
 		bg_color_ctrl.onChange(() => self.update_background());
 
 	// Lighting controls.
@@ -652,19 +652,19 @@ viewer.add_GUI = function() {
 		const env_map_ctrl = light_folder.add(self.state, 'environment', environments.map((env) => env.name));
 		env_map_ctrl.onChange(() => self.update_environment());
 		[
-			light_folder.add(self.state, 'toneMapping', {Linear: LinearToneMapping, 'ACES Filmic': ACESFilmicToneMapping}),
+			light_folder.add(self.state, 'tone_mapping', {Linear: LinearToneMapping, 'ACES Filmic': ACESFilmicToneMapping}),
 			light_folder.add(self.state, 'exposure', -10, 10, 0.01),
-			light_folder.add(self.state, 'punctualLights').listen(),
-			light_folder.add(self.state, 'ambientIntensity', 0, 2),
-			light_folder.addColor(self.state, 'ambientColor'),
-			light_folder.add(self.state, 'directIntensity', 0, 4), // TODO(#116)
-			light_folder.addColor(self.state, 'directColor')
+			light_folder.add(self.state, 'punctual_lights').listen(),
+			light_folder.add(self.state, 'ambient_intensity', 0, 2),
+			light_folder.addColor(self.state, 'ambient_color'),
+			light_folder.add(self.state, 'direct_intensity', 0, 4),
+			light_folder.addColor(self.state, 'direct_color')
 		].forEach((ctrl) => ctrl.onChange(() => self.update_lights()));
 
 	// Animation controls.
 		self.anim_folder = gui.addFolder('Animation');
 		self.anim_folder.domElement.style.display = 'none';
-		const playback_speed_ctrl = self.anim_folder.add(self.state, 'playbackSpeed', 0, 1);
+		const playback_speed_ctrl = self.anim_folder.add(self.state, 'playback_speed', 0, 1);
 		playback_speed_ctrl.onChange((speed) => {
 			if (self.mixer) self.mixer.timeScale = speed;
 		});
@@ -676,7 +676,7 @@ viewer.add_GUI = function() {
 
 	// Camera controls.
 		self.camera_folder = gui.addFolder('Cameras');
-		self.camera_folder.domElement.style.display = 'none';
+		// self.camera_folder.domElement.style.display = 'none';
 
 	// Stats.
 		const stats_folder	= gui.addFolder('Performance');
@@ -694,7 +694,6 @@ viewer.add_GUI = function() {
 viewer.update_GUI = function() {
 
 	const self = this
-
 
 	self.camera_folder.domElement.style.display = 'none';
 
@@ -720,9 +719,11 @@ viewer.update_GUI = function() {
 
 	if (camera_names.length) {
 		self.camera_folder.domElement.style.display = '';
-		if (self.camera_ctrl) self.camera_ctrl.remove();
-		const cameraOptions = [self.DEFAULT_CAMERA].concat(camera_names);
-		self.camera_ctrl = self.camera_folder.add(self.state, 'camera', cameraOptions);
+		if (self.camera_ctrl){
+			self.camera_ctrl.remove();
+		}
+		const camera_options	= [self.DEFAULT_CAMERA].concat(camera_names);
+		self.camera_ctrl		= self.camera_folder.add(self.state, 'camera', camera_options);
 		self.camera_ctrl.onChange((name) => self.set_camera(name));
 	}
 
@@ -745,22 +746,22 @@ viewer.update_GUI = function() {
 
 	if (self.clips.length) {
 		self.anim_folder.domElement.style.display = '';
-		const actionStates = self.state.actionStates = {};
+		const action_states = self.state.action_states = {};
 		self.clips.forEach((clip, clipIndex) => {
 		clip.name = `${clipIndex + 1}. ${clip.name}`;
 
 		// Autoplay the first clip.
 		let action;
 		if (clipIndex === 0) {
-			actionStates[clip.name] = true;
+			action_states[clip.name] = true;
 			action = self.mixer.clipAction(clip);
 			action.play();
 		} else {
-			actionStates[clip.name] = false;
+			action_states[clip.name] = false;
 		}
 
 		// Play other clips when enabled.
-		const ctrl = self.anim_folder.add(actionStates, clip.name).listen();
+		const ctrl = self.anim_folder.add(action_states, clip.name).listen();
 		ctrl.onChange((playAnimation) => {
 			action = action || self.mixer.clipAction(clip);
 			action.setEffectiveTimeScale(1);
