@@ -92,13 +92,17 @@ export const service_ckeditor = function() {
 							})
 							.then(function(response){
 								// set json_langs
-								self.json_langs = response
+								// self.json_langs = response
+								window['json_langs'] = response
 								resolve(response)
 							})
 						})
 					)
 					await Promise.all(load_promises)
 			}
+
+		// set json_langs (loaded once and set to global var)
+			self.json_langs = window['json_langs']
 
 		// create editor (ddEditor|InlineEditor)
 			const create = async function (){
