@@ -31,8 +31,8 @@ export const instances = []
 /**
 * GET_INSTANCE
 * Get the instance, first use the storage of the instances cache, if the instance is not init will be create and stored for use.
-* for create the instance is necessary acces to every init code of every component, do it take time,
-* and this method crete one promise to wait for the creation instance of every component,
+* for create the instance is necessary access to every init code of every component, do it take time,
+* and this method create one promise to wait for the creation instance of every component,
 * @param object options
 * Sample:
 *	{
@@ -174,46 +174,54 @@ export const get_instance = async function(options){
 						: base_path + model + '/js/' + name + '.js' // + '?v=' + page_globals.dedalo_version
 
 				// import element mod file once (and wait until finish)
-					let current_element
-					try {
-						current_element = await import(path)
-					}catch(error){
-						console.error(`------- ERROR ON IMPORT ELEMENT!!! [model:${model}] [path:${path}] \n Error: \n`, error);
+					// let current_element
+					// try {
+					// 	current_element = await import(path)
+					// }catch(error){
+					// 	console.error(`------- ERROR ON IMPORT ELEMENT!!! [model:${model}] [path:${path}] \n Error: \n`, error);
 
-						resolve(false)
-						return
-					}
+					// 	resolve(false)
+					// 	return
+					// }
 
-				// check current_element
-					if (typeof current_element[model]!=="function") {
-						console.warn(`------- INVALID MODEL!!! [model:${model}] path: `, path);
-						resolve(false)
-						return
-					}
+				import(path)
+				.then(async function(module){
 
-				// instance the element
-					const instance_element = new current_element[model]()
+					// check module
+						if (typeof module[model]!=="function") {
+							console.warn(`------- INVALID MODEL!!! [model:${model}] path: `, path);
+							resolve(false)
+							return
+						}
 
-				// serialize element id
-				// add the id for init the instance with the id
-					instance_element.id = key
-					//instance_element.id_base = key_instances_builder(options, false)
-					instance_element.id_base = section_tipo+'_'+section_id+'_'+tipo
-				// id_variant . Propagate a custom instance id to children
-					if (options.id_variant) {
-						instance_element.id_variant = options.id_variant
-					}
+					// instance the element
+						const instance_element = new module[model]()
 
-				// init the element
-					await instance_element.init(options)
+					// serialize element id
+					// add the id for init the instance with the id
+						instance_element.id = key
+						//instance_element.id_base = key_instances_builder(options, false)
+						instance_element.id_base = section_tipo+'_'+section_id+'_'+tipo
+					// id_variant . Propagate a custom instance id to children
+						if (options.id_variant) {
+							instance_element.id_variant = options.id_variant
+						}
 
-				// add to the instances cache
-					instances.push(instance_element)
+					// init the element
+						await instance_element.init(options)
 
-					// console.log("Created fresh instance of :", model, section_tipo, section_id, key, instance_element)
+					// add to the instances cache
+						instances.push(instance_element)
+						// console.log("Created fresh instance of :", model, section_tipo, section_id, key, instance_element)
 
-				// return the new created instance
-					resolve(instance_element)
+					// return the new created instance
+						resolve(instance_element)
+				})
+				.catch((error) => {
+					console.error(`------- ERROR ON IMPORT ELEMENT!!! [model:${model}] [path:${path}] \n Error: \n`, error);
+					resolve(false)
+					return
+				});
 			})
 			.catch(err => { console.error(err) });
 		}//end load_instance
