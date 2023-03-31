@@ -156,7 +156,10 @@ viewer.build = function (content_value, options) {
 
 	self.animate = self.animate.bind(self);
 	requestAnimationFrame( self.animate );
-	window.addEventListener('resize', self.resize.bind(self), false);
+
+	// resize event. Add to content value instead window to allow user resize manually the component
+		// window.addEventListener('resize', self.resize.bind(self), false);
+		new ResizeObserver( self.resize.bind(self) ).observe( self.content_value )
 }// end build
 
 
@@ -178,7 +181,7 @@ viewer.render = function() {
 
 /**
 * RESIZE
-* when the window is resize it's necessary to update the aspect of the camera and the size of the rendered node
+* When the window is resize it's necessary to update the aspect of the camera and the size of the rendered node
 */
 viewer.resize = function() {
 
@@ -186,13 +189,18 @@ viewer.resize = function() {
 
 	const {clientHeight, clientWidth} = self.content_value
 
-	self.default_camera.aspect = clientWidth / clientHeight;
-	self.default_camera.updateProjectionMatrix();
-	self.renderer.setSize(clientWidth, clientHeight);
+	// set timeout to disengage the container new size calculation
+	// and the render making resize more fluid
+	setTimeout(function(){
 
-	self.axes_camera.aspect = self.axes_div.clientWidth / self.axes_div.clientHeight;
-	self.axes_camera.updateProjectionMatrix();
-	self.axes_renderer.setSize(self.axes_div.clientWidth, self.axes_div.clientHeight);
+		self.default_camera.aspect = clientWidth / clientHeight;
+		self.default_camera.updateProjectionMatrix();
+		self.renderer.setSize(clientWidth, clientHeight);
+
+		self.axes_camera.aspect = self.axes_div.clientWidth / self.axes_div.clientHeight;
+		self.axes_camera.updateProjectionMatrix();
+		self.axes_renderer.setSize(self.axes_div.clientWidth, self.axes_div.clientHeight);
+	}, 5)
 }//end resize
 
 

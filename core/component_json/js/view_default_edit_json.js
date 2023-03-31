@@ -166,6 +166,14 @@ const get_content_value = (key, current_value, self) => {
 						current_value
 					)
 					self.editors.push(editor) // append current editor
+
+					// add resize content_value event to allow user to resize the map
+						new ResizeObserver( function(){
+							setTimeout(function(){
+								editor.resize();
+							}, 3)
+						})
+						.observe( content_value )
 			})
 
 			// blur event
