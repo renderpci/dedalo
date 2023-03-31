@@ -1286,8 +1286,8 @@ abstract class common {
 				$key_beats = [
 					$called_model,
 					$called_tipo,
-					$this->section_id ?? '',
-					($this->section_tipo ?? ''),
+					$this->get_section_id() ?? '',
+					($this->get_section_tipo() ?? ''),
 					$this->mode,
 					$options->context_type,
 					(int)$options->get_request_config,
@@ -1338,8 +1338,8 @@ abstract class common {
 						// $bt = debug_backtrace()[0];
 						// dump($json->data, ' json->data ++ '.to_string($bt));
 					}
-				$current_section_tipo	= $this->section_tipo ?? $this->tipo ?? '';
-				$current_section_id		= $this->section_id ?? '';
+				$current_section_tipo	= $this->get_section_tipo() ?? $this->tipo ?? '';
+				$current_section_id		= $this->get_section_id() ?? '';
 				debug_log(
 					'------------------- get_json --------------------- '. $called_tipo .' ---------- '. $exec_time .' ---- '. $called_model.' - '.$current_section_tipo.'.'.$current_section_id,
 					logger::DEBUG
@@ -3796,7 +3796,7 @@ abstract class common {
 	public function get_tools() : array {
 
 		// cache
-			$cache_key = $this->tipo.'_'.($this->section_tipo ?? '');
+			$cache_key = $this->tipo.'_'.($this->get_section_tipo() ?? '');
 			static $cache_get_tools;
 			if (isset($cache_get_tools[$cache_key])) {
 				return $cache_get_tools[$cache_key];
@@ -3931,7 +3931,7 @@ abstract class common {
 
 							if(!isset($tool_config)) continue;
 
-							$current_section_tipo	= $this->section_tipo ?? $this->tipo;
+							$current_section_tipo	= $this->get_section_tipo() ?? $this->tipo;
 							$tool_context			= tool_common::create_tool_simple_context($tool_object, $tool_config, $this->tipo, $current_section_tipo );
 
 							$tools[] = $tool_context;
