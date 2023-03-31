@@ -195,6 +195,7 @@ abstract class component_common extends common {
 						'list',
 						'search',
 						'tm',
+						'related_list', // used by component_relation_index, and component_text_area to build custom sections
 						// 'simple',
 						// 'tool_portal',
 						// 'tool_lang',
@@ -209,7 +210,6 @@ abstract class component_common extends common {
 						// 'load_tr',
 						// 'update',
 						// 'portal_list',
-						// 'related_list',
 						// 'list_thesaurus',
 						// 'portal_list_view_mosaic',
 						// 'edit_in_list',
