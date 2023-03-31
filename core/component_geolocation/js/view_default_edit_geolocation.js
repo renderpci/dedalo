@@ -286,6 +286,13 @@ export const get_content_value = (i, current_value, self) =>{
 						self.layers_loader({
 							load: 'full'
 						})
+						// add resize content_value event to allow user to resize the map
+						new ResizeObserver( function(){
+							setTimeout(function(){
+								self.refresh_map(self.map)
+							}, 3)
+						})
+						.observe( content_value )
 					})
 				}
 			)

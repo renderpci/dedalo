@@ -117,11 +117,14 @@
 
 			// video_container
 			>.content_value {
-				background-color: #faf8fc;
+				// background-color: #faf8fc;
 				height: inherit;
 				min-height: 404px;
 				width: 100%;
 				min-width: 540px;
+
+				resize: vertical;
+				overflow: hidden;
 
 				@media screen and (max-width: @width_break_point_1) {
 					height: unset;
