@@ -80,6 +80,8 @@ session_write_close();
 			$obj->dedalo_entity						= DEDALO_ENTITY;
 			// version
 			$obj->dedalo_version					= DEDALO_VERSION;
+			// build
+			$obj->dedalo_build						= DEDALO_BUILD;
 			// mode
 			$obj->mode								= $mode ?? null;
 			// lang
