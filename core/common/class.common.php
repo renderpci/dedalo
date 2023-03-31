@@ -3801,9 +3801,9 @@ abstract class common {
 			if (isset($cache_get_tools[$cache_key])) {
 				return $cache_get_tools[$cache_key];
 			}
-			if (isset($_SESSION['dedalo']['tools'][$cache_key])) {
-				return $_SESSION['dedalo']['tools'][$cache_key];
-			}
+			// if (isset($_SESSION['dedalo']['tools'][$cache_key])) {
+			// 	return $_SESSION['dedalo']['tools'][$cache_key];
+			// }
 
 		$tools = [];
 
@@ -3859,7 +3859,7 @@ abstract class common {
 
 		// cache
 			$cache_get_tools[$cache_key] = $tools;
-			$_SESSION['dedalo']['tools'][$cache_key] = $tools;
+			// $_SESSION['dedalo']['tools'][$cache_key] = $tools;
 
 
 		return $tools;
