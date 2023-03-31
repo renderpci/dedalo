@@ -1286,8 +1286,8 @@ abstract class common {
 				$key_beats = [
 					$called_model,
 					$called_tipo,
-					$this->section_id ?? '',
-					($this->section_tipo ?? ''),
+					$this->get_section_id() ?? '',
+					($this->get_section_tipo() ?? ''),
 					$this->mode,
 					$options->context_type,
 					(int)$options->get_request_config,
@@ -1338,8 +1338,8 @@ abstract class common {
 						// $bt = debug_backtrace()[0];
 						// dump($json->data, ' json->data ++ '.to_string($bt));
 					}
-				$current_section_tipo	= $this->section_tipo ?? $this->tipo ?? '';
-				$current_section_id		= $this->section_id ?? '';
+				$current_section_tipo	= $this->get_section_tipo() ?? $this->tipo ?? '';
+				$current_section_id		= $this->get_section_id() ?? '';
 				debug_log(
 					'------------------- get_json --------------------- '. $called_tipo .' ---------- '. $exec_time .' ---- '. $called_model.' - '.$current_section_tipo.'.'.$current_section_id,
 					logger::DEBUG
@@ -1524,13 +1524,20 @@ abstract class common {
 				if (isset($tool_object->properties->mode) && $tool_object->properties->mode!==$mode) {
 					continue;
 				}
-
+				// tool_config
 				$tool_config	= isset($properties->tool_config->{$tool_object->name})
 					? $properties->tool_config->{$tool_object->name}
 					: null;
-				$current_tool_section_tipo = $this->get_section_tipo() ?? $this->tipo;
-				$tool_context	= tool_common::create_tool_simple_context($tool_object, $tool_config, $this->tipo, $current_tool_section_tipo);
-				$tools[]		= $tool_context;
+				// tool context
+				$current_tool_section_tipo	= $this->get_section_tipo() ?? $this->tipo;
+				$tool_context				= tool_common::create_tool_simple_context(
+					$tool_object,
+					$tool_config,
+					$this->tipo,
+					$current_tool_section_tipo
+				);
+				// add
+				$tools[] = $tool_context;
 			}//end foreach ($tools_list as $item)
 
 		// buttons
@@ -2465,16 +2472,17 @@ abstract class common {
 			// of the list (for sections and portals) by default or edit mode get the properties of the term itself.
 			switch ($mode) {
 				case 'list':
-				case 'portal_list':
-					// if section or component has properties injected, use instead the section_list
+					// default. Properties from self element
+					$properties = $this->get_properties();
+
+					// section. If section or component has properties injected, use it instead the section_list
 					// And sometimes the portals don't has section_list defined.
 					// In these cases get the properties from the current tipo
-					$properties = $this->get_properties();
 					if($model==='section' && isset($properties->source->request_config)){
-						break;
+						break; // stop here
 					}
 
-					# in the case that section_list is defined
+					// in the case that section_list is defined
 					$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
 						$tipo,
 						'section_list',
@@ -2487,20 +2495,15 @@ abstract class common {
 
 						$current_term	= $ar_terms[0];
 						$RecordObj_dd	= new RecordObj_dd($current_term);
+
+						// override properties var
 						$properties		= $RecordObj_dd->get_properties();
-
-					}else{
-
-						// section. Use self section properties if no section list is defined
-
-						$properties = $this->get_properties();
 					}
 					break;
+
 				default:
-					// edit mode or components without section_list defined (other than portals or sections)
-					// $RecordObj_dd	= new RecordObj_dd($tipo);
-					// $properties		= $RecordObj_dd->get_properties();
-					$properties			= $this->get_properties();
+					// edit mode or components without section_list defined
+					$properties = $this->get_properties();
 					break;
 			}
 
@@ -2969,7 +2972,6 @@ abstract class common {
 							break;
 						case 'list':
 						case 'search':
-						case 'portal_list':
 						default:
 							if ($model==='section') {
 								# case section list is defined
@@ -2986,7 +2988,7 @@ abstract class common {
 								// portal cases
 								// case section list is defined
 								$ar_terms = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
-									$tipo, //string tipo
+									$tipo, // string tipo
 									'section_list', // string model
 									'children', // string relation_type
 									true // bool search_exact
@@ -3014,12 +3016,11 @@ abstract class common {
 				// related_clean
 					$ar_related_clean 	 = [];
 					$target_section_tipo = $section_tipo;
-
 					if (!empty($ar_related)) {
 						foreach ((array)$ar_related as $current_tipo) {
 							$current_model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 							if ($current_model==='section') {
-								$target_section_tipo = $current_tipo; // Overwrite
+								$target_section_tipo = $current_tipo; // Overwrite (!)
 								continue;
 							}else if ($current_model==='section' || $current_model==='exclude_elements') {
 								continue;
@@ -3047,11 +3048,6 @@ abstract class common {
 						// 		, logger::ERROR
 						// 	);
 						// }
-
-				// target_section_tipo
-					if (!isset($target_section_tipo)) {
-						$target_section_tipo = $section_tipo;
-					}
 
 				// sqo_config
 					$sqo_config = new stdClass();
@@ -3083,7 +3079,7 @@ abstract class common {
 						? $tipo_properties->children_view
 						: null;
 
-				// authorized ddo items. Check the permissions of each element and discard non accessibles
+				// authorized ddo items. Check the permissions of each element and discard non accessible
 					$ar_related_clean_auth = (function() use($ar_related_clean, $target_section_tipo){
 						// check each element permissions
 						$result = [];
@@ -3101,7 +3097,7 @@ abstract class common {
 					$ddo_map = array_map(function($current_tipo) use($tipo, $target_section_tipo, $current_mode, $children_view){
 
 						$model						= RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true);
-						// $legacy_model 				= RecordObj_dd::get_legacy_model_name_by_tipo($current_tipo)
+						// $legacy_model			= RecordObj_dd::get_legacy_model_name_by_tipo($current_tipo)
 						$current_tipo_RecordObj_dd	= new RecordObj_dd($current_tipo);
 						$current_tipo_properties	= $current_tipo_RecordObj_dd->get_properties();
 						$own_view					= isset($current_tipo_properties->view)
@@ -3790,20 +3786,20 @@ abstract class common {
 
 	/**
 	* GET_TOOLS
-	* Get component tools filtered by user permissions
+	* Get element (component, section, ...) tools filtered by user permissions
 	* @return array $tools
 	*/
 	public function get_tools() : array {
 
 		// cache
-			$cache_key = $this->tipo.'_'.($this->section_tipo ?? '');
+			$cache_key = $this->tipo.'_'.($this->get_section_tipo() ?? '');
 			static $cache_get_tools;
 			if (isset($cache_get_tools[$cache_key])) {
 				return $cache_get_tools[$cache_key];
 			}
-			if (isset($_SESSION['dedalo']['tools'][$cache_key])) {
-				return $_SESSION['dedalo']['tools'][$cache_key];
-			}
+			// if (isset($_SESSION['dedalo']['tools'][$cache_key])) {
+			// 	return $_SESSION['dedalo']['tools'][$cache_key];
+			// }
 
 		$tools = [];
 
@@ -3819,7 +3815,7 @@ abstract class common {
 			$properties			= $this->get_properties();
 			$with_lang_versions	= isset($properties->with_lang_versions) ? $properties->with_lang_versions : false;
 
-		// component tools
+		// element tools
 			foreach ($user_tools as $tool) {
 
 				$affected_tipos				= isset($tool->affected_tipos)  ? (array)$tool->affected_tipos : [];
@@ -3859,7 +3855,7 @@ abstract class common {
 
 		// cache
 			$cache_get_tools[$cache_key] = $tools;
-			$_SESSION['dedalo']['tools'][$cache_key] = $tools;
+			// $_SESSION['dedalo']['tools'][$cache_key] = $tools;
 
 
 		return $tools;
@@ -3931,7 +3927,7 @@ abstract class common {
 
 							if(!isset($tool_config)) continue;
 
-							$current_section_tipo	= $this->section_tipo ?? $this->tipo;
+							$current_section_tipo	= $this->get_section_tipo() ?? $this->tipo;
 							$tool_context			= tool_common::create_tool_simple_context($tool_object, $tool_config, $this->tipo, $current_section_tipo );
 
 							$tools[] = $tool_context;
@@ -3971,7 +3967,7 @@ abstract class common {
 		// by default or edit mode get the properties of the term itself.
 			switch ($mode) {
 				case 'list':
-				case 'portal_list':
+				// case 'portal_list':
 					# in the case that section_list is defined
 					$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section_list', 'children', true);
 					if(isset($ar_terms[0])) {

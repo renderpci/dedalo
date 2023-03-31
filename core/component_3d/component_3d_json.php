@@ -40,8 +40,6 @@
 	}//end if($options->get_context===true)
 
 
-	dump($context, "No tengo una rana cantora de contexto".to_string());
-
 
 // data
 	$data = [];
@@ -78,14 +76,11 @@
 
 				// media info
 					$item->media_info = $this->get_media_streams();
-
 			}
 
 		$data[] = $item;  // append to the end of the array
 	}//end if($options->get_data===true && $permissions>0)
 
-
-	dump($data, "No tengo una rana cantora de datos".to_string());
 
 
 // JSON string

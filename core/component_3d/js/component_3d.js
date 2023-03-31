@@ -80,5 +80,3 @@ export const component_3d = function(){
 	// component_3d.prototype.viewer			= render_viewer_component_3d.prototype.viewer
 
 	component_3d.prototype.change_mode			= component_common.prototype.change_mode
-
-
