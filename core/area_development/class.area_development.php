@@ -47,22 +47,10 @@ class area_development extends area_common {
 			$item = new stdClass();
 				$item->id		= 'make_backup';
 				$item->typo		= 'widget';
-				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
 				$item->label	= label::get_label('make_backup') ?? 'Make backup';
-				$item->info		= null;
-				$file_name		= date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $_SESSION['dedalo']['auth']['user_id'] .'_forced_dbv' . implode('-', get_current_version_in_db()).'.custom.backup';
-				$item->body		= 'Force to make a full backup now like:<br><br><div>'.DEDALO_BACKUP_PATH_DB.'/<br>'.$file_name.'</div>';
-				$item->run[]	= (object)[
-					'fn'		=> 'init_form',
-					'options'	=> (object)[
-						'confirm_text' => label::get_label('sure') ?? 'Sure?'
-					]
-				];
-				$item->trigger 	= (object)[
-					'dd_api'	=> 'dd_utils_api',
-					'action'	=> 'make_backup',
-					'options'	=> null
+				$item->value	= (object)[
+					'backup_path'	=> DEDALO_BACKUP_PATH_DB,
+					'file_name'		=> date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $_SESSION['dedalo']['auth']['user_id'] .'_forced_dbv' . implode('-', get_current_version_in_db()).'.custom.backup'
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
@@ -400,25 +388,6 @@ class area_development extends area_common {
 
 		// update_code
 			$item = new stdClass();
-				// $item->id		= 'update_code';
-				// $item->class	= 'with_100';
-				// $item->typo		= 'widget';
-				// $item->tipo		= $this->tipo;
-				// $item->parent	= $this->tipo;
-				// $item->label	= label::get_label('update') .' '. label::get_label('code');
-				// $item->body		= 'Current version: <b>'.DEDALO_VERSION.'</b> - build: <b>'.DEDALO_BUILD.'</b>.';
-				// $item->body		.= ' Update Dédalo code to the latest version';
-				// $item->run[]	= (object)[
-				// 	'fn'		=> 'init_form',
-				// 	'options'	=> (object)[
-				// 		'confirm_text' => label::get_label('sure') ?? 'Sure?'
-				// 	]
-				// ];
-				// $item->trigger 	= (object)[
-				// 	'dd_api'	=> 'dd_utils_api',
-				// 	'action'	=> 'update_code',
-				// 	'options'	=> null
-				// ];
 				$item->id		= 'update_code';
 				$item->typo		= 'widget';
 				$item->label	= label::get_label('update') .' '. label::get_label('code');
@@ -431,7 +400,7 @@ class area_development extends area_common {
 				$item->id		= 'publication_api';
 				$item->typo		= 'widget';
 				$item->label	= 'Publication server API';
-				$item->value 	= (object)[
+				$item->value	= (object)[
 					'api_web_user_code_multiple' => API_WEB_USER_CODE_MULTIPLE
 				];
 			$widget = $this->widget_factory($item);
