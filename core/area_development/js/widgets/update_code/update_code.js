@@ -38,11 +38,11 @@ export const update_code = function() {
 * extend functions from common
 */
 // prototypes assign
-	// // lifecycle
+	// lifecycle
 	update_code.prototype.init		= widget_common.prototype.init
 	update_code.prototype.build		= widget_common.prototype.build
 	update_code.prototype.render	= widget_common.prototype.render
 	update_code.prototype.destroy	= widget_common.prototype.destroy
-	// // render
+	// render
 	update_code.prototype.edit		= render_update_code.prototype.list
 	update_code.prototype.list		= render_update_code.prototype.list

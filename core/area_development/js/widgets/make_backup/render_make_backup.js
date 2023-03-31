@@ -10,13 +10,13 @@
 
 
 /**
-* RENDER_UPDATE_CODE
+* RENDER_MAKE_BACKUP
 * Manages the component's logic and appearance in client side
 */
-export const render_update_code = function() {
+export const render_make_backup = function() {
 
 	return true
-}//end render_update_code
+}//end render_make_backup
 
 
 
@@ -33,7 +33,7 @@ export const render_update_code = function() {
 * @return HTMLElement wrapper
 * 	To append to the widget body node (area_development)
 */
-render_update_code.prototype.list = async function(options) {
+render_make_backup.prototype.list = async function(options) {
 
 	const self = this
 
@@ -72,7 +72,7 @@ const get_content_data_edit = async function(self) {
 		})
 
 	// info
-		const text = `Current version: <b>${page_globals.dedalo_version}</b><br>Current build: <b>${page_globals.dedalo_build}</b>`
+		const text = `Force to make a full backup now like:<br><div>${value.backup_path}/<br>${value.file_name}</div>`
 		const info = ui.create_dom_element({
 			element_type	: 'div',
 			inner_html		: text,
@@ -88,13 +88,13 @@ const get_content_data_edit = async function(self) {
 
 	// form init
 		self.caller.init_form({
-			submit_label	: 'Update Dédalo code to the latest version',
+			submit_label	: self.name,
 			confirm_text	: get_label.sure || 'Sure?',
 			body_info		: content_data,
 			body_response	: body_response,
 			trigger : {
 				dd_api	: 'dd_utils_api',
-				action	: 'update_code',
+				action	: 'make_backup',
 				options	: null
 			}
 		})
