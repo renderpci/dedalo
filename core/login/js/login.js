@@ -254,10 +254,25 @@ login.prototype.action_dispatch = async function(api_response) {
 					files_loader.update(e.data)
 
 					if (e.data.status==='finish') {
+
+						// css force to reload
+							(function() {
+							  let h, a, f;
+							  a = document.getElementsByTagName('link');
+							  for (h = 0; h < a.length; h++) {
+								f = a[h];
+								if (f.rel.toLowerCase().match(/stylesheet/) && f.href) {
+								  var g = f.href.replace(/(&|\?)rnd=\d+/, '');
+								  f.href = g + (g.match(/\?/) ? '&' : '?');
+								  f.href += 'rnd=' + (new Date().valueOf());
+								}
+							  }// end for
+							})()
+
 						// login continue
-						setTimeout(function(){
-							load_finish()
-						}, 450)
+							setTimeout(function(){
+								load_finish()
+							}, 450)
 					}
 				}
 				// load_finish()
