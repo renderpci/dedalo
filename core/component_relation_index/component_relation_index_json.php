@@ -93,12 +93,16 @@
 				$current_section_tipo	= $locator->section_tipo;
 				$current_section_id		= $locator->section_id;
 
-				$section = section::get_instance($current_section_id, $current_section_tipo, 'related_list');
+				$section = section::get_instance(
+					$current_section_id,
+					$current_section_tipo,
+					'related_list'
+				);
 
-				$section_json = $section->get_json();
+				$section_json	= $section->get_json();
 				$ar_subcontext	= $section_json->context;
 
-				// the the different request_config to be used as configurated request_config of the component
+				// the the different request_config to be used as configured request_config of the component
 				foreach ($ar_subcontext as $current_context) {
 
 					if ($current_context->model ==='section'
@@ -113,7 +117,7 @@
 							});
 						$ddo_map = $section_request_config->show->ddo_map;
 						// change the ddo parent of the section to the component, only if the parent is the section_tipo
-						// is necesary don't change the ddo with deep dependence
+						// is necessary don't change the ddo with deep dependence
 						foreach ($ddo_map as $current_ddo) {
 							 $current_ddo->parent = ($current_ddo->parent === $current_section_tipo)
 								 ? $tipo
