@@ -4,7 +4,7 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
+	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {when_in_viewport} from '../../common/js/events.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
@@ -127,16 +127,21 @@ const get_content_value = (i, current_value, self) => {
 
 	// init viewer when content_value node is in in browser viewport
 		when_in_viewport(content_value, function(){
+
 			const viewer_3d = viewer.init()
+
 			viewer_3d.build(content_value, {})
-			viewer_3d.load(file_url) //rootPath, fileMap
-				.catch((e) => this.onError(e))
-				.then((gltf) => {
-					// if (!this.options.kiosk) {
-						// dator.validate(fileURL, rootPath, fileMap, gltf);
-					// }
+
+			viewer_3d.load(file_url) // rootPath, fileMap
+			.catch((e) => this.onError(e))
+			.then((gltf) => {
+				content_value.renderer = viewer_3d.renderer
+				event_manager.publish('renderer_3d_ready_'+self.id, viewer_3d.renderer)
+				// if (!this.options.kiosk) {
+					// dator.validate(fileURL, rootPath, fileMap, gltf);
+				// }
 				// cleanup();
-				});
+			});
 		})
 
 

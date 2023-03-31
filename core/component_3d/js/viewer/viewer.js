@@ -47,15 +47,20 @@ export const viewer = function () {
 	return true
 }
 
+/**
+* INIT
+* @return object self
+* 	Self instance
+*/
 viewer.init = function () {
 
 	const self = this
 
 	self.DEFAULT_CAMERA	= '[default]';
 
-	self.MANAGER			= new LoadingManager();
-	self.DRACO_LOADER		= new DRACOLoader( self.MANAGER ).setDecoderPath( '../../lib/threejs/jsm/libs/draco/' );
-	self.KTX2_LOADER		= new KTX2Loader( self.MANAGER ).setTranscoderPath( '../../lib/threejs/jsm/libs/basis/' );
+	self.MANAGER		= new LoadingManager();
+	self.DRACO_LOADER	= new DRACOLoader( self.MANAGER ).setDecoderPath( '../../lib/threejs/jsm/libs/draco/' );
+	self.KTX2_LOADER	= new KTX2Loader( self.MANAGER ).setTranscoderPath( '../../lib/threejs/jsm/libs/basis/' );
 
 	Cache.enabled = true;
 
@@ -81,7 +86,7 @@ viewer.build = function (content_value, options) {
 	self.gui 			= null;
 
 	self.state = {
-		environment			: options.environments ||  environments.find((el) => el.id === 'neutral').name,
+		environment			: options.environments ||  environments.find((el) => el.id==='neutral').name,
 		background			: options.background || false,
 		playbackSpeed		: options.playbackSpeed || 1.0,
 		actionStates		: options.actionStates || {},
@@ -98,7 +103,7 @@ viewer.build = function (content_value, options) {
 		ambientColor		: options.ambientColor || 0xFFFFFF,
 		directIntensity		: options.directIntensity || 0.8 * Math.PI,
 		directColor			: options.directColor || 0xFFFFFF,
-		bgColor				: options.bgColor || 0x191919,
+		bgColor				: options.bgColor || 0x191919
 	};
 
 	self.prev_time = 0;
@@ -113,7 +118,7 @@ viewer.build = function (content_value, options) {
 	self.scene.background	= self.background_color;
 
 
-	const fov =  45 //0.8 * 180 / Math.PI
+	const fov = 45 //0.8 * 180 / Math.PI
 
 	self.default_camera	= new PerspectiveCamera( fov, self.content_value.clientWidth / self.content_value.clientHeight, 0.01, 1000 );
 	self.active_camera	= self.default_camera;
@@ -272,7 +277,6 @@ viewer.set_content = function( object, clips ) {
 		self.default_camera.position.y += size / 5.0;
 		self.default_camera.position.z += size / 2.0;
 		self.default_camera.lookAt(center);
-
 	}
 
 	self.set_camera(self.DEFAULT_CAMERA);
@@ -341,6 +345,7 @@ viewer.dump_object = function(object, lines = [], isLast = true, prefix = '') {
 		const isLast = ndx === lastNdx;
 		dump_object(child, lines, isLast, newPrefix);
 	});
+
 	return lines;
 }//end dump_object
 
@@ -417,9 +422,9 @@ viewer.set_camera = function( name ) {
 	} else {
 		self.controls.enabled = false;
 		self.content.traverse((node) => {
-		if (node.isCamera && node.name === name) {
-			self.active_camera = node;
-		}
+			if (node.isCamera && node.name === name) {
+				self.active_camera = node;
+			}
 		});
 	}
 }//end set_camera
@@ -789,19 +794,17 @@ viewer.clear = function() {
 				material[ key ].dispose();
 			}
 		}
-	} );
+	});
 }
-
 
 
 
 function traverse_materials (object, callback) {
 	object.traverse((node) => {
-	if (!node.isMesh) return;
-	const materials = Array.isArray(node.material)
-		? node.material
-		: [node.material];
-	materials.forEach(callback);
+		if (!node.isMesh) return;
+		const materials = Array.isArray(node.material)
+			? node.material
+			: [node.material];
+		materials.forEach(callback);
 	});
 }
-
