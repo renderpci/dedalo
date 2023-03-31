@@ -662,13 +662,19 @@ class tool_common {
 				// filter user authorized tools
 					foreach ($registered_tools as $tool) {
 
-						if( isset($tool->always_active) ||
+						if( (isset($tool->always_active) && $tool->always_active===true) ||
 							in_array($tool->section_id, $ar_allowed_id)
 							) {
 							$user_tools[] = $tool;
 						}
 					}
 			}
+
+		// debug
+			// $names = array_map(function($el){
+			// 	return $el->name .' - '. $el->section_id;
+			// }, $user_tools);
+			// dump($names, '$names ++ '.to_string());
 
 
 		return $user_tools;

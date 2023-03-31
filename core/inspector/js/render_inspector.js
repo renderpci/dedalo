@@ -213,7 +213,6 @@ const get_content_data = function(self) {
 		const inspector_tools			= self.caller.context.tools.filter(el => el.show_in_inspector && el.properties && el.properties?.mode==='edit')
 		const inspector_tools_length	= inspector_tools.length
 		if (inspector_tools_length>0) {
-
 			const tools_container = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'tools_container top',

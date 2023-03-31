@@ -269,7 +269,7 @@ login.prototype.action_dispatch = async function(api_response) {
 				if (api_response.result_options && api_response.result_options.redirect) {
 					setTimeout(function(){
 						window.location.replace( api_response.result_options.redirect )
-					}, 1)
+					}, 3)
 				}else{
 
 					// has_tipo in url
