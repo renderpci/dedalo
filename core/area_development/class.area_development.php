@@ -400,25 +400,28 @@ class area_development extends area_common {
 
 		// update_code
 			$item = new stdClass();
+				// $item->id		= 'update_code';
+				// $item->class	= 'with_100';
+				// $item->typo		= 'widget';
+				// $item->tipo		= $this->tipo;
+				// $item->parent	= $this->tipo;
+				// $item->label	= label::get_label('update') .' '. label::get_label('code');
+				// $item->body		= 'Current version: <b>'.DEDALO_VERSION.'</b> - build: <b>'.DEDALO_BUILD.'</b>.';
+				// $item->body		.= ' Update Dédalo code to the latest version';
+				// $item->run[]	= (object)[
+				// 	'fn'		=> 'init_form',
+				// 	'options'	=> (object)[
+				// 		'confirm_text' => label::get_label('sure') ?? 'Sure?'
+				// 	]
+				// ];
+				// $item->trigger 	= (object)[
+				// 	'dd_api'	=> 'dd_utils_api',
+				// 	'action'	=> 'update_code',
+				// 	'options'	=> null
+				// ];
 				$item->id		= 'update_code';
-				$item->class	= 'with_100';
 				$item->typo		= 'widget';
-				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
 				$item->label	= label::get_label('update') .' '. label::get_label('code');
-				$item->body		= 'Current version: <b>'.DEDALO_VERSION.'</b> - build: <b>'.DEDALO_BUILD.'</b>.';
-				$item->body		.= ' Update Dédalo code to the latest version';
-				$item->run[]	= (object)[
-					'fn'		=> 'init_form',
-					'options'	=> (object)[
-						'confirm_text' => label::get_label('sure') ?? 'Sure?'
-					]
-				];
-				$item->trigger 	= (object)[
-					'dd_api'	=> 'dd_utils_api',
-					'action'	=> 'update_code',
-					'options'	=> null
-				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
