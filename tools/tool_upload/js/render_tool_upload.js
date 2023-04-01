@@ -4,7 +4,7 @@
 
 
 // imports
-	// import {event_manager} from '../../../core/common/js/event_manager.js'
+	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
 	import {ui} from '../../../core/common/js/ui.js'
 
@@ -186,6 +186,12 @@ render_tool_upload.prototype.upload_done = async function (options) {
 						// render
 						const component_node = await component_instance.render()
 						self.preview_component_container.appendChild(component_node)
+
+						if(typeof self.caller.create_posterframe === 'function'){
+							event_manager.subscribe('viewer_ready_'+component_instance.id, function(viewer) {
+								self.caller.create_posterframe(viewer)
+							})
+						}
 					}
 
 				// event to update the DOM elements of the instance
