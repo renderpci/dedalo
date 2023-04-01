@@ -25,6 +25,7 @@ export const render_page = function() {
 /**
 * EDIT
 * Render node for use in section
+* @param object options
 * @return HTMLElement wrapper
 */
 render_page.prototype.edit = async function(options) {
@@ -46,16 +47,6 @@ render_page.prototype.edit = async function(options) {
 		wrapper.appendChild(content_data)
 		// set pointers
 		wrapper.content_data = content_data
-
-	// events
-		// page click
-			// wrapper.addEventListener('click', fn_deactivate_components)
-			window.addEventListener('click', fn_deactivate_components)
-			function fn_deactivate_components() {
-				if (page_globals.component_active) {
-					ui.component.deactivate(page_globals.component_active)
-				}
-			}
 
 
  	return wrapper
