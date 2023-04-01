@@ -19,7 +19,7 @@ abstract class backup {
 
 	/**
 	* INIT_BACKUP_SECUENCE
-	* Make backup (compressed MySQL dump) of current dedalo DB before login
+	* Make backup (compressed SQL dump) of current dedalo DB before login
 	* @return object $response
 	*/
 	public static function init_backup_secuence(int $user_id, string $username, bool $skip_backup_time_range=false) : object {
@@ -62,15 +62,21 @@ abstract class backup {
 					if (!defined('DEDALO_BACKUP_TIME_RANGE')) {
 						define('DEDALO_BACKUP_TIME_RANGE', 8); // Minimum lapse of time (in hours) for run backup script again. Default: (int) 4
 					}
-					$last_modification_time_secs	= get_last_modification_date( $file_path, $allowedExtensions=array('backup'), $ar_exclude=array('/acc/'));
-					$current_time_secs				= time();
-					$difference_in_hours			= round( ($current_time_secs/3600) - round($last_modification_time_secs/3600), 0 );
+					$last_modification_time_secs = get_last_modification_date(
+						$file_path, // string path
+						['backup'], // array|null allowedExtensions
+						['/acc/'] // array ar_exclude
+					);
+					$current_time_secs		= time();
+					$difference_in_hours	= round( ($current_time_secs/3600) - round($last_modification_time_secs/3600), 0 );
 					if ( $difference_in_hours < DEDALO_BACKUP_TIME_RANGE ) {
 						$msg = " Skipped backup. A recent backup (about $difference_in_hours hours early) already exists. It is not necessary to build another one";
 						debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);
+
 						$response->result	= true;
 						$response->msg		= $msg . " ".__METHOD__;
-						return $response;
+
+						return $response; // stop here
 					}
 				}
 
@@ -79,10 +85,12 @@ abstract class backup {
 				$mysqlExportPath = $file_path .'/'. $db_name . '.custom.backup';
 				if (file_exists($mysqlExportPath)) {
 					$msg = " Skipped backup. A recent backup already exists ('$mysqlExportPath'). It is not necessary to build another one";
-					debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);
+					debug_log(__METHOD__." $msg ".to_string($db_name), logger::DEBUG);
+
 					$response->result	= true;
 					$response->msg		= $msg . " ".__METHOD__;
-					return $response;
+
+					return $response; // stop here
 				}
 
 			// command base. Export the database and output the status to the page
@@ -133,14 +141,24 @@ abstract class backup {
 						if(file_exists($prgfile)) {
 							chmod($prgfile, 0755);
 						}else{
-							throw new Exception("Error Processing backup. Script file do not exists or is not accessible. Please check folder '../backup/temp' permissions", 1);
+							$msg = "Error Processing backup. Script file do not exists or is not accessible. Please check folder '../backup/temp' permissions";
+							debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
+							throw new Exception($msg, 1);
 						}
 				}
 				debug_log(__METHOD__." Building delayed backup file ($mysqlExportPath). Command:\n ".to_string($command), logger::DEBUG);
 
+				// fastcgi_finish_request
+					if (function_exists('fastcgi_finish_request')) {
+					    fastcgi_finish_request();
+					    debug_log(__METHOD__." fastcgi_finish_request() function is called to prevent lock this connection. ".to_string(), logger::WARNING);
+					} else {
+						debug_log(__METHOD__." Error: This server does not support fastcgi_finish_request() function. ".to_string(), logger::ERROR);
+					}
 
 				// run delayed command
-				$res = exec_::exec_sh_file($prgfile);
+					exec_::exec_sh_file($prgfile);
+
 			}//end if($skip_backup_time_range===true)
 
 
@@ -167,7 +185,7 @@ abstract class backup {
 
 		}catch (Exception $e) {
 
-			$msg = "Sorry $username. ".  $e->getMessage(). "\n";
+			$msg = "Error $username. ".  $e->getMessage(). "\n";
 			debug_log(__METHOD__." Exception: $msg ".to_string(), logger::ERROR);
 
 			// response error
@@ -182,7 +200,7 @@ abstract class backup {
 				? format_size_units( filesize($mysqlExportPath) )
 				: '0 MB';
 
-		// response ok
+		// response OK
 			$response->result	= true;
 			$response->msg		= "OK. backup done. ".$db_name." ($file_bk_size)";
 
@@ -1153,7 +1171,7 @@ abstract class backup {
 
 	/**
 	* COLLECT_ALL_STR_FILES
-	* Make a http request to server to retrieve the necessary files to updates structure
+	* Make a HTTP request to server to retrieve the necessary files to updates structure
 	* @return array $ar_files
 	*	Array of objects
 	*/
@@ -1296,6 +1314,8 @@ abstract class backup {
 
 	/**
 	* DOWNLOAD_REMOTE_STRUCTURE_FILE
+	* @param object $obj
+	* @param string $target_dir
 	* @return bool
 	*/
 	public static function download_remote_structure_file(object $obj, string $target_dir) : bool {
