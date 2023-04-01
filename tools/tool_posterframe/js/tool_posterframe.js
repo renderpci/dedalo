@@ -267,7 +267,7 @@ tool_posterframe.prototype.get_ar_identifying_image = async function() {
 
 /**
 * CREATE_IDENTIFYING_IMAGE
-* 	Create a new idenfifing image in target portal based on current item_value selection ad av current_time
+* 	Create a new identifying image in target portal based on current item_value selection ad av current_time
 * @return promise > array
 */
 tool_posterframe.prototype.create_identifying_image = async function(item_value, current_time) {
