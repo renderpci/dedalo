@@ -440,6 +440,14 @@ page.prototype.add_events = function() {
 			}//end switch
 		})//end keydown event
 
+	// page click
+		document.addEventListener('click', fn_deactivate_components)
+		function fn_deactivate_components() {
+			if (page_globals.component_active) {
+				ui.component.deactivate(page_globals.component_active)
+			}
+		}
+
 
 	return true
 }//end add_events
