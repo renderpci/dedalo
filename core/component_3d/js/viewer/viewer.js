@@ -236,6 +236,7 @@ viewer.load = function( file_uri ) {
 			);
 		}
 
+		self.object = scene
 		self.set_content(scene, clips);
 
 		// blob_URLs.forEach(URL.revokeObjectURL);
@@ -335,8 +336,13 @@ viewer.get_image = function(options){
 
 	self.default_camera.aspect = width / height;
 	self.default_camera.updateProjectionMatrix();
-	self.renderer.setSize (width, height);
+	self.renderer.setSize(width, height);
 
+	const box		= new Box3().setFromObject(self.object);
+	const size		= box.getSize(new Vector3()).length();
+	const center	= box.getCenter(new Vector3());
+
+	self.default_camera.lookAt(center);
 	self.render()
 
 	return new Promise(function(resolve){
