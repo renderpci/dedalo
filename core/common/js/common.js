@@ -359,7 +359,6 @@ common.prototype.render = async function (options={}) {
 
 	// result_node render based in render_level
 		const result_node = await (async () => {
-			// console.warn("///////////////////// render_level:",render_level, self.id);
 
 			// render_level
 			switch(render_level) {
@@ -379,9 +378,7 @@ common.prototype.render = async function (options={}) {
 					// new content data node
 						const new_content_data_node = node
 							? node // use already calculated node
-							: await self[render_mode]({
-								render_level : render_level
-							  });
+							: await self[render_mode](render_options);
 
 					// replace
 						old_content_data_node.replaceWith(new_content_data_node);
@@ -473,8 +470,8 @@ common.prototype.refresh = async function(options={}) {
 	const self = this
 
 	// options
-		const build_autoload	= options.build_autoload!==undefined ? options.build_autoload : true
-		const render_level		= options.render_level || 'content' // string full|content
+		const build_autoload	= options.build_autoload ?? true
+		const render_level		= options.render_level ?? 'content' // string full|content
 
 	// loading css add
 		// const nodes_lenght = self.node.length
@@ -515,15 +512,11 @@ common.prototype.refresh = async function(options={}) {
 			// var t2 = performance.now()
 		}
 
-	// copy original ar_node
-		// const ar_node		= self.node
-		// const ar_node_length	= ar_node.length
-
 	// render. Only render content_data, not the whole element wrapper
 		let result
 		if (self.status==='built') {
 			await self.render({
-				render_level : render_level // Default value is 'content'
+				render_level : render_level // Note that default value is 'content'
 			})
 			result = true
 		}else{
@@ -847,7 +840,7 @@ common.prototype.load_style = function (src) {
 	return new Promise(function(resolve, reject) {
 
 		// check already loaded
-			const links 	= document.getElementsByTagName("link");
+			const links 	= document.getElementsByTagName('link');
 			const links_len = links.length
 			for (let i = links_len - 1; i >= 0; i--) {
 				if(links[i].getAttribute('href')===src) {
@@ -857,8 +850,8 @@ common.prototype.load_style = function (src) {
 			}
 
 		// DOM tag
-			const element 	  = document.createElement("link")
-				  element.rel = "stylesheet"
+			const element 	  = document.createElement('link')
+				  element.rel = 'stylesheet'
 
 			element.onload = function() {
 				resolve(src);
@@ -869,7 +862,7 @@ common.prototype.load_style = function (src) {
 
 			element.href = src
 
-			document.getElementsByTagName("head")[0].appendChild(element)
+			document.getElementsByTagName('head')[0].appendChild(element)
 	})
 	.catch(err => { console.error(err) });
 }//end load_style
@@ -885,7 +878,7 @@ common.prototype.load_script = async function(src) {
 	return new Promise(function(resolve, reject) {
 
 		// check already loaded
-			const scripts 	  = document.getElementsByTagName("script");
+			const scripts 	  = document.getElementsByTagName('script');
 			const scripts_len = scripts.length
 			for (let i = scripts_len - 1; i >= 0; i--) {
 				if(scripts[i].getAttribute('src')===src) {
@@ -895,8 +888,8 @@ common.prototype.load_script = async function(src) {
 			}
 
 		// DOM tag
-			const element = document.createElement("script")
-			element.setAttribute("defer", "defer");
+			const element = document.createElement('script')
+			element.setAttribute('defer', 'defer');
 
 			element.onload = function() {
 
@@ -966,9 +959,7 @@ export const get_columns_map = function(context, datum_context) {
 		// by default the columns are for every component that has direct link to the component(portal) or section
 		// if the portal has more component in deep, it can define as columns in the properties,
 		// but by default, the portal will be only one column (with all components joined in the cell).
-		const source_columns_map = (context.columns_map)
-			? context.columns_map
-			: false
+		const source_columns_map = context.columns_map || []
 	// view
 		const view			= context.view
 		const children_view	= context.children_view || null
@@ -1096,7 +1087,7 @@ export const get_columns_map = function(context, datum_context) {
 							dd_object.column_id = dd_object.tipo
 							break;
 					}//end switch
-				}//end if (dd_object.column_id && source_columns_map)
+				}//end if (dd_object.column_id && source_columns_map.length > 0)
 			}//end for (let j = 0; j < ar_first_level_ddo_len; j++)
 		}//end for (let i = 0; i < request_config_length; i++)
 
@@ -1187,7 +1178,7 @@ export const get_columns_map = function(context, datum_context) {
 * get the path in inverse format, the last in the chain will be the first object [0]
 * @return array ar_inverted_paths the the specific paths, with inverse path format.
 */
-export const get_ar_inverted_paths = function(full_ddo_map){
+export const get_ar_inverted_paths = function(full_ddo_map) {
 
 	// get the parents for the column, creating the inverse path
 	// (from the last component to the main parent, the column will be with the data of the first item of the column)
@@ -1221,7 +1212,7 @@ export const get_ar_inverted_paths = function(full_ddo_map){
 
 			// join all with the inverse format
 			// name -> people to study -> interview
-			column.push(current_ddo,...parents)
+			column.push(current_ddo, ...parents)
 			ar_inverted_paths.push(column)
 		}
 
@@ -1661,10 +1652,10 @@ common.prototype.build_rqo_search = async function(request_config_object, action
 
 	// optional configuration to use when the search will be built
 		const sqo_options = {
-			filter_free				: filter_free,
-			fixed_filter			: fixed_filter,
-			filter_by_list			: filter_by_list,
-			operator				: operator
+			filter_free		: filter_free,
+			fixed_filter	: fixed_filter,
+			filter_by_list	: filter_by_list,
+			operator		: operator
 		}
 
 	// DDO_MAP
@@ -2205,7 +2196,7 @@ export const load_data_debug = async function(self, load_data_promise, rqo_show_
 		}
 
 	// check caller instance is section or are
-		if (self.type!=="section" && self.type!=="area") {
+		if (self.type!=='section' && self.type!=='area') {
 			return false
 		}
 
@@ -2215,7 +2206,7 @@ export const load_data_debug = async function(self, load_data_promise, rqo_show_
 
 	// load_data_promise response check
 		if (response.result===false) {
-			console.error("API EXCEPTION:",response.msg);
+			console.error('API EXCEPTION:',response.msg);
 			return false
 		}
 
