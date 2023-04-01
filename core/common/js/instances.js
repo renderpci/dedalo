@@ -61,7 +61,7 @@ export const get_instance = async function(options){
 		const lang				= options.lang  || page_globals.dedalo_data_lang
 		const model				= options.model || await ( async () => {
 
-			const element_context_response	= await data_manager.get_element_context({
+			const element_context_response = await data_manager.get_element_context({
 				tipo			: tipo,
 				section_tipo	: section_tipo,
 				section_id		: section_id
@@ -83,14 +83,13 @@ export const get_instance = async function(options){
 			options.lang	= lang
 
 	// key. build the key locator of the instance
-		const key = options.key || key_instances_builder(options, true)
+		const key = options.key || key_instances_builder(options)
 		//if (model!=='section_record') {
 		//	key = key_instances_builder(options) + "_" + Date.now()
 		//}
 		// console.log("key:",key, options);
 
 	// if the instance is not in the cache, build one new instance of the element
-
 		// DES
 			// const load_instance = async () => {
 
@@ -144,92 +143,82 @@ export const get_instance = async function(options){
 			// 	}
 			// }
 
-		const load_instance = () => {
-			return new Promise(async function(resolve){
+	return new Promise(async function(resolve){
 
-				// search. first we see if the instance is inside the instances cache
-				const found_instance = instances.find(instance => instance.id===key)
+		// search. first we see if the instance is inside the instances cache
+			const found_instance = instances.find(instance => instance.id===key)
+			// resolve the promise with the cache instance found
+			if (found_instance) {
+				// console.warn("returned already resolved instance from cache:", found_instance[0]);
+				resolve(found_instance)
+			}
 
-				// resolve the promise with the cache instance found
-					if (found_instance) {
-						// console.warn("returned already resolved instance from cache:", found_instance[0]);
-						resolve(found_instance)
-					}
+		// element file import path
+			const base_path	= model.indexOf('tool_')!==-1
+				? '../../../tools/'
+				: model.indexOf('service_')!==-1
+					? '../../services/'
+					: '../../'
 
-					//console.log("---Creating instance of:", model, tipo, " - " + key)
+			const name = model.indexOf('tool_')!==-1
+				? 'index'
+				: model
 
-				// element file import path
-					const base_path	= model.indexOf('tool_')!==-1
-						? '../../../tools/'
-						: model.indexOf('service_')!==-1
-							? '../../services/'
-							: '../../'
+			const path = direct_path
+				? direct_path
+				: base_path + model + '/js/' + name + '.js' // + '?v=' + page_globals.dedalo_version
 
-					const name = model.indexOf('tool_')!==-1
-						? 'index'
-						: model
+		// import element mod file once (and wait until finish)
+			// let current_element
+			// try {
+			// 	current_element = await import(path)
+			// }catch(error){
+			// 	console.error(`------- ERROR ON IMPORT ELEMENT!!! [model:${model}] [path:${path}] \n Error: \n`, error);
 
-					const path = direct_path
-						? direct_path
-						: base_path + model + '/js/' + name + '.js' // + '?v=' + page_globals.dedalo_version
+			// 	resolve(false)
+			// 	return
+			// }
 
-				// import element mod file once (and wait until finish)
-					// let current_element
-					// try {
-					// 	current_element = await import(path)
-					// }catch(error){
-					// 	console.error(`------- ERROR ON IMPORT ELEMENT!!! [model:${model}] [path:${path}] \n Error: \n`, error);
+		import(path)
+		.then(async function(module){
 
-					// 	resolve(false)
-					// 	return
-					// }
-
-				import(path)
-				.then(async function(module){
-
-					// check module
-						if (typeof module[model]!=="function") {
-							console.warn(`------- INVALID MODEL!!! [model:${model}] path: `, path);
-							resolve(false)
-							return
-						}
-
-					// instance the element
-						const instance_element = new module[model]()
-
-					// serialize element id
-					// add the id for init the instance with the id
-						instance_element.id = key
-						//instance_element.id_base = key_instances_builder(options, false)
-						instance_element.id_base = section_tipo+'_'+section_id+'_'+tipo
-					// id_variant . Propagate a custom instance id to children
-						if (options.id_variant) {
-							instance_element.id_variant = options.id_variant
-						}
-
-					// init the element
-						await instance_element.init(options)
-
-					// add to the instances cache
-						instances.push(instance_element)
-						// console.log("Created fresh instance of :", model, section_tipo, section_id, key, instance_element)
-
-					// return the new created instance
-						resolve(instance_element)
-				})
-				.catch((error) => {
-					console.error(`------- ERROR ON IMPORT ELEMENT!!! [model:${model}] [path:${path}] \n Error: \n`, error);
+			// check module
+				if (typeof module[model]!=="function") {
+					console.warn(`------- INVALID MODEL!!! [model:${model}] path: `, path);
 					resolve(false)
 					return
-				});
-			})
-			.catch(err => { console.error(err) });
-		}//end load_instance
+				}
 
-	const instance = load_instance()
+			// instance the element
+				const instance_element = new module[model]()
 
+			// serialize element id
+			// add the id for init the instance with the id
+				instance_element.id = key
+				//instance_element.id_base = key_instances_builder(options, false)
+				instance_element.id_base = section_tipo+'_'+section_id+'_'+tipo
+			// id_variant . Propagate a custom instance id to children
+				if (options.id_variant) {
+					instance_element.id_variant = options.id_variant
+				}
 
-	return instance
+			// init the element
+				await instance_element.init(options)
+
+			// add to the instances cache
+				instances.push(instance_element)
+				// console.log("Created fresh instance of :", model, section_tipo, section_id, key, instance_element)
+
+			// return the new created instance
+				resolve(instance_element)
+		})
+		.catch((error) => {
+			console.error(`------- ERROR ON IMPORT ELEMENT!!! [model:${model}] [path:${path}] \n Error: \n`, error);
+			resolve(false)
+			return
+		});
+	})
+	.catch(err => { console.error(err) });
 }//end get_instance
 
 
@@ -338,11 +327,11 @@ export const delete_instance = async function(options) {
 
 /**
 * KEY_INSTANCES_BUILDER
-* Creates string normalized key from valious parameters
+* Creates string normalized key from several parameters
 * @param object options
 * @return string key
 */
-export const key_instances_builder = function(options){
+export const key_instances_builder = function(options) {
 
 	const order = ['model','tipo','section_tipo','section_id','mode','lang','parent','matrix_id','id_variant','column_id']
 	const key_parts = []
