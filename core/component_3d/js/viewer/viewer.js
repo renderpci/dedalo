@@ -96,7 +96,7 @@ viewer.build = function (content_value, options) {
 		grid				: options.grid || false,
 
 		// Lights
-		punctual_lights		: options.punctual_lights || true,
+		punctual_lights		: options.punctual_lights || false,
 		exposure			: options.exposure || 0.0,
 		tone_mapping		: options.tone_mapping || LinearToneMapping,
 		ambient_intensity	: options.ambient_intensity || 0.3,
@@ -200,7 +200,7 @@ viewer.resize = function() {
 		self.axes_camera.aspect = self.axes_div.clientWidth / self.axes_div.clientHeight;
 		self.axes_camera.updateProjectionMatrix();
 		self.axes_renderer.setSize(self.axes_div.clientWidth, self.axes_div.clientHeight);
-	}, 5)
+	}, 1)
 }//end resize
 
 
@@ -221,7 +221,7 @@ viewer.load = function( file_uri ) {
 			.setKTX2Loader( self.KTX2_LOADER.detectSupport( self.renderer ) )
 			.setMeshoptDecoder( MeshoptDecoder );
 
-		const blob_URLs = [];
+		// const blob_URLs = [];
 
 		loader.load(file_uri, (gltf) => {
 
@@ -238,7 +238,7 @@ viewer.load = function( file_uri ) {
 
 		self.set_content(scene, clips);
 
-		blob_URLs.forEach(URL.revokeObjectURL);
+		// blob_URLs.forEach(URL.revokeObjectURL);
 
 		resolve(gltf);
 
@@ -323,6 +323,34 @@ viewer.set_content = function( object, clips ) {
 }//end set_content
 
 
+viewer.get_image = function(options){
+
+	const self = this
+
+	const original_width	= self.renderer.domElement.width /2 ;
+	const original_height	= self.renderer.domElement.height /2;
+
+	const width		= options.width /2
+	const height	= options.height /2
+
+	self.default_camera.aspect = width / height;
+	self.default_camera.updateProjectionMatrix();
+	self.renderer.setSize (width, height);
+
+	self.render()
+
+	return new Promise(function(resolve){
+		self.renderer.domElement.toBlob(async (blob) =>{
+
+			self.default_camera.aspect = original_width / original_height;
+			self.default_camera.updateProjectionMatrix();
+			self.renderer.setSize (original_width, original_height);
+			self.render()
+
+			resolve(blob)
+		}, "image/jpeg", 0.75);
+	})
+}
 
 /**
 * DUMP_GRAPH

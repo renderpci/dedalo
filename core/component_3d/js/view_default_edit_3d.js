@@ -135,12 +135,10 @@ const get_content_value = (i, current_value, self) => {
 			viewer_3d.load(file_url) // rootPath, fileMap
 			.catch((e) => this.onError(e))
 			.then((gltf) => {
-				content_value.renderer = viewer_3d.renderer
-				event_manager.publish('renderer_3d_ready_'+self.id, viewer_3d.renderer)
-				// if (!this.options.kiosk) {
-					// dator.validate(fileURL, rootPath, fileMap, gltf);
-				// }
-				// cleanup();
+				content_value.viewer = viewer_3d
+				event_manager.publish('viewer_ready_'+self.id, viewer_3d)
+
+
 			});
 		})
 
