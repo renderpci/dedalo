@@ -302,14 +302,11 @@ viewer.set_content = function( object, clips ) {
 	self.scene.add(object);
 	self.content = object;
 
-	self.state.punctual_lights = true;
-
 	self.content.traverse((node) => {
 		if (node.isLight) {
-		self.state.punctual_lights = false;
+			self.state.punctual_lights = false;
 		} else if (node.isMesh) {
-		// TODO(https://github.com/mrdoob/three.js/pull/18235): Clean up.
-		node.material.depthWrite = !node.material.transparent;
+			node.material.depthWrite = !node.material.transparent;
 		}
 	});
 
