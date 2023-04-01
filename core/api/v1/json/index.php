@@ -76,7 +76,7 @@ $global_start_time = hrtime(true);
 
 
 
-// get post vars
+// get post vars. file_get_contents returns a string
 	$str_json = file_get_contents('php://input');
 	//error_log(print_r($str_json,true));
 	if (!empty($str_json)) {
