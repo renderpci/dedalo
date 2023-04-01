@@ -321,6 +321,16 @@ viewer.set_content = function( object, clips ) {
 }//end set_content
 
 
+
+/**
+* GET_IMAGE
+* get image jpg of the model loaded
+* @param options object
+* {
+* 	width : 720
+* 	height: 404
+* }
+*/
 viewer.get_image = function(options){
 
 	const self = this
@@ -354,6 +364,7 @@ viewer.get_image = function(options){
 		}, "image/jpeg", 0.75);
 	})
 }
+
 
 /**
 * DUMP_GRAPH
