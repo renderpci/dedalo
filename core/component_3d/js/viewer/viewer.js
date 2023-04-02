@@ -236,6 +236,7 @@ viewer.load = function( file_uri ) {
 			);
 		}
 
+		self.object = scene
 		self.set_content(scene, clips);
 
 		// blob_URLs.forEach(URL.revokeObjectURL);
@@ -301,14 +302,11 @@ viewer.set_content = function( object, clips ) {
 	self.scene.add(object);
 	self.content = object;
 
-	self.state.punctual_lights = true;
-
 	self.content.traverse((node) => {
 		if (node.isLight) {
-		self.state.punctual_lights = false;
+			self.state.punctual_lights = false;
 		} else if (node.isMesh) {
-		// TODO(https://github.com/mrdoob/three.js/pull/18235): Clean up.
-		node.material.depthWrite = !node.material.transparent;
+			node.material.depthWrite = !node.material.transparent;
 		}
 	});
 
@@ -323,6 +321,16 @@ viewer.set_content = function( object, clips ) {
 }//end set_content
 
 
+
+/**
+* GET_IMAGE
+* get image jpg of the model loaded
+* @param options object
+* {
+* 	width : 720
+* 	height: 404
+* }
+*/
 viewer.get_image = function(options){
 
 	const self = this
@@ -335,8 +343,13 @@ viewer.get_image = function(options){
 
 	self.default_camera.aspect = width / height;
 	self.default_camera.updateProjectionMatrix();
-	self.renderer.setSize (width, height);
+	self.renderer.setSize(width, height);
 
+	const box		= new Box3().setFromObject(self.object);
+	const size		= box.getSize(new Vector3()).length();
+	const center	= box.getCenter(new Vector3());
+
+	self.default_camera.lookAt(center);
 	self.render()
 
 	return new Promise(function(resolve){
@@ -351,6 +364,7 @@ viewer.get_image = function(options){
 		}, "image/jpeg", 0.75);
 	})
 }
+
 
 /**
 * DUMP_GRAPH
