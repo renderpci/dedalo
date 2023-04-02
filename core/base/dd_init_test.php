@@ -223,6 +223,18 @@
 
 
 
+// MEDIA PDF V5 folder.
+	if(defined('DEDALO_PDF_FOLDER')) {
+		$default_quality_path	= DEDALO_MEDIA_PATH.DEDALO_PDF_FOLDER.'/'.DEDALO_PDF_QUALITY_DEFAULT;
+		$original_quality_path	= DEDALO_MEDIA_PATH.DEDALO_PDF_FOLDER.'/'.DEDALO_PDF_QUALITY_ORIGINAL;
+		if( !is_dir($folder_path) || !is_dir($original_quality_path) ) {
+			require_once DEDALO_CORE_PATH .'/base/upgrade/class.v5_to_v6.php';
+			v5_to_v6::update_component_pdf_media_dir();
+		}
+	}
+
+
+
 // MEDIA PDF folder
 	# Target folder exists test
 	if(defined('DEDALO_PDF_FOLDER')) {

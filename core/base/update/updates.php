@@ -207,6 +207,14 @@ $updates->$v = new stdClass();
 			$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
 		$updates->$v->run_scripts[] = $script_obj;
 
+	// component_pdf. rename media folder from 'standar' to 'web' and add a full copy as 'original'
+		$script_obj = new stdClass();
+			$script_obj->info			= "component_pdf: rename media folder from 'standar' to 'web' and creates a full copy as 'original'";
+			$script_obj->script_class	= "v5_to_v6";
+			$script_obj->script_method	= "update_component_pdf_media_dir";
+			$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
+		$updates->$v->run_scripts[] = $script_obj;
+
 	// DATA INSIDE DATABASE UPDATES
 		// clean_section_and_component_dato. Update 'datos' to section_data
 			require_once dirname(dirname(__FILE__)) .'/upgrade/class.data_v5_to_v6.php';
@@ -217,7 +225,6 @@ $updates->$v = new stdClass();
 				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
 			$updates->$v->run_scripts[] = $script_obj;
 
-
 		// convert_table_data_profiles. Update 'datos' to section_data
 			require_once dirname(dirname(__FILE__)) .'/upgrade/class.security_v5_to_v6.php';
 			$script_obj = new stdClass();
@@ -227,7 +234,6 @@ $updates->$v = new stdClass();
 				$script_obj->script_vars	= json_encode(['component_security_areas','component_security_access']); // Note that only ONE argument encoded is sent
 			$updates->$v->run_scripts[] = $script_obj;
 
-
 		// convert_table_data_users. Update 'datos' to section_data
 			// require_once dirname(dirname(__FILE__)) .'/upgrade/class.security_v5_to_v6.php';
 			$script_obj = new stdClass();
@@ -236,7 +242,6 @@ $updates->$v = new stdClass();
 				$script_obj->script_method	= "convert_table_data_users";
 				$script_obj->script_vars	= json_encode(['component_profile','component_security_administration','component_filter_records']); // Note that only ONE argument encoded is sent
 			$updates->$v->run_scripts[] = $script_obj;
-
 
 		// convert_table_data_activity. Update 'datos' to section_data
 			require_once dirname(dirname(__FILE__)) .'/upgrade/class.activity_v5_to_v6.php';
