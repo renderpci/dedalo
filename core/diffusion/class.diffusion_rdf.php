@@ -1159,7 +1159,7 @@ class diffusion_rdf extends diffusion {
 	* Used to determine when show publication button in sections
 	* @return array $ar_diffusion_sections
 	*/
-	public static function get_diffusion_sections_from_diffusion_element($diffusion_element_tipo) {
+	public static function get_diffusion_sections_from_diffusion_element(string $diffusion_element_tipo, string $class_name=null) : array {
 
 		$ar_diffusion_sections = array();
 

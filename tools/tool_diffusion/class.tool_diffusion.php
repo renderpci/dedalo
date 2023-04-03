@@ -16,6 +16,7 @@ class tool_diffusion extends tool_common {
 	/**
 	* GET_DIFFUSION_INFO
 	* Collect basic tool info needed to crate user options
+	* @param object $options
 	* @return object $response
 	* { result: [{}], msg: '' }
 	*/
@@ -29,7 +30,7 @@ class tool_diffusion extends tool_common {
 			$section_tipo = $options->section_tipo ?? null;
 
 		// levels default from config
-			$resolve_levels = self::get_resolve_levels();
+			$resolve_levels = diffusion::get_resolve_levels();
 
 		// diffusion_map
 			$diffusion_map = diffusion::get_diffusion_map(DEDALO_DIFFUSION_DOMAIN);
@@ -39,7 +40,7 @@ class tool_diffusion extends tool_common {
 				// $groups = [];
 				// foreach ($diffusion_map as $diffusion_group_tipo => $ar_diffusion_element) {
 
-				// 	$have_section_diffusion = tool_diffusion::have_section_diffusion( $section_tipo, $ar_diffusion_element );
+				// 	$have_section_diffusion = diffusion::have_section_diffusion( $section_tipo, $ar_diffusion_element );
 				// 	if ($have_section_diffusion===false) {
 				// 		continue; # ignore
 				// 	}
@@ -157,8 +158,8 @@ class tool_diffusion extends tool_common {
 					[] // array ar_records
 				);
 
-				$response->result = $export_result->result;
-				$response->msg 	  = $export_result->msg;
+				$response->result	= $export_result->result;
+				$response->msg		= $export_result->msg;
 
 				// Update schema data always
 				// $publication_schema_result = tool_diffusion::update_publication_schema($diffusion_element_tipo);
@@ -228,7 +229,7 @@ class tool_diffusion extends tool_common {
 
 					}else{
 
-						// ok case
+						// OK case
 						$sqo = clone($sqo_session);
 							$sqo->limit		= 'ALL';
 							$sqo->offset	= 0;
@@ -407,81 +408,6 @@ class tool_diffusion extends tool_common {
 
 		return $response;
 	}//end export_record
-
-
-
-	// acc methods
-
-
-
-	/**
-	* HAVE_SECTION_DIFFUSION
-	* Return correspondence of current section in diffusion domain
-	* Note: For better control, sections are TR of diffusion_elements. This correspondence always must exists in diffusion map
-	* @return bool true/false
-	*/
-	public static function have_section_diffusion(string $section_tipo, array $ar_diffusion_map_elements=null) : bool {
-
-		$have_section_diffusion = false;
-
-		if (is_null($ar_diffusion_map_elements)) {
-			# calculate all
-			$ar_diffusion_map_elements = diffusion::get_ar_diffusion_map_elements(DEDALO_DIFFUSION_DOMAIN);
-		}
-		// dump($ar_diffusion_map_elements, ' ar_diffusion_map_elements ++ '.to_string($section_tipo).' - DEDALO_DIFFUSION_DOMAIN:'.DEDALO_DIFFUSION_DOMAIN);
-		foreach ($ar_diffusion_map_elements as $diffusion_group_tipo => $obj_value) {
-
-			$diffusion_element_tipo = $obj_value->element_tipo;
-
-			$ar_related = self::get_diffusion_sections_from_diffusion_element($diffusion_element_tipo, $obj_value->class_name);
-			if(in_array($section_tipo, $ar_related)) {
-				$have_section_diffusion = true;
-				break;
-			}
-		}
-
-		return $have_section_diffusion;
-	}//end have_section_diffusion
-
-
-
-	/**
-	* GET_DIFFUSION_SECTION
-	* @param string $diffusion_element_tipo
-	* @return array $ar_diffusion_sections
-	*/
-	public static function get_diffusion_sections_from_diffusion_element(string $diffusion_element_tipo, string $class_name) {
-
-		if(SHOW_DEVELOPER!==true) {
-			if( isset($_SESSION['dedalo']['config']['ar_diffusion_sections'][$diffusion_element_tipo]) ) {
-				return $_SESSION['dedalo']['config']['ar_diffusion_sections'][$diffusion_element_tipo];
-			}
-		}
-
-		include_once(DEDALO_CORE_PATH . '/diffusion/class.'.$class_name.'.php');
-
-		$ar_diffusion_sections = $class_name::get_diffusion_sections_from_diffusion_element($diffusion_element_tipo);
-
-		# Store in session
-		$_SESSION['dedalo']['config']['ar_diffusion_sections'][$diffusion_element_tipo] = $ar_diffusion_sections;
-
-		return $ar_diffusion_sections;
-	}//end get_diffusion_sections_from_diffusion_element
-
-
-
-	/**
-	* GET_RESOLVE_LEVELS
-	* @return int $resolve_levels
-	*/
-	public static function get_resolve_levels() : int {
-
-		$resolve_levels = isset($_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS'])
-			? $_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS']
-			: (defined('DEDALO_DIFFUSION_RESOLVE_LEVELS') ? DEDALO_DIFFUSION_RESOLVE_LEVELS : 2);
-
-		return $resolve_levels;
-	}//end get_resolve_levels
 
 
 

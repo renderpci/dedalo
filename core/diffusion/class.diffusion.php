@@ -15,10 +15,10 @@ abstract class diffusion  {
 
 		public static $update_record_actions = [];
 
-		public static $publication_first_tipo 		= 'dd271';
-		public static $publication_last_tipo  		= 'dd1223';
-		public static $publication_first_user_tipo  = 'dd1224';
-		public static $publication_last_user_tipo  	= 'dd1225';
+		public static $publication_first_tipo		= 'dd271';
+		public static $publication_last_tipo		= 'dd1223';
+		public static $publication_first_user_tipo	= 'dd1224';
+		public static $publication_last_user_tipo	= 'dd1225';
 
 		public $ar_records;
 
@@ -118,6 +118,18 @@ abstract class diffusion  {
 	* Get and set diffusion_map of current domain ($this->domain)
 	* @param string $diffusion_domain_name . Like 'aup'
 	* @return object $entity_diffusion_tables
+	* 	Sample:
+	* 	{
+	*	    "murapa2": [
+	*	        {
+	*	            "element_tipo": "murapa3",
+	*	            "name": "Publicar en web",
+	*	            "class_name": "diffusion_mysql",
+	*	            "database_name": "web_murapa",
+	*	            "database_tipo": "murapa4"
+	*	        }
+	*	    ]
+	*	}
 	*/
 	public static function get_diffusion_map( string $diffusion_domain_name=DEDALO_DIFFUSION_DOMAIN ) : object {
 
@@ -231,13 +243,23 @@ abstract class diffusion  {
 	* GET_AR_DIFFUSION_MAP_ELEMENTS
 	* @param string $diffusion_domain_name = DEDALO_DIFFUSION_DOMAIN
 	* @return array $ar_diffusion_map_elements
+	* 	Sample (assoc array):
+	* 	{
+	*	    "murapa3": {
+	*	        "element_tipo": "murapa3",
+	*	        "name": "Publish to web",
+	*	        "class_name": "diffusion_mysql",
+	*	        "database_name": "web_murapa",
+	*	        "database_tipo": "murapa4"
+	*	    }
+	*	}
 	*/
 	public static function get_ar_diffusion_map_elements( string $diffusion_domain_name=DEDALO_DIFFUSION_DOMAIN ) : array {
 
 		$diffusion_map = self::get_diffusion_map($diffusion_domain_name);
 
 		# Get only diffusion_elements, ignore groups
-		$diffusion_map_elements=array();
+		$diffusion_map_elements = array();
 		foreach ($diffusion_map as $ar_value) foreach ($ar_value as $group_tipo => $obj_value) {
 			$diffusion_map_elements[$obj_value->element_tipo] = $obj_value;
 		}
@@ -249,12 +271,87 @@ abstract class diffusion  {
 
 	/**
 	* DIFFUSION_COMPLETE_DUMP
-	* @return
+	* catch calls only
 	*/
 	public function diffusion_complete_dump($diffusion_element, bool $resolve_references=true) {
 		// Override in every heritage class
 		throw new Exception("Error Processing Request", 1);
 	}//end diffusion_complete_dump
+
+
+
+	/**
+	* HAVE_SECTION_DIFFUSION
+	* Return correspondence of current section in diffusion domain
+	* Note: For better control, sections are related terms of diffusion_elements.
+	* This correspondence always must exists in diffusion map
+	* @param string $section_tipo
+	* @param array $ar_diffusion_map_elements = null
+	* @return bool $have_section_diffusion
+	*/
+	public static function have_section_diffusion(string $section_tipo, array $ar_diffusion_map_elements=null) : bool {
+
+		$have_section_diffusion = false;
+
+		if (is_null($ar_diffusion_map_elements)) {
+			# calculate all
+			$ar_diffusion_map_elements = diffusion::get_ar_diffusion_map_elements(DEDALO_DIFFUSION_DOMAIN);
+		}
+		// dump($ar_diffusion_map_elements, ' ar_diffusion_map_elements ++ '.to_string($section_tipo).' - DEDALO_DIFFUSION_DOMAIN:'.DEDALO_DIFFUSION_DOMAIN);
+		foreach ($ar_diffusion_map_elements as $diffusion_group_tipo => $obj_value) {
+
+			$diffusion_element_tipo = $obj_value->element_tipo;
+
+			$ar_related = diffusion::get_diffusion_sections_from_diffusion_element($diffusion_element_tipo, $obj_value->class_name);
+			if(in_array($section_tipo, $ar_related)) {
+				$have_section_diffusion = true;
+				break;
+			}
+		}
+
+		return $have_section_diffusion;
+	}//end have_section_diffusion
+
+
+
+	/**
+	* GET_DIFFUSION_SECTIONS_FROM_DIFFUSION_ELEMENT
+	* @param string $diffusion_element_tipo
+	* @return array $ar_diffusion_sections
+	*/
+	public static function get_diffusion_sections_from_diffusion_element(string $diffusion_element_tipo, string $class_name) : array {
+
+		// if(SHOW_DEVELOPER!==true) {
+		// 	if( isset($_SESSION['dedalo']['config']['ar_diffusion_sections'][$diffusion_element_tipo]) ) {
+		// 		return $_SESSION['dedalo']['config']['ar_diffusion_sections'][$diffusion_element_tipo];
+		// 	}
+		// }
+
+		include_once(DEDALO_CORE_PATH . '/diffusion/class.'.$class_name.'.php');
+
+		$ar_diffusion_sections = $class_name::get_diffusion_sections_from_diffusion_element($diffusion_element_tipo);
+
+		// Store in session
+		// $_SESSION['dedalo']['config']['ar_diffusion_sections'][$diffusion_element_tipo] = $ar_diffusion_sections;
+
+		return $ar_diffusion_sections;
+	}//end get_diffusion_sections_from_diffusion_element
+
+
+
+	/**
+	* GET_RESOLVE_LEVELS
+	* Get resolve levels value form config file or from session if defined
+	* @return int $resolve_levels
+	*/
+	public static function get_resolve_levels() : int {
+
+		$resolve_levels = isset($_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS'])
+			? $_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS']
+			: (defined('DEDALO_DIFFUSION_RESOLVE_LEVELS') ? DEDALO_DIFFUSION_RESOLVE_LEVELS : 2);
+
+		return $resolve_levels;
+	}//end get_resolve_levels
 
 
 

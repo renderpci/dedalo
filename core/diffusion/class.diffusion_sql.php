@@ -4381,17 +4381,27 @@ class diffusion_sql extends diffusion  {
 	* GET_DIFFUSION_SECTIONS_FROM_DIFFUSION_ELEMENT
 	* @return array $ar_diffusion_sections
 	*/
-	public static function get_diffusion_sections_from_diffusion_element($diffusion_element_tipo) {
+	public static function get_diffusion_sections_from_diffusion_element(string $diffusion_element_tipo, string $class_name=null) : array {
 
 		$ar_diffusion_sections = array();
 
 		$reference_root_element = $diffusion_element_tipo;
 
 		// database_alias check . $tipo, $model_name, $relation_type, $search_exact=false
-			$direct_child = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, 'database_alias', 'children', true);
+			$direct_child = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+				$diffusion_element_tipo,
+				'database_alias',
+				'children',
+				true
+			);
 			if (!empty($direct_child)) {
 				$database_alias_tipo = reset($direct_child);
-				$real_db_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_alias_tipo, 'database', 'termino_relacionado', true);
+				$real_db_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+					$database_alias_tipo,
+					'database',
+					'termino_relacionado',
+					true
+				);
 				if (!empty($real_db_tipo)) {
 					$reference_root_element = reset($real_db_tipo);
 				}
@@ -4418,11 +4428,12 @@ class diffusion_sql extends diffusion  {
 
 			$model_name = RecordObj_dd::get_modelo_name_by_tipo($current_table_tipo,true);
 			switch ($model_name) {
+
 				case 'table_alias':
-					# First try section (thesaurus needed)
+					// First try section (thesaurus needed)
 					$ar_related = common::get_ar_related_by_model('section', $current_table_tipo);
 					if (!isset($ar_related[0])) {
-						# If not, We search 'table' now
+						// If not, We search 'table' now
 						$ar_table = common::get_ar_related_by_model('table', $current_table_tipo);
 						if (isset($ar_table[0])) {
 							$ar_related = common::get_ar_related_by_model('section', $ar_table[0]);
@@ -4432,7 +4443,7 @@ class diffusion_sql extends diffusion  {
 
 				case 'table':
 				default:
-					# Pointer to section
+					// Pointer to section
 					$ar_related = common::get_ar_related_by_model('section', $current_table_tipo);
 					break;
 			}
@@ -4441,6 +4452,7 @@ class diffusion_sql extends diffusion  {
 				$ar_diffusion_sections[] = $ar_related[0];
 			}
 		}
+
 
 		return $ar_diffusion_sections;
 	}//end get_diffusion_sections_from_diffusion_element
