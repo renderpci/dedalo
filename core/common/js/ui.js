@@ -679,7 +679,7 @@ export const ui = {
 					return false
 				}
 
-			// deactivate others
+			// deactivate current active if exists
 				if (page_globals.component_active &&
 					page_globals.component_active.id!==component.id
 					) {
