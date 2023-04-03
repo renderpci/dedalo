@@ -28,7 +28,7 @@ export const render_search_component_portal = function() {
 
 /**
 * SEARCH
-* Render node for use in search
+* Render node for use in search mode
 * @param object options
 * @return HTMLElement wrapper
 */
@@ -40,8 +40,8 @@ render_search_component_portal.prototype.search = async function(options) {
 		const render_level = options.render_level || 'full'
 
 	// columns_map
-		const columns_map = await rebuild_columns_map(self)
-		self.columns_map = columns_map
+		const columns_map	= await rebuild_columns_map(self)
+		self.columns_map	= columns_map
 
 	// ar_section_record
 		const ar_section_record = await get_section_records({
@@ -140,9 +140,9 @@ const rebuild_columns_map = async function(self) {
 		// 		callback	: render_edit_view_line.render_column_id
 		// 	})
 
-	const base_columns_map = await self.columns_map
-
-	columns_map.push(...base_columns_map)
+	// base_columns_map
+		const base_columns_map = await self.columns_map
+		columns_map.push(...base_columns_map)
 
 	// column component_info check
 		if (self.add_component_info===true) {
