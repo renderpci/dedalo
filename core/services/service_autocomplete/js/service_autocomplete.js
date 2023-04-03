@@ -329,13 +329,10 @@ service_autocomplete.prototype.rebuild_search_query_object = async function(opti
 			return null
 		}
 
+		const sqo			= rqo_search.sqo
 		const sqo_options	= rqo_search.sqo_options
 		const fixed_filter	= sqo_options.fixed_filter //self.request_config_object.find((current_item)=> current_item.typo==='fixed_filter')
 		const filter_free	= sqo_options.filter_free	//self.request_config_object.find((current_item)=> current_item.typo==='filter_free')
-		// const operador	= sqo_options.operador
-
-		const sqo			= rqo_search.sqo
-		// sqo.section_tipo	= search_sections || sqo.section_tipo
 
 	// delete the sqo_options to the final rqo_options
 		delete rqo_search.sqo_options
@@ -356,27 +353,27 @@ service_autocomplete.prototype.rebuild_search_query_object = async function(opti
 				filter_free_parse[new_operator]	= []
 
 				// get the array of the filters objects, they have the default operator
-				const current_filter = filter_free[operator]
-				const current_filter_length = current_filter.length
+				const current_filter		= filter_free[operator]
+				const current_filter_length	= current_filter.length
 				for (let i = 0; i < current_filter_length; i++) {
 
 					const filter_item = current_filter[i]
 
-					const q =  filter_item.q
+					const q = filter_item.q
 
-					if( !q || q === "" ){
+					if(!q || q==='') {
 						continue
 					}
 
 					filter_item.q = q
 					filter_item.q_split = true
 
-					// create the filter with the operator choosed by the user
+					// create the filter with the operator selected by the user
 					filter_free_parse[new_operator].push(filter_item)
 				}
 
 				const filter_empty = filter_free_parse[new_operator].length === 0
-				if(filter_empty){
+				if(filter_empty) {
 					return null
 				}
 			}
@@ -390,7 +387,7 @@ service_autocomplete.prototype.rebuild_search_query_object = async function(opti
 				}
 			}
 
-			if(filter_by_list && filter_by_list.length > 0){
+			if(filter_by_list && filter_by_list.length > 0) {
 				sqo.filter.$and.push({
 					$or:[...filter_by_list]
 				})
@@ -756,4 +753,3 @@ service_autocomplete.prototype.zenon_engine = async function(options) {
 
 		})//end Promise
 }//end zenon_engine
-
