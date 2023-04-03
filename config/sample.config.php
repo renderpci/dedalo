@@ -519,23 +519,29 @@
 
 // notifications
 	// Send notifications to user browser. E.g. Current lock components..
-	define('DEDALO_NOTIFICATIONS'			, false);
-	define('DEDALO_NODEJS'					, '/usr/bin/node');
-	define('DEDALO_NODEJS_PM2'				, '/usr/bin/pm2');
+	define('DEDALO_NOTIFICATIONS', 	false);
+	define('DEDALO_NODEJS', 		'/usr/bin/node');
+	define('DEDALO_NODEJS_PM2', 	'/usr/bin/pm2');
 
 
 
-// diffusion domain
+// diffusion
 	// Set publication diffusion domain. Default value is 'default'
-	define('DEDALO_DIFFUSION_DOMAIN'			, 'default');
-	define('DEDALO_DIFFUSION_RESOLVE_LEVELS'	, 2);
-	define('DEDALO_PUBLICATION_ALERT'			, false);
-
-
-
-// diffusion_custom
+	define('DEDALO_DIFFUSION_DOMAIN',			'default');
+	define('DEDALO_DIFFUSION_RESOLVE_LEVELS',	2);
+	// diffusion_custom
 	// Optional custom class to manipulate diffusion options. string|bool . Default: false
 	define('DIFFUSION_CUSTOM', false);
+	// api (publication). This definition is used in administration panels to auto-fill main vars
+	// Note that in the public server config file, you need to define again this values because
+	// the public API files could be place in another location/server as independent files
+	define('API_WEB_USER_CODE_MULTIPLE' , [
+		[
+			'db_name'	=> '', // like web_my_entity
+			'code'		=> ''  // like asd38kjlkasd6gadsg2fasdoijQks
+		]
+	]);
+
 
 
 
@@ -599,18 +605,6 @@
 
 // zotero_import
 	// Deprecated. Not used here.
-
-
-
-// api (publication). This definition is used in administration panels to auto-fill main vars
-	// Note that in the public server config file, you need to define again this values because
-	// the public API files could be place in another location/server as independent files
-	define('API_WEB_USER_CODE_MULTIPLE' , [
-		[
-			'db_name'	=> '', // like web_my_entity
-			'code'		=> ''  // like asd38kjlkasd6gadsg2fasdoijQks
-		]
-	]);
 
 
 
