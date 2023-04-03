@@ -19,6 +19,8 @@ var lock_components = new function() {
 		}
 	});
 
+
+
 	// ON UNLOAD window
 	/* Moved to html_page.js
 	window.addEventListener("beforeunload", function (event) {

@@ -1110,11 +1110,25 @@ final class dd_utils_api {
 	* Connects to database and updates user lock components state
 	* on focus or blur user actions
 	* @param object $rqo
+	* 	Sample:
+	* 	{
+	*	    "dd_api": "dd_utils_api",
+	*	    "action": "update_lock_components_state",
+	*	    "options": {
+	*	        "component_tipo": "hierarchy24",
+	*	        "section_tipo": "sv1",
+	*	        "section_id": "1",
+	*	        "action": "focus"
+	*	    }
+	*	}
 	* @return object $response
 	*/
 	public static function update_lock_components_state(object $rqo) : object {
 
-		// Ignore user abort load page
+		// session unlock
+		session_write_close();
+
+		// Ignore user abort action
 		ignore_user_abort(true);
 
 		$response = new stdClass();
@@ -1122,10 +1136,11 @@ final class dd_utils_api {
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// short vars
-			$section_id		= $rqo->section_id;
-			$section_tipo	= $rqo->section_tipo;
-			$component_tipo	= $rqo->component_tipo;
-			$action			= $rqo->action;
+			$options		= $rqo->options;
+			$section_id		= $options->section_id;
+			$section_tipo	= $options->section_tipo;
+			$component_tipo	= $options->component_tipo ?? null;
+			$action			= $options->action; // delete_user_section_locks | blur | focus
 			$user_id		= (int)navigator::get_user_id();
 			$full_username	= ($user_id<0)
 				? 'Debug user'

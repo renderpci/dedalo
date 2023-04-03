@@ -376,6 +376,10 @@ final class dd_core_api {
 							// ..
 							break;
 					}//end switch (true)
+
+
+				// unlock user components. Normally this occurs when user force reload the page
+					lock_components::force_unlock_all_components( navigator::get_user_id() );
 			}//end if (login::is_logged()!==true)
 
 		// response OK
@@ -1480,6 +1484,9 @@ final class dd_core_api {
 						if (!empty($properties)){
 							$element->set_properties($properties);
 						}
+
+					// unlock user components. Normally this occurs when user navigate across sections or paginate
+						lock_components::force_unlock_all_components( navigator::get_user_id() );
 					break;
 
 				case 'related_search': // Used to get the related sections that call to the source section
