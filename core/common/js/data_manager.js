@@ -30,6 +30,36 @@ data_manager.request = async function(options) {
 		this.redirect		= options.redirect || 'follow' // manual, *follow, error
 		this.referrer		= options.referrer || 'no-referrer' // no-referrer, *client
 		this.body			= options.body // body data type must match "Content-Type" header
+		this.use_worker		= options.use_worker ?? false
+
+
+	// using worker cases.
+	// Note that execution is slower, but it is useful for low priority
+	// calls like 'update_lock_components_state'
+		if (this.use_worker===true) {
+			const current_worker = new Worker(DEDALO_CORE_URL + '/common/js/worker_data.js', {
+				type : 'module'
+			});
+			current_worker.postMessage({
+				url		: this.url,
+				body	: this.body
+			});
+
+			return new Promise(function(resolve, reject){
+				current_worker.onmessage = function(e) {
+					if (!e.data.api_response) {
+						console.error('Error worker_data onmessage', e.data);
+						current_worker.terminate()
+
+						reject({})
+					}
+
+					current_worker.terminate()
+
+					resolve(e.data.api_response)
+				}
+			})
+		}
 
 		// this.url			= options.url || DEDALO_API_URL
 		// this.method		= options.method || 'POST' // *GET, POST, PUT, DELETE, etc.

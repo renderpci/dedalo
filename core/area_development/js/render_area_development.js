@@ -6,7 +6,7 @@
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {when_in_viewport} from '../../common/js/events.js'
-	// import {data_manager} from '../../common/js/data_manager.js'
+	import {data_manager} from '../../common/js/data_manager.js'
 	import {render_tree_data} from '../../common/js/common.js'
 	import {ui} from '../../common/js/ui.js'
 
@@ -222,37 +222,17 @@ const build_widget = (item, self) => {
 							body_response.prepend(spinner)
 
 						// data_manager
-							// const api_response = await data_manager.request({
-							// 	body : {
-							// 		dd_api	: item.trigger.dd_api,
-							// 		action	: item.trigger.action,
-							// 		options	: item.trigger.options
-							// 	}
-							// })
-							// print_response(body_response, api_response)
-							// widget_info.classList.remove("lock")
-							// spinner.remove()
-
-						// delegates get_children task to worker. When finish, create global radio for current area
-							const current_worker = new Worker('../area_development/js/worker_area_development.js', {
-								type : 'module'
-							});
-							current_worker.postMessage({
-								url		: DEDALO_API_URL,
-								dd_api	: item.trigger.dd_api,
-								action	: item.trigger.action,
-								options	: item.trigger.options
-							});
-							current_worker.onmessage = function(e) {
-
-								const api_response = e.data.api_response
-
-								print_response(body_response, api_response)
-								widget_info.classList.remove("lock")
-								spinner.remove()
-
-								current_worker.terminate()
-							}
+							const api_response = await data_manager.request({
+								use_worker	: true,
+								body		: {
+									dd_api	: item.trigger.dd_api,
+									action	: item.trigger.action,
+									options	: item.trigger.options
+								}
+							})
+							print_response(body_response, api_response)
+							widget_info.classList.remove("lock")
+							spinner.remove()
 					})
 				}//end if (item.info) {
 
@@ -421,37 +401,38 @@ export const build_form = function(widget_object) {
 						: values
 
 					// data_manager
-						// const api_response = await data_manager.request({
-						// 	body : {
-						// 		dd_api	: widget_object.trigger.dd_api,
-						// 		action	: widget_object.trigger.action,
-						// 		options	: options
-						// 	}
-						// })
-						// print_response(body_response, api_response)
-						// form_container.classList.remove("lock")
-						// spinner.remove()
+						const api_response = await data_manager.request({
+							use_worker	: true,
+							body		: {
+								dd_api	: widget_object.trigger.dd_api,
+								action	: widget_object.trigger.action,
+								options	: options
+							}
+						})
+						print_response(body_response, api_response)
+						form_container.classList.remove("lock")
+						spinner.remove()
 
 					// delegates get_children task to worker. When finish, create global radio for current area
-						const current_worker = new Worker('../area_development/js/worker_area_development.js', {
-							type : 'module'
-						});
-						current_worker.postMessage({
-							url		: DEDALO_API_URL,
-							dd_api	: widget_object.trigger.dd_api,
-							action	: widget_object.trigger.action,
-							options	: options
-						});
-						current_worker.onmessage = function(e) {
-							const api_response = e.data.api_response
+						// const current_worker = new Worker('../area_development/js/worker_area_development.js', {
+						// 	type : 'module'
+						// });
+						// current_worker.postMessage({
+						// 	url		: DEDALO_API_URL,
+						// 	dd_api	: widget_object.trigger.dd_api,
+						// 	action	: widget_object.trigger.action,
+						// 	options	: options
+						// });
+						// current_worker.onmessage = function(e) {
+						// 	const api_response = e.data.api_response
 
-							print_response(body_response, api_response)
+						// 	print_response(body_response, api_response)
 
-							form_container.classList.remove('lock')
-							spinner.remove()
+						// 	form_container.classList.remove('lock')
+						// 	spinner.remove()
 
-							current_worker.terminate()
-						}
+						// 	current_worker.terminate()
+						// }
 			}
 		})
 

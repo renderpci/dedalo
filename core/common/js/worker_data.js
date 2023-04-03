@@ -9,7 +9,7 @@
 * ONMESSAGE
 * Called from caller 'postMessage' action like:
 
-	const current_worker = new Worker('../area_development/js/worker.js', {
+	const current_worker = new Worker('../common/js/worker.js', {
 		type		: 'module',
 		credentials	: 'omit'
 	});
@@ -29,25 +29,20 @@
 */
 self.onmessage = async function(e) {
 	const t1 = performance.now()
+	// console.log(')))))))))))))))) worker e.data:', e.data);
 
 	// Dynamic import
 		// const data_manager_instance	= await import('../../common/js/data_manager.js')
 		// const data_manager			= data_manager_instance.data_manager
 
 	// options
-		const url		= e.data.url
-		const dd_api	= e.data.dd_api
-		const action	= e.data.action
-		const options	= e.data.options
+		const url	= e.data.url
+		const body	= e.data.body
 
 	// data_manager
 		const api_response = await data_manager.request({
 			url		: url,
-			body	: {
-				dd_api	: dd_api,
-				action	: action,
-				options	: options
-			}
+			body	: body
 		})
 
 	const response = {

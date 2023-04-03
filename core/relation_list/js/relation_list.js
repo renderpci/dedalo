@@ -209,7 +209,10 @@ relation_list.prototype.build = async function(autoload=true){
 	// load data if not yet received as an option
 		if (autoload===true) {
 
-			const api_response = await data_manager.request({body:self.rqo})
+			const api_response = await data_manager.request({
+				use_worker	: true,
+				body		: self.rqo
+			})
 				// console.log("RELATION_LIST api_response:", self.id, api_response);
 
 			// set the result to the datum

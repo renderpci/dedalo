@@ -233,19 +233,46 @@ page.prototype.init = async function(options) {
 						// loading css remove
 							if (container) { container.classList.remove('loading') }
 
+	// activate_component
+		self.events_tokens.push(
+			event_manager.subscribe('activate_component', fn_activate_component)
+		)
+		// fn_activate_component
+		function fn_activate_component(component_instance) {
+			dd_console(`// page activate_component received component_instance`, 'DEBUG', component_instance)
 
-						resolve(new_page_element_instance.id)
-					})
+			// lock_component. launch worker
+				data_manager.request({
+					use_worker	: true,
+					body		: {
+						dd_api	: 'dd_utils_api',
+						action	: 'update_lock_components_state',
+						options	: {
+							component_tipo	: component_instance.tipo,
+							section_tipo	: component_instance.section_tipo,
+							section_id		: component_instance.section_id,
+							action			: 'focus' // delete_user_section_locks | blur | focus
+						}
+					}
+				})
+				.then(function(api_response){
 
-				} catch (error) {
-					// loading css remove
-					if (container) { container.classList.remove('loading') }
-					// spinner.remove()
-					console.error('Error on user navigation. user_navigation_options:', user_navigation_options)
-					console.error(error)
-					return false
-				}
-			}//end fn_user_navigation
+					if (api_response.in_use===true) {
+						document.activeElement.blur()
+
+						ui.component.deactivate(component_instance)
+						// component_instance.node.classList.add('disabled_component')
+						// ui.component.lock(component_instance)
+
+
+						ui.attach_to_modal({
+							header	: get_label.warning || 'Warning',
+							body	: api_response.msg,
+							size	: 'small'
+						})
+					}
+				})
+		}//end fn_user_navigation
 
 
 	// window onpopstate. Triggered when user make click on browser navigation buttons
@@ -444,7 +471,26 @@ page.prototype.add_events = function() {
 		document.addEventListener('click', fn_deactivate_components)
 		function fn_deactivate_components() {
 			if (page_globals.component_active) {
-				ui.component.deactivate(page_globals.component_active)
+
+				const component_instance = page_globals.component_active
+
+				// lock_component. launch worker
+					data_manager.request({
+						use_worker	: true,
+						body		: {
+							dd_api	: 'dd_utils_api',
+							action	: 'update_lock_components_state',
+							options	: {
+								component_tipo	: component_instance.tipo,
+								section_tipo	: component_instance.section_tipo,
+								section_id		: component_instance.section_id,
+								action			: 'blur' // delete_user_section_locks | blur | focus
+							}
+						}
+					})
+
+				// deactivate
+					ui.component.deactivate(component_instance)
 			}
 		}
 
