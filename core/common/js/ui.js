@@ -785,6 +785,64 @@ export const ui = {
 
 
 		/**
+		* LOCK
+		* @param object component
+		*	Full component instance
+		* @return promise
+		* 	Resolve bool
+		*/
+		lock : async (component) => {
+
+			// check already lock
+				if (component.lock===true) {
+					return false
+				}
+
+			// styles. Remove wrapper css active if exists
+				component.node.classList.add('lock')
+
+			// component lock status
+				component.lock = true
+
+			// publish event lock_component
+				// event_manager.publish('lock_component', component)
+
+
+			return true
+		},//end lock
+
+
+
+		/**
+		* UNLOCK
+		* @param object component
+		*	Full component instance
+		* @return promise
+		* 	Resolve bool
+		*/
+		unlock : async (component) => {
+
+			// check already lock
+				if (component.lock!==true) {
+					return false
+				}
+
+			// styles. Remove wrapper css active if exists
+				component.node.classList.remove('lock')
+
+			// component lock status
+				component.lock = false
+
+			// publish event lock_component
+				// event_manager.publish('unlock_component', component)
+
+
+			return true
+		},//end lock
+
+
+
+		/**
 		* ERROR
 		* Set component state as valid or error
 		*
