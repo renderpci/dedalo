@@ -8,6 +8,7 @@ if (defined('DIFFUSION_CUSTOM') && DIFFUSION_CUSTOM!==false) {
 abstract class diffusion  {
 
 
+
 	// class vars
 		protected $domain;
 		public $ar_diffusion_map;
@@ -30,8 +31,6 @@ abstract class diffusion  {
 	function __construct( ?object $options=null ) {
 
 		$this->domain = DEDALO_DIFFUSION_DOMAIN;
-
-		return true;
 	}//end __construct
 
 
@@ -281,45 +280,41 @@ abstract class diffusion  {
 
 	/**
 	* BUILD_JSON_ROW
-	* @param object $request_options
+	* @param object $options
 	* @return object $json_row
 	*	JSON object with all field : field_value in given lang
 	*/
-	public static function build_json_row(object $request_options) {
+	public static function build_json_row(object $options) : stdClass {
 
 		// options
-			$options = new stdClass();
-				$options->section_tipo 			= null;
-				$options->section_id   			= null;
-				$options->diffusion_element_tipo= null;
-				$options->lang 					= null;
-				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-					#dump($options, ' options ++ '.to_string());
+			$section_tipo			= $options->section_tipo ?? null;
+			$section_id				= $options->section_id ?? null;
+			$diffusion_element_tipo	= $options->diffusion_element_tipo ?? null;
+			$lang					= $options->lang ?? null;
 
 		// fields
-			$ar_fields = self::get_table_fields( $options->diffusion_element_tipo, $options->section_tipo );
-				#dump($ar_fields, ' ar_fields ++ '.to_string());
+			$ar_fields = self::get_table_fields( $diffusion_element_tipo, $section_tipo );
 
 		// value
 			$row = new stdClass();
 
 				$item = new stdClass();
-					$item->value = diffusion::build_id($options->section_tipo, $options->section_id, $options->lang);
+					$item->value = diffusion::build_id($section_tipo, $section_id, $lang);
 					$item->model = 'field_text';
 				$row->id = $item;
 
 				$item = new stdClass();
-					$item->value = $options->section_tipo;
+					$item->value = $section_tipo;
 					$item->model = 'field_text';
 				$row->section_tipo = $item;
 
 				$item = new stdClass();
-					$item->value = $options->section_id;
+					$item->value = $section_id;
 					$item->model = 'field_int';
 				$row->section_id = $item;
 
 				$item = new stdClass();
-					$item->value = $options->lang;
+					$item->value = $lang;
 					$item->model = 'field_text';
 				$row->lang = $item;
 
@@ -332,7 +327,7 @@ abstract class diffusion  {
 				foreach ($ar_fields as $field) {
 					#if ($field->label==='publication') continue;
 
-					$value = self::get_field_value($field->tipo, $options->section_tipo, $options->section_id, $options->lang, $request_options);
+					$value = self::get_field_value($field->tipo, $section_tipo, $section_id, $lang, $options);
 
 					#if (is_array($value) || is_object($value)) {
 					#	$value = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -346,7 +341,6 @@ abstract class diffusion  {
 					// Add value
 					$row->{$field->label} = $item;
 				}
-				#dump($row, ' row ++ '.to_string());
 
 
 		return $row;
@@ -370,7 +364,7 @@ abstract class diffusion  {
 	* @return mixed $field_value
 	*	Is the diffusion value of component called by field. Can be null, array, string, int
 	*/
-	public static function get_field_value($tipo, $section_tipo, $section_id, $lang, $request_options) {
+	public static function get_field_value(string $tipo, string $section_tipo, $section_id, string $lang, object $request_options) {
 
 		$field_value = null;
 
@@ -380,24 +374,24 @@ abstract class diffusion  {
 			#$diffusion_model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 
 		// Component
-			$ar_related 		= common::get_ar_related_by_model('component_', $tipo, $strict=false);
+			$ar_related 		= common::get_ar_related_by_model('component_', $tipo, false);
 			$component_tipo 	= reset($ar_related); //RecordObj_dd::get_ar_terminos_relacionados($tipo, false, true)[0];
 			$model_name 		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 			#$real_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($component_tipo, 'section', 'parent')[0];
-			$current_component 	= component_common::get_instance($model_name,
-																 $component_tipo,
-																 $section_id,
-																 'list', // Note that 'list' mode have dato fallback (in section)
-																 $lang,
-																 $section_tipo,
-																 false);
+			$current_component 	= component_common::get_instance(
+				$model_name,
+				$component_tipo,
+				$section_id,
+				'list', // Note that 'list' mode have dato fallback (in section)
+				$lang,
+				$section_tipo,
+				false
+			);
 
-			if(property_exists($properties, 'get_field_value') && isset($properties->get_field_value->get_dato_method)){
-				$get_dato_method = $properties->get_field_value->get_dato_method;
-				$dato = $current_component->{$get_dato_method}();
-			}else{
-				$dato = $current_component->get_dato();
-			}
+			// dato
+			$dato = (property_exists($properties, 'get_field_value') && isset($properties->get_field_value->get_dato_method))
+				? $current_component->{$properties->get_field_value->get_dato_method}()
+				: $current_component->get_dato();
 
 
 		# switch cases
@@ -457,10 +451,10 @@ abstract class diffusion  {
 				case (is_object($properties) && property_exists($properties, 'process_dato')):
 					# Process dato with function
 					$options = $request_options;
-						$options->properties 	= $properties;
-						$options->tipo 			= $tipo;
-						$options->component_tipo= $component_tipo;
-						$options->section_id 	= $section_id;
+						$options->properties		= $properties;
+						$options->tipo				= $tipo;
+						$options->component_tipo	= $component_tipo;
+						$options->section_id		= $section_id;
 
 					$function_name 	= $properties->process_dato;
 					$field_value 	= call_user_func($function_name, $options, $dato);
@@ -480,12 +474,12 @@ abstract class diffusion  {
 
 	/**
 	* RESOLVE_COMPONENT_VALUE
-	* Intermediathe method to call component methods from diffusion
+	* Intermediate method to call component methods from diffusion
+	* @param object $options
+	* @param mixed $dato
 	* @return mixed $value
 	*/
-	public static function resolve_component_value( $options, $dato ) {
-		// dump($options, ' options ++ '.to_string());
-		// dump($dato, ' dato ++ '.to_string());
+	public static function resolve_component_value( object $options, $dato ) {
 
 		# Ref. $options
 		# [typology] =>
@@ -508,9 +502,9 @@ abstract class diffusion  {
 		#     )
 		# [diffusion_element_tipo] => mdcat353
 
-		$process_dato_arguments = (object)$options->properties->process_dato_arguments;
-		$method 				= $process_dato_arguments->component_method;
-		$custom_arguments 		= isset($process_dato_arguments->custom_arguments) ? $process_dato_arguments->custom_arguments : [];
+		$process_dato_arguments	= (object)$options->properties->process_dato_arguments;
+		$method					= $process_dato_arguments->component_method;
+		$custom_arguments		= isset($process_dato_arguments->custom_arguments) ? $process_dato_arguments->custom_arguments : [];
 
 
 		$component_tipo = isset($options->component_tipo) ? $options->component_tipo : common::get_ar_related_by_model('component_', $options->tipo, $strict=false)[0];
@@ -526,14 +520,15 @@ abstract class diffusion  {
 			array_unshift($custom_arguments, $options->lang);
 		}
 
-		$component 		= component_common::get_instance($model_name,
-														 $component_tipo,
-														 $section_id,
-														 'list',
-														 $options->lang,
-														 $options->section_tipo,
-														 false);
-
+		$component = component_common::get_instance(
+			$model_name,
+			$component_tipo,
+			$section_id,
+			'list',
+			$options->lang,
+			$options->section_tipo,
+			false
+		);
 
 		$value = call_user_func_array(array($component, $method), $custom_arguments);
 
@@ -551,11 +546,12 @@ abstract class diffusion  {
 	/**
 	* GET_TABLE_FIELDS
 	* Resolve all fields of a 'table' element inside a given 'diffusion_element'
-	* Uses diffusion mysql tables model
+	* Uses diffusion MYSQL tables model
 	* @param string $diffusion_element_tipo
+	* @param string $section_tipo
 	* @return array $ar_table_children
 	*/
-	public static function get_table_fields($diffusion_element_tipo, $section_tipo) {
+	public static function get_table_fields(string $diffusion_element_tipo, string $section_tipo) : array {
 
 		$diffusion_element_tables_map = diffusion_sql::get_diffusion_element_tables_map( $diffusion_element_tipo );
 			#dump($diffusion_element_tables_map, ' diffusion_element_tables_map ++ '.to_string());
@@ -594,9 +590,11 @@ abstract class diffusion  {
 
 	/**
 	* MAP_SECTION_ID_TO_SUBTITLES_URL
+	* @param object $options
+	* @param mixed $dato
 	* @return string $subtitles_url
 	*/
-	public static function map_section_id_to_subtitles_url($options, $dato) {
+	public static function map_section_id_to_subtitles_url(object $options, mixed $dato) : string {
 
 		require_once(DEDALO_SHARED_PATH . '/class.subtitles.php');
 
@@ -619,7 +617,7 @@ abstract class diffusion  {
 	*	)
 	* @return object $image_size
 	*/
-	public static function map_image_info($options, $dato) {
+	public static function map_image_info(object $options, $dato) : object {
 
 		//dump($options, ' options ++ '.to_string());
 		//dump($dato, ' dato ++ '.to_string());
@@ -628,12 +626,14 @@ abstract class diffusion  {
 
 		// component image
 			$model_name = RecordObj_dd::get_modelo_name_by_tipo($locator->component_tipo,true);
-			$component 	 = component_common::get_instance($model_name,
-														  $locator->component_tipo,
-														  $locator->section_id,
-														  'list',
-														  DEDALO_DATA_NOLAN,
-														  $locator->section_tipo);
+			$component 	 = component_common::get_instance(
+				$model_name,
+				$locator->component_tipo,
+				$locator->section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$locator->section_tipo
+			);
 		// Dimensions from default quality
 			$image_dimensions = $component->get_image_dimensions(DEDALO_IMAGE_QUALITY_DEFAULT);
 
@@ -648,11 +648,11 @@ abstract class diffusion  {
 
 		// image_info object
 			$image_info = new stdClass();
-				$image_info->width  	= $image_dimensions[0];
-				$image_info->height 	= $image_dimensions[1];
-				$image_info->bits   	= $image_dimensions['bits'];
-				$image_info->channels  	= $image_dimensions['channels'];
-				$image_info->mime  		= $image_dimensions['mime'];
+				$image_info->width		= $image_dimensions[0];
+				$image_info->height		= $image_dimensions[1];
+				$image_info->bits		= $image_dimensions['bits'];
+				$image_info->channels	= $image_dimensions['channels'];
+				$image_info->mime		= $image_dimensions['mime'];
 
 
 		return $image_info;
