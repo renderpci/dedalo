@@ -401,7 +401,11 @@ class area_development extends area_common {
 				$item->typo		= 'widget';
 				$item->label	= 'Publication server API';
 				$item->value	= (object)[
-					'api_web_user_code_multiple' => API_WEB_USER_CODE_MULTIPLE
+					'dedalo_diffusion_domain'			=> DEDALO_DIFFUSION_DOMAIN,
+					'dedalo_diffusion_resolve_levels'	=> DEDALO_DIFFUSION_RESOLVE_LEVELS,
+					'api_web_user_code_multiple'		=> API_WEB_USER_CODE_MULTIPLE,
+					'dedalo_diffusion_langs'			=> DEDALO_DIFFUSION_LANGS,
+					'diffusion_map'						=> diffusion::get_diffusion_map(),
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;

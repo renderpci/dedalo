@@ -100,11 +100,11 @@ const get_content_data_edit = async function(self) {
 				})
 		}
 
-	// api_web_user_code_multiple
+	// diffusion_values (from config file)
 		ui.create_dom_element({
 			element_type	: 'pre',
 			class_name		: '',
-			inner_html		: JSON.stringify(api_web_user_code_multiple, null, 2),
+			inner_html		: JSON.stringify(value, null, 2),
 			parent			: content_data
 		})
 
