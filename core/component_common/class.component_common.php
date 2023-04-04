@@ -389,8 +389,6 @@ abstract class component_common extends common {
 			$this->mode = $mode;
 			if ($this->mode==='edit') {
 				$this->update_diffusion_info_propagate_changes = true;
-			}elseif ($this->mode==='print') {
-				$this->print_options = new stdClass();
 			}
 
 		// lang
@@ -499,9 +497,6 @@ abstract class component_common extends common {
 				// 				? (int)$rqo->show->sqo_config->offset
 				// 				: 0);
 				// }
-
-
-		return true;
 	}//end __construct
 
 
@@ -582,24 +577,6 @@ abstract class component_common extends common {
 
 		return true;
 	}//end set_dato_default
-
-
-
-	# define tipo
-	protected function define_tipo($tipo) : void {
-
-		$this->tipo = $tipo;
-	}
-	# define lang
-	protected function define_lang($lang) : void {
-
-		$this->lang = $lang;
-	}
-	# define mode
-	protected function define_mode($mode) : void {
-
-		$this->mode = $mode;
-	}
 
 
 
@@ -735,7 +712,7 @@ abstract class component_common extends common {
 			}
 		}
 
-		return $dato; # <- Se aplicará directamente el fallback de idioma para el mode list
+		return $dato; // <- The language fallback for the mode list will be directly applied
 	}//end get_dato
 
 
@@ -939,7 +916,6 @@ abstract class component_common extends common {
 			$section_tipo	= $this->get_section_tipo();
 			$section_id		= $this->get_section_id();
 			$tipo			= $this->get_tipo();
-			$mode			= $this->get_mode();
 			$lang			= $this->get_lang() ?? DEDALO_DATA_LANG;
 
 			// Innecesario ???
@@ -962,9 +938,6 @@ abstract class component_common extends common {
 			// 	trigger_error('Error Processing component save. Inconsistency detected: component trying to save without section_id: '. $section_id);
 			// 	return false;
 			// }
-
-		// dato
-			$dato = $this->dato;
 
 		// is temp case
 		// Sometimes we need use component as temporal element without save real data to database. Is this case
@@ -1014,7 +987,7 @@ abstract class component_common extends common {
 
 	/**
 	* SAVE_ACTIVITY
-	*
+	* @return void
 	*/
 	public function save_activity() : void {
 
@@ -1319,6 +1292,8 @@ abstract class component_common extends common {
 					}
 				}//end foreach ($ar_section as $current_section)
 			}// end if(!empty($ar_section ))
+
+
 		return $ar_data;
 	}//end update_observers_dato
 
@@ -1384,7 +1359,6 @@ abstract class component_common extends common {
 
 				# Authorized tools names
 				#if (!in_array($tool_name, (array)$this->ar_authorized_tool_name)) {
-
 					$tool = new stdClass();
 						$tool->name = $tool_name;
 
@@ -1413,9 +1387,6 @@ abstract class component_common extends common {
 		$tool_obj = null;
 
 		if ($tool_name==='tool_relation') {
-			if(SHOW_DEBUG===true) {
-				#debug_log(__METHOD__." DESACTIVA LA CARGA DE TOOL RELATION ".__METHOD__);
-			}
 			return $tool_obj;
 		}
 
@@ -1435,7 +1406,8 @@ abstract class component_common extends common {
 	* @return array $ar_tools_name
 	*/
 	protected function get_ar_tools_name() : array {
-		# Default tools
+
+		// Default tools
 		$ar_tools_name = $this->ar_tools_name;
 
 		$properties = $this->get_properties();
@@ -1911,7 +1883,9 @@ abstract class component_common extends common {
 
 
 	/**
-	* DECORE UNTRANSLATED
+	* DECORE_UNTRANSLATED
+	* @param string|null $string
+	* @return string|null
 	*/
 	public static function decore_untranslated(?string $string) : ?string {
 
@@ -1961,42 +1935,6 @@ abstract class component_common extends common {
 
 		return $dato;
 	}//end add_object_to_dato
-
-
-
-	/**
-	* REMOVE_LOCATOR_IN_DATO
-	* Remove received locator in objects array comparing ar_properties
-	*/
-	public static function remove_locator_in_dato(object $locator_obj, array $dato, array $ar_properties=['section_tipo','section_id']) {
-
-		// if (!is_object($locator_obj)) {
-		// 	throw new Exception("Error Processing Request. var 'object' is not of type object locator_obj ", 1);
-		// }
-
-		$remove_key=false;
-		foreach ($dato as $key => $current_locator_obj) {
-			if (!is_object($current_locator_obj)) {
-				if(SHOW_DEBUG===true) {
-					throw new Exception("Error Processing Request. 'dato' elements are not objects. Please verify json_decode is called before use this method", 1);
-				}
-				trigger_error(__METHOD__ . "Sorry. Object locator expected. Nothing is removed");
-				break;
-			}
-			if ( true===locator::compare_locators( $locator_obj, $current_locator_obj, $ar_properties ) ){
-				$remove_key=$key;
-				break;
-			}
-		}
-
-		if ($remove_key!==false) {
-
-			unset($dato[$remove_key]);
-			$dato = array_values($dato); # Re-index array dato (IMPORTANT FOR MAINTAIN JSON ARRAY FORMAT !!)
-		}
-
-		return $dato;
-	}//end remove_locator_in_dato
 
 
 

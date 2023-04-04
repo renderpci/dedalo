@@ -35,7 +35,6 @@
 
 
 
-
 /**
 * SEARCH
 */
@@ -745,60 +744,60 @@ search.prototype.get_search_group_operator = function(search_group) {
 
 
 
-// Save editing preset
-	/**
-	* UPDATE_STATE
-	* get the save state of the presets
-	* @param object options
-	* @return promise
-	*/
-	search.prototype.update_state = async function(options) {
+/**
+* UPDATE_STATE
+* Save editing preset
+* get the save state of the presets
+* @param object options
+* @return bool
+*/
+search.prototype.update_state = async function(options) {
 
-		const self = this
+	const self = this
 
-		// options
-			const state						= options.state // string
-			const editing_section_id		= options.editing_section_id || null // string|null
-			const editing_save_arguments	= options.editing_save_arguments || null // string|null
+	// options
+		const state						= options.state // string
+		const editing_section_id		= options.editing_section_id || null // string|null
+		const editing_save_arguments	= options.editing_save_arguments || null // string|null
 
-		// fix vars
-			self.search_layout_state = state
+	// fix vars
+		self.search_layout_state = state
 
-		// search_container_selection_presets. Store current editing section_id in search_container_selection_presets dataset
-			const search_container_selection_presets = self.search_container_selection_presets
+	// search_container_selection_presets. Store current editing section_id in search_container_selection_presets dataset
+		const search_container_selection_presets = self.search_container_selection_presets
 
-		// editing_section_id case
-			if (editing_section_id) {
-				// Set dataset section_id
-				search_container_selection_presets.dataset.section_id = editing_section_id
-				// Set dataset save_arguments
-				search_container_selection_presets.dataset.save_arguments = editing_save_arguments
-			}
+	// editing_section_id case
+		if (editing_section_id) {
+			// Set dataset section_id
+			search_container_selection_presets.dataset.section_id = editing_section_id
+			// Set dataset save_arguments
+			search_container_selection_presets.dataset.save_arguments = editing_save_arguments
+		}
 
-		// button save preset
-			const button_save_preset = self.button_save_preset
-			if (button_save_preset) {
+	// button save preset
+		const button_save_preset = self.button_save_preset
+		if (button_save_preset) {
 
-				if (state==='changed' && self.user_preset_section_id) {
-					// Show save preset button
-					button_save_preset.classList.remove('hide')
-				}else{
-					// Hide save preset button
-					if (!button_save_preset.classList.contains('hide')) {
-						button_save_preset.classList.add('hide')
-					}
+			if (state==='changed' && self.user_preset_section_id) {
+				// Show save preset button
+				button_save_preset.classList.remove('hide')
+			}else{
+				// Hide save preset button
+				if (!button_save_preset.classList.contains('hide')) {
+					button_save_preset.classList.add('hide')
 				}
 			}
+		}
 
-		// save temp preset if changed
-			if (state==='changed') {
-				// Save temp preset
-				await save_temp_preset(self)
-			}
+	// save temp preset if changed
+		if (state==='changed') {
+			// Save temp preset
+			await save_temp_preset(self)
+		}
 
 
-		return true
-	}//end update_state
+	return true
+}//end update_state
 
 
 

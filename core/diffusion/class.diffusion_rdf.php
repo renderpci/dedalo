@@ -1,18 +1,14 @@
 <?php
-require_once(DEDALO_CORE_PATH . '/diffusion/class.diffusion.php');
-require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/vendor/autoload.php');
-/*
-* CLASS DIFFUSION_rdf
-* Used to publish data to RDF
-* The publication in RDF need to be defined in the ontology inside a diffusion_element
-*/
+require_once DEDALO_CORE_PATH . '/diffusion/class.diffusion.php';
+// require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/vendor/autoload.php');
+require_once DEDALO_LIB_PATH . '/vendor/autoload.php';
 
 
 
 /**
 * DIFFUSION_RDF
-* @param int $section_id
-* @param array $rdf_wrapper
+* Used to publish data to RDF
+* The publication in RDF need to be defined in the ontology inside a diffusion_element
 */
 class diffusion_rdf extends diffusion {
 
@@ -31,11 +27,12 @@ class diffusion_rdf extends diffusion {
 	public $DEDALO_EXTRAS_BASE_URL;
 
 
+
 	/**
 	* CONSTRUCT
 	* @param object $options . Default null
 	*/
-	function __construct($options=null) {
+	function __construct(object $options=null) {
 
 		parent::__construct($options=null);
 
@@ -724,18 +721,22 @@ class diffusion_rdf extends diffusion {
 
 		if($model_name === 'relation_list'){
 
-			$element		= new relation_list( $current_tipo,
-												 $section_id,
-												 $section_tipo,
-												 'list',);
+			$element = new relation_list(
+				$current_tipo,
+				$section_id,
+				$section_tipo,
+				'list'
+			);
 
 		}else{
-			$element		= component_common::get_instance($model_name,
-															 $current_tipo,
-															 $section_id,
-															 'list',
-															 DEDALO_DATA_LANG,
-															 $section_tipo);
+			$element = component_common::get_instance(
+				$model_name,
+				$current_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_LANG,
+				$section_tipo
+			);
 		}
 		$parent = $ddo->tipo;
 
@@ -752,7 +753,7 @@ class diffusion_rdf extends diffusion {
 				$diffusion_properties		= $ddo->diffusion_properties;
 				$element->set_diffusion_properties($diffusion_properties);
 
-				$value		= $element->get_diffusion_dato();
+				$value = $element->get_diffusion_dato();
 
 				$config_properties = $ddo->config ?? null;
 				if($config_properties){
@@ -853,7 +854,7 @@ class diffusion_rdf extends diffusion {
 		// Search Dedalo entities publication services
 			$section_tipo	= DEDALO_SERVICES_SECTION_TIPO; 	// services_section_tipo = 'dd1010';
 			$entity_id		= DEDALO_ENTITY_ID; // Config DEDALO_ENTITY_ID
-			$service_type 	= $this->service_type; // setting in the diffusion_element
+			$service_type	= $this->service_type; // setting in the diffusion_element
 
 		// query object
 			$query = '
@@ -903,12 +904,13 @@ class diffusion_rdf extends diffusion {
 			if (empty($dato_entity)) {
 
 				$entity_locator = null;
-				debug_log(__METHOD__." Empty records!  Nothing is found for entity: '$entity_id' and service_name: '$service_name' ".to_string(), logger::ERROR);
+				debug_log(__METHOD__." Empty records!  Nothing is found for entity: '$entity_id' and service_type: '$service_type' ".to_string(), logger::ERROR);
 
 			}else{
 				$entity_locator->set_section_id($dato_entity->section_id);
 				$entity_locator->set_section_tipo($dato_entity->section_tipo);
 			}
+
 
 		return $entity_locator;
 	}//end resolve_entity_locator
@@ -1159,7 +1161,7 @@ class diffusion_rdf extends diffusion {
 	* Used to determine when show publication button in sections
 	* @return array $ar_diffusion_sections
 	*/
-	public static function get_diffusion_sections_from_diffusion_element($diffusion_element_tipo) {
+	public static function get_diffusion_sections_from_diffusion_element(string $diffusion_element_tipo, string $class_name=null) : array {
 
 		$ar_diffusion_sections = array();
 

@@ -502,6 +502,30 @@ class component_pdf extends component_media_common {
 			$full_file_name		= $file_data->full_file_name;		// like "test175_test65_1.pdf"
 			$full_file_path		= $file_data->full_file_path;		// like "/mypath/media/pdf/1.5MB/test175_test65_1.jpg"
 
+		// copy original to default quality (in the future, a quality conversion script will be placed here)
+			$default_quality		= $this->get_default_quality();
+			$default_quality_path	= $this->get_media_path_dir($default_quality);
+			$target_file_path		= $default_quality_path . '/' . $full_file_name;
+			$copy_result			= copy(
+				$full_file_path, // from original quality directory
+				$target_file_path // to default quality directory
+			);
+			if ($copy_result===false) {
+				debug_log(__METHOD__ . PHP_EOL
+					. " Error: Unable to copy pdf file : " . PHP_EOL
+					. ' Source path: ' . $full_file_path . PHP_EOL
+					. ' Target path: ' . $target_file_path
+					, logger::ERROR
+				);
+			}else{
+				debug_log(__METHOD__ . PHP_EOL
+					. " Copied pdf file (".DEDALO_PDF_QUALITY_ORIGINAL." -> ".DEDALO_PDF_QUALITY_DEFAULT.") : " . PHP_EOL
+					. ' Source path: ' . $full_file_path . PHP_EOL
+					. ' Target path: ' . $target_file_path
+					, logger::DEBUG
+				);
+			}
+
 		// thumb : Create pdf_thumb image
 			$thumb_url = $this->get_pdf_thumb(
 				true // bool force_create

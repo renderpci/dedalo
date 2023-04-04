@@ -91,7 +91,7 @@ final class dd_manager {
 			}
 
 		// debug
-			if(SHOW_DEBUG===true) {
+			if(SHOW_DEBUG===true || SHOW_DEVELOPER===true) {
 				$total_time_api_exec = exec_time_unit($api_manager_start_time,'ms').' ms';
 				$api_debug = new stdClass();
 					$api_debug->api_exec_time	= $total_time_api_exec;

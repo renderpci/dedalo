@@ -47,6 +47,11 @@ class component_relation_parent extends component_relation_common {
 	*/
 	public function get_dato() {
 
+		// search mode
+			if ($this->mode==='search') {
+				return $this->dato ?? null;
+			}
+
 		// always get dato calculated from my parents
 			$dato = $this->get_my_parents();
 
@@ -136,7 +141,7 @@ class component_relation_parent extends component_relation_common {
 			$dato = is_array($dato) ? array_values($dato) : (array)$dato;
 
 		// search mode
-			if ($this->mode==="search") {
+			if ($this->mode==='search') {
 				# Fix dato
 				$this->dato = $dato;
 
