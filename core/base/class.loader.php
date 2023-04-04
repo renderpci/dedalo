@@ -45,6 +45,7 @@ include(DEDALO_CORE_PATH . '/dd_grid/class.dd_grid_cell_object.php'); # new 27-0
 include(DEDALO_CORE_PATH . '/dd_grid/class.indexation_grid.php'); # new 28-07-2021
 #include(DEDALO_CORE_PATH . '/common/class.relation.php');
 include(DEDALO_CORE_PATH . '/component_common/class.component_common.php');
+include(DEDALO_CORE_PATH . '/component_common/class.lock_components.php');
 include(DEDALO_CORE_PATH . '/component_media_common/class.component_media_common.php');
 include(DEDALO_CORE_PATH . '/component_relation_common/class.component_relation_common.php');
 include(DEDALO_CORE_PATH . '/search/class.search.php');
@@ -68,7 +69,6 @@ include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_component_info.php');
 include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_component_3d_api.php');
 // others
 include(DEDALO_CORE_PATH . '/ontology/class.ontology.php');
-include(DEDALO_CORE_PATH . '/lock_components/class.lock_components.php');
 // include the shared classes
 include(DEDALO_SHARED_PATH . '/class.TR.php');
 include(DEDALO_SHARED_PATH . '/class.OptimizeTC.php');
