@@ -306,6 +306,8 @@
 	define('DEDALO_MEDIA_PATH'	, DEDALO_ROOT_PATH	. '/media');
 	define('DEDALO_MEDIA_URL'	, DEDALO_ROOT_WEB 	. '/media');
 
+
+
 	// av media
 		// dedalo_av_folder. string default '/av'
 		define('DEDALO_AV_FOLDER'					, '/av');
@@ -349,28 +351,7 @@
 		// dedalo_av_recompress_all. On 1, all video files are re-compressed to 960k/s variable bit rate and keyframe every 75 frames
 		define('DEDALO_AV_RECOMPRESS_ALL'			, 1); // 1 re-compress all av files uploaded, 0 to only copy av files uploaded (default 0)
 
-	// 3d media
-		// dedalo_3d_foler. string default '/3d'
-		define('DEDALO_3D_FOLDER'					, '/3d');
-		// dedalo_3d_extension. string default 'glb'
-		define('DEDALO_3D_EXTENSION'				, 'glb');
-		// dedalo_3d_extensions_supported. array default ['glb', 'gltf', 'obj', 'fbx', 'dae', 'zip']
-		define('DEDALO_3D_EXTENSIONS_SUPPORTED'		, ['glb', 'gltf', 'obj', 'fbx', 'dae', 'zip']);
-		// dedalo_3d_mime_type. string default 'model/gltf+json'
-		define('DEDALO_3D_MIME_TYPE'				, 'model/gltf-binary');
-		// dedalo_3d_quality_original. string default 'original'
-		define('DEDALO_3D_QUALITY_ORIGINAL'			, 'original');
-		// quality default normally 'original'
-		define('DEDALO_3D_QUALITY_DEFAULT'			, 'original');
-		// quality folders array (sort desc quality)
-		define('DEDALO_3D_AR_QUALITY'				, [DEDALO_3D_QUALITY_ORIGINAL]);
 
-		// dedalo_3d_gltfpack_path normally /usr/local/bin/gltfpack or /opt/gltfpack (converts and compresses .obj/.gltf to .glb/.gltf)
-		define('DEDALO_3D_GLTFPACK_PATH'			, '/usr/local/bin/gltfpack');
-		// dedalo_3d_fbx2gltf_path normally /usr/local/bin/FBX2glTF or /opt/FBX2glTF (converts .fbx to .glb/.gltf)
-		define('DEDALO_3D_FBX2GLTF_PATH'			, '/usr/local/bin/FBX2glTF');
-		// dedalo_3d_collada2gltf_path normally /usr/local/bin/COLLADA2GLTF-bin or /opt/COLLADA2GLTF-bin (converts .dae to .glb/.gltf)
-		define('DEDALO_3D_COLLADA2GLTF_PATH'		, '/usr/local/bin/COLLADA2GLTF-bin');
 
 	// image media
 		// image_folder. Default: '/image'
@@ -434,6 +415,31 @@
 		define('DEDALO_PDF_RENDERER'				, '/usr/bin/wkhtmltopdf');
 		// automatic_transcription_engine (path of daemon generator of text files from PDF) Using XPDF from http://www.foolabs.com/xpdf/ or https://pdftotext.com
 		define('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE'	, '/usr/bin/pdftotext');
+
+
+
+	// 3d media
+		// dedalo_3d_foler. string default '/3d'
+		define('DEDALO_3D_FOLDER'					, '/3d');
+		// dedalo_3d_extension. string default 'glb'
+		define('DEDALO_3D_EXTENSION'				, 'glb');
+		// dedalo_3d_extensions_supported. array default ['glb', 'gltf', 'obj', 'fbx', 'dae', 'zip']
+		define('DEDALO_3D_EXTENSIONS_SUPPORTED'		, ['glb', 'gltf', 'obj', 'fbx', 'dae', 'zip']);
+		// dedalo_3d_mime_type. string default 'model/gltf+json'
+		define('DEDALO_3D_MIME_TYPE'				, 'model/gltf-binary');
+		// dedalo_3d_quality_original. string default 'original'
+		define('DEDALO_3D_QUALITY_ORIGINAL'			, 'original');
+		// quality default normally 'original'
+		define('DEDALO_3D_QUALITY_DEFAULT'			, 'original');
+		// quality folders array (sort desc quality)
+		define('DEDALO_3D_AR_QUALITY'				, [DEDALO_3D_QUALITY_ORIGINAL]);
+
+		// dedalo_3d_gltfpack_path normally /usr/local/bin/gltfpack or /opt/gltfpack (converts and compresses .obj/.gltf to .glb/.gltf)
+		define('DEDALO_3D_GLTFPACK_PATH'			, '/usr/local/bin/gltfpack');
+		// dedalo_3d_fbx2gltf_path normally /usr/local/bin/FBX2glTF or /opt/FBX2glTF (converts .fbx to .glb/.gltf)
+		define('DEDALO_3D_FBX2GLTF_PATH'			, '/usr/local/bin/FBX2glTF');
+		// dedalo_3d_collada2gltf_path normally /usr/local/bin/COLLADA2GLTF-bin or /opt/COLLADA2GLTF-bin (converts .dae to .glb/.gltf)
+		define('DEDALO_3D_COLLADA2GLTF_PATH'		, '/usr/local/bin/COLLADA2GLTF-bin');
 
 
 

@@ -150,8 +150,8 @@ abstract class backup {
 
 				// fastcgi_finish_request
 					if (function_exists('fastcgi_finish_request')) {
-					    fastcgi_finish_request();
-					    debug_log(__METHOD__." fastcgi_finish_request() function is called to prevent lock this connection. ".to_string(), logger::WARNING);
+						fastcgi_finish_request();
+						debug_log(__METHOD__." fastcgi_finish_request() function is called to prevent lock this connection. ".to_string(), logger::WARNING);
 					} else {
 						debug_log(__METHOD__." Error: This server does not support fastcgi_finish_request() function. ".to_string(), logger::ERROR);
 					}
