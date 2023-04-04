@@ -379,7 +379,9 @@ final class dd_core_api {
 
 
 				// unlock user components. Normally this occurs when user force reload the page
-					lock_components::force_unlock_all_components( navigator::get_user_id() );
+					if (DEDALO_LOCK_COMPONENTS===true) {
+						lock_components::force_unlock_all_components( navigator::get_user_id() );
+					}
 			}//end if (login::is_logged()!==true)
 
 		// response OK
@@ -1486,7 +1488,9 @@ final class dd_core_api {
 						}
 
 					// unlock user components. Normally this occurs when user navigate across sections or paginate
-						lock_components::force_unlock_all_components( navigator::get_user_id() );
+						if (DEDALO_LOCK_COMPONENTS===true) {
+							lock_components::force_unlock_all_components( navigator::get_user_id() );
+						}
 					break;
 
 				case 'related_search': // Used to get the related sections that call to the source section
@@ -2057,17 +2061,19 @@ final class dd_core_api {
 		// environment object
 			$environment = (object)[
 				// page_globals
-				'page_globals'				=> $page_globals,
+				'page_globals'						=> $page_globals,
 				// plain global vars
-				'DEDALO_ENVIRONMENT'		=> true,
-				// 'DEDALO_API_URL'			=> defined('DEDALO_API_URL') ? DEDALO_API_URL : (DEDALO_CORE_URL . '/api/v1/json/'),
-				'DEDALO_CORE_URL'			=> DEDALO_CORE_URL,
-				'DEDALO_ROOT_WEB'			=> DEDALO_ROOT_WEB,
-				'DEDALO_TOOLS_URL'			=> DEDALO_TOOLS_URL,
-				'SHOW_DEBUG'				=> SHOW_DEBUG,
-				'SHOW_DEVELOPER'			=> SHOW_DEVELOPER,
-				'DEVELOPMENT_SERVER'		=> DEVELOPMENT_SERVER,
-				'DEDALO_SECTION_ID_TEMP'	=> DEDALO_SECTION_ID_TEMP,
+				'DEDALO_ENVIRONMENT'				=> true,
+				// 'DEDALO_API_URL'					=> defined('DEDALO_API_URL') ? DEDALO_API_URL : (DEDALO_CORE_URL . '/api/v1/json/'),
+				'DEDALO_CORE_URL'					=> DEDALO_CORE_URL,
+				'DEDALO_ROOT_WEB'					=> DEDALO_ROOT_WEB,
+				'DEDALO_TOOLS_URL'					=> DEDALO_TOOLS_URL,
+				'SHOW_DEBUG'						=> SHOW_DEBUG,
+				'SHOW_DEVELOPER'					=> SHOW_DEVELOPER,
+				'DEVELOPMENT_SERVER'				=> DEVELOPMENT_SERVER,
+				'DEDALO_SECTION_ID_TEMP'			=> DEDALO_SECTION_ID_TEMP,
+				'DEDALO_UPLOAD_SERVICE_CHUNK_FILES'	=> DEDALO_UPLOAD_SERVICE_CHUNK_FILES,
+				'DEDALO_LOCK_COMPONENTS'			=> DEDALO_LOCK_COMPONENTS,
 				// DD_TIPOS . Some useful dd tipos (used in client by tool_user_admin for example)
 				'DD_TIPOS' => [
 					'DEDALO_SECTION_USERS_TIPO'			=> DEDALO_SECTION_USERS_TIPO,
