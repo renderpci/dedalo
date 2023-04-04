@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+	<meta charset="utf-8"/>
+</head>
+<body>
+
+<link rel="stylesheet" href="docs.css">
+<link rel="stylesheet" href="update.css">
+
+<h1 id="updatev5tov6">Update V5 to V6</h1>
+
+<p>Version 6 is a complete rebuild version. Lot of code has been rebuilt from scratch and some data definitions has been changed.</p>
+
+<p>Before you strat updgrading to update it is important to be aware of some of these changes in data and Dédalo definitions.</p>
+
+<h2 id="importantchangesfromv5">Important changes from v5</h2>
+
+<ol>
+<li>In v6 all components data is storage as array, so some components has changed to be array. The update will change the data of these components in your DDBB to convert it to array:</li>
+</ol>
+
+<ul>
+<li> component_text_area</li>
+<li> component_number</li>
+<li> component_geolocation</li>
+<li> component_json</li>
+<li> component_av</li>
+<li> component_image</li>
+<li> component_pdf</li>
+<li> component_svg</li>
+</ul>
+
+<p>See an example of component_text_area:</p>
+
+<p>v5 format as string:</p>
+
+<pre><code class="json">&quot;rsc36&quot;: {
+	&quot;dato&quot;: {
+		&quot;lg-nolan&quot;: &quot;my data&quot;
+	}
+}
+</code></pre>
+
+<p>v6 format as array:</p>
+
+<pre><code class="json">&quot;rsc36&quot;: {
+	&quot;dato&quot;: {
+		&quot;lg-nolan&quot;: [&quot;my data&quot;]
+	}
+}
+</code></pre>
+
+<ol>
+<li>PDF media files structure has been changed to storage original files and web files.</li>
+</ol>
+
+<p>In v5 PDF media files do not has original quality and web quality, to unify quality files criteria in all media files, v6 add original quality to stored the PDF files uploaded by users.</p>
+
+<p>So, the update process will change media file structure duplicating the currect /standar directory to /original and /web directories.</p>
+
+<p>The update will run this commands in ../dedalo/media/pdf directory:</p>
+
+<pre><code class="shell">	mv standar orginal
+	cp original web
+</code></pre>
+
+<p>Diffusion: this change could need a update into your difusion DDBB. Some diffusion configs store the path to media files and will need update his data. The update process will do not this re-publication of your project, it will need a manual re-publication of your data. Check your publication DDBB to see if Documents tables need to be re-publicated.</p>
+
+<ol>
+<li>Update the config files.</li>
+</ol>
+
+<p>The update script will not change your config files. You will need update your configurations manually.
+V6 has a new files structure for /config directory and files outside the /core Dédalo structure.</p>
+
+<p>V5 config directory:</p>
+
+<pre><code class="shell">../dedalo/lib/dedalo/config
+</code></pre>
+
+<p>V6 config directory:</p>
+
+<pre><code class="shell">../dedalo/config
+</code></pre>
+
+<h2 id="preparingyourcurrentv5installation">Preparing your current v5 installation</h2>
+
+<p>Before update you will prepare your v5 installation doing:</p>
+
+<ol>
+<li>Log in as root into current v5.</li>
+<li>Go to Administration panel.</li>
+<li>Make backup of your Dédalo installation.</li>
+<li>Update v5 to last code.</li>
+</ol>
+
+<ul>
+<li> Ensure that your code is &gt;= 5.9.5</li>
+<li> Ensure that your data is updated to 5.8.2</li>
+</ul>
+
+<ol>
+<li>Update v5 to last ontolgy version</li>
+</ol>
+
+<ul>
+<li> Ensure that your ontology version is &gt; 01&#8211;04&#8211;2023</li>
+</ul>
+
+<ol>
+<li>Duplicate your current DDBB and rename as your own project. Do not update your current database directly. It is recommended to use a duplicate DDBB. You can do it this step in several ways:</li>
+</ol>
+
+<ul>
+<li>If you want duplicate with SQL you could use something as:</li>
+</ul>
+
+<pre><code class="sql">CREATE DATABASE my_new_database TEMPLATE my_old_database;
+</code></pre>
+
+<ul>
+<li>If you want duplicate in shell you could use something as:</li>
+</ul>
+
+<pre><code class="shell">pg_dump -Fc -f olddb.pgdump -d olddb &amp;&amp;\
+createdb newdb &amp;&amp;\
+pg_restore -d newdb olddb.pgdump
+</code></pre>
+
+<h2 id="updatingprocess">Updating process</h2>
+
+<p>Ready to update.</p>
+
+<ol>
+<li>Rename your v5 directory as dedalo_v5.</li>
+</ol>
+
+<pre><code class="shell">cd ../httpdocs
+mv dedalo dedalo_v5
+</code></pre>
+
+<ol>
+<li>Download the v6 from our repository and add it to ./httpdocs dir.</li>
+</ol>
+
+<p>You can use git, wget or download and upload with ftp.
+Example using wget:</p>
+
+<pre><code class="shell">cd ../httpdocs
+wget https://github.com/renderpci/dedalo/archive/refs/heads/master.zip
+unzip master.zip
+mv dedalo-master dedalo
+</code></pre>
+
+<ol>
+<li>Config Dédalo to use your databases and your own media, etc.</li>
+</ol>
+
+<p>Duplicate sample config files and rename it to config</p>
+
+<pre><code class="shell">cd ../httpdocs/dedalo/config
+cp sample.config.php config.php
+cp sample.config_db.php config_db.php
+cp sample.config_core.php config_core.php
+cp sample.config_areas.php config_areas.php
+</code></pre>
+
+<p>Check your v5 config to add your custom properties.</p>
+
+<ol>
+<li>Duplicate or move your media directory
+It&#8217;s highly recommended to duplicate your media directory instead move it.</li>
+</ol>
+
+<pre><code class="shell">cd ../httpdocs
+cp dedalo_v5/media dedalo/
+</code></pre>
+
+<ol>
+<li>Asing the correct permisions to all /dedalo directories and files.</li>
+</ol>
+
+<pre><code class="shell">cd ../httpdocs/
+chown -R my_dedalo_user:my_dedalo_group dedalo
+chmod -R 750 dedalo
+</code></pre>
+
+<ol>
+<li>Run Dédalo in your browser.</li>
+</ol>
+
+<p>You will see the install / update script.</p>
+
+<figure>
+<img src="assets/20230403_172538_to_update.png" alt="small" />
+<figcaption>small</figcaption>
+</figure>
+
+<p>Select the &#8220;To update&#8221; to start the process.</p>
+
+<ol>
+<li>Login as root (with your v5 root account)</li>
+</ol>
+
+<figure>
+<img src="assets/20230402_150947_login.png" alt="medium" />
+<figcaption>medium</figcaption>
+</figure>
+
+<ol>
+<li>You will see the v6 administration panel.</li>
+</ol>
+
+<figure>
+<img src="assets/20230403_171028_admin_panel.png" alt="large" />
+<figcaption>large</figcaption>
+</figure>
+
+<ol>
+<li>Update the Ontology to &gt; 01&#8211;04&#8211;2023</li>
+</ol>
+
+<figure>
+<img src="assets/20230403_171133_ontology_update.png" alt="medium" />
+<figcaption>medium</figcaption>
+</figure>
+
+<ol>
+<li>Run the update scripts. It will take time to change your Database and files. It&#8217;s highly recommended to see your PHP log (<code>tail -f php.log</code>)</li>
+</ol>
+
+<figure>
+<img src="assets/20230403_171233_update_data.png" alt="large" />
+<figcaption>large</figcaption>
+</figure>
+
+<p>Down to last step and clik &#8220;Ok&#8221; button</p>
+
+<figure>
+<img src="assets/20230403_171425_update_data2.png" alt="large" />
+<figcaption>large</figcaption>
+</figure>
+
+<p>Wait until you see the ok, this process could be long.</p>
+
+<ol>
+<li>Run the tool register.</li>
+</ol>
+
+<figure>
+<img src="assets/20230403_172746_register_tools.png" alt="medium" />
+<figcaption>medium</figcaption>
+</figure>
+
+<ol>
+<li>Done! log out and log in as normal use.</li>
+</ol>
+
+</body>
+</html>
+
