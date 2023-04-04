@@ -420,10 +420,10 @@
 		define('DEDALO_PDF_EXTENSIONS_SUPPORTED'	, ['pdf']);
 		// dedalo_pdf_quality_original. string default 'original'
 		define('DEDALO_PDF_QUALITY_ORIGINAL'		, 'original');
-		// pdf_quality_default. Default: 'standard'
-		define('DEDALO_PDF_QUALITY_DEFAULT'			, 'standard');
+		// pdf_quality_default. Default: 'web'
+		define('DEDALO_PDF_QUALITY_DEFAULT'			, 'web');
 		// pdf_ar_quality. Array of PDF quality definitions
-		define('DEDALO_PDF_AR_QUALITY'				, [DEDALO_PDF_QUALITY_DEFAULT]);
+		define('DEDALO_PDF_AR_QUALITY'				, [DEDALO_PDF_QUALITY_ORIGINAL, DEDALO_PDF_QUALITY_DEFAULT]);
 		// pdf_mime_type. Default: 'application/pdf'
 		define('DEDALO_PDF_MIME_TYPE'				, 'application/pdf');
 		# pdf_type. Default: 'pdf'
@@ -519,23 +519,29 @@
 
 // notifications
 	// Send notifications to user browser. E.g. Current lock components..
-	define('DEDALO_NOTIFICATIONS'			, false);
-	define('DEDALO_NODEJS'					, '/usr/bin/node');
-	define('DEDALO_NODEJS_PM2'				, '/usr/bin/pm2');
+	define('DEDALO_NOTIFICATIONS', 	false);
+	define('DEDALO_NODEJS', 		'/usr/bin/node');
+	define('DEDALO_NODEJS_PM2', 	'/usr/bin/pm2');
 
 
 
-// diffusion domain
+// diffusion
 	// Set publication diffusion domain. Default value is 'default'
-	define('DEDALO_DIFFUSION_DOMAIN'			, 'default');
-	define('DEDALO_DIFFUSION_RESOLVE_LEVELS'	, 2);
-	define('DEDALO_PUBLICATION_ALERT'			, false);
-
-
-
-// diffusion_custom
+	define('DEDALO_DIFFUSION_DOMAIN',			'default');
+	define('DEDALO_DIFFUSION_RESOLVE_LEVELS',	2);
+	// diffusion_custom
 	// Optional custom class to manipulate diffusion options. string|bool . Default: false
 	define('DIFFUSION_CUSTOM', false);
+	// api (publication). This definition is used in administration panels to auto-fill main vars
+	// Note that in the public server config file, you need to define again this values because
+	// the public API files could be place in another location/server as independent files
+	define('API_WEB_USER_CODE_MULTIPLE' , [
+		[
+			'db_name'	=> '', // like web_my_entity
+			'code'		=> ''  // like asd38kjlkasd6gadsg2fasdoijQks
+		]
+	]);
+
 
 
 
@@ -599,18 +605,6 @@
 
 // zotero_import
 	// Deprecated. Not used here.
-
-
-
-// api (publication). This definition is used in administration panels to auto-fill main vars
-	// Note that in the public server config file, you need to define again this values because
-	// the public API files could be place in another location/server as independent files
-	define('API_WEB_USER_CODE_MULTIPLE' , [
-		[
-			'db_name'	=> '', // like web_my_entity
-			'code'		=> ''  // like asd38kjlkasd6gadsg2fasdoijQks
-		]
-	]);
 
 
 

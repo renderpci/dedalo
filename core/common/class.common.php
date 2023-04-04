@@ -3836,6 +3836,14 @@ abstract class common {
 							}
 						}
 
+					// diffusion case. Skip non diffusion defined (in Ontology) sections
+						if ($tool->name==='tool_diffusion') {
+							$have_section_diffusion = diffusion::have_section_diffusion($tipo);
+							if ($have_section_diffusion===false) {
+								continue;
+							}
+						}
+
 					if ($requirement_translatable===true) {
 
 						$translatable = ($is_component===true)

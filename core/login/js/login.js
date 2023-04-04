@@ -234,7 +234,9 @@ login.prototype.action_dispatch = async function(api_response) {
 				});
 				current_worker.postMessage({
 					action	: 'clear_cache',
-					url		: '../../api/v1/json/' // DEDALO_API_URL
+					url		: typeof DEDALO_API_URL!=='undefined'
+						? DEDALO_API_URL
+						: '../../api/v1/json/' // DEDALO_API_URL
 				});
 				current_worker.onmessage = function(e) {
 

@@ -630,8 +630,8 @@ component_portal.prototype.add_value = async function(value) {
 
 	// exists. Check if value already exists. (!) Note that only current loaded paginated values are available for compare, not the whole portal data
 		const exists = current_value.find(item => item.section_tipo===value.section_tipo && item.section_id==value.section_id)
-		if (typeof exists!=="undefined") {
-			console.log("[add_value] Value already exists (1) !");
+		if (typeof exists!=='undefined') {
+			console.log('[add_value] Value already exists (1) !');
 			return false
 		}
 
@@ -677,7 +677,7 @@ component_portal.prototype.add_value = async function(value) {
 			console.warn("// add_value api_response.result.data (unexpected total):",api_response.result.data);
 		}
 
-	// check if value already existed. (!) Note that here, the whole portal data has been compared in server
+	// check if value already exist. (!) Note that here, the whole portal data has been compared in server
 		if (parseInt(total) <= parseInt(total_before)) {
 			// self.update_pagination_values('remove') // remove added pagination value
 			console.log("[add_value] Value already exists (2) !");
@@ -721,12 +721,13 @@ component_portal.prototype.add_value = async function(value) {
 
 	// mode specifics
 		switch(self.mode) {
+
 			case 'search' :
 				// publish change. Event to update the DOM elements of the instance
 				event_manager.publish('change_search_element', self)
 				self.node.classList.remove('active')
-
 				break;
+
 			default:
 
 				break;

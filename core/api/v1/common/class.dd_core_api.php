@@ -376,6 +376,12 @@ final class dd_core_api {
 							// ..
 							break;
 					}//end switch (true)
+
+
+				// unlock user components. Normally this occurs when user force reload the page
+					if (DEDALO_LOCK_COMPONENTS===true) {
+						lock_components::force_unlock_all_components( navigator::get_user_id() );
+					}
 			}//end if (login::is_logged()!==true)
 
 		// response OK
@@ -1480,6 +1486,11 @@ final class dd_core_api {
 						if (!empty($properties)){
 							$element->set_properties($properties);
 						}
+
+					// unlock user components. Normally this occurs when user navigate across sections or paginate
+						if (DEDALO_LOCK_COMPONENTS===true) {
+							lock_components::force_unlock_all_components( navigator::get_user_id() );
+						}
 					break;
 
 				case 'related_search': // Used to get the related sections that call to the source section
@@ -2012,7 +2023,6 @@ final class dd_core_api {
 					$obj->dedalo_protect_media_files	= (defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) ? 1 : 0;
 					// notifications
 					$obj->DEDALO_NOTIFICATIONS			= defined("DEDALO_NOTIFICATIONS") ? (int)DEDALO_NOTIFICATIONS : 0;
-					$obj->DEDALO_PUBLICATION_ALERT		= defined("DEDALO_PUBLICATION_ALERT") ? (int)DEDALO_PUBLICATION_ALERT : 0;
 					// float_window_features
 					// $obj->float_window_features		= json_decode('{"small":"menubar=no,location=no,resizable=yes,scrollbars=yes,status=no,width=600,height=540"}');
 					$obj->fallback_image				= DEDALO_CORE_URL . '/themes/default/0.jpg';
@@ -2051,28 +2061,29 @@ final class dd_core_api {
 		// environment object
 			$environment = (object)[
 				// page_globals
-				'page_globals'				=> $page_globals,
+				'page_globals'						=> $page_globals,
 				// plain global vars
-				'DEDALO_ENVIRONMENT'		=> true,
-				// 'DEDALO_API_URL'			=> defined('DEDALO_API_URL') ? DEDALO_API_URL : (DEDALO_CORE_URL . '/api/v1/json/'),
-				'DEDALO_CORE_URL'			=> DEDALO_CORE_URL,
-				'DEDALO_ROOT_WEB'			=> DEDALO_ROOT_WEB,
-				'DEDALO_TOOLS_URL'			=> DEDALO_TOOLS_URL,
-				'SHOW_DEBUG'				=> SHOW_DEBUG,
-				'SHOW_DEVELOPER'			=> SHOW_DEVELOPER,
-				'DEVELOPMENT_SERVER'		=> DEVELOPMENT_SERVER,
-				'DEDALO_SECTION_ID_TEMP'	=> DEDALO_SECTION_ID_TEMP,
+				'DEDALO_ENVIRONMENT'				=> true,
+				// 'DEDALO_API_URL'					=> defined('DEDALO_API_URL') ? DEDALO_API_URL : (DEDALO_CORE_URL . '/api/v1/json/'),
+				'DEDALO_CORE_URL'					=> DEDALO_CORE_URL,
+				'DEDALO_ROOT_WEB'					=> DEDALO_ROOT_WEB,
+				'DEDALO_TOOLS_URL'					=> DEDALO_TOOLS_URL,
+				'SHOW_DEBUG'						=> SHOW_DEBUG,
+				'SHOW_DEVELOPER'					=> SHOW_DEVELOPER,
+				'DEVELOPMENT_SERVER'				=> DEVELOPMENT_SERVER,
+				'DEDALO_SECTION_ID_TEMP'			=> DEDALO_SECTION_ID_TEMP,
+				'DEDALO_UPLOAD_SERVICE_CHUNK_FILES'	=> DEDALO_UPLOAD_SERVICE_CHUNK_FILES,
+				'DEDALO_LOCK_COMPONENTS'			=> DEDALO_LOCK_COMPONENTS,
 				// DD_TIPOS . Some useful dd tipos (used in client by tool_user_admin for example)
 				'DD_TIPOS' => [
-					'DEDALO_SECTION_USERS_TIPO'			=> DEDALO_SECTION_USERS_TIPO,
-					'DEDALO_USER_PROFILE_TIPO'			=> DEDALO_USER_PROFILE_TIPO,
-					'DEDALO_USER_NAME_TIPO'				=> DEDALO_USER_NAME_TIPO,
-					'DEDALO_USER_PASSWORD_TIPO'			=> DEDALO_USER_PASSWORD_TIPO,
-					'DEDALO_FULL_USER_NAME_TIPO'		=> DEDALO_FULL_USER_NAME_TIPO,
-					'DEDALO_USER_EMAIL_TIPO'			=> DEDALO_USER_EMAIL_TIPO,
-					'DEDALO_FILTER_MASTER_TIPO'			=> DEDALO_FILTER_MASTER_TIPO,
-					'DEDALO_USER_IMAGE_TIPO'			=> DEDALO_USER_IMAGE_TIPO,
-					'DEDALO_RELATION_TYPE_INDEX_TIPO'	=> DEDALO_RELATION_TYPE_INDEX_TIPO
+					// 'DEDALO_SECTION_USERS_TIPO'			=> DEDALO_SECTION_USERS_TIPO,
+					// 'DEDALO_USER_PROFILE_TIPO'			=> DEDALO_USER_PROFILE_TIPO,
+					// 'DEDALO_FULL_USER_NAME_TIPO'			=> DEDALO_FULL_USER_NAME_TIPO,
+					// 'DEDALO_USER_EMAIL_TIPO'				=> DEDALO_USER_EMAIL_TIPO,
+					// 'DEDALO_FILTER_MASTER_TIPO'			=> DEDALO_FILTER_MASTER_TIPO,
+					// 'DEDALO_USER_IMAGE_TIPO'				=> DEDALO_USER_IMAGE_TIPO,
+					'DEDALO_RELATION_TYPE_INDEX_TIPO'		=> DEDALO_RELATION_TYPE_INDEX_TIPO,
+					'DEDALO_SECTION_INFO_INVERSE_RELATIONS'	=> DEDALO_SECTION_INFO_INVERSE_RELATIONS
 				],
 				// labels
 				// 'get_label' => include DEDALO_CORE_PATH . '/common/js/lang/'.DEDALO_APPLICATION_LANG.'.js'

@@ -147,14 +147,9 @@ service_time_machine.prototype.build = async function(autoload=false) {
 
 			// API request. Get context and data
 				const api_response = await data_manager.request({
-					body : self.rqo
+					body		: self.rqo,
+					use_worker	: true
 				})
-				if(SHOW_DEVELOPER===true) {
-					dd_console("2 [service_time_machine.build] by "+self.caller.model+" api_response:",
-						'DEBUG',
-						[self.id, clone(api_response), api_response.debug ? api_response.debug.real_execution_time : '']
-					);
-				}
 
 			// set the result to the datum
 				self.datum		= api_response.result || []
