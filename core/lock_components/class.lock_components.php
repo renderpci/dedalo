@@ -20,44 +20,33 @@ class lock_components {
 	*/
 	public static function update_lock_components_state( object $event_element ) : object {
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed';
-			$response->dato		= null;
-			$response->in_use	= false;
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed';
+				$response->dato		= null;
+				$response->in_use	= false;
 
 		$update_lock_elements = true;	// Default is true
 
 		// load current db elements
 			$id 	  = 1;
 			$strQuery = "SELECT datos FROM \"".lock_components::LOCK_COMPONENTS_TABLE."\" WHERE id = $id LIMIT 1";
-			$res 	  = JSON_RecordObj_matrix::search_free($strQuery, $wait=true);
+			$res 	  = JSON_RecordObj_matrix::search_free($strQuery, true);
+			$num_rows = pg_num_rows($res);
 
-		/*
-		$strQuery = "SELECT datos \"".lock_components::LOCK_COMPONENTS_TABLE."\" WHERE id = $1 LIMIT 1)";
-		$res 	  = pg_send_query_params(DBi::_getConnection(), $strQuery, array($id));
-		*/
-		/*
-		$strQuery = "SELECT datos \"".lock_components::LOCK_COMPONENTS_TABLE."\" WHERE id = $id LIMIT 1)";
-		$res = pg_prepare(DBi::_getConnection(), "", $strQuery);
-		$res = pg_execute(DBi::_getConnection(), "",array());
-		*/
-		$num_rows = pg_num_rows($res);
-
-
-		// create first row on empty table
+			// create first row if empty table
 			if ($num_rows<1) {
-				# Create new record
-				$dato 		   = '[]';
-				$strQuery 	   = "INSERT INTO \"".lock_components::LOCK_COMPONENTS_TABLE."\" (id,datos) VALUES ($1,$2)";
-				$insert_result = pg_query_params(DBi::_getConnection(), $strQuery, array(1,$dato));
+				$dato		= '[]';
+				$strQuery	= "INSERT INTO \"".lock_components::LOCK_COMPONENTS_TABLE."\" (id,datos) VALUES ($1,$2)";
+				pg_query_params(DBi::_getConnection(), $strQuery, array(1,$dato));
 			}else{
 				$dato = pg_fetch_result($res, 0, 0);
 			}
 			$dato = (array)json_decode($dato);
 
-
 		// switch action
+			$new_dato = [];
 			switch ($event_element->action) {
 
 				case 'focus':
@@ -69,6 +58,7 @@ class lock_components {
 							if (   $current_event_element->section_id==$event_element->section_id
 								&& $current_event_element->section_tipo===$event_element->section_tipo
 								) {
+
 								unset($dato[$key]);
 							}
 
@@ -79,17 +69,20 @@ class lock_components {
 								&& $current_event_element->section_tipo===$event_element->section_tipo
 								&& $current_event_element->component_tipo===$event_element->component_tipo
 								) {
-								$update_lock_elements = false;
+
+								// update_lock_elements
+									$update_lock_elements = false;
 
 								// response
 									$response->result = false;
 									$response->msg 	  = sprintf(label::get_label('component_in_use'),''.$current_event_element->full_username.'');
 									$response->dato   = $dato;
 									$response->in_use = true;
-								break;
+								break; // stop loop here
 							}
 						}
 					}
+					// fix dato
 					$new_dato = array_merge( (array)$dato, array($event_element) );
 					break;
 
@@ -101,9 +94,11 @@ class lock_components {
 							&& $current_event_element->component_tipo===$event_element->component_tipo
 							&& $current_event_element->user_id==$event_element->user_id
 							) {
+
 							unset($dato[$key]);
 						}
 					}
+					// fix dato
 					$new_dato = $dato;
 					break;
 
@@ -115,15 +110,18 @@ class lock_components {
 							$current_event_element->section_tipo===$event_element->section_tipo &&
 							$current_event_element->user_id==$event_element->user_id
 							) {
-							#debug_log(__METHOD__." Deleting (unset) dato key $key ".to_string($dato[$key]), logger::DEBUG);
+							// debug_log(__METHOD__." Deleting (unset) dato key $key ".to_string($dato[$key]), logger::DEBUG);
+
 							unset($dato[$key]);
 						}
 					}
+					// fix dato
 					$new_dato = $dato;
 					break;
 
 				default:
-					$update_lock_elements = false;
+					// update_lock_elements
+						$update_lock_elements = false;
 
 					// response
 						$response->result = false;
@@ -133,72 +131,63 @@ class lock_components {
 					break;
 			}
 
-		/*
-			#
-			# DELETE OLD ELEMENTS OF CURRENT USER
-			$ara_properties = array('user_id','section_id','section_tipo');
-			foreach ($dato as $key => $current_event_element) {
+		// delete old elements of current user
+			// $ara_properties = array('user_id','section_id','section_tipo');
+			// foreach ($dato as $key => $current_event_element) {
 
-				# BLUR ACTION
-				if ($event_element->action=='blur') {
+			// 	# BLUR ACTION
+			// 	if ($event_element->action=='blur') {
 
-					if (   $current_event_element->section_id==$event_element->section_id
-						&& $current_event_element->section_tipo==$event_element->section_tipo
-						&& $current_event_element->component_tipo==$event_element->component_tipo
-						//&& $current_event_element->user_id==$event_element->user_id
-						) {
-						unset($dato[$key]);
-						//$add_element=false;
-					}
-				}
+			// 		if (   $current_event_element->section_id==$event_element->section_id
+			// 			&& $current_event_element->section_tipo==$event_element->section_tipo
+			// 			&& $current_event_element->component_tipo==$event_element->component_tipo
+			// 			//&& $current_event_element->user_id==$event_element->user_id
+			// 			) {
+			// 			unset($dato[$key]);
+			// 			//$add_element=false;
+			// 		}
+			// 	}
 
-				if ($current_event_element->user_id==$event_element->user_id) {
+			// 	if ($current_event_element->user_id==$event_element->user_id) {
 
-					# SAME USER
-					if (   $current_event_element->section_id==$event_element->section_id
-						&& $current_event_element->section_tipo==$event_element->section_tipo
-						) {
-						unset($dato[$key]);
-					}
+			// 		# SAME USER
+			// 		if (   $current_event_element->section_id==$event_element->section_id
+			// 			&& $current_event_element->section_tipo==$event_element->section_tipo
+			// 			) {
+			// 			unset($dato[$key]);
+			// 		}
 
-				}else{
+			// 	}else{
 
-					# DIFFERENT USER
-					if ($current_event_element->section_id==$event_element->section_id &&
-						$current_event_element->section_tipo==$event_element->section_tipo &&
-						$current_event_element->component_tipo==$event_element->component_tipo
-						) {
-						//$response = "Error. User ".$event_element->full_username." is using this field. Please wait to finish";
-						$response = sprintf(label::get_label('component_in_use'),$event_element->full_username);
-						return $response;
-					}
-				}
-
-			}//end foreach ($dato as $key => $current_event_element) {
-			*/
-
+			// 		# DIFFERENT USER
+			// 		if ($current_event_element->section_id==$event_element->section_id &&
+			// 			$current_event_element->section_tipo==$event_element->section_tipo &&
+			// 			$current_event_element->component_tipo==$event_element->component_tipo
+			// 			) {
+			// 			//$response = "Error. User ".$event_element->full_username." is using this field. Please wait to finish";
+			// 			$response = sprintf(label::get_label('component_in_use'),$event_element->full_username);
+			// 			return $response;
+			// 		}
+			// 	}
+			// }//end foreach ($dato as $key => $current_event_element) {
 
 		// update_lock_elements
 			if ($update_lock_elements===true) {
 
 				// recreate dato array keys
-				$new_dato = array_values($new_dato);	// Recreate array keys to avoid produce json objects instead array
-				$new_dato = json_encode($new_dato);		// Convert again to text before save to database
-				$strQuery = "UPDATE \"".lock_components::LOCK_COMPONENTS_TABLE."\" SET datos = $1 WHERE id = $2";
-				#$result   = pg_query_params(DBi::_getConnection(), $strQuery, array( $new_dato, $id ));
-				pg_send_query_params(DBi::_getConnection(), $strQuery, array( $new_dato, $id ));
-				$res = pg_get_result(DBi::_getConnection());
-				// PG_SEND_QUERY is async query
-					// if (!pg_connection_busy(DBi::_getConnection())) {
-					// 	pg_send_query(DBi::_getConnection(), $strQuery);
-					// 	$result = pg_get_result(DBi::_getConnection()); # RESULT (pg_get_result for pg_send_query is needed)
-					// }
+					$new_dato = array_values($new_dato);	// Recreate array keys to avoid produce json objects instead array
+					$new_dato = json_encode($new_dato);		// Convert again to text before save to database
+					$strQuery = "UPDATE \"".lock_components::LOCK_COMPONENTS_TABLE."\" SET datos = $1 WHERE id = $2";
+
+				// sync mode
+					pg_send_query_params(DBi::_getConnection(), $strQuery, array( $new_dato, $id ));
+					pg_get_result(DBi::_getConnection());
 
 				// response
 					$response->result = true;
 					$response->msg 	  = 'Updated db lock elements';
 					$response->dato   = $dato;
-			}
+			}//end if ($update_lock_elements===true)
 
 
 		return $response;

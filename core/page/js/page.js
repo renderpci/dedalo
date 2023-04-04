@@ -257,6 +257,7 @@ page.prototype.init = async function(options) {
 			dd_console(`// page activate_component received component_instance`, 'DEBUG', component_instance)
 
 			// lock_component. launch worker
+			if (DEDALO_LOCK_COMPONENTS===true) {
 				data_manager.request({
 					use_worker	: true,
 					body		: {
@@ -279,14 +280,30 @@ page.prototype.init = async function(options) {
 						// component_instance.node.classList.add('disabled_component')
 						// ui.component.lock(component_instance)
 
+						// clean previous locks of current user in current section
+							data_manager.request({
+								use_worker	: true,
+								body		: {
+									dd_api	: 'dd_utils_api',
+									action	: 'update_lock_components_state',
+									options	: {
+										component_tipo	: null,
+										section_tipo	: component_instance.section_tipo,
+										section_id		: null,
+										action			: 'delete_user_section_locks' // delete_user_section_locks | blur | focus
+									}
+								}
+							})
 
-						ui.attach_to_modal({
-							header	: get_label.warning || 'Warning',
-							body	: api_response.msg,
-							size	: 'small'
-						})
+						// show warning
+							ui.attach_to_modal({
+								header	: get_label.warning || 'Warning',
+								body	: api_response.msg,
+								size	: 'small'
+							})
 					}
 				})
+			}
 		}//end fn_user_navigation
 
 
@@ -490,6 +507,7 @@ page.prototype.add_events = function() {
 				const component_instance = page_globals.component_active
 
 				// lock_component. launch worker
+				if (DEDALO_LOCK_COMPONENTS===true) {
 					data_manager.request({
 						use_worker	: true,
 						body		: {
@@ -503,6 +521,7 @@ page.prototype.add_events = function() {
 							}
 						}
 					})
+				}
 
 				// deactivate
 					ui.component.deactivate(component_instance)
