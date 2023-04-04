@@ -11,13 +11,13 @@ final class dd_component_3d_api {
 
 
 	/**
-	* add_posterframe
+	* MOVE_FILE_TO_DIR
 	* Creates a fragment from given av file with TC in:out
 	*
 	* @param object $rqo
 	* 	Sample:
 	* {
-	* 	action	: "add_posterframe",
+	* 	action	: "move_file_to_dir",
 	*	dd_api	: 'dd_component_3d_api',
 	*	source	: {
 	*		tipo			: 'rsc36',
@@ -67,7 +67,6 @@ final class dd_component_3d_api {
 			);
 
 		// move file
-
 			$source_file_path	= constant($file_data->tmp_dir) . '/'. $file_data->resource_type. '/' . $file_data->tmp_name;
 			$target_file_path	= $component->get_media_path_dir($target_dir). '/' . $file_data->name;
 
