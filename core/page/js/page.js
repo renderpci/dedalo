@@ -500,7 +500,7 @@ page.prototype.add_events = function() {
 		})//end keydown event
 
 	// page click
-		document.addEventListener('click', fn_deactivate_components)
+		document.addEventListener('mousedown', fn_deactivate_components)
 		function fn_deactivate_components() {
 			if (page_globals.component_active) {
 
