@@ -43,8 +43,10 @@ export const service_autocomplete = function() {
 */
 // prototypes assign
 	// life-cycle
-	service_autocomplete.prototype.destroy		= common.prototype.destroy
-
+	service_autocomplete.prototype.destroy	= common.prototype.destroy
+	// others
+	service_autocomplete.prototype.hide		= view_default_autocomplete.hide
+	service_autocomplete.prototype.show		= view_default_autocomplete.show
 
 
 /**
