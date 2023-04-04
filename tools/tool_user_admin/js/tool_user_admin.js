@@ -1,4 +1,4 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, DD_TIPOS */
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -110,8 +110,8 @@ tool_user_admin.prototype.build = async function(autoload=false) {
 */
 tool_user_admin.prototype.get_ddo_map = function() {
 
-	// section_tipo from environment DD_TIPOS
-	const section_tipo = DD_TIPOS.DEDALO_SECTION_USERS_TIPO
+	// section_tipo
+	const section_tipo = 'dd128'
 
 	const ddo_map = [
 		// section id . read only (!)
@@ -129,7 +129,7 @@ tool_user_admin.prototype.get_ddo_map = function() {
 		},
 		// username . read only (!)
 		{
-			tipo			: DD_TIPOS.DEDALO_USER_NAME_TIPO,
+			tipo			: 'dd132',
 			type			: 'component',
 			typo			: 'ddo',
 			model			: 'component_input_text',
@@ -138,12 +138,12 @@ tool_user_admin.prototype.get_ddo_map = function() {
 			// label		: 'User name',
 			mode			: 'edit',
 			properties		: {css:{}},
-			view 			: 'line',
+			// view 			: 'line',
 			permissions		: 1
 		},
 		// user profile . read only (!)
 		{
-			tipo			: DD_TIPOS.DEDALO_USER_PROFILE_TIPO,
+			tipo			: 'dd1725',
 			type			: 'component',
 			typo			: 'ddo',
 			model			: 'component_select',
@@ -152,12 +152,12 @@ tool_user_admin.prototype.get_ddo_map = function() {
 			// label		: 'User profile',
 			mode			: 'edit',
 			properties		: {css:{}},
-			view 			: 'line',
+			// view 			: 'line',
 			permissions		: 1,
 		},
 		// user full name . editable
 		{
-			tipo			: DD_TIPOS.DEDALO_FULL_USER_NAME_TIPO,
+			tipo			: 'dd452',
 			type			: 'component',
 			typo			: 'ddo',
 			model			: 'component_input_text',
@@ -169,7 +169,7 @@ tool_user_admin.prototype.get_ddo_map = function() {
 		},
 		// password . editable
 		{
-			tipo			: DD_TIPOS.DEDALO_USER_PASSWORD_TIPO,
+			tipo			: 'dd133',
 			type			: 'component',
 			typo			: 'ddo',
 			model			: 'component_password',
@@ -181,7 +181,7 @@ tool_user_admin.prototype.get_ddo_map = function() {
 		},
 		// email . editable
 		{
-			tipo			: DD_TIPOS.DEDALO_USER_EMAIL_TIPO,
+			tipo			: 'dd134',
 			type			: 'component',
 			typo			: 'ddo',
 			model			: 'component_email',
@@ -193,7 +193,7 @@ tool_user_admin.prototype.get_ddo_map = function() {
 		},
 		// projects . read only (!)
 		// {
-		// 	tipo			: DD_TIPOS.DEDALO_FILTER_MASTER_TIPO,
+		// 	tipo			: 'dd170',
 		// 	type			: 'component',
 		// 	typo			: 'ddo',
 		// 	model			: 'component_filter_master',
@@ -206,7 +206,7 @@ tool_user_admin.prototype.get_ddo_map = function() {
 		// },
 		// user image . editable
 		{
-			tipo			: DD_TIPOS.DEDALO_USER_IMAGE_TIPO,
+			tipo			: 'dd522',
 			type			: 'component',
 			typo			: 'ddo',
 			model			: 'component_image',
@@ -233,7 +233,7 @@ tool_user_admin.prototype.build_user_section = async function() {
 	const self = this
 
 	// short vars
-		const section_tipo	= DD_TIPOS.DEDALO_SECTION_USERS_TIPO // self.section_tipo
+		const section_tipo	= 'dd128' // self.section_tipo
 		const section_id	= '' + page_globals.user_id
 
 	// ddo_map. Note that this ddo_map overwrite the default section request_config show ddo_map (!)
