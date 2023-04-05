@@ -52,6 +52,8 @@ view_default_edit_image.render = function(self, options) {
 			wrapper_options.label = null // prevent to crate label node
 		}
 		const wrapper = ui.component.build_wrapper_edit(self, wrapper_options)
+		// common media classes
+		wrapper.classList.add('media_wrapper')
 		// set pointers
 		wrapper.content_data = content_data
 
@@ -73,6 +75,8 @@ const get_content_data = function(self) {
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
+		// common media classes
+		content_data.classList.add('media_content_data')
 
 	// values (images)
 		const inputs_value	= value
@@ -107,7 +111,7 @@ const get_content_value = function(i, value, self) {
 	// content_value
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'content_value'
+			class_name		: 'content_value media_content_value'
 		})
 
 	// file_info
@@ -137,7 +141,7 @@ const get_content_value = function(i, value, self) {
 
 
 /**
-* GET_CONTENT_VALUE_read
+* GET_CONTENT_VALUE_READ
 * @param int i
 * @param object value
 * @object self

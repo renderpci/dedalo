@@ -102,34 +102,37 @@
 	&.edit {
 
 		>.content_data {
-			// Note that height is always the media min height (392px)
-			// (!) Do not use max o min height here to prevent to affect canvas reference size
-			height: @media_min_height;
-			display: table;
 
-			justify-content: center;
-			max-height: @media_max_height;
-			min-height: @media_min_height;
+			// moved to layout.less.media_wrapper.edit
+				// // Note that height is always the media min height (392px)
+				// // (!) Do not use max o min height here to prevent to affect canvas reference size
+				// height: @media_min_height;
+				// display: table;
 
-			@media screen and (max-width: @width_break_point_1) {
-				min-height: unset;
-			}
+				// justify-content: center;
+				// max-height: @media_max_height;
+				// min-height: @media_min_height;
+
+				// @media screen and (max-width: @width_break_point_1) {
+				// 	min-height: unset;
+				// }
 
 			// video_container
 			>.content_value {
-				// background-color: #faf8fc;
-				height: inherit;
-				min-height: 404px;
-				width: 100%;
-				min-width: 540px;
 
-				resize: vertical;
-				overflow: hidden;
+				// moved to layout.less.media_wrapper.edit
+					// height: inherit;
+					// min-height: 404px;
+					// width: 100%;
+					// min-width: 540px;
 
-				@media screen and (max-width: @width_break_point_1) {
-					height: unset;
-					max-height: 404px;
-				}
+					// resize: vertical;
+					// overflow: hidden;
+
+					// @media screen and (max-width: @width_break_point_1) {
+					// 	height: unset;
+					// 	max-height: 404px;
+					// }
 			}
 
 			// posterframe

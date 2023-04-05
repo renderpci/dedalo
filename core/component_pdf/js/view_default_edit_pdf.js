@@ -51,6 +51,8 @@ view_default_edit_pdf.render = async function(self, options) {
 			wrapper_options.label = null // prevent to create label node
 		}
 		const wrapper = ui.component.build_wrapper_edit(self, wrapper_options)
+		// common media classes
+		wrapper.classList.add('media_wrapper')
 		// set pointers
 		wrapper.content_data = content_data
 
@@ -79,6 +81,8 @@ export const get_content_data_edit = function(self) {
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
+		// common media classes
+		content_data.classList.add('media_content_data')
 
 	// values (documents)
 		const inputs_value	= (value.length<1) ? [null] : value // force one empty element at least
@@ -131,7 +135,7 @@ const get_content_value = function(i, current_value, self) {
 	// content_value node
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'content_value'
+			class_name		: 'content_value media_content_value'
 		})
 
 	// pdf_url
@@ -302,6 +306,16 @@ const get_buttons = (self) => {
 		if (self.caller && self.caller.type==='tool') {
 			return fragment
 		}
+
+	// button_fullscreen
+		const button_fullscreen = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button full_screen',
+			parent			: fragment
+		})
+		button_fullscreen.addEventListener('click', function() {
+			ui.enter_fullscreen(self.node)
+		})
 
 	// buttons tools
 		if( self.show_interface.tools === true){
