@@ -21,8 +21,9 @@ const model		= url_vars.model
 
 // events
 	// page click
-		window.addEventListener('click', fn_deactivate_components)
-		function fn_deactivate_components() {
+		window.addEventListener('mousedown', fn_deactivate_components)
+		function fn_deactivate_components(e) {
+			e.stopPropagation()
 			if (page_globals.component_active) {
 				ui.component.deactivate(page_globals.component_active)
 			}
