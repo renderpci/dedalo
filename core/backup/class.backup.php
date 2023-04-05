@@ -1,5 +1,5 @@
 <?php
-include_once DEDALO_CORE_PATH . '/common/class.exec_.php';
+// include_once DEDALO_CORE_PATH . '/common/class.exec_.php';
 /*
 * CLASS BACKUP
 *
@@ -641,46 +641,44 @@ abstract class backup {
 			$response->result	= false;
 			$response->msg		= '';
 
-		#
-		# DB_SYSTEM_CONFIG_VERIFY
-		$system_config_verify = self::db_system_config_verify();
-		if ($system_config_verify->result===false) {
-			$response->msg 		.= $system_config_verify->msg;
-			$response->result 	= false;
-			return (object)$response;
-		}
-
-
-		# FILE_PATH
-		if(defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true) {
-
-			# Check remote server status before begins
-			/* ALREADY CHECKED IN TRIGGER, AT BEGINING OF PROCESS
-				$remote_server_status = (int)self::check_remote_server();
-			*/
-
-			# Download once all str files from server
-			$all_str_files = backup::collect_all_str_files($dedalo_prefix_tipos);
-			foreach ($all_str_files as $key => $obj) {
-				if($obj->type==="main_file") {
-					$file_path  = STRUCTURE_DOWNLOAD_DIR;
-					$mysqlImportFilename = $file_path .'/'. $obj->name;
-					break;
-				}
-			}
-			if (!isset($mysqlImportFilename)) {
-				$response->msg 		.= " Error on get main_file name from all_str_files ";
-				if(SHOW_DEBUG===true) {
-					$response->msg 		.= "<pre>".print_r($all_str_files,true)."</pre>";
-				}
+		// db_system_config_verify
+			$system_config_verify = self::db_system_config_verify();
+			if ($system_config_verify->result===false) {
+				// error
+				$response->msg 		.= $system_config_verify->msg;
 				$response->result 	= false;
 				return (object)$response;
 			}
-		}else{
-			# Default path
-			$file_path = rtrim(DEDALO_BACKUP_PATH_STRUCTURE, '/');
-			$mysqlImportFilename = $file_path .'/'. $db_name . ".backup";
-		}
+
+		// file_path
+			if(defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true) {
+
+				// Check remote server status before begins
+				 // ALREADY CHECKED IN TRIGGER, AT BEGINING OF PROCESS
+				// 	$remote_server_status = (int)self::check_remote_server();
+
+				// Download once all str files from server
+				$all_str_files = backup::collect_all_str_files($dedalo_prefix_tipos);
+				foreach ($all_str_files as $key => $obj) {
+					if($obj->type==="main_file") {
+						$file_path  = STRUCTURE_DOWNLOAD_DIR;
+						$mysqlImportFilename = $file_path .'/'. $obj->name;
+						break;
+					}
+				}
+				if (!isset($mysqlImportFilename)) {
+					$response->msg 		.= " Error on get main_file name from all_str_files ";
+					if(SHOW_DEBUG===true) {
+						$response->msg 		.= "<pre>".print_r($all_str_files,true)."</pre>";
+					}
+					$response->result 	= false;
+					return (object)$response;
+				}
+			}else{
+				# Default path
+				$file_path = rtrim(DEDALO_BACKUP_PATH_STRUCTURE, '/');
+				$mysqlImportFilename = $file_path .'/'. $db_name . ".backup";
+			}
 
 
 		if (!file_exists($mysqlImportFilename)) {
@@ -1248,8 +1246,7 @@ abstract class backup {
 		}
 
 		# Get extras array list
-		$ar_extras_folders 	 = (array)glob(DEDALO_EXTRAS_PATH . '/*', GLOB_ONLYDIR);
-
+		$ar_extras_folders = (array)glob(DEDALO_EXTRAS_PATH . '/*', GLOB_ONLYDIR);
 		$ar_extras = array();
 		foreach ($ar_extras_folders as $current_dir) {
 			$base_dir = basename($current_dir);
@@ -1259,7 +1256,6 @@ abstract class backup {
 			}
 			$ar_extras[] = $base_dir;
 		}
-
 
 		foreach ($ar_extras as $folder_name) {
 			$obj = new stdClass();
@@ -1278,17 +1274,22 @@ abstract class backup {
 			$ar_files[] = $obj;
 		}
 
-		# Remote case
+		// Remote case
 		if ($remote===true) {
 			$target_dir = STRUCTURE_DOWNLOAD_DIR;
-			foreach ($ar_files as $key => $obj) {
-				# Download remofe file to local
-				backup::download_remote_structure_file($obj, $target_dir);
+			foreach ($ar_files as $obj) {
 				// Overwrite path to new downloaded files
 				$obj->path = $target_dir;
-			}
+				// direct download
+				backup::download_remote_structure_file($obj, $target_dir);
+			}// end foreach ($ar_files as $key => $obj)
 		}
-		#debug_log(__METHOD__." ar_files ".to_string($remote)." - ".to_string($ar_files), logger::DEBUG);
+
+		// debug
+			$ar_files_names = array_map(function($el){
+				return $el->name;
+			}, $ar_files);
+			debug_log(__METHOD__." collected ar_files: ".PHP_EOL. json_encode($ar_files_names, JSON_PRETTY_PRINT), logger::DEBUG);
 
 
 		return (array)$ar_files;
@@ -1332,9 +1333,10 @@ abstract class backup {
 		#	$fist_line = strtok($result, "\n\r");
 		#	debug_log(__METHOD__." download type:$obj->type - name:$obj->name result fist_line: \n".to_string($fist_line), logger::DEBUG);
 		#}
+		debug_log(__METHOD__." >>> Downloaded remote data from $obj->name - ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
 
 		# Create downloads folder if not exists
-		if (backup::$checked_download_str_dir!==true) {
+		if (self::$checked_download_str_dir!==true) {
 			$folder_path = STRUCTURE_DOWNLOAD_DIR;
 			if( !is_dir($folder_path) ) {
 				if(!mkdir($folder_path, 0700,true)) {
@@ -1343,7 +1345,7 @@ abstract class backup {
 				}
 				debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
 			}
-			backup::$checked_download_str_dir = true;
+			self::$checked_download_str_dir = true;
 		}
 
 		# Delete previous version file if exists
@@ -1679,4 +1681,112 @@ abstract class backup {
 
 
 
+	/**
+	* UPDATE_ONTOLOGY
+	* Called by area_development -> Update Ontology widget
+	* Connect with master server, download ontology files and update local DDBB and lang files
+	* @param array $dedalo_prefix_tipos
+	* @return object $response
+	*/
+	public static function update_ontology(array $dedalo_prefix_tipos) : object {
+		$start_time=start_time();
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= ''; // 'Error. Request failed ['.__FUNCTION__.']';
+
+		// Remote server check
+			if(defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true) {
+
+				debug_log(__METHOD__." Checking remote_server status. Expected header code 200 .... ".to_string(), logger::DEBUG);
+
+				// Check remote server status before begins
+					$remote_server_response = (object)backup::check_remote_server();
+					if(SHOW_DEBUG===true) {
+						$check_status_exec_time = exec_time_unit($start_time,'ms').' ms';
+						debug_log(__METHOD__." REMOTE_SERVER_STATUS ($check_status_exec_time): ".to_string($remote_server_response), logger::DEBUG);
+					}
+
+					if (	$remote_server_response->result!==false
+						 && $remote_server_response->code===200
+						 && $remote_server_response->error===false) {
+
+						// success
+						$response->msg		.= $remote_server_response->msg;
+
+					}else{
+
+						// error
+						$response->msg		= 'Error. Request failed ['.__FUNCTION__.'] ' . $remote_server_response->msg;
+						$response->result	= false;
+						return $response;
+					}
+			}
+
+		// EXPORT. Before import, EXPORT ;-)
+			$db_name = 'dedalo4_development_str_'.date("Y-m-d_Hi").'.custom';
+			$res_export_structure = (object)backup::export_structure($db_name, $exclude_tables=false);	// Full backup
+			if ($res_export_structure->result===false) {
+
+				// error on export current DDBB
+				$response->msg = 'Error. Request failed ['.__FUNCTION__.'] ' . $res_export_structure->msg;
+				return $response;
+
+			}else{
+				// Exec time
+				$prev_time = start_time();
+				// Append msg
+				$response->msg .= $res_export_structure->msg . ' - export time: '.exec_time_unit($start_time,'ms').' ms';
+			}
+
+		// IMPORT
+			$import_structure_response = backup::import_structure(
+				'dedalo4_development_str.custom', // string db_name
+				true, // bool check_server
+				$dedalo_prefix_tipos
+			);
+			if ($import_structure_response->result===false) {
+
+				// error on import current DDBB
+				$response->msg = 'Error. Request failed ['.__FUNCTION__.'] ' .$import_structure_response->msg;
+				return $response;
+
+			}else{
+				// Append msg
+				$response->msg .= $import_structure_response->msg . ' - export time: '.exec_time_unit($prev_time,'ms').' ms';
+			}
+
+		// optimize tables
+			$ar_tables = ['jer_dd','matrix_descriptors_dd','matrix_dd','matrix_list'];
+			backup::optimize_tables($ar_tables);
+
+		// delete all session data except auth
+			foreach ($_SESSION['dedalo'] as $key => $value) {
+				if ($key==='auth') continue;
+				unset($_SESSION['dedalo'][$key]);
+			}
+
+		// update javascript labels
+			$ar_langs = DEDALO_APPLICATION_LANGS;
+			foreach ($ar_langs as $lang => $label) {
+				$label_path	= '/common/js/lang/' . $lang . '.js';
+				$ar_label	= label::get_ar_label($lang); // Get all properties
+				file_put_contents( DEDALO_CORE_PATH.$label_path, json_encode($ar_label, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+				debug_log(__METHOD__." Generated js labels file for lang: $lang - $label_path ".to_string(), logger::DEBUG);
+			}
+
+		// response
+			$response->result	= true;
+			$response->msg		= 'OK. Request done ['.__FUNCTION__.'] ' .$response->msg ;
+
+
+		return $response;
+	}//end update_ontology
+
+
+
 }//end class backup
+
+
+
