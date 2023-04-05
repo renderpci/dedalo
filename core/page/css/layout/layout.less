@@ -729,6 +729,11 @@
 			// 	margin: 1em;
 			// 	margin-left: 0;
 			// }
+
+			button {
+				margin-bottom: 1rem;
+			}
+
 			&.content {
 				padding: 1rem;
 				padding-top: 1.5rem;
@@ -1432,4 +1437,57 @@
 	background-image: url('../../themes/default/dedalo_logo.svg');
 	background-size: 5rem;
 	background-repeat: space;
+}
+
+
+
+// media components base CSS unified
+.media_wrapper.edit.wrapper_component {
+
+	.media_content_data {
+		// Note that height is always the media min height (392px)
+		// (!) Do not use max o min height here to prevent to affect canvas reference size
+			// height: @media_min_height;
+			// display: table;
+
+			// justify-content: center;
+			// max-height: @media_max_height;
+			// min-height: @media_min_height;
+
+			// @media screen and (max-width: @width_break_point_1) {
+			// 	min-height: unset;
+			// }
+		display: contents;
+	}
+
+	.media_content_value {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		width: 100%;
+		height: @media_min_height;
+		// min-height: @media_min_height; // 404px;
+
+		// with margin option
+			margin: 1rem;
+			margin-top: 0.5rem;
+			width: calc(100% - 2rem);
+
+		// without margin option
+			// margin-top: 0.5rem;
+
+		resize: vertical;
+		overflow: hidden;
+
+		@media screen and (max-width: @width_break_point_1) {
+			height: unset;
+			max-height: 404px;
+		}
+	}
+
+	&.fullscreen {
+		.media_content_value {
+			height: unset;
+		}
+	}
 }
