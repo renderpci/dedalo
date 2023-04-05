@@ -152,7 +152,6 @@ export const ui = {
 					]
 					if (view) {ar_css.push('view_'+view)}
 					if (mode==='search') ar_css.push('tooltip_toggle')
-					// if (mode==='tm') ar_css.push('edit')
 					wrapper.classList.add(...ar_css)
 
 				// legacy CSS
