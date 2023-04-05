@@ -222,9 +222,8 @@ final class dd_utils_api {
 	* @return object $response
 	*/
 	public static function update_ontology(object $rqo) : object {
-		$start_time = start_time();
 
-		// session_write_close();
+		session_write_close();
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -238,101 +237,12 @@ final class dd_utils_api {
 				return trim($item);
 			}, explode(',', $dedalo_prefix_tipos));
 			if (empty($ar_dedalo_prefix_tipos)) {
+				// error
 				$response->msg .= ' - Empty dedalo_prefix_tipos value!';
 				return $response;
 			}
 
-		# Remote server case
-		if(defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true) {
-
-			debug_log(__METHOD__." Checking remote_server status. Expected header code 200 .... ".to_string(), logger::DEBUG);
-
-			# Check remote server status before begins
-			$remote_server_response = (object)backup::check_remote_server();
-
-			if(SHOW_DEBUG===true) {
-				$check_status_exec_time = exec_time_unit($start_time,'ms').' ms';
-				debug_log(__METHOD__." REMOTE_SERVER_STATUS ($check_status_exec_time): ".to_string($remote_server_response), logger::DEBUG);
-			}
-
-			if (	$remote_server_response->result!==false
-				 && $remote_server_response->code===200
-				 && $remote_server_response->error===false) {
-				$response->msg		.= $remote_server_response->msg;
-			}else{
-				$response->msg		.= $remote_server_response->msg;
-				$response->result	= false;
-				return $response;
-			}
-		}
-
-		# EXPORT. Before import, EXPORT ;-)
-			$db_name = 'dedalo4_development_str_'.date("Y-m-d_Hi").'.custom';
-			$res_export_structure = (object)backup::export_structure($db_name, $exclude_tables=false);	// Full backup
-			if ($res_export_structure->result===false) {
-				$response->msg = $res_export_structure->msg;
-				return $response;
-			}else{
-				# Append msg
-				$response->msg	.= $res_export_structure->msg;
-				# Exec time
-				$export_exec_time	= exec_time_unit($start_time,'ms').' ms';
-				$prev_time			= start_time();
-			}
-
-		# IMPORT
-			$import_structure_response = backup::import_structure(
-				'dedalo4_development_str.custom', // string db_name
-				true, // bool check_server
-				$ar_dedalo_prefix_tipos
-			);
-			if ($import_structure_response->result===false) {
-				$response->msg	.= $import_structure_response->msg;
-				return $response;
-			}else{
-				$response->msg	.= $import_structure_response->msg;
-				# Exec time
-				$import_exec_time = exec_time_unit($prev_time,'ms').' ms';
-			}
-
-		// optimize tables
-			$ar_tables = ['jer_dd','matrix_descriptors_dd','matrix_dd','matrix_list'];
-			backup::optimize_tables($ar_tables);
-
-
-		# Delete session config (force to recalculate)
-		#unset($_SESSION['dedalo']['config']);
-
-		# Delete session permissions table (force to recalculate)
-		#unset($_SESSION['dedalo']['auth']['permissions_table']);
-
-		// delete all session data except auth
-			foreach ($_SESSION['dedalo'] as $key => $value) {
-				if ($key==='auth') continue;
-				unset($_SESSION['dedalo'][$key]);
-			}
-
-		// update javascript labels
-			$ar_langs = DEDALO_APPLICATION_LANGS;
-			foreach ($ar_langs as $lang => $label) {
-				$label_path	= '/common/js/lang/' . $lang . '.js';
-				$ar_label	= label::get_ar_label($lang); // Get all properties
-				file_put_contents( DEDALO_CORE_PATH.$label_path, json_encode($ar_label, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
-				debug_log(__METHOD__." Generated js labels file for lang: $lang - $label_path ".to_string(), logger::DEBUG);
-			}
-
-		// update structure css
-			// $build_structure_css_response = (object)css::build_structure_css();
-			// if ($build_structure_css_response->result===false) {
-			// 	debug_log(__METHOD__." Error on build_structure_css: ".to_string($build_structure_css_response), logger::ERROR);
-
-			// 	$response->result	= false;
-			// 	$response->msg		= __METHOD__." Error on build_structure_css: ".to_string($build_structure_css_response);
-			// 	return $response;
-			// }
-
-		$response->result	= true;
-		$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
+		$response = backup::update_ontology( $ar_dedalo_prefix_tipos );
 
 
 		return $response;
