@@ -475,7 +475,7 @@
 
 
 // dedalo_test_install. bool
-	// On true, check current admin (root) user password on login page
+	// 	On true, check if the root user has set password at login page, if not set Dédalo will init the install process.
 	define('DEDALO_TEST_INSTALL', true);
 
 
