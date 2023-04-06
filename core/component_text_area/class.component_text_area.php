@@ -1477,6 +1477,15 @@ class component_text_area extends component_common {
 				$diffusion_value = null;
 			}
 
+		// change p by br to preserve v5 compatibility (ck/tiny)
+			$diffusion_value = preg_replace('/(<p>)/i', '<br />', $diffusion_value);
+			$diffusion_value = preg_replace('/(</p>)/i', '', $diffusion_value);
+
+		// Remove first br
+			if(mb_strpos($diffusion_value,'<br />')===0) 	$diffusion_value = mb_substr($diffusion_value, 6, mb_strlen($diffusion_value));
+		// Remove last br
+			if(mb_substr($diffusion_value, mb_strlen($diffusion_value)-6)=='<br />' ) $diffusion_value = mb_substr($diffusion_value, 0, -6);
+
 
 		return $diffusion_value;
 	}//end get_diffusion_value
