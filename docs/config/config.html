@@ -1575,158 +1575,6 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalomain3ddirectory">Dédalo main 3d directory</h4>
-
-<p><strong>config.php</strong></p>
-
-<p>DEDALO_3D_FOLDER <code>string</code></p>
-
-<p>This parameter define the main directory for the 3d files.</p>
-
-<pre><code class="php">define('DEDALO_3D_FOLDER', '/3d');
-</code></pre>
-
-<hr />
-
-<h4 id="dédalo3dextensiontypeoffile">Dédalo 3d extension (type of file)</h4>
-
-<p><strong>config.php</strong></p>
-
-<p>DEDALO_3D_EXTENSION <code>string</code></p>
-
-<p>This parameter defines the standard file type of 3d files.</p>
-
-<p> By default Dédalo use glb standard definition for the 3d files. All other formats will be exported to this standard.</p>
-
-<pre><code class="php">define('DEDALO_3D_EXTENSION', 'glb');
-</code></pre>
-
-<hr />
-
-<h4 id="dédalo3dextensionssupported">Dédalo 3d extensions supported</h4>
-
-<p><strong>config.php</strong></p>
-
-<p>DEDALO_IMAGE_EXTENSIONS_SUPPORTED <code>array</code></p>
-
-<p>This parameter defines the standards file type admited for the 3d files.</p>
-
-<p>Dédalo will use this parameter to indentify the file format of the original files uploaded by the users before transform it to the standard defined in the DEDALO_3D_EXTENSION parameter.</p>
-
-<pre><code class="php">define('DEDALO_3D_EXTENSIONS_SUPPORTED', ['glb']);
-</code></pre>
-
-<blockquote>
-<p>Note: in current version only glb files are avalible, in future versions other format files will be suported: as &#8216;gltf&#8217;, &#8216;obj&#8217;, &#8216;fbx&#8217;, &#8216;dae&#8217;, &#8216;zip&#8217;</p>
-</blockquote>
-
-<hr />
-
-<h4 id="dédalo3dmimetype">Dédalo 3d mime type</h4>
-
-<p><strong>config.php</strong></p>
-
-<p>DEDALO_3D_MIME_TYPE <code>string</code></p>
-
-<p>This parameter defines the standard mime type for the 3d files.</p>
-
-<p>This parameter will use to create the correct http header for the standar define in DEDALO_3D_EXTENSION.</p>
-
-<pre><code class="php">define('DEDALO_3D_MIME_TYPE', 'model/gltf-binary');
-</code></pre>
-
-<hr />
-
-<h4 id="dédalo3dqualityfororiginalfiles">Dédalo 3d quality for original files</h4>
-
-<p><strong>config.php</strong></p>
-
-<p>DEDALO_3D_QUALITY_ORIGINAL <code>string</code></p>
-
-<p>This parameter defines the quality original for the 3d files.</p>
-
-<p>This parameter will use to identify the uploaded files to with specific quality. Dédalo admit lots of differents format from different sources and qualities, and it define this files as &#8220;original&#8221; quality. Dédalo will transform all suported formats to web standard format, unify all different qualities and codecs, and will store the original file witout touch. In some cases, if the institution has a protocol for manage image files, is possible to use one specific quality for the files that users can upload. By default Dédalo do not limit the original format to be uploaded using a &#8220;original&#8221; quality denomination.</p>
-
-<pre><code class="php">define('DEDALO_3D_QUALITY_ORIGINAL', 'original');
-</code></pre>
-
-<hr />
-
-<h4 id="dédalo3dqualityforprocesedfiles">Dédalo 3d quality for procesed files</h4>
-
-<p><strong>config.php</strong></p>
-
-<p>DEDALO_3D_QUALITY_DEFAULT <code>string</code></p>
-
-<p>This parameter defines the default quality used for the 3d files.</p>
-
-<p>This parameter will use to transform all 3d files to specific format, unifying the quality used by all sections. By deafult Dédalo use glb format for web quality.</p>
-
-<pre><code class="php">define('DEDALO_3D_QUALITY_DEFAULT', 'web');
-</code></pre>
-
-<hr />
-
-<h4 id="dédalo3dthumbdefault">Dédalo 3d thumb default</h4>
-
-<p><strong>config.php</strong></p>
-
-<p>DEDALO_3D_THUMB_DEFAULT <code>string</code></p>
-
-<p>This parameter defines the thumb quality definition that can be used for compress the 3d files.</p>
-
-<p>This parameter will use to render, compress and store image files used in lists. The compresion will use the 3d original file and will render it and compress at 720x404 jpg version or thumb version of the image.</p>
-
-<pre><code class="php">define('DEDALO_3D_THUMB_DEFAULT', 'thumb');
-</code></pre>
-
-<hr />
-
-<h4 id="dédalo3dgltfpackconversor">Dédalo 3d gltfpack conversor</h4>
-
-<p><strong>config.php</strong></p>
-
-<p>DEDALO_3D_GLTFPACK_PATH <code>string</code></p>
-
-<p>This parameter defines the gltfpack library path.</p>
-
-<p>This parameter will use to locate the gltfpack library, it will use to compress and store 3d files from gltf format to glb.</p>
-
-<pre><code class="php">define('DEDALO_3D_GLTFPACK_PATH', '/usr/local/bin/gltfpack');
-</code></pre>
-
-<hr />
-
-<h4 id="dédalo3dfbx2gltfconversor">Dédalo 3d FBX2glTF conversor</h4>
-
-<p><strong>config.php</strong></p>
-
-<p>DEDALO_3D_FBX2GLTF_PATH <code>string</code></p>
-
-<p>This parameter defines the FBX2glTF library path.</p>
-
-<p>This parameter will use to locate the FBX2glTF library, it will use to compress and store 3d files from fbx format to glb.</p>
-
-<pre><code class="php">define('DEDALO_3D_FBX2GLTF_PATH', '/usr/local/bin/FBX2glTF');
-</code></pre>
-
-<hr />
-
-<h4 id="dédalo3dcollada2gltfconversor">Dédalo 3d COLLADA2GLTF conversor</h4>
-
-<p><strong>config.php</strong></p>
-
-<p>DEDALO_3D_COLLADA2GLTF_PATH <code>string</code></p>
-
-<p>This parameter defines the COLLADA2GLTF library path.</p>
-
-<p>This parameter will use to locate the COLLADA2GLTF library, it will use to compress and store 3d files from collada format to glb.</p>
-
-<pre><code class="php">define('DEDALO_3D_COLLADA2GLTF_PATH', '/usr/local/bin/COLLADA2GLTF-bin');
-</code></pre>
-
-<hr />
-
 <h4 id="dédaloimagedirectory">Dédalo image directory</h4>
 
 <p><strong>config.php</strong></p>
@@ -2119,6 +1967,173 @@ The main section of the project that will used, normally will be a inventory or 
 <p>This parameter will use to compress and store image files used in lists. The compresion will use the original file and will compress the first page with smaller verision or thumb version of the pdf. Only will be compress the first pdf page to thumb quality.</p>
 
 <pre><code class="php">define('DEDALO_PDF_THUMB_DEFAULT', 'thumb');
+</code></pre>
+
+<hr />
+
+<h4 id="dédalomain3ddirectory">Dédalo main 3d directory</h4>
+
+<p><strong>config.php</strong></p>
+
+<p>DEDALO_3D_FOLDER <code>string</code></p>
+
+<p>This parameter define the main directory for the 3d files.</p>
+
+<pre><code class="php">define('DEDALO_3D_FOLDER', '/3d');
+</code></pre>
+
+<hr />
+
+<h4 id="dédalo3dextensiontypeoffile">Dédalo 3d extension (type of file)</h4>
+
+<p><strong>config.php</strong></p>
+
+<p>DEDALO_3D_EXTENSION <code>string</code></p>
+
+<p>This parameter defines the standard file type of 3d files.</p>
+
+<p> By default Dédalo use glb standard definition for the 3d files. All other formats will be exported to this standard.</p>
+
+<pre><code class="php">define('DEDALO_3D_EXTENSION', 'glb');
+</code></pre>
+
+<hr />
+
+<h4 id="dédalo3dextensionssupported">Dédalo 3d extensions supported</h4>
+
+<p><strong>config.php</strong></p>
+
+<p>DEDALO_IMAGE_EXTENSIONS_SUPPORTED <code>array</code></p>
+
+<p>This parameter defines the standards file type admited for the 3d files.</p>
+
+<p>Dédalo will use this parameter to indentify the file format of the original files uploaded by the users before transform it to the standard defined in the DEDALO_3D_EXTENSION parameter.</p>
+
+<pre><code class="php">define('DEDALO_3D_EXTENSIONS_SUPPORTED', ['glb']);
+</code></pre>
+
+<blockquote>
+<p>Note: in current version only glb files are avalible, in future versions other format files will be suported: as &#8216;gltf&#8217;, &#8216;obj&#8217;, &#8216;fbx&#8217;, &#8216;dae&#8217;, &#8216;zip&#8217;</p>
+</blockquote>
+
+<hr />
+
+<h4 id="dédalo3dmimetype">Dédalo 3d mime type</h4>
+
+<p><strong>config.php</strong></p>
+
+<p>DEDALO_3D_MIME_TYPE <code>string</code></p>
+
+<p>This parameter defines the standard mime type for the 3d files.</p>
+
+<p>This parameter will use to create the correct http header for the standar define in DEDALO_3D_EXTENSION.</p>
+
+<pre><code class="php">define('DEDALO_3D_MIME_TYPE', 'model/gltf-binary');
+</code></pre>
+
+<hr />
+
+<h4 id="dédalo3dqualityfororiginalfiles">Dédalo 3d quality for original files</h4>
+
+<p><strong>config.php</strong></p>
+
+<p>DEDALO_3D_QUALITY_ORIGINAL <code>string</code></p>
+
+<p>This parameter defines the quality original for the 3d files.</p>
+
+<p>This parameter will use to identify the uploaded files to with specific quality. Dédalo admit lots of differents format from different sources and qualities, and it define this files as &#8220;original&#8221; quality. Dédalo will transform all suported formats to web standard format, unify all different qualities and codecs, and will store the original file witout touch. In some cases, if the institution has a protocol for manage image files, is possible to use one specific quality for the files that users can upload. By default Dédalo do not limit the original format to be uploaded using a &#8220;original&#8221; quality denomination.</p>
+
+<pre><code class="php">define('DEDALO_3D_QUALITY_ORIGINAL', 'original');
+</code></pre>
+
+<hr />
+
+<h4 id="dédalo3dqualityforprocesedfiles">Dédalo 3d quality for procesed files</h4>
+
+<p><strong>config.php</strong></p>
+
+<p>DEDALO_3D_QUALITY_DEFAULT <code>string</code></p>
+
+<p>This parameter defines the default quality used for the 3d files.</p>
+
+<p>This parameter will use to transform all 3d files to specific format, unifying the quality used by all sections. By deafult Dédalo use glb format for web quality.</p>
+
+<pre><code class="php">define('DEDALO_3D_QUALITY_DEFAULT', 'web');
+</code></pre>
+
+<hr />
+
+<h4 id="dédalo3dthumbdefault">Dédalo 3d thumb default</h4>
+
+<p><strong>config.php</strong></p>
+
+<p>DEDALO_3D_THUMB_DEFAULT <code>string</code></p>
+
+<p>This parameter defines the thumb quality definition that can be used for compress the 3d files.</p>
+
+<p>This parameter will use to render, compress and store image files used in lists. The compresion will use the 3d original file and will render it and compress at 720x404 jpg version or thumb version of the image.</p>
+
+<pre><code class="php">define('DEDALO_3D_THUMB_DEFAULT', 'thumb');
+</code></pre>
+
+<hr />
+
+<h4 id="dédalo3dqualitiesdefiniton">Dédalo 3d qualities definiton</h4>
+
+<p><strong>config.php</strong></p>
+
+<p>DEDALO_3D_AR_QUALITY <code>array</code></p>
+
+<p>This parameter defines the different qualities that can be used for store 3d files.</p>
+
+<p>This parameter will use to store files to specific quality.</p>
+
+<pre><code class="php">define('DEDALO_3D_AR_QUALITY', [DEDALO_3D_QUALITY_ORIGINAL, DEDALO_3D_QUALITY_DEFAULT]);
+</code></pre>
+
+<hr />
+
+<h4 id="dédalo3dgltfpackconversor">Dédalo 3d gltfpack conversor</h4>
+
+<p><strong>config.php</strong></p>
+
+<p>DEDALO_3D_GLTFPACK_PATH <code>string</code></p>
+
+<p>This parameter defines the gltfpack library path.</p>
+
+<p>This parameter will use to locate the gltfpack library, it will use to compress and store 3d files from gltf format to glb.</p>
+
+<pre><code class="php">define('DEDALO_3D_GLTFPACK_PATH', '/usr/local/bin/gltfpack');
+</code></pre>
+
+<hr />
+
+<h4 id="dédalo3dfbx2gltfconversor">Dédalo 3d FBX2glTF conversor</h4>
+
+<p><strong>config.php</strong></p>
+
+<p>DEDALO_3D_FBX2GLTF_PATH <code>string</code></p>
+
+<p>This parameter defines the FBX2glTF library path.</p>
+
+<p>This parameter will use to locate the FBX2glTF library, it will use to compress and store 3d files from fbx format to glb.</p>
+
+<pre><code class="php">define('DEDALO_3D_FBX2GLTF_PATH', '/usr/local/bin/FBX2glTF');
+</code></pre>
+
+<hr />
+
+<h4 id="dédalo3dcollada2gltfconversor">Dédalo 3d COLLADA2GLTF conversor</h4>
+
+<p><strong>config.php</strong></p>
+
+<p>DEDALO_3D_COLLADA2GLTF_PATH <code>string</code></p>
+
+<p>This parameter defines the COLLADA2GLTF library path.</p>
+
+<p>This parameter will use to locate the COLLADA2GLTF library, it will use to compress and store 3d files from collada format to glb.</p>
+
+<pre><code class="php">define('DEDALO_3D_COLLADA2GLTF_PATH', '/usr/local/bin/COLLADA2GLTF-bin');
 </code></pre>
 
 <hr />
