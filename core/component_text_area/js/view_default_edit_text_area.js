@@ -37,9 +37,9 @@ view_default_edit_text_area.render = async function(self, options) {
 		self.render_level = render_level
 
 	// fix non value scenarios
-		self.data.value = (self.data && self.data.value.length>0)
-			? self.data.value
-			: [null]
+		// self.data.value = (self.data && self.data.value.length>0)
+		// 	? self.data.value
+		// 	: [null]
 
 	// content_data
 		const content_data = get_content_data_edit(self)
@@ -102,7 +102,8 @@ view_default_edit_text_area.render = async function(self, options) {
 const get_content_data_edit = function(self) {
 
 	// short vars
-		const value				= self.data.value
+		const data				= self.data || {}
+		const value				= data.value || []
 		const is_inside_tool	= self.is_inside_tool
 
 	// content_data
@@ -110,7 +111,7 @@ const get_content_data_edit = function(self) {
 
 	// values (inputs)
 		const inputs_value	= value // is array
-		const value_length	= inputs_value.length
+		const value_length	= inputs_value.length || 1
 		for (let i = 0; i < value_length; i++) {
 			// get the content_value
 			const content_value = (self.permissions===1)
@@ -135,9 +136,10 @@ const get_content_value = (i, current_value, self) => {
 
 	// get fallback when current_value is empty
 	// clean fallback to only text
-		const data					= self.data
+		const data					= self.data || {}
+		const value					= data.value || []
 		const ar_fallback_value		= data.fallback_value || []
-		const fallback				= get_fallback_value(data.value, ar_fallback_value)
+		const fallback				= get_fallback_value(value, ar_fallback_value)
 		const dirty_fallback_value	= fallback[i]
 	// clean fallback of any tag
 		const fallback_fragment = document.createDocumentFragment();
@@ -148,8 +150,8 @@ const get_content_value = (i, current_value, self) => {
 		})
 		const fallback_value = fallback_fragment.firstChild.innerText;
 
-	// value is a raw html without parse into nodes (txt format)
-		const value = self.tags_to_html(current_value)
+	// value_string is a raw html without parse into nodes (txt format)
+		const value_string = self.tags_to_html(current_value)
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -169,7 +171,7 @@ const get_content_value = (i, current_value, self) => {
 			element_type	: 'div',
 			class_name		: 'value_container editor_container',
 			parent			: content_value,
-			inner_html 		: value
+			inner_html 		: value_string
 		})
 
 	// init_current_service_text_editor
@@ -209,7 +211,7 @@ const get_content_value = (i, current_value, self) => {
 					caller				: self,
 					value_container		: value_container,
 					toolbar_container	: toolbar_container,
-					value				: value,
+					value				: value_string,
 					fallback_value 		: fallback_value,
 					key					: i,
 					editor_config		: editor_config,

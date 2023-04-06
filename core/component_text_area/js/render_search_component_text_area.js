@@ -119,14 +119,15 @@ const add_events = function(self, wrapper) {
 const get_content_data = function(self) {
 
 	// short vars
-		const value = self.data.value
+		const data	= self.data || {}
+		const value	= data.value || []
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 
 	// values (inputs)
-		const inputs_value	= value.length>0 ? value : ['']
-		const value_length	= inputs_value.length
+		const inputs_value	= value // .length>0 ? value : ['']
+		const value_length	= inputs_value.length || 1
 		for (let i = 0; i < value_length; i++) {
 
 			const current_value = inputs_value[i]
