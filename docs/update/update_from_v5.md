@@ -176,7 +176,7 @@ Select the "To update" to start the process.
 
 1. Run the update scripts. It will take time to change your Database and files. It's highly recommended to see your PHP log (`tail -f php.log`)
 
-![large](assets/20230403_171233_update_data.png)
+![large](assets/20230403_171234_update_data.png)
 
 Down to last step and clik "Ok" button
 
