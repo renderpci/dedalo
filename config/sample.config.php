@@ -242,10 +242,10 @@
 	// dedalo_application_langs_default
 	define('DEDALO_APPLICATION_LANGS_DEFAULT', 'lg-eng');
 	// dedalo_application_lang. Current Dédalo application lang (cascade calculate from get, post, session vars, default)
-	define('DEDALO_APPLICATION_LANG',			fix_cascade_config4_var('dedalo_application_lang',DEDALO_APPLICATION_LANGS_DEFAULT));
+	define('DEDALO_APPLICATION_LANG',			fix_cascade_config_var('dedalo_application_lang',DEDALO_APPLICATION_LANGS_DEFAULT));
 	// dedalo_data_lang
 	define('DEDALO_DATA_LANG_DEFAULT',			'lg-eng');
-	define('DEDALO_DATA_LANG',					fix_cascade_config4_var('dedalo_data_lang',DEDALO_DATA_LANG_DEFAULT));
+	define('DEDALO_DATA_LANG',					fix_cascade_config_var('dedalo_data_lang',DEDALO_DATA_LANG_DEFAULT));
 	// dedalo_data_lang_selector. Show/hide menu data lang selector. bool default true
 	define('DEDALO_DATA_LANG_SELECTOR',			true);
 	// dedalo_data_nolan. string default 'lg-nolan'. Do not change this
