@@ -125,7 +125,7 @@ abstract class RecordDataBoundObject {
 	# SET_DATO : SET DATO UNIFIED (JSON)
 	public function set_dato($dato, bool $raw=false) {
 
-		# Always set dato as modified
+		// Always set dato as modified
 		$this->arModifiedRelations['dato'] = 1;
 
 		$this->dato = $dato;

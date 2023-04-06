@@ -584,7 +584,7 @@ class diffusion_sql extends diffusion  {
 			if ( isset($diffusion_info->$diffusion_element_tipo) ) {
 
 				if($skip_publication_state_check===1) {
-					# Nothing to do. (Configurated from tool_administrator)
+					# Nothing to do. (Configured from tool_administrator)
 				}else{
 					# RESOLVED_RECORDS (set a resolved)
 					$columns_data_resolved_records[] = $columns_data_resolved_records_key;

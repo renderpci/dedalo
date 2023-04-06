@@ -1,5 +1,6 @@
 <?php
 // include_once DEDALO_CORE_PATH . '/common/class.exec_.php';
+// include_once DEDALO_CORE_PATH . '/common/class.Thread.php';
 /*
 * CLASS BACKUP
 *
@@ -1230,7 +1231,6 @@ abstract class backup {
 		$ar_files[] = $obj;
 
 
-
 		# EXTRAS
 
 		# Check extras folder coherence with config DEDALO_PREFIX_TIPOS
@@ -1277,12 +1277,22 @@ abstract class backup {
 		// Remote case
 		if ($remote===true) {
 			$target_dir = STRUCTURE_DOWNLOAD_DIR;
+
 			foreach ($ar_files as $obj) {
 				// Overwrite path to new downloaded files
 				$obj->path = $target_dir;
+
 				// direct download
-				backup::download_remote_structure_file($obj, $target_dir);
+					backup::download_remote_structure_file($obj, $target_dir);
+
+				// thread . Use above Thread class @see https://www.php.net/manual/en/language.fibers.php
+					// Thread::register(
+					// 	$obj->name, // name
+					// 	'backup::download_remote_structure_file', // 'my_thread',
+					// 	[$obj, $target_dir]
+					// );
 			}// end foreach ($ar_files as $key => $obj)
+			// Thread::run();
 		}
 
 		// debug
@@ -1306,7 +1316,16 @@ abstract class backup {
 		$data_string = "data=" . json_encode($data);
 
 		// file_get_contents option
-			$result = file_get_contents(STRUCTURE_SERVER_URL . '?' .$data_string);
+			// $result = file_get_contents(STRUCTURE_SERVER_URL . '?' .$data_string);
+
+		// curl way
+			$response = curl_request((object)[
+				'url'		=> STRUCTURE_SERVER_URL .'?' .$data_string,
+				'timeout'	=> 60, // int seconds
+				'header'	=> false // bool add header to result
+				// 'post'	=> false
+			]);
+			$result = $response->result;
 
 		return $result;
 	}//end get_remote_data
@@ -1333,20 +1352,25 @@ abstract class backup {
 		#	$fist_line = strtok($result, "\n\r");
 		#	debug_log(__METHOD__." download type:$obj->type - name:$obj->name result fist_line: \n".to_string($fist_line), logger::DEBUG);
 		#}
-		debug_log(__METHOD__." >>> Downloaded remote data from $obj->name - ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
+		debug_log(__METHOD__
+			. " >>> Downloaded remote data from $obj->name - "
+			. 'result: ' . gettype($result) . ' - '
+			. exec_time_unit($start_time,'ms').' ms'
+			, logger::DEBUG
+		);
 
-		# Create downloads folder if not exists
-		if (self::$checked_download_str_dir!==true) {
-			$folder_path = STRUCTURE_DOWNLOAD_DIR;
-			if( !is_dir($folder_path) ) {
-				if(!mkdir($folder_path, 0700,true)) {
-					debug_log(__METHOD__." Error on read or create backup STRUCTURE_DOWNLOAD_DIR directory. Permission denied ".to_string(), logger::ERROR);
-					return false;
+		// Create downloads folder if not exists
+			if (self::$checked_download_str_dir!==true) {
+				$folder_path = STRUCTURE_DOWNLOAD_DIR;
+				if( !is_dir($folder_path) ) {
+					if(!mkdir($folder_path, 0700,true)) {
+						debug_log(__METHOD__." Error on read or create backup STRUCTURE_DOWNLOAD_DIR directory. Permission denied ".to_string(), logger::ERROR);
+						return false;
+					}
+					debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
 				}
-				debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+				self::$checked_download_str_dir = true;
 			}
-			self::$checked_download_str_dir = true;
-		}
 
 		# Delete previous version file if exists
 		if (file_exists($target_dir .'/'. $obj->name)) {
@@ -1354,16 +1378,16 @@ abstract class backup {
 		}
 
 		# Write downloaded file to local directory
-		file_put_contents( $target_dir .'/'. $obj->name, $result);
+		file_put_contents($target_dir .'/'. $obj->name, $result);
 
 		if(SHOW_DEBUG===true) {
-			$fist_line	= strtok($result, "\n\r");
-			$fist_line	= str_replace(['\n','\N','\r','\t','  '], ' ', $fist_line);
-			$fist_line	= preg_replace('/\s+/', ' ', $fist_line);
-			$total		= exec_time_unit($start_time,'ms')." ms";
-			debug_log(__METHOD__.PHP_EOL."Get remote and write str data type: $obj->type - name: $obj->name in: $total \n".substr($fist_line, 0, 250), logger::DEBUG);
-			// Clean memory footprint
-			unset($fist_line); strtok('', '');
+			// $fist_line	= strtok($result, "\n\r");
+			// $fist_line	= str_replace(['\n','\N','\r','\t','  '], ' ', $fist_line);
+			// $fist_line	= preg_replace('/\s+/', ' ', $fist_line);
+			// $total		= exec_time_unit($start_time,'ms')." ms";
+			// debug_log(__METHOD__.PHP_EOL."Get remote and write str data type: $obj->type - name: $obj->name in: $total \n".substr($fist_line, 0, 250), logger::DEBUG);
+			// // Clean memory footprint
+			// unset($fist_line); strtok('', '');
 		}
 
 
@@ -1718,7 +1742,7 @@ abstract class backup {
 					}else{
 
 						// error
-						$response->msg		= 'Error. Request failed ['.__FUNCTION__.'] ' . $remote_server_response->msg;
+						$response->msg		= 'Error. Request failed 1 ['.__FUNCTION__.'] ' . $remote_server_response->msg;
 						$response->result	= false;
 						return $response;
 					}
@@ -1730,7 +1754,7 @@ abstract class backup {
 			if ($res_export_structure->result===false) {
 
 				// error on export current DDBB
-				$response->msg = 'Error. Request failed ['.__FUNCTION__.'] ' . $res_export_structure->msg;
+				$response->msg = 'Error. Request failed 2 ['.__FUNCTION__.'] ' . $res_export_structure->msg;
 				return $response;
 
 			}else{
@@ -1747,9 +1771,9 @@ abstract class backup {
 				$dedalo_prefix_tipos
 			);
 			if ($import_structure_response->result===false) {
-
+					dump($import_structure_response, ' import_structure_response ++ '.to_string());
 				// error on import current DDBB
-				$response->msg = 'Error. Request failed ['.__FUNCTION__.'] ' .$import_structure_response->msg;
+				$response->msg = 'Error. Request failed 3 ['.__FUNCTION__.'] ' .$import_structure_response->msg;
 				return $response;
 
 			}else{
@@ -1767,14 +1791,22 @@ abstract class backup {
 				unset($_SESSION['dedalo'][$key]);
 			}
 
-		// update javascript labels
+		// update JAVASCRIPT labels
 			$ar_langs = DEDALO_APPLICATION_LANGS;
 			foreach ($ar_langs as $lang => $label) {
-				$label_path	= '/common/js/lang/' . $lang . '.js';
-				$ar_label	= label::get_ar_label($lang); // Get all properties
-				file_put_contents( DEDALO_CORE_PATH.$label_path, json_encode($ar_label, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
-				debug_log(__METHOD__." Generated js labels file for lang: $lang - $label_path ".to_string(), logger::DEBUG);
+				// debug_log(__METHOD__." >>> Writing file $lang => $label ", logger::DEBUG);
+
+				// direct
+					backup::write_lang_file($lang);
+
+				// thread . Use above Thread class @see https://www.php.net/manual/en/language.fibers.php
+					// Thread::register(
+					// 	$lang, // name
+					// 	'backup::write_lang_file', // 'my_thread',
+					// 	[$lang]
+					// );
 			}
+			// Thread::run();
 
 		// response
 			$response->result	= true;
@@ -1786,7 +1818,47 @@ abstract class backup {
 
 
 
+	/**
+	* WRITE_LANG_FILE
+	* Calculated labels for given lang and write a js file with the result
+	* @param string $lang
+	* @return bool
+	*/
+	public static function write_lang_file(string $lang) {
+
+		// all labels
+		$ar_label = label::get_ar_label($lang);
+		if (empty($ar_label)) {
+			debug_log(__METHOD__
+				. " Error on get labels for lang: $lang" . PHP_EOL
+				. ' The file will be created empty'
+				, logger::ERROR
+			);
+			$ar_label = (object)[
+				'label_warning' => 'You see this data because the labels are empty! '.$lang
+			];
+		}
+
+		// file path
+		$file_path = DEDALO_CORE_PATH . '/common/js/lang/' . $lang . '.js';
+
+		// content
+		$content = json_encode($ar_label, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+
+		file_put_contents(
+			$file_path,
+			$content
+		);
+
+		debug_log(__METHOD__
+			. " Generated js labels file for lang: $lang - $file_path " .PHP_EOL
+			. ' File size: ' .format_size_units( filesize($file_path) )
+			, logger::DEBUG
+		);
+
+		return true;
+	}//end write_lang_file
+
+
+
 }//end class backup
-
-
-
