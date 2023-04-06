@@ -17,6 +17,8 @@ abstract class RecordDataBoundObject {
 	public $use_cache = true; // default is true (for structure only)
 	public $use_cache_manager = false;
 
+	protected $dato;
+
 	#protected static $db_connection;
 
 	#protected static $ar_RecordDataObject_query;
@@ -136,10 +138,11 @@ abstract class RecordDataBoundObject {
 	/**
 	* LOAD
 	* Get one row from database based on current section_tipo and section_id
-	* @return bool true
+	* @return bool
 	*/
 	public function Load() : bool {
 		if(SHOW_DEBUG===true) $start_time = start_time();
+
 
 		// Prevent load if $this->ID is not set
 			if(!isset($this->ID) || $this->ID===false) {
@@ -322,16 +325,19 @@ abstract class RecordDataBoundObject {
 				$strQuery_set = str_replace(['\\u0000','\u0000'], ' ', $strQuery_set);
 
 			// remove last 2 chars
-				$strQuery .= substr($strQuery_set,0,-2);
+				$strQuery .= substr($strQuery_set, 0, -2);
 
 			// where sentence
 				$strQuery .= (is_int($this->ID))
-					? ' WHERE "'. $this->strPrimaryKeyName .'" = ' . $this->ID
-					: ' WHERE "'. $this->strPrimaryKeyName .'" = ' . "'$this->ID'";
+					? ' WHERE "' . $this->strPrimaryKeyName .'" = ' . $this->ID
+					: ' WHERE "' . $this->strPrimaryKeyName .'" = ' . "'$this->ID'";
 
 			$result = pg_query($this->get_connection(), $strQuery);
 			if($result===false) {
-				echo "Error: sorry an error occurred on UPDATE record '$this->ID'. Data is not saved";
+				debug_log(__METHOD__
+					." Error: sorry an error occurred on UPDATE record '$this->ID'. Data is not saved "
+					, logger::ERROR
+				);
 				if(SHOW_DEBUG===true) {
 					dump($strQuery,"strQuery");
 					dump(pg_last_error(DBi::_getConnection()),"pg_last_error(DBi::_getConnection())");
@@ -352,18 +358,16 @@ abstract class RecordDataBoundObject {
 
 				if(isset($actualVal)) {
 					if(array_key_exists($value, $this->arModifiedRelations)) {
-						$strQuery			.= "\"$key\", ";
+
+						$strQuery .= "\"$key\", ";
 
 						if (is_object($actualVal) || is_array($actualVal)) {
 							$actualVal = json_handler::encode($actualVal);
 						}
 
-						if(is_int($actualVal) && $this->strTableName !== 'matrix_time_machine') {
-							$strValueList	.= "$actualVal, ";
-						}else{
-							#$actualVal 	= $this->get_connection()->real_escape_string($actualVal);
-							$strValueList	.= "'".pg_escape_string($this->get_connection(), $actualVal)."', "; # Escape the text data
-						}
+						$strValueList .= (is_int($actualVal) && $this->strTableName!=='matrix_time_machine')
+							? "$actualVal, "
+							: "'".pg_escape_string($this->get_connection(), $actualVal)."', "; # Escape the text data
 					}
 				}
 			}
@@ -371,24 +375,36 @@ abstract class RecordDataBoundObject {
 			// prevent null encoded errors
 				$strValueList = str_replace(['\\u0000','\u0000'], ' ', $strValueList);
 
-			$strQuery 	 = substr($strQuery,0,strlen($strQuery)-2);
-			$strValueList= substr($strValueList,0,strlen($strValueList)-2);
-			$strQuery	.= ') VALUES (';
-			$strQuery	.= $strValueList;
-			$strQuery	.= ') RETURNING "'.$this->strPrimaryKeyName.'" ';
+			// strQuery
+				$strQuery		= substr($strQuery, 0, strlen($strQuery)-2);
+				$strValueList	= substr($strValueList, 0, strlen($strValueList)-2);
+				$strQuery		.= ') VALUES (';
+				$strQuery		.= $strValueList;
+				$strQuery		.= ') RETURNING "'.$this->strPrimaryKeyName.'" ';
 
-
-			$result = pg_query($this->get_connection(), $strQuery);
-			if ($result===false) {
-				debug_log(__METHOD__." Error: DDBB query error. INSERT record. Data is not saved ". PHP_EOL . pg_last_error(DBi::_getConnection()) .PHP_EOL . to_string($strQuery), logger::ERROR);
-				if(SHOW_DEBUG===true) {
-					throw new Exception("Error Processing Save Insert Request (1). error: ". pg_last_error(DBi::_getConnection()), 1);
+			// exec query
+				$result = pg_query($this->get_connection(), $strQuery);
+				if ($result===false) {
+					debug_log(__METHOD__
+						." Error: DDBB query error. INSERT record. Data is not saved ". PHP_EOL
+						. pg_last_error(DBi::_getConnection()) .PHP_EOL
+						. to_string($strQuery)
+						, logger::ERROR
+					);
+					if(SHOW_DEBUG===true) {
+						throw new Exception("Error Processing Save Insert Request (1). error: ". pg_last_error(DBi::_getConnection()), 1);
+					}
+					return false;
 				}
-				return false;
-			}
 
 			$id = pg_fetch_result($result, 0, '"'.$this->strPrimaryKeyName.'"');
 			if ($id===false) {
+				debug_log(__METHOD__
+					." Error Processing Request (1-b) ". PHP_EOL
+					. pg_last_error(DBi::_getConnection()) .PHP_EOL
+					. to_string($strQuery)
+					, logger::ERROR
+				);
 				if(SHOW_DEBUG===true) {
 					dump($strQuery,"strQuery");
 					throw new Exception("Error Processing Request (1-b): ".pg_last_error(DBi::_getConnection()), 1);
@@ -417,20 +433,25 @@ abstract class RecordDataBoundObject {
 	# ARRAY EDITABLE FIELDS
 	public function get_ar_editable_fields() : array {
 
-		static $ar_editable_fields;
-
-		if(isset($ar_editable_fields)) {
-			return($ar_editable_fields);
-		}
-
-		if(is_array($this->arRelationMap)) {
-
-			foreach($this->arRelationMap as $field_name => $property_name) {
-
-				if($property_name !== 'ID') $ar_editable_fields[] = $field_name ;
+		// cache
+			static $ar_editable_fields;
+			if(isset($ar_editable_fields)) {
+				return $ar_editable_fields;
 			}
-			return $ar_editable_fields ;
-		}
+
+		// arRelationMap values
+			if(is_array($this->arRelationMap)) {
+
+				foreach($this->arRelationMap as $field_name => $property_name) {
+
+					if($property_name!=='ID') {
+						$ar_editable_fields[] = $field_name;
+					}
+				}
+
+				return $ar_editable_fields ;
+			}
+
 
 		return [];
 	}//end get_ar_editable_fields
@@ -441,20 +462,20 @@ abstract class RecordDataBoundObject {
 	* SEARCH
 	* Generic search. Needs array key-value as field => value
 	* TIPO $arguments['parent'] = 14 ...
+	* @param array $ar_arguments
+	* @param string|null $matrix_table = null
 	* @return array $ar_records
 	*/
-	public function search(array $ar_arguments=null, string $matrix_table=null) : array {
-
-		# DEBUG INFO SHOWED IN FOOTER
+	public function search(array $ar_arguments, string $matrix_table=null) : array {
 		if(SHOW_DEBUG===true) $start_time = start_time();
 
-		$ar_records = array();
+		// default value
+			$ar_records = [];
 
-		# TABLE . Optionally change table temporally for search
-		if (!empty($matrix_table)) {
-			$this->strTableName = $matrix_table;
-		}
-		#dump($ar_arguments, " ar_arguments ".to_string());
+		// matrix_table. Optionally change table temporally for search
+			if (!empty($matrix_table)) {
+				$this->strTableName = $matrix_table;
+			}
 
 		$strPrimaryKeyName	= $this->strPrimaryKeyName;
 		$strQuery			= '';
@@ -638,7 +659,7 @@ abstract class RecordDataBoundObject {
 			}
 
 		// strQuery
-		$strQuery = trim('SELECT '. $SQL_CACHE .'"'.$strPrimaryKeyName. '" FROM "'.$this->strTableName.'" WHERE '. $strQuery . $strQuery_limit . $strQuery_offset) ;	#$strQuery .= 'SQL_CACHE ';
+		$strQuery = trim('SELECT '. $SQL_CACHE .'"'.$strPrimaryKeyName. '" FROM "'.$this->strTableName.'" WHERE '. $strQuery . $strQuery_limit . $strQuery_offset);
 		// error_log('------ '.$strQuery);
 
 		# CACHE : Static var
@@ -683,7 +704,7 @@ abstract class RecordDataBoundObject {
 			# QUE SE GUARDA EN UN ARRAY ESTÁTICO
 			# IMPORTANT Only store in cache positive results, NOT EMPTY RESULTS
 			# (Store empty results is problematic for example with component_common::get_id_by_tipo_parent($tipo, $parent, $lang) when matrix relation record is created and more than 1 call is made,
-			# the nexts results are 0 and duplicate records are built in matrix)
+			# the next results are 0 and duplicate records are built in matrix)
 			# Nota: en algunos casos interesa forzar el refresco de los datos (como por ejemplo en counter). Es esos caso NO guardaremos el resultado en caché
 			$n_records = is_countable($ar_records) ? sizeof($ar_records) : 0;
 			if($use_cache===true && $n_records>0) {
@@ -713,15 +734,12 @@ abstract class RecordDataBoundObject {
 			if($this->blForDeletion===true) {
 
 				if (is_int($this->ID)) {
-					$strQuery 	= "DELETE FROM \"$this->strTableName\" WHERE \"$this->strPrimaryKeyName\" = $this->ID";
+					$strQuery = "DELETE FROM \"$this->strTableName\" WHERE \"$this->strPrimaryKeyName\" = $this->ID";
 				}else{
-					$strQuery 	= "DELETE FROM \"$this->strTableName\" WHERE \"$this->strPrimaryKeyName\" = '$this->ID' ";
+					$strQuery = "DELETE FROM \"$this->strTableName\" WHERE \"$this->strPrimaryKeyName\" = '$this->ID' ";
 				}
 
-				#$result 		= mysql_query($strQuery, $this->get_connection());
-				#$result 		= $this->get_connection()->query($strQuery);
-				$result		= JSON_RecordObj_matrix::search_free($strQuery);
-
+				$result = JSON_RecordObj_matrix::search_free($strQuery);
 				if($result===false) {
 					if(SHOW_DEBUG===true) {
 						$msg = __METHOD__." Failed Delete record (RDBO) from {$this->strPrimaryKeyName}: $this->ID \n" . $this->get_connection()->error ;
@@ -729,6 +747,11 @@ abstract class RecordDataBoundObject {
 						$msg = "Failed Delete record (RDBO). Record $this->ID is not deleted. Please contact with your admin" ;
 					}
 					trigger_error($msg);
+					debug_log(__METHOD__
+						. ' ' . $msg .PHP_EOL
+						. 'strQuery: ' . to_string($strQuery)
+						, logger::ERROR
+					);
 					throw new Exception($msg, 1);
 				}
 			}
