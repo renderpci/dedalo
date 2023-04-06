@@ -1,7 +1,7 @@
 <?php
 /**
 * TS_TERM
-* Object like tesaurus term
+* Object like thesaurus term
 *
 */
 class ts_term extends stdClass {
@@ -73,8 +73,6 @@ class ts_term extends stdClass {
 		if (!isset($this->table)) {
 			$this->table = TABLE_THESAURUS;
 		}
-
-		return true;
 	}//end __construct
 
 

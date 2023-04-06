@@ -31,8 +31,6 @@ class component_text_area extends component_common {
 
 		# We build the component normally
 		parent::__construct($tipo, $parent, $mode, $lang, $section_tipo);
-
-		return true;
 	}//end __construct
 
 
@@ -1529,7 +1527,11 @@ class component_text_area extends component_common {
 	public function get_related_component_select_lang() : ?string {
 
 		$tipo = null;
-		$related_terms = $this->get_ar_related_by_model('component_select_lang');
+		$related_terms = $this->get_ar_related_by_model('
+			component_select_lang',
+			$this->get_tipo(),
+			true
+		);
 
 		switch (true) {
 			case count($related_terms)===1 :

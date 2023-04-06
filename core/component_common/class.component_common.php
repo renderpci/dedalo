@@ -1471,36 +1471,37 @@ abstract class component_common extends common {
 	/**
 	* DATO IN DEFAULT LANG
 	*/
-	protected function get_dato_default_lang() {
+		// protected function get_dato_default_lang() {
 
-		if (empty($this->section_id)) {
-			trigger_error("Sorry. Few vars on get_dato_default_lang");
-			return false;
-		}
+		// 	if (empty($this->section_id)) {
+		// 		trigger_error("Sorry. Few vars on get_dato_default_lang");
+		// 		return false;
+		// 	}
 
-		if ($this->lang === DEDALO_DATA_LANG_DEFAULT) {
+		// 	if ($this->lang===DEDALO_DATA_LANG_DEFAULT) {
 
-			$dato = $this->get_dato();
+		// 		$dato = $this->get_dato();
 
-		}else{
+		// 	}else{
 
-			$section_id 	= $this->get_section_id();
-			$tipo			= $this->get_tipo();
-			$section_tipo 	= $this->get_section_tipo();
+		// 		$section_id		= $this->get_section_id();
+		// 		$tipo			= $this->get_tipo();
+		// 		$section_tipo	= $this->get_section_tipo();
 
-			$current_component_name	= get_class($this);
-			$component_obj			= component_common::get_instance(
-				$current_component_name,
-				$tipo, $section_id,
-				'edit',
-				DEDALO_DATA_LANG_DEFAULT,
-				$section_tipo
-			);
-			$dato = $component_obj->get_dato();
-		}
+		// 		$current_component_name	= get_class($this);
+		// 		$component_obj			= component_common::get_instance(
+		// 			$current_component_name,
+		// 			$tipo,
+		// 			$section_id,
+		// 			'edit',
+		// 			DEDALO_DATA_LANG_DEFAULT,
+		// 			$section_tipo
+		// 		);
+		// 		$dato = $component_obj->get_dato();
+		// 	}
 
-		return $dato;
-	}//end get_dato_default_lang
+		// 	return $dato;
+		// }//end get_dato_default_lang
 
 
 
