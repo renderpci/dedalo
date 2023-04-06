@@ -832,7 +832,7 @@ component_text_area.prototype.tag_data_object_to_string = function(data) {
 		}
 
 	// convert the data_tag to string to be used it in html
-	// replace the " to ' to be compatible with the dataset of html5, the tag strore his data ref inside the data-data html
+	// replace the " to ' to be compatible with the dataset of html5, the tag store his data ref inside the data-data html
 	// json use " but it's not compatible with the data-data storage in html5
 		const data_string = JSON.stringify(data).replace(/"/g, '\'')
 
@@ -874,14 +874,14 @@ component_text_area.prototype.create_fragment = function(key, text_editor) {
 
 	// text_editor check
 		if (!text_editor) {
-			console.error("-> [component_text_area.create_fragment] text_editor not received! key:", key);
+			console.error('-> [component_text_area.create_fragment] text_editor not received! key:', key);
 			return false
 		}
 
 	// selection text
 		const selection_raw = text_editor.get_selection();
 		if (!selection_raw || selection_raw.length<1) {
-			console.warn("Ignored empty selection:", selection_raw, key);
+			console.warn('Ignored empty selection:', selection_raw, key);
 			return false
 		}
 
@@ -897,16 +897,16 @@ component_text_area.prototype.create_fragment = function(key, text_editor) {
 
 		// tag images
 			const image_in  = self.build_view_tag_obj({
-				type	: "indexIn",
+				type	: 'indexIn',
 				state	: tag_state,
-				label	: "label in " + tag_id,
-				data	: ""
+				label	: 'label in ' + tag_id,
+				data	: ''
 			}, tag_id)
 			const image_out  = self.build_view_tag_obj({
-				type	: "indexOut",
+				type	: 'indexOut',
 				state	: tag_state,
-				label	: "label in " + tag_id,
-				data	: ""
+				label	: 'label in ' + tag_id,
+				data	: ''
 			}, tag_id)
 
 		// wrap_selection_with_tags. Prepend and apped tag image node to current editor text selection
