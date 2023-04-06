@@ -109,8 +109,8 @@ Every config file has its own parameters that need to be changed with the our pr
 	```
 3. Locate and change the PROPERTY with the proper configuration.
 
-	### Main variables
-
+	### **Main variables**
+	### paths
 	---
 
 	#### Dédalo host
@@ -324,6 +324,7 @@ Every config file has its own parameters that need to be changed with the our pr
 	```php
 	define('DEDALO_LIB_URL',		DEDALO_ROOT_WEB .'/'. DEDALO_LIB );
 	```
+
 	> Example: https://dedalo.dev/dedalo/lib/
 
 	---
@@ -357,28 +358,50 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-
 	#### Dédalo extras path
 
 	**config.php**
 
 	DEDALO_EXTRAS_PATH 	`string`
 
-	This parameter define the extras path directory. Extras path contains specific code for some installations, like tools or widgets, that the specific entity use to extend default Dédalo behaviour. The extras directory is linked by the tld of the ontology used. If you install Dédalo for oral history project, you will need load the extras 'oh' directory, because it has a extension tools for this research field.
+	This parameter defines the extras path directory. Extras path contains specific code for some installations, like tools or widgets, that the specific entity use to extend default Dédalo behaviour. The extras directory is linked by the tld of the ontology used. If you install Dédalo for oral history project, you will need load the 'oh' extras directory, because it has a extension tools for this research field.
 
-	> Example: /home/www/httpdocs/dedalo/lib/extras
-	>
+	> Example: /home/www/httpdocs/dedalo/core/extras
 
 	```php
-	define('DEDALO_EXTRAS_PATH', DEDALO_LIB_BASE_PATH .'/extras');
+	define('DEDALO_EXTRAS_PATH',	DEDALO_CORE_PATH . '/extras');
 	```
+
 	> This parameter use previous constant definition:
 	>
-	> DEDALO_LIB_BASE_PATH
+	> DEDALO_CORE_PATH
 	>
 	> It ensure the a changes in the lib path will be implemented in the extras path.
-	>
+	
+	---
 
+	#### Dédalo extras uri
+
+	**config.php**
+
+	DEDALO_EXTRAS_URL 	`string`
+
+	This parameter defines the extras path directory. Extras path contains specific code for some installations, like tools or widgets, that the specific entity use to extend default Dédalo behaviour. The extras directory is linked by the tld of the ontology used. If you install Dédalo for oral history project, you will need load the 'oh' extras directory, because it has a extension tools for this research field.
+
+	```php
+	define('DEDALO_EXTRAS_URL',		DEDALO_CORE_URL . '/extras');
+	```
+
+	> Example: https://dedalo.dev/dedalo/core/extras/
+
+	> This parameter use previous constant definition:
+	>
+	> DEDALO_CORE_PATH
+	>
+	> It ensure the a changes in the lib path will be implemented in the extras path.
+	
+
+	### Salt
 	---
 
 	#### Dédalo salt string (string used for encryption)
@@ -387,11 +410,13 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	DEDALO_SALT_STRING	`string`
 
-	Salt string to be used by the encryption Dédalo model. Used for generated random string that is added to each password as part of the hashing process.
+	Salt string to be used by the encryption systen. Used to generated random string that is added to each password as part of the hashing process.
 
 	```php
 	define('DEDALO_SALT_STRING', 'My_secure_Salt_String!_2046');
 	```
+
+	### Locale
 	---
 
 	#### Dédalo time zone
@@ -400,14 +425,16 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	DEDALO_TIMEZONE	`string`
 
-	Used to define the time zone of the project. It could be different of the server installation or the linux timezone. The time zone will be used to store the time stamp of the changes done by the users.
+	Used to defines the time zone of the project. It could be different of the server installation or the linux timezone. The time zone will be used to store the time stamp of the changes done by the users.
 
 	```php
 	define('DEDALO_TIMEZONE', 'Europe/Madrid');
 	```
-	> The time zone is set in the next code:
+	> The time zone is set in the next code line:
 	>
-	> date_default_timezone_set(DEDALO_TIMEZONE);
+	> ```php
+	>date_default_timezone_set(DEDALO_TIMEZONE);
+	>```
 	>
 	> It ensure that PHP has defined the time zone in the parameter.
 	>
@@ -418,28 +445,43 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	**config.php**
 
-	Set the internal php locale will be use to encode text. By default Dédalo use UTF8 encoding for Spanish 'es_ES.utf8'.
+	DEDALO_LOCALE	`string`
+
+	Defines the internal php locale will be use to encode text. By default Dédalo use UTF8 encoding for Spanish 'es_ES.utf8'.
+
 	It is possible change it for specific languages, see the php documentation.
 
 	```php
-	setlocale(LC_ALL, 'es_ES.utf8');
+	define('DEDALO_LOCALE', 'es-ES');
 	```
+
+	> The locale is set in the next code line:
+	>
+	> ```php
+	>setlocale(LC_ALL, DEDALO_LOCALE);
+	>```
+	>
+	> It ensure that PHP has defined the time zone in the parameter.
+	
 	---
 
-	#### Developer server
+	#### Dédalo date order
 
 	**config.php**
 
-	DEVELOPMENT_SERVER	`bool`
+	Defines the default order fo the date imput by users and to be showed in component_date. By default Dédalo use dmy (European dates formant).
 
-	It define if the server will be used to do develop tasks. When the server is defined to be a developer server, Dédalo will activate the debug mode and will add the developer sections in the menu.
-
-	With the debugger active Dédalo will show lot of messages in the php log and js console taking time to process the data. Don't use de developer mode in a production server.
+	Options:
+	*	dmy = common way order day/moth/year
+	*	mdy = USA way order moth/day/year
+	*	ymd = China, Japan, Korean, Iran way year/month/day
 
 	```php
-	define('DEVELOPMENT_SERVER', false);
+	define('DEDALO_DATE_ORDER', 'dmy');
 	```
-	### Entity vars
+
+
+	### Entity
 
 	---
 
@@ -449,7 +491,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	DEDALO_ENTITY	`string`
 
-	This parameter define the name of the entity proprietary of the Dédalo installation. Dédalo entity will be used to access to databases, to encrypt passwords or to publish data into the specific publication ontology and should NOT be changed after installation.
+	This parameter defines the name of the entity proprietary of the Dédalo installation. Dédalo entity will be used to access to databases, to encrypt passwords or to publish data into the specific publication ontology and should NOT be changed after installation.
 
 	```php
 	define('DEDALO_ENTITY', 'my_entity_name');
@@ -465,7 +507,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	DEDALO_ENTITY_LABEL	`string`
 
-	Define the entity label, the real name of the entity. Due the entity definition is use to encrypt passwords or access to databases, sometimes you will need define the real name of the entity with characters such as 'ñ' or accents.
+	Defines the entity label, the real name of the entity. Due the entity definition is use to encrypt passwords or access to databases, sometimes you will need define the real name of the entity with characters such as 'ñ' or accents.
 
 	```php
 	define('DEDALO_ENTITY_LABEL', DEDALO_ENTITY);
@@ -485,12 +527,30 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	DEDALO_ENTITY_ID	`int`
 
-	This parameter define the normalised id for the entity. The id of the entity could be used to create a locator to obtain information between Dédalo installations, the id will be added to the locator with the key: "entity_id" when the locator point to external resource.
+	This parameter defines the normalised id for the entity. The id of the entity could be used to create a locator to obtain information between Dédalo installations, the id will be added to the locator with the key: "entity_id" when the locator point to external resource.
 
 	```php
 	define('DEDALO_ENTITY_ID', 0);
 	```
-	### Cache vars
+
+	---
+
+	#### Developer server
+
+	**config.php**
+
+	DEVELOPMENT_SERVER	`bool`
+
+	It defines if the server will be used to do develop tasks. When the server is defined to be a developer server, Dédalo will activate the debug mode and will add the developer sections in the menu.
+
+	With the debugger active Dédalo will show lot of messages in the php log and js console taking time to process the data. Do not use developer mode in a production server.
+
+	```php
+	define('DEVELOPMENT_SERVER', false);
+	```
+	---
+
+	### Cache
 
 	---
 
@@ -498,43 +558,20 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	**config.php**
 
-	DEDALO_CACHE_MANAGER	`bool`
+	DEDALO_CACHE_MANAGER	`bool || object`
 
-	This parameter configure the cache manager to use. By default the cache manager is deactivated but you can configure Dédalo to use some technologies to cache the data like redis / memcached / zebra_db.
-
-	If the cache manager is activated you will need defined the DEDALO_CACHE_MANAGER_DB parameter and create the database and configure the cache_manager.php file.
+	This parameter configure the cache manager to use. By default the cache manager use files in tmp directory.
 
 	```php
-	define('DEDALO_CACHE_MANAGER', false );
+	define('DEDALO_CACHE_MANAGER', (object)[
+		'manager'		=> 'files',
+		'files_path'	=> '/tmp'
+	]);
 	```
-	---
-
-	#### Dédalo cache manager database
-
-	**config.php**
-
-	DEDALO_CACHE_MANAGER_DB	`string`
-
-	This parameter define the name of the database to use for the cache manager. Normally the name begins with "cache_" prefix to add it to the name of the cache database.
-
-	```php
-	define('DEDALO_CACHE_MANAGER_DB', 'cache_dedalo.dev' );
-	```
-	> Dédalo use the host name var:
-	>
-	> DEDALO_HOST
-	>
-	> to assign the variable in this way:
-	>
-	> define('DEDALO_CACHE_MANAGER_DB', 'cache_'.substr(DEDALO_HOST, 0,-5) );
-	>
-	> but this definition could be change for specific requirements.
-	>
-
-	> For complete the cache manger configuration you will need to see the file:
-	>
-	> ../dedalo/lib/dedalo/config/cache_manager.php
-	>
+	> When cache manager is set to `files` it will write cache files with complex resolved data of current logged user (like profiles data). You can desactivate it in this way:
+	> ```php
+	> define('DEDALO_CACHE_MANAGER', false );
+	> ```
 
 	### Core require
 
@@ -544,11 +581,11 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	**config.php**
 
-	Dédalo need include core_functions.php file, it has definitions of some basic functions that will use for all Dédalo
-	class and methods like encoding or encryption data.
+	Dédalo need to include core_functions.php file, it has definitions of some basic functions that will use for all Dédalo
+	class and methods like encoding or encryption data. This file will be loaded before the sesion start.
 
 	```php
-	include_once(DEDALO_LIB_BASE_PATH.'/config/core_functions.php');
+	include(DEDALO_CORE_PATH . '/base/core_functions.php');
 	```
 	---
 
@@ -556,11 +593,12 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	**config.php**
 
-	This command include the version file to control the correspondence between code and data versions.
+	This command include the config core file to control the status of installation.
 
 	```php
-	include(DEDALO_LIB_BASE_PATH.'/config/version.inc');
+	include(DEDALO_CONFIG_PATH . '/config_core.php');
 	```
+
 	---
 
 	#### Dédalo fixed tipos
@@ -572,51 +610,34 @@ Every config file has its own parameters that need to be changed with the our pr
 	This file acts as cache of some common tipos, some times when Dédalo need access to fixed part of the ontology is faster use a prefixed tipo than load the ontology and resolve the tipo, this calls are not loaded dynamically.
 
 	```php
-	include(DEDALO_LIB_BASE_PATH.'/config/dd_tipos.php');
+	include(DEDALO_CONFIG_PATH . '/dd_tipos.php');
 	```
-	> Tipo = Typology of Indirect Programming Object.
-	>
+	> Tipo = Typology of Indirect Programming Object/s.
 
 	---
 
-	#### Loader
+	#### Version
 
 	**config.php**
 
-	Dédalo need include some common classes and tools to be operative. The loader is responsible for loading the core
-	classes into memory before start the login process to the users.
-	string
+	This command include the version file to control the correspondence between code and data versions.
 
 	```php
-	include(DEDALO_LIB_BASE_PATH.'/config/class.loader.php');
-	```
-	### Database connection
-
-	---
-
-	#### PostgreSQL connection
-
-	**config.php**
-
-	Dédalo need import the config4_db.php file to load the database connection configuration. This file contains the
-	PostgreSQL and MySQL connections. Dédalo interface will use the PostgreSQL connection to manage all datasets, the ontology, etc, and will use the MySQL connection to transform and save the publication versions of the data.
-
-	```php
-	include(DEDALO_LIB_BASE_PATH.'/config/config4_db.php');
+	include(DEDALO_CONFIG_PATH . '/version.inc');
 	```
 	---
 
-	#### Slow query
+	#### Database config  / connection
 
 	**config.php**
 
-	SLOW_QUERY_MS	`int`
-
-	This parameter define the time limit to query calls, if the query done to database is higher that the value of this parameter, Dédalo will alert in php log and will try to index this query. By default this parameter is set to 1200 ms (1,2 seconds).
+	Dédalo need to import the config4_db.php file to load the database connection configuration. This file contains the
+	PostgreSQL and MariaDB / MySQL connections. Dédalo interface will use the PostgreSQL connection to manage all datasets, the ontology, etc, and will use the MySQL connection to transform and save the publication versions of the data.
 
 	```php
-	define('SLOW_QUERY_MS' , 1200);
+	include(DEDALO_CONFIG_PATH . '/config_db.php');
 	```
+	---
 
 	### Session
 
@@ -628,10 +649,11 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	DEDALO_SESSION_HANDLER	`string`
 
-	This parameter define the method used to manage php session for the installation. It could be configured as files, memcached, user or postgresql by default this parameter is defined as 'files', it means that php will use a file stored in the server to save the users sessions.
+	This parameter defines the method used to manage php session for the installation. It could be configured as files, memcached, user or postgresql by default this parameter is defined as `files`, it means that php will use a file stored in the server to save the users sessions.
 
 	If you are using memcached, you can activate it to save the sessions in RAM.
-	Sessions store information about the user connection or the last search done, it will use to reopen Dédalo in the same section that last session browse by the user or reload the filter with the last search configuration.
+
+	Sessions store information about the user connection or the last search done, it will use to reopen Dédalo in the same section of the last session browse by the user or reload the filter with the last search configuration.
 
 	```php
 	define('DEDALO_SESSION_HANDLER', 'files');
@@ -642,9 +664,9 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	**config.php**
 
-	session_duration_hours
+	session_duration_hours	`int`
+	timeout_seconds `int`
 
-	timeout_seconds
 	Session lifetime is defined by one calculation of hours convert to seconds. Normally the sessions in Dédalo define 1 journal session (8 hours) and this time will be the max duration of dedalo user session. The session will be deleted when it exceeds this time.
 
 	```php
@@ -659,47 +681,43 @@ Every config file has its own parameters that need to be changed with the our pr
 	**config.php**
 
 	Starting the session ensure that the session is open and alive when the user login. The session will start with the
-	format defined, the timeout and the session_name (using DEDALO_ENTITY parameter).
+	format defined.
+	
+	Session needs to define the if the protocol to store cookies is https or not. Besides if the cookie samesite is Lax or Strict, by default is define as `Strict`
+	
+	 the timeout and the session_name (using DEDALO_ENTITY parameter).
 
 	```php
+	$cookie_secure		= (DEDALO_PROTOCOL==='https://');
+	$cookie_samesite	= (DEVELOPMENT_SERVER===true) ? 'Lax' : 'Strict';
 	session_start_manager([
-	'save_handler' => 'files',
-	'timeout_seconds' => 28800,
-	'session_name' => 'dedalo_'.DEDALO_ENTITY
+		'save_handler' 			=> 'files',
+		'timeout_seconds'		=> $timeout_seconds,
+		'prevent_session_lock'	=> defined('PREVENT_SESSION_LOCK') ? PREVENT_SESSION_LOCK : false,
+		'session_name' 			=> 'dedalo_'.DEDALO_ENTITY
+		'cookie_secure'			=> $cookie_secure, // Only https (true | false)
+		'cookie_samesite'		=> $cookie_samesite // (None | Lax | Strict)
 	]);
 	```
 
-	### Backup variables
-
-   ---
-
-   #### Dédalo backup on loggin
-
-   **config.php**
-
-   DEDALO_BACKUP_ON_LOGIN 	`bool`
-
-   This parameter define the if Dédalo will do a backup when the users login. It prevents that issues doing to the data could repair quickly. Dédalo will check if the last backup is a copy done after the time defined by DEDALO_BACKUP_TIME_RANGE and will create new one if the time exceed this parameter. Dédalo will use the .pgpass file to connect to PostgreSQL and will create a .backup file in the backup directory.
-   
-	```php
-	define('DEDALO_BACKUP_ON_LOGIN', true);
-	```
-
-   ---
-
-   #### Dédalo backup time range
-
-   **config.php**
-
-   DEDALO_BACKUP_TIME_RANGE	`int`
-
-   This parameter define the time lapse between backup copies in hours. Dédalo check in every user login if the last backup exceed this time lapse, in affirmative case, it will create new one.
-   
-	```php
-	define('DEDALO_BACKUP_TIME_RANGE', 8);
-	```
-
 	### Developer variables
+
+	---
+	#### Show debug
+
+	**config.php**
+
+	SHOW_DEBUG	`bool`
+
+	This parameter active or deactive the debugger. Used to show the log warnings and errors, it will be always active when the user logged is a superuser.
+
+	```php
+	define('SHOW_DEBUG',
+		(isset($_SESSION['dedalo']['auth']['user_id']) && $_SESSION['dedalo']['auth']['user_id']==DEDALO_SUPERUSER)
+			? true
+			: false // default false
+	);
+	```
 
 	---
 
@@ -714,34 +732,121 @@ Every config file has its own parameters that need to be changed with the our pr
 	When is true, the logged user can access and view specific develop information like component configuration (tipo, parent, etc.) hidden to regular users to avoid too much noise.
 
 	```php
-	define('SHOW_DEVELOPER', (isset($_SESSION['dedalo4']['auth']['is_developer']) && $_SESSION['dedalo4']['auth']['is_developer']===true));
+	define('SHOW_DEVELOPER',
+		(isset($_SESSION['dedalo']['auth']['is_developer']) && $_SESSION['dedalo']['auth']['is_developer']===true)
+			? true
+			: false // default false
+	);
+	```
+
+
+
+	### Loader required
+
+	---
+
+	#### Loader
+
+	**config.php**
+
+	DEDALO_CORE_PATH	`string`
+
+	Dédalo needs to include some common classes and tools to be operative. The loader is the responsible for loading the core classes into memory before start the users login process.
+	
+	```php
+	include DEDALO_CORE_PATH . '/base/class.loader.php';
+	```
+	
+	### Backup variables
+
+	---
+
+	#### Dédalo backup on loggin
+
+	**config.php**
+
+	DEDALO_BACKUP_ON_LOGIN 	`bool`
+
+	This parameter defines if Dédalo will do a backup when the users login. It prevents that issues doing to the data could repair quickly. 
+	If this constant is set to `true` Dédalo will check if the last backup is a copy done after the time defined by DEDALO_BACKUP_TIME_RANGE and will create new one if the time exceed this parameter. Dédalo will use the `.pgpass` file to connect to PostgreSQL and will create a `.backup` file in the backup directory.
+
+	```php
+	define('DEDALO_BACKUP_ON_LOGIN'	 , true);
 	```
 
 	---
 
-	#### Show debug
+	#### Dédalo backup time range
 
 	**config.php**
 
-	SHOW_DEBUG	`bool`
+	DEDALO_BACKUP_TIME_RANGE	`int`
 
-	This parameter active or deactive the debugger. Used to show the log warnings and errors, it will be always active when the user logged is a superuser.
+	This parameter defines the time lapse between backup copies in hours. Dédalo check in every user login if the last backup exceed this time lapse, in affirmative case, it will create new one.
 
 	```php
-	define('SHOW_DEBUG', false);
+	define('DEDALO_BACKUP_TIME_RANGE', 8);
 	```
-
+	
 	---
 
-	#### Logger
+	#### Dédalo backups directory
 
 	**config.php**
 
-	Dédalo needs to include the file logger.php to manage the user's activity and the application errors and messages.
+	DEDALO_BACKUP_PATH	`string`
+
+	This parameter defines the backups directory path. By default the backups directory will be out of httpdocs scope for security.
 
 	```php
-	include(DEDALO_LIB_BASE_PATH . '/logger/class.logger.php');
+	define('DEDALO_BACKUP_PATH'	, dirname(dirname(DEDALO_ROOT_PATH)) . '/backups');
 	```
+	
+	---
+
+	#### Dédalo temporary backup
+
+	**config.php**
+
+	DEDALO_BACKUP_PATH_TEMP	`string`
+
+	This parameter defines the temporary backups directory path. Dédalo will use this directory to strore download ontology data before update the ontology.
+
+	```php
+	define('DEDALO_BACKUP_PATH_TEMP'	, DEDALO_BACKUP_PATH . '/temp');
+	```
+	
+	---
+
+	#### Dédalo main db backup
+
+	**config.php**
+
+	DEDALO_BACKUP_PATH_DB	`string`
+
+	This parameter defines the main database backups directory path. Dédalo will use this directory to strore the full backup of PostgreSQL.
+
+	```php
+	define('DEDALO_BACKUP_PATH_DB'	, DEDALO_BACKUP_PATH . '/db');
+	```
+	
+	---
+
+	#### Dédalo ontology backup
+
+	**config.php**
+
+	DEDALO_BACKUP_PATH_ONTOLOGY	`string`
+
+	This parameter defines the main ontology backups directory path. Dédalo will use this directory to strore the full ontology backup.
+
+	```php
+	define('DEDALO_BACKUP_PATH_ONTOLOGY' 	, DEDALO_BACKUP_PATH . '/ontology');
+	```
+	
+	### Logs and errors
+
+	Store application activity data info and errors into `activity` table in DDBB.
 
 	---
 
@@ -751,12 +856,26 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	LOGGER_LEVEL	`class constant`
 
-	This parameter defines the level of the information shown in the logger. Normally, when Dédalo is in production the logger uses the 'WARNING' level that only shows informative information of the action when it has inconsistencies. When Dédalo’s debugger is active, the lever of the logger will be more verbose with debug information, errors, and warnings.
+	This parameter defines the level of the information shown in the logger. Normally, when Dédalo is in production, the logger uses the 'WARNING' level that only shows informative information of the action when it has inconsistencies. When Dédalo’s debugger is active, the lever of the logger will be more verbose with debug information, errors, and warnings.
+
+	The server error log level by default is: `ERROR` (will be change to `DEBUB` when SHOW_DEBUG===true)
+
+	|	Level error codes	||
+	| --- | --- |
+	|	DEBUG	| 100	|
+	|	INFO	| 75	|
+	|	NOTICE	| 50	|
+	|	WARNING	| 25	|
+	|	ERROR	| 10	|
+	|	CRITICAL| 5		|
 
 	```php
-	define('LOGGER_LEVEL', logger::WARNING);
-	define('LOGGER_LEVEL', logger::DEBUG);
+	define('LOGGER_LEVEL', (SHOW_DEBUG===true)
+		? logger::DEBUG // log all messages
+		: logger::ERROR // log only errors
+	);
 	```
+	> Note that log outputs files are defined in the `php.ini` config file / `error_log` definition like `/var/log/fpm-php.log`. You can view the server log using terminal command `tail -f /var/log/php_errors.log` with your own log path.
 
 	---
 
@@ -766,32 +885,14 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	Dedalo store the activity in the table matrix_activity in PostgreSQL, the logger need to be configured to use this
 	table.
-
-	---
-
-	#### Dédalo logs directory
-
-	**config.php**
-
-	DEDALO_LOGS_DIR	`string`
-
-	Set the directory to store the log file. The logger will use this file to store the activity.
+	Logger wil save all user activity and the application errors and messages.
 
 	```php
-	define('DEDALO_LOGS_DIR', dirname(dirname(DEDALO_ROOT)) . '/logs');
+	logger::register('activity'	, 'activity://auto:auto@auto:5432/log_data?table=matrix_activity');
+	logger::$obj['activity'] = logger::get_instance('activity');
 	```
 
-	---
-
-	#### Error
-
-	**config.php**
-
-	Dédalo use a specific error definition and it need to be included with the file 'Error.php'. This file capture the
-	php error and create a Dédalo standard error to be save in the log file.
-	include(DEDALO_LIB_BASE_PATH.'/config/class.Error.php');
-	Language variables
-
+	### Languages
 	---
 
 	#### Dédalo structure lang
@@ -800,7 +901,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	DEDALO_STRUCTURE_LANG	`string`
 
-	This parameter define the default language that the ontology will use as main language. The ontology (abstracted structure) is the definition of areas, sections, fields, connections between data and definition models. All terms used in the ontology can be translated to any language, but this main language define here will be use as mandatory language, if Dédalo is configured in other language that is not defined in the ontology translations Dédalo will do a fall back to this main language, if these main language is not present, Dédalo will use any other language to show the interface and explanations.
+	This parameter defines the default language that the ontology will use as main language. The ontology (abstracted structure) is the definition of areas, sections, fields, connections between data and definition models. All terms used in the ontology can be translated to any language, but this main language defined here will be use as mandatory language, if Dédalo is configured in other language that is not defined in the ontology translations Dédalo will do a fall back to this main language, if these main language is not present, Dédalo will use any other language to show the interface and explanations.
 
 	This parameter do not define the main data language, it only affect to the Dédalo interface and definitions in the ontology.
 
@@ -808,27 +909,27 @@ Every config file has its own parameters that need to be changed with the our pr
 	define('DEDALO_STRUCTURE_LANG', 'lg-spa');
 	```
 
-	> Dédalo uses the pattern: lg-xxx  
-	> lg = identify the term as language  
-	> xxx = with the official tld of the ISO 639-6, Alpha-4 code for comprehensive coverage of language variants.
+	>For the languages, Dédalo uses the pattern: `lg-xxx`  
+	>lg : identify the term as language  
+	>xxx : with the official tld of the ISO 639-6, Alpha-4 code for comprehensive coverage of language variants.
 	>
-	> Some common languages:
+	>Some common languages:
 	>
-	> 	| Value |	Diffusion language |
-	>	| ------ | ------ |
-	> 	| lg-spa	| Spanish	|
-	> 	| lg-cat	| Catalan	|
-	> 	| lg-eus	| Basque	|
-	> 	| lg-eng	| English	|
-	> 	| lg-fra	| French	|
-	> 	| lg-ita	| Italian	|
-	> 	| lg-por	| Portuguese	|
-	> 	| lg-deu	| German	|
-	> 	| lg-ara	| Arabian	|
-	> 	| lg-ell	| Greek	|
-	> 	| lg-rus	| Russian	|
-	> 	| lg-ces	| Czech	|
-	> 	| lg-jpn	| Japanese	|
+	>| Value |	Diffusion language |
+	>| --- | --- |
+	>| lg-spa	| Spanish	|
+	>| lg-cat	| Catalan	|
+	>| lg-eus	| Basque	|
+	>| lg-eng	| English	|
+	>| lg-fra	| French	|
+	>| lg-ita	| Italian	|
+	>| lg-por	| Portuguese	|
+	>| lg-deu	| German	|
+	>| lg-ara	| Arabian	|
+	>| lg-ell	| Greek	|
+	>| lg-rus	| Russian	|
+	>| lg-ces	| Czech	|
+	>| lg-jpn	| Japanese	|
 
 	---
 
@@ -838,7 +939,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	DEDALO_APPLICATION_LANGS	`object` (php: serialized associative array)
 
-	This parameter define the languages that Dédalo will use for the data and user interface. Dédalo is a true multi-language application, any text field can be defined as translatable and this configuration define the languages that the installation will use to store and translate text data. When the user select one of those languages Dédalo will change the data showed or the user interface, render all data with this new language.
+	This parameter defines the languages that Dédalo will use for the data and user interface. Dédalo is a true multi-language application, any text field can be defined as translatable and this configuration define the languages that the installation will use to store and translate text data. When the user select one of those languages Dédalo will change the data showed or the user interface, so it will render all data with this new language.
 
 	```php
 	define('DEDALO_APPLICATION_LANGS', serialize([
@@ -859,11 +960,12 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	DEDALO_APPLICATION_LANGS_DEFAULT	`string`
 
-	Define the main language will used in the user interface.
+	Defines the main language will used in the user interface.
+
 	Dédalo can be translated to any language, the translations of the interface are done in the ontology. The users can change the Dédalo interface to use it in his language. In Dédalo the user interface and the data language are separated concepts and it is possible have a interface in one language and the data in other. This main language will be used as primary option and as fall back language when the element does not have the translation available.
 	
 	```php
-	define('DEDALO_APPLICATION_LANGS_DEFAULT', 'lg-spa');
+	define('DEDALO_APPLICATION_LANGS_DEFAULT', 'lg-eng');
 	```
 
 	> See the Dédalo structure lang for see the languages definitions.
@@ -876,14 +978,15 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	DEDALO_APPLICATION_LANG	`string`
 
-	This parameter define the language will us Dédalo for the user interface.
+	This parameter defines the language will us Dédalo for the user interface.
+
 	This is a dynamic parameter and it can be changed when the user login, or in application menu. When the language is changed it is saved into the user's session and it is read to maintain coherence in the diary workflow. If the user's session does not have defined the application language then Dédalo will use the application default language definition.
 
 	```php
 	define('DEDALO_APPLICATION_LANG', 'lg-spa');
 	```
 
-	> This parameter use the method 'fix_cascade_config4_var' to calculate the value. The result of this function will be a string with the correct language value in string format. You can define it as fixed data value, but is recommended do not change the definition, if you want change the default language for the interface use the: DEDALO_APPLICATION_LANGS_DEFAULT.
+	> This parameter use the method 'fix_cascade_config_var' to calculate the value. The result of this function will be a string with the correct language value in string format. You can define it as fixed data value, but is recommended do not change the definition, if you want change the default language for the interface use the: DEDALO_APPLICATION_LANGS_DEFAULT.
 
 	---
 
@@ -893,7 +996,8 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	DEDALO_DATA_LANG_DEFAULT	`string`
 
-	Define the main language will used by Dédalo to manage and process data.
+	Defines the main language will used by Dédalo to manage and process data.
+
 	The main language is the mandatory language for the text data in the catalog or inventory. Dédalo is a real multi-language application, it can manage multiple translation of the textual information.
 
 	In a multi-language situation, when you require some tanslated information but it is not present (because it is not done), Dédalo will need to use the main language to do a fall back proccess to main language to show the data. If the main language data is not present, Dédalo will use any other language to show those data.
@@ -910,14 +1014,15 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	DEDALO_DATA_LANG	`string`
 
-	It define the data language used by Dédalo to process and render textual information.
+	It defines the data language used by Dédalo to process and render textual information.
+	
 	This is a dynamic parameter that can be changed by the user in any moment. Dédalo is a real multi-language application, it can manage information in multiple languages and process it as unique information block (the field store any translated version of his data). The user can translate any information directly or using specific tools. This parameter define the current language used.
 
 	```php
 	define('DEDALO_DATA_LANG', 'lg-spa');
 	```
 
-	> This parameter use the method 'fix_cascade_config4_var' to calculate the value. The result of this function will be a string with the correct language value in string format. You can define it as fixed data value, but is recommended do not change the definition, if you want change the default language for the data use the: DEDALO_DATA_LANG_DEFAULT.
+	> This parameter use the method 'fix_cascade_config_var' to calculate the value. The result of this function will be a string with the correct language value in string format. You can define it as fixed data value, but is recommended do not change the definition, if you want change the default language for the data use the: [DEDALO_DATA_LANG_DEFAULT](#dédalodefaultdatalanguage).
 
 	---
 
@@ -927,10 +1032,12 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	DEDALO_DATA_LANG_SELECTOR	`bool`
 
-	It define if the menu show or hide the data language selector. When the selector is showed the user can change the data language independently of the interface language. If the selector is hide the data language is synchronous to the interface language a change in the interface language will be a change in the data language.
+	It defines if the menu show or hide the data language selector. 
+	
+	When the selector is showed the user can change the data language independently of the interface language. If the selector is hide the data language is synchronous to the interface language a change in the interface language will be a change in the data language.
 	
 	```php
-	define('DEDALO_DATA_LANG_SELECTOR', false);
+	define('DEDALO_DATA_LANG_SELECTOR',	true);
 	```
 
 	---
@@ -941,8 +1048,11 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	DEDALO_DATA_NOLAN	`string`
 
-	This parameter define the tld used by Dédalo to tag data without translation possibility. Dédalo is multi language by default, all information could be translated to other languages that the main lang, but some data is not susceptible to be translated, like numbers, data or personal names. In these cases Dédalo define this data as "not translatable" with the specific tld define in this parameter.
-	By default and for global Dédalo definition for non translatable data this tld is: lg-nolan
+	This parameter defines the tld used by Dédalo to tag data without translation possibility.
+
+	Dédalo is multi language by default, all information could be translated to other languages that the main lang, but some data is not susceptible to be translated, like numbers, dates or personal names. In these cases Dédalo defines this kind of data as "not translatable" with the specific tld define in this parameter.
+
+	By default and for global Dédalo definition for non translatable data this tld is: `lg-nolan`
 	
 	```php
 	define('DEDALO_DATA_NOLAN', 'lg-nolan');
@@ -954,14 +1064,16 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	**config.php**
 
-	DEDALO_PROJECTS_DEFAULT_LANGS	`serialized array`
+	DEDALO_PROJECTS_DEFAULT_LANGS	`array`
 
-	This parameter define the languages that will use for export and publish data.
+	This parameter defines the languages that will use for export and publish data.
 
-	This definition control the amount of languages that will be processed to export data or publish data in the publication process. When Dédalo export data or publish data, it check the languages of every field of every record to create a fixed version of the data with the language processed or his own correspondences of the main languages when the data is not available in the current language. This parameter reduce the amount languages used in those proceses.
+	This definition control the amount of languages that will be processed to export data or publish data in the publication process. 
+	
+	When Dédalo export data or publish data, it check the languages of every field of every record to create a fixed version of the data with the language processed or his own correspondences of the main languages when the data is not available in the current language. This parameter reduce the amount languages used in those proceses.
 	
 	```php
-	define('DEDALO_PROJECTS_DEFAULT_LANGS', serialize([ 'lg-spa', 'lg-cat', 'lg-eng', ]));
+	define('DEDALO_PROJECTS_DEFAULT_LANGS',	[ 'lg-spa', 'lg-cat', 'lg-eng', ]);
 	```
 
 	> The parameter use the Dédalo tld definition for languages. See DEDALO_APPLICATION_LANGS definition to show some examples.
@@ -972,18 +1084,19 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	**config.php**
 
-	DEDALO_DIFFUSION_LANGS	`serialized array`
+	DEDALO_DIFFUSION_LANGS	`array`
 
-	This parameter define the languages that Dédalo will use to publish data.
+	This parameter defines the languages that Dédalo will use to publish data.
+
 	This definition control the amount of languages that will be processed to publish data in the publication process. When Dédalo publish data, it check the languages of every field of every record to create a fixed version of the data with the language processed or his own correspondences of the main languages when the data is not available in the current language. This parameter reduce the amount languages used in this process.
 
 	This parameter is configured with the same values as DEDALO_PROJECTS_DEFAULT_LANGS, but it can be changed to other values to separate the export languages from the diffusion languages.
 
 	```php
-	define('DEDALO_DIFFUSION_LANGS', serialize([ 'lg-spa', 'lg-cat', 'lg-eng', ]));
+	define('DEDALO_DIFFUSION_LANGS', [ 'lg-spa', 'lg-cat', 'lg-eng', ]);
 	```
 
-	The parameter use the Dédalo tld definition for languages. See DEDALO_APPLICATION_LANGS definition to show some examples.
+	>The parameter use the Dédalo tld definition for languages. See DEDALO_APPLICATION_LANGS definition to show some examples.
 
 	---
 
@@ -994,17 +1107,19 @@ Every config file has its own parameters that need to be changed with the our pr
 	DEDALO_TRANSLATOR_URL	`string`
 
 	This parameter define the external service to translate data.
+
 	You can define the URI for external API service that will use in the translation tool. External services provide different APIs and URIs that can be configured here.
 
-
 	```php
-	define('DEDALO_TRANSLATOR_URL', 'http://babel.antropolis.net/babel_engine/');
+	define('DEDALO_TRANSLATOR_URL', 'http://babel.render.net/babel_engine/');
 	```
 
-	> You will need an account in the external service. Dédalo has full integration with [Apertium](https://www.apertium.org) server (open source machine translation). Other external services, like Google translation, IBM Watson, etc will need a developer integration of his API.
+	>You will need an account in the external service. Dédalo has full integration with [Apertium](https://www.apertium.org) server (open source machine translation). Other external services, like Google translation, IBM Watson, etc will need a developer integration of his API.
 	>
-	> If you want to use a machine translation for developer proposes, you can talk with [Render](https://render.es), that support the Dédalo development to get a free account to his machine translation server.
-	Default variables
+	>If you want to use a machine translation for developer proposes, you can talk with [Render](https://render.es), that support the Dédalo development to get a free account to his machine translation server.
+	>	
+
+	### Default variables
 
 	---
 
@@ -1012,34 +1127,35 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	**config.php**
 
-	DEDALO_PREFIX_TIPOS	'serialized array'
+	DEDALO_PREFIX_TIPOS	`array`
 
-	This parameter define the ontology tipos to be used in the Dédalo installation.
-	Every tipo (typology of indirect programming object) define a heritage field, a data model, a structuration tools and definitions. Dédalo is a multi heritage application with ontologies for Archeology, Ethnology, Oral History, Numismatics, etc. Every project or institution can add any tipos that it demands. An archeologic museum will use the model for archeological catalogs, but it will not need the ethnological definitions. In the same way that Oral History project will don't use the archeological or numismatic definitions.
+	This parameter defines the ontology tipos to be used in the Dédalo installation.
+
+	Every tipo (typology of indirect programming object) defines a heritage field, a data model, a structuration tools and definitions. Dédalo is a multi heritage application with ontologies for Archeology, Ethnology, Oral History, Numismatics, etc. Every project or institution can add any tipos that it demands. An archeologic museum will use the model for archeological catalogs, but it will not need the ethnological definitions. In the same way that Oral History project will don't use the archeological or numismatic definitions.
 
 	By default Dédalo load some common tipos for all project types.
 
-	|	|	|
-	| ------ | ------ |
-	|	**dd**	|	dedalo. Definition of default list and common uses and tools such as translation tools.	|
-	|	**rsc**	|	resources. Definition for areas and sections commons to all projects such as people, images, audiovisual files, publications, documents, bibliography, etc.	|
-	|	**hierarchy**	|	thesaurus. Definition for sections as toponymy, onomastic, chronologies, techniques, material, etc.	|
-	|	**lg**	| languages, Definition for the languages in the thesaurus (used for all application to translate data and interface)	|
+	| | |
+	| --- | --- |
+	| **dd** | dedalo. Definition of default list and common uses and tools such as translation tools. |
+	| **rsc** | resources. Definition for areas and sections commons to all projects such as people, images, audiovisual files, publications, documents, bibliography, etc. |
+	| **hierarchy** | thesaurus. Definition for sections as toponymy, onomastic, chronologies, techniques, material, etc. |
+	| **lg** | languages, Definition for the languages in the thesaurus (used for all application to translate data and interface) |
 
 	Besides, every installation can import the ontology tipo that will use in the inventory or research:
 
-	|	|	|
-	| ------ | ------ |
-	|	**oh**	|	Oral History, the definition sections and tools to be used for oral history projects such as interviews, transcription, indexation, etc.	|
-	|	**ich**	|	Intangible Cultural Heritage, the definition sections and tools to use for intangible heritage, such as elements, processes, communities, symbolic acts, etc.	|
-	|	**numisdata**	|	Numismatic heritage,  the definition sections and tools to use for numismatics projecte, such as mints, types, legends, hoards, finds, etc.	|
-	|	**mupreva**	|	Archeological heritage, the definition of sections and tools to use for archeological heritage, such as archeological places, deposit, catalog, etc.	|
-	|	**qdp**		|	Ethnological heritage, the definition of sections and tools to use for ethnological heritage, such as objects, collectors, informants, etc	|
-	|	**dmm**	|	Memory and documentary heritage, the definition of sections and tools to be used for the heritage of memory, such as graves, deportees, exiles, tortured, etc.	|
+	| |	|
+	| --- | --- |
+	| **oh** | Oral History, the definition sections and tools to be used for oral history projects such as interviews, transcription, indexation, etc. |
+	| **ich** |	Intangible Cultural Heritage, the definition sections and tools to use for intangible heritage, such as elements, processes, communities, symbolic acts, etc. |
+	| **numisdata** | Numismatic heritage,  the definition sections and tools to use for numismatics projecte, such as mints, types, legends, hoards, finds, etc. |
+	| **mupreva** | Archeological heritage, the definition of sections and tools to use for archeological heritage, such as archeological places, deposit, catalog, etc. |
+	| **qdp** | Ethnological heritage, the definition of sections and tools to use for ethnological heritage, such as objects, collectors, informants, etc |
+	| **dmm** |	Memory and documentary heritage, the definition of sections and tools to be used for the heritage of memory, such as graves, deportees, exiles, tortured, etc. |
 
 	
 	```php
-	define('DEDALO_PREFIX_TIPOS', serialize([ 'dd', 'rsc', 'hierarchy', 'lg', 'oh', 'ich' ]));
+	define('DEDALO_PREFIX_TIPOS', [ 'dd', 'rsc', 'hierarchy', 'lg', 'oh', 'ich' ]);
 	```
 
 	---
@@ -1050,7 +1166,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	MAIN_FALLBACK_SECTION	`string`
 
-	It define the section will loaded by default when the user login.
+	It defines the section will loaded by default when the user login.
 	The main section of the project that will used, normally will be a inventory or catalog section.
 	
 	```php
@@ -1087,29 +1203,15 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo permissions for the root user
-
-	**config.php**
-
-	DEDALO_PERMISSIONS_ROOT	`int`
-
-	This parameter define the permissions of the root user for access to the data.
-	Root user do not have access to the record in the database and his permissions are pre-defined in the installation, this user can access to all projects, areas, sections, list, thesaurus, and the full loaded ontology, by default this user have the debugger active. The parameter can reduce the access to the data for this super user globally.
-
-	```php
-	define('DEDALO_PERMISSIONS_ROOT', 1);
-	```
-
-	---
-
 	#### Dédalo maximum rows per page
 
 	**config.php**
 
 	DEDALO_MAX_ROWS_PER_PAGE	`int`
 
-	It define the maximum rows that will loaded in the lists.
-	This value is the default number of rows that Dédalo will load but is possible change this value directly in the filtre by the users when they make a search, if the user do not define the maximum rows, Dédalo will use the value of this parameter.
+	It defines the maximum rows that will loaded in the lists.
+
+	This value is the default number of rows that Dédalo will load, but is possible to change this value directly in the filtre by the users, when they make a search, if the user do not define the maximum rows, Dédalo will use the value of this parameter.
 
 	```php
 	define('DEDALO_MAX_ROWS_PER_PAGE', 10);
@@ -1123,7 +1225,8 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	DEDALO_PROFILE_DEFAULT	`int`
 
-	This parameter define the section_id of the default profile that Dédalo will use to create new user.
+	This parameter defines the section_id of the default profile that Dédalo will use to create new user.
+
 	The profile define where the user can access inside the system, and if they can access to tools or administrative areas. By default Dédalo will use the profile definition for normal 'users' (section_id : 2, the section_id : 1 is for administrators users).
 
 	```php
@@ -1138,7 +1241,9 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	DEDALO_DEFAULT_PROJECT	`int`
 
-	This parameter define the default project that Dédalo will use to create new sections (records in the DDBB). Dédalo use the project component (component_filter) to group sections by the research criteria. The project field is mandatory in every section, because an user that can access to a project will no see the records of the other projects and, therfore, is necessary that all sections can be searchable by projects. If the user forget introduce project data, Dédalo will use this parameter to introduce it.
+	This parameter defines the default project that Dédalo will use to create new sections (records in the DDBB).
+
+	Dédalo use the project component (component_filter) to group sections by the research criteria. The project field is mandatory in every section, because an user that can access to a project will no see the records of the other projects and, therfore, is necessary that all sections can be searchable by projects. If the user forget introduce project data, Dédalo will use this parameter to introduce it.
 
 	```php
 	define('DEDALO_DEFAULT_PROJECT', 1);
@@ -1152,165 +1257,22 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	DEDALO_FILTER_SECTION_TIPO_DEFAULT	`int`
 
-	This parameter define the section that has the projects information inside the ontology. Dédalo will use this parameter to define the locator of the filter by projects to apply to any search of sections. By default Dédalo has a predefined section to store the projects that administrators users can enlarge. The default section_tipo is 'dd153' and it is located below 'Administration' area in the menu. Every project field target this section to define the specific project of the current record.
-
-	```php
-	define('DEDALO_FILTER_SECTION_TIPO_DEFAULT','dd153');
-	```
-
-	> This definition get the section_tipo from the predefined constant DEDALO_SECTION_PROJECTS_TIPO inside 'dd_tipos.php' file.
-
-	---
-
-	#### Dédalo section_id temporal
-
-	**config.php**
-
-	DEDALO_SECTION_ID_TEMP	`string`
-
-	This parameter define the section_id used to create temporal sections on the fly. Temporal sections are previous version of the section before it has a section_id asigned by the database counter. The temporal section_id identify those sections to be managed bafore that the section will saved into database.
+	This parameter defines the section that has the projects information inside the ontology. 
 	
+	Dédalo will use this parameter to define the locator of the filter by projects to apply to any search of sections. By default Dédalo has a predefined section to store the projects that administrators users can enlarge. The default section_tipo is 'dd153' and it is located below 'Administration' area in the menu. Every project field target this section to define the specific project of the current record.
+
 	```php
-	define('DEDALO_SECTION_ID_TEMP', 'tmp');
+	define('DEDALO_FILTER_SECTION_TIPO_DEFAULT', DEDALO_SECTION_PROJECTS_TIPO );
 	```
 
-	## External libraries variables
-	
-	Dédalo use some external libraries to use in specifics tasks. This part of the config define this libraries and his location inside the directory tree. This libraries will be load dynamically as Dédalo needs, for example if one section use geolocation in maps Dédalo will use leaflet.js library.
-
-	Many thanks to those great open source project! Dédalo will not the same without those libraries.
+	> By default this definition get the section_tipo from the predefined constant DEDALO_SECTION_PROJECTS_TIPO inside 'dd_tipos.php' file. Target filter section (current 'dd153' - Projects section). Do not change this param.
 
 	---
-
-	#### Text editor library
-
-	**config.php**
-
-	TEXT_EDITOR_URL_JS	`string`
-
-	It define the the path to the text editor library that will use. This parameter is not linked to specific library, the text editor can be replace from a libray to other. By default Dédalo use TynnyMCE library, but it can be replace to others.
-
-	```php
-	define('TEXT_EDITOR_URL_JS', DEDALO_ROOT_WEB . '/lib/tinymce/js/tinymce/tinymce.min.js');
-	```
-
-	---
-
-	#### PaperJS library
-
-	**config.php**
-
-	PAPER_JS_URL	`string`
-
-	It define the the path to the PaperJS library. Paper is a vector graphics libray used by Dédalo to draw graphics inside images.
-
-	In his words:
-	Paper.js is an open source vector graphics scripting framework that runs on top of the HTML5 Canvas. It offers a clean Scene Graph / Document Object Model and a lot of powerful functionality to create and work with vector graphics and bezier curves, all neatly wrapped up in a well designed, consistent and clean programming interface.
-	
-	```php
-	define('PAPER_JS_URL', DEDALO_ROOT_WEB .'/lib/paper/dist/paper-core.min.js');
-	```
-
-	---
-
-	#### Leaflet library
-
-	**config.php**
-
-	LEAFLET_JS_URL	`string`
-
-	It define the the path to the Leaflet library. Leaflet is used by Dédalo to create a interactive maps and adding geroreference data.
-	
-	```php
-	define('LEAFLET_JS_URL', DEDALO_ROOT_WEB .'/lib/leaflet/stable_versions/leaflet.js');
-	```
-
-	---
-
-	#### D3 library
-
-	**config.php**
-
-	D3_URL_JS	`string`
-
-	It define the the path to the D3 library. D3 is a graph libray that will be use by Dédalo to create statistics.
-	
-	```php
-	define('D3_URL_JS', DEDALO_ROOT_WEB .'/lib/nvd3/lib/d3.v3.min.js');
-	```
-
-	---
-
-	#### NVD3 library
-
-	**config.php**
-
-	NVD3_URL_JS	`string`
-
-	It define the the path to the NVD3 library. NVD3 is a graph libray that will be use by Dédalo to create statistics.
-
-	```php
-	define('NVD3_URL_JS', DEDALO_ROOT_WEB .'/lib/nvd3/build/nv.d3.min.js');
-	```
-
-	---
-
-	#### NVD3 CSS library
-
-	**config.php**
-
-	NVD3_URL_CSS	`string`
-
-	It define the the path to the NVD3 CSS library.
-
-	```php
-	define('NVD3_URL_CSS', DEDALO_ROOT_WEB .'/lib/nvd3/build/nv.d3.min.css');
-	```
-
-	---
-
-	#### Bootstrap CSS library
-
-	**config.php**
-
-	BOOTSTRAP_CSS_URL	`string`
-
-	It define the the path to the Bootstrap CSS library. Boostrap is a CSS definiton used by Dédalo to create buttons and other user interface elements.
-
-	```php
-	define('BOOTSTRAP_CSS_URL', DEDALO_ROOT_WEB .'/lib/bootstrap/dist/css/bootstrap.min.css');
-	```
-
-	---
-
-	#### Bootstrap JS library
-
-	**config.php**
-
-	BOOTSTRAP_JS_URL	`string`
-
-	It define the the path to the Bootstrap JS library.
-
-	```php
-	define('BOOTSTRAP_JS_URL', DEDALO_ROOT_WEB .'/lib/bootstrap/dist/js/bootstrap.min.js');
-	```
-
-	---
-
-	#### Use CDN
-
-	**config.php**
-
-	USE_CDN	`string`
-
-	This parameter define if Dédalo will use CDN (content delivery network) server to get the libraries. By default Dédalo don't use CDN server and the libraries need to be updated manually, this ensure that the verion of the libray is compatible with the Dédalo features and intergration of the library.
-
-	```php
-	define('USE_CDN', false);
-	```
 
 	## Media variables
-	Media are images, pdf, audiovisual, svg and other files that Dédalo use inside the sections. Media is referenced by locator and all files are name in the server with the locator that call it. Dédalo has a media directories definition that can be change with this paramenters, for ex: is possible define the amount of image copies in different qualities for images.
+	Media as images, pdf, audiovisual, svg and other are files that Dédalo use inside the sections. 
+	
+	Media is referenced by locator and all files are name in the server with the locator that call it. Dédalo has a media directories definition that can be change with this paramenters, for ex: is possible define the amount of image copies in different qualities for images.
 
 	---
 
@@ -1318,12 +1280,14 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	**config.php**
 
-	DEDALO_MEDIA_BASE_PATH `string`
+	DEDALO_MEDIA_PATH `string`
 
-	This parameter define the root media directory in the directory tree. Normally this directory is located in the top Dédalo directory, but it can be define in other paths. remember that Dédalo will need acces to this directory as owner with read/writte permisions.
+	This parameter defines the root media directory in the directory tree.
+
+	Normally this directory is located in the top Dédalo directory, but it can be define in other paths. remember that Dédalo will need acces to this directory as owner with read/writte permisions.
 
 	```php
-	define('DEDALO_MEDIA_BASE_PATH', DEDALO_ROOT . '/media');
+	define('DEDALO_MEDIA_PATH', DEDALO_ROOT_PATH . '/media');
 	```
 
 	---
@@ -1332,12 +1296,14 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	**config.php**
 
-	DEDALO_MEDIA_BASE_URL `string`
+	DEDALO_MEDIA_URL `string`
 
-	This parameter define the root media url to be accesed by the client. Dédalo will use this parameter to create the uri's to the media accesible to the clients.
+	This parameter defines the root media url to be accesed by the client. 
+	
+	Dédalo will use this parameter to create the uri's to the media accesible to the clients.
 
 	```php
-	define('DEDALO_MEDIA_BASE_URL', DEDALO_ROOT_WEB . '/media');
+	define('DEDALO_MEDIA_URL', DEDALO_ROOT_WEB . '/media');
 	```
 
 	---
@@ -1348,9 +1314,11 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	DEDALO_AV_FOLDER `string`
 
-	This parameter define the directory for the audiovisual files.
+	This parameter defines the main directory for the audiovisual files.
 
+	```php
 	define('DEDALO_AV_FOLDER', '/av');
+	```
 
 	---
 
@@ -1360,7 +1328,9 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	DEDALO_AV_EXTENSION `string`
 
-	This parameter define the standard file type of encapsulation for the audiovisual files. By default Dédalo use mp4 encapsulation definition for the audiovisual files with codec h264 or h265. All other formats will be compresed to this parameters.
+	This parameter defines the standard file type of encapsulation for the audiovisual files. 
+	
+	By default Dédalo use mp4 encapsulation definition for the audiovisual files with codec h264 or h265. All other formats will be compresed to this parameters.
 
 	```php
 	define('DEDALO_AV_EXTENSION', 'mp4');
@@ -1372,12 +1342,14 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	**config.php**
 
-	DEDALO_AV_EXTENSIONS_SUPPORTED `serialized array`
+	DEDALO_AV_EXTENSIONS_SUPPORTED `array`
 
-	This parameter define the standards file type admited for the audiovisual files. Dédalo will use this parameter to indentify the file format of the original files uploaded by the users before compres it to the standard defined in the DEDALO_AV_EXTENSION parameter.
+	This parameter defines the standards file type admited for the audiovisual files.
+	
+	Dédalo will use this parameter to indentify the file format of the original files uploaded by the users before compres it to the standard defined in the DEDALO_AV_EXTENSION parameter.
 
 	```php
-	define('DEDALO_AV_EXTENSIONS_SUPPORTED', serialize(['mp4','wave','wav','aiff','aif','mp3','mov','avi','mpg','mpeg']));
+	define('DEDALO_AV_EXTENSIONS_SUPPORTED', ['mp4','wave','wav','aiff','aif','mp3','mov','avi','mpg','mpeg','vob','zip','flv']);
 	```
 
 	---
@@ -1388,24 +1360,12 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	DEDALO_AV_MIME_TYPE `string`
 
-	This parameter define the standard mime type for the audiovisual files. This parameter will use to create the correct http header for the standar define in DEDALO_AV_EXTENSION.
+	This parameter defines the standard mime type for the audiovisual files.
+	
+	This parameter will use to create the correct http header for the standar define in DEDALO_AV_EXTENSION.
 
 	```php
 	define('DEDALO_AV_MIME_TYPE', 'video/mp4');
-	```
-
-	---
-
-	#### Dédalo audiovisual codec type
-
-	**config.php**
-
-	DEDALO_AV_TYPE `string`
-
-	This parameter define the standard code type for the audiovisual files. This parameter will use to compress the audiovisual original format to the codec defined by this parameter. By default Dédalo use the h264 or h265 codec to compress the av files.
-
-	```php
-	define('DEDALO_AV_TYPE', 'h264/AAC');
 	```
 
 	---
@@ -1430,7 +1390,9 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	DEDALO_AV_QUALITY_ORIGINAL `string`
 
-	This parameter define the quality original for the audiovisual files. This parameter will use to identify the uploaded files to with specific quality. Dédalo admit lots of differents format from different sources and qualities, and it define this files as "original" quality. Dédalo will compress all formats to web standard format, unify all different qualities and codecs, and will store the original file witout touch. In some cases, if the institution has a protocol for manage av files, is possible to use one specific quality for the files that users can upload. By default Dédalo do not limit the original format to be uploaded using a "original" quality denomination.
+	This parameter defines the quality original for the audiovisual files. 
+	
+	This parameter will use to identify the uploaded files to with specific quality. Dédalo admit lots of differents format from different sources and qualities, and it define this files as "original" quality. Dédalo will compress all formats to web standard format, unify all different qualities and codecs, and will store the original file witout touch. In some cases, if the institution has a protocol for manage av files, is possible to use one specific quality for the files that users can upload. By default Dédalo do not limit the original format to be uploaded using a "original" quality denomination.
 
 	```php
 	define('DEDALO_AV_QUALITY_ORIGINAL', 'original');
@@ -1444,7 +1406,9 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	DEDALO_AV_QUALITY_DEFAULT `string`
 
-	This parameter define the default quality used for the audiovisual files. This parameter will use to compress all audiovisual files to specific quality, unifying the quality used by all sections. By deafult Dédalo use 720x404 h264 quality.
+	This parameter defines the default quality used for the audiovisual files. 
+	
+	This parameter will use to compress all audiovisual files to specific quality, unifying the quality used by all sections. By deafult Dédalo use 720x404 h264 quality.
 
 	```php
 	define('DEDALO_AV_QUALITY_DEFAULT', '404');
@@ -1458,10 +1422,12 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	DEDALO_AV_AR_QUALITY `string`
 
-	This parameter define the different qualities that can be used for compress the audiovisual files. This parameter will use to compress audiovisual files to specific quality. The compresion will use the original file and will compress to those qualities when the user demand a specific quality.
+	This parameter defines the different qualities that can be used for compress the audiovisual files. 
+	
+	This parameter will use to compress audiovisual files to specific quality. The compresion will use the original file and will compress to those qualities when the user demand a specific quality.
 
 	```php
-	define('DEDALO_AV_AR_QUALITY', serialize([DEDALO_AV_QUALITY_ORIGINAL,'1080','720','576','404','240','audio']));
+	define('DEDALO_AV_AR_QUALITY', [DEDALO_AV_QUALITY_ORIGINAL,'4k','1080','720','576','404','240','audio']);
 	```
 
 	---
@@ -1472,7 +1438,9 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	DEDALO_AV_POSTERFRAME_EXTENSION `string`
 
-	This parameter define the type of the image file used to create the posterframe of the audiovisual files. The posterframe is the image that will show before load the audivisual files and identify it. This parameter define the type of this image. By deafult Dédalo use jpg standard to create the posterframe.
+	This parameter defines the type of the image file used to create the posterframe of the audiovisual files. 
+	
+	The posterframe is the image that will show before load the audivisual files and identify it. This parameter define the type of this image. By deafult Dédalo use jpg standard to create the posterframe.
 
 	```php
 	define('DEDALO_AV_POSTERFRAME_EXTENSION', 'jpg');
@@ -1486,7 +1454,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	DEDALO_AV_FFMPEG_PATH `string`
 
-	This parameter define the path to the ffmpeg library in the server. Ffmpeg will use to compress the audivisual files.
+	This parameter defines the path to the ffmpeg library in the server. ffmpeg will use to compress the audivisual files.
 
 	```php
 	define('DEDALO_AV_FFMPEG_PATH', '/usr/bin/ffmpeg');
@@ -1500,10 +1468,11 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	DEDALO_AV_FFMPEG_SETTINGS `string`
 
-	This parameter define the path to the ffmpeg settings in the server. This settings configure the parameters of the qualities to be used to compress audiovisual files.
+	This parameter defines the path to the ffmpeg settings in the server. This settings configure the parameters of the qualities to be used to compress audiovisual files.
 
 	```php
-	define('DEDALO_AV_FFMPEG_SETTINGS', DEDALO_LIB_BASE_PATH . '/media_engine/lib/ffmpeg_settings');
+	define('DEDALO_AV_FFMPEG_SETTINGS', DEDALO_CORE_PATH . '/media_engine/lib/ffmpeg_settings');
+
 	```
 
 	---
@@ -2181,6 +2150,20 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
+	#### Dédalo section_id temporal
+
+	**config.php**
+
+	DEDALO_SECTION_ID_TEMP	`string`
+
+	This parameter define the section_id used to create temporal sections on the fly. Temporal sections are previous version of the section before it has a section_id asigned by the database counter. The temporal section_id identify those sections to be managed bafore that the section will saved into database.
+	
+	```php
+	define('DEDALO_SECTION_ID_TEMP', 'tmp');
+	```
+
+	---
+
 	#### Dédalo path of the export tool files directory
 
 	**config.php**
@@ -2747,3 +2730,60 @@ Every config file has its own parameters that need to be changed with the our pr
 	```php
 	notice_to_active_users(array('msg'=>'Please leave the session', 'mode'=>"warning"));
 	```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	### Database connection
+
+	---
+
+	#### Slow query
+
+	**config.php**
+
+	SLOW_QUERY_MS	`int`
+
+	This parameter define the time limit to query calls, if the query done to database is higher that the value of this parameter, Dédalo will alert in php log and will try to index this query. By default this parameter is set to 1200 ms (1,2 seconds).
+
+	```php
+	define('SLOW_QUERY_MS' , 1200);
+	```
+	---
