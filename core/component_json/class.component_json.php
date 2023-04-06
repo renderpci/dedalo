@@ -1,6 +1,6 @@
 <?php
-/*
-* CLASS COMPONENT LAYOUT
+/**
+* CLASS COMPONENT_JSON
 *
 *
 */
@@ -16,7 +16,7 @@ class component_json extends component_common {
 		// Force always DEDALO_DATA_NOLAN
 		$lang = DEDALO_DATA_NOLAN;
 
-		return parent::__construct($tipo, $parent, $mode, $lang, $section_tipo);
+		parent::__construct($tipo, $parent, $mode, $lang, $section_tipo);
 	}//end __construct
 
 
@@ -281,7 +281,7 @@ class component_json extends component_common {
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__METHOD__.'] ';
 
-		// imported_data. (Is json decoded data from raw uploaded file content)
+		// imported_data. (Is JSON decoded data from raw uploaded file content)
 			$imported_data = $file_data->imported_parsed_data;
 
 		// wrap data with array to maintain component data format
@@ -293,7 +293,7 @@ class component_json extends component_common {
 
 		$response = new stdClass();
 			$response->result 	= true;
-			$response->msg 		= 'Ok. Request done';
+			$response->msg 		= 'OK. Request done';
 
 		return $response;
 	}//end process_uploaded_file
