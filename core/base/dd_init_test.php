@@ -65,7 +65,7 @@
 
 // BACKUPS_STRUCTURE
 	# Target folder exists test
-	$folder_path = DEDALO_BACKUP_PATH_STRUCTURE;
+	$folder_path = STRUCTURE_DOWNLOAD_DIR;
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0700, true)) {
 
