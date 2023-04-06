@@ -177,7 +177,7 @@ class free_node extends stdClass {
 
 	/**
 	* FIND_WORD_IN_TEXT
-	* Find word in text and return array witch hilighted fragment and associated thesaurus
+	* Find word in text and return array witch highlighted fragment and associated thesaurus
 	* @return array
 	*/
 	protected function find_word_in_text($word, $raw_text, $av_section_id, $n_chars, $limit, $match_select=false) {
@@ -224,6 +224,10 @@ class free_node extends stdClass {
 
 				# TEXT_BEFORE . Buscamos el último <br /> anterior a word_position en el texto anterior
 					$pInArray			= self::str_pos_all($text_before,'<br />');
+					if (empty($pInArray)) {
+						// try with paragraphs (ckeditor)
+						$pInArray = self::str_pos_all($text_before,'<p>');
+					}
 					$n_paragraphs		= 4 ;
 					$c_key				= $pInArray && is_array($pInArray)
 						? count($pInArray)-$n_paragraphs-1
@@ -234,6 +238,10 @@ class free_node extends stdClass {
 
 				# TEXT_AFTER . Buscamos el primer </p> posterior  a palabraPos
 					$pOutArray		= self::str_pos_all($text_after,'<br />');
+					if (empty($pOutArray)) {
+						// try with paragraphs (ckeditor)
+						$pOutArray		= self::str_pos_all($text_after,'<p>');
+					}
 					$n_paragraphs	= 5 ;
 
 					if(isset($pOutArray[$n_paragraphs])) {
