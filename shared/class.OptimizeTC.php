@@ -18,10 +18,12 @@ abstract class OptimizeTC {
 	static $version = "1.0.4"; // 10-04-2018 // Added multi byte support for all string operations
 
 
+
 	/**
 	* GET_TC_VALUE_PATTERN
 	* Not use complete tag like '[TC_00:00:00.000_TC]'. Only tc value like '00:00:00.000'
-	* @return regex
+	* @return string
+	* 	regex such as /([0-9]{1,2}):([0-9]{1,2}):([0-9]{1,2})(\.([0-9]{1,3}))?/
 	*/
 	public static function get_tc_value_pattern() : string {
 
