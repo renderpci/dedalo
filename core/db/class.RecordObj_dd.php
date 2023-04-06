@@ -1101,176 +1101,190 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 		$result	= array();
 
-		if(empty($tipo)) return $result;
-
-		# TIPO : Acepta también arrays como entrada de tipo aunque sólo usa el primero. Evitar esto..
-		if(is_array($tipo) && isset($tipo[0])) {
-			$tipo = $tipo[0];
-			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__." Used function 'get_ar_terminoID_by_modelo_name_and_relation' received one array instead a espected string. Used first value as tipo: ".to_string($tipo), logger::DEBUG);
-				throw new Exception("Error Processing Request", 1);
+		// empty case
+			if(empty($tipo)) {
+				return $result;
 			}
-		}
 
-		# STATIC CACHE
-		static $get_ar_terminoID_by_modelo_name_and_relation_data;
+		// array case. it also accepts arrays as input type although it only uses the first one. avoid this..
+			if(is_array($tipo) && isset($tipo[0])) {
 
-		$uid = $tipo.'_'.$modelo_name.'_'.$relation_type.'_'.(int)$search_exact;
-		if(isset($get_ar_terminoID_by_modelo_name_and_relation_data[$uid])) {
-			return $get_ar_terminoID_by_modelo_name_and_relation_data[$uid];
-		}
+				$tipo = $tipo[0];
 
-		#if(SHOW_DEBUG===true) $start_time = start_time();
-		#dump($tipo);	#dump(debug_backtrace());
+				debug_log(__METHOD__
+					." Used function 'get_ar_terminoID_by_modelo_name_and_relation' received an array instead as expected string. Used first value as tipo: "
+					.to_string($tipo)
+					, logger::ERROR
+				);
+			}
+
+		// static cache
+			static $get_ar_terminoID_by_modelo_name_and_relation_data;
+			$uid = $tipo.'_'.$modelo_name.'_'.$relation_type.'_'.(int)$search_exact;
+			if(isset($get_ar_terminoID_by_modelo_name_and_relation_data[$uid])) {
+				return $get_ar_terminoID_by_modelo_name_and_relation_data[$uid];
+			}
 
 		switch($relation_type) {
 
 			case 'children' :
 
-					# Obtenemos los hijos
-					$RecordObj_dd	= new RecordObj_dd($tipo);
-					$ar_childrens	= $RecordObj_dd->get_ar_childrens_of_this();
+				// we get the children
+				$RecordObj_dd	= new RecordObj_dd($tipo);
+				$ar_childrens	= $RecordObj_dd->get_ar_childrens_of_this();
 
-					# los recorremos para filtrar por modelo
-					if(is_array($ar_childrens)) foreach($ar_childrens as $terminoID) {
+				// we go through them to filter by model
+				if(is_array($ar_childrens)) foreach($ar_childrens as $terminoID) {
 
-						$RecordObj_dd			= new RecordObj_dd($terminoID);
-						$modelo					= $RecordObj_dd->get_modelo();
+					$RecordObj_dd	= new RecordObj_dd($terminoID);
+					$modelo			= $RecordObj_dd->get_modelo();
 
-						if(empty($modelo)) {
-							$name = RecordObj_dd::get_termino_by_tipo($terminoID);
-							trigger_error("Error Processing get_ar_terminoID_by_modelo_name_and_relation [children - $tipo]. Modelo is empty. Please define modelo for this component $terminoID ($name)");
-							return array();
-							#throw new Exception("Error Processing get_ar_terminoID_by_modelo_name_and_relation. Modelo is empty. Please define modelo for this component $terminoID ($name)", 1);
+					if(empty($modelo)) {
+						$name = RecordObj_dd::get_termino_by_tipo($terminoID);
+						debug_log(__METHOD__
+							." Error Processing get_ar_terminoID_by_modelo_name_and_relation [children - $tipo]. Model is empty. Please define model for this component $terminoID ($name) "
+							.to_string()
+							, logger::ERROR
+						);
+						return [];
+					}
+
+					$current_modelo_name = $RecordObj_dd->get_termino_by_tipo($modelo);
+
+					if($search_exact===true) {
+						if ($current_modelo_name===$modelo_name) {
+							$result[] = $terminoID;
 						}
-						$current_modelo_name	= $RecordObj_dd->get_termino_by_tipo($modelo);	#dump($modelo_name);
-
-						if($search_exact===true) {
-							if ($current_modelo_name===$modelo_name) {
-								$result[] = $terminoID;
-							}
-						}else{
-							if(strpos($current_modelo_name, $modelo_name) !== false) {
-								$result[] = $terminoID;
-							}
+					}else{
+						if(strpos($current_modelo_name, $modelo_name)!==false) {
+							$result[] = $terminoID;
 						}
 					}
-					break;
+				}
+				break;
 
 			case 'children_recursive' :
 
-					# Obtenemos los hijos recursivamente
-					$RecordObj_dd	= new RecordObj_dd($tipo);
-					$ar_childrens	= $RecordObj_dd->get_ar_recursive_childrens_of_this($tipo);		#dump($ar_childrens);
+				// We get the children recursively
+				$RecordObj_dd	= new RecordObj_dd($tipo);
+				$ar_childrens	= $RecordObj_dd->get_ar_recursive_childrens_of_this($tipo);		#dump($ar_childrens);
 
-					# los recorremos para filtrar por modelo
-					if(is_array($ar_childrens)) foreach($ar_childrens as $terminoID) {
+				// we go through them to filter by model
+				if(is_array($ar_childrens)) foreach($ar_childrens as $terminoID) {
 
-						$RecordObj_dd			= new RecordObj_dd($terminoID);
-						$modelo					= $RecordObj_dd->get_modelo();
+					$RecordObj_dd	= new RecordObj_dd($terminoID);
+					$modelo			= $RecordObj_dd->get_modelo();
 
-						if(empty($modelo)) {
-							$clabel = RecordObj_dd::get_termino_by_tipo($terminoID);
-							trigger_error("Error Processing get_ar_terminoID_by_modelo_name_and_relation [children_recursive - $tipo]. Modelo is empty. Please define modelo for this component $terminoID ($clabel)");
-							return array();
-							#throw new Exception("Error Processing get_ar_terminoID_by_modelo_name_and_relation. Modelo is empty. Please define modelo for this component $terminoID ($name)", 1);
+					if(empty($modelo)) {
+						$clabel = RecordObj_dd::get_termino_by_tipo($terminoID);
+						debug_log(__METHOD__
+							." Error Processing get_ar_terminoID_by_modelo_name_and_relation [children_recursive - $tipo]. Model is empty. Please define model for this component $terminoID ($clabel) "
+							.to_string()
+							, logger::ERROR
+						);
+						return [];
+					}
+
+					$current_modelo_name = $RecordObj_dd->get_termino_by_tipo($modelo);
+
+					if($search_exact===true) {
+						if ($current_modelo_name===$modelo_name) {
+							$result[] = $terminoID;
 						}
-						$current_modelo_name	= $RecordObj_dd->get_termino_by_tipo($modelo);
-
-						#if ($current_modelo_name==='box elements') {
-						#	debug_log(__METHOD__." Ignored tipo $terminoID of model 'box elements' ".to_string(), logger::DEBUG);
-						#	continue;
-						#}
-
-						if($search_exact===true) {
-							if ($current_modelo_name===$modelo_name) {
-								$result[] = $terminoID;
-							}
-						}else{
-							if(strpos($current_modelo_name, $modelo_name) !== false) {
-								 $result[] = $terminoID;
-							}
+					}else{
+						if(strpos($current_modelo_name, $modelo_name)!==false) {
+							 $result[] = $terminoID;
 						}
 					}
-					break;
+				}
+				break;
 
 			case 'termino_relacionado' :
 
-					# Obtenemos los tr
-					$RecordObj_dd				= new RecordObj_dd($tipo);
-					$ar_terminos_relacionados	= $RecordObj_dd->get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);	#dump($ar_terminos_relacionados);
+				// We get the related terms
+				$RecordObj_dd				= new RecordObj_dd($tipo);
+				$ar_terminos_relacionados	= $RecordObj_dd->get_ar_terminos_relacionados(
+					$tipo,
+					true, // bool cache
+					true // bool simple
+				);
 
-					# los recorremos para filtrar por modelo
-					if(is_array($ar_terminos_relacionados)) foreach($ar_terminos_relacionados as $terminoID) {
+				// we go through them to filter by model
+				if(is_array($ar_terminos_relacionados)) foreach($ar_terminos_relacionados as $terminoID) {
 
-						$RecordObj_dd			= new RecordObj_dd($terminoID);
-						$modelo					= $RecordObj_dd->get_modelo();
+					$RecordObj_dd	= new RecordObj_dd($terminoID);
+					$modelo			= $RecordObj_dd->get_modelo();
 
-						#$current_modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($terminoID,true);
-						#	dump($current_modelo_name, ' current_modelo_name ++ '.to_string());
+					if(empty($modelo)) {
+						$clabel = '';
+						debug_log(__METHOD__
+							. " Error Processing get_ar_terminoID_by_modelo_name_and_relation [termino_relacionado - $tipo]. Model is empty. Please define model for this component terminoID:$terminoID, name:$clabel "
+							, logger::ERROR
+						);
+						return [];
+					}
 
-						if(empty($modelo)) {
-							$clabel = ''; //RecordObj_dd::get_termino_by_tipo($terminoID);
+					$current_modelo_name = $RecordObj_dd->get_termino_by_tipo($modelo);
 
-							trigger_error("Error Processing get_ar_terminoID_by_modelo_name_and_relation [termino_relacionado - $tipo]. Modelo is empty. Please define modelo for this component terminoID:$terminoID, name:$clabel ");
-								# $bt = debug_backtrace();
-								# dump($bt, '$bt ++ '.to_string());
-								# throw new Exception(__METHOD__." Error Processing get_ar_terminoID_by_modelo_name_and_relation. Modelo is empty. Please define modelo for this terminoID: $terminoID (name: $clabel)", 1);
-							return array();
+					if($search_exact===true) {
+						if ($current_modelo_name===$modelo_name) {
+							$result[] = $terminoID;
 						}
-						$current_modelo_name	= $RecordObj_dd->get_termino_by_tipo($modelo);
-
-						if($search_exact===true) {
-							if ($current_modelo_name===$modelo_name) {
-								$result[] = $terminoID;
-							}
-						}else{
-							if(strpos($current_modelo_name, $modelo_name) !== false) {
-								 $result[] = $terminoID;
-							}
+					}else{
+						if(strpos($current_modelo_name, $modelo_name)!==false) {
+							 $result[] = $terminoID;
 						}
 					}
-					break;
+				}
+				break;
 
 			case 'parent' :
 
-					# Obtenemos los padres
-					$RecordObj_dd	= new RecordObj_dd($tipo);
-					$ar_parents		= $RecordObj_dd->get_ar_parents_of_this();	#dump($ar_parents,'ar_parents');die();
+				// we get the parents
+				$RecordObj_dd	= new RecordObj_dd($tipo);
+				$ar_parents		= $RecordObj_dd->get_ar_parents_of_this();
 
-					# los recorremos para filtrar por modelo
-					if(is_array($ar_parents)) foreach($ar_parents as $terminoID) {
+				// we go through them to filter by model
+				if(is_array($ar_parents)) foreach($ar_parents as $terminoID) {
 
-						$RecordObj_dd			= new RecordObj_dd($terminoID);
-						$modelo					= $RecordObj_dd->get_modelo();
+					$RecordObj_dd	= new RecordObj_dd($terminoID);
+					$modelo			= $RecordObj_dd->get_modelo();
 
-						if(empty($modelo)) {
-							$clabel = RecordObj_dd::get_termino_by_tipo($terminoID);
-							trigger_error("Error Processing get_ar_terminoID_by_modelo_name_and_relation [parent - $tipo]. Modelo is empty. Please define modelo for this component $terminoID ($clabel)");
-							return array();
-							#throw new Exception("Error Processing get_ar_terminoID_by_modelo_name_and_relation. Modelo is empty. Please define modelo for this component $terminoID ($name)", 1);
+					if(empty($modelo)) {
+						$clabel = RecordObj_dd::get_termino_by_tipo($terminoID);
+						debug_log(__METHOD__
+							." Error Processing get_ar_terminoID_by_modelo_name_and_relation [parent - $tipo]. Model is empty. Please define model for this component $terminoID ($clabel) "
+							, logger::ERROR
+						);
+						return [];
+					}
+
+					$current_modelo_name = $RecordObj_dd->get_termino_by_tipo($modelo);		#dump($modelo_name);
+
+					if($search_exact===true) {
+						if ($current_modelo_name===$modelo_name) {
+							$result[] = $terminoID;
 						}
-						$current_modelo_name	= $RecordObj_dd->get_termino_by_tipo($modelo);		#dump($modelo_name);
-
-						if($search_exact===true) {
-							if ($current_modelo_name===$modelo_name) {
-								$result[] = $terminoID;
-							}
-						}else{
-							if($current_modelo_name===$modelo_name) {
-								 $result[] = $terminoID;
-							}
+					}else{
+						if($current_modelo_name===$modelo_name) {
+							 $result[] = $terminoID;
 						}
 					}
-					break;
+				}
+				break;
 
 			default :
-					throw new Exception("relation_type [$relation_type] not defined!", 1);
-					break;
+				debug_log(__METHOD__
+					." ERROR: relation_type [$relation_type] not defined! "
+					.to_string()
+					, logger::ERROR
+				);
+				return [];
+				break;
 		}
 
-		# STORE CACHE DATA
-		$get_ar_terminoID_by_modelo_name_and_relation_data[$uid] = $result;
+		// store cache data
+			$get_ar_terminoID_by_modelo_name_and_relation_data[$uid] = $result;
 
 
 		return (array)$result;
@@ -1280,12 +1294,13 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 	/**
 	* GET_TRANSLATABLE
+	* @param string $tipo
 	* @return bool
 	*/
 	public static function get_translatable(string $tipo) : bool {
 
-		$RecordObj_dd = new RecordObj_dd($tipo);
-		$translatable = $RecordObj_dd->get_traducible();
+		$RecordObj_dd	= new RecordObj_dd($tipo);
+		$translatable	= $RecordObj_dd->get_traducible();
 
 		return ($translatable==='si');
 	}//end get_translatable
