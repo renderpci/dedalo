@@ -1935,9 +1935,16 @@ class component_text_area extends component_common {
 
 	/**
 	* BUILD_GEOLOCATION_DATA
+	* @param array|null $raw_data
+	* @param bool $geojson = false
 	* @return array $ar_elements
 	*/
-	public static function build_geolocation_data( array $raw_data, bool $geojson=false) : array {
+	public static function build_geolocation_data(?array $raw_data, bool $geojson=false) : array {
+
+		// empty raw_data case
+			if (empty($raw_data)) {
+				return [];
+			}
 
 		# Test data
 		// $request_raw_text = '[geo-n-1--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.097785,41.393268]}}]}:data]Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;[geo-n-2--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.10389792919159,41.393728914379295]}}]}:data]&nbsp;Texto dos';
