@@ -233,6 +233,8 @@ function debug_log(string $info, int $level=logger::DEBUG) : bool {
 
 /**
 * CURL_REQUEST
+*  Exec a curl call to the given URL
+* @param object $options
 * @return object $response
 * 	msg: string info about execution
 * 	code: int httpcode response from server
@@ -290,23 +292,28 @@ function curl_request(object $options) : object {
 		$httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		// debug_log(__METHOD__." ".$url." status code: ".to_string($httpcode), logger::WARNING);
 
-	// message. Generate a human readable info
-		$msg = '';
-		switch ($httpcode) {
-			case 200:
-				$msg .= "OK. check_remote_server passed successfully (status code: $httpcode)";
-				break;
-			case 401:
-				$msg .= "Error. Unauthorized code (status code: $httpcode)";
-				break;
-			case 400:
-				$msg .= "Error. Server has problems collect structure files (status code: $httpcode)";
-				break;
-			default:
-				$msg .= "Error. check_remote_server problem found (status code: $httpcode)";
-				break;
-		}
-		debug_log(__METHOD__.' '.$url.' msg: '.$msg, logger::WARNING);
+		// message. Generate a human readable info
+			$msg = '';
+			switch ($httpcode) {
+				case 200:
+					$msg .= "OK. check_remote_server passed successfully (status code: $httpcode)";
+					break;
+				case 401:
+					$msg .= "Error. Unauthorized code (status code: $httpcode)";
+					break;
+				case 400:
+					$msg .= "Error. Server has problems collect structure files (status code: $httpcode)";
+					break;
+				default:
+					$msg .= "Error. check_remote_server problem found (status code: $httpcode)";
+					break;
+			}
+			$debug_level = $httpcode===200 ? logger::DEBUG : logger::ERROR;
+			debug_log(__METHOD__
+				. ' url:' . $url . PHP_EOL
+				. $msg
+				, $debug_level
+			);
 
 	// curl_errno check. Verify if any error has occurred on CURL execution
 		$error_info = false;
@@ -318,8 +325,11 @@ function curl_request(object $options) : object {
 				debug_log(__METHOD__.' '.$url.' error_info: '.$error_info, logger::ERROR);
 			}else{
 				// no errors
-				$full_info = curl_getinfo($ch);
-				debug_log(__METHOD__.' Success on get_contents_curl: '.to_string($full_info), logger::INFO);
+					// $full_info = curl_getinfo($ch);
+					// debug_log(__METHOD__
+					// 	.' Success on get_contents_curl: '.to_string($full_info)
+					// 	, logger::INFO
+					// );
 			}
 		} catch (Exception $e) {
 			$msg .= '. curl_request Caught exception:' . $e->getMessage();
