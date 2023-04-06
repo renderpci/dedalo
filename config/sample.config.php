@@ -202,11 +202,7 @@
 	define('DEDALO_BACKUP_PATH' 	 		, dirname(dirname(DEDALO_ROOT_PATH)) . '/backups');
 	define('DEDALO_BACKUP_PATH_TEMP' 	 	, DEDALO_BACKUP_PATH . '/temp');
 	define('DEDALO_BACKUP_PATH_DB' 	 		, DEDALO_BACKUP_PATH . '/db');
-	define('DEDALO_BACKUP_PATH_STRUCTURE' 	, DEDALO_BACKUP_PATH . '/structure');
-	define('DEDALO_BACKUP_PATH_USERS' 		, DEDALO_BACKUP_PATH . '/users');
-	// structure_download. When ontology is updated, download files are saved here
-	define('STRUCTURE_DOWNLOAD_JSON_FILE', DEDALO_BACKUP_PATH_STRUCTURE);
-
+	define('DEDALO_BACKUP_PATH_ONTOLOGY' 	, DEDALO_BACKUP_PATH . '/ontology');
 
 
 // log and errors : Store application activity data info and errors to DDBB

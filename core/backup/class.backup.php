@@ -803,7 +803,7 @@ abstract class backup {
 		if(defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true) {
 			$path = STRUCTURE_DOWNLOAD_DIR;
 		}else{
-			$path = DEDALO_BACKUP_PATH_STRUCTURE.'/download';
+			$path = DEDALO_BACKUP_PATH_ONTOLOGY.'/download';
 		}
 
 
@@ -1195,31 +1195,31 @@ abstract class backup {
 		$obj = new stdClass();
 			$obj->type = "main_file";
 			$obj->name = "dedalo4_development_str.custom.backup";
-			$obj->path = DEDALO_BACKUP_PATH_STRUCTURE;
+			$obj->path = DEDALO_BACKUP_PATH_ONTOLOGY;
 		$ar_files[] = $obj;
 
 		# core str file
 		$obj = new stdClass();
 			$obj->type = "jer_file";
 			$obj->name = "jer_dd_dd.copy";
-			$obj->path = DEDALO_BACKUP_PATH_STRUCTURE . '/str_data';
+			$obj->path = DEDALO_BACKUP_PATH_ONTOLOGY . '/str_data';
 		$ar_files[] = $obj;
 		$obj = new stdClass();
 			$obj->type = "descriptors_file";
 			$obj->name = "matrix_descriptors_dd_dd.copy";
-			$obj->path = DEDALO_BACKUP_PATH_STRUCTURE . '/str_data';
+			$obj->path = DEDALO_BACKUP_PATH_ONTOLOGY . '/str_data';
 		$ar_files[] = $obj;
 
 		# resources str file
 		$obj = new stdClass();
 			$obj->type = "jer_file";
 			$obj->name = "jer_dd_rsc.copy";
-			$obj->path = DEDALO_BACKUP_PATH_STRUCTURE . '/str_data';
+			$obj->path = DEDALO_BACKUP_PATH_ONTOLOGY . '/str_data';
 		$ar_files[] = $obj;
 		$obj = new stdClass();
 			$obj->type = "descriptors_file";
 			$obj->name = "matrix_descriptors_dd_rsc.copy";
-			$obj->path = DEDALO_BACKUP_PATH_STRUCTURE . '/str_data';
+			$obj->path = DEDALO_BACKUP_PATH_ONTOLOGY . '/str_data';
 		$ar_files[] = $obj;
 
 		# private list of values
@@ -1228,7 +1228,7 @@ abstract class backup {
 			$obj->name  = "matrix_dd.copy";
 			$obj->table = "matrix_dd";
 			$obj->tld 	= "dd";
-			$obj->path  = DEDALO_BACKUP_PATH_STRUCTURE . '/str_data';
+			$obj->path  = DEDALO_BACKUP_PATH_ONTOLOGY . '/str_data';
 		$ar_files[] = $obj;
 
 
