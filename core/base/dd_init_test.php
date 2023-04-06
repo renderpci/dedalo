@@ -423,12 +423,16 @@
 // IMAGE MAGICK
 	#exec(MAGICK_PATH. "convert -version", $out, $rcode); // Try to get ImageMagick "convert" program version number.
 	#if ($rcode!==0) $init_response->msg .= trim("Error on system test. ImageMagick lib not found");
-	$image_magick = trim(shell_exec('command -v '.MAGICK_PATH.'convert'));
+	$image_magick = shell_exec('command -v '.MAGICK_PATH.'convert');
 	if (empty($image_magick)) {
 
-		$init_response->msg[]	= 'Error on system test. ImageMagick lib not found';
+		$init_response->msg[]	= 'Error on system test. ImageMagick lib not found. Review your config path';
 		$init_response->errors	= true;
-		debug_log(__METHOD__."  ".implode(PHP_EOL, $init_response->msg), logger::ERROR);
+		debug_log(__METHOD__
+			. "  ".implode(PHP_EOL, $init_response->msg) .PHP_EOL
+			. 'path: ' . MAGICK_PATH
+			, logger::ERROR
+		);
 
 		return $init_response;
 	}
@@ -637,13 +641,14 @@
 		}else{
 
 			// write test file
-			$file_name		= DEDALO_ENTITY .'_'. $user_id.'.cache_test_file.json';
+			$test_user_id	= $user_id ?? 0;
+			$file_name		= DEDALO_ENTITY .'_'. $test_user_id.'.cache_test_file.json';
 			$custom_prefix	= 'to_delete_';
 			dd_cache::process_and_cache_to_file((object)[
 				'process_file'	=> DEDALO_CORE_PATH . '/base/cache_test_file.php',
 				'data'			=> (object)[
 					'session_id'	=> session_id(),
-					'user_id'		=> $user_id
+					'user_id'		=> $test_user_id
 				],
 				'file_name'	=> $file_name,
 				'wait'		=> true,
@@ -658,7 +663,11 @@
 			if (empty($cache_data)) {
 				$init_response->msg[]	= 'Warning: cache data stream fails. Check your DEDALO_CACHE_MANAGER config or your PHP bin path (config_db.php PHP_BIN_PATH) to fix it';
 				$init_response->errors	= true;
-				debug_log(__METHOD__."  ".implode(PHP_EOL, $init_response->msg), logger::ERROR);
+				debug_log(__METHOD__."  "
+					.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+					. 'file_name: ' . $file_name
+					, logger::ERROR
+				);
 
 				return $init_response;
 			}else{
