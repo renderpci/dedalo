@@ -97,22 +97,6 @@
 
 
 
-// BACKUP USERS DIR
-	# Target folder exists test
-	$folder_path = DEDALO_BACKUP_PATH_USERS;
-	if( !is_dir($folder_path) ) {
-		if(!mkdir($folder_path, 0700, true)) {
-
-			$init_response->msg[]	= 'Error on read or create backup users directory. Permission denied';
-			$init_response->errors	= true;
-			debug_log(__METHOD__."  ".implode(PHP_EOL, $init_response->msg), logger::ERROR);
-
-			return $init_response;
-		}
-		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
-	}
-
-
 // BACKUP_TEMP
 	# Target folder exists test
 	if (defined('STRUCTURE_DOWNLOAD_DIR') && STRUCTURE_DOWNLOAD_DIR!==false) {
