@@ -928,13 +928,22 @@ final class dd_core_api {
 					if($permissions < 2) {
 						$response->error	= 1;
 						$response->msg		= 'Error. You don\'t have enough permissions to edit this component ('.$tipo.'). permissions:'.to_string($permissions);
+						debug_log(__METHOD__
+							. " $response->msg " . PHP_EOL
+							. " $model ($tipo - $section_tipo - $section_id): "
+							. exec_time_unit($start_time).' ms'
+							, logger::ERROR
+						);
 						return $response;
 					}
 
 				// changed_data is array always. Check to safe value
 					if (!is_array($changed_data)) {
 						$changed_data = [$changed_data];
-						debug_log(__METHOD__." ERROR. var 'changed_data' expected to be array. Received type: ". gettype($changed_data), logger::ERROR);
+						debug_log(__METHOD__
+							." ERROR. var 'changed_data' expected to be array. Received type: ". gettype($changed_data)
+							, logger::ERROR
+						);
 					}
 
 				if ($mode==='search') {
@@ -955,12 +964,22 @@ final class dd_core_api {
 							if ($update_result===false) {
 								$response->error	 = 2;
 								$response->msg		.= ' Error on update_data_value. New data it\'s not saved! ';
+								debug_log(__METHOD__
+									. " $response->msg " . PHP_EOL
+									. " $model ($tipo - $section_tipo - $section_id): "
+									. exec_time_unit($start_time).' ms'
+									, logger::ERROR
+								);
 								return $response;
 							}
 						}
 
 					// save
-						debug_log(__METHOD__." --> API ready to save record $model ($tipo - $section_tipo - $section_id): ".exec_time_unit($start_time).' ms', logger::DEBUG);
+						debug_log(__METHOD__
+							." --> API ready to save record $model ($tipo - $section_tipo - $section_id): "
+							.exec_time_unit($start_time).' ms'
+							, logger::DEBUG
+						);
 						$component->Save();
 					// force recalculate dato
 						$component->get_dato();
@@ -996,7 +1015,11 @@ final class dd_core_api {
 				break;
 
 			default:
-				# code...
+				debug_log(__METHOD__
+					. " Error. This type '$type' is not defined and will be ignored. Use 'component' as type if you are saving a component data" . PHP_EOL
+					. " $model ($tipo - $section_tipo - $section_id): "
+					, logger::ERROR
+				);
 				break;
 		}//end switch ($type)
 
