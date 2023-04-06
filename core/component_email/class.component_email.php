@@ -17,8 +17,6 @@ class component_email extends component_common {
 		$lang = DEDALO_DATA_NOLAN;
 
 		parent::__construct($tipo, $parent, $mode, $lang, $section_tipo);
-
-		return true;
 	}//end __construct
 
 

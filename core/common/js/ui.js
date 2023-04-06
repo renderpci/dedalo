@@ -152,7 +152,6 @@ export const ui = {
 					]
 					if (view) {ar_css.push('view_'+view)}
 					if (mode==='search') ar_css.push('tooltip_toggle')
-					// if (mode==='tm') ar_css.push('edit')
 					wrapper.classList.add(...ar_css)
 
 				// legacy CSS
@@ -206,9 +205,29 @@ export const ui = {
 					}
 
 				// event click . Activate component on event
-					wrapper.addEventListener('click', (e) => {
+					wrapper.addEventListener('mousedown', (e) => {
 						e.stopPropagation()
 						ui.component.activate(instance)
+
+						if(SHOW_DEBUG===true) {
+							if (e.metaKey && e.altKey) {
+								e.stopPropagation()
+								e.preventDefault()
+								console.log('/// refreshing instance:', instance);
+								instance.refresh({
+									build_autoload : true,
+									render_level : 'content'
+								})
+								return
+							}
+							if (e.altKey) {
+								e.stopPropagation()
+								e.preventDefault()
+								// common.render_tree_data(instance, document.getElementById('debug'))
+								console.log('/// selected instance:', instance);
+								return
+							}
+						}
 					})
 
 			// label. If node label received, it is placed at first. Else a new one will be built from scratch (default)
@@ -299,25 +318,25 @@ export const ui = {
 
 			// debug
 				if(SHOW_DEBUG===true) {
-					wrapper.addEventListener('click', function(e){
-						if (e.metaKey && e.altKey) {
-							e.stopPropagation()
-							e.preventDefault()
-							console.log('/// refreshing instance:', instance);
-							instance.refresh({
-								build_autoload : true,
-								render_level : 'content'
-							})
-							return
-						}
-						if (e.altKey) {
-							e.stopPropagation()
-							e.preventDefault()
-							// common.render_tree_data(instance, document.getElementById('debug'))
-							console.log('/// selected instance:', instance);
-							return
-						}
-					})
+					// wrapper.addEventListener('click', function(e){
+					// 	if (e.metaKey && e.altKey) {
+					// 		e.stopPropagation()
+					// 		e.preventDefault()
+					// 		console.log('/// refreshing instance:', instance);
+					// 		instance.refresh({
+					// 			build_autoload : true,
+					// 			render_level : 'content'
+					// 		})
+					// 		return
+					// 	}
+					// 	if (e.altKey) {
+					// 		e.stopPropagation()
+					// 		e.preventDefault()
+					// 		// common.render_tree_data(instance, document.getElementById('debug'))
+					// 		console.log('/// selected instance:', instance);
+					// 		return
+					// 	}
+					// })
 
 					// test css
 						// const my_css = {

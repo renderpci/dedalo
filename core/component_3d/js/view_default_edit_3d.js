@@ -51,7 +51,9 @@ view_default_edit_3d.render = async function(self, options) {
 			content_data	: content_data,
 			buttons			: buttons
 		})
-		// set pointers to content_data
+		// common media classes
+		wrapper.classList.add('media_wrapper')
+		// set pointers
 		wrapper.content_data = content_data
 
 
@@ -78,6 +80,8 @@ const get_content_data_edit = function(self) {
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
+		// common media classes
+		content_data.classList.add('media_content_data')
 
 	// values (inputs)
 		const inputs_value	= (value.length>0) ? value : [null] // force one empty input at least
@@ -90,6 +94,7 @@ const get_content_data_edit = function(self) {
 			// set pointer
 			content_data[i] = content_value
 		}
+
 
 	return content_data
 }//end  get_content_data_edit
@@ -109,7 +114,7 @@ const get_content_value = (i, current_value, self) => {
 	// content_value
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'content_value'
+			class_name		: 'content_value media_content_value'
 		})
 
 	// get file quality
@@ -137,11 +142,8 @@ const get_content_value = (i, current_value, self) => {
 			.then((gltf) => {
 				content_value.viewer = viewer_3d
 				event_manager.publish('viewer_ready_'+self.id, viewer_3d)
-
-
 			});
 		})
-
 
 	// urls
 		// 	// posterframe url
@@ -237,7 +239,7 @@ const get_content_value_read = (i, current_value, self) => {
 	// content_value
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'content_value read_only',
+			class_name		: 'content_value media_content_value read_only',
 			inner_html		: 'Working in this view ' + self.view
 		})
 

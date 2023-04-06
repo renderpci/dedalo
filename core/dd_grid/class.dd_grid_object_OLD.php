@@ -92,8 +92,6 @@ class dd_grid_object {
 				$method = 'set_'.$key;
 				$this->{$method}($value);
 			}
-
-		return true;
 	}//end __construct
 
 
