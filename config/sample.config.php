@@ -284,8 +284,6 @@
 	// numerical matrix values of list of values 'yes/no'. Do not change this values !
 	define('NUMERICAL_MATRIX_VALUE_YES', 1);
 	define('NUMERICAL_MATRIX_VALUE_NO',  2);
-	// dedalo_permissions_root. Default permissions
-	// define('DEDALO_PERMISSIONS_ROOT', 1); DEPRECATED !
 	// dedalo_max_rows_per_page . Default max record per page. int default 10
 	define('DEDALO_MAX_ROWS_PER_PAGE', 10);
 	// user profile by default. Default profile id. int default 2 (regular user)
@@ -386,8 +384,6 @@
 		define('DEDALO_IMAGE_AR_QUALITY'			, [DEDALO_IMAGE_QUALITY_ORIGINAL,DEDALO_IMAGE_QUALITY_RETOUCHED,'25MB','6MB','1.5MB',DEDALO_IMAGE_THUMB_DEFAULT]);
 		// image_print_dpi (default int 150. Used to calculate print size of images -tool_image_versions-)
 		define('DEDALO_IMAGE_PRINT_DPI'				, 150);
-		// image lib
-		// define('DEDALO_IMAGE_LIB'				, true);  (!) DEPRECATED
 		// image_file_url
 		define('DEDALO_IMAGE_FILE_URL'				, DEDALO_CORE_URL . '/media_engine/img.php');
 		// lib ImageMagick magick_path
@@ -470,11 +466,6 @@
 
 
 
-// rest_config
-	// Deprecated. Not used here.
-
-
-
 // media entity menu config
 	# DEDALO_ENTITY_MEDIA_AREA_TIPO = remove the Real sections from menu ALL sections
 	define('DEDALO_ENTITY_MEDIA_AREA_TIPO', '');
@@ -520,11 +511,6 @@
 // dedalo_ar_exclude_components
 	// optional array of component tipo to exclude
 	define('DEDALO_AR_EXCLUDE_COMPONENTS', []);
-
-
-
-// dedalo_protect_media
-	// Deprecated. Not used here.
 
 
 
