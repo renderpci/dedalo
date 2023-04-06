@@ -202,11 +202,7 @@
 	define('DEDALO_BACKUP_PATH' 	 		, dirname(dirname(DEDALO_ROOT_PATH)) . '/backups');
 	define('DEDALO_BACKUP_PATH_TEMP' 	 	, DEDALO_BACKUP_PATH . '/temp');
 	define('DEDALO_BACKUP_PATH_DB' 	 		, DEDALO_BACKUP_PATH . '/db');
-	define('DEDALO_BACKUP_PATH_STRUCTURE' 	, DEDALO_BACKUP_PATH . '/structure');
-	define('DEDALO_BACKUP_PATH_USERS' 		, DEDALO_BACKUP_PATH . '/users');
-	// structure_download. When ontology is updated, download files are saved here
-	define('STRUCTURE_DOWNLOAD_JSON_FILE', DEDALO_BACKUP_PATH_STRUCTURE);
-
+	define('DEDALO_BACKUP_PATH_ONTOLOGY' 	, DEDALO_BACKUP_PATH . '/ontology');
 
 
 // log and errors : Store application activity data info and errors to DDBB
@@ -246,10 +242,10 @@
 	// dedalo_application_langs_default
 	define('DEDALO_APPLICATION_LANGS_DEFAULT', 'lg-eng');
 	// dedalo_application_lang. Current Dédalo application lang (cascade calculate from get, post, session vars, default)
-	define('DEDALO_APPLICATION_LANG',			fix_cascade_config4_var('dedalo_application_lang',DEDALO_APPLICATION_LANGS_DEFAULT));
+	define('DEDALO_APPLICATION_LANG',			fix_cascade_config_var('dedalo_application_lang',DEDALO_APPLICATION_LANGS_DEFAULT));
 	// dedalo_data_lang
 	define('DEDALO_DATA_LANG_DEFAULT',			'lg-eng');
-	define('DEDALO_DATA_LANG',					fix_cascade_config4_var('dedalo_data_lang',DEDALO_DATA_LANG_DEFAULT));
+	define('DEDALO_DATA_LANG',					fix_cascade_config_var('dedalo_data_lang',DEDALO_DATA_LANG_DEFAULT));
 	// dedalo_data_lang_selector. Show/hide menu data lang selector. bool default true
 	define('DEDALO_DATA_LANG_SELECTOR',			true);
 	// dedalo_data_nolan. string default 'lg-nolan'. Do not change this
@@ -288,8 +284,6 @@
 	// numerical matrix values of list of values 'yes/no'. Do not change this values !
 	define('NUMERICAL_MATRIX_VALUE_YES', 1);
 	define('NUMERICAL_MATRIX_VALUE_NO',  2);
-	// dedalo_permissions_root. Default permissions
-	// define('DEDALO_PERMISSIONS_ROOT', 1); DEPRECATED !
 	// dedalo_max_rows_per_page . Default max record per page. int default 10
 	define('DEDALO_MAX_ROWS_PER_PAGE', 10);
 	// user profile by default. Default profile id. int default 2 (regular user)
@@ -340,17 +334,12 @@
 		define('DEDALO_AV_STREAMER'					, null);
 		// av_watermark_file
 		define('DEDALO_AV_WATERMARK_FILE'			, DEDALO_MEDIA_PATH .'/'. DEDALO_AV_FOLDER . '/watermark/watermark.png');
-
-		// text_subtitles_engine (tool_subtitles)
-		// define('TEXT_SUBTITLES_ENGINE'			, DEDALO_CORE_PATH . '/tools/tool_subtitles'); (!) DEPRECATED
 		// dedalo_subtitles_folder (tool_subtitles)
 		define('DEDALO_SUBTITLES_FOLDER'			, '/subtitles');
 		// dedalo_av_subtitles_extension . Default is 'vtt'
 		define('DEDALO_AV_SUBTITLES_EXTENSION'		, 'vtt');
-
 		// dedalo_av_recompress_all. On 1, all video files are re-compressed to 960k/s variable bit rate and keyframe every 75 frames
 		define('DEDALO_AV_RECOMPRESS_ALL'			, 1); // 1 re-compress all av files uploaded, 0 to only copy av files uploaded (default 0)
-
 
 
 	// image media
@@ -376,8 +365,6 @@
 		define('DEDALO_IMAGE_AR_QUALITY'			, [DEDALO_IMAGE_QUALITY_ORIGINAL,DEDALO_IMAGE_QUALITY_RETOUCHED,'25MB','6MB','1.5MB',DEDALO_IMAGE_THUMB_DEFAULT]);
 		// image_print_dpi (default int 150. Used to calculate print size of images -tool_image_versions-)
 		define('DEDALO_IMAGE_PRINT_DPI'				, 150);
-		// image lib
-		// define('DEDALO_IMAGE_LIB'				, true);  (!) DEPRECATED
 		// image_file_url
 		define('DEDALO_IMAGE_FILE_URL'				, DEDALO_CORE_URL . '/media_engine/img.php');
 		// lib ImageMagick magick_path
@@ -399,16 +386,16 @@
 		define('DEDALO_PDF_EXTENSION'				, 'pdf');
 		// pdf_extensions_supported. Array default: ['pdf']
 		define('DEDALO_PDF_EXTENSIONS_SUPPORTED'	, ['pdf']);
+		// pdf_mime_type. Default: 'application/pdf'
+		define('DEDALO_PDF_MIME_TYPE'				, 'application/pdf');
+		# pdf_type. Default: 'pdf'
+		define('DEDALO_PDF_TYPE'					, 'pdf');
 		// dedalo_pdf_quality_original. string default 'original'
 		define('DEDALO_PDF_QUALITY_ORIGINAL'		, 'original');
 		// pdf_quality_default. Default: 'web'
 		define('DEDALO_PDF_QUALITY_DEFAULT'			, 'web');
 		// pdf_ar_quality. Array of PDF quality definitions
 		define('DEDALO_PDF_AR_QUALITY'				, [DEDALO_PDF_QUALITY_ORIGINAL, DEDALO_PDF_QUALITY_DEFAULT]);
-		// pdf_mime_type. Default: 'application/pdf'
-		define('DEDALO_PDF_MIME_TYPE'				, 'application/pdf');
-		# pdf_type. Default: 'pdf'
-		define('DEDALO_PDF_TYPE'					, 'pdf');
 		// pdf_thumb_default Default: 'thumb'
 		define('DEDALO_PDF_THUMB_DEFAULT'			, 'thumb');
 		// pdf_renderer (path of daemon pdf generator from html) Normally wkhtmltopdf (https://wkhtmltopdf.org) lib is used
@@ -429,11 +416,12 @@
 		define('DEDALO_3D_MIME_TYPE'				, 'model/gltf-binary');
 		// dedalo_3d_quality_original. string default 'original'
 		define('DEDALO_3D_QUALITY_ORIGINAL'			, 'original');
-		// quality default normally 'original'
-		define('DEDALO_3D_QUALITY_DEFAULT'			, 'original');
+		// quality default normally 'web'
+		define('DEDALO_3D_QUALITY_DEFAULT'			, 'web');
+		// Thumbs folders to store 1 render of the 3d file, used in list
+		define('DEDALO_3D_THUMB_DEFAULT', 			' thumb');
 		// quality folders array (sort desc quality)
-		define('DEDALO_3D_AR_QUALITY'				, [DEDALO_3D_QUALITY_ORIGINAL]);
-
+		define('DEDALO_3D_AR_QUALITY'				, [DEDALO_3D_QUALITY_ORIGINAL, DEDALO_3D_QUALITY_DEFAULT]);
 		// dedalo_3d_gltfpack_path normally /usr/local/bin/gltfpack or /opt/gltfpack (converts and compresses .obj/.gltf to .glb/.gltf)
 		define('DEDALO_3D_GLTFPACK_PATH'			, '/usr/local/bin/gltfpack');
 		// dedalo_3d_fbx2gltf_path normally /usr/local/bin/FBX2glTF or /opt/FBX2glTF (converts .fbx to .glb/.gltf)
@@ -456,18 +444,20 @@
 		define('DEDALO_SVG_EXTENSION'				, 'svg');
 		// svg_extensions_supported. Default ['svg']
 		define('DEDALO_SVG_EXTENSIONS_SUPPORTED'	, ['svg']);
-		// svg_quality_default. Default 'standard'
-		define('DEDALO_SVG_QUALITY_DEFAULT'			, 'standard');
-		// svg_ar_quality
-		define('DEDALO_SVG_AR_QUALITY'				, [DEDALO_SVG_QUALITY_DEFAULT]);
 		// svg_mime_type. Default 'image/svg+xml'
 		define('DEDALO_SVG_MIME_TYPE'				, 'image/svg+xml');
+		// svg_quality_original. Default 'original'
+		define('DEDALO_SVG_QUALITY_ORIGINAL'		, 'original');
+		// svg_quality_default. Default 'web'
+		define('DEDALO_SVG_QUALITY_DEFAULT'			, 'web');
+		// svg_ar_quality
+		define('DEDALO_SVG_AR_QUALITY'				, [DEDALO_SVG_QUALITY_DEFAULT, DEDALO_SVG_QUALITY_DEFAULT]);
 
 
 
 // upload config
 	// DEDALO_UPLOAD_TMP_DIR
-	// define the temporary directory to use to store the files uploaded, moved from php/tmp upload directory
+	// it defines the temporary directory to use to store the files uploaded, moved from php/tmp upload directory
 	define('DEDALO_UPLOAD_TMP_DIR', DEDALO_MEDIA_PATH . '/upload/service_upload/tmp');
 	// DEDALO_UPLOAD_SERVICE_CHUNK_FILES
 	// split files into chunks before upload at max size defined
@@ -483,11 +473,6 @@
 
 
 
-// rest_config
-	// Deprecated. Not used here.
-
-
-
 // media entity menu config
 	# DEDALO_ENTITY_MEDIA_AREA_TIPO = remove the Real sections from menu ALL sections
 	define('DEDALO_ENTITY_MEDIA_AREA_TIPO', '');
@@ -497,7 +482,7 @@
 
 
 // dedalo_test_install. bool
-	// On true, check current admin (root) user password on login page
+	// 	On true, check if the root user has set password at login page, if not set Dédalo will init the install process.
 	define('DEDALO_TEST_INSTALL', true);
 
 
@@ -522,6 +507,9 @@
 	define('DEDALO_LOCK_COMPONENTS', false);
 
 
+// protect media files, when active the access to media files are controlled and only register users can access to it.
+	define('DEDALO_PROTECT_MEDIA_FILES', false);
+
 
 // notifications
 	// Send notifications to user browser. E.g. Current lock components..
@@ -530,35 +518,9 @@
 	define('DEDALO_NODEJS_PM2', 	'/usr/bin/pm2');
 
 
-
-// diffusion
-	// Set publication diffusion domain. Default value is 'default'
-	define('DEDALO_DIFFUSION_DOMAIN',			'default');
-	define('DEDALO_DIFFUSION_RESOLVE_LEVELS',	2);
-	// diffusion_custom
-	// Optional custom class to manipulate diffusion options. string|bool . Default: false
-	define('DIFFUSION_CUSTOM', false);
-	// api (publication). This definition is used in administration panels to auto-fill main vars
-	// Note that in the public server config file, you need to define again this values because
-	// the public API files could be place in another location/server as independent files
-	define('API_WEB_USER_CODE_MULTIPLE' , [
-		[
-			'db_name'	=> '', // like web_my_entity
-			'code'		=> ''  // like asd38kjlkasd6gadsg2fasdoijQks
-		]
-	]);
-
-
-
-
 // dedalo_ar_exclude_components
 	// optional array of component tipo to exclude
 	define('DEDALO_AR_EXCLUDE_COMPONENTS', []);
-
-
-
-// dedalo_protect_media
-	// Deprecated. Not used here.
 
 
 
@@ -580,12 +542,33 @@
 
 
 
+// diffusion
+	// Set publication diffusion domain. Default value is 'default'
+	define('DEDALO_DIFFUSION_DOMAIN',			'default');
+	define('DEDALO_DIFFUSION_RESOLVE_LEVELS',	2);
+	// diffusion_custom
+	// Optional custom class to manipulate diffusion options. string|bool . Default: false
+	define('DIFFUSION_CUSTOM', false);
+	// api (publication). This definition is used in administration panels to auto-fill main vars
+	// Note that in the public server config file, you need to define again this values because
+	// the public API files could be place in another location/server as independent files
+	define('API_WEB_USER_CODE_MULTIPLE' , [
+		[
+			'db_name'	=> '', // like web_my_entity
+			'code'		=> ''  // like asd38kjlkasd6gadsg2fasdoijQks
+		]
+	]);
+
+
 // remote_structure_server_code
 	define('STRUCTURE_FROM_SERVER'		, true);
 	define('STRUCTURE_SERVER_CODE'		, 'x3a0B4Y020Eg9w');
 	define('STRUCTURE_SERVER_URL'		, 'https://master.render.es/dedalo/lib/dedalo/extras/str_manager/');
-	define('STRUCTURE_DOWNLOAD_DIR'		, DEDALO_BACKUP_PATH_STRUCTURE . '/download');
-
+	define('STRUCTURE_DOWNLOAD_DIR'		, DEDALO_BACKUP_PATH_ONTOLOGY . '/download');
+		// structure_download. When ontology is updated, download files are saved here
+	define('STRUCTURE_DOWNLOAD_JSON_FILE', DEDALO_BACKUP_PATH_ONTOLOGY);
+	// SERVER_PROXY Optional IP and port like 'XXX.XXX.XXX.XXX:3128'. Do not remove comment if its not necessary
+	// define('SERVER_PROXY', 				'XXX.XXX.XXX.XXX:3128');
 
 
 // dedalo_code

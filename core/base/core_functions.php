@@ -783,15 +783,15 @@ function sanitize_query(string $strQuery) : string {
 
 
 /**
-* FIX_CONFIG4_VAR
-* Set a cascading config4 variable, based on availability and by prevalence order (REQUEST,SESSION,DEFAULT)
+* FIX_CONFIG_VAR
+* Set a cascading config variable, based on availability and by prevalence order (REQUEST,SESSION,DEFAULT)
 * @param string $var_name
 * @param mixed $var_default_value
 *
 * @return mixed $var_value
 */
-// function fix_cascade_config4_var(string $var_name, mixed $var_default_value) : mixed {
-function fix_cascade_config4_var(string $var_name, $var_default_value) { // 7.4 compatible
+// function fix_cascade_config_var(string $var_name, mixed $var_default_value) : mixed {
+function fix_cascade_config_var(string $var_name, $var_default_value) { // 7.4 compatible
 
 	switch (true) {
 		# REQUEST (GET/POST)
@@ -810,7 +810,7 @@ function fix_cascade_config4_var(string $var_name, $var_default_value) { // 7.4 
 	}
 
 	return $var_value;
-}//end fix_cascade_config4_var
+}//end fix_cascade_config_var
 
 
 
