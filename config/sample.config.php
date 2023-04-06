@@ -356,11 +356,10 @@
 		define('DEDALO_3D_MIME_TYPE'				, 'model/gltf-binary');
 		// dedalo_3d_quality_original. string default 'original'
 		define('DEDALO_3D_QUALITY_ORIGINAL'			, 'original');
-		// quality default normally 'original'
-		define('DEDALO_3D_QUALITY_DEFAULT'			, 'original');
-		// quality folders array (sort desc quality)
-		define('DEDALO_3D_AR_QUALITY'				, [DEDALO_3D_QUALITY_ORIGINAL]);
-
+		// quality default normally 'web'
+		define('DEDALO_3D_QUALITY_DEFAULT'			, 'web');
+		// Thumbs folders to store 1 render of the 3d file, used in list
+		define('DEDALO_3D_THUMB_DEFAULT', 			' thumb');
 		// dedalo_3d_gltfpack_path normally /usr/local/bin/gltfpack or /opt/gltfpack (converts and compresses .obj/.gltf to .glb/.gltf)
 		define('DEDALO_3D_GLTFPACK_PATH'			, '/usr/local/bin/gltfpack');
 		// dedalo_3d_fbx2gltf_path normally /usr/local/bin/FBX2glTF or /opt/FBX2glTF (converts .fbx to .glb/.gltf)
