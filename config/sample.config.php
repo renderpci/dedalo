@@ -500,6 +500,9 @@
 	define('DEDALO_LOCK_COMPONENTS', false);
 
 
+// protect media files, when active the access to media files are controlled and only register users can access to it.
+	define('DEDALO_PROTECT_MEDIA_FILES', false);
+
 
 // notifications
 	// Send notifications to user browser. E.g. Current lock components..
