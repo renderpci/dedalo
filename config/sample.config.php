@@ -446,18 +446,20 @@
 		define('DEDALO_SVG_EXTENSION'				, 'svg');
 		// svg_extensions_supported. Default ['svg']
 		define('DEDALO_SVG_EXTENSIONS_SUPPORTED'	, ['svg']);
-		// svg_quality_default. Default 'standard'
-		define('DEDALO_SVG_QUALITY_DEFAULT'			, 'standard');
-		// svg_ar_quality
-		define('DEDALO_SVG_AR_QUALITY'				, [DEDALO_SVG_QUALITY_DEFAULT]);
 		// svg_mime_type. Default 'image/svg+xml'
 		define('DEDALO_SVG_MIME_TYPE'				, 'image/svg+xml');
+		// svg_quality_original. Default 'original'
+		define('DEDALO_SVG_QUALITY_ORIGINAL'		, 'original');
+		// svg_quality_default. Default 'web'
+		define('DEDALO_SVG_QUALITY_DEFAULT'			, 'web');
+		// svg_ar_quality
+		define('DEDALO_SVG_AR_QUALITY'				, [DEDALO_SVG_QUALITY_DEFAULT, DEDALO_SVG_QUALITY_DEFAULT]);
 
 
 
 // upload config
 	// DEDALO_UPLOAD_TMP_DIR
-	// define the temporary directory to use to store the files uploaded, moved from php/tmp upload directory
+	// it defines the temporary directory to use to store the files uploaded, moved from php/tmp upload directory
 	define('DEDALO_UPLOAD_TMP_DIR', DEDALO_MEDIA_PATH . '/upload/service_upload/tmp');
 	// DEDALO_UPLOAD_SERVICE_CHUNK_FILES
 	// split files into chunks before upload at max size defined
