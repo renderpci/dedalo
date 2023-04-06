@@ -60,9 +60,6 @@ class component_geolocation extends component_common {
 			// 		trigger_error("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP");
 			// 	}
 			// }
-
-
-		return true;
 	}//end __construct
 
 

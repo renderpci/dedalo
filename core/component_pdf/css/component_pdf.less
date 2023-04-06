@@ -23,34 +23,38 @@
 	&.edit {
 
 		>.content_data {
-			// Note that height is always the media min height (392px)
-			// (!) Do not use max o min height here to prevent to affect canvas reference size
-			height: @media_min_height;
-			display: table;
 
-			justify-content: center;
-			max-height: @media_max_height;
-			min-height: @media_min_height;
-			overflow: hidden;
+			// moved to layout.less.media_wrapper.edit
+				// // Note that height is always the media min height (392px)
+				// // (!) Do not use max o min height here to prevent to affect canvas reference size
+				// height: @media_min_height;
+				// display: table;
 
-			@media screen and (max-width: @width_break_point_1) {
-				min-height: unset;
-			}
+				// justify-content: center;
+				// max-height: @media_max_height;
+				// min-height: @media_min_height;
+				// overflow: hidden;
+
+				// @media screen and (max-width: @width_break_point_1) {
+				// 	min-height: unset;
+				// }
 
 			// pdf container
 			>.content_value {
-				// flex-wrap: wrap;
-				// align-items: flex-start;
-				width: 100%;
-				height: 100%;
-				resize: vertical;
-				overflow: auto;
-				min-height: @media_min_height; // 404px;
 
-				@media screen and (max-width: @width_break_point_1) {
-					height: unset;
-					max-height: 600px;
-				}
+				// moved to layout.less.media_wrapper.edit
+					// // flex-wrap: wrap;
+					// // align-items: flex-start;
+					// width: 100%;
+					// height: 100%;
+					// resize: vertical;
+					// overflow: auto;
+					// min-height: @media_min_height; // 404px;
+
+					// @media screen and (max-width: @width_break_point_1) {
+					// 	height: unset;
+					// 	max-height: 600px;
+					// }
 
 				// iframe
 				>.pdf_viewer_frame {

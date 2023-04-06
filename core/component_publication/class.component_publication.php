@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS COMPONENT_PUBLICATION
 *
 *
@@ -23,11 +23,11 @@ class component_publication extends component_relation_common {
 	*/
 	function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
 
-		# Force always DEDALO_DATA_NOLAN
+		// Force always DEDALO_DATA_NOLAN
 		$lang = DEDALO_DATA_NOLAN;
 
-		# construct the component normally
-		return parent::__construct($tipo, $parent, $mode, $lang, $section_tipo);
+		// construct the component normally
+		parent::__construct($tipo, $parent, $mode, $lang, $section_tipo);
 	}//end __construct
 
 

@@ -460,7 +460,8 @@ component_common.prototype.save = async function(changed_data) {
 
 				// data_manager API request
 					const api_response = await data_manager.request({
-						body : rqo
+						use_worker	: true,
+						body		: rqo
 					})
 					if(SHOW_DEVELOPER===true) {
 						dd_console(`[component_common.save] api_response ${self.model} ${self.tipo}`, 'DEBUG', api_response)

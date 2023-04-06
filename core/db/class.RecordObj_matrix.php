@@ -58,8 +58,6 @@ class RecordObj_matrix extends RecordDataBoundObject {
 
 			parent::__construct(null);
 		}
-
-		return true;
 	}//end __construct
 
 

@@ -60,7 +60,8 @@ describe("COMPONENTS ACTIVATE", async function() {
 					const wrapper = instance.node
 
 					// activate by click event
-					wrapper.click()
+					// wrapper.click()
+					wrapper.dispatchEvent(new Event('mousedown'));
 					assert( wrapper.classList.contains('active'), `wrapper activated styles are NOT found`)
 					assert( instance.active===true, `instance property active is NOT set as true`)
 					assert( page_globals.component_active===instance, `page_globals.component_active is NOT set correctly`)

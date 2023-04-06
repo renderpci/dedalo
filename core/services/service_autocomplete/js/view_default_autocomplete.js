@@ -897,9 +897,13 @@ const render_datalist = async function(self, api_response) {
 								}
 
 								// clean the last list
-								while (datalist.firstChild) {
-									datalist.removeChild(datalist.firstChild)
-								}
+									while (datalist.firstChild) {
+										datalist.removeChild(datalist.firstChild)
+									}
+
+								// hide service
+									self.hide()
+
 							}else{
 								console.warn('Function sent is not defined to be exec by service autocomplete:', self.add_value);
 							}
@@ -912,9 +916,12 @@ const render_datalist = async function(self, api_response) {
 						await self.caller.add_value(value)
 
 						// clean the last list
-						while (datalist.firstChild) {
-							datalist.removeChild(datalist.firstChild)
-						}
+							while (datalist.firstChild) {
+								datalist.removeChild(datalist.firstChild)
+							}
+
+						// hide service
+							self.hide()
 					}
 			});
 			// mouseenter event
@@ -1048,6 +1055,39 @@ const render_datalist = async function(self, api_response) {
 
 	return datalist
 }//end render_datalist
+
+
+
+/**
+* SHOW
+* Remove hide class from main node
+* @return bool
+*/
+view_default_autocomplete.show = function () {
+
+	if (this.node.classList.contains('hide')) {
+		this.node.classList.remove('hide')
+	}
+
+	return true
+}//end show
+
+
+
+/**
+* HIDE
+* Add hide class to main node
+* @return bool
+*/
+view_default_autocomplete.hide = function () {
+
+	if (!this.node.classList.contains('hide')) {
+		this.node.classList.add('hide')
+	}
+
+	return true
+}//end hide
+
 
 
 

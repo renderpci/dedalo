@@ -1703,52 +1703,57 @@ export const ts_object = new function() {
 			const html_data		= '...';	//" show_component_in_ts_object here! "
 			const role			= section_tipo + '_' + section_id + '_' + tipo
 
-		// component instance
-			const current_component = await instances.get_instance({
-				section_tipo	: section_tipo,
-				section_id		: section_id,
-				tipo			: tipo,
-				lang			: lang,
-				mode			: 'edit', // mode,
-				view			: 'default',
-				id_variant		: new Date().getTime()
-			})
+		const render_component_node = async function() {
 
-		// term edit case
-			if(type==='term') {
+			// component instance
+				const current_component = await instances.get_instance({
+					section_tipo	: section_tipo,
+					section_id		: section_id,
+					tipo			: tipo,
+					lang			: lang,
+					mode			: 'edit', // mode,
+					view			: 'default',
+					id_variant		: new Date().getTime()
+				})
 
-				// delete the previous registered events
-					self.events_tokens.map(current_token => event_manager.unsubscribe(current_token))
+			// term edit case
+				if(type==='term') {
 
-				// update value, subscription to the changes: if the DOM input value was changed, observers dom elements will be changed own value with the observable value
-					self.events_tokens.push(
-						event_manager.subscribe('update_value_'+current_component.id_base, fn_update_value)
-					)
-					function fn_update_value(options) {
+					// delete the previous registered events
+						self.events_tokens.map(current_token => event_manager.unsubscribe(current_token))
 
-						const caller = options.caller
+					// update value, subscription to the changes: if the DOM input value was changed, observers dom elements will be changed own value with the observable value
+						self.events_tokens.push(
+							event_manager.subscribe('update_value_'+current_component.id_base, fn_update_value)
+						)
+						function fn_update_value(options) {
 
-						const ar_values = []
-						switch (caller.model) {
-							case 'component_portal':
-								const data = caller.datum.data.filter(el => el.tipo !== caller.tipo)
-								ar_values.push(...data.map(el => el.value))
-								break;
+							const caller = options.caller
 
-							default:
-								ar_values.push(...caller.data.value)
-								break;
+							const ar_values = []
+							switch (caller.model) {
+								case 'component_portal':
+									const data = caller.datum.data.filter(el => el.tipo !== caller.tipo)
+									ar_values.push(...data.map(el => el.value))
+									break;
+
+								default:
+									ar_values.push(...caller.data.value)
+									break;
+							}
+
+							const value = ar_values.join(' ')
+							// change the value of the current DOM element
+							button_obj.firstChild.innerHTML = value
 						}
+				}
 
-						const value = ar_values.join(' ')
-						// change the value of the current DOM element
-						button_obj.firstChild.innerHTML = value
-					}
-			}
+				// build and render component
+					await current_component.build(true)
+					const component_node = await current_component.render()
 
-		// build and render component
-			await current_component.build(true)
-			const component_node = await current_component.render()
+				return component_node
+			}//end render_component_node
 
 		// data_contanier
 			const element_data_contanier = wrap.querySelector(':scope > [data-role="data_container"]')
@@ -1771,6 +1776,7 @@ export const ts_object = new function() {
 				}
 
 				// add the new one
+				const component_node = await render_component_node()
 				element_data_contanier.appendChild(component_node)
 
 			}else{
@@ -1783,10 +1789,11 @@ export const ts_object = new function() {
 		}else{ // if the data element is empty (first click to show)
 
 			// add node
+				const component_node = await render_component_node()
 				element_data_contanier.appendChild(component_node)
 		}
 
-		return component_node;
+		return true // component_node;
 	}//end show_component_in_ts_object
 
 

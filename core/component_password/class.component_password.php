@@ -15,7 +15,7 @@ class component_password extends component_common {
 
 		$lang = DEDALO_DATA_NOLAN;
 
-		return parent::__construct($tipo, $parent, $mode, $lang, $section_tipo);
+		parent::__construct($tipo, $parent, $mode, $lang, $section_tipo);
 	}//end __construct
 
 

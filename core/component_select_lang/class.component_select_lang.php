@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS COMPONENT_SELECT_LANG
 *
 *
@@ -37,8 +37,6 @@ class component_select_lang extends component_relation_common {
 		// 			trigger_error("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP");
 		// 		}
 		// 	}
-
-		// 	return $result;
 		// }//end __construct
 
 

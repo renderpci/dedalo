@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS COMPONENT_NUMBER
 * Manage numbers with specific precision
 * types supported : int || float
@@ -24,8 +24,6 @@ class component_number extends component_common {
 		$lang = DEDALO_DATA_NOLAN;
 
 		parent::__construct($tipo, $parent, $mode, $lang, $section_tipo);
-
-		return true;
 	}//end __construct
 
 

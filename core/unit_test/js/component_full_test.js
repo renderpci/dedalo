@@ -21,8 +21,9 @@ const model		= url_vars.model
 
 // events
 	// page click
-		window.addEventListener('click', fn_deactivate_components)
-		function fn_deactivate_components() {
+		window.addEventListener('mousedown', fn_deactivate_components)
+		function fn_deactivate_components(e) {
+			e.stopPropagation()
 			if (page_globals.component_active) {
 				ui.component.deactivate(page_globals.component_active)
 			}
@@ -591,4 +592,53 @@ async function make_element_test(options) {
 				);
 			}
 		})	})	})
+	}
+
+	{
+		const mode			= 'search'
+		const view			= 'default'
+		const permissions	= 2
+		const name			= `${element.model} ${mode}-${view}-${permissions}`
+		describe(name, function() {
+		it(`${element.model.toUpperCase()} ${name}`, async function() {
+		await make_element_test({
+			mode		: mode,
+			view		: view,
+			permissions	: permissions,
+			element		: element,
+			content		: container,
+			fn_asserts	: async (new_instance) => {
+				// asserts
+				assert.equal(
+					new_instance.status,
+					'rendered',
+					'Status must be rendered'
+				);
+				assert.notEqual(
+					new_instance.node,
+					null,
+					'Main node not could be null'
+				);
+				assert.equal(
+					new_instance.node.querySelector(':scope >.buttons_container'),
+					null,
+					'buttons_container must not exist (edit-search-2)'
+				);
+				assert.notEqual(
+					new_instance.node.querySelector(':scope >.content_data'),
+					null,
+					'content_data must necessarily exist'
+				);
+				assert.notEqual(
+					new_instance.node.content_data,
+					undefined,
+					'content_data pointer must necessarily exist from wrapper'
+				);
+				assert.equal(
+					new_instance.node.classList.contains('search'),
+					true,
+					'instance wrapper classList display must contains "view_line" '
+				);
+			}
+		})	}) })
 	}

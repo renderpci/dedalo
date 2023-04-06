@@ -44,6 +44,8 @@ view_default_edit_svg.render = async function(self, options) {
 			content_data	: content_data,
 			buttons			: buttons
 		})
+		// common media classes
+		wrapper.classList.add('media_wrapper')
 		// set pointers
 		wrapper.content_data = content_data
 
@@ -66,6 +68,8 @@ export const get_content_data = function(self) {
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
+		// common media classes
+		content_data.classList.add('media_content_data')
 
 	// values iterate (one or zero is expected)
 		const inputs_value	= value.length>0 ? value : [null]
@@ -99,7 +103,7 @@ const get_content_value = function(i, value, self) {
 	// content_value
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'content_value'
+			class_name		: 'content_value media_content_value'
 		})
 
 	// media url from data.datalist based on selected context quality
@@ -120,6 +124,7 @@ const get_content_value = function(i, value, self) {
 			image.setAttribute('tabindex', 0)
 		}
 
+
 	return content_value
 }//end get_content_value
 
@@ -138,7 +143,7 @@ const get_content_value_read = function(i, value, self) {
 	// content_value
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'content_value read_only'
+			class_name		: 'content_value media_content_value read_only'
 		})
 
 	// media url from data.datalist based on selected context quality
@@ -158,6 +163,7 @@ const get_content_value_read = function(i, value, self) {
 			})
 		}
 
+
 	return content_value
 }//end get_content_value_read
 
@@ -176,6 +182,16 @@ const get_buttons = (self) => {
 		if (self.caller && self.caller.type==='tool') {
 			return fragment
 		}
+
+	// button_fullscreen
+		const button_fullscreen = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button full_screen',
+			parent			: fragment
+		})
+		button_fullscreen.addEventListener('click', function() {
+			ui.enter_fullscreen(self.node)
+		})
 
 	// buttons tools
 		if( self.show_interface.tools === true){
