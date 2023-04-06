@@ -390,7 +390,7 @@ abstract class backup {
 			$db_name = 'dedalo4_development_str.custom';
 		}
 
-		$file_path		 = rtrim(DEDALO_BACKUP_PATH_STRUCTURE, '/');
+		$file_path		 = rtrim(DEDALO_BACKUP_PATH_ONTOLOGY, '/');
 		$mysqlExportPath = $file_path .'/'. $db_name . ".backup";
 
 		$port_command = !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';
@@ -530,7 +530,7 @@ abstract class backup {
 			$msg .= "<b>$current_tld</b>";
 
 			$path = ($current_tld==='dd' || $current_tld==='rsc')
-				? DEDALO_BACKUP_PATH_STRUCTURE . '/str_data' // CORE DEDALO STR
+				? DEDALO_BACKUP_PATH_ONTOLOGY . '/str_data' // CORE DEDALO STR
 				: DEDALO_EXTRAS_PATH .'/'. $current_tld . '/str_data'; // STR EXTRAS
 
 			# Check destination dir for proper permissions
@@ -593,7 +593,7 @@ abstract class backup {
 		#
 		# MATRIX_DD (Private list of values)
 		$table 		= 'matrix_dd';
-		$path 		= DEDALO_BACKUP_PATH_STRUCTURE . '/str_data';
+		$path 		= DEDALO_BACKUP_PATH_ONTOLOGY . '/str_data';
 		$path_file 	= "{$path}/{$table}.copy";
 		$res3 		= backup::copy_to_file($table, $path_file, null);
 
@@ -678,7 +678,7 @@ abstract class backup {
 			}
 		}else{
 			# Default path
-			$file_path = rtrim(DEDALO_BACKUP_PATH_STRUCTURE, '/');
+			$file_path = rtrim(DEDALO_BACKUP_PATH_ONTOLOGY, '/');
 			$mysqlImportFilename = $file_path .'/'. $db_name . ".backup";
 		}
 
