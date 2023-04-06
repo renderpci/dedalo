@@ -334,14 +334,10 @@
 		define('DEDALO_AV_STREAMER'					, null);
 		// av_watermark_file
 		define('DEDALO_AV_WATERMARK_FILE'			, DEDALO_MEDIA_PATH .'/'. DEDALO_AV_FOLDER . '/watermark/watermark.png');
-
-		// text_subtitles_engine (tool_subtitles)
-		// define('TEXT_SUBTITLES_ENGINE'			, DEDALO_CORE_PATH . '/tools/tool_subtitles'); (!) DEPRECATED
 		// dedalo_subtitles_folder (tool_subtitles)
 		define('DEDALO_SUBTITLES_FOLDER'			, '/subtitles');
 		// dedalo_av_subtitles_extension . Default is 'vtt'
 		define('DEDALO_AV_SUBTITLES_EXTENSION'		, 'vtt');
-
 		// dedalo_av_recompress_all. On 1, all video files are re-compressed to 960k/s variable bit rate and keyframe every 75 frames
 		define('DEDALO_AV_RECOMPRESS_ALL'			, 1); // 1 re-compress all av files uploaded, 0 to only copy av files uploaded (default 0)
 
