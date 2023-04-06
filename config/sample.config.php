@@ -414,16 +414,16 @@
 		define('DEDALO_PDF_EXTENSION'				, 'pdf');
 		// pdf_extensions_supported. Array default: ['pdf']
 		define('DEDALO_PDF_EXTENSIONS_SUPPORTED'	, ['pdf']);
+		// pdf_mime_type. Default: 'application/pdf'
+		define('DEDALO_PDF_MIME_TYPE'				, 'application/pdf');
+		# pdf_type. Default: 'pdf'
+		define('DEDALO_PDF_TYPE'					, 'pdf');
 		// dedalo_pdf_quality_original. string default 'original'
 		define('DEDALO_PDF_QUALITY_ORIGINAL'		, 'original');
 		// pdf_quality_default. Default: 'web'
 		define('DEDALO_PDF_QUALITY_DEFAULT'			, 'web');
 		// pdf_ar_quality. Array of PDF quality definitions
 		define('DEDALO_PDF_AR_QUALITY'				, [DEDALO_PDF_QUALITY_ORIGINAL, DEDALO_PDF_QUALITY_DEFAULT]);
-		// pdf_mime_type. Default: 'application/pdf'
-		define('DEDALO_PDF_MIME_TYPE'				, 'application/pdf');
-		# pdf_type. Default: 'pdf'
-		define('DEDALO_PDF_TYPE'					, 'pdf');
 		// pdf_thumb_default Default: 'thumb'
 		define('DEDALO_PDF_THUMB_DEFAULT'			, 'thumb');
 		// pdf_renderer (path of daemon pdf generator from html) Normally wkhtmltopdf (https://wkhtmltopdf.org) lib is used
