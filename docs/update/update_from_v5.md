@@ -10,14 +10,14 @@ Before you strat updgrading to update it is important to be aware of some of the
 ## Important changes from v5
 
 1. In v6 all components data is storage as array, so some components has changed to be array. The update will change the data of these components in your DDBB to convert it to array:
-   * component_text_area
-   * component_number
-   * component_geolocation
-   * component_json
-   * component_av
-   * component_image
-   * component_pdf
-   * component_svg
+	* component_text_area
+	* component_number
+	* component_geolocation
+	* component_json
+	* component_av
+	* component_image
+	* component_pdf
+	* component_svg
 
 See an example of component_text_area:
 
@@ -81,10 +81,10 @@ Before update you will prepare your v5 installation doing:
 2. Go to Administration panel.
 3. Make backup of your Dédalo installation.
 4. Update v5 to last code.
-   * Ensure that your code is >= 5.9.5
-   * Ensure that your data is updated to 5.8.2
+	* Ensure that your code is >= 5.9.5
+	* Ensure that your data is updated to 5.8.2
 5. Update v5 to last ontolgy version
-   * Ensure that your ontology version is > 01-04-2023
+	* Ensure that your ontology version is > 01-04-2023
 6. Duplicate your current DDBB and rename as your own project. Do not update your current database directly. It is recommended to use a duplicate DDBB. You can do it this step in several ways:
 
 * If you want duplicate with SQL you could use something as:
@@ -139,7 +139,7 @@ cp sample.config_areas.php config_areas.php
 Check your v5 config to add your custom properties.
 
 4. Duplicate or move your media directory
-   It's highly recommended to duplicate your media directory instead move it.
+	It's highly recommended to duplicate your media directory instead move it.
 
 ```shell
 cd ../httpdocs
