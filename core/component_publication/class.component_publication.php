@@ -19,7 +19,6 @@ class component_publication extends component_relation_common {
 
 	/**
 	* __CONSTRUCT
-	* @return bool
 	*/
 	function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
 
