@@ -524,27 +524,6 @@
 	define('DEDALO_NODEJS_PM2', 	'/usr/bin/pm2');
 
 
-
-// diffusion
-	// Set publication diffusion domain. Default value is 'default'
-	define('DEDALO_DIFFUSION_DOMAIN',			'default');
-	define('DEDALO_DIFFUSION_RESOLVE_LEVELS',	2);
-	// diffusion_custom
-	// Optional custom class to manipulate diffusion options. string|bool . Default: false
-	define('DIFFUSION_CUSTOM', false);
-	// api (publication). This definition is used in administration panels to auto-fill main vars
-	// Note that in the public server config file, you need to define again this values because
-	// the public API files could be place in another location/server as independent files
-	define('API_WEB_USER_CODE_MULTIPLE' , [
-		[
-			'db_name'	=> '', // like web_my_entity
-			'code'		=> ''  // like asd38kjlkasd6gadsg2fasdoijQks
-		]
-	]);
-
-
-
-
 // dedalo_ar_exclude_components
 	// optional array of component tipo to exclude
 	define('DEDALO_AR_EXCLUDE_COMPONENTS', []);
@@ -572,6 +551,24 @@
 	// If not is defined, will be calculated from current Dédalo data version
 	define('ENCRYPTION_MODE', 'openssl');
 
+
+
+// diffusion
+	// Set publication diffusion domain. Default value is 'default'
+	define('DEDALO_DIFFUSION_DOMAIN',			'default');
+	define('DEDALO_DIFFUSION_RESOLVE_LEVELS',	2);
+	// diffusion_custom
+	// Optional custom class to manipulate diffusion options. string|bool . Default: false
+	define('DIFFUSION_CUSTOM', false);
+	// api (publication). This definition is used in administration panels to auto-fill main vars
+	// Note that in the public server config file, you need to define again this values because
+	// the public API files could be place in another location/server as independent files
+	define('API_WEB_USER_CODE_MULTIPLE' , [
+		[
+			'db_name'	=> '', // like web_my_entity
+			'code'		=> ''  // like asd38kjlkasd6gadsg2fasdoijQks
+		]
+	]);
 
 
 // remote_structure_server_code
