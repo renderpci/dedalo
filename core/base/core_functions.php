@@ -560,7 +560,7 @@ function get_last_modified_file(string $path, array $allowed_extensions) {
 * DEDALO_ENCRYPT_OPENSSL
 * @return string $output
 */
-function dedalo_encrypt_openssl(string $stringArray, string $key=DEDALO_INFORMACION) : string {
+function dedalo_encrypt_openssl(string $stringArray, string $key=DEDALO_INFORMATION) : string {
 
 	if (!function_exists('openssl_encrypt')) throw new Exception("Error Processing Request: Lib OPENSSL unavailable.", 1);
 
@@ -580,7 +580,7 @@ function dedalo_encrypt_openssl(string $stringArray, string $key=DEDALO_INFORMAC
 * DEDALO_DECRYPT_OPENSSL
 * @return string $output
 */
-function dedalo_decrypt_openssl(string $stringArray, string $key=DEDALO_INFORMACION) : string {
+function dedalo_decrypt_openssl(string $stringArray, string $key=DEDALO_INFORMATION) : string {
 
 	if (!function_exists('openssl_decrypt')) throw new Exception("Error Processing Request: Lib OPENSSL unavailable.", 1);
 

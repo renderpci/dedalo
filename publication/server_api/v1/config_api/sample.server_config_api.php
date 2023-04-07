@@ -27,8 +27,20 @@
 	$DEFAULT_LANG		= 'lg-spa';
 	$DEFAULT_DDBB		= 'web_XXXXXXXXX';
 	$WEB_BASE_URL		= 'https://my_organization.es';
-	$API_WEB_USER_CODE	= 'XXXXXXXXXXXXXXXXXXXXXXXXXXX...';
 
+// api_web_user_code . Verification user code (must be identical in config of client and server)
+	define('API_WEB_USER_CODE', 'XXXXXXXXXXXXXXXXXXXXXXXXXXX');
+	if (isset($skip_api_web_user_code_verification) && $skip_api_web_user_code_verification===true) {
+		// Ignore api code verification mode
+	}else{
+		if (empty($code)) {
+			echo json_encode("Error. Empty user code");
+			die();
+		}elseif ($code!==API_WEB_USER_CODE) {
+			echo json_encode("Error. Invalid user code '$code' " . API_ENTITY);
+			die();
+		}
+	}
 
 // db config. Use always a read only user for connect to the database
 	// db_name . Optional
@@ -71,29 +83,11 @@
 
 
 
-// api_web_user_code . Verification user code (must be identical in config of client and server)
-	if (isset($skip_api_web_user_code_verification) && $skip_api_web_user_code_verification===true) {
-		// Ignore api code verification mode
-	}else{
-		define('API_WEB_USER_CODE', $API_WEB_USER_CODE);
-		if (empty($code)) {
-			echo json_encode("Error. Empty user code");
-			die();
-		}elseif ($code!==API_WEB_USER_CODE) {
-			echo json_encode("Error. Invalid user code '$code' " . API_ENTITY);
-			die();
-		}
-	}
-
-// web_current_lang_code . Current lang default. If request get 'lang' overwrite value
+// web_current_lang_code . If request get 'lang', overwrite default value
 	define('WEB_CURRENT_LANG_CODE', !empty($lang) ? $lang : $DEFAULT_LANG);
-
-
 
 // __content_base_url__ . Web base url where are served the contents
 	define('__CONTENT_BASE_URL__', $WEB_BASE_URL);
-
-
 
 // web_video_path
 	define('WEB_VIDEO_BASE_URL', DEDALO_MEDIA_BASE_URL .'/'. DEDALO_AV_FOLDER .'/'. DEDALO_AV_QUALITY_DEFAULT);

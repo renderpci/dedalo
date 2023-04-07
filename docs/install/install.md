@@ -4,13 +4,13 @@ Dédalo is used to manage cultural properties as archeological, ethnological, do
 
 In this installation manual you will see how you can prepare your server before install Dédalo.
 
-## 1. Minimum and recommended server.
+## 1. Minimum and recommended server
 
 Dédalo uses a NoSQL architecture, an abstraction model controlled by his ontology that requires intense calculations in real time. The data format is not defined in the database and is calculated in the execution time. Besides, Dédalo creates audiovisual editions in real time when the users and visitors search in the inventory. All of these features make intense use of the processor and RAM.
 
 For the space to store all data and media, it depends on every project. Before buying or renting a server, think about the amount of data of your project and future growth. It's very normal that the projects manage thousands or hundred thousand records and images, pdfs or audiovisual files and millions of data relations and editions. Cultural catalogues managed with Dédalo stored all data around the cultural properties and it requires a large RAID system.
 
-Recomennded server:
+Recommended server:
 
 OS:
 
@@ -40,29 +40,28 @@ Backup:
 > Note: We recommend using an external backup system, in another building of the server facilities to preserve data from physical problems such as fire or flood.
 > Dédalo creates a backup of the database automatically, it prepares the backup file to be copied to the backup system, but, for the media files you will need to configure your server to copy these files manually.
 
-## 2. Installation options.
+## 2. Installation options
 
-Instead install you can use our "ready to use" virtual machine with all installed and configurated.
+Instead install you can use our "ready to use" virtual machine with all installed and configured.
 
 ### 2.1. Ready-to-use Virtual Machine for V6
 
 Then, you can use our V6 ready-to-use Virtual Machine for development:
 
-<p><a href="https://dedalo.dev/v6" target="_blank">Dedalo V5</a></p>
+[Dedalo V6](https://dedalo.dev/v6)
 
 > Note: we do not recommended use this machine as production system, it could be fine to develop or learn about Dédalo. If you want to use it you will need change all passwords because are public.
 
 ### 2.2. Video-guide for V6 installation
 
 Then, you can follow the steps in the V6 installation video:
-
-<p><a href="https://dedalo.dev/v5_install" target="_blank">Dedalo V6 installation video on Ubuntu</a></p>
+[Dedalo V6 installation video on Ubuntu](https://dedalo.dev/v6_install)
 
 ### 2.3. Manual installation
 
 Then, install Dédalo manually, commands are Ubuntu 22.04 (only as references):
 
-1. Install Ubuntu and all dependeces.
+1. Install Ubuntu and all dependencies.
 
    1. Install PHP
 
@@ -71,7 +70,7 @@ Then, install Dédalo manually, commands are Ubuntu 22.04 (only as references):
       ```
 
       > Note: the minimal version for PHP is 8.1 so you could change previous command for it.
-      >
+
    2. Install Apache and activate the mods
 
       ```shell
@@ -88,9 +87,10 @@ Then, install Dédalo manually, commands are Ubuntu 22.04 (only as references):
       a2enmod http2
       a2enmod rewrite
       ```
+
    3. Install PostgreSQL
 
-      Get the oficial repository:
+      Get the official repository:
 
       ```shell
       sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
@@ -103,6 +103,7 @@ Then, install Dédalo manually, commands are Ubuntu 22.04 (only as references):
       apt-get update
       apt-get -y install postgresql
       ```
+
    4. Install MariaDB or MySQL
 
       Get the repository of the LTS version
@@ -125,16 +126,19 @@ Then, install Dédalo manually, commands are Ubuntu 22.04 (only as references):
       ```shell
       mysql_secure_installation
       ```
+
    5. Install ffmpeg
 
       ```shell
       apt install ffmpeg
       ```
+
    6. Install ImageMagick
 
       ```shell
       apt install imagemagick
       ```
+
    7. Install PDF tools
 
       ```shell
@@ -149,6 +153,7 @@ Then, install Dédalo manually, commands are Ubuntu 22.04 (only as references):
       tar xpvf  xpdf-tools-linux-4.03.tar.gz
       mv pdf* /usr/local/bin
       ```
+
 2. Download Dédalo and place it under the httpdocs directory of the web server.
 
    ```shell
@@ -161,6 +166,7 @@ Then, install Dédalo manually, commands are Ubuntu 22.04 (only as references):
    unzip master.zip
    mv dedalo-master dedalo
    ```
+
 3. Create a database in PostgreSQL named `dedalo_xx` (you can change the `xx` as you please).
    Enter into psql
 
@@ -187,12 +193,14 @@ Then, install Dédalo manually, commands are Ubuntu 22.04 (only as references):
    COMMENT ON DATABASE dedalo_xxx
    IS 'Dédalo: Cultural Heritage and Memory management system';
    ```
+
 4. Rename `sample.config.php` to `config.php`.
 
    ```shell
    cd [...]/dedalo/config/
    mv sample.config.php config.php
    ```
+
 5. Modify `[...]/dedalo/config/config.php` as you need. Usually, this involves the `DEDALO_ENTITY` string and the OS library paths.
 6. Rename `sample.config_db.php` to `config_db.php`.
 
@@ -200,6 +208,7 @@ Then, install Dédalo manually, commands are Ubuntu 22.04 (only as references):
    cd [...]/dedalo/config/
    mv sample.config_db.php config_db.php
    ```
+
 7. Modify `[...]/dedalo/config/config_db.php` with your database configuration.
 8. Rename `sample.config_core.php` to `config_core.php`.
 
@@ -207,16 +216,17 @@ Then, install Dédalo manually, commands are Ubuntu 22.04 (only as references):
    cd [...]/dedalo/config/
    mv sample.config_core.php config_core.php
    ```
+
 9. Rename `[...]/dedalo/config/sample.config_areas.php` to `[...]/dedalo/config/config_areas.php`.
 
    ```shell
    cd [...]/dedalo/config/
    mv sample.config_core.php config_core.php
    ```
+
 10. Open Dédalo in the browser.
 11. Follow the instructions.
 12. Once the installation process is done, log in and head to the Development Area. There, update the Ontology and register all tools.
 13. Create an admin user.
 14. Log out and log in with the admin user.
 15. Create Users and Projects as you need.
-

@@ -245,7 +245,7 @@ class install extends common {
 			$db_name		= DEDALO_DATABASE_CONN;
 			$user_name		= DEDALO_USERNAME_CONN;
 			$pw				= DEDALO_PASSWORD_CONN;
-			$information	= DEDALO_INFORMACION;
+			$information	= DEDALO_INFORMATION;
 			$info_key		= DEDALO_INFO_KEY;
 
 			$config_check = true;

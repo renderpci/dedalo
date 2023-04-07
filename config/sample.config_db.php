@@ -22,12 +22,14 @@ define('DEDALO_DATABASE_CONN'		, 'dedalo_mydatabase');
 define('DEDALO_USERNAME_CONN'		, 'myusername');
 // DEDALO_PASSWORD_CONN: string
 define('DEDALO_PASSWORD_CONN'		, 'mypassword');
-// DEDALO_INFORMACION: string . (!) Change it to any string before install, but don't change it after install
-define('DEDALO_INFORMACION'			, 'Dédalo install version');
+// DEDALO_INFORMATION: string . (!) Change it to any string before install, but don't change it after install
+define('DEDALO_INFORMATION'			, 'Dédalo install version');
 // DEDALO_INFO_KEY: string . (!) Change it with any string before install, but don't change it after install
 define('DEDALO_INFO_KEY'			, DEDALO_ENTITY);
 // SLOW_QUERY_MS: int 6000
 define('SLOW_QUERY_MS'				, 6000);
+// DEDALO_DB_MANAGEMENT: bool . Used to activate or not the management of the DDBB by Dédalo, if false all management task will require to do manually.
+define('DEDALO_DB_MANAGEMENT' , true);
 
 // MYSQL (PUBLIC DATA)
 // MySQL connection for publication
