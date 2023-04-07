@@ -48,21 +48,20 @@ Instead install you can use our "ready to use" virtual machine with all installe
 
 Then, you can use our V6 ready-to-use Virtual Machine for development:
 
-<p><a href="https://dedalo.dev/v6" target="_blank">Dedalo V5</a></p>
+[Dedalo V6](https://dedalo.dev/v6)
 
 > Note: we do not recommended use this machine as production system, it could be fine to develop or learn about Dédalo. If you want to use it you will need change all passwords because are public.
 
 ### 2.2. Video-guide for V6 installation
 
 Then, you can follow the steps in the V6 installation video:
-
-<p><a href="https://dedalo.dev/v5_install" target="_blank">Dedalo V6 installation video on Ubuntu</a></p>
+[Dedalo V6 installation video on Ubuntu](https://dedalo.dev/v6_install)
 
 ### 2.3. Manual installation
 
 Then, install Dédalo manually, commands are Ubuntu 22.04 (only as references):
 
-1. Install Ubuntu and all dependeces.
+1. Install Ubuntu and all dependencies.
 
    1. Install PHP
 
@@ -71,7 +70,7 @@ Then, install Dédalo manually, commands are Ubuntu 22.04 (only as references):
       ```
 
       > Note: the minimal version for PHP is 8.1 so you could change previous command for it.
-      >
+
    2. Install Apache and activate the mods
 
       ```shell
@@ -231,4 +230,3 @@ Then, install Dédalo manually, commands are Ubuntu 22.04 (only as references):
 13. Create an admin user.
 14. Log out and log in with the admin user.
 15. Create Users and Projects as you need.
-
