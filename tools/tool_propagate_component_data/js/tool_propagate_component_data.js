@@ -152,23 +152,22 @@ tool_propagate_component_data.prototype.propagate_component_data = function(acti
 		const propagate_data_value	= self.component_to_propagate.data.value
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'propagate_component_data')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			section_tipo			: section_tipo,
-			section_id				: section_id,
-			component_tipo			: component_tipo,
-			action					: action,
-			lang					: lang,
-			propagate_data_value	: propagate_data_value
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				section_tipo			: section_tipo,
+				section_id				: section_id,
+				component_tipo			: component_tipo,
+				action					: action,
+				lang					: lang,
+				propagate_data_value	: propagate_data_value
+			}
 		}
 
 	// call to the API, fetch data and get response

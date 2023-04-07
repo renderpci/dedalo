@@ -42,16 +42,18 @@ final class dd_core_api {
 	* sample:
 	* {
 	*	"action": "start",
-	*	"search_obj": {
-	*		"t": "oh1",
-	*		"m": "edit"
-	*	},
-	*	"menu": true,
-	*	"prevent_lock": true
+	*	"prevent_lock": true,
+	* 	"options" : {
+	* 		"search_obj": {
+	*			"t": "oh1",
+	*			"m": "edit"
+	*		 },
+	* 		"menu": true
+	* 	}
 	* }
 	* @return object $response
 	*/
-	public static function start(object $options) : object {
+	public static function start(object $rqo) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -59,6 +61,7 @@ final class dd_core_api {
 			$response->error	= null;
 
 		// options
+			$options	= $rqo->options;
 			$search_obj	= $options->search_obj ?? new StdClass(); // url vars
 			$menu		= $options->menu ?? false;
 
@@ -93,7 +96,6 @@ final class dd_core_api {
 
 				// tool case
 				$tool_name = $search_obj->tool;
-
 
 			}else if (isset($search_obj->locator)) {
 
@@ -1042,6 +1044,13 @@ final class dd_core_api {
 	* sample:
 	* {
 	*    "action": "count",
+	*    "source": {
+	*        "typo": "source",
+	*        "type": "tm",
+	*        "action": null,
+	*        "model": "service_time_machine",
+	*        ..
+	*    },
 	*    "sqo": {
 	*        "id": "tmp",
 	*        "mode": "tm",
@@ -1049,14 +1058,7 @@ final class dd_core_api {
 	*            "oh1"
 	*        ]
 	*    },
-	*    "prevent_lock": true,
-	*    "source": {
-	*        "typo": "source",
-	*        "type": "tm",
-	*        "action": null,
-	*        "model": "service_time_machine",
-	*        ..
-	*    }
+	*    "prevent_lock": true
 	* }
 	* @return object $response
 	*/
@@ -1238,15 +1240,22 @@ final class dd_core_api {
 	* GET_SECTION_ELEMENTS_CONTEXT
 	* Get all components of current section (used in section search filter and tool export)
 	* Used by filter and tool_export
-	* @param object $options
-	*	array $options->ar_section_tipo
+	* @param object $rqo
+	*	{
+	*		action			: 'get_section_elements_context',
+	*		prevent_lock	: true,
+	*		options			: {
+	*			context_type			: 'simple',
+	*			ar_section_tipo			: section_tipo,
+	*			ar_components_exclude	: ar_components_exclude
+	*		}
+	*	}
 	* @return object $response
 	*/
-	public static function get_section_elements_context(object $options) : object {
-
-		session_write_close();
+	public static function get_section_elements_context(object $rqo) : object {
 
 		// options
+			$options				= $rqo->options;
 			$ar_section_tipo		= (array)$options->ar_section_tipo;
 			$context_type			= $options->context_type;
 			$ar_components_exclude	= $options->ar_components_exclude ?? null;
@@ -1825,6 +1834,15 @@ final class dd_core_api {
 	* GET_INDEXATION_GRID
 	* @see class.request_query_object.php
 	* @param object $rqo
+	* {
+	*	action	: 'get_indexation_grid',
+	*	source	: {
+	*		section_tipo	: section_tipo,
+	*		section_id		: section_id,
+	*		tipo			: component_tipo,
+	*		value			: value // ["oh1",] array of section_tipo \ used to filter the locator with specific section_tipo (like 'oh1')
+	*	}
+	* }
 	* @return object $response
 	*/
 	public static function get_indexation_grid(object $rqo) : object {
@@ -1867,6 +1885,11 @@ final class dd_core_api {
 	/**
 	* GET_RELATION_LIST
 	* @param object $rqo
+	* {
+	*	action	: 'get_relation_list',
+	*	source	: source,
+	*	sqo		: sqo
+	* }
 	* @return object $response
 	*/
 	public static function get_relation_list(object $rqo) : object {
@@ -1936,54 +1959,54 @@ final class dd_core_api {
 	* 	error : int|null
 	* }
 	*/
-	public static function service_request(object $rqo) : object {
+		// public static function service_request(object $rqo) : object {
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__METHOD__.']. ';
-			$response->error	= null;
+		// 	$response = new stdClass();
+		// 		$response->result	= false;
+		// 		$response->msg		= 'Error. Request failed ['.__METHOD__.']. ';
+		// 		$response->error	= null;
 
-		// short vars
-			$source			= $rqo->source;
-			$service_name	= $source->model;
-			$service_method	= $source->action;
-			$arguments		= $source->arguments ?? new stdClass();
+		// 	// short vars
+		// 		$source			= $rqo->source;
+		// 		$service_name	= $source->model;
+		// 		$service_method	= $source->action;
+		// 		$arguments		= $source->arguments ?? new stdClass();
 
-		// load services class file
-			$class_file = DEDALO_CORE_PATH . '/services/' .$service_name. '/class.' . $service_name .'.php';
-			if (!file_exists($class_file)) {
-				$response->msg = 'Error. services class_file do not exists. Create a new one in format class.my_service_name.php ';
-				if(SHOW_DEBUG===true) {
-					$response->msg .= '. file: '.$class_file;
-				}
-				return $response;
-			}
-			require $class_file;
+		// 	// load services class file
+		// 		$class_file = DEDALO_CORE_PATH . '/services/' .$service_name. '/class.' . $service_name .'.php';
+		// 		if (!file_exists($class_file)) {
+		// 			$response->msg = 'Error. services class_file do not exists. Create a new one in format class.my_service_name.php ';
+		// 			if(SHOW_DEBUG===true) {
+		// 				$response->msg .= '. file: '.$class_file;
+		// 			}
+		// 			return $response;
+		// 		}
+		// 		require $class_file;
 
-		// method (static)
-			if (!method_exists($service_name, $service_method)) {
-				$response->msg = 'Error. services method \''.$service_method.'\' do not exists ';
-				return $response;
-			}
-			try {
+		// 	// method (static)
+		// 		if (!method_exists($service_name, $service_method)) {
+		// 			$response->msg = 'Error. services method \''.$service_method.'\' do not exists ';
+		// 			return $response;
+		// 		}
+		// 		try {
 
-				$fn_result = call_user_func(array($service_name, $service_method), $arguments);
+		// 			$fn_result = call_user_func(array($service_name, $service_method), $arguments);
 
-			} catch (Exception $e) { // For PHP 5
+		// 		} catch (Exception $e) { // For PHP 5
 
-				trigger_error($e->getMessage());
+		// 			trigger_error($e->getMessage());
 
-				$fn_result = new stdClass();
-					$fn_result->result	= false;
-					$fn_result->msg		= 'Error. Request failed on call_user_func service_method: '.$service_method;
+		// 			$fn_result = new stdClass();
+		// 				$fn_result->result	= false;
+		// 				$fn_result->msg		= 'Error. Request failed on call_user_func service_method: '.$service_method;
 
-			}
+		// 		}
 
-			$response = $fn_result;
+		// 		$response = $fn_result;
 
 
-		return $response;
-	}//end service_request
+		// 	return $response;
+		// }//end service_request
 
 
 

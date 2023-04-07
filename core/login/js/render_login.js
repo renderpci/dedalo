@@ -97,7 +97,7 @@ const get_content_data = function(self) {
 						body : {
 							action	: 'change_lang',
 							dd_api	: 'dd_utils_api',
-							options  : {
+							options	: {
 								dedalo_data_lang		: lang,
 								dedalo_application_lang	: lang
 							}

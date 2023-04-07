@@ -152,18 +152,17 @@ tool_import_dedalo_csv.prototype.load_csv_files_list = async function() {
 	const self = this
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'get_csv_files')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			// dir : use default as fallback (DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH)
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options : {
+				// dir : use default as fallback (DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH)
+			}
 		}
 
 	// call to the API, fetch data and get response
@@ -207,18 +206,17 @@ tool_import_dedalo_csv.prototype.remove_file = function(item) {
 	const self = this
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'delete_csv_file')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			file_name : item.name
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				file_name : item.name
+			}
 		}
 
 	// call to the API, fetch data and get response
@@ -260,19 +258,18 @@ tool_import_dedalo_csv.prototype.import_files = function(files, time_machine_sav
 	const self = this
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'import_files')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			files				: files,
-			time_machine_save	: time_machine_save
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				files				: files,
+				time_machine_save	: time_machine_save
+			}
 		}
 
 	// call to the API, fetch data and get response
@@ -309,18 +306,17 @@ tool_import_dedalo_csv.prototype.get_section_components_list = function(section_
 		}
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'get_section_components_list')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			section_tipo : section_tipo
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				section_tipo : section_tipo
+			}
 		}
 
 	// call to the API, fetch data and get response
@@ -378,18 +374,17 @@ tool_import_dedalo_csv.prototype.process_uploaded_file = function(file_data) {
 	const self = this
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'process_uploaded_file')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			file_data : file_data
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				file_data : file_data
+			}
 		}
 
 	// call to the API, fetch data and get response

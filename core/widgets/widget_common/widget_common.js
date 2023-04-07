@@ -69,7 +69,7 @@ widget_common.prototype.init = async function(options) {
 * BUILD
 * Generic widget build function. Load css files
 * @param bool autoload
-* @return promise bool
+* @return  bool
 */
 widget_common.prototype.build = async function(autoload=false) {
 
@@ -92,8 +92,10 @@ widget_common.prototype.build = async function(autoload=false) {
 					tipo			: self.caller.tipo,
 					section_tipo	: self.caller.section_tipo,
 					section_id		: self.caller.section_id,
-					mode			: self.mode,
-					widget_name		: self.name
+					mode			: self.mode
+				},
+				options : {
+					widget_name	: self.name
 				}
 			}
 			const api_response = await data_manager.request({

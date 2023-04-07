@@ -131,21 +131,20 @@ tool_posterframe.prototype.create_posterframe = function(current_time) {
 	const self = this
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'create_posterframe')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			tipo			: self.main_element.tipo,
-			section_tipo	: self.main_element.section_tipo,
-			section_id		: self.main_element.section_id,
-			current_time	: current_time
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				tipo			: self.main_element.tipo,
+				section_tipo	: self.main_element.section_tipo,
+				section_id		: self.main_element.section_id,
+				current_time	: current_time
+			}
 		}
 
 	// call to the API, fetch data and get response
@@ -183,20 +182,19 @@ tool_posterframe.prototype.delete_posterframe = async function() {
 		}
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'delete_posterframe')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			tipo			: self.main_element.tipo,
-			section_tipo	: self.main_element.section_tipo,
-			section_id		: self.main_element.section_id
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options : {
+				tipo			: self.main_element.tipo,
+				section_tipo	: self.main_element.section_tipo,
+				section_id		: self.main_element.section_id
+			}
 		}
 
 	// call to the API, fetch data and get response
@@ -230,19 +228,18 @@ tool_posterframe.prototype.get_ar_identifying_image = async function() {
 	const self = this
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'get_ar_identifying_image')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			section_tipo	: self.main_element.section_tipo,
-			section_id		: self.main_element.section_id
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				section_tipo	: self.main_element.section_tipo,
+				section_id		: self.main_element.section_id
+			}
 		}
 
 	// call to the API, fetch data and get response
@@ -280,22 +277,21 @@ tool_posterframe.prototype.create_identifying_image = async function(item_value,
 		}
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'create_identifying_image')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			tipo			: self.main_element.tipo,
-			section_tipo	: self.main_element.section_tipo,
-			section_id		: self.main_element.section_id,
-			item_value		: item_value,
-			current_time	: current_time
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				tipo			: self.main_element.tipo,
+				section_tipo	: self.main_element.section_tipo,
+				section_id		: self.main_element.section_id,
+				item_value		: item_value,
+				current_time	: current_time
+			}
 		}
 
 	// call to the API, fetch data and get response

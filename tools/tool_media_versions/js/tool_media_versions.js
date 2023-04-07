@@ -129,20 +129,19 @@ tool_media_versions.prototype.get_files_info = async function() {
 	const self = this
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'get_files_info')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			tipo			: self.main_element.tipo,
-			section_tipo	: self.main_element.section_tipo,
-			section_id		: self.main_element.section_id
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				tipo			: self.main_element.tipo,
+				section_tipo	: self.main_element.section_tipo,
+				section_id		: self.main_element.section_id
+			}
 		}
 
 	// call to the API, fetch data and get response
@@ -182,21 +181,20 @@ tool_media_versions.prototype.delete_file = async function(quality) {
 		}
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'delete_file')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			tipo			: self.main_element.tipo,
-			section_tipo	: self.main_element.section_tipo,
-			section_id		: self.main_element.section_id,
-			quality			: quality
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				tipo			: self.main_element.tipo,
+				section_tipo	: self.main_element.section_tipo,
+				section_id		: self.main_element.section_id,
+				quality			: quality
+			}
 		}
 
 	// call to the API, fetch data and get response
@@ -236,21 +234,20 @@ tool_media_versions.prototype.build_version = async function(quality) {
 		}
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'build_version')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			tipo			: self.main_element.tipo,
-			section_tipo	: self.main_element.section_tipo,
-			section_id		: self.main_element.section_id,
-			quality			: quality
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				tipo			: self.main_element.tipo,
+				section_tipo	: self.main_element.section_tipo,
+				section_id		: self.main_element.section_id,
+				quality			: quality
+			}
 		}
 
 	// call to the API, fetch data and get response
@@ -290,21 +287,20 @@ tool_media_versions.prototype.conform_headers = async function(quality) {
 		}
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'conform_headers')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			tipo			: self.main_element.tipo,
-			section_tipo	: self.main_element.section_tipo,
-			section_id		: self.main_element.section_id,
-			quality			: quality
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				tipo			: self.main_element.tipo,
+				section_tipo	: self.main_element.section_tipo,
+				section_id		: self.main_element.section_id,
+				quality			: quality
+			}
 		}
 
 	// call to the API, fetch data and get response
@@ -331,7 +327,7 @@ tool_media_versions.prototype.conform_headers = async function(quality) {
 * ROTATE
 * 	Apply a rotation process to the selected file
 * @param string quality
-* @param string degrees
+* @param string|int degrees
 * 	-90 / 90
 * @return promise
 * 	resolve: array of objects
@@ -346,22 +342,21 @@ tool_media_versions.prototype.rotate = async function(quality, degrees) {
 		}
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'rotate')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			tipo			: self.main_element.tipo,
-			section_tipo	: self.main_element.section_tipo,
-			section_id		: self.main_element.section_id,
-			quality			: quality,
-			degrees			: degrees
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				tipo			: self.main_element.tipo,
+				section_tipo	: self.main_element.section_tipo,
+				section_id		: self.main_element.section_id,
+				quality			: quality,
+				degrees			: degrees
+			}
 		}
 
 	// call to the API, fetch data and get response
