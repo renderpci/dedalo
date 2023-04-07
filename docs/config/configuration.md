@@ -93,6 +93,8 @@ This config file is used by Dédalo to set and get the status of the installatio
 
 Every config file has its own parameters that need to be changed with the your own project environment.
 
-1. Changing the parameters of global Dédalo config file.
-2. Changing the parameters of database config file.
-3. Cahngins parameters of areas config file.
+1. Changing parameters of global [Dédalo configuration file](./config.md#changing-parameters-of-global-dédalo-config-file).
+2. Changing parameters of [database configiguration file](./config_db.md#changing-parameters-of-dédalo-database-config-file).
+   1. Work system [configutarion](./config_db.md#work-system-database-variables)
+   2. Diffusion system [configuration](./config_db.md#diffusion-system-database-variables)
+3. Changing parameters of [areas configuration file](./config_areas.md#changing-parameters-of-dédalo-areas-config-file).
