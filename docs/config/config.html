@@ -5,106 +5,7 @@
 </head>
 <body>
 
-<h1 id="configuration">Configuration</h1>
-
-<p>Dédalo has four different config files in the ../dedalo/config/ directory:</p>
-
-<ul>
-<li>config.php</li>
-<li>config_db.php</li>
-<li>config_areas</li>
-<li>config_core.php</li>
-</ul>
-
-<p>Every file configure a specific part of the installation.</p>
-
-<p>The configuration files are &#8220;static&#8221; files that is necessary update manually, because these files has your database connection (with name, passwords, etc) and other specific parameters for your installation.</p>
-
-<blockquote>
-<p>Note: You will need review the &#8220;sample&#8221; files of the new versions to add or remove the changes specify in the new version. Dédalo will not change your specific configuration files when it&#8217;s updated automatically.</p>
-</blockquote>
-
-<h2 id="renamedédaloconfigurationfiles">Rename Dédalo configuration files</h2>
-
-<p>In the installation process you will has rename the sample files to active files, removing the &#8220;sample_&#8221; text of the filename. If you not did this step complete it before config your installation.</p>
-
-<p>When Dédalo is downloaded from GitHub, some config files should be configured with the proper parameters. All those config files come with a &#8216;sample&#8217; prefix that need to be removed from the names to get the functionality.</p>
-
-<p>The first step would be locating and renaming config files from their original value in GitHub to target file names that Dédalo can will locate and use.</p>
-
-<h3 id="renameglobaldédaloconfigfile">Rename global Dédalo config file</h3>
-
-<p><strong>config.php</strong></p>
-
-<p>This is the main config for all Dédalo system, this file is used to configure Dédalo with the entity, languages the will used in the projects, media formats, directories to use.</p>
-
-<ol>
-<li><p>Locate the file into the directory: ../httpdocs/dedalo/config/</p>
-
-<pre><code class="shell">cd ../httpdocs/dedalo/config/
-</code></pre></li>
-<li><p>Rename the sample.config.php to config.php</p>
-
-<pre><code class="shell">mv sample.config.php config.php
-</code></pre></li>
-</ol>
-
-<h3 id="dédalodbconfigfile">Dédalo DB config file</h3>
-
-<p><strong>config_db.php</strong></p>
-
-<p>This config file set the Dédalo connection to databases. This file will be used to configure both PostgreSQL and MySQL databases connections. PostgreSQL will be used for the working system and MySQL will be used to publish data.</p>
-
-<ol>
-<li><p>Locate the file into the directory: ../httpdocs/dedalo/config/</p>
-
-<pre><code class="shell">cd ../httpdocs/dedalo/config/
-</code></pre></li>
-<li><p>Rename the sample.config_db.php to config_db.php</p>
-
-<pre><code class="shell">mv sample.config_db.php config_db.php
-</code></pre></li>
-</ol>
-
-<h3 id="dédaloareasconfigfile">Dédalo Areas config file</h3>
-
-<p><strong>config_areas.php</strong></p>
-
-<p>This config file set the Dédalo areas that are usable or can be accessed or denied his access. The areas are the main group of information, it could be any &#8220;cultural field&#8221; of the research such as Oral Memory or Archeological heritage. Allowing or denying access to an area you are allowing or removing the access to all sections that this area has.</p>
-
-<ol>
-<li><p>Locate the file into the directory: ../httpdocs/dedalo/config/</p>
-
-<pre><code class="shell">cd ../httpdocs/dedalo/config/
-</code></pre></li>
-<li><p>Rename the sample.config_areas.php to config_areas.php</p>
-
-<pre><code class="shell">mv sample.config_areas.php config_areas.php
-</code></pre></li>
-</ol>
-
-<h3 id="dédalocoreconfigfile">Dédalo core config file</h3>
-
-<p><strong>config_core.php</strong></p>
-
-<p>This config file is used by Dédalo to set and get the status of the installation, you do not need change it manually.</p>
-
-<ol>
-<li><p>Locate the file into the directory: ../httpdocs/dedalo/config/</p>
-
-<pre><code class="shell">cd ../httpdocs/dedalo/config/
-</code></pre></li>
-<li><p>Rename the sample.config_core.php to config_core.php</p>
-
-<pre><code class="shell">mv sample.config_core.php config_core.php
-</code></pre></li>
-</ol>
-
-<h2 id="setupdédaloconfigurationfiles">Set up Dédalo configuration files</h2>
-
-<p>Every config file has its own parameters that need to be changed with the our project environment.</p>
-
-<h3 id="changingtheparametersofglobaldédaloconfigfile.">Changing the parameters of global Dédalo config file.</h3>
+<h1 id="changingparametersofglobaldédaloconfigfile.">Changing parameters of global Dédalo config file.</h1>
 
 <p><strong>config.php</strong></p>
 
@@ -119,13 +20,13 @@
 </code></pre></li>
 <li><p>Locate and change the PROPERTY with the proper configuration.</p>
 
-<h3 id="mainvariables"><strong>Main variables</strong></h3>
+<h2 id="mainvariables"><strong>Main variables</strong></h2>
 
-<h3 id="paths">paths</h3>
+<h2 id="paths">paths</h2>
 
 <hr />
 
-<h4 id="dédalohost">Dédalo host</h4>
+<h3 id="dédalohost">Dédalo host</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -138,7 +39,7 @@
 
 <hr />
 
-<h4 id="dédaloprotocol">Dédalo protocol</h4>
+<h3 id="dédaloprotocol">Dédalo protocol</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -151,7 +52,7 @@
 
 <hr />
 
-<h4 id="dédalorootpath">Dédalo root path</h4>
+<h3 id="dédalorootpath">Dédalo root path</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -168,7 +69,7 @@
 
 <hr />
 
-<h4 id="dédalorootwebdirectory">Dédalo root web directory</h4>
+<h3 id="dédalorootwebdirectory">Dédalo root web directory</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -185,7 +86,7 @@
 
 <hr />
 
-<h4 id="dédalobasepaths">Dédalo base paths</h4>
+<h3 id="dédalobasepaths">Dédalo base paths</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -206,7 +107,7 @@ define('DEDALO_LIB',	'lib');
 
 <hr />
 
-<h4 id="dédaloconfigpath">Dédalo config path</h4>
+<h3 id="dédaloconfigpath">Dédalo config path</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -221,7 +122,7 @@ define('DEDALO_LIB',	'lib');
 
 <hr />
 
-<h4 id="dédalocorepath">Dédalo core path</h4>
+<h3 id="dédalocorepath">Dédalo core path</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -234,7 +135,7 @@ define('DEDALO_LIB',	'lib');
 
 <hr />
 
-<h4 id="dédalocoreurl">Dédalo core URL</h4>
+<h3 id="dédalocoreurl">Dédalo core URL</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -248,7 +149,7 @@ The uri path will be use to do calls from API to load and different components.<
 
 <hr />
 
-<h4 id="dédalosharedpath">Dédalo shared path</h4>
+<h3 id="dédalosharedpath">Dédalo shared path</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -261,7 +162,7 @@ The uri path will be use to do calls from API to load and different components.<
 
 <hr />
 
-<h4 id="dédalosharedurl">Dédalo shared URL</h4>
+<h3 id="dédalosharedurl">Dédalo shared URL</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -278,7 +179,7 @@ The uri path will be use to do calls from API to load and different components.<
 
 <hr />
 
-<h4 id="dédalotoolspath">Dédalo tools path</h4>
+<h3 id="dédalotoolspath">Dédalo tools path</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -291,7 +192,7 @@ The uri path will be use to do calls from API to load and different components.<
 
 <hr />
 
-<h4 id="dédalotoolsurl">Dédalo tools URL</h4>
+<h3 id="dédalotoolsurl">Dédalo tools URL</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -304,7 +205,7 @@ The uri path will be use to do calls from API to load and different components.<
 
 <hr />
 
-<h4 id="dédalolibpath">Dédalo lib path</h4>
+<h3 id="dédalolibpath">Dédalo lib path</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -317,7 +218,7 @@ The uri path will be use to do calls from API to load and different components.<
 
 <hr />
 
-<h4 id="dédalolibraryuri">Dédalo library uri</h4>
+<h3 id="dédalolibraryuri">Dédalo library uri</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -335,7 +236,7 @@ The uri path will be use to create html and js to load and call different tools 
 
 <hr />
 
-<h4 id="dédalowidgetspath">Dédalo widgets path</h4>
+<h3 id="dédalowidgetspath">Dédalo widgets path</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -348,7 +249,7 @@ The uri path will be use to create html and js to load and call different tools 
 
 <hr />
 
-<h4 id="dédalowidgetsurl">Dédalo widgets URL</h4>
+<h3 id="dédalowidgetsurl">Dédalo widgets URL</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -365,7 +266,7 @@ The uri path will be use to create html and js to load and call different tools 
 
 <hr />
 
-<h4 id="dédaloextraspath">Dédalo extras path</h4>
+<h3 id="dédaloextraspath">Dédalo extras path</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -390,7 +291,7 @@ The uri path will be use to create html and js to load and call different tools 
 
 <hr />
 
-<h4 id="dédaloextrasuri">Dédalo extras uri</h4>
+<h3 id="dédaloextrasuri">Dédalo extras uri</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -417,7 +318,7 @@ The uri path will be use to create html and js to load and call different tools 
 
 <hr />
 
-<h4 id="dédalosaltstringstringusedforencryption">Dédalo salt string (string used for encryption)</h4>
+<h3 id="dédalosaltstringstringusedforencryption">Dédalo salt string (string used for encryption)</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -432,7 +333,7 @@ The uri path will be use to create html and js to load and call different tools 
 
 <hr />
 
-<h4 id="dédalotimezone">Dédalo time zone</h4>
+<h3 id="dédalotimezone">Dédalo time zone</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -454,7 +355,7 @@ The uri path will be use to create html and js to load and call different tools 
 
 <hr />
 
-<h4 id="dédalolocaleencoding">Dédalo locale encoding</h4>
+<h3 id="dédalolocaleencoding">Dédalo locale encoding</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -478,7 +379,7 @@ The uri path will be use to create html and js to load and call different tools 
 
 <hr />
 
-<h4 id="dédalodateorder">Dédalo date order</h4>
+<h3 id="dédalodateorder">Dédalo date order</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -499,7 +400,7 @@ The uri path will be use to create html and js to load and call different tools 
 
 <hr />
 
-<h4 id="dédaloentity">Dédalo entity</h4>
+<h3 id="dédaloentity">Dédalo entity</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -516,7 +417,7 @@ The uri path will be use to create html and js to load and call different tools 
 
 <hr />
 
-<h4 id="dédaloentitylabel">Dédalo entity label</h4>
+<h3 id="dédaloentitylabel">Dédalo entity label</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -537,7 +438,7 @@ The uri path will be use to create html and js to load and call different tools 
 
 <hr />
 
-<h4 id="entityid">Entity id</h4>
+<h3 id="entityid">Entity id</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -550,7 +451,7 @@ The uri path will be use to create html and js to load and call different tools 
 
 <hr />
 
-<h4 id="developerserver">Developer server</h4>
+<h3 id="developerserver">Developer server</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -569,7 +470,7 @@ The uri path will be use to create html and js to load and call different tools 
 
 <hr />
 
-<h4 id="dédalocachemanager">Dédalo cache manager</h4>
+<h3 id="dédalocachemanager">Dédalo cache manager</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -594,7 +495,7 @@ The uri path will be use to create html and js to load and call different tools 
 
 <hr />
 
-<h4 id="basicfunctions">Basic functions</h4>
+<h3 id="basicfunctions">Basic functions</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -606,7 +507,7 @@ class and methods like encoding or encryption data. This file will be loaded bef
 
 <hr />
 
-<h4 id="version">Version</h4>
+<h3 id="version">Version</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -617,7 +518,7 @@ class and methods like encoding or encryption data. This file will be loaded bef
 
 <hr />
 
-<h4 id="dédalofixedtipos">Dédalo fixed tipos</h4>
+<h3 id="dédalofixedtipos">Dédalo fixed tipos</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -634,7 +535,7 @@ This file acts as cache of some common tipos, some times when Dédalo need acces
 
 <hr />
 
-<h4 id="version">Version</h4>
+<h3 id="version">Version</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -645,7 +546,7 @@ This file acts as cache of some common tipos, some times when Dédalo need acces
 
 <hr />
 
-<h4 id="databaseconfigconnection">Database config / connection</h4>
+<h3 id="databaseconfigconnection">Database config / connection</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -661,7 +562,7 @@ PostgreSQL and MariaDB / MySQL connections. Dédalo interface will use the Postg
 
 <hr />
 
-<h4 id="dédalosessionhandler">Dédalo session handler</h4>
+<h3 id="dédalosessionhandler">Dédalo session handler</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -678,7 +579,7 @@ PostgreSQL and MariaDB / MySQL connections. Dédalo interface will use the Postg
 
 <hr />
 
-<h4 id="sessionlifetime">Session lifetime</h4>
+<h3 id="sessionlifetime">Session lifetime</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -693,7 +594,7 @@ $timeout_seconds = intval($session_duration_hours*3600);
 
 <hr />
 
-<h4 id="startingthesession">Starting the session</h4>
+<h3 id="startingthesession">Starting the session</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -720,7 +621,7 @@ session_start_manager([
 
 <hr />
 
-<h4 id="showdebug">Show debug</h4>
+<h3 id="showdebug">Show debug</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -737,7 +638,7 @@ session_start_manager([
 
 <hr />
 
-<h4 id="showdeveloper">Show developer</h4>
+<h3 id="showdeveloper">Show developer</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -758,7 +659,7 @@ session_start_manager([
 
 <hr />
 
-<h4 id="loader">Loader</h4>
+<h3 id="loader">Loader</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -773,7 +674,7 @@ session_start_manager([
 
 <hr />
 
-<h4 id="dédalobackuponloggin">Dédalo backup on loggin</h4>
+<h3 id="dédalobackuponloggin">Dédalo backup on loggin</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -787,7 +688,7 @@ If this constant is set to <code>true</code> Dédalo will check if the last back
 
 <hr />
 
-<h4 id="dédalobackuptimerange">Dédalo backup time range</h4>
+<h3 id="dédalobackuptimerange">Dédalo backup time range</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -800,7 +701,7 @@ If this constant is set to <code>true</code> Dédalo will check if the last back
 
 <hr />
 
-<h4 id="dédalobackupsdirectory">Dédalo backups directory</h4>
+<h3 id="dédalobackupsdirectory">Dédalo backups directory</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -813,7 +714,7 @@ If this constant is set to <code>true</code> Dédalo will check if the last back
 
 <hr />
 
-<h4 id="dédalotemporarybackup">Dédalo temporary backup</h4>
+<h3 id="dédalotemporarybackup">Dédalo temporary backup</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -826,7 +727,7 @@ If this constant is set to <code>true</code> Dédalo will check if the last back
 
 <hr />
 
-<h4 id="dédalomaindbbackup">Dédalo main db backup</h4>
+<h3 id="dédalomaindbbackup">Dédalo main db backup</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -839,7 +740,7 @@ If this constant is set to <code>true</code> Dédalo will check if the last back
 
 <hr />
 
-<h4 id="dédaloontologybackup">Dédalo ontology backup</h4>
+<h3 id="dédaloontologybackup">Dédalo ontology backup</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -856,7 +757,7 @@ If this constant is set to <code>true</code> Dédalo will check if the last back
 
 <hr />
 
-<h4 id="loggerlevel">Logger level</h4>
+<h3 id="loggerlevel">Logger level</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -887,7 +788,7 @@ If this constant is set to <code>true</code> Dédalo will check if the last back
 
 <hr />
 
-<h4 id="activitylogdatabase">Activity log database</h4>
+<h3 id="activitylogdatabase">Activity log database</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -903,7 +804,7 @@ logger::$obj['activity'] = logger::get_instance('activity');
 
 <hr />
 
-<h4 id="dédalostructurelang">Dédalo structure lang</h4>
+<h3 id="dédalostructurelang">Dédalo structure lang</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -942,7 +843,7 @@ xxx : with the official tld of the ISO 639&#8211;6, Alpha-4 code for comprehensi
 
 <hr />
 
-<h4 id="dédaloapplicationlanguages">Dédalo application languages</h4>
+<h3 id="dédaloapplicationlanguages">Dédalo application languages</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -965,7 +866,7 @@ xxx : with the official tld of the ISO 639&#8211;6, Alpha-4 code for comprehensi
 
 <hr />
 
-<h4 id="dédalodefaultapplicationlanguage">Dédalo default application language</h4>
+<h3 id="dédalodefaultapplicationlanguage">Dédalo default application language</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -984,7 +885,7 @@ xxx : with the official tld of the ISO 639&#8211;6, Alpha-4 code for comprehensi
 
 <hr />
 
-<h4 id="dédaloapplicationlanguage">Dédalo application language</h4>
+<h3 id="dédaloapplicationlanguage">Dédalo application language</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1003,7 +904,7 @@ xxx : with the official tld of the ISO 639&#8211;6, Alpha-4 code for comprehensi
 
 <hr />
 
-<h4 id="dédalodefaultdatalanguage">Dédalo default data language</h4>
+<h3 id="dédalodefaultdatalanguage">Dédalo default data language</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1020,7 +921,7 @@ xxx : with the official tld of the ISO 639&#8211;6, Alpha-4 code for comprehensi
 
 <hr />
 
-<h4 id="dédalodatalanguage">Dédalo data language</h4>
+<h3 id="dédalodatalanguage">Dédalo data language</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1034,12 +935,12 @@ xxx : with the official tld of the ISO 639&#8211;6, Alpha-4 code for comprehensi
 </code></pre>
 
 <blockquote>
-<p>This parameter use the method &#8216;fix_cascade_config_var&#8217; to calculate the value. The result of this function will be a string with the correct language value in string format. You can define it as fixed data value, but is recommended do not change the definition, if you want change the default language for the data use the: <a href="#dédalodefaultdatalanguage">DEDALO_DATA_LANG_DEFAULT</a>.</p>
+<p>This parameter use the method &#8216;fix_cascade_config_var&#8217; to calculate the value. The result of this function will be a string with the correct language value in string format. You can define it as fixed data value, but is recommended do not change the definition, if you want change the default language for the data use the: <a href="#dédalo-default-data-language">DEDALO_DATA_LANG_DEFAULT</a>.</p>
 </blockquote>
 
 <hr />
 
-<h4 id="dédalodatalanguageselector">Dédalo data language selector</h4>
+<h3 id="dédalodatalanguageselector">Dédalo data language selector</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1054,7 +955,7 @@ xxx : with the official tld of the ISO 639&#8211;6, Alpha-4 code for comprehensi
 
 <hr />
 
-<h4 id="dédalodatawithoutlanguagenolang">Dédalo data without language (no lang)</h4>
+<h3 id="dédalodatawithoutlanguagenolang">Dédalo data without language (no lang)</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1071,7 +972,7 @@ xxx : with the official tld of the ISO 639&#8211;6, Alpha-4 code for comprehensi
 
 <hr />
 
-<h4 id="dédalodefaultprojectslanguages">Dédalo default projects languages</h4>
+<h3 id="dédalodefaultprojectslanguages">Dédalo default projects languages</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1092,7 +993,7 @@ xxx : with the official tld of the ISO 639&#8211;6, Alpha-4 code for comprehensi
 
 <hr />
 
-<h4 id="dédalodiffusionlanguages">Dédalo diffusion languages</h4>
+<h3 id="dédalodiffusionlanguages">Dédalo diffusion languages</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1113,7 +1014,7 @@ xxx : with the official tld of the ISO 639&#8211;6, Alpha-4 code for comprehensi
 
 <hr />
 
-<h4 id="dédalotranslatorurl">Dédalo translator url</h4>
+<h3 id="dédalotranslatorurl">Dédalo translator url</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1136,7 +1037,7 @@ xxx : with the official tld of the ISO 639&#8211;6, Alpha-4 code for comprehensi
 
 <hr />
 
-<h4 id="dédaloprefixtipos">Dédalo prefix tipos</h4>
+<h3 id="dédaloprefixtipos">Dédalo prefix tipos</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1171,7 +1072,7 @@ xxx : with the official tld of the ISO 639&#8211;6, Alpha-4 code for comprehensi
 
 <hr />
 
-<h4 id="mainfallbacksection">Main fallback section</h4>
+<h3 id="mainfallbacksection">Main fallback section</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1185,7 +1086,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="numericalmatrixvalueforyes">Numerical matrix value for yes</h4>
+<h3 id="numericalmatrixvalueforyes">Numerical matrix value for yes</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1198,7 +1099,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="numericalmatrixvalueforno">Numerical matrix value for no</h4>
+<h3 id="numericalmatrixvalueforno">Numerical matrix value for no</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1211,7 +1112,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalomaximumrowsperpage">Dédalo maximum rows per page</h4>
+<h3 id="dédalomaximumrowsperpage">Dédalo maximum rows per page</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1226,7 +1127,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalodefaultprofile">Dédalo default profile</h4>
+<h3 id="dédalodefaultprofile">Dédalo default profile</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1241,7 +1142,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalodefaultproject">Dédalo default project</h4>
+<h3 id="dédalodefaultproject">Dédalo default project</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1256,7 +1157,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalofiltersectiontipodefault">Dédalo filter section tipo default</h4>
+<h3 id="dédalofiltersectiontipodefault">Dédalo filter section tipo default</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1283,7 +1184,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalomediabasepath">Dédalo media base path</h4>
+<h3 id="dédalomediabasepath">Dédalo media base path</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1298,7 +1199,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalomediabaseurl">Dédalo media base url</h4>
+<h3 id="dédalomediabaseurl">Dédalo media base url</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1313,7 +1214,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloaudiovisualdirectory">Dédalo audiovisual directory</h4>
+<h3 id="dédaloaudiovisualdirectory">Dédalo audiovisual directory</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1326,7 +1227,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloaudiovisualextensiontypeoffile">Dédalo audiovisual extension (type of file)</h4>
+<h3 id="dédaloaudiovisualextensiontypeoffile">Dédalo audiovisual extension (type of file)</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1341,7 +1242,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloaudiovisualextensionssupported">Dédalo audiovisual extensions supported</h4>
+<h3 id="dédaloaudiovisualextensionssupported">Dédalo audiovisual extensions supported</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1356,7 +1257,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloaudiovisualmimetype">Dédalo audiovisual mime type</h4>
+<h3 id="dédaloaudiovisualmimetype">Dédalo audiovisual mime type</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1371,7 +1272,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloaudiovisualcodectype">Dédalo audiovisual codec type</h4>
+<h3 id="dédaloaudiovisualcodectype">Dédalo audiovisual codec type</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1384,7 +1285,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloaudiovisualqualityfororiginalfiles">Dédalo audiovisual quality for original files</h4>
+<h3 id="dédaloaudiovisualqualityfororiginalfiles">Dédalo audiovisual quality for original files</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1399,7 +1300,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloaudiovisualqualityforprocesedfiles">Dédalo audiovisual quality for procesed files</h4>
+<h3 id="dédaloaudiovisualqualityforprocesedfiles">Dédalo audiovisual quality for procesed files</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1414,7 +1315,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloaudiovisualqualitiesdefiniton">Dédalo audiovisual qualities definiton</h4>
+<h3 id="dédaloaudiovisualqualitiesdefiniton">Dédalo audiovisual qualities definiton</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1429,7 +1330,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloposterframefiletypeextensionforaudiovisualfiles">Dédalo posterframe filetype extension for audiovisual files</h4>
+<h3 id="dédaloposterframefiletypeextensionforaudiovisualfiles">Dédalo posterframe filetype extension for audiovisual files</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1444,7 +1345,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloaudiovisualprocessorfilepathffmpegpath">Dédalo audiovisual processor filepath (ffmpeg path)</h4>
+<h3 id="dédaloaudiovisualprocessorfilepathffmpegpath">Dédalo audiovisual processor filepath (ffmpeg path)</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1457,7 +1358,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloaudiovisualprocessorsettingsffmpegsettings">Dédalo audiovisual processor settings (ffmpeg settings)</h4>
+<h3 id="dédaloaudiovisualprocessorsettingsffmpegsettings">Dédalo audiovisual processor settings (ffmpeg settings)</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1471,7 +1372,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloaudiovisualprocessorsettingsfaststart">Dédalo audiovisual processor settings (faststart)</h4>
+<h3 id="dédaloaudiovisualprocessorsettingsfaststart">Dédalo audiovisual processor settings (faststart)</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1486,7 +1387,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloaudiovisualffprobepath">Dédalo audiovisual ffprobe path</h4>
+<h3 id="dédaloaudiovisualffprobepath">Dédalo audiovisual ffprobe path</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1499,7 +1400,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloaudiovisualstreamer">Dédalo audiovisual streamer</h4>
+<h3 id="dédaloaudiovisualstreamer">Dédalo audiovisual streamer</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1514,7 +1415,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloaudiovisualwatermarkfile">Dédalo audiovisual watermark file</h4>
+<h3 id="dédaloaudiovisualwatermarkfile">Dédalo audiovisual watermark file</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1530,7 +1431,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloaudiovisualsubtitlesdirectory">Dédalo audiovisual subtitles directory</h4>
+<h3 id="dédaloaudiovisualsubtitlesdirectory">Dédalo audiovisual subtitles directory</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1545,7 +1446,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloaudiovisualsubtitlestypeextension">Dédalo audiovisual subtitles type extension</h4>
+<h3 id="dédaloaudiovisualsubtitlestypeextension">Dédalo audiovisual subtitles type extension</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1560,7 +1461,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloaudiovisualrecompressalluploadedfiles">Dédalo audiovisual recompress all uploaded files</h4>
+<h3 id="dédaloaudiovisualrecompressalluploadedfiles">Dédalo audiovisual recompress all uploaded files</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1575,7 +1476,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloimagedirectory">Dédalo image directory</h4>
+<h3 id="dédaloimagedirectory">Dédalo image directory</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1588,7 +1489,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloimageextensiontypeoffile">Dédalo image extension (type of file)</h4>
+<h3 id="dédaloimageextensiontypeoffile">Dédalo image extension (type of file)</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1603,7 +1504,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloimagemimetype">Dédalo image mime type</h4>
+<h3 id="dédaloimagemimetype">Dédalo image mime type</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1616,7 +1517,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloimagetype">Dédalo image type</h4>
+<h3 id="dédaloimagetype">Dédalo image type</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1631,7 +1532,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloimageextensionssupported">Dédalo image extensions supported</h4>
+<h3 id="dédaloimageextensionssupported">Dédalo image extensions supported</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1646,7 +1547,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloimagequalityfororiginalfiles">Dédalo image quality for original files</h4>
+<h3 id="dédaloimagequalityfororiginalfiles">Dédalo image quality for original files</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1661,7 +1562,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloimagequalityforthereotuchedfiles">Dédalo image quality for the reotuched files</h4>
+<h3 id="dédaloimagequalityforthereotuchedfiles">Dédalo image quality for the reotuched files</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1676,7 +1577,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloimagedefaultquality">Dédalo image default quality</h4>
+<h3 id="dédaloimagedefaultquality">Dédalo image default quality</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1691,7 +1592,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloimagethumbdefault">Dédalo image thumb default</h4>
+<h3 id="dédaloimagethumbdefault">Dédalo image thumb default</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1706,7 +1607,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloimagequalitiesdefiniton">Dédalo image qualities definiton</h4>
+<h3 id="dédaloimagequalitiesdefiniton">Dédalo image qualities definiton</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1721,7 +1622,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloimageprintresolutiondefiniton">Dédalo image print resolution definiton</h4>
+<h3 id="dédaloimageprintresolutiondefiniton">Dédalo image print resolution definiton</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1734,7 +1635,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloimageengineprocesorurl">Dédalo image engine procesor URL</h4>
+<h3 id="dédaloimageengineprocesorurl">Dédalo image engine procesor URL</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1747,7 +1648,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="imagemagickpath">Image magick path</h4>
+<h3 id="imagemagickpath">Image magick path</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1760,7 +1661,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="colorprofilespaths">Color profiles paths</h4>
+<h3 id="colorprofilespaths">Color profiles paths</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1775,7 +1676,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloimagethumbwidthsize">Dédalo image thumb width size</h4>
+<h3 id="dédaloimagethumbwidthsize">Dédalo image thumb width size</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1788,7 +1689,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloimagethumbheightsize">Dédalo image thumb height size</h4>
+<h3 id="dédaloimagethumbheightsize">Dédalo image thumb height size</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1801,7 +1702,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloimagewebdirectory">Dédalo image web directory</h4>
+<h3 id="dédaloimagewebdirectory">Dédalo image web directory</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1814,7 +1715,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalopdfdirectory">Dédalo pdf directory</h4>
+<h3 id="dédalopdfdirectory">Dédalo pdf directory</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1827,7 +1728,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalopdfextensiontypeoffile">Dédalo pdf extension (type of file)</h4>
+<h3 id="dédalopdfextensiontypeoffile">Dédalo pdf extension (type of file)</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1840,7 +1741,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalopdfextensionssupported">Dédalo pdf extensions supported</h4>
+<h3 id="dédalopdfextensionssupported">Dédalo pdf extensions supported</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1853,7 +1754,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalopdfqualityfordefaultfiles">Dédalo pdf quality for default files</h4>
+<h3 id="dédalopdfqualityfordefaultfiles">Dédalo pdf quality for default files</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1866,7 +1767,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalopdfqualitiesdefiniton">Dédalo pdf qualities definiton</h4>
+<h3 id="dédalopdfqualitiesdefiniton">Dédalo pdf qualities definiton</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1881,7 +1782,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalopdfmimetype">Dédalo pdf mime type</h4>
+<h3 id="dédalopdfmimetype">Dédalo pdf mime type</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1896,7 +1797,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalopdftype">Dédalo pdf type</h4>
+<h3 id="dédalopdftype">Dédalo pdf type</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1911,7 +1812,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalopdfqualityfororiginalfiles">Dédalo pdf quality for original files</h4>
+<h3 id="dédalopdfqualityfororiginalfiles">Dédalo pdf quality for original files</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1926,7 +1827,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalopdfqualityforprocesedfiles">Dédalo pdf quality for procesed files</h4>
+<h3 id="dédalopdfqualityforprocesedfiles">Dédalo pdf quality for procesed files</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1941,7 +1842,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalopdfqualityforprocesedfiles">Dédalo pdf quality for procesed files</h4>
+<h3 id="dédalopdfqualityforprocesedfiles">Dédalo pdf quality for procesed files</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1956,7 +1857,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalopdfthumbdefault">Dédalo pdf thumb default</h4>
+<h3 id="dédalopdfthumbdefault">Dédalo pdf thumb default</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1971,7 +1872,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalomain3ddirectory">Dédalo main 3d directory</h4>
+<h3 id="dédalomain3ddirectory">Dédalo main 3d directory</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1984,7 +1885,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalo3dextensiontypeoffile">Dédalo 3d extension (type of file)</h4>
+<h3 id="dédalo3dextensiontypeoffile">Dédalo 3d extension (type of file)</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -1999,7 +1900,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalo3dextensionssupported">Dédalo 3d extensions supported</h4>
+<h3 id="dédalo3dextensionssupported">Dédalo 3d extensions supported</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2018,7 +1919,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalo3dmimetype">Dédalo 3d mime type</h4>
+<h3 id="dédalo3dmimetype">Dédalo 3d mime type</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2033,7 +1934,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalo3dqualityfororiginalfiles">Dédalo 3d quality for original files</h4>
+<h3 id="dédalo3dqualityfororiginalfiles">Dédalo 3d quality for original files</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2048,7 +1949,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalo3dqualityforprocesedfiles">Dédalo 3d quality for procesed files</h4>
+<h3 id="dédalo3dqualityforprocesedfiles">Dédalo 3d quality for procesed files</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2063,7 +1964,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalo3dthumbdefault">Dédalo 3d thumb default</h4>
+<h3 id="dédalo3dthumbdefault">Dédalo 3d thumb default</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2078,7 +1979,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalo3dqualitiesdefiniton">Dédalo 3d qualities definiton</h4>
+<h3 id="dédalo3dqualitiesdefiniton">Dédalo 3d qualities definiton</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2093,7 +1994,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalo3dgltfpackconversor">Dédalo 3d gltfpack conversor</h4>
+<h3 id="dédalo3dgltfpackconversor">Dédalo 3d gltfpack conversor</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2108,7 +2009,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalo3dfbx2gltfconversor">Dédalo 3d FBX2glTF conversor</h4>
+<h3 id="dédalo3dfbx2gltfconversor">Dédalo 3d FBX2glTF conversor</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2123,7 +2024,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalo3dcollada2gltfconversor">Dédalo 3d COLLADA2GLTF conversor</h4>
+<h3 id="dédalo3dcollada2gltfconversor">Dédalo 3d COLLADA2GLTF conversor</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2138,7 +2039,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalohtmlrendertopdflibrarypath">Dédalo html render to pdf library path</h4>
+<h3 id="dédalohtmlrendertopdflibrarypath">Dédalo html render to pdf library path</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2151,7 +2052,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="pdfautomatictranscriptionengine">Pdf automatic transcription engine</h4>
+<h3 id="pdfautomatictranscriptionengine">Pdf automatic transcription engine</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2164,7 +2065,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalodirectoryforhtmlfiles">Dédalo directory for html files</h4>
+<h3 id="dédalodirectoryforhtmlfiles">Dédalo directory for html files</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2177,7 +2078,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalohtmlfilesextensiontypeoffile">Dédalo html files extension (type of file)</h4>
+<h3 id="dédalohtmlfilesextensiontypeoffile">Dédalo html files extension (type of file)</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2190,7 +2091,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalomaindirectoryforsvgfiles">Dédalo main directory for svg files</h4>
+<h3 id="dédalomaindirectoryforsvgfiles">Dédalo main directory for svg files</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2204,7 +2105,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalosvgextensiontypeoffile">Dédalo svg extension (type of file)</h4>
+<h3 id="dédalosvgextensiontypeoffile">Dédalo svg extension (type of file)</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2217,7 +2118,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalosvgextensionssupported">Dédalo svg extensions supported</h4>
+<h3 id="dédalosvgextensionssupported">Dédalo svg extensions supported</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2232,7 +2133,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalosvgmimetype">Dédalo svg mime type</h4>
+<h3 id="dédalosvgmimetype">Dédalo svg mime type</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2247,7 +2148,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalosvgqualityfororiginalfiles">Dédalo svg quality for original files</h4>
+<h3 id="dédalosvgqualityfororiginalfiles">Dédalo svg quality for original files</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2262,7 +2163,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalosvgqualityforprocesedfiles">Dédalo svg quality for procesed files</h4>
+<h3 id="dédalosvgqualityforprocesedfiles">Dédalo svg quality for procesed files</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2277,7 +2178,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalosvgqualitiesforprocesedfiles">Dédalo svg qualities for procesed files</h4>
+<h3 id="dédalosvgqualitiesforprocesedfiles">Dédalo svg qualities for procesed files</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2292,7 +2193,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalouploadtemporarydirectory">Dédalo upload temporary directory</h4>
+<h3 id="dédalouploadtemporarydirectory">Dédalo upload temporary directory</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2307,7 +2208,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalouploadtemporarydirectory">Dédalo upload temporary directory</h4>
+<h3 id="dédalouploadtemporarydirectory">Dédalo upload temporary directory</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2328,7 +2229,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalogeoreferenceprovider">Dédalo georeference provider</h4>
+<h3 id="dédalogeoreferenceprovider">Dédalo georeference provider</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2345,7 +2246,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalomediaareatipoforspecificentitymodel">Dédalo media area tipo for specific entity model</h4>
+<h3 id="dédalomediaareatipoforspecificentitymodel">Dédalo media area tipo for specific entity model</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2360,7 +2261,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloskiptiposfrommenu">Dédalo skip tipos from menu</h4>
+<h3 id="dédaloskiptiposfrommenu">Dédalo skip tipos from menu</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2375,7 +2276,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalotestinstall">Dédalo test install</h4>
+<h3 id="dédalotestinstall">Dédalo test install</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2390,7 +2291,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalosection_idtemporal">Dédalo section_id temporal</h4>
+<h3 id="dédalosection_idtemporal">Dédalo section_id temporal</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2407,7 +2308,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalopathoftheexporttoolfilesdirectory">Dédalo path of the export tool files directory</h4>
+<h3 id="dédalopathoftheexporttoolfilesdirectory">Dédalo path of the export tool files directory</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2420,7 +2321,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalourioftheexporttoolfilesdirectory">Dédalo uri of the export tool files directory</h4>
+<h3 id="dédalourioftheexporttoolfilesdirectory">Dédalo uri of the export tool files directory</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2433,7 +2334,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalopathoftheimporttoolfilesdirectory">Dédalo path of the import tool files directory</h4>
+<h3 id="dédalopathoftheimporttoolfilesdirectory">Dédalo path of the import tool files directory</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2448,7 +2349,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalolockcomponents">Dédalo lock components</h4>
+<h3 id="dédalolockcomponents">Dédalo lock components</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2461,7 +2362,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalolockcomponentsnotifications">Dédalo lock components notifications</h4>
+<h3 id="dédalolockcomponentsnotifications">Dédalo lock components notifications</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2474,7 +2375,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloprotectmediafilesforexternalacces">Dédalo protect media files for external acces</h4>
+<h3 id="dédaloprotectmediafilesforexternalacces">Dédalo protect media files for external acces</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2489,7 +2390,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalonodejslibrarypath">Dédalo node js library path</h4>
+<h3 id="dédalonodejslibrarypath">Dédalo node js library path</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2502,7 +2403,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalonodejspm2librarypath">Dédalo node js pm2 library path</h4>
+<h3 id="dédalonodejspm2librarypath">Dédalo node js pm2 library path</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2515,7 +2416,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédaloexcludecompoents">Dédalo exclude compoents</h4>
+<h3 id="dédaloexcludecompoents">Dédalo exclude compoents</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2530,7 +2431,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalofilteruserrecordsbyid">Dédalo filter user records by id</h4>
+<h3 id="dédalofilteruserrecordsbyid">Dédalo filter user records by id</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2545,7 +2446,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="geonamesaccount">Geonames account</h4>
+<h3 id="geonamesaccount">Geonames account</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2558,7 +2459,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="encriptionmode">Encription mode</h4>
+<h3 id="encriptionmode">Encription mode</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2577,7 +2478,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="diffusiondomain">Diffusion domain</h4>
+<h3 id="diffusiondomain">Diffusion domain</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2596,7 +2497,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="resolutionlevelsgoingtothedeeperinformation">Resolution levels; going to the deeper information</h4>
+<h3 id="resolutionlevelsgoingtothedeeperinformation">Resolution levels; going to the deeper information</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2619,7 +2520,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="checkthepublicationstate">Check the publication state</h4>
+<h3 id="checkthepublicationstate">Check the publication state</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2641,7 +2542,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalodiffusioncustom">Dédalo diffusion custom</h4>
+<h3 id="dédalodiffusioncustom">Dédalo diffusion custom</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2660,7 +2561,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="setingtheapiwebusercodeformultipleddbb">Seting the API web user code for multiple DDBB</h4>
+<h3 id="setingtheapiwebusercodeformultipleddbb">Seting the API web user code for multiple DDBB</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2688,7 +2589,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="syncontologyfrommasterserver">Sync ontology from master server</h4>
+<h3 id="syncontologyfrommasterserver">Sync ontology from master server</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2701,7 +2602,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="ontologymasterservercode">Ontology master server code</h4>
+<h3 id="ontologymasterservercode">Ontology master server code</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2714,7 +2615,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="ontologymasterserveruri">Ontology master server uri</h4>
+<h3 id="ontologymasterserveruri">Ontology master server uri</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2727,7 +2628,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="ontologydownloaddirectory">Ontology download directory</h4>
+<h3 id="ontologydownloaddirectory">Ontology download directory</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2740,7 +2641,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="ontologyinjsonformatdownloaddirectory">Ontology in json format download directory</h4>
+<h3 id="ontologyinjsonformatdownloaddirectory">Ontology in json format download directory</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2753,7 +2654,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="proxyserver">Proxy server</h4>
+<h3 id="proxyserver">Proxy server</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2770,7 +2671,7 @@ The main section of the project that will used, normally will be a inventory or 
 
 <hr />
 
-<h4 id="dédalosourceverionsuri">Dédalo source verions uri</h4>
+<h3 id="dédalosourceverionsuri">Dédalo source verions uri</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2797,7 +2698,7 @@ https://github.com/renderpci/dedalo/archive/refs/heads/developer.zip</p>
 
 <hr />
 
-<h4 id="dédalosourceversionslocaldirectorytosavethenewcode">Dédalo source versions local directory to save the new code</h4>
+<h3 id="dédalosourceversionslocaldirectorytosavethenewcode">Dédalo source versions local directory to save the new code</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2810,7 +2711,7 @@ https://github.com/renderpci/dedalo/archive/refs/heads/developer.zip</p>
 
 <hr />
 
-<h4 id="dédalomaintenancemode">Dédalo maintenance mode</h4>
+<h3 id="dédalomaintenancemode">Dédalo maintenance mode</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2825,7 +2726,7 @@ https://github.com/renderpci/dedalo/archive/refs/heads/developer.zip</p>
 
 <hr />
 
-<h4 id="noticetoactiveusers">Notice to active users</h4>
+<h3 id="noticetoactiveusers">Notice to active users</h3>
 
 <p><strong>config.php</strong></p>
 
@@ -2840,7 +2741,7 @@ https://github.com/renderpci/dedalo/archive/refs/heads/developer.zip</p>
 
 <hr />
 
-<h4 id="slowquery">Slow query</h4>
+<h3 id="slowquery">Slow query</h3>
 
 <p><strong>config.php</strong></p>
 
