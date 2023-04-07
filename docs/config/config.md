@@ -1,4 +1,4 @@
-# Changing the parameters of global Dédalo config file.
+# Changing parameters of global Dédalo config file.
 
 **config.php**
 
