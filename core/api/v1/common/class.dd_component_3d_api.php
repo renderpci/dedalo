@@ -69,11 +69,12 @@ final class dd_component_3d_api {
 		// move file
 			$source_file_path	= constant($file_data->tmp_dir) . '/'. $file_data->resource_type. '/' . $file_data->tmp_name;
 			$target_file_path	= $component->get_media_path_dir($target_dir). '/' . $file_data->name;
-
 			$result				= rename($source_file_path, $target_file_path);
 
+		// response
 			$response->result	= $result;
 			$response->msg		= 'OK. Request done '.__METHOD__;
+
 
 		return $response;
 	}//end add_posterframe

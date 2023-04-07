@@ -101,7 +101,7 @@ tool_update_cache.prototype.build = async function(autoload=false) {
 
 /**
 * GET_COMPONENT_LIST
-* 	Get the list of section components selectables to update cache
+* 	Get the list of section components available to update cache
 * @return promise > bool
 */
 tool_update_cache.prototype.get_component_list = function() {
@@ -111,18 +111,17 @@ tool_update_cache.prototype.get_component_list = function() {
 	const section_tipo = self.caller.section_tipo
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'get_component_list')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			section_tipo : section_tipo
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				section_tipo : section_tipo
+			}
 		}
 
 	// call to the API, fetch data and get response
@@ -147,7 +146,7 @@ tool_update_cache.prototype.get_component_list = function() {
 
 /**
 * update_cache
-* 	Get the llist of section components selectables to update cache
+* 	Get the list of section components available to update cache
 * @return promise > bool
 */
 tool_update_cache.prototype.update_cache = function(ar_component_tipo) {
@@ -157,20 +156,19 @@ tool_update_cache.prototype.update_cache = function(ar_component_tipo) {
 	const section_tipo = self.caller.section_tipo
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'update_cache')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			section_tipo		: section_tipo,
-			ar_component_tipo	: ar_component_tipo,
-			lang				: page_globals.dedalo_application_lang
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				section_tipo		: section_tipo,
+				ar_component_tipo	: ar_component_tipo,
+				lang				: page_globals.dedalo_application_lang
+			}
 		}
 
 	// call to the API, fetch data and get response

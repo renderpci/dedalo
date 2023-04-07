@@ -2455,13 +2455,17 @@ common.prototype.get_section_elements_context = async function(options) {
 			}else{
 
 				// load data
-					const api_response = await data_manager.request({
-						body : {
-							action					: 'get_section_elements_context',
+					const rqo = {
+						action			: 'get_section_elements_context',
+						prevent_lock	: true,
+						options			: {
 							context_type			: 'simple',
 							ar_section_tipo			: section_tipo,
 							ar_components_exclude	: ar_components_exclude
 						}
+					}
+					const api_response = await data_manager.request({
+						body : rqo
 					})
 
 				// fix

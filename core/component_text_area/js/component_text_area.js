@@ -516,16 +516,16 @@ component_text_area.prototype.preprocess_text_to_save = async function(html_valu
 
 				let current_tag_id = current_element.dataset.tag_id
 
-				// svg case. Keep current svg tag_id for renumerate on the fly
+				// svg case. Keep current svg tag_id for renumber on the fly
 					if (current_element.dataset.type==="svg") {
 
 						current_tag_id = parseInt(current_tag_id)
 						if(current_tag_id<1) current_tag_id = 1
 
 						// console.log("ar_svg_used_tag_id.indexOf(current_tag_id):",ar_svg_used_tag_id.indexOf(current_tag_id), ar_svg_used_tag_id, current_tag_id);
-						// If is zero or already exits, renumerate
+						// If is zero or already exits, renumber
 						if(ar_svg_used_tag_id.indexOf( current_tag_id ) > -1) {
-							// Renumerate
+							// renumber
 							current_tag_id = Math.max.apply(Math, ar_svg_used_tag_id) + 1
 						}
 						ar_svg_used_tag_id.push( current_tag_id )
@@ -631,6 +631,7 @@ component_text_area.prototype.update_changed_data = function (options) {
 
 /**
 * UNWRAP_ELEMENT
+* @param HTMLElement el
 * @return bool
 */
 const unwrap_element = function(el) {
@@ -773,7 +774,7 @@ component_text_area.prototype.build_view_tag_obj = function(data_tag, tag_id) {
 	const label			= data_tag.label
 	// convert the data_tag to string to be used it in html
 	// const data_string	= JSON.stringify(data_tag.data)
-	// replace the " to ' to be compatible with the dataset of html5, the tag strore his data ref inside the data-data html
+	// replace the " to ' to be compatible with the dataset of html5, the tag store his data ref inside the data-data html
 	// json use " but it's not compatible with the data-data storage in html5
 	// const data			= data_string.replace(/"/g, '\'')
 	const data = data_tag.data
@@ -909,7 +910,7 @@ component_text_area.prototype.create_fragment = function(key, text_editor) {
 				data	: ''
 			}, tag_id)
 
-		// wrap_selection_with_tags. Prepend and apped tag image node to current editor text selection
+		// wrap_selection_with_tags. Prepend and append tag image node to current editor text selection
 			const range_clon = text_editor.wrap_selection_with_tags(image_in, image_out)
 
 	return (range_clon)
@@ -925,6 +926,8 @@ component_text_area.prototype.create_fragment = function(key, text_editor) {
 * 	e.g. '2'
 * @param string type
 * 	e.g. 'index'
+* @param int key = 0
+* 	editors key (default zero)
 * @return promise
 * 	resolve object response
 */
@@ -942,9 +945,11 @@ component_text_area.prototype.delete_tag = function(tag_id, type, key=0) {
 					section_tipo	: self.section_tipo,
 					section_id		: self.section_id,
 					tipo			: self.tipo,
-					lang			: self.lang,
-					tag_id			: tag_id, // string current selected tag (passed as param)
-					type			: type // string current selected tag type (passed as param)
+					lang			: self.lang
+				},
+				options : {
+					tag_id	: tag_id, // string current selected tag (passed as param)
+					type	: type // string current selected tag type (passed as param)
 				}
 			}
 		})

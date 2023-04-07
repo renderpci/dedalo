@@ -1002,7 +1002,9 @@ component_portal.prototype.delete_locator = function(locator, ar_properties) {
 				section_tipo	: self.section_tipo, // current component_text_area section_tipo
 				section_id		: self.section_id, // component_text_area section_id
 				tipo			: self.tipo, // component_text_area tipo
-				lang			: self.lang, // component_text_area lang
+				lang			: self.lang // component_text_area lang
+			},
+			options : {
 				locator			: locator,
 				ar_properties	: ar_properties
 			}

@@ -274,27 +274,26 @@ tool_time_machine.prototype.apply_value = function(options) {
 		const matrix_id		= options.matrix_id
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'apply_value')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			section_id		: section_id,
-			section_tipo	: section_tipo,
-			tipo			: tipo,
-			lang			: lang,
-			matrix_id		: matrix_id
-		}
-
-	// dataframe caller
-		if (self.caller_dataframe) {
-			source.arguments.caller_dataframe = self.caller_dataframe
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				section_id		: section_id,
+				section_tipo	: section_tipo,
+				tipo			: tipo,
+				lang			: lang,
+				matrix_id		: matrix_id
+			}
+		}
+
+	// dataframe caller
+		if (self.caller_dataframe) {
+			rqo.options.caller_dataframe = self.caller_dataframe
 		}
 
 	// call to the API, fetch data and get response

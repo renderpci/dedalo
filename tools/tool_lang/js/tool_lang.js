@@ -173,24 +173,23 @@ tool_lang.prototype.automatic_translation = async function(translator, source_la
 	const self = this
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'automatic_translation')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			source_lang		: source_lang,
-			target_lang		: target_lang,
-			component_tipo	: self.main_element.tipo,
-			section_id		: self.main_element.section_id,
-			section_tipo	: self.main_element.section_tipo,
-			translator		: translator,
-			config			: self.context.config
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				source_lang		: source_lang,
+				target_lang		: target_lang,
+				component_tipo	: self.main_element.tipo,
+				section_id		: self.main_element.section_id,
+				section_tipo	: self.main_element.section_tipo,
+				translator		: translator,
+				config			: self.context.config
+			}
 		}
 
 	// call to the API, fetch data and get response

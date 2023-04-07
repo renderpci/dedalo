@@ -120,18 +120,17 @@ tool_diffusion.prototype.get_diffusion_info = function() {
 		const section_tipo	= section.section_tipo
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'get_diffusion_info')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			section_tipo : section_tipo
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options : {
+				section_tipo : section_tipo
+			}
 		}
 
 	// call to the API, fetch data and get response
@@ -173,22 +172,21 @@ tool_diffusion.prototype.export = function(options) {
 		const section_id				= self.caller.section_id || null
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'export')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			section_tipo			: section_tipo,
-			section_id				: section_id,
-			mode					: mode,
-			diffusion_element_tipo	: diffusion_element_tipo,
-			resolve_levels			: resolve_levels
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options : {
+				section_tipo			: section_tipo,
+				section_id				: section_id,
+				mode					: mode,
+				diffusion_element_tipo	: diffusion_element_tipo,
+				resolve_levels			: resolve_levels
+			}
 		}
 
 	// call to the API, fetch data and get response

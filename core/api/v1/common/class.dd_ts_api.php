@@ -13,7 +13,7 @@ final class dd_ts_api {
 	* Get JSON data of all children of current element
 	* @param object $rqo
 	* Sample:
-	* {}
+	* {
 	* 	dd_api			: 'dd_ts_api',
 	* 	prevent_lock	: true,
 	* 	action			: 'get_children_data',
@@ -648,32 +648,6 @@ final class dd_ts_api {
 
 		return $response;
 	}//end save_order
-
-
-
-	/**
-	* LINK_TERM
-	* @return object $response
-	*//*
-	public function link_term($json_data) {
-
-		# set vars
-		$vars = array('section_tipo','section_id');
-			foreach($vars as $name) {
-				$$name = common::setVar($name);
-				if (empty($$name)) {
-					echo "Error. ".$$name." is mandatory";
-					return false;
-				}
-			}
-
-		$result = false;
-
-		$locator = new locator();
-			$locator->set_section_tipo($section_tipo);
-			$locator->set_section_id($section_id);
-	}//end link_term
-	*/
 
 
 

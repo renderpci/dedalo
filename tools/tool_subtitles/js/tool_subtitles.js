@@ -228,10 +228,12 @@ tool_subtitles.prototype.get_user_tools = async function(ar_requested_tools){
 
 	// rqo
 		const rqo = {
-			dd_api				: 'dd_tools_api',
-			action				: 'user_tools',
-			source				: source,
-			ar_requested_tools	: ar_requested_tools
+			dd_api	: 'dd_tools_api',
+			action	: 'user_tools',
+			source	: source,
+			options	: {
+				ar_requested_tools : ar_requested_tools
+			}
 		}
 
 	// call to the API, fetch data and get response
