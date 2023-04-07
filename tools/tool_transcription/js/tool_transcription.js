@@ -205,10 +205,12 @@ tool_transcription.prototype.get_user_tools = async function(ar_requested_tools)
 
 	// rqo
 		const rqo = {
-			dd_api				: 'dd_tools_api',
-			action				: 'user_tools',
-			source				: source,
-			ar_requested_tools	: ar_requested_tools
+			dd_api	: 'dd_tools_api',
+			action	: 'user_tools',
+			source	: source,
+			options	: {
+				ar_requested_tools : ar_requested_tools
+			}
 		}
 
 	// call to the API, fetch data and get response
@@ -278,31 +280,30 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'automatic_transcription')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			source_lang			: source_lang,
-			transcription_ddo : {
-				component_tipo		: self.transcription_component.tipo,
-				section_id			: self.transcription_component.section_id,
-				section_tipo		: self.transcription_component.section_tipo
-			},
-			media_ddo : {
-				component_tipo		: self.media_component.tipo,
-				section_id			: self.media_component.section_id,
-				section_tipo		: self.media_component.section_tipo
-			},
-			transcriber_engine	: transcriber_engine,
-			transcriber_quality : transcriber_quality,
-			config				: self.context.config
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				source_lang : source_lang,
+				transcription_ddo : {
+					component_tipo	: self.transcription_component.tipo,
+					section_id		: self.transcription_component.section_id,
+					section_tipo	: self.transcription_component.section_tipo
+				},
+				media_ddo : {
+					component_tipo		: self.media_component.tipo,
+					section_id			: self.media_component.section_id,
+					section_tipo		: self.media_component.section_tipo
+				},
+				transcriber_engine	: transcriber_engine,
+				transcriber_quality	: transcriber_quality,
+				config				: self.context.config
+			}
 		}
 
 	// call to the API, fetch data and get response

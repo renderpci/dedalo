@@ -97,32 +97,33 @@ tool_import_rdf.prototype.build = async function(autoload=false) {
 * Call the API to get process the source component_iri and transform to Dédalo model
 * the correspondence is in external ontology.
 *
-* @param tipo ontology_tipo (the tipo of the external ontology to be used )
-* @param data ar_values (like '["http://numismatics.org/ocre/id/ric.1(2).aug.1A"]', selected by the user)
-*
+* @param tipo ontology_tipo
+* 	(the tipo of the external ontology to be used )
+* @param array ar_values
+* 	(like '["http://numismatics.org/ocre/id/ric.1(2).aug.1A"]', selected by the user)
 * @return promise response
 */
-tool_import_rdf.prototype.get_rdf_data = async function( ontology_tipo, ar_values) {
+tool_import_rdf.prototype.get_rdf_data = async function(ontology_tipo, ar_values) {
 
 	const self = this
+
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'get_rdf_data')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			ontology_tipo	: ontology_tipo,
-			ar_values		: ar_values,
-			locator	: {
-				section_tipo	: self.caller.section_tipo,
-				section_id		: self.caller.section_id,
-			}
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				ontology_tipo	: ontology_tipo,
+				ar_values		: ar_values,
+				locator			: {
+					section_tipo	: self.caller.section_tipo,
+					section_id		: self.caller.section_id,
+				}
+			}
 		}
 
 	// call to the API, fetch data and get response

@@ -105,24 +105,23 @@ tool_pdf_extractor.prototype.get_pdf_data = async function(options) {
 		const component = self.caller
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'get_pdf_data')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			lang			: component.lang,
-			component_tipo	: component.tipo,
-			section_tipo	: component.section_tipo,
-			section_id		: component.section_id,
-			method			: method,
-			page_in			: page_in,
-			page_out		: page_out
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				lang			: component.lang,
+				component_tipo	: component.tipo,
+				section_tipo	: component.section_tipo,
+				section_id		: component.section_id,
+				method			: method,
+				page_in			: page_in,
+				page_out		: page_out
+			}
 		}
 
 	// call to the API, fetch data and get response

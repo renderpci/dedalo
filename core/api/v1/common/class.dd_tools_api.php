@@ -12,6 +12,14 @@ final class dd_tools_api {
 	* USER_TOOLS
 	* Get user authorized tools filtered by custom list (optional)
 	* @param object $rqo
+	* {
+	*	dd_api	: 'dd_tools_api',
+	*	action	: 'user_tools',
+	*	source	: source,
+	*	options	: {
+	*		ar_requested_tools : ar_requested_tools
+	*	}
+	* }
 	* @return object $response
 	*/
 	public static function user_tools(object $rqo) : object {
@@ -21,8 +29,10 @@ final class dd_tools_api {
 			$response->msg		= 'Error. Request failed ['.__METHOD__.']. ';
 			$response->error	= null;
 
-		// list of requested tools
-			$ar_requested_tools	= $rqo->ar_requested_tools ?? null;
+		// options
+			$options = $rqo->options;
+			// list of requested tools
+			$ar_requested_tools	= $options->ar_requested_tools ?? null;
 
 		// all user authorized tools
 			$user_id	= (int)navigator::get_user_id();
@@ -63,29 +73,38 @@ final class dd_tools_api {
 	* {
 	* 	action: "tool_request"
 	* 	dd_api: "dd_utils_api"
-	* 	source: {typo: "source", action: "delete_tag", model: "tool_indexation", arguments: {
-	*   	indexing_component_tipo: "rsc860"
-	*		main_component_lang: "lg-eng"
-	*		main_component_tipo: "rsc36"
-	*		section_id: "1"
-	*		section_tipo: "rsc167"
-	*		tag_id: "5"
-	*   }}
+	* 	source: {
+	* 		typo: "source",
+	* 		action: "delete_tag",
+	* 		model: "tool_indexation",
+	* 		arguments: {
+	*   		indexing_component_tipo: "rsc860"
+	*			main_component_lang: "lg-eng"
+	*			main_component_tipo: "rsc36"
+	*			section_id: "1"
+	*			section_tipo: "rsc167"
+	*			tag_id: "5"
+	*   	}
+	* 	}
 	* }
 	* @return object response { result: mixed, msg: string }
 	*/
 	public static function tool_request(object $rqo) : object {
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__METHOD__.']. ';
-			$response->error	= null;
+		// options
+			$options		= $rqo->options ?? [];
+			$fn_arguments	= $options;
 
-		// short vars
+		// source
 			$source			= $rqo->source;
 			$tool_name		= $source->model;
 			$tool_method	= $source->action;
-			$arguments		= $source->arguments ?? [];
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__METHOD__.']. ';
+				$response->error	= null;
 
 		// load tool class file
 			$class_file = DEDALO_TOOLS_PATH . '/' .$tool_name. '/class.' . $tool_name .'.php';
@@ -105,7 +124,7 @@ final class dd_tools_api {
 			}
 			try {
 
-				$fn_result = call_user_func(array($tool_name, $tool_method), $arguments);
+				$fn_result = call_user_func(array($tool_name, $tool_method), $fn_arguments);
 
 			} catch (Exception $e) { // For PHP 5
 

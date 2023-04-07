@@ -93,17 +93,18 @@ $global_start_time = hrtime(true);
 	if (isset($_FILES)) {
 		if (!isset($rqo) && !empty($_FILES)) {
 			$rqo = new stdClass();
-				$rqo->action = 'upload';
-				$rqo->dd_api = 'dd_utils_api';
+				$rqo->action	= 'upload';
+				$rqo->dd_api	= 'dd_utils_api';
+				$rqo->options	= new stdClass();
 		}
 		foreach($_POST as $key => $value) {
-				$rqo->{$key} = safe_xss($value);
+				$rqo->options->{$key} = safe_xss($value);
 		}
 		foreach($_GET as $key => $value) {
-				$rqo->{$key} = safe_xss($value);
+				$rqo->options->{$key} = safe_xss($value);
 		}
 		foreach($_FILES as $key => $value) {
-				$rqo->{$key} = $value;
+				$rqo->options->{$key} = $value;
 		}
 	}
 

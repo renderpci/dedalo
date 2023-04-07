@@ -502,26 +502,25 @@ const get_content_data_edit = async function(self) {
 					: null
 
 			// source. Note that second argument is the name of the function to manage the tool request like 'delete_tag'
-			// this generates a call as my_tool_name::my_function_name(arguments)
+			// this generates a call as my_tool_name::my_function_name(options)
 				const source = create_source(self, 'import_files')
-				// add the necessary arguments used in the given function
-				source.arguments = {
-					tipo					: self.caller.tipo,
-					section_tipo			: self.caller.section_tipo,
-					section_id				: self.caller.section_id,
-					tool_config				: self.tool_config,
-					files_data				: self.files_data,
-					components_temp_data	: components_temp_data,
-					key_dir					: self.key_dir,
-					custom_target_quality 	: self.custom_target_quality
-				}
 
 			// process the images in the server (uploaded previously)
 			// rqo
 				const rqo = {
 					dd_api	: 'dd_tools_api',
 					action	: 'tool_request',
-					source	: source
+					source	: source,
+					options	: {
+						tipo					: self.caller.tipo,
+						section_tipo			: self.caller.section_tipo,
+						section_id				: self.caller.section_id,
+						tool_config				: self.tool_config,
+						files_data				: self.files_data,
+						components_temp_data	: components_temp_data,
+						key_dir					: self.key_dir,
+						custom_target_quality	: self.custom_target_quality
+					}
 				}
 
 			// call to the API, fetch data and get response
@@ -964,18 +963,17 @@ const create_template = async function(self) {
 
 				// source
 					const source = create_source(self, 'delete_uploaded_file')
-					// add the necessary arguments used in the given function
-					source.arguments = {
-						key_dir			: self.key_dir,
-						file_name		: current_name,
-						section_tipo	: self.section_tipo
-					}
 
 				// rqo
 					const rqo = {
 						dd_api	: 'dd_tools_api',
 						action	: 'tool_request',
-						source	: source
+						source	: source,
+						options	: {
+							key_dir			: self.key_dir,
+							file_name		: current_name,
+							section_tipo	: self.section_tipo
+						}
 					}
 
 				// call to the API, fetch data and get response
@@ -1078,19 +1076,18 @@ const create_template = async function(self) {
 		// })
 
 		// source. Note that second argument is the name of the function to manage the tool request like 'delete_tag'
-			// this generates a call as my_tool_name::my_function_name(arguments)
+			// this generates a call as my_tool_name::my_function_name(options)
 			const source = create_source(self, 'list_uploaded_files')
-			// add the necessary arguments used in the given function
-			source.arguments = {
-				key_dir			: self.key_dir,
-				section_tipo	: self.section_tipo
-			}
 
 		// rqo
 			const rqo = {
 				dd_api	: 'dd_tools_api',
 				action	: 'tool_request',
-				source	: source
+				source	: source,
+				options	: {
+					key_dir			: self.key_dir,
+					section_tipo	: self.section_tipo
+				}
 			}
 
 		// call to the API, fetch data and get response

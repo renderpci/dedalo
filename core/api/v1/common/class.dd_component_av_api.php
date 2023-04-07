@@ -22,17 +22,18 @@ final class dd_component_av_api {
 	*	source	: {
 	*		tipo			: 'rsc36',
 	*		section_tipo	: section_tipo,
-	*		section_id		: section_id,
+	*		section_id		: section_id
+	*	},
+	*	options	: {
 	*		quality			: quality,
-	*		tc_in			: tc_in,
-	*		tc_out			: tc_out,
+	*		tc_in_secs		: tc_in_secs,
+	*		tc_out_secs		: tc_out_secs,
 	*		watermark		: false // bool
 	*	}
 	* }
 	* @return object $response
 	*/
 	public static function download_fragment( object $rqo ) : object {
-
 
 		// source
 			$source			= $rqo->source;

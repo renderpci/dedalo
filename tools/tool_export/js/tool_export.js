@@ -175,22 +175,21 @@ tool_export.prototype.get_export_grid = async function(options) {
 		sqo.offset	= 0
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'get_export_grid'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'get_export_grid')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			section_tipo		: self.caller.section_tipo, // section that call to the tool, it will be used to get the records from db
-			model				: self.caller.model,
-			data_format			: data_format, // format selected by the user to get data
-			ar_ddo_to_export	: ar_ddo_to_export, // array with the ddo map and paths to get the info
-			sqo					: sqo
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				section_tipo		: self.caller.section_tipo, // section that call to the tool, it will be used to get the records from db
+				model				: self.caller.model,
+				data_format			: data_format, // format selected by the user to get data
+				ar_ddo_to_export	: ar_ddo_to_export, // array with the ddo map and paths to get the info
+				sqo					: sqo
+			}
 		}
 		const api_response = await data_manager.request({
 			body : rqo

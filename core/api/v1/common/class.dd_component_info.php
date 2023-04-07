@@ -9,9 +9,10 @@
 final class dd_component_info {
 
 
+
 	/**
-	* get_widget_dato
-	* Creates a fragment from given av file with TC in:out
+	* GET_WIDGET_DATO
+	* Get given widget data for current component
 	*
 	* @param object $rqo
 	* 	Sample:
@@ -22,9 +23,11 @@ final class dd_component_info {
 	*		tipo			: 'oh87',
 	*		section_tipo	: section_tipo,
 	*		section_id		: section_id,
-	* 		mode			: 'edit',
+	* 		mode			: 'edit'
+	*	},
+	* 	options : {
 	* 		widget_name		: 'descriptors'
-	*	}
+	* 	}
 	* }
 	* @return object $response
 	*/
@@ -35,8 +38,11 @@ final class dd_component_info {
 			$tipo			= $source->tipo;
 			$section_tipo	= $source->section_tipo;
 			$section_id		= $source->section_id;
-			$widget_name	= $source->widget_name;
 			$mode			= $source->mode;
+
+		// options
+			$options		= $rqo->options;
+			$widget_name	= $options->widget_name;
 
 		// response
 			$response = new stdClass();
@@ -60,7 +66,7 @@ final class dd_component_info {
 
 			if (empty($widgets) || !is_array($widgets)) {
 
-				$msg = " Empty defined widgets for ".get_called_class()." : $component->label [$component->tipo] ".to_string($widgets);
+				$msg = ' Empty defined widgets for '.get_called_class()." : $component->label [$component->tipo] ".to_string($widgets);
 
 				debug_log(__METHOD__.$msg, logger::ERROR);
 				$response->msg[] = $msg;
@@ -72,7 +78,7 @@ final class dd_component_info {
 			});
 
 			if(empty($widget_obj)){
-				$msg = " Empty widget_obj for widget ". $widget_name;
+				$msg = ' Empty widget_obj for widget '. $widget_name;
 
 				debug_log(__METHOD__.$msg, logger::ERROR);
 				$response->msg[] = $msg;

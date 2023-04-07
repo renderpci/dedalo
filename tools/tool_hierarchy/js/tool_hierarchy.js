@@ -135,19 +135,18 @@ tool_hierarchy.prototype.generate_virtual_section = async function() {
 	const self = this
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'generate_virtual_section')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			section_id		: self.caller.section_id,
-			section_tipo	: self.caller.section_tipo
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				section_id		: self.caller.section_id,
+				section_tipo	: self.caller.section_tipo
+			}
 		}
 
 	// call to the API, fetch data and get response

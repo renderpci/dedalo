@@ -140,23 +140,22 @@ tool_tc.prototype.change_all_time_codes = function(offset_seconds) {
 	const self = this
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'change_all_timecodes')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			component_tipo	: self.main_element.tipo,
-			section_tipo	: self.main_element.section_tipo,
-			section_id		: self.main_element.section_id,
-			lang			: self.main_element.lang,
-			offset_seconds	: offset_seconds,
-			key				: null
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				component_tipo	: self.main_element.tipo,
+				section_tipo	: self.main_element.section_tipo,
+				section_id		: self.main_element.section_id,
+				lang			: self.main_element.lang,
+				offset_seconds	: offset_seconds,
+				key				: null
+			}
 		}
 
 	// call to the API, fetch data and get response

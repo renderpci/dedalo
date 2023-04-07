@@ -15,6 +15,11 @@ final class dd_utils_api {
 	* This function could be caller by external processes as install to get the context of the login to create the login instance
 	* Login only need context, it not need data to be render.
 	* @param object $rqo
+	* {
+	*	action	: 'get_login_context',
+	*	dd_api	: 'dd_utils_api',
+	*	source	: source
+	* }
 	* @return object $response
 	*/
 	public static function get_login_context(object $rqo) : object {
@@ -48,6 +53,11 @@ final class dd_utils_api {
 	* GET_INSTALL_CONTEXT
 	* This function is an alias of get_element_context and does not need to login before
 	* @param object $rqo
+	* {
+	*	action	: 'get_install_context',
+	*	dd_api	: 'dd_utils_api',
+	*	source	: source
+	*  }
 	* @return object $response
 	*/
 	public static function get_install_context(object $rqo) : object {
@@ -229,8 +239,11 @@ final class dd_utils_api {
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
+		// options
+			$options = $rqo->options ?? [];
+
 		// dedalo_prefix_tipos
-			$dedalo_prefix_tipos = array_find((array)$rqo->options, function($item){
+			$dedalo_prefix_tipos = array_find((array)$options, function($item){
 				return $item->name==='dedalo_prefix_tipos';
 			})->value;
 			$ar_dedalo_prefix_tipos = array_map(function($item){
@@ -362,21 +375,21 @@ final class dd_utils_api {
 	* @param object $rqo
 	* @return object $response
 	*/
-	public static function build_structure_css(object $rqo) : object {
+		// public static function build_structure_css(object $rqo) : object {
 
-		// session_write_close();
+		// 	// session_write_close();
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-
-
-		$response->result	= css::build_structure_css();
-		$response->msg		= 'OK. Request done';
+		// 	$response = new stdClass();
+		// 		$response->result	= false;
+		// 		$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 
-		return $response;
-	}//end build_structure_css
+		// 	$response->result	= css::build_structure_css();
+		// 	$response->msg		= 'OK. Request done';
+
+
+		// 	return $response;
+		// }//end build_structure_css
 
 
 
@@ -387,15 +400,13 @@ final class dd_utils_api {
 	*/
 	public static function build_install_version(object $rqo) : object {
 
-		// session_write_close();
-
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
-
-		$response->result	= install::build_install_version();
-		$response->msg		= 'OK. Request done';
+		// build
+			$response->result	= install::build_install_version();
+			$response->msg		= 'OK. Request done';
 
 
 		return $response;
@@ -486,13 +497,21 @@ final class dd_utils_api {
 	/**
 	* CHANGE_LANG
 	* @param object $rqo
+	* {
+	*	action	: 'change_lang',
+	*	dd_api	: 'dd_utils_api',
+	*	options	: {
+	*		dedalo_data_lang		: lang,
+	*		dedalo_application_lang	: lang
+	*	}
+	*  }
 	* @return object $response
 	*/
 	public static function change_lang(object $rqo) : object {
 
 		$response = new stdClass();
 			$response->result	= true;
-			$response->msg		= 'Ok. Request done ['.__METHOD__.']';
+			$response->msg		= 'OK. Request done ['.__METHOD__.']';
 
 		// options
 			$options					= $rqo->options;
@@ -529,15 +548,26 @@ final class dd_utils_api {
 	/**
 	* LOGIN
 	* @param object $rqo
+	* {
+	*	action	: 'login',
+	*	dd_api	: 'dd_utils_api',
+	*	options	: {
+	*		username	: username,
+	*		auth		: auth
+	*	}
+	* }
 	* @return object $response
 	*/
 	public static function login(object $rqo) : object {
 
-		$options = new stdClass();
-			$options->username	= $rqo->options->username;
-			$options->password	= $rqo->options->auth;
+		// options
+			$options = $rqo->options;
 
-		$response = (object)login::Login( $options );
+		// login
+			$response = (object)login::Login((object)[
+				'username' => $options->username,
+				'password' => $options->auth
+			]);
 
 
 		return $response;
@@ -548,6 +578,11 @@ final class dd_utils_api {
 	/**
 	* QUIT
 	* @param object $rqo
+	* {
+	*	action	: 'quit',
+	*	dd_api	: 'dd_utils_api',
+	*	options	: {}
+	* }
 	* @return object $response
 	*/
 	public static function quit(object $rqo) : object {
@@ -556,13 +591,16 @@ final class dd_utils_api {
 			$response->result	= true;
 			$response->msg		= 'OK. Request done ['.__METHOD__.']';
 
+		// options
+			$options = $rqo->options;
+
 		// Login type . Get before unset session
 			$login_type = isset($_SESSION['dedalo']['auth']['login_type'])
 				? $_SESSION['dedalo']['auth']['login_type']
 				: 'default';
 
 		// Quit action
-			$result = login::Quit( $rqo->options );
+			$result = login::Quit( $options );
 
 		// Close script session
 			session_write_close();
@@ -586,15 +624,25 @@ final class dd_utils_api {
 	* INSTALL
 	* Control the install process calls to be re-direct to the correct actions
 	* @param object $rqo
+	* {
+	*	action	: 'install',
+	*	dd_api	: 'dd_utils_api',
+	*	options	: {
+	*		action : 'to_update'
+	*	}
+	* }
 	* @return object $response
 	*/
 	public static function install(object $rqo) : object {
 
-		$action	= $rqo->options->action;
+		// options
+			$options	= $rqo->options;
+			$action		= $options->action;
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed';
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed';
 
 		// check the dedalo install status (config_auto.php)
 		// When install is finished, it will be set automatically to 'installed'
@@ -638,7 +686,7 @@ final class dd_utils_api {
 						return $response;
 					}
 
-				$install_hierarchies_options = $rqo->options;
+				$install_hierarchies_options = $options;
 
 				// exec
 					$response = (object)install::install_hierarchies( $install_hierarchies_options );
@@ -647,7 +695,7 @@ final class dd_utils_api {
 			case 'set_root_pw':
 
 				//exec
-					$response = (object)install::set_root_pw($rqo->options);
+					$response = (object)install::set_root_pw($options);
 				break;
 
 			case 'install_finish':
@@ -704,14 +752,17 @@ final class dd_utils_api {
 	* Sample expected $json_data:
 	* {
 	*	"action": "upload",
-	*	"file_to_upload": { 	(assoc array)
-	*		"name"			: "exported_plantillas-web_-1-dd477.csv",
-	*		"full_path"		: "exported_plantillas-web_-1-dd477.csv",
-	*		"type"			: "text/csv",
-	*		"tmp_name"		: "/private/var/tmp/phpQ02UUO",
-	*		"error"			: 0,
-	*		"size"			: 29892
-	*	}
+	* 	"options": {
+	*		"file_to_upload": { 	(assoc array)
+	*			"name"			: "exported_plantillas-web_-1-dd477.csv",
+	*			"full_path"		: "exported_plantillas-web_-1-dd477.csv",
+	*			"type"			: "text/csv",
+	*			"tmp_name"		: "/private/var/tmp/phpQ02UUO",
+	*			"error"			: 0,
+	*			"size"			: 29892
+	*		},
+	* 		"chunked": false,
+	* 	}
 	* }
 	* @param object $rqo
 	* @return object $response
@@ -720,17 +771,19 @@ final class dd_utils_api {
 
 		session_write_close();
 
+		// options
+			$options		= $rqo->options;
+			$file_to_upload	= $options->file_to_upload ?? $options->upload;	// assoc array Added from PHP input '$_FILES'
+			$resource_type	= $options->resource_type; // string like 'tool_upload'
+			$chunked		= isset($options->chunked) // received as string 'true'|'false'
+				? (bool)json_decode($options->chunked)
+				: false;
+
 		// response
 			$response = new stdClass();
 				$response->result	= false;
 				$response->msg		= 'Error. '.label::get_label('error_on_upload_file');
 
-		// rqo
-			$file_to_upload	= $rqo->file_to_upload ?? $rqo->upload;	// assoc array Added from PHP input '$_FILES'
-			$resource_type	= $rqo->resource_type; // string like 'tool_upload'
-			$chunked		= isset($rqo->chunked) // received as string 'true'|'false'
-				? (bool)json_decode($rqo->chunked)
-				: false;
 
 		// check for upload issues
 		try {
@@ -783,27 +836,27 @@ final class dd_utils_api {
 
 
 			// chunked
-				$chunked	= json_decode($rqo->chunked);
+				// $chunked	= json_decode($options->chunked);
 
 				// filename
-				$file_name	= $file_to_upload['name'];
+				$file_name		= $file_to_upload['name'];
+				$file_tmp_name	= $file_to_upload['tmp_name'];
 
 				// extension
-				$extension	= strtolower( pathinfo($file_to_upload['name'], PATHINFO_EXTENSION) );
-
+				$extension	= strtolower( pathinfo($file_name, PATHINFO_EXTENSION) );
 
 				// Do not trust $file_to_upload['mime'] VALUE !!
 				// Check MIME Type by yourself.
 
 				$finfo		= new finfo(FILEINFO_MIME_TYPE);
-				$file_mime	= $finfo->file($file_to_upload['tmp_name']); // ex. string 'text/plain'
+				$file_mime	= $finfo->file($file_tmp_name); // ex. string 'text/plain'
 
 			// name
-				$name = basename($file_to_upload['tmp_name']);
+				$name = basename($file_tmp_name);
 				if($chunked){
-					$file_name		= $rqo->file_name;
-					$total_chunks	= $rqo->total_chunks;
-					$chunk_index	= $rqo->chunk_index;
+					$file_name		= $options->file_name;
+					$total_chunks	= $options->total_chunks;
+					$chunk_index	= $options->chunk_index;
 					$extension		= 'blob';
 					$name			= "{$chunk_index}-{$name}.{$extension}";
 					$file_mime		= 'application/octet-stream';
@@ -818,7 +871,7 @@ final class dd_utils_api {
 						true
 						)) {
 						// throw new RuntimeException('Invalid file format.');
-						debug_log(__METHOD__." Error. Stopped upload unknown file mime type: ".to_string($file_mime).' - name: '.to_string($file_to_upload['tmp_name']), logger::ERROR);
+						debug_log(__METHOD__." Error. Stopped upload unknown file mime type: ".to_string($file_mime).' - name: '.to_string($file_tmp_name), logger::ERROR);
 						$msg = ' upload: Invalid file format. (mime: '.$file_mime.')';
 						$response->msg .= $msg;
 						return $response;
@@ -833,8 +886,8 @@ final class dd_utils_api {
 					}
 
 				// check file is available in temp dir
-					if(!file_exists($file_to_upload['tmp_name'])) {
-						debug_log(__METHOD__." Error on locate temporary file ".$file_to_upload['tmp_name'], logger::ERROR);
+					if(!file_exists($file_tmp_name)) {
+						debug_log(__METHOD__." Error on locate temporary file ".$file_tmp_name, logger::ERROR);
 						$response->msg .= "Uploaded file not found in temporary folder";
 						return $response;
 					}
@@ -867,12 +920,12 @@ final class dd_utils_api {
 					}
 				// move file to target path
 					$target_path	= $dir . '/' . $name;
-					$moved			= move_uploaded_file($file_to_upload['tmp_name'], $target_path);
+					$moved			= move_uploaded_file($file_tmp_name, $target_path);
 					// verify move file is successful
 					if ($moved!==true) {
 						debug_log(__METHOD__.PHP_EOL
 							.'Error on get/move temp file to target_path '.PHP_EOL
-							.'source: '.$file_to_upload['tmp_name'].PHP_EOL
+							.'source: '.$file_tmp_name.PHP_EOL
 							.'target: '.$target_path,
 							 logger::ERROR
 						);
@@ -902,7 +955,7 @@ final class dd_utils_api {
 					$file_data->extension		= $extension;
 					$file_data->chunked			= $chunked;
 
-					if($chunked){
+					if($chunked) {
 						$file_data->total_chunks	= $total_chunks;
 						$file_data->chunk_index		= $chunk_index;
 					}
@@ -911,7 +964,7 @@ final class dd_utils_api {
 				switch ($resource_type) {
 
 					case 'web': // uploading images from text editor
-						$safe_file_name	= sanitize_file_name($file_to_upload['name']); // clean file name
+						$safe_file_name	= sanitize_file_name($file_name); // clean file name
 						$file_path		= DEDALO_MEDIA_PATH . '/image' . DEDALO_IMAGE_WEB_FOLDER . '/' . $safe_file_name;
 						$file_url		= DEDALO_MEDIA_URL  . '/image' . DEDALO_IMAGE_WEB_FOLDER . '/' . $safe_file_name;
 						$current_path	= $target_path;
@@ -945,17 +998,27 @@ final class dd_utils_api {
 	/**
 	* GET_SYSTEM_INFO
 	* @param object $rqo
+	*
+	*	dd_api	: 'dd_utils_api',
+	*	action	: 'join_chunked_files_uploaded',
+	*	options	: {
+	*		file_data		: file_data,
+	*		files_chunked	: files_chunked
+	*	}
+	* }
 	* @return object response
 	*/
 	public static function join_chunked_files_uploaded(object $rqo) : object {
 
-		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed';
+		// options
+			$options		= $rqo->options;
+			$files_chunked	= $options->files_chunked;
+			$file_data		= $options->file_data;
 
-		// rqo variables
-			$files_chunked	= $rqo->files_chunked;
-			$file_data		= $rqo->file_data;
+		// response
+			$response = new stdClass();
+				$response->result 	= false;
+				$response->msg 		= 'Error. Request failed';
 
 		// file_path
 			$file_path = DEDALO_UPLOAD_TMP_DIR . '/' . $file_data->resource_type;
@@ -1000,11 +1063,10 @@ final class dd_utils_api {
 			}
 
 		// set the file values
-			$file_data->tmp_name		= $tmp_joined_file; // like 'phpv75h2K'
-			$file_data->extension		= $extension;
+			$file_data->tmp_name	= $tmp_joined_file; // like 'phpv75h2K'
+			$file_data->extension	= $extension;
 
-		// response
-		// all is OK response
+		// response. All is OK response
 			$response->result		= true;
 			$response->file_data	= $file_data;
 			$response->msg			= 'OK. '.label::get_label('file_uploaded_successfully');
