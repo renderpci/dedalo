@@ -215,6 +215,14 @@ $updates->$v = new stdClass();
 			$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
 		$updates->$v->run_scripts[] = $script_obj;
 
+	// component_svg. rename media folder from 'standard' to 'web' and add a full copy as 'original'
+		$script_obj = new stdClass();
+			$script_obj->info			= "component_svg: rename media folder from 'standard' to 'web' and creates a full copy as 'original'";
+			$script_obj->script_class	= "v5_to_v6";
+			$script_obj->script_method	= "update_component_svg_media_dir";
+			$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
+		$updates->$v->run_scripts[] = $script_obj;
+
 	// DATA INSIDE DATABASE UPDATES
 		// clean_section_and_component_dato. Update 'datos' to section_data
 			require_once dirname(dirname(__FILE__)) .'/upgrade/class.data_v5_to_v6.php';
