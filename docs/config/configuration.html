@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+	<meta charset="utf-8"/>
+</head>
+<body>
+
+<h1 id="configuration">Configuration</h1>
+
+<p>Dédalo has four different config files in the ../dedalo/config/ directory:</p>
+
+<ul>
+<li>config.php</li>
+<li>config_db.php</li>
+<li>config_areas</li>
+<li>config_core.php</li>
+</ul>
+
+<p>Every file configure a specific part of the installation.</p>
+
+<p>The configuration files are &#8220;static&#8221; files that is necessary update manually, because these files has your database connection (with name, passwords, etc) and other specific parameters for your installation.</p>
+
+<blockquote>
+<p>Note: You will need review the &#8220;sample&#8221; files of the new versions to add or remove the changes specify in the new version. Dédalo will not change your specific configuration files when it&#8217;s updated automatically.</p>
+</blockquote>
+
+<h2 id="renamedédaloconfigurationfiles">Rename Dédalo configuration files</h2>
+
+<p>In the installation process you will has rename the sample files to active files, removing the &#8220;sample_&#8221; text of the filename. If you not did this step complete it before config your installation.</p>
+
+<p>When Dédalo is downloaded from GitHub, some config files should be configured with the proper parameters. All those config files come with a &#8216;sample&#8217; prefix that need to be removed from the names to get the functionality.</p>
+
+<p>The first step would be locating and renaming config files from their original value in GitHub to target file names that Dédalo can will locate and use.</p>
+
+<h3 id="renameglobaldédaloconfigfile">Rename global Dédalo config file</h3>
+
+<p><strong>config.php</strong></p>
+
+<p>This is the main config for all Dédalo system, this file is used to configure Dédalo with the entity, languages the will used in the projects, media formats, directories to use.</p>
+
+<ol>
+<li><p>Locate the file into the directory: ../httpdocs/dedalo/config/</p>
+
+<pre><code class="shell">cd ../httpdocs/dedalo/config/
+</code></pre></li>
+<li><p>Rename the sample.config.php to config.php</p>
+
+<pre><code class="shell">mv sample.config.php config.php
+</code></pre></li>
+</ol>
+
+<h3 id="dédalodbconfigfile">Dédalo DB config file</h3>
+
+<p><strong>config_db.php</strong></p>
+
+<p>This config file set the Dédalo connection to databases. This file will be used to configure both PostgreSQL and MySQL databases connections. PostgreSQL will be used for the working system and MySQL will be used to publish data.</p>
+
+<ol>
+<li><p>Locate the file into the directory: ../httpdocs/dedalo/config/</p>
+
+<pre><code class="shell">cd ../httpdocs/dedalo/config/
+</code></pre></li>
+<li><p>Rename the sample.config_db.php to config_db.php</p>
+
+<pre><code class="shell">mv sample.config_db.php config_db.php
+</code></pre></li>
+</ol>
+
+<h3 id="dédaloareasconfigfile">Dédalo Areas config file</h3>
+
+<p><strong>config_areas.php</strong></p>
+
+<p>This config file set the Dédalo areas that are usable or can be accessed or denied his access. The areas are the main group of information, it could be any &#8220;cultural field&#8221; of the research such as Oral Memory or Archeological heritage. Allowing or denying access to an area you are allowing or removing the access to all sections that this area has.</p>
+
+<ol>
+<li><p>Locate the file into the directory: ../httpdocs/dedalo/config/</p>
+
+<pre><code class="shell">cd ../httpdocs/dedalo/config/
+</code></pre></li>
+<li><p>Rename the sample.config_areas.php to config_areas.php</p>
+
+<pre><code class="shell">mv sample.config_areas.php config_areas.php
+</code></pre></li>
+</ol>
+
+<h3 id="dédalocoreconfigfile">Dédalo core config file</h3>
+
+<p><strong>config_core.php</strong></p>
+
+<p>This config file is used by Dédalo to set and get the status of the installation, you do not need change it manually.</p>
+
+<ol>
+<li><p>Locate the file into the directory: ../httpdocs/dedalo/config/</p>
+
+<pre><code class="shell">cd ../httpdocs/dedalo/config/
+</code></pre></li>
+<li><p>Rename the sample.config_core.php to config_core.php</p>
+
+<pre><code class="shell">mv sample.config_core.php config_core.php
+</code></pre></li>
+</ol>
+
+<h2 id="setupdédaloconfigurationfiles">Set up Dédalo configuration files</h2>
+
+<p>Every config file has its own parameters that need to be changed with the your own project environment.</p>
+
+<ol>
+<li>Changing the parameters of global Dédalo config file.</li>
+<li>Changing the parameters of database config file.</li>
+<li>Cahngins parameters of areas config file.</li>
+</ol>
+
+</body>
+</html>
+
