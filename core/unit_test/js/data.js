@@ -241,10 +241,10 @@
 		    "lib_data": null,
 		    "files_info": [
 		      {
-		        "quality": "original",
-		        "file_url": `/v6/media/media_development/av/original/${file_name}.AVI`,
-		        "file_name": `${file_name}.AVI`,
-		        "file_path": `/Users/paco/Trabajos/Dedalo/v6/master_dedalo/media/media_development/av/original/${file_name}.AVI`,
+		        "quality": "web",
+		        "file_url": `/dedalo/media/3d/web/${file_name}.glb`,
+		        "file_name": `${file_name}.glb`,
+		        "file_path": `/home/www/dedalo/media/av/web/${file_name}.glb`,
 		        "file_size": 22126087,
 		        "file_time": {
 		          "day": 11,
@@ -268,24 +268,7 @@
 		            "timestamp": "2022-02-11 11:34:41"
 		          },
 		          "user": null,
-		          "file_name": `${file_name}.AVI`
-		        }
-		      },
-		      {
-		        "quality": "404",
-		        "file_url": `/v6/media/media_development/av/404/${file_name}.mp4`,
-		        "file_name": `${file_name}.mp4`,
-		        "file_path": `/Users/paco/Trabajos/Dedalo/v6/master_dedalo/media/media_development/av/404/${file_name}.mp4`,
-		        "file_size": 22126087,
-		        "file_time": {
-		          "day": 11,
-		          "hour": 11,
-		          "time": 64992281681,
-		          "year": 2022,
-		          "month": 2,
-		          "minute": 34,
-		          "second": 41,
-		          "timestamp": "2022-02-11 11:34:41"
+		          "file_name": `${file_name}.glb`
 		        }
 		      }
 		    ]
@@ -305,9 +288,9 @@
 		    "files_info": [
 		      {
 		        "quality": "original",
-		        "file_url": `/v6/media/media_development/av/original/${file_name}.AVI`,
-		        "file_name": `${file_name}.AVI`,
-		        "file_path": `/Users/paco/Trabajos/Dedalo/v6/master_dedalo/media/media_development/av/original/${file_name}.AVI`,
+		        "file_url": `/dedalo/media/av/original/${file_name}.avi`,
+		        "file_name": `${file_name}.avi`,
+		        "file_path": `/home/www/dedalo/media/av/original/${file_name}.avi`,
 		        "file_size": 22126087,
 		        "file_time": {
 		          "day": 11,
@@ -331,14 +314,14 @@
 		            "timestamp": "2022-02-11 11:34:41"
 		          },
 		          "user": null,
-		          "file_name": `${file_name}.AVI`
+		          "file_name": `${file_name}.avi`
 		        }
 		      },
 		      {
 		        "quality": "404",
-		        "file_url": `/v6/media/media_development/av/404/${file_name}.mp4`,
+		        "file_url": `/dedalo/media/av/404/${file_name}.mp4`,
 		        "file_name": `${file_name}.mp4`,
-		        "file_path": `/Users/paco/Trabajos/Dedalo/v6/master_dedalo/media/media_development/av/404/${file_name}.mp4`,
+		        "file_path": `/home/www/dedalo/media/av/404/${file_name}.mp4`,
 		        "file_size": 22126087,
 		        "file_time": {
 		          "day": 11,
@@ -368,9 +351,9 @@
 		    "files_info": [
 		      {
 		        "quality": "original",
-		        "file_url": `/v6/media/media_development/image/original/0/${file_name}.jpg`,
+		        "file_url": `/dedalo/media/image/original/0/${file_name}.jpg`,
 		        "file_name": `${file_name}.jpg`,
-		        "file_path": `/Users/paco/Trabajos/Dedalo/v6/master_dedalo/media/media_development/image/original/0/${file_name}.jpg`,
+		        "file_path": `/home/www/dedalo/media/image/original/0/${file_name}.jpg`,
 		        "file_size": 14355433,
 		        "file_time": {
 		          "day": 13,
@@ -399,9 +382,9 @@
 		      },
 		      {
 		        "quality": "1.5MB",
-		        "file_url": `/v6/media/media_development/image/1.5MB/0/${file_name}.jpg`,
+		        "file_url": `/dedalo/media/image/1.5MB/0/${file_name}.jpg`,
 		        "file_name": `${file_name}.jpg`,
-		        "file_path": `/Users/paco/Trabajos/Dedalo/v6/master_dedalo/media/media_development/image/1.5MB/0/${file_name}.jpg`,
+		        "file_path": `/home/www/dedalo/media/image/1.5MB/0/${file_name}.jpg`,
 		        "file_size": 344574,
 		        "file_time": {
 		          "day": 13,
@@ -430,10 +413,10 @@
 		    "lib_data": null,
 		    "files_info": [
 		      {
-		        "quality": "standard",
-		        "file_url": `/v6/media/media_development/pdf/standard/0/${file_name}.pdf`,
+		        "quality": "web",
+		        "file_url": `/dedalo/media/pdf/web/0/${file_name}.pdf`,
 		        "file_name": `${file_name}.pdf`,
-		        "file_path": `/Users/paco/Trabajos/Dedalo/v6/master_dedalo/media/media_development/pdf/standard/0/${file_name}.pdf`,
+		        "file_path": `/home/www/dedalo/media/pdf/web/0/${file_name}.pdf`,
 		        "file_size": 255969,
 		        "file_time": {
 		          "day": 25,
@@ -476,10 +459,10 @@
 		    "lib_data": null,
 		    "files_info": [
 		      {
-		        "quality": "standard",
-		        "file_url": `/v6/media/media_development/svg/standard/${file_name}.svg`,
+		        "quality": "web",
+		        "file_url": `/dedalo/media/svg/web/${file_name}.svg`,
 		        "file_name": `${file_name}.svg`,
-		        "file_path": `/Users/paco/Trabajos/Dedalo/v6/master_dedalo/media/media_development/svg/standard/${file_name}.svg`,
+		        "file_path": `/home/www/dedalo/media/svg/web/${file_name}.svg`,
 		        "file_size": 1180,
 		        "file_time": {
 		          "day": 19,
