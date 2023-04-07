@@ -196,9 +196,9 @@ class component_password extends component_common {
 		$encryption_mode = encryption_mode();
 
 		if( $encryption_mode==='openssl' ) {
-			return dedalo_encrypt_openssl($stringArray, DEDALO_INFORMACION);
+			return dedalo_encrypt_openssl($stringArray, DEDALO_INFORMATION);
 		}else if($encryption_mode==='mcrypt') {
-			return dedalo_encryptStringArray($stringArray, DEDALO_INFORMACION);
+			return dedalo_encryptStringArray($stringArray, DEDALO_INFORMATION);
 		}else{
 			debug_log(__METHOD__." UNKNOW ENCRYPT MODE !! ".to_string(), logger::ERROR);
 		}
@@ -242,7 +242,7 @@ class component_password extends component_common {
 				$section_id = explode('.', $reference_id)[1];
 				if((int)$section_id === -1){
 
-					$default = dedalo_decryptStringArray($dato_unchanged, DEDALO_INFORMACION);
+					$default = dedalo_decryptStringArray($dato_unchanged, DEDALO_INFORMATION);
 
 					$section = section::get_instance( -1, DEDALO_SECTION_USERS_TIPO );
 					$dato = $section->get_dato();
@@ -270,8 +270,8 @@ class component_password extends component_common {
 				# Compatibility old dedalo instalations
 				if (!empty($dato_unchanged) && is_string($dato_unchanged)) {
 
-					$old_pw = dedalo_decryptStringArray($dato_unchanged, DEDALO_INFORMACION);
-					$new_dato = dedalo_encrypt_openssl($old_pw, DEDALO_INFORMACION);
+					$old_pw = dedalo_decryptStringArray($dato_unchanged, DEDALO_INFORMATION);
+					$new_dato = dedalo_encrypt_openssl($old_pw, DEDALO_INFORMATION);
 
 					debug_log(__METHOD__." changed pw from $dato_unchanged - $new_dato ".to_string($old_pw), logger::DEBUG);
 
