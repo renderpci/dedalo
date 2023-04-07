@@ -23,78 +23,82 @@ The first step would be locating and renaming config files from their original v
 
 ### Rename global Dédalo config file
 
-**config.php**
+./dedalo/config/config.php
 
 This is the main config for all Dédalo system, this file is used to configure Dédalo with the entity, languages the will used in the projects, media formats, directories to use.
 
 1. Locate the file into the directory: ../httpdocs/dedalo/config/
 
-	```shell
-	cd ../httpdocs/dedalo/config/
-	```
+    ```shell
+    cd ../httpdocs/dedalo/config/
+    ```
+
 2. Rename the sample.config.php to config.php
 
-	```shell
-	mv sample.config.php config.php
-	```
+    ```shell
+    mv sample.config.php config.php
+    ```
 
 ### Dédalo DB config file
 
-**config_db.php**
+./dedalo/config/config_db.php
 
 This config file set the Dédalo connection to databases. This file will be used to configure both PostgreSQL and MySQL databases connections. PostgreSQL will be used for the working system and MySQL will be used to publish data.
 
 1. Locate the file into the directory: ../httpdocs/dedalo/config/
 
-	```shell
-	cd ../httpdocs/dedalo/config/
-	```
+    ```shell
+    cd ../httpdocs/dedalo/config/
+    ```
+
 2. Rename the sample.config_db.php to config_db.php
 
-	```shell
-	mv sample.config_db.php config_db.php
-	```
+    ```shell
+    mv sample.config_db.php config_db.php
+    ```
 
 ### Dédalo Areas config file
 
-**config_areas.php**
+./dedalo/config/config_areas.php
 
 This config file set the Dédalo areas that are usable or can be accessed or denied his access. The areas are the main group of information, it could be any "cultural field" of the research such as Oral Memory or Archeological heritage. Allowing or denying access to an area you are allowing or removing the access to all sections that this area has.
 
 1. Locate the file into the directory: ../httpdocs/dedalo/config/
 
-	```shell
-	cd ../httpdocs/dedalo/config/
-	```
+    ```shell
+    cd ../httpdocs/dedalo/config/
+    ```
+
 2. Rename the sample.config_areas.php to config_areas.php
 
-	```shell
-	mv sample.config_areas.php config_areas.php
-	```
+    ```shell
+    mv sample.config_areas.php config_areas.php
+    ```
 
 ### Dédalo core config file
 
-**config_core.php**
+./dedalo/config/config_core.php
 
 This config file is used by Dédalo to set and get the status of the installation, you do not need change it manually.
 
 1. Locate the file into the directory: ../httpdocs/dedalo/config/
 
-	```shell
-	cd ../httpdocs/dedalo/config/
-	```
+    ```shell
+    cd ../httpdocs/dedalo/config/
+    ```
+
 2. Rename the sample.config_core.php to config_core.php
 
-	```shell
-	mv sample.config_core.php config_core.php
-	```
+    ```shell
+    mv sample.config_core.php config_core.php
+    ```
 
 ## Set up Dédalo configuration files
 
 Every config file has its own parameters that need to be changed with the your own project environment.
 
 1. Changing parameters of global [Dédalo configuration file](./config.md#changing-parameters-of-global-dédalo-config-file).
-2. Changing parameters of [database configiguration file](./config_db.md#changing-parameters-of-dédalo-database-config-file).
-   1. Work system [configutarion](./config_db.md#work-system-database-variables)
+2. Changing parameters of [database configuration file](./config_db.md#changing-parameters-of-dédalo-database-config-file).
+   1. Work system [configuration](./config_db.md#work-system-database-variables)
    2. Diffusion system [configuration](./config_db.md#diffusion-system-database-variables)
 3. Changing parameters of [areas configuration file](./config_areas.md#changing-parameters-of-dédalo-areas-config-file).
