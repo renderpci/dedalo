@@ -1,99 +1,4 @@
-# Configuration
-
-Dédalo has four different config files in the ../dedalo/config/ directory:
-
-* config.php
-* config_db.php
-* config_areas
-* config_core.php
-
-Every file configure a specific part of the installation.
-
-The configuration files are "static" files that is necessary update manually, because these files has your database connection (with name, passwords, etc) and other specific parameters for your installation.
-
-> Note: You will need review the "sample" files of the new versions to add or remove the changes specify in the new version. Dédalo will not change your specific configuration files when it's updated automatically.
-
-## Rename Dédalo configuration files
-
-In the installation process you will has rename the sample files to active files, removing the "sample_" text of the filename. If you not did this step complete it before config your installation.
-
-When Dédalo is downloaded from GitHub, some config files should be configured with the proper parameters. All those config files come with a 'sample' prefix that need to be removed from the names to get the functionality.
-
-The first step would be locating and renaming config files from their original value in GitHub to target file names that Dédalo can will locate and use.
-
-### Rename global Dédalo config file
-
-**config.php**
-
-This is the main config for all Dédalo system, this file is used to configure Dédalo with the entity, languages the will used in the projects, media formats, directories to use.
-
-1. Locate the file into the directory: ../httpdocs/dedalo/config/
-
-	```shell
-	cd ../httpdocs/dedalo/config/
-	```
-2. Rename the sample.config.php to config.php
-
-	```shell
-	mv sample.config.php config.php
-	```
-
-### Dédalo DB config file
-
-**config_db.php**
-
-This config file set the Dédalo connection to databases. This file will be used to configure both PostgreSQL and MySQL databases connections. PostgreSQL will be used for the working system and MySQL will be used to publish data.
-
-1. Locate the file into the directory: ../httpdocs/dedalo/config/
-
-	```shell
-	cd ../httpdocs/dedalo/config/
-	```
-2. Rename the sample.config_db.php to config_db.php
-
-	```shell
-	mv sample.config_db.php config_db.php
-	```
-
-### Dédalo Areas config file
-
-**config_areas.php**
-
-This config file set the Dédalo areas that are usable or can be accessed or denied his access. The areas are the main group of information, it could be any "cultural field" of the research such as Oral Memory or Archeological heritage. Allowing or denying access to an area you are allowing or removing the access to all sections that this area has.
-
-1. Locate the file into the directory: ../httpdocs/dedalo/config/
-
-	```shell
-	cd ../httpdocs/dedalo/config/
-	```
-2. Rename the sample.config_areas.php to config_areas.php
-
-	```shell
-	mv sample.config_areas.php config_areas.php
-	```
-
-### Dédalo core config file
-
-**config_core.php**
-
-This config file is used by Dédalo to set and get the status of the installation, you do not need change it manually.
-
-1. Locate the file into the directory: ../httpdocs/dedalo/config/
-
-	```shell
-	cd ../httpdocs/dedalo/config/
-	```
-2. Rename the sample.config_core.php to config_core.php
-
-	```shell
-	mv sample.config_core.php config_core.php
-	```
-
-## Set up Dédalo configuration files
-
-Every config file has its own parameters that need to be changed with the our project environment.
-
-### Changing the parameters of global Dédalo config file.
+# Changing parameters of global Dédalo config file.
 
 **config.php**
 
@@ -109,11 +14,11 @@ Every config file has its own parameters that need to be changed with the our pr
 	```
 3. Locate and change the PROPERTY with the proper configuration.
 
-	### **Main variables**
-	### paths
+	## **Main variables**
+	## paths
 	---
 
-	#### Dédalo host
+	### Dédalo host
 
 	**config.php**
 
@@ -127,7 +32,7 @@ Every config file has its own parameters that need to be changed with the our pr
 	```
 	---
 
-	#### Dédalo protocol
+	### Dédalo protocol
 
 	**config.php**
 
@@ -140,7 +45,7 @@ Every config file has its own parameters that need to be changed with the our pr
 	```
 	---
 
-	#### Dédalo root path
+	### Dédalo root path
 
 	**config.php**
 
@@ -156,7 +61,7 @@ Every config file has its own parameters that need to be changed with the our pr
 	```
 	---
 
-	#### Dédalo root web directory
+	### Dédalo root web directory
 
 	**config.php**
 
@@ -172,7 +77,7 @@ Every config file has its own parameters that need to be changed with the our pr
 	```
 	---
 
-	#### Dédalo base paths
+	### Dédalo base paths
 
 	**config.php**
 
@@ -194,7 +99,7 @@ Every config file has its own parameters that need to be changed with the our pr
 	
 	---
 
-	#### Dédalo config path
+	### Dédalo config path
 
 	**config.php**
 
@@ -210,7 +115,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo core path
+	### Dédalo core path
 
 	**config.php**
 
@@ -224,7 +129,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo core URL
+	### Dédalo core URL
 
 	**config.php**
 
@@ -239,7 +144,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo shared path
+	### Dédalo shared path
 
 	**config.php**
 
@@ -253,7 +158,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo shared URL
+	### Dédalo shared URL
 
 	**config.php**
 
@@ -269,7 +174,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo tools path
+	### Dédalo tools path
 
 	**config.php**
 
@@ -283,7 +188,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo tools URL
+	### Dédalo tools URL
 
 	**config.php**
 
@@ -297,7 +202,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo lib path
+	### Dédalo lib path
 
 	**config.php**
 
@@ -312,7 +217,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo library uri
+	### Dédalo library uri
 
 	**config.php**
 
@@ -329,7 +234,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo widgets path
+	### Dédalo widgets path
 
 	**config.php**
 
@@ -342,7 +247,7 @@ Every config file has its own parameters that need to be changed with the our pr
 	```
 	---
 
-	#### Dédalo widgets URL
+	### Dédalo widgets URL
 
 	**config.php**
 
@@ -358,7 +263,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo extras path
+	### Dédalo extras path
 
 	**config.php**
 
@@ -380,7 +285,7 @@ Every config file has its own parameters that need to be changed with the our pr
 	
 	---
 
-	#### Dédalo extras uri
+	### Dédalo extras uri
 
 	**config.php**
 
@@ -404,7 +309,7 @@ Every config file has its own parameters that need to be changed with the our pr
 	### Salt
 	---
 
-	#### Dédalo salt string (string used for encryption)
+	### Dédalo salt string (string used for encryption)
 
 	**config.php**
 
@@ -419,7 +324,7 @@ Every config file has its own parameters that need to be changed with the our pr
 	### Locale
 	---
 
-	#### Dédalo time zone
+	### Dédalo time zone
 
 	**config.php**
 
@@ -441,7 +346,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo locale encoding
+	### Dédalo locale encoding
 
 	**config.php**
 
@@ -465,7 +370,7 @@ Every config file has its own parameters that need to be changed with the our pr
 	
 	---
 
-	#### Dédalo date order
+	### Dédalo date order
 
 	**config.php**
 
@@ -485,7 +390,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo entity
+	### Dédalo entity
 
 	**config.php**
 
@@ -501,7 +406,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo entity label
+	### Dédalo entity label
 
 	**config.php**
 
@@ -521,7 +426,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Entity id
+	### Entity id
 
 	**config.php**
 
@@ -535,7 +440,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Developer server
+	### Developer server
 
 	**config.php**
 
@@ -554,7 +459,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo cache manager
+	### Dédalo cache manager
 
 	**config.php**
 
@@ -577,7 +482,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Basic functions
+	### Basic functions
 
 	**config.php**
 
@@ -589,7 +494,7 @@ Every config file has its own parameters that need to be changed with the our pr
 	```
 	---
 
-	#### Version
+	### Version
 
 	**config.php**
 
@@ -601,7 +506,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo fixed tipos
+	### Dédalo fixed tipos
 
 	**config.php**
 
@@ -616,7 +521,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Version
+	### Version
 
 	**config.php**
 
@@ -627,7 +532,7 @@ Every config file has its own parameters that need to be changed with the our pr
 	```
 	---
 
-	#### Database config  / connection
+	### Database config  / connection
 
 	**config.php**
 
@@ -643,7 +548,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo session handler
+	### Dédalo session handler
 
 	**config.php**
 
@@ -660,7 +565,7 @@ Every config file has its own parameters that need to be changed with the our pr
 	```
 	---
 
-	#### Session lifetime
+	### Session lifetime
 
 	**config.php**
 
@@ -676,7 +581,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Starting the session
+	### Starting the session
 
 	**config.php**
 
@@ -703,7 +608,7 @@ Every config file has its own parameters that need to be changed with the our pr
 	### Developer variables
 
 	---
-	#### Show debug
+	### Show debug
 
 	**config.php**
 
@@ -721,7 +626,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Show developer
+	### Show developer
 
 	**config.php**
 
@@ -745,7 +650,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Loader
+	### Loader
 
 	**config.php**
 
@@ -761,7 +666,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo backup on loggin
+	### Dédalo backup on loggin
 
 	**config.php**
 
@@ -776,7 +681,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo backup time range
+	### Dédalo backup time range
 
 	**config.php**
 
@@ -790,7 +695,7 @@ Every config file has its own parameters that need to be changed with the our pr
 	
 	---
 
-	#### Dédalo backups directory
+	### Dédalo backups directory
 
 	**config.php**
 
@@ -804,7 +709,7 @@ Every config file has its own parameters that need to be changed with the our pr
 	
 	---
 
-	#### Dédalo temporary backup
+	### Dédalo temporary backup
 
 	**config.php**
 
@@ -818,7 +723,7 @@ Every config file has its own parameters that need to be changed with the our pr
 	
 	---
 
-	#### Dédalo main db backup
+	### Dédalo main db backup
 
 	**config.php**
 
@@ -832,7 +737,7 @@ Every config file has its own parameters that need to be changed with the our pr
 	
 	---
 
-	#### Dédalo ontology backup
+	### Dédalo ontology backup
 
 	**config.php**
 
@@ -850,7 +755,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Logger level
+	### Logger level
 
 	**config.php**
 
@@ -879,7 +784,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Activity log database
+	### Activity log database
 
 	**config.php**
 
@@ -895,7 +800,7 @@ Every config file has its own parameters that need to be changed with the our pr
 	### Languages
 	---
 
-	#### Dédalo structure lang
+	### Dédalo structure lang
 
 	**config.php**
 
@@ -933,7 +838,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo application languages
+	### Dédalo application languages
 
 	**config.php**
 
@@ -954,7 +859,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo default application language
+	### Dédalo default application language
 
 	**config.php**
 
@@ -972,7 +877,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo application language
+	### Dédalo application language
 
 	**config.php**
 
@@ -990,7 +895,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo default data language
+	### Dédalo default data language
 
 	**config.php**
 
@@ -1008,7 +913,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo data language
+	### Dédalo data language
 
 	**config.php**
 
@@ -1022,11 +927,11 @@ Every config file has its own parameters that need to be changed with the our pr
 	define('DEDALO_DATA_LANG', 'lg-spa');
 	```
 
-	> This parameter use the method 'fix_cascade_config_var' to calculate the value. The result of this function will be a string with the correct language value in string format. You can define it as fixed data value, but is recommended do not change the definition, if you want change the default language for the data use the: [DEDALO_DATA_LANG_DEFAULT](#dédalodefaultdatalanguage).
+	> This parameter use the method 'fix_cascade_config_var' to calculate the value. The result of this function will be a string with the correct language value in string format. You can define it as fixed data value, but is recommended do not change the definition, if you want change the default language for the data use the: [DEDALO_DATA_LANG_DEFAULT](#dédalo-default-data-language).
 
 	---
 
-	#### Dédalo data language selector
+	### Dédalo data language selector
 
 	**config.php**
 
@@ -1042,7 +947,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo data without language (no lang)
+	### Dédalo data without language (no lang)
 
 	**config.php**
 
@@ -1060,7 +965,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo default projects languages
+	### Dédalo default projects languages
 
 	**config.php**
 
@@ -1080,7 +985,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo diffusion languages
+	### Dédalo diffusion languages
 
 	**config.php**
 
@@ -1100,7 +1005,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo translator url
+	### Dédalo translator url
 
 	**config.php**
 
@@ -1123,7 +1028,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo prefix tipos
+	### Dédalo prefix tipos
 
 	**config.php**
 
@@ -1160,7 +1065,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Main fallback section
+	### Main fallback section
 
 	**config.php**
 
@@ -1175,7 +1080,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Numerical matrix value for yes
+	### Numerical matrix value for yes
 
 	**config.php**
 
@@ -1189,7 +1094,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Numerical matrix value for no
+	### Numerical matrix value for no
 
 	**config.php**
 
@@ -1203,7 +1108,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo maximum rows per page
+	### Dédalo maximum rows per page
 
 	**config.php**
 
@@ -1219,7 +1124,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo default profile
+	### Dédalo default profile
 
 	**config.php**
 
@@ -1235,7 +1140,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo default project
+	### Dédalo default project
 
 	**config.php**
 
@@ -1251,7 +1156,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo filter section tipo default
+	### Dédalo filter section tipo default
 
 	**config.php**
 
@@ -1276,7 +1181,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo media base path
+	### Dédalo media base path
 
 	**config.php**
 
@@ -1292,7 +1197,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo media base url
+	### Dédalo media base url
 
 	**config.php**
 
@@ -1308,7 +1213,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo audiovisual directory
+	### Dédalo audiovisual directory
 
 	**config.php**
 
@@ -1322,7 +1227,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo audiovisual extension (type of file)
+	### Dédalo audiovisual extension (type of file)
 
 	**config.php**
 
@@ -1338,7 +1243,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo audiovisual extensions supported
+	### Dédalo audiovisual extensions supported
 
 	**config.php**
 
@@ -1354,7 +1259,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo audiovisual mime type
+	### Dédalo audiovisual mime type
 
 	**config.php**
 
@@ -1370,7 +1275,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo audiovisual codec type
+	### Dédalo audiovisual codec type
 
 	**config.php**
 
@@ -1384,7 +1289,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo audiovisual quality for original files
+	### Dédalo audiovisual quality for original files
 
 	**config.php**
 
@@ -1400,7 +1305,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo audiovisual quality for procesed files
+	### Dédalo audiovisual quality for procesed files
 
 	**config.php**
 
@@ -1416,7 +1321,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo audiovisual qualities definiton
+	### Dédalo audiovisual qualities definiton
 
 	**config.php**
 
@@ -1432,7 +1337,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo posterframe filetype extension for audiovisual files
+	### Dédalo posterframe filetype extension for audiovisual files
 
 	**config.php**
 
@@ -1448,7 +1353,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo audiovisual processor filepath (ffmpeg path)
+	### Dédalo audiovisual processor filepath (ffmpeg path)
 
 	**config.php**
 
@@ -1462,7 +1367,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo audiovisual processor settings (ffmpeg settings)
+	### Dédalo audiovisual processor settings (ffmpeg settings)
 
 	**config.php**
 
@@ -1477,7 +1382,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo audiovisual processor settings (faststart)
+	### Dédalo audiovisual processor settings (faststart)
 
 	**config.php**
 
@@ -1493,7 +1398,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo audiovisual ffprobe path
+	### Dédalo audiovisual ffprobe path
 
 	**config.php**
 
@@ -1507,7 +1412,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo audiovisual streamer
+	### Dédalo audiovisual streamer
 
 	**config.php**
 
@@ -1523,7 +1428,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo audiovisual watermark file
+	### Dédalo audiovisual watermark file
 
 	**config.php**
 
@@ -1540,7 +1445,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo audiovisual subtitles directory
+	### Dédalo audiovisual subtitles directory
 
 	**config.php**
 
@@ -1556,7 +1461,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo audiovisual subtitles type extension
+	### Dédalo audiovisual subtitles type extension
 
 	**config.php**
 
@@ -1572,7 +1477,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo audiovisual recompress all uploaded files
+	### Dédalo audiovisual recompress all uploaded files
 
 	**config.php**
 
@@ -1588,7 +1493,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo image directory
+	### Dédalo image directory
 
 	**config.php**
 
@@ -1602,7 +1507,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo image extension (type of file)
+	### Dédalo image extension (type of file)
 
 	**config.php**
 
@@ -1618,7 +1523,7 @@ Every config file has its own parameters that need to be changed with the our pr
 	
 	---
 
-	#### Dédalo image mime type
+	### Dédalo image mime type
 
 	**config.php**
 
@@ -1632,7 +1537,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo image type
+	### Dédalo image type
 
 	**config.php**
 
@@ -1648,7 +1553,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo image extensions supported
+	### Dédalo image extensions supported
 
 	**config.php**
 
@@ -1664,7 +1569,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo image quality for original files
+	### Dédalo image quality for original files
 
 	**config.php**
 
@@ -1680,7 +1585,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo image quality for the reotuched files
+	### Dédalo image quality for the reotuched files
 
 	**config.php**
 
@@ -1696,7 +1601,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo image default quality
+	### Dédalo image default quality
 
 	**config.php**
 
@@ -1712,7 +1617,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo image thumb default
+	### Dédalo image thumb default
 
 	**config.php**
 
@@ -1728,7 +1633,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo image qualities definiton
+	### Dédalo image qualities definiton
 
 	**config.php**
 
@@ -1744,7 +1649,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo image print resolution definiton
+	### Dédalo image print resolution definiton
 
 	**config.php**
 
@@ -1758,7 +1663,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo image engine procesor URL
+	### Dédalo image engine procesor URL
 
 	**config.php**
 
@@ -1772,7 +1677,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Image magick path
+	### Image magick path
 
 	**config.php**
 
@@ -1786,7 +1691,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Color profiles paths
+	### Color profiles paths
 
 	**config.php**
 
@@ -1802,7 +1707,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo image thumb width size
+	### Dédalo image thumb width size
 
 	**config.php**
 
@@ -1816,7 +1721,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo image thumb height size
+	### Dédalo image thumb height size
 
 	**config.php**
 
@@ -1830,7 +1735,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo image web directory
+	### Dédalo image web directory
 
 	**config.php**
 
@@ -1844,7 +1749,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo pdf directory
+	### Dédalo pdf directory
 
 	**config.php**
 
@@ -1858,7 +1763,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo pdf extension (type of file)
+	### Dédalo pdf extension (type of file)
 
 	**config.php**
 
@@ -1872,7 +1777,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo pdf extensions supported
+	### Dédalo pdf extensions supported
 
 	**config.php**
 
@@ -1886,7 +1791,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo pdf quality for default files
+	### Dédalo pdf quality for default files
 
 	**config.php**
 
@@ -1900,7 +1805,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo pdf qualities definiton
+	### Dédalo pdf qualities definiton
 
 	**config.php**
 
@@ -1916,7 +1821,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo pdf mime type
+	### Dédalo pdf mime type
 
 	**config.php**
 
@@ -1932,7 +1837,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo pdf type
+	### Dédalo pdf type
 
 	**config.php**
 
@@ -1948,7 +1853,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo pdf quality for original files
+	### Dédalo pdf quality for original files
 
 	**config.php**
 
@@ -1964,7 +1869,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo pdf quality for procesed files
+	### Dédalo pdf quality for procesed files
 
 	**config.php**
 
@@ -1980,7 +1885,7 @@ Every config file has its own parameters that need to be changed with the our pr
 	
 	---
 
-	#### Dédalo pdf quality for procesed files
+	### Dédalo pdf quality for procesed files
 
 	**config.php**
 
@@ -1996,7 +1901,7 @@ Every config file has its own parameters that need to be changed with the our pr
 	
 	---
 
-	#### Dédalo pdf thumb default
+	### Dédalo pdf thumb default
 
 	**config.php**
 
@@ -2013,7 +1918,7 @@ Every config file has its own parameters that need to be changed with the our pr
 	---
 
 
-	#### Dédalo main 3d directory
+	### Dédalo main 3d directory
 
 	**config.php**
 
@@ -2027,7 +1932,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo 3d extension (type of file)
+	### Dédalo 3d extension (type of file)
 
 	**config.php**
 
@@ -2043,7 +1948,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo 3d extensions supported
+	### Dédalo 3d extensions supported
 
 	**config.php**
 
@@ -2060,7 +1965,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo 3d mime type
+	### Dédalo 3d mime type
 
 	**config.php**
 
@@ -2076,7 +1981,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo 3d quality for original files
+	### Dédalo 3d quality for original files
 
 	**config.php**
 
@@ -2092,7 +1997,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo 3d quality for procesed files
+	### Dédalo 3d quality for procesed files
 
 	**config.php**
 
@@ -2108,7 +2013,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo 3d thumb default
+	### Dédalo 3d thumb default
 
 	**config.php**
 
@@ -2124,7 +2029,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 	
-	#### Dédalo 3d qualities definiton
+	### Dédalo 3d qualities definiton
 
 	**config.php**
 
@@ -2140,7 +2045,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo 3d gltfpack conversor 
+	### Dédalo 3d gltfpack conversor 
 
 	**config.php**
 
@@ -2156,7 +2061,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo 3d FBX2glTF conversor 
+	### Dédalo 3d FBX2glTF conversor 
 
 	**config.php**
 
@@ -2172,7 +2077,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo 3d COLLADA2GLTF conversor 
+	### Dédalo 3d COLLADA2GLTF conversor 
 
 	**config.php**
 
@@ -2188,7 +2093,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo html render to pdf library path
+	### Dédalo html render to pdf library path
 
 	**config.php**
 
@@ -2202,7 +2107,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Pdf automatic transcription engine
+	### Pdf automatic transcription engine
 
 	**config.php**
 
@@ -2216,7 +2121,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo directory for html files
+	### Dédalo directory for html files
 
 	**config.php**
 
@@ -2230,7 +2135,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo html files extension (type of file)
+	### Dédalo html files extension (type of file)
 
 	**config.php**
 
@@ -2244,7 +2149,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo main directory for svg files
+	### Dédalo main directory for svg files
 
 	**config.php**
 
@@ -2258,7 +2163,7 @@ Every config file has its own parameters that need to be changed with the our pr
 	```
 	---
 
-	#### Dédalo svg extension (type of file)
+	### Dédalo svg extension (type of file)
 
 	**config.php**
 
@@ -2272,7 +2177,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo svg extensions supported
+	### Dédalo svg extensions supported
 
 	**config.php**
 
@@ -2288,7 +2193,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo svg mime type
+	### Dédalo svg mime type
 
 	**config.php**
 
@@ -2303,7 +2208,7 @@ Every config file has its own parameters that need to be changed with the our pr
 	```
 	---
 
-	#### Dédalo svg quality for original files
+	### Dédalo svg quality for original files
 
 	**config.php**
 
@@ -2319,7 +2224,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo svg quality for procesed files
+	### Dédalo svg quality for procesed files
 
 	**config.php**
 
@@ -2335,7 +2240,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo svg qualities for procesed files
+	### Dédalo svg qualities for procesed files
 
 	**config.php**
 
@@ -2351,7 +2256,7 @@ Every config file has its own parameters that need to be changed with the our pr
 	
 	---
 
-	#### Dédalo upload temporary directory
+	### Dédalo upload temporary directory
 
 	**config.php**
 
@@ -2367,7 +2272,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo upload temporary directory
+	### Dédalo upload temporary directory
 
 	**config.php**
 
@@ -2388,7 +2293,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo georeference provider
+	### Dédalo georeference provider
 
 	**config.php**
 
@@ -2407,7 +2312,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo media area tipo for specific entity model
+	### Dédalo media area tipo for specific entity model
 
 	**config.php**
 
@@ -2423,7 +2328,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo skip tipos from menu
+	### Dédalo skip tipos from menu
 
 	**config.php**
 
@@ -2439,7 +2344,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo test install
+	### Dédalo test install
 
 	**config.php**
 
@@ -2455,7 +2360,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo section_id temporal
+	### Dédalo section_id temporal
 
 	**config.php**
 
@@ -2473,7 +2378,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo path of the export tool files directory
+	### Dédalo path of the export tool files directory
 
 	**config.php**
 
@@ -2487,7 +2392,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo uri of the export tool files directory
+	### Dédalo uri of the export tool files directory
 
 	**config.php**
 
@@ -2501,7 +2406,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo path of the import tool files directory
+	### Dédalo path of the import tool files directory
 
 	**config.php**
 
@@ -2518,7 +2423,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo lock components
+	### Dédalo lock components
 
 	**config.php**
 
@@ -2532,7 +2437,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo lock components notifications
+	### Dédalo lock components notifications
 
 	**config.php**
 
@@ -2546,7 +2451,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo protect media files for external acces
+	### Dédalo protect media files for external acces
 
 	**config.php**
 
@@ -2562,7 +2467,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo node js library path
+	### Dédalo node js library path
 
 	**config.php**
 
@@ -2576,7 +2481,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo node js pm2 library path
+	### Dédalo node js pm2 library path
 
 	**config.php**
 
@@ -2590,7 +2495,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo exclude compoents
+	### Dédalo exclude compoents
 
 	**config.php**
 
@@ -2606,7 +2511,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo filter user records by id
+	### Dédalo filter user records by id
 
 	**config.php**
 
@@ -2622,7 +2527,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Geonames account
+	### Geonames account
 
 	**config.php**
 
@@ -2636,7 +2541,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Encription mode
+	### Encription mode
 
 	**config.php**
 
@@ -2656,7 +2561,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Diffusion domain
+	### Diffusion domain
 
 	**config.php**
 
@@ -2674,7 +2579,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Resolution levels; going to the deeper information
+	### Resolution levels; going to the deeper information
 
 	**config.php**
 
@@ -2696,7 +2601,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Check the publication state
+	### Check the publication state
 
 	**config.php**
 
@@ -2718,7 +2623,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo diffusion custom
+	### Dédalo diffusion custom
 
 	**config.php**
 
@@ -2737,7 +2642,7 @@ Every config file has its own parameters that need to be changed with the our pr
 	```
 	---
 	
-	#### Seting the API web user code for multiple DDBB
+	### Seting the API web user code for multiple DDBB
 
 	**config.php**
 
@@ -2766,7 +2671,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Sync ontology from master server
+	### Sync ontology from master server
 
 	**config.php**
 
@@ -2780,7 +2685,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Ontology master server code
+	### Ontology master server code
 
 	**config.php**
 
@@ -2794,7 +2699,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Ontology master server uri
+	### Ontology master server uri
 
 	**config.php**
 
@@ -2808,7 +2713,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Ontology download directory
+	### Ontology download directory
 
 	**config.php**
 
@@ -2822,7 +2727,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Ontology in json format download directory
+	### Ontology in json format download directory
 
 	**config.php**
 
@@ -2836,7 +2741,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Proxy server
+	### Proxy server
 
 	**config.php**
 
@@ -2850,7 +2755,7 @@ Every config file has its own parameters that need to be changed with the our pr
 	> In the string could add user and pasword as proxy needs. Ex: my_user:my_pw@192.0.0.1:3128
 	---
 
-	#### Dédalo source verions uri
+	### Dédalo source verions uri
 
 	**config.php**
 
@@ -2876,7 +2781,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo source versions local directory to save the new code
+	### Dédalo source versions local directory to save the new code
 
 	**config.php**
 
@@ -2890,7 +2795,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Dédalo maintenance mode
+	### Dédalo maintenance mode
 
 	**config.php**
 
@@ -2906,7 +2811,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Notice to active users
+	### Notice to active users
 
 	**config.php**
 
@@ -2962,7 +2867,7 @@ Every config file has its own parameters that need to be changed with the our pr
 
 	---
 
-	#### Slow query
+	### Slow query
 
 	**config.php**
 

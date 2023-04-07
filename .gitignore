@@ -2,9 +2,9 @@
 # DEDALO4 FOR PUBLIC GITHUB PUBLICATION
 
 # Ignore configuration files that may contain sensitive information.
-config4*
-config_db*
-config_areas*
+config.php
+config_db.php
+config_areas.php
 config.php
 config_private
 config.json
