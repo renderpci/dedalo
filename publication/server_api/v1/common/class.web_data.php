@@ -1352,7 +1352,7 @@ class web_data {
 
 			// # SQL_FILTER
 			// if(!empty($sql_filter) && strlen($sql_filter)>2 ) {
-			// 	if($sql_filter===PUBLICACION_FILTER_SQL) {
+			// 	if($sql_filter===PUBLICATION_FILTER_SQL) {
 			// 		$sql .= PHP_EOL . $sql_filter;
 			// 	}else{
 			// 		$sql .= PHP_EOL . 'AND ('.$sql_filter.')';
@@ -1371,7 +1371,7 @@ class web_data {
 
 			// sql_filter
 				if(!empty($sql_filter) && strlen($sql_filter)>2) {
-					if($sql_filter===PUBLICACION_FILTER_SQL) {
+					if($sql_filter===PUBLICATION_FILTER_SQL) {
 						$ar_parts[] = $sql_filter;
 					}else{
 						$sql_filter_clean = ( substr($sql_filter, 0, 1)==='(' && substr($sql_filter, -1)===')' )
@@ -1580,7 +1580,7 @@ class web_data {
 		 				// dump($portal_options->resolve_portals_custom, ' portal_options->resolve_portals_custom ++ ---------------------------- '.to_string($table));
 	 				}
 
-		 			$filter = PUBLICACION_FILTER_SQL;
+		 			$filter = PUBLICATION_FILTER_SQL;
 		 			if( !empty($options->portal_filter)
 		 				&& isset($options->portal_filter[$portal_options->table]) )
 		 				{
@@ -1953,7 +1953,7 @@ class web_data {
 			$s_options->ar_fields 	= array(FIELD_TERM_ID,FIELD_TERM,$field_indexation);
 			$s_options->lang 		= $options->lang;
 			$s_options->order 		= FIELD_TERM ." ASC";
-			#$s_options->sql_filter = (string)"`index` LIKE '%\"section_id\":\"$av_section_id\",\"component_tipo\":\"$TRANSCRIPTION_TIPO\"%'" . PUBLICACION_FILTER_SQL;
+			#$s_options->sql_filter = (string)"`index` LIKE '%\"section_id\":\"$av_section_id\",\"component_tipo\":\"$TRANSCRIPTION_TIPO\"%'" . PUBLICATION_FILTER_SQL;
 			$s_options->sql_filter 	= (string)$sql_filter;
 
 		$rows_data	= (object)web_data::get_rows_data( $s_options );
@@ -2247,10 +2247,10 @@ class web_data {
 				$options->ar_fields 	= array('term_id',FIELD_TERM);
 				$options->lang 			= $lang;
 				$options->order 		= null;
-				#$options->sql_filter 	= (string)"`index` LIKE '%\"section_id\":\"$av_section_id\",\"component_tipo\":\"$TRANSCRIPTION_TIPO\",\"tag_id\":\"$tag_id\"%'" . PUBLICACION_FILTER_SQL;
+				#$options->sql_filter 	= (string)"`index` LIKE '%\"section_id\":\"$av_section_id\",\"component_tipo\":\"$TRANSCRIPTION_TIPO\",\"tag_id\":\"$tag_id\"%'" . PUBLICATION_FILTER_SQL;
 				// "type":"dd96","tag_id":"1","section_id":"22","section_tipo":"rsc167","component_tipo":"rsc36","section_top_id":"17","section_top_tipo":"oh1","from_component_tipo":"hierarchy40"
 				# {"type":"dd96","tag_id":"10","section_id":"9","section_tipo":"rsc167","component_tipo":"rsc36","section_top_id":"9","section_top_tipo":"oh1","from_component_tipo":"hierarchy40"}
-				$options->sql_filter 	= (string)"`indexation` LIKE '%\"type\":\"dd96\",\"tag_id\":\"$tag_id\",\"section_id\":\"$av_section_id\",\"section_tipo\":\"$AUDIOVISUAL_SECTION_TIPO\"%'" . PUBLICACION_FILTER_SQL;
+				$options->sql_filter 	= (string)"`indexation` LIKE '%\"type\":\"dd96\",\"tag_id\":\"$tag_id\",\"section_id\":\"$av_section_id\",\"section_tipo\":\"$AUDIOVISUAL_SECTION_TIPO\"%'" . PUBLICATION_FILTER_SQL;
 
 			$rows_data	= (object)web_data::get_rows_data( $options );
 				#dump($rows_data, ' rows_data ++ '.to_string($tag_id));
@@ -2300,7 +2300,7 @@ class web_data {
 			$options->ar_fields	= array('term_id',FIELD_TERM);
 			$options->lang		= $lang;
 			$options->order		= null;
-			#$options->sql_filter 	= (string)"`index` LIKE '%\"section_id\":\"$av_section_id\",\"component_tipo\":\"$TRANSCRIPTION_TIPO\",\"tag_id\":\"$tag_id\"%'" . PUBLICACION_FILTER_SQL;
+			#$options->sql_filter 	= (string)"`index` LIKE '%\"section_id\":\"$av_section_id\",\"component_tipo\":\"$TRANSCRIPTION_TIPO\",\"tag_id\":\"$tag_id\"%'" . PUBLICATION_FILTER_SQL;
 			// "type":"dd96","tag_id":"1","section_id":"22","section_tipo":"rsc167","component_tipo":"rsc36","section_top_id":"17","section_top_tipo":"oh1","from_component_tipo":"hierarchy40"
 			# {"type":"dd96","tag_id":"10","section_id":"9","section_tipo":"rsc167","component_tipo":"rsc36","section_top_id":"9","section_top_tipo":"oh1","from_component_tipo":"hierarchy40"}
 
@@ -2620,7 +2620,7 @@ class web_data {
 		$options = new stdClass();
 			$options->table 		= (string)TABLE_AUDIOVISUAL;
 			$options->ar_fields 	= array(FIELD_TRANSCRIPTION);
-			$options->sql_filter 	= "section_id = $av_section_id AND lang = '".WEB_CURRENT_LANG_CODE."' " . PUBLICACION_FILTER_SQL;
+			$options->sql_filter 	= "section_id = $av_section_id AND lang = '".WEB_CURRENT_LANG_CODE."' " . PUBLICATION_FILTER_SQL;
 			$options->order 		= null;
 			$options->limit 		= null;
 

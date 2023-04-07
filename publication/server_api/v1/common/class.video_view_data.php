@@ -261,9 +261,9 @@ class video_view_data extends stdClass {
 			$options->order 		= null;
 			$options->lang 			= $this->lang;
 			if ($interview_section_id) {
-				$options->sql_filter = (string)"section_id = $interview_section_id" . PUBLICACION_FILTER_SQL;
+				$options->sql_filter = (string)"section_id = $interview_section_id" . PUBLICATION_FILTER_SQL;
 			}else{
-				$options->sql_filter = (string)"audiovisual LIKE '%\"$av_section_id\"%'" . PUBLICACION_FILTER_SQL;
+				$options->sql_filter = (string)"audiovisual LIKE '%\"$av_section_id\"%'" . PUBLICATION_FILTER_SQL;
 			}
 
 			// AND lang = '".$options->lang."'
@@ -292,7 +292,7 @@ class video_view_data extends stdClass {
 		$options = new stdClass();
 			$options->table 		= (string)TABLE_AUDIOVISUAL;
 			$options->ar_fields 	= array(FIELD_VIDEO, FIELD_TRANSCRIPTION, 'duration');
-			$options->sql_filter 	= 'section_id = '.(int)$av_section_id .' '. PUBLICACION_FILTER_SQL;
+			$options->sql_filter 	= 'section_id = '.(int)$av_section_id .' '. PUBLICATION_FILTER_SQL;
 			$options->lang 			= $this->lang;
 			$options->order 		= null;
 			$options->limit 		= 1;
@@ -321,7 +321,7 @@ class video_view_data extends stdClass {
 			$options->ar_fields 	= array(FIELD_NAME,FIELD_SURNAME,FIELD_BIRTHDATE,FIELD_BIRTHPLACE);
 			$options->lang 			= WEB_CURRENT_LANG_CODE;
 			$options->order 		= null;
-			$options->sql_filter 	= (string)$filter . PUBLICACION_FILTER_SQL;
+			$options->sql_filter 	= (string)$filter . PUBLICATION_FILTER_SQL;
 
 			$rows_data	= (object)web_data::get_rows_data( $options );
 
