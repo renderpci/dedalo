@@ -140,7 +140,7 @@
 	# Target folder exists test
 	$folder_path = DEDALO_MEDIA_PATH;
 	if( !is_dir($folder_path) ) {
-		if(!mkdir($folder_path, 0775,true)) {
+		if(!mkdir($folder_path, 0755,true)) {
 
 			$init_response->msg[]	= 'Error on read or create media directory. Permission denied';
 			$init_response->errors	= true;
@@ -158,7 +158,7 @@
 	foreach ($ar_folder as $quality) {
 		$folder_path = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER.'/'.$quality;
 		if( !is_dir($folder_path) ) {
-			if(!mkdir($folder_path, 0775, true)) {
+			if(!mkdir($folder_path, 0755, true)) {
 
 				$init_response->msg[]	= 'Error on read or create media quality ['.$quality.'] directory. Permission denied';
 				$init_response->errors	= true;
@@ -177,7 +177,7 @@
 	# Target folder exists test
 	$folder_path = DEDALO_MEDIA_PATH .'/'. DEDALO_AV_FOLDER . '/posterframe/deleted';
 	if( !is_dir($folder_path) ) {
-		if(!mkdir($folder_path, 0775, true)) {
+		if(!mkdir($folder_path, 0755, true)) {
 			$init_response->msg .= trim(" Error on read or create media posterframe deleted directory. Permission denied ");
 		}
 	}
@@ -193,7 +193,7 @@
 	foreach ($ar_quality as $quality) {
 		$folder_path = DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER . '/'.$quality;
 		if( !is_dir($folder_path) ) {
-			if(!mkdir($folder_path, 0775, true)) {
+			if(!mkdir($folder_path, 0755, true)) {
 
 				$init_response->msg[]	= 'Error on read or create image '.$quality.' deleted directory. Permission denied';
 				$init_response->errors	= true;
@@ -260,7 +260,7 @@
 	if(defined('DEDALO_HTML_FILES_FOLDER')) {
 	$folder_path = DEDALO_MEDIA_PATH.DEDALO_HTML_FILES_FOLDER;
 	if( !is_dir($folder_path) ) {
-		if(!mkdir($folder_path, 0775, true)) {
+		if(!mkdir($folder_path, 0755, true)) {
 
 			$init_response->msg[]	= 'Error on read or create media DEDALO_HTML_FILES_FOLDER default directory. Permission denied';
 			$init_response->errors	= true;
@@ -278,7 +278,7 @@
 	if(defined('DEDALO_IMAGE_WEB_FOLDER')) {
 	$folder_path = DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER . DEDALO_IMAGE_WEB_FOLDER;
 	if( !is_dir($folder_path) ) {
-		if(!mkdir($folder_path, 0775, true)) {
+		if(!mkdir($folder_path, 0755, true)) {
 
 			$init_response->msg[]	= 'Error on read or create media DEDALO_IMAGE_WEB_FOLDER default directory. Permission denied';
 			$init_response->errors	= true;
@@ -296,7 +296,7 @@
 	if(defined('DEDALO_TOOL_EXPORT_FOLDER_PATH')) {
 	$folder_path = DEDALO_TOOL_EXPORT_FOLDER_PATH;
 	if( !is_dir($folder_path) ) {
-		if(!mkdir($folder_path, 0775, true)) {
+		if(!mkdir($folder_path, 0755, true)) {
 
 			$init_response->msg[]	= 'Error on read or create media DEDALO_TOOL_EXPORT_FOLDER_PATH default directory. Permission denied';
 			$init_response->errors	= true;
@@ -315,7 +315,7 @@
 	foreach ($ar_quality as $quality) {
 		$folder_path = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . '/'.$quality;
 		if( !is_dir($folder_path) ) {
-			if(!mkdir($folder_path, 0775, true)) {
+			if(!mkdir($folder_path, 0755, true)) {
 
 				$init_response->msg[]	= 'Error on read or create image '.$quality.' directory. Permission denied';
 				$init_response->errors	= true;
@@ -690,7 +690,7 @@
 	#	# Generate js files with all labels (in not extist current lang file)
 	#	$folder_path = DEDALO_CORE_PATH.'/common/js/lang';
 	#	if( !is_dir($folder_path) ) {
-	#		if(!mkdir($folder_path, 0775, true)) {
+	#		if(!mkdir($folder_path, 0755, true)) {
 	#			$init_response->msg .= trim(" Error on read or create js/lang directory. Permission denied");
 	#			return $init_response;
 	#		}

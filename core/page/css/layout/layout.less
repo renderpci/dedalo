@@ -1444,6 +1444,10 @@
 // media components base CSS unified
 .media_wrapper.edit.wrapper_component {
 
+	// resize vertical
+		// resize: vertical;
+		// overflow: hidden;
+
 	.media_content_data {
 		// Note that height is always the media min height (392px)
 		// (!) Do not use max o min height here to prevent to affect canvas reference size
@@ -1476,8 +1480,9 @@
 		// without margin option
 			// margin-top: 0.5rem;
 
-		resize: vertical;
-		overflow: hidden;
+		// resize vertical
+			resize: vertical;
+			overflow: hidden;
 
 		@media screen and (max-width: @width_break_point_1) {
 			height: unset;
