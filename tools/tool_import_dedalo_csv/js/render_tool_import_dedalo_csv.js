@@ -57,7 +57,7 @@ render_tool_import_dedalo_csv.prototype.edit = async function(options) {
 		// spinner
 		const spinner = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: "spinner",
+			class_name		: 'spinner',
 			parent : service_upload_container
 		})
 		wrapper.tool_header.after(service_upload_container)
@@ -74,17 +74,6 @@ render_tool_import_dedalo_csv.prototype.edit = async function(options) {
 				spinner.remove()
 			})
 		})
-
-
-	// modal container
-		// if (!window.opener) {
-		// 	const header	= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
-		// 	const modal		= ui.attach_to_modal(header, wrapper, null, 'big')
-		// 	modal.on_close	= () => {
-		// 		// when closing the modal, common destroy is called to remove tool and elements instances
-		// 		self.destroy(true, true, true)
-		// 	}
-		// }
 
 
 	return wrapper
@@ -217,9 +206,9 @@ const get_content_data = async function(self) {
 
 										const failed_rows = current_rensponse.failed_rows
 
-										const headder = ui.create_dom_element({
+										const header = ui.create_dom_element({
 											element_type	: 'div',
-											class_name 		: 'headder',
+											class_name 		: 'header',
 											parent			: result_info_container
 										})
 										// const created_nodes = current_rensponse.created_rows.map(el => '<span>'+el+',</span>')
@@ -227,7 +216,7 @@ const get_content_data = async function(self) {
 												element_type	: 'div',
 												class_name 		: 'label',
 												inner_html		: get_label.failed || 'Failed' + ':',
-												parent			: headder
+												parent			: header
 											})
 											const failed_rows_len = failed_rows.length
 											for (let i = 0; i < failed_rows_len; i++) {
@@ -254,9 +243,9 @@ const get_content_data = async function(self) {
 
 									if(current_rensponse.created_rows.length>0){
 
-										const headder = ui.create_dom_element({
+										const header = ui.create_dom_element({
 											element_type	: 'div',
-											class_name 		: 'headder',
+											class_name 		: 'header',
 											parent			: result_info_container
 										})
 
@@ -265,21 +254,21 @@ const get_content_data = async function(self) {
 												element_type	: 'div',
 												class_name 		: 'label',
 												inner_html		: get_label.created || 'Created' + ':',
-												parent			: headder
+												parent			: header
 											})
 
 											const copy_to_find_button = ui.create_dom_element({
 												element_type	: 'button',
 												class_name		: 'warning tool_update_cache',
 												inner_html		: get_label.copy_to_find || 'copy to find',
-												parent			: headder
+												parent			: header
 											})
 
 											const copy_as_column_button = ui.create_dom_element({
 												element_type	: 'button',
 												class_name		: 'warning tool_update_cache',
 												inner_html		: get_label.copy_as_column || 'copy as column',
-												parent			: headder
+												parent			: header
 											})
 
 
@@ -313,9 +302,9 @@ const get_content_data = async function(self) {
 									if(current_rensponse.updated_rows.length>0){
 										// const updated_nodes = current_rensponse.updated_rows.map(el => '<span>'+el+',</span>')
 
-										const headder = ui.create_dom_element({
+										const header = ui.create_dom_element({
 											element_type	: 'div',
-											class_name 		: 'headder',
+											class_name 		: 'header',
 											parent			: result_info_container
 										})
 
@@ -323,21 +312,21 @@ const get_content_data = async function(self) {
 												element_type	: 'div',
 												class_name 		: 'label',
 												inner_html		: get_label.updated || 'Updated' + ':',
-												parent			: headder
+												parent			: header
 											})
 
 											const copy_to_find_button = ui.create_dom_element({
 												element_type	: 'button',
 												class_name		: 'warning tool_update_cache',
 												inner_html		: get_label.copy_to_find || 'copy to find',
-												parent			: headder
+												parent			: header
 											})
 
 											const copy_as_column_button = ui.create_dom_element({
 												element_type	: 'button',
 												class_name		: 'warning tool_update_cache',
 												inner_html		: get_label.copy_as_column || 'copy as column',
-												parent			: headder
+												parent			: header
 											})
 
 										const updated_rows = ui.create_dom_element({
@@ -542,7 +531,7 @@ const render_file_info = function(self, item) {
 			inner_html		: get_label.preview || 'Preview',
 			parent			: fragment
 		})
-		button_preview.addEventListener("click", function(){
+		button_preview.addEventListener('click', function(){
 			preview.classList.toggle('hide')
 		})
 		// preview text
@@ -608,6 +597,8 @@ const render_file_info = function(self, item) {
 
 /**
 * RENDER_COLUMNS_MAPPER
+* @param object self
+* @param object item
 * @return HTMLElement item_wrapper
 */
 const render_columns_mapper = async function(self, item) {
@@ -632,6 +623,20 @@ const render_columns_mapper = async function(self, item) {
 			})
 
 			return fragment
+		}
+
+	// check section_id column exists
+		const first_row				= item.data[0]
+		const columns_section_id	= first_row
+			? first_row.find(el => el==='section_id')
+			: null
+		if (!columns_section_id) {
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'container error',
+				inner_html		: 'Error. Column section_id is mandatory in the first row of csv file!',
+				parent			: fragment
+			})
 		}
 
 	// header
@@ -844,7 +849,7 @@ const render_columns_mapper = async function(self, item) {
 * Called on service_upload has finished of upload file using a event
 * @see event subscription at 'init' function
 * @param object options
-* @return promise
+* @return bool
 */
 render_tool_import_dedalo_csv.prototype.upload_done = async function (options) {
 
@@ -859,13 +864,13 @@ render_tool_import_dedalo_csv.prototype.upload_done = async function (options) {
 		}
 		const spinner = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: "spinner",
+			class_name		: 'spinner',
 			parent			: self.process_file
 		})
 		const process_file_info = ui.create_dom_element({
 			element_type	: 'span',
 			inner_html		: 'Processing file..',
-			class_name		: "info",
+			class_name		: 'info',
 			parent			: self.process_file
 		})
 		self.process_file.appendChild(spinner)
@@ -893,5 +898,3 @@ render_tool_import_dedalo_csv.prototype.upload_done = async function (options) {
 
 	return true
 }//end upload_done
-
-

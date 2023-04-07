@@ -131,24 +131,23 @@ tool_upload.prototype.process_uploaded_file = function(file_data) {
 	const self = this
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'process_uploaded_file')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			file_data		: file_data,
-			tipo			: self.caller.tipo,
-			section_tipo	: self.caller.section_tipo,
-			section_id		: self.caller.section_id,
-			caller_type		: self.caller.context.type, // like 'tool' or 'component'. Switch different process actions on tool_upload class
-			quality			: self.caller.context.target_quality || self.caller.context.features.default_target_quality || null, // only for components
-			target_dir		: self.caller.context.target_dir || null // optional object like {type: 'dedalo_config', value: 'DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH' // defined in config}
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				file_data		: file_data,
+				tipo			: self.caller.tipo,
+				section_tipo	: self.caller.section_tipo,
+				section_id		: self.caller.section_id,
+				caller_type		: self.caller.context.type, // like 'tool' or 'component'. Switch different process actions on tool_upload class
+				quality			: self.caller.context.target_quality || self.caller.context.features.default_target_quality || null, // only for components
+				target_dir		: self.caller.context.target_dir || null // optional object like {type: 'dedalo_config', value: 'DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH' // defined in config}
+			}
 		}
 
 	// call to the API, fetch data and get response

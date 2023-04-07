@@ -586,10 +586,12 @@ service_upload.prototype.join_chunked_files = async function(options) {
 
 	// rqo
 		const rqo = {
-			dd_api			: 'dd_utils_api',
-			action			: 'join_chunked_files_uploaded',
-			file_data		: file_data,
-			files_chunked	: files_chunked
+			dd_api	: 'dd_utils_api',
+			action	: 'join_chunked_files_uploaded',
+			options	: {
+				file_data		: file_data,
+				files_chunked	: files_chunked
+			}
 		}
 
 	// call to the API, fetch data and get response

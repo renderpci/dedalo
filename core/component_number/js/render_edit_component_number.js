@@ -27,7 +27,7 @@ export const render_edit_component_number = function() {
 * EDIT
 * Render node for use in edit
 * @param object options
-* @return HTMLElement|null
+* @return HTMLElement wrapper
 */
 render_edit_component_number.prototype.edit = async function(options) {
 
@@ -56,9 +56,6 @@ render_edit_component_number.prototype.edit = async function(options) {
 		default:
 			return view_default_edit_number.render(self, options)
 	}
-
-
-	return null
 }//end edit
 
 
@@ -78,12 +75,11 @@ export const get_content_data = function(self) {
 		const content_data = ui.component.build_content_data(self)
 
 	// build values
-		const inputs_value	= (value.length<1) ? [null] : value // force one empty input at least
-		const value_length	= inputs_value.length
+		const value_length = value.length || 1
 		for (let i = 0; i < value_length; i++) {
 			const content_value_node = (self.permissions===1)
-				? get_content_value_read(i, inputs_value[i], self)
-				: get_content_value(i, inputs_value[i], self)
+				? get_content_value_read(i, value[i], self)
+				: get_content_value(i, value[i], self)
 			content_data.appendChild(content_value_node)
 			// set pointers
 			content_data[i] = content_value_node
@@ -295,17 +291,17 @@ export const blur_handler = function(e, key, self) {
 	const safe_value = (e.target.value.length>0)
 		? self.fix_number_format(e.target.value)
 		: null
-	// console.log("safe_value:----------->>",e.target.value); return
+
 	// if the safe_value is different than the value of user had enter set the safe_value
-	if(safe_value!==e.target.value) {
-		e.target.value = safe_value
-	}
+		if(safe_value!=e.target.value) {
+			e.target.value = safe_value
+		}
 
 	// change data
 		const changed_data_item = Object.freeze({
 			action	: 'update',
 			key		: key,
-			value	: safe_value || ''
+			value	: safe_value
 		})
 
 	// fix instance changed_data

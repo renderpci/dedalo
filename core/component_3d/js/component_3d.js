@@ -122,7 +122,7 @@ component_3d.prototype.create_posterframe = async function( viewer ) {
 	const file_data = api_response.file_data
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self)
 
 	// rqo

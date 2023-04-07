@@ -24,10 +24,12 @@ final class dd_component_portal_api {
 	*		section_tipo	: 'rsc167', // current component_text_area section_tipo
 	*		section_id		: '2', // component_text_area section_id
 	*		tipo			: 'rsc36', // component_text_area tipo
-	*		lang			: 'lg-spa', // component_text_area lang
-	*		locator			: {tag_id:"2",type:"dd96"} // object locator full or partial
+	*		lang			: 'lg-spa' // component_text_area lang
+	*	},
+	* 	options : {
+	* 		locator			: {tag_id:"2",type:"dd96"} // object locator full or partial
 	* 		ar_properties 	: ['tag_id','type'] // properties to compare
-	*	}
+	* 	}
 	* }
 	* @return object $response
 	*/
@@ -39,14 +41,17 @@ final class dd_component_portal_api {
 				$response->msg		= [];
 				$response->error	= null;
 
-		// short vars from rqo
+		// source
 			$source			= $rqo->source;
 			$section_tipo	= $source->section_tipo;
 			$section_id		= $source->section_id;
 			$tipo			= $source->tipo;
 			$lang			= $source->lang;
-			$locator		= $source->locator; // object e.g. {tag_id:"2",type:"dd96"}
-			$ar_properties	= $source->ar_properties; // array properties to compare e.g. ['tag_id','type']
+
+		// options
+			$options		= $rqo->options;
+			$locator		= $options->locator; // object e.g. {tag_id:"2",type:"dd96"}
+			$ar_properties	= $options->ar_properties; // array properties to compare e.g. ['tag_id','type']
 
 
 		// tags_index. component. Remove locators with the tag_id given

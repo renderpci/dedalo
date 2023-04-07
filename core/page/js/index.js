@@ -55,9 +55,11 @@ const t0 = performance.now()
 		// start bootstrap
 			const rqo = { // rqo (request query object)
 				action			: 'start',
-				search_obj		: url_vars_to_object(location.search),
-				menu			: menu,
-				prevent_lock	: true
+				prevent_lock	: true,
+				options : {
+					search_obj	: url_vars_to_object(location.search),
+					menu		: menu,
+				}
 			}
 
 			// request page context (usually menu and section context)
