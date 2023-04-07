@@ -1054,7 +1054,7 @@ final class dd_utils_api {
 			$user_id		= (int)navigator::get_user_id();
 			$full_username	= ($user_id<0)
 				? 'Debug user'
-				: $_SESSION['dedalo']['auth']['full_username'];
+				: ($_SESSION['dedalo']['auth']['full_username'] ?? 'Unknown');
 
 		// event_element
 			$event_element = new stdClass();

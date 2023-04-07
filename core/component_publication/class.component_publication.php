@@ -1,7 +1,8 @@
 <?php
 /**
 * CLASS COMPONENT_PUBLICATION
-*
+* Manages record publishable status.
+* Possible values are null | locator yes | locator no
 *
 */
 class component_publication extends component_relation_common {
@@ -33,13 +34,15 @@ class component_publication extends component_relation_common {
 
 	/**
 	* GET_VALOR
-	* Get value . default is get dato . overwrite in every different specific component
+	* Get value. default is get dato . overwrite in every different specific component
+	* @param string $lang = DEDALO_DATA_LANG
+	* @return string|null $valor
 	*/
 	public function get_valor( $lang=DEDALO_DATA_LANG ) {
 
 		$dato = $this->get_dato();
 
-		# Test dato format (b4 changed to object)
+		// Test dato format (b4 changed to object)
 			if(SHOW_DEBUG===true) {
 				if (!empty($dato)) foreach ($dato as $key => $value) {
 					if (!empty($value) && !is_object($value)) {
@@ -88,7 +91,7 @@ class component_publication extends component_relation_common {
 					}
 				}
 				break;
-		}#end switch
+		}//end switch
 
 
 		return $valor;
