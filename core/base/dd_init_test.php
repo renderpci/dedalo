@@ -207,51 +207,49 @@
 
 
 
-// MEDIA PDF V5 folder.
+// MEDIA PDF folder
 	if(defined('DEDALO_PDF_FOLDER')) {
-		$default_quality_path	= DEDALO_MEDIA_PATH.DEDALO_PDF_FOLDER.'/'.DEDALO_PDF_QUALITY_DEFAULT;
-		$original_quality_path	= DEDALO_MEDIA_PATH.DEDALO_PDF_FOLDER.'/'.DEDALO_PDF_QUALITY_ORIGINAL;
-		if( !is_dir($folder_path) || !is_dir($original_quality_path) ) {
-			require_once DEDALO_CORE_PATH .'/base/upgrade/class.v5_to_v6.php';
-			v5_to_v6::update_component_pdf_media_dir();
-		}
+		// v5 to v6 names manage
+			$default_quality_path	= DEDALO_MEDIA_PATH.DEDALO_PDF_FOLDER.'/'.DEDALO_PDF_QUALITY_DEFAULT;
+			$original_quality_path	= DEDALO_MEDIA_PATH.DEDALO_PDF_FOLDER.'/'.DEDALO_PDF_QUALITY_ORIGINAL;
+			if( !is_dir($default_quality_path) || !is_dir($original_quality_path) ) {
+				require_once DEDALO_CORE_PATH .'/base/upgrade/class.v5_to_v6.php';
+				v5_to_v6::update_component_pdf_media_dir();
+			}
+
+		// Target folder exists test
+			$folder_path = DEDALO_MEDIA_PATH.DEDALO_PDF_FOLDER.'/'.DEDALO_PDF_QUALITY_DEFAULT;
+			if( !is_dir($folder_path) ) {
+				if(!mkdir($folder_path, 0755, true)) {
+
+					$init_response->msg[]	= 'Error on read or create media PDF default directory. Permission denied';
+					$init_response->errors	= true;
+					debug_log(__METHOD__."  ".implode(PHP_EOL, $init_response->msg), logger::ERROR);
+
+					return $init_response;
+				}
+				debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+			}
 	}
 
 
 
-// MEDIA PDF folder
-	# Target folder exists test
-	if(defined('DEDALO_PDF_FOLDER')) {
-	$folder_path = DEDALO_MEDIA_PATH.DEDALO_PDF_FOLDER.'/'.DEDALO_PDF_QUALITY_DEFAULT;
-	if( !is_dir($folder_path) ) {
-		if(!mkdir($folder_path, 0775, true)) {
-
-			$init_response->msg[]	= 'Error on read or create media pdf default directory. Permission denied';
-			$init_response->errors	= true;
-			debug_log(__METHOD__."  ".implode(PHP_EOL, $init_response->msg), logger::ERROR);
-
-			return $init_response;
-		}
-		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
-	}}
-
-
-
 // MEDIA PDF THUMBS folder
-	# Target folder exists test
 	if(defined('DEDALO_PDF_THUMB_DEFAULT')) {
-	$folder_path = DEDALO_MEDIA_PATH.DEDALO_PDF_FOLDER.'/'.DEDALO_PDF_THUMB_DEFAULT;
-	if( !is_dir($folder_path) ) {
-		if(!mkdir($folder_path, 0775, true)) {
+		// Target folder exists test
+		$folder_path = DEDALO_MEDIA_PATH.DEDALO_PDF_FOLDER.'/'.DEDALO_PDF_THUMB_DEFAULT;
+		if( !is_dir($folder_path) ) {
+			if(!mkdir($folder_path, 0755, true)) {
 
-			$init_response->msg[]	= 'Error on read or create media pdf default directory. Permission denied';
-			$init_response->errors	= true;
-			debug_log(__METHOD__."  ".implode(PHP_EOL, $init_response->msg), logger::ERROR);
+				$init_response->msg[]	= 'Error on read or create media PDF default directory. Permission denied';
+				$init_response->errors	= true;
+				debug_log(__METHOD__."  ".implode(PHP_EOL, $init_response->msg), logger::ERROR);
 
-			return $init_response;
+				return $init_response;
+			}
+			debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
 		}
-		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
-	}}
+	}
 
 
 
@@ -329,19 +327,29 @@
 
 
 
-// MEDIA AVG
-	# Target folder exists test
-	$folder_path = DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER ;
-	if( !is_dir($folder_path) ) {
-		if(!mkdir($folder_path, 0775, true)) {
+// MEDIA SVG
+	if(defined('DEDALO_SVG_FOLDER')) {
+		// v5 to v6 names manage
+			$default_quality_path	= DEDALO_MEDIA_PATH.DEDALO_SVG_FOLDER.'/'.DEDALO_SVG_QUALITY_DEFAULT;
+			$original_quality_path	= DEDALO_MEDIA_PATH.DEDALO_SVG_FOLDER.'/'.DEDALO_SVG_QUALITY_ORIGINAL;
+			if( !is_dir($default_quality_path) || !is_dir($original_quality_path) ) {
+				require_once DEDALO_CORE_PATH .'/base/upgrade/class.v5_to_v6.php';
+				v5_to_v6::update_component_svg_media_dir();
+			}
 
-			$init_response->msg[]	= 'Error on read or create svg directory. Permission denied';
-			$init_response->errors	= true;
-			debug_log(__METHOD__."  ".implode(PHP_EOL, $init_response->msg), logger::ERROR);
+		// Target folder exists test
+			$folder_path = DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER ;
+			if( !is_dir($folder_path) ) {
+				if(!mkdir($folder_path, 0755, true)) {
 
-			return $init_response;
-		}
-		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+					$init_response->msg[]	= 'Error on read or create SVG directory. Permission denied';
+					$init_response->errors	= true;
+					debug_log(__METHOD__."  ".implode(PHP_EOL, $init_response->msg), logger::ERROR);
+
+					return $init_response;
+				}
+				debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+			}
 	}
 
 
