@@ -534,296 +534,12 @@ PUBLICATION_FILTER_SQL `array`
 
 Set a global filter to the publication records. It will be apply only to the publication column.
 
+```php
 define('PUBLICATION_FILTER_SQL', " ");
+```
 
-> **Warning**
-{: .alert .alert-danger}
-> Deprecated
-
-!!! danger
-    This is the danger admonition body
-
-> **Warning**
-> This is a warning
-
-> [!WARNING]
-> Dangerous certain consequences of an action.
----
-
-### Setting the multiple locators used as restriction
-
-### Setting the library path
-
-./dedalo/publication/server_api/v1/config_api/server_config_api.php
-
-DEDALO_LIB_BASE_PATH
-
-Set the main directory used to load externa libraries like LeafLet, Boostrap or other libraries. This path is a Linux path, a internal path used by php.
-string
-define('DEDALO_LIB_BASE_PATH', dirname(dirname(dirname(API_ROOT))) );
-
----
-
-### Setting the library URI
-
-./dedalo/publication/server_api/v1/config_api/server_config_api.php
-
-DEDALO_LIB_BASE_URL
-
-Set the main directory used to load externa libraries like LeafLet, Boostrap or other library. This path is a uri path, external path will used by the browser to get the libraries.
-string
-define('DEDALO_LIB_BASE_URL', '/dedalo/lib/dedalo');
-
----
-
-### Setting the interview table name
-
-./dedalo/publication/server_api/v1/config_api/server_config_api.php
-
-TABLE_INTERVIEW
-
-Set the interview table name that will be used for get if the interview referenced by the resources data is active. Sometimes is possible that an audiovisual resource linked two or more interviews, and one of them could not to be published, and the public data need to banned.
-This parameter set the public table for interviews.
-string
-define('TABLE_INTERVIEW', 'interview');
-
----
-
-### Setting the informant table name
-
-./dedalo/publication/server_api/v1/config_api/server_config_api.php
-
-TABLE_INFORMANT
-
-Set the informat table name (people from whom we obtain information). This variable will be used for locate informants from the indexations in the thesaurus tables.
-string
-define('TABLE_INFORMANT', 'informant');
-
----
-
-### Define the interview summary field name
-
-./dedalo/publication/server_api/v1/config_api/server_config_api.php
-
-FIELD_SUMMARY
-
-Define the field name of the interview summary for the component_tipo 'oh23' in Dédalo ontology. It is used only for Oral history/memory.
-string
-define('FIELD_SUMMARY', 'abstract');
-
----
-
-### Define interview date field name
-
-./dedalo/publication/server_api/v1/config_api/server_config_api.php
-
-FIELD_INTERVIEW_DATE
-
-Define the field name of the interview date for the component_tipo 'oh29' in Dédalo ontology. It is used only for Oral history/memory.
-string
-define('FIELD_INTERVIEW_DATE', 'date');
-
----
-
-### Define the interview informant field
-
-./dedalo/publication/server_api/v1/config_api/server_config_api.php
-
-FIELD_INFORMANT
-
-Define the field name of the interview informant (interviewed) for the component_tipo 'oh24' in Dédalo ontology. It is used only for Oral history/memory.
-string
-define('FIELD_INFORMANT', 'informant');
-
----
-
-### Define the interview image field
-
-./dedalo/publication/server_api/v1/config_api/server_config_api.php
-
-FIELD_IMAGE
-
-Define the field name of the interview image for the component_tipo 'oh17' in Dédalo ontology. It is used only for Oral history/memory.
-string
-define('FIELD_IMAGE', 'image');
-
----
-
-### Define the interviewed name field
-
-./dedalo/publication/server_api/v1/config_api/server_config_api.php
-
-FIELD_NAME
-
-Define the field name of the interviewed for the component_tipo 'rsc85' in Dédalo ontology. It is used only for Oral history/memory.
-string
-define('FIELD_NAME', 'name');
-
----
-
-### Define the interviewed surname field
-
-./dedalo/publication/server_api/v1/config_api/server_config_api.php
-
-FIELD_SURNAME
-
-Define the field name for the surname of the interviewed for the component_tipo 'rsc86' in Dédalo ontology. It is used only for Oral history/memory.
-string
-define('FIELD_SURNAME', 'surname');
-
----
-
-### Define the interviewed birthdate field
-
-./dedalo/publication/server_api/v1/config_api/server_config_api.php
-
-FIELD_BIRTHDATE
-
-Define the field name for the interviewee's birthdate for the component_tipo 'rsc89' in Dédalo ontology. It is used only for Oral history/memory.
-string
-define('FIELD_BIRTHDATE', 'birthdate');
-
----
-
-### Define the interviewee's birthplace field
-
-./dedalo/publication/server_api/v1/config_api/server_config_api.php
-
-FIELD_BIRTHPLACE
-
-Define the field name for the interviewee's birthplace for the component_tipo 'rsc91' in Dédalo ontology. It is used only for Oral history/memory.
-string
-define('FIELD_BIRTHPLACE', 'birthplace');
-
----
-
-### Define the audiovisual file field name
-
-./dedalo/publication/server_api/v1/config_api/server_config_api.php
-
-FIELD_VIDEO
-
-Define the field name for the audiovisual file for the component_tipo 'rsc35' in Dédalo ontology. It is used only for Oral history/memory.
-string
-define('FIELD_VIDEO', 'video');
-
----
-
-### Define the interview code field name
-
-./dedalo/publication/server_api/v1/config_api/server_config_api.php
-
-FIELD_CODE
-
-Define the field name for the interview code for the component_tipo 'oh14' in Dédalo ontology. It is used only for Oral history/memory.
-string
-define('FIELD_CODE', 'code');
-
----
-
-### Define the audiovisual interview field name
-
-./dedalo/publication/server_api/v1/config_api/server_config_api.php
-
-FIELD_AUDIOVISUAL
-
-Define the field name for the audiovisual interview, the component_tipo 'oh25' in Dédalo ontology. It is used only for Oral history/memory.
-string
-define('FIELD_AUDIOVISUAL', 'audiovisual');
-
----
-
-### Define the transcription component_tipo
-
-./dedalo/publication/server_api/v1/config_api/server_config_api.php
-
-FIELD_TRANSCRIPTION
-
-Define the 'component_tipo' in Dédalo ontology used for stored the transcription of the audiovisual files.
-This param is used for get the full transciption locator used in indexations.
-string
-define('FIELD_TRANSCRIPTION', TRANSCRIPTION_TIPO);
-
----
-
-### Define the audiovisual section_tipo
-
-./dedalo/publication/server_api/v1/config_api/server_config_api.php
-
-AUDIOVISUAL_SECTION_TIPO
-
-Define the 'section_tipo' in Dédalo ontology used for stored the audiovisual information.
-This param is used in combination with the AV_TIPO to comform the full name of the audiovisual file.
-The name of audiovisual files has his own locator to find it. The locator is used in the flat format: 'component_tipo'_'section_tipo'_'section_id' + extension
-Example: rsc35_rsc167_36.mp4
-string
-define('AUDIOVISUAL_SECTION_TIPO', 'rsc167');
-
----
-
-### Define the audiovisual component_tipo
-
-./dedalo/publication/server_api/v1/config_api/server_config_api.php
-
-AV_TIPO
-
-Define the 'component_tipo' in Dédalo ontology used for stored the audiovisual file.
-This param is used in combination with the AUDIOVISUAL_SECTION_TIPO to comform the full name of the audiovisual file.
-The name of audiovisual files has his own locator to find it. The locator is used in the flat format: 'component_tipo'_'section_tipo'_'section_id' + extension
-Example: rsc35_rsc167_36.mp4
-string
-define('AV_TIPO', 'rsc35');
-
----
-
-### Define the duration column
-
-./dedalo/publication/server_api/v1/config_api/server_config_api.php
-
-FIELD_DURATION
-
-Define the name in the audiovisual table for the component_tipo 'rsc54' in Dédalo ontology used for stored the duration of the audiovisual files.
-This param is used for get the duration of the audiovisual file in the real time cuts and don't calculate it every time.
-string
-define('FIELD_DURATION', 'duration');
-
----
-
-### Setting the audiovisual table name
-
-./dedalo/publication/server_api/v1/config_api/server_config_api.php
-
-TABLE_AUDIOVISUAL
-
-Set the audiovisual table name. This variable will be used for locate audiovisual fragments from the indexations in the thesaurus tables.
-string
-define('TABLE_AUDIOVISUAL', 'audiovisual');
-
----
-
-### Setting the image table name
-
-./dedalo/publication/server_api/v1/config_api/server_config_api.php
-
-TABLE_IMAGE
-
-Set the image table name. This variable will be used for locate images from the indexations in the thesaurus tables.
-string
-define('TABLE_IMAGE', 'image');
-
----
-
-### Define the transcription component_tipo
-
-./dedalo/publication/server_api/v1/config_api/server_config_api.php
-
-TRANSCRIPTION_TIPO
-
-Define the 'component_tipo' in Dédalo ontology used for stored the transcription of the audiovisual files.
-This param is used for get the full transciption locator used in indexations.
-string
-define('TRANSCRIPTION_TIPO', 'rsc36');
-Setting the thesaurus tables
+!!! danger ""
+    Deprecated
 
 ---
 
@@ -831,14 +547,19 @@ Setting the thesaurus tables
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
 
-$table_thesaurus_map
+$table_thesaurus_map `associative array`
 
 This global variable is used to define the map of thesaurus tables and the correspondence with section_tipo defined by locators.
-Many backend data are locators that are used to point other information (the locator are a realation between data), the original locator in Dédalo use the section_tipo defined in the ontology to point the target data.
-When the data is published, sometimes the section_tipo for the thesaurus definition is changed to be more "human readable" format, but the original locators are not point these new table name. The table resolution will change the locator to point the rigth name, but some times, if the project has a lot thesarus tables, could be convenient create the map for get a fast mapping of the ts tables.
-This varibale get the thesaurus map resolved fast to avoid unnecessary union tables, this variable is optional. Is possible use it when you need manage various tables at same time (toponymy for example)
-associative array
+
+Many backend data are locators that are used to point other information (locators are a relations between data), the original locator in Dédalo use the section_tipo defined in the ontology to point the target data.
+
+When the data is published, sometimes the section_tipo for the thesaurus definition is changed to be more "human readable" format, but the original locators are not point these new table name. The table resolution will change the locator to point the right name, but some times, if the project has a lot thesaurus tables, could be convenient create the map for get a fast mapping of the ts tables.
+
+This variable get the thesaurus map resolved fast to avoid unnecessary union tables, this variable is optional. Is possible use it when you need manage various tables at same time (toponymy for example).
+
+```php
 $table_thesaurus_map = array('ts1'=>'ts_tematics');
+```
 
 ---
 
@@ -846,11 +567,16 @@ $table_thesaurus_map = array('ts1'=>'ts_tematics');
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
 
-TABLE_THESAURUS
+TABLE_THESAURUS `string`
 
 Set the tables that has thesaurus structure and can be used in common way. The thesaurus tables can be used in common search, unions, and other uses.
-string with comma separated values
+
+```php
 define('TABLE_THESAURUS', "ts_tematics,ts_ono");
+```
+
+!!! info ""
+    different values are with comma separated
 
 ---
 
@@ -858,23 +584,153 @@ define('TABLE_THESAURUS', "ts_tematics,ts_ono");
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
 
-TABLE_HIERARCHY
+TABLE_HIERARCHY `string`
 
-Set the hierarchy table for get the main root term of the thesaurus tables. Thesaurus tables has a hierarchy relations between terms and is necesary identify the main or root tem or the tree.
-string
+Set the hierarchy table for get the main root term of the thesaurus tables. Thesaurus tables has a hierarchy relations between terms and is necessary identify the main or root tem or the tree.
+
+```php
 define('TABLE_HIERARCHY', 'hierarchy');
+```
 
 ---
 
-### Define the locator column name for ts tables
+### Setting the interview table name
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
 
-FIELD_TERM_ID
+TABLE_INTERVIEW `string`
 
-Define the field name for the locator (in flat mode) that define the tesaure. This paramenter will use for get the terms of the correct tables.
-string
-define('FIELD_TERM_ID', 'term_id');
+Set the interview table name that will be used for get if the interview referenced by the resources data is active. Sometimes is possible that an audiovisual resource linked two or more interviews, and one of them could not to be published, and the public data need to banned.
+This parameter set the public table for interviews.
+
+```php
+define('TABLE_INTERVIEW', 'interview');
+```
+
+---
+
+### Setting the audiovisual table name
+
+./dedalo/publication/server_api/v1/config_api/server_config_api.php
+
+TABLE_AUDIOVISUAL `string`
+
+Set the audiovisual table name. This variable will be used for locate audiovisual fragments from the indexations in the thesaurus tables.
+
+```php
+define('TABLE_AUDIOVISUAL', 'audiovisual');
+```
+
+---
+
+### Setting the image table name
+
+./dedalo/publication/server_api/v1/config_api/server_config_api.php
+
+TABLE_IMAGE `string`
+
+Set the image table name. This variable will be used for locate images from the indexations in the thesaurus tables.
+
+```php
+define('TABLE_IMAGE', 'image');
+```
+
+---
+
+### Setting the informant table name
+
+./dedalo/publication/server_api/v1/config_api/server_config_api.php
+
+TABLE_INFORMANT `string`
+
+Set the informant table name (people from whom we obtain information). This variable will be used for locate informants from the indexations in the thesaurus tables.
+
+```php
+define('TABLE_INFORMANT', 'informant');
+```
+
+---
+
+### Define the field name for transcription component_tipo
+
+./dedalo/publication/server_api/v1/config_api/server_config_api.php
+
+FIELD_TRANSCRIPTION `string`
+
+Defines the 'component_tipo' in Dédalo ontology used for stored the transcription of the audiovisual files.
+This param is used for get the full transcription locator used in indexations.
+
+```php
+define('FIELD_TRANSCRIPTION', TRANSCRIPTION_TIPO);
+```
+
+---
+
+### Define the audiovisual component_tipo
+
+./dedalo/publication/server_api/v1/config_api/server_config_api.php
+
+AV_TIPO `string`
+
+Defines the 'component_tipo' in Dédalo ontology used for stored the audiovisual file.
+This param is used in combination with the AUDIOVISUAL_SECTION_TIPO to conform the full name of the audiovisual file.
+
+The name of audiovisual files has his own locator to find it. The locator is used in the flat format: 'component_tipo'_'section_tipo'_'section_id' + extension
+Example: rsc35_rsc167_36.mp4
+
+```php
+define('AV_TIPO', 'rsc35');
+```
+
+---
+
+### Define the audiovisual section_tipo
+
+./dedalo/publication/server_api/v1/config_api/server_config_api.php
+
+AUDIOVISUAL_SECTION_TIPO `string`
+
+Define the 'section_tipo' in Dédalo ontology used for stored the audiovisual information.
+
+This param is used in combination with the AV_TIPO to conform the full name of the audiovisual file.
+The name of audiovisual files has his own locator to find it. The locator is used in the flat format: 'component_tipo'_'section_tipo'_'section_id' + extension
+Example: rsc35_rsc167_36.mp4
+
+```php
+define('AUDIOVISUAL_SECTION_TIPO', 'rsc167');
+```
+
+## Fields
+
+---
+
+### Define transcription component_tipo
+
+./dedalo/publication/server_api/v1/config_api/server_config_api.php
+
+TRANSCRIPTION_TIPO `string`
+
+Defines the 'component_tipo' in Dédalo ontology used for stored the transcription of the audiovisual files.
+This param is used for get the full transcription locator used in indexations.
+
+```php
+define('TRANSCRIPTION_TIPO', 'rsc36');
+```
+
+---
+
+### Define the duration column
+
+./dedalo/publication/server_api/v1/config_api/server_config_api.php
+
+FIELD_DURATION `string`
+
+Defines the name in the audiovisual table for the component_tipo 'rsc54' in Dédalo ontology used for stored the duration of the audiovisual files.
+This param is used for get the duration of the audiovisual file in the real time cuts and don't calculate it every time.
+
+```php
+define('FIELD_DURATION', 'duration');
+```
 
 ---
 
@@ -882,11 +738,169 @@ define('FIELD_TERM_ID', 'term_id');
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
 
-FIELD_TERM
+FIELD_TERM `string`
 
-Define the field name of the tesaure term for the component_tipo 'hierarchy25' in Dédalo ontology. Used for store the term of descriptors.
-string
+Defines the field name of the thesaurus term for the component_tipo 'hierarchy25' in Dédalo ontology. Used for store the term of descriptors.
+
+```php
 define('FIELD_TERM', 'term');
+```
+
+---
+
+## Setting the thesaurus tables
+
+### Define the locator column name for ts tables
+
+./dedalo/publication/server_api/v1/config_api/server_config_api.php
+
+FIELD_TERM_ID `string`
+
+Defines the field name for the locator (in flat mode) that define the thesaurus. This parameter will use for get the terms of the correct tables.
+
+```php
+define('FIELD_TERM_ID', 'term_id');
+```
+
+---
+
+### Define the interview summary field name
+
+./dedalo/publication/server_api/v1/config_api/server_config_api.php
+
+FIELD_SUMMARY `string`
+
+Defines the field name of the interview summary for the component_tipo 'oh23' in Dédalo ontology. It is used only for Oral history/memory.
+
+```php
+define('FIELD_SUMMARY', 'abstract');
+```
+
+---
+
+### Define interview date field name
+
+./dedalo/publication/server_api/v1/config_api/server_config_api.php
+
+FIELD_INTERVIEW_DATE `string`
+
+Defines the field name of the interview date for the component_tipo 'oh29' in Dédalo ontology. It is used only for Oral history/memory.
+
+```php
+define('FIELD_INTERVIEW_DATE', 'date');
+```
+
+---
+
+### Define the interview informant field
+
+./dedalo/publication/server_api/v1/config_api/server_config_api.php
+
+FIELD_INFORMANT `string`
+
+Defines the field name of the interview informant (interviewed) for the component_tipo 'oh24' in Dédalo ontology. It is used only for Oral history/memory.
+
+```php
+define('FIELD_INFORMANT', 'informant');
+```
+
+---
+
+### Define the interview image field
+
+./dedalo/publication/server_api/v1/config_api/server_config_api.php
+
+FIELD_IMAGE `string`
+
+Defines the field name of the interview image for the component_tipo 'oh17' in Dédalo ontology. It is used only for Oral history/memory.
+
+```php
+define('FIELD_IMAGE', 'image');
+```
+
+---
+
+### Define the interviewed name field
+
+./dedalo/publication/server_api/v1/config_api/server_config_api.php
+
+FIELD_NAME `string`
+
+Defines the field name of the interviewed for the component_tipo 'rsc85' in Dédalo ontology. It is used only for Oral history/memory.
+
+```php
+define('FIELD_NAME', 'name');
+```
+
+---
+
+### Define the interviewed surname field
+
+./dedalo/publication/server_api/v1/config_api/server_config_api.php
+
+FIELD_SURNAME `string`
+
+Defines the field name for the surname of the interviewed for the component_tipo 'rsc86' in Dédalo ontology. It is used only for Oral history/memory.
+
+```php
+define('FIELD_SURNAME', 'surname');
+```
+
+---
+
+### Define the interviewed birth date field
+
+./dedalo/publication/server_api/v1/config_api/server_config_api.php
+
+FIELD_BIRTHDATE `string`
+
+Defines the field name for the interviewee's birth date for the component_tipo 'rsc89' in Dédalo ontology. It is used only for Oral history/memory.
+
+```php
+define('FIELD_BIRTHDATE', 'birthdate');
+```
+
+---
+
+### Define the interviewee's birthplace field
+
+./dedalo/publication/server_api/v1/config_api/server_config_api.php
+
+FIELD_BIRTHPLACE `string`
+
+Defines the field name for the interviewee's birthplace for the component_tipo 'rsc91' in Dédalo ontology. It is used only for Oral history/memory.
+
+```php
+define('FIELD_BIRTHPLACE', 'birthplace');
+```
+
+---
+
+### Define the audiovisual file field name
+
+./dedalo/publication/server_api/v1/config_api/server_config_api.php
+
+FIELD_VIDEO `string`
+
+Defines the field name for the audiovisual file for the component_tipo 'rsc35' in Dédalo ontology. It is used only for Oral history/memory.
+
+```php
+define('FIELD_VIDEO', 'video');
+```
+
+---
+
+### Define the interview code field name
+
+./dedalo/publication/server_api/v1/config_api/server_config_api.php
+
+FIELD_CODE `string`
+
+Defines the field name for the interview code for the component_tipo 'oh14' in Dédalo ontology. It is used only for Oral history/memory.
+
+```php
+define('FIELD_CODE', 'code');
+```
 
 ---
 
@@ -894,10 +908,124 @@ define('FIELD_TERM', 'term');
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
 
-FIELD_NORDER
+FIELD_NORDER `string`
 
-Define the field name for the order number of the thesaurus term, the component_tipo 'hierarchy36' in Dédalo ontology.
-string
+Defines the field name for the order number of the thesaurus term, the component_tipo 'hierarchy36' in Dédalo ontology.
+
+```php
 define('FIELD_NORDER', 'norder');
+```
 
 ---
+
+### Define the audiovisual interview field name
+
+./dedalo/publication/server_api/v1/config_api/server_config_api.php
+
+FIELD_AUDIOVISUAL `string`
+
+Defines the field name for the audiovisual interview, the component_tipo 'oh25' in Dédalo ontology. It is used only for Oral history/memory.
+
+```php
+define('FIELD_AUDIOVISUAL', 'audiovisual');
+```
+
+---
+
+### Define the indexation field
+
+./dedalo/publication/server_api/v1/config_api/server_config_api.php
+
+FIELD_INDEX `string`
+
+Defines the field name for the indexations of audiovisual, the component_tipo 'rsc1051' in Dédalo ontology. It is used only for Oral history/memory.
+
+```php
+define('FIELD_INDEX', 'indexation');
+```
+
+---
+
+### Define access control for calls
+
+./dedalo/publication/server_api/v1/config_api/server_config_api.php
+
+ACCESS_CONTROL_ALLOW_ORIGIN `string`
+
+Specifies a URI that may access the resource. You may specify one or more origins, separated by commas.
+You can to define `*` for requests without credentials
+
+```php
+define('ACCESS_CONTROL_ALLOW_ORIGIN', '*');
+```
+
+---
+
+### Define MariaDb / MySQL database connection
+
+./dedalo/publication/server_api/v1/config_api/server_config_api.php
+
+MYSQL_WEB_DATABASE_CONN `string`
+
+ Database to use (for multiple database publication options like 'mht'). var `$db_name` is set in json/index.php file from request
+
+```php
+define('MYSQL_WEB_DATABASE_CONN', !empty($db_name)
+    ? $db_name                      // received in JSON request
+    : MYSQL_DEDALO_DATABASE_CONN    // default from current db config
+);
+```
+
+## Publication schema
+
+Publication schema defines how the fields and tables are connected. The publication schema definition is dependent of every diffusion element and his own ontology. This definition is optional, used to resolve the relations automatically. Every relation could be resolve with `Publication API::records -> resolve_portals_custom` option of the API.
+
+Schema defines the name of the field as the name of the property and table as his value.
+
+```json
+{
+    "publication_schema":{
+        "field_name" : "table_name"
+    }
+}
+```
+
+If is necessary to create a automatic resolution for an image field with the image table, the publication schema will be:
+
+```json
+{
+    "publication_schema":{
+        "image" : "image"
+    }
+}
+```
+
+Sometimes could be necessary to link different fields to same table, you could define multiple properties in the schema.
+
+```json
+{
+    "publication_schema":{
+        "image"             : "image",
+        "identify_image"    : "image"
+    }
+}
+```
+
+When the schema is defined the API could resolve the links automatically using `Publication API::records -> resolve_portal` property with `true` value.
+
+Schema could resolve dd_relations fields in the same way, but in this case the value of the field is not the table directly but an object with every section_tipo of the locator will be resolve in the table.
+
+```json
+{
+    "publication_schema":{
+        "image"             : "image",
+        "identify_image"    : "image"
+         "dd_relations": {
+            "oh1"       : "interview",
+            "rsc167"    : "audiovisual"
+        }
+    }
+}
+```
+
+for change the publication schema, change the diffusion_element in ontology and save it. This action will create a table named `publication_schema` in MariaDB / MySQL with the schema.
