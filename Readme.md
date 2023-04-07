@@ -12,11 +12,11 @@ Dédalo is a knowledge management system for tangible and intangible Cultural He
 
 <a href="https://dedalo.dev" target="_blank">Official Dédalo webpage</a>
 
-Dédalo is an Open Source software based on a new paradigm of programing: developing objects with an ontology model. The ontology controls the app flow with the descriptors, related terms, no descriptors, TG, TE, etc. Objects are built with a MVC structure and are linked to the ontology. The database uses a NoSQL model, storing all data in JSONB (binary) format.
+Dédalo is an Open Source software based on a new paradigm of programming: developing objects with an ontology model. The ontology controls the app flow with the descriptors, related terms, no descriptors, TG, TE, etc. Objects are built with a MVC structure and are linked to the ontology. The database uses a NoSQL model, storing all data in JSONB (binary) format.
 
 Dédalo uses the structured Ontology in order to:
 1. Make the data structured (user data is stored without a fixed structure).
-2. Build the programing objects during execution time.
+2. Build the programming objects during execution time.
 3. Interpret the code and the data to translate it to multiple formats (RDF, JSON-LD, SQL, CSV, XML, Dublin Core, HTML, PDF, etc.).
 
 The ontology can be modified, subsequently changing the data and the code. You can (1) develop new functionalities without changing the data and (2) alter the metadata independently of the code and the data.
