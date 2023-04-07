@@ -924,51 +924,51 @@ abstract class backup {
 				$msg .= "<b>$obj->name</b>";
 
 				/*
-				$res1=$res2=0;
+					$res1=$res2=0;
 
-				# DEDALO_PREFIX_TIPOS : config tipos verify. 'tipos' not defined in config, will be ignored
-				if (!in_array($current_dir, $DEDALO_PREFIX_TIPOS)) {
-					continue; # Filter load prefix from config 'DEDALO_PREFIX_TIPOS'
-				}
-
-				#
-				# JER_DD EXTRAS
-					$table 		= 'jer_dd';
-					$tld 		= $current_dir;
-					$path_file1 = $path.'/'.$table .'_'.$tld.'.copy';
-					$path_file1 =
-					$res1 		= backup::copy_from_file($table, $path_file1, $tld);
-
-					if (empty($res1)) {
-						$msg .= "<br>Error on import $table {$tld} . Please try again";
-						if(SHOW_DEBUG===true) {
-							#throw new Exception("Error Processing Request: $msg", 1);
-						}
-						#print("<div class=\"error\">$msg</div>");
-						debug_log(__METHOD__." $msg ".to_string($res1), logger::ERROR);
-						$load_with_errors=true;
+					# DEDALO_PREFIX_TIPOS : config tipos verify. 'tipos' not defined in config, will be ignored
+					if (!in_array($current_dir, $DEDALO_PREFIX_TIPOS)) {
+						continue; # Filter load prefix from config 'DEDALO_PREFIX_TIPOS'
 					}
 
-				#
-				# MATRIX_DESCRIPTORS_DD EXTRAS
-					$table 		= 'matrix_descriptors_dd';
-					$tld 		= $current_dir;
-					$path_file 	= $path.'/'.$table .'_'.$tld.'.copy';
-					$res2 		= backup::copy_from_file($table, $path_file, $tld);
+					#
+					# JER_DD EXTRAS
+						$table 		= 'jer_dd';
+						$tld 		= $current_dir;
+						$path_file1 = $path.'/'.$table .'_'.$tld.'.copy';
+						$path_file1 =
+						$res1 		= backup::copy_from_file($table, $path_file1, $tld);
 
-					if (empty($res2)) {
-						$msg .= "<br>Error on import $table {$tld} . Please try again";
-						if(SHOW_DEBUG===true) {
-							#throw new Exception("Error Processing Request: $msg", 1);
+						if (empty($res1)) {
+							$msg .= "<br>Error on import $table {$tld} . Please try again";
+							if(SHOW_DEBUG===true) {
+								#throw new Exception("Error Processing Request: $msg", 1);
+							}
+							#print("<div class=\"error\">$msg</div>");
+							debug_log(__METHOD__." $msg ".to_string($res1), logger::ERROR);
+							$load_with_errors=true;
 						}
-						#print("<div class=\"error\">$msg</div>");
-						debug_log(__METHOD__." $msg ".to_string($res1), logger::ERROR);
-						$load_with_errors=true;
-					}
-				*/
 
-				#
-				# OBJ EXTRAS
+					#
+					# MATRIX_DESCRIPTORS_DD EXTRAS
+						$table 		= 'matrix_descriptors_dd';
+						$tld 		= $current_dir;
+						$path_file 	= $path.'/'.$table .'_'.$tld.'.copy';
+						$res2 		= backup::copy_from_file($table, $path_file, $tld);
+
+						if (empty($res2)) {
+							$msg .= "<br>Error on import $table {$tld} . Please try again";
+							if(SHOW_DEBUG===true) {
+								#throw new Exception("Error Processing Request: $msg", 1);
+							}
+							#print("<div class=\"error\">$msg</div>");
+							debug_log(__METHOD__." $msg ".to_string($res1), logger::ERROR);
+							$load_with_errors=true;
+						}
+					*/
+
+
+				// OBJ EXTRAS
 					$table		= $obj->table;
 					$tld		= $obj->tld;
 					$path_file	= $obj->path .'/'. $obj->name;
@@ -979,8 +979,8 @@ abstract class backup {
 						debug_log(__METHOD__." $msg ".to_string($res1), logger::ERROR);
 						$load_with_errors=true;
 
-						$response->result 	 = false;
-						$response->msg 		.= $msg;
+						$response->result	= false;
+						$response->msg		.= $msg;
 						return $response;
 					}
 

@@ -184,4 +184,81 @@ class v5_to_v6 {
 
 
 
+	/**
+	* UPDATE_COMPONENT_svg_MEDIA_DIR
+	* component_svg: rename media folder from 'standard' to 'web' and creates a full copy as 'original'
+	* Target names are obtained from configuration constant definitions such as 'DEDALO_SVG_QUALITY_DEFAULT'
+	* @return bool
+	*/
+	public static function update_component_svg_media_dir() : bool {
+
+		// check old directory existence. try default v5 name
+			$current_dir = DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER . '/standard';
+			if (!is_dir($current_dir)) {
+				debug_log(__METHOD__
+					. " Error: svg default expected v5 path was not found ! : " . $current_dir .PHP_EOL
+					. ' This could be an error or simply that you have already changed the name of this folder'
+					, logger::ERROR
+				);
+			}
+
+		// rename. To path like '/home/dedalo/media/svg/web'
+			$new_dir = DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER . '/' . DEDALO_SVG_QUALITY_DEFAULT;
+			if (!is_dir($new_dir)) {
+				if( !rename($current_dir, $new_dir) ) {
+						debug_log(__METHOD__ . PHP_EOL
+							. " Error: Unable to rename svg directory : " . PHP_EOL
+							. ' Source path: ' . $current_dir . PHP_EOL
+							. ' Target path: ' . $new_dir
+							, logger::ERROR
+						);
+
+						return false;
+				}
+				debug_log(__METHOD__ . PHP_EOL
+					. " Renamed directory " . PHP_EOL
+					. ' ' . $current_dir . PHP_EOL
+					. " to " . PHP_EOL
+					. ' ' . $new_dir
+					, logger::WARNING
+				);
+			}
+
+		// duplicate default quality to 'original'
+			$default_quality_path	= $new_dir;
+			$target_copy_path		= DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER . '/' . DEDALO_SVG_QUALITY_ORIGINAL;
+			if (!is_dir($target_copy_path)) {
+				// exec command
+				$command	= "cp -R $default_quality_path $target_copy_path";
+				$output		= null;
+				$retval		= null;
+				$result		= exec($command, $output, $retval);
+				if ($result===false) {
+					debug_log(__METHOD__ . PHP_EOL
+						. " Error: Unable to copy directory. command : " . $command . PHP_EOL
+						. ' Source path: ' . $default_quality_path . PHP_EOL
+						. ' Target path: ' . $target_copy_path
+						, logger::ERROR
+					);
+
+					return false;
+				}
+				debug_log(__METHOD__ . PHP_EOL
+					. ' Copied directory ' . PHP_EOL
+					. ' '. $default_quality_path . PHP_EOL
+					. ' to ' . PHP_EOL
+					. ' ' . $target_copy_path .PHP_EOL
+					. "status: ". to_string($retval) .PHP_EOL
+					. "output: ". to_string($output) .PHP_EOL
+					. "command: ". $command
+					, logger::WARNING
+				);
+			}
+
+
+		return true;
+	}//end update_component_svg_media_dir
+
+
+
 }//end class v5_to_v6

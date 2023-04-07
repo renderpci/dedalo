@@ -557,7 +557,7 @@ abstract class component_common extends common {
 						// set dato only when own dato is empty
 							$this->set_dato($default_dato);
 
-						// temp section cases no not save anything
+						// temp section cases do not save anything
 							if ( strpos($this->section_id, DEDALO_SECTION_ID_TEMP)===false ) {
 								$this->Save();
 							}
