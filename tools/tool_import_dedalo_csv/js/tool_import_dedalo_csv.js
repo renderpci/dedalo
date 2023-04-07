@@ -64,6 +64,8 @@ export const tool_import_dedalo_csv = function () {
 /**
 * INIT
 * Custom tool init
+* @param object options
+* @return bool
 */
 tool_import_dedalo_csv.prototype.init = async function(options) {
 
@@ -94,6 +96,8 @@ tool_import_dedalo_csv.prototype.init = async function(options) {
 /**
 * BUILD
 * Custom tool build
+* @param bool autoload = false
+* @return bool
 */
 tool_import_dedalo_csv.prototype.build = async function(autoload=false) {
 
@@ -139,6 +143,9 @@ tool_import_dedalo_csv.prototype.build = async function(autoload=false) {
 
 /**
 * LOAD_CSV_FILES_LIST
+* Call to API and get the list of uploaded CSV files
+* @return promise
+* 	Resolve array result
 */
 tool_import_dedalo_csv.prototype.load_csv_files_list = async function() {
 
