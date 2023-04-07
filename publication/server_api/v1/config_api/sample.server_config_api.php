@@ -116,7 +116,7 @@
 
 // general constants
 	// Publication filter optional like "AND publicacion = 'si'". It is used for legacy compatibility
-	define('PUBLICACION_FILTER_SQL', ' ');
+	define('PUBLICATION_FILTER_SQL', ' ');
 
 	// Fast thesaurus map definition to prevent unnecessary union tables (optional)
 	// Use when you need to manage several tables at the same time (toponymy for example)

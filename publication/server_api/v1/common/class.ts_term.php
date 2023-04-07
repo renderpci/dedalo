@@ -91,7 +91,7 @@ class ts_term extends stdClass {
 				#$options->ar_fields 	= array(FIELD_TERM,'indexation','time','space','scope_note');
 				$options->ar_fields 	= array('*');
 				$options->lang 			= $this->lang;
-				$options->sql_filter 	= "term_id = '".$this->term_id."'" . PUBLICACION_FILTER_SQL;
+				$options->sql_filter 	= "term_id = '".$this->term_id."'" . PUBLICATION_FILTER_SQL;
 				$options->order 		= null;
 				#$options->limit 		= 1;
 
@@ -178,7 +178,7 @@ class ts_term extends stdClass {
 			$options->table 		= (string)$table;
 			$options->ar_fields 	= array('term_id',FIELD_NORDER,'descriptor');
 			$options->lang 			= WEB_CURRENT_LANG_CODE;
-			#options->sql_filter 	= "parent = '$term_id'" . PUBLICACION_FILTER_SQL;
+			#options->sql_filter 	= "parent = '$term_id'" . PUBLICATION_FILTER_SQL;
 			$options->sql_filter 	= $term_filter;
 			$options->order 		= '`'.FIELD_NORDER.'` ASC';
 
@@ -311,7 +311,7 @@ class ts_term extends stdClass {
 				$options->table 		= (string)TABLE_AUDIOVISUAL;
 				$options->ar_fields 	= array('id');
 				$options->lang 			= WEB_CURRENT_LANG_CODE;
-				$options->sql_filter 	= "section_id = '$current_section_id'" . PUBLICACION_FILTER_SQL;
+				$options->sql_filter 	= "section_id = '$current_section_id'" . PUBLICATION_FILTER_SQL;
 				$options->limit 		= 1;
 
 			$rows_data	= (object)web_data::get_rows_data( $options );
@@ -370,11 +370,11 @@ class ts_term extends stdClass {
 
 
 			#
-			# MODO USANDO EL FILTRO ('PUBLICACION_FILTER_SQL')
+			# MODO USANDO EL FILTRO ('PUBLICATION_FILTER_SQL')
 				$options = new stdClass();
 					$options->table 		= TABLE_AUDIOVISUAL;
 					$options->ar_fields 	= array('section_id');
-					$options->sql_filter 	= "section_id = $current_section_id " . PUBLICACION_FILTER_SQL;
+					$options->sql_filter 	= "section_id = $current_section_id " . PUBLICATION_FILTER_SQL;
 					$options->limit 		= 1;
 
 				$rows_data = (object)web_data::get_rows_data( $options );
@@ -391,7 +391,7 @@ class ts_term extends stdClass {
 					$options = new stdClass();
 						$options->table 		= TABLE_INTERVIEW;
 						$options->ar_fields 	= array('id');
-						$options->sql_filter 	= "audiovisual LIKE '%\"{$current_section_id}\"%' " . PUBLICACION_FILTER_SQL;
+						$options->sql_filter 	= "audiovisual LIKE '%\"{$current_section_id}\"%' " . PUBLICATION_FILTER_SQL;
 						$options->limit 		= 1;
 
 					$rows_data_interview = (object)web_data::get_rows_data( $options );
@@ -493,7 +493,7 @@ class ts_term extends stdClass {
 			$options->table 		= (string)$thesaurus_table;
 			$options->ar_fields 	= array('id','parent');
 			$options->lang 			= WEB_CURRENT_LANG_CODE;
-			$options->sql_filter 	= "term_id = '$term_id'" . PUBLICACION_FILTER_SQL;
+			$options->sql_filter 	= "term_id = '$term_id'" . PUBLICATION_FILTER_SQL;
 			$options->limit 		= 1;
 
 		$rows_data	= (object)web_data::get_rows_data( $options );
@@ -543,7 +543,7 @@ class ts_term extends stdClass {
 			$options->table 		= (string)TABLE_THESAURUS;
 			$options->ar_fields 	= array('id');
 			$options->lang 			= WEB_CURRENT_LANG_CODE;
-			$options->sql_filter 	= "indexation LIKE '%$term_id%'" . PUBLICACION_FILTER_SQL;
+			$options->sql_filter 	= "indexation LIKE '%$term_id%'" . PUBLICATION_FILTER_SQL;
 			$options->limit 		= 1;
 
 		$rows_data	= (object)web_data::get_rows_data( $options );

@@ -117,7 +117,7 @@ class indexation_node extends stdClass {
 				$options->table 		= (string)TABLE_IMAGE;
 				$options->ar_fields 	= array(FIELD_IMAGE);
 				$options->order 		= null;
-				$options->sql_filter 	= "section_id = ".$section_id . PUBLICACION_FILTER_SQL; //
+				$options->sql_filter 	= "section_id = ".$section_id . PUBLICATION_FILTER_SQL; //
 
 			$rows_data = (object)web_data::get_rows_data( $options );
 			if (!empty($rows_data->result)) {
@@ -144,7 +144,7 @@ class indexation_node extends stdClass {
 			$options->table 		= (string)TABLE_INTERVIEW;
 			$options->ar_fields 	= array(FIELD_IMAGE);
 			$options->order 		= null;
-			$options->sql_filter 	= "section_id = " . $locator->section_top_id . PUBLICACION_FILTER_SQL;
+			$options->sql_filter 	= "section_id = " . $locator->section_top_id . PUBLICATION_FILTER_SQL;
 
 		$row_interview_data	= (object)web_data::get_rows_data( $options );
 			#dump($row_interview_data, ' row_interview_data ++ '.to_string($options)); die();

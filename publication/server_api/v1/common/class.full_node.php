@@ -142,7 +142,7 @@ class full_node extends stdClass {
 			$options->ar_fields 	 = $ar_fields;
 			$options->lang 		 	 = $this->lang;
 			$options->order 		 = null;
-			$options->sql_filter 	 = FIELD_AUDIOVISUAL . " LIKE '%\"" . $av_section_id ."\"%'". PUBLICACION_FILTER_SQL;
+			$options->sql_filter 	 = FIELD_AUDIOVISUAL . " LIKE '%\"" . $av_section_id ."\"%'". PUBLICATION_FILTER_SQL;
 			$options->limit 		 = 1;
 			# Resolve only some needed portals
 			$options->resolve_portals_custom = json_decode('{
@@ -261,7 +261,7 @@ class full_node extends stdClass {
 				$options->lang 			= WEB_CURRENT_LANG_CODE;
 				$options->order 		= null;
 				# {"type":"dd96","tag_id":"10","section_id":"9","section_tipo":"rsc167","component_tipo":"rsc36","section_top_id":"9","section_top_tipo":"oh1","from_component_tipo":"hierarchy40"}
-				$options->sql_filter 	= (string)"`indexation` LIKE '%\"type\":\"dd96\",\"tag_id\":\"$tag_id\",\"section_id\":\"$av_section_id\",\"section_tipo\":\"$AUDIOVISUAL_SECTION_TIPO\"%' " . PUBLICACION_FILTER_SQL;
+				$options->sql_filter 	= (string)"`indexation` LIKE '%\"type\":\"dd96\",\"tag_id\":\"$tag_id\",\"section_id\":\"$av_section_id\",\"section_tipo\":\"$AUDIOVISUAL_SECTION_TIPO\"%' " . PUBLICATION_FILTER_SQL;
 
 			$rows_data	= (object)web_data::get_rows_data( $options );
 				#dump($rows_data, ' rows_data ++ '.to_string($tag_id));
