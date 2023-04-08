@@ -164,34 +164,34 @@ Ready to update.
 
     You will see the install / update script.
 
-    ![install script](assets/20230403_172538_to_update.png){: class="small"}
+    ![install script](assets/20230403_172538_to_update.png){: .small}
 
     Select the "To update" to start the process.
 
 7. Login as root (with your v5 root account)
 
-    ![login](assets/20230402_150947_login.png){: class="medium"}
+    ![login](assets/20230402_150947_login.png){: .medium}
 
 8. You will see the v6 administration panel.
 
-    ![Administration panel](assets/20230403_171028_admin_panel.png){: class="large"}
+    ![Administration panel](assets/20230403_171028_admin_panel.png){: .large}
 
 9. Update the Ontology to > 01-04-2023
 
-    ![Update ontology](assets/20230403_171133_ontology_update.png){: class="medium"}
+    ![Update ontology](assets/20230403_171133_ontology_update.png){: .medium}
 
 10. Run the update scripts. It will take time to change your Database and files. It's highly recommended to see your PHP log (`tail -f php.log`)
 
-    ![Update data](assets/20230403_171234_update_data.png){: class="large"}
+    ![Update data](assets/20230403_171234_update_data.png){: .large}
 
     Down to last step and click "Ok" button
 
-    ![Ok button in bottom script](assets/20230403_171425_update_data2.png){: class="large"}
+    ![Ok button in bottom script](assets/20230403_171425_update_data2.png){: .large}
 
     Wait until you see the ok, this process could be long.
 
 11. Run the tool register.
 
-    ![Tool register](assets/20230403_172746_register_tools.png){: class="medium"}
+    ![Tool register](assets/20230403_172746_register_tools.png){: .medium}
 
 12. Done! log out and log in as normal use.
