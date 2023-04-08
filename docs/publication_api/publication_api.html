@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+	<meta charset="utf-8"/>
+</head>
+<body>
+
+<h1 id="publicationapi">Publication API</h1>
+
+<p>Dédalo Publication API connects your archive data with the web.</p>
+
+<h2 id="introduction">Introduction</h2>
+
+<p>Dédalo stores all data in a private PostgreSQL database, only accessible by the back-end.</p>
+
+<p>When it is needed to publish some of the data stored, Dédalo is able to do that through a publication tool (Dédalo diffusion engine).</p>
+
+<p>One of the most used publication services is the SQL publication format, and generally, these published data will be stored in a MySQL or MariaDB database. This database is accessible through Dédalo’s Public API.</p>
+
+<p>Publication process transform your data into different formats as SQL, RDF or any other diffusion format without change your work data. This process is controlled by the ontology definition.</p>
+
+<p>The purpose of this document is to guide you through the different available methods in the API, explaining every option and showing you how to use them with examples, code snippets and much more.</p>
+
+<h2 id="diffusionontology">Diffusion ontology</h2>
+
+<p>Diffusion ontology is a specific part of the Dédalo ontology to control what kind of data could be public and how this data need to be processed. The main idea is control the access to private data and how will be showed in the public web.</p>
+
+<p>To understand this, you need to know that some archives has a personal data as tel or address that it can not to be public. And doing this transform you can control what data could be public and what no.</p>
+
+<p>Besides, publication process could transform the original data into different &#8220;formats&#8221; or &#8220;versions&#8221;.</p>
+
+<p>For example: if you want to show one city, you can choose how this data will be processed by the web, so you can to define different formats to achieve these needs. So, to publish &#8220;Valencia&#8221; you can think; what kind of data will I need? and format it.</p>
+
+<p>Let me explain. Inside Dédalo a toponymy as Valencia is a thesaurus term with all administrative hierarchy:</p>
+
+<p><img src="assets/20230408_182510_valencia.png" alt="valencia schema" />{: .small}</p>
+
+<p>Ontology definition to publish this toponymy could be configured to get:</p>
+
+<p>Only the name of the town. The name and all his parents (all administrative hierarchy), the name and the county, name and model (municipality), etc&#8230;</p>
+
+<p>So you can create different fields in the publication database with different data:</p>
+
+<table>
+<colgroup>
+<col />
+<col />
+</colgroup>
+
+<thead>
+</thead>
+
+<tbody>
+<tr>
+	<td>toponymy </td>
+	<td> Valencia</td>
+</tr>
+<tr>
+	<td>with_parents </td>
+	<td> Valencia, València, Valencia/Valéncia, Comunitat Valenciana, Spain</td>
+</tr>
+<tr>
+	<td>toponymy_county </td>
+	<td> Valencia, Spain</td>
+</tr>
+<tr>
+	<td>toponymy_model </td>
+	<td> Valencia, Municipality</td>
+</tr>
+<tr>
+	<td>etc </td>
+	<td> etc</td>
+</tr>
+</tbody>
+</table>
+
+<p>If you need search by community (&#8220;Comunitat Valenciana&#8221;) instead the municipality, so, you can do it searching in the field &#8220;with_parents&#8221;, but if you need add one point to map, you will need to use the geo data, so, you can define to add it to the resolution:</p>
+
+<table>
+<colgroup>
+<col />
+<col />
+</colgroup>
+
+<thead>
+</thead>
+
+<tbody>
+<tr>
+	<td>toponymy </td>
+	<td> Valencia</td>
+</tr>
+<tr>
+	<td>geo </td>
+	<td> <code>{&quot;alt&quot;:16,&quot;lat&quot;:39.469860091745815,&quot;lon&quot;:-0.3764533996582032,&quot;zoom&quot;:12}</code></td>
+</tr>
+</tbody>
+</table>
+
+<p>Or you will need to link the term and his parents with the thesaurus table and you can add his locators:</p>
+
+<table>
+<colgroup>
+<col />
+<col />
+</colgroup>
+
+<thead>
+</thead>
+
+<tbody>
+<tr>
+	<td>toponymy </td>
+	<td> Valencia</td>
+</tr>
+<tr>
+	<td>data </td>
+	<td> <code>[&quot;es1_7242&quot;]</code></td>
+</tr>
+<tr>
+	<td>with_parents </td>
+	<td> Valencia, València, Valencia/Valéncia, Comunitat Valenciana, Spain</td>
+</tr>
+<tr>
+	<td>data_parents </td>
+	<td> <code>[&quot;es1_7242&quot;, &quot;es1_8131&quot;,&quot;es1_8842&quot;, &quot;es1_8858&quot;, &quot;es1_1&quot;]</code></td>
+</tr>
+</tbody>
+</table>
+
+<p>The original data &#8220;Valencia&#8221; could be transformed into different fields to be used as needs without change the original data in PostgreSQL.</p>
+
+<p>Doing those transformations we can adapt the data into publication database to be ready for different applications / optimizations, and create a very efficient websites, because the data is prepared to resolve the needs of the website, and, if in the future, you will need to add another combination not defined, is easy to include it.</p>
+
+<h3 id="howontologypublicationworks">How ontology publication works?</h3>
+
+<p>All publication process is defined in Dédalo ontology, and it is dependent of the <a href="https://dedalo.dev/ontology/dd3">diffusion</a> term.</p>
+
+<p>Ontology defines some models to create a diffusion schema.</p>
+
+<p>Common models</p>
+
+<table>
+<colgroup>
+<col />
+<col />
+</colgroup>
+
+<thead>
+</thead>
+
+<tbody>
+<tr>
+	<td>diffusion_domain </td>
+	<td> entity or tld group (main diffusion term)</td>
+</tr>
+<tr>
+	<td>diffusion_element </td>
+	<td> group</td>
+</tr>
+<tr>
+	<td>diffusion_group </td>
+	<td> specific group</td>
+</tr>
+</tbody>
+</table>
+
+<p>For SQL:</p>
+
+<table>
+<colgroup>
+<col />
+<col />
+</colgroup>
+
+<thead>
+</thead>
+
+<tbody>
+<tr>
+	<td>database </td>
+	<td> name of MariaDB / MySQL database</td>
+</tr>
+<tr>
+	<td>database_alias </td>
+	<td> name of table in database (copy of schema of other database term )</td>
+</tr>
+<tr>
+	<td>table </td>
+	<td> name of table in database</td>
+</tr>
+<tr>
+	<td>table_alias </td>
+	<td> name of table in database (copy of schema of other table term )</td>
+</tr>
+<tr>
+	<td>field_boolean </td>
+	<td> bool field inside table in database</td>
+</tr>
+<tr>
+	<td>field_date </td>
+	<td> timestamp field inside table in database</td>
+</tr>
+<tr>
+	<td>field_decimal </td>
+	<td> float field inside table in database</td>
+</tr>
+<tr>
+	<td>field_enum </td>
+	<td> enum field inside table in database</td>
+</tr>
+<tr>
+	<td>field_int </td>
+	<td> in field inside table in database</td>
+</tr>
+<tr>
+	<td>field_mediumtext </td>
+	<td> mediumtext field inside table in database</td>
+</tr>
+<tr>
+	<td>field_point </td>
+	<td> mediumtext field inside table in database</td>
+</tr>
+<tr>
+	<td>field_varchar </td>
+	<td> varchar field inside table in database</td>
+</tr>
+<tr>
+	<td>field_text </td>
+	<td> text field inside table in database</td>
+</tr>
+<tr>
+	<td>field_year </td>
+	<td> year field inside table in database</td>
+</tr>
+</tbody>
+</table>
+
+<p>For RDF:</p>
+
+<table>
+<colgroup>
+<col />
+<col />
+</colgroup>
+
+<thead>
+</thead>
+
+<tbody>
+<tr>
+	<td> external_ontologies </td>
+	<td> group of definitions (main diffusion term) </td>
+</tr>
+<tr>
+	<td> external_ontology </td>
+	<td> definition of other ontology    </td>
+</tr>
+<tr>
+	<td> owl:Class   </td>
+	<td> Class          </td>
+</tr>
+<tr>
+	<td> owl:ObjectProperty </td>
+	<td> Property         </td>
+</tr>
+</tbody>
+</table>
+
+<h2 id="dédalodiffusionengine">Dédalo diffusion engine</h2>
+
+<p>It manages Dédalo’s diffusion schema and data.</p>
+
+<p>Diffusion engine will process the Dédalo data and transform to other formats using the diffusion ontology. When user publish data Diffusion engine will do the transoms and store the result into other databases or files using an ontology map that defines what sections and fields will be exported.</p>
+
+<blockquote>
+<p>Output could be targeted to another database or to RDF files.</p>
+</blockquote>
+
+<p>The most common scenario is to publish the data in a separate MariaDB / MySQL database. All the published data is intentionally published by the administrators and therefore, the destination database can be used for consultation without compromising the original data stored in the Dédalo working database.</p>
+
+<p>Dédalo has some configurations already prepared for use as Oral History, Bibliography or Web, but you can build others, following the already existing elements patterns.</p>
+
+<p>Each element of the ontology has several parameters that define the characteristics and the output format of the field in the MySQL table.</p>
+
+<p>For example, the column name, the column type (varchar, text, int, date, etc.) the output processing (diffusion methods to post process the data), etc.</p>
+
+<p>When data is published it will be accessible by the Publication Server API.</p>
+
+<h2 id="dédalopublicationserverapi">Dédalo Publication Server API</h2>
+
+<p>It manages the public server request using a REST interface.</p>
+
+<p>The publication server API can be hosted in the same Dédalo server or in another server used to create a website.
+Publication server files are placed by default in Dédalo file structure at:</p>
+
+<p>../httpdocs/dedalo/publication/server_api</p>
+
+<p>but, you can move or copy this folder to another location or server. The only requirement to function is to allow access to the public database and media files.</p>
+
+<p>Requests must be made to:</p>
+
+<p><a href="#dédalo-publication-server-api">https://mydomain.org/my_path/server_api/v1/json/</a></p>
+
+<p>Example to get a list with all available tables in the database:</p>
+
+<p><a href="#dédalo-publication-server-api">http://mydomain.org/my_path/server_api/v1/json/tables_info?code=XXXX</a></p>
+
+<p>The manager receives http requests from the public site, processes them and returns the data in JSON format.</p>
+
+<p>Requests could be made with javascript, php, perl or any language capable of managing REST using json headers.</p>
+
+<h2 id="serverconfigurations">Server configurations</h2>
+
+<p>Some examples of server configuration and data flow.</p>
+
+<ol>
+<li>All system in the same server. The workspace and the diffusion is inside the same server. This configuration is easy to create and maintain, the server has all services, media, but any interference in website or attack will affect to work system.</li>
+</ol>
+
+<figure>
+<img src="assets/20230408_180339_one_publication_server.svg" alt="one server configuration" />
+<figcaption>one server configuration</figcaption>
+</figure>
+
+<ol>
+<li>Two different servers, one for work system, and another for Diffusion. Pros: the website is totally separated of the work system and you can scale if you have a lot of traffic into website, an attack to the website do no affect to work system. Cons: double maintenance, double cost.</li>
+</ol>
+
+<figure>
+<img src="assets/20230408_182454_two_publication_servers.svg" alt="Two server configuration" />
+<figcaption>Two server configuration</figcaption>
+</figure>
+
+<ol>
+<li>Three different servers, first for work system, the second for media, the third for diffusion. This configuration ensure that your media files are shared by work system and diffusion system</li>
+</ol>
+
+<figure>
+<img src="assets/20230408_200232_three_publication_servers.svg" alt="Three server configuration" />
+<figcaption>Three server configuration</figcaption>
+</figure>
+
+<h2 id="dataflow">Data flow</h2>
+
+<ol>
+<li>User do an action to get information.</li>
+<li>Website sent a request to the publication API as <code>Publication API::records</code>.</li>
+<li>The request is processed and sended as SQL call to the database.</li>
+<li>MariaDB/MySQL search into public data and return the result.</li>
+<li>With the result publication API send a query to get authorization of the media associated.</li>
+<li>Publication API create the final JSON mixing data and media result to be sended to website.</li>
+<li>Finally website render the webpage and send to the user browser.</li>
+</ol>
+
+<figure>
+<img src="assets/20230408_201925_data_flow.svg" alt="Data flow" />
+<figcaption>Data flow</figcaption>
+</figure>
+
+<h2 id="publicationapisetup">Publication API Setup</h2>
+
+<p>Set up publication API has two parts, activate the config files and setup the constants.</p>
+
+<ol>
+<li>Set up Dédalo <a href="./public_api_configuration.md">Publication API configuration files</a></li>
+<li>Dédalo <a href="./server_config_api.md">Publication API configuration</a></li>
+</ol>
+
+<h2 id="usingpublicationapi">Using publication API</h2>
+
+<p>The most widely used publication model in Dédalo is the publication on tables in a MySQL database.</p>
+
+<p>Once the publication model (publication ontology) is generated, either using a pre-existing model such as Oral History or creating a custom one.</p>
+
+<p>Dédalo publication API use a REST model to access to public data and we follow the OpenAPI initiative to document it.</p>
+
+<p>The calls to API are sended via GET or POST queries, using variables as code to identify the authorized calls:</p>
+
+<p><code>https://mydomain/dedalo/lib/dedalo/publication/server_api/v1/json/tables_info?code=XXXX</code></p>
+
+<p>The documentation API is accessible in the path:</p>
+
+<p><code>../dedalo/publication/server_api/v1/docu/ui/</code></p>
+
+</body>
+</html>
+
