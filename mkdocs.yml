@@ -1,13 +1,18 @@
 site_name: Dédalo v6
 theme:
   name: material
+  logo: assets/dedalo_logo_white.svg
+  favicon: assets/favicon.ico
+  font: false
 
   features:
     - navigation.tracking
     - navigation.path
     - navigation.top
     - navigation.footer
+    - navigation.instant
     - content.code.copy
+
 
   palette:
     # Palette toggle for light mode
