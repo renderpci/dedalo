@@ -1,7 +1,10 @@
-site_name: Dédalo v6
+site_name: Dédalo Documentation
+# site_dir: use a git ignored directory, alias of local Dédalo website doc folder
+# site_dir: ../../../../web_projects/web_dedalo/doc
+site_dir: docs_site
 theme:
   name: material
-  logo: assets/dedalo_logo_white.svg
+  logo: assets/images/dedalo_logo_white.svg
   favicon: assets/favicon.ico
   font: false
 
@@ -13,7 +16,6 @@ theme:
     - navigation.instant
     - content.code.copy
 
-
   palette:
     # Palette toggle for light mode
     - media: "(prefers-color-scheme: light)"
@@ -22,7 +24,6 @@ theme:
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
-
     # Palette toggle for dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
