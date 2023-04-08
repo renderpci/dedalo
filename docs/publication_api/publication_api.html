@@ -379,9 +379,120 @@ Publication server files are placed by default in Dédalo file structure at:</p>
 
 <p><code>https://mydomain/dedalo/lib/dedalo/publication/server_api/v1/json/tables_info?code=XXXX</code></p>
 
-<p>The documentation API is accessible in the path:</p>
+<p>The documentation API user interface is accessible in the path:</p>
 
 <p><code>../dedalo/publication/server_api/v1/docu/ui/</code></p>
+
+<p>You can view your specific configuration and open publication API user interface directly inside Dédalo, go to <code>Development</code> menu and locate <code>Publication server API</code>, to open it click into &#8220;Open Swagger UI&#8221;:</p>
+
+<p><img src="assets/20230408_212204_publication_api_access.png" alt="" />{: .medium}</p>
+
+<p>You will see the Swagger interface ready to be used.</p>
+
+<p>!!! warning
+If you have problems with getting data review the <a href="server_config_api.md">public api configuration</a>,and MariaDB / MySQl installation.</p>
+
+<figure>
+<img src="assets/20230408_213159_server_api_ui.png" alt="Server API UI" />
+<figcaption>Server API UI</figcaption>
+</figure>
+
+<h2 id="doingrequestandgettingdata">Doing request and getting data</h2>
+
+<p>Before begin to do calls you need to know:</p>
+
+<ul>
+<li>By default the request calls to get information about tables, fields, schema, etc use GET, but request calls to get data use POST.</li>
+<li>Every call to API need to send the API code as variable. API Code is defined in <a href="./server_config_api.md#setting-the-api-code-authorisation-code">server_config_api.php</a> file.</li>
+<li>Every call to API need to specify the database.</li>
+<li>Some calls will need to specify the table.</li>
+<li>Response data are strings.</li>
+</ul>
+
+<p>!!! note
+For historical reasons and compatibility with old webpages all response data will be sended as JSON stringified, you will need parse before use it.</p>
+
+<h3 id="relateddata">Related data</h3>
+
+<p>In the process to publish data Dédalo will resolve lost of relations to create flat version of data, but not all relations should be resolved because some data need to have relations to be resolve as web users need, so public data has some relations between tables and need to be resolved.</p>
+
+<p>The data they hold is a stringified array in JSON format as &#8216;[&#8220;1&#8221;,&#8220;2&#8221;]&#8217;. This data corresponds to the section_id column of each destination table.</p>
+
+<p>In this example we see the correspondence between the informant column (interview table) and the section_id column (informant table). This correspondence can be resolved (if we need it) individually, through via single requests to each table, or in a joint request using the resolve_portals or resolve_portals_custom option on the same table.Table interviewTable informant array in json format array in json format</p>
+
+<h3 id="tables_info">/tables_info</h3>
+
+<p>The GET &#8216;tables_info&#8217; request returns information from all the existing tables in our publication database. If you are doing a Oral History website the tables that you will get are:</p>
+
+<ul>
+<li>interview: contains generic information on the interview, as well as links to the resources used in the itself (image, audiovisual, informant)</li>
+<li>&#8216;image&#8217;: contains the data of the images associated with the interview (url, title, caption, description)</li>
+<li>audiovisual: contains the data of the audiovisuals (recordings) at the level of ' tape', with the url of the video file, the transcription text, the duration, subtitles, etc.</li>
+<li>&#8216;informant&#8217;: contains the data of the informants associated with the interviews (name, surname, year and place of birth, etc. )</li>
+<li>interview: this table contains relationship columns to the image, audiovisual, and informant tables.</li>
+</ul>
+
+<p>Call:</p>
+
+<pre><code class="curl">curl -X 'GET' \
+  'https://my_domain.org/dedalo/publication/server_api/v1/json/tables_info?code=XXXX' \
+  -H 'accept: application/json'
+</code></pre>
+
+<p>Response:</p>
+
+<pre><code class="json">{
+  &quot;image&quot;: [
+    &quot;section_id&quot;,
+    &quot;lang&quot;,
+    &quot;publication&quot;,
+    &quot;image&quot;,
+    &quot;title&quot;,
+    &quot;footprint&quot;,
+    &quot;description&quot;
+  ],
+  &quot;informant&quot;: [
+    &quot;section_id&quot;,
+    &quot;lang&quot;,
+    &quot;publication&quot;,
+    &quot;name&quot;,
+    &quot;surname&quot;,
+    &quot;nickname&quot;,
+    &quot;birthdate&quot;,
+    &quot;birthplace&quot;,
+    &quot;birthplace_id&quot;,
+    &quot;gender&quot;,
+    &quot;location&quot;,
+    &quot;location_id&quot;,
+    &quot;profession&quot;,
+    &quot;dead_date&quot;,
+    &quot;dead_place&quot;,
+    &quot;dead_id&quot;,
+    &quot;biography&quot;,
+    &quot;observations&quot;
+  ],
+  &quot;interview&quot;: [
+    &quot;section_id&quot;,
+    &quot;lang&quot;,
+    &quot;publication&quot;,
+    &quot;code&quot;,
+    &quot;title&quot;,
+    &quot;abstract&quot;,
+    &quot;priority&quot;,
+    &quot;interview_place&quot;,
+    &quot;primary_lang&quot;,
+    &quot;date&quot;,
+    &quot;image&quot;,
+    &quot;audiovisual&quot;,
+    &quot;informant&quot;,
+    &quot;images&quot;,
+    &quot;project&quot;
+  ],
+  &quot;publication_schema&quot;: [
+    &quot;data&quot;
+  ]
+}
+</code></pre>
 
 </body>
 </html>

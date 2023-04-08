@@ -90,7 +90,7 @@ field_varchar | varchar field inside table in database
 field_text | text field inside table in database
 field_year | year field inside table in database
 
- For RDF:
+For RDF:
 
 | --- | --- |
 | external_ontologies | group of definitions (main  diffusion term) |
@@ -184,7 +184,115 @@ The calls to API are sended via GET or POST queries, using variables as code to 
 
 `https://mydomain/dedalo/lib/dedalo/publication/server_api/v1/json/tables_info?code=XXXX`
 
-The documentation API is accessible in the path:
+The documentation API user interface is accessible in the path:
 
 `../dedalo/publication/server_api/v1/docu/ui/`
 
+You can view your specific configuration and open publication API user interface directly inside Dédalo, go to `Development` menu and locate `Publication server API`, to open it click into "Open Swagger UI":
+
+![](assets/20230408_212204_publication_api_access.png){: .medium}
+
+You will see the Swagger interface ready to be used.
+
+!!! warning
+    If you have problems with getting data review the [public api configuration](server_config_api.md),and MariaDB / MySQl installation.
+
+![Server API UI](assets/20230408_213159_server_api_ui.png)
+
+## Doing request and getting data
+
+Before begin to do calls you need to know:
+
+- By default the request calls to get information about tables, fields, schema, etc use GET, but request calls to get data use POST.
+- Every call to API need to send the API code as variable. API Code is defined in [server_config_api.php](./server_config_api.md#setting-the-api-code-authorisation-code) file.
+- Every call to API need to specify the database.
+- Some calls will need to specify the table.
+- Response data are strings.
+
+!!! note
+    For historical reasons and compatibility with old webpages all response data will be sended as JSON stringified, you will need parse before use it.
+
+### Related data
+
+In the process to publish data Dédalo will resolve lost of relations to create flat version of data, but not all relations should be resolved because some data need to have relations to be resolve as web users need, so public data has some relations between tables and need to be resolved.
+
+The data they hold is a stringified array in JSON format as '["1","2"]'. This data corresponds to the section_id column of each destination table.
+
+
+
+In this example we see the correspondence between the informant column (interview table) and the section_id column (informant table). This correspondence can be resolved (if we need it) individually, through via single requests to each table, or in a joint request using the resolve_portals or resolve_portals_custom option on the same table.Table interviewTable informant array in json format array in json format
+
+
+### /tables_info
+
+The GET 'tables_info' request returns information from all the existing tables in our publication database. If you are doing a Oral History website the tables that you will get are:
+
+- interview: contains generic information on the interview, as well as links to the resources used in the itself (image, audiovisual, informant)
+- 'image': contains the data of the images associated with the interview (url, title, caption, description)
+- audiovisual: contains the data of the audiovisuals (recordings) at the level of ' tape', with the url of the video file, the transcription text, the duration, subtitles, etc. 
+- 'informant': contains the data of the informants associated with the interviews (name, surname, year and place of birth, etc. )
+- interview: this table contains relationship columns to the image, audiovisual, and informant tables.
+
+Call:
+
+```curl
+curl -X 'GET' \
+  'https://my_domain.org/dedalo/publication/server_api/v1/json/tables_info?code=XXXX' \
+  -H 'accept: application/json'
+```
+
+Response:
+
+```json
+{
+  "image": [
+    "section_id",
+    "lang",
+    "publication",
+    "image",
+    "title",
+    "footprint",
+    "description"
+  ],
+  "informant": [
+    "section_id",
+    "lang",
+    "publication",
+    "name",
+    "surname",
+    "nickname",
+    "birthdate",
+    "birthplace",
+    "birthplace_id",
+    "gender",
+    "location",
+    "location_id",
+    "profession",
+    "dead_date",
+    "dead_place",
+    "dead_id",
+    "biography",
+    "observations"
+  ],
+  "interview": [
+    "section_id",
+    "lang",
+    "publication",
+    "code",
+    "title",
+    "abstract",
+    "priority",
+    "interview_place",
+    "primary_lang",
+    "date",
+    "image",
+    "audiovisual",
+    "informant",
+    "images",
+    "project"
+  ],
+  "publication_schema": [
+    "data"
+  ]
+}
+```
