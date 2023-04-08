@@ -1,0 +1,56 @@
+site_name: Dédalo v6
+theme:
+  name: material
+
+  features:
+    - navigation.tracking
+    - navigation.path
+    - navigation.top
+    - navigation.footer
+    - content.code.copy
+
+  palette:
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: orange
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: orange
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+markdown_extensions:
+  - attr_list
+  - md_in_html
+  - admonition
+  - pymdownx.details
+  - footnotes
+  - markdown.extensions.codehilite:
+      guess_lang: true
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - pymdownx.highlight:
+      extend_pygments_lang:
+        - name: php
+          lang: php
+          options:
+            startinline: true
+        - name: shell
+          lang: shell
+          options:
+            startinline: true
+
+extra:
+  generator: false
+
+# repo_url: https://github.com/renderpci/dedalo
+
+extra_css:
+  - additional_docs.css
