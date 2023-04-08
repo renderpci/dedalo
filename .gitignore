@@ -136,3 +136,6 @@ package-lock.json
 package.json
 
 node_modules
+
+# generated html documentation files
+docs_site
