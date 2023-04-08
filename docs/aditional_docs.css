@@ -1,0 +1,12 @@
+img .large {
+  width: 60em;
+  max-width: 1000px;
+}
+img .medium {
+  width: 30em;
+  max-width: 500px;
+}
+img .small {
+  width: 20em;
+  max-width: 200px;
+}

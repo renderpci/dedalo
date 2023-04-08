@@ -40,7 +40,7 @@ Before you start upgrading to update it is important to be aware of some of thes
             }
         }
     }
-     ```
+    ```
 
 2. PDF media files structure has been changed to storage original files and web files.
 
@@ -164,34 +164,34 @@ Ready to update.
 
     You will see the install / update script.
 
-    ![small](assets/20230403_172538_to_update.png)
+    ![install script](assets/20230403_172538_to_update.png){: class="small"}
 
     Select the "To update" to start the process.
 
 7. Login as root (with your v5 root account)
 
-    ![medium](assets/20230402_150947_login.png)
+    ![login](assets/20230402_150947_login.png){: class="medium"}
 
 8. You will see the v6 administration panel.
 
-    ![large](assets/20230403_171028_admin_panel.png)
+    ![Administration panel](assets/20230403_171028_admin_panel.png){: class="large"}
 
 9. Update the Ontology to > 01-04-2023
 
-    ![medium](assets/20230403_171133_ontology_update.png)
+    ![Update ontology](assets/20230403_171133_ontology_update.png){: class="medium"}
 
 10. Run the update scripts. It will take time to change your Database and files. It's highly recommended to see your PHP log (`tail -f php.log`)
 
-    ![large](assets/20230403_171234_update_data.png)
+    ![Update data](assets/20230403_171234_update_data.png){: class="large"}
 
     Down to last step and click "Ok" button
 
-    ![large](assets/20230403_171425_update_data2.png)
+    ![Ok button in bottom script](assets/20230403_171425_update_data2.png){: class="large"}
 
     Wait until you see the ok, this process could be long.
 
 11. Run the tool register.
 
-    ![medium](assets/20230403_172746_register_tools.png)
+    ![Tool register](assets/20230403_172746_register_tools.png){: class="medium"}
 
 12. Done! log out and log in as normal use.
