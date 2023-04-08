@@ -85,11 +85,11 @@ define('DEDALO_ROOT_WEB', '/' . explode('/', $_SERVER["REQUEST_URI"])[1]);
 
 Define the names of the config files. This constants are used for build paths to config files. It is possible to change the name of the configuration files changing this values.
 
-DEDALO_CONFIG `string`  
-DEDALO_CORE  `string`  
-DEDALO_SHARED `string`  
-DEDALO_TOOLS `string`  
-DEDALO_LIB  `string`  
+DEDALO_CONFIG `string`
+DEDALO_CORE  `string`
+DEDALO_SHARED `string`
+DEDALO_TOOLS `string`
+DEDALO_LIB  `string`
 
 ```php
 define('DEDALO_CONFIG', 'config');
@@ -806,8 +806,8 @@ This parameter do not define the main data language, it only affect to the Déda
 define('DEDALO_STRUCTURE_LANG', 'lg-spa');
 ```
 
->For the languages, Dédalo uses the pattern: `lg-xxx`  
->lg : identify the term as language  
+>For the languages, Dédalo uses the pattern: `lg-xxx`
+>lg : identify the term as language
 >xxx : with the official tld of the ISO 639-6, Alpha-4 code for comprehensive coverage of language variants.
 >
 >Some common languages:
@@ -1676,7 +1676,7 @@ MAGICK_PATH `string`
 This parameter defines the path to image magick library in the server (when image magick library is installed)
 
 ```php
-define('MAGICK_PATH', '/usr/bin/'); 
+define('MAGICK_PATH', '/usr/bin/');
 ```
 
 ---
@@ -1720,7 +1720,7 @@ DEDALO_IMAGE_THUMB_HEIGHT `int`
 This parameter defines height size in pixels to the thumb images, it will be used to compress the images with the thumb quality (the smaller version to be used in lists).
 
 ```php
-define('DEDALO_IMAGE_THUMB_HEIGHT', 148); 
+define('DEDALO_IMAGE_THUMB_HEIGHT', 148);
 ```
 
 ---
@@ -2051,7 +2051,7 @@ define('DEDALO_3D_GLTFPACK_PATH', '/usr/local/bin/gltfpack');
 
 ---
 
-### Dédalo 3d FBX2glTF converter  
+### Dédalo 3d FBX2glTF converter
 
 ./dedalo/config/config.php
 
