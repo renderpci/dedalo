@@ -209,8 +209,22 @@ Before begin to do calls you need to know:
 - Some calls will need to specify the table.
 - Response data are strings.
 
-!!! note
-    For historical reasons and compatibility with old webpages all response data will be sended as JSON stringified, you will need parse before use it.
+    !!! note
+        For historical reasons and compatibility with old webpages all response data will be sended as JSON stringified, you will need parse before use it.
+
+- You can do the calls directly or with CURL. All examples in this doc will use direct calls.
+
+    This two request are the same:
+
+    ```api_request
+    https:///my_domain.org/dedalo/lib/dedalo/publication/server_api/v1/json/publication_schema?code=XXXX
+    ```
+
+    ```curl
+    curl -X 'GET' \
+    'https://my_domain.org/dedalo/publication/server_api/v1/json/publication_schema?code=XXXX' \
+    -H 'accept: application/json'
+    ```
 
 ### Related data
 
@@ -222,8 +236,9 @@ The data they hold is a stringified array in JSON format as '["1","2"]'. This da
 
 In this example we see the correspondence between the informant column (interview table) and the section_id column (informant table). This correspondence can be resolved (if we need it) individually, through via single requests to each table, or in a joint request using the resolve_portals or resolve_portals_custom option on the same table.Table interviewTable informant array in json format array in json format
 
-
 ### /tables_info
+
+Method: **GET**
 
 The GET 'tables_info' request returns information from all the existing tables in our publication database. If you are doing a Oral History website the tables that you will get are:
 
@@ -233,12 +248,10 @@ The GET 'tables_info' request returns information from all the existing tables i
 - 'informant': contains the data of the informants associated with the interviews (name, surname, year and place of birth, etc. )
 - interview: this table contains relationship columns to the image, audiovisual, and informant tables.
 
-Call:
+Request:
 
-```curl
-curl -X 'GET' \
-  'https://my_domain.org/dedalo/publication/server_api/v1/json/tables_info?code=XXXX' \
-  -H 'accept: application/json'
+```api_request
+https://my_domain.org/dedalo/publication/server_api/v1/json/tables_info?code=XXXX
 ```
 
 Response:
@@ -296,3 +309,431 @@ Response:
   ]
 }
 ```
+### /publication_schema
+
+Method: **GET**
+
+Get information about automatic portal resolution map. Publication schema is the definition to resolve the connection between fields and the tables.
+
+!!! info About portal fields
+    Portal is a relation between data, we name portal to fields with connections with other record in the same or other table.
+    If you have a interview with two audiovisuals, yo will have a portal named `audiovisual` in the table `interview`, the portal will be a array with two section_id to locate the record in the table audiovisual.
+
+The request to 'publication_schema' returns information on the configuration of the automatic resolution of portals (see [resolve_portals](#resolve_portal)), which collects the data from the publication_schema table.
+
+It is defined in the properties of the 'diffusion_element' node in the diffusion ontology and is updated when it is saved. As mentioned, it will be used as a map for the automatic resolution of relations (portals).
+
+The name of each property corresponds to the column that houses the pointer and value to the destination table where the information is stored.
+
+```json
+"publication_schema":{
+    "field_name" : "table_name"
+}
+```
+
+Example of publication schema defined in ontology diffusion_element:
+
+```json
+"publication_schema":{
+    "image"         : "image",
+    "audiovisual"   : "audiovisual",
+    "informant"     : "informant",
+    "images"        : "image"
+}
+```
+
+When you request to publication_schema you will return this:
+
+Request:
+
+```api_request
+https://my_domain.org/dedalo/publication/server_api/v1/json/publication_schema?code=XXXX
+```
+
+Response:
+
+```json
+{
+    "image"         : "image",
+    "audiovisual"   : "audiovisual",
+    "informant"     : "informant",
+    "images"        : "image"
+}
+```
+
+### /table_thesaurus
+
+Method: **GET**
+
+Request information about the table thesaurus resolution. This call get the configuration of the table thesaurus defined in the [TABLE_THESAURUS](./server_config_api.md#setting-the-thesaurus-table-map) constant in ./server_config_api.php file.
+
+It is used when is necessary to manage several indexations pointed to several thesaurus. For example if you have one interview fragment with terms of thematic, onomastic and chronologic thesaurus, this definition will use in [fragment_from_index_locator](#fragment_from_index_locator) request to resolve the fragment into all thesaurus tables.
+
+Request:
+
+```api_request
+https://my_domain.org/dedalo/publication/server_api/v1/json/table_thesaurus?code=XXXX
+```
+
+Response:
+
+```json
+"ts_chronological,ts_themes,ts_onomastic"
+```
+
+### /table_thesaurus_map
+
+Method: **GET**
+
+Request information about the table thesaurus map defined in [table_thesaurus_map](./server_config_api.md#setting-the-thesaurus-table-map) variable in ./server_config_api.php
+
+Thesaurus map definition is used to prevent unnecessary union tables. It is used when you have a portal with different locators pointed to some thesaurus and the resolution will use the section_tipo tld to search only in the thesaurus table of this tld.
+
+For expample if you have a indexation with thematic and onomastic thesaurus, you will have a portal with the locator in flat mode:
+
+```json
+{
+    "indexation" : ["ts1_34","on1_55"]
+}
+```
+
+The main Dédalo locator for this indexation are:
+
+```json
+[
+    {
+        "section_tipo" : "ts1",
+        "section_id" : 34
+    },
+    {
+        "section_tipo" : "on1",
+        "section_id" : 55
+    }
+]
+```
+
+Thesaurus map define that section_tipo `ts1` will be resolved with `ts_themes` table and `on1` will be resolved in `ts_onomastic` table. The request will use only those tables prevent use all thesaurus tables.
+
+When you call to [thesaurus_term](#thesaurus_term) or [thesaurus_children](#thesaurus_children), or any other thesaurus call, will use this definition to avoid unnecessary UNION with all thesaurus tables, and use only the tables that the request will need.
+
+Request:
+
+```api_request
+https://my_domain.org/dedalo/publication/server_api/v1/json/table_thesaurus_map?code=XXXX
+```
+
+Response:
+
+```json
+{
+    "dc1": "ts_chronological",
+    "ts1": "ts_themes",
+    "on1": "ts_onomastic",
+    "fr1": "ts_onomastic"
+}
+```
+
+### /records
+
+Method: **POST**
+
+The request to 'records' is a generic SQL query that returns the list of records found as an array of objects. It can be used to retrieve rows of tables, making it possible to select the columns to return, the number of records, the language of the themselves, grouping, sql filters, etc.
+
+This request is similar to a basic sql query but note that not all commands are supported or allowed for security reasons.
+
+!!! warning Security
+    All calls did to API are filtered and analyzed by server processes to avoid SQL injection. Any call is directly processed by database. Diffusion API is defined to be easy to use and understand and the calls maintain similar SQL syntax, but thinking in security all calls are filtered before will send to database.
+
+#### code
+
+Authorization code (mandatory) `string`
+
+#### db_name
+
+Database name. If not defined, the default database will be used `string`
+
+#### table
+
+Table name in the database (mandatory) `string`
+
+#### are_fields
+
+Fields names to request data, similar to SELECT in SQL language. `sting || array`
+
+By default you will get all fields / columns of the table, but you can limited the information that you need to specific field o column setting the `ar_fields` parameter. The `ar_fields` use a comma separated list of required columns in table or strings array, both formats are allowed.
+
+Sample:
+
+```json
+"name","surname"
+```
+
+OR:
+
+```json
+["name","surname"]
+```
+
+Request:
+
+```api_request
+https://my_domain.org/dedalo/publication/server_api/v1/json/records?code=XXX&db_name=my_database&table=informant&ar_fields=["name","surname"]
+```
+
+Response:
+
+```json
+[
+    {
+        "table"     : "informant",
+        "name"      : "John",
+        "surname"   : "Doe"
+    }
+]
+```
+
+#### section_id
+
+Get specific section_id. `int || int sequence`
+
+If you need specific record like 1 you can a request to section_id also, it is valid a sequence separated by comma, like 1,4,5.
+
+!!! info
+    Dédalo do not use classical primary key id of the databases to locate information, it use a section_id in combination of section_tipo to define a unique record, in the work system it is possible to have the same section_id in the same table because the row is defined as these combination of section_id and section_tipo. This scenario is only for the work system but it is translated to publication scenario. All request will use section_id instead id.
+
+Sample:
+
+```json
+{
+    "section_id" : 1
+}
+```
+
+Request:
+
+```api_request
+https://my_domain.org/dedalo/publication/server_api/v1/json/records?code=XXX&db_name=my_database&table=informant&section_id=1
+```
+
+Response:
+
+```json
+[
+    {
+        "table"         : "informant",
+        "section_id"    : 1,
+        "lang"          : "lg-eng",
+        "name"          : "John",
+        "surname"       : "Doe",
+        "nickname"      : "Johny",
+        "birthdate"     : "1943-09-30",
+        "birthplace"    : "Valencia",
+        "birthplace_id" : "["es1_7242"]",
+        "gender"        : "non binary",
+        "location"      : "Valencina de la Concepción",
+        "location_id"   : "["es1_7248"]",
+        "profession"    : "writer",
+        "dead_date"     : null,
+        "dead_place"    : null,
+        "dead_id"       : null,
+        "biography"     : null,
+        "observations"  : null
+    }
+]
+```
+
+#### sql_filter
+
+Custom query added to standard filter. `string`
+
+It is possible to define the same parameters than SQL: `=, >, <, >=, <=, LIKE, LIKE %, ILIKE %, NOT LIKE, IN, IS NULL, IS NOT NULL` in any combination with fields.
+
+Sample:
+
+```json
+"sql_filter": "name = John"
+````
+
+Request:
+
+```api_request
+https://my_domain.org/dedalo/publication/server_api/v1/json/records?code=XXX&db_name=my_database&table=informant&sql_filter="name = John"
+```
+
+```json
+ {
+    "table"         : "informant",
+    "section_id"    : 1,
+    "lang"          : "lg-eng",
+    "name"          : "John",
+    "surname"       : "Doe"
+    ...
+}
+```
+
+
+#### lang
+
+Defines the lang of the data.
+
+Dédalo is a multilingual system, every installation has his own language definition in his own configuration. The request to API will define the language that you want retrieve information. If this parameter is not defined publication API will get the default lang defined in [DEFAULT_LANG](./server_config_api.md#setting-the-default-lang-to-get-data) constant in server_config_api.php file.
+
+??? note Languages
+    For the languages, Dédalo uses the pattern: `lg-xxx`
+    lg : identify the term as language
+    xxx : with the official tld of the ISO 639-6, Alpha-4 code for comprehensive coverage of language variants.
+
+    Some common languages:
+    
+    | Value | Diffusion language |
+    | --- | --- |
+    | lg-spa | Spanish |
+    | lg-cat | Catalan |
+    | lg-eus | Basque |
+    | lg-eng | English |
+    | lg-fra | French |
+    | lg-ita | Italian |
+    | lg-por | Portuguese |
+    | lg-deu | German |
+    | lg-ara | Arabian |
+    | lg-ell | Greek |
+    | lg-rus | Russian |
+    | lg-ces | Czech |
+    | lg-jpn | Japanese |
+
+#### order
+
+Custom order for result.`string`
+
+To set the order by specific field and the order as name ASC or name DESC and is possible add more than 1 field / column.
+Set this parameter with `null` if you do not want sort.
+
+Sample:
+
+```json
+"order" : "name ASC, surname ASC"
+```
+
+Request:
+
+```api_request
+https://my_domain.org/dedalo/publication/server_api/v1/json/records?code=XXX&db_name=my_database&table=informant&order=name ASC, surname ASC
+````
+
+Response:
+
+```json
+[
+     {
+        "table"         : "informant",
+        "section_id"    : 315,
+        "lang"          : "lg-eng",
+        "name"          : "Alberto",
+        "surname"       : "Bertomeu",
+        "nickname"      : "Pinxo",
+        "birthdate"     : "1948-10-01",
+        "birthplace"    : "Valencia",
+        "birthplace_id" : "["es1_7242"]",
+        "gender"        : "male",
+        "location"      : null,
+        "location_id"   : null",
+        "profession"    : "his profession",
+        "dead_date"     : null,
+        "dead_place"    : null,
+        "dead_id"       : null,
+        "biography"     : null,
+        "observations"  : null
+    },
+    {
+        "table"         : "informant",
+        "section_id"    : 1,
+        "lang"          : "lg-eng",
+        "name"          : "John",
+        "surname"       : "Doe",
+        "nickname"      : "Johny",
+        "birthdate"     : "1943-09-30",
+        "birthplace"    : "Valencia",
+        "birthplace_id" : "["es1_7242"]",
+        "gender"        : "non binary",
+        "location"      : "Valencina de la Concepción",
+        "location_id"   : "["es1_7248"]",
+        "profession"    : "writer",
+        "dead_date"     : null,
+        "dead_place"    : null,
+        "dead_id"       : null,
+        "biography"     : null,
+        "observations"  : null
+    }
+]
+```
+
+#### offset
+
+Custom records offset for query `int`
+
+Used to do pagination between rows in combination with `limit`. When you request has more rows than limit definition, you can specify the offset of the pagination to get other portion of the rows. 
+
+#### count
+
+Count the number of total rows was fonded in the search. `bool`
+
+If you set this parameter to `true` you will get the total records number that found in your request.
+Request:
+
+```api_request
+https://my_domain.org/dedalo/publication/server_api/v1/json/records?code=XXX&db_name=my_database&table=informant&count=true
+```
+
+Response:
+
+```json
+{
+  "result":  [
+    {   
+        "table"         : "informant",
+        "section_id"    : 1,
+        "lang"          : "lg-eng",
+        "name"          : "John",
+        "surname"       : "Doe"
+        ...
+    },
+    {   
+        "table"         : "informant",
+        "section_id"    : 2,
+        "lang"          : "lg-eng",
+        "name"          : "Another",
+        "surname"       : "Informant"
+        ...
+    }
+    "msg": "Ok get rows_data done. Ok exec_query done",
+    "total": 2,
+    "debug": {
+        "total_time": 0.001
+    }
+}
+```
+
+If your request do not match to any record you will get `false` in total.
+
+```json
+{
+  "result": false,
+  "msg": "Ok get rows_data done.",
+  "total": false,
+  "debug": {
+    "total_time": 0.001
+  }
+}
+```
+
+### /resolve_portal
+
+Activates automatic resolution of portals. `bool`
+
+Default `false`
+
+### /fragment_from_index_locator
+
+### /thesaurus_children
+
+### /thesaurus_term

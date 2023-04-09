@@ -402,15 +402,26 @@ If you have problems with getting data review the <a href="server_config_api.md"
 <p>Before begin to do calls you need to know:</p>
 
 <ul>
-<li>By default the request calls to get information about tables, fields, schema, etc use GET, but request calls to get data use POST.</li>
-<li>Every call to API need to send the API code as variable. API Code is defined in <a href="./server_config_api.md#setting-the-api-code-authorisation-code">server_config_api.php</a> file.</li>
-<li>Every call to API need to specify the database.</li>
-<li>Some calls will need to specify the table.</li>
-<li>Response data are strings.</li>
-</ul>
+<li><p>By default the request calls to get information about tables, fields, schema, etc use GET, but request calls to get data use POST.</p></li>
+<li><p>Every call to API need to send the API code as variable. API Code is defined in <a href="./server_config_api.md#setting-the-api-code-authorisation-code">server_config_api.php</a> file.</p></li>
+<li><p>Every call to API need to specify the database.</p></li>
+<li><p>Some calls will need to specify the table.</p></li>
+<li><p>Response data are strings.</p>
 
 <p>!!! note
-For historical reasons and compatibility with old webpages all response data will be sended as JSON stringified, you will need parse before use it.</p>
+For historical reasons and compatibility with old webpages all response data will be sended as JSON stringified, you will need parse before use it.</p></li>
+<li><p>You can do the calls directly or with CURL. All examples in this doc will use direct calls.</p>
+
+<p>This two request are the same:</p>
+
+<pre><code class="api_request">https:///my_domain.org/dedalo/lib/dedalo/publication/server_api/v1/json/publication_schema?code=XXXX
+</code></pre>
+
+<pre><code class="curl">curl -X 'GET' \
+'https://my_domain.org/dedalo/publication/server_api/v1/json/publication_schema?code=XXXX' \
+-H 'accept: application/json'
+</code></pre></li>
+</ul>
 
 <h3 id="relateddata">Related data</h3>
 
@@ -422,6 +433,8 @@ For historical reasons and compatibility with old webpages all response data wil
 
 <h3 id="tables_info">/tables_info</h3>
 
+<p>Method: <strong>GET</strong></p>
+
 <p>The GET &#8216;tables_info&#8217; request returns information from all the existing tables in our publication database. If you are doing a Oral History website the tables that you will get are:</p>
 
 <ul>
@@ -432,11 +445,9 @@ For historical reasons and compatibility with old webpages all response data wil
 <li>interview: this table contains relationship columns to the image, audiovisual, and informant tables.</li>
 </ul>
 
-<p>Call:</p>
+<p>Request:</p>
 
-<pre><code class="curl">curl -X 'GET' \
-  'https://my_domain.org/dedalo/publication/server_api/v1/json/tables_info?code=XXXX' \
-  -H 'accept: application/json'
+<pre><code class="api_request">https://my_domain.org/dedalo/publication/server_api/v1/json/tables_info?code=XXXX
 </code></pre>
 
 <p>Response:</p>
@@ -493,6 +504,409 @@ For historical reasons and compatibility with old webpages all response data wil
   ]
 }
 </code></pre>
+
+<h3 id="publication_schema">/publication_schema</h3>
+
+<p>Method: <strong>GET</strong></p>
+
+<p>Get information about automatic portal resolution map. Publication schema is the definition to resolve the connection between fields and the tables.</p>
+
+<p>!!! info About portal fields
+Portal is a relation between data, we name portal to fields with connections with other record in the same or other table.
+If you have a interview with two audiovisuals, yo will have a portal named <code>audiovisual</code> in the table <code>interview</code>, the portal will be a array with two section_id to locate the record in the table audiovisual.</p>
+
+<p>The request to &#8216;publication_schema&#8217; returns information on the configuration of the automatic resolution of portals (see <a href="#resolve_portal">resolve_portals</a>), which collects the data from the publication_schema table.</p>
+
+<p>It is defined in the properties of the &#8216;diffusion_element&#8217; node in the diffusion ontology and is updated when it is saved. As mentioned, it will be used as a map for the automatic resolution of relations (portals).</p>
+
+<p>The name of each property corresponds to the column that houses the pointer and value to the destination table where the information is stored.</p>
+
+<pre><code class="json">&quot;publication_schema&quot;:{
+    &quot;field_name&quot; : &quot;table_name&quot;
+}
+</code></pre>
+
+<p>Example of publication schema defined in ontology diffusion_element:</p>
+
+<pre><code class="json">&quot;publication_schema&quot;:{
+    &quot;image&quot;         : &quot;image&quot;,
+    &quot;audiovisual&quot;   : &quot;audiovisual&quot;,
+    &quot;informant&quot;     : &quot;informant&quot;,
+    &quot;images&quot;        : &quot;image&quot;
+}
+</code></pre>
+
+<p>When you request to publication_schema you will return this:</p>
+
+<p>Request:</p>
+
+<pre><code class="api_request">https://my_domain.org/dedalo/publication/server_api/v1/json/publication_schema?code=XXXX
+</code></pre>
+
+<p>Response:</p>
+
+<pre><code class="json">{
+    &quot;image&quot;         : &quot;image&quot;,
+    &quot;audiovisual&quot;   : &quot;audiovisual&quot;,
+    &quot;informant&quot;     : &quot;informant&quot;,
+    &quot;images&quot;        : &quot;image&quot;
+}
+</code></pre>
+
+<h3 id="table_thesaurus">/table_thesaurus</h3>
+
+<p>Method: <strong>GET</strong></p>
+
+<p>Request information about the table thesaurus resolution. This call get the configuration of the table thesaurus defined in the <a href="./server_config_api.md#setting-the-thesaurus-table-map">TABLE_THESAURUS</a> constant in ./server_config_api.php file.</p>
+
+<p>It is used when is necessary to manage several indexations pointed to several thesaurus. For example if you have one interview fragment with terms of thematic, onomastic and chronologic thesaurus, this definition will use in <a href="#fragment_from_index_locator">fragment_from_index_locator</a> request to resolve the fragment into all thesaurus tables.</p>
+
+<p>Request:</p>
+
+<pre><code class="api_request">https://my_domain.org/dedalo/publication/server_api/v1/json/table_thesaurus?code=XXXX
+</code></pre>
+
+<p>Response:</p>
+
+<pre><code class="json">&quot;ts_chronological,ts_themes,ts_onomastic&quot;
+</code></pre>
+
+<h3 id="table_thesaurus_map">/table_thesaurus_map</h3>
+
+<p>Method: <strong>GET</strong></p>
+
+<p>Request information about the table thesaurus map defined in <a href="./server_config_api.md#setting-the-thesaurus-table-map">table_thesaurus_map</a> variable in ./server_config_api.php</p>
+
+<p>Thesaurus map definition is used to prevent unnecessary union tables. It is used when you have a portal with different locators pointed to some thesaurus and the resolution will use the section_tipo tld to search only in the thesaurus table of this tld.</p>
+
+<p>For expample if you have a indexation with thematic and onomastic thesaurus, you will have a portal with the locator in flat mode:</p>
+
+<pre><code class="json">{
+    &quot;indexation&quot; : [&quot;ts1_34&quot;,&quot;on1_55&quot;]
+}
+</code></pre>
+
+<p>The main Dédalo locator for this indexation are:</p>
+
+<pre><code class="json">[
+    {
+        &quot;section_tipo&quot; : &quot;ts1&quot;,
+        &quot;section_id&quot; : 34
+    },
+    {
+        &quot;section_tipo&quot; : &quot;on1&quot;,
+        &quot;section_id&quot; : 55
+    }
+]
+</code></pre>
+
+<p>Thesaurus map define that section_tipo <code>ts1</code> will be resolved with <code>ts_themes</code> table and <code>on1</code> will be resolved in <code>ts_onomastic</code> table. The request will use only those tables prevent use all thesaurus tables.</p>
+
+<p>When you call to <a href="#thesaurus_term">thesaurus_term</a> or <a href="#thesaurus_children">thesaurus_children</a>, or any other thesaurus call, will use this definition to avoid unnecessary UNION with all thesaurus tables, and use only the tables that the request will need.</p>
+
+<p>Request:</p>
+
+<pre><code class="api_request">https://my_domain.org/dedalo/publication/server_api/v1/json/table_thesaurus_map?code=XXXX
+</code></pre>
+
+<p>Response:</p>
+
+<pre><code class="json">{
+    &quot;dc1&quot;: &quot;ts_chronological&quot;,
+    &quot;ts1&quot;: &quot;ts_themes&quot;,
+    &quot;on1&quot;: &quot;ts_onomastic&quot;,
+    &quot;fr1&quot;: &quot;ts_onomastic&quot;
+}
+</code></pre>
+
+<h3 id="records">/records</h3>
+
+<p>Method: <strong>POST</strong></p>
+
+<p>The request to &#8216;records&#8217; is a generic SQL query that returns the list of records found as an array of objects. It can be used to retrieve rows of tables, making it possible to select the columns to return, the number of records, the language of the themselves, grouping, sql filters, etc.</p>
+
+<p>This request is similar to a basic sql query but note that not all commands are supported or allowed for security reasons.</p>
+
+<p>!!! warning Security
+All calls did to API are filtered and analyzed by server processes to avoid SQL injection. Any call is directly processed by database. Diffusion API is defined to be easy to use and understand and the calls maintain similar SQL syntax, but thinking in security all calls are filtered before will send to database.</p>
+
+<h4 id="code">code</h4>
+
+<p>Authorization code (mandatory) <code>string</code></p>
+
+<h4 id="db_name">db_name</h4>
+
+<p>Database name. If not defined, the default database will be used <code>string</code></p>
+
+<h4 id="table">table</h4>
+
+<p>Table name in the database (mandatory) <code>string</code></p>
+
+<h4 id="are_fields">are_fields</h4>
+
+<p>Fields names to request data, similar to SELECT in SQL language. <code>sting || array</code></p>
+
+<p>By default you will get all fields / columns of the table, but you can limited the information that you need to specific field o column setting the <code>ar_fields</code> parameter. The <code>ar_fields</code> use a comma separated list of required columns in table or strings array, both formats are allowed.</p>
+
+<p>Sample:</p>
+
+<pre><code class="json">&quot;name&quot;,&quot;surname&quot;
+</code></pre>
+
+<p>OR:</p>
+
+<pre><code class="json">[&quot;name&quot;,&quot;surname&quot;]
+</code></pre>
+
+<p>Request:</p>
+
+<pre><code class="api_request">https://my_domain.org/dedalo/publication/server_api/v1/json/records?code=XXX&amp;db_name=my_database&amp;table=informant&amp;ar_fields=[&quot;name&quot;,&quot;surname&quot;]
+</code></pre>
+
+<p>Response:</p>
+
+<pre><code class="json">[
+    {
+        &quot;table&quot;     : &quot;informant&quot;,
+        &quot;name&quot;      : &quot;John&quot;,
+        &quot;surname&quot;   : &quot;Doe&quot;
+    }
+]
+</code></pre>
+
+<h4 id="section_id">section_id</h4>
+
+<p>Get specific section_id. <code>int || int sequence</code></p>
+
+<p>If you need specific record like 1 you can a request to section_id also, it is valid a sequence separated by comma, like 1,4,5.</p>
+
+<p>!!! info
+Dédalo do not use classical primary key id of the databases to locate information, it use a section_id in combination of section_tipo to define a unique record, in the work system it is possible to have the same section_id in the same table because the row is defined as these combination of section_id and section_tipo. This scenario is only for the work system but it is translated to publication scenario. All request will use section_id instead id.</p>
+
+<p>Sample:</p>
+
+<pre><code class="json">{
+    &quot;section_id&quot; : 1
+}
+</code></pre>
+
+<p>Request:</p>
+
+<pre><code class="api_request">https://my_domain.org/dedalo/publication/server_api/v1/json/records?code=XXX&amp;db_name=my_database&amp;table=informant&amp;section_id=1
+</code></pre>
+
+<p>Response:</p>
+
+<pre><code class="json">[
+    {
+        &quot;table&quot;         : &quot;informant&quot;,
+        &quot;section_id&quot;    : 1,
+        &quot;lang&quot;          : &quot;lg-eng&quot;,
+        &quot;name&quot;          : &quot;John&quot;,
+        &quot;surname&quot;       : &quot;Doe&quot;,
+        &quot;nickname&quot;      : &quot;Johny&quot;,
+        &quot;birthdate&quot;     : &quot;1943-09-30&quot;,
+        &quot;birthplace&quot;    : &quot;Valencia&quot;,
+        &quot;birthplace_id&quot; : &quot;[&quot;es1_7242&quot;]&quot;,
+        &quot;gender&quot;        : &quot;non binary&quot;,
+        &quot;location&quot;      : &quot;Valencina de la Concepción&quot;,
+        &quot;location_id&quot;   : &quot;[&quot;es1_7248&quot;]&quot;,
+        &quot;profession&quot;    : &quot;writer&quot;,
+        &quot;dead_date&quot;     : null,
+        &quot;dead_place&quot;    : null,
+        &quot;dead_id&quot;       : null,
+        &quot;biography&quot;     : null,
+        &quot;observations&quot;  : null
+    }
+]
+</code></pre>
+
+<h4 id="sql_filter">sql_filter</h4>
+
+<p>Custom query added to standard filter. <code>string</code></p>
+
+<p>It is possible to define the same parameters than SQL: <code>=, &gt;, &lt;, &gt;=, &lt;=, LIKE, LIKE %, ILIKE %, NOT LIKE, IN, IS NULL, IS NOT NULL</code> in any combination with fields.</p>
+
+<p>Sample:</p>
+
+<pre><code class="json">&quot;sql_filter&quot;: &quot;name = John&quot;
+</code></pre>
+
+<p>Request:</p>
+
+<pre><code class="api_request">https://my_domain.org/dedalo/publication/server_api/v1/json/records?code=XXX&amp;db_name=my_database&amp;table=informant&amp;sql_filter=&quot;name = John&quot;
+</code></pre>
+
+<pre><code class="json"> {
+    &quot;table&quot;         : &quot;informant&quot;,
+    &quot;section_id&quot;    : 1,
+    &quot;lang&quot;          : &quot;lg-eng&quot;,
+    &quot;name&quot;          : &quot;John&quot;,
+    &quot;surname&quot;       : &quot;Doe&quot;
+    ...
+}
+</code></pre>
+
+<h4 id="lang">lang</h4>
+
+<p>Defines the lang of the data.</p>
+
+<p>Dédalo is a multilingual system, every installation has his own language definition in his own configuration. The request to API will define the language that you want retrieve information. If this parameter is not defined publication API will get the default lang defined in <a href="./server_config_api.md#setting-the-default-lang-to-get-data">DEFAULT_LANG</a> constant in server_config_api.php file.</p>
+
+<p>??? note Languages
+For the languages, Dédalo uses the pattern: <code>lg-xxx</code>
+lg : identify the term as language
+xxx : with the official tld of the ISO 639&#8211;6, Alpha-4 code for comprehensive coverage of language variants.</p>
+
+<pre><code>Some common languages:
+    
+| Value | Diffusion language |
+| --- | --- |
+| lg-spa | Spanish |
+| lg-cat | Catalan |
+| lg-eus | Basque |
+| lg-eng | English |
+| lg-fra | French |
+| lg-ita | Italian |
+| lg-por | Portuguese |
+| lg-deu | German |
+| lg-ara | Arabian |
+| lg-ell | Greek |
+| lg-rus | Russian |
+| lg-ces | Czech |
+| lg-jpn | Japanese |
+</code></pre>
+
+<h4 id="order">order</h4>
+
+<p>Custom order for result.<code>string</code></p>
+
+<p>To set the order by specific field and the order as name ASC or name DESC and is possible add more than 1 field / column.
+Set this parameter with <code>null</code> if you do not want sort.</p>
+
+<p>Sample:</p>
+
+<pre><code class="json">&quot;order&quot; : &quot;name ASC, surname ASC&quot;
+</code></pre>
+
+<p>Request:</p>
+
+<pre><code class="api_request">https://my_domain.org/dedalo/publication/server_api/v1/json/records?code=XXX&amp;db_name=my_database&amp;table=informant&amp;order=name ASC, surname ASC
+</code></pre>
+
+<p>Response:</p>
+
+<pre><code class="json">[
+     {
+        &quot;table&quot;         : &quot;informant&quot;,
+        &quot;section_id&quot;    : 315,
+        &quot;lang&quot;          : &quot;lg-eng&quot;,
+        &quot;name&quot;          : &quot;Alberto&quot;,
+        &quot;surname&quot;       : &quot;Bertomeu&quot;,
+        &quot;nickname&quot;      : &quot;Pinxo&quot;,
+        &quot;birthdate&quot;     : &quot;1948-10-01&quot;,
+        &quot;birthplace&quot;    : &quot;Valencia&quot;,
+        &quot;birthplace_id&quot; : &quot;[&quot;es1_7242&quot;]&quot;,
+        &quot;gender&quot;        : &quot;male&quot;,
+        &quot;location&quot;      : null,
+        &quot;location_id&quot;   : null&quot;,
+        &quot;profession&quot;    : &quot;his profession&quot;,
+        &quot;dead_date&quot;     : null,
+        &quot;dead_place&quot;    : null,
+        &quot;dead_id&quot;       : null,
+        &quot;biography&quot;     : null,
+        &quot;observations&quot;  : null
+    },
+    {
+        &quot;table&quot;         : &quot;informant&quot;,
+        &quot;section_id&quot;    : 1,
+        &quot;lang&quot;          : &quot;lg-eng&quot;,
+        &quot;name&quot;          : &quot;John&quot;,
+        &quot;surname&quot;       : &quot;Doe&quot;,
+        &quot;nickname&quot;      : &quot;Johny&quot;,
+        &quot;birthdate&quot;     : &quot;1943-09-30&quot;,
+        &quot;birthplace&quot;    : &quot;Valencia&quot;,
+        &quot;birthplace_id&quot; : &quot;[&quot;es1_7242&quot;]&quot;,
+        &quot;gender&quot;        : &quot;non binary&quot;,
+        &quot;location&quot;      : &quot;Valencina de la Concepción&quot;,
+        &quot;location_id&quot;   : &quot;[&quot;es1_7248&quot;]&quot;,
+        &quot;profession&quot;    : &quot;writer&quot;,
+        &quot;dead_date&quot;     : null,
+        &quot;dead_place&quot;    : null,
+        &quot;dead_id&quot;       : null,
+        &quot;biography&quot;     : null,
+        &quot;observations&quot;  : null
+    }
+]
+</code></pre>
+
+<h4 id="offset">offset</h4>
+
+<p>Custom records offset for query <code>int</code></p>
+
+<p>Used to do pagination between rows in combination with <code>limit</code>. When you request has more rows than limit definition, you can specify the offset of the pagination to get other portion of the rows.</p>
+
+<h4 id="count">count</h4>
+
+<p>Count the number of total rows was fonded in the search. <code>bool</code></p>
+
+<p>If you set this parameter to <code>true</code> you will get the total records number that found in your request.
+Request:</p>
+
+<pre><code class="api_request">https://my_domain.org/dedalo/publication/server_api/v1/json/records?code=XXX&amp;db_name=my_database&amp;table=informant&amp;count=true
+</code></pre>
+
+<p>Response:</p>
+
+<pre><code class="json">{
+  &quot;result&quot;:  [
+    {   
+        &quot;table&quot;         : &quot;informant&quot;,
+        &quot;section_id&quot;    : 1,
+        &quot;lang&quot;          : &quot;lg-eng&quot;,
+        &quot;name&quot;          : &quot;John&quot;,
+        &quot;surname&quot;       : &quot;Doe&quot;
+        ...
+    },
+    {   
+        &quot;table&quot;         : &quot;informant&quot;,
+        &quot;section_id&quot;    : 2,
+        &quot;lang&quot;          : &quot;lg-eng&quot;,
+        &quot;name&quot;          : &quot;Another&quot;,
+        &quot;surname&quot;       : &quot;Informant&quot;
+        ...
+    }
+    &quot;msg&quot;: &quot;Ok get rows_data done. Ok exec_query done&quot;,
+    &quot;total&quot;: 2,
+    &quot;debug&quot;: {
+        &quot;total_time&quot;: 0.001
+    }
+}
+</code></pre>
+
+<p>If your request do not match to any record you will get <code>false</code> in total.</p>
+
+<pre><code class="json">{
+  &quot;result&quot;: false,
+  &quot;msg&quot;: &quot;Ok get rows_data done.&quot;,
+  &quot;total&quot;: false,
+  &quot;debug&quot;: {
+    &quot;total_time&quot;: 0.001
+  }
+}
+</code></pre>
+
+<h3 id="resolve_portal">/resolve_portal</h3>
+
+<p>Activates automatic resolution of portals. <code>bool</code></p>
+
+<p>Default <code>false</code></p>
+
+<h3 id="fragment_from_index_locator">/fragment_from_index_locator</h3>
+
+<h3 id="thesaurus_children">/thesaurus_children</h3>
+
+<h3 id="thesaurus_term">/thesaurus_term</h3>
 
 </body>
 </html>
