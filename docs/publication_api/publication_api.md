@@ -445,6 +445,8 @@ This request is similar to a basic sql query but note that not all commands are 
 !!! warning Security
     All calls did to API are filtered and analyzed by server processes to avoid SQL injection. Any call is directly processed by database. Diffusion API is defined to be easy to use and understand and the calls maintain similar SQL syntax, but thinking in security all calls are filtered before will send to database.
 
+Properties of records:
+
 #### code
 
 Authorization code (mandatory) `string`
@@ -562,7 +564,7 @@ https://my_domain.org/dedalo/publication/server_api/v1/json/records?code=XXX&db_
 ```
 
 ```json
- {
+{
     "table"         : "informant",
     "section_id"    : 1,
     "lang"          : "lg-eng",
@@ -624,7 +626,7 @@ Response:
 
 ```json
 [
-     {
+    {
         "table"         : "informant",
         "section_id"    : 315,
         "lang"          : "lg-eng",
@@ -688,7 +690,7 @@ Response:
 
 ```json
 {
-  "result":  [
+"result":  [
     {   
         "table"         : "informant",
         "section_id"    : 1,
@@ -717,12 +719,12 @@ If your request do not match to any record you will get `false` in total.
 
 ```json
 {
-  "result"  : false,
-  "msg"     : "Ok get rows_data done.",
-  "total"   : false,
-  "debug"   : {
+"result"  : false,
+"msg"     : "Ok get rows_data done.",
+"total"   : false,
+"debug"   : {
     "total_time": 0.001
-  }
+}
 }
 ```
 
@@ -776,7 +778,6 @@ Request:
 ```api_request
 https://my_domain.org/dedalo/publication/server_api/v1/json/records?code=XXX&db_name=my_database&table=informant&resolve_portal=true
 ```
-
 
 The request will get the informant data and the audiovisual data in this way:
 
@@ -857,11 +858,51 @@ The column is resolve with table, and the column in the target table is resolve 
 
 `column -> table -> table.column2 -> table2`
 
-
 Request:
 
 ```api_request
-https://my_domain.org/dedalo/publication/server_api/v1/json/records?code=XXX&db_name=my_database&table=informant&resolve_portal=true
+https://my_domain.org/dedalo/publication/server_api/v1/json/records?code=XXX&db_name=my_database&table=informant&resolve_portals_custom={"audiovisual":"audiovisual","informant":"informant"}
+```
+
+Response:
+
+```json
+{
+    "table"         : "interview",
+    "section_id"    : 1,
+    "lang"          : "lg-spa",
+    "publication"   : "yes",
+    "audiovisual"   : [
+        {
+            "table"         : "audiovisual",
+            "section_id"    : 1,
+            "lang"          : "lg-spa",
+            "publication"   : "yes",
+            ...
+        }
+    ],
+    "informant"     :  [
+        {
+            "table"         : "informant",
+            "section_id"    : 1,
+            "lang"          : "lg-spa",
+            "publication"   : "yes",
+            "name"          : "John",
+            "surname"       : "Doe"
+            ...
+        },
+        {
+            "table"         : "informant",
+            "section_id"    : 2,
+            "lang"          : "lg-spa",
+            "publication"   : "yes",
+            "name"          : "Another",
+            "surname"       : "Informant"
+            ...
+        }
+    ],
+    ...
+}
 ```
 
 #### process_result
@@ -876,12 +917,12 @@ If you request the birthplace of an informant you will get the name of the topon
 
 ```json
 {
-  "fn": "process_result::resolve_geolocation",
-  "columns": [
+"fn": "process_result::resolve_geolocation",
+"columns": [
     {
-      "name": "birthplace_id"
+    "name": "birthplace_id"
     }
-  ]
+]
 }
 ```
 
@@ -897,75 +938,73 @@ Without process_result response:
 
 ```json
 {
-  "result": [
-    {
-      "table"           : "informant",
-      "section_id"      : 133,
-      "lang"            : "lg-spa",
-      "publication"     : "yes",
-      "birthplace"      : "Huelva, Huelva, Andalucía, Reino de España",
-      "birthplace_id"   : [ "es1_3410"],
-      ...
+    "result": [
+        {
+        "table"           : "informant",
+        "section_id"      : 133,
+        "lang"            : "lg-spa",
+        "publication"     : "yes",
+        "birthplace"      : "Huelva, Huelva, Andalucía, Reino de España",
+        "birthplace_id"   : [ "es1_3410"],
+        ...
+        }
+    ],
+    "msg": "Ok get rows_data done. Ok exec_query done",
+    "total": false,
+    "debug": {
+        "total_time": 0.002
     }
-  ],
-  "msg": "Ok get rows_data done. Ok exec_query done",
-  "total": false,
-  "debug": {
-    "total_time": 0.002
-  }
 }
 ```
-
 
 With process_result response:
 
 ```json
 {
-  "result": [
+"result": [
     {
-      "table"           : "informant",
-      "section_id"      : 133,
-      "lang"            : "lg-spa",
-      "publication"     : "yes",
-      "birthplace"      : "Huelva, Huelva, Andalucía, Reino de España",
-      "birthplace_id"   : [
+    "table"           : "informant",
+    "section_id"      : 133,
+    "lang"            : "lg-spa",
+    "publication"     : "yes",
+    "birthplace"      : "Huelva, Huelva, Andalucía, Reino de España",
+    "birthplace_id"   : [
         {
-          "layer_id": 1,
-          "text": "",
-          "layer_data": {
+        "layer_id": 1,
+        "text": "",
+        "layer_data": {
             "type": "FeatureCollection",
             "features": [
-              {
+            {
                 "type": "Feature",
                 "properties": {},
                 "geometry": {
-                  "type": "Point",
-                  "coordinates": [
+                "type": "Point",
+                "coordinates": [
                     -6.95040588,
                     37.26004113
-                  ]
+                ]
                 }
-              }
+            }
             ]
-          }
         }
-      ],
-      ...
+        }
+    ],
+    ...
     }
-  ],
-  "msg": "Ok get rows_data done. Ok exec_query done",
-  "total": false,
-  "debug": {
+],
+"msg": "Ok get rows_data done. Ok exec_query done",
+"total": false,
+"debug": {
     "total_time": 0.002
-  }
+}
 }
 ```
 
-
-other functions defined:
+Other functions defined:
 
 - add_parents_and_children_recursive
-  
+
     ```json
     {
         "fn": "process_result::add_parents_and_children_recursive",
@@ -981,7 +1020,7 @@ other functions defined:
 
 - add_parents_or_children
 - break_down_totals
-  
+
     ```json
     {
         "fn": "process_result::break_down_totals",
@@ -994,7 +1033,7 @@ other functions defined:
 
 - sum_totals
 - resolve_indexation_fragments
-  
+
     ```json
     {
         "fn": "process_result::resolve_indexation_fragments",
@@ -1008,8 +1047,21 @@ other functions defined:
 !!! note
     see  ../dedalo/publication/server_api/v1/common/class.process_result.php file descriptions for every method.
 
+## Thesarurs
 
+To work with the thesaurus, there is a series of specific calls that facilitate operations and queries that would be very complex to do using only the records request.
 
+The thesaurus can be a single table or a group of tables defined in the API server configuration, or in each request, on the fly.
+
+### /reel_terms
+
+Method: **POST**
+
+The request to 'reel_terms' returns the resolution of all terms used in indexing a transcript. This is useful, for example, to know which terms are referred to throughout an interview. 
+
+A 'reel' is every row of the 'audiovisual' table. An interview ('interview' table) can refer to several 'reels'.
+
+The transcription information is always contained in the column named 'rsc36' named like this because it is the type of the real component that hosts it in Daedalus
 
 ### /fragment_from_index_locator
 
