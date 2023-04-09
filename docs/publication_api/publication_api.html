@@ -630,11 +630,13 @@ If you have a interview with two audiovisuals, yo will have a portal named <code
 <p>!!! warning Security
 All calls did to API are filtered and analyzed by server processes to avoid SQL injection. Any call is directly processed by database. Diffusion API is defined to be easy to use and understand and the calls maintain similar SQL syntax, but thinking in security all calls are filtered before will send to database.</p>
 
-<p>Properties of records:</p>
+<h4 id="parametersforrecordscalls">Parameters for records calls</h4>
+
+<hr />
 
 <h4 id="code">code</h4>
 
-<p>Authorization code (mandatory) <code>string</code></p>
+<p>Authorization code <code>string</code> <strong>Mandatory</strong></p>
 
 <h4 id="db_name">db_name</h4>
 
@@ -642,7 +644,7 @@ All calls did to API are filtered and analyzed by server processes to avoid SQL 
 
 <h4 id="table">table</h4>
 
-<p>Table name in the database (mandatory) <code>string</code></p>
+<p>Table name in the database <code>string</code> <strong>Mandatory</strong></p>
 
 <h4 id="are_fields">are_fields</h4>
 
@@ -1200,7 +1202,7 @@ Request:</p>
 <p>!!! note
 see ../dedalo/publication/server_api/v1/common/class.process_result.php file descriptions for every method.</p>
 
-<h2 id="thesarurs">Thesarurs</h2>
+<h2 id="thesaurus">Thesaurus</h2>
 
 <p>To work with the thesaurus, there is a series of specific calls that facilitate operations and queries that would be very complex to do using only the records request.</p>
 
@@ -1214,9 +1216,364 @@ see ../dedalo/publication/server_api/v1/common/class.process_result.php file des
 
 <p>A &#8216;reel&#8217; is every row of the &#8216;audiovisual&#8217; table. An interview (&#8216;interview&#8217; table) can refer to several &#8216;reels&#8217;.</p>
 
-<p>The transcription information is always contained in the column named &#8216;rsc36&#8217; named like this because it is the type of the real component that hosts it in Daedalus</p>
+<p>The transcription information is always contained in the column named &#8216;rsc36&#8217; named like this because it is the type of the real component that hosts it in Dédalo.</p>
+
+<h4 id="parametersforreel_termscalls">Parameters for reel_terms calls</h4>
+
+<hr />
+
+<ul>
+<li><p><strong>code</strong></p>
+
+<p>Authorization code <code>string</code> <strong>Mandatory</strong>
+see <a href="#code">code</a></p></li>
+<li><p><strong>db_name</strong></p>
+
+<p>Database name. If not defined, the default database will be used <code>string</code><br />
+see <a href="#db_name">db_name</a></p></li>
+<li><p><strong>lang</strong></p>
+
+<p>Defines the lang of the data.<br />
+see <a href="#lang">lang</a></p></li>
+</ul>
+
+<h4 id="av_section_id">av_section_id</h4>
+
+<p>Defines the section_id for the table audiovisual to be resolved.</p>
+
+<p>Request:</p>
+
+<pre><code class="api_request">https://my_domain.org/dedalo/publication/server_api/v1/json/records?code=XXX&amp;db_name=my_database&amp;table=informant&amp;av_section_id=1
+</code></pre>
+
+<p>Response:</p>
+
+<pre><code class="json">{
+  &quot;result&quot;: [
+    {
+      &quot;term_id&quot;: &quot;aa1_115&quot;,
+      &quot;term&quot;: &quot;War&quot;,
+      &quot;locators&quot;: [
+        {
+          &quot;type&quot;: &quot;dd96&quot;,
+          &quot;tag_id&quot;: &quot;71&quot;,
+          &quot;section_id&quot;: &quot;1&quot;,
+          &quot;section_tipo&quot;: &quot;rsc167&quot;,
+          &quot;component_tipo&quot;: &quot;rsc36&quot;,
+          &quot;section_top_id&quot;: &quot;1&quot;,
+          &quot;section_top_tipo&quot;: &quot;oh1&quot;,
+          &quot;from_component_tipo&quot;: &quot;hierarchy40&quot;
+        },
+        {
+          &quot;type&quot;: &quot;dd96&quot;,
+          &quot;tag_id&quot;: &quot;90&quot;,
+          &quot;section_id&quot;: &quot;1&quot;,
+          &quot;section_tipo&quot;: &quot;rsc167&quot;,
+          &quot;component_tipo&quot;: &quot;rsc36&quot;,
+          &quot;section_top_id&quot;: &quot;1&quot;,
+          &quot;section_top_tipo&quot;: &quot;oh1&quot;,
+          &quot;from_component_tipo&quot;: &quot;hierarchy40&quot;
+        }
+      ]
+    }
+  ]
+}
+</code></pre>
+
+<p>Every locator in the response is a fragment of the audiovisual (an indexation of the transcription, a moment of the interview that one person talk about any theme) to get the video and transcription text and it could resolve using fragment_from_index_locator publication API call.</p>
 
 <h3 id="fragment_from_index_locator">/fragment_from_index_locator</h3>
+
+<p>Method: <strong>POST</strong></p>
+
+<p>Build a fragment of text and video indexed with the index locator requested.</p>
+
+<p>A fragment is a piece of the transcription indexed by users and related to one or more thesaurus terms. The request sent a locator and publication API will return the fragment with the text of transcription and the audiovisual file with the tc in and tc out to be cut.</p>
+
+<h4 id="parametersforfragment_from_index_locatorcalls">Parameters for fragment_from_index_locator calls</h4>
+
+<hr />
+
+<ul>
+<li><p><strong>code</strong></p>
+
+<p>Authorization code <code>string</code> <strong>Mandatory</strong>
+see <a href="#code">code</a></p></li>
+<li><p><strong>db_name</strong></p>
+
+<p>Database name. If not defined, the default database will be used <code>string</code><br />
+see <a href="#db_name">db_name</a></p></li>
+<li><p><strong>lang</strong></p>
+
+<p>Defines the lang of the data.<br />
+see <a href="#lang">lang</a></p></li>
+</ul>
+
+<h4 id="fragment_terms">fragment_terms</h4>
+
+<p>Calculate index tag intersections with current text fragment <code>bool</code></p>
+
+<p>When is set to true, add the terms found to the result.</p>
+
+<pre><code class="api_request">https://my_domain.org/dedalo/publication/server_api/v1/json/records?code=XXX&amp;db_name=my_database&amp;table=informant&amp;index_locator={&quot;type&quot;:&quot;dd96&quot;,&quot;tag_id&quot;:&quot;71&quot;,&quot;section_id&quot;:&quot;1&quot;,&quot;section_tipo&quot;:&quot;rsc167&quot;,&quot;component_tipo&quot;:&quot;rsc36&quot;,&quot;section_top_id&quot;:&quot;1&quot;,&quot;section_top_tipo&quot;:&quot;oh1&quot;,&quot;from_component_tipo&quot;:&quot;hierarchy40&quot;}&amp;fragment_terms=true
+</code></pre>
+
+<p>Response:</p>
+
+<pre><code class="json">{
+    &quot;fragm&quot;: &quot;&lt;strong&gt;text fragment of the transcription.&lt;/strong&gt; in html format&quot;,
+    &quot;video_url&quot;: &quot;/dedalo/media/av/404/rsc35_rsc167_1.mp4?vbegin=732&amp;vend=869&quot;,
+    &quot;posterframe_url&quot;: &quot;/dedalo/media/av/posterframe/rsc35_rsc167_1.jpg&quot;,
+    &quot;posterframe_tag_url&quot;: &quot;/dedalo/media/av/posterframe/rsc35_rsc167_1/rsc35_rsc167_1_71.jpg&quot;,
+    &quot;subtitles_url&quot;: &quot;/dedalo/lib/dedalo/publication/server_api/v1/subtitles/?section_id=1&amp;lang=lg-spa&amp;tc_in=732.047&amp;tc_out=869&quot;,
+    &quot;tcin_secs&quot;: 732.047,
+    &quot;tcout_secs&quot;: 869,
+    &quot;fragment_terms_inside&quot;: {
+      &quot;ts1_90&quot;: &quot;Child Games&quot;
+    },
+    &quot;terms&quot;: [
+      {
+        &quot;table&quot;: &quot;ts_onomastic&quot;,
+        &quot;term_id&quot;: &quot;on1_28&quot;,
+        &quot;term&quot;: &quot;Postwar and dictatorship&quot;
+      },
+      {
+        &quot;table&quot;: &quot;ts_thematics&quot;,
+        &quot;term_id&quot;: &quot;ts1_115&quot;,
+        &quot;term&quot;: &quot;Nutrition&quot;
+      }
+    ]
+}
+</code></pre>
+
+<h4 id="index_locator">index_locator</h4>
+
+<p>Locator of the audiovisual transcription <code>object</code> <strong>Mandatory</strong></p>
+
+<p>In certain contexts, we can know the indexing locator (for example with the result of the &#8216;reel_terms&#8217; request) If we know the indexing locator we can extract the fragment of the interview that was indexed with the locator.</p>
+
+<p>The &#8216;fragment&#8217; returned will contain the selection of the text of the indexed transcript, as well as the url of the video fragment and subtitles as the information of the start and end times of the fragment (tc in / tc out )</p>
+
+<p>Request:</p>
+
+<pre><code class="api_request">https://my_domain.org/dedalo/publication/server_api/v1/json/records?code=XXX&amp;db_name=my_database&amp;table=informant&amp;index_locator={&quot;type&quot;:&quot;dd96&quot;,&quot;tag_id&quot;:&quot;71&quot;,&quot;section_id&quot;:&quot;1&quot;,&quot;section_tipo&quot;:&quot;rsc167&quot;,&quot;component_tipo&quot;:&quot;rsc36&quot;,&quot;section_top_id&quot;:&quot;1&quot;,&quot;section_top_tipo&quot;:&quot;oh1&quot;,&quot;from_component_tipo&quot;:&quot;hierarchy40&quot;}
+</code></pre>
+
+<pre><code class="json">{
+  &quot;result&quot;: {
+    &quot;fragm&quot;: &quot;&lt;strong&gt;text fragment of the transcription.&lt;/strong&gt; in html format&quot;,
+    &quot;video_url&quot;: &quot;/dedalo/media/av/404/rsc35_rsc167_1.mp4?vbegin=732&amp;vend=869&quot;,
+    &quot;posterframe_url&quot;: &quot;/dedalo/media/av/posterframe/rsc35_rsc167_1.jpg&quot;,
+    &quot;posterframe_tag_url&quot;: &quot;/dedalo/media/av/posterframe/rsc35_rsc167_1/rsc35_rsc167_1_71.jpg&quot;,
+    &quot;subtitles_url&quot;: &quot;/dedalo/lib/dedalo/publication/server_api/v1/subtitles/?section_id=1&amp;lang=lg-spa&amp;tc_in=732.047&amp;tc_out=869&quot;,
+    &quot;tcin_secs&quot;: 732.047,
+    &quot;tcout_secs&quot;: 869,
+    &quot;index_locator&quot;: {
+        &quot;type&quot;: &quot;dd96&quot;,
+        &quot;tag_id&quot;: &quot;71&quot;,
+        &quot;section_id&quot;: &quot;1&quot;,
+        &quot;section_tipo&quot;: &quot;rsc167&quot;,
+        &quot;component_tipo&quot;: &quot;rsc36&quot;,
+        &quot;section_top_id&quot;: &quot;1&quot;,
+        &quot;section_top_tipo&quot;: &quot;oh1&quot;,
+        &quot;from_component_tipo&quot;: &quot;hierarchy40&quot;
+    },
+  &quot;msg&quot;: &quot;Request done successfully&quot;
+}
+</code></pre>
+
+<p>To cut the audiovisual file you only need to add the video_url parameter into html5 video tag.</p>
+
+<h3 id="thesaurus_root_list">/thesaurus_root_list</h3>
+
+<p>Method: <strong>POST</strong></p>
+
+<p>The request will return the main terms, first level, of the thesaurus.</p>
+
+<p>Return an array of &#8216;ts_term&#8217; objects with resolved data.</p>
+
+<p>!!! note
+This functionality requires that all thesaurus tables follow the same schema. Besides, the root terms will be considered the xx1_1 terms. To able work you must configure your Dédalo thesaurus data in this way.</p>
+
+<pre><code>For example, for thesaurus 'Themes' with tld 'ts' must be exists a root term 'Themes' with section_id 1. This will be publish as term_id 'ts1_1' to be discoverable by the API.
+</code></pre>
+
+<p>This call is used to get the main terms to build a thesaurus view. The call without parameters will return the first level of the hierarchy, and is possible to define witch thesaurus will returned.</p>
+
+<h4 id="parametersforthesaurus_root_list">Parameters for thesaurus_root_list</h4>
+
+<hr />
+
+<ul>
+<li><p><strong>code</strong></p>
+
+<p>Authorization code <code>string</code> <strong>Mandatory</strong>
+see <a href="#code">code</a></p></li>
+<li><p><strong>db_name</strong></p>
+
+<p>Database name. If not defined, the default database will be used <code>string</code><br />
+see <a href="#db_name">db_name</a></p></li>
+<li><p><strong>lang</strong></p>
+
+<p>Defines the lang of the data.<br />
+see <a href="#lang">lang</a></p></li>
+</ul>
+
+<h4 id="table">table</h4>
+
+<p>Defines the table/s of the data. <code>string || string sequence</code> <strong>Optional</strong></p>
+
+<p>You can defines the thesaurus table or a comma separated names of multiple thesaurus tables. If the parameter is undefined, publication API will use server config <a href="./server_config_api.md#setting-the-thesaurus-table-map">thesaurus tables</a>.</p>
+
+<h4 id="parents">parents</h4>
+
+<p>Defines the root parent/s <code>string</code> <strong>Optional</strong></p>
+
+<p>Sometimes you will need to define specific starting points or parents, rather than main level. This can be done with the &#8216;parents&#8217; parameter, adding the desired terms separated by &#8216;,&#8217;:</p>
+
+<p>Request</p>
+
+<pre><code class="api_request">https://my_domain.org/dedalo/publication/server_api/v1/json/thesaurus_root_list?code=XXX&amp;db_name=my_database&amp;parents=hierarchy1_245,hierarchy1_253
+</code></pre>
+
+<p>Response:</p>
+
+<pre><code class="json">{
+  &quot;result&quot;: {
+    &quot;hp1&quot;: [
+      {
+        &quot;term_id&quot;: &quot;hp1_3&quot;,
+        &quot;term&quot;: &quot;Second Republic&quot;,
+        &quot;scope_note&quot;: &quot;&quot;,
+        &quot;indexation&quot;: [
+          {
+            &quot;type&quot;: &quot;dd96&quot;,
+            &quot;tag_id&quot;: &quot;39&quot;,
+            &quot;section_id&quot;: &quot;7&quot;,
+            &quot;section_tipo&quot;: &quot;rsc167&quot;,
+            &quot;component_tipo&quot;: &quot;rsc36&quot;,
+            &quot;section_top_id&quot;: &quot;5&quot;,
+            &quot;section_top_tipo&quot;: &quot;oh1&quot;,
+            &quot;from_component_tipo&quot;: &quot;hierarchy40&quot;
+          }
+        ],
+        &quot;time&quot;: &quot;&quot;,
+        &quot;space&quot;: {
+          &quot;alt&quot;: 16,
+          &quot;lat&quot;: &quot;39.462571&quot;,
+          &quot;lon&quot;: &quot;-0.376295&quot;,
+          &quot;zoom&quot;: 15
+        },
+        &quot;lang&quot;: &quot;lg-eng&quot;,
+        &quot;options&quot;: {},
+        &quot;highlight&quot;: null,
+        &quot;table&quot;: &quot;periodos&quot;,
+        &quot;parent_term&quot;: null,
+        &quot;section_id&quot;: &quot;3&quot;,
+        &quot;tld&quot;: &quot;hp1&quot;,
+        &quot;model&quot;: null,
+        &quot;parent&quot;: [
+          &quot;hp1_1&quot;
+        ],
+        &quot;childrens&quot;: null,
+        &quot;norder&quot;: &quot;0&quot;,
+        &quot;ar_childrens&quot;: []
+      },
+      {
+        &quot;term_id&quot;: &quot;hp1_25&quot;,
+        &quot;term&quot;: &quot;Civil War&quot;,
+        &quot;scope_note&quot;: &quot;&quot;,
+        &quot;indexation&quot;: null,
+        &quot;time&quot;: &quot;&quot;,
+        &quot;space&quot;: {
+          &quot;alt&quot;: 16,
+          &quot;lat&quot;: &quot;39.462571&quot;,
+          &quot;lon&quot;: &quot;-0.376295&quot;,
+          &quot;zoom&quot;: 12
+        },
+        &quot;lang&quot;: &quot;lg-eng&quot;,
+        &quot;options&quot;: {},
+        &quot;highlight&quot;: null,
+        &quot;table&quot;: &quot;periodos&quot;,
+        &quot;parent_term&quot;: null,
+        &quot;section_id&quot;: &quot;25&quot;,
+        &quot;tld&quot;: &quot;hp1&quot;,
+        &quot;model&quot;: null,
+        &quot;parent&quot;: [
+          &quot;hp1_1&quot;
+        ],
+        &quot;childrens&quot;: null,
+        &quot;norder&quot;: &quot;1&quot;,
+        &quot;ar_childrens&quot;: []
+      }
+    ]
+  }
+}
+</code></pre>
+
+<h4 id="exclude_tld">exclude_tld</h4>
+
+<p>Comma separated list of tld to be exclude like &#8216;xx,rt&#8217; in the call. <code>string</code> <strong>Optional</strong></p>
+
+<h3 id="thesaurus_random_term">/thesaurus_random_term</h3>
+
+<p>This request returns a random term from the thesaurus.</p>
+
+<p>You can define the source thesaurus table(s) of the term and exclude unwanted terms.</p>
+
+<p>Used to generate a random reference term in a thematic search to show different results to the visitor every time to visit the website, showing different terms every time seems that the page was changed.</p>
+
+<h4 id="parametersforthesaurus_random_term">Parameters for thesaurus_random_term</h4>
+
+<hr />
+
+<ul>
+<li><p><strong>code</strong></p>
+
+<p>Authorization code <code>string</code> <strong>Mandatory</strong>
+see <a href="#code">code</a></p></li>
+<li><p><strong>db_name</strong></p>
+
+<p>Database name. If not defined, the default database will be used <code>string</code><br />
+see <a href="#db_name">db_name</a></p></li>
+<li><p><strong>lang</strong></p>
+
+<p>Defines the lang of the data.<br />
+see <a href="#lang">lang</a></p></li>
+<li><p><strong>table</strong></p>
+
+<p>Defines the table/s of the data.
+see <a href="#table-1">table</a></p></li>
+<li><p><strong>exclude_tld</strong></p>
+
+<p>Defines the table/s of the data.
+see <a href="#exclude_tld">exclude_tld</a></p></li>
+</ul>
+
+<p>Request</p>
+
+<pre><code class="api_request">https://my_domain.org/dedalo/publication/server_api/v1/json/thesaurus_random_term?code=XXX&amp;db_name=my_database
+</code></pre>
+
+<p>Response:</p>
+
+<pre><code class="json">{
+  &quot;term&quot;: &quot;Playing&quot;,
+  &quot;term_id&quot;: &quot;aa1_90&quot;,
+  &quot;indexation&quot;: [
+    {
+      &quot;type&quot;: &quot;dd96&quot;,
+      &quot;tag_id&quot;: &quot;15&quot;,
+      &quot;section_id&quot;: &quot;1&quot;,
+      &quot;section_tipo&quot;: &quot;rsc167&quot;,
+      &quot;component_tipo&quot;: &quot;rsc36&quot;,
+      &quot;section_top_id&quot;: &quot;1&quot;,
+      &quot;section_top_tipo&quot;: &quot;oh1&quot;,
+      &quot;from_component_tipo&quot;: &quot;hierarchy40&quot;
+    }
+  ]
+}
+</code></pre>
 
 <h3 id="thesaurus_children">/thesaurus_children</h3>
 
