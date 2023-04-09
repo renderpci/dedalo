@@ -34,8 +34,9 @@ Only the name of the town. The name and all his parents (all administrative hier
 
 So you can create different fields in the publication database with different data:
 
+| field | value|
 | --- | --- |
-| toponymy    | Valencia |
+| toponymy | Valencia |
 | with_parents | Valencia, València, Valencia/Valéncia, Comunitat Valenciana, Spain |
 | toponymy_county | Valencia, Spain |
 | toponymy_model | Valencia, Municipality |
@@ -43,12 +44,14 @@ So you can create different fields in the publication database with different da
 
 If you need search by community ("Comunitat Valenciana") instead the municipality, so, you can do it searching in the field "with_parents", but if you need add one point to map, you will need to  use the geo data, so, you can define to add it to the resolution:
 
+| field | value|
 | --- | --- |
 | toponymy | Valencia |
 | geo | `{"alt":16,"lat":39.469860091745815,"lon":-0.3764533996582032,"zoom":12}` |
 
 Or you will need to link the term and his parents with the thesaurus table and you can add his locators:
 
+| field | value|
 | --- | ---|
 | toponymy | Valencia |
 | data | `["es1_7242"]` |
@@ -67,6 +70,7 @@ Ontology defines some models to create a diffusion schema.
 
 Common models
 
+| model | definition|
 | --- | --- |
 | diffusion_domain | entity or tld group (main diffusion term) |
 | diffusion_element | group |
@@ -74,6 +78,7 @@ Common models
 
 For SQL:
 
+| model | definition|
 | --- | --- |
 | database | name of MariaDB / MySQL database |
 | database_alias | name of table in database (copy of schema of other database term ) |
@@ -92,6 +97,7 @@ For SQL:
 
 For RDF:
 
+| model | definition|
 | --- | --- |
 | external_ontologies | group of definitions (main  diffusion term) |
 | external_ontology   | definition of other ontology                |
@@ -557,7 +563,7 @@ Sample:
 
 ```json
 "sql_filter": "name = John"
-````
+```
 
 Request:
 
@@ -582,7 +588,7 @@ Defines the lang of the data.
 
 Dédalo is a multilingual system, every installation has his own language definition in his own configuration. The request to API will define the language that you want retrieve information. If this parameter is not defined publication API will get the default lang defined in [DEFAULT_LANG](./server_config_api.md#setting-the-default-lang-to-get-data) constant in server_config_api.php file.
 
-??? note Languages
+??? note "Languages"
     For the languages, Dédalo uses the pattern: `lg-xxx`
     lg : identify the term as language
     xxx : with the official tld of the ISO 639-6, Alpha-4 code for comprehensive coverage of language variants.
@@ -622,7 +628,7 @@ Request:
 
 ```api_request
 https://my_domain.org/dedalo/publication/server_api/v1/json/records?code=XXX&db_name=my_database&table=informant&order=name ASC, surname ASC
-````
+```
 
 Response:
 
@@ -637,10 +643,10 @@ Response:
         "nickname"      : "Pinxo",
         "birthdate"     : "1948-10-01",
         "birthplace"    : "Valencia",
-        "birthplace_id" : "["es1_7242"]",
+        "birthplace_id" : ["es1_7242"],
         "gender"        : "male",
         "location"      : null,
-        "location_id"   : null",
+        "location_id"   : null,
         "profession"    : "his profession",
         "dead_date"     : null,
         "dead_place"    : null,
@@ -657,10 +663,10 @@ Response:
         "nickname"      : "Johny",
         "birthdate"     : "1943-09-30",
         "birthplace"    : "Valencia",
-        "birthplace_id" : "["es1_7242"]",
+        "birthplace_id" : ["es1_7242"],
         "gender"        : "non binary",
         "location"      : "Valencina de la Concepción",
-        "location_id"   : "["es1_7248"]",
+        "location_id"   : ["es1_7248"],
         "profession"    : "writer",
         "dead_date"     : null,
         "dead_place"    : null,
