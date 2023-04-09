@@ -26,7 +26,7 @@ For example: if you want to show one city, you can choose how this data will be 
 
 Let me explain. Inside Dédalo a toponymy as Valencia is a thesaurus term with all administrative hierarchy:
 
-![valencia schema](assets/20230408_182510_valencia.png){: .small}
+![valencia schema](assets/20230408_182510_valencia.png){: .medium}
 
 Ontology definition to publish this toponymy could be configured to get:
 
@@ -34,26 +34,26 @@ Only the name of the town. The name and all his parents (all administrative hier
 
 So you can create different fields in the publication database with different data:
 
---- | ---
-toponymy    | Valencia
-with_parents | Valencia, València, Valencia/Valéncia, Comunitat Valenciana, Spain
-toponymy_county | Valencia, Spain
-toponymy_model | Valencia, Municipality
-etc | etc
+| --- | --- |
+| toponymy    | Valencia |
+| with_parents | Valencia, València, Valencia/Valéncia, Comunitat Valenciana, Spain |
+| toponymy_county | Valencia, Spain |
+| toponymy_model | Valencia, Municipality |
+| etc | etc |
 
 If you need search by community ("Comunitat Valenciana") instead the municipality, so, you can do it searching in the field "with_parents", but if you need add one point to map, you will need to  use the geo data, so, you can define to add it to the resolution:
 
---- | ---
-toponymy    | Valencia
-geo | `{"alt":16,"lat":39.469860091745815,"lon":-0.3764533996582032,"zoom":12}`
+| --- | --- |
+| toponymy | Valencia |
+| geo | `{"alt":16,"lat":39.469860091745815,"lon":-0.3764533996582032,"zoom":12}` |
 
 Or you will need to link the term and his parents with the thesaurus table and you can add his locators:
 
---- | ---
-toponymy    | Valencia
-data | `["es1_7242"]`
-with_parents | Valencia, València, Valencia/Valéncia, Comunitat Valenciana, Spain
-data_parents | `["es1_7242", "es1_8131","es1_8842", "es1_8858", "es1_1"]`
+| --- | ---|
+| toponymy | Valencia |
+| data | `["es1_7242"]` |
+| with_parents | Valencia, València, Valencia/Valéncia, Comunitat Valenciana, Spain |
+| data_parents | `["es1_7242", "es1_8131","es1_8842", "es1_8858", "es1_1"]` |
 
 The original data "Valencia" could be transformed into different fields to be used as needs without change the original data in PostgreSQL.
 
@@ -67,28 +67,28 @@ Ontology defines some models to create a diffusion schema.
 
 Common models
 
---- | ---
-diffusion_domain | entity or tld group (main diffusion term)
-diffusion_element | group
-diffusion_group | specific group
+| --- | --- |
+| diffusion_domain | entity or tld group (main diffusion term) |
+| diffusion_element | group |
+| diffusion_group | specific group |
 
 For SQL:
 
---- | ---
-database | name of MariaDB / MySQL database
-database_alias | name of table in database (copy of schema of other database term )
-table | name of table in database
-table_alias | name of table in database (copy of schema of other table term )
-field_boolean | bool field inside table in database
-field_date | timestamp field inside table in database
-field_decimal | float field inside table in database
-field_enum | enum field inside table in database
-field_int | in field inside table in database
-field_mediumtext | mediumtext field inside table in database
-field_point | mediumtext field inside table in database
-field_varchar | varchar field inside table in database
-field_text | text field inside table in database
-field_year | year field inside table in database
+| --- | --- |
+| database | name of MariaDB / MySQL database |
+| database_alias | name of table in database (copy of schema of other database term ) |
+| table | name of table in database |
+| table_alias | name of table in database (copy of schema of other table term ) |
+| field_boolean | bool field inside table in database |
+| field_date | timestamp field inside table in database |
+| field_decimal | float field inside table in database |
+| field_enum | enum field inside table in database |
+| field_int | in field inside table in database |
+| field_mediumtext | mediumtext field inside table in database |
+| field_point | mediumtext field inside table in database |
+| field_varchar | varchar field inside table in database |
+| field_text | text field inside table in database |
+| field_year | year field inside table in database |
 
 For RDF:
 
@@ -1433,6 +1433,22 @@ Response:
 }
 ```
 
+### /thesaurus_random_term
+
+Execute a search against thesaurus tables
+
+You can define the source thesaurus table(s) of the term and exclude unwanted terms.
+
+Used to generate a random reference term in a thematic search to show different results to the visitor every time to visit the website, showing different terms every time seems that the page was changed.
+
+#### Parameters for thesaurus_random_term
+
+---
+
+
+
 ### /thesaurus_children
 
 ### /thesaurus_term
+
+
