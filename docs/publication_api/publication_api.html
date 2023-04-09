@@ -630,6 +630,8 @@ If you have a interview with two audiovisuals, yo will have a portal named <code
 <p>!!! warning Security
 All calls did to API are filtered and analyzed by server processes to avoid SQL injection. Any call is directly processed by database. Diffusion API is defined to be easy to use and understand and the calls maintain similar SQL syntax, but thinking in security all calls are filtered before will send to database.</p>
 
+<p>Properties of records:</p>
+
 <h4 id="code">code</h4>
 
 <p>Authorization code (mandatory) <code>string</code></p>
@@ -737,7 +739,7 @@ Dédalo do not use classical primary key id of the databases to locate informati
 <pre><code class="api_request">https://my_domain.org/dedalo/publication/server_api/v1/json/records?code=XXX&amp;db_name=my_database&amp;table=informant&amp;sql_filter=&quot;name = John&quot;
 </code></pre>
 
-<pre><code class="json"> {
+<pre><code class="json">{
     &quot;table&quot;         : &quot;informant&quot;,
     &quot;section_id&quot;    : 1,
     &quot;lang&quot;          : &quot;lg-eng&quot;,
@@ -797,7 +799,7 @@ Set this parameter with <code>null</code> if you do not want sort.</p>
 <p>Response:</p>
 
 <pre><code class="json">[
-     {
+    {
         &quot;table&quot;         : &quot;informant&quot;,
         &quot;section_id&quot;    : 315,
         &quot;lang&quot;          : &quot;lg-eng&quot;,
@@ -859,7 +861,7 @@ Request:</p>
 <p>Response:</p>
 
 <pre><code class="json">{
-  &quot;result&quot;:  [
+&quot;result&quot;:  [
     {   
         &quot;table&quot;         : &quot;informant&quot;,
         &quot;section_id&quot;    : 1,
@@ -887,12 +889,12 @@ Request:</p>
 <p>If your request do not match to any record you will get <code>false</code> in total.</p>
 
 <pre><code class="json">{
-  &quot;result&quot;  : false,
-  &quot;msg&quot;     : &quot;Ok get rows_data done.&quot;,
-  &quot;total&quot;   : false,
-  &quot;debug&quot;   : {
+&quot;result&quot;  : false,
+&quot;msg&quot;     : &quot;Ok get rows_data done.&quot;,
+&quot;total&quot;   : false,
+&quot;debug&quot;   : {
     &quot;total_time&quot;: 0.001
-  }
+}
 }
 </code></pre>
 
@@ -1020,7 +1022,47 @@ Request:</p>
 
 <p>Request:</p>
 
-<pre><code class="api_request">https://my_domain.org/dedalo/publication/server_api/v1/json/records?code=XXX&amp;db_name=my_database&amp;table=informant&amp;resolve_portal=true
+<pre><code class="api_request">https://my_domain.org/dedalo/publication/server_api/v1/json/records?code=XXX&amp;db_name=my_database&amp;table=informant&amp;resolve_portals_custom={&quot;audiovisual&quot;:&quot;audiovisual&quot;,&quot;informant&quot;:&quot;informant&quot;}
+</code></pre>
+
+<p>Response:</p>
+
+<pre><code class="json">{
+    &quot;table&quot;         : &quot;interview&quot;,
+    &quot;section_id&quot;    : 1,
+    &quot;lang&quot;          : &quot;lg-spa&quot;,
+    &quot;publication&quot;   : &quot;yes&quot;,
+    &quot;audiovisual&quot;   : [
+        {
+            &quot;table&quot;         : &quot;audiovisual&quot;,
+            &quot;section_id&quot;    : 1,
+            &quot;lang&quot;          : &quot;lg-spa&quot;,
+            &quot;publication&quot;   : &quot;yes&quot;,
+            ...
+        }
+    ],
+    &quot;informant&quot;     :  [
+        {
+            &quot;table&quot;         : &quot;informant&quot;,
+            &quot;section_id&quot;    : 1,
+            &quot;lang&quot;          : &quot;lg-spa&quot;,
+            &quot;publication&quot;   : &quot;yes&quot;,
+            &quot;name&quot;          : &quot;John&quot;,
+            &quot;surname&quot;       : &quot;Doe&quot;
+            ...
+        },
+        {
+            &quot;table&quot;         : &quot;informant&quot;,
+            &quot;section_id&quot;    : 2,
+            &quot;lang&quot;          : &quot;lg-spa&quot;,
+            &quot;publication&quot;   : &quot;yes&quot;,
+            &quot;name&quot;          : &quot;Another&quot;,
+            &quot;surname&quot;       : &quot;Informant&quot;
+            ...
+        }
+    ],
+    ...
+}
 </code></pre>
 
 <h4 id="process_result">process_result</h4>
@@ -1034,12 +1076,12 @@ Request:</p>
 <p>If you request the birthplace of an informant you will get the name of the toponymy. But if you need the coordinates of the toponymy you could request this info in this way:</p>
 
 <pre><code class="json">{
-  &quot;fn&quot;: &quot;process_result::resolve_geolocation&quot;,
-  &quot;columns&quot;: [
+&quot;fn&quot;: &quot;process_result::resolve_geolocation&quot;,
+&quot;columns&quot;: [
     {
-      &quot;name&quot;: &quot;birthplace_id&quot;
+    &quot;name&quot;: &quot;birthplace_id&quot;
     }
-  ]
+]
 }
 </code></pre>
 
@@ -1053,69 +1095,69 @@ Request:</p>
 <p>Without process_result response:</p>
 
 <pre><code class="json">{
-  &quot;result&quot;: [
-    {
-      &quot;table&quot;           : &quot;informant&quot;,
-      &quot;section_id&quot;      : 133,
-      &quot;lang&quot;            : &quot;lg-spa&quot;,
-      &quot;publication&quot;     : &quot;yes&quot;,
-      &quot;birthplace&quot;      : &quot;Huelva, Huelva, Andalucía, Reino de España&quot;,
-      &quot;birthplace_id&quot;   : [ &quot;es1_3410&quot;],
-      ...
+    &quot;result&quot;: [
+        {
+        &quot;table&quot;           : &quot;informant&quot;,
+        &quot;section_id&quot;      : 133,
+        &quot;lang&quot;            : &quot;lg-spa&quot;,
+        &quot;publication&quot;     : &quot;yes&quot;,
+        &quot;birthplace&quot;      : &quot;Huelva, Huelva, Andalucía, Reino de España&quot;,
+        &quot;birthplace_id&quot;   : [ &quot;es1_3410&quot;],
+        ...
+        }
+    ],
+    &quot;msg&quot;: &quot;Ok get rows_data done. Ok exec_query done&quot;,
+    &quot;total&quot;: false,
+    &quot;debug&quot;: {
+        &quot;total_time&quot;: 0.002
     }
-  ],
-  &quot;msg&quot;: &quot;Ok get rows_data done. Ok exec_query done&quot;,
-  &quot;total&quot;: false,
-  &quot;debug&quot;: {
-    &quot;total_time&quot;: 0.002
-  }
 }
 </code></pre>
 
 <p>With process_result response:</p>
 
 <pre><code class="json">{
-  &quot;result&quot;: [
+&quot;result&quot;: [
     {
-      &quot;table&quot;           : &quot;informant&quot;,
-      &quot;section_id&quot;      : 133,
-      &quot;lang&quot;            : &quot;lg-spa&quot;,
-      &quot;publication&quot;     : &quot;yes&quot;,
-      &quot;birthplace&quot;      : &quot;Huelva, Huelva, Andalucía, Reino de España&quot;,
-      &quot;birthplace_id&quot;   : [
+    &quot;table&quot;           : &quot;informant&quot;,
+    &quot;section_id&quot;      : 133,
+    &quot;lang&quot;            : &quot;lg-spa&quot;,
+    &quot;publication&quot;     : &quot;yes&quot;,
+    &quot;birthplace&quot;      : &quot;Huelva, Huelva, Andalucía, Reino de España&quot;,
+    &quot;birthplace_id&quot;   : [
         {
-          &quot;layer_id&quot;: 1,
-          &quot;text&quot;: &quot;&quot;,
-          &quot;layer_data&quot;: {
+        &quot;layer_id&quot;: 1,
+        &quot;text&quot;: &quot;&quot;,
+        &quot;layer_data&quot;: {
             &quot;type&quot;: &quot;FeatureCollection&quot;,
             &quot;features&quot;: [
-              {
+            {
                 &quot;type&quot;: &quot;Feature&quot;,
                 &quot;properties&quot;: {},
                 &quot;geometry&quot;: {
-                  &quot;type&quot;: &quot;Point&quot;,
-                  &quot;coordinates&quot;: [
+                &quot;type&quot;: &quot;Point&quot;,
+                &quot;coordinates&quot;: [
                     -6.95040588,
                     37.26004113
-                  ]
+                ]
                 }
-              }
+            }
             ]
-          }
         }
-      ],
-      ...
+        }
+    ],
+    ...
     }
-  ],
-  &quot;msg&quot;: &quot;Ok get rows_data done. Ok exec_query done&quot;,
-  &quot;total&quot;: false,
-  &quot;debug&quot;: {
+],
+&quot;msg&quot;: &quot;Ok get rows_data done. Ok exec_query done&quot;,
+&quot;total&quot;: false,
+&quot;debug&quot;: {
     &quot;total_time&quot;: 0.002
-  }
+}
 }
 </code></pre>
 
-<p>other functions defined:</p>
+<p>Other functions defined:</p>
 
 <ul>
 <li><p>add_parents_and_children_recursive</p>
@@ -1157,6 +1199,22 @@ Request:</p>
 
 <p>!!! note
 see ../dedalo/publication/server_api/v1/common/class.process_result.php file descriptions for every method.</p>
+
+<h2 id="thesarurs">Thesarurs</h2>
+
+<p>To work with the thesaurus, there is a series of specific calls that facilitate operations and queries that would be very complex to do using only the records request.</p>
+
+<p>The thesaurus can be a single table or a group of tables defined in the API server configuration, or in each request, on the fly.</p>
+
+<h3 id="reel_terms">/reel_terms</h3>
+
+<p>Method: <strong>POST</strong></p>
+
+<p>The request to &#8216;reel_terms&#8217; returns the resolution of all terms used in indexing a transcript. This is useful, for example, to know which terms are referred to throughout an interview.</p>
+
+<p>A &#8216;reel&#8217; is every row of the &#8216;audiovisual&#8217; table. An interview (&#8216;interview&#8217; table) can refer to several &#8216;reels&#8217;.</p>
+
+<p>The transcription information is always contained in the column named &#8216;rsc36&#8217; named like this because it is the type of the real component that hosts it in Daedalus</p>
 
 <h3 id="fragment_from_index_locator">/fragment_from_index_locator</h3>
 
