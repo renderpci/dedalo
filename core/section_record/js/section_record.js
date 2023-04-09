@@ -415,6 +415,21 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 										console.log('current_data:', current_data);
 										console.log("self:", self);
 										console.groupEnd()
+
+										// const new_context = clone(current_ddo)
+
+										// const current_instance = await build_instance(
+										// 	self, // current section_record instance
+										// 	new_context, // edit context
+										// 	section_id, // current section_id
+										// 	current_data, // already calculated instance data
+										// 	current_column.id, // column id
+										// 	false // build autoload
+										// )
+
+										// // add built instance
+										// self.ar_instances.push(current_instance)
+
 										continue;
 									}
 
