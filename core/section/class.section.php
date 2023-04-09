@@ -192,6 +192,9 @@ class section extends common {
 			#global$TIMER;$TIMER[__METHOD__.'_' .$section_name.'_IN_'.$tipo.'_'.$mode.'_'.$section_id.'_'.start_time()]=start_time();
 		}
 
+		// uid
+			$this->uid = hrtime(true); // nanoseconds
+
 		// Set general vars
 			$this->lang			= DEDALO_DATA_NOLAN;
 			$this->section_id	= $section_id;

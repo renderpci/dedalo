@@ -368,6 +368,9 @@ abstract class component_common extends common {
 	*/
 	protected function __construct(string $tipo=null, $section_id=null, string $mode='edit', string $lang=DEDALO_DATA_LANG, string $section_tipo=null) {
 
+		// uid
+			$this->uid = hrtime(true); // nanoseconds
+
 		// tipo
 			if ( empty($tipo) ) {
 				$msg = "Component common: valid 'tipo' value is mandatory!";
