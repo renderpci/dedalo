@@ -96,6 +96,9 @@ abstract class common {
 		// data_source . string ('tm' for time machine source data)
 		public $data_source;
 
+		// uid. Unique id string
+		public $uid;
+
 		// required methods
 			// abstract protected function define_id($id);
 			// abstract protected function define_tipo();
