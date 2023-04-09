@@ -1,12 +1,30 @@
-site_name: Dédalo v6
+##
+## How to use:
+##
+## Install Python (brew or similar..)
+## Install mkdocs (binary_path/pip install mkdocs)
+##  https://www.mkdocs.org/getting-started/#installation
+## Install Material for MkDocs
+##  https://squidfunk.github.io/mkdocs-material/getting-started/
+## terminal run: cd current directory
+## terminal run: mkdocs build -v
+##
+##
+site_name: Dédalo Documentation
+# site_dir: use a git ignored directory, symlink of local Dédalo website doc folder
+site_dir: docs_site
 theme:
   name: material
+  logo: assets/images/dedalo_logo_white.svg
+  favicon: assets/favicon.ico
+  font: false
 
   features:
     - navigation.tracking
     - navigation.path
     - navigation.top
     - navigation.footer
+    - navigation.instant
     - content.code.copy
 
   palette:
@@ -17,7 +35,6 @@ theme:
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
-
     # Palette toggle for dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
@@ -51,6 +68,8 @@ extra:
   generator: false
 
 # repo_url: https://github.com/renderpci/dedalo
+
+copyright: DÉDALO. MANAGING CULTURAL HERITAGE ARCHIVES - <a href="https://dedalo.dev">dedalo.dev</a>
 
 extra_css:
   - additional_docs.css
