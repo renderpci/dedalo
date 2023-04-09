@@ -603,13 +603,13 @@ Changes:
 				  fixed correct output to tool_export
 - component_select : fixed correct output to tool_export
 - component_text_area : solved issue when button is not showed for link tag content from tool_portal
-- tool_upload : added default postprocessing create transcription when upload pdf media
+- tool_upload : added default post-processing create transcription when upload pdf media
 - tool_portal : added edit already existing portal links to enable, for example select a fragment when link is created in one user action (bibliography, etc..)
 - component_portal : fixed various issues related with refresh component in some context. Now centralized html_page page_globals engine is dedicated to manage components refresh
 - html_page : added centralized control / management of page components to refresh when new windows are open by tools etc
 - search : optimized 'current_edit' search . Removed count
 		   added always order by section_id clause to maintain pagination consistence over list and edit modes
-- tool_comom : adecuated to use html_page refresh components
+- tool_common : adequate to use html_page refresh components
 - config : add constant 'DEDALO_PDF_THUMB_DEFAULT' default value 'thumb' to store rendered pdf preview thumbs
 
 
