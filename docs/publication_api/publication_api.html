@@ -385,7 +385,7 @@ Publication server files are placed by default in Dédalo file structure at:</p>
 
 <p>You can view your specific configuration and open publication API user interface directly inside Dédalo, go to <code>Development</code> menu and locate <code>Publication server API</code>, to open it click into &#8220;Open Swagger UI&#8221;:</p>
 
-<p><img src="assets/20230408_212204_publication_api_access.png" alt="" />{: .medium}</p>
+<p><img src="assets/20230408_212204_publication_api_access.png" alt="API access" />{: .medium}</p>
 
 <p>You will see the Swagger interface ready to be used.</p>
 
@@ -707,10 +707,10 @@ Dédalo do not use classical primary key id of the databases to locate informati
         &quot;nickname&quot;      : &quot;Johny&quot;,
         &quot;birthdate&quot;     : &quot;1943-09-30&quot;,
         &quot;birthplace&quot;    : &quot;Valencia&quot;,
-        &quot;birthplace_id&quot; : &quot;[&quot;es1_7242&quot;]&quot;,
+        &quot;birthplace_id&quot; : [&quot;es1_7242&quot;],
         &quot;gender&quot;        : &quot;non binary&quot;,
         &quot;location&quot;      : &quot;Valencina de la Concepción&quot;,
-        &quot;location_id&quot;   : &quot;[&quot;es1_7248&quot;]&quot;,
+        &quot;location_id&quot;   : [&quot;es1_7248&quot;],
         &quot;profession&quot;    : &quot;writer&quot;,
         &quot;dead_date&quot;     : null,
         &quot;dead_place&quot;    : null,
@@ -876,9 +876,9 @@ Request:</p>
         &quot;surname&quot;       : &quot;Informant&quot;
         ...
     }
-    &quot;msg&quot;: &quot;Ok get rows_data done. Ok exec_query done&quot;,
-    &quot;total&quot;: 2,
-    &quot;debug&quot;: {
+    &quot;msg&quot;   : &quot;Ok get rows_data done. Ok exec_query done&quot;,
+    &quot;total&quot; : 2,
+    &quot;debug&quot; : {
         &quot;total_time&quot;: 0.001
     }
 }
@@ -887,10 +887,10 @@ Request:</p>
 <p>If your request do not match to any record you will get <code>false</code> in total.</p>
 
 <pre><code class="json">{
-  &quot;result&quot;: false,
-  &quot;msg&quot;: &quot;Ok get rows_data done.&quot;,
-  &quot;total&quot;: false,
-  &quot;debug&quot;: {
+  &quot;result&quot;  : false,
+  &quot;msg&quot;     : &quot;Ok get rows_data done.&quot;,
+  &quot;total&quot;   : false,
+  &quot;debug&quot;   : {
     &quot;total_time&quot;: 0.001
   }
 }
@@ -901,6 +901,262 @@ Request:</p>
 <p>Activates automatic resolution of portals. <code>bool</code></p>
 
 <p>Default <code>false</code></p>
+
+<p>When resolve portal is set to <code>true</code> the request will use the publication_schema of defined in diffusion_element. The data of the fields / columns that has the relation to other tables will be resolved automatically and will send the resolve rows instead the section_id in the fields. The option is use to resolve relations in one call, the portal will be get the destination data and will send as data of the portal field.</p>
+
+<p>Portals stored the relation to other tables as array of section_id.</p>
+
+<p>For example the fields audiovisual and informant are portals of the table interview:</p>
+
+<p>Request:</p>
+
+<pre><code class="api_request">https://my_domain.org/dedalo/publication/server_api/v1/json/records?code=XXX&amp;db_name=my_database&amp;table=informant&amp;resolve_portal=false
+</code></pre>
+
+<p>Response:</p>
+
+<pre><code class="json">{
+    &quot;table&quot;         : &quot;interview&quot;,
+    &quot;section_id&quot;    : 1,
+    &quot;lang&quot;          : &quot;lg-spa&quot;,
+    &quot;publication&quot;   : &quot;yes&quot;,
+    &quot;audiovisual&quot;   : [&quot;1&quot;],
+    &quot;informant&quot;     : [&quot;1&quot;,&quot;2&quot;],
+    ...
+}
+</code></pre>
+
+<p>When you request a interview you will get these portals with array of section_id. But if server has a <a href="#publication_schema">publication_schema</a> defined in this way:</p>
+
+<pre><code class="json">&quot;publication_schema&quot;:{
+    &quot;image&quot;         : &quot;image&quot;,
+    &quot;audiovisual&quot;   : &quot;audiovisual&quot;,
+    &quot;informant&quot;     : &quot;informant&quot;,
+    &quot;images&quot;        : &quot;image&quot;
+}
+</code></pre>
+
+<p>and <code>resolve_portal</code> is set to <code>true</code></p>
+
+<p>Request:</p>
+
+<pre><code class="api_request">https://my_domain.org/dedalo/publication/server_api/v1/json/records?code=XXX&amp;db_name=my_database&amp;table=informant&amp;resolve_portal=true
+</code></pre>
+
+<p>The request will get the informant data and the audiovisual data in this way:</p>
+
+<pre><code class="json">{
+    &quot;table&quot;         : &quot;interview&quot;,
+    &quot;section_id&quot;    : 1,
+    &quot;lang&quot;          : &quot;lg-spa&quot;,
+    &quot;publication&quot;   : &quot;yes&quot;,
+    &quot;audiovisual&quot;   : [
+        {
+            &quot;table&quot;         : &quot;audiovisual&quot;,
+            &quot;section_id&quot;    : 1,
+            &quot;lang&quot;          : &quot;lg-spa&quot;,
+            &quot;publication&quot;   : &quot;yes&quot;,
+            ...
+        }
+    ],
+    &quot;informant&quot;     :  [
+        {
+            &quot;table&quot;         : &quot;informant&quot;,
+            &quot;section_id&quot;    : 1,
+            &quot;lang&quot;          : &quot;lg-spa&quot;,
+            &quot;publication&quot;   : &quot;yes&quot;,
+            &quot;name&quot;          : &quot;John&quot;,
+            &quot;surname&quot;       : &quot;Doe&quot;
+            ...
+        },
+        {
+            &quot;table&quot;         : &quot;informant&quot;,
+            &quot;section_id&quot;    : 2,
+            &quot;lang&quot;          : &quot;lg-spa&quot;,
+            &quot;publication&quot;   : &quot;yes&quot;,
+            &quot;name&quot;          : &quot;Another&quot;,
+            &quot;surname&quot;       : &quot;Informant&quot;
+            ...
+        }
+    ],
+    ...
+}
+</code></pre>
+
+<p>The main idea is get deep data in one request.</p>
+
+<h4 id="resolve_portals_custom">resolve_portals_custom</h4>
+
+<p>Resolve requested portals only. <code>object</code></p>
+
+<p>In the same way that resolve portal, this property is use to get related data, but it will not use the publication_schema set in diffusion_element. Publication API will use your own schema definition.</p>
+
+<p>Example:</p>
+
+<pre><code class="json">{
+    &quot;audiovisual&quot; : &quot;audiovisual&quot;,
+    &quot;informant&quot;   : &quot;informant&quot;
+}
+</code></pre>
+
+<p>Where key is column name and value is target table.</p>
+
+<pre><code class="json">{
+    &quot;column&quot; : &quot;table&quot;
+}
+</code></pre>
+
+<p>An is possible to resolve deeper, using the two properties in this way:</p>
+
+<pre><code class="json">{
+    &quot;column&quot;        : &quot;table&quot;,
+    &quot;table.column2&quot; : &quot;table2&quot;
+}
+</code></pre>
+
+<p>The column is resolve with table, and the column in the target table is resolve in table2.</p>
+
+<p><code>column -&gt; table -&gt; table.column2 -&gt; table2</code></p>
+
+<p>Request:</p>
+
+<pre><code class="api_request">https://my_domain.org/dedalo/publication/server_api/v1/json/records?code=XXX&amp;db_name=my_database&amp;table=informant&amp;resolve_portal=true
+</code></pre>
+
+<h4 id="process_result">process_result</h4>
+
+<p>Resolve a column/s of the request with specific function. <code>object</code></p>
+
+<p>Process some data in column to get a different result instead the value in the publication. Used to manage very specific scenarios where records call its not enough.</p>
+
+<p>For example this parameter could be used to resolve geo-location information of toponymy column.</p>
+
+<p>If you request the birthplace of an informant you will get the name of the toponymy. But if you need the coordinates of the toponymy you could request this info in this way:</p>
+
+<pre><code class="json">{
+  &quot;fn&quot;: &quot;process_result::resolve_geolocation&quot;,
+  &quot;columns&quot;: [
+    {
+      &quot;name&quot;: &quot;birthplace_id&quot;
+    }
+  ]
+}
+</code></pre>
+
+<p>The publication API will apply the function <code>resolve_geolocation</code> to the data in <code>birthplace_id</code> field, and the result will be sent in the same <code>birthplace_id</code> property.</p>
+
+<p>Request:</p>
+
+<pre><code class="api_request">https://my_domain.org/dedalo/publication/server_api/v1/json/records?code=XXX&amp;db_name=my_database&amp;table=informant&amp;process_result={&quot;fn&quot;:&quot;process_result::resolve_geolocation&quot;,&quot;columns&quot;:[{&quot;name&quot;:&quot;birthplace_id&quot;}]}
+</code></pre>
+
+<p>Without process_result response:</p>
+
+<pre><code class="json">{
+  &quot;result&quot;: [
+    {
+      &quot;table&quot;           : &quot;informant&quot;,
+      &quot;section_id&quot;      : 133,
+      &quot;lang&quot;            : &quot;lg-spa&quot;,
+      &quot;publication&quot;     : &quot;yes&quot;,
+      &quot;birthplace&quot;      : &quot;Huelva, Huelva, Andalucía, Reino de España&quot;,
+      &quot;birthplace_id&quot;   : [ &quot;es1_3410&quot;],
+      ...
+    }
+  ],
+  &quot;msg&quot;: &quot;Ok get rows_data done. Ok exec_query done&quot;,
+  &quot;total&quot;: false,
+  &quot;debug&quot;: {
+    &quot;total_time&quot;: 0.002
+  }
+}
+</code></pre>
+
+<p>With process_result response:</p>
+
+<pre><code class="json">{
+  &quot;result&quot;: [
+    {
+      &quot;table&quot;           : &quot;informant&quot;,
+      &quot;section_id&quot;      : 133,
+      &quot;lang&quot;            : &quot;lg-spa&quot;,
+      &quot;publication&quot;     : &quot;yes&quot;,
+      &quot;birthplace&quot;      : &quot;Huelva, Huelva, Andalucía, Reino de España&quot;,
+      &quot;birthplace_id&quot;   : [
+        {
+          &quot;layer_id&quot;: 1,
+          &quot;text&quot;: &quot;&quot;,
+          &quot;layer_data&quot;: {
+            &quot;type&quot;: &quot;FeatureCollection&quot;,
+            &quot;features&quot;: [
+              {
+                &quot;type&quot;: &quot;Feature&quot;,
+                &quot;properties&quot;: {},
+                &quot;geometry&quot;: {
+                  &quot;type&quot;: &quot;Point&quot;,
+                  &quot;coordinates&quot;: [
+                    -6.95040588,
+                    37.26004113
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ],
+      ...
+    }
+  ],
+  &quot;msg&quot;: &quot;Ok get rows_data done. Ok exec_query done&quot;,
+  &quot;total&quot;: false,
+  &quot;debug&quot;: {
+    &quot;total_time&quot;: 0.002
+  }
+}
+</code></pre>
+
+<p>other functions defined:</p>
+
+<ul>
+<li><p>add_parents_and_children_recursive</p>
+
+<pre><code class="json">{
+    &quot;fn&quot;: &quot;process_result::add_parents_and_children_recursive&quot;,
+    &quot;columns&quot;: [
+        {
+        &quot;name&quot;: &quot;parents&quot;
+        }
+    ]
+}
+</code></pre>
+
+<p>Used in numisdata catalog tree to create the records hierarchy in server side</p></li>
+<li><p>add_parents_or_children</p></li>
+<li><p>break_down_totals</p>
+
+<pre><code class="json">{
+    &quot;fn&quot;: &quot;process_result::break_down_totals&quot;,
+    &quot;base_column&quot;: &quot;term_id&quot;,
+    &quot;total_column&quot;: &quot;total&quot;
+}
+</code></pre>
+
+<p>Used for example to split interview informants place of birth when more than one informant or place exists</p></li>
+<li><p>sum_totals</p></li>
+<li><p>resolve_indexation_fragments</p>
+
+<pre><code class="json">{
+    &quot;fn&quot;: &quot;process_result::resolve_indexation_fragments&quot;,
+    &quot;column&quot;: &quot;indexation&quot;,
+    &quot;fragment_terms&quot;: false
+}
+</code></pre>
+
+<p>Used to auto-resolve indexation column values of &#8220;exhibitions&#8221; table in qdp</p></li>
+</ul>
+
+<p>!!! note
+see ../dedalo/publication/server_api/v1/common/class.process_result.php file descriptions for every method.</p>
 
 <h3 id="fragment_from_index_locator">/fragment_from_index_locator</h3>
 

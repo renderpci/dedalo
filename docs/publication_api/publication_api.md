@@ -190,7 +190,7 @@ The documentation API user interface is accessible in the path:
 
 You can view your specific configuration and open publication API user interface directly inside Dédalo, go to `Development` menu and locate `Publication server API`, to open it click into "Open Swagger UI":
 
-![](assets/20230408_212204_publication_api_access.png){: .medium}
+![API access](assets/20230408_212204_publication_api_access.png){: .medium}
 
 You will see the Swagger interface ready to be used.
 
@@ -309,6 +309,7 @@ Response:
   ]
 }
 ```
+
 ### /publication_schema
 
 Method: **GET**
@@ -528,10 +529,10 @@ Response:
         "nickname"      : "Johny",
         "birthdate"     : "1943-09-30",
         "birthplace"    : "Valencia",
-        "birthplace_id" : "["es1_7242"]",
+        "birthplace_id" : ["es1_7242"],
         "gender"        : "non binary",
         "location"      : "Valencina de la Concepción",
-        "location_id"   : "["es1_7248"]",
+        "location_id"   : ["es1_7248"],
         "profession"    : "writer",
         "dead_date"     : null,
         "dead_place"    : null,
@@ -570,7 +571,6 @@ https://my_domain.org/dedalo/publication/server_api/v1/json/records?code=XXX&db_
     ...
 }
 ```
-
 
 #### lang
 
@@ -671,7 +671,7 @@ Response:
 
 Custom records offset for query `int`
 
-Used to do pagination between rows in combination with `limit`. When you request has more rows than limit definition, you can specify the offset of the pagination to get other portion of the rows. 
+Used to do pagination between rows in combination with `limit`. When you request has more rows than limit definition, you can specify the offset of the pagination to get other portion of the rows.
 
 #### count
 
@@ -705,9 +705,9 @@ Response:
         "surname"       : "Informant"
         ...
     }
-    "msg": "Ok get rows_data done. Ok exec_query done",
-    "total": 2,
-    "debug": {
+    "msg"   : "Ok get rows_data done. Ok exec_query done",
+    "total" : 2,
+    "debug" : {
         "total_time": 0.001
     }
 }
@@ -717,10 +717,10 @@ If your request do not match to any record you will get `false` in total.
 
 ```json
 {
-  "result": false,
-  "msg": "Ok get rows_data done.",
-  "total": false,
-  "debug": {
+  "result"  : false,
+  "msg"     : "Ok get rows_data done.",
+  "total"   : false,
+  "debug"   : {
     "total_time": 0.001
   }
 }
@@ -731,6 +731,285 @@ If your request do not match to any record you will get `false` in total.
 Activates automatic resolution of portals. `bool`
 
 Default `false`
+
+When resolve portal is set to `true` the request will use the publication_schema of defined in diffusion_element. The data of the fields / columns that has the relation to other tables will be resolved automatically and will send the resolve rows instead the section_id in the fields. The option is use to resolve relations in one call, the portal will be get the destination data and will send as data of the portal field.
+
+Portals stored the relation to other tables as array of section_id.
+
+For example the fields audiovisual and informant are portals of the table interview:
+
+Request:
+
+```api_request
+https://my_domain.org/dedalo/publication/server_api/v1/json/records?code=XXX&db_name=my_database&table=informant&resolve_portal=false
+```
+
+Response:
+
+```json
+{
+    "table"         : "interview",
+    "section_id"    : 1,
+    "lang"          : "lg-spa",
+    "publication"   : "yes",
+    "audiovisual"   : ["1"],
+    "informant"     : ["1","2"],
+    ...
+}
+```
+
+When you request a interview you will get these portals with array of section_id. But if server has a [publication_schema](#publication_schema) defined in this way:
+
+```json
+"publication_schema":{
+    "image"         : "image",
+    "audiovisual"   : "audiovisual",
+    "informant"     : "informant",
+    "images"        : "image"
+}
+```
+
+and `resolve_portal` is set to `true`
+
+Request:
+
+```api_request
+https://my_domain.org/dedalo/publication/server_api/v1/json/records?code=XXX&db_name=my_database&table=informant&resolve_portal=true
+```
+
+
+The request will get the informant data and the audiovisual data in this way:
+
+```json
+{
+    "table"         : "interview",
+    "section_id"    : 1,
+    "lang"          : "lg-spa",
+    "publication"   : "yes",
+    "audiovisual"   : [
+        {
+            "table"         : "audiovisual",
+            "section_id"    : 1,
+            "lang"          : "lg-spa",
+            "publication"   : "yes",
+            ...
+        }
+    ],
+    "informant"     :  [
+        {
+            "table"         : "informant",
+            "section_id"    : 1,
+            "lang"          : "lg-spa",
+            "publication"   : "yes",
+            "name"          : "John",
+            "surname"       : "Doe"
+            ...
+        },
+        {
+            "table"         : "informant",
+            "section_id"    : 2,
+            "lang"          : "lg-spa",
+            "publication"   : "yes",
+            "name"          : "Another",
+            "surname"       : "Informant"
+            ...
+        }
+    ],
+    ...
+}
+```
+
+The main idea is get deep data in one request.
+
+#### resolve_portals_custom
+
+Resolve requested portals only. `object`
+
+In the same way that resolve portal, this property is use to get related data, but it will not use the publication_schema set in diffusion_element. Publication API will use your own schema definition.
+
+Example:
+
+```json
+{
+    "audiovisual" : "audiovisual",
+    "informant"   : "informant"
+}
+```
+
+Where key is column name and value is target table.
+
+```json
+{
+    "column" : "table"
+}
+```
+
+An is possible to resolve deeper, using the two properties in this way:
+
+```json
+{
+    "column"        : "table",
+    "table.column2" : "table2"
+}
+```
+
+The column is resolve with table, and the column in the target table is resolve in table2.
+
+`column -> table -> table.column2 -> table2`
+
+
+Request:
+
+```api_request
+https://my_domain.org/dedalo/publication/server_api/v1/json/records?code=XXX&db_name=my_database&table=informant&resolve_portal=true
+```
+
+#### process_result
+
+Resolve a column/s of the request with specific function. `object`
+
+Process some data in column to get a different result instead the value in the publication. Used to manage very specific scenarios where records call its not enough.
+
+For example this parameter could be used to resolve geo-location information of toponymy column.
+
+If you request the birthplace of an informant you will get the name of the toponymy. But if you need the coordinates of the toponymy you could request this info in this way:
+
+```json
+{
+  "fn": "process_result::resolve_geolocation",
+  "columns": [
+    {
+      "name": "birthplace_id"
+    }
+  ]
+}
+```
+
+The publication API will apply the function `resolve_geolocation` to the data in `birthplace_id` field, and the result will be sent in the same `birthplace_id` property.
+
+Request:
+
+```api_request
+https://my_domain.org/dedalo/publication/server_api/v1/json/records?code=XXX&db_name=my_database&table=informant&process_result={"fn":"process_result::resolve_geolocation","columns":[{"name":"birthplace_id"}]}
+```
+
+Without process_result response:
+
+```json
+{
+  "result": [
+    {
+      "table"           : "informant",
+      "section_id"      : 133,
+      "lang"            : "lg-spa",
+      "publication"     : "yes",
+      "birthplace"      : "Huelva, Huelva, Andalucía, Reino de España",
+      "birthplace_id"   : [ "es1_3410"],
+      ...
+    }
+  ],
+  "msg": "Ok get rows_data done. Ok exec_query done",
+  "total": false,
+  "debug": {
+    "total_time": 0.002
+  }
+}
+```
+
+
+With process_result response:
+
+```json
+{
+  "result": [
+    {
+      "table"           : "informant",
+      "section_id"      : 133,
+      "lang"            : "lg-spa",
+      "publication"     : "yes",
+      "birthplace"      : "Huelva, Huelva, Andalucía, Reino de España",
+      "birthplace_id"   : [
+        {
+          "layer_id": 1,
+          "text": "",
+          "layer_data": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "type": "Feature",
+                "properties": {},
+                "geometry": {
+                  "type": "Point",
+                  "coordinates": [
+                    -6.95040588,
+                    37.26004113
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ],
+      ...
+    }
+  ],
+  "msg": "Ok get rows_data done. Ok exec_query done",
+  "total": false,
+  "debug": {
+    "total_time": 0.002
+  }
+}
+```
+
+
+other functions defined:
+
+- add_parents_and_children_recursive
+  
+    ```json
+    {
+        "fn": "process_result::add_parents_and_children_recursive",
+        "columns": [
+            {
+            "name": "parents"
+            }
+        ]
+    }
+    ```
+
+    Used in numisdata catalog tree to create the records hierarchy in server side
+
+- add_parents_or_children
+- break_down_totals
+  
+    ```json
+    {
+        "fn": "process_result::break_down_totals",
+        "base_column": "term_id",
+        "total_column": "total"
+    }
+    ```
+
+    Used for example to split interview informants place of birth when more than one informant or place exists 
+
+- sum_totals
+- resolve_indexation_fragments
+  
+    ```json
+    {
+        "fn": "process_result::resolve_indexation_fragments",
+        "column": "indexation",
+        "fragment_terms": false
+    }
+    ```
+
+    Used to auto-resolve indexation column values of "exhibitions" table in qdp 
+
+!!! note
+    see  ../dedalo/publication/server_api/v1/common/class.process_result.php file descriptions for every method.
+
+
+
 
 ### /fragment_from_index_locator
 
