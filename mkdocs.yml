@@ -1,6 +1,17 @@
+##
+## How to use:
+##
+## Install Python (brew or similar..)
+## Install mkdocs (binary_path/pip install mkdocs)
+##  https://www.mkdocs.org/getting-started/#installation
+## Install Material for MkDocs
+##  https://squidfunk.github.io/mkdocs-material/getting-started/
+## terminal run: cd current directory
+## terminal run: mkdocs build -v
+##
+##
 site_name: Dédalo Documentation
-# site_dir: use a git ignored directory, alias of local Dédalo website doc folder
-# site_dir: ../../../../web_projects/web_dedalo/doc
+# site_dir: use a git ignored directory, symlink of local Dédalo website doc folder
 site_dir: docs_site
 theme:
   name: material
@@ -57,6 +68,8 @@ extra:
   generator: false
 
 # repo_url: https://github.com/renderpci/dedalo
+
+copyright: DÉDALO. MANAGING CULTURAL HERITAGE ARCHIVES - <a href="https://dedalo.dev">dedalo.dev</a>
 
 extra_css:
   - additional_docs.css
