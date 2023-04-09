@@ -85,8 +85,9 @@ class component_geolocation extends component_common {
 	* SET_DATO
 	* @param array|null $dato
 	* 	Dato now is multiple. Because this, expected type is array
+	* @return bool
 	*/
-	public function set_dato($dato) {
+	public function set_dato($dato) : bool {
 
 		// JSON encoded dato case
 		if (is_string($dato)) {
@@ -99,7 +100,7 @@ class component_geolocation extends component_common {
 			$dato = [$dato];
 		}
 
-		parent::set_dato( (array)$dato );
+		return parent::set_dato( (array)$dato );
 	}//end set_dato
 
 

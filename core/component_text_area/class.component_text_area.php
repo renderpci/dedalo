@@ -124,7 +124,7 @@ class component_text_area extends component_common {
 	*	but in some cases can be an array JSON encoded or some rare times as plain string
 	* @return bool
 	*/
-	public function set_dato($dato) {
+	public function set_dato($dato) : bool {
 
 		if (is_string($dato)) { // Tool Time machine case, dato is string
 
@@ -163,7 +163,8 @@ class component_text_area extends component_common {
 		}
 		$dato = $safe_dato;
 
-		parent::set_dato( (array)$dato );
+
+		return parent::set_dato( (array)$dato );
 	}//end set_dato
 
 

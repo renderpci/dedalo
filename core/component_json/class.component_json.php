@@ -57,8 +57,9 @@ class component_json extends component_common {
 
 	/**
 	* SET_DATO
+	* @return bool
 	*/
-	public function set_dato($dato) {
+	public function set_dato($dato) : bool {
 
 		if (!empty($dato)) {
 
@@ -75,14 +76,13 @@ class component_json extends component_common {
 			}
 		}
 
-		parent::set_dato( $dato );
+		return parent::set_dato( $dato );
 	}//end set_dato
 
 
 
 	/**
 	* GET_VALOR
-	* @return
 	*/
 	public function get_valor() {
 		$dato  = $this->get_dato();

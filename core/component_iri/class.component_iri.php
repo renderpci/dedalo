@@ -56,9 +56,10 @@ class component_iri extends component_common {
 
 
 	/**
-	*  SET_DATO
+	* SET_DATO
+	* @return bool
 	*/
-	public function set_dato($dato) {
+	public function set_dato($dato) : bool {
 
 		if (is_string($dato)) { # Tool Time machine case, dato is string
 			$dato = json_handler::decode($dato);
@@ -71,7 +72,7 @@ class component_iri extends component_common {
 			#debug_log(__METHOD__." dato [$this->tipo,$this->parent] Type is ".gettype($dato)." -> ".to_string($dato), logger::ERROR);
 		}
 
-		parent::set_dato( (array)$dato );
+		return parent::set_dato( (array)$dato );
 	}//end set_dato
 
 

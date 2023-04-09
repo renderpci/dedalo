@@ -34,8 +34,9 @@ class component_security_access extends component_common {
 	/**
 	* SET_DATO
 	* @param array $dato
+	* @return bool
 	*/
-	public function set_dato($dato) {
+	public function set_dato($dato) : bool {
 
 		if (!is_array($dato)) {
 			if(empty($dato)) {

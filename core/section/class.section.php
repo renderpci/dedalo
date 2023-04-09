@@ -357,7 +357,7 @@ class section extends common {
 	* Fix section relations and components to prevent save issues
 	* @return bool true
 	*/
-	public function set_dato($dato) {
+	public function set_dato($dato) : bool {
 
 		// call common->set_dato (!) fix var 'bl_loaded_matrix_data' as true
 			$result = parent::set_dato($dato);
