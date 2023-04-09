@@ -451,7 +451,7 @@ This request is similar to a basic sql query but note that not all commands are 
 !!! warning Security
     All calls did to API are filtered and analyzed by server processes to avoid SQL injection. Any call is directly processed by database. Diffusion API is defined to be easy to use and understand and the calls maintain similar SQL syntax, but thinking in security all calls are filtered before will send to database.
 
-#### Parameters for records calls
+**Parameters:**
 
 ---
 
@@ -736,7 +736,7 @@ If your request do not match to any record you will get `false` in total.
 }
 ```
 
-### /resolve_portal
+#### resolve_portal
 
 Activates automatic resolution of portals. `bool`
 
@@ -1071,24 +1071,24 @@ A 'reel' is every row of the 'audiovisual' table. An interview ('interview' tabl
 
 The transcription information is always contained in the column named 'rsc36' named like this because it is the type of the real component that hosts it in Dédalo.
 
-#### Parameters for reel_terms calls
+**Parameters:**
 
 ---
 
-- **code**
+#### code
   
-    Authorization code `string`  **Mandatory**
-    see [code](#code)
+Authorization code `string`  **Mandatory**
+see [code](#code)
 
-- **db_name**
+#### db_name
   
-    Database name. If not defined, the default database will be used `string`  
-    see [db_name](#db_name)
+Database name. If not defined, the default database will be used `string`  
+see [db_name](#db_name)
 
-- **lang**
+#### lang
   
-    Defines the lang of the data.  
-    see [lang](#lang)
+Defines the lang of the data.  
+see [lang](#lang)
 
 #### av_section_id
 
@@ -1145,24 +1145,24 @@ Build a fragment of text and video indexed with the index locator requested.
 
 A fragment is a piece of the transcription indexed by users and related to one or more thesaurus terms. The request sent a locator and publication API will return the fragment with the text of transcription and the audiovisual file with the tc in and tc out to be cut.
 
-#### Parameters for fragment_from_index_locator calls
+**Parameters:**
 
 ---
 
-- **code**
+#### code
   
-    Authorization code `string`  **Mandatory**
-    see [code](#code)
+Authorization code `string`  **Mandatory**
+see [code](#code)
 
-- **db_name**
+#### db_name
   
-    Database name. If not defined, the default database will be used `string`  
-    see [db_name](#db_name)
+Database name. If not defined, the default database will be used `string`  
+see [db_name](#db_name)
 
-- **lang**
-  
-    Defines the lang of the data.  
-    see [lang](#lang)
+#### lang
+
+Defines the lang of the data.  
+see [lang](#lang)
 
 #### fragment_terms
 
@@ -1258,21 +1258,21 @@ Return an array of 'ts_term' objects with resolved data.
 
 This call is used to get the main terms to build a thesaurus view. The call without parameters will return the first level of the hierarchy, and is possible to define witch thesaurus will returned.
 
-#### Parameters for thesaurus_root_list
+**Parameters:**
 
 ---
 
-- **code**
+#### code
   
     Authorization code `string` **Mandatory**
     see [code](#code)
 
-- **db_name**
+#### db_name
   
     Database name. If not defined, the default database will be used `string`  
     see [db_name](#db_name)
 
-- **lang**
+#### lang
   
     Defines the lang of the data.  
     see [lang](#lang)
@@ -1383,34 +1383,34 @@ You can define the source thesaurus table(s) of the term and exclude unwanted te
 
 Used to generate a random reference term in a thematic search to show different results to the visitor every time to visit the website, showing different terms every time seems that the page was changed.
 
-#### Parameters for thesaurus_random_term
+**Parameters:**
 
 ---
 
-- **code**
+#### code
   
-    Authorization code `string` **Mandatory**
-    see [code](#code)
+Authorization code `string` **Mandatory**
+see [code](#code)
 
-- **db_name**
+#### db_name
   
-    Database name. If not defined, the default database will be used `string`  
-    see [db_name](#db_name)
+Database name. If not defined, the default database will be used `string`  
+see [db_name](#db_name)
 
-- **lang**
+#### lang
   
-    Defines the lang of the data.  
-    see [lang](#lang)
+Defines the lang of the data.  
+see [lang](#lang)
 
-- **table**
+#### table
   
-    Defines the table/s of the data. 
-    see [table](#table-1)
+Defines the table/s of the data. 
+see [table](#table-1)
 
-- **exclude_tld**
+#### exclude_tld
   
-    Defines the table/s of the data. 
-    see [exclude_tld](#exclude_tld)
+Defines the table/s of the data. 
+see [exclude_tld](#exclude_tld)
 
 Request
 
@@ -1447,7 +1447,7 @@ You can define the source thesaurus table(s) of the term and exclude unwanted te
 
 Used to generate a random reference term in a thematic search to show different results to the visitor every time to visit the website, showing different terms every time seems that the page was changed.
 
-#### Parameters for thesaurus_random_term
+**Parameters:**
 
 ---
 
