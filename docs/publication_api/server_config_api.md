@@ -1019,7 +1019,7 @@ Schema could resolve dd_relations fields in the same way, but in this case the v
 {
     "publication_schema":{
         "image"             : "image",
-        "identify_image"    : "image"
+        "identify_image"    : "image",
          "dd_relations": {
             "oh1"       : "interview",
             "rsc167"    : "audiovisual"

@@ -373,7 +373,7 @@ define('DEDALO_LOCALE', 'es-ES');
 
 ./dedalo/config/config.php
 
-Defines the default order fo the date input by users and to be showed in component_date. By default Dédalo use dmy (European dates formant).
+Defines the default order for the date input by users and to be showed in component_date. By default Dédalo use dmy (European dates format).
 
 Options:
 
@@ -657,7 +657,7 @@ include DEDALO_CORE_PATH . '/base/class.loader.php';
 
 ---
 
-### Dédalo backup on loggin
+### Dédalo backup on login
 
 ./dedalo/config/config.php
 
@@ -1026,7 +1026,7 @@ DEDALO_PREFIX_TIPOS `array`
 
 This parameter defines the ontology tipos to be used in the Dédalo installation.
 
-Every tipo (typology of indirect programming object) defines a heritage field, a data model, a structuring tools and definitions. Dédalo is a multi heritage application with ontologies for Archeology, Ethnology, Oral History, Numismatics, etc. Every project or institution can add any tipos that it demands. An archeologic museum will use the model for archeological catalogs, but it will not need the ethnological definitions. In the same way that Oral History project will don't use the archeological or numismatic definitions.
+Every tipo (typology of indirect programming object) defines a heritage field, a data model, a structuring tools and definitions. Dédalo is a multi heritage application with ontologies for Archeology, Ethnology, Oral History, Numismatics, etc. Every project or institution can add any tipos that it demands. An archaeologic museum will use the model for archeological catalogs, but it will not need the ethnological definitions. In the same way that Oral History project will don't use the archeological or numismatic definitions.
 
 By default Dédalo load some common tipos for all project types.
 
@@ -1043,7 +1043,7 @@ Besides, every installation can import the ontology tipo that will use in the in
 | --- | --- |
 | **oh** | Oral History, the definition sections and tools to be used for oral history projects such as interviews, transcription, indexation, etc. |
 | **ich** | Intangible Cultural Heritage, the definition sections and tools to use for intangible heritage, such as elements, processes, communities, symbolic acts, etc. |
-| **numisdata** | Numismatic heritage,  the definition sections and tools to use for numismatics projecte, such as mints, types, legends, hoards, finds, etc. |
+| **numisdata** | Numismatic heritage,  the definition sections and tools to use for numismatics project, such as mints, types, legends, hoards, finds, etc. |
 | **mupreva** | Archeological heritage, the definition of sections and tools to use for archeological heritage, such as archeological places, deposit, catalog, etc. |
 | **qdp** | Ethnological heritage, the definition of sections and tools to use for ethnological heritage, such as objects, collectors, informants, etc |
 | **dmm** | Memory and documentary heritage, the definition of sections and tools to be used for the heritage of memory, such as graves, deportees, exiles, tortured, etc. |
@@ -1467,7 +1467,7 @@ define('DEDALO_AV_SUBTITLES_EXTENSION', 'vtt');
 
 ---
 
-### Dédalo audiovisual recompress all uploaded files
+### Dédalo audiovisual re-compress all uploaded files
 
 ./dedalo/config/config.php
 
@@ -1987,7 +1987,7 @@ define('DEDALO_3D_QUALITY_ORIGINAL', 'original');
 
 ---
 
-### Dédalo 3d quality for procesed files
+### Dédalo 3d quality for processed files
 
 ./dedalo/config/config.php
 
@@ -2293,7 +2293,7 @@ DEDALO_GEO_PROVIDER `string`
 
 This parameter defines the tile maps provider to be used.
 
-The param can be change the provider to specific configurations, for ex, if you want to use the ancient roman map and the actual OSM map you can use the "NUMISDATA" provider that include both maps. values suported: OSM | ARCGIS | GOOGLE | VARIOUS | ARCGIS | NUMISDATA
+The param can be change the provider to specific configurations, for ex, if you want to use the ancient roman map and the actual OSM map you can use the "NUMISDATA" provider that include both maps. values supported: OSM | ARCGIS | GOOGLE | VARIOUS | ARCGIS | NUMISDATA
 
 ```php
 define('DEDALO_GEO_PROVIDER', 'VARIOUS');
@@ -2307,9 +2307,9 @@ define('DEDALO_GEO_PROVIDER', 'VARIOUS');
 
 DEDALO_ENTITY_MEDIA_AREA_TIPO `string`
 
-This parameter defines the media area tipo that will removed from the menu. This area is the ontolgy definiton for media files for the entity.
+This parameter defines the media area tipo that will removed from the menu. This area is the ontology definition for media files for the entity.
 
-By default Dédalo do not use this parameter because the default instalation use the standard media area for all media definitons. This parameter can be used by the entities to define his media model in the ontology for ex: mupreva260.
+By default Dédalo do not use this parameter because the default installation use the standard media area for all media definitions. This parameter can be used by the entities to define his media model in the ontology for ex: mupreva260.
 
 ```php
 define('DEDALO_ENTITY_MEDIA_AREA_TIPO', '');
@@ -2357,7 +2357,7 @@ DEDALO_SECTION_ID_TEMP `string`
 
 This parameter defines the section_id used to create temporal sections on the fly.
 
-Temporal sections are previous version of the section, created before it has a section_id asigned by the database counter. The temporal section_id identify those sections to be managed before that the section will saved into database.
+Temporal sections are previous version of the section, created before it has a section_id assigned by the database counter. The temporal section_id identify those sections to be managed before that the section will saved into database.
 
 ```php
 define('DEDALO_SECTION_ID_TEMP', 'tmp');
@@ -2413,7 +2413,7 @@ define('DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH', DEDALO_MEDIA_BASE_PATH . '/i
 
 DEDALO_LOCK_COMPONENTS `bool`
 
-This parameter defines if Dédalo will lock / unlock components to avoid replacement data when more than one user edit the same component or Dédalo do not manage the user edition unlocking all components. By default Dédalo do not manage the editons (false option).
+This parameter defines if Dédalo will lock / unlock components to avoid replacement data when more than one user edit the same component or Dédalo do not manage the user edition unlocking all components. By default Dédalo do not manage the editions (option false).
 
 ```php
 define('DEDALO_LOCK_COMPONENTS', false);
@@ -2435,7 +2435,7 @@ define('DEDALO_NOTIFICATIONS', false);
 
 ---
 
-### Dédalo protect media files for external acces
+### Dédalo protect media files for external access
 
 ./dedalo/config/config.php
 
@@ -2443,7 +2443,7 @@ DEDALO_PROTECT_MEDIA_FILES `bool`
 
 This parameter defines if the directory of the media files (av, images, pdf, ...) will be protected and controlled for undesired/external access.
 
-By default Dédalo do not close the access for media files because it can access by external web pages (false option), when the option is active (true) the direct acces to media files are avoided and only is possible acces by the internal system or the publication API .
+By default Dédalo do not close the access for media files because it can access by external web pages (false option), when the option is active (true) the direct access to media files are avoided and only is possible access by the internal system or the publication API .
 
 ```php
 define('DEDALO_PROTECT_MEDIA_FILES', false);
@@ -2479,7 +2479,7 @@ define('DEDALO_NODEJS_PM2', '/usr/bin/pm2');
 
 ---
 
-### Dédalo exclude compoents
+### Dédalo exclude components
 
 ./dedalo/config/config.php
 
@@ -2525,7 +2525,7 @@ define('GEONAMES_ACCOUNT_USERNAME', 'my_account');
 
 ---
 
-### Encription mode
+### Encryption mode
 
 ./dedalo/config/config.php
 
@@ -2626,7 +2626,7 @@ define('DIFFUSION_CUSTOM', DEDALO_LIB_BASE_PATH . false);
 
 ---
 
-### Seting the API web user code for multiple DDBB
+### Setting the API web user code for multiple DDBB
 
 ./dedalo/config/config.php
 
@@ -2701,7 +2701,7 @@ define('STRUCTURE_SERVER_URL', 'https://master.dedalo.dev/dedalo/lib/dedalo/extr
 
 STRUCTURE_DOWNLOAD_DIR `string`
 
-This parameter defines the directory to downolad the ontology files in the server.
+This parameter defines the directory to download the ontology files in the server.
 
 ```php
 define('STRUCTURE_DOWNLOAD_DIR', DEDALO_BACKUP_PATH_ONTOLOGY . '/download');
@@ -2735,10 +2735,10 @@ This parameter defines if the access to the master server will need to be access
 define('SERVER_PROXY', '192.0.0.1:3128');
 ```
 
-> In the string could add user and pasword as proxy needs. Ex: my_user:my_pw@192.0.0.1:3128
+> In the string could add user and password as proxy needs. Ex: my_user:my_pw@192.0.0.1:3128
 ---
 
-### Dédalo source verions uri
+### Dédalo source version uri
 
 ./dedalo/config/config.php
 
@@ -2786,7 +2786,7 @@ DEDALO_MAINTENANCE_MODE `bool`
 
 This parameter defines whether the maintenance mode is active or not.
 
-By default the maintenance mode is inactive (false). When it is active (true) only root user can login and all logged users will be forced to leave the sesion, the debugger will be activated and the logger will be changed from WARNING to DEBUG mode.
+By default the maintenance mode is inactive (false). When it is active (true) only root user can login and all logged users will be forced to leave the session, the debugger will be activated and the logger will be changed from WARNING to DEBUG mode.
 
 ```php
 define('DEDALO_MAINTENANCE_MODE', false);

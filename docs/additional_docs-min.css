@@ -20,6 +20,12 @@
 		background-color: transparent;
 		outline: 1px solid #ffffff69;
 	}
+	.md-search__form input::-webkit-input-placeholder {
+	    color: #fafafa;
+	}
+	.md-search__form input::-moz-placeholder {
+	    color: #fafafa;
+	}
 	.md-search__form input::placeholder {
 	    color: #fafafa;
 	}
