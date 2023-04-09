@@ -45,8 +45,9 @@ class component_filter_records extends component_common {
 	/**
 	* SET_DATO
 	* dato is object (from js json data) and set as array
+	* @return bool
 	*/
-	public function set_dato( $dato ) {
+	public function set_dato($dato) : bool {
 
 		if (is_string($dato)) { # Tool Time machine case, dato is string
 			$dato = json_handler::decode($dato);
@@ -55,7 +56,7 @@ class component_filter_records extends component_common {
 		#	$dato = array($dato);
 		#}
 
-		parent::set_dato( (array)$dato );
+		return parent::set_dato( (array)$dato );
 	}//end set_dato
 
 

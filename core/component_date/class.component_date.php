@@ -52,12 +52,14 @@ class component_date extends component_common {
 		// Force always DEDALO_DATA_NOLAN
 		$lang = DEDALO_DATA_NOLAN;
 
-		# Creamos el componente normalmente
+		// We create the component normally
 		parent::__construct($tipo, $parent, $mode, $lang, $section_tipo);
 
 		if(SHOW_DEBUG===true) {
 			if ($this->RecordObj_dd->get_traducible()==='si') {
-				debug_log(__METHOD__." Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is NOT 'traducible'. Please fix this ASAP ".to_string(), logger::ERROR);
+				debug_log(__METHOD__
+					." Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is NOT 'traducible'. Please fix this ASAP"
+					, logger::ERROR);
 			}
 		}
 	}//end __construct
@@ -132,8 +134,9 @@ class component_date extends component_common {
 
 	/**
 	* SET_DATO
+	* @return bool
 	*/
-	public function set_dato( $dato ) {
+	public function set_dato($dato) : bool {
 
 		if (is_string($dato)) {
 			$dato = json_decode($dato);
@@ -142,7 +145,7 @@ class component_date extends component_common {
 			$dato = array();
 		}
 
-		# Compatibility with version 4.0.14 to 4.7 dedalo instalations
+		# Compatibility with version 4.0.14 to 4.7 dedalo installations
 		if (is_object($dato) && !empty(get_object_vars($dato)) ) {
 			$safe_dato		= array();
 			$safe_dato[] 	= $dato;

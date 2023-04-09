@@ -69,8 +69,9 @@ class component_filter extends component_relation_common {
 
 	/**
 	* SET_DATO
+	* @return bool
 	*/
-	public function set_dato( $dato ) {
+	public function set_dato($dato) : bool {
 
 		// For safe compatibility backwards. Removed 08-02-2023 because is not needed in current version
 			// $dato = self::convert_dato_pre_490( $dato, $this->tipo );
@@ -148,6 +149,8 @@ class component_filter extends component_relation_common {
 
 	/**
 	* GET_DEFAULT_DATO_FOR_USER
+	* // TO DO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	* Acabar de definir el modelo final de default values (sección?, fichero?, virtuales?)
 	* @return array $default_dato
 	*/
 	public function get_default_dato_for_user(int $user_id) : array {

@@ -40,10 +40,11 @@ class component_password extends component_common {
 	* SET_DATO
 	* @param array|null $dato
 	* (!) do not encrypt this var
+	* @return bool
 	*/
-	public function set_dato($dato) {
+	public function set_dato($dato) : bool {
 
-		parent::set_dato( (array)$dato );
+		return parent::set_dato( (array)$dato );
 	}//end set_dato
 
 

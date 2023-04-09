@@ -127,8 +127,9 @@ class component_relation_parent extends component_relation_common {
 	* Don't use this method regularly, is preferable use 'add_parent' method for every new relation
 	* @param array|string $dato
 	*	When dato is string is because is a JSON encoded dato
+	* @return bool
 	*/
-	public function set_dato($dato) {
+	public function set_dato($dato) : bool {
 
 		// format check
 			if (is_string($dato)) { # Tool Time machine case, dato is string
@@ -196,7 +197,6 @@ class component_relation_parent extends component_relation_common {
 						break;
 				}
 			}
-
 
 			// $this->update_parents($dato);
 

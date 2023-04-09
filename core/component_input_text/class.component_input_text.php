@@ -25,8 +25,9 @@ class component_input_text extends component_common {
 	* @param array|null $dato
 	* 	Dato now is multiple. Because this, expected type is array
 	*	but in some cases can be an array JSON encoded or some rare times a plain string
+	* @return bool
 	*/
-	public function set_dato($dato) {
+	public function set_dato($dato) : bool {
 
 		// string case. (Tool Time machine case, dato is string)
 			if (is_string($dato)) {
@@ -37,7 +38,7 @@ class component_input_text extends component_common {
 				$dato_last_character	= substr($dato_trim, -1);
 
 				if ($dato_first_character==='[' && $dato_last_character===']') {
-					# dato is json encoded
+					# dato is JSON encoded
 					$dato = json_handler::decode($dato_trim);
 				}else{
 					# dato is string plain value
@@ -54,17 +55,17 @@ class component_input_text extends component_common {
 				#debug_log(__METHOD__." dato [$this->tipo,$this->parent] Type is ".gettype($dato)." -> ".to_string($dato), logger::ERROR);
 			}
 
-		$safe_dato=array();
-		foreach ((array)$dato as $key => $value) {
-			if (!is_string($value)) {
-				$safe_dato[] = to_string($value);
-			}else{
-				$safe_dato[] = $value;
+		// safe dato
+			$safe_dato = array();
+			foreach ((array)$dato as $value) {
+				$safe_dato[] = (!is_string($value))
+					? to_string($value)
+					: $value;
 			}
-		}
-		$dato = $safe_dato;
+			$dato = $safe_dato;
 
-		parent::set_dato( (array)$dato );
+
+		return parent::set_dato( (array)$dato );
 	}//end set_dato
 
 

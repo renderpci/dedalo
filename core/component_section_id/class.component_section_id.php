@@ -19,6 +19,42 @@ class component_section_id extends component_common {
 
 
 	/**
+	* SET_DATO
+	* @param int|null $dato
+	* @return bool
+	*/
+	public function set_dato($dato) : bool {
+
+		// dato format check
+			if (!is_null($dato) && !is_integer($dato)) {
+
+				debug_log(__METHOD__ . ' '
+					. '[SET] RECEIVED DATO IS NOT AS EXPECTED TYPE integer|null. type: '. gettype($dato) .' - dato: '. to_string($dato) . PHP_EOL
+					. 'model: '. get_called_class() .PHP_EOL
+					. 'tipo: ' . $this->tipo . ' - section_tipo: ' . $this->section_tipo . ' - section_id: ' . $this->section_id
+					, logger::ERROR
+				);
+
+			}
+
+		// unset previous calculated valor
+			if (isset($this->valor)) {
+				unset($this->valor);
+			}
+
+		// set dato
+			$this->dato = $dato;
+
+		// resolved set
+			$this->dato_resolved = $dato;
+
+
+		return true;
+	}//end get_dato
+
+
+
+	/**
 	* GET_VALOR
 	*/
 	public function get_valor() {

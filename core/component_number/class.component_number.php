@@ -47,21 +47,27 @@ class component_number extends component_common {
 
 	/**
 	* SET_DATO
+	* @return bool
 	*/
-	public function set_dato($dato) {
+	public function set_dato($dato) : bool {
 
-		$safe_dato=array();
-		foreach ((array)$dato as $key => $value) {
+		$safe_dato = array();
+		foreach ((array)$dato as  $value) {
 			if (is_null($value) || $value==='') {
 				$safe_dato[] = null;
 			}elseif (is_numeric($value)) {
 				$safe_dato[] = $this->set_format_form_type($value);
 			}else{
-				trigger_error("Invalid value! [component_number.set_dato] value: ".json_encode($value));
+				// trigger_error("Invalid value! [component_number.set_dato] value: ".json_encode($value));
+				debug_log(__METHOD__
+					." Invalid value! [component_number.set_dato] value: "
+					.to_string($value)
+					, logger::ERROR
+				);
 			}
 		}
 
-		parent::set_dato( $safe_dato );
+		return parent::set_dato( $safe_dato );
 	}//end set_dato
 
 

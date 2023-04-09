@@ -35,18 +35,19 @@ class component_email extends component_common {
 
 	/**
 	* SET_DATO
+	* @return bool
 	*/
-	public function set_dato($dato) {
+	public function set_dato($dato) : bool {
 
 		$safe_dato=array();
-		foreach ((array)$dato as $key => $value) {
+		foreach ((array)$dato as $value) {
 			$safe_dato[] = empty($value)
 				? $value
 				: component_email::clean_email($value);
 		}
 		$dato = $safe_dato;
 
-		parent::set_dato( (array)$dato );
+		return parent::set_dato( (array)$dato );
 	}//end set_dato
 
 

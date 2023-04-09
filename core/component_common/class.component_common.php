@@ -585,7 +585,7 @@ abstract class component_common extends common {
 	* @param array|null dato
 	* @return bool true
 	*/
-	public function set_dato($dato) {
+	public function set_dato($dato) : bool {
 
 		// dato format check
 			if (!is_null($dato) && !is_array($dato)) {

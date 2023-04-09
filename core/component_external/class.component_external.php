@@ -208,13 +208,14 @@ class component_external extends component_common {
 	*  SET_DATO
 	* @param array $dato
 	* 	Dato now is multiple. For this expected type is array
-	*	but in some cases can be an array json encoded or some rare times a plain string
+	*	but in some cases can be an array JSON encoded or some rare times a plain string
+	* @return bool
 	*/
-	public function set_dato($dato) {
+	public function set_dato($dato) : bool {
 
 		if (is_string($dato)) { # Tool Time machine case, dato is string
 			if (strpos($dato, '[')!==false) {
-				# dato is json encoded
+				# dato is JSON encoded
 				$dato = json_handler::decode($dato);
 			}else{
 				# dato is string plain value
@@ -229,7 +230,7 @@ class component_external extends component_common {
 		}
 
 		$safe_dato=array();
-		foreach ((array)$dato as $key => $value) {
+		foreach ((array)$dato as $value) {
 			if (!is_string($value)) {
 				$safe_dato[] = to_string($value);
 			}else{
@@ -238,7 +239,7 @@ class component_external extends component_common {
 		}
 		$dato = $safe_dato;
 
-		parent::set_dato( (array)$dato );
+		return parent::set_dato( (array)$dato );
 	}//end set_dato
 
 
