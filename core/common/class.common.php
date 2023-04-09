@@ -473,7 +473,7 @@ abstract class common {
 	* @param mixed dato
 	* @return bool true
 	*/
-	public function set_dato($dato) {
+	public function set_dato($dato) : bool {
 
 		// set
 		$this->dato = $dato;
