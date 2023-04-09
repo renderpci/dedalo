@@ -1,8 +1,8 @@
 {
   "swagger" : "2.0",
   "info" : {
-    "version" : "1.0.25",
-    "title" : "Dédalo Publication Server REST API 1.0.25",
+    "version" : "1.1.0",
+    "title" : "Dédalo V6 Publication Server REST API 1.1.0",
     "description" : "Builds Public Dédalo data for publication. Use this online tool to test your data, and remember to always enter your authentication code when running a test call. <br>This API is focused on Oral History files and is for general purpose. If you need special functions or custom results, you can join the API development team by contacting the source developers (also known as Alex & Paco) at webmaster@render.es ",
     "license" : {
       "name" : "Apache 2.0 license",
@@ -10,7 +10,7 @@
     },
     "contact" : {
       "name" : "Aditional Dédalo publication info",
-      "url" : "https://dedalo.dev/publication_api"
+      "url" : "https://dedalo.dev/docs/"
     }
   },
   "host" : "dedalo.render.es",
@@ -26,8 +26,6 @@
   }, {
     "name" : "Thesaurus",
     "description" : "Specific hierarchy and thesaurus functions"
-  }, {
-    "name" : "Thesaurus Legacy (Deprecated)"
   }, {
     "name" : "Free",
     "description" : "Search functions in transcription text"
@@ -249,12 +247,6 @@
           "required" : false,
           "type" : "string",
           "format" : "string"
-        }, {
-          "name" : "sql_fullselect",
-          "in" : "query",
-          "description" : "Custom sql select for builds query. Replaces any other columns or table selection option. i.e. 'SELECT mycolumn FROM mytable'",
-          "required" : false,
-          "type" : "string"
         }, {
           "name" : "sql_filter",
           "in" : "query",
@@ -595,68 +587,6 @@
         }
       }
     },
-    "/thesaurus_autocomplete" : {
-      "post" : {
-        "tags" : [ "Thesaurus Legacy (Deprecated)" ],
-        "summary" : "Predictive autocomplete search",
-        "description" : "Search string in database (begins with $q) and get array of max 25 records",
-        "parameters" : [ {
-          "$ref" : "#/parameters/code"
-        }, {
-          "$ref" : "#/parameters/db_name"
-        }, {
-          "$ref" : "#/parameters/lang"
-        }, {
-          "name" : "table",
-          "in" : "query",
-          "description" : "Optional comma separated names of thesaurus tables. If undefined, server config thesaurus tables are used",
-          "required" : false,
-          "type" : "string",
-          "format" : "string"
-        }, {
-          "name" : "q",
-          "in" : "query",
-          "description" : "string to search in database. Minimum 3 chars for full text search",
-          "required" : true,
-          "type" : "string",
-          "default" : "term"
-        }, {
-          "name" : "format",
-          "in" : "query",
-          "description" : "Result format ('full' for object including term_id and 'simple' for term plain text). Default is 'simple'",
-          "required" : false,
-          "type" : "string",
-          "default" : "simple"
-        }, {
-          "name" : "limit",
-          "in" : "query",
-          "description" : "Max number of records returned. Undefined uses default of 25",
-          "type" : "integer",
-          "format" : "int"
-        } ],
-        "responses" : {
-          "200" : {
-            "description" : "Successful response",
-            "schema" : {
-              "title" : "Array of records",
-              "type" : "array",
-              "items" : {
-                "title" : "Records info",
-                "type" : "object",
-                "properties" : {
-                  "name" : {
-                    "type" : "string"
-                  },
-                  "single" : {
-                    "type" : "boolean"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/thesaurus_term" : {
       "post" : {
         "tags" : [ "Thesaurus" ],
@@ -719,45 +649,6 @@
           "in" : "query",
           "description" : "Selects type of image to use. Values are 'identify_image', 'posterframe'. Default is posterframe",
           "type" : "string",
-          "required" : false
-        } ],
-        "responses" : {
-          "200" : {
-            "description" : "OK"
-          }
-        }
-      }
-    },
-    "/thesaurus_video_view_data" : {
-      "post" : {
-        "tags" : [ "Thesaurus Legacy (Deprecated)" ],
-        "summary" : "Video player data",
-        "description" : "Deprecated (!). Gets data needed to build video fragment",
-        "parameters" : [ {
-          "$ref" : "#/parameters/code"
-        }, {
-          "$ref" : "#/parameters/db_name"
-        }, {
-          "$ref" : "#/parameters/lang"
-        }, {
-          "name" : "term_id",
-          "in" : "query",
-          "description" : "Term id to get data like ts1_1",
-          "required" : true,
-          "type" : "string",
-          "default" : "ts1_1"
-        }, {
-          "name" : "ar_locators",
-          "in" : "query",
-          "description" : "JSON encoded array of locator objects like [{\"type\":\"dd96\",\"tag_id\":\"2\",\"section_id\":\"1\",\"section_tipo\":\"rsc167\",\"component_tipo\":\"rsc36\",\"section_top_id\":\"1\",\"section_top_tipo\":\"oh1\",\"from_component_tipo\":\"hierarchy40\"},{\"type\":\"dd96\",\"tag_id\":\"6\",\"section_id\":\"1\",\"section_tipo\":\"rsc167\",\"component_tipo\":\"rsc36\",\"section_top_id\":\"1\",\"section_top_tipo\":\"oh1\",\"from_component_tipo\":\"hierarchy40\"}]",
-          "type" : "string",
-          "required" : true,
-          "default" : "[{\"type\":\"dd96\",\"tag_id\":\"1\",\"section_id\":\"1\",\"section_tipo\":\"rsc167\",\"component_tipo\":\"rsc36\",\"section_top_id\":\"1\",\"section_top_tipo\":\"oh1\",\"from_component_tipo\":\"hierarchy40\"},{\"type\":\"dd96\",\"tag_id\":\"1\",\"section_id\":\"4\",\"section_tipo\":\"rsc167\",\"component_tipo\":\"rsc36\",\"section_top_id\":\"3\",\"section_top_tipo\":\"oh1\",\"from_component_tipo\":\"hierarchy40\"}]"
-        }, {
-          "name" : "ar_locators_key",
-          "in" : "query",
-          "description" : "current array key selector. Default is '0'",
-          "type" : "integer",
           "required" : false
         } ],
         "responses" : {
