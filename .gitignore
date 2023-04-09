@@ -24,7 +24,6 @@ config/*
 acc
 _acc
 des
-test
 .DS_Store
 .eslintrc
 .lesshintrc
@@ -37,6 +36,9 @@ test
 *.data
 .smbdelete*
 * copy.*
+test
+!/test
+
 
 # install/import/hierarchy
 str_data*
