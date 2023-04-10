@@ -26,7 +26,7 @@ For example: if you want to show one city, you can choose how this data will be 
 
 Let me explain. Inside Dédalo a toponymy as Valencia is a thesaurus term with all administrative hierarchy:
 
-![valencia schema](assets/20230408_182510_valencia.png){: .medium}
+![valencia schema](assets/20230408_182510_valencia.png){: .large}
 
 Ontology definition to publish this toponymy could be configured to get:
 
@@ -201,7 +201,7 @@ You can view your specific configuration and open publication API user interface
 You will see the Swagger interface ready to be used.
 
 !!! warning
-    If you have problems with getting data review the [public api configuration](server_config_api.md),and MariaDB / MySQl installation.
+    If you have problems with getting data review the [public api configuration](server_config_api.md),and MariaDB / MySQL installation.
 
 ![Server API UI](assets/20230408_213159_server_api_ui.png)
 
@@ -250,7 +250,7 @@ The GET 'tables_info' request returns information from all the existing tables i
 
 - interview: contains generic information on the interview, as well as links to the resources used in the itself (image, audiovisual, informant)
 - 'image': contains the data of the images associated with the interview (url, title, caption, description)
-- audiovisual: contains the data of the audiovisuals (recordings) at the level of ' tape', with the url of the video file, the transcription text, the duration, subtitles, etc. 
+- audiovisual: contains the data of the audiovisuals (recordings) at the level of ' tape', with the url of the video file, the transcription text, the duration, subtitles, etc.
 - 'informant': contains the data of the informants associated with the interviews (name, surname, year and place of birth, etc. )
 - interview: this table contains relationship columns to the image, audiovisual, and informant tables.
 
@@ -1037,7 +1037,7 @@ Other functions defined:
     }
     ```
 
-    Used for example to split interview informants place of birth when more than one informant or place exists 
+    Used for example to split interview informants place of birth when more than one informant or place exists.
 
 - sum_totals
 - resolve_indexation_fragments
@@ -1050,7 +1050,7 @@ Other functions defined:
     }
     ```
 
-    Used to auto-resolve indexation column values of "exhibitions" table in qdp 
+    Used to auto-resolve indexation column values of "exhibitions" table in qdp.
 
 !!! note
     see  ../dedalo/publication/server_api/v1/common/class.process_result.php file descriptions for every method.
@@ -1168,7 +1168,7 @@ see [lang](#lang)
 
 Calculate index tag intersections with current text fragment `bool`
 
-When is set to true, add the terms found to the result. 
+When is set to true, add the terms found to the result.
 
 ```api_request
 https://my_domain.org/dedalo/publication/server_api/v1/json/records?code=XXX&db_name=my_database&table=informant&index_locator={"type":"dd96","tag_id":"71","section_id":"1","section_tipo":"rsc167","component_tipo":"rsc36","section_top_id":"1","section_top_tipo":"oh1","from_component_tipo":"hierarchy40"}&fragment_terms=true
@@ -1264,18 +1264,18 @@ This call is used to get the main terms to build a thesaurus view. The call with
 
 #### code
   
-    Authorization code `string` **Mandatory**
-    see [code](#code)
+Authorization code `string` **Mandatory**
+see [code](#code)
 
 #### db_name
   
-    Database name. If not defined, the default database will be used `string`  
-    see [db_name](#db_name)
+Database name. If not defined, the default database will be used `string`  
+see [db_name](#db_name)
 
 #### lang
   
-    Defines the lang of the data.  
-    see [lang](#lang)
+Defines the lang of the data.  
+see [lang](#lang)
 
 #### table
 
@@ -1404,12 +1404,12 @@ see [lang](#lang)
 
 #### table
   
-Defines the table/s of the data. 
+Defines the table/s of the data.
 see [table](#table-1)
 
 #### exclude_tld
   
-Defines the table/s of the data. 
+Defines the table/s of the data.
 see [exclude_tld](#exclude_tld)
 
 Request
@@ -1439,7 +1439,7 @@ Response:
 }
 ```
 
-### /thesaurus_random_term
+### /thesaurus_search
 
 Execute a search against thesaurus tables
 
@@ -1451,10 +1451,697 @@ Used to generate a random reference term in a thematic search to show different 
 
 ---
 
+#### code
+  
+Authorization code `string` **Mandatory**
+see [code](#code)
 
+#### db_name
+  
+Database name. If not defined, the default database will be used `string`  
+see [db_name](#db_name)
+
+#### lang
+  
+Defines the lang of the data.  
+see [lang](#lang)
+
+#### table
+  
+Defines the table/s of the data.
+see [table](#table-1)
+
+#### exclude_tld
+  
+Defines the table/s of the data.
+see [exclude_tld](#exclude_tld)
+
+#### q
+
+To search term column in thesaurus database/s. `string` **Mandatory**
+
+By default q parameter will search in the `term` column of all thesaurus tables. Out the box the minimum characters for full text search is set to 3, but it's possible to change it in MariaDB / MySQL configuration, changing the [ft_min_word_len](https://dev.mysql.com/doc/refman/8.0/en/fulltext-fine-tuning.html#fulltext-word-length) parameter
+
+Returns a array of objects with the data of the records found in the thesaurus, including indexing data, his direct parent and his direct children in the hierarchy. It also returns the complete information of the recursive parents in order to be able to build the hierarchical path until reaching the root term of the thesaurus table.
+
+Request
+
+```api_request
+https://my_domain.org/dedalo/publication/server_api/v1/json/thesaurus_search?code=XXX&q=war
+```
+
+Response:
+
+```json
+{
+  "search_data": {
+    "result": [
+      {
+        "table": "ts_thematics",
+        "section_id": 26,
+        "lang": "lg-eng",
+        "publication": null,
+        "descriptor": "yes",
+        "tld": "ts1",
+        "term_id": "ts1_26",
+        "term": "Spanish Civil War",
+        "model": null,
+        "parent": ["ts1_1"],
+        "children": ["ts1_15","ts1_65"],
+        ...
+      }
+    ]
+  }
+}
+```
+
+#### rows_per_page
+
+Pagination preference. `int`
+
+By default one term /row per page. When user request a concept will lots of terms it can useful to create a page with the term and his context (parents, indexations) isolated of other terms founded.
+
+For deactivate the limit use 0.
+
+#### page_number
+
+Offset of the search `int`
+
+Used in combination with [rows_per_page](#rows_per_page) The parameter indicate the current page number. By default is set to 1.
+
+#### tree_root
+
+Defines first element from build the hierarchy tree when showing the results. `string`
+
+The accepted values of the parameter are: first_parent || last_parent. The default value is last_parent.
+
+```mermaid
+flowchart TD
+
+    %% Colors %%
+
+    classDef default fill:#dddddd,stroke:#000,stroke-width:0;
+    classDef orange fill:#FFAB70,stroke:#000,color:#000
+
+    A(Thematic) --> B
+    B(spanish Civil War) --> C(Working)
+    C --> D(Types of work)
+    D --> E(Domestic and cleaning services)
+    D --> F(Agriculture):::orange
+    D --> G(Sales)
+    D --> H(Housekeeping)
+```
+
+A search for the "Agriculture" with "last_parent" property, you will to get all hierarchy from Thematic -> spanish Civil War -> Types of work -> Agriculture
+
+But a search for the "Agriculture" with "first_parent" property, you will get only the direct parent of the term.
+
+```mermaid
+flowchart TD
+
+    %% Colors %%
+
+    classDef default fill:#dddddd,stroke:#000,stroke-width:0;
+    classDef orange fill:#FFAB70,stroke:#000,color:#000
+
+    A(Types of work) --> B(Agriculture):::orange
+```
+
+### /thesaurus_term
+
+Method: **POST**
+
+Get terms objects form thesaurus. Resolve one or more ts_term from ar_term_id.
+
+!!! note About **term_id**
+    term_id is a flat version of the Dédalo locator. It use section_tipo and section_id to identify the term. Example: ts1_55 is the same that standard locator:
+
+    ```json
+    {
+        "section_tipo"  : "ts1",
+        "section_id"    : 55
+    }
+    ```
+
+    - ts1: could mapped to table ts_thematic see [table_thesaurus_map](./server_config_api.md#setting-the-thesaurus-table-map) in server_congig_api.php file
+    - 55: indicate the id of the table (section_id)
+
+    !!! warning
+        For historical reasons the term_id nomenclature is maintained in the publication API, in the future version of this API will be changed to standard locator nomenclature.
+
+**Parameters:**
+
+---
+
+#### code
+  
+Authorization code `string` **Mandatory**
+see [code](#code)
+
+#### db_name
+  
+Database name. If not defined, the default database will be used `string`  
+see [db_name](#db_name)
+
+#### lang
+  
+Defines the lang of the data.  
+see [lang](#lang)
+
+#### ar_term_id
+
+term_id to be searched. `string || sequence string` **Mandatory**
+
+Defines the term_id to search, it could be multiple specifying a string sequence of term_id.
+
+Only one term_id: `ts1_55`
+
+Multiple term_id: `ts1_55,ts1_85,on1_154`
+
+Request
+
+```api_request
+https://my_domain.org/dedalo/publication/server_api/v1/json/thesaurus_term?code=XXX&ar_term_id=ts1_55
+```
+
+Response:
+
+```json
+{
+    "term_id": "ts1_55",
+    "term": "Education",
+    "descriptor": "yes",
+    "scope_note": null,
+    "indexation": null,
+    "time": null,
+    "space": null,
+    "lang": "lg-eng",
+    "options": {},
+    "highlight": null,
+    "table": "ts_thematic",
+    "ar_childrens": [
+        "hp1_3",
+        "hp1_25",
+        "hp1_26",
+        "hp1_6"
+    ]
+    "children": [
+        {"type":"dd48","section_id":"3","section_tipo":"ts1","from_component_tipo":"hierarchy49"},
+        {"type":"dd48","section_id":"25","section_tipo":"ts1","from_component_tipo":"hierarchy49"},
+        {"type":"dd48","section_id":"26","section_tipo":"ts1","from_component_tipo":"hierarchy49"},
+        {"type":"dd48","section_id":"6","section_tipo":"ts1","from_component_tipo":"hierarchy49"}
+        ]
+    ...
+}
+```
+
+#### combine
+
+Combined result mode. `bool` **(!) Experimental**
+
+When is set to combine will return only indexations with intersections. Options: false || combined. By default is set to `false`.
+
+Used to get terms in combination with other terms based of the indexation of the current term. It will search the used context of the term and will return other terms used in the same context, terms that has coincidences.
+
+### thesaurus_indexation_node
+
+Method: **POST**
+
+Gets indexation object with all required information.
+A request to thesaurus_indexation_node will build a indexation_node with all fragments of the term
+
+An "indexing node" is an object that contains information of all the indexings of the given term grouped by interview.
+
+This is useful, for example, if within the same interview there are 3 references (indexations) to a term. We then obtain the data of all of them, which allows us to navigate on the different labels, within the same interview.
+
+We also obtain the url of the interview's posterframe, which facilitates the management of the thumbnails.
+
+**Parameters:**
+
+---
+
+#### code
+  
+Authorization code `string` **Mandatory**
+see [code](#code)
+
+#### db_name
+  
+Database name. If not defined, the default database will be used `string`  
+see [db_name](#db_name)
+
+#### lang
+  
+Defines the lang of the data.  
+see [lang](#lang)
+
+#### term_id
+
+Term to be located in the transcription. `string` **Mandatory**
+
+Only one term_id is allowed by request.
+
+`ts1_55`
+
+
+#### ar_locators
+
+Array of indexation locators with tag_id to be used in combination of term_id. `string` **Mandatory**
+
+!!! note About **tag_id**
+    tag_id is a part of Dédalo locator that identify a text fragment of a field (component) in work system. tag_id has in and out reference inside a text. to locate this part of text Dédalo locator use the path:
+
+    `section_tipo -> section_id -> component_tipo -> tag_id`
+
+    You can think in this path as:
+
+    `table -> row -> column -> part of text`
+
+Example of locators to get an indexations:
+
+```json
+[
+  {
+    "tag_id": "1",
+    "section_id": "1",
+    "section_tipo": "rsc167",
+    "component_tipo": "rsc36",
+    "from_component_tipo": "hierarchy40"
+  },
+  {
+    "tag_id": "1",
+    "section_id": "4",
+    "section_tipo": "rsc167",
+    "component_tipo": "rsc36",
+    "from_component_tipo": "hierarchy40"
+  }
+]
+```
+
+The tag_id and field (component_tipo) and the table (section_tipo) is the same in both locators but the row (section_id) it's different.
+
+Request
+
+```api_request
+https://my_domain.org/dedalo/publication/server_api/v1/json/thesaurus_indexation_node?code=XXX&term_id=ts1_1&ar_locators=[{"type":"dd96","tag_id":"1","section_id":"1","section_tipo":"rsc167","component_tipo":"rsc36","section_top_id":"1","section_top_tipo":"oh1","from_component_tipo":"hierarchy40"},{"type":"dd96","tag_id":"1","section_id":"4","section_tipo":"rsc167","component_tipo":"rsc36","section_top_id":"3","section_top_tipo":"oh1","from_component_tipo":"hierarchy40"}]
+```
+
+Response:
+
+```json
+{
+  "result": [
+    {
+      "term_id": "ts1_1",
+      "locator": {
+        "type": "dd96",
+        "tag_id": "1",
+        "section_id": "1",
+        "section_tipo": "rsc167",
+        "component_tipo": "rsc36",
+        "section_top_id": "1",
+        "section_top_tipo": "oh1",
+        "from_component_tipo": "hierarchy40"
+      },
+      "node_id": "1",
+      "image_type": "posterframe",
+      "lang": "lg-spa",
+      "image_url": "/dedalo/media/av/posterframe/rsc35_rsc167_1.jpg",
+      "group_locators": [
+        {
+          "type": "dd96",
+          "tag_id": "1",
+          "section_id": "1",
+          "section_tipo": "rsc167",
+          "component_tipo": "rsc36",
+          "section_top_id": "1",
+          "section_top_tipo": "oh1",
+          "from_component_tipo": "hierarchy40"
+        }
+      ]
+    },
+    {
+      "term_id": "ts1_1",
+      "locator": {
+        "type": "dd96",
+        "tag_id": "1",
+        "section_id": "4",
+        "section_tipo": "rsc167",
+        "component_tipo": "rsc36",
+        "section_top_id": "3",
+        "section_top_tipo": "oh1",
+        "from_component_tipo": "hierarchy40"
+      },
+      "node_id": "3",
+      "image_type": "posterframe",
+      "lang": "lg-spa",
+      "image_url": "/dedalo/media/av/posterframe/rsc35_rsc167_4.jpg",
+      "group_locators": [
+        {
+          "type": "dd96",
+          "tag_id": "1",
+          "section_id": "4",
+          "section_tipo": "rsc167",
+          "component_tipo": "rsc36",
+          "section_top_id": "3",
+          "section_top_tipo": "oh1",
+          "from_component_tipo": "hierarchy40"
+        }
+      ]
+    }
+  ],
+  "msg": "Ok. Request thesaurus_indexation_node done"
+}
+```
+
+#### image_type
+
+Defines type of image to use. `string`
+
+When you want to get a indexation is possible that you want to show the audiovisual poster-frame or the interview image. you can choose it setting this parameter.
+
+Options: identify_image || posterframe. By default is set to `posterframe`.
 
 ### /thesaurus_children
 
-### /thesaurus_term
+Method: **POST**
+
+Get all children nodes of the requested term_id.
+
+This search will make a records query in current term table to find the records with data parent equal to current term_id.
+
+**Parameters:**
+
+---
+
+#### code
+  
+Authorization code `string` **Mandatory**
+see [code](#code)
+
+#### db_name
+  
+Database name. If not defined, the default database will be used `string`  
+see [db_name](#db_name)
+
+#### lang
+  
+Defines the lang of the data.  
+see [lang](#lang)
+
+#### ar_fields
+
+Comma separated list of required columns in table.`string`
+
+Remove some fields of the result. see [are_fields](#ar_fields)
+
+#### term_id
+
+Term to be located in the transcription. `string` **Mandatory**
+
+Only one term_id is allowed by request.
+
+To get `aa1_4` child term:
+
+Request
+
+```api_request
+https://my_domain.org/dedalo/publication/server_api/v1/json/thesaurus_children?code=XXX&term_id=aa1_4
+```
+
+Response:
+
+```json
+[
+    {
+        "table": "anthropology",
+        "section_id": 33,
+        "lang": "lg-eng",
+        "publication": null,
+        "descriptor": "yes",
+        "tld": "aa1",
+        "term_id": "aa1_33",
+        "term": "Types of works",
+        "model": null,
+        "parent": ["aa1_4"],
+        "parents": ["aa1_4","aa1_1"],
+        "children": [
+            {"type":"dd48","section_id":"141","section_tipo":"aa1","from_component_tipo":"hierarchy49"},
+            {"type":"dd48","section_id":"37","section_tipo":"aa1","from_component_tipo":"hierarchy49"}
+        ],
+        "location": null,
+        "location_name": null,
+        "illustration": null,
+        "dd_relations": [{"type":"dd48","section_id":"33","section_tipo":"aa1","from_component_tipo":"hierarchy49","from_section_tipo":"aa1","from_section_id":"4"}],
+        "dd_tm": "1679437224",
+        "external_uri": null,
+        "project": "["1"]",
+        "location_map": null,
+        "space_geojson": ""
+    }
+]
+```
+
+#### recursive
+
+Get all children in all levels `bool`
+
+When is set to true the request will go deep hierarchy search to get all children inside children until last one. By default is set to `false`
+
+To get `aa1_4` children terms:
+
+Request
+
+```api_request
+https://my_domain.org/dedalo/publication/server_api/v1/json/thesaurus_children?code=XXX&term_id=aa1_4&recursive=true
+```
+
+Response:
+
+```json
+[
+    {
+        "table": "anthropology",
+        "section_id": 33,
+        "lang": "lg-eng",
+        "descriptor": "yes",
+        "term_id": "aa1_33",
+        "term": "Types of works",
+        "parent": ["aa1_4"],
+        "parents": ["aa1_4","aa1_1"],
+        "children": [
+            {"type":"dd48","section_id":"141","section_tipo":"aa1","from_component_tipo":"hierarchy49"},
+            {"type":"dd48","section_id":"37","section_tipo":"aa1","from_component_tipo":"hierarchy49"}
+        ],
+        ...
+    },
+    {
+        "table": "anthropology",
+        "section_id": 141,
+        "lang": "lg-eng",
+        "descriptor": "yes",
+        "term_id": "aa1_33",
+        "term": "Domestic and cleaning services",
+        "parent": ["aa1_33"],
+        "parents": ["aa1_33","aa1_4","aa1_1"],
+        "children": null,
+        ...
+    },
+    {
+        "table": "anthropology",
+        "section_id": 37,
+        "lang": "lg-eng",
+        "descriptor": "yes",
+        "term_id": "aa1_37",
+        "term": "Domestic and cleaning services",
+        "parent": ["aa1_33"],
+        "parents": ["aa1_33","aa1_4","aa1_1"],
+        "children": [
+            {"type":"dd48","section_id":"88","section_tipo":"aa1","from_component_tipo":"hierarchy49"},
+        ],
+        ...
+    },
+    {
+        "table": "anthropology",
+        "section_id": 88,
+        "lang": "lg-eng",
+        "descriptor": "yes",
+        "term_id": "aa1_37",
+        "term": "Housekeeping",
+        "parent": ["aa1_37"],
+        "parents": ["aa1_37","aa1_33","aa1_4","aa1_1"],
+        "children": null,
+        ...
+    }
+]
+```
+
+#### only_descriptors
+
+Exclude no descriptors in the result `bool`
+
+Use it to get descriptor terms or all terms (descriptor and no descriptors). By default this parameter is set to `true`. No descriptors are synonyms of descriptors, and normally you will not use it to show the thesaurus tree. But in some cases you will note that descriptor term has this other names.
+
+For example:
+
+War -> War conflict
+
+the term `War` has a no descriptor `War conflict` but you will not get the synonym.
+
+#### remove_restricted
+
+Exclude restricted terms in the result `bool`
+
+Use to remove the terms restricted in the result. Restricted terms are used to forbidden the publication of some part of the texts. By default this parameter is set to `true`. When is set to `false` you will get restricted term to use it to block the access to the information,
+
+!!! note
+    Publication API will check this terms automatically but you can see whats happen in the search.
+
+### /thesaurus_parents
+
+Method: **POST**
+
+Get parent nodes of the requested term_id.
+
+This search will make a records query in current term table to find the records with children equal to current term_id.
+
+**Parameters:**
+
+---
+
+#### code
+  
+Authorization code `string` **Mandatory**
+see [code](#code)
+
+#### db_name
+  
+Database name. If not defined, the default database will be used `string`  
+see [db_name](#db_name)
+
+#### lang
+  
+Defines the lang of the data.  
+see [lang](#lang)
+
+#### ar_fields
+
+Comma separated list of required columns in table.`string`
+
+Remove some fields of the result. see [are_fields](#ar_fields)
+
+#### term_id
+
+Term to be located in the transcription. `string` **Mandatory**
+
+Only one term_id is allowed by request.
+
+To get `aa1_88` parent term:
+
+Request
+
+```api_request
+https://my_domain.org/dedalo/publication/server_api/v1/json/thesaurus_parents?code=XXX&term_id=aa1_88
+```
+
+Response:
+
+```json
+[
+    {
+        "table": "anthropology",
+        "section_id": 37,
+        "lang": "lg-eng",
+        "descriptor": "yes",
+        "term_id": "aa1_37",
+        "term": "Domestic and cleaning services",
+        "parent": ["aa1_33"],
+        "parents": ["aa1_33","aa1_4","aa1_1"],
+        "children": [
+            {"type":"dd48","section_id":"88","section_tipo":"aa1","from_component_tipo":"hierarchy49"},
+        ],
+        ...
+    }
+]
+```
+
+#### recursive
+
+Get all children in all levels `bool`
+
+When is set to true the request will go deep hierarchy search to get all children inside children until last one. By default is set to `false`
+
+Request
+
+To get all `aa1_88` parents terms:
+
+```api_request
+https://my_domain.org/dedalo/publication/server_api/v1/json/thesaurus_children?code=XXX&term_id=aa1_37&recursive=true
+```
+
+Response:
+
+```json
+[
+        {
+        "table": "anthropology",
+        "section_id": 37,
+        "lang": "lg-eng",
+        "descriptor": "yes",
+        "term_id": "aa1_37",
+        "term": "Domestic and cleaning services",
+        "parent": ["aa1_33"],
+        "parents": ["aa1_33","aa1_4","aa1_1"],
+        "children": [
+            {"type":"dd48","section_id":"88","section_tipo":"aa1","from_component_tipo":"hierarchy49"},
+        ],
+        ...
+    },
+    {
+        "table": "anthropology",
+        "section_id": 33,
+        "lang": "lg-eng",
+        "descriptor": "yes",
+        "term_id": "aa1_33",
+        "term": "Types of works",
+        "parent": ["aa1_4"],
+        "parents": ["aa1_4","aa1_1"],
+        "children": [
+            {"type":"dd48","section_id":"141","section_tipo":"aa1","from_component_tipo":"hierarchy49"},
+            {"type":"dd48","section_id":"37","section_tipo":"aa1","from_component_tipo":"hierarchy49"}
+        ],
+        ...
+    },
+    {
+        "table": "anthropology",
+        "section_id": 4,
+        "lang": "lg-eng",
+        "descriptor": "yes",
+        "term_id": "aa1_4",
+        "term": "Works",
+        "parent": ["aa1_33"],
+        "parents": ["aa1_1"],
+        "children": [
+            {"type":"dd48","section_id":"33","section_tipo":"aa1","from_component_tipo":"hierarchy49"}
+        ],
+        ...
+    },
+    {
+        "table": "anthropology",
+        "section_id": 1,
+        "lang": "lg-eng",
+        "descriptor": "yes",
+        "term_id": "aa1_1",
+        "term": "Social anthropology",
+        "parent": null,
+        "parents": null,
+         "children": [
+            {"type":"dd48","section_id":"4","section_tipo":"aa1","from_component_tipo":"hierarchy49"}
+        ],
+        ...
+    }
+]
+```
+
 
 
