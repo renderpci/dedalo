@@ -1551,7 +1551,7 @@ flowchart TD
     D --> H(Housekeeping)
 ```
 
-A search for the "Agriculture" with "last_parent" property, you will to get all hierarchy from Thematic -> spanish Civil War -> Types of work -> Agriculture
+A search for the "Agriculture" with "last_parent" property, you will to get all hierarchy from Thematic -> spanish Civil War -> Working -> Types of work -> Agriculture
 
 But a search for the "Agriculture" with "first_parent" property, you will get only the direct parent of the term.
 
@@ -1662,7 +1662,7 @@ When is set to combine will return only indexations with intersections. Options:
 
 Used to get terms in combination with other terms based of the indexation of the current term. It will search the used context of the term and will return other terms used in the same context, terms that has coincidences.
 
-### thesaurus_indexation_node
+### /thesaurus_indexation_node
 
 Method: **POST**
 
