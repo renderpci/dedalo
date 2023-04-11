@@ -68,7 +68,7 @@ const get_content_data = async function(self) {
 
 	// check page context is valid
 		if (!self.context) {
-			const response_error = render_page.render_server_response_error('Invalid context', false)
+			const response_error = self.render_server_response_error('Invalid context', false)
 			return response_error
 		}
 
@@ -133,9 +133,6 @@ const get_content_data = async function(self) {
 								self, // object page instance
 								current_context // object is used as source
 							)
-
-							// set caller
-							// current_instance.caller = self
 
 							// store instance to locate on destroy
 							self.ar_instances.push(current_instance)

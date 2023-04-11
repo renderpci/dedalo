@@ -199,7 +199,11 @@ class dd_object extends stdClass {
 	*/
 	public function set_typo(string $value) : void {
 		if($value!=='ddo') {
-			debug_log(__METHOD__." Error. Fixed invalid typo ".to_string($value), logger::WARNING);
+			debug_log(__METHOD__
+				." Error. Fixed invalid typo "
+				.to_string($value)
+				, logger::ERROR
+			);
 			$value = 'ddo';
 		}
 		$this->typo = $value;

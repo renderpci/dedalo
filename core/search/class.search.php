@@ -2001,6 +2001,9 @@ class search {
 
 	/**
 	* TRIM_TIPO
+	* Contract the tipo to prevent large names in SQL sentences
+	* @param string $tipo
+	* @param int $max = 2
 	* @return string $trimmed_tipo
 	*/
 	public static function trim_tipo(string $tipo, int $max=2) : string {
@@ -2023,7 +2026,11 @@ class search {
 		// match regex
 			preg_match("/^([a-z]+)([0-9]+)$/", $tipo, $matches);
 			if (empty($matches) || empty($matches[1]) || empty($matches[2]) ) {
-				debug_log(__METHOD__." Error on preg match tipo: $tipo ".to_string(), logger::ERROR);
+				debug_log(__METHOD__
+					." Error on preg match tipo: $tipo ". PHP_EOL
+					.'tipo: '.to_string($tipo)
+					, logger::ERROR
+				);
 			}
 
 		$name	= $matches[1];
