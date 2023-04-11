@@ -1262,7 +1262,7 @@ abstract class common {
 	* 	data : [...]
 	* }
 	*/
-	public function get_json(object $request_options=null) : object {
+	public function get_json(object $options=null) : object {
 
 		$json_cache = false; // experimental. Set false in production (!)
 
@@ -1271,17 +1271,22 @@ abstract class common {
 				$get_json_start_time = start_time();
 			}
 
+		// options
+			$get_context		= $options->get_context ?? true;
+			$context_type		= $options->context_type ?? 'default';
+			$get_data			= $options->get_data ?? true;
+			$get_request_config	= $options->get_request_config ?? false;
+
 		// options parse
-			$options = new stdClass();
-				$options->get_context			= true;
-				$options->context_type			= 'default';
-				$options->get_data				= true;
-				$options->get_request_config	= false;
-				if($request_options!==null) foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+			// $options = new stdClass();
+			// 	$options->get_context			= true;
+			// 	$options->context_type			= 'default';
+			// 	$options->get_data				= true;
+			// 	$options->get_request_config	= false;
+			// 	if($request_options!==null) foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			$called_model	= get_class($this); // get_called_class(); // static::class
 			$called_tipo	= $this->get_tipo();
-			$get_data		= $options->get_data;
 
 		// cache context
 			static $resolved_get_json = [];
@@ -1292,10 +1297,10 @@ abstract class common {
 					$this->get_section_id() ?? '',
 					($this->get_section_tipo() ?? ''),
 					$this->mode,
-					$options->context_type,
-					(int)$options->get_request_config,
-					(int)$options->get_context,
-					(int)$options->get_data
+					$context_type,
+					(int)$get_request_config,
+					(int)$get_context,
+					(int)$get_data
 				];
 				$cache_key = implode('_', $key_beats);
 				if (isset($resolved_get_json[$cache_key])) {
@@ -1305,6 +1310,13 @@ abstract class common {
 			}
 
 		// old way
+			// re-create options object to easy select from JSON controller
+				$options = (object)[
+					'get_context'			=> $get_context,
+					'context_type'			=> $context_type,
+					'get_data'				=> $get_data,
+					'get_request_config'	=> $get_request_config,
+				];
 			// path. Class name is called class (ex. component_input_text), not this class (common)
 				$path = DEDALO_CORE_PATH .'/'. $called_model .'/'. $called_model .'_json.php';
 
@@ -1313,10 +1325,10 @@ abstract class common {
 
 		// new way
 			// $json = new stdClass();
-			// 	if (true===$options->get_context) {
+			// 	if (true===get_context) {
 			// 		$json->context = $this->get_context($options);
 			// 	}
-			// 	if (true===$options->get_data) {
+			// 	if (true===get_data) {
 			// 		$json->data = $this->get_data($options);
 			// 	}
 
