@@ -220,7 +220,14 @@ class dd_object extends stdClass {
 	public function set_type(string $value) : void  {
 		$ar_type_allowed = self::$ar_type_allowed;
 		if( !in_array($value, $ar_type_allowed) ) {
-			throw new Exception("Error Processing Request. Invalid locator type: $value. Only are allowed: ".to_string($ar_type_allowed), 1);
+			// throw new Exception("Error Processing Request. Invalid locator type: $value. Only are allowed: ".to_string($ar_type_allowed), 1);
+			debug_log(__METHOD__
+				." Invalid locator: " .PHP_EOL
+				. to_string($value) .PHP_EOL
+				. ' Only are allowed' .PHP_EOL
+				. to_string($ar_type_allowed)
+				, logger::ERROR
+			);
 		}
 		$this->type = $value;
 	}//end set_type
@@ -234,7 +241,12 @@ class dd_object extends stdClass {
 	*/
 	public function set_tipo(string $value) : void  {
 		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
-			throw new Exception("Error Processing Request. Invalid tipo: $value", 1);
+			// throw new Exception("Error Processing Request. Invalid tipo: $value", 1);
+			debug_log(__METHOD__
+				." Invalid tipo: " .PHP_EOL
+				. to_string($value)
+				, logger::ERROR
+			);
 		}
 		$this->tipo = $value;
 	}//end set_tipo
@@ -264,9 +276,14 @@ class dd_object extends stdClass {
 	* @param string $value
 	* @return void
 	*/
-	public function set_parent(string $value) : void {
-		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
-			throw new Exception("Error Processing Request. Invalid parent: $value", 1);
+	public function set_parent(?string $value) : void {
+		if(empty($value) || !RecordObj_dd::get_prefix_from_tipo($value)) {
+			// throw new Exception("Error Processing Request. Invalid parent: $value", 1);
+			debug_log(__METHOD__
+				." Error Processing Request. Invalid parent: "
+				.to_string($value)
+				, logger::ERROR
+			);
 		}
 		$this->parent = $value;
 	}//end set_parent
@@ -278,9 +295,14 @@ class dd_object extends stdClass {
 	* @param string $value
 	* @return void
 	*/
-	public function set_parent_grouper(string $value) : void {
-		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
-			throw new Exception("Error Processing Request. Invalid parent_grouper: $value", 1);
+	public function set_parent_grouper(?string $value) : void {
+
+		if(empty($value) || !RecordObj_dd::get_prefix_from_tipo($value)) {
+			debug_log(__METHOD__
+				." Error Processing Request. Invalid parent_grouper: "
+				.to_string($value)
+				, logger::ERROR
+			);
 		}
 		$this->parent_grouper = $value;
 	}//end set_parent_grouper
@@ -294,7 +316,12 @@ class dd_object extends stdClass {
 	*/
 	public function set_lang(string $value) : void {
 		if(strpos($value, 'lg-')!==0) {
-			throw new Exception("Error Processing Request. Invalid lang: $value", 1);
+			// throw new Exception("Error Processing Request. Invalid lang: $value", 1);
+			debug_log(__METHOD__
+				." Error Processing Request. Invalid lang: "
+				.to_string($value)
+				, logger::ERROR
+			);
 		}
 		$this->lang = $value;
 	}//end set_lang
@@ -327,10 +354,10 @@ class dd_object extends stdClass {
 
 	/**
 	* SET_LEGACY_MODEL
-	* @param string $value
+	* @param string|null $value
 	* @return void
 	*/
-	public function set_legacy_model(string $value) : void {
+	public function set_legacy_model(?string $value) : void {
 
 		$this->legacy_model = $value;
 	}//end set_legacy_model
@@ -408,7 +435,12 @@ class dd_object extends stdClass {
 	public function set_tools(?array $value) : void {
 
 		if(!is_null($value) && !is_array($value)){
-			throw new Exception("Error Processing Request, Tools only had allowed array or null values. ".gettype($value). " is received" , 1);
+			// throw new Exception("Error Processing Request, Tools only had allowed array or null values. ".gettype($value). " is received" , 1);
+			debug_log(__METHOD__
+				." Tools only had allowed array or null values. ".gettype($value). " is received "
+				.to_string($value)
+				, logger::ERROR
+			);
 		}
 
 		$this->tools = $value;
@@ -424,7 +456,12 @@ class dd_object extends stdClass {
 	public function set_buttons(?array $value) : void {
 
 		if(!is_null($value) && !is_array($value)){
-			throw new Exception("Error Processing Request, Buttons only had allowed array or null values. ".gettype($value). " is received" , 1);
+			// throw new Exception("Error Processing Request, Buttons only had allowed array or null values. ".gettype($value). " is received" , 1);
+			debug_log(__METHOD__
+				." Buttons only had allowed array or null values. ".gettype($value). " is received "
+				.to_string($value)
+				, logger::ERROR
+			);
 		}
 
 		$this->buttons = $value;
