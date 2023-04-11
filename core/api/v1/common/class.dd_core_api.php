@@ -55,15 +55,16 @@ final class dd_core_api {
 	*/
 	public static function start(object $rqo) : object {
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-			$response->error	= null;
-
 		// options
-			$options	= $rqo->options;
+			$options	= $rqo->options ?? new StdClass();
 			$search_obj	= $options->search_obj ?? new StdClass(); // url vars
 			$menu		= $options->menu ?? false;
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+				$response->error	= null;
 
 		// install check
 		// check if Dédalo was installed, if not, run the install process
@@ -82,13 +83,24 @@ final class dd_core_api {
 						$context[] = $install->get_structure_context();
 
 					// response to client
-						$response->result	= $context;
-						$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
+						$response->result = (object)[
+							'context'	=> $context,
+							'data'		=> []
+						];
+						$response->msg = 'OK. Request done ['.__FUNCTION__.']';
 
 						return $response;
 				}
 			}
 
+		// Notify invalid rqo->options if it happens (after install check)
+			if (!isset($rqo->options)) {
+				debug_log(__METHOD__
+					. " start rqo options is mandatory! " .PHP_EOL
+					. to_string($rqo)
+					, logger::ERROR
+				);
+			}
 
 		// page mode and tipo
 			$default_section_tipo = MAIN_FALLBACK_SECTION; // 'test38';
@@ -99,15 +111,18 @@ final class dd_core_api {
 
 			}else if (isset($search_obj->locator)) {
 
-				// locator case
-				$locator	= json_decode($search_obj->locator);
-				$tipo		= $locator->section_tipo ?? $default_section_tipo;
-				$section_id	= $locator->section_id ?? null;
-				$mode		= $locator->mode ?? 'list';
+				// locator case (pseudo locator)
+				$locator		= is_string($search_obj->locator) ? json_decode($search_obj->locator) : $search_obj->locator;
+				$tipo			= $locator->tipo ?? $default_section_tipo;
+				$section_tipo	= $locator->section_tipo ?? $tipo;
+				$section_id		= $locator->section_id ?? null;
+				$mode			= $locator->mode ?? 'list';
+				$lang			= $search_obj->lang	?? $search_obj->lang ?? DEDALO_DATA_LANG;
+				$view			= $search_obj->view ?? null;
 
 			}else{
 
-				// default case
+				// default and fallback case
 				$tipo			= $search_obj->t	?? $search_obj->tipo			?? $default_section_tipo; // MAIN_FALLBACK_SECTION;
 				$section_tipo	= $search_obj->st	?? $search_obj->section_tipo	?? $tipo;
 				$section_id		= $search_obj->id	?? $search_obj->section_id		?? null;
@@ -127,6 +142,7 @@ final class dd_core_api {
 						$response->result	= false;
 						$response->error	= $msg;
 						$response->msg		= $msg;
+
 						return $response;
 					}
 
@@ -387,8 +403,11 @@ final class dd_core_api {
 			}//end if (login::is_logged()!==true)
 
 		// response OK
-			$response->result	= $context;
-			$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
+			$response->result = (object)[
+				'context'	=> $context,
+				'data'		=> []
+			];
+			$response->msg = 'OK. Request done ['.__FUNCTION__.']';
 
 
 		return $response;
