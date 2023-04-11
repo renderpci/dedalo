@@ -129,36 +129,45 @@ abstract class component_common extends common {
 					$component_name = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
 
 			}else if (!empty($component_name) && $model_name!==$component_name) {
-				// throw new Exception("Error: on construct component (2): model not match. model_name:'$model_name', component_name:'$component_name', tipo:'$tipo', section_id:'$section_id', mode:'$mode', lang:'$lang'", 1);
 
 				// warn to admin
-					$msg = "Warning. Fixed inconsistency in component get_instance tipo:'$tipo'. Expected model is '$model_name' and received model is '$component_name'";
-					debug_log(__METHOD__.' '. $msg, logger::ERROR);
+					debug_log(__METHOD__.' '
+						. "Warning. Fixed inconsistency in component get_instance tipo:'$tipo'. Expected model is '$model_name' and received model is '$component_name'"
+						, logger::ERROR
+					);
 
 				// fix bad model
 					$component_name = $model_name;
 			}
 			if (strpos($component_name, 'component_')!==0) {
-				// trigger_error(__METHOD__." Error Processing Request. Illegal component: '$component_name' ");
-				debug_log(__METHOD__."  Error Processing Request. Illegal component: ".to_string($component_name), logger::ERROR);
+
+				debug_log(__METHOD__
+					. '  Error Processing Request. Illegal component: '
+					. to_string($component_name)
+					, logger::ERROR
+				);
 				if(SHOW_DEBUG===true) {
 					$bt = debug_backtrace();
 					dump($bt, ' bt ++ '.to_string($tipo));
 					// throw new Exception("Error Processing Request. Illegal component: '$component_name' on ".__METHOD__, 1);
 				}
+
 				return null;
 			}
 
 		// section_tipo check : optional (if empty, section_tipo is calculated from: 1. page globals, 2. structure -only useful for real sections-)
 			if (empty($section_tipo)) {
-				// $section_tipo = component_common::resolve_section_tipo($tipo);
-				// debug_log(__METHOD__." Called component without section tipo ".to_string($tipo), logger::DEBUG);
-				trigger_error("Sorry. resolve_section_tipo is not supported anymore. Please fix this call ASASP");
+
+				debug_log(__METHOD__
+					. '  Error. resolve_section_tipo is not supported anymore. Please fix this call ASASP '
+					, logger::ERROR
+				);
 				if(SHOW_DEBUG===true) {
 					dump($section_tipo, ' DEBUG WARNING: TRIGGERED resolve_section_tipo from: '.to_string($tipo));
 					$bt = debug_backtrace();
 					debug_log(__METHOD__." DEBUG WARNING: TRIGGERED resolve_section_tipo: bt : ".to_string($bt), logger::ERROR);
 				}
+
 				return null;
 			}
 
@@ -358,6 +367,7 @@ abstract class component_common extends common {
 				// error_log("------------------------- get_instance ------- $tipo ----". exec_time_unit($start_time,'ms')." ms");
 			}
 
+
 		return $ar_component_instances[$cache_key];
 	}//end get_instance
 
@@ -365,28 +375,28 @@ abstract class component_common extends common {
 
 	/**
 	* __CONSTRUCT
+	* @param string $tipo = null
+	* @param string|int|null $section_id = null
+	* @param string $mode = 'edit'
+	* @param string $lang = DEDALO_DATA_LANG
+	* @param string $section_tipo = null
+	* @return void
 	*/
-	protected function __construct(string $tipo=null, $section_id=null, string $mode='edit', string $lang=DEDALO_DATA_LANG, string $section_tipo=null) {
+	protected function __construct(string $tipo, $section_id=null, string $mode='edit', string $lang=DEDALO_DATA_LANG, string $section_tipo=null) {
 
 		// uid
 			$this->uid = hrtime(true); // nanoseconds
 
 		// tipo
-			if ( empty($tipo) ) {
-				$msg = "Component common: valid 'tipo' value is mandatory!";
-				// $GLOBALS['log_messages'][] = $msg;
-				throw new Exception($msg, 1);
-			}elseif ($tipo==='dummy') {
-				throw new Exception("Error dummy caller!!", 1);
-			}
 			$this->tipo = $tipo;
 
-		// section_id
+		// section_id.
+			// Preserve 'parent' for v5 compatibility in some situations
 			$this->parent		= $section_id;
 			$this->section_id	= $section_id;
 
 		// mode
-			if ( empty($mode) ) {
+			if (empty($mode)) {
 				$mode = 'edit';
 			}
 			$this->mode = $mode;
@@ -395,29 +405,32 @@ abstract class component_common extends common {
 			}
 
 		// lang
-			if(isset($this->lang)) {
-				// lang : Overwrite var '$lang' with previous component declaration of '$this->lang'
-				$lang = $this->lang;
-			}elseif ( empty($lang) ) {
-				$msg = __METHOD__.' Valid \'lang\' value is mandatory! ('.$tipo.' - '.get_called_class().') Default DEDALO_DATA_LANG ('.DEDALO_DATA_LANG.') is used';
-				// $GLOBALS['log_messages'][] = $msg;
-				trigger_error($msg);
-				$lang = DEDALO_DATA_LANG;
+			// Note that $this->lang could be already assigned. If true, don't overwrite the fixed value
+			if (!isset($this->lang)) {
+				if (empty($lang)) {
+					debug_log(__METHOD__.'  '
+						. ' Valid \'lang\' value is mandatory! ('.$tipo.' - '.get_called_class().') Default DEDALO_DATA_LANG ('.DEDALO_DATA_LANG.') is used'
+						, logger::ERROR
+					);
+					$lang = DEDALO_DATA_LANG;
+				}
+				$this->lang = $lang;
 			}
-			$this->lang = $lang;
 
 		// section_tipo
 			if (empty($section_tipo)) {
-				// # section_tipo : optional (if empty, section_tipo is calculated from: 1. page globals, 2. structure -only useful for real sections-)
-				// $section_tipo = component_common::resolve_section_tipo($tipo);
-				// debug_log(__METHOD__." Calculated section tipo from tipo ($tipo) !!!!!! Fix ASAP ".to_string(), logger::ERROR);
+				debug_log(__METHOD__
+					." Error. section_tipo is mandatory ! "
+					. json_encode(func_get_args(), JSON_PRETTY_PRINT)
+					, logger::ERROR
+				);
 				throw new Exception("Error Processing Request. section_tipo is mandatory !", 1);
 			}
 			$this->section_tipo = $section_tipo;
 
-		// structure data
-		// We set the received type and load the structure previously to determine if this type is translatable
-		// or not and set the language again if it is not translatable
+		// structure data (load from Ontology)
+			// We set the received type and load the structure previously to determine if this type is translatable
+			// or not and set the language again if it is not translatable
 			parent::load_structure_data();
 
 		// properties
@@ -427,28 +440,25 @@ abstract class component_common extends common {
 		// We establish the preliminary language from the load of the structure
 			if ($this->traducible==='no') {
 				if (isset($properties->with_lang_versions) && $properties->with_lang_versions===true) {
-					# Allow tool lang on non translatable components
+					// Allow tool lang on non translatable components
 				}else{
-					# Force no lang
+					// Force no lang
 					$this->lang = DEDALO_DATA_NOLAN;
 				}
 			}
 
 		// ar_tools_obj reset
-			$this->ar_tools_obj = false;
-
-		// debug set base info
-			// $this->debugger = "tipo:$this->tipo - norden:$this->norden - mode:$this->mode - section_id:$this->section_id";
+			$this->ar_tools_obj = null;
 
 		// set_dato_default (new way 28-10-2016)
 			if ( $this->mode==='edit' && !is_null($this->section_id) ) {
 				$this->set_dato_default();
 			}
 
-		// pagination
+		// pagination. Set defaults
 			$this->pagination = new stdClass();
-			$this->pagination->offset = 0;
-			$this->pagination->limit = null;
+				$this->pagination->offset	= 0;
+				$this->pagination->limit	= null;
 
 			// DES
 				// $request_config = ( isset($properties->source->request_config) )
@@ -550,7 +560,7 @@ abstract class component_common extends common {
 		// set default dato (only when own dato is empty)
 			if (!empty($default_dato)) {
 
-				// matrix data : load matrix data
+				// matrix data : force load matrix data
 					$this->load_component_dato();
 
 				// current dato check
@@ -566,10 +576,11 @@ abstract class component_common extends common {
 							}
 
 						// debug
-							debug_log(__METHOD__ .
-								" Created ".get_called_class()." \"$this->label\" id:$this->section_id, tipo:$this->tipo, section_tipo:$this->section_tipo, mode:$this->mode with default data from 'properties':" .
-								PHP_EOL . to_string($default_dato),
-								logger::DEBUG
+							debug_log(__METHOD__
+								." Created ".get_called_class()." \"$this->label\" id:$this->section_id, tipo:$this->tipo, section_tipo:$this->section_tipo, mode:$this->mode".PHP_EOL
+								." with default data from 'properties':"
+								. to_string($default_dato)
+								, logger::DEBUG
 							);
 
 						// matrix data : load matrix data again
@@ -771,7 +782,6 @@ abstract class component_common extends common {
 		if($this->bl_loaded_matrix_data!==true) {
 
 			// section create
-				// $section = section::get_instance($this->section_id, $this->section_tipo);
 				$section = $this->get_my_section();
 
 			// fix dato
