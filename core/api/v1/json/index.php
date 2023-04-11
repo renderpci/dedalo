@@ -133,7 +133,7 @@ $global_start_time = hrtime(true);
 	// try {
 
 		$dd_manager	= new dd_manager();
-		$result		= $dd_manager->manage_request( $rqo );
+		$response	= $dd_manager->manage_request( $rqo );
 
 		// debug
 			// $current = (hrtime(true) - $global_start_time) / 1000000;
@@ -147,9 +147,13 @@ $global_start_time = hrtime(true);
 		// debug
 			if(SHOW_DEBUG===true) {
 				// real_execution_time add
-				$result->debug						= $result->debug ?? new stdClass();
-				$result->debug->real_execution_time	= exec_time_unit($global_start_time,'ms').' ms';
+				$response->debug						= $response->debug ?? new stdClass();
+				$response->debug->real_execution_time	= exec_time_unit($global_start_time,'ms').' ms';
 			}
+
+		// server_errors. bool true on debug_log write log with LOGGER_LEVEL as 'ERROR' or 'CRITICAL'
+			$response->server_errors = !empty($_ENV['DEDALO_ERRORS']);
+
 
 	// } catch (Throwable $e) { // For PHP 7
 
@@ -180,8 +184,8 @@ $global_start_time = hrtime(true);
 
 
 
-// output the result JSON string
-	$output_string = json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+// output the response JSON string
+	$output_string = json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
 	// debug (browser Server-Timing)
 		// header('Server-Timing: miss, db;dur=53, app;dur=47.2');

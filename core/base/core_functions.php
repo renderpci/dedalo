@@ -217,6 +217,10 @@ function debug_log(string $info, int $level=logger::DEBUG) : bool {
 		);
 		$base_msg	= 'DEBUG_LOG ['.logger::level_to_string($level).'] '.PHP_EOL. $info;
 		$msg		= sprintf($colorFormats['bg_yellow'], $base_msg);
+
+		// DEDALO_ERRORS ADD
+		$_ENV['DEDALO_ERRORS'][] = $info;
+
 	}else{
 		$msg		= 'DEBUG_LOG ['.logger::level_to_string($level).'] '. $info;
 	}
