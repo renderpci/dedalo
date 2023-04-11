@@ -35,14 +35,6 @@
 			default:
 				// tree_datalist
 				$tree_datalist 	= $this->get_tree_datalist();
-				// langs_datalist
-				$langs_datalist = [];
-				foreach(DEDALO_APPLICATION_LANGS as $key => $value) {
-					$obj_langs = new stdClass();
-						$obj_langs->value	= $key;
-						$obj_langs->label	= $value;
-					$langs_datalist[] = $obj_langs;
-				}
 				// info_data
 				$info_data		= $this->get_info_data();
 				break;
@@ -53,7 +45,6 @@
 			$item->tipo				= $this->get_tipo();
 			$item->model			= 'menu';
 			$item->tree_datalist	= $tree_datalist;
-			$item->langs_datalist	= $langs_datalist;
 			$item->info_data		= $info_data;
 			$item->show_ontology	= security::is_global_admin(CURRENT_LOGGED_USED_ID); //  SHOW_DEVELOPER; // boolean from config file
 			$item->username			= navigator::get_username();

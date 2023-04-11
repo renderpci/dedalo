@@ -51,8 +51,10 @@ render_menu.prototype.edit = async function() {
 		})
 		quit_button.addEventListener('click', async () => {
 			// local_db_data remove in all langs
-				for (let i = 0; i < self.data.langs_datalist.length; i++) {
-					const lang	= self.data.langs_datalist[i].value
+				const langs			= page_globals.dedalo_application_langs
+				const langs_length	= langs.length
+				for (let i = 0; i < langs_length; i++) {
+					const lang	= langs[i].value
 					const regex	= /lg-[a-z]{2,5}$/
 					const id	= self.id.replace(regex, lang)
 					await data_manager.delete_local_db_data(id, 'data')
@@ -193,7 +195,7 @@ render_menu.prototype.edit = async function() {
 		}
 
 	// application lang selector
-		const lang_datalist = self.data.langs_datalist
+		const lang_datalist = page_globals.dedalo_application_langs
 		const dedalo_aplication_langs_selector = ui.build_select_lang({
 			id			: 'dd_app_lang',
 			langs		: lang_datalist,
