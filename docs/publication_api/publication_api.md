@@ -2364,6 +2364,8 @@ This parameter will add a filter to be apply to request. If this filter is not s
 Combined calls to publication API in one request.
 It will execute an array of requests in only one call to the server.
 
+The /combi parameter is useful in cases where we need to make many known requests to the API, if we do every call independently it will generate a lot of traffic and long wait times associated with network latency. By grouping them into one, the request/response process is speeded up and the time required is reduced traffic considerably. Requests thus encapsulated can be of any type supported by the API, with no limit on quantity or repetition.
+
 #### code
   
 Authorization code `string` **Mandatory**
