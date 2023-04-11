@@ -18,109 +18,7 @@ The purpose of this document is to guide you through the different available met
 
 Diffusion ontology is a specific part of the Dédalo ontology to control what kind of data could be public and how this data need to be processed. The main idea is control the access to private data and how will be showed in the public web.
 
-To understand this, you need to know that some archives has a personal data as tel or address that it can not to be public. And doing this transform you can control what data could be public and what no.
-
-Besides, publication process could transform the original data into different "formats" or "versions".
-
-For example: if you want to show one city, you can choose how this data will be processed by the web, so you can to define different formats to achieve these needs. So, to publish "Valencia" you can think; what kind of data will I need? and format it.
-
-Let me explain. Inside Dédalo a toponymy as Valencia is a thesaurus term with all administrative hierarchy:
-
-![valencia schema](assets/20230408_182510_valencia.png){: .large}
-
-Ontology definition to publish this toponymy could be configured to get:
-
-Only the name of the town. The name and all his parents (all administrative hierarchy), the name and the county, name and model (municipality), etc...
-
-So you can create different fields in the publication database with different data:
-
-| field | value|
-| --- | --- |
-| toponymy | Valencia |
-| with_parents | Valencia, València, Valencia/Valéncia, Comunitat Valenciana, Spain |
-| toponymy_county | Valencia, Spain |
-| toponymy_model | Valencia, Municipality |
-| etc | etc |
-
-If you need search by community ("Comunitat Valenciana") instead the municipality, so, you can do it searching in the field "with_parents", but if you need add one point to map, you will need to  use the geo data, so, you can define to add it to the resolution:
-
-| field | value|
-| --- | --- |
-| toponymy | Valencia |
-| geo | `{"alt":16,"lat":39.469860091745815,"lon":-0.3764533996582032,"zoom":12}` |
-
-Or you will need to link the term and his parents with the thesaurus table and you can add his locators:
-
-| field | value|
-| --- | ---|
-| toponymy | Valencia |
-| data | `["es1_7242"]` |
-| with_parents | Valencia, València, Valencia/Valéncia, Comunitat Valenciana, Spain |
-| data_parents | `["es1_7242", "es1_8131","es1_8842", "es1_8858", "es1_1"]` |
-
-The original data "Valencia" could be transformed into different fields to be used as needs without change the original data in PostgreSQL.
-
-Doing those transformations we can adapt the data into publication database to be ready for different applications / optimizations, and create a very efficient websites, because the data is prepared to resolve the needs of the website, and, if in the future, you will need to add another combination not defined, is easy to include it.
-
-### How ontology publication works?
-
-All publication process is defined in Dédalo ontology, and it is dependent of the [diffusion](https://dedalo.dev/ontology/dd3) term.
-
-Ontology defines some models to create a diffusion schema.
-
-Common models
-
-| model | definition|
-| --- | --- |
-| diffusion_domain | entity or tld group (main diffusion term) |
-| diffusion_element | group |
-| diffusion_group | specific group |
-
-For SQL:
-
-| model | definition|
-| --- | --- |
-| database | name of MariaDB / MySQL database |
-| database_alias | name of table in database (copy of schema of other database term ) |
-| table | name of table in database |
-| table_alias | name of table in database (copy of schema of other table term ) |
-| field_boolean | bool field inside table in database |
-| field_date | timestamp field inside table in database |
-| field_decimal | float field inside table in database |
-| field_enum | enum field inside table in database |
-| field_int | in field inside table in database |
-| field_mediumtext | mediumtext field inside table in database |
-| field_point | mediumtext field inside table in database |
-| field_varchar | varchar field inside table in database |
-| field_text | text field inside table in database |
-| field_year | year field inside table in database |
-
-For RDF:
-
-| model | definition|
-| --- | --- |
-| external_ontologies | group of definitions (main  diffusion term) |
-| external_ontology   | definition of other ontology                |
-| owl:Class           | Class                                       |
-| owl:ObjectProperty  | Property                                    |
-
-## Dédalo diffusion engine
-
-It manages Dédalo’s diffusion schema and data.
-
-Diffusion engine will process the Dédalo data and transform to other formats using the diffusion ontology. When user publish data Diffusion engine will do the transoms and store the result into other databases or files using an ontology map that defines what sections and fields will be exported.
-
-> Output could be targeted to another database or to RDF files.
-
-The most common scenario is to publish the data in a separate MariaDB / MySQL database. All the published data is intentionally published by the administrators and therefore, the destination database can be used for consultation without compromising the original data stored in the Dédalo working database.
-
-Dédalo has some configurations already prepared for use as Oral History, Bibliography or Web, but you can build others, following the already existing elements patterns.
-
-Each element of the ontology has several parameters that define the characteristics and the output format of the field in the MySQL table.
-
-For example, the column name, the column type (varchar, text, int, date, etc.) the output processing (diffusion methods to post process the data), etc.
-
-When data is published it will be accessible by the Publication Server API.
+If you want to know more read [ontology](../diffusion_data_flow.md#diffusion-ontology) in diffusion data flow documentation.
 
 ## Dédalo Publication Server API
 
@@ -151,13 +49,13 @@ Some examples of server configuration and data flow.
 
 1. All system in the same server. The workspace and the diffusion is inside the same server. This configuration is easy to create and maintain, the server has all services, media, but any interference in website or attack will affect to work system.
 
-   ![one server configuration](assets/20230408_180339_one_publication_server.svg)
+   ![one server configuration](../assets/20230408_180339_one_publication_server.svg)
 2. Two different servers, one for work system, and another for Diffusion. Pros: the website is totally separated of the work system and you can scale if you have a lot of traffic into website, an attack to the website do no affect to work system. Cons: double maintenance, double cost.
 
-   ![Two server configuration](assets/20230408_182454_two_publication_servers.svg)
+   ![Two server configuration](../assets/20230408_182454_two_publication_servers.svg)
 3. Three different servers, first for work system, the second for media, the third for diffusion. This configuration ensure that your media files are shared by work system and diffusion system
 
-   ![Three server configuration](assets/20230408_200232_three_publication_servers.svg)
+   ![Three server configuration](../assets/20230408_200232_three_publication_servers.svg)
 
 ## Data flow
 
@@ -169,7 +67,9 @@ Some examples of server configuration and data flow.
 6. Publication API create the final JSON mixing data and media result to be sended to website.
 7. Finally website render the webpage and send to the user browser.
 
-![Data flow](assets/20230408_201925_data_flow.svg)
+![Data flow](../assets/20230408_201925_data_flow.svg)
+
+More about diffusion about data flow [here](../diffusion_data_flow.md).
 
 ## Publication API Setup
 
@@ -196,14 +96,14 @@ The documentation API user interface is accessible in the path:
 
 You can view your specific configuration and open publication API user interface directly inside Dédalo, go to `Development` menu and locate `Publication server API`, to open it click into "Open Swagger UI":
 
-![API access](assets/20230408_212204_publication_api_access.png){: .medium}
+![API access](../assets/20230408_212204_publication_api_access.png){: .medium}
 
 You will see the Swagger interface ready to be used.
 
 !!! warning
-    If you have problems with getting data review the [public api configuration](server_config_api.md),and MariaDB / MySQL installation.
+If you have problems with getting data review the [public api configuration](server_config_api.md),and MariaDB / MySQL installation.
 
-![Server API UI](assets/20230408_213159_server_api_ui.png)
+![Server API UI](../assets/20230408_213159_server_api_ui.png)
 
 ## Doing request and getting data
 
@@ -215,30 +115,30 @@ Before begin to do calls you need to know:
 - Some calls will need to specify the table.
 - Response data are strings.
 
-    !!! note
-        For historical reasons and compatibility with old webpages all response data will be sended as JSON stringified, you will need parse before use it.
+  !!! note
+    For historical reasons and compatibility with old webpages all response data will be sended as JSON stringified, you will need parse before use it.
 
 - You can do the calls directly or with CURL. All examples in this doc will use direct calls.
 
-    This two request are the same:
+  This two request are the same:
 
-    ```api_request
-    https:///my_domain.org/dedalo/lib/dedalo/publication/server_api/v1/json/publication_schema?code=XXXX
-    ```
+  ```api_request
+  https:///my_domain.org/dedalo/lib/dedalo/publication/server_api/v1/json/publication_schema?code=XXXX
+  ```
 
-    ```curl
-    curl -X 'GET' \
-    'https://my_domain.org/dedalo/publication/server_api/v1/json/publication_schema?code=XXXX' \
-    -H 'accept: application/json'
-    ```
+  ```curl
+  curl -X 'GET' \
+  'https://my_domain.org/dedalo/publication/server_api/v1/json/publication_schema?code=XXXX' \
+  -H 'accept: application/json'
+  ```
 
 ### Related data
 
 In the process to publish data Dédalo will resolve lost of relations to create flat version of data, but not all relations should be resolved because some data need to have relations to be resolve as web users need, so public data has some relations between tables and need to be resolved.
 
-The data they hold is a stringified array in JSON format as '["1","2"]'. This data corresponds to the section_id column of each destination table.
+The data they hold is a stringified array in JSON format as `["1","2"]`. This data corresponds to the section_id column of each destination table.
 
-
+![Connection data between tables](assets/20230411_181250_mysql_data_connection.svg)
 
 In this example we see the correspondence between the informant column (interview table) and the section_id column (informant table). This correspondence can be resolved (if we need it) individually, through via single requests to each table, or in a joint request using the resolve_portals or resolve_portals_custom option on the same table.Table interviewTable informant array in json format array in json format
 
@@ -323,8 +223,8 @@ Method: **GET**
 Get information about automatic portal resolution map. Publication schema is the definition to resolve the connection between fields and the tables.
 
 !!! info About portal fields
-    Portal is a relation between data, we name portal to fields with connections with other record in the same or other table.
-    If you have a interview with two audiovisuals, yo will have a portal named `audiovisual` in the table `interview`, the portal will be a array with two section_id to locate the record in the table audiovisual.
+Portal is a relation between data, we name portal to fields with connections with other record in the same or other table.
+If you have a interview with two audiovisuals, yo will have a portal named `audiovisual` in the table `interview`, the portal will be a array with two section_id to locate the record in the table audiovisual.
 
 The request to 'publication_schema' returns information on the configuration of the automatic resolution of portals (see [resolve_portals](#resolve_portal)), which collects the data from the publication_schema table.
 
@@ -449,7 +349,7 @@ The request to 'records' is a generic SQL query that returns the list of records
 This request is similar to a basic sql query but note that not all commands are supported or allowed for security reasons.
 
 !!! warning Security
-    All calls did to API are filtered and analyzed by server processes to avoid SQL injection. Any call is directly processed by database. Diffusion API is defined to be easy to use and understand and the calls maintain similar SQL syntax, but thinking in security all calls are filtered before will send to database.
+All calls did to API are filtered and analyzed by server processes to avoid SQL injection. Any call is directly processed by database. Diffusion API is defined to be easy to use and understand and the calls maintain similar SQL syntax, but thinking in security all calls are filtered before will send to database.
 
 **Parameters:**
 
@@ -510,7 +410,7 @@ Get specific section_id. `int || int sequence`
 If you need specific record like 1 you can a request to section_id also, it is valid a sequence separated by comma, like 1,4,5.
 
 !!! info
-    Dédalo do not use classical primary key id of the databases to locate information, it use a section_id in combination of section_tipo to define a unique record, in the work system it is possible to have the same section_id in the same table because the row is defined as these combination of section_id and section_tipo. This scenario is only for the work system but it is translated to publication scenario. All request will use section_id instead id.
+Dédalo do not use classical primary key id of the databases to locate information, it use a section_id in combination of section_tipo to define a unique record, in the work system it is possible to have the same section_id in the same table because the row is defined as these combination of section_id and section_tipo. This scenario is only for the work system but it is translated to publication scenario. All request will use section_id instead id.
 
 Sample:
 
@@ -589,27 +489,27 @@ Defines the lang of the data.
 Dédalo is a multilingual system, every installation has his own language definition in his own configuration. The request to API will define the language that you want retrieve information. If this parameter is not defined publication API will get the default lang defined in [DEFAULT_LANG](./server_config_api.md#setting-the-default-lang-to-get-data) constant in server_config_api.php file.
 
 ??? note "Languages"
-    For the languages, Dédalo uses the pattern: `lg-xxx`
-    lg : identify the term as language
-    xxx : with the official tld of the ISO 639-6, Alpha-4 code for comprehensive coverage of language variants.  
+For the languages, Dédalo uses the pattern: `lg-xxx`
+lg : identify the term as language
+xxx : with the official tld of the ISO 639-6, Alpha-4 code for comprehensive coverage of language variants.
 
-    Some common languages:
-    
-    | Value | Diffusion language |
-    | --- | --- |
-    | lg-spa | Spanish |
-    | lg-cat | Catalan |
-    | lg-eus | Basque |
-    | lg-eng | English |
-    | lg-fra | French |
-    | lg-ita | Italian |
-    | lg-por | Portuguese |
-    | lg-deu | German |
-    | lg-ara | Arabian |
-    | lg-ell | Greek |
-    | lg-rus | Russian |
-    | lg-ces | Czech |
-    | lg-jpn | Japanese |
+Some common languages:
+
+| Value | Diffusion language |
+| --- | --- |
+| lg-spa | Spanish |
+| lg-cat | Catalan |
+| lg-eus | Basque |
+| lg-eng | English |
+| lg-fra | French |
+| lg-ita | Italian |
+| lg-por | Portuguese |
+| lg-deu | German |
+| lg-ara | Arabian |
+| lg-ell | Greek |
+| lg-rus | Russian |
+| lg-ces | Czech |
+| lg-jpn | Japanese |
 
 #### order
 
@@ -1013,47 +913,45 @@ Other functions defined:
 
 - add_parents_and_children_recursive
 
-    ```json
-    {
-        "fn": "process_result::add_parents_and_children_recursive",
-        "columns": [
-            {
-            "name": "parents"
-            }
-        ]
-    }
-    ```
+  ```json
+  {
+      "fn": "process_result::add_parents_and_children_recursive",
+      "columns": [
+          {
+          "name": "parents"
+          }
+      ]
+  }
+  ```
 
-    Used in numisdata catalog tree to create the records hierarchy in server side
-
+  Used in numisdata catalog tree to create the records hierarchy in server side
 - add_parents_or_children
 - break_down_totals
 
-    ```json
-    {
-        "fn": "process_result::break_down_totals",
-        "base_column": "term_id",
-        "total_column": "total"
-    }
-    ```
+  ```json
+  {
+      "fn": "process_result::break_down_totals",
+      "base_column": "term_id",
+      "total_column": "total"
+  }
+  ```
 
-    Used for example to split interview informants place of birth when more than one informant or place exists.
-
+  Used for example to split interview informants place of birth when more than one informant or place exists.
 - sum_totals
 - resolve_indexation_fragments
 
-    ```json
-    {
-        "fn": "process_result::resolve_indexation_fragments",
-        "column": "indexation",
-        "fragment_terms": false
-    }
-    ```
+  ```json
+  {
+      "fn": "process_result::resolve_indexation_fragments",
+      "column": "indexation",
+      "fragment_terms": false
+  }
+  ```
 
-    Used to auto-resolve indexation column values of "exhibitions" table in qdp.
+  Used to auto-resolve indexation column values of "exhibitions" table in qdp.
 
 !!! note
-    see  ../dedalo/publication/server_api/v1/common/class.process_result.php file descriptions for every method.
+see  ../dedalo/publication/server_api/v1/common/class.process_result.php file descriptions for every method.
 
 ## Thesaurus
 
@@ -1076,18 +974,18 @@ The transcription information is always contained in the column named 'rsc36' na
 ---
 
 #### code
-  
+
 Authorization code `string`  **Mandatory**
 see [code](#code)
 
 #### db_name
-  
-Database name. If not defined, the default database will be used `string`  
+
+Database name. If not defined, the default database will be used `string`
 see [db_name](#db_name)
 
 #### lang
-  
-Defines the lang of the data.  
+
+Defines the lang of the data.
 see [lang](#lang)
 
 #### av_section_id
@@ -1150,18 +1048,18 @@ A fragment is a piece of the transcription indexed by users and related to one o
 ---
 
 #### code
-  
+
 Authorization code `string`  **Mandatory**
 see [code](#code)
 
 #### db_name
-  
-Database name. If not defined, the default database will be used `string`  
+
+Database name. If not defined, the default database will be used `string`
 see [db_name](#db_name)
 
 #### lang
 
-Defines the lang of the data.  
+Defines the lang of the data.
 see [lang](#lang)
 
 #### fragment_terms
@@ -1217,6 +1115,8 @@ Request:
 https://my_domain.org/dedalo/publication/server_api/v1/json/records?code=XXX&db_name=my_database&table=informant&index_locator={"type":"dd96","tag_id":"71","section_id":"1","section_tipo":"rsc167","component_tipo":"rsc36","section_top_id":"1","section_top_tipo":"oh1","from_component_tipo":"hierarchy40"}
 ```
 
+Response:
+
 ```json
 {
   "result": {
@@ -1252,8 +1152,8 @@ The request will return the main terms, first level, of the thesaurus.
 Return an array of 'ts_term' objects with resolved data.
 
 !!! note
-    This functionality requires that all thesaurus tables follow the same schema. Besides, the root terms will be considered the xx1_1 terms. To able work you must configure your Dédalo thesaurus data in this way.  
-    For example, for thesaurus 'Themes' with tld 'ts' must be exists a root term 'Themes' with section_id 1. This will be publish as term_id 'ts1_1' to be discoverable by the API.
+This functionality requires that all thesaurus tables follow the same schema. Besides, the root terms will be considered the xx1_1 terms. To able work you must configure your Dédalo thesaurus data in this way.
+For example, for thesaurus 'Themes' with tld 'ts' must be exists a root term 'Themes' with section_id 1. This will be publish as term_id 'ts1_1' to be discoverable by the API.
 
 This call is used to get the main terms to build a thesaurus view. The call without parameters will return the first level of the hierarchy, and is possible to define witch thesaurus will returned.
 
@@ -1262,18 +1162,18 @@ This call is used to get the main terms to build a thesaurus view. The call with
 ---
 
 #### code
-  
+
 Authorization code `string` **Mandatory**
 see [code](#code)
 
 #### db_name
-  
-Database name. If not defined, the default database will be used `string`  
+
+Database name. If not defined, the default database will be used `string`
 see [db_name](#db_name)
 
 #### lang
-  
-Defines the lang of the data.  
+
+Defines the lang of the data.
 see [lang](#lang)
 
 #### table
@@ -1387,27 +1287,27 @@ Used to generate a random reference term in a thematic search to show different 
 ---
 
 #### code
-  
+
 Authorization code `string` **Mandatory**
 see [code](#code)
 
 #### db_name
-  
-Database name. If not defined, the default database will be used `string`  
+
+Database name. If not defined, the default database will be used `string`
 see [db_name](#db_name)
 
 #### lang
-  
-Defines the lang of the data.  
+
+Defines the lang of the data.
 see [lang](#lang)
 
 #### table
-  
+
 Defines the table/s of the data.
 see [table](#table-1)
 
 #### exclude_tld
-  
+
 Defines the table/s of the data.
 see [exclude_tld](#exclude_tld)
 
@@ -1451,27 +1351,27 @@ Used to generate a random reference term in a thematic search to show different 
 ---
 
 #### code
-  
+
 Authorization code `string` **Mandatory**
 see [code](#code)
 
 #### db_name
-  
-Database name. If not defined, the default database will be used `string`  
+
+Database name. If not defined, the default database will be used `string`
 see [db_name](#db_name)
 
 #### lang
-  
-Defines the lang of the data.  
+
+Defines the lang of the data.
 see [lang](#lang)
 
 #### table
-  
+
 Defines the table/s of the data.
 see [table](#table-1)
 
 #### exclude_tld
-  
+
 Defines the table/s of the data.
 see [exclude_tld](#exclude_tld)
 
@@ -1573,38 +1473,37 @@ Method: **POST**
 Get terms objects form thesaurus. Resolve one or more ts_term from ar_term_id.
 
 !!! note "About **term_id**"
-    term_id is a flat version of the Dédalo locator. It use section_tipo and section_id to identify the term. Example: ts1_55 is the same that standard locator:  
+term_id is a flat version of the Dédalo locator. It use section_tipo and section_id to identify the term. Example: ts1_55 is the same that standard locator:
 
-    ```json
-    {
-        "section_tipo"  : "ts1",
-        "section_id"    : 55
-    }
-    ```  
+```json
+{
+    "section_tipo"  : "ts1",
+    "section_id"    : 55
+}
+```  
 
-    - ts1: could mapped to table ts_thematic see [table_thesaurus_map](./server_config_api.md#setting-the-thesaurus-table-map) in server_congig_api.php file
-    - 55: indicate the id of the table (section_id)
+- ts1: could mapped to table ts_thematic see [table_thesaurus_map](./server_config_api.md#setting-the-thesaurus-table-map) in server_congig_api.php file
+- 55: indicate the id of the table (section_id)
 
-    !!! warning
-        For historical reasons the term_id nomenclature is maintained in the publication API, in the future version of this API will be changed to standard locator nomenclature.
-
+!!! warning
+    For historical reasons the term_id nomenclature is maintained in the publication API, in the future version of this API will be changed to standard locator nomenclature.
 **Parameters:**
 
 ---
 
 #### code
-  
+
 Authorization code `string` **Mandatory**
 see [code](#code)
 
 #### db_name
-  
-Database name. If not defined, the default database will be used `string`  
+
+Database name. If not defined, the default database will be used `string`
 see [db_name](#db_name)
 
 #### lang
-  
-Defines the lang of the data.  
+
+Defines the lang of the data.
 see [lang](#lang)
 
 #### ar_term_id
@@ -1680,18 +1579,18 @@ We also obtain the url of the interview's posterframe, which facilitates the man
 ---
 
 #### code
-  
+
 Authorization code `string` **Mandatory**
 see [code](#code)
 
 #### db_name
-  
-Database name. If not defined, the default database will be used `string`  
+
+Database name. If not defined, the default database will be used `string`
 see [db_name](#db_name)
 
 #### lang
-  
-Defines the lang of the data.  
+
+Defines the lang of the data.
 see [lang](#lang)
 
 #### term_id
@@ -1707,10 +1606,10 @@ Only one term_id is allowed by request.
 Array of indexation locators with tag_id to be used in combination of term_id. `string` **Mandatory**
 
 !!! note About **tag_id**
-    tag_id is a part of Dédalo locator that identify a text fragment of a field (component) in work system. tag_id has in and out reference inside a text. to locate this part of text Dédalo locator use the path:  
-    `section_tipo -> section_id -> component_tipo -> tag_id`  
-    You can think in this path as:  
-    `table -> row -> column -> part of text`
+tag_id is a part of Dédalo locator that identify a text fragment of a field (component) in work system. tag_id has in and out reference inside a text. to locate this part of text Dédalo locator use the path:
+`section_tipo -> section_id -> component_tipo -> tag_id`
+You can think in this path as:
+`table -> row -> column -> part of text`
 
 Example of locators to get an indexations:
 
@@ -1830,18 +1729,18 @@ This search will make a records query in current term table to find the records 
 ---
 
 #### code
-  
+
 Authorization code `string` **Mandatory**
 see [code](#code)
 
 #### db_name
-  
-Database name. If not defined, the default database will be used `string`  
+
+Database name. If not defined, the default database will be used `string`
 see [db_name](#db_name)
 
 #### lang
-  
-Defines the lang of the data.  
+
+Defines the lang of the data.
 see [lang](#lang)
 
 #### ar_fields
@@ -2007,7 +1906,7 @@ Exclude restricted terms in the result `bool`
 Use to remove the terms restricted in the result. Restricted terms are used to forbidden the publication of some part of the texts. By default this parameter is set to `true`. When is set to `false` you will get restricted term to use it to block the access to the information,
 
 !!! note
-    Publication API will check this terms automatically but you can see whats happen in the search.
+Publication API will check this terms automatically but you can see whats happen in the search.
 
 ### /thesaurus_parents
 
@@ -2022,18 +1921,18 @@ This search will make a records query in current term table to find the records 
 ---
 
 #### code
-  
+
 Authorization code `string` **Mandatory**
 see [code](#code)
 
 #### db_name
-  
-Database name. If not defined, the default database will be used `string`  
+
+Database name. If not defined, the default database will be used `string`
 see [db_name](#db_name)
 
 #### lang
-  
-Defines the lang of the data.  
+
+Defines the lang of the data.
 see [lang](#lang)
 
 #### ar_fields
@@ -2187,18 +2086,18 @@ The request returns a list of objects with the data of the elements found when e
 ---
 
 #### code
-  
+
 Authorization code `string` **Mandatory**
 see [code](#code)
 
 #### db_name
-  
-Database name. If not defined, the default database will be used `string`  
+
+Database name. If not defined, the default database will be used `string`
 see [db_name](#db_name)
 
 #### lang
-  
-Defines the lang of the data.  
+
+Defines the lang of the data.
 see [lang](#lang)
 
 #### q
@@ -2262,7 +2161,7 @@ Response:
           "name": "Alicia",
           "surname": "Ferrero Vidal",
           "surname_single_maiden": ""
-        }       
+        }     
       ],
       "project": ["1"],
       "image_url": "/dedalo/media/av/posterframe/rsc35_rsc167_13.jpg",
@@ -2367,13 +2266,13 @@ It will execute an array of requests in only one call to the server.
 The /combi parameter is useful in cases where we need to make many known requests to the API, if we do every call independently it will generate a lot of traffic and long wait times associated with network latency. By grouping them into one, the request/response process is speeded up and the time required is reduced traffic considerably. Requests thus encapsulated can be of any type supported by the API, with no limit on quantity or repetition.
 
 #### code
-  
+
 Authorization code `string` **Mandatory**
 see [code](#code)
 
 #### db_name
-  
-Database name. If not defined, the default database will be used `string`  
+
+Database name. If not defined, the default database will be used `string`
 see [db_name](#db_name)
 
 #### ar_calls
