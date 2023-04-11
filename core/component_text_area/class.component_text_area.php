@@ -15,7 +15,7 @@ class component_text_area extends component_common {
 	/**
 	* __CONSTRUCT
 	*/
-	function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_LANG, string $section_tipo=null) {
+	protected function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_LANG, string $section_tipo=null) {
 
 		// Overwrite lang when component_select_lang is present
 			if ( ($mode==='edit') && (!empty($parent) && !empty($section_tipo)) ) {
