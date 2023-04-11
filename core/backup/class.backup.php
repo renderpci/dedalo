@@ -1320,10 +1320,14 @@ abstract class backup {
 
 		// curl way
 			$response = curl_request((object)[
-				'url'		=> STRUCTURE_SERVER_URL .'?' .$data_string,
-				'timeout'	=> 60, // int seconds
-				'header'	=> false // bool add header to result
-				// 'post'	=> false
+				'url'				=> STRUCTURE_SERVER_URL .'?' .$data_string,
+				'post'				=> true,
+				'header'			=> false, // bool add header to result
+				'ssl_verifypeer'	=> false,
+				'timeout'			=> 60, // int seconds
+				'proxy'				=> (defined('SERVER_PROXY') && !empty(SERVER_PROXY))
+					? SERVER_PROXY // from Dédalo config file
+					: false // default case
 			]);
 			$result = $response->result;
 
