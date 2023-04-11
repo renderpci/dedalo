@@ -78,6 +78,10 @@ const t0 = performance.now()
 
 				return
 			}
+			// server_errors check
+			if (api_response.server_errors===true) {
+				console.warn('Running with server errors:');
+			}
 
 		// page instance init
 			const page_instance = await get_instance({
