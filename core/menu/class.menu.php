@@ -266,6 +266,7 @@ class menu extends common {
 				'tools'			=> $tools
 			]);
 
+
 		return $dd_object;
 	}//end get_structure_context
 

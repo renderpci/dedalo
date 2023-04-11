@@ -360,9 +360,9 @@ abstract class common {
 			$model_name = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
 			// empty model case
 			if (empty($model_name)) {
-				debug_log(__METHOD__.
-					" Current tipo ($tipo) model name is empty. Default table 'matrix' was used.".to_string(),
-					logger::ERROR
+				debug_log(__METHOD__
+					. " Current tipo ($tipo) model name is empty. Model is mandatory, check your model for tipo: $tipo"
+					, logger::ERROR
 				);
 				return null;
 			}
@@ -372,9 +372,10 @@ abstract class common {
 			}
 			// non section model case
 			if ($model_name!=='section') {
-				debug_log(__METHOD__.
-					" Error Processing Request. Don't use non section tipo ($tipo - $model_name) to calculate matrix_table. Use always section_tipo ",
-					logger::ERROR
+				debug_log(__METHOD__
+					. " Error. Don't use non section tipo to calculate matrix_table. Use always section_tipo". PHP_EOL
+					. " tipo: $tipo - model: $model_name"
+					, logger::ERROR
 				);
 				return null;
 			}
