@@ -222,38 +222,44 @@ abstract class JSON_RecordDataBoundObject {
 	*/
 	public function Save( object $save_options=null ) : ?int {
 
-		# SECTION_TIPO. Check valid section_tipo for safety
-		if (!$section_tipo = safe_tipo($this->section_tipo)) {
-			debug_log(__METHOD__." Stop Save Bad tipo  ".to_string($this->section_tipo), logger::ERROR);
-			// return false;
-			return null;
-		}
+		// options
+			$new_record = $save_options->new_record;
 
-		// datos : JSON ENCODE ALWAYS !!!
-			$datos = json_handler::encode($this->dato);
-
-		// prevent null encoded errors
-			$datos = str_replace(['\\u0000','\u0000'], ' ', $datos);
+		// section_tipo. Check valid section_tipo for safety
+			$section_tipo = safe_tipo( $this->section_tipo );
+			if ($section_tipo===false) {
+				debug_log(__METHOD__
+					. " Stop Save. Bad section tipo "
+					. to_string($this->section_tipo)
+					, logger::ERROR
+				);
+				// return false;
+				return null;
+			}
 
 		// section_id. Section_id is always int
 			$section_id = intval($this->section_id);
 
+		// datos : JSON ENCODE ALWAYS !!!
+			$datos = json_handler::encode($this->dato);
+			// prevent null encoded errors
+			$datos = str_replace(['\\u0000','\u0000'], ' ', $datos);
+
 		// debug
 			if(SHOW_DEBUG===true) {
-				// dump($save_options->new_record, ' save_options->new_record ++ '.to_string());
 				// dump($section_id, ' section_id ++ '.to_string());
 				// dump($this->force_insert_on_save, ' this->force_insert_on_save ++ '.to_string());
 			}
 
 		#
 		# SAVE UPDATE : Record already exists
-		if( $save_options->new_record!==true && $section_id>0 && $this->force_insert_on_save!==true ) {
+		if( $new_record!==true && $section_id>0 && $this->force_insert_on_save!==true ) {
 
-			# Si no se ha modificado nada, ignoramos la orden de salvar
-			// if(!isset($this->arRelationMap['datos'])) {
-			// 	debug_log(__METHOD__." Ignored save. Nothing was changed in 'datos' ! ".to_string(), logger::DEBUG);
-			// 	return false;
-			// }
+			// Si no se ha modificado nada, ignoramos la orden de salvar
+				// if(!isset($this->arRelationMap['datos'])) {
+				// 	debug_log(__METHOD__." Ignored save. Nothing was changed in 'datos' ! ".to_string(), logger::DEBUG);
+				// 	return false;
+				// }
 
 			$strQuery	= 'UPDATE '.$this->strTableName.' SET datos = $1 WHERE section_id = $2 AND section_tipo = $3 RETURNING id';
 			$params		= [$datos, $section_id, $section_tipo];
@@ -292,8 +298,8 @@ abstract class JSON_RecordDataBoundObject {
 				// error case
 					if ($id===false) {
 						debug_log(__METHOD__
-							. " !! Error Processing Request. Received response (id) is 'false'. Maybe you trying to update a non existing record".PHP_EOL
-							. "Check the existence of record section_tipo: '$section_tipo' section_id: '$section_id' "
+							. " !! Error Processing Request. Received response (id) is 'false'. Maybe you trying to update a non existing record" . PHP_EOL
+							. "Check the existence of record section_tipo: '$section_tipo' section_id: '$section_id' " . PHP_EOL
 							. "pg_last_error: " . PHP_EOL
 							. pg_last_error(DBi::_getConnection())
 							, logger::ERROR
@@ -307,8 +313,6 @@ abstract class JSON_RecordDataBoundObject {
 								$strQuery
 							);
 							dump($result, ' Save result. section_id: '.to_string($section_id) . PHP_EOL .'query:' . PHP_EOL . to_string($debug_strQuery));
-							// throw new Exception("Error Processing Request: " .PHP_EOL. pg_last_error(DBi::_getConnection()), 1);
-							// dump(debug_backtrace(), ' bt debug_backtrace ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string());
 						}
 						// return false;
 						return null;
@@ -342,7 +346,10 @@ abstract class JSON_RecordDataBoundObject {
 					// Return sequence auto created section_id
 					$section_id = pg_fetch_result($result,0,'section_id');
 					if ($section_id===false) {
-						debug_log(__METHOD__.' Error. ID received after update is different from current ID. this ID: '.$this->ID.' ', logger::ERROR);
+						debug_log(__METHOD__
+							.' Error. ID received after update is different from current ID. this ID: '.$this->ID.' '
+							, logger::ERROR
+						);
 						if(SHOW_DEBUG===true) {
 							dump(null, "strQuery : ".PHP_EOL.to_string($strQuery));
 							// throw new Exception("Error Processing Request: ".pg_last_error(DBi::_getConnection()), 1);
@@ -357,8 +364,10 @@ abstract class JSON_RecordDataBoundObject {
 				default:
 
 					if(empty($section_id) || empty($section_tipo)) {
-						#throw new Exception("Error Processing Request. section_id and section_tipo", 1);
-						debug_log(__METHOD__." Error Processing Request. section_id:$section_id and section_tipo:$section_tipo, table:$this->strTableName - $this->ID", logger::ERROR);
+						debug_log(__METHOD__
+							." Error Processing Request. section_id:$section_id and section_tipo:$section_tipo, table:$this->strTableName - $this->ID"
+							, logger::ERROR
+						);
 					}
 
 					# Insert record datos and receive a new id
@@ -366,10 +375,13 @@ abstract class JSON_RecordDataBoundObject {
 
 					$result   = pg_query_params(DBi::_getConnection(), $strQuery, array( $section_id, $section_tipo, $datos ));
 					if($result===false) {
-						debug_log(__METHOD__." Error Processing Save Insert Request (2) error: ". pg_last_error(DBi::_getConnection()), logger::ERROR);
+						debug_log(__METHOD__
+							." Error Processing Save Insert Request (2) error: " . PHP_EOL
+							. pg_last_error(DBi::_getConnection())
+							, logger::ERROR
+						);
 						if(SHOW_DEBUG===true) {
-							dump($strQuery,"strQuery section_id:$section_id, section_tipo:$section_tipo, datos:".to_string($datos));
-							// throw new Exception("Error Processing Save Insert Request (2) error: ". pg_last_error(DBi::_getConnection()), 1);;
+							dump($strQuery, "strQuery section_id:$section_id, section_tipo:$section_tipo, datos:".to_string($datos));
 						}
 						// return false;
 						return null;
@@ -377,25 +389,27 @@ abstract class JSON_RecordDataBoundObject {
 
 					$id = pg_fetch_result($result,0,'id');
 					if ($id===false) {
-						debug_log(__METHOD__."Error Processing Request: ".pg_last_error(DBi::_getConnection()), logger::ERROR);
+						debug_log(__METHOD__
+							."Error Processing Request: " . PHP_EOL
+							.pg_last_error(DBi::_getConnection())
+							, logger::ERROR
+						);
 						if(SHOW_DEBUG===true) {
-							dump($strQuery,"strQuery");
-							// throw new Exception("Error Processing Request: ".pg_last_error(DBi::_getConnection()), 1);
+							dump($strQuery, "strQuery");
 						}
 						// return false;
 						return null;
 					}
-					# Fix new received id (id matrix)
+					// Fix new received id (id matrix)
 					$this->ID = $id;
 
-					# Return always current existing or created id
+					// Return always current existing or created id
 					return (int)$this->ID;
 					break;
 			}//end switch($this->strTableName)
+		}//end if( $new_record!==true && $section_id>0 && $this->force_insert_on_save!==true )
 
-		}//end if( $save_options->new_record!==true && $section_id>0 && $this->force_insert_on_save!==true )
 
-		// return false;
 		return null;
 	}//end Save
 
@@ -443,8 +457,10 @@ abstract class JSON_RecordDataBoundObject {
 	/**
 	* SEARCH_FREE
 	* Perform a simple free SQL query and exec in db return result resource
-	* @param string $strQuery Full SQL query like "SELECT id FROM table WHERE id>0"
-	* @param bool $wait to set syc/async exec. Default us true
+	* @param string $strQuery
+	* 	Full SQL query like "SELECT id FROM table WHERE id>0"
+	* @param bool $wait
+	* 	to set syc/async exec. Default us true
 	* @return resource|PgSql\Result|bool $result
 	*   resource (PHP<8) OR object (PHP>=8) | false $result
 	* 	Database resource/object from exec query
@@ -459,37 +475,47 @@ abstract class JSON_RecordDataBoundObject {
 				}
 			}
 
-		$conn = DBi::_getConnection() ?? false;
-		if ($conn===false) {
-			debug_log(__METHOD__." Error. DDBB connection failed ".to_string(), logger::ERROR);
-			return false;
-		}
+		// connection to DDBB
+			$conn = DBi::_getConnection() ?? false;
+			if ($conn===false) {
+				debug_log(__METHOD__." Error. DDBB connection failed ", logger::ERROR);
+				return false;
+			}
 
 		// $result = pg_query(DBi::_getConnection(), $strQuery);
 
 		// exec With prepared statement
 			$stmtname  = ''; //md5($strQuery); //'search_free_stmt';
-			$statement = pg_prepare(DBi::_getConnection(), $stmtname, $strQuery);
+			$statement = pg_prepare($conn, $stmtname, $strQuery);
 			if ($statement===false) {
-				debug_log(__METHOD__." Error when pg_prepare statement for strQuery: ".to_string($strQuery), logger::ERROR);
+				debug_log(__METHOD__
+					. " Error when pg_prepare statement for strQuery: "
+					. to_string($strQuery) . PHP_EOL
+					. pg_last_error($conn)
+					, logger::ERROR
+				);
 				return false;
 			}
 
 			if ($wait===false) {
 				// async case
-				pg_send_execute(DBi::_getConnection(), $stmtname, array());
-				$result = pg_get_result(DBi::_getConnection());
+				pg_send_execute($conn, $stmtname, array());
+				$result = pg_get_result($conn);
 			}else{
 				// default sync case
-				$result = pg_execute(DBi::_getConnection(), $stmtname, array());
+				$result = pg_execute($conn, $stmtname, array());
 			}
 
 		// check result
 			if($result===false) {
+				debug_log(__METHOD__
+					." Error Processing SEARCH_FREE Request. pg_last_error:". PHP_EOL
+					. pg_last_error($conn)
+					, logger::ERROR
+				);
 				if(SHOW_DEBUG===true) {
-					dump(pg_last_error(DBi::_getConnection())," error on strQuery: ".to_string( PHP_EOL.$strQuery.PHP_EOL ));
+					dump(pg_last_error($conn)," error on strQuery: ".to_string( PHP_EOL.$strQuery.PHP_EOL ));
 				}
-				trigger_error("Error Processing SEARCH_FREE Request. pg_last_error: ". pg_last_error(DBi::_getConnection()));
 				return false;
 			}
 
@@ -501,14 +527,14 @@ abstract class JSON_RecordDataBoundObject {
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				$total_time_ms = exec_time_unit($start_time,'ms');
-				#$_SESSION['debug_content'][__METHOD__][] = " ". str_replace("\n",'',$strQuery) ." [$total_time_ms ms]";
+				$total_time_ms = exec_time_unit($start_time, 'ms');
 				if($total_time_ms>SLOW_QUERY_MS) {
-					#dump(debug_backtrace()[2],' DEBUG_BACKTRACE  ') ;
-					error_log($total_time_ms."ms. SEARCH_SLOW_QUERY: $strQuery ");
+					debug_log(__METHOD__
+						. " SEARCH_SLOW_QUERY [$total_time_ms ms]: ". PHP_EOL
+						. $strQuery
+						, logger::WARNING
+					);
 				}
-				#global$TIMER;$TIMER[__METHOD__.'_'.$strQuery.'_TOTAL:'.count($ar_records).'_'.start_time()]=start_time();
-				#error_log("search_free - Loaded: $total_time_ms ms ");
 			}
 
 
@@ -576,7 +602,7 @@ abstract class JSON_RecordDataBoundObject {
 					$strQuery .= $value.' ';
 					break;
 
-				# OR (formato lang:or= array('DEDALO_DATA_LANG',DEDALO_DATA_NOLAN))
+				# OR (format lang:or= array('DEDALO_DATA_LANG',DEDALO_DATA_NOLAN))
 				case (strpos($key,':or')!==false):
 					$campo = substr($key, 0, strpos($key,':or'));
 					$strQuery_temp ='';
@@ -641,7 +667,11 @@ abstract class JSON_RecordDataBoundObject {
 
 			# DEBUG
 			if(SHOW_DEBUG===true) {
-				error_log(__METHOD__." --> Used cache run-in for query: $strQuery");
+				debug_log(__METHOD__
+					." --> Used cache run-in for query: "
+					.to_string($strQuery)
+					, logger::DEBUG
+				);
 			}
 
 		}else{
@@ -650,7 +680,11 @@ abstract class JSON_RecordDataBoundObject {
 
 			$result = pg_query(DBi::_getConnection(), $strQuery);// or die("Cannot execute query: $strQuery\n". pg_last_error(DBi::_getConnection()));
 			if ($result===false) {
-				debug_log(__METHOD__." Error Processing Request . ".pg_last_error(DBi::_getConnection()), logger::ERROR);
+				debug_log(__METHOD__
+					." Error Processing pg_query request " .PHP_EOL
+					. pg_last_error(DBi::_getConnection())
+					, logger::ERROR
+				);
 				if(SHOW_DEBUG===true) {
 					dump(pg_last_error(DBi::_getConnection()), ' pg_last_error(DBi::_getConnection()) ++ '.to_string($strQuery));
 					// throw new Exception("Error Processing Request . ".pg_last_error(DBi::_getConnection()), 1);
