@@ -122,6 +122,15 @@ This element would point (related term) to the source component of the data, 'Co
 
 For a publication ontology to be operational, it is necessary to always create a 'field_enum' column related to the publication component of the section. In this way we will have control of whether a record is publishable or not.
 
+**diffusion_root**
+Dédalo defines the publication architecture as an ontology subtree below the root diffusion node 'dd3' with the model "diffusion", this node ca not be changed, to build a specific diffusion model is necessary build a diffusion domain below the root diffusion node.
+
+**diffusion_domain**
+Every diffusion domain would be created using the custom diffusion model elements to describe the complete diffusion flow. One Dédalo installation can has some different diffusion domain nodes, each of these nodes for one specific publication.
+
+**diffusion_element**
+The diffusion element define the start point into the model of publication. These nodes defines the publication format and the script that can convert the data to specific output.
+
 Common models
 
 | model             | definition                                |
