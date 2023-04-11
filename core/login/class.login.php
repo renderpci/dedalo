@@ -1291,9 +1291,6 @@ class login extends common {
 					];
 			}
 
-		// langs list
-			$properties->dedalo_application_langs = DEDALO_APPLICATION_LANGS;
-
 		// dd_object
 			$dd_object = new dd_object((object)[
 				'label'			=> $label,
@@ -1311,6 +1308,8 @@ class login extends common {
 
 
 }//end login class
+
+
 
 class exec {
     /**

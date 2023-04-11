@@ -85,7 +85,7 @@ const get_content_data = function(self) {
 		// top.appendChild(files_loader)
 
 	// select lang
-		const langs			= self.context.properties.dedalo_application_langs
+		const langs			= page_globals.dedalo_application_langs
 		const select_lang	= ui.build_select_lang({
 			langs 	 : langs,
 			selected : page_globals.dedalo_application_lang,
