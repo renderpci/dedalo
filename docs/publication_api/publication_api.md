@@ -2380,7 +2380,7 @@ see [db_name](#db_name)
 
 Group of calls `array`
 
-The call object need to be JSON stringified. Every call will be iterated and resolved in the server side. Every call need a unique id and the options of the call with the parameter of the request.
+The call object need to be JSON stringified. Every call will be iterated and resolved in the server side. Every call need a unique id and the options of the call with the parameter of the request. The id will be set in the result data to be identified the all associated.
 
 Example:
 
