@@ -61,7 +61,7 @@ class component_relation_common extends component_common {
 	*
 	* @return bool
 	*/
-	public function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=null, string $section_tipo=null) {
+	protected function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=null, string $section_tipo=null) {
 
 		// lang. translatable conditioned
 			$translatable = RecordObj_dd::get_translatable($tipo);
