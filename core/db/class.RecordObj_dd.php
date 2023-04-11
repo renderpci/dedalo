@@ -6,8 +6,10 @@
 */
 class RecordObj_dd extends RecordDataBoundObject {
 
-	# FIELDS
-	protected $terminoID;
+
+
+	// fields
+	public $terminoID;
 	protected $parent;
 	protected $modelo;
 	protected $esmodelo;
@@ -21,10 +23,10 @@ class RecordObj_dd extends RecordDataBoundObject {
 	protected $properties;
 	protected $prefijo ;
 
-	# FIELDS EXTERNAL
+	// fields external
 	protected $filtroTerminos ;
 
-	# OPTIONAL ESPECIFIC LOADS
+	// optional specific loads
 	protected $ar_recursive_childrens_of_this	= array();
 	#protected $ar_parents_cache				= array();
 	#protected $ar_reels_of_this				= array();
