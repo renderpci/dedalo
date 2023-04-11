@@ -591,7 +591,7 @@ Dédalo is a multilingual system, every installation has his own language defini
 ??? note "Languages"
     For the languages, Dédalo uses the pattern: `lg-xxx`
     lg : identify the term as language
-    xxx : with the official tld of the ISO 639-6, Alpha-4 code for comprehensive coverage of language variants.
+    xxx : with the official tld of the ISO 639-6, Alpha-4 code for comprehensive coverage of language variants.  
 
     Some common languages:
     
@@ -1252,8 +1252,7 @@ The request will return the main terms, first level, of the thesaurus.
 Return an array of 'ts_term' objects with resolved data.
 
 !!! note
-    This functionality requires that all thesaurus tables follow the same schema. Besides, the root terms will be considered the xx1_1 terms. To able work you must configure your Dédalo thesaurus data in this way.
-
+    This functionality requires that all thesaurus tables follow the same schema. Besides, the root terms will be considered the xx1_1 terms. To able work you must configure your Dédalo thesaurus data in this way.  
     For example, for thesaurus 'Themes' with tld 'ts' must be exists a root term 'Themes' with section_id 1. This will be publish as term_id 'ts1_1' to be discoverable by the API.
 
 This call is used to get the main terms to build a thesaurus view. The call without parameters will return the first level of the hierarchy, and is possible to define witch thesaurus will returned.
@@ -1540,7 +1539,7 @@ flowchart TD
 
     %% Colors %%
 
-    classDef default fill:#dddddd,stroke:#000,stroke-width:0;
+    classDef default fill:#eeeeee,stroke:#000,stroke-width:0;
     classDef orange fill:#FFAB70,stroke:#000,color:#000
 
     A(Thematic) --> B
@@ -1561,7 +1560,7 @@ flowchart TD
 
     %% Colors %%
 
-    classDef default fill:#dddddd,stroke:#000,stroke-width:0;
+    classDef default fill:#eeeeee,stroke:#000,stroke-width:0;
     classDef orange fill:#FFAB70,stroke:#000,color:#000
 
     A(Types of work) --> B(Agriculture):::orange
@@ -1573,15 +1572,15 @@ Method: **POST**
 
 Get terms objects form thesaurus. Resolve one or more ts_term from ar_term_id.
 
-!!! note About **term_id**
-    term_id is a flat version of the Dédalo locator. It use section_tipo and section_id to identify the term. Example: ts1_55 is the same that standard locator:
+!!! note "About **term_id**"
+    term_id is a flat version of the Dédalo locator. It use section_tipo and section_id to identify the term. Example: ts1_55 is the same that standard locator:  
 
     ```json
     {
         "section_tipo"  : "ts1",
         "section_id"    : 55
     }
-    ```
+    ```  
 
     - ts1: could mapped to table ts_thematic see [table_thesaurus_map](./server_config_api.md#setting-the-thesaurus-table-map) in server_congig_api.php file
     - 55: indicate the id of the table (section_id)
@@ -1703,18 +1702,14 @@ Only one term_id is allowed by request.
 
 `ts1_55`
 
-
 #### ar_locators
 
 Array of indexation locators with tag_id to be used in combination of term_id. `string` **Mandatory**
 
 !!! note About **tag_id**
-    tag_id is a part of Dédalo locator that identify a text fragment of a field (component) in work system. tag_id has in and out reference inside a text. to locate this part of text Dédalo locator use the path:
-
-    `section_tipo -> section_id -> component_tipo -> tag_id`
-
-    You can think in this path as:
-
+    tag_id is a part of Dédalo locator that identify a text fragment of a field (component) in work system. tag_id has in and out reference inside a text. to locate this part of text Dédalo locator use the path:  
+    `section_tipo -> section_id -> component_tipo -> tag_id`  
+    You can think in this path as:  
     `table -> row -> column -> part of text`
 
 Example of locators to get an indexations:
@@ -1861,7 +1856,24 @@ Term to be located in the transcription. `string` **Mandatory**
 
 Only one term_id is allowed by request.
 
-To get `aa1_4` child term:
+Example: Take account this hierarchy nodes.
+
+```mermaid
+flowchart TD
+
+    %% Colors %%
+
+    classDef default fill:#eeeeee,stroke:#000,stroke-width:0;
+    classDef orange fill:#FFAB70,stroke:#000,color:#000
+
+    A(Social anthropology : aa1_1) --> B(Works : aa1_4):::orange
+    B --> C(Types of works : aa1_33)
+    C --> D(Domestic and cleaning services : aa1_37)
+    C --> E(Agriculture : aa1_141)
+    D --> F(Housekeeping : aa1_88)
+```
+
+If we want to get `aa1_4` child term:
 
 Request
 
@@ -1908,7 +1920,7 @@ Get all children in all levels `bool`
 
 When is set to true the request will go deep hierarchy search to get all children inside children until last one. By default is set to `false`
 
-To get `aa1_4` children terms:
+If we will to get `aa1_4` children terms:
 
 Request
 
@@ -1940,8 +1952,8 @@ Response:
         "section_id": 141,
         "lang": "lg-eng",
         "descriptor": "yes",
-        "term_id": "aa1_33",
-        "term": "Domestic and cleaning services",
+        "term_id": "aa1_141",
+        "term": "Agriculture",
         "parent": ["aa1_33"],
         "parents": ["aa1_33","aa1_4","aa1_1"],
         "children": null,
@@ -1966,7 +1978,7 @@ Response:
         "section_id": 88,
         "lang": "lg-eng",
         "descriptor": "yes",
-        "term_id": "aa1_37",
+        "term_id": "aa1_88",
         "term": "Housekeeping",
         "parent": ["aa1_37"],
         "parents": ["aa1_37","aa1_33","aa1_4","aa1_1"],
@@ -2036,6 +2048,23 @@ Term to be located in the transcription. `string` **Mandatory**
 
 Only one term_id is allowed by request.
 
+Example: Take account this hierarchy nodes.
+
+```mermaid
+flowchart TD
+
+    %% Colors %%
+
+    classDef default fill:#eeeeee,stroke:#000,stroke-width:0;
+    classDef orange fill:#FFAB70,stroke:#000,color:#000
+
+    A(Social anthropology : aa1_1) --> B(Works : aa1_4)
+    B --> C(Types of works : aa1_33)
+    C --> D(Domestic and cleaning services : aa1_37)
+    C --> E(Agriculture : aa1_141)
+    D --> F(Housekeeping : aa1_88):::orange
+```
+
 To get `aa1_88` parent term:
 
 Request
@@ -2071,9 +2100,7 @@ Get all children in all levels `bool`
 
 When is set to true the request will go deep hierarchy search to get all children inside children until last one. By default is set to `false`
 
-Request
-
-To get all `aa1_88` parents terms:
+Request to get all `aa1_88` parents terms:
 
 ```api_request
 https://my_domain.org/dedalo/publication/server_api/v1/json/thesaurus_children?code=XXX&term_id=aa1_37&recursive=true
@@ -2143,5 +2170,253 @@ Response:
 ]
 ```
 
+## Free
 
+Free is used to do request at interviews transcription. It use the component rsc36 to query the search. Publication API has this specific call to resolve fragments of the interviews than can not be done with regular SQL calls.
 
+### /free_search
+
+Method: **POST**
+
+Request a search against transcription column in audiovisual table. By default the request will be in rsc36 column.
+
+The request returns a list of objects with the data of the elements found when executing the search. These data include the interview information, images, informants and the associated audiovisual, as well as the urls of the poster frames, of the files 'cut' video footage and subtitles, as well as relevant restricted fragment (included in fragment found)
+
+**Parameters:**
+
+---
+
+#### code
+  
+Authorization code `string` **Mandatory**
+see [code](#code)
+
+#### db_name
+  
+Database name. If not defined, the default database will be used `string`  
+see [db_name](#db_name)
+
+#### lang
+  
+Defines the lang of the data.  
+see [lang](#lang)
+
+#### q
+
+String to search. `string` **Mandatory**
+
+This field is use full-text search.
+
+Request
+
+To get all `aa1_88` parents terms:
+
+```api_request
+https://my_domain.org/dedalo/publication/server_api/v1/json/free_search?code=XXX&q=war
+```
+
+Response:
+
+```json
+{
+  "result": [
+    {
+      "av_section_id": 13,
+      "q": "war",
+      "appearances_limit": 1,
+      "match_select": false,
+      "image_type": "posterframe",
+      "video_fragment": false,
+      "list_fragment": true,
+      "fragment_terms": false,
+      "lang": "lg-eng",
+      "video": "/dedalo/media/av/404/rsc35_rsc167_13.mp4",
+      "interview_section_id": 10,
+      "code": "ICR-10",
+      "title": "",
+      "abstract": "The interview abstract",
+      "priority": 5,
+      "interview_place": "Tomelloso, Ciudad Real, Castilla-La Mancha, Spain",
+      "primary_lang": "Castellano",
+      "date": "2012-03-20",
+      "image": [
+        {
+          "table": "image",
+          "section_id": 10,
+          "lang": "lg-eng",
+          "publication": "yes",
+          "image": "/dedalo/media/image/1.5MB/0/rsc29_rsc170_10.jpg"
+        }
+      ],
+      "audiovisual": ["13"],
+      "informant": [
+        {
+          "table": "informant",
+          "section_id": 19,
+          "lang": "lg-eng",
+          "publication": "yes",
+          "birthdate": "1921-05-20",
+          "birthplace": "Tomelloso, Ciudad Real, Castilla-La Mancha, Spain",
+          "birthplace_id": ["es1_6800"],
+          "gender": "Woman",
+          "name": "Alicia",
+          "surname": "Ferrero Vidal",
+          "surname_single_maiden": ""
+        }       
+      ],
+      "project": ["1"],
+      "image_url": "/dedalo/media/av/posterframe/rsc35_rsc167_13.jpg",
+      "ar_restricted_fragments": null,
+      "fragments": [
+        {
+          "word": "war",
+          "match": 1,
+          "list_fragment": ".. chool of the monks, at all, two years. I did the communion, the first communion of... Six years. After<mark>war</mark>ds already they changed me my parents of house. They carried me to a private school, of a lady that called sister Victoria. It had to carry the seat from house, a .."
+        }
+      ]
+    }
+  ],
+  "msg": "Ok. Request free_search done successfully",
+  "page_number": 1,
+  "rows_per_page": 10,
+  "total": 45
+}
+```
+
+#### is_literal
+
+Allow search literals like "my house" `bool`
+
+Used in combination of q to set if the request will be a literal, exactly as q is. By default is set to `false`
+
+#### rows_per_page
+
+Number of records returned by page. `int`
+
+Limit the number of records. Default is set to 10
+
+#### page_number
+
+Current page number. `int` **Deprecated** use `offset`
+
+#### offset
+
+Offset used to paginate results. `int`
+
+Default is set to 0
+
+#### appearances_limit
+
+Maximum number of appearances `int`
+
+Free search will get rows of transcriptions, the maximum rows of audiovisual transcriptions is limit with the row_per_page parameter, but inside the transcription the word searched could be appear more than 1 and this parameter limit the times to be appear the q searched inside the same transcription (matches calculated). By default is set to 1.
+
+#### match_select
+
+Selects a specific match inside results. `int`
+
+For example, to get only the first appearance of a word.
+
+#### count
+
+Total records count. `bool`
+
+By default is set to `true`
+
+#### image_type
+
+Type of image returned. `string`
+
+When you want to get a indexation is possible that you want to show the audiovisual poster-frame or the interview image. you can choose it setting this parameter.
+
+Options: identify_image || posterframe. By default is set to `posterframe`.
+
+#### list_fragment
+
+Get small text version `bool`
+
+Resolve text fragment of the interview to show in list mode. Get a preview of the fragment but it will not resolve the video cut if you need the video fragment you will need active [video_fragment](#video_fragment) parameter.
+
+By default is set to `true`
+
+#### video_fragment
+
+Activates the resolution to cut audiovisual associated to fragment `bool`
+
+When the parameter is active the query will resolve the audiovisual time to be cut of every fragment it extended text transcription fragment with his audiovisual fragment. By default is set to `false`
+
+#### fragment_terms
+
+Calculates indexations terms for every fragment of transcription. `bool`
+
+When is set to `true` publication API will calculate if the fragment requested has an indexation and will return the terms of this indexation. By default is set to `false`.
+
+#### filter
+
+Optional filter to apply at request `string`
+
+This parameter will add a filter to be apply to request. If this filter is not set the request will be apply to all records in the table, but you can limit the search to specific records adding, for example, `section_id = 1`, the q will use to search only in the  transcription of the section_id 1.
+
+## Utils
+
+### /combi
+
+Combined calls to publication API in one request.
+It will execute an array of requests in only one call to the server.
+
+#### code
+  
+Authorization code `string` **Mandatory**
+see [code](#code)
+
+#### db_name
+  
+Database name. If not defined, the default database will be used `string`  
+see [db_name](#db_name)
+
+#### ar_calls
+
+Group of calls `array`
+
+The call object need to be JSON stringified. Every call will be iterated and resolved in the server side. Every call need a unique id and the options of the call with the parameter of the request.
+
+Example:
+
+```json
+ [
+  {
+    "id": "templates_all",
+    "options": {
+      "dedalo_get": "records",
+      "table": "template_map",
+      "ar_fields": [
+        "data",
+        "name"
+      ],
+      "lang": "lg-spa"
+    }
+  },
+  {
+    "id": "menu_all",
+    "options": {
+      "dedalo_get": "records",
+      "table": "ts_web",
+      "ar_fields": [
+        "section_id",
+        "term_id",
+        "term",
+        "web_path",
+        "parent",
+        "children",
+        "template_name",
+        "title",
+        "abstract",
+        "body",
+        "norder",
+        "image"
+      ],
+      "lang": "lg-spa"
+    }
+  }
+]
+```
