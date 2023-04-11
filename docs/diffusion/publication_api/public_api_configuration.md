@@ -12,7 +12,7 @@ The first step would be locating and renaming config files from their original v
 
 This config file sets the public API server. This file will be used to configure all server parameters for the publication API.
 
-It is independent from the back-end config files and has its own properties and DDBB connection. The API server files can be moved to other server machines, to create an independent space for the public websites because the server API is not connected directly to the back-end.
+It is independent from the back-end config files and has its own properties and database connection. The API server files can be moved to other server machines, to create an independent space for the public websites because the server API is not connected directly to the back-end.
 
 Public API is located in `../httpdocs/dedalo/publication/server_api/` and it has its own config file.
 
