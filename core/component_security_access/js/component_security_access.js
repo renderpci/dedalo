@@ -271,6 +271,7 @@ component_security_access.prototype.get_parents = function(item, datalist) {
 * @return array ar_children
 */
 component_security_access.prototype.get_children = function(item, datalist) {
+	const t1 = performance.now()
 
 	const self = this
 
@@ -285,6 +286,7 @@ component_security_access.prototype.get_children = function(item, datalist) {
 			const children = e.data.result
 			// current_worker.terminate()
 			// console.log('children:', children);
+			console.log("__***Time performance.now()-t1 get_children:", children.length, performance.now()-t1);
 			resolve( children )
 		}
 		current_worker.onerror = function(e) {
