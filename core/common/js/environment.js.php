@@ -68,7 +68,7 @@ session_write_close();
 		$is_root			= $user_id==DEDALO_SUPERUSER;
 
 		$obj = new stdClass();
-			$obj->dedalo_errors						= !empty($_ENV['DEDALO_ERRORS']);
+			$obj->server_errors						= !empty($_ENV['DEDALO_ERRORS']);
 			// logged informative only
 			$obj->is_logged							= login::is_logged();
 			$obj->is_global_admin					= $is_global_admin;
