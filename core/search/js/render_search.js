@@ -383,21 +383,26 @@ render_search.prototype.render_search_buttons = function(){
 
 	// recursive children
 		if (self.caller.context.section_map && self.caller.context.section_map.thesaurus) {
-			const recursive_label = ui.create_dom_element({
-				element_type	: 'label',
-				text_content	: get_label['children_recursive'] || 'Children',
-				class_name		: 'children_recursive_label',
-				parent			: max_group
-			})
-			const search_children_recursive_node = ui.create_dom_element({
-				element_type	: 'input',
-				type			: 'checkbox',
-				value			: '',
-				class_name		: 'children_recursive'
-			})
-			recursive_label.prepend(search_children_recursive_node)
-			// fix node
-			self.search_children_recursive_node	= search_children_recursive_node
+			// re-check if this section have really a component_relation_children before create the option
+			const section_components_list		= self.components_list[self.section_tipo]
+			const component_relation_children	= section_components_list.find(el => el.model==='component_relation_children')
+			if (component_relation_children) {
+				const recursive_label = ui.create_dom_element({
+					element_type	: 'label',
+					text_content	: get_label['children_recursive'] || 'Children',
+					class_name		: 'children_recursive_label',
+					parent			: max_group
+				})
+				const search_children_recursive_node = ui.create_dom_element({
+					element_type	: 'input',
+					type			: 'checkbox',
+					value			: '',
+					class_name		: 'children_recursive'
+				})
+				recursive_label.prepend(search_children_recursive_node)
+				// fix node
+				self.search_children_recursive_node	= search_children_recursive_node
+			}
 		}
 
 	// reset group
