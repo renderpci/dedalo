@@ -57,7 +57,7 @@ export const component_security_access = function(){
 	component_security_access.prototype.save				= component_common.prototype.save
 	component_security_access.prototype.update_data_value	= component_common.prototype.update_data_value
 	component_security_access.prototype.update_datum		= component_common.prototype.update_datum
-	// component_security_access.prototype.change_value		= component_common.prototype.change_value
+	component_security_access.prototype.change_value		= component_common.prototype.change_value
 	component_security_access.prototype.set_changed_data	= component_common.prototype.set_changed_data
 	component_security_access.prototype.build_dd_request	= common.prototype.build_dd_request
 
@@ -130,7 +130,7 @@ component_security_access.prototype.build = async function(options) {
 			}
 		}
 		// replace value
-		self.data.value = filled_value
+		self.filled_value = filled_value
 
 
 	return common_build
@@ -171,8 +171,8 @@ component_security_access.prototype.update_value = function(item, input_value) {
 	const self = this
 
 	// value . Copy of current data.value
-		const value = self.data.value
-			? [...self.data.value]
+		const value = self.filled_value
+			? [...self.filled_value]
 			: []
 
 	// item check
@@ -198,7 +198,7 @@ component_security_access.prototype.update_value = function(item, input_value) {
 		}
 
 	// fix updated changed_value
-		self.data.value = value
+		self.filled_value = value
 
 	// event. publish update_value_xx event on change data.value
 		const name = 'update_value_' + self.id + '_' + item.tipo + '_' + item.section_tipo
@@ -348,7 +348,7 @@ component_security_access.prototype.update_parents_radio_butons = async function
 						continue
 					}
 
-					const data_found = self.data.value.find(el => el.tipo===child.tipo && el.section_tipo===child.section_tipo)
+					const data_found = self.filled_value.find(el => el.tipo===child.tipo && el.section_tipo===child.section_tipo)
 					if (!data_found) {
 						diff_value = true
 						break
@@ -384,20 +384,20 @@ component_security_access.prototype.update_parents_radio_butons = async function
 * @return promise
 * Resolve bool|object (API response) from change_value()
 */
-component_security_access.prototype.change_value = async function(options) {
+// component_security_access.prototype.change_value = async function(options) {
 
-	const self = this
+// 	const self = this
 
-	// options
-		const from_save_changes = options.from_save_changes || false
+// 	// options
+// 		const from_save_changes = options.from_save_changes || false
 
-	const api_response = (from_save_changes===true)
-		? await component_common.prototype.change_value.call(this, options) // internal call from self save_changes. Pass untouched to component_common
-		: await self.save_changes() // Prepare as save changes mode that triggers change_value again
+// 	const api_response = (from_save_changes===true)
+// 		? await component_common.prototype.change_value.call(this, options) // internal call from self save_changes. Pass untouched to component_common
+// 		: await self.save_changes() // Prepare as save changes mode that triggers change_value again
 
 
-	return api_response
-}//end change_value
+// 	return api_response
+// }//end change_value
 
 
 
@@ -413,9 +413,9 @@ component_security_access.prototype.save_changes = async function() {
 
 	// rebuild value removing empty zero values
 		const clean_changed_value	= []
-		const value_length			= self.data.value.length
+		const value_length			= self.filled_value.length
 		for (let i = 0; i < value_length; i++) {
-			const value_item = self.data.value[i]
+			const value_item = self.filled_value[i]
 			if (value_item.value>0) {
 				clean_changed_value.push(value_item)
 			}
