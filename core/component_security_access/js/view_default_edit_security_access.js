@@ -191,6 +191,7 @@ const get_content_data = async function(self) {
 * 	Containing li nodes
 */
 const render_tree_items = function(items, datalist, value, self) {
+	// const t0 = performance.now()
 
 	// tree_object . Object with all li nodes rendered sequentially
 		const tree_object = {}
@@ -210,10 +211,6 @@ const render_tree_items = function(items, datalist, value, self) {
 				)// li node
 
 			// store in the tree_object
-				// const key = current_item.tipo +'_'+ current_item.section_tipo
-				// const key = current_item.model==='section'
-				// 	? current_item.tipo
-				// 	: current_item.tipo +'_'+ current_item.section_tipo
 				const key = current_item.tipo
 				tree_object[key] = tree_node
 		}
@@ -239,6 +236,7 @@ const render_tree_items = function(items, datalist, value, self) {
 				fragment.appendChild(tree_node)
 			}
 		}
+		// console.log('performance.now()-t0:', performance.now()-t0);
 
 
 	return fragment
