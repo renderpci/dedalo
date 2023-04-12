@@ -95,13 +95,15 @@ class search {
 		protected $ar_sql_joins;
 
 
+
 	/**
 	* GET_INSTANCE
+	* @param object $search_query_object
 	* @return class instance
 	*/
 	public static function get_instance(object $search_query_object) : object {
 
-		# Accepted objects json encoded too
+		// Accepted objects JSON encoded too
 		if (is_string($search_query_object)) {
 			$search_query_object = json_decode($search_query_object);
 		}
@@ -134,7 +136,7 @@ class search {
 	* __CONSTRUCT
 	*/
 	private function __construct(object $search_query_object) {
-		# Set up class minim vars
+		// Set up class minim vars
 		$this->set_up($search_query_object);
 	}//end __construct
 
@@ -142,8 +144,10 @@ class search {
 
 	/**
 	* SET_UP
+	* @param object $search_query_object
+	* @return void
 	*/
-	public function set_up(object $search_query_object) : bool {
+	public function set_up(object $search_query_object) : void {
 
 		// # Accepted objects json encoded too
 		// if (is_string($search_query_object)) {
@@ -249,9 +253,6 @@ class search {
 			: (isset($this->search_query_object->skip_projects_filter)
 				? $this->search_query_object->skip_projects_filter
 				: false);
-
-
-		return true;
 	}//end set_up
 
 
@@ -270,7 +271,6 @@ class search {
 
 		# Converts JSON search_query_object to SQL query string
 		$sql_query = $this->parse_search_query_object( $full_count=false );
-			// debug_log(__METHOD__." sql_query ".to_string($sql_query), logger::DEBUG);
 
 		$parsed_time = round(start_time()-$start_time,3);
 
@@ -480,10 +480,10 @@ class search {
 	/**
 	* GENERATE_CHILDREN_RECURSIVE_SEARCH
 	* Create a new filter to inject in current search query object
-	*
+	* @param array $ar_rows
 	* @return object $new_sqo
 	*/
-	public function generate_children_recursive_search($ar_rows) {
+	public function generate_children_recursive_search(array $ar_rows) : object {
 
 		// clone original sqo
 			$new_sqo = clone $this->search_query_object;
@@ -538,7 +538,6 @@ class search {
 				$filter->{$op_or} = $children_filter;
 			}
 
-
 		// replace filter in sqo
 			$new_sqo->filter = $filter;
 
@@ -551,24 +550,22 @@ class search {
 	* GET_FILTERED_RELATIONS
 	* @param array $relations_data
 	* @param string $component_tipo
-	*
 	* @return array $filtered_relations
 	*/
 	public static function get_filtered_relations(array $relations_data, string $component_tipo) : array {
 
 		$filtered_relations = [];
 
-		// if($relations_data = json_decode($relations_data_string)) {
 		if(!empty($relations_data)) {
 
 			$filtered_relations = array_filter($relations_data, function($locator) use($component_tipo) {
 				return (isset($locator->from_component_tipo) && $locator->from_component_tipo===$component_tipo);
 			});
 
-			$filtered_relations = array_values($filtered_relations); // Avoid json encoding objects
+			$filtered_relations = array_values($filtered_relations); // Avoid JSON encoding objects
 		}
 
-		// return json_encode($filtered_relations);
+
 		return $filtered_relations;
 	}//end get_filtered_relations
 
@@ -578,59 +575,42 @@ class search {
 	* PRE_PARSE_SEARCH_QUERY_OBJECT
 	* Iterate all filter and select elements and communicate with components to rebuild the search_query_object
 	* Not return anything, only modifies the class var $this->search_query_object
+	* @return void
 	*/
-	public function pre_parse_search_query_object() : bool {
+	public function pre_parse_search_query_object() : void {
 
-		#$start_time=start_time();
-		#dump($this->search_query_object, 'preparsed $this->search_query_object 1 ++ '.to_string());
-
-		# FILTER
+		// filter
 			if (!empty($this->search_query_object->filter)) {
 
-				# conform_search_query_object. Conform recursively each filter object asking the components
+				// conform_search_query_object. Conform recursively each filter object asking the components
 				foreach ($this->search_query_object->filter as $op => $ar_value) {
 					$new_search_query_object_filter = self::conform_search_query_object($op, $ar_value);
 					break; // Only expected one
 				}
-
-				# Replace filter array with components preparsed values
-				if (isset($new_search_query_object_filter)) {
-					$this->search_query_object->filter = $new_search_query_object_filter;
-						#dump( json_encode($this->search_query_object, JSON_PRETTY_PRINT), ' json_encode(value) ++ '.to_string());
-				}else{
-					$this->search_query_object->filter = null;
-				}
+				// Replace filter array with components preparsed values
+				$this->search_query_object->filter = $new_search_query_object_filter ?? null;
 			}
 
-		# SELECT
+		// select
 			$new_search_query_object_select = [];
 			foreach ($this->search_query_object->select as $select_object) {
 				$new_search_query_object_select[] = search::component_parser_select( $select_object );
 			}
-			# Replace select array with components preparsed values
+			// Replace select array with components preparsed values
 			$this->search_query_object->select = $new_search_query_object_select;
 
-		# ORDER. Note that order is parsed with same parser as 'select' (component_parser_select)
+		// order. Note that order is parsed with same parser as 'select' (component_parser_select)
 			if (!empty($this->search_query_object->order)) {
 				$new_search_query_object_order = [];
 				foreach ((array)$this->search_query_object->order as $select_object) {
 					$new_search_query_object_order[] = search::component_parser_select( $select_object );
 				}
-				#debug_log(__METHOD__." new_search_query_object_order ".to_string($new_search_query_object_order), logger::DEBUG); #die();
-				# Replace select array with components preparsed values
+				// Replace select array with components preparsed values
 				$this->search_query_object->order = $new_search_query_object_order;
 			}
 
-		#dump($this->search_query_object, 'preparsed $this->search_query_object 2 ++ '.to_string()); die();
-		#debug_log(__METHOD__." total time ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
-
-		# Set as parsed already
-		#$this->preparsed_search_query_object = true;
-
-		# Set object as parsed
+		// Set object as parsed
 		$this->search_query_object->parsed = true;
-
-		return true;
 	}//end pre_parse_search_query_object
 
 
@@ -641,7 +621,7 @@ class search {
 	* @param object $select_objec
 	* @return object $select_object
 	*/
-	public static function component_parser_select( object $select_object ) {
+	public static function component_parser_select(object $select_object) {
 
 		$path			= $select_object->path;
 		$component_tipo	= end($path)->component_tipo;
@@ -728,6 +708,7 @@ class search {
 			}
 		}
 
+
 		return $new_ar_query_object;
 	}//end conform_search_query_object
 
@@ -748,7 +729,7 @@ class search {
 
 		#if ($this->preparsed_search_query_object === false) {
 		if ($this->search_query_object->parsed!==true) {
-			# Preparse search_query_object with components always before begins
+			// Preparse search_query_object with components always before begins
 			$this->pre_parse_search_query_object();
 		}
 
@@ -1090,10 +1071,11 @@ class search {
 
 		$sql_query .= ';' . PHP_EOL;
 
-		// dump(null, ' sql_query ++ '.to_string($sql_query)); #die();
-		// debug_log(__METHOD__." SQL QUERY: ".PHP_EOL.to_string($sql_query), logger::DEBUG);
-		#debug_log(__METHOD__." this->search_query_object: ".to_string($this->search_query_object), logger::DEBUG);
-		#debug_log(__METHOD__." total time ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
+		// debug
+			// dump(null, ' sql_query ++ '.to_string($sql_query)); #die();
+			// debug_log(__METHOD__." SQL QUERY: ".PHP_EOL.to_string($sql_query), logger::DEBUG);
+			// debug_log(__METHOD__." this->search_query_object: ".to_string($this->search_query_object), logger::DEBUG);
+			// debug_log(__METHOD__." total time ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
 
 		return $sql_query;
 	}//end parse_search_query_object
