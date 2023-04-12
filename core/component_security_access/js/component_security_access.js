@@ -384,20 +384,20 @@ component_security_access.prototype.update_parents_radio_butons = async function
 * @return promise
 * Resolve bool|object (API response) from change_value()
 */
-// component_security_access.prototype.change_value = async function(options) {
+	// component_security_access.prototype.change_value = async function(options) {
 
-// 	const self = this
+	// 	const self = this
 
-// 	// options
-// 		const from_save_changes = options.from_save_changes || false
+	// 	// options
+	// 		const from_save_changes = options.from_save_changes || false
 
-// 	const api_response = (from_save_changes===true)
-// 		? await component_common.prototype.change_value.call(this, options) // internal call from self save_changes. Pass untouched to component_common
-// 		: await self.save_changes() // Prepare as save changes mode that triggers change_value again
+	// 	const api_response = (from_save_changes===true)
+	// 		? await component_common.prototype.change_value.call(this, options) // internal call from self save_changes. Pass untouched to component_common
+	// 		: await self.save_changes() // Prepare as save changes mode that triggers change_value again
 
 
-// 	return api_response
-// }//end change_value
+	// 	return api_response
+	// }//end change_value
 
 
 
