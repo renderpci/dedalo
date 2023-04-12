@@ -240,10 +240,14 @@ function debug_log(string $info, int $level=logger::DEBUG) : bool {
 *  Exec a curl call to the given URL
 * @param object $options
 * @return object $response
+* {
 * 	msg: string info about execution
 * 	code: int httpcode response from server
 * 	error: mixed error info from CURL if exists. Else false
 * 	result: mixed data received from server
+* 		Returns true on success or false on failure. However, if the CURLOPT_RETURNTRANSFER option is set,
+* 		it will return the result on success, false on failure.
+* }
 */
 function curl_request(object $options) : object {
 
@@ -1655,26 +1659,10 @@ function check_basic_system() : object {
 		$ar_langs = DEDALO_APPLICATION_LANGS;
 		foreach ($ar_langs as $lang => $label) {
 			$label_path = '/common/js/lang/' . $lang . '.js';
-			if (!file_exists(DEDALO_CORE_PATH.$label_path)) {
-				$ar_label	= label::get_ar_label($lang); // Get all properties
-				$write		= file_put_contents( DEDALO_CORE_PATH.$label_path, json_encode($ar_label, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
-				if ($write===false) {
-					$response->msg = 'Error on write js/lang file. Permission denied. '.DEDALO_CORE_PATH.$label_path;
-					debug_log(__METHOD__." ".$response->msg, logger::ERROR);
-					return $response;
-				}
-				debug_log(__METHOD__." Generated js labels file for lang: $lang - $label_path ", logger::WARNING);
+			if (!file_exists( DEDALO_CORE_PATH . $label_path )) {
+				backup::write_lang_file($lang);
 			}
 		}
-
-	// structure css
-		// Generate css structure file (if not exist)
-		// Removed!. No longer used
-		// $file_path = DEDALO_CORE_PATH.'/common/css/structure.css';
-		// if (!file_exists($file_path)) {
-		// 	$build_structure_css_response = (object)css::build_structure_css();
-		// 	debug_log(__METHOD__." Generated structure css file: $file_path ".$build_structure_css_response->msg, logger::WARNING);
-		// }
 
 	// database is available
 		// $db_install_conn = install::get_db_install_conn();
@@ -1684,9 +1672,8 @@ function check_basic_system() : object {
 		// 	return $response;
 		// }
 
-
 	$response->result 	= true;
-	$response->msg 		= 'Ok. check_basic_system done';
+	$response->msg 		= 'OK. check_basic_system done';
 
 	return $response;
 }//end check_basic_system
