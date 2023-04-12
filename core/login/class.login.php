@@ -703,15 +703,16 @@ class login extends common {
 
 		// precalculate profiles datalist security access in background
 		// This file is generated on every user login, launching the process in background
-			$status = dd_cache::process_and_cache_to_file((object)[
+			dd_cache::process_and_cache_to_file((object)[
 				'process_file'	=> DEDALO_CORE_PATH . '/component_security_access/calculate_tree.php',
 				'data'			=> (object)[
 					'session_id'	=> session_id(),
 					'user_id'		=> $user_id
 				],
-				'file_name'		=> 'cache_tree.json'
+				'file_name'		=> 'cache_tree.json',
+				'wait'			=> false
 			]);
-			debug_log(__METHOD__." Generating security access datalist in background... ".to_string($status), logger::DEBUG);
+			debug_log(__METHOD__." Generating security access datalist in background... ", logger::DEBUG);
 
 		// user image
 			$user_image = login::get_user_image($user_id);

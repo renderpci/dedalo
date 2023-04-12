@@ -97,10 +97,11 @@ class component_security_access extends component_common {
 						: null;
 					if (!empty($datalist)) {
 						$this->datalist = $datalist;
-						$total = exec_time_unit($start_time,'ms').' ms';
-						debug_log(
-							__METHOD__." Return already calculated and cached in file datalist. Total items: ". count($datalist).' in time: '.$total,
-							logger::DEBUG
+						debug_log(__METHOD__
+							. " Return already calculated and cached in file datalist. Total items: "
+							. count($datalist).' in time: '
+							. exec_time_unit($start_time,'ms').' ms'
+							, logger::DEBUG
 						);
 						return $datalist;
 					}
@@ -189,9 +190,10 @@ class component_security_access extends component_common {
 			}
 
 		// debug
-			debug_log(
-				__METHOD__.' Calculated datalist (total: '.count($datalist).') in  '.exec_time_unit($start_time,'ms').' ms',
-				logger::DEBUG
+			debug_log(__METHOD__
+				.' Calculated datalist (total: '.count($datalist).') in  '
+				. exec_time_unit($start_time,'ms').' ms'
+				, logger::DEBUG
 			);
 
 		return $datalist;
@@ -494,11 +496,12 @@ class component_security_access extends component_common {
 				}
 			}
 
-		// $fiber = new Fiber(function() use($section_id) : void {
-		// $fiber = new Fiber(function() use($section_id) : array {
-			debug_log(__METHOD__.
-				" (1) user_id: " .$user_id." launching datalist /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// ",
-				 logger::ERROR
+		// $fiber = new Fiber(function() use($section_id, $user_id, $start_time) : array {
+
+			debug_log(__METHOD__
+				. " (1) user_id: " .$user_id
+				. ' launching datalist /////////////////////////////////////////////////////////////////////////////////////////////////////////////// '
+				, logger::ERROR
 			);
 
 			$section_tipo				= DEDALO_SECTION_PROFILES_TIPO;
@@ -515,17 +518,18 @@ class component_security_access extends component_common {
 			$datalist = $component_security_access->get_datalist( $user_id );
 
 			// Fiber::suspend();
-			debug_log(__METHOD__.
-				" (2) count: " . count($datalist) .' '. exec_time_unit($start_time).' ms launching datalist ////////////////////////////////////////////////////////////////////////////////////////////// ',
-				logger::ERROR
+			debug_log(__METHOD__
+				. " (2) count: " . count($datalist) .' '. exec_time_unit($start_time).' ms'
+				. ' launching datalist ////////////////////////////////////////////////////////////////////////////////////////////// '
+				, logger::ERROR
 			);
 
-			return $datalist;
+			// return $datalist;
 		// });
 		// $fiber->start(); // running a Fiber
-		// var_dump($fiber->getReturn());
+		// return $fiber->getReturn();
 
-		// return $fiber;
+		return $datalist;
 	}//end calculate_tree
 
 
