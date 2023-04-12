@@ -244,7 +244,8 @@ relation_list.prototype.build = async function(autoload=true){
 
 			// set the response to the self.total
 			self.total = await data_manager.request({
-				body : rqo
+				body		: rqo,
+				use_worker	: true
 			})
 			.then(function(response){
 				if(response.result !== false){
