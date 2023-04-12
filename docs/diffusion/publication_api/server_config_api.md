@@ -109,7 +109,7 @@ define('__CONTENT_BASE_URL__', $WEB_BASE_URL);
 
 ---
 
-### Setting the API code, authorisation code
+### Setting the API code, authorization code
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
 
@@ -349,7 +349,7 @@ define('SHOW_DEBUG', false);
 
 ---
 
-### Define the section used for stored audiovisual resources
+### Defining the section used for stored audiovisual resources
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
 
@@ -368,7 +368,7 @@ define('DEDALO_SECTION_RESOURCES_AV_TIPO', 'rsc167');
 
 ---
 
-### Define the 'field' with component_tipo used for stored audiovisual resources
+### Defining the 'field' with component_tipo used for stored audiovisual resources
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
 
@@ -387,7 +387,7 @@ define('DEDALO_COMPONENT_RESOURCES_AV_TIPO', 'rsc35');
 
 ---
 
-### Define the component_tipo used for store the duration for audiovisual resources
+### Defining the component_tipo used for store the duration for audiovisual resources
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
 
@@ -403,7 +403,7 @@ define('DEDALO_COMPONENT_RESOURCES_AV_TIPO', 'rsc35');
 
 ---
 
-### Define the component_tipo used for store the transcription of audiovisual resources
+### Defining the component_tipo used for store the transcription of audiovisual resources
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
 
@@ -419,7 +419,7 @@ define('DEDALO_COMPONENT_RESOURCES_TR_TIPO', 'rsc36');
 
 ---
 
-### Define the component_tipo used for store the transcription annotations
+### Defining the component_tipo used for store the transcription annotations
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
 
@@ -651,7 +651,7 @@ define('TABLE_INFORMANT', 'informant');
 
 ---
 
-### Define the field name for transcription component_tipo
+### Defining the field name for transcription component_tipo
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
 
@@ -666,7 +666,7 @@ define('FIELD_TRANSCRIPTION', TRANSCRIPTION_TIPO);
 
 ---
 
-### Define the audiovisual component_tipo
+### Defining the audiovisual component_tipo
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
 
@@ -684,7 +684,7 @@ define('AV_TIPO', 'rsc35');
 
 ---
 
-### Define the audiovisual section_tipo
+### Defining the audiovisual section_tipo
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
 
@@ -704,7 +704,7 @@ define('AUDIOVISUAL_SECTION_TIPO', 'rsc167');
 
 ---
 
-### Define transcription component_tipo
+### Defining transcription component_tipo
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
 
@@ -719,7 +719,7 @@ define('TRANSCRIPTION_TIPO', 'rsc36');
 
 ---
 
-### Define the duration column
+### Defining the duration column
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
 
@@ -734,7 +734,7 @@ define('FIELD_DURATION', 'duration');
 
 ---
 
-### Define the field name of the term for ts tables
+### Defining the field name of the term for ts tables
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
 
@@ -750,7 +750,7 @@ define('FIELD_TERM', 'term');
 
 ## Setting the thesaurus tables
 
-### Define the locator column name for ts tables
+### Defining the locator column name for ts tables
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
 
@@ -764,7 +764,7 @@ define('FIELD_TERM_ID', 'term_id');
 
 ---
 
-### Define the interview summary field name
+### Defining the interview summary field name
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
 
@@ -778,7 +778,7 @@ define('FIELD_SUMMARY', 'abstract');
 
 ---
 
-### Define interview date field name
+### Defining interview date field name
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
 
@@ -792,7 +792,7 @@ define('FIELD_INTERVIEW_DATE', 'date');
 
 ---
 
-### Define the interview informant field
+### Defining the interview informant field
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
 
@@ -806,7 +806,7 @@ define('FIELD_INFORMANT', 'informant');
 
 ---
 
-### Define the interview image field
+### Defining the interview image field
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
 
@@ -820,7 +820,7 @@ define('FIELD_IMAGE', 'image');
 
 ---
 
-### Define the interviewed name field
+### Defining the interviewed name field
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
 
@@ -834,7 +834,7 @@ define('FIELD_NAME', 'name');
 
 ---
 
-### Define the interviewed surname field
+### Defining the interviewed surname field
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
 
@@ -848,7 +848,7 @@ define('FIELD_SURNAME', 'surname');
 
 ---
 
-### Define the interviewed birth date field
+### Defining the interviewed birth date field
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
 
@@ -862,7 +862,7 @@ define('FIELD_BIRTHDATE', 'birthdate');
 
 ---
 
-### Define the interviewee's birthplace field
+### Defining the interviewee's birthplace field
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
 
@@ -876,7 +876,7 @@ define('FIELD_BIRTHPLACE', 'birthplace');
 
 ---
 
-### Define the audiovisual file field name
+### Defining the audiovisual file field name
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
 
@@ -890,7 +890,7 @@ define('FIELD_VIDEO', 'video');
 
 ---
 
-### Define the interview code field name
+### Defining the interview code field name
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
 
@@ -904,7 +904,7 @@ define('FIELD_CODE', 'code');
 
 ---
 
-### Define the order number of thesaurus term field name
+### Defining the order number of thesaurus term field name
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
 
@@ -918,7 +918,7 @@ define('FIELD_NORDER', 'norder');
 
 ---
 
-### Define the audiovisual interview field name
+### Defining the audiovisual interview field name
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
 
@@ -932,7 +932,7 @@ define('FIELD_AUDIOVISUAL', 'audiovisual');
 
 ---
 
-### Define the indexation field
+### Defining the indexation field
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
 
@@ -946,7 +946,7 @@ define('FIELD_INDEX', 'indexation');
 
 ---
 
-### Define access control for calls
+### Defining access control for calls
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
 
@@ -961,7 +961,7 @@ define('ACCESS_CONTROL_ALLOW_ORIGIN', '*');
 
 ---
 
-### Define MariaDb / MySQL database connection
+### Defining MariaDb / MySQL database connection
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
 
@@ -976,7 +976,7 @@ define('MYSQL_WEB_DATABASE_CONN', !empty($db_name)
 );
 ```
 
-## Publication schema
+## Defining publication schema
 
 Publication schema defines how the fields and tables are connected. The publication schema definition is dependent of every diffusion element and his own ontology. This definition is optional, used to resolve the relations automatically. Every relation could be resolve with `Publication API::records -> resolve_portals_custom` option of the API.
 
