@@ -35,6 +35,17 @@ abstract class backup {
 		// Force to unlock browser session
 			session_write_close();
 
+		// non dedalo_db_management case. Used when DDBB is in a external server or when backups are managed externally
+			if (defined('DEDALO_DB_MANAGEMENT') && DEDALO_DB_MANAGEMENT===false) {
+				$response->result	= true;
+				$response->msg		= 'OK. Skipped request by db config management '.__METHOD__;
+				debug_log(__METHOD__
+					." Skipped request backup_secuence because DEDALO_DB_MANAGEMENT = false"
+					, logger::WARNING
+				);
+				return $response;
+			}
+
 		try {
 			// name : file name formatted as date . (one hour resolution)
 				$ar_dd_data_version	= get_current_version_in_db();
@@ -377,22 +388,33 @@ abstract class backup {
 	*/
 	public static function export_structure(string $db_name=null, bool $exclude_tables=true) : object {
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__METHOD__.']';
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__METHOD__.']';
 
-		#
-		# DB_SYSTEM_CONFIG_VERIFY
-		$system_config_verify = self::db_system_config_verify();
-		if ($system_config_verify->result===false) {
-			$response->msg .= $system_config_verify->msg;
-			return $response;
-		}
+		// non dedalo_db_management case. Used when DDBB is in a external server or when backups are managed externally
+			if (defined('DEDALO_DB_MANAGEMENT') && DEDALO_DB_MANAGEMENT===false) {
+				$response->result	= true;
+				$response->msg		= 'OK. Skipped request by db config management '.__METHOD__;
+				debug_log(__METHOD__
+					." Skipped request because DEDALO_DB_MANAGEMENT = false"
+					, logger::WARNING
+				);
+				return $response;
+			}
 
+		// DB_SYSTEM_CONFIG_VERIFY
+			$system_config_verify = self::db_system_config_verify();
+			if ($system_config_verify->result===false) {
+				$response->msg .= $system_config_verify->msg;
+				return $response;
+			}
 
-		if (empty($db_name)) {
-			$db_name = 'dedalo4_development_str.custom';
-		}
+		// db_name
+			if (empty($db_name)) {
+				$db_name = 'dedalo4_development_str.custom';
+			}
 
 		$file_path		 = rtrim(DEDALO_BACKUP_PATH_ONTOLOGY, '/');
 		$mysqlExportPath = $file_path .'/'. $db_name . ".backup";
@@ -636,7 +658,6 @@ abstract class backup {
 	* @param string db_name default 'dedalo4_development_str.custom'
 	* @param bool $check_server = true
 	* @param array $dedalo_prefix_tipos = null
-
 	* @return object $response
 	*/
 	public static function import_structure(string $db_name='dedalo4_development_str.custom', bool $check_server=true, array $dedalo_prefix_tipos=null) : object {
@@ -644,6 +665,17 @@ abstract class backup {
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= '';
+
+		// non dedalo_db_management case. Used when DDBB is in a external server or when backups are managed externally
+			if (defined('DEDALO_DB_MANAGEMENT') && DEDALO_DB_MANAGEMENT===false) {
+				$response->result	= true;
+				$response->msg		= 'OK. Skipped request by db config management '.__METHOD__;
+				debug_log(__METHOD__
+					." Skipped request because DEDALO_DB_MANAGEMENT = false"
+					, logger::WARNING
+				);
+				return $response;
+			}
 
 		// db_system_config_verify
 			$system_config_verify = self::db_system_config_verify();
@@ -789,12 +821,24 @@ abstract class backup {
 	*/
 	public static function load_dedalo_str_tables_data_from_files() : object {
 
-		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= '';
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= '';
 
-		$ar_msg=array();
+		// non dedalo_db_management case. Used when DDBB is in a external server or when backups are managed externally
+			if (defined('DEDALO_DB_MANAGEMENT') && DEDALO_DB_MANAGEMENT===false) {
+				$response->result	= true;
+				$response->msg		= 'OK. Skipped request by db config management '.__METHOD__;
+				debug_log(__METHOD__
+					." Skipped request because DEDALO_DB_MANAGEMENT = false"
+					, logger::WARNING
+				);
+				return $response;
+			}
 
+		// ar_msg
+			$ar_msg=array();
 
 		if (!defined('DEDALO_EXTRAS_PATH')) {
 			define('DEDALO_EXTRAS_PATH'		, DEDALO_CORE_PATH .'/extras');

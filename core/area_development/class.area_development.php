@@ -49,8 +49,9 @@ class area_development extends area_common {
 				$item->typo		= 'widget';
 				$item->label	= label::get_label('make_backup') ?? 'Make backup';
 				$item->value	= (object)[
-					'backup_path'	=> DEDALO_BACKUP_PATH_DB,
-					'file_name'		=> date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $_SESSION['dedalo']['auth']['user_id'] .'_forced_dbv' . implode('-', get_current_version_in_db()).'.custom.backup'
+					'dedalo_db_management'	=> DEDALO_DB_MANAGEMENT,
+					'backup_path'			=> DEDALO_BACKUP_PATH_DB,
+					'file_name'				=> date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $_SESSION['dedalo']['auth']['user_id'] .'_forced_dbv' . implode('-', get_current_version_in_db()).'.custom.backup'
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;

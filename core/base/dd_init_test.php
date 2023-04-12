@@ -384,15 +384,20 @@
 
 
 // PSQL (Agus problem)
-	$path = DB_BIN_PATH . 'psql';
-	$psql = trim(shell_exec('command -v '. $path));
-	if (empty($psql)) {
+	// non dedalo_db_management case. Used when DDBB is in a external server or when backups are managed externally
+	if (defined('DEDALO_DB_MANAGEMENT') && DEDALO_DB_MANAGEMENT===false) {
+		// nothing to do
+	}else{
+		$path = DB_BIN_PATH . 'psql';
+		$psql = trim(shell_exec('command -v '. $path));
+		if (empty($psql)) {
 
-		$init_response->msg[]	= 'Error: psql not found at: '.$path . PHP_EOL . ' Review your PostgreSQL installation or your db config file';
-		$init_response->errors	= true;
-		debug_log(__METHOD__."  ".implode(PHP_EOL, $init_response->msg), logger::ERROR);
+			$init_response->msg[]	= 'Error: psql not found at: '.$path . PHP_EOL . ' Review your PostgreSQL installation or your db config file';
+			$init_response->errors	= true;
+			debug_log(__METHOD__."  ".implode(PHP_EOL, $init_response->msg), logger::ERROR);
 
-		return $init_response;
+			return $init_response;
+		}
 	}
 
 
