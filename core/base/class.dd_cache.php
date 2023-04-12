@@ -67,8 +67,8 @@ class dd_cache {
 		// debug
 			debug_log(__METHOD__.
 				" ------> COMMAND PROCESS_AND_CACHE_TO_FILE: $file_name --------------------------------------------------------:"
-				.PHP_EOL.PHP_EOL. $command .PHP_EOL,
-				logger::DEBUG
+				. PHP_EOL.PHP_EOL. $command .PHP_EOL
+				, logger::DEBUG
 			);
 
 		// exec command

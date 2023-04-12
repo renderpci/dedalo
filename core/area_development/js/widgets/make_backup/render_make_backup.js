@@ -64,15 +64,29 @@ render_make_backup.prototype.list = async function(options) {
 const get_content_data_edit = async function(self) {
 
 	// short vars
-		const value = self.value || {}
+		const value					= self.value || {}
+		const dedalo_db_management	= value.dedalo_db_management
+		const backup_path			= value.backup_path
+		const file_name				= value.file_name
 
 	// content_data
 		const content_data = ui.create_dom_element({
 			element_type : 'div'
 		})
 
+	// dedalo_db_management
+		if (dedalo_db_management===false) {
+			ui.create_dom_element({
+				element_type	: 'div',
+				inner_html		: 'Dédalo backup if not allow by config DEDALO_DB_MANAGEMENT',
+				class_name		: 'info_text comment',
+				parent			: content_data
+			})
+			return content_data
+		}
+
 	// info
-		const text = `Force to make a full backup now like:<br><div>${value.backup_path}/<br>${value.file_name}</div>`
+		const text = `Force to make a full backup now like:<br><div>${backup_path}/<br>${file_name}</div>`
 		const info = ui.create_dom_element({
 			element_type	: 'div',
 			inner_html		: text,

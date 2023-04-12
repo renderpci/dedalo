@@ -68,6 +68,7 @@ session_write_close();
 		$is_root			= $user_id==DEDALO_SUPERUSER;
 
 		$obj = new stdClass();
+			$obj->server_errors						= !empty($_ENV['DEDALO_ERRORS']);
 			// logged informative only
 			$obj->is_logged							= login::is_logged();
 			$obj->is_global_admin					= $is_global_admin;
@@ -88,15 +89,22 @@ session_write_close();
 			$obj->dedalo_application_lang			= DEDALO_APPLICATION_LANG;
 			$obj->dedalo_data_lang					= DEDALO_DATA_LANG;
 			$obj->dedalo_data_nolan					= DEDALO_DATA_NOLAN;
-			// dedalo_projects_default_langs
-			if ($obj->is_logged===true && defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS==='installed') {
-				$obj->dedalo_projects_default_langs	= array_map(function($current_lang) {
-					$lang_obj = new stdClass();
-						$lang_obj->label = lang::get_name_from_code($current_lang);
-						$lang_obj->value = $current_lang;
-					return $lang_obj;
-				}, DEDALO_PROJECTS_DEFAULT_LANGS);
-			}
+			$obj->dedalo_application_langs			= (function(){
+				$result = [];
+				foreach (DEDALO_APPLICATION_LANGS as $value => $label) {
+					$result[] = (object)[
+						'label'	=> $label,
+						'value'	=> $value
+					];
+				}
+				return $result;
+			})();
+			$obj->dedalo_projects_default_langs	= array_map(function($current_lang) {
+				return (object)[
+					'label'	=> lang::get_name_from_code($current_lang),
+					'value'	=> $current_lang
+				];
+			}, DEDALO_PROJECTS_DEFAULT_LANGS);
 			// quality defaults
 			$obj->dedalo_image_quality_default	= DEDALO_IMAGE_QUALITY_DEFAULT;
 			$obj->dedalo_av_quality_default		= DEDALO_AV_QUALITY_DEFAULT;

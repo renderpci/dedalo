@@ -15,7 +15,7 @@ class component_text_area extends component_common {
 	/**
 	* __CONSTRUCT
 	*/
-	function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_LANG, string $section_tipo=null) {
+	protected function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_LANG, string $section_tipo=null) {
 
 		// Overwrite lang when component_select_lang is present
 			if ( ($mode==='edit') && (!empty($parent) && !empty($section_tipo)) ) {
@@ -1654,6 +1654,8 @@ class component_text_area extends component_common {
 	/**
 	* GET_TAGS_PERSONS
 	* Get available tags for insert in text area. Interviewed, informants, etc..
+	* @param string $related_section_tipo = TOP_TIPO
+	* @param  array $ar_related_sections = []
 	* @return array $ar_tags_inspector
 	*/
 	public function get_tags_persons(string $related_section_tipo=TOP_TIPO, array $ar_related_sections=[]) : array {
@@ -1661,55 +1663,72 @@ class component_text_area extends component_common {
 		$tags_persons = array();
 
 		$section_id		= $this->get_section_id();
-		$section_tipo	= $this->get_section_tipo();
+		// $section_tipo	= $this->get_section_tipo();
 
 		$properties = $this->get_properties();
 		if (!isset($properties->tags_persons)) {
-			debug_log(__METHOD__." Warning: empty properties for tags_persons [properties->tags_persons] (related_section_tipo: $related_section_tipo) ".to_string($properties), logger::WARNING);
+			debug_log(__METHOD__
+				." Warning: empty properties for tags_persons [properties->tags_persons] (related_section_tipo: $related_section_tipo)" .PHP_EOL
+				.to_string($properties)
+				, logger::WARNING
+			);
 			return $tags_persons;
 		}
 		elseif (!isset($properties->tags_persons->$related_section_tipo)) {
-			debug_log(__METHOD__." Warning: bad top_tipo for tags_persons (related_section_tipo: $related_section_tipo) ".to_string($properties), logger::WARNING);
+			debug_log(__METHOD__
+				." Warning: bad top_tipo for tags_persons (related_section_tipo: $related_section_tipo)" .PHP_EOL
+				.to_string($properties)
+				, logger::WARNING
+			);
 			return $tags_persons;
 		}
 
-		# Recalculate indirectly
-		# ar_references is an array of section_id
-		$ar_references = array_filter($ar_related_sections, function($element) use($related_section_tipo){
-			return $element->section_tipo === $related_section_tipo;
-		}); //$this->get_ar_tag_references($obj_value->section_tipo, $obj_value->component_tipo);
+		// Recalculate indirectly
+		// ar_references is an array of section_id
+			$ar_references = array_filter($ar_related_sections, function($element) use($related_section_tipo){
+				return $element->section_tipo === $related_section_tipo;
+			}); //$this->get_ar_tag_references($obj_value->section_tipo, $obj_value->component_tipo);
 
-		# Resolve obj value
-		$ar_objects = [];
-		foreach ((array)$properties->tags_persons->$related_section_tipo as $key => $obj_value) {
-			// set parent to the section_tipo, the $key of the properties {"oh1":"component_tipo": "oh24",...}
+		// Resolve obj value
+			$ar_objects = [];
+			foreach ((array)$properties->tags_persons->{$related_section_tipo} as $obj_value) {
+
+				// set parent to the section_tipo, the $key of the properties {"oh1":"component_tipo": "oh24",...}
 				$obj_value->parent = $related_section_tipo;
 
-			if ($obj_value->section_tipo===$this->section_tipo) {
+				if ($obj_value->section_tipo===$this->section_tipo) {
 
-				$obj_value->section_id = $section_id; // inject current record section id (parent)
+					$obj_value->section_id = $section_id; // inject current record section id (parent)
 
-				// Add directly
-				$ar_objects[] = $obj_value;
-			}else{
+					// Add directly
+					$ar_objects[] = $obj_value;
 
-				if (empty($ar_references)) {
-					debug_log(__METHOD__." Error (empty ar_references) on calculate section_id from inverse locators $this->section_tipo - $this->parent ".to_string(), logger::ERROR);
-					continue;
-				}
-				foreach ($ar_references as $reference_locator) {
+				}else{
 
-					$new_obj_value = clone $obj_value;
-						$new_obj_value->section_id = $reference_locator->section_id;
+					if (empty($ar_references)) {
 
-					# Add from reference
-					$ar_objects[] = $new_obj_value;
+						debug_log(__METHOD__
+							." Error (empty ar_references) on calculate section_id from inverse locators $this->section_tipo - $this->parent"
+							. 'ar_related_sections: '.to_string($ar_related_sections)
+							, logger::WARNING
+						);
+
+					}else{
+
+						foreach ($ar_references as $reference_locator) {
+
+							$new_obj_value = clone $obj_value;
+								$new_obj_value->section_id = $reference_locator->section_id;
+
+							// Add from reference
+							$ar_objects[] = $new_obj_value;
+						}
+					}
 				}
 			}
-		}
 
 		$resolved = [];
-		foreach ($ar_objects as $key => $obj_value) {
+		foreach ($ar_objects as $obj_value) {
 
 			$current_section_tipo	= $obj_value->section_tipo;
 			$current_section_id		= $obj_value->section_id;
@@ -1718,7 +1737,7 @@ class component_text_area extends component_common {
 			$current_tag_id			= !empty($obj_value->tag_id) ? $obj_value->tag_id : 1;
 
 			$model_name	= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
-			$component		= component_common::get_instance(
+			$component	= component_common::get_instance(
 				$model_name,
 				$current_component_tipo,
 				$current_section_id,
@@ -1726,9 +1745,9 @@ class component_text_area extends component_common {
 				DEDALO_DATA_NOLAN,
 				$current_section_tipo
 			);
-			# TAG
+			// TAG
 			$dato = $component->get_dato();
-			foreach ($dato as $key => $current_locator) {
+			foreach ($dato as $current_locator) {
 
 				$lkey = $current_locator->section_tipo .'_' .$current_locator->section_id;
 				if (in_array($lkey, $resolved)) {

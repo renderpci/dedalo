@@ -97,10 +97,11 @@ class component_security_access extends component_common {
 						: null;
 					if (!empty($datalist)) {
 						$this->datalist = $datalist;
-						$total = exec_time_unit($start_time,'ms').' ms';
-						debug_log(
-							__METHOD__." Return already calculated and cached in file datalist. Total items: ". count($datalist).' in time: '.$total,
-							logger::DEBUG
+						debug_log(__METHOD__
+							. " Return already calculated and cached in file datalist. Total items: "
+							. count($datalist).' in time: '
+							. exec_time_unit($start_time,'ms').' ms'
+							, logger::DEBUG
 						);
 						return $datalist;
 					}
@@ -189,9 +190,10 @@ class component_security_access extends component_common {
 			}
 
 		// debug
-			debug_log(
-				__METHOD__.' Calculated datalist (total: '.count($datalist).') in  '.exec_time_unit($start_time,'ms').' ms',
-				logger::DEBUG
+			debug_log(__METHOD__
+				.' Calculated datalist (total: '.count($datalist).') in  '
+				. exec_time_unit($start_time,'ms').' ms'
+				, logger::DEBUG
 			);
 
 		return $datalist;
@@ -494,11 +496,12 @@ class component_security_access extends component_common {
 				}
 			}
 
-		// $fiber = new Fiber(function() use($section_id) : void {
-		// $fiber = new Fiber(function() use($section_id) : array {
-			debug_log(__METHOD__.
-				" (1) user_id: " .$user_id." launching datalist /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// ",
-				 logger::ERROR
+		// $fiber = new Fiber(function() use($section_id, $user_id, $start_time) : array {
+
+			debug_log(__METHOD__
+				. " (1) user_id: " .$user_id
+				. ' launching datalist /////////////////////////////////////////////////////////////////////////////////////////////////////////////// '
+				, logger::ERROR
 			);
 
 			$section_tipo				= DEDALO_SECTION_PROFILES_TIPO;
@@ -515,17 +518,18 @@ class component_security_access extends component_common {
 			$datalist = $component_security_access->get_datalist( $user_id );
 
 			// Fiber::suspend();
-			debug_log(__METHOD__.
-				" (2) count: " . count($datalist) .' '. exec_time_unit($start_time).' ms launching datalist ////////////////////////////////////////////////////////////////////////////////////////////// ',
-				logger::ERROR
+			debug_log(__METHOD__
+				. " (2) count: " . count($datalist) .' '. exec_time_unit($start_time).' ms'
+				. ' launching datalist ////////////////////////////////////////////////////////////////////////////////////////////// '
+				, logger::ERROR
 			);
 
-			return $datalist;
+			// return $datalist;
 		// });
 		// $fiber->start(); // running a Fiber
-		// var_dump($fiber->getReturn());
+		// return $fiber->getReturn();
 
-		// return $fiber;
+		return $datalist;
 	}//end calculate_tree
 
 
@@ -565,53 +569,101 @@ class component_security_access extends component_common {
 			$component_security_access_dato	= $component_security_access->get_dato() ?? [];
 
 		// Iterate sections (normally like ts1,ts2)
-			$new_values = [];
-			$ar_section_tipo_length = sizeof($ar_section_tipo);
-			for ($i=0; $i < $ar_section_tipo_length; $i++) {
+			// $new_values = [];
+			// $ar_section_tipo_length = sizeof($ar_section_tipo);
+			// for ($i=0; $i < $ar_section_tipo_length; $i++) {
 
-				$current_section_tipo = $ar_section_tipo[$i];
+			// 	$current_section_tipo = $ar_section_tipo[$i];
 
-				// current section
-					// sample data:
-						// {
-						//     "tipo": "test28",
-						//     "value": 1,
-						//     "section_tipo": "test3"
-						// }
-					$new_values[] = (object)[
-						'tipo'			=> $current_section_tipo,
-						'section_tipo'	=> $current_section_tipo,
-						'value'			=> (int)$permissions
-					];
+			// 	// current section
+			// 		// sample data:
+			// 			// {
+			// 			//     "tipo": "test28",
+			// 			//     "value": 1,
+			// 			//     "section_tipo": "test3"
+			// 			// }
+			// 		$new_values[] = (object)[
+			// 			'tipo'			=> $current_section_tipo,
+			// 			'section_tipo'	=> $current_section_tipo,
+			// 			'value'			=> (int)$permissions
+			// 		];
 
-				// Components inside section
-					$real_section	= section::get_section_real_tipo_static( $current_section_tipo );
-					$ar_children	= section::get_ar_children_tipo_by_model_name_in_section(
-						$real_section, // section_tipo
-						['component','button','section_group','relation_list','time_machine_list'], // ar_model_name_required
-						true, // from_cache
-						false, // resolve_virtual
-						true, // recursive
-						false // search_exact
-					);
-					foreach ($ar_children as $children_tipo) {
+			// 	// Components inside section
+			// 		$real_section	= section::get_section_real_tipo_static( $current_section_tipo );
+			// 		$ar_children	= section::get_ar_children_tipo_by_model_name_in_section(
+			// 			$real_section, // section_tipo
+			// 			['component','button','section_group','relation_list','time_machine_list'], // ar_model_name_required
+			// 			true, // from_cache
+			// 			false, // resolve_virtual
+			// 			true, // recursive
+			// 			false // search_exact
+			// 		);
+			// 		foreach ($ar_children as $children_tipo) {
 
-						// new element case
-						$new_values[] = (object)[
-							'tipo'			=> $children_tipo,
+			// 			// new element case
+			// 			$new_values[] = (object)[
+			// 				'tipo'			=> $children_tipo,
+			// 				'section_tipo'	=> $current_section_tipo,
+			// 				'value'			=> (int)$permissions
+			// 			];
+			// 			debug_log(__METHOD__.
+			// 				" Added item $children_tipo to section $current_section_tipo".to_string(),
+			// 				logger::DEBUG
+			// 			);
+			// 		}
+			// }//end foreach ($ar_section_tipo as $current_section_tipo)
+
+
+		// Iterate sections (normally like ts1,ts2) Generator version
+			$values_list_generator = function() use($ar_section_tipo, $permissions) {
+
+				$ar_section_tipo_length = sizeof($ar_section_tipo);
+				for ($i=0; $i < $ar_section_tipo_length; $i++) {
+
+					$current_section_tipo = $ar_section_tipo[$i];
+
+					// current section
+						// sample data:
+							// {
+							//     "tipo": "test28",
+							//     "value": 1,
+							//     "section_tipo": "test3"
+							// }
+						yield (object)[
+							'tipo'			=> $current_section_tipo,
 							'section_tipo'	=> $current_section_tipo,
 							'value'			=> (int)$permissions
 						];
-						debug_log(__METHOD__.
-							" Added item $children_tipo to section $current_section_tipo".to_string(),
-							logger::DEBUG
+
+					// Components inside section
+						$real_section	= section::get_section_real_tipo_static( $current_section_tipo );
+						$ar_children	= section::get_ar_children_tipo_by_model_name_in_section(
+							$real_section, // section_tipo
+							['component','button','section_group','relation_list','time_machine_list'], // ar_model_name_required
+							true, // from_cache
+							false, // resolve_virtual
+							true, // recursive
+							false // search_exact
 						);
-					}
-			}//end foreach ($ar_section_tipo as $current_section_tipo)
+						foreach ($ar_children as $children_tipo) {
+
+							// new element case
+							yield (object)[
+								'tipo'			=> $children_tipo,
+								'section_tipo'	=> $current_section_tipo,
+								'value'			=> (int)$permissions
+							];
+							debug_log(__METHOD__
+								. " Added item $children_tipo to section $current_section_tipo"
+								, logger::DEBUG
+							);
+						}
+				}//end foreach ($ar_section_tipo as $current_section_tipo)
+			};
 
 		// add values
 			$unique_values = [];
-			foreach ($new_values as $value) {
+			foreach ($values_list_generator() as $value) {
 				// check if already exists
 				$found = array_find($component_security_access_dato, function($el) use($value) {
 					return ($el->tipo===$value->tipo && $el->section_tipo===$value->section_tipo);

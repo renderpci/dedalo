@@ -8,16 +8,16 @@ abstract class RecordDataBoundObject {
 
 	protected $ID;
 	protected $strTableName;
-	public $arRelationMap;
+	protected $arRelationMap;
 	protected $strPrimaryKeyName ;	# usually id
 	protected $blForDeletion;
-	protected $blIsLoaded;
+	public $blIsLoaded;
 	public $arModifiedRelations;
 
 	public $use_cache = true; // default is true (for structure only)
 	public $use_cache_manager = false;
 
-	protected $dato;
+	public $dato;
 
 	#protected static $db_connection;
 

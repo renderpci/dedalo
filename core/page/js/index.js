@@ -78,11 +78,19 @@ const t0 = performance.now()
 
 				return
 			}
+			// server_errors check (page and environment)
+			if (api_response.server_errors===true) {
+				console.warn('Page running with server errors:');
+			}
+			if (page_globals.server_errors===true) {
+				console.warn('Environment running with server errors:');
+			}
+			console.log('page_globals:', page_globals);
 
 		// page instance init
 			const page_instance = await get_instance({
 				model	: 'page',
-				context	: api_response.result // array page context items (usually menu, section )
+				context	: api_response.result.context // array page context items (usually menu, section )
 			});
 
 		// page instance build and render
@@ -94,7 +102,7 @@ const t0 = performance.now()
 			main.classList.remove('loading','hide')
 
 		// page title update
-			const section_info = api_response.result.find(el => el.model==='section' || el.model.indexOf('area')===0)
+			const section_info = api_response.result.context.find(el => el.model==='section' || el.model.indexOf('area')===0)
 			if (section_info) {
 				document.title =  'V6 ' + section_info.tipo + ' ' + section_info.label
 			}

@@ -2,6 +2,8 @@
 
 // Reviewed: 05-10-2022
 
+
+
 // POSTGRESQL (PRIVATE DATA)
 // Default PotsgreSQL connection, for investigation system
 // DEDALO_DB_TYPE: string|null 'postgresql'
@@ -28,8 +30,10 @@ define('DEDALO_INFORMATION'			, 'Dédalo install version');
 define('DEDALO_INFO_KEY'			, DEDALO_ENTITY);
 // SLOW_QUERY_MS: int 6000
 define('SLOW_QUERY_MS'				, 6000);
-// DEDALO_DB_MANAGEMENT: bool . Used to activate or not the management of the DDBB by Dédalo, if false all management task will require to do manually.
-define('DEDALO_DB_MANAGEMENT' , true);
+// DEDALO_DB_MANAGEMENT: bool . Used to activate or not the management of the DDBB by Dédalo. If false, all administration tasks will need to be done manually.
+define('DEDALO_DB_MANAGEMENT'		, true);
+
+
 
 // MYSQL (PUBLIC DATA)
 // MySQL connection for publication

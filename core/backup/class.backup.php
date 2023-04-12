@@ -21,6 +21,9 @@ abstract class backup {
 	/**
 	* INIT_BACKUP_SECUENCE
 	* Make backup (compressed SQL dump) of current dedalo DB before login
+	* @param int $user_id
+	* @param string $username
+	* @param bool $skip_backup_time_range = false
 	* @return object $response
 	*/
 	public static function init_backup_secuence(int $user_id, string $username, bool $skip_backup_time_range=false) : object {
@@ -31,6 +34,17 @@ abstract class backup {
 
 		// Force to unlock browser session
 			session_write_close();
+
+		// non dedalo_db_management case. Used when DDBB is in a external server or when backups are managed externally
+			if (defined('DEDALO_DB_MANAGEMENT') && DEDALO_DB_MANAGEMENT===false) {
+				$response->result	= true;
+				$response->msg		= 'OK. Skipped request by db config management '.__METHOD__;
+				debug_log(__METHOD__
+					." Skipped request backup_secuence because DEDALO_DB_MANAGEMENT = false"
+					, logger::WARNING
+				);
+				return $response;
+			}
 
 		try {
 			// name : file name formatted as date . (one hour resolution)
@@ -113,10 +127,10 @@ abstract class backup {
 
 				// default backup case. Async dump building sh file
 
-				$command = 'sleep 6s; nice -n 19 ' . $command;
+				$command = 'sleep 15s; nice -n 19 ' . $command;
 
 				// build sh file with backup command if not exists
-				$prgfile = DEDALO_BACKUP_PATH_TEMP.'/backup_' . DEDALO_DB_TYPE . '_' . date("Y-m-d_His") . '_' . DEDALO_DATABASE_CONN  . '.sh';	//
+				$prgfile = DEDALO_BACKUP_PATH_TEMP.'/backup_' . DEDALO_DB_TYPE . '_' . date("Y-m-d_H") . '_' . DEDALO_DATABASE_CONN  . '.sh';	//
 				if(!file_exists($prgfile)) {
 
 					// target folder verify (exists and permissions)
@@ -186,7 +200,7 @@ abstract class backup {
 
 		}catch (Exception $e) {
 
-			$msg = "Error $username. ".  $e->getMessage(). "\n";
+			$msg = "Error on backup_secuence. User: $username. - error: ".  $e->getMessage(). "\n";
 			debug_log(__METHOD__." Exception: $msg ".to_string(), logger::ERROR);
 
 			// response error
@@ -374,22 +388,33 @@ abstract class backup {
 	*/
 	public static function export_structure(string $db_name=null, bool $exclude_tables=true) : object {
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__METHOD__.']';
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__METHOD__.']';
 
-		#
-		# DB_SYSTEM_CONFIG_VERIFY
-		$system_config_verify = self::db_system_config_verify();
-		if ($system_config_verify->result===false) {
-			$response->msg .= $system_config_verify->msg;
-			return $response;
-		}
+		// non dedalo_db_management case. Used when DDBB is in a external server or when backups are managed externally
+			if (defined('DEDALO_DB_MANAGEMENT') && DEDALO_DB_MANAGEMENT===false) {
+				$response->result	= true;
+				$response->msg		= 'OK. Skipped request by db config management '.__METHOD__;
+				debug_log(__METHOD__
+					." Skipped request because DEDALO_DB_MANAGEMENT = false"
+					, logger::WARNING
+				);
+				return $response;
+			}
 
+		// DB_SYSTEM_CONFIG_VERIFY
+			$system_config_verify = self::db_system_config_verify();
+			if ($system_config_verify->result===false) {
+				$response->msg .= $system_config_verify->msg;
+				return $response;
+			}
 
-		if (empty($db_name)) {
-			$db_name = 'dedalo4_development_str.custom';
-		}
+		// db_name
+			if (empty($db_name)) {
+				$db_name = 'dedalo4_development_str.custom';
+			}
 
 		$file_path		 = rtrim(DEDALO_BACKUP_PATH_ONTOLOGY, '/');
 		$mysqlExportPath = $file_path .'/'. $db_name . ".backup";
@@ -633,7 +658,6 @@ abstract class backup {
 	* @param string db_name default 'dedalo4_development_str.custom'
 	* @param bool $check_server = true
 	* @param array $dedalo_prefix_tipos = null
-
 	* @return object $response
 	*/
 	public static function import_structure(string $db_name='dedalo4_development_str.custom', bool $check_server=true, array $dedalo_prefix_tipos=null) : object {
@@ -641,6 +665,17 @@ abstract class backup {
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= '';
+
+		// non dedalo_db_management case. Used when DDBB is in a external server or when backups are managed externally
+			if (defined('DEDALO_DB_MANAGEMENT') && DEDALO_DB_MANAGEMENT===false) {
+				$response->result	= true;
+				$response->msg		= 'OK. Skipped request by db config management '.__METHOD__;
+				debug_log(__METHOD__
+					." Skipped request because DEDALO_DB_MANAGEMENT = false"
+					, logger::WARNING
+				);
+				return $response;
+			}
 
 		// db_system_config_verify
 			$system_config_verify = self::db_system_config_verify();
@@ -786,12 +821,24 @@ abstract class backup {
 	*/
 	public static function load_dedalo_str_tables_data_from_files() : object {
 
-		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= '';
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= '';
 
-		$ar_msg=array();
+		// non dedalo_db_management case. Used when DDBB is in a external server or when backups are managed externally
+			if (defined('DEDALO_DB_MANAGEMENT') && DEDALO_DB_MANAGEMENT===false) {
+				$response->result	= true;
+				$response->msg		= 'OK. Skipped request by db config management '.__METHOD__;
+				debug_log(__METHOD__
+					." Skipped request because DEDALO_DB_MANAGEMENT = false"
+					, logger::WARNING
+				);
+				return $response;
+			}
 
+		// ar_msg
+			$ar_msg=array();
 
 		if (!defined('DEDALO_EXTRAS_PATH')) {
 			define('DEDALO_EXTRAS_PATH'		, DEDALO_CORE_PATH .'/extras');
@@ -1308,31 +1355,6 @@ abstract class backup {
 
 
 	/**
-	* GET_REMOTE_DATA
-	* @return string $result
-	*/
-	public static function get_remote_data(object $data) {
-
-		$data_string = "data=" . json_encode($data);
-
-		// file_get_contents option
-			// $result = file_get_contents(STRUCTURE_SERVER_URL . '?' .$data_string);
-
-		// curl way
-			$response = curl_request((object)[
-				'url'		=> STRUCTURE_SERVER_URL .'?' .$data_string,
-				'timeout'	=> 60, // int seconds
-				'header'	=> false // bool add header to result
-				// 'post'	=> false
-			]);
-			$result = $response->result;
-
-		return $result;
-	}//end get_remote_data
-
-
-
-	/**
 	* DOWNLOAD_REMOTE_STRUCTURE_FILE
 	* @param object $obj
 	* @param string $target_dir
@@ -1341,23 +1363,37 @@ abstract class backup {
 	public static function download_remote_structure_file(object $obj, string $target_dir) : bool {
 		$start_time = start_time();
 
-		$data = (object)[
-			'code'	=> STRUCTURE_SERVER_CODE,
-			'type'	=> $obj->type,
-			'name'	=> $obj->name
-		];
+		// curl request
+			$data = (object)[
+				'code'	=> STRUCTURE_SERVER_CODE,
+				'type'	=> $obj->type,
+				'name'	=> $obj->name
+			];
+			$data_string = "data=" . json_encode($data);
+			// request
+			$response = curl_request((object)[
+				'url'				=> STRUCTURE_SERVER_URL .'?' .$data_string,
+				'post'				=> true,
+				'header'			=> false, // bool add header to result
+				'ssl_verifypeer'	=> false,
+				'timeout'			=> 60, // int seconds
+				'proxy'				=> (defined('SERVER_PROXY') && !empty(SERVER_PROXY))
+					? SERVER_PROXY // from Dédalo config file
+					: false // default case
+			]);
+			$result = $response->result;
 
-		$result = self::get_remote_data($data);
-		#if(SHOW_DEBUG===true) {
-		#	$fist_line = strtok($result, "\n\r");
-		#	debug_log(__METHOD__." download type:$obj->type - name:$obj->name result fist_line: \n".to_string($fist_line), logger::DEBUG);
-		#}
-		debug_log(__METHOD__
-			. " >>> Downloaded remote data from $obj->name - "
-			. 'result: ' . gettype($result) . ' - '
-			. exec_time_unit($start_time,'ms').' ms'
-			, logger::DEBUG
-		);
+		// debug
+			// if(SHOW_DEBUG===true) {
+			// 	$fist_line = strtok($result, "\n\r");
+			// 	debug_log(__METHOD__." download type:$obj->type - name:$obj->name result fist_line: \n".to_string($fist_line), logger::DEBUG);
+			// }
+			debug_log(__METHOD__
+				. " >>> Downloaded remote data from $obj->name - "
+				. 'result type: ' . gettype($result) . ' - '
+				. exec_time_unit($start_time,'ms').' ms'
+				, logger::DEBUG
+			);
 
 		// Create downloads folder if not exists
 			if (self::$checked_download_str_dir!==true) {
@@ -1507,7 +1543,7 @@ abstract class backup {
 	* given tlds
 	* @param array $ar_tld
 	*	array of strings like ['dd','rsc'...]
-	* @return object $response
+	* @return array $ar_data
 	*/
 	public static function structure_to_json(array $ar_tld) : array {
 
@@ -1823,8 +1859,9 @@ abstract class backup {
 	* Calculated labels for given lang and write a js file with the result
 	* @param string $lang
 	* @return bool
+	* 	false if write error occurred, true if all is file is written successfully
 	*/
-	public static function write_lang_file(string $lang) {
+	public static function write_lang_file(string $lang) : bool {
 
 		// all labels
 		$ar_label = label::get_ar_label($lang);
@@ -1845,10 +1882,19 @@ abstract class backup {
 		// content
 		$content = json_encode($ar_label, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 
-		file_put_contents(
+		$write = file_put_contents(
 			$file_path,
 			$content
 		);
+		if ($write===false) {
+			debug_log(__METHOD__
+				. ' Error on write js/lang file. Permission denied.' . PHP_EOL
+				. " lang: $lang - $file_path " .PHP_EOL
+				, logger::ERROR
+			);
+
+			return false;
+		}
 
 		debug_log(__METHOD__
 			. " Generated js labels file for lang: $lang - $file_path " .PHP_EOL

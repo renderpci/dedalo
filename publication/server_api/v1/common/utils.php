@@ -1,4 +1,7 @@
 <?php
+
+
+
 /**
 * DUMP
 * @param $val
@@ -10,7 +13,7 @@
 *
 * @return
 *	Nothing
-*	Only print (formated as <pre>code</pre>) the info and value or dumped var
+*	Only print (formatted as <pre>code</pre>) the info and value or dumped var
 */
 #function dump($val, $var_name=NULL, $expected=NULL, $print=false){
 function dump($val, $var_name=NULL, $arguments=array()){
@@ -138,6 +141,8 @@ function wrap_pre($string, $add_header_html=true) {
 	return $html;
 }//end wrap_pre
 
+
+
 /**
 * DEBUG_LOG
 */
@@ -151,12 +156,16 @@ function debug_log($info, $level='DEBUG') {
 }//end debug_log
 
 
+
 # START_TIME
 function start_time() {
 	$mtime = explode(' ',microtime());
 
 	return $mtime[1]+$mtime[0];
 }
+
+
+
 # EXEC_TIME
 function exec_time($start, $method=NULL, $result=NULL) {
 
@@ -177,6 +186,9 @@ function exec_time($start, $method=NULL, $result=NULL) {
 
 	return '<pre>'.$final_string.'</pre>' ;
 }//end exec_time
+
+
+
 # EXEC_TIME_UNIT
 function exec_time_unit($start, $unit='ms', $round=3) {
 

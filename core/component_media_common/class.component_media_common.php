@@ -66,7 +66,7 @@ class component_media_common extends component_common {
 	/**
 	* __CONSTRUCT
 	*/
-	function __construct(string $tipo, $section_id=null, string $mode='list', string $lang=DEDALO_DATA_LANG, string $section_tipo=null) {
+	protected function __construct(string $tipo, $section_id=null, string $mode='list', string $lang=DEDALO_DATA_LANG, string $section_tipo=null) {
 
 		// lang. Force always DEDALO_DATA_NOLAN when is not translatable
 		// (note that PDF can be translatable)

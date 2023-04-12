@@ -6,8 +6,10 @@
 */
 class RecordObj_dd extends RecordDataBoundObject {
 
-	# FIELDS
-	protected $terminoID;
+
+
+	// fields
+	public $terminoID;
 	protected $parent;
 	protected $modelo;
 	protected $esmodelo;
@@ -21,10 +23,10 @@ class RecordObj_dd extends RecordDataBoundObject {
 	protected $properties;
 	protected $prefijo ;
 
-	# FIELDS EXTERNAL
+	// fields external
 	protected $filtroTerminos ;
 
-	# OPTIONAL ESPECIFIC LOADS
+	// optional specific loads
 	protected $ar_recursive_childrens_of_this	= array();
 	#protected $ar_parents_cache				= array();
 	#protected $ar_reels_of_this				= array();
@@ -308,7 +310,11 @@ class RecordObj_dd extends RecordDataBoundObject {
 	/**
 	* GET_DESCRIPTOR_DATO_BY_TIPO
 	* Get termino dato by tipO ('termino','def','obs') static version
-	* @return string|null
+	* @param string $terminoID
+	* @param string $lang = null
+	* @param string $tipo
+	* @param bool $fallback = false
+	* @return string|null $dato
 	*/
 	public static function get_descriptor_dato_by_tipo(string $terminoID, string $lang=null, string $tipo, bool $fallback=false) : ?string {
 
@@ -318,50 +324,61 @@ class RecordObj_dd extends RecordDataBoundObject {
 			return null;
 		}
 
-		# STATIC CACHE
-		static $descriptor_dato_by_tipo_stat_data;
-		$uid = $terminoID.'-'.$lang.'-'.$tipo.'-'.intval($fallback);	#dump($uid,'$uid');
-		if(isset($descriptor_dato_by_tipo_stat_data[$uid])) {
-			#error_log("Returned data from cache get_descriptor_dato_by_tipo uid:$uid");
-			return $descriptor_dato_by_tipo_stat_data[$uid];
-		}
-		#dump(""," from terminoID:$terminoID, lang:$lang, tipo:$tipo, fallback:$fallback");
+		// static cache
+			static $descriptor_dato_by_tipo_stat_data;
+			$uid = $terminoID.'-'.$lang.'-'.$tipo.'-'.intval($fallback);
+			if(isset($descriptor_dato_by_tipo_stat_data[$uid])) {
+				return $descriptor_dato_by_tipo_stat_data[$uid];
+			}
 
-		$matrix_table				= RecordObj_descriptors_dd::$descriptors_matrix_table;
-		$RecordObj_descriptors_dd	= new RecordObj_descriptors_dd($matrix_table, NULL, $terminoID, $lang, $tipo, $fallback);
-		$dato						= (string)$RecordObj_descriptors_dd->get_dato();
-			#dump($dato," terminoID:$terminoID, lang:$lang, tipo:$tipo, fallback$fallback");
+		// table matrix_descriptors search dato
+			$RecordObj_descriptors_dd = new RecordObj_descriptors_dd(
+				RecordObj_descriptors_dd::$descriptors_matrix_table, // string matrix table 'matrix_descriptors'
+				null, // string id
+				$terminoID, // string parent
+				$lang, // string lang
+				$tipo, // string tipo
+				$fallback // bool fallback
+			);
+			$dato = (string)$RecordObj_descriptors_dd->get_dato();
 
-		# STATIC CACHE
-		$descriptor_dato_by_tipo_stat_data[$uid] = $dato;
+		// static cache
+			$descriptor_dato_by_tipo_stat_data[$uid] = $dato;
+
 
 		return $dato;
-	}
+	}//end get_descriptor_dato_by_tipo
 
 
 
 	/**
 	* GET_TERMINO_BY_TIPO
 	* Static version
+	* @param string $terminoID
+	* @param string $lang = null
+	* @param bool $from_cache = false
+	* @param bool $fallback = true
 	* @return string|null $result
 	*/
 	public static function get_termino_by_tipo(string $terminoID, string $lang=null, bool $from_cache=false, bool $fallback=true) : ?string {
-		#$from_cache=false;
-
-		static $termino_by_tipo;
 
 		// cache
-		$cache_uid = $terminoID . '_' . $lang . (int)$fallback;
-		if (isset($termino_by_tipo[$cache_uid])) {
-			return $termino_by_tipo[$cache_uid];
-		}
+			static $termino_by_tipo;
+			$cache_uid = $terminoID . '_' . $lang . (int)$fallback;
+			if (isset($termino_by_tipo[$cache_uid])) {
+				return $termino_by_tipo[$cache_uid];
+			}
 
-		$tipo	= 'termino';
-		$result	= self::get_descriptor_dato_by_tipo($terminoID, $lang, $tipo, $fallback);
-
+		// descriptor search
+			$result	= self::get_descriptor_dato_by_tipo(
+				$terminoID,
+				$lang,
+				'termino', // string typology
+				$fallback
+			);
 
 		// cache
-		$termino_by_tipo[$cache_uid] = $result;
+			$termino_by_tipo[$cache_uid] = $result;
 
 
 		return $result;
@@ -484,8 +501,10 @@ class RecordObj_dd extends RecordDataBoundObject {
 	/**
 	* GET_LEGACY_MODEL_NAME_BY_TIPO
 	* Temporal function to manage transitional models
+	* @param string $tipo
+	* @return string|null $model_name
 	*/
-	public static function get_legacy_model_name_by_tipo(string $tipo) : string {
+	public static function get_legacy_model_name_by_tipo(string $tipo) : ?string {
 
 		$RecordObj_dd	= new RecordObj_dd($tipo);
 		$model_name		= $RecordObj_dd->get_legacy_model_name();
@@ -496,12 +515,18 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 	/**
-	* GET_legacy_MODEL_NAME_BY_TIPO
+	* GET_LEGACY_MODEL_NAME
 	* Temporal function to manage transitional models
+	* @return string|null $model_name
 	*/
-	public function get_legacy_model_name() : string {
+	public function get_legacy_model_name() : ?string {
 
-		$model_name = $this->get_termino_by_tipo($this->get_modelo(),'lg-spa',true,false);
+		$model_name = $this->get_termino_by_tipo(
+			$this->get_modelo() ?? '',
+			'lg-spa',
+			true,
+			false
+		);
 
 		return $model_name;
 	}//end get_legacy_model_name

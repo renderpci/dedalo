@@ -11,12 +11,12 @@ class component_json extends component_common {
 	/**
 	* __CONSTRUCT
 	*/
-	public function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
+	protected function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
 
 		// Force always DEDALO_DATA_NOLAN
-		$lang = DEDALO_DATA_NOLAN;
+		$this->lang = DEDALO_DATA_NOLAN;
 
-		parent::__construct($tipo, $parent, $mode, $lang, $section_tipo);
+		parent::__construct($tipo, $parent, $mode, $this->lang, $section_tipo);
 	}//end __construct
 
 
