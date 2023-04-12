@@ -340,7 +340,8 @@ class search {
 			if (isset($this->search_query_object->children_recursive) && $this->search_query_object->children_recursive===true) {
 				$ar_row_children = [];
 				foreach ($ar_records as $row) {
-					$row_children 	 = component_relation_children::get_children(
+
+					$row_children = component_relation_children::get_children(
 						$row->section_id, // string section_id
 						$row->section_tipo, // string section_tipo
 						null, // string|null component_tipo
