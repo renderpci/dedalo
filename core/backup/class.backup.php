@@ -21,6 +21,9 @@ abstract class backup {
 	/**
 	* INIT_BACKUP_SECUENCE
 	* Make backup (compressed SQL dump) of current dedalo DB before login
+	* @param int $user_id
+	* @param string $username
+	* @param bool $skip_backup_time_range = false
 	* @return object $response
 	*/
 	public static function init_backup_secuence(int $user_id, string $username, bool $skip_backup_time_range=false) : object {
@@ -113,10 +116,10 @@ abstract class backup {
 
 				// default backup case. Async dump building sh file
 
-				$command = 'sleep 6s; nice -n 19 ' . $command;
+				$command = 'sleep 15s; nice -n 19 ' . $command;
 
 				// build sh file with backup command if not exists
-				$prgfile = DEDALO_BACKUP_PATH_TEMP.'/backup_' . DEDALO_DB_TYPE . '_' . date("Y-m-d_His") . '_' . DEDALO_DATABASE_CONN  . '.sh';	//
+				$prgfile = DEDALO_BACKUP_PATH_TEMP.'/backup_' . DEDALO_DB_TYPE . '_' . date("Y-m-d_H") . '_' . DEDALO_DATABASE_CONN  . '.sh';	//
 				if(!file_exists($prgfile)) {
 
 					// target folder verify (exists and permissions)
@@ -186,7 +189,7 @@ abstract class backup {
 
 		}catch (Exception $e) {
 
-			$msg = "Error $username. ".  $e->getMessage(). "\n";
+			$msg = "Error on backup_secuence. User: $username. - error: ".  $e->getMessage(). "\n";
 			debug_log(__METHOD__." Exception: $msg ".to_string(), logger::ERROR);
 
 			// response error
