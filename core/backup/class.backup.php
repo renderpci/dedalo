@@ -1826,9 +1826,9 @@ abstract class backup {
 	* WRITE_LANG_FILE
 	* Calculated labels for given lang and write a js file with the result
 	* @param string $lang
-	* @return bool
+	* @return void
 	*/
-	public static function write_lang_file(string $lang) {
+	public static function write_lang_file(string $lang) : void {
 
 		// all labels
 		$ar_label = label::get_ar_label($lang);
@@ -1859,8 +1859,6 @@ abstract class backup {
 			. ' File size: ' .format_size_units( filesize($file_path) )
 			, logger::DEBUG
 		);
-
-		return true;
 	}//end write_lang_file
 
 
