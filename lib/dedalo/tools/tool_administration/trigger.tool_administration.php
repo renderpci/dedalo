@@ -980,37 +980,61 @@ function update_dedalo_code($json_data) {
 		$result = new stdClass();
 
 		// Download zip file from server (master)
-			// $contents = file_get_contents(DEDALO_SOURCE_VERSION_URL);
-			$contents = (defined('SERVER_PROXY') && !empty(SERVER_PROXY))
-				? (function(){
 
-					// regular contaxt
-						$aContext = [
-							'http' => [
-								'proxy'				=> 'tcp://' . SERVER_PROXY,
-								'request_fulluri'	=> true
-							]
-						];
-						$context = stream_context_create($aContext);
+			// old way file_get_contents
+				// $contents = (defined('SERVER_PROXY') && !empty(SERVER_PROXY))
+				// 	? (function(){
 
-					// HTTPS fixed bug context
-						// $path		= DEDALO_SOURCE_VERSION_URL;
-						// $hostname	= parse_url($path, PHP_URL_HOST);
-						// $opts = array(
-						// 	'http' => array(
-						// 		'method'	=> 'GET',
-						// 		'proxy'		=> 'tcp://' . DEDALO_SOURCE_VERSION_URL,
-						// 	),
-						// 	'ssl' => array(
-						// 		'SNI_server_name'	=> $hostname,
-						// 		'SNI_enabled'		=> true
-						// 	)
-						// );
-						// $context = stream_context_create($opts);
+				// 		// regular contaxt
+				// 			$aContext = [
+				// 				'http' => [
+				// 					'proxy'				=> 'tcp://' . SERVER_PROXY,
+				// 					'request_fulluri'	=> true
+				// 				]
+				// 			];
+				// 			$context = stream_context_create($aContext);
 
-					return file_get_contents(DEDALO_SOURCE_VERSION_URL, false, $context);
-				  })()
-				: file_get_contents(DEDALO_SOURCE_VERSION_URL);
+				// 		// HTTPS fixed bug context
+				// 			// $path		= DEDALO_SOURCE_VERSION_URL;
+				// 			// $hostname	= parse_url($path, PHP_URL_HOST);
+				// 			// $opts = array(
+				// 			// 	'http' => array(
+				// 			// 		'method'	=> 'GET',
+				// 			// 		'proxy'		=> 'tcp://' . DEDALO_SOURCE_VERSION_URL,
+				// 			// 	),
+				// 			// 	'ssl' => array(
+				// 			// 		'SNI_server_name'	=> $hostname,
+				// 			// 		'SNI_enabled'		=> true
+				// 			// 	)
+				// 			// );
+				// 			// $context = stream_context_create($opts);
+
+				// 		return file_get_contents(DEDALO_SOURCE_VERSION_URL, false, $context);
+				// 	  })()
+				// 	: file_get_contents(DEDALO_SOURCE_VERSION_URL);
+
+			// curl mode (unified with download_remote_structure_file)
+				// data
+					$data_string = "data=" . json_encode(null);
+
+				// curl request options
+					$options = (object)[
+						'url'				=> DEDALO_SOURCE_VERSION_URL,
+						'post'				=> true,
+						'postfields'		=> $data_string,
+						'returntransfer'	=> 1,
+						'followlocation'	=> true,
+						'header'			=> false,
+						'ssl_verifypeer'	=> false,
+						'timeout'			=> 300, // seconds
+						'proxy' 			=> (defined('SERVER_PROXY') && !empty(SERVER_PROXY))
+							? SERVER_PROXY // from Dédalo config file
+							: false // default case
+					];
+
+				// curl_request
+					$response = backup::curl_request($options);
+					$contents = $response->result;
 
 			if (!$contents) {
 				$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Contents from Dédalo code repository fail to download from: '.DEDALO_SOURCE_VERSION_URL;
