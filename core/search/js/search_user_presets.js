@@ -101,7 +101,8 @@ export const get_editing_preset_json_filter = async function(self) {
 
 		// API request
 			const api_response = await data_manager.request({
-				body : rqo
+				body		: rqo,
+				use_worker	: true
 			})
 
 		// debug
@@ -420,7 +421,8 @@ export const create_new_search_preset = function(options) {
 				}
 			}
 			const api_response = await data_manager.request({
-				body : rqo
+				body		: rqo,
+				use_worker	: true
 			})
 			if (api_response.result && api_response.result>0) {
 
@@ -509,7 +511,8 @@ export const save_preset = async function(options) {
 
 		// API request
 			const api_response = await data_manager.request({
-				body : rqo
+				body		: rqo,
+				use_worker	: true
 			})
 
 		// error check
