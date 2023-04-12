@@ -406,7 +406,7 @@ const render_area_item = function(item, datalist, value, self) {
 										continue;
 									}
 
-								const found = self.data.value.find(el => el.tipo===child.tipo)
+								const found = self.filled_value.find(el => el.tipo===child.tipo)
 								if (found && found.value===2) {
 									break parents_loop;
 								}
@@ -707,7 +707,7 @@ const create_global_radio_group = function(self, item, permissions, datalist, co
 
 			if(child.tipo === child.section_tipo) continue; // exclude areas
 
-			const data_found = self.data.value.find(el => el.tipo===child.tipo && el.section_tipo===child.section_tipo)
+			const data_found = self.filled_value.find(el => el.tipo===child.tipo && el.section_tipo===child.section_tipo)
 			if(data_found){
 				if (last_value && data_found.value!==last_value) {
 					child_value = null
