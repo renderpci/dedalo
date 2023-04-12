@@ -1309,6 +1309,7 @@ abstract class backup {
 
 	/**
 	* GET_REMOTE_DATA
+	* @param object $data
 	* @return string $result
 	*/
 	public static function get_remote_data(object $data) {
@@ -1511,7 +1512,7 @@ abstract class backup {
 	* given tlds
 	* @param array $ar_tld
 	*	array of strings like ['dd','rsc'...]
-	* @return object $response
+	* @return array $ar_data
 	*/
 	public static function structure_to_json(array $ar_tld) : array {
 
@@ -1826,9 +1827,10 @@ abstract class backup {
 	* WRITE_LANG_FILE
 	* Calculated labels for given lang and write a js file with the result
 	* @param string $lang
-	* @return void
+	* @return bool
+	* 	false if write error occurred, true if all is file is written successfully
 	*/
-	public static function write_lang_file(string $lang) : void {
+	public static function write_lang_file(string $lang) : bool {
 
 		// all labels
 		$ar_label = label::get_ar_label($lang);
@@ -1849,16 +1851,27 @@ abstract class backup {
 		// content
 		$content = json_encode($ar_label, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 
-		file_put_contents(
+		$write = file_put_contents(
 			$file_path,
 			$content
 		);
+		if ($write===false) {
+			debug_log(__METHOD__
+				. ' Error on write js/lang file. Permission denied.' . PHP_EOL
+				. " lang: $lang - $file_path " .PHP_EOL
+				, logger::ERROR
+			);
+
+			return false;
+		}
 
 		debug_log(__METHOD__
 			. " Generated js labels file for lang: $lang - $file_path " .PHP_EOL
 			. ' File size: ' .format_size_units( filesize($file_path) )
 			, logger::DEBUG
 		);
+
+		return true;
 	}//end write_lang_file
 
 

@@ -1366,14 +1366,10 @@ final class dd_utils_api {
 			// update javascript labels
 				$ar_langs = DEDALO_APPLICATION_LANGS;
 				foreach ($ar_langs as $lang => $label) {
-					$label_path	= '/common/js/lang/' . $lang . '.js';
-					$ar_label	= label::get_ar_label($lang); // Get all properties
-					file_put_contents( DEDALO_CORE_PATH.$label_path, json_encode($ar_label, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
-					debug_log(__METHOD__." Generated js labels file for lang: $lang - $label_path ".to_string(), logger::DEBUG);
+					backup::write_lang_file($lang);
 				}
 
-
-			// response ok
+			// response OK
 				$response->result	= $result;
 				$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
 
