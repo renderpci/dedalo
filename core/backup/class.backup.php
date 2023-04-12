@@ -1311,18 +1311,22 @@ abstract class backup {
 
 
 	/**
-	* GET_REMOTE_DATA
-	* @param object $data
-	* @return string $result
+	* DOWNLOAD_REMOTE_STRUCTURE_FILE
+	* @param object $obj
+	* @param string $target_dir
+	* @return bool
 	*/
-	public static function get_remote_data(object $data) {
+	public static function download_remote_structure_file(object $obj, string $target_dir) : bool {
+		$start_time = start_time();
 
-		$data_string = "data=" . json_encode($data);
-
-		// file_get_contents option
-			// $result = file_get_contents(STRUCTURE_SERVER_URL . '?' .$data_string);
-
-		// curl way
+		// curl request
+			$data = (object)[
+				'code'	=> STRUCTURE_SERVER_CODE,
+				'type'	=> $obj->type,
+				'name'	=> $obj->name
+			];
+			$data_string = "data=" . json_encode($data);
+			// request
 			$response = curl_request((object)[
 				'url'				=> STRUCTURE_SERVER_URL .'?' .$data_string,
 				'post'				=> true,
@@ -1335,37 +1339,17 @@ abstract class backup {
 			]);
 			$result = $response->result;
 
-		return $result;
-	}//end get_remote_data
-
-
-
-	/**
-	* DOWNLOAD_REMOTE_STRUCTURE_FILE
-	* @param object $obj
-	* @param string $target_dir
-	* @return bool
-	*/
-	public static function download_remote_structure_file(object $obj, string $target_dir) : bool {
-		$start_time = start_time();
-
-		$data = (object)[
-			'code'	=> STRUCTURE_SERVER_CODE,
-			'type'	=> $obj->type,
-			'name'	=> $obj->name
-		];
-
-		$result = self::get_remote_data($data);
-		#if(SHOW_DEBUG===true) {
-		#	$fist_line = strtok($result, "\n\r");
-		#	debug_log(__METHOD__." download type:$obj->type - name:$obj->name result fist_line: \n".to_string($fist_line), logger::DEBUG);
-		#}
-		debug_log(__METHOD__
-			. " >>> Downloaded remote data from $obj->name - "
-			. 'result: ' . gettype($result) . ' - '
-			. exec_time_unit($start_time,'ms').' ms'
-			, logger::DEBUG
-		);
+		// debug
+			// if(SHOW_DEBUG===true) {
+			// 	$fist_line = strtok($result, "\n\r");
+			// 	debug_log(__METHOD__." download type:$obj->type - name:$obj->name result fist_line: \n".to_string($fist_line), logger::DEBUG);
+			// }
+			debug_log(__METHOD__
+				. " >>> Downloaded remote data from $obj->name - "
+				. 'result type: ' . gettype($result) . ' - '
+				. exec_time_unit($start_time,'ms').' ms'
+				, logger::DEBUG
+			);
 
 		// Create downloads folder if not exists
 			if (self::$checked_download_str_dir!==true) {
