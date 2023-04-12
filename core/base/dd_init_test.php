@@ -694,6 +694,8 @@
 		}
 	}
 
+
+
 // LANGS JS (moved to login.php !)
 	#	# Generate js files with all labels (in not extist current lang file)
 	#	$folder_path = DEDALO_CORE_PATH.'/common/js/lang';
