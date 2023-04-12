@@ -474,7 +474,7 @@ component_common.prototype.save = async function(changed_data) {
 							const changed_data_length = changed_data.length
 							for (let i = 0; i < changed_data_length; i++) {
 								const item = changed_data[i]
-								console.log(`[component_common.save] action:'${item.action}' lang:'${self.context.lang}', key:'${item.key}'`);
+								console.log(`[component_common.save] action:'${item.action}' lang:'${self.context.lang}', key:'${item.key}, i:'${item.i}'`);
 							}
 							// console.log(`[component_common.save] api_response value:`, api_response_data_value);
 							console.log('[component_common.save] api_response:', api_response);
