@@ -474,7 +474,7 @@ component_common.prototype.save = async function(changed_data) {
 							const changed_data_length = changed_data.length
 							for (let i = 0; i < changed_data_length; i++) {
 								const item = changed_data[i]
-								console.log(`[component_common.save] action:'${item.action}' lang:'${self.context.lang}', key:'${item.key}'`);
+								console.log(`[component_common.save] action:'${item.action}' lang:'${self.context.lang}', key:'${item.key}, i:'${item.i}'`);
 							}
 							// console.log(`[component_common.save] api_response value:`, api_response_data_value);
 							console.log('[component_common.save] api_response:', api_response);
@@ -872,7 +872,6 @@ component_common.prototype.change_value = async function(options) {
 
 	// options
 		const changed_data			= options.changed_data
-		const action				= changed_data.action
 		const label					= options.label
 		const refresh				= typeof options.refresh!=='undefined' ? options.refresh : false
 		const build_autoload		= typeof options.build_autoload!=='undefined' ? options.build_autoload : false
@@ -884,6 +883,7 @@ component_common.prototype.change_value = async function(options) {
 		}
 
 	// remove dialog. Check the remove dialog (default or sent by caller )user confirmation prevents remove accidentally
+		const action = changed_data[0]
 		if (action==='remove') {
 
 			// generate default remove dialog to confirm the remove option is correct

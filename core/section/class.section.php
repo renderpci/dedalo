@@ -49,6 +49,8 @@ class section extends common {
 		// tm_context. Array
 		public $tm_context;
 
+
+
 		/**
 		* SECTIONS FOR DATAFRAME
 		*________________________
@@ -181,7 +183,7 @@ class section extends common {
 	* CONSTRUCT
 	* Extends parent abstract class common
 	*/
-	private function __construct($section_id=null, ?string $tipo=null, ?string $mode='edit') {
+	private function __construct($section_id=null, string $tipo=null, ?string $mode='edit') {
 
 		if (empty($tipo)) {
 			throw new Exception("Error: on construct section : tipo is mandatory. section_id:$section_id, tipo:$tipo, mode:$mode", 1);

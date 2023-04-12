@@ -218,16 +218,11 @@
 	}
 
 	export const random_security_access = function() {
-		const result = [{
-			tipo			: "mupi23",
-			value			: random_number(10000) || 1,
-			section_tipo	: "mupi2"
-		},
-		{
-			tipo			: "oh15",
+		const result = {
+			tipo			: "oh25",
 			value			: random_number(10000) || 1,
 			section_tipo	: "oh1"
-		}]
+		}
 
 		return result
 	}

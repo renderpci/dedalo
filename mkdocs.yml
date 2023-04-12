@@ -51,7 +51,11 @@ markdown_extensions:
   - footnotes
   - markdown.extensions.codehilite:
       guess_lang: true
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.inlinehilite
   - pymdownx.highlight:
       extend_pygments_lang:

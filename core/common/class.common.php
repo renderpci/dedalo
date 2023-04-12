@@ -360,9 +360,9 @@ abstract class common {
 			$model_name = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
 			// empty model case
 			if (empty($model_name)) {
-				debug_log(__METHOD__.
-					" Current tipo ($tipo) model name is empty. Default table 'matrix' was used.".to_string(),
-					logger::ERROR
+				debug_log(__METHOD__
+					. " Current tipo ($tipo) model name is empty. Model is mandatory, check your model for tipo: $tipo"
+					, logger::ERROR
 				);
 				return null;
 			}
@@ -372,9 +372,10 @@ abstract class common {
 			}
 			// non section model case
 			if ($model_name!=='section') {
-				debug_log(__METHOD__.
-					" Error Processing Request. Don't use non section tipo ($tipo - $model_name) to calculate matrix_table. Use always section_tipo ",
-					logger::ERROR
+				debug_log(__METHOD__
+					. " Error. Don't use non section tipo to calculate matrix_table. Use always section_tipo". PHP_EOL
+					. " tipo: $tipo - model: $model_name"
+					, logger::ERROR
 				);
 				return null;
 			}
@@ -912,121 +913,121 @@ abstract class common {
 
 
 	/**
-	* TRIGGER_MANAGER
+	* TRIGGER_MANAGER DEPERECATED
 	* @param php://input
 	* @return bool
 	*/
-	public static function trigger_manager(object $request_options=null) : bool {
+		// public static function trigger_manager(object $request_options=null) : bool {
 
-		// options parse
-			$options = new stdClass();
-				$options->test_login		= true;
-				$options->source			= 'php://input';
-				$options->set_json_header	= true;
-				if(!empty($request_options)) {
-					foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-				}
+		// 	// options parse
+		// 		$options = new stdClass();
+		// 			$options->test_login		= true;
+		// 			$options->source			= 'php://input';
+		// 			$options->set_json_header	= true;
+		// 			if(!empty($request_options)) {
+		// 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+		// 			}
 
-		# Set JSON headers for all responses (default)
-			if ($options->set_json_header===true) {
-				#header('Content-Type: application/json');
-				header('Content-Type: application/json; charset=utf-8');
-			}
-
-
-		# JSON_DATA
-		# javascript common.get_json_data sends a stringify json object
-		# this object is getted here and decoded with all ajax request vars
-			if ($options->source==='GET') {
-				#$str_json = json_encode($_GET);
-				// Verify all get vars before json encode
-				$get_obj = new stdClass();
-				foreach ($_GET as $key => $value) {
-					$get_obj->{$key} = safe_xss($value);
-				}
-				$str_json = json_encode($get_obj);
-			}elseif ($options->source==='POST') {
-				#$str_json = json_encode($_GET);
-				// Verify all get vars before json encode
-				$get_obj = new stdClass();
-				foreach ($_POST as $key => $value) {
-					$get_obj->{$key} = safe_xss($value);
-				}
-				$str_json = json_encode($get_obj);
-			}else{
-				$str_json = file_get_contents('php://input');
-			}
-			if (!$json_data = json_decode($str_json)) {
-				$response = new stdClass();
-					$response->result	= false;
-					$response->msg		= "Error on read php://input data";
-
-				return false;
-			}
-
-		# DEDALO_MAINTENANCE_MODE
-			$mode = $json_data->mode;
-			if ($mode!=="Save" && $mode!=="Login") {
-				if (DEDALO_MAINTENANCE_MODE===true && (isset($_SESSION['dedalo']['auth']['user_id']) && $_SESSION['dedalo']['auth']['user_id']!=DEDALO_SUPERUSER)) {
-					debug_log(__METHOD__." Kick user ".to_string(), logger::DEBUG);
-
-					# Unset user session login
-					# Delete current Dédalo session
-					unset($_SESSION['dedalo']['auth']);
-
-					# maintenance check
-					$response = new stdClass();
-						$response->result	= true;
-						$response->msg		= "Sorry, this site is under maintenace now";
-					echo json_encode($response);
-					#exit();
-					return false;
-				}
-			}
+		// 	# Set JSON headers for all responses (default)
+		// 		if ($options->set_json_header===true) {
+		// 			#header('Content-Type: application/json');
+		// 			header('Content-Type: application/json; charset=utf-8');
+		// 		}
 
 
-		# LOGGED USER CHECK. Can be disabled in options (login case)
-			if($options->test_login===true && login::is_logged()!==true) {
-				$response = new stdClass();
-					$response->result	= false;
-					$response->msg		= "Error. Auth error: please login [1]";
-				echo json_encode($response);
-				#exit();
-				return false;
-			}
+		// 	# JSON_DATA
+		// 	# javascript common.get_json_data sends a stringify json object
+		// 	# this object is getted here and decoded with all ajax request vars
+		// 		if ($options->source==='GET') {
+		// 			#$str_json = json_encode($_GET);
+		// 			// Verify all get vars before json encode
+		// 			$get_obj = new stdClass();
+		// 			foreach ($_GET as $key => $value) {
+		// 				$get_obj->{$key} = safe_xss($value);
+		// 			}
+		// 			$str_json = json_encode($get_obj);
+		// 		}elseif ($options->source==='POST') {
+		// 			#$str_json = json_encode($_GET);
+		// 			// Verify all get vars before json encode
+		// 			$get_obj = new stdClass();
+		// 			foreach ($_POST as $key => $value) {
+		// 				$get_obj->{$key} = safe_xss($value);
+		// 			}
+		// 			$str_json = json_encode($get_obj);
+		// 		}else{
+		// 			$str_json = file_get_contents('php://input');
+		// 		}
+		// 		if (!$json_data = json_decode($str_json)) {
+		// 			$response = new stdClass();
+		// 				$response->result	= false;
+		// 				$response->msg		= "Error on read php://input data";
+
+		// 			return false;
+		// 		}
+
+		// 	# DEDALO_MAINTENANCE_MODE
+		// 		$mode = $json_data->mode;
+		// 		if ($mode!=="Save" && $mode!=="Login") {
+		// 			if (DEDALO_MAINTENANCE_MODE===true && (isset($_SESSION['dedalo']['auth']['user_id']) && $_SESSION['dedalo']['auth']['user_id']!=DEDALO_SUPERUSER)) {
+		// 				debug_log(__METHOD__." Kick user ".to_string(), logger::DEBUG);
+
+		// 				# Unset user session login
+		// 				# Delete current Dédalo session
+		// 				unset($_SESSION['dedalo']['auth']);
+
+		// 				# maintenance check
+		// 				$response = new stdClass();
+		// 					$response->result	= true;
+		// 					$response->msg		= "Sorry, this site is under maintenace now";
+		// 				echo json_encode($response);
+		// 				#exit();
+		// 				return false;
+		// 			}
+		// 		}
 
 
-		# MODE Verify
-			if(empty($json_data->mode)) {
-				$response = new stdClass();
-					$response->result	= false;
-					$response->msg		= "Error. mode is mandatory";
-				echo json_encode($response);
-				#exit();
-				return false;
-			}
+		// 	# LOGGED USER CHECK. Can be disabled in options (login case)
+		// 		if($options->test_login===true && login::is_logged()!==true) {
+		// 			$response = new stdClass();
+		// 				$response->result	= false;
+		// 				$response->msg		= "Error. Auth error: please login [1]";
+		// 			echo json_encode($response);
+		// 			#exit();
+		// 			return false;
+		// 		}
 
 
-		# CALL FUNCTION
-
-			if ( function_exists($json_data->mode) ) {
-
-				$response = (object)call_user_func($json_data->mode, $json_data);
-
-			}else{
-
-				$response = new stdClass();
-					$response->result	= false;
-					$response->msg		= 'Error. Request failed. json_data->mode not exists: '.to_string($json_data->mode);
-			}
-
-			// echo final string
-				// $json_params = (SHOW_DEBUG===true) ? JSON_PRETTY_PRINT : JSON_UNESCAPED_UNICODE;
-				echo json_encode($response, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE);
+		// 	# MODE Verify
+		// 		if(empty($json_data->mode)) {
+		// 			$response = new stdClass();
+		// 				$response->result	= false;
+		// 				$response->msg		= "Error. mode is mandatory";
+		// 			echo json_encode($response);
+		// 			#exit();
+		// 			return false;
+		// 		}
 
 
-		return true;
-	}//end trigger_manager
+		// 	# CALL FUNCTION
+
+		// 		if ( function_exists($json_data->mode) ) {
+
+		// 			$response = (object)call_user_func($json_data->mode, $json_data);
+
+		// 		}else{
+
+		// 			$response = new stdClass();
+		// 				$response->result	= false;
+		// 				$response->msg		= 'Error. Request failed. json_data->mode not exists: '.to_string($json_data->mode);
+		// 		}
+
+		// 		// echo final string
+		// 			// $json_params = (SHOW_DEBUG===true) ? JSON_PRETTY_PRINT : JSON_UNESCAPED_UNICODE;
+		// 			echo json_encode($response, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE);
+
+
+		// 	return true;
+		// }//end trigger_manager
 
 
 
@@ -1128,7 +1129,7 @@ abstract class common {
 	* TRUNCATE_HTML
 	* Thanks to Søren Løvborg (printTruncated)
 	*/
-	public static function truncate_html(int $maxLength, string $html, bool $isUtf8=true) : string {
+	public static function DES_truncate_html(int $maxLength, string $html, bool $isUtf8=true) : string {
 
 		$full_text = '';
 
@@ -1221,7 +1222,121 @@ abstract class common {
 			$full_text .= sprintf('</%s>', array_pop($tags));
 		}
 
+
 		return $full_text;
+	}//end truncate_html
+
+
+
+	/**
+	* TRUNCATE_HTML
+	* Truncate a string up to a number of characters while preserving whole words and HTML tags
+	*
+	* @param integer $length
+	* 	Length of returned string, including ellipsis.
+	* @param string $text
+	* 	String to truncate
+	* @param boolean $considerHtml
+	* 	If true, HTML tags would be handled correctly
+	* @param string $ending
+	* 	Ending to be appended to the trimmed string.
+	* @param boolean $exact
+	* 	If false, $text will not be cut mid-word
+	*
+	* @return string $truncate
+	* 	Trimmed string.
+	*/
+	public static function truncate_html(int $length, string $text, bool $considerHtml=true, string $ending = '...', bool $exact=false) : string {
+
+		if ($considerHtml===true) {
+			// if the plain text is shorter than the maximum length, return the whole text
+			if (strlen(preg_replace('/<.*?>/', '', $text)) <= $length) {
+				return $text;
+			}
+			// splits all html-tags to scan-able lines
+			preg_match_all('/(<.+?>)?([^<>]*)/s', $text, $lines, PREG_SET_ORDER);
+			$total_length	= strlen($ending);
+			$open_tags		= array();
+			$truncate		= '';
+			foreach ($lines as $line_matchings) {
+				// if there is any html-tag in this line, handle it and add it (uncounted) to the output
+				if (!empty($line_matchings[1])) {
+					// if it's an "empty element" with or without xhtml-conform closing slash
+					if (preg_match('/^<(\s*.+?\/\s*|\s*(img|br|input|hr|area|base|basefont|col|frame|isindex|link|meta|param)(\s.+?)?)>$/is', $line_matchings[1])) {
+						// do nothing
+					// if tag is a closing tag
+					} else if (preg_match('/^<\s*\/([^\s]+?)\s*>$/s', $line_matchings[1], $tag_matchings)) {
+						// delete tag from $open_tags list
+						$pos = array_search($tag_matchings[1], $open_tags);
+						if ($pos !== false) {
+						unset($open_tags[$pos]);
+						}
+					// if tag is an opening tag
+					} else if (preg_match('/^<\s*([^\s>!]+).*?>$/s', $line_matchings[1], $tag_matchings)) {
+						// add tag to the beginning of $open_tags list
+						array_unshift($open_tags, strtolower($tag_matchings[1]));
+					}
+					// add html-tag to $truncate'd text
+					$truncate .= $line_matchings[1];
+				}
+				// calculate the length of the plain text part of the line; handle entities as one character
+				$content_length = strlen(preg_replace('/&[0-9a-z]{2,8};|&#[0-9]{1,7};|[0-9a-f]{1,6};/i', ' ', $line_matchings[2]));
+				if ($total_length+$content_length> $length) {
+					// the number of characters which are left
+					$left = $length - $total_length;
+					$entities_length = 0;
+					// search for html entities
+					if (preg_match_all('/&[0-9a-z]{2,8};|&#[0-9]{1,7};|[0-9a-f]{1,6};/i', $line_matchings[2], $entities, PREG_OFFSET_CAPTURE)) {
+						// calculate the real length of all entities in the legal range
+						foreach ($entities[0] as $entity) {
+							if ($entity[1]+1-$entities_length <= $left) {
+								$left--;
+								$entities_length += strlen($entity[0]);
+							} else {
+								// no more characters left
+								break;
+							}
+						}
+					}
+					$truncate .= substr($line_matchings[2], 0, $left+$entities_length);
+					// maximum length is reached, so get off the loop
+					break;
+				} else {
+					$truncate .= $line_matchings[2];
+					$total_length += $content_length;
+				}
+				// if the maximum length is reached, get off the loop
+				if($total_length>= $length) {
+					break;
+				}
+			}
+		}else{
+			if (strlen($text) <= $length) {
+				return $text;
+			} else {
+				$truncate = substr($text, 0, $length - strlen($ending));
+			}
+		}
+		// if the words shouldn't be cut in the middle...
+		if ($exact===false) {
+			// ...search the last occurrence of a space...
+			$spacepos = strrpos($truncate, ' ');
+			if (isset($spacepos)) {
+				// ...and cut the text in this position
+				$truncate = substr($truncate, 0, $spacepos);
+			}
+		}
+		// add the defined ending to the text
+		$truncate .= $ending;
+		if($considerHtml) {
+			// close all unclosed html-tags
+			foreach ($open_tags as $tag) {
+				$truncate .= '</' . $tag . '>';
+			}
+		}
+
+
+		return $truncate;
 	}//end truncate_html
 
 
@@ -1262,7 +1377,7 @@ abstract class common {
 	* 	data : [...]
 	* }
 	*/
-	public function get_json(object $request_options=null) : object {
+	public function get_json(object $options=null) : object {
 
 		$json_cache = false; // experimental. Set false in production (!)
 
@@ -1271,17 +1386,22 @@ abstract class common {
 				$get_json_start_time = start_time();
 			}
 
+		// options
+			$get_context		= $options->get_context ?? true;
+			$context_type		= $options->context_type ?? 'default';
+			$get_data			= $options->get_data ?? true;
+			$get_request_config	= $options->get_request_config ?? false;
+
 		// options parse
-			$options = new stdClass();
-				$options->get_context			= true;
-				$options->context_type			= 'default';
-				$options->get_data				= true;
-				$options->get_request_config	= false;
-				if($request_options!==null) foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+			// $options = new stdClass();
+			// 	$options->get_context			= true;
+			// 	$options->context_type			= 'default';
+			// 	$options->get_data				= true;
+			// 	$options->get_request_config	= false;
+			// 	if($request_options!==null) foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			$called_model	= get_class($this); // get_called_class(); // static::class
 			$called_tipo	= $this->get_tipo();
-			$get_data		= $options->get_data;
 
 		// cache context
 			static $resolved_get_json = [];
@@ -1292,10 +1412,10 @@ abstract class common {
 					$this->get_section_id() ?? '',
 					($this->get_section_tipo() ?? ''),
 					$this->mode,
-					$options->context_type,
-					(int)$options->get_request_config,
-					(int)$options->get_context,
-					(int)$options->get_data
+					$context_type,
+					(int)$get_request_config,
+					(int)$get_context,
+					(int)$get_data
 				];
 				$cache_key = implode('_', $key_beats);
 				if (isset($resolved_get_json[$cache_key])) {
@@ -1305,6 +1425,13 @@ abstract class common {
 			}
 
 		// old way
+			// re-create options object to easy select from JSON controller
+				$options = (object)[
+					'get_context'			=> $get_context,
+					'context_type'			=> $context_type,
+					'get_data'				=> $get_data,
+					'get_request_config'	=> $get_request_config,
+				];
 			// path. Class name is called class (ex. component_input_text), not this class (common)
 				$path = DEDALO_CORE_PATH .'/'. $called_model .'/'. $called_model .'_json.php';
 
@@ -1313,10 +1440,10 @@ abstract class common {
 
 		// new way
 			// $json = new stdClass();
-			// 	if (true===$options->get_context) {
+			// 	if (true===get_context) {
 			// 		$json->context = $this->get_context($options);
 			// 	}
-			// 	if (true===$options->get_data) {
+			// 	if (true===get_data) {
 			// 		$json->data = $this->get_data($options);
 			// 	}
 

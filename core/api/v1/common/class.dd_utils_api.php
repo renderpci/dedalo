@@ -1267,47 +1267,33 @@ final class dd_utils_api {
 
 			debug_log(__METHOD__." Start downloading file ".DEDALO_SOURCE_VERSION_URL, logger::DEBUG);
 
-			// Download zip file from server (master)
-				// $contents = file_get_contents(DEDALO_SOURCE_VERSION_URL);
-				$contents = (defined('SERVER_PROXY') && !empty(SERVER_PROXY))
-					? (function(){
-
-						// regular context
-							$aContext = [
-								'http' => [
-									'proxy'				=> 'tcp://' . SERVER_PROXY,
-									'request_fulluri'	=> true
-								]
-							];
-							$context = stream_context_create($aContext);
-
-						// HTTPS fixed bug context
-							// $path		= DEDALO_SOURCE_VERSION_URL;
-							// $hostname	= parse_url($path, PHP_URL_HOST);
-							// $opts = array(
-							// 	'http' => array(
-							// 		'method'	=> 'GET',
-							// 		'proxy'		=> 'tcp://' . DEDALO_SOURCE_VERSION_URL,
-							// 	),
-							// 	'ssl' => array(
-							// 		'SNI_server_name'	=> $hostname,
-							// 		'SNI_enabled'		=> true
-							// 	)
-							// );
-							// $context = stream_context_create($opts);
-
-						return file_get_contents(DEDALO_SOURCE_VERSION_URL, false, $context);
-					  })()
-					: file_get_contents(DEDALO_SOURCE_VERSION_URL);
-
-				if (!$contents) {
+			// Download zip file from server (master) curl mode (unified with download_remote_structure_file)
+				// data
+				$data_string = "data=" . json_encode(null);
+				// curl_request
+				$curl_response = curl_request((object)[
+					'url'				=> DEDALO_SOURCE_VERSION_URL,
+					'post'				=> true,
+					'postfields'		=> $data_string,
+					'returntransfer'	=> 1,
+					'followlocation'	=> true,
+					'header'			=> false, // bool add header to result
+					'ssl_verifypeer'	=> false,
+					'timeout'			=> 300, // int seconds
+					'proxy'				=> (defined('SERVER_PROXY') && !empty(SERVER_PROXY))
+						? SERVER_PROXY // from Dédalo config file
+						: false // default case
+				]);
+				$contents = $curl_response->result;
+				// check contents
+				if ($contents===false) {
 					$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Contents from Dédalo code repository fail to download from: '.DEDALO_SOURCE_VERSION_URL;
 					debug_log(__METHOD__." $response->msg", logger::ERROR);
 					return $response;
 				}
 				$result->download_file = [
-					"Downloaded file: " . DEDALO_SOURCE_VERSION_URL,
-					"Time: " . exec_time_unit($start_time,'secs')." secs"
+					'Downloaded file: ' . DEDALO_SOURCE_VERSION_URL,
+					'Time: ' . exec_time_unit($start_time,'secs') . ' secs'
 				];
 				debug_log(__METHOD__." Downloaded file (".DEDALO_SOURCE_VERSION_URL.") in ".exec_time_unit($start_time,'secs'), logger::DEBUG);
 
@@ -1380,14 +1366,10 @@ final class dd_utils_api {
 			// update javascript labels
 				$ar_langs = DEDALO_APPLICATION_LANGS;
 				foreach ($ar_langs as $lang => $label) {
-					$label_path	= '/common/js/lang/' . $lang . '.js';
-					$ar_label	= label::get_ar_label($lang); // Get all properties
-					file_put_contents( DEDALO_CORE_PATH.$label_path, json_encode($ar_label, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
-					debug_log(__METHOD__." Generated js labels file for lang: $lang - $label_path ".to_string(), logger::DEBUG);
+					backup::write_lang_file($lang);
 				}
 
-
-			// response ok
+			// response OK
 				$response->result	= $result;
 				$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
 

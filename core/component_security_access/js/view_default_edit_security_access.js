@@ -191,6 +191,7 @@ const get_content_data = async function(self) {
 * 	Containing li nodes
 */
 const render_tree_items = function(items, datalist, value, self) {
+	// const t0 = performance.now()
 
 	// tree_object . Object with all li nodes rendered sequentially
 		const tree_object = {}
@@ -210,10 +211,6 @@ const render_tree_items = function(items, datalist, value, self) {
 				)// li node
 
 			// store in the tree_object
-				// const key = current_item.tipo +'_'+ current_item.section_tipo
-				// const key = current_item.model==='section'
-				// 	? current_item.tipo
-				// 	: current_item.tipo +'_'+ current_item.section_tipo
 				const key = current_item.tipo
 				tree_object[key] = tree_node
 		}
@@ -239,6 +236,7 @@ const render_tree_items = function(items, datalist, value, self) {
 				fragment.appendChild(tree_node)
 			}
 		}
+		// console.log('performance.now()-t0:', performance.now()-t0);
 
 
 	return fragment
@@ -408,7 +406,7 @@ const render_area_item = function(item, datalist, value, self) {
 										continue;
 									}
 
-								const found = self.data.value.find(el => el.tipo===child.tipo)
+								const found = self.filled_value.find(el => el.tipo===child.tipo)
 								if (found && found.value===2) {
 									break parents_loop;
 								}
@@ -709,7 +707,7 @@ const create_global_radio_group = function(self, item, permissions, datalist, co
 
 			if(child.tipo === child.section_tipo) continue; // exclude areas
 
-			const data_found = self.data.value.find(el => el.tipo===child.tipo && el.section_tipo===child.section_tipo)
+			const data_found = self.filled_value.find(el => el.tipo===child.tipo && el.section_tipo===child.section_tipo)
 			if(data_found){
 				if (last_value && data_found.value!==last_value) {
 					child_value = null

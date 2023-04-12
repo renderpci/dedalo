@@ -35,7 +35,7 @@ class component_relation_related extends component_relation_common {
 	/**
 	* __CONSTRUCT
 	*/
-	function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
+	protected function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
 
 		# relation_type
 		# $this->relation_type = DEDALO_RELATION_TYPE_CHILDREN_TIPO;

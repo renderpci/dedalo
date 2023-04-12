@@ -86,18 +86,30 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'body_response'
 		})
 
-	// form init
-		self.caller.init_form({
-			submit_label	: 'Update Dédalo code to the latest version',
-			confirm_text	: get_label.sure || 'Sure?',
-			body_info		: content_data,
-			body_response	: body_response,
-			trigger : {
-				dd_api	: 'dd_utils_api',
-				action	: 'update_code',
-				options	: null
-			}
-		})
+	// dedalo_entity check
+		if (page_globals.dedalo_entity==='development') {
+			// message development
+			ui.create_dom_element({
+				element_type	: 'div',
+				inner_html		: 'The development site does not allow updating the code',
+				class_name		: 'info_text comment',
+				parent			: content_data
+			})
+
+		}else{
+			// form init
+			self.caller.init_form({
+				submit_label	: 'Update Dédalo code to the latest version',
+				confirm_text	: get_label.sure || 'Sure?',
+				body_info		: content_data,
+				body_response	: body_response,
+				trigger : {
+					dd_api	: 'dd_utils_api',
+					action	: 'update_code',
+					options	: null
+				}
+			})
+		}
 
 	// add at end body_response
 		content_data.appendChild(body_response)

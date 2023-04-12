@@ -1148,7 +1148,8 @@ section.prototype.get_total = async function() {
 			source			: source
 		}
 		const api_count_response = await data_manager.request({
-			body : rqo_count
+			body		: rqo_count,
+			use_worker	: true
 		})
 
 	// API error case

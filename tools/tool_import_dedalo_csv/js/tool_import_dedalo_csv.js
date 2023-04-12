@@ -323,7 +323,8 @@ tool_import_dedalo_csv.prototype.get_section_components_list = function(section_
 		return new Promise(function(resolve){
 
 			data_manager.request({
-				body : rqo
+				body		: rqo,
+				use_worker	: true
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {
