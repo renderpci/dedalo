@@ -1939,3 +1939,22 @@ function callback( callable $fn ) {
 	// $fn->__invoke();
 	return ($fn)();
 }//end callback
+
+
+
+/**
+* BUILD_LINK
+* @param string $name
+* @param array $arguments
+* @return string $link
+*/
+function build_link(string $name, array $arguments) : string {
+
+	$url	= $arguments['url'] ?? null;
+	$css	= $arguments['css'] ?? '';
+	$target	= $arguments['target'] ?? '_blank';
+
+	$link = "<a href=\"$url\" target=\"$target\" class=\"$css\">$name</a>";
+
+	return $link;
+}//end build_link
