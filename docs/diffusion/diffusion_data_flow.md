@@ -91,16 +91,16 @@ In other situation will need add Valencia as a point into a map, to do that, you
 | field    | value                                                                     |
 | ---------- | --------------------------------------------------------------------------- |
 | toponymy | Valencia                                                                  |
-| geo      | `{"alt":16,"lat":39.469860091745815,"lon":-0.3764533996582032,"zoom":12}` |
+| geo      | \{"alt":16,"lat":39.469860091745815,"lon":-0.3764533996582032,"zoom":12} |
 
 Or you will need to link the term and his parents with the thesaurus table then you can configure publication ontology to add his locators:
 
 | field        | value                                                                |
 | -------------- | ---------------------------------------------------------------------- |
 | toponymy     | Valencia                                                             |
-| data         | `["es1_7242"]`                                                       |
+| data         | \["es1_7242"]                                                       |
 | with_parents | Valencia, València, Valencia/Valéncia, Comunitat Valenciana, Spain |
-| data_parents | `["es1_7242", "es1_8131","es1_8842", "es1_8858", "es1_1"]`           |
+| data_parents | \["es1_7242", "es1_8131","es1_8842", "es1_8858", "es1_1"]           |
 
 The original data "Valencia" could be transformed into different fields to be used as specific needs without change the original data in PostgreSQL.
 
@@ -147,7 +147,7 @@ The diffusion element define the start point into the model of publication. Thes
 | diffusion_group   | specific group                            |
 | diffusion_element | diffusion stream start point              |
 | external_ontologies | main diffusion to defines external ontologies |
-| external_ontology | main node of every ontology as Dublin Core, Nomisma, CIDOC, etc.
+| external_ontology | main node of every ontology as Dublin Core, Nomisma, CIDOC, etc. |
 
 #### Models for SQL
 
@@ -167,6 +167,68 @@ The diffusion element define the start point into the model of publication. Thes
 | field_varchar    | varchar field inside table in database                             |
 | field_text       | text field inside table in database                                |
 | field_year       | year field inside table in database                                |
+
+##### Table nodes
+
+Within diffusion ontology, we should create as many table nodes as tables we would like to publish in the public database (mysql). Every table node is related through a Related Term (TR) with a source data section element. In the example below, `interview` table node is related with 'oh1' section (Oral History).
+
+##### Field nodes
+
+Within diffusion ontology, field nodes are the equivalent of mysql columns within a table. We would add as many field nodes to a table element as we would like to publish in the public database.
+
+Every field node is related through a Related Term (TR) with a source data component element, in the previous table example, publication, code, title and abstract fields nodes are related with some components within 'oh1' section (Oral History).
+
+Depending on the selected field model, there are some different properties that must be set. These are some examples:
+
+| Dédalo field element | Dédalo property |
+| --- | --- |
+| field_enum | {"enum": {"1": "yes","2": "no"}} |
+| field_varchar | {"varchar":160} |
+
+Some times the source data should be processed before sending a response. There is a special property used to configure a function that should be executed to get the final data result:
+
+```json
+{
+    // class_name - will be set with name of the class where the function to be executed is located
+    // function_name - will be set with the name of the function to be executed to process the data
+    "process_dato": "class_name::function_name",
+    "process_dato_arguments": {
+        // argument1…N - will be set with the different parameters that the function needs to process the data
+        // value1…N - will be set with the value that will be assigned to the parameter"
+        "argument1": "value1_text",
+        "argument2": value2_int,
+        ...
+        "argumentN": "valueN_text"
+        }
+}
+```
+
+Examples:
+
+```json
+{
+  "process_dato": "diffusion_sql::split_date_range",
+  "process_dato_arguments": {
+    "selected_key": 0,
+    "selected_date": "start"
+  }
+}
+```
+
+The function will process a component date of range type and will split it returning, in this case, the start date.
+
+```json
+{
+    "process_dato": "diffusion_sql::map_locator_to_termID",
+    "process_dato_arguments": {
+        "custom_arguments": {
+            "add_parents": false
+        }
+    }
+}
+```
+
+The function will map the locators to their termID and, in this case, is not adding their parents.
 
 #### Models for RDF
 
@@ -269,9 +331,57 @@ Dédalo then collects the required data from the section (oh1), traverses each o
 !!! Note "Publication buttons"
     The publication button appear in list and edit modes. In list will publish all records found (user can search to filter the records to be published), in the edit will be published only the record that is editing.
 
-The process will verify if the database and the table exist in MariaDB / MySQL, if not, will create it automatically with the schema defined in diffusion ontology. By default Dédalo add the columns `id` `section_id` and `lang` because this columns are mandatory.
+### Data managed
 
-Example; if diffusion ontology only has a `code` node defined as field_varchar of 160 characters,Dédalo will create the database, table and mandatory columns in this way.
+Take account this data used in work system.
+
+Table **interview : oh1**
+
+| tipo | field label | value | data - in Dédalo format |
+| --- | --- | --- | --- |
+| [oh62](https://dedalo.dev/ontology/oh62) | id | 1 | \[1] |
+| [oh14](https://dedalo.dev/ontology/oh14) | Code | oh_code1 | \["oh_code1"] |
+| [oh16](https://dedalo.dev/ontology/oh16) | Title | My title |  \["My title"] |
+| [oh23](https://dedalo.dev/ontology/oh23) | Summary | My abstract translated | \["My abstract translated"] |
+| [oh24](https://dedalo.dev/ontology/oh24) | Informants | Manuel González, María Gómez | \[{"section_id" : "1","section_tipo" : "rsc197"},{"section_id" : "2", "section_tipo" : "rsc197"}] |
+
+The interview 1 has two informants (interviewees) linked by locators stored in `informants oh24` field. THerefore the table of informant will had two records:
+
+Table **informants : rsc197**
+
+| tipo | field label | value | data - in Dédalo format |
+| --- | --- | --- | --- |
+| [rsc261](https://dedalo.dev/ontology/rsc261) | id | 1 | \[1] |
+| [rsc85](https://dedalo.dev/ontology/rsc85) | Name | Manuel | \["Manuel"] |
+| [rsc86](https://dedalo.dev/ontology/rsc86) | Surname | González | \["González"] |
+| [rsc89](https://dedalo.dev/ontology/rsc89) | Date of birth | 1936 | \[{"start":{"year":1936}}] |
+
+| tipo | field label | value | data - in Dédalo format |
+| --- | --- | --- | --- |
+| [rsc261](https://dedalo.dev/ontology/rsc261) | id | 2 | \[2] |
+| [rsc85](https://dedalo.dev/ontology/rsc85)  | Name | María | \["María"] |
+| [rsc86](https://dedalo.dev/ontology/rsc86) | Surname | Gómez | \["Gómez"] |
+| [rsc89](https://dedalo.dev/ontology/rsc89) | Date of birth | 1945-09-30 | \[{"start":{"day":30,"year":1945,"month":9}}] |
+
+Lets go to publish this data and see what will stored into MariaDB/MySQL.
+
+Diffusion ontology has this resolution
+
+| tipo | field name | model | get data from | name of working data |
+| --- | --- | --- | --- |  --- |
+| [oh66](https://dedalo.dev/ontology/oh66) | interview | table | [oh1](https://dedalo.dev/ontology/oh1)  | Oral history |
+| [oh100](https://dedalo.dev/ontology/oh100) | code | field_varchar | [oh14](https://dedalo.dev/ontology/oh14)  | Code |
+| [oh68](https://dedalo.dev/ontology/oh100) | title | field_text | [oh16](https://dedalo.dev/ontology/oh16)  | Title |
+| [oh69](https://dedalo.dev/ontology/oh69) | abstract | field_text | [oh23](https://dedalo.dev/ontology/oh23)  | Summary |
+| [oh109](https://dedalo.dev/ontology/oh109) | informant | field_text | [oh24](https://dedalo.dev/ontology/oh23)  | Informants |
+| [rsc267](https://dedalo.dev/ontology/rsc267) | informant | table | [rsc197](https://dedalo.dev/ontology/rsc197)  | People under study |
+| [rsc269](https://dedalo.dev/ontology/rsc269) | name | field_text | [rsc85](https://dedalo.dev/ontology/rsc85)  | Name |
+| [rsc270](https://dedalo.dev/ontology/rsc270) | surname | field_text | [rsc86](https://dedalo.dev/ontology/rsc86) | Surname |
+| [rsc272](https://dedalo.dev/ontology/rsc272) | birthdate | field_date | [rsc89](https://dedalo.dev/ontology/rsc89) | Date of birth |
+
+First at all the publication process will verify if the database and the table exist in MariaDB / MySQL, if not, will create it automatically with the schema defined in diffusion ontology. By default Dédalo add the columns `id` `section_id` and `lang` because this columns are mandatory.
+
+Example; if diffusion ontology only has a `code` node defined as field_varchar of 160 characters, Dédalo will create the database, table and mandatory columns in this way.
 
 ```SQL
 CREATE TABLE `interview` (
@@ -285,15 +395,15 @@ CREATE TABLE `interview` (
 !!! note "MariaDB / MySQL engine"
     By default Dédalo use MyISAM as database engine, because the tables are only for read by the website and it will not required edition functionalities as InnoDB has. If you want change it, you will see the `./core/diffusion/class.diffusion_mysql.php`
 
-The table will has the columns
+The table `interview` will has the columns
 
 | id | section_id | lang | code |
 | --- | --- | --- | --- |
 | 1 | 1 | lg-eng | oh_code1 |
 
-This publication tables could delete in any time and for different reasons, because the original data is in work system and it is possible re-published it that will recreate the table.
+These publish tables could be deleted at any time and for different reasons, since the original data is saved in the working system and it is possible to republish it to recreate the table.
 
-If an user publish a existing published record, the actual record in MariaDB/MySQL will be delete and will create new one with the current data even if the data in work system was not changed (in this case the id will increment but the rest of data will be the same).
+If an user republish a previously published record, the actual record in MariaDB/MySQL will be delete and will recreated new one with the current data even if the data in work system was not changed (in this case the id will increment but the rest of data will be the same).
 
 | id | section_id | lang | code |
 | --- | --- | --- | --- |
@@ -309,7 +419,7 @@ Every language defined will create his own record and will store the lang code i
 
 If the working data do not has the translation, publication process will do fallback to the main data lang defined in [DEDALO_DATA_LANG_DEFAULT](../config/config.md#defining-default-data-language) in `./config/config.php` file
 
-for example if working data has the abstract in English and Español but it is not done in Català, (català is empty) you will get:
+For example if working data has the abstract in English and Español but it is not done in Català, (català is empty) you will get:
 
 | id | section_id | lang | abstract |
 | --- | --- | --- | --- |
@@ -317,7 +427,7 @@ for example if working data has the abstract in English and Español but it is n
 | 2 | 1 | lg-spa | Mi resumen traducido |
 | 3 | 1 | lg-cat | My abstract translated |
 
-If the working data is not translatable, the data will repeat in all rows.
+If the working data is not translatable, as `code` is, the data will repeat in all rows.
 
 | id | section_id | lang | code | title |
 | --- | --- | --- | --- | --- |
@@ -327,7 +437,7 @@ If the working data is not translatable, the data will repeat in all rows.
 
 In diffusion process the related data is resolve in lot of cases but sometimes is necessary to have links between tables to resolve complex situation, in these cases the column will store an array of  `section_id` of the other table in JSON and how this data is not translatable it will repeat for every row.
 
-For example if we have 2 informants (two interviewees) for the interview his section will have two `locators` to link with this persons.
+In this sample we have 2 informants (two interviewees) for the interview his section will have two `locators` to link with this persons.
 
 ```json
 [
@@ -348,34 +458,34 @@ Table **interview**:
 
 | id | section_id | lang | code | title | informant_data
 | --- | --- | --- | --- | --- | --- |
-| 1 | 1 | lg-eng | oh_code1 | My title | ["1","2"]
-| 2 | 1 | lg-spa | oh_code1 | Mi título | ["1","2"]
-| 3 | 1 | lg-cat | oh_code1 |  El meu titol | ["1","2"]
+| 1 | 1 | lg-eng | oh_code1 | My title | \["1","2"]  |
+| 2 | 1 | lg-spa | oh_code1 | Mi título | \["1","2"]  |
+| 3 | 1 | lg-cat | oh_code1 |  El meu títol | \["1","2"]  |
 
 Table **informant**:
 
 | id | section_id | lang | name | surname |
 | --- | --- | --- | --- | --- |
-| 4 | 1 | lg-eng | Manuel | González | 
-| 7 | 2 | lg-eng | María | Gómez | 
+| 4 | 1 | lg-eng | Manuel | González |
+| 7 | 2 | lg-eng | María | Gómez |
 
 To avoid resolve data is possible to add the related data into the main table, therefore you can get the names of the informants in the same table of the interview.
 
 | id | section_id | lang | code | informant_data | informant |
-| --- | --- | --- | --- | --- | --- | 
-| 1 | 1 | lg-eng | oh_code1 | ["1","2"] | Manuel González, María Gómez |
-| 2 | 1 | lg-spa | oh_code1 | ["1","2"] | Manuel González, María Gómez |
-| 3 | 1 | lg-cat | oh_code1 | ["1","2"] | Manuel González, María Gómez |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 1 | lg-eng | oh_code1 | \["1","2"]  | Manuel González, María Gómez |
+| 2 | 1 | lg-spa | oh_code1 | \["1","2"] | Manuel González, María Gómez |
+| 3 | 1 | lg-cat | oh_code1 | \["1","2"]  | Manuel González, María Gómez |
 
 Or is possible to define the resolve data of other fields as birth date of informants.
 
 | id | section_id | lang | code  | informant_data | informant | birthdate |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 1 | lg-eng | oh_code1 |["1","2"] | Manuel González, María Gómez | 1936, 1945-09-30 |
-| 2 | 1 | lg-spa | oh_code1 | ["1","2"] | Manuel González, María Gómez | 1936, 1945-09-30 |
-| 3 | 1 | lg-cat | oh_code1 | ["1","2"] | Manuel González, María Gómez | 1936, 1945-09-30 |
+| 1 | 1 | lg-eng | oh_code1 | \["1","2"]  | Manuel González, María Gómez | 1936, 1945-09-30 |
+| 2 | 1 | lg-spa | oh_code1 | \["1","2"]  | Manuel González, María Gómez | 1936, 1945-09-30 |
+| 3 | 1 | lg-cat | oh_code1 | \["1","2"]  | Manuel González, María Gómez | 1936, 1945-09-30 |
 
-Besides birth date will be in the informant table
+Besides birth date will be in the informant table.
 
 | id | section_id | lang | name | surname |  birthdate |
 | --- | --- | --- | --- | --- | --- |
@@ -386,8 +496,14 @@ Sometimes, related data could be stored as an array instead a string.
 
 | id | section_id | lang | code  | informant_data | informant | birthdate |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 1 | lg-eng | oh_code1 |["1","2"] |["Manuel González", "María Gómez"] | ["1936", "1945-09-30"] |
-| 2 | 1 | lg-spa | oh_code1 | ["1","2"] |["Manuel González", "María Gómez"] | ["1936", "1945-09-30"]|
-| 3 | 1 | lg-cat | oh_code1 | ["1","2"] |["Manuel González", "María Gómez"] | ["1936", "1945-09-30"] |
+| 1 | 1 | lg-eng | oh_code1 | \["1","2"] | \["Manuel González", "María Gómez"] | \["1936", "1945-09-30"] |
+| 2 | 1 | lg-spa | oh_code1 | \["1","2"] | \["Manuel González", "María Gómez"] | \["1936", "1945-09-30"] |
+| 3 | 1 | lg-cat | oh_code1 | \["1","2"] | \["Manuel González", "María Gómez"] | \["1936", "1945-09-30"] |
 
 The order of related data will be the same of the section_id array order, if the user change the order in the interview the resolution of the related data will be sync with it.
+
+| id | section_id | lang | code  | informant_data | informant | birthdate |
+| --- | --- | --- | --- | --- | --- | --- |
+| 2 | 1 | lg-spa | oh_code1 | \["2","1"] | \["María Gómez", "Manuel González"] | \[ "1945-09-30", "1936"] |
+| 1 | 1 | lg-eng | oh_code1 | \["2","1"] | \["María Gómez", "Manuel González"] | \[ "1945-09-30", "1936"] |
+| 3 | 1 | lg-cat | oh_code1 | \["2","1"] | \["María Gómez", "Manuel González"] | \[ "1945-09-30", "1936"] |
