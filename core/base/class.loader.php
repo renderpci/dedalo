@@ -16,6 +16,7 @@ include(DEDALO_CORE_PATH . '/db/class.RecordObj_time_machine.php');
 include(DEDALO_CORE_PATH . '/db/class.RecordObj_dd.php');
 include(DEDALO_CORE_PATH . '/db/class.RecordObj_descriptors_dd.php');
 include(DEDALO_CORE_PATH . '/db/class.json_handler.php');
+include DEDALO_CORE_PATH . '/backup/class.backup.php';
 include(DEDALO_CORE_PATH . '/common/class.common.php');
 include(DEDALO_CORE_PATH . '/common/class.lang.php');
 include(DEDALO_CORE_PATH . '/common/class.navigator.php');
