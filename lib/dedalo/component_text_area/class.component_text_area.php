@@ -1796,10 +1796,9 @@ class component_text_area extends component_common {
 			return $ar_descriptors;
 		}
 
-		$full_tag = $matches_indexIn[0][0];
 		$tag_id_key = 4;
 		foreach ($matches_indexIn[$tag_id_key] as $key => $tag_id) {
-
+			$full_tag = $matches_indexIn[0][$key];
 			if ($type==="struct") {
 				$ar_index = component_relation_struct::get_indexations_from_tag($component_tipo, $section_tipo, $section_id, $tag_id, DEDALO_DATA_LANG);
 			}else{

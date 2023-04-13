@@ -226,7 +226,7 @@ class tool_tr_print extends tool_common {
 	* @return 
 	*/
 	public function get_descriptors( $fragment, $type ) {
-		
+
 		$section_tipo 	= $this->component_obj->get_section_tipo();
 		$section_id 	= $this->component_obj->get_parent();
 		$component_tipo = $this->component_obj->get_tipo();
