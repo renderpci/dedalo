@@ -18,6 +18,9 @@ abstract class JSON_RecordDataBoundObject {
 	public $arModifiedRelations;
 	protected $dato;
 
+	protected $section_tipo;
+	protected $section_id;
+
 	public $use_cache = false;
 	public $use_cache_manager = false;
 
