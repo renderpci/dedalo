@@ -239,8 +239,9 @@ component_security_access.prototype.get_parents = function(item, datalist) {
 		})
 		current_worker.onmessage = function(e) {
 			const parents = e.data.result
-			// current_worker.terminate()
+			current_worker.terminate()
 			// console.log('parents:', parents);
+			console.log("__***Time performance.now()-t1 get_parents:", item.tipo, parents.length, performance.now()-t1);
 			resolve( parents )
 		}
 		current_worker.onerror = function(e) {
@@ -284,9 +285,9 @@ component_security_access.prototype.get_children = function(item, datalist) {
 		})
 		current_worker.onmessage = function(e) {
 			const children = e.data.result
-			// current_worker.terminate()
+			current_worker.terminate()
 			// console.log('children:', children);
-			console.log("__***Time performance.now()-t1 get_children:", children.length, performance.now()-t1);
+			console.log("__***Time performance.now()-t1 get_children:", item.tipo, children.length, performance.now()-t1);
 			resolve( children )
 		}
 		current_worker.onerror = function(e) {
