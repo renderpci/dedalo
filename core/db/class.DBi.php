@@ -11,8 +11,9 @@ abstract class DBi {
 	/**
 	* _GETCONNECTION
 	* Returns an PgSql\Connection instance on success, or false on failure.
-	* @return resource|object $pg_conn
-	* 8.1.0	Returns an PgSql\Connection instance now; previously, a resource was returned.
+	* @return PgSql\Connection $pg_conn
+	* 	>=8.1.0	Returns an PgSql\Connection instance now; previously, a resource was returned.
+	* 	false on failure
 	*/
 	public static function _getConnection(
 		string|null $host		= DEDALO_HOSTNAME_CONN,
@@ -22,7 +23,7 @@ abstract class DBi {
 		string|null $port		= DEDALO_DB_PORT_CONN,
 		string|null $socket		= DEDALO_SOCKET_CONN,
 		bool 		$cache		= true
-		) : object|false {
+		) : PgSql\Connection|bool {
 
 		static $pg_conn;
 
@@ -70,8 +71,9 @@ abstract class DBi {
 	* _GETNEWCONNECTION
 	* Alias of _getConnection, but with param cache=false
 	* Get a new PostgreSQL database connection without reuse existing connections
-	* @return resource|object $pg_conn (object in PHP >=8.1)
-	* 8.1.0	Returns an PgSql\Connection instance now; previously, a resource was returned.
+	* @return PgSql\Connection $pg_conn
+	* 	>=8.1.0	Returns an PgSql\Connection instance now; previously, a resource was returned.
+	* 	false on failure
 	*/
 	public static function _getNewConnection(
 		string|null $host		= DEDALO_HOSTNAME_CONN,
@@ -80,7 +82,7 @@ abstract class DBi {
 		string 		$database	= DEDALO_DATABASE_CONN,
 		string|null $port		= DEDALO_DB_PORT_CONN,
 		string|null $socket		= DEDALO_SOCKET_CONN
-		) : object|false {
+		) : PgSql\Connection|bool {
 
 		$pg_conn = DBi::_getConnection(
 			$host,
@@ -111,7 +113,7 @@ abstract class DBi {
 		string|null $port	= DEDALO_DB_PORT_CONN,
 		string|null $socket	= DEDALO_SOCKET_CONN,
 		bool $cache			= true
-		) : object|false {
+		) : object|bool {
 
 		static $pg_pdo_conn;
 		if($cache===true && isset($pg_pdo_conn)) {
@@ -121,9 +123,10 @@ abstract class DBi {
 		// PDO
 			try {
 				$pg_pdo_conn = new PDO(
-				'pgsql:host=' . $host . ';dbname=' . $database . ';', $user, $password, array(
-					PDO::ATTR_ERRMODE   =>  PDO::ERRMODE_EXCEPTION,
-				));
+					'pgsql:host=' . $host . ';dbname=' . $database . ';', $user, $password, array(
+						PDO::ATTR_ERRMODE =>  PDO::ERRMODE_EXCEPTION,
+					)
+				);
 			} catch (\PDOException $e) {
 				throw new \PDOException($e->getMessage(), (int)$e->getCode());
 			}
@@ -144,7 +147,7 @@ abstract class DBi {
 		$database=MYSQL_DEDALO_DATABASE_CONN,
 		$port=MYSQL_DEDALO_DB_PORT_CONN,
 		$socket=MYSQL_DEDALO_SOCKET_CONN
-		) : object|false {
+		) : object|bool {
 
 
 		// cache
