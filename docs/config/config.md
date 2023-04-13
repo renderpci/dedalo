@@ -18,7 +18,7 @@
 
 ## **Main variables:** Paths
 
-### Dédalo host
+### Defining host
 
 ./dedalo/config/config.php
 
@@ -32,7 +32,7 @@ define('DEDALO_HOST', $_SERVER['HTTP_HOST'] );
 
 ---
 
-### Dédalo protocol
+### Defining protocol
 
 ./dedalo/config/config.php
 
@@ -46,7 +46,7 @@ define('DEDALO_PROTOCOL', (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS']==='on')
 
 ---
 
-### Dédalo root path
+### Defining root path
 
 ./dedalo/config/config.php
 
@@ -63,7 +63,7 @@ define('DEDALO_ROOT_PATH', dirname(dirname(__FILE__)));
 
 ---
 
-### Dédalo root web directory
+### Defining root web directory
 
 ./dedalo/config/config.php
 
@@ -79,7 +79,7 @@ define('DEDALO_ROOT_WEB', '/' . explode('/', $_SERVER["REQUEST_URI"])[1]);
 
 ---
 
-### Dédalo base paths
+### Defining base paths
 
 ./dedalo/config/config.php
 
@@ -101,7 +101,7 @@ define('DEDALO_LIB', 'lib');
 
 ---
 
-### Dédalo config path
+### Defining config path
 
 ./dedalo/config/config.php
 
@@ -117,7 +117,7 @@ define('DEDALO_LIB_BASE_PATH', dirname( dirname(__FILE__) ));
 
 ---
 
-### Dédalo core path
+### Defining core path
 
 ./dedalo/config/config.php
 
@@ -131,7 +131,7 @@ define('DEDALO_CORE_PATH',  DEDALO_ROOT_PATH .'/'. DEDALO_CORE);
 
 ---
 
-### Dédalo core URL
+### Defining core URL
 
 ./dedalo/config/config.php
 
@@ -146,7 +146,7 @@ define('DEDALO_CORE_URL',  DEDALO_ROOT_WEB .'/'. DEDALO_CORE );
 
 ---
 
-### Dédalo shared path
+### Defining shared path
 
 ./dedalo/config/config.php
 
@@ -160,7 +160,7 @@ define('DEDALO_SHARED_PATH', DEDALO_ROOT_PATH .'/'. DEDALO_SHARED);
 
 ---
 
-### Dédalo shared URL
+### Defining shared URL
 
 ./dedalo/config/config.php
 
@@ -176,7 +176,7 @@ define('DEDALO_SHARED_URL',  DEDALO_ROOT_WEB  .'/'. DEDALO_SHARED );
 
 ---
 
-### Dédalo tools path
+### Defining tools path
 
 ./dedalo/config/config.php
 
@@ -190,7 +190,7 @@ define('DEDALO_TOOLS_PATH',  DEDALO_ROOT_PATH .'/'. DEDALO_TOOLS);
 
 ---
 
-### Dédalo tools URL
+### Defining tools URL
 
 ./dedalo/config/config.php
 
@@ -204,7 +204,7 @@ define('DEDALO_TOOLS_URL',  DEDALO_ROOT_WEB .'/'. DEDALO_TOOLS );
 
 ---
 
-### Dédalo lib path
+### Defining lib path
 
 ./dedalo/config/config.php
 
@@ -218,7 +218,7 @@ define('DEDALO_LIB_PATH',  DEDALO_ROOT_PATH .'/'. DEDALO_LIB);
 
 ---
 
-### Dédalo library uri
+### Defining library uri
 
 ./dedalo/config/config.php
 
@@ -235,7 +235,7 @@ define('DEDALO_LIB_URL',  DEDALO_ROOT_WEB .'/'. DEDALO_LIB );
 
 ---
 
-### Dédalo widgets path
+### Defining widgets path
 
 ./dedalo/config/config.php
 
@@ -249,7 +249,7 @@ define('DEDALO_WIDGETS_PATH', DEDALO_CORE_PATH . '/widgets');
 
 ---
 
-### Dédalo widgets URL
+### Defining widgets URL
 
 ./dedalo/config/config.php
 
@@ -265,7 +265,7 @@ define('DEDALO_WIDGETS_URL', DEDALO_CORE_URL . '/widgets');
 
 ---
 
-### Dédalo extras path
+### Defining extras path
 
 ./dedalo/config/config.php
 
@@ -287,7 +287,7 @@ define('DEDALO_EXTRAS_PATH', DEDALO_CORE_PATH . '/extras');
 
 ---
 
-### Dédalo extras uri
+### Defining extras uri
 
 ./dedalo/config/config.php
 
@@ -309,7 +309,7 @@ define('DEDALO_EXTRAS_URL',  DEDALO_CORE_URL . '/extras');
 
 ## Salt
 
-### Dédalo salt string (string used for encryption)
+### Defining salt string (string used for encryption)
 
 ./dedalo/config/config.php
 
@@ -323,7 +323,7 @@ define('DEDALO_SALT_STRING', 'My_secure_Salt_String!_2046');
 
 ## Locale
 
-### Dédalo time zone
+### Defining time zone
 
 ./dedalo/config/config.php
 
@@ -345,7 +345,7 @@ define('DEDALO_TIMEZONE', 'Europe/Madrid');
 
 ---
 
-### Dédalo locale encoding
+### Defining locale encoding
 
 ./dedalo/config/config.php
 
@@ -369,7 +369,7 @@ define('DEDALO_LOCALE', 'es-ES');
 
 ---
 
-### Dédalo date order
+### Defining date order
 
 ./dedalo/config/config.php
 
@@ -387,7 +387,7 @@ define('DEDALO_DATE_ORDER', 'dmy');
 
 ## Entity
 
-### Dédalo entity
+### Defining entity
 
 ./dedalo/config/config.php
 
@@ -403,7 +403,7 @@ define('DEDALO_ENTITY', 'my_entity_name');
 
 ---
 
-### Dédalo entity label
+### Defining entity label
 
 ./dedalo/config/config.php
 
@@ -456,7 +456,7 @@ define('DEVELOPMENT_SERVER', false);
 
 ## Cache
 
-### Dédalo cache manager
+### Defining cache manager
 
 ./dedalo/config/config.php
 
@@ -492,7 +492,7 @@ include(DEDALO_CORE_PATH . '/base/core_functions.php');
 
 ---
 
-### Dédalo configuration path
+### Defining configuration path
 
 ./dedalo/config/config.php
 
@@ -504,7 +504,7 @@ include(DEDALO_CONFIG_PATH . '/config_core.php');
 
 ---
 
-### Dédalo fixed tipos
+### Defining fixed tipos
 
 ./dedalo/config/config.php
 
@@ -546,7 +546,7 @@ include(DEDALO_CONFIG_PATH . '/config_db.php');
 
 ---
 
-### Dédalo session handler
+### Defining session handler
 
 ./dedalo/config/config.php
 
@@ -657,7 +657,7 @@ include DEDALO_CORE_PATH . '/base/class.loader.php';
 
 ---
 
-### Dédalo backup on login
+### Defining backup on login
 
 ./dedalo/config/config.php
 
@@ -673,7 +673,7 @@ define('DEDALO_BACKUP_ON_LOGIN'  , true);
 
 ---
 
-### Dédalo backup time range
+### Defining backup time range
 
 ./dedalo/config/config.php
 
@@ -687,7 +687,7 @@ define('DEDALO_BACKUP_TIME_RANGE', 8);
 
 ---
 
-### Dédalo backups directory
+### Defining backups directory
 
 ./dedalo/config/config.php
 
@@ -701,7 +701,7 @@ define('DEDALO_BACKUP_PATH' , dirname(dirname(DEDALO_ROOT_PATH)) . '/backups');
 
 ---
 
-### Dédalo temporary backup
+### Defining temporary backup
 
 ./dedalo/config/config.php
 
@@ -715,7 +715,7 @@ define('DEDALO_BACKUP_PATH_TEMP' , DEDALO_BACKUP_PATH . '/temp');
 
 ---
 
-### Dédalo main db backup
+### Defining main db backup
 
 ./dedalo/config/config.php
 
@@ -729,7 +729,7 @@ define('DEDALO_BACKUP_PATH_DB' , DEDALO_BACKUP_PATH . '/db');
 
 ---
 
-### Dédalo ontology backup
+### Defining ontology backup
 
 ./dedalo/config/config.php
 
@@ -792,7 +792,7 @@ logger::$obj['activity'] = logger::get_instance('activity');
 
 ## Languages
 
-### Dédalo structure lang
+### Defining structure lang
 
 ./dedalo/config/config.php
 
@@ -830,7 +830,7 @@ define('DEDALO_STRUCTURE_LANG', 'lg-spa');
 
 ---
 
-### Dédalo application languages
+### Defining application languages
 
 ./dedalo/config/config.php
 
@@ -852,7 +852,7 @@ define('DEDALO_APPLICATION_LANGS', serialize([
 
 ---
 
-### Dédalo default application language
+### Defining default application language
 
 ./dedalo/config/config.php
 
@@ -870,7 +870,7 @@ define('DEDALO_APPLICATION_LANGS_DEFAULT', 'lg-eng');
 
 ---
 
-### Dédalo application language
+### Defining application language
 
 ./dedalo/config/config.php
 
@@ -888,7 +888,7 @@ define('DEDALO_APPLICATION_LANG', 'lg-spa');
 
 ---
 
-### Dédalo default data language
+### Defining default data language
 
 ./dedalo/config/config.php
 
@@ -906,7 +906,7 @@ define('DEDALO_DATA_LANG_DEFAULT', 'lg-spa');
 
 ---
 
-### Dédalo data language
+### Defining data language
 
 ./dedalo/config/config.php
 
@@ -920,11 +920,11 @@ This is a dynamic parameter that can be changed by the user in any moment. Déda
 define('DEDALO_DATA_LANG', 'lg-spa');
 ```
 
-> This parameter use the method 'fix_cascade_config_var' to calculate the value. The result of this function will be a string with the correct language value in string format. You can define it as fixed data value, but is recommended do not change the definition, if you want change the default language for the data use the: [DEDALO_DATA_LANG_DEFAULT](#dédalo-default-data-language).
+> This parameter use the method 'fix_cascade_config_var' to calculate the value. The result of this function will be a string with the correct language value in string format. You can define it as fixed data value, but is recommended do not change the definition, if you want change the default language for the data use the: [DEDALO_DATA_LANG_DEFAULT](#defining-default-data-language).
 
 ---
 
-### Dédalo data language selector
+### Defining data language selector
 
 ./dedalo/config/config.php
 
@@ -940,7 +940,7 @@ define('DEDALO_DATA_LANG_SELECTOR', true);
 
 ---
 
-### Dédalo data without language (no lang)
+### Defining data without language (no lang)
 
 ./dedalo/config/config.php
 
@@ -958,7 +958,7 @@ define('DEDALO_DATA_NOLAN', 'lg-nolan');
 
 ---
 
-### Dédalo default projects languages
+### Defining default projects languages
 
 ./dedalo/config/config.php
 
@@ -978,7 +978,7 @@ define('DEDALO_PROJECTS_DEFAULT_LANGS', [ 'lg-spa', 'lg-cat', 'lg-eng', ]);
 
 ---
 
-### Dédalo diffusion languages
+### Defining diffusion languages
 
 ./dedalo/config/config.php
 
@@ -998,7 +998,7 @@ define('DEDALO_DIFFUSION_LANGS', [ 'lg-spa', 'lg-cat', 'lg-eng', ]);
 
 ---
 
-### Dédalo translator url
+### Defining translator url
 
 ./dedalo/config/config.php
 
@@ -1018,7 +1018,7 @@ define('DEDALO_TRANSLATOR_URL', 'http://babel.render.net/babel_engine/');
 
 ## Default variables
 
-### Dédalo prefix tipos
+### Defining prefix tipos
 
 ./dedalo/config/config.php
 
@@ -1054,7 +1054,7 @@ define('DEDALO_PREFIX_TIPOS', [ 'dd', 'rsc', 'hierarchy', 'lg', 'oh', 'ich' ]);
 
 ---
 
-### Main fallback section
+### Defining main fallback section
 
 ./dedalo/config/config.php
 
@@ -1069,7 +1069,7 @@ define('MAIN_FALLBACK_SECTION', 'oh1');
 
 ---
 
-### Numerical matrix value for yes
+### Defining numerical matrix value for yes
 
 ./dedalo/config/config.php
 
@@ -1083,7 +1083,7 @@ define('NUMERICAL_MATRIX_VALUE_YES', 1);
 
 ---
 
-### Numerical matrix value for no
+### Defining numerical matrix value for no
 
 ./dedalo/config/config.php
 
@@ -1097,7 +1097,7 @@ define('NUMERICAL_MATRIX_VALUE_NO', 2);
 
 ---
 
-### Dédalo maximum rows per page
+### Defining maximum rows per page
 
 ./dedalo/config/config.php
 
@@ -1113,7 +1113,7 @@ define('DEDALO_MAX_ROWS_PER_PAGE', 10);
 
 ---
 
-### Dédalo default profile
+### Defining default profile
 
 ./dedalo/config/config.php
 
@@ -1129,7 +1129,7 @@ define('DEDALO_PROFILE_DEFAULT', 2);
 
 ---
 
-### Dédalo default project
+### Defining default project
 
 ./dedalo/config/config.php
 
@@ -1145,7 +1145,7 @@ define('DEDALO_DEFAULT_PROJECT', 1);
 
 ---
 
-### Dédalo filter section tipo default
+### Defining filter section tipo default
 
 ./dedalo/config/config.php
 
@@ -1171,7 +1171,7 @@ Media is referenced by locator and all files are name in the server with the loc
 
 ---
 
-### Dédalo media base path
+### Defining media base path
 
 ./dedalo/config/config.php
 
@@ -1187,7 +1187,7 @@ define('DEDALO_MEDIA_PATH', DEDALO_ROOT_PATH . '/media');
 
 ---
 
-### Dédalo media base url
+### Defining media base url
 
 ./dedalo/config/config.php
 
@@ -1203,7 +1203,7 @@ define('DEDALO_MEDIA_URL', DEDALO_ROOT_WEB . '/media');
 
 ---
 
-### Dédalo audiovisual directory
+### Defining audiovisual directory
 
 ./dedalo/config/config.php
 
@@ -1217,7 +1217,7 @@ define('DEDALO_AV_FOLDER', '/av');
 
 ---
 
-### Dédalo audiovisual extension (type of file)
+### Defining audiovisual extension (type of file)
 
 ./dedalo/config/config.php
 
@@ -1233,7 +1233,7 @@ define('DEDALO_AV_EXTENSION', 'mp4');
 
 ---
 
-### Dédalo audiovisual extensions supported
+### Defining audiovisual extensions supported
 
 ./dedalo/config/config.php
 
@@ -1249,7 +1249,7 @@ define('DEDALO_AV_EXTENSIONS_SUPPORTED', ['mp4','wave','wav','aiff','aif','mp3',
 
 ---
 
-### Dédalo audiovisual mime type
+### Defining audiovisual mime type
 
 ./dedalo/config/config.php
 
@@ -1265,7 +1265,7 @@ define('DEDALO_AV_MIME_TYPE', 'video/mp4');
 
 ---
 
-### Dédalo audiovisual codec type
+### Defining audiovisual codec type
 
 ./dedalo/config/config.php
 
@@ -1279,7 +1279,7 @@ define('DEDALO_AV_TYPE', 'h264/AAC');
 
 ---
 
-### Dédalo audiovisual quality for original files
+### Defining audiovisual quality for original files
 
 ./dedalo/config/config.php
 
@@ -1295,7 +1295,7 @@ define('DEDALO_AV_QUALITY_ORIGINAL', 'original');
 
 ---
 
-### Dédalo audiovisual quality for processed files
+### Defining audiovisual quality for processed files
 
 ./dedalo/config/config.php
 
@@ -1311,7 +1311,7 @@ define('DEDALO_AV_QUALITY_DEFAULT', '404');
 
 ---
 
-### Dédalo audiovisual qualities definition
+### Defining audiovisual qualities definition
 
 ./dedalo/config/config.php
 
@@ -1327,7 +1327,7 @@ define('DEDALO_AV_AR_QUALITY', [DEDALO_AV_QUALITY_ORIGINAL,'4k','1080','720','57
 
 ---
 
-### Dédalo posterframe filetype extension for audiovisual files
+### Defining posterframe filetype extension for audiovisual files
 
 ./dedalo/config/config.php
 
@@ -1343,7 +1343,7 @@ define('DEDALO_AV_POSTERFRAME_EXTENSION', 'jpg');
 
 ---
 
-### Dédalo audiovisual processor filepath (ffmpeg path)
+### Defining audiovisual processor filepath (ffmpeg path)
 
 ./dedalo/config/config.php
 
@@ -1357,7 +1357,7 @@ define('DEDALO_AV_FFMPEG_PATH', '/usr/bin/ffmpeg');
 
 ---
 
-### Dédalo audiovisual processor settings (ffmpeg settings)
+### Defining audiovisual processor settings (ffmpeg settings)
 
 ./dedalo/config/config.php
 
@@ -1372,7 +1372,7 @@ define('DEDALO_AV_FFMPEG_SETTINGS', DEDALO_CORE_PATH . '/media_engine/lib/ffmpeg
 
 ---
 
-### Dédalo audiovisual processor settings (faststart)
+### Defining audiovisual processor settings (faststart)
 
 ./dedalo/config/config.php
 
@@ -1388,7 +1388,7 @@ define('DEDALO_AV_FASTSTART_PATH', '/usr/bin/qt-faststart');
 
 ---
 
-### Dédalo audiovisual ffprobe path
+### Defining audiovisual ffprobe path
 
 ./dedalo/config/config.php
 
@@ -1402,7 +1402,7 @@ define('DEDALO_AV_FFPROBE_PATH', '/usr/bin/ffprobe');
 
 ---
 
-### Dédalo audiovisual streamer
+### Defining audiovisual streamer
 
 ./dedalo/config/config.php
 
@@ -1418,7 +1418,7 @@ define('DEDALO_AV_STREAMER', NULL);
 
 ---
 
-### Dédalo audiovisual watermark file
+### Defining audiovisual watermark file
 
 ./dedalo/config/config.php
 
@@ -1435,7 +1435,7 @@ define('DEDALO_AV_WATERMARK_FILE', DEDALO_MEDIA_PATH .'/'. DEDALO_AV_FOLDER . '/
 
 ---
 
-### Dédalo audiovisual subtitles directory
+### Defining audiovisual subtitles directory
 
 ./dedalo/config/config.php
 
@@ -1451,7 +1451,7 @@ define('DEDALO_SUBTITLES_FOLDER', '/subtitles');
 
 ---
 
-### Dédalo audiovisual subtitles type extension
+### Defining audiovisual subtitles type extension
 
 ./dedalo/config/config.php
 
@@ -1467,7 +1467,7 @@ define('DEDALO_AV_SUBTITLES_EXTENSION', 'vtt');
 
 ---
 
-### Dédalo audiovisual re-compress all uploaded files
+### Defining audiovisual re-compress all uploaded files
 
 ./dedalo/config/config.php
 
@@ -1483,7 +1483,7 @@ define('DEDALO_AV_RECOMPRESS_ALL', 1);
 
 ---
 
-### Dédalo image directory
+### Defining image directory
 
 ./dedalo/config/config.php
 
@@ -1497,7 +1497,7 @@ define('DEDALO_IMAGE_FOLDER', '/image');
 
 ---
 
-### Dédalo image extension (type of file)
+### Defining image extension (type of file)
 
 ./dedalo/config/config.php
 
@@ -1513,7 +1513,7 @@ define('DEDALO_IMAGE_EXTENSION', 'jpg');
 
 ---
 
-### Dédalo image mime type
+### Defining image mime type
 
 ./dedalo/config/config.php
 
@@ -1527,7 +1527,7 @@ define('DEDALO_IMAGE_MIME_TYPE', 'image/jpeg');
 
 ---
 
-### Dédalo image type
+### Defining image type
 
 ./dedalo/config/config.php
 
@@ -1543,7 +1543,7 @@ define('DEDALO_IMAGE_TYPE', 'jpeg');
 
 ---
 
-### Dédalo image extensions supported
+### Defining image extensions supported
 
 ./dedalo/config/config.php
 
@@ -1559,7 +1559,7 @@ define('DEDALO_IMAGE_EXTENSIONS_SUPPORTED', ['jpg','jpeg','png','tif','tiff','bm
 
 ---
 
-### Dédalo image quality for original files
+### Defining image quality for original files
 
 ./dedalo/config/config.php
 
@@ -1575,7 +1575,7 @@ define('DEDALO_IMAGE_QUALITY_ORIGINAL', 'original');
 
 ---
 
-### Dédalo image quality for the retouched files
+### Defining image quality for the retouched files
 
 ./dedalo/config/config.php
 
@@ -1591,7 +1591,7 @@ define('DEDALO_IMAGE_QUALITY_RETOUCHED', 'modified');
 
 ---
 
-### Dédalo image default quality
+### Defining image default quality
 
 ./dedalo/config/config.php
 
@@ -1607,7 +1607,7 @@ define('DEDALO_IMAGE_QUALITY_DEFAULT', '1.5MB');
 
 ---
 
-### Dédalo image thumb default
+### Defining image thumb default
 
 ./dedalo/config/config.php
 
@@ -1623,7 +1623,7 @@ define('DEDALO_IMAGE_THUMB_DEFAULT', 'thumb');
 
 ---
 
-### Dédalo image qualities definition
+### Defining image qualities definition
 
 ./dedalo/config/config.php
 
@@ -1639,7 +1639,7 @@ define('DEDALO_IMAGE_AR_QUALITY', [DEDALO_IMAGE_QUALITY_ORIGINAL,DEDALO_IMAGE_QU
 
 ---
 
-### Dédalo image print resolution definition
+### Defining image print resolution definition
 
 ./dedalo/config/config.php
 
@@ -1653,7 +1653,7 @@ define('DEDALO_IMAGE_PRINT_DPI', 150);
 
 ---
 
-### Dédalo image engine processor URL
+### Defining image engine processor URL
 
 ./dedalo/config/config.php
 
@@ -1667,7 +1667,7 @@ define('DEDALO_IMAGE_FILE_URL', DEDALO_CORE_URL . '/media_engine/img.php');
 
 ---
 
-### Image Magick path
+### Defining Image Magick path
 
 ./dedalo/config/config.php
 
@@ -1681,7 +1681,7 @@ define('MAGICK_PATH', '/usr/bin/');
 
 ---
 
-### Color profiles paths
+### Defining Color profiles paths
 
 ./dedalo/config/config.php
 
@@ -1697,7 +1697,7 @@ define('COLOR_PROFILES_PATH', DEDALO_CORE_PATH . '/media_engine/lib/color_profil
 
 ---
 
-### Dédalo image thumb width size
+### Defining image thumb width size
 
 ./dedalo/config/config.php
 
@@ -1711,7 +1711,7 @@ define('DEDALO_IMAGE_THUMB_WIDTH', 222);
 
 ---
 
-### Dédalo image thumb height size
+### Defining image thumb height size
 
 ./dedalo/config/config.php
 
@@ -1725,7 +1725,7 @@ define('DEDALO_IMAGE_THUMB_HEIGHT', 148);
 
 ---
 
-### Dédalo image web directory
+### Defining image web directory
 
 ./dedalo/config/config.php
 
@@ -1739,7 +1739,7 @@ define('DEDALO_IMAGE_WEB_FOLDER', '/web');
 
 ---
 
-### Dédalo pdf directory
+### Defining pdf directory
 
 ./dedalo/config/config.php
 
@@ -1753,7 +1753,7 @@ define('DEDALO_PDF_FOLDER', '/pdf');
 
 ---
 
-### Dédalo pdf extension (type of file)
+### Defining pdf extension (type of file)
 
 ./dedalo/config/config.php
 
@@ -1767,7 +1767,7 @@ define('DEDALO_PDF_EXTENSION', 'pdf');
 
 ---
 
-### Dédalo pdf extensions supported
+### Defining pdf extensions supported
 
 ./dedalo/config/config.php
 
@@ -1781,7 +1781,7 @@ define('DEDALO_PDF_EXTENSIONS_SUPPORTED', serialize(['pdf']));
 
 ---
 
-### Dédalo pdf quality for default files
+### Defining pdf quality for default files
 
 ./dedalo/config/config.php
 
@@ -1795,7 +1795,7 @@ define('DEDALO_PDF_QUALITY_DEFAULT', 'standar');
 
 ---
 
-### Dédalo pdf qualities definition
+### Defining pdf qualities definition
 
 ./dedalo/config/config.php
 
@@ -1811,7 +1811,7 @@ define('DEDALO_PDF_EXTENSIONS_SUPPORTED', ['pdf']);
 
 ---
 
-### Dédalo pdf mime type
+### Defining pdf mime type
 
 ./dedalo/config/config.php
 
@@ -1827,7 +1827,7 @@ define('DEDALO_PDF_MIME_TYPE', 'application/pdf');
 
 ---
 
-### Dédalo pdf type
+### Defining pdf type
 
 ./dedalo/config/config.php
 
@@ -1843,7 +1843,7 @@ define('DEDALO_PDF_TYPE', 'pdf');
 
 ---
 
-### Dédalo pdf quality for original files
+### Defining pdf quality for original files
 
 ./dedalo/config/config.php
 
@@ -1859,7 +1859,7 @@ define('DEDALO_PDF_QUALITY_ORIGINAL', 'original');
 
 ---
 
-### Dédalo pdf quality default
+### Defining pdf quality default
 
 ./dedalo/config/config.php
 
@@ -1875,7 +1875,7 @@ define('DEDALO_PDF_QUALITY_DEFAULT', 'web');
 
 ---
 
-### Dédalo pdf quality for processed files
+### Defining pdf quality for processed files
 
 ./dedalo/config/config.php
 
@@ -1891,7 +1891,7 @@ define('DEDALO_PDF_AR_QUALITY', [DEDALO_PDF_QUALITY_ORIGINAL, DEDALO_PDF_QUALITY
 
 ---
 
-### Dédalo pdf thumb default
+### Defining pdf thumb default
 
 ./dedalo/config/config.php
 
@@ -1907,7 +1907,7 @@ define('DEDALO_PDF_THUMB_DEFAULT', 'thumb');
 
 ---
 
-### Dédalo main 3d directory
+### Defining main 3d directory
 
 ./dedalo/config/config.php
 
@@ -1921,7 +1921,7 @@ define('DEDALO_3D_FOLDER', '/3d');
 
 ---
 
-### Dédalo 3d extension (type of file)
+### Defining 3d extension (type of file)
 
 ./dedalo/config/config.php
 
@@ -1937,7 +1937,7 @@ define('DEDALO_3D_EXTENSION', 'glb');
 
 ---
 
-### Dédalo 3d extensions supported
+### Defining 3d extensions supported
 
 ./dedalo/config/config.php
 
@@ -1955,7 +1955,7 @@ define('DEDALO_3D_EXTENSIONS_SUPPORTED', ['glb']);
 
 ---
 
-### Dédalo 3d mime type
+### Defining 3d mime type
 
 ./dedalo/config/config.php
 
@@ -1971,7 +1971,7 @@ define('DEDALO_3D_MIME_TYPE', 'model/gltf-binary');
 
 ---
 
-### Dédalo 3d quality for original files
+### Defining 3d quality for original files
 
 ./dedalo/config/config.php
 
@@ -1987,7 +1987,7 @@ define('DEDALO_3D_QUALITY_ORIGINAL', 'original');
 
 ---
 
-### Dédalo 3d quality for processed files
+### Defining 3d quality for processed files
 
 ./dedalo/config/config.php
 
@@ -2003,7 +2003,7 @@ define('DEDALO_3D_QUALITY_DEFAULT', 'web');
 
 ---
 
-### Dédalo 3d thumb default
+### Defining 3d thumb default
 
 ./dedalo/config/config.php
 
@@ -2019,7 +2019,7 @@ define('DEDALO_3D_THUMB_DEFAULT', 'thumb');
 
 ---
 
-### Dédalo 3d qualities definition
+### Defining 3d qualities definition
 
 ./dedalo/config/config.php
 
@@ -2035,7 +2035,7 @@ define('DEDALO_3D_AR_QUALITY', [DEDALO_3D_QUALITY_ORIGINAL, DEDALO_3D_QUALITY_DE
 
 ---
 
-### Dédalo 3d gltfpack converter
+### Defining 3d gltfpack converter
 
 ./dedalo/config/config.php
 
@@ -2051,7 +2051,7 @@ define('DEDALO_3D_GLTFPACK_PATH', '/usr/local/bin/gltfpack');
 
 ---
 
-### Dédalo 3d FBX2glTF converter
+### Defining 3d FBX2glTF converter
 
 ./dedalo/config/config.php
 
@@ -2067,7 +2067,7 @@ define('DEDALO_3D_FBX2GLTF_PATH', '/usr/local/bin/FBX2glTF');
 
 ---
 
-### Dédalo 3d COLLADA2GLTF converter
+### Defining 3d COLLADA2GLTF converter
 
 ./dedalo/config/config.php
 
@@ -2083,7 +2083,7 @@ define('DEDALO_3D_COLLADA2GLTF_PATH', '/usr/local/bin/COLLADA2GLTF-bin');
 
 ---
 
-### Dédalo html render to pdf library path
+### Defining html render to pdf library path
 
 ./dedalo/config/config.php
 
@@ -2111,7 +2111,7 @@ define('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE', '/usr/bin/pdftotext');
 
 ---
 
-### Dédalo directory for html files
+### Defining directory for html files
 
 ./dedalo/config/config.php
 
@@ -2125,7 +2125,7 @@ define('DEDALO_HTML_FILES_FOLDER', '/html_files');
 
 ---
 
-### Dédalo html files extension (type of file)
+### Defining html files extension (type of file)
 
 ./dedalo/config/config.php
 
@@ -2139,7 +2139,7 @@ define('DEDALO_HTML_FILES_EXTENSION', 'html');
 
 ---
 
-### Dédalo main directory for svg files
+### Defining main directory for svg files
 
 ./dedalo/config/config.php
 
@@ -2153,7 +2153,7 @@ define('DEDALO_SVG_FOLDER', '/svg');
 
 ---
 
-### Dédalo svg extension (type of file)
+### Defining svg extension (type of file)
 
 ./dedalo/config/config.php
 
@@ -2167,7 +2167,7 @@ define('DEDALO_SVG_EXTENSION', 'svg');
 
 ---
 
-### Dédalo svg extensions supported
+### Defining svg extensions supported
 
 ./dedalo/config/config.php
 
@@ -2183,7 +2183,7 @@ define('DEDALO_SVG_EXTENSIONS_SUPPORTED', ['svg']);
 
 ---
 
-### Dédalo svg mime type
+### Defining svg mime type
 
 ./dedalo/config/config.php
 
@@ -2199,7 +2199,7 @@ define('DEDALO_SVG_MIME_TYPE', 'image/svg+xml');
 
 ---
 
-### Dédalo svg quality for original files
+### Defining svg quality for original files
 
 ./dedalo/config/config.php
 
@@ -2215,7 +2215,7 @@ define('DEDALO_SVG_QUALITY_ORIGINAL', 'original');
 
 ---
 
-### Dédalo svg quality for processed files
+### Defining svg quality for processed files
 
 ./dedalo/config/config.php
 
@@ -2231,7 +2231,7 @@ define('DEDALO_SVG_QUALITY_DEFAULT', 'web');
 
 ---
 
-### Dédalo svg qualities for processed files
+### Defining svg qualities for processed files
 
 ./dedalo/config/config.php
 
@@ -2247,7 +2247,7 @@ define('DEDALO_SVG_AR_QUALITY', [DEDALO_SVG_QUALITY_DEFAULT, DEDALO_SVG_QUALITY_
 
 ---
 
-### Dédalo upload temporary directory
+### Defining upload temporary directory
 
 ./dedalo/config/config.php
 
@@ -2263,7 +2263,7 @@ define('DEDALO_UPLOAD_TMP_DIR', DEDALO_MEDIA_PATH . '/upload/service_upload/tmp'
 
 ---
 
-### Dédalo upload split files in chunks
+### Defining upload split files in chunks
 
 ./dedalo/config/config.php
 
@@ -2285,7 +2285,7 @@ Dédalo use a georeference system based in leaflet library to create maps for th
 
 ---
 
-### Dédalo georeference provider
+### Defining georeference provider
 
 ./dedalo/config/config.php
 
@@ -2301,7 +2301,7 @@ define('DEDALO_GEO_PROVIDER', 'VARIOUS');
 
 ## Menu variables
 
-### Dédalo media area tipo for specific entity model
+### Defining media area tipo for specific entity model
 
 ./dedalo/config/config.php
 
@@ -2317,7 +2317,7 @@ define('DEDALO_ENTITY_MEDIA_AREA_TIPO', '');
 
 ---
 
-### Dédalo skip tipos from menu
+### Defining skip tipos from menu
 
 ./dedalo/config/config.php
 
@@ -2333,7 +2333,7 @@ define('DEDALO_ENTITY_MENU_SKIP_TIPOS', []);
 
 ---
 
-### Dédalo test install
+### Defining test install
 
 ./dedalo/config/config.php
 
@@ -2349,7 +2349,7 @@ define('DEDALO_TEST_INSTALL', true);
 
 ---
 
-### Dédalo section_id temporal
+### Defining section_id temporal
 
 ./dedalo/config/config.php
 
@@ -2365,7 +2365,7 @@ define('DEDALO_SECTION_ID_TEMP', 'tmp');
 
 ## Tools variables
 
-### Dédalo path of the export tool files directory
+### Defining path of the export tool files directory
 
 ./dedalo/config/config.php
 
@@ -2379,7 +2379,7 @@ define('DEDALO_TOOL_EXPORT_FOLDER_PATH', DEDALO_MEDIA_PATH . '/export/files');
 
 ---
 
-### Dédalo uri of the export tool files directory
+### Defining uri of the export tool files directory
 
 ./dedalo/config/config.php
 
@@ -2393,7 +2393,7 @@ define('DEDALO_TOOL_EXPORT_FOLDER_URL' , DEDALO_MEDIA_BASE_URL . '/export/files'
 
 ---
 
-### Dédalo path of the import tool files directory
+### Defining path of the import tool files directory
 
 ./dedalo/config/config.php
 
@@ -2407,7 +2407,7 @@ define('DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH', DEDALO_MEDIA_BASE_PATH . '/i
 
 ## Security variables
 
-### Dédalo lock components
+### Defining lock components
 
 ./dedalo/config/config.php
 
@@ -2421,7 +2421,7 @@ define('DEDALO_LOCK_COMPONENTS', false);
 
 ---
 
-### Dédalo lock components notifications
+### Defining lock components notifications
 
 ./dedalo/config/config.php
 
@@ -2435,7 +2435,7 @@ define('DEDALO_NOTIFICATIONS', false);
 
 ---
 
-### Dédalo protect media files for external access
+### Defining protect media files for external access
 
 ./dedalo/config/config.php
 
@@ -2451,7 +2451,7 @@ define('DEDALO_PROTECT_MEDIA_FILES', false);
 
 ---
 
-### Dédalo node js library path
+### Defining node js library path
 
 ./dedalo/config/config.php
 
@@ -2465,7 +2465,7 @@ define('DEDALO_NODEJS', '/usr/bin/node');
 
 ---
 
-### Dédalo node js pm2 library path
+### Defining node js pm2 library path
 
 ./dedalo/config/config.php
 
@@ -2479,7 +2479,7 @@ define('DEDALO_NODEJS_PM2', '/usr/bin/pm2');
 
 ---
 
-### Dédalo exclude components
+### Defining exclude components
 
 ./dedalo/config/config.php
 
@@ -2495,7 +2495,7 @@ define('DEDALO_AR_EXCLUDE_COMPONENTS', []);
 
 ---
 
-### Dédalo filter user records by id
+### Defining filter user records by id
 
 ./dedalo/config/config.php
 
@@ -2561,13 +2561,13 @@ define('DEDALO_DIFFUSION_DOMAIN', 'default')
 
 ---
 
-### Resolution levels; going to the deeper information
+### Defining resolution levels; going to the deeper information
 
 ./dedalo/config/config.php
 
 DEDALO_DIFFUSION_RESOLVE_LEVELS `int`
 
-This parameter would be set with the number of resolution levels we would like to accomplish. By default, its value is set to '2' (see a resolution level explanation in image below).
+This parameter set the number of resolution levels we would like to accomplish. By default, its value is set to '2'.
 
 ```php
 define('DEDALO_DIFFUSION_RESOLVE_LEVELS', 2)
@@ -2575,11 +2575,11 @@ define('DEDALO_DIFFUSION_RESOLVE_LEVELS', 2)
 
 > Every other positive, numerical value will be accepted.
 
-The resolution of linked information that Dédalo can be resolved in the publication process. The information inside Dédalo has a relation model resolved by locators, and one section can have a lot of ramifications to different resources, thesaurus, etc. every linked information from portals or autocompletes is a level of information. The direct linked information to the main level is the first level, the information that is linked to the first level is the second, etc..
+The number defines the maximum resolution levels of linked information that Dédalo will resolved in the publication process. Dédalo work with related data connected by locators, every link is a level of information, the parameter limit the quantity of linked data will be resolve in the linked data tree.
 
-Ex: If you have 1 interview of oh with 1 linked image and this image has a person linked as author that has 1 linked toponym for the birthplace. For publishing all linked information will be necessary 3 levels of resolution:
+Ex: If you have an Oral History interview (level 0) with 1 linked image (level 1) and this image has a person linked as author (level 2) and these author 1 linked toponym for the birthplace (level 3). For publishing all linked information will be necessary 3 levels of resolution:
 
-If you increase the value of this parameter, the time needed by Dédalo to resolve the linked data in the publication process will also increase.
+If you increase the value of this parameter, the time needed by Dédalo to resolve the linked data in the publication process will also increase in exponential progression.
 
 ---
 
@@ -2606,7 +2606,7 @@ $_SESSION['dedalo4']['config']['skip_publication_state_check'] = 1;
 
 ---
 
-### Dédalo diffusion custom
+### Defining diffusion custom
 
 ./dedalo/config/config.php
 
@@ -2738,7 +2738,7 @@ define('SERVER_PROXY', '192.0.0.1:3128');
 > In the string could add user and password as proxy needs. Ex: my_user:my_pw@192.0.0.1:3128
 ---
 
-### Dédalo source version uri
+### Defining source version uri
 
 ./dedalo/config/config.php
 
@@ -2764,7 +2764,7 @@ define('DEDALO_SOURCE_VERSION_URL', 'https://github.com/renderpci/dedalo/archive
 
 ---
 
-### Dédalo source versions local directory to save the new code
+### Defining source versions local directory to save the new code
 
 ./dedalo/config/config.php
 
@@ -2778,7 +2778,7 @@ define('DEDALO_SOURCE_VERSION_LOCAL_DIR', '/tmp/'.DEDALO_ENTITY);
 
 ---
 
-### Dédalo maintenance mode
+### Defining maintenance mode
 
 ./dedalo/config/config.php
 

@@ -110,7 +110,7 @@ If you have problems with getting data review the [public api configuration](ser
 Before begin to do calls you need to know:
 
 - By default the request calls to get information about tables, fields, schema, etc use GET, but request calls to get data use POST.
-- Every call to API need to send the API code as variable. API Code is defined in [server_config_api.php](./server_config_api.md#setting-the-api-code-authorisation-code) file.
+- Every call to API need to send the API code as variable. API Code is defined in [server_config_api.php](./server_config_api.md#setting-the-api-code-authorization-code) file.
 - Every call to API need to specify the database.
 - Some calls will need to specify the table.
 - Response data are strings.
