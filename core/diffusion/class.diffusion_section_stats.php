@@ -236,7 +236,7 @@ class diffusion_section_stats extends diffusion {
 				}//end for($i = $begin; $i <= $end; $i->modify('+1 day'))
 
 		// debug info
-			$memory		= tools::get_memory_usage();
+			$memory		= dd_memory_usage();
 			$total_time	= exec_time_unit($start_time,'ms').' ms';
 			debug_log(__METHOD__.
 				" -> updated_days:  ".to_string($updated_days)." - memory: $memory - total_time: $total_time",
