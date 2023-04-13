@@ -85,7 +85,6 @@ const t0 = performance.now()
 			if (page_globals.server_errors===true) {
 				console.warn('Environment running with server errors:');
 			}
-			console.log('page_globals:', page_globals);
 
 		// page instance init
 			const page_instance = await get_instance({

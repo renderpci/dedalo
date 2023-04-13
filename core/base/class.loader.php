@@ -16,6 +16,7 @@ include(DEDALO_CORE_PATH . '/db/class.RecordObj_time_machine.php');
 include(DEDALO_CORE_PATH . '/db/class.RecordObj_dd.php');
 include(DEDALO_CORE_PATH . '/db/class.RecordObj_descriptors_dd.php');
 include(DEDALO_CORE_PATH . '/db/class.json_handler.php');
+include DEDALO_CORE_PATH . '/backup/class.backup.php';
 include(DEDALO_CORE_PATH . '/common/class.common.php');
 include(DEDALO_CORE_PATH . '/common/class.lang.php');
 include(DEDALO_CORE_PATH . '/common/class.navigator.php');
@@ -27,7 +28,7 @@ include(DEDALO_CORE_PATH . '/common/class.exec_.php');
 // include(DEDALO_CORE_PATH . '/common/class.operator.php');
 include(DEDALO_CORE_PATH . '/common/class.locator.php');
 include(DEDALO_CORE_PATH . '/common/class.dd_date.php');
-include(DEDALO_CORE_PATH . '/common/class.layout_map.php');# new 12-06-2019
+include(DEDALO_CORE_PATH . '/common/class.request_config_presets.php');
 include(DEDALO_CORE_PATH . '/common/class.dd_object.php'); # new 12-06-2019
 include(DEDALO_CORE_PATH . '/common/class.ddo_map_object.php'); # new 28-07-2019
 include(DEDALO_CORE_PATH . '/common/class.request_query_object.php'); # new 16-05-2021
@@ -70,6 +71,9 @@ include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_component_info.php');
 include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_component_3d_api.php');
 // others
 include(DEDALO_CORE_PATH . '/ontology/class.ontology.php');
+// legacy classes (used only by v5 shared Ontology)
+include(DEDALO_CORE_PATH . '/legacy/class.css.php');
+include(DEDALO_CORE_PATH . '/legacy/class.js.php');
 // include the shared classes
 include(DEDALO_SHARED_PATH . '/class.TR.php');
 include(DEDALO_SHARED_PATH . '/class.OptimizeTC.php');
