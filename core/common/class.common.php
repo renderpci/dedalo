@@ -2525,12 +2525,6 @@ abstract class common {
 
 				// skip empty ddo_map
 				if (empty($current_request_config->show->ddo_map)) {
-					debug_log(__METHOD__
-						. " Error on get ddo_map from current_request_config. Ignored element " . PHP_EOL
-						. ' ('.$this->tipo.' - '. RecordObj_dd::get_termino_by_tipo($this->tipo) .')' . PHP_EOL
-						. to_string($current_request_config)
-						, logger::ERROR
-					);
 					continue;
 				}
 
