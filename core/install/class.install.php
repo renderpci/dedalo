@@ -36,6 +36,8 @@ class install extends common {
 
 	/**
 	* GET_STRUCTURE_CONTEXT
+	* @param int $permissions = 1
+	* @param bool $add_request_config = false
 	* @return dd_object $dd_object
 	*/
 	public function get_structure_context(int $permissions=1, bool $add_request_config=false) : dd_object {
@@ -67,19 +69,27 @@ class install extends common {
 					// failed. Stop here
 					$dd_object->set_properties($properties);
 
-					$msg = $init_test_response->msg ?? 'Unknown error msg';
-					debug_log(__METHOD__." Init test error: " . to_string($msg), logger::ERROR);
+					debug_log(__METHOD__
+						." Error: dd_init_test " . PHP_EOL
+						. $init_test_response->msg ?? 'Unknown error on init_test_response'
+						, logger::ERROR
+					);
 
 					return $dd_object;
 				}
 
 		// check db_status (config_db.php and DB connection)
-			$db_status = install::get_db_status();
-			$properties->db_status = $db_status;
-			if($db_status->global_status === false) {
+			$db_status				= install::get_db_status();
+			$properties->db_status	= $db_status;
+			if($db_status->global_status===false) {
 
 				// failed. Stop here
 				$dd_object->set_properties($properties);
+
+				debug_log(__METHOD__
+					." Error: DDBB connection (get_db_status) is not reachable "
+					, logger::ERROR
+				);
 
 				return $dd_object;
 			}
@@ -137,7 +147,7 @@ class install extends common {
 	* GET_CONFIG
 	* @return object $config
 	*/
-	public static function get_config() {
+	public static function get_config() : object {
 
 		$db_install_name	= install::$db_install_name;
 		$host_line			= (!empty(DEDALO_HOSTNAME_CONN)) ? ('-h '.DEDALO_HOSTNAME_CONN) : 'localhost';
@@ -214,9 +224,10 @@ class install extends common {
 	/**
 	* GET_DB_INSTALL_CONN
 	* Open connection to the new install database (not current, note the database name)
-	* @return resource || bool false
+	* @return PgSql\Connection|bool
+	* 	false on error
 	*/
-	public static function get_db_install_conn() {
+	public static function get_db_install_conn() : PgSql\Connection|bool {
 
 		$config = install::get_config();
 
@@ -231,6 +242,7 @@ class install extends common {
 
 		return $db_install_conn;
 	}//end get_db_install_conn
+
 
 
 	/**
@@ -302,7 +314,7 @@ class install extends common {
 
 		// global status
 			$global_status = true;
-			foreach ($db_status as $key => $value) {
+			foreach ($db_status as $value) {
 				if ($value===false) {
 					$global_status = false;
 					break;
@@ -318,7 +330,7 @@ class install extends common {
 
 	/**
 	* GET_DB_DATA_VERSION
-	* @return object $response
+	* @return array|null $current_version_in_db
 	*/
 	public function get_db_data_version() : ?array {
 
@@ -480,15 +492,16 @@ class install extends common {
 			// 	}
 			// }
 
-
 		// build install DDBB to default compressed psql file
 			$call_response = install::build_install_db_file();
 			if ($call_response->result===false) {
 				return $call_response;
 			}
 
-		$response->result	= true;
-		$response->msg		= 'OK. The current database \''.DEDALO_DATABASE_CONN.'\' has been cloned to \''.$config->db_install_name.'\' and exported a install copy to \''.$config->target_file_path_compress.'\'';
+		// response
+			$response->result	= true;
+			$response->msg		= 'OK. The current database \''.DEDALO_DATABASE_CONN.'\' has been cloned to \''.$config->db_install_name.'\' and exported a install copy to \''.$config->target_file_path_compress.'\'';
+
 
 		return $response;
 	}//end build_install_version
@@ -500,7 +513,7 @@ class install extends common {
 	* Unzip the psql default install file and import it to the current blank database
 	* @return object $response
 	*/
-	public static function install_db_from_default_file() {
+	public static function install_db_from_default_file() : object {
 
 		// set timeout in seconds
 		set_time_limit(600); // 10 minutes (10*60)
@@ -551,8 +564,10 @@ class install extends common {
 				debug_log(__METHOD__." Exec response 4 (shell_exec): ".json_encode($command_res), logger::DEBUG);
 			}
 
-		$response->result	= true;
-		$response->msg		= 'OK. Request done';
+		// response
+			$response->result	= true;
+			$response->msg		= 'OK. Request done';
+
 
 		return $response;
 	}//end install_db_from_default_file
@@ -561,9 +576,10 @@ class install extends common {
 
 	/**
 	* CLONE_DATABASE
+	* @param bool $skip_if_exists
 	* @return object $response
 	*/
-	private static function clone_database(bool $skip_if_exists) {
+	private static function clone_database(bool $skip_if_exists) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -581,23 +597,36 @@ class install extends common {
 					SELECT datname FROM pg_catalog.pg_database WHERE datname = \''.$config->db_install_name.'\'
 				);
 			';
-			debug_log(__METHOD__." Executing DB query ".to_string($sql), logger::WARNING);
+			debug_log(__METHOD__
+				." Executing DB query " . PHP_EOL
+				. $sql
+				, logger::WARNING
+			);
 			if ($exec) {
 				$result	= pg_query(DBi::_getConnection(), $sql);
-				$rows	= (array)pg_fetch_assoc($result); // returns 'f' for false, 't' for true
-				$value	= reset($rows);
 				if (!$result) {
-					$msg = " Error on db execution 1 (clone database): ".pg_last_error(DBi::_getConnection());
-					debug_log(__METHOD__.$msg, logger::ERROR);
+					$msg = " Error on db execution (clone database 0): ".pg_last_error(DBi::_getConnection());
+					debug_log(__METHOD__
+						. $msg . PHP_EOL
+						. $sql
+						, logger::ERROR
+					);
 					$response->msg = $msg;
 
 					return $response; // return error here !
 				}
+				$rows	= (array)pg_fetch_assoc($result); // returns 'f' for false, 't' for true
+				$value	= reset($rows);
+
 				$db_exists = ($value==='t');
 				if ($db_exists===true && $skip_if_exists===true) {
 
 					$response->result	= true;
 					$response->msg		= 'OK. Request done. DDBB already exists. Ignored clone!';
+					debug_log(__METHOD__
+						. $response->msg
+						, logger::WARNING
+					);
 
 					return $response; // return success here !
 				}
@@ -619,12 +648,20 @@ class install extends common {
 					-- WHERE
 					-- 	pg_stat_activity.datname = \''.DEDALO_DATABASE_CONN.'\';
 				';
-				debug_log(__METHOD__." Executing DB query ".to_string($sql), logger::WARNING);
+				debug_log(__METHOD__
+					. " Executing DB query " . PHP_EOL
+					. to_string($sql)
+					, logger::WARNING
+				);
 				if ($exec) {
 					$result = pg_query(DBi::_getConnection(), $sql);
 					if (!$result) {
-						$msg = " Error on db execution (clone database): ".pg_last_error(DBi::_getConnection());
-						debug_log(__METHOD__.$msg, logger::ERROR);
+						$msg = " Error on db execution (clone database 1): ".pg_last_error(DBi::_getConnection());
+						debug_log(__METHOD__
+							. $msg .PHP_EOL
+							. $sql
+							, logger::ERROR
+						);
 						$response->msg = $msg;
 
 						return $response; // return error here !
@@ -639,12 +676,20 @@ class install extends common {
 			$sql = '
 				DROP DATABASE IF EXISTS '.$config->db_install_name.';
 			';
-			debug_log(__METHOD__." Executing DB query ".to_string($sql), logger::WARNING);
+			debug_log(__METHOD__
+				. " Executing DB query " . PHP_EOL
+				. $sql
+				, logger::WARNING
+			);
 			if ($exec) {
 				$result   = pg_query($db_conn, $sql);
 				if (!$result) {
-					$msg = " Error on db execution (clone database): ".pg_last_error(DBi::_getConnection());
-					debug_log(__METHOD__.$msg, logger::ERROR);
+					$msg = " Error on db execution (clone database 2): ".pg_last_error($db_conn);
+					debug_log(__METHOD__
+						. $msg .PHP_EOL
+						. $sql
+						, logger::ERROR
+					);
 					$response->msg = $msg;
 
 					return $response; // return error here !
@@ -655,20 +700,30 @@ class install extends common {
 			$sql = '
 				CREATE DATABASE '.$config->db_install_name.' WITH TEMPLATE '.DEDALO_DATABASE_CONN.' OWNER '.DEDALO_USERNAME_CONN.';
 			';
-			debug_log(__METHOD__." Executing DB query ".to_string($sql), logger::WARNING);
 			if ($exec) {
-				$result   = pg_query($db_conn, $sql);
+				debug_log(__METHOD__
+					. " Executing DB query " . PHP_EOL
+					. $sql
+					, logger::WARNING
+				);
+				$result = pg_query($db_conn, $sql);
 				if (!$result) {
-					$msg = " Error on db execution (clone database): ".pg_last_error(DBi::_getConnection());
-					debug_log(__METHOD__.$msg, logger::ERROR);
+					$msg = " Error on db execution (clone database 3): ".pg_last_error($db_conn);
+					debug_log(__METHOD__
+						. $msg .PHP_EOL
+						. $sql
+						, logger::ERROR
+					);
 					$response->msg = $msg;
 
 					return $response; // return error here !
 				}
 			}
 
-		$response->result	= true;
-		$response->msg		= 'OK. Request done';
+		// response
+			$response->result	= true;
+			$response->msg		= 'OK. Request done';
+
 
 		return $response;
 	}//end clone_database
@@ -679,7 +734,7 @@ class install extends common {
 	* CLEAN_ONTOLOGY
 	* @return object $response
 	*/
-	private static function clean_ontology() {
+	private static function clean_ontology() : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -702,7 +757,11 @@ class install extends common {
 				tld NOT IN('.$line.');
 			';
 			// dump(null, ' clean jer_dd ++ '.to_string($sql));
-			debug_log(__METHOD__." Executing DB query ".to_string($sql), logger::WARNING);
+			debug_log(__METHOD__
+				. " Executing DB query " .PHP_EOL
+				. $sql
+				, logger::WARNING
+			);
 			if ($exec) {
 				$result   = pg_query($db_install_conn, $sql);
 				if (!$result) {
@@ -760,7 +819,7 @@ class install extends common {
 	* CLEAN_COUNTERS
 	* @return object $response
 	*/
-	private static function clean_counters() {
+	private static function clean_counters() : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -825,7 +884,7 @@ class install extends common {
 	* CLEAN_TABLES
 	* @return object $response
 	*/
-	private static function clean_tables() {
+	private static function clean_tables() : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -859,8 +918,10 @@ class install extends common {
 				}
 			}
 
-		$response->result	= true;
-		$response->msg		= 'OK. Request done '.__METHOD__;
+		// response
+			$response->result	= true;
+			$response->msg		= 'OK. Request done '.__METHOD__;
+
 
 		return $response;
 	}//end clean_tables
@@ -929,7 +990,7 @@ class install extends common {
 	* CREATE_ROOT_USER
 	* @return object $response
 	*/
-	private static function create_root_user() {
+	private static function create_root_user() : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1068,7 +1129,7 @@ class install extends common {
 	* to current install database
 	* @return object $response
 	*/
-	private static function create_extensions() {
+	private static function create_extensions() : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1097,9 +1158,9 @@ class install extends common {
 			return $response;
 		}
 
-
-		$response->result	= true;
-		$response->msg		= 'OK. Request done '.__METHOD__;
+		// response
+			$response->result	= true;
+			$response->msg		= 'OK. Request done '.__METHOD__;
 
 
 		return $response;
@@ -1111,7 +1172,7 @@ class install extends common {
 	* CREATE_MAIN_PROJECT
 	* @return object $response
 	*/
-	private static function create_main_project() {
+	private static function create_main_project() : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1232,7 +1293,7 @@ class install extends common {
 	* CREATE_MAIN_PROFILES
 	* @return object $response
 	*/
-	private static function create_main_profiles() {
+	private static function create_main_profiles() : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1437,7 +1498,7 @@ class install extends common {
 	* Table 'matrix_test' must to exists
 	* @return object $response
 	*/
-	private static function create_test_record() {
+	private static function create_test_record() : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1493,7 +1554,7 @@ class install extends common {
 	* (!) Note that all sections are inactive by default. Use 'activate_hierarchy' to load terms and models and activate hierarchy
 	* @return object $response
 	*/
-	private static function import_hierarchy_main_records() {
+	private static function import_hierarchy_main_records() : object {
 
 		// set timeout in seconds
 		set_time_limit(600); // 10 minutes (10*60)
@@ -1544,7 +1605,7 @@ class install extends common {
 	* BUILD_INSTALL_DB_FILE
 	* @return object $response
 	*/
-	public static function build_install_db_file() {
+	public static function build_install_db_file() : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1597,7 +1658,7 @@ class install extends common {
 	* 	Like 'es1'
 	* @return object $response
 	*/
-	public static function import_hierarchy_file(string $section_tipo) {
+	public static function import_hierarchy_file(string $section_tipo) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1663,10 +1724,11 @@ class install extends common {
 	/**
 	* ACTIVATE_HIERARCHY
 	* Activate thesaurus hierarchy by tld2
+	* @param string $tld2
 	* 	Like 'lg'
 	* @return object $response
 	*/
-	public static function activate_hierarchy(string $tld2) {
+	public static function activate_hierarchy(string $tld2) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1709,12 +1771,14 @@ class install extends common {
 		// active hierarchy
 			$active_tipo	= DEDALO_HIERARCHY_ACTIVE_TIPO;	// 'hierarchy4';
 			$model_name		= RecordObj_dd::get_modelo_name_by_tipo($active_tipo, true);
-			$component		= component_common::get_instance( $model_name,
-															  $active_tipo,
-															  $section_id,
-															  'list',
-															  DEDALO_DATA_NOLAN,
-															  $section_tipo);
+			$component		= component_common::get_instance(
+				$model_name,
+				$active_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
 			$dato = json_decode('[
 			  {
 				"type": "'.DEDALO_RELATION_TYPE_LINK.'",
@@ -1747,19 +1811,25 @@ class install extends common {
 			];
 			$call_response = hierarchy::generate_virtual_section($options);
 			if ($call_response->result===false) {
-				debug_log(__METHOD__." Error ".$call_response->msg, logger::ERROR);
+				debug_log(__METHOD__
+					." Error " .PHP_EOL
+					. to_string($call_response->msg)
+					, logger::ERROR
+				);
 			}
 
 		// set target section data
 			// target thesaurus
 				$component_tipo	= DEDALO_HIERARCHY_TARGET_SECTION_TIPO;	// 'hierarchy53';
 				$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
-				$component		= component_common::get_instance( $model_name,
-																  $component_tipo,
-																  $section_id,
-																  'list',
-																  DEDALO_DATA_NOLAN,
-																  $section_tipo);
+				$component		= component_common::get_instance(
+					$model_name,
+					$component_tipo,
+					$section_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$section_tipo
+				);
 				$dato = [$tld2.'1'];
 				$component->set_dato($dato);
 				$component->Save();
@@ -1767,12 +1837,14 @@ class install extends common {
 			// target model
 				$component_tipo	= DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO;	// 'hierarchy58';
 				$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
-				$component		= component_common::get_instance( $model_name,
-																  $component_tipo,
-																  $section_id,
-																  'list',
-																  DEDALO_DATA_NOLAN,
-																  $section_tipo);
+				$component		= component_common::get_instance(
+					$model_name,
+					$component_tipo,
+					$section_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$section_tipo
+				);
 				$dato = [$tld2.'2'];
 				$component->set_dato($dato);
 				$component->Save();
@@ -1781,12 +1853,14 @@ class install extends common {
 			// general term
 				$component_tipo	= DEDALO_HIERARCHY_CHILDREN_TIPO;	// 'hierarchy45';
 				$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
-				$component		= component_common::get_instance( $model_name,
-																  $component_tipo,
-																  $section_id,
-																  'list',
-																  DEDALO_DATA_NOLAN,
-																  $section_tipo);
+				$component		= component_common::get_instance(
+					$model_name,
+					$component_tipo,
+					$section_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$section_tipo
+				);
 				$dato = json_decode('[
 					{
 						"type": "dd48",
@@ -1805,12 +1879,14 @@ class install extends common {
 
 					$component_tipo	= DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO;	// 'hierarchy59';
 					$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
-					$component		= component_common::get_instance( $model_name,
-																	  $component_tipo,
-																	  $section_id,
-																	  'list',
-																	  DEDALO_DATA_NOLAN,
-																	  $section_tipo);
+					$component		= component_common::get_instance(
+						$model_name,
+						$component_tipo,
+						$section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$section_tipo
+					);
 					$dato = json_decode('[
 						{
 							"type": "dd48",
@@ -1841,7 +1917,7 @@ class install extends common {
 	* 	Like 'lg'
 	* @return object $response
 	*/
-	public static function get_available_hierarchy_files() {
+	public static function get_available_hierarchy_files() : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -2148,9 +2224,10 @@ class install extends common {
 	/**
 	* INSTALL_HIERARCHIES
 	* Called from install trigger with selected user options from check boxes
+	* @param object $options
 	* @return object $response
 	*/
-	public static function install_hierarchies($options) {
+	public static function install_hierarchies(object $options) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -2199,7 +2276,7 @@ class install extends common {
 	* We can assume that systems with only a root user are NOT properly installed yet
 	* @return object $response
 	*/
-	public static function system_is_already_installed() {
+	public static function system_is_already_installed() : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -2377,14 +2454,18 @@ class install extends common {
 			$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( json_handler::encode($dato), -1, DEDALO_SECTION_USERS_TIPO ));
 			if($result===false) {
 				$response->msg = 'Error: sorry an error happens on UPDATE record. Data is not saved';
-				debug_log(__METHOD__." $response->msg ".to_string($strQuery), logger::ERROR);
+				debug_log(__METHOD__
+					. " $response->msg " . PHP_EOL
+					. $strQuery
+					, logger::ERROR
+				);
 				return $response;
 			}
 
 		// reset session
 			unset($_SESSION['dedalo']['auth']);
 
-		// response ok
+		// response success
 			$response->result	= true;
 			$response->msg		= 'OK. root pw was set';
 
@@ -2443,16 +2524,19 @@ class install extends common {
 					// and the LOCK_EX flag to prevent anyone else writing to the file at the same time
 					if(!file_put_contents($file, $line, FILE_APPEND | LOCK_EX)) {
 
-						$response->msg = 'Error (2). It\'s not possible set the install status, review the PHP permissions to write in Dédalo directory: ' . $file;
-						debug_log(__METHOD__." ".$response->msg, logger::ERROR);
+						$response->msg = 'Error (2). It\'s not possible set the install status, review the PHP permissions to write in Dédalo directory: '.$file;
+						debug_log(__METHOD__
+							. ' ' . $response->msg .PHP_EOL
+							. 'file: '.$file
+							, logger::ERROR
+						);
 						return $response;
 					}
-
 
 					$response->result	= true;
 					$response->msg		= 'All ready';
 
-					debug_log(__METHOD__." Added config_auto line with constant: DEDALO_INSTALL_STATUS  ".to_string(), logger::DEBUG);
+					debug_log(__METHOD__." Added config_auto line with constant: DEDALO_INSTALL_STATUS  ", logger::DEBUG);
 
 
 				}elseif (strpos($content, 'DEDALO_INSTALL_STATUS')!==false && strpos($content, '\'DEDALO_INSTALL_STATUS\', \''.$status.'\'')===false) {
@@ -2476,10 +2560,8 @@ class install extends common {
 				}
 			}
 
-
 		// refresh session cached data. Delete all session data
 			unset($_SESSION['dedalo']);
-
 
 
 		return $response;
@@ -2487,4 +2569,4 @@ class install extends common {
 
 
 
-}//end class
+}//end class install

@@ -680,8 +680,7 @@ class login extends common {
 			if( DEDALO_BACKUP_ON_LOGIN ) {
 				# Close script session
 				session_write_close();
-				require_once DEDALO_CORE_PATH.'/backup/class.backup.php';
-				$backup_secuence_response	= backup::init_backup_secuence($user_id, $username);
+				$backup_secuence_response	= backup::init_backup_secuence($user_id, $username, false);
 				$backup_info				= $backup_secuence_response->msg;
 			}else{
 				$backup_info				= 'Deactivated "on login backup" for this domain';

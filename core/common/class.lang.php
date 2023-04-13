@@ -511,8 +511,9 @@ class lang {
 	/**
 	* GET_ALPHA2_FROM_CODE
 	* @param string $lang_code
+	* 	Sample: 'lg-spa'
 	* @return string|null $alpha2
-	*	Like 'en' from lg-eng
+	*	Sample 'es'
 	*/
 	public static function get_alpha2_from_code( string $lang_code ) : ?string {
 
@@ -720,7 +721,7 @@ class lang {
 				case "zu" 	: $code = "lg-zul"; break;
 			*/
 			default:
-				debug_log(__METHOD__." Sorry, lang not defined: \"$lang_code\" ".to_string(), logger::ERROR);
+				debug_log(__METHOD__." Sorry, lang not defined: \"$lang_code\" ", logger::ERROR);
 				break;
 		}
 		if (isset($code)) {

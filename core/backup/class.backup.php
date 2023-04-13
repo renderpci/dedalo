@@ -33,12 +33,14 @@ abstract class backup {
 			$response->msg		= 'Error. Request failed '.__METHOD__;
 
 		// Force to unlock browser session
-			session_write_close();
+			// session_write_close();
 
 		// non dedalo_db_management case. Used when DDBB is in a external server or when backups are managed externally
 			if (defined('DEDALO_DB_MANAGEMENT') && DEDALO_DB_MANAGEMENT===false) {
-				$response->result	= true;
+
 				$response->msg		= 'OK. Skipped request by db config management '.__METHOD__;
+				$response->result	= true;
+
 				debug_log(__METHOD__
 					." Skipped request backup_secuence because DEDALO_DB_MANAGEMENT = false"
 					, logger::WARNING
@@ -47,11 +49,6 @@ abstract class backup {
 			}
 
 		try {
-			// name : file name formatted as date . (one hour resolution)
-				$ar_dd_data_version	= get_current_version_in_db();
-				$db_name			= ($skip_backup_time_range===true)
-					? date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $user_id .'_forced_dbv' . implode('-', $ar_dd_data_version)
-					: date("Y-m-d_H")   .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $user_id .'_dbv' . implode('-', $ar_dd_data_version);
 
 			// Backups folder exists verify
 				$file_path = DEDALO_BACKUP_PATH_DB;
@@ -64,6 +61,12 @@ abstract class backup {
 					}
 					debug_log(__METHOD__." CREATED DIR: $file_path  ".to_string(), logger::DEBUG);
 				}
+
+			// name : file name formatted as date . (one hour resolution)
+				$ar_dd_data_version	= get_current_version_in_db();
+				$db_name			= ($skip_backup_time_range===true)
+					? date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $user_id .'_forced_dbv' . implode('-', $ar_dd_data_version)
+					: date("Y-m-d_H")   .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $user_id .'_dbv' . implode('-', $ar_dd_data_version);
 
 			// time range check
 				if($skip_backup_time_range===true) {
@@ -134,16 +137,9 @@ abstract class backup {
 				if(!file_exists($prgfile)) {
 
 					// target folder verify (exists and permissions)
-						try{
-							$target_folder_path = DEDALO_BACKUP_PATH_TEMP;
-							# folder exists
-							if( !is_dir($target_folder_path) ) {
-								if(!mkdir($target_folder_path, 0775,true)) throw new Exception(" Error on read or create backup temp directory. Permission denied");
-							}
-						} catch (Exception $e) {
-							$msg = '<span class="error">'.$e->getMessage().'</span>';
-							#echo dd_error::wrap_error($msg);
-							debug_log(__METHOD__." Exception: $msg ".to_string(), logger::ERROR);
+						$target_folder_path = DEDALO_BACKUP_PATH_TEMP;
+						if( !is_dir($target_folder_path) ) {
+							if(!mkdir($target_folder_path, 0775, true)) throw new Exception(" Error on read or create backup temp directory. Permission denied");
 						}
 
 					// sh file generating
@@ -160,22 +156,21 @@ abstract class backup {
 							debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
 							throw new Exception($msg, 1);
 						}
+
+					// fastcgi_finish_request
+						// if (function_exists('fastcgi_finish_request')) {
+						// 	fastcgi_finish_request();
+						// 	debug_log(__METHOD__." fastcgi_finish_request() function was called to prevent lock this connection. ".to_string(), logger::WARNING);
+						// } else {
+						// 	debug_log(__METHOD__." Error: This server does not support fastcgi_finish_request() function. ".to_string(), logger::ERROR);
+						// }
+
+					// run delayed command
+						exec_::exec_sh_file($prgfile);
+
+					debug_log(__METHOD__." Building delayed backup file ($mysqlExportPath). Command:\n ".to_string($command), logger::DEBUG);
 				}
-				debug_log(__METHOD__." Building delayed backup file ($mysqlExportPath). Command:\n ".to_string($command), logger::DEBUG);
-
-				// fastcgi_finish_request
-					if (function_exists('fastcgi_finish_request')) {
-						fastcgi_finish_request();
-						debug_log(__METHOD__." fastcgi_finish_request() function is called to prevent lock this connection. ".to_string(), logger::WARNING);
-					} else {
-						debug_log(__METHOD__." Error: This server does not support fastcgi_finish_request() function. ".to_string(), logger::ERROR);
-					}
-
-				// run delayed command
-					exec_::exec_sh_file($prgfile);
-
 			}//end if($skip_backup_time_range===true)
-
 
 			// EXEC : Exec command
 				// $worked_result exec_::exec_command($command);
@@ -201,7 +196,10 @@ abstract class backup {
 		}catch (Exception $e) {
 
 			$msg = "Error on backup_secuence. User: $username. - error: ".  $e->getMessage(). "\n";
-			debug_log(__METHOD__." Exception: $msg ".to_string(), logger::ERROR);
+			debug_log(__METHOD__
+				. " Exception: $msg "
+				, logger::ERROR
+			);
 
 			// response error
 				$response->result	= false;

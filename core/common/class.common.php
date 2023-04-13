@@ -1892,16 +1892,20 @@ abstract class common {
 
 				// skip empty ddo_map
 				if(empty($request_config_object->show->ddo_map)) {
-					debug_log(__METHOD__." Ignored empty show ddo_map ($this->tipo - ".
-						RecordObj_dd::get_termino_by_tipo($this->tipo).
-						") in request_config_object (It may be due to a lack of permissions in their children):".
-						PHP_EOL.to_string($request_config_object),
+					debug_log(__METHOD__
+						. " Ignored empty show ddo_map " . PHP_EOL
+						. ' ('.$this->tipo.' - '. RecordObj_dd::get_termino_by_tipo($this->tipo) .')' . PHP_EOL
+						. ' in request_config_object (It may be due to a lack of permissions in their children):' . PHP_EOL
+						. to_string($request_config_object),
 						logger::ERROR
 					);
 					continue;
 				}
 				// merge all ddo of all request_config
-				$full_ddo_map = array_merge($full_ddo_map, $request_config_object->show->ddo_map);
+				$full_ddo_map = array_merge(
+					$full_ddo_map,
+					$request_config_object->show->ddo_map
+				);
 			}//end foreach ($request_config_dedalo as $request_config_object)
 			// remove duplicates, sometimes the portal point to other portal with two different bifurcations, and the portal pointed is duplicated in the request_config (dedalo, Zenon,...)
 			$full_ddo_map = array_unique($full_ddo_map, SORT_REGULAR);
@@ -2457,7 +2461,7 @@ abstract class common {
 			$user_id		= navigator::get_user_id();
 
 		// 1. From user preset
-			$user_preset = layout_map::search_user_preset_layout_map(
+			$user_preset = request_config_presets::search_request_config(
 				$tipo,
 				$section_tipo,
 				$user_id,
@@ -2468,10 +2472,10 @@ abstract class common {
 			if (!empty($user_preset)) {
 
 				// fix request_config value
-					$request_config = $user_preset;
+				$request_config = $user_preset;
 
 				debug_log(__METHOD__.
-					" request_config calculated from user preset [$section_tipo-$tipo] ",
+					" request_config calculated from request_config_presets [$section_tipo-$tipo] ",
 					logger::DEBUG
 				);
 			}
@@ -2516,11 +2520,18 @@ abstract class common {
 
 			$request_config_len = sizeof($request_config);
 			for ($i=0; $i < $request_config_len; $i++) {
-				$current_request = $request_config[$i];
+
+				$current_request_config = $request_config[$i];
+
+				// skip empty ddo_map
+				if (empty($current_request_config->show->ddo_map)) {
+					continue;
+				}
+
 				// add ddo_map
 				dd_core_api::$ddo_map = array_merge(
 					dd_core_api::$ddo_map,
-					$current_request->show->ddo_map
+					$current_request_config->show->ddo_map
 				);
 			}
 

@@ -3,7 +3,8 @@
 
 
 // SYNC LANG
-	$lang = $_SESSION['lang'] = tools::convert_d4_to_d3_lang(DEDALO_APPLICATION_LANG);
+	// $lang = $_SESSION['lang'] = tools::convert_d4_to_d3_lang(DEDALO_APPLICATION_LANG);
+$lang = $_SESSION['lang'] = lang::get_alpha2_from_code(DEDALO_APPLICATION_LANG);
 
 
 // path to file

@@ -98,6 +98,7 @@ component_security_access.prototype.init = async function(options) {
 
 /**
 * BUILD
+* @param object options
 * @return promise bool
 * 	Resolve bool
 */
@@ -203,8 +204,8 @@ component_security_access.prototype.update_value = function(item, input_value) {
 	// event. publish update_value_xx event on change data.value
 		const name = 'update_value_' + self.id + '_' + item.tipo + '_' + item.section_tipo
 		event_manager.publish(name, input_value)
+		// console.log("changed_value:", item.tipo, item.section_tipo, changed_value);
 
-	// console.log("changed_value:", item.tipo, item.section_tipo, changed_value);
 
 	return value
 }//end update_value
@@ -224,9 +225,11 @@ component_security_access.prototype.update_value = function(item, input_value) {
 		section_tipo: "mht5"
 	}
 * @param array datalist
-* @return array ar_parents
+* @return promise
+* 	resolve array ar_parents
 */
 component_security_access.prototype.get_parents = function(item, datalist) {
+	const t1 = performance.now()
 
 	const self = this
 
@@ -239,12 +242,18 @@ component_security_access.prototype.get_parents = function(item, datalist) {
 		})
 		current_worker.onmessage = function(e) {
 			const parents = e.data.result
-			// current_worker.terminate()
-			// console.log('parents:', parents);
+			current_worker.terminate()
+
+			// debug
+				if(SHOW_DEBUG===true) {
+					// console.log('parents:', parents);
+					console.log("__***Time performance.now()-t1 get_parents:", item.tipo, parents.length, performance.now()-t1);
+				}
+
 			resolve( parents )
 		}
 		current_worker.onerror = function(e) {
-			console.error('Worker error:', e);
+			console.error('Worker error [get_parents]:', e);
 		}
 		current_worker.postMessage({
 			fn		: 'get_parents',
@@ -268,7 +277,8 @@ component_security_access.prototype.get_parents = function(item, datalist) {
 		section_tipo: "mht5"
 	}
 * @param array datalist
-* @return array ar_children
+* @return promise
+* 	resolve array ar_children
 */
 component_security_access.prototype.get_children = function(item, datalist) {
 	const t1 = performance.now()
@@ -284,13 +294,18 @@ component_security_access.prototype.get_children = function(item, datalist) {
 		})
 		current_worker.onmessage = function(e) {
 			const children = e.data.result
-			// current_worker.terminate()
-			// console.log('children:', children);
-			console.log("__***Time performance.now()-t1 get_children:", children.length, performance.now()-t1);
+			current_worker.terminate()
+
+			// debug
+				if(SHOW_DEBUG===true) {
+					// console.log('children:', children);
+					console.log("__***Time performance.now()-t1 get_children:", item.tipo, children.length, performance.now()-t1);
+				}
+
 			resolve( children )
 		}
 		current_worker.onerror = function(e) {
-			console.error('Worker error:', e);
+			console.error('Worker error [get_children]:', e);
 		}
 		current_worker.postMessage({
 			fn		: 'get_children',
@@ -405,7 +420,7 @@ component_security_access.prototype.update_parents_radio_butons = async function
 * SAVE_CHANGES
 * Rebuild self.data.value removing empty zero values and save result
 * @return promise
-* Resolve bool|object (API response) from change_value()
+* 	Resolve bool|object (API response) from change_value()
 */
 component_security_access.prototype.save_changes = async function() {
 
@@ -430,9 +445,9 @@ component_security_access.prototype.save_changes = async function() {
 
 	// change_value to save
 		const result = self.change_value({
-			changed_data		: changed_data,
-			refresh				: false,
-			from_save_changes	: true
+			changed_data			: changed_data,
+			refresh					: false,
+			// from_save_changes	: true
 		})
 
 
