@@ -298,7 +298,6 @@ flowchart TB
     level1:::level
     level2:::level
     level3:::level
-
 ```
 
 The default this parameter is 2 levels. If you increase the value of this parameter, the time needed by Dédalo to resolve the linked data in the publication process will also increase because the ramifications will multiple in x times for every level in exponential progression.
