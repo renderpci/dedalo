@@ -40,7 +40,7 @@ Of course Dédalo has more tables than `matrix` table but in total Dédalo only 
 
 And the same thing was happen with columns/fields, we name it `components` because in matrix table we have only 4 columns but the data has a different component to define the property of the data.
 
-For ex in classic SQL you will have a people table with:
+For ex in classic SQL you will have a people table as:
 
 | id | name | surname |
 | --- | --- | --- |
