@@ -1,8 +1,8 @@
 {
   "swagger" : "2.0",
   "info" : {
-    "version" : "1.0.25",
-    "title" : "Dédalo Publication Server REST API 1.0.25",
+    "version" : "1.0.26",
+    "title" : "Dédalo Publication Server REST API 1.0.26",
     "description" : "Builds Public Dédalo data for publication. Use this online tool to test your data, and remember to always enter your authentication code when running a test call. <br>This API is focused on Oral History files and is for general purpose. If you need special functions or custom results, you can join the API development team by contacting the source developers (also known as Alex & Paco) at webmaster@render.es ",
     "license" : {
       "name" : "Apache 2.0 license",
@@ -252,7 +252,7 @@
         }, {
           "name" : "sql_fullselect",
           "in" : "query",
-          "description" : "Custom sql select for builds query. Replaces any other columns or table selection option. i.e. 'SELECT mycolumn FROM mytable'",
+          "description" : "Deprecated (don't use it, will be removed in v6). \n Custom sql select for builds query. Replaces any other columns or table selection option. i.e. 'SELECT mycolumn FROM mytable'",
           "required" : false,
           "type" : "string"
         }, {
