@@ -7,6 +7,8 @@
 require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
 require_once( DEDALO_LIB_BASE_PATH . '/backup/class.backup.php');
 
+session_write_close();
+
 // DATA . The only one var received is a json encoded var called "data"
 	$data = json_decode($_REQUEST['data']);
 
@@ -15,7 +17,7 @@ require_once( DEDALO_LIB_BASE_PATH . '/backup/class.backup.php');
 	$valid_codes = defined('STRUCTURE_SERVER_CODE_OTHERS')
 		? STRUCTURE_SERVER_CODE_OTHERS
 		: [];
-	$valid_codes[] = STRUCTURE_SERVER_CODE;	 // add main code	
+	$valid_codes[] = STRUCTURE_SERVER_CODE;	 // add main code
 	if (!$data || !in_array($data->code, $valid_codes)) {
 		http_response_code(401); // Unauthorized
 		exit();
@@ -29,7 +31,7 @@ require_once( DEDALO_LIB_BASE_PATH . '/backup/class.backup.php');
 
 // SELECTED_OBJ. Get local str files info (paths, names, etc.) to find the requested
 	$selected_obj  = null;
-	$all_str_files = backup::collect_all_str_files();	
+	$all_str_files = backup::collect_all_str_files();
 	foreach ($all_str_files as $key => $obj) {
 		if ($data->name === $obj->name) {
 			$selected_obj = $all_str_files[$key];

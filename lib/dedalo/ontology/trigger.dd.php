@@ -3,7 +3,7 @@
 	ini_set('output_buffering', 'off');
 
 
-// ontology custon config file
+// ontology custom config file
 include_once( dirname(__FILE__) .'/config/config_ontology.php' );
 // Old lang vars
 include_once( dirname(__FILE__) . '/lang/lang_code.php' );
