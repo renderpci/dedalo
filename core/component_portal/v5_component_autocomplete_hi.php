@@ -109,6 +109,31 @@
 
 			// default case
 			$diffusion_value = $this->get_valor($lang, 'string', $separator);
+
+		}else if(isset($option_obj->parent_section_tipo)) {
+
+			$ar_parent_section_tipo = is_array($option_obj->parent_section_tipo)
+				? $option_obj->parent_section_tipo
+				: [$option_obj->parent_section_tipo];
+
+			$add_parents = $option_obj->add_parents ?? false;
+
+			$terms = [];
+			foreach ($dato as $current_locator) {
+
+				if (!in_array($current_locator->section_tipo, $ar_parent_section_tipo)) {
+					continue; // ignore non desired sections
+				}
+
+				// $terms[] = ts_object::get_term_dato_by_locator($current_locator)
+				$terms[] = component_relation_common::get_locator_value(
+					$current_locator,
+					$lang,
+					$add_parents
+				);
+			}
+			$diffusion_value = implode($separator, $terms);
+
 		}else{
 
 			// properties options defined
