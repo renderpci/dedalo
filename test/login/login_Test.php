@@ -18,6 +18,14 @@ final class login_test extends TestCase {
 
 
 
+	protected function setUp(): void   {
+		// $this->markTestSkipped(
+		// 	'Disabled !'
+		// );
+	}
+
+
+
 	/**
 	* FORCE_LOGIN
 	* @param int $user_id

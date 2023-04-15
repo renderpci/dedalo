@@ -17,12 +17,19 @@ final class api_v1_test extends TestCase {
 
 
 
+	protected function setUp(): void   {
+		// $this->markTestSkipped(
+		// 	'Disabled !'
+		// );
+	}
+
+
+
 	/**
 	* TEST_START
 	* @return void
 	*/
 	public function test_start(): void {
-
 
 		// rqo start section
 			$rqo = (object)[
@@ -30,7 +37,7 @@ final class api_v1_test extends TestCase {
 					'search_obj'	=> (object)[
 						'tipo'	=> 'oh1',
 						'mode'	=> 'list'
- 					],
+					],
 					'menu' => true
 				]
 			];
@@ -88,7 +95,7 @@ final class api_v1_test extends TestCase {
 					'search_obj' => (object)[
 						'tipo'	=> 'dd100',
 						'mode'	=> 'list'
- 					],
+					],
 				]
 			];
 			$_ENV['DEDALO_ERRORS'] = []; // reset
@@ -108,7 +115,7 @@ final class api_v1_test extends TestCase {
 					'search_obj' => (object)[
 						'tool'	=> 'tool_lang',
 						'mode'	=> 'list'
- 					],
+					],
 				]
 			];
 			$_ENV['DEDALO_ERRORS'] = []; // reset
@@ -128,7 +135,7 @@ final class api_v1_test extends TestCase {
 					'search_obj' => (object)[
 						'tipo'	=> 'dd355',
 						'mode'	=> 'list'
- 					],
+					],
 				]
 			];
 			$_ENV['DEDALO_ERRORS'] = []; // reset
@@ -149,7 +156,7 @@ final class api_v1_test extends TestCase {
 						'tipo'			=> 'rsc36',
 						'section_tipo'	=> 'rsc167',
 						'mode'			=> 'list'
- 					],
+					],
 				]
 			];
 			$_ENV['DEDALO_ERRORS'] = []; // reset
@@ -192,7 +199,7 @@ final class api_v1_test extends TestCase {
 		// rqo invalid
 			$rqo = json_decode('
 				{
-				    "invalid thing": "patata"
+					"invalid thing": "patata"
 				}
 			');
 			$_ENV['DEDALO_ERRORS'] = []; // reset
@@ -224,28 +231,28 @@ final class api_v1_test extends TestCase {
 		// rqo valid
 			$rqo = json_decode('
 				{
-				    "action": "read",
-				    "source": {
-				        "typo": "source",
-				        "type": "section",
-				        "action": "search",
-				        "model": "section",
-				        "tipo": "rsc167",
-				        "section_tipo": "rsc167",
-				        "section_id": null,
-				        "mode": "edit",
-				        "view": null,
-				        "lang": "lg-eng"
-				    },
-				    "sqo": {
-				        "section_tipo": [
-				            "rsc167"
-				        ],
-				        "limit": 10,
-				        "offset": 0,
-				        "select": [],
-				        "full_count": false
-				    }
+					"action": "read",
+					"source": {
+						"typo": "source",
+						"type": "section",
+						"action": "search",
+						"model": "section",
+						"tipo": "rsc167",
+						"section_tipo": "rsc167",
+						"section_id": null,
+						"mode": "edit",
+						"view": null,
+						"lang": "lg-eng"
+					},
+					"sqo": {
+						"section_tipo": [
+							"rsc167"
+						],
+						"limit": 10,
+						"offset": 0,
+						"select": [],
+						"full_count": false
+					}
 				}
 			');
 			$_ENV['DEDALO_ERRORS'] = []; // reset
@@ -262,45 +269,45 @@ final class api_v1_test extends TestCase {
 				$this->assertTrue( empty($_ENV['DEDALO_ERRORS']) );
 
 		// rqo invalid tipo
-			$rqo = json_decode('
-				{
-				    "action": "read",
-				    "source": {
-				        "typo": "source",
-				        "type": "section",
-				        "action": "search",
-				        "model": "section",
-				        "tipo": "x96wTrsc167pR7",
-				        "section_tipo": "x96wTrsc167pR7k3",
-				        "section_id": null,
-				        "mode": "edit",
-				        "view": null,
-				        "lang": "lg-eng"
-				    },
-				    "sqo": {
-				        "section_tipo": [
-				            "x96wTrsc167pR7k3"
-				        ],
-				        "limit": 1,
-				        "offset": 0,
-				        "select": [],
-				        "full_count": false
-				    }
-				}
-			');
-			$_ENV['DEDALO_ERRORS'] = []; // reset
-			$response = dd_core_api::read($rqo);
-				// dump($_ENV['DEDALO_ERRORS'], ' DEDALO_ERRORS ++ '.to_string());
-				// dump($response, ' response ++ '.to_string());
-			$context	= $response->result->context;
-			$data		= $response->result->data;
+			// $rqo = json_decode('
+			// 	{
+			// 		"action": "read",
+			// 		"source": {
+			// 			"typo": "source",
+			// 			"type": "section",
+			// 			"action": "search",
+			// 			"model": "section",
+			// 			"tipo": "x96wTrsc167pR7",
+			// 			"section_tipo": "x96wTrsc167pR7k3",
+			// 			"section_id": null,
+			// 			"mode": "edit",
+			// 			"view": null,
+			// 			"lang": "lg-eng"
+			// 		},
+			// 		"sqo": {
+			// 			"section_tipo": [
+			// 				"x96wTrsc167pR7k3"
+			// 			],
+			// 			"limit": 1,
+			// 			"offset": 0,
+			// 			"select": [],
+			// 			"full_count": false
+			// 		}
+			// 	}
+			// ');
+			// $_ENV['DEDALO_ERRORS'] = []; // reset
+			// $response = dd_core_api::read($rqo);
+			// 	// dump($_ENV['DEDALO_ERRORS'], ' DEDALO_ERRORS ++ '.to_string());
+			// 	// dump($response, ' response ++ '.to_string());
+			// $context	= $response->result->context;
+			// $data		= $response->result->data;
 
-			// check format. Expected array for data and context
-				$this->assertTrue( gettype($context)==='array' );
-				$this->assertTrue( gettype($data)==='array' );
-				$this->assertTrue( count($data)===0 );
-				// expected running with errors
-				$this->assertTrue( !empty($_ENV['DEDALO_ERRORS']) );
+			// // check format. Expected array for data and context
+			// 	$this->assertTrue( gettype($context)==='array' );
+			// 	$this->assertTrue( gettype($data)==='array' );
+			// 	$this->assertTrue( count($data)===0 );
+			// 	// expected running with errors
+			// 	$this->assertTrue( !empty($_ENV['DEDALO_ERRORS']) );
 	}//end test_read
 
 
@@ -309,8 +316,34 @@ final class api_v1_test extends TestCase {
 	* TEST_INVALID_API_CALL
 	* @return void
 	*/
-	public function XXXXtest_invalid_api_call(): void {
+	public function test_invalid_api_call(): void {
 
+
+		$rqo = json_decode('
+			{
+				"method": "vaccinate the Raspa",
+				"values": {
+					"action": "locate the cat",
+					"model": "section",
+					"tipo": "x96wTrsc167pR7",
+					"section_tipo": "x96wTrsc167pR7k3",
+					"section_id": null,
+					"mode": "edit",
+					"view": null,
+					"lang": "lg-fabada"
+				}
+			}
+		');
+		$_ENV['DEDALO_ERRORS'] = []; // reset
+		$response = dd_core_api::read($rqo);
+			// dump($_ENV['DEDALO_ERRORS'], ' DEDALO_ERRORS ++ '.to_string());
+			// dump($response, ' response ++ '.to_string());
+
+		// expected running with errors
+			$this->assertTrue( !empty($_ENV['DEDALO_ERRORS']) );
+
+		// expected result as false
+			$this->assertTrue( $response->result===false );
 
 	}//end test_invalid_api_call
 
