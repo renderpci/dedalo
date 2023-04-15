@@ -21,6 +21,7 @@ class json_handler {
 
 	/**
 	* JSON ENCODE
+	* Unified json_encode method with error control
 	*/
 	public static function encode($value, $options=JSON_UNESCAPED_UNICODE) {
 
@@ -33,15 +34,24 @@ class json_handler {
 		if(SHOW_DEBUG===true) {
 
 			$type = gettype($value);
-			dump($result, ' result ++ '.to_string());
-			dump($value, ' type ++ type: '.to_string($type));
+			dump($result, ' result (json_encoded) ++ '.to_string());
+			dump($value,  ' value - type: '.to_string($type));
 			trigger_error("json_handler GETTYPE: ".$type);
 
 			if ($type==='string') {
 				$encoding = mb_detect_encoding($value);
 				trigger_error("MB_DETECT_ENCODING: ".$encoding);
 			}
+			dump(debug_backtrace(), ')))) debug_backtrace() ++ '.to_string());
 		}
+
+		debug_log(__METHOD__
+			. " JSON encode error " .PHP_EOL
+			. 'value: ' . print_r($value, true) .PHP_EOL
+			. 'json_last_error: '.json_last_error() .PHP_EOL
+			. json_handler::$_messages[json_last_error()] ?? 'Unknown error'
+			, logger::ERROR
+		);
 
 		throw new RuntimeException(static::$_messages[json_last_error()]);
 	}//end encode
