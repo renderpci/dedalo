@@ -1107,26 +1107,26 @@ abstract class component_common extends common {
 	* set in properties the config of the observer
 	* ex:
 	*  {
-    *	"info": "our own comments to info of the event",
-    *	"server": {
-    *		"config": {
+	*	"info": "our own comments to info of the event",
+	*	"server": {
+	*		"config": {
 	*			"use_inverse_relations"	: bool,
 	* 			"use_observable_dato"	: bool,
 	* 			"use_inverse_relations"	: bool,
 	* 			"filter"				: sqo
-    *		},
-    *		"perform": {
-    *			"params": {
-    *				"xx": bool,
-    * 				"yy": int    *
-    *			},
-    *		"function": "set_dato_xxx"
-    *		}
-    * 	},
-    *	"component_tipo": "ddxx"
-    * }
-    * component_tipo: the component that is observed his changes. the component that fire the event.
-    * config options:
+	*		},
+	*		"perform": {
+	*			"params": {
+	*				"xx": bool,
+	* 				"yy": int    *
+	*			},
+	*		"function": "set_dato_xxx"
+	*		}
+	* 	},
+	*	"component_tipo": "ddxx"
+	* }
+	* component_tipo: the component that is observed his changes. the component that fire the event.
+	* config options:
 	* 	use_self_section: use the $locator (the section that made the change) because the component is in the same section that observable
 	* 	use_observable_dato: use the $observable_dato (the section has added, deleted, changed in portal) because the component to update is in the target section of the portal
 	* 	use_inverse_relations: use all inverse relations of the section, because the component to update is not in the same or target section of portal
