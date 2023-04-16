@@ -12,9 +12,8 @@
 *		$locator->from_component_tipo	= (string)$component_tipo; // source component tipo
 *		$locator->tag_id				= (string)$tag_id;
 *		$locator->tag_component_tipo	= (string)$tag_component_tipo; // component that has the tag, in the same section (used for component_relation_index)
-*		$locator->state					= (object)$state;
 * 		$locator->type					= (string)$type;
-*		$locator->section_id_key				= (int)$section_id_key; // dataframe index array number of the data that reference
+*		$locator->section_id_key		= (int)$section_id_key; // dataframe index array number of the data that reference
 *
 *	Note that properties could exists or not (they are created on the fly). Final result object only contain set properties and locator object could be empty or partially set.
 *	For example, component portal only use section_tipo an section_id in many cases.
@@ -33,7 +32,6 @@ class locator extends stdClass {
 		private $component_tipo;
 		private $tag_id;
 		private $tag_component_tipo;
-		private $state;
 		private $section_id_key;
 	*/
 
@@ -164,15 +162,7 @@ class locator extends stdClass {
 		}
 		$this->tag_component_tipo = $value;
 	}
-	/**
-	* SET_STATE
-	*/
-	public function set_state(object $value) {
-		// if(!is_object($value)) {
-		// 	throw new Exception("Error Processing Request. Invalid state: $value", 1);
-		// }
-		$this->state = $value;
-	}
+
 	/**
 	* SET_TYPE
 	* Only defined relation types (structure) ar allowed
