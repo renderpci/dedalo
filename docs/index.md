@@ -3,6 +3,7 @@
 Dédalo is a Open Source software develop abstract objects with a ontology model. The ontology control the app flow with the descriptors, related terms, no descriptors, TG, TE, etc. The objects are built with a MVC structure and are linked to the ontology. The database use a NoSQL model, all data is stored in JSONB (binary).
 
 1. [Introduction](./core/introduction.md)
+   1. [Locator](./core/locator.md)
 2. [Installation](./install/install.md#installation)
 3. [Configuration](./config/configuration.md)
    1. [Configuration of Dédalo](./config/config.md)
