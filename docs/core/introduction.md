@@ -42,9 +42,9 @@ And the same thing happened with the columns/fields, we call it "components" bec
 
 For ex in classic SQL you will have a people table as:
 
-| id | name | surname |
-| --- | --- | --- |
-| 1 |Alicia |Gutierrez|
+| id | name   | surname   |
+| ---- | -------- | ----------- |
+| 1  | Alicia | Gutierrez |
 
 But in Dédalo we have only a column for data and we will store the previous data in this way:
 
@@ -105,40 +105,40 @@ But... some names appear here, "section_id"? why? why not id? because we use id 
 See a example:
 
 | id | section_id | section_tipo | data |
-| --- | --- | --- | --- |
-| 1 |1 | "rsc197" | { "section" : "rsc197", "section_id": 1, "rsc85" : "Alicia","rsc86" : "Gutierrez"} |
-| 2 |1 | "oh1" | { "section" : "oh1", "section_id": 1, "oh2" : "Interview"} |
+| ---- | ---- | ---- | ---- |
+| 1  | 1 | "rsc197" | { "section" : "rsc197", "section_id": 1, "rsc85" : "Alicia","rsc86" : "Gutierrez"} |
+| 2  | 1 | "oh1" | { "section" : "oh1", "section_id": 1, "oh2" : "Interview"} |
 
 We have two section_id = 1 because rsc197 is a section (remember a table) for persons and oh1 is a section for interviews. So, section_id is linked directly to sections in the same way than id is linked to tables.
 
 Dédalo nomenclature table:
 
 | name | equivalent | definition |
-| --- | --- | --- |
-| area|  | group of things as sections, an area could be "Intangible Heritage" that has sections as "Oral History" or "Intangible Cultural Assets" |
-| section | SQL table with format and logic | a group of records the same thing |
-| component | SQL column with format and logic | a field with data management his data has specific format |
-| tipo | code | alphanumeric code to identify every thing in the ontology, tipo is the Spanish name of type and it is the acronym of Typology of Indirect Programming Objects :-D |
-| section_tipo | specific table |  a unique definition of a table in ontology |
-| component_tipo | specific column | a unique definition of a column in ontology |
-| model | typology | an unique definition of a typology in ontology, a model defines what node is in the ontology, a model could be 'component_input_text' to define that the node will work with text data and will use the input_text logic, so a tipo has a model: [oh1](https://dedalo.dev/ontology/oh1) -> section (oral history interview), [rsc85](https://dedalo.dev/ontology/rsc85) -> component_input_text (person name) |
-| context | | small piece of the ontology that defines every element as section, component, tool, etc, used to create the instances or modify it. |
-| subcontext | | small piece of the ontology with all necessary elements to build the main element, for a section it will be the components inside it, for a component_portal will be the components pointed in other sections. |
-| section_id | id | in combination with section_tipo: specific record /row of the table, unique id for his section_tipo |
-| data | | data container with value and optional values as datalist or fallbacks of the value |
-| value | | stored data in database |
-| subdata | column value | all necessary data of other elements that is necessary to build the main element, in section will be all component data, for a a component_portal will be the data of the pointed section and components. |
-| Search Quey Object (sqo) | SQL query | abstraction of SQL syntax in json format, inspired by [mango query](https://docs.couchdb.org/en/stable/api/database/find.html) project and adapted to Dédalo schema |
-| Request Quey Object (rqo) | API request | object to do request to Dédalo API to request sections, components, tools, and every thing that client need to process, it can contains a sqo |
-| locator| relation  | pointer between data, unidirectional, bidirectional o multidirectional |
-| ontology | schema  | active definition of Dédalo behavior and his schema, ontology defines tables, columns, relations between data, tools, sections, components, etc, the changes in ontology will apply in real time to the Dédalo behavior. |
-| dd_object (ddo) | | Dédalo object, a normalized object to be used in rqo, sqo and classes to build and instantiate sections, components, etc. |
-| dd_date | | Dédalo date, a normalized object to representative dates |
-| ts_object | | Dédalo thesaurus, a normalized object to representative thesaurus hierarchies |
-| dd_grid | | Dédalo grid table, a normalized object to representative tables with rows and columns, dd_grid resolve data relations and build tables of flat data |
-| tool | | specific interface and logic for do a task, tools in Dédalo could be a work process as 'transcription interviews' or actions as "propagate data between records" |
-| service | | specific interface and logic shared between components, sections or tools in Dédalo a service could be a "text processor" used by text areas or html text components, or "upload files" process than could be used by image, pdf or audiovisuals components |
-| widget |  | specific piece of code to do a task as summarize some components, collect data from sections, etc |
+| ---- | ---- | ---- |
+| area | | Group of things as sections, an area could be "Intangible Heritage" that has sections as "Oral History" or "Intangible Cultural Assets", the areas will showed in menu because their are at the top of the hierarchy |
+| section       | SQL table with format and logic  | A group of records the same thing|
+| component     | SQL column with format and logic | A field with data management his data has specific format          |
+| tipo| code       | Alphanumeric code to identify every thing in the ontology, tipo is the Spanish name of type and it is the acronym of Typology of Indirect Programming Objects :-D    |
+| section_tipo  | specific table       | A unique definition of a table in ontology   |
+| component_tipo| specific column      | A unique definition of a column in ontology  |
+| model         | typology   | An unique definition of a typology in ontology, a model defines what node is in the ontology, a model could be 'component_input_text' to define that the node will work with text data and will use the input_text logic, so a tipo has a model:[oh1](https://dedalo.dev/ontology/oh1) -> section (oral history interview), [rsc85](https://dedalo.dev/ontology/rsc85) -> component_input_text (person name) |
+| context       || Small piece of the ontology that defines every element as section, component, tool, etc, used to create the instances or modify it.  |
+| subcontext    || Small piece of the ontology with all necessary elements to build the main element, for a section it will be the components inside it, for a component_portal will be the components pointed in other sections.   |
+| section_id    | id         | In combination with section_tipo: specific record /row of the table, unique id for his section_tipo|
+| data|| Data container with value and optional values as datalist or fallbacks of the value      |
+| value         || Stored data in database|
+| subdata       | column value         | All necessary data of other elements that is necessary to build the main element, in section will be all component data, for a a component_portal will be the data of the pointed section and components.        |
+| Search Quey Object (sqo)  | SQL query  | Abstraction of SQL syntax in json format, inspired by[mango query](https://docs.couchdb.org/en/stable/api/database/find.html) project and adapted to Dédalo schema  |
+| Request Quey Object (rqo) | API request| Object to do request to Dédalo API to request sections, components, tools, and every thing that client need to process, it can contains a sqo |
+| locator       | relation   | Pointer between data, unidirectional, bidirectional o multidirectional       |
+| ontology      | schema     | Active definition of Dédalo behavior and his schema, ontology defines tables, columns, relations between data, tools, sections, components, etc, the changes in ontology will apply in real time to the Dédalo behavior.   |
+| dd_object (ddo)           || Dédalo object, a normalized object to be used in rqo, sqo and classes to build and instantiate sections, components, etc.           |
+| dd_date       || Dédalo date, a normalized object to representative dates          |
+| ts_object     || Dédalo thesaurus, a normalized object to representative thesaurus hierarchies           |
+| dd_grid       || Dédalo grid table, a normalized object to representative tables with rows and columns, dd_grid resolve data relations and build tables of flat data       |
+| tool|| specific interface and logic for do a task, tools in Dédalo could be a work process as 'transcription interviews' or actions as "propagate data between records"    |
+| service       || Specific interface and logic shared between components, sections or tools in Dédalo a service could be a "text processor" used by text areas or html text components, or "upload files" process than could be used by image, pdf or audiovisuals components |
+| widget        || Specific piece of code to do a task as summarize some components, collect data from sections, etc  |
 
 ### Dédalo ontology
 
@@ -152,7 +152,6 @@ In The American Heritage® Dictionary of the English Language, 5th Edition, defi
 In GNU Collaborative International Dictionary of English defines [ontology](https://gcide.gnu.org.ua/?q=ontology&define=Define&strategy=.) as:
 
 1. That department of the science of metaphysics which investigates and explains the nature and essential properties and relations of all beings, as such, or the principles and causes of being.
-
 2. (Computers) A systematic arrangement of all of the important categories of objects or concepts which exist in some field of discourse, showing the relations between them. When complete, an ontology is a categorization of all of the concepts in some field of knowledge, including the objects and all of the properties, relations, and functions needed to define the objects and specify their actions. A simplified ontology may contain only a hierarchical classification (a taxonomy) showing the type subsumption relations between concepts in the field of discourse. An ontology may be visualized as an abstract graph with nodes and labeled arcs representing the objects and relations. The concepts included in an ontology and the hierarchical ordering will be to a certain extent arbitrary, depending upon the purpose for which the ontology is created. This arises from the fact that objects are of varying importance for different purposes, and different properties of objects may be chosen as the criteria by which objects are classified. In addition, different degrees of aggregation of concepts may be used, and distinctions of importance for one purpose may be of no concern for a different purpose.
 
 In wiktionary defines [ontology](https://en.wiktionary.org/wiki/ontology) as:
@@ -174,3 +173,51 @@ Yes. A change in the definitions is apply in real time to the schema, data and b
 Of course, abstraction layers has a cost. The time to resolve data is not the same that direct data. And the complexity to resolve a record grow exponentially. In other hand Dédalo is a super flexible system to change information and adapt it to new requirements or needs and Dédalo can change the data to many formats or standards because the final format is dependent of the ontology definition. Dédalo can transform data from Nomisma, Dublin Core, Marc21, CIDOC, or any other standard, it's necessary define it in the ontology, but Dédalo does not have limits.
 
 Abstraction is nice, but it's hard to develop, at the beginning the ontology was not the concept that we are working now, the ontology begun as a simple definition and version to version it was adding more and more levels of abstraction, in data and the code. And of course, it's not finished. The first version was builded in the v3 thesaurus adapting it for the programming needs of v4, for ex: the first data definitions was not interchangeable between components, or some properties was very rigid creating limitations... and the develop process has to balance between compatibility of previous versions and changes for new situations, so it is a slow process done it a step by step.
+
+Ok, ok, but, what is exactly the ontology in Dédalo?. The first version of the ontology was a fork of the v3 thesaurus, so, his interface and his management is a... thesaurus hierarchy. It is not different of other thesaurus, nodes inside other nodes, parent, children, related with his own properties, translations, and definitions, but in these case it defines how Dédalo will work. See it:
+
+![Dédalo ontology view](assets/20230416_105934_dedalo_ontology_general_view.png)
+
+The hierarchy has areas, sections components, and his relations with other parts of ontology and his properties, some properties are for data, as data default, some of them are used for render the component as css.
+
+In the previous image, you can see that quality node is a component_select connected to other part of the ontology, the  "Content quality" section and the "Quality" component that is a component_input_text.
+
+```mermaid
+flowchart LR
+    A((Quality : oh21)) --related--> B((Content quality : dd889))
+    B --child--> C((Quality : dd891))
+```
+
+To get the data resolution of the Quality component : oh21 , Dédalo will need to follow this path and ask to "content quality" section : dd889, what data is inside Quality : dd891 component
+
+Is classical SQL you will need to create two tables with his own schema and connect the column Quality with the id of the table Quality:
+
+```mermaid
+erDiagram
+    Interview {
+        int id PK
+        bool publication
+        string code
+        string Previous_code
+        int Quality FK
+        etc etc
+    }
+    Quality {
+        int id PK
+        bool publication
+        string Quality
+        etc etc
+    }
+    Interview }o--o| Quality : Quality
+```
+
+Then you will need to create the logic with the specific query to get all posible values of the select.
+
+```SQL
+SELECT Quality.id, Quality."Quality"
+FROM "Quality" 
+```
+
+Or doing a join if you want to see it in list mode (without all results). With the data you will need to build the html code to create the select.
+
+The problem here are changes, because the schema, the logic and the render is specific and rigid, if you need  change quality, you will need change the schema of the database, the logic in your code and the html associated. In simple cases or specific uses than not has changes it is not a problem, but in a large and complex situation it could be very hard. Dédalo ontology is a abstraction of all of this process and you will not change your databases or the logic associated opening the possibility to grow and change in a flexible way.
