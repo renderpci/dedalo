@@ -11,6 +11,8 @@
 	// 	session_start();
 	// }
 
+error_log(" SAML sls... ");
+
 // Require files
 	require_once( dirname(__FILE__) . '/saml_config.php' );
 	require_once( SAML_SETTINGS_PATH );

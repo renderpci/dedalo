@@ -9,12 +9,14 @@
 
 $start_time=microtime(1);
 
+error_log('SAML acs is calling ...........');
+
 // Require files
 	require_once( dirname(__FILE__) . '/saml_config.php' );
 	require_once( SAML_SETTINGS_PATH );
 	require_once( TOOLKIT_PATH . '_toolkit_loader.php' );
 
-	error_log('SAML acs is calling ...........');
+
 
 // test
 	/*
@@ -93,6 +95,7 @@ $start_time=microtime(1);
 
 								$total = exec_time_unit($start_time,'ms')." ms"; echo $total;
 								debug_log(__METHOD__." SAML user ".print_r($code, true)." [$client_ip] was logged successfully.  ".$total, logger::ERROR);
+								error_log(" SAML user ".print_r($code, true)." [$client_ip] was logged successfully.  ".$total);
 
 								header("Location: ".DEDALO_ROOT_WEB);
 								exit();

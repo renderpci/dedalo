@@ -38,6 +38,7 @@ abstract class common {
 	protected $required;
 	protected $traducible;
 	protected $label;
+	protected $lang;
 
 	# REQUIRED METHODS
 	#abstract protected function define_id($id);

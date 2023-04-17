@@ -7,6 +7,7 @@
  * redirected to the consume URL (specified in settings) with the auth
  * details.
  */
+error_log(" SAML index... ");
 
 // Require files
 	require_once( dirname(__FILE__) . '/saml_config.php' );
