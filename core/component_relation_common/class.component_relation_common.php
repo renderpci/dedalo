@@ -256,12 +256,11 @@ class component_relation_common extends component_common {
 	* overwrite in every different specific component
 	* Some the text components can set the value with the dato directly
 	* the relation components need to process the locator to resolve the value
-	* @param string $lang = DEDALO_DATA_LANG
 	* @param object|null $ddo = null
 	*
 	* @return object $value
 	*/
-	public function get_grid_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : dd_grid_cell_object {
+	public function get_grid_value(object $ddo=null) : dd_grid_cell_object {
 
 		// ddo customs: set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$fields_separator	= $ddo->fields_separator ?? null;
@@ -407,7 +406,7 @@ class component_relation_common extends component_common {
 				$current_component->column_obj = $current_column_obj;
 
 				// get the value and fallback_value of the component and stored to be joined
-				$current_column		= $current_component->get_grid_value($current_lang, $ddo);
+				$current_column		= $current_component->get_grid_value($ddo);
 				$sub_row_count		= $current_column->row_count ?? 0;
 				// if (in_array($component_model, $components_with_relations)) {
 				// 	$current_column = get_last_column_recursive([$current_column]);

@@ -294,7 +294,7 @@ class indexation_grid {
 				}
 
 			// component_value add
-				$component_value	= $current_component->get_grid_value($current_lang, $ddo);
+				$component_value	= $current_component->get_grid_value($ddo);
 				$ar_row_count[]		= $component_value->row_count ?? 0;
 				$ar_cells[]			= $component_value;
 		}// end foreach ($ar_children_ddo as $ddo)
