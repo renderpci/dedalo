@@ -924,7 +924,7 @@ component_common.prototype.change_value = async function(options) {
 
 	// save. save and rebuild the component
 		const api_response = await self.save(changed_data)
-
+				console.log("api_response:-----------------",api_response);
 		// fix instance changed_data
 			// self.data.changed_data = changed_data
 			if (api_response && api_response.result) {

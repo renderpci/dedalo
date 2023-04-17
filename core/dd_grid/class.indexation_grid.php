@@ -144,7 +144,7 @@ class indexation_grid {
 			$ar_section_rows_count	= [];
 			foreach ($ar_values as $current_section_id => $ar_locators) {
 
-				$ar_head_value = $this->get_value($head_ddo_map, $ar_locators[0]);
+				$ar_head_value = $this->get_grid_value($head_ddo_map, $ar_locators[0]);
 				// take the maximum number of rows (the columns can has 1, 2, 55 rows and we need the highest value, 55)
 				$head_row_count = max($ar_head_value->ar_row_count);
 
@@ -161,7 +161,7 @@ class indexation_grid {
 				$rows_max_count = [$head_row_count];
 				foreach ($ar_locators as $current_locator) {
 
-					$ar_row_value = $this->get_value($row_ddo_map, $current_locator);
+					$ar_row_value = $this->get_grid_value($row_ddo_map, $current_locator);
 					// take the maximum number of rows (the columns can has 1, 2, 55 rows and we need the highest value, 55)
 					$row_count = max($ar_row_value->ar_row_count);
 					// store the result to sum with the head rows
@@ -197,14 +197,14 @@ class indexation_grid {
 
 
 	/**
-	* GET_VALUE
+	* GET_GRID_VALUE
 	*
 	* @param array $ar_ddo
 	* @param object $locator
 	*
 	* @return object $value
 	*/
-	public function get_value(array $ar_ddo, object $locator) : object {
+	public function get_grid_value(array $ar_ddo, object $locator) : object {
 
 		// top properties add
 			$locator->section_top_tipo	= $locator->section_top_tipo ?? $locator->section_tipo;
@@ -294,7 +294,7 @@ class indexation_grid {
 				}
 
 			// component_value add
-				$component_value	= $current_component->get_value($current_lang, $ddo);
+				$component_value	= $current_component->get_grid_value($ddo);
 				$ar_row_count[]		= $component_value->row_count ?? 0;
 				$ar_cells[]			= $component_value;
 		}// end foreach ($ar_children_ddo as $ddo)
@@ -307,7 +307,7 @@ class indexation_grid {
 
 
 		return $value;
-	}//end get_value
+	}//end get_grid_value
 
 
 

@@ -75,17 +75,16 @@ class component_section_id extends component_common {
 
 
 	/**
-	* GET_RAW_VALUE
-	* Get the raw value of the components. By default will be get_dato().
+	* GET_GRID_VALUE
+	* Get the value of the components. By default will be get_dato().
 	* overwrite in every different specific component
 	* The direct components can set the value with the dato directly
 	* The relation components will separate the locator in rows
-	* @param string $lang = DEDALO_DATA_LANG
 	* @param object|null $ddo = null
 	*
 	* @return object $value
 	*/
-	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : dd_grid_cell_object {
+	public function get_grid_value(object $ddo=null) : dd_grid_cell_object {
 
 		// column_obj
 			if(isset($this->column_obj)){
@@ -109,7 +108,7 @@ class component_section_id extends component_common {
 
 
 		return $value;
-	}//end get_raw_value
+	}//end get_grid_value
 
 
 

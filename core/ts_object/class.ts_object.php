@@ -668,11 +668,14 @@ class ts_object {
 						$lang,
 						$section_tipo
 					);
-					// $current_value = $component->get_valor($lang);
-					// $current_value = $component->get_value();
-					$current_value = $component->get_dato();
+					$current_value = $component->get_valor($lang);
+					// $current2_value = $component->get_value();
+
+					// $current_value = $component->get_dato();
+					dump($current_value, ' TO BE ADAPTED TO v6 +--------------------------------------------------+ '.to_string($tipo));
 					if (!empty($current_value)) {
-						$ar_valor[] = implode(', ', $current_value);
+						// $ar_valor[] = implode(', ', $current_value);
+						$ar_valor[] = $current_value;
 					}
 				}
 				$valor = implode(', ', $ar_valor);
