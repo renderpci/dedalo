@@ -184,7 +184,8 @@ relation_list.prototype.build = async function(autoload=true){
 			section_id		: self.section_id,
 			tipo			: self.tipo,
 			mode			: self.mode,
-			model 			: self.model
+			model			: self.model,
+			action			: 'get_relation_list'
 		}
 	// sqo, use the "related" mode to get related sections that call to the current record (current section_tipo and section_id)
 		const sqo = {
@@ -199,8 +200,14 @@ relation_list.prototype.build = async function(autoload=true){
 			}]
 		}
 	// rqo, use the 'get_realtion_list' action from the API
+		// const rqo = {
+		// 	action	: 'get_relation_list',
+		// 	source	: source,
+		// 	sqo		: sqo
+		// }
+		// (!) Unified 17-04-2023 using API 'read' instead custom function 'get_relation_list'
 		const rqo = {
-			action	: 'get_relation_list',
+			action	: 'read',
 			source	: source,
 			sqo		: sqo
 		}
