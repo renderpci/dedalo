@@ -597,6 +597,14 @@ class component_portal extends component_relation_common {
 
 		$path = [];
 
+		// no request_config case. @see common::get_section_elements_context
+		// sometimes, request_config is not calculated for speed (context simple case)
+		// in those cases, order_path is not important and could be ignored
+			if (!isset($this->request_config)) {
+				return $path;
+			}
+
+
 		// from_section_tipo. If exists and is distinct to section_tipo, build and prepend the caller item
 			if (isset($this->from_section_tipo) && $this->from_section_tipo!==$section_tipo) {
 				$path[] = (object)[
@@ -617,17 +625,30 @@ class component_portal extends component_relation_common {
 
 		// ddo_map. request_config show ddo_map first item is used to sort
 		// must be calculated previously by the get_structure_context method
-			$request_config_item = array_find($this->request_config, function($el){
+			$request_config			= $this->request_config ?? [];
+			$request_config_item	= array_find($request_config, function($el){
 				return $el->api_engine==='dedalo';
 			});
+			// non defined case
+			if (empty($request_config_item) && !empty($request_config)) {
+				// select first
+				$request_config_first_item = reset($request_config);
+				if (isset($request_config_first_item->api_engine) && $request_config_first_item->api_engine!=='dedalo') {
+					// nothing to do
+				}else{
+					// set first item as default if no definition exists of api_engine
+					$request_config_item = $request_config_first_item;
+				}
+			}
 			$show = $request_config_item->show ?? null;
 			if (empty($show)) {
 
 				debug_log(__METHOD__.
-					" Ignored empty request_config_item->show (mode:$this->mode) [$this->section_tipo - $this->tipo - ".
-					RecordObj_dd::get_termino_by_tipo($this->tipo).
-					"]",
-					logger::ERROR
+					" Ignored empty request_config_item->show (mode:$this->mode) [$this->section_tipo - $this->tipo - "
+					. RecordObj_dd::get_termino_by_tipo($this->tipo) ."]". PHP_EOL
+					. 'request_config: ' . PHP_EOL
+					. json_handler::encode($request_config)
+					, logger::ERROR
 				);
 
 			}else{
