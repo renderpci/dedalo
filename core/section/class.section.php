@@ -3100,6 +3100,9 @@ class section extends common {
 
 			case 'update_record': // update_record (record already exists)
 
+				// forced to load section data
+					$this->get_dato();
+					
 				// Modified by user
 					$user_locator->set_from_component_tipo($modified_by_user['tipo']);
 					// set value with safe path
