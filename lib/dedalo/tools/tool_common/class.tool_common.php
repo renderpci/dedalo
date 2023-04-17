@@ -97,6 +97,7 @@ abstract class tool_common extends common {
 		// read contents line by line and store data
 			$csv_array			= array();
 			$convert_to_utf8	= false;
+			$bom				= pack('H*','EFBBBF');
 			$i=0;
 			while (($line = fgetcsv($f, 0, $csv_delimiter, $enclosure, $escape)) !== false) {
 
@@ -125,8 +126,14 @@ abstract class tool_common extends common {
 					}
 
 				// iterate line cells (columns from split text line by $csv_delimiter)
+
 					foreach ($line as $cell) {
-						$csv_array[$i][] = trim($cell);
+						// remove BOM in the first line when is set.
+						$cell_clean = $i===0
+							? preg_replace("/^$bom/", '', $cell)
+							: $cell;
+
+						$csv_array[$i][] = trim($cell_clean);
 					}
 
 				$i++;
