@@ -2454,10 +2454,13 @@ common.prototype.get_section_elements_context = async function(options) {
 
 			}else{
 
+				const source = create_source(self, null)
+
 				// load data
 					const rqo = {
 						action			: 'get_section_elements_context',
 						prevent_lock	: true,
+						source			: source,
 						options			: {
 							context_type			: 'simple',
 							ar_section_tipo			: section_tipo,
