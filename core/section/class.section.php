@@ -3572,7 +3572,7 @@ class section extends common {
 								if ($ddo->model==='dd_grid') {
 
 									// component value
-										$value = $current_component->get_value();
+										$value = $current_component->get_grid_value();
 									// data item
 										$data_item = $current_component->get_data_item($value);
 										// add matrix_id always
