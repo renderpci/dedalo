@@ -78,7 +78,8 @@ $global_start_time = hrtime(true);
 
 // get post vars. file_get_contents returns a string
 	$str_json = file_get_contents('php://input');
-	//error_log(print_r($str_json,true));
+	// error_log(print_r($str_json,true));
+	// error_log(print_r($_REQUEST,true));
 	if (!empty($str_json)) {
 		$rqo = json_decode( $str_json );
 	}
@@ -185,7 +186,8 @@ $global_start_time = hrtime(true);
 
 
 // output the response JSON string
-	$output_string = json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+	// $output_string = json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+	$output_string = json_handler::encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
 	// debug (browser Server-Timing)
 		// header('Server-Timing: miss, db;dur=53, app;dur=47.2');
