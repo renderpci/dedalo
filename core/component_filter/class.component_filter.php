@@ -397,7 +397,7 @@ class component_filter extends component_relation_common {
 
 
 	/**
-	* GET_VALUE
+	* GET_GRID_VALUE
 	* Get the value of the component.
 	* component filter return a array of values
 	* @param string $lang = DEDALO_DATA_LANG
@@ -405,7 +405,7 @@ class component_filter extends component_relation_common {
 	*
 	* @return dd_grid_cell_object $value
 	*/
-	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : dd_grid_cell_object {
+	public function get_grid_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : dd_grid_cell_object {
 
 		// column_obj. Set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$fields_separator	= $ddo->fields_separator ?? null;
@@ -481,7 +481,7 @@ class component_filter extends component_relation_common {
 				$dd_grid_cell_object->set_value($ar_values);
 
 		return $dd_grid_cell_object;
-	}//end get_value
+	}//end get_grid_value
 
 
 

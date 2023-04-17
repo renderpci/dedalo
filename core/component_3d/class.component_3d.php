@@ -14,7 +14,7 @@ class component_3d extends component_media_common {
 
 
 	/**
-	* GET_VALUE
+	* GET_GRID_VALUE
 	* Get the value of the components. By default will be get_dato().
 	* overwrite in every different specific component
 	* Some the text components can set the value with the dato directly
@@ -24,7 +24,7 @@ class component_3d extends component_media_common {
 	*
 	* @return grid_cell_object $value
 	*/
-	public function get_value(string $lang=DEDALO_DATA_LANG, ?object $ddo=null) : dd_grid_cell_object {
+	public function get_grid_value(string $lang=DEDALO_DATA_LANG, ?object $ddo=null) : dd_grid_cell_object {
 
 		// column_obj
 			$column_obj = isset($this->column_obj)
@@ -60,7 +60,7 @@ class component_3d extends component_media_common {
 
 
 		return $grid_cell_object;
-	}//end get_value
+	}//end get_grid_value
 
 
 

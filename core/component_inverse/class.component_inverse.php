@@ -36,7 +36,7 @@ class component_inverse extends component_common {
 
 
 	/**
-	* GET_VALUE
+	* GET_GRID_VALUE
 	* Get the value of the component.
 	* For component inverse, data is the locators of sections that call to his section
 	* every instance of the component is a unique row with multiple columns for every section that call
@@ -62,7 +62,7 @@ class component_inverse extends component_common {
 	*
 	* @return dd_grid_cell_object $dd_grid_cell_object
 	*/
-	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : dd_grid_cell_object {
+	public function get_grid_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : dd_grid_cell_object {
 
 		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$fields_separator	= $ddo->fields_separator ?? null;
@@ -152,7 +152,7 @@ class component_inverse extends component_common {
 
 	dump($dd_grid_cell_object, '$dd_grid_cell_object ++ '.to_string());
 		return $dd_grid_cell_object;
-	}//end get_value
+	}//end get_grid_value
 
 
 	/**
