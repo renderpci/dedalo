@@ -313,6 +313,12 @@ class section extends common {
 				// get the data of the caller section from database
 					$caller_dato = $caller_section->get_dato();
 
+				// if the caller_dato doesn't has relations log the error and return empty object. (it can happen in time machine situations)
+					if(!isset($caller_dato->relations)){
+						debug_log(__METHOD__." Ignored caller_dataframe section without relations!: ".to_string($this->caller_dataframe->section_tipo).'_'.to_string($this->caller_dataframe->section_id), logger::ERROR);
+						return new stdClass();
+					}
+
 				// relations. Get the data with matching the section_id of the current section with the section_id_key of the data of the caller
 				// section_id === section_id_key
 				// 4 === 4
@@ -3251,6 +3257,15 @@ class section extends common {
 					$components_with_relations	= component_relation_common::get_components_with_relations();
 					$mode						= 'list';
 
+				// if time machine is recovering sections, creates the section and inject his time machine dato to be used as normal section loaded from matrix
+				// all data and sub-data will get from this.
+				if($source_model==='section'){
+					$section = section::get_instance(
+						$section_id,
+						$section_tipo
+					);
+					$section->set_dato($dato);
+				}
 
 				// ar_ddo iterate
 						// build data from elements
