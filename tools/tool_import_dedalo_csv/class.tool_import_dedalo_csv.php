@@ -348,6 +348,13 @@ class tool_import_dedalo_csv extends tool_common {
 			$updated_rows	= [];
 			$failed_rows	= [];
 
+		// check if the value is a valid JSON
+		function is_json($value){
+		return is_string($value) && is_array(json_decode($value, true)) && (json_last_error() == JSON_ERROR_NONE)
+			? true
+			: false;
+		}
+
 		# sort ar_csv_data by section_id (first column)
 			# uasort($ar_csv_data, function($a, $b) {
 			#    return $a[0] > $b[0];
@@ -572,9 +579,26 @@ class tool_import_dedalo_csv extends tool_common {
 				$value = str_replace('U+003B', ';', $value);
 
 				// Check if is a JSON string. Is yes, decode
-					if(strpos($value, '[')===0 || strpos($value, '{')===0) {
-						if($dato_from_json = json_decode($value)) {	// , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
-							$value = $dato_from_json;
+					// if(strpos($value, '[')===0 || strpos($value, '{')===0) {
+					if(is_json($value)){
+						$dato_from_json = json_decode($value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
+						$value = $dato_from_json;
+					}else{
+
+						$begins_one	= substr($value, 0, 1);
+						$ends_one	= substr($value, -1);
+
+						$begins_two	= substr($value, 0, 2);
+						$ends_two	= substr($value, -2);
+
+						if( ($model_name==='component_text_area' || $model_name==='component_input_text')
+							&& (
+								($begins_two !== '["' && $ends_two !== '"]') ||
+								($begins_two !== '["' && $ends_one !== ']') ||
+								($begins_one !== '[' && $ends_two !== '"]')
+							)
+						){
+							$value = [$value];
 						}else{
 							// log JSON conversion error
 							debug_log(__METHOD__." json_last_error: ".json_last_error(), logger::ERROR);
@@ -606,7 +630,7 @@ class tool_import_dedalo_csv extends tool_common {
 							$value = $value->dato;
 						}
 					}
-
+					// dump($value, ' is_json($value +------------------/-----------------------+ '.to_string());
 				# Elements 'translatable' can be formatted as json values like {"lg-eng":"My value","lg-spa":"Mi valor"}
 				if (($translate===true || $with_lang_versions===true) && is_object($value)) {
 					debug_log(__METHOD__." Parsing multi-language value [$component_tipo - $section_tipo - $section_id]: ".to_string($value), logger::DEBUG);
