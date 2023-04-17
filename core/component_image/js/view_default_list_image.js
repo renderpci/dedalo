@@ -37,7 +37,7 @@ view_default_list_image.render = function(self, options) {
 		const wrapper = ui.component.build_wrapper_list(self, {
 			autoload : false
 		})
-		wrapper.classList.add('media')
+		wrapper.classList.add('media','media_wrapper')
 
 	// url
 		// const value		= data.value

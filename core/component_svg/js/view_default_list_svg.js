@@ -35,6 +35,7 @@ view_default_list_svg.render = function(self, options) {
 		const wrapper = ui.component.build_wrapper_list(self, {
 
 		})
+		wrapper.classList.add('media','media_wrapper')
 		wrapper.appendChild(fragment)
 
 
