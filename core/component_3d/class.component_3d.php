@@ -19,12 +19,11 @@ class component_3d extends component_media_common {
 	* overwrite in every different specific component
 	* Some the text components can set the value with the dato directly
 	* the relation components need to process the locator to resolve the value
-	* @param string $lang = DEDALO_DATA_LANG
 	* @param object|null $ddo = null
 	*
 	* @return grid_cell_object $value
 	*/
-	public function get_grid_value(string $lang=DEDALO_DATA_LANG, ?object $ddo=null) : dd_grid_cell_object {
+	public function get_grid_value(?object $ddo=null) : dd_grid_cell_object {
 
 		// column_obj
 			$column_obj = isset($this->column_obj)

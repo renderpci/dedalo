@@ -450,7 +450,7 @@ class tool_export extends tool_common {
 			// get component_value add
 				$component_value = ($this->data_format==='dedalo')
 					? $current_component->get_raw_value()
-					: $current_component->get_grid_value($current_lang, $ddo);
+					: $current_component->get_grid_value($ddo);
 
 			// get columns objects that the component had stored
 				$sub_ar_columns_obj	= $component_value->ar_columns_obj ?? [];

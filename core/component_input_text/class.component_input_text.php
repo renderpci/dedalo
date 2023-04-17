@@ -76,12 +76,11 @@ class component_input_text extends component_common {
 	* overwrite in every different specific component
 	* Some the text components can set the value with the dato directly
 	* the relation components need to process the locator to resolve the value
-	* @param string $lang = DEDALO_DATA_LANG
 	* @param object|null $ddo = null
 	*
 	* @return dd_grid_cell_object $value
 	*/
-	public function get_grid_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : dd_grid_cell_object {
+	public function get_grid_value( object $ddo=null) : dd_grid_cell_object {
 
 		// column_obj. Set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			if(isset($this->column_obj)){
@@ -95,7 +94,7 @@ class component_input_text extends component_common {
 			$dato			= $this->get_dato();
 			$fallback_value	= component_common::extract_component_dato_fallback(
 				$this, // component instance this
-				$lang, // string lang
+				$this->get_lang(), // string lang
 				DEDALO_DATA_LANG_DEFAULT // string main_lang
 			);
 
