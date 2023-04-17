@@ -62,12 +62,16 @@
 			$item = $this->get_data_item($value);
 			// add useful properties
 			// posterframe_url
-				$item->posterframe_url	= $this->get_posterframe_url(true, false, false, false); // $test_file=true, $absolute=false, $avoid_cache=false
-			// default quality video URL (usually from 404)
-				$item->model_url		= $this->file_exist()
+				$item->posterframe_url = $this->get_posterframe_url(
+					false, // test_file
+					false, // absolute
+					false // avoid_cache
+				);
+			// model_url. Default quality video URL (usually from 404)
+				$item->model_url = $this->file_exist()
 					? $this->get_url(false)
 					: null;
-			//  files info datalist. Used for tools to know available quality versions and characteristics (size, URL, etc.)
+			// datalist. Files info datalist. Used for tools to know available quality versions and characteristics (size, URL, etc.)
 				// $item->datalist = $this->get_files_info();
 				$item->datalist = $this->get_datalist();
 

@@ -956,7 +956,7 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 		}//end for (let i = 0; i < ar_sections_len; i++)
 
 	// Store selected value as cookie to recover later
-		const cookie_name  = "selected_typology"
+		const cookie_name  = 'selected_typology'
 		create_cookie(cookie_name, typology_id, 365)
 
 

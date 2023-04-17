@@ -208,7 +208,7 @@ class menu extends common {
 			$info_data->php_session_handler	= ini_get('session.save_handler');
 			$info_data->pg_db				= pg_version(DBi::_getConnection())['server'];
 			$info_data->pg_db_name			= DEDALO_DATABASE_CONN;
-			$info_data->server_software		= $_SERVER['SERVER_SOFTWARE'];
+			$info_data->server_software		= $_SERVER['SERVER_SOFTWARE'] ?? 'unknown';
 			$info_data->dedalo_version		= DEDALO_VERSION;
 			$info_data->dedalo_build		= DEDALO_BUILD;
 			$info_data->php_sapi_name		= php_sapi_name();

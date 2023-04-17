@@ -56,21 +56,26 @@ class navigator {
 
 
 
+	/**
+	 * GET_USER_ID
+	 * Resolve current logged user id
+	 * @return int|null
+	 */
 	public static function get_user_id() : ?int {
 		return isset(navigator::$user_id)
 			? (int)navigator::$user_id
-			: (isset($_SESSION['dedalo'])
+			: (isset($_SESSION['dedalo']) && isset($_SESSION['dedalo']['auth'])
 				? (int)$_SESSION['dedalo']['auth']['user_id']
 				: null);
 	}
-	# Alias of get_user_id
-	public static function get_userID_matrix() : ?int {
-		return (int)navigator::get_user_id();
-	}
+	# Alias of get_user_id (not used)
+		// public static function get_userID_matrix() : ?int {
+		// 	return navigator::get_user_id();
+		// }
 
 
 
-	public static function get_username() : string {
+	public static function get_username() : ?string {
 		return navigator::$username;
 	}
 
