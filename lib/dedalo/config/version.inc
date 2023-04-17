@@ -2849,7 +2849,7 @@
 		Added to get 650 values of marc21 to rsc210
 		Fixed search existing values in tool_import_zotero
 	Released version 5.9.5
-
+		Fixed BOM header in UTF8 at import .csv files
 
 	[/HISTORY]
 
@@ -2874,13 +2874,13 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.9.5';
+	$DEDALO_VERSION = '5.9.5a';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '2023-04-14T13:52:38+02:00');
+	define('DEDALO_BUILD'	, '2023-04-17T10:52:38+02:00');
 
 
 
