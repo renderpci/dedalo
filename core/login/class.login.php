@@ -105,7 +105,9 @@ class login extends common {
 					$activity_datos
 				);
 				// delay failed output after 2 seconds to prevent brute force attacks
-		        sleep(2);
+				if (DEVELOPMENT_SERVER!==true) {
+					sleep(2);
+				}
 				// response
 				$response->msg = "Error: User does not exists or password is invalid!";
 				error_log("DEDALO LOGIN ERROR : Invalid user or password");
@@ -129,7 +131,9 @@ class login extends common {
 					$activity_datos
 				);
 				# delay failed output after 2 seconds to prevent brute force attacks
-		        sleep(2);
+		        if (DEVELOPMENT_SERVER!==true) {
+					sleep(2);
+				}
 				#exit("Error: User $username not exists !");
 				$response->msg = 'Error: User ambiguous';
 				error_log("DEDALO LOGIN ERROR : Invalid user or password. User ambiguous ($username)");
@@ -170,8 +174,9 @@ class login extends common {
 						$activity_datos
 					);
 					# delay failed output by 2 seconds to prevent brute force attacks
-	        		sleep(2);
-
+					if (DEVELOPMENT_SERVER!==true) {
+						sleep(2);
+					}
 					$response->msg = 'Error: Wrong password [1]';
 					error_log("DEDALO LOGIN ERROR : Wrong password [1] (".DEDALO_ENTITY.")");
 					return $response;
@@ -205,7 +210,9 @@ class login extends common {
 				);
 
 				# delay failed output by 2 seconds to prevent brute force attacks
-				sleep(2);
+				if (DEVELOPMENT_SERVER!==true) {
+					sleep(2);
+				}
 				$response->msg = 'Error: Account inactive or not defined [1]';
 				error_log("DEDALO LOGIN ERROR : Account inactive");
 				return $response;
@@ -344,7 +351,9 @@ class login extends common {
 							);
 
 							# delay failed output by 2 seconds to prevent brute force attacks
-							sleep(2);
+							if (DEVELOPMENT_SERVER!==true) {
+								sleep(2);
+							}
 							$response->msg = "[Login_SAML] Error: Account inactive or not defined [1]";
 							error_log("[Login_SAML] DEDALO LOGIN ERROR : Account inactive");
 							return $response;
@@ -422,7 +431,9 @@ class login extends common {
 						);
 
 					# delay failed output after 2 seconds to prevent brute force attacks
-			        sleep(2);
+			        if (DEVELOPMENT_SERVER!==true) {
+						sleep(2);
+					}
 					$response->msg = label::get_label('user_code_does_not_exist_error'); # "Error: User Code not exists! Please try again";
 					error_log("[Login_SAML] DEDALO LOGIN ERROR : Invalid saml code");
 					return $response;
@@ -722,7 +733,7 @@ class login extends common {
 			$response->result_options->user_id		= $user_id;
 
 		// log : Prepare and save login action
-			$browser = $_SERVER['HTTP_USER_AGENT'];
+			$browser = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
 			if (strpos($browser, 'AppleWebKit')===false) $browser = '<i style="color:red">'.$browser.'</i>';
 
 			$activity_datos['result']		= 'allow';
