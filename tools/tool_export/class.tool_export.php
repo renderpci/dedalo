@@ -202,7 +202,7 @@ class tool_export extends tool_common {
 
 		foreach ($records as $current_locator) {
 
-			$ar_row_value = $this->get_value($ar_ddo_map, $current_locator);
+			$ar_row_value = $this->get_grid_value($ar_ddo_map, $current_locator);
 
 			// take the maximum number of rows (the rows can has 1, 2, 55 rows and we need the highest value, 55)
 			$row_count = max($ar_row_value->ar_row_count);
@@ -363,14 +363,14 @@ class tool_export extends tool_common {
 
 
 	/**
-	* GET_VALUE
+	* GET_GRID_VALUE
 	* Builds ddgrid value object
 	* @param array $ar_ddo
 	* @param object $locator
 	*
 	* @return object $value
 	*/
-	protected function get_value(array $ar_ddo, object $locator) {
+	protected function get_grid_value(array $ar_ddo, object $locator) {
 
 		$ar_cells		= [];
 		$ar_row_count	= [];
@@ -450,7 +450,7 @@ class tool_export extends tool_common {
 			// get component_value add
 				$component_value = ($this->data_format==='dedalo')
 					? $current_component->get_raw_value()
-					: $current_component->get_value($current_lang, $ddo);
+					: $current_component->get_grid_value($ddo);
 
 			// get columns objects that the component had stored
 				$sub_ar_columns_obj	= $component_value->ar_columns_obj ?? [];
@@ -475,7 +475,7 @@ class tool_export extends tool_common {
 
 
 		return $value;
-	}//end get_value
+	}//end get_grid_value
 
 
 

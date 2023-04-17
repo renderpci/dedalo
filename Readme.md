@@ -1,10 +1,6 @@
 <img src="https://dedalo.render.es/dedalo/images/logos/dedalo_logo.png" alt="Dédalo logo" />
 
-**IMPORTANT: V6 ontology compatibility with V4 and V5**<br>
-*Starting 21-05-2020, the ontology in V4 and V5 needs to be updated with a new `properties` column in the `jer_dd` table. For compatibility with the upcoming V6, this new column will not affect the functionality of V4 or V5. However, new exported ontology files from master will include this column in copy files. If you do not add this column to `jer_dd`, Dédalo will not import the new files and you will lose the ontology data. Note that you can re-build `jer_dd` carrying out the import process manually.
-Read the update V5.6.0.*
-
-**ATENTION! The `v6_developer` branch is in beta state. Do NOT use it in production.**
+**ATENTION! The `v6` is in release candidate state. Do NOT use it in production.**
 
 ## 1. What is Dédalo?
 
@@ -195,8 +191,7 @@ Windows: Dédalo might run, but we HAVE NOT TESTED IT.
 
 ## 9. Compatible browsers
 
-Dédalo version V6+ is only tested in chromium and webkit browsers (Chrome, Safari, Edge 77+, ...).<br>
-Firefox situation: from Dédalo V4.8 onwards, it is fully compatible with Firefox and can be used in production. However, we need more feedback from the users; please share your experience!
+Dédalo version V6+ is only tested in chromium and webkit browsers (Chrome, Safari, Edge 77+, ...).
 
 Browser	|	Version |	Compatible with Dédalo
 --------- | --------- | ---------

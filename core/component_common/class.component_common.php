@@ -802,16 +802,35 @@ abstract class component_common extends common {
 
 	/**
 	* GET_VALUE
+	* Get the raw value of the components. By default will be get_dato().
+	* overwrite in every different specific component
+	* The direct components can set the value with the dato directly
+	* The relation components will separate the locator in rows
+	* @return string || null $value
+	* 	dd_grid_cell_object
+	*/
+	public function get_value() : ?string {
+
+		$value = null;
+
+		$grid_value = $this->get_grid_value();
+
+
+		return $value;
+	}//end get_value
+
+
+	/**
+	* GET_GRID_VALUE
 	* Get the value of the components. By default will be get_dato().
 	* overwrite in every different specific component
 	* Some the text components can set the value with the dato directly
 	* the relation components need to process the locator to resolve the value
-	* @param string $lang = DEDALO_DATA_LANG
 	* @param object|null $ddo = null
 	*
 	* @return dd_grid_cell_object $dd_grid_cell_object
 	*/
-	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : dd_grid_cell_object {
+	public function get_grid_value(object $ddo=null) : dd_grid_cell_object {
 
 		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$fields_separator	= $ddo->fields_separator ?? null;
@@ -870,7 +889,7 @@ abstract class component_common extends common {
 
 
 		return $dd_grid_cell_object;
-	}//end get_value
+	}//end get_grid_value
 
 
 
@@ -1107,26 +1126,26 @@ abstract class component_common extends common {
 	* set in properties the config of the observer
 	* ex:
 	*  {
-    *	"info": "our own comments to info of the event",
-    *	"server": {
-    *		"config": {
+	*	"info": "our own comments to info of the event",
+	*	"server": {
+	*		"config": {
 	*			"use_inverse_relations"	: bool,
 	* 			"use_observable_dato"	: bool,
 	* 			"use_inverse_relations"	: bool,
 	* 			"filter"				: sqo
-    *		},
-    *		"perform": {
-    *			"params": {
-    *				"xx": bool,
-    * 				"yy": int    *
-    *			},
-    *		"function": "set_dato_xxx"
-    *		}
-    * 	},
-    *	"component_tipo": "ddxx"
-    * }
-    * component_tipo: the component that is observed his changes. the component that fire the event.
-    * config options:
+	*		},
+	*		"perform": {
+	*			"params": {
+	*				"xx": bool,
+	* 				"yy": int    *
+	*			},
+	*		"function": "set_dato_xxx"
+	*		}
+	* 	},
+	*	"component_tipo": "ddxx"
+	* }
+	* component_tipo: the component that is observed his changes. the component that fire the event.
+	* config options:
 	* 	use_self_section: use the $locator (the section that made the change) because the component is in the same section that observable
 	* 	use_observable_dato: use the $observable_dato (the section has added, deleted, changed in portal) because the component to update is in the target section of the portal
 	* 	use_inverse_relations: use all inverse relations of the section, because the component to update is not in the same or target section of portal

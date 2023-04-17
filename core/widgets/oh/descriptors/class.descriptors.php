@@ -83,8 +83,8 @@ class descriptors extends widget_common {
 
 				// create items with the every locator
 				$ar_component_dato	= [];
-				$ar_component_value	= [];
-				$component_value = new stdClass();
+				$ar_component_grid_value	= [];
+				$component_grid_value = new stdClass();
 				foreach ($ar_locator as $locator) {
 
 					$model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
@@ -97,19 +97,19 @@ class descriptors extends widget_common {
 						$locator->section_tipo
 					);
 					$component_dato		= $component->get_dato();
-					$component_value	= $component->get_value();
+					$component_grid_value	= $component->get_grid_value();
 
 					$ar_component_dato	= array_merge($ar_component_dato, $component_dato);
-					$ar_component_value	= array_merge($ar_component_value, $component_value->value);
+					$ar_component_grid_value	= array_merge($ar_component_grid_value, $component_grid_value->value);
 				}
 
 				// prevent empty locators value continue execution generating errors
-					if (!isset($component_value)) {
+					if (!isset($component_grid_value)) {
 						continue;
 					}
 
 				// set value. Using last created component
-					$component_value->value = $ar_component_value;
+					$component_grid_value->value = $ar_component_grid_value;
 
 				// output, use the IPO output for create the items to send to compoment_info and client side
 				foreach ($output as $data_map) {
@@ -122,7 +122,7 @@ class descriptors extends widget_common {
 
 						case 'terms':
 						default:
-							$value = $component_value;
+							$value = $component_grid_value;
 					}
 
 					// get the current row id and the items into the $result
