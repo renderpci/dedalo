@@ -107,6 +107,10 @@
 			// toggle_container_selector
 			>.toggle_container_selector {
 				margin: 0px;
+
+				&.sections {
+					background-color: #a0a0a0;
+				}
 			}
 
 			// search_container_selector
@@ -415,6 +419,8 @@
 
 				// component_presets_label at top
 				>.component_presets_label {
+					display: inline-flex;
+					width: 100%;
 					background-color: #575a5c;
 					color: #ffffff;
 					text-align: center;
@@ -429,7 +435,6 @@
 					>.button.add {
 						color: #565a5c;
 						background-color: #f3f3f3;
-						float: right;
 						cursor: pointer;
 						z-index: 9;
 					}
