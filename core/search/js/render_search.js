@@ -89,6 +89,12 @@ render_search.prototype.list = async function() {
 						// Open search panel
 						toggle_presets(self) // toggle to open from default state close
 					}
+				// type_panel cookie state track
+					// if(self.cookie_track("type_panel")===true) {
+					if(ui_status.value.type_panel && ui_status.value.type_panel.is_open) {
+						// Open search panel
+						toggle_type(self) // toggle to open from default state close
+					}
 			}//end if (ui_status)
 		})
 
@@ -808,32 +814,38 @@ render_search.prototype.render_user_preset_list = async function(ar_elements, pe
 
 
 /**
-* RENDER_sections_selector
+* RENDER_SECTIONS_SELECTOR
 * Render and insert nodes into wrapper
+* @param object self
+* @return DocumentFragment
 */
 const render_sections_selector = (self) => {
 
 	if(!self.sections_selector_data) return false
 
-	// button toggle fields (Show/hide where section fields list are loaded)
-		// const toggle_container_selector = ui.create_dom_element({
-		// 	element_type	: 'div',
-		// 	class_name		: 'toggle_container_selector',
-		// 	inner_html		: get_label.fields,
-		// 	parent			: search_global_container
-		// })
-		// .addEventListener('click',function(){
-		// 	toggle_fields(self)
-		// })
+	// fragment
+		const fragment = new DocumentFragment()
 
-	//wrapper
+	// button toggle type
+		const toggle_container_selector = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'toggle_container_selector sections',
+			inner_html		: get_label.type || 'Type',
+			parent			: fragment
+		})
+		.addEventListener('click',function(e){
+			e.stopPropagation()
+			toggle_type(self)
+		})
+
+	// wrapper
 		const wrapper_sections_selector = ui.create_dom_element({
-			class_name 		: 'wrapper_sections_selector',
-			element_type	: 'div'
+			class_name		: 'wrapper_sections_selector display_none',
+			element_type	: 'div',
+			parent			: fragment
 		})
 		// set wrapper_sections_selector
 		self.wrapper_sections_selector = wrapper_sections_selector
-
 
 	// typologies
 		const typologies = self.sections_selector_data.filter(item => item.type === 'typology')
@@ -880,7 +892,7 @@ const render_sections_selector = (self) => {
 			build_sections_check_boxes(self, typology_selector.value, wrapper_sections_selector_ul)
 
 
-	return wrapper_sections_selector
+	return fragment
 }//end render_sections_selector
 
 
@@ -1129,6 +1141,46 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 
 		return true
 	}//end toggle_operator_value
+
+
+
+	/**
+	* TOGGLE_TYPE
+	* @param object self
+	* @return bool
+	*/
+	export const toggle_type = (self) => {
+
+		const wrapper_sections_selector = self.wrapper_sections_selector
+
+		// cookie to track state
+		const cookie_name = 'type_panel'
+
+		if (wrapper_sections_selector.classList.contains('display_none')) {
+
+			wrapper_sections_selector.classList.remove('display_none')
+
+			// Set search panel as closed
+				self.track_show_panel({
+					name	: cookie_name,
+					action	: 'open'
+				})
+
+		}else{
+
+			if (wrapper_sections_selector && !wrapper_sections_selector.classList.contains('display_none')) {
+				wrapper_sections_selector.classList.add('display_none')
+			}
+
+			// Set search panel as closed
+				self.track_show_panel({
+					name	: cookie_name,
+					action	: 'close'
+				})
+		}
+
+		return true
+	}//end toggle_type
 
 
 
