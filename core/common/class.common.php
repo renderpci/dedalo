@@ -1051,7 +1051,7 @@ abstract class common {
 	public static function get_cookie_properties() : object {
 
 		# Cookie properties
-		$domain		= $_SERVER['SERVER_NAME'];
+		$domain		= $_SERVER['SERVER_NAME'] ?? '';
 		$secure		= stripos(DEDALO_PROTOCOL,'https')!==false ? 'true' : 'false';
 		$httponly	= 'true'; # Not accessible for javascript, only for http/s requests
 
