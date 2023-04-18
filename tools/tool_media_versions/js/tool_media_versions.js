@@ -93,18 +93,19 @@ tool_media_versions.prototype.build = async function(autoload=false) {
 	try {
 
 		// specific actions.. like fix main_element for convenience
-			const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_element")
+			const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==='main_element')
 			self.main_element		= self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
 
 			// self.main_element_quality.
-			// (!) It's used to force a specific main_element quality before render the component
+			// (!) It's used to force a specific quality for main_element before render the component
 				if (self.main_element_quality) {
 					self.main_element.context.features.quality = self.main_element_quality
 				}
 
 		// fix important vars
 			self.ar_quality	= self.caller.context.features.ar_quality
-			self.files_info	= self.caller.data.datalist
+			// self.files_info	= self.caller.data.datalist
+			self.files_info	= self.main_element.data.datalist
 
 	} catch (error) {
 		self.error = error
@@ -119,10 +120,40 @@ tool_media_versions.prototype.build = async function(autoload=false) {
 
 /**
 * GET_FILES_INFO
-* Check if every quality file exists
-* Note that files_info is called 'datalist' in caller component data
+* Check every quality file exists
+* Note that 'files_info' is called 'datalist' in caller and main component data
 * @return promise
-* 	resolve: array of objects
+* 	resolve: result (array of objects)
+* 	sample:
+* [
+    {
+        "quality": "original",
+        "file_exist": true,
+        "file_name": "rsc35_rsc167_238.mp4",
+        "file_path": "/path/dedalo/media/av/original/rsc35_rsc167_238.mp4",
+        "file_url": "/v6/media/av/original/rsc35_rsc167_238.mp4",
+        "file_size": 13975035,
+        "file_time": {...}
+    },
+    {
+        "quality": "404",
+        "file_exist": true,
+        "file_name": "rsc35_rsc167_238.mp4",
+        "file_path": "/path/dedalo/media/av/404/rsc35_rsc167_238.mp4",
+        "file_url": "/v6/media/av/404/rsc35_rsc167_238.mp4",
+        "file_size": 14455274,
+        "file_time": {...}
+    },
+    {
+        "quality": "audio",
+        "file_exist": false,
+        "file_name": null,
+        "file_path": null,
+        "file_url": null,
+        "file_size": null,
+        "file_time": null
+    }
+* ]
 */
 tool_media_versions.prototype.get_files_info = async function() {
 
@@ -148,7 +179,8 @@ tool_media_versions.prototype.get_files_info = async function() {
 		return new Promise(function(resolve){
 
 			data_manager.request({
-				body : rqo
+				body		: rqo,
+				use_worker	: true
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {
