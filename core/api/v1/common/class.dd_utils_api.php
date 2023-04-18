@@ -12,8 +12,9 @@ final class dd_utils_api {
 	* GET_LOGIN_CONTEXT
 	* This function is not used in normal login behavior (login is called directly in start API).
 	* It could be called when the instance of the login has been build with autoload in true.
-	* This function could be caller by external processes as install to get the context of the login to create the login instance
-	* Login only need context, it not need data to be render.
+	* This function could be called by external processes as install to get the context of the login
+	* and to create the login instance
+	* Login only need context, it not needed data to render.
 	* @param object $rqo
 	* {
 	*	action	: 'get_login_context',
@@ -88,28 +89,29 @@ final class dd_utils_api {
 
 
 	/**
-	* DEDALO_VERSION
+	* DEDALO_VERSION (UNUSED !)
+	* Use environment page_globals instead !
 	* @param object $rqo
 	* @return object $response
 	*/
-	public static function dedalo_version(object $rqo) : object {
+		// public static function dedalo_version(object $rqo) : object {
 
-		session_write_close();
+		// 	session_write_close();
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-
-
-		$response->result = (object)[
-			'version' 	=>	DEDALO_VERSION,
-			'build'		=>	DEDALO_BUILD
-		];
-		$response->msg 	  = 'OK. Request done';
+		// 	$response = new stdClass();
+		// 		$response->result	= false;
+		// 		$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 
-		return $response;
-	}//end dedalo_version
+		// 	$response->result = (object)[
+		// 		'version' 	=>	DEDALO_VERSION,
+		// 		'build'		=>	DEDALO_BUILD
+		// 	];
+		// 	$response->msg 	  = 'OK. Request done';
+
+
+		// 	return $response;
+		// }//end dedalo_version
 
 
 
@@ -129,7 +131,7 @@ final class dd_utils_api {
 		$info			= pg_version(DBi::_getConnection());
 		$info['host']	= to_string(DEDALO_HOSTNAME_CONN);
 
-		$response->result	= $info;
+		$response->result	= (object)$info;
 		$response->msg		= 'OK. Request done';
 
 
@@ -235,17 +237,18 @@ final class dd_utils_api {
 
 		session_write_close();
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-
 		// options
 			$options = $rqo->options ?? [];
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// dedalo_prefix_tipos
 			$dedalo_prefix_tipos = array_find((array)$options, function($item){
 				return $item->name==='dedalo_prefix_tipos';
-			})->value;
+			})->value ?? '';
 			$ar_dedalo_prefix_tipos = array_map(function($item){
 				return trim($item);
 			}, explode(',', $dedalo_prefix_tipos));
@@ -272,14 +275,18 @@ final class dd_utils_api {
 
 		// session_write_close();
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+		// options
+			$options = $rqo->options ?? [];
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// dedalo_prefix_tipos
-			$dedalo_prefix_tipos = array_find((array)$rqo->options, function($item){
+			$dedalo_prefix_tipos = array_find((array)$options, function($item){
 				return $item->name==='dedalo_prefix_tipos';
-			})->value;
+			})->value ?? '';
 			$ar_dedalo_prefix_tipos = array_map(function($item){
 				return trim($item);
 			}, explode(',', $dedalo_prefix_tipos));
@@ -319,14 +326,18 @@ final class dd_utils_api {
 
 		// session_write_close();
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+		// options
+			$options = $rqo->options ?? [];
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// dedalo_prefix_tipos
-			$dedalo_prefix_tipos = array_find((array)$rqo->options, function($item){
+			$dedalo_prefix_tipos = array_find((array)$options, function($item){
 				return $item->name==='dedalo_prefix_tipos';
-			})->value;
+			})->value ?? '';
 			$ar_dedalo_prefix_tipos = array_map(function($item){
 				return trim($item);
 			}, explode(',', $dedalo_prefix_tipos));
@@ -455,38 +466,44 @@ final class dd_utils_api {
 
 		// session_write_close();
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-
-
 		set_time_limit ( 259200 );  // 3 days
 
-		if($search_query_object = json_decode($rqo->options)) {
+		// options
+			$options	= $rqo->options ?? null;
+			$sqo		= is_string($options)
+				? json_handler::decode($options)
+				: $options;
 
-			$search = search::get_instance($search_query_object);
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
-			// search exec
-				$rows = $search->search();
+		// search if not empty
+			if (!empty($sqo)) {
 
-			// SQL string query
-				$sql_query = $rows->strQuery;
+				// search exec
+					$search	= search::get_instance($sqo);
+					$rows	= $search->search();
 
-				$ar_lines = explode(PHP_EOL, $sql_query);
-				$ar_final = array_map(function($line){
-					$line = trim($line);
-					if (strpos($line, '--')===0) {
-						$line = '<span class="notes">'.$line.'</span>';
-					}
-					return $line;
-				}, $ar_lines);
-				$sql_query = implode(PHP_EOL, $ar_final);
-				$sql_query = "<pre style=\"font-size:12px\">".$sql_query."</pre>";
+				// SQL string query decorator
+					$sql_query = $rows->strQuery ?? '';
 
-			$response->result	= true;
-			$response->msg		= $sql_query;
-			$response->rows		= $rows;
-		}
+					$ar_lines = explode(PHP_EOL, $sql_query);
+					$ar_final = array_map(function($line){
+						$line = trim($line);
+						// if (strpos($line, '--')===0) {
+						// 	$line = '<span class="notes">'.$line.'</span>';
+						// }
+						return $line;
+					}, $ar_lines);
+					$sql_query = implode(PHP_EOL, $ar_final);
+					// $sql_query = '<pre>'.$sql_query.'</pre>';
+
+				$response->result	= true;
+				$response->msg		= $sql_query;
+				$response->rows		= $rows;
+			}
 
 
 		return $response;
@@ -509,14 +526,15 @@ final class dd_utils_api {
 	*/
 	public static function change_lang(object $rqo) : object {
 
-		$response = new stdClass();
-			$response->result	= true;
-			$response->msg		= 'OK. Request done ['.__METHOD__.']';
-
 		// options
 			$options					= $rqo->options;
 			$dedalo_data_lang			= $options->dedalo_data_lang ?? null;
 			$dedalo_application_lang	= $options->dedalo_application_lang ?? null;
+
+		// response
+			$response = new stdClass();
+				$response->result	= true;
+				$response->msg		= 'OK. Request done ['.__METHOD__.']';
 
 		// dedalo_data_lang
 			if (!empty($dedalo_data_lang)) {
@@ -587,12 +605,13 @@ final class dd_utils_api {
 	*/
 	public static function quit(object $rqo) : object {
 
-		$response = new stdClass();
-			$response->result	= true;
-			$response->msg		= 'OK. Request done ['.__METHOD__.']';
-
 		// options
 			$options = $rqo->options;
+
+		// response
+			$response = new stdClass();
+				$response->result	= true;
+				$response->msg		= 'OK. Request done ['.__METHOD__.']';
 
 		// Login type . Get before unset session
 			$login_type = isset($_SESSION['dedalo']['auth']['login_type'])
@@ -602,7 +621,7 @@ final class dd_utils_api {
 		// Quit action
 			$result = login::Quit( $options );
 
-		// Close script session
+		// Close script session after log out
 			session_write_close();
 
 		// Response
@@ -721,14 +740,18 @@ final class dd_utils_api {
 	*/
 	public static function regenerate_relations(object $rqo) : object {
 
-		$response = new stdClass();
-			$response->result	= true;
-			$response->msg		= 'Ok. Request done ['.__METHOD__.']';
-
 		session_write_close();
 
+		// options
+			$options = $rqo->options;
+
+		// response
+			$response = new stdClass();
+				$response->result	= true;
+				$response->msg		= 'Ok. Request done ['.__METHOD__.']';
+
 		// tables value
-			$item_tables = array_find($rqo->options, function($item){
+			$item_tables = array_find($options, function($item){
 				return $item->name==='tables';
 			});
 
@@ -783,7 +806,6 @@ final class dd_utils_api {
 			$response = new stdClass();
 				$response->result	= false;
 				$response->msg		= 'Error. '.label::get_label('error_on_upload_file');
-
 
 		// check for upload issues
 		try {
@@ -1103,11 +1125,7 @@ final class dd_utils_api {
 		// Ignore user abort action
 		ignore_user_abort(true);
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-
-		// short vars
+		// options
 			$options		= $rqo->options;
 			$section_id		= $options->section_id;
 			$section_tipo	= $options->section_tipo;
@@ -1146,9 +1164,13 @@ final class dd_utils_api {
 	*/
 	public static function get_dedalo_files(object $rqo) : object {
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+		// session unlock
+		session_write_close();
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// get files
 			$files = [];
@@ -1403,7 +1425,7 @@ final class dd_utils_api {
 	*
 	* @return array $files
 	*/
-	private static function get_dir_files( string $dir, array $ext, callable $format ) : array {
+	private static function get_dir_files(string $dir, array $ext, callable $format) : array {
 
 		$rii = new RecursiveIteratorIterator(
 			new RecursiveDirectoryIterator( $dir )
@@ -1442,11 +1464,11 @@ final class dd_utils_api {
 	private static function error_number_to_text(int $f_error_number) : string {
 
 		if( $f_error_number===0 ) {
-						 # all is OK
+						 // all is OK
 						 $f_error_text = label::get_label('file_uploaded_successfully');
 		}else{
 			switch($f_error_number) {
-						 # Error by number
+						 // Error by number
 				case 1 : $f_error_text = label::get_label('uploaded_file_exceeds_the_directive');	break;
 				case 2 : $f_error_text = label::get_label('uploaded_file_exceeds_the_maximum_size');	break;
 				case 3 : $f_error_text = label::get_label('uploaded_file_was_only_partially_uploaded');	break;

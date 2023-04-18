@@ -672,7 +672,8 @@ class ts_object {
 					// $current2_value = $component->get_value();
 
 					// $current_value = $component->get_dato();
-					dump($current_value, ' TO BE ADAPTED TO v6 +--------------------------------------------------+ '.to_string($tipo));
+					// dump($current_value, ' TO BE ADAPTED TO v6 +--------------------------------------------------+ '.to_string($tipo));
+					// @todo :  TO BE ADAPTED TO v6
 					if (!empty($current_value)) {
 						// $ar_valor[] = implode(', ', $current_value);
 						$ar_valor[] = $current_value;
