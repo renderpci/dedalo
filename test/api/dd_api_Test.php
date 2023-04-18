@@ -13,7 +13,7 @@ use PHPUnit\Framework\Attributes\TestDox;
 	}
 
 
-final class api_v1_test extends TestCase {
+final class dd_api_Test extends TestCase {
 
 
 
