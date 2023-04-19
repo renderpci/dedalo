@@ -52,21 +52,35 @@ class tools_register {
 					$basename = pathinfo($current_dir_tool)['basename'];
 
 				// ignore folders with name different from pattern 'tool_*'
-					if ($basename==='tool_common' || $basename==='tool_dev_template' || preg_match('/^tool_\w+$/', $basename, $output_array)!==1) {
-						debug_log(__METHOD__." Ignored dir  ".to_string($basename), logger::ERROR);
+					if ($basename==='tool_common' || $basename==='tool_dev_template' || $basename==='acc') {
+						continue;
+					}
+					if (preg_match('/^tool_\w+$/', $basename, $output_array)!==1) {
+						debug_log(__METHOD__
+							. " Ignored non tool valid directory:" .PHP_EOL
+							. 'dirname: ' . $basename
+							, logger::ERROR
+						);
 						continue;
 					}
 
 				// info_file register.json file check
 					$info_file = $current_dir_tool . '/register.json';
 					if(!file_exists($info_file)){
-						debug_log(__METHOD__." ERROR. File register.json does not exist into $current_dir_tool ".to_string(), logger::ERROR);
+						debug_log(__METHOD__
+							. " ERROR. File register.json does not exist into directory: ".PHP_EOL
+							. " $current_dir_tool "
+							, logger::ERROR
+						);
 						continue;
 					}
 
 				// info object (JSON encoded)
 					if( !$info_object = json_decode( file_get_contents($info_file) ) ){
-						debug_log(__METHOD__." ERROR. Wrong file register.json . Is not JSON valid file ".to_string(), logger::ERROR);
+						debug_log(__METHOD__
+							." ERROR. Wrong file register.json . Is not a JSON valid file "
+							, logger::ERROR
+						);
 						continue;
 					}
 
@@ -77,10 +91,22 @@ class tools_register {
 						? $new_info_object->components->{$tipo_ontology}->dato->{DEDALO_DATA_NOLAN}
 						: null;
 
-					if(!empty($current_ontology)){
+					if(!empty($current_ontology)) {
 
+						if (isset($current_ontology[0]) && empty((array)$current_ontology[0])) {
+							debug_log(__METHOD__
+								." ERROR. Ignored Wrong file register.json ONTOLOGY DATA (empty item value)" .PHP_EOL
+								. ' dir_tool: ' . $current_dir_tool
+								, logger::ERROR
+							);
+							continue;
+						}
 						if (isset($current_ontology[1])) {
-							debug_log(__METHOD__." ERROR. Ignored Wrong file register.json ONTOLOGY DATA (more than one value)".to_string(), logger::ERROR);
+							debug_log(__METHOD__
+								." ERROR. Ignored Wrong file register.json ONTOLOGY DATA (more than one value)" .PHP_EOL
+								. ' dir_tool: ' . $current_dir_tool
+								, logger::ERROR
+							);
 							continue;
 						}
 
@@ -123,7 +149,10 @@ class tools_register {
 
 				// import ontology (structure) in jer_dd
 					if (defined('ONTOLOGY_DB')) {
-						debug_log(__METHOD__." !!!!! ignored ontology import (ONTOLOGY_DB is defined) ".to_string(), logger::WARNING);
+						debug_log(__METHOD__
+							." !!!!! ignored ontology import (ONTOLOGY_DB is defined and this prevent to import ontology)"
+							, logger::WARNING
+						);
 					}else{
 						foreach ($ar_ontologies as $current_ontology) {
 							ontology::import($current_ontology);
@@ -149,7 +178,10 @@ class tools_register {
 								$msg = isset($current_tool_section_data->info)
 									? $current_tool_section_data->info
 									: 'This file must be downloaded from current tool Dédalo Tools Development record using the button \'Download register file\' ';
-								debug_log(__METHOD__." Error. tool register file of '$basename' is a placeholder !".PHP_EOL.$msg, logger::ERROR);
+								debug_log(__METHOD__
+									. " Error. tool register file of basename: '$basename' is a placeholder !" . PHP_EOL
+									. $msg
+									, logger::ERROR);
 								continue;
 							}
 
@@ -157,12 +189,20 @@ class tools_register {
 							try {
 								$tool_name = reset($current_tool_section_data->components->{self::$tipo_tool_name}->dato->{DEDALO_DATA_NOLAN});
 							} catch (Exception $e) {
-								debug_log(__METHOD__." ERROR on get tool name ".$e->getMessage(), logger::ERROR);
-								debug_log(__METHOD__." Ignored tool ! ".to_string($current_tool_section_data->section_id), logger::ERROR);
+								debug_log(__METHOD__
+									. " ERROR on get tool name " .PHP_EOL
+									. ' Exception: '. $e->getMessage() . PHP_EOL
+									. ' The tool will be ignored. section_id: '. $current_tool_section_data->section_id
+									, logger::ERROR
+								);
 								continue;
 							}
 							if (empty($tool_name)) {
-								debug_log(__METHOD__." Error. tool name is empty ! ".to_string($current_tool_section_data->section_id), logger::ERROR);
+								debug_log(__METHOD__
+									. " Error. tool name is empty ! Ignored tool" . PHP_EOL
+									. ' section_id: '.to_string($current_tool_section_data->section_id)
+									, logger::ERROR
+								);
 								continue;
 							}
 
@@ -220,7 +260,7 @@ class tools_register {
 							);
 							$component->set_dato([$tool_object]);
 							$component->Save();
-							$tool_config = tools_register::create_tool_config($tool_object->name);
+							tools_register::create_tool_config($tool_object->name);
 					}
 			}
 
@@ -230,7 +270,11 @@ class tools_register {
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__." Imported ".($counter+1)." ontology items from dirs: ".json_encode($info_file_processed, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), logger::DEBUG);
+				debug_log(__METHOD__
+					. " Imported ".($counter+1)." ontology items from dirs: ". PHP_EOL
+					. json_encode($info_file_processed, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
+					, logger::DEBUG
+				);
 			}
 
 
@@ -510,7 +554,7 @@ class tools_register {
 			$value		= $dato_ref=='1' ? true : false;
 			$tool_object->requirement_translatable = $value;
 
-		// ontology
+		// ontology -component_json-
 			$component_tipo	= self::$tipo_ontology; // 'dd1334';
 			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 			$component		= component_common::get_instance(
@@ -524,7 +568,7 @@ class tools_register {
 			$dato	= (array)$component->get_dato();
 			$value	= $dato[0] ?? null;
 			// empty object case check
-			if (empty((array)$value)) {
+			if (empty($value) || empty((array)$value)) {
 				$value = null;
 			}
 			$tool_object->ontology = $value;
@@ -630,11 +674,21 @@ class tools_register {
 	*/
 	public static function renumerate_term_id(array $ontology, &$counter) : array {
 
+		// empty case
+			if (empty($ontology)) {
+				return $ontology;
+			}
+
 		foreach ($ontology as $item) {
 
 			// bad ontology error skip
 				if (!isset($item->tipo)) {
-					debug_log(__METHOD__." Skipped wrong ontology. ontology tipo is not set +++++++++++++++++++++++++++++++++++++++++++++ ".to_string(), logger::ERROR);
+					debug_log(__METHOD__
+						. " Skipped wrong ontology element. Item ontology tipo is not set" .PHP_EOL
+						. 'item: '.to_string($item) . PHP_EOL
+						. 'ontology: '.to_string($ontology)
+						, logger::ERROR
+					);
 					continue;
 				}
 
