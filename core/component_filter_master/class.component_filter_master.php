@@ -1,7 +1,6 @@
 <?php
-include_once( DEDALO_CORE_PATH . '/component_filter/class.component_filter.php' );
 /*
-* CLASS COMPONENT FILTER MASTER
+* CLASS COMPONENT_FILTER_MASTER
 *
 *
 */
@@ -9,34 +8,9 @@ class component_filter_master extends component_filter {
 
 
 
-	private $user_id;
-	// protected $caller_id;
-
-
-
-	/**
-	* __CONSTRUCT
-	*/
-	protected function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
-
-		$this->lang = DEDALO_DATA_NOLAN;
-
-		// Note that parent is NOT component_common here (is component_filter)
-		parent::__construct($tipo, $parent, $mode, $this->lang, $section_tipo);
-
-		// $this->user_id  = $this->get_parent();
-
-		// # caller_id from parent var (default)
-		// if(!empty($parent)) {
-		// 	$this->caller_id = $parent;
-		// }
-	}//end __construct
-
-
-
 	/**
 	* SAVE OVERRIDE
-	* Overwrite component_common method
+	* Overwrite component_filter method
 	* @return int|null $section_id
 	*/
 	public function Save() : ?int {
@@ -52,10 +26,9 @@ class component_filter_master extends component_filter {
 	/**
 	* PROPAGATE_FILTER
 	* Only to catch calls to parent method
+	* @return bool
 	*/
 	public function propagate_filter() : bool {
-		# Nothing to do
-		// debug_log(__METHOD__." Invalid call !! ".to_string(), logger::ERROR);
 
 		return true;
 	}//end propagate_filter

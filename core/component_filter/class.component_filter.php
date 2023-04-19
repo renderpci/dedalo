@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS COMPONENT FILTER
 
 1 - Get the section_id of the user
@@ -370,12 +370,12 @@ class component_filter extends component_relation_common {
 		$ar_children = section::get_ar_children_tipo_by_model_name_in_section(
 			$section_tipo,
 			$ar_model_name_required,
-			$from_cache=true,
-			$resolve_virtual=true, // (!) keep default resolve_virtual=false
-			$recursive=true,
-			$search_exact=true,
-			$ar_tipo_exclude_elements=false,
-			$ar_exclude_models=null
+			true, // bool from_cache
+			true, // bool resolve_virtual (!) keep default resolve_virtual=false
+			true, // bool recursive
+			true, // bool search_exact
+			false, // array|bool ar_tipo_exclude_elements
+			null // array|null ar_exclude_models
 		);
 		foreach ($ar_children as $child_tipo) {
 

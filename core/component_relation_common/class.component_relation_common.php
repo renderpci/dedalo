@@ -268,35 +268,38 @@ class component_relation_common extends component_common {
 			$format_columns		= $ddo->format_columns ?? null;
 			$class_list			= $ddo->class_list ?? null;
 
-		$data = $this->get_dato();
+		// data
+			$data = $this->get_dato() ?? [];
 
 		// set the label of the component as column label
-		$label = $this->get_label();
-		// get the request request_config of the component
+			$label = $this->get_label();
+
+		// request_config. Get/build the request_config of the component
 		// the caller can built a request_config that will used instead the default request_config
-		$request_config = isset($this->request_config)
-			? $this->request_config
-			: $this->build_request_config();
+			$request_config = isset($this->request_config)
+				? $this->request_config
+				: $this->build_request_config();
 
 		// get the correct rqo (use only the dedalo api_engine)
-		$dedalo_request_config = array_find($request_config, function($el){
-			return $el->api_engine==='dedalo';
-		});
+			$dedalo_request_config = array_find($request_config, function($el){
+				return $el->api_engine==='dedalo';
+			});
 
-		// get the ddo_map to be used to create the components related to the portal
-		$ddo_map = $dedalo_request_config->show->ddo_map;
+		// ddo_map. Get the ddo_map to be used to create the components related to the portal
+			$ddo_map = $dedalo_request_config->show->ddo_map;
 
-		$ar_cells			= [];
-		$ar_columns_obj		= [];
-		$sub_row_count		= 0;
-		$sub_column_count	= null;
-		// the column_object could be injected for the caller or build new one
-		if(isset($this->column_obj)){
-			$column_obj = $this->column_obj;
-		}else{
-			$column_obj = new stdClass();
-				$column_obj->id = $this->section_tipo.'_'.$this->tipo;
-		}
+		// short vars
+			$ar_cells				= [];
+			$ar_columns_obj			= [];
+			$sub_row_count			= 0;
+			// $sub_column_count	= null;
+			// the column_object could be injected for the caller or build new one
+			if(isset($this->column_obj)){
+				$column_obj = $this->column_obj;
+			}else{
+				$column_obj = new stdClass();
+					$column_obj->id = $this->section_tipo.'_'.$this->tipo;
+			}
 
 		// children_recursive function, get all ddo chain that depends of this component
 			if (!function_exists('get_children_recursive')) {
@@ -336,8 +339,15 @@ class component_relation_common extends component_common {
 			$ddo_direct_children = array_filter($ddo_map, function($el){
 				return $el->parent === $this->tipo;
 			});
+			if (empty($ddo_direct_children)) {
+				debug_log(__METHOD__
+					. " WARNING! Empty direct_children for tipo: $this->tipo" .PHP_EOL
+					. 'ddo: ' . to_string($ddo)
+					, logger::WARNING
+				);
+			}
 
-		$components_with_relations	= component_relation_common::get_components_with_relations();
+		$components_with_relations = component_relation_common::get_components_with_relations();
 		// removed at 18-03-2023 because portal error, it's not possible resolve section_tipo here
 		// if(empty($data)){
 		// 	$pseudo_locator = new stdClass();
@@ -346,9 +356,10 @@ class component_relation_common extends component_common {
 		// 		$pseudo_locator->section_id		= null;
 		// 	$data[] = $pseudo_locator;
 		// }
-		foreach($data as $current_key => $locator){
+		foreach($data as $current_key => $locator) {
+
 			$locator_column_obj	= [];
-			$ar_columns = [];
+			$ar_columns			= [];
 			foreach ($ddo_direct_children as $ddo) {
 				// the the ddo has a multiple section_tipo (such as toponymy component_autocomplete), reset the section_tipo
 				$ddo_section_tipo		= is_array($ddo->section_tipo) ? reset($ddo->section_tipo) : $ddo->section_tipo;
@@ -359,8 +370,7 @@ class component_relation_common extends component_common {
 				$translatable			= RecordObj_dd::get_translatable($ddo->tipo);
 				$current_lang			= $translatable===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 				$component_model		= RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
-					// dump($component_model,'$component_model +++++++++++++++  tipo: '.$ddo->tipo.' - lang: '.$current_lang);
-				$current_component 	= component_common::get_instance(
+				$current_component		= component_common::get_instance(
 					$component_model,
 					$ddo->tipo,
 					$locator->section_id,
@@ -416,7 +426,7 @@ class component_relation_common extends component_common {
 
 				// store the columns into the full columns array
 				$ar_columns[] = $current_column;
-			}// end foreach ($ddo_direct_children as $ddo)
+			}//end foreach ($ddo_direct_children as $ddo)
 
 			// in the case that the portals has sub-data, this sub-data will separated only in columns, not in rows
 			if(isset($this->sub_columns_divison) && $this->sub_columns_divison || $this->section_id === null){

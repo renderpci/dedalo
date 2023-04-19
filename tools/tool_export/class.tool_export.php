@@ -384,10 +384,10 @@ class tool_export extends tool_common {
 			$ddo		= ($first_path->section_tipo===$locator->section_tipo) ? $first_path : null;
 
 			// set the separator if the ddo has a specific separator, it will be used instead the component default separator
-				$fields_separator	= $ddo->fields_separator ?? null;
-				$records_separator	= $ddo->records_separator ?? null;
-				$format_columns		= $ddo->format_columns ?? null;
-				$class_list			= $ddo->class_list ?? null;
+				// $fields_separator	= $ddo->fields_separator ?? null;
+				// $records_separator	= $ddo->records_separator ?? null;
+				// $format_columns		= $ddo->format_columns ?? null;
+				// $class_list			= $ddo->class_list ?? null;
 
 			// component. Create the component to get the value of the column
 				$RecordObj_dd		= new RecordObj_dd($ddo->component_tipo);

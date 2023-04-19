@@ -228,38 +228,51 @@ const get_table_columns = function(self, current_data) {
 
 				switch(current_data.cell_type) {
 					case 'header':
-						const header_node = get_header_column(self, current_data)
-						column_nodes.push(header_node)
+						column_nodes.push(
+							get_header_column(self, current_data)
+						)
 						break;
 					case 'av':
-						const av_node = get_av_column(current_data)
-						column_nodes.push(av_node)
+						column_nodes.push(
+							get_av_column(current_data)
+						)
 						break;
 
 					case 'img':
-						const img_node = get_img_column(current_data)
-						column_nodes.push(img_node)
+						column_nodes.push(
+							get_img_column(current_data)
+						)
 						break;
 
 					case 'button':
-						const button_node = get_button_column(current_data)
-						column_nodes.push(button_node)
+						column_nodes.push(
+							get_button_column(current_data)
+						)
 						break;
 
 					case 'json':
-						const json_node = get_json_column(current_data)
-						column_nodes.push(json_node)
+						column_nodes.push(
+							get_json_column(current_data)
+						)
 						break;
 
 					case 'section_id':
-						const section_id_node = get_section_id_column(current_data)
-						column_nodes.push(section_id_node)
+						column_nodes.push(
+							get_section_id_column(current_data)
+						)
+						break;
+
+					case 'iri':
+						column_nodes.push(
+							get_iri_column(current_data)
+						)
 						break;
 
 					case 'text':
 					default:
-						const column_node = get_text_column(current_data)
-						column_nodes.push(column_node)
+						column_nodes.push(
+							get_text_column(current_data)
+						)
 						break;
 				}//end switch(current_data.cell_type)
 			}// end if(current_data.type==='column' && current_data.cell_type)
@@ -424,7 +437,7 @@ const get_img_column = function(current_data){
 * @param object current_data
 * @return HTMLElement button (img)
 */
-const get_button_column = function(current_data){
+const get_button_column = function(current_data) {
 
 	const value			= current_data.value[0]
 	const class_list	= value.class_list || ''
