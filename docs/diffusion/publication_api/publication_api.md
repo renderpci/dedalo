@@ -489,27 +489,27 @@ Defines the lang of the data.
 Dédalo is a multilingual system, every installation has his own language definition in his own configuration. The request to API will define the language that you want retrieve information. If this parameter is not defined publication API will get the default lang defined in [DEFAULT_LANG](./server_config_api.md#setting-the-default-lang-to-get-data) constant in server_config_api.php file.
 
 ??? note "Languages"
-For the languages, Dédalo uses the pattern: `lg-xxx`
-lg : identify the term as language
-xxx : with the official tld of the ISO 639-6, Alpha-4 code for comprehensive coverage of language variants.
+    For the languages, Dédalo uses the pattern: `lg-xxx`
+    lg : identify the term as language
+    xxx : with the official tld of the ISO 639-6, Alpha-4 code for comprehensive coverage of language variants.
 
-Some common languages:
+    Some common languages:
 
-| Value | Diffusion language |
-| --- | --- |
-| lg-spa | Spanish |
-| lg-cat | Catalan |
-| lg-eus | Basque |
-| lg-eng | English |
-| lg-fra | French |
-| lg-ita | Italian |
-| lg-por | Portuguese |
-| lg-deu | German |
-| lg-ara | Arabian |
-| lg-ell | Greek |
-| lg-rus | Russian |
-| lg-ces | Czech |
-| lg-jpn | Japanese |
+    | Value | Diffusion language |
+    | --- | --- |
+    | lg-spa | Spanish |
+    | lg-cat | Catalan |
+    | lg-eus | Basque |
+    | lg-eng | English |
+    | lg-fra | French |
+    | lg-ita | Italian |
+    | lg-por | Portuguese |
+    | lg-deu | German |
+    | lg-ara | Arabian |
+    | lg-ell | Greek |
+    | lg-rus | Russian |
+    | lg-ces | Czech |
+    | lg-jpn | Japanese |
 
 #### order
 
