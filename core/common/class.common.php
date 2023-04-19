@@ -2751,7 +2751,6 @@ abstract class common {
 							$get_ddo_map		= $parsed_item->show->get_ddo_map ?? false;
 							$ar_ddo_calcutaled	= [];
 							if($get_ddo_map!==false) {
-
 								switch ($get_ddo_map->model) {
 
 									case 'section_map':
@@ -2763,7 +2762,6 @@ abstract class common {
 												debug_log(__METHOD__." Ignored section_tipo without section_map  ".to_string($current_section_tipo), logger::WARNING);
 												continue;
 											}
-
 											foreach ($get_ddo_map->columns as $current_column_path) {
 
 												$section_map_value = get_object_property($section_map, $current_column_path);
