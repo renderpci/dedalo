@@ -512,3 +512,41 @@ const get_section_id_column = function(current_data) {
 
 	return section_id_node
 }//end get_section_id_column
+
+
+
+/**
+* GET_IRI_COLUMN
+* @param object current_data
+* @return HTMLElement text_node (span)
+*/
+const get_iri_column = function(current_data) {
+
+	const class_list = current_data.class_list || ''
+
+	// td_node
+		const td_node = ui.create_dom_element({
+			element_type	: 'td',
+			class_name		: class_list
+		})
+
+	//  links
+		const value			= current_data.value || []
+		const value_length	= value.length
+		for (let i = 0; i < value_length; i++) {
+			const item = value[i]
+			ui.create_dom_element({
+				element_type	: 'a',
+				href			: item.iri,
+				inner_html		: item.title || item.iri,
+				parent			: td_node
+			})
+			// space
+			if (i < value_length-1) {
+				td_node.appendChild( document.createTextNode( ' | ' ) );
+			}
+		}
+
+
+	return td_node
+}//end get_iri_column
