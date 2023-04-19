@@ -15,8 +15,20 @@ class component_inverse extends component_common {
 	*/
 	public function get_dato() {
 
-		$section	= $this->get_my_section();
-		$dato		= $section->get_inverse_locators();
+		// dato_resolved. Already resolved case
+			if(isset($this->dato_resolved)) {
+				return $this->dato_resolved;
+			}
+
+		// section search for inverse locators
+			$section	= $this->get_my_section();
+			$dato		= $section->get_inverse_locators();
+
+		// fix dato
+			$this->dato = $dato;
+
+		// Set as loaded
+			$this->bl_loaded_matrix_data = true;
 
 		return $dato;
 	}//end get_dato
@@ -149,9 +161,11 @@ class component_inverse extends component_common {
 				$dd_grid_cell_object->set_records_separator($records_separator);
 				$dd_grid_cell_object->set_value([$grid_row]);
 
-	dump($dd_grid_cell_object, '$dd_grid_cell_object ++ '.to_string());
+		dump($dd_grid_cell_object, '$dd_grid_cell_object ++ '.to_string());
+
 		return $dd_grid_cell_object;
 	}//end get_grid_value
+
 
 
 	/**
