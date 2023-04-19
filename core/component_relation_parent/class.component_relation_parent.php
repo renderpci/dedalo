@@ -92,7 +92,7 @@ class component_relation_parent extends component_relation_common {
 	* GET_DATO_FULL
 	* @return array $dato_export
 	*/
-	public function get_dato_full() {
+	public function get_dato_full() : array {
 
 		$dato = $this->get_dato();
 		$tipo = $this->get_tipo();
@@ -104,7 +104,7 @@ class component_relation_parent extends component_relation_common {
 			$dato_length	= sizeof($dato);
 			for ($i=0; $i < $dato_length; $i++) {
 
-				$item = &$dato[i];
+				$item = $dato[$i];
 				// create a new locator and change from component tipo. Note that this component dont have relation type (!)
 				$locator = new locator();
 					$locator->set_section_tipo($item->section_tipo);
