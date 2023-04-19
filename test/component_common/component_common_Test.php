@@ -25,6 +25,8 @@ final class component_common_test extends TestCase {
 	*/
 	public function test_get_instance() : void {
 
+		login_test::force_login(1);
+
 		// elements
 			$elements = get_elements();
 
@@ -106,15 +108,17 @@ final class component_common_test extends TestCase {
 
 
 	/**
-	* TEST_COMPONENT_DATO
+	* TEST_GET_DATO
 	* @return void
 	*/
-	public function test_component_dato(): void {
+	public function test_get_dato(): void {
 
 		// elements
 			$elements = get_elements();
 
+		// default dato
 		foreach ($elements as $element) {
+			$_ENV['DEDALO_ERRORS'] = []; // reset
 
 			$component = component_common::get_instance(
 				$element->model, // string model
@@ -125,33 +129,112 @@ final class component_common_test extends TestCase {
 				$element->section_tipo // string section_tipo
 			);
 
-			// dato type
-				$dato = $component->get_dato();
-				$element->dato_type = gettype($dato);
+			$this->assertTrue(
+				$component->get_bl_loaded_matrix_data()===false,
+				'expected false for bl_loaded_matrix_data'
+			);
 
+			// dato
+			$dato = $component->get_dato();
+
+			if (!empty($dato)) {
+				$this->assertTrue(
+					$component->get_bl_loaded_matrix_data()===true,
+					'expected true for bl_loaded_matrix_data '.$element->model
+				);
+			}
+
+			$element->dato_type	= gettype($dato);
+
+			$this->assertTrue(
+				empty($_ENV['DEDALO_ERRORS']),
+				'expected running without errors'
+			);
 
 			switch ($element->model) {
 				case 'component_section_id':
-					$this->assertTrue( gettype($dato)==='integer' );
-
+					$this->assertTrue(
+						gettype($dato)==='integer' ,
+						'expected type integer'
+					);
 					// $component->set_dato('string');
 					// $dato = $component->get_dato();
 					// $this->assertTrue( gettype($dato)==='integer' );
 					break;
 				default:
-					$this->assertTrue( gettype($dato)==='array' || is_null($dato) );
+					$this->assertTrue(
+						gettype($dato)==='array' || is_null($dato),
+						'expected type array or null'
+					);
 					break;
 			}
 		}
-	}//end test_component_dato
+
+		// data_source dato (tm)
+		foreach ($elements as $element) {
+			$_ENV['DEDALO_ERRORS'] = []; // reset
+
+			$component = component_common::get_instance(
+				$element->model, // string model
+				$element->tipo, // string tipo
+				$element->section_id, // string section_id
+				$element->mode, // string mode
+				$element->lang, // string lang
+				$element->section_tipo, // string section_tipo
+				false
+			);
+			$component->set_data_source('tm');
+			$component->set_matrix_id('1');
+
+			$this->assertTrue(
+				$component->get_bl_loaded_matrix_data()===false,
+				'expected false for bl_loaded_matrix_data'
+			);
+
+			// dato
+			$dato = $component->get_dato();
+
+			if (!empty($dato)) {
+				$this->assertTrue(
+					$component->get_bl_loaded_matrix_data()===true,
+					'expected true for bl_loaded_matrix_data '.$element->model
+				);
+			}
+
+			$element->dato_type	= gettype($dato);
+
+			$this->assertTrue(
+				empty($_ENV['DEDALO_ERRORS']),
+				'expected running without errors'
+			);
+
+			switch ($element->model) {
+				case 'component_section_id':
+					$this->assertTrue(
+						gettype($dato)==='integer' ,
+						'expected type integer'
+					);
+					// $component->set_dato('string');
+					// $dato = $component->get_dato();
+					// $this->assertTrue( gettype($dato)==='integer' );
+					break;
+				default:
+					$this->assertTrue(
+						gettype($dato)==='array' || is_null($dato),
+						'expected type array or null'
+					);
+					break;
+			}
+		}
+	}//end test_get_dato
 
 
 
 	/**
-	* TEST_COMPONENT_json
+	* TEST_GET_COMPONENT_JSON
 	* @return void
 	*/
-	public function test_component_json(): void {
+	public function test_get_component_json(): void {
 
 		// force status as logged to allow test
 			login_test::force_login(DEDALO_SUPERUSER);
@@ -197,7 +280,7 @@ final class component_common_test extends TestCase {
 				}
 			}
 		}
-	}//end test_component_json
+	}//end test_get_component_json
 
 
 
