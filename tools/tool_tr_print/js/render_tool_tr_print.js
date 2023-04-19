@@ -27,10 +27,11 @@ export const render_tool_tr_print = function() {
 /**
 * EDIT
 * Render node
-* @param object options = {render_level:'full'}
+* @param object options
+* 	sample {render_level:'full'}
 * @return HTMLElement wrapper
 */
-render_tool_tr_print.prototype.edit = async function(options={render_level:'full'}) {
+render_tool_tr_print.prototype.edit = async function(options) {
 
 	const self = this
 
@@ -670,8 +671,8 @@ const render_default = function(self) {
 					// the tag_id is inside the p4 of the match
 					const tag_id = p4
 					// get all indexation terms of the current tag with match tag_id inside the locator
-					const tags_index = self.transcription_component.data.tags_index || []
-					const ar_indexation = tags_index.filter(el =>
+					const tags_index	= self.transcription_component.data.tags_index || []
+					const ar_indexation	= tags_index.filter(el =>
 						el.data.tag_id	=== tag_id
 					)
 					const ar_indexation_len = ar_indexation.length
