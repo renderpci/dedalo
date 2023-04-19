@@ -558,7 +558,7 @@ final class dd_core_api {
 	*        "section_tipo": "oh1"
 	*    }
 	* }
-	* @return array $result
+	* @return object $response
 	*/
 	public static function create(object $rqo) : object {
 
@@ -608,7 +608,7 @@ final class dd_core_api {
 	*    "action": "duplicate ",
 	*    "source": {
 	*        "section_tipo": "oh1"
-	* 		"section_id": "2"
+	* 		"section_id": 2 // integer
 	*    }
 	* }
 	* @return array $result
@@ -746,7 +746,7 @@ final class dd_core_api {
 			}
 
 		// sqo. search_query_object. If empty, we will create a new one with default values
-			$sqo = $rqo->sqo;
+			$sqo = $rqo->sqo ?? null;
 			if(empty($sqo)){
 				// we build a new sqo based on the current source section_id
 
@@ -890,11 +890,11 @@ final class dd_core_api {
 	*        "debug_label": "Title",
 	*        "debug_mode": "edit",
 	*        "row_section_id": "124",
-	*        "changed_data": {
+	*        "changed_data": [{
 	*            "action": "update",
 	*            "key": 0,
 	*            "value": "title2"
-	*        }
+	*        }]
 	*    }
 	* }
 	* @return object $response
@@ -1044,8 +1044,8 @@ final class dd_core_api {
 				break;
 		}//end switch ($type)
 
-		// result. if the process is correct, we return the $result to the client
-			$response->result = $result;
+		// result. If the process is successful, we return the $element_json as result to client
+			$response->result = $result ?? false;
 			if (empty($response->error)) {
 				$response->msg = 'OK. Request save done successfully';
 			}
@@ -1080,15 +1080,25 @@ final class dd_core_api {
 	*    "prevent_lock": true
 	* }
 	* @return object $response
+	*
 	*/
 	public static function count(object $rqo) : object {
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-			$response->error	= null;
+		// rqo vars
+			$tipo	= $rqo->source->tipo;
+			$model	= $rqo->source->model ?? RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$sqo	= $rqo->sqo;
 
-		$sqo = $rqo->sqo;
+		// prevent_lock. Close session if not already closed
+			if (!isset($rqo->prevent_lock)) {
+				session_write_close();
+			}
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+				$response->error	= null;
 
 		// permissions check. If user don't have access to any section, set total to zero and prevent search
 			$ar_section_tipo = $sqo->section_tipo;
@@ -1104,8 +1114,6 @@ final class dd_core_api {
 		// session filter check
 			// If session filter exists from current section, add to the sqo
 			// to be consistent with the last search
-			$model			= $rqo->source->model;
-			$tipo			= $rqo->source->tipo;
 			$sqo_id			= ($model==='section') ? implode('_', ['section', $tipo]) : 'undefined';
 			$sqo_session	= $_SESSION['dedalo']['config']['sqo'][$sqo_id] ?? null;
 			if ( !isset($sqo->filter) && isset($sqo_session) && isset($sqo_session->filter) ) {
@@ -1140,20 +1148,20 @@ final class dd_core_api {
 
 		session_write_close();
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-			$response->error	= null;
-
 		// rqo vars
 			$source			= $rqo->source;
-
 			$tipo			= $source->tipo ?? null;
 			$section_tipo	= $source->section_tipo ?? $source->tipo ?? null;
 			$model			= $source->model ?? RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			$lang			= $source->lang ?? DEDALO_DATA_LANG;
 			$mode			= $source->mode ?? 'list';
-			$section_id 	= $source->section_id ?? null; // only used by tools (it needed to load the section_tool record to get the context )
+			$section_id		= $source->section_id ?? null; // only used by tools (it needed to load the section_tool record to get the context )
+
+		// response
+			$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->error	= null;
 
 		// build element
 			switch (true) {
@@ -1263,6 +1271,17 @@ final class dd_core_api {
 	*	{
 	*		action			: 'get_section_elements_context',
 	*		prevent_lock	: true,
+	*		"source": {
+	*	        "typo": "source",
+	*	        "type": "filter",
+	*	        "action": null,
+	*	        "model": "search",
+	*	        "section_tipo": "numisdata4",
+	*	        "section_id": 0,
+	*	        "mode": "list",
+	*	        "view": null,
+	*	        "lang": "lg-eng"
+	*	    },
 	*		options			: {
 	*			context_type			: 'simple',
 	*			ar_section_tipo			: section_tipo,
@@ -1279,10 +1298,11 @@ final class dd_core_api {
 			$context_type			= $options->context_type;
 			$ar_components_exclude	= $options->ar_components_exclude ?? null;
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-			$response->error	= null;
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+				$response->error	= null;
 
 		// section_elements_context_options
 			$section_elements_context_options = (object)[
@@ -1547,7 +1567,13 @@ final class dd_core_api {
 				case 'related_search': // Used to get the related sections that call to the source section
 
 					// sections
-						$element = sections::get_instance(null, $sqo, $tipo, $mode, $lang);
+						$element = sections::get_instance(
+							null,
+							$sqo,
+							$tipo,
+							$mode,
+							$lang ?? DEDALO_DATA_LANG
+						);
 
 					// store sqo section
 						if ($model==='section' && ($mode==='edit' || $mode==='list')) {
@@ -1567,7 +1593,6 @@ final class dd_core_api {
 								$component_lang	= (RecordObj_dd::get_translatable($tipo)===true)
 									? $lang
 									: DEDALO_DATA_NOLAN;
-
 
 								$element = component_common::get_instance(
 									$model,
@@ -1696,6 +1721,12 @@ final class dd_core_api {
 							// resolve_data model not defined
 							debug_log(__METHOD__." WARNING data:resolve_data model not defined for tipo: $tipo ".to_string($model), logger::WARNING);
 					}
+					break;
+
+				case 'get_relation_list': // Used by relation list only (legacy compatibility)
+
+					$element = new relation_list($tipo, $section_id, $section_tipo, $mode);
+					$element->set_sqo($sqo);
 					break;
 
 				default:
@@ -1858,7 +1889,7 @@ final class dd_core_api {
 	*	source	: {
 	*		section_tipo	: section_tipo,
 	*		section_id		: section_id,
-	*		tipo			: component_tipo,
+	*		tipo			: "test25", component_tipo
 	*		value			: value // ["oh1",] array of section_tipo \ used to filter the locator with specific section_tipo (like 'oh1')
 	*	}
 	* }
@@ -1866,26 +1897,34 @@ final class dd_core_api {
 	*/
 	public static function get_indexation_grid(object $rqo) : object {
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-			$response->error	= null;
-
-		// validate input data
-			if (empty($rqo->source->section_tipo) || empty($rqo->source->tipo) || empty($rqo->source->section_id)) {
-				$response->msg .= ' Trigger Error: ('.__FUNCTION__.') Empty source properties (is mandatory)';
-				$response->error = 1;
-				return $response;
-			}
-
-		// ddo_source
-			$ddo_source = $rqo->source;
-
-		// source vars
+		// rqo vars
+			// ddo_source
+			$ddo_source		= $rqo->source;
+			// source vars
 			$section_tipo	= $ddo_source->section_tipo ?? $ddo_source->tipo;
 			$section_id		= $ddo_source->section_id ?? null;
 			$tipo			= $ddo_source->tipo ?? null;
 			$value			= $ddo_source->value ?? null; // ["oh1",] array of section_tipo \ used to filter the locator with specific section_tipo (like 'oh1')
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+				$response->error	= null;
+
+		// validate input data
+			if (empty($rqo->source->section_tipo) || empty($rqo->source->tipo) || empty($rqo->source->section_id)) {
+				$response->msg .= ' Trigger Error: ('.__FUNCTION__.') Empty source properties (section_tipo, section_id, tipo are mandatory)';
+				$response->error = 1;
+
+				debug_log(__METHOD__
+					." $response->msg " .PHP_EOL
+					. to_string($rqo->source)
+					, logger::ERROR
+				);
+
+				return $response;
+			}
 
 		// diffusion_index_ts
 			$indexation_grid	= new indexation_grid($section_tipo, $section_id, $tipo, $value);
@@ -1902,51 +1941,70 @@ final class dd_core_api {
 
 
 	/**
-	* GET_RELATION_LIST
+	* GET_RELATION_LIST (MOVED AND UNIFIED TO READ !)
 	* @param object $rqo
 	* {
-	*	action	: 'get_relation_list',
-	*	source	: source,
-	*	sqo		: sqo
+		*    "action": "get_relation_list",
+		*    "source": {
+		*        "section_tipo": "test3",
+		*        "section_id": "1",
+		*        "tipo": "test138",
+		*        "mode": "edit",
+		*        "model": "relation_list"
+		*    },
+		*    "sqo": {
+		*        "section_tipo": [
+		*            "all"
+		*        ],
+		*        "mode": "related",
+		*        "limit": 10,
+		*        "offset": 0,
+		*        "filter_by_locators": [
+		*            {
+		*                "section_tipo": "test3",
+		*                "section_id": "1"
+		*            }
+		*        ]
+		*    }
 	* }
 	* @return object $response
 	*/
-	public static function get_relation_list(object $rqo) : object {
+		// public static function get_relation_list(object $rqo) : object {
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-			$response->error	= null;
+		// 	$response = new stdClass();
+		// 		$response->result	= false;
+		// 		$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+		// 		$response->error	= null;
 
-		// validate input data
-			if (empty($rqo->source->section_tipo) || empty($rqo->source->tipo) || empty($rqo->source->section_id)) {
-				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty source properties (is mandatory)';
-				return $response;
-			}
+		// 	// validate input data
+		// 		if (empty($rqo->source->section_tipo) || empty($rqo->source->tipo) || empty($rqo->source->section_id)) {
+		// 			$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty source properties (is mandatory)';
+		// 			return $response;
+		// 		}
 
-		// ddo_source
-			$ddo_source = $rqo->source;
+		// 	// ddo_source
+		// 		$ddo_source = $rqo->source;
 
-		// source vars
-			$section_tipo	= $ddo_source->section_tipo ?? $ddo_source->tipo;
-			$section_id		= $ddo_source->section_id ?? null;
-			$tipo			= $ddo_source->tipo ?? null;
-			$mode			= $ddo_source->mode ?? 'edit'; // ["oh1",] array of section_tipo \ used to filter the locator with specific section_tipo (like 'oh1')
-			$sqo			= !empty($rqo->sqo) ? $rqo->sqo : null;
+		// 	// source vars
+		// 		$section_tipo	= $ddo_source->section_tipo ?? $ddo_source->tipo;
+		// 		$section_id		= $ddo_source->section_id ?? null;
+		// 		$tipo			= $ddo_source->tipo ?? null;
+		// 		$mode			= $ddo_source->mode ?? 'edit'; // ["oh1",] array of section_tipo \ used to filter the locator with specific section_tipo (like 'oh1')
+		// 		$sqo			= !empty($rqo->sqo) ? $rqo->sqo : null;
 
-		// relation_list
-			$relation_list 	= new relation_list($tipo, $section_id, $section_tipo, $mode);
-			$relation_list->set_sqo($sqo);
+		// 	// relation_list
+		// 		$relation_list 	= new relation_list($tipo, $section_id, $section_tipo, $mode);
+		// 		$relation_list->set_sqo($sqo);
 
-			$relation_list_json = $relation_list->get_json();
+		// 		$relation_list_json = $relation_list->get_json();
 
-		// response OK
-			$response->result	= $relation_list_json;
-			$response->msg		= 'OK. Request done successful ['.__FUNCTION__.']';
+		// 	// response OK
+		// 		$response->result	= $relation_list_json;
+		// 		$response->msg		= 'OK. Request done successful ['.__FUNCTION__.']';
 
 
-		return $response;
-	}//end get_relation_list
+		// 	return $response;
+		// }//end get_relation_list
 
 
 

@@ -6,6 +6,8 @@ use PHPUnit\Framework\Attributes\TestDox;
 // require_once dirname(dirname(__FILE__)). '/lib/vendor/autoload.php';
 	require_once dirname(dirname(dirname(__FILE__))) . '/config/config.php';
 	require_once dirname(dirname(__FILE__)) . '/login/login_Test.php';
+	require_once 'data.php';
+	require_once 'elements.php';
 
 // check is development server. if not, throw to prevent malicious access
 	if (!defined('DEVELOPMENT_SERVER') || DEVELOPMENT_SERVER!==true) {
@@ -18,282 +20,13 @@ final class component_common_test extends TestCase {
 
 
 	/**
-	* GET_ELEMENTS
-	* @return array $elements
-	*/
-	public function get_elements() : array {
-
-		// components general values
-			$section_tipo	= 'test3';
-			$section_id		= 1;
-			$mode			= 'edit';
-			$lang			= 'lg-eng';
-			// $permissions	= 2;
-
-		$elements = [
-			(object)[
-				'model'			=> 'component_3d',
-				'tipo'			=> 'test26',
-				'section_tipo'	=> $section_tipo,
-				'section_id'	=> $section_id,
-				'mode'			=> $mode,
-				'lang'			=> $lang
-			],
-			(object)[
-				'model'			=> 'component_av',
-				'tipo'			=> 'test94',
-				'section_tipo'	=> $section_tipo,
-				'section_id'	=> $section_id,
-				'mode'			=> $mode,
-				'lang'			=> $lang
-			],
-			(object)[
-				'model'			=> 'component_check_box',
-				'tipo'			=> 'test88',
-				'section_tipo'	=> $section_tipo,
-				'section_id'	=> $section_id,
-				'mode'			=> $mode,
-				'lang'			=> $lang
-			],
-			(object)[
-				'model'			=> 'component_date',
-				'tipo'			=> 'test145',
-				'section_tipo'	=> $section_tipo,
-				'section_id'	=> $section_id,
-				'mode'			=> $mode,
-				'lang'			=> $lang
-			],
-			(object)[
-				'model'			=> 'component_email',
-				'tipo'			=> 'test208',
-				'section_tipo'	=> $section_tipo,
-				'section_id'	=> $section_id,
-				'mode'			=> $mode,
-				'lang'			=> $lang
-			],
-			(object)[
-				'model'			=> 'component_filter_master',
-				'tipo'			=> 'test70',
-				'section_tipo'	=> $section_tipo,
-				'section_id'	=> $section_id,
-				'mode'			=> $mode,
-				'lang'			=> $lang
-			],
-			(object)[
-				'model'			=> 'component_filter_records',
-				'tipo'			=> 'test69',
-				'section_tipo'	=> $section_tipo,
-				'section_id'	=> $section_id,
-				'mode'			=> $mode,
-				'lang'			=> $lang
-			],
-			(object)[
-				'model'			=> 'component_filter',
-				'tipo'			=> 'test101',
-				'section_tipo'	=> $section_tipo,
-				'section_id'	=> $section_id,
-				'mode'			=> $mode,
-				'lang'			=> $lang
-			],
-			(object)[
-				'model'			=> 'component_geolocation',
-				'tipo'			=> 'test100',
-				'section_tipo'	=> $section_tipo,
-				'section_id'	=> $section_id,
-				'mode'			=> $mode,
-				'lang'			=> $lang
-			],
-			(object)[
-				'model'			=> 'component_image',
-				'tipo'			=> 'test99',
-				'section_tipo'	=> $section_tipo,
-				'section_id'	=> $section_id,
-				'mode'			=> $mode,
-				'lang'			=> $lang
-			],
-			(object)[
-				'model'			=> 'component_input_text',
-				'tipo'			=> 'test52',
-				'section_tipo'	=> $section_tipo,
-				'section_id'	=> $section_id,
-				'mode'			=> $mode,
-				'lang'			=> $lang
-			],
-			(object)[
-				'model'			=> 'component_inverse',
-				'tipo'			=> 'test68',
-				'section_tipo'	=> $section_tipo,
-				'section_id'	=> $section_id,
-				'mode'			=> $mode,
-				'lang'			=> $lang
-			],
-			(object)[
-				'model'			=> 'component_iri',
-				'tipo'			=> 'test140',
-				'section_tipo'	=> $section_tipo,
-				'section_id'	=> $section_id,
-				'mode'			=> $mode,
-				'lang'			=> $lang
-			],
-			(object)[
-				'model'			=> 'component_json',
-				'tipo'			=> 'test18',
-				'section_tipo'	=> $section_tipo,
-				'section_id'	=> $section_id,
-				'mode'			=> $mode,
-				'lang'			=> $lang
-			],
-			(object)[
-				'model'			=> 'component_number',
-				'tipo'			=> 'test211',
-				'section_tipo'	=> $section_tipo,
-				'section_id'	=> $section_id,
-				'mode'			=> $mode,
-				'lang'			=> $lang
-			],
-			(object)[
-				'model'			=> 'component_password',
-				'tipo'			=> 'test152',
-				'section_tipo'	=> $section_tipo,
-				'section_id'	=> $section_id,
-				'mode'			=> $mode,
-				'lang'			=> $lang
-			],
-			(object)[
-				'model'			=> 'component_pdf',
-				'tipo'			=> 'test85',
-				'section_tipo'	=> $section_tipo,
-				'section_id'	=> $section_id,
-				'mode'			=> $mode,
-				'lang'			=> $lang
-			],
-			(object)[
-				'model'			=> 'component_portal',
-				'tipo'			=> 'test80',
-				'section_tipo'	=> $section_tipo,
-				'section_id'	=> $section_id,
-				'mode'			=> $mode,
-				'lang'			=> $lang
-			],
-			(object)[
-				'model'			=> 'component_publication',
-				'tipo'			=> 'test92',
-				'section_tipo'	=> $section_tipo,
-				'section_id'	=> $section_id,
-				'mode'			=> $mode,
-				'lang'			=> $lang
-			],
-			(object)[
-				'model'			=> 'component_radio_button',
-				'tipo'			=> 'test87',
-				'section_tipo'	=> $section_tipo,
-				'section_id'	=> $section_id,
-				'mode'			=> $mode,
-				'lang'			=> $lang
-			],
-			(object)[
-				'model'			=> 'component_relation_children',
-				'tipo'			=> 'test201',
-				'section_tipo'	=> $section_tipo,
-				'section_id'	=> $section_id,
-				'mode'			=> $mode,
-				'lang'			=> $lang
-			],
-			(object)[
-				'model'			=> 'component_relation_index',
-				'tipo'			=> 'test25',
-				'section_tipo'	=> $section_tipo,
-				'section_id'	=> $section_id,
-				'mode'			=> $mode,
-				'lang'			=> $lang
-			],
-			(object)[
-				'model'			=> 'component_relation_model',
-				'tipo'			=> 'test169',
-				'section_tipo'	=> $section_tipo,
-				'section_id'	=> $section_id,
-				'mode'			=> $mode,
-				'lang'			=> $lang
-			],
-			(object)[
-				'model'			=> 'component_relation_parent',
-				'tipo'			=> 'test71',
-				'section_tipo'	=> $section_tipo,
-				'section_id'	=> $section_id,
-				'mode'			=> $mode,
-				'lang'			=> $lang
-			],
-			(object)[
-				'model'			=> 'component_relation_related',
-				'tipo'			=> 'test54',
-				'section_tipo'	=> $section_tipo,
-				'section_id'	=> $section_id,
-				'mode'			=> $mode,
-				'lang'			=> $lang
-			],
-			(object)[
-				'model'			=> 'component_section_id',
-				'tipo'			=> 'test102',
-				'section_tipo'	=> $section_tipo,
-				'section_id'	=> $section_id,
-				'mode'			=> $mode,
-				'lang'			=> $lang
-			],
-			(object)[
-				'model'			=> 'component_security_access',
-				'tipo'			=> 'test157',
-				'section_tipo'	=> $section_tipo,
-				'section_id'	=> $section_id,
-				'mode'			=> $mode,
-				'lang'			=> $lang
-			],
-			(object)[
-				'model'			=> 'component_select',
-				'tipo'			=> 'test91',
-				'section_tipo'	=> $section_tipo,
-				'section_id'	=> $section_id,
-				'mode'			=> $mode,
-				'lang'			=> $lang
-			],
-			(object)[
-				'model'			=> 'component_select_lang',
-				'tipo'			=> 'test89',
-				'section_tipo'	=> $section_tipo,
-				'section_id'	=> $section_id,
-				'mode'			=> $mode,
-				'lang'			=> $lang
-			],
-			(object)[
-				'model'			=> 'component_svg',
-				'tipo'			=> 'test177',
-				'section_tipo'	=> $section_tipo,
-				'section_id'	=> $section_id,
-				'mode'			=> $mode,
-				'lang'			=> $lang
-			],
-			(object)[
-				'model'			=> 'component_text_area',
-				'tipo'			=> 'test17',
-				'section_tipo'	=> $section_tipo,
-				'section_id'	=> $section_id,
-				'mode'			=> $mode,
-				'lang'			=> $lang
-			]
-		];
-
-		return $elements;
-	}//end get_elements
-
-
-
-	/**
 	* TEST_GET_INSTANCE
 	* @return void
 	*/
 	public function test_get_instance() : void {
 
 		// elements
-			$elements = $this->get_elements();
+			$elements = get_elements();
 
 		foreach ($elements as $element) {
 
@@ -379,7 +112,7 @@ final class component_common_test extends TestCase {
 	public function test_component_dato(): void {
 
 		// elements
-			$elements = $this->get_elements();
+			$elements = get_elements();
 
 		foreach ($elements as $element) {
 
@@ -424,7 +157,7 @@ final class component_common_test extends TestCase {
 			login_test::force_login(DEDALO_SUPERUSER);
 
 		// elements
-			$elements = $this->get_elements();
+			$elements = get_elements();
 
 		foreach ($elements as $element) {
 
@@ -544,6 +277,89 @@ final class component_common_test extends TestCase {
 
 		$this->assertSame($component->uid, $component2->uid);
 	}//end test_save_component_dato
+
+
+
+	/**
+	* TEST_SAVE_COMPONENTS
+	* @return void
+	*/
+	public function test_save_components() : void {
+
+		// elements
+			$elements = get_elements();
+
+		foreach ($elements as $element) {
+
+			$test_save = $element->test_save ?? true;
+			if (!isset($element->new_value) || !$test_save) {
+				continue;
+			}
+
+			// if ($element->model!=='component_image') {
+				// continue;
+			// }
+
+			// component
+				$component = component_common::get_instance(
+					$element->model, // string model
+					$element->tipo, // string tipo
+					$element->section_id, // string section_id
+					$element->mode, // string mode
+					$element->lang, // string lang
+					$element->section_tipo, // string section_tipo
+					// false
+				);
+				$component_dato = $component->get_dato();
+
+			// get data
+				$arguments	= $element->new_value_params ?? [];
+				$new_data	= call_user_func_array($element->new_value, $arguments);
+
+				$this->assertTrue(
+					gettype($new_data)==='array',
+					'Same type expected (array) ' .gettype($new_data)
+				);
+
+			$component->set_dato($new_data);
+
+			$component_dato2 = $component->get_dato();
+
+			$this->assertEquals(
+				$component_dato2,
+				$new_data
+			);
+
+			$component->Save();
+
+			// component copy
+				$component_copy = component_common::get_instance(
+					$element->model, // string model
+					$element->tipo, // string tipo
+					$element->section_id, // string section_id
+					$element->mode, // string mode
+					$element->lang, // string lang
+					$element->section_tipo, // string section_tipo
+					false
+				);
+				$this->assertTrue(
+					$component_copy->uid!==$component->uid ,
+					'Different uid'
+				);
+
+				$component_copy_dato = $component_copy->get_dato();
+					// dump($new_data, '$new_data +//////+ '.to_string($element->model));
+					// dump($component_copy_dato, '$component_copy_dato +//////+ '.to_string($element->model));
+
+				$this->assertEquals(
+					$component_copy_dato,
+					$new_data,
+					'dato is equal '.gettype($component_copy_dato).'/'.gettype($new_data)
+				);
+
+			// debug_log(__METHOD__." )))))))))))))))))))) Processed  $element->model".to_string(), logger::ERROR);
+		}//end foreach ($elements as $element)
+	}//end test_save_components
 
 
 

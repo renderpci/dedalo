@@ -1728,16 +1728,18 @@ class component_image extends component_media_common {
 
 	/**
 	* GET_MEDIA_PATH_DIR
+	* Calculates the file base path based on the given quality
 	* @param string $quality
 	* @return string $media_path
 	*/
 	public function get_media_path_dir(string $quality) : string {
 
 		if (empty($quality)) {
-			// $bt = debug_backtrace();
-			// dump($bt, ' bt ++ '.to_string());
-			// throw new Exception("Error Processing Request. quality is empty !!", 1);
-			debug_log(__METHOD__." quality is empty !!! ".to_string($quality), logger::ERROR);
+			debug_log(__METHOD__
+				. " quality is empty !!! " .PHP_EOL
+				. "tipo: $this->tipo, section_tipo: $this->section_tipo, section_id: $this->section_id"
+				, logger::ERROR
+			);
 		}
 
 		if($this->external_source) {
@@ -1750,10 +1752,9 @@ class component_image extends component_media_common {
 			$initial_media_path	= $this->initial_media_path ?? '';
 			$additional_path	= $this->additional_path ?? '';
 
-			// $media_path = DEDALO_MEDIA_URL . DEDALO_IMAGE_FOLDER . $this->initial_media_path . '/' . $quality . $this->additional_path;
 			$media_path = DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER . $initial_media_path . '/' . $quality . $additional_path;
 		}
-		debug_log(__METHOD__." media_path - quality: '$quality' - media_path: ".to_string($media_path), logger::DEBUG);
+
 
 		return $media_path;
 	}//end get_media_path_dir

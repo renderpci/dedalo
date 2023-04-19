@@ -7,7 +7,7 @@
 	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	// import {get_tool_label} from '../../tool_common/js/tool_common.js'
-	// import {printf} from '../../../core/common/js/utils/index.js'
+	// import {pause} from '../../../core/common/js/utils/util.js'
 
 
 
@@ -47,17 +47,6 @@ render_tool_propagate_component_data.prototype.edit = async function(options) {
 			content_data : content_data
 		})
 
-	// modal container
-		// if (!window.opener) {
-		// 	const header	= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
-		// 	const modal		= ui.attach_to_modal(header, wrapper, null)
-		// 	modal.on_close	= () => {
-		// 		self.caller.refresh()
-		// 		// when closing the modal, common destroy is called to remove tool and elements instances
-		// 		self.destroy(true, true, true)
-		// 	}
-		// }
-
 
 	return wrapper
 }//end edit
@@ -67,7 +56,7 @@ render_tool_propagate_component_data.prototype.edit = async function(options) {
 /**
 * GET_CONTENT_DATA
 * Render tool body or 'content_data'
-* @param instance self
+* @param object self
 * @return HTMLElement content_data
 */
 const get_content_data = async function(self) {
@@ -109,10 +98,16 @@ const get_content_data = async function(self) {
 		})
 
 	// component caller
-		self.component_to_propagate.render()
-		.then(function(component_node){
-			components_list_container.appendChild(component_node)
+		ui.load_item_with_spinner({
+			container	: components_list_container,
+			callback	: async () => {
+				// await pause(2000)
+				await self.get_component_to_propagate()
+				const component_node = await self.component_to_propagate.render()
+				return component_node
+			}
 		})
+
 
 	// buttons_container
 		const buttons_container = ui.create_dom_element({
@@ -122,17 +117,16 @@ const get_content_data = async function(self) {
 		})
 
 	// info_text
-		const section		= self.caller.caller.caller
+		const section = self.caller.caller.caller
 
-	// check the filter to know if the user has apply some filter or if will apply to all records
+	// filter. Check the filter to know if the user has apply some filter or if will apply to all records
 		const filter = section.rqo && section.rqo.sqo && section.rqo.sqo.filter
 			? section.rqo.sqo.filter.$and.length > 0
 			: false
 
 		const total = await section.get_total()
 
-
-		const text_string	= self.get_tool_label('content_will_be_added_removed', total)
+		const text_string = self.get_tool_label('content_will_be_added_removed', total)
 			|| 'The content of the component in the current {0} records will be added or removed'
 		ui.create_dom_element({
 			element_type	: 'div',
@@ -152,11 +146,10 @@ const get_content_data = async function(self) {
 		const button_replace = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'warning add button_replace',
-			// inner_html	: get_label.tool_do_add || 'Add',
 			inner_html		: self.get_tool_label('tool_do_replace') || 'Replace values',
 			parent			: buttons_container
 		})
-		button_replace.addEventListener("click", async function(e){
+		button_replace.addEventListener('click', async function(e){
 			e.preventDefault()
 
 			await ui.component.deactivate(self.component_to_propagate)

@@ -723,7 +723,8 @@ const change_lang = async function(e) {
 	const current_lang = e.target.value
 
 	const api_response = await data_manager.request({
-		body : {
+		use_worker	: true,
+		body		: {
 			action	: 'change_lang',
 			dd_api	: 'dd_utils_api',
 			options	: {

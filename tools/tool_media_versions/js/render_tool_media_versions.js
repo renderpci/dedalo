@@ -219,7 +219,7 @@ const get_line_labels = function(ar_quality, self) {
 
 			const file_info_node = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'file_info' + (quality===self.caller.context.features.default_quality ? ' default' : ''),
+				class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : ''),
 				parent			: fragment
 			})
 
@@ -271,7 +271,7 @@ const get_line_file_exists = function(ar_quality, self) {
 
 			const file_info_node = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'file_info' + (quality===self.caller.context.features.default_quality ? ' default' : ''),
+				class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : ''),
 				parent			: fragment
 			})
 
@@ -341,7 +341,7 @@ const get_line_file_size = function(ar_quality, self) {
 
 			const file_info_node = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'file_info' + (quality===self.caller.context.features.default_quality ? ' default' : ''),
+				class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : ''),
 				parent			: fragment
 			})
 
@@ -400,7 +400,7 @@ const get_line_file_upload = function(ar_quality, self) {
 
 			const file_info_node = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'file_info' + (quality===self.caller.context.features.default_quality ? ' default' : ''),
+				class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : ''),
 				parent			: fragment
 			})
 
@@ -600,15 +600,9 @@ const get_line_build_version = function(ar_quality, self) {
 			const quality = ar_quality[i]
 
 			// file_info
-				// const file_info = self.files_info.find(el => el.quality===quality)
-
-				// 'file_exist'
-				// 'file_size'
-				// 'url'
-
 			const file_info_node = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'file_info' + (quality===self.caller.context.features.default_quality ? ' default' : ''),
+				class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : ''),
 				parent			: fragment
 			})
 
@@ -625,6 +619,7 @@ const get_line_build_version = function(ar_quality, self) {
 			button_build_version.addEventListener('click', async function() {
 
 				self.node.classList.add('loading')
+
 				// exec build_version
 				const result = await self.build_version(quality)
 				if (result===true) {
@@ -639,29 +634,35 @@ const get_line_build_version = function(ar_quality, self) {
 						parent			: file_info_node
 					})
 
-					if(self.caller.model==='component_av') {
-						async function check_file() {
+					switch (self.main_element.model) {
+						case 'component_av':
+							async function check_file() {
+								setTimeout(async function(){
+									const files_info = await self.get_files_info()
+									const found = files_info.find(el => el.quality===quality)
+									if (found && found.file_url) {
+										// processing_label.remove()
+										// button_build_version.classList.remove('hide')
+										self.main_element_quality = quality
+										self.refresh({
+											build_autoload : false
+										})
+									}else{
+										// check again after 5 sec
+										check_file()
+									}
+								}, 1000)
+							}
+							check_file()
+							break;
+
+						default:
 							setTimeout(async function(){
-								const files_info = await self.get_files_info()
-								const found = files_info.find(el => el.quality===quality)
-								if (found && found.file_url) {
-									// processing_label.remove()
-									// button_build_version.classList.remove('hide')
-									self.main_element_quality = quality
-									self.refresh({
-										build_autoload : false
-									})
-								}else{
-									// check again after 5 sec
-									check_file()
-								}
-							}, 1000)
-						}
-						check_file()
-					}else{
-						self.refresh({
-							build_autoload : false
-						})
+								self.refresh({
+									build_autoload : false
+								})
+							}, 1)
+							break;
 					}
 				}
 				self.node.classList.remove('loading')
@@ -706,7 +707,7 @@ const get_line_conform_headers = function(ar_quality, self) {
 			// file_info_node
 				const file_info_node = ui.create_dom_element({
 					element_type	: 'div',
-					class_name		: 'file_info' + (quality===self.caller.context.features.default_quality ? ' default' : ''),
+					class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : ''),
 					parent			: fragment
 				})
 
@@ -771,7 +772,7 @@ const get_line_rotate = function(ar_quality, self) {
 
 			const file_info_node = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'file_info' + (quality===self.caller.context.features.default_quality ? ' default' : ''),
+				class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : ''),
 				parent			: fragment
 			})
 

@@ -253,14 +253,15 @@ function curl_request(object $options) : object {
 
 	// options
 		$url			= $options->url; // mandatory
-		$post			= isset($options->post) ? $options->post : true;
+		$post			= $options->post ?? true;
 		$postfields		= $options->postfields ?? null;
 		$returntransfer	= $options->returntransfer ?? 1;
-		$followlocation	= isset($options->followlocation) ? $options->followlocation : true;
-		$header			= isset($options->header) ? $options->header : true;
-		$ssl_verifypeer	= isset($options->ssl_verifypeer) ? $options->ssl_verifypeer : false;
+		$followlocation	= $options->followlocation ?? true;
+		$header			= $options->header ?? true;
+		$ssl_verifypeer	= $options->ssl_verifypeer ?? false;
 		$timeout		= isset($options->timeout) ? (int)$options->timeout : 5; // seconds
 		$proxy			= $options->proxy ?? false;
+		$httpheader		= $options->httpheader ?? null; // array('Content-Type:application/json')
 
 	// response
 		$response = new stdClass();
@@ -280,6 +281,11 @@ function curl_request(object $options) : object {
 	// postfields
 		if (!empty($postfields)) {
 			curl_setopt($ch, CURLOPT_POSTFIELDS, $postfields); // data_string
+		}
+
+	// httpheader
+		if (!empty($httpheader)) {
+			curl_setopt( $ch, CURLOPT_HTTPHEADER, $httpheader);
 		}
 
 	// proxy. Use connection proxy on demand

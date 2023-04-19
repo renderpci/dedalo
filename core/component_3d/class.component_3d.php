@@ -151,16 +151,18 @@ class component_3d extends component_media_common {
 
 	/**
 	* GET_POSTERFRAME_URL
+	* @param bool $test_file = true
+	* @param bool $absolute = false
+	* @param bool $avoid_cache = false
 	* @return string $posterframe_url
 	*/
 	public function get_posterframe_url(bool $test_file=true, bool $absolute=false, bool $avoid_cache=false) : string {
 
-		$id	= $this->get_id();
 		$file_name	= $this->get_posterframe_file_name();
 
 		$posterframe_url = DEDALO_MEDIA_URL . DEDALO_3D_FOLDER .'/posterframe/'. $file_name;
 
-		# FILE EXISTS TEST : If not, show '0' dedalo image logo
+		// FILE EXISTS TEST : If not, show '0' dedalo image logo
 		if ($test_file===true) {
 			$file = DEDALO_MEDIA_PATH .DEDALO_3D_FOLDER.'/posterframe/'. $file_name ;
 			if(!file_exists($file)) {
@@ -168,7 +170,7 @@ class component_3d extends component_media_common {
 			}
 		}
 
-		# ABSOLUTE (Default false)
+		// ABSOLUTE (Default false)
 		if ($absolute===true) {
 			$posterframe_url = DEDALO_PROTOCOL . DEDALO_HOST . $posterframe_url;
 		}

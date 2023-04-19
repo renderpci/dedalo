@@ -18,30 +18,6 @@ class component_select_lang extends component_relation_common {
 
 
 	/**
-	* __CONSTRUCT
-	* @return bool
-	*/
-		// function __construct($tipo=null, $parent=null, $mode='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
-
-		// 	# Force always DEDALO_DATA_NOLAN
-		// 	$lang = DEDALO_DATA_NOLAN;
-
-		// 	# Build the component normally
-		// 	$result = parent::__construct($tipo, $parent, $mode, $lang, $section_tipo);
-
-		// 	if(SHOW_DEBUG) {
-		// 		// check lang is properly configured
-		// 		$traducible = $this->RecordObj_dd->get_traducible();
-		// 		if ($traducible==='si') {
-		// 			#throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
-		// 			trigger_error("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP");
-		// 		}
-		// 	}
-		// }//end __construct
-
-
-
-	/**
 	* GET_VALOR
 	* Get value . default is get dato . overwrite in every different specific component
 	* @return string | null $valor
@@ -94,47 +70,6 @@ class component_select_lang extends component_relation_common {
 
 		return (object)parent::build_search_comparison_operators($comparison_operators);
 	}//end build_search_comparison_operators
-
-
-
-
-	/**
-	* GET_SEARCH_QUERY_OLD
-	* Build search query for current component . Overwrite for different needs in other components
-	* (is static to enable direct call from section_records without construct component)
-	* Params
-	* @param string $json_field . JSON container column Like 'dato'
-	* @param string $search_tipo . Component tipo Like 'dd421'
-	* @param string $tipo_de_dato_search . Component dato container Like 'dato' or 'valor'
-	* @param string $current_lang . Component dato lang container Like 'lg-spa' or 'lg-nolan'
-	* @param string $search_value . Value received from search form request Like 'paco'
-	* @param string $comparison_operator . SQL comparison operator Like 'ILIKE'
-	*
-	* @see class.section_records.php get_rows_data filter_by_search
-	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
-	*/
-		// public static function get_search_query_old( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='=') {
-		// 	$search_query='';
-		// 	if ( empty($search_value) ) {
-		// 		return $search_query;
-		// 	}
-		// 	$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
-
-		// 	switch (true) {
-		// 		case $comparison_operator=='=':
-		// 			$search_query = " $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb ";
-		// 			break;
-		// 		case $comparison_operator=='!=':
-		// 			$search_query = " ($json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb)=FALSE ";
-		// 			break;
-		// 	}
-
-		// 	if(SHOW_DEBUG) {
-		// 		$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
-		// 		#dump($search_query, " search_query for search_value: ".to_string($search_value)); #return '';
-		// 	}
-		// 	return $search_query;
-		// }//end get_search_query_old
 
 
 
@@ -453,6 +388,7 @@ class component_select_lang extends component_relation_common {
 
 		return $missing_lang;
 	}//end get_missing_lang
+
 
 
 }//end class component_select_lang
