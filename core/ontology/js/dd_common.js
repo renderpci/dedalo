@@ -291,8 +291,8 @@ function save_descriptor(input_node) {
 					alert(response.msg || 'Undefined error')
 			}else{
 				// SUCCESS case
-				// refresh tree from parent if openere
-					if (window.opener) {
+				// refresh tree from parent if opener
+					if (window.opener && form.parent) {
 						const parent_term = form.parent.value
 						// Reload only de parent div
 						window.opener.openDivTrack(parent_term, 1, terminoID)

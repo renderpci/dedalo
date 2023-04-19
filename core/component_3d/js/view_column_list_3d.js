@@ -38,7 +38,7 @@ view_column_list_3d.render = async function(self, options) {
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {})
-		wrapper.classList.add('media')
+		wrapper.classList.add('media','media_wrapper')
 
 	// url
 		const posterframe_url	= data.posterframe_url || page_globals.fallback_image

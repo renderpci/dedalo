@@ -20,6 +20,7 @@
 		$section_id		= $locator->section_id;
 		$component_tipo	= $locator->component_tipo ?? null;
 		$tag_id			= $locator->tag_id ?? null;
+		$lang			= DEDALO_DATA_LANG;
 
 	// context
 		$permissions		= $this->get_component_permissions();

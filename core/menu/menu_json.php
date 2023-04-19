@@ -40,13 +40,15 @@
 				break;
 		}
 
+		$user_id = navigator::get_user_id(); // CURRENT_LOGGED_USED_ID
+
 		// data item
 		$item = new stdClass();
 			$item->tipo				= $this->get_tipo();
 			$item->model			= 'menu';
 			$item->tree_datalist	= $tree_datalist;
 			$item->info_data		= $info_data;
-			$item->show_ontology	= security::is_global_admin(CURRENT_LOGGED_USED_ID); //  SHOW_DEVELOPER; // boolean from config file
+			$item->show_ontology	= security::is_global_admin($user_id); //  SHOW_DEVELOPER; // boolean from config file
 			$item->username			= navigator::get_username();
 
 		$data[] = $item;

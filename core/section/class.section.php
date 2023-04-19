@@ -41,7 +41,7 @@ class section extends common {
 
 		public $save_modified = true; # Default is true
 
-		public $layout_map;
+		// public $layout_map;
 
 		// injected whole database record, with all columns
 		public $record;
@@ -3102,7 +3102,7 @@ class section extends common {
 
 				// forced to load section data
 					$this->get_dato();
-					
+
 				// Modified by user
 					$user_locator->set_from_component_tipo($modified_by_user['tipo']);
 					// set value with safe path

@@ -528,6 +528,22 @@ export const render_section_info = function(self) {
 				})
 			}
 
+	// section_id
+		// label
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'key',
+			inner_html		: 'section_id',
+			parent			: fragment
+		})
+		// value
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'value',
+			inner_html		: section.section_id,
+			parent			: fragment
+		})
+
 	// section created
 		// label
 		ui.create_dom_element({

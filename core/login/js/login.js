@@ -212,6 +212,12 @@ login.prototype.action_dispatch = async function(api_response) {
 	// default behavior
 		if (api_response.result===true) {
 
+			// hide component_message ok
+				const component_message =self.node.content_data.querySelector('.component_message.ok')
+				if (component_message) {
+					component_message.classList.add('hide')
+				}
+
 			// user image load
 				const bg_image = (api_response.result_options && api_response.result_options.user_image)
 					? api_response.result_options.user_image
@@ -245,6 +251,7 @@ login.prototype.action_dispatch = async function(api_response) {
 						self.node.content_data.select_lang.classList.add('hide')
 						self.node.content_data.form.classList.add('hide')
 						// self.node.content_data.info.classList.add('hide')
+
 						// show things
 						self.node.content_data.top.classList.remove('hide')
 

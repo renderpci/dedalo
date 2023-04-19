@@ -202,10 +202,12 @@ class component_text_area extends component_common {
 
 				default:
 					$procesed_data = [];
-					foreach ($data as $current_value) {
-						$current_value = trim($current_value);
-						if (!empty($current_value)) {
-							$procesed_data[] = TR::add_tag_img_on_the_fly($current_value);
+					if (!empty($data)) {
+						foreach ($data as $current_value) {
+							$current_value = trim($current_value);
+							if (!empty($current_value)) {
+								$procesed_data[] = TR::add_tag_img_on_the_fly($current_value);
+							}
 						}
 					}
 					$cell_type = 'text'; // default

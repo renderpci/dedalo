@@ -94,7 +94,8 @@ const get_content_data = function(self) {
 				if (lang) {
 					// data_manager api call
 					await data_manager.request({
-						body : {
+						use_worker	: true,
+						body		: {
 							action	: 'change_lang',
 							dd_api	: 'dd_utils_api',
 							options	: {

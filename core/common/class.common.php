@@ -1051,7 +1051,7 @@ abstract class common {
 	public static function get_cookie_properties() : object {
 
 		# Cookie properties
-		$domain		= $_SERVER['SERVER_NAME'];
+		$domain		= $_SERVER['SERVER_NAME'] ?? '';
 		$secure		= stripos(DEDALO_PROTOCOL,'https')!==false ? 'true' : 'false';
 		$httponly	= 'true'; # Not accessible for javascript, only for http/s requests
 
@@ -1723,13 +1723,18 @@ abstract class common {
 					$dd_object->filter_by_list = $filter_by_list;
 				}
 
-			// component specific
+			// specific by model
 				if (strpos($model, 'component_')===0) {
+
+					// component specific
+
 					if ($sortable===true) {
 						// add component path to allow sort columns properly
 						// ? remove if because forbids cache list mode uniformly
 						// if (!empty($this->from_parent)) {
-							$dd_object->path = $this->get_order_path($tipo, $section_tipo);
+							$dd_object->path = isset($this->request_config)
+								? $this->get_order_path($tipo, $section_tipo)
+								: [];
 						// }
 					}
 					if ($mode==='search') {
@@ -1737,6 +1742,13 @@ abstract class common {
 						$dd_object->search_operators_info	= $this->search_operators_info();
 						$dd_object->search_options_title	= search::search_options_title($dd_object->search_operators_info);
 					}
+
+				}else if($model==='section') {
+
+					// section specific. relation_list // time_machine_list
+						$dd_object->relation_list		= $this->get_relation_list();
+						$dd_object->time_machine_list	= $this->get_time_machine_list_tipo();
+						$dd_object->section_map 		= section::get_section_map( $section_tipo );
 				}
 
 			// view, all components has view, used to change the render view.
@@ -1745,13 +1757,6 @@ abstract class common {
 
 			// children_view. Sometimes the component defines the view of his children (see rsc368)
 				$dd_object->children_view = $this->get_children_view();
-
-			// relation_list // time_machine_list
-				if($model==='section'){
-					$dd_object->relation_list		= $this->get_relation_list();
-					$dd_object->time_machine_list	= $this->get_time_machine_list_tipo();
-					$dd_object->section_map 		= section::get_section_map( $section_tipo );
-				}
 
 		// cache. fix context dd_object
 			self::$structure_context_cache[$ddo_key] = $dd_object;
@@ -1894,7 +1899,7 @@ abstract class common {
 				if(empty($request_config_object->show->ddo_map)) {
 					debug_log(__METHOD__
 						. " Ignored empty show ddo_map " . PHP_EOL
-						. ' ('.$this->tipo.' - '. RecordObj_dd::get_termino_by_tipo($this->tipo) .')' . PHP_EOL
+						. ' (tipo: '.$this->tipo.' - '. RecordObj_dd::get_termino_by_tipo($this->tipo) .')' . PHP_EOL
 						. ' in request_config_object (It may be due to a lack of permissions in their children):' . PHP_EOL
 						. to_string($request_config_object),
 						logger::ERROR

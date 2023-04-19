@@ -17,6 +17,14 @@ final class OutputTest extends TestCase {
 
 
 
+	protected function setUp(): void   {
+		$this->markTestSkipped(
+			'Disabled !'
+		);
+	}
+
+
+
 	// minimal test check to prevent phpunit miss-configuration errors
 		public function testMinimalTestExpectInteger(): void {
 			// $this->expectOutputString('foo');

@@ -45,8 +45,16 @@ class menu extends common {
 
 		$ar_areas = [];
 
-		$user_id			= navigator::get_user_id();
-		$is_global_admin	= security::is_global_admin($user_id);
+		$user_id = navigator::get_user_id();
+		if (empty($user_id)) {
+			debug_log(__METHOD__
+				. " Warning. Empty user id "
+				, logger::WARNING
+			);
+			return $ar_areas;
+		}
+
+		$is_global_admin = security::is_global_admin($user_id);
 
 		// get all areas of the current installation
 			$ar_full_areas = area::get_areas();
@@ -208,7 +216,7 @@ class menu extends common {
 			$info_data->php_session_handler	= ini_get('session.save_handler');
 			$info_data->pg_db				= pg_version(DBi::_getConnection())['server'];
 			$info_data->pg_db_name			= DEDALO_DATABASE_CONN;
-			$info_data->server_software		= $_SERVER['SERVER_SOFTWARE'];
+			$info_data->server_software		= $_SERVER['SERVER_SOFTWARE'] ?? 'unknown';
 			$info_data->dedalo_version		= DEDALO_VERSION;
 			$info_data->dedalo_build		= DEDALO_BUILD;
 			$info_data->php_sapi_name		= php_sapi_name();
