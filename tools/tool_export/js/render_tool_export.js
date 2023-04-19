@@ -19,8 +19,6 @@
 * Manages the component's logic and appearance in client side
 */
 export const render_tool_export = function() {
-
-	return true
 }//end render_tool_export
 
 
@@ -28,6 +26,7 @@ export const render_tool_export = function() {
 /**
 * EDIT
 * Render DOM nodes of the tool
+* @param object options
 * @return HTMLElement wrapper
 */
 render_tool_export.prototype.edit = async function (options) {
@@ -50,19 +49,6 @@ render_tool_export.prototype.edit = async function (options) {
 		// set pointers
 		wrapper.content_data = content_data
 
-	// tool_container container
-		// if (!window.opener) {
-		// 	const header			= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
-		// 	const tool_container	= ui.attach_to_modal(header, wrapper, null, 'big')
-		// 	tool_container.on_close	= async () => {
-		// 		// tool destroy
-		// 			await self.destroy(true, true, true)
-		// 		// refresh source component text area
-		// 			if (self.caller) {
-		// 				self.caller.refresh()
-		// 			}
-		// 	}
-		// }
 
 	return wrapper
 }//end render_tool_export
@@ -71,17 +57,25 @@ render_tool_export.prototype.edit = async function (options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
+* @param object self
 * @return HTMLElement content_data
 */
 const get_content_data_edit = async function(self) {
 
 	const fragment = new DocumentFragment()
 
+	// grid_top
+		const grid_top = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'grid_top',
+			parent			: fragment
+		})
+
 	// components_list_container (left side)
 		const components_list_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'components_list_container',
-			parent			: fragment
+			parent			: grid_top
 		})
 		// fields list . List of section fields usable in search
 			// const search_container_selector = ui.create_dom_element({
@@ -110,7 +104,7 @@ const get_content_data_edit = async function(self) {
 		const user_selection_list = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'user_selection_list',
-			parent			: fragment
+			parent			: grid_top
 		})
 		// user_selection_list drag and drop events
 		user_selection_list.addEventListener('dragover',function(e){self.on_dragover(this,e)})
@@ -158,7 +152,7 @@ const get_content_data_edit = async function(self) {
 		const export_buttons_config = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'export_buttons_config',
-			parent			: fragment
+			parent			: grid_top
 		})
 
 		// records info
@@ -251,7 +245,6 @@ const get_content_data_edit = async function(self) {
 					parent			: select_data_format_export
 				})
 
-
 		// show labels check
 			const show_tipo_in_label = ui.create_dom_element({
 				element_type	: 'div',
@@ -278,6 +271,11 @@ const get_content_data_edit = async function(self) {
 					while (export_data_container.hasChildNodes()) {
 						export_data_container.removeChild(export_data_container.lastChild);
 					}
+					const data_spinner = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'spinner',
+						parent			: export_data_container
+					});
 
 				// export_grid API call
 					// self.data_format = select_data_format_export.value
@@ -301,7 +299,12 @@ const get_content_data_edit = async function(self) {
 						class_name		: 'spinner',
 						parent			: export_buttons_config
 					})
-					const show_tipo_in_label = show_tipo_in_label_check.checked
+					const show_tipo_in_label = show_tipo_in_label_check.checked;
+
+				// loading class elements
+					[components_list_container, user_selection_list, export_buttons_options].map(
+						el => el.classList.add('loading')
+					)
 
 				// export_grid
 					const export_grid_options = {
@@ -313,15 +316,22 @@ const get_content_data_edit = async function(self) {
 					const dd_grid				= await self.get_export_grid(export_grid_options)
 					const dd_grid_export_node	= await dd_grid.render()
 					if (dd_grid_export_node) {
+						data_spinner.remove()
 						export_data_container.appendChild(dd_grid_export_node)
-						export_data_container.scrollIntoView(true)
+						// export_data_container.scrollIntoView(true)
+						export_buttons_options.scrollIntoView(true)
 					}
 
 				// spinner remove
 					[button_export, activate_all_columns, deactivate_all_columns].map(
 						el => el.classList.remove('hide')
 					)
-					spinner.remove()
+					spinner.remove();
+
+				// loading class elements
+					[components_list_container, user_selection_list, export_buttons_options].map(
+						el => el.classList.remove('loading')
+					)
 			})
 
 		// activate_all_columns
