@@ -190,6 +190,28 @@ class dd_grid_cell_object {
 
 
 	/**
+	* GET METHODS
+	* By accessors. When property exits, return property value, else return null
+	*/
+	final public function __get($name) {
+
+		if (isset($this->$name)) {
+			return $this->$name;
+		}
+
+		$trace = debug_backtrace();
+		debug_log(
+			__METHOD__
+			.' Undefined property via __get(): '.$name .
+			' in ' . $trace[0]['file'] .
+			' on line ' . $trace[0]['line'],
+			logger::DEBUG);
+		return null;
+	}//end __get
+
+
+
+	/**
 	* SET_CLASS_LIST
 	* @param string $value
 	* @return void
