@@ -802,22 +802,21 @@ abstract class component_common extends common {
 
 	/**
 	* GET_VALUE
-	* Get the raw value of the components. By default will be get_dato().
-	* overwrite in every different specific component
-	* The direct components can set the value with the dato directly
-	* The relation components will separate the locator in rows
-	* @return string || null $value
+	* Get the string value of the components.
+	* Use dd_grid to resolve his value
+	* first it get the dd_grid_value
+	* second it flat the dd_grid to obtain a string
+	* @return string|null $value
 	* 	dd_grid_cell_object
 	*/
 	public function get_value() : ?string {
 
-		$value = null;
-
-		$grid_value = $this->get_grid_value();
-
+		$grid_value	= $this->get_grid_value();
+		$value		= dd_grid_cell_object::resolve_value($grid_value);
 
 		return $value;
 	}//end get_value
+
 
 
 	/**
@@ -827,7 +826,6 @@ abstract class component_common extends common {
 	* Some the text components can set the value with the dato directly
 	* the relation components need to process the locator to resolve the value
 	* @param object|null $ddo = null
-	*
 	* @return dd_grid_cell_object $dd_grid_cell_object
 	*/
 	public function get_grid_value(object $ddo=null) : dd_grid_cell_object {
