@@ -659,7 +659,11 @@ abstract class component_common extends common {
 
 				// matrix_id check
 					if (empty($this->matrix_id)) {
-						debug_log(__METHOD__." ERROR. 'matrix_id' IS MANDATORY IN TIME MACHINE MODE  ".to_string(), logger::ERROR);
+						debug_log(__METHOD__
+							." ERROR. 'matrix_id' IS MANDATORY IN TIME MACHINE MODE. " .PHP_EOL
+							. get_called_class() .' - '. $this->tipo . ' - ' .$this->section_tipo . ' - ' .$this->section_id
+							, logger::ERROR
+						);
 						return null;
 					}
 
@@ -775,7 +779,10 @@ abstract class component_common extends common {
 				return false;
 			}
 			if (empty($this->section_tipo)) {
-				debug_log(__METHOD__." Error Processing Request. section tipo not found for component $this->tipo ".to_string(), logger::ERROR);
+				debug_log(__METHOD__
+					." Error Processing Request. section tipo not found for component $this->tipo "
+					, logger::ERROR
+				);
 				return false;
 			}
 
