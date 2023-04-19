@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS COMPONENT_INVERSE
 *
 *
@@ -169,7 +169,7 @@ class component_inverse extends component_common {
 
 	/**
 	* GET_VALOR_EXPORT
-	* Return component value sended to export data
+	* Return component value sent to export data
 	* @return string $valor
 	*/
 	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
@@ -239,6 +239,7 @@ class component_inverse extends component_common {
 
 		return $lines;
 	}//end get_valor_export
+
 
 
 }//end class component_inverse

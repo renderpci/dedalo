@@ -741,8 +741,10 @@ section.prototype.render = async function(options={}) {
 * Generate a section_record instance for each data value
 * Create (init and build) a section_record for each component value
 * Used by portals to get all rows for render
+* @param object options
+* @return array section_records
 */
-export const get_section_records = async function(options){
+export const get_section_records = async function(options) {
 
 	// options
 		const self				= options.caller
@@ -836,6 +838,7 @@ export const get_section_records = async function(options){
 			return ready_instances
 		});
 
+
 	return section_records
 }//end get_section_records
 
@@ -843,32 +846,23 @@ export const get_section_records = async function(options){
 
 /**
 * LOAD_SECTION_TOOL_FILES
-* Used by section_tool
-* @return promise
+* Used by section_tool to set the tool icon from tool css definition
+* Normally mask-image: url('../img/icon.svg');
+* @return void
 */
 section.prototype.load_section_tool_files = function() {
 
 	const self = this
 
-	// load dependencies js/css
-		// const load_promises = []
+	// css file load
+		const model	= self.config.tool_context.model
+		const url	= DEDALO_TOOLS_URL + '/' + model + '/css/' + model + '.css'
+		common.prototype.load_style(url)
 
-		// css file load
-			// const lib_css_file = self.config.tool_context && self.config.tool_context.css
-			// 	? self.config.tool_context.css.url
-			// 	: null
-			// if (lib_css_file) {
-			// 	load_promises.push( common.prototype.load_style(lib_css_file) )
-			// }
-			const model = self.config.tool_context.model
-			const url = DEDALO_TOOLS_URL + '/' + model + '/css/' + model + '.css'
-			console.warn(')))))))))))) (((((((((( url:', url, self);
-			const js_promise = common.prototype.load_style(url)
-
-	// const js_promise = Promise.all(load_promises)
-
-
-	return js_promise
+	// debug
+		if(SHOW_DEBUG===true) {
+			console.log('loaded section_tool files:', url);
+		}
 }//end load_section_tool_files
 
 
@@ -931,7 +925,7 @@ section.prototype.delete_section = async function (options) {
 * Refresh the section instance with new sqo params creating a
 * history footprint. Used to paginate and sort records
 * @param object options
-* @return promise
+* @return bool
 */
 section.prototype.navigate = async function(options) {
 
@@ -1045,6 +1039,7 @@ section.prototype.navigate = async function(options) {
 section.prototype.change_mode = async function(options) {
 
 	/*
+		@todo
 		under construction !
 	*/
 
