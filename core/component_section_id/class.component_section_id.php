@@ -13,7 +13,12 @@ class component_section_id extends component_common {
 	*/
 	public function get_dato() {
 
-		return (int)$this->section_id;
+		$dato = (int)$this->section_id;
+
+		// Set as loaded
+			$this->bl_loaded_matrix_data = true;
+
+		return $dato;
 	}//end get_dato
 
 
