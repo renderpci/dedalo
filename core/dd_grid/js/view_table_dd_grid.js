@@ -406,28 +406,38 @@ const get_av_column = function(current_data) {
 /**
 * GET_IMG_COLUMN
 * @param object current_data
-* @return HTMLElement image (img)
+* @return HTMLElement td_node
 */
-const get_img_column = function(current_data){
+const get_img_column = function(current_data) {
 
 	const class_list = current_data.class_list || ''
 
-	const image_node = ui.create_dom_element({
-		// id			: current_data.id,
-		element_type	: 'td'
-	})
-
-	// url
-		const url = current_data.value[0]
-	// image
-		ui.create_dom_element({
-			element_type	: "img",
-			class_name		: class_list,
-			src 			: window.location.origin + url,
-			parent 			: image_node
+	// td_node
+		const td_node = ui.create_dom_element({
+			element_type : 'td'
 		})
 
-	return image_node
+	// image
+		const url = current_data.value[0]
+		if (url) {
+
+			// append current domain and protocol only in local images, excluding
+			// external like 'https://gallica.bnf.fr/ark:/12148/btv1b8498948z/f1.highres'
+			const full_url = url.indexOf('http')===0
+				? url
+				: window.location.origin + url
+
+			// image
+				ui.create_dom_element({
+					element_type	: 'img',
+					class_name		: class_list,
+					src 			: full_url,
+					parent 			: td_node
+				})
+		}
+
+
+	return td_node
 }//end get_img_column
 
 
