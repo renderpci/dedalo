@@ -47,6 +47,11 @@ class component_relation_parent extends component_relation_common {
 	*/
 	public function get_dato() {
 
+		// dato_resolved. Already resolved case
+			if(isset($this->dato_resolved)) {
+				return $this->dato_resolved;
+			}
+
 		// search mode
 			if ($this->mode==='search') {
 				return $this->dato ?? null;
@@ -57,7 +62,11 @@ class component_relation_parent extends component_relation_common {
 
 		// check dato format
 			if (!empty($dato) && !is_array($dato)) {
-				debug_log(__METHOD__." Re-saved invalid dato. Array expected and ".gettype($dato)." is received for tipo:$this->tipo, parent:$this->parent", logger::ERROR);
+				debug_log(__METHOD__
+					." Re-saved invalid dato. Array expected and type: ". gettype($dato)
+					." is received for tipo: $this->tipo, parent: $this->parent"
+					, logger::ERROR
+				);
 				$dato = array();
 				$this->set_dato( $dato );
 				$this->Save();
@@ -82,6 +91,16 @@ class component_relation_parent extends component_relation_common {
 					$dato_fixed[] = $locator;
 				}
 			}
+
+		// fix dato
+			$this->dato = $dato;
+
+		// @experimental
+			$this->dato_resolved = $this->dato;
+
+		// Set as loaded
+			$this->bl_loaded_matrix_data = true;
+
 
 		return (array)$dato_fixed;
 	}//end get_dato
