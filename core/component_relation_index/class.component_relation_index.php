@@ -18,10 +18,15 @@ class component_relation_index extends component_relation_common {
 
 
 	/**
-	* GET_DATA
+	* GET_DATO
 	* @return array|null $dato
 	*/
 	public function get_dato() : ?array {
+
+		// dato_resolved. Already resolved case
+			if(isset($this->dato_resolved)) {
+				return $this->dato_resolved;
+			}
 
 		// external. Custom properties external dato
 			if(	(!empty($this->build_options) && $this->build_options->get_dato_external===true) ||
@@ -31,7 +36,6 @@ class component_relation_index extends component_relation_common {
 					$reference_locator->set_type(DEDALO_RELATION_TYPE_INDEX_TIPO); // dd96
 					$reference_locator->set_section_tipo($this->section_tipo);
 					$reference_locator->set_section_id($this->section_id);
-
 
 				# Get calculated inverse locators for all matrix tables
 				$ar_inverse_locators = search_related::get_referenced_locators( $reference_locator );
@@ -63,7 +67,13 @@ class component_relation_index extends component_relation_common {
 				}
 
 				$this->set_dato($new_dato);
+
+				// Set as loaded
+				$this->bl_loaded_matrix_data = true;
 			}//end if
+
+		// @experimental
+			$this->dato_resolved = $this->dato;
 
 
 		return $this->dato;
