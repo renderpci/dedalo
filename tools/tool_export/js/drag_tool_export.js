@@ -73,6 +73,8 @@
 		event.preventDefault() // Necessary. Allows us to drop.
 		event.stopPropagation()
 
+		container.classList.remove('dragover')
+
 		const self = this
 
 		// data transfer

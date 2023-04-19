@@ -269,7 +269,7 @@ const get_content_data_edit = async function(self) {
 		// button_export
 			const button_export = ui.create_dom_element({
 				element_type	: 'button',
-				class_name		: 'button_export success',
+				class_name		: 'button_export table success',
 				inner_html		: get_label.tool_export || 'Export',
 				parent			: export_buttons_config
 			})
@@ -407,7 +407,7 @@ const get_content_data_edit = async function(self) {
 		// csv. button_export_csv
 			const button_export_csv = ui.create_dom_element({
 				element_type	: 'button',
-				class_name		: 'processing_import success',
+				class_name		: 'processing_import success download',
 				inner_html		: (get_label.download || 'Download') + ' csv',
 				parent			: export_buttons_options
 			})
@@ -434,7 +434,7 @@ const get_content_data_edit = async function(self) {
 		// tsv. button_export_tsv
 			const button_export_tsv = ui.create_dom_element({
 				element_type	: 'button',
-				class_name		: 'processing_import success',
+				class_name		: 'processing_import success download',
 				inner_html		: (get_label.download || 'Export') + ' tsv',
 				parent			: export_buttons_options
 			})
@@ -461,7 +461,7 @@ const get_content_data_edit = async function(self) {
 		// excel. button_export Excel
 			const button_export_excel = ui.create_dom_element({
 				element_type	: 'button',
-				class_name		: 'processing_import success',
+				class_name		: 'processing_import success download',
 				inner_html		: (get_label.download || 'Export') + ' Excel',
 				parent			: export_buttons_options
 			})
@@ -482,7 +482,7 @@ const get_content_data_edit = async function(self) {
 		// html. button export html
 			const button_export_html = ui.create_dom_element({
 				element_type	: 'button',
-				class_name		: 'processing_import success',
+				class_name		: 'processing_import success download',
 				inner_html		: (get_label.download || 'Export') + ' html',
 				parent			: export_buttons_options
 			})
@@ -503,7 +503,7 @@ const get_content_data_edit = async function(self) {
 		// print. button export print
 			const button_export_print = ui.create_dom_element({
 				element_type	: 'button',
-				class_name		: 'processing_import success',
+				class_name		: 'processing_import success print',
 				inner_html		: get_label.print || 'Print',
 				parent			: export_buttons_options
 			})
