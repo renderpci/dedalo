@@ -1092,43 +1092,43 @@ view_default_autocomplete.hide = function () {
 
 
 /**
- * GET_LAST_DDO_DATA_VALUE
- * Recursive function
- * follow the path of the columns to get the correct data to the last component in the chain, the last component has the text to show.
- * all others ddo in the middle of the chain are portals with locator value, and only will show the last component.
- * @param array current_path
- * @param array value
- * @param array data
- * @return ddo object current_element_data
- * */
-	// const get_last_ddo_data_value = function(current_path, value, data) {
+* GET_LAST_DDO_DATA_VALUE
+* Recursive function
+* follow the path of the columns to get the correct data to the last component in the chain, the last component has the text to show.
+* all others ddo in the middle of the chain are portals with locator value, and only will show the last component.
+* @param array current_path
+* @param array value
+* @param array data
+* @return ddo object current_element_data
+*/
+const get_last_ddo_data_value = function(current_path, value, data) {
 
-	// 	// check the path length sent, the first loop is the full path, but it is changed with the check data
-	// 	const current_path_length = current_path.length
-	// 	for (let i = 0; i < value.length; i++) {
-	// 		const section_tipo 	= value[i].section_tipo
-	// 		const section_id 	= value[i].section_id
-	// 		// get the column data with last ddo
-	// 		const ddo_item = current_path[current_path.length - 1];
-	// 		// get the data into the full data from API and get the value (locator or final data as input_text data)
-	// 		const current_element_data = data.find((item)=> item.tipo===ddo_item.tipo && item.section_tipo===section_tipo && item.section_id===section_id)
-	// 		const current_value = (current_element_data)
-	// 			? current_element_data.value
-	// 			: false
-	// 		// if the element doesn't has data stop the recursion.
-	// 		if(current_value === false) return false;
-	// 		// create new_path without and remove the current ddo
-	// 		const new_path = [...current_path]
-	// 		new_path.pop()
-	// 		// if it is the last ddo, the data is the correct data to build the column
-	// 		// else continue with the path doing recursion
-	// 		if (current_path_length===1) {
-	// 			return current_element_data
-	// 		}
+	// check the path length sent, the first loop is the full path, but it is changed with the check data
+	const current_path_length = current_path.length
+	for (let i = 0; i < value.length; i++) {
+		const section_tipo 	= value[i].section_tipo
+		const section_id 	= value[i].section_id
+		// get the column data with last ddo
+		const ddo_item = current_path[current_path.length - 1];
+		// get the data into the full data from API and get the value (locator or final data as input_text data)
+		const current_element_data = data.find((item)=> item.tipo===ddo_item.tipo && item.section_tipo===section_tipo && item.section_id===section_id)
+		const current_value = (current_element_data)
+			? current_element_data.value
+			: false
+		// if the element doesn't has data stop the recursion.
+		if(current_value === false) return false;
+		// create new_path without and remove the current ddo
+		const new_path = [...current_path]
+		new_path.pop()
+		// if it is the last ddo, the data is the correct data to build the column
+		// else continue with the path doing recursion
+		if (current_path_length===1) {
+			return current_element_data
+		}
 
-	// 		return get_last_ddo_data_value(new_path, current_value, data)
-	// 	}
-	// }//end get_last_ddo_data_value
+		return get_last_ddo_data_value(new_path, current_value, data)
+	}
+}//end get_last_ddo_data_value
 
 
 
@@ -1136,269 +1136,274 @@ view_default_autocomplete.hide = function () {
 * RENDER_GRID_CHOOSE
 * Render result data as DOM grid nodes and place it into document body as
 * float draggable div preserving position across calls
+* Used by 'numisdata575'
 * @param object self
 * @param object selected_instance
 * 	Current section_record
 * @param object params
 * @return HTMLElement grid_choose_container
 */
-	// view_default_autocomplete.render_grid_choose = async function( self, selected_instance, params ) {
+view_default_autocomplete.render_grid_choose = async function( self, selected_instance, params ) {
 
-	// 	// data from API
-	// 		const grid_choose_data = await get_grid_choose_data(self, selected_instance, params)
+	// data from API
+		const grid_choose_data = await get_grid_choose_data(self, selected_instance, params)
 
-	// 	// get dd objects from the context that will be used to build the lists in correct order
-	// 		const rqo_search	= grid_choose_data.rqo_search
-	// 		const data			= grid_choose_data.data
-	// 		const context		= grid_choose_data.context
+	// get dd objects from the context that will be used to build the lists in correct order
+		const rqo_search	= grid_choose_data.rqo_search
+		const data			= grid_choose_data.data
+		const context		= grid_choose_data.context
 
-	// 	// grid_choose_container
-	// 		const current_container		= document.getElementById('choose_container')
-	// 		const grid_choose_container	= current_container
-	// 			|| ui.create_dom_element({
-	// 				element_type	: 'div',
-	// 				id				: 'choose_container',
-	// 				class_name		: 'grid_choose_container draggable'
-	// 			})
+	// grid_choose_container
+		const current_container		= document.getElementById('choose_container')
+		const grid_choose_container	= current_container
+			|| ui.create_dom_element({
+				element_type	: 'div',
+				id				: 'choose_container',
+				class_name		: 'grid_choose_container draggable'
+			})
 
-	// 		// clean the last list
-	// 			while (grid_choose_container.firstChild) {
-	// 				grid_choose_container.removeChild(grid_choose_container.firstChild)
-	// 			}
+		// clean the last list
+			while (grid_choose_container.firstChild) {
+				grid_choose_container.removeChild(grid_choose_container.firstChild)
+			}
 
-	// 		// service node reference. Set bellow autocomplete search box when is created (once)
-	// 			if (!current_container) {
-	// 				const reference_node	= self.datalist
-	// 				const rect				= reference_node.getBoundingClientRect();
-	// 				const top				= rect.top  + window.scrollY + 20
-	// 				const left				= rect.left + window.scrollX + 20
-	// 				// set coordinates. Same as datalist position
-	// 				grid_choose_container.style.left	= left + 'px'
-	// 				grid_choose_container.style.top		= top + 'px'
-	// 			}
+		// service node reference. Set bellow autocomplete search box when is created (once)
+			if (!current_container) {
+				const reference_node	= self.datalist
+				const rect				= reference_node.getBoundingClientRect();
+				const top				= rect.top  + window.scrollY + 20
+				const left				= rect.left + window.scrollX + 20
+				// set coordinates. Same as datalist position
+				grid_choose_container.style.left	= left + 'px'
+				grid_choose_container.style.top		= top + 'px'
+			}
 
-	// 	// label. From section_record node
-	// 		const label = selected_instance.node
-	// 			? selected_instance.node.firstChild.innerHTML
-	// 			: ''
+	// label. From section_record node
+		const label = selected_instance.node
+			? selected_instance.node.firstChild.innerHTML
+			: ''
 
-	// 	// header
-	// 		const header = ui.create_dom_element({
-	// 			element_type	: 'div',
-	// 			class_name		: 'grid_choose_header text_unselectable dragger',
-	// 			inner_html		: label,
-	// 			parent			: grid_choose_container
-	// 		});
-	// 		// drag move set
-	// 		(function(){
-	// 			let x, y, target, margin_left, margin_top = null
-	// 			// header is the drag area
-	// 			header.addEventListener('mousedown', function(e) {
+	// header
+		const header = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'grid_choose_header text_unselectable dragger',
+			inner_html		: label,
+			parent			: grid_choose_container
+		});
+		// drag move set
+		(function(){
+			let x, y, target, margin_left, margin_top = null
+			// header is the drag area
+			header.addEventListener('mousedown', function(e) {
 
-	// 				const path = e.composedPath();
+				const path = e.composedPath();
 
-	// 				let clickedDragger = false;
-	// 				for(let i = 0; path[i] !== document; i++) {
+				let clickedDragger = false;
+				for(let i = 0; path[i] !== document; i++) {
 
-	// 					if (path[i].classList.contains('dragger')) {
-	// 						// dragger is clicked (header)
-	// 						clickedDragger = true;
-	// 					}
-	// 					else if (clickedDragger===true && path[i].classList.contains('draggable')) {
-	// 						// draggable is set (all modal-content)
-	// 						target = path[i];
-	// 						target.classList.add('dragging');
-	// 						x = e.clientX - target.style.left.slice(0, -2);
-	// 						y = e.clientY - target.style.top.slice(0, -2);
+					if (path[i].classList.contains('dragger')) {
+						// dragger is clicked (header)
+						clickedDragger = true;
+					}
+					else if (clickedDragger===true && path[i].classList.contains('draggable')) {
+						// draggable is set (all modal-content)
+						target = path[i];
+						target.classList.add('dragging');
+						x = e.clientX - target.style.left.slice(0, -2);
+						y = e.clientY - target.style.top.slice(0, -2);
 
-	// 						// this is calculated once, every time that user clicks on header
-	// 						// to get the whole container margin and use it as position offset
-	// 						const compStyles	= window.getComputedStyle(target);
-	// 						margin_left			= parseInt(compStyles.getPropertyValue('margin-left'))
-	// 						margin_top			= parseInt(compStyles.getPropertyValue('margin-top'))
+						// this is calculated once, every time that user clicks on header
+						// to get the whole container margin and use it as position offset
+						const compStyles	= window.getComputedStyle(target);
+						margin_left			= parseInt(compStyles.getPropertyValue('margin-left'))
+						margin_top			= parseInt(compStyles.getPropertyValue('margin-top'))
 
-	// 						return;
-	// 					}
-	// 				}
-	// 			});
+						return;
+					}
+				}
+			});
 
-	// 			document.addEventListener('mouseup', function() {
-	// 				// if (target !== null) {
-	// 				if (target) {
-	// 					target.classList.remove('dragging');
-	// 				}
-	// 				target = null;
-	// 			});
+			document.addEventListener('mouseup', function() {
+				// if (target !== null) {
+				if (target) {
+					target.classList.remove('dragging');
+				}
+				target = null;
+			});
 
-	// 			document.addEventListener('mousemove', function(e) {
-	// 				// no target case (mouse position changes but target is null or undefined)
-	// 					if (!target) {
-	// 						return;
-	// 					}
+			document.addEventListener('mousemove', function(e) {
+				// no target case (mouse position changes but target is null or undefined)
+					if (!target) {
+						return;
+					}
 
-	// 				// re-position element based on mouse position
-	// 					target.style.left	= e.clientX - x + 'px';
-	// 					target.style.top	= e.clientY - y + 'px';
+				// re-position element based on mouse position
+					target.style.left	= e.clientX - x + 'px';
+					target.style.top	= e.clientY - y + 'px';
 
-	// 				// limit boundaries. take care of initial margin offset
-	// 					const pRect		= target.parentElement.getBoundingClientRect();
-	// 					const tgtRect	= target.getBoundingClientRect();
-	// 					if (tgtRect.left < pRect.left) {
-	// 						target.style.left = (0 - margin_left) + 'px';
-	// 					}
-	// 					if (tgtRect.top < pRect.top) {
-	// 						target.style.top = (0 - margin_top) + 'px';
-	// 					}
-	// 					if (tgtRect.right > (pRect.right)) {
-	// 						target.style.left = (pRect.width - tgtRect.width - margin_left) + 'px';
-	// 					}
-	// 					if (tgtRect.bottom > (pRect.bottom)) {
-	// 						target.style.top = (pRect.height - tgtRect.height - margin_top - 1) + 'px';
-	// 					}
-	// 			});
-	// 		})();
+				// limit boundaries. take care of initial margin offset
+					const pRect		= target.parentElement.getBoundingClientRect();
+					const tgtRect	= target.getBoundingClientRect();
+					if (tgtRect.left < pRect.left) {
+						target.style.left = (0 - margin_left) + 'px';
+					}
+					if (tgtRect.top < pRect.top) {
+						target.style.top = (0 - margin_top) + 'px';
+					}
+					if (tgtRect.right > (pRect.right)) {
+						target.style.left = (pRect.width - tgtRect.width - margin_left) + 'px';
+					}
+					if (tgtRect.bottom > (pRect.bottom)) {
+						target.style.top = (pRect.height - tgtRect.height - margin_top - 1) + 'px';
+					}
+			});
+		})();
 
-	// 	// button_close
-	// 		const button_close = ui.create_dom_element({
-	// 			element_type	: 'span',
-	// 			class_name		: 'button close white',
-	// 			parent			: header
-	// 		})
-	// 		button_close.addEventListener('click', function(e) {
-	// 			e.stopPropagation()
-	// 			while (grid_choose_container.firstChild) {
-	// 				grid_choose_container.removeChild(grid_choose_container.firstChild)
-	// 			}
-	// 			grid_choose_container.remove()
-	// 			if (self.node && self.node.grid_choose_container) {
-	// 				delete self.node.grid_choose_container
-	// 			}
-	// 		})
+	// button_close
+		const button_close = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button close white',
+			parent			: header
+		})
+		button_close.addEventListener('click', function(e) {
+			e.stopPropagation()
+			while (grid_choose_container.firstChild) {
+				grid_choose_container.removeChild(grid_choose_container.firstChild)
+			}
+			grid_choose_container.remove()
+			if (self.node && self.node.grid_choose_container) {
+				delete self.node.grid_choose_container
+			}
+		})
 
-	// 	// ar_search_sections. get the sections that was searched
-	// 		// const ar_search_sections = rqo_search.sqo.section_tipo
+	// ar_search_sections. get the sections that was searched
+		// const ar_search_sections = rqo_search.sqo.section_tipo
 
-	// 	// columns
-	// 		const columns = rqo_search.show.columns
+	// columns
+		const columns = rqo_search.show.columns
 
-	// 	// get the ar_locator founded in sections
-	// 		const data_locator	= data.find((item)=> item.tipo === rqo_search.source.tipo && item.typo==='sections');
-	// 		const ar_locator	= (data_locator) ? data_locator.value : []
+	// get the ar_locator founded in sections
+		const data_locator	= data.find((item)=> item.tipo === rqo_search.source.tipo && item.typo==='sections');
+		const ar_locator	= (data_locator) ? data_locator.value : []
 
-	// 	// iterate the sections
-	// 		for (const current_locator of ar_locator) {
+	// iterate the sections
+		for (const current_locator of ar_locator) {
 
-	// 			// const section_tipo	= current_locator.section_tipo
-	// 			// const section_id	= current_locator.section_id
+			// const section_tipo	= current_locator.section_tipo
+			// const section_id	= current_locator.section_id
 
-	// 			// get data that mach with the current section from the global data sent by the API
-	// 			// get the full row with all items in the ddo that mach with the section_id
-	// 			// const current_row = data.filter((item)=> item.section_tipo===section_tipo && item.section_id===section_id )
+			// get data that mach with the current section from the global data sent by the API
+			// get the full row with all items in the ddo that mach with the section_id
+			// const current_row = data.filter((item)=> item.section_tipo===section_tipo && item.section_id===section_id )
 
-	// 			// grid_item
-	// 				// const grid_item = ui.create_dom_element({
-	// 				// 	element_type	: 'div',
-	// 				// 	class_name		: 'grid_item',
-	// 				// 	dataset			: {value : JSON.stringify(current_locator)},
-	// 				// 	parent			: grid_choose_container
-	// 				// })
+			// grid_item
+				// const grid_item = ui.create_dom_element({
+				// 	element_type	: 'div',
+				// 	class_name		: 'grid_item',
+				// 	dataset			: {value : JSON.stringify(current_locator)},
+				// 	parent			: grid_choose_container
+				// })
 
-	// 			// values. build the text of the row with label nodes in correct order (the ddo order in context).
-	// 				const columns_length = columns.length
-	// 				for (let i = 0; i < columns_length; i++) {
+			// values. build the text of the row with label nodes in correct order (the ddo order in context).
+				const columns_length = columns.length
+				for (let i = 0; i < columns_length; i++) {
 
-	// 					const current_path = columns[i]
+					const current_path = columns[i]
 
-	// 					// the columns has the last element in the chain in the first position of the array,
-	// 					// the first position is the only component that is necessary to build and show
-	// 						const ddo_item				= current_path[0]
-	// 						const current_element_data	= get_last_ddo_data_value(current_path, [current_locator], data)
-	// 						// if the element doesn't has data continue to the next element.
-	// 						if (typeof current_element_data==='undefined' || current_element_data===false) {
-	// 							console.warn('[render_datalist] Ignored tipo not found in row:', ddo_item.tipo, ddo_item);
-	// 							continue
-	// 						}
+					// the columns has the last element in the chain in the first position of the array,
+					// the first position is the only component that is necessary to build and show
+						const ddo_item				= current_path[0]
+						const current_element_data	= get_last_ddo_data_value(current_path, [current_locator], data)
+						// if the element doesn't has data continue to the next element.
+						if (typeof current_element_data==='undefined' || current_element_data===false) {
+							console.warn('[render_datalist] Ignored tipo not found in row:', ddo_item.tipo, ddo_item);
+							continue
+						}
 
-	// 					// context of the element
-	// 						const current_element_context = context.find( (item) =>
-	// 							item.tipo===ddo_item.tipo &&
-	// 							item.section_tipo===current_element_data.section_tipo
-	// 						)
-	// 						if (!current_element_context) {
-	// 							console.error('Ignored element: context not found. ddo_item:', ddo_item, 'context:', context);
-	// 							continue;
-	// 						}
+					// context of the element
+						const current_element_context = context.find( (item) =>
+							item.tipo===ddo_item.tipo &&
+							item.section_tipo===current_element_data.section_tipo
+						)
+						if (!current_element_context) {
+							console.error('Ignored element: context not found. ddo_item:', ddo_item, 'context:', context);
+							continue;
+						}
 
-	// 					// mode and view
-	// 						current_element_context.mode	= params.mode || 'list'
-	// 						current_element_context.view	= params.view || 'default'
+					// mode and view
+						current_element_context.mode	= params.mode || 'list'
+						current_element_context.view	= params.view || 'default'
 
-	// 					// instance
-	// 						const instance_options = {
-	// 							context			: current_element_context,
-	// 							data			: current_element_data,
-	// 							datum			: {data : data, context: context},
-	// 							tipo			: current_element_context.tipo,
-	// 							section_tipo	: current_element_context.section_tipo,
-	// 							model			: current_element_context.model,
-	// 							section_id		: current_element_data.section_id,
-	// 							mode			: current_element_context.mode, // 'mini',
-	// 							lang			: current_element_context.lang,
-	// 							id_variant		: self.id
-	// 						}
-	// 						const current_instance = await instances.get_instance(instance_options)
-	// 						current_instance.build(false)
-	// 						const node = await current_instance.render()
+					// instance
+						const instance_options = {
+							context			: current_element_context,
+							data			: current_element_data,
+							datum			: {data : data, context: context},
+							tipo			: current_element_context.tipo,
+							section_tipo	: current_element_context.section_tipo,
+							model			: current_element_context.model,
+							section_id		: current_element_data.section_id,
+							mode			: current_element_context.mode, // 'mini',
+							lang			: current_element_context.lang,
+							id_variant		: self.id
+						}
+						const current_instance = await instances.get_instance(instance_options)
+						current_instance.build(false)
+						const node = await current_instance.render()
 
-	// 					// append instance rendered node
-	// 						grid_choose_container.appendChild(node)
-	// 				}//end for ddo_item
-	// 		}//end for (const current_locator of ar_locator)
+					// append instance rendered node
+						grid_choose_container.appendChild(node)
+				}//end for ddo_item
+		}//end for (const current_locator of ar_locator)
 
 
-	// 	return grid_choose_container
-	// }//end render_grid_choose
+	return grid_choose_container
+}//end render_grid_choose
 
 
 
 /**
 * GET_GRID_CHOOSE_DATA
+* Used by render_grid_choose
+* @param object self
+* @param object selected_instance
+* @param object params
 * @return object grid_choose_data
 */
-	// const get_grid_choose_data = async function(self, selected_instance, params) {
+const get_grid_choose_data = async function(self, selected_instance, params) {
 
-	// 	// request_config
-	// 		const request_config = self.request_config.find(el => el.type === params.request_config_type)
-	// 		if(!request_config){
-	// 			console.warn("Called request_config is not defined with type: ", params.request_config_type);
-	// 			return
-	// 		}
+	// request_config
+		const request_config = self.request_config.find(el => el.type === params.request_config_type)
+		if(!request_config){
+			console.warn("Called request_config is not defined with type: ", params.request_config_type);
+			return
+		}
 
-	// 	// rqo
-	// 		const rqo_search = await self.caller.build_rqo_search(request_config, 'search')
+	// rqo
+		const rqo_search = await self.caller.build_rqo_search(request_config, 'search')
 
-	// 		delete rqo_search.sqo_options.filter_free
-	// 		delete rqo_search.sqo_options.filter_by_list
-	// 		// const rqo = await self.rebuild_search_query_object({
-	// 		// 	rqo_search		: rqo_search
-	// 		// });
-	// 		rqo_search.sqo.filter_by_locators = [{
-	// 			section_id		: selected_instance.section_id,
-	// 			section_tipo	: selected_instance.section_tipo
-	// 		}]
+		delete rqo_search.sqo_options.filter_free
+		delete rqo_search.sqo_options.filter_by_list
+		// const rqo = await self.rebuild_search_query_object({
+		// 	rqo_search		: rqo_search
+		// });
+		rqo_search.sqo.filter_by_locators = [{
+			section_id		: selected_instance.section_id,
+			section_tipo	: selected_instance.section_tipo
+		}]
 
-	// 	// API read request
-	// 		const api_response	= await data_manager.request({
-	// 			body : rqo_search
-	// 		})
+	// API read request
+		const api_response	= await data_manager.request({
+			body : rqo_search
+		})
 
-	// 	// grid_choose_data
-	// 		const grid_choose_data = {
-	// 			rqo_search	: rqo_search,
-	// 			data		: api_response.result.data,
-	// 			context		: api_response.result.context
-	// 		}
+	// grid_choose_data
+		const grid_choose_data = {
+			rqo_search	: rqo_search,
+			data		: api_response.result.data,
+			context		: api_response.result.context
+		}
 
 
-	// 	return grid_choose_data
-	// }//end get_grid_choose_data
+	return grid_choose_data
+}//end get_grid_choose_data
