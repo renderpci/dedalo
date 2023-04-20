@@ -1261,7 +1261,7 @@ abstract class component_common extends common {
 						'edit',
 						true
 					);
-					$inverse_locators = $section_observable->get_inverse_locators();
+					$inverse_locators = $section_observable->get_inverse_references();
 
 					$ar_section = [];
 					foreach ($inverse_locators as $inv_locator) {
