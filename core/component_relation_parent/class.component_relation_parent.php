@@ -42,10 +42,10 @@ class component_relation_parent extends component_relation_common {
 	* GET DATO
 	* This component don't store data, only manages calculated data from component_relation_children generated data
 	* stored in section 'relations' container
-	* @return array $dato
+	* @return array|null $dato
 	*	$dato is always an array of locators
 	*/
-	public function get_dato() {
+	public function get_dato() : ?array {
 
 		// dato_resolved. Already resolved case
 			if(isset($this->dato_resolved)) {
@@ -92,17 +92,20 @@ class component_relation_parent extends component_relation_common {
 				}
 			}
 
-		// fix dato
-			$this->dato = $dato;
+		// fix resolved dato
+			// parent::set_dato($dato_fixed);
 
-		// @experimental
+		// fix dato.
+			$this->dato = $dato_fixed;
+
+		// @experimental.
 			$this->dato_resolved = $this->dato;
 
-		// Set as loaded
+		// Set as loaded.
 			$this->bl_loaded_matrix_data = true;
 
 
-		return (array)$dato_fixed;
+		return $this->dato;
 	}//end get_dato
 
 
