@@ -26,8 +26,11 @@ abstract class common {
 
 		// norden
 		protected $norden;
-		// traducible
+
+		// string traducible (si|no)
 		public $traducible;
+		// bool translatable
+		public $translatable;
 
 		// // section_id. string like '1526'
 		// public $section_id;
@@ -307,7 +310,8 @@ abstract class common {
 				$this->label	= RecordObj_dd::get_termino_by_tipo($this->tipo,DEDALO_APPLICATION_LANG,true);		#echo 'DEDALO_APPLICATION_LANG: '.DEDALO_APPLICATION_LANG ;#var_dump($this->label);	#die();
 
 			// translatable
-				$this->traducible = $this->RecordObj_dd->get_traducible();
+				$this->traducible	= $this->RecordObj_dd->get_traducible();
+				$this->translatable	= $this->traducible==='si';
 				// If the element is not translatable, we set its 'lang' to 'lg-nolan' (DEDALO_DATA_NOLAN)
 				if ($this->traducible==='no') {
 					$this->fix_language_nolan();
@@ -331,6 +335,19 @@ abstract class common {
 
 		return true;
 	}//end load_structure_data
+
+
+
+	/**
+	* IS_TRANSLATABLE
+	* @return bool
+	*/
+	public function is_translatable() : bool {
+
+		$translatable = $this->translatable ?? false;
+
+		return $translatable;
+	}//end is_translatable
 
 
 
