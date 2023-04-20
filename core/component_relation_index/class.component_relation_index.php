@@ -32,52 +32,50 @@ class component_relation_index extends component_relation_common {
 				return $this->dato_resolved;
 			}
 
-		// external. Custom properties external dato
-			if(	(!empty($this->build_options) && $this->build_options->get_dato_external===true) ||
-				(isset($this->properties->source->mode) && $this->properties->source->mode==='external')) {
+		// reference_locator
+			$reference_locator = new locator();
+				$reference_locator->set_type(DEDALO_RELATION_TYPE_INDEX_TIPO); // dd96
+				$reference_locator->set_section_tipo($this->section_tipo);
+				$reference_locator->set_section_id($this->section_id);
 
-				$reference_locator = new locator();
-					$reference_locator->set_type(DEDALO_RELATION_TYPE_INDEX_TIPO); // dd96
-					$reference_locator->set_section_tipo($this->section_tipo);
-					$reference_locator->set_section_id($this->section_id);
+		// referenced locators. Get calculated inverse locators for all matrix tables
+			$ar_inverse_locators = search_related::get_referenced_locators( $reference_locator );
 
-				# Get calculated inverse locators for all matrix tables
-				$ar_inverse_locators = search_related::get_referenced_locators( $reference_locator );
+		// format result like own dato
+			$new_dato = [];
+			foreach ($ar_inverse_locators as $current_locator) {
 
-				$new_dato = [];
-				foreach ($ar_inverse_locators as $current_locator) {
+				$locator = new locator();
+					$locator->set_type($current_locator->type);
+					$locator->set_section_tipo($current_locator->from_section_tipo);
+					$locator->set_section_id($current_locator->from_section_id);
+					if(isset($current_locator->tag_component_tipo)){
+						$locator->set_component_tipo($current_locator->tag_component_tipo);
+					}
+					if(isset($current_locator->tag_id)){
+						$locator->set_tag_id($current_locator->tag_id);
+					}
+					if(isset($current_locator->section_top_id)){
+						$locator->set_section_top_id($current_locator->section_top_id);
+					}
+					if(isset($current_locator->section_top_id)){
+						$locator->set_section_top_tipo($current_locator->section_top_tipo);
+					}
+					if(isset($current_locator->from_component_tipo)){
+						$locator->set_from_component_top_tipo($current_locator->from_component_tipo);
+					}
 
-					$locator = new locator();
-						$locator->set_type($current_locator->type);
-						$locator->set_section_tipo($current_locator->from_section_tipo);
-						$locator->set_section_id($current_locator->from_section_id);
-						if(isset($current_locator->tag_component_tipo)){
-							$locator->set_component_tipo($current_locator->tag_component_tipo);
-						}
-						if(isset($current_locator->tag_id)){
-							$locator->set_tag_id($current_locator->tag_id);
-						}
-						if(isset($current_locator->section_top_id)){
-							$locator->set_section_top_id($current_locator->section_top_id);
-						}
-						if(isset($current_locator->section_top_id)){
-							$locator->set_section_top_tipo($current_locator->section_top_tipo);
-						}
-						if(isset($current_locator->from_component_tipo)){
-							$locator->set_from_component_top_tipo($current_locator->from_component_tipo);
-						}
+					$new_dato[] = $locator;
+			}
 
-						$new_dato[] = $locator;
-				}
+		// fix resolved dato
+			parent::set_dato($new_dato);
 
-				$this->set_dato($new_dato);
+		// Set as loaded. Already set on set parent::set_dato
+			// $this->bl_loaded_matrix_data = true;
 
-				// Set as loaded
-				$this->bl_loaded_matrix_data = true;
-			}//end if
-
-		// @experimental
-			$this->dato_resolved = $this->dato;
+		// @experimental. Already set on set parent::set_dato
+			// $this->dato_resolved = $this->dato;
 
 
 		return $this->dato;
