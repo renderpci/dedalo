@@ -261,7 +261,7 @@ class tool_posterframe extends tool_common {
 
 		// section locators
 			$section			= section::get_instance($section_id, $section_tipo);
-			$inverse_locators	= $section->get_inverse_locators();
+			$inverse_locators	= $section->get_inverse_references();
 
 		// ar_identifying_image
 			$ar_identifying_image = [];

@@ -22,7 +22,7 @@ class component_inverse extends component_common {
 
 		// section search for inverse locators
 			$section	= $this->get_my_section();
-			$dato		= $section->get_inverse_locators();
+			$dato		= $section->get_inverse_references();
 
 		// fix dato
 			$this->dato = $dato;

@@ -113,7 +113,7 @@ class search_related extends search {
 	/**
 	* GET_REFERENCED_LOCATORS
 	* Get the sections that is pointed by any kind of locator to the caller (reference_locator)
-	* @see section::get_inverse_locators
+	* @see section::get_inverse_references
 	*
 	* @param object $reference_locator
 	*	Basic locator with section_tipo and section_id properties
