@@ -453,7 +453,8 @@ service_autocomplete.prototype.dedalo_engine = async function() {
 
 	// API read request
 		const load_section_data_promise	= data_manager.request({
-			body : rqo
+			body		: rqo,
+			use_worker	: true
 		})
 
 	// render section on load data

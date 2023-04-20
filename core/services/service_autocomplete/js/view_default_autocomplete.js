@@ -1394,7 +1394,8 @@ const get_grid_choose_data = async function(self, selected_instance, params) {
 
 	// API read request
 		const api_response	= await data_manager.request({
-			body : rqo_search
+			body		: rqo_search,
+			use_worker	: true
 		})
 
 	// grid_choose_data
