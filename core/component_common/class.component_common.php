@@ -519,11 +519,11 @@ abstract class component_common extends common {
 	* Set dato default when properties->dato_default exists and current component dato is empty
 	* properties are loaded always (structure data) at beginning of build component. Because this
 	* is more fast verify if is set 'dato_default' and not load component data always as before
-	* @return bool true
+	* @return mixed $dato_default
 	*/
-	private function set_dato_default() : bool {
+	private function set_dato_default() : mixed {
 
-		$default_dato = null;
+		$dato_default = null;
 
 		// optional defaults for config_defaults file
 			if (defined('CONFIG_DEFAULT_FILE_PATH')) {
@@ -532,33 +532,41 @@ abstract class component_common extends common {
 				$defaults = json_decode($contents);
 				if (!empty($defaults)) {
 					if (!is_array($defaults)) {
-						debug_log(__METHOD__." Ignored config_default_file value. Expected type was array but received is ". gettype($defaults), logger::ERROR);
+						debug_log(__METHOD__
+							." Ignored config_default_file value. Expected type was array but received is "
+							. gettype($defaults)
+							, logger::ERROR
+						);
 					}else{
 						$found = array_find($defaults, function($el){
 							return $el->tipo===$this->tipo; // Note that match only uses component tipo (case hierarchy25 problem)
 						});
 						if (!empty($found)) {
-							$default_dato = $found->value;
+							$dato_default = $found->value;
 						}
 					}
 				}else{
-					debug_log(__METHOD__." Ignored empty defaults file contents ! (Check if JSON is valid) ".to_string($defaults), logger::ERROR);
+					debug_log(__METHOD__
+						." Ignored empty defaults file contents ! (Check if JSON is valid) "
+						.to_string($defaults)
+						, logger::ERROR
+					);
 				}
 			}
 
 		// properties try
-			if (empty($default_dato)) {
+			if (empty($dato_default)) {
 				$properties = $this->get_properties();
 				if(isset($properties->dato_default)) {
 					// Method fallback. Remember method option like cases as date 'today'
-					$default_dato = isset($properties->dato_default->method)
+					$dato_default = isset($properties->dato_default->method)
 						? $this->get_method( $properties->dato_default->method )
 						: $properties->dato_default;
 				}
 			}
 
 		// set default dato (only when own dato is empty)
-			if (!empty($default_dato)) {
+			if (!empty($dato_default)) {
 
 				// matrix data : force load matrix data
 					$this->load_component_dato();
@@ -568,7 +576,7 @@ abstract class component_common extends common {
 					if (empty($dato)) {
 
 						// set dato only when own dato is empty
-							$this->set_dato($default_dato);
+							$this->set_dato($dato_default);
 
 						// temp section cases do not save anything
 							if ( strpos($this->section_id, DEDALO_SECTION_ID_TEMP)===false ) {
@@ -579,17 +587,17 @@ abstract class component_common extends common {
 							debug_log(__METHOD__
 								." Created ".get_called_class()." \"$this->label\" id:$this->section_id, tipo:$this->tipo, section_tipo:$this->section_tipo, mode:$this->mode".PHP_EOL
 								." with default data from 'properties':"
-								. to_string($default_dato)
+								. to_string($dato_default)
 								, logger::DEBUG
 							);
 
 						// matrix data : load matrix data again
 							$this->load_component_dato();
 					}
-			}//end if (!empty($default_dato))
+			}//end if (!empty($dato_default))
 
 
-		return true;
+		return $dato_default;
 	}//end set_dato_default
 
 
