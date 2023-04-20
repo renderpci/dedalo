@@ -376,7 +376,8 @@ class dd_grid_cell_object {
 	public static function resolve_value(dd_grid_cell_object $dd_grid) : string {
 
 		$value_check = $dd_grid->value;
-		if(isset($value_check[0]) && is_object($value_check[0]) && $value_check[0]->type === 'row') {
+		if(isset($value_check[0]) && is_object($value_check[0]) &&
+			isset($value_check[0]->type) && $value_check[0]->type==='row') {
 
 			// rows case
 
@@ -405,7 +406,7 @@ class dd_grid_cell_object {
 
 			// case columns
 
-			$ar_column_values = $dd_grid->value;
+			$ar_column_values = (array)$dd_grid->value;
 
 			$fields_separator = $dd_grid->fields_separator ?? ', ';
 
@@ -415,7 +416,9 @@ class dd_grid_cell_object {
 					? $value
 					: $dd_grid->fallback_value[$key];
 
-					$ar_column_value[] = $fallback;
+				$ar_column_value[] = is_string($fallback)
+					? $fallback
+					: to_string($fallback);
 			}
 
 			$column_value = implode($fields_separator, $ar_column_value);
