@@ -808,6 +808,20 @@ abstract class component_common extends common {
 
 
 	/**
+	* IS_TRANSLATABLE
+	* @return bool
+	*/
+	public function is_translatable() {
+
+		$RecordObj_dd	= $this->RecordObj_dd ?? new RecordObj_dd($this->tipo);
+		$translatable	= (bool)$RecordObj_dd->get_traducible()==='si';
+
+		return $translatable;
+	}//end is_translatable
+
+
+
+	/**
 	* GET_VALUE
 	* Get the string value of the components.
 	* Use dd_grid to resolve his value
