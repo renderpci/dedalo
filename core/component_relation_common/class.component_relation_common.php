@@ -600,8 +600,9 @@ class component_relation_common extends component_common {
 
 		$safe_dato = [];
 
-		$translatable = $this->RecordObj_dd->get_traducible();
-		$lang = $this->get_lang();
+		// translatable
+			$translatable	= $this->RecordObj_dd->get_traducible();
+			$lang			= $this->get_lang();
 
 		if (!empty($dato)) {
 
@@ -693,9 +694,9 @@ class component_relation_common extends component_common {
 			}
 		}
 
-		// set again the safe dato to current component dato (this action force to refresh component property 'dato' with the new safe values)
+		// set again the safe dato to current component dato
+		// (this action force to refresh component property 'dato' with the new safe values)
 			parent::set_dato( (array)$safe_dato );
-
 
 		// translatable cases
 			if ($translatable==='si') {

@@ -746,11 +746,9 @@ abstract class component_common extends common {
 	*/
 	public function get_dato_full() {
 
-		$section = $this->get_my_section();
-
-		$all_component_data = $section->get_all_component_data($this->tipo);
-
-		$dato_full = $all_component_data->dato ?? null;
+		$section			= $this->get_my_section();
+		$all_component_data	= $section->get_all_component_data($this->tipo);
+		$dato_full			= $all_component_data->dato ?? null;
 
 		return $dato_full;
 	}//end get_dato_full
@@ -804,20 +802,6 @@ abstract class component_common extends common {
 
 		return true;
 	}//end load_component_dato
-
-
-
-	/**
-	* IS_TRANSLATABLE
-	* @return bool
-	*/
-	public function is_translatable() {
-
-		$RecordObj_dd	= $this->RecordObj_dd ?? new RecordObj_dd($this->tipo);
-		$translatable	= (bool)$RecordObj_dd->get_traducible()==='si';
-
-		return $translatable;
-	}//end is_translatable
 
 
 
