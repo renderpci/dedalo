@@ -70,10 +70,10 @@ service_autocomplete.prototype.init = async function(options) {
 		self.id_variant		= options.id_variant || self.model
 
 	// set properties
-		self.model					= 'service_autocomplete'
-		self.id						= 'service_autocomplete' +'_'+ self.tipo +'_'+ self.section_tipo
-		self.mode 					= 'search'
-		self.context 				= {
+		self.model			= 'service_autocomplete'
+		self.id				= 'service_autocomplete' +'_'+ self.tipo +'_'+ self.section_tipo
+		self.mode			= 'search'
+		self.context 		= {
 			tipo			: self.tipo,
 			section_tipo	: self.section_tipo,
 			model 			: self.model,

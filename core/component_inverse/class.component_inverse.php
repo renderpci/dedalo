@@ -161,7 +161,7 @@ class component_inverse extends component_common {
 				$dd_grid_cell_object->set_records_separator($records_separator);
 				$dd_grid_cell_object->set_value([$grid_row]);
 
-		dump($dd_grid_cell_object, '$dd_grid_cell_object ++ '.to_string());
+		// dump($dd_grid_cell_object, '$dd_grid_cell_object ++ '.to_string());
 
 		return $dd_grid_cell_object;
 	}//end get_grid_value

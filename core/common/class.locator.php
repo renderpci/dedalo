@@ -170,6 +170,11 @@ class locator extends stdClass {
 	public function set_type(string $value) {
 		$ar_allowed = common::get_allowed_relation_types();
 		if( !in_array($value, $ar_allowed) ) {
+			debug_log(__METHOD__
+				. " Error Processing Request. Invalid locator type: ". json_encode($value) .PHP_EOL
+				. ' allowed type: '. to_string($ar_allowed)
+				, logger::ERROR
+			);
 			throw new Exception("Error Processing Request. Invalid locator type: $value. Only are allowed: ".to_string($ar_allowed), 1);
 		}
 		$this->type = $value;

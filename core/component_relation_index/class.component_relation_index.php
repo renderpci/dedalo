@@ -19,6 +19,10 @@ class component_relation_index extends component_relation_common {
 
 	/**
 	* GET_DATO
+	* Resolve indexation references data
+	* Note that this component data is always EXTERNAL
+	* because is used to display remote references of relation type (DEDALO_RELATION_TYPE_INDEX_TIPO)
+	* to current section
 	* @return array|null $dato
 	*/
 	public function get_dato() : ?array {
@@ -199,32 +203,32 @@ class component_relation_index extends component_relation_common {
 	* @param object $locator
 	* @return bool
 	*/
-	public function add_locator( object $locator ) : bool {
+		// public function add_locator( object $locator ) : bool {
 
-		$locator = clone($locator);
+		// 	$locator = clone($locator);
 
-		# Verify exists locator type
-		if (!property_exists($locator,'type')) {
-			$locator->type = $this->relation_type;
-		}
+		// 	# Verify exists locator type
+		// 	if (!property_exists($locator,'type')) {
+		// 		$locator->type = $this->relation_type;
+		// 	}
 
-		# Verify exists locator from_component_tipo
-		if (!property_exists($locator,'from_component_tipo')) {
-			$locator->from_component_tipo = $this->tipo;
-		}
+		// 	# Verify exists locator from_component_tipo
+		// 	if (!property_exists($locator,'from_component_tipo')) {
+		// 		$locator->from_component_tipo = $this->tipo;
+		// 	}
 
-		if ($locator->type!=$this->relation_type) {
-			debug_log(__METHOD__." Stopped add index (struct) of invalid type (valid type is $this->relation_type). Received type: ".to_string($locator->type), logger::ERROR);
-			return false;
-		}
+		// 	if ($locator->type!=$this->relation_type) {
+		// 		debug_log(__METHOD__." Stopped add index (struct) of invalid type (valid type is $this->relation_type). Received type: ".to_string($locator->type), logger::ERROR);
+		// 		return false;
+		// 	}
 
-		# Add current locator to component dato
-		if (!$add_locator = $this->add_locator_to_dato($locator)) {
-			return false;
-		}
+		// 	# Add current locator to component dato
+		// 	if (!$add_locator = $this->add_locator_to_dato($locator)) {
+		// 		return false;
+		// 	}
 
-		return true;
-	}//end add_locator
+		// 	return true;
+		// }//end add_locator
 
 
 
