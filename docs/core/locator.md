@@ -84,7 +84,7 @@ table: matrix
 
 | id | section_id | section_tipo | datos |
 | --- | --- | --- | --- |
-|345 | 1 | oh1 | \[{"oh24":\[{"section_id": 88, "section_tipo": "rsc97"}]}] |
+| 345 | 1 | oh1 | \[{"oh24":\[{"section_id": 88, "section_tipo": "rsc97"}]}] |
 
 table: matrix
 
@@ -98,7 +98,7 @@ Then the result will be:
 
 | id | section_id | section_tipo | datos |
 | --- | --- | --- | --- |
-|345 | 1 | oh1 | Adela García |
+| 345 | 1 | oh1 | Adela García |
 
 Locators can point to:
 
