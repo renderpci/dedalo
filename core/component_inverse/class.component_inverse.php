@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS COMPONENT_INVERSE
 *
 *
@@ -15,8 +15,20 @@ class component_inverse extends component_common {
 	*/
 	public function get_dato() {
 
-		$section	= $this->get_my_section();
-		$dato		= $section->get_inverse_locators();
+		// dato_resolved. Already resolved case
+			if(isset($this->dato_resolved)) {
+				return $this->dato_resolved;
+			}
+
+		// section search for inverse locators
+			$section	= $this->get_my_section();
+			$dato		= $section->get_inverse_references();
+
+		// fix dato
+			$this->dato = $dato;
+
+		// Set as loaded
+			$this->bl_loaded_matrix_data = true;
 
 		return $dato;
 	}//end get_dato
@@ -149,9 +161,11 @@ class component_inverse extends component_common {
 				$dd_grid_cell_object->set_records_separator($records_separator);
 				$dd_grid_cell_object->set_value([$grid_row]);
 
-	dump($dd_grid_cell_object, '$dd_grid_cell_object ++ '.to_string());
+		// dump($dd_grid_cell_object, '$dd_grid_cell_object ++ '.to_string());
+
 		return $dd_grid_cell_object;
 	}//end get_grid_value
+
 
 
 	/**
@@ -169,7 +183,7 @@ class component_inverse extends component_common {
 
 	/**
 	* GET_VALOR_EXPORT
-	* Return component value sended to export data
+	* Return component value sent to export data
 	* @return string $valor
 	*/
 	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
@@ -239,6 +253,18 @@ class component_inverse extends component_common {
 
 		return $lines;
 	}//end get_valor_export
+
+
+
+	/**
+	* EXTRACT_COMPONENT_VALUE_FALLBACK
+	* Catch common method calls
+	* @return string $value
+	*/
+	public static function extract_component_value_fallback(object $component, string $lang=DEDALO_DATA_LANG, bool $mark=true, string $main_lang=DEDALO_DATA_LANG_DEFAULT) : string {
+		return '';
+	}
+
 
 
 }//end class component_inverse

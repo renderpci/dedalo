@@ -411,7 +411,7 @@ class tool_tr_print extends tool_common {
 		$lang 		  = $this->component_obj->get_lang();
 
 		$section = section::get_instance($parent, $section_tipo);
-		$inverse_locators = $section->get_inverse_locators();
+		$inverse_locators = $section->get_inverse_references();
 			#dump($inverse_locators, ' $inverse_locators ++ '.to_string());
 
 		$ar_interviews = array();

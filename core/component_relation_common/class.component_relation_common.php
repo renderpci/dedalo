@@ -129,7 +129,8 @@ class component_relation_common extends component_common {
 			'component_relation_related',
 			'component_relation_struct',
 			'component_select',
-			'component_select_lang'
+			'component_select_lang',
+			'component_inverse',
 		];
 
 		return $components_with_relations;
@@ -600,8 +601,9 @@ class component_relation_common extends component_common {
 
 		$safe_dato = [];
 
-		$translatable = $this->RecordObj_dd->get_traducible();
-		$lang = $this->get_lang();
+		// translatable
+			$translatable	= $this->RecordObj_dd->get_traducible();
+			$lang			= $this->get_lang();
 
 		if (!empty($dato)) {
 
@@ -693,9 +695,9 @@ class component_relation_common extends component_common {
 			}
 		}
 
-		// set again the safe dato to current component dato (this action force to refresh component property 'dato' with the new safe values)
+		// set again the safe dato to current component dato
+		// (this action force to refresh component property 'dato' with the new safe values)
 			parent::set_dato( (array)$safe_dato );
-
 
 		// translatable cases
 			if ($translatable==='si') {
@@ -719,28 +721,28 @@ class component_relation_common extends component_common {
 
 
 	/**
-	* GET_VALOR_LANG
+	* GET_VALOR_LANG (DEPRECATED)
 	* Return the component lang depending of is translatable or not
 	* If the component need change this langs (selects, radio buttons...) overwrite this function
 	* @return string $lang
 	*/
-	public function get_valor_lang() : string {
+		// public function get_valor_lang() : string {
 
-		$related = (array)$this->RecordObj_dd->get_relaciones();
-		if(empty($related)){
-			return $this->lang;
-		}
+		// 	$related = (array)$this->RecordObj_dd->get_relaciones();
+		// 	if(empty($related)){
+		// 		return $this->lang;
+		// 	}
 
-		$termonioID_related	= array_values($related[0])[0];
-		$translatable		= RecordObj_dd::get_translatable($termonioID_related);
+		// 	$termonioID_related	= array_values($related[0])[0];
+		// 	$translatable		= RecordObj_dd::get_translatable($termonioID_related);
 
-		$lang = $translatable===true
-			? DEDALO_DATA_LANG
-			: DEDALO_DATA_NOLAN;
+		// 	$lang = $translatable===true
+		// 		? DEDALO_DATA_LANG
+		// 		: DEDALO_DATA_NOLAN;
 
 
-		return $lang;
-	}//end get_valor_lang
+		// 	return $lang;
+		// }//end get_valor_lang
 
 
 
@@ -762,7 +764,10 @@ class component_relation_common extends component_common {
 		$valor_export = $this->get_valor($lang);
 
 		// replace html '<br>'' for plain text return '\nl'
-		$valor_export = br2nl($valor_export);
+		if(!empty($valor_export)) {
+			$valor_export = br2nl($valor_export);
+		}
+
 
 		return $valor_export;
 	}//end get_valor_export

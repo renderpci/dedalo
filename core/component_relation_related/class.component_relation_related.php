@@ -102,7 +102,7 @@ class component_relation_related extends component_relation_common {
 			// current_ar_value array|null
 			$current_ar_value = self::get_locator_value(
 				$current_locator, // object locator
-				$lang, // string lang
+				$lang ?? DEDALO_DATA_LANG, // string lang
 				false, // bool show_parents
 				$ar_componets_related // array|null ar_components_related
 			);

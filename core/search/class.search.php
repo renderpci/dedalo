@@ -2504,7 +2504,7 @@ class search {
 	/**
 	* CALCULATE_INVERSE_LOCATORS
 	* Now inverse locators is always calculated, not stored !
-	* @see section::get_inverse_locators
+	* @see section::get_inverse_references
 	* @param object $reference_locator
 	*	Basic locator with section_tipo and section_id properties
 	* @param int|null $limit = null

@@ -42,10 +42,15 @@ class component_relation_parent extends component_relation_common {
 	* GET DATO
 	* This component don't store data, only manages calculated data from component_relation_children generated data
 	* stored in section 'relations' container
-	* @return array $dato
+	* @return array|null $dato
 	*	$dato is always an array of locators
 	*/
-	public function get_dato() {
+	public function get_dato() : ?array {
+
+		// dato_resolved. Already resolved case
+			if(isset($this->dato_resolved)) {
+				return $this->dato_resolved;
+			}
 
 		// search mode
 			if ($this->mode==='search') {
@@ -57,7 +62,11 @@ class component_relation_parent extends component_relation_common {
 
 		// check dato format
 			if (!empty($dato) && !is_array($dato)) {
-				debug_log(__METHOD__." Re-saved invalid dato. Array expected and ".gettype($dato)." is received for tipo:$this->tipo, parent:$this->parent", logger::ERROR);
+				debug_log(__METHOD__
+					." Re-saved invalid dato. Array expected and type: ". gettype($dato)
+					." is received for tipo: $this->tipo, parent: $this->parent"
+					, logger::ERROR
+				);
 				$dato = array();
 				$this->set_dato( $dato );
 				$this->Save();
@@ -83,7 +92,20 @@ class component_relation_parent extends component_relation_common {
 				}
 			}
 
-		return (array)$dato_fixed;
+		// fix resolved dato
+			// parent::set_dato($dato_fixed);
+
+		// fix dato.
+			$this->dato = $dato_fixed;
+
+		// @experimental.
+			$this->dato_resolved = $this->dato;
+
+		// Set as loaded.
+			$this->bl_loaded_matrix_data = true;
+
+
+		return $this->dato;
 	}//end get_dato
 
 
@@ -787,7 +809,7 @@ class component_relation_parent extends component_relation_common {
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value($lang=DEDALO_DATA_LANG, $option_obj=null) : ?string {
+	public function get_diffusion_value( ?string $lang=DEDALO_DATA_LANG, $option_obj=null ) : ?string {
 
 		$resolve_value = isset($option_obj->resolve_value) ? $option_obj->resolve_value : false;
 

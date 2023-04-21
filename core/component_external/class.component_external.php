@@ -263,12 +263,12 @@ class component_external extends component_common {
 
 
 	/**
-	* LOAD TOOLS
+	* LOAD TOOLS (DEPRECATED)
 	*/
-	public function load_tools( bool $check_lang_tools=true ) : array {
+		// public function load_tools( bool $check_lang_tools=true ) : array {
 
-		return [];
-	}//end load_tools
+		// 	return [];
+		// }//end load_tools
 
 
 
