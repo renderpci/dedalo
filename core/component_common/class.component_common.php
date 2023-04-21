@@ -1354,114 +1354,115 @@ abstract class component_common extends common {
 
 
 	/**
-	* LOAD TOOLS
+	* LOAD TOOLS (DEPRECATED)
 	* @param bool $check_lang_tools = true
 	* @return array $ar_tools_obj
+	* security_tools
 	*/
-	public function load_tools( bool $check_lang_tools=true ) : array {
+		// public function load_tools( bool $check_lang_tools=true ) : array {
 
-		// other modes than 'edit' do not need tools
-			if(	strpos($this->mode, 'edit')===false
-				|| login::is_logged()!==true
-				) {
-				return [];
-			}
+		// 	// other modes than 'edit' do not need tools
+		// 		if(	strpos($this->mode, 'edit')===false
+		// 			|| login::is_logged()!==true
+		// 			) {
+		// 			return [];
+		// 		}
 
-		// if we are not logged in, it is not necessary to load the tools
-			if(login::is_logged()!==true) {
-				return [];
-			}
+		// 	// if we are not logged in, it is not necessary to load the tools
+		// 		if(login::is_logged()!==true) {
+		// 			return [];
+		// 		}
 
-		# Load all tools of current component
-		$ar_tools_name = $this->get_ar_tools_name();
+		// 	# Load all tools of current component
+		// 	$ar_tools_name = $this->get_ar_tools_name();
 
-		# check_lang_tools default is true
-		if ($check_lang_tools===true) {
-			$traducible = $this->RecordObj_dd->get_traducible();
-			if ($traducible==='no' || $this->lang===DEDALO_DATA_NOLAN) {
-				$key = array_search('tool_lang',$ar_tools_name);
-				if($key!==false){
-					unset($ar_tools_name[$key]);
-				}
-			}
-		}
+		// 	# check_lang_tools default is true
+		// 	if ($check_lang_tools===true) {
+		// 		$traducible = $this->RecordObj_dd->get_traducible();
+		// 		if ($traducible==='no' || $this->lang===DEDALO_DATA_NOLAN) {
+		// 			$key = array_search('tool_lang',$ar_tools_name);
+		// 			if($key!==false){
+		// 				unset($ar_tools_name[$key]);
+		// 			}
+		// 		}
+		// 	}
 
-		# Create obj tools array
-		$ar_tools_obj = [];
-		if(is_array($ar_tools_name)) foreach ($ar_tools_name as $tool_name) {
+		// 	# Create obj tools array
+		// 	$ar_tools_obj = [];
+		// 	if(is_array($ar_tools_name)) foreach ($ar_tools_name as $tool_name) {
 
-			$authorized_tool = component_security_tools::is_authorized_tool_for_logged_user($tool_name);
+		// 		$authorized_tool = component_security_tools::is_authorized_tool_for_logged_user($tool_name);
 
-			if ($authorized_tool===true) {
+		// 		if ($authorized_tool===true) {
 
-				# INDEXATION TOOL CASE : When current tool have 'indexation' name, test thesaurus permissions for avoid inconsistencies
-				if (strpos($tool_name, 'indexation')!==false) {
-					$ts_permissions = (int)common::get_permissions(DEDALO_TESAURO_TIPO, DEDALO_TESAURO_TIPO);
-					if ($ts_permissions<1) continue;	# Skip this tool
-				}
+		// 			# INDEXATION TOOL CASE : When current tool have 'indexation' name, test thesaurus permissions for avoid inconsistencies
+		// 			if (strpos($tool_name, 'indexation')!==false) {
+		// 				$ts_permissions = (int)common::get_permissions(DEDALO_TESAURO_TIPO, DEDALO_TESAURO_TIPO);
+		// 				if ($ts_permissions<1) continue;	# Skip this tool
+		// 			}
 
-				# Authorized tools names
-				#if (!in_array($tool_name, (array)$this->ar_authorized_tool_name)) {
-					$tool = new stdClass();
-						$tool->name = $tool_name;
+		// 			# Authorized tools names
+		// 			#if (!in_array($tool_name, (array)$this->ar_authorized_tool_name)) {
+		// 				$tool = new stdClass();
+		// 					$tool->name = $tool_name;
 
-					$ar_tools_obj[] = $tool;
-				#}
-			}
-		}
+		// 				$ar_tools_obj[] = $tool;
+		// 			#}
+		// 		}
+		// 	}
 
-		// set
-			$this->ar_tools_obj = $ar_tools_obj;
+		// 	// set
+		// 		$this->ar_tools_obj = $ar_tools_obj;
 
 
-		return $ar_tools_obj;
-	}//end load_tools
+		// 	return $ar_tools_obj;
+		// }//end load_tools
 
 
 
 	/**
-	* LOAD SPECIFIC TOOL
+	* LOAD SPECIFIC TOOL (DEPRECATED)
 	* Note: Used in class.inspector to load relation tool
 	* @param string $tool_name
 	* @return object|null $tool_object
 	*/
-	public function load_specific_tool(string $tool_name) : ?object {
+		// public function load_specific_tool(string $tool_name) : ?object {
 
-		$tool_obj = null;
+		// 	$tool_obj = null;
 
-		if ($tool_name==='tool_relation') {
-			return $tool_obj;
-		}
+		// 	if ($tool_name==='tool_relation') {
+		// 		return $tool_obj;
+		// 	}
 
-		$authorized_tool = component_security_tools::is_authorized_tool_for_logged_user($tool_name);
-		if ($authorized_tool===true) {
-			require_once(DEDALO_CORE_PATH . '/tools/'.$tool_name.'/class.'.$tool_name.'.php');
-			$tool_obj = new $tool_name($this);
-		}
+		// 	$authorized_tool = component_security_tools::is_authorized_tool_for_logged_user($tool_name);
+		// 	if ($authorized_tool===true) {
+		// 		require_once(DEDALO_CORE_PATH . '/tools/'.$tool_name.'/class.'.$tool_name.'.php');
+		// 		$tool_obj = new $tool_name($this);
+		// 	}
 
-		return $tool_obj;
-	}//end load_specific_tool
+		// 	return $tool_obj;
+		// }//end load_specific_tool
 
 
 
 	/**
-	* GET_AR_TOOLS_NAME
+	* GET_AR_TOOLS_NAME (DEPRECATED)
 	* @return array $ar_tools_name
 	*/
-	protected function get_ar_tools_name() : array {
+		// protected function get_ar_tools_name() : array {
 
-		// Default tools
-		$ar_tools_name = $this->ar_tools_name;
+		// 	// Default tools
+		// 	$ar_tools_name = $this->ar_tools_name;
 
-		$properties = $this->get_properties();
-		if (isset($properties->ar_tools_name)) {
-			foreach ((array)$properties->ar_tools_name as $current_name => $obj_tool) {
-				$ar_tools_name[] = $current_name;
-			}
-		}
+		// 	$properties = $this->get_properties();
+		// 	if (isset($properties->ar_tools_name)) {
+		// 		foreach ((array)$properties->ar_tools_name as $current_name => $obj_tool) {
+		// 			$ar_tools_name[] = $current_name;
+		// 		}
+		// 	}
 
-		return (array)$ar_tools_name;
-	}//end get_ar_tools_name
+		// 	return (array)$ar_tools_name;
+		// }//end get_ar_tools_name
 
 
 
@@ -1549,35 +1550,35 @@ abstract class component_common extends common {
 
 
 	/**
-	* GET DATO AS STRING
+	* GET DATO AS STRING (DEPRECATED)
 	* Get dato formatted as string
 	*/
-	public function get_dato_as_string() : string {
+		// public function get_dato_as_string() : string {
 
-		$dato = $this->get_dato();
-		#return var_export($dato,true);
+		// 	$dato = $this->get_dato();
+		// 	#return var_export($dato,true);
 
-		if(is_array($dato)) {
-			$string = 'Array: ';
-			foreach ($dato as $key => $value) {
-				if(is_array($value)) $value = 'array '.implode(', ', $value );
-				if (is_string($value)) {
-					$string .= $key .':'. $value .', ';
-				}
-			}
-			if(strlen($string)>2) $string = substr($string, 0,-2);
-			return $string;
-		}else if (is_object($dato)) {
-			#$string = 'Object: ' . get_class($dato);
-		}else if (is_int($dato)) {
-			$string = 'Int: ' . $dato;
-		}else if (is_string($dato)) {
-			$string = 'Str: ' . $dato;
-		}
+		// 	if(is_array($dato)) {
+		// 		$string = 'Array: ';
+		// 		foreach ($dato as $key => $value) {
+		// 			if(is_array($value)) $value = 'array '.implode(', ', $value );
+		// 			if (is_string($value)) {
+		// 				$string .= $key .':'. $value .', ';
+		// 			}
+		// 		}
+		// 		if(strlen($string)>2) $string = substr($string, 0,-2);
+		// 		return $string;
+		// 	}else if (is_object($dato)) {
+		// 		#$string = 'Object: ' . get_class($dato);
+		// 	}else if (is_int($dato)) {
+		// 		$string = 'Int: ' . $dato;
+		// 	}else if (is_string($dato)) {
+		// 		$string = 'Str: ' . $dato;
+		// 	}
 
 
-		return $dato;
-	}//end get_dato_as_string
+		// 	return $dato;
+		// }//end get_dato_as_string
 
 
 
@@ -1983,40 +1984,40 @@ abstract class component_common extends common {
 
 
 	/**
-	* GET_DIFFUSION_OBJ
+	* GET_DIFFUSION_OBJ (DEPRECATED)
 	* @param stdClass Object $properties
 	*/
-	public function get_diffusion_obj(object $properties) : object {
+		// public function get_diffusion_obj(object $properties) : object {
 
-		# Build object
-		$diffusion_obj = new diffusion_component_obj();
-			$diffusion_obj->component_name	= get_class($this);
-			$diffusion_obj->parent			= $this->get_section_id();
-			$diffusion_obj->section_tipo	= $this->get_section_tipo();
-			$diffusion_obj->tipo			= $this->get_tipo();
-			$diffusion_obj->lang			= $this->get_lang();
-			$diffusion_obj->label			= $this->get_label();
-			#$diffusion_obj->dato			= $this->get_dato();
+		// 	# Build object
+		// 	$diffusion_obj = new diffusion_component_obj();
+		// 		$diffusion_obj->component_name	= get_class($this);
+		// 		$diffusion_obj->parent			= $this->get_section_id();
+		// 		$diffusion_obj->section_tipo	= $this->get_section_tipo();
+		// 		$diffusion_obj->tipo			= $this->get_tipo();
+		// 		$diffusion_obj->lang			= $this->get_lang();
+		// 		$diffusion_obj->label			= $this->get_label();
+		// 		#$diffusion_obj->dato			= $this->get_dato();
 
-			# initial_media_path
-			#$section 							= section::get_instance($diffusion_obj->parent, $diffusion_obj->section_tipo );
-			#$diffusion_obj->initial_media_path  = $section->get_initial_media_path();
+		// 		# initial_media_path
+		// 		#$section 							= section::get_instance($diffusion_obj->parent, $diffusion_obj->section_tipo );
+		// 		#$diffusion_obj->initial_media_path  = $section->get_initial_media_path();
 
-			$diffusion_obj->initial_media_path = $this->get_initial_media_path();
+		// 		$diffusion_obj->initial_media_path = $this->get_initial_media_path();
 
-			/*
-			$valor = $this->get_dato();
-			$valor = to_string($valor);
-			#$valor = filter_var($valor, FILTER_SANITIZE_STRING);
-			$diffusion_obj->columns['valor'] 	= $valor;
-			*/
+		// 		/*
+		// 		$valor = $this->get_dato();
+		// 		$valor = to_string($valor);
+		// 		#$valor = filter_var($valor, FILTER_SANITIZE_STRING);
+		// 		$diffusion_obj->columns['valor'] 	= $valor;
+		// 		*/
 
-		# Set standard 'valor' (Overwrite when need resolve dato. Ex. portals)
-		$diffusion_obj->columns['valor'] = $this->get_valor();
+		// 	# Set standard 'valor' (Overwrite when need resolve dato. Ex. portals)
+		// 	$diffusion_obj->columns['valor'] = $this->get_valor();
 
 
-		return $diffusion_obj;
-	}//end get_diffusion_obj
+		// 	return $diffusion_obj;
+		// }//end get_diffusion_obj
 
 
 
