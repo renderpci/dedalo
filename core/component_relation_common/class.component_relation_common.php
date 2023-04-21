@@ -721,28 +721,28 @@ class component_relation_common extends component_common {
 
 
 	/**
-	* GET_VALOR_LANG
+	* GET_VALOR_LANG (DEPRECATED)
 	* Return the component lang depending of is translatable or not
 	* If the component need change this langs (selects, radio buttons...) overwrite this function
 	* @return string $lang
 	*/
-	public function get_valor_lang() : string {
+		// public function get_valor_lang() : string {
 
-		$related = (array)$this->RecordObj_dd->get_relaciones();
-		if(empty($related)){
-			return $this->lang;
-		}
+		// 	$related = (array)$this->RecordObj_dd->get_relaciones();
+		// 	if(empty($related)){
+		// 		return $this->lang;
+		// 	}
 
-		$termonioID_related	= array_values($related[0])[0];
-		$translatable		= RecordObj_dd::get_translatable($termonioID_related);
+		// 	$termonioID_related	= array_values($related[0])[0];
+		// 	$translatable		= RecordObj_dd::get_translatable($termonioID_related);
 
-		$lang = $translatable===true
-			? DEDALO_DATA_LANG
-			: DEDALO_DATA_NOLAN;
+		// 	$lang = $translatable===true
+		// 		? DEDALO_DATA_LANG
+		// 		: DEDALO_DATA_NOLAN;
 
 
-		return $lang;
-	}//end get_valor_lang
+		// 	return $lang;
+		// }//end get_valor_lang
 
 
 
