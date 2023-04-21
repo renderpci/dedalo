@@ -15,6 +15,7 @@ use PHPUnit\Framework\Attributes\TestDox;
 	}
 
 
+
 final class component_common_test extends TestCase {
 
 
@@ -582,10 +583,863 @@ final class component_common_test extends TestCase {
 				gettype($value)==='string' || gettype($value)===null,
 				'expected get_value type is string|null. ' .gettype($value) ." ($element->model)"
 			);
-
-
 		}
 	}//end test_get_value
+
+
+
+	/**
+	* TEST_GET_GRID_VALUE
+	* @return void
+	*/
+	public function test_get_grid_value() {
+
+		// default dato
+		foreach (get_elements() as $element) {
+			$_ENV['DEDALO_ERRORS'] = []; // reset
+
+			$component = component_common::get_instance(
+				$element->model, // string model
+				$element->tipo, // string tipo
+				$element->section_id, // string section_id
+				$element->mode, // string mode
+				$element->lang, // string lang
+				$element->section_tipo, // string section_tipo
+				false
+			);
+
+			$dd_grid_cell_object = $component->get_grid_value();
+				// dump($dd_grid_cell_object, ' dd_grid_cell_object ++ '.to_string($element->model));
+
+			$this->assertTrue(
+				empty($_ENV['DEDALO_ERRORS']),
+				'expected running without errors'
+			);
+
+			$this->assertTrue(
+				gettype($dd_grid_cell_object)==='object',
+				'expected get_grid_value type is object. ' .gettype($dd_grid_cell_object) ." ($element->model)"
+			);
+
+			if ($element->model==='component_section_id') {
+				$this->assertTrue(
+				gettype($dd_grid_cell_object->value)==='integer',
+					'expected get_grid_value type is object->value. ' .gettype($dd_grid_cell_object->value) ." ($element->model)"
+				);
+			}else{
+				$this->assertTrue(
+					gettype($dd_grid_cell_object->value)==='array',
+					'expected get_grid_value type is object->value. ' .gettype($dd_grid_cell_object->value) ." ($element->model)"
+				);
+			}
+
+			$this->assertTrue(
+				gettype($dd_grid_cell_object->ar_columns_obj)==='array',
+				'expected get_grid_value type is object. ' .gettype($dd_grid_cell_object->ar_columns_obj) ." ($element->model)"
+			);
+
+			// if (!empty($dd_grid_cell_object->value)) {
+			// 	$this->assertTrue(
+			// 		!empty($dd_grid_cell_object->ar_columns_obj),
+			// 		'expected get_grid_value type is NOT empty. ' ." ($element->model)"
+			// 	);
+			// }
+		}
+	}//end test_get_grid_value
+
+
+
+	/**
+	* TEST_GET_RAW_VALUE
+	* @return void
+	*/
+	public function test_get_raw_value() {
+
+		// default dato
+		foreach (get_elements() as $element) {
+			$_ENV['DEDALO_ERRORS'] = []; // reset
+
+			$component = component_common::get_instance(
+				$element->model, // string model
+				$element->tipo, // string tipo
+				$element->section_id, // string section_id
+				$element->mode, // string mode
+				$element->lang, // string lang
+				$element->section_tipo, // string section_tipo
+				false
+			);
+
+			$dd_grid_cell_object = $component->get_raw_value();
+				// dump($dd_grid_cell_object, ' raw_value dd_grid_cell_object ++ '.to_string($element->model));
+
+			$this->assertTrue(
+				empty($_ENV['DEDALO_ERRORS']),
+				'expected running without errors'
+			);
+
+			$this->assertTrue(
+				gettype($dd_grid_cell_object)==='object',
+				'expected get_grid_value type is object. ' .gettype($dd_grid_cell_object) ." ($element->model)"
+			);
+
+			if (!empty($dd_grid_cell_object->value)) {
+
+				if ($element->model==='component_section_id') {
+					$this->assertTrue(
+					gettype($dd_grid_cell_object->value)==='integer',
+						'expected get_grid_value type is integer. ' .gettype($dd_grid_cell_object->value) ." ($element->model)"
+					);
+				}else{
+					if (in_array($element->model, component_relation_common::get_components_with_relations())) {
+						$this->assertTrue(
+							gettype($dd_grid_cell_object->value)==='array',
+							'expected get_grid_value type is array. ' .gettype($dd_grid_cell_object->value) ." ($element->model)"
+						);
+					}else{
+						$this->assertTrue(
+							gettype($dd_grid_cell_object->value)==='object',
+							'expected get_grid_value type is object. ' .gettype($dd_grid_cell_object->value) ." ($element->model)"
+						);
+					}
+				}
+			}
+
+			// $this->assertTrue(
+			// 	gettype($dd_grid_cell_object->ar_columns_obj)==='array',
+			// 	'expected get_grid_value type is object. ' .gettype($dd_grid_cell_object->ar_columns_obj) ." ($element->model)"
+			// );
+
+			// if (!empty($dd_grid_cell_object->value)) {
+			// 	$this->assertTrue(
+			// 		!empty($dd_grid_cell_object->ar_columns_obj),
+			// 		'expected get_grid_value type is NOT empty. ' ." ($element->model)"
+			// 	);
+			// }
+		}
+	}//end test_get_raw_value
+
+
+
+	/**
+	* TEST_Save
+	* @return void
+	*/
+	public function test_Save() {
+
+		// default dato
+		foreach (get_elements() as $element) {
+			$_ENV['DEDALO_ERRORS'] = []; // reset
+
+			$test_save = $element->test_save ?? true;
+			if (!isset($element->new_value) || !$test_save) {
+				continue;
+			}
+
+			$component = component_common::get_instance(
+				$element->model, // string model
+				$element->tipo, // string tipo
+				$element->section_id, // string section_id
+				$element->mode, // string mode
+				$element->lang, // string lang
+				$element->section_tipo, // string section_tipo
+				false
+			);
+
+			$component_dato = $component->get_dato();
+
+			$this->assertTrue(
+				empty($_ENV['DEDALO_ERRORS']),
+				'expected running without errors'
+			);
+
+			// new data
+				$arguments	= $element->new_value_params ?? [];
+				$new_data	= call_user_func_array($element->new_value, $arguments);
+
+				$this->assertTrue(
+					gettype($new_data)==='array',
+					'new_data type expected array. current type: ' .gettype($new_data)
+				);
+
+				$component->set_dato($new_data);
+
+			// check new data assignation
+				$component_dato2 = $component->get_dato();
+
+				$this->assertEquals(
+					$component_dato2, $new_data,
+					'both data and new_data expected equal '.$element->model .PHP_EOL
+					.'component_dato2: '.json_encode($component_dato2) .PHP_EOL
+					.'new_data       : '.json_encode($new_data)
+				);
+
+				$result = $component->Save();
+
+				$this->assertTrue(
+					$result===(int)$element->section_id,
+					'save result expected as int '.$element->section_id.' - obtained: '. to_string($result)
+				);
+
+			// component copy
+				$component_copy = component_common::get_instance(
+					$element->model, // string model
+					$element->tipo, // string tipo
+					$element->section_id, // string section_id
+					$element->mode, // string mode
+					$element->lang, // string lang
+					$element->section_tipo, // string section_tipo
+					false
+				);
+				$this->assertTrue(
+					$component_copy->uid!==$component->uid ,
+					'expected different uid ' . "$component_copy->uid => $component->uid"
+				);
+
+				$component_copy_dato = $component_copy->get_dato();
+
+				$this->assertEquals(
+					$component_copy_dato,
+					$new_data,
+					'expected data is equal '.gettype($component_copy_dato).'/'.gettype($new_data) .PHP_EOL
+					.'component_copy_dato: '.json_encode($component_copy_dato) .PHP_EOL
+					.'new_data           : '.json_encode($new_data)
+				);
+		}
+	}//end test_Save
+
+
+
+	/**
+	* TEST_SAVE_ACTIVITY
+	* @return void
+	*/
+	public function test_save_activity() {
+
+		// default dato
+		foreach (get_elements() as $element) {
+			$_ENV['DEDALO_ERRORS'] = []; // reset
+
+			$component = component_common::get_instance(
+				$element->model, // string model
+				$element->tipo, // string tipo
+				$element->section_id, // string section_id
+				$element->mode, // string mode
+				$element->lang, // string lang
+				$element->section_tipo, // string section_tipo
+				false
+			);
+
+			$response = $component->save_activity();
+				// dump($response, ' $response ++ '.to_string($element->model));
+
+			$this->assertTrue(
+				empty($_ENV['DEDALO_ERRORS']),
+				'expected running without errors'
+			);
+
+			$this->assertTrue(
+				is_null($response),
+				'expected response type is null. received: '.gettype($response)
+			);
+		}
+	}//end test_save_activity
+
+
+
+	/**
+	* TEST_PROPAGATE_TO_OBSERVERS
+	* @return void
+	*/
+	public function test_propagate_to_observers() {
+
+		// default dato
+		foreach (get_elements() as $element) {
+			$_ENV['DEDALO_ERRORS'] = []; // reset
+
+			$component = component_common::get_instance(
+				$element->model, // string model
+				$element->tipo, // string tipo
+				$element->section_id, // string section_id
+				$element->mode, // string mode
+				$element->lang, // string lang
+				$element->section_tipo, // string section_tipo
+				false
+			);
+
+			$response = $component->propagate_to_observers();
+				// dump($response, ' $response ++ '.to_string($element->model));
+
+			$this->assertTrue(
+				empty($_ENV['DEDALO_ERRORS']),
+				'expected running without errors'
+			);
+
+			$this->assertTrue(
+				gettype($response)==='NULL' || gettype($response)==='array',
+				'response type expected array. current type: ' .gettype($response)
+			);
+		}
+	}//end test_propagate_to_observers
+
+
+
+	/**
+	* TEST_GET_REQUIRED
+	* @return void
+	*/
+	public function test_get_required() {
+
+		// default dato
+		foreach (get_elements() as $element) {
+			$_ENV['DEDALO_ERRORS'] = []; // reset
+
+			$component = component_common::get_instance(
+				$element->model, // string model
+				$element->tipo, // string tipo
+				$element->section_id, // string section_id
+				$element->mode, // string mode
+				$element->lang, // string lang
+				$element->section_tipo, // string section_tipo
+				false
+			);
+
+			$response = $component->get_required();
+				// dump($response, ' $response ++ '.to_string($element->model));
+
+			$this->assertTrue(
+				empty($_ENV['DEDALO_ERRORS']),
+				'expected running without errors'
+			);
+
+			$this->assertTrue(
+				gettype($response)==='boolean',
+				'response type expected boolean. current type: ' .gettype($response) .' - '.$element->model
+			);
+		}
+	}//end test_get_required
+
+
+
+
+	/**
+	* TEST_GET_VALOR
+	* @return void
+	*/
+	public function test_get_valor() {
+
+		// default dato
+		foreach (get_elements() as $element) {
+			$_ENV['DEDALO_ERRORS'] = []; // reset
+
+			$component = component_common::get_instance(
+				$element->model, // string model
+				$element->tipo, // string tipo
+				$element->section_id, // string section_id
+				$element->mode, // string mode
+				$element->lang, // string lang
+				$element->section_tipo, // string section_tipo
+				false
+			);
+
+			$response = $component->get_valor();
+				// dump($response, ' $response ++ '.to_string($element->model));
+
+			$this->assertTrue(
+				empty($_ENV['DEDALO_ERRORS']),
+				'expected running without errors'
+			);
+
+			// (!) Important. This method is still used by diffusion (v5)
+			// DO NOT CHANGE THE RETURN VALUES
+		}
+	}//end test_get_valor
+
+
+
+	/**
+	* TEST_GET_VALOR_EXPORT
+	* @return void
+	*/
+	public function test_get_valor_export() {
+
+		// default dato
+		foreach (get_elements() as $element) {
+			$_ENV['DEDALO_ERRORS'] = []; // reset
+
+			$component = component_common::get_instance(
+				$element->model, // string model
+				$element->tipo, // string tipo
+				$element->section_id, // string section_id
+				$element->mode, // string mode
+				$element->lang, // string lang
+				$element->section_tipo, // string section_tipo
+				false
+			);
+
+			$response = $component->get_valor_export();
+				// dump($response, ' $response ++ '.to_string($element->model));
+
+			$this->assertTrue(
+				empty($_ENV['DEDALO_ERRORS']),
+				'expected running without errors'
+			);
+
+			$this->assertTrue(
+				gettype($response)==='string' || gettype($response)==='NULL',
+				'response type expected string|null. current type: ' .gettype($response) .' - '.$element->model
+			);
+
+			// (!) Important. This method is still used by diffusion (v5)
+			// DO NOT CHANGE THE RETURN VALUES
+		}
+	}//end test_get_valor_export
+
+
+
+	/**
+	* TEST_PARSE_SEARCH_DYNAMIC
+	* @return void
+	*/
+	public function XXX_test_parse_search_dynamic() {
+
+		// default dato
+		foreach (get_elements() as $element) {
+			$_ENV['DEDALO_ERRORS'] = []; // reset
+
+			$component = component_common::get_instance(
+				$element->model, // string model
+				$element->tipo, // string tipo
+				$element->section_id, // string section_id
+				$element->mode, // string mode
+				$element->lang, // string lang
+				$element->section_tipo, // string section_tipo
+				false
+			);
+
+			$response = $component->parse_search_dynamic($ar_filtered_by_search_dynamic);
+				// dump($response, ' $response ++ '.to_string($element->model));
+
+			$this->assertTrue(
+				empty($_ENV['DEDALO_ERRORS']),
+				'expected running without errors'
+			);
+
+			$this->assertTrue(
+				gettype($response)==='string' || gettype($response)==='NULL',
+				'response type expected string|null. current type: ' .gettype($response) .' - '.$element->model
+			);
+
+			// (!) Important. This method is still used by diffusion (v5)
+			// DO NOT CHANGE THE RETURN VALUES
+		}
+	}//end test_parse_search_dynamic
+
+
+
+	/**
+	* TEST_GET_AR_LIST_OF_VALUES
+	* @return void
+	*/
+	public function test_get_ar_list_of_values() {
+
+		// default dato
+		foreach (get_elements() as $element) {
+			$_ENV['DEDALO_ERRORS'] = []; // reset
+
+			$component = component_common::get_instance(
+				$element->model, // string model
+				$element->tipo, // string tipo
+				$element->section_id, // string section_id
+				$element->mode, // string mode
+				$element->lang, // string lang
+				$element->section_tipo, // string section_tipo
+				false
+			);
+
+			$response = $component->get_ar_list_of_values();
+				// dump($response, ' $response ++ '.to_string($element->model));
+
+			$this->assertTrue(
+				empty($_ENV['DEDALO_ERRORS']),
+				'expected running without errors'
+			);
+
+			$this->assertTrue(
+				gettype($response)==='object',
+				'response type expected object. current type: ' .gettype($response) .' - '.$element->model
+			);
+
+			$this->assertTrue(
+				gettype($response->result)==='array',
+				'response->result type expected array. current type: ' .gettype($response->result) .' - '.$element->model
+			);
+
+			$this->assertTrue(
+				gettype($response->msg)==='string',
+				'response->msg type expected string. current type: ' .gettype($response->msg) .' - '.$element->model
+			);
+		}
+	}//end test_get_ar_list_of_values
+
+
+
+	/**
+	* TEST_DECORE_UNTRANSLATED
+	* @return void
+	*/
+	public function test_decore_untranslated() {
+
+		$response = component_common::decore_untranslated("I'm a automatic test string");
+
+		$this->assertTrue(
+			gettype($response)==='string',
+			'response type expected string. current type: ' .gettype($response) .' - component_common::test_decore_untranslated'
+		);
+
+		$this->assertTrue(
+			strpos($response, '<mark>')===0,
+			'response expected to contains <mark> - component_common::test_decore_untranslated - ' . $response
+		);
+
+		$response = component_common::decore_untranslated(null);
+
+		$this->assertTrue(
+			gettype($response)==='NULL',
+			'response type expected NULL. current type: ' .gettype($response) .' - component_common::test_decore_untranslated'
+		);
+	}//end test_decore_untranslated
+
+
+
+	/**
+	* TEST_add_object_to_dato
+	* @return void
+	*/
+	public function test_add_object_to_dato() {
+
+		$_ENV['DEDALO_ERRORS'] = []; // reset
+
+		$object = (object)[
+			'section_tipo'	=> '2',
+			'section_id'	=> 'test3'
+		];
+		$dato = [
+			(object)[
+				'section_tipo'	=> '3',
+				'section_id'	=> 'test3'
+			]
+		];
+		$response = component_common::add_object_to_dato($object, $dato);
+
+		$this->assertTrue(
+			empty($_ENV['DEDALO_ERRORS']),
+			'expected running without errors'
+		);
+
+		$this->assertTrue(
+			gettype($response)==='array',
+			'response type expected array. current type: ' .gettype($response) .' - component_common::test_add_object_to_dato'
+		);
+
+		$this->assertTrue(
+			count($response)===2,
+			'response count expected is 2. count: ' .count($response) .' - component_common::test_add_object_to_dato'
+		);
+
+		// insert already existing element
+		$object = (object)[
+			'section_tipo'	=> '3',
+			'section_id'	=> 'test3'
+		];
+		$response2 = component_common::add_object_to_dato($object, $response);
+
+		$this->assertTrue(
+			empty($_ENV['DEDALO_ERRORS']),
+			'expected running without errors'
+		);
+
+		$this->assertTrue(
+			count($response2)===2,
+			'response count expected is 2. count: ' .count($response2) .' - component_common::test_add_object_to_dato'
+		);
+	}//end test_add_object_to_dato
+
+
+
+	/**
+	* TEST_GET_COMPONENT_AR_LANGS
+	* @return void
+	*/
+	public function test_get_component_ar_langs() {
+
+		// default dato
+		foreach (get_elements() as $element) {
+			$_ENV['DEDALO_ERRORS'] = []; // reset
+
+			$component = component_common::get_instance(
+				$element->model, // string model
+				$element->tipo, // string tipo
+				$element->section_id, // string section_id
+				$element->mode, // string mode
+				$element->lang, // string lang
+				$element->section_tipo, // string section_tipo
+				false
+			);
+
+			$result = $component->get_component_ar_langs();
+				// dump($result, ' get_component_ar_langs result ++ '.to_string($element->model));
+
+			$this->assertTrue(
+				empty($_ENV['DEDALO_ERRORS']),
+				'expected running without errors'
+			);
+
+			$this->assertTrue(
+				gettype($result)==='array',
+				'result type expected array. current type: ' .gettype($result) .' - '.$element->model
+			);
+		}
+	}//end test_get_component_ar_langs
+
+
+
+	/**
+	* TEST_GET_AR_TARGET_SECTION_TIPO
+	* @return void
+	*/
+	public function test_get_ar_target_section_tipo() {
+
+		// default dato
+		foreach (get_elements() as $element) {
+			$_ENV['DEDALO_ERRORS'] = []; // reset
+
+			$component = component_common::get_instance(
+				$element->model, // string model
+				$element->tipo, // string tipo
+				$element->section_id, // string section_id
+				$element->mode, // string mode
+				$element->lang, // string lang
+				$element->section_tipo, // string section_tipo
+				false
+			);
+
+			$result = $component->get_ar_target_section_tipo();
+				// dump($result, ' get_component_ar_langs result ++ '.to_string($element->model));
+
+			$this->assertTrue(
+				empty($_ENV['DEDALO_ERRORS']),
+				'expected running without errors'
+			);
+
+			$this->assertTrue(
+				gettype($result)==='array' || gettype($result)==='NULL',
+				'result type expected array|null. current type: ' .gettype($result) .' - '.$element->model
+			);
+
+			if (!is_null($result)) {
+				$this->assertTrue(
+					!empty($result) && !empty($result[0]),
+					'result expected not empty ' .$element->model .PHP_EOL
+					. json_encode($result)
+				);
+			}
+		}
+	}//end test_get_ar_target_section_tipo
+
+
+
+	/**
+	* TEST_GET_DIFFUSION_VALUE
+	* @return void
+	*/
+	public function test_get_diffusion_value() {
+
+		// default dato
+		foreach (get_elements() as $element) {
+			$_ENV['DEDALO_ERRORS'] = []; // reset
+
+			$component = component_common::get_instance(
+				$element->model, // string model
+				$element->tipo, // string tipo
+				$element->section_id, // string section_id
+				$element->mode, // string mode
+				$element->lang, // string lang
+				$element->section_tipo, // string section_tipo
+				false
+			);
+
+			$response = $component::update_dato_version((object)[
+				'update_version'	=> [6,0,0],
+				'tipo'				=> $element->tipo,
+				'section_tipo'		=> $element->section_tipo,
+				'section_id'		=> $element->section_id
+			]);
+				// dump($response, ' get_component_ar_langs response ++ '.to_string($element->model));
+
+			$this->assertTrue(
+				empty($_ENV['DEDALO_ERRORS']),
+				'expected running without errors'
+			);
+
+			$this->assertTrue(
+				gettype($response)==='object',
+				'response type expected object. current type: ' .gettype($response) .' - '.$element->model
+			);
+
+			$this->assertTrue(
+				gettype($response->result)==='integer',
+				'response->result type expected integer. current type: ' .gettype($response) .' - '.$element->model
+			);
+
+			$this->assertTrue(
+				gettype($response->msg)==='string',
+				'response->msg type expected integer. current type: ' .gettype($response) .' - '.$element->model
+			);
+		}
+	}//end test_get_diffusion_value
+
+
+
+	/**
+	* TEST_REGENERATE_COMPONENT
+	* @return void
+	*/
+	public function test_regenerate_component() {
+
+		// default dato
+		foreach (get_elements() as $element) {
+			$_ENV['DEDALO_ERRORS'] = []; // reset
+
+			$component = component_common::get_instance(
+				$element->model, // string model
+				$element->tipo, // string tipo
+				$element->section_id, // string section_id
+				$element->mode, // string mode
+				$element->lang, // string lang
+				$element->section_tipo, // string section_tipo
+				false
+			);
+
+			$response = $component->regenerate_component();
+				// dump($response, '  response ++ '.to_string($element->model));
+
+			$this->assertTrue(
+				empty($_ENV['DEDALO_ERRORS']),
+				'expected running without errors'
+			);
+
+			$this->assertTrue(
+				gettype($response)==='boolean',
+				'response type expected boolean. current type: ' .gettype($response) .' - '.$element->model
+			);
+		}
+	}//end test_regenerate_component
+
+
+
+	/**
+	* TEST_EXTRACT_COMPONENT_DATO_FALLBACK
+	* @return void
+	*/
+	public function test_extract_component_dato_fallback() {
+
+		// default dato
+		foreach (get_elements() as $element) {
+			$_ENV['DEDALO_ERRORS'] = []; // reset
+
+			$component = component_common::get_instance(
+				$element->model, // string model
+				$element->tipo, // string tipo
+				$element->section_id, // string section_id
+				$element->mode, // string mode
+				$element->lang, // string lang
+				$element->section_tipo, // string section_tipo
+				false
+			);
+
+			$result = $element->model::extract_component_dato_fallback(
+				$component,
+				DEDALO_DATA_LANG,
+				DEDALO_DATA_LANG_DEFAULT
+			);
+				// dump($result, ' result ++ '.to_string($element->model));
+
+			$this->assertTrue(
+				empty($_ENV['DEDALO_ERRORS']),
+				'expected running without errors'
+			);
+
+			$this->assertTrue(
+				gettype($result)==='array',
+				'result type expected array. current type: ' .gettype($result) .' - '.$element->model
+			);
+		}
+	}//end test_extract_component_dato_fallback
+
+
+
+	/**
+	* TEST_EXTRACT_COMPONENT_VALUE_FALLBACK
+	* @return void
+	*/
+	public function test_extract_component_value_fallback() {
+
+		// default dato
+		foreach (get_elements() as $element) {
+			$_ENV['DEDALO_ERRORS'] = []; // reset
+
+			$component = component_common::get_instance(
+				$element->model, // string model
+				$element->tipo, // string tipo
+				$element->section_id, // string section_id
+				$element->mode, // string mode
+				$element->lang, // string lang
+				$element->section_tipo, // string section_tipo
+				false
+			);
+
+			$result = $element->model::extract_component_value_fallback(
+				$component,
+				DEDALO_DATA_LANG
+			);
+			// dump($result, ' result ++ '.to_string($element->model));
+
+			$this->assertTrue(
+				empty($_ENV['DEDALO_ERRORS']),
+				'expected running without errors'
+			);
+
+			$this->assertTrue(
+				gettype($result)==='string',
+				'result type expected string. current type: ' .gettype($result) .' - '.$element->model
+			);
+		}
+	}//end test_extract_component_value_fallback
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -629,7 +1483,7 @@ final class component_common_test extends TestCase {
 			$this->assertTrue(
 				gettype($json_data->context)==='array',
 				'expected json_data->context type is array'
-			 );
+			);
 			$this->assertTrue(
 				gettype($json_data->data)==='array',
 				'expected json_data->data type is array'
@@ -734,90 +1588,6 @@ final class component_common_test extends TestCase {
 			'expected component is the same uid '.$component->uid.' => '.$component2->uid
 		);
 	}//end test_save_component_dato
-
-
-
-	/**
-	* TEST_SAVE_COMPONENTS
-	* @return void
-	*/
-	public function test_save_components() : void {
-
-		// elements
-			$elements = get_elements();
-
-		foreach ($elements as $element) {
-			$_ENV['DEDALO_ERRORS'] = []; // reset
-
-			$test_save = $element->test_save ?? true;
-			if (!isset($element->new_value) || !$test_save) {
-				continue;
-			}
-
-			// component
-				$component = component_common::get_instance(
-					$element->model, // string model
-					$element->tipo, // string tipo
-					$element->section_id, // string section_id
-					$element->mode, // string mode
-					$element->lang, // string lang
-					$element->section_tipo, // string section_tipo
-					// false
-				);
-				$component_dato = $component->get_dato();
-
-			// new data
-				$arguments	= $element->new_value_params ?? [];
-				$new_data	= call_user_func_array($element->new_value, $arguments);
-
-				$this->assertTrue(
-					gettype($new_data)==='array',
-					'new_data type expected array. current type: ' .gettype($new_data)
-				);
-
-				$component->set_dato($new_data);
-
-			// check new data assignation
-				$component_dato2 = $component->get_dato();
-
-				$this->assertEquals(
-					$component_dato2, $new_data,
-					'both data and new_data expected equal'
-				);
-
-				$result = $component->Save();
-
-				$this->assertTrue(
-					$result===(int)$element->section_id,
-					'save result expected as int '.$element->section_id.' - obtained: '. to_string($result)
-				);
-
-			// component copy
-				$component_copy = component_common::get_instance(
-					$element->model, // string model
-					$element->tipo, // string tipo
-					$element->section_id, // string section_id
-					$element->mode, // string mode
-					$element->lang, // string lang
-					$element->section_tipo, // string section_tipo
-					false
-				);
-				$this->assertTrue(
-					$component_copy->uid!==$component->uid ,
-					'expected different uid ' . "$component_copy->uid => $component->uid"
-				);
-
-				$component_copy_dato = $component_copy->get_dato();
-
-				$this->assertEquals(
-					$component_copy_dato,
-					$new_data,
-					'expected data are equal '.gettype($component_copy_dato).'/'.gettype($new_data)
-				);
-
-			// debug_log(__METHOD__." )))))))))))))))))))) Processed  $element->model".to_string(), logger::ERROR);
-		}//end foreach ($elements as $element)
-	}//end test_save_components
 
 
 
