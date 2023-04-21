@@ -2849,8 +2849,15 @@
 		Added to get 650 values of marc21 to rsc210
 		Fixed search existing values in tool_import_zotero
 	Released version 5.9.5
+		Fixed autologin issue where sometimes window location was not set correctly if no full path is set (including /index.php)
+		Added saml error log notification to improve debug
+		Updated swagger file version 1.0.25 to 1.0.26
+		Added component_autocomplete_hi get_diffusion_value options ($option_obj->parent_section_tipo)) to allow filter dato locators by section tipo (see isad87 properties)
+		Changed update_dedalo_code method from file_get_contents to curl_request to unify proxy management in request
 		Fixed BOM header in UTF8 at import .csv files
-
+		Updated ontology. Improved term edition inline
+		Added relation_list->get_difusion_value related case to manage deep path resolutions. See properties case mdcat4338
+		Fixed errors in diffusion value calculation in custom->related mode (relation_list->get_difusion_value) see mdcat4338 case
 
 
 	[/HISTORY]
@@ -2882,7 +2889,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '2023-04-21T15:14:44+02:00');
+	define('DEDALO_BUILD'	, '2023-04-21T17:35:02+02:00');
 
 
 
