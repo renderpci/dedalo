@@ -2075,17 +2075,18 @@ abstract class component_common extends common {
 		$tipo		= $this->tipo;
 		$section_id	= $this->section_id;
 		if (empty($section_id)) {
-			trigger_error("Error: section_id is mandatory for ".__METHOD__);
-			if(SHOW_DEBUG===true) {
-				dump($this,"this");
-				throw new Exception("Error Processing Request", 1);
-			}
+			debug_log(__METHOD__
+				." Error: section_id is mandatory !"
+				, logger::ERROR
+			);
+
+			return $component_ar_langs;
 		}
 
-		$section				= $this->get_my_section();
-		$section_dato			= $section->get_dato();
+		$section		= $this->get_my_section();
+		$section_dato	= $section->get_dato();
 
-		$component_dato_full	= $section_dato->components->$tipo->dato ?? null;
+		$component_dato_full = $section_dato->components->$tipo->dato ?? null;
 		if ($component_dato_full!==null) {
 			foreach ($component_dato_full as $key => $value) {
 				$component_ar_langs[] = $key; // Old way
@@ -2137,13 +2138,14 @@ abstract class component_common extends common {
 
 	/**
 	* GET_AR_TARGET_SECTION_TIPO
-	* Sección/es de la que se alimenta de registros el portal/autocomplete. No confundir con la sección en la que está el portal
-	* @return array ar_target_section_tipo
-	* 	Array of string like ['dd153']
+	* Section/s from which the portal/autocomplete feeds with records.
+	* Not to be confused with the section in which the portal is
+	* @return array|null ar_target_section_tipo
+	* 	Array of string tipo like ['dd153']
 	*/
 	public function get_ar_target_section_tipo() : ?array {
 
-		if (!$this->tipo) {
+		if (empty($this->tipo)) {
 			return null;
 		}
 
@@ -2152,32 +2154,25 @@ abstract class component_common extends common {
 			// 	return $this->ar_target_section_tipo;
 			// }
 
-		// get_config_context normalized
-			// $config_context = (array)common::get_config_context($this->tipo, $external=false, $this->section_tipo, $this->mode);
-			// $options = new stdClass();
-			// 	$options->tipo			= $this->tipo;
-			// 	$options->external		= false;
-			// 	$options->section_tipo	= $this->section_tipo;
-			// 	$options->mode			= $this->mode;
-			// 	$options->section_id	= null;
-			// 	$options->limit			= $this->pagination->limit;
+		// config_context. Get_config_context normalized
 			$config_context = $this->get_ar_request_config();
 
-		$ar_target_section_tipo = [];
-		foreach ($config_context as $config_context_item) {
-			$ar_current_section_tipo = array_map(function($el){
-				return $el->tipo;
-			}, $config_context_item->sqo->section_tipo);
+			$ar_target_section_tipo = [];
+			foreach ($config_context as $config_context_item) {
+				$ar_current_section_tipo = array_map(function($el){
+					return $el->tipo;
+				}, $config_context_item->sqo->section_tipo);
 
-			$ar_target_section_tipo = array_merge($ar_target_section_tipo, $ar_current_section_tipo);
-		}
+				$ar_target_section_tipo = array_merge($ar_target_section_tipo, $ar_current_section_tipo);
+			}
 
-		// debug
-			if(SHOW_DEBUG===true) {
-				if ( empty($ar_target_section_tipo)) {
-					$component_name = RecordObj_dd::get_termino_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true);
-					trigger_error("Error Processing Request. Please, define target section structure for component: $component_name - $this->tipo");
-				}
+			if (empty($ar_target_section_tipo)) {
+				$component_name = RecordObj_dd::get_termino_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true);
+				debug_log(__METHOD__
+					. " Error Processing Request. Please, define target section structure for component: $component_name".PHP_EOL
+					. " tipo: $this->tipo - model: " .get_called_class()
+					, logger::DEBUG
+				);
 			}
 
 		# Fix value
@@ -2260,10 +2255,10 @@ abstract class component_common extends common {
 	*/
 	public function regenerate_component() : bool {
 
-		# Force loads dato always !IMPORTANT
+		// Force loads dato always !IMPORTANT
 		$this->get_dato();
 
-		# Save component data
+		// Save component data
 		$this->Save();
 
 
@@ -2306,7 +2301,7 @@ abstract class component_common extends common {
 
 		$dato_fb = [];
 		// fallback if empty (or is annoying mce-bogus code from tinyMCE editor)
-		foreach ($dato as $key => $value) {
+		foreach ((array)$dato as $key => $value) {
 			if(empty($value) || $value==='<br data-mce-bogus="1">'){
 
 				// Try main lang. (Used config DEDALO_DATA_LANG_DEFAULT as main_lang)
@@ -2353,6 +2348,7 @@ abstract class component_common extends common {
 
 		// restore initial lang
 			$component->set_lang($inital_lang);
+
 
 		return $dato_fb;
 	}//end extract_component_dato_fallback
@@ -2409,6 +2405,10 @@ abstract class component_common extends common {
 			if ($mark===true) {
 				$value = '<mark>'.$value.'</mark>';
 			}
+		}
+
+		if (!is_string($value)) {
+			$value = to_string($value);
 		}
 
 		return $value;
