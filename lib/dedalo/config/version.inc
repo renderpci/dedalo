@@ -2849,6 +2849,8 @@
 		Added to get 650 values of marc21 to rsc210
 		Fixed search existing values in tool_import_zotero
 	Released version 5.9.5
+		Fixed BOM header in UTF8 at import .csv files
+
 
 
 	[/HISTORY]
