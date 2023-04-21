@@ -288,4 +288,26 @@ class component_section_id extends component_common {
 
 
 
+	/**
+	* EXTRACT_COMPONENT_DATO_FALLBACK
+	* Catch extract_component_dato_fallback common method calls
+	* @return array $dato_fb
+	*/
+	public static function extract_component_dato_fallback(object $component, string $lang=DEDALO_DATA_LANG, string $main_lang=DEDALO_DATA_LANG_DEFAULT) : array {
+		return [];
+	}
+
+
+
+	/**
+	* EXTRACT_COMPONENT_VALUE_FALLBACK
+	* Catch common method calls
+	* @return string $value
+	*/
+	public static function extract_component_value_fallback(object $component, string $lang=DEDALO_DATA_LANG, bool $mark=true, string $main_lang=DEDALO_DATA_LANG_DEFAULT) : string {
+		return '';
+	}
+
+
+
 }//end class component_section_id
