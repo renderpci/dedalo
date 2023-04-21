@@ -81,11 +81,13 @@ The locator resolution will use the columns section_id and section_tipo in matri
 See it as tables:
 
 table: matrix
+
 | id | section_id | section_tipo | datos |
 | --- | --- | --- | --- |
 |345 | 1 | oh1 | \[{"oh24":\[{"section_id": 88, "section_tipo": "rsc97"}]}] |
 
 table: matrix
+
 | id | section_id | section_tipo | datos |
 | --- | --- | --- | --- |
 | 654 | 88 | rsc197 | \[{"rsc85":\["Adela"]},{"rsc86":\["García"]}] |
@@ -93,6 +95,7 @@ table: matrix
 When ask to informants field it will answer with the data in People under study 88, with the name ([rsc85](https://dedalo.dev/ontology/rsc85)) and surname ([rsc86](https://dedalo.dev/ontology/rsc86)) of the informant.
 
 Then the result will be:
+
 | id | section_id | section_tipo | datos |
 | --- | --- | --- | --- |
 |345 | 1 | oh1 | Adela García |
