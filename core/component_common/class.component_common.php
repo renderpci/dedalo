@@ -2026,40 +2026,40 @@ abstract class component_common extends common {
 	* GET_STATS_VALUE_RESOLVED
 	* @return array $ar_final
 	*/
-	// public static function get_stats_value_resolved(string $tipo, $current_stats_value, string $stats_model, object $stats_properties=null) : array {
+		// public static function get_stats_value_resolved(string $tipo, $current_stats_value, string $stats_model, object $stats_properties=null) : array {
 
-	// 	$caller_component = get_called_class();
+		// 	$caller_component = get_called_class();
 
-	// 	$ar_values = [];
-	// 	foreach ($current_stats_value as $current_dato => $value) {
+		// 	$ar_values = [];
+		// 	foreach ($current_stats_value as $current_dato => $value) {
 
-	// 		if( empty($current_dato) ) {
+		// 		if( empty($current_dato) ) {
 
-	// 			$current_dato = 'nd';
-	// 			$ar_values[$current_dato] = $value;
+		// 			$current_dato = 'nd';
+		// 			$ar_values[$current_dato] = $value;
 
-	// 		}else{
+		// 		}else{
 
-	// 			$current_component = component_common::get_instance(
-	// 				$caller_component,
-	// 				$tipo,
-	// 				null,
-	// 				'stats'
-	// 			);
-	// 			$current_component->set_dato($current_dato);
+		// 			$current_component = component_common::get_instance(
+		// 				$caller_component,
+		// 				$tipo,
+		// 				null,
+		// 				'stats'
+		// 			);
+		// 			$current_component->set_dato($current_dato);
 
-	// 			$valor = $current_component->get_valor();
+		// 			$valor = $current_component->get_valor();
 
-	// 			$ar_values[$valor] = $value;
-	// 		}
-	// 	}//end foreach
+		// 			$ar_values[$valor] = $value;
+		// 		}
+		// 	}//end foreach
 
-	// 	$label		= RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true).':'.$stats_model;
-	// 	$ar_final	= array($label => $ar_values);
+		// 	$label		= RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true).':'.$stats_model;
+		// 	$ar_final	= array($label => $ar_values);
 
 
-	// 	return $ar_final;
-	// }//end get_stats_value_resolved
+		// 	return $ar_final;
+		// }//end get_stats_value_resolved
 
 
 
@@ -2105,32 +2105,33 @@ abstract class component_common extends common {
 
 
 	/**
-	* GET_AR_AUTHORIZED_TOOL_NAME
+	* GET_AR_AUTHORIZED_TOOL_NAME (DEPRECATED)
+	* @return array $this->ar_authorized_tool_name
 	*/
-	public function get_ar_authorized_tool_name() : array {
+		// public function get_ar_authorized_tool_name() : array {
 
-		if (self::get_permissions($this->section_tipo, $this->tipo)<=1) {
-			return array();
-		}
+		// 	if (self::get_permissions($this->section_tipo, $this->tipo)<=1) {
+		// 		return array();
+		// 	}
 
-		if (!isset($this->ar_authorized_tool_name)) {
-			//REMOVED OLD WAY$this->get_ar_tools_obj();
-		}
+		// 	if (!isset($this->ar_authorized_tool_name)) {
+		// 		//REMOVED OLD WAY$this->get_ar_tools_obj();
+		// 	}
 
-		return (array)$this->ar_authorized_tool_name;
-	}//end get_ar_authorized_tool_name
+		// 	return (array)$this->ar_authorized_tool_name;
+		// }//end get_ar_authorized_tool_name
 
 
 
 	/*
-	* GET_VALOR_LANG
+	* GET_VALOR_LANG (DEPRECATED)
 	* Return the component lang
 	* If the component need change this langs (selects, radiobuttons...) overwrite this function
 	*/
-	public function get_valor_lang() : string {
+		// public function get_valor_lang() : string {
 
-		return $this->lang;
-	}//end get_valor_lang
+		// 	return $this->lang;
+		// }//end get_valor_lang
 
 
 
@@ -2272,19 +2273,19 @@ abstract class component_common extends common {
 
 
 	/**
-	* IS_DATO_EMPTY
+	* IS_DATO_EMPTY (DEPRECATED)
 	* @return bool
 	*/
-	public static function is_dato_empty($dato) : bool {
+		// public static function is_dato_empty($dato) : bool {
 
-		foreach ((array)$dato as $value) {
-			if (!empty($value)) {
-				return false;
-			}
-		}
+		// 	foreach ((array)$dato as $value) {
+		// 		if (!empty($value)) {
+		// 			return false;
+		// 		}
+		// 	}
 
-		return true;
-	}//end is_dato_empty
+		// 	return true;
+		// }//end is_dato_empty
 
 
 
