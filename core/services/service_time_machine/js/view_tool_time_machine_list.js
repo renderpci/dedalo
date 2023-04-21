@@ -259,7 +259,6 @@ const render_column_id = function(options) {
 			if (main_caller.model==='section') {
 
 				// section case
-
 				// user confirmation
 					const msg = tool.get_tool_label('recover_section_alert') || '*Are you sure you want to restore this section?'
 					if (!confirm(msg)) {
@@ -304,6 +303,11 @@ const render_column_id = function(options) {
 						mode		: 'tm'
 					}
 					event_manager.publish('tm_edit_record', data)
+					const dom_buttons_view = document.querySelectorAll('.button_view')
+					for (let i = dom_buttons_view.length - 1; i >= 0; i--) {
+						dom_buttons_view[i].classList.remove('warning')
+					}
+					button_view.classList.add('warning')
 			}
 		})
 		// siblings can use click too to easy set preview value
