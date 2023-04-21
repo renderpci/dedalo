@@ -809,7 +809,7 @@ class component_relation_parent extends component_relation_common {
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value($lang=DEDALO_DATA_LANG, $option_obj=null) : ?string {
+	public function get_diffusion_value( ?string $lang=DEDALO_DATA_LANG, $option_obj=null ) : ?string {
 
 		$resolve_value = isset($option_obj->resolve_value) ? $option_obj->resolve_value : false;
 
