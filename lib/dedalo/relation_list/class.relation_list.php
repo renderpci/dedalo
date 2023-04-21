@@ -406,6 +406,8 @@ class relation_list extends common {
 								$value_obj->section_tipo	= $current_locator->from_section_tipo;
 								$value_obj->section_id		= $current_locator->from_section_id;
 
+							$related_value_obj = new stdClass();
+
 							$is_related = false;
 
 							// iterate object map_item
@@ -419,7 +421,8 @@ class relation_list extends common {
 
 								// table
 									if ($map_key==='table') {
-										$value_obj->table = $map_obj;
+										$value_obj->table			= $map_obj;
+										$related_value_obj->table	= $map_obj;
 										continue;
 									}
 
@@ -466,14 +469,13 @@ class relation_list extends common {
 														' | ' // string default_separator
 													);
 
-												$related_value_obj = new stdClass();
+												if ($is_related===false) {
 													$related_value_obj->section_tipo	= $filtered_value->from_section_tipo;
 													$related_value_obj->section_id		= $filtered_value->from_section_id;
-													$related_value_obj->{$map_key}		= $current_value;
-
-												if (!in_array($related_value_obj, $ar_values)) {
-													$ar_values[] = $related_value_obj;
 												}
+
+												$related_value_obj->{$map_key}	= $current_value;
+
 											}//end foreach ($filtered_result as $filtered_value)
 										}
 										$is_related = true;
@@ -504,6 +506,8 @@ class relation_list extends common {
 
 							if (!in_array($value_obj, $ar_values) && $is_related===false) {
 								$ar_values[] = $value_obj;
+							}else if(!in_array($related_value_obj, $ar_values) && $is_related===true){
+								$ar_values[] = $related_value_obj;
 							}
 						}
 
