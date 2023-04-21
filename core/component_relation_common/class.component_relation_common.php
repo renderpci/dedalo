@@ -129,7 +129,8 @@ class component_relation_common extends component_common {
 			'component_relation_related',
 			'component_relation_struct',
 			'component_select',
-			'component_select_lang'
+			'component_select_lang',
+			'component_inverse',
 		];
 
 		return $components_with_relations;
