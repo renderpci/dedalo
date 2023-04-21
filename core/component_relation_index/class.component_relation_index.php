@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS COMPONENT_RELATION_INDEX
 *
 *

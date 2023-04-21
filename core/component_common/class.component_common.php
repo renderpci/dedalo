@@ -946,6 +946,7 @@ abstract class component_common extends common {
 	}//end get_raw_value
 
 
+
 	/**
 	* SAVE
 	* Save component data in matrix using parent section
@@ -1039,13 +1040,13 @@ abstract class component_common extends common {
 		if (!in_array($this->tipo, logger_backend_activity::$ar_elements_activity_tipo)) {
 			try {
 				# LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
-				$matrix_table 	= common::get_matrix_table_from_tipo($this->section_tipo);
+				$matrix_table = common::get_matrix_table_from_tipo($this->section_tipo);
 				logger::$obj['activity']->log_message(
 					'SAVE',
 					logger::INFO,
 					$this->tipo,
 					null,
-					array(
+					[
 						'msg'				=> 'Saved component data',
 						'tipo'				=> $this->tipo,
 						'section_id'		=> $this->section_id,
@@ -1055,13 +1056,14 @@ abstract class component_common extends common {
 						'component_name'	=> get_called_class(),
 						'table'				=> $matrix_table,
 						'section_tipo'		=> $this->section_tipo
-					)
+					]
 				);
 			} catch (Exception $e) {
-				if(SHOW_DEBUG===true) {
-					$msg = 'Exception: ' . $e->getMessage();
-					trigger_error($msg);
-				}
+				debug_log(__METHOD__
+					." Exception saving activity caught. " .PHP_EOL
+					. " tipo: $this->tipo, section_tipo: $this->section_tipo, section_id: $this->section_id" .PHP_EOL
+					. $e->getMessage()
+					, logger::DEBUG);
 			}//end try catch
 		}//end if (!in_array($tipo, logger_backend_activity::$ar_elements_activity_tipo))
 	}//end save_activity
@@ -1345,7 +1347,7 @@ abstract class component_common extends common {
 	/**
 	* GET_REQUIRED
 	*/
-	private function get_required() : bool {
+	public function get_required() : bool {
 
 		// return ($this->required==='si'); // (!) Not used in structure anymore (usableIndex)
 		return true;
@@ -1468,8 +1470,8 @@ abstract class component_common extends common {
 
 	/**
 	* GET VALOR
-	* LIST:
-	* GET VALUE . DEFAULT IS GET DATO . OVERWRITE IN EVERY DIFFERENT SPECIFIC COMPONENT
+	* 	(!) Important. This method is still used by diffusion (v5)
+	* 	DO NOT CHANGE THE RETURN VALUES
 	*/
 	public function get_valor() {
 
@@ -1945,38 +1947,37 @@ abstract class component_common extends common {
 
 	/**
 	* ADD_OBJECT_TO_DATO
-	* Add received object to objects array
+	* Add received object to the objects array (dato)
+	* @param object $object
+	* @param array $dato
+	* @return array $dato
 	*/
 	public static function add_object_to_dato(object $object, array $dato) : array {
 
-		if (!is_object($object)) {
-			throw new Exception("Error Processing Request. var 'object' is not of type object ", 1);
-		}
-		if (get_class($object)==='locator') {
-			$std_object = locator::get_std_class( $object );
-		}else{
-			$std_object = $object;
-		}
+		// safe std class
+			$std_object = get_class($object)==='locator'
+				? locator::get_std_class( $object )
+				: $object;
 
-		$object_exists=false;
-		foreach ($dato as $key => $current_object_obj) {
-			/*
-			if (!is_object($current_object_obj)) {
-				if(SHOW_DEBUG===true) {
-					throw new Exception("Error Processing Request. 'dato' elements are not objects. Please verify json_decode is called before use this method", 1);
+
+		// check if already exists
+			foreach ($dato as $current_object_obj) {
+
+				if ((object)$std_object==(object)$current_object_obj) {
+
+					debug_log(__METHOD__
+						." Ignored add element ".to_string($std_object) .PHP_EOL
+						.' the object already exists.'
+						, logger::WARNING
+					);
+
+					return $dato;
 				}
-				trigger_error(__METHOD__ . "Sorry. Object expected. Nothing is added");
-				break;
 			}
-			*/
-			if ((object)$std_object==(object)$current_object_obj) {
-				$object_exists=true; break;
-			}
-		}
 
-		if ($object_exists===false) {
+		// add if not
 			$dato[] = $std_object;
-		}
+
 
 		return $dato;
 	}//end add_object_to_dato
@@ -2502,7 +2503,7 @@ abstract class component_common extends common {
 		$value = to_string($value);
 
 		if ($is_fallback===true && $decore_untranslated===true) {
-			$value = self::decore_untranslated($value);
+			$value = component_common::decore_untranslated($value);
 		}
 
 		return $value;

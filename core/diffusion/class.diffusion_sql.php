@@ -3483,7 +3483,6 @@ class diffusion_sql extends diffusion  {
 														 $section_tipo);
 
 		#$measurements = $component->get_valor($lang);
-		#$measurements = $component->get_valor_export( $valor=null, $lang, $quotes=null, $add_id=null );
 		#$measurements = $component->get_valor( $lang, $data_to_be_used='valor_list', $records_separator='<br>', $fields_separator=', ' );
 		#$measurements = strip_tags( $measurements );
 
@@ -3530,7 +3529,6 @@ class diffusion_sql extends diffusion  {
 																 $lang,
 																 $section_tipo,
 																 true);
-				#$current_value_export = $component->get_valor_export( null, $lang, $quotes, $add_id );
 				$current_value_export = $component->get_valor( $lang );
 
 				// Clean double spaces and remove \n
