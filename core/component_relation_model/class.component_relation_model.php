@@ -50,8 +50,11 @@ class component_relation_model extends component_relation_common {
 				$lang, // string lang
 				false // bool show_parents
 			);
-			$ar_values[] = $current_label;
+			$ar_values[] = is_array($current_label)
+				? implode($separator, $current_label)
+				: $current_label;
 		}
+
 		$valor = implode($separator, $ar_values);
 
 

@@ -764,7 +764,10 @@ class component_relation_common extends component_common {
 		$valor_export = $this->get_valor($lang);
 
 		// replace html '<br>'' for plain text return '\nl'
-		$valor_export = br2nl($valor_export);
+		if(!empty($valor_export)) {
+			$valor_export = br2nl($valor_export);
+		}
+
 
 		return $valor_export;
 	}//end get_valor_export
