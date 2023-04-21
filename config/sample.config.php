@@ -451,7 +451,7 @@
 		// svg_quality_default. Default 'web'
 		define('DEDALO_SVG_QUALITY_DEFAULT'			, 'web');
 		// svg_ar_quality
-		define('DEDALO_SVG_AR_QUALITY'				, [DEDALO_SVG_QUALITY_DEFAULT, DEDALO_SVG_QUALITY_DEFAULT]);
+		define('DEDALO_SVG_AR_QUALITY'				, [DEDALO_SVG_QUALITY_ORIGINAL, DEDALO_SVG_QUALITY_DEFAULT]);
 
 
 
