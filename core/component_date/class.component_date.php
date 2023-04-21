@@ -1067,8 +1067,7 @@ class component_date extends component_common {
 		switch ($update_version) {
 
 			case '6.0.0':
-				break;
-
+				// break;
 			default:
 				$response = new stdClass();
 					$response->result	= 0;
