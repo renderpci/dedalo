@@ -76,7 +76,11 @@ abstract class filter {
 
 		// check user_id
 			if (empty($user_id)) {
-				debug_log(__METHOD__." Invalid user id ".to_string(), logger::ERROR);
+				debug_log(__METHOD__
+					. " Invalid user id "
+					. to_string($user_id)
+					, logger::ERROR
+				);
 				throw new Exception("Error Processing Request. Invalid user id", 1);
 			}
 

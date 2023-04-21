@@ -519,11 +519,11 @@ abstract class component_common extends common {
 	* Set dato default when properties->dato_default exists and current component dato is empty
 	* properties are loaded always (structure data) at beginning of build component. Because this
 	* is more fast verify if is set 'dato_default' and not load component data always as before
-	* @return bool true
+	* @return mixed $dato_default
 	*/
-	private function set_dato_default() : bool {
+	private function set_dato_default() : mixed {
 
-		$default_dato = null;
+		$dato_default = null;
 
 		// optional defaults for config_defaults file
 			if (defined('CONFIG_DEFAULT_FILE_PATH')) {
@@ -532,33 +532,41 @@ abstract class component_common extends common {
 				$defaults = json_decode($contents);
 				if (!empty($defaults)) {
 					if (!is_array($defaults)) {
-						debug_log(__METHOD__." Ignored config_default_file value. Expected type was array but received is ". gettype($defaults), logger::ERROR);
+						debug_log(__METHOD__
+							." Ignored config_default_file value. Expected type was array but received is "
+							. gettype($defaults)
+							, logger::ERROR
+						);
 					}else{
 						$found = array_find($defaults, function($el){
 							return $el->tipo===$this->tipo; // Note that match only uses component tipo (case hierarchy25 problem)
 						});
 						if (!empty($found)) {
-							$default_dato = $found->value;
+							$dato_default = $found->value;
 						}
 					}
 				}else{
-					debug_log(__METHOD__." Ignored empty defaults file contents ! (Check if JSON is valid) ".to_string($defaults), logger::ERROR);
+					debug_log(__METHOD__
+						." Ignored empty defaults file contents ! (Check if JSON is valid) "
+						.to_string($defaults)
+						, logger::ERROR
+					);
 				}
 			}
 
 		// properties try
-			if (empty($default_dato)) {
+			if (empty($dato_default)) {
 				$properties = $this->get_properties();
 				if(isset($properties->dato_default)) {
 					// Method fallback. Remember method option like cases as date 'today'
-					$default_dato = isset($properties->dato_default->method)
+					$dato_default = isset($properties->dato_default->method)
 						? $this->get_method( $properties->dato_default->method )
 						: $properties->dato_default;
 				}
 			}
 
 		// set default dato (only when own dato is empty)
-			if (!empty($default_dato)) {
+			if (!empty($dato_default)) {
 
 				// matrix data : force load matrix data
 					$this->load_component_dato();
@@ -568,7 +576,7 @@ abstract class component_common extends common {
 					if (empty($dato)) {
 
 						// set dato only when own dato is empty
-							$this->set_dato($default_dato);
+							$this->set_dato($dato_default);
 
 						// temp section cases do not save anything
 							if ( strpos($this->section_id, DEDALO_SECTION_ID_TEMP)===false ) {
@@ -579,17 +587,17 @@ abstract class component_common extends common {
 							debug_log(__METHOD__
 								." Created ".get_called_class()." \"$this->label\" id:$this->section_id, tipo:$this->tipo, section_tipo:$this->section_tipo, mode:$this->mode".PHP_EOL
 								." with default data from 'properties':"
-								. to_string($default_dato)
+								. to_string($dato_default)
 								, logger::DEBUG
 							);
 
 						// matrix data : load matrix data again
 							$this->load_component_dato();
 					}
-			}//end if (!empty($default_dato))
+			}//end if (!empty($dato_default))
 
 
-		return true;
+		return $dato_default;
 	}//end set_dato_default
 
 
@@ -659,7 +667,11 @@ abstract class component_common extends common {
 
 				// matrix_id check
 					if (empty($this->matrix_id)) {
-						debug_log(__METHOD__." ERROR. 'matrix_id' IS MANDATORY IN TIME MACHINE MODE  ".to_string(), logger::ERROR);
+						debug_log(__METHOD__
+							." ERROR. 'matrix_id' IS MANDATORY IN TIME MACHINE MODE. " .PHP_EOL
+							. get_called_class() .' - '. $this->tipo . ' - ' .$this->section_tipo . ' - ' .$this->section_id
+							, logger::ERROR
+						);
 						return null;
 					}
 
@@ -742,11 +754,9 @@ abstract class component_common extends common {
 	*/
 	public function get_dato_full() {
 
-		$section = $this->get_my_section();
-
-		$all_component_data = $section->get_all_component_data($this->tipo);
-
-		$dato_full = $all_component_data->dato ?? null;
+		$section			= $this->get_my_section();
+		$all_component_data	= $section->get_all_component_data($this->tipo);
+		$dato_full			= $all_component_data->dato ?? null;
 
 		return $dato_full;
 	}//end get_dato_full
@@ -775,7 +785,10 @@ abstract class component_common extends common {
 				return false;
 			}
 			if (empty($this->section_tipo)) {
-				debug_log(__METHOD__." Error Processing Request. section tipo not found for component $this->tipo ".to_string(), logger::ERROR);
+				debug_log(__METHOD__
+					." Error Processing Request. section tipo not found for component $this->tipo "
+					, logger::ERROR
+				);
 				return false;
 			}
 
@@ -933,6 +946,7 @@ abstract class component_common extends common {
 	}//end get_raw_value
 
 
+
 	/**
 	* SAVE
 	* Save component data in matrix using parent section
@@ -1026,13 +1040,13 @@ abstract class component_common extends common {
 		if (!in_array($this->tipo, logger_backend_activity::$ar_elements_activity_tipo)) {
 			try {
 				# LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
-				$matrix_table 	= common::get_matrix_table_from_tipo($this->section_tipo);
+				$matrix_table = common::get_matrix_table_from_tipo($this->section_tipo);
 				logger::$obj['activity']->log_message(
 					'SAVE',
 					logger::INFO,
 					$this->tipo,
 					null,
-					array(
+					[
 						'msg'				=> 'Saved component data',
 						'tipo'				=> $this->tipo,
 						'section_id'		=> $this->section_id,
@@ -1042,13 +1056,14 @@ abstract class component_common extends common {
 						'component_name'	=> get_called_class(),
 						'table'				=> $matrix_table,
 						'section_tipo'		=> $this->section_tipo
-					)
+					]
 				);
 			} catch (Exception $e) {
-				if(SHOW_DEBUG===true) {
-					$msg = 'Exception: ' . $e->getMessage();
-					trigger_error($msg);
-				}
+				debug_log(__METHOD__
+					." Exception saving activity caught. " .PHP_EOL
+					. " tipo: $this->tipo, section_tipo: $this->section_tipo, section_id: $this->section_id" .PHP_EOL
+					. $e->getMessage()
+					, logger::DEBUG);
 			}//end try catch
 		}//end if (!in_array($tipo, logger_backend_activity::$ar_elements_activity_tipo))
 	}//end save_activity
@@ -1256,7 +1271,7 @@ abstract class component_common extends common {
 						'edit',
 						true
 					);
-					$inverse_locators = $section_observable->get_inverse_locators();
+					$inverse_locators = $section_observable->get_inverse_references();
 
 					$ar_section = [];
 					foreach ($inverse_locators as $inv_locator) {
@@ -1332,7 +1347,7 @@ abstract class component_common extends common {
 	/**
 	* GET_REQUIRED
 	*/
-	private function get_required() : bool {
+	public function get_required() : bool {
 
 		// return ($this->required==='si'); // (!) Not used in structure anymore (usableIndex)
 		return true;
@@ -1341,121 +1356,122 @@ abstract class component_common extends common {
 
 
 	/**
-	* LOAD TOOLS
+	* LOAD TOOLS (DEPRECATED)
 	* @param bool $check_lang_tools = true
 	* @return array $ar_tools_obj
+	* security_tools
 	*/
-	public function load_tools( bool $check_lang_tools=true ) : array {
+		// public function load_tools( bool $check_lang_tools=true ) : array {
 
-		// other modes than 'edit' do not need tools
-			if(	strpos($this->mode, 'edit')===false
-				|| login::is_logged()!==true
-				) {
-				return [];
-			}
+		// 	// other modes than 'edit' do not need tools
+		// 		if(	strpos($this->mode, 'edit')===false
+		// 			|| login::is_logged()!==true
+		// 			) {
+		// 			return [];
+		// 		}
 
-		// if we are not logged in, it is not necessary to load the tools
-			if(login::is_logged()!==true) {
-				return [];
-			}
+		// 	// if we are not logged in, it is not necessary to load the tools
+		// 		if(login::is_logged()!==true) {
+		// 			return [];
+		// 		}
 
-		# Load all tools of current component
-		$ar_tools_name = $this->get_ar_tools_name();
+		// 	# Load all tools of current component
+		// 	$ar_tools_name = $this->get_ar_tools_name();
 
-		# check_lang_tools default is true
-		if ($check_lang_tools===true) {
-			$traducible = $this->RecordObj_dd->get_traducible();
-			if ($traducible==='no' || $this->lang===DEDALO_DATA_NOLAN) {
-				$key = array_search('tool_lang',$ar_tools_name);
-				if($key!==false){
-					unset($ar_tools_name[$key]);
-				}
-			}
-		}
+		// 	# check_lang_tools default is true
+		// 	if ($check_lang_tools===true) {
+		// 		$traducible = $this->RecordObj_dd->get_traducible();
+		// 		if ($traducible==='no' || $this->lang===DEDALO_DATA_NOLAN) {
+		// 			$key = array_search('tool_lang',$ar_tools_name);
+		// 			if($key!==false){
+		// 				unset($ar_tools_name[$key]);
+		// 			}
+		// 		}
+		// 	}
 
-		# Create obj tools array
-		$ar_tools_obj = [];
-		if(is_array($ar_tools_name)) foreach ($ar_tools_name as $tool_name) {
+		// 	# Create obj tools array
+		// 	$ar_tools_obj = [];
+		// 	if(is_array($ar_tools_name)) foreach ($ar_tools_name as $tool_name) {
 
-			$authorized_tool = component_security_tools::is_authorized_tool_for_logged_user($tool_name);
+		// 		$authorized_tool = component_security_tools::is_authorized_tool_for_logged_user($tool_name);
 
-			if ($authorized_tool===true) {
+		// 		if ($authorized_tool===true) {
 
-				# INDEXATION TOOL CASE : When current tool have 'indexation' name, test thesaurus permissions for avoid inconsistencies
-				if (strpos($tool_name, 'indexation')!==false) {
-					$ts_permissions = (int)common::get_permissions(DEDALO_TESAURO_TIPO, DEDALO_TESAURO_TIPO);
-					if ($ts_permissions<1) continue;	# Skip this tool
-				}
+		// 			# INDEXATION TOOL CASE : When current tool have 'indexation' name, test thesaurus permissions for avoid inconsistencies
+		// 			if (strpos($tool_name, 'indexation')!==false) {
+		// 				$ts_permissions = (int)common::get_permissions(DEDALO_TESAURO_TIPO, DEDALO_TESAURO_TIPO);
+		// 				if ($ts_permissions<1) continue;	# Skip this tool
+		// 			}
 
-				# Authorized tools names
-				#if (!in_array($tool_name, (array)$this->ar_authorized_tool_name)) {
-					$tool = new stdClass();
-						$tool->name = $tool_name;
+		// 			# Authorized tools names
+		// 			#if (!in_array($tool_name, (array)$this->ar_authorized_tool_name)) {
+		// 				$tool = new stdClass();
+		// 					$tool->name = $tool_name;
 
-					$ar_tools_obj[] = $tool;
-				#}
-			}
-		}
+		// 				$ar_tools_obj[] = $tool;
+		// 			#}
+		// 		}
+		// 	}
 
-		// set
-			$this->ar_tools_obj = $ar_tools_obj;
+		// 	// set
+		// 		$this->ar_tools_obj = $ar_tools_obj;
 
 
-		return $ar_tools_obj;
-	}//end load_tools
+		// 	return $ar_tools_obj;
+		// }//end load_tools
 
 
 
 	/**
-	* LOAD SPECIFIC TOOL
+	* LOAD SPECIFIC TOOL (DEPRECATED)
 	* Note: Used in class.inspector to load relation tool
 	* @param string $tool_name
 	* @return object|null $tool_object
 	*/
-	public function load_specific_tool(string $tool_name) : ?object {
+		// public function load_specific_tool(string $tool_name) : ?object {
 
-		$tool_obj = null;
+		// 	$tool_obj = null;
 
-		if ($tool_name==='tool_relation') {
-			return $tool_obj;
-		}
+		// 	if ($tool_name==='tool_relation') {
+		// 		return $tool_obj;
+		// 	}
 
-		$authorized_tool = component_security_tools::is_authorized_tool_for_logged_user($tool_name);
-		if ($authorized_tool===true) {
-			require_once(DEDALO_CORE_PATH . '/tools/'.$tool_name.'/class.'.$tool_name.'.php');
-			$tool_obj = new $tool_name($this);
-		}
+		// 	$authorized_tool = component_security_tools::is_authorized_tool_for_logged_user($tool_name);
+		// 	if ($authorized_tool===true) {
+		// 		require_once(DEDALO_CORE_PATH . '/tools/'.$tool_name.'/class.'.$tool_name.'.php');
+		// 		$tool_obj = new $tool_name($this);
+		// 	}
 
-		return $tool_obj;
-	}//end load_specific_tool
+		// 	return $tool_obj;
+		// }//end load_specific_tool
 
 
 
 	/**
-	* GET_AR_TOOLS_NAME
+	* GET_AR_TOOLS_NAME (DEPRECATED)
 	* @return array $ar_tools_name
 	*/
-	protected function get_ar_tools_name() : array {
+		// protected function get_ar_tools_name() : array {
 
-		// Default tools
-		$ar_tools_name = $this->ar_tools_name;
+		// 	// Default tools
+		// 	$ar_tools_name = $this->ar_tools_name;
 
-		$properties = $this->get_properties();
-		if (isset($properties->ar_tools_name)) {
-			foreach ((array)$properties->ar_tools_name as $current_name => $obj_tool) {
-				$ar_tools_name[] = $current_name;
-			}
-		}
+		// 	$properties = $this->get_properties();
+		// 	if (isset($properties->ar_tools_name)) {
+		// 		foreach ((array)$properties->ar_tools_name as $current_name => $obj_tool) {
+		// 			$ar_tools_name[] = $current_name;
+		// 		}
+		// 	}
 
-		return (array)$ar_tools_name;
-	}//end get_ar_tools_name
+		// 	return (array)$ar_tools_name;
+		// }//end get_ar_tools_name
 
 
 
 	/**
 	* GET VALOR
-	* LIST:
-	* GET VALUE . DEFAULT IS GET DATO . OVERWRITE IN EVERY DIFFERENT SPECIFIC COMPONENT
+	* 	(!) Important. This method is still used by diffusion (v5)
+	* 	DO NOT CHANGE THE RETURN VALUES
 	*/
 	public function get_valor() {
 
@@ -1536,35 +1552,35 @@ abstract class component_common extends common {
 
 
 	/**
-	* GET DATO AS STRING
+	* GET DATO AS STRING (DEPRECATED)
 	* Get dato formatted as string
 	*/
-	public function get_dato_as_string() : string {
+		// public function get_dato_as_string() : string {
 
-		$dato = $this->get_dato();
-		#return var_export($dato,true);
+		// 	$dato = $this->get_dato();
+		// 	#return var_export($dato,true);
 
-		if(is_array($dato)) {
-			$string = 'Array: ';
-			foreach ($dato as $key => $value) {
-				if(is_array($value)) $value = 'array '.implode(', ', $value );
-				if (is_string($value)) {
-					$string .= $key .':'. $value .', ';
-				}
-			}
-			if(strlen($string)>2) $string = substr($string, 0,-2);
-			return $string;
-		}else if (is_object($dato)) {
-			#$string = 'Object: ' . get_class($dato);
-		}else if (is_int($dato)) {
-			$string = 'Int: ' . $dato;
-		}else if (is_string($dato)) {
-			$string = 'Str: ' . $dato;
-		}
+		// 	if(is_array($dato)) {
+		// 		$string = 'Array: ';
+		// 		foreach ($dato as $key => $value) {
+		// 			if(is_array($value)) $value = 'array '.implode(', ', $value );
+		// 			if (is_string($value)) {
+		// 				$string .= $key .':'. $value .', ';
+		// 			}
+		// 		}
+		// 		if(strlen($string)>2) $string = substr($string, 0,-2);
+		// 		return $string;
+		// 	}else if (is_object($dato)) {
+		// 		#$string = 'Object: ' . get_class($dato);
+		// 	}else if (is_int($dato)) {
+		// 		$string = 'Int: ' . $dato;
+		// 	}else if (is_string($dato)) {
+		// 		$string = 'Str: ' . $dato;
+		// 	}
 
 
-		return $dato;
-	}//end get_dato_as_string
+		// 	return $dato;
+		// }//end get_dato_as_string
 
 
 
@@ -1931,38 +1947,37 @@ abstract class component_common extends common {
 
 	/**
 	* ADD_OBJECT_TO_DATO
-	* Add received object to objects array
+	* Add received object to the objects array (dato)
+	* @param object $object
+	* @param array $dato
+	* @return array $dato
 	*/
 	public static function add_object_to_dato(object $object, array $dato) : array {
 
-		if (!is_object($object)) {
-			throw new Exception("Error Processing Request. var 'object' is not of type object ", 1);
-		}
-		if (get_class($object)==='locator') {
-			$std_object = locator::get_std_class( $object );
-		}else{
-			$std_object = $object;
-		}
+		// safe std class
+			$std_object = get_class($object)==='locator'
+				? locator::get_std_class( $object )
+				: $object;
 
-		$object_exists=false;
-		foreach ($dato as $key => $current_object_obj) {
-			/*
-			if (!is_object($current_object_obj)) {
-				if(SHOW_DEBUG===true) {
-					throw new Exception("Error Processing Request. 'dato' elements are not objects. Please verify json_decode is called before use this method", 1);
+
+		// check if already exists
+			foreach ($dato as $current_object_obj) {
+
+				if ((object)$std_object==(object)$current_object_obj) {
+
+					debug_log(__METHOD__
+						." Ignored add element ".to_string($std_object) .PHP_EOL
+						.' the object already exists.'
+						, logger::WARNING
+					);
+
+					return $dato;
 				}
-				trigger_error(__METHOD__ . "Sorry. Object expected. Nothing is added");
-				break;
 			}
-			*/
-			if ((object)$std_object==(object)$current_object_obj) {
-				$object_exists=true; break;
-			}
-		}
 
-		if ($object_exists===false) {
+		// add if not
 			$dato[] = $std_object;
-		}
+
 
 		return $dato;
 	}//end add_object_to_dato
@@ -1970,40 +1985,40 @@ abstract class component_common extends common {
 
 
 	/**
-	* GET_DIFFUSION_OBJ
+	* GET_DIFFUSION_OBJ (DEPRECATED)
 	* @param stdClass Object $properties
 	*/
-	public function get_diffusion_obj(object $properties) : object {
+		// public function get_diffusion_obj(object $properties) : object {
 
-		# Build object
-		$diffusion_obj = new diffusion_component_obj();
-			$diffusion_obj->component_name	= get_class($this);
-			$diffusion_obj->parent			= $this->get_section_id();
-			$diffusion_obj->section_tipo	= $this->get_section_tipo();
-			$diffusion_obj->tipo			= $this->get_tipo();
-			$diffusion_obj->lang			= $this->get_lang();
-			$diffusion_obj->label			= $this->get_label();
-			#$diffusion_obj->dato			= $this->get_dato();
+		// 	# Build object
+		// 	$diffusion_obj = new diffusion_component_obj();
+		// 		$diffusion_obj->component_name	= get_class($this);
+		// 		$diffusion_obj->parent			= $this->get_section_id();
+		// 		$diffusion_obj->section_tipo	= $this->get_section_tipo();
+		// 		$diffusion_obj->tipo			= $this->get_tipo();
+		// 		$diffusion_obj->lang			= $this->get_lang();
+		// 		$diffusion_obj->label			= $this->get_label();
+		// 		#$diffusion_obj->dato			= $this->get_dato();
 
-			# initial_media_path
-			#$section 							= section::get_instance($diffusion_obj->parent, $diffusion_obj->section_tipo );
-			#$diffusion_obj->initial_media_path  = $section->get_initial_media_path();
+		// 		# initial_media_path
+		// 		#$section 							= section::get_instance($diffusion_obj->parent, $diffusion_obj->section_tipo );
+		// 		#$diffusion_obj->initial_media_path  = $section->get_initial_media_path();
 
-			$diffusion_obj->initial_media_path = $this->get_initial_media_path();
+		// 		$diffusion_obj->initial_media_path = $this->get_initial_media_path();
 
-			/*
-			$valor = $this->get_dato();
-			$valor = to_string($valor);
-			#$valor = filter_var($valor, FILTER_SANITIZE_STRING);
-			$diffusion_obj->columns['valor'] 	= $valor;
-			*/
+		// 		/*
+		// 		$valor = $this->get_dato();
+		// 		$valor = to_string($valor);
+		// 		#$valor = filter_var($valor, FILTER_SANITIZE_STRING);
+		// 		$diffusion_obj->columns['valor'] 	= $valor;
+		// 		*/
 
-		# Set standard 'valor' (Overwrite when need resolve dato. Ex. portals)
-		$diffusion_obj->columns['valor'] = $this->get_valor();
+		// 	# Set standard 'valor' (Overwrite when need resolve dato. Ex. portals)
+		// 	$diffusion_obj->columns['valor'] = $this->get_valor();
 
 
-		return $diffusion_obj;
-	}//end get_diffusion_obj
+		// 	return $diffusion_obj;
+		// }//end get_diffusion_obj
 
 
 
@@ -2011,40 +2026,40 @@ abstract class component_common extends common {
 	* GET_STATS_VALUE_RESOLVED
 	* @return array $ar_final
 	*/
-	// public static function get_stats_value_resolved(string $tipo, $current_stats_value, string $stats_model, object $stats_properties=null) : array {
+		// public static function get_stats_value_resolved(string $tipo, $current_stats_value, string $stats_model, object $stats_properties=null) : array {
 
-	// 	$caller_component = get_called_class();
+		// 	$caller_component = get_called_class();
 
-	// 	$ar_values = [];
-	// 	foreach ($current_stats_value as $current_dato => $value) {
+		// 	$ar_values = [];
+		// 	foreach ($current_stats_value as $current_dato => $value) {
 
-	// 		if( empty($current_dato) ) {
+		// 		if( empty($current_dato) ) {
 
-	// 			$current_dato = 'nd';
-	// 			$ar_values[$current_dato] = $value;
+		// 			$current_dato = 'nd';
+		// 			$ar_values[$current_dato] = $value;
 
-	// 		}else{
+		// 		}else{
 
-	// 			$current_component = component_common::get_instance(
-	// 				$caller_component,
-	// 				$tipo,
-	// 				null,
-	// 				'stats'
-	// 			);
-	// 			$current_component->set_dato($current_dato);
+		// 			$current_component = component_common::get_instance(
+		// 				$caller_component,
+		// 				$tipo,
+		// 				null,
+		// 				'stats'
+		// 			);
+		// 			$current_component->set_dato($current_dato);
 
-	// 			$valor = $current_component->get_valor();
+		// 			$valor = $current_component->get_valor();
 
-	// 			$ar_values[$valor] = $value;
-	// 		}
-	// 	}//end foreach
+		// 			$ar_values[$valor] = $value;
+		// 		}
+		// 	}//end foreach
 
-	// 	$label		= RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true).':'.$stats_model;
-	// 	$ar_final	= array($label => $ar_values);
+		// 	$label		= RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true).':'.$stats_model;
+		// 	$ar_final	= array($label => $ar_values);
 
 
-	// 	return $ar_final;
-	// }//end get_stats_value_resolved
+		// 	return $ar_final;
+		// }//end get_stats_value_resolved
 
 
 
@@ -2060,17 +2075,18 @@ abstract class component_common extends common {
 		$tipo		= $this->tipo;
 		$section_id	= $this->section_id;
 		if (empty($section_id)) {
-			trigger_error("Error: section_id is mandatory for ".__METHOD__);
-			if(SHOW_DEBUG===true) {
-				dump($this,"this");
-				throw new Exception("Error Processing Request", 1);
-			}
+			debug_log(__METHOD__
+				." Error: section_id is mandatory !"
+				, logger::ERROR
+			);
+
+			return $component_ar_langs;
 		}
 
-		$section				= $this->get_my_section();
-		$section_dato			= $section->get_dato();
+		$section		= $this->get_my_section();
+		$section_dato	= $section->get_dato();
 
-		$component_dato_full	= $section_dato->components->$tipo->dato ?? null;
+		$component_dato_full = $section_dato->components->$tipo->dato ?? null;
 		if ($component_dato_full!==null) {
 			foreach ($component_dato_full as $key => $value) {
 				$component_ar_langs[] = $key; // Old way
@@ -2090,44 +2106,46 @@ abstract class component_common extends common {
 
 
 	/**
-	* GET_AR_AUTHORIZED_TOOL_NAME
+	* GET_AR_AUTHORIZED_TOOL_NAME (DEPRECATED)
+	* @return array $this->ar_authorized_tool_name
 	*/
-	public function get_ar_authorized_tool_name() : array {
+		// public function get_ar_authorized_tool_name() : array {
 
-		if (self::get_permissions($this->section_tipo, $this->tipo)<=1) {
-			return array();
-		}
+		// 	if (self::get_permissions($this->section_tipo, $this->tipo)<=1) {
+		// 		return array();
+		// 	}
 
-		if (!isset($this->ar_authorized_tool_name)) {
-			//REMOVED OLD WAY$this->get_ar_tools_obj();
-		}
+		// 	if (!isset($this->ar_authorized_tool_name)) {
+		// 		//REMOVED OLD WAY$this->get_ar_tools_obj();
+		// 	}
 
-		return (array)$this->ar_authorized_tool_name;
-	}//end get_ar_authorized_tool_name
+		// 	return (array)$this->ar_authorized_tool_name;
+		// }//end get_ar_authorized_tool_name
 
 
 
 	/*
-	* GET_VALOR_LANG
+	* GET_VALOR_LANG (DEPRECATED)
 	* Return the component lang
 	* If the component need change this langs (selects, radiobuttons...) overwrite this function
 	*/
-	public function get_valor_lang() : string {
+		// public function get_valor_lang() : string {
 
-		return $this->lang;
-	}//end get_valor_lang
+		// 	return $this->lang;
+		// }//end get_valor_lang
 
 
 
 	/**
 	* GET_AR_TARGET_SECTION_TIPO
-	* Sección/es de la que se alimenta de registros el portal/autocomplete. No confundir con la sección en la que está el portal
-	* @return array ar_target_section_tipo
-	* 	Array of string like ['dd153']
+	* Section/s from which the portal/autocomplete feeds with records.
+	* Not to be confused with the section in which the portal is
+	* @return array|null ar_target_section_tipo
+	* 	Array of string tipo like ['dd153']
 	*/
 	public function get_ar_target_section_tipo() : ?array {
 
-		if (!$this->tipo) {
+		if (empty($this->tipo)) {
 			return null;
 		}
 
@@ -2136,32 +2154,25 @@ abstract class component_common extends common {
 			// 	return $this->ar_target_section_tipo;
 			// }
 
-		// get_config_context normalized
-			// $config_context = (array)common::get_config_context($this->tipo, $external=false, $this->section_tipo, $this->mode);
-			// $options = new stdClass();
-			// 	$options->tipo			= $this->tipo;
-			// 	$options->external		= false;
-			// 	$options->section_tipo	= $this->section_tipo;
-			// 	$options->mode			= $this->mode;
-			// 	$options->section_id	= null;
-			// 	$options->limit			= $this->pagination->limit;
+		// config_context. Get_config_context normalized
 			$config_context = $this->get_ar_request_config();
 
-		$ar_target_section_tipo = [];
-		foreach ($config_context as $config_context_item) {
-			$ar_current_section_tipo = array_map(function($el){
-				return $el->tipo;
-			}, $config_context_item->sqo->section_tipo);
+			$ar_target_section_tipo = [];
+			foreach ($config_context as $config_context_item) {
+				$ar_current_section_tipo = array_map(function($el){
+					return $el->tipo;
+				}, $config_context_item->sqo->section_tipo);
 
-			$ar_target_section_tipo = array_merge($ar_target_section_tipo, $ar_current_section_tipo);
-		}
+				$ar_target_section_tipo = array_merge($ar_target_section_tipo, $ar_current_section_tipo);
+			}
 
-		// debug
-			if(SHOW_DEBUG===true) {
-				if ( empty($ar_target_section_tipo)) {
-					$component_name = RecordObj_dd::get_termino_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true);
-					trigger_error("Error Processing Request. Please, define target section structure for component: $component_name - $this->tipo");
-				}
+			if (empty($ar_target_section_tipo)) {
+				$component_name = RecordObj_dd::get_termino_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true);
+				debug_log(__METHOD__
+					. " Error Processing Request. Please, define target section structure for component: $component_name".PHP_EOL
+					. " tipo: $this->tipo - model: " .get_called_class()
+					, logger::DEBUG
+				);
 			}
 
 		# Fix value
@@ -2176,19 +2187,23 @@ abstract class component_common extends common {
 	* GET_DIFFUSION_VALUE
 	* Calculate current component diffusion value for target field (usually a mysql field)
 	* Used for diffusion_mysql to unify components diffusion value call
-	* @return string $diffusion_value
+	* @param string|null $lang = null
+	* @param object|null $option_obj = null
+	* @return string|null $diffusion_value
 	*
 	* @see class.diffusion_mysql.php
 	*/
 	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
-		# Default behavior is get value
-		$diffusion_value = $this->get_valor( $lang );
+		// Default behavior is get value
+			$diffusion_value = $this->get_valor(
+				$lang ?? DEDALO_DATA_LANG
+			);
 
-		# strip_tags all values (remove untranslated mark elements)
-		$diffusion_value = !empty($diffusion_value)
-			? preg_replace("/<\/?mark>/", "", $diffusion_value)
-			: null;
+		// strip_tags all values (remove untranslated mark elements)
+			$diffusion_value = !empty($diffusion_value)
+				? preg_replace("/<\/?mark>/", "", $diffusion_value)
+				: null;
 
 
 		return $diffusion_value;
@@ -2240,10 +2255,10 @@ abstract class component_common extends common {
 	*/
 	public function regenerate_component() : bool {
 
-		# Force loads dato always !IMPORTANT
+		// Force loads dato always !IMPORTANT
 		$this->get_dato();
 
-		# Save component data
+		// Save component data
 		$this->Save();
 
 
@@ -2253,19 +2268,19 @@ abstract class component_common extends common {
 
 
 	/**
-	* IS_DATO_EMPTY
+	* IS_DATO_EMPTY (DEPRECATED)
 	* @return bool
 	*/
-	public static function is_dato_empty($dato) : bool {
+		// public static function is_dato_empty($dato) : bool {
 
-		foreach ((array)$dato as $value) {
-			if (!empty($value)) {
-				return false;
-			}
-		}
+		// 	foreach ((array)$dato as $value) {
+		// 		if (!empty($value)) {
+		// 			return false;
+		// 		}
+		// 	}
 
-		return true;
-	}//end is_dato_empty
+		// 	return true;
+		// }//end is_dato_empty
 
 
 
@@ -2286,7 +2301,7 @@ abstract class component_common extends common {
 
 		$dato_fb = [];
 		// fallback if empty (or is annoying mce-bogus code from tinyMCE editor)
-		foreach ($dato as $key => $value) {
+		foreach ((array)$dato as $key => $value) {
 			if(empty($value) || $value==='<br data-mce-bogus="1">'){
 
 				// Try main lang. (Used config DEDALO_DATA_LANG_DEFAULT as main_lang)
@@ -2333,6 +2348,7 @@ abstract class component_common extends common {
 
 		// restore initial lang
 			$component->set_lang($inital_lang);
+
 
 		return $dato_fb;
 	}//end extract_component_dato_fallback
@@ -2389,6 +2405,10 @@ abstract class component_common extends common {
 			if ($mark===true) {
 				$value = '<mark>'.$value.'</mark>';
 			}
+		}
+
+		if (!is_string($value)) {
+			$value = to_string($value);
 		}
 
 		return $value;
@@ -2488,7 +2508,7 @@ abstract class component_common extends common {
 		$value = to_string($value);
 
 		if ($is_fallback===true && $decore_untranslated===true) {
-			$value = self::decore_untranslated($value);
+			$value = component_common::decore_untranslated($value);
 		}
 
 		return $value;

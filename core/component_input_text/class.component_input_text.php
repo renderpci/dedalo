@@ -174,18 +174,18 @@ class component_input_text extends component_common {
 
 
 	/**
-	* LOAD TOOLS
+	* LOAD TOOLS (DEPRECATED)
 	*/
-	public function load_tools( bool $check_lang_tools=true ) : array {
+		// public function load_tools( bool $check_lang_tools=true ) : array {
 
-		$properties = $this->get_properties();
-		if (isset($properties->with_lang_versions) && $properties->with_lang_versions===true) {
-			# Allow tool lang on non translatable components
-			$check_lang_tools = false;
-		}
+		// 	$properties = $this->get_properties();
+		// 	if (isset($properties->with_lang_versions) && $properties->with_lang_versions===true) {
+		// 		# Allow tool lang on non translatable components
+		// 		$check_lang_tools = false;
+		// 	}
 
-		return parent::load_tools( $check_lang_tools );
-	}//end load_tools
+		// 	return parent::load_tools( $check_lang_tools );
+		// }//end load_tools
 
 
 

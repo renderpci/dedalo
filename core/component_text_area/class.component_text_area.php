@@ -1382,106 +1382,106 @@ class component_text_area extends component_common {
 
 
 	/**
-	* GET_DIFFUSION_OBJ
+	* GET_DIFFUSION_OBJ (DEPRECATED)
 	* @param object $properties
 	* @return object $diffusion_obj
 	*/
-	public function get_diffusion_obj(object $properties) : object {
+		// public function get_diffusion_obj(object $properties) : object {
 
-		$diffusion_obj = parent::get_diffusion_obj( $properties );
-		/*
-		$diffusion_obj->component_name		= get_class($this);
-		$diffusion_obj->parent 				= $this->get_parent();
-		$diffusion_obj->tipo 				= $this->get_tipo();
-		$diffusion_obj->lang 				= $this->get_lang();
-		$diffusion_obj->label 				= $this->get_label();
-		$diffusion_obj->columns['valor']	= $this->get_valor();
-		*/
+		// 	$diffusion_obj = parent::get_diffusion_obj( $properties );
+		// 	/*
+		// 	$diffusion_obj->component_name		= get_class($this);
+		// 	$diffusion_obj->parent 				= $this->get_parent();
+		// 	$diffusion_obj->tipo 				= $this->get_tipo();
+		// 	$diffusion_obj->lang 				= $this->get_lang();
+		// 	$diffusion_obj->label 				= $this->get_label();
+		// 	$diffusion_obj->columns['valor']	= $this->get_valor();
+		// 	*/
 
-		$section_tipo = $this->section_tipo;
+		// 	$section_tipo = $this->section_tipo;
 
-		if(isset($properties['rel_locator'])) {
+		// 	if(isset($properties['rel_locator'])) {
 
-			$rel_locator_obj	= $properties['rel_locator'];
-			#$rel_locator		= component_common::build_locator_from_obj( $rel_locator_obj );
-			$fragment_info		= component_text_area::get_fragment_text_from_rel_locator( $rel_locator_obj );
-			$texto				= $this->get_dato()[0];
+		// 		$rel_locator_obj	= $properties['rel_locator'];
+		// 		#$rel_locator		= component_common::build_locator_from_obj( $rel_locator_obj );
+		// 		$fragment_info		= component_text_area::get_fragment_text_from_rel_locator( $rel_locator_obj );
+		// 		$texto				= $this->get_dato()[0];
 
-			# FRAGMENT
-			$diffusion_obj->columns['fragment']	= $fragment_info[0];
+		// 		# FRAGMENT
+		// 		$diffusion_obj->columns['fragment']	= $fragment_info[0];
 
-			# RELATED
-			$current_related_tipo 	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($rel_locator_obj->component_tipo, $model_name='component_', $relation_type='termino_relacionado');
+		// 		# RELATED
+		// 		$current_related_tipo 	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($rel_locator_obj->component_tipo, $model_name='component_', $relation_type='termino_relacionado');
 
-			# No related term is present
-			if(empty($current_related_tipo[0])) return $diffusion_obj;
+		// 		# No related term is present
+		// 		if(empty($current_related_tipo[0])) return $diffusion_obj;
 
-			$current_related_tipo = $current_related_tipo[0];
-			$related_model_name  = RecordObj_dd::get_modelo_name_by_tipo($current_related_tipo,true);
+		// 		$current_related_tipo = $current_related_tipo[0];
+		// 		$related_model_name  = RecordObj_dd::get_modelo_name_by_tipo($current_related_tipo,true);
 
-			switch ($related_model_name) {
+		// 		switch ($related_model_name) {
 
-				case 'component_av':
+		// 			case 'component_av':
 
-					// TC
-					$tag_in_pos		= $fragment_info[1];
-					$tag_out_pos	= $fragment_info[2];
+		// 				// TC
+		// 				$tag_in_pos		= $fragment_info[1];
+		// 				$tag_out_pos	= $fragment_info[2];
 
-					$tc_in = OptimizeTC::optimize_tc_in(
-						$texto, // string text
-						null, // string|null indexIN
-						(int)$tag_in_pos, // int|null start_position
-						0 // int in_margin
-					);
-					$tc_out = OptimizeTC::optimize_tc_out(
-						$texto, // string text
-						null, // string|null indexOUT
-						(int)$tag_out_pos, // int|null end_position
-						100 // int in_margin
-					);
-					$tcin_secs		= OptimizeTC::TC2seg($tc_in);
-					$tcout_secs		= OptimizeTC::TC2seg($tc_out);
-					$duracion_secs	= $tcout_secs - $tcin_secs;
-					$duracion_tc	= OptimizeTC::seg2tc($duracion_secs);
+		// 				$tc_in = OptimizeTC::optimize_tc_in(
+		// 					$texto, // string text
+		// 					null, // string|null indexIN
+		// 					(int)$tag_in_pos, // int|null start_position
+		// 					0 // int in_margin
+		// 				);
+		// 				$tc_out = OptimizeTC::optimize_tc_out(
+		// 					$texto, // string text
+		// 					null, // string|null indexOUT
+		// 					(int)$tag_out_pos, // int|null end_position
+		// 					100 // int in_margin
+		// 				);
+		// 				$tcin_secs		= OptimizeTC::TC2seg($tc_in);
+		// 				$tcout_secs		= OptimizeTC::TC2seg($tc_out);
+		// 				$duracion_secs	= $tcout_secs - $tcin_secs;
+		// 				$duracion_tc	= OptimizeTC::seg2tc($duracion_secs);
 
-					$diffusion_obj->columns['related_tipo']	= $current_related_tipo;
-					$diffusion_obj->columns['related']		= $related_model_name;
-					$diffusion_obj->columns['tc_in']		= $tc_in;
-					$diffusion_obj->columns['tc_out']		= $tc_out;
-					$diffusion_obj->columns['duracion_tc']	= $duracion_tc;
-					$diffusion_obj->columns['tcin_secs']	= $tcin_secs;
-					$diffusion_obj->columns['tcout_secs']	= $tcout_secs;
+		// 				$diffusion_obj->columns['related_tipo']	= $current_related_tipo;
+		// 				$diffusion_obj->columns['related']		= $related_model_name;
+		// 				$diffusion_obj->columns['tc_in']		= $tc_in;
+		// 				$diffusion_obj->columns['tc_out']		= $tc_out;
+		// 				$diffusion_obj->columns['duracion_tc']	= $duracion_tc;
+		// 				$diffusion_obj->columns['tcin_secs']	= $tcin_secs;
+		// 				$diffusion_obj->columns['tcout_secs']	= $tcout_secs;
 
-					#$component_av   = new component_av($current_related_tipo, $this->get_parent(), 'edit');
-					$component_av   = component_common::get_instance(
-						$related_model_name,
-						$current_related_tipo,
-						$this->get_parent(),
-						'list',
-						DEDALO_DATA_LANG,
-						$section_tipo
-					);
-					$video_id 		= $component_av->get_video_id();
+		// 				#$component_av   = new component_av($current_related_tipo, $this->get_parent(), 'edit');
+		// 				$component_av   = component_common::get_instance(
+		// 					$related_model_name,
+		// 					$current_related_tipo,
+		// 					$this->get_parent(),
+		// 					'list',
+		// 					DEDALO_DATA_LANG,
+		// 					$section_tipo
+		// 				);
+		// 				$video_id 		= $component_av->get_video_id();
 
-					$diffusion_obj->columns['video_id']	= $video_id;
-					#$diffusion_obj->columns['video_url']	= $duracion_tc;
-					break;
+		// 				$diffusion_obj->columns['video_id']	= $video_id;
+		// 				#$diffusion_obj->columns['video_url']	= $duracion_tc;
+		// 				break;
 
-				case 'component_image':
+		// 			case 'component_image':
 
-					break;
+		// 				break;
 
-				case 'component_geolocation':
+		// 			case 'component_geolocation':
 
-					break;
+		// 				break;
 
-				default:
-					throw new Exception("Error Processing Request. Current related $related_model_name is not valid. Please configure textarea for this media ", 1);
-			}
-		}
+		// 			default:
+		// 				throw new Exception("Error Processing Request. Current related $related_model_name is not valid. Please configure textarea for this media ", 1);
+		// 		}
+		// 	}
 
-		return $diffusion_obj;
-	}//end get_diffusion_obj
+		// 	return $diffusion_obj;
+		// }//end get_diffusion_obj
 
 
 

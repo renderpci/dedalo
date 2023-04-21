@@ -149,7 +149,7 @@ export const render_reference = async function(options) {
 		// button Apply reference
 			const button_apply = ui.create_dom_element({
 				element_type	: 'button',
-				class_name		: 'success apply',
+				class_name		: 'success apply check',
 				text_content	: get_label.apply || 'Apply',
 				parent			: footer
 			})
@@ -216,7 +216,7 @@ export const render_reference = async function(options) {
 			header	: header,
 			body	: body,
 			footer	: footer,
-			size	: 'small' // string size big|normal
+			// size	: 'small' // string size big|normal
 		})
 		// when the modal is closed the section instance of the note need to be destroyed with all events and components
 		modal.on_close = async () => {

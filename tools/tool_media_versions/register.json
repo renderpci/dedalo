@@ -124,9 +124,7 @@
         "dd999": {
             "inf": "Configuración [component_json]",
             "dato": {
-                "lg-nolan": [
-                    {}
-                ]
+                "lg-nolan": null
             }
         },
         "dd1326": {
@@ -173,9 +171,7 @@
         "dd1350": {
             "inf": "Afecta a tipos: [component_json]",
             "dato": {
-                "lg-nolan": [
-                    {}
-                ]
+                "lg-nolan": null
             }
         }
     },

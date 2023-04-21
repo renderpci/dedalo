@@ -34,9 +34,6 @@ export const tool_tr_print = function () {
 	this.langs						= null
 	this.caller						= null
 	this.transcription_component	= null // component text area where we are working into the tool
-	// this.relation_list				= null // datum of relation_list (to obtaim list of top_section_tipo/id)
-
-	return true
 }//end page
 
 
@@ -55,6 +52,8 @@ export const tool_tr_print = function () {
 
 /**
 * INIT
+* @param object options
+* @return bool true
 */
 tool_tr_print.prototype.init = async function(options) {
 
@@ -78,6 +77,8 @@ tool_tr_print.prototype.init = async function(options) {
 
 /**
 * BUILD
+* @param bool autoload = false
+* @return object self
 */
 tool_tr_print.prototype.build = async function(autoload=false) {
 

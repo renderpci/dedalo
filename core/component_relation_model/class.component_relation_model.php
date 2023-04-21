@@ -47,11 +47,14 @@ class component_relation_model extends component_relation_common {
 			// current_label array|null
 			$current_label = component_relation_common::get_locator_value(
 				$locator, // object locator
-				$lang, // string lang
+				$lang ?? DEDALO_DATA_LANG, // string lang
 				false // bool show_parents
 			);
-			$ar_values[] = $current_label;
+			$ar_values[] = is_array($current_label)
+				? implode($separator, $current_label)
+				: $current_label;
 		}
+
 		$valor = implode($separator, $ar_values);
 
 

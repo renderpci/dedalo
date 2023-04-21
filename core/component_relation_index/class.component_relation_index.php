@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS COMPONENT_RELATION_INDEX
 *
 *
@@ -18,52 +18,64 @@ class component_relation_index extends component_relation_common {
 
 
 	/**
-	* GET_DATA
+	* GET_DATO
+	* Resolve indexation references data
+	* Note that this component data is always EXTERNAL
+	* because is used to display remote references of relation type (DEDALO_RELATION_TYPE_INDEX_TIPO)
+	* to current section
 	* @return array|null $dato
 	*/
 	public function get_dato() : ?array {
 
-		// external. Custom properties external dato
-			if(	(!empty($this->build_options) && $this->build_options->get_dato_external===true) ||
-				(isset($this->properties->source->mode) && $this->properties->source->mode==='external')) {
+		// dato_resolved. Already resolved case
+			if(isset($this->dato_resolved)) {
+				return $this->dato_resolved;
+			}
 
-				$reference_locator = new locator();
-					$reference_locator->set_type(DEDALO_RELATION_TYPE_INDEX_TIPO); // dd96
-					$reference_locator->set_section_tipo($this->section_tipo);
-					$reference_locator->set_section_id($this->section_id);
+		// reference_locator
+			$reference_locator = new locator();
+				$reference_locator->set_type(DEDALO_RELATION_TYPE_INDEX_TIPO); // dd96
+				$reference_locator->set_section_tipo($this->section_tipo);
+				$reference_locator->set_section_id($this->section_id);
 
+		// referenced locators. Get calculated inverse locators for all matrix tables
+			$ar_inverse_locators = search_related::get_referenced_locators( $reference_locator );
 
-				# Get calculated inverse locators for all matrix tables
-				$ar_inverse_locators = search_related::get_referenced_locators( $reference_locator );
+		// format result like own dato
+			$new_dato = [];
+			foreach ($ar_inverse_locators as $current_locator) {
 
-				$new_dato = [];
-				foreach ($ar_inverse_locators as $current_locator) {
+				$locator = new locator();
+					$locator->set_type($current_locator->type);
+					$locator->set_section_tipo($current_locator->from_section_tipo);
+					$locator->set_section_id($current_locator->from_section_id);
+					if(isset($current_locator->tag_component_tipo)){
+						$locator->set_component_tipo($current_locator->tag_component_tipo);
+					}
+					if(isset($current_locator->tag_id)){
+						$locator->set_tag_id($current_locator->tag_id);
+					}
+					if(isset($current_locator->section_top_id)){
+						$locator->set_section_top_id($current_locator->section_top_id);
+					}
+					if(isset($current_locator->section_top_id)){
+						$locator->set_section_top_tipo($current_locator->section_top_tipo);
+					}
+					if(isset($current_locator->from_component_tipo)){
+						$locator->set_from_component_top_tipo($current_locator->from_component_tipo);
+					}
 
-					$locator = new locator();
-						$locator->set_type($current_locator->type);
-						$locator->set_section_tipo($current_locator->from_section_tipo);
-						$locator->set_section_id($current_locator->from_section_id);
-						if(isset($current_locator->tag_component_tipo)){
-							$locator->set_component_tipo($current_locator->tag_component_tipo);
-						}
-						if(isset($current_locator->tag_id)){
-							$locator->set_tag_id($current_locator->tag_id);
-						}
-						if(isset($current_locator->section_top_id)){
-							$locator->set_section_top_id($current_locator->section_top_id);
-						}
-						if(isset($current_locator->section_top_id)){
-							$locator->set_section_top_tipo($current_locator->section_top_tipo);
-						}
-						if(isset($current_locator->from_component_tipo)){
-							$locator->set_from_component_top_tipo($current_locator->from_component_tipo);
-						}
+					$new_dato[] = $locator;
+			}
 
-						$new_dato[] = $locator;
-				}
+		// fix resolved dato
+			parent::set_dato($new_dato);
 
-				$this->set_dato($new_dato);
-			}//end if
+		// Set as loaded. Already set on set parent::set_dato
+			// $this->bl_loaded_matrix_data = true;
+
+		// @experimental. Already set on set parent::set_dato
+			// $this->dato_resolved = $this->dato;
 
 
 		return $this->dato;
@@ -189,32 +201,32 @@ class component_relation_index extends component_relation_common {
 	* @param object $locator
 	* @return bool
 	*/
-	public function add_locator( object $locator ) : bool {
+		// public function add_locator( object $locator ) : bool {
 
-		$locator = clone($locator);
+		// 	$locator = clone($locator);
 
-		# Verify exists locator type
-		if (!property_exists($locator,'type')) {
-			$locator->type = $this->relation_type;
-		}
+		// 	# Verify exists locator type
+		// 	if (!property_exists($locator,'type')) {
+		// 		$locator->type = $this->relation_type;
+		// 	}
 
-		# Verify exists locator from_component_tipo
-		if (!property_exists($locator,'from_component_tipo')) {
-			$locator->from_component_tipo = $this->tipo;
-		}
+		// 	# Verify exists locator from_component_tipo
+		// 	if (!property_exists($locator,'from_component_tipo')) {
+		// 		$locator->from_component_tipo = $this->tipo;
+		// 	}
 
-		if ($locator->type!=$this->relation_type) {
-			debug_log(__METHOD__." Stopped add index (struct) of invalid type (valid type is $this->relation_type). Received type: ".to_string($locator->type), logger::ERROR);
-			return false;
-		}
+		// 	if ($locator->type!=$this->relation_type) {
+		// 		debug_log(__METHOD__." Stopped add index (struct) of invalid type (valid type is $this->relation_type). Received type: ".to_string($locator->type), logger::ERROR);
+		// 		return false;
+		// 	}
 
-		# Add current locator to component dato
-		if (!$add_locator = $this->add_locator_to_dato($locator)) {
-			return false;
-		}
+		// 	# Add current locator to component dato
+		// 	if (!$add_locator = $this->add_locator_to_dato($locator)) {
+		// 		return false;
+		// 	}
 
-		return true;
-	}//end add_locator
+		// 	return true;
+		// }//end add_locator
 
 
 
@@ -387,15 +399,15 @@ class component_relation_index extends component_relation_common {
 	* Return valid operators for search in current component
 	* @return array $ar_operators
 	*/
-	// public function search_operators_info() : array {
+		// public function search_operators_info() : array {
 
-	// 	$ar_operators = [
-	// 		'*' 	 => 'no_empty', // not null
-	// 		'=' 	 => 'vacio'
-	// 	];
+		// 	$ar_operators = [
+		// 		'*' 	 => 'no_empty', // not null
+		// 		'=' 	 => 'vacio'
+		// 	];
 
-	// 	return $ar_operators;
-	// }//end search_operators_info
+		// 	return $ar_operators;
+		// }//end search_operators_info
 
 
 

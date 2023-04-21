@@ -2488,7 +2488,7 @@ class section extends common {
 			}
 
 		// inverse_locators
-		$inverse_locators = $this->get_inverse_locators();
+		$inverse_locators = $this->get_inverse_references();
 		foreach($inverse_locators as $locator) {
 
 			$current_section_tipo = $locator->from_section_tipo;
@@ -2527,14 +2527,14 @@ class section extends common {
 
 
 	/**
-	* GET_INVERSE_LOCATORS
+	* GET_INVERSE_LOCATORS (DEPRECATED)
 	* Alias of section->get_inverse_references
 	* @return array $inverse_locators
 	*/
-	public function get_inverse_locators() : array {
+		// public function get_inverse_locators() : array {
 
-		return $this->get_inverse_references();
-	}//end get_inverse_locators
+		// 	return $this->get_inverse_references();
+		// }//end get_inverse_locators
 
 
 
@@ -2547,22 +2547,24 @@ class section extends common {
 	public function get_inverse_references() : array {
 
 		if (empty($this->section_id)) {
-			# Section not exists yet. Return empty array
+			// The section does not exist yet. Return empty array
 			return array();
 		}
 
-		#$inverse_locators = search::get_inverse_relations_from_relations_table($this->tipo, $this->section_id);
+		// $inverse_locators = search::get_inverse_relations_from_relations_table($this->tipo, $this->section_id);
 
-		# Create a minimal locator based on current section
-		$reference_locator = new locator();
-			$reference_locator->set_section_tipo($this->tipo);
-			$reference_locator->set_section_id($this->section_id);
+		// Create a minimal locator based on current section
+			$reference_locator = new locator();
+				$reference_locator->set_section_tipo($this->tipo);
+				$reference_locator->set_section_id($this->section_id);
 
-		# Get calculated inverse locators for all matrix tables
-		$ar_inverse_locators = search_related::get_referenced_locators( $reference_locator );
+		// Get calculated inverse locators for all matrix tables
+			$ar_inverse_locators = search_related::get_referenced_locators(
+				$reference_locator
+			);
 
 
-		return (array)$ar_inverse_locators;
+		return $ar_inverse_locators;
 	}//end get_inverse_references
 
 
@@ -2575,7 +2577,7 @@ class section extends common {
 
 		$removed_locators = [];
 
-		$inverse_locators = $this->get_inverse_locators();
+		$inverse_locators = $this->get_inverse_references();
 		foreach ((array)$inverse_locators as $current_locator) {
 
 			$component_tipo = $current_locator->from_component_tipo;
