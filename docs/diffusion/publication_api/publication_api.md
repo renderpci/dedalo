@@ -101,7 +101,7 @@ You can view your specific configuration and open publication API user interface
 You will see the Swagger interface ready to be used.
 
 !!! warning
-If you have problems with getting data review the [public api configuration](server_config_api.md),and MariaDB / MySQL installation.
+    If you have problems with getting data review the [public api configuration](server_config_api.md),and MariaDB / MySQL installation.
 
 ![Server API UI](../assets/20230408_213159_server_api_ui.png)
 
@@ -115,7 +115,7 @@ Before begin to do calls you need to know:
 - Some calls will need to specify the table.
 - Response data are strings.
 
-  !!! note
+!!! note
     For historical reasons and compatibility with old webpages all response data will be sended as JSON stringified, you will need parse before use it.
 
 - You can do the calls directly or with CURL. All examples in this doc will use direct calls.
@@ -223,8 +223,8 @@ Method: **GET**
 Get information about automatic portal resolution map. Publication schema is the definition to resolve the connection between fields and the tables.
 
 !!! info About portal fields
-Portal is a relation between data, we name portal to fields with connections with other record in the same or other table.
-If you have a interview with two audiovisuals, yo will have a portal named `audiovisual` in the table `interview`, the portal will be a array with two section_id to locate the record in the table audiovisual.
+    Portal is a relation between data, we name portal to fields with connections with other record in the same or other table.
+    If you have a interview with two audiovisuals, yo will have a portal named `audiovisual` in the table `interview`, the portal will be a array with two section_id to locate the record in the table audiovisual.
 
 The request to 'publication_schema' returns information on the configuration of the automatic resolution of portals (see [resolve_portals](#resolve_portal)), which collects the data from the publication_schema table.
 
@@ -349,7 +349,7 @@ The request to 'records' is a generic SQL query that returns the list of records
 This request is similar to a basic sql query but note that not all commands are supported or allowed for security reasons.
 
 !!! warning Security
-All calls did to API are filtered and analyzed by server processes to avoid SQL injection. Any call is directly processed by database. Diffusion API is defined to be easy to use and understand and the calls maintain similar SQL syntax, but thinking in security all calls are filtered before will send to database.
+    All calls did to API are filtered and analyzed by server processes to avoid SQL injection. Any call is directly processed by database. Diffusion API is defined to be easy to use and understand and the calls maintain similar SQL syntax, but thinking in security all calls are filtered before will send to database.
 
 **Parameters:**
 
@@ -410,7 +410,7 @@ Get specific section_id. `int || int sequence`
 If you need specific record like 1 you can a request to section_id also, it is valid a sequence separated by comma, like 1,4,5.
 
 !!! info
-Dédalo do not use classical primary key id of the databases to locate information, it use a section_id in combination of section_tipo to define a unique record, in the work system it is possible to have the same section_id in the same table because the row is defined as these combination of section_id and section_tipo. This scenario is only for the work system but it is translated to publication scenario. All request will use section_id instead id.
+    Dédalo do not use classical primary key id of the databases to locate information, it use a section_id in combination of section_tipo to define a unique record, in the work system it is possible to have the same section_id in the same table because the row is defined as these combination of section_id and section_tipo. This scenario is only for the work system but it is translated to publication scenario. All request will use section_id instead id.
 
 Sample:
 
@@ -951,7 +951,7 @@ Other functions defined:
   Used to auto-resolve indexation column values of "exhibitions" table in qdp.
 
 !!! note
-see  ../dedalo/publication/server_api/v1/common/class.process_result.php file descriptions for every method.
+    see  ../dedalo/publication/server_api/v1/common/class.process_result.php file descriptions for every method.
 
 ## Thesaurus
 
@@ -1473,7 +1473,7 @@ Method: **POST**
 Get terms objects form thesaurus. Resolve one or more ts_term from ar_term_id.
 
 !!! note "About **term_id**"
-term_id is a flat version of the Dédalo locator. It use section_tipo and section_id to identify the term. Example: ts1_55 is the same that standard locator:
+    term_id is a flat version of the Dédalo locator. It use section_tipo and section_id to identify the term. Example: ts1_55 is the same that standard locator:
 
 ```json
 {
@@ -1606,10 +1606,10 @@ Only one term_id is allowed by request.
 Array of indexation locators with tag_id to be used in combination of term_id. `string` **Mandatory**
 
 !!! note About **tag_id**
-tag_id is a part of Dédalo locator that identify a text fragment of a field (component) in work system. tag_id has in and out reference inside a text. to locate this part of text Dédalo locator use the path:
-`section_tipo -> section_id -> component_tipo -> tag_id`
-You can think in this path as:
-`table -> row -> column -> part of text`
+    tag_id is a part of Dédalo locator that identify a text fragment of a field (component) in work system. tag_id has in and out reference inside a text. to locate this part of text Dédalo locator use the path:
+    `section_tipo -> section_id -> component_tipo -> tag_id`
+    You can think in this path as:
+    `table -> row -> column -> part of text`
 
 Example of locators to get an indexations:
 
@@ -1906,7 +1906,7 @@ Exclude restricted terms in the result `bool`
 Use to remove the terms restricted in the result. Restricted terms are used to forbidden the publication of some part of the texts. By default this parameter is set to `true`. When is set to `false` you will get restricted term to use it to block the access to the information,
 
 !!! note
-Publication API will check this terms automatically but you can see whats happen in the search.
+    Publication API will check this terms automatically but you can see whats happen in the search.
 
 ### /thesaurus_parents
 
