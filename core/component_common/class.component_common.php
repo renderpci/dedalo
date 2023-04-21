@@ -2191,19 +2191,23 @@ abstract class component_common extends common {
 	* GET_DIFFUSION_VALUE
 	* Calculate current component diffusion value for target field (usually a mysql field)
 	* Used for diffusion_mysql to unify components diffusion value call
-	* @return string $diffusion_value
+	* @param string|null $lang = null
+	* @param object|null $option_obj = null
+	* @return string|null $diffusion_value
 	*
 	* @see class.diffusion_mysql.php
 	*/
 	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
-		# Default behavior is get value
-		$diffusion_value = $this->get_valor( $lang );
+		// Default behavior is get value
+			$diffusion_value = $this->get_valor(
+				$lang ?? DEDALO_DATA_LANG
+			);
 
-		# strip_tags all values (remove untranslated mark elements)
-		$diffusion_value = !empty($diffusion_value)
-			? preg_replace("/<\/?mark>/", "", $diffusion_value)
-			: null;
+		// strip_tags all values (remove untranslated mark elements)
+			$diffusion_value = !empty($diffusion_value)
+				? preg_replace("/<\/?mark>/", "", $diffusion_value)
+				: null;
 
 
 		return $diffusion_value;

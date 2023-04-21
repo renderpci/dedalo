@@ -991,7 +991,11 @@ class component_filter extends component_relation_common {
 
 		$ar_label = [];
 		foreach ((array)$dato as $locator) {
-			$label = ts_object::get_term_by_locator($locator, $lang, true);
+			$label = ts_object::get_term_by_locator(
+				$locator,
+				$lang ?? DEDALO_DATA_LANG,
+				true
+			);
 			if (!empty($label)) {
 				$label = strip_tags(trim($label));
 				if (!empty($label)) {
