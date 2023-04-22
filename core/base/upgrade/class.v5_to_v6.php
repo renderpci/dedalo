@@ -196,9 +196,9 @@ class v5_to_v6 {
 			$current_dir = DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER . '/standard';
 			if (!is_dir($current_dir)) {
 				debug_log(__METHOD__
-					. " Error: svg default expected v5 path was not found ! : " . $current_dir .PHP_EOL
+					. " Warning: svg default expected v5 path was not found ! : " . $current_dir .PHP_EOL
 					. ' This could be an error or simply that you have already changed the name of this folder'
-					, logger::ERROR
+					, logger::WARNING
 				);
 			}
 

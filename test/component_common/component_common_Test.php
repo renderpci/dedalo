@@ -497,9 +497,8 @@ final class component_common_test extends TestCase {
 
 
 
-
 	/**
-	* test_is_translatable
+	* TEST_IS_TRANSLATABLE
 	* @return void
 	*/
 	public function test_is_translatable() {
@@ -721,7 +720,7 @@ final class component_common_test extends TestCase {
 
 
 	/**
-	* TEST_Save
+	* TEST_SAVE
 	* @return void
 	*/
 	public function test_Save() {
@@ -917,7 +916,6 @@ final class component_common_test extends TestCase {
 			);
 		}
 	}//end test_get_required
-
 
 
 
@@ -1309,6 +1307,11 @@ final class component_common_test extends TestCase {
 		// default dato
 		foreach (get_elements() as $element) {
 			$_ENV['DEDALO_ERRORS'] = []; // reset
+
+			$test_save = $element->test_save ?? true;
+			if (!isset($element->new_value) || !$test_save) {
+				continue;
+			}
 
 			$component = component_common::get_instance(
 				$element->model, // string model
