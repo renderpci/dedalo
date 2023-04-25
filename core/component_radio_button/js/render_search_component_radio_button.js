@@ -153,7 +153,6 @@ const get_input_element = (i, datalist_item, self) => {
 		content_value.addEventListener('click', function(e) {
 			// de-select option
 			if (e.altKey===true) {
-				// e.preventDefault()
 
 				// remove checked state
 					input.checked = false
