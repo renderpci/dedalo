@@ -23,6 +23,7 @@ export const render_search_component_publication = function() {
 /**
 * SEARCH
 * Render node for use in current mode
+* @param object options
 * @return HTMLElement wrapper
 */
 render_search_component_publication.prototype.search = async function(options) {
@@ -52,14 +53,18 @@ render_search_component_publication.prototype.search = async function(options) {
 
 /**
 * GET_CONTENT_DATA
+* Note that the edit switcher view is not useful for search because
+* we need here non value option that is achieved using the alt key on
+* press any option of the radio button
+* @param object self
 * @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 
 	// short vars
-		// const value	= self.data.value
-		const mode		= self.mode
-		const datalist	= self.data.datalist || []
+		const data		= self.data || {}
+		const value		= data.value || []
+		const datalist	= data.datalist || []
 
 	// content_data
 		const content_data = ui.component.build_content_data(self, {
@@ -80,7 +85,7 @@ const get_content_data = function(self) {
 				const value = (input_q_operator.value.length>0) ? input_q_operator.value : null
 			// q_operator. Fix the data in the instance previous to save
 				self.data.q_operator = value
-			// publish search. Event to update the dom elements of the instance
+			// publish search. Event to update the DOM elements of the instance
 				event_manager.publish('change_search_element', self)
 		})
 
@@ -108,16 +113,16 @@ const get_content_data = function(self) {
 * @param object self
 * @return HTMLElement content_value
 */
-const get_content_value = (i, current_value, self) => {
+const get_content_value = (i, datalist_item, self) => {
 
 	// short vars
 		const value				= self.data.value || []
 		const value_length		= value.length
-		const datalist_item		= current_value
+		// const datalist_value	= Object.assign({
+		// 	from_component_tipo : self.tipo
+		// }, datalist_item.value)
+		const datalist_value	= datalist_item.value
 		const label				= datalist_item.label
-		const datalist_value	= Object.assign({
-			from_component_tipo : self.tipo
-		}, datalist_item.value)
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -140,27 +145,23 @@ const get_content_value = (i, current_value, self) => {
 			name			: self.id,
 		})
 		input_label.prepend(input)
-
 		input.addEventListener('change', function() {
 
 			// changed_data
 				const changed_data_item = Object.freeze({
 					action	: 'update',
-					key		: i,
+					key		: 0,
 					value	: datalist_value
 				})
 
 			// update the instance data (previous to save)
 				self.update_data_value(changed_data_item)
-			// set data.changed_data. The change_data to the instance
-				// self.data.changed_data = changed_data
-			// publish search. Event to update the dom elements of the instance
+			// publish search. Event to update the DOM elements of the instance
 				event_manager.publish('change_search_element', self)
 		})//end change
 		content_value.addEventListener('click', function(e) {
 			// de-select option
 			if (e.altKey===true) {
-				e.preventDefault()
 
 				// remove checked state
 					input.checked = false
@@ -178,9 +179,7 @@ const get_content_value = (i, current_value, self) => {
 
 				// update the instance data (previous to save)
 					self.update_data_value(changed_data_item)
-				// set data.changed_data. The change_data to the instance
-					// self.data.changed_data = changed_data
-				// publish search. Event to update the dom elements of the instance
+				// publish search. Event to update the DOM elements of the instance
 					event_manager.publish('change_search_element', self)
 			}
 		})//end click
