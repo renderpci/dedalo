@@ -2026,7 +2026,7 @@ class component_relation_common extends component_common {
 	/**
 	* GET_CONFIG_CONTEXT_SECTION_TIPO
 	* @param array $ar_section_tipo_sources
-	* @param string|null $retrieved_section_tipo=null
+	* @param string|null $retrieved_section_tipo = null
 	* @return array $ar_section_tipo
 	*/
 	public static function get_request_config_section_tipo(array $ar_section_tipo_sources, $retrieved_section_tipo=null) : array {
@@ -2041,7 +2041,15 @@ class component_relation_common extends component_common {
 					// 	$source_item = is_array($retrieved_section_tipo) ? reset($retrieved_section_tipo) : $retrieved_section_tipo;
 					// }
 					if ($source_item==='self') {
-						throw new Exception("***** Error Processing get_request_config_section_tipo (1) invalid section_tipo format. Use an object like \"section_tipo\": [{\"source\": \"self\"}] . ".to_string($source_item), 1);
+						debug_log(__METHOD__
+							." Exception ERROR Processing get_request_config_section_tipo (1) invalid section_tipo format. Use an object like \"section_tipo\": [{\"source\": \"self\"}] "
+							. to_string($source_item)
+							, logger::ERROR
+						);
+						if(SHOW_DEBUG===true) {
+							throw new Exception("***** Error Processing get_request_config_section_tipo (1) invalid section_tipo format
+								. Use an object like \"section_tipo\": [{\"source\": \"self\"}] . ".to_string($source_item), 1);
+						}
 					}
 
 				$ar_section_tipo[] = $source_item;
@@ -2065,10 +2073,12 @@ class component_relation_common extends component_common {
 					// $ar_section_tipo = is_array($retrieved_section_tipo) ? reset($retrieved_section_tipo) : $retrieved_section_tipo;
 					$ar_section_tipo = is_array($retrieved_section_tipo) ? $retrieved_section_tipo : [$retrieved_section_tipo];
 					break;
+
 				case 'hierarchy_types':
 					$hierarchy_types = component_relation_common::get_hierarchy_sections_from_types($source_item->value);
 					$ar_section_tipo = array_merge($ar_section_tipo, $hierarchy_types);
 					break;
+
 				case 'field_value':
 					// this case is used in component_relation_children in the hierarchy section
 					// in these case the array of sections will get from the value of specific field
@@ -2137,6 +2147,23 @@ class component_relation_common extends component_common {
 							}//end foreach ($dato as $current_record)
 					}
 					break;
+
+				case 'hierarchy_terms':
+					// sample data item:
+						// {
+						//     "value": [
+						//         {
+						//             "recursive": true,
+						//             "section_id": "202",
+						//             "section_tipo": "aa1"
+						//         }
+						//     ],
+						//     "source": "hierarchy_terms"
+						// }
+					foreach ($source_item->value as $item) {
+						$ar_section_tipo[] = $item->section_tipo;
+					}
+					break;
 				case 'section':
 				default:
 					$ar_section_tipo = array_merge($ar_section_tipo, (array)$source_item->value);
@@ -2144,6 +2171,7 @@ class component_relation_common extends component_common {
 			}
 		}//end foreach ((array)$ar_section_tipo_sources as $source_item)
 
+		// remove duplicates
 		$ar_section_tipo = array_unique($ar_section_tipo);
 
 
