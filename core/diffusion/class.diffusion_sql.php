@@ -1335,18 +1335,25 @@ class diffusion_sql extends diffusion  {
 		// mandatory vars check
 			if(empty($section_tipo) || empty($section_id) || empty($diffusion_element_tipo)) {
 				$response->result	= false;
-				$response->msg		.= " ERROR ON UPDATE RECORD section_id:'$section_id' - section_tipo:'$section_tipo' - diffusion_element_tipo:'$diffusion_element_tipo'. Undefined mandatory options var";
-				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
+				$response->msg		.= " ERROR ON UPDATE RECORD section_id:'$section_id' - section_tipo:'$section_tipo' - diffusion_element_tipo:'$diffusion_element_tipo'. Undefined a mandatory options var";
+				debug_log(__METHOD__
+					." $response->msg " . PHP_EOL
+					. to_string($options)
+					, logger::ERROR
+				);
 				return $response;
 			}
-			# Old code heritage control
+			// Old code heritage control
 			if (is_array($section_id)) {
 				if(SHOW_DEBUG===true) {
 					dump($section_id, ' $section_id ++ '.to_string());
 				}
 				$response->result	= false;
-				$response->msg		.= 'Error Processing Request. Sorry, array is not accepted to update_record anymore. Please use int as section_id';
-				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
+				$response->msg		.= 'Error Processing Request. Type array is not accepted to update_record anymore. Please use integer as section_id';
+				debug_log(__METHOD__
+					." $response->msg "
+					, logger::ERROR
+				);
 				return $response;
 			}
 
@@ -1357,7 +1364,17 @@ class diffusion_sql extends diffusion  {
 			$diffusion_element_tables_map = diffusion_sql::get_diffusion_element_tables_map( $diffusion_element_tipo );
 			if (!property_exists($diffusion_element_tables_map, $section_tipo)) {
 				$response->result	= false;
-				$response->msg		.= "WARNING ON UPDATE RECORD[2] section_id: $section_id - section_tipo: $section_tipo - diffusion_element_tipo: $diffusion_element_tipo. Undefined section_tipo $section_tipo var in diffusion_element_tables_map. ".PHP_EOL."PROBABLY THE TARGET TABLE FOR (".RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG).") DO NOT EXISTS IN SQL. If you want resolve this reference, create a diffusion table for this data ($section_tipo) or check mysql tables for problems with table creation. ";
+				$response->msg		.= "WARNING ON UPDATE RECORD[2] section_id: $section_id - section_tipo: $section_tipo - diffusion_element_tipo: $diffusion_element_tipo.".PHP_EOL
+				." Undefined section_tipo $section_tipo var in diffusion_element_tables_map. ".PHP_EOL
+				." PROBABLY THE TARGET TABLE FOR (".RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG).") DO NOT EXISTS IN SQL. ".PHP_EOL
+				." If you want resolve this reference, create a diffusion table for this data ($section_tipo) or check the MYSQL schema for problems with table creation.";
+				debug_log(__METHOD__
+					. " $response->msg " .PHP_EOL
+					. ' The property "'.$section_tipo.'" do not exists in the object diffusion_element_tables_map ' .PHP_EOL
+					.' Ignored update_record request. options:' .PHP_EOL
+					. json_encode($options, JSON_PRETTY_PRINT)
+					, logger::ERROR
+				);
 				return $response;
 			}
 			$table_map			= $diffusion_element_tables_map->{$section_tipo};
@@ -1411,9 +1428,10 @@ class diffusion_sql extends diffusion  {
 				// response
 				$response->result	= true;
 				$response->msg		= 'Skipped record already updated. resolved_static_key: '.$resolved_static_key;
-				if(SHOW_DEBUG===true) {
-					debug_log(__METHOD__."  ".$response->msg .PHP_EOL.' ----------------------------------------------------------------- ', logger::WARNING);
-				}
+				debug_log(__METHOD__
+					. ' '.$response->msg
+					, logger::WARNING
+				);
 				return $response;
 			}
 
@@ -1421,7 +1439,12 @@ class diffusion_sql extends diffusion  {
 
 			// diffusion_section . Resolve diffusion section from section tipo
 				if (in_array($section_tipo, (array)$ar_unconfigured_diffusion_section)) {
-					$response->msg .= 'unconfigured_diffusion_section';
+					$response->result	= false;
+					$response->msg		.= 'unconfigured_diffusion_section';
+					debug_log(__METHOD__
+						." Error[1]: misconfigured diffusion section for section_tipo: ".to_string($section_tipo)
+						, logger::ERROR
+					);
 					return $response;
 				}
 				$diffusion_section = $table_tipo;
@@ -1437,7 +1460,11 @@ class diffusion_sql extends diffusion  {
 					// error_log(__METHOD__." WARNING: diffusion_section not found in correspondence with section_tipo: $section_tipo . Nothing is updated !!");
 					$ar_unconfigured_diffusion_section[] = $section_tipo;
 
-					$response->msg .= " unconfigured_diffusion_section: $section_tipo";
+					$response->msg .= " [2] misconfigured diffusion section for section_tipo: $section_tipo";
+					debug_log(__METHOD__
+						." Error[2]: misconfigured diffusion section for section_tipo: ".to_string($section_tipo)
+						, logger::ERROR
+					);
 					return $response;
 				}
 
@@ -1487,17 +1514,25 @@ class diffusion_sql extends diffusion  {
 							$save_options->record_data['engine'] = $database_properties->engine; // If defined in database properties
 						}
 
-					$save = diffusion_mysql::save_record($save_options);
+					// save
+						$save_response = diffusion_mysql::save_record($save_options);
+						if (!empty($save_response) || $save_response->result===false) {
+							debug_log(__METHOD__
+								.' Error: save response error ' . PHP_EOL
+								.' save_response: ' . json_encode($save_response, JSON_PRETTY_PRINT)
+								, logger::ERROR
+							);
+						}
 
 					// global_search (LEGACY ONLY)
 						if (isset($table_properties->global_search_map)) {
 
 							$gs_options = new stdClass();
 								$gs_options->global_search_map		= $table_properties->global_search_map;
-								$gs_options->diffusion_section 		= $diffusion_section;
-								$gs_options->section_tipo 			= $section_tipo;
-								$gs_options->diffusion_element_tipo = $diffusion_element_tipo;
-								$gs_options->ar_field_data 			= $ar_field_data;
+								$gs_options->diffusion_section		= $diffusion_section;
+								$gs_options->section_tipo			= $section_tipo;
+								$gs_options->diffusion_element_tipo	= $diffusion_element_tipo;
+								$gs_options->ar_field_data			= $ar_field_data;
 							self::save_global_search_data($gs_options);
 
 						}//end if (isset($table_properties->global_search_map))
@@ -2246,7 +2281,16 @@ class diffusion_sql extends diffusion  {
 			#dump($save, ' save ++ '.to_string());
 
 		if (!isset($save->new_id)) {
-			debug_log(__METHOD__." ERROR ON INERT RECORD !!! (diffusion_mysql::save_record) ".to_string(), logger::ERROR);
+			debug_log(__METHOD__
+				." ERROR ON INERT RECORD (global_search) !!! (diffusion_mysql::save_record) " .PHP_EOL
+				.'save: ' . to_string($save)
+				, logger::ERROR
+			);
+		}else{
+			debug_log(__METHOD__
+				." Saved new record in global_search - ".$save->new_id
+				, logger::DEBUG
+			);
 		}
 		debug_log(__METHOD__." Saved new record in global_search - ".$save->new_id .to_string(), logger::DEBUG);
 
@@ -2403,9 +2447,18 @@ class diffusion_sql extends diffusion  {
 		$save = diffusion_mysql::save_record($save_options);
 
 		if (!isset($save->new_id)) {
-			debug_log(__METHOD__." ERROR ON INERT RECORD !!! (diffusion_mysql::save_record) ".to_string(), logger::ERROR);
+			debug_log(__METHOD__
+				. " ERROR ON INERT RECORD !!! (diffusion_mysql::save_record) " . PHP_EOL
+				. 'save: ' . to_string($save)
+				, logger::ERROR
+			);
+		}else{
+			debug_log(__METHOD__
+				. " Saved new record in global_search - new_id: " . $save->new_id
+				, logger::DEBUG
+			);
 		}
-		debug_log(__METHOD__." Saved new record in global_search - ".$save->new_id .to_string(), logger::DEBUG);
+
 
 
 		return (object)$save;

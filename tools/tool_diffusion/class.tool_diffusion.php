@@ -225,6 +225,7 @@ class tool_diffusion extends tool_common {
 
 						// error case
 						$response->msg = ' Not sqo_session found from id: '.$sqo_id;
+						debug_log(__METHOD__." $response->msg ", logger::ERROR);
 						return $response;
 
 					}else{
@@ -339,7 +340,11 @@ class tool_diffusion extends tool_common {
 		// ar_diffusion_map_elements
 			$ar_diffusion_map_elements = diffusion::get_ar_diffusion_map_elements(DEDALO_DIFFUSION_DOMAIN);
 			if (!isset($ar_diffusion_map_elements[$diffusion_element_tipo])) {
-				debug_log(__METHOD__." Skipped diffusion_element $diffusion_element_tipo not found in ar_diffusion_map ".to_string($ar_diffusion_map_elements), logger::ERROR);
+				debug_log(__METHOD__
+					. " Skipped diffusion_element $diffusion_element_tipo not found in ar_diffusion_map " . PHP_EOL
+					. 'ar_diffusion_map_elements: '.to_string($ar_diffusion_map_elements)
+					, logger::ERROR
+				);
 				$response->msg .= "Error. Skipped diffusion_element $diffusion_element_tipo not found in ar_diffusion_map";
 				return $response;
 			}
@@ -377,11 +382,17 @@ class tool_diffusion extends tool_common {
 					: (defined('DEDALO_DIFFUSION_RESOLVE_LEVELS') ? DEDALO_DIFFUSION_RESOLVE_LEVELS : 2);
 
 				$response->msg = sprintf("<span class=\"ok\">Ok. Published record ID %s successfully. Levels: ".$max_recursions."</span>",$section_id);
+				debug_log(__METHOD__." $response->msg ", logger::DEBUG);
 			}else{
 
 				// error case
 				$response->result	= false;
 				$response->msg		= "Error. Error on publish record $section_id";
+				debug_log(__METHOD__
+					. " $response->msg " .PHP_EOL
+					. 'update_record_result: ' . to_string($update_record_result)
+					, logger::ERROR
+				);
 			}
 
 		// msg. Add specific messages
