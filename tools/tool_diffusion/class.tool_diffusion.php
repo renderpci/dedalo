@@ -248,22 +248,21 @@ class tool_diffusion extends tool_common {
 					$section_tipo	= (string)$row->section_tipo;
 
 					// exec export from current record
-					$export_result = tool_diffusion::export_record(
-						$section_tipo,
-						$section_id,
-						$diffusion_element_tipo,
-						$resolve_references, // bool resolve_references
-						$rows_data->ar_records // array ar_records
-					);
+						$export_result = tool_diffusion::export_record(
+							$section_tipo,
+							$section_id,
+							$diffusion_element_tipo,
+							$resolve_references, // bool resolve_references
+							$rows_data->ar_records // array ar_records
+						);
+						if($export_result->result==true) {
+							$n_records_published++;
+						}else{
+							$response->msg .= $export_result->msg;
+							debug_log(__METHOD__." export_result ".to_string($export_result), logger::ERROR);
+						}
 
-					if($export_result->result==true) {
-						$n_records_published++;
-					}else{
-						$response->msg .= $export_result->msg;
-						debug_log(__METHOD__." export_result ".to_string($export_result), logger::DEBUG);
-					}
-
-					// diffusion_rdf
+					// diffusion_rdf case
 						if ($diffusion_class_name==='diffusion_rdf') {
 							break; // Only one iteration is needed
 						}
@@ -416,6 +415,7 @@ class tool_diffusion extends tool_common {
 			// 	}
 			// 	// $response->msg .= " <span>Exec in ".exec_time_unit($start_time,'secs')." secs - MB: ". $memory_usage ."</span>";
 			// }
+
 
 		return $response;
 	}//end export_record
