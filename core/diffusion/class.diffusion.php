@@ -117,6 +117,8 @@ abstract class diffusion  {
 	* GET_AR_DIFFUSION_MAP
 	* Get and set diffusion_map of current domain ($this->domain)
 	* @param string $diffusion_domain_name . Like 'aup'
+	* @param bool $connection_status = false
+	* 	On true, check connection status (usually MySQL database)
 	* @return object $entity_diffusion_tables
 	* 	Sample:
 	* 	{
@@ -131,7 +133,7 @@ abstract class diffusion  {
 	*	    ]
 	*	}
 	*/
-	public static function get_diffusion_map( string $diffusion_domain_name=DEDALO_DIFFUSION_DOMAIN ) : object {
+	public static function get_diffusion_map( string $diffusion_domain_name=DEDALO_DIFFUSION_DOMAIN, $connection_status=false ) : object {
 
 		// cache
 			static $diffusion_map;
@@ -220,16 +222,57 @@ abstract class diffusion  {
 						$diffusion_database_name = RecordObj_dd::get_termino_by_tipo($diffusion_database_tipo, DEDALO_STRUCTURE_LANG, true, false);
 					}
 
-				$data = new stdClass();
-					$data->element_tipo		= $element_tipo;
-					$data->name				= $name;
-					$data->class_name		= $diffusion_class_name;
-					$data->database_name	= $diffusion_database_name;
-					$data->database_tipo	= $diffusion_database_tipo;
+				$item = new stdClass();
+					$item->element_tipo		= $element_tipo;
+					$item->name				= $name;
+					$item->class_name		= $diffusion_class_name;
+					$item->database_name	= $diffusion_database_name;
+					$item->database_tipo	= $diffusion_database_tipo;
 
-				$diffusion_map->{$diffusion_group_tipo}[] = $data;
+				// add connection DDBB status. Check connection is reachable
+					if ($connection_status===true) {
+						switch ($item->class_name) {
+							case 'diffusion_mysql':
+								// check connection
+								$conn = $conn ?? DBi::_getConnection_mysql();
+								if ($conn===false) {
+									$item->connection_status = (object)[
+										'result'	=> false,
+										'msg'		=> 'Unable to connect to database'
+									];
+								}else{
+									// check database
+									$db_available = diffusion_mysql::database_exits($item->database_name);
+									if ($db_available===true) {
+										$item->connection_status = (object)[
+											'result'	=> true,
+											'msg'		=> 'Database is ready'
+										];
+									}else{
+										$item->connection_status = (object)[
+											'result'	=> false,
+											'msg'		=> 'Database is NOT ready'
+										];
+									}
+								}
+								// error log when fails
+									if ($item->connection_status->result===false) {
+										debug_log(__METHOD__
+											." ".$item->connection_status->msg . ' ['.$item->database_name.']'
+											, logger::ERROR
+										);
+									}
+								break;
 
-			}#foreach ($ar_diffusion_element_tipo as $element_tipo)
+							default:
+								// ignore
+								break;
+						}
+					}//end if ($connection_status===true)
+
+				// add diffusion_map item
+					$diffusion_map->{$diffusion_group_tipo}[] = $item;
+			}//end foreach ($ar_diffusion_element_tipo as $element_tipo)
 
 		}//end foreach ($ar_diffusion_group as $diffusion_group_tipo)
 		#dump($diffusion_map, ' diffusion_map by diffusion_group_tipo ++ '.to_string());

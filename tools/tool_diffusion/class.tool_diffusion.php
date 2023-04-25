@@ -34,7 +34,10 @@ class tool_diffusion extends tool_common {
 			$resolve_levels = diffusion::get_resolve_levels();
 
 		// diffusion_map
-			$diffusion_map = diffusion::get_diffusion_map(DEDALO_DIFFUSION_DOMAIN);
+			$diffusion_map = diffusion::get_diffusion_map(
+				DEDALO_DIFFUSION_DOMAIN,
+				true // bool connection_status
+			);
 
 			// groups
 				// $groups = [];
@@ -58,46 +61,6 @@ class tool_diffusion extends tool_common {
 				// 		$groups[] = $item;
 				// 	}
 				// }
-
-		// add connection DDBB status. Check connection is reachable
-			foreach ($diffusion_map as $items) {
-				foreach ($items as $item) {
-					if ($item->class_name==='diffusion_mysql') {
-
-						// check connection
-						$conn = $conn ?? DBi::_getConnection_mysql();
-						if ($conn===false) {
-							$item->connection_status = (object)[
-								'result'	=> false,
-								'msg'		=> 'Unable to connect to database'
-							];
-						}else{
-							// check database
-							$db_available = diffusion_mysql::database_exits($item->database_name);
-							if ($db_available===true) {
-								$item->connection_status = (object)[
-									'result'	=> true,
-									'msg'		=> 'Database is ready'
-								];
-							}else{
-								$item->connection_status = (object)[
-									'result'	=> false,
-									'msg'		=> 'Database is NOT ready'
-								];
-							}
-						}
-
-						if ($item->connection_status->result===false) {
-							debug_log(__METHOD__
-								." ".$item->connection_status->msg . ' ['.$item->database_name.']'
-								, logger::ERROR
-							);
-						}
-					}
-				}//end foreach ($items as $item)
-			}//end foreach ($diffusion_map as $items)
-			// dump($diffusion_map, ' diffusion_map 2 ++ '.to_string());
-
 
 		// skip_publication_state_check
 			$skip_publication_state_check = $_SESSION['dedalo']['config']['skip_publication_state_check'] ?? 0;
