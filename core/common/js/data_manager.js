@@ -45,10 +45,17 @@ data_manager.request = async function(options) {
 				body	: this.body
 			});
 
+			current_worker.onerror = (event) => {
+				console.error("There is an error with current worker error!");
+				console.log('options:', options);
+				console.log('event:', event);
+			};
+
 			return new Promise(function(resolve, reject){
+
 				current_worker.onmessage = function(e) {
 					if (!e.data.api_response) {
-						console.error('Error worker_data onmessage', e.data);
+						console.error('Error worker_data onmessage. Rejected! e.data:', e.data);
 						current_worker.terminate()
 
 						reject({})
