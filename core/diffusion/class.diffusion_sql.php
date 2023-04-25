@@ -1311,7 +1311,6 @@ class diffusion_sql extends diffusion  {
 	* UPDATE_RECORD
 	* Update one or any number of records ( array ) and references
 	* @param object $options
-	* @param bool $resolve_references
 	* @return obj $response
 	*/
 	public function update_record($options) {
@@ -1406,9 +1405,9 @@ class diffusion_sql extends diffusion  {
 			if (isset($table_properties->custom_diffusion)) {
 				$function_name	= $table_properties->custom_diffusion;
 				$custom_options	= clone $options;
-					$custom_options->database_name 		= $database_name;
-					$custom_options->table_name 		= $table_name;
-					$custom_options->table_properties 	= $table_properties;
+					$custom_options->database_name		= $database_name;
+					$custom_options->table_name			= $table_name;
+					$custom_options->table_properties	= $table_properties;
 				call_user_func($function_name, $custom_options);
 
 				$response->result 	= true;
@@ -1712,7 +1711,10 @@ class diffusion_sql extends diffusion  {
 							// recursion level reset
 								// $current_recursion_level = 1;
 								if(SHOW_DEBUG===true) {
-									debug_log(__METHOD__." current recursion_level: '$recursion_level' of $max_recursions [$current_section_tipo] label: '".RecordObj_dd::get_termino_by_tipo($current_section_tipo)."' - ar_section_id:".to_string($ar_section_id)." ============================================================================================== ", logger::DEBUG);
+									debug_log(__METHOD__
+										." current recursion_level: '$recursion_level' of $max_recursions [$current_section_tipo] label: '".RecordObj_dd::get_termino_by_tipo($current_section_tipo)."' - ar_section_id:".to_string($ar_section_id)." ============================================================================================== "
+										, logger::DEBUG
+									);
 								}
 
 							foreach ((array)$ar_section_id as $current_section_id) {
@@ -2106,44 +2108,44 @@ class diffusion_sql extends diffusion  {
 							$list_data[$lang]->image 	= $image_parts[0]; // Only first image is used
 						}
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => 'list_data',
-							'field_value' => json_encode($list_data[$lang], JSON_UNESCAPED_UNICODE)
+							'field_name'	=> 'list_data',
+							'field_value'	=> json_encode($list_data[$lang], JSON_UNESCAPED_UNICODE)
 						];
 
 					# FULL_DATA
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => 'full_data',
-							'field_value' => implode(' ',$full_data[$lang])
+							'field_name'	=> 'full_data',
+							'field_value'	=> implode(' ',$full_data[$lang])
 						];
 
 					# name_surname. NAME_SURNAME_DATA . Added 18-03-2018 !!
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => 'name_surname',
-							'field_value' => implode(' ',$name_surname_data[$lang])
+							'field_name'	=> 'name_surname',
+							'field_value'	=> implode(' ',$name_surname_data[$lang])
 						];
 
 					# prisoner_number. prisoner_number_DATA . Added 01-05-2020 !!
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => 'prisoner_number',
-							'field_value' => json_encode($prisoner_number_data[$lang], JSON_UNESCAPED_UNICODE)
+							'field_name'	=> 'prisoner_number',
+							'field_value'	=> json_encode($prisoner_number_data[$lang], JSON_UNESCAPED_UNICODE)
 						];
 
 					# symbol_state. symbol_state_data . Added 09-12-2020 !!
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => 'symbol_state',
-							'field_value' => json_encode($symbol_state_data[$lang], JSON_UNESCAPED_UNICODE)
+							'field_name'	=> 'symbol_state',
+							'field_value'	=> json_encode($symbol_state_data[$lang], JSON_UNESCAPED_UNICODE)
 						];
 
 					# sort. sort_data . Added 18-03-2018 !!
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => 'sort',
-							'field_value' => implode(' ',$sort_data[$lang])
+							'field_name'	=> 'sort',
+							'field_value'	=> implode(' ',$sort_data[$lang])
 						];
 
 					# sort_id
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => 'sort_id',
-							'field_value' => $section_id
+							'field_name'	=> 'sort_id',
+							'field_value'	=> $section_id
 						];
 
 					# thesaurus. THESAURUS_DATA . Merge all values in one only array. Added 13-11-2018 !!
@@ -2154,9 +2156,9 @@ class diffusion_sql extends diffusion  {
 						#	}
 						#}
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => 'thesaurus',
-							#'field_value' => (!empty($ar_thesaurus_elements)) ? json_encode($ar_thesaurus_elements) : null
-							'field_value' => (!empty($thesaurus_data[$lang])) ? implode(' | ', $thesaurus_data[$lang]) : null
+							'field_name'		=> 'thesaurus',
+							// 'field_value'	=> (!empty($ar_thesaurus_elements)) ? json_encode($ar_thesaurus_elements) : null
+							'field_value'		=> (!empty($thesaurus_data[$lang])) ? implode(' | ', $thesaurus_data[$lang]) : null
 						];
 
 					# prison. Merge all values in one only array. Added 20-11-2018 !!
@@ -2167,8 +2169,8 @@ class diffusion_sql extends diffusion  {
 							}
 						}
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => 'prison',
-							'field_value' => !empty($ar_prison_elements) ? implode(' | ', $ar_prison_elements) : null
+							'field_name'	=> 'prison',
+							'field_value'	=> !empty($ar_prison_elements) ? implode(' | ', $ar_prison_elements) : null
 						];
 
 					# pub_author. Merge all values in one only array. Added 15-11-2018 !!
@@ -2179,8 +2181,8 @@ class diffusion_sql extends diffusion  {
 							}
 						}
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => 'pub_author',
-							'field_value' => !empty($ar_pub_author_elements) ? implode(' | ', $ar_pub_author_elements) : null
+							'field_name'	=> 'pub_author',
+							'field_value'	=> !empty($ar_pub_author_elements) ? implode(' | ', $ar_pub_author_elements) : null
 						];
 
 					# title_generic. title_generic_data. Merge all values in one only array. Added 15-11-2018 !!
@@ -2191,8 +2193,8 @@ class diffusion_sql extends diffusion  {
 							}
 						}
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => 'title',
-							'field_value' => !empty($ar_title_generic_elements) ? implode(' | ', $ar_title_generic_elements) : null
+							'field_name'	=> 'title',
+							'field_value'	=> !empty($ar_title_generic_elements) ? implode(' | ', $ar_title_generic_elements) : null
 						];
 
 					# FIELDS
@@ -2205,8 +2207,8 @@ class diffusion_sql extends diffusion  {
 							$ar_objects[] = $fields_obj;
 						}
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => 'fields',
-							'field_value' => json_encode($ar_objects, JSON_UNESCAPED_UNICODE)
+							'field_name'	=> 'fields',
+							'field_value'	=> json_encode($ar_objects, JSON_UNESCAPED_UNICODE)
 						];
 
 					# FILTER_DATE
@@ -2219,26 +2221,26 @@ class diffusion_sql extends diffusion  {
 							$filter_date = reset($output_array);
 
 							$ar_fields_global[$pseudo_section_id][$lang][] = [
-								'field_name'  => 'filter_date',
-								'field_value' => $filter_date
+								'field_name'	=> 'filter_date',
+								'field_value'	=> $filter_date
 							];
 						}
 
 
 					# LINK
 						$link_obj = [
-							'table' 	 => $table_name,
-							'section_id' => $section_id
+							'table'			=> $table_name,
+							'section_id'	=> $section_id
 						];
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => 'link',
-							'field_value' => json_encode($link_obj)
+							'field_name'	=> 'link',
+							'field_value'	=> json_encode($link_obj)
 						];
 
 					# TABLE
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => 'table',
-							'field_value' => $table_name
+							'field_name'	=> 'table',
+							'field_value'	=> $table_name
 						];
 
 					# fons_code (archive code)
@@ -2265,20 +2267,18 @@ class diffusion_sql extends diffusion  {
 			#dump($list_data, ' list_data ++ '.to_string());
 
 		$ar_field_data = [
-			"database_name" 	=> $database_name,
-			"table_name" 		=> 'global_search',
-			"diffusion_section" => $options->diffusion_section,
-			"ar_fields" 		=> $ar_fields_global
+			"database_name"		=> $database_name,
+			"table_name"		=> 'global_search',
+			"diffusion_section"	=> $options->diffusion_section,
+			"ar_fields"			=> $ar_fields_global
 		];
 
 		$save_options = new stdClass();
-			$save_options->diffusion_element_tipo 	= $options->diffusion_element_tipo;
-			$save_options->section_tipo 			= $options->section_tipo;
-			$save_options->record_data 				= $ar_field_data;
-			$save_options->delete_previous 			= true;
-		#dump($save_options, ' save_options ++ '.to_string()); die();
+			$save_options->diffusion_element_tipo	= $options->diffusion_element_tipo;
+			$save_options->section_tipo				= $options->section_tipo;
+			$save_options->record_data				= $ar_field_data;
+			$save_options->delete_previous			= true;
 		$save = diffusion_mysql::save_record($save_options);
-			#dump($save, ' save ++ '.to_string());
 
 		if (!isset($save->new_id)) {
 			debug_log(__METHOD__
@@ -2292,7 +2292,6 @@ class diffusion_sql extends diffusion  {
 				, logger::DEBUG
 			);
 		}
-		debug_log(__METHOD__." Saved new record in global_search - ".$save->new_id .to_string(), logger::DEBUG);
 
 
 		return (object)$save;
@@ -2388,7 +2387,7 @@ class diffusion_sql extends diffusion  {
 								}
 							}
 
-						// field value formated
+						// field value formatted
 							$field_value = (function($column_values) use($column_map_item, $source_columns){
 
 								$format = $column_map_item->format ?? null;
