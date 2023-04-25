@@ -101,6 +101,13 @@
 
 					.value {
 						font-weight: bold;
+
+						&.fail {
+							color: red;
+						}
+						&.success {
+							color: green;
+						}
 					}
 
 					.container_bottom {
@@ -121,6 +128,10 @@
 							margin: 1rem;
 							background-color: @base_color;
 							border-color: darken(@base_color, 5%);
+
+							&.not_ready {
+								opacity: 0.4;
+							}
 						}
 
 						.spinner {
