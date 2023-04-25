@@ -927,9 +927,10 @@ class diffusion_sql extends diffusion  {
 
 	/**
 	* CHECK_PUBLICATION_VALUE
+	* @param object $request_options
 	* @return bool
 	*/
-	public static function check_publication_value($request_options) {
+	public static function check_publication_value(object $request_options) {
 
 		$to_publish = true;
 
@@ -959,17 +960,28 @@ class diffusion_sql extends diffusion  {
 			# Delete this record
 			if ($options->delete_previous===true) {
 				diffusion_sql::delete_sql_record($options->section_id, $options->database_name, $options->table_name, $options->section_tipo);
-				debug_log(__METHOD__." Skipped (and mysql deleted) record $options->section_id ".$options->table_name." (publication=no)", logger::DEBUG);
+				debug_log(__METHOD__
+					." Skipped (and MYSQL deleted) record $options->section_id ".$options->table_name." (publication=no)"
+					, logger::DEBUG
+				);
 
 				// Global search case
-					if (isset($options->table_properties->global_search_map)) {
+					if (isset($options->table_properties) && isset($options->table_properties->global_search_map)) {
 						# exists search global table (mdcat fix)
 						diffusion_sql::delete_sql_record($options->section_id, $options->database_name, 'global_search', $options->section_tipo);
-						debug_log(__METHOD__." Deleted global_search record {$options->section_tipo}_{$options->section_id} (publication=no)", logger::DEBUG);
+						debug_log(__METHOD__
+							." Deleted global_search record {$options->section_tipo}_{$options->section_id} (publication=no)"
+							, logger::DEBUG
+						);
 					}
 			}
 
-			$section = section::get_instance($options->section_id, $options->section_tipo, $mode='list', false);
+			$section = section::get_instance(
+				$options->section_id,
+				$options->section_tipo,
+				'list', // string mode
+				false // bool cache
+			);
 			$section->set_bl_loaded_matrix_data(false); // force section to update dato from current database to prevent loose user changes on publication time lapse
 			$section->diffusion_info_add($options->diffusion_element_tipo);
 			$section->save_modified = false;
@@ -978,11 +990,19 @@ class diffusion_sql extends diffusion  {
 
 			# Cascade delete
 			# dump( json_decode($options->table_properties), ' options->table_properties ++ '.to_string());
-			if ($options->delete_previous===true && isset($options->table_properties->cascade_delete)) {
-				foreach ((array)$options->table_properties->cascade_delete as $tkey => $tvalue) {
+			if ($options->delete_previous===true && isset($options->table_properties) && isset($options->table_properties->cascade_delete)) {
+				foreach ((array)$options->table_properties->cascade_delete as $tvalue) {
 					$cd_table_name = $tvalue->table;
-					diffusion_sql::delete_sql_record($options->section_id, $options->database_name, $cd_table_name, $options->section_tipo);
-					debug_log(__METHOD__." Deleted (cascade_delete) record $options->section_id ".$cd_table_name." ", logger::DEBUG);
+					diffusion_sql::delete_sql_record(
+						$options->section_id,
+						$options->database_name,
+						$cd_table_name,
+						$options->section_tipo
+					);
+					debug_log(__METHOD__
+						." Deleted (cascade_delete) record $options->section_id ".$cd_table_name." "
+						, logger::DEBUG
+					);
 				}
 			}
 
@@ -1001,6 +1021,7 @@ class diffusion_sql extends diffusion  {
 
 	/**
 	* GET_FIELD_RELATED_COMPONENT
+	* @param string $tipo
 	* @return string $related_term
 	*/
 	public static function get_field_related_component($tipo) {
@@ -1078,8 +1099,8 @@ class diffusion_sql extends diffusion  {
 
 				#
 				# Diffusion element
-				$diffusion_term	= new RecordObj_dd($options->tipo);
-				$properties		= $diffusion_term->get_propiedades(true);	# Format: {"data_to_be_used": "dato"}
+				$diffusion_term					= new RecordObj_dd($options->tipo);
+				$properties						= $diffusion_term->get_propiedades(true);	# Format: {"data_to_be_used": "dato"}
 
 				#
 				# Component target
@@ -1100,6 +1121,7 @@ class diffusion_sql extends diffusion  {
 							'list'
 						);
 					}else{
+
 						$current_component = component_common::get_instance(
 							$model_name,
 							$related_component_tipo,
@@ -1372,7 +1394,7 @@ class diffusion_sql extends diffusion  {
 					. ' The property "'.$section_tipo.'" do not exists in the object diffusion_element_tables_map ' .PHP_EOL
 					.' Ignored update_record request. options:' .PHP_EOL
 					. json_encode($options, JSON_PRETTY_PRINT)
-					, logger::ERROR
+					, logger::WARNING
 				);
 				return $response;
 			}
@@ -1452,7 +1474,7 @@ class diffusion_sql extends diffusion  {
 						$section_name = RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_STRUCTURE_LANG, true, false);
 						// throw new Exception("Error Processing Request. diffusion_section not found in correspondence with section_tipo: $section_tipo . Nothing is updated", 1);
 						// echo "<hr> DEBUG update_record: Omitted update section <b>'$section_name'</b>. Optional diffusion_section not found in correspondence with section_tipo: $section_tipo [$section_id]<br>";
-						$msg = " Omitted update section <b>'$section_name'</b>. Optional diffusion_section not found in correspondence with section_tipo: $section_tipo [$section_id] ";
+						$msg = " Omitted update section '$section_name'. Optional diffusion_section not found in correspondence with section_tipo: $section_tipo [$section_id] ";
 						$response->msg .= $msg;
 						debug_log(__METHOD__." $msg", logger::DEBUG);
 					}
@@ -1515,7 +1537,7 @@ class diffusion_sql extends diffusion  {
 
 					// save
 						$save_response = diffusion_mysql::save_record($save_options);
-						if (!empty($save_response) || $save_response->result===false) {
+						if ($save_response->result===false) {
 							debug_log(__METHOD__
 								.' Error: save response error ' . PHP_EOL
 								.' save_response: ' . json_encode($save_response, JSON_PRETTY_PRINT)
