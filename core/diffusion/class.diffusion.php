@@ -757,12 +757,18 @@ abstract class diffusion  {
 	*	)
 	* @return object $image_size
 	*/
-	public static function map_image_info(object $options, $dato) : object {
+	public static function map_image_info(object $options, $dato) : ?object {
 
 		//dump($options, ' options ++ '.to_string());
 		//dump($dato, ' dato ++ '.to_string());
 
-		$locator = $dato;
+		if (empty($dato)) {
+			return null;
+		}
+
+		$locator = is_array($dato)
+			? reset($dato)
+			: $dato;
 
 		// component image
 			$model_name = RecordObj_dd::get_modelo_name_by_tipo($locator->component_tipo,true);
@@ -776,6 +782,9 @@ abstract class diffusion  {
 			);
 		// Dimensions from default quality
 			$image_dimensions = $component->get_image_dimensions(DEDALO_IMAGE_QUALITY_DEFAULT);
+			if (empty($image_dimensions)) {
+				return null;
+			}
 
 		// Response (from imagemagick)
 			# [0] => 617
