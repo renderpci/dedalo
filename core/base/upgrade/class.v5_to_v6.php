@@ -103,80 +103,86 @@ class v5_to_v6 {
 	*/
 	public static function update_component_pdf_media_dir() : bool {
 
-		// check old directory existence. try default v5 name
-			$current_dir = DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER . '/standar';
-			if (!is_dir($current_dir)) {
-				debug_log(__METHOD__
-					. " Error: pdf default expected v5 path was not found ! : " . $current_dir .PHP_EOL
-					. ' This could be an error or simply that you have already changed the name of this folder'
-					, logger::ERROR
-				);
+		try {
 
-				// try changed v5 name
-				$current_dir = DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER . '/standard';
+			// check old directory existence. try default v5 name
+				$current_dir = DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER . '/standar';
 				if (!is_dir($current_dir)) {
-					debug_log(__METHOD__ . PHP_EOL
-						. " Error: pdf default expected path was not found ! : " . $current_dir .PHP_EOL
+					debug_log(__METHOD__
+						. " Error: pdf default expected v5 path was not found ! : " . $current_dir .PHP_EOL
 						. ' This could be an error or simply that you have already changed the name of this folder'
 						, logger::ERROR
 					);
 
-					return false;
-				}
-			}
-
-		// rename. To path like '/home/dedalo/media/pdf/web'
-			$new_dir = DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_QUALITY_DEFAULT;
-			if (!is_dir($new_dir)) {
-				if( !rename($current_dir, $new_dir) ) {
+					// try changed v5 name
+					$current_dir = DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER . '/standard';
+					if (!is_dir($current_dir)) {
 						debug_log(__METHOD__ . PHP_EOL
-							. " Error: Unable to rename pdf directory : " . PHP_EOL
-							. ' Source path: ' . $current_dir . PHP_EOL
-							. ' Target path: ' . $new_dir
+							. " Error: pdf default expected path was not found ! : " . $current_dir .PHP_EOL
+							. ' This could be an error or simply that you have already changed the name of this folder'
 							, logger::ERROR
 						);
 
 						return false;
+					}
 				}
-				debug_log(__METHOD__ . PHP_EOL
-					. " Renamed directory " . PHP_EOL
-					. ' ' . $current_dir . PHP_EOL
-					. " to " . PHP_EOL
-					. ' ' . $new_dir
-					, logger::WARNING
-				);
-			}
 
-		// duplicate default quality to 'original'
-			$default_quality_path	= $new_dir;
-			$target_copy_path		= DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_QUALITY_ORIGINAL;
-			if (!is_dir($target_copy_path)) {
-				// exec command
-				$command	= "cp -R $default_quality_path $target_copy_path";
-				$output		= null;
-				$retval		= null;
-				$result		= exec($command, $output, $retval);
-				if ($result===false) {
+			// rename. To path like '/home/dedalo/media/pdf/web'
+				$new_dir = DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_QUALITY_DEFAULT;
+				if (!is_dir($new_dir)) {
+					if( !rename($current_dir, $new_dir) ) {
+							debug_log(__METHOD__ . PHP_EOL
+								. " Error: Unable to rename pdf directory : " . PHP_EOL
+								. ' Source path: ' . $current_dir . PHP_EOL
+								. ' Target path: ' . $new_dir
+								, logger::ERROR
+							);
+
+							return false;
+					}
 					debug_log(__METHOD__ . PHP_EOL
-						. " Error: Unable to copy directory. command : " . $command . PHP_EOL
-						. ' Source path: ' . $default_quality_path . PHP_EOL
-						. ' Target path: ' . $target_copy_path
-						, logger::ERROR
+						. " Renamed directory " . PHP_EOL
+						. ' ' . $current_dir . PHP_EOL
+						. " to " . PHP_EOL
+						. ' ' . $new_dir
+						, logger::WARNING
 					);
-
-					return false;
 				}
-				debug_log(__METHOD__ . PHP_EOL
-					. ' Copied directory ' . PHP_EOL
-					. ' '. $default_quality_path . PHP_EOL
-					. ' to ' . PHP_EOL
-					. ' ' . $target_copy_path .PHP_EOL
-					. "status: ". to_string($retval) .PHP_EOL
-					. "output: ". to_string($output) .PHP_EOL
-					. "command: ". $command
-					, logger::WARNING
-				);
-			}
+
+			// duplicate default quality to 'original'
+				$default_quality_path	= $new_dir;
+				$target_copy_path		= DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_QUALITY_ORIGINAL;
+				if (!is_dir($target_copy_path)) {
+					// exec command
+					$command	= "cp -R $default_quality_path $target_copy_path";
+					$output		= null;
+					$retval		= null;
+					$result		= exec($command, $output, $retval);
+					if ($result===false) {
+						debug_log(__METHOD__ . PHP_EOL
+							. " Error: Unable to copy directory. command : " . $command . PHP_EOL
+							. ' Source path: ' . $default_quality_path . PHP_EOL
+							. ' Target path: ' . $target_copy_path
+							, logger::ERROR
+						);
+
+						return false;
+					}
+					debug_log(__METHOD__ . PHP_EOL
+						. ' Copied directory ' . PHP_EOL
+						. ' '. $default_quality_path . PHP_EOL
+						. ' to ' . PHP_EOL
+						. ' ' . $target_copy_path .PHP_EOL
+						. "status: ". to_string($retval) .PHP_EOL
+						. "output: ". to_string($output) .PHP_EOL
+						. "command: ". $command
+						, logger::WARNING
+					);
+				}
+
+		} catch (Exception $e) {
+			debug_log(__METHOD__." Caught exception: ".$e->getMessage(), logger::ERROR);
+		}
 
 
 		return true;
@@ -192,68 +198,74 @@ class v5_to_v6 {
 	*/
 	public static function update_component_svg_media_dir() : bool {
 
-		// check old directory existence. try default v5 name
-			$current_dir = DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER . '/standard';
-			if (!is_dir($current_dir)) {
-				debug_log(__METHOD__
-					. " Warning: svg default expected v5 path was not found ! : " . $current_dir .PHP_EOL
-					. ' This could be an error or simply that you have already changed the name of this folder'
-					, logger::WARNING
-				);
-			}
+		try {
 
-		// rename. To path like '/home/dedalo/media/svg/web'
-			$new_dir = DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER . '/' . DEDALO_SVG_QUALITY_DEFAULT;
-			if (!is_dir($new_dir)) {
-				if( !rename($current_dir, $new_dir) ) {
+			// check old directory existence. try default v5 name
+				$current_dir = DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER . '/standard';
+				if (!is_dir($current_dir)) {
+					debug_log(__METHOD__
+						. " Warning: svg default expected v5 path was not found ! : " . $current_dir .PHP_EOL
+						. ' This could be an error or simply that you have already changed the name of this folder'
+						, logger::WARNING
+					);
+				}
+
+			// rename. To path like '/home/dedalo/media/svg/web'
+				$new_dir = DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER . '/' . DEDALO_SVG_QUALITY_DEFAULT;
+				if (!is_dir($new_dir)) {
+					if( !rename($current_dir, $new_dir) ) {
+							debug_log(__METHOD__ . PHP_EOL
+								. " Error: Unable to rename svg directory : " . PHP_EOL
+								. ' Source path: ' . $current_dir . PHP_EOL
+								. ' Target path: ' . $new_dir
+								, logger::ERROR
+							);
+
+							return false;
+					}
+					debug_log(__METHOD__ . PHP_EOL
+						. " Renamed directory " . PHP_EOL
+						. ' ' . $current_dir . PHP_EOL
+						. " to " . PHP_EOL
+						. ' ' . $new_dir
+						, logger::WARNING
+					);
+				}
+
+			// duplicate default quality to 'original'
+				$default_quality_path	= $new_dir;
+				$target_copy_path		= DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER . '/' . DEDALO_SVG_QUALITY_ORIGINAL;
+				if (!is_dir($target_copy_path)) {
+					// exec command
+					$command	= "cp -R $default_quality_path $target_copy_path";
+					$output		= null;
+					$retval		= null;
+					$result		= exec($command, $output, $retval);
+					if ($result===false) {
 						debug_log(__METHOD__ . PHP_EOL
-							. " Error: Unable to rename svg directory : " . PHP_EOL
-							. ' Source path: ' . $current_dir . PHP_EOL
-							. ' Target path: ' . $new_dir
+							. " Error: Unable to copy directory. command : " . $command . PHP_EOL
+							. ' Source path: ' . $default_quality_path . PHP_EOL
+							. ' Target path: ' . $target_copy_path
 							, logger::ERROR
 						);
 
 						return false;
-				}
-				debug_log(__METHOD__ . PHP_EOL
-					. " Renamed directory " . PHP_EOL
-					. ' ' . $current_dir . PHP_EOL
-					. " to " . PHP_EOL
-					. ' ' . $new_dir
-					, logger::WARNING
-				);
-			}
-
-		// duplicate default quality to 'original'
-			$default_quality_path	= $new_dir;
-			$target_copy_path		= DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER . '/' . DEDALO_SVG_QUALITY_ORIGINAL;
-			if (!is_dir($target_copy_path)) {
-				// exec command
-				$command	= "cp -R $default_quality_path $target_copy_path";
-				$output		= null;
-				$retval		= null;
-				$result		= exec($command, $output, $retval);
-				if ($result===false) {
+					}
 					debug_log(__METHOD__ . PHP_EOL
-						. " Error: Unable to copy directory. command : " . $command . PHP_EOL
-						. ' Source path: ' . $default_quality_path . PHP_EOL
-						. ' Target path: ' . $target_copy_path
-						, logger::ERROR
+						. ' Copied directory ' . PHP_EOL
+						. ' '. $default_quality_path . PHP_EOL
+						. ' to ' . PHP_EOL
+						. ' ' . $target_copy_path .PHP_EOL
+						. "status: ". to_string($retval) .PHP_EOL
+						. "output: ". to_string($output) .PHP_EOL
+						. "command: ". $command
+						, logger::WARNING
 					);
-
-					return false;
 				}
-				debug_log(__METHOD__ . PHP_EOL
-					. ' Copied directory ' . PHP_EOL
-					. ' '. $default_quality_path . PHP_EOL
-					. ' to ' . PHP_EOL
-					. ' ' . $target_copy_path .PHP_EOL
-					. "status: ". to_string($retval) .PHP_EOL
-					. "output: ". to_string($output) .PHP_EOL
-					. "command: ". $command
-					, logger::WARNING
-				);
-			}
+
+		} catch (Exception $e) {
+			debug_log(__METHOD__." Caught exception: ".$e->getMessage(), logger::ERROR);
+		}
 
 
 		return true;
