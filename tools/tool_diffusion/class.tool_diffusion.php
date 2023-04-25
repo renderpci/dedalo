@@ -186,6 +186,11 @@ class tool_diffusion extends tool_common {
 	*/
 	public static function export_list(object $options) : object {
 
+		// time_limit set
+			$minutes = 20;
+			$seconds = 60 * $minutes;
+			set_time_limit($seconds); // Prevent some infinite loop cases when data is bad formed
+
 		// response
 			$response = new stdClass();
 				$response->result	= false;
@@ -201,11 +206,6 @@ class tool_diffusion extends tool_common {
 			$_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS'] = !empty($resolve_levels)
 				? $resolve_levels
 				: (defined('DEDALO_DIFFUSION_RESOLVE_LEVELS') ? DEDALO_DIFFUSION_RESOLVE_LEVELS : 2);
-
-		// time_limit set
-			$minutes = 15;
-			$seconds = 60 * $minutes;
-			set_time_limit($seconds); // Prevent some infinite loop cases when data is bad formed
 
 		// Write session to unlock session file
 			session_write_close();
