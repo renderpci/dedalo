@@ -282,7 +282,6 @@ export const render_publication_items = function(self) {
 					parent			: publication_items_grid
 				})
 
-
 			// database
 				const database_label = ui.create_dom_element({
 					element_type	: 'span',
@@ -296,6 +295,25 @@ export const render_publication_items = function(self) {
 					class_name		: 'value',
 					parent			: publication_items_grid
 				})
+
+			// connection_status
+				if (item.connection_status) {
+					const connection_status_label = ui.create_dom_element({
+						element_type	: 'span',
+						inner_html		: get_label.connection_status || 'Connection status',
+						class_name		: 'label',
+						parent			: publication_items_grid
+					})
+					const class_status = item.connection_status.result===true
+						? 'success'
+						: 'fail'
+					const connection_status_value = ui.create_dom_element({
+						element_type	: 'div',
+						inner_html		: item.connection_status.msg,
+						class_name		: 'value ' + class_status,
+						parent			: publication_items_grid
+					})
+				}
 
 			// container_bottom
 				const container_bottom = ui.create_dom_element({
@@ -356,6 +374,11 @@ export const render_publication_items = function(self) {
 								publication_button.classList.remove('hide')
 							})
 					})
+					if (item.connection_status) {
+						if (item.connection_status.result===false) {
+							publication_button.classList.add('not_ready')
+						}
+					}
 		}//end for (let i = 0; i < current_diffusion_map_length; i++)
 	}
 

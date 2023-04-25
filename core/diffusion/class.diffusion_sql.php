@@ -1754,7 +1754,7 @@ class diffusion_sql extends diffusion  {
 
 		// response
 			$response->result	= true;
-			$response->msg		.= "OK. Record updated '$section_id' and n references: ".count($ar_resolved_static).' in levels: '.$max_recursions.'. ';
+			$response->msg		.= "Record updated '$section_id' and n references: ".count($ar_resolved_static).' in levels: '.$max_recursions.'';
 
 
 		return $response;

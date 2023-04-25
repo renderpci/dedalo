@@ -57,8 +57,8 @@ include(DEDALO_CORE_PATH . '/widgets/widget_common/class.widget_common.php');
 // diffusion
 include(DEDALO_CORE_PATH . '/diffusion/class.diffusion.php');
 include(DEDALO_CORE_PATH . '/diffusion/class.diffusion_section_stats.php');
-// include(DEDALO_CORE_PATH . '/diffusion/class.diffusion_sql.php');
-// include(DEDALO_CORE_PATH . '/diffusion/class.diffusion_mysql.php');
+include(DEDALO_CORE_PATH . '/diffusion/class.diffusion_sql.php');
+include(DEDALO_CORE_PATH . '/diffusion/class.diffusion_mysql.php');
 // API
 include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_core_api.php');
 include(DEDALO_CORE_PATH . '/api/v1/common/class.dd_utils_api.php');

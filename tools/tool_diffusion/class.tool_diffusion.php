@@ -15,7 +15,8 @@ class tool_diffusion extends tool_common {
 
 	/**
 	* GET_DIFFUSION_INFO
-	* Collect basic tool info needed to crate user options
+	* Collect basic tool info needed to create user options
+	* Is called on tool build by client
 	* @param object $options
 	* @return object $response
 	* { result: [{}], msg: '' }
@@ -34,7 +35,6 @@ class tool_diffusion extends tool_common {
 
 		// diffusion_map
 			$diffusion_map = diffusion::get_diffusion_map(DEDALO_DIFFUSION_DOMAIN);
-				// dump($diffusion_map, ' diffusion_map ++ '.to_string());
 
 			// groups
 				// $groups = [];
@@ -58,6 +58,46 @@ class tool_diffusion extends tool_common {
 				// 		$groups[] = $item;
 				// 	}
 				// }
+
+		// add connection DDBB status. Check connection is reachable
+			foreach ($diffusion_map as $items) {
+				foreach ($items as $item) {
+					if ($item->class_name==='diffusion_mysql') {
+
+						// check connection
+						$conn = $conn ?? DBi::_getConnection_mysql();
+						if ($conn===false) {
+							$item->connection_status = (object)[
+								'result'	=> false,
+								'msg'		=> 'Unable to connect to database'
+							];
+						}else{
+							// check database
+							$db_available = diffusion_mysql::database_exits($item->database_name);
+							if ($db_available===true) {
+								$item->connection_status = (object)[
+									'result'	=> true,
+									'msg'		=> 'Database is ready'
+								];
+							}else{
+								$item->connection_status = (object)[
+									'result'	=> false,
+									'msg'		=> 'Database is NOT ready'
+								];
+							}
+						}
+
+						if ($item->connection_status->result===false) {
+							debug_log(__METHOD__
+								." ".$item->connection_status->msg . ' ['.$item->database_name.']'
+								, logger::ERROR
+							);
+						}
+					}
+				}//end foreach ($items as $item)
+			}//end foreach ($diffusion_map as $items)
+			// dump($diffusion_map, ' diffusion_map 2 ++ '.to_string());
+
 
 		// skip_publication_state_check
 			$skip_publication_state_check = $_SESSION['dedalo']['config']['skip_publication_state_check'] ?? 0;
@@ -380,7 +420,7 @@ class tool_diffusion extends tool_common {
 					? $_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS']
 					: (defined('DEDALO_DIFFUSION_RESOLVE_LEVELS') ? DEDALO_DIFFUSION_RESOLVE_LEVELS : 2);
 
-				$response->msg = sprintf("<span class=\"ok\">Ok. Published record ID %s successfully. Levels: ".$max_recursions."</span>",$section_id);
+				$response->msg = sprintf("<div class=\"ok\">Published record ID %s successfully (levels: ".$max_recursions.")</div>",$section_id);
 				debug_log(__METHOD__." $response->msg ", logger::DEBUG);
 			}else{
 
@@ -402,7 +442,7 @@ class tool_diffusion extends tool_common {
 					}
 					return $carry;
 				});
-				$response->msg .= ' - ' . $update_record_result_msg;
+				$response->msg .= ' ' . $update_record_result_msg;
 			}
 
 		// debug
