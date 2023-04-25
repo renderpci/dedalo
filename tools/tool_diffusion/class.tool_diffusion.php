@@ -274,20 +274,20 @@ class tool_diffusion extends tool_common {
 				// response info
 					$response->n_records_published = $n_records_published;
 					if ($n_records_published>0) {
-						#echo "Published record: $section_id ";
 						$response->result = true;
 						if ($diffusion_class_name==='diffusion_rdf') {
 							$response->msg .= to_string($export_result->msg);
 						}else{
-							$response->msg .= sprintf("<span class=\"ok\">Ok. Published %s records successfully</span>",$n_records_published);
+							$response->msg .= sprintf("Published %s records successfully", $n_records_published);
 						}
 
 					}else{
 						$response->result = false;
-						$response->msg .= "<span class=\"warning\">Warning. Error on publish records. $n_records_published records area publish</span>";
-						if(SHOW_DEBUG) {
-							#dump($response, ' response ++ '.to_string());;
-						}
+						$response->msg .= "Error on publish records: response->result is false. n_records_published: $n_records_published";
+						debug_log(__METHOD__
+							."  ".$response->msg
+							, logger::ERROR
+						);
 					}
 
 				// Update schema data always
@@ -296,6 +296,10 @@ class tool_diffusion extends tool_common {
 			}catch (Exception $e) {
 				$response->result	= false;
 				$response->msg		= 'EXCEPTION caught [export_list]: ' . $e->getMessage();
+				debug_log(__METHOD__
+					."  ".$response->msg
+					, logger::ERROR
+				);
 			}
 
 		// debug
@@ -343,8 +347,8 @@ class tool_diffusion extends tool_common {
 			$ar_diffusion_map_elements = diffusion::get_ar_diffusion_map_elements(DEDALO_DIFFUSION_DOMAIN);
 			if (!isset($ar_diffusion_map_elements[$diffusion_element_tipo])) {
 				debug_log(__METHOD__
-					. " Skipped diffusion_element $diffusion_element_tipo not found in ar_diffusion_map " . PHP_EOL
-					. 'ar_diffusion_map_elements: '.to_string($ar_diffusion_map_elements)
+					. " Error. Skipped diffusion_element '$diffusion_element_tipo' not found in ar_diffusion_map " . PHP_EOL
+					. ' ar_diffusion_map_elements: '.to_string($ar_diffusion_map_elements)
 					, logger::ERROR
 				);
 				$response->msg .= "Error. Skipped diffusion_element $diffusion_element_tipo not found in ar_diffusion_map";
@@ -383,7 +387,7 @@ class tool_diffusion extends tool_common {
 					? $_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS']
 					: (defined('DEDALO_DIFFUSION_RESOLVE_LEVELS') ? DEDALO_DIFFUSION_RESOLVE_LEVELS : 2);
 
-				$response->msg = sprintf("<div class=\"ok\">Published record ID %s successfully (levels: ".$max_recursions.")</div>",$section_id);
+				$response->msg = sprintf("Published record ID %s successfully (levels: ".$max_recursions.")", $section_id);
 				debug_log(__METHOD__." $response->msg ", logger::DEBUG);
 			}else{
 
@@ -416,7 +420,7 @@ class tool_diffusion extends tool_common {
 			// 	}else{
 			// 		$memory_usage = memory_get_usage();
 			// 	}
-			// 	// $response->msg .= " <span>Exec in ".exec_time_unit($start_time,'secs')." secs - MB: ". $memory_usage ."</span>";
+			// 	// $response->msg .= " Exec in ".exec_time_unit($start_time,'secs')." secs - MB: ". $memory_usage ."";
 			// }
 
 

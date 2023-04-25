@@ -147,15 +147,13 @@ const get_input_element = (i, datalist_item, self) => {
 
 			// update the instance data (previous to save)
 				self.update_data_value(changed_data_item)
-			// set data.changed_data. The change_data to the instance
-				// self.data.changed_data = changed_data
-			// publish search. Event to update the dom elements of the instance
+			// publish search. Event to update the DOM elements of the instance
 				event_manager.publish('change_search_element', self)
 		})// end change event
 		content_value.addEventListener('click', function(e) {
 			// de-select option
 			if (e.altKey===true) {
-				e.preventDefault()
+				// e.preventDefault()
 
 				// remove checked state
 					input.checked = false
@@ -173,9 +171,7 @@ const get_input_element = (i, datalist_item, self) => {
 
 				// update the instance data (previous to save)
 					self.update_data_value(changed_data_item)
-				// set data.changed_data. The change_data to the instance
-					self.data.changed_data = changed_data
-				// publish search. Event to update the dom elements of the instance
+				// publish search. Event to update the DOM elements of the instance
 					event_manager.publish('change_search_element', self)
 			}
 		})
