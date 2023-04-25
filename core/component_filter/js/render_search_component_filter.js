@@ -53,7 +53,8 @@ render_search_component_filter.prototype.search = async function(options) {
 
 /**
 * GET_CONTENT_DATA
-* @return dom object content_data
+* @param object self
+* @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 
@@ -76,7 +77,7 @@ const get_content_data = function(self) {
 				const value = (input_q_operator.value.length>0) ? input_q_operator.value : null
 			// q_operator. Fix the data in the instance previous to save
 				self.data.q_operator = value
-			// publish search. Event to update the dom elements of the instance
+			// publish search. Event to update the DOM elements of the instance
 				event_manager.publish('change_search_element', self)
 		})
 
@@ -91,7 +92,7 @@ const get_content_data = function(self) {
 				parent			: content_data
 			})
 
-		// get tree nodes with children recursively
+	// get_children_node. Get tree nodes with children recursively
 		const get_children_node = function(element){
 
 			const children_elements = datalist.filter(
@@ -109,8 +110,8 @@ const get_content_data = function(self) {
 			const element_node = get_input_element(element, self)
 			if(children_elements_len > 0) {
 				for (let i = 0; i < children_elements_len; i++) {
-					const current_child = children_elements[i]
-					const child_node = get_children_node(current_child)
+					const current_child	= children_elements[i]
+					const child_node	= get_children_node(current_child)
 					element_node.branch.appendChild(child_node)
 				}
 			}
@@ -122,8 +123,8 @@ const get_content_data = function(self) {
 		const root_elements		= datalist.filter(el => el.parent === null)
 		const root_elements_len	= root_elements.length
 		for (let i = 0; i < root_elements_len; i++) {
-			const current_element = root_elements[i]
-			const element_node = get_children_node(current_element)
+			const current_element	= root_elements[i]
+			const element_node		= get_children_node(current_element)
 			ul_branch.appendChild(element_node)
 
 		}
