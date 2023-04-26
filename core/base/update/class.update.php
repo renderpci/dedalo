@@ -433,21 +433,29 @@ class update {
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__METHOD__.']';
 
-		$script_class  = $script_obj->script_class;
-		$script_method = $script_obj->script_method;
-		$script_vars   = isset($script_obj->script_vars) ? (array)$script_obj->script_vars : array();
+		try {
 
-		//$result = $script_class::$script_method( $script_obj->script_vars );
-		$result = call_user_func_array($script_class.'::'.$script_method, $script_vars);
+			$script_class  = $script_obj->script_class;
+			$script_method = $script_obj->script_method;
+			$script_vars   = isset($script_obj->script_vars) ? (array)$script_obj->script_vars : array();
 
-		if (is_object($result)) {
-			$response = $result;
-		}else if ($result===false) {
-			$response->msg .= ' False result is received for: '.$script_class.'::'.$script_method;
-		}else{
-			$response->result  = true;
-			$response->msg 	   = ' '.to_string($result);
+			//$result = $script_class::$script_method( $script_obj->script_vars );
+			$result = call_user_func_array($script_class.'::'.$script_method, $script_vars);
+
+			if (is_object($result)) {
+				$response = $result;
+			}else if ($result===false) {
+				$response->msg .= ' False result is received for: '.$script_class.'::'.$script_method;
+			}else{
+				$response->result  = true;
+				$response->msg 	   = ' '.to_string($result);
+			}
+
+		} catch (Exception $e) {
+
+			debug_log(__METHOD__." Caught exception: ".$e->getMessage(), logger::ERROR);
 		}
+
 
 		return $response;
 	}//end run_scripts

@@ -1763,9 +1763,10 @@ class component_image extends component_media_common {
 
 	/**
 	* GET_IMAGE_DIMENSIONS
-	* @return array|false
+	* @param string $quality
+	* @return array|bool $ar_info
 	*/
-	public function get_image_dimensions(string $quality) : array|false {
+	public function get_image_dimensions(string $quality) : array|bool {
 
 		if($this->external_source){
 
@@ -1779,25 +1780,40 @@ class component_image extends component_media_common {
 		}
 
 		if ( !file_exists( $filename )) {
-			debug_log(__METHOD__." Error. Image file not found ".to_string($filename), logger::ERROR);
+			debug_log(__METHOD__
+				." Error. Image file not found ". PHP_EOL
+				. 'filename: ' .$filename
+				, logger::ERROR
+			);
 			return false ;
 		}
 
 		try {
 			$ar_info = @getimagesize($filename);
 			if(!$ar_info) {
-				debug_log(__METHOD__." Error. Image getimagesize error 1 ".to_string($filename), logger::ERROR);
-				throw new Exception('Unknown image width!');
+				debug_log(__METHOD__
+					." Error. Image getimagesize error 1 ". PHP_EOL
+					. 'filename: ' .$filename
+					, logger::ERROR
+				);
+				// throw new Exception('Unknown image width!');
+				return false;
 			}
 
-			$width	= $ar_info[0];
-			$height = $ar_info[1];
-			$type	= $ar_info[2];
+			// data sample
+				// $width	= $ar_info[0];
+				// $height	= $ar_info[1];
+				// $type	= $ar_info[2];
 
 			return $ar_info;
 
 		} catch (Exception $e) {
-			debug_log(__METHOD__." Error. Image getimagesize error 2 ".to_string($filename), logger::ERROR);
+			debug_log(__METHOD__
+				." Error. Image getimagesize error 2 " . PHP_EOL
+				. 'filename: ' .$filename .PHP_EOL
+				. 'Caught exception: '.  $e->getMessage()
+				, logger::ERROR
+			);
 		}
 
 		return false;

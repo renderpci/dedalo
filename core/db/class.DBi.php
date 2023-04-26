@@ -47,7 +47,10 @@ abstract class DBi {
 		// Connecting, selecting database
 		$pg_conn_real = pg_connect($str_connect);
 		if($pg_conn===false) {
-			debug_log(__METHOD__.' Error. Could not connect to database (52) : '.to_string($database), logger::ERROR);
+			debug_log(__METHOD__
+				.' Error. Could not connect to database (52) : '.to_string($database)
+				, logger::ERROR
+			);
 			if(SHOW_DEBUG===true) {
 				// throw new Exception("Error. Could not connect to database (52)", 1);
 			}
@@ -138,7 +141,7 @@ abstract class DBi {
 
 	/**
 	* _GETCONNECTION_MYSQL
-	* @return resource $mysqli
+	* @return resource|false $mysqli
 	*/
 	public static function _getConnection_mysql(
 		$host=MYSQL_DEDALO_HOSTNAME_CONN,
@@ -171,14 +174,27 @@ abstract class DBi {
 		// @see https://www.php.net/manual/en/mysqli-driver.report-mode.php
 			mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 			// mysqli_report(MYSQLI_REPORT_ALL ^ MYSQLI_REPORT_STRICT);
+			// mysqli_report(MYSQLI_REPORT_ERROR);
 
 		// INIT
 			// $mysqli = mysqli_init();
 			$mysqli = new mysqli($host, $user, $password, $database, $port);
-
 			if ($mysqli===false) {
 				#die('Dedalo '.__METHOD__ . ' Failed mysqli_init');
-				throw new Exception(' Dedalo '.__METHOD__ . ' Failed mysqli_init ', 1);
+				// throw new Exception(' Dedalo '.__METHOD__ . ' Failed mysqli_init ', 1);
+				debug_log(__METHOD__
+					. " Error on connect to MYSQL database. Failed mysqli_init ". PHP_EOL
+					, logger::DEBUG
+				);
+				return false;
+			}
+			if ($mysqli->connect_errno) {
+			    debug_log(__METHOD__
+					. " Error on connect to MYSQL database [2]. ". PHP_EOL
+					. 'connect_error: ' .$mysqli->connect_error
+					, logger::DEBUG
+				);
+				return false;
 			}
 
 		// $mysqli->options(MYSQLI_OPT_INT_AND_FLOAT_NATIVE, 1);
@@ -186,25 +202,46 @@ abstract class DBi {
 		// AUTOCOMMIT : SET AUTOCOMMIT (Needed for InnoDB save)
 		if (!$mysqli->options(MYSQLI_INIT_COMMAND, 'SET AUTOCOMMIT = 1')) {
 			// die('Dedalo '.'Setting MYSQLI_INIT_COMMAND failed');
-			throw new Exception(' Connect Error. Setting MYSQLI_INIT_COMMAND failed ', 1);
+			// throw new Exception(' Connect Error. Setting MYSQLI_INIT_COMMAND failed ', 1);
+			debug_log(__METHOD__
+				. " Error on connect to MYSQL database [3].  Setting MYSQLI_INIT_COMMAND failed". PHP_EOL
+				. 'connect_error: ' .$mysqli->connect_error
+				, logger::DEBUG
+			);
 		}
 
 		// TIMEOUT : SET CONNECT_TIMEOUT
 		if (!$mysqli->options(MYSQLI_OPT_CONNECT_TIMEOUT, 10)) {
 			// die('Dedalo '.'Setting MYSQLI_OPT_CONNECT_TIMEOUT failed');
-			throw new Exception(' Connect Error. Setting MYSQLI_OPT_CONNECT_TIMEOUT failed ', 1);
+			// throw new Exception(' Connect Error. Setting MYSQLI_OPT_CONNECT_TIMEOUT failed ', 1);
+			debug_log(__METHOD__
+				. " Error on connect to MYSQL database [4].  Setting MYSQLI_OPT_CONNECT_TIMEOUT failed". PHP_EOL
+				. 'connect_error: ' .$mysqli->connect_error
+				, logger::DEBUG
+			);
 		}
 
 		// CONNECT
 		if (!$mysqli->real_connect($host, $user, $password, $database,  $port, $socket)) {
-			throw new Exception(' Connect Error on mysqli->real_connect '.mysqli_connect_errno().' - '.mysqli_connect_error(), 1);
+			// throw new Exception(' Connect Error on mysqli->real_connect '.mysqli_connect_errno().' - '.mysqli_connect_error(), 1);
+			debug_log(__METHOD__
+				. " Error on connect to MYSQL database ". PHP_EOL
+				. 'mysqli_connect_errno: ' .mysqli_connect_errno() . PHP_EOL
+				. 'mysqli_connect_error: ' .mysqli_connect_error()
+				, logger::DEBUG
+			);
+			return false;
 			// die( wrap_pre('Dedalo '.'Connect Error (' . mysqli_connect_errno() . ') ' . mysqli_connect_error()) );
 		}
 
 		// UTF8 : Change character set to utf8mb4
 		if (!$mysqli->set_charset('utf8mb4')) {
 			// printf("Error loading character set utf8mb4: %s\n", $mysqli->error);
-			debug_log(__METHOD__." Error loading character set utf8mb4: ".to_string($mysqli->error), logger::DEBUG);
+			debug_log(__METHOD__
+				." Error loading character set utf8mb4: ". PHP_EOL
+				. 'mysqli->error: ' . $mysqli->error
+				, logger::DEBUG
+			);
 		}
 
 		// errors

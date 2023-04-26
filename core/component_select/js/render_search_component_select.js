@@ -164,9 +164,14 @@ const get_content_value = (i, current_value, self) => {
 				? datalist_item.label + (current_section_id ? " [" + current_section_id + "]" : '')
 				: datalist_item.label
 
+			const datalist_value = datalist_item.value
+			if (datalist_value) {
+				datalist_value.from_component_tipo = self.tipo
+			}
+
 			const option = ui.create_dom_element({
 				element_type	: 'option',
-				value			: JSON.stringify(datalist_item.value),
+				value			: JSON.stringify(datalist_value),
 				inner_html		: current_label,
 				parent			: select
 			})

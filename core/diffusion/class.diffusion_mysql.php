@@ -47,46 +47,36 @@ class diffusion_mysql extends diffusion_sql  {
 	* Returns false on failure. For successful queries which produce a result set, such as
 	* SELECT, SHOW, DESCRIBE or EXPLAIN, mysqli_query() will return a mysqli_result object.
 	* For other successful queries, mysqli_query() will return true.
-	* @return object|resource
+	* @return object|resource|bool
 	*/
-	public static function exec_mysql_query(string $sql, ?string $table_name=null, $database_name=false, bool $multi_query=false) {
-
-		#debug_log(__METHOD__." Connecting database: $database_name - table: $table_name ".to_string(), logger::DEBUG);
+	public static function exec_mysql_query(string $sql, ?string $table_name=null, $database_name=false, bool $multi_query=false) : mixed {
 
 		if (empty($database_name)) {
-			throw new Exception("Error Processing Request. database_name is mandatory !", 1);
+			// throw new Exception("Error Processing Request. database_name is mandatory !", 1);
+			debug_log(__METHOD__
+				." Error. database name is mandatory "
+				, logger::ERROR
+			);
+			return false;
 		}
 
 		$mysql_conn = self::get_conn($database_name);
-
-		// debug
-			// error_log("++++++++++ sql 1 : ".$sql);
 
 		// result
 		$result = ($multi_query===true)
 			? $mysql_conn->multi_query( $sql )
 			: $mysql_conn->query( $sql );
-
 		if ($result===false || !empty($mysql_conn->error)) {
-			// debug_log(__METHOD__." ERROR for database: $database_name : error: ".to_string($mysql_conn->error), logger::ERROR);
-			// if(SHOW_DEBUG===true) {
-			// 	#dump( $mysql_conn->error, "error".to_string() );
-			// 	// error_log("++++++++++ SQL ERROR QUERY : ".$sql);
-			// 	// error_log("error_log sql: ".$sql);
-			// 	dump($mysql_conn->error, ' sql ERROR: query ++ '.PHP_EOL.to_string($sql).PHP_EOL);
-			// 	#throw new Exception("Error Processing Request. MySQL query_insert_data error ".to_string($mysql_conn->error), 1);
-			// }
-			// $msg = "INFO: Data skipped in SQL table : ". $table_name .' : '. to_string($mysql_conn->error);
 			debug_log(
-				__METHOD__.' INFO: Data skipped in SQL table : '. $table_name .' , error: '. $mysql_conn->error,
+				__METHOD__.' INFO: Data skipped in SQL table : '. $table_name . PHP_EOL
+				.' error: '. $mysql_conn->error,
 				logger::ERROR
 			);
 		}
-		#$mysql_conn->close();
+		// $mysql_conn->close();
 
 		if( strpos($sql, 'INSERT')!==false ) {
 			self::$insert_id = $mysql_conn->insert_id;
-			#dump(self::$insert_id, ' insert_id ++ '.to_string($sql));
 		}
 
 		return $result;
@@ -988,27 +978,74 @@ class diffusion_mysql extends diffusion_sql  {
 
 
 	/**
+	* DATABASE_EXITS
+	* Check if target database already exists
+	* @string $database_name
+	* @return $database_exits bool
+	*/
+	public static function database_exits(string $database_name) : bool {
+
+		$database_exits = false;
+
+		// connect
+			$mysql_conn = self::get_conn($database_name);
+			if ($mysql_conn===false) {
+				return $database_exits;
+			}
+
+		// query
+			$strQuery = "
+			SELECT SCHEMA_NAME
+			FROM INFORMATION_SCHEMA.SCHEMATA
+			WHERE SCHEMA_NAME = \"$database_name\"
+			";
+			// result
+			$result = $mysql_conn->query( $strQuery );
+			if ($result===false || !empty($mysql_conn->error)) {
+				debug_log(
+					__METHOD__.' ERROR. unable to exec query '. PHP_EOL
+					. $strQuery .PHP_EOL
+					.' error: '. $mysql_conn->error,
+					logger::ERROR
+				);
+				return $database_exits;
+			}
+
+		// count result
+			$row_cnt = $result->num_rows;
+			if (!empty($row_cnt) && $row_cnt>0) {
+				$database_exits = true;
+			}
+
+		// $mysql_conn->close();
+
+		return (bool)$database_exits;
+	}//end database_exits
+
+
+
+	/**
 	* IS_PUBLICABLE
 	* Check is field 'publication' is present and if value is 'no' return false. Else return true
 	* @return bool
 	*//* DEPRECATED
-	public static function is_publicable($section_id, $ar_fields) {
+		public static function is_publicable($section_id, $ar_fields) {
 
-		$ar_fields = reset($ar_fields); // Only need first lang
+			$ar_fields = reset($ar_fields); // Only need first lang
 
-		foreach ($ar_fields as $key => $ar_value) {
-			#dump($ar_value, ' $ar_value ++ '.to_string());
-			if (
-				($ar_value['field_name']==='publication' || $ar_value['field_name']==='publicacion') &&
-				($ar_value['field_value']==='no' || empty($ar_value['field_value']))
-				) {
-				return false;
+			foreach ($ar_fields as $key => $ar_value) {
+				#dump($ar_value, ' $ar_value ++ '.to_string());
+				if (
+					($ar_value['field_name']==='publication' || $ar_value['field_name']==='publicacion') &&
+					($ar_value['field_value']==='no' || empty($ar_value['field_value']))
+					) {
+					return false;
+				}
 			}
-		}
 
-		return true;
-	}//end is_publicable
-	*/
+			return true;
+		}//end is_publicable
+		*/
 
 
 
@@ -1107,7 +1144,9 @@ class diffusion_mysql extends diffusion_sql  {
 		$strQuery = "REPLACE INTO `$database_name`.`$table_name` (`id`, `data`) VALUES ($id, '$data');"; // ON DUPLICATE KEY UPDATE data='$data'
 		$result   = self::exec_mysql_query( $strQuery, $table_name, $database_name );
 			if ($result===false) {
-				if(SHOW_DEBUG===true) { dump($strQuery, 'ERROR ON $strQuery '.to_string(DBi::_getConnection_mysql()->error)); }
+				if(SHOW_DEBUG===true) {
+					dump($strQuery, 'ERROR ON $strQuery '. DBi::_getConnection_mysql()->error);
+				}
 				$response->result = false;
 				$response->msg    = "Error Processing Request. Nothing is added. MySQL error".DBi::_getConnection_mysql()->error;
 				return (object)$response;
@@ -1123,7 +1162,7 @@ class diffusion_mysql extends diffusion_sql  {
 
 	/**
 	* CREATE_publication_schema_TABLE
-	* Build MySQL table 'map' with standar options
+	* Build MySQL table 'map' with standard options
 	* @return object $response
 	*/
 	private static function create_publication_schema_table( $database_name, $table_name ) {
@@ -1136,7 +1175,9 @@ class diffusion_mysql extends diffusion_sql  {
 			$strQuery = "DROP TABLE IF EXISTS `$table_name`;";
 			$result  = self::exec_mysql_query( $strQuery, $table_name, $database_name);
 			if ($result===false) {
-				if(SHOW_DEBUG===true) { dump($strQuery, 'ERROR ON $strQuery '.to_string(DBi::_getConnection_mysql()->error)); }
+				if(SHOW_DEBUG===true) {
+					dump($strQuery, 'ERROR ON $strQuery '.to_string(DBi::_getConnection_mysql()->error));
+				}
 				$response->result = false;
 				$response->msg    = "Error Processing Request. Nothing is created 1. MySQL error".DBi::_getConnection_mysql()->error;
 				return (object)$response;

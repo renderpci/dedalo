@@ -15,7 +15,8 @@ class tool_diffusion extends tool_common {
 
 	/**
 	* GET_DIFFUSION_INFO
-	* Collect basic tool info needed to crate user options
+	* Collect basic tool info needed to create user options
+	* Is called on tool build by client
 	* @param object $options
 	* @return object $response
 	* { result: [{}], msg: '' }
@@ -33,8 +34,10 @@ class tool_diffusion extends tool_common {
 			$resolve_levels = diffusion::get_resolve_levels();
 
 		// diffusion_map
-			$diffusion_map = diffusion::get_diffusion_map(DEDALO_DIFFUSION_DOMAIN);
-				// dump($diffusion_map, ' diffusion_map ++ '.to_string());
+			$diffusion_map = diffusion::get_diffusion_map(
+				DEDALO_DIFFUSION_DOMAIN,
+				true // bool connection_status
+			);
 
 			// groups
 				// $groups = [];
@@ -183,6 +186,11 @@ class tool_diffusion extends tool_common {
 	*/
 	public static function export_list(object $options) : object {
 
+		// time_limit set
+			$minutes = 20;
+			$seconds = 60 * $minutes;
+			set_time_limit($seconds); // Prevent some infinite loop cases when data is bad formed
+
 		// response
 			$response = new stdClass();
 				$response->result	= false;
@@ -198,11 +206,6 @@ class tool_diffusion extends tool_common {
 			$_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS'] = !empty($resolve_levels)
 				? $resolve_levels
 				: (defined('DEDALO_DIFFUSION_RESOLVE_LEVELS') ? DEDALO_DIFFUSION_RESOLVE_LEVELS : 2);
-
-		// time_limit set
-			$minutes = 15;
-			$seconds = 60 * $minutes;
-			set_time_limit($seconds); // Prevent some infinite loop cases when data is bad formed
 
 		// Write session to unlock session file
 			session_write_close();
@@ -225,6 +228,7 @@ class tool_diffusion extends tool_common {
 
 						// error case
 						$response->msg = ' Not sqo_session found from id: '.$sqo_id;
+						debug_log(__METHOD__." $response->msg ", logger::ERROR);
 						return $response;
 
 					}else{
@@ -247,22 +251,21 @@ class tool_diffusion extends tool_common {
 					$section_tipo	= (string)$row->section_tipo;
 
 					// exec export from current record
-					$export_result = tool_diffusion::export_record(
-						$section_tipo,
-						$section_id,
-						$diffusion_element_tipo,
-						$resolve_references, // bool resolve_references
-						$rows_data->ar_records // array ar_records
-					);
+						$export_result = tool_diffusion::export_record(
+							$section_tipo,
+							$section_id,
+							$diffusion_element_tipo,
+							$resolve_references, // bool resolve_references
+							$rows_data->ar_records // array ar_records
+						);
+						if($export_result->result==true) {
+							$n_records_published++;
+						}else{
+							$response->msg .= $export_result->msg;
+							debug_log(__METHOD__." export_result ".to_string($export_result), logger::ERROR);
+						}
 
-					if($export_result->result==true) {
-						$n_records_published++;
-					}else{
-						$response->msg .= $export_result->msg;
-						debug_log(__METHOD__." export_result ".to_string($export_result), logger::DEBUG);
-					}
-
-					// diffusion_rdf
+					// diffusion_rdf case
 						if ($diffusion_class_name==='diffusion_rdf') {
 							break; // Only one iteration is needed
 						}
@@ -271,20 +274,20 @@ class tool_diffusion extends tool_common {
 				// response info
 					$response->n_records_published = $n_records_published;
 					if ($n_records_published>0) {
-						#echo "Published record: $section_id ";
 						$response->result = true;
 						if ($diffusion_class_name==='diffusion_rdf') {
 							$response->msg .= to_string($export_result->msg);
 						}else{
-							$response->msg .= sprintf("<span class=\"ok\">Ok. Published %s records successfully</span>",$n_records_published);
+							$response->msg .= sprintf("Published %s records successfully", $n_records_published);
 						}
 
 					}else{
 						$response->result = false;
-						$response->msg .= "<span class=\"warning\">Warning. Error on publish records. $n_records_published records area publish</span>";
-						if(SHOW_DEBUG) {
-							#dump($response, ' response ++ '.to_string());;
-						}
+						$response->msg .= "Error on publish records: response->result is false. n_records_published: $n_records_published";
+						debug_log(__METHOD__
+							."  ".$response->msg
+							, logger::ERROR
+						);
 					}
 
 				// Update schema data always
@@ -293,6 +296,10 @@ class tool_diffusion extends tool_common {
 			}catch (Exception $e) {
 				$response->result	= false;
 				$response->msg		= 'EXCEPTION caught [export_list]: ' . $e->getMessage();
+				debug_log(__METHOD__
+					."  ".$response->msg
+					, logger::ERROR
+				);
 			}
 
 		// debug
@@ -339,7 +346,11 @@ class tool_diffusion extends tool_common {
 		// ar_diffusion_map_elements
 			$ar_diffusion_map_elements = diffusion::get_ar_diffusion_map_elements(DEDALO_DIFFUSION_DOMAIN);
 			if (!isset($ar_diffusion_map_elements[$diffusion_element_tipo])) {
-				debug_log(__METHOD__." Skipped diffusion_element $diffusion_element_tipo not found in ar_diffusion_map ".to_string($ar_diffusion_map_elements), logger::ERROR);
+				debug_log(__METHOD__
+					. " Error. Skipped diffusion_element '$diffusion_element_tipo' not found in ar_diffusion_map " . PHP_EOL
+					. ' ar_diffusion_map_elements: '.to_string($ar_diffusion_map_elements)
+					, logger::ERROR
+				);
 				$response->msg .= "Error. Skipped diffusion_element $diffusion_element_tipo not found in ar_diffusion_map";
 				return $response;
 			}
@@ -364,10 +375,10 @@ class tool_diffusion extends tool_common {
 					$diffusion_options->diffusion_element_tipo	= $diffusion_element_tipo;
 					$diffusion_options->resolve_references		= $resolve_references;
 
-				$update_record_result = $diffusion->update_record($diffusion_options);
+				$update_record_response = $diffusion->update_record($diffusion_options);
 
 			// check result
-			if ($update_record_result && $update_record_result->result) {
+			if ($update_record_response && $update_record_response->result) {
 
 				// success
 				$response->result = true;
@@ -376,35 +387,52 @@ class tool_diffusion extends tool_common {
 					? $_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS']
 					: (defined('DEDALO_DIFFUSION_RESOLVE_LEVELS') ? DEDALO_DIFFUSION_RESOLVE_LEVELS : 2);
 
-				$response->msg = sprintf("<span class=\"ok\">Ok. Published record ID %s successfully. Levels: ".$max_recursions."</span>",$section_id);
+				$response->msg = sprintf("Published record ID %s successfully (levels: ".$max_recursions.")", $section_id);
+				debug_log(__METHOD__." $response->msg ", logger::DEBUG);
 			}else{
 
 				// error case
-				$response->result	= false;
-				$response->msg		= "Error. Error on publish record $section_id";
+				$response->result = false;
+
+				if (isset($update_record_response->code) && $update_record_response->code===2) {
+					$response->msg		= "Warning [2] on publish record $section_id . Target table is not defined. Skip reference resolution";
+					debug_log(__METHOD__
+						. " $response->msg " .PHP_EOL
+						. 'update_record_response: ' . json_encode($update_record_response, JSON_PRETTY_PRINT)
+						, logger::WARNING
+					);
+				}else{
+					$response->msg		= "Error on publish record $section_id";
+					debug_log(__METHOD__
+						. " $response->msg " .PHP_EOL
+						. 'update_record_response: ' . json_encode($update_record_response, JSON_PRETTY_PRINT)
+						, logger::ERROR
+					);
+				}
 			}
 
 		// msg. Add specific messages
-			if (isset($update_record_result->msg)) {
-				$update_record_result_msg = array_reduce((array)$update_record_result->msg, function($carry, $item){
+			if (isset($update_record_response->msg)) {
+				$update_record_response_msg = array_reduce((array)$update_record_response->msg, function($carry, $item){
 					if (!empty($item)) {
 						return $item;
 					}
 					return $carry;
 				});
-				$response->msg .= ' - ' . $update_record_result_msg;
+				$response->msg .= ' ' . $update_record_response_msg;
 			}
 
 		// debug
 			// if(SHOW_DEBUG===true) {
-			// 	$response->debug = $update_record_result;
+			// 	$response->debug = $update_record_response;
 			// 	if (function_exists('bcdiv')) {
 			// 		$memory_usage = bcdiv(memory_get_usage(), 1048576, 3);
 			// 	}else{
 			// 		$memory_usage = memory_get_usage();
 			// 	}
-			// 	// $response->msg .= " <span>Exec in ".exec_time_unit($start_time,'secs')." secs - MB: ". $memory_usage ."</span>";
+			// 	// $response->msg .= " Exec in ".exec_time_unit($start_time,'secs')." secs - MB: ". $memory_usage ."";
 			// }
+
 
 		return $response;
 	}//end export_record

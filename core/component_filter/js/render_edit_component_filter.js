@@ -125,6 +125,10 @@ export const get_content_data = function(self) {
 
 /**
 * GET_INPUT_ELEMENT
+* Render li node with given element data and value
+* @param object element
+* 	sample: {type: 'project', label: 'Camino de la Justicia', section_tipo: 'dd153', section_id: '9', value: {…}, …}
+* @param object self
 * @return HTMLElement li
 */
 export const get_input_element = (element, self) => {
@@ -132,10 +136,13 @@ export const get_input_element = (element, self) => {
 	// short vars
 		const value				= self.data.value || []
 		const value_length		= value.length
-		const datalist_value	= element.value
 		const label				= element.label || ''
 		const section_id		= element.section_id
 		const section_tipo		= element.section_tipo
+		const datalist_value	= element.value
+		if (datalist_value) {
+			datalist_value.from_component_tipo = self.tipo
+		}
 
 	// li container
 		const li_class_name = (element.has_children) ? ' grouper' : ''
@@ -174,7 +181,7 @@ export const get_input_element = (element, self) => {
 			// 	value	: changed_value
 			// })
 
-			// // fix instance changed_data
+			// fix instance changed_data
 			// 	self.set_changed_data(changed_data_item)
 
 			// check all values
@@ -185,7 +192,7 @@ export const get_input_element = (element, self) => {
 						checked_items.push(all_inputs[i])
 					}
 				}
-				if (checked_items.length<1) {
+				if (checked_items.length<1 && self.mode!=='search') {
 					// restore checked
 					input_node.checked = true
 					alert( get_label.select_one_project || 'You must select at least one project' );
@@ -253,6 +260,10 @@ export const get_input_element = (element, self) => {
 
 /**
 * GET_INPUT_ELEMENT_read
+* Render li node with given element data and value in read only mode
+* @param object element
+* 	sample: {type: 'project', label: 'Camino de la Justicia', section_tipo: 'dd153', section_id: '9', value: {…}, …}
+* @param object self
 * @return HTMLElement li
 */
 export const get_input_element_read = (element, self) => {
@@ -316,7 +327,7 @@ export const get_input_element_read = (element, self) => {
 
 /**
 * GET_BUTTONS
-* @param object instance
+* @param object self
 * @return HTMLElement buttons_container
 */
 export const get_buttons = (self) => {
