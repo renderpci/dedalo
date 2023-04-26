@@ -375,10 +375,10 @@ class tool_diffusion extends tool_common {
 					$diffusion_options->diffusion_element_tipo	= $diffusion_element_tipo;
 					$diffusion_options->resolve_references		= $resolve_references;
 
-				$update_record_result = $diffusion->update_record($diffusion_options);
+				$update_record_response = $diffusion->update_record($diffusion_options);
 
 			// check result
-			if ($update_record_result && $update_record_result->result) {
+			if ($update_record_response && $update_record_response->result) {
 
 				// success
 				$response->result = true;
@@ -392,29 +392,39 @@ class tool_diffusion extends tool_common {
 			}else{
 
 				// error case
-				$response->result	= false;
-				$response->msg		= "Error. Error on publish record $section_id";
-				debug_log(__METHOD__
-					. " $response->msg " .PHP_EOL
-					. 'update_record_result: ' . to_string($update_record_result)
-					, logger::ERROR
-				);
+				$response->result = false;
+
+				if (isset($update_record_response->code) && $update_record_response->code===2) {
+					$response->msg		= "Warning [2] on publish record $section_id . Target table is not defined. Skip reference resolution";
+					debug_log(__METHOD__
+						. " $response->msg " .PHP_EOL
+						. 'update_record_response: ' . json_encode($update_record_response, JSON_PRETTY_PRINT)
+						, logger::WARNING
+					);
+				}else{
+					$response->msg		= "Error on publish record $section_id";
+					debug_log(__METHOD__
+						. " $response->msg " .PHP_EOL
+						. 'update_record_response: ' . json_encode($update_record_response, JSON_PRETTY_PRINT)
+						, logger::ERROR
+					);
+				}
 			}
 
 		// msg. Add specific messages
-			if (isset($update_record_result->msg)) {
-				$update_record_result_msg = array_reduce((array)$update_record_result->msg, function($carry, $item){
+			if (isset($update_record_response->msg)) {
+				$update_record_response_msg = array_reduce((array)$update_record_response->msg, function($carry, $item){
 					if (!empty($item)) {
 						return $item;
 					}
 					return $carry;
 				});
-				$response->msg .= ' ' . $update_record_result_msg;
+				$response->msg .= ' ' . $update_record_response_msg;
 			}
 
 		// debug
 			// if(SHOW_DEBUG===true) {
-			// 	$response->debug = $update_record_result;
+			// 	$response->debug = $update_record_response;
 			// 	if (function_exists('bcdiv')) {
 			// 		$memory_usage = bcdiv(memory_get_usage(), 1048576, 3);
 			// 	}else{
