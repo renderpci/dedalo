@@ -623,7 +623,7 @@ class web_data {
 			// set final strQuery
 				// $sql_options->strQuery = $strQuery;
 					#dump($strQuery, ' strQuery ++ '.to_string());
-					error_log('get_rows_data: '.PHP_EOL.$strQuery);
+					// error_log('get_rows_data: '.PHP_EOL.$strQuery);
 
 			// exec query
 				$query_options = new stdClass();
@@ -640,7 +640,7 @@ class web_data {
 					$query_options->map						= $sql_options->map;
 					$query_options->process_result			= $sql_options->process_result;
 					$query_options->lang					= $sql_options->lang;
-					$query_options->db_name					= $sql_options->db_name;
+					$query_options->db_name					= $sql_options->db_name ?? MYSQL_WEB_DATABASE_CONN ?? null;
 					$query_options->conn					= $sql_options->conn;
 					$query_options->sql_options				= $sql_options; // full used options here
 
@@ -650,7 +650,7 @@ class web_data {
 			// response
 				$response->result 	= $exec_query_response->result;
 				$response->total 	= $exec_query_response->total ?? false;
-				$response->msg    	= 'Ok get rows_data done. ' . $exec_query_response->msg;
+				$response->msg    	= 'OK get rows_data done. ' . $exec_query_response->msg;
 
 			// debug
 				$response->debug = (isset($exec_query_response->debug))
@@ -2572,9 +2572,10 @@ class web_data {
 	/**
 	* GET_AR_RESTRICTED_FRAGMENTS
 	* Calcula toda la información (text fragment, tc's, etc.) de los fragmentos restringidos en esta cinta
-	* @return array
+	* @param string|int $section_id
+	* @return array $ar_restricted_fragments
 	*/
-	public static function get_ar_restricted_fragments( $section_id ) {
+	public static function get_ar_restricted_fragments( string|int $section_id ) : array {
 
 		static $ar_restricted_fragments;
 		if (isset($ar_restricted_fragments[$section_id])) {
@@ -2702,15 +2703,13 @@ class web_data {
 			$filter = "`term_id` = '$term_id' AND $filter ";
 		}
 
-
-
 		$options = new stdClass();
-			$options->table 		= (string)TABLE_THESAURUS;
-			$options->ar_fields 	= ['term_id',$field_indexation];
-			$options->sql_filter 	= $filter; 	// !IMPORTANT : NEVER USE PUBLICATION FILTER HERE // ." AND lang = '".WEB_CURRENT_LANG_CODE."' "
-			$options->lang 			= WEB_CURRENT_LANG_CODE;
-			$options->order 		= null;
-			$options->limit 		= null;
+			$options->table			= (string)TABLE_THESAURUS;
+			$options->ar_fields		= ['term_id',$field_indexation];
+			$options->sql_filter	= $filter; 	// !IMPORTANT : NEVER USE PUBLICATION FILTER HERE // ." AND lang = '".WEB_CURRENT_LANG_CODE."' "
+			$options->lang			= WEB_CURRENT_LANG_CODE;
+			$options->order			= null;
+			$options->limit			= null;
 
 			$rows_data = (object)web_data::get_rows_data( $options );
 				#dump($rows_data, ' rows_data - term_id: '.$term_id); #die();
