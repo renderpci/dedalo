@@ -193,7 +193,8 @@ tool_diffusion.prototype.export = function(options) {
 		return new Promise(function(resolve){
 
 			data_manager.request({
-				body : rqo
+				use_worker	: true,
+				body		: rqo
 			})
 			.then(function(api_response){
 				// dd_console("-> export API api_response:",'DEBUG',api_response);

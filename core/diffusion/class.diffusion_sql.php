@@ -927,9 +927,10 @@ class diffusion_sql extends diffusion  {
 
 	/**
 	* CHECK_PUBLICATION_VALUE
+	* @param object $request_options
 	* @return bool
 	*/
-	public static function check_publication_value($request_options) {
+	public static function check_publication_value(object $request_options) {
 
 		$to_publish = true;
 
@@ -959,17 +960,28 @@ class diffusion_sql extends diffusion  {
 			# Delete this record
 			if ($options->delete_previous===true) {
 				diffusion_sql::delete_sql_record($options->section_id, $options->database_name, $options->table_name, $options->section_tipo);
-				debug_log(__METHOD__." Skipped (and mysql deleted) record $options->section_id ".$options->table_name." (publication=no)", logger::DEBUG);
+				debug_log(__METHOD__
+					." Skipped (and MYSQL deleted) record $options->section_id ".$options->table_name." (publication=no)"
+					, logger::DEBUG
+				);
 
 				// Global search case
-					if (isset($options->table_properties->global_search_map)) {
+					if (isset($options->table_properties) && isset($options->table_properties->global_search_map)) {
 						# exists search global table (mdcat fix)
 						diffusion_sql::delete_sql_record($options->section_id, $options->database_name, 'global_search', $options->section_tipo);
-						debug_log(__METHOD__." Deleted global_search record {$options->section_tipo}_{$options->section_id} (publication=no)", logger::DEBUG);
+						debug_log(__METHOD__
+							." Deleted global_search record {$options->section_tipo}_{$options->section_id} (publication=no)"
+							, logger::DEBUG
+						);
 					}
 			}
 
-			$section = section::get_instance($options->section_id, $options->section_tipo, $mode='list', false);
+			$section = section::get_instance(
+				$options->section_id,
+				$options->section_tipo,
+				'list', // string mode
+				false // bool cache
+			);
 			$section->set_bl_loaded_matrix_data(false); // force section to update dato from current database to prevent loose user changes on publication time lapse
 			$section->diffusion_info_add($options->diffusion_element_tipo);
 			$section->save_modified = false;
@@ -978,11 +990,19 @@ class diffusion_sql extends diffusion  {
 
 			# Cascade delete
 			# dump( json_decode($options->table_properties), ' options->table_properties ++ '.to_string());
-			if ($options->delete_previous===true && isset($options->table_properties->cascade_delete)) {
-				foreach ((array)$options->table_properties->cascade_delete as $tkey => $tvalue) {
+			if ($options->delete_previous===true && isset($options->table_properties) && isset($options->table_properties->cascade_delete)) {
+				foreach ((array)$options->table_properties->cascade_delete as $tvalue) {
 					$cd_table_name = $tvalue->table;
-					diffusion_sql::delete_sql_record($options->section_id, $options->database_name, $cd_table_name, $options->section_tipo);
-					debug_log(__METHOD__." Deleted (cascade_delete) record $options->section_id ".$cd_table_name." ", logger::DEBUG);
+					diffusion_sql::delete_sql_record(
+						$options->section_id,
+						$options->database_name,
+						$cd_table_name,
+						$options->section_tipo
+					);
+					debug_log(__METHOD__
+						." Deleted (cascade_delete) record $options->section_id ".$cd_table_name." "
+						, logger::DEBUG
+					);
 				}
 			}
 
@@ -1001,6 +1021,7 @@ class diffusion_sql extends diffusion  {
 
 	/**
 	* GET_FIELD_RELATED_COMPONENT
+	* @param string $tipo
 	* @return string $related_term
 	*/
 	public static function get_field_related_component($tipo) {
@@ -1078,8 +1099,8 @@ class diffusion_sql extends diffusion  {
 
 				#
 				# Diffusion element
-				$diffusion_term	= new RecordObj_dd($options->tipo);
-				$properties		= $diffusion_term->get_propiedades(true);	# Format: {"data_to_be_used": "dato"}
+				$diffusion_term					= new RecordObj_dd($options->tipo);
+				$properties						= $diffusion_term->get_propiedades(true);	# Format: {"data_to_be_used": "dato"}
 
 				#
 				# Component target
@@ -1100,6 +1121,7 @@ class diffusion_sql extends diffusion  {
 							'list'
 						);
 					}else{
+
 						$current_component = component_common::get_instance(
 							$model_name,
 							$related_component_tipo,
@@ -1311,7 +1333,6 @@ class diffusion_sql extends diffusion  {
 	* UPDATE_RECORD
 	* Update one or any number of records ( array ) and references
 	* @param object $options
-	* @param bool $resolve_references
 	* @return obj $response
 	*/
 	public function update_record($options) {
@@ -1335,18 +1356,25 @@ class diffusion_sql extends diffusion  {
 		// mandatory vars check
 			if(empty($section_tipo) || empty($section_id) || empty($diffusion_element_tipo)) {
 				$response->result	= false;
-				$response->msg		.= " ERROR ON UPDATE RECORD section_id:'$section_id' - section_tipo:'$section_tipo' - diffusion_element_tipo:'$diffusion_element_tipo'. Undefined mandatory options var";
-				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
+				$response->msg		.= " ERROR ON UPDATE RECORD section_id:'$section_id' - section_tipo:'$section_tipo' - diffusion_element_tipo:'$diffusion_element_tipo'. Undefined a mandatory options var";
+				debug_log(__METHOD__
+					." $response->msg " . PHP_EOL
+					. to_string($options)
+					, logger::ERROR
+				);
 				return $response;
 			}
-			# Old code heritage control
+			// Old code heritage control
 			if (is_array($section_id)) {
 				if(SHOW_DEBUG===true) {
 					dump($section_id, ' $section_id ++ '.to_string());
 				}
 				$response->result	= false;
-				$response->msg		.= 'Error Processing Request. Sorry, array is not accepted to update_record anymore. Please use int as section_id';
-				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
+				$response->msg		.= 'Error Processing Request. Type array is not accepted to update_record anymore. Please use integer as section_id';
+				debug_log(__METHOD__
+					." $response->msg "
+					, logger::ERROR
+				);
 				return $response;
 			}
 
@@ -1356,8 +1384,21 @@ class diffusion_sql extends diffusion  {
 		// table info
 			$diffusion_element_tables_map = diffusion_sql::get_diffusion_element_tables_map( $diffusion_element_tipo );
 			if (!property_exists($diffusion_element_tables_map, $section_tipo)) {
+				$label = RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG);
+
+				$response->code		= 2;
 				$response->result	= false;
-				$response->msg		.= "WARNING ON UPDATE RECORD[2] section_id: $section_id - section_tipo: $section_tipo - diffusion_element_tipo: $diffusion_element_tipo. Undefined section_tipo $section_tipo var in diffusion_element_tables_map. ".PHP_EOL."PROBABLY THE TARGET TABLE FOR (".RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG).") DO NOT EXISTS IN SQL. If you want resolve this reference, create a diffusion table for this data ($section_tipo) or check mysql tables for problems with table creation. ";
+				$response->msg		.= "WARNING ON UPDATE RECORD[2] section_id: $section_id - section_tipo: $section_tipo - diffusion_element_tipo: $diffusion_element_tipo.".PHP_EOL
+				." Undefined section_tipo $section_tipo var in diffusion_element_tables_map. ".PHP_EOL
+				." PROBABLY THE TARGET TABLE FOR $section_tipo ($label) DO NOT EXISTS IN SQL. ".PHP_EOL
+				." If you want to resolve this reference, create a diffusion table for this data ($section_tipo) or check the MYSQL schema for problems with tables creation.";
+				debug_log(__METHOD__
+					. " $response->msg " .PHP_EOL
+					. ' The property "'.$section_tipo.'" do not exists in the object diffusion_element_tables_map ' .PHP_EOL
+					.' Ignored update_record request. options:' .PHP_EOL
+					. json_encode($options, JSON_PRETTY_PRINT)
+					, logger::WARNING
+				);
 				return $response;
 			}
 			$table_map			= $diffusion_element_tables_map->{$section_tipo};
@@ -1389,9 +1430,9 @@ class diffusion_sql extends diffusion  {
 			if (isset($table_properties->custom_diffusion)) {
 				$function_name	= $table_properties->custom_diffusion;
 				$custom_options	= clone $options;
-					$custom_options->database_name 		= $database_name;
-					$custom_options->table_name 		= $table_name;
-					$custom_options->table_properties 	= $table_properties;
+					$custom_options->database_name		= $database_name;
+					$custom_options->table_name			= $table_name;
+					$custom_options->table_properties	= $table_properties;
 				call_user_func($function_name, $custom_options);
 
 				$response->result 	= true;
@@ -1411,9 +1452,10 @@ class diffusion_sql extends diffusion  {
 				// response
 				$response->result	= true;
 				$response->msg		= 'Skipped record already updated. resolved_static_key: '.$resolved_static_key;
-				if(SHOW_DEBUG===true) {
-					debug_log(__METHOD__."  ".$response->msg .PHP_EOL.' ----------------------------------------------------------------- ', logger::WARNING);
-				}
+				debug_log(__METHOD__
+					. ' '.$response->msg
+					, logger::WARNING
+				);
 				return $response;
 			}
 
@@ -1421,7 +1463,12 @@ class diffusion_sql extends diffusion  {
 
 			// diffusion_section . Resolve diffusion section from section tipo
 				if (in_array($section_tipo, (array)$ar_unconfigured_diffusion_section)) {
-					$response->msg .= 'unconfigured_diffusion_section';
+					$response->result	= false;
+					$response->msg		.= 'unconfigured_diffusion_section';
+					debug_log(__METHOD__
+						." Error[1]: misconfigured diffusion section for section_tipo: ".to_string($section_tipo)
+						, logger::ERROR
+					);
 					return $response;
 				}
 				$diffusion_section = $table_tipo;
@@ -1430,14 +1477,18 @@ class diffusion_sql extends diffusion  {
 						$section_name = RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_STRUCTURE_LANG, true, false);
 						// throw new Exception("Error Processing Request. diffusion_section not found in correspondence with section_tipo: $section_tipo . Nothing is updated", 1);
 						// echo "<hr> DEBUG update_record: Omitted update section <b>'$section_name'</b>. Optional diffusion_section not found in correspondence with section_tipo: $section_tipo [$section_id]<br>";
-						$msg = " Omitted update section <b>'$section_name'</b>. Optional diffusion_section not found in correspondence with section_tipo: $section_tipo [$section_id] ";
+						$msg = " Omitted update section '$section_name'. Optional diffusion_section not found in correspondence with section_tipo: $section_tipo [$section_id] ";
 						$response->msg .= $msg;
 						debug_log(__METHOD__." $msg", logger::DEBUG);
 					}
 					// error_log(__METHOD__." WARNING: diffusion_section not found in correspondence with section_tipo: $section_tipo . Nothing is updated !!");
 					$ar_unconfigured_diffusion_section[] = $section_tipo;
 
-					$response->msg .= " unconfigured_diffusion_section: $section_tipo";
+					$response->msg .= " [2] misconfigured diffusion section for section_tipo: $section_tipo";
+					debug_log(__METHOD__
+						." Error[2]: misconfigured diffusion section for section_tipo: ".to_string($section_tipo)
+						, logger::ERROR
+					);
 					return $response;
 				}
 
@@ -1487,17 +1538,25 @@ class diffusion_sql extends diffusion  {
 							$save_options->record_data['engine'] = $database_properties->engine; // If defined in database properties
 						}
 
-					$save = diffusion_mysql::save_record($save_options);
+					// save
+						$save_response = diffusion_mysql::save_record($save_options);
+						if ($save_response->result===false) {
+							debug_log(__METHOD__
+								.' Error: save response error ' . PHP_EOL
+								.' save_response: ' . json_encode($save_response, JSON_PRETTY_PRINT)
+								, logger::ERROR
+							);
+						}
 
 					// global_search (LEGACY ONLY)
 						if (isset($table_properties->global_search_map)) {
 
 							$gs_options = new stdClass();
 								$gs_options->global_search_map		= $table_properties->global_search_map;
-								$gs_options->diffusion_section 		= $diffusion_section;
-								$gs_options->section_tipo 			= $section_tipo;
-								$gs_options->diffusion_element_tipo = $diffusion_element_tipo;
-								$gs_options->ar_field_data 			= $ar_field_data;
+								$gs_options->diffusion_section		= $diffusion_section;
+								$gs_options->section_tipo			= $section_tipo;
+								$gs_options->diffusion_element_tipo	= $diffusion_element_tipo;
+								$gs_options->ar_field_data			= $ar_field_data;
 							self::save_global_search_data($gs_options);
 
 						}//end if (isset($table_properties->global_search_map))
@@ -1582,9 +1641,12 @@ class diffusion_sql extends diffusion  {
 			if ($resolve_references===true) {
 
 				// ar_section_components . Get section components (portals and autocompletes) and look for references
-					$ar_components_with_references = array( 'component_portal',
-															'component_autocomplete',
-															'component_autocomplete_hi'); #component_relation_common::get_components_with_relations(); # Using modelo name
+				// component_relation_common::get_components_with_relations(); # Using model name
+					$ar_components_with_references = [
+						'component_portal',
+						'component_autocomplete',
+						'component_autocomplete_hi'
+					];
 					$ar_section_components = section::get_ar_children_tipo_by_model_name_in_section(
 						$section_tipo,
 						$ar_components_with_references,
@@ -1616,7 +1678,11 @@ class diffusion_sql extends diffusion  {
 							$RecordObj_dd					= new RecordObj_dd($current_component_tipo);
 							$current_component_properties	= $RecordObj_dd->get_propiedades(true);
 							if (isset($current_component_properties->source->mode) && $current_component_properties->source->mode==='external') {
-								debug_log(__METHOD__." Skipped component with external source mode: ".to_string($current_component_tipo), logger::DEBUG);
+								debug_log(__METHOD__
+									." Skipped component with external source mode" . PHP_EOL
+									. 'current_component_tipo: ' .to_string($current_component_tipo)
+									, logger::WARNING
+								);
 								continue;
 							}
 
@@ -1677,7 +1743,13 @@ class diffusion_sql extends diffusion  {
 							// recursion level reset
 								// $current_recursion_level = 1;
 								if(SHOW_DEBUG===true) {
-									debug_log(__METHOD__." current recursion_level: '$recursion_level' of $max_recursions [$current_section_tipo] label: '".RecordObj_dd::get_termino_by_tipo($current_section_tipo)."' - ar_section_id:".to_string($ar_section_id)." ============================================================================================== ", logger::DEBUG);
+									$label = RecordObj_dd::get_termino_by_tipo($current_section_tipo);
+									debug_log(__METHOD__
+										. " current recursion_level: '$recursion_level' of $max_recursions [$current_section_tipo] "
+										. " label: '$label' - ar_section_id: ".to_string($ar_section_id)
+										." ============================================================================================== "
+										, logger::DEBUG
+									);
 								}
 
 							foreach ((array)$ar_section_id as $current_section_id) {
@@ -1694,9 +1766,9 @@ class diffusion_sql extends diffusion  {
 								$this->update_record( $new_options, true );
 							}
 
-							#if (!in_array($current_section_tipo, $ar_section_tipo_resolved)) {
-							#	$ar_section_tipo_resolved[] = $current_section_tipo;
-							#}
+							// if (!in_array($current_section_tipo, $ar_section_tipo_resolved)) {
+							// 	$ar_section_tipo_resolved[] = $current_section_tipo;
+							// }
 						}//end foreach ($group_by_section_tipo as $current_section_tipo => $ar_section_id)
 
 					#$ar_uniques = array_unique(array_keys($group_by_section_tipo));
@@ -1716,8 +1788,8 @@ class diffusion_sql extends diffusion  {
 			}
 
 		// response
-			$response->result	= true;
-			$response->msg		.= "OK. Record updated '$section_id' and n references: ".count($ar_resolved_static).' in levels: '.$max_recursions.'. ';
+			$response->result	 = true;
+			$response->msg		.= "Record updated section_id: '$section_id' and n references: ".count($ar_resolved_static).' in n levels: '.$max_recursions.'';
 
 
 		return $response;
@@ -2071,44 +2143,44 @@ class diffusion_sql extends diffusion  {
 							$list_data[$lang]->image 	= $image_parts[0]; // Only first image is used
 						}
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => 'list_data',
-							'field_value' => json_encode($list_data[$lang], JSON_UNESCAPED_UNICODE)
+							'field_name'	=> 'list_data',
+							'field_value'	=> json_encode($list_data[$lang], JSON_UNESCAPED_UNICODE)
 						];
 
 					# FULL_DATA
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => 'full_data',
-							'field_value' => implode(' ',$full_data[$lang])
+							'field_name'	=> 'full_data',
+							'field_value'	=> implode(' ',$full_data[$lang])
 						];
 
 					# name_surname. NAME_SURNAME_DATA . Added 18-03-2018 !!
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => 'name_surname',
-							'field_value' => implode(' ',$name_surname_data[$lang])
+							'field_name'	=> 'name_surname',
+							'field_value'	=> implode(' ',$name_surname_data[$lang])
 						];
 
 					# prisoner_number. prisoner_number_DATA . Added 01-05-2020 !!
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => 'prisoner_number',
-							'field_value' => json_encode($prisoner_number_data[$lang], JSON_UNESCAPED_UNICODE)
+							'field_name'	=> 'prisoner_number',
+							'field_value'	=> json_encode($prisoner_number_data[$lang], JSON_UNESCAPED_UNICODE)
 						];
 
 					# symbol_state. symbol_state_data . Added 09-12-2020 !!
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => 'symbol_state',
-							'field_value' => json_encode($symbol_state_data[$lang], JSON_UNESCAPED_UNICODE)
+							'field_name'	=> 'symbol_state',
+							'field_value'	=> json_encode($symbol_state_data[$lang], JSON_UNESCAPED_UNICODE)
 						];
 
 					# sort. sort_data . Added 18-03-2018 !!
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => 'sort',
-							'field_value' => implode(' ',$sort_data[$lang])
+							'field_name'	=> 'sort',
+							'field_value'	=> implode(' ',$sort_data[$lang])
 						];
 
 					# sort_id
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => 'sort_id',
-							'field_value' => $section_id
+							'field_name'	=> 'sort_id',
+							'field_value'	=> $section_id
 						];
 
 					# thesaurus. THESAURUS_DATA . Merge all values in one only array. Added 13-11-2018 !!
@@ -2119,9 +2191,9 @@ class diffusion_sql extends diffusion  {
 						#	}
 						#}
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => 'thesaurus',
-							#'field_value' => (!empty($ar_thesaurus_elements)) ? json_encode($ar_thesaurus_elements) : null
-							'field_value' => (!empty($thesaurus_data[$lang])) ? implode(' | ', $thesaurus_data[$lang]) : null
+							'field_name'		=> 'thesaurus',
+							// 'field_value'	=> (!empty($ar_thesaurus_elements)) ? json_encode($ar_thesaurus_elements) : null
+							'field_value'		=> (!empty($thesaurus_data[$lang])) ? implode(' | ', $thesaurus_data[$lang]) : null
 						];
 
 					# prison. Merge all values in one only array. Added 20-11-2018 !!
@@ -2132,8 +2204,8 @@ class diffusion_sql extends diffusion  {
 							}
 						}
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => 'prison',
-							'field_value' => !empty($ar_prison_elements) ? implode(' | ', $ar_prison_elements) : null
+							'field_name'	=> 'prison',
+							'field_value'	=> !empty($ar_prison_elements) ? implode(' | ', $ar_prison_elements) : null
 						];
 
 					# pub_author. Merge all values in one only array. Added 15-11-2018 !!
@@ -2144,8 +2216,8 @@ class diffusion_sql extends diffusion  {
 							}
 						}
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => 'pub_author',
-							'field_value' => !empty($ar_pub_author_elements) ? implode(' | ', $ar_pub_author_elements) : null
+							'field_name'	=> 'pub_author',
+							'field_value'	=> !empty($ar_pub_author_elements) ? implode(' | ', $ar_pub_author_elements) : null
 						];
 
 					# title_generic. title_generic_data. Merge all values in one only array. Added 15-11-2018 !!
@@ -2156,8 +2228,8 @@ class diffusion_sql extends diffusion  {
 							}
 						}
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => 'title',
-							'field_value' => !empty($ar_title_generic_elements) ? implode(' | ', $ar_title_generic_elements) : null
+							'field_name'	=> 'title',
+							'field_value'	=> !empty($ar_title_generic_elements) ? implode(' | ', $ar_title_generic_elements) : null
 						];
 
 					# FIELDS
@@ -2170,8 +2242,8 @@ class diffusion_sql extends diffusion  {
 							$ar_objects[] = $fields_obj;
 						}
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => 'fields',
-							'field_value' => json_encode($ar_objects, JSON_UNESCAPED_UNICODE)
+							'field_name'	=> 'fields',
+							'field_value'	=> json_encode($ar_objects, JSON_UNESCAPED_UNICODE)
 						];
 
 					# FILTER_DATE
@@ -2184,26 +2256,26 @@ class diffusion_sql extends diffusion  {
 							$filter_date = reset($output_array);
 
 							$ar_fields_global[$pseudo_section_id][$lang][] = [
-								'field_name'  => 'filter_date',
-								'field_value' => $filter_date
+								'field_name'	=> 'filter_date',
+								'field_value'	=> $filter_date
 							];
 						}
 
 
 					# LINK
 						$link_obj = [
-							'table' 	 => $table_name,
-							'section_id' => $section_id
+							'table'			=> $table_name,
+							'section_id'	=> $section_id
 						];
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => 'link',
-							'field_value' => json_encode($link_obj)
+							'field_name'	=> 'link',
+							'field_value'	=> json_encode($link_obj)
 						];
 
 					# TABLE
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => 'table',
-							'field_value' => $table_name
+							'field_name'	=> 'table',
+							'field_value'	=> $table_name
 						];
 
 					# fons_code (archive code)
@@ -2230,25 +2302,31 @@ class diffusion_sql extends diffusion  {
 			#dump($list_data, ' list_data ++ '.to_string());
 
 		$ar_field_data = [
-			"database_name" 	=> $database_name,
-			"table_name" 		=> 'global_search',
-			"diffusion_section" => $options->diffusion_section,
-			"ar_fields" 		=> $ar_fields_global
+			"database_name"		=> $database_name,
+			"table_name"		=> 'global_search',
+			"diffusion_section"	=> $options->diffusion_section,
+			"ar_fields"			=> $ar_fields_global
 		];
 
 		$save_options = new stdClass();
-			$save_options->diffusion_element_tipo 	= $options->diffusion_element_tipo;
-			$save_options->section_tipo 			= $options->section_tipo;
-			$save_options->record_data 				= $ar_field_data;
-			$save_options->delete_previous 			= true;
-		#dump($save_options, ' save_options ++ '.to_string()); die();
+			$save_options->diffusion_element_tipo	= $options->diffusion_element_tipo;
+			$save_options->section_tipo				= $options->section_tipo;
+			$save_options->record_data				= $ar_field_data;
+			$save_options->delete_previous			= true;
 		$save = diffusion_mysql::save_record($save_options);
-			#dump($save, ' save ++ '.to_string());
 
 		if (!isset($save->new_id)) {
-			debug_log(__METHOD__." ERROR ON INERT RECORD !!! (diffusion_mysql::save_record) ".to_string(), logger::ERROR);
+			debug_log(__METHOD__
+				." ERROR ON INERT RECORD (global_search) !!! (diffusion_mysql::save_record) " .PHP_EOL
+				.'save: ' . to_string($save)
+				, logger::ERROR
+			);
+		}else{
+			debug_log(__METHOD__
+				." Saved new record in global_search - ".$save->new_id
+				, logger::DEBUG
+			);
 		}
-		debug_log(__METHOD__." Saved new record in global_search - ".$save->new_id .to_string(), logger::DEBUG);
 
 
 		return (object)$save;
@@ -2344,7 +2422,7 @@ class diffusion_sql extends diffusion  {
 								}
 							}
 
-						// field value formated
+						// field value formatted
 							$field_value = (function($column_values) use($column_map_item, $source_columns){
 
 								$format = $column_map_item->format ?? null;
@@ -2403,9 +2481,18 @@ class diffusion_sql extends diffusion  {
 		$save = diffusion_mysql::save_record($save_options);
 
 		if (!isset($save->new_id)) {
-			debug_log(__METHOD__." ERROR ON INERT RECORD !!! (diffusion_mysql::save_record) ".to_string(), logger::ERROR);
+			debug_log(__METHOD__
+				. " ERROR ON INERT RECORD !!! (diffusion_mysql::save_record) " . PHP_EOL
+				. 'save: ' . to_string($save)
+				, logger::ERROR
+			);
+		}else{
+			debug_log(__METHOD__
+				. " Saved new record in global_search - new_id: " . $save->new_id
+				, logger::DEBUG
+			);
 		}
-		debug_log(__METHOD__." Saved new record in global_search - ".$save->new_id .to_string(), logger::DEBUG);
+
 
 
 		return (object)$save;

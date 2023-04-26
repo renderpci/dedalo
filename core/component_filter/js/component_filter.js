@@ -70,6 +70,10 @@ export const component_filter = function(){
 
 /**
 * GET_CHANGED_KEY
+* @param string action
+* 	sample: insert
+* @param object value
+* 	sample: {section_tipo: 'dd153', section_id: '6'}
 */
 component_filter.prototype.get_changed_key = function(action, value) {
 
@@ -149,7 +153,7 @@ component_filter.prototype.change_handler = async function(options) {
 			self.update_data_value(changed_data_item)
 		// set data.changed_data. The change_data to the instance
 			// self.data.changed_data = changed_data
-		// publish search. Event to update the dom elements of the instance
+		// publish search. Event to update the DOM elements of the instance
 			event_manager.publish('change_search_element', self)
 
 	}else{

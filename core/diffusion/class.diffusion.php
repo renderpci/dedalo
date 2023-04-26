@@ -117,6 +117,8 @@ abstract class diffusion  {
 	* GET_AR_DIFFUSION_MAP
 	* Get and set diffusion_map of current domain ($this->domain)
 	* @param string $diffusion_domain_name . Like 'aup'
+	* @param bool $connection_status = false
+	* 	On true, check connection status (usually MySQL database)
 	* @return object $entity_diffusion_tables
 	* 	Sample:
 	* 	{
@@ -131,7 +133,7 @@ abstract class diffusion  {
 	*	    ]
 	*	}
 	*/
-	public static function get_diffusion_map( string $diffusion_domain_name=DEDALO_DIFFUSION_DOMAIN ) : object {
+	public static function get_diffusion_map( string $diffusion_domain_name=DEDALO_DIFFUSION_DOMAIN, $connection_status=false ) : object {
 
 		// cache
 			static $diffusion_map;
@@ -220,16 +222,57 @@ abstract class diffusion  {
 						$diffusion_database_name = RecordObj_dd::get_termino_by_tipo($diffusion_database_tipo, DEDALO_STRUCTURE_LANG, true, false);
 					}
 
-				$data = new stdClass();
-					$data->element_tipo		= $element_tipo;
-					$data->name				= $name;
-					$data->class_name		= $diffusion_class_name;
-					$data->database_name	= $diffusion_database_name;
-					$data->database_tipo	= $diffusion_database_tipo;
+				$item = new stdClass();
+					$item->element_tipo		= $element_tipo;
+					$item->name				= $name;
+					$item->class_name		= $diffusion_class_name;
+					$item->database_name	= $diffusion_database_name;
+					$item->database_tipo	= $diffusion_database_tipo;
 
-				$diffusion_map->{$diffusion_group_tipo}[] = $data;
+				// add connection DDBB status. Check connection is reachable
+					if ($connection_status===true) {
+						switch ($item->class_name) {
+							case 'diffusion_mysql':
+								// check connection
+								$conn = $conn ?? DBi::_getConnection_mysql();
+								if ($conn===false) {
+									$item->connection_status = (object)[
+										'result'	=> false,
+										'msg'		=> 'Unable to connect to database'
+									];
+								}else{
+									// check database
+									$db_available = diffusion_mysql::database_exits($item->database_name);
+									if ($db_available===true) {
+										$item->connection_status = (object)[
+											'result'	=> true,
+											'msg'		=> 'Database is ready'
+										];
+									}else{
+										$item->connection_status = (object)[
+											'result'	=> false,
+											'msg'		=> 'Database is NOT ready'
+										];
+									}
+								}
+								// error log when fails
+									if ($item->connection_status->result===false) {
+										debug_log(__METHOD__
+											." ".$item->connection_status->msg . ' ['.$item->database_name.']'
+											, logger::ERROR
+										);
+									}
+								break;
 
-			}#foreach ($ar_diffusion_element_tipo as $element_tipo)
+							default:
+								// ignore
+								break;
+						}
+					}//end if ($connection_status===true)
+
+				// add diffusion_map item
+					$diffusion_map->{$diffusion_group_tipo}[] = $item;
+			}//end foreach ($ar_diffusion_element_tipo as $element_tipo)
 
 		}//end foreach ($ar_diffusion_group as $diffusion_group_tipo)
 		#dump($diffusion_map, ' diffusion_map by diffusion_group_tipo ++ '.to_string());
@@ -656,7 +699,7 @@ abstract class diffusion  {
 		$RecordObj_dd 	   = new RecordObj_dd($diffusion_element_tables_map->{$section_tipo}->table);
 		$ar_table_children = $RecordObj_dd->get_ar_childrens_of_this();
 
-		# Add childrens from table alias too
+		# Add children from table alias too
 			if (!empty($diffusion_element_tables_map->from_alias)) {
 				$RecordObj_dd_alias 	 = new RecordObj_dd($diffusion_element_tables_map->{$section_tipo}->from_alias);
 				$ar_table_alias_children = (array)$RecordObj_dd_alias->get_ar_childrens_of_this();
@@ -706,33 +749,53 @@ abstract class diffusion  {
 
 	/**
 	* MAP_IMAGE_INFO
+	* @param object $options
+	* sample:
+	* {
+	* 	"typology": null,
+	*    "value": null,
+	*    "tipo": "mht136",
+	*    "parent": "612",
+	*    "lang": "lg-spa",
+	*    "section_tipo": "rsc170",
+	*    "caler_id": 3,
+	*    "properties": {
+	*        "varchar": 1000,
+	*        "process_dato": "diffusion::map_image_info"
+	*    },
+	*    "diffusion_element_tipo": "mht50",
+	*    "component": { ... }
+	* }
 	* @param $dato
-	*	object locator like (
-	*	    [section_id] => 248
-	*	    [section_tipo] => rsc170
-	*	    [component_tipo] => rsc29
-	*	)
+	* sample:
+	* [{
+	*	    "lib_data": null,
+	*	    "files_info": [
+	*	        {
+	*	            "quality": "original",
+	*	            "file_url": "/dedalo/media/image/original/0/rsc29_rsc170_704.jpg",
+	*	            "file_name": "rsc29_rsc170_704.jpg",
+	*	            ...
+	*	        }, ...
+	*	 	]
+	* }]
 	* @return object $image_size
 	*/
-	public static function map_image_info(object $options, $dato) : object {
+	public static function map_image_info(object $options, $dato) : ?object {
 
-		//dump($options, ' options ++ '.to_string());
-		//dump($dato, ' dato ++ '.to_string());
-
-		$locator = $dato;
+		// dato check
+			if (empty($dato)) {
+				return null;
+			}
 
 		// component image
-			$model_name = RecordObj_dd::get_modelo_name_by_tipo($locator->component_tipo,true);
-			$component 	 = component_common::get_instance(
-				$model_name,
-				$locator->component_tipo,
-				$locator->section_id,
-				'list',
-				DEDALO_DATA_NOLAN,
-				$locator->section_tipo
-			);
+			$component = $options->component;
+
 		// Dimensions from default quality
 			$image_dimensions = $component->get_image_dimensions(DEDALO_IMAGE_QUALITY_DEFAULT);
+			if (empty($image_dimensions)) {
+				return null;
+			}
 
 		// Response (from imagemagick)
 			# [0] => 617
@@ -1293,6 +1356,65 @@ abstract class diffusion  {
 
 		return $ar_table_tipo_edit;
 	}//end parse_database_alias_tables
+
+
+
+	/**
+	* UPDATE_PUBLICATION_SCHEMA
+	* @param string $diffusion_element_tipo
+	* @return object $response
+	*/
+	public static function update_publication_schema(string $diffusion_element_tipo) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= __METHOD__. ' Error. Request failed';
+
+
+		$RecordObj_dd	= new RecordObj_dd($diffusion_element_tipo);
+		$propiedades	= $RecordObj_dd->get_propiedades(true);
+		$schema_obj		= (is_object($propiedades) && isset($propiedades->publication_schema))
+			? $propiedades->publication_schema
+			: false;
+
+		// no propiedades configured case
+			if (empty($schema_obj)) {
+				return $response;
+			}
+
+		$class_name = isset($propiedades->diffusion->class_name) ? $propiedades->diffusion->class_name : false;
+
+		switch ($class_name) {
+			case 'diffusion_mysql':
+				// databases
+				$databases = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+					$diffusion_element_tipo, // string tipo
+					'database', // string modelo_name
+					'children', // string relation_type
+					false // bool search_exact switch between 'database' or contains 'database' like 'database_alias'
+				);
+				if (isset($databases[0])) {
+					// Loads parent class diffusion
+					// include_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.'.$class_name.'.php');
+					// get_termino_by_tipo($terminoID, $lang=NULL, $from_cache=false, $fallback=true)
+					$database_name	= RecordObj_dd::get_termino_by_tipo($databases[0]);
+
+					// save_table_schema. Use save_table_schema response as this method response
+					$response = (object)diffusion_sql::save_table_schema( $database_name, $schema_obj );
+				}else{
+					$response->msg .= " Database not found in structure for diffusion element: '$diffusion_element_tipo' ";
+				}
+				break;
+
+			default:
+				// Nothing to do
+				$response->result	= true;
+				$response->msg		= "Ignored publication_schema for class_name: '$class_name' ";
+				break;
+		}
+
+		return $response;
+	}//end update_publication_schema
 
 
 
