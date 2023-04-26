@@ -116,13 +116,14 @@ const get_content_data = function(self) {
 const get_content_value = (i, datalist_item, self) => {
 
 	// short vars
+		const label				= datalist_item.label
 		const value				= self.data.value || []
 		const value_length		= value.length
-		// const datalist_value	= Object.assign({
-		// 	from_component_tipo : self.tipo
-		// }, datalist_item.value)
 		const datalist_value	= datalist_item.value
-		const label				= datalist_item.label
+		const datalist_value	= datalist_item.value // is locator like {section_id:"1",section_tipo:"dd174"}
+		if (datalist_value) {
+			datalist_value.from_component_tipo = self.tipo
+		}
 
 	// content_value
 		const content_value = ui.create_dom_element({

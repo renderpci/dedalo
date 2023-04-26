@@ -115,9 +115,12 @@ const get_input_element = (i, current_value, self) => {
 		const value				= self.data.value || []
 		const value_length		= value.length
 		const datalist_item		= current_value // is object as {label, section_id, value}
-		const datalist_value	= datalist_item.value // is locator like {section_id:"1",section_tipo:"dd174"}
 		const label				= datalist_item.label
 		const section_id		= datalist_item.section_id
+		const datalist_value	= datalist_item.value // is locator like {section_id:"1",section_tipo:"dd174"}
+		if (datalist_value) {
+			datalist_value.from_component_tipo = self.tipo
+		}
 
 	// create content_value
 		const content_value = ui.create_dom_element({
@@ -126,7 +129,6 @@ const get_input_element = (i, current_value, self) => {
 		})
 
 	// label
-		// const label_string = (SHOW_DEBUG===true) ? label + " [" + section_id + "]" : label
 		const option_label = ui.create_dom_element({
 			element_type	: 'label',
 			inner_html		: label,
