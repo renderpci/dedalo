@@ -205,7 +205,7 @@ abstract class TR {
 
 
 	/**
-	* ADDTAGIMGONTHEFLY
+	* ADD_TAG_IMG_ON_THE_FLY
 	* Convert Dédalo tags like index, tc, etc. to images
 	* @param string $text
 	* @param object $request_options = null
