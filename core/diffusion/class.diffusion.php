@@ -788,28 +788,7 @@ abstract class diffusion  {
 				return null;
 			}
 
-			$locator = is_array($dato)
-				? reset($dato)
-				: $dato;
-
-			if (empty($locator->component_tipo)) {
-				debug_log(__METHOD__." Error. Ignored locator without component_tipo " .PHP_EOL
-					. 'locator: ' . to_string($locator)
-					, logger::ERROR
-				);
-				return null;
-			}
-
 		// component image
-			// $model_name = RecordObj_dd::get_modelo_name_by_tipo($locator->component_tipo,true);
-			// $component 	 = component_common::get_instance(
-			// 	$model_name,
-			// 	$locator->component_tipo,
-			// 	$locator->section_id,
-			// 	'list',
-			// 	DEDALO_DATA_NOLAN,
-			// 	$locator->section_tipo
-			// );
 			$component = $options->component;
 
 		// Dimensions from default quality
