@@ -70,7 +70,7 @@ class image extends stdClass {
 
 			$options = new stdClass();
 				$options->btn_url = $this->btn_url; //__CONTENT_BASE_URL__ . '/dedalo/inc/btn.php';
-			$this->description_with_images = TR::addTagImgOnTheFly($description_raw, $options);
+			$this->description_with_images = TR::add_tag_img_on_the_fly($description_raw, $options);
 		}
 
 		# Description clean text
