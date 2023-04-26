@@ -9,8 +9,8 @@ class free_node extends stdClass {
 
 
 	# Version. Important!
-	static $version = "1.0.0"; //12-06-2017
-
+	// static $version = "1.0.0"; // 12-06-2017
+	static $version = "1.0.1"; // 26-04-2023
 
 	public $av_section_id; 	// int like 46
 	#public $fragments;	// object
@@ -35,8 +35,10 @@ class free_node extends stdClass {
 
 	/**
 	* __CONSTRUCT
+	* @param string|int $av_section_id
+	* @param object $request_options
 	*/
-	public function __construct( $av_section_id, $request_options ) {
+	public function __construct( int|string $av_section_id, object $request_options ) {
 
 		$this->av_section_id = $av_section_id;
 
@@ -51,35 +53,35 @@ class free_node extends stdClass {
 	* LOAD_DATA
 	* @return bool
 	*/
-	public function load_data() {
+	public function load_data() : bool {
 
-		# INTERVIEW
-		# Get interviews that contains this av_section_id as value in json_encoded column 'audiovisual'
-		$row_interview_data = self::get_row_interview_data( $this->av_section_id, $this->lang );
-		$interview_data_obj = reset($row_interview_data->result);
-			#dump($row_interview_data, ' $row_interview_data ++ '.to_string());
+		// interview
+		// get interviews that contains this av_section_id as value in json_encoded column 'audiovisual'
+			$row_interview_data = self::get_row_interview_data( $this->av_section_id, $this->lang );
+			$interview_data_obj = reset($row_interview_data->result);
+				#dump($row_interview_data, ' $row_interview_data ++ '.to_string());
 
-		# General info
-		foreach ((array)$interview_data_obj as $field_name => $value) {
-			if($field_name==='table' || $field_name==='lang' || $field_name==='publication' || $field_name==='images') continue;
-			if ($field_name==='section_id') {
-				$field_name = 'interview_section_id';
+		// general info
+			foreach ((array)$interview_data_obj as $field_name => $value) {
+				if($field_name==='table' || $field_name==='lang' || $field_name==='publication' || $field_name==='images') continue;
+				if ($field_name==='section_id') {
+					$field_name = 'interview_section_id';
+				}
+				$this->$field_name = $value;
 			}
-			$this->$field_name = $value;
-		}
 
-		# IMAGE_URL
-		$this->image_url = $this->get_image_url();
+		// image_url
+			$this->image_url = $this->get_image_url();
 
-		# Restricted fragments
-		$this->ar_restricted_fragments = web_data::get_ar_restricted_fragments( $this->av_section_id );
+		// restricted fragments
+			$this->ar_restricted_fragments = web_data::get_ar_restricted_fragments( $this->av_section_id );
 
-		# FRAGMENTS
-		$FIELD_TRANSCRIPTION = FIELD_TRANSCRIPTION;
-		$raw_text 			 = $this->$FIELD_TRANSCRIPTION;
-		$q 					 = $this->q;
-		$fragments 			 = $this->get_free_fragments( $q, $raw_text );
-		$this->fragments 	 = $fragments;
+		// fragments
+			$FIELD_TRANSCRIPTION	= FIELD_TRANSCRIPTION;
+			$raw_text				= $this->$FIELD_TRANSCRIPTION;
+			$q						= $this->q;
+			$fragments				= $this->get_free_fragments( $q, $raw_text );
+			$this->fragments		= $fragments;
 
 
 		return true;
@@ -88,28 +90,30 @@ class free_node extends stdClass {
 
 
 	/**
-	* GET_ROW_INTERVIEW_data
+	* GET_ROW_INTERVIEW_DATA
+	*
+	* @param string|int $av_section_id
+	* @param string $lang
 	* @return object rows_data
 	*/
-	public static function get_row_interview_data( $av_section_id, $lang ) {
+	public static function get_row_interview_data( int|string $av_section_id, string $lang ) : object {
 
 		$ar_fields = array('*'); 	//array('section_id',code,title,abstract,country,autonomous_community,province,comarca);
 
 		$options = new stdClass();
-			$options->table 		 = (string)TABLE_INTERVIEW;
-			$options->ar_fields 	 = $ar_fields;
-			$options->lang 		 	 = $lang;
-			$options->order 		 = null;
-			$options->sql_filter 	 = FIELD_AUDIOVISUAL . " LIKE '%\"" . $av_section_id ."\"%' ". PUBLICATION_FILTER_SQL;
-			$options->limit 		 = 1;
+			$options->table			= (string)TABLE_INTERVIEW;
+			$options->ar_fields		= $ar_fields;
+			$options->lang			= $lang;
+			$options->order			= null;
+			$options->sql_filter	= FIELD_AUDIOVISUAL . " LIKE '%\"" . $av_section_id ."\"%' ". PUBLICATION_FILTER_SQL;
+			$options->limit			= 1;
 			# Resolve only some needed portals
 			$options->resolve_portals_custom = json_decode('{
-				"image" 	:"image",
-				"informant" :"informant"
+				"image"		: "image",
+				"informant"	: "informant"
 			}');
 
 		$row_interview_data	= (object)web_data::get_rows_data( $options );
-			#dump(reset($row_interview_data->result), ' row_interview_data ++ '.to_string($options)); #die();
 
 
 		return $row_interview_data;
@@ -118,10 +122,12 @@ class free_node extends stdClass {
 
 
 	/**
-	* GET_FREE_FRAGMENTs
-	* @return
+	* GET_FREE_FRAGMENTS
+	* @param string $q
+	* @param string $raw_text
+	* @return array $reel_fragments
 	*/
-	public function get_free_fragments( $q, $raw_text ) {
+	public function get_free_fragments( string $q, string $raw_text ) : array {
 
 		$q 			= trim($q);
 		$q 			= stripslashes($q);
@@ -148,15 +154,15 @@ class free_node extends stdClass {
 		#$raw_text_sure = $raw_text;
 
 		$delete_options =new stdClass();
-			$delete_options->deleteTC 			= false;
-			$delete_options->deleteIndex 		= true;
-			$delete_options->deleteSvg 			= true;
-			$delete_options->deleteGeo 			= true;
-			$delete_options->delete_page 		= true;
-			$delete_options->delete_person 		= true;
-			$delete_options->delete_note   		= true;
-			$delete_options->delete_struct 		= true;
-			$delete_options->delete_reference 	= true;
+			$delete_options->deleteTC			= false;
+			$delete_options->deleteIndex		= true;
+			$delete_options->deleteSvg			= true;
+			$delete_options->deleteGeo			= true;
+			$delete_options->delete_page		= true;
+			$delete_options->delete_person		= true;
+			$delete_options->delete_note		= true;
+			$delete_options->delete_struct		= true;
+			$delete_options->delete_reference	= true;
 		// $raw_text_sure = TR::deleteMarks($raw_text_sure, $delete_options); // Force delete  tags
 		$raw_text_sure = html_entity_decode($raw_text_sure);
 
@@ -168,7 +174,6 @@ class free_node extends stdClass {
 				$reel_fragments = array_merge($reel_fragments, $ar_fragments);
 			}
 		}
-		#dump($reel_fragments, ' reel_fragments ++ '.to_string());
 
 		return $reel_fragments;
 	}//end get_free_fragments
@@ -178,9 +183,12 @@ class free_node extends stdClass {
 	/**
 	* FIND_WORD_IN_TEXT
 	* Find word in text and return array witch highlighted fragment and associated thesaurus
+	* @param string $word
+	* @param string $raw_text
+	*
 	* @return array
 	*/
-	protected function find_word_in_text($word, $raw_text, $av_section_id, $n_chars, $limit, $match_select=false) {
+	protected function find_word_in_text(string $word, string $raw_text, $av_section_id, $n_chars, $limit, $match_select=false) : array {
 
 		$lang = $this->lang;
 
@@ -328,7 +336,7 @@ class free_node extends stdClass {
 
 			if($match_select===false && $i>=$limit) break;
 
-		$i++;}//end foreach ($mathches as $key => $ar_value)
+		$i++;}//end foreach ($matches as $key => $ar_value)
 
 
 		return (array)$ar_word_fragment;
@@ -548,9 +556,9 @@ class free_node extends stdClass {
 	*  Find all occurrences of a needle in a haystack
 	*  @param string $haystack
 	*  @param string $needle
-	*  @return array or false
+	*  @return array|bool $aStrPos
 	*/
-	public static function str_pos_all($haystack,$needle) {
+	public static function str_pos_all( $haystack, $needle ) {
 
 		  $s=0;
 		  $i=0;
@@ -573,27 +581,27 @@ class free_node extends stdClass {
 
 	/**
 	* GET_IMAGE_URL
-	* @return string
+	* @return string $image_url
 	*/
-	public function get_image_url() {
+	public function get_image_url() : string {
 
-		$image_url = null;	//'../images/bg_foto_search_free.png'; // Default
+		$image_url = '';	//'../images/bg_foto_search_free.png'; // Default
 
 		switch (true) {
 			case (isset($this->image_type) && $this->image_type==='identify_image'):
 				# IDENTIFY_IMAGE
 				if (isset($this->image[0])) {
-					$identify_image_url = $this->image[0][FIELD_IMAGE];
-					$image_url = $identify_image_url;
+					$identify_image_url	= $this->image[0][FIELD_IMAGE];
+					$image_url			= $identify_image_url;
 				}
 				break;
 
 			case (isset($this->image_type) && $this->image_type==='posterframe'):
 			default:
 				# POSTERFRAME
-				$path = DEDALO_MEDIA_BASE_URL .'/av/posterframe'; // __CONTENT_BASE_URL__ .
-				$name = DEDALO_COMPONENT_RESOURCES_AV_TIPO .'_'. AUDIOVISUAL_SECTION_TIPO .'_'. $this->av_section_id .'.jpg';
-				$image_url = $path .'/'. $name;
+				$path		= DEDALO_MEDIA_BASE_URL .'/av/posterframe'; // __CONTENT_BASE_URL__ .
+				$name		= DEDALO_COMPONENT_RESOURCES_AV_TIPO .'_'. AUDIOVISUAL_SECTION_TIPO .'_'. $this->av_section_id .'.jpg';
+				$image_url	= $path .'/'. $name;
 				break;
 		}
 
@@ -603,4 +611,3 @@ class free_node extends stdClass {
 
 
 }//end class free_node
-?>
