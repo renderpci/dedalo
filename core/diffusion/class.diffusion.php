@@ -699,7 +699,7 @@ abstract class diffusion  {
 		$RecordObj_dd 	   = new RecordObj_dd($diffusion_element_tables_map->{$section_tipo}->table);
 		$ar_table_children = $RecordObj_dd->get_ar_childrens_of_this();
 
-		# Add childrens from table alias too
+		# Add children from table alias too
 			if (!empty($diffusion_element_tables_map->from_alias)) {
 				$RecordObj_dd_alias 	 = new RecordObj_dd($diffusion_element_tables_map->{$section_tipo}->from_alias);
 				$ar_table_alias_children = (array)$RecordObj_dd_alias->get_ar_childrens_of_this();
@@ -1356,6 +1356,65 @@ abstract class diffusion  {
 
 		return $ar_table_tipo_edit;
 	}//end parse_database_alias_tables
+
+
+
+	/**
+	* UPDATE_PUBLICATION_SCHEMA
+	* @param string $diffusion_element_tipo
+	* @return object $response
+	*/
+	public static function update_publication_schema(string $diffusion_element_tipo) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= __METHOD__. ' Error. Request failed';
+
+
+		$RecordObj_dd	= new RecordObj_dd($diffusion_element_tipo);
+		$propiedades	= $RecordObj_dd->get_propiedades(true);
+		$schema_obj		= (is_object($propiedades) && isset($propiedades->publication_schema))
+			? $propiedades->publication_schema
+			: false;
+
+		// no propiedades configured case
+			if (empty($schema_obj)) {
+				return $response;
+			}
+
+		$class_name = isset($propiedades->diffusion->class_name) ? $propiedades->diffusion->class_name : false;
+
+		switch ($class_name) {
+			case 'diffusion_mysql':
+				// databases
+				$databases = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+					$diffusion_element_tipo, // string tipo
+					'database', // string modelo_name
+					'children', // string relation_type
+					false // bool search_exact switch between 'database' or contains 'database' like 'database_alias'
+				);
+				if (isset($databases[0])) {
+					// Loads parent class diffusion
+					// include_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.'.$class_name.'.php');
+					// get_termino_by_tipo($terminoID, $lang=NULL, $from_cache=false, $fallback=true)
+					$database_name	= RecordObj_dd::get_termino_by_tipo($databases[0]);
+
+					// save_table_schema. Use save_table_schema response as this method response
+					$response = (object)diffusion_sql::save_table_schema( $database_name, $schema_obj );
+				}else{
+					$response->msg .= " Database not found in structure for diffusion element: '$diffusion_element_tipo' ";
+				}
+				break;
+
+			default:
+				// Nothing to do
+				$response->result	= true;
+				$response->msg		= "Ignored publication_schema for class_name: '$class_name' ";
+				break;
+		}
+
+		return $response;
+	}//end update_publication_schema
 
 
 
