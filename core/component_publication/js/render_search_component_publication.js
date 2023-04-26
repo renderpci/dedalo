@@ -119,7 +119,6 @@ const get_content_value = (i, datalist_item, self) => {
 		const label				= datalist_item.label
 		const value				= self.data.value || []
 		const value_length		= value.length
-		const datalist_value	= datalist_item.value
 		const datalist_value	= datalist_item.value // is locator like {section_id:"1",section_tipo:"dd174"}
 		if (datalist_value) {
 			datalist_value.from_component_tipo = self.tipo

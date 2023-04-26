@@ -136,10 +136,13 @@ export const get_input_element = (element, self) => {
 	// short vars
 		const value				= self.data.value || []
 		const value_length		= value.length
-		const datalist_value	= element.value
 		const label				= element.label || ''
 		const section_id		= element.section_id
 		const section_tipo		= element.section_tipo
+		const datalist_value	= element.value
+		if (datalist_value) {
+			datalist_value.from_component_tipo = self.tipo
+		}
 
 	// li container
 		const li_class_name = (element.has_children) ? ' grouper' : ''
