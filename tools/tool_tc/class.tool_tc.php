@@ -212,7 +212,7 @@ class tool_tc extends tool_common {
 
 		// 	//Currently (v6) raw_text contains an array instead of a string as in previous versions
 		// 	foreach ($raw_text as $key => $text) {
-		// 		$text = TR::addTagImgOnTheFly($text);
+		// 		$text = TR::add_tag_img_on_the_fly($text);
 		// 	}
 
 		// 	return $raw_text;
