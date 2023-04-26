@@ -1384,11 +1384,14 @@ class diffusion_sql extends diffusion  {
 		// table info
 			$diffusion_element_tables_map = diffusion_sql::get_diffusion_element_tables_map( $diffusion_element_tipo );
 			if (!property_exists($diffusion_element_tables_map, $section_tipo)) {
+				$label = RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG);
+
+				$response->code		= 2;
 				$response->result	= false;
 				$response->msg		.= "WARNING ON UPDATE RECORD[2] section_id: $section_id - section_tipo: $section_tipo - diffusion_element_tipo: $diffusion_element_tipo.".PHP_EOL
 				." Undefined section_tipo $section_tipo var in diffusion_element_tables_map. ".PHP_EOL
-				." PROBABLY THE TARGET TABLE FOR (".RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG).") DO NOT EXISTS IN SQL. ".PHP_EOL
-				." If you want resolve this reference, create a diffusion table for this data ($section_tipo) or check the MYSQL schema for problems with table creation.";
+				." PROBABLY THE TARGET TABLE FOR $section_tipo ($label) DO NOT EXISTS IN SQL. ".PHP_EOL
+				." If you want to resolve this reference, create a diffusion table for this data ($section_tipo) or check the MYSQL schema for problems with tables creation.";
 				debug_log(__METHOD__
 					. " $response->msg " .PHP_EOL
 					. ' The property "'.$section_tipo.'" do not exists in the object diffusion_element_tables_map ' .PHP_EOL
@@ -1638,9 +1641,12 @@ class diffusion_sql extends diffusion  {
 			if ($resolve_references===true) {
 
 				// ar_section_components . Get section components (portals and autocompletes) and look for references
-					$ar_components_with_references = array( 'component_portal',
-															'component_autocomplete',
-															'component_autocomplete_hi'); #component_relation_common::get_components_with_relations(); # Using modelo name
+				// component_relation_common::get_components_with_relations(); # Using model name
+					$ar_components_with_references = [
+						'component_portal',
+						'component_autocomplete',
+						'component_autocomplete_hi'
+					];
 					$ar_section_components = section::get_ar_children_tipo_by_model_name_in_section(
 						$section_tipo,
 						$ar_components_with_references,
@@ -1672,7 +1678,11 @@ class diffusion_sql extends diffusion  {
 							$RecordObj_dd					= new RecordObj_dd($current_component_tipo);
 							$current_component_properties	= $RecordObj_dd->get_propiedades(true);
 							if (isset($current_component_properties->source->mode) && $current_component_properties->source->mode==='external') {
-								debug_log(__METHOD__." Skipped component with external source mode: ".to_string($current_component_tipo), logger::DEBUG);
+								debug_log(__METHOD__
+									." Skipped component with external source mode" . PHP_EOL
+									. 'current_component_tipo: ' .to_string($current_component_tipo)
+									, logger::WARNING
+								);
 								continue;
 							}
 
@@ -1733,8 +1743,11 @@ class diffusion_sql extends diffusion  {
 							// recursion level reset
 								// $current_recursion_level = 1;
 								if(SHOW_DEBUG===true) {
+									$label = RecordObj_dd::get_termino_by_tipo($current_section_tipo);
 									debug_log(__METHOD__
-										." current recursion_level: '$recursion_level' of $max_recursions [$current_section_tipo] label: '".RecordObj_dd::get_termino_by_tipo($current_section_tipo)."' - ar_section_id:".to_string($ar_section_id)." ============================================================================================== "
+										. " current recursion_level: '$recursion_level' of $max_recursions [$current_section_tipo] "
+										. " label: '$label' - ar_section_id: ".to_string($ar_section_id)
+										." ============================================================================================== "
 										, logger::DEBUG
 									);
 								}
@@ -1753,9 +1766,9 @@ class diffusion_sql extends diffusion  {
 								$this->update_record( $new_options, true );
 							}
 
-							#if (!in_array($current_section_tipo, $ar_section_tipo_resolved)) {
-							#	$ar_section_tipo_resolved[] = $current_section_tipo;
-							#}
+							// if (!in_array($current_section_tipo, $ar_section_tipo_resolved)) {
+							// 	$ar_section_tipo_resolved[] = $current_section_tipo;
+							// }
 						}//end foreach ($group_by_section_tipo as $current_section_tipo => $ar_section_id)
 
 					#$ar_uniques = array_unique(array_keys($group_by_section_tipo));
@@ -1775,8 +1788,8 @@ class diffusion_sql extends diffusion  {
 			}
 
 		// response
-			$response->result	= true;
-			$response->msg		.= "Record updated '$section_id' and n references: ".count($ar_resolved_static).' in levels: '.$max_recursions.'';
+			$response->result	 = true;
+			$response->msg		.= "Record updated section_id: '$section_id' and n references: ".count($ar_resolved_static).' in n levels: '.$max_recursions.'';
 
 
 		return $response;
