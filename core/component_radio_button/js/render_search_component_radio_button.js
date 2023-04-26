@@ -10,7 +10,7 @@
 
 
 /**
-* render_search_component_radio_button
+* RENDER_SEARCH_COMPONENT_RADIO_BUTTON
 * Manage the components logic and appearance in client side
 */
 export const render_search_component_radio_button = function() {
@@ -52,6 +52,7 @@ render_search_component_radio_button.prototype.search = async function(options) 
 
 /**
 * GET_CONTENT_DATA_SEARCH
+* @param object self
 * @return HTMLElement content_data
 */
 const get_content_data_search = function(self) {
@@ -78,7 +79,7 @@ const get_content_data_search = function(self) {
 				const value = (input_q_operator.value.length>0) ? input_q_operator.value : null
 			// q_operator. Fix the data in the instance previous to save
 				self.data.q_operator = value
-			// publish search. Event to update the dom elements of the instance
+			// publish search. Event to update the DOM elements of the instance
 				event_manager.publish('change_search_element', self)
 		})
 
@@ -111,9 +112,10 @@ const get_input_element = (i, datalist_item, self) => {
 		const value				= self.data.value || []
 		const value_length		= value.length
 		const label				= datalist_item.label
-		const datalist_value	= Object.assign({
-			from_component_tipo : self.tipo
-		}, datalist_item.value)
+		const datalist_value	= datalist_item.value
+		if (datalist_value) {
+			datalist_value.from_component_tipo = self.tipo
+		}
 
 	// content_value
 		const content_value = ui.create_dom_element({
