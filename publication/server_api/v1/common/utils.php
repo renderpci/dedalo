@@ -190,16 +190,41 @@ function exec_time($start, $method=NULL, $result=NULL) {
 
 
 # EXEC_TIME_UNIT
-function exec_time_unit($start, $unit='ms', $round=3) {
+	// function exec_time_unit($start, $unit='ms', $round=3) {
 
-	$end = start_time();
-	$total = $end - $start;
-	if($unit==='ms') {
-		$total = $total*1000;
-	}else if($unit==='sec' || $unit==='secs') {
-		$total = $total;
-	}
-	return round($total,3);
+	// 	$end = start_time();
+	// 	$total = $end - $start;
+	// 	if($unit==='ms') {
+	// 		$total = $total*1000;
+	// 	}else if($unit==='sec' || $unit==='secs') {
+	// 		$total = $total;
+	// 	}
+	// 	return round($total,3);
+	// }//end exec_time_unit
+
+
+
+/**
+* EXEC_TIME
+* @param float $start
+* 	time in nanoseconds from function start_time()
+* @param string $unit = 'ms' (milliseconds)
+* 	possible values: ns|ms|sec
+* @param int $round = 3
+* 	Math total rounded to value
+* @return string
+*/
+function exec_time_unit(float $start, string $unit='ms', int $round=3) : string {
+
+	$total_ns	= start_time() - $start;
+	$total		= ($unit==='ms')
+		? $total_ns/1e+6 // ($total/1e+6) nanoseconds to milliseconds
+		: $total_ns;
+
+	// round
+		$result = round($total, $round);
+
+	return $result;
 }//end exec_time_unit
 
 
