@@ -1645,7 +1645,8 @@ class diffusion_sql extends diffusion  {
 					$ar_components_with_references = [
 						'component_portal',
 						'component_autocomplete',
-						'component_autocomplete_hi'
+						'component_autocomplete_hi',
+						'component_select'
 					];
 					$ar_section_components = section::get_ar_children_tipo_by_model_name_in_section(
 						$section_tipo,
