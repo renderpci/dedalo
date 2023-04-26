@@ -749,37 +749,69 @@ abstract class diffusion  {
 
 	/**
 	* MAP_IMAGE_INFO
+	* @param object $options
+	* sample:
+	* {
+	* 	"typology": null,
+	*    "value": null,
+	*    "tipo": "mht136",
+	*    "parent": "612",
+	*    "lang": "lg-spa",
+	*    "section_tipo": "rsc170",
+	*    "caler_id": 3,
+	*    "properties": {
+	*        "varchar": 1000,
+	*        "process_dato": "diffusion::map_image_info"
+	*    },
+	*    "diffusion_element_tipo": "mht50",
+	*    "component": { ... }
+	* }
 	* @param $dato
-	*	object locator like (
-	*	    [section_id] => 248
-	*	    [section_tipo] => rsc170
-	*	    [component_tipo] => rsc29
-	*	)
+	* sample:
+	* [{
+	*	    "lib_data": null,
+	*	    "files_info": [
+	*	        {
+	*	            "quality": "original",
+	*	            "file_url": "/dedalo/media/image/original/0/rsc29_rsc170_704.jpg",
+	*	            "file_name": "rsc29_rsc170_704.jpg",
+	*	            ...
+	*	        }, ...
+	*	 	]
+	* }]
 	* @return object $image_size
 	*/
 	public static function map_image_info(object $options, $dato) : ?object {
 
-		//dump($options, ' options ++ '.to_string());
-		//dump($dato, ' dato ++ '.to_string());
+		// dato check
+			if (empty($dato)) {
+				return null;
+			}
 
-		if (empty($dato)) {
-			return null;
-		}
+			$locator = is_array($dato)
+				? reset($dato)
+				: $dato;
 
-		$locator = is_array($dato)
-			? reset($dato)
-			: $dato;
+			if (empty($locator->component_tipo)) {
+				debug_log(__METHOD__." Error. Ignored locator without component_tipo " .PHP_EOL
+					. 'locator: ' . to_string($locator)
+					, logger::ERROR
+				);
+				return null;
+			}
 
 		// component image
-			$model_name = RecordObj_dd::get_modelo_name_by_tipo($locator->component_tipo,true);
-			$component 	 = component_common::get_instance(
-				$model_name,
-				$locator->component_tipo,
-				$locator->section_id,
-				'list',
-				DEDALO_DATA_NOLAN,
-				$locator->section_tipo
-			);
+			// $model_name = RecordObj_dd::get_modelo_name_by_tipo($locator->component_tipo,true);
+			// $component 	 = component_common::get_instance(
+			// 	$model_name,
+			// 	$locator->component_tipo,
+			// 	$locator->section_id,
+			// 	'list',
+			// 	DEDALO_DATA_NOLAN,
+			// 	$locator->section_tipo
+			// );
+			$component = $options->component;
+
 		// Dimensions from default quality
 			$image_dimensions = $component->get_image_dimensions(DEDALO_IMAGE_QUALITY_DEFAULT);
 			if (empty($image_dimensions)) {
