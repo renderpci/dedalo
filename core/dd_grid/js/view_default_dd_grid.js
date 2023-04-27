@@ -59,7 +59,9 @@ view_default_dd_grid.render = async function(self, options) {
 
 /**
 * GET_GRID_NODES
+* Recursively build grid nodes from value
 * @param array data
+* 	If data item type is 'column', generates a node, else recursively resolve the value
 * @return DocumentFragment
 */
 const get_grid_nodes = function(data) {
@@ -72,7 +74,9 @@ const get_grid_nodes = function(data) {
 
 		const cell_nodes = []
 		if (current_data && current_data.type) {
-			const node = get_div_container(current_data)
+
+			// node
+				const node = get_div_container(current_data)
 
 			// label
 				if(current_data.type==='column' && current_data.render_label){
@@ -85,47 +89,54 @@ const get_grid_nodes = function(data) {
 
 					switch(current_data.cell_type) {
 						case 'av':
-							const av_node = get_av_column(current_data)
-							node.appendChild(av_node)
+							node.appendChild(
+								get_av_column(current_data)
+							)
 							break;
 
 						case 'img':
-							const img_node = get_img_column(current_data)
-							node.appendChild(img_node)
+							node.appendChild(
+								get_img_column(current_data)
+							)
 							break;
 
 						case 'iri':
-							const current_node = get_iri_column(current_data)
-							node.appendChild(current_node)
+							node.appendChild(
+								get_iri_column(current_data)
+							)
 							break;
 
 						case 'button':
-							const button_node = get_button_column(current_data)
-							node.appendChild(button_node)
+							node.appendChild(
+								get_button_column(current_data)
+							)
 							break;
 
 						case 'json':
-							const json_node = get_json_column(current_data)
-							node.appendChild(json_node)
+							node.appendChild(
+								get_json_column(current_data)
+							)
 							break;
 
 						case 'section_id':
-							const section_id_node = get_section_id_column(current_data)
-							node.appendChild(section_id_node)
+							node.appendChild(
+								get_section_id_column(current_data)
+							)
 							break;
 
 						case 'text':
 						default:
-							const column_node = get_text_column(
-								current_data,
-								false // bool use fallback value
+							node.appendChild(
+								get_text_column(
+									current_data,
+									false // bool use fallback value
+								)
 							)
-							node.appendChild(column_node)
 							break;
 					}//end switch(current_data.cell_type)
 				}// end if(current_data.type==='column' && current_data.cell_type)
 
-			// value
+			// value. Recursion
 				if(current_data.value){
 					const child_node = get_grid_nodes(current_data.value)
 					node.appendChild(child_node)

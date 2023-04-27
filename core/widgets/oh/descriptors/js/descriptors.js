@@ -5,8 +5,8 @@
 
 // imports
 	import {widget_common} from '../../../widget_common/widget_common.js'
-	import {render_descriptors} from '../js/render_descriptors.js'
-
+	import {render_edit_descriptors} from './render_edit_descriptors.js'
+	import {render_list_descriptors} from './render_list_descriptors.js'
 
 
 export const descriptors = function(){
@@ -43,5 +43,5 @@ export const descriptors = function(){
 	descriptors.prototype.render	= widget_common.prototype.render
 	descriptors.prototype.refresh	= widget_common.prototype.refresh
 	// render
-	descriptors.prototype.edit		= render_descriptors.prototype.edit
-	descriptors.prototype.list		= render_descriptors.prototype.list
+	descriptors.prototype.edit		= render_edit_descriptors.prototype.edit
+	descriptors.prototype.list		= render_list_descriptors.prototype.list

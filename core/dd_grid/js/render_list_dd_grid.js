@@ -13,6 +13,7 @@
 	import {view_default_dd_grid} from './view_default_dd_grid.js'
 	import {view_mini_dd_grid} from './view_mini_dd_grid.js'
 	import {view_indexation_dd_grid} from './view_indexation_dd_grid.js'
+	import {view_descriptors_dd_grid} from './view_descriptors_dd_grid.js'
 	import {
 		render_links_list
 	} from '../../component_iri/js/render_list_component_iri.js'
@@ -33,6 +34,7 @@ export const render_list_dd_grid = function() {
 /**
 * LIST
 * Render node to use in list
+* @param object options
 * @return HTMLElement wrapper
 */
 render_list_dd_grid.prototype.list = async function(options) {
@@ -61,12 +63,13 @@ render_list_dd_grid.prototype.list = async function(options) {
 		case 'indexation':
 			return view_indexation_dd_grid.render(self, options)
 
+		case 'descriptors':
+			return view_descriptors_dd_grid.render(self, options)
+
 		case 'default':
 		default:
 			return view_default_dd_grid.render(self, options)
 	}
-
-	return null
 }//end list
 
 

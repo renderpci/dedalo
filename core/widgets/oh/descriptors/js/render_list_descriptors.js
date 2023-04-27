@@ -11,52 +11,23 @@
 
 
 /**
-* RENDER_DESCRIPTORS
+* RENDER_LIST_DESCRIPTORS
 * Manages the component's logic and appearance in client side
 */
-export const render_descriptors = function() {
+export const render_list_descriptors = function() {
 
 	return true
-}//end render_descriptors
-
-
-
-/**
-* EDIT
-* Render node for use in modes: edit, edit_in_list
-* @return HTMLElement wrapper
-*/
-render_descriptors.prototype.edit = async function(options) {
-
-	const self = this
-
-	const render_level = options.render_level
-
-	// content_data
-		const content_data = await get_content_data_edit(self)
-		if (render_level==='content') {
-			return content_data
-		}
-
-	// wrapper. ui build_edit returns widget wrapper
-		const wrapper = ui.widget.build_wrapper_edit(self, {
-			content_data : content_data
-		})
-
-	wrapper.content_data = content_data
-
-
-	return wrapper
-}//end edit
+}//end render_list_descriptors
 
 
 
 /**
 * LIST
 * Render node for use in modes: list, list_in_list
+* @param object options
 * @return HTMLElement wrapper
 */
-render_descriptors.prototype.list = async function(options) {
+render_list_descriptors.prototype.list = async function(options) {
 
 	const self = this
 
@@ -72,8 +43,8 @@ render_descriptors.prototype.list = async function(options) {
 		const wrapper = ui.widget.build_wrapper_edit(self, {
 			content_data : content_data
 		})
+		wrapper.content_data = content_data
 
-	wrapper.content_data = content_data
 
 	return wrapper
 }//end list
@@ -81,70 +52,52 @@ render_descriptors.prototype.list = async function(options) {
 
 
 /**
-* GET_CONTENT_DATA_list
+* GET_CONTENT_DATA_LIST
+* @param object self
 * @return HTMLElement content_data
 */
 const get_content_data_list = async function(self) {
 
-	const fragment = new DocumentFragment()
+	// content_data
+		const content_data = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_data widget'
+		})
 
-	// values container
+	// button_display
 		const button_display = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'button_display',
 			inner_html 		: get_label.terms || 'Terms',
-			parent			: fragment
+			parent			: content_data
 		})
-		button_display.addEventListener('mouseup', async function(){
-			self.mode = 'edit'
-			await self.refresh()
-		})
+		button_display.addEventListener('mouseup', function(e){
+			e.stopPropagation()
 
-	// content_data
-		const content_data = ui.create_dom_element({
-			element_type : 'div'
+			button_display.classList.add('loading')
+
+			// spinner
+				const spinner = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'spinner small',
+					parent			: content_data
+				})
+
+			// change mode
+				self.mode = 'edit'
+				self.node.classList.remove('list')
+				self.node.classList.add('edit')
+
+			self.refresh()
+			.then(function(response){
+				spinner.remove()
+				button_display.classList.remove('loading')
+			})
 		})
-		content_data.appendChild(fragment)
 
 
 	return content_data
 }//end get_content_data_list
-
-
-
-/**
-* GET_CONTENT_DATA_EDIT
-* @return HTMLElement content_data
-*/
-const get_content_data_edit = async function(self) {
-
-	const fragment = new DocumentFragment()
-
-	// values container
-		const values_container = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name		: 'values_container',
-			parent			: fragment
-		})
-
-	// values
-		const ipo			= self.ipo
-		const ipo_length	= ipo.length
-
-		for (let i = 0; i < ipo_length; i++) {
-			const data = self.value.filter(item => item.key===i)
-			get_value_element(i, data , values_container, self)
-		}
-
-	// content_data
-		const content_data = ui.create_dom_element({
-			element_type : 'div'
-		})
-		content_data.appendChild(fragment)
-
-
-	return content_data
-}//end get_content_data_edit
 
 
 
@@ -213,6 +166,7 @@ const get_value_element = async (i, data, values_container, self) => {
 		await dd_grid.build(false)
 		const node = await dd_grid.render()
 		descriptors_list_container.appendChild(node)
+
 
 	return li
 }//end get_value_element
