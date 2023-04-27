@@ -313,7 +313,7 @@ abstract class subtitles {
 
 			$ar_final[] = subtitles::fragment_split($text, $tcin, $tcout);
 		}
-		#dump($ar_final,'ar_final en get_ar_lines'); die();
+		// dump($ar_final,'ar_final en get_ar_lines'); die();
 
 		# Plain formatted
 		$ar_final_formatted = array();
@@ -342,6 +342,7 @@ abstract class subtitles {
 	*/
 	public static function fragment_split(string $text, string $tcin, ?string $tcout) : array {
 
+		$siguiente_linea_add_b = '';
 		$siguiente_linea_add_i	= '';
 		$is_last_Line			= false;
 		$ar_lines				= array();
@@ -371,6 +372,7 @@ abstract class subtitles {
 				}
 			}
 
+
 		// build lines
 			$i=0;
 			do{
@@ -379,7 +381,7 @@ abstract class subtitles {
 
 				// search a blank space from end to begin . If n char of line < maxCharLine, this is the last line.
 				$line_length = subtitles::text_lenght($current_line);
-
+				error_log('line_length: '.$i.' - '.$line_length);
 				// exception on large words
 					// if (strpos($current_line, " ")===false) {
 					// 	error_log("$i - line length; $line_length - maxCharLine: $maxCharLine ");
@@ -388,7 +390,7 @@ abstract class subtitles {
 					// }
 
 				// spacePos
-					if($line_length < $maxCharLine) {
+					if($line_length <= $maxCharLine) {
 
 						$spacePos		= $line_length;
 						$is_last_Line	= true;
@@ -403,34 +405,30 @@ abstract class subtitles {
 
 
 				// Bold & italics
-
 					// add bold and italics at the beginning of a paragraph that has continuity in bold or italics,
 					// the previous paragraph does not end and we transfer the label
 					$current_line_cut = $siguiente_linea_add_i .= $current_line_cut;
+					$current_line_cut = $siguiente_linea_add_b .= $current_line_cut;
 
-					// check if the bold has continuity in more than one line
-						// $numero_br = str_replace('<b>', '<b>', $current_line_cut, $br_in);
-						// $numero_br = str_replace('</b>', '</b>', $current_line_cut, $br_out);
+					// bold. check if the bold has continuity in more than one line
+						str_replace('<b>', '<b>', $current_line_cut, $count_br_in);
+						str_replace('</b>', '</b>', $current_line_cut, $count_br_out);
+						if ($count_br_in > $count_br_out) {
+							$current_line_cut .= '</b>';
+							$siguiente_linea_add_b = '<b>';
+						}else{
+							$siguiente_linea_add_b = '';
+						}
 
-					// DES 26-04-2023
-						// if ($br_in > $br_out) {
-						// 	$current_line_cut .= '</b>';
-						// 	$siguiente_linea_add_b = '<b>';
-						// }else{
-						// 	$siguiente_linea_add_b = '';
-						// }
-
-						// // check if the italics have continuity in more than one line
-						// 	$numero_br = str_replace('<i>', '<i>', $current_line_cut, $br_in);
-						// 	$numero_br = str_replace('</i>', '</i>', $current_line_cut, $br_out);
-
-						// if ($br_in>$br_out){
-						// 	//echo "need a br $br_in $br_out";
-						// 	$current_line_cut .= '</i>';
-						// 	$siguiente_linea_add_i = '<i>';
-						// }else{
-						// 	$siguiente_linea_add_i = '';
-						// }
+					// italic. check if the italics have continuity in more than one line
+						str_replace('<i>', '<i>', $current_line_cut, $count_br_in_italic);
+						str_replace('</i>', '</i>', $current_line_cut, $count_br_out_italic);
+						if ($count_br_in_italic > $count_br_out_italic){
+							$current_line_cut .= '</i>';
+							$siguiente_linea_add_i = '<i>';
+						}else{
+							$siguiente_linea_add_i = '';
+						}
 
 				// PROVISIONAL : Bold and italic formatting sometimes fails. To make sure there are no form errors in html
 				// we check the final result of the line to debug the number and positioning of the labels

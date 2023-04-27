@@ -12,6 +12,10 @@
 	// Turn off output buffering
 		// ini_set('output_buffering', 'off');
 
+	// time limit in seconds
+		ini_set('memory_limit', '256M');
+		set_time_limit(5);
+
 	// headers
 		header("Access-Control-Allow-Origin: *");
 		header('Content-Type: text/vtt');
@@ -42,8 +46,8 @@
 
 	// GET vars
 		$section_id	= isset($_GET['section_id']) ? (int)$safe_xss($_GET['section_id']) : false;
-		$tc_in		= isset($_GET['tc_in']) ? $safe_xss($_GET['tc_in']) : false;
-		$tc_out		= isset($_GET['tc_out']) ? $safe_xss($_GET['tc_out']) : false;
+		$tc_in		= isset($_GET['tc_in']) ? (int)$safe_xss($_GET['tc_in']) : false;
+		$tc_out		= isset($_GET['tc_out']) ? (int)$safe_xss($_GET['tc_out']) : false;
 
 	// Load class
 		$skip_api_web_user_code_verification = true;
@@ -127,6 +131,7 @@
 
 		$subtitles_text_response	= subtitles::build_subtitles_text( $st_options );
 		$subtitles_text				= $subtitles_text_response->result;
+
 
 	// Debug
 		if(SHOW_DEBUG===true) {
