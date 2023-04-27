@@ -26,6 +26,18 @@
 	// 	}
 	// }
 
+
+	// shared
+	>.search_container {
+		width: 100%;
+		position: relative;
+
+		>.spinner {
+			position: relative;
+			margin: 20px;
+		}
+	}
+
 	&.edit {
 		width: calc(100vw - @inspector_width - 0.25rem);
 		margin-bottom: 10rem;
@@ -78,13 +90,7 @@
 		}//end .inspector_container
 
 		>.search_container {
-			width: 100%;
-			position: relative;
 
-			>.spinner {
-				position: relative;
-				margin: 20px;
-			}
 		}
 
 		>.content_data {
@@ -163,43 +169,37 @@
 				}
 			}
 
-			// >.button {
-			// 	background-color: @color_orange_dedalo;
-			// 	color: #ffffff;
-			// 	display: inherit;
-			// 	width: auto;
-			// 	height: auto;
-			// 	padding: 1em;
-			// 	padding-top: 0;
-			// 	padding-bottom: 0;
-			// 	border-radius: 0.25em;
-			// 	margin: 0.25em;
-			// 	// margin-top: 0.25em;
-			// 	// margin-bottom: 0.25em;
+			// des
+				// >.button {
+				// 	background-color: @color_orange_dedalo;
+				// 	color: #ffffff;
+				// 	display: inherit;
+				// 	width: auto;
+				// 	height: auto;
+				// 	padding: 1em;
+				// 	padding-top: 0;
+				// 	padding-bottom: 0;
+				// 	border-radius: 0.25em;
+				// 	margin: 0.25em;
+				// 	// margin-top: 0.25em;
+				// 	// margin-bottom: 0.25em;
 
-			// 	// icons inside, like export icon
-			// 	>.button {
-			// 		margin-left: 0;
-			// 	}
+				// 	// icons inside, like export icon
+				// 	>.button {
+				// 		margin-left: 0;
+				// 	}
 
-			// 	&:hover {
-			// 		color: #000000;
-			// 	}
-			// 	&:active {
-			// 		color: #ffffff;
-			// 	}
-			// }
+				// 	&:hover {
+				// 		color: #000000;
+				// 	}
+				// 	&:active {
+				// 		color: #ffffff;
+				// 	}
+				// }
 		}
 
 		>.search_container {
-			// background-color: #b0feee;
-			width: 100%;
-			position: relative;
 
-			>.spinner {
-				position: relative;
-				margin: 20px;
-			}
 		}
 
 		>.paginator_container {

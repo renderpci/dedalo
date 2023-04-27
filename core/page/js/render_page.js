@@ -163,7 +163,7 @@ const get_content_data = async function(self) {
 					// spinner
 					ui.create_dom_element({
 						element_type	: 'div',
-						class_name		: 'spinner',
+						class_name		: 'spinner medium',
 						parent			: container_placeholder
 					})
 

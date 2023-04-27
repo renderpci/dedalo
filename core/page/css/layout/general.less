@@ -211,12 +211,16 @@
 	// }
 
 	.spinner {
-		/* Size */
-		height: 3rem;
-		width: 3rem;
+		@color_base: #d1d5db;
+
+		// position
 		position: absolute;
 		left: 40%;
 		top: 40%;
+
+		// size
+		height: 3rem;
+		width: 3rem;
 
 		// bg
 			// &:before {
@@ -233,15 +237,22 @@
 			// 	height: 85%;
 			// }
 
-		/* Create a curve at the top */
-		border: 4px solid #d1d5db;
-		border-top-color: @color_orange_dedalo;
+		// Create a curve at the top
 		border-radius: 50%;
+		border: 4px solid @color_base;
+		border-top-color: @color_orange_dedalo;
+
+		&.medium {
+			height: 2rem;
+			width: 2rem;
+			border: 3px solid @color_base;
+			border-top-color: @color_orange_dedalo;
+		}
 
 		&.small {
 			height: 1.5rem;
 			width: 1.5rem;
-			border: 2px solid #d1d5db;
+			border: 2px solid @color_base;
 			border-top-color: @color_orange_dedalo;
 		}
 
@@ -637,8 +648,8 @@
 		>.spinner {
 			left: 0.75rem;
 			top: 0.5rem;
-			height: 2rem;
-			width: 2rem;
+			// height: 2rem;
+			// width: 2rem;
 			z-index: 2;
 			margin: 0px;
 			// border-top: 1px @color_orange_dedalo solid;
