@@ -80,6 +80,7 @@ dd_grid.prototype.init	= async function(options) {
 	// show_tipo_in_label
 		self.show_tipo_in_label = options.show_tipo_in_label || false
 
+
 	return common_init
 }//end build
 
