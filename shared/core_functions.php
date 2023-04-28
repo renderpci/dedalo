@@ -106,7 +106,7 @@ function debug_log(string $info, int $level=logger::DEBUG) : bool {
 	// only debug mode and a minimum level generates messages
 	// see config file to check minimum log level
 	// Note that if SHOW_DEBUG is true, all messages will be printed to the log file (level will be ignored)
-		if($level > LOGGER_LEVEL && SHOW_DEBUG===false) {
+		if(!defined('LOGGER_LEVEL') || ($level > LOGGER_LEVEL && SHOW_DEBUG===false)) {
 			return false;
 		}
 
