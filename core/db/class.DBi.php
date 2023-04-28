@@ -231,7 +231,6 @@ abstract class DBi {
 				, logger::DEBUG
 			);
 			return false;
-			// die( wrap_pre('Dedalo '.'Connect Error (' . mysqli_connect_errno() . ') ' . mysqli_connect_error()) );
 		}
 
 		// UTF8 : Change character set to utf8mb4
