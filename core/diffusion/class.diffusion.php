@@ -234,7 +234,16 @@ abstract class diffusion  {
 						switch ($item->class_name) {
 							case 'diffusion_mysql':
 								// check connection
-								$conn = $conn ?? DBi::_getConnection_mysql();
+								try {
+									$conn = $conn ?? DBi::_getConnection_mysql();
+								} catch (Exception $e) {
+									$conn = false;
+									debug_log(__METHOD__
+										."  Caught exception on connect to MySQL (database_name: $item->database_name): ". PHP_EOL
+										. $e->getMessage()
+										, logger::ERROR
+									);
+								}
 								if ($conn===false) {
 									$item->connection_status = (object)[
 										'result'	=> false,
