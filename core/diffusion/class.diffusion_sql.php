@@ -440,17 +440,17 @@ class diffusion_sql extends diffusion  {
 				foreach ($options as $var_name => $value) {
 					$$var_name = $value; // move options var to self var
 				}
-
-		if(SHOW_DEBUG===true) {
-			#dump($options, ' options ++ '.to_string());
-			#dump($table_tipo, ' table_tipo ++ ');
-			#dump($ar_section_id_portal, ' ar_section_id_portal ++ ');
-			#dump($database_name, ' database_name ++ ');
-			#dump($ar_result, ' ar_result ++ ');
-			#dump($diffusion_element_tipo, " diffusion_element_tipo ++ (".RecordObj_dd::get_termino_by_tipo($table_tipo).")");
-			  #dump($ar_section_id_portal,"ar_section_id_portal - table_tipo: $table_tipo (".RecordObj_dd::get_termino_by_tipo($table_tipo).") - database_name: $database_name (".RecordObj_dd::get_termino_by_tipo($database_name).") "); #die();
-			#exit();
-		}
+		// debug
+			if(SHOW_DEBUG===true) {
+				#dump($options, ' options ++ '.to_string());
+				#dump($table_tipo, ' table_tipo ++ ');
+				#dump($ar_section_id_portal, ' ar_section_id_portal ++ ');
+				#dump($database_name, ' database_name ++ ');
+				#dump($ar_result, ' ar_result ++ ');
+				#dump($diffusion_element_tipo, " diffusion_element_tipo ++ (".RecordObj_dd::get_termino_by_tipo($table_tipo).")");
+				  #dump($ar_section_id_portal,"ar_section_id_portal - table_tipo: $table_tipo (".RecordObj_dd::get_termino_by_tipo($table_tipo).") - database_name: $database_name (".RecordObj_dd::get_termino_by_tipo($database_name).") "); #die();
+				#exit();
+			}
 
 		// set_time_limit ( 259200 );  // 3 dias
 
@@ -471,7 +471,7 @@ class diffusion_sql extends diffusion  {
 						return null;
 					}
 
-				// SECTION_TIPO . Set section tipo
+				// SECTION_TIPO . Set section tipo
 					$section_tipo = $ar_section_tipo[0];
 
 				$ar_result = array();
@@ -506,7 +506,7 @@ class diffusion_sql extends diffusion  {
 			$ar_field_data['database_name']	= (string)$database_name;
 			$ar_field_data['table_name'] 	= (string)$table_name;
 			#$ar_field_data['ar_fields'] 	= array();
-				#dump($ar_field_data['table_name'], ' table_name ++ '.to_string());
+				// dump($ar_field_data['table_name'], ' table_name ++ '.to_string());
 				#dump(debug_backtrace() , 'debug_backtrace()  ++ '.to_string());
 
 		#
@@ -572,15 +572,17 @@ class diffusion_sql extends diffusion  {
 			# RESOLVED_RECORDS_KEY
 			$columns_data_resolved_records_key = $section_tipo.'-'.$current_section_id.'-'.$build_mode;
 			if (true===in_array($columns_data_resolved_records_key, $columns_data_resolved_records)) {
-				debug_log(__METHOD__." SKIPPED RECORD [$columns_data_resolved_records_key]. ALREADY RESOLVED. ".to_string(), logger::WARNING);
+				debug_log(__METHOD__
+					." SKIPPED RECORD [$columns_data_resolved_records_key]. ALREADY RESOLVED. "
+					, logger::WARNING
+				);
 				continue;
 			}
 
-			#
-			# SECTION DIFFUSION INFO - CHECK
-			# On finish record update, update current section diffusion_info
-			$section 		= section::get_instance($current_section_id, $section_tipo, $mode='list', false);
-			$diffusion_info = $section->get_diffusion_info();
+			// SECTION DIFFUSION INFO - CHECK
+			// On finish record update, update current section diffusion_info
+			$section		= section::get_instance($current_section_id, $section_tipo, 'list', false);
+			$diffusion_info	= $section->get_diffusion_info();
 			if ( isset($diffusion_info->$diffusion_element_tipo) ) {
 
 				if($skip_publication_state_check===1) {
@@ -589,14 +591,15 @@ class diffusion_sql extends diffusion  {
 					# RESOLVED_RECORDS (set a resolved)
 					$columns_data_resolved_records[] = $columns_data_resolved_records_key;
 
-					debug_log(__METHOD__." Skipped current record [{$section_tipo}-{$current_section_id}]. Already published ($diffusion_element_tipo). ".to_string(), logger::DEBUG);
+					debug_log(__METHOD__
+						." Skipped current record [{$section_tipo}-{$current_section_id}]. Already published ($diffusion_element_tipo)."
+						, logger::DEBUG
+					);
 					continue;
 				}
 			}
 
-
-			#
-			# COMPONENT PUBLICATION - CHECK (once)
+			// COMPONENT PUBLICATION - CHECK (once)
 			/*
 			$component_publication_bool_value = (bool)diffusion::get_component_publication_bool_value($component_publication_tipo, $current_section_id, $section_tipo);
 				#dump($component_publication_bool_value, ' component_publication_bool_value ++ '.to_string());
@@ -739,8 +742,8 @@ class diffusion_sql extends diffusion  {
 							*/
 							#default: # Normal field case
 
-								$RecordObj_dd 	= new RecordObj_dd($curent_children_tipo);
-								$properties 	= $RecordObj_dd->get_propiedades(true);
+								$RecordObj_dd	= new RecordObj_dd($curent_children_tipo);
+								$properties		= $RecordObj_dd->get_propiedades(true);
 
 								switch (true) { # DISCRIMINE BY PROPIEDADES
 									case ( is_object($properties) && property_exists($properties, 'exclude_column') && $properties->exclude_column===true ):
@@ -827,7 +830,7 @@ class diffusion_sql extends diffusion  {
 											$default_options->diffusion_element_tipo	= $diffusion_element_tipo;
 										$column = self::build_data_field( $default_options );
 										#$column = self::create_data_field($curent_children_tipo, false, false, $current_section_id, $current_lang, false, $pointer_section_tipo); //$tipo, $value, $is_section_id=false, $parent=null, $lang=null, $is_portal=false, $section_tipo=null
-											#dump($column, ' column - curent_children_tipo: '.$curent_children_tipo);
+											// dump($column, ' column - curent_children_tipo: '.$curent_children_tipo);
 
 										// related text area case (set for indexations publish)
 											if ($column['related_model']==='component_text_area') {
@@ -1415,8 +1418,8 @@ class diffusion_sql extends diffusion  {
 			// 	$database_tipo = self::$database_tipo;
 			// }else{
 			// 	# DIFFUSION ELEMENT
-			// 	$diffusion_element 	= self::get_diffusion_element_from_element_tipo($diffusion_element_tipo);
-			// 	$database_name 		= $diffusion_element->database_name;
+			// 	$diffusion_element	= self::get_diffusion_element_from_element_tipo($diffusion_element_tipo);
+			// 	$database_name		= $diffusion_element->database_name;
 			// 	if (empty($database_name)) {
 			// 		throw new Exception("Error Processing Request. database_name not defined", 1);
 			// 	}
