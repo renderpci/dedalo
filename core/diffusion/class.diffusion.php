@@ -1186,8 +1186,8 @@ abstract class diffusion  {
 
 		// first . component publication first. save if not exist
 			// date
-				$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($publication_first_tipo,true);
-				$component 		= component_common::get_instance(
+				$model_name	= RecordObj_dd::get_modelo_name_by_tipo($publication_first_tipo,true);
+				$component	= component_common::get_instance(
 					$model_name,
 					$publication_first_tipo,
 					$section_id,

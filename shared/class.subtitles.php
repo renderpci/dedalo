@@ -340,7 +340,7 @@ abstract class subtitles {
 	* 	(tc tag like [TC_00:01:02_TC])
 	* @return array
 	*/
-	public static function fragment_split(string $text, string $tcin, ?string $tcout) : array {
+	public static function fragment_split(string $text, ?string $tcin, ?string $tcout) : array {
 
 		$siguiente_linea_add_b = '';
 		$siguiente_linea_add_i	= '';
@@ -372,7 +372,6 @@ abstract class subtitles {
 				}
 			}
 
-
 		// build lines
 			$i=0;
 			do{
@@ -381,7 +380,7 @@ abstract class subtitles {
 
 				// search a blank space from end to begin . If n char of line < maxCharLine, this is the last line.
 				$line_length = subtitles::text_lenght($current_line);
-				error_log('line_length: '.$i.' - '.$line_length);
+
 				// exception on large words
 					// if (strpos($current_line, " ")===false) {
 					// 	error_log("$i - line length; $line_length - maxCharLine: $maxCharLine ");
@@ -397,11 +396,11 @@ abstract class subtitles {
 
 					}else{
 
-						$spacePos		= mb_strrpos($current_line, ' '); // Locate the last space
+						$spacePos = mb_strrpos($current_line, ' '); // Locate the last space
 					}
 
 				// save fragment text line
-					$current_line_cut = ''.trim( mb_substr($text, $refPos,  $spacePos) );
+					$current_line_cut = trim( mb_substr($text, $refPos,  $spacePos) );
 
 
 				// Bold & italics

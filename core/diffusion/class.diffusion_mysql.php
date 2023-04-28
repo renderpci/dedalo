@@ -558,6 +558,7 @@ class diffusion_mysql extends diffusion_sql  {
 		// create table if not exits
 			static $ar_verified_tables;
 			if ( !in_array($table_name, (array)$ar_verified_tables) ) {
+
 				if(!self::table_exits($database_name, $table_name)) {
 
 					// table do not exists case. Create a new one
