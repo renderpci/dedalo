@@ -763,7 +763,7 @@ class diffusion_mysql extends diffusion_sql  {
 
 		$real_table_fields = [];
 
-		$strQuery	= "DESCRIBE $table_name ;";
+		$strQuery	= "DESCRIBE {$database_name}.$table_name ;";
 		$result		= self::exec_mysql_query( $strQuery, $table_name, $database_name );
 		if ($result===false) {
 			return $real_table_fields;
