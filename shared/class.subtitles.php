@@ -338,18 +338,24 @@ abstract class subtitles {
 	* 	(tc tag like [TC_00:01:02_TC])
 	* @param string|null $tc_out_tag
 	* 	(tc tag like [TC_00:01:02_TC])
-	* @return array
+	* @return array $ar_lines
 	*/
 	public static function fragment_split(string $text, ?string $tcin, ?string $tcout) : array {
 
-		$siguiente_linea_add_b = '';
-		$siguiente_linea_add_i	= '';
-		$is_last_Line			= false;
-		$ar_lines				= array();
-		$refPos					= 0;
-		$offsetSecs				= OptimizeTC::TC2seg($tcin);
-		$maxCharLine			= subtitles::$maxCharLine;
-		$current_charTime		= subtitles::$charTime; // in milliseconds
+		// empty case
+			if (empty($text)) {
+				return [];
+			}
+
+		// short vars
+			$siguiente_linea_add_b	= '';
+			$siguiente_linea_add_i	= '';
+			$is_last_Line			= false;
+			$ar_lines				= array();
+			$refPos					= 0;
+			$offsetSecs				= OptimizeTC::TC2seg($tcin);
+			$maxCharLine			= subtitles::$maxCharLine;
+			$current_charTime		= subtitles::$charTime; // in milliseconds
 
 		// calculate duration of char (secs)
 		// there is a general calculation, but to optimize the approximation it is calculated
