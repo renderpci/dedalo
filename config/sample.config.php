@@ -121,7 +121,7 @@
 
 // required files
 	// core_functions. Basic common functions (before session start)
-	include(DEDALO_CORE_PATH . '/base/core_functions.php');
+	include(DEDALO_SHARED_PATH . '/core_functions.php');
 	// config_core. core definitions and status.
 	include(DEDALO_CONFIG_PATH . '/config_core.php');
 	// dd_tipos. List of main Dédalo resolved tipos

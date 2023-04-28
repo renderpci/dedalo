@@ -1,9 +1,15 @@
 <?php
+/**
+ * CORE FUNCTIONS
+ * Moved from core/base/core_functions.php to shared/core_functions.php
+ * to prevent duplication of functions in publication classes
+ * /
 
 
 
 /**
 * DUMP
+* Print in error log the given value
 * @param mixed $val
 *	Value to show. Can be a string / array / object
 * @param string $var_name = null
@@ -11,153 +17,80 @@
 * @param array $arguments = []
 *	Expected value for reference
 *
-* @return string $html
-*	Nothing
-*	Only print (formatted as <pre>code</pre>) the info and value or dumped var
+* @return string $msg
 */
-function dump($val, string $var_name=null, array $arguments=null) : string {
-
-	$html = '';
-
+function dump(mixed $val, string $var_name=null, array $arguments=null) : string {
 
 	// Back-trace info of current execution
-	$bt = debug_backtrace();
+		$bt = debug_backtrace();
 
+	// msg
+		$msg  = ' DUMP ' . PHP_EOL
+			   .' Caller: ' . str_replace(DEDALO_ROOT_PATH, '', $bt[0]['file']) . PHP_EOL
+			   .' Line: '.@$bt[0]['line'];
 
-	$html .= " DUMP ".PHP_EOL."  Caller: ".str_replace(DEDALO_ROOT_PATH,'',$bt[0]['file']);
-	$html .= PHP_EOL ." Line: ".@$bt[0]['line'];
-
-	# LEVEL 1
+	// LEVEL 1
 
 		// function
 			if (isset($bt[1]['function'])) {
-				$html .= PHP_EOL . " Inside method: ".$bt[1]['function'];
+				$msg .= PHP_EOL . ' Inside method: ' . $bt[1]['function'];
 			}
 
 		// var_name
 			if(isset($var_name)) {
-				$html .= PHP_EOL . " name: <strong>". $var_name . '</strong>';
-				$html .= PHP_EOL . ' +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ // ++++++++++++++++++++++++++++++++++++++++';
+				$msg .= PHP_EOL . ' name: '. $var_name . PHP_EOL
+				. ' +++++++++++++++++++++++++++++++++++++++++++++++++++// '.$var_name.' //+++++++++++++++++++++++++++++++++++++++++++++++++++';
 			}
-
-		// expected
-			// if(isset($expected))
-			//	$html .= PHP_EOL . " val expected: <em> $expected </em>";
-
-		// exec_time
-			// if(isset($start_time)) {
-			// 	$html .= PHP_EOL . ' exec_time: <em> ' . exec_time_unit($start_time) . ' </em>';
-			// }
 
 		// arguments (optional)
 			if(isset($arguments) && is_array($arguments)) foreach ($arguments as $key => $value) {
-				$html .= PHP_EOL . " $key: <em> $value </em>";
+				$msg .= PHP_EOL . " $key: $value ";
 			}
 
 		// value
-			$value_html = '';
-			$html .= PHP_EOL . ' value: ';
+			$value_string = '';
+			$msg .= PHP_EOL . ' value: ';
 			switch (true) {
 				case is_null($val):
-					$value_html .= json_encode($val);
+					$value_string .= json_encode($val);
 					break;
 				case is_bool($val):
-					$value_html .= json_encode($val);
+					$value_string .= json_encode($val);
 					break;
 				case is_array($val):
-					#$value_html .= var_export($val, true);
-					$value_html .= json_encode($val,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
+					$value_string .= json_encode($val, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
 					break;
 				case is_object($val):
-					#$value_html .= var_export($val,true);
-					$value_html .= json_encode($val,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
+					$value_string .= json_encode($val, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
 					break;
 				default:
-					if(is_string($val) && $val != strip_tags($val)) {
+					if(is_string($val) && $val!=strip_tags($val)) {
 						$val = htmlspecialchars($val);
 					}
-					$value_html .= var_export($val, true);
+					$value_string .= var_export($val, true);
 					break;
 			}
-			$html .= trim($value_html);
+			$msg .= trim($value_string);
 
 		// type
-			$html .= PHP_EOL . " type: ".gettype($val)."";
+			$msg .= PHP_EOL . ' type: '.gettype($val);
 
-	# LEVEL 2
+	// LEVEL 2
 
 		// caller function
 			if (isset($bt[2]) && isset($bt[2]['file'])) {
-				$html .= PHP_EOL . " Caller 2: ";
-				$html .= " ". print_r($bt[2]['file'],true);
-				$html .= PHP_EOL . " Function: ". print_r($bt[2]['function'],true);
-				$html .= " [Line: ". print_r($bt[2]['line'],true)."]";
+				$msg .= PHP_EOL . ' Caller 2: ';
+				$msg .= ' '. print_r($bt[2]['file'],true);
+				$msg .= PHP_EOL . ' Function: '. print_r($bt[2]['function'], true);
+				$msg .= ' [Line: '. print_r($bt[2]['line'], true)."]";
 			}
-
-	// print
-		if(SHOW_DEBUG===true) {
-			// print wrap_pre($html);
-			// echo "<script>console.log('PHP: ".$html."');</script>";
-			$str_json = file_get_contents('php://input');
-			// error_log("++++>>>> ".to_string($str_json));
-			if (!$str_json && empty($_POST)) {
-				// not exists call php://input
-				print wrap_pre($html);
-			}
-		}
 
 	// console error log always
-	error_log(PHP_EOL.'-->'.$html);
+		error_log(PHP_EOL.'-->'.$msg);
 
-	#return wrap_pre($html);
-	return $html;
+
+	return $msg;
 }//end dump
-
-
-
-/**
-* WRAP_PRE
-*/
-function wrap_pre(string $string, bool $add_header_html=true) : string {
-	$html='';
-	// $html .= "\n<html xmlns=\"http://www.w3.org/1999/xhtml\" ><body>";
-	if ($add_header_html) {
-		$html .= '<!DOCTYPE html>';
-		$html .= '<html lang="en">';
-		$html .= '<head>';
-		$html .= '<meta charset="utf-8">';
-		$html .= '</head><body>';
-	}
-	$style = 'tab-size:2;white-space:pre-wrap;overflow:auto;min-width:500px;font-family:monospace;color:#4B5D5E;font-size:0.8em;background-color:rgba(217, 227, 255, 0.8);border-radius:5px;padding:10px;position:relative;z-index:1';
-	$html .= "<pre class=\"dump\" style=\"$style\">";
-	$html .= "<div class=\"icon_warning\"></div>";
-	$html .= stripslashes($string);
-	$html .= "</pre>";
-	if ($add_header_html) {
-		$html .= '</body></html>';
-	}
-	return $html;
-}//end wrap_pre
-
-
-
-/**
-* WRAP_HTML
-*/
-function wrap_html(string $string, bool $htmlspecialchars=true) {
-	$html='';
-	$html .= '<!DOCTYPE html>';
-	$html .= '<html lang="en"><head>';
-	$html .= '<meta charset="utf-8">';
-	$html .= '</head><body>';
-	if ($htmlspecialchars) {
-		$string = htmlspecialchars($string);
-	}
-	$html .= nl2br( $string );
-	$html .= '</body></html>';
-
-	return $html;
-}//end wrap_html
 
 
 
@@ -187,33 +120,33 @@ function debug_log(string $info, int $level=logger::DEBUG) : bool {
 
 	if ($level<11) {
 		$colorFormats = array(
-				// styles
-				// italic and blink may not work depending of your terminal
-				'bold'			=> "\033[1m%s\033[0m",
-				'dark'			=> "\033[2m%s\033[0m",
-				'italic'		=> "\033[3m%s\033[0m",
-				'underline'		=> "\033[4m%s\033[0m",
-				'blink'			=> "\033[5m%s\033[0m",
-				'reverse'		=> "\033[7m%s\033[0m",
-				'concealed'		=> "\033[8m%s\033[0m",
-				// foreground colors
-				'black'			=> "\033[30m%s\033[0m",
-				'red'			=> "\033[31m%s\033[0m",
-				'green'			=> "\033[32m%s\033[0m",
-				'yellow'		=> "\033[33m%s\033[0m",
-				'blue'			=> "\033[34m%s\033[0m",
-				'magenta'		=> "\033[35m%s\033[0m",
-				'cyan'			=> "\033[36m%s\033[0m",
-				'white'			=> "\033[37m%s\033[0m",
-				// background colors
-				'bg_black'		=> "\033[40m%s\033[0m",
-				'bg_red'		=> "\033[41m%s\033[0m",
-				'bg_green'		=> "\033[42m%s\033[0m",
-				'bg_yellow'		=> "\033[43m%s\033[0m",
-				'bg_blue'		=> "\033[44m%s\033[0m",
-				'bg_magenta'	=> "\033[45m%s\033[0m",
-				'bg_cyan'		=> "\033[46m%s\033[0m",
-				'bg_white'		=> "\033[47m%s\033[0m"
+			// styles
+			// italic and blink may not work depending of your terminal
+			'bold'			=> "\033[1m%s\033[0m",
+			'dark'			=> "\033[2m%s\033[0m",
+			'italic'		=> "\033[3m%s\033[0m",
+			'underline'		=> "\033[4m%s\033[0m",
+			'blink'			=> "\033[5m%s\033[0m",
+			'reverse'		=> "\033[7m%s\033[0m",
+			'concealed'		=> "\033[8m%s\033[0m",
+			// foreground colors
+			'black'			=> "\033[30m%s\033[0m",
+			'red'			=> "\033[31m%s\033[0m",
+			'green'			=> "\033[32m%s\033[0m",
+			'yellow'		=> "\033[33m%s\033[0m",
+			'blue'			=> "\033[34m%s\033[0m",
+			'magenta'		=> "\033[35m%s\033[0m",
+			'cyan'			=> "\033[36m%s\033[0m",
+			'white'			=> "\033[37m%s\033[0m",
+			// background colors
+			'bg_black'		=> "\033[40m%s\033[0m",
+			'bg_red'		=> "\033[41m%s\033[0m",
+			'bg_green'		=> "\033[42m%s\033[0m",
+			'bg_yellow'		=> "\033[43m%s\033[0m",
+			'bg_blue'		=> "\033[44m%s\033[0m",
+			'bg_magenta'	=> "\033[45m%s\033[0m",
+			'bg_cyan'		=> "\033[46m%s\033[0m",
+			'bg_white'		=> "\033[47m%s\033[0m"
 		);
 		$base_msg	= 'DEBUG_LOG ['.logger::level_to_string($level).'] '.PHP_EOL. $info;
 		$msg		= sprintf($colorFormats['bg_yellow'], $base_msg);
@@ -380,30 +313,6 @@ function start_time() {
 
 /**
 * EXEC_TIME
-* @return string
-*/
-function exec_time($start, string $method=null, $result=null) : string {
-
-	$total = exec_time_unit($start, 'ms', 3);
-
-	$exec = ($total>100)
-		? sprintf(' Exec in <span style=\'color:red\'>%.3f ms.</span>', $total)
-		: sprintf(' Exec in %.3f ms.', $total);
-
-	$final_string = '<b>' . $method . '</b>' . $exec ;
-
-	if(!empty($result)) {
-		$final_string .= ' Res '.to_string($result) ;
-	}
-
-
-	return '<pre>'.$final_string.'</pre>' ;
-}//end exec_time
-
-
-
-/**
-* EXEC_TIME
 * @param float $start
 * 	time in nanoseconds from function start_time()
 * @param string $unit = 'ms' (milliseconds)
@@ -445,10 +354,11 @@ function exec_time_unit(float $start, string $unit='ms', int $round=3) : string 
 /**
 * TO_STRING
 * Get input var as parsed string
+* @param mixed $var = null
 * @return string
 */
 // function to_string(mixed $var=null) : string {
-function to_string($var=null) : string {
+function to_string(mixed $var=null) : string {
 
 	if(is_null($var)) {
 		return '';
@@ -468,21 +378,22 @@ function to_string($var=null) : string {
 			}else{
 				return implode('|', $var);
 			}
-		}else if( is_object( current($var) ) ){
+		}else if( is_object(current($var)) ) {
 			foreach ($var as $obj) {
 				$ar_ob[] = $obj;
 			}
-			return print_r($ar_ob,true);
+			return print_r($ar_ob, true);
 		}
 
 		return print_r($var, true);
 
 	}else if (is_object($var)) {
+
 		$var = json_encode($var, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
 		return $var;
-		#$var = json_decode($var);
-		#return '<pre>'.print_r($var,true).'</pre>';
+
 	}else if (is_bool($var)) {
+
 		$var = (int)$var;
 	}
 
@@ -956,16 +867,19 @@ function decbin32($dec) {
 * The function will return true if the supplied IP is within the range.
 * Note little validation is done on the range inputs - it expects you to
 * use one of the above 3 formats.
+* @param string $ip
+* @param string $range
+* @return bool
 */
-function ip_in_range($ip, $range) {
+function ip_in_range(string $ip, string $range) : bool {
 
   if (strpos($range, '/') !== false) {
 	// $range is in IP/NETMASK format
 	list($range, $netmask) = explode('/', $range, 2);
 	if (strpos($netmask, '.') !== false) {
 	  // $netmask is a 255.255.0.0 format
-	  $netmask = str_replace('*', '0', $netmask);
-	  $netmask_dec = ip2long($netmask);
+		$netmask		= str_replace('*', '0', $netmask);
+		$netmask_dec	= ip2long($netmask);
 	  return ( (ip2long($ip) & $netmask_dec) == (ip2long($range) & $netmask_dec) );
 	}else{
 	  // $netmask is a CIDR size block
@@ -1003,7 +917,11 @@ function ip_in_range($ip, $range) {
 	  return ( ($ip_dec>=$lower_dec) && ($ip_dec<=$upper_dec) );
 	}
 
-	echo 'Range argument is not in 1.2.3.4/24 or 1.2.3.4/255.255.255.0 format';
+	debug_log(__METHOD__
+		. " Range argument is not in 1.2.3.4/24 or 1.2.3.4/255.255.255.0 format " . PHP_EOL
+		. to_string($range)
+		, logger::DEBUG
+	);
 
 	return false;
   }

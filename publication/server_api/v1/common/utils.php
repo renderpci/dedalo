@@ -1,4 +1,9 @@
 <?php
+/**
+ * CORE_FUNCTIONS
+ * Include core_functions to prevent duplicate functions in the publication server
+ */
+include dirname(dirname(dirname(dirname(dirname(__FILE__))))).'/shared/core_functions.php';
 
 
 
@@ -15,105 +20,103 @@
 *	Nothing
 *	Only print (formatted as <pre>code</pre>) the info and value or dumped var
 */
-#function dump($val, $var_name=NULL, $expected=NULL, $print=false){
-function dump($val, $var_name=NULL, $arguments=array()){
+	// function dump($val, $var_name=null, $arguments=array()){
 
-	$html = '';
+	// 	$html = '';
 
-
-	// Backtrace info of current execution
-	$bt = debug_backtrace();
+	// 	// Back-trace info of current execution
+	// 	$bt = debug_backtrace();
 
 
-	$html .= " DUMP ".PHP_EOL."  Caller: ".str_replace(API_ROOT,'',$bt[0]['file']);
-	$html .= PHP_EOL ." Line: ".@$bt[0]['line'];
+	// 	$html .= " DUMP ".PHP_EOL."  Caller: ".str_replace(API_ROOT,'',$bt[0]['file']);
+	// 	$html .= PHP_EOL ." Line: ".@$bt[0]['line'];
 
-	# NIVEL 1
+	// 	# NIVEL 1
 
-		# FUNCTION
-		if (isset($bt[1]['function']))
-			$html .= PHP_EOL . " Inside method: ".$bt[1]['function'];
+	// 		# FUNCTION
+	// 		if (isset($bt[1]['function']))
+	// 			$html .= PHP_EOL . " Inside method: ".$bt[1]['function'];
 
-		# VAR_NAME
-		if(isset($var_name))
-			$html .= PHP_EOL . " name: <strong>".$var_name."</strong>";
+	// 		# VAR_NAME
+	// 		if(isset($var_name))
+	// 			$html .= PHP_EOL . " name: <strong>".$var_name."</strong>";
 
-		# EXPECTED
-		if(isset($expected))
-			$html .= PHP_EOL . " val expected: <em> $expected </em>";
+	// 		# EXPECTED
+	// 		if(isset($expected))
+	// 			$html .= PHP_EOL . " val expected: <em> $expected </em>";
 
-		# EXEC_TIME
-		if(isset($start_time)) {
-			$html .= PHP_EOL . " exec_time: <em> ".exec_time($start_time)." </em>";
-		}
+	// 		# EXEC_TIME
+	// 		if(isset($start_time)) {
+	// 			$html .= PHP_EOL . " exec_time: <em> ".exec_time($start_time)." </em>";
+	// 		}
 
-		# arguments (optional)
-		if(isset($arguments) && is_array($arguments)) foreach ($arguments as $key => $value) {
-			$html .= PHP_EOL . " $key: <em> $value </em>";
-		}
+	// 		# arguments (optional)
+	// 		if(isset($arguments) && is_array($arguments)) foreach ($arguments as $key => $value) {
+	// 			$html .= PHP_EOL . " $key: <em> $value </em>";
+	// 		}
 
-		# VALUE
-		$value_html='';
-		$html .= PHP_EOL . " value: " ;
-		switch (true) {
-			case is_array($val):
-				#$value_html .= print_r($val, true);
-				$value_html .= json_encode($val, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-				break;
-			case is_object($val):
-				#$value_html .= print_r($val,true);
-				$value_html .= json_encode($val, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-				break;
-			default:
-				if(is_string($val) && $val != strip_tags($val)) {
-					$val = htmlspecialchars($val);
-				}
-				#$value_html .= var_export($val,true);
-				$value_html .= json_encode($val, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-				break;
-		}
+	// 		# VALUE
+	// 		$value_html='';
+	// 		$html .= PHP_EOL . " value: " ;
+	// 		switch (true) {
+	// 			case is_array($val):
+	// 				#$value_html .= print_r($val, true);
+	// 				$value_html .= json_encode($val, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+	// 				break;
+	// 			case is_object($val):
+	// 				#$value_html .= print_r($val,true);
+	// 				$value_html .= json_encode($val, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+	// 				break;
+	// 			default:
+	// 				if(is_string($val) && $val != strip_tags($val)) {
+	// 					$val = htmlspecialchars($val);
+	// 				}
+	// 				#$value_html .= var_export($val,true);
+	// 				$value_html .= json_encode($val, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+	// 				break;
+	// 		}
 
-		$html .= trim($value_html);
+	// 		$html .= trim($value_html);
 
-		# TYPE
-		$html .= PHP_EOL . " type: ".gettype($val)."";
-
-
-	# NIVEL 2
-
-		# CALLER FUNCTION
-		if (isset($bt[2]) && isset($bt[2]['file'])) {
-			$html .= PHP_EOL . " Caller2: ";
-			$html .= " ". print_r($bt[2]['file'],true);
-			$html .= PHP_EOL . " Function: ". print_r($bt[2]['function'],true);
-			$html .= " [Line: ". print_r($bt[2]['line'],true)."]";
-		}
+	// 		# TYPE
+	// 		$html .= PHP_EOL . " type: ".gettype($val)."";
 
 
-	# PRINT
-	if(SHOW_DEBUG===true) {
+	// 	# NIVEL 2
 
-		// print wrap_pre($html);
-		// echo "<script>console.log('PHP: ".$html."');</script>";
-
-		$str_json = file_get_contents('php://input');
-		#error_log("++++>>>> ".to_string($str_json));
-		if (!$str_json) {
-			// not exists call php://input
-			print wrap_pre($html);
-		}
-	}
-
-	# LOG MESSAGE
-	#$GLOBALS['log_messages'][] = wrap_pre($html);
-
-	# CONSOLE ERROR LOG ALWAYS
-	error_log(PHP_EOL.'-->'.$html);
+	// 		# CALLER FUNCTION
+	// 		if (isset($bt[2]) && isset($bt[2]['file'])) {
+	// 			$html .= PHP_EOL . " Caller2: ";
+	// 			$html .= " ". print_r($bt[2]['file'],true);
+	// 			$html .= PHP_EOL . " Function: ". print_r($bt[2]['function'],true);
+	// 			$html .= " [Line: ". print_r($bt[2]['line'],true)."]";
+	// 		}
 
 
-	#return wrap_pre($html);
-	return $html;
-}//end dump
+	// 	# PRINT
+	// 	if(SHOW_DEBUG===true) {
+
+	// 		// print wrap_pre($html);
+	// 		// echo "<script>console.log('PHP: ".$html."');</script>";
+
+	// 		$str_json = file_get_contents('php://input');
+	// 		#error_log("++++>>>> ".to_string($str_json));
+	// 		if (!$str_json) {
+	// 			// not exists call php://input
+	// 			print wrap_pre($html);
+	// 		}
+	// 	}
+
+	// 	# LOG MESSAGE
+	// 	#$GLOBALS['log_messages'][] = wrap_pre($html);
+
+	// 	# CONSOLE ERROR LOG ALWAYS
+	// 	error_log(PHP_EOL.'-->'.$html);
+
+
+	// 	#return wrap_pre($html);
+	// 	return $html;
+	// }//end dump
 
 
 
@@ -146,23 +149,23 @@ function wrap_pre($string, $add_header_html=true) {
 /**
 * DEBUG_LOG
 */
-function debug_log($info, $level='DEBUG') {
-	if(SHOW_DEBUG!==true) return false;
+	// function debug_log($info, $level='DEBUG') {
+	// 	if(SHOW_DEBUG!==true) return false;
 
-	$msg = 'DEBUG_LOG ['.$level.'] '.$info;
-	error_log($msg);
+	// 	$msg = 'DEBUG_LOG ['.$level.'] '.$info;
+	// 	error_log($msg);
 
-	return $msg;
-}//end debug_log
+	// 	return $msg;
+	// }//end debug_log
 
 
 
 # START_TIME
-function start_time() {
-	$mtime = explode(' ',microtime());
+	// function start_time() {
+	// 	$mtime = explode(' ',microtime());
 
-	return $mtime[1]+$mtime[0];
-}
+	// 	return $mtime[1]+$mtime[0];
+	// }
 
 
 
@@ -189,21 +192,6 @@ function exec_time($start, $method=NULL, $result=NULL) {
 
 
 
-# EXEC_TIME_UNIT
-	// function exec_time_unit($start, $unit='ms', $round=3) {
-
-	// 	$end = start_time();
-	// 	$total = $end - $start;
-	// 	if($unit==='ms') {
-	// 		$total = $total*1000;
-	// 	}else if($unit==='sec' || $unit==='secs') {
-	// 		$total = $total;
-	// 	}
-	// 	return round($total,3);
-	// }//end exec_time_unit
-
-
-
 /**
 * EXEC_TIME
 * @param float $start
@@ -214,71 +202,71 @@ function exec_time($start, $method=NULL, $result=NULL) {
 * 	Math total rounded to value
 * @return string
 */
-function exec_time_unit(float $start, string $unit='ms', int $round=3) : string {
+	// function exec_time_unit(float $start, string $unit='ms', int $round=3) : string {
 
-	// calculation is always in nanoseconds
-		$total_ns = start_time() - $start;
+	// 	// calculation is always in nanoseconds
+	// 		$total_ns = start_time() - $start;
 
-	// convert to unit
-		switch ($unit) {
-			case 'ms':
-				$total = $total_ns/1000000; // ($total/1e+6) nanoseconds to milliseconds
-				break;
-			case 'sec':
-				$total = $total_ns/1000000000; // ($total/1e+9) nanoseconds to seconds
-				break;
-			case 'min':
-				$total = $total_ns/60000000000; // ($total/6e+10) nanoseconds to minutes
-				break;
-			case 'ns':
-			default:
-				$total = $total_ns;
-				break;
-		}
+	// 	// convert to unit
+	// 		switch ($unit) {
+	// 			case 'ms':
+	// 				$total = $total_ns/1000000; // ($total/1e+6) nanoseconds to milliseconds
+	// 				break;
+	// 			case 'sec':
+	// 				$total = $total_ns/1000000000; // ($total/1e+9) nanoseconds to seconds
+	// 				break;
+	// 			case 'min':
+	// 				$total = $total_ns/60000000000; // ($total/6e+10) nanoseconds to minutes
+	// 				break;
+	// 			case 'ns':
+	// 			default:
+	// 				$total = $total_ns;
+	// 				break;
+	// 		}
 
-	// round
-		$result = round($total, $round);
+	// 	// round
+	// 		$result = round($total, $round);
 
-	return $result;
-}//end exec_time_unit
+	// 	return $result;
+	// }//end exec_time_unit
 
 
 
 /**
 * TO_STRING
 */
-function to_string($var=null) {
-	if ($var===null) return $var;
+	// function to_string($var=null) {
+	// 	if ($var===null) return $var;
 
-	if (is_string($var) && (strpos($var, '{')===0 || strpos($var, '[')===0)) {
-		$var = json_decode($var);
-	}
+	// 	if (is_string($var) && (strpos($var, '{')===0 || strpos($var, '[')===0)) {
+	// 		$var = json_decode($var);
+	// 	}
 
-	if (is_array($var)) {
-		if ( is_string(current($var)) || is_numeric(current($var)) ) {
-			return implode('|', $var);
-		}else if( is_object( current($var) ) ){
-			foreach ($var as $obj) {
-				$ar_ob[] = $obj;
-			}
-			#return implode('|', $ar_ob);
-			return print_r($ar_ob,true);
-		}else if(empty($var)){
-			return 'Array(empty)';
-		}
-		return print_r($var,true);
+	// 	if (is_array($var)) {
+	// 		if ( is_string(current($var)) || is_numeric(current($var)) ) {
+	// 			return implode('|', $var);
+	// 		}else if( is_object( current($var) ) ){
+	// 			foreach ($var as $obj) {
+	// 				$ar_ob[] = $obj;
+	// 			}
+	// 			#return implode('|', $ar_ob);
+	// 			return print_r($ar_ob,true);
+	// 		}else if(empty($var)){
+	// 			return 'Array(empty)';
+	// 		}
+	// 		return print_r($var,true);
 
-	}else if (is_object($var)) {
-		$var = json_encode($var, JSON_PRETTY_PRINT);
-		return $var;
-		#$var = json_decode($var);
-		#return '<pre>'.print_r($var,true).'</pre>';
-	}else if (is_bool($var)) {
-		$var = (int)$var;
-	}
+	// 	}else if (is_object($var)) {
+	// 		$var = json_encode($var, JSON_PRETTY_PRINT);
+	// 		return $var;
+	// 		#$var = json_decode($var);
+	// 		#return '<pre>'.print_r($var,true).'</pre>';
+	// 	}else if (is_bool($var)) {
+	// 		$var = (int)$var;
+	// 	}
 
-	return "$var";
-}//end to_string
+	// 	return "$var";
+	// }//end to_string
 
 
 
