@@ -209,17 +209,32 @@ function exec_time($start, $method=NULL, $result=NULL) {
 * @param float $start
 * 	time in nanoseconds from function start_time()
 * @param string $unit = 'ms' (milliseconds)
-* 	possible values: ns|ms|sec
+* 	possible values: ns|ms|sec|min
 * @param int $round = 3
 * 	Math total rounded to value
 * @return string
 */
 function exec_time_unit(float $start, string $unit='ms', int $round=3) : string {
 
-	$total_ns	= start_time() - $start;
-	$total		= ($unit==='ms')
-		? $total_ns/1e+6 // ($total/1e+6) nanoseconds to milliseconds
-		: $total_ns;
+	// calculation is always in nanoseconds
+		$total_ns = start_time() - $start;
+
+	// convert to unit
+		switch ($unit) {
+			case 'ms':
+				$total = $total_ns/1000000; // ($total/1e+6) nanoseconds to milliseconds
+				break;
+			case 'sec':
+				$total = $total_ns/1000000000; // ($total/1e+9) nanoseconds to seconds
+				break;
+			case 'min':
+				$total = $total_ns/60000000000; // ($total/6e+10) nanoseconds to minutes
+				break;
+			case 'ns':
+			default:
+				$total = $total_ns;
+				break;
+		}
 
 	// round
 		$result = round($total, $round);
