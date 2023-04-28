@@ -10,6 +10,7 @@ class security_v5_to_v6 {
 
 	/**
 	* CONVERT_SECTION_DATO_TO_DATA
+	* @param stdClass $datos_column
 	* @return object $dato
 	*/
 	public static function convert_section_dato_to_data( stdClass $datos_column ) : object {
@@ -18,22 +19,25 @@ class security_v5_to_v6 {
 
 		$section_tipo = $dato->section_tipo;
 
-		if($section_tipo===DEDALO_SECTION_PROFILES_TIPO){	// PROFILES TABLE
+		if($section_tipo===DEDALO_SECTION_PROFILES_TIPO) {	// PROFILES TABLE
 
 			// security_access / areas
-				// dd249 COMPONENT_SECURITY_AREAS
-				$security_acces_areas = $dato->components->{DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN}  ?? new stdClass(); // expected object
+
 				// dd774 COMPONENT_SECURITY_ACCESS
 				$security_acces_dato = $dato->components->{DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? new stdClass(); // expected object
-
 				if (is_object($security_acces_dato)) {
+
+					// converting from v5 data (was an object. On finish, an array is saved)
+
+					// dd249 COMPONENT_SECURITY_AREAS
+					$security_areas_dato = $dato->components->{DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN}  ?? new stdClass(); // expected object
 
 					// change areas dato dd249
 						// sample data dd249
 						// from
 						// {
-						// "ad1": 3,
-						// "ds1": 3
+						//  "ad1": 3,
+						//  "ds1": 3
 						// }
 						// to
 						// {
@@ -42,13 +46,11 @@ class security_v5_to_v6 {
 						// 	"value": 3
 						// }
 					$new_access_dato = [];
-					foreach ($security_acces_areas as $current_tipo => $value) {
+					foreach ($security_areas_dato as $current_tipo => $value) {
 
 						$current_dato = new stdClass();
 							$current_dato->tipo			= $current_tipo;
 							$current_dato->section_tipo	= $current_tipo; // self (section, area) tipo as section tipo
-							// $current_dato->parent	= $parent;
-							// $current_dato->type		= 'area';
 							$current_dato->value		= $value;
 						$new_access_dato[] = $current_dato;
 					}
@@ -93,20 +95,42 @@ class security_v5_to_v6 {
 							$current_dato = new stdClass();
 								$current_dato->tipo			= $current_tipo;
 								$current_dato->section_tipo	= $current_parent; // current area/section
-								// $current_dato->parent	= $current_parent;
 								$current_dato->value		= $value;
 							$new_access_dato[] = $current_dato;
 						}
 					}
-					// replace data
-					if ( isset($dato->components->{DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO}->dato) && isset($dato->components->{DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN}) ) {
-						$dato->components->{DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO}->dato->{DEDALO_DATA_NOLAN} = $new_access_dato;
-					}
-					// remove unused old value
-					unset($dato->components->{DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO});
+
+					// replace data profiles
+						$dato->components->{DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO} = (object)[
+							'dato' => (object)[
+								DEDALO_DATA_NOLAN => $new_access_dato
+							]
+						];
+
+					// remove unused old value (SECURITY_AREAS)
+						if (isset($dato->components->{DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO})) {
+							unset($dato->components->{DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO});
+						}
 
 				}else{
-					debug_log(__METHOD__." 'security_acces_dato' is not an expected type object. Ignored (maybe is already updated) type: ".gettype($security_acces_dato).' - value: '.to_string($security_acces_dato), logger::WARNING);
+
+					// v6 already converted case (array) or unknown error
+
+					if (gettype($security_acces_dato)==='array') {
+
+						debug_log(__METHOD__
+							." 'security_acces_dato' is array. Ignored already updated data"
+							, logger::WARNING
+						);
+
+					}else{
+
+						debug_log(__METHOD__
+							." 'security_acces_dato' is not an expected type object or array. Ignored type: ".gettype($security_acces_dato). PHP_EOL
+							.' value: '. to_string($security_acces_dato)
+							, logger::ERROR
+						);
+					}
 				}
 
 			// security tools
@@ -318,19 +342,21 @@ class security_v5_to_v6 {
 
 	/**
 	* CONVERT_TABLE_DATA
-	* @return bool true
+	* @param array $ar_tables = null
+	* @return bool
+	* 	true
 	*/
 	public static function convert_table_data(array $ar_tables=null) : bool {
 
 		if ($ar_tables===null) {
 			// default
 			$ar_tables = [
-				"matrix_profiles",
-				"matrix_users",
+				'matrix_profiles',
+				'matrix_users',
 			];
 		}
 
-		foreach ($ar_tables as $key => $table) {
+		foreach ($ar_tables as $table) {
 
 			// Get last id in the table
 			$strQuery 	= "SELECT id FROM $table ORDER BY id DESC LIMIT 1 ";
@@ -339,7 +365,7 @@ class security_v5_to_v6 {
 			if (!$rows) {
 				continue;
 			}
-			$max 		= $rows['id'];
+			$max = $rows['id'];
 
 			$min = 1;
 			if ($table==='matrix_users') {
@@ -350,9 +376,9 @@ class security_v5_to_v6 {
 			$i_ref = 0; $start_time = start_time();
 			for ($i=$min; $i<=$max; $i++) {
 
-				$strQuery 	= "SELECT id, datos FROM $table WHERE id = $i ORDER BY id ASC";
-				$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
-				if(!$result) {
+				$strQuery	= "SELECT id, datos FROM $table WHERE id = $i ORDER BY id ASC";
+				$result		= JSON_RecordDataBoundObject::search_free($strQuery);
+				if($result===false) {
 					$msg = "Failed Search id $i. Data is not found.";
 					debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
 					continue;
@@ -363,17 +389,16 @@ class security_v5_to_v6 {
 
 				while($rows = pg_fetch_assoc($result)) {
 
-					$id 	= $rows['id'];
-					$datos 	= json_decode($rows['datos']);
-						#dump($datos, ' datos ++ '.to_string($id));
+					$id		= $rows['id'];
+					$datos	= json_decode($rows['datos']);
 
 					if (!empty($datos)) {
-						$section_data 			= self::convert_section_dato_to_data( $datos );
-						$section_data_encoded 	= json_encode($section_data);
+						$section_data			= self::convert_section_dato_to_data( $datos );
+						$section_data_encoded	= json_encode($section_data);
 
-						$strQuery 	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
-						$result 	= pg_query_params(DBi::_getConnection(), $strQuery, array( $section_data_encoded, $id ));
-						if(!$result) {
+						$strQuery	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
+						$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $section_data_encoded, $id ));
+						if($result===false) {
 							$msg = "Failed Update section_data $i";
 							debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
 							continue;
@@ -405,7 +430,7 @@ class security_v5_to_v6 {
 	*/
 	public static function convert_table_data_profiles() : bool {
 
-		self::convert_table_data(["matrix_profiles"]);
+		self::convert_table_data(['matrix_profiles']);
 
 		return true;
 	}//end convert_table_data_profiles
@@ -418,7 +443,7 @@ class security_v5_to_v6 {
 	*/
 	public static function convert_table_data_users() : bool {
 
-		self::convert_table_data(["matrix_users"]);
+		self::convert_table_data(['matrix_users']);
 
 		return true;
 	}//end convert_table_data_users
@@ -426,5 +451,3 @@ class security_v5_to_v6 {
 
 
 }//end class security_v5_to_v6
-
-
