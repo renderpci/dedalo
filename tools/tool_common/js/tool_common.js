@@ -810,55 +810,6 @@ const view_window = async function(options) {
 
 
 /**
-* TRIGGER_REQUEST
-* This is a common tool API request way
-*/
-	// export const trigger_request = async function(trigger_url, body) {
-	// 	const t0 = performance.now()
-
-	// 	const handle_errors = function(response) {
-	// 		if (!response.ok) {
-	// 			throw Error(response.statusText);
-	// 		}
-	// 		return response;
-	// 	}
-
-	// 	const trigger_response = await fetch(
-	//  		trigger_url,
-	//  		{
-	// 			method		: 'POST',
-	// 			mode		: 'cors',
-	// 			cache		: 'no-cache',
-	// 			credentials	: 'same-origin',
-	// 			headers		: {'Content-Type': 'application/json'},
-	// 			redirect	: 'follow',
-	// 			referrer	: 'no-referrer',
-	// 			body		: JSON.stringify(body)
-	// 		})
-	// 		.then(handle_errors)
-	// 		.then(response => response.json()) // parses JSON response into native Javascript objects
-	// 		.catch(error => {
-	// 			console.error("!!!!! REQUEST ERROR: ",error)
-	// 			return {
-	// 				result	: false,
-	// 				msg		: error.message,
-	// 				error	: error
-	// 			}
-	// 		});
-
-
-	// 	// debug
-	// 		if(SHOW_DEBUG===true) {
-	// 			console.log("__Time to trigger_request", self.model, " ms:", performance.now()-t0);
-	// 		}
-
-
-	// 	return trigger_response
-	// }//end trigger_request
-
-
-
-/**
 * GET_TOOL_LABEL
 * Return the label in the current language.
 * If the label is not defined, try with lang_default, not lang and received label_name if nothing is found

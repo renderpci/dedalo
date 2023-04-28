@@ -169,7 +169,8 @@ tool_import_dedalo_csv.prototype.load_csv_files_list = async function() {
 		return new Promise(function(resolve){
 
 			data_manager.request({
-				body : rqo
+				use_worker	: true,
+				body		: rqo
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {
@@ -276,7 +277,8 @@ tool_import_dedalo_csv.prototype.import_files = function(files, time_machine_sav
 		return new Promise(function(resolve){
 
 			data_manager.request({
-				body : rqo
+				use_worker	: true,
+				body		: rqo
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {
@@ -392,7 +394,8 @@ tool_import_dedalo_csv.prototype.process_uploaded_file = function(file_data) {
 		return new Promise(function(resolve){
 
 			data_manager.request({
-				body : rqo
+				use_worker	: true,
+				body		: rqo
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {

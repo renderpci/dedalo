@@ -198,7 +198,8 @@ tool_propagate_component_data.prototype.propagate_component_data = function(acti
 		return new Promise(function(resolve){
 
 			data_manager.request({
-				body : rqo
+				use_worker	: true,
+				body		: rqo
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {

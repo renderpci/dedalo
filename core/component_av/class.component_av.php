@@ -1520,7 +1520,7 @@ class component_av extends component_media_common {
 
 					// fix final dato with new format as array
 						$new_dato = [$dato_item];
-						debug_log(__METHOD__." update_version new_dato ".to_string($new_dato), logger::DEBUG);
+						// debug_log(__METHOD__." update_version new_dato ".to_string($new_dato), logger::DEBUG);
 
 					$response = new stdClass();
 						$response->result	= 1;

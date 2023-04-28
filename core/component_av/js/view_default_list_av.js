@@ -12,13 +12,13 @@
 
 
 /**
-* VIEW_COLUMN_LIST_AV
+* VIEW_default_LIST_AV
 * Manages the component's logic and appearance in client side
 */
-export const view_column_list_av = function() {
+export const view_default_list_av = function() {
 
 	return true
-}//end  view_column_list_av
+}//end  view_default_list_av
 
 
 
@@ -27,7 +27,7 @@ export const view_column_list_av = function() {
 * Render node for use in list as column
 * @return HTMLElement wrapper
 */
-view_column_list_av.render = async function(self, options) {
+view_default_list_av.render = async function(self, options) {
 
 	// options
 		const render_level = options.render_level || 'full'
@@ -39,6 +39,14 @@ view_column_list_av.render = async function(self, options) {
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {})
 		wrapper.classList.add('media','media_wrapper')
+
+	// content_data
+		const content_data = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'content_data'
+		})
+		// set pointers to content_data
+		wrapper.content_data = content_data
 
 	// url
 		const posterframe_url	= data.posterframe_url || page_globals.fallback_image

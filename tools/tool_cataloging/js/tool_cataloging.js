@@ -49,7 +49,7 @@ export const tool_cataloging = function () {
 	tool_cataloging.prototype.render	= tool_common.prototype.render
 	tool_cataloging.prototype.destroy	= common.prototype.destroy
 	tool_cataloging.prototype.refresh	= common.prototype.refresh
-	tool_cataloging.prototype.edit	= render_tool_cataloging.prototype.edit
+	tool_cataloging.prototype.edit		= render_tool_cataloging.prototype.edit
 
 
 

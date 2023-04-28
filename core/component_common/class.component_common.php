@@ -733,7 +733,7 @@ abstract class component_common extends common {
 					. 'model: '. get_called_class() . PHP_EOL
 					. 'tipo: ' . $this->tipo . ' - section_tipo: ' . $this->section_tipo . ' - section_id: ' . $this->section_id . PHP_EOL
 					. 'table: '. $matrix_table
-					, logger::ERROR
+					, logger::WARNING
 				);
 			}
 		}
