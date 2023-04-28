@@ -506,12 +506,9 @@ abstract class backup {
 		# Save partials str data based on tld to independent files
 		if ($db_name==='dedalo4_development_str.custom' && $response->result===true) {
 			$res_dedalo_str_tables_data = self::save_dedalo_str_tables_data();
+			$response->msg .= $res_dedalo_str_tables_data->msg;
 			if ($res_dedalo_str_tables_data->result===false) {
-				$response->result 	 = false;
-				$response->msg 		.= $res_dedalo_str_tables_data->msg;
-			}else{
-				#$res_html .= wrap_pre($ar_response_html);
-				$response->msg .= $res_dedalo_str_tables_data->msg;
+				$response->result = false;
 			}
 		}
 
@@ -641,7 +638,7 @@ abstract class backup {
 
 		# All is ok
 		$response->result 	= true;
-		$response->msg 		= wrap_pre( implode("<hr>", $ar_msg) );
+		$response->msg 		= implode('<hr>', $ar_msg);
 
 
 		return (object)$response;
@@ -1070,7 +1067,7 @@ abstract class backup {
 
 
 		$response->result	= true;
-		$response->msg		.= wrap_pre( implode("<hr>", $ar_msg) );
+		$response->msg		.= implode('<hr>', $ar_msg);
 
 
 		return (object)$response;
@@ -1138,7 +1135,6 @@ abstract class backup {
 
 		// 	# File test
 		// 	if (!file_exists($file)) {
-		// 		#die( wrap_pre("Error. Database system configuration not allow import (1). pgpass not found") );
 		// 		$response->msg 		= 'Error. Database system configuration not allow import (1). pgpass not found '.__METHOD__;
 		// 		$response->result 	= false;
 		// 	}
@@ -1146,7 +1142,6 @@ abstract class backup {
 		// 	# File permissions
 		// 	$perms = decoct(fileperms($file) & 0777);
 		// 	if ($perms!='600') {
-		// 		#die( wrap_pre("Error. Database system configuration not allow import (2). pgpass invalid permissions") );
 		// 		$response->msg 		= 'Error. Database system configuration not allow import (2). pgpass invalid permissions '.__METHOD__;
 		// 		$response->result 	= false;
 		// 	}
@@ -1189,7 +1184,6 @@ abstract class backup {
 
 			# File test
 			if (!file_exists($file)) {
-				#die( wrap_pre("Error. Database system configuration not allow import (1). pgpass not found") );
 				$response->msg 		= 'Error. Database system configuration not allow import (1). pgpass not found '.__METHOD__;
 				$response->result 	= false;
 			}
@@ -1197,7 +1191,6 @@ abstract class backup {
 			# File permissions
 			$perms = decoct(fileperms($file) & 0777);
 			if ($perms!='600') {
-				#die( wrap_pre("Error. Database system configuration not allow import (2). pgpass invalid permissions") );
 				$response->msg 		= 'Error. Database system configuration not allow import (2). pgpass invalid permissions '.__METHOD__;
 				$response->result 	= false;
 			}

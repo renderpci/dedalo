@@ -514,14 +514,18 @@ class diffusion_mysql extends diffusion_sql  {
 	/**
 	* SAVE_RECORD
 	* Insert / Update one MySQL row (one for lang)
+	* @param object $request_options
 	* @return object $response
 	*/
-	public static function save_record( $request_options ) : object {
-		if(SHOW_DEBUG===true) $start_time=microtime(1);
+	public static function save_record( object $request_options ) : object {
+		if(SHOW_DEBUG===true) {
+			$start_time=start_time();
+		}
 
-		$response = new stdClass();
-			$response->result = false;
-			$response->msg 	  = array();
+		// response default
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= array();
 
 		// options
 			$options = new stdClass();
@@ -542,6 +546,9 @@ class diffusion_mysql extends diffusion_sql  {
 			$delete_previous 		= $options->delete_previous;
 			$section_tipo			= $options->section_tipo;
 			$diffusion_element_tipo	= $options->diffusion_element_tipo;
+
+		// conn
+			$conn = DBi::_getConnection_mysql();
 
 		// check mandatory vars
 			if (empty($database_name) || empty($table_name)) {
@@ -666,7 +673,10 @@ class diffusion_mysql extends diffusion_sql  {
 						$field_value	= $field['field_value'];
 
 						if (!in_array($field_name, $real_table_fields)) {
-							debug_log(__METHOD__." Skipped create field '$field_name' because not exists in table '$table_name' [section_id: $section_id]", logger::WARNING);
+							debug_log(__METHOD__
+								." Skipped create field '$field_name' because not exists in table '$table_name' [section_id: $section_id]"
+								, logger::WARNING
+							);
 							continue; # Skip
 						}
 
@@ -677,7 +687,7 @@ class diffusion_mysql extends diffusion_sql  {
 						$ar_field_value[]	= $field_value;
 					}
 
-					// dedalo_diffusion_tm. Insert mysql record. if the difusion_versions is active we store all changes
+					// dedalo_diffusion_tm. Insert MySQL record. if the difusion_versions is active we store all changes
 						if(defined('DEDALO_DIFFUSION_TM') && DEDALO_DIFFUSION_TM){
 
 							$strQuery_tm = "INSERT INTO `$database_name`.`tm_{$table_name}` (".implode(',', $ar_field_name).") VALUES (".implode(',', $ar_field_value).");";
@@ -688,10 +698,13 @@ class diffusion_mysql extends diffusion_sql  {
 								$database_name
 							);
 							if ($result===false) {
-								#throw new Exception("Error Processing Request. MySQL insert error".DBi::_getConnection_mysql()->error, 1);
+								#throw new Exception("Error Processing Request. MySQL insert error".$conn->error, 1);
 								$response->result = false;
-								$response->msg    = "Error Processing Request. Nothing is saved. MySQL insert error ".DBi::_getConnection_mysql()->error;
-								debug_log(__METHOD__." $response->msg ", logger::ERROR);
+								$response->msg    = "Error Processing Request. Nothing is saved. MySQL insert error ".$conn->error;
+								debug_log(__METHOD__
+									." $response->msg "
+									, logger::ERROR
+								);
 								return (object)$response;
 							}
 						}
@@ -706,29 +719,27 @@ class diffusion_mysql extends diffusion_sql  {
 							$database_name
 						);
 						if ($result===false) {
-							#throw new Exception("Error Processing Request. MySQL insert error".DBi::_getConnection_mysql()->error, 1);
-							debug_log(__METHOD__." Error on insert MySQL data ". DBi::_getConnection_mysql()->error, logger::ERROR);
+							#throw new Exception("Error Processing Request. MySQL insert error".$conn->error, 1);
+							debug_log(__METHOD__." Error on insert MySQL data ". $conn->error, logger::ERROR);
 
 							$response->result = false;
-							$response->msg    = "Error Processing Request. Nothing is saved. MySQL insert error".DBi::_getConnection_mysql()->error;
+							$response->msg    = "Error Processing Request. Nothing is saved. MySQL insert error".$conn->error;
 							return (object)$response;
 						}
-
-
 
 						$response->msg[] = "Inserted record section_id:$section_id, table:$table_name, lang:$lang";
 				}//end foreach ($ar_fields as $lang => $fields) iterate langs
 			}//end foreach ($ar_section_id as $section_id)
 
 
-		// response ok
-			$response->result = true;
-			$response->new_id = self::$insert_id;
-			$response->msg    = implode(",\n", $response->msg);		#dump($response, ' response');
+		// response OK
+			$response->result	= true;
+			$response->new_id	= self::$insert_id;
+			$response->msg		= implode(",\n", $response->msg);		#dump($response, ' response');
 
 		// response debug
 			if(SHOW_DEBUG===true) {
-				$response->debug = exec_time($start_time);
+				$response->debug = exec_time_unit($start_time, 'ms');
 			}
 
 
