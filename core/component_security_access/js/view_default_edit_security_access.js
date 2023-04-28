@@ -335,7 +335,7 @@ const render_area_item = function(item, datalist, value, self) {
 		// checked option set on match
 		if (typeof item_value!=='undefined') {
 			// console.log("item_value.value:", item_value.value, item.tipo);
-			if (permissions===2) {
+			if (permissions>=2) {
 				input_checkbox.checked = true
 			}else if(permissions===1) {
 				input_checkbox.indeterminate = true
@@ -352,7 +352,7 @@ const render_area_item = function(item, datalist, value, self) {
 			function fn_update_value(changed_data) {
 				// console.log("-------------- - event update_value changed_data:", changed_data);
 				// change the value of the current dom element
-				if (changed_data===2) {
+				if (changed_data>=2) {
 					input_checkbox.checked			= true
 					input_checkbox.indeterminate	= false
 				}else if(changed_data===1) {
@@ -378,7 +378,7 @@ const render_area_item = function(item, datalist, value, self) {
 					const parents = await self.get_parents(input_checkbox.item)
 					const parents_length = parents.length
 
-					if (input_value===2) {
+					if (input_value>=2) {
 
 						for (let i = 0; i < parents_length; i++) {
 
@@ -407,7 +407,7 @@ const render_area_item = function(item, datalist, value, self) {
 									}
 
 								const found = self.filled_value.find(el => el.tipo===child.tipo)
-								if (found && found.value===2) {
+								if (found && found.value>=2) {
 									break parents_loop;
 								}
 							}
@@ -982,7 +982,7 @@ const render_area_item_read = function(item, datalist, value) {
 			? parseInt(item_value.value)
 			: 0
 
-		const permissions_label = (permissions===2)
+		const permissions_label = (permissions>=2)
 			? 'rw-'
 			: (permissions===1)
 				? 'r--'
@@ -1076,7 +1076,7 @@ const render_permissions_item_read = function(item, datalist, value) {
 			class_name		: 'li_item permissions'
 		})
 
-		const permissions_label = (permissions===2)
+		const permissions_label = (permissions>=2)
 			? 'rw-'
 			: (permissions===1)
 				? 'r--'
