@@ -80,7 +80,7 @@ class update {
 			#RecordObj_time_machine::$save_time_machine_version  = false;
 
 		// update. Select the correct update object from the file 'updates.php'
-			foreach ($updates as $key => $version_to_update) {
+			foreach ($updates as $version_to_update) {
 				if($current_version[0] == $version_to_update->update_from_major){
 					if($current_version[1] == $version_to_update->update_from_medium){
 						if($current_version[2] == $version_to_update->update_from_minor){
@@ -97,16 +97,26 @@ class update {
 
 		// SQL_update
 			if(isset($update->SQL_update)){
-				foreach ((array)$update->SQL_update as $key => $current_query) {
-					$SQL_update = update::SQL_update($current_query);
-					$cmsg  = $SQL_update->msg;
-					$msg[] = "Updated sql: ".to_string($cmsg);
+				foreach ((array)$update->SQL_update as $current_query) {
+
+					$SQL_update	= update::SQL_update($current_query);
+					$cmsg		= $SQL_update->msg;
+					$msg[]		= "Updated sql: ".to_string($cmsg);
 
 					if ($SQL_update->result===false) {
-						array_push($msg, "Error on SQL_update");
-						$response->result	= false ;
-						$response->msg		= $msg;
-						return $response;
+
+						array_push($msg, "Error on SQL_update: ".to_string($current_query));
+
+						// $response->result	= false ;
+						// $response->msg		= $msg;
+						// return $response;
+
+						debug_log(__METHOD__." Error on update SQL_update ".PHP_EOL
+							. 'The result is false. Check your query sentence: ' .PHP_EOL
+							. to_string($current_query) .PHP_EOL
+							. 'Note that the update SQL_update loop to be continue with the next one'
+							, logger::ERROR
+						);
 					}
 				}
 			}
@@ -120,22 +130,35 @@ class update {
 						$update_version
 					);
 					$msg[] = "Updated component: ".to_string($current_model);
-					debug_log(__METHOD__." Updated component ".to_string($current_model), logger::DEBUG);
+					debug_log(__METHOD__
+						." Updated component ".to_string($current_model)
+						, logger::DEBUG
+					);
 				}
 			}
 
 		// run_scripts
 			if(isset($update->run_scripts)){
 				foreach ((array)$update->run_scripts as $current_script) {
-					$run_scripts = update::run_scripts($current_script);
-					$cmsg  = $run_scripts->msg;
-					$msg[] = "Updated run scripts: ".to_string($cmsg);
+
+					$run_scripts	= update::run_scripts($current_script);
+					$cmsg			= $run_scripts->msg;
+					$msg[]			= "Updated run scripts: ".to_string($cmsg);
 
 					if ($run_scripts->result===false) {
-						array_push($msg, "Error on run_scripts");
-						$response->result	= false;
-						$response->msg		= $msg;
-						return $response;
+
+						array_push($msg, 'Error on run_scripts: '.to_string($current_script));
+
+						// $response->result	= false;
+						// $response->msg		= $msg;
+						// return $response;
+
+						debug_log(__METHOD__." Error on run_scripts ".PHP_EOL
+							. 'The result is false. Check your script: ' .PHP_EOL
+							. to_string($current_script) .PHP_EOL
+							. 'Note that the run_scripts loop to be continue with the next one'
+							, logger::ERROR
+						);
 					}
 				}
 			}
@@ -147,7 +170,7 @@ class update {
 			$msg[]						= "Updated Dédalo data version: ".to_string($version_to_update_string);
 
 		// response
-			array_push($msg, "Updated version successfully");
+			array_push($msg, 'Updated version successfully');
 			$response->result	= true ;
 			$response->msg		= $msg;
 
@@ -164,26 +187,35 @@ class update {
 	*/
 	public static function SQL_update(string $SQL_update) : object {
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed';
+		// response default
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed';
 
-		$result = pg_query(DBi::_getConnection(), $SQL_update);
-		if(!$result) {
-			echo "Error: an error occurred on SQL_update code.";
-			if(SHOW_DEBUG===true) {
-				trigger_error( "<span class=\"error\">Error Processing SQL_update Request </span>". pg_last_error(DBi::_getConnection()) );
-				debug_log(__METHOD__." Error Processing SQL_update Request ".to_string(), logger::DEBUG);
-				dump(null,"SQL_update ".to_string($SQL_update));
-				#throw new Exception("Error Processing SQL_update Request ". pg_last_error(DBi::_getConnection()), 1);;
+		// exec query
+			$result = pg_query(DBi::_getConnection(), $SQL_update);
+			if($result===false) {
+				// error case
+				debug_log(__METHOD__
+					." Error Processing SQL_update Request ". PHP_EOL
+					. pg_last_error(DBi::_getConnection()) .PHP_EOL
+					. 'SQL_update: '.to_string($SQL_update)
+					, logger::ERROR
+				);
+				$response->msg .= " Error Processing SQL_update Request: ". pg_last_error(DBi::_getConnection());
+				return $response;
 			}
-			$response->msg .= " Error Processing SQL_update Request: ". pg_last_error(DBi::_getConnection());
-			return $response;
-		}
-		debug_log(__METHOD__." Executed database update: ".to_string($SQL_update), logger::DEBUG);
 
-		$response->result	= true;
-		$response->msg		= "Executed database update: ".to_string($SQL_update);
+		// debug info
+			debug_log(__METHOD__
+				." Executed database update: ".to_string($SQL_update)
+				, logger::DEBUG
+			);
+
+		// response OK
+			$response->result	= true;
+			$response->msg		= 'Executed database update: '.to_string($SQL_update);
+
 
 		return (object)$response;
 	}//end SQL_update
@@ -207,7 +239,7 @@ class update {
 		$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name('section');
 		foreach ($ar_section_tipo as $current_section_tipo) {
 
-			# Activity data is not updated [REMOVED 29-08-2018 TO ALLOW FILTER AND FILTER MASTER UPDATES]
+			// Activity data is not updated [REMOVED 29-08-2018 TO ALLOW FILTER AND FILTER MASTER UPDATES]
 			if($current_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
 				# component_ip, component_autocomplete, component_autocomplete_ts, component_date, component_input_text, component_filter
 				if ($model_name==='component_filter' || $model_name==='component_autocomplete' || $model_name==='component_ip') {
@@ -218,7 +250,7 @@ class update {
 				}
 			}
 
-			# Skip sections
+			// Skip sections
 			$ar_section_skip = [
 				/*
 				#'lg1', // lenguajes
@@ -265,11 +297,14 @@ class update {
 				continue;
 			}
 
-			#
-			# Test if target table exists (avoid errors on update components of "too much updated" structures)
+
+			// Test if target table exists (avoid errors on update components of "too much updated" structures)
 			$current_table = common::get_matrix_table_from_tipo($current_section_tipo);
 			if (!in_array($current_table, $tables) ) {
-				debug_log(__METHOD__." Skipped section ($current_section_tipo) because table ($current_table) not exists ".to_string(), logger::ERROR);
+				debug_log(__METHOD__
+					." Skipped section ($current_section_tipo) because table ($current_table) do not exists "
+					, logger::ERROR
+				);
 				continue;
 			}
 
@@ -280,7 +315,10 @@ class update {
 			$n_rows = pg_num_rows($result);
 			if ($n_rows<1) {
 				# Skip empty sections
-				debug_log(__METHOD__." Skipped current_section_tipo '$current_section_tipo'. (Empty records) ".to_string(), logger::WARNING);
+				debug_log(__METHOD__
+					." Skipped current_section_tipo '$current_section_tipo'. (Empty records) "
+					, logger::WARNING
+				);
 				continue;
 			}
 
@@ -289,21 +327,27 @@ class update {
 			#$ar_component_tipo = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_section_tipo, $model_name, 'children_recursive', $search_exact=true);
 			$ar_component_tipo = section::get_ar_children_tipo_by_model_name_in_section(
 				$current_section_tipo,
-				[$model_name],
-				$from_cache=true,
-				$resolve_virtual=true,
-				$recursive=true,
-				$search_exact=true
+				[$model_name], // array ar_model_name_required
+				true, // bool from_cache
+				true, // bool resolve_virtual
+				true, // bool recursive
+				true // bool search_exact
 			);
 			if (empty($ar_component_tipo)) {
-				# Skip empty components sections
-				debug_log(__METHOD__." Skipped current_section_tipo '$current_section_tipo'. (Empty components of type $model_name) ".to_string(), logger::WARNING);
+				// Skip empty components sections
+				debug_log(__METHOD__
+					." Skipped current_section_tipo '$current_section_tipo'. (Empty components of type $model_name)"
+					, logger::WARNING
+				);
 				continue;
 			}
 
 			# Notify to log to know script state
 			$n_components = count($ar_component_tipo);
-			debug_log(__METHOD__." Updating components of section: $current_section_tipo (records: $n_rows, components $model_name: $n_components) Total: ". ($n_rows*$n_components), logger::WARNING);
+			debug_log(__METHOD__
+				." Updating components of section: $current_section_tipo (records: $n_rows, components $model_name: $n_components) Total: ". ($n_rows*$n_components)
+				, logger::WARNING
+			);
 
 			$i=0; $tm=0;
 			// Iterate database resource directly to minimize memory requirements on large arrays
@@ -429,15 +473,16 @@ class update {
 	*/
 	public static function run_scripts( object $script_obj ) : object {
 
-		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__METHOD__.']';
+		// response default
+			$response = new stdClass();
+				$response->result 	= false;
+				$response->msg 		= 'Error. Request failed ['.__METHOD__.']';
 
 		try {
 
-			$script_class  = $script_obj->script_class;
-			$script_method = $script_obj->script_method;
-			$script_vars   = isset($script_obj->script_vars) ? (array)$script_obj->script_vars : array();
+			$script_class	= $script_obj->script_class;
+			$script_method	= $script_obj->script_method;
+			$script_vars	= isset($script_obj->script_vars) ? (array)$script_obj->script_vars : array();
 
 			//$result = $script_class::$script_method( $script_obj->script_vars );
 			$result = call_user_func_array($script_class.'::'.$script_method, $script_vars);
@@ -445,15 +490,20 @@ class update {
 			if (is_object($result)) {
 				$response = $result;
 			}else if ($result===false) {
-				$response->msg .= ' False result is received for: '.$script_class.'::'.$script_method;
+				$response->result	= false;
+				$response->msg		.= ' False result is received for: '.$script_class.'::'.$script_method;
 			}else{
-				$response->result  = true;
-				$response->msg 	   = ' '.to_string($result);
+				$response->result	= true;
+				$response->msg		= ' '.to_string($result);
 			}
 
 		} catch (Exception $e) {
 
-			debug_log(__METHOD__." Caught exception: ".$e->getMessage(), logger::ERROR);
+			debug_log(__METHOD__
+				." Caught exception on run_scripts ($script_method): ". PHP_EOL
+				. $e->getMessage()
+				, logger::ERROR
+			);
 		}
 
 
