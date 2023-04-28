@@ -157,7 +157,10 @@ class time_machine_v5_to_v6 {
 
 				// log info each 1000
 					if ($i_ref===0) {
-						debug_log(__METHOD__." Partial update of section data table: $table - id: $id - total: $n_rows - total time secs: ".exec_time_unit($start_time,'sec'), logger::DEBUG);
+						debug_log(__METHOD__
+							." Partial update of section data table: $table - id: $id - total: $n_rows - total min: ".exec_time_unit($start_time,'min')
+							, logger::DEBUG
+						);
 					}else{
 						$i_ref = ($i_ref>10000) ? 0 : $i_ref + 1;
 					}
