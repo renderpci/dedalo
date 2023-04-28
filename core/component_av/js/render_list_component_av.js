@@ -8,7 +8,7 @@
 	// import {ui} from '../../common/js/ui.js'
 	// import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	// import {object_to_url_vars} from '../../common/js/utils/index.js'
-	import {view_column_list_av} from './view_column_list_av.js'
+	import {view_default_list_av} from './view_default_list_av.js'
 	import {view_mini_list_av} from './view_mini_list_av.js'
 	import {view_text_list_av} from './view_text_list_av.js'
 
@@ -47,7 +47,7 @@ render_list_component_av.prototype.list = async function(options) {
 		case 'column':
 		case 'default':
 		default:
-			return view_column_list_av.render(self, options)
+			return view_default_list_av.render(self, options)
 	}
 
 	return null
