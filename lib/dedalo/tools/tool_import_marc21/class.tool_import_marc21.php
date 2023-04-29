@@ -315,12 +315,12 @@ class tool_import_marc21 extends tool_common {
 			foreach ($ar_mc21_fields as $current_field) {
 
 				$ar_elementFields = $record->getFields($current_field);
-				$ar_values = [];
 				foreach ($ar_elementFields as $tag => $elementField) {
-
-					$ar_values[] = tool_import_marc21::get_field($elementField, $element_vars);
+					$field_content = tool_import_marc21::get_field($elementField, $element_vars);
+					if(!empty($field_content) && $field_content !== ''){
+						$field_values[] = $field_content;
+					}
 				}
-				$field_values[] = implode($row_separator, $ar_values);
 			}
 			$value = implode($row_separator, $field_values);
 
