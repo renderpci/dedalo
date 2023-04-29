@@ -327,6 +327,30 @@
 
 
 
+// MEDIA 3D
+	// Target folder exists test
+	$ar_quality = DEDALO_3D_AR_QUALITY;
+	$ar_quality[] = 'posterframe';
+	foreach ($ar_quality as $quality) {
+		$folder_path = DEDALO_MEDIA_PATH . DEDALO_3D_FOLDER . '/'.$quality;
+		if( !is_dir($folder_path) ) {
+			if(!mkdir($folder_path, 0755, true)) {
+
+				$init_response->msg[]	= 'Error on read or create 3d '.$quality.' directory. Permission denied';
+				$init_response->errors	= true;
+				debug_log(__METHOD__
+					."  ".implode(PHP_EOL, $init_response->msg)
+					, logger::ERROR
+				);
+
+				return $init_response;
+			}
+			debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+		}
+	}
+
+
+
 // MEDIA SVG
 	if(defined('DEDALO_SVG_FOLDER')) {
 		// v5 to v6 names manage
