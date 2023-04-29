@@ -48,8 +48,6 @@ class dd_object extends stdClass {
 		public $target_sections;
 		// request_config		: [],
 		public $request_config;
-		// ar_sections_tipo		: ['oh1']
-		public $ar_sections_tipo;
 		// columns_map			: array
 		public $columns_map;
 		// view					: string|null like 'table'
@@ -78,16 +76,8 @@ class dd_object extends stdClass {
 		public $records_separator;
 		// legacy_model			: string like "component_autocomplet_hi"
 		public $legacy_model;
-		// relation_list		: string
-		public $relation_list;
-		// path					: array
-		public $path;
-		// debug				: object
-		public $debug;
-		// add_label : bool
-		public $add_label;
-		// string|null time_machine_list . Get the time machine list tipo for the section
-		public $time_machine_list;
+
+
 		// object features. Use this container to add custom properties like 'notes_publication_tipo' in text area
 		public $features;
 		// array toolbar_buttons
@@ -102,6 +92,9 @@ class dd_object extends stdClass {
 		public $search_options_title;
 		// string target_section_tipo
 		public $target_section_tipo;
+
+		// debug				: object
+		public $debug;
 		*/
 
 
@@ -138,6 +131,10 @@ class dd_object extends stdClass {
 			return;
 		}
 
+		// set typo always
+			$this->typo = 'ddo';
+
+
 		// set model in first time
 			if(isset($data->model)) {
 				$this->set_model($data->model);
@@ -148,9 +145,6 @@ class dd_object extends stdClass {
 				$method = 'set_'.$key;
 				$this->{$method}($value);
 			}
-
-		// set typo always
-			$this->set_typo('ddo');
 
 		// resolve type
 			$model = $this->model;
@@ -189,26 +183,6 @@ class dd_object extends stdClass {
 	* SET  METHODS
 	* Verify values and set property to current object
 	*/
-
-
-
-	/**
-	* SET_TYPO
-	* @param string $value
-	* @return void
-	*/
-	public function set_typo(string $value) : void {
-		if($value!=='ddo') {
-			debug_log(__METHOD__
-				." Error. Fixed invalid typo "
-				.to_string($value)
-				, logger::ERROR
-			);
-			$value = 'ddo';
-		}
-		$this->typo = $value;
-	}//end set_typo
-
 
 
 	/**
@@ -506,18 +480,6 @@ class dd_object extends stdClass {
 
 
 	/**
-	* SET_AR_SECTIONS_TIPO
-	* @param array $value
-	* @return void
-	*/
-	public function set_ar_sections_tipo(array $value) : void {
-
-		$this->ar_sections_tipo = $value;
-	}//end set_ar_sections_tipo
-
-
-
-	/**
 	* SET_COLUMNS_MAP
 	* @param array|null $value
 	* @return void
@@ -553,16 +515,16 @@ class dd_object extends stdClass {
 
 
 
-	/**
-	* SET_SECTION_ID
-	* Used by tools
-	* @param int|null $value
-	* @return void
-	*/
-	public function set_section_id(?int $value) : void {
+	// /**
+	// * SET_SECTION_ID
+	// * Used by tools
+	// * @param int|null $value
+	// * @return void
+	// */
+	// public function set_section_id(?int $value) : void {
 
-		$this->section_id = $value;
-	}//end set_section_id
+	// 	$this->section_id = $value;
+	// }//end set_section_id
 
 
 

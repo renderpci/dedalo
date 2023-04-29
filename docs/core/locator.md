@@ -10,9 +10,13 @@ Locator is the connection, the relation, between data. Dédalo use a NoSQL model
 
 **locator** `object`
 
-Using locators is the way to connect data in Dédalo, besides locators are the own data of multiple components, selects, portals, check boxes, etc. They use locators to point and resolve his data.
+Locators are the way to connect data in Dédalo, besides locators are the own data for multiple components; selects, portals, check boxes, etc. These components uses locators to point and resolve his data.
 
-Dédalo use few tables with lots of sections named "matrix_XXX" this tables has the same schema:
+Locator is an extensible object, it depends of the data pointed and his properties could be extended by specific uses.
+
+### Function and structure
+
+To understand how locator works, keep in mind that Dédalo use few tables with lots of sections named "matrix_XXX" and all of these tables has the same schema:
 
 ```mermaid
 erDiagram
@@ -61,7 +65,7 @@ When a component need to call to other section and get his data will use a locat
 Locator has a direction, the basic format is a unidirectional pointer; point to data (to).
 
 ```mermaid
-graph LR
+    graph LR
     A((Oral History 1 :: Informants)) --locator--> B((People under study 88))
 ```
 
@@ -70,7 +74,7 @@ The component "Informants" ([oh24](https://dedalo.dev/ontology/oh24)) of "Oral H
 ```json
 {
     "section_id": 88,
-    "section_tipo": "rec197"
+    "section_tipo": "rsc197"
 }
 ```
 
@@ -80,13 +84,13 @@ The locator resolution will use the columns section_id and section_tipo in matri
 
 See it as tables:
 
-table: matrix
+Table: **matrix**
 
 | id | section_id | section_tipo | datos |
 | --- | --- | --- | --- |
 | 345 | 1 | oh1 | \[{"oh24":\[{"section_id": 88, "section_tipo": "rsc97"}]}] |
 
-table: matrix
+table: **matrix**
 
 | id | section_id | section_tipo | datos |
 | --- | --- | --- | --- |
@@ -110,7 +114,7 @@ Locator reference the source with the prefix *from*:
 
 from_section_tipo: the section that has the component that store the locator, the source.
 
-Properties:
+### Properties
 
 - **section_id** : `string` destination section_id **Mandatory** | ex : 1
 - **section_tipo** : `string` destination section_tipo **Mandatory** | ex : rsc197
@@ -124,3 +128,29 @@ Properties:
 - **section_id_key** : `int` data-frame index array number of the data that reference | ex : 1
 - **section_top_tipo** : `string` source section_tipo  **Deprecated** use *from_section_tipo* | ex : oh1
 - **section_top_id** : `string` source section_id **Deprecated** use *from_section_id* | ex : 1
+
+## Flat version
+
+Normal locator is a object, but, in some cases, is useful a string version of the locator, for example to be used as filename of images, pdf or audiovisual files. The flat version of the locator is a chained plain locator string without the properties name.
+
+Example; the section_id 3 of an image could pointed in this way:
+
+```json
+{
+    "section_id": 3,
+    "section_tipo": "rsc170",
+    "component_tipo": "rsc29"
+}
+```
+
+The locator says: get the record 3 (section_id) section image (section_tipo [rsc170](https://dedalo.dev/ontology/rsc170)) and give me the field of the image (component_tipo [rsc29](https://dedalo.dev/ontology/rsc29))
+
+Flat version only uses the values of the locator and always has this structure:
+
+component_tipo_section_tipo_section_id
+
+The '_' character is use to separate the values, and the result of previous locator in his flat version will be: **rsc29_rsc170_3**
+
+As the flat version is used to named the media files, the image is stored as: rsc29_rsc170_3.jpg in the server.
+
+It's possible to get flat version calling to the `get_flat()` function of the locator class.
