@@ -44,6 +44,8 @@ render_edit_service_upload.prototype.edit = async function (options) {
 			class_name		: 'service_upload'
 		})
 		wrapper.appendChild(content_data)
+		// set pointers
+		wrapper.content_data = content_data
 
 
 	return wrapper
@@ -68,6 +70,8 @@ export const get_content_data = function(self) {
 		form.name		= 'form_upload'
 		form.enctype	= 'multipart/form-data'
 		form.method		= 'post'
+		// fix form
+		self.form		= form
 
 	// input_file
 		const input_file = ui.create_dom_element({
@@ -101,6 +105,8 @@ export const get_content_data = function(self) {
 	// progress_bar_container
 		const progress_bar_container = render_progress_bar(self)
 		fragment.appendChild(progress_bar_container)
+		// fix progress_bar_container
+		self.progress_bar_container = progress_bar_container
 
 	// response_container
 		const response_container = ui.create_dom_element({
@@ -145,6 +151,7 @@ export const get_content_data = function(self) {
 
 /**
 * RENDER_INFO
+* @param object self
 * @return HTMLElement info
 */
 export const render_info = function(self) {

@@ -95,6 +95,9 @@ component_3d.prototype.create_posterframe = async function( viewer ) {
 
 	const self = this
 
+	// fallback to fixed self.viewer
+		viewer = viewer || self.viewer
+
 	// image_blob
 		const image_blob = await viewer.get_image({
 			width	: 720,
