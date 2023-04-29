@@ -164,33 +164,68 @@ render_tool_upload.prototype.upload_done = async function (options) {
 				process_file_info.innerHTML = response.msg || 'Processing file done successfully.'
 				process_file_info.classList.add('success')
 
+				// hide service_upload elements. To upload again, user must to reload the page
+					setTimeout(function(){
+						[self.service_upload.form, self.service_upload.progress_bar_container].map(el => el.classList.add('hide'));
+					}, 1)
+					// console.log('self.service_upload.form:', self.service_upload.form);
+					// console.log('self.service_upload.progress_bar_container:', self.service_upload.progress_bar_container);
+
 
 				// preview_component_container
 					if (self.caller.type==='component') {
-						// get instance and init
-						const component_instance = await get_instance({
-							model			: self.caller.model,
-							mode			: 'edit',
-							view			: 'default',
-							permissions		: 1,
-							tipo			: self.caller.tipo,
-							section_tipo	: self.caller.section_tipo,
-							section_id		: self.caller.section_id,
-							lang			: self.caller.lang,
-							id_variant		: self.name, // id_variant prevents id conflicts
-							caller			: self // set current tool as component caller (to check if component is inside tool or not)
-						})
-						self.ar_instances.push(component_instance)
-						// build
-						await component_instance.build(true)
-						// render
-						const component_node = await component_instance.render()
-						self.preview_component_container.appendChild(component_node)
 
-						if(typeof self.caller.create_posterframe === 'function'){
-							event_manager.subscribe('viewer_ready_'+component_instance.id, function(viewer) {
-								self.caller.create_posterframe(viewer)
+						/*
+							// get instance and init
+							const component_instance = await get_instance({
+								model			: self.caller.model,
+								mode			: 'edit',
+								view			: 'default',
+								permissions		: 1,
+								tipo			: self.caller.tipo,
+								section_tipo	: self.caller.section_tipo,
+								section_id		: self.caller.section_id,
+								lang			: self.caller.lang,
+								id_variant		: self.name + '_upload_' + self.caller.id, // id_variant prevents id conflicts
+								caller			: self // set current tool as component caller (to check if component is inside tool or not)
 							})
+							self.ar_instances.push(component_instance)
+							// build
+							await component_instance.build(true)
+							*/
+
+						const component_instance = self.caller
+
+						// render
+						if (component_instance.status==='rendered') {
+
+							await component_instance.refresh()
+
+						}else{
+
+							// create_posterframe on viewer is rendered and ready
+							if(typeof component_instance.create_posterframe==='function') {
+
+								// prevent to show previous posterframe using default image instead
+								component_instance.data.posterframe_url = page_globals.fallback_image
+
+								// on viewer ready, create the posterframe from the viewer
+								event_manager.subscribe('viewer_ready_'+component_instance.id, function(element) {
+									component_instance.create_posterframe(element)
+									.then(function(response){
+										console.log('create_posterframe response',response);
+									})
+								})
+							}
+
+							// render component
+							const component_node = await component_instance.render()
+
+							// preview. Clean and update
+							while (self.preview_component_container.firstChild) {
+								self.preview_component_container.removeChild(self.preview_component_container.firstChild);
+							}
+							self.preview_component_container.appendChild(component_node)
 						}
 					}
 

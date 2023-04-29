@@ -132,18 +132,35 @@ const get_content_value = (i, current_value, self) => {
 			return content_value
 		}
 
+	// posterframe image
+		const posterframe_url = data.posterframe_url || page_globals.fallback_image
+		content_value.posterframe = ui.create_dom_element({
+			element_type	: 'img',
+			class_name		: 'posterframe',
+			src				: posterframe_url + '?t=' + (new Date()).getTime(),
+			parent			: content_value
+		})
+
 	// init viewer when content_value node is in in browser viewport
 		when_in_viewport(content_value, function(){
 
 			const viewer_3d = viewer.init()
+
+			// fix viewer
+			self.viewer = viewer_3d
 
 			viewer_3d.build(content_value, {})
 
 			viewer_3d.load(file_url) // rootPath, fileMap
 			.catch((e) => this.onError(e))
 			.then((gltf) => {
-				content_value.viewer = viewer_3d
-				event_manager.publish('viewer_ready_'+self.id, viewer_3d)
+				setTimeout(function(){
+					if (content_value.posterframe) {
+						content_value.posterframe.remove()
+					}
+					content_value.viewer = viewer_3d
+					event_manager.publish('viewer_ready_'+self.id, viewer_3d)
+				}, 1)
 			});
 		})
 
@@ -173,13 +190,7 @@ const get_content_value = (i, current_value, self) => {
 		// 		// 	image.src = posterframe_url
 		// 		// }
 
-	// posterframe image
-		// 		const posterframe = ui.create_dom_element({
-		// 			element_type	: 'img',
-		// 			class_name		: 'posterframe',
-		// 			src				: posterframe_url,
-		// 			parent			: content_value
-		// 		})
+
 
 	// video / posterframe cases
 		// 	if (video_url) {
