@@ -818,7 +818,11 @@ final class dd_utils_api {
 				) {
 					// throw new RuntimeException('Invalid parameters. (1)');
 					$msg = ' upload: Invalid parameters. (1)';
-					debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
+					debug_log(__METHOD__
+						." $msg " .PHP_EOL
+						. to_string($rqo)
+						, logger::ERROR
+					);
 					$response->msg .= $msg;
 					return $response;
 				}
@@ -829,24 +833,33 @@ final class dd_utils_api {
 						break;
 
 					case UPLOAD_ERR_NO_FILE:
-						// throw new RuntimeException('No file sent.');
 						$msg = ' upload: No file sent.';
-						debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
+						debug_log(__METHOD__
+							. " $msg " .PHP_EOL
+							. ' file_to_upload error:' .to_string($file_to_upload['error'])
+							, logger::ERROR
+						);
 						$response->msg .= $msg;
 						return $response;
 
 					case UPLOAD_ERR_INI_SIZE:
 					case UPLOAD_ERR_FORM_SIZE:
-						// throw new RuntimeException('Exceeded filesize limit.');
 						$msg = ' upload: Exceeded filesize limit.';
-						debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
+						debug_log(__METHOD__
+							. " $msg " .PHP_EOL
+							. ' file_to_upload error:' .to_string($file_to_upload['error'])
+							, logger::ERROR
+						);
 						$response->msg .= $msg;
 						return $response;
 
 					default:
-						// throw new RuntimeException('Unknown errors.');
 						$msg = ' upload: Unknown errors.';
-						debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
+						debug_log(__METHOD__
+							." $msg " .PHP_EOL
+							. ' file_to_upload error:' .to_string($file_to_upload['error'])
+							, logger::ERROR
+						);
 						$response->msg .= $msg;
 						return $response;
 				}
@@ -886,14 +899,19 @@ final class dd_utils_api {
 
 			// CHECKING
 				// Check MIME
-					$known_mime_types	= self::get_known_mime_types();
+					$known_mime_types = self::get_known_mime_types();
 					if (false===array_search(
 						$file_mime,
 						$known_mime_types,
 						true
 						)) {
 						// throw new RuntimeException('Invalid file format.');
-						debug_log(__METHOD__." Error. Stopped upload unknown file mime type: ".to_string($file_mime).' - name: '.to_string($file_tmp_name), logger::ERROR);
+						debug_log(__METHOD__
+							." Error. Stopped upload unknown file mime type." . PHP_EOL
+							. ' file_mime: ' . to_string($file_mime) . PHP_EOL
+							. ' file_tmp_name: ' . to_string($file_tmp_name)
+							, logger::ERROR
+						);
 						$msg = ' upload: Invalid file format. (mime: '.$file_mime.')';
 						$response->msg .= $msg;
 						return $response;
@@ -909,23 +927,37 @@ final class dd_utils_api {
 
 				// check file is available in temp dir
 					if(!file_exists($file_tmp_name)) {
-						debug_log(__METHOD__." Error on locate temporary file ".$file_tmp_name, logger::ERROR);
+						debug_log(__METHOD__
+							. " Error on locate temporary file ". PHP_EOL
+							. ' file_tmp_name' .to_string($file_tmp_name)
+							, logger::ERROR
+						);
 						$response->msg .= "Uploaded file not found in temporary folder";
 						return $response;
 					}
 
 				// check extension
 					$allowed_extensions	= array_keys($known_mime_types);
-					if (!in_array($extension, $allowed_extensions)) {
-						$response->msg .= "Error. Invalid file extension ".$extension;
-						debug_log(__METHOD__.PHP_EOL.$response->msg, logger::ERROR);
+					if (!empty($extension) && !in_array($extension, $allowed_extensions)) {
+						$response->msg .= " Error. Invalid file extension [1]: ".to_string($extension);
+						debug_log(__METHOD__
+							.' ' . $response->msg .PHP_EOL
+							. 'extension: ' . to_string($extension) .PHP_EOL
+							. 'allowed_extensions: ' .to_string($allowed_extensions)
+							, logger::ERROR
+						);
 						return $response;
 					}
 
 			// Manage uploaded file
 				// check tmp upload dir
 					if (!defined('DEDALO_UPLOAD_TMP_DIR')) {
-						debug_log(__METHOD__." DEDALO_UPLOAD_TMP_DIR is not defined. Please, define constant 'DEDALO_UPLOAD_TMP_DIR' in config file. (Using fallback value instead: DEDALO_MEDIA_PATH . '/import/file') ".to_string(), logger::ERROR);
+						debug_log(__METHOD__
+							." DEDALO_UPLOAD_TMP_DIR is not defined. Please, define constant 'DEDALO_UPLOAD_TMP_DIR' in config file." .PHP_EOL
+							." (Using fallback value instead: DEDALO_MEDIA_PATH . '/import/file')" .PHP_EOL
+							." Config constant 'DEDALO_UPLOAD_TMP_DIR' is mandatory!"
+							, logger::ERROR
+						);
 						$response->msg .= " Config constant 'DEDALO_UPLOAD_TMP_DIR' is mandatory!";
 						return $response;
 					}
@@ -1079,8 +1111,13 @@ final class dd_utils_api {
 			$known_mime_types	= self::get_known_mime_types();
 			$allowed_extensions	= array_keys($known_mime_types);
 			if (!in_array($extension, $allowed_extensions)) {
-				$response->msg .= "Error. Invalid file extension ".$extension;
-				debug_log(__METHOD__.PHP_EOL.$response->msg, logger::ERROR);
+				$response->msg .= "Error. Invalid file extension [2] ".$extension;
+				debug_log(__METHOD__
+					. ' '.$response->msg .PHP_EOL
+					. ' extension: '. to_string($extension) .PHP_EOL
+					. ' allowed_extensions: ' .to_string($allowed_extensions)
+					, logger::ERROR
+				);
 				return $response;
 			}
 
@@ -1555,6 +1592,11 @@ final class dd_utils_api {
 			// open office
 			'odt'	=> 'application/vnd.oasis.opendocument.text',
 			'ods'	=> 'application/vnd.oasis.opendocument.spreadsheet',
+
+			// 3d @see https://github.com/KhronosGroup/glTF/blob/main/specification/1.0/README.md#mimetypes
+			'glb'	=> 'application/octet-stream',
+			'gltf'	=> 'model/gltf+json',
+			'glsl'	=> 'text/plain'
 		);
 
 		return $mime_types;
