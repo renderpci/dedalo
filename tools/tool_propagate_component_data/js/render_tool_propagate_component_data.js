@@ -117,7 +117,17 @@ const get_content_data = async function(self) {
 		})
 
 	// info_text
-		const section = self.caller.caller.caller
+		const section = self.caller.caller?.caller
+		if (!section) {
+			console.error('Ignored order. Unable to get section. caller:', self.caller);
+			const content_data = ui.tool.build_content_data(self)
+			content_data.appendChild(ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'msg',
+				inner_html		: 'Caller section is unavailable'
+			}))
+			return content_data
+		}
 
 	// filter. Check the filter to know if the user has apply some filter or if will apply to all records
 		const filter = section.rqo && section.rqo.sqo && section.rqo.sqo.filter
