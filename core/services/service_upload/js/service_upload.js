@@ -334,8 +334,8 @@ export const upload = async function(options) {
 
 			}//end xhr_load
 
-		// proces_file
-			const process_file = function (file) {
+		// chunk_file
+			const chunk_file = function (file) {
 
 				const file_size		= file.size;
 				//break into xMB chunks
@@ -481,9 +481,9 @@ export const upload = async function(options) {
 				xhr.send(formdata);
 			}
 
-		// process_file on end, else send next chunk
+		// chunk_file on end, else send next chunk
 			if (DEDALO_UPLOAD_SERVICE_CHUNK_FILES > 0) {
-				process_file(file, resource_type)
+				chunk_file(file, resource_type)
 			}else{
 				send()
 			}
