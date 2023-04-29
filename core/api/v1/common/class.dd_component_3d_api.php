@@ -72,18 +72,19 @@ final class dd_component_3d_api {
 
 			debug_log(__METHOD__
 				. " Moving file from  " . PHP_EOL
-				. $source_file_path .PHP_EOL
-				. 'to' .PHP_EOL
-				. $target_file_path
+				. ' - ' . $source_file_path .PHP_EOL
+				. ' - to' .PHP_EOL
+				. ' - ' . $target_file_path
 				, logger::DEBUG
 			);
 			$result = rename($source_file_path, $target_file_path);
 			if ($result===false) {
 				debug_log(__METHOD__
 					. " Error moving file from  " . PHP_EOL
-					. $source_file_path .PHP_EOL
-					. 'to' .PHP_EOL
-					. $target_file_path
+					. ' - ' . $source_file_path .PHP_EOL
+					. ' - to' .PHP_EOL
+					. ' - ' . $target_file_path .PHP_EOL
+					. ' rqo: ' . to_string($rqo)
 					, logger::ERROR
 				);
 			}

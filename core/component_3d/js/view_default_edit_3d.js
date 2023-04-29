@@ -111,6 +111,8 @@ const get_content_data_edit = function(self) {
 */
 const get_content_value = (i, current_value, self) => {
 
+	const data = self.data || {}
+
 	// content_value
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
