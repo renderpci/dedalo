@@ -48,8 +48,6 @@ class dd_object extends stdClass {
 		public $target_sections;
 		// request_config		: [],
 		public $request_config;
-		// ar_sections_tipo		: ['oh1']
-		public $ar_sections_tipo;
 		// columns_map			: array
 		public $columns_map;
 		// view					: string|null like 'table'
@@ -483,18 +481,6 @@ class dd_object extends stdClass {
 
 		$this->request_config = $value;
 	}//end set_request_config
-
-
-
-	/**
-	* SET_AR_SECTIONS_TIPO
-	* @param array $value
-	* @return void
-	*/
-	public function set_ar_sections_tipo(array $value) : void {
-
-		$this->ar_sections_tipo = $value;
-	}//end set_ar_sections_tipo
 
 
 
