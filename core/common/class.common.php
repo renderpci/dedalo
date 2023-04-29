@@ -3376,7 +3376,6 @@ abstract class common {
 	public function get_source() : object {
 
 		$source = new request_query_object();
-			// $source->set_typo('source');
 			$source->set_tipo($this->get_tipo());
 			$source->set_section_tipo($this->get_section_tipo());
 			$source->set_lang($this->get_lang());
