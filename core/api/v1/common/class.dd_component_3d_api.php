@@ -69,7 +69,25 @@ final class dd_component_3d_api {
 		// move file
 			$source_file_path	= constant($file_data->tmp_dir) . '/'. $file_data->resource_type. '/' . $file_data->tmp_name;
 			$target_file_path	= $component->get_media_path_dir($target_dir). '/' . $file_data->name;
-			$result				= rename($source_file_path, $target_file_path);
+
+			debug_log(__METHOD__
+				. " Moving file from  " . PHP_EOL
+				. $source_file_path .PHP_EOL
+				. 'to' .PHP_EOL
+				. $target_file_path
+				, logger::DEBUG
+			);
+			$result = rename($source_file_path, $target_file_path);
+			if ($result===false) {
+				debug_log(__METHOD__
+					. " Error moving file from  " . PHP_EOL
+					. $source_file_path .PHP_EOL
+					. 'to' .PHP_EOL
+					. $target_file_path
+					, logger::ERROR
+				);
+			}
+
 
 		// response
 			$response->result	= $result;
