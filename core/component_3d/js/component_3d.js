@@ -88,82 +88,80 @@ export const component_3d = function(){
 /**
 * CREATE_POSTERFRAME
 * 	Creates a new posterframe file from current_view overwriting old file if exists
-* @return promise > bool
+* @param object viewer
+* @return bool
 */
 component_3d.prototype.create_posterframe = async function( viewer ) {
 
 	const self = this
 
-	const blob = await viewer.get_image({
-		width	: 720,
-		height	: 404
-	})
+	// image_blob
+		const image_blob = await viewer.get_image({
+			width	: 720,
+			height	: 404
+		})
+		image_blob.name = self.tipo +'_'+ self.section_tipo +'_'+ self.section_id +'.jpg' // added name to the tmp file
 
-	blob.name = self.tipo+'_'+self.section_tipo+'_'+self.section_id+'.jpg' // added name to the tmp file
-
-	const options = {
-		id					: self.id,
-		file				: blob, // binary data as file
-		resource_type		: '3d', // target dir
-		allowed_extensions	: ['jpg'],
-		max_size_bytes		: blob.size
-	}
-	// upload file as other images to tmp directory
-	const api_response = await upload(options)
-
-	if (!api_response.result) {
-		console.error("Error on api_response:", api_response);
-		return {
-			result	: false,
-			msg		: api_response.msg || 'Error on api_response'
+	// debug
+		if(SHOW_DEBUG===true) {
+			console.log('3d create_posterframe image_blob:', image_blob);
 		}
-	}
 
-	const file_data = api_response.file_data
+	// upload file
+		// upload file as another images to tmp directory
+		const api_response = await upload({
+			id					: self.id,
+			file				: image_blob, // binary data as file
+			resource_type		: '3d', // target dir
+			allowed_extensions	: ['jpg'],
+			max_size_bytes		: image_blob.size
+		})
+		if (!api_response.result) {
+			console.error("Error on api_response:", api_response);
+			return {
+				result	: false,
+				msg		: api_response.msg || 'Error on api_response'
+			}
+		}
+		// file_data set
+		const file_data = api_response.file_data
 
-	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(options)
-		const source = create_source(self)
+	// debug
+		if(SHOW_DEBUG===true) {
+			console.log('3d file_data (on upload finish):', file_data);
+		}
 
-	// rqo
+	return new Promise(function(resolve){
+
+		// move_file_to_dir
 		const rqo = {
 			dd_api	: 'dd_component_3d_api',
 			action	: 'move_file_to_dir',
-			source	: source,
+			source	: create_source(self),
 			options : {
 				target_dir	:'posterframe',
 				file_data	: file_data
 			}
 		}
-
-	// call to the API, fetch data and get response
-		return new Promise(function(resolve){
-
-			data_manager.request({
-				body : rqo
-			})
-			.then(function(response){
-				if(SHOW_DEVELOPER===true) {
-					dd_console("-> upload_blob API response:",'DEBUG',response);
-				}
-
-				const result = response.result // array of objects
-
-				resolve(result)
-			})
+		// call to the API, fetch data and get response
+		data_manager.request({
+			body : rqo
 		})
+		.then(function(response){
+			if(SHOW_DEVELOPER===true) {
+				dd_console("-> upload_blob API response:",'DEBUG',response);
+			}
 
+			const result = response.result // array of objects
 
+			resolve(result)
+		})
+	})
 	// save file
 	// const posterframe =  viewer.renderer.domElement.toDataURL("image/jpeg", 0.95);
-
 	// const a = document.createElement('a');
 	//	a.href = posterframe;
 	//	a.download = 'a.jpg';
 	//	document.body.appendChild(a);
 	//	a.click();
-
-
-
-
 }//end create_posterframe
