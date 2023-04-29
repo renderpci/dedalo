@@ -76,16 +76,8 @@ class dd_object extends stdClass {
 		public $records_separator;
 		// legacy_model			: string like "component_autocomplet_hi"
 		public $legacy_model;
-		// relation_list		: string
-		public $relation_list;
-		// path					: array
-		public $path;
-		// debug				: object
-		public $debug;
-		// add_label : bool
-		public $add_label;
-		// string|null time_machine_list . Get the time machine list tipo for the section
-		public $time_machine_list;
+
+
 		// object features. Use this container to add custom properties like 'notes_publication_tipo' in text area
 		public $features;
 		// array toolbar_buttons
@@ -100,6 +92,9 @@ class dd_object extends stdClass {
 		public $search_options_title;
 		// string target_section_tipo
 		public $target_section_tipo;
+
+		// debug				: object
+		public $debug;
 		*/
 
 
