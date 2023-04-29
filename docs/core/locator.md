@@ -124,3 +124,29 @@ Properties:
 - **section_id_key** : `int` data-frame index array number of the data that reference | ex : 1
 - **section_top_tipo** : `string` source section_tipo  **Deprecated** use *from_section_tipo* | ex : oh1
 - **section_top_id** : `string` source section_id **Deprecated** use *from_section_id* | ex : 1
+
+## Flat version
+
+Normal locator is a object, but, in some cases, is useful a string version of the locator, for example to be used as filename of images, pdf or audiovisual files. The flat version of the locator is a chained plain locator string without the properties name.
+
+Example; the section_id 3 of an image could pointed in this way:
+
+```json
+{
+    "section_id": 3,
+    "section_tipo": "rsc170",
+    "component_tipo": "rsc29"
+}
+```
+
+The locator says: get the record 3 (section_id) section image (section_tipo [rsc170](https://dedalo.dev/ontology/rsc170)) and give me the field of the image (component_tipo [rsc29](https://dedalo.dev/ontology/rsc29))
+
+Flat version only uses the values of the locator and always has this structure:
+
+component_tipo_section_tipo_section_id
+
+The '_' character is use to separate the values, and the result of previous locator in his flat version will be: **rsc29_rsc170_3**
+
+As the flat version is used to named the media files, the image is stored as: rsc29_rsc170_3.jpg in the server.
+
+It's possible to get flat version calling to the `get_flat()` function of the locator class.
