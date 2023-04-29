@@ -10,9 +10,13 @@ Locator is the connection, the relation, between data. Dédalo use a NoSQL model
 
 **locator** `object`
 
-Using locators is the way to connect data in Dédalo, besides locators are the own data of multiple components, selects, portals, check boxes, etc. They use locators to point and resolve his data.
+Locators are the way to connect data in Dédalo, besides locators are the own data for multiple components; selects, portals, check boxes, etc. These components uses locators to point and resolve his data.
 
-Dédalo use few tables with lots of sections named "matrix_XXX" this tables has the same schema:
+Locator is an extensible object, it depends of the data pointed and his properties could be extended by specific uses.
+
+### Function and structure
+
+To understand how locator works, keep in mind that Dédalo use few tables with lots of sections named "matrix_XXX" and all of these tables has the same schema:
 
 ```mermaid
 erDiagram
@@ -61,7 +65,7 @@ When a component need to call to other section and get his data will use a locat
 Locator has a direction, the basic format is a unidirectional pointer; point to data (to).
 
 ```mermaid
-graph LR
+    graph LR
     A((Oral History 1 :: Informants)) --locator--> B((People under study 88))
 ```
 
@@ -70,7 +74,7 @@ The component "Informants" ([oh24](https://dedalo.dev/ontology/oh24)) of "Oral H
 ```json
 {
     "section_id": 88,
-    "section_tipo": "rec197"
+    "section_tipo": "rsc197"
 }
 ```
 
@@ -80,13 +84,13 @@ The locator resolution will use the columns section_id and section_tipo in matri
 
 See it as tables:
 
-table: matrix
+Table: **matrix**
 
 | id | section_id | section_tipo | datos |
 | --- | --- | --- | --- |
 | 345 | 1 | oh1 | \[{"oh24":\[{"section_id": 88, "section_tipo": "rsc97"}]}] |
 
-table: matrix
+table: **matrix**
 
 | id | section_id | section_tipo | datos |
 | --- | --- | --- | --- |
@@ -110,7 +114,7 @@ Locator reference the source with the prefix *from*:
 
 from_section_tipo: the section that has the component that store the locator, the source.
 
-Properties:
+### Properties
 
 - **section_id** : `string` destination section_id **Mandatory** | ex : 1
 - **section_tipo** : `string` destination section_tipo **Mandatory** | ex : rsc197
