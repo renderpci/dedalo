@@ -138,6 +138,10 @@ class dd_object extends stdClass {
 			return;
 		}
 
+		// set typo always
+			$this->typo = 'ddo';
+
+
 		// set model in first time
 			if(isset($data->model)) {
 				$this->set_model($data->model);
@@ -148,9 +152,6 @@ class dd_object extends stdClass {
 				$method = 'set_'.$key;
 				$this->{$method}($value);
 			}
-
-		// set typo always
-			$this->set_typo('ddo');
 
 		// resolve type
 			$model = $this->model;
@@ -189,26 +190,6 @@ class dd_object extends stdClass {
 	* SET  METHODS
 	* Verify values and set property to current object
 	*/
-
-
-
-	/**
-	* SET_TYPO
-	* @param string $value
-	* @return void
-	*/
-	public function set_typo(string $value) : void {
-		if($value!=='ddo') {
-			debug_log(__METHOD__
-				." Error. Fixed invalid typo "
-				.to_string($value)
-				, logger::ERROR
-			);
-			$value = 'ddo';
-		}
-		$this->typo = $value;
-	}//end set_typo
-
 
 
 	/**
