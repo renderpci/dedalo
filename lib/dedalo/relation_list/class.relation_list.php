@@ -397,6 +397,7 @@ class relation_list extends common {
 						// }
 						// ]
 					foreach ((array)$custom_map as $map_item) {
+						// error_log( json_encode($map_item, JSON_PRETTY_PRINT));
 
 						// match current locator section tipo with defined maps section_tipo. If not exist, ignore it
 						if ($map_item->section_tipo===$current_locator->from_section_tipo) {
@@ -404,6 +405,10 @@ class relation_list extends common {
 							$value_obj = new stdClass();
 								$value_obj->section_tipo	= $current_locator->from_section_tipo;
 								$value_obj->section_id		= $current_locator->from_section_id;
+
+							$related_value_obj = new stdClass();
+
+							$is_related = false;
 
 							// iterate object map_item
 							foreach ($map_item as $map_key => $map_obj) {
@@ -416,7 +421,64 @@ class relation_list extends common {
 
 								// table
 									if ($map_key==='table') {
-										$value_obj->table = $map_obj;
+										$value_obj->table			= $map_obj;
+										$related_value_obj->table	= $map_obj;
+										continue;
+									}
+
+								// related case (@see mdcat4338 properties)
+									if(isset($map_obj->related)) {
+
+										$related = new relation_list(
+											$map_obj->related->target_component_tipo, //string tipo
+											$current_locator->from_section_id, // mixed section_id
+											$current_locator->from_section_tipo, // string section_tipo
+											'edit'
+										);
+										$current_dato = $related->get_inverse_references(false, 0, false);
+										$filtered_result = [];
+										foreach ((array)$current_dato as $current_dato_value) {
+											// filter_section
+											if (!in_array($current_dato_value->from_section_tipo, (array)$map_obj->related->filter_section)) {
+												continue;
+											}
+											$filtered_result[] = $current_dato_value; // add locator
+										}
+
+										if (!empty($filtered_result)) {
+											foreach ($filtered_result as $filtered_value) {
+
+												$filtered_custom_locator = new locator();
+													$filtered_custom_locator->set_section_tipo($filtered_value->from_section_tipo);
+													$filtered_custom_locator->set_section_id($filtered_value->from_section_id);
+
+												// Check target is publicable
+													$filtered_current_is_publicable = diffusion::get_is_publicable($filtered_custom_locator);
+													if ($filtered_current_is_publicable!==true) {
+														debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($filtered_custom_locator), logger::DEBUG);
+														continue;
+													}
+
+												// current_value
+													$current_dato			= [$filtered_custom_locator];
+													$process_dato_arguments	= $map_obj->custom_arguments->process_dato_arguments;
+														$process_dato_arguments->lang = $lang;
+													$current_value 			= diffusion_sql::resolve_value(
+														$process_dato_arguments, // mixed options
+														$current_dato, // mixed dato
+														' | ' // string default_separator
+													);
+
+												if ($is_related===false) {
+													$related_value_obj->section_tipo	= $filtered_value->from_section_tipo;
+													$related_value_obj->section_id		= $filtered_value->from_section_id;
+												}
+
+												$related_value_obj->{$map_key}	= $current_value;
+
+											}//end foreach ($filtered_result as $filtered_value)
+										}
+										$is_related = true;
 										continue;
 									}
 
@@ -438,13 +500,14 @@ class relation_list extends common {
 									$process_dato_arguments->lang = $lang;
 
 								$current_value = diffusion_sql::resolve_value($process_dato_arguments, $current_dato, $separator=' | ');
-									// dump($current_value, ' current_value ++ '.to_string());
 
 								$value_obj->{$map_key} = $current_value;
-							}
+							}//end foreach ($map_item as $map_key => $map_obj)
 
-							if (!in_array($value_obj, $ar_values)) {
+							if (!in_array($value_obj, $ar_values) && $is_related===false) {
 								$ar_values[] = $value_obj;
+							}else if(!in_array($related_value_obj, $ar_values) && $is_related===true){
+								$ar_values[] = $related_value_obj;
 							}
 						}
 
@@ -606,5 +669,3 @@ class relation_list extends common {
 
 
 }//relation_list
-
-
