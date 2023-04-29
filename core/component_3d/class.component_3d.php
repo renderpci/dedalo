@@ -778,187 +778,47 @@ class component_3d extends component_media_common {
 			$full_file_name		= $file_data->full_file_name;		// like "test175_test65_1.mp4"
 			$full_file_path		= $file_data->full_file_path;		// like "/mypath/media/av/404/test175_test65_1.mp4"
 
-			// extension
-				$file_ext = pathinfo($original_file_name, PATHINFO_EXTENSION);
-				if (empty($file_ext)) {
-					// throw new Exception("Error Processing Request. File extension is unknown", 1);
-					$msg = ' Error Processing Request. File extension is unknown';
-					debug_log(__METHOD__.$msg, logger::ERROR);
-					$response->msg .= $msg;
-					return $response;
-				}
-			// id (without extension, like 'test81_test65_2')
-				$id = $this->get_id();
-				if (empty($id)) {
-					throw new Exception("Error Processing Request. Invalid id: ".to_string($id), 1);
-				}
+		// extension
+			$file_ext = pathinfo($original_file_name, PATHINFO_EXTENSION);
+			if (empty($file_ext)) {
+				// throw new Exception("Error Processing Request. File extension is unknown", 1);
+				$response->msg .= ' Error Processing Request. File extension is unknown';
+				debug_log(__METHOD__
+					. ' '.$response->msg
+					, logger::ERROR
+				);
+				return $response;
+			}
+		// id (without extension, like 'test81_test65_2')
+			$id = $this->get_id();
+			if (empty($id)) {
+				$response->msg .= ' Error Processing Request. Invalid id';
+				debug_log(__METHOD__
+					. ' '.$response->msg
+					, logger::ERROR
+				);
+				return $response;
+			}
 
-			// quality default in upload is 'original' (!)
-				$quality  = $this->get_quality();
-
-			$AVObj = new AVObj($id, $quality);
-
-		try {
-
-			# AUDIO CASE
-			if ($quality==='audio') {
-
-				// audio extensions supported
-				$ar_audio_only_ext = array('mp3','aiff','aif','wave','wav');
-				if (in_array($file_ext, $ar_audio_only_ext)) {
-					# Audio conversion
-					$Ffmpeg = new Ffmpeg();
-					$Ffmpeg->convert_audio($AVObj, $full_file_path);
-				}else{
-					// throw new Exception("Error Processing Request. Current audio extension [$file_ext] is not supported (q:$quality)", 1);
-					debug_log(__METHOD__." Error Processing Request. Current audio extension [$file_ext] is not supported (q:$quality)".to_string(), logger::ERROR);
-				}
-
-			# VIDEO CASE
-			}else{
-
-				// dedalo_av_recompress_all
-				// When config DEDALO_AV_RECOMPRESS_ALL is set to 1, all video files are
-				// re-compressed to 960k/s variable bit rate and keyframe every 75 frames
-					if (defined('DEDALO_AV_RECOMPRESS_ALL') && DEDALO_AV_RECOMPRESS_ALL===1) {
-
-						debug_log(__METHOD__." RECOMPRESSING AV FROM '$quality' PLEASE WAIT.. ".to_string(), logger::DEBUG);
-
-						# If default quality file not exists, generate default quality version now
-						# $target_file  = $AVObj->get_media_filepath(); ???????????????????????????????? SURE ???????
-						$quality_default_AVObj 		 = new AVObj($id, DEDALO_3D_QUALITY_DEFAULT);
-						$quality_default_target_file = $quality_default_AVObj->get_media_filepath();
-						if (!file_exists($quality_default_target_file)) {
-							$source_file = $full_file_path; // actually full original path and name
-							if (!file_exists($source_file)) {
-								debug_log(__METHOD__." ERROR: Source file not exists ($source_file) ".to_string(), logger::ERROR);
-							}else{
-								// convert with ffmpeg
-								Ffmpeg::convert_to_dedalo_av($source_file, $quality_default_target_file);
-							}
-						}else{
-							debug_log(__METHOD__." WARNING: Ignored conversion to default quality (".DEDALO_3D_QUALITY_DEFAULT."). File already exists", logger::WARNING);
-						}//end if (!file_exists($target_file)) {
-					}//end if (defined('DEDALO_AV_RECOMPRESS_ALL') && DEDALO_AV_RECOMPRESS_ALL==1)
+		// copy from original to default quality
+			$original_file_path			= $full_file_path;
+			$default_quality			= $this->get_default_quality();
+			$default_quality_file_path	= $this->get_media_filepath($default_quality);
+			if (!copy($original_file_path, $default_quality_file_path)) {
+				debug_log(__METHOD__
+					. " Error on copy original file to default quality file " . PHP_EOL
+					. 'original_file_path: ' .$original_file_path .PHP_EOL
+					. 'default_quality_file_path: ' .$default_quality_file_path
+					, logger::ERROR
+				);
+				$response->msg = 'Error on copy original file to default quality file';
+				return $response;
+			}
 
 
-				// posterframe. Create posterframe of current video if it does not exist
-					$PosterFrameObj = new PosterFrameObj($id);
-					if(Ffmpeg::get_ffmpeg_installed_path() && !$PosterFrameObj->get_file_exists()) {
-						$timecode	= '00:00:05';
-						$Ffmpeg		= new Ffmpeg();
-						$Ffmpeg->create_posterframe($AVObj, $timecode);
-					}else{
-						debug_log(__METHOD__." WARNING: Ignored creation of posterframe. File already exists", logger::WARNING);
-					}
-
-				// conform headers
-					# Apply qt-faststart to optimize file headers position
-					#$Ffmpeg = new Ffmpeg();
-					#$Ffmpeg->conform_header($AVObj);
-
-			}//end if ($quality=='audio') {
-
-
-			// audio files. Audio files generate always a audio file
-				$ar_audio_only_ext = array('mp3','aiff','aif','wave','wav');
-				if (in_array($file_ext, $ar_audio_only_ext) && $quality===DEDALO_3D_QUALITY_ORIGINAL) {
-
-					# Audio conversion
-					$AVObj_target = new AVObj($id, 'audio');
-					$target_file  = $AVObj_target->get_media_filepath();
-					if (!file_exists($target_file)) {
-						$source_file = $full_file_path;
-						if (!file_exists($source_file)) {
-							debug_log(__METHOD__." ERROR: Source file not exists ($source_file) 2 ".to_string(), logger::WARNING);
-						}
-						Ffmpeg::convert_to_dedalo_av($source_file, $target_file);
-						debug_log(__METHOD__." Converted source audio file to 'audio' quality ".to_string(), logger::DEBUG);
-					}//end if (!file_exists($target_file))
-				}
-
-
-			// target_filename. Save original file name in a component_input_text
-				$properties = $this->get_properties();
-				if (isset($properties->target_filename)) {
-
-					$current_section_id  = $this->get_parent();
-					$target_section_tipo = $this->get_section_tipo();
-
-					$model_name_target_filename	= RecordObj_dd::get_modelo_name_by_tipo($properties->target_filename, true);
-					$component_target_filename	= component_common::get_instance(
-						$model_name_target_filename, // model
-						$properties->target_filename, // tipo
-						$current_section_id, // seciton_id
-						'edit', // mode
-						DEDALO_DATA_NOLAN, // lang
-						$target_section_tipo // section_tipo
-					);
-					$component_target_filename->set_dato($original_file_name);
-					$component_target_filename->Save();
-					debug_log(__METHOD__." Saved original filename: ".to_string($original_file_name), logger::DEBUG);
-				}
-
-
-			// add data with the file uploaded
-				// if ($quality===DEDALO_3D_QUALITY_ORIGINAL) {
-				// 	$dato			= $this->get_dato();
-				// 	$value			= empty($dato) ? new stdClass() : reset($dato);
-				// 	$media_value	= $this->build_media_value((object)[
-				// 		'value'		=> $value,
-				// 		'file_name'	=> $original_file_name
-				// 	]);
-				// 	$this->set_dato([$media_value]);
-				// 	$this->Save();
-				// }
-
-			// get files info
-				$files_info	= [];
-				$ar_quality = DEDALO_3D_AR_QUALITY;
-				foreach ($ar_quality as $current_quality) {
-					if ($current_quality==='thumb') continue;
-					// read file if exists to get file_info
-					$file_info = $this->get_quality_file_info($current_quality);
-					// add non empty quality files data
-					if (!empty($file_info)) {
-						$files_info[] = $file_info;
-					}
-				}
-
-			// save component dato
-				$dato		= $this->get_dato();
-				$save_dato	= false;
-				if (isset($dato[0])) {
-					if (!is_object($dato[0])) {
-						// bad dato
-						debug_log(__METHOD__." ERROR. BAD COMPONENT DATO ".to_string($dato), logger::ERROR);
-					}else{
-						// update property files_info
-						$dato[0]->files_info = $files_info;
-						$save_dato = true;
-					}
-				}else{
-					// create a new dato from scratch
-					$dato_item = (object)[
-						'files_info' => $files_info
-					];
-					$dato = [$dato_item];
-					$save_dato = true;
-				}
-				if ($save_dato===true) {
-					$this->set_dato($dato);
-					$this->Save();
-				}
-
-			// all is OK
-				$response->result	= true;
-				$response->msg		= 'OK. Request done ['.__METHOD__.'] ';
-
-		} catch (Exception $e) {
-			$msg = 'Exception[process_uploaded_file][ImageMagick]: ' .  $e->getMessage() . "\n";
-			debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
-			$response->msg .= ' - '.$msg;
-		}
+		// response OK
+			$response->result	= true;
+			$response->msg		= 'OK. successful request';
 
 
 		return $response;
