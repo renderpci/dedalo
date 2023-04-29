@@ -51,33 +51,52 @@ class diffusion_mysql extends diffusion_sql  {
 	*/
 	public static function exec_mysql_query(string $sql, ?string $table_name=null, $database_name=false, bool $multi_query=false) : mixed {
 
-		if (empty($database_name)) {
-			// throw new Exception("Error Processing Request. database_name is mandatory !", 1);
+		// empty database_name case
+			if (empty($database_name)) {
+				debug_log(__METHOD__
+					." Error. database name is mandatory "
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		try {
+
+			$mysql_conn = self::get_conn($database_name);
+
+			// result
+			$result = ($multi_query===true)
+				? $mysql_conn->multi_query( $sql )
+				: $mysql_conn->query( $sql );
+			if ($result===false || !empty($mysql_conn->error)) {
+				debug_log(
+					__METHOD__.' INFO: Data skipped in SQL table : '. $table_name . PHP_EOL
+					.' error: '. $mysql_conn->error,
+					logger::ERROR
+				);
+			}
+			// $mysql_conn->close();
+
+			if( strpos($sql, 'INSERT')!==false ) {
+				self::$insert_id = $mysql_conn->insert_id;
+			}
+
+		} catch (Exception $e) {
+
+			error_log( 'Caught exception: ' . $e->getMessage() );
+
 			debug_log(__METHOD__
-				." Error. database name is mandatory "
+				. " database_name " . PHP_EOL
+				. ' database_name: ' .$database_name .PHP_EOL
+				. ' msg: ' . $e->getMessage() .PHP_EOL
+				. ' connection error: '. $mysql_conn->error ?? 'Unknown'
+				. ' sql: '.$sql
 				, logger::ERROR
 			);
-			return false;
+
+			$result = false;
 		}
 
-		$mysql_conn = self::get_conn($database_name);
-
-		// result
-		$result = ($multi_query===true)
-			? $mysql_conn->multi_query( $sql )
-			: $mysql_conn->query( $sql );
-		if ($result===false || !empty($mysql_conn->error)) {
-			debug_log(
-				__METHOD__.' INFO: Data skipped in SQL table : '. $table_name . PHP_EOL
-				.' error: '. $mysql_conn->error,
-				logger::ERROR
-			);
-		}
-		// $mysql_conn->close();
-
-		if( strpos($sql, 'INSERT')!==false ) {
-			self::$insert_id = $mysql_conn->insert_id;
-		}
 
 		return $result;
 	}//end exec_mysql_query
@@ -102,50 +121,66 @@ class diffusion_mysql extends diffusion_sql  {
     *                [field_options] => 12
     *            )   ..
     * )
-    * @return bool true
+    * @return bool
 	*/
 	public static function create_table(array $table_data, bool $drop=true) : bool {
 
-		$database_name	= $table_data['database_name'];	# nombre base de datos
-		$table_name		= $table_data['table_name'];	# nombre tabla
-		$ar_fields		= $table_data['ar_fields'];		# campos de la tabla
-		$engine			= isset($table_data['engine']) ? $table_data['engine'] : 'MyISAM';
-		$table_type		= $table_data['table_type'];	# table type: default | tm
+		// short vars
+			$database_name	= $table_data['database_name'];	# nombre base de datos
+			$table_name		= $table_data['table_name'];	# nombre tabla
+			$ar_fields		= $table_data['ar_fields'];		# campos de la tabla
+			$engine			= isset($table_data['engine']) ? $table_data['engine'] : 'MyISAM';
+			$table_type		= $table_data['table_type'];	# table type: default | tm
 
-		#
-		# DROP (default is true)
-			if($drop===true) {
-				$sql_query  = (string)'';
-				$sql_query .= "DROP TABLE IF EXISTS `$database_name`.`$table_name` ; ";
-				#
-				# EXEC SINGLE QUERY TO DATABASE
-				$result = self::exec_mysql_query( $sql_query, $table_name, $database_name );
+		// database_name is mandatory
+			if (empty($database_name)) {
+				debug_log(__METHOD__
+					. " Error on create_table: database name is mandatory ". PHP_EOL
+					. 'table_data: ' . to_string($table_data)
+					, logger::ERROR
+				);
+				return false;
 			}
 
-		#
-		# CREATE
-			$sql_query  = (string)'';
-			$sql_query .= "\nCREATE TABLE `$database_name`.`$table_name` (";
+
+		// DROP (default is true)
+			if($drop===true) {
+				$sql_query = "DROP TABLE IF EXISTS `$database_name`.`$table_name`;";
+				// exec single query to database
+				$result = self::exec_mysql_query(
+					$sql_query,
+					$table_name,
+					$database_name
+				);
+			}
+
+		// create
+			$sql_query = "CREATE TABLE `$database_name`.`$table_name` (";
+
 			// generate fields
 			$sql_query .= self::generate_fields($ar_fields);
 			$sql_query .= ",\n";
+
 			// generate keys
 			$sql_query .= self::generate_keys($ar_fields, $table_type);
 			switch ($engine) {
 				case 'InnoDB':
-					$sql_query .= "\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Self-generated table in Dédalo4 for diffusion' AUTO_INCREMENT=1 ;\n";
+					$sql_query .= "\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Self-generated table in Dédalo for diffusion' AUTO_INCREMENT=1 ;\n";
 					break;
 				case 'MyISAM':
 				default:
-					$sql_query .= "\n) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci PACK_KEYS=0 COMMENT='Self-generated table in Dédalo4 for diffusion' AUTO_INCREMENT=1 ;\n";
+					$sql_query .= "\n) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci PACK_KEYS=0 COMMENT='Self-generated table in Dédalo for diffusion' AUTO_INCREMENT=1 ;\n";
 					break;
 			}
 
-			#
-			# EXEC SINGLE QUERY TO DATABASE
+			// exec single query to database
 			$result = self::exec_mysql_query( $sql_query, $table_name, $database_name );
 			if ($result===false) {
-				debug_log(__METHOD__." Error on created new table $database_name.$table_name ".to_string($sql_query), logger::ERROR);
+				debug_log(__METHOD__
+					." Error on created new table $database_name.$table_name " .PHP_EOL
+					.to_string($sql_query)
+					, logger::ERROR
+				);
 			}else{
 				debug_log(__METHOD__." Created new table $database_name.$table_name ".to_string($sql_query), logger::DEBUG);
 			}
@@ -201,7 +236,7 @@ class diffusion_mysql extends diffusion_sql  {
 			}
 
 		// SQL add column
-		$sql_query = 'ALTER TABLE `'.$table_name.'` ADD '.$column_sql .', '.$index_sql .';';
+		$sql_query = 'ALTER TABLE '.$database_name.'.`'.$table_name.'` ADD '.$column_sql .', '.$index_sql .';';
 
 		// exec single query to database
 		$result = self::exec_mysql_query(
@@ -210,9 +245,17 @@ class diffusion_mysql extends diffusion_sql  {
 			$database_name
 		);
 		if ($result===false) {
-			debug_log(__METHOD__." Erroro on created new column $database_name.$table_name $field_name ".to_string($sql_query), logger::ERROR);
+			debug_log(__METHOD__
+				. " Err on created new column $database_name.$table_name $field_name "
+				.'sql_query:' . to_string($sql_query)
+				, logger::ERROR
+			);
 		}else{
-			debug_log(__METHOD__." Created new column $database_name.$table_name $field_name ".to_string($sql_query), logger::WARNING);
+			debug_log(__METHOD__
+				. " Created new column $database_name.$table_name $field_name "
+				. 'sql_query:' . to_string($sql_query)
+				, logger::WARNING
+			);
 		}
 
 
