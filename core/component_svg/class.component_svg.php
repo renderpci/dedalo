@@ -389,68 +389,104 @@ class component_svg extends component_media_common {
 			$file_ext = pathinfo($original_file_name, PATHINFO_EXTENSION);
 			if (empty($file_ext)) {
 				// throw new Exception("Error Processing Request. File extension is unknown", 1);
-				$msg = ' Error Processing Request. File extension is unknown';
-				debug_log(__METHOD__.$msg, logger::ERROR);
-				$response->msg .= $msg;
+				$response->msg .= ' Error Processing Request. File extension is unknown';
+				debug_log(__METHOD__
+					. ' '.$response->msg
+					, logger::ERROR
+				);
+				return $response;
+			}
+		// id (without extension, like 'test81_test65_2')
+			$id = $this->get_id();
+			if (empty($id)) {
+				$response->msg .= ' Error Processing Request. Invalid id';
+				debug_log(__METHOD__
+					. ' '.$response->msg
+					, logger::ERROR
+				);
 				return $response;
 			}
 
-		// quality default in upload is 'original' (!)
-			$quality  = $this->get_quality();
-
-		// add data with the file uploaded
-			// if ($quality===DEDALO_SVG_QUALITY_DEFAULT) {
-			// 	$dato			= $this->get_dato();
-			// 	$value			= empty($dato) ? new stdClass() : reset($dato);
-			// 	$media_value	= $this->build_media_value((object)[
-			// 		'value'		=> $value,
-			// 		'file_name'	=> $original_file_name
-			// 	]);
-			// 	$this->set_dato([$media_value]);
-			// 	$this->Save();
-			// }
-
-		// get files info
-			$files_info	= [];
-			$ar_quality = DEDALO_SVG_AR_QUALITY;
-			foreach ($ar_quality as $current_quality) {
-				if ($current_quality==='thumb') continue;
-				// read file if exists to get file_info
-				$file_info = $this->get_quality_file_info($current_quality);
-				// add non empty quality files data
-				if (!empty($file_info)) {
-					$files_info[] = $file_info;
-				}
-			}
-
-		// save component dato
-			$dato		= $this->get_dato();
-			$save_dato	= false;
-			if (isset($dato[0])) {
-				if (!is_object($dato[0])) {
-					// bad dato
-					debug_log(__METHOD__." ERROR. BAD COMPONENT DATO ".to_string($dato), logger::ERROR);
-				}else{
-					// update property files_info
-					$dato[0]->files_info = $files_info;
-					$save_dato = true;
-				}
+		// copy from original to default quality
+			$original_file_path			= $full_file_path;
+			$default_quality			= $this->get_default_quality();
+			$default_quality_file_path	= $this->get_media_filepath($default_quality);
+			if ($original_file_path===$default_quality_file_path) {
+				debug_log(__METHOD__
+					. " File is already in default quality " . PHP_EOL
+					. ' Nothing is moved '
+					, logger::WARNING
+				);
 			}else{
-				// create a new dato from scratch
-				$dato_item = (object)[
-					'files_info' => $files_info
-				];
-				$dato = [$dato_item];
-				$save_dato = true;
-			}
-			if ($save_dato===true) {
-				$this->set_dato($dato);
-				$this->Save();
+				if (!copy($original_file_path, $default_quality_file_path)) {
+					debug_log(__METHOD__
+						. " Error on copy original file to default quality file " . PHP_EOL
+						. 'original_file_path: ' .$original_file_path .PHP_EOL
+						. 'default_quality_file_path: ' .$default_quality_file_path
+						, logger::ERROR
+					);
+					$response->msg = 'Error on copy original file to default quality file';
+					return $response;
+				}
 			}
 
-		// all is OK
+		// DES
+			// quality default in upload is 'original' (!)
+				// $quality  = $this->get_quality();
+
+			// add data with the file uploaded
+				// if ($quality===DEDALO_SVG_QUALITY_DEFAULT) {
+				// 	$dato			= $this->get_dato();
+				// 	$value			= empty($dato) ? new stdClass() : reset($dato);
+				// 	$media_value	= $this->build_media_value((object)[
+				// 		'value'		=> $value,
+				// 		'file_name'	=> $original_file_name
+				// 	]);
+				// 	$this->set_dato([$media_value]);
+				// 	$this->Save();
+				// }
+
+			// get files info
+			// 	$files_info	= [];
+			// 	$ar_quality = DEDALO_SVG_AR_QUALITY;
+			// 	foreach ($ar_quality as $current_quality) {
+			// 		if ($current_quality==='thumb') continue;
+			// 		// read file if exists to get file_info
+			// 		$file_info = $this->get_quality_file_info($current_quality);
+			// 		// add non empty quality files data
+			// 		if (!empty($file_info)) {
+			// 			$files_info[] = $file_info;
+			// 		}
+			// 	}
+
+			// // save component dato
+			// 	$dato		= $this->get_dato();
+			// 	$save_dato	= false;
+			// 	if (isset($dato[0])) {
+			// 		if (!is_object($dato[0])) {
+			// 			// bad dato
+			// 			debug_log(__METHOD__." ERROR. BAD COMPONENT DATO ".to_string($dato), logger::ERROR);
+			// 		}else{
+			// 			// update property files_info
+			// 			$dato[0]->files_info = $files_info;
+			// 			$save_dato = true;
+			// 		}
+			// 	}else{
+			// 		// create a new dato from scratch
+			// 		$dato_item = (object)[
+			// 			'files_info' => $files_info
+			// 		];
+			// 		$dato = [$dato_item];
+			// 		$save_dato = true;
+			// 	}
+			// 	if ($save_dato===true) {
+			// 		$this->set_dato($dato);
+			// 		$this->Save();
+			// 	}
+
+		// response OK
 			$response->result	= true;
-			$response->msg		= 'OK. Request done ['.__METHOD__.'] ';
+			$response->msg		= 'OK. successful request';
 
 
 		return $response;
