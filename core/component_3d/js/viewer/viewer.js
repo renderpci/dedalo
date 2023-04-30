@@ -42,37 +42,50 @@
 	import { environments } from './environments.js';
 
 
+
+/**
+* VIEWER
+*/
 export const viewer = function () {
 
-	return true
 }
+
+
 
 /**
 * INIT
+* @param object options
 * @return object self
 * 	Self instance
 */
-viewer.init = function () {
+viewer.init = async function (options) {
 
 	const self = this
 
-	self.DEFAULT_CAMERA	= '[default]';
+	// options
+		const cache = options.cache ?? true
+		const default_camera = options.default_camera ?? '[default]'
 
-	self.MANAGER		= new LoadingManager();
-	self.DRACO_LOADER	= new DRACOLoader( self.MANAGER ).setDecoderPath( '../../lib/threejs/jsm/libs/draco/' );
-	self.KTX2_LOADER	= new KTX2Loader( self.MANAGER ).setTranscoderPath( '../../lib/threejs/jsm/libs/basis/' );
+	// set main vars
+		self.DEFAULT_CAMERA	= default_camera;
+		self.MANAGER		= new LoadingManager();
+		self.DRACO_LOADER	= new DRACOLoader( self.MANAGER ).setDecoderPath( '../../lib/threejs/jsm/libs/draco/' );
+		self.KTX2_LOADER	= new KTX2Loader( self.MANAGER ).setTranscoderPath( '../../lib/threejs/jsm/libs/basis/' );
 
-	Cache.enabled = true;
+		Cache.enabled = cache;
 
 	return self
-}
+}//end init
+
+
 
 /**
 * BUILD
-* @param content_value html node
-* @param options object with the viewer options saved
+* @param content_value HTMLElement
+* @param options object
+* 	saved viewer options
 */
-viewer.build = function (content_value, options) {
+viewer.build = async function (content_value, options) {
 
 	const self = this
 
@@ -160,17 +173,26 @@ viewer.build = function (content_value, options) {
 	// resize event. Add to content value instead window to allow user resize manually the component
 		// window.addEventListener('resize', self.resize.bind(self), false);
 		new ResizeObserver( self.resize.bind(self) ).observe( self.content_value )
-}// end build
+}//end build
+
 
 
 /**
 * RENDER
+* Is triggered for each frame (x frames/sec)
+* @return void
 */
-viewer.render = function() {
+viewer.render = async function() {
 
 	const self = this
 
-	self.renderer.render( self.scene, self.active_camera );
+	// render each frame
+	await self.renderer.render(
+		self.scene,
+		self.active_camera
+	)
+
+	// updates axes camera render
 	if (self.state.grid) {
 		self.axes_camera.position.copy(self.default_camera.position)
 		self.axes_camera.lookAt(self.axes_scene.position)
@@ -206,7 +228,10 @@ viewer.resize = function() {
 
 /**
 * LOAD
-* @param file_uri uri of the file to be load
+* @param string file_uri
+* 	uri of the file to be load
+* @return promise
+* 	resolve object gltf
 */
 viewer.load = function( file_uri ) {
 
@@ -221,30 +246,40 @@ viewer.load = function( file_uri ) {
 			.setKTX2Loader( self.KTX2_LOADER.detectSupport( self.renderer ) )
 			.setMeshoptDecoder( MeshoptDecoder );
 
-		// const blob_URLs = [];
+		loader.load(
+			// resource URL
+			file_uri,
+			// called when the resource is loaded
+			(gltf) => {
 
-		loader.load(file_uri, (gltf) => {
+				const clips = gltf.animations || [];
+				const scene = gltf.scene || gltf.scenes[0];
+				if (!scene) {
+					// Valid, but not supported by this viewer.
+					throw new Error(
+					'This model contains no scene, and cannot be viewed here. However,'
+					+ ' it may contain individual 3D resources.'
+					);
+				}
 
-		const scene = gltf.scene || gltf.scenes[0];
-		const clips = gltf.animations || [];
+				self.object = scene
+				self.set_content(scene, clips);
 
-		if (!scene) {
-			// Valid, but not supported by this viewer.
-			throw new Error(
-			'This model contains no scene, and cannot be viewed here. However,'
-			+ ' it may contain individual 3D resources.'
-			);
-		}
+				// blob_URLs.forEach(URL.revokeObjectURL);
 
-		self.object = scene
-		self.set_content(scene, clips);
-
-		// blob_URLs.forEach(URL.revokeObjectURL);
-
-		resolve(gltf);
-
-		}, undefined, reject);
-
+				resolve(gltf);
+			},
+			// called while loading is progressing
+			undefined,
+			// called when loading has errors
+			function ( error ) {
+				console.log( 'An error happened loading file: ', file_uri);
+				reject(false)
+			}
+		);
+	})
+	.catch((err) => {
+		console.error(err);
 	});
 }//end load
 
@@ -361,7 +396,7 @@ viewer.get_image = function(options){
 			self.render()
 
 			resolve(blob)
-		}, "image/jpeg", 0.75);
+		}, 'image/jpeg', 0.75);
 	})
 }
 
@@ -512,6 +547,7 @@ viewer.update_lights = function() {
 
 /**
 * UPDATE_LIGHTS
+* @return void
 */
 viewer.add_lights = function() {
 
@@ -532,15 +568,23 @@ viewer.add_lights = function() {
 }//end add_lights
 
 
+/**
+* REMOVE_LIGHTS
+* @return void
+*/
 viewer.remove_lights = function() {
 
 	const self = this
 
 	self.lights.forEach((light) => light.parent.remove(light));
 	self.lights.length = 0;
-}
+}//end remove_lights
 
 
+/**
+* REMOVE_LIGHTS
+* @return void
+*/
 viewer.update_environment = function() {
 
 	const self = this
@@ -550,9 +594,8 @@ viewer.update_environment = function() {
 	self.get_cube_map_texture( environment ).then(( { envMap } ) => {
 		self.scene.environment = envMap;
 		self.scene.background = self.state.background ? envMap : self.background_color;
-
 	});
-}
+}//end update_environment
 
 
 viewer.get_cube_map_texture = function( environment ) {
@@ -587,6 +630,10 @@ viewer.get_cube_map_texture = function( environment ) {
 }
 
 
+/**
+* UPDATE_DISPLAY
+* @return void
+*/
 viewer.update_display = function() {
 
 	const self = this
@@ -624,7 +671,7 @@ viewer.update_display = function() {
 			self.axes_renderer.clear();
 		}
 	}
-}
+}//end update_display
 
 
 viewer.update_background = function() {

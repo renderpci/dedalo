@@ -1425,13 +1425,10 @@ abstract class backup {
 
 	/**
 	* CHECK_REMOTE_SERVER
+	* Exec a curl request wit given data to check current server status
 	* @return object $response
 	*/
 	public static function check_remote_server() : object {
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed '.__METHOD__;
 
 		// data
 			$data = array(
@@ -1440,8 +1437,8 @@ abstract class backup {
 			);
 			$data_string = "data=" . json_encode($data);
 
-		// curl_request options
-			$options = (object)[
+		// curl_request
+			$response = curl_request((object)[
 				'url'				=> STRUCTURE_SERVER_URL,
 				'post'				=> true,
 				'postfields'		=> $data_string,
@@ -1453,17 +1450,7 @@ abstract class backup {
 				'proxy'				=> (defined('SERVER_PROXY') && !empty(SERVER_PROXY))
 					? SERVER_PROXY // from Dédalo config file
 					: false // default case
-			];
-
-		// curl_request
-			$response = curl_request($options);
-
-		// decorate message
-			if ($response->code==200) {
-				$response->msg = "<div class=\"ok\">".$response->msg."</div>";
-			}else{
-				$response->msg = "<div class=\"error\">".$response->msg."</div>";
-			}
+			]);
 
 
 		return $response;
@@ -1484,7 +1471,11 @@ abstract class backup {
 		$user_id	= $_SESSION['dedalo']['auth']['user_id'];
 		$username	= $_SESSION['dedalo']['auth']['username'];
 
-		$response = backup::init_backup_secuence($user_id, $username, $skip_backup_time_range=true);
+		$response = backup::init_backup_secuence(
+			$user_id,
+			$username,
+			true // bool skip_backup_time_range
+		);
 		#debug_log(__METHOD__."  backup_info: $response->msg ".to_string(), logger::DEBUG);
 
 		return (object)$response;
@@ -1513,14 +1504,22 @@ abstract class backup {
 			// exec command
 				$res = shell_exec($command);
 			// debug
-				debug_log(__METHOD__." res; ".to_string($res) . PHP_EOL . ' - command: ' . to_string($command), logger::WARNING);
+				debug_log(__METHOD__
+					. ' result: ' . to_string($res) . PHP_EOL
+					. ' command: ' . to_string($command)
+					, logger::WARNING
+				);
 
 		// VACUUM
 			$command = $command_base . ' -c \'VACUUM ' . implode(', ', $tables) .';\'';
 			// exec command
 				$res = shell_exec($command);
 			// debug
-				debug_log(__METHOD__." res; ".to_string($res) . PHP_EOL . ' - command: ' . to_string($command), logger::WARNING);
+				debug_log(__METHOD__
+					. ' result ' . to_string($res) . PHP_EOL
+					. ' command: ' . to_string($command)
+					, logger::WARNING
+				);
 
 
 		return $res;
@@ -1756,7 +1755,11 @@ abstract class backup {
 					$remote_server_response = (object)backup::check_remote_server();
 					if(SHOW_DEBUG===true) {
 						$check_status_exec_time = exec_time_unit($start_time,'ms').' ms';
-						debug_log(__METHOD__." REMOTE_SERVER_STATUS ($check_status_exec_time): ".to_string($remote_server_response), logger::DEBUG);
+						debug_log(__METHOD__
+							." REMOTE_SERVER_STATUS ($check_status_exec_time). remote_server_response: " .PHP_EOL
+							. to_string($remote_server_response)
+							, logger::DEBUG
+						);
 					}
 
 					if (	$remote_server_response->result!==false
