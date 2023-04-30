@@ -804,15 +804,23 @@ class component_3d extends component_media_common {
 			$original_file_path			= $full_file_path;
 			$default_quality			= $this->get_default_quality();
 			$default_quality_file_path	= $this->get_media_filepath($default_quality);
-			if (!copy($original_file_path, $default_quality_file_path)) {
+			if ($original_file_path===$default_quality_file_path) {
 				debug_log(__METHOD__
-					. " Error on copy original file to default quality file " . PHP_EOL
-					. 'original_file_path: ' .$original_file_path .PHP_EOL
-					. 'default_quality_file_path: ' .$default_quality_file_path
-					, logger::ERROR
+					. " File is already in default quality " . PHP_EOL
+					. ' Nothing is moved '
+					, logger::WARNING
 				);
-				$response->msg = 'Error on copy original file to default quality file';
-				return $response;
+			}else{
+				if (!copy($original_file_path, $default_quality_file_path)) {
+					debug_log(__METHOD__
+						. " Error on copy original file to default quality file " . PHP_EOL
+						. 'original_file_path: ' .$original_file_path .PHP_EOL
+						. 'default_quality_file_path: ' .$default_quality_file_path
+						, logger::ERROR
+					);
+					$response->msg = 'Error on copy original file to default quality file';
+					return $response;
+				}
 			}
 
 
