@@ -603,6 +603,17 @@ abstract class component_common extends common {
 
 
 	/**
+	* SET_DATO_RESOLVED
+	* @param array|null $dato
+	* @return void
+	*/
+	public function set_dato_resolved(?array $dato) : void {
+		$this->dato_resolved = $dato;
+	}//end set_dato_resolved
+
+
+
+	/**
 	* SET_DATO
 	* @param array|null dato
 	* @return bool true
