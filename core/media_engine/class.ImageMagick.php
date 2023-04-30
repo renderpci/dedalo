@@ -237,7 +237,7 @@ final class ImageMagick {
 		$ar_layers		= $options->ar_layers ?? null; // in image is the layer of the image, by default all (false), in pdf is the number of page/s, by default all (false).
 		$target_file	= $options->target_file; // output file, mandatory.
 		// properties
-		$quality		= $options->quality ?? 75; // default quality to compress the jpg. int. default 75.
+		$quality		= $options->quality ?? 90; // default quality to compress the jpg. int. default 90.
 		$thumbnail		= $options->thumbnail ?? false; // use the thumbnail preset as fixed width and height.
 		$colorspace 	= $options->colorspace ?? 'sRGB'; // default color space to be used for output file.
 		$profile_in		= $options->profile_in ?? 'Generic_CMYK_Profile.icc';
