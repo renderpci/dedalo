@@ -1504,3 +1504,12 @@
 		height: @view_line_height; // 5rem;
 	}
 }
+// prevents component_3d an other media to loose the necessary height in the
+// upload window preview
+.preview_component_container {
+	.media_wrapper.edit.wrapper_component .media_content_value  {
+		@media screen and (max-width: @width_break_point_1) {
+			height: @media_min_height;
+		}
+	}
+}

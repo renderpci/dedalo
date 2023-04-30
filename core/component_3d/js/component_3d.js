@@ -95,6 +95,11 @@ component_3d.prototype.create_posterframe = async function( viewer ) {
 
 	const self = this
 
+	// fallback to fixed self.viewer
+		if (!viewer) {
+			viewer = self.viewer
+		}
+
 	// image_blob
 		const image_blob = await viewer.get_image({
 			width	: 720,
@@ -107,7 +112,7 @@ component_3d.prototype.create_posterframe = async function( viewer ) {
 			console.log('3d create_posterframe image_blob:', image_blob);
 		}
 
-	// upload file
+	// upload file (using service_upload)
 		// upload file as another images to tmp directory
 		const api_response = await upload({
 			id					: self.id,
@@ -125,6 +130,8 @@ component_3d.prototype.create_posterframe = async function( viewer ) {
 		}
 		// file_data set
 		const file_data = api_response.file_data
+		// force to name as image_blob.name to prevent chunk mode issues
+		file_data.name = image_blob.name
 
 	// debug
 		if(SHOW_DEBUG===true) {
@@ -138,8 +145,8 @@ component_3d.prototype.create_posterframe = async function( viewer ) {
 			dd_api	: 'dd_component_3d_api',
 			action	: 'move_file_to_dir',
 			source	: create_source(self),
-			options : {
-				target_dir	:'posterframe',
+			options	: {
+				target_dir	: 'posterframe',
 				file_data	: file_data
 			}
 		}

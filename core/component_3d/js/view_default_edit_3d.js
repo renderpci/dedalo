@@ -111,6 +111,8 @@ const get_content_data_edit = function(self) {
 */
 const get_content_value = (i, current_value, self) => {
 
+	const data = self.data || {}
+
 	// content_value
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
@@ -126,24 +128,57 @@ const get_content_value = (i, current_value, self) => {
 			: null
 
 	// no file case
-		if(!file_url){
-			return content_value
-		}
+		// if(!file_url){
+		// 	return content_value
+		// }
 
 	// init viewer when content_value node is in in browser viewport
-		when_in_viewport(content_value, function(){
+	when_in_viewport(content_value, async function(){
 
-			const viewer_3d = viewer.init()
+		// posterframe image
+			const posterframe_url = data.posterframe_url || page_globals.fallback_image
+			content_value.posterframe = ui.create_dom_element({
+				element_type	: 'img',
+				class_name		: 'posterframe',
+				parent			: content_value
+			})
+			// image background color
+			content_value.posterframe.addEventListener('load', set_bg_color, false)
+			function set_bg_color() {
+				this.removeEventListener('load', set_bg_color, false)
+				ui.set_background_image(this, content_value)
+			}
+			content_value.posterframe.src = posterframe_url + '?t=' + (new Date()).getTime()
 
-			viewer_3d.build(content_value, {})
+		// viewer_3d
+			const viewer_3d = await viewer.init({
+				cache : false
+			})
+			// fix viewer
+			self.viewer = viewer_3d
 
-			viewer_3d.load(file_url) // rootPath, fileMap
-			.catch((e) => this.onError(e))
-			.then((gltf) => {
-				content_value.viewer = viewer_3d
-				event_manager.publish('viewer_ready_'+self.id, viewer_3d)
-			});
-		})
+			if(file_url) {
+				await viewer_3d.build(content_value, {})
+
+				viewer_3d.load(
+					file_url  // + '?t=' + (new Date()).getTime()
+				) // rootPath, fileMap
+				.catch((e) => this.onError(e))
+				.then((gltf) => {
+					setTimeout(function(){
+
+						// publish event viewer is ready
+						event_manager.publish('viewer_ready_'+self.id, viewer_3d)
+
+						// remove posterframe
+						if (content_value.posterframe) {
+							content_value.posterframe.remove()
+						}
+					}, 1)
+				});
+			}
+	});//end when_in_viewport
+
 
 	// urls
 		// 	// posterframe url
@@ -171,13 +206,7 @@ const get_content_value = (i, current_value, self) => {
 		// 		// 	image.src = posterframe_url
 		// 		// }
 
-	// posterframe image
-		// 		const posterframe = ui.create_dom_element({
-		// 			element_type	: 'img',
-		// 			class_name		: 'posterframe',
-		// 			src				: posterframe_url,
-		// 			parent			: content_value
-		// 		})
+
 
 	// video / posterframe cases
 		// 	if (video_url) {

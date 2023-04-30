@@ -434,7 +434,7 @@ export const upload = async function(options) {
 					xhr.addEventListener("load", xhr_load, false);
 
 				xhr.send(formdata);
-			}
+			}//end send_chunk
 
 		// send the entire file to server
 			function send(options) {
