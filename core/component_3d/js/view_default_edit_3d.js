@@ -148,7 +148,7 @@ const get_content_value = (i, current_value, self) => {
 				this.removeEventListener('load', set_bg_color, false)
 				ui.set_background_image(this, content_value)
 			}
-			content_value.posterframe.src = posterframe_url
+			content_value.posterframe.src = posterframe_url + '?t=' + (new Date()).getTime()
 
 		// viewer_3d
 			const viewer_3d = await viewer.init({
