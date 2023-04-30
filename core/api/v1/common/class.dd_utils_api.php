@@ -299,7 +299,7 @@ final class dd_utils_api {
 		$json_data	= backup::structure_to_json($ar_tld);
 
 		$file_name	= 'structure.json';
-		$file_path	= (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : STRUCTURE_DOWNLOAD_DIR) . '/' . $file_name;
+		$file_path	= (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : ONTOLOGY_DOWNLOAD_DIR) . '/' . $file_name;
 
 		if(!file_put_contents($file_path, json_encode($json_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), LOCK_EX)) {
 			// write error occurred
@@ -346,7 +346,7 @@ final class dd_utils_api {
 		$ar_tld	= empty($ar_dedalo_prefix_tipos) ? [] : $ar_dedalo_prefix_tipos;
 
 		$file_name	= 'structure.json';
-		$file_path	= (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : STRUCTURE_DOWNLOAD_DIR) . '/' . $file_name;
+		$file_path	= (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : ONTOLOGY_DOWNLOAD_DIR) . '/' . $file_name;
 
 		$data		= json_decode( file_get_contents($file_path) );
 		$response	= backup::import_structure_json_data($data, $ar_tld);
