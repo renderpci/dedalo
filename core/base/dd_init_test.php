@@ -5,7 +5,7 @@
 
 
 // default values
-	$create_dir_permissions = 0740;
+	$create_dir_permissions = 0750;
 
 
 
