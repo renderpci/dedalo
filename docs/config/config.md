@@ -2699,12 +2699,12 @@ define('STRUCTURE_SERVER_URL', 'https://master.dedalo.dev/dedalo/lib/dedalo/extr
 
 ./dedalo/config/config.php
 
-STRUCTURE_DOWNLOAD_DIR `string`
+ONTOLOGY_DOWNLOAD_DIR `string`
 
 This parameter defines the directory to download the ontology files in the server.
 
 ```php
-define('STRUCTURE_DOWNLOAD_DIR', DEDALO_BACKUP_PATH_ONTOLOGY . '/download');
+define('ONTOLOGY_DOWNLOAD_DIR', DEDALO_BACKUP_PATH_ONTOLOGY . '/download');
 ```
 
 ---

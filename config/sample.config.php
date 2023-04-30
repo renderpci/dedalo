@@ -564,7 +564,7 @@
 	define('STRUCTURE_FROM_SERVER'		, true);
 	define('STRUCTURE_SERVER_CODE'		, 'x3a0B4Y020Eg9w');
 	define('STRUCTURE_SERVER_URL'		, 'https://master.render.es/dedalo/lib/dedalo/extras/str_manager/');
-	define('STRUCTURE_DOWNLOAD_DIR'		, DEDALO_BACKUP_PATH_ONTOLOGY . '/download');
+	define('ONTOLOGY_DOWNLOAD_DIR'		, DEDALO_BACKUP_PATH_ONTOLOGY . '/download');
 		// structure_download. When ontology is updated, download files are saved here
 	define('STRUCTURE_DOWNLOAD_JSON_FILE', DEDALO_BACKUP_PATH_ONTOLOGY);
 	// SERVER_PROXY Optional IP and port like 'XXX.XXX.XXX.XXX:3128'. Do not remove comment if its not necessary

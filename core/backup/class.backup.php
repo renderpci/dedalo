@@ -692,7 +692,7 @@ abstract class backup {
 				$all_str_files = backup::collect_all_str_files($dedalo_prefix_tipos);
 				foreach ($all_str_files as $key => $obj) {
 					if($obj->type==="main_file") {
-						$file_path  = STRUCTURE_DOWNLOAD_DIR;
+						$file_path  = ONTOLOGY_DOWNLOAD_DIR;
 						$mysqlImportFilename = $file_path .'/'. $obj->name;
 						break;
 					}
@@ -842,7 +842,7 @@ abstract class backup {
 		}
 
 		if(defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true) {
-			$path = STRUCTURE_DOWNLOAD_DIR;
+			$path = ONTOLOGY_DOWNLOAD_DIR;
 		}else{
 			$path = DEDALO_BACKUP_PATH_ONTOLOGY.'/download';
 		}
@@ -1314,7 +1314,7 @@ abstract class backup {
 
 		// Remote case
 		if ($remote===true) {
-			$target_dir = STRUCTURE_DOWNLOAD_DIR;
+			$target_dir = ONTOLOGY_DOWNLOAD_DIR;
 
 			foreach ($ar_files as $obj) {
 				// Overwrite path to new downloaded files
@@ -1388,10 +1388,10 @@ abstract class backup {
 
 		// Create downloads folder if not exists
 			if (self::$checked_download_str_dir!==true) {
-				$folder_path = STRUCTURE_DOWNLOAD_DIR;
+				$folder_path = ONTOLOGY_DOWNLOAD_DIR;
 				if( !is_dir($folder_path) ) {
 					if(!mkdir($folder_path, 0700,true)) {
-						debug_log(__METHOD__." Error on read or create backup STRUCTURE_DOWNLOAD_DIR directory. Permission denied ".to_string(), logger::ERROR);
+						debug_log(__METHOD__." Error on read or create backup ONTOLOGY_DOWNLOAD_DIR directory. Permission denied ".to_string(), logger::ERROR);
 						return false;
 					}
 					debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);

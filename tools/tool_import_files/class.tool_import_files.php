@@ -153,12 +153,12 @@ class tool_import_files extends tool_common {
 
 
 		// Regex file info ^(.+)(-([a-zA-Z]{1}))\.([a-zA-Z]{3,4})$
-			// Format result preg_match '1-2-A.jpg' and 'gato-2-A.jpg'
-			// 0	=>	1-2-A.jpg 	: gato-2-A.jpg 	# full_name
-			// 1	=>	1-2-A 		: gato-2-A 		# name
-			// 2	=>	1 			: gato 			# base_name (name without order and letter)
+			// Format result preg_match '1-2-A.jpg' and 'cat-2-A.jpg'
+			// 0	=>	1-2-A.jpg 	: cat-2-A.jpg 	# full_name
+			// 1	=>	1-2-A 		: cat-2-A 		# name
+			// 2	=>	1 			: cat 			# base_name (name without order and letter)
 			// 3	=>	1 			: 				# section_id (empty when not numeric)
-			// 4	=>				: gato 			# base_string_name (empty when numeric)
+			// 4	=>				: cat 			# base_string_name (empty when numeric)
 			// 5	=>	-2 			: -2 			# not used
 			// 6	=>	2 			: 2 			# portal_order
 			// 7	=>	-A 			: -A 			# not used
@@ -271,10 +271,15 @@ class tool_import_files extends tool_common {
 						}
 					}
 
-				// extension unify. convert JPG to jpg
+				// extension unify. convert JPG | PSD | TIFF | ... to jpg
 					if (strtolower($extension)!=strtolower(DEDALO_IMAGE_EXTENSION)) {
 						$original_file_path_jpg = DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER .'/'. $custom_target_quality .''. $additional_path .'/'. $image_id .'.'. DEDALO_IMAGE_EXTENSION;
-						ImageMagick::convert($original_file_path, $original_file_path_jpg );
+						$options = new stdClass();
+							$options->source_file	= $original_file_path;
+							$options->target_file	= $original_file_path_jpg;
+							$options->quality		= 100;
+
+						ImageMagick::convert($options);
 					}
 
 				// convert to default quality
