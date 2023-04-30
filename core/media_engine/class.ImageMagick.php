@@ -222,7 +222,6 @@ final class ImageMagick {
 	}//end dd_thumb
 
 
-
 	/**
 	* CREATE ALTERNATE VIDEO OR AUDIO VERSION WITH RECEIVED SETTINGS
 	* @param string $source_file

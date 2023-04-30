@@ -77,7 +77,6 @@ class dd_object extends stdClass {
 		// legacy_model			: string like "component_autocomplet_hi"
 		public $legacy_model;
 
-
 		// object features. Use this container to add custom properties like 'notes_publication_tipo' in text area
 		public $features;
 		// array toolbar_buttons
