@@ -99,12 +99,12 @@
 
 // BACKUP_TEMP
 	# Target folder exists test
-	if (defined('STRUCTURE_DOWNLOAD_DIR') && STRUCTURE_DOWNLOAD_DIR!==false) {
-		$folder_path = STRUCTURE_DOWNLOAD_DIR;
+	if (defined('ONTOLOGY_DOWNLOAD_DIR') && ONTOLOGY_DOWNLOAD_DIR!==false) {
+		$folder_path = ONTOLOGY_DOWNLOAD_DIR;
 		if( !is_dir($folder_path) ) {
 			if(!mkdir($folder_path, 0700, true)) {
 
-				$init_response->msg[]	= 'Error on read or create backup ' . STRUCTURE_DOWNLOAD_DIR . ' directory. Permission denied';
+				$init_response->msg[]	= 'Error on read or create backup ' . ONTOLOGY_DOWNLOAD_DIR . ' directory. Permission denied';
 				$init_response->errors	= true;
 				debug_log(__METHOD__."  ".implode(PHP_EOL, $init_response->msg), logger::ERROR);
 
