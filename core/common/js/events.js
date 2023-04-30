@@ -150,20 +150,26 @@ export const when_in_dom = function(node, callback) {
 export const when_in_viewport = function(node, callback, once=true) {
 
 	// observer. Exec the callback when element is in viewport
-	const observer = new IntersectionObserver(function(entries) {
-		// if(entries[0].isIntersecting === true) {}
-		const entry = entries[1] || entries[0]
-		if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
+	const observer = new IntersectionObserver(
+		function(entries, observer) {
 
-			// default is true (executes the callback once)
-			if (once===true) {
-				observer.disconnect();
+			const entry = entries[1] || entries[0]
+			if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
+
+				// default is true (executes the callback once)
+				if (once===true) {
+					observer.disconnect();
+				}
+
+				// callback()
+				window.requestAnimationFrame(callback)
 			}
-
-			// callback()
-			window.requestAnimationFrame(callback)
+		},
+		{
+			rootMargin: "0px",
+			threshold: [0]
 		}
-	}, { threshold: [0] });
+	);
 	observer.observe(node);
 
 	return observer
