@@ -812,7 +812,13 @@ class component_av extends component_media_common {
 			// id (without extension, like 'test81_test65_2')
 				$id = $this->get_id();
 				if (empty($id)) {
-					throw new Exception("Error Processing Request. Invalid id: ".to_string($id), 1);
+					// throw new Exception("Error Processing Request. Invalid id: ".to_string($id), 1);
+					$response->msg .= ' Error: id is empty. Unable to get component id ';
+					debug_log(__METHOD__
+						. $response->msg
+						, logger::DEBUG
+					);
+					return $response;
 				}
 
 			// quality default in upload is 'original' (!)
@@ -838,8 +844,13 @@ class component_av extends component_media_common {
 						'uploaded_file_path'	=> $uploaded_file_path
 					]);
 				}else{
-					// throw new Exception("Error Processing Request. Current audio extension [$file_ext] is not supported (q:$quality)", 1);
-					debug_log(__METHOD__." Error Processing Request. Current audio extension [$file_ext] is not supported (q:$quality)".to_string(), logger::ERROR);
+					$response->msg .= " Error Processing Request. Current audio extension [$file_ext] is not supported (q:$quality)";
+					debug_log(__METHOD__
+						. $response->msg . PHP_EOL
+						. ' audio extensions allowed: ' . to_string($ar_audio_only_ext)
+						, logger::ERROR
+					);
+					return $response;
 				}
 
 			// video case
@@ -850,17 +861,25 @@ class component_av extends component_media_common {
 				// re-compressed to 960k/s variable bit rate and keyframe every 75 frames
 					if (defined('DEDALO_AV_RECOMPRESS_ALL') && DEDALO_AV_RECOMPRESS_ALL===1) {
 
-						debug_log(__METHOD__." RECOMPRESSING AV FROM '$quality' PLEASE WAIT.. ".to_string(), logger::DEBUG);
+						debug_log(__METHOD__
+							." RECOMPRESSING AV FROM '$quality' PLEASE WAIT.. "
+							, logger::DEBUG
+						);
 
 						// If default quality file do not exists, generate default quality version now
 						// $quality_default_AVObj 		 = new AVObj($id, DEDALO_AV_QUALITY_DEFAULT);
 						// $quality_default_target_file = $quality_default_AVObj->get_media_filepath();
 						$default_quality				= $this->get_default_quality();
 						$quality_default_target_file	= $this->get_media_filepath($default_quality);
-						if ( !file_exists($quality_default_target_file) ) {
+						// if ( !file_exists($quality_default_target_file) ) {
 							$source_file = $full_file_path; // actually full original path and name
-							if (!file_exists($source_file)) {
-								debug_log(__METHOD__." ERROR: Source file not exists ($source_file) ".to_string(), logger::ERROR);
+							if ( !file_exists($source_file) ) {
+								// error. unable to convert
+								debug_log(__METHOD__
+									." ERROR: Source file do not exists! Ignored conversion to default_quality ($default_quality) ". PHP_EOL
+									.' source_file: ' . $source_file
+									, logger::ERROR
+								);
 							}else{
 								// convert with ffmpeg
 								Ffmpeg::convert_to_dedalo_av(
@@ -868,21 +887,27 @@ class component_av extends component_media_common {
 									$quality_default_target_file // string target_file
 								);
 							}
-						}else{
-							debug_log(__METHOD__." WARNING: Ignored conversion to default quality (".DEDALO_AV_QUALITY_DEFAULT."). File already exists", logger::WARNING);
-						}//end if (!file_exists($target_file)) {
+						// }else{
+						// 	debug_log(__METHOD__
+						// 		." WARNING: Ignored conversion to default quality (".DEDALO_AV_QUALITY_DEFAULT."). File already exists"
+						// 		, logger::WARNING
+						// 	);
+						// }//end if (!file_exists($target_file)) {
 					}//end if (defined('DEDALO_AV_RECOMPRESS_ALL') && DEDALO_AV_RECOMPRESS_ALL==1)
 
 
 				// posterframe. Create posterframe of current video if not exists
 					$posterframe_path = $this->get_posterframe_path();
-					if( !file_exists($posterframe_path) ) {
+					// if( !file_exists($posterframe_path) ) {
 						$timecode	= '00:00:10';
 						$Ffmpeg		= new Ffmpeg();
 						$Ffmpeg->create_posterframe($AVObj, $timecode);
-					}else{
-						debug_log(__METHOD__." WARNING: Ignored creation of posterframe. File already exists", logger::WARNING);
-					}
+					// }else{
+					// 	debug_log(__METHOD__
+					// 		." WARNING: Ignored creation of posterframe. File already exists"
+					// 		, logger::WARNING
+					// 	);
+					// }
 
 				// conform headers
 					# Apply qt-faststart to optimize file headers position
@@ -897,18 +922,25 @@ class component_av extends component_media_common {
 
 					// Audio conversion
 					$target_file = $this->get_media_filepath($quality);
-					if (!file_exists($target_file)) {
+					// if ( !file_exists($target_file) ) {
 						$source_file = $full_file_path;
 						if (!file_exists($source_file)) {
-							debug_log(__METHOD__." ERROR: Source file not exists ($source_file) 2 ".to_string(), logger::WARNING);
+							debug_log(__METHOD__
+								." ERROR converting to audio file: Source file do not exists (2) " . PHP_EOL
+								.' source_file:' . to_string($source_file)
+								, logger::ERROR
+							);
 						}
 						Ffmpeg::convert_to_dedalo_av(
 							$source_file,
 							$target_file
 						);
 
-						debug_log(__METHOD__." Converted source audio file to 'audio' quality ".to_string(), logger::DEBUG);
-					}//end if (!file_exists($target_file))
+						debug_log(__METHOD__
+							." Converted source audio file from 'original' to 'audio' quality "
+							, logger::DEBUG
+						);
+					// }//end if (!file_exists($target_file))
 				}
 
 			// properties
@@ -929,8 +961,8 @@ class component_av extends component_media_common {
 					$component_target_filename->set_dato($original_file_name);
 					$component_target_filename->Save();
 					debug_log(__METHOD__.
-						' Saved original filename to '.$properties->target_filename.' : '.to_string($original_file_name),
-						logger::DEBUG
+						' Saved original filename to '.$properties->target_filename.' : '.to_string($original_file_name)
+						, logger::DEBUG
 					);
 				}
 
@@ -951,8 +983,8 @@ class component_av extends component_media_common {
 					$component_target_duration->set_dato([$duration]);
 					$component_target_duration->Save();
 					debug_log(__METHOD__.
-						' Saved av duration to '.$properties->target_duration.' : '.to_string($duration).' - secs: '.to_string($secs),
-						logger::DEBUG
+						' Saved av duration to '.$properties->target_duration.' : '.to_string($duration).' - secs: '.to_string($secs)
+						, logger::DEBUG
 					);
 				}
 
@@ -975,7 +1007,11 @@ class component_av extends component_media_common {
 				if (isset($dato[0])) {
 					if (!is_object($dato[0])) {
 						// bad dato
-						debug_log(__METHOD__." ERROR. BAD COMPONENT DATO ".to_string($dato), logger::ERROR);
+						debug_log(__METHOD__
+							." ERROR. BAD COMPONENT DATO " .PHP_EOL
+							.' dato:' . to_string($dato)
+							, logger::ERROR
+						);
 					}else{
 						// update property files_info
 						$dato[0]->files_info = $files_info;
@@ -994,14 +1030,16 @@ class component_av extends component_media_common {
 					$this->Save();
 				}
 
-
 			// all is OK
 				$response->result	= true;
 				$response->msg		= 'OK. Request done ['.__METHOD__.'] ';
 
 		} catch (Exception $e) {
 			$msg = 'Exception[process_uploaded_file][ImageMagick]: ' .  $e->getMessage() . "\n";
-			debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
+			debug_log(__METHOD__
+				." $msg "
+				, logger::ERROR
+			);
 			$response->msg .= ' - '.$msg;
 		}
 
