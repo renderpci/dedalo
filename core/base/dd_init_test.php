@@ -63,13 +63,30 @@
 
 
 
-// BACKUPS_STRUCTURE
+// BACKUP_PATH_ONTOLOGY
 	# Target folder exists test
-	$folder_path = STRUCTURE_DOWNLOAD_DIR;
+	$folder_path = DEDALO_BACKUP_PATH_ONTOLOGY;
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0700, true)) {
 
-			$init_response->msg[]	= 'Error on read or create backups_structure directory. Permission denied';
+			$init_response->msg[]	= 'Error on read or create backup_path_ontology directory. Permission denied';
+			$init_response->errors	= true;
+			debug_log(__METHOD__."  ".implode(PHP_EOL, $init_response->msg), logger::ERROR);
+
+			return $init_response;
+		}
+		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+	}
+
+
+
+// BACKUPS_ONTOLOGY_DOWNLOAD_DIR
+	# Target folder exists test
+	$folder_path = ONTOLOGY_DOWNLOAD_DIR;
+	if( !is_dir($folder_path) ) {
+		if(!mkdir($folder_path, 0700, true)) {
+
+			$init_response->msg[]	= 'Error on read or create backups_ontology_download_dir directory. Permission denied';
 			$init_response->errors	= true;
 			debug_log(__METHOD__."  ".implode(PHP_EOL, $init_response->msg), logger::ERROR);
 
