@@ -461,8 +461,12 @@ class component_image extends component_media_common {
 					true // bool exclude_converted
 				);
 				$original_image_path_real = $path['dirname'] . '/' .  $path['filename'] . '.' . $original_image_extension;
+				$options = new stdClass();
+					$options->source_file	= $original_image_path_real;
+					$options->target_file	= $original_image_path;
+					$options->quality		= 100;
 
-				Imagemagick::convert($original_image_path_real, $original_image_path);
+				ImageMagick::convert($options);
 			}
 
 		// Image source
@@ -498,9 +502,21 @@ class component_image extends component_media_common {
 			if($target_pixels_width<1)  $target_pixels_width  = 720;
 			if($target_pixels_height<1) $target_pixels_height = 720;
 
+		// convert options
+			$options = new stdClass();
+	 			$options->source_file = $source_image;
+	 			$options->target_file = $target_image;
+
 		// convert with ImageMagick command
-			$flags = '-thumbnail '.$target_pixels_width.'x'.$target_pixels_height;
-			ImageMagick::convert($source_image, $target_image, $flags);
+			if ($target_quality===DEDALO_IMAGE_THUMB_DEFAULT) {
+				$options->thumbnail = true;
+			}else{
+				$options->resize = $target_pixels_width.'x'.$target_pixels_height;
+			}
+			ImageMagick::convert($options);
+
+			// $flags = '-thumbnail '.$target_pixels_width.'x'.$target_pixels_height;
+			// ImageMagick::process($source_image, $target_image, $flags);
 
 
 		return true;
@@ -584,16 +600,23 @@ class component_image extends component_media_common {
 			if ($overwrite===true) {
 
 				// original quality create
-					Imagemagick::convert(
-						$original_image_path_real,
-						$original_image_path
-					);
+					// Imagemagick::convert(
+					// 	$original_image_path_real,
+					// 	$original_image_path
+					// );
+				$options_original = new stdClass();
+					$options_original->source_file	= $original_image_path_real;
+					$options_original->target_file	= $original_image_path;
+					$options_original->quality		= 100;
+
+				ImageMagick::convert($options_original);
 
 				// default quality create
-					Imagemagick::convert(
-						$original_image_path,
-						$image_default_path
-					);
+				$options_default = new stdClass();
+					$options_default->source_file	= $original_image_path;
+					$options_default->target_file	= $image_default_path;
+
+				ImageMagick::convert($options_default);
 			}
 
 
@@ -952,8 +975,13 @@ class component_image extends component_media_common {
 			# Create new file path
 			$new_file_path = substr($uploaded_file_path, 0, -(strlen($f_extension)) ) . DEDALO_IMAGE_EXTENSION;
 			# Convert
-			ImageMagick::convert($uploaded_file_path, $new_file_path);
+			$options = new stdClass();
+				$options->source_file	= $uploaded_file_path;
+				$options->target_file	= $new_file_path;
+				$options->quality		= 100;
 
+			ImageMagick::convert($options);
+			
 			$file_path = $new_file_path;
 
 		}else{

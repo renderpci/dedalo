@@ -43,11 +43,29 @@ header('Content-Type: application/json');
 		if (move_uploaded_file($_FILES['file']['tmp_name'], $uploaded_file )) {
 			$status = 1;
 
-			$target_pixels_width	= 192;
-			$target_pixels_height	= 96;
+			switch ($_FILES['file']['type']) {
+			 	case 'application/pdf':
+			 		$options = new stdClass();
+			 			$options->source_file = $uploaded_file;
+			 			$options->ar_layers = [0];
+			 			$options->target_file = $thumbnail_file;
+						$options->density	= 150;
+						$options->antialias	= true;
+						$options->quality	= 75;
 
-			$flags = '-thumbnail '.$target_pixels_width.'x'.$target_pixels_height; //. ' -format jpeg'
-			ImageMagick::convert($uploaded_file, $thumbnail_file, $flags);
+			 		ImageMagick::convert($options);
+			 		break;
+
+			 	case 'image/jpeg':
+			 	default:
+			 	$options = new stdClass();
+					$options->source_file = $uploaded_file;
+					$options->target_file = $thumbnail_file;
+					$options->thumbnail = true;
+
+					ImageMagick::convert($options);
+					break;
+			 }
 
 			$thumbnail_url = $upload_url . 'thumbnail/' . $basemane . '.jpg';
 

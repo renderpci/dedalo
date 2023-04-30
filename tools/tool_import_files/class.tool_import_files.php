@@ -271,10 +271,15 @@ class tool_import_files extends tool_common {
 						}
 					}
 
-				// extension unify. convert JPG to jpg
+				// extension unify. convert JPG | PSD | TIFF | ... to jpg
 					if (strtolower($extension)!=strtolower(DEDALO_IMAGE_EXTENSION)) {
 						$original_file_path_jpg = DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER .'/'. $custom_target_quality .''. $additional_path .'/'. $image_id .'.'. DEDALO_IMAGE_EXTENSION;
-						ImageMagick::convert($original_file_path, $original_file_path_jpg );
+						$options = new stdClass();
+							$options->source_file	= $original_file_path;
+							$options->target_file	= $original_file_path_jpg;
+							$options->quality		= 100;
+
+						ImageMagick::convert($options);
 					}
 
 				// convert to default quality
