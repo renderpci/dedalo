@@ -1817,7 +1817,28 @@ class component_image extends component_media_common {
 		}
 
 		try {
-			$ar_info = @getimagesize($filename);
+			// $ar_info	= @getimagesize($filename);
+			$exif		= exif_read_data($filename);
+			if(!empty($exif['Orientation'])) {
+				switch($exif['Orientation']) {
+					case 8:// rotate 90
+					case 6:// rotate 270 || -90
+						$width = $exif['COMPUTED']['Height'];
+						$height = $exif['COMPUTED']['Width'];
+						break;
+					case 1:	// rotate 0
+					case 3: // rotate 180
+					default:
+						$width = $exif['COMPUTED']['Width'];
+						$height = $exif['COMPUTED']['Height'];
+						break;
+				}
+			}else{
+				$width = $exif['COMPUTED']['Width'];
+				$height = $exif['COMPUTED']['Height'];
+			}
+			$ar_info[] = $width;
+			$ar_info[] = $height;
 			if(!$ar_info) {
 				debug_log(__METHOD__
 					." Error. Image getimagesize error 1 ". PHP_EOL
@@ -1871,23 +1892,22 @@ class component_image extends component_media_common {
 
 		// others. Calculated
 			}else{
-
 				// ratio
 					$source_ratio = (int)$source_pixels_width / (int)$source_pixels_height;
 				// target megabytes
 					$target_megabytes = component_image::convert_quality_to_megabytes($target_quality) * 350000;
-				// height
-					$height = $target_megabytes / $source_ratio;
-					$height = intval(sqrt($height));
-				// width
-					$width = round($height * $source_ratio);
+				// calculate the short_axis.
+					$short_axis = $target_megabytes / $source_ratio;
+				// set the values for height and width.
+				// if the image is a landscape the ratio will be positive: 1.33 otherwise (vertical) will be negative 0.75
+					$height	= intval(sqrt($short_axis));
+					$width	= round($height * $source_ratio);
 
 				$result = [
 					$width,
 					$height
 				];
 			}
-
 
 		return $result;
 	}//end get_target_pixels_to_quality_conversion
