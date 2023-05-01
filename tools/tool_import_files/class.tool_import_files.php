@@ -7,120 +7,6 @@
 class tool_import_files extends tool_common {
 
 
-
-	protected $valid_extensions;
-
-
-
-	/**
-	* SET_UP
-	* @param string $key_dir=null
-	* @return bool
-	*/
-	public function set_up(string $key_dir=null) : bool {
-
-		# VERIFY USER IS LOGGED
-			if(login::is_logged()!==true) {
-				debug_log(__METHOD__."  Auth error: please login ".to_string(), logger::ERROR);
-				return false;
-			}
-
-		// user_id. Currently logged user
-			$user_id = navigator::get_user_id();
-
-		// upload_dir_custom
-			$upload_dir_custom = isset($key_dir) ? '/'.$key_dir : null;
-			if (empty($upload_dir_custom)) {
-				trigger_error(__METHOD__." WARNING TOOL_IMPORT_FILES: EMPTY upload_dir_custom");
-			}
-
-		// tool import paths
-			$base_path = '/upload/import_files/temp/user_' . $user_id . $upload_dir_custom . '/';
-			define('TOOL_IMPORT_FILES_UPLOAD_DIR', DEDALO_MEDIA_PATH . $base_path);
-			define('TOOL_IMPORT_FILES_UPLOAD_URL', DEDALO_MEDIA_URL  . $base_path);
-
-		// extensions. Fix array of valid extensions
-			$this->valid_extensions = array_merge(DEDALO_IMAGE_EXTENSIONS_SUPPORTED, DEDALO_PDF_EXTENSIONS_SUPPORTED);
-
-		// base_folder_path. Target folder exists and create test
-			$base_folder_path = DEDALO_MEDIA_PATH  .'/upload/import_files/temp/';
-			if( !is_dir($base_folder_path) ) {
-				if(!mkdir($base_folder_path, 0775,true)) {
-					throw new Exception(" Error on read or create base_folder_path directory. Permission denied ");
-				}
-			}
-
-		// user_folder_path. Target folder exists and create test
-			$user_folder_path = TOOL_IMPORT_FILES_UPLOAD_DIR;
-			if( !is_dir($user_folder_path) ) {
-				if(!mkdir($user_folder_path, 0775,true)) {
-					throw new Exception(" Error on read or create TOOL_IMPORT_FILES_UPLOAD_DIR directory. Permission denied ");
-				}
-			}
-
-		// thumbnail_user_folder_path. Target folder exists and create test
-			$thumbnail_user_folder_path = TOOL_IMPORT_FILES_UPLOAD_DIR.'/thumbnail';
-			if( !is_dir($thumbnail_user_folder_path) ) {
-				if(!mkdir($thumbnail_user_folder_path, 0775,true)) {
-					throw new Exception(" Error on read or create thumbnail_user_folder_path directory. Permission denied ");
-				}
-			}
-
-
-		return true;
-	}//end set_up
-
-
-
-	/**
-	* FIND_ALL_FILES
-	* Read directory (must be accessible)
-	* @param string $dir
-	* @return array $ar_data
-	*/
-	public function find_all_files(string $dir) : array {
-
-		$ar_data = [];
-
-		try {
-			if (!file_exists($dir)) {
-				$create_dir = mkdir($dir, 0777,true);
-				if(!$create_dir) throw new Exception(" Error on create directory. Permission denied \"$dir\" (1)");
-			}
-			$root = scandir($dir);
-		} catch (Exception $e) {
-			debug_log(__METHOD__." Caught exception: ".$e->getMessage(), logger::ERROR);
-		}
-		if (!$root) {
-			return $ar_data;
-		}
-
-		// sort in natural order
-			natsort($root);
-
-		// filter available files in directory
-			foreach($root as $value) {
-
-				// Skip non valid extensions
-					$file_parts = pathinfo($value);
-					if(empty($file_parts['extension']) || !in_array(strtolower($file_parts['extension']), $this->valid_extensions)) {
-						continue;
-					}
-
-				// Case file. Add
-					if(is_file("$dir/$value")) {
-						$ar_data[] = $this->get_file_data($dir, $value);
-					}
-			}
-
-		// SORT ARRAY (By custom core function build_sorter)
-			// usort($ar_data, build_sorter('numero_recurso'));
-
-		return $ar_data;
-	}//end find_all_files
-
-
-
 	/**
 	* GET_FILE_DATA
 	* Extract the information about given file using regex to get the file name patterns
@@ -484,13 +370,6 @@ class tool_import_files extends tool_common {
 			// custom_target_quality. Optional media quality to store uploaded files
 			$custom_target_quality		= $options->custom_target_quality ?? null;
 
-		// tool_import_files setup
-			$tool_import_files = new tool_import_files(
-				$section_id,
-				$section_tipo
-			);
-			$tool_import_files->set_up($key_dir);
-
 		// import_mode
 			$import_mode			= $tool_config->import_mode ?? 'default';
 			$import_file_name_mode	= $tool_config->import_file_name_mode ?? null;
@@ -739,15 +618,6 @@ class tool_import_files extends tool_common {
 						}//end switch ($ddo->role)
 					}//end foreach ($ar_ddo_map as $ddo)
 
-
-					// $input_elements_in_source = array_filter($ar_ddo_map, function($item) use($current_component_option_tipo){
-					// 	return $item->role==='component_option' && $item->tipo===$current_component_option_tipo;
-					// });
-
-					// $input_elements_in_target = array_filter($ar_ddo_map, function($item) use($target_section_tipo){
-					// 	return $item->role === 'component_option' && $item->section_tipo===$target_section_tipo;
-					// });
-
 				// file_processor
 					// Global var button properties json data array
 					// Optional additional file script processor defined in button import properties
@@ -797,16 +667,6 @@ class tool_import_files extends tool_common {
 					unset( $_SESSION['dedalo']['section_temp_data'][$temp_data_uid]);
 				}
 			}
-
-		// Consolidate counter. Set counter value to last section_id in section
-			// if ($total>0) {
-			// 	$matrix_table = 'matrix';//common::get_matrix_table_from_tipo($section_tipo);
-			// 	counter::consolidate_counter( $section_tipo, $matrix_table );
-			// 	if (isset($target_section_tipo)) {
-			// 		$matrix_table = common::get_matrix_table_from_tipo($target_section_tipo);
-			// 		counter::consolidate_counter( $target_section_tipo, $matrix_table );
-			// 	}
-			// }
 
 		// response
 			$response->result	= true;
