@@ -1137,6 +1137,141 @@ final class dd_utils_api {
 
 
 	/**
+	* LIST_UPLOADED_FILES
+	* Used by the upload lib (Dropzone) to get the list of already uploaded files on server
+	* @param object $rqo
+	* 	Object with only the key_dir name like { key_dir: 'oh1_4' }
+	* @return object $response
+	* 	response->result:
+	* 	Array of objects like: [{
+	* 		url : server generated thumbnail url,
+	* 		name : file name like 'my_photo51.jpg',
+	* 		size : informative file size in bytes like 6528743 (from original file, not from the thumb)
+	* 	}]
+	*/
+	public static function list_uploaded_files(object $rqo) : object {
+
+		// unlock session
+			session_write_close();
+			ignore_user_abort();
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed';
+
+		// options
+			$key_dir		= $rqo->options->key_dir ?? null;
+
+		// dir
+			$user_id = navigator::get_user_id();
+			$tmp_dir = DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $key_dir;
+			$tmp_url = DEDALO_UPLOAD_TMP_URL . '/'. $user_id . '/' . $key_dir;
+
+		// read files dir
+			$files		= [];
+			$files_raw	= scandir($tmp_dir);
+			foreach ($files_raw as $file_name) {
+				$file_path = $tmp_dir . '/' . $file_name;
+
+				if (strlen($file_name) > 0 && $file_name[0]!=='.' && is_file($file_path)) {
+
+					$info		= pathinfo($file_name);
+					$basemane	= basename($file_name,'.'.$info['extension']);
+
+					$files[] = (object)[
+						'url'	=> $tmp_url .'/thumbnail/'. $basemane . '.jpg',
+						'name'	=> $file_name,
+						'size'	=> filesize($file_path)
+					];
+				}
+			}
+
+		// response
+			$response->result	= $files;
+			$response->msg		= 'OK. Request done';
+
+		return $response;
+	}//end list_uploaded_files
+
+
+
+	/**
+	* DELETE_UPLOADED_FILE
+	* Used by the upload lib (Dropzone) to delete already uploaded files on server
+	* @param object $rqo
+	* 	Object like { file_name: 'my_photo_452.jpg', key_dir: 'rsc29_rsc176' }
+	* @return object $response
+	* 	response->result
+	* 	Returns false if file do not exists or the unlink call do not return true
+	*/
+	public static function delete_uploaded_file(object $rqo) : object {
+
+		// unlock session
+			session_write_close();
+			ignore_user_abort();
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+
+		$options = $rqo->options;
+
+		// short vars
+			$file_names	= is_array($options->file_name) ? $options->file_name : [$options->file_name];
+			$key_dir	= $options->key_dir; // key_dir. Contraction of tipo + section_tipo, like: 'rsc29_rsc176'
+
+		// dir
+			$user_id = navigator::get_user_id();
+			$tmp_dir = DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $key_dir;
+
+		// delete each file
+			foreach ($file_names as $file_name) {
+
+				// file_path
+					$file_path = $tmp_dir . '/' . $file_name;
+
+				// delete file
+					if (!file_exists($file_path)) {
+						$response->result	= false;
+						$response->msg		= "Error on delete file (the file do not exists): ".to_string($file_path);
+						debug_log(__METHOD__." $response->msg", logger::ERROR);
+						return $response;
+					}
+					if (!unlink($file_path)) {
+						$response->result	= false;
+						$response->msg		= "Error on delete file (unable to unlink file): ".to_string($file_path);
+						debug_log(__METHOD__." $response->msg", logger::ERROR);
+						return $response;
+					}
+
+				// path thumb
+					$info				= pathinfo($file_name);
+					$basemane			= basename($file_name,'.'.$info['extension']);
+					$file_path_thumb	= $tmp_dir . '/thumbnail/' . $basemane . '.jpg';
+
+				// delete thumb
+					if (file_exists($file_path_thumb) && !unlink($file_path_thumb)) {
+						$response->result	= false;
+						$response->msg		= "Error on delete thumb file (unable to unlink file): ".to_string($file_path_thumb);
+						debug_log(__METHOD__." $response->msg", logger::ERROR);
+						return $response;
+					}
+			}//end foreach ($file_names as $file_name)
+
+		// response
+			$response->result	= true;
+			$response->msg		= 'OK. Request done';
+
+
+		return $response;
+	}//end delete_uploaded_file
+
+
+
+
+
+
+	/**
 	* UPDATE_LOCK_COMPONENTS_STATE
 	* Connects to database and updates user lock components state
 	* on focus or blur user actions
