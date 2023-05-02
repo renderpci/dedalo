@@ -912,6 +912,75 @@ class tools_register {
 
 
 
+/**
+	* GET_ALL_default_CONFIG
+	* @return array $ar_config
+	*/
+	public static function get_all_default_config() : array {
+
+		// short vars
+			$section_tools_config_tipo	= self::$section_registered_tools_tipo; // 'dd1324'
+			$name_tipo					= self::$tipo_tool_name; // 'dd1326';
+			$config_tipo				= self::$tools_default_configuration; // 'dd1633' tools Configuration component_json
+
+		// sqo_config_tool_active
+			$sqo_config_tool_active = json_decode('{
+				"section_tipo": "'.$section_tools_config_tipo.'",
+				"limit": 0,
+				"filter": null,
+				"full_count": false
+			}');
+
+		// search
+			$config_search	= search::get_instance($sqo_config_tool_active);
+			$config_result	= $config_search->search();
+			$ar_records		= $config_result->ar_records ?? [];
+
+		// map result as ar_config
+			$ar_config = array_map(function($record) use($name_tipo, $config_tipo){
+
+				$section = section::get_instance($record->section_id, $record->section_tipo);
+				$section->set_dato($record->datos);
+
+				// name
+					$model		= RecordObj_dd::get_modelo_name_by_tipo($name_tipo,true);
+					$component	= component_common::get_instance(
+						$model,
+						$name_tipo,
+						$record->section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$record->section_tipo
+					);
+					$dato	= $component->get_dato();
+					$name	= reset($dato);
+
+				// config
+					$model		= RecordObj_dd::get_modelo_name_by_tipo($config_tipo,true);
+					$component	= component_common::get_instance(
+						$model,
+						$config_tipo,
+						$record->section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$record->section_tipo
+					);
+					$dato	= $component->get_dato();
+					$config	= reset($dato);
+
+				$value = (object)[
+					'name'		=> $name,
+					'config'	=> $config
+				];
+
+				return $value;
+			}, $ar_records);
+
+
+		return $ar_config;
+	}//end get_all_default_config
+
+
 	/**
 	* GET_ALL_CONFIG_TOOL_CLIENT
 	* filter the client part of the config defined with the "client" property to true
