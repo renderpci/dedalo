@@ -987,11 +987,25 @@ final class dd_utils_api {
 							.'Error on get/move temp file to target_path '.PHP_EOL
 							.'source: '.$file_tmp_name.PHP_EOL
 							.'target: '.$target_path
-							 logger::ERROR
+							, logger::ERROR
 						);
 						$response->msg .= 'Uploaded file Error on get/move to target_path.';
 						return $response;
 					}
+
+					// thumbnail file
+					if(!$chunked){
+						$thumb_options = new stdClass();
+							$thumb_options->tmp_dir			= $tmp_dir;
+							$thumb_options->name			= $name;
+							$thumb_options->target_path		= $target_path;
+							$thumb_options->key_dir	= $key_dir;
+							$thumb_options->user_id			= $user_id;
+
+						$thumbnail_url = dd_utils_api::create_thumbnail($thumb_options);
+					}
+
+
 
 			// file_data to client. POST file (sent across $_FILES) info and some additions
 				// Example of received data:
@@ -1014,6 +1028,7 @@ final class dd_utils_api {
 					$file_data->size			= $file_to_upload['size']; // like 878860 (bytes)
 					$file_data->extension		= $extension;
 					$file_data->chunked			= $chunked;
+					$file_data->thumbnail_url 	= $thumbnail_url ?? null;
 
 					if($chunked) {
 						$file_data->total_chunks	= $total_chunks;
@@ -1129,9 +1144,19 @@ final class dd_utils_api {
 				return $response;
 			}
 
+		// thumbnail
+			$thumb_options = new stdClass();
+				$thumb_options->tmp_dir			= $file_path;
+				$thumb_options->name			= $tmp_joined_file;
+				$thumb_options->target_path		= $target_path;
+				$thumb_options->key_dir	= $key_dir;
+				$thumb_options->user_id			= $user_id;
+			$thumbnail_url = dd_utils_api::create_thumbnail($thumb_options);
+
 		// set the file values
-			$file_data->tmp_name	= $tmp_joined_file; // like 'phpv75h2K'
-			$file_data->extension	= $extension;
+			$file_data->tmp_name		= $tmp_joined_file; // like 'phpv75h2K'
+			$file_data->extension		= $extension;
+			$file_data->thumbnail_url	= $thumbnail_url ?? null;
 
 		// response. All is OK response
 			$response->result		= true;
