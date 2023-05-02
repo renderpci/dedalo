@@ -345,7 +345,7 @@ class component_media_common extends component_common {
 			// 	"name": "IMG_3007.jpg",
 			// 	"type": "image/jpeg",
 			// 	"tmp_dir": "DEDALO_UPLOAD_TMP_DIR",
-			// 	"resource_type": "tool_upload",
+			// 	"key_dir": "tool_upload",
 			// 	"tmp_name": "phpJIQq4e",
 			// 	"error": 0,
 			// 	"size": 22131522,
@@ -354,7 +354,7 @@ class component_media_common extends component_common {
 
 		// short vars
 			$name			= $file_data->name; // string original file name like 'IMG_3007.jpg'
-			$resource_type	= $file_data->resource_type; // string upload caller name like 'tool_upload'
+			$key_dir		= $file_data->key_dir; // string upload caller name like 'tool_upload'
 			$tmp_dir		= $file_data->tmp_dir; // constant string name like 'DEDALO_UPLOAD_TMP_DIR'
 			$tmp_name		= $file_data->tmp_name; // string like 'phpJIQq4e'
 			$quality 		= $file_data->quality ?? $this->get_quality();
@@ -366,7 +366,9 @@ class component_media_common extends component_common {
 				$response->msg .= $msg;
 				return $response;
 			}
-			$source_file = constant($tmp_dir) .'/'. $resource_type . '/' . $tmp_name;
+
+			$user_id = navigator::get_user_id();
+			$source_file = constant($tmp_dir). '/'. $user_id .'/'. $key_dir . '/' . $tmp_name;
 
 		// check source file file
 			if (!file_exists($source_file)) {

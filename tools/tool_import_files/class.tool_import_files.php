@@ -394,7 +394,10 @@ class tool_import_files extends tool_common {
 
 		// ar_data. All files collected from files upload form
 			$ar_processed	= [];
-			$files_dir		= TOOL_IMPORT_FILES_UPLOAD_DIR;
+			// $tmp_dir		= TOOL_IMPORT_FILES_UPLOAD_DIR;
+			$user_id = navigator::get_user_id();
+			$tmp_dir = DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $key_dir;
+
 			foreach ((array)$files_data as $value_obj) {
 
 				$current_file_name				= $value_obj->name;

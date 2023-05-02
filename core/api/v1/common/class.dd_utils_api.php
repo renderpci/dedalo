@@ -796,8 +796,8 @@ final class dd_utils_api {
 
 		// options
 			$options		= $rqo->options;
-			$file_to_upload	= $options->file_to_upload ?? $options->upload;	// assoc array Added from PHP input '$_FILES'
-			$resource_type	= $options->resource_type; // string like 'tool_upload'
+			$file_to_upload	= $options->file_to_upload ?? $options->file ?? $options->upload;	// assoc array Added from PHP input '$_FILES'
+			$key_dir	= $options->key_dir; // string like 'tool_upload'
 			$chunked		= isset($options->chunked) // received as string 'true'|'false'
 				? (bool)json_decode($options->chunked)
 				: false;
@@ -961,26 +961,32 @@ final class dd_utils_api {
 						$response->msg .= " Config constant 'DEDALO_UPLOAD_TMP_DIR' is mandatory!";
 						return $response;
 					}
-					$dir = DEDALO_UPLOAD_TMP_DIR . '/' . $resource_type;
+				// user_id. Currently logged user
+					$user_id = navigator::get_user_id();
+					$tmp_dir = DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $key_dir;
 
 				// Check the target_dir, if it's not created will be make to be used.
 					// Target folder exists test
-					if( !is_dir($dir) ) {
-						if(!mkdir($dir, 0700, true)) {
+					if( !is_dir($tmp_dir) ) {
+						if(!mkdir($tmp_dir, 0700, true)) {
 							$response->msg .= ' Error on read or create UPLOAD_TMP_DIR directory. Permission denied';
+							debug_log(__METHOD__.PHP_EOL
+								. " $response->msg"
+								, logger::ERROR
+							);
 							return $response;
 						}
-						debug_log(__METHOD__." CREATED DIR: $dir  ".to_string(), logger::DEBUG);
+						debug_log(__METHOD__." CREATED DIR: $tmp_dir  ".to_string(), logger::DEBUG);
 					}
 				// move file to target path
-					$target_path	= $dir . '/' . $name;
+					$target_path	= $tmp_dir . '/' . $name;
 					$moved			= move_uploaded_file($file_tmp_name, $target_path);
 					// verify move file is successful
 					if ($moved!==true) {
 						debug_log(__METHOD__.PHP_EOL
 							.'Error on get/move temp file to target_path '.PHP_EOL
 							.'source: '.$file_tmp_name.PHP_EOL
-							.'target: '.$target_path,
+							.'target: '.$target_path
 							 logger::ERROR
 						);
 						$response->msg .= 'Uploaded file Error on get/move to target_path.';
@@ -1002,7 +1008,7 @@ final class dd_utils_api {
 					$file_data->type			= $file_to_upload['type']; // like 'image\/jpeg'
 					// $file_data->tmp_name		= $target_path; // do not include for safety
 					$file_data->tmp_dir			= 'DEDALO_UPLOAD_TMP_DIR'; // like DEDALO_MEDIA_PATH . '/upload/service_upload/tmp'
-					$file_data->resource_type	= $resource_type; // like 'tool_upload'
+					$file_data->key_dir	= $key_dir; // like 'tool_upload'
 					$file_data->tmp_name		= $name; // like 'phpv75h2K'
 					$file_data->error			= $file_to_upload['error']; // like 0
 					$file_data->size			= $file_to_upload['size']; // like 878860 (bytes)
@@ -1014,8 +1020,8 @@ final class dd_utils_api {
 						$file_data->chunk_index		= $chunk_index;
 					}
 
-			// resource_type cases response
-				switch ($resource_type) {
+			// key_dir cases response
+				switch ($key_dir) {
 
 					case 'web': // uploading images from text editor
 						$safe_file_name	= sanitize_file_name($file_name); // clean file name
@@ -1068,6 +1074,7 @@ final class dd_utils_api {
 			$options		= $rqo->options;
 			$files_chunked	= $options->files_chunked;
 			$file_data		= $options->file_data;
+			$key_dir 		= $file_data->key_dir;
 
 		// response
 			$response = new stdClass();
@@ -1075,7 +1082,8 @@ final class dd_utils_api {
 				$response->msg 		= 'Error. Request failed';
 
 		// file_path
-			$file_path = DEDALO_UPLOAD_TMP_DIR . '/' . $file_data->resource_type;
+			$user_id = navigator::get_user_id();
+			$file_path = DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $key_dir;
 
 		// tmp_joined_file
 			$tmp_joined_file = 'tmp_'.$file_data->name;
