@@ -46,14 +46,33 @@
 							$this->context->toolbar_buttons[] = 'button_note';
 					}
 
-				// lang
-					$related_component_lang = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+				// lang (related_component_lang)
+					$ar_related_component_lang_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
 						$this->tipo, // tipo
 						'component_select_lang', // model name
 						'termino_relacionado', // relation_type
 						true // search_exact
 					);
-
+					if (!empty($ar_related_component_lang_tipo)) {
+						$related_component_lang_tipo	= reset($ar_related_component_lang_tipo);
+						$related_component_lang_model	= RecordObj_dd::get_modelo_name_by_tipo($related_component_lang_tipo,true);
+						$related_component_lang = component_common::get_instance(
+							$related_component_lang_model, // string model
+							$related_component_lang_tipo, // string tipo
+							$this->section_id, // string section_id
+							'list', // string mode
+							$lang, // string lang
+							$this->section_tipo // string section_tipo
+						);
+						$related_component_lang_dato = $related_component_lang->get_dato();
+						if (!empty($related_component_lang_dato[0])) {
+							$related_component_lang = lang::get_code_from_locator($related_component_lang_dato[0]);
+						}
+						if (!property_exists($this->context, 'options')) {
+							$this->context->options = new stdClass();
+						}
+						$this->context->options->related_component_lang = $related_component_lang;
+					}
 
 				// geo
 					$related_component_geolocation = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(

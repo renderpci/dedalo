@@ -45,7 +45,8 @@ render_tool_lang.prototype.edit = async function(options) {
 		const wrapper = ui.tool.build_wrapper_edit(self, {
 			content_data : content_data
 		})
-
+		// set pointers
+		wrapper.content_data = content_data
 
 	// status, render the status components for users and admins to control the process of the tool
 		const status_container = await render_status(self)
@@ -182,10 +183,7 @@ const get_content_data_edit = async function(self) {
 		// if the target component has the same lang than source component block the edition to avoid errors
 		// ck-editor can not manage 2 instances of the same component in edit
 			if (self.target_component) {
-				const read_only = (self.target_lang === self.source_lang)
-					? true
-					: false
-					console.log('self.target_component:', self.target_component);
+				const read_only = false
 				self.target_component.show_interface.read_only = read_only
 				const target_component_node = await self.target_component.render()
 				const target_component_container = ui.create_dom_element({

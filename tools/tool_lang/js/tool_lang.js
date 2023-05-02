@@ -54,6 +54,8 @@ export const tool_lang = function () {
 
 /**
 * INIT
+* @param object options
+* @return bool common_init
 */
 tool_lang.prototype.init = async function(options) {
 
@@ -94,6 +96,7 @@ tool_lang.prototype.init = async function(options) {
 /**
 * BUILD
 * Custom build
+* @param bool autoload
 */
 tool_lang.prototype.build = async function(autoload=false) {
 
@@ -108,6 +111,11 @@ tool_lang.prototype.build = async function(autoload=false) {
 			const main_element_ddo = self.tool_config.ddo_map.find(el => el.role==='main_element')
 			if (main_element_ddo) {
 				self.main_element = self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
+			}
+			// overwrite default lang from options.related_component_lang if exists (original lang)
+			if (self.main_element.context.options && self.main_element.context.options.related_component_lang) {
+				self.source_lang = self.main_element.context.lang = self.main_element.lang = self.main_element.context.options.related_component_lang
+				self.target_lang = null
 			}
 
 		// status_user_component. control the tool status process for users
@@ -151,7 +159,6 @@ tool_lang.prototype.build = async function(autoload=false) {
 
 	return common_build
 }//end build_custom
-
 
 
 
