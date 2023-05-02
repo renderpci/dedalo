@@ -4,8 +4,6 @@
 
 
 // imports
-	// import {event_manager} from '../../../core/common/js/event_manager.js'
-	// import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {create_source} from '../../../core/common/js/common.js'
@@ -45,24 +43,8 @@ render_tool_import_files.prototype.edit = async function(options) {
 		const wrapper = ui.tool.build_wrapper_edit(self, {
 			content_data : content_data
 		})
+		wrapper.content_data	= content_data
 
-	wrapper.content_data	= content_data
-
-	// modal tool container
-		// if (!window.opener) {
-		// 	const header					= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
-		// 	self.tool_container				= ui.attach_to_modal(header, wrapper, null, 'big')
-		// 	self.tool_container.on_close	= () => {
-		// 		self.caller.refresh()
-		// 		// set the images in the dropzone instance, that were uploaded and stay in the server, to ADDED status, to prevent delete them in the server when the tool close
-		// 		const files = self.active_dropzone.files
-		// 		for (let i = files.length - 1; i >= 0; i--) {
-		// 			files[i].status = Dropzone.ADDED
-		// 		}
-		// 		self.active_dropzone.destroy()
-		// 		self.destroy(true, true, true)
-		// 	}
-		// }
 
 	return wrapper
 }//end render_tool_import_files
@@ -250,7 +232,6 @@ const get_content_data_edit = async function(self) {
 		}// end if(ar_quality)
 
 
-
 	// file name control
 		// hide the options when the tool is caller by components, the import_mode is defined in preferences.
 			const class_name_configuration = (self.tool_config.import_mode && self.tool_config.import_mode==='section')
@@ -395,8 +376,6 @@ const get_content_data_edit = async function(self) {
 							}else{
 								template_container.classList.remove('same_name_section')
 							}
-
-
 						})
 
 						// switch_label
@@ -447,15 +426,8 @@ const get_content_data_edit = async function(self) {
 			parent			: inputs_container
 		})
 
-		// inputs components container
-		const components_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'components_container',
-			parent			: inputs_container
-		})
-
-		const inputs_nodes = await get_temp_sections(self)
-		components_container.appendChild(inputs_nodes)
+		const inputs_nodes = await self.service_tmp_section.render()
+		inputs_container.appendChild(inputs_nodes)
 
 	// buttons_bottom_container
 		const buttons_bottom_container = ui.create_dom_element({
@@ -487,12 +459,7 @@ const get_content_data_edit = async function(self) {
 				self.files_data[i].component_option = current_value.previewElement.querySelector(".option_component_select").value;
 			}
 			// get the data from every component used to propagate to every file uploaded
-			const ar_instances = self.ar_instances
-			const components_temp_data = []
-			for (let i = ar_instances.length - 1; i >= 0; i--) {
-				const current_instance = ar_instances[i]
-				components_temp_data.push(current_instance.data)
-			}
+			const components_temp_data = self.service_tmp_section.get_components_data()
 
 			// get the global configuration (to apply in the server)
 			self.tool_config.import_file_name_mode = (self.tool_config.import_mode === 'section' && control_section_id_check_box.checked)
@@ -568,33 +535,8 @@ const get_content_data_edit = async function(self) {
 
 
 
-
 /**
-* GET_TEMP_SECTIONS
-* @return HTMLElement DocumentFragment
-*/
-const get_temp_sections = async function(self){
-
-	const ar_instances = self.ar_instances
-
-	const fragment = new DocumentFragment();
-
-	for (let i = 0; i < ar_instances.length; i++) {
-
-		const current_instance = ar_instances[i]
-
-		const instance_node = await current_instance.render()
-
-		fragment.appendChild(instance_node)
-	}
-
-	return fragment
-}//end get_temp_sections
-
-
-
-/**
-* GET_TEMP_SECTIONS
+* SET_IMPORT_MODE
 * @return bool true
 */
 const set_import_mode = function (self, apply){
