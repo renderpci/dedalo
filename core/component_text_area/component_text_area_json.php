@@ -66,12 +66,13 @@
 						);
 						$related_component_lang_dato = $related_component_lang->get_dato();
 						if (!empty($related_component_lang_dato[0])) {
-							$related_component_lang = lang::get_code_from_locator($related_component_lang_dato[0]);
+							$original_lang = lang::get_code_from_locator($related_component_lang_dato[0]);
+							if (!property_exists($this->context, 'options')) {
+								$this->context->options = new stdClass();
+							}
+							// set original lang
+							$this->context->options->related_component_lang = $original_lang;
 						}
-						if (!property_exists($this->context, 'options')) {
-							$this->context->options = new stdClass();
-						}
-						$this->context->options->related_component_lang = $related_component_lang;
 					}
 
 				// geo
