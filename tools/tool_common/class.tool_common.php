@@ -145,6 +145,13 @@ class tool_common {
 				return $el->name===$name;
 			});
 
+			if(empty($ar_config)){
+				$ar_config		= tools_register::get_all_default_config_tool_client();
+				$config_data	= array_find($ar_config, function($el) use($name) {
+					return $el->name===$name;
+				});
+			}
+
 		// lang
 			$lang = DEDALO_DATA_LANG;
 
@@ -412,6 +419,13 @@ class tool_common {
 				return $el->name===$tool_name;
 			});
 
+			if(empty($config)){
+				// get all tools config sections
+				$ar_config = tools_register::get_all_default_config();
+				$config = array_find($ar_config, function($el) use($tool_name) {
+					return $el->name===$tool_name;
+				});
+			}
 
 		return $config;
 	}//end get_config

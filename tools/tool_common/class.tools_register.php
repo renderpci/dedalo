@@ -19,7 +19,7 @@ class tools_register {
 	static $tipo_affeted_models				= 'dd1330';
 	static $tipo_properties					= 'dd1335';
 	static $tools_configuration				= 'dd999'; // tools Configuration component_json
-
+	static $tools_default_configuration		= 'dd1633'; // tools default Configuration component_json
 
 
 	/**
