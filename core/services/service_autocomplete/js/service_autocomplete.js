@@ -19,7 +19,6 @@
 * SERVICE_AUTOCOMPLETE
 * Used as service by component_portal, (old component_autocomplete, component_autocomplete_hi)
 * component_relation_parent, component_relation_children, component_relation_related
-*
 */
 export const service_autocomplete = function() {
 
@@ -49,9 +48,9 @@ export const service_autocomplete = function() {
 	service_autocomplete.prototype.show		= view_default_autocomplete.show
 
 
+
 /**
 * INIT
-*
 * @param object options
 * @return bool
 */
@@ -122,11 +121,11 @@ service_autocomplete.prototype.build = async function(options={}) {
 			: self.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
 
 	// reset search options
-		self.sqo					= {}
-		self.ar_filter_by_list		= []
-		self.ar_instances 			= []
-		self.list_name				= 's_'+new Date().getUTCMilliseconds()
-		self.search_fired			= false
+		self.sqo				= {}
+		self.ar_filter_by_list	= []
+		self.ar_instances		= []
+		self.list_name			= 's_'+new Date().getUTCMilliseconds()
+		self.search_fired		= false
 
 	// operator
 		self.operator = self.request_config_object.search && self.request_config_object.search.sqo_config && self.request_config_object.search.sqo_config.operator
@@ -135,7 +134,7 @@ service_autocomplete.prototype.build = async function(options={}) {
 				? self.request_config_object.show.sqo_config.operator
 				: '$and'
 
-	// engine. get the search_engine sended or set the default value
+	// engine. get the search_engine sent or set the default value
 		self.search_engine = (self.request_config_object) ? self.request_config_object.api_engine : 'dedalo';
 
 	// rqo_search, it's necessary do it by caller, because rqo is dependent of the source.
@@ -160,6 +159,7 @@ service_autocomplete.prototype.build = async function(options={}) {
 
 	// status update
 		self.status = 'built'
+
 
 	return true
 }//end build
@@ -272,7 +272,7 @@ service_autocomplete.prototype.render = async function(options={}) {
 
 /**
 * AUTOCOMPLETE_SEARCH
-* @return promise
+* @return promise js_promise
 */
 service_autocomplete.prototype.autocomplete_search = function() {
 
@@ -301,9 +301,6 @@ service_autocomplete.prototype.autocomplete_search = function() {
 
 	// exec search self.search_engine = dedalo_engine || zenon_engine, the method that will called
 		const js_promise = self[engine]()
-
-	// debug
-		// console.log('autocomplete_search js_promise >>', js_promise );
 
 
 	return js_promise
