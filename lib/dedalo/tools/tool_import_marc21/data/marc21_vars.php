@@ -167,7 +167,7 @@ $marc21_vars = array();
 							);
 //MEMORIAL
 
-//Topogràfic
+// Indexations
 	$marc21_vars[] = array( "Field" 				=> ["600","610","611","630","647","648","650","651","653","654","655","656","657","658","662","688"],
 							"Subfield_separator" 	=> " - ",
 							"field_multiple" 		=> true,
