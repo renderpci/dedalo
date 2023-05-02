@@ -324,7 +324,7 @@ const render_image_node = function(self, file_info, content_value) {
 
 		if (data.base_svg_url) {
 			// svg file already exists
-			object_node.data = data.base_svg_url
+			object_node.data = data.base_svg_url + '?t=' + (new Date()).getTime()
 		}else{
 			// fallback to default svg file
 			// base_svg_url_default. Replace default image extension from '0.jpg' to '0.svg'
