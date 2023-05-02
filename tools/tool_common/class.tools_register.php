@@ -988,6 +988,38 @@ class tools_register {
 	*/
 	public static function get_all_config_tool_client() : array {
 
+		static $cache_ar_client_default_config;
+		if (isset($cache_ar_client_default_config)) {
+			return $cache_ar_client_default_config;
+		}
+
+		// get all tools config sections
+		$ar_config = tools_register::get_all_config_tool();
+
+		$ar_client_defautl_config = array_map(function($item){
+
+			$new_config = [];
+			if($item->config !== false){
+				foreach ($item->config as $key => $value) {
+					if (isset($value->client) && $value->client===true) {
+						$new_config[$key] = $value;
+					}
+				}
+			}
+
+			$new_item = new stdClass();
+				$new_item->name		= $item->name;
+				$new_item->config	= !empty($new_config) ? (object)$new_config : null;
+
+			return $new_item;
+		}, $ar_config);
+
+		$cache_ar_client_default_config = $ar_client_defautl_config;
+
+		return $ar_client_defautl_config;
+	}//end get_all_config_tool_client
+
+
 
 	/**
 	* GET_ALL_default_CONFIG_TOOL_CLIENT
