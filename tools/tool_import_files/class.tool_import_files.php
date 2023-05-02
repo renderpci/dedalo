@@ -27,7 +27,7 @@ class tool_import_files extends tool_common {
 
 		// ar_data values
 			$ar_data['dir_path']		= $dir;					# /Users/dedalo/media/media_mupreva/image/temp/files/user_1/
-			$ar_data['file_path']		= $dir.$file;			# /Users/dedalo/media/media_mupreva/image/temp/files/user_1/45001-1.jpg
+			$ar_data['file_path']		= $dir.'/'.$file;		# /Users/dedalo/media/media_mupreva/image/temp/files/user_1/45001-1.jpg
 			$ar_data['file_name']		= $file_name;			# 04582_01_EsCuieram_Terracota_AD_ORIG
 			$ar_data['file_name_full']	= $file;				# $ar_value[0]; # 04582_01_EsCuieram_Terracota_AD_ORIG.JPG
 			$ar_data['extension']		= $extension;			# JPG (we respect upper/lower case)
@@ -131,14 +131,8 @@ class tool_import_files extends tool_common {
 					$additional_path	= $component->get_additional_path();
 
 				// original image desired store
-					$original_path		= DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER .'/'. $custom_target_quality .''. $additional_path;
+					$original_path		= $component->get_media_path_dir($custom_target_quality);
 					$original_file_path	= $original_path .'/'. $image_id . '.'. strtolower($extension);
-					if( !is_dir($original_path) ) {
-						if(!mkdir($original_path, 0775, true)) {
-							debug_log(__METHOD__." Error on read or create directory. Permission denied $original_path ".to_string(), logger::ERROR);
-							return false;
-						}
-					}
 
 				// copy the original
 					if (!copy($source_full_path, $original_file_path)) {
@@ -159,7 +153,7 @@ class tool_import_files extends tool_common {
 
 				// extension unify. convert JPG | PSD | TIFF | ... to jpg
 					if (strtolower($extension)!=strtolower(DEDALO_IMAGE_EXTENSION)) {
-						$original_file_path_jpg = DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER .'/'. $custom_target_quality .''. $additional_path .'/'. $image_id .'.'. DEDALO_IMAGE_EXTENSION;
+						$original_file_path_jpg = $original_path .'/'. $image_id .'.'. DEDALO_IMAGE_EXTENSION;
 						$options = new stdClass();
 							$options->source_file	= $original_file_path;
 							$options->target_file	= $original_file_path_jpg;
@@ -405,18 +399,25 @@ class tool_import_files extends tool_common {
 				$current_component_option_tipo	= $value_obj->component_option;
 
 				// Check file exists
-					$file_full_path = $files_dir . $current_file_name;
+					$file_full_path = $tmp_dir .'/'. $current_file_name;
 
 					if (!file_exists($file_full_path)) {
 						$msg = "File ignored (not found) $current_file_name";
-						if(SHOW_DEVELOPER===true) { $msg .= " - $file_full_path"; }
 						$ar_msg[] = $msg;
+						debug_log(__METHOD__
+							." $msg ". PHP_EOL
+							.' file_full_path: ' .$file_full_path
+							, logger::ERROR
+						);
 						continue; // Skip file
 					}
 				// Check proper mode config
 					if ($import_file_name_mode==='enumerate' && $import_mode!=='section') {
 						$msg = "Invalid import mode: $import_mode . Ignored action";
-						debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
+						debug_log(__METHOD__
+							." $msg "
+							, logger::ERROR
+						);
 						$ar_msg[] = $msg;
 						continue; // Skip file
 					}
@@ -425,12 +426,13 @@ class tool_import_files extends tool_common {
 				// debug_log(__METHOD__." Init file import_mode:$import_mode - import_file_name_mode:$import_file_name_mode - file_full_path ".to_string($file_full_path), logger::DEBUG);
 
 				// file_data
-					$file_data = tool_import_files::get_file_data($files_dir, $current_file_name);
+					$file_data = tool_import_files::get_file_data($tmp_dir, $current_file_name);
 
 				// target_ddo
 					if ($import_mode==='section') {
 						// switch import_file_name_mode
 						switch ($import_file_name_mode) {
+
 							case 'enumerate':
 								if (!empty($file_data['regex']->section_id)) {
 									// Direct numeric case like 1.jpg
@@ -485,7 +487,10 @@ class tool_import_files extends tool_common {
 
 				// target_ddo check
 					if(empty($target_ddo)){
-						debug_log(__METHOD__." target_ddo is empty will be ignored ".to_string(), logger::ERROR);
+						debug_log(__METHOD__
+							." target_ddo is empty and will be ignored "
+							, logger::ERROR
+						);
 						continue;
 					}
 
@@ -508,7 +513,7 @@ class tool_import_files extends tool_common {
 					if ($portal_response->result===false) {
 						$response->result 	= false;
 						$response->msg 		= "Error on create portal children: ".$portal_response->msg;
-						debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
+						debug_log(__METHOD__." $response->msg ", logger::ERROR);
 						return $response;
 					}
 					// save portal if all is all ok
@@ -631,7 +636,7 @@ class tool_import_files extends tool_common {
 							$processor_options->file_processor_properties	= $file_processor_properties;
 							# Standard arguments
 							$processor_options->file_name					= $current_file_name;
-							$processor_options->file_path					= $files_dir;
+							$processor_options->file_path					= $tmp_dir;
 							$processor_options->section_tipo				= $section_tipo;
 							$processor_options->section_id					= $section_id;
 							$processor_options->target_section_tipo			= $target_section_tipo;
