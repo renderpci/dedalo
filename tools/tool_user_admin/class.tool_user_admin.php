@@ -31,12 +31,13 @@ class tool_user_admin extends tool_common {
 
 		// optional config read from config
 			// get all tools config sections
-				$ar_config = tools_register::get_all_config_tool();
+				$tool_name	= get_called_class();
+				$config = tool_common::get_config($tool_name);
 			// select current from all tool config matching tool name
-				$tool_name	= get_called_class(); // tool_lang
-				$config		= array_find($ar_config, function($el) use($tool_name) {
-					return $el->name===$tool_name;
-				});
+				//  // tool_lang
+				// $config		= array_find($ar_config, function($el) use($tool_name) {
+				// 	return $el->name===$tool_name;
+				// });
 
 		// awesome tool process...
 
