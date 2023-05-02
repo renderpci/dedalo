@@ -1746,5 +1746,54 @@ final class dd_utils_api {
 	}//end get_known_mime_types
 
 
+	/**
+	* CREATE_THUMBNAIL
+	* @param object $options
+	* @return sting | null, url of the thumbnail file
+	*/
+	private static function create_thumbnail(object $options) : ?string {
+
+		$tmp_dir		= $options->tmp_dir;
+		$name			= $options->name;
+		$target_path	= $options->target_path;
+		$key_dir		= $options->key_dir;
+		$user_id		= $options->user_id;
+
+		$file_type		= mime_content_type($target_path);
+
+		$pathinfo	= pathinfo($name);
+		$filename = $pathinfo['filename'];
+		$thumbnail_file	= $tmp_dir. '/thumbnail/' . $filename . '.jpg';
+		switch ($file_type) {
+		 	case 'application/pdf':
+		 		$thumb_pdf_options = new stdClass();
+		 			$thumb_pdf_options->source_file = $target_path;
+		 			$thumb_pdf_options->ar_layers = [0];
+		 			$thumb_pdf_options->target_file = $thumbnail_file;
+					$thumb_pdf_options->density	= 150;
+					$thumb_pdf_options->antialias	= true;
+					$thumb_pdf_options->quality	= 75;
+					$thumb_pdf_options->resize	= '12.5%';
+
+		 		ImageMagick::convert($thumb_pdf_options);
+		 		break;
+
+		 	case 'image/jpeg':
+		 	default:
+		 	$thumb_image_options = new stdClass();
+				$thumb_image_options->source_file = $target_path;
+				$thumb_image_options->target_file = $thumbnail_file;
+				$thumb_image_options->thumbnail = true;
+
+				ImageMagick::convert($thumb_image_options);
+				break;
+		 }
+
+		$thumbnail_url = DEDALO_UPLOAD_TMP_URL.'/'. $user_id . '/' . $key_dir . '/thumbnail/' . $filename . '.jpg';
+
+		return $thumbnail_url;
+	}//end create_thumbnail
+
+
 
 }//end dd_utils_api
