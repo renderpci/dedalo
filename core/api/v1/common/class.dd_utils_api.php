@@ -876,6 +876,7 @@ final class dd_utils_api {
 				// filename
 				$file_name		= $file_to_upload['name'];
 				$file_tmp_name	= $file_to_upload['tmp_name'];
+				$file_type 		= $file_to_upload['type'];
 
 				// extension
 				$extension	= strtolower( pathinfo($file_name, PATHINFO_EXTENSION) );
@@ -887,13 +888,14 @@ final class dd_utils_api {
 				$file_mime	= $finfo->file($file_tmp_name); // ex. string 'text/plain'
 
 			// name
-				$name = basename($file_tmp_name);
+				$name = $file_name;
 				if($chunked){
 					$file_name		= $options->file_name;
 					$total_chunks	= $options->total_chunks;
 					$chunk_index	= $options->chunk_index;
+					$tmp_name 		= basename($file_tmp_name);
 					$extension		= 'blob';
-					$name			= "{$chunk_index}-{$name}.{$extension}";
+					$name			= "{$chunk_index}-{$tmp_name}.{$extension}";
 					$file_mime		= 'application/octet-stream';
 				}
 
@@ -1103,6 +1105,9 @@ final class dd_utils_api {
 		// tmp_joined_file
 			$tmp_joined_file = 'tmp_'.$file_data->name;
 
+		// target path of the final file joined
+			$target_path = $file_path .'/'.$tmp_joined_file;
+
 		// loop through temp files and grab the content
 			foreach ($files_chunked as $chunk_filename) {
 
@@ -1116,7 +1121,7 @@ final class dd_utils_api {
 				}
 
 				// add chunk to main file
-				file_put_contents("{$file_path}/{$tmp_joined_file}", $chunk, FILE_APPEND | LOCK_EX);
+				file_put_contents($target_path, $chunk, FILE_APPEND | LOCK_EX);
 
 				// delete chunk
 				unlink($temp_file_path);
