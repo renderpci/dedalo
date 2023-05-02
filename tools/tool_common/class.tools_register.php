@@ -988,20 +988,30 @@ class tools_register {
 	*/
 	public static function get_all_config_tool_client() : array {
 
+
+	/**
+	* GET_ALL_default_CONFIG_TOOL_CLIENT
+	* filter the client part of the config defined with the "client" property to true
+	* @return array $ar_client_config
+	*/
+	public static function get_all_default_config_tool_client() : array {
+
 		static $cache_ar_client_config;
 		if (isset($cache_ar_client_config)) {
 			return $cache_ar_client_config;
 		}
 
 		// get all tools config sections
-		$ar_config = tools_register::get_all_config_tool();
+		$ar_config = tools_register::get_all_default_config();
 
 		$ar_client_config = array_map(function($item){
 
 			$new_config = [];
-			foreach ($item->config as $key => $value) {
-				if (isset($value->client) && $value->client===true) {
-					$new_config[$key] = $value;
+			if($item->config !== false){
+				foreach ($item->config as $key => $value) {
+					if (isset($value->client) && $value->client===true) {
+						$new_config[$key] = $value;
+					}
 				}
 			}
 
