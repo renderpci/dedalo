@@ -64,6 +64,7 @@ service_upload.prototype.init = async function(options) {
 	// fix
 		self.model				= options.model || 'service_upload'
 		self.allowed_extensions	= options.allowed_extensions || []
+		self.key_dir			= options.key_dir || null
 
 	// events
 		self.events_tokens.push(
@@ -174,7 +175,7 @@ export const upload = async function(options) {
 	// options
 		const id					= options.id // id done by the caller, used to send the events of progress
 		const file					= options.file // object {name:'xxx.jpg',size:5456456}
-		const resource_type			= options.resource_type // object {type: 'dedalo_config', value: 'DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH'}
+		const key_dir				= options.key_dir // object {type: 'dedalo_config', value: 'DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH'}
 		const allowed_extensions	= options.allowed_extensions // array ['tiff', 'jpeg']
 		const max_size_bytes		= options.max_size_bytes // int 352142
 
@@ -205,7 +206,7 @@ export const upload = async function(options) {
 
 		// FormData build
 			// 	const fd = new FormData();
-			// 	fd.append('resource_type',		resource_type);
+			// 	fd.append('key_dir',		key_dir);
 			// 	// fd.append('allowed_extensions', 	JSON.stringify(allowed_extensions));
 			// 	// file
 			// 	fd.append('fileToUpload', file);
@@ -403,7 +404,7 @@ export const upload = async function(options) {
 				// request header
 				xhr.setRequestHeader("X-File-Name", encodeURIComponent(file.name));
 
-					formdata.append('resource_type', resource_type);
+					formdata.append('key_dir', key_dir);
 					formdata.append('file_name', file.name);
 					formdata.append('chunked', chunked);
 					formdata.append('start', start);
@@ -449,7 +450,7 @@ export const upload = async function(options) {
 				// request header
 				xhr.setRequestHeader("X-File-Name", encodeURIComponent(file.name));
 
-					formdata.append('resource_type', resource_type);
+					formdata.append('key_dir', key_dir);
 					formdata.append('file_name', file.name);
 					formdata.append('chunked', chunked);
 					formdata.append('file_to_upload', file);
@@ -483,7 +484,7 @@ export const upload = async function(options) {
 
 		// chunk_file on end, else send next chunk
 			if (DEDALO_UPLOAD_SERVICE_CHUNK_FILES > 0) {
-				chunk_file(file, resource_type)
+				chunk_file(file, key_dir)
 			}else{
 				send()
 			}
@@ -540,15 +541,19 @@ service_upload.prototype.upload_file = async function(options) {
 
 	// short vars
 		const allowed_extensions	= self.allowed_extensions
-		const resource_type			= self.caller.context.features
-			? self.caller.context.features.resource_type
-			: (self.caller.model || null) // like 'image'
+		const key_dir			= self.key_dir
+			? self.key_dir
+			: self.caller.context.features && self.caller.context.features.key_dir
+				? self.caller.context.features.key_dir
+				: self.caller.caller.context.features && self.caller.caller.context.features.key_dir
+					? self.caller.caller.context.features.key_dir
+					: (self.caller.caller.model || null) // like 'image'
 
 	// upload (using service upload)
 		const api_response = await upload({
 			id					: self.id, // id done by the caller, used to send the events of progress
 			file				: file, // object {name:'xxx.jpg',size:5456456}
-			resource_type		: resource_type, // string like 'image' used to target dir
+			key_dir		: key_dir, // string like 'image' used to target dir
 			allowed_extensions	: allowed_extensions, // array ['tiff', 'jpeg']
 			max_size_bytes		: self.max_size_bytes // int 352142
 		})

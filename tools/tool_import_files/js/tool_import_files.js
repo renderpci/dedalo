@@ -12,7 +12,8 @@
 	// import {ui} from '../../../core/common/js/ui.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_import_files} from './render_tool_import_files.js'
-	import {upload_manager_init} from './upload_manager.js'
+	import {service_dropzone} from '../../../core/services/service_dropzone/js/service_dropzone.js'
+	import {service_tmp_section} from '../../../core/services/service_tmp_section/js/service_tmp_section.js'
 
 
 
@@ -35,10 +36,12 @@ export const tool_import_files = function () {
 	this.langs				= null
 	this.caller				= null
 	this.key_dir			= null
-	this.active_dropzone	= null
 	this.tool_contanier		= null
 	this.files_data			= []
 
+	// services
+	this.service_dropzone		= null
+	this.service_tmp_section	= null
 	return true
 }//end page
 
@@ -69,8 +72,6 @@ tool_import_files.prototype.init = async function(options) {
 
 	// upload_manager_init
 		self.key_dir = self.caller.tipo + '_' + self.caller.section_tipo
-		await upload_manager_init()
-
 
 	return common_init
 }//end init
@@ -89,79 +90,56 @@ tool_import_files.prototype.build = async function(autoload=false) {
 
 	const self = this
 
+	// common_build. call generic common tool build
+		const common_build = await tool_common.prototype.build.call(this, autoload, {
+			load_ddo_map : () => { return []} // prevents to auto load ddo_map
+		});
+
 	try {
-
-		// load_input_ddo_map
-		const load_input_ddo_map = async function() {
-
-			// ddo_map load all role 'input_component' elements inside ddo_map
-			const ar_promises			= []
-			const ddo_map_input			= self.tool_config.ddo_map.filter(el => el.role==='input_component')
-			const ddo_map_input_length	= ddo_map_input.length
-			for (let i = 0; i < ddo_map_input_length; i++) {
-
-				const el = ddo_map_input[i]
-
-				ar_promises.push( new Promise(async (resolve) => {
-
-					const element_options = {
-						model			: el.model,
-						mode			: el.mode,
-						tipo			: el.tipo,
-						section_tipo	: el.section_tipo,
-						section_id		: 'tmp',
-						lang			: self.lang,
-						type			: el.type,
-						id_variant		: self.model,  // id_variant prevents id conflicts
-						caller			: self // set tool as caller of the component :-)
-					}
-
-					// init and build instance
-						get_instance(element_options) // load and init
-						.then(function(element_instance){
-							element_instance.build(true) // build, loading data
-							.then(function(){
-								resolve(element_instance)
-							})
-						})
-				}))
-			}//end for (let i = 0; i < ddo_map.length; i++)
-
-			// set on finish
-				await Promise.all(ar_promises).then((ar_instances) => {
-					// dd_console(`ar_instances`, 'DEBUG', ar_instances)
-					self.ar_instances = ar_instances
-				})
-
-			return true
-		}//end load_input_ddo_map
 
 		// load_target_component
 		const load_target_component_context = async function() {
 
 			// ddo_map load all role 'input_component' elements inside ddo_map
-			const ar_promises			= []
-			const target_component		= self.tool_config.ddo_map.find(el => el.role==='target_component')
-
+			const target_component = self.tool_config.ddo_map.find(el => el.role==='target_component')
 			const element_context_response = await data_manager.get_element_context({
 				tipo			: target_component.tipo,
 				section_tipo	: target_component.section_tipo,
-				section_id		: 'tmp',
+				section_id		: 'tmp'
 			})
 
-			self.target_component_context = element_context_response.result[0]
-
-			return true
+			return element_context_response.result[0]
 		}//end load_target_component_context
+		self.target_component_context = await load_target_component_context()
 
-		load_target_component_context()
+		// Service DropZone
+			if(self.tool_config.file_processor){
+				self.tool_config.file_processor.map(el => {
+					el.function_name_label = self.get_tool_label(el.function_name)
+				});
+			}
+			// init service dropzone
+			self.service_dropzone = await get_instance({
+				model 				: 'service_dropzone',
+				mode 				: 'edit',
+				caller 				: self,
+				allowed_extensions	: self.allowed_extensions || [],
+				key_dir				: self.key_dir,
+				component_option	: self.tool_config.ddo_map.filter(el => el.role === 'component_option'),
+				file_processor		: self.tool_config.file_processor || null
+			})
+			await self.service_dropzone.build()
 
-		// call generic common tool build
-		const common_build = await tool_common.prototype.build.call(this, autoload, {
-			load_ddo_map : load_input_ddo_map // will be executed as callback in tool_common
-		});
+		// Service tmp_section
+			// init service tmp_section
+			self.service_tmp_section = await get_instance({
+				model	: 'service_tmp_section',
+				mode	: 'edit',
+				caller	: self,
+				ddo_map	: self.tool_config.ddo_map.filter(el => el.role==='input_component')
 
-		return common_build
+			})
+			await self.service_tmp_section.build()
 
 	} catch (error) {
 		self.error = error
@@ -169,4 +147,5 @@ tool_import_files.prototype.build = async function(autoload=false) {
 	}
 
 
+	return common_build
 }//end build

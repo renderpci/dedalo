@@ -174,12 +174,13 @@ class tool_transcription extends tool_common {
 
 		// config
 			// get all tools config sections
-				$ar_config = tools_register::get_all_config_tool();
+				$tool_name	= get_called_class();
+				$config = tool_common::get_config($tool_name);
 			// select current from all tool config matching tool name
-				$tool_name	= get_called_class(); // tool_lang
-				$config		= array_find($ar_config, function($el) use($tool_name) {
-					return $el->name===$tool_name;
-				});
+				// $tool_name	= get_called_class(); // tool_lang
+				// $config		= array_find($ar_config, function($el) use($tool_name) {
+				// 	return $el->name===$tool_name;
+				// });
 
 		// config JSON . Must be compatible with tool properties transcriber_engine data
 			$ar_transcriber_configs	= $config->config->transcriber_config->value;

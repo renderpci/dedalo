@@ -796,8 +796,8 @@ final class dd_utils_api {
 
 		// options
 			$options		= $rqo->options;
-			$file_to_upload	= $options->file_to_upload ?? $options->upload;	// assoc array Added from PHP input '$_FILES'
-			$resource_type	= $options->resource_type; // string like 'tool_upload'
+			$file_to_upload	= $options->file_to_upload ?? $options->file ?? $options->upload;	// assoc array Added from PHP input '$_FILES'
+			$key_dir	= $options->key_dir; // string like 'tool_upload'
 			$chunked		= isset($options->chunked) // received as string 'true'|'false'
 				? (bool)json_decode($options->chunked)
 				: false;
@@ -876,6 +876,7 @@ final class dd_utils_api {
 				// filename
 				$file_name		= $file_to_upload['name'];
 				$file_tmp_name	= $file_to_upload['tmp_name'];
+				$file_type 		= $file_to_upload['type'];
 
 				// extension
 				$extension	= strtolower( pathinfo($file_name, PATHINFO_EXTENSION) );
@@ -887,13 +888,14 @@ final class dd_utils_api {
 				$file_mime	= $finfo->file($file_tmp_name); // ex. string 'text/plain'
 
 			// name
-				$name = basename($file_tmp_name);
+				$name = $file_name;
 				if($chunked){
 					$file_name		= $options->file_name;
 					$total_chunks	= $options->total_chunks;
 					$chunk_index	= $options->chunk_index;
+					$tmp_name 		= basename($file_tmp_name);
 					$extension		= 'blob';
-					$name			= "{$chunk_index}-{$name}.{$extension}";
+					$name			= "{$chunk_index}-{$tmp_name}.{$extension}";
 					$file_mime		= 'application/octet-stream';
 				}
 
@@ -961,31 +963,51 @@ final class dd_utils_api {
 						$response->msg .= " Config constant 'DEDALO_UPLOAD_TMP_DIR' is mandatory!";
 						return $response;
 					}
-					$dir = DEDALO_UPLOAD_TMP_DIR . '/' . $resource_type;
+				// user_id. Currently logged user
+					$user_id = navigator::get_user_id();
+					$tmp_dir = DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $key_dir;
 
 				// Check the target_dir, if it's not created will be make to be used.
 					// Target folder exists test
-					if( !is_dir($dir) ) {
-						if(!mkdir($dir, 0700, true)) {
+					if( !is_dir($tmp_dir) ) {
+						if(!mkdir($tmp_dir, 0700, true)) {
 							$response->msg .= ' Error on read or create UPLOAD_TMP_DIR directory. Permission denied';
+							debug_log(__METHOD__.PHP_EOL
+								. " $response->msg"
+								, logger::ERROR
+							);
 							return $response;
 						}
-						debug_log(__METHOD__." CREATED DIR: $dir  ".to_string(), logger::DEBUG);
+						debug_log(__METHOD__." CREATED DIR: $tmp_dir  ".to_string(), logger::DEBUG);
 					}
 				// move file to target path
-					$target_path	= $dir . '/' . $name;
+					$target_path	= $tmp_dir . '/' . $name;
 					$moved			= move_uploaded_file($file_tmp_name, $target_path);
 					// verify move file is successful
 					if ($moved!==true) {
 						debug_log(__METHOD__.PHP_EOL
 							.'Error on get/move temp file to target_path '.PHP_EOL
 							.'source: '.$file_tmp_name.PHP_EOL
-							.'target: '.$target_path,
-							 logger::ERROR
+							.'target: '.$target_path
+							, logger::ERROR
 						);
 						$response->msg .= 'Uploaded file Error on get/move to target_path.';
 						return $response;
 					}
+
+					// thumbnail file
+					if(!$chunked){
+						$thumb_options = new stdClass();
+							$thumb_options->tmp_dir			= $tmp_dir;
+							$thumb_options->name			= $name;
+							$thumb_options->target_path		= $target_path;
+							$thumb_options->key_dir	= $key_dir;
+							$thumb_options->user_id			= $user_id;
+
+						$thumbnail_url = dd_utils_api::create_thumbnail($thumb_options);
+					}
+
+
 
 			// file_data to client. POST file (sent across $_FILES) info and some additions
 				// Example of received data:
@@ -1002,20 +1024,21 @@ final class dd_utils_api {
 					$file_data->type			= $file_to_upload['type']; // like 'image\/jpeg'
 					// $file_data->tmp_name		= $target_path; // do not include for safety
 					$file_data->tmp_dir			= 'DEDALO_UPLOAD_TMP_DIR'; // like DEDALO_MEDIA_PATH . '/upload/service_upload/tmp'
-					$file_data->resource_type	= $resource_type; // like 'tool_upload'
+					$file_data->key_dir	= $key_dir; // like 'tool_upload'
 					$file_data->tmp_name		= $name; // like 'phpv75h2K'
 					$file_data->error			= $file_to_upload['error']; // like 0
 					$file_data->size			= $file_to_upload['size']; // like 878860 (bytes)
 					$file_data->extension		= $extension;
 					$file_data->chunked			= $chunked;
+					$file_data->thumbnail_url 	= $thumbnail_url ?? null;
 
 					if($chunked) {
 						$file_data->total_chunks	= $total_chunks;
 						$file_data->chunk_index		= $chunk_index;
 					}
 
-			// resource_type cases response
-				switch ($resource_type) {
+			// key_dir cases response
+				switch ($key_dir) {
 
 					case 'web': // uploading images from text editor
 						$safe_file_name	= sanitize_file_name($file_name); // clean file name
@@ -1068,6 +1091,7 @@ final class dd_utils_api {
 			$options		= $rqo->options;
 			$files_chunked	= $options->files_chunked;
 			$file_data		= $options->file_data;
+			$key_dir 		= $file_data->key_dir;
 
 		// response
 			$response = new stdClass();
@@ -1075,10 +1099,14 @@ final class dd_utils_api {
 				$response->msg 		= 'Error. Request failed';
 
 		// file_path
-			$file_path = DEDALO_UPLOAD_TMP_DIR . '/' . $file_data->resource_type;
+			$user_id = navigator::get_user_id();
+			$file_path = DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $key_dir;
 
 		// tmp_joined_file
 			$tmp_joined_file = 'tmp_'.$file_data->name;
+
+		// target path of the final file joined
+			$target_path = $file_path .'/'.$tmp_joined_file;
 
 		// loop through temp files and grab the content
 			foreach ($files_chunked as $chunk_filename) {
@@ -1093,7 +1121,7 @@ final class dd_utils_api {
 				}
 
 				// add chunk to main file
-				file_put_contents("{$file_path}/{$tmp_joined_file}", $chunk, FILE_APPEND | LOCK_EX);
+				file_put_contents($target_path, $chunk, FILE_APPEND | LOCK_EX);
 
 				// delete chunk
 				unlink($temp_file_path);
@@ -1121,9 +1149,19 @@ final class dd_utils_api {
 				return $response;
 			}
 
+		// thumbnail
+			$thumb_options = new stdClass();
+				$thumb_options->tmp_dir			= $file_path;
+				$thumb_options->name			= $tmp_joined_file;
+				$thumb_options->target_path		= $target_path;
+				$thumb_options->key_dir	= $key_dir;
+				$thumb_options->user_id			= $user_id;
+			$thumbnail_url = dd_utils_api::create_thumbnail($thumb_options);
+
 		// set the file values
-			$file_data->tmp_name	= $tmp_joined_file; // like 'phpv75h2K'
-			$file_data->extension	= $extension;
+			$file_data->tmp_name		= $tmp_joined_file; // like 'phpv75h2K'
+			$file_data->extension		= $extension;
+			$file_data->thumbnail_url	= $thumbnail_url ?? null;
 
 		// response. All is OK response
 			$response->result		= true;
@@ -1133,6 +1171,141 @@ final class dd_utils_api {
 
 		return $response;
 	}//end get_system_info
+
+
+
+	/**
+	* LIST_UPLOADED_FILES
+	* Used by the upload lib (Dropzone) to get the list of already uploaded files on server
+	* @param object $rqo
+	* 	Object with only the key_dir name like { key_dir: 'oh1_4' }
+	* @return object $response
+	* 	response->result:
+	* 	Array of objects like: [{
+	* 		url : server generated thumbnail url,
+	* 		name : file name like 'my_photo51.jpg',
+	* 		size : informative file size in bytes like 6528743 (from original file, not from the thumb)
+	* 	}]
+	*/
+	public static function list_uploaded_files(object $rqo) : object {
+
+		// unlock session
+			session_write_close();
+			ignore_user_abort();
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed';
+
+		// options
+			$key_dir		= $rqo->options->key_dir ?? null;
+
+		// dir
+			$user_id = navigator::get_user_id();
+			$tmp_dir = DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $key_dir;
+			$tmp_url = DEDALO_UPLOAD_TMP_URL . '/'. $user_id . '/' . $key_dir;
+
+		// read files dir
+			$files		= [];
+			$files_raw	= scandir($tmp_dir);
+			foreach ($files_raw as $file_name) {
+				$file_path = $tmp_dir . '/' . $file_name;
+
+				if (strlen($file_name) > 0 && $file_name[0]!=='.' && is_file($file_path)) {
+
+					$info		= pathinfo($file_name);
+					$basemane	= basename($file_name,'.'.$info['extension']);
+
+					$files[] = (object)[
+						'url'	=> $tmp_url .'/thumbnail/'. $basemane . '.jpg',
+						'name'	=> $file_name,
+						'size'	=> filesize($file_path)
+					];
+				}
+			}
+
+		// response
+			$response->result	= $files;
+			$response->msg		= 'OK. Request done';
+
+		return $response;
+	}//end list_uploaded_files
+
+
+
+	/**
+	* DELETE_UPLOADED_FILE
+	* Used by the upload lib (Dropzone) to delete already uploaded files on server
+	* @param object $rqo
+	* 	Object like { file_name: 'my_photo_452.jpg', key_dir: 'rsc29_rsc176' }
+	* @return object $response
+	* 	response->result
+	* 	Returns false if file do not exists or the unlink call do not return true
+	*/
+	public static function delete_uploaded_file(object $rqo) : object {
+
+		// unlock session
+			session_write_close();
+			ignore_user_abort();
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+
+		$options = $rqo->options;
+
+		// short vars
+			$file_names	= is_array($options->file_name) ? $options->file_name : [$options->file_name];
+			$key_dir	= $options->key_dir; // key_dir. Contraction of tipo + section_tipo, like: 'rsc29_rsc176'
+
+		// dir
+			$user_id = navigator::get_user_id();
+			$tmp_dir = DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $key_dir;
+
+		// delete each file
+			foreach ($file_names as $file_name) {
+
+				// file_path
+					$file_path = $tmp_dir . '/' . $file_name;
+
+				// delete file
+					if (!file_exists($file_path)) {
+						$response->result	= false;
+						$response->msg		= "Error on delete file (the file do not exists): ".to_string($file_path);
+						debug_log(__METHOD__." $response->msg", logger::ERROR);
+						return $response;
+					}
+					if (!unlink($file_path)) {
+						$response->result	= false;
+						$response->msg		= "Error on delete file (unable to unlink file): ".to_string($file_path);
+						debug_log(__METHOD__." $response->msg", logger::ERROR);
+						return $response;
+					}
+
+				// path thumb
+					$info				= pathinfo($file_name);
+					$basemane			= basename($file_name,'.'.$info['extension']);
+					$file_path_thumb	= $tmp_dir . '/thumbnail/' . $basemane . '.jpg';
+
+				// delete thumb
+					if (file_exists($file_path_thumb) && !unlink($file_path_thumb)) {
+						$response->result	= false;
+						$response->msg		= "Error on delete thumb file (unable to unlink file): ".to_string($file_path_thumb);
+						debug_log(__METHOD__." $response->msg", logger::ERROR);
+						return $response;
+					}
+			}//end foreach ($file_names as $file_name)
+
+		// response
+			$response->result	= true;
+			$response->msg		= 'OK. Request done';
+
+
+		return $response;
+	}//end delete_uploaded_file
+
+
+
 
 
 
@@ -1601,6 +1774,55 @@ final class dd_utils_api {
 
 		return $mime_types;
 	}//end get_known_mime_types
+
+
+	/**
+	* CREATE_THUMBNAIL
+	* @param object $options
+	* @return sting | null, url of the thumbnail file
+	*/
+	private static function create_thumbnail(object $options) : ?string {
+
+		$tmp_dir		= $options->tmp_dir;
+		$name			= $options->name;
+		$target_path	= $options->target_path;
+		$key_dir		= $options->key_dir;
+		$user_id		= $options->user_id;
+
+		$file_type		= mime_content_type($target_path);
+
+		$pathinfo	= pathinfo($name);
+		$filename = $pathinfo['filename'];
+		$thumbnail_file	= $tmp_dir. '/thumbnail/' . $filename . '.jpg';
+		switch ($file_type) {
+		 	case 'application/pdf':
+		 		$thumb_pdf_options = new stdClass();
+		 			$thumb_pdf_options->source_file = $target_path;
+		 			$thumb_pdf_options->ar_layers = [0];
+		 			$thumb_pdf_options->target_file = $thumbnail_file;
+					$thumb_pdf_options->density	= 150;
+					$thumb_pdf_options->antialias	= true;
+					$thumb_pdf_options->quality	= 75;
+					$thumb_pdf_options->resize	= '12.5%';
+
+		 		ImageMagick::convert($thumb_pdf_options);
+		 		break;
+
+		 	case 'image/jpeg':
+		 	default:
+		 	$thumb_image_options = new stdClass();
+				$thumb_image_options->source_file = $target_path;
+				$thumb_image_options->target_file = $thumbnail_file;
+				$thumb_image_options->thumbnail = true;
+
+				ImageMagick::convert($thumb_image_options);
+				break;
+		 }
+
+		$thumbnail_url = DEDALO_UPLOAD_TMP_URL.'/'. $user_id . '/' . $key_dir . '/thumbnail/' . $filename . '.jpg';
+
+		return $thumbnail_url;
+	}//end create_thumbnail
 
 
 
