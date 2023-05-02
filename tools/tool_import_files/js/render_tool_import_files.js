@@ -408,7 +408,8 @@ const get_content_data_edit = async function(self) {
 			parent			: fragment
 		})
 
-		const template = await create_template(self)
+		// const template = await create_template(self)
+		const template = await self.service_dropzone.render()
 		template_container.appendChild(template)
 
 
