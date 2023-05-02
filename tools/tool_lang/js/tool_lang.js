@@ -116,6 +116,8 @@ tool_lang.prototype.build = async function(autoload=false) {
 			if (self.main_element.context.options && self.main_element.context.options.related_component_lang) {
 				self.source_lang = self.main_element.context.lang = self.main_element.lang = self.main_element.context.options.related_component_lang
 				self.target_lang = null
+				// rebuilt to force load the new lang
+				await self.main_element.build(true)
 			}
 
 		// status_user_component. control the tool status process for users

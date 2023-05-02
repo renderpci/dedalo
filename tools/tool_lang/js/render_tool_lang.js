@@ -103,10 +103,10 @@ const get_content_data_edit = async function(self) {
 				})
 				source_select_lang.addEventListener("change", function(e){
 					const lang = e.target.value
-					add_component({
-						self				: self,
-						component			: self.main_element,
-						lang				: lang
+					change_component_lang({
+						self		: self,
+						component	: self.main_element,
+						lang		: lang
 					})
 				})
 				top_left.appendChild(source_select_lang)
@@ -120,15 +120,14 @@ const get_content_data_edit = async function(self) {
 				})
 
 		// source component
-			// self.main_element.show_interface.read_only = true
 			const source_component_container = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'source_component_container',
 				parent			: left_block
 			})
+			self.main_element.show_interface.read_only = true
 			self.main_element.render()
 			.then(function(node){
-				// node.classList.add('disabled_component')
 				source_component_container.appendChild(node)
 			})
 
@@ -154,10 +153,10 @@ const get_content_data_edit = async function(self) {
 				})
 				target_select_lang.addEventListener("change", async function(e){
 					const lang = e.target.value
-					add_component({
-						self				: self,
-						component			: self.target_component,
-						lang				: lang
+					change_component_lang({
+						self		: self,
+						component	: self.target_component,
+						lang		: lang
 					})
 
 					const data = {
@@ -183,8 +182,7 @@ const get_content_data_edit = async function(self) {
 		// if the target component has the same lang than source component block the edition to avoid errors
 		// ck-editor can not manage 2 instances of the same component in edit
 			if (self.target_component) {
-				const read_only = false
-				self.target_component.show_interface.read_only = read_only
+				self.target_component.show_interface.read_only = (self.target_component.lang===self.source_lang)
 				const target_component_node = await self.target_component.render()
 				const target_component_container = ui.create_dom_element({
 					element_type	: 'div',
@@ -416,7 +414,7 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 
 
 /**
-* ADD_COMPONENT
+* CHANGE_COMPONENT_LANG
 * Load and render a new component for translate
 * @param property object
 * 	self		: instance of the tool
@@ -425,7 +423,7 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 * @return HTMLElement|bool
 * 	component wrapper node
 */
-export const add_component = async (options) => {
+export const change_component_lang = async (options) => {
 
 	const self					= options.self
 	const component				= options.component
@@ -433,12 +431,18 @@ export const add_component = async (options) => {
 
 	// check if source component or target component has the lang selected to lock the component edition
 	// if not release read_only property
-		if (lang===self.main_element.lang || lang===self.target_component.lang) {
-			// node.classList.add('disabled_component')
-			component.show_interface.read_only = true
-		}else{
-			component.show_interface.read_only = false
-		}
+		// if (lang===self.main_element.lang || lang===self.target_component.lang) {
+		// 	// node.classList.add('disabled_component')
+		// 	component.show_interface.read_only = true
+		// }else{
+		// 	component.show_interface.read_only = false
+		// }
+
+	// id_variant: tool_lang / target_component
+		const is_main = component.id_variant==='tool_lang'
+
+	// read_only
+		component.show_interface.read_only = is_main || (lang===self.source_lang)
 
 	// render component
 		component.lang = lang
@@ -449,7 +453,7 @@ export const add_component = async (options) => {
 		// const node		= await component.render()
 
 	return true
-}//end add_component
+}//end change_component_lang
 
 
 
