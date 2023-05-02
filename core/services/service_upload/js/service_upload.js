@@ -541,9 +541,13 @@ service_upload.prototype.upload_file = async function(options) {
 
 	// short vars
 		const allowed_extensions	= self.allowed_extensions
-		const resource_type			= self.caller.context.features
-			? self.caller.context.features.resource_type
-			: (self.caller.model || null) // like 'image'
+		const key_dir			= self.key_dir
+			? self.key_dir
+			: self.caller.context.features && self.caller.context.features.key_dir
+				? self.caller.context.features.key_dir
+				: self.caller.caller.context.features && self.caller.caller.context.features.key_dir
+					? self.caller.caller.context.features.key_dir
+					: (self.caller.caller.model || null) // like 'image'
 
 	// upload (using service upload)
 		const api_response = await upload({
