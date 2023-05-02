@@ -459,6 +459,7 @@
 	// DEDALO_UPLOAD_TMP_DIR
 	// it defines the temporary directory to use to store the files uploaded, moved from php/tmp upload directory
 	define('DEDALO_UPLOAD_TMP_DIR', DEDALO_MEDIA_PATH . '/upload/service_upload/tmp');
+	define('DEDALO_UPLOAD_TMP_URL', DEDALO_MEDIA_URL . '/upload/service_upload/tmp');
 	// DEDALO_UPLOAD_SERVICE_CHUNK_FILES
 	// split files into chunks before upload at max size defined
 	// values supported:
