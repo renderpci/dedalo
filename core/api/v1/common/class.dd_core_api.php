@@ -1019,6 +1019,9 @@ final class dd_core_api {
 						$component->set_datalist($data->datalist);
 					}
 
+				// force recalculate dato
+					$component->set_dato_resolved(null);
+
 				// element JSON
 					$get_json_options = new stdClass();
 						$get_json_options->get_context	= true;
