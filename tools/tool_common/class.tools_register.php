@@ -1058,7 +1058,7 @@ class tools_register {
 
 
 		return $ar_client_config;
-	}//end get_all_config_tool_client
+	}//end get_all_default_config_tool_client
 
 
 
