@@ -3036,6 +3036,49 @@ class diffusion_sql extends diffusion  {
 
 
 	/**
+	* MAP_LOCATOR_TO_INT_RECURSIVE
+	* Convert array of locators (dato) to array of section_id.
+	* If isset propiedades->process_dato_arguments->custom_arguments->add_parents as true
+	* it will be recursive
+	* @param object $options
+	* @param array|null $dato
+	* @return array|null $value
+	*/
+	public static function map_locator_to_int_recursive($options=null, $dato=null) : ?array {
+
+		if (empty($dato)) {
+			return null;
+		}
+
+		$value = (!empty($dato) && isset($dato[0]))
+			? (int)$dato[0]->section_id
+			: null;
+
+		$value = [];
+		foreach ($dato as $current_locator) {
+
+			$section_id	= (int)$current_locator->section_id;
+			$value[]	= $section_id;
+
+			// parents recursive
+			// add parents option
+			// if defined in properties, get current locator parents recursively and add it to current value (like municipality, region, country hierarchy)
+				if (isset($options->propiedades->process_dato_arguments->custom_arguments->add_parents) && $options->propiedades->process_dato_arguments->custom_arguments->add_parents===true) {
+					// get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
+					$ar_parents = component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, true);
+					foreach ($ar_parents as $parent_locator) {
+						$value[] = $parent_locator->section_id;
+					}
+				}
+		}
+
+
+		return $value;
+	}//end map_locator_to_int_recursive
+
+
+
+	/**
 	* MAP_LOCATOR_TO_TERMINOID_PARENT
 	* @see Alias of map_to_terminoID
 	* Used to trigger parent publication when children is published (useful in thesaurus web publications like mupreva)
