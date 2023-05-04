@@ -148,19 +148,37 @@ function debug_log(string $info, int $level=logger::DEBUG) : bool {
 			'bg_cyan'		=> "\033[46m%s\033[0m",
 			'bg_white'		=> "\033[47m%s\033[0m"
 		);
-		$base_msg	= 'DEBUG_LOG ['.logger::level_to_string($level).'] '.PHP_EOL. $info;
-		$msg		= sprintf($colorFormats['bg_yellow'], $base_msg);
+
+		// bt
+		$bt		= debug_backtrace();
+		$source	= $bt[1];
+
+		$base_msg	= 'DEBUG_LOG ['.logger::level_to_string($level).']' . PHP_EOL
+			. ' ' . $info .' '. PHP_EOL
+			. ' File: ' . $source['file'].' '. PHP_EOL
+			. ' Line: ' . $source['line'].' ';
+
+		$msg = sprintf($colorFormats['bg_yellow'], $base_msg);
 
 		// DEDALO_ERRORS ADD
 		$_ENV['DEDALO_ERRORS'][] = $info;
 
+		// error log print
+		error_log($msg);
+
+		// critical
+		if ($level<6) {
+			error_log( print_r($bt, true) );
+		}
+
 	}else{
 		$msg		= 'DEBUG_LOG ['.logger::level_to_string($level).'] '. $info;
+		// error log print
+		error_log($msg);
 	}
 
 
-	// error log print
-		error_log($msg);
+
 
 
 	return true;

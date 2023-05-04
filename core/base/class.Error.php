@@ -21,14 +21,13 @@ class dd_error {
 			'line'		=> $line
 		);
 
-		$message = safe_xss($message);
-
-		$error_to_show['user']	= "<span class='error'>Ops.. [Error]        " . $message ."</span>";
-		$error_to_show['debug']	= "<span class='error'>Ops.. [Error]$number " . $message ."</span>";
-		$error_to_show['dump']	= '<pre>' . print_r($error,true) . '</pre>';
+		// $error_to_show['user']	= 'Ops.. [Error]             ' . $message;
+		// $error_to_show['debug']	= 'Ops.. [Error] '.$number.' ' . $message;
+		// $error_to_show['dump']	= print_r($error, true);
 
 		// PHP-APACHE LOG
-		error_log('ERROR: '.$error_to_show['debug'].$error_to_show['dump']);
+		// error_log('ERROR: '.$error_to_show['debug'].$error_to_show['dump']);
+		error_log('ERROR [captureError]: '. print_r($error, true));
 	}//end captureError
 
 
@@ -42,11 +41,14 @@ class dd_error {
 
 			$message = safe_xss($exception->getMessage());
 			// Display content $exception variable
-			$error_to_show['user']	= "<span class='error'>Ops.. [Exception] " . $message ."</span>";
-			$error_to_show['debug']	= "<span class='error'>Ops.. [Exception] " . $message ."</span>";
-			$error_to_show['dump']	= '<pre>' . print_r($exception,true) . '</pre>';
+			// $error_to_show['user']	= "<span class='error'>Ops.. [Exception] " . $message ."</span>";
+			// $error_to_show['debug']	= "<span class='error'>Ops.. [Exception] " . $message ."</span>";
+			// $error_to_show['dump']	= '<pre>' . print_r($exception,true) . '</pre>';
+			$error_to_show['user']	= 'Ops.. [Exception] ' . $message;
+			$error_to_show['debug']	= 'Ops.. [Exception] ' . $message;
+			$error_to_show['dump']	= print_r($exception,true);
 
-			error_log($error_to_show['debug'].$error_to_show['dump']);
+			error_log($error_to_show['debug'] . $error_to_show['dump']);
 		}
 		catch (Exception $exception2) {
 			// Another uncaught exception was thrown while handling the first one.
@@ -54,9 +56,13 @@ class dd_error {
 			$message2 = safe_xss($exception2->getMessage());
 
 			// Display content $exception variable
-			$error_to_show['user']	= "<span class='error'>Ops2.. [Exception2] " . $message2 ."</span>";
-			$error_to_show['debug']	= "<span class='error'>Ops.. [Exception2] " . $message ."</span>" . "<span class='error'>Ops2.. [Exception2] " . $message2 ."</span>";
-			$error_to_show['dump']	= '<pre><h1>Additional uncaught exception thrown while handling exception.</h1>'.print_r($exception,true).'<hr>'.print_r($exception2,true).'</pre>';
+			// $error_to_show['user']	= "<span class='error'>Ops2.. [Exception2] " . $message2 ."</span>";
+			// $error_to_show['debug']	= "<span class='error'>Ops.. [Exception2] " . $message ."</span>" . "<span class='error'>Ops2.. [Exception2] " . $message2 ."</span>";
+			// $error_to_show['dump']	= '<pre><h1>Additional uncaught exception thrown while handling exception.</h1>'.print_r($exception,true).'<hr>'.print_r($exception2,true).'</pre>';
+
+			$error_to_show['user']	= "Ops2.. [Exception2] " . $message2 ;
+			$error_to_show['debug']	= "Ops.. [Exception2]  " . $message .PHP_EOL." Ops2.. [Exception2] " . $message2;
+			$error_to_show['dump']	= 'Additional uncaught exception thrown while handling exception.'.print_r($exception,true).PHP_EOL.print_r($exception2,true);
 
 			error_log('Exception 2 : '.$message2);
 		}
@@ -79,11 +85,11 @@ class dd_error {
 			# ob_end_clean( );
 
 			// Display content $exception variable
-			$error_to_show['user']	= "<span class='error'>Ops.. [Fatal Error] " . $error['message'] ." </span>";
-			$error_to_show['debug']	= "<span class='error'>Ops.. [Fatal Error] " . $error['message'] ." </span>";
-			$error_to_show['dump']	= '<pre>' . print_r($error,true) . '</pre>';
+			$error_to_show['user']	= 'Ops.. [Fatal Error] ' . $error['message'];
+			$error_to_show['debug']	= 'Ops.. [Fatal Error] ' . $error['message'];
+			$error_to_show['dump']	= print_r($error,true);
 
-			error_log( json_encode($error_to_show) );
+			error_log('ERROR [captureShutdown]: '. print_r($error_to_show, true));
 
 		} else {
 			return true;
@@ -98,34 +104,34 @@ class dd_error {
 	/**
 	* WRAP_ERROR
 	*/
-	public static function wrap_error($string_error, $show_option=true, $span_error_class=null) : string {
+		// public static function wrap_error($string_error, $show_option=true, $span_error_class=null) : string {
 
-		$html = '';
-		$html .= '<!DOCTYPE html>';
-		$html .= '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US" lang="en-US">';
-		$html .= '<head>';
-		$html .= ' <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />';
-		$html .= ' <link rel="stylesheet" href="'.DEDALO_CORE_URL.'/common/css/common.css" type="text/css" />';
-		$html .= ' <link rel="stylesheet" href="'.DEDALO_CORE_URL.'/html_page/css/html_page.css" type="text/css" />';
-		$html .= '</head>';
-		$html .= '<body style="padding:20px">';
+		// 	$html = '';
+		// 	$html .= '<!DOCTYPE html>';
+		// 	$html .= '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US" lang="en-US">';
+		// 	$html .= '<head>';
+		// 	$html .= ' <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />';
+		// 	$html .= ' <link rel="stylesheet" href="'.DEDALO_CORE_URL.'/common/css/common.css" type="text/css" />';
+		// 	$html .= ' <link rel="stylesheet" href="'.DEDALO_CORE_URL.'/html_page/css/html_page.css" type="text/css" />';
+		// 	$html .= '</head>';
+		// 	$html .= '<body style="padding:20px">';
 
-		$html .= " <span class='$span_error_class'>".$string_error."</span>";
+		// 	$html .= " <span class='$span_error_class'>".$string_error."</span>";
 
-		if($show_option) {
-			$html .= '
-					<div class="" style="padding:0px">
-					<a href="'.DEDALO_CORE_URL.'/main/?home" style="padding:5px">Home</a>
-					<a href="javascript:history.go(-1)" style="padding:5px">Back</a> Sorry, an error was found
-					<img src="'.DEDALO_CORE_URL.'/themes/default/favicon.ico" style="position:relative;top:1px" />
-					</div>';
-		}
+		// 	if($show_option) {
+		// 		$html .= '
+		// 				<div class="" style="padding:0px">
+		// 				<a href="'.DEDALO_CORE_URL.'/main/?home" style="padding:5px">Home</a>
+		// 				<a href="javascript:history.go(-1)" style="padding:5px">Back</a> Sorry, an error was found
+		// 				<img src="'.DEDALO_CORE_URL.'/themes/default/favicon.ico" style="position:relative;top:1px" />
+		// 				</div>';
+		// 	}
 
-		$html .= '</body>';
-		$html .= '</html>';
+		// 	$html .= '</body>';
+		// 	$html .= '</html>';
 
-		return $html;
-	}//end wrap_error
+		// 	return $html;
+		// }//end wrap_error
 
 
 
