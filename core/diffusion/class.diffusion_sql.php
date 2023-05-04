@@ -3050,15 +3050,10 @@ class diffusion_sql extends diffusion  {
 			return null;
 		}
 
-		$value = (!empty($dato) && isset($dato[0]))
-			? (int)$dato[0]->section_id
-			: null;
-
 		$value = [];
 		foreach ($dato as $current_locator) {
 
-			$section_id	= (int)$current_locator->section_id;
-			$value[]	= $section_id;
+			$value[] = (string)$current_locator->section_id;;
 
 			// parents recursive
 			// add parents option
@@ -3067,7 +3062,7 @@ class diffusion_sql extends diffusion  {
 					// get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
 					$ar_parents = component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, true);
 					foreach ($ar_parents as $parent_locator) {
-						$value[] = $parent_locator->section_id;
+						$value[] = (string)$parent_locator->section_id;
 					}
 				}
 		}
