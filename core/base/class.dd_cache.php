@@ -100,7 +100,10 @@ class dd_cache {
 
 		// base_path. Used to save the files. Usually '/tmp'
 			if (!defined('DEDALO_CACHE_MANAGER') || !isset(DEDALO_CACHE_MANAGER->files_path)) {
-				debug_log(__METHOD__." Error: Check your DEDALO_CACHE_MANAGER config to fix it ".to_string(), logger::ERROR);
+				debug_log(__METHOD__
+					." Error: Check your DEDALO_CACHE_MANAGER config to fix it "
+					, logger::ERROR
+				);
 				return false;
 			}
 			$base_path = DEDALO_CACHE_MANAGER->files_path;
@@ -161,7 +164,10 @@ class dd_cache {
 
 		// base_path. Used to save the files. Usually '/tmp'
 			if (!defined('DEDALO_CACHE_MANAGER') || !isset(DEDALO_CACHE_MANAGER->files_path)) {
-				debug_log(__METHOD__." Error on get cache manager files_path. Check your config file! ".to_string(), logger::ERROR);
+				debug_log(__METHOD__
+					." Error on get cache manager files_path. Check your config file! "
+					, logger::ERROR
+				);
 				return false;
 			}
 			$base_path = DEDALO_CACHE_MANAGER->files_path;
@@ -173,7 +179,11 @@ class dd_cache {
 			$contents = file_get_contents($file_path);
 			if ($contents===false) {
 				// error reading the file
-				debug_log(__METHOD__." Error: reading cache file fail:  ".to_string($file_path), logger::ERROR);
+				debug_log(__METHOD__
+					. ' Error on reading cache file !' . PHP_EOL
+					. ' file_path: '.to_string($file_path)
+					, logger::ERROR
+				);
 			}
 			// debug_log(__METHOD__." Returning file cache contents successfully:  ".to_string($file_path), logger::ERROR);
 
@@ -190,11 +200,14 @@ class dd_cache {
 	* 	If null, all files with default prefix will be deleted
 	* @return bool
 	*/
-	public static function delete_cache_files( array $cache_files=null ) {
+	public static function delete_cache_files( array $cache_files=null ) : bool {
 
 		// check base_path
 			if (!defined('DEDALO_CACHE_MANAGER') || !isset(DEDALO_CACHE_MANAGER->files_path)) {
-				debug_log(__METHOD__." Error on get cache manager files_path. Check your config file! ".to_string(), logger::ERROR);
+				debug_log(__METHOD__
+					. " Error on get cache manager files_path. Check your config file! "
+					, logger::ERROR
+				);
 				return false;
 			}
 			$base_path = DEDALO_CACHE_MANAGER->files_path;
@@ -220,10 +233,18 @@ class dd_cache {
 						if ($deleted===true) {
 							debug_log(__METHOD__." Deleted file $file_path ", logger::DEBUG);
 						}else{
-							debug_log(__METHOD__." Error on deleted file $file_path ", logger::ERROR);
+							debug_log(__METHOD__
+								. " Error on deleted file " .PHP_EOL
+								. ' file_path: ' . $file_path
+								, logger::ERROR
+							);
 						}
 					}else{
-						debug_log(__METHOD__." Warning. Ignored non found file to deleted: $file_path ", logger::ERROR);
+						debug_log(__METHOD__
+							. " Warning. Ignored non found file to deleted " .PHP_EOL
+							. ' file_path: ' . $file_path
+							, logger::ERROR
+						);
 					}
 				}
 			}

@@ -33,8 +33,9 @@ abstract class RecordDataBoundObject {
 
 	/**
 	* __CONSTRUCT
-	* @param string $id
+	* @param string|null $id
 	*	Like 'dd73'
+	* @return void
 	*/
 	public function __construct( ?string $id=null ) {
 
@@ -143,7 +144,6 @@ abstract class RecordDataBoundObject {
 	public function Load() : bool {
 		if(SHOW_DEBUG===true) $start_time = start_time();
 
-
 		// Prevent load if $this->ID is not set
 			if(!isset($this->ID) || $this->ID===false) {
 				return false;
@@ -184,12 +184,20 @@ abstract class RecordDataBoundObject {
 			// exec query
 				$connection = $this->get_connection();
 				if ($connection===false) {
-					debug_log(__METHOD__." Connection error. Return false ".to_string(), logger::ERROR);
+					debug_log(__METHOD__
+						." Connection error. get_connection return false "
+						, logger::ERROR
+					);
 					return false;
 				}
 				$result = pg_query($connection, $strQuery) ;//or die("Cannot (2) execute query: $strQuery <br>\n". pg_last_error(DBi::_getConnection()));
 				if ($result===false) {
-					debug_log(__METHOD__." Error: DDBB query error ". PHP_EOL . pg_last_error(DBi::_getConnection()) .PHP_EOL . to_string($strQuery), logger::ERROR);
+					debug_log(__METHOD__
+						. " Error: DDBB query error ". PHP_EOL
+						. ' error: ' .pg_last_error(DBi::_getConnection()) .PHP_EOL
+						. ' strQuery: '.to_string($strQuery)
+						, logger::ERROR
+					);
 					// if(SHOW_DEBUG===true) {
 					// 	throw new Exception("Error Processing Request Load: (".DEDALO_DATABASE_CONN.") ".pg_last_error(DBi::_getConnection())." <hr>$strQuery", 1);
 					// }
@@ -229,7 +237,12 @@ abstract class RecordDataBoundObject {
 					// 	dump($bt, ' Load pg_fetch_assoc bt +++++++++++++++++++++ '.to_string($this->ID));
 					// }
 					// // trigger_error('WARNING: No result on Load arRow. $strQuery: ' .PHP_EOL. $strQuery);
-					debug_log(__METHOD__." 'WARNING: No result found on Load arRow: ".to_string($arRow), logger::WARNING);
+					debug_log(__METHOD__
+						." 'WARNING: No result found on Load arRow" .PHP_EOL
+						. ' last_error: ' .pg_last_error(DBi::_getConnection()) .PHP_EOL
+						. ' strQuery: '.to_string($strQuery)
+						, logger::WARNING
+					);
 
 					return false;
 				}
@@ -259,7 +272,14 @@ abstract class RecordDataBoundObject {
 		// debug
 			if(SHOW_DEBUG===true) {
 				$total_time_ms = exec_time_unit($start_time,'ms');
-				if($total_time_ms>SLOW_QUERY_MS) error_log($total_time_ms." - LOAD_SLOW_QUERY: $strQuery - records:".count($arRow));
+				if($total_time_ms>SLOW_QUERY_MS) {
+					debug_log(__METHOD__
+						." 'WARNING: LOAD_SLOW_QUERY IN RECORDDATABOUNCEOBJECT !" .PHP_EOL
+						. ' total_time_ms: ' .$total_time_ms . PHP_EOL
+						. ' strQuery: '.to_string($strQuery)
+						, logger::WARNING
+					);
+				}
 			}
 
 
@@ -335,12 +355,13 @@ abstract class RecordDataBoundObject {
 			$result = pg_query($this->get_connection(), $strQuery);
 			if($result===false) {
 				debug_log(__METHOD__
-					." Error: sorry an error occurred on UPDATE record '$this->ID'. Data is not saved "
+					. " Error: sorry an error occurred on UPDATE record ID: '$this->ID'. Data is not saved " .PHP_EOL
+					. ' strQuery: ' . $strQuery . PHP_EOL
+					. ' last_error: ' .pg_last_error(DBi::_getConnection())
 					, logger::ERROR
 				);
 				if(SHOW_DEBUG===true) {
-					dump($strQuery,"strQuery");
-					dump(pg_last_error(DBi::_getConnection()),"pg_last_error(DBi::_getConnection())");
+					dump($strQuery, "strQuery");
 					throw new Exception("Error Processing Request", 1);;
 				}
 			}
@@ -400,9 +421,9 @@ abstract class RecordDataBoundObject {
 			$id = pg_fetch_result($result, 0, '"'.$this->strPrimaryKeyName.'"');
 			if ($id===false) {
 				debug_log(__METHOD__
-					." Error Processing Request (1-b) ". PHP_EOL
-					. pg_last_error(DBi::_getConnection()) .PHP_EOL
-					. to_string($strQuery)
+					. " Error Processing Request (1-b) ". PHP_EOL
+					. ' last_error: '. pg_last_error(DBi::_getConnection()) .PHP_EOL
+					. ' strQuery: ' . to_string($strQuery)
 					, logger::ERROR
 				);
 				if(SHOW_DEBUG===true) {
@@ -687,11 +708,16 @@ abstract class RecordDataBoundObject {
 			}
 			$result = pg_query($this->get_connection(), $strQuery);
 			if ($result===false) {
+				debug_log(__METHOD__
+					. " Error on DB query " . PHP_EOL
+					. ' last_error: ' . pg_last_error(DBi::_getConnection()) . PHP_EOL
+					. ' strQuery: ' . $strQuery
+					, logger::ERROR
+				);
 				if(SHOW_DEBUG===true) {
 					// throw new Exception("Error Processing Request . ".pg_last_error(DBi::_getConnection()), 1);
 					// }else{
 					// trigger_error("Error on DB query");
-					debug_log(__METHOD__."  Error on DB query ". pg_last_error(DBi::_getConnection()), logger::ERROR);
 				}
 				return [];
 			}
@@ -716,7 +742,14 @@ abstract class RecordDataBoundObject {
 				if(SHOW_DEBUG===true) {
 					$total_time_ms = exec_time_unit($start_time,'ms');
 					#$_SESSION['debug_content'][__METHOD__][] = " ". str_replace("\n",'',$strQuery) ." count:".count($ar_records)." [$total_time_ms ms]";
-					if($total_time_ms>SLOW_QUERY_MS) error_log($total_time_ms."ms. SEARCH_SLOW_QUERY: $strQuery - records:".count($ar_records));
+					if($total_time_ms>SLOW_QUERY_MS) {
+						debug_log(__METHOD__
+							." 'WARNING: LOAD_SLOW_QUERY IN RECORDDATABOUNCEOBJECT !" .PHP_EOL
+							. ' total_time_ms: ' .$total_time_ms . PHP_EOL
+							. ' strQuery: ' . $strQuery
+							, logger::WARNING
+						);
+					}
 				}
 		}
 
