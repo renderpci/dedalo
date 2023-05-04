@@ -897,10 +897,8 @@ class RecordObj_dd extends RecordDataBoundObject {
 				$ar_parents_of_this[] = $parent;
 			}
 
-			$RecordObj_dd = new RecordObj_dd($parent);
-			$parent 	  = $RecordObj_dd->get_parent();
-
-			#$esdescriptor = $RecordObj_dd->get_esdescriptor(); #if($esdescriptor!='si' && $parent!=$parent_zero) die( __METHOD__ ."<span class='error'> Error. this parent is not descriptor ! (parent:$parent, esdescriptor:$esdescriptor) </span>");
+			$RecordObj_dd	= new RecordObj_dd($parent);
+			$parent			= $RecordObj_dd->get_parent();
 
 		} while ( !empty($parent) && ($parent !== $parent_zero) && $parent !== $parent_inicial );
 

@@ -34,7 +34,7 @@ class security {
 
 		// user id check
 			if(empty($_SESSION['dedalo']['auth']['user_id'])) {
-				$msg = " <span class='error'> Error: Session user_id is not defined! </span>";
+				$msg = " Error: Session user_id is not defined! ";
 				trigger_error($msg);
 				if(SHOW_DEBUG===true) {
 					throw new Exception( __METHOD__ . $msg);

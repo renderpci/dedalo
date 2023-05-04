@@ -1095,6 +1095,14 @@ class search {
 			$this->ar_matrix_tables = [];
 			foreach ($this->ar_section_tipo as $key => $current_section_tipo) {
 				$current_matrix_table = common::get_matrix_table_from_tipo($current_section_tipo);
+				if (empty($current_matrix_table)) {
+					debug_log(__METHOD__
+						. " Ignored invalid empty matrix table " . PHP_EOL
+						. ' section_tipo: ' . $current_section_tipo . ' '
+						, logger::ERROR
+					);
+					continue;
+				}
 				if (!in_array($current_matrix_table, $this->ar_matrix_tables)) {
 					$this->ar_matrix_tables[] = $current_matrix_table;
 				}
