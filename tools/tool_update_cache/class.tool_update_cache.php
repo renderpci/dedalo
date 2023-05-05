@@ -16,6 +16,7 @@ class tool_update_cache extends tool_common {
 	* @return object $response
 	*/
 	public static function update_cache(object $options) : object {
+		$start_time=start_time();
 
 		// options
 			$section_tipo		= $options->section_tipo ?? null;
@@ -33,8 +34,12 @@ class tool_update_cache extends tool_common {
 		// RECORDS. Use actual list search options as base to build current search
 			$sqo_id	= implode('_', ['section', $section_tipo]); // cache key sqo_id
 			if (empty($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
-				$response->msg .= ' section session sqo is not found!';
-				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
+				$response->msg .= ' Section session sqo not found!';
+				debug_log(__METHOD__
+					. " $response->msg ". PHP_EOL
+					. ' sqo_id: ' .$sqo_id
+					, logger::ERROR
+				);
 				return $response;
 			}
 			$sqo			= clone $_SESSION['dedalo']['config']['sqo'][$sqo_id];
@@ -46,6 +51,8 @@ class tool_update_cache extends tool_common {
 			$rows_data	= $search->search();
 
 		// result records iterate
+			$i = 0;
+			$total_records = count($rows_data->ar_records);
 			foreach ($rows_data->ar_records as $row) {
 
 				$section_id = $row->section_id;
@@ -84,6 +91,19 @@ class tool_update_cache extends tool_common {
 							);
 						}
 				}//end foreach ($related_terms as $current_component_tipo)
+
+				// debug infg
+					if ($i>1000) {
+						debug_log(__METHOD__
+							. ' Updating cache' .PHP_EOL
+							. ' total records: ' .$total_records .PHP_EOL
+							. ' memory usage: ' . dd_memory_usage() .PHP_EOL
+							. ' time secs: ' . exec_time_unit($start_time, 'sec')
+							, logger::DEBUG
+						);
+						$i = 0;
+					}
+					$i++;
 			}//end foreach ($records_data->result as $key => $ar_value)
 
 		// Enable logging activity and time machine # !IMPORTANT
@@ -92,10 +112,9 @@ class tool_update_cache extends tool_common {
 
 		// response
 			$response->result	= true;
-			$response->msg		= "Updated cache of section $section_tipo successfully. Total records: "
-				.count($rows_data->ar_records)
-				." where components count: "
-				.count($ar_component_tipo);
+			$response->msg		= "Updated cache of section '$section_tipo' successfully." . PHP_EOL
+				." Total records: " . count($rows_data->ar_records)
+				." where components count: " . count($ar_component_tipo);
 
 
 		return $response;
@@ -106,27 +125,21 @@ class tool_update_cache extends tool_common {
 	/**
 	* GET_COMPONENT_LIST
 	* List of components ready to update cache
-	*
+	* @param object $options
 	* @return object $response
 	* 	->result = array of objects
 	*/
-	public static function get_component_list(object $request_options) : object {
+	public static function get_component_list(object $options) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// options
-			$options = new stdClass();
-				$options->section_tipo	= null;
-				$options->lang			= DEDALO_DATA_LANG;
-				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-		// short vars
 			$section_tipo	= $options->section_tipo;
-			$lang			= $options->lang;
+			$lang			= $options->lang ?? DEDALO_DATA_LANG;
 
-		# All section components
+		// All section components
 			$related_terms = section::get_ar_children_tipo_by_model_name_in_section(
 				$section_tipo, // section_tipo
 				['component_'], // ar_model_name_required
@@ -155,7 +168,10 @@ class tool_update_cache extends tool_common {
 			foreach ($related_terms as $current_component_tipo) {
 				$model = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
 				if (strpos($model, 'component_')===false) {
-					debug_log(__METHOD__." Skipped element '$model' tipo: $current_component_tipo (is not a component) ".to_string(), logger::DEBUG);
+					debug_log(__METHOD__
+						." Skipped element model: '$model' tipo: $current_component_tipo (is not a component)"
+						, logger::DEBUG
+					);
 					continue;
 				}
 
