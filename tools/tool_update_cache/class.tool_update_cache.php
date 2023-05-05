@@ -55,7 +55,7 @@ class tool_update_cache extends tool_common {
 					// model
 						$model = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
 						if (strpos($model, 'component_')===false) {
-							debug_log(__METHOD__." Skipped element '$model' tipo: $current_component_tipo (is not a component) ".to_string(), logger::DEBUG);
+							debug_log(__METHOD__." Skipped element '$model' tipo: $current_component_tipo (is not a component) ", logger::DEBUG);
 							continue;
 						}
 
@@ -74,14 +74,21 @@ class tool_update_cache extends tool_common {
 						$current_component->get_dato(); # !! Important get dato before regenerate
 						$result = $current_component->regenerate_component();
 						if ($result!==true) {
-							debug_log(__METHOD__." Error on regenerate component $model - $current_component_tipo - $section_tipo - $section_id ", logger::ERROR);
+							debug_log(__METHOD__
+								. ' Error on regenerate component ' .PHP_EOL
+								. ' model: ' .$model .PHP_EOL
+								. ' current_component_tipo: ' .$current_component_tipo .PHP_EOL
+								. ' section_tipo: ' .$section_tipo .PHP_EOL
+								. ' section_id: ' .$section_id
+								, logger::ERROR
+							);
 						}
 				}//end foreach ($related_terms as $current_component_tipo)
 			}//end foreach ($records_data->result as $key => $ar_value)
 
 		// Enable logging activity and time machine # !IMPORTANT
-			logger_backend_activity::$enable_log 				= true;
-			RecordObj_time_machine::$save_time_machine_version 	= true;
+			logger_backend_activity::$enable_log				= true;
+			RecordObj_time_machine::$save_time_machine_version	= true;
 
 		// response
 			$response->result	= true;
