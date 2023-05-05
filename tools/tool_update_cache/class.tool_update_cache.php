@@ -17,6 +17,10 @@ class tool_update_cache extends tool_common {
 	*/
 	public static function update_cache(object $options) : object {
 
+		// unlock session
+			session_write_close();
+			ignore_user_abort();
+
 		// options
 			$section_tipo		= $options->section_tipo ?? null;
 			$ar_component_tipo	= $options->ar_component_tipo ?? null;
