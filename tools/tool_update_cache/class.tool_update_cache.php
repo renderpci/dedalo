@@ -16,7 +16,6 @@ class tool_update_cache extends tool_common {
 	* @return object $response
 	*/
 	public static function update_cache(object $options) : object {
-		$start_time=start_time();
 
 		// options
 			$section_tipo		= $options->section_tipo ?? null;
