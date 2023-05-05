@@ -161,7 +161,7 @@ function debug_log(string $info, int $level=logger::DEBUG) : bool {
 		$msg = sprintf($colorFormats['bg_yellow'], $base_msg);
 
 		// DEDALO_ERRORS ADD
-		$_ENV['DEDALO_ERRORS'][] = $info;
+		$_ENV['DEDALO_LAST_ERROR'] = $info;
 
 		// error log print
 		error_log($msg);

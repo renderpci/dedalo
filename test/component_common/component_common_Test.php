@@ -137,7 +137,7 @@ final class component_common_test extends TestCase {
 	public function test_set_dato_default() {
 
 		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
 			$component = component_common::get_instance(
 				$element->model, // string model
@@ -151,7 +151,7 @@ final class component_common_test extends TestCase {
 			$dato_default = $component->set_dato_default();
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 		}
@@ -166,7 +166,7 @@ final class component_common_test extends TestCase {
 	public function test_set_dato() {
 
 		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
 			if (isset($element->test_save) && $element->test_save===false || !isset($element->new_value)) {
 				continue;
@@ -197,7 +197,7 @@ final class component_common_test extends TestCase {
 			$component->set_dato($new_data);
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 
@@ -236,7 +236,7 @@ final class component_common_test extends TestCase {
 
 		// default dato
 		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
 			$component = component_common::get_instance(
 				$element->model, // string model
@@ -264,7 +264,7 @@ final class component_common_test extends TestCase {
 			}
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 
@@ -289,7 +289,7 @@ final class component_common_test extends TestCase {
 
 		// data_source dato (tm)
 		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
 			$component = component_common::get_instance(
 				$element->model, // string model
@@ -319,7 +319,7 @@ final class component_common_test extends TestCase {
 			}
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 
@@ -355,7 +355,7 @@ final class component_common_test extends TestCase {
 
 		// default dato
 		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
 			$component = component_common::get_instance(
 				$element->model, // string model
@@ -408,7 +408,7 @@ final class component_common_test extends TestCase {
 
 		// default dato
 		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
 			$component = component_common::get_instance(
 				$element->model, // string model
@@ -424,7 +424,7 @@ final class component_common_test extends TestCase {
 			$dato_unchanged	= $component->get_dato_unchanged();
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 
@@ -450,7 +450,7 @@ final class component_common_test extends TestCase {
 
 		// default dato
 		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
 			$component = component_common::get_instance(
 				$element->model, // string model
@@ -466,7 +466,7 @@ final class component_common_test extends TestCase {
 			$component->get_dato();
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 
@@ -505,7 +505,7 @@ final class component_common_test extends TestCase {
 
 		// default dato
 		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
 			$component = component_common::get_instance(
 				$element->model, // string model
@@ -520,7 +520,7 @@ final class component_common_test extends TestCase {
 			$is_translatable = $component->is_translatable();
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 
@@ -559,7 +559,7 @@ final class component_common_test extends TestCase {
 
 		// default dato
 		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
 			$component = component_common::get_instance(
 				$element->model, // string model
@@ -574,7 +574,7 @@ final class component_common_test extends TestCase {
 			$value = $component->get_value();
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 
@@ -595,7 +595,7 @@ final class component_common_test extends TestCase {
 
 		// default dato
 		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
 			$component = component_common::get_instance(
 				$element->model, // string model
@@ -611,7 +611,7 @@ final class component_common_test extends TestCase {
 				// dump($dd_grid_cell_object, ' dd_grid_cell_object ++ '.to_string($element->model));
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 
@@ -656,7 +656,7 @@ final class component_common_test extends TestCase {
 
 		// default dato
 		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
 			$component = component_common::get_instance(
 				$element->model, // string model
@@ -672,7 +672,7 @@ final class component_common_test extends TestCase {
 				// dump($dd_grid_cell_object, ' raw_value dd_grid_cell_object ++ '.to_string($element->model));
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 
@@ -727,7 +727,7 @@ final class component_common_test extends TestCase {
 
 		// default dato
 		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
 			$test_save = $element->test_save ?? true;
 			if (!isset($element->new_value) || !$test_save) {
@@ -747,7 +747,7 @@ final class component_common_test extends TestCase {
 			$component_dato = $component->get_dato();
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 
@@ -816,7 +816,7 @@ final class component_common_test extends TestCase {
 
 		// default dato
 		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
 			$component = component_common::get_instance(
 				$element->model, // string model
@@ -832,7 +832,7 @@ final class component_common_test extends TestCase {
 				// dump($response, ' $response ++ '.to_string($element->model));
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 
@@ -853,7 +853,7 @@ final class component_common_test extends TestCase {
 
 		// default dato
 		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
 			$component = component_common::get_instance(
 				$element->model, // string model
@@ -869,7 +869,7 @@ final class component_common_test extends TestCase {
 				// dump($response, ' $response ++ '.to_string($element->model));
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 
@@ -890,7 +890,7 @@ final class component_common_test extends TestCase {
 
 		// default dato
 		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
 			$component = component_common::get_instance(
 				$element->model, // string model
@@ -906,7 +906,7 @@ final class component_common_test extends TestCase {
 				// dump($response, ' $response ++ '.to_string($element->model));
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 
@@ -927,7 +927,7 @@ final class component_common_test extends TestCase {
 
 		// default dato
 		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
 			$component = component_common::get_instance(
 				$element->model, // string model
@@ -943,7 +943,7 @@ final class component_common_test extends TestCase {
 				// dump($response, ' $response ++ '.to_string($element->model));
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 
@@ -962,7 +962,7 @@ final class component_common_test extends TestCase {
 
 		// default dato
 		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
 			$component = component_common::get_instance(
 				$element->model, // string model
@@ -978,7 +978,7 @@ final class component_common_test extends TestCase {
 				// dump($response, ' $response ++ '.to_string($element->model));
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 
@@ -1002,7 +1002,7 @@ final class component_common_test extends TestCase {
 
 		// default dato
 		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
 			$component = component_common::get_instance(
 				$element->model, // string model
@@ -1018,7 +1018,7 @@ final class component_common_test extends TestCase {
 				// dump($response, ' $response ++ '.to_string($element->model));
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 
@@ -1042,7 +1042,7 @@ final class component_common_test extends TestCase {
 
 		// default dato
 		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
 			$component = component_common::get_instance(
 				$element->model, // string model
@@ -1058,7 +1058,7 @@ final class component_common_test extends TestCase {
 				// dump($response, ' $response ++ '.to_string($element->model));
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 
@@ -1115,7 +1115,7 @@ final class component_common_test extends TestCase {
 	*/
 	public function test_add_object_to_dato() {
 
-		$_ENV['DEDALO_ERRORS'] = []; // reset
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
 		$object = (object)[
 			'section_tipo'	=> '2',
@@ -1130,7 +1130,7 @@ final class component_common_test extends TestCase {
 		$response = component_common::add_object_to_dato($object, $dato);
 
 		$this->assertTrue(
-			empty($_ENV['DEDALO_ERRORS']),
+			empty($_ENV['DEDALO_LAST_ERROR']),
 			'expected running without errors'
 		);
 
@@ -1152,7 +1152,7 @@ final class component_common_test extends TestCase {
 		$response2 = component_common::add_object_to_dato($object, $response);
 
 		$this->assertTrue(
-			empty($_ENV['DEDALO_ERRORS']),
+			empty($_ENV['DEDALO_LAST_ERROR']),
 			'expected running without errors'
 		);
 
@@ -1172,7 +1172,7 @@ final class component_common_test extends TestCase {
 
 		// default dato
 		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
 			$component = component_common::get_instance(
 				$element->model, // string model
@@ -1188,7 +1188,7 @@ final class component_common_test extends TestCase {
 				// dump($result, ' get_component_ar_langs result ++ '.to_string($element->model));
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 
@@ -1209,7 +1209,7 @@ final class component_common_test extends TestCase {
 
 		// default dato
 		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
 			$component = component_common::get_instance(
 				$element->model, // string model
@@ -1225,7 +1225,7 @@ final class component_common_test extends TestCase {
 				// dump($result, ' get_component_ar_langs result ++ '.to_string($element->model));
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 
@@ -1254,7 +1254,7 @@ final class component_common_test extends TestCase {
 
 		// default dato
 		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
 			$component = component_common::get_instance(
 				$element->model, // string model
@@ -1275,7 +1275,7 @@ final class component_common_test extends TestCase {
 				// dump($response, ' get_component_ar_langs response ++ '.to_string($element->model));
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 
@@ -1306,7 +1306,7 @@ final class component_common_test extends TestCase {
 
 		// default dato
 		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
 			$test_save = $element->test_save ?? true;
 			if (!isset($element->new_value) || !$test_save) {
@@ -1327,7 +1327,7 @@ final class component_common_test extends TestCase {
 				// dump($response, '  response ++ '.to_string($element->model));
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 
@@ -1348,7 +1348,7 @@ final class component_common_test extends TestCase {
 
 		// default dato
 		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
 			$component = component_common::get_instance(
 				$element->model, // string model
@@ -1368,7 +1368,7 @@ final class component_common_test extends TestCase {
 				// dump($result, ' result ++ '.to_string($element->model));
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 
@@ -1389,7 +1389,7 @@ final class component_common_test extends TestCase {
 
 		// default dato
 		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
 			$component = component_common::get_instance(
 				$element->model, // string model
@@ -1408,7 +1408,7 @@ final class component_common_test extends TestCase {
 			// dump($result, ' result ++ '.to_string($element->model));
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 
@@ -1462,7 +1462,7 @@ final class component_common_test extends TestCase {
 			$elements = get_elements();
 
 		foreach ($elements as $element) {
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
 			$component = component_common::get_instance(
 				$element->model, // string model
@@ -1479,7 +1479,7 @@ final class component_common_test extends TestCase {
 			]);
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 

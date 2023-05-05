@@ -153,7 +153,7 @@ $global_start_time = hrtime(true);
 			}
 
 		// server_errors. bool true on debug_log write log with LOGGER_LEVEL as 'ERROR' or 'CRITICAL'
-			$response->server_errors = !empty($_ENV['DEDALO_ERRORS']);
+			$response->server_errors = !empty($_ENV['DEDALO_LAST_ERROR']);
 
 
 	// } catch (Throwable $e) { // For PHP 7
