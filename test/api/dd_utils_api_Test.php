@@ -49,12 +49,12 @@ final class dd_utils_api_Test extends TestCase {
 			    }
 			}
 		');
-		$_ENV['DEDALO_ERRORS'] = []; // reset
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 		$response = $rqo->dd_api::{$rqo->action}($rqo);
 			// dump($response, ' response ++ '.to_string());
 
 		$this->assertTrue(
-			empty($_ENV['DEDALO_ERRORS']),
+			empty($_ENV['DEDALO_LAST_ERROR']),
 			'expected running without errors'
 		);
 
@@ -80,12 +80,12 @@ final class dd_utils_api_Test extends TestCase {
 			    }
 			}
 		');
-		$_ENV['DEDALO_ERRORS'] = []; // reset
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 		$response = $rqo->dd_api::{$rqo->action}($rqo);
 			// dump($response, ' response ++ '.to_string());
 
 		$this->assertTrue(
-			empty($_ENV['DEDALO_ERRORS']),
+			empty($_ENV['DEDALO_LAST_ERROR']),
 			'expected running without errors'
 		);
 
@@ -111,12 +111,12 @@ final class dd_utils_api_Test extends TestCase {
 		// 		    }
 		// 		}
 		// 	');
-		// 	$_ENV['DEDALO_ERRORS'] = []; // reset
+		// 	$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 		// 	$response = $rqo->dd_api::{$rqo->action}($rqo);
 		// 		// dump($response, ' response ++ '.to_string());
 
 		// 	$this->assertTrue(
-		// 		empty($_ENV['DEDALO_ERRORS']),
+		// 		empty($_ENV['DEDALO_LAST_ERROR']),
 		// 		'expected running without errors'
 		// 	);
 
@@ -141,12 +141,12 @@ final class dd_utils_api_Test extends TestCase {
 			    "action": "database_info"
 			}
 		');
-		$_ENV['DEDALO_ERRORS'] = []; // reset
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 		$response = $rqo->dd_api::{$rqo->action}($rqo);
 			// dump($response, ' response ++ '.to_string());
 
 		$this->assertTrue(
-			empty($_ENV['DEDALO_ERRORS']),
+			empty($_ENV['DEDALO_LAST_ERROR']),
 			'expected running without errors'
 		);
 
@@ -170,12 +170,12 @@ final class dd_utils_api_Test extends TestCase {
 			    "action": "get_system_info"
 			}
 		');
-		$_ENV['DEDALO_ERRORS'] = []; // reset
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 		$response = $rqo->dd_api::{$rqo->action}($rqo);
 			// dump($response, ' response ++ '.to_string());
 
 		$this->assertTrue(
-			empty($_ENV['DEDALO_ERRORS']),
+			empty($_ENV['DEDALO_LAST_ERROR']),
 			'expected running without errors'
 		);
 
@@ -199,12 +199,12 @@ final class dd_utils_api_Test extends TestCase {
 			    "action": "make_backup"
 			}
 		');
-		$_ENV['DEDALO_ERRORS'] = []; // reset
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 		$response = $rqo->dd_api::{$rqo->action}($rqo);
 			// dump($response, ' response ++ '.to_string());
 
 		$this->assertTrue(
-			empty($_ENV['DEDALO_ERRORS']),
+			empty($_ENV['DEDALO_LAST_ERROR']),
 			'expected running without errors'
 		);
 
@@ -234,12 +234,12 @@ final class dd_utils_api_Test extends TestCase {
 			    "action": "update_ontology"
 			}
 		');
-		$_ENV['DEDALO_ERRORS'] = []; // reset
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 		$response = $rqo->dd_api::{$rqo->action}($rqo);
 			// dump($response, ' response ++ '.to_string());
 
 		$this->assertTrue(
-			empty($_ENV['DEDALO_ERRORS']),
+			empty($_ENV['DEDALO_LAST_ERROR']),
 			'expected running without errors'
 		);
 
@@ -269,12 +269,12 @@ final class dd_utils_api_Test extends TestCase {
 			    ]
 			}
 		');
-		$_ENV['DEDALO_ERRORS'] = []; // reset
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 		$response = $rqo->dd_api::{$rqo->action}($rqo);
 			// dump($response, ' response ++ '.to_string());
 
 		$this->assertTrue(
-			empty($_ENV['DEDALO_ERRORS']),
+			empty($_ENV['DEDALO_LAST_ERROR']),
 			'expected running without errors'
 		);
 
@@ -299,12 +299,12 @@ final class dd_utils_api_Test extends TestCase {
 			    "options": ["dd"]
 			}
 		');
-		$_ENV['DEDALO_ERRORS'] = []; // reset
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 		// $response = $rqo->dd_api::{$rqo->action}($rqo);
 			// dump($response, ' response ++ '.to_string());
 
 		$this->assertTrue(
-			empty($_ENV['DEDALO_ERRORS']),
+			empty($_ENV['DEDALO_LAST_ERROR']),
 			'expected running without errors'
 		);
 
@@ -328,7 +328,7 @@ final class dd_utils_api_Test extends TestCase {
 			    "action": "register_tools"
 			}
 		');
-		$_ENV['DEDALO_ERRORS'] = []; // reset
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 		$response = $rqo->dd_api::{$rqo->action}($rqo);
 			// dump($response, ' response ++ '.to_string());
 
@@ -383,12 +383,12 @@ final class dd_utils_api_Test extends TestCase {
 			    }
 			}
 		');
-		$_ENV['DEDALO_ERRORS'] = []; // reset
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 		$response = $rqo->dd_api::{$rqo->action}($rqo);
 			// dump($response, ' response ++ '.to_string());
 
 		$this->assertTrue(
-			empty($_ENV['DEDALO_ERRORS']),
+			empty($_ENV['DEDALO_LAST_ERROR']),
 			'expected running without errors'
 		);
 
@@ -427,12 +427,12 @@ final class dd_utils_api_Test extends TestCase {
 			    }
 			}
 		');
-		$_ENV['DEDALO_ERRORS'] = []; // reset
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 		$response = $rqo->dd_api::{$rqo->action}($rqo);
 			// dump($response, ' response ++ '.to_string());
 
 		$this->assertTrue(
-			empty($_ENV['DEDALO_ERRORS']),
+			empty($_ENV['DEDALO_LAST_ERROR']),
 			'expected running without errors'
 		);
 
@@ -465,12 +465,12 @@ final class dd_utils_api_Test extends TestCase {
 			    }
 			}
 		');
-		$_ENV['DEDALO_ERRORS'] = []; // reset
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 		$response = $rqo->dd_api::{$rqo->action}($rqo);
 			// dump($response, ' response ++ '.to_string());
 
 		$this->assertTrue(
-			empty($_ENV['DEDALO_ERRORS']),
+			empty($_ENV['DEDALO_LAST_ERROR']),
 			'expected running without errors'
 		);
 
@@ -502,12 +502,12 @@ final class dd_utils_api_Test extends TestCase {
 			    }
 			}
 		');
-		$_ENV['DEDALO_ERRORS'] = []; // reset
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 		$response = $rqo->dd_api::{$rqo->action}($rqo);
 			// dump($response, ' response ++ '.to_string());
 
 		$this->assertTrue(
-			empty($_ENV['DEDALO_ERRORS']),
+			empty($_ENV['DEDALO_LAST_ERROR']),
 			'expected running without errors'
 		);
 
@@ -541,12 +541,12 @@ final class dd_utils_api_Test extends TestCase {
 			    }
 			}
 		');
-		$_ENV['DEDALO_ERRORS'] = []; // reset
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 		$response = $rqo->dd_api::{$rqo->action}($rqo);
 			// dump($response, ' response ++ '.to_string());
 
 		$this->assertTrue(
-			empty($_ENV['DEDALO_ERRORS']),
+			empty($_ENV['DEDALO_LAST_ERROR']),
 			'expected running without errors'
 		);
 
@@ -580,12 +580,12 @@ final class dd_utils_api_Test extends TestCase {
 			    "action": "get_dedalo_files"
 			}
 		');
-		$_ENV['DEDALO_ERRORS'] = []; // reset
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 		$response = $rqo->dd_api::{$rqo->action}($rqo);
 			// dump($response, ' response ++ '.to_string());
 
 		$this->assertTrue(
-			empty($_ENV['DEDALO_ERRORS']),
+			empty($_ENV['DEDALO_LAST_ERROR']),
 			'expected running without errors'
 		);
 

@@ -70,12 +70,12 @@ final class dd_api_Test extends TestCase {
 		');
 
 		// direct exec local
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 			$response = dd_utils_api::{$rqo->action}($rqo);
 				// dump($response, ' response  1 ++ '.to_string());
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 			$this->assertTrue(
@@ -113,7 +113,7 @@ final class dd_api_Test extends TestCase {
 					'menu' => true
 				]
 			];
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 			// no login case
 				$response = dd_core_api::start($rqo);
 
@@ -150,7 +150,7 @@ final class dd_api_Test extends TestCase {
 					]
 				]
 			];
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 			$response = dd_core_api::start($rqo);
 
 			// expected section as first item
@@ -176,7 +176,7 @@ final class dd_api_Test extends TestCase {
 					],
 				]
 			];
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 			$response = dd_core_api::start($rqo);
 
 			// expected area_thesaurus as first item
@@ -196,7 +196,7 @@ final class dd_api_Test extends TestCase {
 					],
 				]
 			];
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 			$response = dd_core_api::start($rqo);
 
 			$context_element = $response->result->context[0];
@@ -219,7 +219,7 @@ final class dd_api_Test extends TestCase {
 					],
 				]
 			];
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 			$response = dd_core_api::start($rqo);
 
 			// expected area_thesaurus as first item
@@ -243,7 +243,7 @@ final class dd_api_Test extends TestCase {
 					],
 				]
 			];
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 			$response = dd_core_api::start($rqo);
 
 			// expected area_thesaurus as first item
@@ -267,7 +267,7 @@ final class dd_api_Test extends TestCase {
 					]
 				]
 			];
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 			$response = dd_core_api::start($rqo);
 
 			// expected area_thesaurus as first item
@@ -277,7 +277,7 @@ final class dd_api_Test extends TestCase {
 			$this->assertTrue( $context_element->type==='component' );
 			$this->assertTrue( $context_element->typo==='ddo' );
 			// expected running without errors
-			$this->assertTrue( empty($_ENV['DEDALO_ERRORS']) );
+			$this->assertTrue( empty($_ENV['DEDALO_LAST_ERROR']) );
 
 			// expected result as not false
 			$this->assertFalse( $response->result===false );
@@ -289,7 +289,7 @@ final class dd_api_Test extends TestCase {
 					"invalid thing": "patata"
 				}
 			');
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 			$response = dd_core_api::start($rqo);
 
 			$context	= $response->result->context;
@@ -304,7 +304,7 @@ final class dd_api_Test extends TestCase {
 			// expected empty data
 			$this->assertTrue( count($data)===0 );
 			// expected running with errors
-			$this->assertTrue( !empty($_ENV['DEDALO_ERRORS']) );
+			$this->assertTrue( !empty($_ENV['DEDALO_LAST_ERROR']) );
 	}//end test_start
 
 
@@ -342,7 +342,7 @@ final class dd_api_Test extends TestCase {
 					}
 				}
 			');
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 			$response = dd_core_api::read($rqo);
 				// dump($response, ' search response ++ '.to_string());
 
@@ -357,7 +357,7 @@ final class dd_api_Test extends TestCase {
 				$this->assertTrue( gettype($data)==='array' );
 				$this->assertTrue( count($data)>0 );
 				// expected running without errors
-				$this->assertTrue( empty($_ENV['DEDALO_ERRORS']) );
+				$this->assertTrue( empty($_ENV['DEDALO_LAST_ERROR']) );
 
 		// related_search
 			$rqo = json_handler::decode('
@@ -389,12 +389,12 @@ final class dd_api_Test extends TestCase {
 				}
 			');
 			// direct exec
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 			$response = dd_core_api::{$rqo->action}($rqo);
 				// dump($response, ' related_search response  1 ++ '.to_string());
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 
@@ -442,12 +442,12 @@ final class dd_api_Test extends TestCase {
 				}
 			');
 			// direct exec
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 			$response = dd_core_api::{$rqo->action}($rqo);
 				// dump($response, ' get_data response  1 ++ '.to_string());
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 
@@ -497,12 +497,12 @@ final class dd_api_Test extends TestCase {
 				}
 			');
 			// direct exec
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 			$response = dd_core_api::{$rqo->action}($rqo);
 				// dump($response, ' get_data response  1 ++ '.to_string());
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 
@@ -542,12 +542,12 @@ final class dd_api_Test extends TestCase {
 				}
 			');
 			// direct exec
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 			$response = dd_core_api::{$rqo->action}($rqo);
 				// dump($response, ' get_data response  1 ++ '.to_string());
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 
@@ -603,12 +603,12 @@ final class dd_api_Test extends TestCase {
 				}
 			');
 			// direct exec
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 			$response = dd_core_api::{$rqo->action}($rqo);
 				// dump($response, ' resolve_data response  1 ++ '.to_string());
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 
@@ -662,12 +662,12 @@ final class dd_api_Test extends TestCase {
 			');
 
 			// direct exec
-				$_ENV['DEDALO_ERRORS'] = []; // reset
+				$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 				$response = dd_core_api::{$rqo->action}($rqo);
 					// dump($response, ' test_get_relation_list response  1 ++ '.to_string());
 
 				$this->assertTrue(
-					empty($_ENV['DEDALO_ERRORS']),
+					empty($_ENV['DEDALO_LAST_ERROR']),
 					'expected running without errors'
 				);
 
@@ -732,9 +732,9 @@ final class dd_api_Test extends TestCase {
 					}
 				}
 			');
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 			$response = dd_core_api::read($rqo);
-				// dump($_ENV['DEDALO_ERRORS'], ' DEDALO_ERRORS ++ '.to_string());
+				// dump($_ENV['DEDALO_LAST_ERROR'], ' DEDALO_ERRORS ++ '.to_string());
 				// dump($response, ' response ++ '.to_string());
 			$context	= $response->result->context;
 			$data		= $response->result->data;
@@ -744,7 +744,7 @@ final class dd_api_Test extends TestCase {
 				$this->assertTrue( gettype($data)==='array' );
 				$this->assertTrue( count($data)===0 );
 				// expected running with errors
-				$this->assertTrue( !empty($_ENV['DEDALO_ERRORS']) );
+				$this->assertTrue( !empty($_ENV['DEDALO_LAST_ERROR']) );
 	}//end test_read_invalid_tipo
 
 
@@ -770,13 +770,13 @@ final class dd_api_Test extends TestCase {
 				}
 			}
 		');
-		$_ENV['DEDALO_ERRORS'] = []; // reset
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 		$response = dd_core_api::read($rqo);
-			// dump($_ENV['DEDALO_ERRORS'], ' DEDALO_ERRORS ++ '.to_string());
+			// dump($_ENV['DEDALO_LAST_ERROR'], ' DEDALO_ERRORS ++ '.to_string());
 			// dump($response, ' response ++ '.to_string());
 
 		// expected running with errors
-			$this->assertTrue( !empty($_ENV['DEDALO_ERRORS']) );
+			$this->assertTrue( !empty($_ENV['DEDALO_LAST_ERROR']) );
 
 		// expected result as false
 			$this->assertTrue( $response->result===false );
@@ -802,13 +802,13 @@ final class dd_api_Test extends TestCase {
 				}
 			}
 		');
-		$_ENV['DEDALO_ERRORS'] = []; // reset
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 		$response = dd_core_api::read_raw($rqo);
-			// dump($_ENV['DEDALO_ERRORS'], ' DEDALO_ERRORS ++ '.to_string());
+			// dump($_ENV['DEDALO_LAST_ERROR'], ' DEDALO_ERRORS ++ '.to_string());
 			// dump($response, ' response ++ '.to_string());
 
 		// expected running without errors
-			$this->assertTrue( empty($_ENV['DEDALO_ERRORS']) );
+			$this->assertTrue( empty($_ENV['DEDALO_LAST_ERROR']) );
 
 		// expected running without errors
 			$this->assertTrue( gettype($response->result)==='object' );
@@ -835,13 +835,13 @@ final class dd_api_Test extends TestCase {
 				}
 			}
 		');
-		$_ENV['DEDALO_ERRORS'] = []; // reset
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 		$response = dd_core_api::create($rqo);
-			// dump($_ENV['DEDALO_ERRORS'], ' DEDALO_ERRORS ++ '.to_string());
+			// dump($_ENV['DEDALO_LAST_ERROR'], ' DEDALO_ERRORS ++ '.to_string());
 			// dump($response, ' response ++ '.to_string());
 
 		// expected running without errors
-		$this->assertTrue( empty($_ENV['DEDALO_ERRORS']) );
+		$this->assertTrue( empty($_ENV['DEDALO_LAST_ERROR']) );
 
 		// expected result as not false
 		$this->assertTrue( $response->result!==false );
@@ -874,13 +874,13 @@ final class dd_api_Test extends TestCase {
 				}
 			}
 		');
-		$_ENV['DEDALO_ERRORS'] = []; // reset
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 		$response = dd_core_api::{$rqo->action}($rqo);
-			// dump($_ENV['DEDALO_ERRORS'], ' DEDALO_ERRORS ++ '.to_string());
+			// dump($_ENV['DEDALO_LAST_ERROR'], ' DEDALO_ERRORS ++ '.to_string());
 			// dump($response, ' response ++ '.to_string());
 
 		// expected running without errors
-		$this->assertTrue( empty($_ENV['DEDALO_ERRORS']) );
+		$this->assertTrue( empty($_ENV['DEDALO_LAST_ERROR']) );
 
 		// expected result as not false
 		$this->assertTrue( $response->result!==false );
@@ -918,12 +918,12 @@ final class dd_api_Test extends TestCase {
 		');
 
 		// direct exec
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 			$response = dd_core_api::{$rqo->action}($rqo);
 				// dump($response, ' test_delete response  1 ++ '.to_string());
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 
@@ -986,12 +986,12 @@ final class dd_api_Test extends TestCase {
 		');
 
 		// direct exec
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 			$response = dd_core_api::{$rqo->action}($rqo);
 				// dump($response, ' test_save response  1 ++ '.to_string());
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 
@@ -1039,12 +1039,12 @@ final class dd_api_Test extends TestCase {
 		');
 
 		// direct exec
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 			$response = dd_core_api::{$rqo->action}($rqo);
 				// dump($response, ' test_count response  1 ++ '.to_string());
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 
@@ -1088,16 +1088,16 @@ final class dd_api_Test extends TestCase {
 			');
 
 			// direct exec
-				$_ENV['DEDALO_ERRORS'] = []; // reset
+				$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 				$response = dd_core_api::{$rqo->action}($rqo);
 					// dump($response, ' test_get_element_context response  1 ++ '.to_string());
 
 				$this->assertTrue(
-					empty($_ENV['DEDALO_ERRORS']),
+					empty($_ENV['DEDALO_LAST_ERROR']),
 					'expected running without errors'
 				);
-				if (!empty($_ENV['DEDALO_ERRORS'])) {
-					dump($_ENV['DEDALO_ERRORS'], '$_ENV[DEDALO_ERRORS] ++ '.to_string());
+				if (!empty($_ENV['DEDALO_LAST_ERROR'])) {
+					dump($_ENV['DEDALO_LAST_ERROR'], '$_ENV[DEDALO_ERRORS] ++ '.to_string());
 				}
 
 				$this->assertTrue(
@@ -1126,16 +1126,16 @@ final class dd_api_Test extends TestCase {
 			');
 
 			// direct exec
-				$_ENV['DEDALO_ERRORS'] = []; // reset
+				$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 				$response = dd_core_api::{$rqo->action}($rqo);
 					// dump($response, ' test_get_element_context response  1 ++ '.to_string());
 
 				$this->assertTrue(
-					empty($_ENV['DEDALO_ERRORS']),
+					empty($_ENV['DEDALO_LAST_ERROR']),
 					'expected running without errors'
 				);
-				if (!empty($_ENV['DEDALO_ERRORS'])) {
-					dump($_ENV['DEDALO_ERRORS'], '$_ENV[DEDALO_ERRORS] ++ '.to_string());
+				if (!empty($_ENV['DEDALO_LAST_ERROR'])) {
+					dump($_ENV['DEDALO_LAST_ERROR'], '$_ENV[DEDALO_ERRORS] ++ '.to_string());
 				}
 
 				$this->assertTrue(
@@ -1174,12 +1174,12 @@ final class dd_api_Test extends TestCase {
 		');
 
 		// direct exec
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 			$response = dd_core_api::{$rqo->action}($rqo);
 				// dump($response, ' test_get_section_elements_context response  1 ++ '.to_string());
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 
@@ -1229,12 +1229,12 @@ final class dd_api_Test extends TestCase {
 		// ');
 
 		// direct exec
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 			$response = dd_core_api::{$rqo->action}($rqo);
 				// dump($response, ' test_get_indexation_grid response  1 ++ '.to_string());
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 
@@ -1287,12 +1287,12 @@ final class dd_api_Test extends TestCase {
 		');
 
 		// direct exec
-			$_ENV['DEDALO_ERRORS'] = []; // reset
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 			$response = dd_core_api::{$rqo->action}($rqo);
 				// dump($response, ' test_get_relation_list response  1 ++ '.to_string());
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_ERRORS']),
+				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 
@@ -1353,12 +1353,12 @@ final class dd_api_Test extends TestCase {
 		// 	');
 
 		// 	// direct exec
-		// 		$_ENV['DEDALO_ERRORS'] = []; // reset
+		// 		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 		// 		$response = dd_core_api::{$rqo->action}($rqo);
 		// 			// dump($response, ' test_get_relation_list response  1 ++ '.to_string());
 
 		// 		$this->assertTrue(
-		// 			empty($_ENV['DEDALO_ERRORS']),
+		// 			empty($_ENV['DEDALO_LAST_ERROR']),
 		// 			'expected running without errors'
 		// 		);
 
