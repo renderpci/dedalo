@@ -124,6 +124,7 @@ class tool_update_cache extends tool_common {
 
 			}//end foreach ($records_data->result as $key => $ar_value)
 
+
 		// debug info
 			debug_log(__METHOD__
 				. ' Updating cache chunk of ('.$sqo->limit.') records' .PHP_EOL
@@ -134,9 +135,18 @@ class tool_update_cache extends tool_common {
 
 		// recursion
 			if (!empty($rows_data->ar_records)) {
+
+				// Forces collection of any existing garbage cycles
+					unset($rows_data);  // ~ 40MB/1000
+					gc_collect_cycles();
+
 				$sqo->offset = $sqo->offset + $sqo->limit;
 				return tool_update_cache::process_chunk($sqo, $section_tipo, $ar_component_tipo);
 			}
+
+		// Forces collection of any existing garbage cycles
+			unset($rows_data);  // ~ 40MB/1000
+			gc_collect_cycles();
 
 		// debug info
 			debug_log(__METHOD__
