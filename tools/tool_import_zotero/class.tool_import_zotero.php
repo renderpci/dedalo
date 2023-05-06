@@ -127,7 +127,7 @@ class tool_import_zotero extends tool_common {
 
 								$ar_parts	= explode('/', $zotero_obj->id);
 								$zotero_id	= end($ar_parts);
-								$section_id	= self::get_section_id_from_zotero_id( $id_item, $zotero_id);
+								$section_id	= self::get_section_id_from_code( $id_item, $zotero_id);
 
 								if (is_null($section_id)) {
 									// section : Create new section when not found Zotero id in field code
