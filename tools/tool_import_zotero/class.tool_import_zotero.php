@@ -415,7 +415,7 @@ class tool_import_zotero extends tool_common {
 											$ddo->tipo,
 											$section_id,
 											'edit',
-											DEDALO_DATA_LANG,
+											(RecordObj_dd::get_translatable($ddo->tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN),
 											$ddo->section_tipo
 										);
 										$current_value = $zotero_obj->$name;
