@@ -358,6 +358,7 @@ class component_media_common extends component_common {
 			$tmp_dir		= $file_data->tmp_dir; // constant string name like 'DEDALO_UPLOAD_TMP_DIR'
 			$tmp_name		= $file_data->tmp_name; // string like 'phpJIQq4e'
 			$quality 		= $file_data->quality ?? $this->get_quality();
+			$source_file 	= $file_data->source_file ?? null;
 
 		// source_file
 			if (!defined($tmp_dir)) {
@@ -368,7 +369,9 @@ class component_media_common extends component_common {
 			}
 
 			$user_id = navigator::get_user_id();
-			$source_file = constant($tmp_dir). '/'. $user_id .'/'. $key_dir . '/' . $tmp_name;
+			$source_file 	= isset($source_file)
+				? $source_file
+				: constant($tmp_dir). '/'. $user_id .'/'. rtrim($key_dir, '/') . '/' . $tmp_name;
 
 		// check source file file
 			if (!file_exists($source_file)) {
