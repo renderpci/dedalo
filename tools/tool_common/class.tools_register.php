@@ -883,7 +883,9 @@ class tools_register {
 						$record->section_tipo
 					);
 					$dato	= $component->get_dato();
-					$name	= reset($dato);
+					$name	= !empty($dato)
+						? reset($dato)
+						: null;
 
 				// config
 					$model		= RecordObj_dd::get_modelo_name_by_tipo($config_tipo,true);
@@ -896,7 +898,9 @@ class tools_register {
 						$record->section_tipo
 					);
 					$dato	= $component->get_dato();
-					$config	= reset($dato);
+					$config	= !empty($dato)
+						? reset($dato)
+						: null;
 
 				$value = (object)[
 					'name'		=> $name,
@@ -912,7 +916,7 @@ class tools_register {
 
 
 
-/**
+	/**
 	* GET_ALL_default_CONFIG
 	* @return array $ar_config
 	*/
