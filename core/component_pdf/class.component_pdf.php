@@ -29,6 +29,8 @@ class component_pdf extends component_media_common {
 				return $this->additional_path;
 			}
 
+		$ar_additional_path[$this->id] = false;
+
 		$properties = $this->get_properties();
 			// dump($properties, ' get_additional_path properties ++ '.to_string($this->tipo)); // die();
 		if (isset($properties->additional_path)) {
@@ -56,22 +58,19 @@ class component_pdf extends component_media_common {
 			}
 
 			$ar_additional_path[$this->id] = $dato;
+		}
 
-			if(isset($properties->max_items_folder) && empty($dato)) {
+		if(isset($properties->max_items_folder) && empty($dato)) {
 
-				$max_items_folder  = $properties->max_items_folder;
-				$parent_section_id = $this->section_id;
+			$max_items_folder  = $properties->max_items_folder;
+			$section_id = $this->section_id;
 
-				$ar_additional_path[$this->id] = '/'.$max_items_folder*(floor($parent_section_id / $max_items_folder));
+			$ar_additional_path[$this->id] = '/'.$max_items_folder*(floor($section_id / $max_items_folder));
 
-				$component->set_dato( $ar_additional_path[$this->id] );
-				if (!empty($parent_section_id)) {
-					$component->Save();
-				}
-			}
-		}else{
-
-			$ar_additional_path[$this->id] = false;
+			// $component->set_dato( $ar_additional_path[$this->id] );
+			// if (!empty($section_id)) {
+			// 	$component->Save();
+			// }
 		}
 
 		// fix additional_path
