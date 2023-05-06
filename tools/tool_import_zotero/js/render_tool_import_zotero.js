@@ -73,7 +73,6 @@ const get_content_data_edit = async function(self) {
 				? ''
 				: ' hide'
 
-
 	// components container
 		const drop_zone = ui.create_dom_element({
 			element_type	: 'div',
@@ -81,33 +80,29 @@ const get_content_data_edit = async function(self) {
 			parent			: fragment
 		})
 
-
 	// template_container
 		const template_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'template_container',
 			parent			: fragment
 		})
-
-		// const template = await create_template(self)
+		// service_dropzone render
 		const template = await self.service_dropzone.render()
 		template_container.appendChild(template)
 
-
-		// inputs components container label
+	// inputs components container label
 		const inputs_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'inputs_container',
 			parent			: fragment
 		})
-
 		const inputs_container_caption = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'inputs_container_caption',
 			inner_html		: get_label.values || 'Values',
 			parent			: inputs_container
 		})
-
+		// service_tmp_section
 		const inputs_nodes = await self.service_tmp_section.render()
 		inputs_container.appendChild(inputs_nodes)
 
@@ -156,7 +151,7 @@ const get_content_data_edit = async function(self) {
 						tool_config				: self.tool_config,
 						files_data				: self.files_data,
 						components_temp_data	: components_temp_data,
-						key_dir					: self.key_dir,
+						key_dir					: self.key_dir
 					}
 				}
 
@@ -176,7 +171,7 @@ const get_content_data_edit = async function(self) {
 						self.node.content_data.classList.add('loading')
 						// get message
 						const msg = (response.result===true)
-							? self.get_tool_label('upload_done') || 'Files imported successfully'
+							? self.get_tool_label('upload_done')  || 'Files imported successfully'
 							: self.get_tool_label('upload_error') || 'Files no imported!'
 						// add the message to wrapper (outside content_data that has loading class)
 						const msg_container = ui.create_dom_element({
@@ -207,12 +202,17 @@ const get_content_data_edit = async function(self) {
 
 /**
 * SET_IMPORT_MODE
-* @return bool true
+* @param object self
+* @param bool apply
+* @return bool
 */
-const set_import_mode = function (self, apply){
+const set_import_mode = function (self, apply) {
 
-	for (let i = self.files_data.length - 1; i >= 0; i--) {
-		const current_value = self.files_data[i]
+	const files_data		= self.files_data || []
+	const files_data_length	= files_data.length
+	for (let i = 0; i < files_data_length; i++) {
+
+		const current_value = files_data[i]
 
 		if(apply===true){
 			const regex = /^(.+)-([a-zA-Z])\.([a-zA-Z]{3,4})$/;
@@ -220,13 +220,11 @@ const set_import_mode = function (self, apply){
 			const map_name = regex.exec(current_value.name)
 			if ( map_name!==null && map_name[2]!==null ) {
 
-				const map_name_upper = map_name[2].toUpperCase();
-				const target_portal = self.tool_config.ddo_map.find(el => el.role==='component_option' && el.map_name===map_name_upper)
-
+				const map_name_upper	= map_name[2].toUpperCase();
+				const target_portal		= self.tool_config.ddo_map.find(el => el.role==='component_option' && el.map_name===map_name_upper)
 				if (target_portal) {
 					current_value.previewElement.querySelector(".option_component_select").value = target_portal.tipo;
 				}
-
 			}
 		}else{
 			const default_target_portal = self.tool_config.ddo_map.find(el => el.role === 'component_option' && el.default === true)
@@ -235,7 +233,6 @@ const set_import_mode = function (self, apply){
 			}else{
 				current_value.previewElement.querySelector(".option_component_select").options[0].selected = true ;
 			}
-
 		}
 	}
 
