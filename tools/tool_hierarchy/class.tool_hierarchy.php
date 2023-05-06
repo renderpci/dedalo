@@ -36,7 +36,6 @@ class tool_hierarchy extends tool_common {
 			$response->msg		= $hierarchy_response->msg ;
 
 
-
 		return $response;
 	}//end generate_virtual_section
 

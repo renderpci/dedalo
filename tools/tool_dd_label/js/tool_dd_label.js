@@ -49,6 +49,8 @@ export const tool_dd_label = function () {
 
 /**
 * INIT
+* @param object options
+* @return bool common_init
 */
 tool_dd_label.prototype.init = async function(options) {
 
@@ -102,6 +104,7 @@ tool_dd_label.prototype.init = async function(options) {
 /**
 * UPDATE_DATA
 * Set new JSON data to JSON editor
+* @return bool
 */
 tool_dd_label.prototype.update_data = function() {
 
@@ -121,8 +124,8 @@ tool_dd_label.prototype.update_data = function() {
 * ON_CLOSE_ACTIONS
 * Executes specific action on close the tool
 * @param string open_as
-* 	modal | window
-* @return promise: bool
+* 	modal|window
+* @return bool
 */
 tool_dd_label.prototype.on_close_actions = async function(open_as) {
 

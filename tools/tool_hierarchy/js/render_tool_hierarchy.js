@@ -46,6 +46,8 @@ render_tool_hierarchy.prototype.edit = async function(options) {
 		const wrapper = ui.tool.build_wrapper_edit(self, {
 			content_data : content_data
 		})
+		// set pointers
+		wrapper.content_data = content_data
 
 
 	return wrapper
@@ -205,7 +207,7 @@ const get_content_data = async function(self) {
 
 					set_loading(false)
 				})
-			})
+			})//end button_generate.addEventListener('click'
 
 	// messages_container
 		const messages_container = ui.create_dom_element({
@@ -214,12 +216,9 @@ const get_content_data = async function(self) {
 			parent			: fragment
 		})
 
-
 	// content_data
 		const content_data = ui.tool.build_content_data(self)
 		content_data.appendChild(fragment)
-
-		console.log('self:', self);
 
 
 	return content_data

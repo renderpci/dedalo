@@ -41,9 +41,6 @@ export const tool_dev_template = function () {
 	this.target_lang	= null
 	this.langs			= null
 	this.caller			= null
-
-
-	return true
 }//end page
 
 
@@ -56,9 +53,9 @@ export const tool_dev_template = function () {
 	// render : using common render entry point, use the tool_common render to prepare the tool to be rendered, it will call to specific render defined in render_tool_dev_template
 	tool_dev_template.prototype.render		= tool_common.prototype.render
 	// destroy: using common destroy method
-	tool_dev_template.prototype.destroy	= common.prototype.destroy
+	tool_dev_template.prototype.destroy		= common.prototype.destroy
 	// refresh: using common refresh method
-	tool_dev_template.prototype.refresh	= common.prototype.refresh
+	tool_dev_template.prototype.refresh		= common.prototype.refresh
 	// render mode edit (default). Set the tool custom manager to build the DOM nodes view
 	tool_dev_template.prototype.edit		= render_tool_dev_template.prototype.edit
 
@@ -67,6 +64,8 @@ export const tool_dev_template = function () {
 /**
 * INIT
 * Custom tool init
+* @param object options
+* @return bool common_init
 */
 tool_dev_template.prototype.init = async function(options) {
 
@@ -83,10 +82,18 @@ tool_dev_template.prototype.init = async function(options) {
 	// set the caller if it was defined or create it and set the tool_config or create new one if tool_config was not defined.
 		const common_init = await tool_common.prototype.init.call(this, options);
 
-	// set the self specific vars not defined by the generic init (in tool_common)
-		self.lang	= options.lang // you can call to 'page_globals.dedalo_data_lang' if you want to use the actual configuration of Dédalo
-		self.langs	= page_globals.dedalo_projects_default_langs
-		self.etc	= options.etc // you own vars
+	try {
+
+		// set the self specific vars not defined by the generic init (in tool_common)
+			self.lang	= options.lang // you can call to 'page_globals.dedalo_data_lang' if you want to use the actual configuration of Dédalo
+			self.langs	= page_globals.dedalo_projects_default_langs
+			self.etc	= options.etc // you own vars
+
+	} catch (error) {
+		self.error = error
+		console.error(error)
+	}
+
 
 	return common_init
 }//end init
@@ -96,6 +103,8 @@ tool_dev_template.prototype.init = async function(options) {
 /**
 * BUILD
 * Custom tool build
+* @param bool autoload
+* @return bool common_build
 */
 tool_dev_template.prototype.build = async function(autoload=false) {
 
