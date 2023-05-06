@@ -1458,10 +1458,7 @@ final class component_common_test extends TestCase {
 		// force status as logged to allow test
 			// login_test::force_login(DEDALO_SUPERUSER);
 
-		// elements
-			$elements = get_elements();
-
-		foreach ($elements as $element) {
+		foreach (get_elements() as $element) {
 			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
 			$component = component_common::get_instance(
@@ -1480,7 +1477,7 @@ final class component_common_test extends TestCase {
 
 			$this->assertTrue(
 				empty($_ENV['DEDALO_LAST_ERROR']),
-				'expected running without errors'
+				'expected running without errors ('.$element->model.'): ' .to_string($_ENV['DEDALO_LAST_ERROR'])
 			);
 
 			$this->assertTrue(
