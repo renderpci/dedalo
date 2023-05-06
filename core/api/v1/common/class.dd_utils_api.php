@@ -1252,15 +1252,16 @@ final class dd_utils_api {
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed';
 
-		$options = $rqo->options;
+		// options
+			$options = $rqo->options;
 
 		// short vars
 			$file_names	= is_array($options->file_name) ? $options->file_name : [$options->file_name];
 			$key_dir	= $options->key_dir; // key_dir. Contraction of tipo + section_tipo, like: 'rsc29_rsc176'
 
 		// dir
-			$user_id = navigator::get_user_id();
-			$tmp_dir = DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $key_dir;
+			$user_id	= navigator::get_user_id();
+			$tmp_dir	= DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $key_dir;
 
 		// delete each file
 			foreach ($file_names as $file_name) {
@@ -1269,30 +1270,22 @@ final class dd_utils_api {
 					$file_path = $tmp_dir . '/' . $file_name;
 
 				// delete file
-					if (!file_exists($file_path)) {
-						$response->result	= false;
-						$response->msg		= "Error on delete file (the file do not exists): ".to_string($file_path);
-						debug_log(__METHOD__." $response->msg", logger::ERROR);
-						return $response;
-					}
-					if (!unlink($file_path)) {
+					if (file_exists($file_path) && !unlink($file_path)) {
 						$response->result	= false;
 						$response->msg		= "Error on delete file (unable to unlink file): ".to_string($file_path);
 						debug_log(__METHOD__." $response->msg", logger::ERROR);
-						return $response;
 					}
 
-				// path thumb
+				// thumb_path
 					$info				= pathinfo($file_name);
 					$basemane			= basename($file_name,'.'.$info['extension']);
-					$file_path_thumb	= $tmp_dir . '/thumbnail/' . $basemane . '.jpg';
+					$thumb_file_path	= $tmp_dir . '/thumbnail/' . $basemane . '.jpg';
 
 				// delete thumb
-					if (file_exists($file_path_thumb) && !unlink($file_path_thumb)) {
+					if (file_exists($thumb_file_path) && !unlink($thumb_file_path)) {
 						$response->result	= false;
-						$response->msg		= "Error on delete thumb file (unable to unlink file): ".to_string($file_path_thumb);
+						$response->msg		= "Error on delete thumb file (unable to unlink file): ".to_string($thumb_file_path);
 						debug_log(__METHOD__." $response->msg", logger::ERROR);
-						return $response;
 					}
 			}//end foreach ($file_names as $file_name)
 
@@ -1795,18 +1788,18 @@ final class dd_utils_api {
 		$filename = $pathinfo['filename'];
 		$thumbnail_file	= $tmp_dir. '/thumbnail/' . $filename . '.jpg';
 		switch ($file_type) {
-		 	case 'application/pdf':
-		 		$thumb_pdf_options = new stdClass();
-		 			$thumb_pdf_options->source_file = $target_path;
-		 			$thumb_pdf_options->ar_layers = [0];
-		 			$thumb_pdf_options->target_file = $thumbnail_file;
-					$thumb_pdf_options->density	= 150;
+			case 'application/pdf':
+				$thumb_pdf_options = new stdClass();
+					$thumb_pdf_options->source_file	= $target_path;
+					$thumb_pdf_options->ar_layers	= [0];
+					$thumb_pdf_options->target_file	= $thumbnail_file;
+					$thumb_pdf_options->density		= 150;
 					$thumb_pdf_options->antialias	= true;
-					$thumb_pdf_options->quality	= 75;
-					$thumb_pdf_options->resize	= '12.5%';
+					$thumb_pdf_options->quality		= 75;
+					$thumb_pdf_options->resize		= '12.5%';
 
-		 		ImageMagick::convert($thumb_pdf_options);
-		 		break;
+				ImageMagick::convert($thumb_pdf_options);
+				break;
 
 		 	case 'image/jpeg':
 		 	default:

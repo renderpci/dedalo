@@ -339,6 +339,18 @@ class request_query_object extends stdClass {
 
 
 	/**
+	* SET_OPTIONS
+	* @param object $value
+	* @return void
+	*/
+	public function set_options(object $value) {
+
+		$this->options = $value;
+	}//end set_options
+
+
+
+	/**
 	* GET METHODS
 	* By accessors. When property exits, return property value, else return null
 	* @param string $name

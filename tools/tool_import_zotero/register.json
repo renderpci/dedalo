@@ -58,13 +58,13 @@
       "lg-nolan": [
         {
           "start": {
-            "day": 1,
-            "hour": 19,
-            "time": 65031622268,
+            "day": 6,
+            "hour": 9,
+            "time": 65032017505,
             "year": 2023,
             "month": 5,
-            "minute": 31,
-            "second": 8
+            "minute": 18,
+            "second": 25
           }
         }
       ]
@@ -72,8 +72,14 @@
     "dd612": {
       "inf": "Descripción [component_text_area]",
       "dato": {
+        "lg-cat": [
+          "<p>Exporti el format JSON de Zotero per a importar. Si vol contolar l'id, pongalo en Zotero en el camp 'call-number'. Si vol importar fitxers PDF, utilitze el camp 'archive' de Zotero &nbsp;amb el nom del PDF, i adjunti els fitxers PDF al mateix temps que el fitxer de Zotero.</p>"
+        ],
         "lg-eng": [
-          "<p>Import Zotero records in his JSON format and set the PDF files referenced.</p>"
+          "<p>Export JSON format from Zotero to import. If you want contol the id, set it in Zotero call-number field. If you want to import PDF files, use the Zotero Archive field to introduce the name of the PDF, and upload the PDF files at the same time than Zotero file.</p>"
+        ],
+        "lg-spa": [
+          "<p>Exporte el formato JSON de Zotero para importar. Si quiere contolar el id, pongalo en Zotero en el campo 'call-number'. Si quiere importar ficheros PDF, use el campo 'archive' de Zotero &nbsp;con el nombre del PDF, y adjunte los ficheros PDF al mismo tiempo que el fichero de Zotero.</p>"
         ]
       }
     },
@@ -141,6 +147,14 @@
             "open_as": "window",
             "windowFeatures": null
           }
+        ]
+      }
+    },
+    "dd1362": {
+      "inf": "Dev info [component_text_area]",
+      "dato": {
+        "lg-nolan": [
+          "<p>Use the json version exported by Zotero to import into Publications section: rsc205</p><p>The config of the tool defines the map between Zotero and Dédalo.</p><p>&nbsp;</p><p>Control of section_id with a Zotero field:</p><p></p><p>By default use the tool use &nbsp;the Zotero field 'call-number' to define the section_id of the record, if is set call-number Dédalo will create or update this section_id. It's possible to set other field to control the section_id in with Zotero file. To do that, create a specific config in \"Development-&gt;tools-&gt;Tool configuration\" section</p><p>and changing \"field_to_section_id\" with the name of the Zotero field with section_id. you can see the field default config in the register tool or you can see the 'sample_config.json'. Specific configuration need to be a full configuration, not only the property changed.</p><p></p><p>Upload PDF files:</p><p></p><p>Is possible to upload PDF files with the Zotero records. By default the tool use Zotero 'archive' field set with the full name of the PDF file.</p><p>&nbsp;</p><p>\"archive\" : \"my_pdf_file.pdf\"</p><p></p><p>Add the PDF files with the Zotero json file in the tool, upload all and import.</p><p>&nbsp;</p>"
         ]
       }
     },
@@ -247,448 +261,472 @@
       "inf": "Configuración por defecto [component_json]",
       "dato": {
         "lg-nolan": [
-          [
-            {
-              "map": [
-                {
-                  "name": "id",
-                  "ddo_map": [
-                    {
-                      "tipo": "rsc137",
-                      "section_tipo": "rsc205"
-                    }
-                  ]
-                },
-                {
-                  "name": "type",
-                  "ddo_map": [
-                    {
-                      "tipo": "rsc138",
-                      "section_tipo": "rsc205"
-                    }
-                  ]
-                },
-                {
-                  "name": "title",
-                  "ddo_map": [
-                    {
-                      "tipo": "rsc140",
-                      "section_tipo": "rsc205"
-                    }
-                  ]
-                },
-                {
-                  "name": "container-title",
-                  "ddo_map": [
-                    {
-                      "tipo": "rsc211",
-                      "section_tipo": "rsc205"
-                    },
-                    {
-                      "tipo": "rsc214",
-                      "parent": "rsc211",
-                      "section_tipo": "rsc212"
-                    }
-                  ]
-                },
-                {
-                  "name": "author",
-                  "ddo_map": [
-                    {
-                      "tipo": "rsc349",
-                      "section_tipo": "rsc205"
-                    }
-                  ]
-                },
-                {
-                  "name": "abstract",
-                  "ddo_map": [
-                    {
-                      "tipo": "rsc221",
-                      "section_tipo": "rsc205"
-                    }
-                  ]
-                },
-                {
-                  "name": "accessed",
-                  "ddo_map": [
-                    {
-                      "tipo": "rsc143",
-                      "section_tipo": "rsc205"
-                    }
-                  ]
-                },
-                {
-                  "name": "issued",
-                  "ddo_map": [
-                    {
-                      "tipo": "rsc224",
-                      "section_tipo": "rsc205"
-                    }
-                  ]
-                },
-                {
-                  "name": "note",
-                  "ddo_map": [
-                    {
-                      "tipo": "rsc145",
-                      "section_tipo": "rsc205"
-                    }
-                  ]
-                },
-                {
-                  "name": "source",
-                  "ddo_map": [
-                    {
-                      "tipo": "rsc218",
-                      "section_tipo": "rsc205"
-                    }
-                  ]
-                },
-                {
-                  "name": "URL",
-                  "ddo_map": [
-                    {
-                      "tipo": "rsc217",
-                      "section_tipo": "rsc205"
-                    }
-                  ]
-                },
-                {
-                  "name": "publisher",
-                  "ddo_map": [
-                    {
-                      "tipo": "rsc219",
-                      "section_tipo": "rsc205"
-                    }
-                  ]
-                },
-                {
-                  "name": "page",
-                  "ddo_map": [
-                    {
-                      "tipo": "rsc223",
-                      "section_tipo": "rsc205"
-                    }
-                  ]
-                },
-                {
-                  "name": "issue",
-                  "ddo_map": [
-                    {
-                      "tipo": "rsc222",
-                      "section_tipo": "rsc205"
-                    }
-                  ]
-                },
-                {
-                  "name": "shortTitle",
-                  "ddo_map": [
-                    {
-                      "tipo": "rsc225",
-                      "section_tipo": "rsc205"
-                    }
-                  ]
-                },
-                {
-                  "name": "call-number",
-                  "ddo_map": [
-                    {
-                      "tipo": "dd176",
-                      "section_tipo": "rsc205"
-                    }
-                  ]
-                },
-                {
-                  "name": "publisher-place",
-                  "ddo_map": [
-                    {
-                      "tipo": "rsc144",
-                      "section_tipo": "rsc205"
-                    }
-                  ]
-                },
-                {
-                  "name": "ISBN",
-                  "ddo_map": [
-                    {
-                      "tipo": "rsc147",
-                      "section_tipo": "rsc205"
-                    }
-                  ]
-                },
-                {
-                  "name": "ISSN",
-                  "ddo_map": [
-                    {
-                      "tipo": "rsc147",
-                      "section_tipo": "rsc205"
-                    }
-                  ]
-                },
-                {
-                  "name": "volume",
-                  "ddo_map": [
-                    {
-                      "tipo": "rsc384",
-                      "section_tipo": "rsc205"
-                    }
-                  ]
-                }
-              ],
-              "main": [
-                {
-                  "name": "code",
-                  "tipo": "rsc137"
-                },
-                {
-                  "name": "section",
-                  "tipo": "rsc205"
-                },
-                {
-                  "name": "project",
-                  "tipo": "rsc148"
-                },
-                {
-                  "name": "transcription",
-                  "tipo": "rsc210"
-                },
-                {
-                  "name": "transcription_review",
-                  "tipo": "rsc260"
-                },
-                {
-                  "name": "pfd",
-                  "tipo": "rsc209"
-                },
-                {
-                  "name": "identiying_image",
-                  "tipo": "rsc228"
-                }
-              ],
-              "client": false,
-              "typology": [
-                {
-                  "name": "book",
-                  "value": [
-                    {
-                      "section_id": 1,
-                      "section_tipo": "dd810"
-                    }
-                  ]
-                },
-                {
-                  "name": "magazine",
-                  "value": [
-                    {
-                      "section_id": 2,
-                      "section_tipo": "dd810"
-                    }
-                  ]
-                },
-                {
-                  "name": "article-journal",
-                  "value": [
-                    {
-                      "section_id": 8,
-                      "section_tipo": "dd810"
-                    }
-                  ]
-                },
-                {
-                  "name": "article",
-                  "value": [
-                    {
-                      "section_id": 8,
-                      "section_tipo": "dd810"
-                    }
-                  ]
-                },
-                {
-                  "name": "article-magazine",
-                  "value": [
-                    {
-                      "section_id": 11,
-                      "section_tipo": "dd810"
-                    }
-                  ]
-                },
-                {
-                  "name": "thesis",
-                  "value": [
-                    {
-                      "section_id": 4,
-                      "section_tipo": "dd810"
-                    }
-                  ]
-                },
-                {
-                  "name": "motion_picture",
-                  "value": [
-                    {
-                      "section_id": 6,
-                      "section_tipo": "dd810"
-                    }
-                  ]
-                },
-                {
-                  "name": "film",
-                  "value": [
-                    {
-                      "section_id": 6,
-                      "section_tipo": "dd810"
-                    }
-                  ]
-                },
-                {
-                  "name": "song",
-                  "value": [
-                    {
-                      "section_id": 7,
-                      "section_tipo": "dd810"
-                    }
-                  ]
-                },
-                {
-                  "name": "conference",
-                  "value": [
-                    {
-                      "section_id": 9,
-                      "section_tipo": "dd810"
-                    }
-                  ]
-                },
-                {
-                  "name": "inproceedings",
-                  "value": [
-                    {
-                      "section_id": 9,
-                      "section_tipo": "dd810"
-                    }
-                  ]
-                },
-                {
-                  "name": "proceedings",
-                  "value": [
-                    {
-                      "section_id": 14,
-                      "section_tipo": "dd810"
-                    }
-                  ]
-                },
-                {
-                  "name": "mastersthesis",
-                  "value": [
-                    {
-                      "section_id": 15,
-                      "section_tipo": "dd810"
-                    }
-                  ]
-                },
-                {
-                  "name": "misc",
-                  "value": [
-                    {
-                      "section_id": 16,
-                      "section_tipo": "dd810"
-                    }
-                  ]
-                },
-                {
-                  "name": "techreport",
-                  "value": [
-                    {
-                      "section_id": 13,
-                      "section_tipo": "dd810"
-                    }
-                  ]
-                },
-                {
-                  "name": "incollection",
-                  "value": [
-                    {
-                      "section_id": 17,
-                      "section_tipo": "dd810"
-                    }
-                  ]
-                },
-                {
-                  "name": "unpublished",
-                  "value": [
-                    {
-                      "section_id": 18,
-                      "section_tipo": "dd810"
-                    }
-                  ]
-                },
-                {
-                  "name": "blogPost",
-                  "value": [
-                    {
-                      "section_id": 25,
-                      "section_tipo": "dd810"
-                    }
-                  ]
-                },
-                {
-                  "name": "bookSection",
-                  "value": [
-                    {
-                      "section_id": 26,
-                      "section_tipo": "dd810"
-                    }
-                  ]
-                },
-                {
-                  "name": "document",
-                  "value": [
-                    {
-                      "section_id": 27,
-                      "section_tipo": "dd810"
-                    }
-                  ]
-                },
-                {
-                  "name": "webpage",
-                  "value": [
-                    {
-                      "section_id": 28,
-                      "section_tipo": "dd810"
-                    }
-                  ]
-                },
-                {
-                  "name": "newspaperArticle",
-                  "value": [
-                    {
-                      "section_id": 29,
-                      "section_tipo": "dd810"
-                    }
-                  ]
-                }
-              ],
-              "standard_type": [
-                {
-                  "name": "ISBN",
-                  "value": [
-                    {
-                      "section_id": 1,
-                      "section_tipo": "dd292"
-                    }
-                  ]
-                },
-                {
-                  "name": "ISSN",
-                  "value": [
-                    {
-                      "section_id": 2,
-                      "section_tipo": "dd292"
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
+          {
+            "map": [
+              {
+                "name": "id",
+                "ddo_map": [
+                  {
+                    "tipo": "rsc137",
+                    "section_tipo": "rsc205"
+                  }
+                ]
+              },
+              {
+                "name": "type",
+                "ddo_map": [
+                  {
+                    "tipo": "rsc138",
+                    "section_tipo": "rsc205"
+                  }
+                ]
+              },
+              {
+                "name": "title",
+                "ddo_map": [
+                  {
+                    "tipo": "rsc140",
+                    "section_tipo": "rsc205"
+                  }
+                ]
+              },
+              {
+                "name": "container-title",
+                "ddo_map": [
+                  {
+                    "tipo": "rsc211",
+                    "section_tipo": "rsc205"
+                  },
+                  {
+                    "tipo": "rsc214",
+                    "parent": "rsc211",
+                    "section_tipo": "rsc212"
+                  }
+                ]
+              },
+              {
+                "name": "author",
+                "ddo_map": [
+                  {
+                    "tipo": "rsc349",
+                    "section_tipo": "rsc205"
+                  }
+                ]
+              },
+              {
+                "name": "abstract",
+                "ddo_map": [
+                  {
+                    "tipo": "rsc221",
+                    "section_tipo": "rsc205"
+                  }
+                ]
+              },
+              {
+                "name": "accessed",
+                "ddo_map": [
+                  {
+                    "tipo": "rsc143",
+                    "section_tipo": "rsc205"
+                  }
+                ]
+              },
+              {
+                "name": "issued",
+                "ddo_map": [
+                  {
+                    "tipo": "rsc224",
+                    "section_tipo": "rsc205"
+                  }
+                ]
+              },
+              {
+                "name": "note",
+                "ddo_map": [
+                  {
+                    "tipo": "rsc145",
+                    "section_tipo": "rsc205"
+                  }
+                ]
+              },
+              {
+                "name": "source",
+                "ddo_map": [
+                  {
+                    "tipo": "rsc218",
+                    "section_tipo": "rsc205"
+                  }
+                ]
+              },
+              {
+                "name": "URL",
+                "ddo_map": [
+                  {
+                    "tipo": "rsc217",
+                    "section_tipo": "rsc205"
+                  }
+                ]
+              },
+              {
+                "name": "publisher",
+                "ddo_map": [
+                  {
+                    "tipo": "rsc219",
+                    "section_tipo": "rsc205"
+                  }
+                ]
+              },
+              {
+                "name": "page",
+                "ddo_map": [
+                  {
+                    "tipo": "rsc223",
+                    "section_tipo": "rsc205"
+                  }
+                ]
+              },
+              {
+                "name": "issue",
+                "ddo_map": [
+                  {
+                    "tipo": "rsc222",
+                    "section_tipo": "rsc205"
+                  }
+                ]
+              },
+              {
+                "name": "shortTitle",
+                "ddo_map": [
+                  {
+                    "tipo": "rsc225",
+                    "section_tipo": "rsc205"
+                  }
+                ]
+              },
+              {
+                "name": "call-number",
+                "ddo_map": [
+                  {
+                    "tipo": "dd176",
+                    "section_tipo": "rsc205"
+                  }
+                ]
+              },
+              {
+                "name": "publisher-place",
+                "ddo_map": [
+                  {
+                    "tipo": "rsc144",
+                    "section_tipo": "rsc205"
+                  }
+                ]
+              },
+              {
+                "name": "ISBN",
+                "ddo_map": [
+                  {
+                    "tipo": "rsc147",
+                    "section_tipo": "rsc205"
+                  }
+                ]
+              },
+              {
+                "name": "ISSN",
+                "ddo_map": [
+                  {
+                    "tipo": "rsc147",
+                    "section_tipo": "rsc205"
+                  }
+                ]
+              },
+              {
+                "name": "volume",
+                "ddo_map": [
+                  {
+                    "tipo": "rsc384",
+                    "section_tipo": "rsc205"
+                  }
+                ]
+              },
+              {
+                "name": "DOI",
+                "ddo_map": [
+                  {
+                    "tipo": "rsc385",
+                    "section_tipo": "rsc205"
+                  }
+                ]
+              },
+              {
+                "name": "archive",
+                "ddo_map": [
+                  {
+                    "tipo": "rsc209",
+                    "section_tipo": "rsc205"
+                  }
+                ]
+              }
+            ],
+            "main": [
+              {
+                "name": "code",
+                "tipo": "rsc137"
+              },
+              {
+                "name": "section",
+                "tipo": "rsc205"
+              },
+              {
+                "name": "project",
+                "tipo": "rsc148"
+              },
+              {
+                "name": "transcription",
+                "tipo": "rsc210"
+              },
+              {
+                "name": "transcription_review",
+                "tipo": "rsc260"
+              },
+              {
+                "name": "pdf",
+                "tipo": "rsc209"
+              },
+              {
+                "name": "identifying_image",
+                "tipo": "rsc228"
+              },
+              {
+                "name": "field_standard_number",
+                "tipo": "rsc249"
+              },
+              {
+                "name": "field_to_section_id",
+                "value": "call-number"
+              }
+            ],
+            "client": false,
+            "typology": [
+              {
+                "name": "book",
+                "value": [
+                  {
+                    "section_id": 1,
+                    "section_tipo": "dd810"
+                  }
+                ]
+              },
+              {
+                "name": "magazine",
+                "value": [
+                  {
+                    "section_id": 2,
+                    "section_tipo": "dd810"
+                  }
+                ]
+              },
+              {
+                "name": "article-journal",
+                "value": [
+                  {
+                    "section_id": 8,
+                    "section_tipo": "dd810"
+                  }
+                ]
+              },
+              {
+                "name": "article",
+                "value": [
+                  {
+                    "section_id": 8,
+                    "section_tipo": "dd810"
+                  }
+                ]
+              },
+              {
+                "name": "article-magazine",
+                "value": [
+                  {
+                    "section_id": 11,
+                    "section_tipo": "dd810"
+                  }
+                ]
+              },
+              {
+                "name": "thesis",
+                "value": [
+                  {
+                    "section_id": 4,
+                    "section_tipo": "dd810"
+                  }
+                ]
+              },
+              {
+                "name": "motion_picture",
+                "value": [
+                  {
+                    "section_id": 6,
+                    "section_tipo": "dd810"
+                  }
+                ]
+              },
+              {
+                "name": "film",
+                "value": [
+                  {
+                    "section_id": 6,
+                    "section_tipo": "dd810"
+                  }
+                ]
+              },
+              {
+                "name": "song",
+                "value": [
+                  {
+                    "section_id": 7,
+                    "section_tipo": "dd810"
+                  }
+                ]
+              },
+              {
+                "name": "conference",
+                "value": [
+                  {
+                    "section_id": 9,
+                    "section_tipo": "dd810"
+                  }
+                ]
+              },
+              {
+                "name": "inproceedings",
+                "value": [
+                  {
+                    "section_id": 9,
+                    "section_tipo": "dd810"
+                  }
+                ]
+              },
+              {
+                "name": "proceedings",
+                "value": [
+                  {
+                    "section_id": 14,
+                    "section_tipo": "dd810"
+                  }
+                ]
+              },
+              {
+                "name": "mastersthesis",
+                "value": [
+                  {
+                    "section_id": 15,
+                    "section_tipo": "dd810"
+                  }
+                ]
+              },
+              {
+                "name": "misc",
+                "value": [
+                  {
+                    "section_id": 16,
+                    "section_tipo": "dd810"
+                  }
+                ]
+              },
+              {
+                "name": "techreport",
+                "value": [
+                  {
+                    "section_id": 13,
+                    "section_tipo": "dd810"
+                  }
+                ]
+              },
+              {
+                "name": "incollection",
+                "value": [
+                  {
+                    "section_id": 17,
+                    "section_tipo": "dd810"
+                  }
+                ]
+              },
+              {
+                "name": "unpublished",
+                "value": [
+                  {
+                    "section_id": 18,
+                    "section_tipo": "dd810"
+                  }
+                ]
+              },
+              {
+                "name": "blogPost",
+                "value": [
+                  {
+                    "section_id": 25,
+                    "section_tipo": "dd810"
+                  }
+                ]
+              },
+              {
+                "name": "bookSection",
+                "value": [
+                  {
+                    "section_id": 26,
+                    "section_tipo": "dd810"
+                  }
+                ]
+              },
+              {
+                "name": "document",
+                "value": [
+                  {
+                    "section_id": 27,
+                    "section_tipo": "dd810"
+                  }
+                ]
+              },
+              {
+                "name": "webpage",
+                "value": [
+                  {
+                    "section_id": 28,
+                    "section_tipo": "dd810"
+                  }
+                ]
+              },
+              {
+                "name": "newspaperArticle",
+                "value": [
+                  {
+                    "section_id": 29,
+                    "section_tipo": "dd810"
+                  }
+                ]
+              }
+            ],
+            "standard_type": [
+              {
+                "name": "ISBN",
+                "value": [
+                  {
+                    "section_id": 1,
+                    "section_tipo": "dd292"
+                  }
+                ]
+              },
+              {
+                "name": "ISSN",
+                "value": [
+                  {
+                    "section_id": 2,
+                    "section_tipo": "dd292"
+                  }
+                ]
+              }
+            ]
+          }
         ]
       }
     }
@@ -696,7 +734,7 @@
   "section_id": 20,
   "created_date": "2023-05-01 13:12:45",
   "section_tipo": "dd1340",
-  "modified_date": "2023-05-01 19:31:08",
+  "modified_date": "2023-05-06 09:18:25",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",
