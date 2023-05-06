@@ -142,8 +142,11 @@ abstract class component_common extends common {
 			if (strpos($component_name, 'component_')!==0) {
 
 				debug_log(__METHOD__
-					. '  Error Processing Request. Illegal component: '
-					. to_string($component_name)
+					. ' Error Processing Request. Illegal component: ' .PHP_EOL
+					. ' component_name:' . to_string($component_name) .PHP_EOL
+					. ' tipo:' . to_string($tipo) .PHP_EOL
+					. ' section_tipo:' . to_string($section_tipo) .PHP_EOL
+					. ' section_id:' . to_string($section_id) .PHP_EOL
 					, logger::ERROR
 				);
 				if(SHOW_DEBUG===true) {
@@ -160,12 +163,18 @@ abstract class component_common extends common {
 
 				debug_log(__METHOD__
 					. '  Error. resolve_section_tipo is not supported anymore. Please fix this call ASASP '
+					. ' sectiom_tipo: ' . to_string($section_tipo)
 					, logger::ERROR
 				);
 				if(SHOW_DEBUG===true) {
-					dump($section_tipo, ' DEBUG WARNING: TRIGGERED resolve_section_tipo from: '.to_string($tipo));
 					$bt = debug_backtrace();
-					debug_log(__METHOD__." DEBUG WARNING: TRIGGERED resolve_section_tipo: bt : ".to_string($bt), logger::ERROR);
+					debug_log(__METHOD__
+						. " DEBUG WARNING: TRIGGERED resolve_section_tipo". PHP_EOL
+						. ' tipo: ' .$tipo . PHP_EOL
+						. ' section_tipo: ' .$section_tipo . PHP_EOL
+						. ' backtrace: ' . to_string($bt)
+						, logger::ERROR
+					);
 				}
 
 				return null;
@@ -186,14 +195,22 @@ abstract class component_common extends common {
 					}
 				// section_id format check
 					if ( !empty($section_id) ) {
-
 						if (is_array($section_id)) {
-							trigger_error("Error: section_id is array!");
 							$bt = debug_backtrace();
-							debug_log(__METHOD__." Error: section_id is array! : ".to_string($bt), logger::ERROR);
+							debug_log(__METHOD__
+								." Error: section_id is array! : " . PHP_EOL
+								.' backtrace: '.to_string($bt)
+								, logger::ERROR
+							);
 						}
 						if ( abs(intval($section_id))<1 && strpos($section_id, DEDALO_SECTION_ID_TEMP)===false ) {
-							dump($section_id," section_id - DEDALO_SECTION_ID_TEMP:".DEDALO_SECTION_ID_TEMP);
+							dump($section_id," section_id - DEDALO_SECTION_ID_TEMP:" . DEDALO_SECTION_ID_TEMP);
+							debug_log(__METHOD__
+								." Error: DEDALO_SECTION_ID_TEMP. Trying to use wrong var: section_id: '$section_id' to load as component " . PHP_EOL
+								.' DEDALO_SECTION_ID_TEMP: '. DEDALO_SECTION_ID_TEMP
+								.' backtrace: '.to_string($bt)
+								, logger::ERROR
+							);
 							throw new Exception("Error Processing Request. trying to use wrong var: '$section_id' as section_id to load as component", 1);
 						}
 					}
@@ -275,12 +292,15 @@ abstract class component_common extends common {
 								# Verify this section is from current component tipo
 								$ar_terminoID_by_model_name = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section', 'parent');
 								if (!isset($ar_terminoID_by_model_name[0])) {
-									debug_log(__METHOD__." ar_terminoID_by_model_name is empty for tipo ($tipo), ar_terminoID_by_modelo_name:".to_string($ar_terminoID_by_model_name), logger::ERROR);
+									debug_log(__METHOD__
+										." ar_terminoID_by_model_name is empty for tipo: ($tipo), ar_terminoID_by_modelo_name: ".to_string($ar_terminoID_by_model_name)
+										, logger::ERROR
+									);
 									throw new Exception("Error Processing Request", 1);
 								}
-								$calculated_section_tipo = $ar_terminoID_by_model_name[0];
-								$real_section 			 = section::get_section_real_tipo_static($section_tipo);
-								$is_real 				 = $real_section===$section_tipo ? true : false;
+								$calculated_section_tipo	= $ar_terminoID_by_model_name[0];
+								$real_section				= section::get_section_real_tipo_static($section_tipo);
+								$is_real					= $real_section===$section_tipo ? true : false;
 								if ( $is_real && $section_tipo!==$calculated_section_tipo && $mode!=='search' && SHOW_DEBUG===true) {
 									#dump(debug_backtrace(), ' debug_backtrace '.to_string());
 									#throw new Exception("Error Processing Request. Current component ($tipo) is not children of received section_tipo: $section_tipo.<br> Real section_tipo is: $real_section and calculated_section_tipo: $calculated_section_tipo ", 1);
@@ -323,9 +343,6 @@ abstract class component_common extends common {
 			// overload : If ar_component_instances > $max_cache_instances , not add current element to cache to prevent overload
 				if ( isset($ar_component_instances) && count($ar_component_instances)>$max_cache_instances ) {
 					$ar_component_instances = array_slice($ar_component_instances, $cache_slice_on, null, true);
-					if(SHOW_DEBUG===true) {
-						#debug_log(__METHOD__." Overload components prevent. Unset first cache item [$cache_key]");
-					}
 				}
 
 			// new instance. If not already exists, create a new one and store in cache
@@ -354,18 +371,6 @@ abstract class component_common extends common {
 						// 	$ar_component_instances[$cache_key]->set_mode($mode);
 						// }
 				// }
-
-		// debug
-			if(SHOW_DEBUG===true) {
-				// # Verify 'component_name' and 'tipo' are correct
-				// $model_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-				// if (!empty($component_name) && $component_name!==$model_name) {
-				// 	$msg = "Error Processing Request. Inconsistency detected and fixed with get_instance 'tipo' ($tipo). Expected model is ($model_name) and received model is ($component_name)";
-				// 	#throw new Exception($msg, 1);
-				// 	debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
-				// }
-				// error_log("------------------------- get_instance ------- $tipo ----". exec_time_unit($start_time,'ms')." ms");
-			}
 
 
 		return $ar_component_instances[$cache_key];
@@ -533,8 +538,8 @@ abstract class component_common extends common {
 				if (!empty($defaults)) {
 					if (!is_array($defaults)) {
 						debug_log(__METHOD__
-							." Ignored config_default_file value. Expected type was array but received is "
-							. gettype($defaults)
+							. " Ignored config_default_file value. Expected type was array but received is "
+							. ' type: '. gettype($defaults)
 							, logger::ERROR
 						);
 					}else{
@@ -548,7 +553,7 @@ abstract class component_common extends common {
 				}else{
 					debug_log(__METHOD__
 						." Ignored empty defaults file contents ! (Check if JSON is valid) "
-						.to_string($defaults)
+						.' defaults: '. to_string($defaults)
 						, logger::ERROR
 					);
 				}
@@ -680,7 +685,10 @@ abstract class component_common extends common {
 					if (empty($this->matrix_id)) {
 						debug_log(__METHOD__
 							." ERROR. 'matrix_id' IS MANDATORY IN TIME MACHINE MODE. " .PHP_EOL
-							. get_called_class() .' - '. $this->tipo . ' - ' .$this->section_tipo . ' - ' .$this->section_id
+							. ' class: ' . get_called_class() . PHP_EOL
+							. ' tipo: ' . $this->tipo . PHP_EOL
+							. ' section_tipo: ' . $this->section_tipo . PHP_EOL
+							. ' section_id: ' . $this->section_id
 							, logger::ERROR
 						);
 						return null;
@@ -797,7 +805,7 @@ abstract class component_common extends common {
 			}
 			if (empty($this->section_tipo)) {
 				debug_log(__METHOD__
-					." Error Processing Request. section tipo not found for component $this->tipo "
+					." Error Processing Request. section tipo not found for component tipo: $this->tipo "
 					, logger::ERROR
 				);
 				return false;
@@ -1073,8 +1081,9 @@ abstract class component_common extends common {
 				debug_log(__METHOD__
 					." Exception saving activity caught. " .PHP_EOL
 					. " tipo: $this->tipo, section_tipo: $this->section_tipo, section_id: $this->section_id" .PHP_EOL
-					. $e->getMessage()
-					, logger::DEBUG);
+					. ' exception: '.$e->getMessage()
+					, logger::DEBUG
+				);
 			}//end try catch
 		}//end if (!in_array($tipo, logger_backend_activity::$ar_elements_activity_tipo))
 	}//end save_activity
@@ -1136,7 +1145,10 @@ abstract class component_common extends common {
 			$this->observers_data = $observers_data;
 
 		// debug
-			debug_log(__METHOD__." Exec time: ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
+			debug_log(__METHOD__
+				." Exec time: ".exec_time_unit($start_time,'ms').' ms'
+				, logger::DEBUG
+			);
 
 
 		return $observers_data;
@@ -1216,9 +1228,10 @@ abstract class component_common extends common {
 					$first_key		= $objIterator->key(); // string as '$and'
 					$elements		= $filter->{$first_key}; // array of objects
 					if (empty($elements) || empty($elements[0])) {
-						debug_log(
-							__METHOD__." ERROR: No elements are defined for current_observer filter ".to_string($current_observer->server),
-							logger::ERROR
+						debug_log(__METHOD__
+							." ERROR: No elements are defined for current_observer filter " .PHP_EOL
+							.' observer->server: ' . to_string($current_observer->server)
+							, logger::ERROR
 						);
 						return [];
 					}
@@ -1491,8 +1504,10 @@ abstract class component_common extends common {
 		if(SHOW_DEBUG===true) {
 			if (!is_null($valor) && !is_string($valor) && !is_numeric($valor)) {
 				$msg = "WARNING: CURRENT 'valor' in $this->tipo is NOT valid string. Type is:\"".gettype($valor).'" - valor:'.to_string($valor);
-				trigger_error($msg);
-				debug_log(__METHOD__." ".$msg, logger::WARNING);
+				debug_log(__METHOD__
+					." ".$msg
+					, logger::ERROR
+				);
 				dump(debug_backtrace(), 'get_valor debug_backtrace() ++ '.to_string());
 			}
 		}
@@ -1760,7 +1775,10 @@ abstract class component_common extends common {
 				// response error
 					$response->result	= [];
 					$response->msg		= 'Error. section tipo: '.$target_section_tipo.' is not a valid section ('.$target_section_model.')';
-					debug_log(__METHOD__."  ".$response->msg.to_string(), logger::ERROR);
+					debug_log(__METHOD__
+						."  ".$response->msg.to_string()
+						, logger::ERROR
+					);
 
 				return $response;
 			}
@@ -1771,7 +1789,6 @@ abstract class component_common extends common {
 				? $target_section_tipo .'_'. $lang . $hash_id
 				: $this->tipo .'_'. $lang . $hash_id;
 			if (isset($ar_list_of_values_data[$uid])) {
-				// debug_log(__METHOD__." Return cached item for ar_list_of_values: ".to_string($uid), logger::DEBUG);
 
 				// response OK from cache
 					$response = $ar_list_of_values_data[$uid];
@@ -2087,7 +2104,9 @@ abstract class component_common extends common {
 		$section_id	= $this->section_id;
 		if (empty($section_id)) {
 			debug_log(__METHOD__
-				." Error: section_id is mandatory !"
+				. " Error: section_id is mandatory !" .PHP_EOL
+				. ' tipo: ' . $tipo . PHP_EOL
+				. ' section_id: '. $section_id
 				, logger::ERROR
 			);
 
@@ -2181,7 +2200,8 @@ abstract class component_common extends common {
 				$component_name = RecordObj_dd::get_termino_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true);
 				debug_log(__METHOD__
 					. " Error Processing Request. Please, define target section structure for component: $component_name".PHP_EOL
-					. " tipo: $this->tipo - model: " .get_called_class()
+					. ' tipo: '. $this->tipo .PHP_EOL
+					. ' model: ' .get_called_class()
 					, logger::DEBUG
 				);
 			}
@@ -2443,8 +2463,12 @@ abstract class component_common extends common {
 		if (is_object($dato_full_json)) {
 			$decoded_obj = $dato_full_json;
 		}else{
-			if (!$decoded_obj = json_decode($dato_full_json)) {
-				debug_log(__METHOD__." Error on decode dato_full_json: ".to_string($dato_full_json), logger::ERROR);
+			if (!$decoded_obj = json_handler::decode($dato_full_json)) {
+				debug_log(__METHOD__
+					." Error on decode dato_full_json: " .PHP_EOL
+					. to_string($dato_full_json)
+					, logger::ERROR
+				);
 				return $dato_full_json;
 			}
 		}
@@ -3220,7 +3244,10 @@ abstract class component_common extends common {
 
 				// check selected value to detect mistakes
 					if (!isset($dato[$source_key])) {
-						debug_log(__METHOD__.' Error on sort_data. Source value key ['.$source_key.'] do not exists! ', logger::ERROR);
+						debug_log(__METHOD__
+							.' Error on sort_data. Source value key ['.$source_key.'] do not exists! '
+							, logger::ERROR
+						);
 						return false;
 					}elseif(!locator::compare_locators(
 							$dato[$source_key],
@@ -3228,11 +3255,11 @@ abstract class component_common extends common {
 							['section_id','section_tipo','from_component_tipo','tag_id'])
 						) {
 						debug_log(__METHOD__
-							.' Error on sort_data. Source value if different from DB value:'
-							.PHP_EOL.'key value:'. to_string($source_key)
-							.PHP_EOL.'given value:'. to_string($value)
-							.PHP_EOL.'DB value (dato[source_key]):'. to_string($dato[$source_key])
-							.PHP_EOL.'dato value:'. to_string($dato)
+							.' Error on sort_data. Source value if different from DB value:' .PHP_EOL
+							.' key value: '. to_string($source_key) .PHP_EOL
+							.' given value: '. to_string($value) .PHP_EOL
+							.' DB value (dato[source_key]): '. to_string($dato[$source_key]) .PHP_EOL
+							.' dato value: '. to_string($dato)
 							, logger::ERROR
 						);
 						return false;
@@ -3272,14 +3299,22 @@ abstract class component_common extends common {
 						'target_section_tipo' => $target_section_tipo
 					]);
 					if ($response->result!==true) {
-						debug_log(__METHOD__." Error on add_new_element (section_tipo:'$target_section_tipo'). Response:".PHP_EOL.to_string($response), logger::ERROR);
+						debug_log(__METHOD__
+							." Error on add_new_element (section_tipo:'$target_section_tipo'). Response:".PHP_EOL
+							.to_string($response)
+							, logger::ERROR
+						);
 						return false;
 					}
 				break;
 
 			default:
 				// error
-				debug_log(__METHOD__." Error on update_data_value. changed_data->action is not valid! ".to_string($changed_data->action), logger::ERROR);
+				debug_log(__METHOD__
+					." Error on update_data_value. changed_data->action is not valid! ". PHP_EOL
+					.' changed_data->action: ' . to_string($changed_data->action)
+					, logger::ERROR
+				);
 				return false;
 				break;
 		}
@@ -3386,9 +3421,8 @@ abstract class component_common extends common {
 
 		// check bad data (old formats not array)
 			if (!empty($tm_dato) && !is_array($tm_dato)) {
-				debug_log(__METHOD__." Bad dato found in time machine data. Making array cast to found dato: ".gettype($tm_dato)
-					.PHP_EOL
-					. to_string($tm_dato),
+				debug_log(__METHOD__." Bad dato found in time machine data. Making array cast to found dato: ".gettype($tm_dato) .PHP_EOL
+					. ' tm_dato: ' .  to_string($tm_dato),
 					logger::ERROR
 				);
 				$tm_dato = (array)$tm_dato;
