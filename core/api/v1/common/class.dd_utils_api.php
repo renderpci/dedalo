@@ -1728,6 +1728,7 @@ final class dd_utils_api {
 			'exe'	=> 'application/x-msdownload',
 			'msi'	=> 'application/x-msdownload',
 			'cab'	=> 'application/vnd.ms-cab-compressed',
+			'mrc' 	=> 'application/marc',
 
 			// audio/video
 			'mp3'	=> 'audio/mpeg',
