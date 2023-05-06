@@ -354,10 +354,10 @@ class component_media_common extends component_common {
 
 		// short vars
 			$name			= $file_data->name; // string original file name like 'IMG_3007.jpg'
-			$key_dir		= $file_data->key_dir; // string upload caller name like 'tool_upload'
+			$key_dir		= $file_data->key_dir; // string upload caller name like 'oh1_oh1'
 			$tmp_dir		= $file_data->tmp_dir; // constant string name like 'DEDALO_UPLOAD_TMP_DIR'
 			$tmp_name		= $file_data->tmp_name; // string like 'phpJIQq4e'
-			$quality 		= $file_data->quality ?? $this->get_quality();
+			$quality 		= $file_data->quality ?? $this->get_original_quality();
 			$source_file 	= $file_data->source_file ?? null;
 
 		// source_file
