@@ -597,4 +597,19 @@ class component_iri extends component_common {
 
 
 
+	/**
+	* URL_TO_IRI
+	* Return valid operators for search in current component
+	* @param string $url
+	* @return object $data_iri
+	*/
+	public function url_to_iri( string $url) : object {
+
+		$data_iri = new stdClass();
+			$data_iri->iri = $url;
+
+		return $data_iri;
+	}//end url_to_iri
+
+
 }//end class component_iri
