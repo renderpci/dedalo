@@ -39,17 +39,15 @@
  * @example   marc_yaz.php Pretty print a MARC record retrieved through the PECL yaz extension
  */
 
-
-require_once $pear_lib_path . 'Exception.php';
-require_once $pear_lib_path . 'File/MARCBASE.php';
-require_once $pear_lib_path . 'File/MARC/Record.php';
-require_once $pear_lib_path . 'File/MARC/List.php';
-require_once $pear_lib_path . 'File/MARC/Field.php';
-require_once $pear_lib_path . 'File/MARC/Control_Field.php';
-require_once $pear_lib_path . 'File/MARC/Data_Field.php';
-require_once $pear_lib_path . 'File/MARC/Subfield.php';
-require_once $pear_lib_path . 'File/MARC/Exception.php';
-
+require_once 'PEAR/Exception.php';
+require_once 'File/MARCBASE.php';
+require_once 'File/MARC/Record.php';
+require_once 'File/MARC/Field.php';
+require_once 'File/MARC/Control_Field.php';
+require_once 'File/MARC/Data_Field.php';
+require_once 'File/MARC/Subfield.php';
+require_once 'File/MARC/Exception.php';
+require_once 'File/MARC/List.php';
 
 // {{{ class File_MARC
 /**
@@ -149,13 +147,14 @@ class File_MARC extends File_MARCBASE
      * ?>
      * </code>
      *
-     * @param string $source Name of the file, or a raw MARC string
-     * @param int    $type   Source of the input, either SOURCE_FILE or SOURCE_STRING
+     * @param string $source        Name of the file, or a raw MARC string
+     * @param int    $type          Source of the input, either SOURCE_FILE or SOURCE_STRING
+     * @param string $record_class  Record class, defaults to File_MARC_Record
      */
-    function __construct($source, $type = self::SOURCE_FILE)
+    function __construct($source, $type = self::SOURCE_FILE, $record_class = null)
     {
 
-        parent::__construct($source, $type);
+        parent::__construct($source, $type, $record_class);
 
         switch ($type) {
 
@@ -257,7 +256,7 @@ class File_MARC extends File_MARCBASE
      */
     private function _decode($text)
     {
-        $marc = new File_MARC_Record($this);
+        $marc = new $this->record_class($this);
 
         // fallback on the actual byte length
         $record_length = strlen($text);
