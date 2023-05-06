@@ -363,8 +363,12 @@ class component_media_common extends component_common {
 		// source_file
 			if (!defined($tmp_dir)) {
 				$msg = 'constant is not defined!  tmp_dir: '.$tmp_dir;
-				debug_log(__METHOD__." $msg", logger::ERROR);
 				$response->msg .= $msg;
+				debug_log(__METHOD__
+					.' ' .$response->msg . PHP_EOL
+					. ' tmp_dir: ' . $tmp_dir
+					, logger::ERROR
+				);
 				return $response;
 			}
 
@@ -376,6 +380,11 @@ class component_media_common extends component_common {
 		// check source file file
 			if (!file_exists($source_file)) {
 				$response->msg .= ' Source file not found: ' . basename($source_file);
+				debug_log(__METHOD__
+					.' ' .$response->msg . PHP_EOL
+					. ' source_file: ' . $source_file
+					, logger::ERROR
+				);
 				return $response;
 			}
 
@@ -394,6 +403,11 @@ class component_media_common extends component_common {
 				$allowed_extensions = $this->get_allowed_extensions();
 				$response->msg  = "Error: " .$file_extension. " is an invalid file type ! ";
 				$response->msg .= "Allowed file extensions are: ". implode(', ', $allowed_extensions);
+				debug_log(__METHOD__
+					.' ' .$response->msg . PHP_EOL
+					. ' file_extension: ' . $file_extension
+					, logger::ERROR
+				);
 				return $response;
 			}
 
@@ -401,6 +415,12 @@ class component_media_common extends component_common {
 			$renamed = $this->rename_old_files($file_name, $folder_path);
 			if ($renamed->result===false) {
 				$response->msg .= $renamed->msg;
+				debug_log(__METHOD__
+					.' ' .$response->msg . PHP_EOL
+					. ' file_name: ' . $file_name . PHP_EOL
+					. ' folder_path: ' . $folder_path
+					, logger::ERROR
+				);
 				return $response;
 			}
 
@@ -412,16 +432,26 @@ class component_media_common extends component_common {
 				$move_zip = self::move_zip_file($source_file, $folder_path, $file_name);
 				if (false===$move_zip->result) {
 					$response->msg .= $move_zip->msg;
+					debug_log(__METHOD__
+						.' ' .$response->msg . PHP_EOL
+						. ' source_file: ' . $source_file . PHP_EOL
+						. ' file_name: ' . $file_name
+						, logger::ERROR
+					);
 					return $response;
 				}
 
 			}else{
 				// usual case
-
 				// move temporary file to final destination and name
 				if (false===rename($source_file, $full_file_path)) {
-					debug_log(__METHOD__." Error on move temp file to: ".to_string($full_file_path), logger::ERROR);
 					$response->msg .= ' Error on move temp file '.basename($tmp_name).' to ' . basename($full_file_name);
+					debug_log(__METHOD__
+						.' ' .$response->msg . PHP_EOL
+						. ' source_file: ' . $source_file . PHP_EOL
+						. ' full_file_path: ' . $full_file_path
+						, logger::ERROR
+					);
 					return $response;
 				}
 			}
