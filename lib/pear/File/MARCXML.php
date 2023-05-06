@@ -76,6 +76,12 @@ class File_MARCXML extends File_MARCBASE
     const SOURCE_STRING = 2;
     // }}}
 
+    /**
+     * MARC records retrieved from a SimpleXMLElement object
+     */
+    const SOURCE_SIMPLEXMLELEMENT = 3;
+    // }}}
+
     // {{{ properties
     /**
      * Source containing raw records
@@ -110,7 +116,7 @@ class File_MARCXML extends File_MARCBASE
     /**
      * Read in MARCXML records
      *
-     * This function reads in files or strings that
+     * This function reads in files, strings or SimpleXMLElement objects that
      * contain one or more MARCXML records.
      *
      * <code>
@@ -129,18 +135,28 @@ class File_MARCXML extends File_MARCBASE
      * ?>
      * </code>
      *
-     * @param string $source    Name of the file, or a raw MARC string
-     * @param int    $type      Source of the input, either SOURCE_FILE or SOURCE_STRING
-     * @param string $ns        URI or prefix of the namespace
-     * @param bool   $is_prefix TRUE if $ns is a prefix, FALSE if it's a URI; defaults to FALSE
+     * @param string|SimpleXMLElement $source        Filename, raw MARC string or SimpleXMLElement object
+     * @param int                     $type          Source of the input, either SOURCE_FILE, SOURCE_STRING or SOURCE_SIMPLEXMLELEMENT
+     * @param string                  $ns            URI or prefix of the namespace
+     * @param bool                    $is_prefix     TRUE if $ns is a prefix, FALSE if it's a URI; defaults to FALSE
+     * @param string                  $record_class  Record class, defaults to File_MARC_Record
      */
-    function __construct($source, $type = self::SOURCE_FILE, $ns = "", $is_prefix = false)
+    function __construct($source, $type = self::SOURCE_FILE, $ns = "", $is_prefix = false, $record_class = null)
     {
-        parent::__construct($source, $type);
+        parent::__construct($source, $type, $record_class);
 
         $this->counter = 0;
 
+        if ($source instanceof \SimpleXMLElement) {
+            $type = self::SOURCE_SIMPLEXMLELEMENT;
+        }
+
         switch ($type) {
+
+        case self::SOURCE_SIMPLEXMLELEMENT:
+            $this->type = self::SOURCE_SIMPLEXMLELEMENT;
+            $this->source = $source;
+            break;
 
         case self::SOURCE_FILE:
             $this->type = self::SOURCE_FILE;
@@ -215,7 +231,7 @@ class File_MARCXML extends File_MARCBASE
      */
     private function _decode($text)
     {
-        $marc = new File_MARC_Record($this);
+        $marc = new $this->record_class($this);
 
         // Store leader
         $marc->setLeader($text->leader);

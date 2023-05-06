@@ -9,7 +9,7 @@
  * that is part of the Emilda Project (http://www.emilda.org). Christoffer
  * Landtman generously agreed to make the "php-marc" code available under the
  * GNU LGPL so it could be used as the basis of this PEAR package.
- * 
+ *
  * PHP version 5
  *
  * LICENSE: This program is free software; you can redistribute it and/or modify
@@ -98,7 +98,7 @@ class File_MARC_Data_Field extends File_MARC_Field
      * @param string $ind1      first indicator
      * @param string $ind2      second indicator
      */
-    function __construct($tag, array $subfields = null, $ind1 = null, $ind2 = null) 
+    function __construct($tag, array $subfields = null, $ind1 = null, $ind2 = null)
     {
         $this->subfields = new File_MARC_List();
 
@@ -197,15 +197,7 @@ class File_MARC_Data_Field extends File_MARC_Field
      */
     function prependSubfield(File_MARC_Subfield $new_subfield)
     {
-        $pos = 0;
-        $new_subfield->setPosition($pos);
-        $this->subfields->shift($new_subfield);
-        $node = null;
-        $this->subfields->rewind();
-        while ($node = $this->subfields->next()) {
-            $pos++;
-            $node->setPosition($pos);
-        }
+        $this->subfields->unshift($new_subfield);
         return $new_subfield;
     }
     // }}}
@@ -225,22 +217,7 @@ class File_MARC_Data_Field extends File_MARC_Field
      */
     function insertSubfield(File_MARC_Subfield $new_field, File_MARC_Subfield $existing_field, $before = false)
     {
-        switch ($before) {
-        /* Insert before the specified subfield in the record */
-        case true:
-            $this->subfields->insertNode($new_field, $existing_field, true);
-            break;
-
-        /* Insert after the specified subfield in the record */
-        case false:
-            $this->subfields->insertNode($new_field, $existing_field);
-            break;
-
-        default: 
-            $errorMessage = File_MARC_Exception::formatError(File_MARC_Exception::$messages[File_MARC_Exception::ERROR_INSERTSUBFIELD_MODE], array("mode" => $mode));
-            throw new File_MARC_Exception($errorMessage, File_MARC_Exception::ERROR_INSERTSUBFIELD_MODE);
-            return false;
-        }
+        $this->subfields->insertNode($new_field, $existing_field, $before);
         return $new_field;
     }
     // }}}
@@ -353,15 +330,20 @@ class File_MARC_Data_Field extends File_MARC_Field
      *
      * @param string $code subfield code for which the
      * {@link File_MARC_Subfield} is retrieved
+     * @param bool   $pcre if true, then match as a regular expression
      *
      * @return File_MARC_Subfield returns the first subfield that matches
      * $code, or false if no codes match $code
      */
-    function getSubfield($code = null)
+    function getSubfield($code = null, $pcre = null)
     {
         // iterate merrily through the subfields looking for the requested code
         foreach ($this->subfields as $sf) {
-            if ($sf->getCode() == $code) {
+            if (($pcre
+                && preg_match("/$code/", $sf->getCode()))
+                || (!$pcre
+                && $code == $sf->getCode())
+            ) {
                 return $sf;
             }
         }
@@ -379,12 +361,13 @@ class File_MARC_Data_Field extends File_MARC_Field
      *
      * @param string $code subfield code for which the
      * {@link File_MARC_Subfield} is retrieved
+     * @param bool   $pcre if true, then match as a regular expression
      *
      * @return File_MARC_List|array returns a linked list of all subfields
      * if $code is null, an array of {@link File_MARC_Subfield} objects if
-     * one or more subfields match, or false if no codes match $code
+     * one or more subfields match, or an empty array if no codes match $code
      */
-    function getSubfields($code = null)
+    function getSubfields($code = null, $pcre = null)
     {
         $results = array();
 
@@ -396,7 +379,11 @@ class File_MARC_Data_Field extends File_MARC_Field
 
         // iterate merrily through the subfields looking for the requested code
         foreach ($this->subfields as $sf) {
-            if ($sf->getCode() == $code) {
+            if (($pcre
+                && preg_match("/$code/", $sf->getCode()))
+                || (!$pcre
+                && $code == $sf->getCode())
+            ) {
                 $results[] = $sf;
             }
         }
@@ -480,16 +467,16 @@ class File_MARC_Data_Field extends File_MARC_Field
         return (string)$this->ind1.$this->ind2.implode("", $subfields).File_MARC::END_OF_FIELD;
     }
     // }}}
-    
+
     // {{{ getContents()
     /**
      * Return fields data content as joined string
      *
-     * Return all the fields data content as a joined string 
+     * Return all the fields data content as a joined string
      *
      * @param  string $joinChar A string used to join the data conntent.
      * Default is an empty string
-     * 
+     *
      * @return string Joined string
      */
     function getContents($joinChar = '')
