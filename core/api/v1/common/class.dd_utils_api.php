@@ -1282,17 +1282,16 @@ final class dd_utils_api {
 						return $response;
 					}
 
-				// path thumb
+				// thumb_path
 					$info				= pathinfo($file_name);
 					$basemane			= basename($file_name,'.'.$info['extension']);
-					$file_path_thumb	= $tmp_dir . '/thumbnail/' . $basemane . '.jpg';
+					$thumb_file_path	= $tmp_dir . '/thumbnail/' . $basemane . '.jpg';
 
 				// delete thumb
-					if (file_exists($file_path_thumb) && !unlink($file_path_thumb)) {
+					if (file_exists($thumb_file_path) && !unlink($thumb_file_path)) {
 						$response->result	= false;
-						$response->msg		= "Error on delete thumb file (unable to unlink file): ".to_string($file_path_thumb);
+						$response->msg		= "Error on delete thumb file (unable to unlink file): ".to_string($thumb_file_path);
 						debug_log(__METHOD__." $response->msg", logger::ERROR);
-						return $response;
 					}
 			}//end foreach ($file_names as $file_name)
 
