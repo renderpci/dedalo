@@ -1,340 +1,28 @@
 <?php
 /**
 * CLASS TOOL_IMPORT_ZOTERO
+* Use the json version exported by Zotero to import into Publications section: rsc205
+* The config of the tool defines the map between Zotero and Dédalo.
 *
+* Control of section_id with a Zotero field:
+*
+* By default use the tool use  the Zotero field 'call-number' to define the section_id of the record,
+* if is set call-number Dédalo will create or update this section_id.
+* It's possible to set other field to control the section_id in with Zotero file.
+* To do that, create a specific config in "Development->tools->Tool configuration" section
+* and changing "field_to_section_id" with the name of the Zotero field with section_id.
+* you can see the field default config in the register tool or you can see the 'sample_config.json'.
+* Specific configuration need to be a full configuration, not only the property changed.
+*
+* Upload PDF files:
+*
+* Is possible to upload PDF files with the Zotero records.
+* By default the tool use Zotero 'archive' field set with the full name of the PDF file.
+* "archive" : "my_pdf_file.pdf"
+* Add the PDF files with the Zotero json file in the tool, upload all and import.
 *
 */
 class tool_import_zotero extends tool_common {
-
-
-	/**
-	* GET_FILE_DATA
-	* Extract the information about given file using regex to get the file name patterns
-	* @param string $dir
-	* 	Directory absolute path where file is located
-	* @param string $file
-	* 	Full file name like 'my_photo.today.tif'
-	*
-	* @return array $ar_data
-	* 	Associative array with all extracted data
-	*/
-	public static function get_file_data(string $dir, string $file) : array {	// , $regex="/(\d*)[-|_]?(\d*)_?(\w{0,}\b.*)\.([a-zA-Z]{3,4})\z/"
-
-		$ar_data = array();
-
-		$file_name	= pathinfo($file,PATHINFO_FILENAME);
-		$extension	= pathinfo($file,PATHINFO_EXTENSION);
-
-		// ar_data values
-			$ar_data['dir_path']		= $dir;					# /Users/dedalo/media/media_mupreva/image/temp/files/user_1/
-			$ar_data['file_path']		= $dir.'/'.$file;		# /Users/dedalo/media/media_mupreva/image/temp/files/user_1/45001-1.jpg
-			$ar_data['file_name']		= $file_name;			# 04582_01_EsCuieram_Terracota_AD_ORIG
-			$ar_data['file_name_full']	= $file;				# $ar_value[0]; # 04582_01_EsCuieram_Terracota_AD_ORIG.JPG
-			$ar_data['extension']		= $extension;			# JPG (we respect upper/lower case)
-			$ar_data['file_size']		= number_format(filesize($ar_data['file_path'])/1024/1024,3)." MB"; # 1.7 MB
-
-		// des
-			// $ar_data['image']['image_url']			= DEDALO_ROOT_WEB . "/inc/img.php?s=".$ar_data['file_path'];
-			// $ar_data['image']['image_preview_url']	= DEDALO_LIB_BASE_URL . '/tools/tool_import_zotero/foto_preview.php?f='.$ar_data['file_path'];
-
-
-		// Regex file info ^(.+)(-([a-zA-Z]{1}))\.([a-zA-Z]{3,4})$
-			// Format result preg_match '1-2-A.jpg' and 'cat-2-A.jpg'
-			// 0	=>	1-2-A.jpg 	: cat-2-A.jpg 	# full_name
-			// 1	=>	1-2-A 		: cat-2-A 		# name
-			// 2	=>	1 			: cat 			# base_name (name without order and letter)
-			// 3	=>	1 			: 				# section_id (empty when not numeric)
-			// 4	=>				: cat 			# base_string_name (empty when numeric)
-			// 5	=>	-2 			: -2 			# not used
-			// 6	=>	2 			: 2 			# portal_order
-			// 7	=>	-A 			: -A 			# not used
-			// 8	=>	A 			: A 			# target map (A,B,C..)
-			// 9	=>	jpg 		: jpg 			# extension
-		// regex values
-			preg_match("/^((([\d]+)|([^-]+))([-](\d))?([-]([a-zA-Z]))?)\.([a-zA-Z]{3,4})$/", $file, $ar_match);
-			$regex_data = new stdClass();
-				$regex_data->full_name		= $ar_match[0];
-				$regex_data->name			= $ar_match[1];
-				$regex_data->base_name		= $ar_match[2];
-				$regex_data->section_id		= $ar_match[3];
-				$regex_data->portal_order	= $ar_match[6];
-				$regex_data->letter			= $ar_match[8];
-				$regex_data->extension		= $ar_match[9];
-			$ar_data['regex'] = $regex_data;
-
-
-		return $ar_data;
-	}//end get_file_data
-
-
-
-	/**
-	* SET_MEDIA_FILE
-	* Insert in target section, current uploaded file
-	* @param array $media_file
-	* @param string tipo $target_section_tipo
-	* @param int section_id $current_section_id
-	* @param string tipo $target_component
-	* @param string|null $custom_target_quality
-	* @return bool
-	*/
-	public static function set_media_file(
-		$media_file,
-		string $target_section_tipo,
-		int $current_section_id,
-		string $target_component_tipo,
-		?string $custom_target_quality=null
-		) : bool {
-
-		$model = RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo, true);
-		switch ($model) {
-			case 'component_image':
-
-				// custom_target_quality
-					$custom_target_quality = $custom_target_quality ?? DEDALO_IMAGE_QUALITY_ORIGINAL;
-
-				// file vars
-					// Path of file like '/Users/my_user/Dedalo/media/media_mupreva/image/temp/files/user_1/'
-					$source_path		= $media_file['dir_path'];
-					// Full path to file located in temporal files uploads like '/Users/my_user/Dedalo/media/media_mupreva/image/temp/files/user_1/1253-2.jpg'
-					$source_full_path	= $media_file['file_path'];
-					// File current extension like 'jpg'
-					$extension			= $media_file['extension'];
-					// File name full like '1253-2.jpg'
-					$file_name_full		= $media_file['file_name_full'];
-					// File name without extension
-					$file_name			= $media_file['file_name'];
-
-				// safe paths check
-					if (strpos($source_path, '../')!==false ||
-						strpos($source_full_path, '../')!==false ||
-						strpos($extension, '../')!==false ||
-						strpos($file_name_full, '../')!==false ||
-						strpos($file_name, '../')!==false
-						) {
-						debug_log(__METHOD__." Error Processing Request. Unauthorized path ".to_string(), logger::ERROR);
-						return false;
-					}
-
-				// component_image
-					$component = component_common::get_instance(
-						$model,
-						$target_component_tipo,
-						$current_section_id,
-						'list',
-						DEDALO_DATA_NOLAN,
-						$target_section_tipo
-					);
-
-				// get_image_id
-					$image_id			= $component->get_id();
-					$additional_path	= $component->get_additional_path();
-
-				// original image desired store
-					$original_path		= $component->get_media_path_dir($custom_target_quality);
-					$original_file_path	= $original_path .'/'. $image_id . '.'. strtolower($extension);
-
-				// copy the original
-					if (!copy($source_full_path, $original_file_path)) {
-						debug_log(__METHOD__." Error on copy source_full_path to original_file_path ", logger::ERROR);
-						debug_log(__METHOD__." source_full_path ".to_string($source_full_path), logger::ERROR);
-						debug_log(__METHOD__." original_file_path ".to_string($original_file_path), logger::ERROR);
-						return false;
-					}
-
-				// Delete the thumbnail copy
-					$original_file_thumb = $source_path .'/thumbnail/'. $file_name_full;
-					if (file_exists($original_file_thumb)) {
-						if(!unlink($original_file_thumb)){
-							debug_log(__METHOD__." Thumb Delete ERROR of: ".to_string($original_file_thumb), logger::ERROR);
-							return false;
-						}
-					}
-
-				// extension unify. convert JPG | PSD | TIFF | ... to jpg
-					if (strtolower($extension)!=strtolower(DEDALO_IMAGE_EXTENSION)) {
-						$original_file_path_jpg = $original_path .'/'. $image_id .'.'. DEDALO_IMAGE_EXTENSION;
-						$options = new stdClass();
-							$options->source_file	= $original_file_path;
-							$options->target_file	= $original_file_path_jpg;
-							$options->quality		= 100;
-
-						ImageMagick::convert($options);
-					}
-
-				// convert to default quality
-					// QUALITY_DEFAULT. Generate dedalo default quality version (usually 1.5MB) and thumb image
-					if ($custom_target_quality!==DEDALO_IMAGE_QUALITY_DEFAULT) {
-						$component->convert_quality(
-							$custom_target_quality, // source_quality
-							DEDALO_IMAGE_QUALITY_DEFAULT // target_quality
-						);
-					}
-					// THUMB_DEFAULT. Convert to thumb quality
-					$component->convert_quality(
-						DEDALO_IMAGE_QUALITY_DEFAULT, // source_quality
-						DEDALO_IMAGE_THUMB_DEFAULT // target_quality
-					);
-
-				// generate the svg file
-					$svg_string_node = $component->create_default_svg_string_node(); // return string|null
-					if (empty($svg_string_node)) {
-						debug_log(__METHOD__." File not found on create_default_svg_string_node. Ignored 'create_svg_file' ".to_string(), logger::ERROR);
-					}else{
-						$created_svg_file = $component->create_svg_file($svg_string_node);
-						if ($created_svg_file!==true) {
-							debug_log(__METHOD__." Error creating svg file ".to_string($svg_string_node), logger::ERROR);
-						}
-					}
-
-				// save
-					$value = new stdClass();
-						$value->original_file_name		= $file_name_full;
-						$value->original_upload_date	= component_date::get_date_now();
-					$component->set_dato([$value]);
-					$component->Save();
-
-				// remove original uploaded image after import
-					unlink(	$source_full_path );
-				break;
-
-			default:
-				debug_log(__METHOD__." Error. Media type not allowed ".to_string(), logger::ERROR);
-				break;
-		}
-
-
-		return true;
-	}//end set_media_file
-
-
-
-	/**
-	* GET_MEDIA_FILE_DATE
-	*
-	* @param array $media_file
-	* 	Assoc array with file info like file_path
-	* @return object|null dd_date $dd_date
-	*/
-	public static function get_media_file_date(array $media_file, string $model) {
-
-		$dd_date			= null;
-		$source_full_path	= $media_file['file_path'];
-
-		switch ($model) {
-			case 'component_image':
-				// EXIF try to get date from file metadata
-				$DateTimeOriginal=false;
-				try {
-					$command			= MAGICK_PATH . 'identify -format "%[EXIF:DateTimeOriginal]" ' .'"'.$source_full_path.'"';
-					$DateTimeOriginal	= shell_exec($command);
-					$regex				= "/^(-?[0-9]+)[-:\/.]?([0-9]+)?[-:\/.]?([0-9]+)? ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?$/";
-
-					if(empty($DateTimeOriginal)){
-						$command			= MAGICK_PATH . 'identify -format "%[date:modify]" ' .'"'.$source_full_path.'"';
-						$DateTimeOriginal	= shell_exec($command);
-						$regex   = "/^(\d{4})[-:\/.]?(\d{2})[-:\/.]?(\d{2})T?(\d{2}):(\d{2}):(\d{2})[.]?(\d+)?[\+]?(\d{2})?[-:\/.]?(\d{2})?/";
-					}
-
-				} catch (Exception $e) {
-					if(SHOW_DEBUG) {
-						error_log("Error on get DateTimeOriginal from image metadata");
-					}
-				}
-
-				if (!empty($DateTimeOriginal)) {
-
-					$dd_date		= new dd_date();
-					$original_dato	= (string)$DateTimeOriginal;
-
-					preg_match($regex, $original_dato, $matches);
-
-					if(isset($matches[1])) $dd_date->set_year((int)$matches[1]);
-					if(isset($matches[2])) $dd_date->set_month((int)$matches[2]);
-					if(isset($matches[3])) $dd_date->set_day((int)$matches[3]);
-					if(isset($matches[4])) $dd_date->set_hour((int)$matches[4]);
-					if(isset($matches[5])) $dd_date->set_minute((int)$matches[5]);
-					if(isset($matches[6])) $dd_date->set_second((int)$matches[6]);
-					if(isset($matches[7])) $dd_date->set_ms((int)$matches[7]);
-					// if(isset($matches[8])) $dd_date->set_timezonehh((int)$matches[8]);
-					// if(isset($matches[9])) $dd_date->set_timezonemm((int)$matches[9]);
-				}
-				break;
-
-			default:
-				debug_log(__METHOD__." Error. get_media_file_date . Model is not defined ".to_string(), logger::ERROR);
-				break;
-		}//end switch ($model)
-
-
-		return $dd_date;
-	}//end get_media_file_date
-
-
-
-	/**
-	* FILE_PROCESSOR
-	* @return object $response
-	*/
-	public static function file_processor(object $request_options) : object {
-
-		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed';
-
-		$options = new stdClass();
-			$options->file_processor			= null;
-			$options->file_processor_properties	= null;
-			$options->file_name					= null;
-			$options->file_path					= null;
-			$options->section_tipo				= null;
-			$options->section_id				= null;
-			$options->target_section_tipo		= null;
-			$options->tool_config				= null;
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-		# FILE_PROCESSOR
-		# Global var button properties JSON data array
-		# Optional additional file script processor defined in button import properties
-		# Note that var $file_processor_properties is the button properties JSON data, NOT current element processor selection
-
-		# Iterate each processor
-		foreach ((array)$options->file_processor_properties as $key => $file_processor_obj) {
-
-			if ($file_processor_obj->function_name!==$options->file_processor) {
-				continue;
-			}
-
-			$script_file = str_replace(['DEDALO_EXTRAS_PATH'], [DEDALO_EXTRAS_PATH], $file_processor_obj->script_file);
-			if(include_once($script_file)) {
-
-				$function_name 	  = $file_processor_obj->function_name;
-				if (is_callable($function_name)) {
-					$custom_arguments = (array)$file_processor_obj->custom_arguments;
-					$standard_options = [
-						"file_name"				=> $options->file_name,
-						"file_path"				=> $options->file_path,
-						"section_tipo"			=> $options->section_tipo,
-						"section_id"			=> $options->section_id,
-						"target_section_tipo"	=> $options->target_section_tipo,
-						"tool_config"			=> $options->tool_config
-					];
-					$result = call_user_func($function_name, $standard_options, $custom_arguments);
-				}else{ debug_log(__METHOD__." Error on call file processor function: ".to_string($function_name), logger::ERROR); }
-			}else{ debug_log(__METHOD__." Error on include file processor file script_file: ".to_string($script_file), logger::ERROR); }
-
-			debug_log(__METHOD__." Processed file function_name $function_name with script $script_file".to_string(), logger::DEBUG);
-		}//end foreach ((array)$options->file_processor_properties as $key => $file_processor_obj)
-
-
-		$response->result 	= true;
-		$response->msg 		= 'OK. Request done';
-
-
-		return (object)$response;
-	}//end file_processor
-
-
 
 	/**
 	* IMPORT_FILES
@@ -346,11 +34,9 @@ class tool_import_zotero extends tool_common {
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
-		// get config
-		$tool_name	= get_called_class();
-		$config = tool_common::get_config($tool_name);
-
-		return $response;
+		// get configuration with map to convert zotero files
+			$tool_name	= get_called_class();
+			$config		= tool_common::get_config($tool_name);
 
 		// options
 			// tipo. string component tipo like 'oh17'
@@ -367,48 +53,40 @@ class tool_import_zotero extends tool_common {
 			$components_temp_data		= $options->components_temp_data ?? null;
 			// key_dir. string like: 'oh17_oh1' (contraction section_tipo + component tipo)
 			$key_dir					= $options->key_dir ?? null;
-			// custom_target_quality. Optional media quality to store uploaded files
-			$custom_target_quality		= $options->custom_target_quality ?? null;
 
-		// import_mode
-			$import_mode			= $tool_config->import_mode ?? 'default';
-			$import_file_name_mode	= $tool_config->import_file_name_mode ?? null;
-
-		// ddo_map
-			$ar_ddo_map = $tool_config->ddo_map;
-
-		// target component info
-			$target_ddo_component = array_find($ar_ddo_map, function($item){
-				return $item->role==='target_component';
+			// main components to use Dédalo
+			$main = $config->config->main;
+			// get definition field to set section_id
+			$field_to_section_id = array_find($main, function($el) {
+				return $el->name === 'field_to_section_id';
 			});
-			$target_component_tipo	= $target_ddo_component->tipo;
-			$target_component_model	= RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo, true);
+			// map between Zotero and Dédalo
+			$map = $config->config->map;
+			// map between Zotero type and Dédalo typology list
+			$typology = $config->config->typology;
+			// map between Zotero type and Dédalo standard_type list (ISBN, ISSN)
+			$standard_type = $config->config->standard_type;
 
-		// file_processor_properties
-			$file_processor_properties = $tool_config->file_processor ?? null;
-
-		// init vars
-			$ar_msg							= [];	// messages for response info
+			// ddo_map
+			$ar_ddo_map = $tool_config->ddo_map;
 			$imput_components_section_tipo	= [];	// all different used section tipo in section_temp
-			$total							= 0;	// n of files processed
 
-		// ar_data. All files collected from files upload form
-			$ar_processed	= [];
-			// $tmp_dir		= tool_import_zotero_UPLOAD_DIR;
-			$user_id = navigator::get_user_id();
-			$tmp_dir = DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $key_dir;
+			// read Zotero file in Json format:
+				$ar_zotero_files_data = array_filter($files_data, function($el) {
+					return str_ends_with($el->name, '.json');
+				});
 
-			foreach ((array)$files_data as $value_obj) {
+				$user_id = navigator::get_user_id();
+				$tmp_dir = DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $key_dir;
 
-				$current_file_name				= $value_obj->name;
-				$current_file_processor			= $value_obj->file_processor ?? null; # Note that var $current_file_processor is only the current element processor selection
-				$current_component_option_tipo	= $value_obj->component_option;
+				$ar_procesing_info = [];
 
-				// Check file exists
-					$file_full_path = $tmp_dir .'/'. $current_file_name;
+				foreach ($ar_zotero_files_data as $zotero_file_data) {
+					// Check file exists
+					$file_full_path = $tmp_dir .'/'. $zotero_file_data->name;
 
 					if (!file_exists($file_full_path)) {
-						$msg = "File ignored (not found) $current_file_name";
+						$msg = "File ignored (not found) $zotero_file_data->name";
 						$ar_msg[] = $msg;
 						debug_log(__METHOD__
 							." $msg ". PHP_EOL
@@ -417,262 +95,390 @@ class tool_import_zotero extends tool_common {
 						);
 						continue; // Skip file
 					}
-				// Check proper mode config
-					if ($import_file_name_mode==='enumerate' && $import_mode!=='section') {
-						$msg = "Invalid import mode: $import_mode . Ignored action";
-						debug_log(__METHOD__
-							." $msg "
-							, logger::ERROR
-						);
-						$ar_msg[] = $msg;
-						continue; // Skip file
-					}
+					$ar_zotero_data = json_decode(file_get_contents($file_full_path));
+					foreach ($ar_zotero_data as $zotero_obj) {
 
-				// debug.  Init file import
-				// debug_log(__METHOD__." Init file import_mode:$import_mode - import_file_name_mode:$import_file_name_mode - file_full_path ".to_string($file_full_path), logger::DEBUG);
+						// Create section
+							// In some cases use call-number field in Zotero to get the id of Dédalo.
+							// Section id get from zotero data
+							$section_id = null;
 
-				// file_data
-					$file_data = tool_import_zotero::get_file_data($tmp_dir, $current_file_name);
+							$optional_id = isset($field_to_section_id)
+								? $field_to_section_id->value
+								: null;
 
-				// target_ddo
-					if ($import_mode==='section') {
-						// switch import_file_name_mode
-						switch ($import_file_name_mode) {
 
-							case 'enumerate':
-								if (!empty($file_data['regex']->section_id)) {
-									// Direct numeric case like 1.jpg
-									$section = section::get_instance($file_data['regex']->section_id, $section_tipo);
-									$section->forced_create_record(); // First record of current section_id force create record. Next files with same section_id, not.
-									$_base_section_id = $section->get_section_id();
-								}else{
-									$section = section::get_instance(null, $section_tipo,'edit',false);
-									$section->Save();
-									$_base_section_id = $section->get_section_id();
-								}
-								$section_id = (int)$_base_section_id;
-								break;
+							if (isset($field_to_section_id) && isset($zotero_obj->$optional_id)) {
 
-							case 'named':
-								// String case like ánfora.jpg
-								// Look already imported files
-								$ar_filter_result = array_filter($ar_processed, function($element) use($file_data) {
-									return $file_data['regex']->base_name === $element->file_data['regex']->base_name;
+								$section_id = (int)$zotero_obj->$optional_id;	// Optionally, if is defined zotero->call-number, use this as section id
+
+								$section = section::get_instance($section_id, $section_tipo);
+								$forced_create_record = $section->forced_create_record(); // Sure record is created/recycled with requested id
+
+
+							}else{
+								// Use zotero id as id (stored in "CODE" rsc137) when exists. Else create new section
+								$id_item = array_find($map, function($el) {
+									return $el->name === 'id';
 								});
-								$filter_result = reset($ar_filter_result);
-								if (!empty($filter_result->section_id)) {
-									# Re-use safe already created section_id (file with same base_name like 'ánforas')
-									$_base_section_id = $filter_result->section_id;
-								}else{
-									$section = section::get_instance(null, $section_tipo,'edit',false);
-									$section->Save();
-									$_base_section_id = $section->get_section_id();
+
+								$ar_parts 	= explode('/', $zotero_obj->id);
+								$zotero_id  = end($ar_parts);
+								$section_id = self::get_section_id_from_zotero_id( $id_item, $zotero_id);
+								if (is_null($section_id)) {
+									# SECTION : Create new section when not found zotero id in field code
+									$section = section::get_instance($section_id, $section_tipo);
+									$section_id = $section->Save();
 								}
-								$section_id = (int)$_base_section_id;
-								break;
+							}
+							if (empty($section_id)){
+								debug_log(__METHOD__
+									.' Error Processing Request. section_id is empty, ignored zotero record '
+									, logger::ERROR
+								);
+								continue;
+							}
 
-							default:
-								# IMPORT
-								# Create new section
-								$section 		= section::get_instance(null, $section_tipo);
-								$section->Save();
-								$section_id 	= $section->get_section_id();
-								break;
-						}//end switch ($import_file_name_mode)
-						// set target_ddo from tool_config ddo_map
-						$target_ddo = array_find($ar_ddo_map, function($item) use($current_component_option_tipo){
-							return $item->role === 'component_option' && $item->tipo===$current_component_option_tipo;
-						});
-					}else{
-						// target ddo will be the caller portal, used when the tool is loaded by specific portal and all files will be stored inside these portal
-						$target_ddo = new dd_object();
-							$target_ddo->set_tipo($tipo);
-							$target_ddo->set_section_tipo($section_tipo);
-							$target_ddo->set_model(RecordObj_dd::get_modelo_name_by_tipo($tipo, true));
-					}//end if($import_mode==='section')
+						// Processing Zotero record
+							// Response track
+							$procesing_info			= new stdClass();
+							$ar_procesing_info[]	= $procesing_info;
 
-				// target_ddo check
-					if(empty($target_ddo)){
+							# Object foreach
+							foreach ($zotero_obj as $name => $value) {
+
+								$found_map_item = array_find($map, function($el) use($name) {
+									return $name === $el->name;
+								});
+								#dump($found_map_item, ' ar_filter_result ++ '.to_string($name));
+								if (empty($found_map_item)) {
+									debug_log(__METHOD__
+										.' Ignored '.$name.' from zotero import process '
+										, logger::ERROR
+									);
+									continue; # Skip not accepted data
+								}
+								$ddo_map = $found_map_item->ddo_map;
+								$ddo = reset($ddo_map);
+
+								switch ($name) {
+									case 'id':
+										$current_model	= RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true); // component_input_text
+										$component		= component_common::get_instance(
+											$current_model,
+											$ddo->tipo,
+											$section_id,
+											'edit',
+											DEDALO_DATA_NOLAN,
+											$ddo->section_tipo
+										);
+										$ar_parts 	= explode('/', $zotero_obj->id);
+										$zotero_id  = end($ar_parts);
+
+										$component->set_dato( [$zotero_id] );
+										$component->Save();
+										$procesing_info->$name = "+ Saved $name value ".to_string($value)." from zotero import process";
+										break;
+
+									case 'type':
+										// get the typology locator set in config, and use it as data.
+										$found_typology_item = array_find($typology, function($el) use($value) {
+											return $value === $el->name;
+										});
+										$data = isset($found_typology_item) && isset($found_typology_item->value)
+											? $found_typology_item->value
+											: null;
+
+										if (empty($data)) {
+											debug_log(__METHOD__
+												.' Ignored type '.$name.' from zotero import process. This typology is not defined in Dedalo '
+												, logger::ERROR
+											);
+										}else{
+											$current_model_name = RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
+											$component = component_common::get_instance(
+												$current_model_name,
+												$ddo->tipo,
+												$section_id,
+												'edit',
+												DEDALO_DATA_NOLAN,
+												$section_tipo)
+											;
+											$component->set_dato( $data );
+											$component->Save();
+											$procesing_info->$name = "+ Saved $name value $value with: ". to_string($data) ." from zotero import process";
+										}
+										break;
+
+									case 'container-title':
+										$series_ddo			= end($ddo_map);
+										$section_id_list	= self::get_section_id_from_zotero_container_title( $series_ddo, $zotero_obj->$name );
+										$section_tipo_series		= $series_ddo->section_tipo; # 'rsc212';  # Lista de valores Series / colecciones
+
+										if ($section_id_list>0) {
+											# Use existing record
+										}else{
+
+											# create a new record in list
+											$section_container_list		= section::get_instance(null,$section_tipo_series);
+											$section_id_list			= (int)$section_container_list->Save();
+											$current_model 				= RecordObj_dd::get_modelo_name_by_tipo($series_ddo->tipo,true);
+											$component_series_name		= component_common::get_instance(
+												$current_model ,
+												$series_ddo->tipo,
+												$section_id_list,
+												'edit',
+												DEDALO_DATA_LANG,
+												$section_tipo_series
+											); # Collection / Series (component_input_text)
+
+											# To eliminate quotes
+											// $serie_name = str_replace(array("'",'"'), '', $zotero_obj->$name);
+
+											$component_series_name->set_dato( [$zotero_obj->$name] );
+											$component_series_name->Save();
+										}
+										if(SHOW_DEBUG) {
+											if ($section_id_list<1) throw new Exception("Error Processing Request", 1);
+										}else{
+											$procesing_info->$name = "! Error Processing Request. section_id_list not found ($value)";
+										}
+										$current_model = RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
+										$component = component_common::get_instance(
+											$current_model,
+											$ddo->tipo,
+											$section_id,
+											'edit',
+											DEDALO_DATA_NOLAN,
+											$ddo->section_tipo
+										);
+										$locator = new locator();
+											$locator->set_section_id($section_id_list);
+											$locator->set_section_tipo($section_tipo_series);
+											$locator->set_type(DEDALO_RELATION_TYPE_LINK);	// Added 8-3-2018
+											$locator->set_from_component_tipo($ddo->tipo);  // Added 8-3-2018
+
+										$component->set_dato( array($locator) );
+										$component->Save();
+										$procesing_info->$name = "+ Saved $name value ". json_encode($locator)." from zotero import process";
+
+										break;
+
+									case 'author':
+										$ar_name   = (array)self::zotero_name_to_name( $zotero_obj->$name, 'array' );
+										$component = component_common::get_instance(
+											'component_input_text',
+											$ddo->tipo,
+											$section_id,
+											'edit',
+											DEDALO_DATA_NOLAN,
+											$ddo->section_tipo
+										);
+										$component->set_dato( $ar_name );
+										$component->Save();
+										$procesing_info->$name = "+ Saved $name value ".to_string($ar_name)." (".to_string($value).") from zotero import process";
+										break;
+
+									case 'issued':
+									case 'accessed':
+										$date 	   = self::zotero_date_to_dd_date( $zotero_obj->$name );
+										$component = component_common::get_instance(
+											'component_date',
+											$ddo->tipo,
+											$section_id,
+											'edit',
+											DEDALO_DATA_NOLAN,
+											$ddo->section_tipo
+										);
+										$date_object = new stdClass();
+											$date_object->start = $date;
+										$component->set_dato( $date_object );
+										$component->Save();
+										$procesing_info->$name = "+ Saved $name value ".to_string($date_object)." from zotero import process";
+										break;
+
+									case 'call-number':
+										if (empty($value)) {
+											$procesing_info->$name ="- Ignored $name empty file from Zotero import process";
+											break;
+										}
+
+										$procesing_info->$name = '';
+
+										// Import pdf file based on call-number id. Name your pdf like "16.pdf" for call-number 16
+										#$import_pdf_file = self::import_pdf_file($zotero_obj, $name, $section_id, $section_tipo, $value, $ar_response);
+										break;
+
+									case 'archive':
+										$pdf_file = $tmp_dir. '/'. $zotero_obj->$name;
+
+										if(!file_exists($pdf_file)){
+											debug_log(__METHOD__
+												.' Ignored archive '.$name.' from Zotero import process. The pdf file is not uploaded '
+												, logger::WARNING
+											);
+
+										}else{
+											// Import pdf file based on 'archive' field. Name your pdf like "16.pdf"
+											$import_pdf_file = self::import_pdf_file(
+												$zotero_obj,
+												$main,
+												$section_id,
+												$key_dir
+											);
+
+											// Add import msg
+											$procesing_info->import_pdf_file = $import_pdf_file->msg;
+										}
+
+										// Import pdf file based on call-number id. Name your pdf like "16.pdf" for call-number 16
+										#$import_pdf_file = self::import_pdf_file($zotero_obj, $name, $section_id, $section_tipo, $value, $ar_response);
+										break;
+
+									case 'ISSN':
+									case 'ISBN':
+										$current_model = RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
+										$component = component_common::get_instance(
+											$current_model,
+											$ddo->tipo,
+											$section_id,
+											'edit',
+											DEDALO_DATA_LANG,
+											$ddo->section_tipo
+										);
+										$current_value = $zotero_obj->$name;
+										$current_value = array($current_value);	// Is array (component_input_text)
+										$component->set_dato( $current_value );
+										$component->Save();
+										$procesing_info->$name = "+ Saved $name value ".to_string($value)." from zotero import process";
+
+										# Save number typology too
+										$found_item = array_find($standard_type, function($el) use($name) {
+											return $name === $el->name;
+										});
+										$data = isset($found_item)
+											? $found_item->value
+											: end($standard_type)->value;
+
+										$field_standard_number = array_find($main, function($el) {
+											return $el->name === 'field_standard_number';
+										});
+
+										$component_tipo = $field_standard_number->tipo;
+
+										$current_model = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true); // component_relation_select
+										$component = component_common::get_instance(
+											$current_model,
+											$component_tipo,
+											$section_id,
+											'edit',
+											DEDALO_DATA_NOLAN,
+											$section_tipo
+										);
+										$component->set_dato( $data );
+										$component->Save();
+										break;
+
+									case 'URL':
+									case 'DOI':
+
+										$current_model = RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
+										$component = component_common::get_instance(
+											$current_model,
+											$ddo->tipo,
+											$section_id,
+											'edit',
+											DEDALO_DATA_LANG,
+											$ddo->section_tipo
+										);
+										$current_value = ($name === 'DOI')
+											? 'https://www.doi.org/'.$zotero_obj->$name
+											: $zotero_obj->$name;
+
+										$data_iri = $component->url_to_iri($current_value);
+
+										$component->set_dato( [$data_iri] );
+										$component->Save();
+										$procesing_info->$name = "+ Saved $name value ".to_string($data_iri)." from zotero import process";
+
+										break;
+
+									default:
+										$current_model = RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
+										$component = component_common::get_instance(
+											$current_model,
+											$ddo->tipo,
+											$section_id,
+											'edit',
+											DEDALO_DATA_LANG,
+											$ddo->section_tipo
+										);
+										$current_value = $zotero_obj->$name;
+										$component->set_dato( [$current_value] );
+										$component->Save();
+										$procesing_info->$name = "+ Saved $name value ".to_string($value)." from zotero import process";
+
+										if ($name==='title') {
+											$procesing_info->titulo = $zotero_obj->$name;
+										}
+										break;
+								}#end switch
+							}#end foreach ($zotero_obj as $name => $value)
+
+						// Processing temporal section
+							// ar_ddo_map iterate. role based actions
+							// Create the ddo components with the data to store with the import
+							// when the component has a input in the tool propagate temp section_data
+							// Update created section with temp section data
+							// when the component stored the filename, get the filename and save it
+							foreach ($ar_ddo_map as $ddo) {
+
+								$model			= RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
+								$current_lang	= RecordObj_dd::get_translatable($ddo->tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+
+								$component	= component_common::get_instance(
+									$model,
+									$ddo->tipo,
+									$section_id,
+									'list',
+									$current_lang,
+									$ddo->section_tipo
+								);
+
+								switch ($ddo->role) {
+									case 'input_component':
+
+										// imput_components_section_tipo store
+											if(!in_array($ddo->section_tipo, $imput_components_section_tipo)){
+												$imput_components_section_tipo[] = $ddo->section_tipo;
+											}
+
+										// component_data. Get from request and save
+											$component_data = array_find($components_temp_data, function($item) use($ddo){
+												return isset($item->tipo) && $item->tipo===$ddo->tipo && $item->section_tipo===$ddo->section_tipo;
+											});
+											if(!empty($component_data) && !empty($component_data->value)){
+												$component->set_dato($component_data->value);
+												$component->Save();
+											}
+
+										break;
+
+									default:
+										// Nothing to do here
+										break;
+								}//end switch ($ddo->role)
+							}//end foreach ($ar_ddo_map as $ddo)
+					}//end foreach $ar_zotero_data
+
+					//delete the Zotero file
+					if (!unlink($file_full_path)) {
 						debug_log(__METHOD__
-							." target_ddo is empty and will be ignored "
+							.' Error deleting Zotero file. File: ' . $file_full_path
 							, logger::ERROR
 						);
-						continue;
 					}
-
-				// component portal. Component (expected portal)
-					$component_portal = component_common::get_instance(
-						$target_ddo->model,
-						$target_ddo->tipo,
-						$section_id,
-						'list',
-						DEDALO_DATA_NOLAN,
-						$target_ddo->section_tipo
-					);
-					// Portal target_section_tipo
-					$target_section_tipo = $target_ddo->target_section_tipo ?? $component_portal->get_ar_target_section_tipo()[0];
-
-				// section. Create a new section for each file from current portal
-					$portal_response = (object)$component_portal->add_new_element((object)[
-						'target_section_tipo' => $target_section_tipo
-					]);
-					if ($portal_response->result===false) {
-						$response->result 	= false;
-						$response->msg 		= "Error on create portal children: ".$portal_response->msg;
-						debug_log(__METHOD__." $response->msg ", logger::ERROR);
-						return $response;
-					}
-					// save portal if all is all ok
-					$component_portal->Save();
-
-					// Fix new section created as current_section_id
-					$target_section_id = $portal_response->section_id;
-
-				// component portal new section order. Order portal record when is $import_file_name_mode=enumerate
-					if ($import_file_name_mode==='enumerate' || $import_file_name_mode==='named' ) {
-						$portal_norder = $file_data['regex']->portal_order!=='' ? (int)$file_data['regex']->portal_order : false;
-						if ($portal_norder!==false) {
-							$changed_order = $component_portal->set_locator_order( $portal_response->added_locator, $portal_norder );
-							if ($changed_order===true) {
-								$component_portal->Save();
-							}
-							debug_log(__METHOD__." CHANGED ORDER FOR : ".$file_data['regex']->portal_order." ".to_string($file_data['regex']), logger::DEBUG);
-						}
-					}
-
-				// ar_ddo_map iterate. role based actions
-					// Create the ddo components with the data to store with the import
-					// when the component has a input in the tool propagate temp section_data
-					// Update created section with temp section data
-					// when the component stored the filename, get the filename and save it
-					foreach ($ar_ddo_map as $ddo) {
-
-						if($ddo->role === 'component_option'){
-							continue;
-						}
-
-						$model					= RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
-						$current_lang			= RecordObj_dd::get_translatable($ddo->tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-						$destination_section_id	= ($ddo->section_tipo===$section_tipo)
-							? $section_id
-							: $target_section_id;
-
-						$component	= component_common::get_instance(
-							$model,
-							$ddo->tipo,
-							$destination_section_id,
-							'list',
-							$current_lang,
-							$ddo->section_tipo
-						);
-
-						switch ($ddo->role) {
-							case 'target_filename':
-
-								// file_name. Stores the original file name like 'My añorada.foto.jpg' to a component_input_text
-									$component->set_dato($current_file_name);
-									$component->Save();
-								break;
-
-							case 'target_date':
-
-								// media_file_date (using EXIF or similar metadata source into the file)
-									$dd_date = tool_import_zotero::get_media_file_date($file_data, $target_component_model);
-									if (!empty($dd_date)) {
-										$dato = new stdClass();
-											$dato->start = $dd_date;
-										$component->set_dato([$dato]);
-										$component->Save();
-									}
-								break;
-
-							case 'input_component':
-
-								// imput_components_section_tipo store
-									if(!in_array($ddo->section_tipo, $imput_components_section_tipo)){
-										$imput_components_section_tipo[] = $ddo->section_tipo;
-									}
-
-								// component_data. Get from request and save
-									$component_data = array_find($components_temp_data, function($item) use($ddo){
-										return isset($item->tipo) && $item->tipo===$ddo->tipo && $item->section_tipo===$ddo->section_tipo;
-									});
-									if(!empty($component_data) && !empty($component_data->value)){
-										$component->set_dato($component_data->value);
-										$component->Save();
-									}
-
-								// component_filter. Propagate the project to the media section, that will be the target_section_tipo
-									if($model==='component_filter'){
-										// get the component_filter of the target_ddo section_tipo
-										$ar_children_tipo = section::get_ar_children_tipo_by_model_name_in_section(
-											$target_ddo_component->section_tipo,
-											[$model],
-											true,
-											true
-										);
-										$component_filter_tipo= $ar_children_tipo[0];
-
-										$target_component = component_common::get_instance(
-											$model,
-											$component_filter_tipo,
-											$target_section_id,
-											'list',
-											$current_lang,
-											$target_ddo_component->section_tipo
-										);
-										$target_component->set_dato($component_data->value);
-										$target_component->Save();
-									}
-								break;
-
-							default:
-								// Nothing to do here
-								break;
-						}//end switch ($ddo->role)
-					}//end foreach ($ar_ddo_map as $ddo)
-
-				// file_processor
-					// Global var button properties json data array
-					// Optional additional file script processor defined in button import properties
-					// Note that var $file_processor_properties is the button properties json data, NOT current element processor selection
-					if (!empty($current_file_processor) && !empty($file_processor_properties)) {
-						$processor_options = new stdClass();
-							$processor_options->file_processor				= $current_file_processor;
-							$processor_options->file_processor_properties	= $file_processor_properties;
-							# Standard arguments
-							$processor_options->file_name					= $current_file_name;
-							$processor_options->file_path					= $tmp_dir;
-							$processor_options->section_tipo				= $section_tipo;
-							$processor_options->section_id					= $section_id;
-							$processor_options->target_section_tipo			= $target_section_tipo;
-							$processor_options->tool_config					= $tool_config;
-						$response_file_processor = tool_import_zotero::file_processor($processor_options);
-					}//end if (!empty($file_processor_properties))
-
-				// set_media_file. Move uploaded file to media folder and create default versions
-					tool_import_zotero::set_media_file(
-						$file_data,
-						$target_section_tipo,
-						$target_section_id,
-						$target_component_tipo,
-						$custom_target_quality
-					);
-
-				// ar_processed. Add as processed
-					$processed_info = new stdClass();
-						$processed_info->file_name				= $value_obj->name;
-						$processed_info->file_processor			= $value_obj->file_processor ?? null;
-						$processed_info->target_component_tipo	= $target_component_tipo;
-						$processed_info->section_id				= $section_id;
-						$processed_info->file_data				= $file_data;
-					$ar_processed[] = $processed_info;
-
-
-				debug_log(__METHOD__." Imported files and data from $section_tipo - $section_id".to_string(), logger::WARNING);
-
-				$total++;
-			}//end foreach ((array)$files_data as $key => $value_obj)
+				}//end foreach $ar_zotero_files
 
 		// Reset the temporary section of the components, for empty the fields.
 			foreach ($imput_components_section_tipo as $current_section_tipo) {
@@ -684,12 +490,401 @@ class tool_import_zotero extends tool_common {
 
 		// response
 			$response->result	= true;
-			$response->msg		= 'Import files done successfully. Total: '.$total ." of " .count($files_data);
+			$response->msg		= 'Import Zotero files done successfully.';
 
 
 		return $response;
 	}//end if ($mode=='import_files')
 
+
+
+	/**
+	* IMPORT_PDF_FILE
+	* @return object $response
+	*/
+	# public static function import_pdf_file($zotero_obj, $name, $section_id, $section_tipo, $file_name, $ar_response) {
+	public static function import_pdf_file($zotero_obj, $main, $section_id, $key_dir) {
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed';
+
+		// section_tipo component
+			$section = array_find($main, function($el) {
+				return $el->name === 'section';
+			});
+
+		// pdf component type
+			$pdf = array_find($main, function($el) {
+				return $el->name === 'pdf';
+			});
+
+		// section_tipo component
+			$identifying_image = array_find($main, function($el) {
+				return $el->name === 'identifying_image';
+			});
+
+		$name = $zotero_obj->archive;
+		#
+		# 1 COMPONENT_PDF
+		# Create component pdf to obtain target path of pdf file
+		$component_tipo = $pdf->tipo;
+		$component_pdf 	= component_common::get_instance(
+			'component_pdf',
+			$component_tipo,
+			$section_id,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			$section->tipo
+		);
+
+		// process file
+			// get the page defined in Zotero to assign the first page to first tag page into transcription text.
+			$page		= isset($zotero_obj->page) ? $zotero_obj->page : 1;
+			$first_page	= (int)self::zotero_page_to_first_page( $page );	# number of first page. default is 1
+
+			$file_name = trim($name);
+			$file_data = new stdClass();
+				$file_data->name		= $file_name;
+				$file_data->key_dir		= $key_dir;
+				$file_data->tmp_dir		= 'DEDALO_UPLOAD_TMP_DIR';
+				$file_data->tmp_name	= $file_name;
+				$file_data->first_page 	= $first_page;
+
+
+			// add the temporal file uploaded to original directory of the component
+			$file_info = $component_pdf->add_file($file_data);
+			// process file to create default version or get the text into text_area field.
+			$process_uploaded_file_response = $component_pdf->process_uploaded_file($file_info->ready);
+			if($process_uploaded_file_response->result==false){
+				$response->msg .= ' Error on process pdf file ! ';
+				return $response;
+			}
+
+		// render first page as image
+			$image_file_path = $component_pdf->create_image();
+			// if component had created his image, create the image component to add this file.
+			if($image_file_path!==false){
+
+				$file_id = $component_pdf->get_id();
+
+				$component_image = component_common::get_instance(
+					'component_image',
+					$identifying_image->tipo,
+					$section_id,
+					'edit',
+					DEDALO_DATA_NOLAN,
+					$section->tipo
+				);
+
+				$file_data = new stdClass();
+					$file_data->name		= $file_name . '.' . DEDALO_IMAGE_EXTENSION;
+					$file_data->key_dir		= 'pdf/tmp';
+					$file_data->tmp_dir		= 'DEDALO_MEDIA_PATH';
+					$file_data->tmp_name	= $file_id. '.' . DEDALO_IMAGE_EXTENSION;
+					$file_data->source_file	= DEDALO_MEDIA_PATH. '/pdf/tmp/' . $file_id. '.' . DEDALO_IMAGE_EXTENSION;
+
+				// add the temporal file uploaded to original directory of the component
+					$file_info = $component_image->add_file($file_data);
+
+					$component_image->set_quality(DEDALO_IMAGE_QUALITY_ORIGINAL);
+				// process file to create default version or get the text into text_area field.
+					$component_image->process_uploaded_file($file_info->ready);
+			}
+
+		// delete thumbnails files
+			$options = new stdClass();
+				$options->file_name	= $file_name;
+				$options->key_dir	= $key_dir;
+				$options->tmp_name	= $file_name;
+			$rqo = new request_query_object();
+				$rqo->set_options($options);
+
+			$delete_result = dd_utils_api::delete_uploaded_file($rqo);
+
+		$response->result 	= true;
+		$response->msg 		= 'Ok, pdf file was imported';
+
+		return $response;
+	}//end import_pdf_file
+
+
+	// Zotero transformers data
+
+
+	/**
+	* ZOTERO_DATE_TO_DD_DATE
+	* Convert Zotero date format (object with date/time parts) to standard Dédalo dd_date
+	* @param object $zotero_date
+	* @return object $dd_date
+	* Format >otero obj example
+	* stdClass Object (
+	*        [date-parts] => Array (
+	*                [0] => Array (
+	*                        [0] => 2014
+	*                        [1] => 12
+	*                        [2] => 30
+	*                    )
+	*            )
+	*        [season] => 12:57:26
+	*    )
+	*/
+	public static function zotero_date_to_dd_date( stdClass $zotero_date) {
+
+		$dd_date = new dd_date();
+
+		#
+		# Date
+		$branch_name = 'date-parts';
+
+		if (!is_object($zotero_date)) {
+			#debug_log(__METHOD__." String received ".to_string($zotero_date), logger::ERROR);
+			if ((int)$zotero_date>0) {
+				$dd_date->set_year((int)$zotero_date);
+				return (object)$dd_date;
+			}
+		}
+
+		if (!isset($zotero_date->$branch_name)) {
+			debug_log(__METHOD__." Error on get date from zotero ".to_string($zotero_date), logger::ERROR);
+			return null;
+		}
+
+		$branch = $zotero_date->$branch_name;
+		if ( !isset($branch[0][0]) ) {
+			error_log("Wrong data from ".print_r($zotero_date,true));
+			return (string)'';
+		}
+
+		if(isset($branch[0][0])) $dd_date->set_year((int)$branch[0][0]);
+		if(isset($branch[0][1])) $dd_date->set_month((int)$branch[0][1]);
+		if(isset($branch[0][2])) $dd_date->set_day((int)$branch[0][2]);
+
+
+		#
+		# Time
+		if (property_exists($zotero_date, 'season')) {
+			$current_date	= $zotero_date->season;
+			if ($current_date) {
+				$regex   = "/^([0-9]+)?:?([0-9]+)?:?([0-9]+)?/";
+				preg_match($regex, $current_date, $matches);
+
+				if(isset($matches[1])) $dd_date->set_hour((int)$matches[1]);
+				if(isset($matches[2])) $dd_date->set_minute((int)$matches[2]);
+				if(isset($matches[3])) $dd_date->set_second((int)$matches[3]);
+			}
+		}
+
+		return (object)$dd_date;
+	}//end zotero_date_to_dd_date
+
+
+
+	/**
+	* ZOTERO_NAME_TO_NAME
+	* Convert zotero name field (array with all names, names and surnames) to coma separated string of names
+	* @param array $zotero_name
+	* @return string $name || array $ar_name
+	*/
+	public static function zotero_name_to_name( array $zotero_name, $return_type='string') {
+		$ar_name=array();
+
+		foreach ($zotero_name as $key => $obj_value) {
+
+			$name = '';
+
+			if (property_exists($obj_value, 'literal')) {
+
+				$name .= $obj_value->literal;
+				$ar_name[] = $name;
+
+			}else{
+
+				if (property_exists($obj_value, 'given')) {
+					$name .= $obj_value->given;
+				}
+
+				$apellido_madre = '';
+				if (property_exists($obj_value, 'family')) {
+					$apellido_madre .= $obj_value->family;
+				}
+
+				$ar_name[] = $name.' '.$apellido_madre;
+			}
+		}
+
+		switch ($return_type) {
+			case 'string':
+				return (string)implode(', ', $ar_name);
+				break;
+			default:
+				return (array)$ar_name;
+				break;
+		}
+	}#end zotero_name_to_name
+
+
+
+	/**
+	* ZOTERO_PAGE_TO_FIRST_PAGE
+	* Get first page int from page data like '27-40' to '27'
+	* @param string $zotero_page
+	* @return int $first_page default is 1
+	*/
+	public static function zotero_page_to_first_page( $zotero_page ) {
+
+		switch (true) {
+			case (empty($zotero_page)):
+				$first_page = 1;
+				break;
+
+			case ( strpos($zotero_page, '-')!==false ):
+				$ar_parts 	= explode('-', $zotero_page);
+				$first_page = $ar_parts[0];
+				break;
+
+			default:
+				$first_page = 1;
+				break;
+		}
+
+		if( (int)$first_page < 1 ) $first_page = 1;
+
+		return (int)$first_page;
+	}#end zotero_page_to_first_page
+
+
+	// Update data
+	// find in current register if the record exist
+	// if yes: reuse and update the record
+	// if no : create new one
+
+	/**
+	* GET_SECTION_ID_FROM_ZOTERO_ID
+	* Search in database if current code exists. If true, return section id of founded record
+	* @param string $zotero_id
+	* @return int | null
+	*/
+	public static function get_section_id_from_zotero_id( $id_item, $zotero_id ) {
+
+		$ddo_map	= $id_item->ddo_map;
+		$ddo		= reset($ddo_map);
+		if (strpos($zotero_id, 'http')===0) {
+			$ar_parts 	= explode('/', $zotero_id);
+			$zotero_id  = end($ar_parts);
+		}
+
+		$section_tipo   = $ddo->section_tipo;	 # rsc205
+		$tipo 			= $ddo->tipo; 			# rsc137
+		$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		$code 			= pg_escape_string(DBi::_getConnection(), $zotero_id);
+
+		// JSON seach_query_object to search
+		$sqo = json_decode('
+		{
+			"id": "get_section_id_from_zotero_id",
+			"section_tipo": "'.$section_tipo.'",
+			"limit": 1,
+			"filter": {
+				"$or": [
+					{
+						"q": "='.$code.'",
+						"path": [
+							{
+								"section_tipo": "'.$section_tipo.'",
+								"component_tipo": "'.$tipo.'",
+								"modelo": "'.$model_name.'",
+								"name": "Code"
+							}
+						]
+					},
+					{
+						"q": "*/'.$code.'",
+						"path": [
+							{
+								"section_tipo": "'.$section_tipo.'",
+								"component_tipo": "'.$tipo.'",
+								"modelo": "'.$model_name.'",
+								"name": "Code"
+							}
+						]
+					}
+				]
+			}
+		}');
+
+		// search the sections that has this title
+			$search		= search::get_instance($sqo);
+			$result		= $search->search();
+
+		$section_id = null; // Default
+		if (!empty($result->ar_records[0])) {
+			// Found it in database
+			$section_id = (int)$result->ar_records[0]->section_id;
+
+			debug_log(__METHOD__."Record founded successfully [$section_id] with requested code: ".to_string($zotero_id), logger::DEBUG);
+		}
+
+
+		return $section_id;
+	}//end get_section_id_from_zotero_id
+
+
+
+	/**
+	* GET_SECTION_ID_FROM_ZOTERO_CONTAINER_TITLE
+	* Search in database if current Series/Collections exists. If true, return section id of founded record
+	* @param ddo_object $series_ddo
+	* @param string $zotero_container_title
+	* @return int | null
+	*/
+	public static function get_section_id_from_zotero_container_title( $series_ddo, $zotero_container_title ) {
+
+		$section_tipo		= $series_ddo->section_tipo;		# rsc212 	# values list for Series / Collections
+		$tipo				= $series_ddo->tipo;				# rsc214 	# Series / Collections (component_input_text)
+		$model_name			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		$serie_name			= pg_escape_string(DBi::_getConnection(), $zotero_container_title);
+
+		// JSON seach_query_object to search
+		$sqo = json_decode('
+		{
+			"id": "get_section_id_from_zotero_container_title",
+			"section_tipo": "'.$section_tipo.'",
+			"limit": 1,
+			"filter": {
+				"$and": [
+					{
+						"q": "\''.$serie_name.'\'",
+						"path": [
+							{
+								"section_tipo": "'.$section_tipo.'",
+								"component_tipo": "'.$tipo.'",
+								"model": "'.$model_name.'",
+								"name": "Series / Collections"
+							}
+						]
+					}
+				]
+			}
+		}');
+
+
+		// search the sections that has this title
+			$search		= search::get_instance($sqo);
+			$result		= $search->search();
+			$ar_section	= $result->ar_records;
+
+		$section_id = null; // Default
+		if (!empty($result->ar_records[0])) {
+			// Found it in database
+			$section_id = (int)$result->ar_records[0]->section_id;
+
+			debug_log(__METHOD__." Successfull Founded record [$section_id] with requested code: ".to_string($zotero_container_title), logger::DEBUG);
+		}
+
+
+		return $section_id;
+	}//end get_section_id_from_zotero_container_title
 
 
 }//end class tool_import_zotero
