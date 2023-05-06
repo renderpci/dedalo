@@ -228,10 +228,10 @@ final class ImageMagick {
 	* @param string $target_file
 	* @param string $flags = ''
 	*
-	* @return string|null $result
+	* @return string|bool $result
 	*	Terminal command response
 	*/
-	public static function convert( object $options) : ?string {
+	public static function convert( object $options) : string|bool {
 
 		$source_file	= $options->source_file; // file to be processed, mandatory.
 		$ar_layers		= $options->ar_layers ?? null; // in image is the layer of the image, by default all (false), in pdf is the number of page/s, by default all (false).
@@ -341,15 +341,24 @@ final class ImageMagick {
 		# EXE COMMAND
 		#$result = exec_::exec_command($command);
 		$result = exec($command.' 2>&1', $output, $worked_result);
-		if(SHOW_DEBUG) {
-			if ($worked_result!=0) {
-				#dump($worked_result, ' worked_result ++ '.to_string($output));
-				debug_log(__METHOD__."  worked_result : output: ".to_string($output)." - worked_result:".to_string($worked_result), logger::DEBUG);
-			}
-			if (!empty($result)) {
-				debug_log(__METHOD__." Command convert warning (not empty result): ".to_string($result) ." - output: ".to_string($output)." - worked_result: ".to_string($worked_result), logger::WARNING);
-			}
+
+		if ($worked_result!=0) {
+			debug_log(__METHOD__
+				."  worked_result : output: ".to_string($output)." - worked_result:"
+				.to_string($worked_result)
+				, logger::DEBUG
+			);
+			return false;
 		}
+
+
+		debug_log(__METHOD__
+			." Command convert warning (not empty result): ".to_string($result) . PHP_EOL
+			." output: ".to_string($output)." - worked_result: ".to_string($worked_result)
+			, logger::DEBUG
+		);
+
+
 
 		return $result;
 	}//end convert

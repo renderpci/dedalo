@@ -29,6 +29,8 @@ class component_pdf extends component_media_common {
 				return $this->additional_path;
 			}
 
+		$ar_additional_path[$this->id] = false;
+
 		$properties = $this->get_properties();
 			// dump($properties, ' get_additional_path properties ++ '.to_string($this->tipo)); // die();
 		if (isset($properties->additional_path)) {
@@ -56,22 +58,19 @@ class component_pdf extends component_media_common {
 			}
 
 			$ar_additional_path[$this->id] = $dato;
+		}
 
-			if(isset($properties->max_items_folder) && empty($dato)) {
+		if(isset($properties->max_items_folder) && empty($dato)) {
 
-				$max_items_folder  = $properties->max_items_folder;
-				$parent_section_id = $this->section_id;
+			$max_items_folder  = $properties->max_items_folder;
+			$section_id = $this->section_id;
 
-				$ar_additional_path[$this->id] = '/'.$max_items_folder*(floor($parent_section_id / $max_items_folder));
+			$ar_additional_path[$this->id] = '/'.$max_items_folder*(floor($section_id / $max_items_folder));
 
-				$component->set_dato( $ar_additional_path[$this->id] );
-				if (!empty($parent_section_id)) {
-					$component->Save();
-				}
-			}
-		}else{
-
-			$ar_additional_path[$this->id] = false;
+			// $component->set_dato( $ar_additional_path[$this->id] );
+			// if (!empty($section_id)) {
+			// 	$component->Save();
+			// }
 		}
 
 		// fix additional_path
@@ -356,10 +355,10 @@ class component_pdf extends component_media_common {
 
 		// thumb_path
 			$file_name  = $this->get_id();
-			$thumb_path = DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
+			$target_file = DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
 
 		// thumb already exists case
-			if (!$force_create && file_exists($thumb_path)) {
+			if (!$force_create && file_exists($target_file)) {
 				$url = DEDALO_MEDIA_URL . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
 				# ABSOLUTE (Default false)
 				if ($absolute) {
@@ -369,23 +368,34 @@ class component_pdf extends component_media_common {
 			}
 
 		// thumb not exists case: generate from PDF
-			$quality	= $this->get_default_quality();
-			$path		= $this->get_media_filepath($quality);
-			if (file_exists($path)) {
+			$quality		= $this->get_default_quality();
+			$source_file	= $this->get_media_filepath($quality);
+			if (file_exists($source_file)) {
 
 				// dimensions . Like "102x57"
 					$width		= defined('DEDALO_IMAGE_THUMB_WIDTH')  ? DEDALO_IMAGE_THUMB_WIDTH  : 224;
 					$height		= defined('DEDALO_IMAGE_THUMB_HEIGHT') ? DEDALO_IMAGE_THUMB_HEIGHT : 149;
-					$dimensions	= $width.'x'.$height.'>';
+					$dimensions	= $width.'x'.$height;
+
+					$thumb_pdf_options = new stdClass();
+						$thumb_pdf_options->source_file = $source_file;
+						$thumb_pdf_options->ar_layers 	= [0];
+						$thumb_pdf_options->target_file = $target_file;
+						$thumb_pdf_options->density		= 150;
+						$thumb_pdf_options->antialias	= true;
+						$thumb_pdf_options->quality		= 75;
+						$thumb_pdf_options->resize		= $dimensions;
+
+					$result = ImageMagick::convert($thumb_pdf_options);
 
 				// command
 					// $flags 		= '-debug all';
 					// $flags 		= " -scale 200x200 -background white -flatten ";
-					$command = MAGICK_PATH ."convert -alpha off {$path}[0] -thumbnail '$dimensions' -background white -flatten -gravity center -unsharp 0x.5 -quality 90 $thumb_path";
+					// $command = MAGICK_PATH ."convert -alpha off {$path}[0] -thumbnail '$dimensions' -background white -flatten -gravity center -unsharp 0x.5 -quality 90 $target_file";
 
 				// exec command
-					exec($command.' 2>&1', $output, $result_code);
-					if ($result_code==0) {
+					// exec($command.' 2>&1', $output, $result_code);
+					if ($result!==false) {
 
 						// url. All is OK
 						$url = DEDALO_MEDIA_URL . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
@@ -394,14 +404,52 @@ class component_pdf extends component_media_common {
 						if ($absolute===true) {
 							$url = DEDALO_PROTOCOL . DEDALO_HOST . $url;
 						}
-					}else{
-						// Error. An error occurred
-						debug_log(__METHOD__." An error occurred! Failed command: '$command'  - result_code: ".to_string($result_code), logger::ERROR);
 					}
 			}
 
 		return $url;
 	}//end get_pdf_thumb
+
+
+
+	/**
+	* CREATE_IMAGE
+	*
+	* Once the full path is specified, the command is working as desired.
+	* @param object $options
+	* @return string|false $path
+	*/
+	public function create_image(?object $options=null) : string|bool {
+
+		// options
+			$page		= $options->page ?? 0;
+			$quality	= $options->quality ?? $this->get_original_quality();
+
+		// pdf path
+			$file_name		= $this->get_id();
+			$target_file	= DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER . '/tmp/' . $file_name . '.' . DEDALO_IMAGE_EXTENSION;
+
+		// generate from PDF
+			$source_file	= $this->get_media_filepath($quality);
+			if (file_exists($source_file)) {
+
+				$image_pdf_options = new stdClass();
+					$image_pdf_options->source_file = $source_file;
+					$image_pdf_options->ar_layers 	= [$page];
+					$image_pdf_options->target_file = $target_file;
+					$image_pdf_options->density		= 600;
+					$image_pdf_options->antialias	= true;
+					$image_pdf_options->quality		= 75;
+					$image_pdf_options->resize		= '25%';
+
+				$result_convert = ImageMagick::convert($image_pdf_options);
+			}
+
+			$result = (file_exists($target_file)) ? $target_file : false;
+
+		return $result;
+	}//end create_image
+
 
 
 
@@ -501,7 +549,8 @@ class component_pdf extends component_media_common {
 		// short vars
 			$original_file_name	= $file_data->original_file_name; 	// like "my doc is beaty.psdf"
 			$full_file_name		= $file_data->full_file_name;		// like "test175_test65_1.pdf"
-			$full_file_path		= $file_data->full_file_path;		// like "/mypath/media/pdf/1.5MB/test175_test65_1.jpg"
+			$full_file_path		= $file_data->full_file_path;		// like "/mypath/media/pdf/original/test175_test65_1.jpg"
+			$first_page			= $file_data->first_page ?? 1; 		// used to assign the correct number to page tag of the transcription text
 
 		// copy original to default quality (in the future, a quality conversion script will be placed here)
 			$default_quality		= $this->get_default_quality();
@@ -543,8 +592,8 @@ class component_pdf extends component_media_common {
 
 				try {
 					$options = new stdClass();
-						$options->path_pdf 	 = (string)$target_pdf_path;	# full source pdf file path
-						#$options->first_page = (int)$pagina_inicial;		# number of first page. default is 1
+						$options->path_pdf		= (string)$target_pdf_path;	# full source pdf file path
+						$options->first_page	= (int)$first_page;		# number of first page. default is 1
 					$text_from_pdf_response = (object)component_pdf::get_text_from_pdf( $options );
 						#debug_log(__METHOD__." tool_transcription response ".to_string($text_from_pdf_response), logger::DEBUG);
 						// dump($text_from_pdf_response, ' text_from_pdf_response ++ '.to_string());
@@ -751,9 +800,12 @@ class component_pdf extends component_media_common {
 		$i=(int)$options->first_page;
 		$pdf_text='';
 		foreach ($pages as $current_page) {
+			$pdf_text .= '<p>';
 		    $pdf_text .= '[page-n-'. $i .']';
-		    $pdf_text .= '<br>';
-		    $pdf_text .= nl2br($current_page);
+		    $pdf_text .= '</p>';
+		    $pdf_text .= '<p>';
+		    $pdf_text .= str_replace(["\r\n", "\n\r", "\n", "\r"], '</p><p>' , $current_page);
+		    $pdf_text .= '</p>';
 		    $i++;
 		}
 
