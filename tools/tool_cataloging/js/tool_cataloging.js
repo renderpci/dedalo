@@ -20,23 +20,21 @@
 */
 export const tool_cataloging = function () {
 
-	this.id							= null
-	this.model						= null
-	this.mode						= null
-	this.node						= null
-	this.ar_instances				= null
-	this.status						= null
-	this.events_tokens				= []
-	this.type						= null
-	this.source_lang				= null
-	this.target_lang				= null
-	this.langs						= null
-	this.caller						= null
+	this.id						= null
+	this.model					= null
+	this.mode					= null
+	this.node					= null
+	this.ar_instances			= null
+	this.status					= null
+	this.events_tokens			= []
+	this.type					= null
+	this.source_lang			= null
+	this.target_lang			= null
+	this.langs					= null
+	this.caller					= null
 
-	this.section_to_cataloging		= null // main section to be cataloging
-	this.area_thesaurus 			= null
-
-	return true
+	this.section_to_cataloging	= null // main section to be cataloging
+	this.area_thesaurus			= null
 }//end page
 
 
@@ -55,6 +53,8 @@ export const tool_cataloging = function () {
 
 /**
 * INIT
+* @param object options
+* @return bool common_init
 */
 tool_cataloging.prototype.init = async function(options) {
 
@@ -75,7 +75,6 @@ tool_cataloging.prototype.init = async function(options) {
 		self.error = error
 		console.error(error)
 	}
-
 
 	// listen the thesaurus to update the data of the component_portal when the locator drag by user
 	// the cataloging section has a portal that point to any other section to be ordered
@@ -136,6 +135,7 @@ tool_cataloging.prototype.init = async function(options) {
 		return true;
 	}
 
+
 	return common_init
 }//end init
 
@@ -143,6 +143,8 @@ tool_cataloging.prototype.init = async function(options) {
 
 /**
 * BUILD
+* @param bool autoload
+* @return bool common_build
 */
 tool_cataloging.prototype.build = async function(autoload=false) {
 
@@ -180,11 +182,10 @@ tool_cataloging.prototype.build = async function(autoload=false) {
 /**
 * ASSIGN_ELEMENT
 * Set the original and copy properties to discard component
-* @param locator object
-* @param ar_copies array of nodes
-* @return change object api_response
+* @param object section_to_cataloging
+* @return bool
 */
-tool_cataloging.prototype.load_section = async function(section_to_cataloging){
+tool_cataloging.prototype.load_section = async function(section_to_cataloging) {
 
 	const self = this
 
@@ -204,7 +205,6 @@ tool_cataloging.prototype.load_section = async function(section_to_cataloging){
 
 	self.section_to_cataloging.properties	= section_to_cataloging.properties
 	// self.section_to_cataloging.buttons	= false
-
 
 	self.ar_instances.push(self.section_to_cataloging)
 
