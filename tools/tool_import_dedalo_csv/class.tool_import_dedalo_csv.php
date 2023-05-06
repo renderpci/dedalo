@@ -15,8 +15,13 @@ class tool_import_dedalo_csv extends tool_common {
 
 	/**
 	* GET_CSV_FILES
-	* Read requested dir and return all files of request extension found
+	* Read requested directory and return all files of the request extension found
 	* @return object $response
+	* {
+	* 	result	: array $files_info,
+	* 	msg		: string,
+	* 	error	: string|null
+	* }
 	*/
 	public static function get_csv_files() : object {
 
@@ -43,7 +48,6 @@ class tool_import_dedalo_csv extends tool_common {
 				try {
 
 					// data . extract csv data from file
-					// $file, $skip_header=false, $csv_delimiter=';', $enclosure='"', $escape='"'
 					$ar_data = tool_common::read_csv_file_as_array(
 						$file, // file string
 						false, // skip_header bool
@@ -53,7 +57,11 @@ class tool_import_dedalo_csv extends tool_common {
 					);
 
 					if (empty($ar_data) || empty($ar_data[0])) {
-						debug_log(__METHOD__." Error on read file 1 : ".to_string($file).' The file will be ignored', logger::ERROR);
+						debug_log(__METHOD__
+							. ' Error on read file 1. The file will be ignored' .PHP_EOL
+							. ' file: ' .to_string($file)
+							, logger::ERROR
+						);
 						continue;
 					}
 
@@ -74,7 +82,12 @@ class tool_import_dedalo_csv extends tool_common {
 
 					$response->error =  'Error on read file: '.to_string($file);
 
-					debug_log(__METHOD__." Error on read file 2: ".to_string($file).' The file will be ignored', logger::ERROR);
+					debug_log(__METHOD__
+						. ' Error on read file 2:  The file will be ignored' .PHP_EOL
+						. ' file: ' .to_string($file) .PHP_EOL
+						. ' exception: ' .$e->getMessage()
+						, logger::ERROR
+					);
 					continue;
 				}
 
@@ -88,7 +101,7 @@ class tool_import_dedalo_csv extends tool_common {
 							continue;
 						}
 
-						foreach ($current_line as $key => $value) {
+						foreach ($current_line as $value) {
 							if (empty($value)) {
 								continue;
 							}
@@ -140,12 +153,6 @@ class tool_import_dedalo_csv extends tool_common {
 					$files_info[] = $item;
 			}//end foreach ($files_list as $current_file_name)
 
-			// dump($response, ' response 2 ++ '.to_string());
-			// error_log( 'Type: '.gettype($files_info) );
-			// error_log( 'Count: '.count($files_info) );
-			// error_log( 'Type[0]: '.gettype($files_info[0]) );
-			// trigger_error( 'get_object_vars:'. get_object_vars($files_info[0]));
-			// error_log( json_encode($files_info) );
 
 		// response
 			$response->result	= $files_info;
@@ -165,34 +172,46 @@ class tool_import_dedalo_csv extends tool_common {
 	/**
 	* DELETE_CSV_FILE
 	* 	Delete given CSV file from server
-	* @param object $request_options
+	* @param object $options
 	* @return object $response
+	* {
+	* 	result : bool,
+	* 	msg : string
+	* }
 	*/
-	public static function delete_csv_file(object $request_options) : object {
+	public static function delete_csv_file(object $options) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// options
-			$options = new stdClass();
-				$options->file_name	= null;
-				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+			$file_name = $options->file_name ?? null;
 
 		// short vars
 			$dir		= DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH; // fixed dir from config
-			$file_name	= $options->file_name;
+			$file_name	= $file_name;
 
 		// remove file is exists
 			$file_full_path = $dir .'/'. $file_name;
 			if (file_exists($file_full_path)) {
 				if( unlink($file_full_path) ) {
+
 					$response->result 	= true;
-					$response->msg 		= 'Ok. Request file '.$file_name.' is deleted';
-					debug_log(__METHOD__." response->msg: $response->msg".to_string(), logger::DEBUG);
+					$response->msg 		= 'OK. Request file '.$file_name.' is deleted';
+					debug_log(__METHOD__
+						." response->msg: $response->msg"
+						, logger::DEBUG
+					);
+
 				}else{
-					$response->msg 		= 'Error. File exists but you don\'t have permissions to delete this file';
-					debug_log(__METHOD__." response->msg: $response->msg".to_string(), logger::ERROR);
+
+					$response->msg = 'Error. File exists but you don\'t have permissions to delete this file';
+					debug_log(__METHOD__
+						." response->msg: $response->msg" . PHP_EOL
+						.' file_full_path: ' .$file_full_path
+						, logger::ERROR
+					);
 				}
 			}
 
@@ -205,69 +224,69 @@ class tool_import_dedalo_csv extends tool_common {
 	/**
 	* IMPORT_FILES
 	* 	Import user selected files
-	* @param object $request_options
+	* @param object $options
 	* @return object $response
+	* {
+	* 	result : bool,
+	* 	msg : string,
+	* 	debug : object
+	* }
 	*/
-	public static function import_files(object $request_options) : object {
+	public static function import_files(object $options) : object {
 		$start_time = start_time();
 
 		// Ignore user close browser
 			ignore_user_abort(true);
 
 		// options
-			$options = new stdClass();
-				$options->files				= null;
-				$options->time_machine_save	= null;
-				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+			$files				= $options->files ?? null;
+			$time_machine_save	= $options->time_machine_save ?? null;
 
 		// short vars
-			$files				= $options->files;
-			$time_machine_save	= $options->time_machine_save;
-			$dir				= DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH;
+			$dir = DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH;
 
 		// import each file
 			$import_response=[];
 			foreach ((array)$files as $current_file_obj) {
 
-
-
 				$current_file	= $current_file_obj->file; // string like 'exported_oral-history_-1-oh1.csv'
 				$section_tipo	= $current_file_obj->section_tipo; // string like 'oh1'
 				$ar_columns_map	= $current_file_obj->ar_columns_map; // array of objects like [{checked: false, label: "", mapped_to: "", model: "", tipo: "section_id"}]
 
-				# FILE
-				$file = $dir . '/' . $current_file;
-				if (!file_exists($file)) {
-					$current_file_response = new stdClass();
-						$current_file_response->result			= false;
-						$current_file_response->msg				= "Error. File not found: ".$file;
-						$current_file_response->file			= $current_file;
-						$current_file_response->section_tipo	= $section_tipo;
-					$import_response[] = $current_file_response;
-					continue;
-				}
-				$ar_csv_data = tool_common::read_csv_file_as_array(
-					$file, // string file
-					false, // bool skip_header
-					';' // string csv delimiter
-				);
+				// file
+					$file = $dir . '/' . $current_file;
+					if (!file_exists($file)) {
+						$current_file_response = new stdClass();
+							$current_file_response->result			= false;
+							$current_file_response->msg				= "Error. File not found: ".$file;
+							$current_file_response->file			= $current_file;
+							$current_file_response->section_tipo	= $section_tipo;
+						$import_response[] = $current_file_response;
+						continue;
+					}
+					$ar_csv_data = tool_common::read_csv_file_as_array(
+						$file, // string file
+						false, // bool skip_header
+						';' // string csv delimiter
+					);
 
 				// counter. Consolidate counter. Set counter value to last section_id in section
-				counter::consolidate_counter( $section_tipo, common::get_matrix_table_from_tipo($section_tipo) );
+					counter::consolidate_counter(
+						$section_tipo, common::get_matrix_table_from_tipo($section_tipo)
+					);
 
 				// import exec
-				$current_file_response = (object)tool_import_dedalo_csv::import_dedalo_csv_file(
-					$section_tipo,
-					$ar_csv_data,
-					$time_machine_save,
-					$ar_columns_map
-				);
-				$current_file_response->file			= $current_file;
-				$current_file_response->section_tipo	= $section_tipo;
+					$current_file_response = (object)tool_import_dedalo_csv::import_dedalo_csv_file(
+						$section_tipo,
+						$ar_csv_data,
+						$time_machine_save,
+						$ar_columns_map
+					);
+					$current_file_response->file			= $current_file;
+					$current_file_response->section_tipo	= $section_tipo;
 
 				$import_response[] = $current_file_response;
-			}
-			#dump($result, ' result ++ '.to_string()); exit();
+			}//end foreach ((array)$files as $current_file_obj)
 
 		// response
 			$response = new stdClass();
@@ -277,7 +296,7 @@ class tool_import_dedalo_csv extends tool_common {
 		// debug
 			if(SHOW_DEBUG===true) {
 				$debug = new stdClass();
-					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+					$debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
 					$debug->options		= $options;
 				$response->debug = $debug;
 			}
@@ -298,6 +317,14 @@ class tool_import_dedalo_csv extends tool_common {
 	* @param array $ar_columns_map
 	*
 	* @return object $response
+	* {
+	* 	result			: bool,
+	* 	msg				: string
+	*	created_rows	: array
+	*	updated_rows	: array
+	*	failed_rows		: array;
+	*	time			: string
+	* }
 	*/
 	public static function import_dedalo_csv_file(string $section_tipo, array $ar_csv_data, bool $time_machine_save, array $ar_columns_map) : object {
 		$start_time = start_time();
@@ -343,19 +370,19 @@ class tool_import_dedalo_csv extends tool_common {
 				$modified_by_user	= reset($modified_by_user);
 				$modified_date		= reset($modified_date);
 
-		# Iterate rows
+		// Iterate rows
 			$created_rows	= [];
 			$updated_rows	= [];
 			$failed_rows	= [];
 
 		// check if the value is a valid JSON
-		function is_json($value){
-		return is_string($value) && is_array(json_decode($value, true)) && (json_last_error() == JSON_ERROR_NONE)
-			? true
-			: false;
-		}
+			function is_json($value){
+				return is_string($value) && is_array(json_decode($value, true)) && (json_last_error() == JSON_ERROR_NONE)
+					? true
+					: false;
+			}
 
-		# sort ar_csv_data by section_id (first column)
+		// sort ar_csv_data by section_id (first column)
 			# uasort($ar_csv_data, function($a, $b) {
 			#    return $a[0] > $b[0];
 			# });
@@ -363,16 +390,16 @@ class tool_import_dedalo_csv extends tool_common {
 		$counter = 0;
 		$csv_head_row = $ar_csv_data[0];
 		foreach ((array)$ar_csv_data as $rkey => $row) {
-			$row_start_time = start_time();
 
-
-			if($rkey===0) continue; // Skip first row, the header row
+			// header row
+				if($rkey===0) continue; // Skip first row, the header row
 
 			// section_id (cast to int the section_id of the row)
 				$section_id = !empty($row[$section_id_key]) ? (int)$row[$section_id_key] : null;
 				if (empty($section_id)) {
-					debug_log(__METHOD__.
-						" ERROR on get MANDATORY section_id. SKIPPED record (section_tipo:$section_tipo - rkey:$rkey) ".to_string($section_id),
+					debug_log(__METHOD__
+						." ERROR on get MANDATORY section_id. SKIPPED record (section_tipo: $section_tipo - rkey: $rkey) ". PHP_EOL
+						.' section_id: '. to_string($section_id),
 						logger::ERROR
 					);
 					continue;
@@ -383,308 +410,321 @@ class tool_import_dedalo_csv extends tool_common {
 				$create_record	= $section->forced_create_record();
 				$section_id		= $section->get_section_id();
 
-			# Iterate fields/columns
-			foreach ($row as $key => $value) {
+			// Iterate fields/columns
+				foreach ($row as $key => $value) {
 
-				$column_map = $csv_map[$key];
-				$current_csv_head_column = $csv_head_row[$key];
+					$column_map = $csv_map[$key];
+					$current_csv_head_column = $csv_head_row[$key];
 
-				if($column_map->model === 'section_id' || $column_map->model === 'component_section_id') continue; # Skip section_id value column
-				if(!isset($column_map->checked) || $column_map->checked=== false || !isset($column_map->map_to)) continue;
-				// check if the column_map is correct with the current column in the csv file (match needed)
-				if($current_csv_head_column !== $column_map->tipo) continue;
+					if($column_map->model === 'section_id' || $column_map->model === 'component_section_id') continue; # Skip section_id value column
+					if(!isset($column_map->checked) || $column_map->checked=== false || !isset($column_map->map_to)) continue;
+					// check if the column_map is correct with the current column in the csv file (match needed)
+					if($current_csv_head_column !== $column_map->tipo) continue;
 
-				# created_by_userID
-				if ($column_map->model==='created_by_user' || $column_map->map_to===$created_by_user['tipo']) {
+					// created_by_userID
+					if ($column_map->model==='created_by_user' || $column_map->map_to===$created_by_user['tipo']) {
 
-					$user_locator = self::build_user_locator($value, $created_by_user['tipo']);
-					if (!empty($user_locator)) {
+						$user_locator = self::build_user_locator($value, $created_by_user['tipo']);
+						if (!empty($user_locator)) {
 
-						// set value with safe path
-							$section_dato = $section->get_dato();
-							if (!isset($section_dato->relations)) {
-								$section_dato->relations = [];
-							}
-							$temp_relations = array_filter($section_dato->relations, function($el) use($user_locator){
-								return !isset($el->from_component_tipo) || $el->from_component_tipo!==$user_locator->from_component_tipo;
-							});
-							// add current locator
-							$temp_relations[] = $user_locator;
-							// update relations container
-							$section_dato->relations = array_values($temp_relations);
+							// set value with safe path
+								$section_dato = $section->get_dato();
+								if (!isset($section_dato->relations)) {
+									$section_dato->relations = [];
+								}
+								$temp_relations = array_filter($section_dato->relations, function($el) use($user_locator){
+									return !isset($el->from_component_tipo) || $el->from_component_tipo!==$user_locator->from_component_tipo;
+								});
+								// add current locator
+								$temp_relations[] = $user_locator;
+								// update relations container
+								$section_dato->relations = array_values($temp_relations);
 
-						// Set direct property also
-							$section_dato->created_by_userID = (int)$user_locator->section_id;
+							// Set direct property also
+								$section_dato->created_by_userID = (int)$user_locator->section_id;
 
-						// Save section
-							$section->set_dato($section_dato);
-							$section->Save();
-					}
-					continue;
-				# created_date
-				}elseif ($column_map->model==='created_date' || $column_map->map_to===$created_date['tipo']) {
+							// Save section
+								$section->set_dato($section_dato);
+								$section->Save();
+						}
+						continue;
+					// created_date
+					}elseif ($column_map->model==='created_date' || $column_map->map_to===$created_date['tipo']) {
 
-					$current_date = self::build_date_from_value($value);
-					# Format
-					# $current_date = array(
-					# 	'component_dato' => $value_obj,
-					# 	'timestamp' 	 => $timestamp
-					# );
-					if (!empty($current_date)) {
-						// component build and set dato
-							$component = component_common::get_instance(
-								$created_date['model'],
-								$created_date['tipo'],
-								$section_id,
-								'list',
-								DEDALO_DATA_NOLAN,
-								$section_tipo
-							);
-							$component->set_dato($current_date->component_dato);
-							// $section->set_component_direct_dato($component);
-							$component_dato = $component->get_dato_unchanged();
-							$section_dato	= $section->get_dato();
+						$current_date = self::build_date_from_value($value);
+						# Format
+						# $current_date = array(
+						# 	'component_dato' => $value_obj,
+						# 	'timestamp' 	 => $timestamp
+						# );
+						if (!empty($current_date)) {
+							// component build and set dato
+								$component = component_common::get_instance(
+									$created_date['model'],
+									$created_date['tipo'],
+									$section_id,
+									'list',
+									DEDALO_DATA_NOLAN,
+									$section_tipo
+								);
+								$component->set_dato($current_date->component_dato);
+								// $section->set_component_direct_dato($component);
+								$component_dato = $component->get_dato_unchanged();
+								$section_dato	= $section->get_dato();
 
-						// set value with safe path
-							if (!isset($section_dato->components)) {
-								$section_dato->components = new stdClass();
-							}
-							if (!isset($section_dato->components->{$created_date['tipo']})) {
-								$section_dato->components->{$created_date['tipo']} = new stdClass();
-							}
-							$section_dato->components->{$created_date['tipo']}->{DEDALO_DATA_NOLAN} = $component_dato;
+							// set value with safe path
+								if (!isset($section_dato->components)) {
+									$section_dato->components = new stdClass();
+								}
+								if (!isset($section_dato->components->{$created_date['tipo']})) {
+									$section_dato->components->{$created_date['tipo']} = new stdClass();
+								}
+								$section_dato->components->{$created_date['tipo']}->{DEDALO_DATA_NOLAN} = $component_dato;
 
-						// Set direct property also
-							$section_dato->created_date = $current_date->timestamp;
+							// Set direct property also
+								$section_dato->created_date = $current_date->timestamp;
 
-						// Save
-							$section->set_dato($section_dato);
-							$section->Save();
-					}
-					continue;
-				# modified_by_user
-				}elseif ($column_map->model==='modified_by_user' || $column_map->map_to===$modified_by_user['tipo']) {
+							// Save
+								$section->set_dato($section_dato);
+								$section->Save();
+						}
+						continue;
+					// modified_by_user
+					}elseif ($column_map->model==='modified_by_user' || $column_map->map_to===$modified_by_user['tipo']) {
 
-					$user_locator = self::build_user_locator($value, $modified_by_user['tipo']);
-					if (!empty($user_locator)) {
-						// set value with safe path
-							$section_dato = $section->get_dato();
-							if (!isset($section_dato->relations)) {
-								$section_dato->relations = [];
-							}
-							$temp_relations = array_filter($section_dato->relations, function($el) use($user_locator){
-								return !isset($el->from_component_tipo) || $el->from_component_tipo!==$user_locator->from_component_tipo;
-							});
-							// add current locator
-							$temp_relations[] = $user_locator;
-							// update relations container
-							$section_dato->relations = array_values($temp_relations);
+						$user_locator = self::build_user_locator($value, $modified_by_user['tipo']);
+						if (!empty($user_locator)) {
+							// set value with safe path
+								$section_dato = $section->get_dato();
+								if (!isset($section_dato->relations)) {
+									$section_dato->relations = [];
+								}
+								$temp_relations = array_filter($section_dato->relations, function($el) use($user_locator){
+									return !isset($el->from_component_tipo) || $el->from_component_tipo!==$user_locator->from_component_tipo;
+								});
+								// add current locator
+								$temp_relations[] = $user_locator;
+								// update relations container
+								$section_dato->relations = array_values($temp_relations);
 
-						// Set direct property also
-							$section_dato->modified_by_userID = (int)$user_locator->section_id;
+							// Set direct property also
+								$section_dato->modified_by_userID = (int)$user_locator->section_id;
 
-						// Save section
-							$section->set_dato($section_dato);
-							$section->save_modified = false;
-							$section->Save();
-					}
-					continue;
-				# modified_date
-				}elseif ($column_map->model==='modified_date' || $column_map->map_to===$modified_date['tipo']) {
+							// Save section
+								$section->set_dato($section_dato);
+								$section->save_modified = false;
+								$section->Save();
+						}
+						continue;
+					// modified_date
+					}elseif ($column_map->model==='modified_date' || $column_map->map_to===$modified_date['tipo']) {
 
-					$current_date = self::build_date_from_value($value);
-					# Format
-					# $current_date = array(
-					# 	'component_dato' => $value_obj,
-					# 	'timestamp' 	 => $timestamp
-					# );
-					if (!empty($current_date)) {
-						// component build and set dato
-							$component = component_common::get_instance(
-								$modified_date['model'],
-								$modified_date['tipo'],
-								$section_id,
-								'list',
-								DEDALO_DATA_NOLAN,
-								$section_tipo
-							);
-							$component->set_dato($current_date->component_dato);
-							// $section->set_component_direct_dato($component);
-							$component_dato	= $component->get_dato_unchanged(); ## IMPORTANT !!!!! (NO usar get_dato() aquí ya que puede cambiar el tipo fijo establecido por set_dato)
-							$section_dato	= $section->get_dato();
+						$current_date = self::build_date_from_value($value);
+						# Format
+						# $current_date = array(
+						# 	'component_dato' => $value_obj,
+						# 	'timestamp' 	 => $timestamp
+						# );
+						if (!empty($current_date)) {
+							// component build and set dato
+								$component = component_common::get_instance(
+									$modified_date['model'],
+									$modified_date['tipo'],
+									$section_id,
+									'list',
+									DEDALO_DATA_NOLAN,
+									$section_tipo
+								);
+								$component->set_dato($current_date->component_dato);
+								// $section->set_component_direct_dato($component);
+								$component_dato	= $component->get_dato_unchanged(); ## IMPORTANT !!!!! (NO usar get_dato() aquí ya que puede cambiar el tipo fijo establecido por set_dato)
+								$section_dato	= $section->get_dato();
 
-						// set value with safe path
-							if (!isset($section_dato->components)) {
-								$section_dato->components = new stdClass();
-							}
-							if (!isset($section_dato->components->{$modified_date['tipo']})) {
-								$section_dato->components->{$modified_date['tipo']} = new stdClass();
-							}
-							$section_dato->components->{$modified_date['tipo']}->{DEDALO_DATA_NOLAN} = $component_dato;
+							// set value with safe path
+								if (!isset($section_dato->components)) {
+									$section_dato->components = new stdClass();
+								}
+								if (!isset($section_dato->components->{$modified_date['tipo']})) {
+									$section_dato->components->{$modified_date['tipo']} = new stdClass();
+								}
+								$section_dato->components->{$modified_date['tipo']}->{DEDALO_DATA_NOLAN} = $component_dato;
 
-						// Set direct property also
-							$section_dato->modified_date = $current_date->timestamp;
+							// Set direct property also
+								$section_dato->modified_date = $current_date->timestamp;
 
-						// Save
-							$section->set_dato($section_dato);
-							$section->save_modified = false;
-							$section->Save();
-					}
-					continue;
-				}
-
-				// component_tipo. Target component is always the CSV map element with current key
-					$component_tipo	= $column_map->map_to;
-					if (empty($component_tipo)) {
-						debug_log(__METHOD__." !!!!!!!! ignored empty component_tipo on csv_map key: $key - csv_map: ".to_string($csv_map), logger::ERROR);
+							// Save
+								$section->set_dato($section_dato);
+								$section->save_modified = false;
+								$section->Save();
+						}
 						continue;
 					}
 
-				// component
-					$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
-					$RecordObj_dd	= new RecordObj_dd($component_tipo);
-					$translate		= RecordObj_dd::get_translatable($component_tipo); //==='si' ? true : false;
-					$lang			= $translate===false ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
-					$component		= component_common::get_instance(
-						$model_name,
-						$component_tipo,
-						$section_id,
-						'list',
-						$lang,
-						$section_tipo,
-						false
-					);
-					$properties			= $RecordObj_dd->get_properties(true);
-					$with_lang_versions	= isset($properties->with_lang_versions) ? $properties->with_lang_versions : false;
+					// component_tipo. Target component is always the CSV map element with current key
+						$component_tipo	= $column_map->map_to;
+						if (empty($component_tipo)) {
+							debug_log(__METHOD__
+								. " Error: !!!!!!!! ignored empty component_tipo on csv_map key: $key ". PHP_EOL
+								. " csv_map: ".to_string($csv_map)
+								, logger::ERROR
+							);
+							continue;
+						}
 
-				# Configure component
-					# DIFFUSION_INFO
-					# Note that this process can be very long if there are many inverse locators in this section
-					# To optimize save process in scripts of importation, you can disable this option if is not really necessary
-					$component->update_diffusion_info_propagate_changes = false;
-					# SAVE_TO_DATABASE
-					# Set component to save data but tells section that don save updated section to DDBB for now
-					# No component time machine data will be saved when section saves later
-					$component->save_to_database = ((bool)$time_machine_save===true)
-						? true
-						: false;
+					// component
+						$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+						$RecordObj_dd	= new RecordObj_dd($component_tipo);
+						$translate		= RecordObj_dd::get_translatable($component_tipo); //==='si' ? true : false;
+						$lang			= $translate===false ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+						$component		= component_common::get_instance(
+							$model_name,
+							$component_tipo,
+							$section_id,
+							'list',
+							$lang,
+							$section_tipo,
+							false
+						);
+						$properties			= $RecordObj_dd->get_properties(true);
+						$with_lang_versions	= isset($properties->with_lang_versions) ? $properties->with_lang_versions : false;
 
-				# If value is JSON encoded, decode and set
-				# Note: json_decode returns null when no is possible decode the value
-				#if(strpos($value, '{"lg-')!==false) {
-				#	$value = str_replace(EOL, "\n", $value);
-				#}
-				$value = trim($value); // Avoid wrong final return problems
-				# Remove delimiter escape (U+003B for ;)
-				$value = str_replace('U+003B', ';', $value);
+					// Configure component
+						# DIFFUSION_INFO
+						# Note that this process can be very long if there are many inverse locators in this section
+						# To optimize save process in scripts of importation, you can disable this option if is not really necessary
+						$component->update_diffusion_info_propagate_changes = false;
+						# SAVE_TO_DATABASE
+						# Set component to save data but tells section that don save updated section to DDBB for now
+						# No component time machine data will be saved when section saves later
+						$component->save_to_database = ((bool)$time_machine_save===true)
+							? true
+							: false;
 
-				// Check if is a JSON string. Is yes, decode
-					// if(strpos($value, '[')===0 || strpos($value, '{')===0) {
-					if(is_json($value)){
-						$dato_from_json = json_decode($value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
-						$value = $dato_from_json;
-					}else{
+					# If value is JSON encoded, decode and set
+					# Note: json_decode returns null when no is possible decode the value
+					#if(strpos($value, '{"lg-')!==false) {
+					#	$value = str_replace(EOL, "\n", $value);
+					#}
+					$value = trim($value); // Avoid wrong final return problems
+					# Remove delimiter escape (U+003B for ;)
+					$value = str_replace('U+003B', ';', $value);
 
-						$begins_one	= substr($value, 0, 1);
-						$ends_one	= substr($value, -1);
-
-						$begins_two	= substr($value, 0, 2);
-						$ends_two	= substr($value, -2);
-
-						if( ($model_name==='component_text_area' || $model_name==='component_input_text')
-							&& (
-								($begins_two !== '["' && $ends_two !== '"]') ||
-								($begins_two !== '["' && $ends_one !== ']') ||
-								($begins_one !== '[' && $ends_two !== '"]')
-							)
-						){
-							$value = [$value];
+					// Check if is a JSON string. Is yes, decode
+						// if(strpos($value, '[')===0 || strpos($value, '{')===0) {
+						if(is_json($value)){
+							$dato_from_json = json_decode($value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
+							$value = $dato_from_json;
 						}else{
-							// log JSON conversion error
-							debug_log(__METHOD__." json_last_error: ".json_last_error(), logger::ERROR);
 
-							$failed = new stdClass();
-								$failed->section_id		= $section_id;
-								$failed->data			= stripslashes( $value );
-								$failed->component_tipo	= $component->get_tipo();
-								$failed->msg			= 'IGNORED: malformed data '. to_string($value);
-							$failed_rows[] = $failed;
-							continue 1;
-						}
-					}
-					# debug_log(__METHOD__." Result decode json: type:".gettype($dato_from_json).' -> value: '.$value.' => decoded: '.to_string($dato_from_json), logger::DEBUG);
+							$begins_one	= substr($value, 0, 1);
+							$ends_one	= substr($value, -1);
 
-				// dataframe. Checks value contains dataframe or dato keys
-					if (is_object($value)) {
-						// # Dataframe
-						// if (property_exists($value, 'dataframe')) {
-						// 	foreach ((array)$value->dataframe as $dtkey => $current_dt_locator) {
-						// 		$current_from_key 	= $current_dt_locator->from_key;
-						// 		$current_type 		= $current_dt_locator->type;
-						// 		$component->update_dataframe_element($current_dt_locator, $current_from_key, $current_type); //$ar_locator, $from_key, $type
-						// 		debug_log(__METHOD__." Added dataframe locator [$current_from_key,$current_type] ".to_string($current_dt_locator), logger::DEBUG);
-						// 	}
-						// }
-						# Dato
-						if (property_exists($value, 'dato')) {
-							$value = $value->dato;
-						}
-					}
-					// dump($value, ' is_json($value +------------------/-----------------------+ '.to_string());
-				# Elements 'translatable' can be formatted as json values like {"lg-eng":"My value","lg-spa":"Mi valor"}
-				if (($translate===true || $with_lang_versions===true) && is_object($value)) {
-					debug_log(__METHOD__." Parsing multi-language value [$component_tipo - $section_tipo - $section_id]: ".to_string($value), logger::DEBUG);
-					foreach ($value as $v_key => $v_value) {
+							$begins_two	= substr($value, 0, 2);
+							$ends_two	= substr($value, -2);
 
-						if (strpos($v_key, 'lg-')===0) {
-							$component->set_lang( $v_key );
-							$component->set_dato( $v_value );
-							$component->Save();
-						}else{
-							debug_log(__METHOD__." ERROR ON IMPORT VALUE FROM $model_name [$component_tipo] - VALUE: ".to_string($value), logger::ERROR);
-						}
-					}
-				}else{
+							if( ($model_name==='component_text_area' || $model_name==='component_input_text')
+								&& (
+									($begins_two !== '["' && $ends_two !== '"]') ||
+									($begins_two !== '["' && $ends_one !== ']') ||
+									($begins_one !== '[' && $ends_two !== '"]')
+								)
+							){
+								$value = [$value];
+							}else{
+								// log JSON conversion error
+								debug_log(__METHOD__." json_last_error: ".json_last_error(), logger::ERROR);
 
-					$related_conponents = component_relation_common::get_components_with_relations();
-					if (in_array($model_name, $related_conponents)){ // $model_name==='component_portal' || $model_name==='component_autocomplete') {
-						// check every locator to be valid!!
-						if(!empty($value)) {
-							foreach ((array)$value as $current_locator) {
-								if (empty($current_locator->section_tipo) || empty($current_locator->section_id))	{
-
-									$error = empty($current_locator->section_id)
-										? 'section_id is not valid'
-										: 'section_tipo is not valid';
-									$failed = new stdClass();
-										$failed->section_id		= $section_id;
-										$failed->data			= $current_locator;
-										$failed->component_tipo	= $component->get_tipo();
-										$failed->msg			= 'IGNORED: malformed locator '. $error;
-									$failed_rows[] = $failed;
-									continue 2;
-								}
+								$failed = new stdClass();
+									$failed->section_id		= $section_id;
+									$failed->data			= stripslashes( $value );
+									$failed->component_tipo	= $component->get_tipo();
+									$failed->msg			= 'IGNORED: malformed data '. to_string($value);
+								$failed_rows[] = $failed;
+								continue 1;
 							}
-						}//end if(!empty($value))
-					}
-					// Nolan optional key check
-					if (is_object($value) && property_exists($value, 'lg-nolan')) {
-						$nolan = 'lg-nolan';
-						$value = $value->{$nolan};
-					}
+						}
+						# debug_log(__METHOD__." Result decode json: type:".gettype($dato_from_json).' -> value: '.$value.' => decoded: '.to_string($dato_from_json), logger::DEBUG);
 
-					if (is_object($value) && property_exists($value, 'dataframe') && !property_exists($value, 'dato')) {
-						// Element without dato. Only the dataframe is saved
+					// dataframe. Checks value contains dataframe or dato keys
+						if (is_object($value)) {
+							// # Dataframe
+							// if (property_exists($value, 'dataframe')) {
+							// 	foreach ((array)$value->dataframe as $dtkey => $current_dt_locator) {
+							// 		$current_from_key 	= $current_dt_locator->from_key;
+							// 		$current_type 		= $current_dt_locator->type;
+							// 		$component->update_dataframe_element($current_dt_locator, $current_from_key, $current_type); //$ar_locator, $from_key, $type
+							// 		debug_log(__METHOD__." Added dataframe locator [$current_from_key,$current_type] ".to_string($current_dt_locator), logger::DEBUG);
+							// 	}
+							// }
+							# Dato
+							if (property_exists($value, 'dato')) {
+								$value = $value->dato;
+							}
+						}
+
+					// Elements 'translatable' can be formatted as JSON values like {"lg-eng":"My value","lg-spa":"Mi valor"}
+					if (($translate===true || $with_lang_versions===true) && is_object($value)) {
+
+						debug_log(__METHOD__
+							. " Parsing multi-language value [$component_tipo - $section_tipo - $section_id]: " .PHP_EOL
+							. ' value:' . to_string($value)
+							, logger::DEBUG
+						);
+						foreach ($value as $v_key => $v_value) {
+
+							if (strpos($v_key, 'lg-')===0) {
+								$component->set_lang( $v_key );
+								$component->set_dato( $v_value );
+								$component->Save();
+							}else{
+								debug_log(__METHOD__
+									. " ERROR ON IMPORT VALUE FROM $model_name [$component_tipo]"
+									. ' value:' . to_string($value)
+									, logger::ERROR
+								);
+							}
+						}
 					}else{
-						// Always set dato
-						$component->set_dato( $value );
-					}
 
-					// Save of course
-					// Note that $component->save_to_database = false, avoid real save.
-					$component->Save();
-				}
-			}//end foreach ($row as $key => $value)
+						$related_conponents = component_relation_common::get_components_with_relations();
+						if (in_array($model_name, $related_conponents)){ // $model_name==='component_portal' || $model_name==='component_autocomplete') {
+							// check every locator to be valid!!
+							if(!empty($value)) {
+								foreach ((array)$value as $current_locator) {
+									if (empty($current_locator->section_tipo) || empty($current_locator->section_id))	{
+
+										$error = empty($current_locator->section_id)
+											? 'section_id is not valid'
+											: 'section_tipo is not valid';
+										$failed = new stdClass();
+											$failed->section_id		= $section_id;
+											$failed->data			= $current_locator;
+											$failed->component_tipo	= $component->get_tipo();
+											$failed->msg			= 'IGNORED: malformed locator '. $error;
+										$failed_rows[] = $failed;
+										continue 2;
+									}
+								}
+							}//end if(!empty($value))
+						}
+						// Nolan optional key check
+						if (is_object($value) && property_exists($value, 'lg-nolan')) {
+							$nolan = 'lg-nolan';
+							$value = $value->{$nolan};
+						}
+
+						if (is_object($value) && property_exists($value, 'dataframe') && !property_exists($value, 'dato')) {
+							// Element without dato. Only the dataframe is saved
+						}else{
+							// Always set dato
+							$component->set_dato( $value );
+						}
+
+						// Save of course
+						// Note that $component->save_to_database = false, avoid real save.
+						$component->Save();
+					}
+				}//end foreach ($row as $key => $value)
 
 			// action
 				if($create_record===true) {
@@ -704,8 +744,6 @@ class tool_import_dedalo_csv extends tool_common {
 					$counter = 0;
 					gc_collect_cycles();
 				}
-
-			#debug_log(__METHOD__." +++ $action section $section_tipo - $section_id - in ".exec_time_unit($row_start_time,'ms').' ms', logger::ERROR);
 		}//end foreach ($ar_csv_data as $key => $value)
 
 		// Restore logging activity # !IMPORTANT
@@ -729,7 +767,13 @@ class tool_import_dedalo_csv extends tool_common {
 
 	/**
 	* VERIFY_CSV_MAP
-	* @return mixed true|string
+	* @param array $csv_map
+	* @param string $section_tipo
+	* @return object $response
+	* {
+	* 	result : bool
+	* 	msg : string
+	* }
 	*/
 	public static function verify_csv_map(array $csv_map, string $section_tipo) : object {
 
@@ -760,49 +804,62 @@ class tool_import_dedalo_csv extends tool_common {
 				true, // recursive
 				false // search_exact
 			);
+
 		// check if the csv_map has any "map_to" it's necessary to create any component to mach with the csv columns.
-			$map_to = array_column($csv_map, 'map_to');
-			$non_empty = array_filter($map_to);
-			if(empty($non_empty)) return $response;
-
-
-		foreach ($csv_map as $column_map) {
-			// if the column don't has the checked property or the checked is false or the map_to property is missing the column will not processed
-			// this situation is not a error and go ahead with the other columns
-			if(!isset($column_map->checked) || $column_map->checked ===false || empty($column_map->map_to) ){
-				continue;
-			}
-
-			// sample item (from ar_columns_map)
-				// {
-				// 	"tipo": "dd199",
-				// 	"label": "Creation date",
-				// 	"model": "component_date",
-				// 	"checked": true,
-				// 	"map_to": "dd199"
-				// }
-
-			$component_tipo = $column_map->map_to;
-
-			if(	   $component_tipo==='section_id'
-				|| $component_tipo==='created_by_user'
-				|| $component_tipo==='created_date'
-				|| $component_tipo==='modified_by_user'
-				|| $component_tipo==='modified_date'
-				|| in_array($component_tipo, $ar_section_info)
-			) continue;
-
-			if (!in_array($component_tipo, $ar_possible_component_tipo)) {
-				$model_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
-				// return "Sorry, component tipo: $component_tipo (model: $model_name) not found in section: $section_tipo";
-
-				$response->result = false;
-				$response->msg	= "Sorry, component tipo: $component_tipo (model: $model_name) not found in section: $section_tipo";
+			$map_to		= array_column($csv_map, 'map_to');
+			$non_empty	= array_filter($map_to);
+			if(empty($non_empty)) {
 				return $response;
 			}
 
-			$response->result = true;
-		}
+		// csv_map iterate
+			foreach ($csv_map as $column_map) {
+
+				// if the column don't has the checked property or the checked is false or the map_to property is missing the column will not processed
+				// this situation is not a error and go ahead with the other columns
+				if(!isset($column_map->checked) || $column_map->checked ===false || empty($column_map->map_to) ){
+					continue;
+				}
+
+				// sample item (from ar_columns_map)
+					// {
+					// 	"tipo": "dd199",
+					// 	"label": "Creation date",
+					// 	"model": "component_date",
+					// 	"checked": true,
+					// 	"map_to": "dd199"
+					// }
+
+				$component_tipo = $column_map->map_to;
+
+				// custom tipos
+					if(	   $component_tipo==='section_id'
+						|| $component_tipo==='created_by_user'
+						|| $component_tipo==='created_date'
+						|| $component_tipo==='modified_by_user'
+						|| $component_tipo==='modified_date'
+						|| in_array($component_tipo, $ar_section_info)
+					) continue;
+
+				// error case (ar_possible_component_tipo)
+					if (!in_array($component_tipo, $ar_possible_component_tipo)) {
+
+						$model_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+
+						$response->result	= false;
+						$response->msg		= "Sorry, component tipo: $component_tipo (model: $model_name) not found in section: $section_tipo";
+						debug_log(__METHOD__
+							. " $response->msg " . PHP_EOL
+							. ' component_tipo: ' .$component_tipo
+							, logger::ERROR
+						);
+						return $response;
+					}
+			}
+
+		// response
+			$response->result	= true;
+			$response->msg		= 'OK. Request done successfully';
 
 
 		return $response;
@@ -822,14 +879,15 @@ class tool_import_dedalo_csv extends tool_common {
 
 		$value = trim($value);
 
-		if (empty($value)) {
-			return null;
-		}
+		// no value case
+			if (empty($value)) {
+				return null;
+			}
 
 		// try to JSON decode (null on not decode)
-			$value_json = json_decode($value);
-
+		$value_json = json_handler::decode($value);
 		if (!$value_json) {
+
 			// old format (section_id)
 			// is int. Builds complete locator and set section_id from value
 			$locator = new locator();
@@ -838,26 +896,34 @@ class tool_import_dedalo_csv extends tool_common {
 				$locator->set_from_component_tipo($from_component_tipo);
 				$locator->set_section_id($value);
 		}else{
+
 			// locator or array of locators is received
-			$locator_base = is_array($value_json) ? reset($value_json) : $value_json;
+				$locator_base = is_array($value_json)
+					? reset($value_json)
+					: $value_json;
 
 			// is full locator. Inject safe fixed properties to avoid errors
-			$locator = new locator($locator_base);
-				if (!property_exists($locator_base, 'type')) {
-					$locator->set_type(DEDALO_RELATION_TYPE_LINK);
-				}
-				if (!property_exists($locator_base, 'section_tipo')) {
-					$locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
-				}
-				if (!property_exists($locator_base, 'from_component_tipo')) {
-					$locator->set_from_component_tipo($from_component_tipo);
-				}
+				$locator = new locator($locator_base);
+					if (!property_exists($locator_base, 'type')) {
+						$locator->set_type(DEDALO_RELATION_TYPE_LINK);
+					}
+					if (!property_exists($locator_base, 'section_tipo')) {
+						$locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
+					}
+					if (!property_exists($locator_base, 'from_component_tipo')) {
+						$locator->set_from_component_tipo($from_component_tipo);
+					}
 		}
 
-		if (!isset($locator) || !isset($locator->section_id)) {
-			debug_log(__METHOD__." Error on get user locator value from: ".to_string($value), logger::ERROR);
-			return null;
-		}
+		// fail case
+			if (!isset($locator) || !isset($locator->section_id)) {
+				debug_log(__METHOD__
+					. " Error on get user locator value" .PHP_EOL
+					. ' value: ' . to_string($value)
+					, logger::ERROR
+				);
+				return null;
+			}
 
 		return $locator;
 	}//end build_user_locator
@@ -933,11 +999,10 @@ class tool_import_dedalo_csv extends tool_common {
 					$timestamp = $dd_date->get_dd_timestamp();
 
 				// result
-					$result = array(
-						'component_dato' => $value_obj,
-						'timestamp' 	 => $timestamp
-					);
-
+					$result = (object)[
+						'component_dato'	=> $value_obj,
+						'timestamp'			=> $timestamp
+					];
 			}else{
 				return null;
 			}
@@ -952,12 +1017,12 @@ class tool_import_dedalo_csv extends tool_common {
 				$value_obj->start = $dd_date;
 
 			// result
-				$result = array(
-					'component_dato' => $value_obj,
-					'timestamp' 	 => $value
-				);
-
+				$result = (object)[
+					'component_dato'	=> $value_obj,
+					'timestamp'			=> $value
+				];
 		}
+
 
 		return (object)$result;
 	}//end build_date_from_value
@@ -988,16 +1053,16 @@ class tool_import_dedalo_csv extends tool_common {
 					return $response;
 				}
 
-			$components_list = section::get_ar_children_tipo_by_model_name_in_section(
-				$section_tipo, // section_tipo
-				['component'], // ar_model_name_required
-				true, // from_cache
-				true, // resolve_virtual
-				true, // recursive
-				false, // search_exact
-				false // ar_tipo_exclude_elements (on false, look for 'exclude_elements' model in virtaul section and apply)
-			);
-			// dump($components_list, ' components_list ++ '.to_string($section_tipo));
+			// components_list
+				$components_list = section::get_ar_children_tipo_by_model_name_in_section(
+					$section_tipo, // section_tipo
+					['component'], // ar_model_name_required
+					true, // from_cache
+					true, // resolve_virtual
+					true, // recursive
+					false, // search_exact
+					false // ar_tipo_exclude_elements (on false, look for 'exclude_elements' model in virtaul section and apply)
+				);
 
 			if (!empty($components_list)) {
 
@@ -1010,9 +1075,9 @@ class tool_import_dedalo_csv extends tool_common {
 				$result = [];
 				foreach ($components_list as $tipo) {
 					$result[] = (object)[
-						'label' => RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_APPLICATION_LANG, true),
-						'value' => $tipo,
-						'model' => RecordObj_dd::get_modelo_name_by_tipo($tipo, true)
+						'label'	=> RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_APPLICATION_LANG, true),
+						'value'	=> $tipo,
+						'model'	=> RecordObj_dd::get_modelo_name_by_tipo($tipo, true)
 					];
 				}
 
@@ -1023,6 +1088,10 @@ class tool_import_dedalo_csv extends tool_common {
 
 		} catch (Exception $e) {
 			$response->msg .= ' ' . $e->getMessage();
+			debug_log(__METHOD__
+				. " $response->msg " . PHP_EOL
+				, logger::ERROR
+			);
 		}
 
 
@@ -1081,7 +1150,10 @@ class tool_import_dedalo_csv extends tool_common {
 		// source_file
 			if (!defined($tmp_dir)) {
 				$msg = 'constant is not defined!  tmp_dir: '.$tmp_dir;
-				debug_log(__METHOD__." $msg", logger::ERROR);
+				debug_log(__METHOD__
+					." $msg "
+					, logger::ERROR
+				);
 				$response->msg .= $msg;
 				return $response;
 			}
@@ -1090,35 +1162,52 @@ class tool_import_dedalo_csv extends tool_common {
 		// check source file file
 			if (!file_exists($source_file)) {
 				$response->msg .= ' Source file not found: ' . basename($source_file);
+				debug_log(__METHOD__
+					. " $response->msg " .PHP_EOL
+					. ' source_file: ' .$source_file
+					, logger::ERROR
+				);
 				return $response;
 			}
 
 		// target_file
 			$target_file = DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH . '/' . $name;
 
-		// check target dir
+		// check target directory
 			$dir = DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH;
 			if (!is_dir($dir)) {
 				if(!mkdir($dir, 0775,true)) {
-					$response->msg .= trim(" Error on read or create default directory. Permission denied ");
+					$response->msg .= " Error on read or create default directory. Permission denied ";
+					debug_log(__METHOD__
+						. " $response->msg "
+						, logger::ERROR
+					);
 					return $response;
 				}
-				debug_log(__METHOD__." CREATED DIR: $dir  ".to_string(), logger::DEBUG);
+				// success
+				debug_log(__METHOD__
+					." CREATED DIR: $dir "
+					, logger::DEBUG
+				);
 			}
 
 		// move file
 			$moved = rename($source_file, $target_file);
 			if ($moved!==true) {
-				debug_log(__METHOD__.' Error on move source file to target_dir', logger::ERROR);
+				debug_log(__METHOD__
+					. ' Error on move source file to target_dir' . PHP_EOL
+					. ' source_file: ' . $source_file . PHP_EOL
+					. ' target_file: ' . $target_file
+					, logger::ERROR
+				);
 				$response->msg .= ' Error on move source file to target_dir';
 				return $response;
 			}
 
-		// response ok
+		// response OK
 			$response->result		= true;
 			$response->file_name	= $name;
 			$response->msg			= 'OK. Request done successfully';
-
 
 		// debug
 			if(SHOW_DEBUG===true) {
