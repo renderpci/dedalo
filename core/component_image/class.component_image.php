@@ -184,73 +184,55 @@ class component_image extends component_media_common {
 		$properties				= $this->get_properties();
 		$additional_path_tipo	= $properties->additional_path ?? null;
 		$section_id				= $this->get_section_id();
+
 		if ( !is_null($additional_path_tipo) && !empty($section_id) ) {
 
-			switch (true) {
+			$component_tipo	= $additional_path_tipo;
+			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component		= component_common::get_instance(
+				$model,
+				$component_tipo,
+				$section_id,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				$this->get_section_tipo()
+			);
 
-				case (is_string($additional_path_tipo)):
+			// valor
+				$valor = trim($component->get_valor());
 
-					$component_tipo	= $additional_path_tipo;
-					$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-					$component		= component_common::get_instance(
-						$model,
-						$component_tipo,
-						$section_id,
-						'edit',
-						DEDALO_DATA_NOLAN,
-						$this->get_section_tipo()
-					);
+			// Add a slash at the beginning if it doesn't already exist
+				if ( substr($valor, 0, 1)!=='/' ) {
+					$valor = '/'.$valor;
+				}
 
-					// valor
-						$valor = trim($component->get_valor());
-
-					// Add a slash at the beginning if it doesn't already exist
-						if ( substr($valor, 0, 1)!=='/' ) {
-							$valor = '/'.$valor;
-						}
-
-					// Remove the trailing slash if it exists
-						if ( substr($valor, -1)==='/' ) {
-							$valor = substr($valor, 0, -1);
-						}
-
-					if(empty($valor) && isset($properties->max_items_folder)) {
-
-						// max_items_folder defined case
-							$max_items_folder	= $properties->max_items_folder;
-							$int_section_id		= (int)$section_id;
-
-						// add
-							$additional_path = '/'.$max_items_folder*(floor($int_section_id / $max_items_folder));
-
-						// update component dato. Final dato must be an array to saved into component_input_text
-							$final_dato = array( $additional_path );
-							$component->set_dato( $final_dato );
-
-						// save if mode is edit
-							if ($this->mode==='edit') {
-								$component->Save();
-							}
-					}else{
-						// add
-							$additional_path = $valor;
-					}
-					break;
-
-				/*
-				case (is_object($additional_path) ):
-					//dump(gettype($additional_path),'$additional_path');
-					if(isset($additional_path->max_items_folder)){
-						$max_items_folder = $additional_path->max_items_folder;
-						$section_id = $this->parent;
-
-						$ar_additional_path[$this->id] = '/'.$max_items_folder*(floor($section_id_section_id / $max_items_folder));
-					}
-
-					break;
-				*/
-			}//end switch (true)
+			// Remove the trailing slash if it exists
+				if ( substr($valor, -1)==='/' ) {
+					$valor = substr($valor, 0, -1);
+				}
+				// add
+					$additional_path = $valor;
 		}
+
+		if(empty($valor) && isset($properties->max_items_folder)) {
+
+			// max_items_folder defined case
+				$max_items_folder	= $properties->max_items_folder;
+				$int_section_id		= (int)$section_id;
+
+			// add
+				$additional_path = '/'.$max_items_folder*(floor($int_section_id / $max_items_folder));
+
+			// // update component dato. Final dato must be an array to saved into component_input_text
+			// 	$final_dato = array( $additional_path );
+			// 	$component->set_dato( $final_dato );
+
+			// // save if mode is edit
+			// 	if ($this->mode==='edit') {
+			// 		$component->Save();
+			// 	}
+		}
+
 
 		// fix value
 			$this->additional_path = $additional_path;
