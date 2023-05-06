@@ -151,12 +151,12 @@ function debug_log(string $info, int $level=logger::DEBUG) : bool {
 
 		// bt
 		$bt		= debug_backtrace();
-		$source	= $bt[1];
+		$source	= $bt[1] ?? $bt[0];
 
 		$base_msg	= 'DEBUG_LOG ['.logger::level_to_string($level).']' . PHP_EOL
 			. ' ' . $info .' '. PHP_EOL
-			. ' File: ' . $source['file'].' '. PHP_EOL
-			. ' Line: ' . $source['line'].' ';
+			. ' [File]: ' . $source['file'].' '. PHP_EOL
+			. ' [Line]: ' . $source['line'].' ';
 
 		$msg = sprintf($colorFormats['bg_yellow'], $base_msg);
 
