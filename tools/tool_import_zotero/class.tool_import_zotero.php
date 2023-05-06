@@ -128,6 +128,7 @@ class tool_import_zotero extends tool_common {
 								$ar_parts	= explode('/', $zotero_obj->id);
 								$zotero_id	= end($ar_parts);
 								$section_id	= self::get_section_id_from_zotero_id( $id_item, $zotero_id);
+
 								if (is_null($section_id)) {
 									// section : Create new section when not found Zotero id in field code
 									$section	= section::get_instance($section_id, $section_tipo);
@@ -768,12 +769,12 @@ class tool_import_zotero extends tool_common {
 	// if no : create new one
 
 	/**
-	* GET_SECTION_ID_FROM_ZOTERO_ID
+	* get_section_id_from_code
 	* Search in database if current code exists. If true, return section id of founded record
 	* @param string $zotero_id
 	* @return int | null
 	*/
-	public static function get_section_id_from_zotero_id( $id_item, $zotero_id ) {
+	public static function get_section_id_from_code( $id_item, $zotero_id ) {
 
 		$ddo_map	= $id_item->ddo_map;
 		$ddo		= reset($ddo_map);
@@ -790,7 +791,7 @@ class tool_import_zotero extends tool_common {
 		// JSON seach_query_object to search
 		$sqo = json_decode('
 		{
-			"id": "get_section_id_from_zotero_id",
+			"id": "get_section_id_from_code",
 			"section_tipo": "'.$section_tipo.'",
 			"limit": 1,
 			"filter": {
@@ -799,10 +800,10 @@ class tool_import_zotero extends tool_common {
 						"q": "='.$code.'",
 						"path": [
 							{
-								"section_tipo": "'.$section_tipo.'",
-								"component_tipo": "'.$tipo.'",
-								"modelo": "'.$model_name.'",
-								"name": "Code"
+								"section_tipo"		: "'.$section_tipo.'",
+								"component_tipo"	: "'.$tipo.'",
+								"model"				: "'.$model_name.'",
+								"name"				: "Code"
 							}
 						]
 					},
@@ -810,10 +811,10 @@ class tool_import_zotero extends tool_common {
 						"q": "*/'.$code.'",
 						"path": [
 							{
-								"section_tipo": "'.$section_tipo.'",
-								"component_tipo": "'.$tipo.'",
-								"modelo": "'.$model_name.'",
-								"name": "Code"
+								"section_tipo"		: "'.$section_tipo.'",
+								"component_tipo"	: "'.$tipo.'",
+								"model"				: "'.$model_name.'",
+								"name"				: "Code"
 							}
 						]
 					}
@@ -835,7 +836,7 @@ class tool_import_zotero extends tool_common {
 
 
 		return $section_id;
-	}//end get_section_id_from_zotero_id
+	}//end get_section_id_from_code
 
 
 
