@@ -447,8 +447,10 @@ class tool_common {
 					? scandir($dir)
 					: null;
 			} catch (Exception $e) {
-				debug_log(__METHOD__." Error on read dir ".to_string($dir), logger::ERROR);
-				//return($e);
+				debug_log(__METHOD__
+					." Error on read dir: ".to_string($dir)
+					, logger::ERROR
+				);
 			}
 
 		// error on read the dir or empty result
