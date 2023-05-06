@@ -36,7 +36,6 @@ export const tool_update_cache = function () {
 
 	this.component_list = null
 
-
 	return true
 }//end page
 
@@ -61,6 +60,8 @@ export const tool_update_cache = function () {
 /**
 * INIT
 * Custom tool init
+* @param object options
+* @return bool common_init
 */
 tool_update_cache.prototype.init = async function(options) {
 
@@ -72,7 +73,6 @@ tool_update_cache.prototype.init = async function(options) {
 	// set the self specific vars not defined by the generic init (in tool_common)
 
 
-
 	return common_init
 }//end init
 
@@ -81,6 +81,8 @@ tool_update_cache.prototype.init = async function(options) {
 /**
 * BUILD
 * Custom tool build
+* @param bool autoload
+* @return bool common_build
 */
 tool_update_cache.prototype.build = async function(autoload=false) {
 
@@ -88,7 +90,6 @@ tool_update_cache.prototype.build = async function(autoload=false) {
 
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(this, autoload);
-
 
 	// specific actions.. like fix main_element for convenience
 		self.component_list = await self.get_component_list()
@@ -102,7 +103,8 @@ tool_update_cache.prototype.build = async function(autoload=false) {
 /**
 * GET_COMPONENT_LIST
 * 	Get the list of section components available to update cache
-* @return promise > bool
+* @return promise
+* 	resolve array result
 */
 tool_update_cache.prototype.get_component_list = function() {
 
@@ -128,7 +130,8 @@ tool_update_cache.prototype.get_component_list = function() {
 		return new Promise(function(resolve){
 
 			data_manager.request({
-				body : rqo
+				use_worker	: true,
+				body		: rqo
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {
@@ -145,8 +148,9 @@ tool_update_cache.prototype.get_component_list = function() {
 
 
 /**
-* update_cache
-* 	Get the list of section components available to update cache
+* UPDATE_CACHE
+* Get the list of section components available to update cache
+* @param array ar_component_tipo
 * @return promise > bool
 */
 tool_update_cache.prototype.update_cache = function(ar_component_tipo) {
@@ -175,7 +179,8 @@ tool_update_cache.prototype.update_cache = function(ar_component_tipo) {
 		return new Promise(function(resolve){
 
 			data_manager.request({
-				body : rqo
+				use_worker	: true,
+				body		: rqo
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {
