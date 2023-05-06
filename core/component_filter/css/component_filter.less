@@ -12,12 +12,9 @@
 		// background-color: #f668cc;
 		display: block; // important because don't have label (default is grid)
 
-		&.component_filter >.label {
-			display: none;
-		}
-
 		>.content_data {
 			padding: 0.5em;
+			padding-bottom: 1rem;
 			display: block;
 
 			// ul branch
@@ -27,17 +24,18 @@
 
 				// li item_li
 				>.item_li {
-					margin-top: 0.5rem;
+					margin-top: 0.33rem;
 					margin-left: 1.25rem;
 					// display: flex;
 					align-items: stretch;
+					line-height: 1.4rem;
 
 					>.item_label {
 						cursor: pointer;
 
 						// checkbox option
 						.item_input {
-							margin-right: 0.25rem;
+							margin-right: 0.33rem;
 							vertical-align: text-bottom;
 						}
 					}
@@ -96,8 +94,17 @@
 	.component_filter {
 		>.content_data {
 			font-size: 0.85rem;
+			padding-bottom: 0.5rem;
+
 			.branch .item_li {
 				margin-top: 0.25rem;
+				line-height: 1rem;
+
+				>.item_label {
+					.item_input {
+						margin-right: 0.25rem;
+					}
+				}
 			}
 			>.branch >.item_li {
 				margin-left: 0px;
