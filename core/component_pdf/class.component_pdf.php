@@ -549,7 +549,8 @@ class component_pdf extends component_media_common {
 		// short vars
 			$original_file_name	= $file_data->original_file_name; 	// like "my doc is beaty.psdf"
 			$full_file_name		= $file_data->full_file_name;		// like "test175_test65_1.pdf"
-			$full_file_path		= $file_data->full_file_path;		// like "/mypath/media/pdf/1.5MB/test175_test65_1.jpg"
+			$full_file_path		= $file_data->full_file_path;		// like "/mypath/media/pdf/original/test175_test65_1.jpg"
+			$first_page			= $file_data->first_page ?? 1; 		// used to assign the correct number to page tag of the transcription text
 
 		// copy original to default quality (in the future, a quality conversion script will be placed here)
 			$default_quality		= $this->get_default_quality();
@@ -591,8 +592,8 @@ class component_pdf extends component_media_common {
 
 				try {
 					$options = new stdClass();
-						$options->path_pdf 	 = (string)$target_pdf_path;	# full source pdf file path
-						#$options->first_page = (int)$pagina_inicial;		# number of first page. default is 1
+						$options->path_pdf		= (string)$target_pdf_path;	# full source pdf file path
+						$options->first_page	= (int)$first_page;		# number of first page. default is 1
 					$text_from_pdf_response = (object)component_pdf::get_text_from_pdf( $options );
 						#debug_log(__METHOD__." tool_transcription response ".to_string($text_from_pdf_response), logger::DEBUG);
 						// dump($text_from_pdf_response, ' text_from_pdf_response ++ '.to_string());
@@ -799,9 +800,12 @@ class component_pdf extends component_media_common {
 		$i=(int)$options->first_page;
 		$pdf_text='';
 		foreach ($pages as $current_page) {
+			$pdf_text .= '<p>';
 		    $pdf_text .= '[page-n-'. $i .']';
-		    $pdf_text .= '<br>';
-		    $pdf_text .= nl2br($current_page);
+		    $pdf_text .= '</p>';
+		    $pdf_text .= '<p>';
+		    $pdf_text .= str_replace(["\r\n", "\n\r", "\n", "\r"], '</p><p>' , $current_page);
+		    $pdf_text .= '</p>';
 		    $i++;
 		}
 
