@@ -29,37 +29,6 @@ class tool_export extends tool_common {
 
 
 	/**
-	* __CONSTRUCT (OLD CONSTRUCT)
-	*/
-		// public function __construct(string $section_tipo, string $model, string $data_format='standard', array $ar_ddo_map=[], object $sqo=null) {
-
-		// 	// Fix mode
-		// 	$this->mode = 'tool_export';
-
-		// 	// fix section_tipo
-		// 	$this->section_tipo = $section_tipo;
-
-		// 	// fix model
-		// 	$this->model = $model;
-
-		// 	// Fix data_format
-		// 	$this->data_format = $data_format;
-
-		// 	// fix ar_ddo_map
-		// 	$this->ar_ddo_map = $ar_ddo_map;
-
-		// 	// Fix sqo
-		// 	$this->sqo = $sqo;
-
-		// 	// Fix records
-		// 	$this->ar_records = null;
-
-		// 	return true;
-		// }//end __construct
-
-
-
-	/**
 	* SETUP
 	* Fix main class vars to de accessible
 	* @param object options
@@ -370,7 +339,7 @@ class tool_export extends tool_common {
 	*
 	* @return object $value
 	*/
-	protected function get_grid_value(array $ar_ddo, object $locator) {
+	protected function get_grid_value(array $ar_ddo, object $locator) : object {
 
 		$ar_cells		= [];
 		$ar_row_count	= [];

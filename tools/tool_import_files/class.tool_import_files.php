@@ -7,6 +7,7 @@
 class tool_import_files extends tool_common {
 
 
+
 	/**
 	* GET_FILE_DATA
 	* Extract the information about given file using regex to get the file name patterns
@@ -216,7 +217,7 @@ class tool_import_files extends tool_common {
 	* 	Assoc array with file info like file_path
 	* @return object|null dd_date $dd_date
 	*/
-	public static function get_media_file_date(array $media_file, string $model) {
+	public static function get_media_file_date(array $media_file, string $model) : ?object {
 
 		$dd_date			= null;
 		$source_full_path	= $media_file['file_path'];
@@ -237,9 +238,11 @@ class tool_import_files extends tool_common {
 					}
 
 				} catch (Exception $e) {
-					if(SHOW_DEBUG) {
-						error_log("Error on get DateTimeOriginal from image metadata");
-					}
+					debug_log(__METHOD__
+						. " Error on get DateTimeOriginal from image metadata " . PHP_EOL
+						. ' exception: ' . $e->getMessage()
+						, logger::ERROR
+					);
 				}
 
 				if (!empty($DateTimeOriginal)) {
@@ -262,7 +265,12 @@ class tool_import_files extends tool_common {
 				break;
 
 			default:
-				debug_log(__METHOD__." Error. get_media_file_date . Model is not defined ".to_string(), logger::ERROR);
+				debug_log(__METHOD__
+					. " Error. get_media_file_date . Model is not defined ". PHP_EOL
+					. ' source_full_path: ' . $source_full_path .PHP_EOL
+					. ' model: ' .$model
+					, logger::ERROR
+				);
 				break;
 		}//end switch ($model)
 
@@ -274,24 +282,24 @@ class tool_import_files extends tool_common {
 
 	/**
 	* FILE_PROCESSOR
+	* @param $options
 	* @return object $response
 	*/
-	public static function file_processor(object $request_options) : object {
+	public static function file_processor(object $options) : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed';
 
-		$options = new stdClass();
-			$options->file_processor			= null;
-			$options->file_processor_properties	= null;
-			$options->file_name					= null;
-			$options->file_path					= null;
-			$options->section_tipo				= null;
-			$options->section_id				= null;
-			$options->target_section_tipo		= null;
-			$options->tool_config				= null;
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+		// options
+			$file_processor				=  $options->file_processor ?? null;
+			$file_processor_properties	=  $options->file_processor_properties ?? null;
+			$file_name					=  $options->file_name ?? null;
+			$file_path					=  $options->file_path ?? null;
+			$section_tipo				=  $options->section_tipo ?? null;
+			$section_id					=  $options->section_id ?? null;
+			$target_section_tipo		=  $options->target_section_tipo ?? null;
+			$tool_config				=  $options->tool_config ?? null;
 
 		# FILE_PROCESSOR
 		# Global var button properties JSON data array
@@ -299,9 +307,9 @@ class tool_import_files extends tool_common {
 		# Note that var $file_processor_properties is the button properties JSON data, NOT current element processor selection
 
 		# Iterate each processor
-		foreach ((array)$options->file_processor_properties as $key => $file_processor_obj) {
+		foreach ((array)$file_processor_properties as $file_processor_obj) {
 
-			if ($file_processor_obj->function_name!==$options->file_processor) {
+			if ($file_processor_obj->function_name!==$file_processor) {
 				continue;
 			}
 
@@ -312,23 +320,38 @@ class tool_import_files extends tool_common {
 				if (is_callable($function_name)) {
 					$custom_arguments = (array)$file_processor_obj->custom_arguments;
 					$standard_options = [
-						"file_name"				=> $options->file_name,
-						"file_path"				=> $options->file_path,
-						"section_tipo"			=> $options->section_tipo,
-						"section_id"			=> $options->section_id,
-						"target_section_tipo"	=> $options->target_section_tipo,
-						"tool_config"			=> $options->tool_config
+						'file_name'				=> $file_name,
+						'file_path'				=> $file_path,
+						'section_tipo'			=> $section_tipo,
+						'section_id'			=> $section_id,
+						'target_section_tipo'	=> $target_section_tipo,
+						'tool_config'			=> $tool_config
 					];
 					$result = call_user_func($function_name, $standard_options, $custom_arguments);
-				}else{ debug_log(__METHOD__." Error on call file processor function: ".to_string($function_name), logger::ERROR); }
-			}else{ debug_log(__METHOD__." Error on include file processor file script_file: ".to_string($script_file), logger::ERROR); }
+				}else{
+					debug_log(__METHOD__
+						." Error on call file processor function: " . PHP_EOL
+						.' function_name: ' . to_string($function_name)
+						, logger::ERROR
+					);
+				}
+			}else{
+				debug_log(__METHOD__
+					." Error on include file processor file script_file: " . PHP_EOL
+					.' script_file: ' .to_string($script_file)
+					, logger::ERROR
+				);
+			}
 
-			debug_log(__METHOD__." Processed file function_name $function_name with script $script_file".to_string(), logger::DEBUG);
+			debug_log(__METHOD__
+				." Processed file function_name $function_name with script $script_file"
+				, logger::DEBUG
+			);
 		}//end foreach ((array)$options->file_processor_properties as $key => $file_processor_obj)
 
 
-		$response->result 	= true;
-		$response->msg 		= 'OK. Request done';
+		$response->result	= true;
+		$response->msg		= 'OK. Request done';
 
 
 		return (object)$response;
@@ -339,6 +362,8 @@ class tool_import_files extends tool_common {
 	/**
 	* IMPORT_FILES
 	* Process previously uploaded images
+	* @param object $options
+	* @return object $response
 	*/
 	public static function import_files(object $options) : object {
 
@@ -682,7 +707,7 @@ class tool_import_files extends tool_common {
 
 
 		return $response;
-	}//end if ($mode=='import_files')
+	}//end import_files
 
 
 

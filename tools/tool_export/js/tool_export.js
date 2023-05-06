@@ -115,8 +115,8 @@ tool_export.prototype.init = async function(options) {
 
 /**
 * BUILD
-* @param autoload = bool
-* @param bool autoload
+* @param bool autoload = false
+* @return bool common_build
 */
 tool_export.prototype.build = async function(autoload=false) {
 
@@ -127,6 +127,7 @@ tool_export.prototype.build = async function(autoload=false) {
 
 	try {
 
+		// nothing to do here
 
 	} catch (error) {
 		self.error = error
@@ -142,6 +143,7 @@ tool_export.prototype.build = async function(autoload=false) {
 /**
 * GET_SECTION_ID
 * @return string
+* 	as 'tmp_export_1'
 */
 tool_export.prototype.get_section_id = function() {
 

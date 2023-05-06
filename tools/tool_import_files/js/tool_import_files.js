@@ -23,26 +23,25 @@
 */
 export const tool_import_files = function () {
 
-	this.id					= null
-	this.model				= null
-	this.mode				= null
-	this.node				= null
-	this.ar_instances		= null
-	this.status				= null
-	this.events_tokens		= null
-	this.type				= null
-	this.source_lang		= null
-	this.target_lang		= null
-	this.langs				= null
-	this.caller				= null
-	this.key_dir			= null
-	this.tool_contanier		= null
-	this.files_data			= []
+	this.id						= null
+	this.model					= null
+	this.mode					= null
+	this.node					= null
+	this.ar_instances			= null
+	this.status					= null
+	this.events_tokens			= null
+	this.type					= null
+	this.source_lang			= null
+	this.target_lang			= null
+	this.langs					= null
+	this.caller					= null
+	this.key_dir				= null
+	this.tool_contanier			= null
+	this.files_data				= []
 
 	// services
 	this.service_dropzone		= null
 	this.service_tmp_section	= null
-	return true
 }//end page
 
 
@@ -62,6 +61,8 @@ export const tool_import_files = function () {
 /**
 * INIT
 * Custom tool init
+* @param object options
+* @return bool common_init
 */
 tool_import_files.prototype.init = async function(options) {
 
@@ -72,6 +73,7 @@ tool_import_files.prototype.init = async function(options) {
 
 	// upload_manager_init
 		self.key_dir = self.caller.tipo + '_' + self.caller.section_tipo
+
 
 	return common_init
 }//end init
@@ -84,7 +86,7 @@ tool_import_files.prototype.init = async function(options) {
 * (!) Note that common build resolve all components inside 'self.tool_config.ddo_map' and
 * here we do not want this, but only with role 'input_component' and with tmp section_id
 * @param bool autoload
-* @return promise bool
+* @return bool common_build
 */
 tool_import_files.prototype.build = async function(autoload=false) {
 
@@ -120,9 +122,9 @@ tool_import_files.prototype.build = async function(autoload=false) {
 			}
 			// init service dropzone
 			self.service_dropzone = await get_instance({
-				model 				: 'service_dropzone',
-				mode 				: 'edit',
-				caller 				: self,
+				model				: 'service_dropzone',
+				mode				: 'edit',
+				caller				: self,
 				allowed_extensions	: self.allowed_extensions || [],
 				key_dir				: self.key_dir,
 				component_option	: self.tool_config.ddo_map.filter(el => el.role === 'component_option'),
@@ -137,7 +139,6 @@ tool_import_files.prototype.build = async function(autoload=false) {
 				mode	: 'edit',
 				caller	: self,
 				ddo_map	: self.tool_config.ddo_map.filter(el => el.role==='input_component')
-
 			})
 			await self.service_tmp_section.build()
 

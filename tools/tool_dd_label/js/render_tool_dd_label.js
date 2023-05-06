@@ -31,18 +31,20 @@ render_tool_dd_label.prototype.edit = async function (options={}) {
 	const self = this
 
 	// options
-	const render_level 	= options.render_level
+		const render_level = options.render_level
 
 	// content_data
-		const current_content_data = await get_content_data(self)
+		const content_data = await get_content_data(self)
 		if (render_level==='content') {
-			return current_content_data
+			return content_data
 		}
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.tool.build_wrapper_edit(self, {
-			content_data : current_content_data
+			content_data : content_data
 		})
+		// set pointers
+		wrapper.content_data = content_data
 
 
 	return wrapper
@@ -248,7 +250,12 @@ const render_row = async function(self, ar_langs, header, name, key) {
 /**
 * RENDER_LANGUAGE_LABEL
 * Create each language_label node
-* @return HTMLElement content_data
+* @param object self
+* @param string current_lang
+* @param bool header
+* @param string|null name
+* @param int key
+* @return HTMLElement language_label
 */
 const render_language_label = async function(self, current_lang, header, name, key) {
 
