@@ -156,7 +156,7 @@ class tool_import_zotero extends tool_common {
 								if (empty($found_map_item)) {
 									debug_log(__METHOD__
 										. ' Ignored name: '.$name.' from Zotero import process. Not found map_item to manage it'. PHP_EOL
-										. ' map: ' .to_string($map)
+										. ' map: ' .json_encode($map, JSON_PRETTY_PRINT)
 										, logger::WARNING
 									);
 									continue; # Skip not accepted data
