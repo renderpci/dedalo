@@ -406,6 +406,47 @@ class component_pdf extends component_media_common {
 
 
 	/**
+	* CREATE_IMAGE
+	*
+	* Once the full path is specified, the command is working as desired.
+	* @param object $options
+	* @return string|false $path
+	*/
+	public function create_image(?object $options=null) : string|bool {
+
+		// options
+			$page		= $options->page ?? 0;
+			$quality	= $options->quality ?? $this->get_original_quality();
+
+		// pdf path
+			$file_name		= $this->get_id();
+			$target_file	= DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER . '/tmp/' . $file_name . '.' . DEDALO_IMAGE_EXTENSION;
+
+		// generate from PDF
+			$source_file	= $this->get_media_filepath($quality);
+			if (file_exists($source_file)) {
+
+				$image_pdf_options = new stdClass();
+					$image_pdf_options->source_file = $source_file;
+					$image_pdf_options->ar_layers 	= [$page];
+					$image_pdf_options->target_file = $target_file;
+					$image_pdf_options->density		= 600;
+					$image_pdf_options->antialias	= true;
+					$image_pdf_options->quality		= 75;
+					$image_pdf_options->resize		= '25%';
+
+				$result_convert = ImageMagick::convert($image_pdf_options);
+			}
+
+			$result = (file_exists($target_file)) ? $target_file : false;
+
+		return $result;
+	}//end create_image
+
+
+
+
+	/**
 	* GET_VALOR_EXPORT
 	* Return component value sent to export data
 	* @return string $valor
