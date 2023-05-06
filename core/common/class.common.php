@@ -4076,6 +4076,9 @@ abstract class common {
 				// properties
 					$RecordObj_dd		= new RecordObj_dd($current_button_tipo);
 					$button_properties	= $RecordObj_dd->get_properties();
+					if(isset($button_properties->disable) && $button_properties->disable === true ){
+						continue;
+					}
 
 				// button_import and button_trigger cases for compatibility with v5 ontology
 				// in future version will be merge both with new model button_tool
