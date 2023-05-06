@@ -924,7 +924,7 @@ final class dd_api_Test extends TestCase {
 
 			$this->assertTrue(
 				empty($_ENV['DEDALO_LAST_ERROR']),
-				'expected running without errors'
+				'expected running without errors: ' .json_encode($_ENV['DEDALO_LAST_ERROR'])
 			);
 
 			$this->assertTrue(

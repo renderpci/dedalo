@@ -30,7 +30,7 @@ function ar_random_string() {
 
 
 function random_number($length = 10000000) {
-	return rand(0, $length-1);
+	return rand(1, $length-1);
 }
 
 
@@ -56,7 +56,8 @@ function random_locator($arguments) {
 
 	$section_tipo			= $arguments[0];
 	$from_component_tipo	= $arguments[1];
-	$section_id				= (random_number(50) || 1);
+	$max 					= $arguments[2] ?? 50;
+	$section_id				= (random_number($max) ?? 1);
 
 	// $value = (object)[
 	// 	'type'					=> 'dd151',
@@ -91,9 +92,10 @@ function ar_random_locator() {
 
 
 function custom_locator($arguments) {
-	$section_tipo = $arguments[0];
-	$section_id = $arguments[1];
-	$from_component_tipo = $arguments[2];
+
+	$section_tipo			= $arguments[0];
+	$section_id				= $arguments[1] ?? 1;
+	$from_component_tipo	= $arguments[2];
 
 	$value = (object)[
 		'type'					=> 'dd151',
