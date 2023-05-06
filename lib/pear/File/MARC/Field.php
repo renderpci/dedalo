@@ -36,7 +36,7 @@
  * @link      http://pear.php.net/package/File_MARC
  */
 
-#require_once 'File/MARC/List.php';
+require_once 'File/MARC/List.php';
 
 // {{{ class File_MARC_Field extends File_MARC_List
 /**

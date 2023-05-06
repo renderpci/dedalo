@@ -9,7 +9,7 @@
  * that is part of the Emilda Project (http://www.emilda.org). Christoffer
  * Landtman generously agreed to make the "php-marc" code available under the
  * GNU LGPL so it could be used as the basis of this PEAR package.
- * 
+ *
  * PHP version 5
  *
  * LICENSE: This program is free software; you can redistribute it and/or modify
@@ -43,7 +43,7 @@
  *
  * For the list of {@link File_MARC_Field} objects in a {@link File_MARC_Record}
  * object, the key() method returns the tag name of the field.
- * 
+ *
  * For the list of {@link File_MARC_Subfield} objects in a {@link
  * File_MARC_Data_Field} object, the key() method returns the code of
  * the subfield.
@@ -119,77 +119,32 @@ class File_MARC_List extends SplDoublyLinkedList
     {
         $pos = 0;
         $exist_pos = $existing_node->getPosition();
-        $temp_list = unserialize(serialize($this));
         $this->rewind();
-        $temp_list->rewind();
 
         // Now add the node according to the requested mode
         switch ($before) {
 
         case true:
-            $new_node->setPosition($exist_pos);
-
-            if ($exist_pos == 0) {
-                $this->unshift($new_node);
-                while ($n = $temp_list->next()) {
-                    $pos++;
-                    $this->next()->setPosition($pos);
-                }
-            } else {
-                $prev_node = $temp_list->offsetGet($existing_node->getPosition());
-                $num_nodes = $this->count();
-                $this->rewind();
-                // Copy up to the existing position, add in node, copy rest
-                try {
-                    while ($n = $temp_list->shift()) {
-                        $this->next();
-                        $pos++;
-                        if ($pos < $exist_pos) {
-                            // no-op
-                        } elseif ($pos == $exist_pos) {
-                            $this->offsetSet($pos, $new_node);
-                        } elseif ($pos == $num_nodes) {
-                            $n->setPosition($pos);
-                            $this->push($n);
-                        } elseif ($pos > $exist_pos) {
-                            $n->setPosition($pos);
-                            $this->offsetSet($pos, $n);
-                        }
-                    }
-                }
-                catch (Exception $e) {
-                    // no-op - shift() throws an exception, sigh
-                }
-            }
+            $this->add($exist_pos, $new_node);
             break;
 
         // after
         case false:
-            $prev_node = $temp_list->offsetGet($existing_node->getPosition());
-            $num_nodes = $this->count();
-            $this->rewind();
-            // Copy up to the existing position inclusively, add node, copy rest
-            try {
-                while ($n = $temp_list->shift()) {
-                    $this->next();
-                    $pos++;
-                    if ($pos <= $exist_pos) {
-                        // no-op
-                    } elseif ($pos == $exist_pos + 1) {
-                        $this->offsetSet($pos, $new_node);
-                    } elseif ($pos == $num_nodes) {
-                        $n->setPosition($pos);
-                        $this->push($n);
-                    } elseif ($pos > $exist_pos + 1) {
-                        $n->setPosition($pos);
-                        $this->offsetSet($pos, $n);
-                    }
-                }
-            }
-            catch (Exception $e) {
-                // no-op - shift() throws an exception, sigh
+            if ($this->offsetExists($exist_pos + 1)) {
+                $this->add($exist_pos + 1, $new_node);
+            } else {
+                $this->appendNode($new_node);
+                return true;
             }
             break;
+        }
+
+        // Fix positions
+        $this->rewind();
+        while ($n = $this->current()) {
+            $n->setPosition($pos);
+            $this->next();
+            $pos++;
         }
 
         return true;
@@ -241,15 +196,21 @@ class File_MARC_List extends SplDoublyLinkedList
         $pos = 0;
 
         // Omit target node and adjust pos of remainder
+        $done = false;
         try {
             while ($n = $this->current()) {
-                if ($pos == $target_pos) {
+                if ($pos == $target_pos && !$done) {
+                    $done = true;
+                    $this->next();
                     $this->offsetUnset($pos);
-                } elseif ($pos > $target_pos) {
+                } elseif ($pos >= $target_pos) {
                     $n->setPosition($pos);
+                    $pos++;
+                    $this->next();
+                } else {
+                    $pos++;
+                    $this->next();
                 }
-                $pos++;
-                $this->next();
             }
         }
         catch (Exception $e) {
