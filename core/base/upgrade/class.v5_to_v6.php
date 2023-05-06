@@ -280,4 +280,146 @@ class v5_to_v6 {
 
 
 
+	/**
+	* UPDATE_PUBLICATION_MEDIA_FILES
+	* To prevent very large list of files of PDF and images, the path for
+	* component_pdf (rsc209) and component_image (rsc228) of section Publication (rsc205)
+	* has been changed to calculated model as /0 ...
+	* @return bool
+	*/
+	public static function update_publication_media_files() : bool {
+
+		try {
+
+			// PDF files
+				$max_items_folder = 1000;
+				foreach (DEDALO_PDF_AR_QUALITY as $quality) {
+
+					$current_dir = DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER . '/' . $quality;
+					// check directory
+						if (!is_dir($current_dir)) {
+							debug_log(__METHOD__
+								. ' Ignored invalid directory for quality: '.$quality .PHP_EOL
+								. ' current_dir: ' . $current_dir
+								, logger::ERROR
+							);
+							continue;
+						}
+
+					// files inside
+						$files = scandir($current_dir);
+						foreach ($files as $file) {
+
+							$full_path = $current_dir .'/'. $file;
+
+							// ignore folders and non searched files as 'rsc209_rsc205_1.pdf'
+								if(!is_file($full_path) || strpos($file, 'rsc209_rsc205_')===false) {
+									continue;
+								}
+
+							// section_id
+								preg_match('/.*_([0-9]+)\..*/', $file, $output_array);
+								$section_id = $output_array[1];
+								if (empty($section_id)) {
+									debug_log(__METHOD__
+										. " Error on calculate file section_id using regex. The file will be ignored " . PHP_EOL
+										. ' file: ' . $file
+										, logger::ERROR
+									);
+									continue;
+								}
+
+							// move file
+								$additional_path	= $max_items_folder * (floor($section_id / $max_items_folder));
+								$target_path		= $current_dir . '/' . $additional_path .'/'. $file;
+								$result = rename($full_path, $target_path);
+								if ($result===false) {
+									debug_log(__METHOD__
+										. " Error on move file " . PHP_EOL
+										. ' source full_path: ' . $full_path . PHP_EOL
+										. ' target_path: ' . $target_path
+										, logger::ERROR
+									);
+								}
+						}//end foreach ($files as $file)
+				}//end foreach (DEDALO_PDF_AR_QUALITY as $quality)
+				debug_log(__METHOD__
+					. " Updated Publication PDF media files " . PHP_EOL
+					. ' DEDALO_PDF_AR_QUALITY: ' . json_encode(DEDALO_PDF_AR_QUALITY)
+					, logger::WARNING
+				);
+
+
+			// IMAGE files
+				$max_items_folder = 1000;
+				foreach (DEDALO_IMAGE_AR_QUALITY as $quality) {
+
+					$current_dir = DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER . '/' . $quality;
+					// check directory
+						if (!is_dir($current_dir)) {
+							debug_log(__METHOD__
+								. ' Ignored invalid directory for quality: '.$quality .PHP_EOL
+								. ' current_dir: ' . $current_dir
+								, logger::ERROR
+							);
+							continue;
+						}
+
+					// files inside
+						$files = scandir($current_dir);
+						foreach ($files as $file) {
+
+							$full_path = $current_dir .'/'. $file;
+
+							// ignore folders and non searched files as 'rsc228_rsc205_1.jpg'
+								if(!is_file($full_path) || strpos($file, 'rsc228_rsc205_')===false) {
+									continue;
+								}
+
+							// section_id
+								preg_match('/.*_([0-9]+)\..*/', $file, $output_array);
+								$section_id = $output_array[1];
+								if (empty($section_id)) {
+									debug_log(__METHOD__
+										. " Error on calculate file section_id using regex. The file will be ignored " . PHP_EOL
+										. ' file: ' . $file
+										, logger::ERROR
+									);
+									continue;
+								}
+
+							// move file
+								$additional_path	= $max_items_folder * (floor($section_id / $max_items_folder));
+								$target_path		= $current_dir . '/' . $additional_path .'/'. $file;
+								$result = rename($full_path, $target_path);
+								if ($result===false) {
+									debug_log(__METHOD__
+										. " Error on move file " . PHP_EOL
+										. ' source full_path: ' . $full_path . PHP_EOL
+										. ' target_path: ' . $target_path
+										, logger::ERROR
+									);
+								}
+						}//end foreach ($files as $file)
+				}//end foreach (DEDALO_IMAGE_AR_QUALITY as $quality)
+				debug_log(__METHOD__
+					. " Updated Publication IMAGE media files " . PHP_EOL
+					. ' DEDALO_IMAGE_AR_QUALITY: ' . json_encode(DEDALO_IMAGE_AR_QUALITY)
+					, logger::WARNING
+				);
+
+		} catch (Exception $e) {
+			debug_log(__METHOD__
+				." Error on update_publication_media_files ". PHP_EOL
+				." Caught exception: ".$e->getMessage()
+				, logger::ERROR
+			);
+		}
+
+
+		return true;
+	}//end update_publication_media_files
+
+
+
 }//end class v5_to_v6

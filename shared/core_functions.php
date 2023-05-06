@@ -151,7 +151,7 @@ function debug_log(string $info, int $level=logger::DEBUG) : bool {
 
 		// bt
 		$bt		= debug_backtrace();
-		$source	= $bt[1] ?? $bt[0];
+		$source	= $bt[0];
 
 		$base_msg	= 'DEBUG_LOG ['.logger::level_to_string($level).']' . PHP_EOL
 			. ' ' . $info .' '. PHP_EOL

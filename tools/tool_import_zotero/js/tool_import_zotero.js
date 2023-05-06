@@ -18,31 +18,30 @@
 
 
 /**
-* tool_import_zotero
+* TOOL_IMPORT_ZOTERO
 * Tool to translate contents from one language to other in any text component
 */
 export const tool_import_zotero = function () {
 
-	this.id					= null
-	this.model				= null
-	this.mode				= null
-	this.node				= null
-	this.ar_instances		= null
-	this.status				= null
-	this.events_tokens		= null
-	this.type				= null
-	this.source_lang		= null
-	this.target_lang		= null
-	this.langs				= null
-	this.caller				= null
-	this.key_dir			= null
-	this.tool_contanier		= null
-	this.files_data			= []
+	this.id						= null
+	this.model					= null
+	this.mode					= null
+	this.node					= null
+	this.ar_instances			= null
+	this.status					= null
+	this.events_tokens			= null
+	this.type					= null
+	this.source_lang			= null
+	this.target_lang			= null
+	this.langs					= null
+	this.caller					= null
+	this.key_dir				= null
+	this.tool_contanier			= null
+	this.files_data				= []
 
 	// services
 	this.service_dropzone		= null
 	this.service_tmp_section	= null
-	return true
 }//end page
 
 
@@ -52,16 +51,18 @@ export const tool_import_zotero = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	tool_import_zotero.prototype.render	= tool_common.prototype.render
+	tool_import_zotero.prototype.render		= tool_common.prototype.render
 	tool_import_zotero.prototype.destroy	= common.prototype.destroy
 	tool_import_zotero.prototype.refresh	= common.prototype.refresh
-	tool_import_zotero.prototype.edit	= render_tool_import_zotero.prototype.edit
+	tool_import_zotero.prototype.edit		= render_tool_import_zotero.prototype.edit
 
 
 
 /**
 * INIT
 * Custom tool init
+* @param object options
+* @return bool common_init
 */
 tool_import_zotero.prototype.init = async function(options) {
 
@@ -72,6 +73,7 @@ tool_import_zotero.prototype.init = async function(options) {
 
 	// upload_manager_init
 		self.key_dir = self.caller.tipo + '_' + self.caller.section_tipo
+
 
 	return common_init
 }//end init
@@ -84,7 +86,7 @@ tool_import_zotero.prototype.init = async function(options) {
 * (!) Note that common build resolve all components inside 'self.tool_config.ddo_map' and
 * here we do not want this, but only with role 'input_component' and with tmp section_id
 * @param bool autoload
-* @return promise bool
+* @return bool common_build
 */
 tool_import_zotero.prototype.build = async function(autoload=false) {
 
@@ -96,8 +98,8 @@ tool_import_zotero.prototype.build = async function(autoload=false) {
 		});
 
 	try {
-		// Service DropZone
-			// init service dropzone
+
+		// service_dropzone
 			self.service_dropzone = await get_instance({
 				model 				: 'service_dropzone',
 				mode 				: 'edit',
@@ -110,13 +112,11 @@ tool_import_zotero.prototype.build = async function(autoload=false) {
 			await self.service_dropzone.build()
 
 		// Service tmp_section
-			// init service tmp_section
 			self.service_tmp_section = await get_instance({
 				model	: 'service_tmp_section',
 				mode	: 'edit',
 				caller	: self,
 				ddo_map	: self.tool_config.ddo_map.filter(el => el.role==='input_component')
-
 			})
 			await self.service_tmp_section.build()
 
