@@ -1805,18 +1805,18 @@ class component_image extends component_media_common {
 				switch($exif['Orientation']) {
 					case 8:// rotate 90
 					case 6:// rotate 270 || -90
-						$width = $exif['COMPUTED']['Height'];
+						$width 	= $exif['COMPUTED']['Height'];
 						$height = $exif['COMPUTED']['Width'];
 						break;
 					case 1:	// rotate 0
 					case 3: // rotate 180
 					default:
-						$width = $exif['COMPUTED']['Width'];
+						$width 	= $exif['COMPUTED']['Width'];
 						$height = $exif['COMPUTED']['Height'];
 						break;
 				}
 			}else{
-				$width = $exif['COMPUTED']['Width'];
+				$width 	= $exif['COMPUTED']['Width'];
 				$height = $exif['COMPUTED']['Height'];
 			}
 			$ar_info[] = $width;
