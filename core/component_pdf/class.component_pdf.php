@@ -355,10 +355,10 @@ class component_pdf extends component_media_common {
 
 		// thumb_path
 			$file_name  = $this->get_id();
-			$thumb_path = DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
+			$target_file = DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
 
 		// thumb already exists case
-			if (!$force_create && file_exists($thumb_path)) {
+			if (!$force_create && file_exists($target_file)) {
 				$url = DEDALO_MEDIA_URL . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
 				# ABSOLUTE (Default false)
 				if ($absolute) {
@@ -368,23 +368,34 @@ class component_pdf extends component_media_common {
 			}
 
 		// thumb not exists case: generate from PDF
-			$quality	= $this->get_default_quality();
-			$path		= $this->get_media_filepath($quality);
-			if (file_exists($path)) {
+			$quality		= $this->get_default_quality();
+			$source_file	= $this->get_media_filepath($quality);
+			if (file_exists($source_file)) {
 
 				// dimensions . Like "102x57"
 					$width		= defined('DEDALO_IMAGE_THUMB_WIDTH')  ? DEDALO_IMAGE_THUMB_WIDTH  : 224;
 					$height		= defined('DEDALO_IMAGE_THUMB_HEIGHT') ? DEDALO_IMAGE_THUMB_HEIGHT : 149;
-					$dimensions	= $width.'x'.$height.'>';
+					$dimensions	= $width.'x'.$height;
+
+					$thumb_pdf_options = new stdClass();
+						$thumb_pdf_options->source_file = $source_file;
+						$thumb_pdf_options->ar_layers 	= [0];
+						$thumb_pdf_options->target_file = $target_file;
+						$thumb_pdf_options->density		= 150;
+						$thumb_pdf_options->antialias	= true;
+						$thumb_pdf_options->quality		= 75;
+						$thumb_pdf_options->resize		= $dimensions;
+
+					$result = ImageMagick::convert($thumb_pdf_options);
 
 				// command
 					// $flags 		= '-debug all';
 					// $flags 		= " -scale 200x200 -background white -flatten ";
-					$command = MAGICK_PATH ."convert -alpha off {$path}[0] -thumbnail '$dimensions' -background white -flatten -gravity center -unsharp 0x.5 -quality 90 $thumb_path";
+					// $command = MAGICK_PATH ."convert -alpha off {$path}[0] -thumbnail '$dimensions' -background white -flatten -gravity center -unsharp 0x.5 -quality 90 $target_file";
 
 				// exec command
-					exec($command.' 2>&1', $output, $result_code);
-					if ($result_code==0) {
+					// exec($command.' 2>&1', $output, $result_code);
+					if ($result!==false) {
 
 						// url. All is OK
 						$url = DEDALO_MEDIA_URL . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
@@ -393,9 +404,6 @@ class component_pdf extends component_media_common {
 						if ($absolute===true) {
 							$url = DEDALO_PROTOCOL . DEDALO_HOST . $url;
 						}
-					}else{
-						// Error. An error occurred
-						debug_log(__METHOD__." An error occurred! Failed command: '$command'  - result_code: ".to_string($result_code), logger::ERROR);
 					}
 			}
 
