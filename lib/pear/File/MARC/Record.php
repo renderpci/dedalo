@@ -228,21 +228,7 @@ class File_MARC_Record
      */
     function insertField(File_MARC_Field $new_field, File_MARC_Field $existing_field, $before = false)
     {
-        switch ($before) {
-        /* Insert before the specified field in the record */
-        case true:
-            $this->fields->insertNode($new_field, $existing_field, true);
-            break;
-
-        /* Insert after the specified field in the record */
-        case false:
-            $this->fields->insertNode($new_field, $existing_field);
-            break;
-
-        default: 
-            $errorMessage = File_MARC_Exception::formatError(File_MARC_Exception::$messages[File_MARC_Exception::ERROR_INSERTFIELD_MODE], array("mode" => $before));
-            throw new File_MARC_Exception($errorMessage, File_MARC_Exception::ERROR_INSERTFIELD_MODE);
-        }
+        $this->fields->insertNode($new_field, $existing_field, $before);
         return $new_field;
     }
     // }}}
