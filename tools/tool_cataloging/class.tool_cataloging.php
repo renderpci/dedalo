@@ -1,10 +1,11 @@
 <?php
 /**
-* CLASS tool_numisdata_cataloging
-*
+* CLASS TOOL_CATALOGING
+* 	A numismatic tool
 *
 */
 class tool_cataloging extends tool_common {
 
 
-}//end class tool_numisdata_cataloging
+
+}//end class tool_cataloging
