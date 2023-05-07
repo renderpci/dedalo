@@ -10,7 +10,7 @@
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {tool_common, load_component} from '../../tool_common/js/tool_common.js'
-	import {render_tool_tc, add_component} from './render_tool_tc.js'
+	import {render_tool_tc} from './render_tool_tc.js'
 
 
 
@@ -34,9 +34,6 @@ export const tool_tc = function () {
 	//this.target_lang
 	this.langs			= null
 	this.caller			= null
-
-
-	return true
 }//end page
 
 
@@ -55,6 +52,8 @@ export const tool_tc = function () {
 
 /**
 * INIT
+* @param object options
+* @return bool common_init
 */
 tool_tc.prototype.init = async function(options) {
 
@@ -75,6 +74,8 @@ tool_tc.prototype.init = async function(options) {
 
 /**
 * BUILD_CUSTOM
+* @param bool autoload = false
+* @return bool common_build
 */
 tool_tc.prototype.build = async function(autoload=false) {
 
@@ -102,6 +103,8 @@ tool_tc.prototype.build = async function(autoload=false) {
 
 /**
 * GET_COMPONENT
+* @param string lang
+* @return object component_instance
 */
 tool_tc.prototype.get_component = async function(lang) {
 
@@ -112,12 +115,11 @@ tool_tc.prototype.get_component = async function(lang) {
 
 	// options (clone context and edit)
 		const options = Object.assign(clone(self.main_element.context),{
-			self 				: self,
+			self				: self,
 			lang				: lang,
 			mode				: 'edit',
 			section_id			: self.main_element.section_id,
 			to_delete_instances	: to_delete_instances // array of instances to delete after create the new one
-
 		})
 
 	// call generic common tool build
@@ -159,69 +161,21 @@ tool_tc.prototype.change_all_time_codes = function(offset_seconds) {
 		}
 
 	// call to the API, fetch data and get response
-		return new Promise(function(resolve){
+	return new Promise(function(resolve){
 
-			data_manager.request({
-				body : rqo
-			})
-			.then(function(response){
-				if(SHOW_DEVELOPER===true) {
-					dd_console("-> change_all_time_codes API response:",'DEBUG',response);
-				}
-
-				const result = response.result // array of changed tc
-
-				resolve(result)
-			})
+		data_manager.request({
+			body : rqo
 		})
+		.then(function(response){
+			if(SHOW_DEVELOPER===true) {
+				dd_console("-> change_all_time_codes API response:",'DEBUG',response);
+			}
 
+			const result = response.result // array of changed tc
 
-	// // short vars
-	// 	const wrapper			= self.wrapper
-	// 	const tc_offset			= self.offset_input
-	// 	const target_component	= self.target_component
-
-	// // empty tc offset value case
-	// 	if (tc_offset.value==='' || tc_offset.value===null) {
-	// 		// show_message
-	// 			ui.show_message(
-	// 				wrapper,
-	// 				get_label.error_empty_offset || 'Ops.. Empty tc offset',
-	// 				'error',
-	// 				'response_div',
-	// 				true
-	// 			)
-	// 		// focus
-	// 			tc_offset.focus()
-
-	// 		return false
-	// 	}
-
-	// if (save===true) {
-
-	// 	// return self.add_and_save_time_code_offset(wrapper, tc_offset.value)
-
-	// } else {
-
-	// 	// Changes only preview, don't updates the DB
-	// 		const tc_target_content = wrapper.querySelector('#tc_target_content')
-	// 		const ar_images 		= tc_target_content.querySelectorAll('.tc')
-
-	// 		for (let i = 0; i < ar_images.length; i++) {
-
-	// 			const ar_image_string 	= ar_images[i].src.split('/')
-	// 			const tc_image_string 	= ar_image_string[ar_image_string.length - 1]
-	// 			const new_tc_image_time	= self.add_time_code_offset(tc_image_string, tc_offset.value)
-
-	// 			ar_images[i].src = ar_images[i].src.replace(tc_image_string, new_tc_image_time)
-	// 		}
-
-	// 		const msg = 'Total tc tags changed: ' + ar_images.length
-
-	// 		ui.show_message(wrapper, msg, 'ok' , 'response_div', true)
-	// }
-
-	// return true
+			resolve(result)
+		})
+	});
 }//end change_all_time_codes
 
 
