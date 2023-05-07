@@ -1,5 +1,5 @@
 /**
-* TOOL_IMPORT_marc21
+* TOOL_IMPORT_MARC21
 *
 * Loaded on tool init
 */
@@ -8,6 +8,8 @@
 @import '../../../core/page/css/layout/vars';
 
 @tool_main_color: #63adf8; // blue
+
+
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
@@ -112,10 +114,6 @@
 
 			}
 
-			>.drop_zone {
-				background-color: #b0feee;
-			}
-
 			// template_container. Where de rows are placed
 			>.template_container {
 				outline: 1px solid @color_grey_medium;
@@ -138,7 +136,6 @@
 					margin: 1rem;
 					margin-bottom: 0px;
 					padding-bottom: 0px;
-					// background-color: #fdfcc0;
 
 					// buttons add files etc.
 					>.column_left {
@@ -157,43 +154,11 @@
 
 				// file-row. Each row line
 				.file-row {
-					margin: 1em;
-					margin-bottom: 0px;
-					margin-top: 0.5rem;
 					// display: flex;
 					// flex-wrap: wrap;
 					// justify-content: left;
 					// align-items: center;
 					// outline: 1px solid #f9f5f5;
-					min-height: 72px;
-
-					// grid way
-					display: grid;
-    				grid-template-columns: 128px 2fr 1fr 1fr 1fr 3rem;
-					align-items: center;
-
-					// each column inside
-					>* {
-						margin-right: 1em;
-						// min-width: 128px;
-					}
-
-					.details_wrapp {
-						// width: 23%;
-						padding: 0.5rem;
-						padding-left: 1rem;
-						padding-right: 1rem;
-
-						>.name {
-							margin-right: 0.33rem;
-						}
-						>.error {
-							margin-right: 0.33rem;
-						}
-						>.size {
-							margin-right: 0.33rem;
-						}
-					}
 				}//end .file-row
 			}
 
@@ -228,7 +193,6 @@
 				}
 			}
 
-
 			// inputs_container. Temporal sections container ???????????? REVIEW (!)
 				// .inputs_container {
 				// 	padding: 1em;
@@ -253,7 +217,8 @@
 // modal header tool modification
 	.tool_header.tool_import_marc21 {
 		background-color: @tool_main_color;
-		.tool_name_container{
+
+		.tool_name_container {
 			.label{
 				display: flex;
 				align-items: center;

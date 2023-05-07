@@ -536,11 +536,9 @@ const render_file_info = function(self, item) {
 
 			// errors found
 			const text = JSON.stringify(item.sample_data_errors, null, 2)
-
 			preview = ui.create_dom_element({
 				element_type	: 'pre',
 				class_name		: 'preview error hide',
-				// inner_html	: text, // text.replaceAll('<br>','\n'),
 				inner_html		: text.replaceAll('<br>','\n'),
 				parent			: fragment
 			})
@@ -550,7 +548,6 @@ const render_file_info = function(self, item) {
 		}else{
 
 			const text = JSON.stringify(item.sample_data, null, 2)
-
 			preview = ui.create_dom_element({
 				element_type	: 'pre',
 				class_name		: 'preview hide',
@@ -569,10 +566,10 @@ const render_file_info = function(self, item) {
 
 	// result
 		const result_container = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'result',
-				parent			: fragment
-			})
+			element_type	: 'div',
+			class_name		: 'result',
+			parent			: fragment
+		})
 		item.result_container = result_container
 
 	// item_wrapper

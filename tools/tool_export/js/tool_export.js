@@ -78,7 +78,7 @@ export const tool_export = function () {
 *	tipo: "rsc36"
 *	tool_config: {section_id: "2", section_tipo: "dd1324", name: "tool_export", label: "Tool Indexation", icon: "/v6/tools/tool_export/img/icon.svg", …}
 * }
-* @return bool
+* @return bool common_init
 */
 tool_export.prototype.init = async function(options) {
 
@@ -107,6 +107,7 @@ tool_export.prototype.init = async function(options) {
 
 		// const load_promise = import('../../../lib/sheetjs/dist/xlsx.full.min.js')
 		// await common.prototype.load_script(DEDALO_ROOT_WEB + '/lib/sheetjs/dist/xlsx.full.min.js')
+
 
 	return common_init
 }//end init
