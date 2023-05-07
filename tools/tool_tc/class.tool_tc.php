@@ -11,30 +11,22 @@ class tool_tc extends tool_common {
 	* CHANGE_ALL_TIMECODES
 	* Replaces all found tc tags adding/subtracting the
 	* offset given in seconds like [TC_00:01:37.960_TC] to [TC_00:01:41.960_TC]
-	* @param object $request_options
+	* @param object $options
 	* @return object $response
 	*/
-	public static function change_all_timecodes(object $request_options) : object {
+	public static function change_all_timecodes(object $options) : object {
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// options
-			$options = new stdClass();
-				$options->component_tipo	= null;
-				$options->section_tipo		= null;
-				$options->section_id		= null;
-				$options->lang				= null;
-				$options->offset_seconds	= null;
-				$options->key				= null; // optional dato key
-				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-		// short vars
-			$component_tipo	= $options->component_tipo;
-			$section_tipo	= $options->section_tipo;
-			$section_id		= $options->section_id;
-			$lang			= $options->lang;
+				$component_tipo		= $options->component_tipo ?? null;
+				$section_tipo		= $options->section_tipo ?? null;
+				$section_id			= $options->section_id ?? null;
+				$lang				= $options->lang ?? null;
+				// $offset_seconds	= $options->offset_seconds ?? null;
+				// $key				= $options->key ?? null; // optional dato key
 
 		// component
 			$model		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
@@ -60,7 +52,10 @@ class tool_tc extends tool_common {
 					$result					= self::replace_tc_codes($raw_text, (int)$options->offset_seconds);
 					$final_raw_text			= $result->raw_text;
 					$ar_replaced[$raw_key]	= $result->ar_replaced;
-					debug_log(__METHOD__." replaced data  ".to_string($ar_replaced), logger::DEBUG);
+					debug_log(__METHOD__
+						." replaced data  ".to_string($ar_replaced)
+						, logger::DEBUG
+					);
 				}else{
 					$final_raw_text = $raw_text;
 				}
@@ -93,30 +88,35 @@ class tool_tc extends tool_common {
 	private static function replace_tc_codes(string $raw_text, int $offset_seconds) : object {
 
 		// short vars
-			$tc_pattern = TR::get_mark_pattern($mark='tc', $standalone=false);
+			$tc_pattern = TR::get_mark_pattern(
+				'tc', // string mark
+				false // bool standalone
+			);
 
 		// time codes. Get all time codes (tc tags as [TC_00:01:57.960_TC])
-			preg_match_all($tc_pattern,  $raw_text,  $matches_tc, PREG_PATTERN_ORDER);
+			preg_match_all($tc_pattern, $raw_text, $matches_tc, PREG_PATTERN_ORDER);
 
 		// matches iterate
 			$ar_final = [];
-			foreach ($matches_tc[1] as $current_tc) {
+			if (!empty($matches_tc[1])) {
+				foreach ($matches_tc[1] as $current_tc) {
 
-				$secs		= OptimizeTC::TC2seg($current_tc); // returns float
-				$new_secs	= $secs + $offset_seconds;
+					$secs		= OptimizeTC::TC2seg($current_tc); // returns float
+					$new_secs	= $secs + $offset_seconds;
 
-				if ($new_secs<0) {
-					$new_secs = 0;
+					if ($new_secs<0) {
+						$new_secs = 0;
+					}
+
+					$new_tc = OptimizeTC::seg2tc($new_secs);
+
+					$ar_final[$current_tc] = $new_tc;
 				}
 
-				$new_tc = OptimizeTC::seg2tc($new_secs);
-
-				$ar_final[$current_tc] = $new_tc;
-			}
-
-		// reverse array order
-			if ($offset_seconds>0) {
-				$ar_final = array_reverse($ar_final,true);
+				// reverse array order
+					if ($offset_seconds>0) {
+						$ar_final = array_reverse($ar_final,true);
+					}
 			}
 
 		// final_raw_text
