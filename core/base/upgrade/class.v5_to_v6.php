@@ -319,7 +319,7 @@ class v5_to_v6 {
 
 							// section_id
 								preg_match('/.*_([0-9]+)\..*/', $file, $output_array);
-								$section_id = $output_array[1];
+								$section_id = $output_array[1] ?? null;
 								if (empty($section_id)) {
 									debug_log(__METHOD__
 										. " Error on calculate file section_id using regex. The file will be ignored " . PHP_EOL
@@ -330,9 +330,24 @@ class v5_to_v6 {
 								}
 
 							// move file
-								$additional_path	= $max_items_folder * (floor($section_id / $max_items_folder));
-								$target_path		= $current_dir . '/' . $additional_path .'/'. $file;
-								$result = rename($full_path, $target_path);
+								$additional_path = $max_items_folder * (floor($section_id / $max_items_folder));
+
+							// base_dir
+								$base_dir = $current_dir . '/' . $additional_path;
+								if ( !is_dir($base_dir) ) {
+									if( !mkdir($base_dir, 0750) ) {
+										$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Unable to create dir: '.$base_dir;
+										debug_log(__METHOD__
+											." ++ Error. Unable to create non exiting directory base_dir: '.$base_dir"
+											, logger::ERROR
+										);
+										continue;
+									}
+								}
+
+							// target file
+								$target_path	= $current_dir . '/' . $additional_path .'/'. $file;
+								$result			= rename($full_path, $target_path);
 								if ($result===false) {
 									debug_log(__METHOD__
 										. " Error on move file " . PHP_EOL
@@ -378,10 +393,10 @@ class v5_to_v6 {
 
 							// section_id
 								preg_match('/.*_([0-9]+)\..*/', $file, $output_array);
-								$section_id = $output_array[1];
+								$section_id = $output_array[1] ?? null;
 								if (empty($section_id)) {
 									debug_log(__METHOD__
-										. " Error on calculate file section_id using regex. The file will be ignored " . PHP_EOL
+										. " ++ Error on calculate file section_id using regex. The file will be ignored " . PHP_EOL
 										. ' file: ' . $file
 										, logger::ERROR
 									);
@@ -389,12 +404,27 @@ class v5_to_v6 {
 								}
 
 							// move file
-								$additional_path	= $max_items_folder * (floor($section_id / $max_items_folder));
-								$target_path		= $current_dir . '/' . $additional_path .'/'. $file;
-								$result = rename($full_path, $target_path);
+								$additional_path = $max_items_folder * (floor($section_id / $max_items_folder));
+
+							// base_dir
+								$base_dir = $current_dir . '/' . $additional_path;
+								if ( !is_dir($base_dir) ) {
+									if( !mkdir($base_dir, 0750) ) {
+										$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Unable to create dir: '.$base_dir;
+										debug_log(__METHOD__
+											." ++ Error. Unable to create non exiting directory base_dir: '.$base_dir"
+											, logger::ERROR
+										);
+										continue;
+									}
+								}
+
+							// target file
+								$target_path	= $current_dir . '/' . $additional_path .'/'. $file;
+								$result			= rename($full_path, $target_path);
 								if ($result===false) {
 									debug_log(__METHOD__
-										. " Error on move file " . PHP_EOL
+										. " ++ Error on move file " . PHP_EOL
 										. ' source full_path: ' . $full_path . PHP_EOL
 										. ' target_path: ' . $target_path
 										, logger::ERROR
