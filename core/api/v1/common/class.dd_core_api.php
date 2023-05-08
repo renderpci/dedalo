@@ -329,7 +329,7 @@ final class dd_core_api {
 									$element_json = $element->get_json($get_json_options);
 
 									// context add
-									$context[] = $element_json->context;
+									$context[] = $element_json->context[0];
 								}
 							break;
 
