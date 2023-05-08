@@ -217,7 +217,7 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 					? self.tool_config.ddo_map
 					: []
 
-				const ddo_map_length	= ddo_map.length
+				const ddo_map_length = ddo_map.length
 				for (let i = 0; i < ddo_map_length; i++) {
 
 					// el. components / sections / areas used by the tool defined in tool_config.ddo_map
@@ -304,7 +304,7 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 	// load data if is not already received as option
 		if (autoload===true && !self.context) {
 
-			// rqo. Create the basic rqo to load tool config data stored in component_json tipo 'dd1353'
+			// tool rqo. Create the basic rqo to load tool config data stored in component_json tipo 'dd1353'
 				const rqo = {
 					action	: 'get_element_context',
 					// tool source for component JSON that stores full tool config
@@ -324,7 +324,7 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 				const api_response = await data_manager.request({
 					body : rqo
 				})
-				self.context = api_response.result
+				self.context = api_response.result[0]
 
 			// debug
 				if(SHOW_DEBUG===true) {

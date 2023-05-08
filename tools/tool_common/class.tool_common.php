@@ -37,25 +37,23 @@ class tool_common {
 
 	/**
 	* GET_JSON
-	* @param object|null $request_options = null
+	* Gets tool context
+	* This function to preserve calls coherence,
+	* but only is used to get context, not data.
+	* @param object|null $options = null
 	* @return object $json
 	*/
-	public function get_json(object $request_options=null) : object {
+	public function get_json(object $options=null) : object {
 
-		// options parse
-			$options = new stdClass();
-				$options->get_context	= true;
-				$options->get_data		= true;
-				if($request_options!==null) foreach($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+		// options
+			$get_context	= $options->get_context ?? true;
+			$get_data		= $options->get_data ?? false;
 
-		// new way
+		// JSON object
 			$json = new stdClass();
-				if (true===$options->get_context) {
-					$json->context = $this->get_context();
+				if (true===$get_context) {
+					$json->context = [$this->get_structure_context()];
 				}
-				// if (true===$options->get_data) {
-				// 	$json->data = $this->get_data();
-				// }
 
 		return $json;
 	}//end get_json
@@ -63,11 +61,16 @@ class tool_common {
 
 
 	/**
-	* GET_CONTEXT
+	* GET_STRUCTURE_CONTEXT
 	* Parse the tool context
+	* Used when tools area loaded from different window
+	* like time_machine do
+	* The context data is stored in section 'dd1324' (Registered tools)
+	* preparsed into the component_json 'dd1353' as JSON 'simple_tool_obj'
+	* when tools are registered
 	* @return dd_object $dd_object
 	*/
-	public function get_context() : dd_object {
+	public function get_structure_context() : dd_object {
 
 		// check valid name
 			if ($this->name==='tool_common') {
@@ -90,8 +93,17 @@ class tool_common {
 			);
 			$simple_tool_obj_dato	= $simple_tool_component->get_dato();
 			$tool_object			= reset($simple_tool_obj_dato);
-
-		// $name = $tool_object->name;
+			// tool_object check
+			if (empty($tool_object)) {
+				debug_log(__METHOD__
+					. " Error. Invalid tool_object. Unable to continue !  " . PHP_EOL
+					. ' model: '.to_string($model) .PHP_EOL
+					. ' component_tipo: '.to_string($component_tipo) .PHP_EOL
+					. ' section_tipo: '.to_string($this->section_tipo) .PHP_EOL
+					. ' section_id: '.to_string($this->section_id) .PHP_EOL
+					, logger::ERROR
+				);
+			}
 
 		// label. (JSON list) Try match current lang else use the first lang value
 			$tool_label = array_find($tool_object->label, function($el){
@@ -108,7 +120,7 @@ class tool_common {
 			if(!empty($tool_object->labels) && !empty((array)$tool_object->labels)) {
 
 				// add label with lang fallback
-				foreach ($tool_object->labels as $key => $current_label_value) {
+				foreach ($tool_object->labels as $current_label_value) {
 
 					$label_name = $current_label_value->name;
 					if(!isset($labels[$label_name])) {
@@ -185,7 +197,7 @@ class tool_common {
 
 
 		return $dd_object;
-	}//end get_context
+	}//end get_structure_context
 
 
 
