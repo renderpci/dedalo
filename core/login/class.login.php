@@ -1032,6 +1032,14 @@ class login extends common {
 
 		// already login check
 			if (self::is_logged()!==true) {
+				$user_id = isset($_SESSION['dedalo'])
+					? $_SESSION['dedalo']['auth']['user_id']
+					: null;
+				debug_log(__METHOD__
+					. " User is already logged " . PHP_EOL
+					. ' user_id: '. $user_id
+					, logger::WARNING
+				);
 				return false;
 			}
 
