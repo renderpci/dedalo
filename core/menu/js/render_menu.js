@@ -47,6 +47,7 @@ render_menu.prototype.edit = async function() {
 		const quit_button = ui.create_dom_element({
 			element_type	: 'div',
 			id				: 'quit',
+			class_name		: 'quit top_item',
 			parent			: fragment
 		})
 		quit_button.addEventListener('click', async () => {
@@ -68,7 +69,7 @@ render_menu.prototype.edit = async function() {
 	// logo image
 		const dedalo_icon = ui.create_dom_element({
 			element_type	: 'a',
-			id				: 'dedalo_icon_top',
+			class_name		: 'dedalo_icon_top top_item',
 			parent			: fragment
 		})
 		dedalo_icon.addEventListener('click', function(){
@@ -78,7 +79,7 @@ render_menu.prototype.edit = async function() {
 	// areas/sections hierarchy list
 		const hierarchy = ui.create_dom_element({
 			element_type	: 'div',
-			id				: 'menu_hierarchy',
+			class_name		: 'menu_hierarchy top_item',
 			parent			: fragment
 		})
 		// render first level (root)
@@ -157,7 +158,7 @@ render_menu.prototype.edit = async function() {
 		if (self.data && self.data.show_ontology===true) {
 			const ontology_link = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'ontology',
+				class_name		: 'ontology top_item',
 				parent			: fragment,
 				text_content	: 'Ontology'
 			})
@@ -171,7 +172,7 @@ render_menu.prototype.edit = async function() {
 	// user name link (open tool_user_admin)
 		const logged_user_name = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'logged_user_name',
+			class_name		: 'logged_user_name top_item',
 			text_content	: username,
 			parent			: fragment
 		})
@@ -197,11 +198,11 @@ render_menu.prototype.edit = async function() {
 	// application lang selector
 		const lang_datalist = page_globals.dedalo_application_langs
 		const dedalo_aplication_langs_selector = ui.build_select_lang({
-			id			: 'dd_app_lang',
+			// id		: 'dd_app_lang',
 			langs		: lang_datalist,
 			action		: change_lang,
 			selected	: page_globals.dedalo_application_lang,
-			class_name	: 'reset_input dedalo_aplication_langs_selector'
+			class_name	: 'reset_input dedalo_aplication_langs_selector top_item'
 		})
 		dedalo_aplication_langs_selector.title = get_label.interface || 'Interface'
 		fragment.appendChild(dedalo_aplication_langs_selector)
@@ -214,25 +215,25 @@ render_menu.prototype.edit = async function() {
 			}
 		})
 		const dedalo_data_langs_selector = ui.build_select_lang({
-			id			: 'dd_data_lang',
+			// id		: 'dd_data_lang',
 			langs		: lang_datalist_data,
 			action		: change_lang,
 			selected	: page_globals.dedalo_data_lang,
-			class_name	: 'reset_input dedalo_aplication_langs_selector'
+			class_name	: 'reset_input dedalo_aplication_langs_selector top_item'
 		})
 		fragment.appendChild(dedalo_data_langs_selector)
 
 	// menu_spacer
 		ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'menu_spacer',
+			class_name		: 'menu_spacer top_item',
 			parent			: fragment
 		})
 
 	// section label button (go to list)
 		const section_label = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'section_label',
+			class_name		: 'section_label top_item unactive',
 			parent			: fragment
 		})
 		let current_instance = null // expected section instance assignation when section render finish
@@ -298,15 +299,18 @@ render_menu.prototype.edit = async function() {
 				event_manager.subscribe('render_instance', fn_update_section_label)
 			)
 			function fn_update_section_label(instance) {
-				if((instance.type==='section' || instance.type==='area') && instance.mode!=='tm'){
+				if((instance.type==='section' || instance.type==='area') && instance.mode!=='tm') {
 
 					// search presets section case
 						if (instance.tipo==='dd623') {
 							return
 						}
 
+					section_label.classList.add('inactive')
+
 					if (current_instance && instance.tipo===current_instance.tipo && current_instance.mode!=='edit') {
-						// nothing to do. We are already on a list
+						// we are already on a list
+						section_label.classList.remove('inactive')
 					}else{
 						// update section label
 						// change the value of the current DOM element
@@ -334,7 +338,7 @@ render_menu.prototype.edit = async function() {
 	// inspector button toggle
 		const toggle_inspector = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'button_toggle_inspector',
+			class_name		: 'button_toggle_inspector top_item',
 			parent			: fragment
 		})
 		toggle_inspector.addEventListener("click", function(e) {
@@ -343,7 +347,7 @@ render_menu.prototype.edit = async function() {
 
 	// debug info bar
 		if(SHOW_DEVELOPER===true) {
-			fragment.appendChild( get_debug_info_bar(self) );
+			fragment.appendChild( render_debug_info_bar(self) );
 		}
 
 	// menu_wrapper
@@ -351,11 +355,16 @@ render_menu.prototype.edit = async function() {
 			  menu_wrapper.classList.add('menu_wrapper','menu')
 			  menu_wrapper.appendChild(fragment)
 		// menu left band
-			if (page_globals.is_root===true) {
-				menu_wrapper.classList.add('is_root')
-			}
-			else if (page_globals.is_global_admin===true) {
-				menu_wrapper.classList.add('is_global_admin')
+			switch (true) {
+				case page_globals.is_root===true:
+					menu_wrapper.classList.add('is_root')
+					break;
+				case page_globals.is_global_admin===true:
+					menu_wrapper.classList.add('is_global_admin')
+					break;
+				default:
+					// nothing to add
+					break;
 			}
 
 
@@ -365,11 +374,11 @@ render_menu.prototype.edit = async function() {
 
 
 /**
-* GET_DEBUG_INFO_BAR
+* render_DEBUG_INFO_BAR
 * @param object self
 * @return HTMLElement debug_info_bar
 */
-const get_debug_info_bar = (self) => {
+const render_debug_info_bar = (self) => {
 
 	const debug_info_bar = ui.create_dom_element({
 		element_type	: 'div',
@@ -380,7 +389,7 @@ const get_debug_info_bar = (self) => {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'dedalo_version',
-			text_content	: 'Dédalo v. ' + page_globals.dedalo_version,
+			text_content	: 'Code v. ' + page_globals.dedalo_version,
 			parent			: debug_info_bar
 		})
 
@@ -388,7 +397,7 @@ const get_debug_info_bar = (self) => {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'dedalo_db_name',
-			text_content	: 'Database: ' + page_globals.dedalo_db_name,
+			text_content	: 'DB: ' + page_globals.dedalo_db_name,
 			parent			: debug_info_bar
 		})
 
@@ -412,20 +421,20 @@ const get_debug_info_bar = (self) => {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'php_memory',
-			text_content	: 'PHP memory: ' + page_globals.php_memory,
+			text_content	: 'memory: ' + page_globals.php_memory,
 			parent			: debug_info_bar
 		})
 	// php_sapi_name
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'php_sapi_name',
-			text_content	: 'PHP sapi. ' + self.data.info_data.php_sapi_name,
+			text_content	: 'sapi. ' + self.data.info_data.php_sapi_name,
 			parent			: debug_info_bar
 		})
 
 
 	return debug_info_bar
-}//end get_debug_info_bar
+}//end render_debug_info_bar
 
 
 
