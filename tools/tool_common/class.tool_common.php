@@ -523,7 +523,11 @@ class tool_common {
 
 		// file not found case
 			if(!file_exists($file)) {
-				debug_log(__METHOD__." File not found ".to_string($file), logger::ERROR);
+				debug_log(__METHOD__
+					." File not found " . PHP_EOL
+					.' file: '.to_string($file)
+					, logger::ERROR
+				);
 				return [];
 			}
 
@@ -603,6 +607,8 @@ class tool_common {
 	public static function call_component_method(object $options) : object {
 
 		// Working here... (!)
+		throw new Exception("Error Processing Request", 1);
+
 
 		$response = new stdClass();
 			$response->result	= false;
