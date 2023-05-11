@@ -28,8 +28,6 @@ export const menu = function(){
 	this.events_tokens
 
 	this.ar_instances
-
-	return true
 }//end menu
 
 
@@ -53,7 +51,8 @@ export const menu = function(){
 
 /**
 * INIT
-* @return bool true
+* @param object options
+* @return bool
 */
 menu.prototype.init = function(options) {
 
@@ -82,10 +81,9 @@ menu.prototype.init = function(options) {
 /**
 * BUILD
 * @param bool autoload
-* @return promise
-* 	resolve bool true
+* @return true
 */
-menu.prototype.build = async function(autoload=true){
+menu.prototype.build = async function(autoload=true) {
 	const t0 = performance.now()
 
 	const self = this
