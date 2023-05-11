@@ -1216,7 +1216,7 @@ class component_relation_common extends component_common {
 
 		$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
 
-
+		$component_tipo = end($query_object->path)->component_tipo;
 		switch (true) {
 			# IS DIFFERENT
 			case ($q_operator==='!=' && !empty($q)):
@@ -1229,7 +1229,7 @@ class component_relation_common extends component_common {
 			case ($q_operator==='!*'):
 				$operator = '@>';
 				$q_obj = new stdClass();
-					$q_obj->from_component_tipo = end($query_object->path)->component_tipo;
+					$q_obj->from_component_tipo = $component_tipo ;
 				$ar_q 	  = array($q_obj);
 				$q_clean  = '\''.json_encode($ar_q).'\'::jsonb=FALSE';
 				$query_object->operator = $operator;
@@ -1239,7 +1239,7 @@ class component_relation_common extends component_common {
 			case ($q_operator==='*'):
 				$operator = '@>';
 				$q_obj = new stdClass();
-					$q_obj->from_component_tipo = end($query_object->path)->component_tipo;
+					$q_obj->from_component_tipo = $component_tipo ;
 				$ar_q 	  = array($q_obj);
 				$q_clean  = '\''.json_encode($ar_q).'\'';
 				$query_object->operator = $operator;
@@ -1252,11 +1252,48 @@ class component_relation_common extends component_common {
 				$query_object->operator = $operator;
 				$query_object->q_parsed	= $q_clean;
 				break;
-		}//end switch (true) {
+		}//end switch (true)
+
+
+		// only for component_autocomplete_hi
+			$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($component_tipo);
+			if ($legacy_model==='component_autocomplete_hi'){
+				$query_object = component_relation_common::add_relations_search($query_object);
+			}
 
 
 		return $query_object;
 	}//end resolve_query_object_sql
+
+
+
+	/**
+	* ADD_RELATIONS_SEARCH
+	* @param object $query_object
+	* @return object $new_query_object
+	*/
+	protected static function add_relations_search( object $query_object) : object {
+
+		// q_operator
+			$q_operator = $query_object->q_operator ?? null;
+
+		# Clone and modify query_object for search in relations_search too if the operator is different to ==
+			$relation_search_obj = clone $query_object;
+			if ($q_operator!=='==') {
+				$relation_search_obj->component_path = ['relations_search'];
+			}
+
+		# Group the two query_object in a 'or' clause
+		$operator = '$or';
+		if ($q_operator==='!=') {
+			$operator = '$and';
+		}
+		$new_query_object = new stdClass();
+			$new_query_object->{$operator} = [$query_object,$relation_search_obj];
+
+
+		return $new_query_object;
+	}//end add_relations_search
 
 
 
