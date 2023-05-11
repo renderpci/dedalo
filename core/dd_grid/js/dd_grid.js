@@ -16,23 +16,22 @@
 
 export const dd_grid = function(){
 
-	// // element properties declare
-		this.model
-		this.tipo
-		this.section_tipo
-		this.section_id
-		this.mode
-		this.data_format
-		this.lang
+	// element properties declare
+	this.model
+	this.tipo
+	this.section_tipo
+	this.section_id
+	this.mode
+	this.data_format
+	this.lang
 
-		this.rqo
+	this.rqo
 
-		this.data
-		this.node
-		this.id
+	this.data
+	this.node
+	this.id
 
-		this.events_tokens = []
-	return true
+	this.events_tokens = []
 }//end dd_grid
 
 
@@ -61,8 +60,7 @@ export const dd_grid = function(){
 * Custom init method.
 * Call common init and then add custom properties
 * @param object options
-* @return promise
-* 	bool true
+* @return bool
 */
 dd_grid.prototype.init	= async function(options) {
 
@@ -90,7 +88,7 @@ dd_grid.prototype.init	= async function(options) {
 * BUILD
 * Custom element builder
 * @param bool autoload = false
-* @return bool true
+* @return bool
 */
 dd_grid.prototype.build	= async function(autoload=false) {
 
