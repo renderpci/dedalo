@@ -246,7 +246,7 @@ const get_content_data = async function(self, ar_section_record) {
 const drag_and_drop = function(options) {
 
 	// options
-		const drag_node			= options.section_record_node
+		const drag_node = options.section_record_node
 
 	drag_node.draggable = true
 	drag_node.classList.add('draggable')
@@ -267,14 +267,13 @@ const drag_and_drop = function(options) {
 * @return bool true
 */
 const on_dragstart_mosaic = function(node, event, options) {
-	// event.preventDefault();
 	event.stopPropagation();
 
 	// will be necessary the original locator of the section_record and the paginated_key (the position in the array of data)
 	const transfer_data = {
 		locator			: options.locator,
 		paginated_key	: options.paginated_key,
-		caller			: "tool_cataloging",
+		caller			: 'tool_cataloging'
 	}
 
 	// the data will be transfer to drop in text format
@@ -290,13 +289,13 @@ const on_dragstart_mosaic = function(node, event, options) {
 }//end ondrag_start
 
 
+
 /**
 * RENDER_HOVER_VIEW
 * Render all received section records and place it into a DocumentFragment
-* @param instance self
+* @param object self
 * @param array ar_section_record
-* @param DOM node alt_list_body
-*
+* @param HTMLElement hover_body
 * @return DocumentFragment
 */
 const render_hover_view = async function(self, ar_section_record, hover_body) {
@@ -306,7 +305,6 @@ const render_hover_view = async function(self, ar_section_record, hover_body) {
 
 	// add all section_record rendered nodes
 		const ar_section_record_length = ar_section_record.length
-
 		if (ar_section_record_length>0) {
 
 			for (let i = 0; i < ar_section_record_length; i++) {
@@ -361,6 +359,7 @@ const render_hover_view = async function(self, ar_section_record, hover_body) {
 			}
 		}//end if (ar_section_record_length===0)
 
+
 	return fragment
 }//end render_hover_view
 
@@ -369,6 +368,9 @@ const render_hover_view = async function(self, ar_section_record, hover_body) {
 /**
 * REBUILD_COLUMNS_MAP
 * Adding control columns to the columns_map that will processed by section_recods
+* @param array base_columns_map
+* @param object self
+* @param bool view_mosaic
 * @return obj full_columns_map
 */
 const rebuild_columns_map = function(base_columns_map, self, view_mosaic) {
@@ -408,7 +410,7 @@ const rebuild_columns_map = function(base_columns_map, self, view_mosaic) {
 * @param options
 * @return DocumentFragment
 */
-const render_column_drag = function(options){
+const render_column_drag = function(options) {
 
 	// options
 		const tool_caller		= options.caller.caller

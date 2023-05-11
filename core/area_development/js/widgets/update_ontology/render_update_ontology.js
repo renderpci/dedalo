@@ -10,13 +10,13 @@
 
 
 /**
-* RENDER_UPDATE_CODE
+* RENDER_UPDATE_ONTOLOGY
 * Manages the component's logic and appearance in client side
 */
-export const render_update_code = function() {
+export const render_update_ontology = function() {
 
 	return true
-}//end render_update_code
+}//end render_update_ontology
 
 
 
@@ -33,7 +33,7 @@ export const render_update_code = function() {
 * @return HTMLElement wrapper
 * 	To append to the widget body node (area_development)
 */
-render_update_code.prototype.list = async function(options) {
+render_update_ontology.prototype.list = async function(options) {
 
 	const self = this
 
@@ -66,7 +66,18 @@ render_update_code.prototype.list = async function(options) {
 const get_content_data_edit = async function(self) {
 
 	// short vars
-		const value = self.value || {}
+		const value					= self.value || {}
+		const current_ontology		= value.current_ontology
+		const ontology_db			= value.ontology_db
+		const body					= value.body
+		const structure_from_server	= value.structure_from_server
+		const structure_server_url	= value.structure_server_url
+		const structure_server_code	= value.structure_server_code
+		const prefix_tipos			= value.prefix_tipos || []
+		const confirm_text			= value.confirm_text || 'Sure?'
+
+console.log('value:', value);
+
 
 	// content_data
 		const content_data = ui.create_dom_element({
@@ -74,11 +85,10 @@ const get_content_data_edit = async function(self) {
 		})
 
 	// info
-		const text = `Current version: <b>${page_globals.dedalo_version}</b><br>Current build: <b>${page_globals.dedalo_build}</b>`
 		const info = ui.create_dom_element({
 			element_type	: 'div',
-			inner_html		: text,
 			class_name		: 'info_text',
+			inner_html		: `Current Ontology version: <b>${current_ontology}</b>`,
 			parent			: content_data
 		})
 
@@ -89,25 +99,58 @@ const get_content_data_edit = async function(self) {
 		})
 
 	// dedalo_entity check
-		if (page_globals.dedalo_entity==='development') {
+		if (ontology_db) {
 			// message development
 			ui.create_dom_element({
 				element_type	: 'div',
-				inner_html		: 'The development site does not allow updating the code',
-				class_name		: 'info_text comment',
+				class_name		: 'info_text warning',
+				inner_html		: 'Disabled update Ontology. You are using config ONTOLOGY_DB !',
 				parent			: content_data
 			})
-
 		}else{
+			// config_grid
+				const config_grid = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'config_grid',
+					parent			: content_data
+				})
+				const add_to_grid = (label, value) => {
+					ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'label',
+						inner_html		: label,
+						parent			: config_grid
+					})
+					ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'value',
+						inner_html		: value,
+						parent			: config_grid
+					})
+				}
+				// structure_from_server
+					add_to_grid('Config:', '')
+					add_to_grid('STRUCTURE_FROM_SERVER', structure_from_server)
+					add_to_grid('STRUCTURE_SERVER_URL', structure_server_url)
+					add_to_grid('STRUCTURE_SERVER_CODE', structure_server_code)
+					add_to_grid('DEDALO_PREFIX_TIPOS', prefix_tipos.join(', '))
+
 			// form init
 			self.caller.init_form({
-				submit_label	: 'Update Dédalo code to the latest version',
-				confirm_text	: get_label.sure || 'Sure?',
+				submit_label	: 'Update Dédalo Ontology to the latest version',
+				confirm_text	: confirm_text,
 				body_info		: content_data,
 				body_response	: body_response,
+				inputs			: [{
+					type		: 'text',
+					name		: 'dedalo_prefix_tipos',
+					label		: 'TLD list to update',
+					mandatory	: true,
+					value		: prefix_tipos
+				}],
 				trigger : {
 					dd_api	: 'dd_utils_api',
-					action	: 'update_code',
+					action	: 'update_ontology',
 					options	: null
 				}
 			})

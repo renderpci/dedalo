@@ -4,6 +4,13 @@
 * Loaded on tool init
 */
 
+// imports
+@import '../../../core/page/css/layout/vars.less';
+
+
+@base_color : #1c1c1c;
+@text_color : #00e801;
+
 
 
 // wrapper_tool
@@ -17,7 +24,7 @@
 				grid-gap: 1em;
 			}
 
-			.offset_management_container {
+			.tc_management_container {
 
 				>* {
 					margin-right: 0.5em;
@@ -29,7 +36,7 @@
 					height: 2.25em;
 				}
 
-				// offset secods input
+				// offset seconds input
 				.input_offset {
 					height: 2em;
 					width: 10em;
@@ -37,8 +44,17 @@
 					padding: 0;
 				}
 
-				button {
+				.button_apply {
+					color: @text_color;
 					text-transform: capitalize;
+					background-color: @base_color;
+					border-color: darken(@base_color, 5%);
+
+					&:focus {
+						border: 1.2px solid darken(@base_color, 8%) !important;
+						opacity: 0.7;
+						// color: #ffffff !important;
+					}
 				}
 			}
 		}
@@ -48,5 +64,10 @@
 
 // modal header tool modification
 	.tool_header.tool_tc {
-		background-color: #36a6c1;
+		background-color: @base_color;
+		color: @text_color;
+
+		.button.white {
+			background-color: @text_color !important;
+		}
 	}

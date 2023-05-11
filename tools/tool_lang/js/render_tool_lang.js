@@ -425,9 +425,10 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 */
 export const change_component_lang = async (options) => {
 
-	const self					= options.self
-	const component				= options.component
-	const lang					= options.lang
+	// options
+		const self		= options.self
+		const component	= options.component
+		const lang		= options.lang
 
 	// check if source component or target component has the lang selected to lock the component edition
 	// if not release read_only property

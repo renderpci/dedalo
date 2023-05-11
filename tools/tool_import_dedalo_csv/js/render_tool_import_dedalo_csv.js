@@ -45,6 +45,8 @@ render_tool_import_dedalo_csv.prototype.edit = async function(options) {
 		const wrapper = ui.tool.build_wrapper_edit(self, {
 			content_data : content_data
 		})
+		// set pointers
+		wrapper.content_data = content_data
 
 	// service_upload
 		// Use the service_upload to get and render the button to upload the file,
@@ -58,7 +60,7 @@ render_tool_import_dedalo_csv.prototype.edit = async function(options) {
 		const spinner = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'spinner',
-			parent : service_upload_container
+			parent			: service_upload_container
 		})
 		wrapper.tool_header.after(service_upload_container)
 		// service_upload. Build and render
@@ -84,7 +86,7 @@ render_tool_import_dedalo_csv.prototype.edit = async function(options) {
 /**
 * GET_CONTENT_DATA
 * Render tool body or 'content_data'
-* @param instance self
+* @param object self
 * @return HTMLElement content_data
 */
 const get_content_data = async function(self) {
@@ -164,13 +166,12 @@ const get_content_data = async function(self) {
 					.then(function(response){
 
 						const result_len = response.result.length
-
-						for (var i = result_len - 1; i >= 0; i--) {
+						for (let i = result_len - 1; i >= 0; i--) {
 							const current_rensponse = response.result[i]
 							const current_file = selected_files.find(el => el.name === current_rensponse.file && el.section_tipo === current_rensponse.section_tipo)
 
 							const result_container = current_file.result_container || null
-							if(result_container){
+							if(result_container) {
 
 								const class_button_response = current_rensponse.result
 									? 'success'
@@ -199,10 +200,10 @@ const get_content_data = async function(self) {
 									parent			: result_info_container
 								})
 
-								if(current_rensponse.result){
+								if(current_rensponse.result) {
 
 									// failed_rows
-									if(current_rensponse.failed_rows.length>0){
+									if(current_rensponse.failed_rows.length>0) {
 
 										const failed_rows = current_rensponse.failed_rows
 
@@ -235,13 +236,10 @@ const get_content_data = async function(self) {
 													inner_html		: JSON.stringify( failed.data ),
 													parent			: result_info_container
 												})
-
-
 											}
+									}//end if(current_rensponse.failed_rows.length>0)
 
-									}
-
-									if(current_rensponse.created_rows.length>0){
+									if(current_rensponse.created_rows.length>0) {
 
 										const header = ui.create_dom_element({
 											element_type	: 'div',
@@ -298,8 +296,9 @@ const get_content_data = async function(self) {
 													alert('Error in copying text: ', err);
 												});
 										})
-									}
-									if(current_rensponse.updated_rows.length>0){
+									}//end if(current_rensponse.created_rows.length>0)
+
+									if(current_rensponse.updated_rows.length>0) {
 										// const updated_nodes = current_rensponse.updated_rows.map(el => '<span>'+el+',</span>')
 
 										const header = ui.create_dom_element({
@@ -354,15 +353,10 @@ const get_content_data = async function(self) {
 													alert('Error in copying text: ', err);
 												});
 										})
-									}
-								}
-
-
-
-							}
-
-						}
-
+									}//end f(current_rensponse.updated_rows.length>0)
+								}//end if(current_rensponse.result)
+							}//end if(result_container)
+						}//end for (let i = result_len - 1; i >= 0; i--)
 
 						api_response.innerHTML = JSON.stringify(response, null, 2)
 						content_data.classList.remove('loading')
@@ -404,6 +398,8 @@ const get_content_data = async function(self) {
 
 /**
 * RENDER_FILE_INFO
+* @param object self
+* @param object item
 * @return HTMLElement item_wrapper
 */
 const render_file_info = function(self, item) {
@@ -540,11 +536,9 @@ const render_file_info = function(self, item) {
 
 			// errors found
 			const text = JSON.stringify(item.sample_data_errors, null, 2)
-
 			preview = ui.create_dom_element({
 				element_type	: 'pre',
 				class_name		: 'preview error hide',
-				// inner_html	: text, // text.replaceAll('<br>','\n'),
 				inner_html		: text.replaceAll('<br>','\n'),
 				parent			: fragment
 			})
@@ -554,7 +548,6 @@ const render_file_info = function(self, item) {
 		}else{
 
 			const text = JSON.stringify(item.sample_data, null, 2)
-
 			preview = ui.create_dom_element({
 				element_type	: 'pre',
 				class_name		: 'preview hide',
@@ -573,10 +566,10 @@ const render_file_info = function(self, item) {
 
 	// result
 		const result_container = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'result',
-				parent			: fragment
-			})
+			element_type	: 'div',
+			class_name		: 'result',
+			parent			: fragment
+		})
 		item.result_container = result_container
 
 	// item_wrapper
@@ -599,7 +592,7 @@ const render_file_info = function(self, item) {
 * RENDER_COLUMNS_MAPPER
 * @param object self
 * @param object item
-* @return HTMLElement item_wrapper
+* @return DocumentFragment
 */
 const render_columns_mapper = async function(self, item) {
 

@@ -93,45 +93,22 @@ class area_development extends area_common {
 			$item = new stdClass();
 				$item->id		= 'update_ontology';
 				$item->typo		= 'widget';
-				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
-				$item->info		= null;
-				$item->label	= label::get_label('update_ontology');
-
-				if (defined('ONTOLOGY_DB')) {
-					$item->body = 'Disabled update Ontology. You are using config ONTOLOGY_DB !';
-				}else{
-					$item->body		= (defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true && !empty(STRUCTURE_SERVER_URL)) ?
-						'Current: <b>' . RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO,'lg-spa') .'</b>'.
-						'<hr>TLD: <tt>' . implode(', ', $DEDALO_PREFIX_TIPOS).'</tt>' :
-						label::get_label('update_ontology')." is a disabled for ".DEDALO_ENTITY;
-					$item->body 	.= "<hr>url: ".STRUCTURE_SERVER_URL;
-					$item->body 	.= "<hr>code: ".STRUCTURE_SERVER_CODE;
-					$confirm_text	 = '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! WARNING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'.PHP_EOL;
-					$confirm_text	.= '!!!!!!!!!!!!!! DELETING ACTUAL DATABASE !!!!!!!!!!!!!!!!'.PHP_EOL;
-					$confirm_text	.= 'Are you sure to IMPORT and overwrite current ontology data with LOCAL FILE: ';
-					$confirm_text	.= '"dedalo4_development_str.custom.backup" ?'.PHP_EOL;
-					$item->run[]	= (object)[
-						'fn' 	  => 'init_form',
-						'options' => (object)[
-							'inputs' => [
-								(object)[
-									'type'		=> 'text',
-									'name'		=> 'dedalo_prefix_tipos',
-									'label'		=> 'Dédalo prefix tipos to update',
-									'value'		=> implode(',', $DEDALO_PREFIX_TIPOS),
-									'mandatory'	=> true
-								]
-							],
-							'confirm_text' => $confirm_text
-						]
-					];
-					$item->trigger 	= (object)[
-						'dd_api'	=> 'dd_utils_api',
-						'action'	=> 'update_ontology',
-						'options'	=> null
-					];
-				}
+				$item->label	= label::get_label('update_ontology') ?? 'Update Ontology';
+				$item->value	= (object)[
+					'current_ontology'		=> RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO,'lg-spa'),
+					'prefix_tipos'			=> $DEDALO_PREFIX_TIPOS,
+					'structure_from_server'	=> (defined('STRUCTURE_FROM_SERVER') ? STRUCTURE_FROM_SERVER : null),
+					'structure_server_url'	=> (defined('STRUCTURE_SERVER_URL') ? STRUCTURE_SERVER_URL : null),
+					'structure_server_code'	=> (defined('STRUCTURE_SERVER_CODE') ? STRUCTURE_SERVER_CODE : null),
+					'ontology_db'			=> (defined('ONTOLOGY_DB') ? ONTOLOGY_DB : null),
+					'body'					=> defined('ONTOLOGY_DB')
+						? 'Disabled update Ontology. You are using config ONTOLOGY_DB !'
+						: label::get_label('update_ontology')." is disabled for ".DEDALO_ENTITY,
+					'confirm_text'			=> '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! WARNING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!' . PHP_EOL
+						.'!!!!!!!!!!!!!! DELETING ACTUAL DATABASE !!!!!!!!!!!!!!!!' . PHP_EOL
+						.'Are you sure to overwrite current Ontology data ? ' .PHP_EOL.PHP_EOL
+						.'You will lose all changes made to the current Ontology'
+				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 

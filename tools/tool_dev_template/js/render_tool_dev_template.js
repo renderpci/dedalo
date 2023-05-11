@@ -132,5 +132,3 @@ export const add_component_sample = async (self, component_container, lang) => {
 
 	return true
 }//end add_component_sample
-
-

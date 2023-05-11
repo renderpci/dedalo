@@ -33,7 +33,6 @@ export const view_history_time_machine_list = function() {
 */
 view_history_time_machine_list.render = async function(self, options) {
 
-
 	const wrapper = common_render(self, {
 		no_header : true
 	})

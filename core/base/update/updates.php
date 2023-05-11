@@ -167,7 +167,7 @@ $updates->$v = new stdClass();
 				CREATE INDEX matrix_list_relations_flat_ty_st_si ON matrix_list
 					USING gin(relations_flat_ty_st_si(datos) jsonb_path_ops);
 			");
-
+/*
 	// UPDATE COMPONENTS
 		$updates->$v->components_update = [
 			'component_av',
@@ -259,12 +259,28 @@ $updates->$v = new stdClass();
 				$script_obj->script_method	= "convert_table_data_activity";
 				$script_obj->script_vars	= json_encode(['component_autocomplete_ts']); // Note that only ONE argument encoded is sent
 			$updates->$v->run_scripts[] = $script_obj;
-
+*/
 		// publication media files. rename media files to use max_items_folder as additional path
 			require_once dirname(dirname(__FILE__)) .'/upgrade/class.data_v5_to_v6.php';
 			$script_obj = new stdClass();
 				$script_obj->info			= "publication media files: rename media files to use max_items_folder as additional path";
 				$script_obj->script_class	= "v5_to_v6";
 				$script_obj->script_method	= "update_publication_media_files";
-				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
+				$ar_items = [
+					// PDF publication files
+					(object)[
+						'ar_quality'		=> DEDALO_PDF_AR_QUALITY,
+						'element_dir'		=> DEDALO_PDF_FOLDER,
+						'max_items_folder'	=> 1000,
+						'ref_name'			=> 'rsc209_rsc205_' // find 'rsc209_rsc205_1.pdf'
+					],
+					// image publication files
+					(object)[
+						'ar_quality'		=> DEDALO_IMAGE_AR_QUALITY,
+						'element_dir'		=> DEDALO_IMAGE_FOLDER,
+						'max_items_folder'	=> 1000,
+						'ref_name'			=> 'rsc228_rsc205_' // find 'rsc228_rsc205_1.jpg'
+					]
+				];
+				$script_obj->script_vars	= json_encode($ar_items); // Note that only ONE argument encoded is sent
 			$updates->$v->run_scripts[] = $script_obj;

@@ -46,19 +46,18 @@ render_tool_cataloging.prototype.edit = async function(options={render_level:'fu
 		const wrapper = ui.tool.build_wrapper_edit(self, {
 			content_data : content_data
 		})
+		// set pointers
+		wrapper.content_data = content_data
 
 	// transcription_options are the buttons to get access to other tools (buttons in the header)
 		const header_options_node = await render_header_options(self, content_data)
 		wrapper.tool_buttons_container.appendChild(header_options_node)
 
-
 	// render_activity_info are the information of the activity as "Save"
 		const activity_info = render_activity_info(self)
 		wrapper.activity_info_container.appendChild(activity_info)
-
 		self.node = wrapper
-		// set pointers
-		wrapper.content_data = content_data
+
 		// get_ordered_coins(self)
 
 
@@ -68,7 +67,8 @@ render_tool_cataloging.prototype.edit = async function(options={render_level:'fu
 
 
 /**
-* GET_CONTENT_DATA_EDIT
+* GET_CONTENT_DATA_EDITç
+* @param object self
 * @return HTMLElement content_data
 */
 const get_content_data_edit = async function(self) {
@@ -130,7 +130,9 @@ const get_content_data_edit = async function(self) {
 /**
 * RENDER_HEADER_OPTIONS
 * This is used to build a optional buttons inside the header
-* @return HTMLElement fragment
+* @param object self
+* @param HTMLElement content_data
+* @return HTMLElement DocumentFragment
 */
 const render_header_options = async function(self, content_data) {
 
@@ -162,7 +164,7 @@ const render_activity_info = function(self) {
 		)
 		function fn_saved(options) {
 
-			// recived options contains an object with instance and api_response
+			// revived options contains an object with instance and api_response
 			const node_info_options = Object.assign(options,{
 				container : activity_info_body
 			})
@@ -208,15 +210,13 @@ const get_ordered_coins = async function(self){
 
 	// listen the portal refreshed in other window ans assign the drop events to refreshed nodes
 	self.events_tokens.push(
-		event_manager.subscribe('window_bur_'+ self.ordered_coins.id, assing_drop)
+		event_manager.subscribe('window_bur_'+ self.ordered_coins.id, fn_assing_drop)
 	)
-	function assing_drop(options) {
-
+	function fn_assing_drop(options) {
 		drop({
 			self : self
 		})
 	}
-
 
 	drop({
 		self : self
@@ -229,17 +229,17 @@ const get_ordered_coins = async function(self){
 /**
 * DROP
 * This is used to build the ordered coins node ans assign the drop
-* @param object self
-* 	instance of current tool
+* @param object options
+* @return void
 */
 const drop = function (options) {
 
-	const self			= options.self
-	const ar_drop_nodes = self.ordered_coins.node.querySelectorAll('.column_numisdata9')
+	// options
+		const self = options.self
 
-
+	// ar_drop_nodes
+	const ar_drop_nodes	= self.ordered_coins.node.querySelectorAll('.column_numisdata9')
 	const drop_zones_len = ar_drop_nodes.length
-
 	for (let i = drop_zones_len - 1; i >= 0; i--) {
 
 		const current_node = ar_drop_nodes[i]
@@ -289,5 +289,4 @@ const drop = function (options) {
 						)
 				},false)
 	}// end for (let i = drop_zones_len - 1; i >= 0; i--)
-
 }// end drop

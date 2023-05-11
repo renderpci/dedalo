@@ -11,7 +11,7 @@
 
 
 /**
-* RENDER_tool_import_zotero
+* RENDER_TOOL_IMPORT_ZOTERO
 * Manages the component's logic and appearance in client side
 */
 export const render_tool_import_zotero = function() {
@@ -24,6 +24,7 @@ export const render_tool_import_zotero = function() {
 /**
 * EDIT
 * Render node for use in current mode
+* @param object options
 * @return HTMLElement wrapper
 */
 render_tool_import_zotero.prototype.edit = async function(options) {

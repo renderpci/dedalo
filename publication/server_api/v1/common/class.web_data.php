@@ -262,7 +262,7 @@ class web_data {
 						return false;
 					}
 
-				preg_match_all("/select |delete|update|insert|truncate|extractvalue|\*{2,}|MD5|DBMS_PIPE| union |set names|where|having|user|\-\-|delay|sleep|outfile|\@\@|information_schema| if | if\(|mysql/i", $value, $output_array);
+				preg_match_all("/select |delete|update|insert|includes|wlwmanifest|truncate|extractvalue|\*{2,}|MD5|DBMS_PIPE| union |set names|where|having|user|\-\-|delay|sleep|outfile|\@\@|information_schema| if | if\(|mysql/i", $value, $output_array);
 				if (!empty($output_array[0])) {
 					debug_log(__METHOD__." test $name not passed! ".to_string($output_array), logger::ERROR);
 					return false;

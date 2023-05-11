@@ -917,7 +917,7 @@ class tools_register {
 
 
 	/**
-	* GET_ALL_default_CONFIG
+	* GET_ALL_DEFAULT_CONFIG
 	* @return array $ar_config
 	*/
 	public static function get_all_default_config() : array {

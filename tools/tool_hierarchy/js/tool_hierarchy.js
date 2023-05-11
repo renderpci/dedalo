@@ -41,9 +41,6 @@ export const tool_hierarchy = function () {
 	this.target_lang	= null
 	this.langs			= null
 	this.caller			= null
-
-
-	return true
 }//end page
 
 
@@ -67,6 +64,8 @@ export const tool_hierarchy = function () {
 /**
 * INIT
 * Custom tool init
+* @param object options
+* @return bool common_init
 */
 tool_hierarchy.prototype.init = async function(options) {
 
@@ -92,6 +91,8 @@ tool_hierarchy.prototype.init = async function(options) {
 /**
 * BUILD
 * Custom tool build
+* @param bool autoload = false
+* @return bool common_build
 */
 tool_hierarchy.prototype.build = async function(autoload=false) {
 

@@ -11,7 +11,7 @@
 
 
 /**
-* RENDER_tool_import_marc21
+* RENDER_TOOL_IMPORT_MARC21
 * Manages the component's logic and appearance in client side
 */
 export const render_tool_import_marc21 = function() {
@@ -24,6 +24,7 @@ export const render_tool_import_marc21 = function() {
 /**
 * EDIT
 * Render node for use in current mode
+* @param object options
 * @return HTMLElement wrapper
 */
 render_tool_import_marc21.prototype.edit = async function(options) {
@@ -73,7 +74,6 @@ const get_content_data_edit = async function(self) {
 				? ''
 				: ' hide'
 
-
 	// components container
 		const drop_zone = ui.create_dom_element({
 			element_type	: 'div',
@@ -81,18 +81,15 @@ const get_content_data_edit = async function(self) {
 			parent			: fragment
 		})
 
-
 	// template_container
 		const template_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'template_container',
 			parent			: fragment
 		})
-
-		// const template = await create_template(self)
+		// service_dropzone
 		const template = await self.service_dropzone.render()
 		template_container.appendChild(template)
-
 
 		// inputs components container label
 		const inputs_container = ui.create_dom_element({
@@ -107,7 +104,7 @@ const get_content_data_edit = async function(self) {
 			inner_html		: get_label.values || 'Values',
 			parent			: inputs_container
 		})
-
+		// service_tmp_section
 		const inputs_nodes = await self.service_tmp_section.render()
 		inputs_container.appendChild(inputs_nodes)
 
@@ -207,12 +204,17 @@ const get_content_data_edit = async function(self) {
 
 /**
 * SET_IMPORT_MODE
-* @return bool true
+* @param object self
+* @param bool apply
+* @return bool
 */
-const set_import_mode = function (self, apply){
+const set_import_mode = function (self, apply) {
 
-	for (let i = self.files_data.length - 1; i >= 0; i--) {
-		const current_value = self.files_data[i]
+	const files_data		= self.files_data || []
+	const files_data_length	= files_data.length
+	for (let i = 0; i < files_data_length; i++) {
+
+		const current_value = files_data[i]
 
 		if(apply===true){
 			const regex = /^(.+)-([a-zA-Z])\.([a-zA-Z]{3,4})$/;
@@ -222,11 +224,9 @@ const set_import_mode = function (self, apply){
 
 				const map_name_upper = map_name[2].toUpperCase();
 				const target_portal = self.tool_config.ddo_map.find(el => el.role==='component_option' && el.map_name===map_name_upper)
-
 				if (target_portal) {
 					current_value.previewElement.querySelector(".option_component_select").value = target_portal.tipo;
 				}
-
 			}
 		}else{
 			const default_target_portal = self.tool_config.ddo_map.find(el => el.role === 'component_option' && el.default === true)
@@ -235,7 +235,6 @@ const set_import_mode = function (self, apply){
 			}else{
 				current_value.previewElement.querySelector(".option_component_select").options[0].selected = true ;
 			}
-
 		}
 	}
 

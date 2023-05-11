@@ -43,6 +43,16 @@ final class login_test extends TestCase {
 			$username		= 'test ' . $user_id;
 			$full_username	= 'test user ' . $user_id;
 
+		// dd_init_test
+			$init_response = require DEDALO_CORE_PATH.'/base/dd_init_test.php';
+			if ($init_response->result===false) {
+				debug_log(__METHOD__
+					." Init test error (dd_init_test): ". PHP_EOL
+					.' init_response: ' . $init_response->msg
+					, logger::ERROR
+				);
+			}
+
 		// is_global_admin (before set user session vars)
 			$is_global_admin = (bool)security::is_global_admin($user_id);
 			$_SESSION['dedalo']['auth']['is_global_admin'] = $is_global_admin;
@@ -62,6 +72,31 @@ final class login_test extends TestCase {
 
 		// login_type
 			$_SESSION['dedalo']['auth']['login_type'] = 'default';
+
+		// dedalo_lock_components unlock
+			if (defined('DEDALO_LOCK_COMPONENTS') && DEDALO_LOCK_COMPONENTS===true) {
+				lock_components::force_unlock_all_components($user_id);
+			}
+
+		// precalculate profiles datalist security access in background
+		// This file is generated on every user login, launching the process in background
+			dd_cache::process_and_cache_to_file((object)[
+				'process_file'	=> DEDALO_CORE_PATH . '/component_security_access/calculate_tree.php',
+				'data'			=> (object)[
+					'session_id'	=> session_id(),
+					'user_id'		=> $user_id
+				],
+				'file_name'		=> 'cache_tree.json',
+				'wait'			=> false
+			]);
+
+		// login activity report
+			login::login_activity_report(
+				"User $user_id is logged. Hello $username",
+				'LOG IN',
+				null
+			);
+
 	}//end force_login
 
 

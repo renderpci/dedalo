@@ -34,9 +34,9 @@ class dd_cache {
 		// sh_data
 			$sh_data = [
 				'server' => [
-					'HTTP_HOST'		=> $_SERVER['HTTP_HOST'],
-					'REQUEST_URI'	=> $_SERVER['REQUEST_URI'],
-					'SERVER_NAME'	=> $_SERVER['SERVER_NAME']
+					'HTTP_HOST'		=> $_SERVER['HTTP_HOST'] ?? 'localhost',
+					'REQUEST_URI'	=> $_SERVER['REQUEST_URI'] ?? '',
+					'SERVER_NAME'	=> $_SERVER['SERVER_NAME'] ?? 'development'
 				]
 			];
 			foreach ($data as $key => $value) {
