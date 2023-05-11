@@ -23,6 +23,8 @@ export const view_text_list_image = function() {
 /**
 * RENDER
 * Render node as text. URL is return as text node
+* @param object
+* @param object options
 * @return HTMLElement text_node
 */
 view_text_list_image.render = function(self, options) {

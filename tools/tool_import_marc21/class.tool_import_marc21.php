@@ -1,18 +1,22 @@
 <?php
 /**
 * CLASS TOOL_IMPORT_MARC21
-*
+* Read uploaded Marc21 files and import values based on tool config
 */
-
 // Add MARC library to read and process the Marc21 files
 require(dirname(__FILE__).'/lib/MARC.php');
 
 
+
 class tool_import_marc21 extends tool_common {
+
+
 
 	/**
 	* IMPORT_FILES
 	* Process previously uploaded images
+	* @param object $options
+	* @return object $response
 	*/
 	public static function import_files(object $options) : object {
 
@@ -20,7 +24,7 @@ class tool_import_marc21 extends tool_common {
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
-		// get configuration with map to convert marc21 files
+		// get configuration with map to convert MARC21 files
 			$tool_name	= get_called_class();
 			$config		= tool_common::get_config($tool_name);
 
@@ -63,6 +67,7 @@ class tool_import_marc21 extends tool_common {
 
 				$ar_procesing_info = [];
 
+			// data
 				foreach ($ar_marc21_files_data as $marc21_file_data) {
 					// Check file exists
 					$file_full_path = $tmp_dir .'/'. $marc21_file_data->name;
@@ -82,6 +87,7 @@ class tool_import_marc21 extends tool_common {
 
 					$i=1;
 					while ($record = $ar_records->next()) {
+
 						// Create section
 
 							// Section id get from marc21 data
@@ -121,71 +127,65 @@ class tool_import_marc21 extends tool_common {
 
 							# Object foreach
 							foreach ($map as $element_vars) {
-								// dump($element_vars, '$element_vars ++ '.to_string());
 
 								if (empty($element_vars->tipo)) {
 									dump($element_vars, ' ERROR ON element_vars: tipo is empty ++ '.to_string());
 									continue;
 								}
 
-								#
-								# marc21_conditional
-								$resolved_value=false;
+								// marc21_conditional
+								$resolved_value = false;
 								if (isset($element_vars->marc21_conditional)) {
 
 									if ($marc21_conditional = $element_vars->marc21_conditional) {
 
 										$element_fields = $record->getFields($element_vars->field);
-											#dump($element_fields, ' element_fields ++ '.to_string());
-										foreach ($element_fields as $key => $portal_row_obj) {
-											#dump($portal_row_obj, ' portal_row_obj ++ '.to_string());
+										foreach($element_fields as $key => $portal_row_obj) {
 
 											$sub_field =  $portal_row_obj->getSubfield($marc21_conditional->subfield);
-
 											if ( $sub_field->getData()==$marc21_conditional->value ) {
 
 												$element = $portal_row_obj->getSubfield($element_vars->subfield);
-												if ($element===false) {
-													$value = '';
-												}else{
-													$value = $element->getData();
-												}
-												$resolved_value=true;
+
+												$value = ($element===false)
+													? ''
+													: $element->getData();
+
+												$resolved_value = true;
 												break;
 											}
 										}
 									}
 								}//end if (isset($element_vars['marc21_conditional']))
 
-
-								# VALUE . Value from current field in this row
+								// VALUE . Value from current field in this row
 								if($resolved_value===false) {
 									$value = self::get_value( $record, $element_vars );
 								}
 
-								if(empty($value) || !isset($value)){
-									//dump($value, ' value +++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string());
+								if(empty($value) || !isset($value)) {
 									continue;
 								}
 
-								# skip_on_empty : When is defined, only store value when is not empty (used when in various components data like 'rsc147' )
-								if (empty($value) && (isset($element_vars->skip_on_empty) && $element_vars->skip_on_empty===true) ) {
-									continue;
-								}
-								$value = trim($value);
-								$value = rtrim($value, " \t,:.");
+								// skip_on_empty : When is defined, only store value when is not empty (used when in various components data like 'rsc147' )
+									if (empty($value) && (isset($element_vars->skip_on_empty) && $element_vars->skip_on_empty===true)) {
+										continue;
+									}
 
-								if(isset($element_vars->partial_left_content)){
+								$value	= trim($value);
+								$value	= rtrim($value, " \t,:.");
+
+								if(isset($element_vars->partial_left_content)) {
 									$value_trim = trim($value);
 									$value_test = substr($value_trim, 0, (int)$element_vars->partial_left_content);
 									if( is_int($value_test) === false){
-										preg_match('/\d+/', $value, $value_test);
-										$value_test = (int)implode('', $value_test);
+										preg_match('/\d+/', $value, $value_test_matches);
+										$value_test = (int)implode('', $value_test_matches);
 									}
 									$value = $value_test;
 								}
 
-								if(isset($element_vars->date_format) && $element_vars->date_format === 'year' ){
+								if( isset($element_vars->date_format) && $element_vars->date_format==='year' ) {
 									$dd_date = new dd_date();
 									if((int)$value>0){
 										$dd_date->set_year($value);
@@ -196,12 +196,15 @@ class tool_import_marc21 extends tool_common {
 								}
 
 								# DD_DATA_MAP . map current value to dedalo value when is defined (like 'cat' -> '[section_tipo:lg1,section_id:369]')
-								if ( isset($element_vars->dd_data_map) && $dd_data_map=$element_vars->dd_data_map) {
+								if ( isset($element_vars->dd_data_map) && $dd_data_map=$element_vars->dd_data_map ) {
 									if (property_exists($dd_data_map, $value)) {
-										#dump($dd_data_map->$value, ' value from dd_data_map ++ '.to_string($value));
 										$value = $dd_data_map->$value;
 									}else{
-										debug_log(__METHOD__." ERROR on map dd_data_map. No map exists for value ".to_string($value), logger::ERROR);
+										debug_log(__METHOD__
+											. " ERROR on map dd_data_map. No map exists for value ". PHP_EOL
+											. ' value: ' . to_string($value)
+											, logger::ERROR
+										);
 									}
 								}
 
@@ -223,16 +226,19 @@ class tool_import_marc21 extends tool_common {
 									: [$value];
 								$component->set_dato( $value );
 								$component->Save();
-								debug_log(__METHOD__." Saved component $component_tipo ($model_name - $component_label) with dato: ".to_string($value), logger::DEBUG);
+								debug_log(__METHOD__
+									." Saved component $component_tipo ($model_name - $component_label) with dato: ".to_string($value)
+									, logger::DEBUG
+								);
 
 								# DD_ACTION
-								if (!empty($value) && (isset($element_vars->dd_action) && $dd_action=$element_vars->dd_action)) {
-									# dump($dd_action, ' $dd_action ++ '.to_string());
+								if (!empty($value) && (isset($element_vars->dd_action) && $dd_action===$element_vars->dd_action)) {
+
 									foreach ($dd_action as $key => $value) {
 
-										$component_tipo_action 	= $key;
-										$model_name 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo_action,true);
-										$component_action 		= component_common::get_instance(
+										$component_tipo_action	= $key;
+										$model_name				= RecordObj_dd::get_modelo_name_by_tipo($component_tipo_action,true);
+										$component_action		= component_common::get_instance(
 											$model_name,
 											$component_tipo_action,
 											$section_id,
@@ -243,7 +249,11 @@ class tool_import_marc21 extends tool_common {
 										);
 										$component_action->set_dato($value);
 										$component_action->Save();
-										debug_log(__METHOD__." Saved dd_action. Component $component_tipo_action with dato: ".to_string($value), logger::DEBUG);
+										debug_log(__METHOD__
+											." Saved dd_action. Component $component_tipo_action with dato: " . PHP_EOL
+											.' value: ' . to_string($value)
+											, logger::DEBUG
+										);
 									}
 								}
 
@@ -259,8 +269,7 @@ class tool_import_marc21 extends tool_common {
 
 								$model			= RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
 								$current_lang	= RecordObj_dd::get_translatable($ddo->tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-
-								$component	= component_common::get_instance(
+								$component		= component_common::get_instance(
 									$model,
 									$ddo->tipo,
 									$section_id,
@@ -324,16 +333,14 @@ class tool_import_marc21 extends tool_common {
 	}//end if ($mode=='import_files')
 
 
+
 	/**
 	* GET_VALUE
 	* @param object $record
-	*
 	* @param object $element_vars
-	*
 	* @return string $value
 	*/
 	public static function get_value( object $record, object $element_vars ) : string {
-
 
 		if (isset($element_vars->field_multiple) && $element_vars->field_multiple) {
 
@@ -366,56 +373,47 @@ class tool_import_marc21 extends tool_common {
 	}//end get_value
 
 
+
 	/**
 	* GET_FIELD
-	* @param object $record
-	*
+	* @param object|null $elementField
 	* @param object $element_vars
-	*
 	* @return string $value
 	*/
 	public static function get_field( ?object $elementField, object $element_vars ) : string {
-
 
 		if (empty($elementField)) {
 			return '';
 		}
 
-
 		if (isset($element_vars->subfield)) {
 
-			# Only for specific subfield
+			// Only for specific subfield
 			$element = $elementField->getSubfield($element_vars->subfield);
-				#dump($element, ' element ++ '.to_string());
-			if ($element===false) {
-				$text = '';
-			}else{
-				$text = $element->getData();
-			}
+
+			$text = ($element===false)
+				? ''
+				: $element->getData();
 
 		}else{
 
-     		# Iterate all subfields
+			// Iterate all subfields
 			$text		= '';
 			$ar_text	= [];
-			$separator = $element_vars->subfield_separator ?? " ";
+			$separator	= $element_vars->subfield_separator ?? " ";
 			if( property_exists($elementField, 'subfields') ) {
 				foreach ($elementField->getSubfields() as $code => $value) {
-					#dump($value, ' value ++ '.to_string());
 					$ar_text[] =  $value->getData();
             	}
-            $text = implode($separator, $ar_text);
-			}else{
-				#dump($elementField, ' elementField without subfields ++ '.to_string());
+				$text = implode($separator, $ar_text);
 			}
-
 		}
+
 		$value = trim($text);
+
 
 		return (string)$value;
 	}//end get_field
-
-
 
 
 
@@ -424,18 +422,21 @@ class tool_import_marc21 extends tool_common {
 	// if yes: reuse and update the record
 	// if no : create new one
 
+
+
 	/**
-	* get_section_id_from_code
+	* GET_SECTION_ID_FROM_CODE
 	* Search in database if current code exists. If true, return section id of founded record
+	* @param object $id_item
 	* @param string $marc21_id
-	* @return int | null
+	* @return int|null $section_id
 	*/
-	public static function get_section_id_from_code( $id_item, $marc21_id ) {
+	public static function get_section_id_from_code( object $id_item, string $marc21_id ) : int|null {
 
 		$ddo_map		= $id_item->ddo_map;
 		$ddo			= reset($ddo_map);
-		$section_tipo	= $ddo->section_tipo;	# rsc205
-		$tipo			= $ddo->tipo; 			# rsc137
+		$section_tipo	= $ddo->section_tipo;	// rsc205
+		$tipo			= $ddo->tipo;			// rsc137
 		$model_name		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		$code			= pg_escape_string(DBi::_getConnection(), $marc21_id);
 
@@ -477,13 +478,17 @@ class tool_import_marc21 extends tool_common {
 			$search		= search::get_instance($sqo);
 			$result		= $search->search();
 
-		$section_id = null; // Default
-		if (!empty($result->ar_records[0])) {
-			// Found it in database
-			$section_id = (int)$result->ar_records[0]->section_id;
+		// section_id
+			$section_id = null; // Default
+			if (!empty($result->ar_records[0])) {
+				// Found it in database
+				$section_id = (int)$result->ar_records[0]->section_id;
 
-			debug_log(__METHOD__."Record founded successfully [$section_id] with requested code: ".to_string($marc21_id), logger::DEBUG);
-		}
+				debug_log(__METHOD__
+					." Record found successfully [$section_id] with requested code: ".to_string($marc21_id)
+					, logger::DEBUG
+				);
+			}
 
 
 		return $section_id;
@@ -494,14 +499,14 @@ class tool_import_marc21 extends tool_common {
 	/**
 	* GET_SECTION_ID_FROM_COLLECTIONS_CONTAINER_TITLE
 	* Search in database if current Series/Collections exists. If true, return section id of founded record
-	* @param ddo_object $series_ddo
-	* @param string $marc21_container_title
-	* @return int | null
+	* @param object $series_ddo
+	* @param string $collection_title
+	* @return int|null $section_id
 	*/
-	public static function get_section_id_from_collections_container_title( $series_ddo, $collection_title ) {
+	public static function get_section_id_from_collections_container_title( object $series_ddo, string $collection_title ) : int|null {
 
-		$section_tipo		= $series_ddo->section_tipo;		# rsc212 	# values list for Series / Collections
-		$tipo				= $series_ddo->tipo;				# rsc214 	# Series / Collections (component_input_text)
+		$section_tipo		= $series_ddo->section_tipo;		// rsc212 	# values list for Series / Collections
+		$tipo				= $series_ddo->tipo;				// rsc214 	# Series / Collections (component_input_text)
 		$model_name			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		$serie_name			= pg_escape_string(DBi::_getConnection(), $collection_title);
 
@@ -530,21 +535,24 @@ class tool_import_marc21 extends tool_common {
 
 
 		// search the sections that has this title
-			$search		= search::get_instance($sqo);
-			$result		= $search->search();
-			$ar_section	= $result->ar_records;
+			$search	= search::get_instance($sqo);
+			$result	= $search->search();
 
 		$section_id = null; // Default
 		if (!empty($result->ar_records[0])) {
 			// Found it in database
 			$section_id = (int)$result->ar_records[0]->section_id;
 
-			debug_log(__METHOD__." Successfull Founded record [$section_id] with requested code: ".to_string($collection_title), logger::DEBUG);
+			debug_log(__METHOD__
+				." Successful Founded record [$section_id] with requested code: ".to_string($collection_title)
+				, logger::DEBUG
+			);
 		}
 
 
 		return $section_id;
 	}//end get_section_id_from_COlLECTIONS_container_title
+
 
 
 }//end class tool_import_marc21

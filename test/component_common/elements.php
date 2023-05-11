@@ -41,7 +41,7 @@ function get_elements() : array {
 			'mode'				=> $mode,
 			'lang'				=> $lang,
 			'new_value'			=> 'ar_random_locator',
-			'new_value_params'	=> ['dd501','test88']
+			'new_value_params'	=> ['dd501','test88',3]
 		],
 		(object)[
 			'model'			=> 'component_date',
@@ -69,7 +69,7 @@ function get_elements() : array {
 			'mode'				=> $mode,
 			'lang'				=> $lang,
 			'new_value'			=> 'ar_random_locator',
-			'new_value_params'	=> [$section_tipo,'test70']
+			'new_value_params'	=> [$section_tipo,'test70',2]
 		],
 		(object)[
 			'model'			=> 'component_filter_records',
@@ -88,7 +88,7 @@ function get_elements() : array {
 			'mode'				=> $mode,
 			'lang'				=> $lang,
 			'new_value'			=> 'ar_random_locator',
-			'new_value_params'	=> [$section_tipo,'test101']
+			'new_value_params'	=> [$section_tipo,'test101',2]
 		],
 		(object)[
 			'model'			=> 'component_geolocation',
@@ -177,7 +177,7 @@ function get_elements() : array {
 			'mode'				=> $mode,
 			'lang'				=> $lang,
 			'new_value'			=> 'ar_random_locator',
-			'new_value_params'	=> ['test38', 'test80', 0]
+			'new_value_params'	=> ['test38','test80',2]
 		],
 		(object)[
 			'model'				=> 'component_publication',
@@ -187,7 +187,7 @@ function get_elements() : array {
 			'mode'				=> $mode,
 			'lang'				=> $lang,
 			'new_value'			=> 'ar_random_locator',
-			'new_value_params'	=> ['dd64','test92']
+			'new_value_params'	=> ['dd64','test92',2]
 		],
 		(object)[
 			'model'				=> 'component_radio_button',
@@ -197,7 +197,7 @@ function get_elements() : array {
 			'mode'				=> $mode,
 			'lang'				=> $lang,
 			'new_value'			=> 'ar_random_locator',
-			'new_value_params'	=> ['dd501','test87']
+			'new_value_params'	=> ['dd501','test87',2]
 		],
 		(object)[
 			'model'				=> 'component_relation_children',
@@ -207,7 +207,7 @@ function get_elements() : array {
 			'mode'				=> $mode,
 			'lang'				=> $lang,
 			'new_value'			=> 'ar_random_locator',
-			'new_value_params'	=> [$section_tipo,'test201']
+			'new_value_params'	=> [$section_tipo,'test201',3]
 		],
 		(object)[
 			'model'				=> 'component_relation_index',
@@ -217,7 +217,7 @@ function get_elements() : array {
 			'mode'				=> $mode,
 			'lang'				=> $lang,
 			'new_value'			=> 'ar_random_locator',
-			'new_value_params'	=> ['es1','test25'],
+			'new_value_params'	=> ['es1','test25',50],
 			'test_save'			=> false
 		],
 		(object)[
@@ -228,7 +228,7 @@ function get_elements() : array {
 			'mode'				=> $mode,
 			'lang'				=> $lang,
 			'new_value'			=> 'ar_random_locator',
-			'new_value_params'	=> ['es2','test169']
+			'new_value_params'	=> ['es2','test169',5]
 		],
 		(object)[
 			'model'				=> 'component_relation_parent',
@@ -238,7 +238,7 @@ function get_elements() : array {
 			'mode'				=> $mode,
 			'lang'				=> $lang,
 			'new_value'			=> 'ar_random_locator',
-			'new_value_params'	=> ['es1','test71'],
+			'new_value_params'	=> ['es1','test71',4],
 			'test_save'			=> false
 		],
 		(object)[
@@ -249,7 +249,7 @@ function get_elements() : array {
 			'mode'				=> $mode,
 			'lang'				=> $lang,
 			'new_value'			=> 'ar_random_locator',
-			'new_value_params'	=> [$section_tipo,'test54']
+			'new_value_params'	=> [$section_tipo,'test54',4]
 		],
 		(object)[
 			'model'			=> 'component_section_id',
@@ -278,7 +278,7 @@ function get_elements() : array {
 			'mode'				=> $mode,
 			'lang'				=> $lang,
 			'new_value'			=> 'ar_random_locator',
-			'new_value_params'	=> ['es1','test91']
+			'new_value_params'	=> ['es1','test91',10]
 		],
 		(object)[
 			'model'				=> 'component_select_lang',
@@ -288,7 +288,7 @@ function get_elements() : array {
 			'mode'				=> $mode,
 			'lang'				=> $lang,
 			'new_value'			=> 'ar_random_locator',
-			'new_value_params'	=> ['lg1','test89']
+			'new_value_params'	=> ['lg1','test89',3]
 		],
 		(object)[
 			'model'			=> 'component_svg',

@@ -648,7 +648,11 @@ class login extends common {
 
 				// errors found on init test (Don't stop execution here)
 					if ($init_response->result===false) {
-						debug_log(__METHOD__." Init test error: ".to_string($init_response->msg), logger::ERROR);
+						debug_log(__METHOD__
+							." Init test error (dd_init_test): ". PHP_EOL
+							.' init_response: ' . $init_response->msg
+							, logger::ERROR
+						);
 						// Don't stop here. Only inform user of init error via JavaScript
 							# $response->result 	= false;
 							# $response->msg 		= $init_response->msg;
@@ -1028,6 +1032,14 @@ class login extends common {
 
 		// already login check
 			if (self::is_logged()!==true) {
+				$user_id = isset($_SESSION['dedalo'])
+					? $_SESSION['dedalo']['auth']['user_id']
+					: null;
+				debug_log(__METHOD__
+					. " User is already logged " . PHP_EOL
+					. ' user_id: '. $user_id
+					, logger::WARNING
+				);
 				return false;
 			}
 

@@ -243,7 +243,6 @@ class component_image extends component_media_common {
 
 
 
-
 	/**
 	* GET_URL
 	* Get image url for current quality
@@ -307,10 +306,10 @@ class component_image extends component_media_common {
 
 		$properties = $this->get_properties();
 		if (isset($properties->external_source) && !empty($this->section_id)) {
-			$component_tipo 	= $properties->external_source;
-			$component_model 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 
-			$component 	= component_common::get_instance(
+			$component_tipo		= $properties->external_source;
+			$component_model	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component			= component_common::get_instance(
 				$component_model,
 				$component_tipo,
 				$this->section_id,
@@ -963,7 +962,7 @@ class component_image extends component_media_common {
 				$options->quality		= 100;
 
 			ImageMagick::convert($options);
-			
+
 			$file_path = $new_file_path;
 
 		}else{

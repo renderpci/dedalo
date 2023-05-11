@@ -69,6 +69,7 @@ class component_filter extends component_relation_common {
 
 	/**
 	* SET_DATO
+	* @param array|null $dato
 	* @return bool
 	*/
 	public function set_dato($dato) : bool {

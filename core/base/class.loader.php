@@ -74,6 +74,8 @@ include(DEDALO_CORE_PATH . '/ontology/class.ontology.php');
 // legacy classes (used only by v5 shared Ontology)
 include(DEDALO_CORE_PATH . '/legacy/class.css.php');
 include(DEDALO_CORE_PATH . '/legacy/class.js.php');
+// tools
+include(DEDALO_TOOLS_PATH . '/tool_common/class.tool_common.php');
 // include the shared classes
 include(DEDALO_SHARED_PATH . '/class.TR.php');
 include(DEDALO_SHARED_PATH . '/class.OptimizeTC.php');

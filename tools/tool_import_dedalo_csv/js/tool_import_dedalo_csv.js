@@ -37,9 +37,6 @@ export const tool_import_dedalo_csv = function () {
 	this.caller			= null
 
 	this.csv_files_list	= null
-
-
-	return true
 }//end page
 
 
@@ -65,7 +62,7 @@ export const tool_import_dedalo_csv = function () {
 * INIT
 * Custom tool init
 * @param object options
-* @return bool
+* @return bool common_init
 */
 tool_import_dedalo_csv.prototype.init = async function(options) {
 
@@ -97,7 +94,7 @@ tool_import_dedalo_csv.prototype.init = async function(options) {
 * BUILD
 * Custom tool build
 * @param bool autoload = false
-* @return bool
+* @return bool common_build
 */
 tool_import_dedalo_csv.prototype.build = async function(autoload=false) {
 
@@ -343,7 +340,7 @@ tool_import_dedalo_csv.prototype.get_section_components_list = function(section_
 					return
 				}
 
-				// chache result
+				// cache result
 				self.resolved_section_components_list[section_tipo] = {
 					list	: response.result,
 					label	: response.label,

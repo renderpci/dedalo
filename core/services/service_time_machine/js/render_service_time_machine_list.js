@@ -28,6 +28,7 @@ export const render_service_time_machine_list = function() {
 /**
 * LIST
 * Render node for use in list
+* @param object options
 * @return HTMLElement wrapper
 */
 render_service_time_machine_list.prototype.list = async function(options) {

@@ -106,11 +106,13 @@ class component_relation_related extends component_relation_common {
 				false, // bool show_parents
 				$ar_componets_related // array|null ar_components_related
 			);
-			$current_value = !empty($current_ar_value)
+
+			$current_value = is_array($current_ar_value)
 				? implode($fields_separator, $current_ar_value)
 				: $current_ar_value; // null case
 
-			$current_locator_json = json_encode($current_locator);
+			$current_locator_json = json_handler::encode($current_locator);
+			// add
 			$ar_values[$current_locator_json] = $current_value;
 		}//end if (!empty($dato))
 

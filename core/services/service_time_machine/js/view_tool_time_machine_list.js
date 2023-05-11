@@ -197,20 +197,21 @@ const rebuild_columns_map = async function(self) {
 				'dd543', // who
 				'dd546' // where
 			  ])
-		// map names to tipo (columns already parse id for another uses)
-		.map(el => {
-			switch (el) {
-				case 'matrix_id': return 'dd1573';
-				case 'when'		: return 'dd547';
-				case 'who'		: return 'dd543';
-				case 'where'	: return 'dd546';
-				default			: return el;
-			}
-		})
+			// map names to tipo (columns already parse id for another uses)
+			.map(el => {
+				switch (el) {
+					case 'matrix_id': return 'dd1573';
+					case 'when'		: return 'dd547';
+					case 'who'		: return 'dd543';
+					case 'where'	: return 'dd546';
+					default			: return el;
+				}
+			})
 
 	// modify list and labels
 		const base_columns_map_length = base_columns_map.length
 		for (let i = 0; i < base_columns_map_length; i++) {
+
 			const el = base_columns_map[i]
 
 			// ignore some columns
@@ -340,4 +341,4 @@ const render_column_id = function(options) {
 
 
 	return fragment
-}//end render_column_id()
+}//end render_column_id

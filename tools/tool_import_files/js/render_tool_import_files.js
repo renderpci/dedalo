@@ -24,6 +24,7 @@ export const render_tool_import_files = function() {
 /**
 * EDIT
 * Render node for use in current mode
+* @param object options
 * @return HTMLElement wrapper
 */
 render_tool_import_files.prototype.edit = async function(options) {
@@ -63,8 +64,8 @@ const get_content_data_edit = async function(self) {
 	// options container
 		const options_wrapper = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'component options',
-			parent 			: fragment
+			class_name		: 'component options',
+			parent			: fragment
 		})
 
 	// filter processor options of the files, it could be defined in the preferences or could be the caller
@@ -73,8 +74,8 @@ const get_content_data_edit = async function(self) {
 
 			const processor = ui.create_dom_element({
 				element_type	: 'span',
-				class_name 		: 'processor',
-				parent 			: options_wrapper
+				class_name		: 'processor',
+				parent			: options_wrapper
 			})
 
 			// label
@@ -88,8 +89,8 @@ const get_content_data_edit = async function(self) {
 			// options process
 				const select_process = ui.create_dom_element({
 					element_type	: 'select',
-					class_name 		: 'component select',
-					parent 			: processor
+					class_name		: 'component select',
+					parent			: processor
 				})
 
 				select_process.addEventListener('change', function(){
@@ -135,8 +136,8 @@ const get_content_data_edit = async function(self) {
 
 			const target_componet = ui.create_dom_element({
 				element_type	: 'span',
-				class_name 		: 'target_componet',
-				parent 			: options_wrapper
+				class_name		: 'target_componet',
+				parent			: options_wrapper
 			})
 
 			// label
@@ -151,8 +152,8 @@ const get_content_data_edit = async function(self) {
 		// select_options
 			const select_options = ui.create_dom_element({
 				element_type	: 'select',
-				class_name 		: 'component select',
-				parent 			: target_componet
+				class_name		: 'component select',
+				parent			: target_componet
 			})
 			select_options.addEventListener('change', function(){
 				const option_component_nodes = document.querySelectorAll('select.option_component_select')
@@ -185,12 +186,12 @@ const get_content_data_edit = async function(self) {
 
 			const ar_quality				= features.ar_quality || ['original']
 			const default_target_quality	= features.default_target_quality || 'original'
-			self.custom_target_quality 		= default_target_quality || null
+			self.custom_target_quality		= default_target_quality || null
 
 			const target_componet = ui.create_dom_element({
 				element_type	: 'span',
-				class_name 		: 'target_componet',
-				parent 			: options_wrapper
+				class_name		: 'target_componet',
+				parent			: options_wrapper
 			})
 
 			// label
@@ -202,33 +203,32 @@ const get_content_data_edit = async function(self) {
 					parent			: target_componet
 				})
 
-			// options process
+			// select_quality. options process
 				const select_quality = ui.create_dom_element({
 					element_type	: 'select',
-					class_name 		: 'component select',
-					parent 			: target_componet
+					class_name		: 'component select',
+					parent			: target_componet
 				})
-
 				select_quality.addEventListener('change', function(){
 					self.custom_target_quality = select_quality.value
 				})
 
-			const default_option_node = new Option(default_target_quality, default_target_quality, true, true);
-				select_quality.appendChild(default_option_node)
+				const default_option_node = new Option(default_target_quality, default_target_quality, true, true);
+					select_quality.appendChild(default_option_node)
 
-			for (let i = 0; i < ar_quality.length; i++) {
-				const option = ar_quality[i]
-				if(option===default_target_quality){
-					continue
-				}
-				const option_procesor_node = ui.create_dom_element({
-					element_type	: 'option',
-					class_name		: 'component select',
-					inner_html		: option,
-					parent			: select_quality
-				})
-				option_procesor_node.value = option
-			}// end for
+				for (let i = 0; i < ar_quality.length; i++) {
+					const option = ar_quality[i]
+					if(option===default_target_quality){
+						continue
+					}
+					const option_procesor_node = ui.create_dom_element({
+						element_type	: 'option',
+						class_name		: 'component select',
+						inner_html		: option,
+						parent			: select_quality
+					})
+					option_procesor_node.value = option
+				}// end for
 		}// end if(ar_quality)
 
 
@@ -337,7 +337,6 @@ const get_content_data_edit = async function(self) {
 							parent			: control_section_id_switcher
 						})
 
-
 					const label_section_id_check_box = ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'checkbox-label',
@@ -390,7 +389,6 @@ const get_content_data_edit = async function(self) {
 						inner_html		: get_label.same_name_same_record || 'Same name same record',
 						parent			: same_name_same_section
 					})
-
 
 
 	// components container
@@ -523,7 +521,7 @@ const get_content_data_edit = async function(self) {
 						resolve(response)
 					})
 				})
-		})
+		})//end button_process_import.addEventListener('click',)
 
 	// content_data
 		const content_data = ui.tool.build_content_data(self)
@@ -535,15 +533,19 @@ const get_content_data_edit = async function(self) {
 
 
 
-
 /**
 * SET_IMPORT_MODE
-* @return bool true
+* @param object self
+* @param bool apply
+* @return bool
 */
-const set_import_mode = function (self, apply){
+const set_import_mode = function (self, apply) {
 
-	for (let i = self.files_data.length - 1; i >= 0; i--) {
-		const current_value = self.files_data[i]
+	const files_data		= self.files_data || []
+	const files_data_length	= files_data.length
+	for (let i = 0; i < files_data_length; i++) {
+
+		const current_value = files_data[i]
 
 		if(apply===true){
 			const regex = /^(.+)-([a-zA-Z])\.([a-zA-Z]{3,4})$/;
@@ -553,11 +555,9 @@ const set_import_mode = function (self, apply){
 
 				const map_name_upper = map_name[2].toUpperCase();
 				const target_portal = self.tool_config.ddo_map.find(el => el.role==='component_option' && el.map_name===map_name_upper)
-
 				if (target_portal) {
 					current_value.previewElement.querySelector(".option_component_select").value = target_portal.tipo;
 				}
-
 			}
 		}else{
 			const default_target_portal = self.tool_config.ddo_map.find(el => el.role === 'component_option' && el.default === true)
@@ -566,7 +566,6 @@ const set_import_mode = function (self, apply){
 			}else{
 				current_value.previewElement.querySelector(".option_component_select").options[0].selected = true ;
 			}
-
 		}
 	}
 

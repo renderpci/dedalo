@@ -51,6 +51,8 @@ export const service_time_machine = function () {
 
 /**
 * INIT
+* @param object options
+* @return bool
 */
 service_time_machine.prototype.init = async function(options) {
 
@@ -92,6 +94,7 @@ service_time_machine.prototype.init = async function(options) {
 	// status update
 	self.status = 'initiated'
 
+
 	return true
 }//end init
 
@@ -100,14 +103,12 @@ service_time_machine.prototype.init = async function(options) {
 /**
 * BUILD
 * @param bool autoload = false
-* @return promise
+* @return bool
 *	resolve bool true
 */
 service_time_machine.prototype.build = async function(autoload=false) {
 
 	const self = this
-
-	// console.log("===================== 1 build service_time_machine:",self);
 
 	// status update
 		self.status = 'building'
@@ -209,6 +210,7 @@ service_time_machine.prototype.build = async function(autoload=false) {
 
 	// status update
 		self.status = 'built'
+
 
 	return true
 }//end build
