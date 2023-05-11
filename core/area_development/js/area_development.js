@@ -179,6 +179,8 @@ area_development.prototype.render = async function(options={}) {
 
 /**
 * INIT_JSON_EDITOR
+* @param object widget_object
+* @return bool
 */
 area_development.prototype.init_json_editor = async function(widget_object) {
 
@@ -379,6 +381,7 @@ const load_json_editor_files = function() {
 
 /**
 * INIT_FORM
+* @param object widget_object
 * @return HTMLElement form
 */
 area_development.prototype.init_form = async function(widget_object) {
