@@ -49,6 +49,8 @@ render_publication_api.prototype.list = async function(options) {
 		const wrapper = ui.widget.build_wrapper_edit(self, {
 			content_data : content_data
 		})
+		// set pointers
+		wrapper.content_data = content_data
 
 
 	return wrapper
