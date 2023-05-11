@@ -231,7 +231,7 @@ render_menu.prototype.edit = async function() {
 			})
 		// update value
 			// subscription to the changes: if the section or area was changed,
-			// observed DOM elements will be changed own value with the observable value
+			// observed DOM elements will change own value with the observable value
 			self.events_tokens.push(
 				event_manager.subscribe('render_instance', fn_update_section_label)
 			)
@@ -262,9 +262,12 @@ render_menu.prototype.edit = async function() {
 					// update current instance
 					current_instance = instance
 
+					console.log('self:', self);
+
 					// toggle inspector view
 					if (instance.mode==='edit') {
 						toggle_inspector.classList.remove('hide')
+						section_label.classList.remove('inactive')
 					}else{
 						toggle_inspector.classList.add('hide')
 					}
