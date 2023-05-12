@@ -80,7 +80,8 @@ view_line_edit_portal.render = async function(self, options) {
 		wrapper.content_data = content_data
 
 	// autocomplete
-		wrapper.addEventListener('click', function() {
+		wrapper.addEventListener('click', function(e) {
+			e.stopPropagation()
 			activate_autocomplete(self, wrapper)
 		})
 
@@ -198,10 +199,10 @@ const rebuild_columns_map = async function(self) {
 * @param object options
 * @return DOM DocumentFragment
 */
-view_line_edit_portal.render_column_id = function(options){
+view_line_edit_portal.render_column_id = function(options) {
 
 	// options
-		const self 			= options.caller
+		const self			= options.caller
 		const section_id	= options.section_id
 		const section_tipo	= options.section_tipo
 
