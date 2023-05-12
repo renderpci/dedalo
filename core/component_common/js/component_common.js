@@ -739,7 +739,7 @@ component_common.prototype.update_datum = function(new_data) {
 						// console.log("____ updated instance data:", inst);
 					}
 				}else{
-					console.warn(`(!) [update_datum] Not found current instance: tipo:${data_item.tipo}, section_tipo:${data_item.section_tipo}, section_id:${data_item.section_id} in instances:`, current_instances)
+					console.warn(`(!) [update_datum] The instance to update was not found: tipo:${data_item.tipo}, section_tipo:${data_item.section_tipo}, section_id:${data_item.section_id} in instances:`, current_instances)
 				}
 			}
 

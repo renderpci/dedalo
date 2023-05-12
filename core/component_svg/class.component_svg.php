@@ -54,9 +54,9 @@ class component_svg extends component_media_common {
 		}
 
 		$additional_path	= false;
-		$id			= $this->get_id();
-		$parent			= $this->get_parent();
-		$section_tipo	= $this->get_section_tipo();
+		$id					= $this->get_id();
+		$parent				= $this->get_parent();
+		$section_tipo		= $this->get_section_tipo();
 
 		$properties = $this->get_properties();
 		if (isset($properties->additional_path) && !empty($parent) ) {
@@ -102,8 +102,8 @@ class component_svg extends component_media_common {
 
 		}else if(isset($properties->max_items_folder)) {
 
-			$max_items_folder  = $properties->max_items_folder;
-			$parent_section_id = $parent;
+			$max_items_folder	= $properties->max_items_folder;
+			$parent_section_id	= $parent;
 
 			$additional_path = '/'.$max_items_folder*(floor($parent_section_id / $max_items_folder));
 
@@ -120,6 +120,7 @@ class component_svg extends component_media_common {
 
 	/**
 	* GET_DEFAULT_QUALITY
+	* @return string
 	*/
 	public function get_default_quality() : string {
 
@@ -139,7 +140,6 @@ class component_svg extends component_media_common {
 
 		return $ar_quality;
 	}//end get_ar_quality
-
 
 
 
@@ -210,7 +210,7 @@ class component_svg extends component_media_common {
 			}
 
 		// image id
-			$image_id 	= $this->get_id();
+			$image_id = $this->get_id();
 
 		// url
 			$additional_path	= $this->get_additional_path();

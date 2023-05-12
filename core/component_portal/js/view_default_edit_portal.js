@@ -61,12 +61,16 @@ view_default_edit_portal.render = async function(self, options) {
 		const content_data = await get_content_data(self, ar_section_record)
 		if (render_level==='content') {
 			// show header_wrapper_list if is hidden
+			const header_wrapper_list = self.node.list_body
+				? self.node.list_body.querySelector(":scope >.header_wrapper_list")
+				: null;
+			if (header_wrapper_list) {
 				if (ar_section_record.length>0) {
-					// self.node.querySelector(":scope >.list_body>.header_wrapper_list").classList.remove('hide')
 					self.node.list_body.querySelector(":scope >.header_wrapper_list").classList.remove('hide')
 				}else{
 					self.node.list_body.querySelector(":scope >.header_wrapper_list").classList.add('hide')
 				}
+			}
 
 			return content_data
 		}

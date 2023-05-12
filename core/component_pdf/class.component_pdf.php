@@ -434,15 +434,15 @@ class component_pdf extends component_media_common {
 			if (file_exists($source_file)) {
 
 				$image_pdf_options = new stdClass();
-					$image_pdf_options->source_file = $source_file;
-					$image_pdf_options->ar_layers 	= [$page];
-					$image_pdf_options->target_file = $target_file;
+					$image_pdf_options->source_file	= $source_file;
+					$image_pdf_options->ar_layers	= [$page];
+					$image_pdf_options->target_file	= $target_file;
 					$image_pdf_options->density		= 600;
 					$image_pdf_options->antialias	= true;
 					$image_pdf_options->quality		= 75;
 					$image_pdf_options->resize		= '25%';
 
-				$result_convert = ImageMagick::convert($image_pdf_options);
+				ImageMagick::convert($image_pdf_options);
 			}
 
 			$result = (file_exists($target_file)) ? $target_file : false;
@@ -466,10 +466,10 @@ class component_pdf extends component_media_common {
 			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
 		}
 
-		$force_create 	= false;
-		$absolute 		= true;	// output absolute path like 'http://myhost/mypath/myimage.jpg';
+		$force_create	= false;
+		$absolute		= true;	// output absolute path like 'http://myhost/mypath/myimage.jpg';
 
-		$valor 			= $this->get_pdf_thumb($force_create, $absolute);	// Note this absolute url is converted to image on export
+		$valor			= $this->get_pdf_thumb($force_create, $absolute);	// Note this absolute url is converted to image on export
 
 		return $valor;
 	}//end get_valor_export
@@ -716,8 +716,8 @@ class component_pdf extends component_media_common {
 		$response = new stdClass();
 
 		$options = new stdClass();
-			$options->path_pdf 	 = null;	# full source pdf file path
-			$options->first_page = 1; 		# number of first page. default is 1
+			$options->path_pdf		= null;	# full source pdf file path
+			$options->first_page	= 1; 		# number of first page. default is 1
 
 		// new_options overwrite options defaults
 			foreach ((object)$new_options as $key => $value) {
@@ -728,15 +728,15 @@ class component_pdf extends component_media_common {
 
 		// error on missing properties
 			if (empty($options->path_pdf) || !file_exists($options->path_pdf)) {
-				$response->result = 'error';
-				$response->msg 	  = "Error Processing Request pdf_automatic_transcription: source pdf file not found";
+				$response->result	= 'error';
+				$response->msg		= "Error Processing Request pdf_automatic_transcription: source pdf file not found";
 				return $response;
 			}
 
 		// test engine pdf to text
 			if (defined('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE')===false) {
-				$response->result = 'error';
-				$response->msg 	  = "Error Processing Request pdf_automatic_transcription: config PDF_AUTOMATIC_TRANSCRIPTION_ENGINE is not defined";
+				$response->result	= 'error';
+				$response->msg		= "Error Processing Request pdf_automatic_transcription: config PDF_AUTOMATIC_TRANSCRIPTION_ENGINE is not defined";
 				return $response;
 			}else{
 				$transcription_engine = shell_exec('type -P '.PDF_AUTOMATIC_TRANSCRIPTION_ENGINE);
@@ -754,14 +754,14 @@ class component_pdf extends component_media_common {
 		$command  = PDF_AUTOMATIC_TRANSCRIPTION_ENGINE . " -enc UTF-8 $options->path_pdf";
 		$output   = exec( "$command 2>&1", $result);	# Generate text version file in same dir as pdf
 		if ( strpos( strtolower($output), 'error')) {
-			$response->result = 'error';
-			$response->msg 	  = "$output";
+			$response->result	= 'error';
+			$response->msg		= "$output";
 			return $response;
 		}
 
 		if (!file_exists($text_filename)) {
-			$response->result = 'error';
-			$response->msg 	  = "Error Processing Request pdf_automatic_transcription: Text file not found";
+			$response->result	= 'error';
+			$response->msg		= "Error Processing Request pdf_automatic_transcription: Text file not found";
 			return $response;
 		}
 		$pdf_text = file_get_contents($text_filename);	# Read current text file
@@ -781,32 +781,32 @@ class component_pdf extends component_media_common {
 		# Test JSON conversion before save
 		$pdf_text 	= json_handler::encode($pdf_text);
 		if (!$pdf_text) {
-			$response->result = 'error';
-			$response->msg 	  = "Error Processing Request pdf_automatic_transcription: String is not valid because format encoding is wrong";
+			$response->result	= 'error';
+			$response->msg		= "Error Processing Request pdf_automatic_transcription: String is not valid because format encoding is wrong";
 			return $response;
 		}
 		$pdf_text 	= json_handler::decode($pdf_text);	# JSON is valid. We turn object to string
 		$pdf_text 	= trim($pdf_text);	// Trim before check is empty
 		if (empty($pdf_text)) {
-			$response->result = 'error';
-			$response->msg 	  = "Error Processing Request pdf_automatic_transcription: Empty text";
+			$response->result	= 'error';
+			$response->msg		= "Error Processing Request pdf_automatic_transcription: Empty text";
 			return $response;
 		}
 
 		#
 		# PAGES TAGS
-		$original_text = str_replace("","", $pdf_text);
-		$pages = explode("", $pdf_text);
-		$i=(int)$options->first_page;
-		$pdf_text='';
+		$original_text	= str_replace("","", $pdf_text);
+		$pages			= explode("", $pdf_text);
+		$i				= (int)$options->first_page;
+		$pdf_text		= '';
 		foreach ($pages as $current_page) {
 			$pdf_text .= '<p>';
-		    $pdf_text .= '[page-n-'. $i .']';
-		    $pdf_text .= '</p>';
-		    $pdf_text .= '<p>';
-		    $pdf_text .= str_replace(["\r\n", "\n\r", "\n", "\r"], '</p><p>' , $current_page);
-		    $pdf_text .= '</p>';
-		    $i++;
+			$pdf_text .= '[page-n-'. $i .']';
+			$pdf_text .= '</p>';
+			$pdf_text .= '<p>';
+			$pdf_text .= str_replace(["\r\n", "\n\r", "\n", "\r"], '</p><p>' , $current_page);
+			$pdf_text .= '</p>';
+			$i++;
 		}
 
 		$response->result	= (string)$pdf_text;
@@ -889,7 +889,7 @@ class component_pdf extends component_media_common {
 	*/
 	public static function utf8_clean(string $string='', bool $control=false) : string {
 
-	    $string = iconv('UTF-8', 'UTF-8//IGNORE', $string);
+		$string = iconv('UTF-8', 'UTF-8//IGNORE', $string);
 
 		return $string;
 	}//end utf8_clean
@@ -1054,7 +1054,7 @@ class component_pdf extends component_media_common {
 
 					// get files info
 						$files_info	= [];
-						$ar_quality = DEDALO_PDF_AR_QUALITY;
+						$ar_quality	= DEDALO_PDF_AR_QUALITY;
 						foreach ($ar_quality as $current_quality) {
 							if ($current_quality==='thumb') continue;
 							// read file if exists to get file_info

@@ -23,7 +23,7 @@
 */
 export const component_portal = function() {
 
-	this.id = null
+	this.id						= null
 
 	// element properties declare
 	this.model					= null
@@ -39,7 +39,7 @@ export const component_portal = function() {
 	this.modal					= null
 	this.caller					= null
 
-	self.standalone 			= null
+	self.standalone				= null
 
 	// context - data
 	this.datum					= null
@@ -57,9 +57,6 @@ export const component_portal = function() {
 	// rqo
 	this.request_config_object	= null
 	this.rqo					= null
-
-
-	return true
 }//end  component_portal
 
 
@@ -607,7 +604,8 @@ component_portal.prototype.build = async function(autoload=false) {
 /**
 * ADD_VALUE
 * Called from service autocomplete when the user selects a datalist option
-* @param object value (locator)
+* @param object value
+* 	(locator)
 * @return bool
 */
 component_portal.prototype.add_value = async function(value) {
@@ -1058,7 +1056,7 @@ component_portal.prototype.sort_data = async function(options) {
 * this function is for compatibility with section and paginator
 * total is resolved in server and comes in data, so it's not necessary call to server to get it
 *
-* @return int
+* @return int self.total
 */
 component_portal.prototype.get_total = async function() {
 
@@ -1066,4 +1064,3 @@ component_portal.prototype.get_total = async function() {
 
 	return self.total
 }//end get_total
-
