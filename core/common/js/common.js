@@ -773,7 +773,7 @@ export const create_source = function (self, action) {
 			section_tipo	: self.section_tipo || self.tipo,
 			section_id		: self.section_id,
 			mode			: self.mode,
-			view			: self.view || null, // 'default',
+			view			: get_view(self), // self.view || self.context?.view || null, // 'default',
 			lang			: self.lang
 		}
 
@@ -806,6 +806,21 @@ export const create_source = function (self, action) {
 
 	return source
 }//end create_source
+
+
+
+/**
+* GET_VIEW
+* Normalized get view from element with context fallback
+* @param object self
+* @return string|null view
+*/
+const get_view = function(self) {
+
+	const view = self.view || self.context?.view || null
+
+	return view
+}//end get_view
 
 
 
