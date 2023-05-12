@@ -50,6 +50,12 @@ view_default_autocomplete.render = async function (self, options) {
 		wrapper.appendChild(content_data)
 		// fix pointers
 		wrapper.content_data = content_data
+		// prevent to deactivate component on autocomplete click
+		wrapper.addEventListener('mousedown', function(e) {
+			if (!e.altKey) {
+				e.stopPropagation()
+			}
+		})
 
 	// fix node
 		self.node = wrapper
