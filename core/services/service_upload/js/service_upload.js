@@ -31,8 +31,6 @@ export const service_upload = function () {
 
 	this.max_size_bytes		= null
 	this.allowed_extensions	= null
-
-	return true
 }//end page
 
 
@@ -417,13 +415,22 @@ export const upload = async function(options) {
 					xhr.upload.addEventListener("loadstart", upload_loadstart, false);
 
 				// upload_error (the upload ends in error)
-					xhr.upload.addEventListener("error", upload_error, false);
+					// xhr.upload.addEventListener("error", upload_error, false);
+					xhr.upload.addEventListener("error", function(evt) {
+						upload_error(evt)
+						console.error('evt:', evt);
+						console.log('chunk:', chunk);
+						clearInterval(intervalTimer);
+						setTimeout(function(){
+							send_chunk(options)
+						}, 5000)
+					}, false);
 
 				// upload_abort (the upload has been aborted by the user)
 					xhr.upload.addEventListener("abort", upload_abort, false);
 
 				// progress
-					xhr.upload.addEventListener("progress", function(event){
+					xhr.upload.addEventListener("progress", function(event) {
 						 upload_progress({
 							event			: event,
 							chunk_index		: chunk_index,
