@@ -167,7 +167,7 @@ $updates->$v = new stdClass();
 				CREATE INDEX matrix_list_relations_flat_ty_st_si ON matrix_list
 					USING gin(relations_flat_ty_st_si(datos) jsonb_path_ops);
 			");
-/*
+
 	// UPDATE COMPONENTS
 		$updates->$v->components_update = [
 			'component_av',
@@ -259,7 +259,7 @@ $updates->$v = new stdClass();
 				$script_obj->script_method	= "convert_table_data_activity";
 				$script_obj->script_vars	= json_encode(['component_autocomplete_ts']); // Note that only ONE argument encoded is sent
 			$updates->$v->run_scripts[] = $script_obj;
-*/
+
 		// publication media files. rename media files to use max_items_folder as additional path
 			require_once dirname(dirname(__FILE__)) .'/upgrade/class.data_v5_to_v6.php';
 			$script_obj = new stdClass();
