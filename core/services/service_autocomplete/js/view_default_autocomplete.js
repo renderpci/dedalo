@@ -137,7 +137,7 @@ const get_content_data = function(self) {
 			parent			: fragment
 		})
 		// add listener to the select
-		button_options.addEventListener('mouseup',function(){
+		button_options.addEventListener('mouseup', function() {
 			options_container.classList.toggle('visible');
 		})
 

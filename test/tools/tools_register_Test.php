@@ -110,13 +110,12 @@ final class tools_register_Test extends TestCase {
 
 
 	/**
-	* TEST_get_all_default_config
+	* TEST_GET_ALL_DEFAULT_CONFIG
 	* @return void
 	*/
 	public function test_get_all_default_config() {
 
 		$all_default_config = tools_register::get_all_default_config();
-	dump($all_default_config, ' all_default_config ++ '.to_string());
 
 		$this->assertTrue(
 			gettype($all_default_config)==='array',

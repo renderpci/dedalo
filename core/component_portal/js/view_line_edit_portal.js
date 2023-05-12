@@ -148,6 +148,7 @@ const get_content_data = async function(self, ar_section_record) {
 /**
 * REBUILD_COLUMNS_MAP
 * Adding control columns to the columns_map that will processed by section_recod
+* @param object self
 * @return obj columns_map
 */
 const rebuild_columns_map = async function(self) {
@@ -270,7 +271,7 @@ view_line_edit_portal.render_column_id = function(options){
 * Render column_remov node
 * Shared across views
 * @param object options
-* @return DOM DocumentFragment
+* @return DocumentFragment
 */
 view_line_edit_portal.render_column_remove = function(options) {
 
@@ -365,4 +366,4 @@ view_line_edit_portal.render_column_remove = function(options) {
 
 
 	return button_remove
-}//end render_column_remove()
+}//end render_column_remove
