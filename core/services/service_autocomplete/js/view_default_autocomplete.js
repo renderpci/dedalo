@@ -872,7 +872,7 @@ const render_datalist = async function(self, api_response) {
 			li_node.appendChild(section_record_node)
 
 			// click event. When the user do click in one row send the data to the caller_instance for save it.
-			li_node.addEventListener('click', async function(e){
+			li_node.addEventListener('click', async function(e) {
 				e.stopPropagation()
 
 				// value

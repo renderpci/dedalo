@@ -55,7 +55,7 @@ render_edit_component_portal.prototype.edit = async function(options) {
 	const self = this
 
 	// view
-		const view = self.context.view
+		const view = self.view || self.context?.view || null
 
 	// wrapper
 	switch(view) {
@@ -109,7 +109,7 @@ render_edit_component_portal.prototype.edit = async function(options) {
 * @param object options
 * @return DocumentFragment
 */
-export const render_column_id = function(options){
+export const render_column_id = function(options) {
 
 	// options
 		const self			= options.caller

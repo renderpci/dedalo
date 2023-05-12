@@ -66,7 +66,8 @@ render_search_component_portal.prototype.search = async function(options) {
 		wrapper.content_data = content_data
 
 	// autocomplete
-		wrapper.addEventListener('click', function() {
+		wrapper.addEventListener('click', function(e) {
+			e.stopPropagation()
 			activate_autocomplete(self, wrapper)
 		})
 

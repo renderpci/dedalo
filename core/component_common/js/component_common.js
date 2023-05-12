@@ -714,8 +714,7 @@ component_common.prototype.update_datum = function(new_data) {
 			// new way multi. Iterate data and instances with equal data
 			for (let i = new_data_length - 1; i >= 0; i--) {
 
-				const data_item			= new_data[i]
-				// console.log("data_item:",data_item);
+				const data_item = new_data[i]
 
 				const current_instances	= ar_instances.filter(el =>
 					el.tipo===data_item.tipo &&
@@ -739,7 +738,14 @@ component_common.prototype.update_datum = function(new_data) {
 						// console.log("____ updated instance data:", inst);
 					}
 				}else{
-					console.warn(`(!) [update_datum] The instance to update was not found: tipo:${data_item.tipo}, section_tipo:${data_item.section_tipo}, section_id:${data_item.section_id} in instances:`, current_instances)
+					console.warn(`(!) [update_datum] The instance to update was not found:
+						tipo: ${data_item.tipo},
+						section_tipo: ${data_item.section_tipo},
+						section_id: ${data_item.section_id},
+						lang: ${data_item.lang}
+						in instances:`,
+						current_instances
+					)
 				}
 			}
 
