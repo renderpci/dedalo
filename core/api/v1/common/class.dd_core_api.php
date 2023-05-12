@@ -918,6 +918,7 @@ final class dd_core_api {
 			$section_tipo		= $source->section_tipo;
 			$section_id			= $source->section_id;
 			$mode				= $source->mode ?? 'list';
+			$view				= $source->view ?? null;
 			$lang				= $source->lang;
 			$type				= $source->type; // the type of the dd_object that is calling to update like 'component'
 			$changed_data		= $data->changed_data ?? null;
@@ -943,6 +944,11 @@ final class dd_core_api {
 						true,
 						$caller_dataframe ?? null
 					);
+
+				// view
+					if (!empty($view)) {
+						$component->set_view($view);
+					}
 
 				// permissions. Get the component permissions and check if the user can update the component
 					$permissions = $component->get_component_permissions();
