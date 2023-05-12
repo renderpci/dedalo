@@ -4726,9 +4726,25 @@ class web_data {
 					$ar_filter[] = 'gender = '. (int)$json_data->filters->gender;
 				}
 
-				# stolpersteine . Data stolpersteine as int like 1 . added 03-02-2021
+				# stolpersteine . like ["1","2"] - operator: AND
+				// if (!empty($json_data->filters->stolpersteine)) {
+				// 	$ar_filter[] = 'stolpersteine = '. $json_data->filters->stolpersteine;
+				// }
 				if (!empty($json_data->filters->stolpersteine)) {
-					$ar_filter[] = 'stolpersteine = '. $json_data->filters->stolpersteine;
+					$ar_stolpersteine = $json_data->filters->stolpersteine;
+					$ar_term = [];
+					foreach ((array)$ar_stolpersteine as $key => $value) {
+						if ($value==='*') {
+							$ar_filter[] = '(`stolpersteine` IS NOT NULL AND `stolpersteine`!=\'\')';
+							break;
+						}
+						$ar_term[] = "`stolpersteine` LIKE '%\"".escape_string($value)."\"%'";
+						// $ar_term[] = "`stolpersteine` = '[\"".escape_string($value)."\"]'";
+					}
+					if (!empty($ar_term)) {
+						$current_filter_stolpersteine = '('.implode(' OR ', $ar_term).')';
+						$ar_filter[] 	= $current_filter_stolpersteine;
+					}
 				}
 
 				# stolpersteine_date . like 376790400 OR [376790400,396790400]
