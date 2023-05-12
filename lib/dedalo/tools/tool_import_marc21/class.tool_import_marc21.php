@@ -144,7 +144,7 @@ class tool_import_marc21 extends tool_common {
 			# Iterate defined ar fields (see marc21_vars.php)
 			
 			foreach ($this->marc21_vars as $element_vars) {
-				#dump($element_vars, '$element_vars ++ '.to_string()); 
+				// dump($element_vars, '$element_vars ++ '.to_string());
 				
 				if (empty($element_vars['dd_component'])) {
 					dump($element_vars, ' ERROR ON element_vars: dd_component is empty ++ '.to_string());
@@ -307,16 +307,25 @@ class tool_import_marc21 extends tool_common {
 
 
 		if (isset($element_vars['field_multiple']) && $element_vars['field_multiple']) {
-			$ar_elementFields = $record->getFields($element_vars['Field']);
-			$ar_values = [];
-			$row_separator = $element_vars['row_separator'] ?? ". ";
-			foreach ($ar_elementFields as $tag => $elementField) {
 
-				$ar_values[] = tool_import_marc21::get_field($elementField, $element_vars);
+			$ar_mc21_fields = (array)$element_vars['Field'];
+			$row_separator = $element_vars['row_separator'] ?? ". ";
+
+			$field_values = [];
+			foreach ($ar_mc21_fields as $current_field) {
+
+				$ar_elementFields = $record->getFields($current_field);
+				foreach ($ar_elementFields as $tag => $elementField) {
+					$field_content = tool_import_marc21::get_field($elementField, $element_vars);
+					if(!empty($field_content) && $field_content !== ''){
+						$field_values[] = $field_content;
+					}
+				}
 			}
-			$value = implode($row_separator, $ar_values);
+			$value = implode($row_separator, $field_values);
 
 		}else{
+
 			$elementField = $record->getField($element_vars['Field']);
 			$value = tool_import_marc21::get_field($elementField, $element_vars);
 
