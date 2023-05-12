@@ -174,7 +174,7 @@ import * as fn from './data.js'
 			section_tipo	: section_tipo,
 			section_id		: section_id,
 			mode			: mode,
-			lang			: lang,
+			lang			: lang, // is nolan ?
 			test_save		: false
 		})
 
@@ -187,7 +187,7 @@ import * as fn from './data.js'
 			section_tipo	: section_tipo,
 			section_id		: section_id,
 			mode			: mode,
-			lang			: lang,
+			lang			: lang, // is nolan ?
 			new_value		: fn.random_iri_data
 		})
 
@@ -209,7 +209,7 @@ import * as fn from './data.js'
 			section_tipo	: section_tipo,
 			section_id		: section_id,
 			mode			: mode,
-			lang			: lang,
+			lang			: page_globals.dedalo_data_nolan,
 			new_value		: fn.random_number
 		})
 
@@ -244,7 +244,7 @@ import * as fn from './data.js'
 			section_tipo		: section_tipo,
 			section_id			: section_id,
 			mode				: mode,
-			lang				: lang,
+			lang				: page_globals.dedalo_data_nolan,
 			new_value			: fn.random_locator,
 			new_value_params	: ['test38', 'test80', 0] // [section_tipo, from_component_tipo, paginated_key]
 		})
@@ -256,7 +256,7 @@ import * as fn from './data.js'
 			section_tipo		: section_tipo,
 			section_id			: section_id,
 			mode				: mode,
-			lang				: lang,
+			lang				: page_globals.dedalo_data_nolan,
 			new_value			: fn.random_locator,
 			new_value_params	: ['dd64','test92']
 		})
@@ -268,7 +268,7 @@ import * as fn from './data.js'
 			section_tipo		: section_tipo,
 			section_id			: section_id,
 			mode				: mode,
-			lang				: lang,
+			lang				: page_globals.dedalo_data_nolan,
 			new_value			: fn.random_locator,
 			new_value_params	: ['dd501','test87']
 		})
@@ -280,7 +280,7 @@ import * as fn from './data.js'
 			section_tipo		: section_tipo,
 			section_id			: section_id,
 			mode				: mode,
-			lang				: lang,
+			lang				: page_globals.dedalo_data_nolan,
 			new_value			: fn.random_locator,
 			new_value_params	: [section_tipo,'test201']
 		})
@@ -292,7 +292,7 @@ import * as fn from './data.js'
 			section_tipo		: section_tipo,
 			section_id			: section_id,
 			mode				: mode,
-			lang				: lang,
+			lang				: page_globals.dedalo_data_nolan,
 			new_value			: fn.random_locator,
 			new_value_params	: ['es1','test25'],
 			test_save			: false
@@ -308,7 +308,7 @@ import * as fn from './data.js'
 			section_tipo		: section_tipo,
 			section_id			: section_id,
 			mode				: mode,
-			lang				: lang,
+			lang				: page_globals.dedalo_data_nolan,
 			new_value			: fn.random_locator,
 			new_value_params	: ['es2','test169']
 		})
@@ -320,7 +320,7 @@ import * as fn from './data.js'
 			section_tipo		: section_tipo,
 			section_id			: section_id,
 			mode				: mode,
-			lang				: lang,
+			lang				: page_globals.dedalo_data_nolan,
 			new_value			: fn.random_locator,
 			new_value_params	: ['es1','test71'],
 			test_save			: false
@@ -333,7 +333,7 @@ import * as fn from './data.js'
 			section_tipo		: section_tipo,
 			section_id			: section_id,
 			mode				: mode,
-			lang				: lang,
+			lang				: page_globals.dedalo_data_nolan,
 			new_value			: fn.random_locator,
 			new_value_params	: [section_tipo,'test54']
 		})
@@ -345,7 +345,7 @@ import * as fn from './data.js'
 			section_tipo	: section_tipo,
 			section_id		: section_id,
 			mode			: mode,
-			lang			: lang,
+			lang			: page_globals.dedalo_data_nolan,
 			new_value		: fn.random_string,
 			test_save		: false
 		})
@@ -357,7 +357,7 @@ import * as fn from './data.js'
 			section_tipo		: section_tipo,
 			section_id			: section_id,
 			mode				: mode,
-			lang				: lang,
+			lang				: page_globals.dedalo_data_nolan,
 			new_value			: fn.random_security_access
 		})
 
@@ -368,7 +368,7 @@ import * as fn from './data.js'
 			section_tipo		: section_tipo,
 			section_id			: section_id,
 			mode				: mode,
-			lang				: lang,
+			lang				: page_globals.dedalo_data_nolan,
 			new_value			: fn.random_locator,
 			new_value_params	: ['es1','test91']
 		})
@@ -380,7 +380,7 @@ import * as fn from './data.js'
 			section_tipo		: section_tipo,
 			section_id			: section_id,
 			mode				: mode,
-			lang				: lang,
+			lang				: page_globals.dedalo_data_nolan,
 			new_value			: fn.random_locator,
 			new_value_params	: ['lg1','test89']
 		})
@@ -392,7 +392,7 @@ import * as fn from './data.js'
 			section_tipo		: section_tipo,
 			section_id			: section_id,
 			mode				: mode,
-			lang				: lang,
+			lang				: page_globals.dedalo_data_nolan,
 			new_value			: fn.random_svg_data
 		})
 
