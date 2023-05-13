@@ -359,7 +359,7 @@ class v5_to_v6 {
 								}
 
 							// additional_path
-								$additional_path = $max_items_folder * (floor($section_id / $max_items_folder));
+								$additional_path = $max_items_folder * (floor((int)$section_id / (int)$max_items_folder));
 
 							// base_dir. Safe create
 								$base_dir = $current_dir . '/' . $additional_path;
