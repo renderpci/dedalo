@@ -32,8 +32,6 @@ export const tool_upload = function () {
 	this.caller			= null
 
 	this.max_size_bytes	= null
-
-	return true
 }//end tool_upload
 
 
