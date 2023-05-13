@@ -217,7 +217,7 @@ class component_image extends component_media_common {
 		if(empty($valor) && isset($properties->max_items_folder)) {
 
 			// max_items_folder defined case
-				$max_items_folder	= $properties->max_items_folder;
+				$max_items_folder	= (int)$properties->max_items_folder;
 				$int_section_id		= (int)$section_id;
 
 			// add
