@@ -23,7 +23,7 @@ class tool_common {
 	* @param string $section_tipo
 	* @return void
 	*/
-	public function __construct(string|int $section_id, string $section_tipo) {
+	public function __construct(string|int|null $section_id, string $section_tipo) {
 
 		// set tool name as class name
 		$this->name = get_called_class();
