@@ -89,8 +89,8 @@ class component_svg extends component_media_common {
 			# If the user not enter component dato, dato is filled by auto value when properties->max_items_folder is defined
 			if(empty($dato) && isset($properties->max_items_folder)) {
 
-				$max_items_folder  = $properties->max_items_folder;
-				$parent_section_id = $parent;
+				$max_items_folder  = (int)$properties->max_items_folder;
+				$parent_section_id = (int)$parent;
 
 				$additional_path = '/'.$max_items_folder*(floor($parent_section_id / $max_items_folder));
 
@@ -102,8 +102,8 @@ class component_svg extends component_media_common {
 
 		}else if(isset($properties->max_items_folder)) {
 
-			$max_items_folder	= $properties->max_items_folder;
-			$parent_section_id	= $parent;
+			$max_items_folder	= (int)$properties->max_items_folder;
+			$parent_section_id	= (int)$parent;
 
 			$additional_path = '/'.$max_items_folder*(floor($parent_section_id / $max_items_folder));
 

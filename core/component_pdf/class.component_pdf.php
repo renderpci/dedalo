@@ -62,8 +62,8 @@ class component_pdf extends component_media_common {
 
 		if(isset($properties->max_items_folder) && empty($dato)) {
 
-			$max_items_folder  = $properties->max_items_folder;
-			$section_id = $this->section_id;
+			$max_items_folder	= (int)$properties->max_items_folder;
+			$section_id			= (int)$this->section_id;
 
 			$ar_additional_path[$this->id] = '/'.$max_items_folder*(floor($section_id / $max_items_folder));
 
