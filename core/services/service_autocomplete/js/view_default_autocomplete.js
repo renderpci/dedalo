@@ -834,6 +834,10 @@ const render_datalist = async function(self, api_response) {
 	// reset ar_instances
 		self.ar_instances = []
 
+	// id_variant. Don't allow cache instances here because interact with page instances.
+	// Use always a custom id_variant to prevent it
+		const id_variant = (self.id_variant || '') + '_' + new Date().getTime()
+
 	// ar_section_record
 		const ar_section_record	= await get_section_records({
 			caller				: self,
@@ -843,7 +847,8 @@ const render_datalist = async function(self, api_response) {
 			value				: data.value,
 			request_config		: [self.rqo_search],
 			columns_map			: self.columns_map,
-			fields_separator	: fields_separator
+			fields_separator	: fields_separator,
+			id_variant			: id_variant
 		})
 		// store to allow destroy later
 		self.ar_instances.push(...ar_section_record)
