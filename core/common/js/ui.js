@@ -606,6 +606,7 @@ export const ui = {
 				const view			= instance.view || null
 				const label			= instance.label // instance.context.label
 				const element_css	= instance.context.css || {}
+				const content_data	= items.content_data || null
 
 			// DocumentFragment
 				const fragment = new DocumentFragment()
@@ -631,18 +632,17 @@ export const ui = {
 				}
 
 			// content_data
-				if (items.content_data) {
-					fragment.appendChild(items.content_data)
+				if (content_data) {
+					fragment.appendChild(content_data)
 				}
 
 			// tooltip
 				if (instance.context.search_options_title) {
-					//fragment.classList.add("tooltip_toggle")
 					ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'tooltip hidden_tooltip',
 						inner_html		: instance.context.search_options_title || '',
-						parent			: items.content_data // fragment
+						parent			: fragment
 					})
 				}
 
@@ -658,8 +658,12 @@ export const ui = {
 						mode,
 						...wrapper_structure_css
 					]
-					if (view) {ar_css.push('view_'+view)}
-					if (mode==='search') ar_css.push('tooltip_toggle')
+					if (view) {
+						ar_css.push('view_'+view)
+					}
+					if (mode==='search') {
+						ar_css.push('tooltip_toggle')
+					}
 					wrapper.classList.add(...ar_css)
 
 				// event click . Activate component on event
@@ -669,6 +673,7 @@ export const ui = {
 					})
 
 				wrapper.appendChild(fragment)
+
 
 			return wrapper
 		},//end build_wrapper_search
