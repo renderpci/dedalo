@@ -57,7 +57,7 @@ export const ts_object = new function() {
 	* GET_CHILDREN
 	* Get the JSON data from the server using promise. When data is loaded, build DOM element
 	* Data is built from parent info (current object section_tipo and section_id)
-	* @param DOM node children_element
+	* @param HTMLElement children_element
 	* @return promise
 	*/
 	this.get_children = function(children_element) {
@@ -136,7 +136,11 @@ export const ts_object = new function() {
 								node_type					: node_type,
 								clean_children_container	: true
 							}
-							const result = await ts_object.dom_parse_children(ar_children_data, children_container, options)
+							const result = await ts_object.dom_parse_children(
+								ar_children_data,
+								children_container,
+								options
+							)
 
 						// updates arrow
 							if (children_element && children_element.firstChild && children_element.dataset.type) {
@@ -1177,7 +1181,7 @@ export const ts_object = new function() {
 
 	/**
 	* REMOVE_CHILDREN_FROM_OPENED_ELEMENTS
-	* @return
+	* @return bool
 	*/
 	this.remove_children_from_opened_elements = function(parent_key) {
 
@@ -1397,34 +1401,34 @@ export const ts_object = new function() {
 			const mode					= button_obj.dataset.mode || 'add_child'
 			const section_id			= wrap.dataset.section_id
 			const section_tipo			= wrap.dataset.section_tipo
-			const target_section_tipo	= wrap.dataset.target_section_tipo || null
+			const target_section_tipo	= wrap.dataset.target_section_tipo
 			const node_type				= wrap.dataset.node_type || null
 			const tipo					= children_element.dataset.tipo
 
 		// target_section_tipo check on add_child_from_hierarchy mode
-			if (mode==="add_child_from_hierarchy") {
-				if (typeof wrap.dataset.target_section_tipo==='undefined') {
-					alert("Please, define a target_section_tipo in current hierarchy before add terms")
-					console.log("[ts_object.add_child] Error on find target_section_tipo dataset on wrap");
-					return Promise.resolve(false);
-				}
+			if (!target_section_tipo) {
+				alert("Please, define a target_section_tipo in current hierarchy before add terms")
+				console.log("[ts_object.add_child] Error on find target_section_tipo dataset on wrap");
+				return Promise.resolve(false);
 			}
 
 
-		return new Promise(function(resolve){
+		return new Promise(function(resolve) {
+
+			const source = {
+				section_id			: section_id,
+				section_tipo		: section_tipo,
+				target_section_tipo	: target_section_tipo,
+				node_type			: node_type,
+				tipo				: tipo
+			}
 
 			// API call
 				const rqo = {
 					dd_api			: 'dd_ts_api',
 					prevent_lock	: true,
 					action			: 'add_child',
-					source			: {
-						section_id			: section_id,
-						section_tipo		: section_tipo,
-						target_section_tipo	: target_section_tipo,
-						node_type			: node_type,
-						tipo				: tipo
-					}
+					source			: source
 				}
 				data_manager.request({
 					body : rqo
@@ -1956,12 +1960,12 @@ export const ts_object = new function() {
 
 	/**
 	* PARSER_SEARCH_RESULT
-	* @return
+	* @return bool
 	*/
 	this.current_main_div = null;
 	var ar_resolved = [];
 	this.parse_search_result = function( data, main_div, is_recursion ) {
-		// console.log("data:",data,is_recursion, main_div);
+
 		const self = this
 
 		/*
@@ -2084,6 +2088,11 @@ export const ts_object = new function() {
 
 			const element = data[key]
 
+			// target section_tipo
+			const target_section_tipo = (element.section_tipo==='hierarchy1')
+				? Object.values(element.heritage)[0].section_tipo
+				: element.section_tipo
+
 			// checks already exists
 				if (ar_resolved.indexOf(key) !== -1) {
 					if(SHOW_DEBUG===true) {
@@ -2124,7 +2133,8 @@ export const ts_object = new function() {
 				const options = {
 					clean_children_container		: false, // Elements are added to existing main_div instead replace
 					children_container_is_loaded	: false, // Set children container as loaded
-					show_arrow_opened				: false // Set icon arrow as opened
+					show_arrow_opened				: false, // Set icon arrow as opened
+					target_section_tipo				: target_section_tipo // add always !
 				}
 
 				// dom_parse_children (returns a promise)

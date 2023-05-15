@@ -224,7 +224,7 @@ class ts_object {
 			$render_vars = $current_object;
 
 			// element_tipo
-				$current_element_tipo	= $current_object->tipo;
+				$current_element_tipo = $current_object->tipo;
 				if (empty($current_element_tipo)) {
 					debug_log(__METHOD__." Error. Empty element_tipo in current_object: ".to_string($current_object), logger::DEBUG);
 					continue;
@@ -669,7 +669,7 @@ class ts_object {
 						$section_tipo
 					);
 					$current_value = $component->get_value();
-					
+
 					if (!empty($current_value)) {
 						$ar_valor[] = $current_value;
 					}
