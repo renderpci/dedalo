@@ -39,7 +39,193 @@
     },
     {
       "type": "dd151",
-      "section_id": "3",
+      "section_id": "10",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "11",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "12",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "14",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "15",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "16",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "17",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "18",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "19",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "20",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "22",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "24",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "25",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "26",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "28",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "29",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "31",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "32",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "33",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "34",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "35",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "36",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "37",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "38",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "39",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "40",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "41",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "43",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "47",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "48",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "49",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "51",
       "section_tipo": "dd1342",
       "from_component_tipo": "dd1330"
     },
@@ -87,13 +273,13 @@
       "lg-nolan": [
         {
           "start": {
-            "day": 19,
-            "hour": 14,
-            "time": 65027801500,
+            "day": 13,
+            "hour": 13,
+            "time": 65032636971,
             "year": 2023,
-            "month": 3,
-            "minute": 11,
-            "second": 40
+            "month": 5,
+            "minute": 22,
+            "second": 51
           }
         }
       ]
@@ -110,13 +296,13 @@
           "<p>Διαδώστε δεδομένα συστατικού στο ίδιο στοιχείο σε εγγραφές</p>"
         ],
         "lg-eng": [
-          "Propagate component data to same component across records"
+          "<p>Propagate component data to same component across records of current section</p>"
         ],
         "lg-ita": [
           "<p>Propaga i dati dei componenti allo stesso componente tra i record</p>"
         ],
         "lg-spa": [
-          "<p>Propaga datos de componentes al mismo componente a través de registros</p>"
+          "<p>Propaga datos de componentes al mismo componente a través de registros de la misma sección</p>"
         ]
       }
     },
@@ -152,7 +338,7 @@
     "dd1327": {
       "dato": {
         "lg-nolan": [
-          "2.0.0"
+          "2.0.1"
         ]
       }
     },
@@ -330,7 +516,7 @@
   "section_id": 11,
   "created_date": "2022-02-28 16:55:15",
   "section_tipo": "dd1340",
-  "modified_date": "2023-03-19 14:11:40",
+  "modified_date": "2023-05-13 13:22:51",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",

@@ -33,7 +33,7 @@ export const section_record = function() {
 	this.data			= null
 
 	this.paginated_key	= null
-	this.row_key 		= null
+	this.row_key		= null
 	// control
 	//this.built		= false
 
@@ -49,9 +49,6 @@ export const section_record = function() {
 	this.column_id		= null
 
 	this.offset			= null
-
-
-	return true
 }//end section
 
 
