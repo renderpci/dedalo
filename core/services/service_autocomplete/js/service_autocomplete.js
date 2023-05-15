@@ -72,14 +72,14 @@ service_autocomplete.prototype.init = async function(options) {
 		self.model			= 'service_autocomplete'
 		self.id				= 'service_autocomplete' +'_'+ self.tipo +'_'+ self.section_tipo
 		self.mode			= 'search'
-		self.context 		= {
+		self.context		= {
 			tipo			: self.tipo,
 			section_tipo	: self.section_tipo,
-			model 			: self.model,
+			model			: self.model,
 			view			: self.view,
 			children_view	: self.children_view,
 			request_config	: self.request_config,
-			mode 			: self.mode
+			mode			: self.mode
 		}
 		self.filter_free_nodes = []
 
@@ -96,7 +96,8 @@ service_autocomplete.prototype.init = async function(options) {
 		// })
 
 	// status update
-	self.status = 'initiated'
+		self.status = 'initiated'
+
 
 	return true
 }//end init

@@ -58,9 +58,9 @@ render_section_tab.prototype.edit = async function(options) {
 					const status_table	= 'status'
 
 				// children
-					const children = self.context.children
-					const children_length = children.length
-					const children_object = {}
+					const children			= self.context.children
+					const children_length	= children.length
+					const children_object	= {}
 					for (let i = 0; i < children_length; i++) {
 						const child = children[i]
 						const child_node = ui.create_dom_element({
@@ -124,6 +124,7 @@ render_section_tab.prototype.edit = async function(options) {
 /**
 * GET_WRAPPER
 * Render node for use in edit
+* @param object self
 * @return HTMLElement wrapper
 */
 const get_wrapper = function(self) {
@@ -131,7 +132,7 @@ const get_wrapper = function(self) {
 	// wrapper
 		const wrapper = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: `${'wrapper_'+self.type} ${self.model} ${self.tipo} ${self.section_tipo+'_'+self.tipo} ${self.context.view} ${self.mode}`
+			class_name		: `${'wrapper_'+self.type} ${self.tipo} ${self.section_tipo+'_'+self.tipo} ${self.context.view} ${self.mode}`
 		})
 	// CSS
 		// const element_css = self.context.css || {}
@@ -181,5 +182,3 @@ const get_wrapper = function(self) {
 
 	// 	return content_data
 	// }//end get_content_data
-
-

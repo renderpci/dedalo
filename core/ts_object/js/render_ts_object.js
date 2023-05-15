@@ -610,47 +610,46 @@ export const render_ts_list = function(options) {
 								if(is_descriptor===true) {
 									const link_add = ui.create_dom_element({
 										element_type	: 'a',
-										parent			: id_colum_content,
 										class_name		: 'id_column_link ts_object_add',
-										title_label		: 'add'
+										title_label		: 'add',
+										parent			: id_colum_content
 									})
-									// link_add event click
-										link_add.addEventListener('click', function(){
+									link_add.addEventListener('click', function(){
 
-											// mode set in dataset
-												this.dataset.mode = (node_type==='hierarchy_node') ? "add_child_from_hierarchy" : "add_child"
+										// mode set in dataset
+											this.dataset.mode = (node_type==='hierarchy_node') ? "add_child_from_hierarchy" : "add_child"
 
-											// add_child
-												self.add_child(this)
-												.then(function(response){
+										// add_child
+											self.add_child(this)
+											.then(function(response){
 
-													// vars from response
-														// new_section_id . Generated as response by the trigger add_child
-															const new_section_id 	= response.result
-														// section_tipo. When dataset target_section_tipo exists, is hierarchy_node. Else is normal node
-															const section_tipo 	  	= response.wrap.dataset.target_section_tipo || response.wrap.dataset.section_tipo
-														// button_obj. button plus that user clicks
-															const button_obj 		= response.button_obj
-														// children_element. list_thesaurus_element of current wrapper
-															const children_element 	= self.get_link_children_from_wrap(response.wrap)
-															if(!children_element) {
-																return console.log("[ts_object.add_child] Error on find children_element 'link_children'");
-															}
+												// vars from response
+													// new_section_id . Generated as response by the trigger add_child
+														const new_section_id 	= response.result
+													// section_tipo. When dataset target_section_tipo exists, is hierarchy_node. Else is normal node
+														const section_tipo 	  	= response.wrap.dataset.target_section_tipo || response.wrap.dataset.section_tipo
+													// button_obj. button plus that user clicks
+														const button_obj 		= response.button_obj
+													// children_element. list_thesaurus_element of current wrapper
+														const children_element 	= self.get_link_children_from_wrap(response.wrap)
+														if(!children_element) {
+															return console.log("[ts_object.add_child] Error on find children_element 'link_children'");
+														}
 
-													// refresh children container
-														self.get_children(children_element)
-														.then(function(){
-															// Open editor in new window
-															self.edit(button_obj, null, new_section_id, section_tipo)
-														})
-												})
-										})//end link_add.addEventListener("click", function(e)
+												// refresh children container
+													self.get_children(children_element)
+													.then(function(){
+														// Open editor in new window
+														self.edit(button_obj, null, new_section_id, section_tipo)
+													})
+											})
+									})//end link_add.addEventListener("click", function(e)
 
 									// add_icon_link_add
 										ui.create_dom_element({
 											element_type	: 'div',
-											parent			: link_add,
-											class_name		: 'ts_object_add_icon'
+											class_name		: 'ts_object_add_icon',
+											parent			: link_add
 										})
 								}//if(is_descriptor===true)
 							}//end if (ar_children_data[i].permissions_button_new>=2) {

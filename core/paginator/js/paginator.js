@@ -43,9 +43,6 @@ export const paginator = function() {
 	this.status				= null
 
 	this.id_variant			= null
-
-
-	return true
 }//end paginator
 
 

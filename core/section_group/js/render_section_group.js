@@ -25,6 +25,7 @@ export const render_section_group = function() {
 /**
 * EDIT
 * Render node for use in edit
+* @param object options
 * @return HTMLElement wrapper
 */
 render_section_group.prototype.edit = async function(options) {
@@ -131,7 +132,6 @@ const get_wrapper = function(self) {
 			set_element_css(selector, self.context.css)
 		}
 
-
 	return wrapper
 }//end get_wrapper
 
@@ -139,6 +139,7 @@ const get_wrapper = function(self) {
 
 /**
 * GET_CONTENT_DATA
+* @param object self
 * @return HTMLElement content_data
 */
 const get_content_data = function(self) {
@@ -146,7 +147,6 @@ const get_content_data = function(self) {
 	// content_data
 		const content_data = document.createElement('div')
 			  content_data.classList.add('content_data', self.type, 'hide')
-
 
 	return content_data
 }//end get_content_data
