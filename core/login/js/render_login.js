@@ -84,31 +84,33 @@ const get_content_data = function(self) {
 		// const files_loader = render_files_loader()
 		// top.appendChild(files_loader)
 
-	// select lang
-		const langs			= page_globals.dedalo_application_langs
-		const select_lang	= ui.build_select_lang({
-			langs 	 : langs,
-			selected : page_globals.dedalo_application_lang,
-			action 	 : async (e) => {
-				const lang = e.target.value || null
-				if (lang) {
-					// data_manager api call
-					await data_manager.request({
-						use_worker	: true,
-						body		: {
-							action	: 'change_lang',
-							dd_api	: 'dd_utils_api',
-							options	: {
-								dedalo_data_lang		: lang,
-								dedalo_application_lang	: lang
+	// select_lang
+		if (self.add_select_lang) {
+			const langs			= page_globals.dedalo_application_langs
+			const select_lang	= ui.build_select_lang({
+				langs 	 : langs,
+				selected : page_globals.dedalo_application_lang,
+				action 	 : async (e) => {
+					const lang = e.target.value || null
+					if (lang) {
+						// data_manager api call
+						await data_manager.request({
+							use_worker	: true,
+							body		: {
+								action	: 'change_lang',
+								dd_api	: 'dd_utils_api',
+								options	: {
+									dedalo_data_lang		: lang,
+									dedalo_application_lang	: lang
+								}
 							}
-						}
-					})
-					window.location.reload(false);
+						})
+						window.location.reload(false);
+					}
 				}
-			}
-		})
-		fragment.appendChild(select_lang)
+			})
+			fragment.appendChild(select_lang)
+		}
 
 	// form
 		const form = ui.create_dom_element({
@@ -321,10 +323,11 @@ const get_content_data = function(self) {
 		content_data.appendChild(fragment)
 		// set pointers
 		content_data.top				= top
-		content_data.select_lang		= select_lang
+		content_data.select_lang		= typeof select_lang!=='undefined' ? select_lang : null
 		content_data.form				= form
 		content_data.info				= info
 		content_data.messages_container	= messages_container
+
 
 	return content_data
 }//end get_content_data

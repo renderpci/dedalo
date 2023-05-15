@@ -12,6 +12,7 @@
 	import {set_context_vars, create_source} from '../../common/js/common.js'
 	import {events_subscription} from './events_subscription.js'
 	import {ui} from '../../common/js/ui.js'
+	import {render_relogin} from '../../login/js/login.js'
 
 
 
@@ -505,6 +506,7 @@ component_common.prototype.save = async function(changed_data) {
 				self.node.classList.remove('loading')
 			}
 
+
 	// check result for errors
 	// result expected is current section_id. False is returned if a problem found
 		const result = response.result
@@ -514,14 +516,42 @@ component_common.prototype.save = async function(changed_data) {
 
 			self.node.classList.add('error')
 
-			if (response.error) {
-				console.error(response.error)
-			}
-			if (response.msg) {
-				alert('Error on save self '+self.model+' data: \n' + response.msg)
-			}
+			switch (response.error) {
+				case 'not_logged':
 
-			console.error('ERROR response:',response);
+					// main_container
+					// const main_container = document.getElementById('main')
+					const main_container = document.querySelector('.wrapper.page')
+					main_container.classList.add('loading')
+
+					// display login window
+					render_relogin({
+						callback : function(login_instance){
+
+							// login success
+
+							// restore styles
+							main_container.classList.remove('loading')
+							self.node.classList.remove('error')
+
+							// force save again this component
+							self.save(changed_data)
+						}
+					})
+
+					// stop here
+					// return response
+					break;
+
+				default:
+					// write message to the console
+					console.error(response.error)
+					if (response.msg) {
+						alert('Error on save self '+self.model+'. msg: \n' + response.msg)
+					}
+					break;
+			}
+			// console.error('ERROR response:',response);
 
 		}else{
 
@@ -930,7 +960,7 @@ component_common.prototype.change_value = async function(options) {
 
 	// save. save and rebuild the component
 		const api_response = await self.save(changed_data)
-				console.log("api_response:-----------------",api_response);
+
 		// fix instance changed_data
 			// self.data.changed_data = changed_data
 			if (api_response && api_response.result) {
