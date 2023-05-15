@@ -131,8 +131,11 @@ data_manager.request = async function(options) {
 					// custom behaviors
 						switch (result.error) {
 							case 'not_logged':
-								// redirect to login page
-								location.reload();
+								// Alert user that is lot logged
+								if (typeof alert==='function') {
+									alert('Warning! User not logged');
+								}
+								console.warn('Warning! User not logged');
 								break;
 
 							default:

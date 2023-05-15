@@ -10,6 +10,7 @@
 	top: 0px;
 	height: 100%;
 	width: 100%;
+	z-index: 999;
 
 	--user_login_image : ''; // Added on login, like url('../../themes/default/raspas/raspa_pantalla_1.jpg');
 
@@ -52,6 +53,11 @@
 		.centered;
 		max-width: 24em;
 		padding: 2em;
+
+		&.overlay {
+			background-color: rgb(255 255 255);
+			box-shadow: 10px 10px 62px 0px rgba(0,0,0,0.43);
+		}
 
 		@media screen and (max-width: @width_break_point_1) {
 			width: 70vw;

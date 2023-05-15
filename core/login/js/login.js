@@ -6,6 +6,7 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
+	import * as instances from '../../common/js/instances.js'
 	import {common,create_source} from '../../common/js/common.js'
 	import {render_login, render_files_loader} from './render_login.js'
 
@@ -32,11 +33,10 @@ export const login = function() {
 	this.node
 	this.ar_instances = []
 
-	this.custom_action_dispatch = null
+	this.custom_action_dispatch
+	this.add_select_lang
 
 	this.status
-
-	return true
 }//end login
 
 
@@ -63,21 +63,24 @@ login.prototype.init = async function(options) {
 	const self = this
 
 	// instance key used vars
-	self.model			= options.model
-	self.tipo			= options.tipo
-	self.mode			= options.mode
-	self.lang			= options.lang
+	self.model				= options.model
+	self.tipo				= options.tipo
+	self.mode				= options.mode
+	self.lang				= options.lang
+	self.add_select_lang	= options.add_select_lang ?? true
+
 
 	// DOM
-	self.node			= null
+	self.node					= null
 
-	self.events_tokens	= []
-	self.context		= options.context	|| null
-	self.data			= options.data		|| null
-	self.datum			= options.datum		|| null
+	self.events_tokens			= []
+	self.context				= options.context	|| null
+	self.data					= options.data		|| null
+	self.datum					= options.datum		|| null
+	self.custom_action_dispatch	= options.custom_action_dispatch
 
-	self.type			= 'login'
-	self.label			= null
+	self.type					= 'login'
+	self.label					= null
 
 	// status update
 		self.status = 'initiated'
@@ -248,7 +251,9 @@ login.prototype.action_dispatch = async function(api_response) {
 
 					if (e.data.status==='ready') {
 						// hide things
-						self.node.content_data.select_lang.classList.add('hide')
+						if (self.node.content_data.select_lang) {
+							self.node.content_data.select_lang.classList.add('hide')
+						}
 						self.node.content_data.form.classList.add('hide')
 						// self.node.content_data.info.classList.add('hide')
 
@@ -298,3 +303,49 @@ login.prototype.action_dispatch = async function(api_response) {
 
 	return true
 }//end action_dispatch
+
+
+
+/**
+* RENDER_RELOGIN
+* Create a new login instance, and after rendering it, place the node in the body of the DOM.
+* Used to allow user login after session with server is lost due to timeout or error
+* @see component_common.save()
+* @param object options
+* {
+* 	callback : function|null
+* }
+* @return object loggin_instance
+*/
+export const render_relogin = async function(options) {
+
+	// options
+		const callback = options?.callback || null
+
+	// loggin_instance
+		const loggin_instance = await instances.get_instance({
+			model					: 'login',
+			tipo					: 'dd229',
+			mode					: 'edit',
+			add_select_lang			: false,
+			custom_action_dispatch	: function() {
+
+				// work done! Destroy this login instance and DOM
+				loggin_instance.destroy(true, true, true)
+
+				// exec possible callback function if exists
+				if (callback && typeof callback==='function') {
+					callback(this)
+				}
+			}
+		})
+		await loggin_instance.build(true)
+		const loggin_node = await loggin_instance.render()
+		loggin_node.content_data.classList.add('overlay')
+
+	// add to DOM
+		document.body.appendChild(loggin_node)
+
+
+	return loggin_instance
+}//end render_relogin
