@@ -795,7 +795,8 @@ export const get_section_records = async function(options) {
 				paginated_key	: locator.paginated_key,
 				columns_map		: columns_map,
 				column_id		: column_id,
-				locator			: locator
+				locator			: locator,
+				id_variant		: id_variant
 			}
 
 			// id_variant . Propagate a custom instance id to children
