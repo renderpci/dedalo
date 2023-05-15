@@ -35,8 +35,6 @@ export const section_group = function(){
 	this.node			= null
 
 	this.id_variant		= null
-
-	return true
 }//end section_group
 
 

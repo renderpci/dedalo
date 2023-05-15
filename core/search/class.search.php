@@ -726,10 +726,10 @@ class search {
 
 	/**
 	* PARSE_SEARCH_QUERY_OBJECT NEW
-	* Build full final sql query to send to DDBB
-	* @param bool $full_count
-	*	default false
+	* Build full final SQL query to send to DDBB
+	* @param bool $full_count = false
 	* @return string $sql_query
+	* 	parsed final SQL query string
 	*/
 	public function parse_search_query_object( bool $full_count=false ) : string {
 		#$start_time=start_time();
@@ -737,21 +737,22 @@ class search {
 		#dump( json_encode($this->search_query_object,JSON_PRETTY_PRINT  ), '$this->search_query_object->filter 2 ++ '.to_string());
 		#debug_log(__METHOD__." JSONSEARCH ORIGINAL (ANTES DE PASAR POR COMPONENTES) ".json_encode($this->search_query_object->filter, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), logger::DEBUG);
 
-		#if ($this->preparsed_search_query_object === false) {
-		if ($this->search_query_object->parsed!==true) {
-			// Preparse search_query_object with components always before begins
-			$this->pre_parse_search_query_object();
-		}
+		// pre_parse_search_query_object if not already parsed
+			if ($this->search_query_object->parsed!==true) {
+				// Pre-parse search_query_object with components always before begins
+				$this->pre_parse_search_query_object();
+			}
 
-		if(SHOW_DEBUG===true) {
-			#dump( json_encode($this->search_query_object,JSON_PRETTY_PRINT  ), '$this->search_query_object->filter 2 ++ '.to_string());
-			#dump( null, '$this->search_query_object->filter 2 ++ '.json_encode($this->search_query_object, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE ));  #die();
-			#$debug_json_string = json_encode($this->search_query_object->filter, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-			#debug_log(__METHOD__." DEBUG_JSON_STRING \n".to_string().$debug_json_string, logger::DEBUG);
-			#$this->remove_distinct=true;
-		}
+		// debug
+			if(SHOW_DEBUG===true) {
+				#dump( json_encode($this->search_query_object,JSON_PRETTY_PRINT  ), '$this->search_query_object->filter 2 ++ '.to_string());
+				#dump( null, '$this->search_query_object->filter 2 ++ '.json_encode($this->search_query_object, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE ));  #die();
+				#$debug_json_string = json_encode($this->search_query_object->filter, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+				#debug_log(__METHOD__." DEBUG_JSON_STRING \n".to_string().$debug_json_string, logger::DEBUG);
+				#$this->remove_distinct=true;
+			}
 
-		# Search elements. Order is important
+		// Search elements. Order is important
 			$main_where_sql			= $this->build_main_where_sql();
 			$sql_query_order		= $this->build_sql_query_order();	// Order before select !
 			$sql_query_select		= $this->build_sql_query_select($full_count);
@@ -759,26 +760,24 @@ class search {
 			$sql_projects_filter	= $this->build_sql_projects_filter();
 			$sql_joins				= $this->get_sql_joins();
 			$main_from_sql			= $this->build_main_from_sql();
-			$sql_limit				= $this->search_query_object->limit;
 			$sql_offset				= $this->search_query_object->offset;
-
+			$sql_limit				= $this->search_query_object->limit;
 			if(isset($this->search_query_object->children_recursive) && $this->search_query_object->children_recursive===true) {
-				$sql_limit = "all";
-				$sql_offset= 0;
+				$sql_limit	= 'all';
+				$sql_offset	= 0;
 			}
-
+			// order default add if not exists
 			if (empty($sql_query_order)) {
 				$sql_query_order = $this->build_sql_query_order_default();
 			}
 
-		# FORCE FALSE ALWAYS THAT EXIST $this->ar_sql_joins . Pending solve subquery pagination issue !
+		// force false always that exist $this->ar_sql_joins . pending solve subquery pagination issue !
 			#if (!empty($sql_joins)) {
 			#	$this->allow_sub_select_by_id = false;
 			#}
-			#debug_log(__METHOD__." search_query_object ".json_encode($this->search_query_object, JSON_PRETTY_PRINT), logger::DEBUG);
 
-		# sql_query
-		$sql_query  = '';
+		// sql_query
+		$sql_query = '';
 
 		switch (true) {
 
@@ -787,7 +786,7 @@ class search {
 				# Only for count
 
 				// column_id to count. default is 'section_id', but in time machine must be 'id' because 'section_id' is not unique
-					$column_id = ($this->matrix_table==='matrix_time_machine') ? 'id' : 'section_id';
+					// $column_id = ($this->matrix_table==='matrix_time_machine') ? 'id' : 'section_id';
 
 				# SELECT
 					$sql_query .= ($this->main_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO || $this->matrix_table==='matrix_time_machine')
@@ -810,9 +809,6 @@ class search {
 						$sql_filter_by_locators = $this->build_sql_filter_by_locators();
 						$sql_query .= PHP_EOL. 'AND '.$sql_filter_by_locators;
 					}
-					#if (!empty($sql_projects_filter)) {
-					#	$sql_query .= $sql_projects_filter;
-					#}
 					if (isset($this->filter_by_user_records)) {
 						$sql_query .= $this->filter_by_user_records;
 					}
@@ -823,12 +819,11 @@ class search {
 					if (count($this->ar_section_tipo)>1) {
 						$sql_query = $this->build_union_query($sql_query);
 					}
-				// $sql_query = 'SELECT COUNT('.$column_id.') as full_count FROM (' . PHP_EOL . $sql_query . PHP_EOL. ') x';
+				// final count query
 					$sql_query = 'SELECT COUNT(*) as full_count FROM (' . PHP_EOL . $sql_query . PHP_EOL. ') x';
-				if(SHOW_DEBUG===true) {
-					$sql_query = '-- Only for count '. $this->matrix_table . PHP_EOL . $sql_query;
-					// debug_log(__METHOD__." sql_query '$this->matrix_table' +++++++++++++++ ".PHP_EOL.to_string($sql_query), logger::ERROR);
-				}
+					if(SHOW_DEBUG===true) {
+						$sql_query = '-- Only for count '. $this->matrix_table . PHP_EOL . $sql_query;
+					}
 				break;
 
 		// sql_filter_by_locators
@@ -840,7 +835,7 @@ class search {
 					: 'ORDER BY ' . $this->build_sql_query_order();
 
 				// select
-					$sql_query .= 'SELECT * FROM(';
+					$sql_query .= 'SELECT * FROM (';
 					$sql_query .= PHP_EOL . 'SELECT *';
 					$sql_query .= PHP_EOL . 'FROM ' . $main_from_sql;
 					$sql_query .= PHP_EOL . 'WHERE ' . $sql_filter_by_locators;
@@ -1022,7 +1017,7 @@ class search {
 
 		// with order
 			default:
-				# Search With order
+				// Search With order
 
 				// query_inside
 					$query_inside = '';
@@ -1086,6 +1081,7 @@ class search {
 			// debug_log(__METHOD__." SQL QUERY: ".PHP_EOL.to_string($sql_query), logger::DEBUG);
 			// debug_log(__METHOD__." this->search_query_object: ".to_string($this->search_query_object), logger::DEBUG);
 			// debug_log(__METHOD__." total time ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
+
 
 		return $sql_query;
 	}//end parse_search_query_object
@@ -1878,10 +1874,10 @@ class search {
 
 				$ar_value2 	= $search_object->$op2;
 
-				$operator2 = strtoupper( substr($op2, 1) );
-				#if ($key > 1) {
-				#	$string_query .= ' '.$operator2.'** ';
-				#}
+				// $operator2 = strtoupper( substr($op2, 1) );
+				// if ($key > 1) {
+				// 	$string_query .= ' '.$operator2.'** ';
+				// }
 				$string_query .= ' (';
 				$string_query .= $this->filter_parser($op2, $ar_value2);
 				$string_query .= ' )';
@@ -2232,21 +2228,22 @@ class search {
 					break;
 
 				case 'function':
-
 					$use_function =  $search_object->use_function ?? null;
 					if (empty($use_function)) {
 						debug_log(__METHOD__." Empty sqo property 'use_function' ".to_string(), logger::ERROR);
 					}else{
 						$sql_where .= $use_function;
 						$sql_where .= '('. $table_alias . '.datos)';
-
 						$sql_where .= $search_object->operator. ' ' .$search_object->q_parsed;
-
 					}
 					break;
 				default:
 					// undefined format case
-					debug_log(__METHOD__.' Ignored undefined search_object_format '.to_string($search_object_format), logger::ERROR);
+					debug_log(__METHOD__
+						.' Ignored undefined search_object_format ' .PHP_EOL
+						.' search_object_format: ' . to_string($search_object_format)
+						, logger::ERROR
+					);
 					break;
 			}//end switch ($search_object->type)
 
@@ -2265,10 +2262,7 @@ class search {
 	public static function resolve_array_elements( object $array_elements, string $component_tipo ) : string {
 
 		$sql_where = '';
-		#debug_log(__METHOD__." ****** array_elements ".to_string($array_elements), logger::DEBUG);
-
 		foreach ($array_elements as $current_operator => $group_elements) {
-			#dump($group_elements, ' $group_elements ++ '.to_string($current_operator)); die();
 
 			$operator_sql = strtoupper(substr($current_operator, 1));
 
@@ -2544,7 +2538,6 @@ class search {
 		#}
 
 		$ar_tables_to_search = common::get_matrix_tables_with_relations();
-		#debug_log(__METHOD__." ar_tables_to_search: ".json_encode($ar_tables_to_search), logger::DEBUG);
 
 		// ar_query
 			$ar_query = array();
@@ -2831,32 +2824,32 @@ class search {
 				}
 			}
 
-			// Exec query (all records at once)
-				if (!empty($ar_insert_values)) {
+		// Exec query (all records at once)
+			if (!empty($ar_insert_values)) {
 
-					$strQuery = 'INSERT INTO '.$table.' (section_id, section_tipo, target_section_id, target_section_tipo, from_component_tipo) VALUES '.implode(',', $ar_insert_values).';';
-					$result = pg_query(DBi::_getConnection(), $strQuery);
-					if(!$result) {
-						$msg = " Failed Insert relations record - $strQuery";
-						debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
-						$response->msg[] = $msg;
-					}else{
-						$msg = " Created " . count($ar_insert_values) . " relations rows (section_tipo:$section_tipo,  section_id:$section_id, from_component_tipo:$from_component_tipo, target_section_tipo:$target_section_tipo)";
-						$response->msg[] = $msg;
-						if(SHOW_DEBUG===true) {
-							if ($section_tipo!==DEDALO_ACTIVITY_SECTION_TIPO) {
-								$msg .= ' ('.RecordObj_dd::get_termino_by_tipo($section_tipo).' - '.RecordObj_dd::get_termino_by_tipo($from_component_tipo).')';
-								$msg .= ' in '. exec_time_unit($start_time).' ms';
-								debug_log(__METHOD__." OK: ".$msg, logger::DEBUG);
-							}
+				$strQuery = 'INSERT INTO '.$table.' (section_id, section_tipo, target_section_id, target_section_tipo, from_component_tipo) VALUES '.implode(',', $ar_insert_values).';';
+				$result = pg_query(DBi::_getConnection(), $strQuery);
+				if(!$result) {
+					$msg = " Failed Insert relations record - $strQuery";
+					debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
+					$response->msg[] = $msg;
+				}else{
+					$msg = " Created " . count($ar_insert_values) . " relations rows (section_tipo:$section_tipo,  section_id:$section_id, from_component_tipo:$from_component_tipo, target_section_tipo:$target_section_tipo)";
+					$response->msg[] = $msg;
+					if(SHOW_DEBUG===true) {
+						if ($section_tipo!==DEDALO_ACTIVITY_SECTION_TIPO) {
+							$msg .= ' ('.RecordObj_dd::get_termino_by_tipo($section_tipo).' - '.RecordObj_dd::get_termino_by_tipo($from_component_tipo).')';
+							$msg .= ' in '. exec_time_unit($start_time).' ms';
+							debug_log(__METHOD__." OK: ".$msg, logger::DEBUG);
 						}
 					}
-
-					// response
-						$response->result	= true;
-						$response->msg[0]	= "Ok. Relations row successfully"; // Override first message
-						$response->msg		= implode(PHP_EOL, $response->msg);
 				}
+
+				// response
+					$response->result	= true;
+					$response->msg[0]	= "OK. Relations row successfully"; // Override first message
+					$response->msg		= implode(PHP_EOL, $response->msg);
+			}
 
 
 		return $response;
