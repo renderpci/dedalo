@@ -512,6 +512,11 @@ class login extends common {
 			false // default_add
 		);
 
+		if(empty($user_image) && $section_id<1) {
+			$user_image = DEDALO_ROOT_WEB . '/core/themes/default/raspas/raspa_screen.jpg';
+		}
+
+
 		return $user_image;
 	}//end get_user_image
 
