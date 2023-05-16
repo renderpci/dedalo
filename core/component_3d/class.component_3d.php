@@ -470,40 +470,8 @@ class component_3d extends component_media_common {
 	*/
 	public function remove_component_media_files(array $ar_quality=[], bool $remove_posterframe=true) : bool {
 
-		$date=date("Y-m-d_Hi");
-
-		// ar_quality
-			if (empty($ar_quality)) {
-				$ar_quality = $this->get_ar_quality();
-			}
-
 		// files remove
-			foreach ($ar_quality as $current_quality) {
-
-				// media_path
-					$media_path = $this->get_video_path($current_quality);
-					if (!file_exists($media_path)) continue; # Skip
-
-				// delete dir
-					$folder_path_del = DEDALO_MEDIA_PATH . DEDALO_3D_FOLDER .'/'. $current_quality . '/deleted';
-					if( !is_dir($folder_path_del) ) {
-						$create_dir 	= mkdir($folder_path_del, 0777,true);
-						if(!$create_dir) {
-							trigger_error(" Error on read or create directory \"deleted\". Permission denied.");
-							return false;
-						}
-					}
-
-				// move/rename file
-					$reelID				= $this->get_id();
-					$media_path_moved	= $folder_path_del . "/$reelID" . '_deleted_' . $date . '.' . $this->get_extension();
-					if( !rename($media_path, $media_path_moved) ) {
-						trigger_error(" Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");
-						return false;
-					}
-
-				debug_log(__METHOD__." Moved file \n$media_path to \n$media_path_moved ", logger::DEBUG);
-			}//end foreach ($ar_quality as $current_quality)
+			parent::remove_component_media_files($ar_quality);
 
 
 		// posterframe remove (default is true)
@@ -522,11 +490,19 @@ class component_3d extends component_media_common {
 							}
 						}
 
+					// date now
+						$date = date("Y-m-d_Hi");
+
 					// move/rename file
 						$reelID				= $this->get_id();
 						$media_path_moved	= $folder_path_del . "/$reelID" . '_deleted_' . $date . '.' . DEDALO_AV_POSTERFRAME_EXTENSION;
 						if( !rename($media_path, $media_path_moved) ) {
-							trigger_error("Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");
+							debug_log(__METHOD__
+								. " Error on move files (posterframe) to folder \"deleted\" . Permission denied . The files are not deleted " . PHP_EOL
+								. ' source (media_path): '. $media_path . PHP_EOL
+								. ' target (media_path_moved): '. $media_path_moved
+								, logger::ERROR
+							);
 							return false;
 						}
 
@@ -903,7 +879,10 @@ class component_3d extends component_media_common {
 			$response->msg		= 'Error. Request failed';
 
 		// remove_component_media_files returns bool value
-		$result = $this->remove_component_media_files([$quality], $remove_posterframe=false);
+		$result = $this->remove_component_media_files(
+			[$quality], // array quality
+			false // bool remove_posterframe
+		);
 		if ($result===true) {
 
 			// save To update valor_list
