@@ -629,7 +629,9 @@ class tool_import_dedalo_csv extends tool_common {
 									($begins_one !== '[' && $ends_two !== '"]')
 								)
 							){
-								$value = [$value];
+								$value = empty($value)
+									? null
+									: [$value];
 							}else{
 								// log JSON conversion error
 								debug_log(__METHOD__." json_last_error: ".json_last_error(), logger::ERROR);
