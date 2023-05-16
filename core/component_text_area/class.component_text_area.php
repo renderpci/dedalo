@@ -126,6 +126,12 @@ class component_text_area extends component_common {
 	*/
 	public function set_dato($dato) : bool {
 
+		// remove data when data is null
+		if(is_null($dato)){
+			return parent::set_dato(null);
+		}
+
+		// check string
 		if (is_string($dato)) { // Tool Time machine case, dato is string
 
 			// check the dato for determinate the original format and if the $dato is correct.
@@ -157,9 +163,13 @@ class component_text_area extends component_common {
 
 		$safe_dato = array();
 		foreach ((array)$dato as $value) {
-			$safe_dato[] = (!is_string($value))
-				? to_string($value)
-				: $value;
+			if($this->is_empty($value)){
+				$safe_dato[] = null;
+			}else{
+				$safe_dato[] = (!is_string($value))
+					? to_string($value)
+					: $value;
+				}
 		}
 		$dato = $safe_dato;
 
@@ -167,6 +177,31 @@ class component_text_area extends component_common {
 		return parent::set_dato( (array)$dato );
 	}//end set_dato
 
+
+	/**
+	* IS_EMPTY
+	* @param string $value
+	* @return bool
+	*/
+	public function is_empty($value) {
+
+		if(is_null($value)){
+			return true;
+		}
+
+		$value = trim($value);
+
+		if(empty($value)){
+			return true;
+		}
+
+		if($value === "<p></p>"){
+			return true;
+		}
+
+		return false;
+
+	}//end is_empty
 
 
 	/**
