@@ -29,6 +29,13 @@ class component_input_text extends component_common {
 	*/
 	public function set_dato($dato) : bool {
 
+
+		// remove data when data is null
+		if(is_null($dato)){
+			return parent::set_dato(null);
+		}
+
+
 		// string case. (Tool Time machine case, dato is string)
 			if (is_string($dato)) {
 
@@ -58,15 +65,42 @@ class component_input_text extends component_common {
 		// safe dato
 			$safe_dato = array();
 			foreach ((array)$dato as $value) {
-				$safe_dato[] = (!is_string($value))
-					? to_string($value)
-					: $value;
+				if($this->is_empty($value)){
+					$safe_dato[] = null;
+				}else{
+					$safe_dato[] = (!is_string($value))
+						? to_string($value)
+						: $value;
+					}
 			}
 			$dato = $safe_dato;
 
 
 		return parent::set_dato( (array)$dato );
 	}//end set_dato
+
+
+
+	/**
+	* IS_EMPTY
+	* @param string $value
+	* @return bool
+	*/
+	public function is_empty($value) {
+
+		if(is_null($value)){
+			return true;
+		}
+
+		$value = trim($value);
+
+		if(empty($value)){
+			return true;
+		}
+
+		return false;
+
+	}//end is_empty
 
 
 

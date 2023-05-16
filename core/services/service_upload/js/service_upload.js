@@ -548,7 +548,7 @@ service_upload.prototype.upload_file = async function(options) {
 
 	// short vars
 		const allowed_extensions	= self.allowed_extensions
-		const key_dir			= self.key_dir
+		const key_dir				= self.key_dir
 			? self.key_dir
 			: self.caller.context.features && self.caller.context.features.key_dir
 				? self.caller.context.features.key_dir
@@ -560,7 +560,7 @@ service_upload.prototype.upload_file = async function(options) {
 		const api_response = await upload({
 			id					: self.id, // id done by the caller, used to send the events of progress
 			file				: file, // object {name:'xxx.jpg',size:5456456}
-			key_dir		: key_dir, // string like 'image' used to target dir
+			key_dir				: key_dir, // string like 'image' used to target dir
 			allowed_extensions	: allowed_extensions, // array ['tiff', 'jpeg']
 			max_size_bytes		: self.max_size_bytes // int 352142
 		})
