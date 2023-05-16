@@ -362,7 +362,7 @@ class diffusion_sql extends diffusion  {
 					case 'field_enum':
 						if(SHOW_DEBUG===true) {
 							if (!isset($properties->enum)) {
-								throw new Exception("Error Processing Request. Field enum $options->tipo is misconfigurated. Please, set property 'enum' to current field", 1);
+								throw new Exception("Error Processing Request. Field enum $options->tipo is misconfigured. Please, set property 'enum' to current field", 1);
 							}
 						}
 						$ar_enum_options=array();
@@ -467,7 +467,10 @@ class diffusion_sql extends diffusion  {
 						$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($table_tipo, 'component_portal', 'termino_relacionado');
 					}
 					if(!isset($ar_section_tipo[0])) {
-						debug_log(__METHOD__." Error Processing Request, related section_tipo not found for $table_tipo. Please define valid related term (section or portal) for pointer table_tipo:$table_tipo (Ignored element $table_tipo!)", logger::ERROR);
+						debug_log(__METHOD__
+							." Error Processing Request, related section_tipo not found for $table_tipo. Please define valid related term (section or portal) for pointer table_tipo:$table_tipo (Ignored element $table_tipo!)"
+							, logger::ERROR
+						);
 						return null;
 					}
 
@@ -538,7 +541,10 @@ class diffusion_sql extends diffusion  {
 						#dump($component_publication_tipo, ' component_publication_tipo ++ '.to_string($ar_table_children));
 					}
 					#trigger_error("Error on find component_publication_tipo. Not found component_publication for section_tipo: $section_tipo. Ignored");
-					debug_log(__METHOD__." Error on find component_publication_tipo. Not found component_publication for table_tipo: $table_tipo. Ignored! table_name:".$ar_field_data['table_name'], logger::ERROR);
+					debug_log(__METHOD__
+						." Error on find component_publication_tipo. Not found component_publication for table_tipo: $table_tipo. Ignored! table_name: ".$ar_field_data['table_name']
+						, logger::ERROR
+					);
 					return null;
 				}
 			}
@@ -1175,7 +1181,7 @@ class diffusion_sql extends diffusion  {
 								if(SHOW_DEBUG===true) {
 									#dump($dato," dato"); #dump($properties->enum," dato");
 									if (!property_exists($properties, 'enum')) {
-										throw new Exception("Error Processing Request. Field enum $tipo is misconfigurated. Please, set property 'enum' to current field", 1);
+										throw new Exception("Error Processing Request. Field enum $tipo is misconfigured. Please, set property 'enum' to current field", 1);
 									}
 								}
 								$ar_field_data['field_value'] = (string)$properties->enum->$dato;		# Format: "enum":{"1":"si", "2":"no"}
@@ -2587,7 +2593,7 @@ class diffusion_sql extends diffusion  {
 			if (isset($properties->force_source_tables_tipo)) {
 				# Override
 				$diffusion_element_tipo_tables = $properties->force_source_tables_tipo;
-				debug_log(__METHOD__." Overrided diffusion_element_tipo $diffusion_element_tipo to $diffusion_element_tipo_tables for calculate diffusion tables ".to_string(), logger::DEBUG);
+				debug_log(__METHOD__." Override diffusion_element_tipo $diffusion_element_tipo to $diffusion_element_tipo_tables for calculate diffusion tables ".to_string(), logger::DEBUG);
 			}
 
 		// database_alias check . $tipo, $model_name, $relation_type, $search_exact=false
@@ -2627,7 +2633,7 @@ class diffusion_sql extends diffusion  {
 
 		#
 		# DATABASE_NAME . Diffusion domain web_default case
-		# Database name is overwrited by config db name. This allow for example, use db 'web_myentity' when diffusion domain is 'default' (instead of db 'web_default')
+		# Database name is overwritten by config db name. This allow for example, use db 'web_myentity' when diffusion domain is 'default' (instead of db 'web_default')
 		$database_name = $diffusion_element->database_name;
 		if ($database_name!==MYSQL_DEDALO_DATABASE_CONN && MYSQL_DEDALO_DATABASE_CONN==='web_default') {
 			$database_name = MYSQL_DEDALO_DATABASE_CONN;
@@ -2653,19 +2659,19 @@ class diffusion_sql extends diffusion  {
 			switch ($model_name) {
 				case 'table':
 					# Direct relation
-					$real_table 		 = $current_table_tipo;
-					$ar_related_sections = common::get_ar_related_by_model('section', $real_table);
+					$real_table				= $current_table_tipo;
+					$ar_related_sections	= common::get_ar_related_by_model('section', $real_table);
 					if (!empty($ar_related_sections)) {
-						$section_tipo 		 = reset($ar_related_sections);
-						$name 				 = RecordObj_dd::get_termino_by_tipo($real_table, DEDALO_STRUCTURE_LANG, true, false);
+						$section_tipo	= reset($ar_related_sections);
+						$name			= RecordObj_dd::get_termino_by_tipo($real_table, DEDALO_STRUCTURE_LANG, true, false);
 
 						$data = new stdClass();
-							$data->table 	 	= $real_table;
-							$data->name  	 	= $name;
-							$data->database_name= $database_name;
-							$data->database_tipo= $database_tipo;
-							$data->properties  = $table_properties;
-							$data->from_alias 	= false;
+							$data->table			= $real_table;
+							$data->name				= $name;
+							$data->database_name	= $database_name;
+							$data->database_tipo	= $database_tipo;
+							$data->properties		= $table_properties;
+							$data->from_alias		= false;
 
 						$diffusion_element_tables_map->$section_tipo = $data;
 					}
@@ -2673,8 +2679,8 @@ class diffusion_sql extends diffusion  {
 
 				case 'table_alias':
 					# Indirect relation
-					$ar_related_tables   = common::get_ar_related_by_model('table', $current_table_tipo);
-					$real_table 		 = reset($ar_related_tables);
+					$ar_related_tables	= common::get_ar_related_by_model('table', $current_table_tipo);
+					$real_table			= reset($ar_related_tables);
 
 					if (empty($real_table)) {
 						// bad structure configuration for current diffusion element
@@ -2695,9 +2701,9 @@ class diffusion_sql extends diffusion  {
 
 					if (!empty($ar_related_sections)) {
 						$section_tipo 		 = reset($ar_related_sections);
-						# Table name is taked from real_table tipo (only one mysql table for all table alias)
+						# Table name is taken from real_table tipo (only one mysql table for all table alias)
 						#$name 				 = RecordObj_dd::get_termino_by_tipo($real_table, DEDALO_STRUCTURE_LANG, true, false);
-						# Table name is taked from current_table_tipo tipo (one mysql table for each table alias)
+						# Table name is taken from current_table_tipo tipo (one mysql table for each table alias)
 						$name 				 = RecordObj_dd::get_termino_by_tipo($current_table_tipo, DEDALO_STRUCTURE_LANG, true, false);
 
 						if (empty($table_properties)) {
@@ -2716,7 +2722,11 @@ class diffusion_sql extends diffusion  {
 						$diffusion_element_tables_map->$section_tipo = $data;
 					}else{
 						// bad structure configuration for current diffusion element
-							debug_log(__METHOD__." ERROR: Bad structure configuration for current diffusion element. Expected section related for tipo: ".to_string($real_table), logger::ERROR);
+							debug_log(__METHOD__
+								." ERROR: Bad structure/ontology configuration for current diffusion element. Expected a section related for tipo: " . PHP_EOL
+								.' real_table tipo: ' . to_string($real_table)
+								, logger::ERROR
+							);
 					}
 					break;
 				/*
@@ -2731,17 +2741,17 @@ class diffusion_sql extends diffusion  {
 					$section_tipo = 'thesaurus';
 
 					$data = new stdClass();
-						$data->table 				= $section_tipo;
-						$data->name  				= $name;
-						$data->database  			= $database;
-						$data->thesaurus_ar_prefix 	= $thesaurus_ar_prefix;
+						$data->table				= $section_tipo;
+						$data->name					= $name;
+						$data->database				= $database;
+						$data->thesaurus_ar_prefix	= $thesaurus_ar_prefix;
 
 					$diffusion_element_tables_map->$section_tipo = $data;
 					break;*/
 
 				default:
 					# Skip no accepted models
-					debug_log(__METHOD__." Skiped invalid model: $model_name", logger::DEBUG);
+					debug_log(__METHOD__." Skipped invalid model: $model_name", logger::DEBUG);
 					#continue;
 					break;
 			}
@@ -2804,8 +2814,8 @@ class diffusion_sql extends diffusion  {
 				#dump($tables_obj, ' tables_obj ++ '.to_string( $diffusion_element_tipo ));
 
 			if (isset($tables_obj->$section_tipo)) {
-				$thesaurus_data->database_name  = $tables_obj->$section_tipo->database;
-				$thesaurus_data->table 	  		= $tables_obj->$section_tipo->table;
+				$thesaurus_data->database_name	= $tables_obj->$section_tipo->database;
+				$thesaurus_data->table			= $tables_obj->$section_tipo->table;
 				break;
 			}
 		}
@@ -2813,9 +2823,12 @@ class diffusion_sql extends diffusion  {
 
 		# Fallback
 		if (!isset($thesaurus_data->database_name)) {
-			$thesaurus_data->database_name = 'web_'.DEDALO_DIFFUSION_DOMAIN;
-			$thesaurus_data->table 	  = 'thesaurus';
-			debug_log(__METHOD__." Thesaurus is not properly defined for diffusion. Using defaults [$thesaurus_data->table,$thesaurus_data->database_name]. Please fix this ASAP  ", logger::WARNING);
+			$thesaurus_data->database_name	= 'web_'.DEDALO_DIFFUSION_DOMAIN;
+			$thesaurus_data->table			= 'thesaurus';
+			debug_log(__METHOD__
+				." Thesaurus is not properly defined for diffusion. Using defaults [$thesaurus_data->table,$thesaurus_data->database_name]. Please fix this ASAP  "
+				, logger::WARNING
+			);
 		}
 
 		return $thesaurus_data;
@@ -2842,7 +2855,7 @@ class diffusion_sql extends diffusion  {
 			while ($rows = pg_fetch_assoc($result_resource)) {
 
 				$current_record_section_id = $rows['section_id'];
-				debug_log(__METHOD__." Difussion record: - $section_tipo - $current_record_section_id ".to_string(), logger::DEBUG);
+				debug_log(__METHOD__." Diffusion record: - $section_tipo - $current_record_section_id ".to_string(), logger::DEBUG);
 
 				$current_options = new stdClass();
 					$current_options->section_tipo				= $section_tipo;
@@ -2926,14 +2939,15 @@ class diffusion_sql extends diffusion  {
 
 	/**
 	* MAP_TARGET_SECTION_TIPO
-	* Searchs in diffusion structure the table that point to the same section of current dato
+	* Search in diffusion structure the table that point to the same section of current dato
 	* @param string $element_tipo
 	* @param array $dato;
 	* 	Contains one value like 'ts1' (is target section tipo data from component in hierarchy record)
-	* @return string $table_name
+	* @return string|null $table_name
 	*	Return table name usable for mysql like 'themes'
 	*/
-	public static function map_target_section_tipo($options, $dato) {
+	public static function map_target_section_tipo(object $options, array $dato) : ?string {
+
 		$table_name = null;
 
 		$element_tipo = $options->tipo;
@@ -2941,13 +2955,23 @@ class diffusion_sql extends diffusion  {
 		$target_section_tipo = reset($dato);
 		if (!empty($target_section_tipo)) {
 
-			$database_element_tipo  = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_tipo, $model_name='database', $relation_type='parent', $search_exact=true);
-				#dump($database_element_tipo, ' database_element_tipo ++ '.to_string());
-			$database_element_tables = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_element_tipo[0], $model_name='table', $relation_type='children', $search_exact=true);
-				#dump($database_element_tables, ' database_element_tables ++ '.to_string());
-			foreach ($database_element_tables as $table_tipo) {
-				$ar_section_tipo = common::get_ar_related_by_model('section', $table_tipo);
+			$database_element_tipo  = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+				$element_tipo,
+				$model_name='database',
+				$relation_type='parent',
+				$search_exact=true
+			);
 
+			$database_element_tables = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+				$database_element_tipo[0],
+				$model_name='table',
+				$relation_type='children',
+				$search_exact=true
+			);
+
+			foreach ($database_element_tables as $table_tipo) {
+
+				$ar_section_tipo = common::get_ar_related_by_model('section', $table_tipo);
 				if (isset($ar_section_tipo[0]) && $ar_section_tipo[0]===$target_section_tipo ) {
 
 					$table_name = RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
@@ -2963,21 +2987,32 @@ class diffusion_sql extends diffusion  {
 
 	/**
 	* MAP_LOCATOR_SECTION_TIPO
-	* @return
+	* @return string|null $table_name
 	*/
-	public static function map_locator_section_tipo($options, $dato) {
+	public static function map_locator_section_tipo(object $options, array $dato) : ?string {
+
 		$table_name = '';
 
-		$element_tipo = $options->tipo;
-		$locator 	  = reset($dato);
+		$element_tipo	= $options->tipo;
+		$locator		= reset($dato);
 		if (isset($locator->section_tipo)) {
-			$database_element_tipo  = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_tipo, $model_name='database', $relation_type='parent', $search_exact=true);
-				#dump($database_element_tipo, ' database_element_tipo ++ '.to_string());
-			$database_element_tables = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_element_tipo[0], $model_name='table', $relation_type='children', $search_exact=true);
+			$database_element_tipo  = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+				$element_tipo,
+				$model_name='database',
+				$relation_type='parent',
+				$search_exact=true
+			);
+
+			$database_element_tables = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+				$database_element_tipo[0],
+				$model_name='table',
+				$relation_type='children',
+				$search_exact=true
+			);
 
 			foreach ($database_element_tables as $table_tipo) {
-				$ar_section_tipo = common::get_ar_related_by_model('section', $table_tipo);
 
+				$ar_section_tipo = common::get_ar_related_by_model('section', $table_tipo);
 				if (isset($ar_section_tipo[0]) && $ar_section_tipo[0]===$locator->section_tipo ) {
 
 					$table_name = RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
@@ -2994,17 +3029,18 @@ class diffusion_sql extends diffusion  {
 	/**
 	* MAP_TO_SECTION_TIPO
 	* Returns current section tipo like 'es1'
-	* @return string $section_tipo
+	* @return string|null $section_tipo
 	*/
 	public static function map_to_section_tipo($options, $dato) {
-		$section_tipo = null;
+
 		/*
 		$element_tipo 		= $options->tipo;
 		$table_element_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_tipo, $model_name='table', $relation_type='parent', $search_exact=true);
 		$ar_section_tipo 	= common::get_ar_related_by_model('section', reset($table_element_tipo));
 		$section_tipo 	 	= reset($ar_section_tipo);
 		*/
-		$section_tipo 	 	= $options->section_tipo;
+		$section_tipo 	 	= $options->section_tipo ?? null;
+
 
 		return $section_tipo;
 	}//end map_to_section_tipo
@@ -3317,10 +3353,9 @@ class diffusion_sql extends diffusion  {
 
 	/**
 	* MAP_LOCATOR_TO_NAME
-	*
-	* @return string $name
+	* @return string|null $name
 	*/
-	public static function map_locator_to_name($options, $dato) {
+	public static function map_locator_to_name(object $options, $dato) : ?string {
 
 		$section_tipo_encoded = self::map_locator_to_section_tipo($options, $dato);
 		if (empty($section_tipo_encoded)) {
@@ -3532,13 +3567,13 @@ class diffusion_sql extends diffusion  {
 		$ar_duration = array();
 		foreach ((array)$dato as $key => $locator) {
 
-			$data_source 	= $options->properties->data_source;
-			$portal_tipo 	= key($data_source);
-			$component_tipo = reset($data_source);
+			$data_source	= $options->properties->data_source;
+			$portal_tipo	= key($data_source);
+			$component_tipo	= reset($data_source);
 
 
-			$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			$component 		= component_common::get_instance(
+			$model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component	= component_common::get_instance(
 				$model_name,
 				$component_tipo,
 				$locator->section_id,
@@ -3604,12 +3639,14 @@ class diffusion_sql extends diffusion  {
 		$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 		if($model_name!=='component_portal') return null;
 
-		$component 		= component_common::get_instance($model_name,
-														 $component_tipo,
-														 $section_id,
-														 $mode='list',
-														 $lang,
-														 $section_tipo);
+		$component = component_common::get_instance(
+			$model_name,
+			$component_tipo,
+			$section_id,
+			'list',
+			$lang,
+			$section_tipo
+		);
 
 		#$measurements = $component->get_valor($lang);
 		#$measurements = $component->get_valor( $lang, $data_to_be_used='valor_list', $records_separator='<br>', $fields_separator=', ' );
@@ -3619,11 +3656,10 @@ class diffusion_sql extends diffusion  {
 
 		#
 		# TERMINOS_RELACIONADOS . Obtenemos los terminos relacionados del componente actual
-		$RecordObj_dd = new RecordObj_dd($component_tipo);
-		$ar_terminos_relacionados = (array)$RecordObj_dd->get_relaciones();
-			#dump($ar_terminos_relacionados, ' ar_terminos_relacionados');
+		$RecordObj_dd				= new RecordObj_dd($component_tipo);
+		$ar_terminos_relacionados	= (array)$RecordObj_dd->get_relaciones();
 
-		#
+
 		# FIELDS
 		$fields=array();
 		foreach ($ar_terminos_relacionados as $key => $ar_value) {
@@ -3634,30 +3670,27 @@ class diffusion_sql extends diffusion  {
 				}
 			}
 		}
-		#dump($fields, ' fields ');
 
 		$ar_resolved=array();
 		foreach( (array)$dato as $key => $value) {
-			#dump($value, ' value ++ '.to_string());
-			$section_tipo 	= $value->section_tipo;
-			$section_id 	= $value->section_id;
+
+			$section_tipo	= $value->section_tipo;
+			$section_id		= $value->section_id;
 
 			$ar_resolved[$section_id][] = $section_id;
 
 			foreach ($fields as $current_tipo) {
 
-				$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-
-				#if ($model_name==='component_section_id') {
-				#	continue;
-				#}
-				$component 		= component_common::get_instance($model_name,
-																 $current_tipo,
-																 $section_id,
-																 'edit',
-																 $lang,
-																 $section_tipo,
-																 true);
+				$model_name	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+				$component	= component_common::get_instance(
+					$model_name,
+					$current_tipo,
+					$section_id,
+					'edit',
+					$lang,
+					$section_tipo,
+					true
+				);
 				$current_value_export = $component->get_valor( $lang );
 
 				// Clean double spaces and remove \n
@@ -3721,6 +3754,7 @@ class diffusion_sql extends diffusion  {
 			$dato = $ar_result;
 		}
 		$total = count($dato);
+
 		return (int)$total;
 	}//end count_data_elements
 
@@ -3728,7 +3762,7 @@ class diffusion_sql extends diffusion  {
 
 	/**
 	* SPLIT_DATA
-	* @return int $total
+	* @return int|null $total
 	*/
 	public static function split_data($options, $dato) {
 
@@ -3736,7 +3770,6 @@ class diffusion_sql extends diffusion  {
 			return null;
 		}
 		$ar_q = $options->properties->process_dato_arguments->q;
-
 
 		// ar_result . dato filtered
 			$ar_result = [];
@@ -3998,24 +4031,14 @@ class diffusion_sql extends diffusion  {
 	* @return string
 	*/
 	public static function build_geolocation_data($options, $dato) {
-		#dump($options, ' options ++ '.to_string());
-		#dump($dato, ' dato ++ '.to_string());
 
-		$request_options = new stdClass();
-			$request_options->raw_text = $dato;
+		$raw_data = !empty($dato)
+			? (array)$dato
+			: [];
 
-		# Test data
-		#$request_options->raw_text = '[geo-n-1--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.097785,41.393268]}}]}:data]Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;[geo-n-2--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.10389792919159,41.393728914379295]}}]}:data]&nbsp;Texto dos';
-		#$request_options->raw_text = '[geo-n-1--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.097785,41.393268]}}]}:data]Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;[geo-n-2--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.10389792919159,41.393728914379295]}}]}:data]&nbsp;Texto dos';
-		#$request_options->raw_text = 'Hola que tal [geo-n-1--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.097785,41.393268]}}]}:data]Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;[geo-n-2--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.10389792919159,41.393728914379295]}}]}:data] Texto dos';
-
-		$options = new stdClass();
-			$options->raw_text			= false;
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-
-		$ar_elements = component_text_area::build_geolocation_data($options->raw_text);
-		$response 	 = json_encode($ar_elements, JSON_UNESCAPED_UNICODE);
+		// $ar_elements = component_text_area::build_geolocation_data($options->raw_text);
+		$ar_elements	= component_text_area::build_geolocation_data($raw_data);
+		$response		= json_encode($ar_elements, JSON_UNESCAPED_UNICODE);
 
 		return (string)$response; // json_encoded object
 	}//end build_geolocation_data
@@ -4057,13 +4080,14 @@ class diffusion_sql extends diffusion  {
 				$section_id			= $component->get_section_id();
 				$section_tipo		= $component->get_section_tipo();
 				$model				= RecordObj_dd::get_modelo_name_by_tipo($fallback_tipo,true);
-
-				$fallback_component = component_common::get_instance($model,
-																	 $fallback_tipo,
-																	 $section_id,
-																	 'list',
-																	 $lang,
-																	 $section_tipo);
+				$fallback_component	= component_common::get_instance(
+					$model,
+					$fallback_tipo,
+					$section_id,
+					'list',
+					$lang,
+					$section_tipo
+				);
 				if (method_exists($fallback_component,$fallback_method)) {
 
 					$response = $fallback_component->{$fallback_method}();
@@ -4083,7 +4107,7 @@ class diffusion_sql extends diffusion  {
 	* Fake method to return true always
 	* @return string
 	*/
-	public static function return_empty_string( $options, $dato ) {
+	public static function return_empty_string($options, $dato) {
 
 		return '';
 	}//end return_empty_string
