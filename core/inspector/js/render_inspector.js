@@ -74,10 +74,6 @@ render_inspector.prototype.edit = async function(options) {
 		})
 		// set pointers
 		wrapper.content_data = content_data
-		wrapper.addEventListener('mousedown', function(e) {
-			// prevents deactivate selected component when user clicks the inspector
-			e.stopPropagation()
-		})
 
 	// add elements
 		wrapper.appendChild(label)
@@ -827,6 +823,10 @@ const render_element_info = function(self) {
 		element_type	: 'div',
 		class_name		: 'element_info_wrap'
 	})
+	element_info_wrap.addEventListener('mousedown', function(e) {
+		// prevents deactivate selected component when user clicks the inspector
+		e.stopPropagation()
+	})
 
 	// element_info_head
 		const element_info_head = ui.create_dom_element({
@@ -1242,6 +1242,10 @@ const render_component_history = function(self) {
 		const component_history_wrap = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'component_history'
+		})
+		component_history_wrap.addEventListener('mousedown', function(e) {
+			// prevents deactivate selected component when user clicks the inspector
+			e.stopPropagation()
 		})
 
 	// component_history_head
