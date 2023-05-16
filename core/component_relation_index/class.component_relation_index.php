@@ -84,6 +84,15 @@ class component_relation_index extends component_relation_common {
 
 
 	/**
+	* GET_DATO_FULL
+	* Returns dato. Alias of get_dato
+	* @return array $dato
+	*	$dato is always an array of locators or an empty array
+	*/
+	public function get_dato_full() {
+
+		return $this->get_dato();
+	}//end get_dato_full
 	* GET_VALOR
 	* Get value . default is get dato . overwrite in every different specific component
 	* @return string | null $valor
