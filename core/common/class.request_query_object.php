@@ -85,7 +85,7 @@
 			 		file_data : {
 						"name"			: "test26_test3_1.jpg",
 						"tmp_dir"		: "DEDALO_UPLOAD_TMP_DIR",
-						"resource_type"	: "3d",
+						"key_dir"		: "3d",
 						"tmp_name"		: "tmp_test26_test3_1.jpg"
 			 		}
 			 		target_dir : 'posterframe' // string with the quality folder name.
