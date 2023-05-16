@@ -226,7 +226,11 @@ class ts_object {
 			// element_tipo
 				$current_element_tipo = $current_object->tipo;
 				if (empty($current_element_tipo)) {
-					debug_log(__METHOD__." Error. Empty element_tipo in current_object: ".to_string($current_object), logger::DEBUG);
+					debug_log(__METHOD__
+						." Error. Empty element_tipo in current_object: " . PHP_EOL
+						.' current_object:'. to_string($current_object)
+						, logger::ERROR
+					);
 					continue;
 				}
 
@@ -334,7 +338,10 @@ class ts_object {
 							$element_obj->value = $render_vars->icon;
 
 							// dato check
-								if(empty($dato)) continue 3; // Skip empty icon value links
+								$considered_empty_dato = (bool)is_empty_dato($dato);
+								if($considered_empty_dato===true) {
+									continue 3; // Skip empty icon value links
+								}
 
 							if ($model_name==='component_relation_index' || $model_name==='component_relation_struct') {
 								#dump($dato, ' dato ++ '.to_string($element_tipo));
