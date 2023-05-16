@@ -119,6 +119,7 @@ component_3d.prototype.create_posterframe = async function( viewer ) {
 			file				: image_blob, // binary data as file
 			resource_type		: '3d', // target dir
 			allowed_extensions	: ['jpg'],
+			key_dir				: '3d',
 			max_size_bytes		: image_blob.size
 		})
 		if (!api_response.result) {
@@ -132,6 +133,7 @@ component_3d.prototype.create_posterframe = async function( viewer ) {
 		const file_data = api_response.file_data
 		// force to name as image_blob.name to prevent chunk mode issues
 		file_data.name = image_blob.name
+
 
 	// debug
 		if(SHOW_DEBUG===true) {

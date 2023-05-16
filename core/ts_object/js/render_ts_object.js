@@ -251,13 +251,14 @@ export const render_ts_line = function(options) {
 			// OTHERS
 			default:
 
+				const current_value = child_data.ar_elements[j].value
+
 				// Case common buttons and links
-				// var event_function 	= [{'type':'click','name':'ts_object.show_component_in_ts_object'}];
 				const element_show_component = ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: class_for_all + ' default',
 					data_set		: children_dataset,
-					text_node		: child_data.ar_elements[j].value,
+					text_node		: current_value, // creates a span node with the value inside
 					parent 			: fragment
 				})
 				element_show_component.addEventListener('mousedown', (e)=>{
