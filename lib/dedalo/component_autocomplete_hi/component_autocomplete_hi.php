@@ -1,12 +1,12 @@
 <?php
-	
+
 	# CONTROLLER
 
 	$tipo 					= $this->get_tipo();
 	$parent 				= $this->get_parent();
 	$section_tipo			= $this->get_section_tipo();
-	$modo					= $this->get_modo();	
-	
+	$modo					= $this->get_modo();
+
 	$propiedades 			= isset($this->propiedades) ? $this->propiedades : $this->get_propiedades();
 	$label 					= $this->get_label();
 	$required				= $this->get_required();
@@ -14,9 +14,9 @@
 	$permissions			= $this->get_component_permissions();
 	$ejemplo				= NULL;
 	$html_title				= "Info about $parent";
-	$ar_tools_obj			= $this->get_ar_tools_obj();	
+	$ar_tools_obj			= $this->get_ar_tools_obj();
 	$lang					= $this->get_lang();
-	$identificador_unico	= $this->get_identificador_unico();	
+	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
 	$relation_type 			= $this->get_relation_type();
 	$dato 					= $this->get_dato(); // !!
@@ -28,8 +28,8 @@
 	$file_name				= $modo;
 	$from_modo				= $modo;
 
-	
-	switch($modo) {		
+
+	switch($modo) {
 
 		case 'edit_in_list':
 			// Fix always edit as modo / filename
@@ -64,7 +64,7 @@
 					if (!empty($var_requested)) {
 						$from_modo = $var_requested;
 					}
-				
+
 				// hierarchy_terms. Defined in propiedades, constrain searched terms using children terms
 					$hierarchy_terms_json = null;
 					if (isset($propiedades->source->hierarchy_terms)) {
@@ -72,14 +72,14 @@
 						$hierarchy_terms = [];
 						foreach ((array)$propiedades->source->hierarchy_terms as $key => $item) {
 							$resursive = (bool)$item->recursive;
-							# Get childrens						
-							$ar_childrens = array_merge($ar_childrens, component_relation_children::get_childrens($item->section_id, $item->section_tipo, null, $resursive));	
+							# Get childrens
+							$ar_childrens = array_merge($ar_childrens, component_relation_children::get_childrens($item->section_id, $item->section_tipo, null, $resursive));
 
 							# Add pseudo locator
 							$hierarchy_terms[] = $item->section_tipo .'_'. $item->section_id;
 						}
 						$constrain_data = $ar_childrens;
-										
+
 
 						$filter_custom = [];
 						$component_section_id_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['component_section_id'], true, true, true, true, false);
@@ -100,14 +100,14 @@
 
 						$hierarchy_terms_json = json_encode($hierarchy_terms);
 					}//end if (isset($propiedades->source->hierarchy_terms))
-				
+
 				// ar_filter_options
 					$ar_filter_options = false; // Default
 					switch ($options_type) {
 						case 'hierarchy':
 							$hierarchy_types 	= isset($propiedades->source->hierarchy_types) ? $propiedades->source->hierarchy_types : null;
 							$hierarchy_sections = isset($propiedades->source->hierarchy_sections) ? $propiedades->source->hierarchy_sections : null;
-				
+
 							# Resolve hierarchy_sections for speed
 							if (!empty($hierarchy_types)) {
 								$hierarchy_sections = component_autocomplete_hi::add_hierarchy_sections_from_types($hierarchy_types, (array)$hierarchy_sections);
@@ -127,21 +127,20 @@
 											$ar_terms 	= array_merge($ar_terms, $current_term);
 										}else{
 											$ar_terms[] = $current_term;
-										}										
+										}
 									}else{
 										debug_log(__METHOD__." ERROR: Misconfigured section tipo: '$current_section'. No property 'term' found in section map thesaurus. Fix ASAP this structure error".to_string(), logger::ERROR);
 									}
 								}
 								$ar_terms = array_unique($ar_terms);
-
 							$ar_filter_options = $this->get_ar_filter_options($options_type, $hierarchy_sections);
 							break;
-						
+
 						/*
 						* Don't used for now, maybe can unify with the component_autocomplete (it use the "filter_by_list")
 						*
 						case 'generic':
-							# FIlTER_BY_LIST (Propiedades option)			
+							# FIlTER_BY_LIST (Propiedades option)
 							if (isset($propiedades->source->filter_by_list)) {
 								$ar_filter_options = $this->get_ar_filter_options($options_type, $propiedades->source->filter_by_list);
 							}
@@ -149,14 +148,14 @@
 							*/
 					}
 					#dump($ar_filter_options, ' ar_filter_options ++ '.to_string());
-					
+
 				// search_query_object params
 					// q_operator is injected by trigger search2
 					$q_operator = isset($this->q_operator) ? $this->q_operator : null;
 					// Limit (Max items allow. 0 for unlimited)
 					$limit 		= isset($propiedades->limit) ? (int)$propiedades->limit : 0;
 					// Divisor
-					$divisor 	= $this->get_divisor();					
+					$divisor 	= $this->get_divisor();
 					$min_length = isset($propiedades->min_length) ? (int)$propiedades->min_length : 1;
 
 				// search_query_object build
@@ -178,9 +177,9 @@
 						$search_query_object_options->tipo 			 	= $tipo;
 					$search_query_object 		= component_autocomplete_hi::build_search_query_object($search_query_object_options);
 					$json_search_query_object 	= json_encode( $search_query_object, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS);
-						#dump($json_search_query_object, ' json_search_query_object ++ '.to_string());						
-				break;		
-		
+						#dump($json_search_query_object, ' json_search_query_object ++ '.to_string());
+				break;
+
 		case 'search' :
 				// General vars
 					# dato is injected by trigger search wen is needed
@@ -201,7 +200,7 @@
 					$search_input_name = $this->get_search_input_name();
 					$source_mode 			= $this->get_source_mode();
 					$options_type 			= $this->get_options_type();
-					
+
 					$ar_referenced_tipo 	= $this->get_ar_referenced_tipo();
 					$ar_referenced_tipo_json= json_handler::encode($this->get_ar_referenced_tipo());
 
@@ -212,14 +211,14 @@
 						$hierarchy_terms = [];
 						foreach ((array)$propiedades->source->hierarchy_terms as $key => $item) {
 							$resursive = (bool)$item->recursive;
-							# Get childrens						
-							$ar_childrens = array_merge($ar_childrens, component_relation_children::get_childrens($item->section_id, $item->section_tipo, null, $resursive));	
+							# Get childrens
+							$ar_childrens = array_merge($ar_childrens, component_relation_children::get_childrens($item->section_id, $item->section_tipo, null, $resursive));
 
 							# Add pseudo locator
-							$hierarchy_terms[] = $item->section_tipo .'_'. $item->section_id;	
+							$hierarchy_terms[] = $item->section_tipo .'_'. $item->section_id;
 						}
 						$constrain_data = $ar_childrens;
-										
+
 
 						$filter_custom = [];
 						$component_section_id_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['component_section_id'], true, true, true, true, false);
@@ -239,8 +238,8 @@
 						}
 
 						$hierarchy_terms_json = json_encode($hierarchy_terms);
-					}//end if (isset($propiedades->source->hierarchy_terms))		
-	
+					}//end if (isset($propiedades->source->hierarchy_terms))
+
 				// ar_filter_options
 					$hierarchy_types 	= isset($propiedades->source->hierarchy_types) ? $propiedades->source->hierarchy_types : null;
 					$hierarchy_sections = isset($propiedades->source->hierarchy_sections) ? $propiedades->source->hierarchy_sections : null;
@@ -251,7 +250,7 @@
 							$hierarchy_types 	= isset($propiedades->source->hierarchy_types) ? $propiedades->source->hierarchy_types : null;
 							$hierarchy_sections = isset($propiedades->source->hierarchy_sections) ? $propiedades->source->hierarchy_sections : null;
 								#dump($hierarchy_sections, ' hierarchy_sections ++ '.to_string()); #return null;
-				
+
 							# Resolve hierarchy_sections for speed
 							if (!empty($hierarchy_types)) {
 								$hierarchy_sections = component_autocomplete_hi::add_hierarchy_sections_from_types($hierarchy_types, (array)$hierarchy_sections);
@@ -270,15 +269,15 @@
 										$ar_terms = array_merge($ar_terms, $current_term);
 									}else{
 										$ar_terms[] = $current_term;
-									}									
+									}
 								}
 								$ar_terms = array_unique($ar_terms);
 
 							$ar_filter_options = $this->get_ar_filter_options($options_type, $hierarchy_sections);
 							break;
-						
+
 						case 'generic':
-							# FIlTER_BY_LIST (Propiedades option)			
+							# FIlTER_BY_LIST (Propiedades option)
 							if (isset($propiedades->source->filter_by_list)) {
 								$ar_filter_options = $this->get_ar_filter_options($options_type, $propiedades->source->filter_by_list);
 							}
@@ -290,7 +289,7 @@
 					$q_operator = isset($this->q_operator) ? $this->q_operator : null;
 					# limit (Max items allow. 0 for unlimited)
 					$limit 		= 1;
-					$divisor 	= $this->get_divisor();					
+					$divisor 	= $this->get_divisor();
 					$min_length = isset($propiedades->min_length) ? (int)$propiedades->min_length : 1;
 
 				// search_query_object build
@@ -311,13 +310,13 @@
 					$search_query_object 		= component_autocomplete_hi::build_search_query_object($search_query_object_options);
 					$json_search_query_object 	= json_encode( $search_query_object, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS);
 						#dump($json_search_query_object, ' json_search_query_object ++ '.to_string());
-				
+
 				//search mode always can edit the field, permissions always in 2
 				$permissions = 2;
 
 				$file_name = 'edit';
 				break;
-						
+
 		case 'list_tm' :
 				$file_name = 'list';
 		case 'portal_list':
@@ -327,12 +326,12 @@
 				$component_info = $this->get_component_info('json');
 				$valor 			= $this->get_valor($lang);
 				$ar_valor 		= $this->get_valor($lang,'array');
-				
+
 				$file_name 	= 'list';
 				break;
-				
+
 		case 'list'	:
-				//$dato	= $this->get_dato();						
+				//$dato	= $this->get_dato();
 				# Return direct value for store in 'valor_list'
 				$valor 	= $this->get_valor($lang,'string');
 				echo (string)$valor; 	# Like "Catarroja, L'Horta Sud, Valencia/València, Comunidad Valenciana, España"
@@ -342,22 +341,22 @@
 		case 'relation':
 				return NULL;
 				# Force file_name to 'list'
-				$file_name  = 'list';				
+				$file_name  = 'list';
 				break;
-		
+
 		case 'print' :
 				$valor = $this->get_valor($lang,'string');
 				break;
 
-		case 'tool_time_machine' :	
+		case 'tool_time_machine' :
 				return NULL;
 				$id_wrapper = 'wrapper_'.$identificador_unico.'_tm';
 				$input_name = "{$tipo}_{$id}_tm";
 				$file_name 	= 'edit';
-				break;					
-		
+				break;
+
 	}
-		
+
 	$page_html	= DEDALO_LIB_BASE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";

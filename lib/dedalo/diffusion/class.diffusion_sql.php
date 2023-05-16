@@ -3113,6 +3113,60 @@ class diffusion_sql extends diffusion  {
 
 
 	/**
+	* MAP_LOCATOR_TO_INT
+	* Get only the first locator section_id if exists
+	* @return int | null
+	*/
+	public static function map_locator_to_int($options=null, $dato=null) {
+
+		$value = (!empty($dato) && isset($dato[0]))
+			? (int)$dato[0]->section_id
+			: null;
+
+		return $value;
+	}//end map_locator_to_int
+
+
+
+	/**
+	* MAP_LOCATOR_TO_INT_RECURSIVE
+	* Convert array of locators (dato) to array of section_id.
+	* If isset propiedades->process_dato_arguments->custom_arguments->add_parents as true
+	* it will be recursive
+	* @param object $options
+	* @param array|null $dato
+	* @return array|null $value
+	*/
+	public static function map_locator_to_int_recursive($options=null, $dato=null) : ?array {
+
+		if (empty($dato)) {
+			return null;
+		}
+
+		$value = [];
+		foreach ($dato as $current_locator) {
+
+			$value[] = (string)$current_locator->section_id;;
+
+			// parents recursive
+			// add parents option
+			// if defined in properties, get current locator parents recursively and add it to current value (like municipality, region, country hierarchy)
+				if (isset($options->propiedades->process_dato_arguments->custom_arguments->add_parents) && $options->propiedades->process_dato_arguments->custom_arguments->add_parents===true) {
+					// get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
+					$ar_parents = component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, true);
+					foreach ($ar_parents as $parent_locator) {
+						$value[] = (string)$parent_locator->section_id;
+					}
+				}
+		}
+
+
+		return $value;
+	}//end map_locator_to_int_recursive
+
+
+
+	/**
 	* MAP_LOCATOR_TO_section_tipo
 	* Returns map first locator to plain "terminoID" like "es_2"
 	* @return string $terminoID
@@ -3798,22 +3852,6 @@ class diffusion_sql extends diffusion  {
 
 		return (int)$quality;
 	}//end map_quality_to_int
-
-
-
-	/**
-	* MAP_LOCATOR_TO_INT
-	* Get only the first locator section_id if exists
-	* @return int | null
-	*/
-	public static function map_locator_to_int($options=null, $dato=null) {
-
-		$value = (!empty($dato) && isset($dato[0]))
-			? (int)$dato[0]->section_id
-			: null;
-
-		return $value;
-	}//end map_locator_to_int
 
 
 
