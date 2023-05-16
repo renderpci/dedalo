@@ -651,13 +651,21 @@ class component_relation_common extends component_common {
 
 				// section_id
 					if (!isset($current_locator->section_id) || !isset($current_locator->section_tipo)) {
-						debug_log(__METHOD__." IGNORED bad formed locator (empty section_id or section_tipo) [$this->section_tipo, $this->parent, $this->tipo] ". get_called_class().' - current_locator: '.to_string($current_locator), logger::ERROR);
+						debug_log(__METHOD__
+							." IGNORED bad formed locator (empty section_id or section_tipo) [$this->section_tipo, $this->parent, $this->tipo] ". PHP_EOL
+							. ' called_class: ' . get_called_class() .PHP_EOL
+							. ' current_locator: '.to_string($current_locator)
+							, logger::ERROR
+						);
 						continue;
 					}
 
 				// type
 					if (!isset($current_locator->type)) {
-						debug_log(__METHOD__." Fixing bad formed locator (empty type) [$this->section_tipo, $this->parent, $this->tipo] ". get_called_class().' - current_locator: '.to_string($current_locator), logger::WARNING);
+						debug_log(__METHOD__
+							." Fixing bad formed locator (empty type) [$this->section_tipo, $this->parent, $this->tipo] ". get_called_class().' - current_locator: '.to_string($current_locator)
+							, logger::WARNING
+						);
 						$current_locator->type = $relation_type;
 					}
 
@@ -665,8 +673,15 @@ class component_relation_common extends component_common {
 					if (!isset($current_locator->from_component_tipo)) {
 						$current_locator->from_component_tipo = $from_component_tipo;
 					}else if ($current_locator->from_component_tipo!==$from_component_tipo) {
-						debug_log(__METHOD__." Fixed bad formed locator (bad from_component_tipo $current_locator->from_component_tipo) [$this->section_tipo, $this->parent, $from_component_tipo] ".get_called_class().' '.to_string(), logger::WARNING);
+						$locator_copy = clone($current_locator);
 						$current_locator->from_component_tipo = $from_component_tipo;
+						debug_log(__METHOD__
+							. " Fixed bad formed locator (bad from_component_tipo $locator_copy->from_component_tipo)" . PHP_EOL
+							. ' source_locator: ' . to_string($locator_copy) . PHP_EOL
+							. ' result_locator: ' . to_string($current_locator) . PHP_EOL
+							. ' called_class: ' . get_called_class()
+							, logger::WARNING
+						);
 					}
 
 				// lang
@@ -674,8 +689,15 @@ class component_relation_common extends component_common {
 						if (!isset($current_locator->lang)) {
 							$current_locator->lang = $lang;
 						}else if ($current_locator->lang!==$lang) {
-							debug_log(__METHOD__." Fixed bad formed locator (bad lang $current_locator->lang) [$this->section_tipo, $this->parent, $lang] ".get_called_class().' '.to_string(), logger::WARNING);
+							$locator_copy = clone($current_locator);
 							$current_locator->lang = $lang;
+							debug_log(__METHOD__
+								. " Fixed bad formed locator (bad lang in translatable locator. Lang: $current_locator->lang) ". PHP_EOL
+								. ' source_locator: ' . to_string($locator_copy) . PHP_EOL
+								. ' result_locator: ' . to_string($current_locator) . PHP_EOL
+								. ' called_class: ' . get_called_class()
+								, logger::WARNING
+							);
 						}// end if (!isset($current_locator->lang))
 					}// end if ($translatable==='si')
 
@@ -690,7 +712,11 @@ class component_relation_common extends component_common {
 					if ($found===false) {
 						$safe_dato[] = $normalized_locator;
 					}else{
-						debug_log(__METHOD__.' Ignored set_dato of already existing locator '.to_string($current_locator), logger::ERROR);
+						debug_log(__METHOD__
+							.' Ignored set_dato of already existing locator '. PHP_EOL
+							.' current_locator: ' . to_string($current_locator)
+							, logger::WARNING
+						);
 					}
 			}
 		}

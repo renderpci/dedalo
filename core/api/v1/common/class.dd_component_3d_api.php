@@ -52,12 +52,11 @@ final class dd_component_3d_api {
 		// response
 			$response = new stdClass();
 				$response->result	= false;
-				$response->msg		= [];
 				$response->msg		= 'Error. Request failed '.__METHOD__;
 
 		// component
-			$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$component = component_common::get_instance(
+			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$component	= component_common::get_instance(
 				$model, // string model
 				$tipo, // string tipo
 				$section_id, // string section_id
@@ -70,9 +69,8 @@ final class dd_component_3d_api {
 			$user_id = navigator::get_user_id();
 			$tmp_dir = DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $file_data->key_dir;
 
-			$source_file_path		= $tmp_dir . '/' . $file_data->tmp_name;
-			// $source_file_path	= constant($file_data->tmp_dir) . '/'. $file_data->key_dir. '/' . $file_data->tmp_name;
-			$target_file_path		= $component->get_media_path_dir($target_dir). '/' . $file_data->name;
+			$source_file_path	= $tmp_dir . '/' . $file_data->tmp_name;
+			$target_file_path	= $component->get_media_path_dir($target_dir). '/' . $file_data->name;
 
 			debug_log(__METHOD__
 				. " Moving file from  " . PHP_EOL
