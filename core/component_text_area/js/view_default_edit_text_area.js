@@ -603,7 +603,8 @@ const get_custom_buttons = (self, text_editor, i) => {
 */
 const get_custom_events = (self, i, text_editor) => {
 
-	const custom_events = {}
+	const custom_events	= {}
+	const features		= self.context.features || {}
 
 	// focus
 		custom_events.focus = (evt, options) => {
@@ -781,12 +782,12 @@ const get_custom_events = (self, i, text_editor) => {
 			switch(true) {
 
 				// 'Escape'
-				case self.context.features.av_player && evt.code===self.context.features.av_player.av_play_pause_code:
-					event_manager.publish('key_up_esc' +'_'+ self.id_base, self.context.features.av_player.av_rewind_seconds)
+				case features.av_player && evt.code===features.av_player.av_play_pause_code:
+					event_manager.publish('key_up_esc' +'_'+ self.id_base, features.av_player.av_rewind_seconds)
 					break;
 
 				// 'F2'
-				case self.context.features.av_player && evt.code===self.context.features.av_player.av_insert_tc_code:
+				case features.av_player && evt.code===features.av_player.av_insert_tc_code:
 					// publish event and receive susbscriptors responses
 					const susbscriptors_responses			= event_manager.publish('key_up_f2' +'_'+ self.id_base, evt.code)
 					const susbscriptors_responses_length	= susbscriptors_responses.length
@@ -1169,6 +1170,7 @@ const render_note = async function(options) {
 		const locator			= JSON.parse(data)
 		const note_section_id	= locator.section_id
 		const note_section_tipo	= locator.section_tipo
+		const features			= self.context.features || {}
 
 	// note section
 		const get_note_section = async function(){
@@ -1193,7 +1195,7 @@ const render_note = async function(options) {
 
 		// subscribe to the change publication of the component_publication of the section node
 		// when the component_publication change it will change the tag note state, showing if the note is private or public
-		const publication_id_base = note_section_tipo+'_'+note_section_id+'_'+self.context.features.notes_publication_tipo
+		const publication_id_base = note_section_tipo+'_'+note_section_id+'_'+features.notes_publication_tipo
 		event_manager.subscribe('change_publication_value_'+publication_id_base, fn_change_publication_state)
 		function fn_change_publication_state(changed_value) {
 			// change the state of the note with the data of the component_publication (section_id = 2 means no publishable)

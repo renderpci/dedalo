@@ -48,9 +48,6 @@ export const component_text_area = function(){
 		this.service_text_editor_instance	= []
 		// auto_init_editor. default is false. To activate, set Ontology property 'auto_init_editor' as true, or configure this component in run-time from tool (like tool_indexation do)
 		this.auto_init_editor				= undefined
-
-
-	return true
 }//end component_text_area
 
 
@@ -287,6 +284,11 @@ component_text_area.prototype.build = async function(options) {
 			: self.context.properties && self.context.properties.auto_init_editor!==undefined
 				? self.context.properties.auto_init_editor
 				: false
+
+	// fix context features non defined
+		if (!self.context.features) {
+			self.context.features = {}
+		}
 
 
 	return common_build
