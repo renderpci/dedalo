@@ -215,7 +215,7 @@ login.prototype.action_dispatch = async function(api_response) {
 	// default behavior
 		if (api_response.result===true) {
 
-			// hide component_message ok
+			// hide component_message OK
 				const component_message =self.node.content_data.querySelector('.component_message.ok')
 				if (component_message) {
 					component_message.classList.add('hide')
@@ -224,11 +224,28 @@ login.prototype.action_dispatch = async function(api_response) {
 			// user image load
 				const bg_image = (api_response.result_options && api_response.result_options.user_image)
 					? api_response.result_options.user_image
-					: api_response.result_options.user_id==-1
-						? '../../themes/default/raspas/raspa_pantalla_1.jpg'
-						: '../../themes/default/icons/dedalo_icon_grey.svg'
+					: DEDALO_ROOT_WEB + '/core/themes/default/icons/dedalo_icon_grey.svg'
 				if (bg_image) {
+					// force load image
+					await (()=>{
+						return new Promise(function(resolve, reject){
+							const img = new Image()
+							img.onload = () => {
+								resolve(true)
+							}
+							img.onerror = () => reject(false)
+							img.src = bg_image
+						})
+					})();
 					self.node.style.setProperty('--user_login_image', `url('${bg_image}')`);
+					self.node.classList.add('raspa_loading')
+					await (()=>{
+						return new Promise(function(resolve, reject){
+							setTimeout(function(){
+								resolve(true)
+							}, 200)
+						})
+					})();
 				}
 
 			// files loader. Circle with progressive fill draw based on percentage of loaded files by worker (by messages info)
