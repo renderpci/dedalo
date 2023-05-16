@@ -1142,23 +1142,14 @@ class tool_import_dedalo_csv extends tool_common {
 			// }
 
 		// short vars
-			$name			= $file_data->name; // string original file name like 'IMG_3007.jpg'
-			$resource_type	= $file_data->resource_type; // string upload caller name like 'tool_upload'
-			$tmp_dir		= $file_data->tmp_dir; // constant string name like 'DEDALO_UPLOAD_TMP_DIR'
-			$tmp_name		= $file_data->tmp_name; // string like 'phpJIQq4e'
+			$name		= $file_data->name; // string original file name like 'IMG_3007.jpg'
+			$key_dir	= $file_data->key_dir; // string upload caller name like 'tool_upload'
+			$tmp_name	= $file_data->tmp_name; // string like 'phpJIQq4e'
 
-		// source_file
-			if (!defined($tmp_dir)) {
-				$msg = 'constant is not defined!  tmp_dir: '.$tmp_dir;
-				debug_log(__METHOD__
-					." $msg "
-					, logger::ERROR
-				);
-				$response->msg .= $msg;
-				return $response;
-			}
-			$source_file = constant($tmp_dir) .'/'. $resource_type . '/' . $tmp_name;
+			$user_id = navigator::get_user_id();
+			$tmp_dir = DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $key_dir;
 
+			$source_file = $tmp_dir . '/' . $tmp_name;
 		// check source file file
 			if (!file_exists($source_file)) {
 				$response->msg .= ' Source file not found: ' . basename($source_file);
