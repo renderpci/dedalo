@@ -31,7 +31,7 @@
 					$current_context->features->ar_quality				= $this->get_ar_quality(); // defined in config
 					$current_context->features->default_quality			= $this->get_default_quality();
 					$current_context->features->quality					= $this->get_quality(); // current instance quality
-					$current_context->features->resource_type			= '3d_'.$this->tipo.'_'.$this->section_tipo;
+					$current_context->features->key_dir					= '3d';
 
 				$context[] = $current_context;
 

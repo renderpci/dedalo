@@ -1915,3 +1915,45 @@ function build_link(string $name, array $arguments) : string {
 
 	return $link;
 }//end build_link
+
+
+
+/**
+* IS_EMPTY_DATO
+* Check if data given is considered empty
+* This prevents pseudo-empty values like '<p></p>' or similar
+* from being considered non-empty.
+* @param mixed $dato
+* @return bool
+*/
+function is_empty_dato(mixed $dato) : bool {
+
+	// note that zero value (0) is considered as empty too
+	if (empty($dato)) {
+		return true;
+	}
+
+	switch (true) {
+
+		case is_array($dato):
+
+			foreach ($dato as $value) {
+				if (!is_empty_dato($value)) {
+					return false;
+				}
+			}
+			return true;
+
+		case is_string($dato):
+
+			$dato_trimmed = trim($dato);
+			if (empty($dato_trimmed) || trim(strip_tags($dato_trimmed))==='') {
+				return true;
+			}
+			return false;
+
+		default:
+
+			return false;
+	}
+}//end is_empty_dato

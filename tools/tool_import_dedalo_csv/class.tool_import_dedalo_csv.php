@@ -1136,7 +1136,7 @@ class tool_import_dedalo_csv extends tool_common {
 			// 	"name": "IMG_3007.jpg",
 			// 	"type": "image/jpeg",
 			// 	"tmp_dir": "DEDALO_UPLOAD_TMP_DIR",
-			// 	"resource_type": "tool_upload",
+			// 	"key_dir": "tool_upload",
 			// 	"tmp_name": "phpJIQq4e",
 			// 	"error": 0,
 			// 	"size": 22131522,
@@ -1152,6 +1152,7 @@ class tool_import_dedalo_csv extends tool_common {
 			$tmp_dir = DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $key_dir;
 
 			$source_file = $tmp_dir . '/' . $tmp_name;
+
 		// check source file file
 			if (!file_exists($source_file)) {
 				$response->msg .= ' Source file not found: ' . basename($source_file);
