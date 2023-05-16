@@ -120,9 +120,9 @@ tool_import_dedalo_csv.prototype.build = async function(autoload=false) {
 			self.service_upload = await get_instance({
 				model				: 'service_upload',
 				mode				: 'edit',
-				resource_type 		: 'csv',
 				allowed_extensions	: ['csv'],
-				caller				: self
+				caller				: self,
+				key_dir 			: 'csv'
 			})
 			// console.log("self.service_upload:",self.service_upload);
 			// store to destroy on close modal
