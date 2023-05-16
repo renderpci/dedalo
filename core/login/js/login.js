@@ -236,6 +236,10 @@ login.prototype.action_dispatch = async function(api_response) {
 							img.onerror = () => reject(false)
 							img.src = bg_image
 						})
+						.catch((error) => {
+							console.log('Error loading image:', bg_image);
+							console.error(error);
+						});
 					})();
 					self.node.style.setProperty('--user_login_image', `url('${bg_image}')`);
 					self.node.classList.add('raspa_loading')
@@ -243,7 +247,7 @@ login.prototype.action_dispatch = async function(api_response) {
 						return new Promise(function(resolve, reject){
 							setTimeout(function(){
 								resolve(true)
-							}, 200)
+							}, 40)
 						})
 					})();
 				}
