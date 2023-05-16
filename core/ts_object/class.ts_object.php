@@ -541,7 +541,7 @@ class ts_object {
 						debug_log(__METHOD__."  ".'$obj_value->value ++ EXPECTED STRING. But received type: '.gettype($obj_value->value) ." - value:".to_string($obj_value->value), logger::ERROR);
 					}
 				}
-				$ar_elements[$key]->value = '<span class="no_descriptor">' . $obj_value->value . '</span>';
+				$ar_elements[$key]->value = $obj_value->value; //'<span class="no_descriptor">' .  . '</span>';
 				break;
 			}
 		}
