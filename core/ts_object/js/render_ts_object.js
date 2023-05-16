@@ -23,6 +23,7 @@ export const render_ts_line = function(options) {
 		const child_data				= options.child_data
 		const indexations_container_id	= options.indexations_container_id
 		const show_arrow_opened			= options.show_arrow_opened
+		const is_descriptor				= options.is_descriptor
 
 	// DocumentFragment
 		const fragment = new DocumentFragment()
@@ -44,7 +45,11 @@ export const render_ts_line = function(options) {
 				// Overwrite dataset (we need section_id and section_tipo to select when content is updated)
 				children_dataset.section_tipo	= child_data.section_tipo
 				children_dataset.section_id		= child_data.section_id
-				const text_node					= child_data.ar_elements[j].value
+				const term_text					= Array.isArray( child_data.ar_elements[j].value )
+					? child_data.ar_elements[j].value.join(' ')
+					: child_data.ar_elements[j].value
+
+
 				// switch(ts_object.thesaurus_mode) {
 				// 	case 'relation':
 				// 		var event_function 	= [];
@@ -57,9 +62,15 @@ export const render_ts_line = function(options) {
 					element_type	: 'div',
 					parent			: fragment,
 					class_name		: class_for_all + ' term',
-					data_set		: children_dataset,
-					text_node		: text_node
+					data_set		: children_dataset
 				})
+				const text_node = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: is_descriptor ? '' : 'no_descriptor',
+					parent 			: term_node,
+					inner_html		: term_text
+				})
+
 				term_node.addEventListener('click', (e)=>{
 					e.stopPropagation()
 
@@ -750,7 +761,8 @@ export const render_ts_list = function(options) {
 				self						: self,
 				child_data					: ar_children_data[i],
 				indexations_container_id	: indexations_container_id,
-				show_arrow_opened			: show_arrow_opened
+				show_arrow_opened			: show_arrow_opened,
+				is_descriptor				: is_descriptor
 			})
 			elements_container.appendChild(ts_line_node)
 	}//end for (let i = 0; i < ar_childrens_data_len; i++)
