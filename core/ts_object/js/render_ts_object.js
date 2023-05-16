@@ -38,62 +38,69 @@ export const render_ts_line = function(options) {
 			tipo	: child_data.ar_elements[j].tipo,
 			type	: child_data.ar_elements[j].type
 		}
+
 		switch(true) {
 
 			// TERM
 			case (child_data.ar_elements[j].type==='term'):
-				// Overwrite dataset (we need section_id and section_tipo to select when content is updated)
-				children_dataset.section_tipo	= child_data.section_tipo
-				children_dataset.section_id		= child_data.section_id
-				const term_text					= Array.isArray( child_data.ar_elements[j].value )
-					? child_data.ar_elements[j].value.join(' ')
-					: child_data.ar_elements[j].value
 
+				// overwrite dataset (we need section_id and section_tipo to select when content is updated)
+					children_dataset.section_tipo	= child_data.section_tipo
+					children_dataset.section_id		= child_data.section_id
 
-				// switch(ts_object.thesaurus_mode) {
-				// 	case 'relation':
-				// 		var event_function 	= [];
-				// 		break;
-				// 	default:
-				// 		var event_function 	= [{'type':'click','name':'ts_object.show_component_in_ts_object'}];
-				// 		break;
-				// }
-				const term_node = ui.create_dom_element({
-					element_type	: 'div',
-					parent			: fragment,
-					class_name		: class_for_all + ' term',
-					data_set		: children_dataset
-				})
-				const text_node = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: is_descriptor ? '' : 'no_descriptor',
-					parent 			: term_node,
-					inner_html		: term_text
-				})
+				// term_text
+					const term_text = Array.isArray( child_data.ar_elements[j].value )
+						? child_data.ar_elements[j].value.join(' ')
+						: child_data.ar_elements[j].value
 
-				term_node.addEventListener('click', (e)=>{
-					e.stopPropagation()
+				// des
+					// switch(ts_object.thesaurus_mode) {
+					// 	case 'relation':
+					// 		var event_function 	= [];
+					// 		break;
+					// 	default:
+					// 		var event_function 	= [{'type':'click','name':'ts_object.show_component_in_ts_object'}];
+					// 		break;
+					// }
 
-					if(self.thesaurus_mode==='relation'){
-						return // ignore relation click
-					}
-
-					term_node.classList.add('loading')
-
-					// show_component_in_ts_object
-					self.show_component_in_ts_object(term_node, e)
-					.then(function(response){
-
-						term_node.classList.remove('loading')
+				// term_node
+					const term_node_span = ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: is_descriptor ? '' : 'no_descriptor',
+						inner_html		: term_text
 					})
-				})
-				if (term_node && self.element_to_hilite) {
-					if(		term_node.dataset.section_id == self.element_to_hilite.section_id
-						&& 	term_node.dataset.section_tipo===self.element_to_hilite.section_tipo) {
-						// hilite element
-						self.hilite_element(term_node)
+					const term_node = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: class_for_all + ' term',
+						data_set		: children_dataset,
+						parent			: fragment
+					})
+					term_node.appendChild(term_node_span)
+					term_node.addEventListener('click', (e)=>{
+						e.stopPropagation()
+
+						if(self.thesaurus_mode==='relation'){
+							return // ignore relation click
+						}
+
+						term_node.classList.add('loading')
+
+						// show_component_in_ts_object
+						self.show_component_in_ts_object(term_node, e)
+						.then(function(response){
+
+							term_node.classList.remove('loading')
+						})
+					})
+
+				// element_to_hilite
+					if (self.element_to_hilite) {
+						if(		term_node.dataset.section_id == self.element_to_hilite.section_id
+							&& 	term_node.dataset.section_tipo===self.element_to_hilite.section_tipo) {
+							// hilite element
+							self.hilite_element(term_node)
+						}
 					}
-				}
 
 				// id_info. Like '[hierarchy1_246]' (Term terminoID )
 					// let term_add = " ["+child_data.section_tipo+'_'+child_data.section_id+"]"
@@ -116,13 +123,12 @@ export const render_ts_line = function(options) {
 			// ND
 			case (child_data.ar_elements[j].type==='link_children_nd'):
 
-				// var event_function 	= [{'type':'click','name':'ts_object.toggle_nd'}];
-				const element_children_nd	= ui.create_dom_element({
+				const element_children_nd = ui.create_dom_element({
 					element_type	: 'div',
-					parent			: fragment,
 					class_name		: class_for_all + ' default term nd',
 					data_set		: children_dataset,
-					text_node		: child_data.ar_elements[j].value
+					text_node		: child_data.ar_elements[j].value,
+					parent			: fragment
 				})
 				element_children_nd.addEventListener('mousedown', (e)=>{
 					e.stopPropagation()
@@ -153,16 +159,17 @@ export const render_ts_line = function(options) {
 					self.toggle_view_children(element_link_children, e)
 				})
 
-				let class_name  = 'ts_object_children_arrow_icon'
-					if (child_data.ar_elements[j].value==='button show children unactive') {
-						class_name += ' arrow_unactive'
-					}else if (show_arrow_opened===true){
-						class_name += ' ts_object_children_arrow_icon_open'
-					}
+				const ar_class = ['ts_object_children_arrow_icon']
+				if (child_data.ar_elements[j].value==='button show children unactive') {
+					ar_class.push('arrow_unactive')
+				}else if (show_arrow_opened===true){
+					ar_class.push('ts_object_children_arrow_icon_open')
+				}
+
 				const arrow_icon = ui.create_dom_element({
 					element_type	: 'div',
+					class_name		: ar_class.join(' '),
 					parent			: element_link_children,
-					class_name		: class_name
 				})
 				break;
 
@@ -173,18 +180,15 @@ export const render_ts_line = function(options) {
 				if (   child_data.ar_elements[j].tipo==='hierarchy40' && child_data.permissions_indexation>=1
 					|| child_data.ar_elements[j].tipo==='hierarchy91' && child_data.permissions_structuration>=1 ) {
 
-					// Build button
-					// var event_function 	= [{'type':'click',
-					// 						'name':'ts_object.show_indexations',
-					// 						'function_arguments':[child_data.section_tipo,child_data.section_id,child_data.ar_elements[j].tipo,indexations_container_id]}]
+					// element_show_indexations. Build button
 					const element_show_indexations	= ui.create_dom_element({
 						element_type	: 'div',
-						parent			: fragment,
 						class_name		: class_for_all + ' show_indexations',
 						data_set		: children_dataset,
-						text_node		: child_data.ar_elements[j].value // generates a span with the value like '<span>U:37</span>'
+						text_node		: child_data.ar_elements[j].value, // generates a span with the value like '<span>U:37</span>'
+						parent			: fragment
 					})
-					element_show_indexations.addEventListener('mousedown',(e)=>{
+					element_show_indexations.addEventListener('mousedown', (e)=>{
 						e.stopPropagation()
 
 						element_show_indexations.classList.add('loading')
@@ -216,7 +220,7 @@ export const render_ts_line = function(options) {
 			// IMG
 			case (child_data.ar_elements[j].type==='img'):
 
-				if(child_data.ar_elements[j].value){
+				if(child_data.ar_elements[j].value) {
 
 					// let event_function 	= [{'type':'click','name':'ts_object.show_component_in_ts_object'}];
 					const element_img = ui.create_dom_element({
