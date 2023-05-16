@@ -669,6 +669,14 @@ class component_input_text extends component_common {
 				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
 				$query_object->unaccent = false; // (!) always false
 				break;
+			# DUPLICATED
+			case (strpos($q, '!!')===0 || $q_operator==='!!'):
+				$operator = '=';
+				$query_object->operator 	= $operator;
+				$query_object->unaccent		= false; // (!) always false
+				$query_object->duplicated	= true;
+				$query_object->lang 		= DEDALO_DATA_NOLAN;
+				break;
 			# DEFAULT CONTAIN
 			default:
 				$operator = '~*';
