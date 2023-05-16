@@ -7,7 +7,7 @@
 | ontology | state | use | interface | tools | comments |
 | --- | --- | --- | --- | --- | --- |
 | dd | production | 100% | 100% | 100% |All definitions are ready |
-| rsc | production | 95% | 95% | 100% | Common definitions are ready, restoration will need more work; [rsc684](https://dedalo.dev/ontology/rsc684), consultation to archives [rsc996](https://dedalo.dev/ontology/rsc996)|
+| rsc | production | 95% | 95% | 100% | Common definitions are ready, conservation will need more work; [rsc684](https://dedalo.dev/ontology/rsc684), consultation to archives [rsc996](https://dedalo.dev/ontology/rsc996)|
 | hierarchy | production | 100% | 100% | 100% | All definitions are ready |
 | ww | production | 100% | 100% | 100% | All definitions are ready |
 | oh | production | 100% | 100% | 100% | All definitions are ready |

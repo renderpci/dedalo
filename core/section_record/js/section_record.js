@@ -386,12 +386,19 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 							// current_data. get the component data to assign to it and create the instance
 								const current_data = self.get_component_data(current_ddo, section_tipo, section_id, matrix_id)
 
-							// current_context. check if the section_tipo of the component match
-								// const current_context = Array.isArray(current_ddo.section_tipo)
-								// 	? self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode)
-								// 	: self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode && el.section_tipo===current_ddo.section_tipo)
+							// unify section_tipo as array, to get context when component is inside a virtual section
+							// sometimes it will need to be compatible in multiple sections (array > 1) as toponymy sections (es1, fr1, etc)
+							// sometimes the component is only for current ddo section (as publication component of media, rsc20 could be in rsc170, rsc167, ... but the context is not shared)
+								const current_ddo_section_tipo = Array.isArray(current_ddo.section_tipo)
+									? current_ddo.section_tipo
+									: [current_ddo.section_tipo]
+
+							// current_context. check if the section_tipo is multiple to use it or not to match component
+								const current_context = current_ddo_section_tipo.length > 1
+									? self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode)
+									: self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode && el.section_tipo===current_ddo_section_tipo[0])
 								// (!) Unified 09-11-2022 because time machine portal sub-context does not match in cases where section_tipo is not array (case oh18)
-								const current_context = self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode)
+								// const current_context = self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode)
 
 								// const current_context = Array.isArray(current_ddo.section_tipo)
 								// 	? self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode)
