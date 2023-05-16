@@ -93,6 +93,90 @@ class component_relation_index extends component_relation_common {
 
 		return $this->get_dato();
 	}//end get_dato_full
+
+
+
+	/**
+	* GET_SECTION_DATUM_FROM_LOCATOR
+	* @param locator $locator
+	* @return object $datum
+	*/
+	public function get_section_datum_from_locator( locator $locator) {
+
+		$context = [];
+
+
+	// context
+		if(!isset($this->context)){
+			$permissions	= $this->get_component_permissions();
+			$this->context	= $this->get_structure_context(
+				$permissions,
+				true // add_request_config
+			);
+		}
+
+		$current_section_tipo	= $locator->section_tipo;
+		$current_section_id		= $locator->section_id;
+
+		// cache
+		$solved_section_datum_tipo_cache =[];
+
+		//
+		$section = section::get_instance(
+			$current_section_id,
+			$current_section_tipo,
+			'related_list'
+		);
+
+		$section_datum	= $section->get_json();
+		$ar_subcontext	= $section_datum->context;
+
+		// the the different request_config to be used as configured request_config of the component
+		foreach ($ar_subcontext as $current_context) {
+
+			if ($current_context->model ==='section'
+				&& $current_context->tipo === $current_section_tipo
+				&& !in_array($current_section_tipo, $solved_section_datum_tipo_cache)) {
+				// get the section request config (we will use his request config)
+				// if the locator has more than 1 section_tipo, will be stored the new request inside the request_config array
+				$original_request_config = $current_context->request_config;
+				// select api_engine dedalo only configs
+					$section_request_config = array_find($original_request_config, function($el){
+						return $el->api_engine==='dedalo';
+					});
+				$ddo_map = $section_request_config->show->ddo_map;
+				// change the ddo parent of the section to the component, only if the parent is the section_tipo
+				// is necessary don't change the ddo with deep dependence
+				foreach ($ddo_map as $current_ddo) {
+					 $current_ddo->parent = ($current_ddo->parent === $current_section_tipo)
+						 ? $this->tipo
+						 : $current_ddo->parent;
+				}
+
+				$final_request_config = array_find($this->context->request_config, function($el){
+					return $el->api_engine==='dedalo';
+				});
+
+				$final_request_config->show->ddo_map = array_merge($final_request_config->show->ddo_map, $section_request_config->show->ddo_map);
+				$final_request_config->sqo->section_tipo = array_merge($final_request_config->sqo->section_tipo, $section_request_config->sqo->section_tipo);
+
+				$solved_section_datum_tipo_cache[] = $current_section_tipo;
+			}
+
+			$current_context->parent = $this->tipo;
+
+			$context[] = $current_context;
+		}
+
+		$datum = new stdClass();
+			$datum->context = $context;
+			$datum->data = $section_datum->data;
+
+		return $datum;
+
+	}//end get_section_datum_from_locator
+
+	/**
 	* GET_VALOR
 	* Get value . default is get dato . overwrite in every different specific component
 	* @return string | null $valor
