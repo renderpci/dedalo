@@ -359,6 +359,35 @@ class component_relation_common extends component_common {
 		// }
 		foreach($data as $current_key => $locator) {
 
+			// component_relation_index case, it doesn't has request_config and it's necessary calculate it
+			// get the locator to build pointed section and get his request config of relation_list.
+			if($this->model === 'dd432' && empty($ddo_direct_children)){
+				$datum = $this->get_section_datum_from_locator($locator);
+				$context = $datum->context;
+
+				$section_context = array_find($context, function($el) use ($locator){
+					return $el->section_tipo===$locator->section_tipo;
+				});
+
+				// get the correct rqo (use only the dedalo api_engine)
+				$dd_request_config = array_find($section_context->request_config, function($el){
+					return $el->api_engine==='dedalo';
+				});
+
+				$ddo_section_id = new dd_object();
+					$ar_section_id_tipo = section::get_ar_children_tipo_by_model_name_in_section($locator->section_tipo, ['component_section_id'], true, true, true);
+					$section_id_tipo = reset($ar_section_id_tipo);
+					$ddo_section_id->set_tipo($section_id_tipo);
+					$ddo_section_id->set_section_tipo($locator->section_tipo);
+					$ddo_section_id->set_parent($this->tipo);
+
+				// ddo_map. Get the ddo_map to be used to create the components related to the portal
+				$ddo_map = array_merge([$ddo_section_id], $dd_request_config->show->ddo_map);
+				$ddo_direct_children = array_filter($ddo_map, function($el){
+					return $el->parent === $this->tipo;
+				});
+			}
+
 			$locator_column_obj	= [];
 			$ar_columns			= [];
 			foreach ($ddo_direct_children as $ddo) {
@@ -515,7 +544,6 @@ class component_relation_common extends component_common {
 				$value->set_fields_separator($fields_separator);
 				$value->set_records_separator($records_separator);
 				$value->set_value($ar_cells);
-
 
 		return $value;
 	}//end get_grid_value
