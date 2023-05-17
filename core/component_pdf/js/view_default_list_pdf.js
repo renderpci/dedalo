@@ -39,7 +39,10 @@ view_default_list_pdf.render = async function(self, options) {
 		wrapper.classList.add('media','media_wrapper')
 
 	// image
-		if (value && value[0] && value[0].files_info.length>0) {
+		const files_info = value && value[0] && value[0].files_info
+			? value[0].files_info
+			: null
+		if (files_info && files_info.length>0) {
 			const url = value
 				? DEDALO_CORE_URL + '/themes/default/pdf_icon.png'
 				: null // page_globals.fallback_image
