@@ -56,6 +56,9 @@
 				align-content: stretch;
 				// grid-template-columns: repeat(4, 1fr);
 
+				// overflow: prevent large portals breaking the layout
+				overflow: auto;
+
 				@media screen and (max-width: @width_break_point_1) {
 					display: block;
 				}
