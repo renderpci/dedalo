@@ -134,27 +134,24 @@
 			padding-bottom: 0.5rem;
 			padding-left: 0.33rem;
 
+			// all section records inside (any level)
 			.section_record {
 				padding-left: 0.5rem; // don't remove this (!)
 			}
 
+			// direct section_record child
 			>.section_record {
-				display: flex;
-				flex-wrap: nowrap;
-				align-items: flex-start;
-				flex: 0 0 100%;
-				margin-left: 0.5rem;
-				margin-bottom: 0.25rem;
-				padding-right: 1.25rem;
-
 
 				&.view_text {
+					display: flex;
+					flex-wrap: nowrap;
+					justify-content: flex-start;
 					margin-left: 0rem;
 					padding-right: 0.5rem;
 					line-height: 1.2rem;
 					flex: 0 0 100%;
-					flex-wrap: nowrap;
-					justify-content: flex-start;
+
+					padding-left: 0px;
 
 					--default_height: 1.1rem;
 
@@ -180,14 +177,34 @@
 						}
 					}
 
-					// .button.delete_bold {
-					// 	margin-right: 0.25rem;
-					// }
-					// .button.pen {
-					// 	margin-left: 0.25rem;
-					// }
+					span:not(.button), mark, div {
+						display: contents;
+					}
 				}
-			}
+
+				&.view_line {
+					display: flex;
+					flex-wrap: nowrap;
+					align-items: flex-start;
+					flex: 0 0 100%;
+					margin-left: 0.5rem;
+					margin-bottom: 0.25rem;
+					padding-right: 1.25rem;
+					// new
+					flex-wrap: wrap;
+					padding-left: 2rem;
+					.component_portal {
+						.section_record {
+							padding: 0;
+							padding-left: 0.25rem;
+						}
+					}
+				}
+
+				>.column:first-of-type {
+					margin-left: -1.33rem;
+				}
+			}//end >.section_record
 
 			// ul references
 			.references {
