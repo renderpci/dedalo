@@ -86,7 +86,7 @@ describe("OTHERS LIFE-CYCLE", async function() {
 
 			it(`${element.model} INIT`, async function() {
 
-				const expected = 'initiated'
+				const expected = 'initialized'
 
 				// context function case. Call and wait here
 					if (element.context && typeof element.context==='function') {

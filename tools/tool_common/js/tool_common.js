@@ -184,7 +184,7 @@ tool_common.prototype.init = async function(options) {
 		self.get_tool_label	= get_tool_label // function get_label called by the different tools to obtain the own label in the current lang. The scope is for every tool.
 
 	// set status
-		self.status = 'initied'
+		self.status = 'initialized'
 
 
 	return true
@@ -588,7 +588,7 @@ const view_modal = async function(options) {
 		const tool_instance = await get_instance(instance_options)
 
 	// stop if already loaded (toggle tool)
-		if (tool_instance.status && tool_instance.status!=='initied') {
+		if (tool_instance.status && tool_instance.status!=='initialized') {
 			return false
 		}
 

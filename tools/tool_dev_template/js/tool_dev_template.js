@@ -204,7 +204,7 @@ tool_dev_template.prototype.load_component_sample = async function(options) {
 		// get instance and init
 			const own_component_instance = await get_instance(instance_options)
 
-	// at this point component_instance and own_component_instance should be the same, the component initiated and ready to be build and render
+	// at this point component_instance and own_component_instance should be the same, the component initialized and ready to be build and render
 	// in this example we use only one of this: component_instance
 	return component_instance
 }//end load_component_sample

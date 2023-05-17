@@ -125,7 +125,7 @@ section_record.prototype.init = async function(options) {
 		//})
 
 	// status update
-		self.status = 'initied'
+		self.status = 'initialized'
 
 
 	return self
@@ -144,7 +144,7 @@ section_record.prototype.init = async function(options) {
 * @param int column_id
 *
 * @return promise current_instance
-* 	Instance of component / section_group initiated and built
+* 	Instance of component / section_group initialized and built
 */
 const build_instance = async (self, context, section_id, current_data, column_id, autoload) => {
 

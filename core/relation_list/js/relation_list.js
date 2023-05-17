@@ -153,7 +153,7 @@ relation_list.prototype.init = function(options) {
 	self.total			= options.total || null
 
 	// status update
-	self.status = 'initiated'
+	self.status = 'initialized'
 
 	return true
 }//end init

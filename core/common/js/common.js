@@ -76,7 +76,7 @@ common.prototype.init = async function(options) {
 		self.caller			= options.caller
 
 	// status update
-		self.status = 'initiated'
+		self.status = 'initialized'
 
 
 	return true

@@ -38,7 +38,7 @@ view_default_edit_section.render = async function(self, options) {
 			);
 		}
 
-	// ar_section_record. section_record instances (initiated and built)
+	// ar_section_record. section_record instances (initialized and built)
 		self.ar_instances = self.ar_instances && self.ar_instances.length>0
 			? self.ar_instances
 			: await get_section_records({caller: self})

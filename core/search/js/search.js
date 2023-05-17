@@ -175,7 +175,7 @@ search.prototype.init = async function(options) {
 		self.permissions = 2
 
 	// status update
-		self.status = 'initiated'
+		self.status = 'initialized'
 
 
 	return true

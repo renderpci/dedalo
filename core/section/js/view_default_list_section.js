@@ -54,7 +54,7 @@ view_default_list_section.render = async function(self, options) {
 		const columns_map	= await rebuild_columns_map(self)
 		self.columns_map	= columns_map
 
-	// ar_section_record. section_record instances (initiated and built)
+	// ar_section_record. section_record instances (initialized and built)
 		self.ar_instances = self.ar_instances && self.ar_instances.length>0
 			? self.ar_instances
 			: await get_section_records({caller: self})

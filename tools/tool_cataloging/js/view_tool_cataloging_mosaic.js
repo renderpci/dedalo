@@ -81,7 +81,7 @@ view_tool_cataloging_mosaic.render = async function(self, options) {
 			const columns_map		= await rebuild_columns_map(base_columns_map, self, true)
 			self.columns_map		= columns_map
 
-		// ar_section_record. section_record instances (initiated and built)
+		// ar_section_record. section_record instances (initialized and built)
 			const ar_section_record	= await get_section_records({
 				caller		: self,
 				mode		: 'list',

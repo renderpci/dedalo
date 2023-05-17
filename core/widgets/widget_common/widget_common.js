@@ -57,7 +57,7 @@ widget_common.prototype.init = async function(options) {
 		self.ar_instances	= [] // array of children instances of current instance (used for autocomplete, etc.)
 
 	// status update
-		self.status = 'initiated'
+		self.status = 'initialized'
 
 
 	return true
