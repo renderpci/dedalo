@@ -103,25 +103,7 @@ data_manager.request = async function(options) {
 				if (result.error) {
 
 					// debug console message
-						console.error("result error:",result);
-
-					// alert msg to user
-						const msg = result.msg || result.error
-						console.error("An error occurred in the connection with the API (worker area development). \n" + msg);
-
-					// custom behaviors
-						switch (result.error) {
-							case 'not_logged':
-								// Alert user that is lot logged
-								if (typeof alert==='function') {
-									alert('Warning! User not logged');
-								}
-								console.warn('Warning! User not logged');
-								break;
-							default:
-								// write message to the console
-								break;
-						}
+						console.error("result error:", result);
 				}
 
 				return result

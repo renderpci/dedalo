@@ -17,6 +17,7 @@
 	import {render_edit_section} from './render_edit_section.js'
 	import {render_list_section} from './render_list_section.js'
 	import {render_common_section} from './render_common_section.js'
+	import {render_relogin} from '../../login/js/login.js'
 
 
 
@@ -61,9 +62,6 @@ export const section = function() {
 	this.rqo					= null
 
 	this.config					= null
-
-
-	return true
 }//end section
 
 
@@ -375,6 +373,9 @@ section.prototype.build = async function(autoload=false) {
 
 	const self = this
 
+	// previous status
+		const previous_status = clone(self.status)
+
 	// status update
 		self.status = 'building'
 
@@ -434,19 +435,50 @@ section.prototype.build = async function(autoload=false) {
 				const api_response = await data_manager.request({
 					body : self.rqo
 				})
-				if(SHOW_DEVELOPER===true) {
-					// const response	= clone(api_response)
-					// const exec_time	= (performance.now()-t0).toFixed(3)
-					// dd_console('SECTION api_response:', 'DEBUG', [self.id, response, exec_time]);
-					console.log('section build api_response:', api_response);
-				}
+				// debug
+					if(SHOW_DEVELOPER===true) {
+						// const response	= clone(api_response)
+						// const exec_time	= (performance.now()-t0).toFixed(3)
+						// dd_console('SECTION api_response:', 'DEBUG', [self.id, response, exec_time]);
+						console.log('section build api_response:', api_response);
+					}
 				if (!api_response || !api_response.result) {
-					self.running_with_errors = [
-						'section build autoload api_response: '+ (api_response.error || api_response.msg)
-					]
-					console.error("Error (2) : section build autoload api_response:", api_response);
+
+					// custom behaviors
+					switch (api_response.error) {
+						case 'not_logged':
+
+							// display login window
+							render_relogin({
+								callback : function(){
+									// login success actions
+								}
+							})
+							break;
+
+						default:
+							self.running_with_errors = [
+								self.model + ' build autoload api_response: '+ (api_response.error || api_response.msg)
+							]
+							console.error("Error (2) : "+self.model+" build autoload api_response:", api_response);
+							break;
+					}
+
+					// status update
+						self.status = previous_status // 'initialized' or 'rendered'
+
 					return false
 				}
+
+			// reset errors
+				self.running_with_errors = null
+
+			// destroy dependencies
+				await self.destroy(
+					false, // bool delete_self
+					true, // bool delete_dependencies
+					false // bool remove_dom
+				)
 
 			// set the result to the datum
 				self.datum = api_response.result
@@ -933,11 +965,11 @@ section.prototype.navigate = async function(options) {
 	const self = this
 
 	// options
+		const action				= options.action || 'paginate'
 		const callback				= options.callback
 		const navigation_history	= options.navigation_history!==undefined
 			? options.navigation_history
 			: false
-		const action				= options.action || 'paginate'
 
 	// unsaved_data check
 		if (window.unsaved_data===true) {
@@ -1001,7 +1033,9 @@ section.prototype.navigate = async function(options) {
 		self.node_body.classList.add('loading')
 
 	// refresh
-		await self.refresh()
+		await self.refresh({
+			destroy : false // avoid to destroy here to allow section to recover from loosed login scenarios
+		})
 
 	// loading
 		self.node_body.classList.remove('loading')
@@ -1022,6 +1056,7 @@ section.prototype.navigate = async function(options) {
 					url		: url
 				})
 		}
+
 
 	return true
 }//end navigate

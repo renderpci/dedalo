@@ -472,6 +472,7 @@ common.prototype.refresh = async function(options={}) {
 	// options
 		const build_autoload	= options.build_autoload ?? true
 		const render_level		= options.render_level ?? 'content' // string full|content
+		const destroy			= options.destroy ?? true
 
 	// loading css add
 		// const nodes_lenght = self.node.length
@@ -479,17 +480,19 @@ common.prototype.refresh = async function(options={}) {
 		// 	self.node[i].classList.add('loading')
 		// }
 
-	// destroy dependencies only
+	// destroy (dependencies only)
 		if (self.status!=='rendered') {
 			console.warn("/// destroyed fail (expected status 'rendered') with actual status:", self.model, self.status);
 			return false
 		}
 		// destroy with params
-		await self.destroy(
-			false, // bool delete_self
-			true, // bool delete_dependencies
-			false // bool remove_dom
-		)
+		if (destroy===true) {
+			await self.destroy(
+				false, // bool delete_self
+				true, // bool delete_dependencies
+				false // bool remove_dom
+			)
+		}
 
 	// debug
 		if(SHOW_DEBUG===true) {
