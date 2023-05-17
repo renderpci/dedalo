@@ -192,7 +192,7 @@ class locator extends stdClass {
 	* @return
 	*/
 	public function set_section_id_key(int $value) {
-		if(int($value)<0) {
+		if($value < 0) {
 			throw new Exception("Error Processing Request. Invalid section_id_key: $value", 1);
 		}
 		$this->type = $value;
