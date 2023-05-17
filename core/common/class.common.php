@@ -4306,7 +4306,6 @@ abstract class common {
 				case 'component_relation_children':
 				case 'component_relation_parent':
 				case 'component_relation_index':
-				// case 'component_relation_model':
 				case 'component_relation_related':
 				case 'component_autocomplete':
 				case 'component_autocomplete_hi':
@@ -4345,6 +4344,10 @@ abstract class common {
 		// based on legacy_model
 			$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($this->get_tipo());
 			switch ($legacy_model) {
+				case 'component_relation_children':
+				case 'component_relation_parent':
+				case 'component_relation_index':
+				case 'component_relation_related':
 				case 'component_autocomplete':
 				case 'component_autocomplete_hi':
 					$children_view = 'text';
