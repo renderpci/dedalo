@@ -92,7 +92,7 @@ service_time_machine.prototype.init = async function(options) {
 	self.request_config	= await self.build_request_config()
 
 	// status update
-	self.status = 'initiated'
+	self.status = 'initialized'
 
 
 	return true

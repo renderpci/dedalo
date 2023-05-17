@@ -136,7 +136,7 @@ async function life_cycle_test(element, view) {
 				new_instance = await get_instance(options)
 
 			// asserts
-				assert.equal(new_instance.status, 'initiated', 'Instance status must be initiated ');
+				assert.equal(new_instance.status, 'initialized', 'Instance status must be initialized ');
 				assert.equal(new_instance.mode, options.mode);
 				assert.equal(new_instance.context, null);
 				assert.equal(new_instance.node, null);

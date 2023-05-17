@@ -360,7 +360,7 @@ page.prototype.init = async function(options) {
 
 
 	// status update
-		self.status = 'initiated'
+		self.status = 'initialized'
 
 	// test
 		// elements_css.rsc75 = {

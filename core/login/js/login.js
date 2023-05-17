@@ -83,7 +83,7 @@ login.prototype.init = async function(options) {
 	self.label					= null
 
 	// status update
-		self.status = 'initiated'
+		self.status = 'initialized'
 
 
 	return true

@@ -96,7 +96,7 @@ service_autocomplete.prototype.init = async function(options) {
 		// })
 
 	// status update
-		self.status = 'initiated'
+		self.status = 'initialized'
 
 
 	return true

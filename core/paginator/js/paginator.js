@@ -87,7 +87,7 @@ paginator.prototype.init = function(options) {
 		self.id = 'paginator_'+self.caller.id
 
 	// status update
-		self.status = 'initied'
+		self.status = 'initialized'
 
 
 	return true

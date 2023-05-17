@@ -172,7 +172,7 @@ export const service_ckeditor = function() {
 			// editor.
 			// InlineEditor is created from lib ckeditor source using webpack.
 			// See source and webpack config files
-			// InlineEditor is initiated with user interface
+			// InlineEditor is initialized with user interface
 			ckeditor.InlineEditor.create( self.value_container, {
 				// initialData: value
 				// toolbar: {
@@ -318,7 +318,7 @@ export const service_ckeditor = function() {
 		// editor
 		// ddEditor is created from lib ckeditor source using webpack.
 		// See source and webpack config files
-		// ckEditor is initiated without user interface
+		// ckEditor is initialized without user interface
 			const editor = await ckeditor.ddEditor.create( self.value_container, {
 				// initialData: value
 				placeholder: self.fallback_value

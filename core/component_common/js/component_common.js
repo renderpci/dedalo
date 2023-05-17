@@ -154,7 +154,7 @@ component_common.prototype.init = async function(options) {
 		//event_manager.publish('component_init', self)
 
 	// status update
-		self.status = 'initiated'
+		self.status = 'initialized'
 
 
 	return true

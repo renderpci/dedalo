@@ -71,7 +71,7 @@ menu.prototype.init = function(options) {
 	self.events_tokens	= []
 
 	// status update
-		self.status = 'initiated'
+		self.status = 'initialized'
 
 	return true
 }//end init
