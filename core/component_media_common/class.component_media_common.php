@@ -726,7 +726,7 @@ class component_media_common extends component_common {
 
 		$date=date("Y-m-d_Hi");
 
-		// ar_quality
+		// ar_quality. Get all if not received any
 			if (empty($ar_quality)) {
 				$ar_quality = $this->get_ar_quality();
 			}
