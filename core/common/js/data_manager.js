@@ -112,43 +112,58 @@ data_manager.request = async function(options) {
 		})
 		.then(handle_errors)
 		.then(response => {
-			// console.log("-> json response 1 ok:",response);
-			// return Promise.reject("*** PHP file not found");
 			const json_parsed = response.json()
 			.then((result)=>{
-				// console.log("-> json result 2:",result);
+
 				if (result.error) {
 
 					// debug console message
-						if (SHOW_DEBUG) {
-							console.error("result error:",result);
-						}
+						console.error("result error:", result);
 
 					// alert msg to user
 						const msg = result.msg || result.error
-						// alert("An error occurred in the connection with the API (data_manager). \n" + msg);
+						alert("An error occurred in the connection with the API (data_manager). \n" + msg);
 
 					// custom behaviors
-						switch (result.error) {
-							case 'not_logged':
-								// Alert user that is lot logged
-								if (typeof alert==='function') {
-									alert('Warning! User not logged');
-								}
-								console.warn('Warning! User not logged');
-								break;
+						// switch (result.error) {
+						// 	case 'not_logged':
+						// 		// Alert user that is lot logged
+						// 		if (typeof alert==='function') {
+						// 			alert('Warning! User not logged');
+						// 		}
+						// 		console.warn('Warning! User not logged');
 
-							default:
-								// write message to the console
-								break;
-						}
+						// 		// main_container lock
+						// 			const main_container = document.querySelector('.wrapper.page')
+						// 			if (main_container) {
+						// 				main_container.classList.add('loading')
+						// 			}
+
+						// 		// render_relogin
+						// 			import('../../login/js/login.js')
+						// 			.then(function(login){
+						// 				login.render_relogin({
+						// 					callback : function(){
+						// 						// main_container unlock
+						// 						if (main_container) {
+						// 							main_container.classList.remove('loading')
+						// 						}
+						// 					}
+						// 				})
+						// 			})
+						// 		break;
+
+						// 	default:
+						// 		// write message to the console
+						// 		break;
+						// }
 				}
 
 				return result
 			})
-			// console.log("-> api_response json_parsed:",json_parsed);
+
 			return json_parsed
-		})// parses JSON response into native JavaScript objects
+		})
 		.catch(error => {
 			console.warn('request url:', typeof this.url, this.url);
 			console.warn("request options:", options);

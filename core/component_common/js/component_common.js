@@ -519,28 +519,19 @@ component_common.prototype.save = async function(changed_data) {
 			switch (response.error) {
 				case 'not_logged':
 
-					// main_container
-					// const main_container = document.getElementById('main')
-					const main_container = document.querySelector('.wrapper.page')
-					main_container.classList.add('loading')
-
 					// display login window
 					render_relogin({
-						callback : function(login_instance){
+						callback : function(){
 
-							// login success
+							// login success actions
 
 							// restore styles
-							main_container.classList.remove('loading')
 							self.node.classList.remove('error')
 
 							// force save again this component
 							self.save(changed_data)
 						}
 					})
-
-					// stop here
-					// return response
 					break;
 
 				default:

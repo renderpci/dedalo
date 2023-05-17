@@ -63,11 +63,11 @@ login.prototype.init = async function(options) {
 	const self = this
 
 	// instance key used vars
-	self.model				= options.model
-	self.tipo				= options.tipo
-	self.mode				= options.mode
-	self.lang				= options.lang
-	self.add_select_lang	= options.add_select_lang ?? true
+	self.model					= options.model
+	self.tipo					= options.tipo
+	self.mode					= options.mode
+	self.lang					= options.lang
+	self.add_select_lang		= options.add_select_lang ?? true
 
 
 	// DOM
@@ -338,10 +338,16 @@ login.prototype.action_dispatch = async function(api_response) {
 * }
 * @return object loggin_instance
 */
-export const render_relogin = async function(options) {
+export const render_relogin = async function(options={}) {
 
 	// options
-		const callback = options?.callback || null
+		const callback			= options.callback || null
+		const main_container	= options.main_container || document.querySelector('.wrapper.page')
+
+	// lock main container (normally page)
+		if (main_container) {
+			main_container.classList.add('loading')
+		}
 
 	// loggin_instance
 		const loggin_instance = await instances.get_instance({
@@ -353,6 +359,11 @@ export const render_relogin = async function(options) {
 
 				// work done! Destroy this login instance and DOM
 				loggin_instance.destroy(true, true, true)
+
+				// unlock main container (normally page)
+				if (main_container) {
+					main_container.classList.remove('loading')
+				}
 
 				// exec possible callback function if exists
 				if (callback && typeof callback==='function') {
