@@ -100,6 +100,9 @@ const render_content_data = async function(self, ar_section_record) {
 			class_name		: 'q_operator',
 			parent			: fragment
 		})
+		input_q_operator.addEventListener('click', function(e){
+			e.stopPropagation()
+		})
 		input_q_operator.addEventListener('change', function(){
 			// value
 				const value = (input_q_operator.value.length>0) ? input_q_operator.value : null
