@@ -353,15 +353,39 @@ const get_header_column = function(current_data) {
 */
 const get_text_column = function(current_data) {
 
-	const text = current_data.value && Array.isArray(current_data.value)
+	const flat_html = current_data.value && Array.isArray(current_data.value)
 		? current_data.value.join(' ')
 		: (current_data.value || '')
 
+	const decode_escaped_html = (str) =>
+		str.replace( /&(\D+);/gi,
+		(tag) =>
+			({
+				'&nbsp;'	: ' ',
+				'&amp;'		: '&',
+				'&#38;'		: '&',
+				'&lt;'		: '<',
+				'&#60;'		: '<',
+				'&gt;'		: '>',
+				'&#62;'		: '>',
+				'&apos;'	: "'",
+				'&#39;'		: "'",
+				'&quot;'	: '"',
+				'&#34;'		: '"'
+			}[tag])
+	)
+
+	// convert paragraphs to return and remove first and last p tags
+	const html_with_return	= flat_html.replace(/<\/p><p>/g, '\n')
+	const html_string		= html_with_return.replace('<p>', '').replace('</p>', '')
+	const text				= decode_escaped_html(html_string)
 	// value
 		const value = text
 
 	return value
 }//end get_text_column
+
+
 
 
 
