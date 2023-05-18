@@ -507,7 +507,7 @@ page.prototype.add_events = function() {
 				const component_instance = page_globals.component_active
 
 				// lock_component. launch worker
-				if (DEDALO_LOCK_COMPONENTS===true) {
+				if (DEDALO_LOCK_COMPONENTS===true && component_instance.mode==='edit') {
 					data_manager.request({
 						use_worker	: true,
 						body		: {
