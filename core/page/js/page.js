@@ -257,7 +257,7 @@ page.prototype.init = async function(options) {
 			dd_console(`// page activate_component received component_instance`, 'DEBUG', component_instance)
 
 			// lock_component. launch worker
-			if (DEDALO_LOCK_COMPONENTS===true) {
+			if (DEDALO_LOCK_COMPONENTS===true && component_instance.mode==='edit') {
 				data_manager.request({
 					use_worker	: true,
 					body		: {
