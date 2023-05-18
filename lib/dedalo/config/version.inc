@@ -2886,7 +2886,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.9.5';
+	$DEDALO_VERSION = '5.9.6';
 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
