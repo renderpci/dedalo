@@ -57,24 +57,27 @@ require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.Ffmpeg.php');
 				exit();
 			}
 
+		// chunked boolean
 			$chunked = json_decode($chunked);
 
+		// options
 			$options = new stdClass();
 				$options->quality = $quality;
 				$options->chunked = $chunked;
-
-
-			if($chunked === true){
-				$options->file_name		= $_POST['file_name'];
-				$options->start			= $_POST['start'];
-				$options->end			= $_POST['end'];
-				$options->chunk_index	= $_POST['chunk_index'];
-				$options->total_chunks	= $_POST['total_chunks'];
-			}
+				if($chunked===true){
+					$options->file_name		= $_POST['file_name'];
+					$options->start			= $_POST['start'];
+					$options->end			= $_POST['end'];
+					$options->chunk_index	= $_POST['chunk_index'];
+					$options->total_chunks	= $_POST['total_chunks'];
+				}
 
 		// Write session to unlock session file
 			session_write_close();
-			debug_log(__METHOD__." Uploading file ($SID) - Session is write and closed ".to_string(), logger::DEBUG);
+			debug_log(__METHOD__
+				." Uploading file ($SID) - Session is write and closed "
+				, logger::DEBUG
+			);
 
 		// component
 			$component_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
@@ -90,9 +93,6 @@ require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.Ffmpeg.php');
 		// upload_file response
 			$tool_upload	= new tool_upload($component_obj);
 			$response		= $tool_upload->upload_file($options);
-
-		// Save component to force to update component 'valor_list'
-			// $component_obj->Save(); // (!) already saved by upload_file method
 
 
 		echo json_encode($response);

@@ -38,20 +38,27 @@ class tool_upload extends tool_common {
 
 	/**
 	* UPLOAD_FILE
-	* @param $quality string
+	* @param object $options
 	* @return object $response
 	*/
 	public function upload_file( $options ) {
 
 		$start_time = start_time();
 
-		$response = new stdClass();
-			$response->result 			 = 0;
-			$response->html 			 = null;
-			$response->update_components = [];
+		// options
+			$quality = $options->quality;
+			$chunked = (bool)$options->chunked;
 
-		$quality = $options->quality;
-		$chunked = $options->chunked;
+		// response
+			$response = new stdClass();
+				$response->result				= 0;
+				$response->html					= null;
+				$response->update_components	= [];
+
+		// logger_backend_activity disable on chunks
+			if ($chunked===true) {
+				logger_backend_activity::$enable_log = false;
+			}
 
 		# Current component name
 		$component_name = get_class( $this->component_obj );
@@ -134,13 +141,15 @@ class tool_upload extends tool_common {
 		// extensions : validate extension file
 			$is_valid_extension = $this->validate_extension( $f_extension, $ar_allowed_extensions );
 			if ($is_valid_extension !== true) {
-				return (string)$is_valid_extension; // msg html
+				$response->result	= false;
+				$response->html		= 'Error: invalid extension: ' . $f_extension;
+				return $response;
 			}
 
 		# LOG UPLOAD BEGINS
-			$tipo 			= $this->component_obj->get_tipo();
-			$parent 		= $this->component_obj->get_parent();
-			$file_size_mb 	= round( ($f_size/1024)/1024 , 2 );
+			$tipo			= $this->component_obj->get_tipo();
+			$parent			= $this->component_obj->get_parent();
+			$file_size_mb	= round( ($f_size/1024)/1024, 2 );
 
 			// LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
 				logger::$obj['activity']->log_message(
@@ -173,7 +182,7 @@ class tool_upload extends tool_common {
 			$this->file_obj->uploaded_file_path = $folder_path . $nombre_archivo;
 
 		// DEBUG MSG
-		debug_log(__METHOD__." Uploading file $component_name - quality: $quality - path: ".$this->file_obj->uploaded_file_path .to_string(), logger::DEBUG);
+			debug_log(__METHOD__." Uploading file $component_name - quality: $quality - path: ".$this->file_obj->uploaded_file_path .to_string(), logger::DEBUG);
 
 		# Move temp uploaded file to final dir
 		if(file_exists($f_temp_name)) {
@@ -322,14 +331,17 @@ class tool_upload extends tool_common {
 		}
 
 		// Save component refresh 'valor_list'
-			$this->component_obj->Save();
+			if ($chunked===false) {
+				// save on finish download file
+				$this->component_obj->Save();
+				// get response and log upload
+				$response_html = $this->get_response_html($file_data);
+			}
 
 		// response
 			$response->result		= 1; # result set to true
 			$response->file_data	= $file_data;
-			$response->html			= ($chunked===false)
-				? $this->get_response_html($file_data)
-				: null;
+			$response->html			= $response_html ?? null;
 
 
 		return $response;
