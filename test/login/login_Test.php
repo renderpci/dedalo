@@ -114,7 +114,17 @@ final class login_test extends TestCase {
 				die();
 			}
 
-		unset($_SESSION['dedalo']['auth']);
+		$options = (object)[
+			'mode'	=> null,
+			'cause'	=> 'test unit exit'
+		];
+		login::quit($options);
+
+		// unset($_SESSION['dedalo']['auth']);
+		// $this->assertTrue(
+		// 	!isset($_SESSION['dedalo']['auth']),
+		// 	'expected not set session dedalo auth for this user: ' .$user_id
+		// );
 	}//end logout
 
 
