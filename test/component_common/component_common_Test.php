@@ -1605,4 +1605,37 @@ final class component_common_test extends TestCase {
 
 
 
+	/**
+	* TEST_LOGOUT_USERS
+	* @return void
+	*/
+	public function XXX_test_logout_users(): void {
+
+		$users = [
+			-1,
+			1
+		];
+		foreach ($users as $user_id) {
+
+			// login_Test::logout($user_id);
+
+			$options = (object)[
+				'mode'	=> null,
+				'cause'	=> 'test unit exit'
+			];
+			login::quit($options);
+
+			// unset($_SESSION['dedalo']);
+
+			$this->assertTrue(
+				!isset($_SESSION['dedalo']['auth']),
+				'expected session dedalo auth is not set'
+			);
+		}
+
+		// dump($_SESSION['dedalo'], ' $_SESSION[dedalo] ++ '.to_string());
+	}//end test_logout_users
+
+
+
 }//end class component_common_test

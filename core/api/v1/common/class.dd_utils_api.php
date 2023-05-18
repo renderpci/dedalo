@@ -781,6 +781,7 @@ final class dd_utils_api {
 	*			"full_path"		: "exported_plantillas-web_-1-dd477.csv",
 	*			"type"			: "text/csv",
 	*			"tmp_name"		: "/private/var/tmp/phpQ02UUO",
+	* 			"key_dir"		: "svg",
 	*			"error"			: 0,
 	*			"size"			: 29892
 	*		},
@@ -797,7 +798,7 @@ final class dd_utils_api {
 		// options
 			$options		= $rqo->options;
 			$file_to_upload	= $options->file_to_upload ?? $options->file ?? $options->upload;	// assoc array Added from PHP input '$_FILES'
-			$key_dir	= $options->key_dir; // string like 'tool_upload'
+			$key_dir		= $options->key_dir; // string like 'tool_upload'
 			$chunked		= isset($options->chunked) // received as string 'true'|'false'
 				? (bool)json_decode($options->chunked)
 				: false;
@@ -869,10 +870,6 @@ final class dd_utils_api {
 				// 	throw new RuntimeException('Exceeded filesize limit.');
 				// }
 
-
-			// chunked
-				// $chunked	= json_decode($options->chunked);
-
 				// filename
 				$file_name		= $file_to_upload['name'];
 				$file_tmp_name	= $file_to_upload['tmp_name'];
@@ -889,11 +886,11 @@ final class dd_utils_api {
 
 			// name
 				$name = $file_name;
-				if($chunked){
+				if($chunked===true) {
 					$file_name		= $options->file_name;
 					$total_chunks	= $options->total_chunks;
 					$chunk_index	= $options->chunk_index;
-					$tmp_name 		= basename($file_tmp_name);
+					$tmp_name		= basename($file_tmp_name);
 					$extension		= 'blob';
 					$name			= "{$chunk_index}-{$tmp_name}.{$extension}";
 					$file_mime		= 'application/octet-stream';
@@ -980,6 +977,7 @@ final class dd_utils_api {
 						}
 						debug_log(__METHOD__." CREATED DIR: $tmp_dir  ".to_string(), logger::DEBUG);
 					}
+
 				// move file to target path
 					$target_path	= $tmp_dir . '/' . $name;
 					$moved			= move_uploaded_file($file_tmp_name, $target_path);
@@ -995,19 +993,17 @@ final class dd_utils_api {
 						return $response;
 					}
 
-					// thumbnail file
-					if(!$chunked){
+				// thumbnail file
+					if(!$chunked===true) {
 						$thumb_options = new stdClass();
-							$thumb_options->tmp_dir			= $tmp_dir;
-							$thumb_options->name			= $name;
-							$thumb_options->target_path		= $target_path;
-							$thumb_options->key_dir	= $key_dir;
-							$thumb_options->user_id			= $user_id;
+							$thumb_options->tmp_dir		= $tmp_dir;
+							$thumb_options->name		= $name;
+							$thumb_options->target_path	= $target_path;
+							$thumb_options->key_dir		= $key_dir;
+							$thumb_options->user_id		= $user_id;
 
 						$thumbnail_url = dd_utils_api::create_thumbnail($thumb_options);
 					}
-
-
 
 			// file_data to client. POST file (sent across $_FILES) info and some additions
 				// Example of received data:
@@ -1022,17 +1018,15 @@ final class dd_utils_api {
 				$file_data = new stdClass();
 					$file_data->name			= $file_name; // like 'My Picture 1.jpg'
 					$file_data->type			= $file_to_upload['type']; // like 'image\/jpeg'
-					// $file_data->tmp_name		= $target_path; // do not include for safety
 					$file_data->tmp_dir			= 'DEDALO_UPLOAD_TMP_DIR'; // like DEDALO_MEDIA_PATH . '/upload/service_upload/tmp'
-					$file_data->key_dir	= $key_dir; // like 'tool_upload'
+					$file_data->key_dir			= $key_dir; // like 'tool_upload'
 					$file_data->tmp_name		= $name; // like 'phpv75h2K'
 					$file_data->error			= $file_to_upload['error']; // like 0
 					$file_data->size			= $file_to_upload['size']; // like 878860 (bytes)
 					$file_data->extension		= $extension;
+					$file_data->thumbnail_url	= $thumbnail_url ?? null;
 					$file_data->chunked			= $chunked;
-					$file_data->thumbnail_url 	= $thumbnail_url ?? null;
-
-					if($chunked) {
+					if($chunked===true) {
 						$file_data->total_chunks	= $total_chunks;
 						$file_data->chunk_index		= $chunk_index;
 					}
@@ -1063,7 +1057,10 @@ final class dd_utils_api {
 		}catch (RuntimeException $e) {
 
 			$response->msg .= ' Request failed: '. $e->getMessage();
-			debug_log(__METHOD__.PHP_EOL.$response->msg, logger::ERROR);
+			debug_log(__METHOD__
+				. ' RuntimeException catch. msg: '.$response->msg
+				, logger::ERROR
+			);
 		}
 
 
@@ -1099,14 +1096,14 @@ final class dd_utils_api {
 				$response->msg 		= 'Error. Request failed';
 
 		// file_path
-			$user_id = navigator::get_user_id();
-			$file_path = DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $key_dir;
+			$user_id	= navigator::get_user_id();
+			$file_path	= DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $key_dir;
 
 		// tmp_joined_file
 			$tmp_joined_file = 'tmp_'.$file_data->name;
 
 		// target path of the final file joined
-			$target_path = $file_path .'/'.$tmp_joined_file;
+			$target_path = $file_path .'/'. $tmp_joined_file;
 
 		// loop through temp files and grab the content
 			foreach ($files_chunked as $chunk_filename) {
@@ -1116,7 +1113,10 @@ final class dd_utils_api {
 				$chunk			= file_get_contents($temp_file_path);
 				if ( empty($chunk) ){
 					$response->msg = "Chunks are uploading as empty strings.";
-					debug_log(__METHOD__.PHP_EOL.$response->msg, logger::ERROR);
+					debug_log(__METHOD__
+						.' Error: '.$response->msg
+						, logger::ERROR
+					);
 					return $response;
 				}
 
@@ -1127,7 +1127,10 @@ final class dd_utils_api {
 				unlink($temp_file_path);
 				if ( file_exists($temp_file_path) ) {
 					$response->msg = "Your temp files could not be deleted.";
-					debug_log(__METHOD__.PHP_EOL.$response->msg, logger::ERROR);
+					debug_log(__METHOD__
+						.' Error: '.$response->msg
+						, logger::ERROR
+					);
 					return $response;
 				}
 			}
@@ -1151,11 +1154,11 @@ final class dd_utils_api {
 
 		// thumbnail
 			$thumb_options = new stdClass();
-				$thumb_options->tmp_dir			= $file_path;
-				$thumb_options->name			= $tmp_joined_file;
-				$thumb_options->target_path		= $target_path;
-				$thumb_options->key_dir	= $key_dir;
-				$thumb_options->user_id			= $user_id;
+				$thumb_options->tmp_dir		= $file_path;
+				$thumb_options->name		= $tmp_joined_file;
+				$thumb_options->target_path	= $target_path;
+				$thumb_options->key_dir		= $key_dir;
+				$thumb_options->user_id		= $user_id;
 			$thumbnail_url = dd_utils_api::create_thumbnail($thumb_options);
 
 		// set the file values
@@ -1198,7 +1201,7 @@ final class dd_utils_api {
 			$response->msg 		= 'Error. Request failed';
 
 		// options
-			$key_dir		= $rqo->options->key_dir ?? null;
+			$key_dir = $rqo->options->key_dir ?? null;
 
 		// dir
 			$user_id = navigator::get_user_id();
@@ -1273,7 +1276,10 @@ final class dd_utils_api {
 					if (file_exists($file_path) && !unlink($file_path)) {
 						$response->result	= false;
 						$response->msg		= "Error on delete file (unable to unlink file): ".to_string($file_path);
-						debug_log(__METHOD__." $response->msg", logger::ERROR);
+						debug_log(__METHOD__
+							." $response->msg"
+							, logger::ERROR
+						);
 					}
 
 				// thumb_path
@@ -1285,7 +1291,10 @@ final class dd_utils_api {
 					if (file_exists($thumb_file_path) && !unlink($thumb_file_path)) {
 						$response->result	= false;
 						$response->msg		= "Error on delete thumb file (unable to unlink file): ".to_string($thumb_file_path);
-						debug_log(__METHOD__." $response->msg", logger::ERROR);
+						debug_log(__METHOD__
+							." $response->msg"
+							, logger::ERROR
+						);
 					}
 			}//end foreach ($file_names as $file_name)
 
@@ -1296,9 +1305,6 @@ final class dd_utils_api {
 
 		return $response;
 	}//end delete_uploaded_file
-
-
-
 
 
 
