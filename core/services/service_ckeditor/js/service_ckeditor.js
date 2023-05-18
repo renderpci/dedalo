@@ -1088,12 +1088,9 @@ export const service_ckeditor = function() {
 	/**
 	* GET_LAST_TAG_ID
 	* Calculates all current text_editor editor tags id of given type (ex. 'tc') and get last used id
-	* @param options
+	* @param object options
 	*	object with the tag parameters, here use only tag_type to search in the ckeditor model structure
-	* @param tag_type
-	*	Class name of image searched like 'geo'
-	*
-	* @return int tag_id
+	* @return int last_tag_id
 	*/
 	this.get_last_tag_id = function(options) {
 
@@ -1114,6 +1111,7 @@ export const service_ckeditor = function() {
 
 		// ar_tag_id, array with all id of the tags nodes
 			const ar_tag_id = [0]
+
 		// Iterate over all items in this range:
 			for ( const value of range.getWalker({ ignoreElementEnd: true }) ) {
 
