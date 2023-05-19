@@ -16,18 +16,19 @@ $updates = new stdClass();
 	// CREATE INDEX IF NOT EXISTS matrix_rsc85_gin ON matrix USING gin(f_unaccent(datos#>>'{components, rsc85, dato}') gin_trgm_ops);
 
 
+
 $v=595; #####################################################################################
 $updates->$v = new stdClass();
 
 	# UPDATE TO
-	$updates->$v->version_major 	 = 5;
-	$updates->$v->version_medium 	 = 9;
-	$updates->$v->version_minor 	 = 6;
+	$updates->$v->version_major			= 5;
+	$updates->$v->version_medium		= 9;
+	$updates->$v->version_minor			= 6;
 
 	# MINIM UPDATE FROM
-	$updates->$v->update_from_major  = 5;
-	$updates->$v->update_from_medium = 8;
-	$updates->$v->update_from_minor  = 2;
+	$updates->$v->update_from_major		= 5;
+	$updates->$v->update_from_medium	= 8;
+	$updates->$v->update_from_minor		= 2;
 
 	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
 		CREATE INDEX IF NOT EXISTS rsc85_idx ON matrix ((datos#>>'{components,rsc85,dato,lg-nolan}'));
@@ -35,6 +36,7 @@ $updates->$v = new stdClass();
 		CREATE INDEX IF NOT EXISTS rsc85_rsc86_idx ON matrix ((datos#>>'{components,rsc85,dato,lg-nolan}'),(datos#>>'{components,rsc86,dato,lg-nolan}'));
 		CREATE INDEX IF NOT EXISTS rsc86_rsc85_idx ON matrix ((datos#>>'{components,rsc86,dato,lg-nolan}'),(datos#>>'{components,rsc85,dato,lg-nolan}'));
 	");
+
 
 
 $v=582; #####################################################################################
