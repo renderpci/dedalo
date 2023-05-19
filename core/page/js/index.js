@@ -103,7 +103,7 @@ const t0 = performance.now()
 		// page title update
 			const section_info = api_response.result.context.find(el => el.model==='section' || el.model.indexOf('area')===0)
 			if (section_info) {
-				document.title =  'V6 ' + section_info.tipo + ' ' + section_info.label
+				document.title =  'V6 ' + section_info.tipo + ' ' + section_info.label.replace(/<[^>]+>/ig,'');
 			}
 
 		// debug
