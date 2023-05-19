@@ -174,7 +174,7 @@ final class tools_register_Test extends TestCase {
 		if (isset($all_config_tool_client[0])) {
 			$this->assertTrue(
 				!empty($all_config_tool_client[0]->name),
-				'expected not empty name value '
+				'expected not empty tool name value '
 			);
 		}
 	}//end test_get_all_default_config_tool_client
