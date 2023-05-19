@@ -1309,7 +1309,7 @@ class component_relation_common extends component_common {
 		}//end switch (true)
 
 
-		// only for component_autocomplete_hi
+		// relations_search. only for component_autocomplete_hi
 			$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($component_tipo);
 			if ($legacy_model==='component_autocomplete_hi'){
 				$query_object = component_relation_common::add_relations_search($query_object);

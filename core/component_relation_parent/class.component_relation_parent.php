@@ -1157,4 +1157,6 @@ class component_relation_parent extends component_relation_common {
 		return $target_component_children_tipos;
 	}//end get_target_component_children_tipos
 
+
+
 }//end class component_relation_parent
