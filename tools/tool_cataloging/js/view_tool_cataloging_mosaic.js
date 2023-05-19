@@ -58,7 +58,7 @@ view_tool_cataloging_mosaic.render = async function(self, options) {
 
 			// columns
 				const hover_columns		= self.columns_map.filter(el => el.hover===true)
-				const hover_columns_map	= rebuild_columns_map(hover_columns, self, false)
+				const hover_columns_map	= await rebuild_columns_map(hover_columns, self, false)
 
 			// hover_view (body)
 				const hover_ar_section_record = await get_section_records({
@@ -373,7 +373,7 @@ const render_hover_view = async function(self, ar_section_record, hover_body) {
 * @param bool view_mosaic
 * @return obj full_columns_map
 */
-const rebuild_columns_map = function(base_columns_map, self, view_mosaic) {
+const rebuild_columns_map = async function(base_columns_map, self, view_mosaic) {
 
 	const full_columns_map = []
 
