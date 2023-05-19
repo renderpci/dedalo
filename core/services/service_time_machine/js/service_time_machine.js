@@ -20,16 +20,17 @@
 */
 export const service_time_machine = function () {
 
-	this.id				= null
-	this.model			= null
-	this.mode			= null
-	this.lang			= null
-	this.node			= null
-	this.ar_instances	= null
-	this.status			= null
-	this.events_tokens	= []
-	this.type			= null
-	this.caller			= null
+	this.id					= null
+	this.model				= null
+	this.mode				= null
+	this.lang				= null
+	this.node				= null
+	this.ar_instances		= null
+	this.status				= null
+	this.events_tokens		= []
+	this.type				= null
+	this.caller				= null
+	this.fixed_columns_map	= null
 }//end service_time_machine
 
 
@@ -204,6 +205,9 @@ service_time_machine.prototype.build = async function(autoload=false) {
 					event_manager.subscribe('paginator_goto_'+self.paginator.id , fn_paginator_goto)
 				)
 		}//end if (!self.paginator)
+
+	// reset fixed_columns_map (prevents to apply rebuild_columns_map more than once)
+		self.fixed_columns_map = false
 
 	// columns_map. Get the columns_map to use into the list
 		self.columns_map = get_columns_map(self.context)

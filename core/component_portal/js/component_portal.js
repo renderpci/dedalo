@@ -58,6 +58,8 @@ export const component_portal = function() {
 	// rqo
 	this.request_config_object	= null
 	this.rqo					= null
+
+	this.fixed_columns_map		= null
 }//end  component_portal
 
 
@@ -578,9 +580,12 @@ component_portal.prototype.build = async function(autoload=false) {
 			: null
 		// self.target_section = self.rqo.sqo.section_tipo
 
+	// reset fixed_columns_map (prevents to apply rebuild_columns_map more than once)
+		self.fixed_columns_map = false
+
 	// columns
 		// if(self.mode!=='list'){
-			self.columns_map = get_columns_map(self.context)
+			self.columns_map = await get_columns_map(self.context)
 		// }
 
 	// component_info add
@@ -750,7 +755,7 @@ component_portal.prototype.add_value = async function(value) {
 
 	// refresh self component
 		await self.refresh({
-			build_autoload	: false, //(self.mode==='search' ? true : false),
+			build_autoload	: false,
 			render_level	: 'content'
 		})
 
@@ -909,7 +914,7 @@ component_portal.prototype.filter_data_by_tag_id = function(options) {
 		return self.render({
 			render_level : 'content'
 		})
-}// end filter_data_by_tag_id
+}//end filter_data_by_tag_id
 
 
 

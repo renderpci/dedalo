@@ -54,8 +54,8 @@ view_coins_mosaic_portal.render = async function(self, options) {
 				})
 
 			// columns
-				const hover_columns	= self.columns_map.filter(el => el.hover===true)
-				const hover_columns_map	= rebuild_columns_map(hover_columns, self, false)
+				const hover_columns		= self.columns_map.filter(el => el.hover===true)
+				const hover_columns_map	= await rebuild_columns_map(hover_columns, self, false)
 
 			// hover_view (body)
 				const hover_ar_section_record = await get_section_records({
@@ -66,7 +66,7 @@ view_coins_mosaic_portal.render = async function(self, options) {
 				})
 				// store to allow destroy later
 				self.ar_instances.push(...hover_ar_section_record)
-				const hover_view	= await render_hover_view(self, hover_ar_section_record, hover_body)
+				const hover_view = await render_hover_view(self, hover_ar_section_record, hover_body)
 				hover_body.appendChild(hover_view)
 
 			return hover_body
@@ -76,7 +76,7 @@ view_coins_mosaic_portal.render = async function(self, options) {
 		// columns_map
 
 			const base_columns_map	= self.columns_map.filter(el => el.in_mosaic===true)
-			const columns_map		= rebuild_columns_map(base_columns_map, self, true)
+			const columns_map		= await rebuild_columns_map(base_columns_map, self, true)
 
 		// content_data
 			const ar_section_record	= await get_section_records({
@@ -409,7 +409,7 @@ const render_hover_view = async function(self, ar_section_record, hover_body) {
 * Adding control columns to the columns_map that will processed by section_recods
 * @return obj full_columns_map
 */
-const rebuild_columns_map = function(base_columns_map, self, view_mosaic) {
+const rebuild_columns_map = async function(base_columns_map, self, view_mosaic) {
 
 	const full_columns_map = []
 
