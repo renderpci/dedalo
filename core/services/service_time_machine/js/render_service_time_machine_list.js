@@ -219,6 +219,11 @@ export const get_content_data = async function(ar_section_record, self) {
 */
 export const rebuild_columns_map = async function(self) {
 
+	// columns_map already rebuilt case
+		if (self.fixed_columns_map===true) {
+			return self.columns_map
+		}
+
 	const columns_map = []
 
 	// columns base
@@ -263,6 +268,9 @@ export const rebuild_columns_map = async function(self) {
 
 			columns_map.push(el)
 		}
+
+	// fixed as calculated
+		self.fixed_columns_map = true
 
 
 	return columns_map
