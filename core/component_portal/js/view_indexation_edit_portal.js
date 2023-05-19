@@ -201,21 +201,21 @@ const rebuild_columns_map = async function(self) {
 		}
 
 	// info. render_info_column column add
-		columns_map.push({
+		const info_node = columns_map.push({
 			id			: 'info',
 			label		: 'Info',
 			callback	: render_info_column
 		})
 
-	// button_remove column add
-		if (self.permissions>1) {
-			columns_map.push({
-				id			: 'remove',
-				label		: '', // get_label.delete || 'Delete',
-				width		: 'auto',
-				callback	: render_column_remove
-			})
-		}
+	// button_remove column add (Moved to inside render_info_column for readability)
+		// if (self.permissions>1) {
+		// 	columns_map.push({
+		// 		id			: 'remove',
+		// 		label		: '', // get_label.delete || 'Delete',
+		// 		width		: 'auto',
+		// 		callback	: render_column_remove
+		// 	})
+		// }
 
 	// fixed as calculated
 		self.fixed_columns_map = true
@@ -346,7 +346,7 @@ const render_tag_column = function(options) {
 /**
 * RENDER_INFO_COLUMN
 * @param object options
-* @return HTMLElement info_node|null
+* @return HTMLElement DocumentFragment
 */
 const render_info_column = function(options) {
 
@@ -358,9 +358,11 @@ const render_info_column = function(options) {
 		const section_tipo		= locator.section_tipo
 		const target_section	= self.target_section
 
+	const fragment = new DocumentFragment()
+
 	// check vars
 		if (!section_tipo || !target_section) {
-			return null
+			return fragment // null
 		}
 
 		const found			= target_section.find(el => el.tipo===section_tipo)
@@ -368,12 +370,21 @@ const render_info_column = function(options) {
 			? found.label
 			: ''
 
+	// info_node
 		const info_node = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'note italic',
-			inner_html		: '[' + section_label + ']'
+			inner_html		: '[' + section_label + ']',
+			parent			: fragment
 		})
 
+	// remove node (former column_remove)
+		if (self.permissions>1) {
+			info_node.appendChild(
+				render_column_remove(options)
+			)
+		}
 
-	return info_node
+
+	return fragment
 }//end render_info_column
