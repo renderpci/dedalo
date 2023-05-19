@@ -62,6 +62,7 @@ export const section = function() {
 	this.rqo					= null
 
 	this.config					= null
+	this.fixed_columns_map		= null
 }//end section
 
 
@@ -700,6 +701,9 @@ section.prototype.build = async function(autoload=false) {
 				self.inspector = current_inspector
 			// }
 		}
+
+	// reset fixed_columns_map (prevents to apply rebuild_columns_map more than once)
+		self.fixed_columns_map = false
 
 	// columns_map. Get the columns_map to use into the list
 		self.columns_map = get_columns_map(self.context, self.datum.context)

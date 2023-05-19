@@ -241,6 +241,11 @@ const get_content_data = async function(self, ar_section_record) {
 */
 const rebuild_columns_map = async function(self) {
 
+	// columns_map already rebuilt case
+		if (self.fixed_columns_map===true) {
+			return self.columns_map
+		}
+
 	const columns_map = []
 
 	// column section_id check
@@ -275,6 +280,9 @@ const rebuild_columns_map = async function(self) {
 	// columns base
 		const base_columns_map = await self.columns_map
 		columns_map.push(...base_columns_map)
+
+	// fixed as calculated
+		self.fixed_columns_map = true
 
 
 	return columns_map
