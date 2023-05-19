@@ -43,8 +43,7 @@ view_line_edit_portal.render = async function(self, options) {
 		const render_level = options.render_level || 'full'
 
 	// columns_map
-		const columns_map	= rebuild_columns_map(self)
-		self.columns_map	= columns_map
+		self.columns_map = await rebuild_columns_map(self)
 
 	// view
 		const children_view	= self.context.children_view || self.context.view || 'default'
@@ -154,13 +153,18 @@ const get_content_data = async function(self, ar_section_record) {
 */
 const rebuild_columns_map = async function(self) {
 
+	// columns_map already rebuilt case
+		if (self.fixed_columns_map===true) {
+			return self.columns_map
+		}
+
 	const columns_map = []
 
 	// column section_id
 		columns_map.push({
 			id			: 'section_id',
 			label		: 'Id',
-			width 		: 'auto',
+			width		: 'auto',
 			callback	: view_line_edit_portal.render_column_id
 		})
 
@@ -182,10 +186,13 @@ const rebuild_columns_map = async function(self) {
 			columns_map.push({
 				id			: 'remove',
 				label		: '', // get_label.delete || 'Delete',
-				width 		: 'auto',
+				width		: 'auto',
 				callback	: view_line_edit_portal.render_column_remove
 			})
 		}
+
+	// fixed as calculated
+		self.fixed_columns_map = true
 
 
 	return columns_map
