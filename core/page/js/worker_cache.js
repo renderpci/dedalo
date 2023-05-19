@@ -111,7 +111,8 @@ self.onmessage = async function(e) {
 
 				case 'css':
 					// time: one day = 86400 (1 x 24 x 60 x 60)
-					headers.append('Cache-Control', 'stale-while-revalidate=86400');
+					// headers.append('Cache-Control', 'stale-while-revalidate=86400');
+					headers.append('Cache-Control', 'stale-while-revalidate=28800'); // 8 hours. 60*60*8
 					// mime: text/css
 					headers.append('Content-Type', 'text/css');
 					break;
