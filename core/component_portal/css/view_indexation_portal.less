@@ -14,7 +14,8 @@
 
 		.section_record.list {
 			display: flex;
-			align-items: stretch;
+			flex-wrap: wrap;
+			align-items: center;
 			border-bottom: 1px solid #eeeeee;
 			width: 100%;
 			margin-bottom: 1px;
@@ -27,12 +28,14 @@
 				background-color: @color_grey_untralight;
 			}
 
-			.column {
+			>.column {
 				display: flex;
 				flex: 0 0 auto;
 				outline: none;
 				width: auto;
 				align-items: center;
+				box-shadow: none;
+				// display: contents;
 
 				&.column_remove, &.column_section_id {
 					background-color: unset;
@@ -43,7 +46,7 @@
 				}
 
 				&.column_section_id {
-				    padding-right: 0.25rem;
+					padding-right: 0.25rem;
 				}
 
 				&.column_info {

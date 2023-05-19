@@ -774,19 +774,25 @@ final class dd_utils_api {
 	* Manages given upload file
 	* Sample expected $json_data:
 	* {
-	*	"action": "upload",
-	* 	"options": {
-	*		"file_to_upload": { 	(assoc array)
-	*			"name"			: "exported_plantillas-web_-1-dd477.csv",
-	*			"full_path"		: "exported_plantillas-web_-1-dd477.csv",
-	*			"type"			: "text/csv",
-	*			"tmp_name"		: "/private/var/tmp/phpQ02UUO",
-	* 			"key_dir"		: "svg",
-	*			"error"			: 0,
-	*			"size"			: 29892
-	*		},
-	* 		"chunked": false,
-	* 	}
+		"action": "upload",
+	    "dd_api": "dd_utils_api",
+	    "options": {
+	        "key_dir": "av",
+	        "file_name": "foc-intro.mp4",
+	        "chunked": "true",
+	        "start": "2097152",
+	        "end": "4194304",
+	        "chunk_index": "1",
+	        "total_chunks": "19",
+	        "file_to_upload": {
+	            "name": "blob",
+	            "full_path": "blob",
+	            "type": "application/octet-stream",
+	            "tmp_name": "/private/var/tmp/phprfdEk5",
+	            "error": 0,
+	            "size": 2097152
+	        }
+	    }
 	* }
 	* @param object $rqo
 	* @return object $response

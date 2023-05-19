@@ -23,31 +23,31 @@
 export const component_text_area = function(){
 
 	// element properties declare
-		this.model			= null
-		this.tipo			= null
-		this.section_tipo	= null
-		this.section_id		= null
-		this.mode			= null
-		this.lang			= null
+	this.model			= null
+	this.tipo			= null
+	this.section_tipo	= null
+	this.section_id		= null
+	this.mode			= null
+	this.lang			= null
 
-		this.section_lang	= null
-		this.context		= null
-		this.data			= null
-		this.parent			= null
-		this.node			= null
-		this.id				= null
+	this.section_lang	= null
+	this.context		= null
+	this.data			= null
+	this.parent			= null
+	this.node			= null
+	this.id				= null
 
-		this.tag			= null // user selected tag DOM element (set on event click_tag_index_)
-		this.text_editor	= [] // array. current active text_editor (service_tinymce) for current node
-		this.events_tokens	= []
-		// this.services	= []
+	this.tag			= null // user selected tag DOM element (set on event click_tag_index_)
+	this.text_editor	= [] // array. current active text_editor (service_tinymce) for current node
+	this.events_tokens	= []
+	// this.services	= []
 
-		// service_text_editor. Name of desired service  to call (service_ckeditor|service_tinymce)
-		this.service_text_editor			= null
-		// service_text_editor_instance. array of created service instances based on input key (one is expected)
-		this.service_text_editor_instance	= []
-		// auto_init_editor. default is false. To activate, set Ontology property 'auto_init_editor' as true, or configure this component in run-time from tool (like tool_indexation do)
-		this.auto_init_editor				= undefined
+	// service_text_editor. Name of desired service  to call (service_ckeditor|service_tinymce)
+	this.service_text_editor			= null
+	// service_text_editor_instance. array of created service instances based on input key (one is expected)
+	this.service_text_editor_instance	= []
+	// auto_init_editor. default is false. To activate, set Ontology property 'auto_init_editor' as true, or configure this component in run-time from tool (like tool_indexation do)
+	this.auto_init_editor				= undefined
 }//end component_text_area
 
 
