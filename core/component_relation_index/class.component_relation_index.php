@@ -8,12 +8,14 @@ class component_relation_index extends component_relation_common {
 
 
 
+	/**
+ 	* @var
+ 	*/
 	// relation_type defaults
-	protected $default_relation_type		= DEDALO_RELATION_TYPE_INDEX_TIPO;
+	protected $default_relation_type		= DEDALO_RELATION_TYPE_INDEX_TIPO; // dd96
 	protected $default_relation_type_rel	= null;
-
 	// test_equal_properties is used to verify duplicates when add locators
-	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo','component_tipo','tag_id');
+	public $test_equal_properties			= ['section_tipo','section_id','type','from_component_tipo','component_tipo','tag_id'];
 
 
 
@@ -89,7 +91,7 @@ class component_relation_index extends component_relation_common {
 	* @return array $dato
 	*	$dato is always an array of locators or an empty array
 	*/
-	public function get_dato_full() {
+	public function get_dato_full() : ?array {
 
 		return $this->get_dato();
 	}//end get_dato_full
@@ -101,42 +103,41 @@ class component_relation_index extends component_relation_common {
 	* @param locator $locator
 	* @return object $datum
 	*/
-	public function get_section_datum_from_locator( locator $locator) {
-
-		$context = [];
-
-
-	// context
-		if(!isset($this->context)){
-			$permissions	= $this->get_component_permissions();
-			$this->context	= $this->get_structure_context(
-				$permissions,
-				true // add_request_config
-			);
-		}
-
-		$current_section_tipo	= $locator->section_tipo;
-		$current_section_id		= $locator->section_id;
+	public function get_section_datum_from_locator( locator $locator) : object {
 
 		// cache
-		$solved_section_datum_tipo_cache =[];
+			$solved_section_datum_tipo =[];
 
-		//
-		$section = section::get_instance(
-			$current_section_id,
-			$current_section_tipo,
-			'related_list'
-		);
+		// context. Calculate if not already resolved
+			if(!isset($this->context)) {
+				$permissions	= $this->get_component_permissions();
+				$this->context	= $this->get_structure_context(
+					$permissions,
+					true // add_request_config
+				);
+			}
+
+		// short vars
+			$current_section_tipo	= $locator->section_tipo;
+			$current_section_id		= $locator->section_id;
+
+		// section
+			$section = section::get_instance(
+				$current_section_id,
+				$current_section_tipo,
+				'related_list'
+			);
 
 		$section_datum	= $section->get_json();
 		$ar_subcontext	= $section_datum->context;
 
 		// the the different request_config to be used as configured request_config of the component
+		$context = [];
 		foreach ($ar_subcontext as $current_context) {
 
 			if ($current_context->model ==='section'
 				&& $current_context->tipo === $current_section_tipo
-				&& !in_array($current_section_tipo, $solved_section_datum_tipo_cache)) {
+				&& !in_array($current_section_tipo, $solved_section_datum_tipo)) {
 				// get the section request config (we will use his request config)
 				// if the locator has more than 1 section_tipo, will be stored the new request inside the request_config array
 				$original_request_config = $current_context->request_config;
@@ -157,10 +158,10 @@ class component_relation_index extends component_relation_common {
 					return $el->api_engine==='dedalo';
 				});
 
-				$final_request_config->show->ddo_map = array_merge($final_request_config->show->ddo_map, $section_request_config->show->ddo_map);
+				$final_request_config->show->ddo_map     = array_merge($final_request_config->show->ddo_map, $section_request_config->show->ddo_map);
 				$final_request_config->sqo->section_tipo = array_merge($final_request_config->sqo->section_tipo, $section_request_config->sqo->section_tipo);
 
-				$solved_section_datum_tipo_cache[] = $current_section_tipo;
+				$solved_section_datum_tipo[] = $current_section_tipo;
 			}
 
 			$current_context->parent = $this->tipo;
@@ -168,20 +169,23 @@ class component_relation_index extends component_relation_common {
 			$context[] = $current_context;
 		}
 
-		$datum = new stdClass();
-			$datum->context = $context;
-			$datum->data = $section_datum->data;
+		// datum object
+			$datum = new stdClass();
+				$datum->context	= $context;
+				$datum->data	= $section_datum->data;
+
 
 		return $datum;
-
 	}//end get_section_datum_from_locator
+
+
 
 	/**
 	* GET_VALOR
 	* Get value . default is get dato . overwrite in every different specific component
 	* @return string | null $valor
 	*/
-	public function get_valor($lang=DEDALO_DATA_LANG) {
+	public function get_valor( $lang=DEDALO_DATA_LANG ) {
 
 		$dato = $this->get_dato();
 		if (empty($dato)) {
@@ -229,8 +233,11 @@ class component_relation_index extends component_relation_common {
 		// preserve v5 order (old webs compatibility
 		// [{"type":"dd96","tag_id":"29","section_id":"30","section_tipo":"rsc167","component_tipo":"rsc36","section_top_id":"26","section_top_tipo":"oh1","from_component_tipo":"hierarchy40"}]
 		if (empty($dato)) {
+
 			$diffusion_value = null;
+
 		}else{
+
 			$diffusion_dato = [];
 			foreach ($dato as $current_locator) {
 
@@ -355,7 +362,7 @@ class component_relation_index extends component_relation_common {
 		];
 
 		# Add current locator to component dato
-		if (!$remove_locator_locator = $this->remove_locator_from_dato($locator, $ar_properties)) {
+		if (!$this->remove_locator_from_dato($locator, $ar_properties)) {
 			return false;
 		}
 
