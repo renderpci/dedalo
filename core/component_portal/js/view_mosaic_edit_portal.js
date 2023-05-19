@@ -75,7 +75,7 @@ view_mosaic_edit_portal.render = async function(self, options) {
 				})
 
 			// columns
-				const alt_columns_map	= rebuild_columns_map(self.columns_map, self, false)
+				const alt_columns_map	= await rebuild_columns_map(self.columns_map, self, false)
 
 			// header. Build using common ui builder
 				const list_header_node = ui.render_list_header(alt_columns_map, self)
@@ -121,8 +121,8 @@ view_mosaic_edit_portal.render = async function(self, options) {
 				}
 
 			// columns
-				const hover_columns	= self.columns_map.filter(el => el.hover===true)
-				const hover_columns_map	= rebuild_columns_map(hover_columns, self, false)
+				const hover_columns		= self.columns_map.filter(el => el.hover===true)
+				const hover_columns_map	= await rebuild_columns_map(hover_columns, self, false)
 
 			// hover_view (body)
 				const hover_ar_section_record = await get_section_records({
@@ -142,7 +142,7 @@ view_mosaic_edit_portal.render = async function(self, options) {
 	// content_data. Create the mosaic with only the marked ddo as "mosaic" with true value
 		// columns_map
 			const base_columns_map	= self.columns_map.filter(el => el.in_mosaic===true)
-			const columns_map		= rebuild_columns_map(base_columns_map, self, true)
+			const columns_map		= await rebuild_columns_map(base_columns_map, self, true)
 
 		// content_data
 			// self.id_variant = self.id_variant
@@ -554,7 +554,7 @@ const render_hover_view = async function(self, ar_section_record, hover_body) {
 * Adding control columns to the columns_map that will processed by section_recods
 * @return obj full_columns_map
 */
-const rebuild_columns_map = function(base_columns_map, self, view_mosaic) {
+const rebuild_columns_map = async function(base_columns_map, self, view_mosaic) {
 
 	const full_columns_map = []
 

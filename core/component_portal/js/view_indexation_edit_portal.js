@@ -48,13 +48,27 @@ view_indexation_edit_portal.render = async function(self, options) {
 		const render_level = options.render_level || 'full'
 
 	// columns_map
-		const columns_map = rebuild_columns_map(self)
-		self.columns_map = columns_map
+		self.columns_map = await rebuild_columns_map(self)
+
+	// value_combined (grouped by tag id)
+		const data	= self.data || {}
+		const value	= data.value || []
+		const value_combined = []
+		const value_length = value.length
+		for (let i = 0; i < value_length; i++) {
+			const item = value[i]
+			const found = value_combined.find(el => el.section_tipo===item.section_tipo && el.section_id===item.section_id)
+			if (!found) {
+				value_combined.push(item)
+			}
+		}
 
 	// ar_section_record
 		const ar_section_record	= await get_section_records({
-			caller	: self,
-			mode	: 'list'
+			caller		: self,
+			mode		: 'list',
+			columns_map	: self.columns_map,
+			value		: value_combined
 		})
 		// store to allow destroy later
 		self.ar_instances.push(...ar_section_record)
@@ -76,6 +90,7 @@ view_indexation_edit_portal.render = async function(self, options) {
 		// set pointers
 		wrapper.content_data = content_data
 
+
 	return wrapper
 }//end render
 
@@ -84,12 +99,16 @@ view_indexation_edit_portal.render = async function(self, options) {
 /**
 * GET_CONTENT_DATA
 * Render all received section records and place it into a new div 'content_data'
+* @param object self
+* @param array ar_section_record
 * @return HTMLElement content_data
 */
 const get_content_data = async function(self, ar_section_record) {
 
 	// build_values
 		const fragment = new DocumentFragment()
+
+		const section_records_nodes = []
 
 		// add all section_record rendered nodes
 			const ar_section_record_length	= ar_section_record.length
@@ -106,12 +125,18 @@ const get_content_data = async function(self, ar_section_record) {
 					ar_promises.push(render_promise)
 				}
 				await Promise.all(ar_promises).then(function(values) {
-				  for (let i = 0; i < ar_section_record_length; i++) {
 
-					const section_record = values[i]
+					// sort values alphabetically
+						values.sort((a,b)=>a.innerText>b.innerText?1:-1)
 
-					fragment.appendChild(section_record)
-				  }
+					for (let i = 0; i < ar_section_record_length; i++) {
+
+						const section_record = values[i]
+
+						// console.log('section_record.innerText:', section_record.innerText);
+
+						fragment.appendChild(section_record)
+					}
 				});
 			}//end if (ar_section_record_length===0)
 
@@ -134,9 +159,15 @@ const get_content_data = async function(self, ar_section_record) {
 /**
 * REBUILD_COLUMNS_MAP
 * Adding control columns to the columns_map that will processed by section_recods
+* @param object self
 * @return obj columns_map
 */
 const rebuild_columns_map = async function(self) {
+
+	// columns_map already rebuilt case
+		if (self.fixed_columns_map===true) {
+			return self.columns_map
+		}
 
 	const columns_map = []
 
@@ -148,16 +179,6 @@ const rebuild_columns_map = async function(self) {
 			callback	: render_column_id
 		})
 
-	// button_remove column add
-		if (self.permissions>1) {
-			columns_map.push({
-				id			: 'remove',
-				label		: '', // get_label.delete || 'Delete',
-				width 		: 'auto',
-				callback	: render_column_remove
-			})
-		}
-
 	// regular columns add
 		const base_columns_map = await self.columns_map
 		columns_map.push(...base_columns_map)
@@ -166,11 +187,11 @@ const rebuild_columns_map = async function(self) {
 		columns_map.push({
 			id			: 'tag',
 			label		: 'Tag',
-			width 		: 'auto',
+			width		: 'auto',
 			callback	: render_tag_column
 		})
 
-	// component_info column add
+	// ddinfo. column_component_info column add
 		if (self.add_component_info===true) {
 			columns_map.push({
 				id			: 'ddinfo',
@@ -179,12 +200,25 @@ const rebuild_columns_map = async function(self) {
 			})
 		}
 
-	// component_info column add
+	// info. render_info_column column add
 		columns_map.push({
 			id			: 'info',
 			label		: 'Info',
 			callback	: render_info_column
 		})
+
+	// button_remove column add
+		if (self.permissions>1) {
+			columns_map.push({
+				id			: 'remove',
+				label		: '', // get_label.delete || 'Delete',
+				width		: 'auto',
+				callback	: render_column_remove
+			})
+		}
+
+	// fixed as calculated
+		self.fixed_columns_map = true
 
 
 	return columns_map
@@ -197,7 +231,7 @@ const rebuild_columns_map = async function(self) {
 * @param object options
 * @return DOM DocumentFragment
 */
-const render_column_id = function(options){
+const render_column_id = function(options) {
 
 	// options
 		const self 			= options.caller
@@ -263,26 +297,48 @@ const render_column_id = function(options){
 /**
 * RENDER_TAG_COLUMN
 * @param object options
-* @return HTMLElement tag_node
+* @return HTMLElement DocumentFragment
 */
-const render_tag_column = function(options){
+const render_tag_column = function(options) {
 
 	// options
 		const locator = options.locator
+		const data	= options.caller.data || {}
+		const value	= data.value || []
+		const value_tags = value.filter(el => el.section_tipo===locator.section_tipo && el.section_id==locator.section_id)
+		// const value_tags = [locator]
 
-	// tag_id
-		const tag_id	= locator.tag_id ?? null
-		const tag_label	= tag_id
-			// ? '- '+ (get_label.tag || 'Tag') + ': ' + tag_id
-			// : ''
+	const fragment = new DocumentFragment()
 
-	const tag_node = ui.create_dom_element({
-		element_type    : 'div',
-		class_name		: 'tags',
-		inner_html		: tag_label
-	})
+	// add a tag for each value
+		const value_tags_length = value_tags.length
+		for (let i = 0; i < value_tags_length; i++) {
 
-	return tag_node
+			const current_locator = value_tags[i]
+
+			const tag_node = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'tags',
+				inner_html		: current_locator.tag_id || null,
+				parent			: fragment
+			})
+			tag_node.addEventListener('click', function(e) {
+				console.log('@todo : Add event and subscribe from component_text_area to allow auto selection of current tag:', current_locator.tag_id);
+
+				// @todo : Add event and subscribe from component_text_area to allow auto selection of current tag
+
+				// const id_base = current_locator.section_tipo + '_' + current_locator.section_id + '_' + 'rsc36'; // like rsc167_14_rsc36
+				// event_manager.publish('click_tag_index_'+ self.id_base, {
+				// 	tag: tag_obj,
+				// 	caller: self,
+				// 	text_editor: text_editor
+				// })
+				// text_editor.set_selection_from_tag(tag_obj)
+			})
+		}
+
+
+	return fragment
 }//end render_tag_column
 
 
@@ -292,7 +348,7 @@ const render_tag_column = function(options){
 * @param object options
 * @return HTMLElement info_node|null
 */
-const render_info_column = function(options){
+const render_info_column = function(options) {
 
 	// options
 		const locator	= options.locator
@@ -313,7 +369,7 @@ const render_info_column = function(options){
 			: ''
 
 		const info_node = ui.create_dom_element({
-			element_type    : 'div',
+			element_type	: 'div',
 			class_name		: 'note italic',
 			inner_html		: '[' + section_label + ']'
 		})
