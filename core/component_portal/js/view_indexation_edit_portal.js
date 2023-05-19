@@ -64,11 +64,16 @@ view_indexation_edit_portal.render = async function(self, options) {
 		}
 
 	// ar_section_record
+		const id_variant = self.active_tag && self.active_tag.tag
+			? self.id_variant + '_' + self.active_tag.tag.tag_id
+			: self.id_variant + '_' + (new Date()).getTime()
+
 		const ar_section_record	= await get_section_records({
 			caller		: self,
 			mode		: 'list',
 			columns_map	: self.columns_map,
-			value		: value_combined
+			value		: value_combined,
+			id_variant	: id_variant
 		})
 		// store to allow destroy later
 		self.ar_instances.push(...ar_section_record)

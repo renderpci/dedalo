@@ -305,6 +305,7 @@
 					}
 				}
 
+				// indexation_container
 				>.indexation_container {
 					// background-color: #b5ffbc;
 					// margin-top: 0.5rem;
@@ -316,9 +317,11 @@
 					>.component_indexing_container {
 						flex: 1;
 						grid-area: unset;
-						// background-color: #cdf64f !important;
-						>.wrapper_component {
-							// height: 100%;
+
+						>.wrapper_component.component_portal {
+							>.content_data {
+								height: calc(37vh - 5rem);
+							}
 						}
 					}
 
