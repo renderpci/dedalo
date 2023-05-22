@@ -54,9 +54,6 @@ render_edit_component_radio_button.prototype.edit = async function(options) {
 		default:
 			return view_default_edit_radio_button.render(self, options)
 	}
-
-
-	return null
 }//end edit
 
 
