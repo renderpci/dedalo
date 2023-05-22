@@ -441,6 +441,41 @@ final class component_text_area_test extends TestCase {
 
 
 	/**
+	* TEST_get_related_component_select_lang
+	* @return void
+	*/
+	public function test_get_related_component_select_lang() {
+
+		$model			= self::$model;
+		$tipo			= 'rsc36';
+		$section_tipo	= 'rsc167';
+		$section_id		= 1;
+		$mode			= 'list';
+		$lang			= DEDALO_DATA_LANG;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo,
+			false
+		);
+
+		$value = $component->get_related_component_select_lang();
+
+		$this->assertTrue(
+			$value==='rsc263',
+				'expected value do not match:' . PHP_EOL
+				.' expected: rsc263' . PHP_EOL
+				.' value: '.to_string($value)
+		);
+	}//end test_get_related_component_select_lang
+
+
+
+	/**
 	* TEST_get_component_indexations
 	* @return void
 	*/
@@ -475,6 +510,863 @@ final class component_text_area_test extends TestCase {
 	}//end test_get_component_indexations
 
 
+
+	/**
+	* TEST_get_component_indexations_term_id
+	* @return void
+	*/
+	public function test_get_component_indexations_term_id() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'list';
+		$lang			= DEDALO_DATA_LANG;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo,
+			false
+		);
+
+		$value = $component->get_component_indexations_term_id('fake value');
+
+		$this->assertTrue(
+			$value==='[]',
+				'expected value do not match:' . PHP_EOL
+				.' expected: []' . PHP_EOL
+				.' value: '.to_string($value)
+		);
+	}//end test_get_component_indexations_term_id
+
+
+
+	/**
+	* TEST_get_component_indexations_terms
+	* @return void
+	*/
+	public function test_get_component_indexations_terms() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'list';
+		$lang			= DEDALO_DATA_LANG;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo,
+			false
+		);
+
+		$value = $component->get_component_indexations_terms();
+
+		$this->assertTrue(
+			$value===[],
+				'expected value do not match:' . PHP_EOL
+				.' expected: []' . PHP_EOL
+				.' value: '.to_string($value)
+		);
+	}//end test_get_component_indexations_terms
+
+
+
+	/**
+	* TEST_get_annotations
+	* @return void
+	*/
+	public function test_get_annotations() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'list';
+		$lang			= DEDALO_DATA_LANG;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo,
+			false
+		);
+
+		$value = $component->get_annotations();
+
+		$this->assertTrue(
+			$value===null,
+				'expected value do not match:' . PHP_EOL
+				.' expected: null' . PHP_EOL
+				.' value: '.to_string($value)
+		);
+
+		$component = component_common::get_instance(
+			$model, // string model
+			'rsc36', // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			'rsc167',
+			false
+		);
+
+		$value = $component->get_annotations();
+
+		$this->assertTrue(
+			!empty($value),
+				'expected value do not match:' . PHP_EOL
+				.' expected: !empty()' . PHP_EOL
+				.' value: '.to_string($value)
+		);
+	}//end test_get_annotations
+
+
+
+	/**
+	* TEST_get_diffusion_value
+	* @return void
+	*/
+	public function test_get_diffusion_value() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'list';
+		$lang			= DEDALO_DATA_LANG;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo,
+			false
+		);
+
+		$value = $component->get_diffusion_value();
+
+		$this->assertTrue(
+			gettype($value)==='string',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: string' . PHP_EOL
+				.' type: '.gettype($value)
+		);
+
+		$this->assertTrue(
+			!empty($value),
+				'expected value do not match:' . PHP_EOL
+				.' expected: !empty()' . PHP_EOL
+				.' value: '.to_string($value)
+		);
+	}//end test_get_diffusion_value
+
+
+
+	/**
+	* TEST_get_diffusion_value_with_images
+	* @return void
+	*/
+	public function test_get_diffusion_value_with_images() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'list';
+		$lang			= DEDALO_DATA_LANG;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo,
+			false
+		);
+
+		$value = $component->get_diffusion_value_with_images();
+
+		$this->assertTrue(
+			gettype($value)==='string',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: string' . PHP_EOL
+				.' type: '.gettype($value)
+		);
+
+		$this->assertTrue(
+			!empty($value),
+				'expected value do not match:' . PHP_EOL
+				.' expected: !empty()' . PHP_EOL
+				.' value: '.to_string($value)
+		);
+	}//end test_get_diffusion_value_with_images
+
+
+
+	/**
+	* TEST_get_related_sections
+	* @return void
+	*/
+	public function test_get_related_sections() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'list';
+		$lang			= DEDALO_DATA_LANG;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo,
+			false
+		);
+
+		$response = $component->get_related_sections();
+
+		$this->assertTrue(
+			gettype($response)==='object',
+				'expected response do not match:' . PHP_EOL
+				.' expected type: object' . PHP_EOL
+				.' type: '.gettype($response)
+		);
+
+		$this->assertTrue(
+			gettype($response->context)==='array',
+				'expected response do not match:' . PHP_EOL
+				.' expected type: array' . PHP_EOL
+				.' type: '.gettype($response)
+		);
+		$this->assertTrue(
+			gettype($response->data)==='array',
+				'expected response do not match:' . PHP_EOL
+				.' expected type: array' . PHP_EOL
+				.' type: '.gettype($response)
+		);
+	}//end test_get_related_sections
+
+
+
+	/**
+	* TEST_get_tags_persons
+	* Note that this method is only used in JSON file
+	* and this test simulate the same behavior
+	* @return void
+	*/
+	public function test_get_tags_persons() {
+
+		$model			= self::$model;
+		$tipo			= 'rsc36';
+		$section_tipo	= 'rsc167';
+		$section_id		= 1;
+		$mode			= 'list';
+		$lang			= DEDALO_DATA_LANG;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo,
+			false
+		);
+
+		$related_sections = $component->get_related_sections();
+		// tags_persons
+		$tags_persons = [];
+		// related_sections
+		$obj_data_sections = array_find($related_sections->data, function($el){
+			return $el->typo==='sections';
+		});
+		$ar_related_sections	= $obj_data_sections->value ?? [];
+		$properties				= $component->get_properties();
+		$tags_persons_config	= $properties->tags_persons;
+		foreach ($tags_persons_config as $related_section_tipo => $current_value) {
+			$ar_tags_persons	=  $component->get_tags_persons($related_section_tipo, $ar_related_sections);
+			$tags_persons		= array_merge($tags_persons, $ar_tags_persons);
+		}
+
+		$value = $tags_persons;
+
+		$this->assertTrue(
+			gettype($value)==='array',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: array' . PHP_EOL
+				.' type: '.gettype($value)
+		);
+
+		$this->assertTrue(
+			!empty($value),
+				'expected value do not match:' . PHP_EOL
+				.' expected: !empty()' . PHP_EOL
+				.' value: '.to_string($value)
+		);
+	}//end test_get_tags_persons
+
+
+
+	/**
+	* TEST_build_tag_person
+	* @return void
+	*/
+	public function test_build_tag_person() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'list';
+		$lang			= DEDALO_DATA_LANG;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo,
+			false
+		);
+
+		$value = $component->build_tag_person([
+			'tag_id'	=> '1',
+			'state'		=> 'n',
+			'label'		=> 'Tag 1 label',
+			'data'		=> '[mydata:xxxx]'
+		]);
+
+		$this->assertTrue(
+			$value==='[person-n-1-Tag 1 label-data:\'[mydata:xxxx]\':data]',
+				'expected value do not match:' . PHP_EOL
+				.' expected: [person-n-1-Tag 1 label-data:\'[mydata:xxxx]\':data]' . PHP_EOL
+				.' type: '. $value
+		);
+	}//end test_build_tag_person
+
+
+
+	/**
+	* TEST_get_tag_person_label
+	* @return void
+	*/
+	public function test_get_tag_person_label() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'list';
+		$lang			= DEDALO_DATA_LANG;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo,
+			false
+		);
+
+		$locator = json_decode('{
+		    "section_tipo": "rsc197",
+		    "section_id": "1",
+		    "component_tipo": "rsc50"
+		}');
+
+		$value = $component->get_tag_person_label(
+			$locator
+		);
+
+		// expected result like :
+			// {
+			//     "initials": "JosLoBe",
+			//     "full_name": "Jose Javier Lope Betelchiuses",
+			//     "role": "Interviewer"
+			// }
+
+		$this->assertTrue(
+			!empty($value),
+				'expected value do not match:' . PHP_EOL
+				.' expected: !empty()' . PHP_EOL
+				.' value: '.to_string($value)
+		);
+		$this->assertTrue(
+			!empty($value->initials),
+				'expected value do not match:' . PHP_EOL
+				.' expected: !empty()' . PHP_EOL
+				.' value: '.to_string($value->initials)
+		);
+		$this->assertTrue(
+			!empty($value->full_name),
+				'expected value do not match:' . PHP_EOL
+				.' expected: !empty()' . PHP_EOL
+				.' value: '.to_string($value->full_name)
+		);
+		$this->assertTrue(
+			!empty($value->role),
+				'expected value do not match:' . PHP_EOL
+				.' expected: !empty()' . PHP_EOL
+				.' value: '.to_string($value->role)
+		);
+	}//end test_get_tag_person_label
+
+
+
+	/**
+	* TEST_person_used
+	* @return void
+	*/
+		// public function test_person_used() {
+
+		// 	$model			= self::$model;
+		// 	$tipo			= self::$tipo;
+		// 	$section_tipo	= self::$section_tipo;
+		// 	$section_id		= 1;
+		// 	$mode			= 'list';
+		// 	$lang			= DEDALO_DATA_LANG;
+
+		// 	// $component = component_common::get_instance(
+		// 	// 	$model, // string model
+		// 	// 	$tipo, // string tipo
+		// 	// 	$section_id,
+		// 	// 	$mode,
+		// 	// 	$lang,
+		// 	// 	$section_tipo,
+		// 	// 	false
+		// 	// );
+
+		// 	$locator = json_decode('{
+		// 		"section_tipo"	: "rsc197",
+		// 		"section_id"	: "1"
+		// 	}');
+
+		// 	$value = component_text_area::person_used(
+		// 		$locator
+		// 	);
+		// 	dump($value, ' value ++ '.to_string());
+		// 	// expected result like :
+		// 		// {
+		// 		//     "initials": "JosLoBe",
+		// 		//     "full_name": "Jose Javier Lope Betelchiuses",
+		// 		//     "role": "Interviewer"
+		// 		// }
+
+		// 	// $this->assertTrue(
+		// 	// 	!empty($value),
+		// 	// 		'expected value do not match:' . PHP_EOL
+		// 	// 		.' expected: !empty()' . PHP_EOL
+		// 	// 		.' value: '.to_string($value)
+		// 	// );
+
+		// }//end test_person_used
+
+
+
+	/**
+	* TEST_regenerate_component
+	* @return void
+	*/
+	public function test_regenerate_component() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'list';
+		$lang			= DEDALO_DATA_LANG;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo,
+			false
+		);
+
+		$value = $component->regenerate_component();
+
+		$this->assertTrue(
+			$value===true,
+				'expected value do not match:' . PHP_EOL
+				.' expected: true' . PHP_EOL
+				.' value: '.to_string($value)
+		);
+	}//end test_regenerate_component
+
+
+
+	/**
+	* TEST_build_geolocation_data
+	* @return void
+	*/
+	public function test_build_geolocation_data() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'list';
+		$lang			= DEDALO_DATA_LANG;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo,
+			false
+		);
+
+		$dato = $component->get_dato();
+
+		$value = $component->build_geolocation_data(
+			$dato, // array raw_data
+			false // bool $geojson
+		);
+
+		$this->assertTrue(
+			gettype($value)==='array',
+				'expected value do not match:' . PHP_EOL
+				.' expected: array' . PHP_EOL
+				.' value: '.gettype($value)
+		);
+	}//end test_build_geolocation_data
+
+
+
+	/**
+	* TEST_resolve_query_object_sql
+	* @return void
+	*/
+	public function test_resolve_query_object_sql() {
+
+		// $model			= self::$model;
+		// $tipo			= self::$tipo;
+		// $section_tipo	= self::$section_tipo;
+		// $section_id		= 1;
+		// $mode			= 'list';
+		// $lang			= DEDALO_DATA_LANG;
+
+		// $component = component_common::get_instance(
+		// 	$model, // string model
+		// 	$tipo, // string tipo
+		// 	$section_id,
+		// 	$mode,
+		// 	$lang,
+		// 	$section_tipo,
+		// 	false
+		// );
+
+		$query_object = json_decode('{
+		    "q": [
+		        "as"
+		    ],
+		    "q_operator": null,
+		    "path": [
+		        {
+		            "section_tipo": "oh1",
+		            "component_tipo": "oh23",
+		            "model": "component_text_area",
+		            "name": "Summary"
+		        }
+		    ],
+		    "type": "jsonb",
+		    "component_path": [
+		        "components",
+		        "oh23",
+		        "dato"
+		    ],
+		    "lang": "all"
+		}');
+
+		$value = component_text_area::resolve_query_object_sql(
+			$query_object
+		);
+		// dump($value, ' value ++ '.to_string());
+
+		$this->assertTrue(
+			$value->operator==='~*',
+				'expected value do not match:' . PHP_EOL
+				.' expected: ~*' . PHP_EOL
+				.' value: '.to_string($value->operator)
+		);
+		$this->assertTrue(
+			$value->q_parsed==="'.*\".*as.*'",
+				'expected value do not match:' . PHP_EOL
+				.' expected: '. "'.*\".*as.*'" . PHP_EOL
+				.' value: '.to_string($value->q_parsed)
+		);
+		$this->assertTrue(
+			$value->unaccent===true,
+				'expected value do not match:' . PHP_EOL
+				.' expected: true' . PHP_EOL
+				.' value: '.to_string($value->unaccent)
+		);
+	}//end test_resolve_query_object_sql
+
+
+
+	/**
+	* TEST_search_operators_info
+	* @return void
+	*/
+	public function test_search_operators_info() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'list';
+		$lang			= DEDALO_DATA_LANG;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo,
+			false
+		);
+
+		$value = $component->search_operators_info();
+
+		$this->assertTrue(
+			gettype($value)==='array',
+				'expected value do not match:' . PHP_EOL
+				.' expected: array' . PHP_EOL
+				.' value: '.gettype($value)
+		);
+		$this->assertTrue(
+			!empty($value),
+				'expected value do not match:' . PHP_EOL
+				.' expected: !empty()' . PHP_EOL
+				.' value: '.to_string($value)
+		);
+	}//end test_search_operators_info
+
+
+
+	/**
+	* TEST_update_dato_version
+	* @return void
+	*/
+	public function test_update_dato_version() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'list';
+		$lang			= DEDALO_DATA_LANG;
+
+		// $component = component_common::get_instance(
+		// 	$model, // string model
+		// 	$tipo, // string tipo
+		// 	$section_id,
+		// 	$mode,
+		// 	$lang,
+		// 	$section_tipo,
+		// 	false
+		// );
+
+		$options = new stdClass();
+			$options->update_version = [6,0,0];
+			$options->dato_unchanged = null;
+
+		$value = component_text_area::update_dato_version($options);
+
+		// expected sample
+			//  {
+			//     "result": 2,
+			//     "msg": "[] Current dato don't need update.<br />"
+			// }
+
+		$this->assertTrue(
+			gettype($value->result)==='integer',
+				'expected value do not match:' . PHP_EOL
+				.' expected: integer' . PHP_EOL
+				.' value: '.gettype($value->result)
+		);
+		$this->assertTrue(
+			$value->result===2,
+				'expected value do not match:' . PHP_EOL
+				.' expected: 2' . PHP_EOL
+				.' value: '.to_string($value->result)
+		);
+	}//end test_update_dato_version
+
+
+
+	/**
+	* TEST_get_list_value
+	* @return void
+	*/
+	public function test_get_list_value() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'list';
+		$lang			= DEDALO_DATA_LANG;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo,
+			false
+		);
+
+		$options = new stdClass();
+			$options->max_chars = 130;
+
+		$value = $component->get_list_value($options);
+
+		// expected sample
+			// [
+			//     "El raspa - Uqom"
+			// ]
+
+		$this->assertTrue(
+			gettype($value)==='array',
+				'expected value do not match:' . PHP_EOL
+				.' expected: array' . PHP_EOL
+				.' value: '.gettype($value)
+		);
+		$this->assertTrue(
+			strlen($value[0])<=130,
+				'expected value do not match:' . PHP_EOL
+				.' expected: <=130' . PHP_EOL
+				.' value: '.strlen($value[0])
+		);
+	}//end test_get_list_value
+
+
+
+	/**
+	* TEST_get_fallback_list_value
+	* @return void
+	*/
+	public function test_get_fallback_list_value() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'list';
+		$lang			= DEDALO_DATA_LANG;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo,
+			false
+		);
+
+		$options = new stdClass();
+			$options->max_chars = 600;
+
+		$value = $component->get_fallback_list_value($options);
+
+		// expected sample
+			// [
+			//     "El raspa - Uqom"
+			// ]
+
+		$this->assertTrue(
+			gettype($value)==='array',
+				'expected value do not match:' . PHP_EOL
+				.' expected: array' . PHP_EOL
+				.' value: '.gettype($value)
+		);
+		$this->assertTrue(
+			strlen($value[0])<=600,
+				'expected value do not match:' . PHP_EOL
+				.' expected: <=130' . PHP_EOL
+				.' value: '.strlen($value[0])
+		);
+	}//end test_get_fallback_list_value
+
+
+
+	/**
+	* TEST_get_fallback_edit_value
+	* @return void
+	*/
+	public function test_get_fallback_edit_value() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'list';
+		$lang			= DEDALO_DATA_LANG;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo,
+			false
+		);
+
+		$options = new stdClass();
+			$options->max_chars = 600;
+
+		$value = $component->get_fallback_edit_value($options);
+
+		// expected sample
+			// [
+			//     "El raspa - Uqom"
+			// ]
+
+		$this->assertTrue(
+			gettype($value)==='array',
+				'expected value do not match:' . PHP_EOL
+				.' expected: array' . PHP_EOL
+				.' value: '.gettype($value)
+		);
+		$this->assertTrue(
+			strlen($value[0])<=600,
+				'expected value do not match:' . PHP_EOL
+				.' expected: <=130' . PHP_EOL
+				.' value: '.strlen($value[0])
+		);
+	}//end test_get_fallback_edit_value
 
 
 
