@@ -1233,6 +1233,25 @@ class component_text_area extends component_common {
 
 
 	/**
+	* GET_RELATED_COMPONENT_select_lang
+	* @return string|null $tipo
+	*/
+	public function get_related_component_select_lang() : ?string {
+
+		$related_component_select_lang = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+			$this->tipo,  // string tipo
+			'component_select_lang', // string model
+			'termino_relacionado' // string relation_type
+		);
+
+		$related_component_select_lang_tipo = $related_component_select_lang[0] ?? null;
+
+		return $related_component_select_lang_tipo;
+	}//end get_related_component_select_lang
+
+
+
+	/**
 	* GET_COMPONENT_INDEXATIONS
 	* Indexations in v6 are direct data from portal configured in
 	* component_text_area properties 'tags_index'
@@ -1284,6 +1303,7 @@ class component_text_area extends component_common {
 	* GET_COMPONENT_INDEXATIONS_TERM_ID
 	* Used for diffusion global search (temporally??????)
 	* @see diffusion global search needs
+	* @param string $type
 	* @return string $indexations_locators
 	* 	JSON encoded array
 	*/
@@ -1632,35 +1652,6 @@ class component_text_area extends component_common {
 
 
 	/**
-	* GET_RELATED_COMPONENT_select_lang
-	* @return string|null $tipo
-	*/
-	public function get_related_component_select_lang() : ?string {
-
-		$tipo = null;
-		$related_terms = $this->get_ar_related_by_model('
-			component_select_lang',
-			$this->get_tipo(),
-			true
-		);
-
-		switch (true) {
-			case count($related_terms)===1 :
-				$tipo = reset($related_terms);
-				break;
-			case count($related_terms)>1 :
-				debug_log(__METHOD__." More than one related component_select_lang are found. Please fix this ASAP ".to_string(), logger::ERROR);
-				break;
-			default:
-				break;
-		}
-
-		return $tipo;
-	}//end get_related_component_select_lang
-
-
-
-	/**
 	* GET_DESCRIPTORS
 	* Return all descriptors associated to index tag of current raw text or fragment
 	* looking for index in tags inside
@@ -1722,8 +1713,15 @@ class component_text_area extends component_common {
 			$sqo->filter_by_locators	= [$current_locator];
 
 		// sections. Get the related_list of the related sections it include some information component to identify the related section.
-		$related_sections	= sections::get_instance(null, $sqo, $this->tipo, 'related_list', $this->lang);
-		$related_section	= $related_sections->get_json();
+		$related_sections = sections::get_instance(
+			null,
+			$sqo,
+			$this->tipo,
+			'related_list',
+			$this->lang
+		);
+		$related_section = $related_sections->get_json();
+
 
 		return $related_section;
 	}//end get_ar_related_sections
@@ -1880,20 +1878,32 @@ class component_text_area extends component_common {
 	/**
 	* BUILD_PERSON
 	* Format like [person-q-Pepe%20lópez%20de%20l'horta%20y%20Martínez-data:{locator}:data]
-	* @return string
+	* @param array $ar_data
+	* [
+	* 	tag_id => 1,
+	* 	state => n,
+	* 	label => tag label
+	* 	data => JSON stringify data
+	* ]
+	* @return string $person_tag
 	*/
 	public function build_tag_person(array $ar_data) : string {
 
-		$type			= 'person';
-		$tag_id			= $ar_data['tag_id'];
-		$state			= $ar_data['state'];
-		$label			= trim($ar_data['label']);
-		$locator		= $ar_data['data'];
-		$locator_json	= json_encode($locator);
-		$data			= $locator_json;
+		// data
+			$tag_id			= $ar_data['tag_id'];
+			$state			= $ar_data['state'];
+			$label			= trim($ar_data['label']);
+			$locator		= $ar_data['data'];
 
-		$person_tag		= TR::build_tag($type, $state, $tag_id, $label, $data); 	// '[person-'.$state.'-'.$label.'-data:'.$locator_json.':data]';
-		// $person_tag = '[person-data:'.$section_tipo.'_'.$section_id.':data]';
+		// short vars
+			$type			= 'person';
+			$locator_json	= json_encode($locator);
+			$data			= $locator_json;
+
+		// tag
+			$person_tag	= TR::build_tag($type, $state, $tag_id, $label, $data); 	// '[person-'.$state.'-'.$label.'-data:'.$locator_json.':data]';
+			// $person_tag = '[person-data:'.$section_tipo.'_'.$section_id.':data]';
+
 
 		return $person_tag;
 	}//end build_tag_person
@@ -1903,6 +1913,7 @@ class component_text_area extends component_common {
 	/**
 	* GET_TAG_PERSON_LABEL
 	* Build tag label to show in transcriptions tag image of persons
+	* @param object locator
 	* @return object $label
 	*/
 	public static function get_tag_person_label(object $locator) : object {
@@ -1968,40 +1979,43 @@ class component_text_area extends component_common {
 
 	/**
 	* PERSON_USED
+	* (!) Method to disappear. Used in v5 to precalculate
+	* if some person is used in current section
+	* @param object $locator
 	* @return array $ar_section_id
 	*/
-	public static function person_used(object $locator) : array {
+		// public static function person_used(object $locator) : array {
 
-		$ar_section_id = array();
+		// 	$ar_section_id = array();
 
-		// Search in all transcriptions looking tags from this person
-		$section_id   = $locator->section_id;
-		$section_tipo = $locator->section_tipo;
+		// 	// Search in all transcriptions looking tags from this person
+		// 	$section_id   = $locator->section_id;
+		// 	$section_tipo = $locator->section_tipo;
 
-		// Like '%''section_id'':''137'',''section_tipo'':''rsc194''%'::text
-		$search_string = "''section_id'':''$section_id'',''section_tipo'':''$section_tipo''";
+		// 	// Like '%''section_id'':''137'',''section_tipo'':''rsc194''%'::text
+		// 	$search_string = "''section_id'':''$section_id'',''section_tipo'':''$section_tipo''";
 
-		$matrix_table = common::get_matrix_table_from_tipo(DEDALO_SECTION_RESOURCES_AV_TIPO);
+		// 	$matrix_table = common::get_matrix_table_from_tipo(DEDALO_SECTION_RESOURCES_AV_TIPO);
 
-		$strQuery = "
-		SELECT a.section_id, a.section_tipo
-		FROM \"$matrix_table\" a
-		WHERE
-		 -- audiovisual resource section
-		 a.section_tipo = 'rsc167'
-		 AND
-		 -- search pseudo locator in all langs
-		 a.datos#>>'{components, rsc36, dato}' ILIKE '%".$search_string."%'::text;
-		";
+		// 	$strQuery = "
+		// 	SELECT a.section_id, a.section_tipo
+		// 	FROM \"$matrix_table\" a
+		// 	WHERE
+		// 	 -- audiovisual resource section
+		// 	 a.section_tipo = 'rsc167'
+		// 	 AND
+		// 	 -- search pseudo locator in all langs
+		// 	 a.datos#>>'{components, rsc36, dato}' ILIKE '%".$search_string."%'::text;
+		// 	";
 
-		$result = JSON_RecordObj_matrix::search_free($strQuery);
-		$n_rows = pg_num_rows($result);
-		while ($rows = pg_fetch_assoc($result)) {
-			$ar_section_id[] = $rows['section_id'];
-		}
+		// 	$result = JSON_RecordObj_matrix::search_free($strQuery);
+		// 	$n_rows = pg_num_rows($result);
+		// 	while ($rows = pg_fetch_assoc($result)) {
+		// 		$ar_section_id[] = $rows['section_id'];
+		// 	}
 
-		return (array)$ar_section_id;
-	}//end person_used
+		// 	return (array)$ar_section_id;
+		// }//end person_used
 
 
 
