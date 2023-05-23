@@ -2613,6 +2613,13 @@ class component_text_area extends component_common {
 
 		$list_value = [];
 		foreach ($dato as $current_value) {
+
+			// empty case
+				if ($this->is_empty($current_value)) {
+					$list_value[] = '';
+					continue;
+				}
+
 			// convert the dato to html
 			$html_value = TR::add_tag_img_on_the_fly($current_value);
 
@@ -2624,9 +2631,8 @@ class component_text_area extends component_common {
 					true // isUtf8
 				  )
 				: '';
-
-			// $list_value[] =$html_value ;
 		}
+
 
 		return $list_value;
 	}//end get_list_value
