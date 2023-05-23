@@ -84,9 +84,11 @@ class component_input_text extends component_common {
 	/**
 	* IS_EMPTY
 	* @param string $value
+	* Check if given value is or not empty considering
+	* spaces and '<p></p>' as empty values
 	* @return bool
 	*/
-	public function is_empty($value) {
+	public function is_empty( ?string $value ) : bool {
 
 		if(is_null($value)){
 			return true;
@@ -99,7 +101,6 @@ class component_input_text extends component_common {
 		}
 
 		return false;
-
 	}//end is_empty
 
 
