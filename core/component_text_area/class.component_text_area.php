@@ -189,7 +189,7 @@ class component_text_area extends component_common {
 	* @param string $value
 	* @return bool
 	*/
-	public function is_empty($value) {
+	public function is_empty( ?string $value ) : bool {
 
 		if(is_null($value)){
 			return true;
