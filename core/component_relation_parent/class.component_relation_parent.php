@@ -939,7 +939,7 @@ class component_relation_parent extends component_relation_common {
 
 
 	/**
-	* RESOLVE_CHILDRENS
+	* RESOLVE_CHILDREN
 	* @return
 	*/
 		// private function resolve_children() {
