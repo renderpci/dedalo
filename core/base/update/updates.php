@@ -107,9 +107,15 @@ $updates->$v = new stdClass();
 				DROP INDEX IF EXISTS matrix_activities_relations_flat_ty_st_si;
 				DROP INDEX IF EXISTS matrix_list_relations_flat_ty_st_si;
 
+				DROP INDEX IF EXISTS matrix_relations_flat_ty_st;
+				DROP INDEX IF EXISTS matrix_hierarchy_relations_flat_ty_st;
+				DROP INDEX IF EXISTS matrix_activities_relations_flat_ty_st;
+				DROP INDEX IF EXISTS matrix_list_relations_flat_ty_st;
+
+				DROP FUNCTION IF EXISTS public.relations_flat_st_si(jsonb);
 				DROP FUNCTION IF EXISTS public.relations_flat_fct_st_si(jsonb);
 				DROP FUNCTION IF EXISTS public.relations_flat_ty_st_si(jsonb);
-				DROP FUNCTION IF EXISTS public.relations_flat_st_si(jsonb);
+				DROP FUNCTION IF EXISTS public.relations_flat_ty_st(jsonb);
 
 				CREATE OR REPLACE FUNCTION public.relations_flat_st_si(datos jsonb) RETURNS jsonb
 					AS $$ SELECT jsonb_agg( concat(rel->>'section_tipo','_',rel->>'section_id') )
@@ -125,6 +131,12 @@ $updates->$v = new stdClass();
 				-- Create function with base flat locators ty=type st=section_tipo si=section_id (oh24_rsc197_2)
 				CREATE OR REPLACE FUNCTION public.relations_flat_ty_st_si(datos jsonb) RETURNS jsonb
 					AS $$ SELECT jsonb_agg( concat(rel->>'type','_',rel->>'section_tipo','_',rel->>'section_id') )
+					FROM jsonb_array_elements($1->'relations') rel(rel)
+					$$ LANGUAGE sql IMMUTABLE;
+
+				-- Create function with base flat locators ty=type st=section_tipo (dd96_rsc197)
+				CREATE OR REPLACE FUNCTION public.relations_flat_ty_st(datos jsonb) RETURNS jsonb
+					AS $$ SELECT jsonb_agg( concat(rel->>'type','_',rel->>'section_tipo') )
 					FROM jsonb_array_elements($1->'relations') rel(rel)
 					$$ LANGUAGE sql IMMUTABLE;
 
@@ -166,6 +178,19 @@ $updates->$v = new stdClass();
 
 				CREATE INDEX matrix_list_relations_flat_ty_st_si ON matrix_list
 					USING gin(relations_flat_ty_st_si(datos) jsonb_path_ops);
+
+				-- Create indexes with  flat locators ty=type st=section_tipo (dd96_rsc197)
+				CREATE INDEX matrix_relations_flat_ty_st ON matrix
+					USING gin(relations_flat_ty_st(datos) jsonb_path_ops);
+
+				CREATE INDEX matrix_hierarchy_relations_flat_ty_st ON matrix_hierarchy
+					USING gin(relations_flat_ty_st(datos) jsonb_path_ops);
+
+				CREATE INDEX matrix_activities_relations_flat_ty_st ON matrix_activities
+					USING gin(relations_flat_ty_st(datos) jsonb_path_ops);
+
+				CREATE INDEX matrix_list_relations_flat_ty_st ON matrix_list
+					USING gin(relations_flat_ty_st(datos) jsonb_path_ops);
 			");
 
 	// UPDATE COMPONENTS

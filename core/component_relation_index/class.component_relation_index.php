@@ -372,6 +372,85 @@ class component_relation_index extends component_relation_common {
 
 
 	/**
+	* RESOLVE_QUERY_OBJECT_SQL
+	* @param object $query_object
+	* @return object $query_object
+	*/
+	public static function resolve_query_object_sql( object $query_object ) : object {
+
+		// operator check
+		$operator = $query_object->q_operator ?? null;
+		if ($operator==='*') {
+
+			// no empty values case
+
+			$section_tipo = end($query_object->path)->section_tipo;
+
+			// references to current section tipo and type
+			$references = component_relation_index::get_references_to_section(
+				$section_tipo
+			);
+
+			// Always set fixed values
+			$query_object->type = 'number';
+			// format. Always set format to column (but in sequence case)
+			$query_object->format = 'column';
+			// component path
+			$query_object->component_path = ['section_id'];
+			// unaccent
+			$query_object->unaccent = false;
+			// column_name
+			$query_object->column_name = 'section_id';
+
+			// in column sentence
+			$q_clean = array_map(function($el){
+				return (int)$el;
+			}, $references);
+			$query_object->operator	= 'IN';
+			$query_object->q_parsed	= implode(',', $q_clean);
+			$query_object->format	= 'in_column';
+		}
+
+
+		return $query_object;
+	}//end resolve_query_object_sql
+
+
+
+	/**
+	* GET_REFERENCES_TO_SECTION
+	* Get all references to current section tipo and relation type (indexation)
+	* This is used as intermediate search to get indexations from another
+	* sections to current section
+	* @param string $section_tipo
+	* @return array $references
+	*/
+	public static function get_references_to_section(string $section_tipo) : array {
+
+		$references = [];
+
+		$locator = new stdClass();
+			$locator->section_tipo	= $section_tipo;
+			$locator->type			= DEDALO_RELATION_TYPE_INDEX_TIPO;
+
+		$referenced_locators = search_related::get_referenced_locators(
+			$locator
+		);
+		// dump($referenced_locators, ' referenced_locators ++ '.to_string($locator));
+
+		foreach ($referenced_locators as $locator) {
+			if (!in_array($locator->section_id, $references)) {
+				$references[] = $locator->section_id;
+			}
+		}
+
+
+		return $references;
+	}//end get_references_to_section
+
+
+
+	/**
 	* GET_INDEXATIONS_FROM_TAG
 	* Used by tool_indexation to get list of terms with index relation to current tag
 	* @return array $ar_indexations
@@ -499,15 +578,14 @@ class component_relation_index extends component_relation_common {
 	* Return valid operators for search in current component
 	* @return array $ar_operators
 	*/
-		// public function search_operators_info() : array {
+	public function search_operators_info() : array {
 
-		// 	$ar_operators = [
-		// 		'*' 	 => 'no_empty', // not null
-		// 		'=' 	 => 'vacio'
-		// 	];
+		$ar_operators = [
+			'*' => 'no_empty',
+		];
 
-		// 	return $ar_operators;
-		// }//end search_operators_info
+		return $ar_operators;
+	}//end search_operators_info
 
 
 
