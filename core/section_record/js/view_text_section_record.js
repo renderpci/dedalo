@@ -182,10 +182,9 @@ view_text_section_record.render = async function(self, options) {
 				// Indexation case could not resolve references values. In that case, fallback value to
 				// section_tipo + section_id.
 				// Note that checked node length take into account the button edit node, because is < 2 and not < 1
-				const current_child_nodes			= wrapper.childNodes
-				const current_child_nodes_length	= current_child_nodes.length
-				if (current_child_nodes_length<2) {
-					wrapper.insertAdjacentHTML('beforeend', last_data.section_tipo +'_'+ last_data.section_id )
+				const current_child_text_nodes = [...wrapper.childNodes].filter(el => el.nodeType === Node.TEXT_NODE)
+				if (current_child_text_nodes.length===0 && last_data) {
+					wrapper.insertAdjacentHTML('beforeend', ' ' + (last_data.section_tipo || '') +'_'+ (last_data.section_id || '') )
 				}
 
 		}//end for (let i = 0; i < columns_map_length; i++)
