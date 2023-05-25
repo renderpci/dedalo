@@ -141,13 +141,12 @@ class indexation_node extends stdClass {
 		$locator = $this->locator;
 
 		$options = new stdClass();
-			$options->table 		= (string)TABLE_INTERVIEW;
-			$options->ar_fields 	= array(FIELD_IMAGE);
-			$options->order 		= null;
-			$options->sql_filter 	= "section_id = " . $locator->section_top_id . PUBLICATION_FILTER_SQL;
+			$options->table			= (string)TABLE_INTERVIEW;
+			$options->ar_fields		= array(FIELD_IMAGE);
+			$options->order			= null;
+			$options->sql_filter	= "section_id = " . $locator->section_top_id . PUBLICATION_FILTER_SQL;
 
 		$row_interview_data	= (object)web_data::get_rows_data( $options );
-			#dump($row_interview_data, ' row_interview_data ++ '.to_string($options)); die();
 
 
 		return $row_interview_data;
@@ -157,8 +156,8 @@ class indexation_node extends stdClass {
 
 	/**
 	* GET_GROUP_LOCATORS
-	* Select all locators cof current interview and sort with actual as first
-	* @return array
+	* Select all locators of current interview and sort with actual as first
+	* @return array $ar_locators_grouped
 	*/
 	public function get_group_locators() {
 
@@ -166,11 +165,11 @@ class indexation_node extends stdClass {
 			return array();
 		}
 
-		$indexations 	  = $this->indexations;
-		$locator 			  = $this->locator;
-		$interview_section_id = $locator->section_top_id;
+		$indexations			= $this->indexations;
+		$locator				= $this->locator;
+		$interview_section_id	= $locator->section_top_id;
 
-		$ar_locators_grouped=array();
+		$ar_locators_grouped = array();
 		foreach ($indexations as $current_locator) {
 			if ($current_locator->section_top_id == $interview_section_id) {
 				/*
@@ -198,4 +197,3 @@ class indexation_node extends stdClass {
 
 
 }//end class indexation_node
-?>
