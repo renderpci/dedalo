@@ -32,8 +32,6 @@ export const component_filter = function(){
 	this.node			= null
 
 	this.tools			= null
-
-	return true
 }//end component_filter
 
 

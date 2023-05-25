@@ -34,8 +34,6 @@ export const component_svg = function(){
 
 	this.file_name
 	this.file_dir
-
-	return true
 }//end component_svg
 
 

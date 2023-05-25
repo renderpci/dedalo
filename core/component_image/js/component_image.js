@@ -37,9 +37,6 @@ export const component_image = function(){
 
 	this.file_name
 	this.file_dir
-
-
-	return true
 }//end component_image
 
 
@@ -74,6 +71,8 @@ export const component_image = function(){
 
 /**
 * INIT
+* @param object options
+* @return bool
 */
 component_image.prototype.init = async function(options) {
 
