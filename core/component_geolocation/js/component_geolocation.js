@@ -265,9 +265,9 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 
 				// LAYER SELECTOR
 				base_maps = {
-					dare 	: dare,
-					arcgis 	: arcgis,
-					osm 	: osm
+					dare	: dare,
+					arcgis	: arcgis,
+					osm		: osm
 				}
 				if(self.layer_control===false) {
 					self.layer_control = L.control.layers(base_maps).addTo(self.map);

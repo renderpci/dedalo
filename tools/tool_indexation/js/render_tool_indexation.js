@@ -325,6 +325,7 @@ const get_tag_info = function(self) {
 		})
 		const fragment_id_tag_id = ui.create_dom_element({
 			element_type	: 'span',
+			class_name		: 'fragment_id_tag_id',
 			inner_html		: tag_id,
 			parent			: fragment_id_info
 		})
