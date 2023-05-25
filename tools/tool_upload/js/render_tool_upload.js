@@ -18,6 +18,7 @@ export const render_tool_upload = function() {
 
 	return true
 }//end render_tool_upload
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 
 
 
@@ -503,3 +504,7 @@ render_tool_upload.prototype.upload_done = async function (options) {
 
 	// 	return true
 	// }//end parse_local_file
+
+
+
+// @license-end
