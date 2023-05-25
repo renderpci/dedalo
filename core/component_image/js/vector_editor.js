@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label,  SHOW_DEBUG, DEDALO_ROOT_WEB, paper, iro */
 /*eslint no-undef: "error"*/
 
@@ -1500,3 +1501,8 @@ vector_editor.prototype.render_layer_row = function(self, layer) {
 
 	return layer_li
 }//end layer_selector
+
+
+
+// @license-end
+
