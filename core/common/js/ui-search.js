@@ -1,7 +1,7 @@
 /**
  * findAndReplaceDOMText v 0.4.6
  * @author James Padolsey http://james.padolsey.com
- * @license http://unlicense.org/UNLICENSE
+ * @license magnet:?xt=urn:btih:5ac446d35272cc2e4e85e4325b146d0b7ca8f50c&dn=unlicense.txt Unlicense
  *
  * Matches the text of a DOM node against a regular expression
  * and replaces each match (or node-separated portions of the match)
@@ -634,3 +634,7 @@
 	return exposed;
 
 }));
+
+
+
+// @license-end
