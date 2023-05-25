@@ -102,8 +102,12 @@ const get_grid_nodes = function(data) {
 	}
 	get_grid_values(data)
 
-	ar_values.sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: 'base' }));
-	console.log('ar_values:', ar_values);
+	// sort items
+		ar_values.sort((a, b) => {
+			const a_label = a.label || 'zzz'
+			const b_label = b.label || 'zzz'
+			return a_label.localeCompare(b_label, undefined, { numeric: true, sensitivity: 'base' })
+		});
 
 	const ar_values_length = ar_values.length
 	for (let i = 0; i < ar_values_length; i++) {
@@ -111,8 +115,15 @@ const get_grid_nodes = function(data) {
 		const text_node = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'descriptors_item',
-			inner_html		: `${item.label} [${item.total}]`
+			inner_html		: `${item.label}`
 		})
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'descriptors_item_total',
+			inner_html		: `[${item.total}]`,
+			parent			: text_node
+		})
+
 		fragment.appendChild(text_node)
 	}
 
