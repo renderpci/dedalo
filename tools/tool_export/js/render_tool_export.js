@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*eslint no-unused-vars: "error"*/
 /*global get_label, SHOW_DEBUG*/
 /*eslint no-undef: "error"*/
@@ -761,3 +762,7 @@ const do_sortable = function(element, self) {
 				}
 			});
 }//end do_sortable
+
+
+
+// @license-end
