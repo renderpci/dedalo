@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
@@ -49,7 +50,8 @@ render_edit_service_tmp_section.prototype.edit = async function (options) {
 		})
 		wrapper.appendChild(content_data)
 		// set pointers
-		wrapper.content_data = content_data
+		wra
+		pper.content_data = content_data
 
 
 	return wrapper
@@ -100,3 +102,8 @@ const render_tmp_components = async function(self) {
 
 	return fragment
 }//end render_tmp_components
+
+
+
+// @license-end
+
