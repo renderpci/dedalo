@@ -153,7 +153,6 @@
 
 							// related_sections add
 								$related_sections = $this->get_related_sections();
-								$related_sections = $related_sections;
 
 							// tags_persons
 								$tags_persons = [];

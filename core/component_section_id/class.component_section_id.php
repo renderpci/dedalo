@@ -146,10 +146,10 @@ class component_section_id extends component_common {
 		// 	$q = json_decode($q);
 		// }
 
-		# Always set fixed values
+		// Always set fixed values
 		$query_object->type = 'number';
 
-		# format. Always set format to column (but in sequence case)
+		// format. Always set format to column (but in sequence case)
 		$query_object->format = 'column';
 
 		$between_separator  = '...';
@@ -160,7 +160,7 @@ class component_section_id extends component_common {
 			$q = implode($sequence_separator, $q);
 		}
 
-		# component path
+		// component path
 		$query_object->component_path = ['section_id'];
 
 		$query_object->unaccent = false;

@@ -103,10 +103,18 @@ view_text_section_record.render = async function(self, options) {
 				// nodes. Await all instances are parallel rendered
 				await Promise.all(ar_promises)// render work done safely
 
+			// last data
+				let last_data = null
+
 			// create the column nodes (fields) and assign the instances nodes to it.
 				for (let j = 0; j < ar_instances_length; j++) {
 
 					const current_instance = ar_instances[j]
+
+					last_data = {
+						section_tipo	: current_instance.section_tipo,
+						section_id		: current_instance.section_id
+					}
 
 					// check instance is valid
 						if (typeof current_instance==='undefined') {
@@ -121,6 +129,7 @@ view_text_section_record.render = async function(self, options) {
 
 					// add already rendered node
 						const current_instance_node	= current_instance.node
+
 						// check the view of the instance to get the correct content, if the instance has text convert to html else get the node
 						switch (current_instance.context.view) {
 							case 'text':
@@ -161,13 +170,23 @@ view_text_section_record.render = async function(self, options) {
 						}
 
 				}//end for (let j = 0; j < ar_instances_length; j++)
+
 			// columns separator (between components inside the same column)
 				if(i < columns_map_length-1 && columns_map[i+1].id!=='remove' && columns_map[i+1].id!=='section_id') {
-
-					const fields_separator = self.context.fields_separator || ', '
-					const node_fields_separator = document.createTextNode(fields_separator)
+					const fields_separator		= self.context.fields_separator || ', '
+					const node_fields_separator	= document.createTextNode(fields_separator)
 					wrapper.appendChild(node_fields_separator)
 				}
+
+			// empty values case. Only button edit is present
+				// Indexation case could not resolve references values. In that case, fallback value to
+				// section_tipo + section_id.
+				// Note that checked node length take into account the button edit node, because is < 2 and not < 1
+				const current_child_text_nodes = [...wrapper.childNodes].filter(el => el.nodeType === Node.TEXT_NODE)
+				if (current_child_text_nodes.length===0 && last_data) {
+					wrapper.insertAdjacentHTML('beforeend', ' ' + (last_data.section_tipo || '') +'_'+ (last_data.section_id || '') )
+				}
+
 		}//end for (let i = 0; i < columns_map_length; i++)
 
 	// component_info add if exists. (!) Removed 22-11-202 because is already added by the component (portal)

@@ -84,9 +84,11 @@ class component_input_text extends component_common {
 	/**
 	* IS_EMPTY
 	* @param string $value
+	* Check if given value is or not empty considering
+	* spaces and '<p></p>' as empty values
 	* @return bool
 	*/
-	public function is_empty($value) {
+	public function is_empty( ?string $value ) : bool {
 
 		if(is_null($value)){
 			return true;
@@ -99,7 +101,6 @@ class component_input_text extends component_common {
 		}
 
 		return false;
-
 	}//end is_empty
 
 
@@ -333,7 +334,6 @@ class component_input_text extends component_common {
 	*	Edited/parsed version of received object
 	*/
 	public static function resolve_query_object_sql( object $query_object) : object | array {
-		#debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
 
 		// if (isset($query_object->type) && $query_object->type==='jsonb') {
 		// 	$q = json_decode($q);

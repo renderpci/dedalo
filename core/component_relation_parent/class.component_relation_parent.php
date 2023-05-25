@@ -939,7 +939,7 @@ class component_relation_parent extends component_relation_common {
 
 
 	/**
-	* RESOLVE_CHILDRENS
+	* RESOLVE_CHILDREN
 	* @return
 	*/
 		// private function resolve_children() {
@@ -1156,5 +1156,7 @@ class component_relation_parent extends component_relation_common {
 
 		return $target_component_children_tipos;
 	}//end get_target_component_children_tipos
+
+
 
 }//end class component_relation_parent

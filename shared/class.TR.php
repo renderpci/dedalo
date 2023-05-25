@@ -55,16 +55,20 @@ abstract class TR {
 			case 'indexIn' :
 				if ($id) {
 					$string = "(\[index-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
+					// $string = "(\[index\-[a-z]\-{$id}(\-[^-]{0,22}\-data:.*?:data)?\])";
 				}else{
 					$string = "(\[(index)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])";
+					// $string = "(\[(index)\-([a-z])\-([0-9]{1,6})(\-([^-]{0,22})\-data:(.*?):data)?\])";
 				}
 				break;
 
 			case 'indexOut':
 				if ($id) {
 					$string = "(\[\/index-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
+					// $string = "(\[\/index\-[a-z]\-{$id}(\-[^-]{0,22}\-data:.*?:data)?\])";
 				}else{
 					$string = "(\[\/(index)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])";
+					// $string = "(\[\/(index)\-([a-z])\-([0-9]{1,6})(\-([^-]{0,22})\-data:(.*?):data)?\])";
 				}
 				break;
 

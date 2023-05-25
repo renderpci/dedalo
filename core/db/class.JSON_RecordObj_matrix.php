@@ -69,7 +69,13 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 			if(SHOW_DEBUG===true) {
 				dump($matrix_table, "section_id: $section_id - tipo: $section_tipo");
 			}
-			throw new Exception("Error Processing Request. Matrix wrong name ", 1);
+			debug_log(__METHOD__
+				. " Error Processing Request. matrix_table is empty" . PHP_EOL
+				. ' section_tipo: '. $section_tipo . PHP_EOL
+				. ' section_id: '. $section_id . PHP_EOL
+				, logger::ERROR
+			);
+			throw new Exception("Error Processing Request. matrix_table is empty. section_tipo: $section_tipo, section_id: $section_id ", 1);
 		}
 
 		if(empty($section_id)) {
@@ -80,8 +86,16 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 		}
 
 		if(empty($section_tipo)) {
-			if(SHOW_DEBUG===true)
+			if(SHOW_DEBUG===true) {
 				dump($section_tipo,"section_id:$section_id - matrix_table:$matrix_table");
+			}
+			debug_log(__METHOD__
+				. " Error Processing Request. section_tipo is empty " . PHP_EOL
+				. ' matrix_table: '. $matrix_table . PHP_EOL
+				. ' section_tipo: '. $section_tipo . PHP_EOL
+				. ' section_id: '. $section_id . PHP_EOL
+				, logger::ERROR
+			);
 			throw new Exception("Error Processing Request. section_tipo is empty ", 1);
 		}
 
