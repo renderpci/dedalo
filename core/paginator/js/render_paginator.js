@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -294,3 +295,7 @@ const fit_input_go_to_page_to_value = function(input_node, page_number) {
 
 	input_node.style.width = (chars + 3) + 'ch';
 }//end fit_input_go_to_page_to_value
+
+
+
+// @license-end
