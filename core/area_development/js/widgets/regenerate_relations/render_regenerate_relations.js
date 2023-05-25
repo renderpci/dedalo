@@ -5,18 +5,17 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
-	// import {object_to_url_vars} from '../../../../common/js/utils/index.js'
 
 
 
 /**
-* RENDER_UPDATE_ONTOLOGY
+* RENDER_regenerate_relations
 * Manages the component's logic and appearance in client side
 */
-export const render_update_ontology = function() {
+export const render_regenerate_relations = function() {
 
 	return true
-}//end render_update_ontology
+}//end render_regenerate_relations
 
 
 
@@ -33,7 +32,7 @@ export const render_update_ontology = function() {
 * @return HTMLElement wrapper
 * 	To append to the widget body node (area_development)
 */
-render_update_ontology.prototype.list = async function(options) {
+render_regenerate_relations.prototype.list = async function(options) {
 
 	const self = this
 
@@ -76,6 +75,7 @@ const get_content_data_edit = async function(self) {
 		const prefix_tipos			= value.prefix_tipos || []
 		const confirm_text			= value.confirm_text || 'Sure?'
 
+
 	// content_data
 		const content_data = ui.create_dom_element({
 			element_type : 'div'
@@ -85,7 +85,7 @@ const get_content_data_edit = async function(self) {
 		const info = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'info_text',
-			inner_html		: `Current Ontology version: <b>${current_ontology}</b>`,
+			inner_html		: body,
 			parent			: content_data
 		})
 
@@ -95,63 +95,25 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'body_response'
 		})
 
-	// dedalo_entity check
-		if (ontology_db) {
-			// message development
-			ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'info_text warning',
-				inner_html		: 'Disabled update Ontology. You are using config ONTOLOGY_DB !',
-				parent			: content_data
-			})
-		}else{
-			// config_grid
-				const config_grid = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'config_grid',
-					parent			: content_data
-				})
-				const add_to_grid = (label, value) => {
-					ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'label',
-						inner_html		: label,
-						parent			: config_grid
-					})
-					ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'value',
-						inner_html		: value,
-						parent			: config_grid
-					})
-				}
-				// structure_from_server
-					add_to_grid('Config:', '')
-					add_to_grid('STRUCTURE_FROM_SERVER', structure_from_server)
-					add_to_grid('STRUCTURE_SERVER_URL', structure_server_url)
-					add_to_grid('STRUCTURE_SERVER_CODE', structure_server_code)
-					add_to_grid('DEDALO_PREFIX_TIPOS', prefix_tipos.join(', '))
+	// form init
+		self.caller.init_form({
+			submit_label	: 'Regenerate relations table data',
+			confirm_text	: confirm_text,
+			body_info		: content_data,
+			body_response	: body_response,
+			inputs			: [{
+				type		: 'text',
+				name		: 'tables',
+				label		: 'Table name/s like "matrix,matrix_hierarchy" or "*" for all',
+				mandatory	: true
+			}],
+			trigger : {
+				dd_api	: 'dd_utils_api',
+				action	: 'regenerate_relations',
+				options	: null
+			}
+		})
 
-			// form init
-			self.caller.init_form({
-				submit_label	: 'Update Dédalo Ontology to the latest version',
-				confirm_text	: confirm_text,
-				body_info		: content_data,
-				body_response	: body_response,
-				inputs			: [{
-					type		: 'text',
-					name		: 'dedalo_prefix_tipos',
-					label		: 'TLD list to update',
-					mandatory	: true,
-					value		: prefix_tipos
-				}],
-				trigger : {
-					dd_api	: 'dd_utils_api',
-					action	: 'update_ontology',
-					options	: null
-				}
-			})
-		}
 
 	// add at end body_response
 		content_data.appendChild(body_response)

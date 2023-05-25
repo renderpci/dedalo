@@ -61,29 +61,9 @@ class area_development extends area_common {
 			$item = new stdClass();
 				$item->id		= 'regenerate_relations';
 				$item->typo		= 'widget';
-				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
-				$item->label	= 'REGENERATE TABLE RELATIONS DATA';
-				$item->info		= null;
-				$item->body		= 'Delete and create again table relations records based on locators data of sections in current table';
-				$item->run[]	= (object)[
-					'fn'		=> 'init_form',
-					'options'	=> (object)[
-						'inputs' => [
-							(object)[
-								'type'		=> 'text',
-								'name'		=> 'tables',
-								'label'		=> 'Table name/s like "matrix,matrix_hierarchy" or "*" for all',
-								'mandatory'	=> true
-							]
-						],
-						'confirm_text' => label::get_label('sure') ?? 'Sure?'
-					]
-				];
-				$item->trigger 	= (object)[
-					'dd_api'	=> 'dd_utils_api',
-					'action'	=> 'regenerate_relations',
-					'options'	=> null
+				$item->label	= 'Regenerate relations table data';
+				$item->value	= (object)[
+					'body' => 'Delete and create again table relations records based on locators data of sections in current selected table/s',
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
