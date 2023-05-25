@@ -35,9 +35,6 @@ export const component_date = function(){
 
 	this.date_separator	= '/'
 	this.time_separator	= ':'
-
-
-	return true
 }//end component_date
 
 

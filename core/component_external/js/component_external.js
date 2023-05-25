@@ -35,9 +35,6 @@ export const component_external = function(){
 	this.tools			= null
 
 	this.duplicates		= false
-
-
-	return true
 }//end component_external
 
 
@@ -70,11 +67,3 @@ export const component_external = function(){
 	component_external.prototype.tm					= render_mini_component_external.prototype.edit
 
 	// component_external.prototype.change_mode		= component_common.prototype.change_mode
-
-
-
-
-
-
-
-

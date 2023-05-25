@@ -7,7 +7,8 @@
 	import {component_select} from '../../component_select/js/component_select.js'
 
 
+
 /**
-* COMPONENT_SELECT_LANG
+* COMPONENT_SELECT_LANG. Alias of component_select
 */
 export const component_select_lang = component_select

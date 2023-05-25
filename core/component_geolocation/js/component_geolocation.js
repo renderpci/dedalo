@@ -40,8 +40,6 @@ export const component_geolocation = function(){
 
 	this.duplicates = false
 	this.events_tokens
-
-	return true
 }//end component_geolocation
 
 
@@ -77,6 +75,8 @@ export const component_geolocation = function(){
 
 /**
 * INIT
+* @param object options
+* @return bool
 */
 component_geolocation.prototype.init = async function(options) {
 
@@ -171,6 +171,9 @@ component_geolocation.prototype.init = async function(options) {
 /**
 * GET_MAP
 * load the libraries and specific css
+* @param HTMLElement map_container
+* @param integer key
+* @return bool
 */
 component_geolocation.prototype.get_map = async function(map_container, key) {
 
@@ -417,6 +420,9 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 
 /**
 * UPDATE_INPUT_VALUES
+* @param integer key
+* @param object data
+* @param HTMLElement map_container
 * @return bool true
 */
 component_geolocation.prototype.update_input_values = function(key, data, map_container) {
@@ -432,9 +438,9 @@ component_geolocation.prototype.update_input_values = function(key, data, map_co
 		const input_alt		= content_value.querySelector("input[data-name='alt']")
 
 	// Set values to inputs
-		input_lat.value  = data.lat
-		input_lon.value  = data.lon
-		input_zoom.value = data.zoom
+		input_lat.value		= data.lat
+		input_lon.value		= data.lon
+		input_zoom.value	= data.zoom
 
 	//get the value from alt input
 		data.alt = JSON.parse(input_alt.value)
@@ -448,9 +454,9 @@ component_geolocation.prototype.update_input_values = function(key, data, map_co
 	// track changes in self.data.changed_data
 		// changed_data
 			const changed_data_item = Object.freeze({
-				action		: 'update',
-				key			: key,
-				value		: self.current_value[key]
+				action	: 'update',
+				key		: key,
+				value	: self.current_value[key]
 			})
 		// fix instance changed_data
 			self.set_changed_data(changed_data_item)
@@ -463,6 +469,7 @@ component_geolocation.prototype.update_input_values = function(key, data, map_co
 
 /**
 * REFRESH_MAP
+* @param object map
 * @return bool true
 */
 component_geolocation.prototype.refresh_map = function(map) {
@@ -478,6 +485,8 @@ component_geolocation.prototype.refresh_map = function(map) {
 /**
 * LAYERS_LOADER
 * Load all data information of the current selected tag or full database layer loaded.
+* @param object options
+* @return bool
 */
 component_geolocation.prototype.layers_loader = function(options) {
 
@@ -489,8 +498,8 @@ component_geolocation.prototype.layers_loader = function(options) {
 
 	// load_layer
 		switch(load) {
-			case ('full'):
 
+			case ('full'):
 				const ar_layer	=  self.ar_layer_loaded
 				const ar_layer_len	= ar_layer.length
 				for (let i = 0; i < ar_layer_len; i++) {
@@ -509,6 +518,7 @@ component_geolocation.prototype.layers_loader = function(options) {
 					}
 				}
 				break;
+
 			case ('layer'):
 				const loaded_layer = self.ar_layer_loaded.find((item) => item.layer_id === layer_id)
 				// if the layer is not in the ar_layer_loaded, it will be new layer (ex:comes form new tag)
@@ -530,6 +540,7 @@ component_geolocation.prototype.layers_loader = function(options) {
 				break;
 		}//end switch
 
+
 	return true
 }//end layers_loader
 
@@ -542,8 +553,10 @@ component_geolocation.prototype.layers_loader = function(options) {
 * ar_FeatureGroup = ar_layers
 * layer_id = int or key for select the layer into the ar_FeatureGroup
 * Layer in Leaflet is a item in the map (circle, point, etc..)
+* @param object layer
+* @return bool
 */
-component_geolocation.prototype.load_layer = function(layer){
+component_geolocation.prototype.load_layer = function(layer) {
 
 	const self = this
 
@@ -641,7 +654,7 @@ component_geolocation.prototype.load_layer = function(layer){
 					self		: self,
 					data_layer	: data_layer,
 					layer_id	: layer_id,
-					feature 	: feature
+					feature		: feature
 				})
 			}// end onEachFeature
 		})// end L.geoJson
@@ -653,6 +666,7 @@ component_geolocation.prototype.load_layer = function(layer){
 	// enable Edit Mode
 		// self.FeatureGroup[layer_id].pm.enable();
 
+	return true
 }//end load_geo_editor
 
 
@@ -661,6 +675,8 @@ component_geolocation.prototype.load_layer = function(layer){
 * LOAD_TAG_INTO_GEO_EDITOR
 * Called by the user click on the tag (in component_text_area)
 * The tag will send the ar_layer_id that it's pointing to
+* @param object options
+* @return bool
 */
 component_geolocation.prototype.load_tag_into_geo_editor = async function(options) {
 
@@ -670,11 +686,11 @@ component_geolocation.prototype.load_tag_into_geo_editor = async function(option
 		const tag_obj = options.tag
 
 	// layer_id
-		const layer_id	= parseInt(tag_obj.tag_id)
+		const layer_id = parseInt(tag_obj.tag_id)
 
 	// load_layer
 		self.layers_loader({
-			load 		: 'layer',
+			load		: 'layer',
 			layer_id	: layer_id
 		})
 
@@ -728,13 +744,13 @@ component_geolocation.prototype.get_lib_data = function() {
 
 	const self = this
 
-	const lib_data = typeof (self.data.value[0])!=='undefined' && typeof (self.data.value[0].lib_data)!=='undefined'
+	const lib_data = typeof(self.data.value[0])!=='undefined' && typeof(self.data.value[0].lib_data)!=='undefined'
 		? self.data.value[0].lib_data
 		: [{
-				layer_id 		: 1,
-				layer_data 		: [],
-				user_layer_name : 'layer_1'
-			}]
+				layer_id		: 1,
+				layer_data		: [],
+				user_layer_name	: 'layer_1'
+		  }]
 
 
 	return lib_data
@@ -752,9 +768,9 @@ component_geolocation.prototype.get_last_layer_id = function() {
 
 	const self = this
 
-	const lib_data 		= self.get_lib_data()
-	const ar_layer_id 	= lib_data.map((item) => item.layer_id)
-	const last_layer_id = Math.max(...ar_layer_id)
+	const lib_data		= self.get_lib_data()
+	const ar_layer_id	= lib_data.map((item) => item.layer_id)
+	const last_layer_id	= Math.max(...ar_layer_id)
 
 	return last_layer_id
 }//end get_last_layer_id
@@ -763,9 +779,9 @@ component_geolocation.prototype.get_last_layer_id = function() {
 
 /**
 * GET_POPUP_CONTENT
-* @return string|null
-* 	Generate popup content based on layer type
-*	Returns HTML string, or null if unknown object
+* Generates popup content based on layer type
+* Returns HTML string, or null if unknown object
+* @return string|null text_node
 */
 component_geolocation.prototype.get_popup_content = function(layer, layer_id) {
 
@@ -845,6 +861,7 @@ component_geolocation.prototype.get_popup_content = function(layer, layer_id) {
 	const color_node	= render_color_picker(self, layer, layer_id)
 	text_node.appendChild(color_node)
 
+
 	return text_node
 }//end get_popup_content
 
@@ -860,7 +877,7 @@ component_geolocation.prototype.str_lat_lng = function(latlng) {
 
 	const self = this
 
-	const lat_lng = "("+self.round_coordinate(latlng.lat, 6)+", "+self.round_coordinate(latlng.lng, 6)+")"
+	const lat_lng = '(' + self.round_coordinate(latlng.lat, 6) + ', ' + self.round_coordinate(latlng.lng, 6) + ')'
 
 	return lat_lng
 }//end str_lat_lng
@@ -869,9 +886,9 @@ component_geolocation.prototype.str_lat_lng = function(latlng) {
 
 /**
 * ROUND_COORDINATE
-* @return
-* 	add pop up information to the draw
-*	Truncate value based on number of decimals
+* Add pop up information to the draw
+* Truncate value based on number of decimals
+* @return int
 */
 component_geolocation.prototype.round_coordinate = function(num, len) {
 
@@ -879,11 +896,15 @@ component_geolocation.prototype.round_coordinate = function(num, len) {
 }//end round_coordinate
 
 
-/*
+
+/**
 * INIT_DRAW_EDITOR
+* Activate the editor
 * @see https://github.com/Leaflet/Leaflet.draw/issues/66
 * @editable_FeatureGroup = the current layer data with all items in the current_layer (FeatureGroup)
 * @layer_id = the id of the active layer
+*
+* @return bool
 */
 component_geolocation.prototype.init_draw_editor = function() {
 
@@ -935,8 +956,9 @@ component_geolocation.prototype.init_draw_editor = function() {
 			self.update_draw_data(self.active_layer_id);
 		});
 
-	// DRAW_EDITOR_IS_INITATED : Fija la variable a global a true (default is false) para evitar duplicidades
+	// DRAW_EDITOR_IS_INITATED : Set the a global variable to true (default is false) to avoid duplication
 	self.draw_editor_is_initated = true;
+
 
 	return true
 }//end init_draw_editor
@@ -947,6 +969,8 @@ component_geolocation.prototype.init_draw_editor = function() {
 * UPDATE_DRAW_DATA
 * Preparing the data for save, update the layers data into the instance
 * Save action is not exec here, see the render_component_geolocation for the save action
+* @param string layer_id
+* @return bool
 */
 component_geolocation.prototype.update_draw_data = function(layer_id) {
 
@@ -1049,7 +1073,8 @@ component_geolocation.prototype.update_draw_data = function(layer_id) {
 * 	"target_geolocation_tipo": "hierarchy31"
 *
 * If the observable doesn't has specified the component_geolocation will use the default thesaurus component_geolocation: hierarchy31
-*
+* @param object options
+* @return void
 */
 component_geolocation.prototype.map_update_coordinates = async function(options) {
 
@@ -1124,7 +1149,8 @@ component_geolocation.prototype.map_update_coordinates = async function(options)
 
 /**
 * LAYER_DATA_CHANGE
-* @param object change, with the information of the tag and the action (insert, remove)
+* @param object change
+* With the information of the tag and the action (insert, remove)
 * {
 * 	action : 'remove'
 * 	tag_id : 1
@@ -1143,8 +1169,8 @@ component_geolocation.prototype.layer_data_change = function(change) {
 		// const layer_name	= 'layer_' +layer_id
 
 		switch(action) {
-			case 'insert':
 
+			case 'insert':
 				const layer_loaded = self.ar_layer_loaded.find((item) => item.layer_id===layer_id)
 				if(layer_loaded){
 					return true
@@ -1175,7 +1201,6 @@ component_geolocation.prototype.layer_data_change = function(change) {
 				break;
 
 			case 'remove':
-
 				// get the layer from the loaded data
 				const layer = self.ar_layer_loaded.find((item) => item.layer_id===layer_id)
 				if(!layer){
@@ -1253,6 +1278,7 @@ component_geolocation.prototype.create_point = function(point) {
 
 	// update the layer data with the new point
 	self.update_draw_data(self.active_layer_id)
+
 
 	return true
 }//end create_point
@@ -1337,18 +1363,16 @@ const init_feature = function(options) {
 		// addLayer
 			self.FeatureGroup[layer_id].addLayer(data_layer)
 	}// end if (data_layer)
-
 }//end init_feature
-
 
 
 
 /**
 * READABLE_AREA
 * @method readable_area(area, metric ): string
-* @return Returns a readable area string in yards or metric.
 * The value will be rounded as defined by the precision option object.
 * @return string area_string
+* Returns a readable area string in yards or metric.
 */
 const readable_area = function (area, metric=true) {
 
@@ -1384,5 +1408,5 @@ const readable_area = function (area, metric=true) {
 		}
 	}
 
-	return area_string;
+	return area_string
 }//end readable_area

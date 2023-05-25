@@ -15,7 +15,6 @@
 
 export const component_iri = function(){
 
-
 	this.id
 
 	// element properties declare
@@ -31,8 +30,6 @@ export const component_iri = function(){
 	this.data
 	this.parent
 	this.node
-
-	return true
 }//end component_iri
 
 

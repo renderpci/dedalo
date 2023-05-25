@@ -33,8 +33,6 @@ export const component_password = function(){
 	this.tools
 
 	this.duplicates = false
-
-	return true
 }//end component_password
 
 

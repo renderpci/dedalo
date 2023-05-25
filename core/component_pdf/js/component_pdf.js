@@ -34,8 +34,6 @@ export const component_pdf = function(){
 
 	this.file_name
 	this.file_dir
-
-	return true
 }//end component_pdf
 
 
@@ -68,6 +66,8 @@ export const component_pdf = function(){
 
 /**
 * BUILD
+* @param bool autoload = false
+* @return bool
 */
 component_pdf.prototype.build = async function(autoload=false) {
 
