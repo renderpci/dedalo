@@ -228,12 +228,6 @@ const get_content_data = function(self) {
 						console.log('api_response:', api_response);
 					}
 
-					// hide spinner and show button label
-						button_enter_label.classList.remove('hide')
-						button_enter_loading.classList.add('hide')
-						button_enter.classList.remove('white')
-
-
 					if (api_response.errors && api_response.errors.length>0 || api_response.result===false) {
 
 						// errors found
@@ -242,6 +236,11 @@ const get_content_data = function(self) {
 						const msg_type	= 'error'
 						ui.show_message(messages_container, message, msg_type, 'component_message', true)
 
+						// hide spinner and show button label
+						button_enter_label.classList.remove('hide')
+						button_enter_loading.classList.add('hide')
+						button_enter.classList.remove('white')
+
 					}else{
 
 						// success case
@@ -249,6 +248,8 @@ const get_content_data = function(self) {
 						const message	= api_response.msg
 						const msg_type	= api_response.result===true ? 'ok' : 'error'
 						ui.show_message(messages_container, message, msg_type, 'component_message', true)
+
+						// hide spinner and show button label
 
 						self.action_dispatch(api_response)
 					}
