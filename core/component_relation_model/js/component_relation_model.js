@@ -7,7 +7,8 @@
 	import {component_select} from '../../component_select/js/component_select.js'
 
 
+
 /**
-* COMPONENT_RELATION_MODEL
+* COMPONENT_RELATION_MODEL. Alias of component_select
 */
 export const component_relation_model = component_select

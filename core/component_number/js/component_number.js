@@ -29,8 +29,6 @@ export const component_number = function(){
 	this.data
 	this.parent
 	this.node
-
-	return true
 }//end component_number
 
 

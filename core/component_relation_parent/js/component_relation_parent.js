@@ -7,7 +7,8 @@
 	import {component_portal} from '../../component_portal/js/component_portal.js'
 
 
+
 /**
-* COMPONENT_RELATION_PARENT
+* COMPONENT_RELATION_PARENT. Alias of component_portal
 */
 export const component_relation_parent = component_portal

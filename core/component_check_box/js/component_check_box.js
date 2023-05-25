@@ -17,21 +17,19 @@
 export const component_check_box = function(){
 
 	// element properties declare
-		this.model
-		this.tipo
-		this.section_tipo
-		this.section_id
-		this.mode
-		this.lang
+	this.model
+	this.tipo
+	this.section_tipo
+	this.section_id
+	this.mode
+	this.lang
 
-		this.section_lang
-		this.context
-		this.data
-		this.parent
-		this.node
-		this.id
-
-	return true
+	this.section_lang
+	this.context
+	this.data
+	this.parent
+	this.node
+	this.id
 }//end component_check_box
 
 

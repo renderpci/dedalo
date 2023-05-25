@@ -48,11 +48,8 @@ export const component_av = function(){
 	this.quality
 
 	this.fragment = null
-
-
-	return true
 }//end  component_av
-// export default component_av
+
 
 
 /**

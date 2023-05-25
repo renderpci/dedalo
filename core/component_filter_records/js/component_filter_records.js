@@ -31,8 +31,6 @@ export const component_filter_records = function(){
 	this.node			= null
 
 	this.tools			= null
-
-	return true
 }//end component_filter_records
 
 

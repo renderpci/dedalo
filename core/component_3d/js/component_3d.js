@@ -46,10 +46,7 @@ export const component_3d = function(){
 	this.video
 	this.quality
 
-	this.fragment = null
-
-
-	return true
+	this.fragment
 }//end  component_3d
 
 

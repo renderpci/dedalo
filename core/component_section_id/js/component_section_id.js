@@ -15,21 +15,19 @@
 export const component_section_id = function(){
 
 	// element properties declare
-		this.model			= null
-		this.tipo			= null
-		this.section_tipo	= null
-		this.section_id		= null
-		this.mode			= null
-		this.lang			= null
+	this.model			= null
+	this.tipo			= null
+	this.section_tipo	= null
+	this.section_id		= null
+	this.mode			= null
+	this.lang			= null
 
-		this.section_lang	= null
-		this.context		= null
-		this.data			= null
-		this.parent			= null
-		this.node			= null
-		this.id				= null
-
-	return true
+	this.section_lang	= null
+	this.context		= null
+	this.data			= null
+	this.parent			= null
+	this.node			= null
+	this.id				= null
 }//end component_section_id
 
 

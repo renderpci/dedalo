@@ -32,8 +32,6 @@ export const component_info = function(){
 	this.node
 
 	this.tools
-
-	return true
 }//end component_info
 
 
@@ -60,10 +58,10 @@ export const component_info = function(){
 
 /**
 * GET_WIDGETS
-* @return promise
+* @return array|bool self.ar_instances
 * 	Resolve: array|false self.ar_instances
 */
-component_info.prototype.get_widgets = async function(){
+component_info.prototype.get_widgets = async function() {
 
 	const self = this
 
@@ -172,9 +170,9 @@ component_info.prototype.get_widgets = async function(){
 
 /**
 * UPDATE_DATA
-* @return promise
+* @return bool
 */
-component_info.prototype.update_data = async function(){
+component_info.prototype.update_data = async function() {
 
 	const self = this
 
@@ -208,7 +206,7 @@ component_info.prototype.update_data = async function(){
 /**
 * CHANGE_MODE
 * Catch method only. Nothing to do here
-* @return promise
+* @return bool
 */
 component_info.prototype.change_mode = async function() {
 
