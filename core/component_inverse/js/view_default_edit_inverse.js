@@ -1,3 +1,7 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
+
+
+
 // import
 	import {ui} from '../../common/js/ui.js'
 	// import {common} from '../../common/js/common.js'
@@ -127,3 +131,8 @@ const get_buttons = (self) => {
 
 	return ui.component.build_buttons_container(self)
 }//end get_buttons
+
+
+
+// @license-end
+
