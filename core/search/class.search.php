@@ -411,6 +411,7 @@ class search {
 
 		// debug
 			if(SHOW_DEVELOPER===true) {
+				// error_log($sql_query);
 				$exec_time = (start_time()-$start_time)/1000000;
 				$response->generated_time['parsed_time'] = $parsed_time;
 				# Info about required time to exec the search
@@ -2223,8 +2224,8 @@ class search {
 					$pre = ($component_path==='section_id')
 						? $table_alias .'.'.$component_path
 						: $table_alias .'.datos#>>\'{' . $component_path . '}\'';
-
-					$sql_where .= $pre . ' IN(' . $search_object->q_parsed .') ';
+					$operator = $search_object->operator ?? 'IN'; // IN|NOT IN
+					$sql_where .= $pre . ' '.$operator.'(' . $search_object->q_parsed .') ';
 					break;
 
 				case 'function':

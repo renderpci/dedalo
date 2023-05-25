@@ -117,18 +117,21 @@ class component_portal extends component_relation_common {
 	*/
 	public function regenerate_component() : bool {
 
-		# Custom properties external dato
-		$properties = $this->get_properties();
-
 		# Force loads dato always !IMPORTANT
 		$this->get_dato();
 
-		debug_log(__METHOD__." Ignored regenerate action in this component. USE generate_relations_table_data TO REGENERATE RELATIONS ".to_string($this->tipo), logger::WARNING);
+		debug_log(__METHOD__
+			." Ignored regenerate action in this component. USE generate_relations_table_data TO REGENERATE RELATIONS ". PHP_EOL
+			.' tipo: '.$this->tipo
+			, logger::WARNING
+		);
 
-		if(empty($dato)) return true;
+		if(empty($dato)) {
+			return true;
+		}
 
-		# Save component data
-		#$this->Save();
+		// Save component data
+			 // $this->Save();
 
 		return true;
 	}//end regenerate_component
@@ -139,15 +142,17 @@ class component_portal extends component_relation_common {
 	* ADD_NEW_ELEMENT
 	* Creates a new record in target section and propagates filter data
 	* Add the new record section id to current component data (as locator) and save it
-	* @param object $request_options
+	* @param object $options
+	* Sample:
+	* {
+	* 	target_section_tipo : 'rsc197'
+	* }
 	* @return object $response
 	*/
-	public function add_new_element( object $request_options ) : object {
+	public function add_new_element( object $options ) : object {
 
 		// options
-			$options = new stdClass();
-				$options->target_section_tipo = null;
-				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+			$target_section_tipo = $options->target_section_tipo ?? null;
 
 		// response
 			$response = new stdClass();
@@ -155,11 +160,10 @@ class component_portal extends component_relation_common {
 				$response->msg		= 'Error. Request failed';
 
 		// target_section_tipo check
-			if(empty($options->target_section_tipo)){
+			if(empty($target_section_tipo)){
 				$response->msg .= ' Is mandatory to specify target_section_tipo';
 				return $response;
 			}
-
 
 		// 1 PROJECTS GET
 			// We get current portal filter data (projects) to heritage in the new portal record
@@ -181,8 +185,7 @@ class component_portal extends component_relation_common {
 
 		// 2 SECTION
 			// Section record . create new empty section in target section tipo
-			$target_section_tipo	= $options->target_section_tipo;
-			$section_new			= section::get_instance(null, $target_section_tipo);
+			$section_new = section::get_instance(null, $target_section_tipo);
 
 			$save_options = new stdClass();
 				$save_options->caller_dato				= $this->get_dato();
@@ -231,19 +234,19 @@ class component_portal extends component_relation_common {
 	/**
 	* REMOVE_ELEMENT
 	*
-	* @param object $request_options
+	* @param object $options
+	* 	sample:
+	* {
+	* 	locator : object locator,
+	* 	remove_mode : delete_link | delete_all
+	* }
 	* @return object $response
 	*/
-	public function remove_element( object $request_options ) : object {
+	public function remove_element( object $options ) : object {
 
 		// options
-			$options = (object)[
-				'locator'		=> $request_options->locator ?? null,
-				'remove_mode'	=> $request_options->remove_mode ?? 'delete_link' // delete_link | delete_all (deletes link and resource)
-			];
-
-		// short vars
-			$locator = $options->locator;
+			$locator		= $options->locator ?? null;
+			$remove_mode	= $options->remove_mode ?? 'delete_link'; // delete_link | delete_all (deletes link and resource)
 
 		// response
 			$response = new stdClass();
@@ -258,7 +261,7 @@ class component_portal extends component_relation_common {
 			}
 
 		// Remove target record
-			if ($options->remove_mode==='delete_all') {
+			if ($remove_mode==='delete_all') {
 
 				$section = section::get_instance(
 					$locator->section_id, // string section_id
@@ -275,14 +278,14 @@ class component_portal extends component_relation_common {
 
 		// Update state
 		// DELETE AND UPDATE the component state of this section and his parents
-			$state = $this->remove_state_from_locator( $locator );
+			$this->remove_state_from_locator( $locator );
 
 		// Save current component updated data
 			$this->Save();
 
 		// response
 			$response->result		= true;
-			$response->remove_mode	= $options->remove_mode;
+			$response->remove_mode	= $remove_mode;
 			$response->msg			= 'OK. Request done '.__METHOD__;
 
 
@@ -293,25 +296,29 @@ class component_portal extends component_relation_common {
 
 	/**
 	* GET_CURRENT_SECTION_FILTER_DATA
+	* Gets fast project data of current section
 	* Search component filter in current section and get the component data
 	* @return array $component_filter_dato
 	*/
 	public function get_current_section_filter_data() : array {
 
-		$section_id		= $this->get_section_id();
-		$section_tipo	= $this->get_section_tipo();
+		// short vars
+			$section_id		= $this->get_section_id();
+			$section_tipo	= $this->get_section_tipo();
 
-		# 1.1 PROYECTOS DE PROYECTOS : Portales de la sección proyectos
 		if ($section_tipo===DEDALO_FILTER_SECTION_TIPO_DEFAULT) {
 
-			#$component_filter_dato 	= array($section_id=>"2"); # Será su propio filtro
+			// Project of projects case : Projects in section portals
+
 			$filter_locator = new locator();
 				$filter_locator->set_section_tipo($section_tipo);
 				$filter_locator->set_section_id($section_id);
 			$component_filter_dato = [$filter_locator];
 
 		}else{
-			// $section		= section::get_instance($section_id, $section_tipo);
+
+			// default case
+
 			$ar_search_model	= ['component_filter'];
 			$ar_children_tipo	= section::get_ar_children_tipo_by_model_name_in_section(
 				$section_tipo, // section_tipo
@@ -324,21 +331,26 @@ class component_portal extends component_relation_common {
 			);
 
 			if (empty($ar_children_tipo[0])) {
-				throw new Exception("Error Processing Request: 'component_filter' is empty 1", 1);
+				// throw new Exception("Error Processing Request: 'component_filter' is empty 1", 1);
+				debug_log(__METHOD__
+					. " Error Processing Request: 'component_filter' is empty 1 " . PHP_EOL
+					. ' $ar_children_tipo: '.to_string($ar_children_tipo)
+					, logger::ERROR
+				);
 			}else {
+
 				$component_filter_tipo	= $ar_children_tipo[0];
 				$model					= RecordObj_dd::get_modelo_name_by_tipo($component_filter_tipo, true);
-
-				$component_filter = component_common::get_instance(
+				$component_filter		= component_common::get_instance(
 					$model,
 					$component_filter_tipo,
 					$section_id,
 					'edit',
-					DEDALO_DATA_LANG,
+					DEDALO_DATA_NOLAN,
 					$section_tipo
 				);
 
-				$component_filter_dato 	= $component_filter->get_dato_generic(); // Without 'from_component_tipo' and 'type' properties
+				$component_filter_dato = $component_filter->get_dato_generic(); // Without 'from_component_tipo' and 'type' properties
 			}
 		}
 
@@ -497,7 +509,8 @@ class component_portal extends component_relation_common {
 
 	/**
 	* GET_VALOR
-	* @return
+	* V5 diffusion compatibility
+	* @return mixed $valor
 	*/
 	public function get_valor($lang=DEDALO_DATA_LANG, $format='string', $fields_separator=', ', $records_separator='<br>', $ar_related_terms=false, $data_to_be_used='valor') {
 
@@ -525,7 +538,7 @@ class component_portal extends component_relation_common {
 
 	/**
 	* GET_VALOR_EXPORT
-	* @return
+	* @return mixed $valor;
 	*/
 	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null ) {
 
