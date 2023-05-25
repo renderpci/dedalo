@@ -183,6 +183,8 @@ session_write_close();
 		// // header("Cache-Control: max-age=$seconds_to_cache");
 		// header("Cache-Control: Cache-Control: stale-while-revalidate=$seconds_to_cache");
 ?>
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
+
 "use strict";
 const page_globals=<?php
 	echo (SHOW_DEBUG===true)
@@ -206,3 +208,6 @@ if (!include DEDALO_CORE_PATH . $lang_path) {
 // json_elements_data array
 // echo ';'.PHP_EOL.js::get_json_elements_data();
 // debug_log('exec_time: ' .exec_time_unit($global_start_time,'ms').' ms', logger::DEBUG);
+?>
+
+// @license-end
