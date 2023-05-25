@@ -97,33 +97,35 @@ vector_editor.prototype.init_canvas = async function(self) {
 		//get the current resized canvas size
 
 	// Paste svg clipboard to active layer
-		document.addEventListener('paste', function(event) {
+		document.addEventListener('paste', fn_paste)
+		function fn_paste(event) {
 			// get the clipboard data
-				const clipboard = event.clipboardData.getData('text/plain')
+			const clipboard = event.clipboardData.getData('text/plain')
 			// check if the clipboard is a svg data
-				if ( clipboard.indexOf('<svg version="')!=-1 ) {
+			if ( clipboard.indexOf('<svg version="')!=-1 ) {
 
-					const pasted_svg = self.current_paper.project.importSVG( clipboard )
-					pasted_svg.clipped = true;
+				const pasted_svg = self.current_paper.project.importSVG( clipboard )
+				pasted_svg.clipped = true;
 
-					// optional: remove the clipped path
-						// pasted_svg.clipped = false;
-						// pasted_svg.children[0].remove()
-						// pasted_svg.parent.insertChildren(pasted_svg.index,pasted_svg.removeChildren());
-						// pasted_svg.remove();
+				// optional: remove the clipped path
+					// pasted_svg.clipped = false;
+					// pasted_svg.children[0].remove()
+					// pasted_svg.parent.insertChildren(pasted_svg.index,pasted_svg.removeChildren());
+					// pasted_svg.remove();
 			}
-		})
-
-		document.addEventListener('copy', function (event) {
+		}
+	// copy event
+		document.addEventListener('copy', fn_copy)
+		function fn_copy(event) {
 			// copy the path and convert to svg to export in the clipboard
-				event.preventDefault();
-				const project_svg = project.exportSVG({asString:true,precision:3})
-				if (event.clipboardData) {
-					event.clipboardData.setData('text/plain', project_svg);
-				} else if (window.clipboardData) {
-					window.clipboardData.setData('Text', project_svg);
-				}
-		});
+			event.preventDefault();
+			const project_svg = project.exportSVG({asString:true,precision:3})
+			if (event.clipboardData) {
+				event.clipboardData.setData('text/plain', project_svg);
+			} else if (window.clipboardData) {
+				window.clipboardData.setData('Text', project_svg);
+			}
+		};
 
 	// create the main layer
 		// main layer is the layer that define the area to be cropped.
