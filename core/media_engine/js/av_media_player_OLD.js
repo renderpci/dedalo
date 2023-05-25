@@ -1,3 +1,5 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
+
 //"use strict"
 var t 					= null ;	// window time interval
 var video_current_state	= null ;	// current state (pause, play)
@@ -705,3 +707,7 @@ function remove_background() {
 
       qt_volumechange — The audio volume or mute attribute has changed.
 */
+
+
+
+// @license-end
