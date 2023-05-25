@@ -7,7 +7,6 @@
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {event_manager} from '../../common/js/event_manager.js'
-	// import {clone} from '../../common/js/utils/index.js'
 	import {render_edit_component_security_access} from './render_edit_component_security_access.js'
 	import {render_list_component_security_access} from './render_list_component_security_access.js'
 	import {render_search_component_security_access} from './render_search_component_security_access.js'
@@ -35,8 +34,6 @@ export const component_security_access = function(){
 	this.tools
 
 	this.worker_path
-
-	return true
 }//end component_security_access
 
 

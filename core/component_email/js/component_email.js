@@ -12,6 +12,7 @@
 	import {render_search_component_email} from '../../component_email/js/render_search_component_email.js'
 
 
+
 export const component_email = function(){
 
 	this.id				= null
@@ -31,8 +32,6 @@ export const component_email = function(){
 	this.node			= null
 
 	this.tools			= null
-
-	return true
 }//end component_email
 
 

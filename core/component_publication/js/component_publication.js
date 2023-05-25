@@ -29,9 +29,6 @@ export const component_publication = function(){
 	this.data			= null
 	this.parent			= null
 	this.node			= null
-
-
-	return true
 }//end component_publication
 
 

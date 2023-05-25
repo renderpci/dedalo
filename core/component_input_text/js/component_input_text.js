@@ -37,9 +37,6 @@ export const component_input_text = function(){
 	this.tools			= null
 
 	this.duplicates		= false
-
-
-	return true
 }//end component_input_text
 
 
@@ -77,13 +74,14 @@ export const component_input_text = function(){
 	component_input_text.prototype.change_mode			= component_common.prototype.change_mode
 
 	// output
-	// component_input_text.prototype.get_raw_string		= render_view_text.prototype.get_raw_string
+	// component_input_text.prototype.get_raw_string	= render_view_text.prototype.get_raw_string
 
 
 
 /**
 * INIT
-* @return promise bool
+* @param object options
+* @return bool
 */
 component_input_text.prototype.init = async function(options) {
 
@@ -93,7 +91,7 @@ component_input_text.prototype.init = async function(options) {
 		const common_init = await component_common.prototype.init.call(self, options);
 
 	return common_init
-}//end  init
+}//end init
 
 
 

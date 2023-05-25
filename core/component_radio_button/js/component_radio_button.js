@@ -29,8 +29,6 @@ export const component_radio_button = function(){
 	this.data
 	this.parent
 	this.node
-
-	return true
 }//end component_radio_button
 
 
