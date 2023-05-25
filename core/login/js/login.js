@@ -227,6 +227,7 @@ login.prototype.action_dispatch = async function(api_response) {
 					: DEDALO_ROOT_WEB + '/core/themes/default/icons/dedalo_icon_grey.svg'
 				if (bg_image) {
 					// force load image
+					self.node.style.setProperty('--user_login_image', `url('${bg_image}')`);
 					await (()=>{
 						return new Promise(function(resolve, reject){
 							const img = new Image()
@@ -241,13 +242,12 @@ login.prototype.action_dispatch = async function(api_response) {
 							console.error(error);
 						});
 					})();
-					self.node.style.setProperty('--user_login_image', `url('${bg_image}')`);
 					self.node.classList.add('raspa_loading')
 					await (()=>{
 						return new Promise(function(resolve, reject){
 							setTimeout(function(){
 								resolve(true)
-							}, 40)
+							}, 150)
 						})
 					})();
 				}
