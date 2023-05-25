@@ -157,14 +157,23 @@ const get_content_data = function(self) {
 		})
 		document.addEventListener('keydown', fn_service_autocomplete_keys, false)
 		function fn_service_autocomplete_keys(e) {
+			// deactivate when the caller is not focused, it block keydown of other components.
+			if (!self.caller.active) {
+				return
+			}
 			self.service_autocomplete_keys(e)
 		}
+		// remove the event when the caller is deactivate to avoid conflicts between events
+		event_manager.subscribe('deactivate_component', function(component){
+			if (component.id===self.caller.id) {
+				document.removeEventListener('keydown', fn_service_autocomplete_keys, false)
+			}
+		})
 
 	// fix main nodes pointers
 		self.search_input		= search_input
 		self.datalist			= datalist
 		self.options_container	= options_container
-
 
 	return fragment
 }//end render
