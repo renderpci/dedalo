@@ -110,6 +110,8 @@ const get_content_data = function(self) {
 				}
 			})
 			fragment.appendChild(select_lang)
+			// fix
+			self.select_lang = select_lang
 		}
 
 	// form
@@ -324,7 +326,7 @@ const get_content_data = function(self) {
 		content_data.appendChild(fragment)
 		// set pointers
 		content_data.top				= top
-		content_data.select_lang		= typeof select_lang!=='undefined' ? select_lang : null
+		content_data.select_lang		= self.select_lang
 		content_data.form				= form
 		content_data.info				= info
 		content_data.messages_container	= messages_container
