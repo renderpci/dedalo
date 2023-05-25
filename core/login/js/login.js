@@ -35,6 +35,7 @@ export const login = function() {
 
 	this.custom_action_dispatch
 	this.add_select_lang
+	this.select_lang
 
 	this.status
 }//end login
@@ -216,7 +217,7 @@ login.prototype.action_dispatch = async function(api_response) {
 		if (api_response.result===true) {
 
 			// hide component_message OK
-				const component_message =self.node.content_data.querySelector('.component_message.ok')
+				const component_message = self.node.content_data.querySelector('.component_message.ok')
 				if (component_message) {
 					component_message.classList.add('hide')
 				}
