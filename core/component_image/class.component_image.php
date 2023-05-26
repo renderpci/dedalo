@@ -454,8 +454,8 @@ class component_image extends component_media_common {
 			$source_image			= $this->get_media_filepath($source_quality);
 			$image_dimensions		= $this->get_image_dimensions($source_quality);
 
-			$source_pixels_width	= $image_dimensions[0] ?? null;
-			$source_pixels_height	= $image_dimensions[1] ?? null;
+			$source_pixels_width	= $image_dimensions->width ?? null;
+			$source_pixels_height	= $image_dimensions->height ?? null;
 
 		// Image target
 			$target_image			= $this->get_media_filepath($target_quality);
@@ -1232,8 +1232,8 @@ class component_image extends component_media_common {
 		// string_node
 			$image_url			= $this->get_media_url_dir($source_quality) .'/'. $id .'.'. $this->get_extension(); // relative path
 			$image_dimensions	= $this->get_image_dimensions($source_quality);
-			$width				= $image_dimensions[0];
-			$height				= $image_dimensions[1];
+			$width				= $image_dimensions->width ?? null;
+			$height				= $image_dimensions->height ?? null;
 
 			$svg_string_node_pretty = '
 				<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="'.$width.'" height="'.$height.'" viewBox="0,0,'.$width.','.$height.'">
@@ -1790,81 +1790,101 @@ class component_image extends component_media_common {
 
 	/**
 	* GET_IMAGE_DIMENSIONS
+	* Calculate image size in pixels using PHP exif_read_data
+	* File used to read data will be the quality received version,
+	* usually default
 	* @param string $quality
-	* @return array|bool $ar_info
+	* @return object $image_dimensions
 	*/
-	public function get_image_dimensions(string $quality) : array|bool {
+	public function get_image_dimensions(string $quality) : object {
 
-		if($this->external_source){
+		$image_dimensions = new stdClass();
 
-			$filename 		= $this->external_source;
+		// file path
+			if($this->external_source) {
 
-		}else{
+				$file_path 		= $this->external_source;
 
-			$id				= $this->id;
-			$media_path_abs	= $this->get_media_path_dir($quality);
-			$filename		= rtrim($media_path_abs, '/') .'/'. $id .'.'. DEDALO_IMAGE_EXTENSION;
-		}
-
-		if ( !file_exists( $filename )) {
-			debug_log(__METHOD__
-				." Error. Image file not found ". PHP_EOL
-				. 'filename: ' .$filename
-				, logger::ERROR
-			);
-			return false ;
-		}
-
-		try {
-			// $ar_info	= @getimagesize($filename);
-			$exif		= exif_read_data($filename);
-			if(!empty($exif['Orientation'])) {
-				switch($exif['Orientation']) {
-					case 8:// rotate 90
-					case 6:// rotate 270 || -90
-						$width 	= $exif['COMPUTED']['Height'];
-						$height = $exif['COMPUTED']['Width'];
-						break;
-					case 1:	// rotate 0
-					case 3: // rotate 180
-					default:
-						$width 	= $exif['COMPUTED']['Width'];
-						$height = $exif['COMPUTED']['Height'];
-						break;
-				}
 			}else{
-				$width 	= $exif['COMPUTED']['Width'];
-				$height = $exif['COMPUTED']['Height'];
+
+				$id				= $this->id;
+				$media_path_abs	= $this->get_media_path_dir($quality);
+				$file_path		= rtrim($media_path_abs, '/') .'/'. $id .'.'. DEDALO_IMAGE_EXTENSION;
 			}
-			$ar_info[] = $width;
-			$ar_info[] = $height;
-			if(!$ar_info) {
+
+		// file do not exists case
+			if ( !file_exists( $file_path )) {
 				debug_log(__METHOD__
-					." Error. Image getimagesize error 1 ". PHP_EOL
-					. 'filename: ' .$filename
+					." Error. Image file not found ". PHP_EOL
+					. 'filename: ' .$file_path
 					, logger::ERROR
 				);
-				// throw new Exception('Unknown image width!');
-				return false;
+				return $image_dimensions;
 			}
 
-			// data sample
-				// $width	= $ar_info[0];
-				// $height	= $ar_info[1];
-				// $type	= $ar_info[2];
+		try {
 
-			return $ar_info;
+			// read file exif data with PHP
+				// sample result data:
+				// {
+				//     "FileName": "rsc29_rsc170_49.jpg",
+				//     "FileDateTime": 1551715486,
+				//     "FileSize": 122953,
+				//     "FileType": 2,
+				//     "MimeType": "image/jpeg",
+				//     "SectionsFound": "",
+				//     "COMPUTED": {
+				//         "html": "width=\"608\" height=\"862\"",
+				//         "Height": 862,
+				//         "Width": 608,
+				//         "IsColor": 1
+				//     }
+				// }
+				$exif = exif_read_data($file_path);
+				if(!empty($exif['Orientation'])) {
+					switch($exif['Orientation']) {
+						case 8:// rotate 90
+						case 6:// rotate 270 || -90
+							$width 	= $exif['COMPUTED']['Height'];
+							$height = $exif['COMPUTED']['Width'];
+							break;
+						case 1:	// rotate 0
+						case 3: // rotate 180
+						default:
+							$width 	= $exif['COMPUTED']['Width'];
+							$height = $exif['COMPUTED']['Height'];
+							break;
+					}
+				}else{
+					$width 	= $exif['COMPUTED']['Width'];
+					$height = $exif['COMPUTED']['Height'];
+				}
+				// check valid values
+				if(empty($width) || empty($height)) {
+					debug_log(__METHOD__
+						." Error. get_image_dimensions error 1 ". PHP_EOL
+						. 'filename: ' .$file_path . PHP_EOL
+						. ' exif: ' . to_string($exif)
+						, logger::ERROR
+					);
+					return $image_dimensions;
+				}
+
+			// image_dimensions set value
+				$image_dimensions->width	= $width;
+				$image_dimensions->height	= $height;
 
 		} catch (Exception $e) {
 			debug_log(__METHOD__
-				." Error. Image getimagesize error 2 " . PHP_EOL
-				. 'filename: ' .$filename .PHP_EOL
+				." Error. get_image_dimensions error 2 " . PHP_EOL
+				. 'filename: ' .$file_path .PHP_EOL
 				. 'Caught exception: '.  $e->getMessage()
 				, logger::ERROR
 			);
 		}
 
-		return false;
+
+		return $image_dimensions;
 	}//end get_image_dimensions
 
 
