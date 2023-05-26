@@ -997,6 +997,13 @@ final class dd_utils_api {
 						);
 						$response->msg .= 'Uploaded file Error on get/move to target_path.';
 						return $response;
+					}else{
+						debug_log(__METHOD__
+							. " Moved file >>>>>>>>>>>>>> " . PHP_EOL
+							. ' from file_tmp_name: '.$file_tmp_name . PHP_EOL
+							. ' to target_path: '.$target_path
+							, logger::WARNING
+						);
 					}
 
 				// thumbnail file

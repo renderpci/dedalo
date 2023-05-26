@@ -357,7 +357,7 @@ class component_media_common extends component_common {
 			$key_dir		= $file_data->key_dir; // string upload caller name like 'oh1_oh1'
 			$tmp_dir		= $file_data->tmp_dir; // constant string name like 'DEDALO_UPLOAD_TMP_DIR'
 			$tmp_name		= $file_data->tmp_name; // string like 'phpJIQq4e'
-			$quality 		= $file_data->quality ?? $this->get_original_quality();
+			$quality 		= $file_data->quality ?? $this->get_quality() ?? $this->get_original_quality();
 			$source_file 	= $file_data->source_file ?? null;
 
 		// source_file
@@ -377,7 +377,7 @@ class component_media_common extends component_common {
 				? $source_file
 				: constant($tmp_dir). '/'. $user_id .'/'. rtrim($key_dir, '/') . '/' . $tmp_name;
 
-		// check source file file
+		// check source file
 			if (!file_exists($source_file)) {
 				$response->msg .= ' Source file not found: ' . basename($source_file);
 				debug_log(__METHOD__
@@ -396,7 +396,12 @@ class component_media_common extends component_common {
 			$full_file_name	= $file_name . '.' . $file_extension;
 			$full_file_path	= $folder_path .'/'. $full_file_name;
 
-			debug_log(__METHOD__." Target file (full_file_path): ".to_string($full_file_path), logger::DEBUG);
+		// debug
+			debug_log(__METHOD__
+				." media_common.add_file Target file (full_file_path): "
+				.to_string($full_file_path)
+				, logger::DEBUG
+			);
 
 		// validate extension
 			if (!$this->valid_file_extension($file_extension)) {
@@ -565,7 +570,7 @@ class component_media_common extends component_common {
 
 	/**
 	* PROCESS_UPLOADED_FILE
-	* Dummy method. Overwrite it when need
+	* Dummy method. Overwrite it in each component
 	* @return object $response
 	*/
 	public function process_uploaded_file(object $file_data) : object {
