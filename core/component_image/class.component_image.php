@@ -1020,6 +1020,13 @@ class component_image extends component_media_common {
 
 	/**
 	* PROCESS_UPLOADED_FILE
+	* Note that this is the last method called in a sequence started on upload file.
+	* The sequence order is:
+	* 	1 - dd_utils_api::upload
+	* 	2 - tool_upload::process_uploaded_file
+	* 	3 - component_media_common::add_file
+	* 	4 - component:process_uploaded_file
+	* The target quality is defined by the component quality set in tool_upload::process_uploaded_file
 	* @param object $file_data
 	*	Data from trigger upload file
 	* @return object $response
@@ -1030,136 +1037,147 @@ class component_image extends component_media_common {
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__METHOD__.'] ';
 
-		// vars
-			$original_file_name	= $file_data->original_file_name; 	// kike "my photo785.jpg"
-			// $full_file_name	= $file_data->full_file_name;		// like "test175_test65_1.jpg"
+		// short vars
+			$original_file_name	= $file_data->original_file_name;	// kike "my photo785.jpg"
 			$full_file_path		= $file_data->full_file_path;		// like "/mypath/media/image/1.5MB/test175_test65_1.jpg"
 
-		// imagemagick. Normalize uploaded image format to Dédalo working format like jpg from tif
-			try {
+		// debug
+			debug_log(__METHOD__
+				. " process_uploaded_file " . PHP_EOL
+				. ' original_file_name: ' . $original_file_name .PHP_EOL
+				. ' full_file_path: ' . $full_file_path
+				, logger::WARNING
+			);
 
-				// default_image_format : If uploaded file is not in Dedalo standard format (jpg), is converted,
-				// and original file is conserved (like myfilename.tiff and myfilename.jpg)
-					$standard_file_path = self::build_standard_image_format($full_file_path);
+		try {
 
-				// target_filename. Save original file name in a component_input_text if defined
-					$properties = $this->get_properties();
-					if (isset($properties->target_filename)) {
+			// default_image_format : If uploaded file is not in Dedalo standard format (jpg), is converted,
+			// and original file is conserved (like myfilename.tiff and myfilename.jpg)
+				$standard_file_path = self::build_standard_image_format($full_file_path);
 
-						$current_section_id			= $this->get_section_id();
-						$target_section_tipo		= $this->get_section_tipo();
-						$model_name_target_filename	= RecordObj_dd::get_modelo_name_by_tipo($properties->target_filename,true);
-						$component_target_filename	= component_common::get_instance(
-							$model_name_target_filename,
-							$properties->target_filename,
-							$current_section_id,
-							'edit',
-							DEDALO_DATA_NOLAN,
-							$target_section_tipo
+			// target_filename. Save original file name in a component_input_text if defined
+				$properties = $this->get_properties();
+				if (isset($properties->target_filename)) {
+					$current_section_id			= $this->get_section_id();
+					$target_section_tipo		= $this->get_section_tipo();
+					$model_name_target_filename	= RecordObj_dd::get_modelo_name_by_tipo($properties->target_filename,true);
+					$component_target_filename	= component_common::get_instance(
+						$model_name_target_filename,
+						$properties->target_filename,
+						$current_section_id,
+						'edit',
+						DEDALO_DATA_NOLAN,
+						$target_section_tipo
+					);
+					$component_target_filename->set_dato( $original_file_name );
+					$component_target_filename->Save();
+				}
+
+			// custom_postprocessing_image. postprocessing_image_script
+				if (defined('POSTPROCESSING_IMAGE_SCRIPT')) {
+					sleep(1);
+					require( POSTPROCESSING_IMAGE_SCRIPT );
+					$result = custom_postprocessing_image($this);
+				}
+
+			// original and retouched cases rewrites default and thumb files
+				$overwrite_default = ($this->quality===DEDALO_IMAGE_QUALITY_ORIGINAL || $this->quality===DEDALO_IMAGE_QUALITY_RETOUCHED);
+				if ($overwrite_default===true) {
+					// Generate default image quality from original if is needed
+						$default = $this->generate_default_quality_file(true);
+
+					// Generate thumb image quality from default always (if default exits)
+						$thumb = $this->generate_thumb();
+
+					// debug
+						debug_log(__METHOD__." SAVING COMPONENT IMAGE: generate_default_quality_file response: ".to_string($default), logger::DEBUG);
+						debug_log(__METHOD__." SAVING COMPONENT IMAGE: generate_thumb response: ".to_string($thumb), logger::DEBUG);
+				}
+
+			// generate the SVG file. Only when original, retouched or default quality files change
+				if ( $this->quality===DEDALO_IMAGE_QUALITY_ORIGINAL ||
+					 $this->quality===DEDALO_IMAGE_QUALITY_RETOUCHED ||
+					 $this->quality===$this->get_default_quality()
+					 ) {
+
+					$svg_string_node		= $this->create_default_svg_string_node();
+					$create_svg_file_result	= $this->create_svg_file($svg_string_node);
+				}
+
+			// add data with the file uploaded, only for original and retouched images, other quality images don't has relevant info.
+				// if( $this->quality===DEDALO_IMAGE_QUALITY_ORIGINAL ||
+				// 	$this->quality===DEDALO_IMAGE_QUALITY_RETOUCHED) {
+
+				// 	$file_name_label	= $this->quality===DEDALO_IMAGE_QUALITY_ORIGINAL ? 'original_file_name'   : 'retouched_file_name';
+				// 	$upload_date_label	= $this->quality===DEDALO_IMAGE_QUALITY_ORIGINAL ? 'original_upload_date' : 'retouched_upload_date';
+
+				// 	$dato			= $this->get_dato();
+				// 	$value			= empty($dato) ? new stdClass() : reset($dato);
+				// 	$media_value	= $this->build_media_value((object)[
+				// 		'value'				=> $value,
+				// 		'file_name'			=> $original_file_name,
+				// 		'file_name_label'	=> $file_name_label,
+				// 		'upload_date'		=> component_date::get_date_now(),
+				// 		'upload_date_label'	=> $upload_date_label
+				// 	]);
+
+				// 	$this->set_dato([$media_value]);
+				// 	$this->Save();
+				// }
+
+			// get files info
+				$files_info	= [];
+				$ar_quality = DEDALO_IMAGE_AR_QUALITY;
+				foreach ($ar_quality as $current_quality) {
+					if ($current_quality==='thumb') continue;
+					// read file if exists to get file_info
+					$file_info = $this->get_quality_file_info($current_quality);
+					// add non empty quality files data
+					if (!empty($file_info)) {
+						$files_info[] = $file_info;
+					}
+				}
+
+			// save component dato
+				$dato		= $this->get_dato();
+				$save_dato	= false;
+				if (isset($dato[0])) {
+					if (!is_object($dato[0])) {
+						// bad dato
+						debug_log(__METHOD__
+							." ERROR. BAD COMPONENT DATO ".to_string($dato)
+							, logger::ERROR
 						);
-						$component_target_filename->set_dato( $original_file_name );
-						$component_target_filename->Save();
-					}
-
-				// custom_postprocessing_image. postprocessing_image_script
-					if (defined('POSTPROCESSING_IMAGE_SCRIPT')) {
-						sleep(1);
-						require( POSTPROCESSING_IMAGE_SCRIPT );
-						$result = custom_postprocessing_image($this);
-					}
-
-				// original and retouched cases rewrites default and thumb files
-					$overwrite_default = ($this->quality===DEDALO_IMAGE_QUALITY_ORIGINAL || $this->quality===DEDALO_IMAGE_QUALITY_RETOUCHED);
-					if ($overwrite_default===true) {
-						// Generate default image quality from original if is needed
-							$default = $this->generate_default_quality_file(true);
-
-						// Generate thumb image quality from default always (if default exits)
-							$thumb = $this->generate_thumb();
-
-						// debug
-							debug_log(__METHOD__." SAVING COMPONENT IMAGE: generate_default_quality_file response: ".to_string($default), logger::DEBUG);
-							debug_log(__METHOD__." SAVING COMPONENT IMAGE: generate_thumb response: ".to_string($thumb), logger::DEBUG);
-					}
-
-				// generate the SVG file. Only when original, retouched or default quality files change
-					if ( $this->quality===DEDALO_IMAGE_QUALITY_ORIGINAL ||
-						 $this->quality===DEDALO_IMAGE_QUALITY_RETOUCHED ||
-						 $this->quality===$this->get_default_quality()
-						 ) {
-
-						$svg_string_node		= $this->create_default_svg_string_node();
-						$create_svg_file_result	= $this->create_svg_file($svg_string_node);
-					}
-
-				// add data with the file uploaded, only for original and retouched images, other quality images don't has relevant info.
-					// if( $this->quality===DEDALO_IMAGE_QUALITY_ORIGINAL ||
-					// 	$this->quality===DEDALO_IMAGE_QUALITY_RETOUCHED) {
-
-					// 	$file_name_label	= $this->quality===DEDALO_IMAGE_QUALITY_ORIGINAL ? 'original_file_name'   : 'retouched_file_name';
-					// 	$upload_date_label	= $this->quality===DEDALO_IMAGE_QUALITY_ORIGINAL ? 'original_upload_date' : 'retouched_upload_date';
-
-					// 	$dato			= $this->get_dato();
-					// 	$value			= empty($dato) ? new stdClass() : reset($dato);
-					// 	$media_value	= $this->build_media_value((object)[
-					// 		'value'				=> $value,
-					// 		'file_name'			=> $original_file_name,
-					// 		'file_name_label'	=> $file_name_label,
-					// 		'upload_date'		=> component_date::get_date_now(),
-					// 		'upload_date_label'	=> $upload_date_label
-					// 	]);
-
-					// 	$this->set_dato([$media_value]);
-					// 	$this->Save();
-					// }
-
-				// get files info
-					$files_info	= [];
-					$ar_quality = DEDALO_IMAGE_AR_QUALITY;
-					foreach ($ar_quality as $current_quality) {
-						if ($current_quality==='thumb') continue;
-						// read file if exists to get file_info
-						$file_info = $this->get_quality_file_info($current_quality);
-						// add non empty quality files data
-						if (!empty($file_info)) {
-							$files_info[] = $file_info;
-						}
-					}
-
-				// save component dato
-					$dato		= $this->get_dato();
-					$save_dato	= false;
-					if (isset($dato[0])) {
-						if (!is_object($dato[0])) {
-							// bad dato
-							debug_log(__METHOD__." ERROR. BAD COMPONENT DATO ".to_string($dato), logger::ERROR);
-						}else{
-							// update property files_info
-							$dato[0]->files_info = $files_info;
-							$save_dato = true;
-						}
 					}else{
-						// create a new dato from scratch
-						$dato_item = (object)[
-							'files_info' => $files_info
-						];
-						$dato = [$dato_item];
+						// update property files_info
+						$dato[0]->files_info = $files_info;
 						$save_dato = true;
 					}
-					if ($save_dato===true) {
-						$this->set_dato($dato);
-						$this->Save();
-					}
+				}else{
+					// create a new dato from scratch
+					$dato_item = (object)[
+						'files_info' => $files_info
+					];
+					$dato = [$dato_item];
+					$save_dato = true;
+				}
+				if ($save_dato===true) {
+					$this->set_dato($dato);
+					$this->Save();
+				}
 
-				// all is OK
-					$response->result	= true;
-					$response->msg		= 'OK. Request done ['.__METHOD__.'] ';
+			// all is OK
+				$response->result	= true;
+				$response->msg		= 'OK. Request done ['.__METHOD__.'] ';
 
-			} catch (Exception $e) {
-				$msg = 'Exception[process_uploaded_file]: ' .  $e->getMessage() . "\n";
-				debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
-				$response->msg .= ' - '.$msg;
-			}
+		} catch (Exception $e) {
+			$msg = 'Exception[process_uploaded_file]: ' .  $e->getMessage() . "\n";
+			debug_log(__METHOD__
+				." $msg "
+				, logger::ERROR
+			);
+			$response->msg .= ' - '.$msg;
+		}
 
 
 		return $response;

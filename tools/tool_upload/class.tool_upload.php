@@ -10,6 +10,9 @@ class tool_upload extends tool_common {
 
 	/**
 	* PROCESS_UPLOADED_FILE
+	* This method is caller after the file is already uploaded to temporary directory.
+	* Move the temp file to the final directory and launch the component process method
+	* @param object $options
 	* @return object $response
 	*/
 	public static function process_uploaded_file(object $options) : object {
