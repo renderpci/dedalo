@@ -805,23 +805,16 @@ abstract class diffusion  {
 			if (empty($image_dimensions)) {
 				return null;
 			}
-
-		// Response (from imagemagick)
-			# [0] => 617
-			# [1] => 849
-			# [2] => 2
-			# [3] => width="617" height="849"
-			# [bits] => 8
-			# [channels] => 3
-			# [mime] => image/jpeg
+			// Response sample (from PHP exif_read_data)
+			// {
+			// 	width => 720,
+			// 	height => 404
+			// }
 
 		// image_info object
 			$image_info = new stdClass();
-				$image_info->width		= $image_dimensions[0];
-				$image_info->height		= $image_dimensions[1];
-				$image_info->bits		= $image_dimensions['bits'];
-				$image_info->channels	= $image_dimensions['channels'];
-				$image_info->mime		= $image_dimensions['mime'];
+				$image_info->width	= $image_dimensions->width ?? null;
+				$image_info->height	= $image_dimensions->height ?? null;
 
 
 		return $image_info;
