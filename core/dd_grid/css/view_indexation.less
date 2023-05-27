@@ -70,6 +70,10 @@
 					border-top-right-radius: 4px;
 					line-height: 0.8em;
 				}
+				// section_tipo variants from label class
+				&.isad1 >label {
+					background-color: #465d8e;
+				}
 
 				.column {
 					span {
@@ -298,31 +302,15 @@
 						&:not(.head)>.column {
 							margin-left: 8rem;
 						}
-
-						// .column.publication.indexation {
-						// 	display: grid;
-						// 	// grid-template-columns: repeat(11, auto);
-						// 	grid-template-columns: 1fr ;
-						// 	// padding-left: 8rem;
-
-						// 	>.column {
-						// 		display: table;
-						// 		overflow: visible;
-						// 		box-shadow: none;
-						// 		outline: none;
-
-						// 		.icon {
-						// 			height: var(--icon_height)
-						// 		}
-						// 	}
-						// }
 					}//end >.row
 				}//end .publication
 
 				// isad . ISAD Archive
 				>.isad {
 					&.row.head {
-						background-color: lighten(@color_orange_dedalo, 44%);
+						// background-color: lighten(@color_orange_dedalo, 44%);
+						// background-color: #eef3ff;
+						background-color: lighten(#465d8e, 54%);
 						display: grid;
 						// grid-template-columns: 102px 8rem 20rem minmax(25rem, auto) 30%;
 						// grid-template-columns: 102px 8rem 20rem 26rem 1fr;
@@ -332,6 +320,10 @@
 						.column {
 							box-shadow: none;
 							outline	: none;
+
+							span {
+								padding-bottom: inherit;
+							}
 						}
 					}//end >.row.head
 
@@ -346,7 +338,7 @@
 						&:not(.head)>.column {
 							margin-left: 8rem;
 							display: grid;
-							grid-template-columns: 1fr 1fr 5fr;
+							grid-template-columns: 1fr 1fr 6fr;
 							>.column {
 								box-shadow: none;
 							}
