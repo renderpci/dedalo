@@ -125,14 +125,45 @@
 					continue; // ignore non desired sections
 				}
 
-				// $terms[] = ts_object::get_term_dato_by_locator($current_locator)
-				$terms[] = component_relation_common::get_locator_value(
+				if (isset($option_obj->parent_term_id)) {
+
+					// filtered by parents_recursive_data. We want only terms with parent given (see propiedades of isad98)
+					// This is useful when we want to discriminate thesaurus branch by top parent in web
+
+					// get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
+						$ar_parents = component_relation_parent::get_parents_recursive(
+							$current_locator->section_id,
+							$current_locator->section_tipo,
+							true
+						);
+
+					$skip = true;
+					foreach ($ar_parents as $current_parent_locator) {
+						$current_term_id = $current_parent_locator->section_tipo.'_'.$current_parent_locator->section_id;
+						if ($current_term_id===$option_obj->parent_term_id) {
+							$skip = false;
+							break;
+						}
+					}
+					if ($skip===true) {
+						continue; // ignore non desired items from different branch
+					}
+				}
+
+				// Resolve terms
+				$locator_values = component_relation_common::get_locator_value(
 					$current_locator,
 					$lang,
 					$add_parents
 				);
+				foreach ($locator_values as $current_lv) {
+					$terms[] = $current_lv;
+				}
 			}
-			$diffusion_value = implode($separator, $terms);
+
+			$diffusion_value = (isset($option_obj->parents_recursive_data) && $option_obj->parents_recursive_data===true)
+				? json_encode($terms)
+				: implode($separator, $terms);
 
 		}else{
 
