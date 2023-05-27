@@ -3,9 +3,8 @@
 *
 * Loaded on tool init
 */
-
 // imports
-	@import '../../../core/page/css/layout/vars.less';
+@import (once) '../../../core/page/css/layout/vars';
 
 // local vars
 	@color_bg_tool : #fd7f26; // @color_orange_dedalo;
@@ -19,8 +18,8 @@
 			background-color: @color_bg_tool;
 		}
 		>.icon{
-			-webkit-mask-image: url(../img/icon.svg);
-			mask-image: url(../img/icon.svg);
+			-webkit-mask-image: url('../img/icon.svg');
+			mask-image: url('../img/icon.svg');
 		}
 	}
 

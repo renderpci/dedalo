@@ -1,14 +1,13 @@
 /**
-* TOOL_numismatic_epigraphy
+* TOOL_NUMISMATIC_ORDER_COINS
 *
 * Loaded on tool init
 */
-
 // imports
-	@import '../../../core/page/css/layout/vars';
+@import (once) '../../../core/page/css/layout/vars';
 
 // local vars
-	@color_bg_tool: #fd7f26; // @color_orange_dedalo;
+@color_bg_tool: #fd7f26; // @color_orange_dedalo;
 
 
 
@@ -498,9 +497,7 @@
 /* HEADER
 ------------------------------------------------------ */
 	.header_tool {
-
-		}
-		.header_tool #header_info {
+		#header_info {
 			display:block;
 			float: left;
 			position: relative;
@@ -508,3 +505,4 @@
 			top: 8px;
 			line-height: 1em;
 		}
+	}
