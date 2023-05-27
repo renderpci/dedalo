@@ -81,7 +81,7 @@ class component_relation_index extends component_relation_common {
 
 
 		return $this->dato;
-	}//end get_data
+	}//end get_dato
 
 
 

@@ -703,8 +703,8 @@ class component_relation_parent extends component_relation_common {
 	public static function get_parents_recursive($section_id, string $section_tipo, bool $skip_root=true, bool $is_recursion=false) : array {
 
 		// static vars set
-			static $ar_parents_recursive_resolved = array();
-			static $locators_resolved 			  = array();
+			static $ar_parents_recursive_resolved	= array();
+			static $locators_resolved				= array();
 
 		// key_resolve
 			$key_resolve = $section_tipo.'_'.$section_id;
@@ -717,13 +717,13 @@ class component_relation_parent extends component_relation_common {
 			$parents_recursive = array();
 
 		// Add first level
-			$ar_parents 	   = component_relation_parent::get_parents($section_id, $section_tipo);
-			$parents_recursive = $ar_parents;
+			$ar_parents			= component_relation_parent::get_parents($section_id, $section_tipo);
+			$parents_recursive	= $ar_parents;
 
 
 		// Self include as resolved
-			$lkey 						= $section_tipo.'_'.$section_id;
-			$locators_resolved[$lkey] 	= $ar_parents;
+			$lkey						= $section_tipo.'_'.$section_id;
+			$locators_resolved[$lkey]	= $ar_parents;
 
 		// iterate ar_parents
 			foreach ($ar_parents as $current_locator) {
@@ -731,13 +731,17 @@ class component_relation_parent extends component_relation_common {
 				// Check self recursion
 					$lkey = $current_locator->section_tipo.'_'.$current_locator->section_id;
 					if (array_key_exists($lkey, $locators_resolved)) {
-						#debug_log(__METHOD__." SKIPPED $section_id, $section_tipo . Skipped resolution ".to_string(), logger::ERROR);
 						$parents_recursive = array_merge($parents_recursive, $locators_resolved[$lkey]);
 						continue;
 					}
 
 				// Add every parent level
-					$current_ar_parents		 = component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, $skip_root, $is_recursion=true);
+					$current_ar_parents = component_relation_parent::get_parents_recursive(
+						$current_locator->section_id,
+						$current_locator->section_tipo,
+						$skip_root,
+						true // bool is_recursion
+					);
 					$current_ar_parents_safe = [];
 					foreach ($current_ar_parents as $c_parent) {
 						#debug_log(__METHOD__." c_parent ".to_string($c_parent), logger::DEBUG);
