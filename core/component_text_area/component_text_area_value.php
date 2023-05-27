@@ -56,36 +56,11 @@
 		$text_fragment	= $fragment_info[0] ?? '';
 
 	// data
+		// reset data
+		$data = [];
 		switch ($format_columns) {
-			case 'pdf':
-				// section_id
-					$cell_id = new dd_grid_cell_object();
-						$cell_id->set_type('column');
-						$cell_id->set_cell_type('text');
-						$cell_id->set_value([$section_id]); // array value
-				// tag_id
-					$cell_tag_id = new dd_grid_cell_object();
-						$cell_tag_id->set_type('column');
-						$cell_tag_id->set_cell_type('text');
-						$cell_tag_id->set_value([$tag_id]); // array value
-				// text_fragment
-					$cell_text_fragment = new dd_grid_cell_object();
-						$cell_text_fragment->set_type('column');
-						$cell_text_fragment->set_cell_type('text');
-						$cell_text_fragment->set_value([$text_fragment]); // array value
-				// data
-					$data = [
-						$cell_id,
-						$cell_tag_id,
-						$cell_text_fragment,
-					];
-				break;
 
 			case 'av':
-			default:
-				// reset data
-				$data = [];
-
 				// tc info
 					$tag_in_pos		= $fragment_info[1] ?? 0;
 					$tag_out_pos	= $fragment_info[2] ?? 0;
@@ -115,9 +90,12 @@
 					// section_id
 						$data[] = new dd_grid_cell_object((object)[
 							'type'			=> 'column',
-							'cell_type'		=> 'text',
-							'class_list'	=> 'section_id',
-							'value'			=> [$section_id] // array value
+							'cell_type'		=> 'record_link',
+							'class_list'	=> 'record_link',
+							'value'			=> [(object)[
+								'section_id'	=> $section_id,
+								'section_tipo'	=> $section_tipo
+							]] // array value
 						]);
 
 					// tag_id
@@ -319,6 +297,53 @@
 								]
 							]]
 						]);
+				break;
+
+			case 'pdf':
+				// section_id
+					$data[] = new dd_grid_cell_object((object)[
+						'type'			=> 'column',
+						'cell_type'		=> 'record_link',
+						'class_list'	=> 'record_link',
+						'value'			=> [(object)[
+							'section_id'	=> $section_id,
+							'section_tipo'	=> $section_tipo
+						]] // array value
+					]);
+				// tag_id
+					$data[] = new dd_grid_cell_object((object)[
+						'type'			=> 'column',
+						'cell_type'		=> 'text',
+						'class_list'	=> 'tag_id',
+						'value'			=> [$tag_id] // array value
+					]);
+				// text_fragment
+					$data[] = new dd_grid_cell_object((object)[
+						'type'			=> 'column',
+						'cell_type'		=> 'text',
+						'class_list'	=> 'text_fragment',
+						'value'			=> [$text_fragment] // array value
+					]);
+				break;
+
+			default:
+				// section_id
+					$data[] = new dd_grid_cell_object((object)[
+						'type'			=> 'column',
+						'cell_type'		=> 'record_link',
+						'class_list'	=> 'record_link',
+						'value'			=> [(object)[
+							'section_id'	=> $section_id,
+							'section_tipo'	=> $section_tipo
+						]] // array value
+					]);
+				// text_fragment
+					$data[] = new dd_grid_cell_object((object)[
+						'type'			=> 'column',
+						'cell_type'		=> 'text',
+						'class_list'	=> 'text_fragment',
+						'value'			=> [$text_fragment] // array value
+					]);
 				break;
 		}//end switch ($format_columns)
 

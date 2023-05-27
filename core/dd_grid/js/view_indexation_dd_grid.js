@@ -7,13 +7,14 @@
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
 	// import {clone,dd_console} from '../../common/js/utils/index.js'
+	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {
+		get_section_id_column,
 		get_av_column,
 		get_img_column,
 		get_label_column,
 		get_json_column,
-		get_section_id_column,
 		get_iri_column
 	} from './render_list_dd_grid.js'
 
@@ -67,6 +68,7 @@ const get_grid_nodes = function(data) {
 
 	const data_len = data.length
 	for (let i = 0; i < data_len; i++) {
+
 		const current_data = data[i]
 
 		const cell_nodes = []
@@ -85,42 +87,55 @@ const get_grid_nodes = function(data) {
 
 					switch(current_data.cell_type) {
 						case 'av':
-							const av_node = get_av_column(current_data)
-							node.appendChild(av_node)
+							node.appendChild(
+								get_av_column(current_data)
+							)
 							break;
 
 						case 'img':
-							const img_node = get_img_column(current_data)
-							node.appendChild(img_node)
+							node.appendChild(
+								get_img_column(current_data)
+							)
 							break;
 
 						case 'iri':
-							const current_node = get_iri_column(current_data)
-							node.appendChild(current_node)
+							node.appendChild(
+								get_iri_column(current_data)
+							)
 							break;
 
 						case 'button':
-							const button_node = get_button_column(current_data)
-							node.appendChild(button_node)
+							node.appendChild(
+								get_button_column(current_data)
+							)
 							break;
 
 						case 'json':
-							const json_node = get_json_column(current_data)
-							node.appendChild(json_node)
+							node.appendChild(
+								get_json_column(current_data)
+							)
 							break;
 
 						case 'section_id':
-							const section_id_node = get_section_id_column(current_data)
-							node.appendChild(section_id_node)
+							node.appendChild(
+								get_section_id_column(current_data)
+							)
+							break;
+
+						case 'record_link':
+							node.appendChild(
+								get_record_link_column(current_data)
+							)
 							break;
 
 						case 'text':
 						default:
-							const column_node = get_text_column(
-								current_data,
-								true // bool use fallback value
+							node.appendChild(
+								get_text_column(
+									current_data,
+									true // bool use fallback value
+								)
 							)
-							node.appendChild(column_node)
 							break;
 					}//end switch(current_data.cell_type)
 				}// end if(current_data.type==='column' && current_data.cell_type)
@@ -283,6 +298,58 @@ export const get_text_column = function(data_item, use_fallback) {
 
 	return text_node
 }//end get_text_column
+
+
+
+/**
+* GET_RECORD_LINK_COLUMN
+* @param object current_data
+* @return HTMLElement text_node (span)
+*/
+export const get_record_link_column = function(current_data) {
+
+	const class_list	= current_data.class_list || ''
+	const section_id	= current_data.value[0].section_id
+	const section_tipo	= current_data.value[0].section_tipo
+
+	const button_edit = ui.create_dom_element({
+		element_type	: 'button',
+		class_name		: 'button_edit button_view_default ' + class_list,
+	})
+	button_edit.addEventListener('click', function(e) {
+		e.stopPropagation()
+
+		// open a new window
+			const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
+				tipo			: section_tipo,
+				section_tipo	: section_tipo,
+				id				: section_id,
+				mode			: 'edit',
+				menu			: false
+			})
+			const new_window = open_window({
+				url		: url,
+				name	: 'record_view',
+				width	: 1280,
+				height	: 740
+			})
+	})
+
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'section_id',
+		inner_html		: section_id,
+		parent			: button_edit
+	})
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'button edit icon',
+		parent			: button_edit
+	})
+
+
+	return button_edit
+}//end get_record_link_column
 
 
 

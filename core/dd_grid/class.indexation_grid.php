@@ -88,7 +88,7 @@ class indexation_grid {
 					$section_grid->set_type('column');
 					$section_grid->set_label($label);
 					$section_grid->set_render_label(true);
-					$section_grid->set_class_list('caption section');
+					$section_grid->set_class_list('caption section '.$current_section_tipo);
 					// $section_grid->set_cell_type('text');
 
 			// add the column to the row
