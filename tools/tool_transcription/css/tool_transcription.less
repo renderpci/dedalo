@@ -3,12 +3,11 @@
 *
 * Loaded on tool init
 */
-
 // imports
-	@import '../../../core/page/css/layout/vars';
+@import (once) '../../../core/page/css/layout/vars';
 
 // local vars
-	@color_bg_tool: #fd7f26; // @color_orange_dedalo;
+@color_bg_tool: #fd7f26; // @color_orange_dedalo;
 
 
 
@@ -426,8 +425,7 @@
 ------------------------------------------------------ */
 	.header_tool {
 
-		}
-		.header_tool .select_fast_lang_switch {
+		.select_fast_lang_switch {
 			float: left;
 			position: relative;
 			top: 3px;
@@ -435,20 +433,20 @@
 			text-transform: capitalize;
 			padding-right: 20px;
 		}
-		//.header_tool .lang_selector_in_header .select_fast_lang_switch select {
-		.header_tool .lang_selector_in_header .select_fast_lang_switch{
+		//.lang_selector_in_header .select_fast_lang_switch select {
+		.lang_selector_in_header .select_fast_lang_switch{
 			opacity: 1;
 			margin-left: 5px;
 			margin-right: 10px;
 			color: #000000;
 			max-width: 84px;
 		}
-		.header_tool .lang_selector_in_header{
+		.lang_selector_in_header{
 			padding: 2px;
 			padding-right: 10px;
 			padding-left: 10px;
 		}
-		.header_tool #header_info {
+		#header_info {
 			display:block;
 			float: left;
 			position: relative;
@@ -456,6 +454,7 @@
 			top: 8px;
 			line-height: 1em;
 		}
+	}
 
 
 /* COMMON

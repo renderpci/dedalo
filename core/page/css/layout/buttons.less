@@ -5,8 +5,8 @@
 // fn_add_mask . buttons with icons
 	.fn_add_mask(@icon_name) {
 
-		-webkit-mask-image: url('@{images_base_path}/icons/@{icon_name}');
-				mask-image: url('@{images_base_path}/icons/@{icon_name}');
+		-webkit-mask-image: url('./../../themes/default/icons/@{icon_name}');
+				mask-image: url('./../../themes/default/icons/@{icon_name}');
 		-webkit-mask-size: contain;
 				mask-size: contain;
 		-webkit-mask-repeat: no-repeat;
@@ -42,7 +42,7 @@
 // fn_append_icon (used by tag element 'button')
 	.fn_append_icon(@icon_name, @color:#3f3f3f, @opacity:1) {
 
-		--icon-path : url('@{images_base_path}/icons/@{icon_name}');
+		--icon-path : url('./../../themes/default/icons/@{icon_name}');
 
 		&:before {
 			background-color: @color;
@@ -628,22 +628,22 @@
 			}
 
 			&.bold:before {
-				//background-image: url(../../themes/default/icons/bold.svg);
+				//background-image: url(./../../themes/default/icons/bold.svg);
 				// .background_icon('bold.svg');
 				.fn_build_button('bold.svg', black, 1);
 			}
 			&.italic:before {
-				//background-image: url(../../themes/default/icons/italic.svg);
+				//background-image: url(./../../themes/default/icons/italic.svg);
 				// .background_icon('italic.svg');
 				.fn_build_button('italic.svg', black, 1);
 			}
 			&.underline:before {
-				//background-image: url(../../themes/default/icons/underline.svg);
+				//background-image: url(./../../themes/default/icons/underline.svg);
 				// .background_icon('underline.svg');
 				.fn_build_button('underline.svg', black, 1);
 			}
 			&.replace:before {
-				//background-image: url(../../themes/default/icons/exchange.svg);
+				//background-image: url(./../../themes/default/icons/exchange.svg);
 				// .background_icon('exchange.svg');
 				.fn_build_button('exchange.svg', black, 1);
 			}
