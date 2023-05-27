@@ -341,25 +341,33 @@ class component_text_area extends component_common {
 	public function get_value_fragment(int $max_char=256) : array {
 
 		// value . Get value with images and html tags
-		$data = $this->get_dato();
+		$dato = $this->get_dato();
 
-		$value = '';
-		foreach ($data as $current_value) {
-			$current_value = trim($current_value);
-			if (!empty($current_value)) {
-				$value = TR::add_tag_img_on_the_fly($current_value);
+		if (empty($dato)) {
+
+			// set the fragment
+			$value_fragment = [''];
+
+		}else{
+
+			$value = '';
+			foreach ($dato as $current_value) {
+				$current_value = trim($current_value);
+				if (!empty($current_value)) {
+					$value = TR::add_tag_img_on_the_fly($current_value);
+				}
 			}
+			// truncate string
+				$text_fragment = common::truncate_html(
+					$max_char,
+					$value,
+					true // bool isUtf8
+				);
+
+
+			// set the fragment
+				$value_fragment = [$text_fragment];
 		}
-		// truncate string
-			$text_fragment = common::truncate_html(
-				$max_char,
-				$value,
-				true // bool isUtf8
-			);
-
-
-		// set the fragment
-			$value_fragment = [$text_fragment];
 
 
 		 return $value_fragment;
