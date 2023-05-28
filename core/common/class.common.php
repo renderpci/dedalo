@@ -1965,6 +1965,7 @@ abstract class common {
 
 				// ar_ddo iterate
 				foreach($ar_ddo as $dd_object) {
+					$ddo_start_time = start_time();
 					// use the locator section_tipo.
 					// when the ddo define is_dataframe (used as sub section as data frame or semantic_node of the locator)
 					// use his own section_tipo, it's totally dependent of the section_id of the locator and it's compatible.
@@ -1972,27 +1973,32 @@ abstract class common {
 						// reference: oh24 -> old semantic_node
 						// reference: numisdata161 -> old dataframe
 
-					$ddo_start_time = start_time();
-
-					if(isset($dd_object->is_dataframe) && $dd_object->is_dataframe===true){
-						$section_tipo = is_array($dd_object->section_tipo)
-							? reset($dd_object->section_tipo)
-							: $dd_object->section_tipo;
-					}else{
-						$section_tipo	= $current_locator->section_tipo;
-					}
-
-					// prevent resolve non children from path ddo, remove the non direct child, it will be calculated by his parent (in recursive loop)
-						if (isset($dd_object->parent) && $dd_object->parent!==$this->tipo) {
-							// dump($dd_object, ' dd_object SKIP dd_object ++'.to_string($this->tipo));
-							continue;
-						}
-
 					// skip security_areas
 						if($dd_object->tipo===DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO) {
 							// 'component_security_areas' removed in v6 but the component will stay in ontology,
 							// PROVISIONAL, only in the alpha state of V6 for compatibility of the ontology of V5.
 							continue;
+						}
+
+					// section_tipo
+						if(isset($dd_object->is_dataframe) && $dd_object->is_dataframe===true){
+							$section_tipo = is_array($dd_object->section_tipo)
+								? reset($dd_object->section_tipo)
+								: $dd_object->section_tipo;
+						}else{
+							$section_tipo	= $current_locator->section_tipo;
+						}
+
+					// prevent resolve non children from path ddo, remove the non direct child,
+					// it will be calculated by his parent (in recursive loop)
+						if($this->tipo=='isad1' || $this->tipo=='hierarchy40') {
+							dump($dd_object, ' dd_object ++'.to_string($this->tipo));
+							// dump($ar_ddo, '$ar_ddo ++ '.to_string());
+							// dump($request_config, ' request_config ++ '.to_string());
+						}
+						if (isset($dd_object->parent) && $dd_object->parent!==$this->tipo) {
+							dump($dd_object, ' SKIP dd_object ++'.to_string($this->tipo));
+							// continue;
 						}
 
 					// short vars
