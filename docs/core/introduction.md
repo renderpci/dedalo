@@ -18,9 +18,9 @@ Our goal is to create a management system for humanities and cultural heritage f
 
 ## Dédalo ecosystem
 
-From the beginning in 1998 the project was built following the Internet and web standards. Nowadays Dédalo is using common open source technologies as httpd, javascript, css, html, postgreSQL or PHP. The project is licensed by AGLP (GNU Affero General Public License v3.0) and his code is updating every day.
+From the beginning in 1998 the project was built following the Internet and web standards. Nowadays Dédalo is using common free and open source technologies as httpd, javascript, css, html, postgreSQL or PHP. The project is licensed by AGLP (GNU Affero General Public License v3.0) and his code is updating every day.
 
-To run Dédalo you will need a internet server running Linux; Ubuntu, Debian, RedHat, etc. and for development you can also install it in MacOs X and, of course, if you want play in Ninja mode, you can try to install it in Windows (but by your own...).
+To run Dédalo you will need a internet server running GNU / Linux; Ubuntu, Debian, RedHat, etc. and for development you can also install it in MacOs X and, of course, if you want play in Ninja mode, you can try to install it in Windows (but by your own...).
 
 All data is stored and management in JSON format. Dédalo use PostgreSQL JSON functionalities to store data in the database. In publication system Dédalo use any other classical SQL database, by default MariaDB or MySQL, but you can choose any other SQL, for publication data Dédalo store classical SQL schema with data in columns
 
@@ -57,7 +57,7 @@ But in Dédalo we have only a column for data and we will store the previous dat
 }
 ```
 
-But, we do not stop here!, the previous example has the columns / properties in English... why in English? the Dédalo project born in Valencia, Spain, why not use our main language, Català, or Español... why use English?, well, we determine that Dédalo will be used with any language,, all names need to be translated and the fields / properties will be abstracted with codes, alphanumeric codes and it will defined by an ontology (do not worry if you do not know what ontology is... it will appear after in this document, but thing that is a hierarchy with definitions).
+But, we do not stop here!, the previous example has the columns / properties in English... why in English? the Dédalo project born in Valencia, Spain, why not use our main language, Català, or Español... why use English?, well, we determine that Dédalo will be used with any language and all field names need to be translated, so the fields / properties were abstracted with codes, alphanumeric codes and it will defined by an ontology (do not worry if you do not know what ontology is... it will appear after in this document, but you can think that is a hierarchy with definitions).
 
 So for create new sections and components we built a nodes in the ontology with all definitions and codes in this way:
 
@@ -98,9 +98,9 @@ And the data is referenced to this definitions in this way:
 }
 ```
 
-Beautiful! an abstraction of a table and columns with translatable fields! if we are working in English we can go to the node definition in the ontology and get the label of the field in English or we are working in Català so we will get the label in Català... changing the ontology names do not affect to the data and we can rename it without change the schema... great!
+Beautiful! an abstraction of a table and columns with translatable fields! if we are working in English we can go to the node definition in the ontology and get the label of the field in English or if we are working in Català so we will get the label in Català... changing the ontology names do not affect to the data and we can rename it without change the schema... great!
 
-But... some names appear here, "section_id"? why? why not id? because we use id is used in the matrix table as typical id and the homonymy in these case could be confusing. It is not the same the unique id of the table than the id of the section, the id of the section is unique for the section but it is not unique for the table and make sense use section_id.
+But... some names appear here, "section_id"? why? why not id? because id is used in the matrix table as typical id and the homonymy in this case could be confusing. It is not the same the unique id of the table than the id of the section, the id of the section is unique for the section but it is not unique for the table and make sense use the name section_id.
 
 See a example:
 
@@ -162,15 +162,15 @@ In wiktionary defines [ontology](https://en.wiktionary.org/wiki/ontology) as:
 4. (logic) A logical system involving theory of classes, developed by [Stanislaw Lesniewski](https://plato.stanford.edu/entries/lesniewski/) (1886-1939).
 5. (countable, computer science, information science) A structure of concepts or entities within a domain, organized by relationships; a system model.
 
-The origin of the concept became of humanities, from philosophy, and was created to describe things. Computer science get this concept and adapt to define a system, a model, a depiction.
+The origin of the concept became from humanities, from philosophy, and was created to describe things. Computer science get this concept and adapt to define a system, a model, a depiction.
 
-Dédalo ontology is this; a data schema description, a description of relationships between tables, columns, an organization of concepts, a structuring definition for cultural heritage. But we introduce a little different point, Dédalo ontology is active, not passive, it's not only a definition, it is totally dynamic system. When the ontology change, the behavior of Dédalo change to adapt it to the new definitions. The ontology is consulted to resolve sections(tables), components (columns), relation data, or format of the data, etc. Ontology is the core of Dédalo.
+Dédalo ontology is this; a data schema description, a description of relationships between tables, columns, an organization of concepts, a structuring definition for cultural heritage. But we introduce a little different point, Dédalo ontology is active, not passive, it's not only a definition, it is totally dynamic system. When the ontology change, the behavior of Dédalo change to adapt it to the new definitions. The ontology is consulted in execution time to resolve sections(tables), components (columns), relation data, or format of the data, dynamically. Ontology is the core of Dédalo.
 
 Dynamic and active ontology?
 
 Yes. A change in the definitions is apply in real time to the schema, data and behavior (with some limitations). Ex: A component with a select list of values could be changed to be a component with autocomplete changing only his definition, it's not necessary change the database or columns or change the data of the component. This change is possible because the data of the component, the schema in the database and the logic of Dédalo has lots of abstraction layers. All definitions are dependents of the ontology and Dédalo doesn't call things directly. For resolve a data from database, Dédalo needs to get the part of the ontology definition for this data, and many times it will need to do new request to other parts of the ontology to defines what this data is.
 
-Of course, abstraction layers has a cost. The time to resolve data is not the same that direct data. And the complexity to resolve a record grow exponentially. In other hand Dédalo is a super flexible system to change information and adapt it to new requirements or needs and Dédalo can change the data to many formats or standards because the final format is dependent of the ontology definition. Dédalo can transform data from Nomisma, Dublin Core, Marc21, CIDOC, or any other standard, it's necessary define it in the ontology, but Dédalo does not have limits.
+Of course, abstraction layers has a cost. The time to resolve data is not the same that direct data. And the complexity to resolve a record grow exponentially. In other hand Dédalo is a super flexible system to change information and adapt it to new requirements or needs and Dédalo can change the data to many formats or standards because the final format is dependent of the ontology definition. Dédalo can transform data from Nomisma, Dublin Core, Marc21, CIDOC, or any other standard, to do that only is necessary define it in the ontology, so, Dédalo does not have limits.
 
 Abstraction is nice, but it's hard to develop, at the beginning the ontology was not the concept that we are working now, the ontology begun as a simple definition and version to version it was adding more and more levels of abstraction, in data and the code. And of course, it's not finished. The first version was builded in the v3 thesaurus adapting it for the programming needs of v4, for ex: the first data definitions was not interchangeable between components, or some properties was very rigid creating limitations... and the develop process has to balance between compatibility of previous versions and changes for new situations, so it is a slow process done it a step by step.
 
@@ -220,4 +220,4 @@ FROM "Quality"
 
 Or doing a join if you want to see it in list mode (without all results). With the data you will need to build the html code to create the select.
 
-The problem here are changes, because the schema, the logic and the render is specific and rigid, if you need  change quality, you will need change the schema of the database, the logic in your code and the html associated. In simple cases or specific uses than not has changes it is not a problem, but in a large and complex situation it could be very hard. Dédalo ontology is a abstraction of all of this process and you will not change your databases or the logic associated opening the possibility to grow and change in a flexible way.
+The problem here are the changes, because the schema, the logic and the render is specific and rigid, if you need  change quality, you will need change the schema of the database, the logic in your code and the html associated. In simple cases or specific uses than not has changes it is not a problem, but in a large and complex situation it could be very hard. Dédalo ontology is a abstraction of all of this process and you will not change your databases or the logic associated opening the possibility to grow and change in a flexible way.
