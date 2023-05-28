@@ -738,6 +738,10 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 			self.node = null
 		}
 
+	// event publish
+		event_manager.publish('destroy_'+self.id)
+
+
 	// status update
 		self.status = 'destroyed'
 

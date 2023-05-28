@@ -175,6 +175,7 @@ const get_content_data = function(self) {
 		self.datalist			= datalist
 		self.options_container	= options_container
 
+
 	return fragment
 }//end render
 
@@ -1212,10 +1213,11 @@ view_default_autocomplete.render_grid_choose = async function( self, selected_in
 			parent			: grid_choose_container
 		});
 		// drag move set
-		(function(){
 			let x, y, target, margin_left, margin_top = null
+
 			// header is the drag area
-			header.addEventListener('mousedown', function(e) {
+			header.addEventListener('mousedown', fn_mousedown)
+			function fn_mousedown(e) {
 
 				const path = e.composedPath();
 
@@ -1242,17 +1244,19 @@ view_default_autocomplete.render_grid_choose = async function( self, selected_in
 						return;
 					}
 				}
-			});
+			};
 
-			document.addEventListener('mouseup', function() {
+			document.addEventListener('mouseup', fn_mouseup)
+			function fn_mouseup() {
 				// if (target !== null) {
 				if (target) {
 					target.classList.remove('dragging');
 				}
 				target = null;
-			});
+			};
 
-			document.addEventListener('mousemove', function(e) {
+			document.addEventListener('mousemove', fn_mousemove)
+			function fn_mousemove(e) {
 				// no target case (mouse position changes but target is null or undefined)
 					if (!target) {
 						return;
@@ -1277,8 +1281,7 @@ view_default_autocomplete.render_grid_choose = async function( self, selected_in
 					if (tgtRect.bottom > (pRect.bottom)) {
 						target.style.top = (pRect.height - tgtRect.height - margin_top - 1) + 'px';
 					}
-			});
-		})();
+			};
 
 	// button_close
 		const button_close = ui.create_dom_element({
@@ -1286,7 +1289,8 @@ view_default_autocomplete.render_grid_choose = async function( self, selected_in
 			class_name		: 'button close white',
 			parent			: header
 		})
-		button_close.addEventListener('click', function(e) {
+		button_close.addEventListener('click', fn_function)
+		function fn_function(e) {
 			e.stopPropagation()
 			while (grid_choose_container.firstChild) {
 				grid_choose_container.removeChild(grid_choose_container.firstChild)
@@ -1295,7 +1299,10 @@ view_default_autocomplete.render_grid_choose = async function( self, selected_in
 			if (self.node && self.node.grid_choose_container) {
 				delete self.node.grid_choose_container
 			}
-		})
+
+			document.removeEventListener('mouseup', fn_mouseup)
+			document.removeEventListener('mousemove', fn_mousemove)
+		}
 
 	// ar_search_sections. get the sections that was searched
 		// const ar_search_sections = rqo_search.sqo.section_tipo

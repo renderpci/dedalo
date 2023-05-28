@@ -83,7 +83,8 @@ export const render_tree = (options) => {
 		})//end container.addEventListener('click'
 
 	// mousedown. document. do global click action on the document body
-		document.addEventListener('mousedown', (e) => {
+		document.addEventListener('mousedown', fn_mousedown)
+		function fn_mousedown(e) {
 			// if the menu is inactive nothing to do
 			if(self.menu_active===false) {
 				return false
@@ -92,17 +93,18 @@ export const render_tree = (options) => {
 			if (e.target.tagName.toLowerCase()!=='a') {
 				close_all_drop_menu(self)
 			}
-		})
+		}
 
 	// keydown. set the escape key to close al menu nodes
-		document.addEventListener('keydown', (e) => {
+		document.addEventListener('keydown', fn_keydown)
+		function fn_keydown(e) {
 			if(self.menu_active===false) {
 				return false
 			}
 			if (e.key==='Escape') {
 				close_all_drop_menu(self);
 			}
-		})
+		}
 
 
 	return true

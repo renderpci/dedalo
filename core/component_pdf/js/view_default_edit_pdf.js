@@ -57,13 +57,6 @@ view_default_edit_pdf.render = async function(self, options) {
 		// set pointers
 		wrapper.content_data = content_data
 
-	// fix editor height. This guarantees that content_data grow to the maximum possible height
-		// when_in_viewport(wrapper, ()=> {
-		// 	const wrapper_height	= wrapper.offsetHeight
-		// 	const label_height		= wrapper.label ? wrapper.label.offsetHeight : 0
-		// 	wrapper.content_data.style.height = (wrapper_height - label_height) + 'px'
-		// })
-
 
 	return wrapper
 }//end render
@@ -72,6 +65,7 @@ view_default_edit_pdf.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
+* @param object self
 * @return HTMLElement content_data
 */
 export const get_content_data_edit = function(self) {
@@ -122,6 +116,7 @@ export const get_content_data_edit = function(self) {
       "second": 1
     }
   }
+* @param object self
 * @return HTMLElement content_value
 */
 const get_content_value = function(i, current_value, self) {
@@ -199,7 +194,6 @@ const get_content_value = function(i, current_value, self) {
 						iframe.classList.remove('loading')
 				})
 
-
 				// options
 					const pdf_viewer_options = await iframe.contentWindow['PDFViewerApplicationOptions'];
 					if (pdf_viewer_options) {
@@ -233,7 +227,7 @@ const get_content_value = function(i, current_value, self) {
 
 				// listener. Remove the listener to prevent navigation problems
 				top.document.removeEventListener('webviewerloaded', fn_webviewerloaded, false)
-			}//end fn_webviewerloaded
+			};//end fn_webviewerloaded
 
 		// viewer_url. the standard html viewer of the pdf.js library
 			const viewer_url = DEDALO_ROOT_WEB + '/lib/pdfjs/web/viewer.html'

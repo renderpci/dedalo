@@ -74,22 +74,24 @@ const get_grid_nodes = function(data) {
 
 		const data_len = data.length
 		for (let i = 0; i < data_len; i++) {
-			const current_data = data[i]
 
+			const current_data = data[i]
 			if (current_data && current_data.type) {
 
 				// column
 					if(current_data.type==='column' && current_data.cell_type) {
 
-						const current_value = current_data.value[0] || current_data.fallback_value[0]
-						const found = ar_values.find(el => el.label===current_value)
+						const current_value	= current_data.value[0] || current_data.fallback_value[0]
+						const found			= ar_values.find(el => el.label===current_value)
 						if (found) {
 							found.total++
 						}else{
-							ar_values.push({
-								label : current_value,
-								total : 1
-							})
+							if (current_value) {
+								ar_values.push({
+									label : current_value,
+									total : 1
+								})
+							}
 						}
 					}//end if(current_data.type==='column' && current_data.cell_type)
 
@@ -128,7 +130,6 @@ const get_grid_nodes = function(data) {
 	}
 
 
-
 	return fragment
 }//end get_grid_nodes
 
@@ -149,6 +150,7 @@ const get_div_container = function(current_data) {
 		element_type	: 'div',
 		class_name		: class_list
 	})
+
 
 	return div_container
 }//end get_div_container

@@ -364,6 +364,13 @@ class component_svg extends component_media_common {
 
 	/**
 	* PROCESS_UPLOADED_FILE
+	* Note that this is the last method called in a sequence started on upload file.
+	* The sequence order is:
+	* 	1 - dd_utils_api::upload
+	* 	2 - tool_upload::process_uploaded_file
+	* 	3 - component_media_common::add_file
+	* 	4 - component:process_uploaded_file
+	* The target quality is defined by the component quality set in tool_upload::process_uploaded_file
 	* @param object $file_data
 	*	Data from trigger upload file
 	* Format:

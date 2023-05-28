@@ -433,9 +433,8 @@ page.prototype.add_events = function() {
 	const self = this
 
 	// keydown events
-		document.addEventListener('keydown', function(evt){
-			// console.log("paget keydown evt:", evt.key, evt);
-
+		document.addEventListener('keydown', fn_keydown)
+		function fn_keydown(evt) {
 			switch(true) {
 
 				case evt.key==='Escape':
@@ -495,10 +494,9 @@ page.prototype.add_events = function() {
 					break;
 
 				default:
-
 					break;
 			}//end switch
-		})//end keydown event
+		}//end fn_keydown
 
 	// page click
 		document.addEventListener('mousedown', fn_deactivate_components)
@@ -527,7 +525,7 @@ page.prototype.add_events = function() {
 				// deactivate
 					ui.component.deactivate(component_instance)
 			}
-		}
+		}//end fn_deactivate_components
 
 
 	return true

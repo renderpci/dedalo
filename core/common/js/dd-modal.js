@@ -8,6 +8,7 @@ class DDModal extends HTMLElement {
 		this._modalVisible = false;
 		this.mini = false;
 		this._modal;
+		this.drag_data;
 		// this.caller_instance;
 		this.on_close;
 		this.publish_close;
@@ -253,7 +254,16 @@ class DDModal extends HTMLElement {
 		window.modal = this // fix modal in window for easy access to close
 
 		// draggable modal feature
-			let x, y, target, margin_left, margin_top = null
+			const self = this
+
+			self.drag_data = {
+				target		: null,
+				x			: null,
+				y			: null,
+				margin_left	: null,
+				margin_top	: null
+			}
+
 			// header is the drag area
 			const header = this.shadowRoot.querySelector(".modal-header")
 			header.addEventListener('mousedown', function(e) {
@@ -269,57 +279,27 @@ class DDModal extends HTMLElement {
 					}
 					else if (clickedDragger===true && path[i].classList.contains('draggable')) {
 						// draggable is set (all modal-content)
-						target = path[i];
-						target.classList.add('dragging');
-						x = e.clientX - target.style.left.slice(0, -2);
-						y = e.clientY - target.style.top.slice(0, -2);
+						self.drag_data.target = path[i];
+						self.drag_data.target.classList.add('dragging');
+						self.drag_data.x = e.clientX - self.drag_data.target.style.left.slice(0, -2);
+						self.drag_data.y = e.clientY - self.drag_data.target.style.top.slice(0, -2);
 
 						// this is calculated once, every time that user clicks on header
 						// to get the whole container margin and use it as position offset
-						const compStyles	= window.getComputedStyle(target);
-						margin_left			= parseInt(compStyles.getPropertyValue('margin-left'))
-						margin_top			= parseInt(compStyles.getPropertyValue('margin-top'))
+						const compStyles			= window.getComputedStyle(self.drag_data.target);
+						self.drag_data.margin_left	= parseInt(compStyles.getPropertyValue('margin-left'))
+						self.drag_data.margin_top	= parseInt(compStyles.getPropertyValue('margin-top'))
 
 						return;
 					}
 				}
 			});
 
-			document.addEventListener('mouseup', function() {
-				// if (target !== null) {
-				if (target) {
-					target.classList.remove('dragging');
-				}
-				target = null;
-			});
+			// mouseup
+				document.addEventListener('mouseup', this.mouseup)
 
-			document.addEventListener('mousemove', function(e) {
-
-				// no target case (mouse position changes but target is null or undefined)
-					if (!target) {
-						return;
-					}
-
-				// re-position element based on mouse position
-					target.style.left	= e.clientX - x + 'px';
-					target.style.top	= e.clientY - y + 'px';
-
-				// limit boundaries. take care of initial margin offset
-					const pRect		= target.parentElement.getBoundingClientRect();
-					const tgtRect	= target.getBoundingClientRect();
-					if (tgtRect.left < pRect.left) {
-						target.style.left = (0 - margin_left) + 'px';
-					}
-					if (tgtRect.top < pRect.top) {
-						target.style.top = (0 - margin_top) + 'px';
-					}
-					if (tgtRect.right > (pRect.right)) {
-						target.style.left = (pRect.width - tgtRect.width - margin_left) + 'px';
-					}
-					if (tgtRect.bottom > (pRect.bottom)) {
-						target.style.top = (pRect.height - tgtRect.height - margin_top - 1) + 'px';
-					}
-			});
+			// mousemove
+				document.addEventListener('mousemove', this.mousemove)
 
 	}
 	disconnectedCallback() {
@@ -328,6 +308,8 @@ class DDModal extends HTMLElement {
 		this.shadowRoot.querySelector(".close_modal").removeEventListener('mousedown', this._hideModal.bind(this));
 		this.shadowRoot.querySelector(".modal").removeEventListener('mousedown', this._hideModal.bind(this));
 		document.removeEventListener('keyup', this.detect_key);
+		document.removeEventListener('mouseup', this.mouseup);
+		document.removeEventListener('mousemove', this.mousemove);
 	}
 	_showModal() {
 		this._modalVisible = true;
@@ -513,6 +495,43 @@ class DDModal extends HTMLElement {
 	}
 	get_modal_content() {
 		return this.shadowRoot.querySelector(".modal-content")
+	}
+	mousemove(e) {
+
+		const self = window.modal
+
+		// no target case (mouse position changes but target is null or undefined)
+			if (!self.drag_data.target) {
+				return;
+			}
+
+		// re-position element based on mouse position
+			self.drag_data.target.style.left	= e.clientX - self.drag_data.x + 'px';
+			self.drag_data.target.style.top		= e.clientY - self.drag_data.y + 'px';
+
+		// limit boundaries. take care of initial margin offset
+			const pRect		= self.drag_data.target.parentElement.getBoundingClientRect();
+			const tgtRect	= self.drag_data.target.getBoundingClientRect();
+			if (tgtRect.left < pRect.left) {
+				self.drag_data.target.style.left = (0 - self.drag_data.margin_left) + 'px';
+			}
+			if (tgtRect.top < pRect.top) {
+				self.drag_data.target.style.top = (0 - self.drag_data.margin_top) + 'px';
+			}
+			if (tgtRect.right > (pRect.right)) {
+				self.drag_data.target.style.left = (pRect.width - tgtRect.width - self.drag_data.margin_left) + 'px';
+			}
+			if (tgtRect.bottom > (pRect.bottom)) {
+				self.drag_data.target.style.top = (pRect.height - tgtRect.height - self.drag_data.margin_top - 1) + 'px';
+			}
+	}
+	mouseup(e) {
+		const self = window.modal
+
+		if (self.drag_data.target) {
+			self.drag_data.target.classList.remove('dragging');
+		}
+		self.drag_data.target = null;
 	}
 }
 customElements.define('dd-modal',DDModal);
