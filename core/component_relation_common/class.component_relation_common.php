@@ -259,14 +259,13 @@ class component_relation_common extends component_common {
 	* the relation components need to process the locator to resolve the value
 	* @param object|null $ddo = null
 	*
-	* @return object $value
+	* @return dd_grid_cell_object $value
 	*/
 	public function get_grid_value(object $ddo=null) : dd_grid_cell_object {
 
 		// ddo customs: set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$fields_separator	= $ddo->fields_separator ?? null;
 			$records_separator	= $ddo->records_separator ?? null;
-			$format_columns		= $ddo->format_columns ?? null;
 			$class_list			= $ddo->class_list ?? null;
 
 		// data
@@ -361,12 +360,14 @@ class component_relation_common extends component_common {
 
 			// component_relation_index case, it doesn't has request_config and it's necessary calculate it
 			// get the locator to build pointed section and get his request config of relation_list.
-			if($this->model === 'dd432' && empty($ddo_direct_children)){
-				$datum = $this->get_section_datum_from_locator($locator);
-				$context = $datum->context;
+			// if($this->model==='dd432' && empty($ddo_direct_children)) {
+			if (get_called_class()==='component_relation_index' && empty($ddo_direct_children)) {
+
+				$datum		= $this->get_section_datum_from_locator($locator);
+				$context	= $datum->context;
 
 				$section_context = array_find($context, function($el) use ($locator){
-					return $el->section_tipo===$locator->section_tipo;
+					return $el->section_tipo === $locator->section_tipo;
 				});
 
 				// get the correct rqo (use only the dedalo api_engine)
@@ -374,9 +375,18 @@ class component_relation_common extends component_common {
 					return $el->api_engine==='dedalo';
 				});
 
+				// section_id_tipo
+				$ar_section_id_tipo	= section::get_ar_children_tipo_by_model_name_in_section(
+					$locator->section_tipo,
+					['component_section_id'],
+					true, // bool from cache
+					true, // bool resolve_virtual
+					true, // bool recursive
+					true // search_exact
+				);
+				$section_id_tipo = reset($ar_section_id_tipo);
+
 				$ddo_section_id = new dd_object();
-					$ar_section_id_tipo = section::get_ar_children_tipo_by_model_name_in_section($locator->section_tipo, ['component_section_id'], true, true, true);
-					$section_id_tipo = reset($ar_section_id_tipo);
 					$ddo_section_id->set_tipo($section_id_tipo);
 					$ddo_section_id->set_section_tipo($locator->section_tipo);
 					$ddo_section_id->set_parent($this->tipo);
@@ -391,12 +401,12 @@ class component_relation_common extends component_common {
 			$locator_column_obj	= [];
 			$ar_columns			= [];
 			foreach ($ddo_direct_children as $ddo) {
+
 				// the the ddo has a multiple section_tipo (such as toponymy component_autocomplete), reset the section_tipo
 				$ddo_section_tipo		= is_array($ddo->section_tipo) ? reset($ddo->section_tipo) : $ddo->section_tipo;
-				$locator->section_tipo	= $locator->section_tipo ?? $ddo_section_tipo ;
-				$section_tipo			= $locator->section_tipo;
+				$locator->section_tipo	= $locator->section_tipo ?? $ddo_section_tipo;
 				// set the path that will be used to create the column_obj id
-				$current_path			= $section_tipo.'_'.$ddo->tipo;
+				$current_path			= $locator->section_tipo.'_'.$ddo->tipo;
 				$translatable			= RecordObj_dd::get_translatable($ddo->tipo);
 				$current_lang			= $translatable===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 				$component_model		= RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
@@ -408,6 +418,7 @@ class component_relation_common extends component_common {
 					$current_lang,
 					$locator->section_tipo
 				);
+
 				// set the locator to the new component, it will used in the next loop
 				$current_component->set_locator($this->locator);
 
@@ -476,10 +487,12 @@ class component_relation_common extends component_common {
 			// 'photograph' locators will be exploded in columns not in rows and the column is identify by the section_id of the photograph
 			// the final format will be: name ; surname ; name|1 ; surname|1 ; name|2 etc of the photograph
 			foreach ($locator_column_obj as $column_pos => $current_column_obj) {
+
 				// check if the current column exists in the full column array
 				$id_obj = array_find($ar_columns_obj, function($el) use($current_column_obj){
 					return ($el->id===$current_column_obj->id);
 				});
+
 				// if not exist we need add it, the columns are joined from the deep of the portals to the parents
 				if($id_obj===null){
 					// check if the current column_id is a locator column, else add the column_object at the end
@@ -513,23 +526,23 @@ class component_relation_common extends component_common {
 				$row_count = 1;
 			}
 		// get the total of columns
-			$column_count	= sizeof($ar_columns_obj);
+			$column_count = sizeof($ar_columns_obj);
 
 		// set the separator text that will be used to render the column
 		// separator will be the "glue" to join data in the client and can be set by caller or could be defined in preferences of the component.
-		$properties = $this->get_properties();
+			$properties = $this->get_properties();
 
-		$fields_separator = isset($fields_separator)
-			? $fields_separator
-			: (isset($properties->fields_separator)
-				? $properties->fields_separator
-				: ', ');
+			$fields_separator = isset($fields_separator)
+				? $fields_separator
+				: (isset($properties->fields_separator)
+					? $properties->fields_separator
+					: ', ');
 
-		$records_separator = isset($records_separator)
-			? $records_separator
-			: (isset($properties->records_separator)
-				? $properties->records_separator
-				: ' | ');
+			$records_separator = isset($records_separator)
+				? $records_separator
+				: (isset($properties->records_separator)
+					? $properties->records_separator
+					: ' | ');
 
 		// value object (dd_grid_cell_object)
 			$value = new dd_grid_cell_object();
@@ -544,6 +557,7 @@ class component_relation_common extends component_common {
 				$value->set_fields_separator($fields_separator);
 				$value->set_records_separator($records_separator);
 				$value->set_value($ar_cells);
+
 
 		return $value;
 	}//end get_grid_value

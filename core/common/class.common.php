@@ -1436,7 +1436,7 @@ abstract class common {
 				];
 				$cache_key = implode('_', $key_beats);
 				if (isset($resolved_get_json[$cache_key])) {
-					debug_log(__METHOD__." ////////////////////////////////////// Returned resolved json with key: ".to_string($cache_key), logger::DEBUG);
+					debug_log(__METHOD__." ////////////////////////////////////// Returned resolved JSON with key: ".to_string($cache_key), logger::DEBUG);
 					return $resolved_get_json[$cache_key];
 				}
 			}
@@ -1877,7 +1877,12 @@ abstract class common {
 		// request_config. On empty return empty context and data object
 			$request_config = $this->context->request_config ?? null;
 			if(empty($request_config)) {
-				debug_log(__METHOD__." Empty request config. Ignored subdatum  ".to_string($this->tipo), logger::ERROR);
+				debug_log(__METHOD__
+					." Empty request config. Ignored subdatum  ". PHP_EOL
+					.' tipo: ' . to_string($this->tipo). PHP_EOL
+					.' context: ' . to_string($this->context)
+					, logger::ERROR
+				);
 				// no request config case. Return empty here
 				return (object)[
 					'context'	=> [],
@@ -1938,15 +1943,12 @@ abstract class common {
 
 				// check locator format
 					if (!is_object($current_locator)) {
-						if(SHOW_DEBUG===true) {
-							// dump($current_locator, ' current_locator ++ '.to_string());
-							// dump($ar_locators, ' ar_locators ++ '.to_string());
-							// throw new Exception("Error Processing Request. current_locator is not an object", 1);
-							debug_log(
-								__METHOD__." Error Processing Request. urrent_locator is NOT an expected object. Ignored locator ! ".to_string($current_locator),
-								logger::ERROR
-							);
-						}
+						// throw new Exception("Error Processing Request. current_locator is not an object", 1);
+						debug_log(
+							__METHOD__." Error Processing Request. urrent_locator is NOT an expected object. Ignored locator ! " .PHP_EOL
+							.' locator: '.to_string($current_locator),
+							logger::ERROR
+						);
 						continue;
 					}
 
@@ -1963,6 +1965,7 @@ abstract class common {
 
 				// ar_ddo iterate
 				foreach($ar_ddo as $dd_object) {
+					$ddo_start_time = start_time();
 					// use the locator section_tipo.
 					// when the ddo define is_dataframe (used as sub section as data frame or semantic_node of the locator)
 					// use his own section_tipo, it's totally dependent of the section_id of the locator and it's compatible.
@@ -1970,26 +1973,28 @@ abstract class common {
 						// reference: oh24 -> old semantic_node
 						// reference: numisdata161 -> old dataframe
 
-					$ddo_start_time = start_time();
-
-					if(isset($dd_object->is_dataframe) && $dd_object->is_dataframe===true){
-						$section_tipo = is_array($dd_object->section_tipo)
-							? reset($dd_object->section_tipo)
-							: $dd_object->section_tipo;
-					}else{
-						$section_tipo	= $current_locator->section_tipo;
-					}
-
-					// prevent resolve non children from path ddo, remove the non direct child, it will be calculated by his parent (in recursive loop)
-						if (isset($dd_object->parent) && $dd_object->parent!==$this->tipo) {
-							// dump($dd_object, ' dd_object SKIP dd_object ++'.to_string($this->tipo));
-							continue;
-						}
-
 					// skip security_areas
 						if($dd_object->tipo===DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO) {
 							// 'component_security_areas' removed in v6 but the component will stay in ontology,
 							// PROVISIONAL, only in the alpha state of V6 for compatibility of the ontology of V5.
+							continue;
+						}
+
+					// section_tipo
+						if(isset($dd_object->is_dataframe) && $dd_object->is_dataframe===true){
+							$section_tipo = is_array($dd_object->section_tipo)
+								? reset($dd_object->section_tipo)
+								: $dd_object->section_tipo;
+						}else{
+							$section_tipo	= $current_locator->section_tipo;
+						}
+
+					// prevent resolve non children from path ddo, remove the non direct child,
+					// it will be calculated by his parent (in recursive loop)
+						if (isset($dd_object->parent) && $dd_object->parent!==$this->tipo) {
+							if(SHOW_DEBUG===true) {
+								dump($dd_object, ' SKIP dd_object ++'.to_string($this->tipo));
+							}
 							continue;
 						}
 
@@ -2053,8 +2058,8 @@ abstract class common {
 								// caller_dataframe cases
 								$caller_dataframe = (strpos($source_model, 'component_')===0)
 									? (object)[
-										'section_tipo' => $this->get_section_tipo(),
-										'section_id' => $this->get_section_id()
+										'section_tipo'	=> $this->get_section_tipo(),
+										'section_id'	=> $this->get_section_id()
 									  ]
 									: null;
 
@@ -2149,9 +2154,10 @@ abstract class common {
 
 							// others case
 							default:
-								debug_log(__METHOD__ ." Ignored model '$model' - current_tipo: '$current_tipo'  - ".
-									RecordObj_dd::get_termino_by_tipo($current_tipo),
-									logger::WARNING
+								debug_log(__METHOD__
+									. " Ignored model '$model' - current_tipo: '$current_tipo'  - ". PHP_EOL
+									. RecordObj_dd::get_termino_by_tipo($current_tipo)
+									, logger::WARNING
 								);
 								break;
 						}//end switch (true)

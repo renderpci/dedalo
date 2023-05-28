@@ -161,7 +161,7 @@ class component_relation_parent extends component_relation_common {
 			if (is_object($dato)) {
 				$dato = array($dato);
 			}
-			# Ensures is a real non-associative array (avoid json encode as object)
+			# Ensures is a real non-associative array (avoid JSON encode as object)
 			$dato = is_array($dato) ? array_values($dato) : (array)$dato;
 
 		// search mode
@@ -171,25 +171,6 @@ class component_relation_parent extends component_relation_common {
 
 				return true;
 			}
-
-		// Add (used only in importations and similar) Note that this call SAVE (component_relation_children) !!
-			// $component_relation_children_tipo = component_relation_parent::get_component_relation_children_tipo($this->tipo);
-			// foreach ($dato as $current_locator) {
-
-			// 	$children_section_tipo 	= $current_locator->section_tipo;
-			// 	$children_section_id 	= $current_locator->section_id;
-			// 	if (empty($children_section_tipo) || empty($children_section_id))  {
-			// 		debug_log(__METHOD__." Skipped Bad locator found on set dato ($this->tipo, $this->parent, $this->section_tipo): locator: ".to_string($current_locator), logger::ERROR);
-			// 		continue;
-			// 	}
-			// 	# Note component_relation_children saves here
-			// 	$result = component_relation_parent::add_parent($this->tipo,
-			// 													$this->parent,
-			// 													$this->section_tipo,
-			// 													$children_section_tipo,
-			// 													$children_section_id,
-			// 													$component_relation_children_tipo);
-			// }
 
 		// changed_data. Updates and SAVE data in component children associated with the current component
 			if (isset($this->changed_data)) {
@@ -204,21 +185,74 @@ class component_relation_parent extends component_relation_common {
 				switch ($changed_data->action) {
 					case 'remove':
 						if (isset($changed_data->to_remove)) {
-							$locator = $changed_data->to_remove;
-							$result  = (bool)$this->remove_parent($locator->section_tipo, $locator->section_id);
+							$locator	= $changed_data->to_remove;
+							$result		= (bool)$this->remove_parent($locator->section_tipo, $locator->section_id);
+							if (!$result) {
+								debug_log(__METHOD__
+									. " Error on remove parent" . PHP_EOL
+									. 'result: ' . to_string($result) . PHP_EOL
+									. 'locator: ' . to_string($locator)
+									, logger::ERROR
+								);
+							}
 						}
 						break;
 					case 'insert':
 					case 'update':
 						if (isset($dato[$changed_data->key])) {
-							$locator = $dato[$changed_data->key];
-							$result = (bool)$this->add_parent($locator->section_tipo, $locator->section_id);
+							$locator	= $dato[$changed_data->key];
+							$result		= (bool)$this->add_parent($locator->section_tipo, $locator->section_id);
+							if (!$result) {
+								debug_log(__METHOD__
+									. " Error on add parent" . PHP_EOL
+									. 'result: ' . to_string($result)
+									. 'locator: ' . to_string($locator)
+									, logger::ERROR
+								);
+							}
 						}
 						break;
 					default:
-						debug_log(__METHOD__." Error. action: '$changed_data->action' not defined ! ".to_string(), logger::ERROR);
+						debug_log(__METHOD__
+							." Error. action: '$changed_data->action' not defined ! "
+							, logger::ERROR
+						);
 						break;
 				}
+			}else{
+
+				// import case
+
+				// remove previous dato
+					$previous_dato = $this->get_dato();
+					if (!empty($previous_dato)) {
+						foreach ($previous_dato as $locator) {
+							$result		= (bool)$this->remove_parent($locator->section_tipo, $locator->section_id);
+							if (!$result) {
+								debug_log(__METHOD__
+									. " Error on remove parent" . PHP_EOL
+									. 'result: ' . to_string($result) . PHP_EOL
+									. 'locator: ' . to_string($locator)
+									, logger::ERROR
+								);
+							}
+						}
+					}
+
+				// add the new one
+					if (!empty($dato)) {
+						foreach ($dato as $locator) {
+							$result		= (bool)$this->add_parent($locator->section_tipo, $locator->section_id);
+							if (!$result) {
+								debug_log(__METHOD__
+									. " Error on add parent" . PHP_EOL
+									. 'result: ' . to_string($result)
+									. 'locator: ' . to_string($locator)
+									, logger::ERROR
+								);
+							}
+						}
+					}
 			}
 
 			// $this->update_parents($dato);
@@ -282,7 +316,10 @@ class component_relation_parent extends component_relation_common {
 
 				default:
 					$changed = false;
-					debug_log(__METHOD__." Error on update_children. Invalid action '$action' ".to_string(), logger::ERROR);
+					debug_log(__METHOD__
+						." Error on update_children. Invalid action '$action' "
+						, logger::ERROR
+					);
 					break;
 			}
 
@@ -666,8 +703,8 @@ class component_relation_parent extends component_relation_common {
 	public static function get_parents_recursive($section_id, string $section_tipo, bool $skip_root=true, bool $is_recursion=false) : array {
 
 		// static vars set
-			static $ar_parents_recursive_resolved = array();
-			static $locators_resolved 			  = array();
+			static $ar_parents_recursive_resolved	= array();
+			static $locators_resolved				= array();
 
 		// key_resolve
 			$key_resolve = $section_tipo.'_'.$section_id;
@@ -680,13 +717,13 @@ class component_relation_parent extends component_relation_common {
 			$parents_recursive = array();
 
 		// Add first level
-			$ar_parents 	   = component_relation_parent::get_parents($section_id, $section_tipo);
-			$parents_recursive = $ar_parents;
+			$ar_parents			= component_relation_parent::get_parents($section_id, $section_tipo);
+			$parents_recursive	= $ar_parents;
 
 
 		// Self include as resolved
-			$lkey 						= $section_tipo.'_'.$section_id;
-			$locators_resolved[$lkey] 	= $ar_parents;
+			$lkey						= $section_tipo.'_'.$section_id;
+			$locators_resolved[$lkey]	= $ar_parents;
 
 		// iterate ar_parents
 			foreach ($ar_parents as $current_locator) {
@@ -694,13 +731,17 @@ class component_relation_parent extends component_relation_common {
 				// Check self recursion
 					$lkey = $current_locator->section_tipo.'_'.$current_locator->section_id;
 					if (array_key_exists($lkey, $locators_resolved)) {
-						#debug_log(__METHOD__." SKIPPED $section_id, $section_tipo . Skipped resolution ".to_string(), logger::ERROR);
 						$parents_recursive = array_merge($parents_recursive, $locators_resolved[$lkey]);
 						continue;
 					}
 
 				// Add every parent level
-					$current_ar_parents		 = component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, $skip_root, $is_recursion=true);
+					$current_ar_parents = component_relation_parent::get_parents_recursive(
+						$current_locator->section_id,
+						$current_locator->section_tipo,
+						$skip_root,
+						true // bool is_recursion
+					);
 					$current_ar_parents_safe = [];
 					foreach ($current_ar_parents as $c_parent) {
 						#debug_log(__METHOD__." c_parent ".to_string($c_parent), logger::DEBUG);
