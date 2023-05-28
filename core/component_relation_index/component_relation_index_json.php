@@ -85,29 +85,24 @@
 
 				$data[] = $item;
 
-			// used to check if the component has the request_config of the section_tipo
-				// $cache_request_config = [];
+			// subdatum
+				foreach ($value as $locator) {
 
-			foreach ($value as $locator) {
+					$datum = $this->get_section_datum_from_locator($locator);
 
-				$datum = $this->get_section_datum_from_locator($locator);
+					// context become calculated and merge with previous
+					$context = array_merge($context, $datum->context);
 
-				// context become calculated and merge with previous
-				$context = array_merge($context, $datum->context);
+					$ar_subdata	= $datum->data;
+					foreach ($ar_subdata as $sub_value) {
+						$sub_value->parent = $tipo;
+						$data[] = $sub_value;
+					}
+				}//end foreach ($value as $locator)
 
-				$ar_subdata	= $datum->data;
-				foreach ($ar_subdata as $sub_value) {
-					$sub_value->parent = $tipo;
-					$data[] = $sub_value;
-				}
-
-				// $context	= array_merge($context, $section_json->context);
-				// $data	= array_merge($data, $section_json->data);
-			}//end foreach ($value as $locator)
-
-			// update parents (only when parent is into the sqo sections list)
-			// To allow client JS to get calculated subdatum, is necessary to change
-			// the parent of every ddo inside the request config
+			// update parents (only when parent is into the sqo sections list).
+			// To allow client JS to get calculated subdatum, it is necessary to change
+			// the parent of each ddo within the request config
 				$found = array_find($context, function($el){
 					return $el->tipo===$this->tipo;
 				});
@@ -124,50 +119,50 @@
 						$current_ddo->parent = $tipo;
 					}
 				}
-				dump($found_request_config, ' found_request_config ++ '.to_string());
 
-			// if (!empty($ar_section_tipo)) {
-			// 	foreach ($ar_section_tipo as $current_section_tipo) {
+			// des
+				// if (!empty($ar_section_tipo)) {
+				// 	foreach ($ar_section_tipo as $current_section_tipo) {
 
-			// 		$section = section::get_instance(null, $current_section_tipo, 'list');
+				// 		$section = section::get_instance(null, $current_section_tipo, 'list');
 
-			// 		$section_options = new stdClass();
-			// 				$section_options->get_context	= true;
-			// 				$section_options->get_data 	 	= false;
-			// 			$section_json = $section->get_json($section_options);
+				// 		$section_options = new stdClass();
+				// 				$section_options->get_context	= true;
+				// 				$section_options->get_data 	 	= false;
+				// 			$section_json = $section->get_json($section_options);
 
-			// 		$context = array_merge($context, $section_json->context);
-			// 	}
-			// }
-
-
-			// subcontext data from layout_map items
-				// $ar_subdata = $this->get_ar_subdata($value);
-
-			// $subdatum = $this->get_subdatum($tipo, $value);
-
-			// $ar_subcontext	= $subdatum->context;
-			// foreach ($ar_subcontext as $current_context) {
-			// 	$context[] = $current_context;
-			// }
-
-			// $ar_subdata		= $subdatum->data;
+				// 		$context = array_merge($context, $section_json->context);
+				// 	}
+				// }
 
 
-			// // subdata add
-			// 	if ($mode==='list') {
-			// 		foreach ($ar_subdata as $current_data) {
+				// subcontext data from layout_map items
+					// $ar_subdata = $this->get_ar_subdata($value);
 
-			// 			$current_data->parent_tipo			= $tipo;
-			// 			$current_data->parent_section_id	= $section_id;
+				// $subdatum = $this->get_subdatum($tipo, $value);
 
-			// 			$data[] = $current_data;
-			// 		}
-			// 	}else{
-			// 		foreach ($ar_subdata as $current_data) {
-			// 			$data[] =$current_data;
-			// 		}
-			// 	}
+				// $ar_subcontext	= $subdatum->context;
+				// foreach ($ar_subcontext as $current_context) {
+				// 	$context[] = $current_context;
+				// }
+
+				// $ar_subdata		= $subdatum->data;
+
+
+				// // subdata add
+				// 	if ($mode==='list') {
+				// 		foreach ($ar_subdata as $current_data) {
+
+				// 			$current_data->parent_tipo			= $tipo;
+				// 			$current_data->parent_section_id	= $section_id;
+
+				// 			$data[] = $current_data;
+				// 		}
+				// 	}else{
+				// 		foreach ($ar_subdata as $current_data) {
+				// 			$data[] =$current_data;
+				// 		}
+				// 	}
 		}//end if (!empty($dato))
 	}//end if $options->get_data===true && $permissions>0
 

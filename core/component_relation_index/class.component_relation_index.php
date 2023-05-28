@@ -147,9 +147,8 @@ class component_relation_index extends component_relation_common {
 
 				// get the section request config (we will use his request config)
 				// if the locator has more than 1 section_tipo, will be stored the new request inside the request_config array
-				$original_request_config = $current_context->request_config;
 				// select api_engine dedalo only config
-				$section_request_config = array_find($original_request_config, function($el){
+				$section_request_config = array_find($current_context->request_config, function($el){
 					return $el->api_engine==='dedalo';
 				});
 
@@ -158,7 +157,6 @@ class component_relation_index extends component_relation_common {
 						debug_log(__METHOD__
 							. " Error. Invalid request_config " . PHP_EOL
 							. " No valid api_engine dedalo request config found ! Ignored current_context " . PHP_EOL
-							. ' original_request_config: ' . to_string($original_request_config) . PHP_EOL
 							. ' current_context: ' . to_string($current_context)
 							, logger::ERROR
 						);
@@ -170,8 +168,11 @@ class component_relation_index extends component_relation_common {
 				// add once the section_tipo
 					foreach ((array)$section_request_config->sqo->section_tipo as $current_sr_section_tipo) {
 						if (!in_array($current_sr_section_tipo, $final_request_config->sqo->section_tipo)) {
+
+							// add section tipo
 							$final_request_config->sqo->section_tipo[] = $current_sr_section_tipo;
 
+							// add ddo_map
 							$final_request_config->show->ddo_map = array_merge(
 								$final_request_config->show->ddo_map,
 								$section_request_config->show->ddo_map
@@ -188,7 +189,7 @@ class component_relation_index extends component_relation_common {
 
 			// add resolved subcontext to component context
 			$context[] = $current_context;
-		}
+		}//end foreach ($ar_subcontext as $current_context)
 
 		// datum object
 			$datum = new stdClass();

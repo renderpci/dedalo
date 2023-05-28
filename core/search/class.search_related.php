@@ -150,14 +150,15 @@ class search_related extends search {
 			// fix result ar_records as dato
 			$result	= $rows_data->ar_records;
 
+
 			# Note that row relations contains all relations and not only searched because we need
 			# filter relations array for each records to get only desired coincidences
 
 		// debug
 			$total_records = count($result);
 			debug_log(__METHOD__
-				. " Calculated referenced_locators step 1 (total: $total_records) $reference_locator->section_tipo,  " . ($reference_locator->section_id ?? '')
-				. exec_time_unit($start_time).' ms'
+				. " Calculated referenced_locators step 1 (total: $total_records) section_tipo:$reference_locator->section_tipo,  section_id:" . ($reference_locator->section_id ?? '')
+				. ', time: ' . exec_time_unit($start_time, 'ms').' ms'
 				, logger::DEBUG
 			);
 
@@ -186,8 +187,8 @@ class search_related extends search {
 
 		// debug
 			debug_log(__METHOD__
-				." Calculated referenced_locators step 2 $reference_locator->section_tipo, " . ($reference_locator->section_id ?? '')
-				. exec_time_unit($start_time).' ms'
+				. " Calculated referenced_locators step 2 section_tipo:$reference_locator->section_tipo, section_id:" . ($reference_locator->section_id ?? '')
+				. ', time: ' . exec_time_unit($start_time, 'ms').' ms'
 				. ' - memory: ' .dd_memory_usage()
 				, logger::DEBUG
 			);
