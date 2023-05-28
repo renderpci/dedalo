@@ -108,7 +108,7 @@ class component_relation_index extends component_relation_common {
 		// cache
 			$solved_section_datum_tipo =[];
 
-		// context. Calculate if not already resolved
+		// self context. Calculate if not already resolved
 			if(!isset($this->context)) {
 				$permissions	= $this->get_component_permissions();
 				$this->context	= $this->get_structure_context(
@@ -131,6 +131,13 @@ class component_relation_index extends component_relation_common {
 		$section_datum	= $section->get_json();
 		$ar_subcontext	= $section_datum->context;
 
+		// final_request_config. Find request_config with api_engine dedalo
+		// this will be changed (ddo_map and section_tipo) on every subcontext resolution in the ar_subcontext loop
+		// this var is not used here, its used only to modify/update the component context->request_config
+			$final_request_config = array_find($this->context->request_config, function($el){
+				return $el->api_engine==='dedalo';
+			});
+
 		// the the different request_config to be used as configured request_config of the component
 		$context = [];
 		foreach ($ar_subcontext as $current_context) {
@@ -138,34 +145,58 @@ class component_relation_index extends component_relation_common {
 			if ($current_context->model ==='section'
 				&& $current_context->tipo === $current_section_tipo
 				&& !in_array($current_section_tipo, $solved_section_datum_tipo)) {
+
 				// get the section request config (we will use his request config)
 				// if the locator has more than 1 section_tipo, will be stored the new request inside the request_config array
 				$original_request_config = $current_context->request_config;
-				// select api_engine dedalo only configs
-					$section_request_config = array_find($original_request_config, function($el){
-						return $el->api_engine==='dedalo';
-					});
-				$ddo_map = $section_request_config->show->ddo_map;
-				// change the ddo parent of the section to the component, only if the parent is the section_tipo
-				// is necessary don't change the ddo with deep dependence
-				foreach ($ddo_map as $current_ddo) {
-					 $current_ddo->parent = ($current_ddo->parent === $current_section_tipo)
-						 ? $this->tipo
-						 : $current_ddo->parent;
-				}
-
-				$final_request_config = array_find($this->context->request_config, function($el){
+				// select api_engine dedalo only config
+				$found_section_request_config = array_find($original_request_config, function($el){
 					return $el->api_engine==='dedalo';
 				});
 
-				$final_request_config->show->ddo_map     = array_merge($final_request_config->show->ddo_map, $section_request_config->show->ddo_map);
-				$final_request_config->sqo->section_tipo = array_merge($final_request_config->sqo->section_tipo, $section_request_config->sqo->section_tipo);
+				// invalid or empty request_config case
+					if (empty($found_section_request_config) || !is_object($found_section_request_config)) {
+						debug_log(__METHOD__
+							. " Error. Invalid request_config " . PHP_EOL
+							. " No valid api_engine dedalo request config found ! Ignored current_context " . PHP_EOL
+							. ' original_request_config: ' . to_string($original_request_config) . PHP_EOL
+							. ' current_context: ' . to_string($current_context)
+							, logger::ERROR
+						);
+						continue;
+					}
 
-				$solved_section_datum_tipo[] = $current_section_tipo;
+				// (!) clone section_request_config to avoid parent change affects the subdatum normal resolution
+				$section_request_config = clone $found_section_request_config;
+
+				// change the ddo parent of the section to the component, only if the parent is the section_tipo
+				// is necessary don't change the ddo with deep dependence
+					$ddo_map = $section_request_config->show->ddo_map;
+					foreach ($ddo_map as $current_ddo) {
+						 $current_ddo->parent = ($current_ddo->parent === $current_section_tipo)
+							 ? $this->tipo
+							 : $current_ddo->parent;
+					}
+
+				// update the component request_config ddo_map and section_tipo with the current subcontext
+				// because ddo_map if fulfilled with calculated subcontext ddo
+					$final_request_config->show->ddo_map = array_merge(
+						$final_request_config->show->ddo_map,
+						$section_request_config->show->ddo_map
+					);
+					$final_request_config->sqo->section_tipo = array_merge(
+						$final_request_config->sqo->section_tipo,
+						$section_request_config->sqo->section_tipo
+					);
+
+				// track as solved to prevent duplicates section_tipo in subcontext
+					$solved_section_datum_tipo[] = $current_section_tipo;
 			}
 
+			// set parent to engage this tipo to be used by JS instance to get his context and data
 			$current_context->parent = $this->tipo;
 
+			// add resolved subcontext to component context
 			$context[] = $current_context;
 		}
 
