@@ -86,7 +86,7 @@
 				$data[] = $item;
 
 			// used to check if the component has the request_config of the section_tipo
-			$cache_request_config = [];
+				// $cache_request_config = [];
 
 			foreach ($value as $locator) {
 
