@@ -171,7 +171,7 @@ render_menu.prototype.edit = async function() {
 	// section label button (go to list)
 		const section_label = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'section_label top_item unactive',
+			class_name		: 'section_label top_item inactive',
 			parent			: fragment
 		})
 		let current_instance = null // expected section instance assignation when section render finish
@@ -262,8 +262,6 @@ render_menu.prototype.edit = async function() {
 
 					// update current instance
 					current_instance = instance
-
-					console.log('self:', self);
 
 					// toggle inspector view
 					if (instance.mode==='edit') {

@@ -272,7 +272,7 @@ render_search.prototype.render_base = function() {
 					save_preset({
 						self			: self,
 						section_id		: section_id,
-						section_tipo	: 'dd623' // presets_section_tipo
+						section_tipo	: 'dd623' // Search presets
 					})
 					.then(function(response){
 						console.log('Preset saved!', response);
@@ -772,7 +772,7 @@ render_search.prototype.render_user_preset_list = async function(ar_elements, pe
 				class_name		: 'css_span_dato',
 				data_set		: {
 					parent			: element.section_id,
-					section_tipo	: 'dd623',
+					section_tipo	: 'dd623', // Search presets
 					tipo			: 'dd624'
 				}
 			})
