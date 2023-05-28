@@ -1991,14 +1991,11 @@ abstract class common {
 
 					// prevent resolve non children from path ddo, remove the non direct child,
 					// it will be calculated by his parent (in recursive loop)
-						if($this->tipo=='isad1' || $this->tipo=='hierarchy40') {
-							dump($dd_object, ' dd_object ++'.to_string($this->tipo));
-							// dump($ar_ddo, '$ar_ddo ++ '.to_string());
-							// dump($request_config, ' request_config ++ '.to_string());
-						}
 						if (isset($dd_object->parent) && $dd_object->parent!==$this->tipo) {
-							dump($dd_object, ' SKIP dd_object ++'.to_string($this->tipo));
-							// continue;
+							if(SHOW_DEBUG===true) {
+								dump($dd_object, ' SKIP dd_object ++'.to_string($this->tipo));
+							}
+							continue;
 						}
 
 					// short vars
