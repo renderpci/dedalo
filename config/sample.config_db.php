@@ -46,6 +46,6 @@ define('MYSQL_DEDALO_PASSWORD_CONN'	,'password');
 // MYSQL_DEDALO_DATABASE_CONN: string 'web_dedalo'
 define('MYSQL_DEDALO_DATABASE_CONN'	,'web_dedalo');
 // MYSQL_DEDALO_DB_PORT_CONN: string|null . Ex. 3306 or null for socket
-define('MYSQL_DEDALO_DB_PORT_CONN'	,'port');
+define('MYSQL_DEDALO_DB_PORT_CONN'	, 3306);
 // MYSQL_DEDALO_SOCKET_CONN: string|null . Ex. /tmp/mysql.sock if use
 define('MYSQL_DEDALO_SOCKET_CONN'	,'/tmp/mysql.sock');
