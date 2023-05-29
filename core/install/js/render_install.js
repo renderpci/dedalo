@@ -632,7 +632,18 @@ const render_config_block = function(self) {
 			})
 		}
 
-
+	// to reset root pw
+		const reset_root_button = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'primary install_button',
+			inner_html		: get_label.to_change_pw || 'To change root',
+			parent			: fragment
+		})
+		reset_root_button.addEventListener('mouseup', async function() {
+			// show the install_db
+			self.node.content_data.set_root_password_block.classList.remove('hide')
+			this.remove();
+		})//end mouse_up event
 
 	return fragment;
 }//end render_config_block
