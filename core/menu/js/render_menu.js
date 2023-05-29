@@ -174,114 +174,24 @@ render_menu.prototype.edit = async function() {
 			class_name		: 'section_label top_item inactive',
 			parent			: fragment
 		})
-		let current_instance = null // expected section instance assignation when section render finish
-		// click event
-			section_label.addEventListener('click', async (e) => {
-				e.stopPropagation()
-				e.preventDefault()
+		section_label.addEventListener('click', fn_onclick)
+		function fn_onclick(e) {
+			e.stopPropagation()
+			e.preventDefault();
 
-				if (!current_instance) {
-					return
-				}
-
-				// navigate browser from edit to list
-				// Note that internal navigation (based on injected browser history) uses the stored local database
-				// saved_rqo if exists. Page real navigation (reload page for instance) uses server side sessions to
-				// preserve offset and order
-				if (current_instance.mode==='edit') {
-
-					// saved_sqo from local_db_data. On section paginate, local_db_data is saved. Recover saved sqo here to
-					// go to list mode in the same position (offset) that the user saw
-						const section_tipo	= current_instance.tipo
-						const sqo_id		= ['section', section_tipo].join('_')
-						const saved_sqo		= await data_manager.get_local_db_data(
-							sqo_id,
-							'sqo'
-						)
-
-					// sqo. Note that we are changing from edit to list mode and current offset it's not applicable
-					// The list offset will be get from server session if exists
-						const sqo = saved_sqo
-							? saved_sqo.value
-							: {
-								filter	: current_instance.rqo.sqo.filter,
-								order	: current_instance.rqo.sqo.order || null
-							 }
-						// always use section request_config_object format instead parsed sqo format
-						sqo.section_tipo = current_instance.request_config_object.sqo.section_tipo
-
-					// source
-						const source = {
-							action			: 'search',
-							model			: current_instance.model, // section
-							tipo			: current_instance.tipo,
-							section_tipo	: current_instance.section_tipo,
-							mode			: 'list',
-							lang			: current_instance.lang
-						 }
-
-					// navigation
-						const user_navigation_rqo = {
-							caller_id	: self.id,
-							source		: source,
-							sqo			: sqo  // new sqo to use in list mode
-						}
-						event_manager.publish('user_navigation', user_navigation_rqo)
-				}
-				self.menu_active = false
-			})
-		// update value
-			// subscription to the changes: if the section or area was changed,
-			// observed DOM elements will change own value with the observable value
-			self.events_tokens.push(
-				event_manager.subscribe('render_instance', fn_update_section_label)
-			)
-			function fn_update_section_label(instance) {
-				if((instance.type==='section' || instance.type==='area') && instance.mode!=='tm') {
-
-					// search presets section case
-						if (instance.tipo==='dd623') {
-							return
-						}
-
-					section_label.classList.add('inactive')
-
-					if (current_instance && instance.tipo===current_instance.tipo && current_instance.mode!=='edit') {
-						// we are already on a list
-						section_label.classList.remove('inactive')
-					}else{
-						// update section label
-						// change the value of the current DOM element
-						// section_label.innerHTML = instance.label
-						// clean
-						while (section_label.firstChild) {
-							section_label.removeChild(section_label.firstChild)
-						}
-						section_label.insertAdjacentHTML('afterbegin', instance.label);
-					}
-
-					// update current instance
-					current_instance = instance
-
-					// toggle inspector view
-					if (instance.mode==='edit') {
-						toggle_inspector.classList.remove('hide')
-						section_label.classList.remove('inactive')
-					}else{
-						toggle_inspector.classList.add('hide')
-					}
-				}
-			}//end fn_update_section_label
+			if (typeof section_label.on_click!=='function') {
+				return
+			}
+			return section_label.on_click(e)
+		}
 
 	// inspector button toggle
 		const toggle_inspector = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'button_toggle_inspector top_item',
+			class_name		: 'button_toggle_inspector top_item hide',
 			parent			: fragment
 		})
-		toggle_inspector.addEventListener("click", function(e) {
-			ui.toggle_inspector(e)
-		})
+		toggle_inspector.addEventListener('click', ui.toggle_inspector)
 
 	// debug info bar
 		if(SHOW_DEVELOPER===true) {
@@ -292,6 +202,8 @@ render_menu.prototype.edit = async function() {
 		const menu_wrapper = document.createElement('div')
 			  menu_wrapper.classList.add('menu_wrapper','menu')
 			  menu_wrapper.appendChild(fragment)
+			  menu_wrapper.section_label	= section_label
+			  menu_wrapper.toggle_inspector	= toggle_inspector
 		// menu left band
 			switch (true) {
 				case page_globals.is_root===true:
@@ -406,6 +318,61 @@ const change_lang = async function(e) {
 
 	return api_response
 }//end change_lang
+
+
+
+/**
+* UPDATE_SECTION_LABEL
+* Change the menu section label value
+* Is called from section after rendering ends
+* @param object options
+* {
+*  value : string as 'Oral History',
+*  mode : string as 'edit',
+*  on_click : callback function
+* }
+* @return bool
+*/
+render_menu.prototype.update_section_label = function(options) {
+
+	const self = this
+
+	// options
+		const value		= options.value
+		const mode		= options.mode
+		const on_click	= options.on_click
+
+	// pointers get
+		const section_label		= self.node.section_label
+		const toggle_inspector	= self.node.toggle_inspector
+
+	// set click event callback
+		section_label.on_click = on_click
+
+	// clean
+		while (section_label.firstChild) {
+			section_label.removeChild(section_label.firstChild)
+		}
+
+	// set value
+		section_label.insertAdjacentHTML('afterbegin', value);
+
+	// toggle inspector view
+		if (mode==='edit') {
+			// hide button inspector
+			toggle_inspector.classList.remove('hide')
+			// enable user click
+			section_label.classList.remove('inactive')
+		}else{
+			// show button inspector
+			toggle_inspector.classList.add('hide')
+			// disable user click
+			section_label.classList.add('inactive')
+		}
+
+
+	return true
+}//end update_section_label
 
 
 
