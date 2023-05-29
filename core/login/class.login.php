@@ -1319,6 +1319,21 @@ class login extends common {
 					];
 			}
 
+		// demo user
+		// Demo is an account used to open and public demo installation
+		// if depends of the entity name, do not used in production.
+			if(DEDALO_ENTITY==='dedalo_demo'){
+				$demo_user = new stdClass();
+					$demo_user->user	= 'dedalo';
+					$demo_user->pw		= '76&_MbdCs3#17_Vhm';
+
+				$properties->info[] = [
+					'type'	=> 'demo_user',
+					'label'	=> 'Demo user',
+					'value'	=> $demo_user
+				];
+			}
+
 		// dd_object
 			$dd_object = new dd_object((object)[
 				'label'			=> $label,
