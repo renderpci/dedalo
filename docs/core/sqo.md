@@ -2,9 +2,9 @@
 
 ## Introduction
 
-Search Query Object or SQO, is a json object to use as abstraction of classical SQL. To create a flexible system with NoSQL and dependent of an ontology, become necessary use a flexible definition of the database query. Dédalo doesn't have columns and we need to search data in the same way than classical SQL. We change SQL model to NoSQL in v4 in 2012, at this time PostgreSQL(v9.2) introduce json format but with a very simple json query.
+Search Query Object or SQO, is a JSON object to use as an abstraction of classical SQL. To create a flexible system with NoSQL and dependent on an ontology, it becomes necessary to use a flexible definition of the database query. Dédalo doesn't have columns and we need to search data in the same way as classical SQL. We changed SQL model to NoSQL in v4 in 2012, at this time PostgreSQL(v9.2) introduced JSON format but with a very simple JSON query.
 
-So we became to define a Search Query Object, because we known that first json search definitions of PostgreSQL will be replaced with a more robust system. And we want to do searches compatible with changes in ontology, we don't want to use pre-definition searches.
+So we came to define a search query object, because we knew that early PostgreSQL JSON search definitions will be replaced with a more robust system. And we want to make searches compatible with ontology changes, we don't want to use predefined searches.
 
 ## Search Query Object - SQO definition
 
@@ -117,4 +117,4 @@ If you want to get any person with name "Ana" the sqo will be:
 }
 ````
 
-The SQO say: search in people under study (section_tipo [rsc197](https://dedalo.dev/ontology/rsc197)) with the path to name field (component_tipo [rsc85](https://dedalo.dev/ontology/rsc85)) with the Ana text.
+The SQO say: search in people under study (section_tipo [rsc197](https://dedalo.dev/ontology/rsc197)) with the path to name field (component_tipo [rsc85](https://dedalo.dev/ontology/rsc85)) with the text 'Ana'.
