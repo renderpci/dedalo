@@ -20,11 +20,11 @@
 
 ## 1. What is Dédalo?
 
-Dédalo is a knowledge management system for tangible and intangible Cultural Heritage, Natural Heritage and Oral History, and Oral Memory.
+Dédalo is a knowledge management system for tangible and intangible Cultural Heritage, Natural Heritage and Oral History and Memory.
 
 [Official Dédalo webpage](https://dedalo.dev)
 
-Dédalo is an Open Source software based on a new paradigm of programming: developing objects with an ontology model. The ontology controls the app flow with the descriptors, related terms, no descriptors, TG, TE, etc. Objects are built with a MVC structure and are linked to the ontology. The database uses a NoSQL model, storing all data in JSONB (binary) format.
+Dédalo is a Free and Open Source software based on a new paradigm of programming: developing objects with an ontology model. The ontology controls the app flow with the descriptors, related terms, no descriptors, TG, TE, etc. Objects are built with a MVC structure and are linked to the ontology. The database uses a NoSQL model, storing all data in JSONB (binary) format.
 
 Dédalo uses the structured Ontology in order to:
 
