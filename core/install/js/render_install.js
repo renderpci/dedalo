@@ -139,14 +139,26 @@ const get_content_data = function(self) {
 			parent			: config_block
 		})
 		// content
-		const config_block_content = ui.create_dom_element({
+		const config_block_status = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'content',
 			parent			: config_block
 		})
-		config_block_content.appendChild(
+		config_block_status.appendChild(
 			render_config_block(self)
 		)
+		content_data.config_block.config_block_status = config_block_status
+
+		// content
+		const config_block_options = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content',
+			parent			: config_block
+		})
+		config_block_options.appendChild(
+			render_config_options(self)
+		)
+		content_data.config_block.config_block_options = config_block_options
 
 	// install_db_block
 		const install_db_block = ui.create_dom_element({
@@ -542,6 +554,21 @@ const render_config_block = function(self) {
 			inner_html		: get_label.config_has_passed || 'Configuration test passed!',
 			parent			: fragment
 		})
+	return fragment;
+}//end render_config_block
+
+
+
+
+/**
+* RENDER_CONFIG_OPTIONS
+* Creates contents nodes with options of install
+* @param object self
+* @return HTMLElement
+*/
+const render_config_options = function(self) {
+
+	const fragment = new DocumentFragment()
 
 	// install_db_button
 		const install_button = ui.create_dom_element({
@@ -553,7 +580,7 @@ const render_config_block = function(self) {
 		install_button.addEventListener('mouseup', async function() {
 			// show the install_db
 			self.node.content_data.install_db_block.classList.remove('hide')
-			this.remove();
+			self.node.content_data.config_block.config_block_options.remove();
 		})//end mouse_up event
 
 	// db_data_version. Update option
@@ -622,7 +649,7 @@ const render_config_block = function(self) {
 					}
 
 				// unlock button
-					update_button.classList.remove('loading')
+					self.node.content_data.config_block.config_block_options.remove();
 			})//end mouse_up event
 
 			const to_update_status = ui.create_dom_element({
@@ -642,11 +669,26 @@ const render_config_block = function(self) {
 		reset_root_button.addEventListener('mouseup', async function() {
 			// show the install_db
 			self.node.content_data.set_root_password_block.classList.remove('hide')
-			this.remove();
+			self.node.content_data.config_block.config_block_options.remove();
+		})//end mouse_up event
+
+
+	// to install hierarchies
+		const install_hierarchies_button = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'primary install_button',
+			inner_html		: get_label.to_install_hierarchies || 'To install hierarchies',
+			parent			: fragment
+		})
+		install_hierarchies_button.addEventListener('mouseup', async function() {
+			// show the install_db
+			self.node.content_data.login_block.classList.remove('hide')
+			self.node.content_data.config_block.config_block_options.remove();
+
 		})//end mouse_up event
 
 	return fragment;
-}//end render_config_block
+}//end render_config_options
 
 
 

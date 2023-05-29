@@ -2391,10 +2391,15 @@ class install extends common {
 
 	/**
 	* SET_ROOT_PW
-	* this action is fired only in the installation process.
-	* if you want change the root pw after installation process you will need to do:
-	* 	1. change the root pw in the section_id -1 in matrix_ursers table to set it to null data.
-	* 	2. remove the installed status in config_auto file.
+	* This action is fired only in the installation process.
+	* if you want to change the root pw after installation process you will need to do:
+	* 	1. To change the root pw in the section_id -1 in matrix_ursers table to set it with null data, in this way:
+	* 		"dd133": {
+	*			"dato": {
+	*			"lg-nolan": null
+	*			}
+	*		}
+	* 	2. remove the installed status in config/config_auto file.
 	* @param object $options
 	* @return object $response
 	*/
