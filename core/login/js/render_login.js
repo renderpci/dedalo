@@ -74,7 +74,8 @@ render_login.prototype.edit = async function(options) {
 */
 const get_content_data = function(self) {
 
-	const fragment = new DocumentFragment()
+	const fragment	= new DocumentFragment()
+	const info_data	= self.context.properties.info || []
 
 	// top
 		const top = ui.create_dom_element({
@@ -161,6 +162,16 @@ const get_content_data = function(self) {
 			parent			: form
 		})
 		auth_input.autocomplete= 'current-password'
+
+	// DEMO user
+	// add demo user if the installation is the open public demo: demo.dedalo.dev
+	// do not use this user pw and entity in production
+		const dedalo_entity =  info_data.find(el => el.type === 'dedalo_entity')
+		if(dedalo_entity && dedalo_entity.value === 'dedalo_demo'){
+			const dedalo_demo_user = info_data.find(el => el.type === 'demo_user')
+			user_input.value = dedalo_demo_user.value.user || ''
+			auth_input.value = dedalo_demo_user.value.pw || ''
+		}
 
 	// button submit
 		const login_item_enter = login_items.find(el => el.tipo==='dd259')
@@ -268,7 +279,7 @@ const get_content_data = function(self) {
 			class_name		: 'info',
 			parent			: fragment
 		})
-		const info_data			= self.context.properties.info || []
+		// const info_data			= self.context.properties.info || []
 		const info_data_length	= info_data.length
 		for (let j = 0; j < info_data_length; j++) {
 
