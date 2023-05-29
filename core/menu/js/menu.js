@@ -39,14 +39,14 @@ export const menu = function(){
 */
 // prototypes assign
 	// lifecycle
-	menu.prototype.render			= common.prototype.render
-	menu.prototype.destroy			= common.prototype.destroy
-	menu.prototype.refresh			= common.prototype.refresh
-	// menu.prototype.create_source	= common.prototype.create_source
+	menu.prototype.render				= common.prototype.render
+	menu.prototype.destroy				= common.prototype.destroy
+	menu.prototype.refresh				= common.prototype.refresh
 
 	// render
-	menu.prototype.list				= render_menu.prototype.list
-	menu.prototype.edit				= render_menu.prototype.edit
+	// menu.prototype.list				= render_menu.prototype.list
+	menu.prototype.edit					= render_menu.prototype.edit
+	menu.prototype.update_section_label	= render_menu.prototype.update_section_label
 
 
 
@@ -151,6 +151,9 @@ menu.prototype.build = async function(autoload=true) {
 			//console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));
 			console.log(`__Time to build ${self.model} [autoload:${autoload}] ms:`, performance.now()-t0);
 		}
+
+	// fix menu instance as global to be available
+		window.menu = self
 
 	// status update
 		self.status = 'built'

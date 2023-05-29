@@ -306,32 +306,100 @@ section.prototype.init = async function(options) {
 				event_manager.subscribe('render_'+self.id, fn_render)
 			)
 			function fn_render() {
-				if (!self.search_container || !self.filter) {
-					console.log('stop event no filter 2:', this);
-					return
-				}
-				// open_search_panel. local DDBB table status
-				const status_id			= 'open_search_panel'
-				const collapsed_table	= 'status'
-				data_manager.get_local_db_data(status_id, collapsed_table, true)
-				.then(async function(ui_status){
-					// (!) Note that ui_status only exists when element is open
-					const is_open = typeof ui_status==='undefined' || ui_status.value===false
-						? false
-						: true
-					if (is_open===true && self.search_container && self.search_container.children.length===0) {
-						// add_to_container(self.search_container, self.filter)
-						await ui.load_item_with_spinner({
-							container	: self.search_container,
-							label		: 'filter',
-							callback	: async () => {
-								await self.filter.build()
-								return self.filter.render()
+
+				// menu label control
+					// menu. Note that menu is set as global var on menu build
+					const menu = window.menu
+					if (menu) {
+						// ignore search presets case
+							if (self.tipo==='dd623') {
+								return
 							}
+
+						menu.update_section_label({
+							value		: self.label,
+							mode		: self.mode,
+							on_click	: on_click
 						})
-						toggle_search_panel(self.filter)
+						async function on_click(e) {
+
+							if (self.mode!=='edit') {
+								console.log('Ignored non edit call to on_click');
+								return
+							}
+
+							// navigate browser from edit to list
+							// Note that internal navigation (based on injected browser history) uses the stored local database
+							// saved_rqo if exists. Page real navigation (reload page for instance) uses server side sessions to
+							// preserve offset and order
+
+							// saved_sqo from local_db_data. On section paginate, local_db_data is saved. Recover saved sqo here to
+							// go to list mode in the same position (offset) that the user saw
+								const section_tipo	= self.tipo
+								const sqo_id		= ['section', section_tipo].join('_')
+								const saved_sqo		= await data_manager.get_local_db_data(
+									sqo_id,
+									'sqo'
+								)
+
+							// sqo. Note that we are changing from edit to list mode and current offset it's not applicable
+							// The list offset will be get from server session if exists
+								const sqo = saved_sqo
+									? saved_sqo.value
+									: {
+										filter	: self.rqo.sqo.filter,
+										order	: self.rqo.sqo.order || null
+									 }
+								// always use section request_config_object format instead parsed sqo format
+								sqo.section_tipo = self.request_config_object.sqo.section_tipo
+
+							// source
+								const source = {
+									action			: 'search',
+									model			: self.model, // section
+									tipo			: self.tipo,
+									section_tipo	: self.section_tipo,
+									mode			: 'list',
+									lang			: self.lang
+								 }
+
+							// navigation
+								const user_navigation_rqo = {
+									caller_id	: self.id,
+									source		: source,
+									sqo			: sqo  // new sqo to use in list mode
+								}
+								event_manager.publish('user_navigation', user_navigation_rqo)
+						}//end on_click
+					}//end if (menu)
+
+				// search control
+					if (!self.search_container || !self.filter) {
+						console.log('stop event no filter 2:', this);
+						return
 					}
-				})
+					// open_search_panel. local DDBB table status
+					const status_id			= 'open_search_panel'
+					const collapsed_table	= 'status'
+					data_manager.get_local_db_data(status_id, collapsed_table, true)
+					.then(async function(ui_status){
+						// (!) Note that ui_status only exists when element is open
+						const is_open = typeof ui_status==='undefined' || ui_status.value===false
+							? false
+							: true
+						if (is_open===true && self.search_container && self.search_container.children.length===0) {
+							// add_to_container(self.search_container, self.filter)
+							await ui.load_item_with_spinner({
+								container	: self.search_container,
+								label		: 'filter',
+								callback	: async () => {
+									await self.filter.build()
+									return self.filter.render()
+								}
+							})
+							toggle_search_panel(self.filter)
+						}
+					})
 			}//end fn_render
 
 	// load additional files as css used by section_tool in self.config
