@@ -47,7 +47,7 @@ Dédalo can handle and cut video in real time to find thematic fragments of inte
 
 Want to see Dédalo in action?
 
-[Dédalo demo](https://dedalo.render.es/)
+[Dédalo demo](https://demo.dedalo.dev/)
 
 ## 3. Who uses Dédalo?
 
