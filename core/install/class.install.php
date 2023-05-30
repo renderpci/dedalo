@@ -2392,9 +2392,9 @@ class install extends common {
 	/**
 	* SET_ROOT_PW
 	* This action is fired only in the installation process.
-	* if you want to change the root pw after installation process you will need to do:
-	* 	1. To change the root pw in the section_id -1 in matrix_ursers table to set it with null data, in this way:
-	* 		"dd133": {
+	* if you want to change the root pw after installation process, you will need to do:
+	* 	1. To change the root pw in the section_id -1 in matrix_ursers table, set it with null data in this way:
+	*		"dd133": {
 	*			"dato": {
 	*			"lg-nolan": null
 	*			}
@@ -2420,7 +2420,7 @@ class install extends common {
 				return $response;
 			}
 
-		// check if the root has the default value in the user sections inside DDBB
+		// check if the root user has the default value in the user sections inside DDBB
 			if(login::check_root_has_default_password()===false){
 				$response->msg = 'Error. root pw was set in another install process';
 				return $response;
