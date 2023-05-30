@@ -89,7 +89,31 @@ area_common.prototype.init = async function(options) {
 
 
 	// events subscription
+		// render_ event
+			self.events_tokens.push(
+				event_manager.subscribe('render_'+self.id, fn_render)
+			)
+			function fn_render() {
+				// menu label control
+					const update_menu = () => {
+						// menu label control
+						// menu. Note that menu is set as global var on menu build
+						const retry_timeout = setTimeout(fn_render, 1500);
+						const menu = window.menu
+						if (menu) {
+							clearTimeout(retry_timeout);
 
+							menu.update_section_label({
+								value		: self.label,
+								mode		: self.mode,
+								on_click	: null
+							})
+						}else{
+							console.log('menu is not available. Try in 1.5 secs');
+						}//end if (menu)
+					}
+					update_menu()
+			}
 
 	// status update
 		self.status = 'initialized'

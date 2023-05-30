@@ -308,70 +308,78 @@ section.prototype.init = async function(options) {
 			function fn_render() {
 
 				// menu label control
-					// menu. Note that menu is set as global var on menu build
-					const menu = window.menu
-					if (menu) {
-						// ignore search presets case
+					const update_menu = () => {
+						// menu. Note that menu is set as global var on menu build
+						const retry_timeout = setTimeout(update_menu, 1500);
+						const menu = window.menu
+						if (menu) {
+							clearTimeout(retry_timeout);
+
+							// ignore search presets case
 							if (self.tipo==='dd623') {
 								return
 							}
 
-						menu.update_section_label({
-							value		: self.label,
-							mode		: self.mode,
-							on_click	: on_click
-						})
-						async function on_click(e) {
+							menu.update_section_label({
+								value		: self.label,
+								mode		: self.mode,
+								on_click	: on_click
+							})
+							async function on_click(e) {
 
-							if (self.mode!=='edit') {
-								console.log('Ignored non edit call to on_click');
-								return
-							}
-
-							// navigate browser from edit to list
-							// Note that internal navigation (based on injected browser history) uses the stored local database
-							// saved_rqo if exists. Page real navigation (reload page for instance) uses server side sessions to
-							// preserve offset and order
-
-							// saved_sqo from local_db_data. On section paginate, local_db_data is saved. Recover saved sqo here to
-							// go to list mode in the same position (offset) that the user saw
-								const section_tipo	= self.tipo
-								const sqo_id		= ['section', section_tipo].join('_')
-								const saved_sqo		= await data_manager.get_local_db_data(
-									sqo_id,
-									'sqo'
-								)
-
-							// sqo. Note that we are changing from edit to list mode and current offset it's not applicable
-							// The list offset will be get from server session if exists
-								const sqo = saved_sqo
-									? saved_sqo.value
-									: {
-										filter	: self.rqo.sqo.filter,
-										order	: self.rqo.sqo.order || null
-									 }
-								// always use section request_config_object format instead parsed sqo format
-								sqo.section_tipo = self.request_config_object.sqo.section_tipo
-
-							// source
-								const source = {
-									action			: 'search',
-									model			: self.model, // section
-									tipo			: self.tipo,
-									section_tipo	: self.section_tipo,
-									mode			: 'list',
-									lang			: self.lang
-								 }
-
-							// navigation
-								const user_navigation_rqo = {
-									caller_id	: self.id,
-									source		: source,
-									sqo			: sqo  // new sqo to use in list mode
+								if (self.mode!=='edit') {
+									console.log('Ignored non edit call to on_click');
+									return
 								}
-								event_manager.publish('user_navigation', user_navigation_rqo)
-						}//end on_click
-					}//end if (menu)
+
+								// navigate browser from edit to list
+								// Note that internal navigation (based on injected browser history) uses the stored local database
+								// saved_rqo if exists. Page real navigation (reload page for instance) uses server side sessions to
+								// preserve offset and order
+
+								// saved_sqo from local_db_data. On section paginate, local_db_data is saved. Recover saved sqo here to
+								// go to list mode in the same position (offset) that the user saw
+									const section_tipo	= self.tipo
+									const sqo_id		= ['section', section_tipo].join('_')
+									const saved_sqo		= await data_manager.get_local_db_data(
+										sqo_id,
+										'sqo'
+									)
+
+								// sqo. Note that we are changing from edit to list mode and current offset it's not applicable
+								// The list offset will be get from server session if exists
+									const sqo = saved_sqo
+										? saved_sqo.value
+										: {
+											filter	: self.rqo.sqo.filter,
+											order	: self.rqo.sqo.order || null
+										 }
+									// always use section request_config_object format instead parsed sqo format
+									sqo.section_tipo = self.request_config_object.sqo.section_tipo
+
+								// source
+									const source = {
+										action			: 'search',
+										model			: self.model, // section
+										tipo			: self.tipo,
+										section_tipo	: self.section_tipo,
+										mode			: 'list',
+										lang			: self.lang
+									 }
+
+								// navigation
+									const user_navigation_rqo = {
+										caller_id	: self.id,
+										source		: source,
+										sqo			: sqo  // new sqo to use in list mode
+									}
+									event_manager.publish('user_navigation', user_navigation_rqo)
+							}//end on_click
+						}else{
+							console.log('menu is not available. Try in 1.5 secs');
+						}//end if (menu)
+					}
+					update_menu()
 
 				// search control
 					if (!self.search_container || !self.filter) {
