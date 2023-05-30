@@ -37,14 +37,13 @@ export const area_common = function() {
 	this.status
 
 	this.id_variant
-
-	return true
 }//end area_common
 
 
 
 /**
 * INIT
+* @param object options
 * @return bool
 */
 area_common.prototype.init = async function(options) {
@@ -52,41 +51,41 @@ area_common.prototype.init = async function(options) {
 	const self = this
 
 	// instance key used vars
-	self.model 				= options.model
-	self.tipo 				= options.tipo
-	self.section_tipo 		= options.section_tipo || self.tipo
-	self.mode 				= options.mode
-	self.lang 				= options.lang
-	self.properties			= options.properties
+	self.model			= options.model
+	self.tipo			= options.tipo
+	self.section_tipo	= options.section_tipo || self.tipo
+	self.mode			= options.mode
+	self.lang			= options.lang
+	self.properties		= options.properties
 
 	// DOM
-	self.node 				= null
+	self.node			= null
 
-	self.parent 			= options.parent
+	self.parent			= options.parent
 
-	self.events_tokens		= []
-	self.ar_instances		= []
+	self.events_tokens	= []
+	self.ar_instances	= []
 
 	// dd request
-	self.dd_request			= {
+	self.dd_request		= {
 		show	: null,
 		search	: null,
 		select	: null
 	}
 
-	self.datum 	 			= options.datum   		|| null
-	self.context 			= options.context 		|| null
-	self.data 	 			= options.data 	  		|| null
-	self.pagination 		= { // pagination info
+	self.datum		= options.datum   		|| null
+	self.context	= options.context 		|| null
+	self.data		= options.data 	  		|| null
+	self.pagination	= { // pagination info
 		total : 0,
 		offset: 0
 	}
 
-	self.type 				= 'area'
-	self.label 				= null
+	self.type	= 'area'
+	self.label	= null
 
-	self.widgets 	 		= options.widgets 	  	|| null
-	self.permissions 		= options.permissions 	|| null
+	self.widgets		= options.widgets 	  	|| null
+	self.permissions	= options.permissions 	|| null
 
 
 	// events subscription
