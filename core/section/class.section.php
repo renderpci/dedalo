@@ -2370,33 +2370,26 @@ class section extends common {
 	*/
 	public function forced_create_record() : bool {
 
-		$start_time = start_time();
-
 		if(is_null($this->section_id)) {
 
 			// Save to obtain a new incremental section_id
-			#debug_log(__METHOD__." == SECTION : Record already exists ($this->section_id, $section_tipo) ".to_string(), logger::DEBUG);
 			$this->Save();
 			return true;
 
 		}else{
 
 			// Check if section_id already exists
-				$section_tipo = $this->tipo;
-				$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
-
-				$strQuery = "SELECT section_id FROM \"$matrix_table\" WHERE section_id = $this->section_id AND section_tipo = '$section_tipo' ";
-				$result	  = JSON_RecordObj_matrix::search_free($strQuery);
-				$num_rows = pg_num_rows($result);
-
-				# Record already exists. Not continue
-				if($num_rows>0) {
-					debug_log(__METHOD__." == SECTION : Record already exists ($this->section_id, $section_tipo) ".to_string(), logger::ERROR);
+				$current_section_id_exists = section::section_id_exists( $this->section_id, $this->tipo );
+				// Record already exists. Not continue
+				if($current_section_id_exists===true) {
+					debug_log(__METHOD__
+						." == SECTION : Record already exists ($this->section_id, $this->tipo)"
+						, logger::ERROR
+					);
 					return false;
 				}
 
 			// section_id not exists. Create a new section record // ADDED 27-12-2018
-				#debug_log(__METHOD__." == SECTION : Creating new forced record ($this->section_id, $section_tipo) ".to_string(), logger::DEBUG);
 				$save_options = new stdClass();
 					$save_options->forced_create_record = $this->section_id;
 				$this->Save($save_options);
@@ -2404,6 +2397,32 @@ class section extends common {
 
 		return true;
 	}//end forced_create_record
+
+
+
+	/**
+	* SECTION_ID_EXISTS
+	* Search in current matrix_table the section_id given for current section_tipo
+	* @param int|string $section_id
+	* 	Will be cast to int into the search
+	* @param string $section_tipo
+	* @return bool $result
+	*/
+	public static function section_id_exists( int|string $section_id, string $section_tipo ) : bool {
+
+		// Check if section_id already exists
+		$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
+
+		$strQuery	= "SELECT section_id FROM \"$matrix_table\" WHERE section_id = ".(int)$section_id." AND section_tipo = '$section_tipo' ";
+		$result		= JSON_RecordObj_matrix::search_free($strQuery);
+		$num_rows	= pg_num_rows($result);
+
+		// num_rows. > 0 indicates already exists
+		$result = (bool)($num_rows>0);
+
+
+		return $result;
+	}//end section_id_exists
 
 
 
