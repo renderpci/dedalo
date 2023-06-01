@@ -47,13 +47,16 @@ class area_thesaurus extends area_common {
 
 	/**
 	* GET_HIERARCHY_TYPOLOGIES
-	* @return array $active_hierarchies
+	* Get an array of all section_id from records of current section
+	* @return array $hierarchy_typologies
 	*/
 	public function get_hierarchy_typologies() : array {
 
-		$hierarchy_typologies = section::get_ar_all_section_records_unfiltered( area_thesaurus::$typologies_section_tipo );
+		$hierarchy_typologies = section::get_ar_all_section_records_unfiltered(
+			area_thesaurus::$typologies_section_tipo
+		);
 
-		return (array)$hierarchy_typologies;
+		return $hierarchy_typologies;
 	}//end get_hierarchy_typologies
 
 

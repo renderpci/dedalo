@@ -336,7 +336,8 @@ login.prototype.action_dispatch = async function(api_response) {
 * @see component_common.save()
 * @param object options
 * {
-* 	callback : function|null
+* 	callback : function|null,
+* main_container : HTMLElement
 * }
 * @return object loggin_instance
 */
