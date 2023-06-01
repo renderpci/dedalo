@@ -44,7 +44,7 @@ export const menu = function(){
 	menu.prototype.refresh				= common.prototype.refresh
 
 	// render
-	// menu.prototype.list				= render_menu.prototype.list
+	menu.prototype.list					= render_menu.prototype.edit
 	menu.prototype.edit					= render_menu.prototype.edit
 	menu.prototype.update_section_label	= render_menu.prototype.update_section_label
 

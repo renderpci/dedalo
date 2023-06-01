@@ -306,11 +306,14 @@ section.prototype.init = async function(options) {
 				event_manager.subscribe('render_'+self.id, fn_render)
 			)
 			function fn_render() {
-
 				// menu label control
 					const update_menu = () => {
+						// ignore sections inside tool (tool_user_admin case)
+						if (self.caller && self.caller.type==='tool') {
+							return
+						}
 						// menu. Note that menu is set as global var on menu build
-						const retry_timeout = setTimeout(update_menu, 1500);
+						const retry_timeout = setTimeout(update_menu, 2000);
 						const menu = window.menu
 						if (menu) {
 							clearTimeout(retry_timeout);
@@ -376,7 +379,7 @@ section.prototype.init = async function(options) {
 									event_manager.publish('user_navigation', user_navigation_rqo)
 							}//end on_click
 						}else{
-							console.log('menu is not available. Try in 1.5 secs');
+							console.log('menu is not available. Try in 2 secs');
 						}//end if (menu)
 					}
 					update_menu()

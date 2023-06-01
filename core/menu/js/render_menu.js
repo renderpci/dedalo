@@ -342,6 +342,17 @@ render_menu.prototype.update_section_label = function(options) {
 		const mode		= options.mode
 		const on_click	= options.on_click
 
+
+	// check
+		if (!self.node) {
+			console.warn('Error: Invalid menu node.', self);
+			return false
+		}
+		if (!self.node.section_label) {
+			console.warn('Error: Invalid menu node section_label.', self.node.section_label);
+			return false
+		}
+
 	// pointers get
 		const section_label		= self.node.section_label
 		const toggle_inspector	= self.node.toggle_inspector

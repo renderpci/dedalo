@@ -230,8 +230,14 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 							continue
 						}
 
-					//skip autoload false.
+					// skip autoload false.
 						if(el.autoload===false){
+							continue
+						}
+
+					// menu temporal check
+						if (el.model==='menu') {
+							console.warn('Ignored menu ddo:', el);
 							continue
 						}
 
@@ -267,7 +273,7 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 
 						// init and build instance
 							get_instance(element_options) // load and init
-							.then(function(element_instance){
+							.then(function(element_instance) {
 								const load_data = true // el.model.indexOf('component')!==-1 || el.model==='area_thesaurus'
 								element_instance.build( load_data ) // build, loading data
 								.then(function(){
@@ -549,7 +555,7 @@ const view_modal = async function(options) {
 		const tool_context	= options.tool_context || {}
 		const caller		= options.caller
 
-	// (!) Moved yo tool_common init unified parse
+	// (!) Moved to tool_common init unified parse
 	// tool_config. If is received, parse section_id. Else create a new one on the fly
 		// to preserve the format of tool_context.tool_config ddo_map
 		// if (!tool_context.tool_config) {

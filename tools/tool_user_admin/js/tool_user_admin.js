@@ -34,9 +34,6 @@ export const tool_user_admin = function () {
 	this.target_lang	= null
 	this.langs			= null
 	this.caller			= null
-
-
-	return true
 }//end page
 
 
@@ -55,13 +52,15 @@ export const tool_user_admin = function () {
 	// others
 	tool_user_admin.prototype.build_rqo_show	= common.prototype.build_rqo_show
 	// render mode edit (default). Set the tool custom manager to build the DOM nodes view
+	tool_user_admin.prototype.edit				= render_tool_user_admin.prototype.edit
 	tool_user_admin.prototype.list				= render_tool_user_admin.prototype.edit
-
 
 
 /**
 * INIT
 * Custom tool init
+* @param object options
+* @return bool
 */
 tool_user_admin.prototype.init = async function(options) {
 
@@ -81,6 +80,8 @@ tool_user_admin.prototype.init = async function(options) {
 /**
 * BUILD
 * Custom tool build
+* @param bool autoload = false
+* @return bool
 */
 tool_user_admin.prototype.build = async function(autoload=false) {
 
@@ -219,6 +220,7 @@ tool_user_admin.prototype.get_ddo_map = function() {
 		}
 	]
 
+
 	return ddo_map
 }//end get_ddo_map
 
@@ -259,7 +261,8 @@ tool_user_admin.prototype.build_user_section = async function() {
 			lang			: page_globals.dedalo_data_nolan,
 			mode			: 'edit',
 			model			: 'section',
-			add_show 		: true,
+			add_show		: true,
+			caller			: self,
 			request_config	: request_config,
 			id_variant		: section_tipo +'_'+ section_id + '_build_user_section'
 		}

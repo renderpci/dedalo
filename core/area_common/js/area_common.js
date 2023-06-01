@@ -96,9 +96,13 @@ area_common.prototype.init = async function(options) {
 			function fn_render() {
 				// menu label control
 					const update_menu = () => {
+						// ignore sections inside tool (tool_user_admin case)
+						if (self.caller && self.caller.type==='tool') {
+							return
+						}
 						// menu label control
 						// menu. Note that menu is set as global var on menu build
-						const retry_timeout = setTimeout(fn_render, 1500);
+						const retry_timeout = setTimeout(fn_render, 2000);
 						const menu = window.menu
 						if (menu) {
 							clearTimeout(retry_timeout);
@@ -109,7 +113,7 @@ area_common.prototype.init = async function(options) {
 								on_click	: null
 							})
 						}else{
-							console.log('menu is not available. Try in 1.5 secs');
+							console.log('menu is not available. Try in 2 secs');
 						}//end if (menu)
 					}
 					update_menu()
