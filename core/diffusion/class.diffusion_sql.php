@@ -614,7 +614,7 @@ class diffusion_sql extends diffusion  {
 					diffusion_sql::delete_sql_record($current_section_id, $ar_field_data['database_name'], $ar_field_data['table_name']);
 					debug_log(__METHOD__." Skipped (and mysql deleted) record $current_section_id ".$ar_field_data['table_name']." (publication=no)", logger::DEBUG);
 
-					$section->diffusion_info_add($diffusion_element_tipo);
+					$section->add_diffusion_info_default($diffusion_element_tipo);
 					$section->Save();
 					debug_log(__METHOD__." Added current diffusion_element_tipo $diffusion_element_tipo to data. Section diffusion_info updated and saved [{$section_tipo}-{$current_section_id}]. ".to_string(), logger::DEBUG);
 
@@ -872,10 +872,14 @@ class diffusion_sql extends diffusion  {
 			// $diffusion_info = $section->get_diffusion_info(); dump($diffusion_info, ' diffusion_info ++ '.to_string());
 			if ($build_mode==='default') {
 				$section->set_bl_loaded_matrix_data(false); // force section to update dato from current database to prevent loose user changes on publication time lapse
-				$section->diffusion_info_add($diffusion_element_tipo);
+				$section->add_diffusion_info_default($diffusion_element_tipo);
 				$section->save_modified = false;
 				$section->Save();
-				debug_log(__METHOD__." Added current diffusion_element_tipo $diffusion_element_tipo to data. Section diffusion_info updated and saved [{$section_tipo}-{$current_section_id}]. ".to_string(), logger::DEBUG);
+				debug_log(__METHOD__
+					." Added current diffusion_element_tipo $diffusion_element_tipo to data." . PHP_EOL
+					." Section diffusion_info updated and saved [{$section_tipo}-{$current_section_id}]."
+					, logger::DEBUG
+				);
 			}
 
 			// resolved_records
@@ -992,7 +996,7 @@ class diffusion_sql extends diffusion  {
 				false // bool cache
 			);
 			$section->set_bl_loaded_matrix_data(false); // force section to update dato from current database to prevent loose user changes on publication time lapse
-			$section->diffusion_info_add($options->diffusion_element_tipo);
+			$section->add_diffusion_info_default($options->diffusion_element_tipo);
 			$section->save_modified = false;
 			$section->Save();
 			debug_log(__METHOD__." Added current diffusion_element_tipo $options->diffusion_element_tipo to data. Section diffusion_info updated and saved [{$options->section_tipo}-{$options->section_id}]. ".to_string(), logger::DEBUG);

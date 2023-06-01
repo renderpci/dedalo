@@ -1762,10 +1762,12 @@ abstract class common {
 
 				}else if($model==='section') {
 
-					// section specific. relation_list // time_machine_list
-						$dd_object->relation_list		= $this->get_relation_list();
-						$dd_object->time_machine_list	= $this->get_time_machine_list_tipo();
-						$dd_object->section_map 		= section::get_section_map( $section_tipo );
+					// (!) Removed 01-06-2023 because don't follow dd_object definitions
+					// and apparently is not used by anyone
+						// section specific. relation_list // time_machine_list
+							// $dd_object->relation_list		= $this->get_relation_list_tipo();
+							// $dd_object->time_machine_list	= $this->get_time_machine_list_tipo();
+							// $dd_object->section_map 			= section::get_section_map( $section_tipo );
 				}
 
 			// view, all components has view, used to change the render view.

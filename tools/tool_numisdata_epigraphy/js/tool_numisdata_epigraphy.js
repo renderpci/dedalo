@@ -16,28 +16,26 @@
 
 
 /**
-* tool_numisdata_epigraphy
+* TOOL_NUMISDATA_EPIGRAPHY
 * Tool to translate contents from one language to other in any text component
 */
 export const tool_numisdata_epigraphy = function () {
 
-	this.id							= null
-	this.model						= null
-	this.mode						= null
-	this.node						= null
-	this.ar_instances				= null
-	this.status						= null
-	this.events_tokens				= []
-	this.type						= null
-	this.source_lang				= null
-	this.target_lang				= null
-	this.langs						= null
-	this.caller						= null
-	this.media_component			= null // component av that will be transcribed (it could be the caller)
-	this.epigraphy	= null // component text area where we are working into the tool
-	this.relation_list				= null // datum of relation_list (to obtaim list of top_section_tipo/id)
-
-	return true
+	this.id					= null
+	this.model				= null
+	this.mode				= null
+	this.node				= null
+	this.ar_instances		= null
+	this.status				= null
+	this.events_tokens		= []
+	this.type				= null
+	this.source_lang		= null
+	this.target_lang		= null
+	this.langs				= null
+	this.caller				= null
+	this.media_component	= null // component av that will be transcribed (it could be the caller)
+	this.epigraphy			= null // component text area where we are working into the tool
+	this.relation_list		= null // datum of relation_list (to obtain list of top_section_tipo/id)
 }//end page
 
 
@@ -56,6 +54,8 @@ export const tool_numisdata_epigraphy = function () {
 
 /**
 * INIT
+* @param object options
+* @return bool
 */
 tool_numisdata_epigraphy.prototype.init = async function(options) {
 
@@ -86,6 +86,8 @@ tool_numisdata_epigraphy.prototype.init = async function(options) {
 
 /**
 * BUILD
+* @param bool autoload = true
+* @return bool
 */
 tool_numisdata_epigraphy.prototype.build = async function(autoload=false) {
 
