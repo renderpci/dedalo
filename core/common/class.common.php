@@ -1675,6 +1675,7 @@ abstract class common {
 				$tool_config	= isset($properties->tool_config->{$tool_object->name})
 					? $properties->tool_config->{$tool_object->name}
 					: null;
+
 				// tool context
 				$current_tool_section_tipo	= $this->get_section_tipo() ?? $this->tipo;
 				$tool_context				= tool_common::create_tool_simple_context(

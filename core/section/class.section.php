@@ -2436,7 +2436,8 @@ class section extends common {
 				);
 				if ( false===$component->restore_component_media_files() ) {
 					debug_log(__METHOD__
-						." Error on restore_deleted_section_media_files: model:$model, tipo:$component_tipo, section_id:$section_id, section_tipo:$section_tipo"
+						." Error on restore_deleted_section_media_files: ". PHP_EOL
+						. " model:$model, tipo:$component_tipo, section_id:$section_id, section_tipo:$section_tipo"
 						, logger::ERROR
 					);
 					continue;

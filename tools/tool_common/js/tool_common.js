@@ -163,7 +163,7 @@ tool_common.prototype.init = async function(options) {
 								}]
 							}
 							if(SHOW_DEBUG===true) {
-								console.log("-> tool_common init final fallback case self.tool_config:", self.tool_config);
+								console.warn("-> tool_common init final fallback case self.tool_config:", self.tool_config);
 							}
 					}
 			}
@@ -235,9 +235,9 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 							continue
 						}
 
-					// menu temporal check
+					// menu skip ddo from menu
 						if (el.model==='menu') {
-							console.warn('Ignored menu ddo:', el);
+							// console.warn('Ignored menu ddo:', el);
 							continue
 						}
 
