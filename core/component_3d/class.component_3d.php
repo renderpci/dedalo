@@ -524,42 +524,41 @@ class component_3d extends component_media_common {
 	*/
 	public function restore_component_media_files() : bool {
 
-		#
-		# AV restore
-		$ar_quality = DEDALO_3D_AR_QUALITY;
-		foreach ($ar_quality as $current_quality) {
+		// AV restore
+		// $ar_quality = DEDALO_3D_AR_QUALITY;
+		// foreach ($ar_quality as $current_quality) {
 
-			# media_path
-			$media_path = $this->get_video_path($current_quality);
-			$media_path = pathinfo($media_path,PATHINFO_DIRNAME).'/deleted';
-			$id 	= $this->get_id();
-			if(SHOW_DEBUG===true) {
-				#dump($media_path, "media_path current_quality:$current_quality - get_id:$id");	#continue;
-			}
-			$file_pattern 	= $media_path .'/'. $id .'_*.'. $this->get_extension();
-			$ar_files 		= glob($file_pattern);
-			if(SHOW_DEBUG===true) {
-				#dump($ar_files, ' ar_files');#continue;
-			}
-			if (empty($ar_files)) {
-				debug_log(__METHOD__." No files to restore were found for id:$id. Nothing was restored (1)");
-				continue; // Skip
-			}
-			natsort($ar_files);	# sort the files from newest to oldest
-			$last_file_path = end($ar_files);
-			$new_file_path 	= $this->get_video_path($current_quality);
-			if( !rename($last_file_path, $new_file_path) ) throw new Exception(" Error on move files to restore folder. Permission denied . Nothing was restored (2)");
+		// 	# media_path
+		// 	$media_path = $this->get_video_path($current_quality);
+		// 	$media_path = pathinfo($media_path,PATHINFO_DIRNAME).'/deleted';
+		// 	$id 	= $this->get_id();
+		// 	if(SHOW_DEBUG===true) {
+		// 		#dump($media_path, "media_path current_quality:$current_quality - get_id:$id");	#continue;
+		// 	}
+		// 	$file_pattern 	= $media_path .'/'. $id .'_*.'. $this->get_extension();
+		// 	$ar_files 		= glob($file_pattern);
+		// 	if(SHOW_DEBUG===true) {
+		// 		#dump($ar_files, ' ar_files');#continue;
+		// 	}
+		// 	if (empty($ar_files)) {
+		// 		debug_log(__METHOD__." No files to restore were found for id:$id. Nothing was restored (1)");
+		// 		continue; // Skip
+		// 	}
+		// 	natsort($ar_files);	# sort the files from newest to oldest
+		// 	$last_file_path = end($ar_files);
+		// 	$new_file_path 	= $this->get_video_path($current_quality);
+		// 	if( !rename($last_file_path, $new_file_path) ) throw new Exception(" Error on move files to restore folder. Permission denied . Nothing was restored (2)");
 
-			if(SHOW_DEBUG===true) {
-				$msg=__METHOD__." Moved file \n$last_file_path to \n$new_file_path";
-				debug_log($msg);
-				#dump($msg, ' msg');
-			}
-		}#end foreach ($ar_quality as $current_quality)
+		// 	if(SHOW_DEBUG===true) {
+		// 		$msg=__METHOD__." Moved file \n$last_file_path to \n$new_file_path";
+		// 		debug_log($msg);
+		// 		#dump($msg, ' msg');
+		// 	}
+		// }#end foreach ($ar_quality as $current_quality)
+		parent::restore_component_media_files();
 
 
-		#
-		# Posterframe restore
+		// Posterframe restore
 		$media_path = $this->get_posterframe_path();
 		$media_path = pathinfo($media_path,PATHINFO_DIRNAME).'/deleted';
 		$id 	= $this->get_id();

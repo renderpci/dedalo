@@ -571,28 +571,29 @@ class component_av extends component_media_common {
 	public function restore_component_media_files() : bool {
 
 		// AV restore
-			$ar_quality = $this->get_ar_quality();;
-			foreach ($ar_quality as $current_quality) {
+			// $ar_quality = $this->get_ar_quality();;
+			// foreach ($ar_quality as $current_quality) {
 
-				$media_path		= $this->get_video_path($current_quality);
-				$media_path		= pathinfo($media_path, PATHINFO_DIRNAME).'/deleted';
-				$id				= $this->get_id();
-				$file_pattern	= $media_path .'/'. $id .'_*.'. $this->get_extension();
-				$ar_files		= glob($file_pattern);
-				if (empty($ar_files)) {
-					debug_log(__METHOD__." No files to restore were found for id:$id. Nothing was restored (1) ".to_string($id), logger::WARNING);
-					continue; // Skip
-				}
-				natsort($ar_files);	// sort the files from newest to oldest
-				$last_file_path	= end($ar_files);
-				$new_file_path	= $this->get_video_path($current_quality);
-				if( !rename($last_file_path, $new_file_path) ) {
-					// throw new Exception(" Error on move files to restore folder. Permission denied . Nothing was restored (2)");
-					debug_log(__METHOD__." Error on move files to restore folder. Permission denied . Nothing was restored (2) ".to_string($new_file_path), logger::ERROR);
-				}
+			// 	$media_path		= $this->get_video_path($current_quality);
+			// 	$media_path		= pathinfo($media_path, PATHINFO_DIRNAME).'/deleted';
+			// 	$id				= $this->get_id();
+			// 	$file_pattern	= $media_path .'/'. $id .'_*.'. $this->get_extension();
+			// 	$ar_files		= glob($file_pattern);
+			// 	if (empty($ar_files)) {
+			// 		debug_log(__METHOD__." No files to restore were found for id:$id. Nothing was restored (1) ".to_string($id), logger::WARNING);
+			// 		continue; // Skip
+			// 	}
+			// 	natsort($ar_files);	// sort the files from newest to oldest
+			// 	$last_file_path	= end($ar_files);
+			// 	$new_file_path	= $this->get_video_path($current_quality);
+			// 	if( !rename($last_file_path, $new_file_path) ) {
+			// 		// throw new Exception(" Error on move files to restore folder. Permission denied . Nothing was restored (2)");
+			// 		debug_log(__METHOD__." Error on move files to restore folder. Permission denied . Nothing was restored (2) ".to_string($new_file_path), logger::ERROR);
+			// 	}
 
-				debug_log(__METHOD__." Moved file \n$last_file_path to \n$new_file_path ".to_string(), logger::DEBUG);
-			}//end foreach ($ar_quality as $current_quality)
+			// 	debug_log(__METHOD__." Moved file \n$last_file_path to \n$new_file_path ".to_string(), logger::DEBUG);
+			// }//end foreach ($ar_quality as $current_quality)
+			parent::restore_component_media_files();
 
 
 		// posterframe restore
