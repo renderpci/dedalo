@@ -897,9 +897,11 @@ common.prototype.load_style = function (src) {
 
 /**
 * LOAD_SCRIPT
-* @param object self
+* @param string src
+* @return promise
+* 	resolve/reject src
 */
-common.prototype.load_script = async function(src) {
+common.prototype.load_script = async function(src, content=null) {
 
 	return new Promise(function(resolve, reject) {
 
@@ -917,13 +919,17 @@ common.prototype.load_script = async function(src) {
 			const element = document.createElement('script')
 			element.setAttribute('defer', 'defer');
 
-			element.onload = function() {
+			if(content) {
+				element.innerHTML = content
+			}
 
+			element.addEventListener('load', function(e) {
 				resolve(src);
-			};
-			element.onerror = function() {
+			})
+
+			element.addEventListener('error', function(e) {
 				reject(src);
-			};
+			})
 
 			element.src = src
 
