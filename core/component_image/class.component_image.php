@@ -825,62 +825,60 @@ class component_image extends component_media_common {
 
 
 	/**
-	* RESTORE_COMPONENT_MEDIA_FILES
+	* RESTORE_COMPONENT_MEDIA_FILES (! Moved to media common)
 	* "Restore" last version of deleted media files (renamed and stored in 'deleted' folder)
 	* Is triggered when tool_time_machine recover a section
 	* @see tool_time_machine::recover_section_from_time_machine
 	*/
-	public function restore_component_media_files() : bool {
+		// public function restore_component_media_files() : bool {
 
-		#
-		# Image restore
-		$ar_quality = DEDALO_IMAGE_AR_QUALITY;
-		foreach ($ar_quality as $current_quality) {
+		// 	// Image restore
+		// 	$ar_quality = DEDALO_IMAGE_AR_QUALITY;
+		// 	foreach ($ar_quality as $current_quality) {
 
-			# media_path
-			$media_path 	 = $this->get_media_filepath($current_quality);
-			$folder_path_del = pathinfo($media_path,PATHINFO_DIRNAME).'/deleted';
-			$id 		 = $this->get_id();
-			if(SHOW_DEBUG===true) {
-				#dump($folder_path_del, "folder_path_del current_quality:$current_quality - get_id:$id");
-			}
-			$file_pattern 	= $folder_path_del .'/'.$id .'_*.'. $this->get_extension();
-			$ar_files 		= glob($file_pattern);
-			if(SHOW_DEBUG===true) {
-				#dump($ar_files, ' ar_files');#continue;
-			}
-			if (empty($ar_files)) {
-				debug_log(__METHOD__."  No files to restore were found for id:$id in quality:$current_quality. Nothing was restored for this quality ".to_string(), logger::DEBUG);
-				continue; // Skip
-			}
-			natsort($ar_files);	# sort the files from newest to oldest
-			$last_file_path = end($ar_files);
-			$new_file_path 	= $this->get_media_filepath($current_quality);
-			if( !rename($last_file_path, $new_file_path) ) throw new Exception(" Error on move files to restore folder. Permission denied . Nothing was restored (2)");
+		// 		# media_path
+		// 		$media_path 	 = $this->get_media_filepath($current_quality);
+		// 		$folder_path_del = pathinfo($media_path,PATHINFO_DIRNAME).'/deleted';
+		// 		$id 		 = $this->get_id();
+		// 		if(SHOW_DEBUG===true) {
+		// 			#dump($folder_path_del, "folder_path_del current_quality:$current_quality - get_id:$id");
+		// 		}
+		// 		$file_pattern 	= $folder_path_del .'/'.$id .'_*.'. $this->get_extension();
+		// 		$ar_files 		= glob($file_pattern);
+		// 		if(SHOW_DEBUG===true) {
+		// 			#dump($ar_files, ' ar_files');#continue;
+		// 		}
+		// 		if (empty($ar_files)) {
+		// 			debug_log(__METHOD__."  No files to restore were found for id:$id in quality:$current_quality. Nothing was restored for this quality ".to_string(), logger::DEBUG);
+		// 			continue; // Skip
+		// 		}
+		// 		natsort($ar_files);	# sort the files from newest to oldest
+		// 		$last_file_path = end($ar_files);
+		// 		$new_file_path 	= $this->get_media_filepath($current_quality);
+		// 		if( !rename($last_file_path, $new_file_path) ) throw new Exception(" Error on move files to restore folder. Permission denied . Nothing was restored (2)");
 
 
-			/* POR ACABAR
-			// Move original files too (PNG,TIF,Etc.)
-			// NOTE : 'original files' are NOT 'original quality'. Are uploaded files with extension different to DEDALO_IMAGE_EXTENSION
-			$original_extension = $this->get_original_extension( $current_quality );
-			$path_parts 		= pathinfo($media_path);
-			$original_file  	= $path_parts['dirname'].'/'.$path_parts['filename'].'.'.$original_extension;
-			#$original_file_moved= $path_parts['dirname'].'/'.$path_parts['filename'].'_deleted_'.$date.'.'.$original_extension;
-			$original_file_moved= $folder_path_del.'/'.$path_parts['filename'].'_deleted_'.$date.'.'.$original_extension;
-			if (file_exists($original_file)) {
-				if( !rename($original_file, $original_file_moved) ) {
-					#throw new Exception(" Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");
-					trigger_error(" Error on move files to folder \"deleted\" [2]. Permission denied . The files are not deleted");
-				}
-			}
-			*/
+		// 		/* POR ACABAR
+		// 		// Move original files too (PNG,TIF,Etc.)
+		// 		// NOTE : 'original files' are NOT 'original quality'. Are uploaded files with extension different to DEDALO_IMAGE_EXTENSION
+		// 		$original_extension = $this->get_original_extension( $current_quality );
+		// 		$path_parts 		= pathinfo($media_path);
+		// 		$original_file  	= $path_parts['dirname'].'/'.$path_parts['filename'].'.'.$original_extension;
+		// 		#$original_file_moved= $path_parts['dirname'].'/'.$path_parts['filename'].'_deleted_'.$date.'.'.$original_extension;
+		// 		$original_file_moved= $folder_path_del.'/'.$path_parts['filename'].'_deleted_'.$date.'.'.$original_extension;
+		// 		if (file_exists($original_file)) {
+		// 			if( !rename($original_file, $original_file_moved) ) {
+		// 				#throw new Exception(" Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");
+		// 				trigger_error(" Error on move files to folder \"deleted\" [2]. Permission denied . The files are not deleted");
+		// 			}
+		// 		}
+		// 		*/
 
-			debug_log(__METHOD__." Successful Moved file \n$last_file_path to \n$new_file_path ".to_string(), logger::DEBUG);
+		// 		debug_log(__METHOD__." Successful Moved file \n$last_file_path to \n$new_file_path ".to_string(), logger::DEBUG);
+		// 	}//end foreach
 
-		}//end foreach
-
-		return true;
-	}//end restore_component_media_files
+		// 	return true;
+		// }//end restore_component_media_files
 
 
 

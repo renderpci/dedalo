@@ -286,45 +286,57 @@ class component_pdf extends component_media_common {
 
 
 	/**
-	* RESTORE_COMPONENT_MEDIA_FILES
+	* RESTORE_COMPONENT_MEDIA_FILES (! Moved to media common)
 	* "Restore" last version of deleted media files (renamed and stored in 'deleted' folder)
 	* Is triggered when tool_time_machine recover a section
 	* @see tool_time_machine::recover_section_from_time_machine
 	* @return bool
 	*/
-	public function restore_component_media_files() : bool {
+		// public function restore_component_media_files() : bool {
 
-		// PDF restore
-		$ar_quality	= DEDALO_PDF_AR_QUALITY;
-		$extension	= $this->get_extension();
-		foreach ($ar_quality as $current_quality) {
+		// 	// element restore
+		// 	$ar_quality	= $this->get_ar_quality();
+		// 	$extension	= $this->get_extension();
+		// 	foreach ($ar_quality as $current_quality) {
 
-			// media_path
-			$media_path = $this->get_media_path_dir($current_quality) . '/deleted';
-			$id 	= $this->get_id();
+		// 		// media_path
+		// 		$media_path	= $this->get_media_path_dir($current_quality) . '/deleted';
+		// 		$id			= $this->get_id();
 
-			$file_pattern 	= $media_path .'/'. $id .'_*.'. $extension;
-			$ar_files 		= glob($file_pattern);
-			if (empty($ar_files)) {
-				debug_log(__METHOD__." No files to restore were found for id:$id. Nothing was restored (1) ".to_string(), logger::WARNING);
-				continue; // Skip
-			}
+		// 		$file_pattern	= $media_path .'/'. $id .'_*.'. $extension;
+		// 		$ar_files		= glob($file_pattern);
+		// 		if (empty($ar_files)) {
+		// 			debug_log(__METHOD__
+		// 				." No files to restore were found for id:$id. Nothing was restored (1) "
+		// 				, logger::WARNING
+		// 			);
+		// 			continue; // Skip
+		// 		}
 
-			natsort($ar_files);	# sort the files from newest to oldest
-			$last_file_path	= end($ar_files);
-			$new_file_path	= $this->get_media_filepath($current_quality);
+		// 		natsort($ar_files);	# sort the files from newest to oldest
+		// 		$last_file_path	= end($ar_files);
+		// 		$new_file_path	= $this->get_media_filepath($current_quality);
 
-			// move file
-			if( !rename($last_file_path, $new_file_path) ) {
-				throw new Exception(" Error on move files to restore folder. Permission denied . Nothing was restored (2)");
-			}
+		// 		// move file
+		// 		if( !rename($last_file_path, $new_file_path) ) {
+		// 			// throw new Exception(" Error on move files to restore folder. Permission denied . Nothing was restored (2)");
+		// 			debug_log(__METHOD__
+		// 				. " Error on move files to restore folder. Permission denied . Nothing was restored (2) " . PHP_EOL
+		// 				. 'last_file_path: '. $last_file_path . PHP_EOL
+		// 				. 'new_file_path: '. $new_file_path
+		// 				, logger::ERROR
+		// 			);
+		// 		}
 
-			debug_log(__METHOD__." Moved file \n$last_file_path to \n$new_file_path ".to_string(), logger::WARNING);
-		}//end foreach
+		// 		debug_log(__METHOD__
+		// 			." Moved file $last_file_path to $new_file_path "
+		// 			, logger::WARNING
+		// 		);
+		// 	}//end foreach
 
 
-		return true;
-	}//end restore_component_media_files
+		// 	return true;
+		// }//end restore_component_media_files
 
 
 
