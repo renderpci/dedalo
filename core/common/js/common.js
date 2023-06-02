@@ -856,7 +856,9 @@ const get_rqo_test = function(self) {
 
 /**
 * LOAD_STYLE
-* @param object self
+* @param string src
+* @return promise
+* 	resolve/reject src
 */
 common.prototype.load_style = function (src) {
 
@@ -876,12 +878,13 @@ common.prototype.load_style = function (src) {
 			const element 	  = document.createElement('link')
 				  element.rel = 'stylesheet'
 
-			element.onload = function() {
+			element.addEventListener('load', function(e) {
 				resolve(src);
-			};
-			element.onerror = function() {
+			})
+
+			element.addEventListener('error', function(e) {
 				reject(src);
-			};
+			})
 
 			element.href = src
 
