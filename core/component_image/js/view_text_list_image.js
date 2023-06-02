@@ -24,9 +24,9 @@ export const view_text_list_image = function() {
 /**
 * RENDER
 * Render node as text. URL is return as text node
-* @param object
+* @param object self
 * @param object options
-* @return HTMLElement text_node
+* @return HTMLElement image_node
 */
 view_text_list_image.render = function(self, options) {
 
@@ -41,11 +41,15 @@ view_text_list_image.render = function(self, options) {
 			? url_object.file_url
 			: default_image
 
-	// text_node
-		const text_node = document.createTextNode(url)
+	// image
+		const image_node = ui.create_dom_element({
+			element_type	: 'img',
+			class_name		: 'component_svg svg view_' + self.view,
+			src				: url
+		})
 
 
-	return text_node
+	return image_node
 }//end render
 
 
