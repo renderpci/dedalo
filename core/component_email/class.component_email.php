@@ -61,9 +61,13 @@ class component_email extends component_common {
 
 		// Optionally, the data could be validated here... although it has already been done in javascript
 			$email = $this->get_dato();
-			foreach ((array)$email as $key => $value) {
+			foreach ((array)$email as $value) {
 				if (!empty($value) && false===component_email::is_valid_email($value)) {
-					debug_log(__METHOD__." No data is saved. Invalid email ".to_string($value), logger::ERROR);
+					debug_log(__METHOD__
+						. " No data is saved. Invalid email "
+						. ' value:' . to_string($value)
+						, logger::ERROR
+					);
 					return null;
 				}
 			}

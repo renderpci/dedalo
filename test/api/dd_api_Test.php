@@ -900,7 +900,24 @@ final class dd_api_Test extends TestCase {
 	*/
 	public function test_delete() : void {
 
-		$section_id = 2;
+		$section_id		= 2;
+		$section_tipo	= 'test3';
+
+		// first, create the section if not already exists
+			$current_section_id_exists = section::section_id_exists( $section_id, $section_tipo );
+			if ($current_section_id_exists===false) {
+				// new section
+				$section = section::get_instance(
+					$section_id, // string|null section_id
+					$section_tipo, // string section_tipo
+					'edit'
+				);
+				$section->Save(
+					(object)[
+						'forced_create_record' => !$current_section_id_exists
+					]
+				);
+			}
 
 		$rqo = json_decode('
 			{
