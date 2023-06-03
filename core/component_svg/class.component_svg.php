@@ -15,110 +15,6 @@ class component_svg extends component_media_common {
 
 
 	/**
-	* GET_INITIAL_MEDIA_PATH
-	*/
-	public function get_initial_media_path() : string {
-
-		$component_tipo		= $this->tipo;
-		// $parent_section	= section::get_instance($this->parent, $this->section_tipo);
-		$parent_section		= $this->get_my_section();
-		$properties			= $parent_section->get_properties();
-			#dump($properties," properties component_tipo:$component_tipo");
-			#dump($properties->initial_media_path->$component_tipo," ");
-
-		if (isset($properties->initial_media_path->$component_tipo)) {
-			$this->initial_media_path = $properties->initial_media_path->$component_tipo;
-			# Add / at begin if not exits
-			if ( substr($this->initial_media_path, 0, 1) != '/' ) {
-				$this->initial_media_path = '/'.$this->initial_media_path;
-			}
-		}else{
-			$this->initial_media_path = false;
-		}
-
-		return $this->initial_media_path;
-	}//end get_initial_media_path
-
-
-
-	/**
-	* GET_ADDITIONAL_PATH
-	* Calculate image additional path from 'properties' JSON config.
-	* @return string|null $additional_path
-	*/
-	public function get_additional_path() : ?string {
-
-		# Already resolved
-		if(isset($this->additional_path)) {
-			return $this->additional_path;
-		}
-
-		$additional_path	= false;
-		$id					= $this->get_id();
-		$parent				= $this->get_parent();
-		$section_tipo		= $this->get_section_tipo();
-
-		$properties = $this->get_properties();
-		if (isset($properties->additional_path) && !empty($parent) ) {
-
-			$component_tipo		= $properties->additional_path;
-			$component_model	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			$component			= component_common::get_instance(
-				$component_model,
-				$component_tipo,
-				$parent,
-				'edit',
-				DEDALO_DATA_NOLAN,
-				$section_tipo
-			);
-			$dato = trim($component->get_valor());
-
-			# Add / at begin if not exits
-			if ( substr($dato, 0, 1)!=='/' ) {
-				$dato = '/'.$dato;
-			}
-			# Remove / at end if exists
-			if ( substr($dato, -1)==='/' ) {
-				$dato = substr($dato, 0, -1);
-			}
-
-			# User defined additional_path path
-			$additional_path = $dato;
-
-			# Auto filled additional_path path
-			# If the user not enter component dato, dato is filled by auto value when properties->max_items_folder is defined
-			if(empty($dato) && isset($properties->max_items_folder)) {
-
-				$max_items_folder  = (int)$properties->max_items_folder;
-				$parent_section_id = (int)$parent;
-
-				$additional_path = '/'.$max_items_folder*(floor($parent_section_id / $max_items_folder));
-
-				# Final dato must be an array to saved into component_input_text
-				$final_dato = array( $additional_path );
-				$component->set_dato( $final_dato );
-				$component->Save();
-			}
-
-		}else if(isset($properties->max_items_folder)) {
-
-			$max_items_folder	= (int)$properties->max_items_folder;
-			$parent_section_id	= (int)$parent;
-
-			$additional_path = '/'.$max_items_folder*(floor($parent_section_id / $max_items_folder));
-
-		}//end if (isset($properties->additional_path) && !empty($parent) )
-
-		# Fix
-		$this->additional_path = $additional_path;
-
-
-		return $additional_path;
-	}//end get_additional_path
-
-
-
-	/**
 	* GET_DEFAULT_QUALITY
 	* @return string
 	*/
@@ -145,6 +41,7 @@ class component_svg extends component_media_common {
 
 	/**
 	* GET_FILE_CONTENT
+	* Get the SVG file data as text
 	* @return string|null $file_content
 	*/
 	public function get_file_content() : ?string {
@@ -156,24 +53,6 @@ class component_svg extends component_media_common {
 
 		return $file_content;
 	}//end get_file_content
-
-
-
-	/**
-	* GET_TARGET_DIR
-	* @param string|null $quality
-	* @return string $target_dir
-	*/
-	public function get_target_dir(?string $quality) : string {
-
-		if(empty($quality)) {
-			$quality = $this->get_quality();
-		}
-
-		$target_dir = $this->get_media_path_dir($quality);
-
-		return $target_dir;
-	}//end get_target_dir
 
 
 
@@ -202,7 +81,7 @@ class component_svg extends component_media_common {
 	* @return string|null $image_url
 	*	Return relative o absolute url. Default false (relative)
 	*/
-	public function get_url(string $quality=null, bool $test_file=true, bool $absolute=false, bool $default_add=true) : ?string {
+	public function get_url(?string $quality=null, bool $test_file=true, bool $absolute=false, bool $default_add=true) : ?string {
 
 		// quality fallback to default
 			if(empty($quality)) {
@@ -305,37 +184,6 @@ class component_svg extends component_media_common {
 
 		return $preview_url;
 	}//end get_preview_url
-
-
-
-	/**
-	* DELETE_FILE
-	* Remove quality version moving the file to a deleted files dir
-	* @see component_image->remove_component_media_files
-	*
-	* @param string $quality
-	* @return object $response
-	*/
-	public function delete_file(string $quality) : object {
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed';
-
-		// remove_component_media_files returns bool value
-		$result = $this->remove_component_media_files([$quality]);
-		if ($result===true) {
-
-			// save To update valor_list
-				$this->Save();
-
-			$response->result	= true;
-			$response->msg		= 'File deleted successfully. ' . $quality;
-		}
-
-
-		return $response;
-	}//end delete_file
 
 
 
