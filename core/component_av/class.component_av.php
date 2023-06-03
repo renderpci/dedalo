@@ -439,32 +439,33 @@ class component_av extends component_media_common {
 
 
 	/**
-	* GET_SOURCE_QUALITY_TO_BUILD
+	* GET_SOURCE_QUALITY_TO_BUILD (! moved to media_common)
 	* Iterate array DEDALO_AV_AR_QUALITY (Order by quality big to small)
 	* @param string $target_quality
 	* @return string|null $current_quality
 	*/
-	public function get_source_quality_to_build(string $target_quality) : ?string {
+		// public function get_source_quality_to_build(string $target_quality) : ?string {
 
-		$ar_quality = DEDALO_AV_AR_QUALITY;
-		foreach($ar_quality as $current_quality) {
+		// 	$ar_quality			= $this->get_ar_quality();
+		// 	$original_quality	= $this->get_original_quality();
+		// 	foreach($ar_quality as $current_quality) {
 
-			if($target_quality===DEDALO_AV_QUALITY_ORIGINAL) continue;
+		// 		if($target_quality===$original_quality) continue;
 
-			// Current file
-			$filename		= $this->get_media_filepath($current_quality);
-			$file_exists	= empty($filename)
-				? false
-				: file_exists($filename);
+		// 		// Current file
+		// 		$filename		= $this->get_media_filepath($current_quality);
+		// 		$file_exists	= empty($filename)
+		// 			? false
+		// 			: file_exists($filename);
 
-			if ($current_quality!==$target_quality && $file_exists) {
-				return $current_quality;
-			}
-		}//end foreach($ar_quality as $quality)
+		// 		if ($current_quality!==$target_quality && $file_exists) {
+		// 			return $current_quality;
+		// 		}
+		// 	}//end foreach($ar_quality as $quality)
 
 
-		return null;
-	}//end get_source_quality_to_build
+		// 	return null;
+		// }//end get_source_quality_to_build
 
 
 
@@ -1257,6 +1258,10 @@ class component_av extends component_media_common {
 		// short vars
 			$id				= $this->get_id();
 			$source_quality	= $this->get_source_quality_to_build($quality);
+			if (empty($source_quality)) {
+				$response->msg .= ' Invalid source_quality';
+				return $response;
+			}
 
 		// AVObj
 			$AVObj = new AVObj($id, $source_quality);

@@ -1127,6 +1127,33 @@ class component_media_common extends component_common {
 
 
 	/**
+	* GET_SOURCE_QUALITY_TO_BUILD
+	* Iterate array $ar_quality (Order by quality big to small)
+	* @param string $target_quality
+	* @return string|null $current_quality
+	*/
+	public function get_source_quality_to_build(string $target_quality) : ?string {
+
+		$ar_quality			= $this->get_ar_quality();
+		$original_quality	= $this->get_original_quality();
+		foreach($ar_quality as $current_quality) {
+
+			if ($target_quality!==$original_quality && $target_quality!==$current_quality) {
+				// check file
+				$filename = $this->get_original_file_path($current_quality);
+				if (!empty($filename) && file_exists($filename)) {
+					return $current_quality;
+				}
+			}
+		}//end foreach($ar_quality as $quality)
+
+
+		return null;
+	}//end get_source_quality_to_build
+
+
+
+	/**
 	* GET_ORIGINAL_EXTENSION
 	* Search the original file into the original path and returns the file extension if is found
 	* If a file with an extension other than DEDALO_IMAGE_EXTENSION is uploaded, it is converted to DEDALO_IMAGE_EXTENSION.

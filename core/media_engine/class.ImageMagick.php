@@ -239,31 +239,35 @@ final class ImageMagick {
 		// properties
 		$quality		= $options->quality ?? 90; // default quality to compress the jpg. int. default 90.
 		$thumbnail		= $options->thumbnail ?? false; // use the thumbnail preset as fixed width and height.
-		$colorspace 	= $options->colorspace ?? 'sRGB'; // default color space to be used for output file.
+		$colorspace		= $options->colorspace ?? 'sRGB'; // default color space to be used for output file.
 		$profile_in		= $options->profile_in ?? 'Generic_CMYK_Profile.icc';
 		$profile_out	= $options->profile_out ?? 'sRGB_Profile.icc';
 		$flatten		= $options->flatten ?? true;
 		$density		= $options->density ?? null; // resolution to process the source file, used to render pdf files. density = 150;
-		$strip 			= $options->strip ?? false;
-		$antialias 		= $options->antialias ?? true;
-		$resize 		= $options->resize ?? null;  // sample: 25% | 1024x756
+		$strip			= $options->strip ?? false;
+		$antialias		= $options->antialias ?? true;
+		$resize			= $options->resize ?? null;  // sample: 25% | 1024x756
 
 		// Valid path verify
 		$folder_path = pathinfo($target_file)['dirname'];
 		if( !is_dir($folder_path) ) {
 			if(!mkdir($folder_path, 0777,true)) {
-				throw new Exception(" Error on read or create dd_thumb directory. Permission denied");
+				debug_log(__METHOD__
+					." Error on crate folder ". PHP_EOL
+					. 'folder_path: ' . $folder_path
+					, logger::ERROR
+				);
+				return false;
 			}
 		}
 
-		# convert 21900.jpg json: : Get info about source file color space
-		$colorspace_command = MAGICK_PATH . "identify -format '%[colorspace]' -quiet " .$source_file. "[0]";
+		// convert 21900.jpg json: : Get info about source file color space
+		$colorspace_command	= MAGICK_PATH . "identify -format '%[colorspace]' -quiet " .$source_file. "[0]";
 		$colorspace_info	= shell_exec($colorspace_command);	//-format "%[EXIF:DateTimeOriginal]"
-			// dump($colorspace_info,'colorspace_info '.to_string($colorspace_command));
 
 		# Layers info
 		# get thumbnail identification
-		$ar_valid_layers  = [];
+		$ar_valid_layers = [];
 		if(!isset($ar_layers)){
 			$layers_file_info = (array)self::get_layers_file_info( $source_file );
 			foreach ($layers_file_info as $layer_key => $layer_type) {
@@ -277,8 +281,7 @@ final class ImageMagick {
 
 		$source_file_with_layers = '"'. $source_file . '"[' . implode(',', $ar_valid_layers) . ']';
 
-
-		 // begin flags : Command flags before source file.
+		// begin flags : Command flags before source file.
 			$begin_flags = '';
 
 			$begin_flags .= isset($density)
@@ -289,7 +292,7 @@ final class ImageMagick {
 				: '';
 
 		// Middle flags : Command flags between source and output files.
-			$middle_flags='';
+			$middle_flags = '';
 
 			$middle_flags .= ($thumbnail===true)
 				? '-thumbnail '.DEDALO_IMAGE_THUMB_WIDTH.'x'.DEDALO_IMAGE_THUMB_HEIGHT
@@ -307,21 +310,25 @@ final class ImageMagick {
 					$profile_file	= COLOR_PROFILES_PATH.$profile_out; // sRGB_Profile
 
 					# Test profile exists
-					if(!file_exists($profile_source)) throw new Exception("Error Processing Request. Color profile not found in: $profile_source", 1);
-					if(!file_exists($profile_file)) throw new Exception("Error Processing Request. Color profile not found in: $profile_file", 1);
+					if(!file_exists($profile_source)) {
+						throw new Exception("Error Processing Request. Color profile not found in: $profile_source", 1);
+					}
+					if(!file_exists($profile_file)) {
+						throw new Exception("Error Processing Request. Color profile not found in: $profile_file", 1);
+					}
 
 					// Remove possible '-thumbnail' flag when profile is used
 					$middle_flags = str_replace('-thumbnail', '', $middle_flags);
 
 					# Command middle_flags
-					$middle_flags 	.= '-profile "'.$profile_source.'" ';
-					$middle_flags 	.= '-profile "'.$profile_file.'" ';
-					$middle_flags 	.= '-flatten -strip '; #-negate.
+					$middle_flags	.= '-profile "'.$profile_source.'" ';
+					$middle_flags	.= '-profile "'.$profile_file.'" ';
+					$middle_flags	.= '-flatten -strip '; #-negate.
 					break;
 
 				# RBG TO RBG
 				default:
-					$middle_flags 			.= " -flatten ";
+					$middle_flags	.= " -flatten ";
 					break;
 			}
 
@@ -331,33 +338,35 @@ final class ImageMagick {
 				? '-resize '. $resize.' ' // sample: 25% | 1024x756
 				: '';
 
+		// command
+			$command = MAGICK_PATH . 'convert '.$begin_flags.' '.$source_file_with_layers.' '.$middle_flags.' "'.$target_file.'" ';	# -negate -profile Profiles/sRGB.icc -colorspace sRGB -colorspace sRGB
+			// $command = 'nice -n 19 '.$command;
 
-		$command = MAGICK_PATH . 'convert '.$begin_flags.' '.$source_file_with_layers.' '.$middle_flags.' "'.$target_file.'" ';	# -negate -profile Profiles/sRGB.icc -colorspace sRGB -colorspace sRGB
-		#$command = 'nice -n 19 '.$command;
-			#if(SHOW_DEBUG) dump($command,'ImageMagick command');
-		debug_log(__METHOD__." Command ".to_string($command), logger::DEBUG);
-
-
-		# EXE COMMAND
-		#$result = exec_::exec_command($command);
-		$result = exec($command.' 2>&1', $output, $worked_result);
-
-		if ($worked_result!=0) {
+		// debug
 			debug_log(__METHOD__
-				."  worked_result : output: ".to_string($output)." - worked_result:"
-				.to_string($worked_result)
+				." Command ".to_string($command)
 				, logger::DEBUG
 			);
-			return false;
-		}
 
+		// exe command
+			$result = exec($command.' 2>&1', $output, $worked_result);
 
-		debug_log(__METHOD__
-			." Command convert warning (not empty result): ".to_string($result) . PHP_EOL
-			." output: ".to_string($output)." - worked_result: ".to_string($worked_result)
-			, logger::DEBUG
-		);
+		// error case
+			if ($worked_result!=0) {
+				debug_log(__METHOD__
+					."  worked_result : output: ".to_string($output)." - worked_result:"
+					.to_string($worked_result)
+					, logger::DEBUG
+				);
+				return false;
+			}
 
+		// debug info
+			debug_log(__METHOD__
+				." Command convert warning (not empty result): ".to_string($result) . PHP_EOL
+				." output: ".to_string($output)." - worked_result: ".to_string($worked_result)
+				, logger::DEBUG
+			);
 
 
 		return $result;
