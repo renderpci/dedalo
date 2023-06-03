@@ -1266,6 +1266,17 @@ class component_av extends component_media_common {
 			$setting_name			= $Ffmpeg->get_setting_name_from_quality($AVObj, $quality);
 			$av_alternate_response	= $Ffmpeg->create_av_alternate($AVObj, $setting_name);
 
+			if (isset($av_alternate_response->result) && $av_alternate_response->result===false) {
+				debug_log(__METHOD__
+					. " Error on Ffmpeg->create_av_alternate " . PHP_EOL
+					. ' setting_name: ' .$setting_name
+					. ' av_alternate_response: ' . to_string($av_alternate_response)
+					, logger::ERROR
+				);
+				$response->msg .= ' ' . ($av_alternate_response->msg ?? 'Unknown error');
+				return $response;
+			}
+
 			if($async==false){
 
 				// exec command and wait
