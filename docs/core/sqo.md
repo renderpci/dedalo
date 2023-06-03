@@ -17,7 +17,7 @@ Search Query Object defines an object with normalized properties to create a dat
 ## Parameters
 
 - **id** : `string` section_tipo and other params to define the unique id **optional** | ex : oh1
-- **section_tipo** : `string` array of section_tipo for search **mandatory** | ex : ['oh1']
+- **section_tipo** : `array || string` array of section_tipo or string with the section_tipo for search **mandatory** | ex : ['oh1']
 - **mode** : `string` ('edit' || 'list' || 'tm' || 'related') configure the sqo for search witch different models of matrix tables into the DDBB **optional** | ex : 'list'
 - **filter** : `object` definition of the filter to be apply at search **optional**
   - **operator** : `array of objects` operator key define the operator ('\$and' || '\$or') they are identified by the use of a dollar sign (\$) prefix in the name property, array value has the arguments `objects` to be affected by operator. **mandatory**, `{"$operator": [arguments]}`
@@ -26,7 +26,7 @@ Search Query Object defines an object with normalized properties to create a dat
     - **path** : `array of objects` array of components creating a sequential path of the component to be searched,  **mandatory**, ex: `[{"section_tipo":"oh1", "component_tipo":"oh24"},{"section_tipo":"rsc197", "component_tipo":"rsc85"}]}`
     - **format** : `string` ('direct' || 'array_elements' || 'typeof' || 'column' || 'in_column' || 'function') used to change the WHERE format **optional**, ex: 'direct'
     - **use_function** : `string` if format is function use_function define the PostgreSQL function to be used. **optional**, ex: 'relations_flat_fct_st_si'
-    - **q_split** : `bool` (true || false) defines if the q need to be split into multiple WHERE queries **optional**, ex: 'false'
+    - **q_split** : `bool` (true || false) defines if the q need to be split into multiple WHERE queries. Default : true **optional**, ex: 'false'
     - **unaccent** : `bool` (true || false) defines if the q will us the unaccent function to remove accent characters in WHERE **optional**, ex: 'false'
     - **type** : `string` ('jsonb' || 'string)  defines the type of data to be searched **optional**, ex: 'jsonb'
   - **limit** : `int` records limit **optional**, ex: 10
@@ -39,11 +39,11 @@ Search Query Object defines an object with normalized properties to create a dat
     - **column_name** : `string` name of the column to be ordered **optional**
     - **values** : `array` the array defines the order of the values **optional**
   - **filter_by_locators** : `array of objects` set a order by locators, every object is a [locator](locator.md) and the order of the array will be respected **optional** ex : `[{"section_tipo":"oh1", "section_id":"8"},{"section_tipo":"oh1", "section_id":"3"}]`
-  - **allow_sub_select_by_id** : `bool` (true || false) create a window in the SQL query to select pass the filter and get the id to select the main section **optional**
-  - **children_recursive** : `bool` (true || false) filter the term of hierarchy and get the all children nodes dependents of the searched term  **optional**
-  - **remove_distinct** : `bool` (true || false) remove duplicates records when the SQL query has a window with multiple criteria that can get duplicate records. by default is true **optional**
-  - **skip_projects_filter** : `bool` (true || false) remove the mandatory filter of the component_filter applied at all users except root and global admin users. by default is false **optional**
-  - **parsed** : `bool` (true || false) state of the sqo, it indicates if the filter was parsed by the components to add operators to the q  **optional**
+  - **allow_sub_select_by_id** : `bool` (true || false) create a window in the SQL query to select pass the filter and get the id to select the main section default : true **optional** .
+  - **children_recursive** : `bool` (true || false) filter the term of hierarchy and get the all children nodes dependents of the searched term. Default : false  **optional**
+  - **remove_distinct** : `bool` (true || false) remove duplicates records when the SQL query has a window with multiple criteria that can get duplicate records. Default : true **optional**
+  - **skip_projects_filter** : `bool` (true || false) remove the mandatory filter of the component_filter applied at all users except root and global admin users. Default : false **optional**
+  - **parsed** : `bool` (true || false) state of the sqo, it indicates if the filter was parsed by the components to add operators to the q. It's used as internal property, but is possible parse it manually and indicate this state. Default flase  **optional**
   - **select** : `array of objects` array of ddo with defines the SELECT parameter **DEPRECATED DO NOT USED IN V6**
 
 ### Summary
@@ -85,12 +85,12 @@ filter_by_locators      : [{
                                 section_tipo
                                 component_tipo
                             }]
-allow_sub_select_by_id  : (true || false)
-children_recursive      : (true || false)
-remove_distinct         : (true || false)
-skip_projects_filter    : (true || false)
-parsed                  : (true || false) // boolean, state of the sqo
-select                  : [{    // array of objects optional
+allow_sub_select_by_id  : (true || false) // default true
+children_recursive      : (true || false) // default false
+remove_distinct         : (true || false) // default true
+skip_projects_filter    : (true || false) // default false
+parsed                  : (true || false) // boolean, state of the sqo | default false
+select                  : [{    //DEPRECATED | array of objects optional
                             section_tipo
                             component_tipo
                         }]
@@ -98,23 +98,44 @@ select                  : [{    // array of objects optional
 
 ## Using SQO
 
-Search Query Object is used to get data from DataBase. It use section_tipo to point specific section/s to get data and it use ddo to define the properties to be searched in q.
+Search Query Object is used to get data from database. It use section_tipo to point specific section/s to get data and it use ddo to define the properties to be searched in q.
 
 If you want to get any person with name "Ana" the sqo will be:
 
 ```` json
 {
-    "section_tipo": "rsc197",
-    "filter" : {
-        "$and" :[{
-            "q" : "Ana"
-        }],
-        "path":[{
-           "section_tipo": "rsc197",
-           "component_tipo": "rsc85"
-        }]
-    }
+  "section_tipo": "rsc197",
+  "filter": {
+    "$and": [{
+        "q": "Ana",
+        "path": [{
+            "section_tipo": "rsc197",
+            "component_tipo": "rsc86"
+          }]
+      }]
+  }
 }
 ````
 
-The SQO say: search in people under study (section_tipo [rsc197](https://dedalo.dev/ontology/rsc197)) with the path to name field (component_tipo [rsc85](https://dedalo.dev/ontology/rsc85)) with the text 'Ana'.
+The SQO say: search in people under study (section_tipo [rsc197](https://dedalo.dev/ontology/rsc197)) with the path to name field (component_tipo [rsc85](https://dedalo.dev/ontology/rsc85)) with the Ana text. SQO will parse the filter with the component_input_text rsc85 and will render into SQL to be used in postgreSQL:
+
+````sql
+
+SELECT DISTINCT ON (rs197.section_id) rs197.section_id,
+rs197.section_tipo,
+rs197.datos
+FROM matrix AS rs197
+WHERE rs197.id in (
+    SELECT DISTINCT ON(rs197.section_id,rs197.section_tipo) rs197.id 
+    FROM matrix AS rs197
+    WHERE (
+            rs197.section_tipo='rsc197') AND 
+            rs197.section_id>0  AND 
+            (f_unaccent(rs197.datos#>>'{components,rsc86,dato}') ~* f_unaccent('.*\[".*Ana.*'))
+    ORDER BY rs197.section_id ASC
+    LIMIT 10
+)
+ORDER BY rs197.section_id ASC
+LIMIT 10;
+
+````
