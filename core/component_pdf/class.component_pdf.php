@@ -16,98 +16,6 @@ class component_pdf extends component_media_common {
 
 
 	/**
-	* GET_ADDITIONAL_PATH
-	* Calculate image additional path from 'properties' JSON config.
-	* @return
-	*/
-	public function get_additional_path() {
-
-		static $ar_additional_path;
-
-		// return if already calculated
-			if(isset($this->additional_path)) {
-				return $this->additional_path;
-			}
-
-		$ar_additional_path[$this->id] = false;
-
-		$properties = $this->get_properties();
-			// dump($properties, ' get_additional_path properties ++ '.to_string($this->tipo)); // die();
-		if (isset($properties->additional_path)) {
-
-			$component_tipo		= $properties->additional_path;
-			$component_model	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			$component			= component_common::get_instance(
-				$component_model,
-				$component_tipo,
-				$this->get_section_id(),
-				'edit',
-				DEDALO_DATA_NOLAN,
-				$this->get_section_tipo()
-			);
-			$dato = trim($component->get_valor());
-
-			# Add / at begin if not exits
-			if ( substr($dato, 0, 1) != '/' ) {
-				$dato = '/'.$dato;
-			}
-
-			# Remove / at end if exists
-			if ( substr($dato, -1) === '/' ) {
-				$dato = substr($dato, 0, -1);
-			}
-
-			$ar_additional_path[$this->id] = $dato;
-		}
-
-		if(isset($properties->max_items_folder) && empty($dato)) {
-
-			$max_items_folder	= (int)$properties->max_items_folder;
-			$section_id			= (int)$this->section_id;
-
-			$ar_additional_path[$this->id] = '/'.$max_items_folder*(floor($section_id / $max_items_folder));
-
-			// $component->set_dato( $ar_additional_path[$this->id] );
-			// if (!empty($section_id)) {
-			// 	$component->Save();
-			// }
-		}
-
-		// fix additional_path
-			$this->additional_path = $ar_additional_path[$this->id];
-
-
-		return $ar_additional_path[$this->id];
-	}//end get_additional_path
-
-
-
-	/**
-	* GET_INITIAL_MEDIA_PATH
-	*/
-	public function get_initial_media_path() : string {
-
-		$component_tipo		= $this->tipo;
-		// $parent_section	= section::get_instance($this->parent, $this->section_tipo);
-		$parent_section		= $this->get_my_section();
-		$properties			= $parent_section->get_properties();
-
-		if (isset($properties->initial_media_path->$component_tipo)) {
-			$this->initial_media_path = $properties->initial_media_path->$component_tipo;
-			# Add / at begin if not exits
-			if ( substr($this->initial_media_path, 0, 1) != '/' ) {
-				$this->initial_media_path = '/'.$this->initial_media_path;
-			}
-		}else{
-			$this->initial_media_path = false;
-		}
-
-		return $this->initial_media_path;
-	}//end get_initial_media_path
-
-
-
-	/**
 	* GET_DEFAULT_QUALITY
 	*/
 	public function get_default_quality() : string {
@@ -464,7 +372,6 @@ class component_pdf extends component_media_common {
 
 
 
-
 	/**
 	* GET_VALOR_EXPORT
 	* Return component value sent to export data
@@ -519,7 +426,7 @@ class component_pdf extends component_media_common {
 
 	/**
 	* GET_ORIGINAL_QUALITY
-	* @return $original_quality
+	* @return string $original_quality
 	*/
 	public function get_original_quality() : string {
 
@@ -534,7 +441,7 @@ class component_pdf extends component_media_common {
 
 	/**
 	* GET_PREVIEW_URL
-	* @return string $url
+	* @return string $preview_url
 	*/
 	public function get_preview_url() : string {
 
@@ -725,7 +632,7 @@ class component_pdf extends component_media_common {
 
 	/**
 	* GET_TEXT_FROM_PDF
-	* Extract text from pdf file
+	* Extract text from PDF file
 	* @param object $new_options
 	* @return object $response
 	*/
@@ -837,16 +744,16 @@ class component_pdf extends component_media_common {
 
 
 
-	#
-	# FUNCTIONS
-	#
-	# VALID_UTF8
-	# utf8 encoding validation developed based on Wikipedia entry at:
-	# http://en.wikipedia.org/wiki/UTF-8
-	# Implemented as a recursive descent parser based on a simple state machine
-	# copyright 2005 Maarten Meijer
-	# This cries out for a C-implementation to be included in PHP core
-	# @return bool
+
+	/**
+	*  VALID_UTF8
+	* utf8 encoding validation developed based on Wikipedia entry at:
+	* http://en.wikipedia.org/wiki/UTF-8
+	* Implemented as a recursive descent parser based on a simple state machine
+	* copyright 2005 Maarten Meijer
+	* This cries out for a C-implementation to be included in PHP core
+	* @return bool
+	*/
 	public static function valid_utf8(string $string) : bool {
 		$len = strlen($string);
 
@@ -911,36 +818,6 @@ class component_pdf extends component_media_common {
 
 		return $string;
 	}//end utf8_clean
-
-
-
-	/**
-	* DELETE_FILE
-	* Remove quality version moving the file to a deleted files dir
-	* @see component_image->remove_component_media_files
-	*
-	* @return object $response
-	*/
-	public function delete_file(string $quality) : object {
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed';
-
-		// remove_component_media_files returns bool value
-		$result = $this->remove_component_media_files([$quality]);
-		if ($result===true) {
-
-			// save To update valor_list
-				$this->Save();
-
-			$response->result	= true;
-			$response->msg		= 'File deleted successfully. ' . $quality;
-		}
-
-
-		return $response;
-	}//end delete_file
 
 
 
