@@ -307,11 +307,28 @@ class component_media_common extends component_common {
 	/**
 	* GET_NAME
 	* Alias of get_id
+	* @return string|null $id
 	*/
 	public function get_name() : ?string {
 
 		return $this->get_id();
 	}//end get_name
+
+
+
+	/**
+	* QUALITY_FILE_EXIST
+	* Check if quality given file exists
+	* @param string $quality
+	* @return bool
+	*/
+	public function quality_file_exist(string $quality) : bool {
+
+		$file_path_abs	= $this->get_media_filepath($quality);
+		$file_exists	= file_exists($file_path_abs);
+
+		return $file_exists;
+	}//end quality_file_exist
 
 
 
@@ -744,10 +761,14 @@ class component_media_common extends component_common {
 					if (!file_exists($media_path)) continue; # Skip
 
 				// delete directory
-					$folder_path_del = $this->get_target_dir($current_quality) . 'deleted';
+					$folder_path_del = $this->get_target_dir($current_quality) . '/deleted';
 					if( !is_dir($folder_path_del) ) {
 						if( !mkdir($folder_path_del, 0777,true) ) {
-							trigger_error(" Error on read or create directory \"deleted\". Permission denied");
+							debug_log(__METHOD__
+								. " Error on read or create directory \"deleted\". Permission denied " . PHP_EOL
+								. ' folder_path_del: ' . $folder_path_del
+								, logger::ERROR
+							);
 							return false;
 						}
 					}
@@ -760,7 +781,12 @@ class component_media_common extends component_common {
 						return false;
 					}
 
-				debug_log(__METHOD__." Moved file \n$media_path to \n$media_path_moved ".to_string(), logger::DEBUG);
+				debug_log(__METHOD__
+					." Moved file". PHP_EOL
+					. ' media_path: ' . $media_path . PHP_EOL
+					. ' media_path_moved: ' . $media_path_moved
+					, logger::WARNING
+				);
 			}//end foreach
 
 
@@ -1229,7 +1255,7 @@ class component_media_common extends component_common {
 	* Sync this quality value
 	* @return bool
 	*/
-	public function set_quality(string $quality) :bool {
+	public function set_quality(string $quality) : bool {
 
 		$ar_valid 	= $this->get_ar_quality();
 
