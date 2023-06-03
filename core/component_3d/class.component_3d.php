@@ -455,19 +455,19 @@ class component_3d extends component_media_common {
 	* @param array $ar_quality optional
 	* @return array $ar_all_files_by_quality
 	*/
-	public function get_ar_all_files_by_quality( array $ar_quality=null ) : array {
+		// public function get_ar_all_files_by_quality( array $ar_quality=null ) : array {
 
-		if (empty($ar_quality)) {
-			$ar_quality = DEDALO_3D_AR_QUALITY;
-		}
+		// 	if (empty($ar_quality)) {
+		// 		$ar_quality = DEDALO_3D_AR_QUALITY;
+		// 	}
 
-		$ar_all_files_by_quality=array();
-		foreach ($ar_quality as $current_quality) {
-			$ar_all_files_by_quality[$current_quality] = $this->get_original_file_path($current_quality);
-		}
+		// 	$ar_all_files_by_quality=array();
+		// 	foreach ($ar_quality as $current_quality) {
+		// 		$ar_all_files_by_quality[$current_quality] = $this->get_original_file_path($current_quality);
+		// 	}
 
-		return (array)$ar_all_files_by_quality;
-	}//end get_ar_all_files_by_quality
+		// 	return (array)$ar_all_files_by_quality;
+		// }//end get_ar_all_files_by_quality
 
 
 
