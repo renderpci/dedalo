@@ -98,11 +98,13 @@ class component_av extends component_media_common {
 
 	/**
 	* GET_DEFAULT_QUALITY
-	* @return string DEDALO_AV_QUALITY_DEFAULT
+	* @return string $default_quality
 	*/
 	public function get_default_quality() : string {
 
-		return DEDALO_AV_QUALITY_DEFAULT;
+		$default_quality = DEDALO_AV_QUALITY_DEFAULT;
+
+		return $default_quality;
 	}//end get_default_quality
 
 
@@ -474,19 +476,19 @@ class component_av extends component_media_common {
 	* @param array $ar_quality optional
 	* @return array $ar_all_files_by_quality
 	*/
-	public function get_ar_all_files_by_quality( array $ar_quality=null ) : array {
+		// public function get_ar_all_files_by_quality( array $ar_quality=null ) : array {
 
-		if (empty($ar_quality)) {
-			$ar_quality = DEDALO_AV_AR_QUALITY;
-		}
+		// 	if (empty($ar_quality)) {
+		// 		$ar_quality = DEDALO_AV_AR_QUALITY;
+		// 	}
 
-		$ar_all_files_by_quality = [];
-		foreach ($ar_quality as $current_quality) {
-			$ar_all_files_by_quality[$current_quality] = $this->get_original_file_path($current_quality);
-		}
+		// 	$ar_all_files_by_quality = [];
+		// 	foreach ($ar_quality as $current_quality) {
+		// 		$ar_all_files_by_quality[$current_quality] = $this->get_original_file_path($current_quality);
+		// 	}
 
-		return $ar_all_files_by_quality;
-	}//end get_ar_all_files_by_quality
+		// 	return $ar_all_files_by_quality;
+		// }//end get_ar_all_files_by_quality
 
 
 
