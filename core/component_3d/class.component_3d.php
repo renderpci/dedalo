@@ -634,93 +634,97 @@ class component_3d extends component_media_common {
 
 	/**
 	* MOVE_ZIP_FILE
-	* Used to move zip files like compressed dvd
+	* Used to move zip files like compressed DVD
 	* @return object $response
 	*/
-	public static function move_zip_file(string $tmp_name, string $folder_path, string $file_name) : object {
+		// public static function move_zip_file(string $tmp_name, string $folder_path, string $file_name) : object {
 
-		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__METHOD__.']';
+		// 	$response = new stdClass();
+		// 		$response->result 	= false;
+		// 		$response->msg 		= 'Error. Request failed ['.__METHOD__.']';
 
-		$zip = new ZipArchive;
-		$res = $zip->open($tmp_name);
-		if ($res!==true) {
-			$response->msg .= "Error on open zip file ! Code: ".to_string($res);
-			return $response;
-		}
+		// 	$zip = new ZipArchive;
+		// 	$res = $zip->open($tmp_name);
+		// 	if ($res!==true) {
+		// 		$response->msg .= "Error on open zip file ! Code: ".to_string($res);
+		// 		return $response;
+		// 	}
 
-		// Create the directories
-		if( !is_dir($folder_path.'/'.$file_name) ) {
-			$ar_folders = [
-				$folder_path .'/'. $file_name,
-				$folder_path .'/'. $file_name . '/VIDEO_TS/',
-				$folder_path .'/'. $file_name . '/AUDIO_TS/'
-			];
-			foreach ($ar_folders as $current_folder) {
-				if(!mkdir($current_folder, 0777)) {
-					$response->msg .= "Error on read or create directory for \"$file_name\" folder. Permission denied ! ($current_folder)";
-					return $response;
-				}
-			}
-		}
+		// 	// Create the directories
+		// 	if( !is_dir($folder_path.'/'.$file_name) ) {
+		// 		$ar_folders = [
+		// 			$folder_path .'/'. $file_name,
+		// 			$folder_path .'/'. $file_name . '/VIDEO_TS/',
+		// 			$folder_path .'/'. $file_name . '/AUDIO_TS/'
+		// 		];
+		// 		foreach ($ar_folders as $current_folder) {
+		// 			if(!mkdir($current_folder, 0777)) {
+		// 				$response->msg .= "Error on read or create directory for \"$file_name\" folder. Permission denied ! ($current_folder)";
+		// 				return $response;
+		// 			}
+		// 		}
+		// 	}
 
-		// See al .zip files for located the VIDEO_TS and AUDIO_TS folders
-		for ($i=0; $i < $zip->numFiles; $i++) {
+		// 	// See al .zip files for located the VIDEO_TS and AUDIO_TS folders
+		// 	for ($i=0; $i < $zip->numFiles; $i++) {
 
-			$current_filename = $zip->getNameIndex($i);
+		// 		$current_filename = $zip->getNameIndex($i);
 
-			if(strpos($current_filename,'VIDEO_TS')!==false){
+		// 		if(strpos($current_filename,'VIDEO_TS')!==false){
 
-				$current_fileinfo = pathinfo($current_filename);
-				# Don't copy the original VIDEO_TS in the zip file
-				if ($current_fileinfo['basename']==='VIDEO_TS') {
-					continue;
-				}
-				# Copy al files of the VIDEO_TS zip file into the VIDEO_TS destination file
-				$src 	= $tmp_name.'#'.$current_filename;
-				$target = $folder_path.'/'.$file_name.'/VIDEO_TS/'.$current_fileinfo['basename'];
-				if(!copy('zip://'.$src, $target)) {
-					$response->msg .= "Error on copy zip file: $src";
-					return $response;
-				}
+		// 			$current_fileinfo = pathinfo($current_filename);
+		// 			# Don't copy the original VIDEO_TS in the zip file
+		// 			if ($current_fileinfo['basename']==='VIDEO_TS') {
+		// 				continue;
+		// 			}
+		// 			# Copy al files of the VIDEO_TS zip file into the VIDEO_TS destination file
+		// 			$src 	= $tmp_name.'#'.$current_filename;
+		// 			$target = $folder_path.'/'.$file_name.'/VIDEO_TS/'.$current_fileinfo['basename'];
+		// 			if(!copy('zip://'.$src, $target)) {
+		// 				$response->msg .= "Error on copy zip file: $src";
+		// 				return $response;
+		// 			}
 
-			}else if(strpos($current_filename,'AUDIO_TS')!==false){
-				$current_fileinfo = pathinfo($current_filename);
-				# Don't copy the original AUDIO_TS in the zip file
-				if ($current_fileinfo['basename'] === 'AUDIO_TS') {
-					continue;
-				}
-				// Copy al files of the VIDEO_TS zip file into the AUDIO_TS destination file
-				$src 	= $tmp_name.'#'.$current_filename;
-				$target = $folder_path.'/'.$file_name.'/AUDIO_TS/'.$current_fileinfo['basename'];
-				if(!copy('zip://'.$src, $target)) {
-					$response->msg .= "Error on copy zip file: $src";
-					return $response;
-				}
-			}
-		}//end for ($i=0; $i < $zip->numFiles; $i++)
+		// 		}else if(strpos($current_filename,'AUDIO_TS')!==false){
+		// 			$current_fileinfo = pathinfo($current_filename);
+		// 			# Don't copy the original AUDIO_TS in the zip file
+		// 			if ($current_fileinfo['basename'] === 'AUDIO_TS') {
+		// 				continue;
+		// 			}
+		// 			// Copy al files of the VIDEO_TS zip file into the AUDIO_TS destination file
+		// 			$src 	= $tmp_name.'#'.$current_filename;
+		// 			$target = $folder_path.'/'.$file_name.'/AUDIO_TS/'.$current_fileinfo['basename'];
+		// 			if(!copy('zip://'.$src, $target)) {
+		// 				$response->msg .= "Error on copy zip file: $src";
+		// 				return $response;
+		// 			}
+		// 		}
+		// 	}//end for ($i=0; $i < $zip->numFiles; $i++)
 
-		$zip->close();
+		// 	$zip->close();
 
-		// all is ok
-		$response->result 	= true;
-		$response->msg 		= 'Ok. Request done ['.__METHOD__.']';
+		// 	// all is ok
+		// 	$response->result 	= true;
+		// 	$response->msg 		= 'Ok. Request done ['.__METHOD__.']';
 
 
-		return $response;
-	}//end move_zip_file
+		// 	return $response;
+		// }//end move_zip_file
 
 
 
 	/**
 	* GET_PREVIEW_URL
-	* @return string $url
+	* Return posterframe url
+	* @return string $preview_url
 	*/
 	public function get_preview_url() : string {
 
-		// $preview_url = $this->get_posterframe_url($test_file=true, $absolute=false, $avoid_cache=false);
-		$preview_url = $this->get_posterframe_url($test_file=false, $absolute=false, $avoid_cache=true);
+		$preview_url = $this->get_posterframe_url(
+			false, // bool test_file
+			false, // bool absolute
+			true // bool avoid_cache
+		);
 
 		return $preview_url;
 	}//end get_preview_url
@@ -811,24 +815,6 @@ class component_3d extends component_media_common {
 
 		return $response;
 	}//end process_uploaded_file
-
-
-	/**
-	* GET_MEDIA_STREAMS
-	* Check the file to get the head streams of the video file
-	* @return
-	*/
-	public function get_media_streams(?string $quality=null) {
-
-		//get the video file path
-			$video_path = $this->get_video_path($quality);
-
-		// get_media_streams from av file
-			$media_streams = Ffmpeg::get_media_streams($video_path);
-
-
-		return $media_streams;
-	}//end get_media_streams
 
 
 
@@ -997,46 +983,56 @@ class component_3d extends component_media_common {
 	*/
 	public function build_version(string $quality) : object {
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed';
+		debug_log(__METHOD__
+			. " Sorry. This method is not implemented yet " . PHP_EOL
+			, logger::ERROR
+		);
 
-		// short vars
-			$id		= $this->get_name();
-			$source_quality	= $this->get_source_quality_to_build($quality);
+		return (object)[
+			'result'	=> false,
+			'msg'		=> 'Sorry. Build version function is not set yet. We are working on it'
+		];
 
-		// AVObj
-			$AVObj = new AVObj($id, $source_quality);
+		// $response = new stdClass();
+		// 	$response->result	= false;
+		// 	$response->msg		= 'Error. Request failed';
 
-		// Ffmpeg
-			$Ffmpeg				= new Ffmpeg();
-			$setting_name		= $Ffmpeg->get_setting_name_from_quality($AVObj, $quality);
-			$command_response	= $Ffmpeg->create_av_alternate($AVObj, $setting_name);
+		// // short vars
+		// 	$id				= $this->get_id();
+		// 	$source_quality	= $this->get_source_quality_to_build($quality);
 
-		// response
-			$response->result			= true;
-			$response->msg				= 'Building av file in background';
-			$response->command_response	= $command_response;
+		// // AVObj
+		// 	$AVObj = new AVObj($id, $source_quality);
 
-		// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
-			logger::$obj['activity']->log_message(
-				'NEW VERSION',
-				logger::INFO,
-				$this->tipo,
-				NULL,
-				[
-					'msg'				=> 'Generated av file',
-					'tipo'				=> $this->tipo,
-					'parent'			=> $this->section_id,
-					'top_id'			=> TOP_ID ?? null,
-					'top_tipo'			=> TOP_TIPO ?? null,
-					'id'			=> $id,
-					'quality'			=> $quality,
-					'source_quality'	=> $source_quality
-				]
-			);
+		// // Ffmpeg
+		// 	$Ffmpeg				= new Ffmpeg();
+		// 	$setting_name		= $Ffmpeg->get_setting_name_from_quality($AVObj, $quality);
+		// 	$command_response	= $Ffmpeg->create_av_alternate($AVObj, $setting_name);
 
-		return $response;
+		// // response
+		// 	$response->result			= true;
+		// 	$response->msg				= 'Building av file in background';
+		// 	$response->command_response	= $command_response;
+
+		// // logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+		// 	logger::$obj['activity']->log_message(
+		// 		'NEW VERSION',
+		// 		logger::INFO,
+		// 		$this->tipo,
+		// 		NULL,
+		// 		[
+		// 			'msg'				=> 'Generated av file',
+		// 			'tipo'				=> $this->tipo,
+		// 			'parent'			=> $this->section_id,
+		// 			'top_id'			=> TOP_ID ?? null,
+		// 			'top_tipo'			=> TOP_TIPO ?? null,
+		// 			'id'			=> $id,
+		// 			'quality'			=> $quality,
+		// 			'source_quality'	=> $source_quality
+		// 		]
+		// 	);
+
+		// return $response;
 	}//end build_version
 
 
@@ -1057,17 +1053,22 @@ class component_3d extends component_media_common {
 	*/
 	public function create_posterframe($current_time, $target_quality=null, $ar_target=null) {
 
-		$reelID		= $this->get_name();
-		$quality	= $target_quality ?? $this->get_quality_default();
+		debug_log(__METHOD__
+			. " Sorry. This method is not implemented yet " . PHP_EOL
+			, logger::ERROR
+		);
 
-		# AVObj
-		$AVObj = new AVObj($reelID, $quality);
+		// $reelID		= $this->get_id();
+		// $quality	= $target_quality ?? $this->get_quality_default();
 
-		# Ffmpeg
-		$Ffmpeg				= new Ffmpeg();
-		$command_response	= $Ffmpeg->create_posterframe($AVObj, $current_time, $ar_target);
+		// # AVObj
+		// $AVObj = new AVObj($reelID, $quality);
 
-		return $command_response;
+		// # Ffmpeg
+		// $Ffmpeg				= new Ffmpeg();
+		// $command_response	= $Ffmpeg->create_posterframe($AVObj, $current_time, $ar_target);
+
+		// return $command_response;
 	}//end create_posterframe
 
 
@@ -1084,13 +1085,17 @@ class component_3d extends component_media_common {
 
 		// check file already exists
 			if(!file_exists($file)) {
-				debug_log(__METHOD__." Posterframe file do not exists ".to_string($file), logger::DEBUG);
+				debug_log(__METHOD__." Posterframe file do not exists. file: ".to_string($file), logger::DEBUG);
 				return false;
 			}
 
 		 // delete file
 			if(!unlink($file)) {
-				trigger_error(" Error on delete posterframe file. Posterframe file is not deleted");
+				debug_log(__METHOD__
+					."  Error on delete posterframe file. Posterframe file is not deleted " . PHP_EOL
+					. ' file: ' . $file
+					, logger::ERROR
+				);
 				return false;
 			}
 
@@ -1108,9 +1113,14 @@ class component_3d extends component_media_common {
 	*/
 	public function get_media_attributes(string $file_path) : ?object {
 
-		$media_attributes = ffmpeg::get_media_attributes($file_path);
+		debug_log(__METHOD__
+			. " Sorry. This method is not implemented yet " . PHP_EOL
+			, logger::ERROR
+		);
 
-		return $media_attributes;
+		// $media_attributes = ffmpeg::get_media_attributes($file_path);
+
+		// return $media_attributes;
 	}//end get_media_attributes
 
 
