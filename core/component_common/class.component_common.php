@@ -1501,16 +1501,17 @@ abstract class component_common extends common {
 
 		$valor = self::get_dato();
 
-		if(SHOW_DEBUG===true) {
-			if (!is_null($valor) && !is_string($valor) && !is_numeric($valor)) {
-				$msg = "WARNING: CURRENT 'valor' in $this->tipo is NOT valid string. Type is:\"".gettype($valor).'" - valor:'.to_string($valor);
-				debug_log(__METHOD__
-					." ".$msg
-					, logger::ERROR
-				);
-				dump(debug_backtrace(), 'get_valor debug_backtrace() ++ '.to_string());
-			}
-		}
+		// debug
+			// if(SHOW_DEBUG===true) {
+			// 	if (!is_null($valor) && !is_string($valor) && !is_numeric($valor)) {
+			// 		$msg = "WARNING: CURRENT 'valor' in $this->tipo is NOT valid string. Type is:\"".gettype($valor).'" - valor:'.to_string($valor);
+			// 		debug_log(__METHOD__
+			// 			." ".$msg
+			// 			, logger::ERROR
+			// 		);
+			// 		dump(debug_backtrace(), 'get_valor debug_backtrace() ++ '.to_string());
+			// 	}
+			// }
 
 		if(!is_array($valor)) return $valor;
 

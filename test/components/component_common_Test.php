@@ -386,11 +386,14 @@ final class component_common_test extends TestCase {
 					if ($element->model!=='component_section_id') {
 						$this->assertTrue(
 							isset($dato_full->{DEDALO_DATA_NOLAN}),
-							'dato_full expected key ('.$element->model.') : '
-							.DEDALO_DATA_NOLAN .PHP_EOL
-							.json_encode($dato_full) .PHP_EOL
+							'dato_full expected $dato_full->{DEDALO_DATA_NOLAN} : ' .PHP_EOL
+							.'lang: '.DEDALO_DATA_NOLAN .PHP_EOL
+							.'dato_full: '.json_encode($dato_full) .PHP_EOL
 							.'is_translatable: '.json_encode($is_translatable).PHP_EOL
-							.'tipo: '.$element->tipo
+							.'tipo: '.$element->tipo .PHP_EOL
+							.'model: '.$element->model .PHP_EOL
+							.'section_tipo: '.$element->section_tipo .PHP_EOL
+							.'section_id: '.$element->section_id
 						);
 					}
 				}
