@@ -1073,28 +1073,14 @@ class component_av extends component_media_common {
 	public function get_media_streams(string $quality) : mixed {
 
 		// get the video file path
-			$video_path = $this->get_video_path($quality);
+			$file_path = $this->get_media_filepath($quality);
 
 		// get_media_streams from av file
-			$media_streams = Ffmpeg::get_media_streams($video_path);
+			$media_streams = Ffmpeg::get_media_streams($file_path);
 
 
 		return $media_streams;
 	}//end get_media_streams
-
-
-
-	/**
-	* GET_VIDEO_PATH
-	* Get full file path. Alias of media common get_media_filepath
-	* @return string $video_path
-	*/
-	public function get_video_path(string $quality) : string {
-
-		$video_path = $this->get_media_filepath($quality);
-
-		return $video_path;
-	}//end get_video_path
 
 
 
@@ -1414,13 +1400,17 @@ class component_av extends component_media_common {
 
 		// check file already exists
 			if(!file_exists($file)) {
-				debug_log(__METHOD__." Posterframe file do not exists ".to_string($file), logger::DEBUG);
+				debug_log(__METHOD__." Posterframe file do not exists. file: ".to_string($file), logger::DEBUG);
 				return false;
 			}
 
 		 // delete file
 			if(!unlink($file)) {
-				debug_log(__METHOD__."  Error on delete posterframe file. Posterframe file is not deleted ".to_string(), logger::ERROR);
+				debug_log(__METHOD__
+					."  Error on delete posterframe file. Posterframe file is not deleted " . PHP_EOL
+					. ' file: ' . $file
+					, logger::ERROR
+				);
 				return false;
 			}
 
