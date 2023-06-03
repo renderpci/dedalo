@@ -317,6 +317,113 @@ class component_media_common extends component_common {
 
 
 	/**
+	* GET_INITIAL_MEDIA_PATH
+	* Used by component_image, component_pdf
+	* @return string|null $this->initial_media_path
+	*/
+	public function get_initial_media_path() : ?string {
+
+		$component_tipo		= $this->tipo;
+		$parent_section		= $this->get_my_section();
+		$properties			= $parent_section->get_properties();
+
+		if (isset($properties->initial_media_path->{$component_tipo})) {
+			$this->initial_media_path = $properties->initial_media_path->{$component_tipo};
+			// Add / at begin if not exits
+			if ( substr($this->initial_media_path, 0, 1) != '/' ) {
+				$this->initial_media_path = '/'.$this->initial_media_path;
+			}
+		}else{
+			$this->initial_media_path = null;
+		}
+
+		return $this->initial_media_path;
+	}//end get_initial_media_path
+
+
+
+	/**
+	* GET_ADDITIONAL_PATH
+	* Calculate image additional path from 'properties' json config.
+	* Used by component_image, component_pdf
+	* @return string|null $additional_path
+	*/
+	public function get_additional_path() : ?string {
+
+		// already set case
+			if(isset($this->additional_path)) {
+				return $this->additional_path;
+			}
+
+		// default value
+			$additional_path = null;
+
+		// short vars
+			$properties				= $this->get_properties();
+			$additional_path_tipo	= $properties->additional_path ?? null;
+			$section_id				= $this->get_section_id();
+			$section_tipo			= $this->get_section_tipo();
+
+		if ( !is_null($additional_path_tipo) && !empty($section_id) ) {
+
+			$component_tipo	= $additional_path_tipo;
+			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component		= component_common::get_instance(
+				$model,
+				$component_tipo,
+				$section_id,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
+
+			// valor
+				$valor = trim($component->get_valor());
+
+			// Add a slash at the beginning if it doesn't already exist
+				if ( substr($valor, 0, 1)!=='/' ) {
+					$valor = '/'.$valor;
+				}
+
+			// Remove the trailing slash if it exists
+				if ( substr($valor, -1)==='/' ) {
+					$valor = substr($valor, 0, -1);
+				}
+
+			// add
+				$additional_path = $valor;
+		}
+
+		if(empty($valor) && isset($properties->max_items_folder)) {
+
+			// max_items_folder defined case
+				$max_items_folder	= (int)$properties->max_items_folder;
+				$int_section_id		= (int)$section_id;
+
+			// add
+				$additional_path = '/'.$max_items_folder*(floor($int_section_id / $max_items_folder));
+
+			// // update component dato. Final dato must be an array to saved into component_input_text
+			// 	$final_dato = array( $additional_path );
+			// 	$component->set_dato( $final_dato );
+
+			// // save if mode is edit
+			// 	if ($this->mode==='edit') {
+			// 		$component->Save();
+			// 	}
+		}
+
+
+		// fix value
+			$this->additional_path = $additional_path;
+
+
+		return $additional_path;
+	}//end get_additional_path
+
+
+
+	/**
 	* QUALITY_FILE_EXIST
 	* Check if quality given file exists
 	* @param string $quality

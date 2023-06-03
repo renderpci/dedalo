@@ -11,11 +11,9 @@ class component_image extends component_media_common {
 	* CLASS VARS
 	*/
 		// id . file name formatted as 'tipo'-'order_id' like dd732-1
-		public $id;
 		public $image_url;
-
+		// external_source
 		public $external_source;
-
 		// Default image dimensions (as showed in section edit)
 		public $width	= 539;
 		public $height	= 404;
@@ -66,31 +64,6 @@ class component_image extends component_media_common {
 
 		return $result;
 	}//end Save
-
-
-
-	/**
-	* GET_INITIAL_MEDIA_PATH
-	* @return string $this->initial_media_path
-	*/
-	public function get_initial_media_path() : string {
-
-		$component_tipo		= $this->tipo;
-		$parent_section		= $this->get_my_section();
-		$properties			= $parent_section->get_properties();
-
-		if (isset($properties->initial_media_path->$component_tipo)) {
-			$this->initial_media_path = $properties->initial_media_path->$component_tipo;
-			// Add / at begin if not exits
-			if ( substr($this->initial_media_path, 0, 1) != '/' ) {
-				$this->initial_media_path = '/'.$this->initial_media_path;
-			}
-		}else{
-			$this->initial_media_path = false;
-		}
-
-		return $this->initial_media_path;
-	}//end get_initial_media_path
 
 
 
@@ -163,83 +136,6 @@ class component_image extends component_media_common {
 
 		return $id;
 	}//end get_id
-
-
-
-	/**
-	* GET_ADDITIONAL_PATH
-	* Calculate image additional path from 'properties' json config.
-	* @return string $additional_path
-	*/
-	public function get_additional_path() : string {
-
-		// already set case
-			if(isset($this->additional_path)) {
-				return $this->additional_path;
-			}
-
-		// default value
-			$additional_path = false;
-
-		$properties				= $this->get_properties();
-		$additional_path_tipo	= $properties->additional_path ?? null;
-		$section_id				= $this->get_section_id();
-
-		if ( !is_null($additional_path_tipo) && !empty($section_id) ) {
-
-			$component_tipo	= $additional_path_tipo;
-			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			$component		= component_common::get_instance(
-				$model,
-				$component_tipo,
-				$section_id,
-				'edit',
-				DEDALO_DATA_NOLAN,
-				$this->get_section_tipo()
-			);
-
-			// valor
-				$valor = trim($component->get_valor());
-
-			// Add a slash at the beginning if it doesn't already exist
-				if ( substr($valor, 0, 1)!=='/' ) {
-					$valor = '/'.$valor;
-				}
-
-			// Remove the trailing slash if it exists
-				if ( substr($valor, -1)==='/' ) {
-					$valor = substr($valor, 0, -1);
-				}
-				// add
-					$additional_path = $valor;
-		}
-
-		if(empty($valor) && isset($properties->max_items_folder)) {
-
-			// max_items_folder defined case
-				$max_items_folder	= (int)$properties->max_items_folder;
-				$int_section_id		= (int)$section_id;
-
-			// add
-				$additional_path = '/'.$max_items_folder*(floor($int_section_id / $max_items_folder));
-
-			// // update component dato. Final dato must be an array to saved into component_input_text
-			// 	$final_dato = array( $additional_path );
-			// 	$component->set_dato( $final_dato );
-
-			// // save if mode is edit
-			// 	if ($this->mode==='edit') {
-			// 		$component->Save();
-			// 	}
-		}
-
-
-		// fix value
-			$this->additional_path = $additional_path;
-
-
-		return $additional_path;
-	}//end get_additional_path
 
 
 
@@ -346,6 +242,20 @@ class component_image extends component_media_common {
 
 		return DEDALO_IMAGE_QUALITY_DEFAULT;
 	}//end get_default_quality
+
+
+
+	/**
+	* GET_AR_QUALITY
+	* Get the list of defined image qualities in Dédalo config
+	* @return array $ar_image_quality
+	*/
+	public function get_ar_quality() : array {
+
+		$ar_image_quality = DEDALO_IMAGE_AR_QUALITY;
+
+		return $ar_image_quality;
+	}//end get_ar_quality
 
 
 
@@ -649,7 +559,7 @@ class component_image extends component_media_common {
 				$default_image_path,
 				$image_thumb_path,
 				false, // bool dimensions
-				$initial_media_path
+				$initial_media_path ?? ''
 			);
 
 		// debug
@@ -694,13 +604,8 @@ class component_image extends component_media_common {
 	*/
 	public function get_thumb_path() : string {
 
-		# common data
-		$id 			 = $this->get_id();
-		$additional_path 	 = $this->get_additional_path();
-		$initial_media_path  = $this->get_initial_media_path();
-
-		# target data (target quality is thumb)
-		$image_thumb_path 	 = $this->get_media_filepath(DEDALO_IMAGE_THUMB_DEFAULT);
+		// target data (target quality is thumb)
+		$image_thumb_path = $this->get_media_filepath(DEDALO_IMAGE_THUMB_DEFAULT);
 
 		return $image_thumb_path;
 	}//end get_thumb_path
@@ -782,7 +687,11 @@ class component_image extends component_media_common {
 					$folder_path_del = $this->get_target_dir($current_quality)  . '/deleted';
 					if( !is_dir($folder_path_del) ) {
 						if( !mkdir($folder_path_del, 0775, true) ) {
-							trigger_error(" Error on read or create directory \"deleted\". Permission denied");
+							debug_log(__METHOD__
+								. " Error on read or create directory \"deleted\". Permission denied " . PHP_EOL
+								. ' folder_path_del: ' . $folder_path_del
+								, logger::ERROR
+							);
 							return false;
 						}
 					}
@@ -791,11 +700,19 @@ class component_image extends component_media_common {
 					$image_name			= $this->get_name();
 					$media_path_moved	= $folder_path_del . '/' . $image_name . '_deleted_' . $date . '.' . $this->get_extension();
 					if( !rename($media_path, $media_path_moved) ) {
-						trigger_error(" Error on move files to folder \"deleted\" [1]. Permission denied . The files are not deleted");
+						debug_log(__METHOD__
+							. " Error on read or  move files to folder \"deleted\" [1]. Permission denied . The files are not deleted " . PHP_EOL
+							. ' media_path: ' . $media_path . PHP_EOL
+							. ' media_path_moved: ' . $media_path_moved
+							, logger::ERROR
+						);
 						return false;
 					}
 
-				debug_log(__METHOD__." >>> Moved file \n$media_path to \n$media_path_moved ".to_string(), logger::DEBUG);
+				debug_log(__METHOD__
+					." >>> Moved file \n$media_path to \n$media_path_moved "
+					, logger::DEBUG
+				);
 
 				// Move original files too (PNG,TIF,Etc.)
 				// NOTE : 'original files' are NOT 'original quality'. Are uploaded files with extension different to DEDALO_IMAGE_EXTENSION
@@ -971,20 +888,6 @@ class component_image extends component_media_common {
 
 		return $file_path;
 	}//end build_standard_image_format
-
-
-
-	/**
-	* GET_AR_QUALITY
-	* Get the list of defined image qualities in Dédalo config
-	* @return array $ar_image_quality
-	*/
-	public function get_ar_quality() : array {
-
-		$ar_image_quality = DEDALO_IMAGE_AR_QUALITY;
-
-		return $ar_image_quality;
-	}//end get_ar_quality
 
 
 
@@ -1606,36 +1509,6 @@ class component_image extends component_media_common {
 
 		return $result;
 	}//end rotate
-
-
-
-	/**
-	* DELETE_FILE
-	* Remove quality version moving the file to a deleted files dir
-	* @see component_image->remove_component_media_files
-	*
-	* @return object $response
-	*/
-	public function delete_file(string $quality) : object {
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed';
-
-		// remove_component_media_files returns bool value
-		$result = $this->remove_component_media_files([$quality]);
-		if ($result===true) {
-
-			// save To update valor_list
-				$this->Save();
-
-			$response->result	= true;
-			$response->msg		= 'File deleted successfully. ' . $quality;
-		}
-
-
-		return $response;
-	}//end delete_file
 
 
 
