@@ -68,7 +68,8 @@
 					false // avoid_cache
 				);
 			// model_url. Default quality video URL (usually from 404)
-				$item->model_url = $this->file_exist()
+				$default_quality = $this->get_default_quality();
+				$item->model_url = $this->quality_file_exist($default_quality)
 					? $this->get_url(false)
 					: null;
 			// datalist. Files info datalist. Used for tools to know available quality versions and characteristics (size, URL, etc.)
