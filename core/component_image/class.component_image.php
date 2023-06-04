@@ -1573,7 +1573,7 @@ class component_image extends component_media_common {
 	* @param string $quality
 	* @return object $response
 	*/
-	public function build_version(string $quality) : object {
+	public function build_version(string $quality, bool $async=true) : object {
 
 		$response = new stdClass();
 			$response->result	= false;

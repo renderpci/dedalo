@@ -1497,4 +1497,82 @@ class component_media_common extends component_common {
 
 
 
+	/**
+	* BUILD_VERSION - Overwrite in each component for real process
+	* Creates a new version based on target quality
+	* (!) Note that this generic method on copy files,
+	* to real process, overwrite in each component !
+	* @param string $quality
+	* @param bool $async = true
+	* @return object $response
+	*/
+	public function build_version(string $quality, bool $async=true) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+
+		// short vars
+			$id					= $this->get_id();
+			$original_quality	= $this->get_original_quality();
+			$original_file_path	= $this->get_original_file_path($original_quality);
+			if (empty($original_file_path) || !file_exists($original_file_path)) {
+				$response->msg .= ' Invalid original_file_path. Skip conversion';
+				debug_log(__METHOD__
+					. " $response->msg " . PHP_EOL
+					. " original_quality: " . $original_quality . PHP_EOL
+					. ' original_file_path: ' . to_string($original_file_path)
+					, logger::ERROR
+				);
+				return $response;
+			}
+			$target_quality_path = $this->get_media_filepath($quality);
+
+		// copy file from source quality to target quality
+			$copy_result = copy(
+				$original_file_path, // from original quality directory
+				$target_quality_path // to default quality directory
+			);
+			if ($copy_result===false) {
+				debug_log(__METHOD__ . PHP_EOL
+					. " Error: Unable copy file : " . PHP_EOL
+					. ' original_file_path: ' . $original_file_path . PHP_EOL
+					. ' target_quality_path: ' . $target_quality_path
+					, logger::ERROR
+				);
+			}else{
+				debug_log(__METHOD__ . PHP_EOL
+					. " Copied file : " . PHP_EOL
+					. ' original_file_path: ' . $original_file_path . PHP_EOL
+					. ' target_quality_path: ' . $target_quality_path
+					, logger::DEBUG
+				);
+			}
+
+		// response
+			$response->result	= true;
+			$response->msg		= 'Copied file. Remember overwrite this method to real conversion';
+
+		// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+			logger::$obj['activity']->log_message(
+				'NEW VERSION',
+				logger::INFO,
+				$this->tipo,
+				NULL,
+				[
+					'msg'				=> 'Built version',
+					'tipo'				=> $this->tipo,
+					'parent'			=> $this->section_id,
+					'id'				=> $id,
+					'quality'			=> $quality,
+					'source_quality'	=> $original_quality,
+					'target_quality'	=> $quality
+				]
+			);
+
+		return $response;
+	}//end build_version
+
+
+
 }//end component_media_common
