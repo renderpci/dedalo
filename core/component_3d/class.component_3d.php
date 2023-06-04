@@ -979,68 +979,6 @@ class component_3d extends component_media_common {
 
 
 	/**
-	* BUILD_VERSION
-	* Creates a new version using FFMEPG conversion using settings based on target quality
-	* @param string $quality
-	* @return object $response
-	*/
-	public function build_version(string $quality) : object {
-
-		debug_log(__METHOD__
-			. " Sorry. This method is not implemented yet " . PHP_EOL
-			, logger::ERROR
-		);
-
-		return (object)[
-			'result'	=> false,
-			'msg'		=> 'Sorry. Build version function is not set yet. We are working on it'
-		];
-
-		// $response = new stdClass();
-		// 	$response->result	= false;
-		// 	$response->msg		= 'Error. Request failed';
-
-		// // short vars
-		// 	$id				= $this->get_id();
-		// 	$source_quality	= $this->get_source_quality_to_build($quality);
-
-		// // AVObj
-		// 	$AVObj = new AVObj($id, $source_quality);
-
-		// // Ffmpeg
-		// 	$Ffmpeg				= new Ffmpeg();
-		// 	$setting_name		= $Ffmpeg->get_setting_name_from_quality($AVObj, $quality);
-		// 	$command_response	= $Ffmpeg->create_av_alternate($AVObj, $setting_name);
-
-		// // response
-		// 	$response->result			= true;
-		// 	$response->msg				= 'Building av file in background';
-		// 	$response->command_response	= $command_response;
-
-		// // logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
-		// 	logger::$obj['activity']->log_message(
-		// 		'NEW VERSION',
-		// 		logger::INFO,
-		// 		$this->tipo,
-		// 		NULL,
-		// 		[
-		// 			'msg'				=> 'Generated av file',
-		// 			'tipo'				=> $this->tipo,
-		// 			'parent'			=> $this->section_id,
-		// 			'top_id'			=> TOP_ID ?? null,
-		// 			'top_tipo'			=> TOP_TIPO ?? null,
-		// 			'id'			=> $id,
-		// 			'quality'			=> $quality,
-		// 			'source_quality'	=> $source_quality
-		// 		]
-		// 	);
-
-		// return $response;
-	}//end build_version
-
-
-
-	/**
 	* CREATE_POSTERFRAME
 	* TODO: ya veremos
 	* Creates a image 'posterframe' from the default quality of current video file

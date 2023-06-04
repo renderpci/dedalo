@@ -494,7 +494,7 @@ class component_pdf extends component_media_common {
 				);
 			}else{
 				debug_log(__METHOD__ . PHP_EOL
-					. " Copied pdf file (".DEDALO_PDF_QUALITY_ORIGINAL." -> ".DEDALO_PDF_QUALITY_DEFAULT.") : " . PHP_EOL
+					. " Copied pdf file (".$full_file_path." -> ".$target_file_path.") : " . PHP_EOL
 					. ' Source path: ' . $full_file_path . PHP_EOL
 					. ' Target path: ' . $target_file_path
 					, logger::DEBUG
