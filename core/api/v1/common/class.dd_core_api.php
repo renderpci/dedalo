@@ -1506,9 +1506,9 @@ final class dd_core_api {
 			$mode				= $ddo_source->mode ?? 'list';
 			$view				= $ddo_source->view ?? null;
 			$lang				= $ddo_source->lang ?? null;
+			$tipo				= $ddo_source->tipo ?? null;
 			$section_tipo		= $ddo_source->section_tipo ?? $ddo_source->tipo;
 			$section_id			= $ddo_source->section_id ?? null;
-			$tipo				= $ddo_source->tipo ?? null;
 			$model				= $ddo_source->model ?? RecordObj_dd::get_modelo_name_by_tipo($ddo_source->tipo,true);
 			$caller_dataframe	= $ddo_source->caller_dataframe ?? null;
 			$properties			= $ddo_source->properties ?? null;
@@ -1794,7 +1794,12 @@ final class dd_core_api {
 
 				case 'get_relation_list': // Used by relation list only (legacy compatibility)
 
-					$element = new relation_list($tipo, $section_id, $section_tipo, $mode);
+					$element = new relation_list(
+						$tipo,
+						$section_id,
+						$section_tipo,
+						$mode
+					);
 					$element->set_sqo($sqo);
 					break;
 
