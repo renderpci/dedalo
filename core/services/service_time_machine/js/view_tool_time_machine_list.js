@@ -264,7 +264,8 @@ const render_column_id = function(options) {
 			class_name		: 'button_view',
 			parent			: fragment
 		})
-		button_view.addEventListener('click', function() {
+		button_view.addEventListener('click', function(e) {
+			e.stopPropagation()
 
 			if (main_caller.model==='section') {
 
