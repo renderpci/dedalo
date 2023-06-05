@@ -211,7 +211,7 @@ const render_relation_list = function(options) {
 				? instance // pagination case do not need to init relation_list
 				: await instances.get_instance({
 					model			: 'relation_list',
-					tipo			: tipo,
+					tipo			: section_tipo,
 					section_tipo	: section_tipo,
 					section_id		: section_id,
 					mode			: mode
