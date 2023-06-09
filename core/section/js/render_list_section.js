@@ -51,7 +51,7 @@ render_list_section.prototype.list = async function(options) {
 
 			default:
 				// dynamic try
-					const render_view = self.render_views.find(el => el.view === view && el.mode === self.mode)
+					const render_view = self.render_views.find(el => el.view===view && el.mode===self.mode)
 					if (render_view) {
 						const path			= render_view.path || './' + render_view.render +'.js'
 						const render_method	= await import (path)
