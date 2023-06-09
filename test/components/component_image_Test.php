@@ -175,7 +175,6 @@ final class component_image_test extends TestCase {
 		);
 
 		$result = $component->get_id();
-			dump($result, ' result ++ '.to_string());
 
 		// sample result
 			// 'test99_test3_1'
@@ -186,13 +185,495 @@ final class component_image_test extends TestCase {
 				. gettype($result)
 		);
 
-
 		$this->assertTrue(
 			$result===($tipo.'_'.$section_tipo.'_'.$section_id),
 			'expected test99_test3_1 ' . PHP_EOL
 				. $result
 		);
 	}//end test_get_id
+
+
+
+	/**
+	* TEST_get_url
+	* @return void
+	*/
+	public function test_get_url() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'edit';
+		$lang			= DEDALO_DATA_NOLAN;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo
+		);
+
+		// default
+			$result = $component->get_url(
+				DEDALO_IMAGE_QUALITY_DEFAULT,
+				false, // test_file
+				false, // absolute
+				false // default_add
+			);
+
+			// expected sample
+			// /media/image/1.5MB/test99_test3_1.jpg
+
+			$this->assertTrue(
+				gettype($result)==='string',
+				'expected type string : ' . PHP_EOL
+					. gettype($result)
+			);
+
+			$this->assertTrue(
+				strpos($result, DEDALO_IMAGE_QUALITY_DEFAULT)!==false,
+				'expected contains ' .DEDALO_IMAGE_QUALITY_DEFAULT. PHP_EOL
+					. $result
+			);
+
+		// test_file
+			$result = $component->get_url(
+				DEDALO_IMAGE_QUALITY_DEFAULT,
+				true, // test_file
+				false, // absolute
+				false // default_add
+			);
+
+			// expected sample
+			// /media/image/1.5MB/test99_test3_1.jpg
+
+			$this->assertTrue(
+				gettype($result)==='string',
+				'expected type string : ' . PHP_EOL
+					. gettype($result)
+			);
+
+			$this->assertTrue(
+				strpos($result, DEDALO_IMAGE_QUALITY_DEFAULT)!==false,
+				'expected contains ' .DEDALO_IMAGE_QUALITY_DEFAULT. PHP_EOL
+					. $result
+			);
+
+		// test_file
+			$result = $component->get_url(
+				DEDALO_IMAGE_QUALITY_DEFAULT,
+				true, // test_file
+				false, // absolute
+				false // default_add
+			);
+
+			$this->assertTrue(
+				gettype($result)==='string' || gettype($result)==='NULL',
+				'expected type string|null : ' . PHP_EOL
+					. gettype($result)
+			);
+
+		// absolute
+			$result = $component->get_url(
+				DEDALO_IMAGE_QUALITY_DEFAULT,
+				false, // test_file
+				true, // absolute
+				false // default_add
+			);
+
+			$this->assertTrue(
+				gettype($result)==='string',
+				'expected type string : ' . PHP_EOL
+					. gettype($result)
+			);
+
+			$this->assertTrue(
+				strpos($result, DEDALO_PROTOCOL . DEDALO_HOST)!==false,
+				'expected contains ' .DEDALO_PROTOCOL . DEDALO_HOST. PHP_EOL
+					. $result
+			);
+
+		// default_add
+			$component = component_common::get_instance(
+				$model, // string model
+				$tipo, // string tipo
+				9999999,
+				$mode,
+				$lang,
+				$section_tipo
+			);
+			$result = $component->get_url(
+				DEDALO_IMAGE_QUALITY_DEFAULT,
+				true, // test_file
+				false, // absolute
+				true // default_add
+			);
+
+			$this->assertTrue(
+				$result==='/core/themes/default/0.jpg',
+				'expected /core/themes/default/0.jpg : ' . PHP_EOL
+					. $result
+			);
+	}//end test_get_url
+
+
+
+	/**
+	* TEST_get_external_source
+	* @return void
+	*/
+	public function test_get_external_source() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'edit';
+		$lang			= DEDALO_DATA_NOLAN;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo
+		);
+
+		$result = $component->get_external_source();
+
+		$this->assertTrue(
+			gettype($result)==='string' || gettype($result)==='NULL',
+			'expected type string|null : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$this->assertTrue(
+			$result===null,
+			'expected null ' . PHP_EOL
+				. json_encode($result)
+		);
+	}//end test_get_external_source
+
+
+
+	/**
+	* TEST_get_default_quality
+	* @return void
+	*/
+	public function test_get_default_quality() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'edit';
+		$lang			= DEDALO_DATA_NOLAN;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo
+		);
+
+		$result = $component->get_default_quality();
+
+		$this->assertTrue(
+			gettype($result)==='string',
+			'expected type string : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$this->assertTrue(
+			$result===DEDALO_IMAGE_QUALITY_DEFAULT,
+			'expected DEDALO_IMAGE_QUALITY_DEFAULT ' . PHP_EOL
+				. $result
+		);
+	}//end test_get_default_quality
+
+
+
+	/**
+	* TEST_get_ar_quality
+	* @return void
+	*/
+	public function test_get_ar_quality() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'edit';
+		$lang			= DEDALO_DATA_NOLAN;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo
+		);
+
+		$result = $component->get_ar_quality();
+
+		$this->assertTrue(
+			gettype($result)==='array',
+			'expected type array : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$this->assertTrue(
+			$result===DEDALO_IMAGE_AR_QUALITY,
+			'expected DEDALO_IMAGE_AR_QUALITY ' . PHP_EOL
+				. json_encode($result)
+		);
+	}//end test_get_ar_quality
+
+
+
+	/**
+	* TEST_get_target_filename
+	* @return void
+	*/
+	public function test_get_target_filename() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'edit';
+		$lang			= DEDALO_DATA_NOLAN;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo
+		);
+
+		$result = $component->get_target_filename();
+
+		$this->assertTrue(
+			gettype($result)==='string',
+			'expected type string : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$name = $tipo.'_'.$section_tipo.'_'.$section_id;
+
+		$this->assertTrue(
+			$result===($name.'.jpg'),
+			'expected ' .$name.'.jpg'. PHP_EOL
+				. $result
+		);
+	}//end test_get_target_filename
+
+
+
+	/**
+	* TEST_convert_quality
+	* @return void
+	*/
+	public function test_convert_quality() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'edit';
+		$lang			= DEDALO_DATA_NOLAN;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo
+		);
+
+		$original_quality	= $component->get_original_quality();
+		$target_quality		= '6MB';
+		$result				= $component->convert_quality(
+			$original_quality,
+			$target_quality
+		);
+
+		$this->assertTrue(
+			gettype($result)==='boolean',
+			'expected type boolean : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$media_filepath = $component->get_media_filepath($target_quality);
+
+		$this->assertTrue(
+			file_exists($media_filepath),
+			'expected  file_exists '. PHP_EOL
+				. $media_filepath
+		);
+	}//end test_convert_quality
+
+
+
+	/**
+	* TEST_set_quality
+	* @return void
+	*/
+	public function test_set_quality() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'edit';
+		$lang			= DEDALO_DATA_NOLAN;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo
+		);
+
+		$target_quality	= '6MB';
+		$result			= $component->set_quality(
+			$target_quality
+		);
+
+		$this->assertTrue(
+			gettype($result)==='boolean',
+			'expected type boolean : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$this->assertTrue(
+			$result===true,
+			'expected true value : true ' . PHP_EOL
+				. json_encode($result)
+		);
+
+		$this->assertTrue(
+			$component->quality===$target_quality,
+			'expected  component quality '. $target_quality . PHP_EOL
+				. $result
+		);
+
+		// invalid value
+			$target_quality	= 'invalid value!';
+			$result			= $component->set_quality(
+				$target_quality
+			);
+
+			$this->assertTrue(
+				$result===false,
+				'expected false value : ' . PHP_EOL
+					. to_string($result)
+			);
+
+			$this->assertTrue(
+				$component->quality!==$target_quality,
+				'expected  component quality distinct of '. $target_quality . PHP_EOL
+					. $result
+			);
+	}//end test_set_quality
+
+
+
+	/**
+	* TEST_generate_default_quality_file
+	* @return void
+	*/
+	public function test_generate_default_quality_file() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'edit';
+		$lang			= DEDALO_DATA_NOLAN;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo
+		);
+
+		$result = $component->generate_default_quality_file(
+			true // overwrite
+		);
+
+		$this->assertTrue(
+			gettype($result)==='boolean',
+			'expected type boolean : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$this->assertTrue(
+			$result===true,
+			'expected true value : true ' . PHP_EOL
+				. json_encode($result)
+		);
+	}//end test_generate_default_quality_file
+
+
+
+	/**
+	* TEST_generate_default_from_original_real
+	* @return void
+	*/
+	public function test_generate_default_from_original_real() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'edit';
+		$lang			= DEDALO_DATA_NOLAN;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo
+		);
+
+		$result = $component->generate_default_from_original_real(
+			true // overwrite
+		);
+			dump($result, ' result ++ '.to_string());
+
+		$this->assertTrue(
+			gettype($result)==='boolean',
+			'expected type boolean : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$this->assertTrue(
+			$result===true,
+			'expected true value : true ' . PHP_EOL
+				. json_encode($result)
+		);
+	}//end test_generate_default_from_original_real
+
+
+
 
 
 }//end class component_image_test
