@@ -146,7 +146,6 @@ Then, install Dédalo manually, commands are Ubuntu 22.04 (only as references):
       ```
 
       > Optional: if you want you can use xpdf utils instead poppler.
-      >
 
       ```shell
       wget https://dl.xpdfreader.com/xpdf-tools-linux-4.04.tar.gz
@@ -168,20 +167,21 @@ Then, install Dédalo manually, commands are Ubuntu 22.04 (only as references):
    ```
 
 3. Create a database in PostgreSQL named `dedalo_xx` (you can change the `xx` as you please).
-   Enter into psql
+
+   1. Enter into `psql`:
 
    ```shell
    su - postgres
    psql
    ```
 
-   Create a Dédalo user:
+   2. Create a Dédalo user:
 
    ```sql
    CREATE USER dedalo_user PASSWORD 'My_super_Secret_pw';
    ```
 
-   Create a Dédalo database and comment it:
+   3. Create a Dédalo database and comment it:
 
    ```sql
    CREATE DATABASE dedalo_xxx
@@ -189,44 +189,59 @@ Then, install Dédalo manually, commands are Ubuntu 22.04 (only as references):
    OWNER=dedalo_user
    CONNECTION LIMIT=-1
    TABLESPACE=pg_default;
+   ```
 
+   ```sql
    COMMENT ON DATABASE dedalo_xxx
    IS 'Dédalo: Cultural Heritage and Memory management system';
    ```
 
-4. Rename `sample.config.php` to `config.php`.
+   4. Exit form `psql` and postgres user:
 
    ```shell
-   cd [...]/dedalo/config/
-   mv sample.config.php config.php
+   \q
+   exit
    ```
 
-5. Modify `[...]/dedalo/config/config.php` as you need. Usually, this involves the `DEDALO_ENTITY` string and the OS library paths.
-6. Rename `sample.config_db.php` to `config_db.php`.
+4. Configuration.
+   Before changing the config files you will need copy/rename the sample config files removing the word "sample", you can rename or copy this files. Please read the [configuration](../config/configuration.md) documentation for further explanation on this.
 
-   ```shell
-   cd [...]/dedalo/config/
-   mv sample.config_db.php config_db.php
-   ```
+   1. Rename `sample.config.php` to `config.php`.
 
-7. Modify `[...]/dedalo/config/config_db.php` with your database configuration.
-8. Rename `sample.config_core.php` to `config_core.php`.
+      ```shell
+      cd [...]/dedalo/config/
+      mv sample.config.php config.php
+      ```
 
-   ```shell
-   cd [...]/dedalo/config/
-   mv sample.config_core.php config_core.php
-   ```
+   2. Modify `[...]/dedalo/config/config.php` as you need. Usually, this involves the `DEDALO_ENTITY` string and the OS library paths. Read the [configuration](../config/config.md) documentation.
 
-9. Rename `[...]/dedalo/config/sample.config_areas.php` to `[...]/dedalo/config/config_areas.php`.
+   3. Rename `sample.config_db.php` to `config_db.php`.
 
-   ```shell
-   cd [...]/dedalo/config/
-   mv sample.config_core.php config_core.php
-   ```
+      ```shell
+      cd [...]/dedalo/config/
+      mv sample.config_db.php config_db.php
+      ```
 
-10. Open Dédalo in the browser.
-11. Follow the instructions.
-12. Once the installation process is done, log in and head to the Development Area. There, update the Ontology and register all tools.
-13. Create an admin user.
-14. Log out and log in with the admin user.
-15. Create Users and Projects as you need.
+   4. Modify `[...]/dedalo/config/config_db.php` with your database configuration. Read the database [configuration](../config/config_db.md) documentation.
+
+   5. Rename `sample.config_core.php` to `config_core.php`.
+
+      ```shell
+      cd [...]/dedalo/config/
+      mv sample.config_core.php config_core.php
+      ```
+
+   6. Rename `[...]/dedalo/config/sample.config_areas.php` to `[...]/dedalo/config/config_areas.php`.
+
+      ```shell
+      cd [...]/dedalo/config/
+      mv sample.config_areas.php config_areas.php
+      ```
+
+   7. Modify `[...]/dedalo/config/config_areas.php` with your areas configuration. Read the areas [configuration](../config/config_areas.md) documentation.
+5. Open Dédalo in the browser.
+6. Follow the instructions.
+7. Once the installation process is done, log in and head to the Development Area. There, update the Ontology and register all tools.
+8. Create an admin user.
+9.  Log out and log in with the admin user.
+10. Create Users and Projects as you need.
