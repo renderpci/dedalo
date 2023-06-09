@@ -222,7 +222,7 @@ class component_media_common extends component_common {
 	* Return component value sent to export data
 	* @return string $valor_export
 	*/
-	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) : string {
+	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) : ?string {
 
 		$element_quality	= $this->get_default_quality();
 		$valor				= $this->get_url(
@@ -1304,7 +1304,7 @@ class component_media_common extends component_common {
 	* 	Creates the relative URL path in current quality as
 	* 	'/dedalo/media/pd/standard'
 	* @param string $quality
-	* @return string $media_path
+	* @return string $media_url_dir
 	*/
 	public function get_media_url_dir(string $quality) : string {
 
@@ -1314,7 +1314,10 @@ class component_media_common extends component_common {
 		$base_path			= $folder . $initial_media_path . '/' . $quality . $additional_path;
 		$media_dir			= DEDALO_MEDIA_URL . $base_path;
 
-		return $media_dir;
+		// remove possible double slashes ad beginning
+		$media_url_dir = preg_replace('/^\/\//', '/', $media_dir);
+
+		return $media_url_dir;
 	}//end get_media_url_dir
 
 
@@ -1387,15 +1390,18 @@ class component_media_common extends component_common {
 	/**
 	* SET_QUALITY
 	* Sync this quality value
+	* set value must be inside config ar_quality definition
 	* @return bool
 	*/
 	public function set_quality(string $quality) : bool {
 
-		$ar_valid 	= $this->get_ar_quality();
-
+		$ar_valid = $this->get_ar_quality();
 		if(!in_array($quality, $ar_valid)) {
-			#$quality = $default ;		#dump($ar_valid, "$quality NO IS IN ARRAY !!!!!");
-			debug_log(__METHOD__." $quality is not accepted value as quality (ignored set action). ".get_called_class().". Please configure media options in config.php ".to_string($this->tipo), logger::ERROR);
+			debug_log(__METHOD__
+				. " quality: '$quality' is not an accepted value as quality (ignored set action). ".get_called_class(). PHP_EOL
+				. ". Please configure media options in config.php - tipo: ".$this->tipo
+				, logger::ERROR
+			);
 			return false;
 		}
 
