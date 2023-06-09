@@ -96,8 +96,8 @@ final class dd_core_api {
 		// Notify invalid rqo->options if it happens (after install check)
 			if (!isset($rqo->options)) {
 				debug_log(__METHOD__
-					. " start rqo options is mandatory! " .PHP_EOL
-					. to_string($rqo)
+					. " start rqo options is mandatory! " . PHP_EOL
+					. ' rqo: '.to_string($rqo)
 					, logger::ERROR
 				);
 			}
@@ -153,7 +153,11 @@ final class dd_core_api {
 					try {
 						$login_context = $login->get_structure_context();
 					} catch (Exception $e) {
-						debug_log(__METHOD__." Caught exception: Error on get login context ". $e->getMessage(), logger::DEBUG);
+						debug_log(__METHOD__
+							." Caught exception: Error on get login context: " . PHP_EOL
+							. ' exception message: '. $e->getMessage()
+							, logger::ERROR
+						);
 					}
 					if (empty($login_context) ||
 						empty($login_context->properties->login_items) // indicates table matrix_descriptors serious problem
@@ -164,7 +168,11 @@ final class dd_core_api {
 
 								// status is 'installed' but database it's not available
 								$msg = "Error. Your installation is set as 'installed' (DEDALO_INSTALL_STATUS) but the ontology tables are not available";
-								debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
+								debug_log(__METHOD__
+									. " $msg " . PHP_EOL
+									. ' rqo: '.to_string($rqo)
+									, logger::ERROR
+								);
 								$response->result	= false;
 								$response->error	= $msg;
 								$response->msg		= $msg;
@@ -223,7 +231,10 @@ final class dd_core_api {
 								if ($tool_name) {
 									$ar_tool_object	= tool_common::get_client_registered_tools([$tool_name]);
 									if (empty($ar_tool_object)) {
-										debug_log(__METHOD__." ERROR. No tool found for tool '$tool_name' in section_tool_tipo ".to_string($section_tool_tipo), logger::ERROR);
+										debug_log(__METHOD__
+											." ERROR. No tool found for tool '$tool_name' in section_tool_tipo: ".to_string($section_tool_tipo)
+											, logger::ERROR
+										);
 									}else{
 										$tool_config	= $properties->tool_config->{$tool_name} ?? false;
 										$tool_context	= tool_common::create_tool_simple_context($ar_tool_object[0], $tool_config);
@@ -316,7 +327,10 @@ final class dd_core_api {
 									return $el->name===$model;
 								});
 								if (empty($tool_found)) {
-									debug_log(__METHOD__." Tool $model not found in tool_common::get_client_registered_tools ".to_string(), logger::ERROR);
+									debug_log(__METHOD__
+										." Tool $model not found in tool_common::get_client_registered_tools "
+										, logger::ERROR
+									);
 								}else{
 									$section_tipo	= $tool_found->section_tipo;
 									$section_id		= $tool_found->section_id;
@@ -468,7 +482,11 @@ final class dd_core_api {
 		// validate input data
 			if (empty($rqo->source->section_tipo)) {
 				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty source \'section_tipo\' (is mandatory)';
-				debug_log(__METHOD__." $response->msg ".PHP_EOL.to_string($rqo), logger::ERROR);
+				debug_log(__METHOD__
+					." $response->msg " . PHP_EOL
+					.' rqo: ' . to_string($rqo)
+					, logger::ERROR
+				);
 				return $response;
 			}
 
@@ -524,7 +542,7 @@ final class dd_core_api {
 
 		// validate input data
 			if (empty($rqo->source->section_tipo)) {
-				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty source \'section_tipo\' (is mandatory)';
+				$response->msg = 'API Error: ('.__FUNCTION__.') Empty source \'section_tipo\' (is mandatory)';
 				return $response;
 			}
 
@@ -573,7 +591,7 @@ final class dd_core_api {
 
 		// section_tipo
 			if (empty($section_tipo)) {
-				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty section_tipo (is mandatory)';
+				$response->msg = 'API Error: ('.__FUNCTION__.') Empty section_tipo (is mandatory)';
 				return $response;
 			}
 
@@ -627,7 +645,7 @@ final class dd_core_api {
 
 		// section_tipo
 			if (empty($section_tipo)) {
-				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty section_tipo (is mandatory)';
+				$response->msg = 'API Error: ('.__FUNCTION__.') Empty section_tipo (is mandatory)';
 				return $response;
 			}
 
@@ -700,7 +718,11 @@ final class dd_core_api {
 			if($model!=='section') {
 				$response->error = 1;
 				$response->msg 	.= '[1] Model is not expected section: '.$model;
-				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
+				debug_log(__METHOD__
+					." $response->msg " . PHP_EOL
+					.' rqo: '.to_string($rqo)
+					, logger::ERROR
+				);
 				return $response;
 			}
 			$caller_dataframe = $ddo_source->caller_dataframe ?? null;
@@ -711,7 +733,11 @@ final class dd_core_api {
 			if ($permissions<2) {
 				$response->error = 2;
 				$response->msg 	.= '[2] Insufficient permissions: '.$permissions;
-				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
+				debug_log(__METHOD__
+					." $response->msg " . PHP_EOL
+					.' rqo: '.to_string($rqo)
+					, logger::ERROR
+				);
 				return $response;
 			}
 
@@ -740,7 +766,11 @@ final class dd_core_api {
 					? 'Some errors occurred when delete sections. delete_mode:' . $delete_mode
 					: 'OK. Request done successfully.';
 
-				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
+				debug_log(__METHOD__
+					." $response->msg " . PHP_EOL
+					.' rqo: '.to_string($rqo)
+					, logger::ERROR
+				);
 
 				return $response;
 			}
@@ -754,7 +784,11 @@ final class dd_core_api {
 					if (empty($section_id)) {
 						$response->error = 3;
 						$response->msg 	.= '[3] section_id = null and $sqo = null, impossible to determinate the sections to delete. ';
-						debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
+						debug_log(__METHOD__
+							." $response->msg " . PHP_EOL
+							.' rqo: '.to_string($rqo)
+							, logger::ERROR
+						);
 						return $response;
 					}
 
@@ -777,7 +811,11 @@ final class dd_core_api {
 			if (empty($ar_records)) {
 				$response->result = [];
 				$response->msg 	.= 'No records found to delete ';
-				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
+				debug_log(__METHOD__
+					." $response->msg " . PHP_EOL
+					.' rqo: '.to_string($rqo)
+					, logger::ERROR
+				);
 				return $response;
 			}
 
@@ -787,7 +825,10 @@ final class dd_core_api {
 			if($records_len > 1 && security::is_global_admin(navigator::get_user_id()) === false){
 				$response->result = [];
 				$response->msg 	.= 'forbidden delete multiple for this user';
-				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
+				debug_log(__METHOD__
+					." $response->msg " . PHP_EOL
+					.' rqo: '.to_string($rqo)
+					, logger::ERROR);
 				return $response;
 			}
 
@@ -828,7 +869,11 @@ final class dd_core_api {
 
 					$response->error = 4;
 					$response->msg 	.= '[4] Some records were not deleted: '.json_encode($check_ar_section_id, JSON_PRETTY_PRINT);
-					debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
+					debug_log(__METHOD__
+						." $response->msg " . PHP_EOL
+						.' rqo: '.to_string($rqo)
+						, logger::ERROR
+					);
 					return $response;
 				}
 			}
@@ -957,8 +1002,7 @@ final class dd_core_api {
 						$response->msg		= 'Error. You don\'t have enough permissions to edit this component ('.$tipo.'). permissions:'.to_string($permissions);
 						debug_log(__METHOD__
 							. " $response->msg " . PHP_EOL
-							. " $model ($tipo - $section_tipo - $section_id): "
-							. exec_time_unit($start_time).' ms'
+							. " model:$model (tipo:$tipo - section_tipo:$section_tipo - section_id:$section_id) "
 							, logger::ERROR
 						);
 						return $response;
@@ -993,8 +1037,8 @@ final class dd_core_api {
 								$response->msg		.= ' Error on update_data_value. New data it\'s not saved! ';
 								debug_log(__METHOD__
 									. " $response->msg " . PHP_EOL
-									. " $model ($tipo - $section_tipo - $section_id): "
-									. exec_time_unit($start_time).' ms'
+									. " model:$model (tipo:$tipo - section_tipo:$section_tipo - section_id:$section_id) " . PHP_EOL
+									.' rqo: '.to_string($rqo)
 									, logger::ERROR
 								);
 								return $response;
@@ -1004,7 +1048,7 @@ final class dd_core_api {
 					// save
 						debug_log(__METHOD__
 							." --> API ready to save record $model ($tipo - $section_tipo - $section_id): "
-							.exec_time_unit($start_time).' ms'
+							.' exec time: '.exec_time_unit($start_time).' ms'
 							, logger::DEBUG
 						);
 						$component->Save();
@@ -1047,7 +1091,8 @@ final class dd_core_api {
 			default:
 				debug_log(__METHOD__
 					. " Error. This type '$type' is not defined and will be ignored. Use 'component' as type if you are saving a component data" . PHP_EOL
-					. " $model ($tipo - $section_tipo - $section_id): "
+					. " model:$model (tipo:$tipo - section_tipo:$section_tipo - section_id:$section_id) " . PHP_EOL
+					.' rqo: '.to_string($rqo)
 					, logger::ERROR
 				);
 				break;
@@ -1229,7 +1274,11 @@ final class dd_core_api {
 							return $el->name===$model;
 						});
 						if (empty($tool_found)) {
-							debug_log(__METHOD__." Tool $model not found in tool_common::get_client_registered_tools ".to_string(), logger::ERROR);
+							debug_log(__METHOD__
+								." Tool $model not found in tool_common::get_client_registered_tools " .PHP_EOL
+								.' rqo: '.to_string($rqo)
+								, logger::ERROR
+							);
 						}else{
 							$section_tipo	= $tool_found->section_tipo;
 							$section_id		= $tool_found->section_id;
@@ -1246,7 +1295,10 @@ final class dd_core_api {
 						$element = new $model($mode);
 					} catch (Exception $e) {
 						// throw new Exception("Error Processing Request", 1);
-						debug_log(__METHOD__." invalid element ".$e->getMessage(), logger::ERROR);
+						debug_log(__METHOD__
+							." invalid element. exception msg: ".$e->getMessage()
+							, logger::ERROR
+						);
 						$response->msg = 'Error. model not found: '.$model;
 						return $response;
 					}
@@ -1454,9 +1506,9 @@ final class dd_core_api {
 			$mode				= $ddo_source->mode ?? 'list';
 			$view				= $ddo_source->view ?? null;
 			$lang				= $ddo_source->lang ?? null;
+			$tipo				= $ddo_source->tipo ?? null;
 			$section_tipo		= $ddo_source->section_tipo ?? $ddo_source->tipo;
 			$section_id			= $ddo_source->section_id ?? null;
-			$tipo				= $ddo_source->tipo ?? null;
 			$model				= $ddo_source->model ?? RecordObj_dd::get_modelo_name_by_tipo($ddo_source->tipo,true);
 			$caller_dataframe	= $ddo_source->caller_dataframe ?? null;
 			$properties			= $ddo_source->properties ?? null;
@@ -1554,7 +1606,11 @@ final class dd_core_api {
 					// store sqo section in session
 						if ($model==='section' && ($mode==='edit' || $mode==='list')) {
 							$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $sqo;
-							debug_log(__METHOD__." -> saved in session sqo sqo_id: '$sqo_id'".PHP_EOL. to_string($sqo), logger::DEBUG);
+							debug_log(__METHOD__
+								. " -> saved in session sqo sqo_id: '$sqo_id'" . PHP_EOL
+								. ' sqo:' . to_string($sqo)
+								, logger::DEBUG
+							);
 						}
 
 					// data_source. Used by time machine as 'tm' to force component to load data from different sources. data_source='tm'
@@ -1596,7 +1652,11 @@ final class dd_core_api {
 
 						if ($section_id<1) {
 							// invalid call
-							debug_log(__METHOD__." WARNING data:get_data invalid section_id: ".to_string($section_id), logger::WARNING);
+							debug_log(__METHOD__
+								. " WARNING data:get_data invalid section_id: "
+								. to_string($section_id)
+								, logger::WARNING
+							);
 						}else{
 							// component
 								$component_lang	= (RecordObj_dd::get_translatable($tipo)===true)
@@ -1691,7 +1751,7 @@ final class dd_core_api {
 
 						// others
 							// get data model not defined
-							debug_log(__METHOD__." WARNING data:get_data model not defined for tipo: $tipo ".to_string($model), logger::WARNING);
+							debug_log(__METHOD__." WARNING data:get_data model not defined for tipo: $tipo - model: $model", logger::WARNING);
 					}
 					break;
 
@@ -1728,19 +1788,24 @@ final class dd_core_api {
 
 						// others
 							// resolve_data model not defined
-							debug_log(__METHOD__." WARNING data:resolve_data model not defined for tipo: $tipo ".to_string($model), logger::WARNING);
+							debug_log(__METHOD__." WARNING data:resolve_data model not defined for tipo: $tipo - model: $model", logger::WARNING);
 					}
 					break;
 
 				case 'get_relation_list': // Used by relation list only (legacy compatibility)
 
-					$element = new relation_list($tipo, $section_id, $section_tipo, $mode);
+					$element = new relation_list(
+						$tipo,
+						$section_id,
+						$section_tipo,
+						$mode
+					);
 					$element->set_sqo($sqo);
 					break;
 
 				default:
 					// not defined model from context / data
-					debug_log(__METHOD__." 1. Ignored action '$action' - tipo: $tipo ".to_string(), logger::WARNING);
+					debug_log(__METHOD__." 1. Ignored action '$action' - tipo: $tipo ", logger::WARNING);
 					break;
 			}//end switch($action)
 
@@ -1770,7 +1835,7 @@ final class dd_core_api {
 
 				}//end if (isset($element))
 				else {
-					debug_log(__METHOD__." Ignored action '$action' - tipo: $tipo (No element was generated) ".to_string(), logger::WARNING);
+					debug_log(__METHOD__." Ignored action '$action' - tipo: $tipo (No element was generated) ", logger::WARNING);
 					$context = $data = [];
 				}
 
@@ -1784,14 +1849,14 @@ final class dd_core_api {
 
 				// $result->data = [];
 
-				debug_log(__METHOD__.
-					' Catching non enough permissions call' .PHP_EOL.
-					' User: '. navigator::get_user_id().PHP_EOL.
-					' tipo: '. $tipo.PHP_EOL.
-					' section_tipo: '. $section_tipo.PHP_EOL.
-					' Permissions: ' .$permissions.PHP_EOL.
-					' rqo: '.to_string($rqo),
-					logger::ERROR
+				debug_log(__METHOD__
+					.' Catching non enough permissions call' . PHP_EOL
+					.' User: '. navigator::get_user_id() . PHP_EOL
+					.' tipo: '. $tipo . PHP_EOL
+					.' section_tipo: '. $section_tipo . PHP_EOL
+					.' Permissions: ' .$permissions . PHP_EOL
+					.' rqo: '.to_string($rqo)
+					, logger::ERROR
 				);
 			}
 
@@ -1927,8 +1992,8 @@ final class dd_core_api {
 				$response->error = 1;
 
 				debug_log(__METHOD__
-					." $response->msg " .PHP_EOL
-					. to_string($rqo->source)
+					. " $response->msg " .PHP_EOL
+					. ' source: '. to_string($rqo->source)
 					, logger::ERROR
 				);
 
@@ -2105,7 +2170,11 @@ final class dd_core_api {
 									}
 									return 'Failed!';
 								}catch(Exception $e){
-									debug_log(__METHOD__." Error: ".$e->getMessage(), logger::ERROR);
+									debug_log(__METHOD__
+										." Exception Error: " . PHP_EOL
+										. $e->getMessage()
+										, logger::ERROR
+									);
 									return 'Failed with Exception!';
 								}
 							})();

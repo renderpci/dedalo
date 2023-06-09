@@ -11,7 +11,7 @@ class component_av extends component_media_common {
 	* CLASS VARS
 	*/
 		// string id .file name formatted as 'tipo'-'order_id' like dd732-1
-		public $video_url;
+		// public $video_url;
 
 
 
@@ -35,7 +35,7 @@ class component_av extends component_media_common {
 				  ];
 
 		// dato
-			$dato = $this->get_dato();
+			$this->get_dato();
 
 		// quality
 			$quality = $this->get_default_quality();
@@ -47,7 +47,7 @@ class component_av extends component_media_common {
 					false, // bool absolute
 					false // bool avoid_cache
 				);
-				$item->video_url = $this->file_exist( $quality )
+				$item->url = $this->quality_file_exist( $quality )
 					? $this->get_url(false)
 					: null;
 
@@ -98,11 +98,13 @@ class component_av extends component_media_common {
 
 	/**
 	* GET_DEFAULT_QUALITY
-	* @return string DEDALO_AV_QUALITY_DEFAULT
+	* @return string $default_quality
 	*/
 	public function get_default_quality() : string {
 
-		return DEDALO_AV_QUALITY_DEFAULT;
+		$default_quality = DEDALO_AV_QUALITY_DEFAULT;
+
+		return $default_quality;
 	}//end get_default_quality
 
 
@@ -110,7 +112,7 @@ class component_av extends component_media_common {
 	/**
 	* GET_URL
 	* @param string|null $quality = null
-	* @return string $video_url
+	* @return string $url
 	*/
 	public function get_url( ?string $quality=null ) : string {
 
@@ -122,7 +124,7 @@ class component_av extends component_media_common {
 		$path	= DEDALO_MEDIA_URL . DEDALO_AV_FOLDER .'/'. $quality . '/';
 		$name	= $id .'.'. $this->get_extension();
 
-		// media file av url
+		// file URL
 		$url = $path . $name;
 
 		return $url;
@@ -161,6 +163,9 @@ class component_av extends component_media_common {
 
 	/**
 	* GET_POSTERFRAME_URL
+	* @param bool $test_file = true
+	* @param bool $absolute = false
+	* @param bool $avoid_cache = false
 	* @return string $posterframe_url
 	*/
 	public function get_posterframe_url(bool $test_file=true, bool $absolute=false, bool $avoid_cache=false) : string {
@@ -170,9 +175,9 @@ class component_av extends component_media_common {
 
 		$posterframe_url = DEDALO_MEDIA_URL . DEDALO_AV_FOLDER .'/posterframe/'. $file_name;
 
-		# FILE EXISTS TEST : If not, show '0' dedalo image logo
+		// FILE EXISTS TEST : If not, show '0' dedalo image logo
 		if ($test_file===true) {
-			$file = DEDALO_MEDIA_PATH .DEDALO_AV_FOLDER.'/posterframe/'. $file_name ;
+			$file = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . '/posterframe/' . $file_name;
 			if(!file_exists($file)) {
 				$posterframe_url = DEDALO_CORE_URL . '/themes/default/0.jpg';
 			}
@@ -194,6 +199,8 @@ class component_av extends component_media_common {
 
 	/**
 	* GET_SUBTITLES_PATH
+	* @param string $lang = DEDALO_DATA_LANG
+	* @return string $subtitles_path
 	*/
 	public function get_subtitles_path( string $lang=DEDALO_DATA_LANG ) : string  {
 
@@ -206,6 +213,7 @@ class component_av extends component_media_common {
 
 	/**
 	* GET_SUBTITLES_URL
+	* @param string $lang = DEDALO_DATA_LANG
 	* @return string $subtitles_url
 	*/
 	public function get_subtitles_url( string $lang=DEDALO_DATA_LANG ) : string {
@@ -296,10 +304,14 @@ class component_av extends component_media_common {
 			$result = $target_dir.'/'.$ar_originals[0];
 		}else{
 			// Error. More than one original found
-			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__." ERROR (DEBUG ONLY): Current quality have more than one file. ".to_string($ar_originals), logger::ERROR);
-				dump($ar_originals, "ar_originals ++++++++++++++++++ ".to_string($ar_originals));
-			}
+				debug_log(__METHOD__
+					." ERROR (DEBUG ONLY): Current quality have more than one file." . PHP_EOL
+					.' ar_originals: ' . to_string($ar_originals)
+					, logger::ERROR
+				);
+				if(SHOW_DEBUG===true) {
+					dump($ar_originals, "ar_originals ++++++++++++++++++ ".to_string($ar_originals));
+				}
 		}
 
 		// restore component quality
@@ -429,33 +441,33 @@ class component_av extends component_media_common {
 
 
 	/**
-	* GET_SOURCE_QUALITY_TO_BUILD
+	* GET_SOURCE_QUALITY_TO_BUILD (! moved to media_common)
 	* Iterate array DEDALO_AV_AR_QUALITY (Order by quality big to small)
 	* @param string $target_quality
 	* @return string|null $current_quality
 	*/
-	public function get_source_quality_to_build(string $target_quality) : ?string {
+		// public function get_source_quality_to_build(string $target_quality) : ?string {
 
-		$ar_quality = DEDALO_AV_AR_QUALITY;
-		foreach($ar_quality as $current_quality) {
+		// 	$ar_quality			= $this->get_ar_quality();
+		// 	$original_quality	= $this->get_original_quality();
+		// 	foreach($ar_quality as $current_quality) {
 
-			if($target_quality===DEDALO_AV_QUALITY_ORIGINAL) continue;
+		// 		if($target_quality===$original_quality) continue;
 
-			// Current file
-			$filename		= $this->get_media_filepath($current_quality);
+		// 		// Current file
+		// 		$filename		= $this->get_media_filepath($current_quality);
+		// 		$file_exists	= empty($filename)
+		// 			? false
+		// 			: file_exists($filename);
 
-			$file_exists	= empty($filename)
-				? false
-				: file_exists($filename);
-
-			if ($current_quality!==$target_quality && $file_exists) {
-				return $current_quality;
-			}
-		}//end foreach($ar_quality as $quality)
+		// 		if ($current_quality!==$target_quality && $file_exists) {
+		// 			return $current_quality;
+		// 		}
+		// 	}//end foreach($ar_quality as $quality)
 
 
-		return null;
-	}//end get_source_quality_to_build
+		// 	return null;
+		// }//end get_source_quality_to_build
 
 
 
@@ -464,19 +476,19 @@ class component_av extends component_media_common {
 	* @param array $ar_quality optional
 	* @return array $ar_all_files_by_quality
 	*/
-	public function get_ar_all_files_by_quality( array $ar_quality=null ) : array {
+		// public function get_ar_all_files_by_quality( array $ar_quality=null ) : array {
 
-		if (empty($ar_quality)) {
-			$ar_quality = DEDALO_AV_AR_QUALITY;
-		}
+		// 	if (empty($ar_quality)) {
+		// 		$ar_quality = DEDALO_AV_AR_QUALITY;
+		// 	}
 
-		$ar_all_files_by_quality = [];
-		foreach ($ar_quality as $current_quality) {
-			$ar_all_files_by_quality[$current_quality] = $this->get_original_file_path($current_quality);
-		}
+		// 	$ar_all_files_by_quality = [];
+		// 	foreach ($ar_quality as $current_quality) {
+		// 		$ar_all_files_by_quality[$current_quality] = $this->get_original_file_path($current_quality);
+		// 	}
 
-		return $ar_all_files_by_quality;
-	}//end get_ar_all_files_by_quality
+		// 	return $ar_all_files_by_quality;
+		// }//end get_ar_all_files_by_quality
 
 
 
@@ -491,40 +503,40 @@ class component_av extends component_media_common {
 	*/
 	public function remove_component_media_files(array $ar_quality=[], bool $remove_posterframe=true) : bool {
 
-		$date = date("Y-m-d_Hi");
-
 		// ar_quality
 			if (empty($ar_quality)) {
 				$ar_quality = $this->get_ar_quality();
 			}
 
 		// files remove
-			foreach ($ar_quality as $current_quality) {
+			parent::remove_component_media_files($ar_quality);
+			// des
+				// foreach ($ar_quality as $current_quality) {
 
-				// media_path
-					$media_path = $this->get_video_path($current_quality);
-					if (!file_exists($media_path)) continue; # Skip
+				// 	// media_path
+				// 		$media_path = $this->get_video_path($current_quality);
+				// 		if (!file_exists($media_path)) continue; # Skip
 
-				// delete dir
-					$folder_path_del = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/'. $current_quality . '/deleted';
-					if( !is_dir($folder_path_del) ) {
-						$create_dir = mkdir($folder_path_del, 0777, true);
-						if(!$create_dir) {
-							debug_log(__METHOD__." Error on read or create directory \"deleted\". Permission denied. ".to_string($folder_path_del), logger::ERROR);
-							return false;
-						}
-					}
+				// 	// delete dir
+				// 		$folder_path_del = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/'. $current_quality . '/deleted';
+				// 		if( !is_dir($folder_path_del) ) {
+				// 			$create_dir = mkdir($folder_path_del, 0777, true);
+				// 			if(!$create_dir) {
+				// 				debug_log(__METHOD__." Error on read or create directory \"deleted\". Permission denied. ".to_string($folder_path_del), logger::ERROR);
+				// 				return false;
+				// 			}
+				// 		}
 
-				// move/rename file
-					$reelID				= $this->get_id();
-					$media_path_moved	= $folder_path_del . "/$reelID" . '_deleted_' . $date . '.' . $this->get_extension();
-					if( !rename($media_path, $media_path_moved) ) {
-						debug_log(__METHOD__." Error on move files to folder \"deleted\" . Permission denied . The files are not deleted ".to_string($media_path_moved), logger::ERROR);
-						return false;
-					}
+				// 	// move/rename file
+				// 		$reelID				= $this->get_id();
+				// 		$media_path_moved	= $folder_path_del . "/$reelID" . '_deleted_' . $date . '.' . $this->get_extension();
+				// 		if( !rename($media_path, $media_path_moved) ) {
+				// 			debug_log(__METHOD__." Error on move files to folder \"deleted\" . Permission denied . The files are not deleted ".to_string($media_path_moved), logger::ERROR);
+				// 			return false;
+				// 		}
 
-				debug_log(__METHOD__." Moved file \n$media_path to \n$media_path_moved ", logger::DEBUG);
-			}//end foreach ($ar_quality as $current_quality)
+				// 	debug_log(__METHOD__." Moved file \n$media_path to \n$media_path_moved ", logger::DEBUG);
+				// }//end foreach ($ar_quality as $current_quality)
 
 
 		// posterframe remove (default is true)
@@ -543,11 +555,19 @@ class component_av extends component_media_common {
 							}
 						}
 
+					// date now
+						$date = date("Y-m-d_Hi");
+
 					// move/rename file
 						$reelID				= $this->get_id();
 						$media_path_moved	= $folder_path_del . "/$reelID" . '_deleted_' . $date . '.' . DEDALO_AV_POSTERFRAME_EXTENSION;
 						if( !rename($media_path, $media_path_moved) ) {
-							debug_log(__METHOD__." Error on move files to folder \"deleted\" . Permission denied . The files are not deleted ".to_string($media_path_moved), logger::ERROR);
+							debug_log(__METHOD__
+								. " Error on move files (posterframe) to folder \"deleted\" . Permission denied . The files are not deleted " . PHP_EOL
+								. ' source (media_path): '. $media_path . PHP_EOL
+								. ' target (media_path_moved): '. $media_path_moved
+								, logger::ERROR
+							);
 							return false;
 						}
 
@@ -597,52 +617,42 @@ class component_av extends component_media_common {
 
 
 		// posterframe restore
-			$media_path		= $this->get_posterframe_path();
-			$media_path		= pathinfo($media_path, PATHINFO_DIRNAME).'/deleted';
-			$id				= $this->get_id();
-			$file_pattern	= $media_path.'/'.$id.'_*.'.DEDALO_AV_POSTERFRAME_EXTENSION;
-			$ar_files		= glob($file_pattern);
+			$posterframe_path	= $this->get_posterframe_path();
+			$media_path			= pathinfo($posterframe_path, PATHINFO_DIRNAME).'/deleted';
+			$id					= $this->get_id();
+			$file_pattern		= $media_path.'/'.$id.'_*.'.DEDALO_AV_POSTERFRAME_EXTENSION;
+			$ar_files			= glob($file_pattern);
 			if (empty($ar_files)) {
 
-				debug_log(__METHOD__." No files to restore were found for posterframe:$id. Nothing was restored (3) ".to_string(), logger::DEBUG);
+				debug_log(__METHOD__
+					." No files to restore were found for posterframe:$id. Nothing was restored (3)"
+					, logger::WARNING
+				);
 
-			}else {
+			}else{
 
 				natsort($ar_files);	// sort the files from newest to oldest
 				$last_file_path	= end($ar_files);
 				$new_file_path	= $this->get_posterframe_path();
 				if( !rename($last_file_path, $new_file_path) ) {
 					// throw new Exception(" Error on move files to restore folder. Permission denied to restore posterframe. Nothing was restored (4)");
-					debug_log(__METHOD__." Error on move files to restore folder. Permission denied to restore posterframe. Nothing was restored (4) ".to_string($new_file_path), logger::ERROR);
+					debug_log(__METHOD__
+						." Error on move files to restore folder. Permission denied to restore posterframe. Nothing was restored (4) " .PHP_EOL
+						.' last_file_path: ' . to_string($last_file_path) . PHP_EOL
+						.' new_file_path: ' . to_string($new_file_path)
+						, logger::ERROR
+					);
 				}
 
-				debug_log(__METHOD__." Moved file \n$last_file_path to \n$new_file_path ".to_string(), logger::DEBUG);
+				debug_log(__METHOD__
+					." Moved file \n$last_file_path to \n$new_file_path "
+					, logger::DEBUG
+				);
 			}
 
 
 		return true;
 	}//end restore_component_media_files
-
-
-
-	/**
-	* FILE_EXIST
-	* Check if quality given file exists.
-	* If not quality is received, default will be used (404 normally)
-	* @param string $quality
-	* @return bool
-	*/
-	public function file_exist(string $quality=null) : bool {
-
-		if(empty($quality)) {
-			$quality = $this->get_default_quality();
-		}
-
-		$video_path		= $this->get_video_path($quality);
-		$file_exists	= file_exists($video_path);
-
-		return $file_exists;
-	}//end file_exist
 
 
 
@@ -1066,28 +1076,14 @@ class component_av extends component_media_common {
 	public function get_media_streams(string $quality) : mixed {
 
 		// get the video file path
-			$video_path = $this->get_video_path($quality);
+			$file_path = $this->get_media_filepath($quality);
 
 		// get_media_streams from av file
-			$media_streams = Ffmpeg::get_media_streams($video_path);
+			$media_streams = Ffmpeg::get_media_streams($file_path);
 
 
 		return $media_streams;
 	}//end get_media_streams
-
-
-
-	/**
-	* GET_VIDEO_PATH
-	* Get full file path. Alias of media common get_media_filepath
-	* @return string $video_path
-	*/
-	public function get_video_path(string $quality) : string {
-
-		$video_path = $this->get_media_filepath($quality);
-
-		return $video_path;
-	}//end get_video_path
 
 
 
@@ -1264,6 +1260,10 @@ class component_av extends component_media_common {
 		// short vars
 			$id				= $this->get_id();
 			$source_quality	= $this->get_source_quality_to_build($quality);
+			if (empty($source_quality)) {
+				$response->msg .= ' Invalid source_quality';
+				return $response;
+			}
 
 		// AVObj
 			$AVObj = new AVObj($id, $source_quality);
@@ -1272,6 +1272,17 @@ class component_av extends component_media_common {
 			$Ffmpeg					= new Ffmpeg();
 			$setting_name			= $Ffmpeg->get_setting_name_from_quality($AVObj, $quality);
 			$av_alternate_response	= $Ffmpeg->create_av_alternate($AVObj, $setting_name);
+
+			if (isset($av_alternate_response->result) && $av_alternate_response->result===false) {
+				debug_log(__METHOD__
+					. " Error on Ffmpeg->create_av_alternate " . PHP_EOL
+					. ' setting_name: ' .$setting_name
+					. ' av_alternate_response: ' . to_string($av_alternate_response)
+					, logger::ERROR
+				);
+				$response->msg .= ' ' . ($av_alternate_response->msg ?? 'Unknown error');
+				return $response;
+			}
 
 			if($async==false){
 
@@ -1407,13 +1418,17 @@ class component_av extends component_media_common {
 
 		// check file already exists
 			if(!file_exists($file)) {
-				debug_log(__METHOD__." Posterframe file do not exists ".to_string($file), logger::DEBUG);
+				debug_log(__METHOD__." Posterframe file do not exists. file: ".to_string($file), logger::DEBUG);
 				return false;
 			}
 
 		 // delete file
 			if(!unlink($file)) {
-				debug_log(__METHOD__."  Error on delete posterframe file. Posterframe file is not deleted ".to_string(), logger::ERROR);
+				debug_log(__METHOD__
+					."  Error on delete posterframe file. Posterframe file is not deleted " . PHP_EOL
+					. ' file: ' . $file
+					, logger::ERROR
+				);
 				return false;
 			}
 

@@ -540,6 +540,8 @@ final class Ffmpeg {
 			}
 
 		$response = new stdClass();
+			$response->result	= true;
+			$response->msg		= 'OK. Request done';
 			$response->command	= $command;
 			$response->prgfile	= $prgfile;
 

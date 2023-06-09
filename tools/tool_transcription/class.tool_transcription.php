@@ -205,11 +205,11 @@ class tool_transcription extends tool_common {
 				$media_ddo->section_tipo
 			);
 			$quality	= $component->get_quality();
-			$audio_file	= $component->file_exist( 'audio' );
+			$audio_file	= $component->quality_file_exist( 'audio' );
 			if($audio_file===false){
 				$component->build_version('audio', $async=false);
 			}
-			$audio_file	= $component->file_exist( 'audio' );
+			$audio_file	= $component->quality_file_exist( 'audio' );
 
 			if($audio_file===false){
 				$response->msg		= 'Error. Audio file is not available.';
