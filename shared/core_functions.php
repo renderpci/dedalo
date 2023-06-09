@@ -255,7 +255,6 @@ function curl_request(object $options) : object {
 
 	// status code. Info about result
 		$httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-		// debug_log(__METHOD__." ".$url." status code: ".to_string($httpcode), logger::WARNING);
 
 		// message. Generate a human readable info
 			$msg = '';
@@ -287,7 +286,10 @@ function curl_request(object $options) : object {
 			if(curl_errno($ch)) {
 				$error_info	 = curl_error($ch);
 				$msg		.= '. curl_request Curl error:' . $error_info;
-				debug_log(__METHOD__.' '.$url.' error_info: '.$error_info, logger::ERROR);
+				debug_log(__METHOD__
+					.' '.$url.' error_info: '.$error_info
+					, logger::ERROR
+				);
 			}else{
 				// no errors
 					// $full_info = curl_getinfo($ch);
@@ -298,7 +300,10 @@ function curl_request(object $options) : object {
 			}
 		} catch (Exception $e) {
 			$msg .= '. curl_request Caught exception:' . $e->getMessage();
-			debug_log(__METHOD__.' curl_request Caught exception:' . $e->getMessage(), logger::ERROR);
+			debug_log(__METHOD__
+				.' curl_request Caught exception:' . $e->getMessage()
+				, logger::ERROR
+			);
 		}
 
 	// close connection
@@ -506,7 +511,11 @@ function get_last_modified_file(string $path, array $allowed_extensions) {
 		}
 	// If the $last_modified_file isn't set, there were no files we throw an exception
 		if (empty($last_modified_file)) {
-			debug_log(__METHOD__." No files found in directory path: ".to_string($path), logger::ERROR);
+			debug_log(__METHOD__
+				." No files found in directory! empty last_modified_file"
+				.' path: ' . to_string($path)
+				, logger::ERROR
+			);
 		}
 
 	return $last_modified_file;
@@ -552,7 +561,10 @@ function dedalo_decrypt_openssl(string $stringArray, string $key=DEDALO_INFORMAT
 	if ( is_serialized($output) ) {
 		return unserialize($output);
 	}else{
-		debug_log(__METHOD__." Current string is not correctly serialized ! ".to_string(), logger::ERROR);
+		debug_log(__METHOD__
+			." Current string is not correctly serialized !"
+			, logger::ERROR
+		);
 		return '';
 	}
 }//end dedalo_decrypt_openssl
@@ -592,7 +604,10 @@ function encryption_mode() : string {
 	  ) {
 		return 'openssl';
 	}else{
-		debug_log(__METHOD__." !! USING OLD CRYPT METHOD (mcrypt). Please use openssl ".to_string(), logger::WARNING);
+		debug_log(__METHOD__
+			." !! USING OLD CRYPT METHOD (mcrypt). Please use openssl "
+			, logger::WARNING
+		);
 		return 'mcrypt';
 	}
 }//end encryption_mode
@@ -1561,7 +1576,11 @@ function get_current_version_in_db() : array {
 			}
 	} catch (Exception $e) {
 		// error_log( 'Caught exception: ' . $e->getMessage() );
-		debug_log(__METHOD__." Caught exception: ".$e->getMessage(), logger::ERROR);
+		debug_log(__METHOD__
+			." Caught exception: " . PHP_EOL
+			.' exception: ' . $e->getMessage()
+			, logger::ERROR
+		);
 	}
 
 
@@ -1608,10 +1627,16 @@ function check_basic_system() : object {
 		if( !is_dir($folder_path) ) {
 			if(!mkdir($folder_path, 0777,true)) {
 				$response->msg = 'Error on read or create js/lang directory. Permission denied';
-				debug_log(__METHOD__." ".$response->msg, logger::ERROR);
+				debug_log(__METHOD__
+					. " ".$response->msg
+					, logger::ERROR
+				);
 				return $response;
 			}
-			debug_log(__METHOD__." Created dir: $folder_path ", logger::WARNING);
+			debug_log(__METHOD__
+				." Created dir: $folder_path "
+				, logger::WARNING
+			);
 		}
 		$ar_langs = DEDALO_APPLICATION_LANGS;
 		foreach ($ar_langs as $lang => $label) {
@@ -1754,7 +1779,11 @@ function get_legacy_constant_value(string $constant_name) {
 		 // try to unserialize
 		if (false!==($value = @unserialize($constant)) ) {
 			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__." Current constant is serialized ! Please edit your Dédalo config file and set without legacy serialization to best performance. NAME: ". $constant_name, logger::WARNING);
+				debug_log(__METHOD__
+					." Current constant is serialized ! Please edit your Dédalo config file and set without legacy serialization to best performance." .PHP_EOL
+					." NAME: ". $constant_name
+					, logger::WARNING
+				);
 			}
 			return $value;
 		}
@@ -1777,7 +1806,10 @@ function test_php_version_supported(string $minimum_php_version='8.1.0') : bool 
 	if (version_compare(PHP_VERSION, $minimum_php_version) >= 0) {
 		return true;
 	}else{
-		debug_log(__METHOD__." This PHP version (".PHP_VERSION.") is not supported ! Please update your PHP to $minimum_php_version or higher ASAP ", logger::ERROR);
+		debug_log(__METHOD__
+			." This PHP version (".PHP_VERSION.") is not supported ! Please update your PHP to $minimum_php_version or higher ASAP "
+			, logger::ERROR
+		);
 		return false;
 	}
 }//end test_php_version_supported

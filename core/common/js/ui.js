@@ -2916,13 +2916,12 @@ export const ui = {
 	* like filter
 	* @param object options
 	* 	{
-	* 		container			: DOM node,
+	* 		container			: HTMLElement,
 	* 		preserve_content	: bool false
 	* 		label				: string,
 	* 		callback			: function
 	* 	}
-	* @return promise
-	* 	Resolve: DOM node result_node
+	* @return HTMLElement result_node
 	*/
 	load_item_with_spinner : async function(options) {
 
@@ -2967,6 +2966,7 @@ export const ui = {
 
 		// replace node
 			await container_placeholder.replaceWith(result_node);
+
 
 		return result_node
 	}//end load_item_with_spinner
