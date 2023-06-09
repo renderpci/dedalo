@@ -1,6 +1,6 @@
 <?php
 /**
-* DD_UTILS_API
+* DD_TOOLS_API
 * Manage API REST data with Dédalo
 *
 */
