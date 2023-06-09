@@ -324,6 +324,27 @@ const get_content_data = function(self) {
 				})
 		}
 
+	// powered by
+		const powered_by = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'powered_by',
+			parent			: fragment
+		})
+		ui.create_dom_element({
+			element_type	: 'img',
+			class_name		: 'dedalo_logo',
+			src				: '../themes/default/dedalo_logo.svg',
+			parent			: powered_by
+		})
+		const link = ui.create_dom_element({
+			element_type	: 'a',
+			class_name		: 'dedalo_link',
+			href			: 'https://dedalo.dev',
+			text_content	: 'Dédalo Cultural Heritage Management System',
+			parent			: powered_by
+		})
+		link.target = '_blank'
+
 	// messages_container
 		const messages_container = ui.create_dom_element({
 			element_type	: 'div',
