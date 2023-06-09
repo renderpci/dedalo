@@ -175,13 +175,13 @@ Then, install Dédalo manually, commands are Ubuntu 22.04 (only as references):
    psql
    ```
 
-   1. Create a Dédalo user:
+   2. Create a Dédalo user:
 
    ```sql
    CREATE USER dedalo_user PASSWORD 'My_super_Secret_pw';
    ```
 
-   1. Create a Dédalo database and comment it:
+   3. Create a Dédalo database and comment it:
 
    ```sql
    CREATE DATABASE dedalo_xxx
@@ -196,7 +196,7 @@ Then, install Dédalo manually, commands are Ubuntu 22.04 (only as references):
    IS 'Dédalo: Cultural Heritage and Memory management system';
    ```
 
-   1. Exit form `psql` and postgres user:
+   4. Exit form `psql` and postgres user:
 
    ```shell
    \q
