@@ -244,7 +244,7 @@ export const set_context_vars = function(self) {
 * RENDER
 * @param object options = {}
 *	render_level : level of deep that is rendered (full | content)
-* @return promise
+* @return HTMLElement|bool node
 *	node first DOM node stored in instance 'node' array
 */
 common.prototype.render = async function (options={}) {
@@ -342,7 +342,7 @@ common.prototype.render = async function (options={}) {
 		//}
 		//console.log("typeof self[render_mode]:",typeof self[render_mode], self.model);
 
-	// render node. Method name is element node like 'edit' or 'list'. If not exists, fallback to 'list'
+	// render mode. Method name is element node like 'edit' or 'list'. If not exists, fallback to 'list'
 		const current_render_mode = (typeof self[render_mode]!=='function')
 			? (function(){
 				console.warn(`Invalid function (render_mode: ${render_mode} ) using fallback to 'list' mode on instance:`, self);
