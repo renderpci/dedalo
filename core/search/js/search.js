@@ -199,39 +199,49 @@ search.prototype.build = async function() {
 	// ar_promises
 		const ar_promises = []
 
-	// editing_preset. Get json_filter from DDBB temp presets section
-		ar_promises.push( new Promise(function(resolve){
+	try {
 
-			get_editing_preset_json_filter(self)
-			.then(function(json_filter){
+		// editing_preset. Get json_filter from DDBB temp presets section
+			ar_promises.push( new Promise(function(resolve){
 
-				// debug
-					if(SHOW_DEBUG===true) {
-						if (!json_filter) {
-							console.log("[search.build] No preset was found (search editing_preset). Using default filter:", self.section_tipo, json_filter);
+				get_editing_preset_json_filter(self)
+				.then(function(json_filter){
+
+					// debug
+						if(SHOW_DEBUG===true) {
+							if (!json_filter) {
+								console.log(
+									'[search.build] No preset was found (search editing_preset). Using default filter:',
+									self.section_tipo, json_filter
+								);
+							}
 						}
-					}
-				// fix value
-				self.json_filter = json_filter || {"$and":[]}
+					// fix value
+					self.json_filter = json_filter || {"$and":[]}
 
-				resolve(self.json_filter)
-			})
-		}))
+					resolve(self.json_filter)
+				})
+			}))
 
-	// section_elements. Get section elements context list
-		ar_promises.push( new Promise(function(resolve){
+		// section_elements. Get section elements context list
+			ar_promises.push( new Promise(function(resolve){
 
-			self.get_section_elements_context({
-				section_tipo			: self.section_tipo,
-				ar_components_exclude	: self.ar_components_exclude
-			})
-			.then(function(response){
-				resolve(response)
-			})
-		}))
+				self.get_section_elements_context({
+					section_tipo			: self.section_tipo,
+					ar_components_exclude	: self.ar_components_exclude
+				})
+				.then(function(response){
+					resolve(response)
+				})
+			}))
 
-	// wait until all request are resolved
+		// wait until all request are resolved or rejected
 		await Promise.allSettled(ar_promises);
+
+	} catch (error) {
+		self.error = error
+		console.error(error)
+	}
 
 
 	// status update

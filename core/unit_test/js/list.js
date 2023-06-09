@@ -14,7 +14,9 @@ import {elements} from './elements.js'
 		'test_others_lifecycle',
 		'test_components_data_changes',
 		'test_components_activate',
-		'test_components_render'
+		'test_components_render',
+		'test_no_logged_error',
+		'test_unknown_error'
 	]
 
 	// content: (!) Note that content value is automatically set by mocha selecting page #content

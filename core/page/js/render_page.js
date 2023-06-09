@@ -57,6 +57,7 @@ render_page.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA
+* @param object self
 * @return HTMLElement content_data
 */
 const get_content_data = async function(self) {
@@ -69,7 +70,22 @@ const get_content_data = async function(self) {
 
 	// check page context is valid
 		if (!self.context) {
-			const response_error = self.render_server_response_error('Invalid context', false)
+
+			// running_with_errors.
+			// It's important to set instance as running_with_errors because this
+			// generates a temporal wrapper. Once solved the problem, (usually a not login scenario)
+			// the instance could be built and rendered again replacing the temporal wrapper
+				self.running_with_errors = [
+					{
+						msg		: 'Invalid context',
+						error	: 'invalid_context'
+					}
+				]
+
+			const wrapper_page = render_server_response_error(
+				self.running_with_errors
+			)
+
 			return response_error
 		}
 
@@ -143,7 +159,10 @@ const get_content_data = async function(self) {
 							await current_instance.build(autoload)
 
 							// render node
-							const node = current_instance.render()
+							const node = await current_instance.render()
+
+							// debug
+							// console.log('))) PAGE RENDERED NODE )))', node);
 
 							return node || ui.create_dom_element({
 								element_type	: 'div',
@@ -233,53 +252,53 @@ const get_content_data = async function(self) {
 * @param string msg
 * @return HTMLElement wrapper|error_container
 */
-render_page.render_server_response_error = function(msg, add_wrapper=true) {
+	// render_page.render_server_response_error = function(msg, add_wrapper=true) {
 
-	// wrapper
-		const wrapper = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'wrapper page'
-		})
+	// 	// wrapper
+	// 		const wrapper = ui.create_dom_element({
+	// 			element_type	: 'div',
+	// 			class_name		: 'wrapper page'
+	// 		})
 
-	// error_container
-		const error_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'page_error_container',
-			parent			: wrapper
-		})
+	// 	// error_container
+	// 		const error_container = ui.create_dom_element({
+	// 			element_type	: 'div',
+	// 			class_name		: 'page_error_container',
+	// 			parent			: wrapper
+	// 		})
 
-	// icon_dedalo
-		ui.create_dom_element({
-			element_type	: 'img',
-			class_name		: 'icon_dedalo',
-			src				: DEDALO_CORE_URL + '/themes/default/dedalo_logo.svg',
-			parent			: error_container
-		})
+	// 	// icon_dedalo
+	// 		ui.create_dom_element({
+	// 			element_type	: 'img',
+	// 			class_name		: 'icon_dedalo',
+	// 			src				: DEDALO_CORE_URL + '/themes/default/dedalo_logo.svg',
+	// 			parent			: error_container
+	// 		})
 
-	// server_response_error h1
-		ui.create_dom_element({
-			element_type	: 'h1',
-			class_name		: 'server_response_error',
-			inner_html		: 'Server response error: <br>' + msg,
-			parent			: error_container
-		})
+	// 	// server_response_error h1
+	// 		ui.create_dom_element({
+	// 			element_type	: 'h1',
+	// 			class_name		: 'server_response_error',
+	// 			inner_html		: 'Server response error: <br>' + msg,
+	// 			parent			: error_container
+	// 		})
 
-	// more_info
-		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'more_info',
-			inner_html		: 'Received data format is not as expected. See your server log for details',
-			parent			: error_container
-		})
+	// 	// more_info
+	// 		ui.create_dom_element({
+	// 			element_type	: 'div',
+	// 			class_name		: 'more_info',
+	// 			inner_html		: 'Received data format is not as expected. See your server log for details',
+	// 			parent			: error_container
+	// 		})
 
-	// add_wrapper false  case
-		if (add_wrapper===false) {
-			return error_container
-		}
+	// 	// add_wrapper false  case
+	// 		if (add_wrapper===false) {
+	// 			return error_container
+	// 		}
 
 
-	return wrapper
-}//end render_server_response_error
+	// 	return wrapper
+	// }//end render_server_response_error
 
 
 

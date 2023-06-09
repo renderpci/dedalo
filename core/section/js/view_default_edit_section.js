@@ -8,7 +8,6 @@
 	import {get_section_records} from '../../section/js/section.js'
 	import {set_element_css} from '../../page/js/css.js'
 	import {ui} from '../../common/js/ui.js'
-	import {render_server_response_error} from './render_common_section.js'
 
 
 
@@ -26,18 +25,14 @@ export const view_default_edit_section = function() {
 /**
 * RENDER
 * Render node for use in edit
+* @param object self
+* @param object options
 * @return HTMLElement wrapper
 */
 view_default_edit_section.render = async function(self, options) {
 
-	const render_level = options.render_level || 'full'
-
-	// running_with_errors case
-		if (self.running_with_errors) {
-			return render_server_response_error(
-				self.running_with_errors
-			);
-		}
+	// options
+		const render_level = options.render_level || 'full'
 
 	// ar_section_record. section_record instances (initialized and built)
 		self.ar_instances = self.ar_instances && self.ar_instances.length>0

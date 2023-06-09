@@ -28,6 +28,11 @@ export const render_list_section = function() {
 * LIST
 * Render node for use in list
 * @param object options
+* sample:
+* {
+*    "render_level": "full",
+*    "render_mode": "list"
+* }
 * @return HTMLElement wrapper
 */
 render_list_section.prototype.list = async function(options) {
@@ -35,7 +40,7 @@ render_list_section.prototype.list = async function(options) {
 	const self = this
 
 	// view
-		const view	= self.context.view
+		const view = self.context?.view || null
 
 	// wrapper
 		switch(view) {

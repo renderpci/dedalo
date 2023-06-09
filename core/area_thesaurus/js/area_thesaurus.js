@@ -4,7 +4,10 @@
 
 
 // imports
-	import {common} from '../../common/js/common.js'
+	import {
+		common,
+		build_autoload
+	} from '../../common/js/common.js'
 	import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {event_manager} from '../../common/js/event_manager.js'
@@ -184,12 +187,26 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 		}
 		await generate_rqo()
 
-	// load data if not yet received as an option
+	// load from DDBB
 		if (autoload===true) {
-			// get context and data
-				// const api_response = await data_manager.read(self.dd_request.show)
-				const api_response = await data_manager.request({body:self.rqo})
-					// console.log("AREA_THESAURUS api_response:", self.id, api_response);
+
+			// build_autoload
+			// Use unified way to load context and data with
+			// errors and not login situation managing
+				const api_response = await build_autoload(self)
+				if (!api_response) {
+					return false
+				}
+
+			// reset errors
+				self.running_with_errors = null
+
+			// destroy dependencies
+				await self.destroy(
+					false, // bool delete_self
+					true, // bool delete_dependencies
+					false // bool remove_dom
+				)
 
 			// set the result to the datum
 				self.datum = api_response.result

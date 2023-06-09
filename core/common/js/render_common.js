@@ -189,4 +189,136 @@ export const render_components_list = function(options) {
 }//end render_components_list
 
 
+
+/**
+* RENDER_SERVER_RESPONSE_ERROR
+* Render generic page error (Raspa background)
+* @param array errors
+* 	sample:
+* 	[
+* 		{
+* 			msg : 'Invalid result',
+* 			error : 'not_logged'
+* 		}
+* 	]
+* @param add_wrapper = false
+* @return HTMLElement wrapper|error_container
+*/
+export const render_server_response_error = function(errors, add_wrapper=false) {
+
+	// wrapper
+		const wrapper = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'wrapper page'
+		})
+
+	// error_container
+		const error_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'page_error_container',
+			parent			: wrapper
+		})
+
+	// icon_dedalo
+		ui.create_dom_element({
+			element_type	: 'img',
+			class_name		: 'icon_dedalo',
+			src				: DEDALO_CORE_URL + '/themes/default/dedalo_logo.svg',
+			parent			: error_container
+		})
+
+	// errors
+		const errors_length = errors.length
+		for (let i = 0; i < errors_length; i++) {
+
+			const msg				= errors[i].msg
+			const error				= errors[i].error
+			const dedalo_last_error	= errors[i].dedalo_last_error || null
+
+			switch (error) {
+				case 'not_logged':
+					// server_response_error h1
+					ui.create_dom_element({
+						element_type	: 'h1',
+						class_name		: 'server_response_error',
+						inner_html		: msg,
+						parent			: error_container
+					})
+					// reload
+					const link = ui.create_dom_element({
+						element_type	: 'a',
+						class_name		: 'reload',
+						inner_html		: 'Reload',
+						parent			: error_container
+					})
+					link.addEventListener('click', function(e) {
+						e.stopPropagation()
+						location.reload()
+					})
+					// not_logged_error add once
+					if (!error_container.classList.contains('not_logged_error')) {
+						error_container.classList.add('not_logged_error')
+					}
+					break;
+
+				default:
+					// server_response_error h1
+						if (msg) {
+							ui.create_dom_element({
+								element_type	: 'h1',
+								class_name		: 'server_response_error',
+								inner_html		: 'Server response msg: ',
+								parent			: error_container
+							})
+							ui.create_dom_element({
+								element_type	: 'h2',
+								class_name		: 'server_response_error',
+								inner_html		: msg,
+								parent			: error_container
+							})
+						}
+
+					// dedalo_last_error
+						if (dedalo_last_error) {
+							ui.create_dom_element({
+								element_type	: 'h1',
+								class_name		: 'server_response_error',
+								inner_html		: 'Server error (last): ',
+								parent			: error_container
+							})
+							ui.create_dom_element({
+								element_type	: 'h2',
+								class_name		: 'server_response_error',
+								inner_html		: dedalo_last_error,
+								parent			: error_container
+							})
+						}
+
+					// more_info
+						ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'more_info',
+							inner_html		: 'Received data format is not as expected. See your server log for details',
+							parent			: error_container
+						})
+					// raspa_error add once
+						if (!error_container.classList.contains('raspa_error')) {
+							error_container.classList.add('raspa_error')
+						}
+					break;
+			}
+		}
+
+
+	// add_wrapper false  case
+		if (add_wrapper===false) {
+			return error_container
+		}
+
+
+	return wrapper
+}//end render_server_response_error
+
+
+
 // @license-end
