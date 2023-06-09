@@ -110,7 +110,7 @@ If you want to get any person with name "Ana" the sqo will be:
         "q": "Ana",
         "path": [{
             "section_tipo": "rsc197",
-            "component_tipo": "rsc86"
+            "component_tipo": "rsc85"
           }]
       }]
   }
@@ -139,3 +139,33 @@ ORDER BY rs197.section_id ASC
 LIMIT 10;
 
 ````
+
+## Definitions
+
+### id
+
+The property id is used to identify a SQO in the process to build, send and retrieve information from server.
+
+In Dédalo API calls it's possible send multiple request and it's necesary a way to identify the original SQO with the result. The property id is used to this function.
+
+```` json
+{
+  "id": "my_id_for_the_request",
+  "section_tipo": "rsc197",
+  "filter": {
+    "$and": [{
+        "q": "Ana",
+        "path": [{
+            "section_tipo": "rsc197",
+            "component_tipo": "rsc85"
+          }]
+      }]
+  }
+}
+````
+
+### section_tipo
+
+Defines the section/s of the search. It can be a string when the search is for one section or it can be array when the search is multiple.
+
+Definition : `array || string` array of section_tipo or string with the section_tipo for search **mandatory** | ex : ['oh1']
