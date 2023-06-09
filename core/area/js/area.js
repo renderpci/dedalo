@@ -105,20 +105,26 @@ area.prototype.build = async function(autoload=true) {
 	// load from DDBB
 		if (autoload===true) {
 
-			// load data
-				const api_response = await data_manager.request({
-					body : self.rqo
-				})
-				if (!api_response || !api_response.result) {
-					self.running_with_errors = [
-						'area build autoload api_response: '+ (api_response.error || api_response.msg)
-					]
-					console.error("Error: area build autoload api_response:", api_response);
+			// build_autoload
+			// Use unified way to load context and data with
+			// errors and not login situation managing
+				const api_response = await build_autoload(self)
+				if (!api_response) {
 					return false
 				}
 
+			// reset errors
+				self.running_with_errors = null
+
+			// destroy dependencies
+				await self.destroy(
+					false, // bool delete_self
+					true, // bool delete_dependencies
+					false // bool remove_dom
+				)
+
 			// set the result to the datum
-				self.datum	= api_response.result
+				self.datum = api_response.result
 
 			// set context and data to current instance
 				// context is only set when it's empty the origin context,

@@ -9,10 +9,14 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	// import * as instances from '../../common/js/instances.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	import {common, set_context_vars, get_columns_map} from '../../common/js/common.js'
+	import {
+		common,
+		set_context_vars,
+		get_columns_map,
+		build_autoload
+	} from '../../common/js/common.js'
 	import {component_common, init_events_subscription} from '../../component_common/js/component_common.js'
 	import {paginator} from '../../paginator/js/paginator.js'
-	import {render_relogin} from '../../login/js/login.js'
 	// import {render_component_portal} from '../../component_portal/js/render_component_portal.js'
 	import {render_edit_component_portal} from '../../component_portal/js/render_edit_component_portal.js'
 	import {render_list_component_portal} from '../../component_portal/js/render_list_component_portal.js'
@@ -363,43 +367,14 @@ component_portal.prototype.build = async function(autoload=false) {
 		// 	}
 		// }
 
-	// load data if not yet received as an option
+	// load from DDBB
 		if (autoload===true) {
 
-			// get context and data
-				const api_response = await data_manager.request({
-					body : self.rqo
-				})
-				// debug
-					if(SHOW_DEVELOPER===true) {
-						const real_execution_time = api_response?.debug?.real_execution_time || null
-						dd_console(`api_response [component_portal.build] COMPONENT ${self.model} build autoload:`, 'DEBUG', [real_execution_time, api_response])
-					}
-				if (!api_response || !api_response.result) {
-
-					// custom behaviors
-					switch (api_response.error) {
-						case 'not_logged':
-
-							// display login window
-							render_relogin({
-								callback : function(){
-									// login success actions
-								}
-							})
-							break;
-
-						default:
-							self.running_with_errors = [
-								self.model + ' build autoload api_response: '+ (api_response.error || api_response.msg)
-							]
-							console.error("Error (2) : "+self.model+" build autoload api_response:", api_response);
-							break;
-					}
-
-					// status update
-						self.status = previous_status // 'initialized' or 'rendered'
-
+			// build_autoload
+			// Use unified way to load context and data with
+			// errors and not login situation managing
+				const api_response = await build_autoload(self)
+				if (!api_response) {
 					return false
 				}
 

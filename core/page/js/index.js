@@ -10,6 +10,7 @@ const t0 = performance.now()
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {get_instance} from '../../common/js/instances.js'
 	import {url_vars_to_object, JSON_parse_safely} from '../../common/js/utils/index.js'
+	import {render_server_response_error} from '../../common/js/render_common.js'
 	import {render_page} from '../js/render_page.js'
 	// import {config_client} from '../../../config/config_client.js' // working here !
 
@@ -73,18 +74,27 @@ const t0 = performance.now()
 		// error case
 			if (!api_response || !api_response.result) {
 
-				const wrapper_page = render_page.render_server_response_error(api_response.msg || 'Invalid result')
+				// running_with_errors
+					const running_with_errors = [
+						{
+							msg		: api_response.msg || 'Invalid API result',
+							error	: api_response.error || 'unknown'
+						}
+					]
+				const wrapper_page = render_server_response_error(
+					running_with_errors
+				)
 				main.appendChild(wrapper_page)
 				main.classList.remove('loading','hide')
 
 				return
 			}
 			// server_errors check (page and environment)
-			if (api_response.server_errors===true) {
-				console.warn('Page running with server errors:');
+			if (api_response.dedalo_last_error) {
+				console.warn('Page running with server errors. dedalo_last_error: ', api_response.dedalo_last_error);
 			}
-			if (page_globals.server_errors===true) {
-				console.warn('Environment running with server errors:');
+			if (page_globals.dedalo_last_error) {
+				console.warn('Environment running with server errors. dedalo_last_error: ', page_globals.dedalo_last_error);
 			}
 
 		// page instance init

@@ -6,6 +6,7 @@
 
 // imports
 	import {data_manager} from '../../common/js/data_manager.js'
+	import * as instances from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
 	import {strip_tags} from '../../../core/common/js/utils/index.js'
 
@@ -520,6 +521,67 @@ export const render_files_loader = function() {
 
 	return fragment
 }//end render_files_loader
+
+
+
+/**
+* RENDER_RELOGIN
+* Create a new login instance, and after rendering it, place the node in the body of the DOM.
+* Used to allow user login after session with server is lost due to timeout or error
+* @see component_common.save()
+* @param object options
+* {
+* 	on_success : function|null,
+* 	main_container : HTMLElement
+* }
+* @return object loggin_instance
+*/
+export const render_relogin = async function(options={}) {
+
+	// options
+		const on_success		= options.on_success || null
+		const main_container	= options.main_container || document.querySelector('.wrapper.page')
+
+	// lock main container (normally page)
+		if (main_container) {
+			main_container.classList.add('loading')
+		}
+
+	// loggin_instance
+		const loggin_instance = await instances.get_instance({
+			model					: 'login',
+			tipo					: 'dd229',
+			mode					: 'edit',
+			add_select_lang			: false,
+			custom_action_dispatch	: function() {
+
+				// work done! Destroy this login instance and DOM
+				loggin_instance.destroy(true, true, true)
+
+				// unlock main container (normally page)
+				if (main_container) {
+					main_container.classList.remove('loading')
+				}
+
+				// exec possible on_success callback function if exists
+				if (on_success && typeof on_success==='function') {
+					on_success(this)
+				}
+			}
+		})
+		await loggin_instance.build(true)
+		const loggin_node = await loggin_instance.render()
+		loggin_node.content_data.classList.add('overlay')
+
+		// powered_by
+		loggin_node.querySelector('.powered_by').classList.add('hide')
+
+	// add to DOM
+		document.body.appendChild(loggin_node)
+
+
+	return loggin_instance
+}//end render_relogin
 
 
 

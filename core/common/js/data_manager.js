@@ -144,7 +144,7 @@ data_manager.request = async function(options) {
 						// 			import('../../login/js/login.js')
 						// 			.then(function(login){
 						// 				login.render_relogin({
-						// 					callback : function(){
+						// 					on_success : function(){
 						// 						// main_container unlock
 						// 						if (main_container) {
 						// 							main_container.classList.remove('loading')

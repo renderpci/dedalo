@@ -11,6 +11,8 @@
 	import {delete_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
 	import {get_elements_css_object} from '../../page/js/css.js'
+	import {render_relogin} from '../../login/js/render_login.js'
+	import {render_server_response_error} from '../../common/js/render_common.js'
 
 
 
@@ -255,6 +257,16 @@ common.prototype.render = async function (options={}) {
 	// options
 		const render_level	= options.render_level || 'full'
 		const render_mode	= options.render_mode || self.mode
+
+	// running_with_errors case
+		if (self.running_with_errors) {
+			const node = render_server_response_error(
+				self.running_with_errors
+			);
+			self.node = node
+
+			return node
+		}
 
 	// permissions
 		const permissions = parseInt(self.permissions)
@@ -2648,6 +2660,95 @@ export const push_browser_history = function(options) {
 
 	return true
 }//end push_browser_history
+
+
+
+/**
+* BUILD_AUTOLOAD
+* Unified way to manage section, area and portals build API request
+* @param object self
+* @return bool
+*/
+export const build_autoload = async function(self) {
+
+	// load context and data
+		const api_response = await data_manager.request({
+			body : self.rqo
+		})
+		// debug
+		if(SHOW_DEVELOPER===true) {
+			console.log(`${self.model} build api_response:`, api_response);
+		}
+
+	// last server error. Only for development
+		const dedalo_last_error = (SHOW_DEVELOPER===true)
+			? api_response.dedalo_last_error
+			: null // remove server errors catch for no developers
+
+	// response check
+		if (!api_response || !api_response.result || dedalo_last_error) {
+
+			// running_with_errors.
+				// It's important to set instance as running_with_errors because this
+				// generates a temporal wrapper. Once solved the problem, (usually a not login scenario)
+				// the instance could be built and rendered again replacing the temporal wrapper
+				self.running_with_errors = [
+					{
+						msg					: `${self.model} build autoload api_response: `+ (api_response.msg),
+						error				: api_response.error || 'unknown',
+						dedalo_last_error	: dedalo_last_error
+					}
+				]
+				// debug
+				if(SHOW_DEVELOPER===true) {
+					console.log('self.running_with_errors:', self.running_with_errors);
+				}
+
+			// previous_status
+				const previous_status = 'initialized'
+
+			// custom behaviors
+				switch (api_response.error) {
+					case 'not_logged':
+						// display login window
+						await render_relogin({
+							on_success : async function(){
+
+								// login success actions
+
+								self.status = previous_status
+
+								const unsaved_data = typeof window.unsaved_data!=='undefined'
+									? window.unsaved_data
+									: false
+
+								// login success actions
+								if (unsaved_data===false) {
+									await self.build(true)
+									await self.render({
+										render_level	: 'full', // content|full
+										render_mode		: self.mode
+									})
+								}
+							}
+						})
+						break;
+
+					default:
+						// nothing to do here
+						break;
+				}
+
+			// status update
+				self.status = previous_status // 'initialized' or 'rendered'
+
+			return false
+		}//end if (!api_response || !api_response.result)
+
+
+	return api_response
+}//end build_autoload
+
 
 
 

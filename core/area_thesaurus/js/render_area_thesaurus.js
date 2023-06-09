@@ -30,11 +30,12 @@ render_area_thesaurus.prototype.list = async function(options) {
 
 	const self = this
 
-	const render_level = options.render_level || 'full'
+	// options
+		const render_level = options.render_level || 'full'
 
 	// ts_object. Is a global page var
 		// set mode. Note that ts_object is NOT an instance
-		self.ts_object.thesaurus_mode = self.context.thesaurus_mode
+		self.ts_object.thesaurus_mode = self.context?.thesaurus_mode || null
 		// caller set
 		self.ts_object.caller = self
 		self.ts_object.linker = self.linker // usually a portal component instance

@@ -9,7 +9,15 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import * as instances from '../../common/js/instances.js'
-	import {common, set_context_vars, create_source, load_data_debug, get_columns_map, push_browser_history} from '../../common/js/common.js'
+	import {
+		common,
+		set_context_vars,
+		create_source,
+		load_data_debug,
+		get_columns_map,
+		push_browser_history,
+		build_autoload
+	} from '../../common/js/common.js'
 	import {paginator} from '../../paginator/js/paginator.js'
 	import {search} from '../../search/js/search.js'
 	import {toggle_search_panel} from '../../search/js/render_search.js'
@@ -18,7 +26,6 @@
 	import {render_edit_section} from './render_edit_section.js'
 	import {render_list_section} from './render_list_section.js'
 	import {render_common_section} from './render_common_section.js'
-	import {render_relogin} from '../../login/js/login.js'
 
 
 
@@ -508,46 +515,14 @@ section.prototype.build = async function(autoload=false) {
 			})
 		}
 
-	// load data if is not already received as option
+	// load from DDBB
 		if (autoload===true) {
-			// const t0 = performance.now()
 
-			// get context and data
-				const api_response = await data_manager.request({
-					body : self.rqo
-				})
-				// debug
-					if(SHOW_DEVELOPER===true) {
-						// const response	= clone(api_response)
-						// const exec_time	= (performance.now()-t0).toFixed(3)
-						// dd_console('SECTION api_response:', 'DEBUG', [self.id, response, exec_time]);
-						console.log('section build api_response:', api_response);
-					}
-				if (!api_response || !api_response.result) {
-
-					// custom behaviors
-					switch (api_response.error) {
-						case 'not_logged':
-
-							// display login window
-							render_relogin({
-								callback : function(){
-									// login success actions
-								}
-							})
-							break;
-
-						default:
-							self.running_with_errors = [
-								self.model + ' build autoload api_response: '+ (api_response.error || api_response.msg)
-							]
-							console.error("Error (2) : "+self.model+" build autoload api_response:", api_response);
-							break;
-					}
-
-					// status update
-						self.status = previous_status // 'initialized' or 'rendered'
-
+			// build_autoload
+			// Use unified way to load context and data with
+			// errors and not login situation managing
+				const api_response = await build_autoload(self)
+				if (!api_response) {
 					return false
 				}
 
@@ -636,6 +611,10 @@ section.prototype.build = async function(autoload=false) {
 							event_manager.unsubscribe(event_token)
 
 							const debug = document.getElementById("debug")
+							if (!debug) {
+								console.log('Ignored debug');
+								return
+							}
 
 							// clean
 								while (debug.firstChild) {
@@ -871,10 +850,11 @@ export const get_section_records = async function(options) {
 		const view				= options.view || 'default'
 		const column_id			= options.column_id || self.column_id || null
 		const datum				= options.datum || self.datum || {}
+		const context			= self.context || {}
 		const request_config	= (options.request_config)
 			? clone(options.request_config)
-			: clone(self.context.request_config)
-		const fields_separator	= options.fields_separator || self.context.fields_separator || {}
+			: clone(context.request_config)
+		const fields_separator	= options.fields_separator || context.fields_separator || {}
 		const lang				= options.lang || self.section_lang || self.lang
 		const value				= options.value || ((self.data && self.data.value)
 			? self.data.value

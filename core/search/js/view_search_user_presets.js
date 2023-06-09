@@ -10,10 +10,7 @@
 	// import {pause} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {set_element_css} from '../../page/js/css.js'
-	import {
-		render_server_response_error,
-		no_records_node
-	} from '../../section/js/render_common_section.js'
+	import {no_records_node} from '../../section/js/render_common_section.js'
 	import {edit_user_search_preset, load_search_preset} from './search_user_presets.js'
 	import {render_filter} from './render_search.js'
 
@@ -41,13 +38,6 @@ view_search_user_presets.render = async function(self, options) {
 
 	// options
 		const render_level = options.render_level || 'full'
-
-	// running_with_errors case
-		if (self.running_with_errors) {
-			return render_server_response_error(
-				self.running_with_errors
-			)
-		}
 
 	// columns_map
 		const columns_map	= await rebuild_columns_map(self)
