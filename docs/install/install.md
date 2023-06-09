@@ -170,38 +170,38 @@ Then, install Dédalo manually, commands are Ubuntu 22.04 (only as references):
 
    1. Enter into `psql`:
 
-   ```shell
-   su - postgres
-   psql
-   ```
+      ```shell
+      su - postgres
+      psql
+      ```
 
    2. Create a Dédalo user:
 
-   ```sql
-   CREATE USER dedalo_user PASSWORD 'My_super_Secret_pw';
-   ```
+      ```sql
+      CREATE USER dedalo_user PASSWORD 'My_super_Secret_pw';
+      ```
 
    3. Create a Dédalo database and comment it:
 
-   ```sql
-   CREATE DATABASE dedalo_xxx
-   WITH ENCODING='UTF8'
-   OWNER=dedalo_user
-   CONNECTION LIMIT=-1
-   TABLESPACE=pg_default;
-   ```
+      ```sql
+      CREATE DATABASE dedalo_xxx
+      WITH ENCODING='UTF8'
+      OWNER=dedalo_user
+      CONNECTION LIMIT=-1
+      TABLESPACE=pg_default;
+      ```
 
-   ```sql
-   COMMENT ON DATABASE dedalo_xxx
-   IS 'Dédalo: Cultural Heritage and Memory management system';
-   ```
+      ```sql
+      COMMENT ON DATABASE dedalo_xxx
+      IS 'Dédalo: Cultural Heritage and Memory management system';
+      ```
 
    4. Exit form `psql` and postgres user:
 
-   ```shell
-   \q
-   exit
-   ```
+      ```shell
+      \q
+      exit
+      ```
 
 4. Configuration.
    Before changing the config files you will need copy/rename the sample config files removing the word "sample", you can rename or copy this files. Please read the [configuration](../config/configuration.md) documentation for further explanation on this.
@@ -239,9 +239,10 @@ Then, install Dédalo manually, commands are Ubuntu 22.04 (only as references):
       ```
 
    7. Modify `[...]/dedalo/config/config_areas.php` with your areas configuration. Read the areas [configuration](../config/config_areas.md) documentation.
+
 5. Open Dédalo in the browser.
 6. Follow the instructions.
 7. Once the installation process is done, log in and head to the Development Area. There, update the Ontology and register all tools.
 8. Create an admin user.
-9.  Log out and log in with the admin user.
+9. Log out and log in with the admin user.
 10. Create Users and Projects as you need.
