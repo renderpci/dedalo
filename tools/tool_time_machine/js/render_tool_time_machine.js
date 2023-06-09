@@ -134,7 +134,7 @@ const get_content_data = async function(self) {
 					inner_html		: self.get_tool_label('apply_and_save') || 'Apply and save',
 					parent			: tool_bar
 				})
-				self.button_apply.addEventListener("click", function(){
+				self.button_apply.addEventListener('click', function(){
 
 					self.apply_value({
 						section_id		: self.main_element.section_id,
@@ -152,8 +152,8 @@ const get_content_data = async function(self) {
 							}
 						}else{
 							// error case
-							console.warn("response:",response);
-							alert(response.msg || 'Error. Unknow error on apply tm value');
+							console.warn('response:',response);
+							alert(response.msg || 'Error. Unknown error on apply tm value');
 						}
 					})
 				})

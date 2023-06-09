@@ -294,6 +294,10 @@ tool_media_versions.prototype.build_version = async function(quality) {
 					dd_console("-> build_version API response:",'DEBUG',response);
 				}
 
+				if (response.result===false && response.msg) {
+					alert(response.msg);
+				}
+
 				const result = response.result // array of objects
 
 				resolve(result)

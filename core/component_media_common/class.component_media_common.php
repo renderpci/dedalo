@@ -307,11 +307,135 @@ class component_media_common extends component_common {
 	/**
 	* GET_NAME
 	* Alias of get_id
+	* @return string|null $id
 	*/
 	public function get_name() : ?string {
 
 		return $this->get_id();
 	}//end get_name
+
+
+
+	/**
+	* GET_INITIAL_MEDIA_PATH
+	* Used by component_image, component_pdf
+	* @return string|null $this->initial_media_path
+	*/
+	public function get_initial_media_path() : ?string {
+
+		$component_tipo		= $this->tipo;
+		$parent_section		= $this->get_my_section();
+		$properties			= $parent_section->get_properties();
+
+		if (isset($properties->initial_media_path->{$component_tipo})) {
+			$this->initial_media_path = $properties->initial_media_path->{$component_tipo};
+			// Add / at begin if not exits
+			if ( substr($this->initial_media_path, 0, 1) != '/' ) {
+				$this->initial_media_path = '/'.$this->initial_media_path;
+			}
+		}else{
+			$this->initial_media_path = null;
+		}
+
+		return $this->initial_media_path;
+	}//end get_initial_media_path
+
+
+
+	/**
+	* GET_ADDITIONAL_PATH
+	* Calculate image additional path from 'properties' json config.
+	* Used by component_image, component_pdf
+	* @return string|null $additional_path
+	*/
+	public function get_additional_path() : ?string {
+
+		// already set case
+			if(isset($this->additional_path)) {
+				return $this->additional_path;
+			}
+
+		// default value
+			$additional_path = null;
+
+		// short vars
+			$properties				= $this->get_properties();
+			$additional_path_tipo	= $properties->additional_path ?? null;
+			$section_id				= $this->get_section_id();
+			$section_tipo			= $this->get_section_tipo();
+
+		if ( !is_null($additional_path_tipo) && !empty($section_id) ) {
+
+			$component_tipo	= $additional_path_tipo;
+			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component		= component_common::get_instance(
+				$model,
+				$component_tipo,
+				$section_id,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
+
+			// valor
+				$valor = trim($component->get_valor());
+
+			// Add a slash at the beginning if it doesn't already exist
+				if ( substr($valor, 0, 1)!=='/' ) {
+					$valor = '/'.$valor;
+				}
+
+			// Remove the trailing slash if it exists
+				if ( substr($valor, -1)==='/' ) {
+					$valor = substr($valor, 0, -1);
+				}
+
+			// add
+				$additional_path = $valor;
+		}
+
+		if(empty($valor) && isset($properties->max_items_folder)) {
+
+			// max_items_folder defined case
+				$max_items_folder	= (int)$properties->max_items_folder;
+				$int_section_id		= (int)$section_id;
+
+			// add
+				$additional_path = '/'.$max_items_folder*(floor($int_section_id / $max_items_folder));
+
+			// // update component dato. Final dato must be an array to saved into component_input_text
+			// 	$final_dato = array( $additional_path );
+			// 	$component->set_dato( $final_dato );
+
+			// // save if mode is edit
+			// 	if ($this->mode==='edit') {
+			// 		$component->Save();
+			// 	}
+		}
+
+
+		// fix value
+			$this->additional_path = $additional_path;
+
+
+		return $additional_path;
+	}//end get_additional_path
+
+
+
+	/**
+	* QUALITY_FILE_EXIST
+	* Check if quality given file exists
+	* @param string $quality
+	* @return bool
+	*/
+	public function quality_file_exist(string $quality) : bool {
+
+		$file_path_abs	= $this->get_media_filepath($quality);
+		$file_exists	= file_exists($file_path_abs);
+
+		return $file_exists;
+	}//end quality_file_exist
 
 
 
@@ -744,10 +868,14 @@ class component_media_common extends component_common {
 					if (!file_exists($media_path)) continue; # Skip
 
 				// delete directory
-					$folder_path_del = $this->get_target_dir($current_quality) . 'deleted';
+					$folder_path_del = $this->get_target_dir($current_quality) . '/deleted';
 					if( !is_dir($folder_path_del) ) {
 						if( !mkdir($folder_path_del, 0777,true) ) {
-							trigger_error(" Error on read or create directory \"deleted\". Permission denied");
+							debug_log(__METHOD__
+								. " Error on read or create directory \"deleted\". Permission denied " . PHP_EOL
+								. ' folder_path_del: ' . $folder_path_del
+								, logger::ERROR
+							);
 							return false;
 						}
 					}
@@ -760,7 +888,12 @@ class component_media_common extends component_common {
 						return false;
 					}
 
-				debug_log(__METHOD__." Moved file \n$media_path to \n$media_path_moved ".to_string(), logger::DEBUG);
+				debug_log(__METHOD__
+					." Moved file". PHP_EOL
+					. ' media_path: ' . $media_path . PHP_EOL
+					. ' media_path_moved: ' . $media_path_moved
+					, logger::WARNING
+				);
 			}//end foreach
 
 
@@ -990,6 +1123,33 @@ class component_media_common extends component_common {
 
 		return $target_filename;
 	}//end get_target_filename
+
+
+
+	/**
+	* GET_SOURCE_QUALITY_TO_BUILD
+	* Iterate array $ar_quality (Order by quality big to small)
+	* @param string $target_quality
+	* @return string|null $current_quality
+	*/
+	public function get_source_quality_to_build(string $target_quality) : ?string {
+
+		$ar_quality			= $this->get_ar_quality();
+		$original_quality	= $this->get_original_quality();
+		foreach($ar_quality as $current_quality) {
+
+			if ($target_quality!==$original_quality && $target_quality!==$current_quality) {
+				// check file
+				$filename = $this->get_original_file_path($current_quality);
+				if (!empty($filename) && file_exists($filename)) {
+					return $current_quality;
+				}
+			}
+		}//end foreach($ar_quality as $quality)
+
+
+		return null;
+	}//end get_source_quality_to_build
 
 
 
@@ -1229,7 +1389,7 @@ class component_media_common extends component_common {
 	* Sync this quality value
 	* @return bool
 	*/
-	public function set_quality(string $quality) :bool {
+	public function set_quality(string $quality) : bool {
 
 		$ar_valid 	= $this->get_ar_quality();
 
@@ -1334,6 +1494,84 @@ class component_media_common extends component_common {
 
 		return true;
 	}//end restore_component_media_files
+
+
+
+	/**
+	* BUILD_VERSION - Overwrite in each component for real process
+	* Creates a new version based on target quality
+	* (!) Note that this generic method on copy files,
+	* to real process, overwrite in each component !
+	* @param string $quality
+	* @param bool $async = true
+	* @return object $response
+	*/
+	public function build_version(string $quality, bool $async=true) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+
+		// short vars
+			$id					= $this->get_id();
+			$original_quality	= $this->get_original_quality();
+			$original_file_path	= $this->get_original_file_path($original_quality);
+			if (empty($original_file_path) || !file_exists($original_file_path)) {
+				$response->msg .= ' Invalid original_file_path. Skip conversion';
+				debug_log(__METHOD__
+					. " $response->msg " . PHP_EOL
+					. " original_quality: " . $original_quality . PHP_EOL
+					. ' original_file_path: ' . to_string($original_file_path)
+					, logger::ERROR
+				);
+				return $response;
+			}
+			$target_quality_path = $this->get_media_filepath($quality);
+
+		// copy file from source quality to target quality
+			$copy_result = copy(
+				$original_file_path, // from original quality directory
+				$target_quality_path // to default quality directory
+			);
+			if ($copy_result===false) {
+				debug_log(__METHOD__ . PHP_EOL
+					. " Error: Unable copy file : " . PHP_EOL
+					. ' original_file_path: ' . $original_file_path . PHP_EOL
+					. ' target_quality_path: ' . $target_quality_path
+					, logger::ERROR
+				);
+			}else{
+				debug_log(__METHOD__ . PHP_EOL
+					. " Copied file : " . PHP_EOL
+					. ' original_file_path: ' . $original_file_path . PHP_EOL
+					. ' target_quality_path: ' . $target_quality_path
+					, logger::DEBUG
+				);
+			}
+
+		// response
+			$response->result	= true;
+			$response->msg		= 'Copied file. Remember overwrite this method to real conversion';
+
+		// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+			logger::$obj['activity']->log_message(
+				'NEW VERSION',
+				logger::INFO,
+				$this->tipo,
+				NULL,
+				[
+					'msg'				=> 'Built version',
+					'tipo'				=> $this->tipo,
+					'parent'			=> $this->section_id,
+					'id'				=> $id,
+					'quality'			=> $quality,
+					'source_quality'	=> $original_quality,
+					'target_quality'	=> $quality
+				]
+			);
+
+		return $response;
+	}//end build_version
 
 
 
