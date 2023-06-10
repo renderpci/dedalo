@@ -25,6 +25,7 @@ class diffusion_rdf extends diffusion {
 	public $entity_locator; // the entity publication service locator to use for get the URL base.
 
 	public $DEDALO_EXTRAS_BASE_URL;
+	public $name_space;
 
 
 
@@ -36,15 +37,19 @@ class diffusion_rdf extends diffusion {
 
 		parent::__construct($options=null);
 
+		// fix url
 		$this->DEDALO_EXTRAS_BASE_URL = DEDALO_ROOT_WEB . '/'. basename(dirname(DEDALO_CORE_PATH)) .'/'. basename(DEDALO_CORE_PATH) .'/'. basename(DEDALO_EXTRAS_PATH);
 	}//end __construct
 
 
+
 	/**
 	* UPDATE_RECORD
+	*
+	* @param bool $resolve_references = false
+	* @return object $response
 	*/
 	public function update_record( $request_options, $resolve_references=false ) {
-
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -55,12 +60,13 @@ class diffusion_rdf extends diffusion {
 				$options->section_tipo				= null;
 				$options->section_id				= null;
 				$options->diffusion_element_tipo	= null;
+				$options->save_file					= true;
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		// target_section_tipo
-			$RecordObj_dd 		 = new RecordObj_dd($options->diffusion_element_tipo);
-			$propiedades 		 = $RecordObj_dd->get_propiedades(true);
-			#$target_section_tipo = $propiedades->diffusion->target_section_tipo;
+			$RecordObj_dd			= new RecordObj_dd($options->diffusion_element_tipo);
+			$propiedades			= $RecordObj_dd->get_propiedades(true);
+			// $target_section_tipo	= $propiedades->diffusion->target_section_tipo;
 
 		// Fix vars
 			$this->external_ontology_tipo	= $options->diffusion_element_tipo;
@@ -83,11 +89,16 @@ class diffusion_rdf extends diffusion {
 
 		// Directory
 			$sub_path    = '/rdf/'.$this->service_name.'/';	 //nomisma/';
-			$folder_path = DEDALO_MEDIA_BASE_PATH . $sub_path;
+			$folder_path = DEDALO_MEDIA_PATH . $sub_path;
 			if (!is_dir($folder_path)) {
 				if(!mkdir($folder_path, 0777, true)) {
-					$response->msg = trim(" Error on read or create directory. Permission denied");
-					return $init_response;
+					$response->msg = " Error on read or create directory. Permission denied";
+					debug_log(__METHOD__
+						. " $response->msg " . PHP_EOL
+						. ' folder_path: ' . $folder_path
+						, logger::ERROR
+					);
+					return $response;
 				}
 				debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
 			}
@@ -96,43 +107,59 @@ class diffusion_rdf extends diffusion {
 			$current_date	= new DateTime();
 			$date			= $current_date->format('Y-m-d H_i_s');
 
-			$ar_owl_class_tipo		= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($options->diffusion_element_tipo, 'owl:Class', 'children', true);
+			$ar_owl_class_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($options->diffusion_element_tipo, 'owl:Class', 'children', true);
 			foreach ($ar_owl_class_tipo as $current_class_tipo) {
-				$ar_current_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_class_tipo, 'section', 'termino_relacionado', true);
-				$current_section_tipo = reset($ar_current_section_tipo);
+				$ar_current_section_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_class_tipo, 'section', 'termino_relacionado', true);
+				$current_section_tipo		= reset($ar_current_section_tipo);
 				if($current_section_tipo === $options->section_tipo){
 					$owl_class_tipo = $current_class_tipo;
 					break;
 				}
 			}
 
-			$rdf_name		= RecordObj_dd::get_termino_by_tipo($owl_class_tipo);
-				$rdf_file_name	= $rdf_name.'_'. $date.'.rdf';
+			// Unable to resolve owl_class_tipo case
+				if (!isset($owl_class_tipo)) {
+					debug_log(__METHOD__
+						. " Unable to resolve owl_class_tipo " . PHP_EOL
+						. ' diffusion_element_tipo: ' . $options->diffusion_element_tipo
+						, logger::ERROR
+					);
+					$response = new stdClass();
+						$response->result	= false;
+						$response->msg		= 'Error. Unable to resolve owl_class_tipo';
+					return $response;
+				}
 
+			$rdf_name		= RecordObj_dd::get_termino_by_tipo($owl_class_tipo);
+			$rdf_file_name	= $rdf_name.'_'. $date.'.rdf';
+
+		// resolve data
 			$rdf_options = new stdClass();
 				// $rdf_options->external_ontology_tipo	= $this->external_ontology_tipo;
 				$rdf_options->owl_class_tipo			= $owl_class_tipo;	// Numisma RDF : modelo_name : xml
 				$rdf_options->section_tipo				= $options->section_tipo; // $target_section_tipo;	// Fichero
 				$rdf_options->ar_section_id				= $ar_section_id;	// Array like [45001,45002,45003];
-				$rdf_options->save_to_file_path			= DEDALO_MEDIA_BASE_PATH . $sub_path . $rdf_file_name; // Target file
-				$rdf_options->url_file					= DEDALO_MEDIA_BASE_URL  . $sub_path . $rdf_file_name;
+				$rdf_options->save_to_file_path			= DEDALO_MEDIA_PATH . $sub_path . $rdf_file_name; // Target file
+				$rdf_options->url_file					= DEDALO_MEDIA_URL  . $sub_path . $rdf_file_name;
+				$rdf_options->save_file					= $options->save_file;
 
 			$response = $this->build_rdf_file( $rdf_options );
-				#dump($response, ' response ++ '.to_string($options));
 
 		// saves publication data
 			diffusion::update_publication_data($options->section_tipo, $options->section_id);
+
 
 		return $response;
 	}//end update_record
 
 
+
 	/**
-	* BUILD_rdf_FILE
+	* BUILD_RDF_FILE
 	* @param object $request_options
 	* @return object $response
 	*/
-	public function build_rdf_file( $request_options ) {
+	public function build_rdf_file( object $request_options ) : object {
 
 		# Maximum execution time seconds
 		set_time_limit(600);
@@ -152,12 +179,13 @@ class diffusion_rdf extends diffusion {
 			$options->ar_section_id				= array();
 			$options->save_to_file_path			= false;
 			$options->url_file					= false;
+			$options->save_file					= true;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		#
 		# WRAPPER
 		// $external_ontology_tipo	= $options->external_ontology_tipo;
-		$owl_class_tipo			= $options->owl_class_tipo;	// Like mupreva2190 for 'Numisma RDF'
+		$owl_class_tipo				= $options->owl_class_tipo;	// Like mupreva2190 for 'Numisma RDF'
 
 		$rdf_graph = new \EasyRdf\Graph();
 
@@ -191,22 +219,19 @@ class diffusion_rdf extends diffusion {
 			}
 		}
 
-			// dump($format_options, ' format_options ++ '.to_string());
+		// parse rdf_object
+			$ar_element=array();
+			foreach ($options->ar_section_id as $current_section_id) {
+				$element		= $this->build_rdf_node($rdf_graph, null, $owl_class_tipo, $options->section_tipo, $current_section_id);
+				$ar_element[]	= $element;
+			}
 
-		# PARSE RDF_OBJECT
-		$ar_element=array();
-		foreach ($options->ar_section_id as $current_section_id) {
-			$element 	  = $this->build_rdf_node($rdf_graph, null, $owl_class_tipo, $options->section_tipo, $current_section_id);
-			#dump($element, ' element ++ $current_section_id: '.to_string($current_section_id));
-			$ar_element[] = $element;
-		}
+		// data
+			$data = $rdf_graph->serialise('rdfxml');
+			if (!is_scalar($data)) {
+				$data = var_export($data, true);
+			}
 
-
-		$data = $rdf_graph->serialise('rdfxml');
-		if (!is_scalar($data)) {
-			$data = var_export($data, true);
-		}
-			// dump(htmlspecialchars($data), ' RDF ++ '.to_string());
 		// print "<pre>".htmlspecialchars($data)."</pre>";
 
 		/*
@@ -223,9 +248,9 @@ class diffusion_rdf extends diffusion {
 			"Scalable Vector Graphics (SVG)": "svg"
    		*/
 
-		#
+
 		# SAVE FILE
-			if ($options->save_to_file_path) {
+			if ($options->save_to_file_path && $options->save_file===true) {
 				if( file_put_contents($options->save_to_file_path, $data) ){
 					#$response->msg[] = "File is saved successfully";
 					$msg  = '';
@@ -238,28 +263,31 @@ class diffusion_rdf extends diffusion {
 			}
 
 		// response additional info
-			$response->result = true;
-			$response->url = $options->url_file;
+			$response->result	= true;
+			$response->url		= $options->url_file;
+			$response->data		= $data;
 
-		$total_time=round(microtime(1)-$start_time,3);
-		$response->debug[] = "Generated [".count($options->ar_section_id)." elements] in $total_time secs";
+		// debug
+			$total_time=round(microtime(1)-$start_time,3);
+			$response->debug[] = "Generated [".count($options->ar_section_id)." elements] in $total_time secs";
 
 
 		return $response;
 	}//end build_rdf_file
 
 
-	/**
-	* BUILD_RDF_node
-	* @return
-	*/
-	public function build_rdf_node($rdf_graph, $node_graph, $ObjectProperty_tipo, $section_tipo, $section_id) {
 
-		//get the name of the property, it is defined in the ontology term, and will use as rdf property
-		$object_name			= RecordObj_dd::get_termino_by_tipo($ObjectProperty_tipo);
-		$object_model_name 		= RecordObj_dd::get_modelo_name_by_tipo($ObjectProperty_tipo);
-		$RecordObj_dd = new RecordObj_dd($ObjectProperty_tipo);
-			$properties = $RecordObj_dd->get_propiedades(true);
+	/**
+	* BUILD_RDF_NODE
+	* @return bool $result
+	*/
+	public function build_rdf_node($rdf_graph, $node_graph, $ObjectProperty_tipo, $section_tipo, $section_id) : bool {
+
+		// get the name of the property, it is defined in the ontology term, and will use as rdf property
+		$object_name		= RecordObj_dd::get_termino_by_tipo($ObjectProperty_tipo);
+		$object_model_name	= RecordObj_dd::get_modelo_name_by_tipo($ObjectProperty_tipo);
+		$RecordObj_dd		= new RecordObj_dd($ObjectProperty_tipo);
+		$properties			= $RecordObj_dd->get_propiedades(true);
 		// result of the recursion, to be used in the component_portals to check if the resource linked has data
 		// if yes, it will create the resource link in the graph, else, it will doesn't create the link
 		$result = false;
@@ -267,7 +295,7 @@ class diffusion_rdf extends diffusion {
 		switch ($object_model_name) {
 
 			case 'owl:Class':
-				if(isset($properties->process)){
+				if(isset($properties->process)) {
 					switch ($properties->process->type) {
 						case 'entity_publication_uri':
 							// check if the title in the base_uril_entity is self and resolve it
@@ -275,11 +303,11 @@ class diffusion_rdf extends diffusion {
 							$base_uri_entity->title = ($base_uri_entity->title === 'self') ? $object_name : $base_uri_entity->title;
 							$uri_data = $this->resolve_base_uri($base_uri_entity);
 							//resolve the uri id
-							if(isset($propiedades->var_uri)){
-								$var_uri = $this->resolve_var_uri($propiedades->var_uri , $section_tipo, $section_id);
-								$uri = $uri_data . $var_uri;
+							if(isset($properties->var_uri)){
+								$var_uri	= $this->resolve_var_uri($properties->var_uri , $section_tipo, $section_id);
+								$uri		= $uri_data . $var_uri;
 							}else{
-								$uri = $uri_data . $section_id;
+								$uri		= $uri_data . $section_id;
 							}
 							// create the graph of the class
 							$node_graph = $rdf_graph->resource($uri, $object_name);
@@ -298,26 +326,26 @@ class diffusion_rdf extends diffusion {
 							// code...
 							break;
 					}
-				}
+				}//end if(isset($properties->process))
 				break;
 
 			case 'rdf':
-
 				$ar_related_dd_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($ObjectProperty_tipo, 'component_', 'termino_relacionado', false);
-				$current_tipo 		= reset($ar_related_dd_tipo);
+				$current_tipo		= reset($ar_related_dd_tipo);
 				$model_name			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo);
-
-				$component			= component_common::get_instance($model_name,
-															 $current_tipo,
-															 $section_id,
-															 'list',
-															 DEDALO_DATA_NOLAN,
-															 $section_tipo);
+				$component			= component_common::get_instance(
+					$model_name,
+					$current_tipo,
+					$section_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$section_tipo
+				);
 
 				$data = (array)$component->get_dato();
 
 				$ar_owl_class_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($ObjectProperty_tipo, 'owl:Class', 'termino_relacionado', true);
-				$owl_class_tipo 	= reset($ar_owl_class_tipo);
+				$owl_class_tipo		= reset($ar_owl_class_tipo);
 
 				// max_items. (!) Notice that here we use the user configurable DEDALO_DIFFUSION_RESOLVE_LEVELS value as n items resolve (Example: 1 coins for current type)
 					$max_items = isset($_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS'])
@@ -380,12 +408,12 @@ class diffusion_rdf extends diffusion {
 
 				// resolve the ddo_map
 					// get the value of all ddo
-					$ar_values = $this->get_ddo_map_value($ddo_map, $parent=$section_tipo, $section_tipo, $section_id);
+					$ar_values = $this->get_ddo_map_value($ddo_map, $section_tipo, $section_tipo, $section_id);
 
 					// set the default lang, and transform to alpha2 standard (lg-eng -> en)
 					$default_lang			= DEDALO_DATA_LANG_DEFAULT;
 					$default_alpha2_lang	= lang::get_alpha2_from_code($default_lang);
-					$ar_langs = [$default_alpha2_lang];
+					$ar_langs				= [$default_alpha2_lang];
 					// create unique array with all languages of the data, it will used to fill the gaps in the components that has to be joined and doesn't has done the translation
 					foreach ($ar_values as $value) {
 						if (!in_array($value->lang, $ar_langs) && $value->lang !== null) {
@@ -440,8 +468,6 @@ class diffusion_rdf extends diffusion {
 								$node_graph->addResource($object_name, $uri_finded);
 								$result = true;
 							}
-
-
 							break;
 						// resolve the component date and create the RDF equivalent
 						case 'get_data_date':
@@ -554,8 +580,8 @@ class diffusion_rdf extends diffusion {
 							$base_uri_entity->title = ($base_uri_entity->title === 'self') ? $object_name : $base_uri_entity->title;
 							$uri_data = $this->resolve_base_uri($base_uri_entity);
 							//resolve the uri id
-							if(isset($propiedades->var_uri)){
-								$var_uri = $this->resolve_var_uri($propiedades->var_uri , $section_tipo, $section_id);
+							if(isset($properties->var_uri)){
+								$var_uri = $this->resolve_var_uri($properties->var_uri , $section_tipo, $section_id);
 								$uri = $uri_data . $var_uri;
 							}else{
 								$uri = $uri_data;
@@ -579,6 +605,7 @@ class diffusion_rdf extends diffusion {
 
 								// fallback to match with the end_ddo to add empty data values for languages:
 								foreach ($end_ddo as $ddo_reference) {
+									$ar_ddo_to_join = array_values($ar_ddo_to_join);
 									$children = array_find($ar_ddo_to_join, function($item) use($ddo_reference) {
 										return $item->tipo===$ddo_reference->tipo;
 									});
@@ -687,14 +714,20 @@ class diffusion_rdf extends diffusion {
 	}//end build_rdf_node
 
 
+
 	/**
 	* GET_DDO_MAP_VALUE
 	* resolve the ddo_map components
-	* @return
+	* @param array $ddo_map
+	* @param string $parent
+	* @param string $section_tipo
+	* @param string|int $section_id
+	* @return array $ar_values
 	*/
-	public function get_ddo_map_value($ddo_map, $parent, $section_tipo, $section_id) {
+	public function get_ddo_map_value(array $ddo_map, string $parent, $section_tipo, $section_id) : array {
 
 		$ar_values = [];
+
 		$children = array_filter($ddo_map, function($item) use($parent) {
 			return $item->parent===$parent;
 		});
@@ -708,18 +741,23 @@ class diffusion_rdf extends diffusion {
 	}//end get_ddo_map_value
 
 
+
 	/**
 	* GET_DDO_VALUE
 	* resolve the ddo values
-	* @return
+	* @param object $ddo
+	* @param array $ddo_map
+	* @param string $section_tipo
+	* @param string|int $section_id
+	* @return array $ar_values
 	*/
-	public function get_ddo_value($ddo, $ddo_map, $section_tipo, $section_id) {
+	public function get_ddo_value(object $ddo, array $ddo_map, string $section_tipo, string|int $section_id) : array {
 
-		$ar_values	= [];
+		$ar_values		= [];
 		$current_tipo	= $ddo->tipo;
 		$model_name		= RecordObj_dd::get_modelo_name_by_tipo($current_tipo);
 
-		if($model_name === 'relation_list'){
+		if($model_name==='relation_list') {
 
 			$element = new relation_list(
 				$current_tipo,
@@ -729,6 +767,7 @@ class diffusion_rdf extends diffusion {
 			);
 
 		}else{
+
 			$element = component_common::get_instance(
 				$model_name,
 				$current_tipo,
@@ -738,21 +777,26 @@ class diffusion_rdf extends diffusion {
 				$section_tipo
 			);
 		}
-		$parent = $ddo->tipo;
 
-		$children = array_filter($ddo_map, function($item) use($parent) {
-			return $item->parent===$parent;
-		});
+		$parent		= $ddo->tipo;
+		$children	= array_values(
+			array_filter($ddo_map, function($item) use($parent) {
+				return $item->parent===$parent;
+			})
+		);
 
-		if(empty($children)){
+		if(empty($children)) {
 
 			$id			= $ddo->id ?? null;
 			$value_fn	= $ddo->value_fn ?? 'get_diffusion_value';
 
-			if($model_name === 'relation_list'){
-				$diffusion_properties		= $ddo->diffusion_properties;
+			if($model_name==='relation_list') {
+
+				// diffusion_properties
+				$diffusion_properties = $ddo->diffusion_properties;
 				$element->set_diffusion_properties($diffusion_properties);
 
+				// value (dato)
 				$value = $element->get_diffusion_dato();
 
 				$config_properties = $ddo->config ?? null;
@@ -765,7 +809,6 @@ class diffusion_rdf extends diffusion {
 					]);
 					$ar_values = $result;
 				}else{
-
 					foreach ($value as $value) {
 						$ddo_value = new stdClass();
 							$ddo_value->tipo	= $ddo->tipo;
@@ -776,7 +819,7 @@ class diffusion_rdf extends diffusion {
 						$ar_values[] = $ddo_value;
 					}
 				}
-			}elseif($model_name === 'component_section_id'){
+			}elseif($model_name==='component_section_id') {
 
 				$ddo_value = new stdClass();
 					$ddo_value->tipo	= $ddo->tipo;
@@ -785,13 +828,15 @@ class diffusion_rdf extends diffusion {
 					$ddo_value->id		= $id;
 
 				$ar_values[] = $ddo_value;
-			}elseif($model_name === 'component_image'){
+			}elseif($model_name === 'component_image') {
+
 				$quality		= $ddo->fn_params->quality ?? '1.5MB';
 				$test_file		= $ddo->fn_params->test_file ?? false;
 				$absolute		= $ddo->fn_params->absolute ?? false;
 				$default_add	= $ddo->fn_params->default_add ?? false;
 
-				$value		= $element->get_image_url($quality, $test_file, $absolute, $default_add);
+				// value
+				$value = $element->get_image_url($quality, $test_file, $absolute, $default_add);
 
 				$ddo_value = new stdClass();
 					$ddo_value->tipo	= $ddo->tipo;
@@ -800,9 +845,11 @@ class diffusion_rdf extends diffusion {
 					$ddo_value->id		= $id;
 
 				$ar_values[] = $ddo_value;
-			}elseif(in_array($model_name, component_relation_common::get_components_with_relations())){
 
-				$value		= $element->{$value_fn}();
+			}elseif(in_array($model_name, component_relation_common::get_components_with_relations())) {
+
+				// value
+				$value = $element->{$value_fn}();
 
 				$ddo_value = new stdClass();
 					$ddo_value->tipo	= $ddo->tipo;
@@ -812,17 +859,22 @@ class diffusion_rdf extends diffusion {
 
 				$ar_values[] = $ddo_value;
 			}else{
-				$dato_full	= $element->get_dato_full();
-				if(!empty($dato_full)){
+
+				$dato_full = $element->get_dato_full();
+				if(!empty($dato_full)) {
 					foreach ($dato_full as $current_lang => $value) {
-						if(!empty($value)){
+						if(!empty($value)) {
+
 							$element->set_lang($current_lang);
-							$lang	= lang::get_alpha2_from_code($current_lang);
+							$lang_alpha2 = $current_lang===DEDALO_DATA_NOLAN
+								? lang::get_alpha2_from_code(DEDALO_DATA_LANG_DEFAULT)
+								: lang::get_alpha2_from_code($current_lang);
+
 							$value	= $element->{$value_fn}($current_lang);
 
 							$ddo_value = new stdClass();
 								$ddo_value->tipo	= $ddo->tipo;
-								$ddo_value->lang	= $lang;
+								$ddo_value->lang	= $lang_alpha2;
 								$ddo_value->value	= $value;
 								$ddo_value->id		= $id;
 
@@ -832,24 +884,33 @@ class diffusion_rdf extends diffusion {
 				}
 			}
 		}else{
+
+			// no empty($children) case
+
 			$ar_locators = $element->get_dato();
 			foreach ($ar_locators as $current_locator) {
-				$result = $this->get_ddo_map_value($ddo_map, $parent, $current_locator->section_tipo, $current_locator->section_id);
-				$ar_values	= array_merge($ar_values, $result);
+				$result	= $this->get_ddo_map_value(
+					$ddo_map,
+					$parent,
+					$current_locator->section_tipo,
+					$current_locator->section_id
+				);
+				$ar_values = array_merge($ar_values, $result);
 			}
-		}
+		}//end if(empty($children))
+
 
 		return $ar_values;
 	}//end get_ddo_value
 
+
+
 	/**
 	* RESOLVE_ENTITY
 	* Resolve the section of publication services (dd1010) of the entity that has the URL base resolutions.
-	* @return locator $entity_locator
+	* @return locator|null $entity_locator
 	*/
-	public function resolve_entity_locator() {
-
-		$entity_locator = new locator();
+	public function resolve_entity_locator() : ?object {
 
 		// Search Dedalo entities publication services
 			$section_tipo	= DEDALO_SERVICES_SECTION_TIPO; 	// services_section_tipo = 'dd1010';
@@ -860,7 +921,7 @@ class diffusion_rdf extends diffusion {
 			$query = '
 			{
 				"id": "base_uri",
-				"modo": "list",
+				"mode": "list",
 				"section_tipo": "'.$section_tipo.'",
 				"limit": 1,
 				"filter": {
@@ -896,24 +957,32 @@ class diffusion_rdf extends diffusion {
 
 
 		// search
-			$search_development2	= new search_development2($search_query_object);
-			$result					= $search_development2->search();
-			$dato_entity			= reset($result->ar_records);
+			$search = search::get_instance(
+				$search_query_object // object sqo
+			);
+			$result			= $search->search();
+			$dato_entity	= $result->ar_records[0] ?? null;
 
 		// base_uri
 			if (empty($dato_entity)) {
 
 				$entity_locator = null;
-				debug_log(__METHOD__." Empty records!  Nothing is found for entity: '$entity_id' and service_type: '$service_type' ".to_string(), logger::ERROR);
+				debug_log(__METHOD__
+					." Empty records!  Nothing is found for entity: '$entity_id' and service_type: '$service_type' "
+					, logger::ERROR
+				);
 
 			}else{
-				$entity_locator->set_section_id($dato_entity->section_id);
-				$entity_locator->set_section_tipo($dato_entity->section_tipo);
+
+				$entity_locator = new locator();
+					$entity_locator->set_section_id($dato_entity->section_id);
+					$entity_locator->set_section_tipo($dato_entity->section_tipo);
 			}
 
 
 		return $entity_locator;
 	}//end resolve_entity_locator
+
 
 
 	/**
@@ -1033,25 +1102,22 @@ class diffusion_rdf extends diffusion {
 				if ($ct_model_name==='component_section_id') {
 					$value = $section_id;
 				}else{
-					$ct_model_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-					$component_obj 	 = component_common::get_instance(	$ct_model_name,
-																		$component_tipo,
-																		$section_id,
-																		'list',
-																		DEDALO_DATA_LANG,
-																		$section_tipo,
-																		false);
+					$ct_model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+					$component_obj	= component_common::get_instance(
+						$ct_model_name,
+						$component_tipo,
+						$section_id,
+						'list',
+						DEDALO_DATA_LANG,
+						$section_tipo,
+						false
+					);
 					$dato = $component_obj->get_valor();
-						#dump($dato, ' dato ++ '.to_string( $ct_model_name ));
 					$value = $dato;
 				}
-				#$var_uri_string .= "$key=$value";
-
+				// $var_uri_string .= "$key=$value";
 				$var_uri_string .= $value; // Rewrite version
-
-
 			}
-
 			// $var_uri_string .= ($component_tipo!=end($var_uri)) ? '&' : '';
 		}
 
@@ -1059,14 +1125,19 @@ class diffusion_rdf extends diffusion {
 	}//end resolve_var_uri
 
 
+
 	/**
-	* RESOLVE_configuration
+	* RESOLVE_CONFIGURATION
 	* get the config to used in specific ddo
 	* filter section_id for use to get data
 	* it's stored in the Publication services section (dd1010) in the component_json
-	* @return string $base_uri
+	* @param object $configuration_entity
+	* @param string|int|null $section_id = null
+	* @return string $result
 	*/
-	public function resolve_configuration($configuration_entity, $section_id=null) {
+	public function resolve_configuration(object $configuration_entity, $section_id=null) : ?string {
+
+		$result = null;
 
 		// Search Dedalo entities publication services
 			$section_tipo	= $configuration_entity->section_tipo; 	// services_section_tipo = 'dd1010';
@@ -1074,39 +1145,43 @@ class diffusion_rdf extends diffusion {
 			$component_tipo	= $configuration_entity->component_tipo; // component_iri dd1014
 			$id				= $configuration_entity->id; // catalog_filter
 
-			if ($section_tipo===DEDALO_SERVICES_SECTION_TIPO) {
+			if($section_tipo===DEDALO_SERVICES_SECTION_TIPO) {
 
-				$service_name	= $this->service_name;
+				$service_name = $this->service_name;
 
-				$RecordObj_dd = new RecordObj_dd($component_tipo);
-				$model = $RecordObj_dd->get_modelo_name();
+				$RecordObj_dd	= new RecordObj_dd($component_tipo);
+				$model			= $RecordObj_dd->get_modelo_name();
 
 				// RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
-				$component_lang = $RecordObj_dd->get_traducible();
-				$lang = $component_lang === 'si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-				$component = component_common::get_instance($model,
-															 $component_tipo,
-															 $this->entity_locator->section_id,
-															 'list',
-															 $lang,
-															 $this->entity_locator->section_tipo);
+				$component_lang	= $RecordObj_dd->get_traducible();
+				$lang			= $component_lang==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+				$component		= component_common::get_instance(
+					$model,
+					$component_tipo,
+					$this->entity_locator->section_id,
+					'list',
+					$lang,
+					$this->entity_locator->section_tipo
+				);
 
 				$config_dato = $component->get_dato();
 				// $row_data =  json_decode($row->datos);
 				// $iri_object_data = $row_data->components->{$component_tipo};
 				if (empty($config_dato)) {
 
-						$config = null;
-						debug_log(__METHOD__." Empty dato!  Nothing is found for section_id: '$section_id' - section_tipo: '$section_tipo' - component_tipo: ".to_string($component_tipo), logger::ERROR);
-
+					$config = null;
+					debug_log(__METHOD__
+						." Empty dato!  Nothing is found for section_id: '$section_id' - section_tipo: '$section_tipo' - component_tipo: ".to_string($component_tipo)
+						, logger::ERROR
+					);
 				}else{
 
 					$config = !empty($config_dato->{$title}) ? $config_dato->{$title} : null;
 
-					$ar_result 		 = array_filter((array)$config, function($item) use($id){
+					$ar_result = array_filter((array)$config, function($item) use($id){
 						return $item->id === $id;
 					});
-					$result 	= reset($ar_result);
+					$result = reset($ar_result);
 				}
 
 			}else{
@@ -1114,24 +1189,28 @@ class diffusion_rdf extends diffusion {
 
 				// Collection (Entity)
 
-					$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($configuration_entity->from_component_tipo,true);
-					$component 		= component_common::get_instance($model_name,
-														$configuration_entity->from_component_tipo,
-														$section_id,
-														'list',
-														DEDALO_DATA_NOLAN,
-														$configuration_entity->from_section_tipo);
+					$model_name	= RecordObj_dd::get_modelo_name_by_tipo($configuration_entity->from_component_tipo,true);
+					$component	= component_common::get_instance(
+						$model_name,
+						$configuration_entity->from_component_tipo,
+						$section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$configuration_entity->from_section_tipo
+					);
 					$dato_entity = $component->get_dato();
 
 					if (!empty($dato_entity)) {
 						// component load
-						$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-						$component 		= component_common::get_instance($model_name,
-															$component_tipo,
-															$dato_entity[0]->section_id,
-															'list',
-															DEDALO_DATA_NOLAN,
-															$section_tipo);
+						$model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+						$component	= component_common::get_instance(
+							$model_name,
+							$component_tipo,
+							$dato_entity[0]->section_id,
+							'list',
+							DEDALO_DATA_NOLAN,
+							$section_tipo
+						);
 						$config_dato = $component->get_dato();
 					}
 
@@ -1139,21 +1218,24 @@ class diffusion_rdf extends diffusion {
 					if (empty($config_dato)) {
 
 						$config = null;
-						debug_log(__METHOD__." Empty dato!  Nothing is found for section_id: '$section_id' - section_tipo: '$section_tipo' - component_tipo: ".to_string($component_tipo), logger::ERROR);
-
+						debug_log(__METHOD__
+							." Empty dato!  Nothing is found for section_id: '$section_id' - section_tipo: '$section_tipo' - component_tipo: ".to_string($component_tipo)
+							, logger::ERROR
+						);
 					}else{
 
-						$config = !empty($config_dato->{$title}) ? $config_dato->{$title} : null;
-						$ar_result 		 = array_filter((array)$config, function($item) use($id){
+						$config		= !empty($config_dato->{$title}) ? $config_dato->{$title} : null;
+						$ar_result	= array_filter((array)$config, function($item) use($id){
 							return $item->id === $id;
 						});
-						$result 	= reset($ar_result);
+						$result = reset($ar_result);
 					}
+			}//end if($section_tipo===DEDALO_SERVICES_SECTION_TIPO)
 
-			}
-			#dump($config, ' config ++ '.to_string());
+
 		return $result;
 	}//end resolve_configuration
+
 
 
 	/**
@@ -1195,7 +1277,7 @@ class diffusion_rdf extends diffusion {
 
 	/**
 	* GET_DIFFUSION_ELEMENT_TABLES_MAP
-	* @return
+	* @return object $diffusion_element_tables_map
 	*/
 	public function get_diffusion_element_tables_map() {
 
@@ -1207,18 +1289,21 @@ class diffusion_rdf extends diffusion {
 	}//end get_diffusion_element_tables_map
 
 
+
 	/**
-	* GET_to_publish_ROWS
+	* GET_TO_PUBLISH_ROWS
+	* @param string $section_tipo
+	* @param array $ar_section_id
 	* @return array $ar_section_id_clean
 	*/
-	public static function get_to_publish_rows($section_tipo, $ar_section_id) {
+	public static function get_to_publish_rows(string $section_tipo, array $ar_section_id) : array {
 
 		# Resolve component_publication_tipo
 		$component_publication_tipo = section::get_ar_children_tipo_by_model_name_in_section($section_tipo, ['component_publication'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
 		$component_section_id_tipo = section::get_ar_children_tipo_by_model_name_in_section($section_tipo, ['component_section_id'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
 
 
-	        $q = implode(',', (array)$ar_section_id);
+	       $q = implode(',', (array)$ar_section_id);
 
         // query
 			$query = '
@@ -1255,13 +1340,14 @@ class diffusion_rdf extends diffusion {
 			        ]
 			    }
 			}';
-			$search_query_object = json_decode($query);
-			#dump($query, 'search_query_object ++ '.json_encode($search_query_object, JSON_PRETTY_PRINT));
+			$sqo = json_decode($query);
 
 		// search
-			$search_development2 = new search_development2($search_query_object);
-			$result 			 = $search_development2->search();
-			$ar_records 		 = $result->ar_records;
+			$search = search::get_instance(
+				$sqo // object sqo
+			);
+			$result		= $search->search();
+			$ar_records	= $result->ar_records;
 
 		// format output as array of id's
 			$ar_section_id_clean = array_map(function($item){
@@ -1273,41 +1359,57 @@ class diffusion_rdf extends diffusion {
 	}//end get_to_publish_rows
 
 
+
 	/**
 	* FILTER_LOCATORS
-	* @return
+	*
+	* @param object $options
+	* @return array $result
 	*/
-	public function filter_locators($options) {
+	public function filter_locators(object $options) : array {
 
-		$value				= $options->value;
-		$config				= $options->config;
-		$config_properties	= $options->config_properties;
+		// options
+			$value				= $options->value;
+			$config				= $options->config;
+			$config_properties	= $options->config_properties;
 
-		$section_tipo = reset($value)->section_tipo;
-		$ar_section_id = [];
-		foreach ($value as $current_locator) {
-			$ar_section_id[] = $current_locator->section_id;
-		}
-		$section_id		= implode(',', $ar_section_id);
-		$filter_json	= $config->filter ?? '';
-		$filter			= json_encode($filter_json);
-		$ddo_map		= $config_properties->result->ddo_map ?? null;
+		// section_tipo
+			$section_tipo = reset($value)->section_tipo;
 
-		foreach ($ddo_map as $ddo) {
-			$ddo->section_tipo	= $ddo->section_tipo === 'self' ? $section_tipo : $ddo->section_tipo;
-			$ddo->parent		= $ddo->parent === 'self' ? $section_tipo : $ddo->parent;
-		}
+		// ddo_map
+			$ddo_map = $config_properties->result->ddo_map ?? null;
+			if (!empty($ddo_map)) {
+				foreach ($ddo_map as $ddo) {
+					$ddo->section_tipo	= $ddo->section_tipo === 'self' ? $section_tipo : $ddo->section_tipo;
+					$ddo->parent		= $ddo->parent === 'self' ? $section_tipo : $ddo->parent;
+				}
+			}
 
-		$query = '
+		// filter
+			// q
+				$ar_section_id	= [];
+				foreach ($value as $current_locator) {
+					$ar_section_id[] = $current_locator->section_id;
+				}
+				$q = implode(',', $ar_section_id);
+
+			// additional_filter
+				$filter_json		= $config->filter ?? '';
+				$additional_filter	= !empty($filter_json)
+					? ',' . json_encode($filter_json)
+					: '';
+
+		// query
+			$query = '
 			{
 				"id": "filter",
-				"modo": "list",
+				"mode": "list",
 				"section_tipo": "'.$section_tipo.'",
 				"limit": 1,
 				"filter": {
 					"$and": [
 						{
-							"q": "'.$section_id.'",
+							"q": "'.$q.'",
 							"q_operator": null,
 							"path": [
 								{
@@ -1317,52 +1419,43 @@ class diffusion_rdf extends diffusion {
 									"name": "Id"
 								}
 							]
-						},
-						'.$filter.'
+						}
+						'.$additional_filter.'
 					]
 				}
 			}';
-			$search_query_object = json_decode($query);
-
+			$sqo = json_decode($query);
 
 		// search
-			$search_development2	= new search_development2($search_query_object);
-			$search_result			= $search_development2->search();
-			$records				= $search_result->ar_records;
+			$search = search::get_instance(
+				$sqo // object sqo
+			);
+			$result		= $search->search();
+			$records	= $result->ar_records;
+
 
 		// result
 			$result = [];
 			foreach ($records as $record) {
-					$section_id = $record->section_id;
-					$section_tipo = $record->section_tipo;
 
-					$result = array_merge($result, $this->get_ddo_map_value($ddo_map, $parent=$section_tipo, $section_tipo, $section_id));
+				$section_id		= $record->section_id;
+				$section_tipo	= $record->section_tipo;
+
+				$ddo_map_value = $this->get_ddo_map_value(
+					$ddo_map,
+					$section_tipo, // parent
+					$section_tipo,
+					$section_id
+				);
+
+				$result = array_merge($result, $ddo_map_value);
 			}
 
-			return $result;
+
+		return $result;
 	}//end filter_locators
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-}//end class
+}//end class diffusion_rdf
 
