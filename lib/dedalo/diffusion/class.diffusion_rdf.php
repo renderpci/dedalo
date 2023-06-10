@@ -822,8 +822,10 @@ class diffusion_rdf extends diffusion {
 					foreach ($dato_full as $current_lang => $value) {
 						if(!empty($value)){
 							$element->set_lang($current_lang);
-							$lang	= lang::get_alpha2_from_code($current_lang);
-							$value	= $element->{$value_fn}($current_lang);
+							$lang = $current_lang===DEDALO_DATA_NOLAN
+								? lang::get_alpha2_from_code(DEDALO_DATA_LANG_DEFAULT)
+								: lang::get_alpha2_from_code($current_lang);
+							$value = $element->{$value_fn}($current_lang);
 
 							$ddo_value = new stdClass();
 								$ddo_value->tipo	= $ddo->tipo;
