@@ -238,27 +238,27 @@ export const render_server_response_error = function(errors, add_wrapper=false) 
 			switch (error) {
 				case 'not_logged':
 					// server_response_error h1
-					ui.create_dom_element({
-						element_type	: 'h1',
-						class_name		: 'server_response_error',
-						inner_html		: msg,
-						parent			: error_container
-					})
-					// reload
-					const link = ui.create_dom_element({
-						element_type	: 'a',
-						class_name		: 'reload',
-						inner_html		: 'Reload',
-						parent			: error_container
-					})
-					link.addEventListener('click', function(e) {
-						e.stopPropagation()
-						location.reload()
-					})
+						ui.create_dom_element({
+							element_type	: 'h1',
+							class_name		: 'server_response_error',
+							inner_html		: msg,
+							parent			: error_container
+						})
+					// link reload
+						const link = ui.create_dom_element({
+							element_type	: 'a',
+							class_name		: 'link reload',
+							inner_html		: 'Reload',
+							parent			: error_container
+						})
+						link.addEventListener('click', function(e) {
+							e.stopPropagation()
+							location.reload()
+						})
 					// not_logged_error add once
-					if (!error_container.classList.contains('not_logged_error')) {
-						error_container.classList.add('not_logged_error')
-					}
+						if (!error_container.classList.contains('not_logged_error')) {
+							error_container.classList.add('not_logged_error')
+						}
 					break;
 
 				default:
@@ -277,7 +277,6 @@ export const render_server_response_error = function(errors, add_wrapper=false) 
 								parent			: error_container
 							})
 						}
-
 					// dedalo_last_error
 						if (dedalo_last_error) {
 							ui.create_dom_element({
@@ -293,7 +292,18 @@ export const render_server_response_error = function(errors, add_wrapper=false) 
 								parent			: error_container
 							})
 						}
-
+					// link home
+						const link_home = ui.create_dom_element({
+							element_type	: 'a',
+							class_name		: 'link home',
+							href			: DEDALO_ROOT_WEB,
+							inner_html		: 'Home',
+							parent			: error_container
+						})
+						link_home.addEventListener('click', function(e) {
+							e.stopPropagation()
+							// location.href = DEDALO_ROOT_WEB
+						})
 					// more_info
 						ui.create_dom_element({
 							element_type	: 'div',
@@ -301,6 +311,8 @@ export const render_server_response_error = function(errors, add_wrapper=false) 
 							inner_html		: 'Received data format is not as expected. See your server log for details',
 							parent			: error_container
 						})
+
+
 					// raspa_error add once
 						if (!error_container.classList.contains('raspa_error')) {
 							error_container.classList.add('raspa_error')
