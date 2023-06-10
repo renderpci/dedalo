@@ -5,7 +5,7 @@
 
 
 // imports
-	import {common,load_data_debug} from '../../common/js/common.js'
+	import {common,load_data_debug, build_autoload} from '../../common/js/common.js'
 	import {area_common} from '../../area_common/js/area_common.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {event_manager} from '../../common/js/event_manager.js'
