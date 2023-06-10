@@ -1,4 +1,5 @@
 <?php
+include_once DEDALO_CORE_PATH . '/diffusion/class.diffusion_rdf.php';
 /**
 * CLASS DIFFUSION_SQL
 *
@@ -529,26 +530,31 @@ class diffusion_sql extends diffusion  {
 					// $ar_table_children = array_merge($ar_table_children, $ar_table_alias_children);
 				}
 			}
-			#dump($ar_table_children, ' ar_table_children ++ '.to_string($table_tipo));
 
 		#
 		# COMPONENT PUBLICATION - CHECK (once)
 			if(empty($component_publication_tipo)) {
 				$component_publication_tipo = diffusion::get_component_publication_tipo($ar_table_children);
-				#dump($component_publication_tipo, ' component_publication_tipo ++ ar_table_children: '.to_string($ar_table_children));
 				if (empty($component_publication_tipo)) {
-					if(SHOW_DEBUG===true) {
-						#dump($component_publication_tipo, ' component_publication_tipo ++ '.to_string($ar_table_children));
-					}
-					#trigger_error("Error on find component_publication_tipo. Not found component_publication for section_tipo: $section_tipo. Ignored");
-					debug_log(__METHOD__
-						." Error on find component_publication_tipo. Not found component_publication for table_tipo: $table_tipo. Ignored! table_name: ".$ar_field_data['table_name']
-						, logger::ERROR
+
+					$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+						$table_tipo,
+						'section',
+						'termino_relacionado',
+						true
 					);
+					debug_log(__METHOD__
+						." Error on find component_publication_tipo. Not found component_publication in this section. Ignored! " . PHP_EOL
+						.' table_tipo: '		. $table_tipo . PHP_EOL
+						.' table_name: '		. ($ar_field_data['table_name'] ?? '') . PHP_EOL
+						.' section_tipo: '		. ($ar_section_tipo[0] ?? 'unknown') . PHP_EOL
+						.' ar_table_children: ' . json_encode($ar_table_children, JSON_PRETTY_PRINT)
+						, logger::WARNING
+					);
+
 					return null;
 				}
 			}
-
 
 		#
 		# RESOLVED RECORDS
@@ -1742,9 +1748,9 @@ class diffusion_sql extends diffusion  {
 					$next_recursion_level = ($recursion_level + 1);
 
 					// debug. show levels resolution calls
-						if(SHOW_DEBUG===true) {
-							dump($group_by_section_tipo, " REFERENCES group_by_section_tipo ++ recursion_level: $recursion_level - section_tipo: $section_tipo");
-						}
+						// if(SHOW_DEBUG===true) {
+						// 	dump($group_by_section_tipo, " REFERENCES group_by_section_tipo ++ recursion_level: $recursion_level - section_tipo: $section_tipo");
+						// }
 
 					// iterate previous created groups by section tipo
 						foreach ($group_by_section_tipo as $current_section_tipo => $ar_section_id) {
@@ -3052,6 +3058,45 @@ class diffusion_sql extends diffusion  {
 
 
 	/**
+	* GENERATE_RDF
+	* @param object $options
+	*  sample:
+	*  {
+	* 	...
+	*    "propiedades" : {
+	* 		"process_dato": "diffusion_sql::generate_rdf",
+	* 		diffusion_element_tipo": "numisdata325"
+	* 	 },
+	* 	...
+	*  }
+	* @param int $dato
+	*  section_id sample: 1
+	* @return string $rdf
+	* sample:
+	*  <?xml version="1.0" encoding="utf-8"...
+	*/
+	public static function generate_rdf($options, $dato) {
+
+		$section_tipo			= $options->section_tipo;
+		$section_id				= $dato;
+		$diffusion_element_tipo	= $options->properties->diffusion_element_tipo;
+
+		$diffusion_rdf	= new diffusion_rdf(null);
+		$response		= $diffusion_rdf->update_record((object)[
+			'section_tipo'				=> $section_tipo,
+			'section_id'				=> $section_id,
+			'diffusion_element_tipo'	=> $diffusion_element_tipo,
+			'save_file'					=> false
+		]);
+
+		$rdf = $response->data ?? null;
+
+		return $rdf;
+	}//end generate_rdf
+
+
+
+	/**
 	* MAP_TO_TERMINOID
 	* Returns current section tipo like 'es1'
 	* @return string $section_tipo
@@ -3098,7 +3143,7 @@ class diffusion_sql extends diffusion  {
 			// parents recursive
 			// add parents option
 			// if defined in properties, get current locator parents recursively and add it to current value (like municipality, region, country hierarchy)
-				if (isset($options->propiedades->process_dato_arguments->custom_arguments->add_parents) && $options->propiedades->process_dato_arguments->custom_arguments->add_parents===true) {
+				if (isset($options->properties->process_dato_arguments->custom_arguments->add_parents) && $options->properties->process_dato_arguments->custom_arguments->add_parents===true) {
 					// get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
 					$ar_parents = component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, true);
 					foreach ($ar_parents as $parent_locator) {
@@ -4062,7 +4107,7 @@ class diffusion_sql extends diffusion  {
 			$raw_text				= $options->raw_text ?? $dato; // maintain ->raw_text for compatibility only
 			// process_dato_arguments. (!) If call is from 'diffusion_sql::resolve_component_value' the path is 'options->process_dato_arguments'
 			// but if call is directly from 'diffusion_sql::build_geolocation_data_geojson' the path is inside 'propiedades'
-			$process_dato_arguments	= $options->process_dato_arguments ?? $options->propiedades->process_dato_arguments ?? null;
+			$process_dato_arguments	= $options->process_dato_arguments ?? $options->properties->process_dato_arguments ?? null;
 			$component				= $options->component ?? null;
 
 		// geolocation_data
