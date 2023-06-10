@@ -39,7 +39,7 @@ class relation_list extends common {
 	* @return array $inverse_locators
 	*/
 	public function get_inverse_references(object $sqo) : array {
-		
+
 		// sections
 			$sections			= sections::get_instance(null, $sqo, $this->section_tipo, $this->mode);
 			$inverse_sections	= $sections->get_dato();

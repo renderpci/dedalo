@@ -774,7 +774,7 @@ class section extends common {
 		// component_dato
 			$fixed_component_dato = array_values(
 				array_filter($this->dato->relations, function($el) use($component_tipo) {
-					return $el->from_component_tipo===$component_tipo;
+					return isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo;
 				})
 			);
 

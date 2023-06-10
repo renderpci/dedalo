@@ -1676,6 +1676,16 @@ function array_find(array $ar_value=null, $fn) {
 		// foreach ($ar_value as $x) {
 		$ar_value_length = sizeof($ar_value);
 		for ($i=0; $i < $ar_value_length ; $i++) {
+
+			// error case
+				if (!isset($ar_value[$i])) {
+					dump($ar_value, ' ar_value ++ '.to_string());
+					$db = debug_backtrace();
+					dump($db, ' db ++ '.to_string());
+					// throw new Exception("Error Processing Request", 1);
+					continue;
+				}
+
 			$x = $ar_value[$i];
 			if (call_user_func($fn, $x)===true)
 			return $x;

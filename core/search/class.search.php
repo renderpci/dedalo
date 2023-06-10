@@ -672,10 +672,17 @@ class search {
 			$search_object = $ar_value[$i];
 
 			if (!is_object($search_object)) {
-				dump($search_object, ' Invalid received object (search_object) type: '.gettype($search_object));
-				debug_log(__METHOD__." Invalid (ignored) non object search_object: ".to_string($search_object), logger::DEBUG);
-				debug_log(__METHOD__." ar_value: ".json_encode($ar_value), logger::DEBUG);
-				throw new Exception("Error Processing Request. search_object must be an object", 1);
+				// dump($search_object, ' Invalid received object (search_object) type: '.gettype($search_object));
+				debug_log(__METHOD__
+					." Invalid (IGNORED) non object search_object: " . PHP_EOL
+					.' type: ' 			. gettype($search_object) . PHP_EOL
+					.' search_object: ' . json_encode($search_object, JSON_PRETTY_PRINT) . PHP_EOL
+					.' ar_value: ' 		. json_encode($ar_value, JSON_PRETTY_PRINT)
+					, logger::ERROR
+				);
+				// throw new Exception("Error Processing Request. search_object must be an object", 1);
+				$bt = debug_backtrace();
+					dump($bt, ' bt ++ '.to_string());
 				continue;
 			}
 

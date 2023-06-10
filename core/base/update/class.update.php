@@ -1,8 +1,7 @@
 <?php
 /**
 * UPDATE
-* Manage API RESP data with Dédalo
-*
+* Manage Dédalo data updates defined in updates.ph file
 */
 class update {
 
@@ -126,7 +125,6 @@ class update {
 				foreach ((array)$update->components_update as $current_model) {
 					$components_update[] = update::components_update(
 						$current_model,
-						$current_version,
 						$update_version
 					);
 					$msg[] = "Updated component: ".to_string($current_model);
@@ -185,7 +183,7 @@ class update {
 	* @param string $SQL_update
 	* @return object $response
 	*/
-	public static function SQL_update(string $SQL_update) : object {
+	public static function SQL_update( string $SQL_update ) : object {
 
 		// response default
 			$response = new stdClass();
@@ -226,11 +224,10 @@ class update {
 	* COMPONENTS_UPDATE
 	* Iterate ALL structure sections and search components to update based on their model
 	* @param string $model_name
-	* @param array $current_version
 	* @param array $update_version
 	* @return bool
 	*/
-	public static function components_update(string $model_name, array $current_version, array $update_version) : bool {
+	public static function components_update( string $model_name, array $update_version ) : bool {
 
 		# Existing db tables
 		# Gets array of all db tables
@@ -359,7 +356,7 @@ class update {
 
 					$RecordObj_dd	= new RecordObj_dd($current_component_tipo);
 					$translatable	= $RecordObj_dd->get_traducible();
-					$ar_langs		= ($translatable==='no') ? array(DEDALO_DATA_NOLAN) : DEDALO_PROJECTS_DEFAULT_LANGS;
+					$ar_langs		= ($translatable==='no') ? [DEDALO_DATA_NOLAN] : DEDALO_PROJECTS_DEFAULT_LANGS;
 
 					foreach ($ar_langs as $current_lang) {
 
@@ -375,8 +372,8 @@ class update {
 							false
 						);
 						$component->get_dato();
-						$dato_unchanged = $component->get_dato_unchanged();
-						$reference_id 	= $current_section_tipo.'.'.$section_id.'.'.$current_component_tipo;
+						$dato_unchanged	= $component->get_dato_unchanged();
+						$reference_id	= $current_section_tipo.'.'.$section_id.'.'.$current_component_tipo;
 
 						$update_options = new stdClass();
 							$update_options->update_version	= $update_version;
@@ -514,9 +511,10 @@ class update {
 
 	/**
 	* UPDATE_DEDALO_DATA_VERSION
-	* @return bool true
+	* @param string $version_to_update
+	* @return bool
 	*/
-	public static function update_dedalo_data_version(string $version_to_update) : bool {
+	public static function update_dedalo_data_version( string $version_to_update ) : bool {
 
 		$values = new stdClass();
 			$values->dedalo_version = $version_to_update;
@@ -527,7 +525,11 @@ class update {
 		$SQL_update = 'INSERT INTO "matrix_updates" ("datos") VALUES (\''.$str_values.'\');';
 
 		self::SQL_update($SQL_update);
-		debug_log(__METHOD__." Updated table 'matrix_updates' with values: ".to_string($str_values), logger::DEBUG);
+		debug_log(__METHOD__
+			." Updated table 'matrix_updates' with values: ". PHP_EOL
+			. json_encode($str_values, JSON_PRETTY_PRINT)
+			, logger::DEBUG
+		);
 
 		return true;
 	}//end update_dedalo_data_version
