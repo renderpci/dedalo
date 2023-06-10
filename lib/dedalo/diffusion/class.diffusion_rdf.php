@@ -48,7 +48,6 @@ class diffusion_rdf extends diffusion {
 	*/
 	public function update_record( $request_options, $resolve_references=false ) {
 
-
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed';
@@ -58,6 +57,7 @@ class diffusion_rdf extends diffusion {
 				$options->section_tipo				= null;
 				$options->section_id				= null;
 				$options->diffusion_element_tipo	= null;
+				$options->save_file					= true;
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		// target_section_tipo
@@ -119,6 +119,7 @@ class diffusion_rdf extends diffusion {
 				$rdf_options->ar_section_id				= $ar_section_id;	// Array like [45001,45002,45003];
 				$rdf_options->save_to_file_path			= DEDALO_MEDIA_BASE_PATH . $sub_path . $rdf_file_name; // Target file
 				$rdf_options->url_file					= DEDALO_MEDIA_BASE_URL  . $sub_path . $rdf_file_name;
+				$rdf_options->save_file					= $options->save_file;
 
 			$response = $this->build_rdf_file( $rdf_options );
 				#dump($response, ' response ++ '.to_string($options));
@@ -126,8 +127,10 @@ class diffusion_rdf extends diffusion {
 		// saves publication data
 			diffusion::update_publication_data($options->section_tipo, $options->section_id);
 
+
 		return $response;
 	}//end update_record
+
 
 
 	/**
@@ -155,6 +158,7 @@ class diffusion_rdf extends diffusion {
 			$options->ar_section_id				= array();
 			$options->save_to_file_path			= false;
 			$options->url_file					= false;
+			$options->save_file					= true;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		#
@@ -228,7 +232,7 @@ class diffusion_rdf extends diffusion {
 
 		#
 		# SAVE FILE
-			if ($options->save_to_file_path) {
+			if ($options->save_to_file_path && $options->save_file===true) {
 				if( file_put_contents($options->save_to_file_path, $data) ){
 					#$response->msg[] = "File is saved successfully";
 					$msg  = '';
@@ -241,11 +245,13 @@ class diffusion_rdf extends diffusion {
 			}
 
 		// response additional info
-			$response->result = true;
-			$response->url = $options->url_file;
+			$response->result	= true;
+			$response->url		= $options->url_file;
+			$response->data		= $data;
 
-		$total_time=round(microtime(1)-$start_time,3);
-		$response->debug[] = "Generated [".count($options->ar_section_id)." elements] in $total_time secs";
+		// debug
+			$total_time=round(microtime(1)-$start_time,3);
+			$response->debug[] = "Generated [".count($options->ar_section_id)." elements] in $total_time secs";
 
 
 		return $response;

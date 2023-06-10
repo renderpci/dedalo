@@ -1,6 +1,7 @@
 <?php
 // Loads parent class diffusion
 include_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.diffusion.php');
+include_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.diffusion_rdf.php');
 /*
 * CLASS DIFFUSION_SQL
 */
@@ -2935,6 +2936,45 @@ class diffusion_sql extends diffusion  {
 
 		return $section_tipo;
 	}//end map_to_section_tipo
+
+
+
+	/**
+	* GENERATE_RDF
+	* @param object $options
+	*  sample:
+	*  {
+	* 	...
+	*    "propiedades" : {
+	* 		"process_dato": "diffusion_sql::generate_rdf",
+	* 		diffusion_element_tipo": "numisdata325"
+	* 	 },
+	* 	...
+	*  }
+	* @param int $dato
+	*  section_id sample: 1
+	* @return string $rdf
+	* sample:
+	*  <?xml version="1.0" encoding="utf-8"...
+	*/
+	public static function generate_rdf($options, $dato) {
+
+		$section_tipo			= $options->section_tipo;
+		$section_id				= $dato;
+		$diffusion_element_tipo	= $options->propiedades->diffusion_element_tipo;
+
+		$diffusion_rdf	= new diffusion_rdf(null);
+		$response		= $diffusion_rdf->update_record((object)[
+			'section_tipo'				=> $section_tipo,
+			'section_id'				=> $section_id,
+			'diffusion_element_tipo'	=> $diffusion_element_tipo,
+			'save_file'					=> false
+		]);
+
+		$rdf = $response->data ?? null;
+
+		return $rdf;
+	}//end generate_rdf
 
 
 
