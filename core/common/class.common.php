@@ -20,6 +20,7 @@ abstract class common {
 		protected $lang;
 		// string label. like 'component_section_id'
 		protected $label;
+		protected $dato; // object dato (JSON encoded in db)
 
 		// object RecordObj_dd. Ontology definition object
 		public $RecordObj_dd;
