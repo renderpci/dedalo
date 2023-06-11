@@ -59,7 +59,9 @@ core/extras/*
 
 # vendor ignore all except used public
 lib/vendor/*
-vendor/*
+!lib/vendor/composer
+!lib/vendor/myclabs
+!lib/vendor/sweetrdf
 # !vendor/maxmind
 # !vendor/maxmind-db
 # !vendor/react
@@ -69,8 +71,8 @@ vendor/*
 # !vendor/socrata
 # !vendor/composer
 # !vendor/leafo
-!vendor/sweetrdf
-!autoload.php
+# files
+!lib/autoload.php
 # !composer.json
 # !composer.lock
 composer.json
