@@ -1,7 +1,17 @@
 <?php
-require_once DEDALO_CORE_PATH . '/diffusion/class.diffusion.php';
-// require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/vendor/autoload.php');
-require_once DEDALO_LIB_PATH . '/vendor/autoload.php';
+// inludes
+	include_once DEDALO_CORE_PATH . '/diffusion/class.diffusion.php';
+	// easyrdf files
+	// require_once DEDALO_LIB_PATH  . '/vendor/autoload.php';
+	include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Graph.php';
+	include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/RdfNamespace.php';
+	include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Format.php';
+	include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/TypeMapper.php';
+	include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Resource.php';
+	include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Literal.php';
+	include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Utils.php';
+	include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Serialiser.php';
+	include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Serialiser/RdfXml.php';
 
 
 
@@ -31,11 +41,11 @@ class diffusion_rdf extends diffusion {
 
 	/**
 	* CONSTRUCT
-	* @param object $options . Default null
+	* @param object $options = null
 	*/
 	function __construct(object $options=null) {
 
-		parent::__construct($options=null);
+		parent::__construct($options);
 
 		// fix url
 		$this->DEDALO_EXTRAS_BASE_URL = DEDALO_ROOT_WEB . '/'. basename(dirname(DEDALO_CORE_PATH)) .'/'. basename(DEDALO_CORE_PATH) .'/'. basename(DEDALO_EXTRAS_PATH);
@@ -46,30 +56,30 @@ class diffusion_rdf extends diffusion {
 	/**
 	* UPDATE_RECORD
 	*
+	* @param object $options
 	* @param bool $resolve_references = false
 	* @return object $response
 	*/
-	public function update_record( $request_options, $resolve_references=false ) {
-
-		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed';
+	public function update_record( object $options, bool $resolve_references=false ) : object {
 
 		// options
-			$options = new stdClass();
-				$options->section_tipo				= null;
-				$options->section_id				= null;
-				$options->diffusion_element_tipo	= null;
-				$options->save_file					= true;
-				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+			$section_tipo			= $options->section_tipo ?? null;
+			$section_id				= $options->section_id ?? null;
+			$diffusion_element_tipo	= $options->diffusion_element_tipo ?? null;
+			$save_file				= $options->save_file ?? null;
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed';
 
 		// target_section_tipo
-			$RecordObj_dd			= new RecordObj_dd($options->diffusion_element_tipo);
+			$RecordObj_dd			= new RecordObj_dd($diffusion_element_tipo);
 			$propiedades			= $RecordObj_dd->get_propiedades(true);
 			// $target_section_tipo	= $propiedades->diffusion->target_section_tipo;
 
 		// Fix vars
-			$this->external_ontology_tipo	= $options->diffusion_element_tipo;
+			$this->external_ontology_tipo	= $diffusion_element_tipo;
 			$this->service_name				= $propiedades->diffusion->service_name;
 			$this->service_type				= $propiedades->diffusion->service_type;
 			$this->name_space				= $propiedades->xmlns;
@@ -77,7 +87,7 @@ class diffusion_rdf extends diffusion {
 
 		// search records
 			if (empty($this->ar_records)) {
-				$ar_section_id = [$options->section_id];
+				$ar_section_id = [$section_id];
 			}else{
 				$ar_section_id = array_map(function($item){
 					return $item->section_id;
@@ -85,10 +95,10 @@ class diffusion_rdf extends diffusion {
 			}
 
 		// filter to publish records
-			$ar_section_id = self::get_to_publish_rows($options->section_tipo, $ar_section_id);
+			$ar_section_id = self::get_to_publish_rows($section_tipo, $ar_section_id);
 
 		// Directory
-			$sub_path    = '/rdf/'.$this->service_name.'/';	 //nomisma/';
+			$sub_path    = '/rdf/'.$this->service_name.'/';	 // nomisma/';
 			$folder_path = DEDALO_MEDIA_PATH . $sub_path;
 			if (!is_dir($folder_path)) {
 				if(!mkdir($folder_path, 0777, true)) {
@@ -107,11 +117,21 @@ class diffusion_rdf extends diffusion {
 			$current_date	= new DateTime();
 			$date			= $current_date->format('Y-m-d H_i_s');
 
-			$ar_owl_class_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($options->diffusion_element_tipo, 'owl:Class', 'children', true);
+			$ar_owl_class_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+				$diffusion_element_tipo,
+				'owl:Class',
+				'children',
+				true // bool search_exact
+			);
 			foreach ($ar_owl_class_tipo as $current_class_tipo) {
-				$ar_current_section_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_class_tipo, 'section', 'termino_relacionado', true);
-				$current_section_tipo		= reset($ar_current_section_tipo);
-				if($current_section_tipo === $options->section_tipo){
+				$ar_current_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+					$current_class_tipo,
+					'section',
+					'termino_relacionado',
+					true // bool search_exact
+				);
+				$current_section_tipo = reset($ar_current_section_tipo);
+				if($current_section_tipo===$section_tipo) {
 					$owl_class_tipo = $current_class_tipo;
 					break;
 				}
@@ -121,7 +141,7 @@ class diffusion_rdf extends diffusion {
 				if (!isset($owl_class_tipo)) {
 					debug_log(__METHOD__
 						. " Unable to resolve owl_class_tipo " . PHP_EOL
-						. ' diffusion_element_tipo: ' . $options->diffusion_element_tipo
+						. ' diffusion_element_tipo: ' . $diffusion_element_tipo
 						, logger::ERROR
 					);
 					$response = new stdClass();
@@ -137,16 +157,16 @@ class diffusion_rdf extends diffusion {
 			$rdf_options = new stdClass();
 				// $rdf_options->external_ontology_tipo	= $this->external_ontology_tipo;
 				$rdf_options->owl_class_tipo			= $owl_class_tipo;	// Numisma RDF : modelo_name : xml
-				$rdf_options->section_tipo				= $options->section_tipo; // $target_section_tipo;	// Fichero
+				$rdf_options->section_tipo				= $section_tipo; // $target_section_tipo;	// Fichero
 				$rdf_options->ar_section_id				= $ar_section_id;	// Array like [45001,45002,45003];
 				$rdf_options->save_to_file_path			= DEDALO_MEDIA_PATH . $sub_path . $rdf_file_name; // Target file
 				$rdf_options->url_file					= DEDALO_MEDIA_URL  . $sub_path . $rdf_file_name;
-				$rdf_options->save_file					= $options->save_file;
+				$rdf_options->save_file					= $save_file;
 
 			$response = $this->build_rdf_file( $rdf_options );
 
 		// saves publication data
-			diffusion::update_publication_data($options->section_tipo, $options->section_id);
+			diffusion::update_publication_data($section_tipo, $section_id);
 
 
 		return $response;
