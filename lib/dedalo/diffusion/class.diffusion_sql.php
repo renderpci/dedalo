@@ -3863,6 +3863,12 @@ class diffusion_sql extends diffusion  {
 	*/
 	public static function map_locator_to_boolean($options=null, $dato=null) {
 
+		// if locator is empty, return null
+		// false ≠ null
+		if(empty($dato)){
+			return null;
+		}
+
 		$value = (!empty($dato) && isset($dato[0]))
 			? ($dato[0]->section_id==1) // bool
 			: false;
