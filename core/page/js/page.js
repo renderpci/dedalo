@@ -40,9 +40,6 @@ export const page = function () {
 	this.context
 	this.status
 	this.events_tokens
-
-
-	return true
 }//end page
 
 
@@ -247,7 +244,6 @@ page.prototype.init = async function(options) {
 				return false
 			}
 		}//end fn_user_navigation
-
 
 	// activate_component
 		self.events_tokens.push(
@@ -529,9 +525,6 @@ page.prototype.add_events = function() {
 					ui.component.deactivate(component_instance)
 			}
 		}//end fn_deactivate_components
-
-
-	return true
 }//end add_events
 
 
@@ -543,7 +536,7 @@ page.prototype.add_events = function() {
 * @param object self (instance)
 * @param object source
 * 	Could be full context of element return by start API function or an basic source on page navigation
-* @return promise current_instance init promise
+* @return promise instance_promise
 */
 export const instantiate_page_element = function(self, source) {
 

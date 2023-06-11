@@ -99,9 +99,8 @@ login.prototype.init = async function(options) {
 
 /**
 * BUILD
-* @param bool autoload = true
-* @return promise
-*	object self
+* @param bool autoload = false
+* @return bool
 */
 login.prototype.build = async function(autoload=false) {
 
@@ -112,7 +111,7 @@ login.prototype.build = async function(autoload=false) {
 
 	// (!) Note that normally login only needs the context to operate and it is injected from page
 	// @see page.instantiate_page_element()
-	// because this the autoload here is false instead the true option in other components, section ...
+	// because this, the autoload here is false instead the true option in other components, section ...
 		if (autoload===true) {
 
 			// rqo build.
@@ -143,7 +142,7 @@ login.prototype.build = async function(autoload=false) {
 		self.status = 'built'
 
 
-	return self
+	return true
 }//end build
 
 
