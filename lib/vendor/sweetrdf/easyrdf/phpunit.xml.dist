@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit
+    backupGlobals="false"
+    backupStaticAttributes="false"
+    colors="true"
+    convertErrorsToExceptions="true"
+    convertNoticesToExceptions="true"
+    convertWarningsToExceptions="true"
+    processIsolation="false"
+    stopOnFailure="false"
+    verbose="true">
+
+    <php>
+      <!--
+        Fix for coverage report causing Seg Fault
+        (see https://bugs.php.net/bug.php?id=53976)
+      -->
+      <ini name="zend.enable_gc" value="0" />
+    </php>
+
+    <testsuites>
+      <testsuite name="EasyRdf Library">
+        <directory suffix="Test.php">test/EasyRdf/</directory>
+      </testsuite>
+      <testsuite name="EasyRdf Examples">
+        <directory suffix="Test.php">test/examples/</directory>
+      </testsuite>
+    </testsuites>
+
+    <filter>
+        <whitelist>
+            <directory>lib</directory>
+        </whitelist>
+    </filter>
+</phpunit>

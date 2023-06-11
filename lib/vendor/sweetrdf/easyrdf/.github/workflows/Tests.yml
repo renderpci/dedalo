@@ -1,0 +1,57 @@
+name: "Tests"
+
+on: push
+
+jobs:
+    linux-tests:
+        name: Linux-Tests with PHP ${{ matrix.php-versions }}
+        runs-on: ubuntu-latest
+
+        strategy:
+            fail-fast: true
+            matrix:
+                php-versions: ['7.1', '7.2', '7.3', '7.4', '8.0', '8.1', '8.2']
+
+        steps:
+            -   name: Checkout
+                uses: actions/checkout@v2
+
+            -   name: Install PHP
+                uses: shivammathur/setup-php@v2
+                with:
+                    php-version: ${{ matrix.php-versions }}
+                    ini-values: memory_limit=1G
+
+            -   name: Install Composer dependencies
+                run: composer update --no-progress --no-suggest --prefer-dist --optimize-autoloader
+
+            -   name: Install other dependencies
+                run: sudo apt-get install graphviz raptor2-utils
+
+            -   name: Tests
+                run: vendor/bin/phpunit
+
+    windows-tests:
+        name: Windows-Tests with PHP ${{ matrix.php-versions }}
+        runs-on: windows-2019
+
+        strategy:
+            fail-fast: true
+            matrix:
+                php-versions: ['7.1', '7.2', '7.3', '7.4', '8.0', '8.1', '8.2']
+
+        steps:
+            -   name: Checkout
+                uses: actions/checkout@v2
+
+            -   name: Install PHP
+                uses: shivammathur/setup-php@v2
+                with:
+                    php-version: ${{ matrix.php-versions }}
+                    ini-values: memory_limit=1G
+
+            -   name: Install Composer dependencies
+                run: composer update --no-progress --no-suggest --prefer-dist --optimize-autoloader
+
+            -   name: Tests
+                run: vendor/bin/phpunit --exclude linux
