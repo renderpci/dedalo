@@ -13,7 +13,7 @@ class section extends common {
 	*/
 		# FIELDS
 		protected $section_id;
-		protected $dato;
+		// protected $dato;
 
 		# Buttons objects
 		public $ar_buttons;
