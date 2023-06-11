@@ -2859,7 +2859,7 @@
 		Added relation_list->get_difusion_value related case to manage deep path resolutions. See properties case mdcat4338
 		Fixed errors in diffusion value calculation in custom->related mode (relation_list->get_difusion_value) see mdcat4338 case
 
-		Valencia 2023-05-18T10:09:52+02:00
+		Valencia 2023-05-19T21:58:51+02:00
 		Fixed tool_upload error where component was saved on every chunk. Now only non chunked f¡uploads will be logged and saved to prevent DDBB overload
 
 
@@ -2892,7 +2892,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '2023-05-18T10:09:52+02:00');
+	define('DEDALO_BUILD'	, '2023-06-10T21:27:57+02:00');
 
 
 

@@ -115,7 +115,7 @@ if(!empty($data) && $data->mode==='edit_ts') {
 	// Write session to unlock session file
 	session_write_close();
 
-	// all ouput will be in json format
+	// all output will be in json format
 	header('Content-Type: application/json');
 
 	$response = new stdClass();

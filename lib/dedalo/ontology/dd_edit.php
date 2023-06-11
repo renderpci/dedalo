@@ -27,6 +27,41 @@ require_once( dirname(__FILE__) . '/lang/lang_code.php' );
 	require_once(dirname(__FILE__) . '/d3_functions.php');
 
 
+// test. Propagate jer_dd and descriptors_dd to matrix Ontology records
+	/*
+	$range = range(1, 1343);
+	// $range = range(1344, 1344);
+	foreach ((array)$range as $n) {
+
+		$current_tipo = 'dmm'.$n;
+			dump($current_tipo, ' current_tipo ++ '.to_string());
+
+		// edit
+			// JSON Ontology Item save
+			$json_item	= (object)ontology::tipo_to_json_item($current_tipo);
+				// dump($json_item, ' json_item ++ '.to_string());
+			$save_item	= ontology::save_json_ontology_item($current_tipo, $json_item);	// return object response
+
+			if (!empty($json_item->descriptors)) {
+				foreach ($json_item->descriptors as $descriptor_value) {
+
+					$result = ontology::edit_term((object)[
+						'term_id'	=> $current_tipo,
+						'dato'		=> $descriptor_value->value,
+						'dato_tipo'	=> 'termino',
+						'lang'		=> $descriptor_value->lang
+					]);
+				}
+			}
+
+			// if ($n>5) {
+			// 	break;
+			// }
+	}
+	die();
+	*/
+
+
 $localizacion	= $tesaurus_title ;
 $localizacion2	= $editar_title  ;
 $area			= 'tesauro';
@@ -131,6 +166,11 @@ require_once($page_html);
 
 # Write session to unlock session file
 session_write_close();
+
+
+
+
+
 
 
 

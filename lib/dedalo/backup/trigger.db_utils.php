@@ -112,7 +112,8 @@ function build_version_from_git_master($json_data) : object {
 				// target
 				$target		= DEDALO_6_CODE_FILES_DIR .'/dedalo'.$version.'_code.zip';
 				// command
-				$command	= "cd $source; git archive --verbose --format=zip --prefix=dedalo{$version}_code/ v6_developer > $target ";
+				// $command	= "cd $source; git archive --verbose --format=zip --prefix=dedalo{$version}_code/ v6_developer > $target ";
+				$command	= "cd $source; git archive --verbose --format=zip --prefix=dedalo{$version}_code/ master > $target ";
 
 			}else{
 				// source
@@ -121,7 +122,8 @@ function build_version_from_git_master($json_data) : object {
 				$target		= DEDALO_CODE_FILES_DIR .'/dedalo'.$version.'_code.zip';
 				// command
 				// $command	= "cd $source; git archive --format=zip --prefix=dedalo5_code/ HEAD > $target 2>&1"; // @see https://git-scm.com/docs/git-archive
-				$command	= "cd $source; git archive --verbose --format=zip --prefix=dedalo{$version}_code/ HEAD > $target ";
+				// $command	= "cd $source; git archive --verbose --format=zip --prefix=dedalo{$version}_code/ HEAD > $target ";
+				$command	= "cd $source; git archive --verbose --format=zip --prefix=dedalo{$version}_code/ v5 > $target ";
 			}
 
 			$msg = "Called Dédalo update_head_code with command: " .PHP_EOL. to_string($command);
