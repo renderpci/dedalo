@@ -359,6 +359,9 @@ page.prototype.init = async function(options) {
 	// events
 		self.add_events()
 
+	// update main CSS url to avoid cache
+		update_css_file('main')
+
 
 	// status update
 		self.status = 'initialized'
@@ -600,6 +603,31 @@ export const instantiate_page_element = function(self, source) {
 
 	return instance_promise
 }//end instantiate_page_element
+
+
+
+/**
+* UPDATE_CSS_FILE
+* Force load cached css file
+* @param string sheet_name
+* 	Sample: 'main'
+* @return bool
+*/
+const update_css_file = function(sheet_name) {
+
+	const style_sheet = document.querySelector('link[href*=' + sheet_name + ']')
+	if (style_sheet) {
+		const url = style_sheet.href
+		if (url.indexOf('?')===-1) {
+			// add version and update style_sheet
+			const new_url = url + '?v=' + (new Date().valueOf())
+			style_sheet.href = new_url
+			return true
+		}
+	}
+
+	return false
+}//end update_css_file
 
 
 
