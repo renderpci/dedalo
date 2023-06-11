@@ -1942,7 +1942,7 @@ export const ui = {
 			const ar_langs_lenght = ar_langs.length
 			for (let i = 0; i < ar_langs_lenght; i++) {
 
-				const option = ui.create_dom_element({
+				const current_option = ui.create_dom_element({
 					element_type	: 'option',
 					value			: ar_langs[i].value,
 					inner_html		: ar_langs[i].label,
@@ -1950,7 +1950,7 @@ export const ui = {
 				})
 				// selected options set on match
 				if (ar_langs[i].value===selected) {
-					option.selected = true
+					current_option.selected = true
 				}
 			}
 
