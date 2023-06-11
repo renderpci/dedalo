@@ -60,7 +60,7 @@ const t0 = performance.now()
 				prevent_lock	: true,
 				options : {
 					search_obj	: url_vars_to_object(location.search),
-					menu		: menu,
+					menu		: menu //  bool
 				}
 			}
 

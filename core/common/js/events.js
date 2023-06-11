@@ -25,6 +25,7 @@ if (typeof window.unsaved_data==='undefined') {
 * event as visibilityState or beforeunload are init at load of the page
 * this events are global and use to control the unsaved data of the page
 * see the main page initialization in /page/index.html
+* @return bool
 */
 export const events_init = function(){
 
@@ -41,10 +42,13 @@ export const events_init = function(){
 			}
 		}
 
-	const saving = event_manager.subscribe('save', function(result){
-		console.log('save result:', result);
-		// saved = true
-	})
+	// save
+		const saving = event_manager.subscribe('save', fn_save)
+		function fn_save(result) {
+			console.log('events_init save result:', result);
+			// saved = true
+		}
+
 
 	return true
 }//end events_init
