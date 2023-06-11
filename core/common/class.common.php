@@ -3382,17 +3382,27 @@ abstract class common {
 
 	/**
 	* GET_SOURCE
-	* @return object | json
+	* @return object $source
 	*/
 	public function get_source() : object {
 
-		$source = new request_query_object();
-			$source->set_tipo($this->get_tipo());
-			$source->set_section_tipo($this->get_section_tipo());
-			$source->set_lang($this->get_lang());
-			$source->set_mode($this->get_mode());
-			$source->set_section_id($this->get_section_id());
-			$source->set_model(get_class($this));
+		// $source = new request_query_object();
+		// 	$source->set_tipo($this->get_tipo());
+		// 	$source->set_section_tipo($this->get_section_tipo());
+		// 	$source->set_lang($this->get_lang());
+		// 	$source->set_mode($this->get_mode());
+		// 	$source->set_section_id($this->get_section_id());
+		// 	$source->set_model(get_class($this));
+
+		$source = (object)[
+			'tipo'			=> $this->get_tipo(),
+			'model'			=> get_class($this),
+			'section_tipo'	=> $this->get_section_tipo(),
+			'section_id'	=> $this->get_section_id(),
+			'lang'			=> $this->get_lang(),
+			'mode'			=> $this->get_mode()
+		];
+
 
 		return $source;
 	}//end get_source
