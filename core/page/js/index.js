@@ -104,18 +104,12 @@ const t0 = performance.now()
 			});
 
 		// page instance build and render
-			const build			= await page_instance.build()
+			const build			= await page_instance.build(false) // set false to prevent duplicate request
 			const wrapper_page	= await page_instance.render()
 
 		// main. Add wrapper page node and restore class
 			main.appendChild(wrapper_page)
 			main.classList.remove('loading','hide')
-
-		// page title update
-			const section_info = api_response.result.context.find(el => el.model==='section' || el.model.indexOf('area')===0)
-			if (section_info) {
-				document.title =  'V6 ' + section_info.tipo + ' ' + section_info.label.replace(/<[^>]+>/ig,'');
-			}
 
 		// debug
 			if(SHOW_DEBUG===true) {
