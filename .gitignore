@@ -75,6 +75,7 @@ vendor/*
 # !composer.lock
 composer.json
 composer.lock
+composer.phar
 
 # Ignore paths that contain generated content.
 /media
