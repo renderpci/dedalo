@@ -13,7 +13,7 @@ abstract class component_common extends common {
 	* @var
 	*/
 		// string section_id. Component's section section_id
-		protected $section_id;
+		// protected $section_id;
 		// string parent. Component's section section_id (alias of $section_id)
 		protected $parent;
 		// string section_tipo. Component's section tipo
