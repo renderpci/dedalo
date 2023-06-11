@@ -299,20 +299,30 @@ const change_lang = async function(e) {
 	e.stopPropagation()
 	e.preventDefault()
 
-	const current_lang = e.target.value
-
-	const api_response = await data_manager.request({
-		use_worker	: true,
-		body		: {
-			action	: 'change_lang',
-			dd_api	: 'dd_utils_api',
-			options	: {
-				dedalo_data_lang		: current_lang,
-				dedalo_application_lang	: e.target.id==='dd_data_lang' ? null : current_lang
-			}
+	// set page style as loading
+		const main = document.getElementById('main')
+		if (main) {
+			main.classList.add('loading')
 		}
-	})
-	window.location.reload(false);
+
+	// current_lang value
+		const current_lang = e.target.value
+
+	// api call
+		const api_response = await data_manager.request({
+			use_worker	: true,
+			body		: {
+				action	: 'change_lang',
+				dd_api	: 'dd_utils_api',
+				options	: {
+					dedalo_data_lang		: current_lang,
+					dedalo_application_lang	: e.target.id==='dd_data_lang' ? null : current_lang
+				}
+			}
+		})
+
+	// reload window
+		window.location.reload(false);
 
 	//event_manager.publish('user_navigation', {lang: current_lang})
 

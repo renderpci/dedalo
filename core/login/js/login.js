@@ -9,6 +9,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	// import * as instances from '../../common/js/instances.js'
 	import {common, create_source} from '../../common/js/common.js'
+	// import {pause} from '../../common/js/utils/index.js'
 	import {
 		render_login,
 		render_files_loader
@@ -160,6 +161,12 @@ login.prototype.build = async function(autoload=false) {
 */
 export const quit = async function(options) {
 
+	// set page style as loading
+		const main = document.getElementById('main')
+		if (main) {
+			main.classList.add('loading')
+		}
+
 	// data_manager API call
 		const api_response = await data_manager.request({
 			body : {
@@ -185,6 +192,11 @@ export const quit = async function(options) {
 		}else{
 
 			console.error(api_response.msg);
+		}
+
+	// set page style as loading
+		if (main) {
+			main.classList.remove('loading')
 		}
 
 
