@@ -1219,7 +1219,7 @@ class diffusion_sql extends diffusion  {
 								if(SHOW_DEBUG===true) {
 									#dump($dato," dato"); #dump($properties->enum," dato");
 									if (!property_exists($properties, 'enum')) {
-										throw new Exception("Error Processing Request. Field enum $tipo is misconfigured. Please, set property 'enum' to current field", 1);
+										throw new Exception("Error Processing Request. Field enum $options->tipo is misconfigured. Please, set property 'enum' to current field", 1);
 									}
 								}
 								$ar_field_data['field_value'] = (string)$properties->enum->$dato;		# Format: "enum":{"1":"si", "2":"no"}
@@ -4154,7 +4154,9 @@ class diffusion_sql extends diffusion  {
 				$fallback_method	= $process_dato_arguments->fallback->method;
 				// lang
 				$RecordObj_dd		= new RecordObj_dd($fallback_tipo);
-				$lang				= $RecordObj_dd->get_traducible()==='si' ? $_options->lang : DEDALO_DATA_NOLAN;
+				$lang				= $RecordObj_dd->get_traducible()==='si'
+					? $options->lang ?? DEDALO_DATA_LANG
+					: DEDALO_DATA_NOLAN;
 
 				$section_id			= $component->get_section_id();
 				$section_tipo		= $component->get_section_tipo();
@@ -4220,16 +4222,21 @@ class diffusion_sql extends diffusion  {
 
 	/**
 	* RESOLVE_MULTIPLE
-	* @return string
+	* Note that in this case, 'process_dato_arguments' is an array instead object
+	* Iterate all elements to collect the complete values
+	* @param object $options
+	* @param mixed $dato
+	* @param string $default_separator = ' | '
+	* @return string|null $value
 	*/
-	public static function resolve_multiple($options, $dato, $default_separator=' | ') {
+	public static function resolve_multiple($options, $dato, $default_separator=' | ') : ?string {
 
 		// check empty dato
 			if (empty($dato) || !isset($dato[0])) {
 				return null;
 			}
 
-		// process_dato_arguments
+		// process_dato_arguments. In this case is an array of objects
 			$process_dato_arguments = (array)$options->properties->process_dato_arguments;
 
 		// ar_value
@@ -4248,8 +4255,8 @@ class diffusion_sql extends diffusion  {
 
 
 				// empty_value. if defined, force custom empty value from properties arguments to insert into result array
-					if (true===self::empty_value($current_value) && isset($process_dato_arguments->empty_value)) {
-						$current_value	= $process_dato_arguments->empty_value; // any type is accepted: array, object, string ..
+					if (true===self::empty_value($current_value) && isset($current_options->empty_value)) {
+						$current_value	= $current_options->empty_value; // any type is accepted: array, object, string ..
 						$ar_value[]		= $current_value;
 					}else{
 						if($current_value!==null){
@@ -4258,20 +4265,24 @@ class diffusion_sql extends diffusion  {
 					}
 			}
 
-		// output optional
-			$output = isset($process_dato_arguments->output) ? $process_dato_arguments->output : null;
-			switch ($output) {
-				case 'merged':
-					# Merge all arrays values in one only array
-					$ar_value 	= array_values($ar_value); // Restore array keys
-					$value 	  	= json_encode($ar_value, JSON_UNESCAPED_UNICODE);
-					break;
+		// output optional. (!) Removed 11-06-2023 because process_dato_arguments is multiple (array)
+			// $output = isset($process_dato_arguments->output) ? $process_dato_arguments->output : null;
+			// switch ($output) {
+			// 	case 'merged':
+			// 		# Merge all arrays values in one only array
+			// 		$ar_value 	= array_values($ar_value); // Restore array keys
+			// 		$value 	  	= json_encode($ar_value, JSON_UNESCAPED_UNICODE);
+			// 		break;
 
-				default:
-					$separator 	= $options->properties->separator ?? $default_separator;
-					$value 		= implode($separator,$ar_value);
-					break;
-			}
+			// 	default:
+			// 		$separator 	= $options->properties->separator ?? $default_separator;
+			// 		$value 		= implode($separator, $ar_value);
+			// 		break;
+			// }
+
+		// to string default action
+			$separator	= $options->properties->separator ?? $default_separator;
+			$value		= implode($separator, $ar_value);
 
 		// check empty values
 			if (true===self::empty_value($value)) {
