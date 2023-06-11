@@ -7,7 +7,6 @@
 // import
 	// custom html elements
 	// import '../../common/js/dd-modal.js'
-	// import '../../services/service_tinymce/js/dd-tiny.js'
 	// others
 	import {clone, dd_console, find_up_node} from '../../common/js/utils/index.js'
 	// import {menu} from '../../menu/js/menu.js'
@@ -16,6 +15,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {get_instance} from '../../common/js/instances.js'
 	import {common, push_browser_history} from '../../common/js/common.js'
+	import {url_vars_to_object, JSON_parse_safely} from '../../common/js/utils/index.js'
 	// import {load_tool} from '../../../tools/tool_common/js/tool_common.js'
 	// import '../../common/js/components_list.js' // launch preload all components files in parallel
 	// import '../../../lib/tinymce/js/tinymce/tinymce.min.js'
@@ -59,6 +59,7 @@ export const page = function () {
 /**
 * INIT
 * @param object options
+* @return bool
 */
 page.prototype.init = async function(options) {
 
@@ -303,22 +304,6 @@ page.prototype.init = async function(options) {
 			}
 		}//end fn_user_navigation
 
-
-	// window onpopstate. Triggered when user make click on browser navigation buttons
-		// note that navigation calls generate a history of event state, and when user click's on back button,
-		// the browser get this event form history with the state info stored previously
-		window.onpopstate = function(event) {
-			if (event.state) {
-				// get previously stored state data
-				const new_user_navigation_options = event.state.user_navigation_options
-				// mark as already used in history
-				new_user_navigation_options.event_in_history = true
-				// publish the event normally as usual
-				event_manager.publish('user_navigation', new_user_navigation_options)
-			}
-		}
-
-
 	// observe tool calls
 		// load_tool
 		// The event is fired by the tool button created with method ui.build_tool_button.
@@ -327,24 +312,6 @@ page.prototype.init = async function(options) {
 			// 	event_manager.subscribe('load_tool', load_tool) // fire tool_common.load_tool function
 			// )
 
-	// beforeunload (event)
-		window.addEventListener('beforeunload', beforeUnloadListener, {capture: true})
-		function beforeUnloadListener(event) {
-			// event.preventDefault();
-
-			// document.activeElement.blur()
-			if (typeof window.unsaved_data==='undefined' || window.unsaved_data!==true) {
-				// console.log('window.unsaved_data:', window.unsaved_data);
-				// removeEventListener('beforeunload', beforeUnloadListener, {capture: true})
-				return false
-			}
-
-			// set event.returnValue value to force browser standard message (unable to customize)
-			// like : 'Changes that you made may not be saved.'
-			event.returnValue = true
-			// return event.returnValue = get_label.discard_changes || 'Discard unsaved changes?';
-		}
-
 	// window messages
 		// window.addEventListener("message", receiveMessage, false);
 		// function receiveMessage(event) {
@@ -352,12 +319,11 @@ page.prototype.init = async function(options) {
 		// 	alert("Mensaje recibido !");
 		// }
 
-	// events
+	// events. Add window/document general events
 		self.add_events()
 
 	// update main CSS url to avoid cache
 		update_css_file('main')
-
 
 	// status update
 		self.status = 'initialized'
@@ -410,10 +376,62 @@ page.prototype.init = async function(options) {
 
 /**
 * BUILD
+* @param bool autoload = false
+* @return bool
 */
-page.prototype.build = async function() {
+page.prototype.build = async function(autoload=false) {
 
 	const self = this
+
+	// status update
+		self.status = 'building'
+
+	// (!) Note that normally page only needs the context to operate and it is injected from index.js
+	// because this, the autoload here is false instead the true option in other elements ...
+		if (autoload===true) {
+
+			// searchParams
+				const searchParams = new URLSearchParams(window.location.href);
+
+			// menu
+				const menu = searchParams.has('menu')
+					? JSON_parse_safely(
+						searchParams.get('menu'), // string from url
+						true // fallback on exception parsing string
+					  )
+					: true
+
+			// start bootstrap
+				const rqo = { // rqo (request query object)
+					action			: 'start',
+					prevent_lock	: true,
+					options : {
+						search_obj	: url_vars_to_object(location.search),
+						menu		: menu //  bool
+					}
+				}
+
+				// request page context (usually menu and section context)
+				const api_response = await data_manager.request({
+					body : rqo
+				});
+
+			// set context and data to current instance
+				self.context	= api_response.result.context
+				self.data		= {}
+		}
+
+	// page title update
+		const section_info = self.context.find(el => el.model==='section' || el.model.indexOf('area')===0)
+		if (section_info) {
+
+			const tipo = section_info.tipo || 'Unknown tipo'
+			const label = section_info.label
+				? section_info.label.replace(/<[^>]+>/ig,'')
+				: ''
+
+			document.title =  'V6 ' + tipo + ' ' + label
+		}
 
 	// status update
 		self.status = 'built'
@@ -426,10 +444,43 @@ page.prototype.build = async function() {
 /**
 * ADD_EVENTS
 * Set page common events like 'keydown'
+* @return void
 */
 page.prototype.add_events = function() {
 
 	const self = this
+
+	// window onpopstate. Triggered when user clicks on the browser navigation buttons
+		// note that navigation calls generate a history of event state, and when user click's on back button,
+		// the browser get this event form history with the state info stored previously
+		window.onpopstate = function(event) {
+			if (event.state) {
+				// get previously stored state data
+				const new_user_navigation_options = event.state.user_navigation_options
+				// mark as already used in history
+				new_user_navigation_options.event_in_history = true
+				// publish the event normally as usual
+				event_manager.publish('user_navigation', new_user_navigation_options)
+			}
+		}
+
+	// beforeunload (event)
+		window.addEventListener('beforeunload', beforeUnloadListener, {capture: true})
+		function beforeUnloadListener(event) {
+			// event.preventDefault();
+
+			// document.activeElement.blur()
+			if (typeof window.unsaved_data==='undefined' || window.unsaved_data!==true) {
+				// console.log('window.unsaved_data:', window.unsaved_data);
+				// removeEventListener('beforeunload', beforeUnloadListener, {capture: true})
+				return false
+			}
+
+			// set event.returnValue value to force browser standard message (unable to customize)
+			// like : 'Changes that you made may not be saved.'
+			event.returnValue = true
+			// return event.returnValue = get_label.discard_changes || 'Discard unsaved changes?';
+		}
 
 	// keydown events
 		document.addEventListener('keydown', fn_keydown)
