@@ -15,8 +15,83 @@ $updates = new stdClass();
 	// CREATE INDEX IF NOT EXISTS matrix_rsc86_gin ON matrix USING gin(f_unaccent(datos#>>'{components, rsc86, dato}') gin_trgm_ops);
 	// CREATE INDEX IF NOT EXISTS matrix_rsc85_gin ON matrix USING gin(f_unaccent(datos#>>'{components, rsc85, dato}') gin_trgm_ops);
 
+$v=597; #####################################################################################
+$updates->$v = new stdClass();
 
-$v=595; #####################################################################################
+	# UPDATE TO
+	$updates->$v->version_major 	 = 5;
+	$updates->$v->version_medium 	 = 9;
+	$updates->$v->version_minor 	 = 7;
+
+	# MINIM UPDATE FROM
+	$updates->$v->update_from_major  = 5;
+	$updates->$v->update_from_medium = 9;
+	$updates->$v->update_from_minor  = 6;
+
+
+	# DATABASE UPDATES
+	require_once( dirname(dirname(__FILE__)) .'/upgrades/class.portugal_upgrade.php');
+
+	$hierarchy_sections = area_thesaurus::get_all_hierarchy_sections();
+	$run_portugal_update = false;
+	foreach ($hierarchy_sections as $row) {
+		# Skip filtered sections when defined
+		$target_section_tipo = $row->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO};
+		if (!empty($target_section_tipo) && $target_section_tipo ==='pt1') {
+			$run_portugal_update = true;
+			break;
+		}
+	}//end foreach ($ar_records as $key => $row)
+
+	if($run_portugal_update === true){
+
+		# get indexations of the current data
+		$script_obj					= new stdClass();
+			$script_obj->info			= "Save the indexation data of the toponomy.";
+			$script_obj->script_class	= "portugal_upgrade";
+			$script_obj->script_method	= "save_indexation";
+			$script_obj->script_vars	= null; // Note that only ONE argument as array is sended
+		$updates->$v->run_scripts[]	= $script_obj;
+
+
+		# Change the Portugal toponomy data
+		$script_obj					= new stdClass();
+			$script_obj->info			= "import new Portual hierarchy.";
+			$script_obj->script_class	= "portugal_upgrade";
+			$script_obj->script_method	= "import_pt1_and_pt2";
+			$script_obj->script_vars	= null; // Note that only ONE argument as array is sended
+		$updates->$v->run_scripts[]	= $script_obj;
+
+		# Update datos to section_data
+		$script_obj = new stdClass();
+			$script_obj->info			= "Convert data of Portugal to new hierarchy.";
+			$script_obj->script_class	= "portugal_upgrade";
+			$script_obj->script_method	= "convert_table_data";
+			$script_obj->script_vars	= [json_encode([
+					'matrix',
+					'matrix_activities',
+					'matrix_activity',
+					'matrix_hierarchy',
+					'matrix_hierarchy_main',
+					'matrix_langs',
+					'matrix_layout',
+					'matrix_list',
+					'matrix_notes',
+					'matrix_profiles',
+					'matrix_projects',
+					'matrix_users',
+					'matrix_indexations',
+					'matrix_structurations',
+					'matrix_dataframe',
+					'matrix_dd',
+					'matrix_layout_dd',
+					'matrix_time_machine'
+			])]; // Note that only ONE argument as array is sended
+		$updates->$v->run_scripts[] = $script_obj;
+	}
+
+
+$v=596; #####################################################################################
 $updates->$v = new stdClass();
 
 	# UPDATE TO
