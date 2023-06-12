@@ -1,20 +1,4 @@
 <?php
-// inludes
-	include_once DEDALO_CORE_PATH . '/diffusion/class.diffusion.php';
-	// easyrdf files
-	// require_once DEDALO_LIB_PATH  . '/vendor/autoload.php';
-	include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Graph.php';
-	include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/RdfNamespace.php';
-	include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Format.php';
-	include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/TypeMapper.php';
-	include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Resource.php';
-	include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Literal.php';
-	include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Utils.php';
-	include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Serialiser.php';
-	include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Serialiser/RdfXml.php';
-
-
-
 /**
 * DIFFUSION_RDF
 * Used to publish data to RDF
@@ -49,13 +33,54 @@ class diffusion_rdf extends diffusion {
 
 		// fix url
 		$this->DEDALO_EXTRAS_BASE_URL = DEDALO_ROOT_WEB . '/'. basename(dirname(DEDALO_CORE_PATH)) .'/'. basename(DEDALO_CORE_PATH) .'/'. basename(DEDALO_EXTRAS_PATH);
+
+		// easyrdf files load
+			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Graph.php';
+			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/RdfNamespace.php';
+			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Format.php';
+			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/TypeMapper.php';
+			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Resource.php';
+			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Literal.php';
+			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Utils.php';
+			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Serialiser.php';
+			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Serialiser/RdfXml.php';
 	}//end __construct
 
 
 
 	/**
+	* GET_DIFFUSION_SECTIONS_FROM_DIFFUSION_ELEMENT
+	* Used to determine when show publication button in sections
+	* Called from class diffusion to get the RDF portion of sections
+	* @see diffusion::get_diffusion_sections_from_diffusion_element
+	* @param string $diffusion_element_tipo
+	* @param string $class_name = null
+	* @return array $ar_diffusion_sections
+	*/
+	public static function get_diffusion_sections_from_diffusion_element(string $diffusion_element_tipo, string $class_name=null) : array {
+
+		$ar_diffusion_sections = array();
+
+		// XML elements
+		$elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, 'owl:Class', 'children', true);
+		foreach ($elements as $current_element_tipo) {
+
+			# Pointer to section
+			$ar_related = common::get_ar_related_by_model('section', $current_element_tipo);
+
+			if (isset($ar_related[0])) {
+				$ar_diffusion_sections[] = $ar_related[0];
+			}
+		}
+
+
+		return $ar_diffusion_sections;
+	}//end get_diffusion_sections_from_diffusion_element
+
+
+
+	/**
 	* UPDATE_RECORD
-	*
 	* @param object $options
 	* @param bool $resolve_references = false
 	* @return object $response
@@ -66,7 +91,7 @@ class diffusion_rdf extends diffusion {
 			$section_tipo			= $options->section_tipo ?? null;
 			$section_id				= $options->section_id ?? null;
 			$diffusion_element_tipo	= $options->diffusion_element_tipo ?? null;
-			$save_file				= $options->save_file ?? null;
+			$save_file				= $options->save_file ?? true;
 
 		// response
 			$response = new stdClass();
@@ -181,7 +206,7 @@ class diffusion_rdf extends diffusion {
 	*/
 	public function build_rdf_file( object $request_options ) : object {
 
-		# Maximum execution time seconds
+		// Maximum execution time seconds
 		set_time_limit(600);
 
 		$start_time=microtime(1);
@@ -272,11 +297,12 @@ class diffusion_rdf extends diffusion {
 		# SAVE FILE
 			if ($options->save_to_file_path && $options->save_file===true) {
 				if( file_put_contents($options->save_to_file_path, $data) ){
-					#$response->msg[] = "File is saved successfully";
+					// $response->msg[] = "File is saved successfully";
+					// '.pathinfo($options->url_file,PATHINFO_BASENAME).'
 					$msg  = '';
-					$msg .= '&nbsp;<a class="btn btn-primary btn-sm" role="button" href="'.$options->url_file.'" target="_blank"><span class="glyphicon glyphicon-save"></span> Download '.pathinfo($options->url_file,PATHINFO_BASENAME).'</a>';
+					$msg .= '&nbsp;<a class="btn btn-primary btn-sm" role="button" href="'.$options->url_file.'" target="_blank"><span class="glyphicon glyphicon-save"></span> Download</a>';
 					if(SHOW_DEBUG===true) {
-					$msg .= '<hr>DEBUG: ' . $options->save_to_file_path;
+					$msg .= '<hr>DEBUG:<br> File path: ' . $options->save_to_file_path;
 					}
 					$response->msg[] = $msg;
 				}
@@ -1259,40 +1285,15 @@ class diffusion_rdf extends diffusion {
 
 
 	/**
-	* GET_DIFFUSION_SECTIONS_FROM_DIFFUSION_ELEMENT
-	* Used to determine when show publication button in sections
-	* @return array $ar_diffusion_sections
-	*/
-	public static function get_diffusion_sections_from_diffusion_element(string $diffusion_element_tipo, string $class_name=null) : array {
-
-		$ar_diffusion_sections = array();
-
-		# xml elements
-		$elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, 'owl:Class', 'children', true);
-		foreach ($elements as $current_element_tipo) {
-
-			# Pointer to section
-			$ar_related = common::get_ar_related_by_model('section', $current_element_tipo);
-
-			if (isset($ar_related[0])) {
-				$ar_diffusion_sections[] = $ar_related[0];
-			}
-		}
-
-
-		return $ar_diffusion_sections;
-	}//end get_diffusion_sections_from_diffusion_element
-
-
-	/**
 	* DIFFUSION_COMPLETE_DUMP
 	* @return
 	*/
 	public function diffusion_complete_dump($diffusion_element, $resolve_references = true) {
 
 		// Working here
-		debug_log(__METHOD__." Called unfinished class. Nothing is done ".to_string(), logger::DEBUG);
+		debug_log(__METHOD__." Called unfinished class. Nothing is done ".to_string(), logger::WARNING);
 	}//end diffusion_complete_dump
+
 
 
 	/**
