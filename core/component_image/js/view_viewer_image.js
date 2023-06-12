@@ -48,7 +48,6 @@ view_viewer_image.render = function(self, options) {
 	// image
 		const image = ui.create_dom_element({
 			element_type	: 'img',
-			// src			: thumb_url,
 			class_name		: 'viewer_image hidden',
 			parent			: wrapper
 		})

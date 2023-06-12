@@ -312,7 +312,6 @@ export const render_server_response_error = function(errors, add_wrapper=false) 
 							parent			: error_container
 						})
 
-
 					// raspa_error add once
 						if (!error_container.classList.contains('raspa_error')) {
 							error_container.classList.add('raspa_error')

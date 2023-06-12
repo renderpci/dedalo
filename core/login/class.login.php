@@ -448,9 +448,9 @@ class login extends common {
 	/**
 	* GET_USERNAME
 	* @param string|int $section_id (is user section id)
-	* @return string $full_username
+	* @return string $username
 	*/
-	public static function get_username($section_id) : string {
+	public static function get_username(string|int $section_id) : string {
 
 		$component = component_common::get_instance(
 			'component_input_text',
@@ -460,7 +460,11 @@ class login extends common {
 			DEDALO_DATA_NOLAN,
 			DEDALO_SECTION_USERS_TIPO
 		);
-		$username = $component->get_valor();
+		$dato = $component->get_dato();
+
+		$username = !empty($dato)
+			? implode(' ', (array)$dato)
+			: '';
 
 		return $username;
 	}//end get_username
@@ -482,7 +486,11 @@ class login extends common {
 			DEDALO_DATA_NOLAN,
 			DEDALO_SECTION_USERS_TIPO
 		);
-		$full_username = $component->get_valor();
+		$dato = $component->get_valor();
+
+		$full_username = !empty($dato)
+			? implode(' ', (array)$dato)
+			: '';
 
 		return $full_username;
 	}//end get_full_username
@@ -592,7 +600,6 @@ class login extends common {
 			$user_have_projects = true;
 		}
 
-
 		return (bool)$user_have_projects;
 	}//end user_have_projects_check
 
@@ -629,10 +636,13 @@ class login extends common {
 
 
 	/**
-	* INIT_USER_LOGIN_SEqUENCE
+	* INIT_USER_LOGIN_SEQUENCE
 	* init login sequence when all is OK
 	* @param int $user_id
 	* @param string $username
+	* @param string $full_username
+	* @param bool $init_test = true
+	* @param string $login_type = 'default'
 	* @return object $response
 	*/
 	private static function init_user_login_sequence(int $user_id, string $username, string $full_username, bool $init_test=true, string $login_type='default') : object {
@@ -950,7 +960,7 @@ class login extends common {
 	* IS_LOGGED
 	* Test if current user is logged (alias of verify_login)
 	* @see login::verify_login
-	* @return bool (true/false)
+	* @return bool
 	*/
 	public static function is_logged() : bool {
 
@@ -966,8 +976,6 @@ class login extends common {
 	* @return bool (true/false)
 	*/
 	private static function verify_login() : bool {
-		#global $maintenance_mode;
-		#debug_log(__METHOD__." maintenance_mode ".to_string($maintenance_mode), logger::DEBUG);
 
 		// not authenticated case
 		if( empty($_SESSION['dedalo']['auth']['user_id']) ||
@@ -1012,7 +1020,8 @@ class login extends common {
 
 	/**
 	* GET_LOGIN_TIPO
-	* @return string
+	* @return string $tipo
+	* 	value 'dd229'
 	*/
 	private static function get_login_tipo() : string {
 
@@ -1029,7 +1038,7 @@ class login extends common {
 	* @param object $options
 	* @return bool
 	*/
-	public static function Quit(object $options) {
+	public static function Quit(object $options) : bool {
 
 		// options
 			$mode	= $options->mode ?? null;
@@ -1201,52 +1210,57 @@ class login extends common {
 	*	Normally current logged user id
 	* @return bool
 	*/
-	public static function is_developer($user_id) : bool {
-
-		$is_developer = false;
+	public static function is_developer( string|int $user_id) : bool {
 
 		$user_id = (int)$user_id;
 
-		# Dedalo superuser case
-		if ($user_id==DEDALO_SUPERUSER) return true;
+		// Dedalo superuser case
+		if ($user_id==DEDALO_SUPERUSER) {
+			return true;
+		}
 
-		# Empty user_id
-		if ($user_id<1) return false;
-
-		# If request user_id is the same as current logged user, return session value, without acces to component
-		#if ( isset($_SESSION['dedalo']['auth']['user_id']) && $user_id==$_SESSION['dedalo']['auth']['user_id'] ) {
-			#return (bool)$_SESSION['dedalo']['auth']['is_developer'];
-		#}
-
-		# Resolve from component
-		$component = component_common::get_instance(
-			'component_radio_button',
-			DEDALO_USER_DEVELOPER_TIPO,
-			$user_id,
-			'edit',
-			DEDALO_DATA_NOLAN,
-			DEDALO_SECTION_USERS_TIPO
-		);
-		$dato = $component->get_dato();
-
-		if (empty($dato)) {
+		// Empty user_id
+		if ($user_id<1) {
 			return false;
 		}
 
-		# test radio button locator value
-		$locator = reset($dato); # value is always an array
-		if (isset($locator->section_id) && (int)$locator->section_id===1) {
-			$is_developer = true;
-		}
+		// If request user_id is the same as current logged user, return session value, without access to component
+			// if ( isset($_SESSION['dedalo']['auth']['user_id']) && $user_id==$_SESSION['dedalo']['auth']['user_id'] ) {
+			// 	return (bool)$_SESSION['dedalo']['auth']['is_developer'];
+			// }
+
+		// Resolve from component data
+			$component = component_common::get_instance(
+				'component_radio_button',
+				DEDALO_USER_DEVELOPER_TIPO,
+				$user_id,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				DEDALO_SECTION_USERS_TIPO
+			);
+			$dato = $component->get_dato();
+
+		// no data case
+			if (empty($dato)) {
+				return false;
+			}
+
+		// test radio button locator value
+			$locator = reset($dato); // value is always an array
+			if (isset($locator->section_id) && (int)$locator->section_id===1) {
+				return true;
+			}
 
 
-		return $is_developer;
+		return false;
 	}//end is_developer
 
 
 
 	/**
 	* GET_STRUCTURE_CONTEXT
+	* @param int $permissions = 1
+	* @param bool $add_request_config = false
 	* @return dd_object $dd_object
 	*/
 	public function get_structure_context(int $permissions=1, bool $add_request_config=false) : dd_object {
@@ -1391,4 +1405,4 @@ class exec {
            return true;
        }else return false;
    }
-};
+}//end exec
