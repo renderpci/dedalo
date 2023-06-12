@@ -20,6 +20,7 @@
 
 		>.content_data {
 			cursor: pointer;
+			// outline: unset;
 
 			.section_record {
 				.column_section_id {
@@ -182,6 +183,11 @@
 	}//end >.list_body
 
 	&.edit {
+
+		>.list_body >.content_data {
+			// display: contents;
+			// outline: 1px solid @color_grey_light;
+		}
 
 		>.list_body >.content_data >.section_record {
 			outline: 1px solid @color_grey_light;
