@@ -56,6 +56,7 @@ export const tool_user_admin = function () {
 	tool_user_admin.prototype.list				= render_tool_user_admin.prototype.edit
 
 
+
 /**
 * INIT
 * Custom tool init
@@ -108,6 +109,7 @@ tool_user_admin.prototype.build = async function(autoload=false) {
 
 /**
 * GET_DDO_MAP
+* Builds the default ddo_map of users section to use in this tool
 * @return array ddo_map
 */
 tool_user_admin.prototype.get_ddo_map = function() {
@@ -228,8 +230,9 @@ tool_user_admin.prototype.get_ddo_map = function() {
 
 /**
 * BUILD_USER_SECTION
-* Initiate a new custom request config
+* Initiate a new custom section (dd128)
 * Note that, for speed, is built only when render is called
+* @return object section
 */
 tool_user_admin.prototype.build_user_section = async function() {
 

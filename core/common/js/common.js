@@ -270,7 +270,7 @@ common.prototype.render = async function (options={}) {
 
 	// permissions
 		const permissions = parseInt(self.permissions)
-		if(permissions<1){
+		if(permissions<1) {
 
 			const label = (get_label.no_access || 'You don\'t have access here')
 						+ ' [' + self.tipo + ']'
