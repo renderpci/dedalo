@@ -9,6 +9,7 @@ import {ui} from '../../common/js/ui.js'
 import {render_relogin} from '../../login/js/render_login.js'
 
 
+
 describe("SECTION FORCED TEST_UNKNOWN_ERROR", async function() {
 
 	const container = document.getElementById('content');
@@ -24,9 +25,18 @@ describe("SECTION FORCED TEST_UNKNOWN_ERROR", async function() {
 	});
 
 	await section.build(true)
+
+	section.running_with_errors = [
+		{
+			msg		: `Unknown error`,
+			error	: 'unknown_error'
+		}
+	]
+
 	const node = await section.render()
 	container.appendChild(node)
 });
+
 
 
 // @license-end

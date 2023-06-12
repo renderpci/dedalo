@@ -124,7 +124,7 @@ export const get_editing_preset_json_filter = async function(self) {
 				]
 				// debug
 				if(SHOW_DEVELOPER===true) {
-					console.log('self.running_with_errors:', self.running_with_errors);
+					console.error('SERVER: self.running_with_errors:', self.running_with_errors);
 				}
 
 			return null
