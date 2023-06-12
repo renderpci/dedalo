@@ -18,18 +18,15 @@ import {url_vars_to_object} from '../../common/js/utils/index.js'
 		import ('../../common/js/instances.js')
 		.then(async function(instances){
 
-			// login instance add
-				instances.get_instance({
-					model	: 'login',
-					tipo	: 'dd229',
-					mode	: 'edit',
-					lang	: page_globals.dedalo_application_lang
-				})
-				.then(instance => instance.build(true))
-				.then(instance => instance.render())
-				.then(wrapper => {
-					document.body.appendChild(wrapper)
-				})
+			const instance = await instances.get_instance({
+				model	: 'login',
+				tipo	: 'dd229',
+				mode	: 'edit',
+				lang	: page_globals.dedalo_application_lang
+			})
+			await instance.build(true)
+			const wrapper = await instance.render()
+			document.body.appendChild(wrapper)
 		})
 		throw 'Login is required';
 	}
