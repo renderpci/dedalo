@@ -50,7 +50,7 @@ view_column_list_3d.render = async function(self, options) {
 	// image
 		const image = ui.create_dom_element({
 			element_type	: 'img',
-			class_name		: 'loading link',
+			class_name		: 'link',
 			parent			: wrapper
 		})
 		// image.loading = 'lazy'
