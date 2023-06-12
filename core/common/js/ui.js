@@ -2682,19 +2682,30 @@ export const ui = {
 	* SET_BACKGROUND_IMAGE
 	* @param DOM node image
 	* @param DOM node target_node
-	* @return DOMnode image
+	* @return bool
 	*/
 	set_background_image : (image, target_node) => {
+
+		// Firefox skip. (prevents erratic Firefox behavior about canvas bg color)
+		if(navigator.userAgent.toLowerCase().indexOf('firefox') > -1){
+			return false
+		}
 
 		const canvas	= document.createElement('canvas');
 		canvas.width	= image.width;
 		canvas.height	= image.height;
 
 		try {
-			canvas.getContext('2d').drawImage(image, 0, 0, image.width, image.height);
-			const rgb = canvas.getContext('2d').getImageData(0, 0, 1, 1).data;
+			// canvas context 2d
+				const ctx = canvas.getContext("2d");
 
-			// round rgb values
+			// draw image into canvas
+				ctx.drawImage(image, 0, 0, image.width, image.height);
+
+			// get RGB data from canvas
+				const rgb = ctx.getImageData(0, 0, 1, 1).data;
+
+			// round RGB values
 				function correction(value) {
 
 					const factor = 1.016
@@ -2711,19 +2722,25 @@ export const ui = {
 				const b = correction(rgb[2])
 
 			// build backgroundColor style string
-			const bg_color_rgb = 'rgb(' + r + ',' + g + ',' + b +')';
+				const bg_color_rgb = 'rgb(' + r + ',' + g + ',' + b +')';
 
 			// set background color style (both container and image)
-			target_node.style.backgroundColor = bg_color_rgb
+				target_node.style.backgroundColor = bg_color_rgb
 
 		}catch(error){
 			console.warn("ui.set_background_image . Unable to get image canvas: ", image);
 		}
 
-		canvas.remove()
-		image.classList.remove('loading')
+		// remove canvas on finish
+			canvas.remove()
 
-		return image
+		// loading style remove
+			// if (image.classList.contains('loading')) {
+			// 	image.classList.remove('loading')
+			// }
+
+
+		return true
 	},//end set_background_image
 
 
