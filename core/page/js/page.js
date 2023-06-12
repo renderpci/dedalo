@@ -76,9 +76,6 @@ page.prototype.init = async function(options) {
 	self.events_tokens	= []
 	self.menu_data		= options.menu_data
 
-	// launch preload all components files in parallel
-		//import('../../common/js/components_list.js')
-
 	// update value, subscription to the changes: if the section or area was changed, observers dom elements will be changed own value with the observable value
 
 	// user_navigation. Menu navigation (not pagination)
@@ -199,7 +196,7 @@ page.prototype.init = async function(options) {
 
 					// refresh page. Force to load new context elements data from DDBB
 						const refresh_result = await self.refresh({
-							build_autoload	: true,
+							build_autoload	: false,
 							render_level	: 'content'
 						})
 
@@ -376,6 +373,7 @@ page.prototype.init = async function(options) {
 
 /**
 * BUILD
+* (!) Note that normally page only needs load once. Later, only sections/areas will be built
 * @param bool autoload = false
 * @return bool
 */
@@ -386,40 +384,69 @@ page.prototype.build = async function(autoload=false) {
 	// status update
 		self.status = 'building'
 
-	// (!) Note that normally page only needs the context to operate and it is injected from index.js
-	// because this, the autoload here is false instead the true option in other elements ...
+	// (!) Note that normally page only needs load once. Later, only sections/areas will be updated
 		if (autoload===true) {
+			if (self.context) {
+				// catch invalid call. Page build must be false except the first start page
+				console.error('Error. Invalid call to page build with autoload=true. Page already have context!', self.context);
+			}else{
 
-			// searchParams
-				const searchParams = new URLSearchParams(window.location.href);
+				// searchParams
+					const searchParams = new URLSearchParams(window.location.href);
 
-			// menu
-				const menu = searchParams.has('menu')
-					? JSON_parse_safely(
-						searchParams.get('menu'), // string from url
-						true // fallback on exception parsing string
-					  )
-					: true
+				// menu
+					const menu = searchParams.has('menu')
+						? JSON_parse_safely(
+							searchParams.get('menu'), // string from url
+							true // fallback on exception parsing string
+						  )
+						: true
 
-			// start bootstrap
-				const rqo = { // rqo (request query object)
-					action			: 'start',
-					prevent_lock	: true,
-					options : {
-						search_obj	: url_vars_to_object(location.search),
-						menu		: menu //  bool
+				// start bootstrap
+					const rqo = { // rqo (request query object)
+						action			: 'start',
+						prevent_lock	: true,
+						options : {
+							search_obj	: url_vars_to_object(location.search),
+							menu		: menu //  bool
+						}
 					}
-				}
 
 				// request page context (usually menu and section context)
-				const api_response = await data_manager.request({
-					body : rqo
-				});
+					const api_response = await data_manager.request({
+						body : rqo
+					});
+					console.log('page build api_response:', api_response);
 
-			// set context and data to current instance
-				self.context	= api_response.result.context
-				self.data		= {}
-		}
+				// error case
+					if (!api_response || !api_response.result) {
+
+						// running_with_errors
+							const running_with_errors = [
+								{
+									msg		: api_response.msg || 'Invalid API result',
+									error	: api_response.error || 'unknown'
+								}
+							]
+						const wrapper_page = render_server_response_error(
+							running_with_errors
+						)
+
+						return false
+					}
+					// server_errors check (page and environment)
+					if (api_response.dedalo_last_error) {
+						console.error('Page running with server errors. dedalo_last_error: ', api_response.dedalo_last_error);
+					}
+					if (page_globals.dedalo_last_error) {
+						console.error('Environment running with server errors. dedalo_last_error: ', page_globals.dedalo_last_error);
+					}
+
+				// set context and data to current instance
+					self.context	= api_response.result.context
+					self.data		= {}
+			}
+		}//end if (autoload===true)
 
 	// page title update
 		const section_info = self.context.find(el => el.model==='section' || el.model.indexOf('area')===0)
