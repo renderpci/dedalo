@@ -194,7 +194,7 @@ render_menu.prototype.edit = async function() {
 		toggle_inspector.addEventListener('click', ui.toggle_inspector)
 
 	// debug info bar
-		if(SHOW_DEVELOPER===true) {
+		if(SHOW_DEVELOPER===true || SHOW_DEBUG===true) {
 			fragment.appendChild( render_debug_info_bar(self) );
 		}
 
