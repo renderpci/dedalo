@@ -2680,13 +2680,15 @@ export const build_autoload = async function(self) {
 			console.log(`${self.model} build api_response:`, api_response);
 		}
 
-	// last server error. Only for development
-		const dedalo_last_error = (SHOW_DEVELOPER===true)
-			? api_response.dedalo_last_error
-			: null // remove server errors catch for no developers
+	// debug last server error. Only for development
+		if(SHOW_DEVELOPER===true || SHOW_DEBUG===true) {
+			if (api_response && api_response.dedalo_last_error) {
+				console.error('SERVER: api_response.dedalo_last_error:', api_response.dedalo_last_error);
+			}
+		}
 
 	// response check
-		if (!api_response || !api_response.result || dedalo_last_error) {
+		if (!api_response || !api_response.result) {
 
 			// running_with_errors.
 				// It's important to set instance as running_with_errors because this
@@ -2696,12 +2698,12 @@ export const build_autoload = async function(self) {
 					{
 						msg					: `${self.model} build autoload api_response: `+ (api_response.msg),
 						error				: api_response.error || 'unknown',
-						dedalo_last_error	: dedalo_last_error
+						dedalo_last_error	: api_response.dedalo_last_error || null
 					}
 				]
 				// debug
-				if(SHOW_DEVELOPER===true) {
-					console.log('self.running_with_errors:', self.running_with_errors);
+				if(SHOW_DEVELOPER===true || SHOW_DEBUG===true) {
+					console.error('SERVER: self.running_with_errors:', self.running_with_errors);
 				}
 
 			// previous_status
