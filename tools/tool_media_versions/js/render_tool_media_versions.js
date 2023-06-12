@@ -130,11 +130,11 @@ const render_versions_grid = function(self) {
 	// line_file_open
 		versions_container.appendChild( get_line_file_open(ar_quality, self) )
 
-	// line_file_size
-		versions_container.appendChild( get_line_file_size(ar_quality, self) )
-
 	// line_file_extension
 		versions_container.appendChild( get_line_file_extension(ar_quality, self) )
+
+	// line_file_size
+		versions_container.appendChild( get_line_file_size(ar_quality, self) )
 
 	// line_file_upload
 		versions_container.appendChild( get_line_file_upload(ar_quality, self) )
@@ -374,6 +374,60 @@ const get_line_file_open = function(ar_quality, self) {
 
 
 /**
+* GET_LINE_FILE_EXTENSION
+* @param array ar_quality
+* @param object self
+* @return HTMLElement fragment
+*/
+const get_line_file_extension = function(ar_quality, self) {
+
+	// DocumentFragment
+ 		const fragment = new DocumentFragment()
+
+ 	// main label
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'label',
+			inner_html		: get_label.extension || 'Extension',
+			parent			: fragment
+		})
+
+	// info columns
+		const ar_quality_length = ar_quality.length
+		for (let i = 0; i < ar_quality_length; i++) {
+
+			const quality = ar_quality[i]
+
+			// file_info
+				const file_info = self.files_info.find(el => el.quality===quality)
+
+			const file_info_node = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : ''),
+				parent			: fragment
+			})
+
+			if (file_info.file_exist===true) {
+
+				const extension = file_info.file_url.split('.').pop();
+
+				// icon file
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: '',
+					inner_html		: extension,
+					parent			: file_info_node
+				})
+			}
+		}
+
+
+	return fragment
+}//end get_line_file_extension
+
+
+
+/**
 * GET_LINE_FILE_SIZE
 * @param array ar_quality
 * @param object self
@@ -429,60 +483,6 @@ const get_line_file_size = function(ar_quality, self) {
 
 	return fragment
 }//end get_line_file_size
-
-
-
-/**
-* GET_LINE_FILE_EXTENSION
-* @param array ar_quality
-* @param object self
-* @return HTMLElement fragment
-*/
-const get_line_file_extension = function(ar_quality, self) {
-
-	// DocumentFragment
- 		const fragment = new DocumentFragment()
-
- 	// main label
-		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'label',
-			inner_html		: get_label.extension || 'Extension',
-			parent			: fragment
-		})
-
-	// info columns
-		const ar_quality_length = ar_quality.length
-		for (let i = 0; i < ar_quality_length; i++) {
-
-			const quality = ar_quality[i]
-
-			// file_info
-				const file_info = self.files_info.find(el => el.quality===quality)
-
-			const file_info_node = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : ''),
-				parent			: fragment
-			})
-
-			if (file_info.file_exist===true) {
-
-				const extension = file_info.file_url.split('.').pop();
-
-				// icon file
-				ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: '',
-					inner_html		: extension,
-					parent			: file_info_node
-				})
-			}
-		}
-
-
-	return fragment
-}//end get_line_file_extension
 
 
 
