@@ -1929,7 +1929,7 @@ abstract class common {
 						. ' (tipo: '.$this->tipo.' - '. RecordObj_dd::get_termino_by_tipo($this->tipo) .')' . PHP_EOL
 						. ' in request_config_object (It may be due to a lack of permissions in their children). request_config_object:' . PHP_EOL
 						. to_string($request_config_object),
-						logger::ERROR
+						logger::WARNING
 					);
 					continue;
 				}
