@@ -4620,6 +4620,10 @@ class diffusion_sql extends diffusion  {
 
 	/**
 	* GET_DIFFUSION_SECTIONS_FROM_DIFFUSION_ELEMENT
+	* Used to determine when show publication button in sections
+	* Called from class diffusion to get the RDF portion of sections
+	* @param string $diffusion_element_tipo
+	* @param string $class_name = null
 	* @return array $ar_diffusion_sections
 	*/
 	public static function get_diffusion_sections_from_diffusion_element(string $diffusion_element_tipo, string $class_name=null) : array {
@@ -4648,13 +4652,13 @@ class diffusion_sql extends diffusion  {
 				}
 			}
 
-		# tables. RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, $model_name='table', $relation_type='children_recursive', $search_exact=false);
-		$ar_table_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
-			$reference_root_element, // database tipo
-			'table', // modelo_name
-			'children_recursive', // relation_type
-			false // search_exact (allow 'table' and 'table_alias')
-		);
+		// tables. RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, $model_name='table', $relation_type='children_recursive', $search_exact=false);
+			$ar_table_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+				$reference_root_element, // database tipo
+				'table', // modelo_name
+				'children_recursive', // relation_type
+				false // search_exact (allow 'table' and 'table_alias')
+			);
 
 		// database_alias case
 			$database_alias_tipo = $diffusion_element_tipo;
