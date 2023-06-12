@@ -126,6 +126,9 @@ login.prototype.build = async function(autoload=false) {
 				const api_response = await data_manager.request({
 					body : rqo
 				})
+				if(SHOW_DEBUG===true) {
+					console.log('login api_response:', api_response);
+				}
 
 			// set context and data to current instance
 				self.context	= api_response.result.find(element => element.model===self.model);
