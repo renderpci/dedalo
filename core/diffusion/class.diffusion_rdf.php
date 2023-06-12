@@ -1036,67 +1036,89 @@ class diffusion_rdf extends diffusion {
 	* get the base uri to used to create the RDF id
 	* normally the base_uri is used to assign the links to the publication resource in the public web
 	* it's stored in the Publication services section (dd1010) in the component_iri
+	* @param object $base_uri_entity
+	* @param mixed $section_id = null
 	* @return string $base_uri
 	*/
-	public function resolve_base_uri($base_uri_entity, $section_id=null) {
+	public function resolve_base_uri(object $base_uri_entity, $section_id=null) : ?string {
 
 		// Search Dedalo entities publication services
-			$section_tipo 			= $base_uri_entity->section_tipo; 	// services_section_tipo = 'dd1010';
-			$title 					= $base_uri_entity->title;
-			$component_tipo 		= $base_uri_entity->component_tipo; // component_iri dd1014
+			$section_tipo	= $base_uri_entity->section_tipo; 	// services_section_tipo = 'dd1010';
+			$title			= $base_uri_entity->title;
+			$component_tipo	= $base_uri_entity->component_tipo; // component_iri dd1014
 
 			if ($section_tipo===DEDALO_SERVICES_SECTION_TIPO) {
 
-				$service_name	= $this->service_name;
+				$service_name = $this->service_name;
 
-				$RecordObj_dd = new RecordObj_dd($component_tipo);
-				$model = $RecordObj_dd->get_modelo_name();
+				$RecordObj_dd	= new RecordObj_dd($component_tipo);
+				$model			= $RecordObj_dd->get_modelo_name();
 
 				// RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
-				$component_lang = $RecordObj_dd->get_traducible();
-				$lang = $component_lang === 'si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-				$component = component_common::get_instance($model,
-															 $component_tipo,
-															 $this->entity_locator->section_id,
-															 'list',
-															 $lang,
-															 $this->entity_locator->section_tipo);
+				$component_lang	= $RecordObj_dd->get_traducible();
+				$lang			= $component_lang==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+				$component		= component_common::get_instance(
+					$model,
+					$component_tipo,
+					$this->entity_locator->section_id,
+					'list',
+					$lang,
+					$this->entity_locator->section_tipo
+				);
 
-				$iri_object_data = $component->get_dato();
-				// $row_data =  json_decode($row->datos);
-				// $iri_object_data = $row_data->components->{$component_tipo};
+				$iri_object_data	= $component->get_dato();
+				// $row_data		=  json_decode($row->datos);
+				// $iri_object_data	= $row_data->components->{$component_tipo};
 
-				$ar_result 		 = array_filter((array)$iri_object_data, function($item) use($title){
+				$ar_result = array_filter((array)$iri_object_data, function($item) use($title){
 					return $item->title === $title;
 				});
 
-				$result 	= reset($ar_result);
-				$base_uri 	= !empty($result->iri) ? $result->iri : null;
-
+				$result		= reset($ar_result);
+				$base_uri	= !empty($result->iri) ? $result->iri : null;
 
 			}else{
+
 				// Case search in public entity section
 
-				// Collection (Entity)
+				// NO CONFIG FILE CHANGED CASE
+				// Note that config file default is 0 (Zero) and if you do not modify this
+				// value, its not possible to locate your entity info into section dd1010
+				if (empty($section_id) || $section_id===0) {
+					debug_log(__METHOD__
+						. " Error . section_id is empty ". PHP_EOL
+						. ' section_id: ' . json_encode($section_id, JSON_PRETTY_PRINT) . PHP_EOL
+						. ' constant config DEDALO_ENTITY_ID: ' . DEDALO_ENTITY_ID . PHP_EOL
+						. ' base_uri_entity: ' . json_encode($base_uri_entity, JSON_PRETTY_PRINT) . PHP_EOL
+						. ' Note that config file default is 0 (Zero) for DEDALO_ENTITY_ID. Review your config'
+						, logger::ERROR
+					);
+					return null;
+				}
 
-					$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($base_uri_entity->from_component_tipo,true);
-					$component 		= component_common::get_instance($model_name,
-														$base_uri_entity->from_component_tipo,
-														$section_id,
-														'list',
-														DEDALO_DATA_NOLAN,
-														$base_uri_entity->from_section_tipo);
+				// Collection (Entity)
+					$model_name	= RecordObj_dd::get_modelo_name_by_tipo($base_uri_entity->from_component_tipo,true);
+					$component	= component_common::get_instance(
+						$model_name,
+						$base_uri_entity->from_component_tipo,
+						$section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$base_uri_entity->from_section_tipo
+					);
 					$dato_entity = $component->get_dato();
 
 					if (!empty($dato_entity)) {
 						// component load
-						$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-						$component 		= component_common::get_instance($model_name,
-															$component_tipo,
-															$dato_entity[0]->section_id,
-															'list',
-															DEDALO_DATA_NOLAN,
-															$section_tipo);
+						$model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+						$component	= component_common::get_instance(
+							$model_name,
+							$component_tipo,
+							$dato_entity[0]->section_id,
+							'list',
+							DEDALO_DATA_NOLAN,
+							$section_tipo
+						);
 						$dato = $component->get_dato();
 					}
 
@@ -1104,19 +1126,22 @@ class diffusion_rdf extends diffusion {
 					if (empty($dato)) {
 
 						$base_uri = null;
-						debug_log(__METHOD__." Empty dato!  Nothing is found for section_id: '$section_id' - section_tipo: '$section_tipo' - component_tipo: ".to_string($component_tipo), logger::ERROR);
-
+						debug_log(__METHOD__
+							." Empty dato!  Nothing is found for section_id: '$section_id' - section_tipo: '$section_tipo' - component_tipo: ".to_string($component_tipo)
+							, logger::ERROR
+						);
 					}else{
 
-						$iri_object_data = (array)$dato;
-						$ar_result 		 = array_filter((array)$iri_object_data, function($item) use($title){
+						$iri_object_data	= (array)$dato;
+						$ar_result			= array_filter((array)$iri_object_data, function($item) use($title){
 							return isset($item->title) && $item->title===$title;
 						});
 
 						$base_uri = isset($ar_result[0]) ? $ar_result[0]->iri : null;
 					}
 			}
-			#dump($base_uri, ' base_uri ++ '.to_string());
+
+
 		return $base_uri;
 	}//end resolve_base_uri
 
