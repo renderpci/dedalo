@@ -176,6 +176,10 @@ session_write_close();
 
 // headers
 	header('Content-type: application/javascript; charset=utf-8');
+	// no cache
+		// header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+		// header("Cache-Control: post-check=0, pre-check=0", false);
+		// header("Pragma: no-cache");
 	// cache optional
 		// $seconds_to_cache = 3600;
 		// $ts = gmdate('D, d M Y H:i:s', time() + $seconds_to_cache) . ' GMT';
