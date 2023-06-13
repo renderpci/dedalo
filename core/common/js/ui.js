@@ -421,7 +421,8 @@ export const ui = {
 				element_type	: 'span',
 				class_name		: 'button close button_exit_edit show_on_active'
 			})
-			button_close_node.addEventListener('click', async function(e){
+			button_close_node.addEventListener('click', fn_click)
+			async function fn_click(e) {
 				e.stopPropagation()
 
 				await ui.component.deactivate(instance)
@@ -443,7 +444,7 @@ export const ui = {
 					mode		: target_mode,
 					autoload	: autoload
 				})
-			})
+			}
 
 			return button_close_node;
 		},//end build_button_exit_edit
@@ -2881,12 +2882,10 @@ export const ui = {
 		node.classList.toggle('fullscreen')
 
 		// set exit event
-		document.addEventListener('keyup', exit_fullscreen, {
-			passive : true
-		})
+		document.addEventListener('keyup', exit_fullscreen, { passive : true })
 		function exit_fullscreen(e) {
 			if (e.key==='Escape') {
-				document.removeEventListener('keyup', exit_fullscreen)
+				document.removeEventListener('keyup', exit_fullscreen, { passive : true })
 				node.classList.remove('fullscreen')
 			}
 		}

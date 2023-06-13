@@ -53,7 +53,8 @@ render_menu.prototype.edit = async function() {
 			class_name		: 'quit top_item',
 			parent			: fragment
 		})
-		quit_button.addEventListener('click', async () => {
+		quit_button.addEventListener('click', fn_click)
+		async function fn_click() {
 			// local_db_data remove in all langs
 				const langs			= page_globals.dedalo_application_langs
 				const langs_length	= langs.length
@@ -67,7 +68,7 @@ render_menu.prototype.edit = async function() {
 				quit({
 					caller : self
 				})
-		})
+		}//end fn_click
 
 	// dedalo_icon
 		const dedalo_icon = ui.create_dom_element({
@@ -75,9 +76,10 @@ render_menu.prototype.edit = async function() {
 			class_name		: 'dedalo_icon_top top_item',
 			parent			: fragment
 		})
-		dedalo_icon.addEventListener('click', function(){
+		dedalo_icon.addEventListener('click', fn_click_open)
+		function fn_click_open() {
 			window.open('https://dedalo.dev', 'Dédalo Site', []);
-		})
+		}
 
 	// menu_hierarchy. areas/sections hierarchy list
 		const menu_hierarchy = ui.create_dom_element({
@@ -100,11 +102,12 @@ render_menu.prototype.edit = async function() {
 				parent			: fragment,
 				text_content	: 'Ontology'
 			})
-			ontology_link.addEventListener('click', () => {
+			ontology_link.addEventListener('click', fn_click_ontology)
+			function fn_click_ontology() {
 				const url = DEDALO_CORE_URL + '/ontology'
 				const win = window.open(url, '_blank');
 					  win.focus();
-			})
+			}
 		}
 
 	// user name link (open tool_user_admin)
@@ -115,7 +118,8 @@ render_menu.prototype.edit = async function() {
 			parent			: fragment
 		})
 		if (username!=='root') {
-			logged_user_name.addEventListener('click', (e) => {
+			logged_user_name.addEventListener('click', fn_open_tool)
+			function fn_open_tool(e) {
 				e.stopPropagation();
 
 				// tool_user_admin Get the user_admin tool to be fired
@@ -130,7 +134,7 @@ render_menu.prototype.edit = async function() {
 						tool_context	: tool_user_admin,
 						caller			: self
 					})
-			})
+			}//end fn_open_tool
 		}
 
 	// application lang selector
