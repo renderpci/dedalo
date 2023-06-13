@@ -466,6 +466,74 @@
 	}
 
 
+
+// temporal chunks remove. Delete possible broken upload files as chunks
+	if (defined('DEDALO_UPLOAD_SERVICE_CHUNK_FILES') && DEDALO_UPLOAD_SERVICE_CHUNK_FILES!==false) {
+		try {
+			$ar_folder = (array)unserialize(DEDALO_AV_AR_QUALITY);
+			foreach ($ar_folder as $quality) {
+
+				$folder_path = DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . '/'. $quality;
+
+				// get chunk files (.blob)
+					$files = glob( $folder_path.'/*.blob' );
+					if (empty($files)) {
+						continue;
+					}
+
+				// folder_path_to_delete
+					$folder_path_to_delete = $folder_path .'/to_delete';
+					if( !is_dir($folder_path_to_delete) ) {
+						if(!mkdir($folder_path_to_delete, 0755, true)) {
+							debug_log(__METHOD__
+								." Error creating folder_path_to_delete path: " . $folder_path_to_delete
+								, logger::ERROR
+							);
+						}
+						debug_log(__METHOD__." Created dir: ".$folder_path_to_delete, logger::WARNING);
+					}
+
+				// iterate found files checking the date
+					$max_preservation_hours = 12;
+					foreach ($files as $file) {
+
+						$modification_time_secs	= filemtime($file);
+						$current_time_secs		= time();
+						$difference_in_hours	= round( ($current_time_secs/3600) - round($modification_time_secs/3600), 0 );
+						if ($difference_in_hours >= $max_preservation_hours) {
+
+							$target = $folder_path_to_delete . '/' . pathinfo($file)['basename'];
+
+							// move file to directory 'to_delete'
+							$rename_result	= rename($file, $target);
+							if ($rename_result===false) {
+								debug_log(__METHOD__
+									. " Error on move file " . PHP_EOL
+									. ' file: ' .$file . PHP_EOL
+									. ' target: ' .$target
+									, logger::ERROR
+								);
+							}else{
+								debug_log(__METHOD__
+									. " Moved file successfully " . PHP_EOL
+									. ' file:   ' . $file . PHP_EOL
+									. ' target: ' . $target
+									, logger::DEBUG
+								);
+							}
+						}
+					}
+			}
+		} catch (Exception $e) {
+			debug_log(__METHOD__
+				. " Error on clean CHUNK_FILES " . PHP_EOL
+				. $e->getMessage()
+				, logger::ERROR
+			);
+		}
+	}
+
+
 #// LANGS JS (moved to login.php !)
 #	# Generate js files with all labels (in not exist current lang file)
 #	$folder_path = DEDALO_LIB_BASE_PATH.'/common/js/lang';
