@@ -53,7 +53,7 @@ abstract class backup {
 					$response->msg 		= "Error on read or create backup directory. Permission denied ".__METHOD__;
 					return $response;
 				}
-				debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+				debug_log(__METHOD__." CREATED DIR: $file_path  ".to_string(), logger::DEBUG);
 			}
 
 
