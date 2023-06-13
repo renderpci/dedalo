@@ -27,44 +27,45 @@ class component_relation_related extends component_relation_common {
 	// test_equal_properties is used to verify duplicates when add locators
 	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
 
-	// sql query stored for debug only
-	static $get_inverse_related_query;
+	// SQL query stored for debug only
+	// static $get_inverse_related_query; // (!) Not used
 
 
 
 	/**
 	* __CONSTRUCT
+	*
 	*/
-	protected function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
+		// protected function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
 
-		# relation_type
-		# $this->relation_type = DEDALO_RELATION_TYPE_CHILDREN_TIPO;
+		// 	# relation_type
+		// 	# $this->relation_type = DEDALO_RELATION_TYPE_CHILDREN_TIPO;
 
-		# Build the component normally
-		parent::__construct($tipo, $parent, $mode, $lang, $section_tipo);
+		// 	# Build the component normally
+		// 	parent::__construct($tipo, $parent, $mode, $lang, $section_tipo);
 
-		// #
-		// # RELATION CONFIG . Set current component relation_type and relation_type_rel based on properties config
-		// $properties = $this->get_properties();
-		// switch (true) {
-		// 	case (isset($properties->config_relation->relation_type) && isset($properties->config_relation->relation_type_rel)):
-		// 		$this->relation_type 	 = $properties->config_relation->relation_type;
-		// 		$this->relation_type_rel = $properties->config_relation->relation_type_rel;
-		// 		break;
+		// 	// #
+		// 	// # RELATION CONFIG . Set current component relation_type and relation_type_rel based on properties config
+		// 	// $properties = $this->get_properties();
+		// 	// switch (true) {
+		// 	// 	case (isset($properties->config_relation->relation_type) && isset($properties->config_relation->relation_type_rel)):
+		// 	// 		$this->relation_type 	 = $properties->config_relation->relation_type;
+		// 	// 		$this->relation_type_rel = $properties->config_relation->relation_type_rel;
+		// 	// 		break;
 
-		// 	default:
-		// 		$this->relation_type 	 = DEDALO_RELATION_TYPE_RELATED_TIPO; // Default
-		// 		$this->relation_type_rel = DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO; // Default
-		// 		debug_log(__METHOD__." Using default values for config component $this->tipo . Please, config structure 'properties' for proper control about component behavior".to_string(), logger::ERROR);
-		// 		break;
-		// }
-	}//end __construct
+		// 	// 	default:
+		// 	// 		$this->relation_type 	 = DEDALO_RELATION_TYPE_RELATED_TIPO; // Default
+		// 	// 		$this->relation_type_rel = DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO; // Default
+		// 	// 		debug_log(__METHOD__." Using default values for config component $this->tipo . Please, config structure 'properties' for proper control about component behavior".to_string(), logger::ERROR);
+		// 	// 		break;
+		// 	// }
+		// }//end __construct
 
 
 
 	/**
 	* GET_VALOR
-	* Get value . default is get dato . overwrite in every different specific component
+	* Get value. default is get dato . overwrite in every different specific component
 	* @return array|string|null $valor
 	*/
 	public function get_valor( $lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false ) {
@@ -130,29 +131,30 @@ class component_relation_related extends component_relation_common {
 	* ADD_RELATED
 	* Add one locator to current 'dato'. Verify is exists to avoid duplicates
 	* NOTE: This method updates component 'dato' but NOT saves
-	* @return bool
+	* @return bool $result
 	*/
 	public function add_related( object $locator ) : bool {
 
-		#dump($locator, ' locator ++ '.to_string()); die();
+		// check locator
+			if ($locator->section_tipo===$this->section_tipo && $locator->section_id==$this->parent) {
+				debug_log(__METHOD__
+					." Invalid related element (self) " . PHP_EOL
+					.' locator: ' . to_string($locator)
+					, logger::DEBUG
+				);
+				return false;
+			}
 
-		if ($locator->section_tipo===$this->section_tipo && $locator->section_id===$this->parent) {
-			debug_log(__METHOD__." Invalid related element (self) ".to_string(), logger::DEBUG);
-			return false;
-		}
+		// Add type_rel
+			if (!isset($locator->type_rel)) {
+				$locator->type_rel = $this->relation_type_rel;
+			}
 
-		# Add type_rel
-		if (!isset($locator->type_rel)) {
-			$locator->type_rel = $this->relation_type_rel;
-		}
-
-		# Add current locator to component dato
-		if (!$add_locator = $this->add_locator_to_dato($locator)) {
-			return false;
-		}
+		// Add current locator to component dato
+			$result = $this->add_locator_to_dato($locator);
 
 
-		return true;
+		return $result;
 	}//end add_related
 
 
@@ -161,29 +163,28 @@ class component_relation_related extends component_relation_common {
 	* REMOVE_RELATED
 	* Iterate current component 'dato' and if math requested locator, removes it the locator from the 'dato' array
 	* NOTE: This method updates component 'dato' but NOT saves
-	* @return bool
+	* @return bool $result
 	*/
 	public function remove_related( object $locator ) : bool {
 
-		# Add current locator to component dato
-		if (!$remove_locator_locator = $this->remove_locator_from_dato($locator)) {
-			return false;
-		}
+		// Add current locator to component dato
+		$result = $this->remove_locator_from_dato($locator);
 
-		return true;
+		return $result;
 	}//end remove_related
 
 
 
 	/**
 	* GET_DATO_WITH_REFERENCES
-	* return the full dato of the component, the real dato with the calculated references
-	* @return
+	* Return the full dato of the component, the real dato with the calculated references
+	* @return array $dato_with_references
 	*/
 	public function get_dato_with_references() : array {
 
-		$dato 		= $this->get_dato();
-		$references = $this->get_calculated_references(true);
+		$dato		= $this->get_dato();
+		$references	= $this->get_calculated_references(true);
+
 		$dato_with_references = array_merge($dato, $references);
 
 		return $dato_with_references;
@@ -200,32 +201,40 @@ class component_relation_related extends component_relation_common {
 	public function get_calculated_references(bool $only_data=false) : array {
 
 		switch ($this->relation_type_rel) {
+
 			case DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO:
 			case DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO:
 				$current_locator = new stdClass();
 					$current_locator->section_tipo			= $this->section_tipo;
 					$current_locator->section_id			= $this->section_id;
 					$current_locator->from_component_tipo	= $this->tipo;
-				$references = component_relation_related::get_references_recursive($this->tipo, $current_locator, $this->relation_type_rel, false, $this->lang );
+				$references = component_relation_related::get_references_recursive(
+					$this->tipo,
+					$current_locator,
+					$this->relation_type_rel,
+					false, // bool recursion
+					$this->lang
+				);
 				break;
+
 			case DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO:
 			default:
 				$references = [];
 				break;
 		}
-		// return the locators without label,
-		// used by merge with the real data of the component ($dato_full or get_dato_with_references())
-		if($only_data===true){
-			return $references;
-		}
 
+		// only_data. Return the locators without label,
+		// used by merge with the real data of the component ($dato_full or get_dato_with_references())
+			if($only_data===true){
+				return $references;
+			}
 
 		// get the request_config of the component to get the show object, it will use to format the label of the reference.
-		$request_config			= $this->get_request_config_object();
-		$show					= $request_config->show;
-		$ar_componets_related	= array_map(function($ddo){
-			return $ddo->tipo;
-		}, $show->ddo_map);
+			$request_config			= $this->get_request_config_object();
+			$show					= $request_config->show;
+			$ar_componets_related	= array_map(function($ddo){
+				return $ddo->tipo;
+			}, $show->ddo_map);
 
 		$fields_separator = (isset($show->fields_separator)) ?  $show->fields_separator : ' | ';
 
@@ -257,7 +266,7 @@ class component_relation_related extends component_relation_common {
 
 	/**
 	* GET_TYPE_REL
-	* @return string $relation_type_rel
+	* @return string $this->relation_type_rel
 	*/
 	public function get_type_rel() : string {
 
@@ -282,20 +291,18 @@ class component_relation_related extends component_relation_common {
 		) : array {
 
 		static $ar_resolved = array();
-
 		// reset ar_resolved on first call
 			if ($recursion===false) {
 				$ar_resolved = [];
 			}
 
 		$pseudo_locator	= $locator->section_tipo .'_'. $locator->section_id . '_'. $lang;
-		$ar_resolved[]	= $pseudo_locator; # set self as resolved
+		$ar_resolved[]	= $pseudo_locator; // set self as resolved
+		$ar_references	= [];
 
-		$ar_references 	= [];
-
-		# References to me
+		// References to me
 		if (isset($locator->section_id) && isset($locator->section_tipo)) {
-			#$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($locator->from_component_tipo,true); // get_class();
+			// $model_name 	= RecordObj_dd::get_modelo_name_by_tipo($locator->from_component_tipo,true); // get_class();
 			$ref_component 	= component_common::get_instance(
 				'component_relation_related',
 				$locator->from_component_tipo,
@@ -364,9 +371,15 @@ class component_relation_related extends component_relation_common {
 
 	/**
 	* GET_REFERENCES
-	* Get bidireccional / multidireccional references to current term
+	* Get bidirectional / multi-directional references to current term
 	* @param string $type_rel = null
 	* @return array $ar_result
+	* array of objects as
+	* [{
+	* 	section_tipo: 'rsc1568';
+	*	section_id: 15269;
+	*	from_component_tipo: rsc85741
+	* }]
 	*/
 	public function get_references( string $type_rel=null ) : array {
 
@@ -376,44 +389,36 @@ class component_relation_related extends component_relation_common {
 			$locator->set_from_component_tipo($this->tipo);
 
 		if (!empty($type_rel)) {
-			# Add type_rel filter
+			// Add type_rel filter
 			$locator->set_type_rel($type_rel);
 		}
 
 		$locator_json = json_encode($locator);
 
-		# Path
+		// Path
 		$base_path = new stdClass();
-			$base_path->name 			= $this->label;
-			$base_path->model 			= get_class($this);
-			$base_path->section_tipo 	= $this->section_tipo;
-			$base_path->component_tipo 	= $this->tipo;
+			$base_path->name			= $this->label;
+			$base_path->model			= get_class($this);
+			$base_path->section_tipo	= $this->section_tipo;
+			$base_path->component_tipo	= $this->tipo;
 
 		$path = array($base_path);
 
-		# Component path
+		// Component path
 		$component_path = ['relations'];
 
-		# Filter
+		// Filter
 		$filter_group = new stdClass();
-			$filter_group->q 				= $locator_json;
-			$filter_group->lang 			= 'all';
-			$filter_group->path 			= $path;
-			$filter_group->component_path 	= $component_path;
+			$filter_group->q				= $locator_json;
+			$filter_group->lang				= 'all';
+			$filter_group->path				= $path;
+			$filter_group->component_path	= $component_path;
 
 		$filter = (object)[
 			'$and' => [$filter_group]
 		];
 
-		# search_query_object
-		// $search_query_object = new stdClass();
-		// 	$search_query_object->id 			= 'temp';
-		// 	$search_query_object->section_tipo 	= $this->section_tipo;
-		// 	$search_query_object->filter 		= $filter;
-		// 	$search_query_object->select 		= [];
-		// 	$search_query_object->limit 		= 0;
-		// 	$search_query_object->offset 		= 0;
-		// 	$search_query_object->full_count 	= false;
+		// search_query_object
 		$search_query_object = new search_query_object();
 			$search_query_object->set_id('temp');
 			$search_query_object->set_section_tipo([$this->section_tipo]);
@@ -421,18 +426,17 @@ class component_relation_related extends component_relation_common {
 			$search_query_object->set_limit(0);
 			$search_query_object->set_offset(0);
 			$search_query_object->set_full_count(false);
-		// dump( json_encode($search_query_object, JSON_PRETTY_PRINT), ' $search_query_object ++ '.to_string()); #die();
 
-		$search 		= search::get_instance($search_query_object);
-		$records_data 	= $search->search();
+		$search			= search::get_instance($search_query_object);
+		$records_data	= $search->search();
 
 		$ar_result = [];
-		foreach ($records_data->ar_records as $key => $row) {
+		foreach ($records_data->ar_records as $row) {
 
 			$element = new stdClass();
-				$element->section_tipo 			= $row->section_tipo;
-				$element->section_id 			= $row->section_id;
-				$element->from_component_tipo 	= $this->tipo;
+				$element->section_tipo			= $row->section_tipo;
+				$element->section_id			= $row->section_id;
+				$element->from_component_tipo	= $this->tipo;
 
 			$ar_result[]    = $element;
 		}
