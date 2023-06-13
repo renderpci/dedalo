@@ -1054,6 +1054,21 @@ class diffusion_rdf extends diffusion {
 				$RecordObj_dd	= new RecordObj_dd($component_tipo);
 				$model			= $RecordObj_dd->get_modelo_name();
 
+				// NO CONFIG FILE CHANGED CASE
+				// Note that config file default is 0 (Zero) and if you do not modify this
+				// value, its not possible to locate your entity info into section dd1010
+				if (empty($this->entity_locator)) {
+					debug_log(__METHOD__
+						. " Error . this->entity_locator is empty ". PHP_EOL
+						. ' this->entity_locator: ' . json_encode($this->entity_locator, JSON_PRETTY_PRINT) . PHP_EOL
+						. ' constant config DEDALO_ENTITY_ID: ' . DEDALO_ENTITY_ID . PHP_EOL
+						. ' base_uri_entity: ' . json_encode($base_uri_entity, JSON_PRETTY_PRINT) . PHP_EOL
+						. ' Note that config file default is 0 (Zero) for DEDALO_ENTITY_ID. Review your config'
+						, logger::ERROR
+					);
+					return null;
+				}
+
 				// RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
 				$component_lang	= $RecordObj_dd->get_traducible();
 				$lang			= $component_lang==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
