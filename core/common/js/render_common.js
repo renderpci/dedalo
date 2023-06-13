@@ -152,7 +152,8 @@ export const render_components_list = function(options) {
 
 						// Event on click load "children" section inside target_list_container recursively
 						const target_section = element.target_section_tipo[0] // Select first only
-						component.addEventListener('click', async function(){
+						component.addEventListener('click', fn_click)
+						async function fn_click(e) {
 							// section_elements_context
 								const current_section_elements = await self.get_section_elements_context({
 									section_tipo			: target_section,
@@ -174,7 +175,7 @@ export const render_components_list = function(options) {
 								}
 							// Active current
 							this.classList.add('active');
-						})
+						}//end fn_click
 					}
 				break;
 		}//end switch (true)

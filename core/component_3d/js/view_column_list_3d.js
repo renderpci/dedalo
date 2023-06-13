@@ -71,7 +71,8 @@ view_column_list_3d.render = async function(self, options) {
 			image.src = url
 
 		// open viewer
-			image.addEventListener('mouseup', function (e) {
+			image.addEventListener('mouseup', fn_mouseup)
+			function fn_mouseup(e) {
 				e.stopPropagation();
 
 				const file_exist = datalist.find(item => item.file_exist === true)
@@ -102,7 +103,7 @@ view_column_list_3d.render = async function(self, options) {
 						const current_window	= window.open(url, 'threeD_viewer', 'width=1024,height=720')
 						current_window.focus()
 				}
-			})
+			}
 
 
 	return wrapper
