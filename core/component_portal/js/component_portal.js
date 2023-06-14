@@ -5,7 +5,12 @@
 
 
 // imports
-	import {clone, dd_console} from '../../common/js/utils/index.js'
+	import {
+		clone,
+		dd_console,
+		object_to_url_vars,
+		open_window
+	} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	// import * as instances from '../../common/js/instances.js'
 	import {get_instance} from '../../common/js/instances.js'
@@ -1260,6 +1265,70 @@ component_portal.prototype.unlink_record = async function(options) {
 
 	return true
 }//end unlink_record
+
+
+
+/**
+* EDIT_RECORD_HANDLER
+* @param object options
+* {
+* 	section_tipo: oh1
+*	section_id : 16
+* }
+* @return object new_window
+*/
+component_portal.prototype.edit_record_handler = async function(options) {
+
+	const self = this
+
+	// options
+		const section_tipo	= options.section_tipo
+		const section_id	= options.section_id
+
+	// open a new window
+		const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
+			tipo			: section_tipo,
+			section_tipo	: section_tipo,
+			id				: section_id,
+			mode			: 'edit',
+			menu			: false
+		})
+		const new_window = open_window({
+			url		: url,
+			name	: 'record_view',
+			width	: 1280,
+			height	: 760
+		})
+		new_window.addEventListener('blur', function() {
+
+			// refresh. Get the proper element to refresh based on some criteria.
+			// Note that portals in text view are not self refresh able
+				function get_edit_caller(instance) {
+					if(instance.caller && instance.caller.mode==='edit' && instance.caller.type==='component') {
+						return instance.caller
+					}else if(instance.caller) {
+						return get_edit_caller(instance.caller)
+					}
+					return self
+				}
+				const edit_caller = get_edit_caller(self)
+				if (edit_caller) {
+					edit_caller.refresh({
+						build_autoload : true
+					})
+					.then(function(response){
+						// fire window_bur event
+					event_manager.publish('window_bur_'+self.id, self)
+					})
+				}
+		})
+
+	// button_edit_click event. Subscribed to close current modal if exists (mosaic view case)
+		event_manager.publish('button_edit_click', this)
+
+
+	return new_window
+}//end edit_record_handler
 
 
 // @license-end
