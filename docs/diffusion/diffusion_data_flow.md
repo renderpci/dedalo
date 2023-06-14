@@ -84,7 +84,7 @@ So you can create different fields in the publication database with different da
 | toponymy_model  | Valencia, Municipality                                               |
 | etc             | etc                                                                  |
 
-And you will have your publish data for differente situaions, if you need search by community ("Comunitat Valenciana") instead the municipality, so, you can do it searching in the field "with_parents".
+And you will have your publish data for different situations, if you need search by community ("Comunitat Valenciana") instead the municipality, so, you can do it searching in the field "with_parents".
 
 In other situation will need add Valencia as a point into a map, to do that, you will need to use the geo data, so, you can define the ontology to add it to the resolution:
 
@@ -414,7 +414,7 @@ Every language defined will create his own record and will store the lang code i
 | --- | --- | --- | --- |
 | 1 | 1 | lg-eng | My title |
 | 2 | 1 | lg-spa | Mi título |
-| 3 | 1 | lg-cat | El meu titol |
+| 3 | 1 | lg-cat | El meu títol |
 
 If the working data do not has the translation, publication process will do fallback to the main data lang defined in [DEDALO_DATA_LANG_DEFAULT](../config/config.md#defining-default-data-language) in `./config/config.php` file
 
