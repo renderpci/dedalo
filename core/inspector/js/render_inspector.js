@@ -300,7 +300,8 @@ const get_content_data = function(self) {
 				text_content	: 'View record data',
 				parent			: buttons_bottom_container
 			})
-			data_link.addEventListener('click', (e)=>{
+			data_link.addEventListener('mousedown', fn_data_link)
+			function fn_data_link(e) {
 				e.stopPropagation()
 				e.preventDefault()
 
@@ -337,7 +338,7 @@ const get_content_data = function(self) {
 							target_window.document.title = 'View record data ' + self.caller.section_id
 						}
 				})
-			})//end data_link.addEventListener("click"
+			}//end data_link.addEventListener("click"
 
 		// tool register files.	dd1340
 			if (self.section_tipo==='dd1340') {
@@ -347,7 +348,8 @@ const get_content_data = function(self) {
 					text_content	: 'Download register file',
 					parent			: buttons_bottom_container
 				})
-				register_download.addEventListener('click', (e)=>{
+				register_download.addEventListener('mousedown', fn_register)
+				function fn_register(e) {
 					e.preventDefault()
 
 					const file_name = 'register.json'
@@ -377,8 +379,8 @@ const get_content_data = function(self) {
 								const data = api_response.result;
 								download_data(data, file_name)
 						})
-				})
-			}
+				}//end fn_register
+			}//end if (self.section_tipo==='dd1340')
 
 
 	return content_data
