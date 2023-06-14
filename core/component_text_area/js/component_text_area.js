@@ -310,7 +310,12 @@ component_text_area.prototype.destroy = async function(delete_self=true, delete_
 		if (self.text_editor && self.text_editor.length>0) {
 			for (let i = 0; i < self.text_editor.length; i++) {
 				// console.log('destroying editor:', self.text_editor[i].editor );
-				self.text_editor[i].editor.destroy()
+				try {
+					self.text_editor[i].editor.destroy()
+				} catch (error) {
+					console.error(error)
+				}
+
 			}
 		}
 
