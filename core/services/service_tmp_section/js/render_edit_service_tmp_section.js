@@ -50,8 +50,7 @@ render_edit_service_tmp_section.prototype.edit = async function (options) {
 		})
 		wrapper.appendChild(content_data)
 		// set pointers
-		wra
-		pper.content_data = content_data
+		wrapper.content_data = content_data
 
 
 	return wrapper
