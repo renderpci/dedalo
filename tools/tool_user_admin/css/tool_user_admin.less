@@ -38,6 +38,10 @@
 						align-content: stretch;
 						grid-template-columns: repeat(10, 1fr);
 
+						@media screen and (max-width: @width_break_point_0) { // 1024px
+							display: block;
+						}
+
 						.wrapper_component {
 							margin-top: 0rem;
 

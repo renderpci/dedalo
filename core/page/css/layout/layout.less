@@ -589,6 +589,14 @@
 		vertical-align: baseline;
 		z-index: unset;
 
+		// .modal-content {
+		// 	width: 100% !important;
+		// }
+
+		@media screen and (max-width: @width_break_point_0) {
+			width: 100%;
+		}
+
 		.header {
 			display: flex;
 			padding: 1rem;
@@ -596,7 +604,7 @@
 			color: white;
 			font-weight: normal;
 			z-index: 2;
-			min-width: 31rem;
+			min-width: 29rem;
 
 			// &.content {
 			// 	padding: 1rem;
@@ -1502,6 +1510,9 @@
 .media_wrapper.list.wrapper_component {
 	&.view_default {
 		height: @view_line_height; // 5rem;
+		@media screen and (max-width: @width_break_point_0) {
+			background-color: unset !important;
+		}
 	}
 }
 // prevents component_3d an other media to loose the necessary height in the
@@ -1539,6 +1550,10 @@
 			overflow: hidden;
 			opacity: 0.3;
 			z-index: -1;
+
+			@media screen and (max-width: @width_break_point_0) {
+				background-position: 35%;
+			}
 		}
 	}
 
