@@ -305,55 +305,15 @@ view_line_edit_portal.render_column_remove = function(options) {
 					return
 				}
 
-			// unlink_record
-				const unlink_record = function() {
-					// changed_data
-					const changed_data = [Object.freeze({
-						action	: 'remove',
-						key		: paginated_key,
-						value	: null
-					})]
-					// change_value (implies saves too)
-					// remove the remove_dialog it's controlled by the event of the button that call
-					// prevent the double confirmation
-					self.change_value({
-						changed_data	: changed_data,
-						label			: section_id,
-						refresh			: false,
-						remove_dialog	: ()=>{
-							return true
-						}
-					})
-					.then(async (response)=>{
-						// the user has selected cancel from delete dialog
-							if (response===false) {
-								// modal. Close modal if isset
-								// if (modal) {
-								// 	modal.on_close()
-								// }
-								return
-							}
-
-						// update pagination offset
-							self.update_pagination_values('remove')
-
-						// refresh
-							await self.refresh({
-								build_autoload : true // when true, force reset offset
-							})
-
-						// check if the caller has active a tag_id
-							if(self.active_tag){
-								// filter component data by tag_id and re-render content
-								self.filter_data_by_tag_id(self.active_tag)
-							}
-
-						// event to update the DOM elements of the instance
-							event_manager.publish('remove_element_'+self.id, row_key)
-					})
-				}
 				// fire the unlink
-				unlink_record()
+				self.unlink_record({
+					paginated_key	: paginated_key,
+					row_key			: row_key,
+					section_id		: section_id
+				})
+				self.delete_dataframe_record({
+					section_id : section_id
+				})
 
 			// data pagination offset. Check and update self data to allow save API request return the proper paginated data
 				const key = parseInt(row_key)
