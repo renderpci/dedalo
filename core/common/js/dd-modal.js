@@ -182,6 +182,11 @@ class DDModal extends HTMLElement {
 					margin-top: 20vh;
 					overflow: auto;
 				}
+				@media screen and (max-width: 1024px) {
+					.modal_small > .modal-content {
+						max-width: unset;
+					}
+				}
 				.modal_small .modal-body {
 
 				}
