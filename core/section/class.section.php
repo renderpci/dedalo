@@ -728,7 +728,14 @@ class section extends common {
 				// save
 					$caller_section->Save();
 
-				return $caller_section->dato;
+				// get the saved data of the component to be returned.
+					$fixed_component_dato = array_values(
+						array_filter($caller_section->dato->relations, function($el) use($component_tipo) {
+							return isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo;
+						})
+					);
+
+				return $fixed_component_dato;
 			}
 
 		// Remove all previous locators of current component tipo
