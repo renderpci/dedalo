@@ -285,8 +285,6 @@ const render_item_hierarchy = (options) => {
 		// the action can be executed mainly in page, but it can be used for any instance.
 			link.addEventListener('click', fn_click)
 			function fn_click(e) {
-				// link.addEventListener('touchend', (e) => {
-				// e.preventDefault()
 				// e.stopPropagation()
 
 				// nonactive menu case
