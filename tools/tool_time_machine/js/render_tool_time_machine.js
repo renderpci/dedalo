@@ -119,9 +119,20 @@ const get_content_data = async function(self) {
 					function on_change_select(e) {
 						const lang = e.target.value
 						if (lang!==self.lang) {
+
+							content_data.classList.add('loading')
+
 							self.lang				= lang
 							self.main_element.lang	= lang
-							self.refresh()
+							// refresh
+							self.refresh({
+								build_autoload	: false, // default true
+								render_level	: 'content', // default content
+								destroy			: true // default true
+							})
+							.then(function(response){
+								content_data.classList.remove('loading')
+							})
 						}
 					}
 					tool_bar.appendChild(select_lang)
@@ -204,6 +215,7 @@ export const add_component = async (self, component_container, lang_value, label
 			preserve_content	: false,
 			label				: label,
 			callback			: async () => {
+
 				// component load
 					const component = matrix_id===null
 						? self.main_element
@@ -216,7 +228,9 @@ export const add_component = async (self, component_container, lang_value, label
 					const node = await component.render({
 						render_mode : 'edit'//mode // 'edit'
 					})
-					node.classList.add('disabled_component')
+					if (node) {
+						node.classList.add('disabled_component')
+					}
 
 				return node
 			}

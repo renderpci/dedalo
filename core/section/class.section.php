@@ -12,8 +12,8 @@ class section extends common {
 	* CLASS VARS
 	*/
 		# FIELDS
-		protected $section_id;
-		protected $dato;
+		// protected $section_id;
+		// protected $dato;
 
 		# Buttons objects
 		public $ar_buttons;
@@ -774,7 +774,7 @@ class section extends common {
 		// component_dato
 			$fixed_component_dato = array_values(
 				array_filter($this->dato->relations, function($el) use($component_tipo) {
-					return $el->from_component_tipo===$component_tipo;
+					return isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo;
 				})
 			);
 
@@ -3908,7 +3908,7 @@ class section extends common {
 						})();
 
 					if (empty($term_id)) {
-						debug_log(__METHOD__." term_id value is mandatoy. Nothing is propagated to descriptors ".to_string($term_id), logger::ERROR);
+						debug_log(__METHOD__." term_id value is mandatory. Nothing is propagated to descriptors ".to_string($term_id), logger::ERROR);
 					}else{
 
 						$dato_tipo = (function() use($component_tipo){
@@ -3927,9 +3927,13 @@ class section extends common {
 							// set and save the value to descriptors dd
 								$RecordObj = new RecordObj_descriptors_dd(RecordObj_descriptors_dd::$descriptors_matrix_table, null, $term_id, $lang, $dato_tipo);
 								$RecordObj->set_dato($value);
-								$result = $RecordObj->Save();
+								$RecordObj->Save();
 
-								debug_log(__METHOD__." Updated descriptors_dd 'termino' [$term_id] - dato_tipo : $dato_tipo - with value: ".to_string($value), logger::DEBUG);
+								debug_log(__METHOD__
+									." Updated descriptors_dd 'termino' [$term_id] - dato_tipo : $dato_tipo". PHP_EOL
+									.' value: ' . json_encode($value, JSON_PRETTY_PRINT)
+									, logger::DEBUG
+								);
 						}
 					}
 				}
@@ -3959,8 +3963,10 @@ class section extends common {
 			}
 
 		// copy data
-			$source_dato	= clone $this->get_dato();
-			$new_dato		= $new_section->get_dato();
+			$source_dato = clone $this->get_dato();
+
+			// load new_section dato
+			$new_section->get_dato();
 
 			// ar_section_info_tipos. Ontology children of DEDALO_SECTION_INFO_SECTION_GROUP
 				$ar_section_info_tipos = RecordObj_dd::get_ar_childrens(DEDALO_SECTION_INFO_SECTION_GROUP);

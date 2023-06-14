@@ -41,13 +41,6 @@ view_tool_cataloging_mosaic.render = async function(self, options) {
 	// options
 		const render_level = options.render_level || 'full'
 
-	// running_with_errors case
-		if (self.running_with_errors) {
-			return render_server_response_error(
-				self.running_with_errors
-			);
-		}
-
 	// hover_body. Alternative section_record with selected ddo to show when user hover the mosaic
 		const hover_body = await (async ()=>{
 

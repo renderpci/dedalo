@@ -297,7 +297,8 @@ class tool_diffusion extends tool_common {
 				$response->result	= false;
 				$response->msg		= 'EXCEPTION caught [export_list]: ' . $e->getMessage();
 				debug_log(__METHOD__
-					."  ".$response->msg
+					. "  ".$response->msg . PHP_EOL
+					. ' exception message: ' . $e->getMessage()
 					, logger::ERROR
 				);
 			}

@@ -75,6 +75,7 @@
 				display: flex;
 				justify-content: center;
 				padding: 1rem;
+				flex-wrap: wrap;
 
 			    .publication_items_grid {
 					background-color: #f7f6f6;
@@ -87,6 +88,8 @@
 					border: 1px solid lighten(@base_color, 10%);
 					padding: 1rem;
 					flex: 1 0;
+					margin-bottom: 0.75rem;
+
 
 					.label, .value {
 						padding: 1rem;
@@ -120,6 +123,14 @@
 						.response_message {
 							padding: 1rem;
 							width: 100%;
+							overflow-wrap: break-word;
+							line-height: 1.1rem;
+
+							a {
+								padding-top: 0.5rem;
+								display: inline-block;
+								padding-bottom: 0.5rem;
+							}
 						}
 
 						.publication_button {

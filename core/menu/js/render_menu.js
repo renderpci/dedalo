@@ -8,10 +8,8 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	import {quit} from '../../login/js/login.js'
-	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import * as menu_tree from './render_menu_tree.js'
-	// import * as menu_tree_mobile from './render_menu_tree_mobile.js'
+	import * as menu_mobile from './render_menu_mobile.js'
 	// import {clone} from '../../common/js/utils/index.js'
 	// import {instances} from '../../common/js/instances.js'
 
@@ -53,21 +51,7 @@ render_menu.prototype.edit = async function() {
 			class_name		: 'quit top_item',
 			parent			: fragment
 		})
-		quit_button.addEventListener('click', async () => {
-			// local_db_data remove in all langs
-				const langs			= page_globals.dedalo_application_langs
-				const langs_length	= langs.length
-				for (let i = 0; i < langs_length; i++) {
-					const lang	= langs[i].value
-					const regex	= /lg-[a-z]{2,5}$/
-					const id	= self.id.replace(regex, lang)
-					await data_manager.delete_local_db_data(id, 'data')
-				}
-			// exec login quit sequence
-				quit({
-					caller : self
-				})
-		})
+		quit_button.addEventListener('click', self.quit_handler.bind(self))
 
 	// dedalo_icon
 		const dedalo_icon = ui.create_dom_element({
@@ -75,22 +59,52 @@ render_menu.prototype.edit = async function() {
 			class_name		: 'dedalo_icon_top top_item',
 			parent			: fragment
 		})
-		dedalo_icon.addEventListener('click', function(){
+		dedalo_icon.addEventListener('click', fn_click_open)
+		function fn_click_open() {
 			window.open('https://dedalo.dev', 'Dédalo Site', []);
-		})
+		}
 
 	// menu_hierarchy. areas/sections hierarchy list
-		const menu_hierarchy = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'menu_hierarchy top_item',
-			parent			: fragment
-		})
-		// menu_tree render
-		menu_tree.render_tree({
-			self		: self,
-			container	: menu_hierarchy,
-			tipo		: 'dd1'
-		})
+		// menu tree
+			const menu_hierarchy = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'menu_hierarchy top_item',
+				parent			: fragment
+			})
+			// menu_tree render
+			menu_tree.render_tree({
+				self		: self,
+				tipo		: 'dd1',
+				container	: menu_hierarchy
+			})
+
+		// mobile only
+			const menu_mobile_icon = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'menu_mobile_icon top_item',
+				parent			: fragment
+			})
+			menu_mobile_icon.addEventListener('click', fn_menu_mobile_click)
+			function fn_menu_mobile_click(e) {
+				e.stopPropagation()
+				if (!menu_mobile_wrapper) {
+					menu_mobile_wrapper = menu_mobile.render_menu({
+						self	: self,
+						tipo	: 'dd1'
+					})
+					// insert after toggle_inspector
+					toggle_inspector.parentNode.insertBefore(menu_mobile_wrapper, toggle_inspector.nextSibling);
+					event_manager.subscribe('user_navigation', fn_user_navigation)
+					function fn_user_navigation(e) {
+						if (!menu_mobile_wrapper.classList.contains('hide')) {
+							menu_mobile_wrapper.classList.add('hide')
+						}
+					}
+				}else{
+					menu_mobile_wrapper.classList.toggle('hide')
+				}
+			}
+			let menu_mobile_wrapper = null
 
 	// ontology link
 		if (self.data && self.data.show_ontology===true) {
@@ -100,11 +114,9 @@ render_menu.prototype.edit = async function() {
 				parent			: fragment,
 				text_content	: 'Ontology'
 			})
-			ontology_link.addEventListener('click', () => {
-				const url = DEDALO_CORE_URL + '/ontology'
-				const win = window.open(url, '_blank');
-					  win.focus();
-			})
+			// set pointers
+			self.ontology_link = ontology_link
+			ontology_link.addEventListener('click', self.open_ontology)
 		}
 
 	// user name link (open tool_user_admin)
@@ -115,7 +127,8 @@ render_menu.prototype.edit = async function() {
 			parent			: fragment
 		})
 		if (username!=='root') {
-			logged_user_name.addEventListener('click', (e) => {
+			logged_user_name.addEventListener('click', self.open_tool_user_admin_handler.bind(self))
+			function fn_open_tool(e) {
 				e.stopPropagation();
 
 				// tool_user_admin Get the user_admin tool to be fired
@@ -130,7 +143,7 @@ render_menu.prototype.edit = async function() {
 						tool_context	: tool_user_admin,
 						caller			: self
 					})
-			})
+			}//end fn_open_tool
 		}
 
 	// application lang selector
@@ -157,12 +170,12 @@ render_menu.prototype.edit = async function() {
 			langs		: lang_datalist_data,
 			action		: change_lang,
 			selected	: page_globals.dedalo_data_lang,
-			class_name	: 'reset_input dedalo_aplication_langs_selector top_item'
+			class_name	: 'reset_input dedalo_aplication_langs_selector data top_item'
 		})
 		fragment.appendChild(dedalo_data_langs_selector)
 
 	// menu_spacer
-		ui.create_dom_element({
+		const menu_spacer = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'menu_spacer top_item',
 			parent			: fragment
@@ -174,16 +187,7 @@ render_menu.prototype.edit = async function() {
 			class_name		: 'section_label top_item inactive',
 			parent			: fragment
 		})
-		section_label.addEventListener('click', fn_onclick)
-		function fn_onclick(e) {
-			e.stopPropagation()
-			e.preventDefault();
-
-			if (typeof section_label.on_click!=='function') {
-				return
-			}
-			return section_label.on_click(e)
-		}
+		section_label.addEventListener('click', self.section_label_handler)
 
 	// inspector button toggle
 		const toggle_inspector = ui.create_dom_element({
@@ -194,7 +198,7 @@ render_menu.prototype.edit = async function() {
 		toggle_inspector.addEventListener('click', ui.toggle_inspector)
 
 	// debug info bar
-		if(SHOW_DEVELOPER===true) {
+		if(SHOW_DEVELOPER===true || SHOW_DEBUG===true) {
 			fragment.appendChild( render_debug_info_bar(self) );
 		}
 
@@ -299,20 +303,30 @@ const change_lang = async function(e) {
 	e.stopPropagation()
 	e.preventDefault()
 
-	const current_lang = e.target.value
-
-	const api_response = await data_manager.request({
-		use_worker	: true,
-		body		: {
-			action	: 'change_lang',
-			dd_api	: 'dd_utils_api',
-			options	: {
-				dedalo_data_lang		: current_lang,
-				dedalo_application_lang	: e.target.id==='dd_data_lang' ? null : current_lang
-			}
+	// set page style as loading
+		const main = document.getElementById('main')
+		if (main) {
+			main.classList.add('loading')
 		}
-	})
-	window.location.reload(false);
+
+	// current_lang value
+		const current_lang = e.target.value
+
+	// api call
+		const api_response = await data_manager.request({
+			use_worker	: true,
+			body		: {
+				action	: 'change_lang',
+				dd_api	: 'dd_utils_api',
+				options	: {
+					dedalo_data_lang		: current_lang,
+					dedalo_application_lang	: e.target.id==='dd_data_lang' ? null : current_lang
+				}
+			}
+		})
+
+	// reload window
+		window.location.reload(false);
 
 	//event_manager.publish('user_navigation', {lang: current_lang})
 

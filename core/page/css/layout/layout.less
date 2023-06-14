@@ -447,7 +447,7 @@
 
 				// image, content_data>img
 				>img, >.content_data>img {
-					display: block;
+					display: inline-block;
 					padding: 0px;
 					width: 100%;
 					height: 100%;
@@ -589,6 +589,14 @@
 		vertical-align: baseline;
 		z-index: unset;
 
+		// .modal-content {
+		// 	width: 100% !important;
+		// }
+
+		@media screen and (max-width: @width_break_point_0) {
+			width: 100%;
+		}
+
 		.header {
 			display: flex;
 			padding: 1rem;
@@ -596,7 +604,7 @@
 			color: white;
 			font-weight: normal;
 			z-index: 2;
-			min-width: 31rem;
+			// min-width: 29rem;
 
 			// &.content {
 			// 	padding: 1rem;
@@ -1258,7 +1266,7 @@
 					&.element_draggable {
 						cursor: move;
 						// background: url('../../themes/default/draggable.svg');
-						background-image: url('../../themes/default/draggable.svg');
+						background-image: url('../../../themes/default/draggable.svg');
 						background-color: rgba(0, 0, 0, 0);
 						background-position-x: 0%;
 						background-position-y: 0%;
@@ -1281,7 +1289,7 @@
 							pointer-events: none;
 							position: absolute;
 							// background: url('../../themes/default/icons/play.svg');
-							background-image: url('../../themes/default/icons/play.svg');
+							background-image: url('../../../themes/default/icons/play.svg');
 							background-repeat: no-repeat;
 							background-position: center;
 							background-size: 0.55em;
@@ -1437,7 +1445,7 @@
 	background-color: #ffe9e9;
 	border: 1px dashed #ef9b9b;
 	// overflow: auto;
-	background-image: url('../../themes/default/dedalo_logo.svg');
+	background-image: url('../../../themes/default/dedalo_logo.svg');
 	background-size: 5rem;
 	background-repeat: space;
 }
@@ -1502,6 +1510,9 @@
 .media_wrapper.list.wrapper_component {
 	&.view_default {
 		height: @view_line_height; // 5rem;
+		@media screen and (max-width: @width_break_point_0) {
+			background-color: unset !important;
+		}
 	}
 }
 // prevents component_3d an other media to loose the necessary height in the
@@ -1511,5 +1522,106 @@
 		@media screen and (max-width: @width_break_point_1) {
 			height: @media_min_height;
 		}
+	}
+}
+
+
+
+
+.page_error_container {
+	padding: 4rem;
+	line-height: 2.5rem;
+	// position: relative;
+
+	// only apply to page error, is not generic
+	&.raspa_error {
+		// background Raspa error
+		 &:after {
+			content: ' ';
+			background-image: url('../../../themes/default/raspa_404.jpg');
+			background-size: cover;
+			background-repeat: no-repeat;
+			height: 100%;
+			width: 100%;
+			position: absolute;
+			left: 0px;
+			top: 0px;
+			min-height: 100vh;
+			overflow: hidden;
+			opacity: 0.3;
+			z-index: -1;
+
+			@media screen and (max-width: @width_break_point_0) {
+				background-position: 35%;
+			}
+		}
+	}
+
+	&.not_logged_error {
+		 &:after {
+			content: ' ';
+			opacity: 0.3;
+		}
+	}
+
+
+	h1 {
+		font-size: 1.7rem;
+		margin: 0.67em 0;
+		margin-bottom: 0px;
+		color: @color_grey_darken;
+		font-weight: 200;
+	}
+
+	.more_info {
+		margin-top: 1.5rem;
+	}
+
+	.link {
+		display: block;
+	}
+
+	// overlay
+		// &:after {
+		// 	content: ' ';
+		// 	height: 100%;
+		// 	width: 100%;
+		// 	position: absolute;
+		// 	background-color: orange;
+		// 	position: absolute;
+		// 	top: 0px;
+		// 	left: 0px;
+		// 	background-color: rgb(255 255 255 / 39%);
+		// }
+
+	// >* {
+	// 	z-index: 3;
+	// }
+
+	// &:before {
+	// 	content: ' ';
+	// 	// background-image: url('../../../themes/default/dedalo_icon_big.png');
+
+	// 	background-repeat: no-repeat;
+	// 	background-position: 0 top;
+	// 	// background-size: 527px 1024px;
+	// 	position: absolute;
+	// 	width: 100%;
+	// 	height: 100%;
+	// 	min-height: 1024px;
+	// 	z-index: -1;
+	// 	opacity: 0.5;
+	// 	-moz-transform: scaleX(-1);
+	// 	-o-transform: scaleX(-1);
+	// 	-webkit-transform: scaleX(-1);
+	// 	transform: scaleX(-1);
+	// }
+
+	>.icon_dedalo {
+		height: 7rem;
+	}
+
+	>.server_response_error {
+
 	}
 }

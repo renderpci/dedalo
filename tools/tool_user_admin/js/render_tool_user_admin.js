@@ -12,6 +12,7 @@
 	// import {pause} from '../../../core/common/js/utils/index.js'
 
 
+
 /**
 * RENDER_TOOL_USER_ADMIN
 * Manages the component's logic and appearance in client side
@@ -59,7 +60,7 @@ render_tool_user_admin.prototype.edit = async function(options) {
 /**
 * GET_CONTENT_DATA
 * Render tool body or 'content_data'
-* @param instance self
+* @param object self
 * @return HTMLElement content_data
 */
 const get_content_data = async function(self) {

@@ -68,7 +68,8 @@ session_write_close();
 		$is_root			= $user_id==DEDALO_SUPERUSER;
 
 		$obj = new stdClass();
-			$obj->server_errors						= !empty($_ENV['DEDALO_LAST_ERROR']);
+			// $obj->server_errors					= !empty($_ENV['DEDALO_LAST_ERROR']);
+			$obj->dedalo_last_error					= $_ENV['DEDALO_LAST_ERROR'] ?? null;
 			// logged informative only
 			$obj->is_logged							= login::is_logged();
 			$obj->is_global_admin					= $is_global_admin;
@@ -175,6 +176,10 @@ session_write_close();
 
 // headers
 	header('Content-type: application/javascript; charset=utf-8');
+	// no cache
+		header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+		header("Cache-Control: post-check=0, pre-check=0", false);
+		header("Pragma: no-cache");
 	// cache optional
 		// $seconds_to_cache = 3600;
 		// $ts = gmdate('D, d M Y H:i:s', time() + $seconds_to_cache) . ' GMT';

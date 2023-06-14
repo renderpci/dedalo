@@ -421,7 +421,8 @@ export const ui = {
 				element_type	: 'span',
 				class_name		: 'button close button_exit_edit show_on_active'
 			})
-			button_close_node.addEventListener('click', async function(e){
+			button_close_node.addEventListener('click', fn_click)
+			async function fn_click(e) {
 				e.stopPropagation()
 
 				await ui.component.deactivate(instance)
@@ -443,7 +444,7 @@ export const ui = {
 					mode		: target_mode,
 					autoload	: autoload
 				})
-			})
+			}
 
 			return button_close_node;
 		},//end build_button_exit_edit
@@ -1942,7 +1943,7 @@ export const ui = {
 			const ar_langs_lenght = ar_langs.length
 			for (let i = 0; i < ar_langs_lenght; i++) {
 
-				const option = ui.create_dom_element({
+				const current_option = ui.create_dom_element({
 					element_type	: 'option',
 					value			: ar_langs[i].value,
 					inner_html		: ar_langs[i].label,
@@ -1950,7 +1951,7 @@ export const ui = {
 				})
 				// selected options set on match
 				if (ar_langs[i].value===selected) {
-					option.selected = true
+					current_option.selected = true
 				}
 			}
 
@@ -2682,19 +2683,30 @@ export const ui = {
 	* SET_BACKGROUND_IMAGE
 	* @param DOM node image
 	* @param DOM node target_node
-	* @return DOMnode image
+	* @return bool
 	*/
 	set_background_image : (image, target_node) => {
+
+		// Firefox skip. (prevents erratic Firefox behavior about canvas bg color)
+		if(navigator.userAgent.toLowerCase().indexOf('firefox') > -1){
+			return false
+		}
 
 		const canvas	= document.createElement('canvas');
 		canvas.width	= image.width;
 		canvas.height	= image.height;
 
 		try {
-			canvas.getContext('2d').drawImage(image, 0, 0, image.width, image.height);
-			const rgb = canvas.getContext('2d').getImageData(0, 0, 1, 1).data;
+			// canvas context 2d
+				const ctx = canvas.getContext("2d");
 
-			// round rgb values
+			// draw image into canvas
+				ctx.drawImage(image, 0, 0, image.width, image.height);
+
+			// get RGB data from canvas
+				const rgb = ctx.getImageData(0, 0, 1, 1).data;
+
+			// round RGB values
 				function correction(value) {
 
 					const factor = 1.016
@@ -2711,19 +2723,25 @@ export const ui = {
 				const b = correction(rgb[2])
 
 			// build backgroundColor style string
-			const bg_color_rgb = 'rgb(' + r + ',' + g + ',' + b +')';
+				const bg_color_rgb = 'rgb(' + r + ',' + g + ',' + b +')';
 
 			// set background color style (both container and image)
-			target_node.style.backgroundColor = bg_color_rgb
+				target_node.style.backgroundColor = bg_color_rgb
 
 		}catch(error){
 			console.warn("ui.set_background_image . Unable to get image canvas: ", image);
 		}
 
-		canvas.remove()
-		image.classList.remove('loading')
+		// remove canvas on finish
+			canvas.remove()
 
-		return image
+		// loading style remove
+			// if (image.classList.contains('loading')) {
+			// 	image.classList.remove('loading')
+			// }
+
+
+		return true
 	},//end set_background_image
 
 
@@ -2864,12 +2882,10 @@ export const ui = {
 		node.classList.toggle('fullscreen')
 
 		// set exit event
-		document.addEventListener('keyup', exit_fullscreen, {
-			passive : true
-		})
+		document.addEventListener('keyup', exit_fullscreen, { passive : true })
 		function exit_fullscreen(e) {
 			if (e.key==='Escape') {
-				document.removeEventListener('keyup', exit_fullscreen)
+				document.removeEventListener('keyup', exit_fullscreen, { passive : true })
 				node.classList.remove('fullscreen')
 			}
 		}
@@ -2916,13 +2932,12 @@ export const ui = {
 	* like filter
 	* @param object options
 	* 	{
-	* 		container			: DOM node,
+	* 		container			: HTMLElement,
 	* 		preserve_content	: bool false
 	* 		label				: string,
 	* 		callback			: function
 	* 	}
-	* @return promise
-	* 	Resolve: DOM node result_node
+	* @return HTMLElement result_node
 	*/
 	load_item_with_spinner : async function(options) {
 
@@ -2967,6 +2982,7 @@ export const ui = {
 
 		// replace node
 			await container_placeholder.replaceWith(result_node);
+
 
 		return result_node
 	}//end load_item_with_spinner

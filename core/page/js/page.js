@@ -7,7 +7,6 @@
 // import
 	// custom html elements
 	// import '../../common/js/dd-modal.js'
-	// import '../../services/service_tinymce/js/dd-tiny.js'
 	// others
 	import {clone, dd_console, find_up_node} from '../../common/js/utils/index.js'
 	// import {menu} from '../../menu/js/menu.js'
@@ -16,6 +15,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {get_instance} from '../../common/js/instances.js'
 	import {common, push_browser_history} from '../../common/js/common.js'
+	import {url_vars_to_object, JSON_parse_safely} from '../../common/js/utils/index.js'
 	// import {load_tool} from '../../../tools/tool_common/js/tool_common.js'
 	// import '../../common/js/components_list.js' // launch preload all components files in parallel
 	// import '../../../lib/tinymce/js/tinymce/tinymce.min.js'
@@ -40,9 +40,6 @@ export const page = function () {
 	this.context
 	this.status
 	this.events_tokens
-
-
-	return true
 }//end page
 
 
@@ -62,6 +59,7 @@ export const page = function () {
 /**
 * INIT
 * @param object options
+* @return bool
 */
 page.prototype.init = async function(options) {
 
@@ -77,9 +75,6 @@ page.prototype.init = async function(options) {
 	self.status			= null
 	self.events_tokens	= []
 	self.menu_data		= options.menu_data
-
-	// launch preload all components files in parallel
-		//import('../../common/js/components_list.js')
 
 	// update value, subscription to the changes: if the section or area was changed, observers dom elements will be changed own value with the observable value
 
@@ -201,7 +196,7 @@ page.prototype.init = async function(options) {
 
 					// refresh page. Force to load new context elements data from DDBB
 						const refresh_result = await self.refresh({
-							build_autoload	: true,
+							build_autoload	: false,
 							render_level	: 'content'
 						})
 
@@ -247,7 +242,6 @@ page.prototype.init = async function(options) {
 				return false
 			}
 		}//end fn_user_navigation
-
 
 	// activate_component
 		self.events_tokens.push(
@@ -307,22 +301,6 @@ page.prototype.init = async function(options) {
 			}
 		}//end fn_user_navigation
 
-
-	// window onpopstate. Triggered when user make click on browser navigation buttons
-		// note that navigation calls generate a history of event state, and when user click's on back button,
-		// the browser get this event form history with the state info stored previously
-		window.onpopstate = function(event) {
-			if (event.state) {
-				// get previously stored state data
-				const new_user_navigation_options = event.state.user_navigation_options
-				// mark as already used in history
-				new_user_navigation_options.event_in_history = true
-				// publish the event normally as usual
-				event_manager.publish('user_navigation', new_user_navigation_options)
-			}
-		}
-
-
 	// observe tool calls
 		// load_tool
 		// The event is fired by the tool button created with method ui.build_tool_button.
@@ -331,24 +309,6 @@ page.prototype.init = async function(options) {
 			// 	event_manager.subscribe('load_tool', load_tool) // fire tool_common.load_tool function
 			// )
 
-	// beforeunload (event)
-		window.addEventListener('beforeunload', beforeUnloadListener, {capture: true})
-		function beforeUnloadListener(event) {
-			// event.preventDefault();
-
-			// document.activeElement.blur()
-			if (typeof window.unsaved_data==='undefined' || window.unsaved_data!==true) {
-				// console.log('window.unsaved_data:', window.unsaved_data);
-				// removeEventListener('beforeunload', beforeUnloadListener, {capture: true})
-				return false
-			}
-
-			// set event.returnValue value to force browser standard message (unable to customize)
-			// like : 'Changes that you made may not be saved.'
-			event.returnValue = true
-			// return event.returnValue = get_label.discard_changes || 'Discard unsaved changes?';
-		}
-
 	// window messages
 		// window.addEventListener("message", receiveMessage, false);
 		// function receiveMessage(event) {
@@ -356,9 +316,11 @@ page.prototype.init = async function(options) {
 		// 	alert("Mensaje recibido !");
 		// }
 
-	// events
+	// events. Add window/document general events
 		self.add_events()
 
+	// update main CSS url to avoid cache
+		update_css_file('main')
 
 	// status update
 		self.status = 'initialized'
@@ -411,10 +373,92 @@ page.prototype.init = async function(options) {
 
 /**
 * BUILD
+* (!) Note that normally page only needs load once. Later, only sections/areas will be built
+* @param bool autoload = false
+* @return bool
 */
-page.prototype.build = async function() {
+page.prototype.build = async function(autoload=false) {
 
 	const self = this
+
+	// status update
+		self.status = 'building'
+
+	// (!) Note that normally page only needs load once. Later, only sections/areas will be updated
+		if (autoload===true) {
+			if (self.context) {
+				// catch invalid call. Page build must be false except the first start page
+				console.error('Error. Ignored call to page build with autoload=true. Page already have context!', self.context);
+			}else{
+
+				// searchParams
+					const searchParams = new URLSearchParams(window.location.href);
+
+				// menu
+					const menu = searchParams.has('menu')
+						? JSON_parse_safely(
+							searchParams.get('menu'), // string from url
+							true // fallback on exception parsing string
+						  )
+						: true
+
+				// start bootstrap
+					const rqo = { // rqo (request query object)
+						action			: 'start',
+						prevent_lock	: true,
+						options : {
+							search_obj	: url_vars_to_object(location.search),
+							menu		: menu //  bool
+						}
+					}
+
+				// request page context (usually menu and section context)
+					const api_response = await data_manager.request({
+						body : rqo
+					});
+					console.log('page build api_response:', api_response);
+
+				// error case
+					if (!api_response || !api_response.result) {
+
+						// running_with_errors
+							const running_with_errors = [
+								{
+									msg		: api_response.msg || 'Invalid API result',
+									error	: api_response.error || 'unknown'
+								}
+							]
+						const wrapper_page = render_server_response_error(
+							running_with_errors
+						)
+
+						return false
+					}
+					// server_errors check (page and environment)
+					if (api_response.dedalo_last_error) {
+						console.error('Page running with server errors. dedalo_last_error: ', api_response.dedalo_last_error);
+					}
+					if (page_globals.dedalo_last_error) {
+						console.error('Environment running with server errors. dedalo_last_error: ', page_globals.dedalo_last_error);
+					}
+
+				// set context and data to current instance
+					self.context	= api_response.result.context
+					self.data		= {}
+			}
+		}//end if (autoload===true)
+
+	// page title update
+		const section_info = self.context.find(el => el.model==='section' || el.model.indexOf('area')===0)
+		if (section_info) {
+
+			const tipo = section_info.tipo || 'Unknown tipo'
+			const label = section_info.label
+				? section_info.label.replace(/<[^>]+>/ig,'')
+				: ''
+
+			document.title =  'V6 ' + tipo + ' ' + label
+		}
 
 	// status update
 		self.status = 'built'
@@ -427,10 +471,43 @@ page.prototype.build = async function() {
 /**
 * ADD_EVENTS
 * Set page common events like 'keydown'
+* @return void
 */
 page.prototype.add_events = function() {
 
 	const self = this
+
+	// window onpopstate. Triggered when user clicks on the browser navigation buttons
+		// note that navigation calls generate a history of event state, and when user click's on back button,
+		// the browser get this event form history with the state info stored previously
+		window.onpopstate = function(event) {
+			if (event.state) {
+				// get previously stored state data
+				const new_user_navigation_options = event.state.user_navigation_options
+				// mark as already used in history
+				new_user_navigation_options.event_in_history = true
+				// publish the event normally as usual
+				event_manager.publish('user_navigation', new_user_navigation_options)
+			}
+		}
+
+	// beforeunload (event)
+		window.addEventListener('beforeunload', beforeUnloadListener, {capture: true})
+		function beforeUnloadListener(event) {
+			// event.preventDefault();
+
+			// document.activeElement.blur()
+			if (typeof window.unsaved_data==='undefined' || window.unsaved_data!==true) {
+				// console.log('window.unsaved_data:', window.unsaved_data);
+				// removeEventListener('beforeunload', beforeUnloadListener, {capture: true})
+				return false
+			}
+
+			// set event.returnValue value to force browser standard message (unable to customize)
+			// like : 'Changes that you made may not be saved.'
+			event.returnValue = true
+			// return event.returnValue = get_label.discard_changes || 'Discard unsaved changes?';
+		}
 
 	// keydown events
 		document.addEventListener('keydown', fn_keydown)
@@ -526,9 +603,6 @@ page.prototype.add_events = function() {
 					ui.component.deactivate(component_instance)
 			}
 		}//end fn_deactivate_components
-
-
-	return true
 }//end add_events
 
 
@@ -540,7 +614,7 @@ page.prototype.add_events = function() {
 * @param object self (instance)
 * @param object source
 * 	Could be full context of element return by start API function or an basic source on page navigation
-* @return promise current_instance init promise
+* @return promise instance_promise
 */
 export const instantiate_page_element = function(self, source) {
 
@@ -600,6 +674,31 @@ export const instantiate_page_element = function(self, source) {
 
 	return instance_promise
 }//end instantiate_page_element
+
+
+
+/**
+* UPDATE_CSS_FILE
+* Force load cached css file
+* @param string sheet_name
+* 	Sample: 'main'
+* @return bool
+*/
+const update_css_file = function(sheet_name) {
+
+	const style_sheet = document.querySelector('link[href*=' + sheet_name + ']')
+	if (style_sheet) {
+		const url = style_sheet.href
+		if (url.indexOf('?')===-1) {
+			// add version and update style_sheet
+			const new_url = url + '?v=' + (new Date().valueOf())
+			style_sheet.href = new_url
+			return true
+		}
+	}
+
+	return false
+}//end update_css_file
 
 
 

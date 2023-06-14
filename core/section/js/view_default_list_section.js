@@ -11,10 +11,7 @@
 	import {ui} from '../../common/js/ui.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {set_element_css} from '../../page/js/css.js'
-	import {
-		render_server_response_error,
-		no_records_node
-	} from './render_common_section.js'
+	import {no_records_node} from './render_common_section.js'
 	import {
 		render_column_id
 	} from './render_list_section.js'
@@ -37,19 +34,17 @@ export const view_default_list_section = function() {
 * Render node for use current view
 * @param object self
 * @para object options
+* sample:
+* {
+*    "render_level": "full",
+*    "render_mode": "list"
+* }
 * @return HTMLElement wrapper
 */
 view_default_list_section.render = async function(self, options) {
 
 	// options
 		const render_level = options.render_level || 'full'
-
-	// running_with_errors case
-		if (self.running_with_errors) {
-			return render_server_response_error(
-				self.running_with_errors
-			);
-		}
 
 	// columns_map
 		const columns_map	= await rebuild_columns_map(self)

@@ -13,13 +13,13 @@ abstract class component_common extends common {
 	* @var
 	*/
 		// string section_id. Component's section section_id
-		protected $section_id;
+		// protected $section_id;
 		// string parent. Component's section section_id (alias of $section_id)
 		protected $parent;
 		// string section_tipo. Component's section tipo
 		protected $section_tipo;
 		protected $valor_lang;				// string language of the final value of the component (if it is a list of values, the language of the field it points to that can be translated even if the component is not data "1" value: "Si" or "yes"
-		protected $dato;					// object dato (JSON encoded in db)
+		// protected $dato;					// object dato (JSON encoded in db)
 		protected $valor;					// string usually dato
 		protected $dataframe;				// object dataframe
 		public $version_date;				// date normally resolved from time machine and assigned to current component

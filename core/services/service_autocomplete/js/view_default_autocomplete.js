@@ -1160,15 +1160,31 @@ const get_last_ddo_data_value = function(current_path, value, data) {
 * float draggable div preserving position across calls
 * Used by 'numisdata575'
 * @param object self
-* @param object selected_instance
-* 	Current section_record
+* @param object section_record
+* 	Current section_record instance
 * @param object params
+* sample:
+* {
+* 	mode: "list"
+*	request_config_type: "secondary"
+*	view: "tag"
+* }
 * @return HTMLElement grid_choose_container
 */
-view_default_autocomplete.render_grid_choose = async function( self, selected_instance, params ) {
+view_default_autocomplete.render_grid_choose = async function( self, section_record, params ) {
+
+	// selection (from user selected section_record)
+		const selected_section_id	= section_record.section_id
+		const selected_section_tipo	= section_record.section_tipo
+		const data_selection		= section_record.datum.data.find(
+			el => el.section_id==selected_section_id && el.section_tipo==selected_section_tipo
+		)
+		const selected_label = data_selection
+			? data_selection.value
+			: selected_section_tipo + '_' + selected_section_tipo
 
 	// data from API
-		const grid_choose_data = await get_grid_choose_data(self, selected_instance, params)
+		const grid_choose_data = await get_grid_choose_data(self, section_record, params)
 
 	// get dd objects from the context that will be used to build the lists in correct order
 		const rqo_search	= grid_choose_data.rqo_search
@@ -1201,9 +1217,9 @@ view_default_autocomplete.render_grid_choose = async function( self, selected_in
 			}
 
 	// label. From section_record node
-		const label = selected_instance.node
-			? selected_instance.node.firstChild.innerHTML
-			: ''
+		const label = Array.isArray(selected_label)
+			? selected_label.join(', ')
+			: selected_label
 
 	// header
 		const header = ui.create_dom_element({
@@ -1311,7 +1327,7 @@ view_default_autocomplete.render_grid_choose = async function( self, selected_in
 		const columns = rqo_search.show.columns
 
 	// get the ar_locator founded in sections
-		const data_locator	= data.find((item)=> item.tipo === rqo_search.source.tipo && item.typo==='sections');
+		const data_locator	= data.find((item)=> item.tipo===rqo_search.source.tipo && item.typo==='sections');
 		const ar_locator	= (data_locator) ? data_locator.value : []
 
 	// iterate the sections
@@ -1392,16 +1408,24 @@ view_default_autocomplete.render_grid_choose = async function( self, selected_in
 
 /**
 * GET_GRID_CHOOSE_DATA
-* Used by render_grid_choose
+* Used by render_grid_choose to call API and resolve
+* the data to display into the grid viewer
 * @param object self
-* @param object selected_instance
+* @param object section_record
+* Current section_record instance
 * @param object params
+* sample:
+* {
+* 	mode: "list"
+*	request_config_type: "secondary"
+*	view: "tag"
+* }
 * @return object grid_choose_data
 */
-const get_grid_choose_data = async function(self, selected_instance, params) {
+const get_grid_choose_data = async function(self, section_record, params) {
 
 	// request_config
-		const request_config = self.request_config.find(el => el.type === params.request_config_type)
+		const request_config = self.request_config.find(el => el.type===params.request_config_type)
 		if(!request_config){
 			console.warn("Called request_config is not defined with type: ", params.request_config_type);
 			return
@@ -1410,18 +1434,27 @@ const get_grid_choose_data = async function(self, selected_instance, params) {
 	// rqo
 		const rqo_search = await self.caller.build_rqo_search(request_config, 'search')
 
+		// remove non used search params
 		delete rqo_search.sqo_options.filter_free
 		delete rqo_search.sqo_options.filter_by_list
+
 		// const rqo = await self.rebuild_search_query_object({
 		// 	rqo_search		: rqo_search
 		// });
+
 		rqo_search.sqo.filter_by_locators = [{
-			section_id		: selected_instance.section_id,
-			section_tipo	: selected_instance.section_tipo
+			section_id		: section_record.section_id,
+			section_tipo	: section_record.section_tipo
 		}]
 
+		// limit. Increase default limit (25) to allow more results
+		rqo_search.sqo.limit = 200
+
+		// section_tipo. Search only in section tipo of selected instance
+		rqo_search.sqo.section_tipo = [section_record.section_tipo]
+
 	// API read request
-		const api_response	= await data_manager.request({
+		const api_response = await data_manager.request({
 			body		: rqo_search,
 			use_worker	: true
 		})

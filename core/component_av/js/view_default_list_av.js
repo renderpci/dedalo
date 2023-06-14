@@ -56,7 +56,7 @@ view_default_list_av.render = async function(self, options) {
 	// image
 		const image = ui.create_dom_element({
 			element_type	: 'img',
-			class_name		: 'loading link',
+			class_name		: 'link',
 			parent			: wrapper
 		})
 		// image.loading = 'lazy'
@@ -68,7 +68,6 @@ view_default_list_av.render = async function(self, options) {
 			function set_bg_color() {
 				this.removeEventListener('load', set_bg_color, false)
 				ui.set_background_image(this, this)
-
 			}
 			image.addEventListener('error', () => {
 				console.log('Image load error:', image);

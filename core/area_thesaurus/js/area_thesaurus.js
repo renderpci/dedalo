@@ -4,7 +4,10 @@
 
 
 // imports
-	import {common} from '../../common/js/common.js'
+	import {
+		common,
+		build_autoload
+	} from '../../common/js/common.js'
 	import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {event_manager} from '../../common/js/event_manager.js'
@@ -52,8 +55,6 @@ export const area_thesaurus = function() {
 
 	// display mode: 'default' | 'relation'
 	this.thesaurus_mode
-
-	return true
 }//end area_thesaurus
 
 
@@ -76,6 +77,7 @@ export const area_thesaurus = function() {
 
 /**
 * INIT
+* @pram object options
 * @return bool
 */
 area_thesaurus.prototype.init = async function(options) {
@@ -143,15 +145,15 @@ area_thesaurus.prototype.init = async function(options) {
 
 /**
 * BUILD
-* @return promise
-*	bool true
+* @param bool autoload = true
+* @return bool
 */
 area_thesaurus.prototype.build = async function(autoload=true) {
 	const t0 = performance.now()
 
 	const self = this
 
-	// call the generic common tool build
+	// call the generic common build
 		// const common_build = await area_common.prototype.build.call(this, options);
 
 	// status update
@@ -163,12 +165,6 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 			context	: []
 		}
 		self.data = self.data || []
-
-	// // request_config_object
-	// 	self.request_config_object	= self.context.request_config.find(el => el.api_engine==='dedalo')
-
-	// // rqo build
-	// 	self.rqo = self.rqo || await self.build_rqo_show(self.request_config_object, 'get_data')
 
 	// rqo
 		const generate_rqo = async function(){
@@ -184,12 +180,26 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 		}
 		await generate_rqo()
 
-	// load data if not yet received as an option
+	// load from DDBB
 		if (autoload===true) {
-			// get context and data
-				// const api_response = await data_manager.read(self.dd_request.show)
-				const api_response = await data_manager.request({body:self.rqo})
-					// console.log("AREA_THESAURUS api_response:", self.id, api_response);
+
+			// build_autoload
+			// Use unified way to load context and data with
+			// errors and not login situation managing
+				const api_response = await build_autoload(self)
+				if (!api_response) {
+					return false
+				}
+
+			// reset errors
+				self.running_with_errors = null
+
+			// destroy dependencies
+				await self.destroy(
+					false, // bool delete_self
+					true, // bool delete_dependencies
+					false // bool remove_dom
+				)
 
 			// set the result to the datum
 				self.datum = api_response.result
@@ -210,9 +220,9 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 				// self.dd_request.show = self.build_rqo('show', self.context.request_config, 'get_data')
 				// console.log("-----------------------self.dd_request.show", self.dd_request.show);
 
-			// // rebuild the request_config_object and rqo in the instance
-			// // request_config_object
-			// 	self.request_config_object	= self.context.request_config.find(el => el.api_engine==='dedalo')
+			// rebuild the request_config_object and rqo in the instance
+				// // request_config_object
+				// 	self.request_config_object	= self.context.request_config.find(el => el.api_engine==='dedalo')
 
 			// // rqo build
 			// 	self.rqo = await self.build_rqo_show(self.request_config_object, 'get_data')
@@ -227,9 +237,8 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 				}
 			// rqo regenerate
 				await generate_rqo()
-				console.log("SECTION self.rqo after load:", clone(self.rqo));
-	}//end if (autoload===true)
-
+				console.log("AREA self.rqo after load:", clone(self.rqo));
+		}//end if (autoload===true)
 
 	// label
 		self.label = self.context.label

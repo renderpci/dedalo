@@ -102,7 +102,8 @@ const get_content_value = (i, current_value, self) => {
 			value			: current_value,
 			parent			: content_value
 		})
-		input.addEventListener('change', function() {
+		input.addEventListener('change', fn_change)
+		function fn_change() {
 
 			// parsed_value
 				const parsed_value = (input.value.length>0) ? input.value : null
@@ -120,7 +121,7 @@ const get_content_value = (i, current_value, self) => {
 				// self.data.changed_data = changed_data
 			// publish search. Event to update the dom elements of the instance
 				event_manager.publish('change_search_element', self)
-		})//end event change
+		}//end fn_change
 
 
 	return content_value

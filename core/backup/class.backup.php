@@ -1367,7 +1367,7 @@ abstract class backup {
 				'post'				=> true,
 				'header'			=> false, // bool add header to result
 				'ssl_verifypeer'	=> false,
-				'timeout'			=> 60, // int seconds
+				'timeout'			=> (60*4), // int seconds
 				'proxy'				=> (defined('SERVER_PROXY') && !empty(SERVER_PROXY))
 					? SERVER_PROXY // from Dédalo config file
 					: false // default case

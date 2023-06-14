@@ -1,190 +1,222 @@
 {
-    "label": "Desarrollo de herramientas",
-    "relations": [
-        {
-            "type": "dd151",
-            "section_id": "-1",
-            "section_tipo": "dd128",
-            "from_component_tipo": "dd200"
-        },
-        {
-            "type": "dd675",
-            "section_id": "1",
-            "section_tipo": "dd153",
-            "from_component_tipo": "dd1337"
-        },
-        {
-            "type": "dd151",
-            "section_id": "3",
-            "section_tipo": "dd1342",
-            "from_component_tipo": "dd1330"
-        },
-        {
-            "type": "dd151",
-            "section_id": "2",
-            "section_tipo": "dd1342",
-            "from_component_tipo": "dd1330"
-        },
-        {
-            "type": "dd151",
-            "section_id": "1",
-            "section_tipo": "dd64",
-            "from_component_tipo": "dd1331"
-        },
-        {
-            "type": "dd151",
-            "section_id": "2",
-            "section_tipo": "dd64",
-            "from_component_tipo": "dd1333"
-        },
-        {
-            "type": "dd151",
-            "section_id": "1",
-            "section_tipo": "dd64",
-            "from_component_tipo": "dd1354"
-        },
-        {
-            "type": "dd151",
-            "section_id": "1",
-            "section_tipo": "dd64",
-            "from_component_tipo": "dd1332"
-        },
-        {
-            "type": "dd151",
-            "section_id": "-1",
-            "section_tipo": "dd128",
-            "from_component_tipo": "dd197"
-        }
-    ],
-    "components": {
-        "dd199": {
-            "dato": {
-                "lg-nolan": [
-                    {
-                        "start": {
-                            "day": 2,
-                            "hour": 12,
-                            "time": 64921869898,
-                            "year": 2019,
-                            "month": 12,
-                            "minute": 44,
-                            "second": 58
-                        }
-                    }
-                ]
-            }
-        },
-        "dd201": {
-            "dato": {
-                "lg-nolan": [
-                    {
-                        "start": {
-                            "day": 3,
-                            "hour": 10,
-                            "time": 65002301460,
-                            "year": 2022,
-                            "month": 6,
-                            "minute": 51,
-                            "second": 0
-                        }
-                    }
-                ]
-            }
-        },
-        "dd612": {
-            "dato": {
-                "lg-eng": [
-                    "Dédalo store every user change in a custom table 'matrix_time_machine'.<br>This tool allow users access and recover this versions"
-                ]
-            }
-        },
-        "dd799": {
-            "dato": {
-                "lg-eng": [
-                    "Time machine"
-                ],
-                "lg-spa": [
-                    "Máquina del tiempo"
-                ]
-            }
-        },
-        "dd1326": {
-            "dato": {
-                "lg-nolan": [
-                    "tool_time_machine"
-                ]
-            }
-        },
-        "dd1327": {
-            "dato": {
-                "lg-nolan": [
-                    "2.0.1"
-                ]
-            }
-        },
-        "dd1328": {
-            "dato": {
-                "lg-nolan": [
-                    "6.0.0"
-                ]
-            }
-        },
-        "dd1335": {
-            "inf": "Propiedades [component_json]",
-            "dato": {
-                "lg-nolan": [
-                    {
-                        "open_as": "window",
-                        "windowFeatures": null
-                    }
-                ]
-            }
-        },
-        "dd1372": {
-            "dato": {
-                "lg-nolan": [
-                    [
-                        {
-                            "lang": "lg-spa",
-                            "name": "recover_section_alert",
-                            "value": "¿Está seguro de que desea restaurar esta sección?"
-                        },
-                        {
-                            "lang": "lg-eng",
-                            "name": "recover_section_alert",
-                            "value": "Are you sure you want to restore this section?"
-                        },
-                        {
-                            "lang": "lg-eng",
-                            "name": "apply_and_save",
-                            "value": "Apply and save"
-                        },
-                        {
-                            "lang": "lg-spa",
-                            "name": "apply_and_save",
-                            "value": "Aplicar y salvar"
-                        },
-                        {
-                            "lang": "lg-cat",
-                            "name": "apply_and_save",
-                            "value": "Aplicar i salvar"
-                        },
-                        {
-                            "lang": "lg-ell",
-                            "name": "apply_and_save",
-                            "value": "εφαρμόστε και αποθηκεύστε"
-                        }
-                    ]
-                ]
-            }
-        }
+  "label": "Desarrollo de herramientas",
+  "relations": [
+    {
+      "type": "dd151",
+      "section_id": "-1",
+      "section_tipo": "dd128",
+      "from_component_tipo": "dd200"
     },
-    "section_id": 2,
-    "created_date": "2019-12-02 12:44:58",
-    "section_tipo": "dd1340",
-    "modified_date": "2022-06-03 10:51:00",
-    "diffusion_info": null,
-    "created_by_userID": -1,
-    "section_real_tipo": "dd1324",
-    "modified_by_userID": -1
+    {
+      "type": "dd675",
+      "section_id": "1",
+      "section_tipo": "dd153",
+      "from_component_tipo": "dd1337"
+    },
+    {
+      "type": "dd151",
+      "section_id": "3",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "2",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "1",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1331"
+    },
+    {
+      "type": "dd151",
+      "section_id": "2",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1333"
+    },
+    {
+      "type": "dd151",
+      "section_id": "1",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1354"
+    },
+    {
+      "type": "dd151",
+      "section_id": "1",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1332"
+    },
+    {
+      "type": "dd151",
+      "section_id": "-1",
+      "section_tipo": "dd128",
+      "from_component_tipo": "dd197"
+    }
+  ],
+  "components": {
+    "dd199": {
+      "dato": {
+        "lg-nolan": [
+          {
+            "start": {
+              "day": 2,
+              "hour": 12,
+              "time": 64921869898,
+              "year": 2019,
+              "month": 12,
+              "minute": 44,
+              "second": 58
+            }
+          }
+        ]
+      }
+    },
+    "dd201": {
+      "dato": {
+        "lg-nolan": [
+          {
+            "start": {
+              "day": 3,
+              "hour": 10,
+              "time": 65002301460,
+              "year": 2022,
+              "month": 6,
+              "minute": 51,
+              "second": 0
+            }
+          }
+        ]
+      },
+      "lg-nolan": [
+        {
+          "start": {
+            "day": 14,
+            "hour": 16,
+            "time": 65035412043,
+            "year": 2023,
+            "month": 6,
+            "minute": 14,
+            "second": 3
+          }
+        }
+      ]
+    },
+    "dd612": {
+      "dato": {
+        "lg-cat": [
+          "<p>Accedir i recuperar versions de les dades de l'historial de canvis</p>"
+        ],
+        "lg-deu": [
+          "<p>Auf Versionen von Änderungsverlaufsdaten zugreifen und diese abrufen</p>"
+        ],
+        "lg-eng": [
+          "<p>Access and retrieve versions of change history data</p>"
+        ],
+        "lg-fra": [
+          "<p>Accéder et récupérer des versions des données de l'historique des modifications</p>"
+        ],
+        "lg-spa": [
+          "<p>Accede y recupera versiones de los datos del historial de cambios</p>"
+        ]
+      }
+    },
+    "dd799": {
+      "dato": {
+        "lg-eng": [
+          "Time machine"
+        ],
+        "lg-spa": [
+          "Máquina del tiempo"
+        ]
+      }
+    },
+    "dd1326": {
+      "dato": {
+        "lg-nolan": [
+          "tool_time_machine"
+        ]
+      }
+    },
+    "dd1327": {
+      "dato": {
+        "lg-nolan": [
+          "2.0.2"
+        ]
+      }
+    },
+    "dd1328": {
+      "dato": {
+        "lg-nolan": [
+          "6.0.0"
+        ]
+      }
+    },
+    "dd1335": {
+      "dato": {
+        "lg-nolan": [
+          {
+            "open_as": "window",
+            "windowFeatures": null
+          }
+        ]
+      }
+    },
+    "dd1362": {
+      "inf": "Dev info [component_text_area]",
+      "dato": {
+        "lg-nolan": [
+          "<p>Dédalo store every user change in a custom table 'matrix_time_machine'.</p><p>This tool allow users access and recover this versions</p>"
+        ]
+      }
+    },
+    "dd1372": {
+      "dato": {
+        "lg-nolan": [
+          [
+            {
+              "lang": "lg-spa",
+              "name": "recover_section_alert",
+              "value": "¿Está seguro de que desea restaurar esta sección?"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "recover_section_alert",
+              "value": "Are you sure you want to restore this section?"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "apply_and_save",
+              "value": "Apply and save"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "apply_and_save",
+              "value": "Aplicar y salvar"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "apply_and_save",
+              "value": "Aplicar i salvar"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "apply_and_save",
+              "value": "εφαρμόστε και αποθηκεύστε"
+            }
+          ]
+        ]
+      }
+    }
+  },
+  "section_id": 2,
+  "created_date": "2019-12-02 12:44:58",
+  "section_tipo": "dd1340",
+  "modified_date": "2023-06-14 16:14:03",
+  "diffusion_info": null,
+  "created_by_userID": -1,
+  "section_real_tipo": "dd1324",
+  "modified_by_userID": -1
 }
