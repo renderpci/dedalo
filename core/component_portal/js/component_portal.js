@@ -8,6 +8,7 @@
 	import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	// import * as instances from '../../common/js/instances.js'
+	import {get_instance} from '../../common/js/instances.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {
 		common,
@@ -1091,6 +1092,174 @@ component_portal.prototype.get_total = async function() {
 	return self.total
 }//end get_total
 
+
+
+/**
+* DELETE_LINKED_RECORD
+* @param object options
+* {
+*	section_tipo : section_tipo,
+*	section_id : section_id
+* }
+* @return bool
+*/
+component_portal.prototype.delete_linked_record = async function(options) {
+
+	const self = this
+
+	const section_id	= options.section_id
+	const section_tipo	= options.section_tipo
+
+	// create the instance of the section called by the row of the portal,
+	// section will be in list because it's not necessary get all data, only the instance context to be deleted it.
+		const instance_options = {
+			model			: 'section',
+			tipo			: section_tipo,
+			section_tipo	: section_tipo,
+			section_id		: section_id,
+			mode			: 'list',
+			lang			: self.lang,
+			caller			: self,
+			inspector		: false,
+			filter			: false
+		}
+	// get the instance
+		const section =	await get_instance(instance_options)
+
+	// create the sqo to be used to find the section will be deleted
+		const sqo = {
+			section_tipo		: [section_tipo],
+			filter_by_locators	: [{
+				section_tipo	: section_tipo,
+				section_id		: section_id
+			}],
+			limit				: 1
+		}
+	// call to the section and delete it
+	const result = section.delete_section({
+		sqo			: sqo,
+		delete_mode	: 'delete_record'
+	})
+
+	return result
+}//end delete_linked_record
+
+
+
+/**
+* DELETE_DATAFRAME_RECORD
+* @param object options
+* {
+*	section_id : section_id
+* }
+* @return bool
+*/
+component_portal.prototype.delete_dataframe_record = async function(options) {
+
+	const self = this
+
+	const section_id	= options.section_id
+
+	// check if the show has any ddo that call to any dataframe section.
+	const ddo_dataframe = self.request_config_object.show.ddo_map.find(el => el.is_dataframe===true)
+
+	if(!ddo_dataframe){
+		return
+	}
+	// create the instance of the section called by the row of the portal,
+	// section will be in list because it's not necessary get all data, only the instance context to be deleted it.
+		const instance_options = {
+			model			: 'section',
+			tipo			: ddo_dataframe.section_tipo,
+			section_tipo	: ddo_dataframe.section_tipo,
+			section_id		: section_id,
+			mode			: 'list',
+			lang			: self.lang,
+			caller			: self,
+			inspector		: false,
+			filter			: false
+		}
+	// get the instance
+		const section =	await get_instance(instance_options)
+
+	// caller_dataframe
+		const caller_dataframe = (self.caller && self.caller.model==='section_record' && self.caller.caller)
+			? {
+				section_tipo	: self.caller.caller.section_tipo,
+				section_id		: self.caller.caller.section_id
+			  }
+			: null
+
+	// call to the section and delete it
+		section.delete_section({
+			delete_mode			: 'delete_dataframe',
+			caller_dataframe	: caller_dataframe
+		})
+}//end delete_dataframe_record
+
+
+
+/**
+* UNLINK_RECORD
+* @param object options
+* {
+* 	paginated_key: paginated_key
+*	section_id : section_id
+* }
+* @return bool
+*/
+component_portal.prototype.unlink_record = async function(options) {
+
+	const self = this
+
+	const paginated_key	= options.paginated_key
+	const row_key		= options.row_key
+	const section_id	= options.section_id
+
+	// changed_data
+	const changed_data = [Object.freeze({
+		action	: 'remove',
+		key		: paginated_key,
+		value	: null
+	})]
+	// change_value (implies saves too)
+	// remove the remove_dialog it's controlled by the event of the button that call
+	// prevent the double confirmation
+	const response = await self.change_value({
+		changed_data	: changed_data,
+		label			: section_id,
+		refresh			: false,
+		remove_dialog	: ()=>{
+			return true
+		}
+	})
+
+	// the user has selected cancel from delete dialog
+		if (response===false) {
+			// modal. Close modal if isset
+			// modal.on_close()
+			return false
+		}
+
+	// update pagination offset
+		self.update_pagination_values('remove')
+
+	// refresh
+		await self.refresh({
+			build_autoload : true // when true, force reset offset
+		})
+
+	// check if the caller has active a tag_id
+		if(self.active_tag){
+			// filter component data by tag_id and re-render content
+			self.filter_data_by_tag_id(self.active_tag)
+		}
+
+	// event to update the DOM elements of the instance
+		event_manager.publish('remove_element_'+self.id, row_key)
+
+	return true
+}//end unlink_record
 
 
 // @license-end
