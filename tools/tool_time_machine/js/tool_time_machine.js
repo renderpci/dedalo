@@ -60,6 +60,8 @@ export const tool_time_machine = function () {
 
 /**
 * INIT
+* @param object options
+* @return bool
 */
 tool_time_machine.prototype.init = async function(options) {
 
@@ -214,6 +216,10 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 			// add to self instances list
 				self.ar_instances.push(self.service_time_machine)
 
+			// (!) force self.caller_is_calculated as false to avoid to re-use calculated
+			// component instances on lang change
+				self.caller_is_calculated = false
+
 		} catch (error) {
 			self.error = error
 			console.error(error)
@@ -226,11 +232,15 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 
 
 /**
-* get_component
+* GET_COMPONENT
 * Loads component to place in respective containers: current preview and preview version
+* @param string lang
+* @param string mode
+* @param string|int|null matrix_id
+* @return object component_instance
 */
 tool_time_machine.prototype.get_component = async function(lang, mode, matrix_id=null) {
-	// console.log("get_component:",lang, mode, matrix_id);
+	// console.log("))))))))))) get_component:",lang, mode, matrix_id);
 
 	const self = this
 
@@ -239,7 +249,7 @@ tool_time_machine.prototype.get_component = async function(lang, mode, matrix_id
 
 	// instance_options (clone context and edit)
 		const options = Object.assign(clone(self.main_element.context), {
-			self 				: self,
+			self				: self,
 			lang				: lang,
 			mode				: 'edit', // mode,
 			section_id			: self.main_element.section_id,
