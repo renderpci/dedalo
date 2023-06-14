@@ -203,9 +203,11 @@ tool_common.prototype.init = async function(options) {
 * 	resolve: bool
 */
 tool_common.prototype.build = async function(autoload=false, options={}) {
-	// const t0 = performance.now()
 
 	const self = this
+
+	// status update
+		self.status = 'building'
 
 	// options
 		// load_ddo_map could be a callback or the default loader function
@@ -293,13 +295,6 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 				return true
 			  }//end async function() load_ddo_map
 
-
-	// previous status
-		// const previous_status = self.status
-
-	// status update
-		self.status = 'building'
-
 	// load self style
 		const tool_css_url = DEDALO_TOOLS_URL + '/' + self.model + '/css/' + self.model + '.css'
 		common.prototype.load_style(tool_css_url)
@@ -307,45 +302,42 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 	// load_ddo_map. Exec load ddo_map elements
 		await load_ddo_map()
 
-
 	// load data if is not already received as option
-		if (autoload===true && !self.context) {
+		if (autoload===true) {
+			if (self.context) {
+				// catch invalid call. Page build must be false except the first start page
+				console.error('Error. Ignored call to tool_common build with autoload=true. Tool already have context!', self.context);
+			}else{
 
-			// tool rqo. Create the basic rqo to load tool config data stored in component_json tipo 'dd1353'
-				const rqo = {
-					action	: 'get_element_context',
-					// tool source for component JSON that stores full tool config
-					source : {
-						model			: self.model,
-						section_tipo	: self.section_tipo,
-						section_id		: self.section_id,
-						mode			: self.mode,
-						lang			: self.lang
-					},
-					prevent_lock : true
-				}
+				// tool rqo. Create the basic rqo to load tool config data stored in component_json tipo 'dd1353'
+					const rqo = {
+						action	: 'get_element_context',
+						// tool source for component JSON that stores full tool config
+						source : {
+							model			: self.model,
+							section_tipo	: self.section_tipo,
+							section_id		: self.section_id,
+							mode			: self.mode,
+							lang			: self.lang
+						},
+						prevent_lock : true
+					}
 
-			// load data. Load section data from db of the current tool.
-			// Tool data configuration is inside the tool_registered section 'dd1324' and parsed into component_json 'dd1353',
-			// The tool info was generated when it was imported / registered by admin
-				const api_response = await data_manager.request({
-					body : rqo
-				})
-				self.context = api_response.result[0]
+				// load data. Load section data from db of the current tool.
+				// Tool data configuration is inside the tool_registered section 'dd1324' and parsed into component_json 'dd1353',
+				// The tool info was generated when it was imported / registered by admin
+					const api_response = await data_manager.request({
+						body : rqo
+					})
+					self.context = api_response.result[0]
 
-			// debug
-				if(SHOW_DEBUG===true) {
-					// console.log("/// [tool_common.build] api_response:", api_response);
-					dd_console(`[tool_common.build] TOOL: ${self.model} api_response:`, 'DEBUG', api_response)
-				}
-		}
-
-	// debug
-		if(SHOW_DEBUG===true) {
-			// console.log("__Time to build", self.model, " ms:", Math.round(performance.now()-t0));
-			// dd_console(`__Time to build ${self.model} ${Math.round(performance.now()-t0)} ms`, 'DEBUG')
-			// dd_console(`tool common build. self.ar_instances`, 'DEBUG', self.ar_instances)
-		}
+				// debug
+					if(SHOW_DEBUG===true) {
+						// console.log("/// [tool_common.build] api_response:", api_response);
+						dd_console(`[tool_common.build] TOOL: ${self.model} api_response:`, 'DEBUG', api_response)
+					}
+			}
+		}//end if (autoload===true && !self.context)
 
 	// status update
 		self.status = 'built'

@@ -388,7 +388,7 @@ page.prototype.build = async function(autoload=false) {
 		if (autoload===true) {
 			if (self.context) {
 				// catch invalid call. Page build must be false except the first start page
-				console.error('Error. Invalid call to page build with autoload=true. Page already have context!', self.context);
+				console.error('Error. Ignored call to page build with autoload=true. Page already have context!', self.context);
 			}else{
 
 				// searchParams
