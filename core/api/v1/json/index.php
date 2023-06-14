@@ -114,7 +114,11 @@ $global_start_time = hrtime(true);
 // rqo check. Some cases like preflight, do not generates a rqo
 	if (empty($rqo)) {
 		error_log('API JSON index. ! Ignored empty rqo');
-		debug_log(__METHOD__." Error on API : Empty rqo (Some cases like preflight, do not generates a rqo) ".to_string($_REQUEST), logger::ERROR);
+		debug_log(__METHOD__
+			." Error on API : Empty rqo (Some cases like preflight, do not generates a rqo) " . PHP_EOL
+			.' $_REQUEST: '. to_string($_REQUEST)
+			, logger::ERROR
+		);
 		exit( 0 );
 	}
 
@@ -153,8 +157,8 @@ $global_start_time = hrtime(true);
 			}
 
 		// server_errors. bool true on debug_log write log with LOGGER_LEVEL as 'ERROR' or 'CRITICAL'
-			$response->server_errors = !empty($_ENV['DEDALO_LAST_ERROR']);
-
+			$response->dedalo_last_error	= $_ENV['DEDALO_LAST_ERROR'] ?? null;
+			// $response->dedalo_last_error	= 'fake error!';
 
 	// } catch (Throwable $e) { // For PHP 7
 

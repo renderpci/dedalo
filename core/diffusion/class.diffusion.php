@@ -69,42 +69,33 @@ abstract class diffusion  {
 	* GET_MY_DIFFUSION_DOMAIN
 	* Get only one diffusion domain by tipo
 	* Note: Define 'class_name' in properties of current desired diffusion element like {"class_name":"diffusion_index_ts"}
-	* @param string $diffusion_domain_name like 'dedalo'
-	* @param string $current_children like 'diffusion_index_ts'
-	* @return string|null $current_children like 'dd15'
+	* @param string $diffusion_domain_name
+	* 	like 'dedalo'
+	* @param string $caller_class_name
+	* 	like 'diffusion_sql'
+	* @return string|null $current_children
+	* 	like 'dd15'
 	*/
-	public static function get_my_diffusion_domain( string$diffusion_domain_name, string $caller_class_name) : ?string {
+	public static function get_my_diffusion_domain(string $diffusion_domain_name, string $caller_class_name) : ?string {
 
-		# Array of all diffusion domains
+		// Array of all diffusion domains
 		$diffusion_domains = (array)diffusion::get_diffusion_domains();
-			#dump($diffusion_domains,'$diffusion_domains');
-
 		foreach ($diffusion_domains as $current_tipo) {
 
 			$current_name = RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_DATA_LANG, true, true);
 
 			if($current_name===$diffusion_domain_name) {
 
-				#
-				# NUEVO MODO (más rápido) : Por propiedad 'class_name' . Evita la necesidad de utilizar el modelo cuando no es un modelo estándar de Dédalo
+				// NUEVO MODO (más rápido) : Por propiedad 'class_name' . Evita la necesidad de utilizar el modelo cuando no es un modelo estándar de Dédalo
 				$ar_childrens = RecordObj_dd::get_ar_childrens($current_tipo);
 				foreach ($ar_childrens as $current_children) {
 
-					$RecordObj_dd = new RecordObj_dd($current_children);
-					$properties  = $RecordObj_dd->get_propiedades(true);
-						#dump($properties, ' properties '.$current_children);
-
-					if ($properties && property_exists($properties->diffusion, 'class_name') && $properties->diffusion->class_name===$caller_class_name) {
+					$RecordObj_dd	= new RecordObj_dd($current_children);
+					$properties		= $RecordObj_dd->get_propiedades(true);
+					if (!empty($properties) && property_exists($properties->diffusion, 'class_name') && $properties->diffusion->class_name===$caller_class_name) {
 						return (string)$current_children;
 					}
 				}
-
-				/* OLD WORLD
-				$my_diffusion_domain = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_tipo, $model_name=$caller_class_name, $relation_type='children');
-					dump($my_diffusion_domain, "current_name:$current_name - diffusion_domain_name:$diffusion_domain_name - caller_class_name:$caller_class_name");
-
-				return (array)$my_diffusion_domain;
-				*/
 			}
 		}
 

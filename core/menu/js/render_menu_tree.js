@@ -36,7 +36,8 @@ export const render_tree = (options) => {
 		})
 
 	// click . Manages global click action on the menu items
-		container.addEventListener('click', (e) => {
+		container.addEventListener('click', fn_click)
+		function fn_click(e) {
 			// e.stopPropagation()
 			// e.preventDefault()
 
@@ -80,7 +81,7 @@ export const render_tree = (options) => {
 				}
 				self.menu_active = true
 			}// end if (self.menu_active===true)
-		})//end container.addEventListener('click'
+		}//end container.addEventListener('click'
 
 	// mousedown. document. do global click action on the document body
 		document.addEventListener('mousedown', fn_mousedown)
@@ -182,9 +183,14 @@ const render_item_hierarchy = (options) => {
 
 	// events
 		// mouseenter
-			li.addEventListener('mouseenter', (e) => {
-			// li.addEventListener('touchstart', function(e) {
-				//e.stopPropagation();
+			li.addEventListener('mouseenter', fn_mouseenter)
+			// li.addEventListener('touchstart', fn_mouseenter)
+			function fn_mouseenter(e) {
+				// e.stopPropagation();
+
+				// if (e.type==='touchstart' && self.menu_active!==false) {
+				// 	e.preventDefault()
+				// }
 
 				if(self.menu_active===false) {
 					return false
@@ -245,17 +251,18 @@ const render_item_hierarchy = (options) => {
 
 					}//end if(nodes_li[i] == active_li)
 				}//end for
-			})//end mouseenter
+			}//end fn_mouseenter
 
 		// mouseleave
-			li.addEventListener('mouseleave', (e) => {
-			// li.addEventListener('touchleave', (e) => {
+			li.addEventListener('mouseleave', fn_mouseleave)
+			function fn_mouseleave(e) {
+				// li.addEventListener('touchleave', (e) => {
 				if (e.clientY<0 || e.srcElement.id==='menu_wrapper') {
 					close_all_drop_menu(self);
 				}
 
 				return true
-			})//end mouseleave
+			}//end mouseleave
 
 		// remove the html <mark> sent by the server
 		// when the label is not in the current language
@@ -276,9 +283,8 @@ const render_item_hierarchy = (options) => {
 		// click
 		// when the user do click publish the tipo to go and set the mode in list
 		// the action can be executed mainly in page, but it can be used for any instance.
-			link.addEventListener('click', (e) => {
-			// link.addEventListener('touchend', (e) => {
-				// e.preventDefault()
+			link.addEventListener('click', fn_click)
+			function fn_click(e) {
 				// e.stopPropagation()
 
 				// nonactive menu case
@@ -306,7 +312,7 @@ const render_item_hierarchy = (options) => {
 				}
 
 				return true
-			})//end link.addEventListener("click")
+			}//end link.addEventListener("click")
 
 	// children_item. recursive generation of children nodes of the current li node.
 		const children_item	= datalist.find(children_item => children_item.parent===item.tipo)
@@ -388,6 +394,7 @@ const close_all_children = function(tipo) {
 		}
 	}
 }//end close_all_children
+
 
 
 // @license-end

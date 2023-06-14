@@ -63,6 +63,11 @@ import {data_manager} from '../../common/js/data_manager.js'
 				// }
 			})
 
+			elements.push({
+				model	: 'page',
+				menu	: true
+			})
+
 		return elements
 	}//end get_elelemnts
 	// throw "exit";

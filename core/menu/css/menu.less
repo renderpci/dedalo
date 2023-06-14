@@ -55,6 +55,8 @@
 			}
 		}
 
+
+
 	// placeholder. Preserve the height space while menu is loading
 		&.container_placeholder {
 			height: 56.625px;
@@ -67,8 +69,9 @@
 			}
 		}
 
-	// direct children elements
-		// >* {
+
+
+	// top_item shared items
 		>.top_item {
 			min-height: @menu_heigth;
 			line-height: @menu_heigth;
@@ -76,10 +79,12 @@
 			margin-left: 1em;
 		}
 
+
+
 	// quit button
 		>.quit {
-			background-image: url('../../themes/default/icons/power-off_white.svg');
 			width: 1em;
+			background-image: url('../../themes/default/icons/power-off_white.svg');
 			background-size: contain;
 			background-repeat: no-repeat;
 			background-position: center;
@@ -90,15 +95,19 @@
 			}
 		}
 
+
+
 	// dedalo_icon link
 		>.dedalo_icon_top {
+			width: 1em;
 			background-image: url('../../themes/default/dedalo_logo.svg');
 			background-repeat: no-repeat;
 			background-size: contain;
 			background-position: center;
-			width: 1em;
 			cursor: pointer;
 		}
+
+
 
 	// menu_hierarchy : Menu tree
 		>.menu_hierarchy {
@@ -286,25 +295,119 @@
 				box-shadow: @menu_box_shadow;
 				/*border-left: 1px solid #b4b4b4;*/
 			}
+
+			@media screen and (max-width: @width_break_point_0) { // 1024px
+				display: none;
+			}
 		}//end #menu_hierarchy
+
+
+
+	// menu_mobile version of menu
+		>.menu_mobile_icon {
+			background-image: url('../../themes/default/icons/menu.svg');
+			background-repeat: no-repeat;
+			background-size: contain;
+			background-position: center;
+			width: 1rem;
+			margin-right: 0.75rem;
+			left: 0.5rem;
+			cursor: pointer;
+
+			&:active {
+				opacity: 0.5;
+			}
+
+			@media screen and (min-width: @width_break_point_0) { // 1024px
+				display: none;
+			}
+		}
+		>.menu_mobile_wrapper {
+			width: 100%;
+			position: relative;
+			background-color: #2d2d2d;
+			font-size: 1.15rem;
+			padding: 1rem;
+
+			@media screen and (min-width: @width_break_point_0) { // 1024px
+				display: none;
+			}
+
+			.menu_mobile_item {
+				display: block;
+				padding: 0.25rem 1rem;
+				padding-right: 1.75rem;
+				position: relative;
+				width: fit-content;
+				line-height: 1.5rem;
+				cursor: pointer;
+
+				&.with_children {
+					color: #9d9d9d;
+
+					&:after {
+						content: " ";
+						display: inline-block;
+						width: 0;
+						height: 0;
+						margin-left: 3px;
+						vertical-align: middle;
+						border-bottom: 5px solid transparent;
+						border-top: 5px solid transparent;
+						border-left: 5px solid #9d9d9d;
+						position: absolute;
+						right: 8px;
+						top: 9px;
+						pointer-events: none;
+					}
+
+					&.active {
+						&:after {
+							transform: rotate(90deg);
+						}
+					}
+				}
+			}
+
+			.menu_mobile_children_container {
+				padding-left: 1rem;
+			}
+		}
+
 
 
 	// Ontology link
 		>.ontology {
 			color: #c9c9c9;
-			cursor: pointer;
 			margin-left: 0.5rem;
+			margin-right: 0.5rem;
+			cursor: pointer;
+
+			&.top_item {
+				@media screen and (max-width: @width_break_point_0) { // 1024px
+					display: none;
+				}
+			}
 		}
+
+
 
 	// username of current logged user
 		>.logged_user_name {
 			color: #a6a6a6;
+			margin-left: 0.5rem;
 			cursor: pointer;
+
+			@media screen and (max-width: @width_break_point_0) { // 1024px
+				line-height: 1.9rem;
+			}
 
 			&:hover {
 				color: #F9F9F9;
 			}
 		}
+
+
 
 	// lang selectors
 		>.dedalo_aplication_langs_selector {
@@ -325,16 +428,34 @@
 			background-size: 7px 12px;
 			background-repeat: no-repeat;
 
+			@media screen and (max-width: @width_break_point_0) { // 1024px
+				text-overflow: ellipsis;
+				width: 6rem;
+				font-size: 1rem;
+
+				&.data {
+					display: none;
+				}
+			}
+
 			&.unsync {
 				color: #fdcf39;
 				opacity: 0.9;
 			}
 		}
 
+
+
 	// spacer
 		>.menu_spacer {
 			flex: 1;
+
+			@media screen and (max-width: @width_break_point_0) { // 1024px
+				display: none;
+			}
 		}
+
+
 
 	// section label. Current section name
 		>.section_label {
@@ -342,6 +463,13 @@
 			margin-right: 1em;
 			padding-top: 1px;
 			user-select: none;
+
+			@media screen and (max-width: @width_break_point_0) { // 1024px
+				font-size: 1rem;
+				line-height: 1.6rem;
+				text-align: right;
+				flex: 1;
+			}
 
 			&:hover {
 				opacity: 1;
@@ -356,22 +484,29 @@
 			}
 		}
 
+
+
 	// inspector toggle button
 		>.button_toggle_inspector {
 			background-image: url('../../themes/default/icons/inspector.svg');
 			background-repeat: no-repeat;
 			background-size: contain;
 			background-position: center;
-			cursor: pointer;
 			width: 2em;
 			height: 1em;
 			margin-right: 1em;
 			margin-left: 0px;
+			cursor: pointer;
+
+			@media screen and (max-width: @width_break_point_0) { // 1024px
+				display: none;
+			}
 		}
+
+
 
 	// debug info bar
 		>.debug_info_bar {
-			// background-color: #3F3F3F;
 			background-color: lighten(@color_grey_ultradark, 2%);
 			width: 100%;
 			margin: 0px;
@@ -390,4 +525,6 @@
 				font-size: 94%;
 			}
 		}
+
+
 }//end .menu_wrapper

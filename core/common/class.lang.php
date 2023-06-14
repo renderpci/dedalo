@@ -721,7 +721,10 @@ class lang {
 				case "zu" 	: $code = "lg-zul"; break;
 			*/
 			default:
-				debug_log(__METHOD__." Sorry, lang not defined: \"$lang_code\" ", logger::ERROR);
+				debug_log(__METHOD__
+					." Sorry, lang not defined: \"$lang_code\". NULL will be returned "
+					, logger::ERROR
+				);
 				break;
 		}
 		if (isset($code)) {

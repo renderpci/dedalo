@@ -98,59 +98,74 @@ export const get_editing_preset_json_filter = async function(self) {
 			show	: show
 		}
 
-	return new Promise(async function(resolve, reject){
 
-		// API request
-			const api_response = await data_manager.request({
-				body		: rqo,
-				use_worker	: true
-			})
-
+	// API request
+		const api_response = await data_manager.request({
+			body		: rqo,
+			use_worker	: true
+		})
 		// debug
-			if(SHOW_DEBUG===true) {
-				console.log('))) api_response [get_editing_preset_json_filter]:', api_response);
-			}
+		if(SHOW_DEVELOPER===true) {
+			console.log(`${self.model} [get_editing_preset_json_filter] api_response:`, api_response);
+		}
 
-		// editing_preset
-			if (api_response.result) {
+	// response check
+		if (!api_response || !api_response.result) {
 
-				const data					= api_response.result.data || []
-				const component_json_data	= data.find(el => el.tipo===presets_component_json_tipo)
-				if (component_json_data) {
-
-					// fix value
-					self.component_json_data = component_json_data
-
-					// json_filter . component_json_data dato is array, select the first value
-					const json_filter = component_json_data.value && component_json_data.value[0]
-						? component_json_data.value[0]
-						: null
-
-					resolve(json_filter)
-				}else{
-
-					// no section exist case. Create a new one and get new the section_id
-					const section_id = await create_new_search_preset({
-						self			: self,
-						section_tipo	: temp_presets_section_tipo
-					})
-
-					const default_json_filter = {"$and":[]}
-
-					// fix fake value
-					self.component_json_data = {
-						tipo			: presets_component_json_tipo,
-						section_tipo	: temp_presets_section_tipo,
-						section_id		: section_id,
-						value			: [default_json_filter]
+			// running_with_errors.
+				// It's important to set instance as running_with_errors because this
+				// generates a temporal wrapper. Once solved the problem, (usually a not login scenario)
+				// the instance could be built and rendered again replacing the temporal wrapper
+				self.running_with_errors = [
+					{
+						msg		: `${self.model} build get_editing_preset_json_filter api_response: `+ (api_response.msg),
+						error	: api_response.error || 'unknown'
 					}
-
-					resolve(default_json_filter)
+				]
+				// debug
+				if(SHOW_DEVELOPER===true) {
+					console.error('SERVER: self.running_with_errors:', self.running_with_errors);
 				}
-			}else{
-				reject(null)
-			}
-	})
+
+			return null
+		}
+
+	// editing_preset
+		const data					= api_response.result.data || []
+		const component_json_data	= data.find(el => el.tipo===presets_component_json_tipo)
+
+	// json_filter. existing section case
+		if (component_json_data) {
+
+			// fix value
+			self.component_json_data = component_json_data
+
+			// json_filter . component_json_data dato is array, select the first value
+			const json_filter = component_json_data.value && component_json_data.value[0]
+				? component_json_data.value[0]
+				: null
+
+			return json_filter
+		}
+
+	// default_json_filter. no section exist case. Create a new one and get new the section_id
+		const section_id = await create_new_search_preset({
+			self			: self,
+			section_tipo	: temp_presets_section_tipo
+		})
+
+		// default_json_filter create
+		const json_filter = {"$and":[]}
+
+		// fix fake value
+		self.component_json_data = {
+			tipo			: presets_component_json_tipo,
+			section_tipo	: temp_presets_section_tipo,
+			section_id		: section_id,
+			value			: [json_filter]
+		}
+
+	return json_filter
 }//end get_editing_preset_json_filter
 
 

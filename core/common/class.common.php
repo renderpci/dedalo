@@ -20,6 +20,8 @@ abstract class common {
 		protected $lang;
 		// string label. like 'component_section_id'
 		protected $label;
+		protected $dato; // object dato (JSON encoded in db)
+		protected $section_id;
 
 		// object RecordObj_dd. Ontology definition object
 		public $RecordObj_dd;
@@ -1927,7 +1929,7 @@ abstract class common {
 						. ' (tipo: '.$this->tipo.' - '. RecordObj_dd::get_termino_by_tipo($this->tipo) .')' . PHP_EOL
 						. ' in request_config_object (It may be due to a lack of permissions in their children). request_config_object:' . PHP_EOL
 						. to_string($request_config_object),
-						logger::ERROR
+						logger::WARNING
 					);
 					continue;
 				}
@@ -3380,17 +3382,27 @@ abstract class common {
 
 	/**
 	* GET_SOURCE
-	* @return object | json
+	* @return object $source
 	*/
 	public function get_source() : object {
 
-		$source = new request_query_object();
-			$source->set_tipo($this->get_tipo());
-			$source->set_section_tipo($this->get_section_tipo());
-			$source->set_lang($this->get_lang());
-			$source->set_mode($this->get_mode());
-			$source->set_section_id($this->get_section_id());
-			$source->set_model(get_class($this));
+		// $source = new request_query_object();
+		// 	$source->set_tipo($this->get_tipo());
+		// 	$source->set_section_tipo($this->get_section_tipo());
+		// 	$source->set_lang($this->get_lang());
+		// 	$source->set_mode($this->get_mode());
+		// 	$source->set_section_id($this->get_section_id());
+		// 	$source->set_model(get_class($this));
+
+		$source = (object)[
+			'tipo'			=> $this->get_tipo(),
+			'model'			=> get_class($this),
+			'section_tipo'	=> $this->get_section_tipo(),
+			'section_id'	=> $this->get_section_id(),
+			'lang'			=> $this->get_lang(),
+			'mode'			=> $this->get_mode()
+		];
+
 
 		return $source;
 	}//end get_source

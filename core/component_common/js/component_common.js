@@ -13,7 +13,7 @@
 	import {set_context_vars, create_source} from '../../common/js/common.js'
 	import {events_subscription} from './events_subscription.js'
 	import {ui} from '../../common/js/ui.js'
-	import {render_relogin} from '../../login/js/login.js'
+	import {render_relogin} from '../../login/js/render_login.js'
 
 
 
@@ -521,8 +521,8 @@ component_common.prototype.save = async function(changed_data) {
 				case 'not_logged':
 
 					// display login window
-					render_relogin({
-						callback : function(){
+					await render_relogin({
+						on_success : function(){
 
 							// login success actions
 

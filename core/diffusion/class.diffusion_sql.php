@@ -1,8 +1,8 @@
 <?php
 /**
 * CLASS DIFFUSION_SQL
-*
-*
+* Manage the publication in SQL DDBB
+* The specific SQL commands are into the MySQL class
 */
 class diffusion_sql extends diffusion  {
 
@@ -34,58 +34,58 @@ class diffusion_sql extends diffusion  {
 	* GET_DB_SCHEMA
 	* Simply Exec self::build_table_columns for every table in structure
 	* @param string $database_tipo like 'dd521'
-	*//*
-	public function get_db_schema($database_tipo) {
+	*/
+		// public function get_db_schema($database_tipo) {
 
-		# DEFAULT CASE
-		# table in first level
-		$ar_diffusion_table = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_tipo, $model_name=array('table'), $relation_type='children', $search_exact=true);
+		// 	# DEFAULT CASE
+		// 	# table in first level
+		// 	$ar_diffusion_table = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_tipo, $model_name=array('table'), $relation_type='children', $search_exact=true);
 
-			# Recorremos hijos de la primera/as tabla/s
-			foreach ($ar_diffusion_table as $key => $current_table_tipo) {
+		// 		# Recorremos hijos de la primera/as tabla/s
+		// 		foreach ($ar_diffusion_table as $key => $current_table_tipo) {
 
-				if(SHOW_DEBUG===true) {
+		// 			if(SHOW_DEBUG===true) {
 
-					# Table verify
-					$model_name = RecordObj_dd::get_modelo_name_by_tipo($current_table_tipo,true);
-					if ($model_name==='section') {
+		// 				# Table verify
+		// 				$model_name = RecordObj_dd::get_modelo_name_by_tipo($current_table_tipo,true);
+		// 				if ($model_name==='section') {
 
-						$ar_section = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_table_tipo, 'section', 'termino_relacionado', true);
-						#dump($ar_section,'ar_section : '.$database_tipo);
+		// 					$ar_section = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_table_tipo, 'section', 'termino_relacionado', true);
+		// 					#dump($ar_section,'ar_section : '.$database_tipo);
 
-						if(empty($ar_section)) {
-							debug_log(__METHOD__." Current diffusion table ($current_table_tipo) is excluded from diffusion data because don't have related 'section'. Please fix this ASAP ".to_string(), logger::WARNING);
-							continue;
-						}
-					}
-				}
-				# Exec build_table_columns for each table
-				$result = self::build_table_columns($current_table_tipo, $database_tipo);
-				#dump($result, ' result ++ '.to_string());
-			}
+		// 					if(empty($ar_section)) {
+		// 						debug_log(__METHOD__." Current diffusion table ($current_table_tipo) is excluded from diffusion data because don't have related 'section'. Please fix this ASAP ".to_string(), logger::WARNING);
+		// 						continue;
+		// 					}
+		// 				}
+		// 			}
+		// 			# Exec build_table_columns for each table
+		// 			$result = self::build_table_columns($current_table_tipo, $database_tipo);
+		// 			#dump($result, ' result ++ '.to_string());
+		// 		}
 
-		# THESAURUS CASE
-		# table_thesaurus in first level
-		$ar_diffusion_table_thesaurus = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_tipo, $model_name='table_thesaurus', $relation_type='children', true);
+		// 	# THESAURUS CASE
+		// 	# table_thesaurus in first level
+		// 	$ar_diffusion_table_thesaurus = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_tipo, $model_name='table_thesaurus', $relation_type='children', true);
 
-			# Recorremos hijos de la primera/as tabla/s
-			foreach ($ar_diffusion_table_thesaurus as $current_table_tipo) {
+		// 		# Recorremos hijos de la primera/as tabla/s
+		// 		foreach ($ar_diffusion_table_thesaurus as $current_table_tipo) {
 
-				$RecordObj_dd = new RecordObj_dd($current_table_tipo);
-				$properties  = json_decode( $RecordObj_dd->get_properties() );
-					#dump($properties, ' properties ++ '.to_string());
-				if (isset($properties->ar_tables)) {
-					$options = new stdClass();
-						$options->ar_tables  	= $properties->ar_tables;
-						$options->table_name 	= RecordObj_dd::get_termino_by_tipo($current_table_tipo, DEDALO_STRUCTURE_LANG, true, false);
-						$options->database_name = RecordObj_dd::get_termino_by_tipo($database_tipo, DEDALO_STRUCTURE_LANG, true, false);
+		// 			$RecordObj_dd = new RecordObj_dd($current_table_tipo);
+		// 			$properties  = json_decode( $RecordObj_dd->get_properties() );
+		// 				#dump($properties, ' properties ++ '.to_string());
+		// 			if (isset($properties->ar_tables)) {
+		// 				$options = new stdClass();
+		// 					$options->ar_tables  	= $properties->ar_tables;
+		// 					$options->table_name 	= RecordObj_dd::get_termino_by_tipo($current_table_tipo, DEDALO_STRUCTURE_LANG, true, false);
+		// 					$options->database_name = RecordObj_dd::get_termino_by_tipo($database_tipo, DEDALO_STRUCTURE_LANG, true, false);
 
-					$thesaurus_columns  = self::build_thesaurus_columns( $options );
-					self::$ar_table[$options->database_name][$current_table_tipo] = $thesaurus_columns;
-				}
-			}
-		#dump(self::$ar_table, 'self::$ar_table ++ '.to_string()); die();
-	}//end get_db_schema*/
+		// 				$thesaurus_columns  = self::build_thesaurus_columns( $options );
+		// 				self::$ar_table[$options->database_name][$current_table_tipo] = $thesaurus_columns;
+		// 			}
+		// 		}
+		// 	#dump(self::$ar_table, 'self::$ar_table ++ '.to_string()); die();
+		// }//end get_db_schema
 
 
 
@@ -146,7 +146,10 @@ class diffusion_sql extends diffusion  {
 					$ar_table_alias_children	= $RecordObj_dd_alias->get_ar_childrens_of_this();
 
 					// merge all
-					$ar_table_children = self::replace_fields($RecordObj_dd_alias, $ar_table_children, $ar_table_alias_children);
+					$ar_table_children = self::replace_fields(
+						$ar_table_children,
+						$ar_table_alias_children
+					);
 				}
 			}
 
@@ -248,9 +251,11 @@ class diffusion_sql extends diffusion  {
 
 	/**
 	* REPLACE_FIELDS
-	* @return array $result
+	* @param array $ar_table_children
+	* @param array $ar_table_alias_children
+	* @return array $ar_fields
 	*/
-	public static function replace_fields($RecordObj_dd_alias, $ar_table_children, $ar_table_alias_children) {
+	public static function replace_fields(array $ar_table_children, array $ar_table_alias_children) : array {
 
 		$ar_fields = [];
 
@@ -264,7 +269,11 @@ class diffusion_sql extends diffusion  {
 
 				$related_tipo = false;
 
-				$ar_related = RecordObj_dd::get_ar_terminos_relacionados($child_tipo, $cache=true, $simple=true);
+				$ar_related = RecordObj_dd::get_ar_terminos_relacionados(
+					$child_tipo,
+					true, // bool cache
+					true // bool simple
+				);
 				foreach ($ar_related as $current_related_tipo) {
 					$model = RecordObj_dd::get_modelo_name_by_tipo($current_related_tipo,true);
 					if (strpos($model, 'field_')===0) {
@@ -294,7 +303,7 @@ class diffusion_sql extends diffusion  {
 					}
 				}
 			}
-			// dump($ar_fields, ' ar_fields ++ '.to_string());
+
 
 		return array_values($ar_fields);
 	}//end replace_fields
@@ -304,80 +313,83 @@ class diffusion_sql extends diffusion  {
 	/**
 	* CREATE_FIELD
 	* Build field array data from request parameters
-	* @param object stdClass $request_options
+	* @param object $options
+	* {
+	* 	tipo : "numisdata776",
+	* 	typology: "default"
+	* }
 	* @return array $ar_field_data
-	* Array field format:
+	* Assoc array field format:
 	* 	$ar_data['field_name'];
 	* 	$ar_data['field_type'];
 	* 	$ar_data['field_coment'];
 	* 	$ar_data['field_options'];
 	*/
-	public static function create_field(stdClass $request_options) {	// old: $tipo, $is_section_id=false, $is_relation=false
+	public static function create_field(object $options) : array {
 
-		$options = new stdClass();
-			$options->typology 		= null;
-			$options->tipo  		= null;
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+		// options
+			$tipo		= $options->tipo ?? null;
+			$typology	= $options->typology ?? null;
 
-		$ar_field_data=array();
+		$ar_field_data = array();
 
-		switch ($options->typology) {
+		switch ($typology) {
 
 			case 'section_id':
-				$ar_field_data['field_name'] 	= 'section_id';
-				$ar_field_data['field_type'] 	= 'field_int';
-				$ar_field_data['field_coment'] 	= 'Campo creado automáticamente para guardar section_id (sin correspondencia en estructura)';
+				$ar_field_data['field_name']	= 'section_id';
+				$ar_field_data['field_type']	= 'field_int';
+				$ar_field_data['field_coment']	= 'Field created automatically to save section_id (no match in Ontology)';
 				$ar_field_data['field_options']	= 12;
 				break;
 
 			case 'lang':
-				$ar_field_data['field_name'] 	= 'lang';
-				$ar_field_data['field_type'] 	= 'field_varchar';
-				$ar_field_data['field_coment'] 	= "Campo creado automáticamente para guardar el idioma (sin correspondencia en estructura)";
-				$ar_field_data['field_options'] = 8;
+				$ar_field_data['field_name']	= 'lang';
+				$ar_field_data['field_type']	= 'field_varchar';
+				$ar_field_data['field_coment']	= "Field created automatically to save the language (no correspondence in Ontology)";
+				$ar_field_data['field_options']	= 8;
 				break;
 
 			// case 'relation': (NOT USED ANYMORE. OLD TABLE COLUMN LINKS BETWEEN TABLES)
-			// 	$ar_field_data['field_name'] 	= RecordObj_dd::get_termino_by_tipo($options->tipo, DEDALO_STRUCTURE_LANG, true, false);
-			// 	$ar_field_data['field_type'] 	= 'field_text';
-			// 	$termino_relacionado 			= RecordObj_dd::get_ar_terminos_relacionados($options->tipo, $cache=true, $simple=true)[0];
-			// 	$ar_field_data['field_coment'] 	= RecordObj_dd::get_termino_by_tipo($termino_relacionado)." - $termino_relacionado";
-			// 	$ar_field_data['field_options'] = null;
-			// 	break;
+				// 	$ar_field_data['field_name'] 	= RecordObj_dd::get_termino_by_tipo($options->tipo, DEDALO_STRUCTURE_LANG, true, false);
+				// 	$ar_field_data['field_type'] 	= 'field_text';
+				// 	$termino_relacionado 			= RecordObj_dd::get_ar_terminos_relacionados($options->tipo, $cache=true, $simple=true)[0];
+				// 	$ar_field_data['field_coment'] 	= RecordObj_dd::get_termino_by_tipo($termino_relacionado)." - $termino_relacionado";
+				// 	$ar_field_data['field_options'] = null;
+				// 	break;
 
 			default:
-				$ar_field_data['field_name'] 	= RecordObj_dd::get_termino_by_tipo($options->tipo, DEDALO_STRUCTURE_LANG, true, false);
-				$ar_field_data['field_type'] 	= RecordObj_dd::get_modelo_name_by_tipo($options->tipo,true);
+				$ar_field_data['field_name']	= RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_STRUCTURE_LANG, true, false);
+				$ar_field_data['field_type']	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 
-				$related_component_tipo			= self::get_field_related_component($options->tipo);
+				$related_component_tipo			= self::get_field_related_component($tipo);
 				$ar_field_data['field_coment']	= !empty($related_component_tipo)
 					? RecordObj_dd::get_termino_by_tipo($related_component_tipo)." - $related_component_tipo"
 					: $ar_field_data['field_name'];
 
-				$RecordObj_dd 		 			= new RecordObj_dd($options->tipo);
-				$properties 				 	= $RecordObj_dd->get_propiedades(true);
+				$RecordObj_dd	= new RecordObj_dd($tipo);
+				$properties		= $RecordObj_dd->get_propiedades(true);
 
-				$diffusion_model_name 			= RecordObj_dd::get_modelo_name_by_tipo($options->tipo,true);
+				$diffusion_model_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 				switch ($diffusion_model_name) {
 					case 'field_enum':
 						if(SHOW_DEBUG===true) {
 							if (!isset($properties->enum)) {
-								throw new Exception("Error Processing Request. Field enum $options->tipo is misconfigured. Please, set property 'enum' to current field", 1);
+								throw new Exception("Error Processing Request. Field enum $tipo is misconfigured. Please, set property 'enum' to current field", 1);
 							}
 						}
 						$ar_enum_options=array();
-						foreach ($properties->enum as $current_enum_key => $current_enum_value) {
-							$ar_enum_options[] = (string)'"'.$current_enum_value.'"';
+						foreach ($properties->enum as $current_enum_value) {
+							$ar_enum_options[] = '"'.$current_enum_value.'"';
 						}
-						$ar_field_data['field_options'] = (string)implode(',', $ar_enum_options);		# Format: "enum":{"1":"si", "2":"no"}
+						$ar_field_data['field_options'] = (string)implode(',', $ar_enum_options); // Format: "enum":{"1":"si", "2":"no"}
 						break;
 					case 'field_varchar':
 						if(isset($properties->varchar)) {
-							$field_options = $properties->varchar; # Default 255
+							$field_options = $properties->varchar; // Default 255
 						}else{
 							$field_options = '255';
 						}
-						$ar_field_data['field_options'] = $field_options; # Format: "varchar":8
+						$ar_field_data['field_options'] = $field_options; // Format: "varchar":8
 						break;
 					case 'field_int':
 						if(isset($properties->length)) {
@@ -399,12 +411,18 @@ class diffusion_sql extends diffusion  {
 						$ar_field_data['field_options'] = (string)'';
 				}
 				break;
-		}
+		}//end switch ($typology)
 
-		if (empty($ar_field_data['field_type'])) {
-			dump(RecordObj_dd::get_modelo_name_by_tipo($options->tipo,true), 'RecordObj_dd::get_modelo_name_by_tipo($options->tipo,true)');
-			dump($ar_field_data['field_type'], 'WARNING: EMPTY ar_field_data: $ar_field_data[field_type] '.$options->tipo);
-		}
+		// debug
+			if (empty($ar_field_data['field_type'])) {
+				debug_log(__METHOD__
+					. ' WARNING: EMPTY ar_field_data: $ar_field_data[field_type] ' . PHP_EOL
+					. ' tipo: ' . $tipo . PHP_EOL
+					. 'model: ' . RecordObj_dd::get_modelo_name_by_tipo($tipo,true)
+					, logger::WARNING
+				);
+			}
+
 
 		return $ar_field_data;
 	}//end create_field
@@ -419,7 +437,7 @@ class diffusion_sql extends diffusion  {
 	* @param object $request_options
 	* @return array|null $ar_field_data
 	*/
-	public static function build_table_columns_data(stdClass $request_options) : ?array {
+	public static function build_table_columns_data(object $request_options) : ?array {
 		// $start_time = start_time();
 
 		// options
@@ -452,19 +470,27 @@ class diffusion_sql extends diffusion  {
 				#exit();
 			}
 
-		// set_time_limit ( 259200 );  // 3 dias
+		// set_time_limit ( 259200 );  // 3 days
 
 		# AR_RESULT . Get all matrix records in current table / portal. When portal is request, records of portal are in var '$ar_section_id_portal'
 		# NOTE : Because we need section_id and section_tipo of every item (multi-target portals), format $ar_result contains this data always
 			if ($ar_result===false) {
 
 				// SECTION try . Target section is a related term of current diffusion pointer. Normally is section, but can be a portal
-					$pointer_type='section';
-					$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($table_tipo, 'section', 'termino_relacionado');
+					$pointer_type		='section';
+					$ar_section_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+						$table_tipo,
+						'section',
+						'termino_relacionado'
+					);
 					if (!isset($ar_section_tipo[0])) {
 						# PORTAL try
-						$pointer_type='portal';
-						$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($table_tipo, 'component_portal', 'termino_relacionado');
+						$pointer_type		= 'portal';
+						$ar_section_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+							$table_tipo,
+							'component_portal',
+							'termino_relacionado'
+						);
 					}
 					if(!isset($ar_section_tipo[0])) {
 						debug_log(__METHOD__
@@ -521,34 +547,42 @@ class diffusion_sql extends diffusion  {
 
 				# Add from table alias too
 				if (!empty($table_from_alias)) {
-					$RecordObj_dd_alias 	 = new RecordObj_dd($table_from_alias);
-					$ar_table_alias_children = (array)$RecordObj_dd_alias->get_ar_childrens_of_this();
+					$RecordObj_dd_alias			= new RecordObj_dd($table_from_alias);
+					$ar_table_alias_children	= (array)$RecordObj_dd_alias->get_ar_childrens_of_this();
 
 					# Merge all
-					$ar_table_children = self::replace_fields($RecordObj_dd_alias, $ar_table_children, $ar_table_alias_children);
+					$ar_table_children = self::replace_fields(
+						$ar_table_children,
+						$ar_table_alias_children
+					);
 					// $ar_table_children = array_merge($ar_table_children, $ar_table_alias_children);
 				}
 			}
-			#dump($ar_table_children, ' ar_table_children ++ '.to_string($table_tipo));
 
 		#
 		# COMPONENT PUBLICATION - CHECK (once)
 			if(empty($component_publication_tipo)) {
 				$component_publication_tipo = diffusion::get_component_publication_tipo($ar_table_children);
-				#dump($component_publication_tipo, ' component_publication_tipo ++ ar_table_children: '.to_string($ar_table_children));
 				if (empty($component_publication_tipo)) {
-					if(SHOW_DEBUG===true) {
-						#dump($component_publication_tipo, ' component_publication_tipo ++ '.to_string($ar_table_children));
-					}
-					#trigger_error("Error on find component_publication_tipo. Not found component_publication for section_tipo: $section_tipo. Ignored");
-					debug_log(__METHOD__
-						." Error on find component_publication_tipo. Not found component_publication for table_tipo: $table_tipo. Ignored! table_name: ".$ar_field_data['table_name']
-						, logger::ERROR
+
+					$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+						$table_tipo,
+						'section',
+						'termino_relacionado',
+						true
 					);
+					debug_log(__METHOD__
+						." Error on find component_publication_tipo. Not found component_publication in this section. Ignored! " . PHP_EOL
+						.' table_tipo: '		. $table_tipo . PHP_EOL
+						.' table_name: '		. ($ar_field_data['table_name'] ?? '') . PHP_EOL
+						.' section_tipo: '		. ($ar_section_tipo[0] ?? 'unknown') . PHP_EOL
+						.' ar_table_children: ' . json_encode($ar_table_children, JSON_PRETTY_PRINT)
+						, logger::WARNING
+					);
+
 					return null;
 				}
 			}
-
 
 		#
 		# RESOLVED RECORDS
@@ -1185,7 +1219,7 @@ class diffusion_sql extends diffusion  {
 								if(SHOW_DEBUG===true) {
 									#dump($dato," dato"); #dump($properties->enum," dato");
 									if (!property_exists($properties, 'enum')) {
-										throw new Exception("Error Processing Request. Field enum $tipo is misconfigured. Please, set property 'enum' to current field", 1);
+										throw new Exception("Error Processing Request. Field enum $options->tipo is misconfigured. Please, set property 'enum' to current field", 1);
 									}
 								}
 								$ar_field_data['field_value'] = (string)$properties->enum->$dato;		# Format: "enum":{"1":"si", "2":"no"}
@@ -1742,9 +1776,9 @@ class diffusion_sql extends diffusion  {
 					$next_recursion_level = ($recursion_level + 1);
 
 					// debug. show levels resolution calls
-						if(SHOW_DEBUG===true) {
-							dump($group_by_section_tipo, " REFERENCES group_by_section_tipo ++ recursion_level: $recursion_level - section_tipo: $section_tipo");
-						}
+						// if(SHOW_DEBUG===true) {
+						// 	dump($group_by_section_tipo, " REFERENCES group_by_section_tipo ++ recursion_level: $recursion_level - section_tipo: $section_tipo");
+						// }
 
 					// iterate previous created groups by section tipo
 						foreach ($group_by_section_tipo as $current_section_tipo => $ar_section_id) {
@@ -3052,6 +3086,47 @@ class diffusion_sql extends diffusion  {
 
 
 	/**
+	* GENERATE_RDF
+	* @param object $options
+	*  sample:
+	*  {
+	* 	...
+	*    "propiedades" : {
+	* 		"process_dato": "diffusion_sql::generate_rdf",
+	* 		diffusion_element_tipo": "numisdata325"
+	* 	 },
+	* 	...
+	*  }
+	* @param int $dato
+	*  section_id sample: 1
+	* @return string $rdf
+	* sample:
+	*  <?xml version="1.0" encoding="utf-8"...
+	*/
+	public static function generate_rdf($options, $dato) {
+
+		include_once DEDALO_CORE_PATH . '/diffusion/class.diffusion_rdf.php';
+
+		$section_tipo			= $options->section_tipo;
+		$section_id				= $dato;
+		$diffusion_element_tipo	= $options->properties->diffusion_element_tipo;
+
+		$diffusion_rdf	= new diffusion_rdf(null);
+		$response		= $diffusion_rdf->update_record((object)[
+			'section_tipo'				=> $section_tipo,
+			'section_id'				=> $section_id,
+			'diffusion_element_tipo'	=> $diffusion_element_tipo,
+			'save_file'					=> false
+		]);
+
+		$rdf = $response->data ?? null;
+
+		return $rdf;
+	}//end generate_rdf
+
+
+
+	/**
 	* MAP_TO_TERMINOID
 	* Returns current section tipo like 'es1'
 	* @return string $section_tipo
@@ -3098,7 +3173,7 @@ class diffusion_sql extends diffusion  {
 			// parents recursive
 			// add parents option
 			// if defined in properties, get current locator parents recursively and add it to current value (like municipality, region, country hierarchy)
-				if (isset($options->propiedades->process_dato_arguments->custom_arguments->add_parents) && $options->propiedades->process_dato_arguments->custom_arguments->add_parents===true) {
+				if (isset($options->properties->process_dato_arguments->custom_arguments->add_parents) && $options->properties->process_dato_arguments->custom_arguments->add_parents===true) {
 					// get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
 					$ar_parents = component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, true);
 					foreach ($ar_parents as $parent_locator) {
@@ -4062,7 +4137,7 @@ class diffusion_sql extends diffusion  {
 			$raw_text				= $options->raw_text ?? $dato; // maintain ->raw_text for compatibility only
 			// process_dato_arguments. (!) If call is from 'diffusion_sql::resolve_component_value' the path is 'options->process_dato_arguments'
 			// but if call is directly from 'diffusion_sql::build_geolocation_data_geojson' the path is inside 'propiedades'
-			$process_dato_arguments	= $options->process_dato_arguments ?? $options->propiedades->process_dato_arguments ?? null;
+			$process_dato_arguments	= $options->process_dato_arguments ?? $options->properties->process_dato_arguments ?? null;
 			$component				= $options->component ?? null;
 
 		// geolocation_data
@@ -4079,7 +4154,9 @@ class diffusion_sql extends diffusion  {
 				$fallback_method	= $process_dato_arguments->fallback->method;
 				// lang
 				$RecordObj_dd		= new RecordObj_dd($fallback_tipo);
-				$lang				= $RecordObj_dd->get_traducible()==='si' ? $_options->lang : DEDALO_DATA_NOLAN;
+				$lang				= $RecordObj_dd->get_traducible()==='si'
+					? $options->lang ?? DEDALO_DATA_LANG
+					: DEDALO_DATA_NOLAN;
 
 				$section_id			= $component->get_section_id();
 				$section_tipo		= $component->get_section_tipo();
@@ -4145,16 +4222,21 @@ class diffusion_sql extends diffusion  {
 
 	/**
 	* RESOLVE_MULTIPLE
-	* @return string
+	* Note that in this case, 'process_dato_arguments' is an array instead object
+	* Iterate all elements to collect the complete values
+	* @param object $options
+	* @param mixed $dato
+	* @param string $default_separator = ' | '
+	* @return string|null $value
 	*/
-	public static function resolve_multiple($options, $dato, $default_separator=' | ') {
+	public static function resolve_multiple($options, $dato, $default_separator=' | ') : ?string {
 
 		// check empty dato
 			if (empty($dato) || !isset($dato[0])) {
 				return null;
 			}
 
-		// process_dato_arguments
+		// process_dato_arguments. In this case is an array of objects
 			$process_dato_arguments = (array)$options->properties->process_dato_arguments;
 
 		// ar_value
@@ -4173,8 +4255,8 @@ class diffusion_sql extends diffusion  {
 
 
 				// empty_value. if defined, force custom empty value from properties arguments to insert into result array
-					if (true===self::empty_value($current_value) && isset($process_dato_arguments->empty_value)) {
-						$current_value	= $process_dato_arguments->empty_value; // any type is accepted: array, object, string ..
+					if (true===self::empty_value($current_value) && isset($current_options->empty_value)) {
+						$current_value	= $current_options->empty_value; // any type is accepted: array, object, string ..
 						$ar_value[]		= $current_value;
 					}else{
 						if($current_value!==null){
@@ -4183,20 +4265,24 @@ class diffusion_sql extends diffusion  {
 					}
 			}
 
-		// output optional
-			$output = isset($process_dato_arguments->output) ? $process_dato_arguments->output : null;
-			switch ($output) {
-				case 'merged':
-					# Merge all arrays values in one only array
-					$ar_value 	= array_values($ar_value); // Restore array keys
-					$value 	  	= json_encode($ar_value, JSON_UNESCAPED_UNICODE);
-					break;
+		// output optional. (!) Removed 11-06-2023 because process_dato_arguments is multiple (array)
+			// $output = isset($process_dato_arguments->output) ? $process_dato_arguments->output : null;
+			// switch ($output) {
+			// 	case 'merged':
+			// 		# Merge all arrays values in one only array
+			// 		$ar_value 	= array_values($ar_value); // Restore array keys
+			// 		$value 	  	= json_encode($ar_value, JSON_UNESCAPED_UNICODE);
+			// 		break;
 
-				default:
-					$separator 	= $options->properties->separator ?? $default_separator;
-					$value 		= implode($separator,$ar_value);
-					break;
-			}
+			// 	default:
+			// 		$separator 	= $options->properties->separator ?? $default_separator;
+			// 		$value 		= implode($separator, $ar_value);
+			// 		break;
+			// }
+
+		// to string default action
+			$separator	= $options->properties->separator ?? $default_separator;
+			$value		= implode($separator, $ar_value);
 
 		// check empty values
 			if (true===self::empty_value($value)) {
@@ -4534,6 +4620,10 @@ class diffusion_sql extends diffusion  {
 
 	/**
 	* GET_DIFFUSION_SECTIONS_FROM_DIFFUSION_ELEMENT
+	* Used to determine when show publication button in sections
+	* Called from class diffusion to get the RDF portion of sections
+	* @param string $diffusion_element_tipo
+	* @param string $class_name = null
 	* @return array $ar_diffusion_sections
 	*/
 	public static function get_diffusion_sections_from_diffusion_element(string $diffusion_element_tipo, string $class_name=null) : array {
@@ -4562,13 +4652,13 @@ class diffusion_sql extends diffusion  {
 				}
 			}
 
-		# tables. RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, $model_name='table', $relation_type='children_recursive', $search_exact=false);
-		$ar_table_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
-			$reference_root_element, // database tipo
-			'table', // modelo_name
-			'children_recursive', // relation_type
-			false // search_exact (allow 'table' and 'table_alias')
-		);
+		// tables. RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, $model_name='table', $relation_type='children_recursive', $search_exact=false);
+			$ar_table_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+				$reference_root_element, // database tipo
+				'table', // modelo_name
+				'children_recursive', // relation_type
+				false // search_exact (allow 'table' and 'table_alias')
+			);
 
 		// database_alias case
 			$database_alias_tipo = $diffusion_element_tipo;

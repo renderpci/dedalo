@@ -53,6 +53,7 @@
 		.centered;
 		max-width: 24em;
 		padding: 2em;
+		padding-bottom: 1em;
 
 		&.overlay {
 			background-color: rgb(255 255 255);
@@ -150,6 +151,24 @@
 			font-size: 0.8em;
 			opacity: 0.6;
 			line-height: 1.3em;
+		}
+
+		// powered by
+		.powered_by {
+			width: 100%;
+			text-align: center;
+
+			.dedalo_logo {
+				height: 1.5rem;
+				width: 100%;
+				margin-top: 1rem;
+				margin-bottom: 0.25rem;
+			}
+			.dedalo_link {
+				font-size: 0.87rem;
+				text-decoration: none;
+				color: @color_orange_dedalo;
+			}
 		}
 
 		// messages from API are showed here
