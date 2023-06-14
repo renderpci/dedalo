@@ -66,6 +66,11 @@ class DDModal extends HTMLElement {
 					display: grid;
 					/*grid-template-rows: minmax(4rem, 4rem) auto minmax(4rem, 4rem);*/
 				}
+				@media screen and (max-width: 1024px) {
+					.modal-content {
+						width: 98%;
+					}
+				}
 				.dragging {
 					cursor: move;
 					user-select: none;
