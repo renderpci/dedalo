@@ -6,9 +6,8 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	import {event_manager} from '../../common/js/event_manager.js'
+	// import {event_manager} from '../../common/js/event_manager.js'
 	import {get_section_records} from '../../section/js/section.js'
-	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {
 		render_column_component_info,
 		activate_autocomplete,
@@ -224,40 +223,11 @@ view_line_edit_portal.render_column_id = function(options) {
 		})
 		button_edit.addEventListener('click', function(e) {
 			e.stopPropagation()
-
-			// open a new window
-				const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
-					tipo			: section_tipo,
-					section_tipo	: section_tipo,
-					id				: section_id,
-					mode			: 'edit',
-					menu			: false
-				})
-				const new_window = open_window({
-					url		: url,
-					name	: 'record_view',
-					width	: 1280,
-					height	: 740
-				})
-				new_window.addEventListener('blur', function() {
-
-					// refresh. Get the proper element to refresh based on some criteria.
-					// Note that portals in text view are not self refresh able
-						function get_edit_caller(instance) {
-							if(instance.caller && instance.caller.mode==='edit' && instance.caller.type==='component') {
-								return instance.caller
-							}else if(instance.caller) {
-								return get_edit_caller(instance.caller)
-							}
-							return self
-						}
-						const edit_caller = get_edit_caller(self)
-						if (edit_caller) {
-							edit_caller.refresh({
-								build_autoload : true
-							})
-						}
-				})
+			// edit_record_handler
+			self.edit_record_handler({
+				section_tipo	: section_tipo,
+				section_id		: section_id,
+			})
 		})
 
 	// edit icon
@@ -305,12 +275,14 @@ view_line_edit_portal.render_column_remove = function(options) {
 					return
 				}
 
-				// fire the unlink
+			// fire the unlink
 				self.unlink_record({
 					paginated_key	: paginated_key,
 					row_key			: row_key,
 					section_id		: section_id
 				})
+
+			// delete_dataframe_record
 				self.delete_dataframe_record({
 					section_id : section_id
 				})

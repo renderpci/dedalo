@@ -151,6 +151,7 @@ export const render_column_id = function(options) {
 				// }
 				// event_manager.publish('user_navigation', user_navigation_rqo)
 
+			/*
 			// open a new window
 				const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
 					tipo			: section_tipo,
@@ -175,6 +176,11 @@ export const render_column_id = function(options) {
 
 			// button_edit_click event. Subscribed to close current modal if exists (mosaic view case)
 				event_manager.publish('button_edit_click', this)
+			*/
+			self.edit_record_handler({
+				section_tipo	: section_tipo,
+				section_id		: section_id
+			})
 		})
 		button_edit.addEventListener('mouseenter', function(e) {
 			e.stopPropagation()
