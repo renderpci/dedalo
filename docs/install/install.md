@@ -59,10 +59,10 @@ Then, you can follow the steps in the V6 installation video:
 
 ### 2.3. Manual installation
 
-Then, install Dédalo manually, commands are Ubuntu 22.04 (only as references):
+Then, install Dédalo manually, commands are for Ubuntu 22.04 (only as references, you can use other GNU/Linux):
 
-1. Install Ubuntu and all dependencies.
-
+1. Download official LTS version of [Ubuntu Server](https://ubuntu.com/download/server).
+2. Install Ubuntu Server and all dependencies.
    1. Install PHP
 
       ```shell
@@ -71,7 +71,7 @@ Then, install Dédalo manually, commands are Ubuntu 22.04 (only as references):
 
       > Note: the minimal version for PHP is 8.1 so you could change previous command for it.
 
-   2. Install Apache and activate the mods
+   2. Install Apache and activate the modules.
 
       ```shell
       apt install apache2 libapache2-mod-fcgid
@@ -153,7 +153,7 @@ Then, install Dédalo manually, commands are Ubuntu 22.04 (only as references):
       mv pdf* /usr/local/bin
       ```
 
-2. Download Dédalo and place it under the httpdocs directory of the web server.
+3. Download Dédalo and place it under the httpdocs directory of the web server.
 
    ```shell
    wget https://github.com/renderpci/dedalo/archive/master.zip
@@ -166,7 +166,7 @@ Then, install Dédalo manually, commands are Ubuntu 22.04 (only as references):
    mv dedalo-master dedalo
    ```
 
-3. Create a database in PostgreSQL named `dedalo_xx` (you can change the `xx` as you please).
+4. Create a database in PostgreSQL named `dedalo_xx` (you can change the `xx` as you please).
 
    1. Enter into `psql`:
 
@@ -203,7 +203,7 @@ Then, install Dédalo manually, commands are Ubuntu 22.04 (only as references):
       exit
       ```
 
-4. Configuration.
+5. Configuration.
    Before changing the config files you will need copy/rename the sample config files removing the word "sample", you can rename or copy this files. Please read the [configuration](../config/configuration.md) documentation for further explanation on this.
 
    1. Rename `sample.config.php` to `config.php`.
@@ -240,9 +240,9 @@ Then, install Dédalo manually, commands are Ubuntu 22.04 (only as references):
 
    7. Modify `[...]/dedalo/config/config_areas.php` with your areas configuration. Read the areas [configuration](../config/config_areas.md) documentation.
 
-5. Open Dédalo in the browser.
-6. Follow the instructions.
-7. Once the installation process is done, log in and head to the Development Area. There, update the Ontology and register all tools.
-8. Create an admin user.
-9. Log out and log in with the admin user.
-10. Create Users and Projects as you need.
+6. Open Dédalo in the browser.
+7. Follow the instructions.
+8. Once the installation process is done, log in and head to the Development Area. There, update the Ontology and register all tools.
+9. Create an admin user.
+10. Log out and log in with the admin user.
+11. Create Users and Projects as you need.
