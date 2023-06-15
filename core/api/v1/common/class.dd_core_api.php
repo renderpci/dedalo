@@ -743,7 +743,7 @@ final class dd_core_api {
 
 		// dataframe section case
 			if ($delete_mode==='delete_dataframe' && !empty($section_id)) {
-				$section 	= section::get_instance(
+				$section = section::get_instance(
 					$section_id,
 					$section_tipo,
 					'list',
@@ -769,7 +769,7 @@ final class dd_core_api {
 				debug_log(__METHOD__
 					." $response->msg " . PHP_EOL
 					.' rqo: '.to_string($rqo)
-					, logger::ERROR
+					, logger::WARNING
 				);
 
 				return $response;
