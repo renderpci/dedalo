@@ -1526,6 +1526,7 @@ final class dd_core_api {
 				if ( !isset($sqo->filter) && isset($sqo_session) && isset($sqo_session->filter) ) {
 					$sqo->filter = $_SESSION['dedalo']['config']['sqo'][$sqo_id]->filter;
 				}
+
 			}else{
 
 				// non received case
@@ -1593,6 +1594,11 @@ final class dd_core_api {
 						// 	$sqo->limit = $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit;
 						// 	debug_log(__METHOD__." Set limit from session to $sqo->limit ".to_string(), logger::DEBUG);
 						// }
+
+					// prevent edit mode set limit greater than 1
+						if ($mode==='edit' && (!isset($sqo->limit) || $sqo->limit>1)) {
+							$sqo->limit = 1;
+						}
 
 					// sections instance
 						$element = sections::get_instance(
