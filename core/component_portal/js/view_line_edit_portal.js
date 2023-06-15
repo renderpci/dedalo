@@ -267,7 +267,7 @@ view_line_edit_portal.render_column_remove = function(options) {
 			element_type	: 'button',
 			class_name		: 'button_remove'
 		})
-		button_remove.addEventListener('click', function(e) {
+		button_remove.addEventListener('click', async function(e) {
 			e.stopPropagation()
 
 			// stop if the user don't confirm
@@ -275,7 +275,7 @@ view_line_edit_portal.render_column_remove = function(options) {
 					return
 				}
 
-			// fire the unlink
+			// fire the unlink_record method
 				self.unlink_record({
 					paginated_key	: paginated_key,
 					row_key			: row_key,

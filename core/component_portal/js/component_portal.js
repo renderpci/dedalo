@@ -1152,25 +1152,92 @@ component_portal.prototype.delete_linked_record = async function(options) {
 
 
 /**
+* UNLINK_RECORD
+* @param object options
+* {
+* 	paginated_key: paginated_key
+*	section_id : section_id
+* }
+* @return bool
+*/
+component_portal.prototype.unlink_record = async function(options) {
+
+	const self = this
+
+	// options
+		const paginated_key	= options.paginated_key
+		const row_key		= options.row_key
+		const section_id	= options.section_id
+
+	// changed_data
+		const changed_data = [Object.freeze({
+			action	: 'remove',
+			key		: paginated_key,
+			value	: null
+		})]
+
+	// change_value (implies saves too)
+	// remove the remove_dialog it's controlled by the event of the button that call
+	// prevent the double confirmation
+		const response = await self.change_value({
+			changed_data	: changed_data,
+			label			: section_id,
+			refresh			: false,
+			remove_dialog	: ()=>{
+				return true
+			}
+		})
+
+	// the user has selected cancel from delete dialog
+		if (response===false) {
+			return false
+		}
+
+	// update pagination offset
+		self.update_pagination_values('remove')
+
+	// refresh
+		await self.refresh({
+			build_autoload : true // when true, force reset offset
+		})
+
+	// check if the caller has active a tag_id
+		if(self.active_tag){
+			// filter component data by tag_id and re-render content
+			self.filter_data_by_tag_id(self.active_tag)
+		}
+
+	// event to update the DOM elements of the instance
+		event_manager.publish('remove_element_'+self.id, row_key)
+
+
+	return true
+}//end unlink_record
+
+
+
+/**
 * DELETE_DATAFRAME_RECORD
 * @param object options
 * {
 *	section_id : section_id
 * }
-* @return bool
+* @return bool delete_section_result
 */
 component_portal.prototype.delete_dataframe_record = async function(options) {
 
 	const self = this
 
-	const section_id	= options.section_id
+	// options
+		const section_id = options.section_id
 
+	// ddo_dataframe.
 	// check if the show has any ddo that call to any dataframe section.
-	const ddo_dataframe = self.request_config_object.show.ddo_map.find(el => el.is_dataframe===true)
+		const ddo_dataframe = self.request_config_object.show.ddo_map.find(el => el.is_dataframe===true)
+		if(!ddo_dataframe){
+			return false
+		}
 
-	if(!ddo_dataframe){
-		return
-	}
 	// create the instance of the section called by the row of the portal,
 	// section will be in list because it's not necessary get all data, only the instance context to be deleted it.
 		const instance_options = {
@@ -1196,75 +1263,14 @@ component_portal.prototype.delete_dataframe_record = async function(options) {
 			: null
 
 	// call to the section and delete it
-		section.delete_section({
+		const delete_section_result = await section.delete_section({
 			delete_mode			: 'delete_dataframe',
 			caller_dataframe	: caller_dataframe
 		})
+
+
+	return delete_section_result
 }//end delete_dataframe_record
-
-
-
-/**
-* UNLINK_RECORD
-* @param object options
-* {
-* 	paginated_key: paginated_key
-*	section_id : section_id
-* }
-* @return bool
-*/
-component_portal.prototype.unlink_record = async function(options) {
-
-	const self = this
-
-	const paginated_key	= options.paginated_key
-	const row_key		= options.row_key
-	const section_id	= options.section_id
-
-	// changed_data
-	const changed_data = [Object.freeze({
-		action	: 'remove',
-		key		: paginated_key,
-		value	: null
-	})]
-	// change_value (implies saves too)
-	// remove the remove_dialog it's controlled by the event of the button that call
-	// prevent the double confirmation
-	const response = await self.change_value({
-		changed_data	: changed_data,
-		label			: section_id,
-		refresh			: false,
-		remove_dialog	: ()=>{
-			return true
-		}
-	})
-
-	// the user has selected cancel from delete dialog
-		if (response===false) {
-			// modal. Close modal if isset
-			// modal.on_close()
-			return false
-		}
-
-	// update pagination offset
-		self.update_pagination_values('remove')
-
-	// refresh
-		await self.refresh({
-			build_autoload : true // when true, force reset offset
-		})
-
-	// check if the caller has active a tag_id
-		if(self.active_tag){
-			// filter component data by tag_id and re-render content
-			self.filter_data_by_tag_id(self.active_tag)
-		}
-
-	// event to update the DOM elements of the instance
-		event_manager.publish('remove_element_'+self.id, row_key)
-
-	return true
-}//end unlink_record
 
 
 

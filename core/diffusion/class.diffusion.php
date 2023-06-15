@@ -1022,21 +1022,21 @@ abstract class diffusion  {
 	public static function delete_record($section_tipo, $section_id) {
 
 		$response = new stdClass();
-			$response->result 		= false;
-			$response->msg 			= __METHOD__ . ' Warning. Nothing is deleted for '.$section_tipo.'-'.$section_id;
-			$response->ar_deleted 	= [];
+			$response->result		= false;
+			$response->msg			= __METHOD__ . ' Warning. Nothing is deleted for '.$section_tipo.'-'.$section_id;
+			$response->ar_deleted	= [];
 
 
 		$ar_diffusion_element = self::get_ar_diffusion_map_elements();
 		foreach ($ar_diffusion_element as $diffusion_element) {
 
-			$diffusion_element_tipo = $diffusion_element->element_tipo;
-			$class_name 			= $diffusion_element->class_name;
+			$diffusion_element_tipo	= $diffusion_element->element_tipo;
+			$class_name				= $diffusion_element->class_name;
 
 			switch ($class_name) {
 				case 'diffusion_mysql':
 
-					$database_name 	= $diffusion_element->database_name;
+					$database_name = $diffusion_element->database_name;
 
 					$table_name = false;
 
@@ -1125,12 +1125,12 @@ abstract class diffusion  {
 								$response->result 		= true;
 								$response->msg 			= "Deleted record successful ($table_name - $section_id) in db $database_name (all langs)";
 								$response->ar_deleted[] = (object)[
-									"section_id" 			 => $section_id,
-									"section_tipo" 			 => $section_tipo,
-									"database_name" 		 => $database_name,
-									"table_name" 			 => $table_name,
-									"diffusion_element_tipo" => $diffusion_element_tipo,
-									"class_name" 			 => $class_name
+									"section_id"				=> $section_id,
+									"section_tipo"				=> $section_tipo,
+									"database_name"				=> $database_name,
+									"table_name"				=> $table_name,
+									"diffusion_element_tipo"	=> $diffusion_element_tipo,
+									"class_name"				=> $class_name
 								];
 							}else{
 								$response->msg = "Unable to delete record ($table_name - $section_id). Maybe the record not exists in db ($database_name)";
@@ -1138,14 +1138,27 @@ abstract class diffusion  {
 						}
 					break;
 
+				case 'diffusion_rdf':
+					$response->result	= true;
+					$response->msg		= __METHOD__ . ' Ignored delete_record call for diffusion_rdf. Class diffusion_rdf do not provide delete feature';
+					break;
+
 				default:
-					debug_log(__METHOD__." ERROR. Ignored class name not defined for delete: ".to_string($class_name), logger::ERROR);
+					debug_log(__METHOD__
+						." WARNING. Ignored delete_record for class (name not defined for delete: ".to_string($class_name)
+						, logger::WARNING
+					);
 					break;
 
 			}//end switch ($class_name)
 
 		}//end foreach ($ar_diffusion_element as $diffusion_element)
-		debug_log(__METHOD__." response:  ".json_encode($response, JSON_PRETTY_PRINT), logger::DEBUG);
+
+		// debug
+			debug_log(__METHOD__
+				." response:  ".json_encode($response, JSON_PRETTY_PRINT)
+				, logger::DEBUG
+			);
 
 
 		return $response;
