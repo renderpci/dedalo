@@ -117,6 +117,9 @@ const get_content_value = (i, current_value, self) => {
 			// saves changed data
 			blur_handler(e, i, self)
 		})//end blur
+		input.addEventListener('click', function(e) {
+			e.stopPropagation()
+		})//end click
 
 
 	return content_value

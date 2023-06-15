@@ -128,6 +128,10 @@ const get_content_value = (i, current_value, self) => {
 			input.addEventListener('keyup', function(e) {
 				keyup_handler(e, i, self)
 			})
+		// click event
+			input.addEventListener('click', function(e) {
+				e.stopPropagation()
+			})
 
 
 	return content_value
