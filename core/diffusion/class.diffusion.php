@@ -364,18 +364,25 @@ abstract class diffusion  {
 	*/
 	public static function get_diffusion_sections_from_diffusion_element(string $diffusion_element_tipo, string $class_name) : array {
 
+		// cache
+			// static $diffusion_sections_from_diffusion_element;
+			// if (isset($diffusion_sections_from_diffusion_element[$diffusion_element_tipo])) {
+			// 	return $diffusion_sections_from_diffusion_element[$diffusion_element_tipo];
+			// }
+
 		// if(SHOW_DEVELOPER!==true) {
-		// 	if( isset($_SESSION['dedalo']['config']['ar_diffusion_sections'][$diffusion_element_tipo]) ) {
-		// 		return $_SESSION['dedalo']['config']['ar_diffusion_sections'][$diffusion_element_tipo];
-		// 	}
+			// if( isset($_SESSION['dedalo']['config']['ar_diffusion_sections'][$diffusion_element_tipo]) ) {
+			// 	return $_SESSION['dedalo']['config']['ar_diffusion_sections'][$diffusion_element_tipo];
+			// }
 		// }
 
 		include_once(DEDALO_CORE_PATH . '/diffusion/class.'.$class_name.'.php');
 
 		$ar_diffusion_sections = $class_name::get_diffusion_sections_from_diffusion_element($diffusion_element_tipo);
 
-		// Store in session
-		// $_SESSION['dedalo']['config']['ar_diffusion_sections'][$diffusion_element_tipo] = $ar_diffusion_sections;
+		// cache
+			// $_SESSION['dedalo']['config']['ar_diffusion_sections'][$diffusion_element_tipo] = $ar_diffusion_sections;
+			// $diffusion_sections_from_diffusion_element[$diffusion_element_tipo] = $ar_diffusion_sections;
 
 		return $ar_diffusion_sections;
 	}//end get_diffusion_sections_from_diffusion_element
