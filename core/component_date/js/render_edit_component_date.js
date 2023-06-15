@@ -318,6 +318,10 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 				// 	})
 				// }
 		})
+		// click event
+		input.addEventListener('click', function(e) {
+			e.stopPropagation()
+		})
 
 	// button_calendar
 		const button_calendar = ui.create_dom_element({

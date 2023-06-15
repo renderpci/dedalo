@@ -10,7 +10,7 @@
 
 
 /**
-* VIEW_TEXT_list_DATE
+* VIEW_TEXT_LIST_DATE
 * Manages the component's logic to get the values of the data without DOM elements or structure
 */
 export const view_text_list_date = function() {
@@ -34,6 +34,7 @@ view_text_list_date.render = async function(self, options) {
 
 	return text_node
 }//end render
+
 
 
 // @license-end

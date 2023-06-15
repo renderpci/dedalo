@@ -9,6 +9,7 @@
 	import {get_ar_raw_data_value} from './render_edit_component_date.js'
 
 
+
 /**
 * VIEW_MINI_DATE
 * Manage the components logic and appearance in client side
