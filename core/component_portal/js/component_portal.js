@@ -1100,58 +1100,6 @@ component_portal.prototype.get_total = async function() {
 
 
 /**
-* DELETE_LINKED_RECORD
-* @param object options
-* {
-*	section_tipo : section_tipo,
-*	section_id : section_id
-* }
-* @return bool
-*/
-component_portal.prototype.delete_linked_record = async function(options) {
-
-	const self = this
-
-	const section_id	= options.section_id
-	const section_tipo	= options.section_tipo
-
-	// create the instance of the section called by the row of the portal,
-	// section will be in list because it's not necessary get all data, only the instance context to be deleted it.
-		const instance_options = {
-			model			: 'section',
-			tipo			: section_tipo,
-			section_tipo	: section_tipo,
-			section_id		: section_id,
-			mode			: 'list',
-			lang			: self.lang,
-			caller			: self,
-			inspector		: false,
-			filter			: false
-		}
-	// get the instance
-		const section =	await get_instance(instance_options)
-
-	// create the sqo to be used to find the section will be deleted
-		const sqo = {
-			section_tipo		: [section_tipo],
-			filter_by_locators	: [{
-				section_tipo	: section_tipo,
-				section_id		: section_id
-			}],
-			limit				: 1
-		}
-	// call to the section and delete it
-	const result = section.delete_section({
-		sqo			: sqo,
-		delete_mode	: 'delete_record'
-	})
-
-	return result
-}//end delete_linked_record
-
-
-
-/**
 * UNLINK_RECORD
 * @param object options
 * {
@@ -1217,7 +1165,64 @@ component_portal.prototype.unlink_record = async function(options) {
 
 
 /**
+* DELETE_LINKED_RECORD
+* Generic section remove in mode 'delete_record'
+* @param object options
+* {
+*	section_tipo : section_tipo,
+*	section_id : section_id
+* }
+* @return bool delete_section_result
+*/
+component_portal.prototype.delete_linked_record = async function(options) {
+
+	const self = this
+
+	// options
+		const section_id	= options.section_id
+		const section_tipo	= options.section_tipo
+
+	// create the instance of the section called by the row of the portal,
+	// section will be in list because it's not necessary get all data, only the instance context to be deleted it.
+		const instance_options = {
+			model			: 'section',
+			tipo			: section_tipo,
+			section_tipo	: section_tipo,
+			section_id		: section_id,
+			mode			: 'list',
+			lang			: self.lang,
+			caller			: self,
+			inspector		: false,
+			filter			: false
+		}
+	// get the instance
+		const section =	await get_instance(instance_options)
+
+	// create the sqo to be used to find the section will be deleted
+		const sqo = {
+			section_tipo		: [section_tipo],
+			filter_by_locators	: [{
+				section_tipo	: section_tipo,
+				section_id		: section_id
+			}],
+			limit				: 1
+		}
+
+	// call to the section and delete it
+		const delete_section_result = section.delete_section({
+			sqo			: sqo,
+			delete_mode	: 'delete_record'
+		})
+
+
+	return delete_section_result
+}//end delete_linked_record
+
+
+
+/**
 * DELETE_DATAFRAME_RECORD
+* Remove section in mode 'delete_dataframe'
 * @param object options
 * {
 *	section_id : section_id
@@ -1276,6 +1281,9 @@ component_portal.prototype.delete_dataframe_record = async function(options) {
 
 /**
 * EDIT_RECORD_HANDLER
+* Unified way to open new window
+* Event 'button_edit_click' will be fired
+* On window blur, a event is published
 * @param object options
 * {
 * 	section_tipo: oh1
@@ -1299,13 +1307,15 @@ component_portal.prototype.edit_record_handler = async function(options) {
 			mode			: 'edit',
 			menu			: false
 		})
+
 		const new_window = open_window({
 			url		: url,
 			name	: 'record_view',
 			width	: 1280,
 			height	: 760
 		})
-		new_window.addEventListener('blur', function() {
+		new_window.addEventListener('blur', fn_widow_blur)
+		function fn_widow_blur() {
 
 			// refresh. Get the proper element to refresh based on some criteria.
 			// Note that portals in text view are not self refresh able
@@ -1324,10 +1334,10 @@ component_portal.prototype.edit_record_handler = async function(options) {
 					})
 					.then(function(response){
 						// fire window_bur event
-					event_manager.publish('window_bur_'+self.id, self)
+						event_manager.publish('window_bur_'+self.id, self)
 					})
 				}
-		})
+		}//end blur event
 
 	// button_edit_click event. Subscribed to close current modal if exists (mosaic view case)
 		event_manager.publish('button_edit_click', this)
@@ -1335,6 +1345,7 @@ component_portal.prototype.edit_record_handler = async function(options) {
 
 	return new_window
 }//end edit_record_handler
+
 
 
 // @license-end

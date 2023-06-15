@@ -267,25 +267,14 @@ view_line_edit_portal.render_column_remove = function(options) {
 			element_type	: 'button',
 			class_name		: 'button_remove'
 		})
-		button_remove.addEventListener('click', async function(e) {
+		button_remove.addEventListener('click', fn_remove)
+		async function fn_remove(e) {
 			e.stopPropagation()
 
 			// stop if the user don't confirm
 				if (!confirm(get_label.sure)) {
 					return
 				}
-
-			// fire the unlink_record method
-				self.unlink_record({
-					paginated_key	: paginated_key,
-					row_key			: row_key,
-					section_id		: section_id
-				})
-
-			// delete_dataframe_record
-				self.delete_dataframe_record({
-					section_id : section_id
-				})
 
 			// data pagination offset. Check and update self data to allow save API request return the proper paginated data
 				const key = parseInt(row_key)
@@ -296,7 +285,20 @@ view_line_edit_portal.render_column_remove = function(options) {
 						? next_offset
 						: 0
 				}
-		})
+
+			// fire the unlink_record method
+			// Note that this function refresh current instance
+				await self.unlink_record({
+					paginated_key	: paginated_key,
+					row_key			: row_key,
+					section_id		: section_id
+				})
+
+			// delete_dataframe_record
+				await self.delete_dataframe_record({
+					section_id : section_id
+				})
+		}//end fn_remove
 
 	// remove_icon
 		ui.create_dom_element({
