@@ -552,7 +552,9 @@ component_common.prototype.save = async function(changed_data) {
 			// data
 				const data = result.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id)
 				if(!data){
-					console.warn('data not found in result:', result);
+					if(SHOW_DEBUG===true) {
+						console.log(`Warn: data not found for ${self.tipo} in API result. Could be an error or just an empty data case. API result:`, result);
+					}
 				}
 				self.data = data || {}
 
