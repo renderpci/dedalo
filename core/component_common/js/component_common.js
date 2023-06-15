@@ -765,7 +765,9 @@ component_common.prototype.update_datum = function(new_data) {
 						section_tipo: ${data_item.section_tipo},
 						section_id: ${data_item.section_id},
 						lang: ${data_item.lang}
-						in instances:`,
+						data_item:`,
+						data_item,
+						' in instances:',
 						current_instances
 					)
 				}
