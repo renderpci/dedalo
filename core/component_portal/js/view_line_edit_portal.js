@@ -12,7 +12,8 @@
 		render_column_component_info,
 		activate_autocomplete,
 		get_buttons,
-		render_references
+		render_references,
+		render_dataframe_table
 	} from './render_edit_component_portal.js'
 
 
@@ -181,6 +182,19 @@ const rebuild_columns_map = async function(self) {
 			})
 		}
 
+	// column dataframe. (!) Working here
+	// @todo
+		// const caller_dataframe = self.rqo.source?.caller_dataframe
+		// if (caller_dataframe) {
+		// 	columns_map.push({
+		// 		id			: 'dataframe',
+		// 		label		: 'dataframe', // get_label.delete || 'Delete',
+		// 		width		: 'auto',
+		// 		callback	: view_line_edit_portal.render_column_dataframe
+		// 	})
+		// }
+
+
 	// column remove
 		if ( self.context.properties.source?.mode !== 'external' && self.permissions > 1) {
 			columns_map.push({
@@ -190,6 +204,9 @@ const rebuild_columns_map = async function(self) {
 				callback	: view_line_edit_portal.render_column_remove
 			})
 		}
+		console.log('columns_map:', columns_map);
+		console.log('self:', self);
+
 
 	// fixed as calculated
 		self.fixed_columns_map = true
@@ -310,6 +327,65 @@ view_line_edit_portal.render_column_remove = function(options) {
 
 	return button_remove
 }//end render_column_remove
+
+
+
+/**
+* RENDER_COLUMN_DATAFRAME
+* It is called by section_record to create the column dataframe icon
+* @param object options
+* sample:
+* {
+* 	caller: component_portal {id: 'component_portal_ …}
+*	locator: {type: 'dd151', section_id: '5', section_tipo: 'numisdata33', from_component_tipo: 'numisdata34', paginated_key: 0}
+*	matrix_id: null
+*	modification_date: null
+*	offset: undefined
+*	paginated_key: 0
+*	row_key: 0
+*	section_id: "5"
+*	section_tipo: "numisdata33"
+* }
+* @return DocumentFragment
+*/
+view_line_edit_portal.render_column_dataframe = function(options) {
+
+	// options
+		const self			= options.caller
+		const row_key		= options.row_key
+		const paginated_key	= options.paginated_key
+		const section_tipo	= options.section_tipo
+		const section_id	= options.section_id
+
+	// button_remove
+		const button_remove = ui.create_dom_element({
+			element_type	: 'button',
+			title			: 'dataframe',
+			class_name		: 'button_dataframe'
+		})
+		button_remove.addEventListener('click', fn_open_dataframe)
+		async function fn_open_dataframe(e) {
+			e.stopPropagation()
+
+			render_dataframe_table({
+				self			: self,
+				row_key			: row_key,
+				paginated_key	: paginated_key,
+				section_tipo	: section_tipo,
+				section_id		: section_id
+			})
+		}//end fn_open_dataframe
+
+	// remove_icon
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button uncertainty icon grey',
+			parent			: button_remove
+		})
+
+
+	return button_remove
+}//end render_column_dataframe
 
 
 
