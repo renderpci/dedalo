@@ -9,6 +9,7 @@
 	import {ui} from '../../common/js/ui.js'
 
 
+
 /**
 * VIEW_TEXT_SECTION_RECORD
 * Manage the components logic and appearance in client side
@@ -29,7 +30,8 @@ export const view_text_section_record = function() {
 */
 view_text_section_record.render = async function(self, options) {
 
-	const render_level = options.render_level || 'full'
+	// options
+		const render_level = options.render_level || 'full'
 
 	// ar_columns_instances
 		const ar_columns_instances	= await self.get_ar_columns_instances_list()

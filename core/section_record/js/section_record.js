@@ -369,7 +369,7 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 						// the section_tipo need to be the section_tipo of the ddo
 						// (section_tipo has not really record in DDBB and his totally dependent of the caller locator section_id)
 						// Note: it's not the scenario of multiple section_tipo as fr1, es1 when section_record it depends of the locator that conform the section_record
-						const section_tipo	= (current_ddo.is_dataframe)
+						const section_tipo = (current_ddo.is_dataframe)
 							? current_ddo.section_tipo
 							: self.section_tipo
 						// if the ddo has column_id (normally all component has it, you can see it in common.js get_columns() method)
@@ -490,7 +490,7 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 								}
 								// set is_dataframe property to be used by tools or other components
 								if(current_ddo.is_dataframe){
-									new_context.is_dataframe	= current_ddo.is_dataframe
+									new_context.is_dataframe = current_ddo.is_dataframe
 								}
 
 							// instance create and set

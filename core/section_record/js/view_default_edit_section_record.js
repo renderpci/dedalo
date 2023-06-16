@@ -127,7 +127,7 @@ const get_content_data_edit = async function(self, ar_instances) {
 				continue;
 			}
 
-			const current_instance		= ar_instances[i]
+			const current_instance = ar_instances[i]
 
 			// component_filter case . Send to inspector
 				if (current_instance.model==='component_filter') {
@@ -137,11 +137,7 @@ const get_content_data_edit = async function(self, ar_instances) {
 					continue;
 				}
 
-
-
 			const current_instance_node	= current_instance.node || await current_instance.render()
-
-
 
 			// parent_grouper. get the parent node inside the context
 				const parent_grouper = current_instance.context.parent_grouper
@@ -185,7 +181,6 @@ const get_content_data_edit = async function(self, ar_instances) {
 					fragment.appendChild(current_instance_node)
 				}
 			}
-
 
 			// portals case
 			// if (current_instance.context.legacy_model==='component_portal') {

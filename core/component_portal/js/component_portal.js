@@ -403,7 +403,7 @@ component_portal.prototype.build = async function(autoload=false) {
 				// 		{ mode: list, view: line, children_view: text ... }
 				// if you call to API to get the context of the rsc368 the context will be the default config
 				// 		{ mode: edit, view: default }
-				// but it's necessary preserve the specific ddo_map configuration in the new context.
+				// but it's necessary to preserve the specific ddo_map configuration in the new context.
 				// Context is set and changed in section_record.js to get the ddo_map configuration
 				if(!self.context){
 					const context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
@@ -690,7 +690,7 @@ component_portal.prototype.add_value = async function(value) {
 	// total_before
 		const total_before = clone(self.total)
 
-	// change_value (and save)
+	// api_response : change_value (and save)
 		const api_response = await self.change_value({
 			changed_data	: changed_data,
 			refresh			: false // not refresh here (!)
