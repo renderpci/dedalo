@@ -555,7 +555,11 @@ section_record.prototype.get_component_data = function(ddo, section_tipo, sectio
 				// the match for components inside numisdata_1016 has to be ddo row_section_id === caller (portal) section_id
 				// data of components inside dataframe sections are conditioned by his caller section_tipo and section_id and his own section_tipo and section_id
 				if (ddo.is_dataframe && el.row_section_id) {
-					return parseInt(el.row_section_id)===parseInt(self.caller.section_id)
+					// return parseInt(el.row_section_id)===parseInt(self.caller.section_id)
+
+					// (Changed 15-06-2023 by Paco to allow add terms viewing dataframe elements, -saving sequence-)
+					return parseInt(el.row_section_id)===parseInt(self.caller.section_id) // portal calling trough section
+						|| parseInt(el.row_section_id)===parseInt(self.section_id) // portal calling self alone
 				}
 
 				// time machine case
