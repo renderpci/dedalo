@@ -465,21 +465,18 @@ component_common.prototype.save = async function(changed_data) {
 						use_worker	: true,
 						body		: rqo
 					})
-					if(SHOW_DEVELOPER===true) {
-						dd_console(`[component_common.save] api_response ${self.model} ${self.tipo}`, 'DEBUG', api_response)
-					}
-				// debug
+					// debug
 					if(SHOW_DEBUG===true) {
+						dd_console(`[component_common.save] api_response ${self.model} ${self.tipo}`, 'DEBUG', api_response)
 						if (api_response.result) {
 							// const changed_data_value = typeof changed_data.value!=="undefined" ? changed_data.value : 'Value not available'
 							// const api_response_data_value = typeof api_response.result.data[0]!=="undefined" ? api_response.result.data[0] : 'Value not available'
 							const changed_data_length = changed_data.length
 							for (let i = 0; i < changed_data_length; i++) {
 								const item = changed_data[i]
-								console.log(`[component_common.save] action:'${item.action}' lang:'${self.context.lang}', key:'${item.key}, i:'${item.i}'`);
+								// console.log(`[component_common.save] action:'${item.action}' lang:'${self.context.lang}', key:'${item.key}, i:'${item.i}'`);
 							}
-							// console.log(`[component_common.save] api_response value:`, api_response_data_value);
-							console.log('[component_common.save] api_response:', api_response);
+							// console.log('[component_common.save] api_response:', api_response);
 						}else{
 							console.error('[component_common.save] api_response ERROR:',api_response);
 						}
@@ -770,7 +767,7 @@ component_common.prototype.update_datum = function(new_data) {
 						data_item:`,
 						data_item,
 						' in instances:',
-						current_instances
+						clone(current_instances)
 					)
 				}
 			}

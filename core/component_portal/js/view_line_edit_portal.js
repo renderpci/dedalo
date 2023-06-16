@@ -204,7 +204,7 @@ const rebuild_columns_map = async function(self) {
 * RENDER_COLUMN_ID
 * It is called by section_record to create the column id with custom options
 * @param object options
-* @return DOM DocumentFragment
+* @return DocumentFragment
 */
 view_line_edit_portal.render_column_id = function(options) {
 
@@ -250,7 +250,7 @@ view_line_edit_portal.render_column_id = function(options) {
 * Render column_remov node
 * Shared across views
 * @param object options
-* @return DocumentFragment
+* @return HTMLElement button_remove
 */
 view_line_edit_portal.render_column_remove = function(options) {
 

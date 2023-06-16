@@ -332,8 +332,59 @@
 
 
 // generic recyclable icons for buttons
+	.add_light {
+		@icon_name : 'add_light.svg'; // add_light, add
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.add, .new {
+		@icon_name : 'add.svg'; // add_light, add
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.align_justify {
+		@icon_name : 'justify.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.arrow_link {
+		@icon_name : 'arrow_link.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
 	.blank {
 		@icon_name : ''; // trash.svg
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.calendar {
+		@icon_name : 'calendar.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.cancel {
+		@icon_name : 'cancel.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.check {
+		@icon_name : 'check.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+		.icon_button& { .fn_add_mask(@icon_name); }
+	}
+	.close {
+		@icon_name : 'close.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.compress {
+		@icon_name : 'compress.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.csv {
+		@icon_name : 'csv.svg';
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
@@ -352,18 +403,23 @@
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
-	.remove {
-		@icon_name : 'trash_light.svg';
+	.diffusion {
+		@icon_name : 'diffusion_light.svg'; // diffusion
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
-	.add, .new {
-		@icon_name : 'add.svg'; // add_light, add
+	.document {
+		@icon_name : 'document.svg';
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
-	.add_light {
-		@icon_name : 'add_light.svg'; // add_light, add
+	.download {
+		@icon_name : 'download.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.drag {
+		@icon_name : 'drag.svg';
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
@@ -377,31 +433,6 @@
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
-	.pen {
-		@icon_name : 'pen.svg';
-		button&  { .fn_append_icon(@icon_name); }
-		.button& { .fn_add_mask(@icon_name); }
-	}
-	.reset {
-		@icon_name : 'eraser.svg';
-		button&  { .fn_append_icon(@icon_name); }
-		.button& { .fn_add_mask(@icon_name); }
-	}
-	.align_justify {
-		@icon_name : 'justify.svg';
-		button&  { .fn_append_icon(@icon_name); }
-		.button& { .fn_add_mask(@icon_name); }
-	}
-	.find {
-		@icon_name : 'find.svg';
-		button&  { .fn_append_icon(@icon_name); }
-		.button& { .fn_add_mask(@icon_name); }
-	}
-	.search {
-		@icon_name : 'search_light.svg'; // search
-		button&  { .fn_append_icon(@icon_name); }
-		.button& { .fn_add_mask(@icon_name); }
-	}
 	.email {
 		@icon_name : 'email.svg';
 		button&  { .fn_append_icon(@icon_name); }
@@ -412,98 +443,8 @@
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
-	.close {
-		@icon_name : 'close.svg';
-		button&  { .fn_append_icon(@icon_name); }
-		.button& { .fn_add_mask(@icon_name); }
-	}
-	.link {
-		@icon_name : 'link.svg';
-		button&  { .fn_append_icon(@icon_name); }
-		.button& { .fn_add_mask(@icon_name); }
-	}
-	.arrow_link {
-		@icon_name : 'arrow_link.svg';
-		button&  { .fn_append_icon(@icon_name); }
-		.button& { .fn_add_mask(@icon_name); }
-	}
-	.calendar {
-		@icon_name : 'calendar.svg';
-		button&  { .fn_append_icon(@icon_name); }
-		.button& { .fn_add_mask(@icon_name); }
-	}
-	.upload {
-		@icon_name : 'upload.svg';
-		button&  { .fn_append_icon(@icon_name); }
-		.button& { .fn_add_mask(@icon_name); }
-	}
-	.download {
-		@icon_name : 'download.svg';
-		button&  { .fn_append_icon(@icon_name); }
-		.button& { .fn_add_mask(@icon_name); }
-	}
-	.save {
-		@icon_name : 'save.svg';
-		button&  { .fn_append_icon(@icon_name); }
-		.button& { .fn_add_mask(@icon_name); }
-	}
 	.eye {
 		@icon_name : 'eye.svg';
-		button&  { .fn_append_icon(@icon_name); }
-		.button& { .fn_add_mask(@icon_name); }
-	}
-	.full_screen {
-		@icon_name : 'full_screen.svg';
-		button&  { .fn_append_icon(@icon_name); }
-		.button& { .fn_add_mask(@icon_name); }
-	}
-	.label {
-		@icon_name : 'tag.svg'; // label
-		button&  { .fn_append_icon(@icon_name); }
-		.button& { .fn_add_mask(@icon_name); }
-	}
-	.document {
-		@icon_name : 'document.svg';
-		button&  { .fn_append_icon(@icon_name); }
-		.button& { .fn_add_mask(@icon_name); }
-	}
-	.compress {
-		@icon_name : 'compress.svg';
-		button&  { .fn_append_icon(@icon_name); }
-		.button& { .fn_add_mask(@icon_name); }
-	}
-	.gear {
-		@icon_name : 'gear.svg';
-		button&  { .fn_append_icon(@icon_name); }
-		.button& { .fn_add_mask(@icon_name); }
-	}
-	.reload {
-		@icon_name : 'reload.svg';
-		button&  { .fn_append_icon(@icon_name); }
-		.button& { .fn_add_mask(@icon_name); }
-	}
-	.sync {
-		@icon_name : 'sync.svg';
-		button&  { .fn_append_icon(@icon_name); }
-		.button& { .fn_add_mask(@icon_name); }
-	}
-	.cancel {
-		@icon_name : 'cancel.svg';
-		button&  { .fn_append_icon(@icon_name); }
-		.button& { .fn_add_mask(@icon_name); }
-	}
-	.table {
-		@icon_name : 'table.svg';
-		button&  { .fn_append_icon(@icon_name); }
-		.button& { .fn_add_mask(@icon_name); }
-	}
-	.info {
-		@icon_name : 'info.svg';
-		button&  { .fn_append_icon(@icon_name); }
-		.button& { .fn_add_mask(@icon_name); }
-	}
-	.csv {
-		@icon_name : 'csv.svg';
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
@@ -512,26 +453,68 @@
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
-	.media {
-		@icon_name : 'media.svg';
-		button&  { .fn_append_icon(@icon_name); }
-		.button& { .fn_add_mask(@icon_name); }
-	}
 	.film {
 		@icon_name : 'film.svg';
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
-	.rotate {
-		@icon_name : 'rotate.svg';
+	.find {
+		@icon_name : 'find.svg';
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
-		&.right {
-			transform: scaleX(-1);
-		}
 	}
-	.repair {
-		@icon_name : 'repair.svg';
+	.full_screen {
+		@icon_name : 'full_screen.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.gear {
+		@icon_name : 'gear.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.geo {
+		@icon_name : 'geo.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.history { // history (time_machine recover icon)
+		@icon_name : 'history.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.info {
+		@icon_name : 'info.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.label {
+		@icon_name : 'tag.svg'; // label
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.lang {
+		@icon_name : 'lang.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.link {
+		@icon_name : 'link.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.list {
+		@icon_name : 'list.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.media {
+		@icon_name : 'media.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.note {
+		@icon_name : 'note.svg';
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
@@ -545,39 +528,63 @@
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
-	.list {
-		@icon_name : 'list.svg';
+	.pen {
+		@icon_name : 'pen.svg';
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
-	.lang {
-		@icon_name : 'lang.svg';
+	.print {
+		@icon_name : 'print.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+		.icon_button& { .fn_add_mask(@icon_name); }
+	}
+
+	.remove {
+		@icon_name : 'trash_light.svg';
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
-	// history (time_machine recover icon)
-	.history {
-		@icon_name : 'history.svg';
+	.reset {
+		@icon_name : 'eraser.svg';
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
-	.drag {
-		@icon_name : 'drag.svg';
+	.reload {
+		@icon_name : 'reload.svg';
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
-	.geo {
-		@icon_name : 'geo.svg';
+	.repair {
+		@icon_name : 'repair.svg';
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
-	.note {
-		@icon_name : 'note.svg';
+	.rotate {
+		@icon_name : 'rotate.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+		&.right {
+			transform: scaleX(-1);
+		}
+	}
+	.save {
+		@icon_name : 'save.svg';
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
-	.diffusion {
-		@icon_name : 'diffusion_light.svg'; // diffusion
+	.search {
+		@icon_name : 'search_light.svg'; // search
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.sync {
+		@icon_name : 'sync.svg';
+		button&  { .fn_append_icon(@icon_name); }
+		.button& { .fn_add_mask(@icon_name); }
+	}
+	.table {
+		@icon_name : 'table.svg';
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
@@ -586,18 +593,32 @@
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
-	.check {
-		@icon_name : 'check.svg';
+	.uncertainty {
+		@icon_name : 'uncertainty.svg';
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
-		.icon_button& { .fn_add_mask(@icon_name); }
 	}
-	.print {
-		@icon_name : 'print.svg';
+	.upload {
+		@icon_name : 'upload.svg';
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
-		.icon_button& { .fn_add_mask(@icon_name); }
 	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 // .contenteditable_buttons (used by content editable)

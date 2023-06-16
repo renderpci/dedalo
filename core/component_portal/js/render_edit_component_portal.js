@@ -492,27 +492,31 @@ export const render_column_remove = function(options) {
 						text_content	: get_label.delete_resource_and_links || 'Delete resource and all links',
 						parent			: footer
 					})
-					button_unlink_and_delete.addEventListener('click', function(){
+					button_unlink_and_delete.addEventListener('click', async function() {
 						// stop if the user don't confirm
 						if (!confirm(get_label.sure)) {
 							return
 						}
-						self.delete_linked_record({
-							section_tipo : section_tipo,
-							section_id : section_id
-						}).then(function(){
-							modal.on_close()
+
+						footer.classList.add('loading')
+
+						await self.delete_linked_record({
+							section_tipo	: section_tipo,
+							section_id		: section_id
 						})
+
 						self.unlink_record({
 							paginated_key	: paginated_key,
 							row_key			: row_key,
 							section_id		: section_id
-						}).then(function(){
-							modal.on_close()
 						})
+						.then(modal.on_close)
+
 						self.delete_dataframe_record({
 							section_id : section_id
 						})
+
+						footer.classList.remove('loading')
 					})
 				}
 
@@ -528,16 +532,21 @@ export const render_column_remove = function(options) {
 					if (!confirm(get_label.sure)) {
 						return
 					}
+
+					footer.classList.add('loading')
+
 					self.unlink_record({
 						paginated_key	: paginated_key,
 						row_key			: row_key,
 						section_id		: section_id
-					}).then(function(){
-						modal.on_close()
 					})
+					.then(modal.on_close)
+
 					self.delete_dataframe_record({
 						section_id : section_id
 					})
+
+					footer.classList.remove('loading')
 				})
 
 			// modal

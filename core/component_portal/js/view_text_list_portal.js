@@ -12,6 +12,7 @@
 	} from './render_edit_component_portal.js'
 
 
+
 /**
 * VIEW_TEXT_LIST_PORTAL
 * Manages the component's logic and appearance in client side
@@ -78,8 +79,6 @@ view_text_list_portal.render = async function(self, options) {
 					const node_records_separator = document.createTextNode(self.context.records_separator)
 					fragment.appendChild(node_records_separator)
 				}
-
-
 		}
 
 	return fragment
