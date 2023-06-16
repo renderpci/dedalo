@@ -54,27 +54,38 @@ class section extends common {
 		/**
 		* SECTIONS FOR DATAFRAME
 		*________________________
-		* @param $source string
-		* Define if the section get data from his record in DDBB or the section get data from the components in other section (section doesn't has record in DDBB get parts of other section)
-		* by default source should be DDBB, but for dataframe (context of data) the section can get his data from other section, and in those cases (source='caller_section')
-		* the section will need to create the caller section to get, set or save data.
-		* When dataframe section is saved it add to the data de property: section_id_key as:
-		* {
-		*	 	"type": "dd151",
-		*	 	"section_id": "1",
-		*	 	"section_tipo":	"rolejob1",
-		*	 	"section_id_key": 4,
-		* 		"from_component_tipo": "oh89"
-		* 	}
-		* section_id_key property is the link the section_id of the portal.
-		* The locator of the portal with section_id = 4 will have the link with section_id_key = 4 of the dataframe section.
-		* Dataframe sections doesn't has record in the DDBB, it create his data doing getting data with the caller_dataframe section and filtering with section_id_key.
-		* @param $caller_dataframe locator (section_id, section_tipo)
-		* is the section that has data in DDBB, it's the section of the portal with the data that need to be data framed with roles, uncertainty or any other dataframe.
-		**/
-		public $source;
-		public $caller_dataframe;
+		*/
+			/**
+			* @param string $source
+			* Define if the section get data from his record in DDBB or the section get data from the components in other section (section doesn't has record in DDBB get parts of other section)
+			* by default source should be DDBB, but for dataframe (context of data) the section can get his data from other section, and in those cases (source='caller_section')
+			* the section will need to create the caller section to get, set or save data.
+			* When dataframe section is saved, it add the property: section_id_key to the data as:
+			* {
+			*	 	"type": "dd151",
+			*	 	"section_id": "1",
+			*	 	"section_tipo":	"rolejob1",
+			*	 	"section_id_key": 4,
+			* 		"from_component_tipo": "oh89"
+			* 	}
+			* section_id_key property is the link the section_id of the portal.
+			* The locator of the portal with section_id = 4 will have the link with section_id_key = 4 of the dataframe section.
+			* Dataframe sections doesn't has record in the DDBB, it create his data doing getting data with the caller_dataframe section and filtering with section_id_key.
+			*/
+			public $source;
 
+			/**
+			* @param object $caller_dataframe
+			* locator (section_id, section_tipo)
+			* The section that has data in DDBB, it's the section of the portal with the data that need to be data-framed with roles, uncertainty or any other dataframe.
+			*/
+			public $caller_dataframe;
+
+
+
+		/**
+		* @param object $JSON_RecordObj_matrix
+		*/
 		protected $JSON_RecordObj_matrix;
 
 
@@ -163,7 +174,7 @@ class section extends common {
 		// find current instance in cache
 			if ( !array_key_exists($key, (array)self::$ar_section_instances) ) {
 				$section = new section($section_id, $tipo, $mode);
-				//dataframe case
+				// dataframe case
 				if(isset($caller_dataframe)){
 					$section->set_caller_dataframe($caller_dataframe);
 				}
@@ -182,17 +193,16 @@ class section extends common {
 	/**
 	* CONSTRUCT
 	* Extends parent abstract class common
+	* @param string|int|null $section_id = null
+	* @param string $tipo = null
+	* @param string|null $mode = 'edit'
 	*/
 	private function __construct($section_id=null, string $tipo=null, ?string $mode='edit') {
 
-		if (empty($tipo)) {
-			throw new Exception("Error: on construct section : tipo is mandatory. section_id:$section_id, tipo:$tipo, mode:$mode", 1);
-		}
-
-		if(SHOW_DEBUG===true) {
-			#$section_name = RecordObj_dd::get_termino_by_tipo($tipo,null,true);
-			#global$TIMER;$TIMER[__METHOD__.'_' .$section_name.'_IN_'.$tipo.'_'.$mode.'_'.$section_id.'_'.start_time()]=start_time();
-		}
+		// check tipo
+			if (empty($tipo)) {
+				throw new Exception("Error: on construct section : tipo is mandatory. section_id:$section_id, tipo:$tipo, mode:$mode", 1);
+			}
 
 		// uid
 			$this->uid = hrtime(true); // nanoseconds
@@ -202,7 +212,6 @@ class section extends common {
 			$this->section_id	= $section_id;
 			$this->tipo			= $tipo;
 			$this->mode			= $mode ?? 'edit';
-			// $this->parent		= 0;
 
 		// load_structure_data. When tipo is set, calculate structure data
 			parent::load_structure_data();
@@ -215,10 +224,11 @@ class section extends common {
 					// fix active_section_id
 						section::$active_section_id = $this->get_section_id();
 			}
-		// set source from properties when section doesn't use record in database, get data from other section.
+
+		// set source from properties when section doesn't use record in database. Get the data from another section.
 			$this->source = $this->properties->source ?? null;
 
-		// pagination
+		// pagination. Set defaults
 			$this->pagination = new stdClass();
 				$this->pagination->offset	= 0;
 				$this->pagination->limit	= null;
@@ -253,6 +263,7 @@ class section extends common {
 					$this->tipo // string section tipo
 				);
 			$this->JSON_RecordObj_matrix = $JSON_RecordObj_matrix;
+			// force updates value
 			$JSON_RecordObj_matrix->set_bl_loaded_matrix_data(false);
 		}
 
@@ -320,7 +331,12 @@ class section extends common {
 
 				// if the caller_dato doesn't has relations log the error and return empty object. (it can happen in time machine situations)
 					if(!isset($caller_dato->relations)){
-						debug_log(__METHOD__." Ignored caller_dataframe section without relations!: ".to_string($this->caller_dataframe->section_tipo).'_'.to_string($this->caller_dataframe->section_id), logger::ERROR);
+						debug_log(__METHOD__
+							." Ignored caller_dataframe section without relations! " .PHP_EOL
+							.' caller_dataframe->section_tipo:' . $this->caller_dataframe->section_tipo .PHP_EOL
+							.' caller_dataframe->section_id:' . $this->caller_dataframe->section_id
+							, logger::ERROR
+						);
 						return new stdClass();
 					}
 
