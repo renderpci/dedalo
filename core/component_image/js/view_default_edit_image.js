@@ -359,7 +359,7 @@ const render_image_node = function(self, file_info, content_value) {
 			// dynamic_url . prevents to cache files inside svg object
 			const image = object_node.contentDocument.querySelector('image')
 			if (image) {
-				const dynamic_url = image.href.baseVal + '?t' + (new Date()).getTime()
+				const dynamic_url = image.href.baseVal + '?t=' + (new Date()).getTime()
 				image.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', dynamic_url);
 			}
 

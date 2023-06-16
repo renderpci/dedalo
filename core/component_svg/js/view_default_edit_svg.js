@@ -120,7 +120,7 @@ const get_content_value = function(i, value, self) {
 			const image = ui.create_dom_element({
 				element_type	: 'img',
 				class_name		: 'image svg_element',
-				src				: url + '?t' + (new Date()).getTime(),
+				src				: url + '?t=' + (new Date()).getTime(),
 				parent			: content_value
 			})
 			image.setAttribute('tabindex', 0)
