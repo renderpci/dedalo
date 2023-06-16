@@ -59,10 +59,18 @@ view_default_list_section.render = async function(self, options) {
 		const content_data = await get_content_data(self, self.ar_instances)
 		if (render_level==='content') {
 
-			// force to refresh paginator
-			if (self.paginator) {
-				self.paginator.refresh()
-			}
+			// paginator. Force to refresh paginator
+				if (self.paginator) {
+					self.paginator.refresh()
+				}
+
+			// list_header_node. Remove possible style 'hide' if not empty
+				if (self.ar_instances.length>0) {
+					const wrapper = self.node
+					if (wrapper.list_header_node && wrapper.list_header_node.classList.contains('hide')) {
+						wrapper.list_header_node.classList.remove('hide')
+					}
+				}
 
 			return content_data
 		}
@@ -161,6 +169,9 @@ view_default_list_section.render = async function(self, options) {
 	// list_header_node. Create and append if ar_instances is not empty
 		const list_header_node = ui.render_list_header(columns_map, self)
 		list_body.appendChild(list_header_node)
+		if (self.ar_instances.length<1) {
+			list_header_node.classList.add('hide')
+		}
 
 	// content_data append
 		list_body.appendChild(content_data)
@@ -173,8 +184,9 @@ view_default_list_section.render = async function(self, options) {
 		})
 		wrapper.appendChild(fragment)
 		// set pointers
-		wrapper.content_data	= content_data
-		wrapper.list_body		= list_body
+		wrapper.content_data		= content_data
+		wrapper.list_body			= list_body
+		wrapper.list_header_node	= list_header_node
 
 
 	return wrapper
