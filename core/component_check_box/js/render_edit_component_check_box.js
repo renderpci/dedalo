@@ -216,6 +216,9 @@ const get_content_value = (i, current_value, self) => {
 				input_checkbox	: input_checkbox
 			})
 		})//end change event
+		input_checkbox.addEventListener('click', function(e) {
+			e.stopPropagation()
+		})
 
 		// checked option set on match
 			for (let j = 0; j < value_length; j++) {

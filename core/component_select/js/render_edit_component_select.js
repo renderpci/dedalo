@@ -201,6 +201,10 @@ const get_content_value = (i, current_value, self) => {
 						remove_dialog	: false
 					})
 			})
+		// click event
+			select.addEventListener('click', function(e){
+				e.stopPropagation()
+			})
 
 	// select options
 		const datalist_length = datalist.length
