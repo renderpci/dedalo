@@ -80,7 +80,7 @@ export const get_content_data_player = function(options) {
 
 	// url
 		// posterframe
-			const posterframe_url = data.posterframe_url
+			const posterframe_url = data.posterframe_url + '?t=' + (new Date()).getTime()
 		// media
 			// const video_url = self.data.video_url
 			const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)

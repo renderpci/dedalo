@@ -51,7 +51,9 @@ view_viewer_edit_av.render = async function(self, options) {
 			: url_object.file_url
 
 	// wrapper background color from posterframe image
-		const posterframe_url = self.data.posterframe_url || page_globals.fallback_image
+		const posterframe_url = self.data.posterframe_url
+			? self.data.posterframe_url + '?t=' + (new Date()).getTime()
+			: page_globals.fallback_image
 		const image = ui.create_dom_element({
 			element_type	: 'img',
 			src				: posterframe_url
