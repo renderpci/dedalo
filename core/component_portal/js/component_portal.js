@@ -720,17 +720,56 @@ component_portal.prototype.add_value = async function(value) {
 	// updates pagination values offset and total
 		// self.update_pagination_values('add')
 
-	// Update data from save API response (note that build_autoload will be passed as false later -when refresh- to avoid call to the API again)
-		// set context and data to current instance
-			await self.update_datum(api_response.result.data) // (!) Updated on save too (add/delete elements)
+	// (v1) Update data from save API response (note that build_autoload will be passed as false later -when refresh- to avoid call to the API again)
+		// // set context and data to current instance
+		// 	await self.update_datum(api_response.result.data) // (!) Updated on save too (add/delete elements)
 
-		// context. update instance properties from context (type, label, tools, fields_separator, permissions)
-			self.context		= api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
-			self.datum.context	= api_response.result.context
+		// // context. update instance properties from context (type, label, tools, fields_separator, permissions)
+		// 	self.context		= api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
+		// 	self.datum.context	= api_response.result.context
 
 		// // data. update instance properties from data (locators)
-			self.data		= api_response.result.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id)
-			self.datum.data	= api_response.result.data
+		// 	self.data		= api_response.result.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id)
+		// 	self.datum.data	= api_response.result.data
+
+	// (v2) Update data (Coherent with portal build)
+		// reset errors
+			self.running_with_errors = null
+
+		// set Context
+			// context is only set when it's empty the origin context,
+			// if the instance has previous context, it will need to preserve.
+			// because the context could be modified by ddo configuration and it can no be changed
+			// ddo_map -----> context
+			// ex: oh27 define the specific ddo_map for rsc368
+			// 		{ mode: list, view: line, children_view: text ... }
+			// if you call to API to get the context of the rsc368 the context will be the default config
+			// 		{ mode: edit, view: default }
+			// but it's necessary to preserve the specific ddo_map configuration in the new context.
+			// Context is set and changed in section_record.js to get the ddo_map configuration
+			if(!self.context){
+				const context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
+				if (!context) {
+					console.error("context not found in api_response:", api_response);
+				}else{
+					self.context = context
+				}
+			}
+
+		// set Data
+			const data = api_response.result.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id)
+			if(!data){
+				console.warn("data not found in api_response:",api_response);
+			}
+			self.data = data || {}
+
+		// Update datum when the component is not standalone, it's dependent of section or others with common datum
+			if(!self.standalone){
+				await self.update_datum(api_response.result.data)
+			}else{
+				self.datum.context	= api_response.result.context
+				self.datum.data		= api_response.result.data
+			}
 
 		// force re-assign self.total and pagination values on build
 			self.total = null
