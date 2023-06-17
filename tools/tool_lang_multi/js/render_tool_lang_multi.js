@@ -6,9 +6,9 @@
 
 // imports
 	// import {event_manager} from '../../../core/common/js/event_manager.js'
+	// import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
-	// import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 
 
 
@@ -25,9 +25,10 @@ export const render_tool_lang_multi = function() {
 
 /**
 * EDIT
+* @param object options = {}
 * @return HTMLElement wrapper
 */
-render_tool_lang_multi.prototype.edit = async function (options={render_level:'full'}) {
+render_tool_lang_multi.prototype.edit = async function (options={}) {
 
 	const self = this
 
@@ -45,15 +46,6 @@ render_tool_lang_multi.prototype.edit = async function (options={render_level:'f
 			content_data : content_data
 		})
 
-	// modal container
-		// if (!window.opener) {
-		// 	const header	= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
-		// 	const modal		= ui.attach_to_modal(header, wrapper, null)
-		// 	modal.on_close	= () => {
-		// 		self.destroy(true, true, true)
-		// 	}
-		// }
-
 
 	return wrapper
 }//end edit
@@ -62,6 +54,7 @@ render_tool_lang_multi.prototype.edit = async function (options={render_level:'f
 
 /**
 * GET_CONTENT_DATA_EDIT
+* @param object self
 * @return HTMLElement content_data
 */
 const get_content_data_edit = async function(self) {
@@ -123,7 +116,6 @@ const get_content_data_edit = async function(self) {
 		// 	parent			: components_container
 		// })
 
-
 	// content_data
 		const content_data = ui.tool.build_content_data(self)
 		content_data.appendChild(fragment)
@@ -137,7 +129,12 @@ const get_content_data_edit = async function(self) {
 /**
 * CREATE_TARGET_COMPONENT
 * @param object lang
+* {
+* 	label: 'English',
+* 	value: 'lg-eng'
+* }
 * @param object instance
+* @return HTMLElment target_component_container
 */
 export const create_target_component = (lang, self) => {
 
@@ -217,6 +214,8 @@ export const create_target_component = (lang, self) => {
 
 /**
 * BUILD_AUTOMATIC_TRANSLATION
+* @param object options
+* @return HTMLElment automatic_translation_container
 */
 const build_automatic_translation = (options) => {
 
