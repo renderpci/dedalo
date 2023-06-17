@@ -38,7 +38,7 @@
 	import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
 	import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 	import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
-
+	import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 	// environments: pictures to be use as reflection images
 	import { environments } from './environments.js';
 
@@ -117,7 +117,8 @@ viewer.build = async function (content_value, options) {
 		ambient_color		: options.ambient_color || 0xFFFFFF,
 		direct_intensity	: options.direct_intensity || 0.8 * Math.PI,
 		direct_color		: options.direct_color || 0xFFFFFF,
-		bg_color			: options.bg_color || 0x191919
+		bg_color			: options.bg_color || 0x191919,
+
 	};
 
 	self.prev_time = 0;
@@ -287,24 +288,24 @@ viewer.load = function( file_uri ) {
 
 /**
 * SET_CONTENT
-* @param {THREE.Object3D} object
+* @param {THREE.Object3D} scene
 * @param {Array<THREE.AnimationClip} clips
 */
-viewer.set_content = function( object, clips ) {
+viewer.set_content = function( scene, clips ) {
 
 	const self = this
 
 	self.clear();
 
-	const box		= new Box3().setFromObject(object);
+	const box		= new Box3().setFromObject(scene);
 	const size		= box.getSize(new Vector3()).length();
 	const center	= box.getCenter(new Vector3());
 
 	self.controls.reset();
 
-	object.position.x += (object.position.x - center.x);
-	object.position.y += (object.position.y - center.y);
-	object.position.z += (object.position.z - center.z);
+	scene.position.x += (scene.position.x - center.x);
+	scene.position.y += (scene.position.y - center.y);
+	scene.position.z += (scene.position.z - center.z);
 	self.controls.maxDistance	= size * 10;
 	self.default_camera.near	= size / 100;
 	self.default_camera.far		= size * 100;
@@ -335,8 +336,8 @@ viewer.set_content = function( object, clips ) {
 
 	self.controls.saveState();
 
-	self.scene.add(object);
-	self.content = object;
+	self.scene.add(scene);
+	self.content = scene;
 
 	self.content.traverse((node) => {
 		if (node.isLight) {
