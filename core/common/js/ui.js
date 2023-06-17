@@ -2687,6 +2687,11 @@ export const ui = {
 	*/
 	set_background_image : (image, target_node) => {
 
+		// Deactivate, it's not useful repeat the first pixel of image.
+		// to discus
+		return false
+
+
 		// Firefox skip. (prevents erratic Firefox behavior about canvas bg color)
 		if(navigator.userAgent.toLowerCase().indexOf('firefox') > -1){
 			return false

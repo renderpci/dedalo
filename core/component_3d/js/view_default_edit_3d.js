@@ -124,60 +124,72 @@ const get_content_value = (i, current_value, self) => {
 		const quality	= self.quality || self.context.features.quality
 		const datalist	= self.data.datalist
 		const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
+
 		const file_url	= file_info
 			? file_info.file_url
 			: null
 
-	// no file case
-		// if(!file_url){
-		// 	return content_value
-		// }
-
 	// init viewer when content_value node is in in browser viewport
 	when_in_viewport(content_value, async function(){
 
-		// posterframe image
-			const posterframe_url = data.posterframe_url || page_globals.fallback_image
-			content_value.posterframe = ui.create_dom_element({
-				element_type	: 'img',
-				class_name		: 'posterframe',
-				parent			: content_value
-			})
-			// image background color
-			content_value.posterframe.addEventListener('load', set_bg_color, false)
-			function set_bg_color() {
-				this.removeEventListener('load', set_bg_color, false)
-				ui.set_background_image(this, content_value)
-			}
-			content_value.posterframe.src = posterframe_url + '?t=' + (new Date()).getTime()
+		if(file_info){
+			// posterframe image
+				const posterframe_url = data.posterframe_url || page_globals.fallback_image
+				content_value.posterframe = ui.create_dom_element({
+					element_type	: 'img',
+					class_name		: 'posterframe',
+					parent			: content_value
+				})
+				// image background color
+				content_value.posterframe.addEventListener('load', set_bg_color, false)
+				function set_bg_color() {
+					this.removeEventListener('load', set_bg_color, false)
+					ui.set_background_image(this, content_value)
+				}
+				content_value.posterframe.src = posterframe_url + '?t=' + (new Date()).getTime()
+		}
 
-		// viewer_3d
+		if(file_url) {
+			// viewer_3d
 			const viewer_3d = await viewer.init({
 				cache : false
 			})
 			// fix viewer
 			self.viewer = viewer_3d
 
-			if(file_url) {
-				await viewer_3d.build(content_value, {})
+			await viewer_3d.build(content_value, {})
 
-				viewer_3d.load(
-					file_url  // + '?t=' + (new Date()).getTime()
-				) // rootPath, fileMap
-				.catch((e) => this.onError(e))
-				.then((gltf) => {
-					setTimeout(function(){
+			viewer_3d.load(
+				file_url  // + '?t=' + (new Date()).getTime()
+			) // rootPath, fileMap
+			.catch((e) => this.onError(e))
+			.then((gltf) => {
+				setTimeout(function(){
 
-						// publish event viewer is ready
-						event_manager.publish('viewer_ready_'+self.id, viewer_3d)
+					// publish event viewer is ready
+					event_manager.publish('viewer_ready_'+self.id, viewer_3d)
 
-						// remove posterframe
-						if (content_value.posterframe) {
-							content_value.posterframe.remove()
-						}
-					}, 1)
-				});
-			}
+					// remove posterframe
+					if (content_value.posterframe) {
+						content_value.posterframe.remove()
+					}
+				}, 1)
+			});
+		}else{
+
+			content_value.classList.add('link')
+			content_value.addEventListener('mouseup', function(e) {
+				e.stopPropagation();
+
+				const tool_upload = self.tools.find(el => el.model==='tool_upload')
+				// open_tool (tool_common)
+					open_tool({
+						tool_context	: tool_upload,
+						caller			: self
+					})
+			})
+		}
+
 	});//end when_in_viewport
 
 
