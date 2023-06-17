@@ -8,7 +8,6 @@
 	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
-	// import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import {tool_common, load_component} from '../../tool_common/js/tool_common.js'
 	import {render_tool_lang_multi} from './render_tool_lang_multi.js'
@@ -33,9 +32,6 @@ export const tool_lang_multi = function () {
 	this.target_lang	= null
 	this.langs			= null
 	this.caller			= null
-
-
-	return true
 }//end page
 
 
@@ -54,6 +50,8 @@ export const tool_lang_multi = function () {
 
 /**
 * INIT
+* @param object options
+* @return bool common_init
 */
 tool_lang_multi.prototype.init = async function(options) {
 
@@ -85,6 +83,8 @@ tool_lang_multi.prototype.init = async function(options) {
 
 /**
 * BUILD_CUSTOM
+* @param bool autoload = false
+* @return bool common_build
 */
 tool_lang_multi.prototype.build = async function(autoload=false) {
 
@@ -121,7 +121,9 @@ tool_lang_multi.prototype.build = async function(autoload=false) {
 
 
 /**
-* get_COMPONENT
+* GET_COMPONENT
+* @param string lang
+* @return object component_instance
 */
 tool_lang_multi.prototype.get_component = async function(lang) {
 
@@ -154,12 +156,16 @@ tool_lang_multi.prototype.get_component = async function(lang) {
 * using a online service like babel or Google translator and save the resulting value
 * (!) Tool lang config translator must to be exists in register_tools section
 *
-* @para string translator (name like 'babel' must to be defined in tool config)
-* @param string source_lang (like 'lg-eng')
-* @param string target_lang (like 'lg-spa')
-* @param DOM element buttons_container (where will be place the message response)
+* @param string translator
+* 	(name like 'babel' must to be defined in tool config)
+* @param string source_lang
+* 	(like 'lg-eng')
+* @param string target_lang
+* 	(like 'lg-spa')
+* @param HTMLElement buttons_container
+* 	(where will be place the message response)
 *
-* @return promise response
+* @return object api_response
 */
 tool_lang_multi.prototype.automatic_translation = async function(translator, source_lang, target_lang, buttons_container) {
 
@@ -186,32 +192,26 @@ tool_lang_multi.prototype.automatic_translation = async function(translator, sou
 		}
 
 	// call to the API, fetch data and get response
-		return new Promise(function(resolve){
-
-			data_manager.request({
-				body : rqo
-			})
-			.then(function(response){
-				if(SHOW_DEVELOPER===true) {
-					dd_console("-> automatic_translation API response:",'DEBUG',response);
-				}
-
-				// user messages
-					const msg_type = (response.result===false) ? 'error' : 'ok'
-					//if (trigger_response.result===false) {
-						ui.show_message(buttons_container, response.msg, msg_type)
-					//}
-
-				// reload target lang
-					const target_component = self.ar_instances.find(el => el.tipo===self.main_element.tipo && el.lang===target_lang)
-					target_component.refresh()
-					if(SHOW_DEVELOPER===true) {
-						dd_console('target_component', 'DEBUG', target_component)
-					}
-
-				resolve(response)
-			})
+		const api_response = await data_manager.request({
+			body : rqo
 		})
+		if(SHOW_DEVELOPER===true) {
+			dd_console("-> automatic_translation API api_response:",'DEBUG', api_response);
+		}
+
+		// user messages
+			const msg_type = (api_response.result===false) ? 'error' : 'ok'
+			ui.show_message(buttons_container, api_response.msg, msg_type)
+
+
+		// reload target lang
+			const target_component = self.ar_instances.find(el => el.tipo===self.main_element.tipo && el.lang===target_lang)
+			target_component.refresh()
+			if(SHOW_DEVELOPER===true) {
+				dd_console('target_component', 'DEBUG', target_component)
+			}
+
+	return api_response
 }//end automatic_translation
 
 
