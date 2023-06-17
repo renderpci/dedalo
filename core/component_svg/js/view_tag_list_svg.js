@@ -77,7 +77,7 @@ view_tag_list_svg.render = function(self, options) {
 
 
 	return wrapper
-}//end get_value_fragment
+}//end render
 
 
 
