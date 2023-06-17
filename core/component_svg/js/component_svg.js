@@ -9,6 +9,7 @@
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_edit_component_svg} from './render_edit_component_svg.js'
 	import {render_list_component_svg} from './render_list_component_svg.js'
+	import {render_search_component_svg} from './render_search_component_svg.js'
 
 
 
@@ -64,6 +65,7 @@ export const component_svg = function(){
 	component_svg.prototype.list				= render_list_component_svg.prototype.list
 	component_svg.prototype.tm					= render_list_component_svg.prototype.list
 	component_svg.prototype.edit				= render_edit_component_svg.prototype.edit
+	component_svg.prototype.search				= render_search_component_svg.prototype.search
 
 
 

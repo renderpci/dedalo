@@ -11,6 +11,7 @@
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_edit_component_3d} from '../../component_3d/js/render_edit_component_3d.js'
 	import {render_list_component_3d} from '../../component_3d/js/render_list_component_3d.js'
+	import {render_search_component_3d} from '../../component_3d/js/render_search_component_3d.js'
 
 	import {upload} from '../../services/service_upload/js/service_upload.js'
 	// import {render_mini_component_3d} from '../../component_3d/js/render_mini_component_3d.js'
@@ -75,7 +76,7 @@ export const component_3d = function(){
 	component_3d.prototype.list					= render_list_component_3d.prototype.list
 	component_3d.prototype.edit					= render_edit_component_3d.prototype.edit
 	component_3d.prototype.tm					= render_edit_component_3d.prototype.edit
-	component_3d.prototype.search				= render_edit_component_3d.prototype.search
+	component_3d.prototype.search				= render_search_component_3d.prototype.search
 	// component_3d.prototype.player			= render_player_component_3d.prototype.player
 	// component_3d.prototype.viewer			= render_viewer_component_3d.prototype.viewer
 
