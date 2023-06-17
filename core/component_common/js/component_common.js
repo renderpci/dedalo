@@ -320,7 +320,7 @@ export const init_events_subscription = function(self) {
 					// 		event_manager.publish(event +'_'+ self.section_tipo +'_'+ self.section_id +'_'+ self.tipo, data_to_send)
 					// or the sort format with the id_base of the observable component:
 					// 		event_manager.publish(event +'_'+ self.id_base, data_to_send)
-					const id_base = self.section_tipo +'_'+ self.section_id +'_'+ component_tipo
+					const id_base = self.section_tipo +'_'+ self.section_id +'_'+ component_tipo+'_'+self.lang
 
 					// debug
 						if(SHOW_DEBUG===true) {
