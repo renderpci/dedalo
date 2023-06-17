@@ -28,6 +28,8 @@ export const view_text_list_svg = function() {
 /**
 * RENDER
 * Render node to be used by this view
+* @param object self
+* @param object options
 * @return HTMLElement image_node
 */
 view_text_list_svg.render = function(self, options) {

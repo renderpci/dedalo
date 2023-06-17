@@ -53,7 +53,7 @@ view_default_list_svg.render = function(self, options) {
 
 /**
 * GET_CONTENT_DATA
-* @param instance self
+* @param object self
 * @return HTMLElement content_data
 */
 export const get_content_data = function(self) {

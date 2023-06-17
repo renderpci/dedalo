@@ -23,6 +23,8 @@ export const view_default_edit_svg = function() {
 /**
 * RENDER
 * Render node for use in edit
+* @param object self
+* @param object options
 * @return HTMLElement wrapper
 */
 view_default_edit_svg.render = async function(self, options) {
@@ -59,14 +61,14 @@ view_default_edit_svg.render = async function(self, options) {
 
 /**
 * CONTENT_DATA_EDIT
+* @param object self
 * @return HTMLElement content_data
 */
 export const get_content_data = function(self) {
 
 	// short vars
-		const data			= self.data || {}
-		const value			= data.value || []
-		// const datalist	= data.datalist || []
+		const data	= self.data || {}
+		const value	= data.value || []
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
@@ -94,6 +96,9 @@ export const get_content_data = function(self) {
 
 /**
 * GET_CONTENT_VALUE
+* @param int i
+* @param object value
+* @param object self
 * @return HTMLElement content_value
 */
 const get_content_value = function(i, value, self) {

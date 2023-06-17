@@ -27,6 +27,8 @@ export const view_line_edit_svg = function() {
 /**
 * RENDER
 * Render node for use in edit
+* @param object self
+* @param object options
 * @return HTMLElement wrapper
 */
 view_line_edit_svg.render = async function(self, options) {

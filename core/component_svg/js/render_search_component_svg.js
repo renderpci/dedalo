@@ -24,13 +24,14 @@ export const render_search_component_svg = function() {
 /**
 * SEARCH
 * Render node for use in modes: search
+* @param object options
 * @return HTMLElement wrapper
 */
 render_search_component_svg.prototype.search = async function(options) {
 
 	const self = this
 
-	// render_level
+	// options
 		const render_level = options.render_level || 'full'
 
 	// content_data

@@ -24,6 +24,8 @@ export const view_mini_list_svg = function() {
 /**
 * RENDER
 * Render node to be used by this view
+* @param object self
+* @param object options
 * @return HTMLElement wrapper
 */
 view_mini_list_svg.render = function(self, options) {
@@ -60,7 +62,7 @@ export const get_value_fragment = function(self) {
 
 	// svg elements
 		const inputs_value	= (value.length<1) ? [null] : value // force one empty input at least
-		const value_length = inputs_value.length
+		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 
 			// // media url from data.datalist based on selected context quality
