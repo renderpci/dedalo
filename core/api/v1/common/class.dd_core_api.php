@@ -728,7 +728,12 @@ final class dd_core_api {
 			$caller_dataframe = $ddo_source->caller_dataframe ?? null;
 
 		// permissions
-			$permissions = common::get_permissions($section_tipo, $section_tipo);
+			if($delete_mode==='delete_dataframe'){
+				$permissions = common::get_permissions($caller_dataframe->section_tipo, $section_tipo);
+			}else{
+				$permissions = common::get_permissions($section_tipo, $section_tipo);
+			}
+
 			debug_log(__METHOD__." permissions: $permissions ".to_string($section_tipo), logger::DEBUG);
 			if ($permissions<2) {
 				$response->error = 2;

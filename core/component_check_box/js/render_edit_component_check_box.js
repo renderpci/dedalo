@@ -231,12 +231,15 @@ const get_content_value = (i, current_value, self) => {
 			}
 
 	// developer_info
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'developer_info show_on_active',
-			text_content	: `[${section_id}]`,
-			parent			: content_value
-		})
+		if(SHOW_DEBUG){
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'developer_info show_on_active',
+				text_content	: `[${section_id}]`,
+				parent			: content_value
+			})
+		}
+
 
 	// button_edit
 		// const button_edit = ui.create_dom_element({
