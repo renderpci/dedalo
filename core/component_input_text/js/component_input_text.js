@@ -207,4 +207,3 @@ component_input_text.prototype.is_unique = async function(new_value){
 
 
 // @license-end
-

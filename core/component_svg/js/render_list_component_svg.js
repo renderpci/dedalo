@@ -28,6 +28,7 @@ export const render_list_component_svg = function() {
 /**
 * LIST
 * Render node for use in list
+* @param object options
 * @return HTMLElement wrapper
 */
 render_list_component_svg.prototype.list = async function(options) {

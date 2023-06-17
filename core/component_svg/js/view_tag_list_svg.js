@@ -25,6 +25,8 @@ export const view_tag_list_svg = function() {
 /**
 * RENDER
 * Render node for use in list
+* @param object self
+* @param object options
 * @return HTMLElement wrapper
 */
 view_tag_list_svg.render = function(self, options) {
@@ -73,7 +75,7 @@ view_tag_list_svg.render = function(self, options) {
 					},
 					parent			: wrapper
 				})
-		}
+		}//end for (let i = 0; i < value_length; i++)
 
 
 	return wrapper
