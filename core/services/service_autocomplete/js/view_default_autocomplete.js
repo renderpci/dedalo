@@ -58,6 +58,27 @@ view_default_autocomplete.render = async function (self, options) {
 			}
 		})
 
+	// position calculate based on caller node (usually a component_portal wrapper)
+		if (self.caller.node) {
+			const reference_node	= self.caller.node
+			const rect				= reference_node.getBoundingClientRect();
+			const top				= rect.bottom  + window.scrollY // + 20
+			const left				= rect.left  + window.scrollX // + 20
+			const width				= rect.width
+
+			// set coordinates. Same as reference_node position
+			wrapper.style.left	= left + 'px'
+			wrapper.style.top	= top + 'px'
+			wrapper.style.width	= width + 'px'
+
+			window.addEventListener('resize', fn_on_resize)
+			function fn_on_resize(){
+				ui.component.deactivate(self.caller)
+				window.removeEventListener('resize', fn_on_resize)
+			}
+		}
+
+
 	// fix node
 		self.node = wrapper
 
