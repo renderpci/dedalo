@@ -613,9 +613,9 @@ final class component_image_test extends TestCase {
 			$section_tipo
 		);
 
-		$result = $component->generate_default_quality_file(
-			true // overwrite
-		);
+		$result = $component->generate_default_quality_file((object)[
+			'overwrite' => true
+		]);
 
 		$this->assertTrue(
 			gettype($result)==='boolean',
@@ -628,15 +628,26 @@ final class component_image_test extends TestCase {
 			'expected true value : true ' . PHP_EOL
 				. json_encode($result)
 		);
+
+		$result = $component->generate_default_quality_file((object)[
+			'overwrite'	=> true,
+			'from'		=> 'original_real'
+		]);
+
+		$this->assertTrue(
+			$result===true,
+			'expected true value : true ' . PHP_EOL
+				. json_encode($result)
+		);
 	}//end test_generate_default_quality_file
 
 
 
 	/**
-	* TEST_generate_default_from_original_real
+	* TEST_generate_thumb
 	* @return void
 	*/
-	public function test_generate_default_from_original_real() {
+	public function test_generate_thumb() {
 
 		$model			= self::$model;
 		$tipo			= self::$tipo;
@@ -654,25 +665,179 @@ final class component_image_test extends TestCase {
 			$section_tipo
 		);
 
-		$result = $component->generate_default_from_original_real(
-			true // overwrite
+		$result = $component->generate_thumb();
+
+		if (!is_null($result)) {
+
+			$this->assertTrue(
+				gettype($result)==='object',
+				'expected type object : ' . PHP_EOL
+					. gettype($result)
+			);
+
+			$this->assertTrue(
+				!empty($result->path),
+				'expected !empty($result->path) ' . PHP_EOL
+					. empty($result)
+			);
+
+			$this->assertTrue(
+				!empty($result->url),
+				'expected !empty($result->url) ' . PHP_EOL
+					. empty($result)
+			);
+		}
+	}//end test_generate_thumb
+
+
+
+	/**
+	* TEST_get_thumb_url
+	* @return void
+	*/
+	public function test_get_thumb_url() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'edit';
+		$lang			= DEDALO_DATA_NOLAN;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo
 		);
-			dump($result, ' result ++ '.to_string());
+
+		$result = $component->get_thumb_url();
+
+		$this->assertTrue(
+			gettype($result)==='string',
+			'expected type string : ' . PHP_EOL
+				. gettype($result)
+		);
+	}//end test_get_thumb_url
+
+
+
+	/**
+	* TEST_get_thumb_path
+	* @return void
+	*/
+	public function test_get_thumb_path() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'edit';
+		$lang			= DEDALO_DATA_NOLAN;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo
+		);
+
+		$result = $component->get_thumb_path();
+
+		$this->assertTrue(
+			gettype($result)==='string',
+			'expected type string : ' . PHP_EOL
+				. gettype($result)
+		);
+	}//end test_get_thumb_path
+
+
+
+	/**
+	* TEST_get_image_print_dimensions
+	* @return void
+	*/
+	public function test_get_image_print_dimensions() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'edit';
+		$lang			= DEDALO_DATA_NOLAN;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo
+		);
+
+		$quality = $component->get_default_quality();
+
+		$result = $component->get_image_print_dimensions($quality);
+
+		// sample
+		// [
+		//     "8,67cm",
+		//     "8,67cm"
+		// ]
+
+		$this->assertTrue(
+			gettype($result)==='array',
+			'expected type array : ' . PHP_EOL
+				. gettype($result)
+		);
+		$this->assertTrue(
+			!empty($result[0]),
+			'expected !empty($result[0]) : ' . PHP_EOL
+				. empty($result[0])
+		);
+		$this->assertTrue(
+			!empty($result[1]),
+			'expected !empty($result[1]) : ' . PHP_EOL
+				. empty($result[1])
+		);
+	}//end test_get_image_print_dimensions
+
+
+
+	/**
+	* TEST_regenerate_component
+	* @return void
+	*/
+	public function test_regenerate_component() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'edit';
+		$lang			= DEDALO_DATA_NOLAN;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo
+		);
+
+		$result = $component->regenerate_component();
 
 		$this->assertTrue(
 			gettype($result)==='boolean',
 			'expected type boolean : ' . PHP_EOL
 				. gettype($result)
 		);
-
-		$this->assertTrue(
-			$result===true,
-			'expected true value : true ' . PHP_EOL
-				. json_encode($result)
-		);
-	}//end test_generate_default_from_original_real
-
-
+	}//end test_regenerate_component
 
 
 
