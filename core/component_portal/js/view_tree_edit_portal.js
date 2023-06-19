@@ -83,57 +83,59 @@ view_tree_edit_portal.render = async function(self, options) {
 export const add_events = function(self, wrapper) {
 
 	// click delegated
-		wrapper.addEventListener("click", function(e){
+		wrapper.addEventListener("click", fn_warpper_click)
+		function fn_warpper_click(e){
 
-		// remove row
-			if(e.target.matches('.button.remove')) {
-				e.preventDefault()
+			// remove row
+				if(e.target.matches('.button.remove')) {
+					e.preventDefault()
 
-				// label
-					const children = e.target.parentNode.parentNode.children
-					const ar_label = []
-					for (let i = 0; i < children.length; i++) {
-						if(children[i].textContent.length>0) {
-							ar_label.push(children[i].textContent)
+					// label
+						const children = e.target.parentNode.parentNode.children
+						const ar_label = []
+						for (let i = 0; i < children.length; i++) {
+							if(children[i].textContent.length>0) {
+								ar_label.push(children[i].textContent)
+							}
 						}
-					}
-					const label = ar_label.join(', ')
+						const label = ar_label.join(', ')
 
-				const changed_data = [Object.freeze({
-					action	: 'remove',
-					key		: JSON.parse(e.target.dataset.key),
-					value	: null
-				})]
+					const changed_data = [Object.freeze({
+						action	: 'remove',
+						key		: JSON.parse(e.target.dataset.key),
+						value	: null
+					})]
 
-				const changed = self.change_value({
-					changed_data	: changed_data,
-					label			: label,
-					refresh			: false,
-					build_autoload	: false
-				})
-				changed.then(async (api_response)=>{
+					const changed = self.change_value({
+						changed_data	: changed_data,
+						label			: label,
+						refresh			: false,
+						build_autoload	: false
+					})
+					changed.then(async (api_response)=>{
 
-					// update pagination offset
-						self.update_pagination_values('remove')
+						// update pagination offset
+							self.update_pagination_values('remove')
 
-					// refresh
-						await self.refresh({
-							build_autoload : false
-						})
+						// refresh
+							await self.refresh({
+								build_autoload : false
+							})
 
-					// check if the caller has active a tag_id
-						if(self.active_tag){
-							// filter component data by tag_id and re-render content
-							self.filter_data_by_tag_id(self.active_tag)
-						}
+						// check if the caller has active a tag_id
+							if(self.active_tag){
+								// filter component data by tag_id and re-render content
+								self.filter_data_by_tag_id(self.active_tag)
+							}
 
-					// event to update the DOM elements of the instance
-						event_manager.publish('remove_element_'+self.id, e.target.dataset.key)
-				})
+						// event to update the DOM elements of the instance
+							event_manager.publish('remove_element_'+self.id, e.target.dataset.key)
+					})
 
-				return true
-			}//end if(e.target.matches('.button.remove'))
-		})//end click event
+					return true
+				}//end if(e.target.matches('.button.remove'))
+
+		}//end fn_warpper_click
 
 
 	return true

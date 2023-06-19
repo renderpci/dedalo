@@ -895,7 +895,10 @@ component_portal.prototype.update_pagination_values = function(action) {
 * FILTER_DATA_BY_TAG_ID
 * Filtered data with the tag clicked by the user
 * The portal will show only the locators for the tag selected
-* @param DOM node tag
+* @param object options
+* sample
+* {
+* }
 * @return promise self.render
 */
 component_portal.prototype.filter_data_by_tag_id = function(options) {

@@ -204,9 +204,6 @@ const rebuild_columns_map = async function(self) {
 				callback	: view_line_edit_portal.render_column_remove
 			})
 		}
-		console.log('columns_map:', columns_map);
-		console.log('self:', self);
-
 
 	// fixed as calculated
 		self.fixed_columns_map = true
