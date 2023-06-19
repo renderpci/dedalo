@@ -42,8 +42,9 @@ export const events_subscription = function(self) {
 			// sync data on similar components (same id_base)
 			// Subscription to the changes: if the DOM input value was changed,
 			// observers DOM elements will be changed own value with the observable value
+			const id_base_lang = self.id_base + '_' + self.lang
 			self.events_tokens.push(
-				event_manager.subscribe('update_value_'+self.id_base, fn_update_value)
+				event_manager.subscribe('update_value_'+id_base_lang, fn_update_value)
 			)
 			function fn_update_value (options) {
 

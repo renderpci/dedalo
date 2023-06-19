@@ -978,7 +978,8 @@ component_common.prototype.change_value = async function(options) {
 		self.status = prev_status
 
 	// event to update the DOM elements of the instance
-		event_manager.publish('update_value_'+self.id_base, {
+		const id_base_lang = self.id_base + '_' + self.lang
+		event_manager.publish('update_value_'+id_base_lang, {
 			caller			: self,
 			changed_data	: changed_data
 		})
