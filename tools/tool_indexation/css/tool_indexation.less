@@ -144,6 +144,7 @@
 			}
 
 			>.left_container, >.right_container {
+				display: grid;
 				padding: 1rem;
 				padding-bottom: 0px;
 				height: 100%;
@@ -156,13 +157,14 @@
 			// left block (thesaurus)
 			>.left_container {
 				width: 45%;
+				overflow: auto;
+				padding-bottom: 5rem;
 				@media screen and (max-width: @width_break_point_0) {
 					width: 100%;
 					width: calc(100vw - 1rem);
 					padding-left: 0px;
 					height: auto;
 				}
-				overflow: auto;
 
 				// thesaurus
 				>.area_thesaurus {
@@ -172,7 +174,6 @@
 
 			// right block
 			>.right_container {
-				display: grid;
 				grid-template-rows: 55vh 3rem auto;
 				width: 55%;
 				@media screen and (max-width: @width_break_point_0) {
