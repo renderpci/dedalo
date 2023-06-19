@@ -213,7 +213,7 @@ const get_content_data = async function(self) {
 						// console.log('self:', self);
 					}
 				// id_base like 'rsc176_3_rsc37'. Note that target component tipo comes from properties->tool_config->target_tipo
-				const id_base = self.caller.section_tipo + '_' + self.caller.section_id + '_' + self.caller.tipo + '_' + self.caller.lang
+				const id_base = self.caller.section_tipo + '_' + self.caller.section_id + '_' + self.caller.tipo
 				// set_pdf_data_ event is observed by component_text_area (init function) and get pdf_data and set as component value (set_value)
 				// The published value must be an object like as expected by component_text_area->set_value
 				event_manager.publish('set_pdf_data_'+ id_base, {
