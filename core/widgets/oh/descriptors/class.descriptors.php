@@ -42,6 +42,7 @@ class descriptors extends widget_common {
 				$type		= $input->type;
 				$ar_locator	= [];
 				switch($type) {
+
 					case 'component_data':
 						foreach ($source as $current_source) {
 
