@@ -442,48 +442,93 @@ class component_image extends component_media_common {
 	* @param bool $overwrite = true
 	* @return bool
 	*/
-	public function generate_default_quality_file(bool $overwrite=true) : bool {
+	public function generate_default_quality_file(object $options) : bool {
 
-		// short vars
-			// $id					= $this->get_name();
-			// $additional_path		= $this->get_additional_path();
-			// $initial_media_path	= $this->get_initial_media_path();
+		// options
+			$overwrite	= $options->overwrite ?? true;
+			$from		= $options->from ?? null;
 
-		// quality retouched
-			if (defined('DEDALO_IMAGE_QUALITY_RETOUCHED') && DEDALO_IMAGE_QUALITY_RETOUCHED!==false) {
-				# source data (modified is source)
-				$original_image_path	= $this->get_media_filepath(DEDALO_IMAGE_QUALITY_RETOUCHED);
-				$real_orig_quality		= DEDALO_IMAGE_QUALITY_RETOUCHED;	// Modified
-			}
+		// from value switch
+		switch ($from) {
 
-		// quality original
-			if (!isset($original_image_path) || !file_exists($original_image_path)) {
-				// source data (default quality is source
-				$original_quality		= $this->get_original_quality();
-				$original_image_path	= $this->get_media_filepath($original_quality);
-				$real_orig_quality		= $original_quality; // Original
-			}
-			// check original file again
-			if (!file_exists($original_image_path)) {
-				debug_log(__METHOD__
-					." Unable locate original_image. File does not exists:" . PHP_EOL
-					.' original_image_path: ' . $original_image_path
-					, logger::ERROR
-				);
-				return false;
-			}
+			case 'original_real':
+				// source data (default quality is source)
+					$original_quality			= $this->get_original_quality();
+					$original_image_path		= $this->get_media_filepath($original_quality);
+					$path						= pathinfo($original_image_path);
+					$original_image_extension	= $this->get_original_extension(
+						true // bool exclude_converted
+					);
+					$original_image_path_real = $path['dirname'] . '/' .  $path['filename'] . '.' . $original_image_extension;
+					if (!file_exists($original_image_path_real)) {
+						debug_log(__METHOD__
+							. " Original image path file does not exists ". PHP_EOL
+							. ' original_image_path_real: ' . $original_image_path_real
+							, logger::WARNING
+						);
+						return false;
+					}
 
-		// quality default
-			$default_quality	= $this->get_default_quality();
-			$image_default_path	= $this->get_media_filepath($default_quality);
-			// overwrite or create default quality image version
-			if ($overwrite===true || !file_exists($image_default_path)) {
+				// target data (target quality is thumb)
+					$default_quality	= $this->get_default_quality();
+					$image_default_path	= $this->get_media_filepath($default_quality);
 
-				return $this->convert_quality(
-					$real_orig_quality,
-					$default_quality
-				);
-			}
+				// conversion
+					if ($overwrite===true) {
+
+						// original quality create
+							ImageMagick::convert((object)[
+								'source_file'	=> $original_image_path_real,
+								'target_file'	=> $original_image_path,
+								'quality'		=> 100
+							]);
+
+						// default quality create
+							ImageMagick::convert((object)[
+								'source_file'	=> $original_image_path,
+								'target_file'	=> $image_default_path
+							]);
+					}
+				break;
+
+			default:
+				// quality retouched
+					if (defined('DEDALO_IMAGE_QUALITY_RETOUCHED') && DEDALO_IMAGE_QUALITY_RETOUCHED!==false) {
+						# source data (modified is source)
+						$original_image_path	= $this->get_media_filepath(DEDALO_IMAGE_QUALITY_RETOUCHED);
+						$real_orig_quality		= DEDALO_IMAGE_QUALITY_RETOUCHED;	// Modified
+					}
+
+				// quality original
+					if (!isset($original_image_path) || !file_exists($original_image_path)) {
+						// source data (default quality is source
+						$original_quality		= $this->get_original_quality();
+						$original_image_path	= $this->get_media_filepath($original_quality);
+						$real_orig_quality		= $original_quality; // Original
+					}
+					// check original file again
+					if (!file_exists($original_image_path)) {
+						debug_log(__METHOD__
+							." Unable locate original_image. File does not exists:" . PHP_EOL
+							.' original_image_path: ' . $original_image_path
+							, logger::ERROR
+						);
+						return false;
+					}
+
+				// quality default
+					$default_quality	= $this->get_default_quality();
+					$image_default_path	= $this->get_media_filepath($default_quality);
+					// overwrite or create default quality image version
+					if ($overwrite===true || !file_exists($image_default_path)) {
+
+						return $this->convert_quality(
+							$real_orig_quality,
+							$default_quality
+						);
+					}
+				break;
+		}
 
 
 		return true;
@@ -492,55 +537,55 @@ class component_image extends component_media_common {
 
 
 	/**
-	* GENERATE_DEFAULT_FROM_ORIGINAL_REAL
+	* GENERATE_DEFAULT_FROM_ORIGINAL_REAL (! Integrated into generate_default_quality_file)
 	* Creates default quality version from real original. That means
 	* that myfile.tiff will be preferred over myfile.jpg from original folder
 	* @param bool $overwrite = true
 	* @return bool true
 	*/
-	public function generate_default_from_original_real(bool $overwrite=true) : bool {
+		// public function generate_default_from_original_real(bool $overwrite=true) : bool {
 
-		// source data (default quality is source)
-			$original_quality			= $this->get_original_quality();
-			$original_image_path		= $this->get_media_filepath($original_quality);
-			$path						= pathinfo($original_image_path);
-			$original_image_extension	= $this->get_original_extension(
-				true // bool exclude_converted
-			);
-			$original_image_path_real = $path['dirname'] . '/' .  $path['filename'] . '.' . $original_image_extension;
-			if (!file_exists($original_image_path_real)) {
-				debug_log(__METHOD__
-					. " Original image path file does not exists ". PHP_EOL
-					. ' original_image_path_real: ' . $original_image_path_real
-					, logger::WARNING
-				);
-				return false;
-			}
+		// 	// source data (default quality is source)
+		// 		$original_quality			= $this->get_original_quality();
+		// 		$original_image_path		= $this->get_media_filepath($original_quality);
+		// 		$path						= pathinfo($original_image_path);
+		// 		$original_image_extension	= $this->get_original_extension(
+		// 			true // bool exclude_converted
+		// 		);
+		// 		$original_image_path_real = $path['dirname'] . '/' .  $path['filename'] . '.' . $original_image_extension;
+		// 		if (!file_exists($original_image_path_real)) {
+		// 			debug_log(__METHOD__
+		// 				. " Original image path file does not exists ". PHP_EOL
+		// 				. ' original_image_path_real: ' . $original_image_path_real
+		// 				, logger::WARNING
+		// 			);
+		// 			return false;
+		// 		}
 
-		// target data (target quality is thumb)
-			$default_quality	= $this->get_default_quality();
-			$image_default_path	= $this->get_media_filepath($default_quality);
+		// 	// target data (target quality is thumb)
+		// 		$default_quality	= $this->get_default_quality();
+		// 		$image_default_path	= $this->get_media_filepath($default_quality);
 
-		// conversion
-			if ($overwrite===true) {
+		// 	// conversion
+		// 		if ($overwrite===true) {
 
-				// original quality create
-					ImageMagick::convert((object)[
-						'source_file'	=> $original_image_path_real,
-						'target_file'	=> $original_image_path,
-						'quality'		=> 100
-					]);
+		// 			// original quality create
+		// 				ImageMagick::convert((object)[
+		// 					'source_file'	=> $original_image_path_real,
+		// 					'target_file'	=> $original_image_path,
+		// 					'quality'		=> 100
+		// 				]);
 
-				// default quality create
-					ImageMagick::convert((object)[
-						'source_file'	=> $original_image_path,
-						'target_file'	=> $image_default_path
-					]);
-			}
+		// 			// default quality create
+		// 				ImageMagick::convert((object)[
+		// 					'source_file'	=> $original_image_path,
+		// 					'target_file'	=> $image_default_path
+		// 				]);
+		// 		}
 
 
-		return true;
-	}//end generate_default_from_original_real
+		// 	return true;
+		// }//end generate_default_from_original_real
 
 
 
@@ -563,7 +608,11 @@ class component_image extends component_media_common {
 
 		// check default quality image
 			if (!file_exists($default_image_path)) {
-				debug_log(__METHOD__." Default image quality does not exists. Skip to create thumb. ".to_string($id), logger::ERROR);
+				debug_log(__METHOD__
+					." Default image quality does not exists. Skip to create thumb. ". PHP_EOL
+					.' id: ' . to_string($id)
+					, logger::ERROR
+				);
 				return null;
 			}
 
@@ -593,7 +642,9 @@ class component_image extends component_media_common {
 		// debug
 			debug_log(__METHOD__." dd_thumb function called and executed in ".
 				exec_time_unit($start_time,'ms').' ms'.
-				". Created thumb file: ".to_string($image_thumb_path), logger::DEBUG);
+				". Created thumb file: ".to_string($image_thumb_path)
+				, logger::DEBUG
+			);
 
 		// result
 			$result = (object)[
@@ -1050,7 +1101,9 @@ class component_image extends component_media_common {
 				$overwrite_default = ($this->quality===DEDALO_IMAGE_QUALITY_ORIGINAL || $this->quality===DEDALO_IMAGE_QUALITY_RETOUCHED);
 				if ($overwrite_default===true) {
 					// Generate default image quality from original if is needed
-						$default = $this->generate_default_quality_file(true);
+						$default = $this->generate_default_quality_file((object)[
+							'overwrite' => true
+						]);
 
 					// Generate thumb image quality from default always (if default exits)
 						$thumb = $this->generate_thumb();
@@ -1860,12 +1913,9 @@ class component_image extends component_media_common {
 	* PIXEL_TO_CENTIMETERS
 	* @param string $quality
 	* 	dir source of image
-	* @param $dpi
+	* @param $dpi = DEDALO_IMAGE_PRINT_DPI
 	*	resolution to convert E.g.: 72dpi or 300dpi
-	* Use:
-	*	$image = "/User/Dedalo/images/0.jpg";
-	*	$dpi = 300;
-	*	$result = px2cm($image, $dpi);
+	* @return array $px2cm
 	*/
 	public function pixel_to_centimeters(string $quality, int $dpi=DEDALO_IMAGE_PRINT_DPI) : array {
 
@@ -1875,23 +1925,18 @@ class component_image extends component_media_common {
 		$x = $size[0];
 		$y = $size[1];
 
-		#Convert to centimeter
+		// Convert to centimeter
 		$h = $x * 2.54 / $dpi;
 		$l = $y * 2.54 / $dpi;
 
-		#Format a number with grouped thousands
+		// Format a number with grouped thousands
 		$h = number_format($h, 2, ',', ' ');
 		$l = number_format($l, 2, ',', ' ');
 
-		$px2cm = [];
-
-		#add size unit
-		$px2cm[] = $h."cm";
-		$px2cm[] = $l."cm";
-
-		#return array w values
-		#$px2cm[0] = X
-		#$px2cm[1] = Y
+		$px2cm = [
+			$h.'cm',
+			$l.'cm'
+		];
 
 		return $px2cm;
 	}//end pixel_to_centimeters
@@ -1911,7 +1956,9 @@ class component_image extends component_media_common {
 				$default_quality		= $this->get_default_quality();
 				$image_default_filepath	= $this->get_media_filepath( $default_quality );
 				if (!file_exists($image_default_filepath)) {
-					$this->generate_default_quality_file();
+					$this->generate_default_quality_file((object)[
+						'overwrite' => true
+					]);
 				}
 
 			// re-create thumb always
