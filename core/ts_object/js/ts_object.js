@@ -1931,6 +1931,7 @@ export const ts_object = new function() {
 
 	/**
 	* TOGGLE_ND
+	* @param HTMLElement button_obj
 	* @return bool
 	*/
 	this.toggle_nd = async function(button_obj) {
@@ -1953,9 +1954,9 @@ export const ts_object = new function() {
 		if (!nd_container.style.display || nd_container.style.display==='none') {
 
 			// Load all children and hide descriptors
-				// Load element by AJAX
+				// Load element by AJAX. Result is an array on HTMLElements
 				ts_object.get_children(button_obj)
-				.then(function() {
+				.then(function(result) {
 
 					// Show hidden nd_container
 					nd_container.style.display = 'inline-table'
