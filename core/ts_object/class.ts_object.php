@@ -313,8 +313,8 @@ class ts_object {
 								: $dato;
 
 							$element_obj->value = isset($element_obj->value)
-								? $element_obj->value . $separator . $element_value
-								: $element_value;
+								? to_string($element_obj->value) . $separator . to_string($element_value)
+								: to_string($element_value);
 							break;
 
 						case ($element_obj->type==='icon'):
@@ -327,7 +327,9 @@ class ts_object {
 								if($render_vars->icon==='ND') {
 									#debug_log(__METHOD__." children_data->ar_elements ".to_string($children_data->ar_elements), logger::DEBUG);
 									#debug_log(__METHOD__." dato->section_id ".to_string($dato), logger::DEBUG);
-									if (isset($dato[0]) && isset($dato[0]->section_id) && (int)$dato[0]->section_id===2) {
+									if (isset($dato[0])
+										&& isset($dato[0]->section_id)
+										&& (int)$dato[0]->section_id===2) {
 										ts_object::set_term_as_nd($children_data->ar_elements);
 										$children_data->is_descriptor = false;
 									}
@@ -352,13 +354,14 @@ class ts_object {
 
 						case ($element_obj->type==='link_children'):
 
-							# D : Descriptors
+							// D : Descriptors
 							$element_obj->value = ($this->have_children_of_type($dato, 'descriptor')===true)
 								? 'button show children'
 								: 'button show children unactive';
 
-							# ND : No descriptors case
-							if($this->have_children_of_type($dato, 'nd')===true) {
+							// ND : No descriptors case
+							$have_children_of_type_result = $this->have_children_of_type($dato, 'nd');
+							if($have_children_of_type_result===true) {
 
 								$nd_element = new stdClass();
 									$nd_element->type	= 'link_children_nd';
@@ -401,7 +404,9 @@ class ts_object {
 	/**
 	* HAVE_CHILDREN_OF_TYPE
 	* @param array $ar_children
+	* 	Array of locators
 	* @param string $type
+	* 	As 'descriptor'
 	* @return bool
 	*/
 	public function have_children_of_type( array $ar_children, string $type ) : bool {
@@ -416,7 +421,12 @@ class ts_object {
 
 			$section_map = section::get_section_map( $current_locator->section_tipo );
 			if (empty($section_map) || !isset($section_map->thesaurus->is_descriptor)) {
-				debug_log(__METHOD__." Invalid section_map 'is_descriptor' property from section $current_locator->section_tipo ".to_string($section_map), logger::ERROR);
+				debug_log(__METHOD__
+					." Invalid section_map 'is_descriptor' property " .PHP_EOL
+					.' section_map: ' . json_encode($section_map, JSON_PRETTY_PRINT) . PHP_EOL
+					.' Please, define a valid section_map for section ' .$current_locator->section_tipo
+					, logger::ERROR
+				);
 				continue;
 			}
 
@@ -433,7 +443,9 @@ class ts_object {
 			$dato = $component->get_dato();
 
 			// When first element is found, return true
-			if (isset($dato[0]) && isset($dato[0]->section_id) && (int)$dato[0]->section_id===$descriptor_value) {
+			if (isset($dato[0])
+				&& isset($dato[0]->section_id)
+				&& (int)$dato[0]->section_id==$descriptor_value) {
 				return true;
 			}
 		}
@@ -543,10 +555,13 @@ class ts_object {
 
 			if ($obj_value->type==='term') {
 				if(SHOW_DEBUG===true) {
-					if (!is_string($obj_value->value)) {
-						#dump($obj_value->value, '$obj_value->value ++ EXPECTED STRING. Instead received type: '.gettype($obj_value->value) ." - ".to_string($obj_value->value));
-						debug_log(__METHOD__."  ".'$obj_value->value ++ EXPECTED STRING. But received type: '.gettype($obj_value->value) ." - value:".to_string($obj_value->value), logger::ERROR);
-					}
+					// if (!is_string($obj_value->value)) {
+						// dump($obj_value->value, '$obj_value->value ++ EXPECTED STRING. Instead received type: '.gettype($obj_value->value) ." - ".to_string($obj_value->value));
+						debug_log(__METHOD__
+							."  ".'$obj_value->value ++ EXPECTED STRING. But received type: '.gettype($obj_value->value) ." - value:".to_string($obj_value->value)
+							, logger::ERROR
+						);
+					// }
 				}
 				$ar_elements[$key]->value = $obj_value->value; //'<span class="no_descriptor">' .  . '</span>';
 				break;

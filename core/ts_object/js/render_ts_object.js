@@ -131,7 +131,8 @@ export const render_ts_line = function(options) {
 					text_node		: child_data.ar_elements[j].value,
 					parent			: fragment
 				})
-				element_children_nd.addEventListener('mousedown', (e)=>{
+				element_children_nd.addEventListener('mousedown', fn_child_nd_click)
+				function fn_child_nd_click(e) {
 					e.stopPropagation()
 
 					element_children_nd.classList.add('loading')
@@ -141,7 +142,7 @@ export const render_ts_line = function(options) {
 
 						element_children_nd.classList.remove('loading')
 					})
-				})
+				}
 				break;
 
 			// ARROW ICON
