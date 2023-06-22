@@ -266,7 +266,7 @@ export const keyup_handler = function(e, key, self) {
 
 	// when tab is pressed the node and self is the target component,
 	// so the change data is not for the source component and user has enter (and don't changed nothing)
-		if (e.key==='Tab') {
+		if (e.key==='Tab' || e.key==='Shift') {
 			return false
 		}
 
