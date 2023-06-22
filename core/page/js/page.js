@@ -8,14 +8,21 @@
 	// custom html elements
 	// import '../../common/js/dd-modal.js'
 	// others
-	import {clone, dd_console, find_up_node} from '../../common/js/utils/index.js'
+	import {
+		clone,
+		dd_console,
+		find_up_node,
+		url_vars_to_object,
+		JSON_parse_safely,
+		object_to_url_vars
+	} from '../../common/js/utils/index.js'
 	// import {menu} from '../../menu/js/menu.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	// import {set_before_unload} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {get_instance} from '../../common/js/instances.js'
 	import {common, push_browser_history} from '../../common/js/common.js'
-	import {url_vars_to_object, JSON_parse_safely} from '../../common/js/utils/index.js'
+
 	// import {load_tool} from '../../../tools/tool_common/js/tool_common.js'
 	// import '../../common/js/components_list.js' // launch preload all components files in parallel
 	// import '../../../lib/tinymce/js/tinymce/tinymce.min.js'
@@ -214,7 +221,19 @@ page.prototype.init = async function(options) {
 									? source.config.source_section_tipo
 									: source.tipo
 								// const url_params	= Object.entries(options_url).map(([key, val]) => `${key}=${val}`).join('&');
-								const url = "?t="+ current_tipo + '&m=' + source.mode
+								// const url = "?t="+ current_tipo + '&m=' + source.mode
+
+								// url search. Append section_id if exists
+									const url_vars = url_vars_to_object(location.search)
+									url_vars.t = current_tipo
+									url_vars.m = source.mode
+									if (source.mode==='list' && url_vars.section_id) {
+										delete url_vars.section_id
+									}
+									if (source.section_id_selected) {
+										url_vars.section_id = source.section_id_selected
+									}
+									const url = '?' + object_to_url_vars(url_vars)
 
 							// browser navigation update
 								push_browser_history({

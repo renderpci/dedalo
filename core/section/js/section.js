@@ -5,7 +5,7 @@
 
 
 // imports
-	import {clone} from '../../common/js/utils/index.js'
+	import {clone, url_vars_to_object, object_to_url_vars} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import * as instances from '../../common/js/instances.js'
@@ -1110,7 +1110,14 @@ section.prototype.navigate = async function(options) {
 			const source	= create_source(self, null)
 			const sqo		= self.request_config_object.sqo
 			const title		= self.id
-			const url		= '#section_nav' // '?t='+ self.tipo + '&m=' + self.mode
+			// const url		= '#section_nav' // '?t='+ self.tipo + '&m=' + self.mode
+
+			// url search. Append section_id if exists
+				const url_vars = url_vars_to_object(location.search)
+				if (self.section_id) {
+					url_vars.section_id = self.section_id
+				}
+				const url = '?' + object_to_url_vars(url_vars)
 
 			// browser navigation update
 				push_browser_history({

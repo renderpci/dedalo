@@ -355,13 +355,14 @@ export const render_column_id = function(options) {
 
 								// source
 									const source = {
-										action			: 'search',
-										model			: self.model, // 'section'
-										tipo			: section_tipo,
-										section_tipo	: section_tipo,
-										// section_id	: section_id, // (!) enabling affect local db stored rqo's
-										mode			: 'edit',
-										lang			: self.lang
+										action				: 'search',
+										model				: self.model, // 'section'
+										tipo				: section_tipo,
+										section_tipo		: section_tipo,
+										// section_id		: section_id, // (!) enabling affect local db stored rqo's
+										section_id_selected	: section_id,
+										mode				: 'edit',
+										lang				: self.lang
 									}
 
 								// user_navigation
