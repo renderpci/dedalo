@@ -1005,7 +1005,7 @@ component_portal.prototype.get_search_value = function() {
 * Refresh the portal instance with new sqo params.
 * Used to paginate and sort records
 * @param object options
-* @return promise
+* @return bool
 */
 component_portal.prototype.navigate = async function(options) {
 

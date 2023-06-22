@@ -96,7 +96,7 @@ export const render_column_id = function(options) {
 		}
 		// adjust the font size to fit it into the column
 		// @see https://www.freecodecamp.org/news/learn-css-units-em-rem-vh-vw-with-code-examples/#what-are-vw-units
-		const base_size = 1.25 // defined as --font_size: 1.25rem; into CSS (list.less)
+		const base_size	= 1.25 // defined as --font_size: 1.25rem; into CSS (list.less)
 		const font_size	= get_font_fit_size(section_id, base_size, 4)
 		if (font_size!==base_size) {
 			section_id_node.style.setProperty('--font_size', `${font_size}rem`);
@@ -280,7 +280,7 @@ export const render_column_id = function(options) {
 							class_name		: 'button_edit list_'+ self.config.tool_context.name,
 							parent			: fragment
 						})
-						button_edit.addEventListener("click", function(e){
+						button_edit.addEventListener('click', function(e){
 							e.stopPropagation();
 
 							// tool_context

@@ -795,8 +795,17 @@ class section extends common {
 		}//end if (!empty($component_dato))
 
 		// component_dato
+			if (!isset($this->dato->relations)) {
+				debug_log(__METHOD__
+					. " Invalid section dato->relations." . PHP_EOL
+					. ' tipo: ' . $this->tipo . PHP_EOL
+					. ' component_obj: ' . json_encode($component_obj, JSON_PRETTY_PRINT)
+					, logger::ERROR
+				);
+			}
+			$relations = $this->dato->relations;
 			$fixed_component_dato = array_values(
-				array_filter($this->dato->relations, function($el) use($component_tipo) {
+				array_filter($relations, function($el) use($component_tipo) {
 					return isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo;
 				})
 			);
