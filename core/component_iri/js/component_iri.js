@@ -103,6 +103,11 @@ component_iri.prototype.build_value = function(key) {
 component_iri.prototype.keyup_handler = function(e, key, current_value, self) {
 	e.preventDefault()
 
+	// tab/shift case catch
+		if (e.key==='Tab' || e.key==='Shift') {
+			return
+		}
+
 	// Enter key force to save changes
 		if (e.key==='Enter') {
 

@@ -81,6 +81,11 @@ render_edit_component_input_text.prototype.edit = async function(options) {
 export const keyup_handler = function(e, key, self) {
 	e.preventDefault()
 
+	// tab/shift case catch
+		if (e.key==='Tab' || e.key==='Shift') {
+			return
+		}
+
 	// Enter key force to save changes
 		if (e.key==='Enter') {
 
