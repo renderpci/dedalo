@@ -291,15 +291,6 @@ export const get_buttons = (self) => {
 					button_edit.addEventListener('click', function(e){
 						e.stopPropagation()
 
-						// navigate link
-							// event_manager.publish('user_navigation', {
-							// 	source : {
-							// 		tipo	: item.tipo,
-							// 		model	: 'section',
-							// 		mode	: 'list'
-							// 	}
-							// })
-
 						// open a new window
 							const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
 								tipo	: item.tipo,
@@ -319,7 +310,7 @@ export const get_buttons = (self) => {
 								})
 							})
 					})
-			}
+			}//end for (let i = 0; i < target_sections_length; i++)
 		}
 
 	// button reset

@@ -58,9 +58,6 @@ render_edit_component_iri.prototype.edit = async function(options) {
 		default:
 			return view_default_edit_iri.render(self, options)
 	}
-
-
-	return null
 }//end edit
 
 
@@ -121,41 +118,40 @@ const get_content_value = (i, current_value, self) => {
 			class_name		: 'content_value'
 		})
 
-	const use_title = typeof(self.context.properties.use_title) !== 'undefined'
-		? self.context.properties.use_title
-		: true
+	// title
+		const use_title = typeof(self.context.properties.use_title) !== 'undefined'
+			? self.context.properties.use_title
+			: true
+		if(use_title){
+			// placeholder. Strip label HTML tags
+				const placeholder_label = mode.indexOf('edit')!==-1
+					? (get_label.title || 'Title')
+					: null
+				const placeholder_text = placeholder_label ? strip_tags(placeholder_label) : null
 
-	if(use_title){
-		// placeholder. Strip label HTML tags
-			const placeholder_label = mode.indexOf('edit')!==-1
-				? (get_label.title || 'Tilte')
-				: null
-			const placeholder_text = placeholder_label ? strip_tags(placeholder_label) : null
+			// input title field
+				const input_title = ui.create_dom_element({
+					element_type	: 'input',
+					type			: 'text',
+					class_name		: 'input_value',
+					placeholder		: placeholder_text,
+					value			: title,
+					parent			: content_value
+				})
+				//end change
+				input_title.addEventListener('keyup', function(e) {
 
-		// input title field
-			const input_title = ui.create_dom_element({
-				element_type	: 'input',
-				type			: 'text',
-				class_name		: 'input_value',
-				placeholder		: placeholder_text,
-				value			: title,
-				parent			: content_value
-			})
-			//end change
-			input_title.addEventListener('keyup', function(e) {
+					// update property title
+						current_value.title = input_title.value
 
-				// update property title
-					current_value.title = input_title.value
-
-				// update_value(self, i, current_value)
-					self.keyup_handler(e, i, current_value, self)
-			})//end keyup
-	} // end if(use_title)
+					// update_value(self, i, current_value)
+						self.keyup_handler(e, i, current_value, self)
+				})//end keyup
+		}// end if(use_title)
 
 
-	// input iri field
-	// const regex = /^((https?):\/\/)?([w|W]{3}\.)+[a-zA-Z0-9\-\.]{3,}\.[a-zA-Z]{2,}(\.[a-zA-Z]{2,})?$/;
-
+	// IRI input field
+		// const regex = /^((https?):\/\/)?([w|W]{3}\.)+[a-zA-Z0-9\-\.]{3,}\.[a-zA-Z]{2,}(\.[a-zA-Z]{2,})?$/;
 		const input_iri = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'url',
@@ -275,7 +271,6 @@ const get_content_value = (i, current_value, self) => {
 				const current_window	= window.open(url, 'component_iri_opened', 'width=1024,height=720')
 				current_window.focus()
 		})
-
 
 
 	return content_value

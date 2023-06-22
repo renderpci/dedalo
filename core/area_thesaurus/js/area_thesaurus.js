@@ -332,9 +332,9 @@ area_thesaurus.prototype.get_sections_selector_data = function() {
 
 
 /**
-* GET_SECTIONS_SELECTOR_DATA
+* NAVIGATE
 * @param object options
-* @return array of objects sections_selector_data
+* @return bool
 */
 area_thesaurus.prototype.navigate = async function(options) {
 
@@ -360,6 +360,7 @@ area_thesaurus.prototype.navigate = async function(options) {
 
 	return true
 }//end get_sections_selector_data
+
 
 
 // @license-end
