@@ -248,6 +248,11 @@ page.prototype.init = async function(options) {
 								})
 						}
 
+					// remove aux items
+						if (window.dedalo.service_autocomplete) {
+							window.dedalo.service_autocomplete.destroy(true, true, true)
+						}
+
 					// loading css remove
 						if (container) { container.classList.remove('loading') }
 

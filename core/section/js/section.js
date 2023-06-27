@@ -1044,6 +1044,11 @@ section.prototype.navigate = async function(options) {
 			window.unsaved_data = false
 		}
 
+	// remove aux items
+		if (window.dedalo.service_autocomplete) {
+			window.dedalo.service_autocomplete.destroy(true, true, true)
+		}
+
 	// callback execute
 		if (callback) {
 			await callback()
