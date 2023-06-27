@@ -15,16 +15,29 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		background-color: @bg_color;
 		// background-image: radial-gradient(30% 50% ellipse at 109% 50%, #ffffff 22px, transparent 10px, #ffab01 23px);
-		background-image: radial-gradient(30% 50% ellipse at 109% 50%, @text_color 22px, transparent 10px, @bg_color 0px);
+		// background-image: radial-gradient(
+		// 	30% 50% ellipse at 109% 50%,
+		// 	@text_color 22px,
+		// 	transparent 10px,
+		// 	@bg_color 0px
+		// );
+		background-image: radial-gradient(
+			42% 56% ellipse at 129% 50%,
+			@text_color 117%,
+			transparent 36%,
+			@bg_color 5%
+		);
+
 		border-bottom-left-radius: 6px;
 		border-top-left-radius: 6px;
 		color: @text_color;
 		font-size: 80%;
-		padding: 0px;
+		padding: 1px;
 		padding-left: 5px;
-		padding-right: 8px;
-		min-width: 20px;
+		padding-right: 5px;
+		min-width: 1.5rem;
 	}//end .fn_build_tag_indexation(
 
 
