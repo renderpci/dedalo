@@ -96,6 +96,9 @@ service_autocomplete.prototype.init = async function(options) {
 		// 	document.removeEventListener('keydown', fn_service_autocomplete_keys, false)
 		// })
 
+	// fix service instance as global
+		window.dedalo.service_autocomplete = self
+
 	// status update
 		self.status = 'initialized'
 
