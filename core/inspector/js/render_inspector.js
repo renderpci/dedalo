@@ -238,10 +238,6 @@ const get_content_data = function(self) {
 			}
 		}
 
-
-
-
-
 	// selection info
 		const selection_info = render_selection_info(self)
 		content_data.appendChild(selection_info)
@@ -433,12 +429,17 @@ export const render_section_info = function(self) {
 			: {}
 
 	// values from caller (section)
-		const section_tipo			= section.section_tipo
-		const label					= section.label
-		const created_date			= section_data.created_date
-		const modified_date			= section_data.modified_date
-		const created_by_user_name	= section_data.created_by_user_name
-		const modified_by_user_name	= section_data.modified_by_user_name
+		const section_tipo				= section.section_tipo
+		const label						= section.label
+		const created_date				= section_data.created_date
+		const modified_date				= section_data.modified_date
+		const created_by_user_name		= section_data.created_by_user_name
+		const modified_by_user_name		= section_data.modified_by_user_name
+		const publication_first_date	= section_data.publication_first_date
+		const publication_last_date		= section_data.publication_last_date
+		const publication_first_user	= section_data.publication_first_user
+		const publication_last_user		= section_data.publication_last_user
+
 
 	// DocumentFragment
 		const fragment = new DocumentFragment();
@@ -574,6 +575,26 @@ export const render_section_info = function(self) {
 			inner_html		: modified_date + '<br>' + modified_by_user_name,
 			parent			: fragment
 		})
+
+	// published
+		// label
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'key',
+			inner_html		: get_label.publicado || 'Published',
+			parent			: fragment
+		})
+		// value
+		const publication_value = publication_first_date
+			? publication_first_date + '<br>' + publication_first_user + '<br>' + publication_last_date + '<br>' + publication_last_user
+			: get_label.nunca || 'Never'
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'value',
+			inner_html		: publication_value,
+			parent			: fragment
+		})
+
 
 	// clean and set container
 		while (container.firstChild) {
