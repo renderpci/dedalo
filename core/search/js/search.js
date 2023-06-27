@@ -679,7 +679,7 @@ search.prototype.get_search_group_operator = function(search_group) {
 
 /**
 * GET_SEARCH_JSON_OBJECT
-* Resolve and configure the final search json object used for build sql query
+* Resolve and configure the final search JSON object used for build SQL query
 * @return object search_json_object
 */
 	// this.get_search_json_object = function() {
@@ -1106,7 +1106,6 @@ search.prototype.filter_is_empty = function(filter_obj) {
 
 	// 	return true;
 	// }//end init_tipology_selector
-
 
 
 

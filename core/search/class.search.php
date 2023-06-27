@@ -2108,9 +2108,17 @@ class search {
 
 		// path : array
 			$path = $search_object->path ?? [];
+			if (!is_array($path)) {
+				debug_log(__METHOD__
+					. " Invalid path " . PHP_EOL
+					. ' path: ' . to_string($path) . PHP_EOL
+					. ' type: ' . gettype($path)
+					, logger::ERROR
+				);
+			}
 
 		// table_alias : string
-			$table_alias = $this->get_table_alias_from_path($path);
+			$table_alias = $this->get_table_alias_from_path( (array)$path );
 
 		// lang. If isset, add to component_path
 			if (isset($search_object->lang) && $search_object->lang!=='all') {
