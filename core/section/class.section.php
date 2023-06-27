@@ -2017,35 +2017,38 @@ class section extends common {
 
 
 	/**
+	* GET_MODIFIED_BY_USERID
+	* Get section dato property 'modified_by_userID'
+	* @return int|null $modified_by_userID
+	*/
+	public function get_modified_by_userID() : ?int {
+
+		$dato = $this->get_dato();
+		if( isset($dato->modified_by_userID) )  {
+			return (int)$dato->modified_by_userID;
+		}
+
+		return null;
+	}//end get_modified_by_userID
+
+
+
+	/**
 	* GET_CREATED_BY_USER_NAME
 	* @param bool $full_name = false
 	* @return string|null $user_name
 	*/
 	public function get_created_by_user_name(bool $full_name=false) : ?string {
 
-		$dato = $this->get_dato();
-
-		if( !isset($dato->created_by_userID) ) {
-			return null;
-		}
-		$user_id = $dato->created_by_userID;
-		if( !$user_id ) {
+		$user_id = $this->get_created_by_userID();
+		if( empty($user_id) ) {
 			return null;
 		}
 
-		$username_tipo = ($full_name===true)
-			? DEDALO_FULL_USER_NAME_TIPO
-			: DEDALO_USER_NAME_TIPO;
-
-		$component_input_text = component_common::get_instance(
-			'component_input_text',
-			$username_tipo,
+		$user_name = section::get_user_name_by_userID(
 			$user_id,
-			'edit',
-			DEDALO_DATA_NOLAN,
-			DEDALO_SECTION_USERS_TIPO
+			$full_name // bool full_name
 		);
-		$user_name = $component_input_text->get_valor();
 
 		return $user_name;
 	}//end get_created_by_user_name
@@ -2054,30 +2057,20 @@ class section extends common {
 
 	/**
 	* GET_MODIFIED_BY_USER_NAME
+	* @param bool $full_name = false
 	* @return string|null $user_name
 	*/
-	public function get_modified_by_user_name() : ?string {
+	public function get_modified_by_user_name(bool $full_name=false) : ?string {
 
-		$dato = $this->get_dato();
-		if( !isset($dato->modified_by_userID) ){
-			return null;
-		}
-		$user_id = $dato->modified_by_userID;
-		if( !$user_id ) {
+		$user_id = $this->get_modified_by_userID();
+		if( empty($user_id) ) {
 			return null;
 		}
 
-		$username_model	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_USER_NAME_TIPO,true);
-		$component		= component_common::get_instance(
-			$username_model, // 'component_input_text',
-			DEDALO_USER_NAME_TIPO,
+		$user_name = section::get_user_name_by_userID(
 			$user_id,
-			'list',
-			DEDALO_DATA_NOLAN,
-			DEDALO_SECTION_USERS_TIPO
+			$full_name // bool full_name
 		);
-		$dato		= $component->get_dato();
-		$user_name	= $dato[0] ?? null;
 
 		return $user_name;
 	}//end get_modified_by_user_name
@@ -2087,17 +2080,17 @@ class section extends common {
 	/**
 	* GET_USER_NAME_BY_USERID
 	* @param int $userID
-	* @param bool $full = true
+	* @param bool $full_name = true
 	* @return string $user_name
 	*/
-	public static function get_user_name_by_userID(int $userID, bool $full=true) : ?string {
+	public static function get_user_name_by_userID(int $userID, bool $full_name=true) : ?string {
 
 		if($userID==DEDALO_SUPERUSER){
-			$user_name = $full===false
+			$user_name = $full_name===false
 				? 'root'
 				: 'Admin debugger';
 		}else{
-			$tipo = $full===false
+			$tipo = $full_name===false
 				? DEDALO_USER_NAME_TIPO
 				: DEDALO_FULL_USER_NAME_TIPO;
 
@@ -2129,8 +2122,8 @@ class section extends common {
 		$section_info = (object)[
 			'created_date'				=> $this->get_created_date(),
 			'modified_date'				=> $this->get_modified_date(),
-			'created_by_user_name'		=> $this->get_created_by_user_name(),
-			'modified_by_user_name'		=> $this->get_modified_by_user_name(),
+			'created_by_user_name'		=> $this->get_created_by_user_name(false),
+			'modified_by_user_name'		=> $this->get_modified_by_user_name(false),
 			// publication
 			'publication_first_date'	=> $this->get_publication_date(diffusion::$publication_first_tipo),
 			'publication_last_date'		=> $this->get_publication_date(diffusion::$publication_last_tipo),
