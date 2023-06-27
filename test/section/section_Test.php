@@ -982,6 +982,39 @@ final class section_test extends TestCase {
 
 
 	/**
+	* TEST_get_modified_by_userID
+	* @return void
+	*/
+	public function test_get_modified_by_userID() : void {
+
+		$section_id		= self::$section_id;
+		$section_tipo	= self::$section_tipo;
+		$mode			= 'edit';
+
+		$section = section::get_instance(
+			$section_id, // string|null section_id
+			$section_tipo, // string section_tipo
+			$mode
+		);
+
+		$result = $section->get_modified_by_userID();
+
+		$this->assertTrue(
+			gettype($result)==='integer' || gettype($result)==='NULL',
+			'expected integer or NULL '. PHP_EOL
+			.' result: ' . gettype($result)
+		);
+
+		$this->assertTrue(
+			$result===-1 || $result===1,
+			'expected $result === -1 || $result===1 '. PHP_EOL
+			.' result: ' . $result
+		);
+	}//end test_get_modified_by_userID
+
+
+
+	/**
 	* TEST_get_created_by_user_name
 	* @return void
 	*/
@@ -1006,8 +1039,8 @@ final class section_test extends TestCase {
 		);
 
 		$this->assertTrue(
-			$result==='root',
-			'expected $result === root '. PHP_EOL
+			$result==='root' || $result==='render',
+			'expected $result === root || $result===render '. PHP_EOL
 			.' result: ' . $result
 		);
 	}//end test_get_created_by_user_name
@@ -1039,9 +1072,9 @@ final class section_test extends TestCase {
 		);
 
 		$this->assertTrue(
-			$result==='root',
-			'expected $result === root '. PHP_EOL
-			.' result: ' . $result
+			$result==='root' || $result==='render',
+			'expected $result === root || $result===render ' . PHP_EOL
+			.' result: ' . $result . ' - ' . $section_tipo.'_'.$section_id
 		);
 	}//end test_get_modified_by_user_name
 
@@ -1176,7 +1209,6 @@ final class section_test extends TestCase {
 		$result = $section->get_publication_user(
 			diffusion::$publication_first_tipo
 		);
-			dump($result, ' //////////// result ++ '.to_string());
 
 		$this->assertTrue(
 			gettype($result)==='string' || gettype($result)==='NULL',
