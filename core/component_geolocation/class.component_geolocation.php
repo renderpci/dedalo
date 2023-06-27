@@ -279,6 +279,101 @@ class component_geolocation extends component_common {
 
 
 	/**
+	* GET_DIFFUSION_VALUE_AS_GEOJSON
+	* Sample
+	* [
+	*    {
+	*      "layer_id": 1,
+	*      "text": "...",
+	*      "layer_data": {
+	*        "type": "FeatureCollection",
+	*        "features": [
+	*          {
+	*            "type": "Feature",
+	*            "properties": {},
+	*            "geometry": {
+	*              "type": "Point",
+	*              "coordinates": [
+	*                2.011618, // longitude
+	*                41.562546 // latitude
+	*              ]
+	*            }
+	*          }
+	*        ]
+	*      }
+	*    }
+	* ]
+	* @see ontology publication use in mdcat4091
+	* @see diffusion_sql::build_geolocation_data_geojson
+	* @return string $value
+	* 	Encoded geojson data
+	*/
+	public function get_diffusion_value_as_geojson() : ?string {
+
+		$dato = $this->get_dato(); // object as {"alt": 281, "lat": "41.56236346", "lon": "2.01215141", "zoom": 15}
+
+		// select first
+		$value = $dato[0] ?? null;
+
+		// check empty
+		if (empty($value) || !isset($value->lon) || !isset($value->lat)) {
+			return null;
+		}
+
+
+		// default dato test
+			// default values
+			// "alt": 16,
+			// "lat": 39.462571,
+			// "lon": -0.376295,
+			// "zoom": 12
+			$value_lat_str	= isset($value->lat)
+				? strval($value->lat)
+				: null;
+			$value_lon_str	= isset($value->lon)
+				? strval($value->lon)
+				: null;
+			$value_lat_str	= str_replace(',', '.', $value_lat_str);
+			$value_lon_str	= str_replace(',', '.', $value_lon_str);
+			if ($value_lat_str==='39.462571' && $value_lon_str==='-0.376295') {
+				return null;
+			}
+
+		// coordinates. Converts float number to 16 decimals number using '.' separator
+			$lon = number_format( trim($value->lon), 16, '.', ''); // string as "2.012151410452" (use dot notation to preserve JSON integrity)
+			$lat = number_format( trim($value->lat), 16, '.', ''); // string as "41.562363467527" (use dot notation to preserve JSON integrity)
+
+		// geojson
+			$ar_value = json_decode('[
+			  {
+			      "layer_id": 1,
+			      "text": "",
+			      "layer_data": {
+			        "type": "FeatureCollection",
+			        "features": [
+			          {
+			            "type": "Feature",
+			            "properties": {},
+			            "geometry": {
+			              "type": "Point",
+			              "coordinates": ['.$lon.','.$lat.']
+			            }
+			          }
+			        ]
+			      }
+			  }
+			]');
+
+		// value . Encode as cleaned text to publish
+			$diffusion_value = json_encode($ar_value);
+
+
+		return $diffusion_value;
+	}//end get_diffusion_value_as_geojson
+
+
+
+	/**
 	* GET_SORTABLE
 	* @return bool
 	* 	Default is true. Override when component is sortable
