@@ -6,10 +6,10 @@
 */
 class records_search extends common {
 
-	
+
 	protected $section_obj;
 	protected $modo;
-	
+
 	protected $section_tipo;
 	#protected $search_list_tipo;
 
@@ -20,7 +20,10 @@ class records_search extends common {
 	protected $ar_components_search_obj;
 	protected $ar_buttons_search_obj;
 
-	
+	public $ar_sections_by_type;
+	public $ar_real_section_tipo;
+
+
 	/**
 	* __CONSTRUCT
 	*/
@@ -47,18 +50,17 @@ class records_search extends common {
 	* de los css / js necesarios siempre en modo list? ... DECIDIR OPCIÓN
 	*/
 	public function get_html() { // Aprox 100 ms
-		
+
 		ob_start();
 		include ( __CLASS__ .'.php' );
 		$html =  ob_get_clean();
 
 		# CACHE
-		#$_SESSION['dedalo4']['config']['records_search'][$section_to_cache]['html'] = $html;		
-		
+		#$_SESSION['dedalo4']['config']['records_search'][$section_to_cache]['html'] = $html;
+
 		return (string)$html;
 	}//end get_html
 
 
 
 }//end records_search
-?>
