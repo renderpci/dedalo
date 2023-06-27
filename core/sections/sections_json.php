@@ -186,15 +186,15 @@
 
 				// item sections value. Update in each iteration
 					$current_value = new stdClass();
-						$current_value->section_tipo			= $section_tipo;
-						$current_value->section_id				= $section_id;
-					// section info
-						$current_value->created_date			= $section->get_created_date();
-						$current_value->modified_date			= $section->get_modified_date();
-						$current_value->created_by_user_name	= $section->get_created_by_user_name();
-						$current_value->modified_by_user_name	= $section->get_modified_by_user_name();
-
-						$current_value->paginated_key			= $key + $offset;
+						$current_value->section_tipo	= $section_tipo;
+						$current_value->section_id		= $section_id;
+					// section info (information about creation, modification and publication of current section)
+						$section_info = $section->get_section_info();
+						foreach ($section_info as $si_key => $si_value) {
+							$current_value->{$si_key} = $si_value;
+						}
+					// paginated_key
+						$current_value->paginated_key = $key + $offset;
 					// tm case
 						if($mode==='tm'){
 							$current_value->matrix_id	= $current_record->id;

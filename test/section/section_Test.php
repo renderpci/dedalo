@@ -1065,7 +1065,7 @@ final class section_test extends TestCase {
 
 		$user_id = -1;
 
-		$result = $section->get_user_name_by_userID( $user_id );
+		$result = $section->get_user_name_by_userID( $user_id, true );
 
 		$this->assertTrue(
 			gettype($result)==='string' || gettype($result)==='NULL',
@@ -1078,7 +1078,113 @@ final class section_test extends TestCase {
 			'expected $result === Admin debugger '. PHP_EOL
 			.' result: ' . $result
 		);
+
+		$result2 = $section->get_user_name_by_userID( $user_id, false );
+
+		$this->assertTrue(
+			$result2==='root',
+			'expected $result === root '. PHP_EOL
+			.' result: ' . $result2
+		);
 	}//end test_get_user_name_by_userID
+
+
+
+	/**
+	* TEST_get_section_info
+	* @return void
+	*/
+	public function test_get_section_info() : void {
+
+		$section_id		= self::$section_id;
+		$section_tipo	= self::$section_tipo;
+		$mode			= 'edit';
+
+		$section = section::get_instance(
+			$section_id, // string|null section_id
+			$section_tipo, // string section_tipo
+			$mode
+		);
+
+		$result = $section->get_section_info();
+
+		$this->assertTrue(
+			gettype($result)==='object',
+			'expected object or NULL '. PHP_EOL
+			.' result: ' . gettype($result)
+		);
+
+		$this->assertTrue(
+			!empty($result->created_by_user_name),
+			'expected $!empty($result->created_by_user_name) '. PHP_EOL
+			.!empty($result->created_by_user_name)
+		);
+		$this->assertTrue(
+			!empty($result->created_date),
+			'expected $!empty($result->created_date) '. PHP_EOL
+			.!empty($result->created_date)
+		);
+	}//end test_get_section_info
+
+
+
+	/**
+	* TEST_get_publication_date
+	* @return void
+	*/
+	public function test_get_publication_date() : void {
+
+		$section_id		= self::$section_id;
+		$section_tipo	= self::$section_tipo;
+		$mode			= 'edit';
+
+		$section = section::get_instance(
+			$section_id, // string|null section_id
+			$section_tipo, // string section_tipo
+			$mode
+		);
+
+		$result = $section->get_publication_date(
+			diffusion::$publication_first_tipo
+		);
+
+		$this->assertTrue(
+			gettype($result)==='string' || gettype($result)==='NULL',
+			'expected string or NULL '. PHP_EOL
+			.' result: ' . gettype($result)
+		);
+	}//end test_get_publication_date
+
+
+
+	/**
+	* TEST_get_publication_user
+	* @return void
+	*/
+	public function test_get_publication_user() : void {
+
+		$section_id		= self::$section_id;
+		$section_tipo	= self::$section_tipo;
+		$mode			= 'edit';
+
+		$section = section::get_instance(
+			$section_id, // string|null section_id
+			$section_tipo, // string section_tipo
+			$mode
+		);
+
+		$result = $section->get_publication_user(
+			diffusion::$publication_first_tipo
+		);
+			dump($result, ' //////////// result ++ '.to_string());
+
+		$this->assertTrue(
+			gettype($result)==='string' || gettype($result)==='NULL',
+			'expected string or NULL '. PHP_EOL
+			.' result: ' . gettype($result)
+		);
+	}//end test_get_publication_user
+
 
 
 

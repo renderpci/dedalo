@@ -2087,17 +2087,24 @@ class section extends common {
 	/**
 	* GET_USER_NAME_BY_USERID
 	* @param int $userID
+	* @param bool $full = true
 	* @return string $user_name
 	*/
-	public static function get_user_name_by_userID(int $userID) : ?string {
+	public static function get_user_name_by_userID(int $userID, bool $full=true) : ?string {
 
 		if($userID==DEDALO_SUPERUSER){
-			$user_name = 'Admin debugger';
+			$user_name = $full===false
+				? 'root'
+				: 'Admin debugger';
 		}else{
-			$full_username_model	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_FULL_USER_NAME_TIPO,true);
+			$tipo = $full===false
+				? DEDALO_USER_NAME_TIPO
+				: DEDALO_FULL_USER_NAME_TIPO;
+
+			$full_username_model	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			$component				= component_common::get_instance(
 				$full_username_model, // 'component_input_text',
-				DEDALO_FULL_USER_NAME_TIPO,
+				$tipo,
 				$userID,
 				'list',
 				DEDALO_DATA_NOLAN,
@@ -2114,93 +2121,69 @@ class section extends common {
 
 	/**
 	* GET_SECTION_INFO
-	* @param string $format
-	* @return object|string|null
+	* Return information about creation, modification and publication of current section
+	* @return object
 	*/
-		// public function get_section_info(string $format='json') {
+	public function get_section_info() : object {
 
-		// 	$section_info = new stdClass();
+		$section_info = (object)[
+			'created_date'				=> $this->get_created_date(),
+			'modified_date'				=> $this->get_modified_date(),
+			'created_by_user_name'		=> $this->get_created_by_user_name(),
+			'modified_by_user_name'		=> $this->get_modified_by_user_name(),
+			// publication
+			'publication_first_date'	=> $this->get_publication_date(diffusion::$publication_first_tipo),
+			'publication_last_date'		=> $this->get_publication_date(diffusion::$publication_last_tipo),
+			'publication_first_user'	=> $this->get_publication_user(diffusion::$publication_first_user_tipo),
+			'publication_last_user'		=> $this->get_publication_user(diffusion::$publication_last_user_tipo)
+		];
 
-		// 		$section_info->created_date 			= (string)$this->get_created_date();
-		// 		$section_info->created_by_user_name		= (string)$this->get_created_by_user_name();
-		// 		$section_info->modified_date 			= (string)$this->get_modified_date();
-		// 		$section_info->modified_by_user_name	= (string)$this->get_modified_by_user_name();
 
-		// 		$section_info->label					= (string)rawurlencode($this->get_label());
-		// 		$section_info->section_id				= (string)$this->get_section_id();
-
-		// 	// publication info
-		// 		$section_info->publication_first		= array(
-		// 			'label' => RecordObj_dd::get_termino_by_tipo(diffusion::$publication_first_tipo, DEDALO_DATA_LANG, true, true),
-		// 			'value' => $this->get_publication_date(diffusion::$publication_first_tipo)
-		// 		);
-		// 		$section_info->publication_last			= array(
-		// 			'label' => RecordObj_dd::get_termino_by_tipo(diffusion::$publication_last_tipo, DEDALO_DATA_LANG, true, true),
-		// 			'value' => $this->get_publication_date(diffusion::$publication_last_tipo)
-		// 		);
-		// 		$section_info->publication_first_user	= array(
-		// 			'label' => null, // RecordObj_dd::get_termino_by_tipo(diffusion::$publication_first_user_tipo, DEDALO_DATA_LANG, true, true),
-		// 			'value' => $this->get_publication_user(diffusion::$publication_first_user_tipo)
-		// 		);
-		// 		$section_info->publication_last_user	= array(
-		// 			'label' => null, // RecordObj_dd::get_termino_by_tipo(diffusion::$publication_last_user_tipo, DEDALO_DATA_LANG, true, true),
-		// 			'value' => $this->get_publication_user(diffusion::$publication_last_user_tipo)
-		// 		);
-
-		// 	switch ($format) {
-		// 		case 'json':
-		// 			return json_handler::encode($section_info);
-		// 			break;
-
-		// 		default:
-		// 			return $section_info;
-		// 			break;
-		// 	}
-
-		// 	return null;
-		// }//end get_section_info
+		return $section_info;
+	}//end get_section_info
 
 
 
 	/**
 	* GET_PUBLICATION_DATE
+	* @see class.diffusion definitions for publication_first_tipo, publication_last_tipo, etc.
 	* @param string $component_tipo
 	* @return string|null $local_date
 	*/
-		// public function get_publication_date(string $component_tipo) : ?string {
+	public function get_publication_date(string $component_tipo) : ?string {
 
-		// 	// tipos
-		// 		$section_id		= $this->section_id;
-		// 		$section_tipo	= $this->tipo;
+		// tipos
+			$section_id		= $this->section_id;
+			$section_tipo	= $this->tipo;
 
-		// 	// component
-		// 		$model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-		// 		$component	= component_common::get_instance(
-		// 			$model_name,
-		// 			$component_tipo,
-		// 			$section_id,
-		// 			'list',
-		// 			DEDALO_DATA_NOLAN,
-		// 			$section_tipo
-		// 		);
-		// 		$dato = $component->get_dato();
+		// component
+			$model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component	= component_common::get_instance(
+				$model_name,
+				$component_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
+			$dato = $component->get_dato();
 
-		// 	// local_date
-		// 		if (empty($dato)) {
+		// local_date
+			if (empty($dato)) {
 
-		// 			$local_date = null;
+				$local_date = null;
 
-		// 		}else{
+			}else{
 
-		// 			$current_date	= reset($dato);
-		// 			$dd_date		= new dd_date($current_date->start);
-		// 			$timestamp		= $dd_date->get_dd_timestamp();
-		// 			$local_date		= component_date::timestamp_to_date($timestamp, true); // string|null
-		// 		}
+				$current_date	= reset($dato);
+				$dd_date		= new dd_date($current_date->start);
+				$timestamp		= $dd_date->get_dd_timestamp();
+				$local_date		= component_date::timestamp_to_date($timestamp, true); // string|null
+			}
 
 
-		// 	return $local_date;
-		// }//end get_publication_date
+		return $local_date;
+	}//end get_publication_date
 
 
 
@@ -2209,38 +2192,47 @@ class section extends common {
 	* @param string $component_tipo
 	* @return string|null $user_name
 	*/
-		// public function get_publication_user(string $component_tipo) : ?string {
+	public function get_publication_user(string $component_tipo) : ?string {
 
-		// 	// tipos
-		// 		$section_id		= $this->section_id;
-		// 		$section_tipo	= $this->tipo;
+		// tipos
+			$section_id		= $this->section_id;
+			$section_tipo	= $this->tipo;
 
-		// 	// component
-		// 		$model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-		// 		$component	= component_common::get_instance(
-		// 			$model_name,
-		// 			$component_tipo,
-		// 			$section_id,
-		// 			'list',
-		// 			DEDALO_DATA_NOLAN,
-		// 			$section_tipo
-		// 		);
-		// 		$dato = $component->get_dato();
+		// component
+			$model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component	= component_common::get_instance(
+				$model_name,
+				$component_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
+			$dato = $component->get_dato();
 
-		// 	// user name
-		// 		if (empty($dato)) {
+		// user name
+			if (empty($dato)) {
 
-		// 			$user_name = null;
+				$user_name = null;
 
-		// 		}else{
-		// 			$user_id	= reset($dato)->section_id;
-		// 			// $user_name	= section::get_user_name_by_userID($user_id);
-		// 			$component_input_text = component_common::get_instance('component_input_text',DEDALO_USER_NAME_TIPO, $user_id, 'edit', DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);
-		// 			$user_name = $component_input_text->get_valor();
-		// 		}
+			}else{
+				$user_id	= (int)reset($dato)->section_id;
+				$user_name	= section::get_user_name_by_userID($user_id, false);
+				// $model_name	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_USER_NAME_TIPO,true);
+				// $component	= component_common::get_instance(
+				// 	$model_name,
+				// 	DEDALO_USER_NAME_TIPO,
+				// 	$user_id,
+				// 	'list',
+				// 	DEDALO_DATA_NOLAN,
+				// 	DEDALO_SECTION_USERS_TIPO
+				// );
+				// $dato		= $component->get_dato();
+				// $user_name	= $dato[0] ?? null;
+			}
 
-		// 	return $user_name;
-		// }//end get_publication_user
+		return $user_name;
+	}//end get_publication_user
 
 
 
