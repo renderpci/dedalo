@@ -478,14 +478,18 @@ component_geolocation.prototype.update_input_values = function(key, data, map_co
 		input_lon.value		= data.lon
 		input_zoom.value	= data.zoom
 
-	//get the value from alt input
-		data.alt = JSON.parse(input_alt.value)
+	// get the value from alt input
+		data.alt = input_alt.value
+			? JSON.parse(input_alt.value)
+			: null
 
-	//set the current value
+	// set the current value
 		self.current_value[key].lat		= data.lat
 		self.current_value[key].lon		= data.lon
 		self.current_value[key].zoom	= data.zoom
-		self.current_value[key].alt		= data.alt
+		if (data.alt) {
+			self.current_value[key].alt	= data.alt
+		}
 
 	// track changes in self.data.changed_data
 		// changed_data
