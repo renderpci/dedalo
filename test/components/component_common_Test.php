@@ -1438,27 +1438,97 @@ final class component_common_test extends TestCase {
 
 
 
+	/**
+	* TEST_GET_COMPONENT_PERMISSIONS
+	* @return void
+	*/
+	public function test_get_component_permissions() {
+
+		// default dato
+		foreach (get_elements() as $element) {
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
+			$component = component_common::get_instance(
+				$element->model, // string model
+				$element->tipo, // string tipo
+				$element->section_id, // string section_id
+				$element->mode, // string mode
+				$element->lang, // string lang
+				$element->section_tipo, // string section_tipo
+				false
+			);
+
+			$result = $component->get_component_permissions();
+			// dump($result, ' result ++ '.to_string($element->model));
+
+			$this->assertTrue(
+				empty($_ENV['DEDALO_LAST_ERROR']),
+				'expected running without errors'
+			);
+
+			$this->assertTrue(
+				gettype($result)==='integer',
+				'result type expected integer. current type: ' .gettype($result) .' - '.$element->model
+			);
+
+			$this->assertTrue(
+				$result===2,
+				'result type expected 2. current: ' .$result .' - '.$element->model
+			);
+
+			$component->set_permissions(1);
+			$result = $component->get_component_permissions();
+			$this->assertTrue(
+				$result===1,
+				'result type expected 1. current: ' .$result .' - '.$element->model
+			);
+		}//end foreach items
+	}//end test_get_component_permissions
 
 
 
+	/**
+	* TEST_get_search_query
+	* @return void
+	*/
+	public function test_get_search_query() {
 
+		// default dato
+		$query_object = json_decode('
+			{
+			  "q": "pepe",
+			  "lang": "lg-spa",
+			  "path": [
+			    {
+			      "section_tipo": "oh1",
+			      "component_tipo": "oh24",
+			      "target_section": "rsc197"
+			    },
+			    {
+			      "section_tipo": "rsc197",
+			      "component_tipo": "rsc85",
+			      "model": "component_input_text"
+			    }
+			  ],
+			  "component_path": [
+			    "dato"
+			  ]
+			}
+		');
 
+		$result = component_input_text::get_search_query($query_object);
+			// dump($result, ' result ++ '.to_string());
 
+		$this->assertTrue(
+			empty($_ENV['DEDALO_LAST_ERROR']),
+			'expected running without errors'
+		);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+		$this->assertTrue(
+			gettype($result)==='array',
+			'result type expected array. current type: ' .gettype($result)
+		);
+	}//end test_get_search_query
 
 
 
