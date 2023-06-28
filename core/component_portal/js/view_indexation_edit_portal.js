@@ -308,11 +308,11 @@ const render_column_id = function(options) {
 const render_tag_column = function(options) {
 
 	// options
-		const locator = options.locator
-		const data	= options.caller.data || {}
-		const value	= data.value || []
-		const value_tags = value.filter(el => el.section_tipo===locator.section_tipo && el.section_id==locator.section_id)
-		// const value_tags = [locator]
+		const locator		= options.locator
+		const data			= options.caller.data || {}
+		const value			= data.value || []
+		const value_tags	= value.filter(el => el.section_tipo===locator.section_tipo && el.section_id==locator.section_id)
+		// const value_tags	= [locator]
 
 	const fragment = new DocumentFragment()
 
@@ -321,6 +321,11 @@ const render_tag_column = function(options) {
 		for (let i = 0; i < value_tags_length; i++) {
 
 			const current_locator = value_tags[i]
+
+			if (!current_locator.tag_id) {
+				console.warn('Ignored non tag_id locator:', current_locator);
+				continue;
+			}
 
 			const tag_node = ui.create_dom_element({
 				element_type	: 'div',
