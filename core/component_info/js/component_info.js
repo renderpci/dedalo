@@ -66,12 +66,17 @@ component_info.prototype.get_widgets = async function() {
 
 	const self = this
 
-	const value = self.data.value
-
-	const datalist = self.data.datalist
-	// self data verification
+	const datalist	= self.data.datalist
+	const value		= self.data.value
+		// self data verification
 		if (!value || value.length===0) {
 			return false
+		}
+		const value_length = value.length
+		for (let i = 0; i < value_length; i++) {
+			if(!value[i]) {
+				console.error('Error. empty value item received:', i, value);
+			}
 		}
 
 	const widgets_properties		= self.context.properties.widgets
@@ -88,7 +93,7 @@ component_info.prototype.get_widgets = async function() {
 
 			const loaded_widget		= self.ar_instances.find(item => item.id === widget_id)
 
-			const widget_value		= value.filter(item => item.widget === widget_name)
+			const widget_value		= value.filter(item => item && item.widget===widget_name)
 			const widget_datalist	= (datalist) ? datalist.filter(item => item.widget === widget_name) : []
 
 			if(loaded_widget){
