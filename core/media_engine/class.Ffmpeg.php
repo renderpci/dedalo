@@ -531,7 +531,7 @@ final class Ffmpeg {
 			if(file_exists($prgfile)) {
 				chmod($prgfile, 0755);
 			}else{
-				// throw new Exception("Error Processing Media. Script file not exists or is not accessible", 1);
+				// throw new Exception("Error Processing Media. Script file do not exists or is not accessible", 1);
 				debug_log(__METHOD__
 					. " Error Processing Media. Script file do not exists or is not accessible " . PHP_EOL
 					. 'command: '. $command

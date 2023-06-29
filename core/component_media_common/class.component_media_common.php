@@ -829,8 +829,8 @@ class component_media_common extends component_common {
 		$result = $this->remove_component_media_files([$quality]);
 		if ($result===true) {
 
-			// save To update valor_list
-				$this->Save();
+			// save to force update dato files_info
+			$this->Save();
 
 			$response->result	= true;
 			$response->msg		= 'File deleted successfully. ' . $quality;
@@ -1510,7 +1510,7 @@ class component_media_common extends component_common {
 	/**
 	* BUILD_VERSION - Overwrite in each component for real process
 	* Creates a new version based on target quality
-	* (!) Note that this generic method on copy files,
+	* (!) Note that this generic method only copy files,
 	* to real process, overwrite in each component !
 	* @param string $quality
 	* @param bool $async = true

@@ -1008,7 +1008,7 @@ class component_av extends component_media_common {
 
 			// get files info
 				$files_info	= [];
-				$ar_quality = DEDALO_AV_AR_QUALITY;
+				$ar_quality = $this->get_ar_quality();
 				foreach ($ar_quality as $current_quality) {
 					if ($current_quality==='thumb') continue;
 					// read file if exists to get file_info
