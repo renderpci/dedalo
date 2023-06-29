@@ -1256,44 +1256,47 @@ class component_relation_common extends component_common {
 
 	/**
 	* RESOLVE_QUERY_OBJECT_SQL
+	* Parses given SQO to use it into the SQL query
+	* @param object $query_object
 	* @return object $query_object
 	*/
 	public static function resolve_query_object_sql( object $query_object ) : object {
-		# Always set fixed values
-		$query_object->type 	= 'jsonb';
-		$query_object->unaccent = false;
 
-		# component path
+		// Always set fixed values
+		$query_object->type		= 'jsonb';
+		$query_object->unaccent	= false;
+
+		// component path
 		$query_object->component_path = ['relations'];
 
 		$q = $query_object->q;
 
 
-		# For unification, all non string are json encoded
-		# This allow accept mixed values (encoded and no encoded)
+		// For unification, all non string are JSON encoded
+		// This allow accept mixed values (encoded and no encoded)
 		if (!is_string($q)) {
 			$q = json_encode($q);
 		}
 
-		// remove initial and final array square brackets if exists
+		// remove initial and final array square brackets if they exists
 		// $q = str_replace(array('[',']'), '', $q);
 		if (strpos($q, '[')===0) {
-			$re		= '/^(\[)(.*)(\])$/m';
-			$q		= preg_replace($re, '$2', $q);
+			$re	= '/^(\[)(.*)(\])$/m';
+			$q	= preg_replace($re, '$2', $q);
 		}
 
-		$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
+		$q_operator		= $query_object->q_operator ?? null;
+		$component_tipo	= end($query_object->path)->component_tipo;
 
-		$component_tipo = end($query_object->path)->component_tipo;
 		switch (true) {
-			# IS DIFFERENT
+			// IS DIFFERENT
 			case ($q_operator==='!=' && !empty($q)):
 				$operator = '@>';
 				$q_clean  = '\'['.$q.']\'::jsonb=FALSE';
 				$query_object->operator = $operator;
 				$query_object->q_parsed = $q_clean;
 				break;
-			# IS NULL
+			// IS NULL
 			case ($q_operator==='!*'):
 				$operator = '@>';
 				$q_obj = new stdClass();
@@ -1303,7 +1306,7 @@ class component_relation_common extends component_common {
 				$query_object->operator = $operator;
 				$query_object->q_parsed	= $q_clean;
 				break;
-			# IS NOT NULL
+			// IS NOT NULL
 			case ($q_operator==='*'):
 				$operator = '@>';
 				$q_obj = new stdClass();
@@ -1313,7 +1316,7 @@ class component_relation_common extends component_common {
 				$query_object->operator = $operator;
 				$query_object->q_parsed = $q_clean;
 				break;
-			# CONTAIN
+			// CONTAIN
 			default:
 				$operator = '@>';
 				$q_clean  = '\'['.$q.']\'';

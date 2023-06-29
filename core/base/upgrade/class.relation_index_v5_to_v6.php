@@ -70,7 +70,7 @@ class relation_index_v5_to_v6 extends v5_to_v6 {
 
 			$new_relations = [];
 
-			foreach ($dato->relations as $key => $locator) {
+			foreach ($dato->relations as $locator) {
 				if($locator->type==='dd96' && isset($locator->tag_id)){
 
 					$new_locator = new locator();
@@ -90,13 +90,15 @@ class relation_index_v5_to_v6 extends v5_to_v6 {
 
 					$target_component_tipo = $component_tipo[$locator->component_tipo] ?? null;
 					if (empty($target_component_tipo)) {
-						debug_log(__METHOD__." Warning: Issue getting target_component_tipo from locator (ignored) : ".to_string($locator), logger::ERROR);
+						debug_log(__METHOD__
+							." Warning: Issue getting target_component_tipo from locator (ignored) : ".to_string($locator)
+							, logger::ERROR
+						);
 						continue;
 					}
 
-					$model = RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo,true);
-
-					$target_component = component_common::get_instance(
+					$model				= RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo,true);
+					$target_component	= component_common::get_instance(
 						$model,
 						$target_component_tipo,
 						$locator->section_id,
@@ -110,10 +112,17 @@ class relation_index_v5_to_v6 extends v5_to_v6 {
 
 					// failed to save (when is ok, return a int section_id value)
 						if (empty($saved)) {
-							debug_log(__METHOD__." Error on save component data **--** $model - $target_component_tipo - $locator->section_tipo - $locator->section_id ".to_string(), logger::ERROR);
+							debug_log(__METHOD__
+								." Error on save component data **--** $model - $target_component_tipo - $locator->section_tipo - $locator->section_id "
+								, logger::ERROR
+							);
 							$new_relations[] = $locator; // preserve non saved locator
 						}else{
-							debug_log(__METHOD__." Saved relation_index! $model - $target_component_tipo - $locator->section_tipo - $locator->section_id ".to_string($new_locator), logger::DEBUG);
+							debug_log(__METHOD__
+								." Saved relation_index! $model - $target_component_tipo - $locator->section_tipo - $locator->section_id " . PHP_EOL
+								.' new_locator: ' . to_string($new_locator)
+								, logger::DEBUG
+							);
 						}
 				}else{
 					$new_relations[] = $locator;
