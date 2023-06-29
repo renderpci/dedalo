@@ -1559,6 +1559,9 @@ class component_media_common extends component_common {
 				);
 			}
 
+		// update component dato files info and save
+			$this->Save();
+
 		// response
 			$response->result	= true;
 			$response->msg		= 'Copied file. Remember overwrite this method to real conversion';
@@ -1582,6 +1585,75 @@ class component_media_common extends component_common {
 
 		return $response;
 	}//end build_version
+
+
+
+	/**
+	* UPDATE_COMPONENT_DATO_FILES_INFO
+	* Get component files info reading current media and
+	* updates the component dato. It doesn't save!
+	* @return bool
+	*/
+	protected function update_component_dato_files_info() {
+
+		// get files info
+			$files_info	= [];
+			$ar_quality = $this->get_ar_quality();
+			foreach ($ar_quality as $current_quality) {
+				if ($current_quality==='thumb') continue;
+				// read file if exists to get file_info
+				$file_info = $this->get_quality_file_info($current_quality);
+				// add non empty quality files data
+				if (!empty($file_info)) {
+					$files_info[] = $file_info;
+				}
+			}
+
+		// save component dato
+			$dato = $this->get_dato();
+			if (isset($dato[0])) {
+				if (!is_object($dato[0])) {
+
+					// bad dato case
+					debug_log(__METHOD__
+						." ERROR. BAD COMPONENT DATO " .PHP_EOL
+						.' dato:' . to_string($dato)
+						, logger::ERROR
+					);
+					return false;
+
+				}else{
+					// update property files_info
+					$dato[0]->files_info = $files_info;
+				}
+			}else{
+				// create a new dato from scratch
+				$dato_item = (object)[
+					'files_info' => $files_info
+				];
+				$dato = [$dato_item];
+			}
+
+		// updates dato
+			$this->set_dato($dato);
+
+
+		return true;
+	}//end update_component_dato_files_info
+
+
+
+	/**
+	* SAVE
+	* Update component dato reading media files before Save
+	* @return int|null $section_matrix_id
+	*/
+	public function Save() : ?int {
+
+		$this->update_component_dato_files_info();
+
+		return parent::Save();
+	}//end Save
 
 
 

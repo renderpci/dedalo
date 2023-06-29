@@ -1663,6 +1663,9 @@ class component_image extends component_media_common {
 		// convert. Returns boolean
 			$result = $this->convert_quality($source_quality, $target_quality);
 
+		// update component dato files info and save
+			$this->Save();
+
 		// response
 			$response->result			= $result;
 			$response->msg				= 'Building av file in background';

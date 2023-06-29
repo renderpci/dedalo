@@ -1288,14 +1288,33 @@ class component_av extends component_media_common {
 
 				// exec command and wait
 				$command = $av_alternate_response->command;
+
+				debug_log(__METHOD__
+					. " Building av file. Wait to finish please " . PHP_EOL
+					. ' command: ' . $command
+					, logger::DEBUG
+				);
+
 				$command_response  = shell_exec( $command );
 
 			}else{
 
 				// launch a background process
-				$prgfile = $av_alternate_response->prgfile;
-				exec_::exec_sh_file($prgfile);
+				$prgfile	= $av_alternate_response->prgfile;
+				$PID		= exec_::exec_sh_file($prgfile);
+
+				debug_log(__METHOD__
+					. " Building av file in background " . PHP_EOL
+					. ' PID: ' . $PID
+					, logger::DEBUG
+				);
 			}
+
+		// update component dato files info and save
+			// $this->Save();
+			// (!) Do not update here because process continues in background and
+			// a save action 'force_save' will be called from client from tool_media_versions
+			// when the new file is available (background process finish)
 
 		// response
 			$response->result	= true;
