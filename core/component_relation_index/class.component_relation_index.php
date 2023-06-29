@@ -395,14 +395,19 @@ class component_relation_index extends component_relation_common {
 
 	/**
 	* RESOLVE_QUERY_OBJECT_SQL
+	* @todo This method do not works if no references are found !
 	* @param object $query_object
 	* @return object $query_object
 	*/
 	public static function resolve_query_object_sql( object $query_object ) : object {
 
+		$with_references = false;
+
 		// q_operator check
 		$q_operator = $query_object->q_operator ?? null;
-		if ($q_operator==='*' || $q_operator==='!*') {
+		if (	$q_operator==='*' // It contains information
+			|| 	$q_operator==='!*' // Empty
+			) {
 
 			// section_tipo from path
 			$section_tipo = end($query_object->path)->section_tipo;
@@ -411,22 +416,32 @@ class component_relation_index extends component_relation_common {
 			$references = component_relation_index::get_references_to_section(
 				$section_tipo
 			);
+			if (!empty($references)) {
 
-			// format. Always set format to column (but in sequence case)
-			$query_object->format = 'column';
-			// component path  array
-			$query_object->component_path = ['section_id'];
-			// operator
-			$query_object->operator	= $q_operator==='!*'
-				? 'NOT IN'
-				: 'IN';
-			// in column sentence
-			$q_clean = array_map(function($el){
-				return (int)$el;
-			}, $references);
-			$query_object->q_parsed	= implode(',', $q_clean);
-			$query_object->format	= 'in_column';
+				// format. Always set format to column (but in sequence case)
+				$query_object->format = 'column';
+				// component path  array
+				$query_object->component_path = ['section_id'];
+				// operator
+				$query_object->operator	= $q_operator==='!*'
+					? 'NOT IN'
+					: 'IN';
+				// in column sentence
+				$q_clean = array_map(function($el){
+					return (int)$el;
+				}, $references);
+				$query_object->q_parsed	= implode(',', $q_clean);
+				$query_object->format	= 'in_column';
+
+				$with_references = true;
+			}
 		}
+
+		// no references case
+			if ($with_references===false) {
+				// @todo This method do not works if no references are found !
+				// Working here !
+			}
 
 
 		return $query_object;

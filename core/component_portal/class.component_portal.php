@@ -390,7 +390,7 @@ class component_portal extends component_relation_common {
 
 			case '6.0.0':
 
-				# Update the locator to move old ds and dataframe to v6 dataframe model.
+				// Update the locator to move old ds and dataframe to v6 dataframe model.
 				if (!empty($dato_unchanged) && is_array($dato_unchanged)) {
 					$RecordObj_dd			= new RecordObj_dd($options->tipo);
 					$properties				= $RecordObj_dd->get_properties();
@@ -409,7 +409,10 @@ class component_portal extends component_relation_common {
 
 							// ds case
 							if(!empty($current_locator->ds)){
-								debug_log(__METHOD__." ----> Located locator->ds  ($options->section_tipo - $options->section_id) ".to_string($current_locator->ds), logger::WARNING);
+								debug_log(__METHOD__
+									." ----> Located locator->ds  ($options->section_tipo - $options->section_id) ".to_string($current_locator->ds)
+									, logger::WARNING
+								);
 
 								foreach((array)$current_locator->ds as $current_ds) {
 									// change to new from_component_tipo
