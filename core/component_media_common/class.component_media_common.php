@@ -1079,13 +1079,17 @@ class component_media_common extends component_common {
 				try {
 					$size = @filesize($file_path);
 				} catch (Exception $e) {
-					trigger_error( __METHOD__ . ' Error on read file size. ' . $e->getMessage() , E_USER_NOTICE);
+					debug_log(__METHOD__
+						. " Error on read file size. (Exception)" . PHP_EOL
+						. $e->getMessage()
+						, logger::ERROR
+					);
 				}
 				return $size ?? null; // in bytes
 			 })();
 
 		// file_time (creation or modification date timestamp). The time when the content of the file was changed
-			$file_time = date("Y-m-d H:i:s", filemtime($file_path));
+			$file_time					= date("Y-m-d H:i:s", filemtime($file_path));
 			$dd_date					= new dd_date();
 			$file_time_dd				= $dd_date->get_date_from_timestamp($file_time);
 			$file_time_dd->time			= dd_date::convert_date_to_seconds($file_time_dd);
