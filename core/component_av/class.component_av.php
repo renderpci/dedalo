@@ -1583,6 +1583,36 @@ class component_av extends component_media_common {
 						$new_dato = [$dato_item];
 						// debug_log(__METHOD__." update_version new_dato ".to_string($new_dato), logger::DEBUG);
 
+					// properties
+						$properties = $component->get_properties();
+
+					// target_duration. Save duration (time-code) in a component_input_text, usually to 'rsc54'
+						if (isset($properties->target_duration)) {
+
+							$secs = $component->get_duration( $component->get_default_quality() ); // float secs
+
+							if (!empty($secs)) {
+
+								$model_name_target_duration	= RecordObj_dd::get_modelo_name_by_tipo($properties->target_duration, true);
+								$component_target_duration	= component_common::get_instance(
+									$model_name_target_duration, // model
+									$properties->target_duration, // tipo
+									$component->get_section_id(), // section_id
+									'edit', // mode
+									DEDALO_DATA_NOLAN, // lang
+									$component->get_section_tipo() // section_tipo
+								);
+
+								$duration	= OptimizeTC::seg2tc($secs); // string TimeCode as '00:05:20:125'
+								$component_target_duration->set_dato([$duration]);
+								$component_target_duration->Save();
+								debug_log(__METHOD__.
+									' Saved av duration to '.$properties->target_duration.' : '.to_string($duration).' - secs: '.to_string($secs)
+									, logger::DEBUG
+								);
+							}
+						}
+
 					$response = new stdClass();
 						$response->result	= 1;
 						$response->new_dato	= $new_dato;
