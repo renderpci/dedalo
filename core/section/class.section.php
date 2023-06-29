@@ -3751,6 +3751,15 @@ class section extends common {
 									$current_component->set_view($current_view);
 
 								// dato. inject dato from time machine record
+									if ($source_model==='section') {
+										// dato safe format
+										if (!isset($dato->relations)) {
+											$dato->relations = [];
+										}
+										if (!isset($dato->components)) {
+											$dato->components = new stdClass();
+										}
+									}
 									$current_dato = ($source_model!=='section')
 										? $dato // from deleted component dato case
 										: (($is_relation===false) // from deleted section case
