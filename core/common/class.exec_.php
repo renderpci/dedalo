@@ -10,61 +10,100 @@ class exec_ {
 
 	/**
 	* EXEC COMMAND
+	* @return bool
 	*/
-	public static function exec_command(string $command, string $to='2>&1') {
+	public static function exec_command(string $command, string $to='2>&1') : bool {
 
 		$output = NULL;
 
 		try {
 
-			# escape command for security
+			// escape command for security
 			$command = escapeshellcmd($command) . ' '.$to;
 
+			// Exec command and get output
+			$output = shell_exec( $command );
 
-			# Exec command and get output
-			$output  = shell_exec( $command );
+			// debug
+				debug_log(__METHOD__
+					. " Notice: exec command: " . PHP_EOL
+					. ' command: ' . $command . PHP_EOL
+					. ' output: ' . $output
+					, logger::WARNING
+				);
 
-			if(SHOW_DEBUG) {
-				error_log("Notice: exec command: ".$command);
-				error_log("Output: ".$output);
-			}
-
-			if( !$output )
+			if( !$output ) {
+				debug_log(__METHOD__
+					. " Error processing media command: " . PHP_EOL
+					. ' command: ' . $command
+					, logger::ERROR
+				);
 				throw new Exception("Error processing media command", 1);
+			}
 
 		}catch(Exception $e){
 
-			return ('Exception: '. $e->getMessage(). "\n");
+			debug_log(__METHOD__
+				. " Exception: " . PHP_EOL
+				. $e->getMessage()
+				, logger::ERROR
+			);
+
+			// return ('Exception: '. $e->getMessage(). "\n");
+			return false;
 		}
 
-		return true ;
+		return true;
 	}//end exec_command
 
 
 
 	/**
 	* EXEC SH FILE
+	* @param string $file
+	* @return int|null $PID
 	*/
-	public static function exec_sh_file(string $file) {
+	public static function exec_sh_file(string $file) : ?int {
+
+		$PID = null;
 
 		try {
-			#exec("sh $file > /dev/null &", $output); # funciona!!! <<<<
-			#exec("sh $file > /dev/null 2>&1 & echo $!", $output); # return pid
-
+			// exec("sh $file > /dev/null &", $output); # funciona!!! <<<<
+			// exec("sh $file > /dev/null 2>&1 & echo $!", $output); # return pid
 			// $response = exec("sh $file > /dev/null 2>&1 & echo $!", $output);
-			$response = exec("sh $file > /dev/null &", $output);
 
-			if ( !$response )
-				throw new Exception("Error Processing media file", 1);
+			// exec command from sh file
+				$response = exec("sh $file > /dev/null & echo $!", $output);
 
-			if(!empty($output[0]))
-				return intval($output[0]);
+			// response check. Could be empty
+				if ( empty($response) ) {
+					debug_log(__METHOD__
+						. " Warning processing media file. response is empty: " . PHP_EOL
+						. ' file: ' . $file
+						, logger::WARNING
+					);
+					// throw new Exception("Error Processing media file", 1);
+				}
+
+			// PID. Output returns the PID as ["3647"]
+				$PID = isset($output[0])
+					? (int)$output[0]
+					: null;
+
+			return $PID;
 
 		}catch(Exception $e){
 
-			return ('Exception: '. $e->getMessage(). "\n");
+			debug_log(__METHOD__
+				. " Exception: " . PHP_EOL
+				. ' Exception message: ' . $e->getMessage()
+				, logger::ERROR
+			);
+
+			// return ('Exception: '. $e->getMessage(). "\n");
 		}
 
+		return $PID;
 	}//end exec_sh_file
 
 
@@ -131,11 +170,11 @@ class exec_ {
 
 
 /* An easy way to keep in track of external processes.
- * Ever wanted to execute a process in php, but you still wanted to have somewhat controll of the process ? Well.. This is a way of doing it.
+ * Ever wanted to execute a process in php, but you still wanted to have somewhat control of the process ? Well.. This is a way of doing it.
  * @compatibility: Linux only. (Windows does not work).
  * @author: Peec
  */
-class Process{
+class Process {
     private $pid;
     private $command;
 
@@ -146,8 +185,8 @@ class Process{
         }
     }
     private function runCom(){
-        $command = 'nohup '.$this->command.' > /dev/null 2>&1 & echo $!';
-        exec($command ,$op);
+		$command = 'nohup '.$this->command.' > /dev/null 2>&1 & echo $!';
+        exec($command, $op);
         $this->pid = (int)$op[0];
     }
 
