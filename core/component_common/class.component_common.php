@@ -3320,6 +3320,12 @@ abstract class component_common extends common {
 					}
 				break;
 
+			// used to force component to save. Example: component_av updates the dato with files_info in each save call
+			case 'force_save':
+
+				// nothing to do here, only return true to allow save call continue
+				break;
+
 			default:
 				// error
 				debug_log(__METHOD__
