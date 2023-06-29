@@ -444,6 +444,24 @@ class component_portal extends component_relation_common {
 								unset($current_locator->dataframe);
 							}
 						}
+						else if(isset($properties->config_relation) && isset($properties->config_relation->relation_type)) {
+
+							// check if locator relation type is correct
+							if (!isset($current_locator->type) || $current_locator->type!==$properties->config_relation->relation_type) {
+
+								$current_locator->type = $properties->config_relation->relation_type;
+
+								$need_to_be_updated	= true;
+
+								debug_log(__METHOD__
+									. " Updated locator type from dd151 to dd96 " . PHP_EOL
+									. ' component tipo: ' . $options->tipo . PHP_EOL
+									. ' section_tipo: ' . $options->section_tipo . PHP_EOL
+									. ' section_id: ' . $options->section_id . PHP_EOL
+									, logger::DEBUG
+								);
+							}
+						}
 
 						$clean_locators[] = $current_locator;
 					}//end foreach ((array)$dato_unchanged as $key => $clocator)
