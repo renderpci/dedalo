@@ -165,10 +165,15 @@ abstract class backup {
 						// 	debug_log(__METHOD__." Error: This server does not support fastcgi_finish_request() function. ".to_string(), logger::ERROR);
 						// }
 
-					// run delayed command
-						exec_::exec_sh_file($prgfile);
+					// run delayed command in background
+						$PID = exec_::exec_sh_file($prgfile);
 
-					debug_log(__METHOD__." Building delayed backup file ($mysqlExportPath). Command:\n ".to_string($command), logger::DEBUG);
+						debug_log(__METHOD__
+							." Building delayed backup file ($mysqlExportPath)" . PHP_EOL
+							.' Command: '.$command .PHP_EOL
+							.' PID: '.$PID
+							, logger::DEBUG
+						);
 				}
 			}//end if($skip_backup_time_range===true)
 
