@@ -736,7 +736,8 @@ const get_line_build_version = function(ar_quality, self) {
 				class_name		: 'button gear',
 				parent			: file_info_node
 			})
-			button_build_version.addEventListener('click', async function() {
+			button_build_version.addEventListener('click', fn_click)
+			async function fn_click() {
 
 				self.node.classList.add('loading')
 
@@ -764,6 +765,14 @@ const get_line_build_version = function(ar_quality, self) {
 										// processing_label.remove()
 										// button_build_version.classList.remove('hide')
 										self.main_element_quality = quality
+
+										// force save component to update dato files_info
+										// Note that action 'force_save' do not need more
+										// properties, is only to allow API exec component save transparently
+											self.main_element.save([{
+												action : 'force_save'
+											}])
+
 										self.refresh({
 											build_autoload : false
 										})
@@ -786,7 +795,7 @@ const get_line_build_version = function(ar_quality, self) {
 					}
 				}
 				self.node.classList.remove('loading')
-			})
+			}
 		}//end for (let i = 0; i < ar_quality_length; i++)
 
 
