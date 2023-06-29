@@ -1600,7 +1600,7 @@ class component_media_common extends component_common {
 			$files_info	= [];
 			$ar_quality = $this->get_ar_quality();
 			foreach ($ar_quality as $current_quality) {
-				if ($current_quality==='thumb') continue;
+				// if ($current_quality==='thumb') continue;
 				// read file if exists to get file_info
 				$file_info = $this->get_quality_file_info($current_quality);
 				// add non empty quality files data
