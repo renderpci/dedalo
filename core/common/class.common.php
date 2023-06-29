@@ -2534,19 +2534,34 @@ abstract class common {
 				// sqo. Preserves filter across calls using session sqo if exists
 				$model	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 				$sqo_id	= ($model==='section') ? implode('_', ['section', $tipo]) : null; // cache key sqo_id
-				if ($model==='section' && isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
-					// replace default sqo with the already stored in session (except section_tipo to prevent to
-					// loose labels and limit to avoid overwrite list in edit and vice-versa)
-					foreach ($_SESSION['dedalo']['config']['sqo'][$sqo_id] as $key => $value) {
-						if($key==='section_tipo' || $key==='generated_time') continue;
-						// limit. Do no t apply null value. instead leave to calculate defaults
-						if ($key==='limit' && $value===null) {
-							continue;
+				if ($model==='section') {
+
+					// dd_core_api::$rqo->sqo is set case
+					// Fixed in dd_core_api::start if user browser has SQO value for this section on local DDBB
+					if (!empty(dd_core_api::$rqo->sqo)) {
+						foreach ($requested_sqo as $sqo_key => $sqo_value) {
+							if ($sqo_key==='section_tipo') {
+								continue;
+							}
+							$dedalo_request_config->sqo->{$sqo_key} = $sqo_value;
 						}
-						if (!isset($dedalo_request_config->sqo)) {
-							$dedalo_request_config->sqo = new stdClass();
+					}
+					// fallback to session (note that always is saved navigation SQO in session to allow preserve records on tools like tool_export)
+					// Here it is mainly used to preserve the navigation of section_tool because the 'tipo' is different from real section
+					else if (isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
+						// replace default sqo with the already stored in session (except section_tipo to prevent to
+						// loose labels and limit to avoid overwrite list in edit and vice-versa)
+						foreach ($_SESSION['dedalo']['config']['sqo'][$sqo_id] as $key => $value) {
+							if($key==='section_tipo' || $key==='generated_time') continue;
+							// limit. Do no t apply null value. instead leave to calculate defaults
+							if ($key==='limit' && $value===null) {
+								continue;
+							}
+							if (!isset($dedalo_request_config->sqo)) {
+								$dedalo_request_config->sqo = new stdClass();
+							}
+							$dedalo_request_config->sqo->{$key} = $value;
 						}
-						$dedalo_request_config->sqo->{$key} = $value;
 					}
 				}
 			}

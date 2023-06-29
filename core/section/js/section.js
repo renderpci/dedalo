@@ -343,29 +343,48 @@ section.prototype.init = async function(options) {
 								}
 
 								// navigate browser from edit to list
-								// Note that internal navigation (based on injected browser history) uses the stored local database
-								// saved_rqo if exists. Page real navigation (reload page for instance) uses server side sessions to
-								// preserve offset and order
+								/* OLD
+									// Note that internal navigation (based on injected browser history) uses the stored local database
+									// saved_rqo if exists. Page real navigation (reload page for instance) uses server side sessions to
+									// preserve offset and order
 
-								// saved_sqo from local_db_data. On section paginate, local_db_data is saved. Recover saved sqo here to
-								// go to list mode in the same position (offset) that the user saw
-									const section_tipo	= self.tipo
-									const sqo_id		= ['section', section_tipo].join('_')
-									const saved_sqo		= await data_manager.get_local_db_data(
-										sqo_id,
-										'sqo'
-									)
+									// saved_sqo from local_db_data. On section paginate, local_db_data is saved. Recover saved sqo here to
+									// go to list mode in the same position (offset) that the user saw
+										const section_tipo	= self.tipo
+										const sqo_id		= ['section', section_tipo].join('_')
+										const saved_sqo		= await data_manager.get_local_db_data(
+											sqo_id,
+											'sqo'
+										)
 
-								// sqo. Note that we are changing from edit to list mode and current offset it's not applicable
-								// The list offset will be get from server session if exists
-									const sqo = saved_sqo
-										? saved_sqo.value
-										: {
-											filter	: self.rqo.sqo.filter,
-											order	: self.rqo.sqo.order || null
-										 }
-									// always use section request_config_object format instead parsed sqo format
-									sqo.section_tipo = self.request_config_object.sqo.section_tipo
+									// sqo. Note that we are changing from edit to list mode and current offset it's not applicable
+									// The list offset will be get from server session if exists
+										const sqo = saved_sqo
+											? saved_sqo.value
+											: {
+												filter	: self.rqo.sqo.filter,
+												order	: self.rqo.sqo.order || null
+											 }
+										// always use section request_config_object format instead parsed sqo format
+										sqo.section_tipo = self.request_config_object.sqo.section_tipo
+									*/
+								// saved_sqo
+								// Note that section build method store SQO in local DDBB to preserve user
+								// navigation section filter and pagination. It's recovered here when exists
+								// to pass values to API server
+								const saved_sqo	= await data_manager.get_local_db_data(
+									self.tipo +'_list',
+									'sqo',
+									true
+								);
+								const sqo = saved_sqo
+									? saved_sqo.value
+									: {
+										filter	: self.rqo.sqo.filter,
+										order	: self.rqo.sqo.order || null
+									  }
+								// always use section request_config_object format instead parsed sqo format
+								sqo.section_tipo = self.request_config_object.sqo.section_tipo
 
 								// source
 									const source = {
@@ -767,6 +786,15 @@ section.prototype.build = async function(autoload=false) {
 	// columns_map. Get the columns_map to use into the list
 		self.columns_map = get_columns_map(self.context, self.datum.context)
 
+	// fix SQO to local DDBB. Used later to preserve section filter and pagination across pagination
+		data_manager.set_local_db_data(
+			{
+				id		: self.tipo + '_' + self.mode,
+				value	: self.rqo.sqo
+			},
+			'sqo'
+		)
+
 	// debug
 		if(SHOW_DEBUG===true) {
 			// console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));
@@ -1058,46 +1086,6 @@ section.prototype.navigate = async function(options) {
 			}
 		}
 
-	// set_local_db_data updated rqo.
-		// This is used to locate last navigation offset of this section
-		// when the user moves from edit to list mode form menu link
-		const sqo_id = ['section', self.tipo].join('_')
-		if (self.mode==='list') {
-
-			// list. Save current sqo to allow get offset when return from edit mode
-			const sqo = clone(self.rqo.sqo)
-			data_manager.set_local_db_data(
-				{
-					id		: sqo_id,
-					value	: sqo
-				},
-				'sqo'
-			)
-
-		}else if(self.mode==='edit' && action==='search') {
-
-			// edit. note that user search in edit mode must to reset offset always
-			// to prevent inconsistent navigation offset between edit and list mode
-			const saved_sqo = await data_manager.get_local_db_data(
-				sqo_id,
-				'sqo'
-			)
-			if (saved_sqo && saved_sqo.value) {
-				// reset offset to allow section to go first page when change to list mode
-				const new_sqo = clone(self.rqo.sqo)
-				// restore list pagination defaults
-				new_sqo.offset	= 0
-				new_sqo.limit	= 10
-				await data_manager.set_local_db_data(
-					{
-						id		: sqo_id,
-						value	: new_sqo
-					},
-					'sqo'
-				)
-			}
-		}
-
 	// loading
 		self.node_body.classList.add('loading')
 
@@ -1115,13 +1103,9 @@ section.prototype.navigate = async function(options) {
 			const source	= create_source(self, null)
 			const sqo		= self.request_config_object.sqo
 			const title		= self.id
-			// const url		= '#section_nav' // '?t='+ self.tipo + '&m=' + self.mode
 
 			// url search. Append section_id if exists
 				const url_vars = url_vars_to_object(location.search)
-				if (self.section_id) {
-					url_vars.section_id = self.section_id
-				}
 				const url = '?' + object_to_url_vars(url_vars)
 
 			// browser navigation update

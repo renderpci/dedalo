@@ -43,13 +43,25 @@ final class dd_core_api {
 	* {
 	*	"action": "start",
 	*	"prevent_lock": true,
-	* 	"options" : {
-	* 		"search_obj": {
+	*	"options" : {
+	*		"search_obj": {
 	*			"t": "oh1",
 	*			"m": "edit"
 	*		 },
-	* 		"menu": true
-	* 	}
+	*		"menu": true
+	*	},
+	*	"sqo": {		// optional to preserve navigation
+	*		"section_tipo": [
+	*			"dd1324"
+	*		],
+	*		"limit": 10,
+	*		"offset": 0
+	*	},
+	* 	"source": {		// optional to preserve navigation
+	*		"tipo": "dd1324",
+	*		"section_tipo": "dd1324",
+	*		"mode": "list"
+	*	}
 	* }
 	* @return object $response
 	*/
@@ -59,12 +71,19 @@ final class dd_core_api {
 			$options	= $rqo->options ?? new StdClass();
 			$search_obj	= $options->search_obj ?? new StdClass(); // url vars
 			$menu		= $options->menu ?? false;
+			// (!) properties 'sqo' and 'source' could be received too, but they are not used here but in common->build_request_config
 
 		// response
 			$response = new stdClass();
 				$response->result	= false;
 				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 				$response->error	= null;
+
+		// fix rqo
+		// Note that this RQO is used later in common->build_request_config to recover SQO and source if they exists
+		// Properties 'sqo' and 'source' are used to preserve user last filter and pagination values fixed previously in browser local DDBB
+		// by section build method and get by page build method
+			dd_core_api::$rqo = $rqo;
 
 		// install check
 		// check if Dédalo was installed, if not, run the install process
@@ -255,7 +274,7 @@ final class dd_core_api {
 								true // add_request_config
 							);
 							// section_tool config
-							// the config is used by section_tool to set the tool to open, if is set inject the config into the context.
+							// the config is used by section_tool to set the tool to open, if is set, inject the config into the context.
 							if (isset($config)) {
 								$current_context->config = $config;
 							}
@@ -1614,7 +1633,9 @@ final class dd_core_api {
 							$lang // string $lang = DEDALO_DATA_NOLAN
 						);
 
-					// store sqo section in session
+					// store sqo section in session.
+					// It's not used to main navigation, but it's needed by some tools like tool_export
+					// in addition to section_tool navigation (like transcription, translation, etc.)
 						if ($model==='section' && ($mode==='edit' || $mode==='list')) {
 							$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $sqo;
 							debug_log(__METHOD__
