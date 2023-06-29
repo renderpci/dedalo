@@ -228,14 +228,8 @@ page.prototype.init = async function(options) {
 
 								// url search. Append section_id if exists
 									const url_vars = url_vars_to_object(location.search)
-									url_vars.t = current_tipo
-									url_vars.m = source.mode
-									if (source.mode==='list' && url_vars.section_id) {
-										delete url_vars.section_id
-									}
-									if (source.section_id_selected) {
-										url_vars.section_id = source.section_id_selected
-									}
+										  url_vars.t = current_tipo
+										  url_vars.m = source.mode
 									const url = '?' + object_to_url_vars(url_vars)
 
 							// browser navigation update
@@ -436,6 +430,27 @@ page.prototype.build = async function(autoload=false) {
 						options : {
 							search_obj	: url_vars_to_object(location.search),
 							menu		: menu //  bool
+						}
+					}
+
+				// local DDBB SQO
+				// Try to get local DDB SQO value when URL tipo exists to preserve user navigation filter and pagination
+					if (rqo.options.search_obj.t) {
+						const section_tipo	= rqo.options.search_obj.t
+						const mode			= rqo.options.search_obj.m || 'list'
+						const local_db_sqo	= await data_manager.get_local_db_data(
+							section_tipo + '_' + mode, // id
+							'sqo', // table
+							true // cache
+						)
+						if (local_db_sqo && local_db_sqo.value) {
+							// add found user navigation values to RQO
+							rqo.sqo		= local_db_sqo.value
+							rqo.source	= {
+								tipo			: section_tipo,
+								section_tipo	: section_tipo,
+								mode			: mode
+							}
 						}
 					}
 
