@@ -632,7 +632,8 @@ export const get_buttons = (self) => {
 						class_name		: 'button sync',
 						parent			: buttons_fold
 					})
-					button_update_data_external.addEventListener('click', async function(){
+					button_update_data_external.addEventListener('click', fn_update_data_external)
+					async function update_data_external(){
 						// force server data to calculate external data
 						const source = self.rqo.source
 						source.build_options = {
@@ -646,7 +647,7 @@ export const get_buttons = (self) => {
 							build_autoload	: true,
 							render_level	: 'content'
 						})
-					})
+					}
 			}//end button external
 
 	// button_add
@@ -656,7 +657,8 @@ export const get_buttons = (self) => {
 				class_name		: 'button add',
 				parent			: buttons_fold
 			})
-			button_add.addEventListener('click', async function(){
+			button_add.addEventListener('click', fn_add)
+			async function fn_add(){
 
 				// target_section_tipo. to add section selector
 					const target_section_tipo = target_section_lenght > 1
@@ -695,7 +697,12 @@ export const get_buttons = (self) => {
 					}else{
 						console.error('Error on api_response on try to create new row:', api_response);
 					}
-			})
+
+				// remove aux items
+					if (window.dedalo.service_autocomplete) {
+						window.dedalo.service_autocomplete.destroy(true, true, true)
+					}
+			}
 		}//end button_add
 
 	// button_link
@@ -705,7 +712,8 @@ export const get_buttons = (self) => {
 				class_name		: 'button link',
 				parent			: buttons_fold
 			})
-			button_link.addEventListener('click', async function(e){
+			button_link.addEventListener('click', fn_link)
+			async function fn_link(e){
 				e.stopPropagation()
 
 				// const section_tipo	= select_section.value
@@ -772,7 +780,7 @@ export const get_buttons = (self) => {
 
 					})()
 					return
-			})
+			}
 		}//end button_link
 
 	// button tree terms selector

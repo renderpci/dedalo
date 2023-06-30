@@ -1108,7 +1108,7 @@ const render_datalist = async function(self, api_response) {
 */
 view_default_autocomplete.show = function () {
 
-	if (this.node.classList.contains('hide')) {
+	if (this.node && this.node.classList.contains('hide')) {
 		this.node.classList.remove('hide')
 	}
 
@@ -1124,7 +1124,7 @@ view_default_autocomplete.show = function () {
 */
 view_default_autocomplete.hide = function () {
 
-	if (!this.node.classList.contains('hide')) {
+	if (this.node && !this.node.classList.contains('hide')) {
 		this.node.classList.add('hide')
 	}
 
