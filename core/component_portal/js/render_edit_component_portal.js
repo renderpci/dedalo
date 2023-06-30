@@ -326,7 +326,8 @@ const render_drag_node = function(options) {
 					text_content	: 'OK',
 					parent			: footer
 				})
-				button_ok.addEventListener('click',function(){
+				button_ok.addEventListener('click', function(e){
+					e.stopPropagation()
 					change_order_modal()
 				})
 				// CHANGE_ORDER_MODAL
@@ -493,7 +494,9 @@ export const render_column_remove = function(options) {
 						text_content	: get_label.delete_resource_and_links || 'Delete resource and all links',
 						parent			: footer
 					})
-					button_unlink_and_delete.addEventListener('click', async function() {
+					button_unlink_and_delete.addEventListener('click', async function(e) {
+						e.stopPropagation()
+
 						// stop if the user don't confirm
 						if (!confirm(get_label.sure)) {
 							return
@@ -528,7 +531,9 @@ export const render_column_remove = function(options) {
 					text_content 	: get_label.delete_only_the_link || 'Delete only the link',
 					parent			: footer
 				})
-				button_unlink_record.addEventListener('click', function(){
+				button_unlink_record.addEventListener('click', function(e){
+					e.stopPropagation()
+
 					// stop if the user don't confirm
 					if (!confirm(get_label.sure)) {
 						return
@@ -633,7 +638,8 @@ export const get_buttons = (self) => {
 						parent			: buttons_fold
 					})
 					button_update_data_external.addEventListener('click', fn_update_data_external)
-					async function update_data_external(){
+					async function fn_update_data_external(e){
+						e.stopPropagation()
 						// force server data to calculate external data
 						const source = self.rqo.source
 						source.build_options = {
@@ -658,7 +664,8 @@ export const get_buttons = (self) => {
 				parent			: buttons_fold
 			})
 			button_add.addEventListener('click', fn_add)
-			async function fn_add(){
+			async function fn_add(e){
+				e.stopPropagation()
 
 				// target_section_tipo. to add section selector
 					const target_section_tipo = target_section_lenght > 1

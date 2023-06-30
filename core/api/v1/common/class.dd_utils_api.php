@@ -711,6 +711,7 @@ final class dd_utils_api {
 					$response = (object)install::install_hierarchies( $install_hierarchies_options );
 
 				break;
+
 			case 'set_root_pw':
 
 				//exec
@@ -722,6 +723,7 @@ final class dd_utils_api {
 				//exec
 					$response = (object)install::set_install_status('installed');
 				break;
+
 			default:
 				$response->msg		= 'Error. Request not valid';
 				break;
