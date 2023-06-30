@@ -1913,8 +1913,8 @@ class install extends common {
 
 	/**
 	* GET_AVAILABLE_HIERARCHY_FILES
-	* Activate thesaurus hierarchy by tld2
-	* 	Like 'lg'
+	* List of all available hierarchy files found in install directory
+	* @see class area_development get_ar_widgets use
 	* @return object $response
 	*/
 	public static function get_available_hierarchy_files() : object {

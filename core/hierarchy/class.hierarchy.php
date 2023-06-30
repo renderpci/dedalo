@@ -1243,33 +1243,36 @@ class hierarchy {
 		$result = JSON_RecordObj_matrix::search_free($strQuery);
 
 		$active_hierarchies=array();
-		while ($rows = pg_fetch_assoc($result)) {
-			$section_id 			= $rows['section_id'];
-			$name 					= $rows['name']; // Note name is NOT translatable
-			$target_section			= $rows['target_section'];
-			$target_section_model	= $rows['target_section_model'];
-			$main_lang				= $rows['main_lang'];
+		while ($row = pg_fetch_assoc($result)) {
 
+			$section_id				= $row['section_id'];
+			$name					= $row['name']; // Note name is NOT translatable
+			$target_section			= $row['target_section'];
+			$target_section_model	= $row['target_section_model'];
+			$main_lang				= $row['main_lang'];
+			$tld					= $row['hierarchy6'];
 
-			if (is_array($ar_name=json_decode($name))) {
+			if (!empty($tld) && is_array($ar_tld=json_decode($tld))) {
+				$tld = reset($ar_tld);
+			}
+			if (!empty($name) && is_array($ar_name=json_decode($name))) {
 				$name = reset($ar_name);
 			}
-			if (is_array($ar_target_section=json_decode($target_section))) {
+			if (!empty($target_section) && is_array($ar_target_section=json_decode($target_section))) {
 				$target_section = reset($ar_target_section);
 			}
-			if (is_array($ar_target_section_model=json_decode($target_section_model))) {
+			if (!empty($target_section_model) && is_array($ar_target_section_model=json_decode($target_section_model))) {
 				$target_section_model = reset($ar_target_section_model);
 			}
-			#dump($target_section, ' target_section ++ '.to_string($strQuery));
 
 			$active_hierarchies[$section_id] = [
-				"name"=>$name,
-				"target_section"=>$target_section,
-				"target_section_model"=>$target_section_model,
-				"main_lang"=>$main_lang
-				];
+				'name'					=> $name,
+				'tld' 					=> $tld,
+				'target_section'		=> $target_section,
+				'target_section_model'	=> $target_section_model,
+				'main_lang'				=> $main_lang
+			];
 		}
-		#dump($active_hierarchies, ' $active_hierarchies ++ '.to_string($strQuery));
 
 		return (array)$active_hierarchies;
 	}//end get_active_hierarchies
