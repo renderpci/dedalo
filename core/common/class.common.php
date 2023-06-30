@@ -2543,6 +2543,9 @@ abstract class common {
 							if ($sqo_key==='section_tipo') {
 								continue;
 							}
+							if (!isset($dedalo_request_config->sqo)) {
+								$dedalo_request_config->sqo = new stdClass();
+							}
 							$dedalo_request_config->sqo->{$sqo_key} = $sqo_value;
 						}
 					}
