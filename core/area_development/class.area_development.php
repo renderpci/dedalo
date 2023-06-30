@@ -277,7 +277,7 @@ class area_development extends area_common {
 
 				$item = new stdClass();
 					$item->id		= 'update_data_version';
-					$item->class	= 'success with_100';
+					$item->class	= 'success width_100';
 					$item->typo		= 'widget';
 					$item->tipo		= $this->tipo;
 					$item->parent	= $this->tipo;
@@ -298,7 +298,7 @@ class area_development extends area_common {
 
 				$item = new stdClass();
 					$item->id		= 'update_data_version';
-					$item->class	= 'danger with_100';
+					$item->class	= 'danger width_100';
 					$item->typo		= 'widget';
 					$item->tipo		= $this->tipo;
 					$item->parent	= $this->tipo;
@@ -349,6 +349,21 @@ class area_development extends area_common {
 				$item->id		= 'update_code';
 				$item->typo		= 'widget';
 				$item->label	= label::get_label('update') .' '. label::get_label('code');
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
+
+
+		// add_hierarchy
+			$item = new stdClass();
+				$item->id		= 'add_hierarchy';
+				$item->typo		= 'widget';
+				$item->class	= 'success width_100';
+				$item->label	= label::get_label('instalar') .' '. label::get_label('jerarquias');
+				$item->value	= (object)[
+					'hierarchies'				=> install::get_available_hierarchy_files()->result,
+					'active_hierarchies'		=> array_values( hierarchy::get_active_hierarchies() ),
+					'hierarchy_files_dir_path'	=> install::get_config()->hierarchy_files_dir_path
+				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
