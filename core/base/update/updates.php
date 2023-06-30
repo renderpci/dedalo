@@ -309,3 +309,12 @@ $updates->$v = new stdClass();
 				];
 				$script_obj->script_vars	= json_encode($ar_items); // Note that only ONE argument encoded is sent
 			$updates->$v->run_scripts[] = $script_obj;
+
+		// Update search_presets data
+			require_once dirname(dirname(__FILE__)) .'/upgrade/class.v5_to_v6.php';
+			$script_obj = new stdClass();
+				$script_obj->info			= "Convert the old dato format from search presets";
+				$script_obj->script_class	= "v5_to_v6";
+				$script_obj->script_method	= "update_search_presets_data";
+				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
+			$updates->$v->run_scripts[] = $script_obj;
