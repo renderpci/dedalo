@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS COMPONENT SECURITY ACCESS
 * Manages ontology elements access and permissions
 *
@@ -500,8 +500,8 @@ class component_security_access extends component_common {
 
 			debug_log(__METHOD__
 				. " (1) user_id: " .$user_id
-				. ' launching datalist /////////////////////////////////////////////////////////////////////////////////////////////////////////////// '
-				, logger::ERROR
+				. ' ))) launching datalist /////////////////////////////////////////////////////////////////////////////////////////////////////////////// '
+				, logger::WARNING
 			);
 
 			$section_tipo				= DEDALO_SECTION_PROFILES_TIPO;
@@ -520,8 +520,8 @@ class component_security_access extends component_common {
 			// Fiber::suspend();
 			debug_log(__METHOD__
 				. " (2) count: " . count($datalist) .' '. exec_time_unit($start_time).' ms'
-				. ' launching datalist ////////////////////////////////////////////////////////////////////////////////////////////// '
-				, logger::ERROR
+				. ' ))) launching datalist ////////////////////////////////////////////////////////////////////////////////////////////// '
+				, logger::WARNING
 			);
 
 			// return $datalist;

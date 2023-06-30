@@ -702,11 +702,11 @@ class hierarchy {
 			$RecordObj_dd	= new RecordObj_dd($options->terminoID, $options->tld2);
 			$parent_test	= $RecordObj_dd->get_parent();
 			if (!empty($parent_test)) {
-				$response->result	= false;
-				$response->msg		= "Current hierarchy ($options->terminoID - $options->name) already exists. Nothing is created.";
+				$response->result	= true;
+				$response->msg		= "Current hierarchy ($options->terminoID - $options->name) already exists. Term creation order ignored.";
 				debug_log(__METHOD__
 					. ' msg: '.to_string($response->msg),
-					logger::ERROR
+					logger::WARNING
 				);
 				return $response;
 			}
