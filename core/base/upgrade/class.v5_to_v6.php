@@ -407,4 +407,186 @@ class v5_to_v6 {
 
 
 
+	/**
+	* UPDATE_SEARCH_PRESETS_DATA
+	* @return bool
+	*/
+	public static function update_search_presets_data() : bool {
+
+		$table	= 'matrix_list';
+		$filter	= "section_tipo='dd623' OR section_tipo='dd655'";
+		$lang	= DEDALO_DATA_NOLAN;
+
+		$strQuery	= "SELECT id, section_id, section_tipo, datos FROM $table WHERE $filter ORDER BY id ASC";
+		$result		= JSON_RecordDataBoundObject::search_free($strQuery);
+		if($result===false) {
+			debug_log(__METHOD__
+				." ERROR: Failed Search. Data is not found. "
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		// debug
+			// $n_rows = pg_num_rows($result);
+			// debug_log(__METHOD__
+			// 	. " n rows: $n_rows " . PHP_EOL
+			// 	. ' strQuery: ' . $strQuery
+			// 	, logger::DEBUG
+			// );
+
+		while($row = pg_fetch_assoc($result)) {
+
+			$id				= $row['id'];
+			$section_tipo	= $row['section_tipo'];
+			$section_id		= $row['section_id'];
+			$datos			= json_decode($row['datos']);
+
+			if (   empty($datos)
+				|| empty($datos->components)
+				|| empty($datos->components->dd625)
+				|| empty($datos->components->dd625->dato)
+				|| empty($datos->components->dd625->dato->{$lang})
+				|| empty($datos->components->dd625->dato->{$lang}[0])
+			) {
+				continue;
+			}
+
+			$component_data = $datos->components->dd625->dato->{$lang}[0];
+
+			// passed by reference (recursive)
+			self::parse_filter($component_data);
+
+			// update section dato
+			$datos->components->dd625->dato->{$lang}[0] = $component_data;
+
+			$section_data_encoded = json_handler::encode($datos);
+
+			$strQuery2	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
+			$result2	= pg_query_params(DBi::_getConnection(), $strQuery2, array( $section_data_encoded, $id ));
+			if(!$result2) {
+				debug_log(__METHOD__
+					." ERROR: Failed Update section_data. table: $table - id: $id ". PHP_EOL
+					.' strQuery2: ' .$strQuery2
+					, logger::ERROR
+				);
+			}else{
+				debug_log(__METHOD__
+					. " Updated record $section_tipo - $section_id " . PHP_EOL
+					. ' $component_data: ' .to_string($component_data)
+					, logger::DEBUG
+				);
+			}
+		}//end while
+
+
+		return true;
+	}//end update_search_presets_data
+
+
+
+	/**
+	* PARSE_FILTER
+	* Recursive function. By reference $component_data
+	* Fixes issues in search_preset data from v5 to v6
+	* sample:
+	* {
+  		"$and": [
+			 {
+		      "q": "788",
+		      "path": [
+		        {
+		          "name": "Id",
+		          "model": "component_section_id",
+		          "section_tipo": "rsc170",
+		          "component_tipo": "rsc175"
+		        }
+		      ],
+		      "type": "jsonb",
+		      "q_operator": null
+		    },
+		    {
+		      "$and": [
+		        {
+		          "q": [],
+		          "path": [
+		            {
+		              "name": "Id",
+		              "model": "component_section_id",
+		              "section_tipo": "rsc170",
+		              "component_tipo": "rsc175"
+		            }
+		          ],
+		          "type": "jsonb",
+		          "q_operator": null
+		        },
+		        {
+		          "$and": [
+		            {
+		              "q": [
+		                "1"
+		              ],
+		              "path": [
+		                {
+		                  "name": "Title",
+		                  "model": "component_input_text",
+		                  "section_tipo": "rsc170",
+		                  "component_tipo": "rsc23"
+		                }
+		              ],
+		              "type": "jsonb",
+		              "q_operator": null
+		            }
+		          ]
+		        }
+		      ]
+		    }
+  		]
+	* @return void
+	*/
+	public static function parse_filter(object &$component_data) : void {
+
+		foreach ($component_data as $key => $value) {
+
+			if (strpos($key, '$')===0) {
+				// operator case
+				foreach ($component_data->{$key} as $c_key => $c_value) {
+					self::parse_filter($component_data->{$key}[$c_key]);
+				}
+
+			}else{
+				// final value case
+
+				$q = $component_data->q;
+
+				// prevent empty string and array
+					if (empty($q)
+						|| (is_array($q) && empty($q[0]))
+					) {
+						$component_data->q = null;
+						continue;
+					}
+
+				// false array cases like "52,55"
+					// if ( !is_array($q) && strpos($q, ',')!==false ) {
+					// 	$component_data->q = [$q];
+					// 	continue;
+					// }
+
+				// non array case
+					if (!is_array($q)) {
+						$component_data->q = [$q];
+						continue;
+					}
+
+				// short vars
+					// $end_path	= end($value->path);
+					// $tipo		= $end_path->component_tipo;
+					// $model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			}
+		}
+	}//end parse_filter
+
+
+
 }//end class v5_to_v6
