@@ -253,8 +253,17 @@ const get_content_data = function(self) {
 			class_name		: 'content',
 			parent			: hierarchies_import_block
 		})
+
+		const hierarchies_import_options = {
+			hierarchies		: self.context.properties.hierarchies,
+			default_checked	: self.context.properties.install_checked_default,
+			callback		: function() {
+				// show next block
+				self.node.content_data.install_finish_block.classList.remove('hide')
+			}
+		}
 		hierarchies_import_block_content.appendChild(
-			render_hierarchies_import_block(self)
+			render_hierarchies_import_block(hierarchies_import_options)
 		)
 
 	// install_finish_block
@@ -673,19 +682,19 @@ const render_config_options = function(self) {
 		})//end mouse_up event
 
 
-	// to install hierarchies
-		const install_hierarchies_button = ui.create_dom_element({
-			element_type	: 'button',
-			class_name		: 'primary install_button',
-			inner_html		: get_label.to_install_hierarchies || 'To install hierarchies',
-			parent			: fragment
-		})
-		install_hierarchies_button.addEventListener('mouseup', async function() {
-			// show the install_db
-			self.node.content_data.login_block.classList.remove('hide')
-			self.node.content_data.config_block.config_block_options.remove();
+	// to install hierarchies. (!) Moved to area_development widget
+		// const install_hierarchies_button = ui.create_dom_element({
+		// 	element_type	: 'button',
+		// 	class_name		: 'primary install_button',
+		// 	inner_html		: get_label.to_install_hierarchies || 'To install hierarchies',
+		// 	parent			: fragment
+		// })
+		// install_hierarchies_button.addEventListener('mouseup', async function() {
+		// 	// show the install_db
+		// 	self.node.content_data.login_block.classList.remove('hide')
+		// 	self.node.content_data.config_block.config_block_options.remove();
+		// })//end mouse_up event
 
-		})//end mouse_up event
 
 	return fragment;
 }//end render_config_options
@@ -1186,12 +1195,19 @@ const render_login_block = async function(self) {
 * @param object self
 * @return HTMLElement content_value
 */
-const render_hierarchies_import_block = function(self) {
+export const render_hierarchies_import_block = function(options) {
 
-	// short vars
-		const properties = self.context.properties
+	// options
+		const hierarchies				= options.hierarchies || []
+		const default_checked			= options.default_checked || []
+		const active_hierarchies		= options.active_hierarchies || [] // already activated hierarchies
+		const hierarchy_files_dir_path	= options.hierarchy_files_dir_path || '' // informative only
+		const callback					= options.callback // executed on finish importation
 
-	const fragment = new DocumentFragment();
+	// DocumentFragment
+		const fragment = new DocumentFragment();
+
+		hierarchies.sort((a,b) => (a.label < b.label) ? 1 : ((b.label < a.label) ? -1 : 0))
 
 	// info
 		ui.create_dom_element({
@@ -1205,21 +1221,18 @@ const render_hierarchies_import_block = function(self) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'description source_files',
-			inner_html		: get_label.import_hierarchies_directory_description || 'Source files directory: '+ properties.hierarchy_files_dir_path,
+			inner_html		: get_label.import_hierarchies_directory_description || 'Source files directory: ' + hierarchy_files_dir_path,
 			parent			: fragment
 		})
 
 	// list of hierarchies
-		const default_checked	= properties.install_checked_default || []
-		const hierarchies		= properties.hierarchies || []
-		const hierarchies_len	= hierarchies.length
-
 		const hierachy_ul = ui.create_dom_element({
 			element_type	: 'ul',
 			class_name		: 'hierachy_ul',
 			parent			: fragment
 		})
 		const hierarchies_to_install = []
+		const hierarchies_len = hierarchies.length
 		for (let i = hierarchies_len - 1; i >= 0; i--) {
 
 			// hierarchy object
@@ -1229,7 +1242,7 @@ const render_hierarchies_import_block = function(self) {
 				}
 
 			// is_default check
-				const is_default_checked	= default_checked.find(el => el === current_hierarchy.tld)
+				const is_default_checked	= default_checked.find(el => el===current_hierarchy.tld)
 				const checked				= is_default_checked
 					? true
 					: false
@@ -1247,6 +1260,14 @@ const render_hierarchies_import_block = function(self) {
 					inner_html		: current_hierarchy.label,
 					parent			: hierachy_li
 				})
+				if (active_hierarchies.includes( current_hierarchy.tld.toLowerCase() )) {
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'active_hierarchy',
+						inner_html		: ' [active]',
+						parent			: hierachy_label
+					})
+				}
 
 			// checkbox
 				const hierarchy_checkbox = ui.create_dom_element({
@@ -1278,7 +1299,19 @@ const render_hierarchies_import_block = function(self) {
 			inner_html		: get_label.import_hierarchies_button || ' Import hierarchies ',
 			parent			: fragment
 		})
-		import_hierarchies_button.addEventListener('mouseup', async function(){
+		import_hierarchies_button.addEventListener('mouseup', fn_import_hierarchies)
+		async function fn_import_hierarchies(){
+
+			// empty selection warning
+				if (hierarchies_to_install.length<1) {
+					alert( get_label.select_a_file || 'Select one or more items' );
+					return
+				}
+
+			// confirm action
+				if (!confirm( hierarchies_to_install.length + ' ' + get_label.jerarquias +'. '+ get_label.sure )) {
+					return false
+				}
 
 			// lock button
 				import_hierarchies_button.classList.add('loading')
@@ -1333,8 +1366,10 @@ const render_hierarchies_import_block = function(self) {
 
 						import_hierarchies_button.remove()
 
-						// show next block
-						self.node.content_data.install_finish_block.classList.remove('hide')
+						// callback on success
+						if (typeof callback==='function') {
+							callback(api_response)
+						}
 					}
 				}
 
@@ -1342,7 +1377,7 @@ const render_hierarchies_import_block = function(self) {
 				import_hierarchies_button.classList.remove('loading')
 				hierachy_ul.classList.remove('loading')
 				spinner.remove()
-		})
+		}
 
 	// import_hiearachies_status msg
 		const import_hiearachies_status = ui.create_dom_element({
@@ -1354,7 +1389,6 @@ const render_hierarchies_import_block = function(self) {
 
 	return fragment
 }//end render_hierarchies_import_block
-
 
 
 
