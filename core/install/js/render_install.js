@@ -320,19 +320,21 @@ const render_help_block = function(self) {
 			parent			: install_info_node
 		})
 		// link
-		ui.create_dom_element({
+		const link_install = ui.create_dom_element({
 			element_type	: 'a',
 			class_name		: 'link',
-			href			: 'https://dedalo.dev/v5',
-			inner_html		: 'dedalo.dev/v5',
+			href			: 'https://dedalo.dev/docs/install/install/',
+			inner_html		: 'https://dedalo.dev/docs/install/install/',
 			parent			: install_info_node
 		})
+		link_install.target	= '_blank'
+		// link_install.rel	= 'noopener noreferrer'
 
 	// installation config
 		const install_config_node = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'description install_config_node',
-			inner_html		: get_label.Instalation_config || 'Installation config: ',
+			inner_html		: get_label.installation_config || 'Installation config: ',
 			parent			: fragment
 		})
 		ui.create_dom_element({
@@ -341,13 +343,17 @@ const render_help_block = function(self) {
 			src				: 'https://dedalo.dev/tpl/assets/img/logos/logo_dedalo.svg',
 			parent			: install_config_node
 		})
-		ui.create_dom_element({
+		const link_configuration = ui.create_dom_element({
 			element_type	: 'a',
 			class_name		: 'link',
-			href			: 'https://dedalo.dev/v5_config',
-			inner_html		: 'dedalo.dev/v5',
+			href			: 'https://dedalo.dev/docs/config/configuration/',
+			inner_html		: 'https://dedalo.dev/docs/config/configuration/',
+			target			: '_blank',
 			parent			: install_config_node
 		})
+		link_configuration.target	= '_blank'
+		// link_configuration.rel	= 'noopener noreferrer'
+
 
 	return fragment
 }//end render_help_block
