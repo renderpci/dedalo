@@ -345,6 +345,18 @@ const get_buttons = (self) => {
 			}
 	}
 
+	// save
+		const save = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button tool save',
+			parent			: fragment
+		})
+		save.addEventListener('click', fn_save)
+		function fn_save(e) {
+			e.stopPropagation()
+			self.text_editor[0].save()
+		}
+
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)
 		// buttons_container.appendChild(fragment)
@@ -555,7 +567,7 @@ const get_custom_buttons = (self, text_editor, i) => {
 
 	// button_lang
 		custom_buttons.push({
-			name			: "button_lang",
+			name			: 'button_lang',
 			manager_editor	: false,
 			options	: {
 				tooltip	: 'Add lang',
@@ -572,20 +584,20 @@ const get_custom_buttons = (self, text_editor, i) => {
 		})
 
 	// button_save
-		const save_label = get_label.save.replace(/<\/?[^>]+(>|$)/g, "") || "Save"
-		custom_buttons.push({
-			name			: "button_save",
-			manager_editor	: false,
-			options	: {
-				text	: save_label,
-				tooltip	: save_label,
-				icon	: false,
-				onclick	: function() {
-					// save. text_editor save function calls current component save_value()
-					text_editor.save()
-				}
-			}
-		})
+		// const save_label = get_label.save.replace(/<\/?[^>]+(>|$)/g, "") || "Save"
+		// custom_buttons.push({
+		// 	name			: 'button_save',
+		// 	manager_editor	: false,
+		// 	options	: {
+		// 		text	: save_label,
+		// 		tooltip	: save_label,
+		// 		icon	: false,
+		// 		onclick	: function(e) {
+		// 			// save. text_editor save function calls current component save_value()
+		// 			text_editor.save()
+		// 		}
+		// 	}
+		// })
 
 
 	return custom_buttons
