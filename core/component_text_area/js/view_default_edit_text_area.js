@@ -306,7 +306,7 @@ const get_content_value_read = (i, current_value, self) => {
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'content_value editor_container read_only',
-			inner_html 		: value
+			inner_html		: value
 		})
 
 	return content_value
@@ -326,7 +326,6 @@ const get_buttons = (self) => {
 		const mode				= self.mode
 		const fragment			= new DocumentFragment()
 
-
 	if (!is_inside_tool && mode==='edit') {
 
 		// button_fullscreen
@@ -335,7 +334,8 @@ const get_buttons = (self) => {
 				class_name		: 'button full_screen',
 				parent			: fragment
 			})
-			button_fullscreen.addEventListener('click', function() {
+			button_fullscreen.addEventListener('click', function(e) {
+				e.stopPropagation()
 				ui.enter_fullscreen(self.node)
 			})
 
@@ -874,18 +874,18 @@ const get_custom_events = (self, i, text_editor) => {
 
 	// changeData
 		custom_events.changeData = (evt, options) => {
-			const ar_changes = options
-			const changes_len = ar_changes.length
 
+			const ar_changes	= options
+			const changes_len	= ar_changes.length
 			for (let i = changes_len - 1; i >= 0; i--) {
 				const change = ar_changes[i]
 				// create the event name as:
 				// editor_tag_geo_change_
 				// editor_tag_indexIn_change_
-				const event_name =  'editor_tag_'+ change.type + '_change_' + self.id_base
+				const event_name = 'editor_tag_'+ change.type + '_change_' + self.id_base
 				event_manager.publish(event_name, change)
 			}
-		}// end changeData event
+		}//end changeData event
 
 
 	return custom_events
@@ -1158,10 +1158,10 @@ const render_page_selector = function(self, data_tag, tag_id, text_editor) {
 const render_note = async function(options) {
 
 	// options
-		const self				= options.self
-		const text_editor		= options.text_editor
-		const i					= options.i
-		const view_tag 			= options.tag
+		const self			= options.self
+		const text_editor	= options.text_editor
+		const i				= options.i
+		const view_tag		= options.tag
 
 	// short vars
 		const data_string		= view_tag.data
@@ -1188,8 +1188,8 @@ const render_note = async function(options) {
 				filter			: false
 			}
 			// get the instance, built and render
-			const note_section		=	await instances.get_instance(instance_options)
-										await note_section.build(true)
+			const note_section	=	await instances.get_instance(instance_options)
+									await note_section.build(true)
 
 			return note_section
 		}
@@ -1207,7 +1207,7 @@ const render_note = async function(options) {
 			// create new tag with the new state of the tag
 
 			if (current_tag_state !== state){
-				const note_tag		= {
+				const note_tag = {
 					type	: 'note',
 					label	: view_tag.label,
 					tag_id	: view_tag.tag_id,
@@ -1330,7 +1330,7 @@ const render_note = async function(options) {
 			container : body,
 			callback : async function() {
 
-				const note_section		= await get_note_section()
+				const note_section = await get_note_section()
 
 				// permissions check
 				if (!note_section.permissions || parseInt(note_section.permissions)<1) {
@@ -1436,7 +1436,7 @@ const render_persons_list = function(self, text_editor, i) {
 
 				const section_container = ui.create_dom_element({
 					element_type	: 'div',
-					class_name 		: 'section_container',
+					class_name		: 'section_container',
 					parent			: body
 				})
 				// get current_locator to be used in common and simple way
@@ -1561,10 +1561,10 @@ const render_langs_list = function(self, text_editor, i) {
 	// body
 		const body = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'content text_area_project_langs_container'
+			class_name		: 'content text_area_project_langs_container'
 		})
 		// sections loop
-			const value_length	= ar_project_langs.length
+			const value_length = ar_project_langs.length
 			let k = 0;
 			for (let i = 0; i < value_length; i++) {
 
@@ -1572,7 +1572,7 @@ const render_langs_list = function(self, text_editor, i) {
 
 				const lang_container = ui.create_dom_element({
 					element_type	: 'div',
-					class_name 		: 'lang_container',
+					class_name		: 'lang_container',
 					parent			: body
 				})
 				lang_container.addEventListener('click', function (evt) {
