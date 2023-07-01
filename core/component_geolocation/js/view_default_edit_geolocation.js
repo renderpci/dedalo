@@ -225,7 +225,9 @@ export const get_content_value = (i, current_value, self) =>{
 				parent			: inputs_container,
 				class_name		: 'map_reload'
 			})
-			refresh_node.addEventListener('click', function() {
+			refresh_node.addEventListener('click', fn_refresh)
+			function fn_refresh(e) {
+				e.stopPropagation()
 
 				const lat	= self.data.value[i].lat
 				const lon	= self.data.value[i].lon
@@ -248,7 +250,7 @@ export const get_content_value = (i, current_value, self) =>{
 
 				// load all layers
 					self.layers_loader({load:'full'})
-			})
+			}//end fn_refresh
 
 		// create point
 			const add_point_node = ui.create_dom_element({
@@ -256,7 +258,8 @@ export const get_content_value = (i, current_value, self) =>{
 				parent			: inputs_container,
 				class_name		: 'map_point'
 			})
-			add_point_node.addEventListener('click', function() {
+			add_point_node.addEventListener('click', function(e) {
+				e.stopPropagation()
 
 				const point = {
 					lat : parseFloat(lat_node.value),
@@ -372,7 +375,8 @@ const get_buttons = (self) => {
 		// 	event_manager.publish('full_screen_'+self.id, fullscreen_state)
 		// 	self.map.invalidateSize()
 		// })
-		button_fullscreen.addEventListener('click', function() {
+		button_fullscreen.addEventListener('click', function(e) {
+			e.stopPropagation()
 			ui.enter_fullscreen(self.node)
 			self.map.invalidateSize()
 		})
@@ -390,7 +394,9 @@ const get_buttons = (self) => {
 			class_name		: 'button tool save',
 			parent			: fragment
 		})
-		save.addEventListener('click', function() {
+		save.addEventListener('click', fn_save)
+		function fn_save(e) {
+			e.stopPropagation()
 
 			const key = 0; // fixed key (only one element is allowed)
 
@@ -407,8 +413,7 @@ const get_buttons = (self) => {
 				// set the data_changed to false to control that the data was changed
 					self.is_data_changed = false
 			})
-
-		})
+		}//end fn_save
 
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)
