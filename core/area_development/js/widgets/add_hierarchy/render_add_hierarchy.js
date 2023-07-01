@@ -89,9 +89,16 @@ const get_content_data_edit = async function(self) {
 	// short vars
 		const hierarchies				= value.hierarchies
 		const hierarchy_files_dir_path	= value.hierarchy_files_dir_path
-		const active_hierarchies		= value.active_hierarchies.map(el => {
-			return el.tld.toLowerCase()
-		})
+		const active_hierarchies		= []
+		const active_hierarchies_length = value.active_hierarchies.length
+		for (let i = 0; i < active_hierarchies_length; i++) {
+			const item = value.active_hierarchies[i]
+			if (item.tld) {
+				active_hierarchies.push( item.tld.toLowerCase() )
+			}else{
+				console.error('Ignored empty tld item from active_hierarchies:', item);
+			}
+		}
 
 	// callback. If exec on success
 		function fn_callback(api_response) {
