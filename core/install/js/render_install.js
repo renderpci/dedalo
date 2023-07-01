@@ -87,7 +87,7 @@ const get_content_data = function(self) {
 		// title
 		ui.create_dom_element({
 			element_type	: 'h1',
-			inner_html		: get_label.instalation_help || 'Installation help',
+			inner_html		: get_label.installation_help || 'Installation help',
 			parent			: help_block
 		})
 		// content
@@ -135,7 +135,7 @@ const get_content_data = function(self) {
 		// title
 		ui.create_dom_element({
 			element_type	: 'h1',
-			inner_html		: get_label.instalation_config_test || 'Configuration',
+			inner_html		: get_label.installation_config_test || 'Configuration',
 			parent			: config_block
 		})
 		// content
@@ -310,7 +310,7 @@ const render_help_block = function(self) {
 		const install_info_node = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'description install_info_node',
-			inner_html		: get_label.Instalation_help_info || 'Installation info: ',
+			inner_html		: get_label.installation_help_info || 'Installation info: ',
 			parent			: fragment
 		})
 		ui.create_dom_element({
