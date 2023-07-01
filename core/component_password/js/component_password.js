@@ -150,13 +150,13 @@ component_password.prototype.validate_password_format = function (pw, options) {
 		}
 
 	// enforce the no sequential, identical characters rule
-		if (o.noSequential && /([\S\s])\1/.test(pw)) {
-			const response = {
-				result	: false,
-				msg		: 'identical characters in sequential order are not allowed'
-			}
-			return response;
-		}
+		// if (o.noSequential && /([\S\s])\1/.test(pw)) {
+		// 	const response = {
+		// 		result	: false,
+		// 		msg		: 'identical characters in sequential order are not allowed'
+		// 	}
+		// 	return response;
+		// }
 
 	// enforce alphanumeric/qwerty sequence ban rules
 		if (o.badSequenceLength) {
