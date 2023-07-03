@@ -217,45 +217,6 @@ class locator extends stdClass {
 	}//end set_lang
 
 
-
-	/**
-	* GET_FLAT
-	* Compound a chained plain flat locator string for use as media componet name, etc..
-	* @return string $name Like 'dd42_dd207_1'
-	*/
-	public function get_flat() : string {
-
-		if ( empty($this->get_component_tipo() ) ) {
-			throw new Exception("Error Processing Request. empty component_tipo", 1);
-		}
-		if ( empty($this->get_section_tipo() ) ) {
-			throw new Exception("Error Processing Request. empty section_tipo", 1);
-		}
-		if ( empty($this->get_section_id() ) ) {
-			throw new Exception("Error Processing Request. empty section_id", 1);
-		}
-
-		$name = $this->component_tipo . locator::DELIMITER . $this->section_tipo . locator::DELIMITER . $this->section_id;
-
-		/*
-		if ( !empty($this->component_tipo) {
-			$name .= locator::DELIMITER . $this->component_tipo;
-		}
-
-		if ( !empty($this->from_component_tipo) {
-			$name .= locator::DELIMITER . $this->from_component_tipo;
-		}
-
-		if ( !empty($this->tag_id) {
-			$name .= locator::DELIMITER . $this->tag_id;
-		}
-		*/
-
-		return $name;
-	}//end get_flat
-
-
-
 	/**
 	* GET_TERM_ID_FROM_LOCATOR
 	* Contract locator object as string like 'es1_185' (section_tipo and section_id)
