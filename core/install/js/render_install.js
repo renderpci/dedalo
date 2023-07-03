@@ -1263,7 +1263,7 @@ export const render_hierarchies_import_block = function(options) {
 				const hierachy_label = ui.create_dom_element({
 					element_type	: 'label',
 					class_name		: 'hierarchy_label',
-					inner_html		: current_hierarchy.label,
+					inner_html		: current_hierarchy.label + ' [' + current_hierarchy.tld + ']',
 					parent			: hierachy_li
 				})
 				if (active_hierarchies.includes( current_hierarchy.tld.toLowerCase() )) {
