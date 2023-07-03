@@ -142,9 +142,19 @@ class json_handler {
 	// 	return $value;
 	// }//end test_json
 
-		return $value;
-	}//end test_json
 
+
+	/**
+	* IS_JSON
+	* check if the value is a valid JSON
+	* @param string $value
+	* @return bool
+	*/
+	public static function is_json($value){
+		return is_string($value) && is_array(json_decode($value, true)) && (json_last_error() == JSON_ERROR_NONE)
+			? true
+			: false;
+	}// end is_json
 
 
 }//end class json_handler
