@@ -129,15 +129,18 @@ class json_handler {
 
 
 
-	/**
-	* TEST_JSON
-	* @param string $value
-	*/
-	public static function test_json( string $value ) {
+	// /**
+	// * TEST_JSON
+	// * @param string $value
+	// */
+	// public static function test_json( string $value ) {
 
-		if ((substr($value, 0, 1) === '{' || substr($value, 0, 1) === '[') && ($json = json_decode($value, true))) {
-			return $json;
-		}
+	// 	if ((substr($value, 0, 1) === '{' || substr($value, 0, 1) === '[') && ($json = json_decode($value, true))) {
+	// 		return $json;
+	// 	}
+
+	// 	return $value;
+	// }//end test_json
 
 		return $value;
 	}//end test_json
