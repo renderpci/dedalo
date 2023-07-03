@@ -236,6 +236,29 @@ class section extends common {
 
 
 
+
+	/**
+	* GET_IDENTIFIER
+	* Compound a chained plain flat identifier string for use as media component name, etc..
+	* @return string $name Like 'dd207_1'
+	*/
+	public function get_identifier() : string {
+
+		if ( empty($this->get_tipo() ) ) {
+			throw new Exception("Error Processing Request. empty section_tipo", 1);
+		}
+		if ( empty($this->get_section_id() ) ) {
+			throw new Exception("Error Processing Request. empty section_id", 1);
+		}
+
+		$identifier = $this->tipo . locator::DELIMITER . $this->section_id;
+
+		return $identifier;
+	}//end get_identifier
+
+
+
+
 	/**
 	* SET_BL_LOADED_MATRIX_DATA
 	* Pass bl_loaded_matrix_data to own $JSON_RecordObj_matrix instance
