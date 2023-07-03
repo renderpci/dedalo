@@ -1033,7 +1033,10 @@ class diffusion_sql extends diffusion  {
 			$section->add_diffusion_info_default($options->diffusion_element_tipo);
 			$section->save_modified = false;
 			$section->Save();
-			debug_log(__METHOD__." Added current diffusion_element_tipo $options->diffusion_element_tipo to data. Section diffusion_info updated and saved [{$options->section_tipo}-{$options->section_id}]. ".to_string(), logger::DEBUG);
+			debug_log(__METHOD__
+				." Added current diffusion_element_tipo $options->diffusion_element_tipo to data. Section diffusion_info updated and saved [{$options->section_tipo}-{$options->section_id}]. "
+				, logger::DEBUG
+			);
 
 			# Cascade delete
 			# dump( json_decode($options->table_properties), ' options->table_properties ++ '.to_string());
@@ -1084,7 +1087,10 @@ class diffusion_sql extends diffusion  {
 		}
 		if (!isset($related_term)) {
 			// throw new Exception("Error Processing Request. Table field '$tipo' related component not found. Please review your structure config and fixit.", 1);
-			debug_log(__METHOD__." Table field '$tipo' related component not found. Please review your structure config".to_string(), logger::WARNING);
+			debug_log(__METHOD__
+				." Table field '$tipo' related component not found. Please review your structure config"
+				, logger::WARNING
+			);
 			return false;
 		}
 
@@ -1109,15 +1115,15 @@ class diffusion_sql extends diffusion  {
 		$ar_field_data['field_value'] = '';
 
 		$options = new stdClass();
-			$options->typology 		= null;
-			$options->value 		= null;
-			$options->tipo 			= null;
-			$options->parent 		= null;
-			$options->lang 			= null;
-			$options->section_tipo 	= null;
-			$options->caler_id 		= null;
-			$options->properties 	= null;
-			$options->diffusion_element_tipo = null;
+			$options->typology					= null;
+			$options->value						= null;
+			$options->tipo						= null;
+			$options->parent					= null;
+			$options->lang						= null;
+			$options->section_tipo				= null;
+			$options->caler_id					= null;
+			$options->properties				= null;
+			$options->diffusion_element_tipo	= null;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 
@@ -1197,7 +1203,6 @@ class diffusion_sql extends diffusion  {
 				}
 
 				$diffusion_model_name = RecordObj_dd::get_modelo_name_by_tipo($options->tipo,true);
-
 
 				# switch cases
 				switch (true) {
@@ -1683,7 +1688,10 @@ class diffusion_sql extends diffusion  {
 			if ($recursion_level>=$max_recursions) {
 				# Avoid infinite loops like Manolo's item to all references
 				$resolve_references = false;
-				debug_log(__METHOD__." (!) Stopped recursive resolve_references on level '$recursion_level' ".to_string($options)." ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ ", logger::WARNING);
+				debug_log(__METHOD__
+					." (!) Stopped recursive resolve_references on level '$recursion_level' ".to_string($options)." ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
+					, logger::WARNING
+				);
 			}
 			if ($resolve_references===true) {
 
@@ -2570,7 +2578,11 @@ class diffusion_sql extends diffusion  {
 				$diffusion_database_name = RecordObj_dd::get_termino_by_tipo($diffusion_database_tipo, DEDALO_STRUCTURE_LANG, true, false); // $terminoID, $lang=NULL, $from_cache=false, $fallback=true
 				break;
 			case $count>1:
-				debug_log(__METHOD__." Detected more than one related elements: $model_name", logger::ERROR);
+				debug_log(__METHOD__
+					." Detected more than one related elements" . PHP_EOL
+					.' model: ' . $model_name
+					, logger::ERROR
+				);
 				break;
 			default:
 				break;
@@ -2631,7 +2643,10 @@ class diffusion_sql extends diffusion  {
 			if (isset($properties->force_source_tables_tipo)) {
 				# Override
 				$diffusion_element_tipo_tables = $properties->force_source_tables_tipo;
-				debug_log(__METHOD__." Override diffusion_element_tipo $diffusion_element_tipo to $diffusion_element_tipo_tables for calculate diffusion tables ".to_string(), logger::DEBUG);
+				debug_log(__METHOD__
+					." Override diffusion_element_tipo $diffusion_element_tipo to $diffusion_element_tipo_tables for calculate diffusion tables "
+					, logger::DEBUG
+				);
 			}
 
 		// database_alias check . $tipo, $model_name, $relation_type, $search_exact=false
@@ -2675,7 +2690,10 @@ class diffusion_sql extends diffusion  {
 		$database_name = $diffusion_element->database_name;
 		if ($database_name!==MYSQL_DEDALO_DATABASE_CONN && MYSQL_DEDALO_DATABASE_CONN==='web_default') {
 			$database_name = MYSQL_DEDALO_DATABASE_CONN;
-			debug_log(__METHOD__." Using config db (".MYSQL_DEDALO_DATABASE_CONN.") as database overwriting diffusion defined (diffusion_element->database_name) ".to_string(), logger::WARNING);
+			debug_log(__METHOD__
+				." Using config db (".MYSQL_DEDALO_DATABASE_CONN.") as database overwriting diffusion defined (diffusion_element->database_name) "
+				, logger::WARNING
+			);
 		}
 		#debug_log(__METHOD__." Using database_name: $database_name ".to_string(), logger::DEBUG);
 
@@ -2864,7 +2882,7 @@ class diffusion_sql extends diffusion  {
 			$thesaurus_data->database_name	= 'web_'.DEDALO_DIFFUSION_DOMAIN;
 			$thesaurus_data->table			= 'thesaurus';
 			debug_log(__METHOD__
-				." Thesaurus is not properly defined for diffusion. Using defaults [$thesaurus_data->table,$thesaurus_data->database_name]. Please fix this ASAP  "
+				." Thesaurus is not properly defined for diffusion. Using defaults [$thesaurus_data->table,$thesaurus_data->database_name]. Please fix this ASAP "
 				, logger::WARNING
 			);
 		}
@@ -2893,7 +2911,10 @@ class diffusion_sql extends diffusion  {
 			while ($rows = pg_fetch_assoc($result_resource)) {
 
 				$current_record_section_id = $rows['section_id'];
-				debug_log(__METHOD__." Diffusion record: - $section_tipo - $current_record_section_id ".to_string(), logger::DEBUG);
+				debug_log(__METHOD__
+					." Diffusion record: - $section_tipo - $current_record_section_id "
+					, logger::DEBUG
+				);
 
 				$current_options = new stdClass();
 					$current_options->section_tipo				= $section_tipo;
@@ -2922,7 +2943,10 @@ class diffusion_sql extends diffusion  {
 	*/
 	public static function delete_sql_record($section_id, $database_name, $table_name, $section_tipo) {
 		if(SHOW_DEBUG===true) {
-			debug_log(__METHOD__." Called with: section_id:$section_id, database_name:$database_name, table_name:$table_name, section_tipo:$section_tipo, called_class:".get_called_class(), logger::DEBUG);
+			debug_log(__METHOD__
+				." Called with: section_id:$section_id, database_name:$database_name, table_name:$table_name, section_tipo:$section_tipo, called_class:".get_called_class()
+				, logger::DEBUG
+			);
 			#$diffusion_element_tables_map = diffusion_sql::get_diffusion_element_tables_map( $options->diffusion_element_tipo );
 		}
 
@@ -3244,7 +3268,10 @@ class diffusion_sql extends diffusion  {
 				$_SESSION['dedalo']['config']['skip_publication_state_check'] = 1;
 
 				tool_diffusion::export_record($section_tipo, $section_id, $diffusion_element_tipo, $resolve_references=true);
-				debug_log(__METHOD__." *** Triggered tool_diffusion::export_record for parent ($section_tipo  - $section_id) ".to_string(), logger::DEBUG);
+				debug_log(__METHOD__
+					." *** Triggered tool_diffusion::export_record for parent ($section_tipo  - $section_id) "
+					, logger::DEBUG
+				);
 
 				# Restore previous skip_publication_state_check state
 				$_SESSION['dedalo']['config']['skip_publication_state_check'] = $current_skip_publication_state_check;
@@ -3298,14 +3325,14 @@ class diffusion_sql extends diffusion  {
 					$current_locator = $ar_parents[0];
 				}
 
-				$section_tipo 	= $current_locator->section_tipo;
-				$section_id 	= $current_locator->section_id;
+				$section_tipo	= $current_locator->section_tipo;
+				$section_id		= $current_locator->section_id;
 
 				$terminoID[] = $section_tipo .'_'. $section_id;
 
 
 				// add parents option
-				// if defined in propeerties, get current locator parents recursively and add it to current value (like municipality, region, country hierarchy)
+				// if defined in properties, get current locator parents recursively and add it to current value (like municipality, region, country hierarchy)
 					if (isset($options->properties->process_dato_arguments->custom_arguments->add_parents) && $options->properties->process_dato_arguments->custom_arguments->add_parents===true) {
 						# calculate parents and add to dato
 						// get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
@@ -3492,7 +3519,10 @@ class diffusion_sql extends diffusion  {
 		// properties
 			$properties = $options->properties;
 			if (!isset($properties->political_toponymy_type)) {
-				debug_log(__METHOD__." Error. Structure political_toponymy_type is not defined for tipo: ".to_string($tipo), logger::ERROR);
+				debug_log(__METHOD__
+					." Error. Structure political_toponymy_type is not defined for tipo: ".to_string($tipo)
+					, logger::ERROR
+				);
 				return null;
 			}
 
@@ -3580,7 +3610,10 @@ class diffusion_sql extends diffusion  {
 
 		// check found
 			if (!isset($children_tipo[0])) {
-				debug_log(__METHOD__." Error. searched component_relation_children not found in section '$section_tipo'", logger::ERROR);
+				debug_log(__METHOD__
+					." Error. searched component_relation_children not found in section '$section_tipo'"
+					, logger::ERROR
+				);
 				return $norder; // zero
 			}
 
@@ -4174,7 +4207,10 @@ class diffusion_sql extends diffusion  {
 					$response = $fallback_component->{$fallback_method}();
 
 				}else{
-					debug_log(__METHOD__." ERROR: Method $fallback_method DO NOT EXISTS IN COMPONENT '$fallback_tipo' ".to_string(), logger::ERROR);
+					debug_log(__METHOD__
+						." ERROR: Method $fallback_method DO NOT EXISTS IN COMPONENT '$fallback_tipo' "
+						, logger::ERROR
+					);
 				}
 			}
 
@@ -4339,7 +4375,10 @@ class diffusion_sql extends diffusion  {
 		#$object_component_tipo = reset($ar_target_component_tipo);
 		if (!is_object($process_dato_arguments)) {
 			dump($process_dato_arguments, ' error process_dato_arguments must be an object ++ '.to_string());
-			debug_log(__METHOD__." ERROR PROCESS_DATO_ARGUMENTS MUST BE AN OBJECT ".to_string(), logger::ERROR);
+			debug_log(__METHOD__
+				." ERROR PROCESS_DATO_ARGUMENTS MUST BE AN OBJECT "
+				, logger::ERROR
+			);
 		}
 		$target_component_tipo	= $process_dato_arguments->target_component_tipo;
 		$model_name			= RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo,true);
@@ -4421,7 +4460,10 @@ class diffusion_sql extends diffusion  {
 					$value2 = call_user_func_array($process_dato_arguments->process_dato, $ar_parsed_values);
 					if (!empty($value) && empty($value2)) {
 						// something bad happened
-						debug_log(__METHOD__." value2 is empty. Something bad happened? - process_dato_arguments->process_dato: ".to_string($process_dato_arguments->process_dato), logger::ERROR);
+						debug_log(__METHOD__
+							." value2 is empty. Something bad happened? - process_dato_arguments->process_dato: ".to_string($process_dato_arguments->process_dato)
+							, logger::ERROR
+						);
 					}
 					$value = $value2;
 				}
