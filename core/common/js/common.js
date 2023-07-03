@@ -92,9 +92,10 @@ common.prototype.init = async function(options) {
 * Generic agnostic build function created to maintain
 * unity of calls.
 * (!) For components, remember use always component_common.build()
-* @return bool true
+* @param bool autoload = false
+* @return bool
 */
-common.prototype.build = async function () {
+common.prototype.build = async function(autoload=false) {
 
 	const self = this
 
