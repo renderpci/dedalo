@@ -554,6 +554,45 @@ class tool_import_dedalo_csv extends tool_common {
 
 					// component_tipo. Target component is always the CSV map element with current key
 						$component_tipo	= $column_map->map_to;
+
+					// created_by_userID
+					if ($column_map->model==='created_by_user' || $column_map->map_to===$created_by_user['tipo']) {
+
+						$component_tipo	= $created_by_user['tipo'];
+
+
+						// $options = new stdClass();
+						// 	$options->type			= DEDALO_RELATION_TYPE_LINK;
+						// 	$options->column_name	= $created_by_user['tipo'];
+						// 	$options->section_tipo	= $section_tipo;
+						// 	$options->value			= $value;
+
+						// $ar_user_locator = self::build_ar_locators($options);
+						// if (!empty($ar_user_locator)) {
+
+						// 	// set value with safe path
+						// 		$section_dato = $section->get_dato();
+						// 		if (!isset($section_dato->relations)) {
+						// 			$section_dato->relations = [];
+						// 		}
+						// 		$temp_relations = array_filter($section_dato->relations, function($el) use($user_locator){
+						// 			return !isset($el->from_component_tipo) || $el->from_component_tipo!==$user_locator->from_component_tipo;
+						// 		});
+						// 		// add current locator
+						// 		$temp_relations[] = $user_locator;
+						// 		// update relations container
+						// 		$section_dato->relations = array_values($temp_relations);
+
+						// 	// Set direct property also
+						// 		$section_dato->created_by_userID = (int)$user_locator->section_id;
+
+						// 	// Save section
+						// 		$section->set_dato($section_dato);
+						// 		$section->Save();
+						// }
+						// continue;
+
+					}
 						if (empty($component_tipo)) {
 							debug_log(__METHOD__
 								. " Error: !!!!!!!! ignored empty component_tipo on csv_map key: $key ". PHP_EOL
