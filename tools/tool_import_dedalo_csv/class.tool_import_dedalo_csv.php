@@ -550,7 +550,8 @@ class tool_import_dedalo_csv extends tool_common {
 								$section->Save();
 						}
 						continue;
-					}
+					}// modified_by_user
+
 
 					// component_tipo. Target component is always the CSV map element with current key
 						$component_tipo	= $column_map->map_to;
@@ -593,6 +594,39 @@ class tool_import_dedalo_csv extends tool_common {
 						// continue;
 
 					}
+					elseif ($column_map->model==='modified_by_user' || $column_map->map_to===$modified_by_user['tipo']) {
+
+
+						$component_tipo	= $modified_by_user['tipo'];
+
+
+						// $user_locator = self::build_user_locator($value, $modified_by_user['tipo']);
+						// if (!empty($user_locator)) {
+						// 	// set value with safe path
+						// 		$section_dato = $section->get_dato();
+						// 		if (!isset($section_dato->relations)) {
+						// 			$section_dato->relations = [];
+						// 		}
+						// 		$temp_relations = array_filter($section_dato->relations, function($el) use($user_locator){
+						// 			return !isset($el->from_component_tipo) || $el->from_component_tipo!==$user_locator->from_component_tipo;
+						// 		});
+						// 		// add current locator
+						// 		$temp_relations[] = $user_locator;
+						// 		// update relations container
+						// 		$section_dato->relations = array_values($temp_relations);
+
+						// 	// Set direct property also
+						// 		$section_dato->modified_by_userID = (int)$user_locator->section_id;
+
+						// 	// Save section
+						// 		$section->set_dato($section_dato);
+						// 		$section->save_modified = false;
+						// 		$section->Save();
+						// }
+						// continue;
+					}
+
+					// check if the component_tipo is empty, forgotten case.
 						if (empty($component_tipo)) {
 							debug_log(__METHOD__
 								. " Error: !!!!!!!! ignored empty component_tipo on csv_map key: $key ". PHP_EOL
