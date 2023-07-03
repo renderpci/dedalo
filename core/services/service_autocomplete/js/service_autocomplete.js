@@ -97,7 +97,7 @@ service_autocomplete.prototype.init = async function(options) {
 		// })
 
 	// fix service instance as global
-		window.dedalo.service_autocomplete = self
+		window.page_globals.service_autocomplete = self
 
 	// status update
 		self.status = 'initialized'

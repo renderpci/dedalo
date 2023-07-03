@@ -760,12 +760,10 @@ const get_custom_events = (self, i, text_editor) => {
 							i			: i,
 							tag			: tag_obj
 						})
-
 						break;
 
 					default:
 						// nothing to do here
-
 						break;
 				}//end switch evt.target.className
 			}else{
@@ -776,11 +774,11 @@ const get_custom_events = (self, i, text_editor) => {
 
 	// mouseup
 		custom_events.MouseUp = (evt, options) => {
-			// console.log("MouseUp options:", options, evt);
+			// console.log("MouseUp options:", evt, options);
 
 			// user text selection event
 				const selection = options.selection
-				event_manager.publish('text_selection_'+ self.id, {selection:selection, caller: self})
+				event_manager.publish('text_selection_'+ self.id, {selection: selection, caller: self})
 
 			// click_no_tag_ . Used by tool_indexation to de-select the active tag
 				if (!evt) {
@@ -801,7 +799,7 @@ const get_custom_events = (self, i, text_editor) => {
 
 				// 'F2'
 				case features.av_player && evt.code===features.av_player.av_insert_tc_code:
-					// publish event and receive susbscriptors responses
+					// publish event and receive subscription responses
 					const susbscriptors_responses			= event_manager.publish('key_up_f2' +'_'+ self.id_base, evt.code)
 					const susbscriptors_responses_length	= susbscriptors_responses.length
 
@@ -813,7 +811,7 @@ const get_custom_events = (self, i, text_editor) => {
 					// text_editor. get editor and content data
 						// const editor_content_data = text_editor.get_editor_content_data()
 
-					// iterate susbscriptors responses
+					// iterate subscription responses
 						for (let i = 0; i < susbscriptors_responses_length; i++) {
 							const data_tag	= susbscriptors_responses[i]
 							const tag_id	= (!data_tag.tag_id)
@@ -850,7 +848,6 @@ const get_custom_events = (self, i, text_editor) => {
 					const node_tag_person	= self.build_view_tag_obj(person_tag, person_tag.tag_id)
 					// set the new tag at caret position in the text.
 					text_editor.set_content(node_tag_person)
-
 					break;
 
 				// ctrl + Shift + 0
@@ -875,7 +872,6 @@ const get_custom_events = (self, i, text_editor) => {
 					const node_tag_lang = self.build_view_tag_obj(lang_tag, lang_tag.tag_id)
 					// set the new tag at caret position in the text.
 					text_editor.set_content(node_tag_lang)
-
 					break;
 
 				// case evt.code==='Backspace' || evt.code==='Delete':

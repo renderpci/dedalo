@@ -337,7 +337,8 @@ export function array_equals(source, array) {
 		// Check if we have nested arrays
 		if (source[i] instanceof Array && array[i] instanceof Array) {
 			// recurse into the nested arrays
-			if (!source[i].equals(array[i]))
+			// if (!source[i].equals(array[i]))
+			if (!is_equal(source[i], array[i]))
 				return false;
 		}
 		// else if (source[i] != array[i]) {

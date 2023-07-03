@@ -611,7 +611,9 @@ const view_modal = async function(options) {
 					tool_instance.on_close_actions('modal')
 				}else{
 
-					caller.refresh()
+					caller.refresh({
+						refresh_id_base_lang : true
+					})
 					tool_instance.destroy(true, true, true)
 				}
 			}
@@ -784,7 +786,9 @@ const view_window = async function(options) {
 			// refresh caller.
 			// Note that in some situations, caller is not an instance like in grid_dd indexation button
 			if (caller && typeof caller.refresh==='function') {
-				caller.refresh()
+				caller.refresh({
+					refresh_id_base_lang : true
+				})
 			}
 
 			// close opened window if is open

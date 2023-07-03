@@ -1615,7 +1615,7 @@ class component_media_common extends component_common {
 					// bad dato case
 					debug_log(__METHOD__
 						." ERROR. BAD COMPONENT DATO " .PHP_EOL
-						.' dato:' . to_string($dato)
+						.' dato:' . json_encode($dato, JSON_PRETTY_PRINT)
 						, logger::ERROR
 					);
 					return false;
