@@ -115,18 +115,15 @@ class component_image extends component_media_common {
 
 		// fallback default
 			if (empty($id)) {
-				// $id = $this->tipo.'_'.$this->section_tipo.'_'.$this->parent;
-				// flat locator as id
-				$locator = new locator();
-					$locator->set_section_tipo($this->get_section_tipo());
-					$locator->set_section_id($this->get_section_id());
-					$locator->set_component_tipo($this->get_tipo());
 
-				if (empty($locator->section_id)) {
-					debug_log(__METHOD__." Error. Invalid locator with empty section_id ".to_string(), logger::ERROR);
+				if (empty($this->section_id)) {
+					debug_log(__METHOD__
+						." Error. Invalid instance with empty section_id "
+						, logger::WARNING
+					);
 					$id = null;
 				}else{
-					$id = $locator->get_flat();
+					$id = $this->get_identifier();
 				}
 			}
 
