@@ -2524,4 +2524,108 @@ class component_relation_common extends component_common {
 
 
 
+	/**
+	* CONFORM_IMPORT_DATA
+	* @param string $import_value
+	* @param string $column_name
+	* @return object $response
+	*/
+	public function conform_import_data(string $import_value, string $column_name) : object {
+
+		// Response
+		$response = new stdClass();
+			$response->result	= null;
+			$response->errors 	= [];
+			$response->msg		= 'Error. Request failed';
+
+		// Check if is a JSON string. Is yes, decode
+		if(json_handler::is_json($import_value)){
+			// try to JSON decode (null on not decode)
+			$dato_from_json = json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
+			$import_value = $dato_from_json;
+		}
+
+		$type			= $this->get_relation_type();
+		$section_tipo	= $this->section_tipo;
+		$value			= $import_value;
+
+		// no value case
+			if (empty($value)) {
+				return $response;
+			}
+
+		// return value
+			$ar_locators = [];
+
+		// column name could be only the tipo as "rsc85" or a identifier as "rsc85_rsc197"
+		// the component tipo are always the first tipo in the column name
+		$ar_tipos				= explode(locator::DELIMITER, $column_name);
+		$from_component_tipo	= $ar_tipos[0];
+		$target_section_tipo	= $ar_tipos[1] ?? null;
+
+		// check if the value is not a valid json or if it's a int,
+		// cases: 1 || 4,5
+		// 1 is an int and 4,5 is string
+		// but not the locator [{"section_tipo":"oh1","section_id":"1"}] it's valid json
+		if (is_string($value) || is_int($value)) {
+
+			// $target_section_tipo
+				if( empty($target_section_tipo)) {
+					$ar_target_section_tipo = $this->get_ar_target_section_tipo();
+
+					if(count($ar_target_section_tipo)>1){
+						debug_log(__METHOD__
+							." Try to import multiple section_tipo without clear target"
+							, logger::ERROR
+						);
+
+						$failed = new stdClass();
+							$failed->section_id		= $this->section_id;
+							$failed->data			= stripslashes( $import_value );
+							$failed->component_tipo	= $this->get_tipo();
+							$failed->msg			= 'IGNORED: mTry to import multiple section_tipo without clear target ';
+						$response->errors[] = $failed;
+
+						return $response;
+					}
+					$target_section_tipo = reset($ar_target_section_tipo);
+				}
+
+			$ar_values	= explode(',', $value);
+			foreach ($ar_values as $section_id) {
+				// old format (section_id)
+				// is int. Builds complete locator and set section_id from value
+				$locator = new locator();
+					$locator->set_type($type);
+					$locator->set_section_tipo($target_section_tipo);
+					$locator->set_from_component_tipo($from_component_tipo);
+					$locator->set_section_id(trim($section_id));
+
+				$ar_locators[] = $locator;
+			}
+		}else{
+
+			// Locator case
+			$value = !is_array($value) ? [$value] : $value;
+			foreach ($value as $current_locator) {
+
+			// is full locator. Inject safe fixed properties to avoid errors
+				$locator = new locator($current_locator);
+					if (!property_exists($current_locator, 'type')) {
+						$locator->set_type($type);
+					}
+					if (!property_exists($current_locator, 'from_component_tipo')) {
+						$locator->set_from_component_tipo($from_component_tipo);
+					}
+
+				$ar_locators[] = $locator;
+			}
+		}
+
+		$response->result	= $ar_locators;
+		$response->msg		= 'ok.';
+
+		return $response;
+	}//end conform_import_data
+
 }//end class component_relation_common
