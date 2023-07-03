@@ -16,6 +16,24 @@ class area extends area_common  {
 
 
 	/**
+	* GET_IDENTIFIER
+	* Compound a chained plain flat identifier string for use as media component name, etc..
+	* @return string $name Like 'dd42_dd207_1'
+	*/
+	public function get_identifier() : string {
+
+		if ( empty($this->get_tipo() ) ) {
+			throw new Exception("Error Processing Request. empty tipo", 1);
+		}
+
+		$identifier = $this->tipo;
+
+		return $identifier;
+	}//end get_identifier
+
+
+
+	/**
 	* GET AREAS RECURSIVE IN JSON FORMAT OF ALL MAJOR AREAS
 	* Iterate all major existing area types (area_root,area_resource,area_admin, ...)
 	* and get all tipos of every one mixed in one full ontology JSON array
