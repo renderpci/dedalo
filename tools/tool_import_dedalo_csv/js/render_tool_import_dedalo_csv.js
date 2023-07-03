@@ -787,8 +787,8 @@ const render_columns_mapper = async function(self, item) {
 					option.model = ar_components[k].model
 
 					// selected options set on match
-					if ( ar_components[k].value===column_name ||
-						(column_name==='section_id' && ar_components[k].model==='component_section_id')) {
+					if ( ar_components[k].value===column_component_tipo ||
+						(column_component_tipo==='section_id' && ar_components[k].model==='component_section_id')) {
 						option.selected = true
 						// checkbox_file_selection update
 						checkbox_file_selection.checked = true
@@ -796,6 +796,7 @@ const render_columns_mapper = async function(self, item) {
 						// update ar_columns_map object
 						ar_columns_map[i].checked	= true
 						ar_columns_map[i].map_to	= ar_components[k].value
+						ar_columns_map[i].column_name	= column_name
 					}
 				}
 				target_select.addEventListener("change", function(e){
@@ -807,9 +808,10 @@ const render_columns_mapper = async function(self, item) {
 					}
 
 					// update ar_columns_map object
-					ar_columns_map[i].checked	= checkbox_file_selection.checked
-					ar_columns_map[i].map_to	= e.target.value
-					ar_columns_map[i].model 	= e.target.options[e.target.selectedIndex].model
+					ar_columns_map[i].checked		= checkbox_file_selection.checked
+					ar_columns_map[i].map_to		= e.target.value
+					ar_columns_map[i].model			= e.target.options[e.target.selectedIndex].model
+
 				})
 
 			// sample_data (search non empty values)
