@@ -83,13 +83,10 @@ component_geolocation.prototype.init = async function(options) {
 
 	const self = this
 
-	// is_data_changed. bool set as true when component data changes.
-		self.is_data_changed = false
-
-
-	self.ar_layer_loaded	= null
-	self.map				= null
-	self.layer_control		= false
+	// short vars
+		self.ar_layer_loaded	= null
+		self.map				= null
+		self.layer_control		= false
 
 	// temporary data_value: component_geolocation does not save the values when the inputs change their value.
 	// We need a temporary value for all current values of the inputs (lat, lon, zoom, alt)
@@ -119,84 +116,84 @@ component_geolocation.prototype.init = async function(options) {
 	// call the generic common tool init
 		const common_init = await component_common.prototype.init.call(this, options);
 
-	// set the self specific libraries and variables not defined by the generic init
-		// load dependencies js/css
-			const load_promises = []
+	// load dependencies js/css. Set the self specific libraries and variables not defined by the generic init
+		const load_promises = []
 
-			const license = null
-				// `
-				// /**
-				//  *
-				//  * @source: http://www.lduros.net/some-javascript-source.js
-				//  *
-				//  * @licstart  The following is the entire license notice for the
-				//  *  JavaScript code in this page.
-				//  *
-				//  * Copyright (C) 2014  Loic J. Duros
-				//  *
-				//  *
-				//  * The JavaScript code in this page is free software: you can
-				//  * redistribute it and/or modify it under the terms of the GNU
-				//  * General Public License (GNU GPL) as published by the Free Software
-				//  * Foundation, either version 3 of the License, or (at your option)
-				//  * any later version.  The code is distributed WITHOUT ANY WARRANTY;
-				//  * without even the implied warranty of MERCHANTABILITY or FITNESS
-				//  * FOR A PARTICULAR PURPOSE.  See the GNU GPL for more details.
-				//  *
-				//  * As additional permission under GNU GPL version 3 section 7, you
-				//  * may distribute non-source (e.g., minimized or compacted) forms of
-				//  * that code without the copy of the GNU GPL normally required by
-				//  * section 4, provided you include this license notice and a URL
-				//  * through which recipients can access the Corresponding Source.
-				//  *
-				//  * @licend  The above is the entire license notice
-				//  * for the JavaScript code in this page.
-				//  *
-				//  */
-				//  `
+		const license = null
+			// `
+			// /**
+			//  *
+			//  * @source: http://www.lduros.net/some-javascript-source.js
+			//  *
+			//  * @licstart  The following is the entire license notice for the
+			//  *  JavaScript code in this page.
+			//  *
+			//  * Copyright (C) 2014  Loic J. Duros
+			//  *
+			//  *
+			//  * The JavaScript code in this page is free software: you can
+			//  * redistribute it and/or modify it under the terms of the GNU
+			//  * General Public License (GNU GPL) as published by the Free Software
+			//  * Foundation, either version 3 of the License, or (at your option)
+			//  * any later version.  The code is distributed WITHOUT ANY WARRANTY;
+			//  * without even the implied warranty of MERCHANTABILITY or FITNESS
+			//  * FOR A PARTICULAR PURPOSE.  See the GNU GPL for more details.
+			//  *
+			//  * As additional permission under GNU GPL version 3 section 7, you
+			//  * may distribute non-source (e.g., minimized or compacted) forms of
+			//  * that code without the copy of the GNU GPL normally required by
+			//  * section 4, provided you include this license notice and a URL
+			//  * through which recipients can access the Corresponding Source.
+			//  *
+			//  * @licend  The above is the entire license notice
+			//  * for the JavaScript code in this page.
+			//  *
+			//  */
+			//  `
 
-			// leaflet. (!) It's necessary to be loaded fully before 'geoman'
-				const lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet.js'
-				await common.prototype.load_script(
-					lib_js_file,
-					license
-				)
+		// leaflet. (!) It's necessary to be loaded fully before 'geoman'
+			const lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet.js'
+			await common.prototype.load_script(
+				lib_js_file,
+				license
+			)
 
-			// another loads in parallel
-				const lib_css_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet.css'
-				load_promises.push( common.prototype.load_style(lib_css_file) )
+		// another loads in parallel
+			const lib_css_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet.css'
+			load_promises.push( common.prototype.load_style(lib_css_file) )
 
-				const geo_editor_lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet-geoman/leaflet-geoman.min.js'
-				load_promises.push( common.prototype.load_script(geo_editor_lib_js_file, license) )
+			const geo_editor_lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet-geoman/leaflet-geoman.min.js'
+			load_promises.push( common.prototype.load_script(geo_editor_lib_js_file, license) )
 
-				const geo_editor_lib_css_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet-geoman/leaflet-geoman.css'
-				load_promises.push( common.prototype.load_style(geo_editor_lib_css_file) )
+			const geo_editor_lib_css_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet-geoman/leaflet-geoman.css'
+			load_promises.push( common.prototype.load_style(geo_editor_lib_css_file) )
 
-				const geo_messure_lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/turf/turf.min.js'
-				load_promises.push( common.prototype.load_script(geo_messure_lib_js_file, license) )
+			const geo_messure_lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/turf/turf.min.js'
+			load_promises.push( common.prototype.load_script(geo_messure_lib_js_file, license) )
 
-				const color_picker_lib_js_file = DEDALO_ROOT_WEB + '/lib/iro/dist/iro.min.js'
-				load_promises.push( common.prototype.load_script(color_picker_lib_js_file, license) )
+			const color_picker_lib_js_file = DEDALO_ROOT_WEB + '/lib/iro/dist/iro.min.js'
+			load_promises.push( common.prototype.load_script(color_picker_lib_js_file, license) )
 
-			// load and set JSON langs file
-				load_promises.push(
-					new Promise(function(resolve){
-						data_manager.request({
-							url		: '../common/js/lang.json',
-							method	: 'GET'
-						})
-						.then(function(response){
-							// set json_langs
-							self.json_langs = response
-							resolve(response)
-						})
+		// load and set JSON langs file
+			load_promises.push(
+				new Promise(function(resolve){
+					data_manager.request({
+						url		: '../common/js/lang.json',
+						method	: 'GET'
 					})
-				)
+					.then(function(response){
+						// set json_langs
+						self.json_langs = response
+						resolve(response)
+					})
+				})
+			)
 
-			await Promise.all(load_promises)
-			.then(async function(){
-				// console.log('All component_geolocation items are loaded:', response);
-			})
+		await Promise.all(load_promises)
+		.then(async function(){
+			// console.log('All component_geolocation items are loaded:', response);
+		})
+
 	// event subscriptions
 		// (!) Note that component properties could set observe events like (numisdata264, hierarchy31):
 		// {
@@ -217,7 +214,7 @@ component_geolocation.prototype.init = async function(options) {
 
 /**
 * GET_MAP
-* load the libraries and specific css
+* Load the libraries and specific CSS
 * @param HTMLElement map_container
 * @param integer key
 * @return bool
@@ -240,14 +237,13 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 	// current_value will be update with different changes to create change_data to save
 		self.current_value[key] = clone(value[key])
 
-
 	// load all layers
 		self.ar_layer_loaded = typeof value[key].lib_data!=='undefined'
 			? clone(value[key].lib_data)
 			: []
 
 	// map_data
-		const map_data = (typeof value!=="undefined")
+		const map_data = (typeof value!=='undefined')
 			? {
 				x		: field_lat,
 				y		: field_lon,
@@ -261,13 +257,11 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 				alt		: self.default_value.alt
 			 }
 
-
 	// new map vars
 		let arcgis		= null
 		let osm			= null
 		let dare		= null
 		let base_maps	= {}
-
 
 	// Add layer to map
 		switch(self.context.features.geo_provider) {
@@ -298,7 +292,7 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 
 			case 'NUMISDATA':
 				// LAYER
-				//var dare 		= new L.TileLayer('http://dare.ht.lu.se/tiles/imperium/{z}/{x}/{y}.png');
+				// var dare = new L.TileLayer('http://dare.ht.lu.se/tiles/imperium/{z}/{x}/{y}.png');
 				dare = new L.tileLayer('http://pelagios.org/tilesets/imperium/{z}/{x}/{y}.png',{
 					maxZoom: 11
 				});
@@ -319,7 +313,6 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 				if(self.layer_control===false) {
 					self.layer_control = L.control.layers(base_maps).addTo(self.map);
 				}
-
 				break;
 
 			case 'VARIOUS':
@@ -329,39 +322,39 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 				//var cloudmade 	= new L.TileLayer('http://{s}.tile.cloudmade.com/BC9A493B41014CAABB98F0471D759707/997/256/{z}/{x}/{y}.png');
 				//var osm 		= new L.TileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
 				osm = new L.tileLayer('//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
-				// mapbox https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v9/static/-74.0237,40.6609,10,100,0/100x100?access_token=pk.eyJ1IjoibWFwc29mc3VtaXQiLCJhIjoiY2p5MDd2dTkxMDBkMjNubXNiaDVvdHo5ZCJ9.eMqOWuqoFITk01ie1I2BYQ
-				// https://api.mapbox.com/styles/v1/mapbox/dark-v9/static/-74.0237,40.6609,10,100,0/100x100?access_token=pk.eyJ1IjoibWFwc29mc3VtaXQiLCJhIjoiY2p5MDd2dTkxMDBkMjNubXNiaDVvdHo5ZCJ9.eMqOWuqoFITk01ie1I2BYQ
-				// https://api.mapbox.com/styles/v1/mapbox/light-v9/static/-74.0237,40.6609,10,100,0/100x100?access_token=pk.eyJ1IjoibWFwc29mc3VtaXQiLCJhIjoiY2p5MDd2dTkxMDBkMjNubXNiaDVvdHo5ZCJ9.eMqOWuqoFITk01ie1I2BYQ
-				//// Provide your access token
-				// const accessToken =
-				//   'pk.eyJ1IjoibWFwc29mc3VtaXQiLCJhIjoiY2l1ZDF3dHE5MDAxZDMwbjA0cTR3dG50eSJ9.63Xci-GKFikhAobboF0DVQ';
-				//
-				// // set mapbox tile layer
-				// const mapboxTiles1 = L.tileLayer(
-				//   `https://api.mapbox.com/styles/v1/mapbox/streets-v9/tiles/{z}/{x}/{y}?access_token=${accessToken}`,
-				//   {
-				//     attribution:
-				//       '&copy; <a href="https://www.mapbox.com/feedback/">Mapbox</a> &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-				//   }
-				// );
-				// const mapboxTiles2 = L.tileLayer(
-				//   `https://api.mapbox.com/styles/v1/mapbox/streets-v9/tiles/{z}/{x}/{y}?access_token=${accessToken}`,
-				//   {
-				//     attribution:
-				//       '&copy; <a href="https://www.mapbox.com/feedback/">Mapbox</a> &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-				//   }
-				// );
-				// const mapboxTiles3 = L.tileLayer(
-				//   `https://api.mapbox.com/styles/v1/mapbox/streets-v9/tiles/{z}/{x}/{y}?access_token=${accessToken}`,
-				//   {
-				//     attribution:
-				//       '&copy; <a href="https://www.mapbox.com/feedback/">Mapbox</a> &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-				//   }
-				// );
+				// des
+					// mapbox https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v9/static/-74.0237,40.6609,10,100,0/100x100?access_token=pk.eyJ1IjoibWFwc29mc3VtaXQiLCJhIjoiY2p5MDd2dTkxMDBkMjNubXNiaDVvdHo5ZCJ9.eMqOWuqoFITk01ie1I2BYQ
+					// https://api.mapbox.com/styles/v1/mapbox/dark-v9/static/-74.0237,40.6609,10,100,0/100x100?access_token=pk.eyJ1IjoibWFwc29mc3VtaXQiLCJhIjoiY2p5MDd2dTkxMDBkMjNubXNiaDVvdHo5ZCJ9.eMqOWuqoFITk01ie1I2BYQ
+					// https://api.mapbox.com/styles/v1/mapbox/light-v9/static/-74.0237,40.6609,10,100,0/100x100?access_token=pk.eyJ1IjoibWFwc29mc3VtaXQiLCJhIjoiY2p5MDd2dTkxMDBkMjNubXNiaDVvdHo5ZCJ9.eMqOWuqoFITk01ie1I2BYQ
+					//// Provide your access token
+					// const accessToken =
+					//   'pk.eyJ1IjoibWFwc29mc3VtaXQiLCJhIjoiY2l1ZDF3dHE5MDAxZDMwbjA0cTR3dG50eSJ9.63Xci-GKFikhAobboF0DVQ';
+					//
+					// // set mapbox tile layer
+					// const mapboxTiles1 = L.tileLayer(
+					//   `https://api.mapbox.com/styles/v1/mapbox/streets-v9/tiles/{z}/{x}/{y}?access_token=${accessToken}`,
+					//   {
+					//     attribution:
+					//       '&copy; <a href="https://www.mapbox.com/feedback/">Mapbox</a> &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+					//   }
+					// );
+					// const mapboxTiles2 = L.tileLayer(
+					//   `https://api.mapbox.com/styles/v1/mapbox/streets-v9/tiles/{z}/{x}/{y}?access_token=${accessToken}`,
+					//   {
+					//     attribution:
+					//       '&copy; <a href="https://www.mapbox.com/feedback/">Mapbox</a> &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+					//   }
+					// );
+					// const mapboxTiles3 = L.tileLayer(
+					//   `https://api.mapbox.com/styles/v1/mapbox/streets-v9/tiles/{z}/{x}/{y}?access_token=${accessToken}`,
+					//   {
+					//     attribution:
+					//       '&copy; <a href="https://www.mapbox.com/feedback/">Mapbox</a> &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+					//   }
+					// );
 
-
-				//var ggl 	= new L.Google();
-				//var ggl2 	= new L.Google('TERRAIN');
+					//var ggl 	= new L.Google();
+					//var ggl2 	= new L.Google('TERRAIN');
 
 				// MAP
 				self.map = new L.map(map_container, {layers: [osm], center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
@@ -374,9 +367,6 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 				if(self.layer_control===false) {
 					self.layer_control = L.control.layers(base_maps).addTo(self.map);
 				}
-
-
-
 				break;
 		}//end switch(self.context.features.geo_provider)
 
@@ -386,12 +376,10 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 		})
 		// self.map.pm.setGlobalOptions({ measurements: { measurement: true, displayFormat: 'metric' } })
 
-
-
 	// disable zoom handlers
-	self.map.scrollWheelZoom.disable();
-	// disable tap handler, if present.
-	// if (self.map.tap) self.map.tap.disable();
+		self.map.scrollWheelZoom.disable();
+		// disable tap handler, if present.
+		// if (self.map.tap) self.map.tap.disable();
 
 	// map move listeners
 		self.map.on('dragend', function(){
@@ -420,8 +408,8 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 				map_container
 			)
 		});
-		self.map.on('click', function(){
-
+		self.map.on('click', function(e){
+			// disable layers
 			for (let feature in self.FeatureGroup) {
 				const feature_group = self.FeatureGroup[feature]
 				feature_group.eachLayer(function (layer){
@@ -437,7 +425,7 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 				self.init_draw_editor()
 
 			// set the lang of the tool
-				const json_langs	= self.json_langs || []
+				const json_langs = self.json_langs || []
 				if (json_langs.length<1) {
 					console.error('Error. Expected array of json_langs but empty result is obtained:', json_langs);
 				}
@@ -449,15 +437,14 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 				self.map.pm.setLang(lang);
 
 			// check if the map has any layer loaded, if not create new one
-			const check_layer_loaded = self.FeatureGroup[self.active_layer_id]
-
-			if(!check_layer_loaded){
-				// load_layer
+				const check_layer_loaded = self.FeatureGroup[self.active_layer_id]
+				if(!check_layer_loaded){
+					// load_layer
 					self.layers_loader({
 						load 		: 'layer',
 						layer_id	: self.active_layer_id
 					})
-			}
+				}
 		});
 
 	return true
@@ -537,6 +524,11 @@ component_geolocation.prototype.refresh_map = function(map) {
 * LAYERS_LOADER
 * Load all data information of the current selected tag or full database layer loaded.
 * @param object options
+* Sample:
+* {
+* 	layer_id: 1
+*	load: "layer"
+* }
 * @return bool
 */
 component_geolocation.prototype.layers_loader = function(options) {
@@ -544,14 +536,14 @@ component_geolocation.prototype.layers_loader = function(options) {
 	const self = this
 
 	// options
-		const load		= options.load || 'full'
-		const layer_id	= options.layer_id
+		const load		= options.load || 'full' // layer|full
+		const layer_id	= options.layer_id || null // optional on full load
 
 	// load_layer
 		switch(load) {
 
 			case ('full'):
-				const ar_layer	=  self.ar_layer_loaded
+				const ar_layer		=  self.ar_layer_loaded
 				const ar_layer_len	= ar_layer.length
 				for (let i = 0; i < ar_layer_len; i++) {
 					const layer = ar_layer[i]
@@ -559,7 +551,7 @@ component_geolocation.prototype.layers_loader = function(options) {
 				}
 				// active all layer in control
 				const control_layers_len = self.layer_control._layers.length
-				for (var i = 0; i < control_layers_len; i++) {
+				for (let i = 0; i < control_layers_len; i++) {
 					const layer = self.layer_control._layers[i]
 					if(layer.overlay){
 						const input = self.layer_control._layerControlInputs[i]
@@ -588,6 +580,7 @@ component_geolocation.prototype.layers_loader = function(options) {
 				break;
 
 			default:
+				console.warn('Ignored invalid load mode:', load);
 				break;
 		}//end switch
 
@@ -605,6 +598,11 @@ component_geolocation.prototype.layers_loader = function(options) {
 * layer_id = int or key for select the layer into the ar_FeatureGroup
 * Layer in Leaflet is a item in the map (circle, point, etc..)
 * @param object layer
+* sample:
+* {
+*	layer_id: 1
+*	layer_data: {type: 'FeatureCollection', features: Array(1)}
+* }
 * @return bool
 */
 component_geolocation.prototype.load_layer = function(layer) {
@@ -621,95 +619,94 @@ component_geolocation.prototype.load_layer = function(layer) {
 
 	// FEATUREGROUP BUILD : Verify if exist FeatureGroup, else create it. map is global var
 	// if( self.map.hasLayer(self.FeatureGroup[layer_id])===false ) {
-	if( typeof self.FeatureGroup[layer_id] === 'undefined'){
+		if( typeof self.FeatureGroup[layer_id] === 'undefined'){
 
-		// the FeatureGroup is not loaded and does not exist into the map
-		// Create a new FeatureGroup
-		self.FeatureGroup[layer_id] = new L.FeatureGroup();
-		self.map.pm.setGlobalOptions({layerGroup: self.FeatureGroup[layer_id]})
+			// the FeatureGroup is not loaded and does not exist into the map
+			// Create a new FeatureGroup
+			self.FeatureGroup[layer_id] = new L.FeatureGroup();
+			self.map.pm.setGlobalOptions({layerGroup: self.FeatureGroup[layer_id]})
 
 
-		// set the FeatureGroup to the map
-		self.FeatureGroup[layer_id].addTo(self.map);
-		// add to the layer control with checkbox and the name of the user
-		self.layer_control.addOverlay(self.FeatureGroup[layer_id], layer_id);
-	}else{
-		// FeatureGroup exist and it's loaded
-		// remove the checkbox for all FeatureGroup into the control panel (remove the visualization)
-		for (let feature in self.FeatureGroup) {
-			self.FeatureGroup[feature].remove()
+			// set the FeatureGroup to the map
+			self.FeatureGroup[layer_id].addTo(self.map);
+			// add to the layer control with checkbox and the name of the user
+			self.layer_control.addOverlay(self.FeatureGroup[layer_id], layer_id);
+		}else{
+			// FeatureGroup exist and it's loaded
+			// remove the checkbox for all FeatureGroup into the control panel (remove the visualization)
+			for (let feature in self.FeatureGroup) {
+				self.FeatureGroup[feature].remove()
+			}
+
+			// add to the layer control with checkbox and the name of the user
+			self.FeatureGroup[layer_id].addTo(self.map);
+			// self.FeatureGroup[layer_id].options.tag_id = layer_id
+			self.map.pm.setGlobalOptions({layerGroup: self.FeatureGroup[layer_id]})
 		}
 
-		// add to the layer control with checkbox and the name of the user
-		self.FeatureGroup[layer_id].addTo(self.map);
-		// self.FeatureGroup[layer_id].options.tag_id = layer_id
-		self.map.pm.setGlobalOptions({layerGroup: self.FeatureGroup[layer_id]})
-	}
-
 	// LAYERS : Load layers from data
-	if (typeof layer_data!=="undefined" && layer_data!=="undefined" && layer_data!=="") {
-		//remove previous data into the layer
-		self.FeatureGroup[layer_id].clearLayers();
+		if (typeof layer_data!=='undefined' && layer_data!=='undefined' && layer_data!=='') {
+			// remove previous data into the layer
+			self.FeatureGroup[layer_id].clearLayers();
 
-		// update the feature data
-		self.FeatureGroup[layer_id].on('pm:update', (e) => {
-			self.update_draw_data(layer_id);
-			// recalculate the popup
-			const content = self.get_popup_content(e.layer, layer_id);
-			if (content) {
-				e.layer.bindPopup(content,{
-					minWidth : 155
-				});
-			}//end if(content)
-		});
-
-		// finish the editing feature data
-		self.FeatureGroup[layer_id].on('pm:edit', (e) => {
-			self.update_draw_data(layer_id);
-			// recalculate the popup
-			const content = self.get_popup_content(e.layer, layer_id);
-			if (content) {
-				e.layer.bindPopup(content,{
-					minWidth : 155
-				});
-			}//end if(content)
-		});
-
-		// when the user drag a handler update the popup data
-		self.FeatureGroup[layer_id].on('pm:markerdrag', (e) => {
-			// self.update_draw_data(layer_id);
-			// recalculate the popup
-			const content = self.get_popup_content(e.layer, layer_id);
-			if (content) {
-				e.layer.bindPopup(content,{
-					minWidth : 155
-				});
-			}//end if(content)
-		});
-
-
-		self.FeatureGroup[layer_id].options.tag_id = layer_id
-		self.map.pm.setGlobalOptions({layerGroup: self.FeatureGroup[layer_id]})
-
-		L.geoJson( layer_data, {
-			pointToLayer: (feature, latlng) => {
-				if (feature.properties.shape==='circle') {
-					return new L.Circle(latlng, feature.properties.radius);
-				} else {
-					return new L.Marker(latlng);
+			// update the feature data
+			self.FeatureGroup[layer_id].on('pm:update', (e) => {
+				self.update_draw_data(layer_id);
+				// recalculate the popup
+				const content = self.get_popup_content(e.layer, layer_id);
+				if (content) {
+					e.layer.bindPopup(content,{
+						minWidth : 155
+					});
 				}
-			},
-			//For each Feature load all layer data of the tag
-			onEachFeature: function (feature, data_layer) {
-				init_feature({
-					self		: self,
-					data_layer	: data_layer,
-					layer_id	: layer_id,
-					feature		: feature
-				})
-			}// end onEachFeature
-		})// end L.geoJson
-	}// end if (typeof layer_data!=="undefined" && layer_data!=="undefined" && layer_data!=="")
+			});
+
+			// finish the editing feature data
+			self.FeatureGroup[layer_id].on('pm:edit', (e) => {
+				self.update_draw_data(layer_id);
+				// recalculate the popup
+				const content = self.get_popup_content(e.layer, layer_id);
+				if (content) {
+					e.layer.bindPopup(content,{
+						minWidth : 155
+					});
+				}
+			});
+
+			// when the user drag a handler update the popup data
+			self.FeatureGroup[layer_id].on('pm:markerdrag', (e) => {
+				// self.update_draw_data(layer_id);
+				// recalculate the popup
+				const content = self.get_popup_content(e.layer, layer_id);
+				if (content) {
+					e.layer.bindPopup(content,{
+						minWidth : 155
+					});
+				}
+			});
+
+			self.FeatureGroup[layer_id].options.tag_id = layer_id
+			self.map.pm.setGlobalOptions({layerGroup: self.FeatureGroup[layer_id]})
+
+			L.geoJson( layer_data, {
+				pointToLayer: (feature, latlng) => {
+					if (feature.properties.shape==='circle') {
+						return new L.Circle(latlng, feature.properties.radius);
+					} else {
+						return new L.Marker(latlng);
+					}
+				},
+				// For each Feature load all layer data of the tag
+				onEachFeature: function (feature, data_layer) {
+					init_feature({
+						self		: self,
+						data_layer	: data_layer,
+						layer_id	: layer_id,
+						feature		: feature
+					})
+				}//end onEachFeature
+			})//end L.geoJson
+		}//end if (typeof layer_data!=="undefined" && layer_data!=="undefined" && layer_data!=="")
 
 	// ACTIVE_LAYER_ID : Set the current active layer id will be editable with the actual FeatureGroup
 		self.active_layer_id = layer_id;
