@@ -48,8 +48,17 @@ export const events_subscription = function(self) {
 			)
 			function fn_update_value (options) {
 
-				// self case
-					if(options.caller.id === self.id){
+				// options
+					const caller		= options.caller
+					const changed_data	= options.changed_data // optional object as:
+						// {
+						// 	key		: 0,
+						// 	value	: input.value,
+						// 	action	: 'update'
+						// }
+
+				// self case. Ignore
+					if(caller.id === self.id){
 						return
 					}
 
@@ -65,17 +74,23 @@ export const events_subscription = function(self) {
 						}
 					}
 
-				const changed_data_item = options.changed_data
+				// update_data_value
+					if (changed_data) {
+						const changed_data_item = changed_data
+						self.update_data_value(changed_data_item)
+					}
 
-				self.update_data_value(changed_data_item)
-				self.refresh({
-					build_autoload	: (self.mode==='edit'
+				// refresh
+					const build_autoload = self.mode==='edit'
 						? true // false (changed to true because problems detected in unit_test)
-						: true),
-					render_level	: (self.mode==='edit'
+						: true
+					const render_level = self.mode==='edit'
 						? 'content'
-						: 'full')
-				})
+						: 'full'
+					self.refresh({
+						build_autoload	: build_autoload,
+						render_level	: render_level
+					})
 			}
 		}//end if (self.mode!=='tm')
 

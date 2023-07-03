@@ -1164,7 +1164,8 @@ class component_image extends component_media_common {
 					if (!is_object($dato[0])) {
 						// bad dato
 						debug_log(__METHOD__
-							." ERROR. BAD COMPONENT DATO ".to_string($dato)
+							." ERROR. BAD COMPONENT DATO " .PHP_EOL
+							.' dato: '. json_encode($dato, JSON_PRETTY_PRINT)
 							, logger::ERROR
 						);
 					}else{
