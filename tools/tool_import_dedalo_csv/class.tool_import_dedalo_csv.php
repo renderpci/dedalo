@@ -116,9 +116,6 @@ class tool_import_dedalo_csv extends tool_common {
 								if ($test===null) {
 									debug_log(__METHOD__." ERROR!! BAD JSON FORMAT  ".to_string($value), logger::ERROR);
 
-									// $current_line  = '<span class="error">ERROR!! BAD JSON FORMAT</span>';
-									// $current_line .= '<div>'.$value.'</div>';
-
 									$sample_data_errors[] = $current_line;
 								}
 
