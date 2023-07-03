@@ -456,8 +456,12 @@ class DDModal extends HTMLElement {
 			}
 
 		// exec optional on-close callback (normally defined in component caller)
-			if (typeof this.on_close==="function") {
+			if (typeof this.on_close==='function') {
 				this.on_close(this)
+				// remove aux items
+					if (window.page_globals.service_autocomplete) {
+						window.page_globals.service_autocomplete.destroy(true, true, true)
+					}
 			}
 
 		// remove caller instance if exists on close

@@ -85,9 +85,6 @@ page.prototype.init = async function(options) {
 
 	// update value, subscription to the changes: if the section or area was changed, observers dom elements will be changed own value with the observable value
 
-	// set global dedalo var object
-		window.dedalo = {}
-
 	// user_navigation. Menu navigation (not pagination)
 		self.events_tokens.push(
 			event_manager.subscribe('user_navigation', fn_user_navigation)
@@ -243,8 +240,8 @@ page.prototype.init = async function(options) {
 						}
 
 					// remove aux items
-						if (window.dedalo.service_autocomplete) {
-							window.dedalo.service_autocomplete.destroy(true, true, true)
+						if (window.page_globals.service_autocomplete) {
+							window.page_globals.service_autocomplete.destroy(true, true, true)
 						}
 
 					// loading css remove
