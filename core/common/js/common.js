@@ -484,9 +484,10 @@ common.prototype.refresh = async function(options={}) {
 	const self = this
 
 	// options
-		const build_autoload	= options.build_autoload ?? true
-		const render_level		= options.render_level ?? 'content' // string full|content
-		const destroy			= options.destroy ?? true
+		const build_autoload		= options.build_autoload ?? true
+		const render_level			= options.render_level ?? 'content' // string full|content
+		const destroy				= options.destroy ?? true
+		const refresh_id_base_lang	= options.refresh_id_base_lang ?? false
 
 	// loading css add
 		// const nodes_lenght = self.node.length
@@ -545,6 +546,16 @@ common.prototype.refresh = async function(options={}) {
 		// for (let i = nodes_lenght - 1; i >= 0; i--) {
 		// 	self.node[i].classList.remove('loading')
 		// }
+
+	// refresh_id_base_lang. On true, force to refresh components with same 'id_base_lang'
+	// @see render_tool_upload.upload_done
+		if (refresh_id_base_lang===true) {
+			const id_base_lang = self.id_base + '_' + self.lang
+			event_manager.publish('update_value_'+id_base_lang, {
+				caller			: self,
+				changed_data	: null
+			})
+		}
 
 	// debug
 		if(SHOW_DEBUG===true) {
