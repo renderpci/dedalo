@@ -413,35 +413,9 @@ class tool_import_dedalo_csv extends tool_common {
 					// check if the column_map is correct with the current column in the csv file (match needed)
 					if($current_csv_head_column !== $column_map->tipo) continue;
 
-					// created_by_userID
-					if ($column_map->model==='created_by_user' || $column_map->map_to===$created_by_user['tipo']) {
 
-						$user_locator = self::build_user_locator($value, $created_by_user['tipo']);
-						if (!empty($user_locator)) {
-
-							// set value with safe path
-								$section_dato = $section->get_dato();
-								if (!isset($section_dato->relations)) {
-									$section_dato->relations = [];
-								}
-								$temp_relations = array_filter($section_dato->relations, function($el) use($user_locator){
-									return !isset($el->from_component_tipo) || $el->from_component_tipo!==$user_locator->from_component_tipo;
-								});
-								// add current locator
-								$temp_relations[] = $user_locator;
-								// update relations container
-								$section_dato->relations = array_values($temp_relations);
-
-							// Set direct property also
-								$section_dato->created_by_userID = (int)$user_locator->section_id;
-
-							// Save section
-								$section->set_dato($section_dato);
-								$section->Save();
-						}
-						continue;
 					// created_date
-					}elseif ($column_map->model==='created_date' || $column_map->map_to===$created_date['tipo']) {
+					if ($column_map->model==='created_date' || $column_map->map_to===$created_date['tipo']) {
 
 						$current_date = self::build_date_from_value($value);
 						# Format
