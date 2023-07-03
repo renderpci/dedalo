@@ -217,6 +217,14 @@ render_tool_upload.prototype.upload_done = async function (options) {
 
 			// preview. add rendered component node
 				self.preview_component_container.appendChild(component_node)
+
+			// refresh the caller (in window opener). (!) Commented because tool_common already refresh on blur (close window)
+				// const source_window = window.opener || window
+				// if (source_window && source_window.page_globals && source_window.page_globals.component_active) {
+				// 	source_window.page_globals.component_active.refresh({
+				// 		refresh_id_base_lang : true
+				// 	})
+				// }
 		}
 
 	// event to update the DOM elements of the instance

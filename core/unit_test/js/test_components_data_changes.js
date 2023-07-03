@@ -67,7 +67,7 @@ describe("COMPONENTS DATA CHANGES", async function() {
 
 						// api_returned_value
 							const api_returned_value = response.result.data[0] && response.result.data[0].value
-								? response.result.data[0].value[0]
+								? response.result.data[0].value[0] // select first value
 								: undefined
 
 							// portal locator cases remove paginated_key

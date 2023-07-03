@@ -26,6 +26,8 @@ export const view_default_edit_image = function() {
 /**
 * RENDER
 * Render node for use in current mode and view
+* @param object self
+* @param object options
 * @return HTMLElement wrapper
 */
 view_default_edit_image.render = function(self, options) {
@@ -486,4 +488,3 @@ const get_buttons = (self) => {
 
 
 // @license-end
-

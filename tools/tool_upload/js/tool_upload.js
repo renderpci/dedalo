@@ -54,6 +54,8 @@ export const tool_upload = function () {
 
 /**
 * INIT
+* @param object options
+* @return bool
 */
 tool_upload.prototype.init = async function(options) {
 
@@ -78,6 +80,8 @@ tool_upload.prototype.init = async function(options) {
 
 /**
 * BUILD
+* @param bool autoload = false
+* @return bool
 */
 tool_upload.prototype.build = async function(autoload=false) {
 
