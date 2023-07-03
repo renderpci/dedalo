@@ -86,6 +86,7 @@ export const component_text_area = function(){
 
 /**
 * INIT
+* @param object options
 * @return bool
 * 	Promise resolve bool
 */
@@ -269,7 +270,8 @@ component_text_area.prototype.init = async function(options) {
 
 /**
 * BUILD
-* @return bool
+* @param object options
+* @return bool common_build
 * 	Promise resolve bool
 */
 component_text_area.prototype.build = async function(options) {
