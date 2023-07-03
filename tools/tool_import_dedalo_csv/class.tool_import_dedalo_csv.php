@@ -601,60 +601,17 @@ class tool_import_dedalo_csv extends tool_common {
 					# Remove delimiter escape (U+003B for ;)
 					$value = str_replace('U+003B', ';', $value);
 
-					// Check if is a JSON string. Is yes, decode
-						// if(strpos($value, '[')===0 || strpos($value, '{')===0) {
-						if(is_json($value)){
-							$dato_from_json = json_decode($value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
-							$value = $dato_from_json;
-						}else{
-
-							$begins_one	= substr($value, 0, 1);
-							$ends_one	= substr($value, -1);
-
-							$begins_two	= substr($value, 0, 2);
-							$ends_two	= substr($value, -2);
-
-							if( ($model_name==='component_text_area' || $model_name==='component_input_text')
-								&& (
-									($begins_two !== '["' && $ends_two !== '"]') ||
-									($begins_two !== '["' && $ends_one !== ']') ||
-									($begins_one !== '[' && $ends_two !== '"]')
-								)
-							){
-								$value = empty($value)
-									? null
-									: [$value];
-							}else{
-								// log JSON conversion error
-								debug_log(__METHOD__." json_last_error: ".json_last_error(), logger::ERROR);
-
-								$failed = new stdClass();
-									$failed->section_id		= $section_id;
-									$failed->data			= stripslashes( $value );
-									$failed->component_tipo	= $component->get_tipo();
-									$failed->msg			= 'IGNORED: malformed data '. to_string($value);
-								$failed_rows[] = $failed;
-								continue 1;
-							}
+					// conform imported value with every component rules.
+					$conform_import_data_response = $component->conform_import_data($value, $column_map->column_name);
+					// if the component has errors, include it into failed rows
+					if(!empty($conform_import_data_response->errors)){
+						foreach ($conform_import_data_response->errors as $current_error) {
+							$failed_rows[] = $current_error;
 						}
-						# debug_log(__METHOD__." Result decode json: type:".gettype($dato_from_json).' -> value: '.$value.' => decoded: '.to_string($dato_from_json), logger::DEBUG);
+						continue; // go to next row
+					}
 
-					// dataframe. Checks value contains dataframe or dato keys
-						if (is_object($value)) {
-							// # Dataframe
-							// if (property_exists($value, 'dataframe')) {
-							// 	foreach ((array)$value->dataframe as $dtkey => $current_dt_locator) {
-							// 		$current_from_key 	= $current_dt_locator->from_key;
-							// 		$current_type 		= $current_dt_locator->type;
-							// 		$component->update_dataframe_element($current_dt_locator, $current_from_key, $current_type); //$ar_locator, $from_key, $type
-							// 		debug_log(__METHOD__." Added dataframe locator [$current_from_key,$current_type] ".to_string($current_dt_locator), logger::DEBUG);
-							// 	}
-							// }
-							# Dato
-							if (property_exists($value, 'dato')) {
-								$value = $value->dato;
-							}
-						}
+					$value = $conform_import_data_response->result;
 
 					// Elements 'translatable' can be formatted as JSON values like {"lg-eng":"My value","lg-spa":"Mi valor"}
 					if (($translate===true || $with_lang_versions===true) && is_object($value)) {
