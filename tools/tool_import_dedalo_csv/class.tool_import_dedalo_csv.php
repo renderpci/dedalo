@@ -901,6 +901,101 @@ class tool_import_dedalo_csv extends tool_common {
 	}//end build_user_locator
 
 
+	/**
+	* BUILD_AR_LOCATORS
+	* @param string $value
+	* @param string $from_component_tipo
+	* Create a safe locator from CSV value.
+	* Value can be a int like 2 or an complete locator like {"type": "dd151","section_id": "2","section_tipo": "dd128","from_component_tipo": "dd197"}
+	* @return array|null $locator
+	*/
+	public static function build_ar_locators(object $options) : ?array {
+
+		// options
+			$type			= $options->type;
+			$column_name	= $options->column_name;
+			$section_tipo	= $options->section_tipo;
+			$value			= $options->value;
+
+		// no value case
+			if (empty($value)) {
+				return null;
+			}
+
+		// return value
+			$ar_locators = [];
+
+		// column name could be only the tipo as "rsc85" or a identifier as "rsc85_rsc197"
+		// the component tipo are always the first tipo in the column name
+		$ar_tipos				= explode(locator::DELIMITER, $column_name);
+		$from_component_tipo	= $ar_tipos[0];
+		$target_section_tipo	= $ar_tipos[1] ?? null;
+
+		// check if the value is not a valid json or if it's a int,
+		// cases: 1 || 4,5
+		// 1 is an int and 4,5 is string
+		// but not the locator [{"section_tipo":"oh1","section_id":"1"}] it's valid json
+		if (is_string($value) || is_int($value)) {
+
+			// $target_section_tipo
+				if( empty($target_section_tipo)) {
+					$model_name	= RecordObj_dd::get_modelo_name_by_tipo($from_component_tipo);
+					$component	= component_common::get_instance(
+						$model_name, // string model
+						$from_component_tipo, // string tipo
+						null, // string section_id
+						'list', // string modo
+						DEDALO_DATA_LANG, // string lang
+						$section_tipo // string section_tipo
+					);
+
+					$ar_target_section_tipo = $component->get_ar_target_section_tipo();
+
+					if(count($ar_target_section_tipo)>1){
+						debug_log(__METHOD__
+							." Try to import multiple section_tipo without clear target"
+							, logger::ERROR
+						);
+						return null;
+					}
+					$target_section_tipo = reset($ar_target_section_tipo);
+				}
+
+			$ar_values	= explode(',', $value);
+			foreach ($ar_values as $section_id) {
+				// old format (section_id)
+				// is int. Builds complete locator and set section_id from value
+				$locator = new locator();
+					$locator->set_type($type);
+					$locator->set_section_tipo($target_section_tipo);
+					$locator->set_from_component_tipo($from_component_tipo);
+					$locator->set_section_id(trim($section_id));
+
+				$ar_locators[] = $locator;
+			}
+		}else{
+
+			// Locator case
+			foreach ((array)$value as $current_locator) {
+
+			// is full locator. Inject safe fixed properties to avoid errors
+				$locator = new locator($current_locator);
+					if (!property_exists($current_locator, 'type')) {
+						$locator->set_type($type);
+					}
+					if (!property_exists($current_locator, 'from_component_tipo')) {
+						$locator->set_from_component_tipo($from_component_tipo);
+					}
+
+				$ar_locators[] = $locator;
+			}
+		}
+
+		return $ar_locators;
+	}//end build_ar_locators
+
+
+
 
 	/**
 	* BUILD_DATE_FROM_VALUE
