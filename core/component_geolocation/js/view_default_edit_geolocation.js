@@ -100,6 +100,17 @@ export const get_content_data = async function(self) {
 
 /**
 * GET_CONTENT_VALUE
+* @param int i
+* @param object current_value
+* Sample:
+* {
+* 	alt: 16
+* 	lat: 39.473844362398225
+*	lib_data: [{…}, {…}]
+*	lon: -0.26004109591099894
+*	zoom: 12
+* }
+* @param object self
 * @return HTMLElement content_value
 */
 export const get_content_value = (i, current_value, self) =>{
@@ -309,6 +320,17 @@ export const get_content_value = (i, current_value, self) =>{
 
 /**
 * GET_CONTENT_VALUE_READ
+* @param int i
+* @param object current_value
+* Sample:
+* {
+* 	alt: 16
+* 	lat: 39.473844362398225
+*	lib_data: [{…}, {…}]
+*	lon: -0.26004109591099894
+*	zoom: 12
+* }
+* @param object self
 * @return HTMLElement content_value
 */
 export const get_content_value_read = (i, current_value, self) =>{
@@ -351,7 +373,7 @@ export const get_content_value_read = (i, current_value, self) =>{
 
 /**
 * GET_BUTTONS
-* @param object instance
+* @param object self
 * @return HTMLElement buttons_container
 */
 const get_buttons = (self) => {
