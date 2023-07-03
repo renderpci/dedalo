@@ -277,21 +277,19 @@ class component_media_common extends component_common {
 			$section_id = $this->get_section_id();
 			if (!isset($section_id)) {
 				if(SHOW_DEBUG===true) {
-					debug_log(__METHOD__." Component dato (parent:$this->section_id,section_tipo:$this->section_tipo) is empty for:".to_string(), logger::WARNING);
+					debug_log(__METHOD__
+						." Component dato (section_id: $this->section_id,section_tipo: $this->section_tipo) is empty"
+						, logger::WARNING
+					);
 				}
 				return null;
 			}
 
-		// flat locator as id
-			$locator = new locator();
-				$locator->set_section_tipo($this->get_section_tipo());
-				$locator->set_section_id($this->get_section_id());
-				$locator->set_component_tipo($this->get_tipo());
-
-			$id	= $locator->get_flat();
+		// get identifier
+			$id	= $this->get_identifier();
 
 		// add lang when translatable
-			if ($this->traducible==='si') {
+			if (RecordObj_dd::get_translatable($this->tipo)===true){
 				$id .= '_'.DEDALO_DATA_LANG;
 			}
 
