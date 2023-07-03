@@ -197,6 +197,17 @@ component_geolocation.prototype.init = async function(options) {
 			.then(async function(){
 				// console.log('All component_geolocation items are loaded:', response);
 			})
+	// event subscriptions
+		// (!) Note that component properties could set observe events like (numisdata264, hierarchy31):
+		// {
+	    //   "client": {
+	    //     "event": "click_tag_geo",
+	    //     "perform": {
+	    //       "function": "load_tag_into_geo_editor"
+	    //     }
+	    //   },
+	    //   "component_tipo": "numisdata19"
+	    // }
 
 
 	return common_init
@@ -713,9 +724,16 @@ component_geolocation.prototype.load_layer = function(layer) {
 
 /**
 * LOAD_TAG_INTO_GEO_EDITOR
+* (!) properties config observe
 * Called by the user click on the tag (in component_text_area)
 * The tag will send the ar_layer_id that it's pointing to
 * @param object options
+* Sample:
+* {
+*  	caller: component_text_area {model: 'component_text_area', tipo: 'numisdata19', …}
+*	tag: {node_name: 'img', type: 'geo', tag_id: '1', state: 'n', label: '1', …}
+*	text_editor: service_ckeditor {init: ƒ, …}
+* }
 * @return bool
 */
 component_geolocation.prototype.load_tag_into_geo_editor = async function(options) {
@@ -736,6 +754,32 @@ component_geolocation.prototype.load_tag_into_geo_editor = async function(option
 
 	return true
 }//end load_tag_into_geo_editor
+
+
+
+/**
+* HANDLE_CLICK_NO_TAG
+* (!) properties config observe
+* Called by the user click in component_text_area (no tag image target)
+* @param object options
+* Sample:
+* {
+*  	caller: component_text_area {model: 'component_text_area', tipo: 'numisdata19', section_tipo: 'numisdata6', …}
+* }
+* @return bool
+*/
+component_geolocation.prototype.handle_click_no_tag = async function(options) {
+
+	const self = this
+
+	// load_layer ('full' indicates load all layers)
+		self.layers_loader({
+			load		: 'full',
+			layer_id	: null
+		})
+
+	return true
+}//end handle_click_no_tag
 
 
 
