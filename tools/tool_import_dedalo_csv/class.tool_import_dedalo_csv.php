@@ -372,12 +372,7 @@ class tool_import_dedalo_csv extends tool_common {
 			$updated_rows	= [];
 			$failed_rows	= [];
 
-		// check if the value is a valid JSON
-			function is_json($value){
-				return is_string($value) && is_array(json_decode($value, true)) && (json_last_error() == JSON_ERROR_NONE)
-					? true
-					: false;
-			}
+
 
 		// sort ar_csv_data by section_id (first column)
 			# uasort($ar_csv_data, function($a, $b) {
