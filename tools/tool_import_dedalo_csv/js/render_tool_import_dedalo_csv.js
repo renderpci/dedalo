@@ -761,7 +761,20 @@ const render_columns_mapper = async function(self, item) {
 					value			: '',
 					parent			: target_select
 				})
-				const ar_components_lenght = ar_components.length
+				// check if the column_name has specific name
+				// else split the column name to get the identifier (oh25_oh1)
+				const ar_identifier = (
+						(column_name==='section_id')
+						|| (column_name==='created_date')
+						|| (column_name==='modified_date')
+						|| (column_name==='created_by_user')
+						|| (column_name==='modified_by_user')
+					)
+					? [column_name]
+					: column_name.split('_')
+				// in any case use the first element in the array, it could be specific name or the component_tipo
+				const column_component_tipo	= ar_identifier[0]
+				const ar_components_lenght	= ar_components.length
 				for (let k = 0; k < ar_components_lenght; k++) {
 
 					const option = ui.create_dom_element({
