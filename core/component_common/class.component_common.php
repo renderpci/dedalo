@@ -3551,4 +3551,45 @@ abstract class component_common extends common {
 
 
 
+	/**
+	* CONFORM_IMPORT_DATA
+	* @param string $import_value
+	* @param string $column_name
+	* @return object $response
+	*/
+	public function conform_import_data(string $import_value, string $column_name) : object {
+
+		// Response
+		$response = new stdClass();
+			$response->result	= null;
+			$response->errors 	= [];
+			$response->msg		= 'Error. Request failed';
+
+		// Check if is a JSON string. Is yes, decode
+		if(json_handler::is_json($import_value)){
+			// try to JSON decode (null on not decode)
+			$dato_from_json = json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
+			$import_value = $dato_from_json;
+		}else{
+
+			// log JSON conversion error
+			debug_log(__METHOD__." json_last_error: ".json_last_error(), logger::ERROR);
+
+			$failed = new stdClass();
+				$failed->section_id		= $this->section_id;
+				$failed->data			= stripslashes( $import_value );
+				$failed->component_tipo	= $this->get_tipo();
+				$failed->msg			= 'IGNORED: malformed data '. to_string($import_value);
+			$response->errors[] = $failed;
+
+			return $response;
+		}
+
+		$response->result	= $import_value;
+		$response->msg		= 'ok.';
+
+		return $response;
+	}//end conform_import_data
+
+
 }//end class component_common
