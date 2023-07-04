@@ -1664,6 +1664,11 @@ class component_text_area extends component_common {
 
 		$diffusion_value_with_images = $valor;
 
+		// remove empty paragraphs
+			if ($diffusion_value_with_images==='<p></p>' || $diffusion_value_with_images==='<p> </p>') {
+				$diffusion_value_with_images = '';
+			}
+
 		return (string)$diffusion_value_with_images;
 	}//end get_diffusion_value_with_images
 
