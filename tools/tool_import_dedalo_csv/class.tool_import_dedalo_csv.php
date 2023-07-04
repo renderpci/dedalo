@@ -114,13 +114,21 @@ class tool_import_dedalo_csv extends tool_common {
 								$test = json_decode($value);
 
 								if ($test===null) {
-									debug_log(__METHOD__." ERROR!! BAD JSON FORMAT  ".to_string($value), logger::ERROR);
+									debug_log(__METHOD__
+										." ERROR!! BAD JSON FORMAT  " . PHP_EOL
+										.' value: ' . to_string($value)
+										, logger::ERROR
+									);
 
 									$sample_data_errors[] = $current_line;
 								}
 
 								if(json_last_error()!==JSON_ERROR_NONE){
-									debug_log(__METHOD__." JSON decode error has occurred: ".json_last_error_msg(), logger::ERROR);
+									debug_log(__METHOD__
+										." JSON decode error has occurred:" . PHP_EOL
+										.' json_last_error_msg: '. json_last_error_msg()
+										, logger::ERROR
+									);
 								}
 							}
 						}
@@ -891,7 +899,7 @@ class tool_import_dedalo_csv extends tool_common {
 			if (!isset($locator) || !isset($locator->section_id)) {
 				debug_log(__METHOD__
 					. " Error on get user locator value" .PHP_EOL
-					. ' value: ' . to_string($value)
+					. ' value: ' . json_encode($value, JSON_PRETTY_PRINT)
 					, logger::ERROR
 				);
 				return null;
@@ -953,7 +961,8 @@ class tool_import_dedalo_csv extends tool_common {
 
 					if(count($ar_target_section_tipo)>1){
 						debug_log(__METHOD__
-							." Try to import multiple section_tipo without clear target"
+							." Trying to import multiple section_tipo without clear target" .PHP_EOL
+							.' ar_target_section_tipo: ' . json_encode($ar_target_section_tipo, JSON_PRETTY_PRINT)
 							, logger::ERROR
 						);
 						return null;
@@ -1045,21 +1054,29 @@ class tool_import_dedalo_csv extends tool_common {
 							$new_value_obj->start = $value_obj;
 
 						$value_obj = $new_value_obj; // replace here
-						debug_log(__METHOD__." Warning. Added property start to data value ".to_string($value), logger::ERROR);
+						debug_log(__METHOD__
+							." Warning. Added property start to data value " . PHP_EOL
+							.' value: ' . to_string($value)
+							, logger::ERROR
+						);
 					}
 
 				// Check object mandatory properties
 					$ar_properties = ['year','month','day']; // ,'hour','minute','second'
 					foreach ($ar_properties as $name) {
 						if (!isset($value_obj->start->{$name})) {
-							debug_log(__METHOD__." Error. ignored invalid date value (property $name not found) ".to_string($value), logger::ERROR);
+							debug_log(__METHOD__
+								." Error. ignored invalid date value (property '$name' not found)" . PHP_EOL
+								.' value: ' .to_string($value)
+								, logger::ERROR
+							);
 							return null;
 						}
 					}
 
 				// time property is recalculated always for security
-					$dd_date = new dd_date($value_obj->start);
-					$time 	 = dd_date::convert_date_to_seconds($dd_date);
+					$dd_date	= new dd_date($value_obj->start);
+					$time		= dd_date::convert_date_to_seconds($dd_date);
 					$value_obj->start->time = $time;
 
 				// date in timestamp format
@@ -1156,7 +1173,7 @@ class tool_import_dedalo_csv extends tool_common {
 		} catch (Exception $e) {
 			$response->msg .= ' ' . $e->getMessage();
 			debug_log(__METHOD__
-				. " $response->msg " . PHP_EOL
+				. " $response->msg "
 				, logger::ERROR
 			);
 		}
