@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS COMPONENT_INFO
 *
 *
@@ -8,8 +8,13 @@ class component_info extends component_common {
 
 
 
+	/**
+	* properties
+	* @var
+	*/
 	public $widget_lang;
 	public $widget_mode;
+
 
 
 	/**
@@ -89,6 +94,7 @@ class component_info extends component_common {
 
 	/**
 	* GET_VALOR
+	* @param string $widget_lang = DEDALO_DATA_LANG
 	* @return string $valor
 	*/
 	public function get_valor( $widget_lang=DEDALO_DATA_LANG ) : string {
@@ -130,89 +136,123 @@ class component_info extends component_common {
 
 	/**
 	* GET_DIFFUSION_DATO
-	* @return string $valor
+	* @param object $options
+	* Sample:
+	* {
+		"widget_name": [
+			"get_archive_weights"
+		],
+		"select": [
+			"media_diameter"
+		],
+		"value_format": "first_value",
+		"lang": "lg-spa"
+	* }
+	* @return mixed $diffusion_dato
 	*/
-	public function get_diffusion_dato( object $options ) {
+	public function get_diffusion_dato( object $options ) : mixed {
 
-		// i.e. options
-			// {
-			//     "widget_name": [
-			//         "get_archive_weights"
-			//     ],
-			//     "select": [
-			//         "media_diameter"
-			//     ],
-			//     "value_format": "first_value"
-			// }
-
-		// set lang to widget
-			// $this->widget_lang = !empty($widget_lang)
-			// 	? $widget_lang
-			// 	: DEDALO_DATA_LANG;
-
-		// force calculate
-			$html = $this->get_html();
+		// options
+			$widget_name	= $options->widget_name; // array
+			$select			= $options->select; // array
+			$value_format	= $options->value_format ?? null; // string|null
+			$lang			= $options->lang ?? DEDALO_DATA_LANG; // string
 
 		// widgets
 			$widgets = $this->get_widgets();
-
-		// dato. Dato has been set when widget html is generated
-			$dato = [];
-			if (!isset($widgets)) {
-
+			if (empty($widgets)) {
 				debug_log(__METHOD__
-					." Error. widgets are not defined for this component - modo: $this->modo - [get_diffusion_dato]". PHP_EOL
+					." Error. widgets are not defined for this component - mode: $this->mode - [get_diffusion_dato]". PHP_EOL
 					.' options:' . json_encode($options, JSON_PRETTY_PRINT)
 					, logger::ERROR
 				);
+				return null;
+			}
 
-			}else{
+		// dato
+			$dato = $this->get_dato();
+			// sample value: →
+				// [
+				//     {
+				//         "widget": "get_archive_weights",
+				//         "key": 0,
+				//         "id": "media_weight",
+				//         "value": 4.47
+				//     },
+				//     {
+				//         "widget": "get_archive_weights",
+				//         "key": 0,
+				//         "id": "max_weight",
+				//         "value": 4.47
+				//     },
+				//     {
+				//         "widget": "get_archive_weights",
+				//         "key": 0,
+				//         "id": "min_weight",
+				//         "value": 4.47
+				//     },
+				//     {
+				//         "widget": "get_archive_weights",
+				//         "key": 0,
+				//         "id": "total_elements_weights",
+				//         "value": 1
+				//     },
+				//     {
+				//         "widget": "get_archive_weights",
+				//         "key": 0,
+				//         "id": "media_diameter",
+				//         "value": 15
+				//     },
+				//     {
+				//         "widget": "get_archive_weights",
+				//         "key": 0,
+				//         "id": "max_diameter",
+				//         "value": 15
+				//     },
+				//     {
+				//         "widget": "get_archive_weights",
+				//         "key": 0,
+				//         "id": "min_diameter",
+				//         "value": 15
+				//     },
+				//     {
+				//         "widget": "get_archive_weights",
+				//         "key": 0,
+				//         "id": "total_elements_diameter",
+				//         "value": 1
+				//     }
+				// ]
 
-				foreach ($widgets as $current_widget) {
+		// diffusion_dato
+			$diffusion_dato = [];
+			foreach ($widget_name as $key => $current_widget_name) {
+				// current_widget_name like 'get_archive_weights'
 
-					$widget_name = $current_widget->widget_name;
-					if (!in_array($widget_name, $options->widget_name)) {
-						continue;
-					}
+				// select. Like 'media_diameter'
+				$current_select = $select[$key];
 
-					if (!isset($current_widget->dato)) {
-						debug_log(__METHOD__
-							." Ignored widget without dato ".to_string($widget_name)
-							, logger::WARNING
-						);
-						continue;
-					}
-
-					$current_dato_object = $current_widget->dato;
-
-					$select_values = $options->select;
-					if (!empty($select_values)) {
-						foreach ($select_values as $name) {
-							if (property_exists($current_dato_object, $name)) {
-								$dato[] = $current_dato_object->{$name};
-							}
-						}
-					}else{
-						$dato[] = $current_dato_object;
-					}
+				// find current widget selected values
+				$ar_values = array_filter($dato, function($el) use($current_widget_name, $current_select){
+					return $el->widget===$current_widget_name // like 'get_archive_weights'
+						&& $el->id===$current_select; // like 'media_diameter'
+				});
+				foreach ($ar_values as $item) {
+					$diffusion_dato[] = $item->value;
 				}
 			}
 
 		// value format
-			switch ($options->value_format) {
+			switch ($value_format) {
 				case 'first_value':
-					$dato = reset($dato);
+					$diffusion_dato = $diffusion_dato[0] ?? null;
 					break;
 				default:
-					# Noting to do
+					// Noting to do
 					break;
 			}
 
-		// encode final dato
-			// $dato = json_encode($dato);
 
-
-		return $dato;
+		return $diffusion_dato;
 	}//end get_diffusion_dato
 
 
@@ -220,7 +260,7 @@ class component_info extends component_common {
 	/**
 	* GET_DATA_LIST
 	* Get and fix the ontology defined widgets data_list
-	* @return array $data_list
+	* @return array|null $data_list
 	*/
 	public function get_data_list() : ?array {
 
