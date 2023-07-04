@@ -2579,7 +2579,7 @@ class component_relation_common extends component_common {
 
 						debug_log(__METHOD__
 							." Trying to import multiple section_tipo without clear target" .PHP_EOL
-							.' ar_target_section_tipo: ': json_encode($ar_target_section_tipo, JSON_PRETTY_PRINT)
+							.' ar_target_section_tipo: '. json_encode($ar_target_section_tipo, JSON_PRETTY_PRINT)
 							, logger::ERROR
 						);
 
