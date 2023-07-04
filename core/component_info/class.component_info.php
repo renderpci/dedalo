@@ -102,6 +102,95 @@ class component_info extends component_common {
 
 
 	/**
+	* GET_DIFFUSION_DATO
+	* @return string $valor
+	*/
+	public function get_diffusion_dato( object $options ) {
+
+		// i.e. options
+			// {
+			//     "widget_name": [
+			//         "get_archive_weights"
+			//     ],
+			//     "select": [
+			//         "media_diameter"
+			//     ],
+			//     "value_format": "first_value"
+			// }
+
+		// set lang to widget
+			// $this->widget_lang = !empty($widget_lang)
+			// 	? $widget_lang
+			// 	: DEDALO_DATA_LANG;
+
+		// force calculate
+			$html = $this->get_html();
+
+		// widgets
+			$widgets = $this->get_widgets();
+
+		// dato. Dato has been set when widget html is generated
+			$dato = [];
+			if (!isset($widgets)) {
+
+				debug_log(__METHOD__
+					." Error. widgets are not defined for this component - modo: $this->modo - [get_diffusion_dato]". PHP_EOL
+					.' options:' . json_encode($options, JSON_PRETTY_PRINT)
+					, logger::ERROR
+				);
+
+			}else{
+
+				foreach ($widgets as $current_widget) {
+
+					$widget_name = $current_widget->widget_name;
+					if (!in_array($widget_name, $options->widget_name)) {
+						continue;
+					}
+
+					if (!isset($current_widget->dato)) {
+						debug_log(__METHOD__
+							." Ignored widget without dato ".to_string($widget_name)
+							, logger::WARNING
+						);
+						continue;
+					}
+
+					$current_dato_object = $current_widget->dato;
+
+					$select_values = $options->select;
+					if (!empty($select_values)) {
+						foreach ($select_values as $name) {
+							if (property_exists($current_dato_object, $name)) {
+								$dato[] = $current_dato_object->{$name};
+							}
+						}
+					}else{
+						$dato[] = $current_dato_object;
+					}
+				}
+			}
+
+		// value format
+			switch ($options->value_format) {
+				case 'first_value':
+					$dato = reset($dato);
+					break;
+				default:
+					# Noting to do
+					break;
+			}
+
+		// encode final dato
+			// $dato = json_encode($dato);
+
+
+		return $dato;
+	}//end get_diffusion_dato
+
+
+
+	/**
 	* GET_DATA_LIST
 	* Get and fix the ontology defined widgets data_list
 	* @return array $data_list
