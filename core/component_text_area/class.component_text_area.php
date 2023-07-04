@@ -309,7 +309,7 @@ class component_text_area extends component_common {
 
 		if ($index==='all') {
 			$ar = array();
-			foreach ($dato as $value) {
+			foreach ((array)$dato as $value) {
 				$value = trim($value);
 				if (!empty($value)) {
 					$ar[] = TR::add_tag_img_on_the_fly($value);

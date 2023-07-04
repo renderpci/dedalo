@@ -21,11 +21,13 @@ class component_info extends component_common {
 		// the component info dato will be the all widgets data
 		$dato = [];
 
-		$properties = $this->get_properties();
-		// get the widgets defined in the ontology
-		$widgets = $properties->widgets ?? null;
+		$widgets = $this->get_widgets();
 		if (empty($widgets) || !is_array($widgets)) {
-			debug_log(__METHOD__." Empty defined widgets for ".get_called_class()." : $this->label [$this->tipo] ".to_string($widgets), logger::ERROR);
+			debug_log(__METHOD__
+				." Empty defined widgets for ".get_called_class()." : $this->label [$this->tipo] ". PHP_EOL
+				.' widgets:' . json_encode($widgets, JSON_PRETTY_PRINT)
+				, logger::ERROR
+			);
 			return null;
 		}
 
@@ -57,6 +59,31 @@ class component_info extends component_common {
 
 		return $dato;
 	}//end get_dato
+
+
+
+	/**
+	* GET_WIDGETS
+	* Resolve list of widgets for current component_info
+	* They are defined in properties
+	* @return array|null
+	*/
+	public function get_widgets() : ?array {
+
+		$properties = $this->get_properties();
+		// get the widgets defined in the ontology
+		$widgets = $properties->widgets ?? null;
+		if (empty($widgets) || !is_array($widgets)) {
+			debug_log(__METHOD__
+				." Empty defined widgets for ".get_called_class()." : $this->label [$this->tipo] ". PHP_EOL
+				.' widgets:' . json_encode($widgets, JSON_PRETTY_PRINT)
+				, logger::ERROR
+			);
+			return null;
+		}
+
+		return $widgets;
+	}//end get_widgets
 
 
 

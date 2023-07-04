@@ -820,7 +820,7 @@ class component_relation_parent extends component_relation_common {
 		}
 
 		$ar_valor = [];
-		foreach ((array)$dato as $key => $current_locator) {
+		foreach ((array)$dato as $current_locator) {
 			$ar_valor[] = ts_object::get_term_by_locator(
 				$current_locator,
 				$lang,
@@ -830,7 +830,7 @@ class component_relation_parent extends component_relation_common {
 
 		# Set component valor
 			$valor='';
-			foreach ($ar_valor as $key => $value) {
+			foreach ($ar_valor as $value) {
 				if(!empty($value)) {
 					$valor .= $value;
 					if(end($ar_valor)!=$value) $valor .= ', ';

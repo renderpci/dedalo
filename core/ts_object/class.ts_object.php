@@ -686,7 +686,7 @@ class ts_object {
 						$model_name,
 						$tipo,
 						$parent,
-						'edit',
+						'list',
 						$lang,
 						$section_tipo
 					);

@@ -4333,9 +4333,9 @@ class diffusion_sql extends diffusion  {
 
 	/**
 	* RESOLVE_VALUE
-	* @return string
+	* @return mixed
 	*/
-	public static function resolve_value($options, $dato, $default_separator=' | ') {
+	public static function resolve_value(object $options, $dato, string $default_separator=' | ') {
 
 		// dump($options, ' options ++ '.to_string());
 		// dump($dato, ' dato ++ '.to_string());
@@ -4347,7 +4347,7 @@ class diffusion_sql extends diffusion  {
 		}
 
 		// can be direct or passed by others
-		$process_dato_arguments = (!isset($options->properties))
+		$process_dato_arguments = (!isset($options->properties)) // use 'properties' here !
 			? $options
 			: (object)$options->properties->process_dato_arguments;
 
@@ -4381,10 +4381,10 @@ class diffusion_sql extends diffusion  {
 			);
 		}
 		$target_component_tipo	= $process_dato_arguments->target_component_tipo;
-		$model_name			= RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo,true);
+		$model_name				= RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo,true);
 
 		$ar_value = [];
-		foreach ($ar_locator as $key => $locator) {
+		foreach ($ar_locator as $locator) {
 
 			// empty check
 				if (empty($locator->section_tipo) || empty($locator->section_id) || empty($model_name)) {
@@ -4470,7 +4470,6 @@ class diffusion_sql extends diffusion  {
 
 			// split string value (see qdp291)
 				if (isset($process_dato_arguments->split_string_value) && $value!==null) {
-
 					$value = json_encode( explode($process_dato_arguments->split_string_value, $value), JSON_UNESCAPED_UNICODE );
 				}
 
@@ -4517,7 +4516,7 @@ class diffusion_sql extends diffusion  {
 				case 'ds':
 					foreach ((array)$value as $current_locator) {
 						if (isset($current_locator->ds)) {
-							foreach ($current_locator->ds as $key => $locator_ds) {
+							foreach ($current_locator->ds as $locator_ds) {
 								$ar_term_ds[] = ts_object::get_term_by_locator( $locator_ds, $options->lang, $from_cache=true );
 							}
 						}
