@@ -394,10 +394,27 @@ class relation_list extends common {
 				// see sample at: qdp341, mdcat4338
 				$ar_values = [];
 
-				$custom_map = $diffusion_properties->process_dato_arguments->custom_map;
-					// dump($custom_map, ' custom_map ++ '.to_string());
-				$ar_inverse_references = $this->get_inverse_references($sqo);
-				foreach ($ar_inverse_references as $current_locator) {
+				$custom_map				= $diffusion_properties->process_dato_arguments->custom_map;
+				$ar_inverse_references	= $this->get_inverse_references($sqo);
+
+				// foreach ($ar_inverse_references as $current_locator) {
+				foreach ($ar_inverse_references as $section_dato) {
+
+					$current_locator = (object)[
+						'from_section_tipo'	=> $section_dato->section_tipo,
+						'from_section_id'	=> $section_dato->section_id
+					];
+
+					if (!isset($current_locator->from_section_tipo) || !isset($current_locator->from_section_id)) {
+						debug_log(__METHOD__
+							. " Error: Invalid locator. Expected from_section_tipo and from_section_id " . PHP_EOL
+							. ' current_locator: ' . json_encode($current_locator, JSON_PRETTY_PRINT) . PHP_EOL
+							. ' custom_map: ' . json_encode($custom_map, JSON_PRETTY_PRINT) . PHP_EOL
+							. ' sqo: ' . json_encode($sqo, JSON_PRETTY_PRINT)
+							, logger::ERROR
+						);
+						throw new Exception("Error Processing Request", 1);
+					}
 
 					$custom_locator = new locator();
 						$custom_locator->set_section_tipo($current_locator->from_section_tipo);
@@ -568,7 +585,7 @@ class relation_list extends common {
 						}
 
 					}//end foreach ($custom_map as $map_item)
-				}
+				}//end foreach ($ar_inverse_references as $section_dato) {
 
 				$diffusion_value = $ar_values;
 				break;
