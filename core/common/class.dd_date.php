@@ -163,6 +163,53 @@ class dd_date extends stdClass {
 
 
 	/**
+	* CHECK_DAY
+	* Check if the max day value for specific month and leap years.
+	* @return bool true
+	*/
+	public function check_day() {
+
+		$day	= $this->day;
+
+		if(empty($day)){
+			return null;
+		}
+		$months_with_31_days = [1,3,5,7,8,10,12];
+		$months_with_30_days = [4,6,9,11];
+		$year	= $this->year;
+		$month	= $this->month;
+
+		// February case
+		if ($month === 2){
+			// check if the year is leap
+			$leap =((0 == $year % 4) && (0 != $year % 100) || (0 == $year % 400))
+				? true
+				: false;
+
+			// check if the day is in leap year
+			if($leap && $day > 29 ){
+				return false;
+			}
+			if($leap === false && $day > 28){
+				return false;
+			}
+
+		}
+		// other months, the moths with 31 days
+		// and the months with 30 days
+		if(in_array($month, $months_with_31_days) && $day > 31){
+			return false;
+		}
+		if(in_array($month, $months_with_30_days) && $day > 30){
+			return false;
+		}
+
+		return true;
+	}//end check_day
+
+
+
+	/**
 	* SET_HOUR
 	* @return bool true
 	*/
