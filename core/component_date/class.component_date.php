@@ -963,34 +963,6 @@ class component_date extends component_common {
 
 
 	/**
-	* BUILD_SEARCH_COMPARISON_OPERATORS
-	* @return object stdClass $search_comparison_operators
-	*/
-		// public function build_search_comparison_operators( $comparison_operators=array('=','!=','>','<','>=','<=') ) {
-		// 	$search_comparison_operators = new stdClass();
-
-		// 	#
-		// 	# Overwrite defaults with 'properties'->SQL_comparison_operators
-		// 		if(SHOW_DEBUG===true) {
-		// 			#dump($this->properties, " this->properties ".to_string());;
-		// 		}
-		// 		if(isset($this->properties->SQL_comparison_operators)) {
-		// 			$comparison_operators = (array)$this->properties->SQL_comparison_operators;
-		// 		}
-
-
-		// 	foreach ($comparison_operators as $current) {
-		// 		# Get the name of the operator in current lang
-		// 		$operator = operator::get_operator($current);
-		// 		$search_comparison_operators->$current = $operator;
-		// 	}
-
-		// 	return (object)$search_comparison_operators;
-		// }//end build_search_comparison_operators
-
-
-
-	/**
 	* ADD_TIME
 	* Recoge el current dato recibido (de tipo stdClass) y lo usa para crear un objeto dd_date al que inyecta
 	* el time (seconds) calculado.
