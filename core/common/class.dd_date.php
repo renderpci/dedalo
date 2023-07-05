@@ -343,14 +343,15 @@ class dd_date extends stdClass {
 
 		# year
 		if (!isset($year)) {
-		  $year = '';
+			$year = '';
 		}
-		if($padding===true)
-		$year = sprintf("%04d", $year);
+		if($padding===true){
+			$year = sprintf("%04d", $year);
+		}
 
 		# month
 		if (!isset($month) || $month<1) {
-		  $month = 0;
+			$month = 0;
 		}
 		if($padding===true)
 		$month = sprintf("%02d", $month);
