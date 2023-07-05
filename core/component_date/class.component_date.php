@@ -34,6 +34,8 @@
 * 	range: with start date and end date
 * 	period: with year, moth, day, hour, minute, second, millisecond
 * 	time: with hour, minute, second, millisecond
+*
+* Export value use a
 */
 class component_date extends component_common {
 
@@ -296,11 +298,14 @@ class component_date extends component_common {
 	* }
 	* @param string $date_mode
 	* 	Sample: 'range'
-	* @param string $sep = '-'
+	* @param string $sep = '/'
 	* 	Sample '/'
 	* @return string $item_value
+	* sample:
+	* -Y/m/d<>-Y/m/d
+	* -200/5/22<>15/8/1
 	*/
-	public static function data_item_to_value(object $data_item, string $date_mode, string $sep='-') : string {
+	public static function data_item_to_value(object $data_item, string $date_mode, string $sep='/') : string {
 
 		$item_value = '';
 
