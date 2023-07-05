@@ -55,10 +55,16 @@ class component_text_area extends component_common {
 					$related_component_select_lang = reset($ar_related_by_model);
 					break;
 				case count($ar_related_by_model)>1 :
-					debug_log(__METHOD__." More than one ar_related_by_model are found. Please fix this ASAP ", logger::ERROR);
+					debug_log(__METHOD__
+						." More than one ar_related_by_model are found. Please fix this ASAP "
+						, logger::ERROR
+					);
 					break;
 				default:
-					debug_log(__METHOD__." Var ar_related_by_model value is invalid. Please fix this ASAP ".to_string($ar_related_by_model), logger::ERROR);
+					debug_log(__METHOD__
+						." Var ar_related_by_model value is invalid. Please fix this ASAP ".to_string($ar_related_by_model)
+						, logger::ERROR
+					);
 					break;
 			}
 			if (isset($related_component_select_lang)) {
@@ -145,8 +151,8 @@ class component_text_area extends component_common {
 				// dato is string plain value
 				$dato = array($dato);
 				debug_log(__METHOD__
-					." Warning. [$this->tipo,$this->parent] Dato received is a plain string. Support for this type is deprecated. Use always an array to set dato. " .PHP_EOL
-					.to_string($dato)
+					." Warning. [$this->tipo,$this->parent] Dato received is a plain string. Support for this type is deprecated. Use always an array to set dato." .PHP_EOL
+					.'dato: '. to_string($dato)
 					, logger::WARNING
 				);
 			}
@@ -156,8 +162,8 @@ class component_text_area extends component_common {
 			if(SHOW_DEBUG===true) {
 				if (!is_array($dato)) {
 					debug_log(__METHOD__
-						." Warning. [$this->tipo,$this->parent]. Received dato is NOT array. Type is '".gettype($dato)."' and dato: '"
-						.to_string($dato)."' will be converted to array"
+						." Warning. [$this->tipo, $this->parent]. Received dato is NOT array. Type is '".gettype($dato)."' and dato will be converted to array" .PHP_EOL
+						.' dato:' . to_string($dato)
 						, logger::ERROR
 					);
 				}
@@ -303,7 +309,7 @@ class component_text_area extends component_common {
 
 		if ($index==='all') {
 			$ar = array();
-			foreach ($dato as $value) {
+			foreach ((array)$dato as $value) {
 				$value = trim($value);
 				if (!empty($value)) {
 					$ar[] = TR::add_tag_img_on_the_fly($value);
@@ -1434,7 +1440,11 @@ class component_text_area extends component_common {
 
 				// empty note case (current_note must be a locator stringnified and replaced double quotes by single)
 				if (empty($current_note)) {
-					debug_log(__METHOD__." Ignored empty note data ".to_string($current_note), logger::ERROR);
+					debug_log(__METHOD__
+						." Ignored empty note data " .PHP_EOL
+						.' current note:' . to_string($current_note)
+						, logger::ERROR
+					);
 					continue;
 				}
 
@@ -1653,6 +1663,11 @@ class component_text_area extends component_common {
 		$valor = $this->get_valor($this->lang);
 
 		$diffusion_value_with_images = $valor;
+
+		// remove empty paragraphs
+			if ($diffusion_value_with_images==='<p></p>' || $diffusion_value_with_images==='<p> </p>') {
+				$diffusion_value_with_images = '';
+			}
 
 		return (string)$diffusion_value_with_images;
 	}//end get_diffusion_value_with_images
@@ -2762,14 +2777,16 @@ class component_text_area extends component_common {
 		// Response
 		$response = new stdClass();
 			$response->result	= null;
-			$response->errors 	= [];
+			$response->errors	= [];
 			$response->msg		= 'Error. Request failed';
 
 		// Check if is a JSON string. Is yes, decode
 			if(json_handler::is_json($import_value)){
+
 				// try to JSON decode (null on not decode)
-				$dato_from_json = json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
-				$import_value = $dato_from_json;
+				$dato_from_json	= json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
+				$import_value	= $dato_from_json;
+
 			}else{
 
 				// check the begin and end of the value string, if it has a [] or other combination that seems array
@@ -2788,7 +2805,10 @@ class component_text_area extends component_common {
 						: [$import_value];
 				}else{
 					// log JSON conversion error
-					debug_log(__METHOD__." json_last_error: ".json_last_error(), logger::ERROR);
+					debug_log(__METHOD__
+						." json_last_error: ".json_last_error()
+						, logger::ERROR
+					);
 
 					$failed = new stdClass();
 						$failed->section_id		= $this->section_id;
@@ -2801,9 +2821,9 @@ class component_text_area extends component_common {
 				}
 			}
 
-			if(!empty($import_value)){
-				$value =[];
+			if(!empty($import_value)) {
 
+				$value = [];
 				foreach ($import_value as $text_value) {
 					$begins_three	= substr($text_value, 0, 3);
 					$ends_four		= substr($text_value, -4);
@@ -2826,7 +2846,7 @@ class component_text_area extends component_common {
 			}
 
 		$response->result	= $value;
-		$response->msg		= 'ok.';
+		$response->msg		= 'OK';
 
 		return $response;
 	}//end conform_import_data

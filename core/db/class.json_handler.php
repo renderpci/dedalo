@@ -22,6 +22,9 @@ class json_handler {
 	/**
 	* JSON ENCODE
 	* Unified json_encode method with error control
+	* @param mixed $value
+	* @param mixed $options = JSON_UNESCAPED_UNICODE
+	* @return mixed $result
 	*/
 	public static function encode($value, $options=JSON_UNESCAPED_UNICODE) {
 
@@ -63,6 +66,9 @@ class json_handler {
 
 	/**
 	* JSON DECODE
+	* @param string $json
+	* @param bool $assoc = false
+	* @return mixed $result
 	*/
 	public static function decode(string $json, bool $assoc=false) {
 
@@ -129,32 +135,33 @@ class json_handler {
 
 
 
-	// /**
-	// * TEST_JSON
-	// * @param string $value
-	// */
-	// public static function test_json( string $value ) {
+	/**
+	* TEST_JSON
+	* @param string $value
+	*/
+		// public static function test_json( string $value ) {
 
-	// 	if ((substr($value, 0, 1) === '{' || substr($value, 0, 1) === '[') && ($json = json_decode($value, true))) {
-	// 		return $json;
-	// 	}
+		// 	if ((substr($value, 0, 1) === '{' || substr($value, 0, 1) === '[') && ($json = json_decode($value, true))) {
+		// 		return $json;
+		// 	}
 
-	// 	return $value;
-	// }//end test_json
+		// 	return $value;
+		// }//end test_json
 
 
 
 	/**
 	* IS_JSON
-	* check if the value is a valid JSON
-	* @param string $value
+	* Checks if the value is a valid JSON
+	* @param mixed $value
 	* @return bool
 	*/
-	public static function is_json($value){
+	public static function is_json($value) : bool {
 		return is_string($value) && is_array(json_decode($value, true)) && (json_last_error() == JSON_ERROR_NONE)
 			? true
 			: false;
 	}// end is_json
+
 
 
 }//end class json_handler

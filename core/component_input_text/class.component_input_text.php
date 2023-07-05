@@ -613,14 +613,16 @@ class component_input_text extends component_common {
 		// Response
 		$response = new stdClass();
 			$response->result	= null;
-			$response->errors 	= [];
+			$response->errors	= [];
 			$response->msg		= 'Error. Request failed';
 
 		// Check if is a JSON string. Is yes, decode
 			if(json_handler::is_json($import_value)){
+
 				// try to JSON decode (null on not decode)
-				$dato_from_json = json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
-				$value = $dato_from_json;
+				$dato_from_json	= json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
+				$value			= $dato_from_json;
+
 			}else{
 
 				// check the begin and end of the value string, if it has a [] or other combination that seems array
@@ -639,7 +641,10 @@ class component_input_text extends component_common {
 						: [$import_value];
 				}else{
 					// log JSON conversion error
-					debug_log(__METHOD__." json_last_error: ".json_last_error(), logger::ERROR);
+					debug_log(__METHOD__
+						." json_last_error: ".json_last_error()
+						, logger::ERROR
+					);
 
 					$failed = new stdClass();
 						$failed->section_id		= $this->section_id;
@@ -653,9 +658,11 @@ class component_input_text extends component_common {
 			}
 
 		$response->result	= $value;
-		$response->msg		= 'ok.';
+		$response->msg		= 'OK';
 
 		return $response;
 	}//end conform_import_data
+
+
 
 }//end class component_input_text

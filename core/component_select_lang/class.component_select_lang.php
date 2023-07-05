@@ -66,10 +66,10 @@ class component_select_lang extends component_relation_common {
 	* @param array $comparison_operators . Like array('=','!=')
 	* @return object stdClass $search_comparison_operators
 	*/
-	public function build_search_comparison_operators( $comparison_operators=array('=','!=') ) {
+		// public function build_search_comparison_operators( $comparison_operators=array('=','!=') ) {
 
-		return (object)parent::build_search_comparison_operators($comparison_operators);
-	}//end build_search_comparison_operators
+		// 	return (object)parent::build_search_comparison_operators($comparison_operators);
+		// }//end build_search_comparison_operators
 
 
 

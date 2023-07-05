@@ -30,8 +30,8 @@
   --mocha-code-keyword: #8a6343;
   --mocha-code-number: #2f6fad;
 }
-
-/*@media (prefers-color-scheme: dark) {
+/*
+@media (prefers-color-scheme: dark) {
   :root {
      --mocha-color: #fff;
      --mocha-bg-color: #222;
@@ -62,8 +62,8 @@
      --mocha-code-keyword: #e3a470;
      --mocha-code-number: #4ca7ff;
   }
-}*/
-
+}
+*/
 body {
   margin:0;
   background-color: var(--mocha-bg-color);
@@ -373,6 +373,8 @@ body {
 #mocha-stats canvas {
   width: 40px;
   height: 40px;
+  border-radius: 50%;
+  background-color: #555;
 }
 
 #mocha code .comment { color: var(--mocha-code-comment); }
