@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS COMPONENT_INFO
 *
 *
@@ -8,8 +8,13 @@ class component_info extends component_common {
 
 
 
+	/**
+	* properties
+	* @var
+	*/
 	public $widget_lang;
 	public $widget_mode;
+
 
 
 	/**
@@ -21,11 +26,13 @@ class component_info extends component_common {
 		// the component info dato will be the all widgets data
 		$dato = [];
 
-		$properties = $this->get_properties();
-		// get the widgets defined in the ontology
-		$widgets = $properties->widgets ?? null;
+		$widgets = $this->get_widgets();
 		if (empty($widgets) || !is_array($widgets)) {
-			debug_log(__METHOD__." Empty defined widgets for ".get_called_class()." : $this->label [$this->tipo] ".to_string($widgets), logger::ERROR);
+			debug_log(__METHOD__
+				." Empty defined widgets for ".get_called_class()." : $this->label [$this->tipo] ". PHP_EOL
+				.' widgets:' . json_encode($widgets, JSON_PRETTY_PRINT)
+				, logger::ERROR
+			);
 			return null;
 		}
 
@@ -61,7 +68,33 @@ class component_info extends component_common {
 
 
 	/**
+	* GET_WIDGETS
+	* Resolve list of widgets for current component_info
+	* They are defined in properties
+	* @return array|null
+	*/
+	public function get_widgets() : ?array {
+
+		$properties = $this->get_properties();
+		// get the widgets defined in the ontology
+		$widgets = $properties->widgets ?? null;
+		if (empty($widgets) || !is_array($widgets)) {
+			debug_log(__METHOD__
+				." Empty defined widgets for ".get_called_class()." : $this->label [$this->tipo] ". PHP_EOL
+				.' widgets:' . json_encode($widgets, JSON_PRETTY_PRINT)
+				, logger::ERROR
+			);
+			return null;
+		}
+
+		return $widgets;
+	}//end get_widgets
+
+
+
+	/**
 	* GET_VALOR
+	* @param string $widget_lang = DEDALO_DATA_LANG
 	* @return string $valor
 	*/
 	public function get_valor( $widget_lang=DEDALO_DATA_LANG ) : string {
@@ -102,9 +135,132 @@ class component_info extends component_common {
 
 
 	/**
+	* GET_DIFFUSION_DATO
+	* @param object $options
+	* Sample:
+	* {
+		"widget_name": [
+			"get_archive_weights"
+		],
+		"select": [
+			"media_diameter"
+		],
+		"value_format": "first_value",
+		"lang": "lg-spa"
+	* }
+	* @return mixed $diffusion_dato
+	*/
+	public function get_diffusion_dato( object $options ) : mixed {
+
+		// options
+			$widget_name	= $options->widget_name; // array
+			$select			= $options->select; // array
+			$value_format	= $options->value_format ?? null; // string|null
+			$lang			= $options->lang ?? DEDALO_DATA_LANG; // string
+
+		// widgets
+			$widgets = $this->get_widgets();
+			if (empty($widgets)) {
+				debug_log(__METHOD__
+					." Error. widgets are not defined for this component - mode: $this->mode - [get_diffusion_dato]". PHP_EOL
+					.' options:' . json_encode($options, JSON_PRETTY_PRINT)
+					, logger::ERROR
+				);
+				return null;
+			}
+
+		// dato
+			$dato = $this->get_dato();
+			// sample value: →
+				// [
+				//     {
+				//         "widget": "get_archive_weights",
+				//         "key": 0,
+				//         "id": "media_weight",
+				//         "value": 4.47
+				//     },
+				//     {
+				//         "widget": "get_archive_weights",
+				//         "key": 0,
+				//         "id": "max_weight",
+				//         "value": 4.47
+				//     },
+				//     {
+				//         "widget": "get_archive_weights",
+				//         "key": 0,
+				//         "id": "min_weight",
+				//         "value": 4.47
+				//     },
+				//     {
+				//         "widget": "get_archive_weights",
+				//         "key": 0,
+				//         "id": "total_elements_weights",
+				//         "value": 1
+				//     },
+				//     {
+				//         "widget": "get_archive_weights",
+				//         "key": 0,
+				//         "id": "media_diameter",
+				//         "value": 15
+				//     },
+				//     {
+				//         "widget": "get_archive_weights",
+				//         "key": 0,
+				//         "id": "max_diameter",
+				//         "value": 15
+				//     },
+				//     {
+				//         "widget": "get_archive_weights",
+				//         "key": 0,
+				//         "id": "min_diameter",
+				//         "value": 15
+				//     },
+				//     {
+				//         "widget": "get_archive_weights",
+				//         "key": 0,
+				//         "id": "total_elements_diameter",
+				//         "value": 1
+				//     }
+				// ]
+
+		// diffusion_dato
+			$diffusion_dato = [];
+			foreach ($widget_name as $key => $current_widget_name) {
+				// current_widget_name like 'get_archive_weights'
+
+				// select. Like 'media_diameter'
+				$current_select = $select[$key];
+
+				// find current widget selected values
+				$ar_values = array_filter($dato, function($el) use($current_widget_name, $current_select){
+					return $el->widget===$current_widget_name // like 'get_archive_weights'
+						&& $el->id===$current_select; // like 'media_diameter'
+				});
+				foreach ($ar_values as $item) {
+					$diffusion_dato[] = $item->value;
+				}
+			}
+
+		// value format
+			switch ($value_format) {
+				case 'first_value':
+					$diffusion_dato = $diffusion_dato[0] ?? null;
+					break;
+				default:
+					// Noting to do
+					break;
+			}
+
+
+		return $diffusion_dato;
+	}//end get_diffusion_dato
+
+
+
+	/**
 	* GET_DATA_LIST
 	* Get and fix the ontology defined widgets data_list
-	* @return array $data_list
+	* @return array|null $data_list
 	*/
 	public function get_data_list() : ?array {
 

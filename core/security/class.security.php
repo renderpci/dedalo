@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS SECURITY
 
 	Permissions:
@@ -13,17 +13,19 @@ class security {
 
 
 
-	# VARS
-	private $permissions;
+	/**
+	* CLASS VARS
+	*/
+		private $permissions;
 
-	private $user_id;
-	private $permissions_tipo;			# CAMPO DE PRMISOS (TIPO DEFINIDO EN CONFIG)
-	private $permissions_dato;			# CAMPO DE PRMISOS (TIPO DEFINIDO EN CONFIG) QUE CONTIENE LOS DATOS
+		private $user_id;
+		private $permissions_tipo;			// permissions defined in config
+		private $permissions_dato;			// permissions defined in config that contains data
 
-	private static $ar_permissions_in_matrix_for_current_user; # AR DATO
-	private static $ar_permissions_table;
+		private static $ar_permissions_in_matrix_for_current_user; // array data
+		private static $ar_permissions_table;
 
-	private $filename_user_ar_permissions_table;
+		private $filename_user_ar_permissions_table;
 
 
 
@@ -35,11 +37,15 @@ class security {
 		// user id check
 			if(empty($_SESSION['dedalo']['auth']['user_id'])) {
 				$msg = " Error: Session user_id is not defined! ";
-				trigger_error($msg);
+				debug_log(__METHOD__
+					. " $msg  " . PHP_EOL
+					. to_string()
+					, logger::ERROR
+				);
 				if(SHOW_DEBUG===true) {
 					throw new Exception( __METHOD__ . $msg);
 				}
-				die($msg);
+				die();
 			}else{
 				$this->user_id = $_SESSION['dedalo']['auth']['user_id'];
 			}
@@ -96,12 +102,9 @@ class security {
 			$permissions_table = security::get_permissions_table();
 
 		// permissions_table find
-			$found = array_find($permissions_table, function($el) use($parent_tipo, $tipo){
+			$found = array_find($permissions_table, function($el) use($tipo, $parent_tipo) {
 				return $el->tipo===$tipo && $el->section_tipo===$parent_tipo;
 			});
-			// if (!$found) {
-			// 	dump($permissions_table, ' permissions_table ++ '.to_string($parent_tipo .' - '. $tipo));
-			// }
 
 		// permissions
 			$permissions = $found->value ?? 0;
@@ -130,9 +133,14 @@ class security {
 	*/
 	private static function get_permissions_table() : array {
 
+		// cache. Cached once by script run
+			static $permissions_table_cache;
+			if (isset($permissions_table_cache)) {
+				return $permissions_table_cache;
+			}
+
 		// short vars
-			static $permissions_table;
-			$cache_file_name	= 'cache_permissions_table.json';
+			$cache_file_name = 'cache_permissions_table.json';
 
 		// cache cascade
 			$use_cache = false;
@@ -140,10 +148,10 @@ class security {
 				switch (true) {
 
 					// static cache (ram)
-					case (isset($permissions_table)):
-						// Cached once by script run
-						return $permissions_table;
-						break;
+						// case (isset($permissions_table_cache)):
+						// 	// Cached once by script run
+						// 	return $permissions_table_cache;
+						// 	break;
 
 					// development_server (non session cache is used)
 						// case (defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true):
@@ -167,7 +175,14 @@ class security {
 
 							$permissions_table = json_decode($cache_data);
 
-							debug_log(__METHOD__." Returning permissions_table from cache disk file", logger::DEBUG);
+							// set cache
+							// $permissions_table_cache = $permissions_table;
+
+							debug_log(__METHOD__
+								." Returning permissions_table from cache disk file"
+								, logger::DEBUG
+							);
+
 							return $permissions_table;
 						}
 						break;
@@ -178,18 +193,22 @@ class security {
 			$permissions_table = security::get_ar_permissions_in_matrix_for_current_user(
 				navigator::get_user_id()
 			);
-			// if ($tipo==='numisdata1017') {
-				// dump($permissions_table, ' permissions_table ++ '.to_string($tipo));
-			// }
+
+		// set cache
+			$permissions_table_cache = $permissions_table;
 
 		// session cached table
 			if ($use_cache===true) {
-				// $_SESSION['dedalo']['auth']['permissions_table'] = $permissions_table;
-				// cache to file
-				dd_cache::cache_to_file((object)[
-					'file_name'	=> $cache_file_name,
-					'data'		=> $permissions_table
-				]);
+				switch (true) {
+					// session
+						// $_SESSION['dedalo']['auth']['permissions_table'] = $permissions_table;
+					// cache to file
+					default:
+						dd_cache::cache_to_file((object)[
+							'file_name'	=> $cache_file_name,
+							'data'		=> $permissions_table
+						]);
+				}
 			}
 
 
@@ -207,7 +226,7 @@ class security {
 	*	Array of all elements of current Ontology with permission values
 	*	Include areas and components permissions
 	*/
-	private static function get_ar_permissions_in_matrix_for_current_user( int $user_id ) : array {
+	private static function get_ar_permissions_in_matrix_for_current_user(int $user_id) : array {
 
 		// get reliable component (assigned profile checked)
 			$component_security_access = security::get_user_security_access($user_id);
@@ -238,7 +257,7 @@ class security {
 				return null;
 			}
 
-			// locator
+			// section_id
 			$profile_id = (int)$user_profile->section_id;
 
 		// component_security_access
@@ -246,7 +265,7 @@ class security {
 				'component_security_access',
 				DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO,
 				$profile_id,
-				'edit',
+				'list',
 				DEDALO_DATA_NOLAN,
 				DEDALO_SECTION_PROFILES_TIPO
 			);
@@ -388,7 +407,7 @@ class security {
 				$security_administrator_model,
 				DEDALO_SECURITY_ADMINISTRATOR_TIPO,
 				$user_id,
-				'edit',
+				'list',
 				DEDALO_DATA_NOLAN,
 				DEDALO_SECTION_USERS_TIPO
 			);

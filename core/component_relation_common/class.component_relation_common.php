@@ -1409,6 +1409,82 @@ class component_relation_common extends component_common {
 
 
 	/**
+	* GET_DIFFUSION_DATO
+	* @return string $diffusion_value
+	*/
+	public function get_diffusion_dato() : ?string {
+
+		$dato = $this->get_dato();
+		if (is_array($dato)) {
+			$ar_id = array();
+			foreach ($dato as $current_locator) {
+				$ar_id[] = $current_locator->section_id;
+			}
+			$final_dato = $ar_id;
+		}
+		$diffusion_value = isset($final_dato)
+			? json_encode($final_dato)
+			: null; // json_encode([]);
+
+		return $diffusion_value;
+	}//end get_diffusion_dato
+
+
+
+	/**
+	* GET_DIFFUSION_RESOLVE_VALUE
+	* Alias of static diffusion_sql::resolve_value
+	* @return mixed
+	*/
+	public function get_diffusion_resolve_value(object $option_obj=null) : mixed {
+
+		$args_list = func_get_args();
+		if (count($args_list)>1) {
+
+			$dato = $this->get_dato();
+
+			$ar_value = [];
+			foreach ($args_list as $current_option_obj) {
+
+				$lang = $current_option_obj->lang; // $this->lang
+
+				$options = new stdClass();
+					$options->lang			= $lang;
+					$options->properties	= $current_option_obj;
+
+				$value = diffusion_sql::resolve_value($options, $dato);
+
+				$ar_value[] = $value;
+			}
+
+			return $ar_value;
+		}
+
+		// example $option_obj
+			// {
+			//     "process_dato_arguments": {
+			//         "target_component_tipo": "numisdata698",
+			//         "component_method": "get_diffusion_value"
+			//     },
+			//	   "lang" : "lg-spa"
+			// }
+
+		$dato = $this->get_dato();
+
+		$lang = $option_obj->lang; // $this->lang
+
+		$options = new stdClass();
+			$options->lang			= $lang;
+			$options->properties	= $option_obj;
+
+		$value = diffusion_sql::resolve_value($options, $dato);
+
+		return $value;
+	}//end get_diffusion_resolve_value
+
+
+
+	/**
 	* GET_DIFFUSION_VALUE_TERM_ID
 	* @return string json_encoded array
 	*/
@@ -2535,19 +2611,21 @@ class component_relation_common extends component_common {
 		// Response
 		$response = new stdClass();
 			$response->result	= null;
-			$response->errors 	= [];
+			$response->errors	= [];
 			$response->msg		= 'Error. Request failed';
 
 		// Check if is a JSON string. Is yes, decode
 		if(json_handler::is_json($import_value)){
+
 			// try to JSON decode (null on not decode)
-			$dato_from_json = json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
-			$import_value = $dato_from_json;
+			$dato_from_json	= json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
+			$import_value	= $dato_from_json;
 		}
 
-		$type			= $this->get_relation_type();
-		$section_tipo	= $this->section_tipo;
-		$value			= $import_value;
+		// short vars
+			$type			= $this->get_relation_type();
+			$section_tipo	= $this->section_tipo;
+			$value			= $import_value;
 
 		// no value case
 			if (empty($value)) {
@@ -2571,11 +2649,13 @@ class component_relation_common extends component_common {
 
 			// $target_section_tipo
 				if( empty($target_section_tipo)) {
-					$ar_target_section_tipo = $this->get_ar_target_section_tipo();
 
-					if(count($ar_target_section_tipo)>1){
+					$ar_target_section_tipo = $this->get_ar_target_section_tipo();
+					if(count($ar_target_section_tipo)>1) {
+
 						debug_log(__METHOD__
-							." Try to import multiple section_tipo without clear target"
+							." Trying to import multiple section_tipo without clear target" .PHP_EOL
+							.' ar_target_section_tipo: '. json_encode($ar_target_section_tipo, JSON_PRETTY_PRINT)
 							, logger::ERROR
 						);
 
@@ -2591,7 +2671,7 @@ class component_relation_common extends component_common {
 					$target_section_tipo = reset($ar_target_section_tipo);
 				}
 
-			$ar_values	= explode(',', $value);
+			$ar_values = explode(',', $value);
 			foreach ($ar_values as $section_id) {
 				// old format (section_id)
 				// is int. Builds complete locator and set section_id from value
@@ -2623,9 +2703,11 @@ class component_relation_common extends component_common {
 		}
 
 		$response->result	= $ar_locators;
-		$response->msg		= 'ok.';
+		$response->msg		= 'OK';
 
 		return $response;
 	}//end conform_import_data
+
+
 
 }//end class component_relation_common

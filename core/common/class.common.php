@@ -362,10 +362,16 @@ abstract class common {
 
 		// check valid tipo
 			if (empty($tipo)) {
-				debug_log(__METHOD__." Error Processing Request. tipo is empty ".to_string($tipo), logger::ERROR);
+				debug_log(__METHOD__
+					." Error Processing Request. tipo is empty ".to_string($tipo)
+					, logger::ERROR)
+				;
 				return null;
 			}elseif ($tipo==='matrix') {
-				debug_log(__METHOD__." Error Processing Request. tipo is invalid ".to_string($tipo), logger::ERROR);
+				debug_log(__METHOD__
+					." Error Processing Request. tipo is invalid ".to_string($tipo)
+					, logger::ERROR
+				);
 				return null;
 			}
 
@@ -386,7 +392,7 @@ abstract class common {
 				return null;
 			}
 			// area model case
-			if ( strpos($model_name, 'area')===0 ) {
+			if (strpos($model_name, 'area')===0 || $model_name==='menu') {
 				return null;
 			}
 			// non section model case

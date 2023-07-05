@@ -101,11 +101,13 @@ class hierarchy {
 				$model_name,
 				$tld2_tipo,
 				$options->section_id,
-				'edit',
+				'list',
 				DEDALO_DATA_NOLAN,
 				$options->section_tipo
 			);
-			$tld2 = strtolower($component->get_valor());
+			$dato		= $component->get_dato();
+			$first_dato	= $dato[0] ?? null;
+			$tld2		= strtolower( $first_dato );
 			if (empty($tld2)) {
 
 				// Error: TLD2 is mandatory
@@ -202,8 +204,16 @@ class hierarchy {
 				DEDALO_DATA_LANG,
 				$options->section_tipo
 			);
-			$name = $component->get_valor();
-
+			// $name = $component->get_valor();
+			$dato_fallback = component_common::extract_component_dato_fallback(
+				$component,
+				DEDALO_DATA_LANG, // lang
+				DEDALO_DATA_LANG_DEFAULT // main_lang
+			);
+			$name = $dato_fallback[0] ?? null;
+			if (empty($name)) {
+				$name = 'Hierarchy ' . $tld2;
+			}
 
 		// commands sequence
 
