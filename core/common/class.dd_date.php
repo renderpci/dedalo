@@ -6,8 +6,7 @@
 */
 class dd_date extends stdClass {
 
-	// Errors Optional
-	#public $errors;
+
 	// Separator when format output
 	static $separator = '/';
 	// Separator when format output
@@ -17,26 +16,8 @@ class dd_date extends stdClass {
 	// Virtual month days
 	static $virtual_month_days = 31;
 
-	// dynamic properties. (!) Note that it is useful to maintain dd_date properties as dynamic
-	// to prevent undesired empty values in dd_date values (inside component_date)
-	// // int year
-	// public $year;
-	// // int month
-	// public $month;
-	// // int day
-	// public $day;
-	// // int hour
-	// public $hour;
-	// // int minute
-	// public $minute;
-	// // int second
-	// public $second;
-	// // time
-	// public $time;
-	// // timestamp
-	// public $timestamp;
-
-
+	// errors status
+	public $errors;
 
 	/**
 	* __CONSTRUCT
