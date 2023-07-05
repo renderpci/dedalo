@@ -81,6 +81,7 @@ class diffusion_rdf extends diffusion {
 
 	/**
 	* UPDATE_RECORD
+	* @see diffusion_sql::generate_rdf (called from)
 	* @param object $options
 	* @param bool $resolve_references = false
 	* @return object $response
@@ -96,7 +97,7 @@ class diffusion_rdf extends diffusion {
 		// response
 			$response = new stdClass();
 				$response->result	= false;
-				$response->msg		= 'Error. Request failed';
+				$response->msg		= [];
 
 		// target_section_tipo
 			$RecordObj_dd			= new RecordObj_dd($diffusion_element_tipo);
@@ -127,9 +128,9 @@ class diffusion_rdf extends diffusion {
 			$folder_path = DEDALO_MEDIA_PATH . $sub_path;
 			if (!is_dir($folder_path)) {
 				if(!mkdir($folder_path, 0777, true)) {
-					$response->msg = " Error on read or create directory. Permission denied";
+					$response->msg[] = " Error on read or create directory. Permission denied";
 					debug_log(__METHOD__
-						. " $response->msg " . PHP_EOL
+						. " msg: " . to_string($response->msg) . PHP_EOL
 						. ' folder_path: ' . $folder_path
 						, logger::ERROR
 					);
@@ -171,27 +172,52 @@ class diffusion_rdf extends diffusion {
 					);
 					$response = new stdClass();
 						$response->result	= false;
-						$response->msg		= 'Error. Unable to resolve owl_class_tipo';
+						$response->msg[]	= 'Error. Unable to resolve owl_class_tipo';
 					return $response;
 				}
 
-			$rdf_name		= RecordObj_dd::get_termino_by_tipo($owl_class_tipo);
-			$rdf_file_name	= $rdf_name.'_'. $date.'.rdf';
-
-		// resolve data
+		// resolve data build_rdf_data
 			$rdf_options = new stdClass();
 				// $rdf_options->external_ontology_tipo	= $this->external_ontology_tipo;
 				$rdf_options->owl_class_tipo			= $owl_class_tipo;	// Numisma RDF : modelo_name : xml
 				$rdf_options->section_tipo				= $section_tipo; // $target_section_tipo;	// Fichero
 				$rdf_options->ar_section_id				= $ar_section_id;	// Array like [45001,45002,45003];
-				$rdf_options->save_to_file_path			= DEDALO_MEDIA_PATH . $sub_path . $rdf_file_name; // Target file
-				$rdf_options->url_file					= DEDALO_MEDIA_URL  . $sub_path . $rdf_file_name;
-				$rdf_options->save_file					= $save_file;
+				// $rdf_options->save_to_file_path		= DEDALO_MEDIA_PATH . $sub_path . $rdf_file_name; // Target file
+				// $rdf_options->url_file				= DEDALO_MEDIA_URL  . $sub_path . $rdf_file_name;
+				// $rdf_options->save_file				= $save_file;
+			$build_response = $this->build_rdf_data( $rdf_options );
 
-			$response = $this->build_rdf_file( $rdf_options );
+		// response add
+			$response->result	= true;
+			$response->data		= $build_response->data;
+			$response->msg		= array_merge($response->msg, $build_response->msg);
+			$response->url		= null;
 
 		// saves publication data
 			diffusion::update_publication_data($section_tipo, $section_id);
+
+		// save file
+			if ($save_file===true) {
+
+				$rdf_name			= RecordObj_dd::get_termino_by_tipo($owl_class_tipo);
+				$rdf_file_name		= $rdf_name.'_'. $date.'.rdf';
+				$save_to_file_path	= DEDALO_MEDIA_PATH . $sub_path . $rdf_file_name;
+				$url_file			= DEDALO_MEDIA_URL  . $sub_path . $rdf_file_name;
+				$data				= $build_response->data;
+
+				if( file_put_contents($save_to_file_path, $data) ){
+
+					$msg  = '';
+					$msg .= '&nbsp;<a class="btn btn-primary btn-sm" role="button" href="'.$url_file.'" target="_blank"><span class="glyphicon glyphicon-save"></span> Download</a>';
+					if(SHOW_DEBUG===true) {
+						$msg .= '<hr>DEBUG:<br> File path: ' . $save_to_file_path;
+					}
+					$response->msg[] = $msg;
+				}
+
+				// response add URL
+				$response->url = $url_file;
+			}
 
 
 		return $response;
@@ -200,74 +226,67 @@ class diffusion_rdf extends diffusion {
 
 
 	/**
-	* BUILD_RDF_FILE
-	* @param object $request_options
+	* BUILD_RDF_DATA
+	* @param object $options
 	* @return object $response
 	*/
-	public function build_rdf_file( object $request_options ) : object {
+	public function build_rdf_data( object $options ) : object {
 
 		// Maximum execution time seconds
 		set_time_limit(600);
 
 		$start_time=microtime(1);
 
-		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= [];
+		// options
+			$owl_class_tipo			= $options->owl_class_tipo		?? null;
+			$section_tipo			= $options->section_tipo		?? null;
+			$ar_section_id			= $options->ar_section_id		?? array();
+			// $rdf_validate		= $options->rdf_validate		?? true;
+			// $rdf_format_output	= $options->rdf_format_output	?? true;
 
-		$options = new stdClass();
-			// $options->external_ontology_tipo	= null;
-			$options->owl_class_tipo			= null;
-			$options->rdf_validate				= true;
-			$options->rdf_format_output			= true;
-			$options->section_tipo				= null;
-			$options->ar_section_id				= array();
-			$options->save_to_file_path			= false;
-			$options->url_file					= false;
-			$options->save_file					= true;
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+		// response
+			$response = new stdClass();
+				$response->result 	= false;
+				$response->msg 		= [];
 
-		#
-		# WRAPPER
-		// $external_ontology_tipo	= $options->external_ontology_tipo;
-		$owl_class_tipo				= $options->owl_class_tipo;	// Like mupreva2190 for 'Numisma RDF'
+		// wrapper
+			$owl_class_tipo = $owl_class_tipo;	// Like 'mupreva2190' for 'Numisma RDF'
 
-		$rdf_graph = new \EasyRdf\Graph();
+		// rdf_graph
+			$rdf_graph = new \EasyRdf\Graph();
 
-		// $RecordObj_dd = new RecordObj_dd($owl_class_tipo);
-		// $propiedades = $RecordObj_dd->get_propiedades(true);
+			$name_space = $this->name_space;
 
-		$name_space = $this->name_space;
-
-		foreach($name_space as $key => $value){
-			\EasyRdf\RdfNamespace::set($key, $value);
-		}
-
-		// $ontology_chidren = RecordObj_dd::get_ar_childrens($ontology_tipo);
-
-		// $owl_class_tipo = null;
-		// $ar_owl_ObjectProperty = [];
-		// foreach ($ontology_chidren as $current_owl_class_tipo) {
-		// 	$ar_current_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_owl_class_tipo, 'section', 'termino_relacionado', true);
-		// 	$current_section_tipo = reset($ar_current_section_tipo);
-		// 	if($current_section_tipo === $options->section_tipo){
-		// 		$owl_class_tipo 			= $current_owl_class_tipo;
-		// 		break;
-		// 	}
-		// }
-
-
-		$format_options = array();
-		foreach (\EasyRdf\Format::getFormats() as $format) {
-			if ($format->getSerialiserClass()) {
-				$format_options[$format->getLabel()] = $format->getName();
+			foreach($name_space as $key => $value){
+				\EasyRdf\RdfNamespace::set($key, $value);
 			}
-		}
+
+		// DES
+			// $ontology_chidren = RecordObj_dd::get_ar_childrens($ontology_tipo);
+
+			// $owl_class_tipo = null;
+			// $ar_owl_ObjectProperty = [];
+			// foreach ($ontology_chidren as $current_owl_class_tipo) {
+			// 	$ar_current_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_owl_class_tipo, 'section', 'termino_relacionado', true);
+			// 	$current_section_tipo = reset($ar_current_section_tipo);
+			// 	if($current_section_tipo === $section_tipo){
+			// 		$owl_class_tipo 			= $current_owl_class_tipo;
+			// 		break;
+			// 	}
+			// }
+
+		// format_options
+			$format_options = array();
+			foreach (\EasyRdf\Format::getFormats() as $format) {
+				if ($format->getSerialiserClass()) {
+					$format_options[$format->getLabel()] = $format->getName();
+				}
+			}
 
 		// parse rdf_object
 			$ar_element=array();
-			foreach ($options->ar_section_id as $current_section_id) {
-				$element		= $this->build_rdf_node($rdf_graph, null, $owl_class_tipo, $options->section_tipo, $current_section_id);
+			foreach ($ar_section_id as $current_section_id) {
+				$element		= $this->build_rdf_node($rdf_graph, null, $owl_class_tipo, $section_tipo, $current_section_id);
 				$ar_element[]	= $element;
 			}
 
@@ -277,49 +296,30 @@ class diffusion_rdf extends diffusion {
 				$data = var_export($data, true);
 			}
 
-		// print "<pre>".htmlspecialchars($data)."</pre>";
-
-		/*
-			"RDF/PHP": "php",
-			"RDF/JSON Resource-Centric": "json",
-			"JSON-LD": "jsonld",
-			"N-Triples": "ntriples",
-			"Turtle Terse RDF Triple Language": "turtle",
-			"RDF/XML": "rdfxml",
-			"Graphviz": "dot",
-			"Notation3": "n3",
-			"Portable Network Graphics (PNG)": "png",
-			"Graphics Interchange Format (GIF)": "gif",
-			"Scalable Vector Graphics (SVG)": "svg"
-   		*/
-
-
-		# SAVE FILE
-			if ($options->save_to_file_path && $options->save_file===true) {
-				if( file_put_contents($options->save_to_file_path, $data) ){
-					// $response->msg[] = "File is saved successfully";
-					// '.pathinfo($options->url_file,PATHINFO_BASENAME).'
-					$msg  = '';
-					$msg .= '&nbsp;<a class="btn btn-primary btn-sm" role="button" href="'.$options->url_file.'" target="_blank"><span class="glyphicon glyphicon-save"></span> Download</a>';
-					if(SHOW_DEBUG===true) {
-					$msg .= '<hr>DEBUG:<br> File path: ' . $options->save_to_file_path;
-					}
-					$response->msg[] = $msg;
-				}
-			}
+		// reference
+			// "RDF/PHP": "php",
+			// "RDF/JSON Resource-Centric": "json",
+			// "JSON-LD": "jsonld",
+			// "N-Triples": "ntriples",
+			// "Turtle Terse RDF Triple Language": "turtle",
+			// "RDF/XML": "rdfxml",
+			// "Graphviz": "dot",
+			// "Notation3": "n3",
+			// "Portable Network Graphics (PNG)": "png",
+			// "Graphics Interchange Format (GIF)": "gif",
+			// "Scalable Vector Graphics (SVG)": "svg"
 
 		// response additional info
 			$response->result	= true;
-			$response->url		= $options->url_file;
 			$response->data		= $data;
 
 		// debug
 			$total_time=round(microtime(1)-$start_time,3);
-			$response->debug[] = "Generated [".count($options->ar_section_id)." elements] in $total_time secs";
+			$response->debug = "Generated [".count($ar_section_id)." elements] in $total_time secs";
 
 
 		return $response;
-	}//end build_rdf_file
+	}//end build_rdf_data
 
 
 
