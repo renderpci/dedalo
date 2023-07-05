@@ -133,9 +133,14 @@ class security {
 	*/
 	private static function get_permissions_table() : array {
 
+		// cache. Cached once by script run
+			static $permissions_table_cache;
+			if (isset($permissions_table_cache)) {
+				return $permissions_table_cache;
+			}
+
 		// short vars
-			static $permissions_table;
-			$cache_file_name	= 'cache_permissions_table.json';
+			$cache_file_name = 'cache_permissions_table.json';
 
 		// cache cascade
 			$use_cache = false;
@@ -143,10 +148,10 @@ class security {
 				switch (true) {
 
 					// static cache (ram)
-					case (isset($permissions_table)):
-						// Cached once by script run
-						return $permissions_table;
-						break;
+						// case (isset($permissions_table_cache)):
+						// 	// Cached once by script run
+						// 	return $permissions_table_cache;
+						// 	break;
 
 					// development_server (non session cache is used)
 						// case (defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true):
@@ -170,7 +175,14 @@ class security {
 
 							$permissions_table = json_decode($cache_data);
 
-							debug_log(__METHOD__." Returning permissions_table from cache disk file", logger::DEBUG);
+							// set cache
+							// $permissions_table_cache = $permissions_table;
+
+							debug_log(__METHOD__
+								." Returning permissions_table from cache disk file"
+								, logger::DEBUG
+							);
+
 							return $permissions_table;
 						}
 						break;
@@ -181,18 +193,22 @@ class security {
 			$permissions_table = security::get_ar_permissions_in_matrix_for_current_user(
 				navigator::get_user_id()
 			);
-			// if ($tipo==='numisdata1017') {
-				// dump($permissions_table, ' permissions_table ++ '.to_string($tipo));
-			// }
+
+		// set cache
+			$permissions_table_cache = $permissions_table;
 
 		// session cached table
 			if ($use_cache===true) {
-				// $_SESSION['dedalo']['auth']['permissions_table'] = $permissions_table;
-				// cache to file
-				dd_cache::cache_to_file((object)[
-					'file_name'	=> $cache_file_name,
-					'data'		=> $permissions_table
-				]);
+				switch (true) {
+					// session
+						// $_SESSION['dedalo']['auth']['permissions_table'] = $permissions_table;
+					// cache to file
+					default:
+						dd_cache::cache_to_file((object)[
+							'file_name'	=> $cache_file_name,
+							'data'		=> $permissions_table
+						]);
+				}
 			}
 
 
