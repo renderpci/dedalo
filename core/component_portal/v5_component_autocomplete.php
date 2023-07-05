@@ -8,7 +8,6 @@
 	* Get resolved string representation of current value (expected id_matrix of section or array)
 	* @return array $this->valor
 	*/
-
 	$_get_valor = function($lang=DEDALO_DATA_LANG, $format='string', $fields_separator=' | ', $records_separator='<br>', $ar_related_terms=false, $data_to_be_used='valor') {
 
 		$dato = $this->get_dato();
@@ -59,11 +58,11 @@
 
 		$ar_values = array();
 
-		// $fields_separator   = $this->get_fields_separator();
-
-		$fields_separator = (isset($propiedades->source->fields_separator))
-			? $propiedades->source->fields_separator
-			: ' | ';
+		// fields_separator
+			// $fields_separator   = $this->get_fields_separator();
+			$fields_separator = (isset($propiedades->source->divisor))
+				? $propiedades->source->divisor
+				: ' | ';
 
 		foreach ($dato as $current_locator) {
 
@@ -188,9 +187,10 @@
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	$_get_diffusion_value = function ($lang=null) : string {
+	$_get_diffusion_value = function ($lang=null, $option_obj=null) : string {
 			// global $_get_valor;
 			// dump($this, ' this ++ '.to_string());
+			// dump($option_obj, ' option_obj ++ '.to_string());
 
 		// force recalculate for each lang
 			unset($this->valor);
@@ -201,6 +201,12 @@
 		// is_publicable from propiedades. case Bibliography 'rsc368'
 			$propiedades	= $this->get_propiedades(true);
 			$is_publicable	= (bool)(isset($propiedades->is_publicable) && $propiedades->is_publicable===true);
+
+		// fields_separator
+			// $fields_separator   = $this->get_fields_separator();
+			$fields_separator = (isset($propiedades->source->divisor))
+				? $propiedades->source->divisor
+				: ' | ';
 
 		$diffusion_value_clean = [];
 		foreach ($value as $item) {
@@ -217,7 +223,7 @@
 			}
 		}
 
-		$diffusion_value = implode(' | ', $diffusion_value_clean);
+		$diffusion_value = implode($fields_separator, $diffusion_value_clean);
 
 		return (string)$diffusion_value;
 	};//end get_diffusion_value
