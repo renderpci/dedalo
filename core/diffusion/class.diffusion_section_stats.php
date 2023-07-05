@@ -552,17 +552,16 @@ class diffusion_section_stats extends diffusion {
 	* Also it is used to export data to diffusion by the component info that host the widget
 	* Date in and user_id are optional actually
 	* @param string $date_in
-	*	Like 2020-12-31
+	*	Like '2020-12-31'
 	* @param string $date_out
-	*	Like 2021-12-31
-	* @param int $user_id [optional]
-	*	Like 1 . Filter result by user if is not null. Default: null
-	* @param string $lang
-	*	LIke lg-eng. Used to resolve labels. Default: DEDALO_DATA_LANG
-	* @return object | false
+	*	Like '2021-12-31'
+	* @param int|null $user_id = null
+	*	[optional] Like 1 . Filter result by user if is not null. Default: null
+	* @param string $lang = DEDALO_DATA_LAN
+	*	Like 'lg-eng'. Used to resolve labels. Default: DEDALO_DATA_LANG
+	* @return object|null $totals
 	*/
-	public static function cross_users_range_data($date_in, $date_out, $user_id=null, $lang=DEDALO_DATA_LANG) {
-		$start_time = start_time();
+	public static function cross_users_range_data(string $date_in, string $date_out, ?int $user_id=null, string $lang=DEDALO_DATA_LANG) : ?object {
 
 		// dates parse. from 2020-12-30 to {"year":2020,"month":6,"day":1,"time":64937808000}
 			$dd_date_in = new dd_date();
@@ -847,8 +846,8 @@ class diffusion_section_stats extends diffusion {
 				$b = $_b->label;
 
 				if ($a == $b) {
-			        return 0;
-			    }
+					return 0;
+				}
 			    return ($a < $b) ? -1 : 1;
 			};
 			usort($when_data, $cmp_label);
@@ -860,6 +859,7 @@ class diffusion_section_stats extends diffusion {
 			$totals->when		= $when_data;
 			$totals->publish	= $publish_data;
 
+
 		return $totals;
 	}//end cross_users_range_data
 
@@ -867,11 +867,20 @@ class diffusion_section_stats extends diffusion {
 
 	/**
 	* PARSE_TOTALS_FOR_JS
+	* @param object $totals
+	* @param  string $tipo = USER_ACTIVITY_SECTION_TIPO
 	* @return array $ar_js_obj
 	*/
-	public static function parse_totals_for_js($totals, $tipo=USER_ACTIVITY_SECTION_TIPO) {
+	public static function parse_totals_for_js(object $totals, string $tipo=USER_ACTIVITY_SECTION_TIPO) : array {
 
 		$ar_js_obj = [];
+
+		// Working here !
+			debug_log(__METHOD__
+				. " Working here ! "
+				, logger::ERROR
+			);
+			return [];
 
 		// who
 			$title = RecordObj_dd::get_termino_by_tipo(logger_backend_activity::$_COMPONENT_QUIEN['tipo'], DEDALO_DATA_LANG, true, true);

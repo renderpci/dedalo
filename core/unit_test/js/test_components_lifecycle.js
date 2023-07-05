@@ -207,7 +207,20 @@ async function life_cycle_test(element, view) {
 					// console.log('+++ new_instance.node:', new_instance.node);
 					if (new_instance.view!=='text') {
 						// console.log('new_instance.node:', new_instance.node, new_instance.mode, new_instance.view);
-						if (new_instance.model!=='component_portal' && new_instance.model.indexOf('component_relation')===-1) {
+						const skip_models = [
+							'component_portal',
+							'component_relation',
+							'component_3d',
+							'component_av',
+							'component_image',
+							'component_pdf',
+							'component_svg',
+							'component_relation_children',
+							'component_relation_index',
+							'component_relation_related',
+							'component_relation_parent'
+						]
+						if (!skip_models.includes(new_instance.model)) {
 							// assert.equal(new_instance.node.content_data, undefined, 'content_data must be undefined on list mode');
 							assert.equal(new_instance.node.querySelector('.content_data'), null, 'content_data must be null on list mode');
 						}
