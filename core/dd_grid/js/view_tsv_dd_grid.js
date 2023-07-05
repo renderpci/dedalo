@@ -345,8 +345,12 @@ const get_header_column = function(current_data) {
 */
 const get_text_column = function(current_data) {
 
+	const records_separator = (current_data.records_separator)
+		? current_data.records_separator
+		: ' | '
+
 	const text = current_data.value && Array.isArray(current_data.value)
-		? current_data.value.join(' ')
+		? current_data.value.join(records_separator)
 		: (current_data.value || '')
 
 	// value

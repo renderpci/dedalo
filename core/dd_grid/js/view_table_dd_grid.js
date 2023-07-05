@@ -375,12 +375,16 @@ const render_text_column = function(current_data) {
 
 	const class_list = current_data.class_list || 'text_column'
 
+	const records_separator = (current_data.records_separator)
+		? current_data.records_separator
+		: ' | '
+
 	const value = current_data.value && Array.isArray(current_data.value)
-		? current_data.value.join(' ')
+		? current_data.value.join(records_separator)
 		: (current_data.value || '')
 
 	const fallback_value = current_data.fallback_value && Array.isArray(current_data.fallback_value)
-		? current_data.fallback_value.join(' ')
+		? current_data.fallback_value.join(records_separator)
 		: (current_data.fallback_value || '')
 
 	const td_node = ui.create_dom_element({

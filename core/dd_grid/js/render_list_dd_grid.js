@@ -90,8 +90,12 @@ export const get_text_column = function(data_item, use_fallback) {
 		? (data_item.value && data_item.value[0]!==undefined ? data_item.value : data_item.fallback_value)
 		: data_item.value
 
+	const records_separator = (current_data.records_separator)
+		? current_data.records_separator
+		: ' | '
+
 	const value_string = value
-		? value.join(' ')
+		? value.join(records_separator)
 		: ''
 
 	const add_style = value_string.length>0
