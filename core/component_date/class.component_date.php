@@ -573,6 +573,11 @@ class component_date extends component_common {
 		// q_object
 			$q_object = $query_object->q ?? null;
 
+		// try to parse
+			// if (is_string($q_object)) {
+			// 	// code...
+			// }
+
 		// plain text case
 			if (!is_object($q_object)) {
 				// Check for operators and date elements
@@ -956,27 +961,27 @@ class component_date extends component_common {
 	* BUILD_SEARCH_COMPARISON_OPERATORS
 	* @return object stdClass $search_comparison_operators
 	*/
-	public function build_search_comparison_operators( $comparison_operators=array('=','!=','>','<','>=','<=') ) {
-		$search_comparison_operators = new stdClass();
+		// public function build_search_comparison_operators( $comparison_operators=array('=','!=','>','<','>=','<=') ) {
+		// 	$search_comparison_operators = new stdClass();
 
-		#
-		# Overwrite defaults with 'properties'->SQL_comparison_operators
-			if(SHOW_DEBUG===true) {
-				#dump($this->properties, " this->properties ".to_string());;
-			}
-			if(isset($this->properties->SQL_comparison_operators)) {
-				$comparison_operators = (array)$this->properties->SQL_comparison_operators;
-			}
+		// 	#
+		// 	# Overwrite defaults with 'properties'->SQL_comparison_operators
+		// 		if(SHOW_DEBUG===true) {
+		// 			#dump($this->properties, " this->properties ".to_string());;
+		// 		}
+		// 		if(isset($this->properties->SQL_comparison_operators)) {
+		// 			$comparison_operators = (array)$this->properties->SQL_comparison_operators;
+		// 		}
 
 
-		foreach ($comparison_operators as $current) {
-			# Get the name of the operator in current lang
-			$operator = operator::get_operator($current);
-			$search_comparison_operators->$current = $operator;
-		}
+		// 	foreach ($comparison_operators as $current) {
+		// 		# Get the name of the operator in current lang
+		// 		$operator = operator::get_operator($current);
+		// 		$search_comparison_operators->$current = $operator;
+		// 	}
 
-		return (object)$search_comparison_operators;
-	}//end build_search_comparison_operators
+		// 	return (object)$search_comparison_operators;
+		// }//end build_search_comparison_operators
 
 
 
