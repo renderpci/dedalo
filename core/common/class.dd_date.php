@@ -21,37 +21,68 @@ class dd_date extends stdClass {
 
 	/**
 	* __CONSTRUCT
-	* @param object $data optional
-	* @param bool $constrain optional (default is false)
+	* @param object $data = null
+	* @param bool $constrain = false
+	* @return object response
 	*/
 	public function __construct( $data=null, $constrain=false ) {
 
-		#$this->constrain = $constrain; // Fix constrain mode
-		if (is_null($data)) return;
-
-		# Nothing to do on construct (for now)
-		if (!is_object($data)) {
-			// trigger_error("wrong data format. object expected. Given type: ".gettype($data));
-			// throw new Exception("Error Processing Request", 1);
-			debug_log(__METHOD__." wrong data format. object expected. Given type: ".gettype($data).' - '.to_string($data), logger::ERROR);
-			if(SHOW_DEBUG===true) {
-				dump(debug_backtrace()[0], " wrong data format. object expected. Given type:".gettype($data).' - data:'.to_string($data)." from:");
+		// null case
+			if (is_null($data)) {
+				return;
 			}
-			return;
+
+		// Nothing to do on construct (for now)
+			if (!is_object($data)) {
+
+				$msg = " wrong data format. object expected. Given type: ".gettype($data).' - data: '.to_string($data);
+				debug_log(__METHOD__
+					. $msg
+					, logger::ERROR
+				);
+				if(SHOW_DEBUG===true) {
+					dump(debug_backtrace()[0], $msg);
+				}
+				$this->errors[] = $msg;
+				return;
+			}
+
+		// set properties
+			foreach ($data as $key => $value) {
+
+				if (!isset($value) || is_null($value)) continue; // Skip empty values
+
+				$method = 'set_'.$key;
+				if (method_exists($this, $method)) {
+
+					$set_value = $this->$method($value, $constrain);
+
+					if($set_value===false) {
+						$this->errors[] = 'Invalid value for: '.$key.' . value: '.to_string($value);
+					}
+
+				}else{
+
+					debug_log(__METHOD__
+						.' Ignored received property: '.$key.' not defined as set method. Data: '.to_string($data)
+						, logger::ERROR
+					);
+					$this->errors[] = 'Ignored received property: '.$key.' not defined as set method. Data: '.to_string($data);
+				}
+			}
+
+		// check day
+		$check_day = $this->check_day();
+		if($check_day === false){
+			debug_log(__METHOD__
+				.' Invalid value for day value: '.to_string($this->day)
+				, logger::ERROR
+			);
+			$this->errors[] = 'Invalid value for day value: '.$this->day;
 		}
 
-		foreach ($data as $key => $value) {
-			//if ($key!=="year" && empty($value)) continue; // Skip empty values
-			if (!isset($value) || is_null($value)) continue; // Skip empty values
-
-			$method = 'set_'.$key;
-			if (method_exists($this, $method)) {
-				$this->$method($value, $constrain);
-			}else{
-				debug_log(__METHOD__." Ignored received property: $key not defined as set method. Data: ".to_string($data), logger::ERROR);
-			}
-		}
 	}//end __construct
+
 
 
 
