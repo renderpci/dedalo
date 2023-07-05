@@ -260,7 +260,7 @@ const item_value_factory = function(id, label, data) {
 			value_node = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'value',
-				inner_html		: current_value, // +'', // prevent zero values hide
+				inner_html		: '',
 				parent			: wrapper
 			})
 		}

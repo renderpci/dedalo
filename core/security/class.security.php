@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS SECURITY
 
 	Permissions:
@@ -13,17 +13,19 @@ class security {
 
 
 
-	# VARS
-	private $permissions;
+	/**
+	* CLASS VARS
+	*/
+		private $permissions;
 
-	private $user_id;
-	private $permissions_tipo;			# CAMPO DE PRMISOS (TIPO DEFINIDO EN CONFIG)
-	private $permissions_dato;			# CAMPO DE PRMISOS (TIPO DEFINIDO EN CONFIG) QUE CONTIENE LOS DATOS
+		private $user_id;
+		private $permissions_tipo;			// permissions defined in config
+		private $permissions_dato;			// permissions defined in config that contains data
 
-	private static $ar_permissions_in_matrix_for_current_user; # AR DATO
-	private static $ar_permissions_table;
+		private static $ar_permissions_in_matrix_for_current_user; // array data
+		private static $ar_permissions_table;
 
-	private $filename_user_ar_permissions_table;
+		private $filename_user_ar_permissions_table;
 
 
 
@@ -35,11 +37,15 @@ class security {
 		// user id check
 			if(empty($_SESSION['dedalo']['auth']['user_id'])) {
 				$msg = " Error: Session user_id is not defined! ";
-				trigger_error($msg);
+				debug_log(__METHOD__
+					. " $msg  " . PHP_EOL
+					. to_string()
+					, logger::ERROR
+				);
 				if(SHOW_DEBUG===true) {
 					throw new Exception( __METHOD__ . $msg);
 				}
-				die($msg);
+				die();
 			}else{
 				$this->user_id = $_SESSION['dedalo']['auth']['user_id'];
 			}
@@ -96,12 +102,9 @@ class security {
 			$permissions_table = security::get_permissions_table();
 
 		// permissions_table find
-			$found = array_find($permissions_table, function($el) use($parent_tipo, $tipo){
+			$found = array_find($permissions_table, function($el) use($tipo, $parent_tipo) {
 				return $el->tipo===$tipo && $el->section_tipo===$parent_tipo;
 			});
-			// if (!$found) {
-			// 	dump($permissions_table, ' permissions_table ++ '.to_string($parent_tipo .' - '. $tipo));
-			// }
 
 		// permissions
 			$permissions = $found->value ?? 0;
@@ -207,7 +210,7 @@ class security {
 	*	Array of all elements of current Ontology with permission values
 	*	Include areas and components permissions
 	*/
-	private static function get_ar_permissions_in_matrix_for_current_user( int $user_id ) : array {
+	private static function get_ar_permissions_in_matrix_for_current_user(int $user_id) : array {
 
 		// get reliable component (assigned profile checked)
 			$component_security_access = security::get_user_security_access($user_id);
@@ -238,7 +241,7 @@ class security {
 				return null;
 			}
 
-			// locator
+			// section_id
 			$profile_id = (int)$user_profile->section_id;
 
 		// component_security_access
@@ -246,7 +249,7 @@ class security {
 				'component_security_access',
 				DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO,
 				$profile_id,
-				'edit',
+				'list',
 				DEDALO_DATA_NOLAN,
 				DEDALO_SECTION_PROFILES_TIPO
 			);
@@ -388,7 +391,7 @@ class security {
 				$security_administrator_model,
 				DEDALO_SECURITY_ADMINISTRATOR_TIPO,
 				$user_id,
-				'edit',
+				'list',
 				DEDALO_DATA_NOLAN,
 				DEDALO_SECTION_USERS_TIPO
 			);
