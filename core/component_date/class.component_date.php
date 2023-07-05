@@ -1388,4 +1388,214 @@ class component_date extends component_common {
 
 
 
+	/**
+	* CONFORM_IMPORT_DATA
+	* @param string $import_value
+	* import data format option:
+	* 1 a stringify version of date:
+	* 	'"[{\\"start\\":{\\"year\\":2012,\\"month\\":11,\\"day\\":7,\\"hour\\":17,\\"minute\\":33,\\"second\\":49},\\"end\\":{\\"year\\":2012,\\"month\\":12,\\"day\\":8,\\"hour\\":22,\\"minute\\":15,\\"second\\":35}}]"'
+	* 2 a string flat date:
+	* 	-205/05/21
+	* 3 a string flat range date with <> separator:
+	* 	-205/05/21 <> 185/01/30
+	* 4 a string multi value (2 values) with | separator
+	* 	1852/12/22 | 1853/02/18
+	* 5 a range multi value (start, end and 2 values) using <> and | separators
+	* 	1852/12/22 <> 1852/12/25 | 1853/02/18
+	* 	1852/12/22 | <> 1853/02/18
+	* 6 string with other order as dmy (day, month, year)
+	* 	22/12/2023
+	* 	mdy
+	* 	12/22/2023
+	* 7 other separator between day month and year, supported - and .
+	* 	2012-22-12
+	* 	2012.22.12
+	* @param string $column_name
+	* ex:
+	* rsc85 // only component tipo
+	* rsc85_dmy // component tipo and the date format
+	* @return object $response
+	*/
+	public function conform_import_data(string $import_value, string $column_name) : object {
+
+		// Response
+		$response = new stdClass();
+			$response->result	= null;
+			$response->errors 	= [];
+			$response->msg		= 'Error. Request failed';
+
+		// Check if is a JSON string. Is yes, decode
+			if(json_handler::is_json($import_value)){
+				// try to JSON decode (null on not decode)
+				$dato_from_json = json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
+				$lang = $this->lang;
+				$value = (is_object($dato_from_json))
+					? $dato_from_json->$lang
+					: $dato_from_json;
+			}else{
+
+				// column name could be only the tipo as "rsc89" or a date order as "rsc85_dmy"
+				// the component tipo are always the first tipo in the column name
+				// by default the date order will be year/month/day ymd
+				$ar_tipos	= explode(locator::DELIMITER, $column_name);
+				$order		= $ar_tipos[1] ?? 'ymd';
+
+				$value = [];
+				// explode the possibles rows of the date
+				$ar_date_rows	= explode('|',$import_value);
+
+				foreach ($ar_date_rows as $key => $date_row) {
+
+					$date_range	= explode('<>',$date_row);
+					$date_obj = new stdClass();
+					foreach ($date_range as $key => $current_date) {
+
+						// remove empty spaces and check if the current date has information else continue to next one
+						// avoid empty information
+						$current_date = trim($current_date);
+						if(empty($current_date)){
+							continue;
+						}
+						// set the mode of date dependent of the length of the date 0=start / 1=end
+						$mode = ($key===0) ? 'start' : 'end';
+
+						// replace all accepted separators -. by /
+						$current_date = preg_replace('/[-.]/', '/', $current_date);
+
+						// replace the negative year situations
+						// year can to be at beginning or at end of the date
+						// -200-05-01 or 01-05--200
+						// -200/05/01 or 01/05/-200
+							// if negative year is at begin replace the / for the -
+							$begins	= substr($current_date, 0, 1);
+							if($begins==='/'){
+								$current_date = '-'.substr($current_date, 1);
+							}
+							// if the negative year is the last position the previous preg_replace was changed it as //200
+							// this replace will change it to /-200
+							$current_date = preg_replace('/\/\//', '/-', $current_date);
+
+						// explode the string into parts
+						$ar_date_parts	= explode('/',$current_date);
+						$lenght			= count($ar_date_parts);
+
+						$dd_date = new dd_date();
+
+						// if the length of the parts has only 1 item it will be the year
+						// and end the loop
+						if($lenght === 1){
+							$dd_date->set_year((int)$ar_date_parts[0]);
+							$date_obj->$mode = $dd_date;
+							continue;
+						}
+
+						switch ($order) {
+							case 'dmy':
+								// month and year : 04/2022
+								if($lenght === 2){
+									if(isset($ar_date_parts[1])){
+										$dd_date->set_month((int)$ar_date_parts[1]);
+									}
+									if(isset($ar_date_parts[2])){
+										$dd_date->set_year((int)$ar_date_parts[2]);
+									}
+								}
+								// day, moth, year (other countries dates) : 25/04/2022
+								elseif($lenght === 3){
+									if(isset($ar_date_parts[0])) {
+										$dd_date->set_day((int)$ar_date_parts[0]);
+									}
+									if(isset($ar_date_parts[1])){
+										$dd_date->set_month((int)$ar_date_parts[1]);
+									}
+									if(isset($ar_date_parts[2])){
+										$dd_date->set_year((int)$ar_date_parts[2]);
+									}
+								}
+								break;
+							case 'mdy':
+								// month and year (USA dates): 04/2022
+								if($lenght === 2){
+									if(isset($ar_date_parts[1])){
+										$dd_date->set_month((int)$ar_date_parts[1]);
+									}
+									if(isset($ar_date_parts[2])){
+										$dd_date->set_year((int)$ar_date_parts[2]);
+									}
+								}
+								// moth, day, year (USA dates) : 04/25/2022
+								elseif($lenght === 3){
+									if(isset($ar_date_parts[0])) {
+										$dd_date->set_month((int)$ar_date_parts[0]);
+									}
+									if(isset($ar_date_parts[1])){
+										$dd_date->set_day((int)$ar_date_parts[1]);
+									}
+									if(isset($ar_date_parts[2])){
+										$dd_date->set_year((int)$ar_date_parts[2]);
+									}
+								}
+								break;
+							case 'ymd':
+							default:
+								// year and month  : 2022/04
+								if($lenght === 2){
+									if(isset($ar_date_parts[1])){
+										$dd_date->set_year((int)$ar_date_parts[1]);
+									}
+									if(isset($ar_date_parts[2])){
+										$dd_date->set_month((int)$ar_date_parts[2]);
+									}
+								}
+								// year, month, date (China, Korean, Japan, Iran dates) : 2022/04/25
+								elseif($lenght === 3){
+									if(isset($ar_date_parts[0])) {
+										$dd_date->set_year((int)$ar_date_parts[0]);
+									}
+									if(isset($ar_date_parts[1])){
+										$dd_date->set_month((int)$ar_date_parts[1]);
+									}
+									if(isset($ar_date_parts[2])){
+										$dd_date->set_day((int)$ar_date_parts[2]);
+									}
+								}
+								break;
+						}
+						$date_obj->$mode = $dd_date;
+					}
+					$value[] = $date_obj;
+				}
+			}
+
+		// check values (informative of errors)
+			if(!empty($value)){
+
+				foreach ($value as $current_date) {
+					foreach ($current_date as $key => $current_dd_date) {
+						$dd_date = new dd_date($current_dd_date, true);
+
+						// errors check
+						if(!empty($dd_date->errors)){
+
+							$failed = new stdClass();
+								$failed->section_id		= $this->section_id;
+								$failed->data			= stripslashes( $import_value );
+								$failed->component_tipo	= $this->get_tipo();
+								$failed->msg			= 'IGNORED: malformed data '. to_string($import_value);
+								$failed->errors			= $dd_date->errors;
+
+							$response->errors[] = $failed;
+						}
+					}
+				}
+			}//end if(!empty($value))
+
+
+		$response->result	= $value;
+		$response->msg		= 'OK';
+
+
+		return $response;
+	}//end conform_import_data
+
 }//end class component_date
