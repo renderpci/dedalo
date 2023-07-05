@@ -561,304 +561,432 @@ class diffusion_section_stats extends diffusion {
 	*	LIke lg-eng. Used to resolve labels. Default: DEDALO_DATA_LANG
 	* @return object | false
 	*/
-		// public static function cross_users_range_data($date_in, $date_out, $user_id=null, $lang=DEDALO_DATA_LANG) {
-		// 	$start_time = start_time();
+	public static function cross_users_range_data($date_in, $date_out, $user_id=null, $lang=DEDALO_DATA_LANG) {
+		$start_time = start_time();
 
-		// 	// dates parse. from 2020-12-30 to {"year":2020,"month":6,"day":1,"time":64937808000}
-		// 		$dd_date_in = new dd_date();
-		// 		$dd_date_in->get_date_from_timestamp( $date_in );
-		// 		$time 		= dd_date::convert_date_to_seconds($dd_date_in);
-		// 		$dd_date_in->set_time($time);
+		// dates parse. from 2020-12-30 to {"year":2020,"month":6,"day":1,"time":64937808000}
+			$dd_date_in = new dd_date();
+			$dd_date_in->get_date_from_timestamp( $date_in );
+			$time 		= dd_date::convert_date_to_seconds($dd_date_in);
+			$dd_date_in->set_time($time);
 
-		// 		$dd_date_out = new dd_date();
-		// 		$dd_date_out->get_date_from_timestamp( $date_out );
-		// 		$time 		= dd_date::convert_date_to_seconds($dd_date_out);
-		// 		$dd_date_out->set_time($time);
+			$dd_date_out = new dd_date();
+			$dd_date_out->get_date_from_timestamp( $date_out );
+			$time 		= dd_date::convert_date_to_seconds($dd_date_out);
+			$dd_date_out->set_time($time);
 
-		// 	// user filter
-		// 		$user_filter = !is_null($user_id)
-		// 			? ',{
-		// 		        "q": "[{\"section_tipo\":\"'.DEDALO_SECTION_USERS_TIPO.'\",\"section_id\":\"'.$user_id.'\",\"from_component_tipo\":\"'.USER_ACTIVITY_USER_TIPO.'\"}]",
-		// 		        "q_operator": null,
-		// 		        "path": [
-		// 		          {
-		// 		            "section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
-		// 		            "component_tipo": "'.USER_ACTIVITY_USER_TIPO.'",
-		// 		            "model": "component_autocomplete",
-		// 		            "name": "User"
-		// 		          }
-		// 		        ]
-		// 		      }'
-		// 			: '';
+		// user filter
+			$user_filter = !is_null($user_id)
+				? ',{
+			        "q": [{"section_tipo":"'.DEDALO_SECTION_USERS_TIPO.'","section_id":"'.$user_id.'","from_component_tipo":"'.USER_ACTIVITY_USER_TIPO.'"}],
+			        "q_operator": null,
+			        "path": [
+			          {
+			            "section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
+			            "component_tipo": "'.USER_ACTIVITY_USER_TIPO.'",
+			            "model": "'. RecordObj_dd::get_modelo_name_by_tipo(USER_ACTIVITY_USER_TIPO,true) .'",
+			            "name": "User"
+			          }
+			        ]
+			      }'
+				: '';
 
-		// 	// get all user activity records from user_activity_section in the range
-		// 		$sqo = json_decode('{
-		// 		  "section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
-		// 		  "limit": 0,
-		// 		  "offset": 0,
-		// 		  "select": [],
-		// 		  "filter": {
-		// 		    "$and": [
-		// 		      {
-		//                 "q": "{\"start\":{\"op\":null,\"day\":'.$dd_date_in->day.',\"month\":'.$dd_date_in->month.',\"year\":'.$dd_date_in->year.',\"time\":'.$dd_date_in->time.'}}",
-		//                 "q_operator": ">",
-		//                 "path": [
-		// 		          {
-		// 		            "section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
-		// 		            "component_tipo": "'.USER_ACTIVITY_DATE_TIPO.'",
-		// 		            "model": "component_date",
-		// 		            "name": "Date"
-		// 		          }
-		// 		        ]
-		// 		      },
-		// 		      {
-		//                 "q": "{\"start\":{\"op\":null,\"day\":'.$dd_date_out->day.',\"month\":'.$dd_date_out->month.',\"year\":'.$dd_date_out->year.',\"time\":'.$dd_date_out->time.'}}",
-		//                 "q_operator": "<=",
-		//                 "path": [
-		// 		          {
-		// 		            "section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
-		// 		            "component_tipo": "'.USER_ACTIVITY_DATE_TIPO.'",
-		// 		            "model": "component_date",
-		// 		            "name": "Date"
-		// 		          }
-		// 		        ]
-		// 		      }
-		// 		      '.$user_filter.'
-		// 		    ]
-		// 		  },
-		// 		  "order": [
-		// 		    {
-		// 		      "direction": "ASC",
-		// 		      "path": [
-		// 		        {
-		// 		          "name": "Date",
-		// 		          "model": "component_date",
-		// 		          "section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
-		// 		          "component_tipo": "'.USER_ACTIVITY_DATE_TIPO.'"
-		// 		        }
-		// 		      ]
-		// 		    }
-		// 		  ]
-		// 		}');
+		// get all user activity records from user_activity_section in the range
+			$sqo = json_decode('{
+			  "section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
+			  "limit": 0,
+			  "offset": 0,
+			  "select": [],
+			  "filter": {
+			    "$and": [
+			      {
+	                "q": {"start":{"op":null,"day":'.$dd_date_in->day.',"month":'.$dd_date_in->month.',"year":'.$dd_date_in->year.',"time":'.$dd_date_in->time.'}},
+	                "q_operator": ">",
+	                "path": [
+			          {
+			            "section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
+			            "component_tipo": "'.USER_ACTIVITY_DATE_TIPO.'",
+			            "model": "component_date",
+			            "name": "Date"
+			          }
+			        ]
+			      },
+			      {
+	                "q": {"start":{"op":null,"day":'.$dd_date_out->day.',"month":'.$dd_date_out->month.',"year":'.$dd_date_out->year.',"time":'.$dd_date_out->time.'}},
+	                "q_operator": "<=",
+	                "path": [
+			          {
+			            "section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
+			            "component_tipo": "'.USER_ACTIVITY_DATE_TIPO.'",
+			            "model": "component_date",
+			            "name": "Date"
+			          }
+			        ]
+			      }
+			      '.$user_filter.'
+			    ]
+			  },
+			  "order": [
+			    {
+			      "direction": "ASC",
+			      "path": [
+			        {
+			          "name": "Date",
+			          "model": "component_date",
+			          "section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
+			          "component_tipo": "'.USER_ACTIVITY_DATE_TIPO.'"
+			        }
+			      ]
+			    }
+			  ]
+			}');
 
-		// 		# Search records
-		// 		$search	= search::get_instance(
-		// 			$sqo // object sqo
-		// 		);
-		// 		$search_result	= $search->search();
-		// 		$ar_records		= $search_result->ar_records;
-		// 		if (empty($ar_records)) {
-		// 			return false;
-		// 		}
+			# Search records
+			$search	= search::get_instance(
+				$sqo // object sqo
+			);
+			$search_result	= $search->search();
+			$ar_records		= $search_result->ar_records;
+			if (empty($ar_records)) {
+				return false;
+			}
 
-		// 	// add selectors
-		// 		$add_who_data		= true;
-		// 		$add_what_data		= true;
-		// 		$add_where_data		= true;
-		// 		$add_when_data		= true;
-		// 		$add_publish_data	= true;
+		// add selectors
+			$add_who_data		= true;
+			$add_what_data		= true;
+			$add_where_data		= true;
+			$add_when_data		= true;
+			$add_publish_data	= true;
 
-		// 	// data
-		// 		$who_data		= [];
-		// 		$what_data		= [];
-		// 		$where_data		= [];
-		// 		$when_data		= [];
-		// 		$publish_data	= [];
+		// data
+			$who_data		= [];
+			$what_data		= [];
+			$where_data		= [];
+			$when_data		= [];
+			$publish_data	= [];
 
-		// 	// objects
-		// 		$who_data_obj		= new stdClass();
-		// 		$what_data_obj		= new stdClass();
-		// 		$where_data_obj		= new stdClass();
-		// 		$when_data_obj		= new stdClass();
-		// 		$publish_data_obj	= new stdClass();
+		// objects
+			$who_data_obj		= new stdClass();
+			$what_data_obj		= new stdClass();
+			$where_data_obj		= new stdClass();
+			$when_data_obj		= new stdClass();
+			$publish_data_obj	= new stdClass();
 
-		// 		// add all hours to preserve holes
-		// 			for ($i=0; $i < 24; $i++) {
-		// 				$when_data_obj->{$i} = (object)[
-		// 					'key'	=> $i,
-		// 					'label'	=> str_pad($i, 2, '0', STR_PAD_LEFT),
-		// 					'value'	=> 0
-		// 				];
-		// 			}
+			// add all hours to preserve holes
+				for ($i=0; $i < 24; $i++) {
+					$when_data_obj->{$i} = (object)[
+						'key'	=> $i,
+						'label'	=> str_pad($i, 2, '0', STR_PAD_LEFT),
+						'value'	=> 0
+					];
+				}
 
-		// 		// who: exclude section info tipos to avoid fake totals
-		// 			// $ar_exclude_tipos = [
-		// 			// 	'dd200', // Created by user
-		// 			// 	'dd199', // Creation date
-		// 			// 	'dd197', // Modified by user
-		// 			// 	'dd201', // Modification date
-		// 			// 	'dd271', // First publication
-		// 			// 	'dd1223', // Last publication
-		// 			// 	'dd1224', // First publication user
-		// 			// 	'dd1225' //  Last publication user
-		// 			// ];
+			// who: exclude section info tipos to avoid fake totals
+				// $ar_exclude_tipos = [
+				// 	'dd200', // Created by user
+				// 	'dd199', // Creation date
+				// 	'dd197', // Modified by user
+				// 	'dd201', // Modification date
+				// 	'dd271', // First publication
+				// 	'dd1223', // Last publication
+				// 	'dd1224', // First publication user
+				// 	'dd1225' //  Last publication user
+				// ];
 
-		// 		foreach ($ar_records as $row) {
+			foreach ($ar_records as $row) {
 
-		// 			$datos	= json_decode($row->datos);
-		// 			$totals	= json_decode($datos->components->{USER_ACTIVITY_TOTALS_TIPO}->dato->{DEDALO_DATA_NOLAN});
+				$datos	= $row->datos;
+				$totals	= $datos->components->{USER_ACTIVITY_TOTALS_TIPO}->dato->{DEDALO_DATA_NOLAN};
+				// format legacy data to one level
+				$totals	= array_flatten($totals);
 
-		// 			// who
-		// 			if ($add_who_data===true) {
-		// 				// user
-		// 					$user = array_find($datos->relations, function($item){
-		// 						return $item->from_component_tipo===USER_ACTIVITY_USER_TIPO && $item->section_tipo===DEDALO_SECTION_USERS_TIPO;
-		// 					});
-		// 				// actions totals (extracted from where totals)
-		// 					$actions_totals = array_reduce($totals, function($carry, $item) {
-		// 						if ($item->type==='where') {
-		// 							$carry += $item->value;
-		// 						}
-		// 						return $carry;
-		// 					}, 0);
-		// 				// add data
-		// 					$item_key = $user->section_id;
-		// 					if (isset($who_data_obj->{$item_key})) {
-		// 						$who_data_obj->{$item_key}->value += $actions_totals;
-		// 					}else{
+				// who
+				if ($add_who_data===true) {
+					// user
+						$user = array_find($datos->relations, function($item){
+							return $item->from_component_tipo===USER_ACTIVITY_USER_TIPO && $item->section_tipo===DEDALO_SECTION_USERS_TIPO;
+						});
 
-		// 						$model_name	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_USER_NAME_TIPO, true);
-		// 						$component	= component_common::get_instance(
-		// 							$model_name,
-		// 							DEDALO_USER_NAME_TIPO,
-		// 							$user->section_id,
-		// 							'list',
-		// 							$lang,
-		// 							$user->section_tipo
-		// 						);
-		// 						$label = $component->get_valor();
+					// actions totals (extracted from where totals)
+						$actions_totals = array_reduce($totals, function($carry, $item) {
+							if ($item->type==='where') {
+								$carry += $item->value;
+							}
+							return $carry;
+						}, 0);
+					// add data
+						$item_key = $user->section_id;
+						if (isset($who_data_obj->{$item_key})) {
+							$who_data_obj->{$item_key}->value += $actions_totals;
+						}else{
 
-		// 						$who_data_obj->{$item_key} = new stdClass();
-		// 							$who_data_obj->{$item_key}->value	= $actions_totals;
-		// 							$who_data_obj->{$item_key}->label	= $label;
-		// 							$who_data_obj->{$item_key}->key		= $user->section_id;
-		// 					}
-		// 			}
+							$model_name	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_USER_NAME_TIPO, true);
+							$component	= component_common::get_instance(
+								$model_name,
+								DEDALO_USER_NAME_TIPO,
+								$user->section_id,
+								'list',
+								$lang,
+								$user->section_tipo
+							);
+							$label = $component->get_valor();
 
-		// 			// what
-		// 			if ($add_what_data===true) {
-		// 				// what totals
-		// 					$what_totals = array_filter($totals, function($item){
-		// 						return $item->type==='what';
-		// 					});
-		// 				// add data
-		// 					foreach ($what_totals as $item) {
+							$who_data_obj->{$item_key} = new stdClass();
+								$who_data_obj->{$item_key}->value	= $actions_totals;
+								$who_data_obj->{$item_key}->label	= $label;
+								$who_data_obj->{$item_key}->key		= $user->section_id;
+						}
+				}
 
-		// 						$item_key = $item->tipo;
-		// 						if (isset($what_data_obj->{$item_key})) {
-		// 							$what_data_obj->{$item_key}->value += $item->value;
-		// 						}else{
-		// 							$what_data_obj->{$item_key} = new stdClass();
-		// 								$what_data_obj->{$item_key}->key	= $item->tipo;
-		// 								$what_data_obj->{$item_key}->label	= RecordObj_dd::get_termino_by_tipo($item->tipo, $lang, true, true);
-		// 								$what_data_obj->{$item_key}->value	= $item->value;
-		// 						}
-		// 					}
-		// 			}
+				// what
+				if ($add_what_data===true) {
+					// what totals
+						$what_totals = array_filter($totals, function($item){
+							return $item->type==='what';
+						});
+					// add data
+						foreach ($what_totals as $item) {
 
-		// 			// where
-		// 			if ($add_where_data===true) {
-		// 				// where totals
-		// 					$where_totals = array_filter($totals, function($item){
-		// 						return $item->type==='where';
-		// 					});
-		// 					// dump($where_totals, ' where_totals ++ '.to_string());
-		// 				// add data
-		// 					foreach ($where_totals as $item) {
+							$item_key = $item->tipo;
+							if (isset($what_data_obj->{$item_key})) {
+								$what_data_obj->{$item_key}->value += $item->value;
+							}else{
+								$what_data_obj->{$item_key} = new stdClass();
+									$what_data_obj->{$item_key}->key	= $item->tipo;
+									$what_data_obj->{$item_key}->label	= RecordObj_dd::get_termino_by_tipo($item->tipo, $lang, true, true);
+									$what_data_obj->{$item_key}->value	= $item->value;
+							}
+						}
+				}
 
-		// 						$item_key = $item->tipo;
-		// 						if (isset($where_data_obj->{$item_key})) {
-		// 							$where_data_obj->{$item_key}->value += $item->value;
-		// 						}else{
-		// 							$where_data_obj->{$item_key} = new stdClass();
-		// 								$where_data_obj->{$item_key}->key	= $item->tipo;
-		// 								$where_data_obj->{$item_key}->label	= RecordObj_dd::get_termino_by_tipo($item->tipo, $lang, true, true);
-		// 								$where_data_obj->{$item_key}->value	= $item->value;
-		// 						}
-		// 					}
-		// 			}
+				// where
+				if ($add_where_data===true) {
+					// where totals
+						$where_totals = array_filter($totals, function($item){
+							return $item->type==='where';
+						});
+						// dump($where_totals, ' where_totals ++ '.to_string());
+					// add data
+						foreach ($where_totals as $item) {
 
-		// 			// when
-		// 			if ($add_when_data===true) {
-		// 				// when totals
-		// 					$when_totals = array_filter($totals, function($item){
-		// 						return $item->type==='when';
-		// 					});
-		// 				// add data
-		// 					foreach ($when_totals as $item) {
+							$item_key = $item->tipo;
+							if (isset($where_data_obj->{$item_key})) {
+								$where_data_obj->{$item_key}->value += $item->value;
+							}else{
+								$where_data_obj->{$item_key} = new stdClass();
+									$where_data_obj->{$item_key}->key	= $item->tipo;
+									$where_data_obj->{$item_key}->label	= RecordObj_dd::get_termino_by_tipo($item->tipo, $lang, true, true);
+									$where_data_obj->{$item_key}->value	= $item->value;
+							}
+						}
+				}
 
-		// 						$item_key = $item->hour;
-		// 						if (isset($when_data_obj->{$item_key})) {
-		// 							$when_data_obj->{$item_key}->value += $item->value;
-		// 						}else{
-		// 							$when_data_obj->{$item_key} = new stdClass();
-		// 								$when_data_obj->{$item_key}->key	= $item->hour;
-		// 								$when_data_obj->{$item_key}->label	= str_pad($item->hour, 2, '0', STR_PAD_LEFT);
-		// 								$when_data_obj->{$item_key}->value	= $item->value;
-		// 						}
-		// 					}
-		// 			}
+				// when
+				if ($add_when_data===true) {
+					// when totals
+						$when_totals = array_filter($totals, function($item){
+							return $item->type==='when';
+						});
+					// add data
+						foreach ($when_totals as $item) {
 
-		// 			// publish
-		// 			if ($add_publish_data===true) {
-		// 				// publish totals
-		// 					$publish_totals = array_filter($totals, function($item){
-		// 						return $item->type==='publish';
-		// 					});
-		// 				// add data
-		// 					foreach ($publish_totals as $item) {
-		// 						$item_key = $item->tipo;
-		// 						if (isset($publish_data_obj->{$item_key})) {
-		// 							$publish_data_obj->{$item_key}->value += $item->value;
-		// 						}else{
-		// 							$publish_data_obj->{$item_key} = new stdClass();
-		// 								$publish_data_obj->{$item_key}->key		= $item->tipo;
-		// 								$publish_data_obj->{$item_key}->label	= RecordObj_dd::get_termino_by_tipo($item->tipo, $lang, true, true);
-		// 								$publish_data_obj->{$item_key}->value	= $item->value;
-		// 						}
-		// 					}
-		// 			}
+							$item_key = $item->hour;
+							if (isset($when_data_obj->{$item_key})) {
+								$when_data_obj->{$item_key}->value += $item->value;
+							}else{
+								$when_data_obj->{$item_key} = new stdClass();
+									$when_data_obj->{$item_key}->key	= $item->hour;
+									$when_data_obj->{$item_key}->label	= str_pad($item->hour, 2, '0', STR_PAD_LEFT);
+									$when_data_obj->{$item_key}->value	= $item->value;
+							}
+						}
+				}
 
-		// 		}//end foreach  rows
+				// publish
+				if ($add_publish_data===true) {
+					// publish totals
+						$publish_totals = array_filter($totals, function($item){
+							return $item->type==='publish';
+						});
+					// add data
+						foreach ($publish_totals as $item) {
+							$item_key = $item->tipo;
+							if (isset($publish_data_obj->{$item_key})) {
+								$publish_data_obj->{$item_key}->value += $item->value;
+							}else{
+								$publish_data_obj->{$item_key} = new stdClass();
+									$publish_data_obj->{$item_key}->key		= $item->tipo;
+									$publish_data_obj->{$item_key}->label	= RecordObj_dd::get_termino_by_tipo($item->tipo, $lang, true, true);
+									$publish_data_obj->{$item_key}->value	= $item->value;
+							}
+						}
+				}
 
-		// 	// convert data objects to vertical array
-		// 		foreach ($who_data_obj as $key => $value) {
-		// 			$who_data[] = $value;
-		// 		}
-		// 		foreach ($what_data_obj as $key => $value) {
-		// 			$what_data[] = $value;
-		// 		}
-		// 		foreach ($where_data_obj as $key => $value) {
-		// 			$where_data[] = $value;
-		// 		}
-		// 		foreach ($when_data_obj as $key => $value) {
-		// 			$when_data[] = $value;
-		// 		}
-		// 		foreach ($publish_data_obj as $key => $value) {
-		// 			$publish_data[] = $value;
-		// 		}
+			}//end foreach  rows
 
-		// 	// sort
-		// 		$cmp_label = function($_a, $_b) {
-		// 			$a = $_a->label;
-		// 			$b = $_b->label;
+		// convert data objects to vertical array
+			foreach ($who_data_obj as $value) {
+				$who_data[] = $value;
+			}
+			foreach ($what_data_obj as $value) {
+				$what_data[] = $value;
+			}
+			foreach ($where_data_obj as $value) {
+				$where_data[] = $value;
+			}
+			foreach ($when_data_obj as $value) {
+				$when_data[] = $value;
+			}
+			foreach ($publish_data_obj as $value) {
+				$publish_data[] = $value;
+			}
 
-		// 			if ($a == $b) {
-		// 		        return 0;
-		// 		    }
-		// 		    return ($a < $b) ? -1 : 1;
-		// 		};
-		// 		usort($when_data, $cmp_label);
+		// sort
+			$cmp_label = function($_a, $_b) {
+				$a = $_a->label;
+				$b = $_b->label;
 
-		// 	$totals = new stdClass();
-		// 		$totals->who		= $who_data;
-		// 		$totals->what		= $what_data;
-		// 		$totals->where		= $where_data;
-		// 		$totals->when		= $when_data;
-		// 		$totals->publish	= $publish_data;
+				if ($a == $b) {
+			        return 0;
+			    }
+			    return ($a < $b) ? -1 : 1;
+			};
+			usort($when_data, $cmp_label);
 
-		// 	return $totals;
-		// }//end cross_users_range_data
+		$totals = new stdClass();
+			$totals->who		= $who_data;
+			$totals->what		= $what_data;
+			$totals->where		= $where_data;
+			$totals->when		= $when_data;
+			$totals->publish	= $publish_data;
+
+		return $totals;
+	}//end cross_users_range_data
+
+
+
+	/**
+	* PARSE_TOTALS_FOR_JS
+	* @return array $ar_js_obj
+	*/
+	public static function parse_totals_for_js($totals, $tipo=USER_ACTIVITY_SECTION_TIPO) {
+
+		$ar_js_obj = [];
+
+		// who
+			$title = RecordObj_dd::get_termino_by_tipo(logger_backend_activity::$_COMPONENT_QUIEN['tipo'], DEDALO_DATA_LANG, true, true);
+			$current_obj = new stdClass();
+				$current_obj->title			= $title;
+				$current_obj->tipo			= $tipo;
+				$current_obj->query			= '';
+				$current_obj->graph_type	= 'stats_bar';
+
+				$item = new stdClass();
+					$item->key		= $title;
+					$item->values	= array_map(function($el){
+						return (object)[
+							'x' => $el->label,
+							'y' => $el->value
+						];
+					}, $totals->who);
+
+				$current_obj->data = [$item];
+
+			$ar_js_obj[] = $current_obj;
+
+		// what
+			$title = RecordObj_dd::get_termino_by_tipo(logger_backend_activity::$_COMPONENT_QUE['tipo'], DEDALO_DATA_LANG, true, true);
+			$current_obj = new stdClass();
+				$current_obj->title			= $title;
+				$current_obj->tipo			= $tipo;
+				$current_obj->query			= '';
+				$current_obj->graph_type	= 'stats_pie';
+
+				$item = new stdClass();
+					$item->key		= $title;
+					$item->values	= array_map(function($el){
+						return (object)[
+							'x' => $el->label,
+							'y' => $el->value
+						];
+					}, $totals->what);
+
+				$current_obj->data = [$item];
+
+			$ar_js_obj[] = $current_obj;
+
+		// where
+			$title = RecordObj_dd::get_termino_by_tipo(logger_backend_activity::$_COMPONENT_DONDE['tipo'], DEDALO_DATA_LANG, true, true);
+			$current_obj = new stdClass();
+				$current_obj->title			= $title;
+				$current_obj->tipo			= $tipo;
+				$current_obj->query			= '';
+				$current_obj->graph_type	= 'stats_bar_horizontal';
+
+				$item = new stdClass();
+					$item->key		= $title;
+					$item->values	= array_map(function($el){
+
+						$label = strip_tags($el->label) . ' ['.$el->key.']';
+
+						return (object)[
+							'x' => $label,
+							'y' => $el->value
+						];
+					}, $totals->where);
+
+				$current_obj->data = [$item];
+
+			$ar_js_obj[] = $current_obj;
+
+		// publish
+			$title = RecordObj_dd::get_termino_by_tipo('dd222', DEDALO_DATA_LANG, true, true);
+			$current_obj = new stdClass();
+				$current_obj->title			= $title;
+				$current_obj->tipo			= $tipo;
+				$current_obj->query			= '';
+				$current_obj->graph_type	= 'stats_bar';
+
+				$item = new stdClass();
+					$item->key		= $title;
+					$item->values	= array_map(function($el){
+
+						$label = strip_tags($el->label) . ' ['.$el->key.']';
+
+						return (object)[
+							'x' => $label,
+							'y' => $el->value
+						];
+					}, $totals->publish);
+
+				$current_obj->data = [$item];
+
+			$ar_js_obj[] = $current_obj;
+
+		// when
+			$title = RecordObj_dd::get_termino_by_tipo(logger_backend_activity::$_COMPONENT_CUANDO['tipo'], DEDALO_DATA_LANG, true, true);
+			$current_obj = new stdClass();
+				$current_obj->title			= $title;
+				$current_obj->tipo			= $tipo;
+				$current_obj->query			= '';
+				$current_obj->graph_type	= 'stats_bar';
+
+				$item = new stdClass();
+					$item->key		= $title;
+					$item->values	= array_map(function($el){
+						return (object)[
+							'x' => strip_tags($el->label),
+							'y' => $el->value
+						];
+					}, $totals->when);
+
+				$current_obj->data = [$item];
+
+			$ar_js_obj[] = $current_obj;
+
+
+		return $ar_js_obj;
+	}//end parse_totals_for_js
 
 
 
