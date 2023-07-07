@@ -536,8 +536,6 @@ class component_portal extends component_relation_common {
 	public function get_valor($lang=DEDALO_DATA_LANG, $format='string', $fields_separator=', ', $records_separator='<br>', $ar_related_terms=false, $data_to_be_used='valor') {
 
 		$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($this->tipo);
-
-
 		// if ($legacy_model==='component_portal') {
 		// 	return 'unavailable';
 		// }

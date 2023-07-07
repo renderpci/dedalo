@@ -4,10 +4,9 @@
 
 
 
-
 	/**
 	* GET VALOR
-	* Get resolved string representation of current tesauro value
+	* Get resolved string representation of current thesaurus value
 	*/
 	$_get_valor = function($lang=DEDALO_DATA_LANG, $format='string', $fields_separator=', ', $records_separator='<br>', $ar_related_terms=false, $data_to_be_used='valor') {
 
@@ -61,10 +60,9 @@
 
 
 
-
 	/**
 	* GET_VALOR_EXPORT
-	* Return component value sended to export data
+	* Return component value sent to export data
 	* @return string $valor
 	*/
 	$_get_valor_export = function ( $valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null ) {
@@ -323,5 +321,3 @@
 
 		return $diffusion_value;
 	};//end get_diffusion_value
-
-
