@@ -178,7 +178,7 @@
 	* Return component value sent to export data
 	* @return string $valor
 	*/
-	$_get_valor_export = function ( $valor=null, $lang=DEDALO_DATA_LANG, $quotes='"', $add_id=false ) {
+	$_get_valor_export = function( $valor=null, $lang=DEDALO_DATA_LANG, $quotes='"', $add_id=false ) {
 
 		if (empty($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
