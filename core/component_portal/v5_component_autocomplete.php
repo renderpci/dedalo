@@ -202,11 +202,25 @@
 			$propiedades	= $this->get_propiedades(true);
 			$is_publicable	= (bool)(isset($propiedades->is_publicable) && $propiedades->is_publicable===true);
 
+		// fields_separator. (!) Note here that more than one value can be returned by this method. To avoid duplicity of ',' separator, use '-' as default
+			$fields_separator_default = ' | ';
 		// fields_separator
 			// $fields_separator   = $this->get_fields_separator();
-			$fields_separator = (isset($propiedades->source->divisor))
-				? $propiedades->source->divisor
-				: ' | ';
+			switch (true) {
+				case isset($option_obj->divisor):
+					$fields_separator = $option_obj->divisor;
+					break;
+				case isset($propiedades->source->divisor):
+					$fields_separator = $propiedades->source->divisor;
+					break;
+				case isset($this->diffusion_properties->option_obj) &&
+					 isset($this->diffusion_properties->option_obj->divisor) :
+					$fields_separator = $this->diffusion_properties->option_obj->divisor;
+					break;
+				default:
+					$fields_separator = $fields_separator_default;
+					break;
+			}
 
 		$diffusion_value_clean = [];
 		foreach ($value as $item) {

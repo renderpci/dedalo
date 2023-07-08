@@ -94,8 +94,49 @@
 
 		$diffusion_value = null;
 
-		// separator. (!) Note here that more than one value can be returned by this method. To avoid duplicity of ',' separator, use '-' as default
-			$separator = ' - ';
+		$propiedades			= $this->get_propiedades();
+		$diffusion_properties	= $this->get_diffusion_properties();
+			// dump($diffusion_properties, ' diffusion_properties tipo ++ '.to_string($this->tipo));
+
+		// fields_separator. (!) Note here that more than one value can be returned by this method. To avoid duplicity of ',' separator, use '-' as default
+			$fields_separator_default = ' - ';
+		// fields_separator
+			// $fields_separator   = $this->get_fields_separator();
+			switch (true) {
+				case isset($option_obj->divisor):
+					$fields_separator = $option_obj->divisor;
+					break;
+				case isset($this->diffusion_properties->option_obj) &&
+					 isset($this->diffusion_properties->option_obj->divisor) :
+					$fields_separator = $this->diffusion_properties->option_obj->divisor;
+					break;
+				case isset($diffusion_properties->source->divisor):
+					$fields_separator = $diffusion_properties->source->divisor;
+					break;
+				default:
+					$fields_separator = $fields_separator_default;
+					break;
+			}
+
+		// records_separator_default
+			$records_separator_default = ', ';
+		// records_separator
+			// $records_separator   = $this->get_records_separator();
+			switch (true) {
+				case isset($option_obj->records_separator):
+					$records_separator = $option_obj->records_separator;
+					break;
+				case isset($this->diffusion_properties->option_obj) &&
+					 isset($this->diffusion_properties->option_obj->records_separator) :
+					$records_separator = $this->diffusion_properties->option_obj->records_separator;
+					break;
+				case isset($diffusion_properties->source->records_separator):
+					$records_separator = $diffusion_properties->source->records_separator;
+					break;
+				default:
+					$records_separator = $records_separator_default;
+					break;
+			}
 
 		// load dato
 			$dato = $this->get_dato();
@@ -106,7 +147,7 @@
 		if (empty($option_obj)) {
 
 			// default case
-			$diffusion_value = $this->get_valor($lang, 'string', $separator);
+			$diffusion_value = $this->get_valor($lang, 'string', $fields_separator, $records_separator);
 
 		}else if(isset($option_obj->parent_section_tipo)) {
 
@@ -161,7 +202,7 @@
 
 			$diffusion_value = (isset($option_obj->parents_recursive_data) && $option_obj->parents_recursive_data===true)
 				? json_encode($terms)
-				: implode($separator, $terms);
+				: implode($fields_separator, $terms);
 
 		}else{
 
@@ -185,7 +226,7 @@
 									null // array|null ar_components_related
 								);
 								if (!empty($current_value)) {
-									$ar_diffusion_value[] = implode($separator, $current_value);
+									$ar_diffusion_value[] = implode($fields_separator, $current_value);
 								}
 
 							// // get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
@@ -198,12 +239,12 @@
 							// 	}
 							// }
 							// if (!empty($ar_terms)) {
-							// 	// $diffusion_value .= $separator . implode($separator, $ar_terms);
+							// 	// $diffusion_value .= $fields_separator . implode($fields_separator, $ar_terms);
 							// 	$ar_diffusion_value = array_merge($ar_diffusion_value, $ar_terms);
 							// }
 						}
 
-					$diffusion_value = implode($separator, $ar_diffusion_value);
+					$diffusion_value = implode($fields_separator, $ar_diffusion_value);
 
 				}else if ($key==='custom_parents') {
 
@@ -307,7 +348,7 @@
 					}//end foreach ($dato as $current_locator)
 
 					// join all locator values
-						$diffusion_value = implode($separator, $ar_diffusion_value);
+						$diffusion_value = implode($fields_separator, $ar_diffusion_value);
 
 				}//end if ($key==='custom_parents')
 			}//end foreach ($option_obj as $key => $value)
