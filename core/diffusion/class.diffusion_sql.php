@@ -4140,42 +4140,71 @@ class diffusion_sql extends diffusion  {
 
 	/**
 	* BUILD_GEOLOCATION_DATA
-	* @return string
+	* @param object $options
+	* @param mixed dato
+	* @return string $result
 	*/
-	public static function build_geolocation_data($options, $dato) {
+	public static function build_geolocation_data(object $options, $dato) : string {
 
-		$raw_data = !empty($dato)
-			? (array)$dato
-			: [];
+		$component = $options->component;
 
-		// $ar_elements = component_text_area::build_geolocation_data($options->raw_text);
-		$ar_elements	= component_text_area::build_geolocation_data($raw_data);
-		$response		= json_encode($ar_elements, JSON_UNESCAPED_UNICODE);
+		$ar_elements = $component->build_geolocation_data(
+			false, // bool geojson
+		);
 
-		return (string)$response; // json_encoded object
+		$result = json_encode($ar_elements, JSON_UNESCAPED_UNICODE);
+
+		return (string)$result; // json_encoded object
 	}//end build_geolocation_data
+
+
+
+	/**
+	* BUILD_GEOLOCATION_DATA
+	* @param object $options
+	* @return string $result
+	*/
+		// public static function build_geolocation_data(object $options, $dato) : string {
+
+		// 	$raw_data = !empty($dato)
+		// 		? (array)$dato
+		// 		: [];
+
+		// 	$component_tipo = $options->component->get_tipo();
+
+		// 	$ar_elements = component_text_area::build_geolocation_data(
+		// 		$raw_data,
+		// 		false, // boll geojson
+		// 		$component_tipo
+		// 	);
+		// 	$result = json_encode($ar_elements, JSON_UNESCAPED_UNICODE);
+
+		// 	return (string)$result; // json_encoded object
+		// }//end build_geolocation_data
 
 
 
 	/**
 	* BUILD_GEOLOCATION_DATA_GEOJSON
 	* @param object $options
-	* @param object $dato
+	* @param mixed $dato
 	* @see ontology publication use in mdcat4091
-	* @return string $response
+	* @return string $geolocation_data
 	*/
-	public static function build_geolocation_data_geojson($options, $dato) {
+	public static function build_geolocation_data_geojson($options, $dato) : string {
 
 		// options
 			$raw_text				= $options->raw_text ?? $dato; // maintain ->raw_text for compatibility only
 			// process_dato_arguments. (!) If call is from 'diffusion_sql::resolve_component_value' the path is 'options->process_dato_arguments'
 			// but if call is directly from 'diffusion_sql::build_geolocation_data_geojson' the path is inside 'propiedades'
 			$process_dato_arguments	= $options->process_dato_arguments ?? $options->properties->process_dato_arguments ?? null;
-			$component				= $options->component ?? null;
+			$component				= $options->component;
 
 		// geolocation_data
-			$ar_elements = component_text_area::build_geolocation_data($raw_text, true); // return an array
-			$response 	 = json_encode($ar_elements, JSON_UNESCAPED_UNICODE);
+			$ar_elements = $component->build_geolocation_data(
+				true
+			);
+			$geolocation_data = json_encode($ar_elements, JSON_UNESCAPED_UNICODE);
 
 		// fallback optional
 			if (empty($ar_elements)
@@ -4204,7 +4233,7 @@ class diffusion_sql extends diffusion  {
 				);
 				if (method_exists($fallback_component,$fallback_method)) {
 
-					$response = $fallback_component->{$fallback_method}();
+					$geolocation_data = $fallback_component->{$fallback_method}();
 
 				}else{
 					debug_log(__METHOD__
@@ -4214,7 +4243,7 @@ class diffusion_sql extends diffusion  {
 				}
 			}
 
-		return (string)$response; // json_encoded object
+		return (string)$geolocation_data; // json_encoded object
 	}//end build_geolocation_data_geojson
 
 
