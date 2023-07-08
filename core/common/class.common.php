@@ -867,9 +867,12 @@ abstract class common {
 
 	/**
 	* GET_AR_RELATED_BY_MODEL
+	* @param string $model_name
+	* @param string $tipo
+	* @param bool $strict = true
 	* @return array $ar_related_by_model
 	*/
-	public static function get_ar_related_by_model(string $model_name, string $tipo, $strict=true) : array {
+	public static function get_ar_related_by_model(string $model_name, string $tipo, bool $strict=true) : array {
 
 		static $ar_related_by_model_data;
 		$uid = $model_name.'_'.$tipo;
@@ -898,7 +901,6 @@ abstract class common {
 				}
 			}
 		}
-		#debug_log(__METHOD__." ar_related_by_model - modelo_name:$model_name - tipo:$tipo - ar_related_by_model:".json_encode($ar_related_by_model), logger::DEBUG);
 
 		$ar_related_by_model_data[$uid] = $ar_related_by_model;
 
