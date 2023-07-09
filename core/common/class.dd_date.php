@@ -7,6 +7,7 @@
 class dd_date extends stdClass {
 
 
+
 	// Separator when format output
 	static $separator = '/';
 	// Separator when format output
@@ -15,9 +16,26 @@ class dd_date extends stdClass {
 	static $virtual_year_days  = 372;
 	// Virtual month days
 	static $virtual_month_days = 31;
-
 	// errors status
 	public $errors;
+	// day
+	protected $day;
+	// month
+	protected $month;
+	// year
+	protected $year;
+	// time
+	protected $time;
+	// hour
+	protected $hour;
+	// minute
+	protected $minute;
+	// second
+	protected $second;
+	// ms
+	protected $ms;
+
+
 
 	/**
 	* __CONSTRUCT
@@ -72,15 +90,14 @@ class dd_date extends stdClass {
 			}
 
 		// check day
-		$check_day = $this->check_day();
-		if($check_day === false){
-			debug_log(__METHOD__
-				.' Invalid value for day value: '.to_string($this->day)
-				, logger::ERROR
-			);
-			$this->errors[] = 'Invalid value for day value: '.$this->day;
-		}
-
+			$check_day = $this->check_day();
+			if($check_day === false){
+				debug_log(__METHOD__
+					.' Invalid value for day value: '.to_string($this->day)
+					, logger::ERROR
+				);
+				$this->errors[] = 'Invalid value for day value: '.$this->day;
+			}
 	}//end __construct
 
 
@@ -169,8 +186,7 @@ class dd_date extends stdClass {
 	*/
 	public function check_day() {
 
-		$day	= $this->day;
-
+		$day = $this->day ?? null;
 		if(empty($day)){
 			return null;
 		}
