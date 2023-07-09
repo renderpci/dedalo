@@ -2165,6 +2165,27 @@ class component_text_area extends component_common {
 				$ar_elements[] = $current_value;
 			}
 
+		// compare result
+			$geo_tags = [];
+			$dato		= $this->get_dato();
+			$raw_text	= $dato[0] ?? '';
+			// split by pattern
+			$pattern_geo_full = TR::get_mark_pattern('geo_full',$standalone=true);
+			$result 		  = preg_split($pattern_geo_full, $raw_text, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
+			foreach ((array)$result as $geo_tag) {
+				if (strpos($geo_tag,'[geo-')===0) {
+					$geo_tags[] = $geo_tag;
+				}
+			}
+			if (count($geo_tags)!==count($ar_elements)) {
+				debug_log(__METHOD__
+					. " ERROR. The number of tags and geodata layers is different! " . PHP_EOL
+					. ' layers: ' .json_encode($ar_elements, JSON_PRETTY_PRINT) . PHP_EOL
+					. ' geo_tags: ' .json_encode($geo_tags, JSON_PRETTY_PRINT)
+					, logger::DEBUG
+				);
+			}
+
 
 		return $ar_elements;
 	}//end build_geolocation_data
