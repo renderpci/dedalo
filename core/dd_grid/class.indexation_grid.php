@@ -162,6 +162,16 @@ class indexation_grid {
 				$rows_max_count = [$head_row_count];
 				foreach ($ar_locators as $current_locator) {
 
+					// check tag_id
+						if (!isset($current_locator->tag_id)) {
+							debug_log(__METHOD__
+								. " Ignored locator without tag_id " . PHP_EOL
+								. ' locator: ' . $locator
+								, logger::ERROR
+							);
+							continue;
+						}
+
 					$ar_row_value = $this->get_grid_value($row_ddo_map, $current_locator);
 					// take the maximum number of rows (the columns can has 1, 2, 55 rows and we need the highest value, 55)
 					$row_count = max($ar_row_value->ar_row_count);

@@ -36,7 +36,11 @@
 				$tag_type = 'struct';
 				break;
 			default:
-				debug_log(__METHOD__." Making fallback to index because rel_locator->type is NOT DEFINED in locator ".to_string($locator), logger::ERROR);
+				debug_log(__METHOD__
+					." Making fallback to index because rel_locator->type is NOT DEFINED in locator " . PHP_EOL
+					.' locator:' . json_encode($locator, JSON_PRETTY_PRINT)
+					, logger::ERROR
+				);
 				$tag_type = 'index';
 				break;
 		}
