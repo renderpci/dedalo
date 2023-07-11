@@ -104,7 +104,8 @@ class indexation_grid {
 				// check empty cases (misconfigured Ontology indexation_list children)
 					if (empty($indexation_list)) {
 						debug_log(__METHOD__.
-							" Error. Ignored empty indexation_list. A config problem was detected. Fix ASAP. (misconfigured Ontology indexation_list children) section_tipo: ".to_string($current_section_tipo),
+							" Error. Ignored empty indexation_list. A config problem was detected. Fix ASAP. (misconfigured Ontology indexation_list children) section_tipo: ". PHP_EOL
+							.' current_section_tipo:' . to_string($current_section_tipo),
 							logger::ERROR
 						);
 						continue;

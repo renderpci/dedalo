@@ -15,7 +15,7 @@ class component_external extends component_common {
 	public function load_data_from_remote() : ?object {
 
 		// short vars
-			$section_id		= $this->get_parent();
+			$section_id		= $this->get_section_id();
 			$section_tipo	= $this->section_tipo;
 			$lang			= DEDALO_DATA_LANG;
 
@@ -51,23 +51,31 @@ class component_external extends component_common {
 
 		// check properties config
 			if (!isset($section_properties->external_data)) {
-				debug_log(__METHOD__." ERROR. Empty properties section external_data" .PHP_EOL. to_string($section_properties), logger::ERROR);
+				debug_log(__METHOD__
+					." ERROR. Unable to load data from_remote. Empty properties section external_data (1)" .PHP_EOL
+					.' tipo: '. $this->tipo .PHP_EOL
+					.' section_tipo: '. $section_tipo .PHP_EOL
+					.' section_id: '. $section_id .PHP_EOL
+					.' section_properties type: ' . gettype($section_properties) .PHP_EOL
+					.' section_properties: ' . json_encode($section_properties, JSON_PRETTY_PRINT)
+					, logger::ERROR
+				);
 				return null;
 			}
 
 		// properties external_data vars
-			$external_data  = $section_properties->external_data;
-			$api_url 		= $external_data->api_url;
-			$response_map 	= $external_data->response_map;
-			$entity 		= $external_data->entity;
+			$external_data	= $section_properties->external_data;
+			$api_url		= $external_data->api_url;
+			$response_map	= $external_data->response_map;
+			$entity			= $external_data->entity;
 
 			// fields
 				$ar_fields = [];
 				# get_ar_children_tipo_by_model_name_in_section($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false, $ar_tipo_exclude_elements=false)
 				$ar_component_tipo = section::get_ar_children_tipo_by_model_name_in_section($section_tipo, ['component'], true, true, true, false, false);
 				foreach ($ar_component_tipo as $component_tipo) {
-					$RecordObj_dd 		 	= new RecordObj_dd($component_tipo);
-					$component_properties 	= $RecordObj_dd->get_properties();
+					$RecordObj_dd			= new RecordObj_dd($component_tipo);
+					$component_properties	= $RecordObj_dd->get_properties();
 					if (empty($component_properties)) {
 						continue;
 					}
@@ -84,10 +92,10 @@ class component_external extends component_common {
 				include_once( dirname(__FILE__) . '/entities/class.'.$entity.'.php' );
 
 				$options = new stdClass();
-					$options->api_url 		= $api_url;
-					$options->ar_fields 	= $ar_fields;
-					$options->section_id 	= $section_id;
-					$options->lang 			= $lang;
+					$options->api_url		= $api_url;
+					$options->ar_fields		= $ar_fields;
+					$options->section_id	= $section_id;
+					$options->lang			= $lang;
 
 				$url = $entity::build_row_request_url($options);
 
@@ -103,7 +111,11 @@ class component_external extends component_common {
 
 		// check response
 			if (empty($response_obj)) {
-				debug_log(__METHOD__." ERROR. Empty response from external_data:" .PHP_EOL. to_string($request_response), logger::ERROR);
+				debug_log(__METHOD__
+					." ERROR. Unable to load data from_remote. Empty response from external_data:" .PHP_EOL
+					.' request_response: ' . to_string($request_response)
+					, logger::ERROR
+				);
 				return null;
 			}
 
