@@ -181,10 +181,10 @@ export const render_ts_line = function(options) {
 			case (child_data.ar_elements[j].tipo==='ww34'):
 			case (child_data.ar_elements[j].tipo==='hierarchy91'):
 
-				// if (   child_data.ar_elements[j].tipo==='hierarchy40' && child_data.permissions_indexation>=1
-				// 	|| child_data.ar_elements[j].tipo==='ww34' && child_data.permissions_indexation>=1
-				// 	|| child_data.ar_elements[j].tipo==='hierarchy91' && child_data.permissions_structuration>=1
-				// 	) {
+				if (   child_data.ar_elements[j].tipo==='hierarchy40' && child_data.permissions_indexation>=1
+					|| child_data.ar_elements[j].tipo==='ww34' && child_data.permissions_indexation>=1
+					|| child_data.ar_elements[j].tipo==='hierarchy91' && child_data.permissions_structuration>=1
+					) {
 
 					// element_show_indexations. Build button
 					const element_show_indexations	= ui.create_dom_element({
@@ -220,7 +220,7 @@ export const render_ts_line = function(options) {
 						// 	class_name		: 'indexations_container',
 						// 	id				: indexations_container_id,
 						// })
-				// }
+				}
 				break;
 
 			// IMG
