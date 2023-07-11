@@ -19,21 +19,21 @@ class dd_date extends stdClass {
 	// errors status
 	public $errors;
 	// day
-	protected $day;
-	// month
-	protected $month;
-	// year
-	protected $year;
-	// time
-	protected $time;
-	// hour
-	protected $hour;
-	// minute
-	protected $minute;
-	// second
-	protected $second;
-	// ms
-	protected $ms;
+	// protected $day;
+	// // month
+	// protected $month;
+	// // year
+	// protected $year;
+	// // time
+	// protected $time;
+	// // hour
+	// protected $hour;
+	// // minute
+	// protected $minute;
+	// // second
+	// protected $second;
+	// // ms
+	// protected $ms;
 
 
 
@@ -117,9 +117,10 @@ class dd_date extends stdClass {
 	/**
 	* SET_TIME
 	* Store absolute date value in seconds
+	* @param int $value
 	* @return void
 	*/
-	public function set_time($value) : void {
+	public function set_time(int $value) : void {
 
 		$this->time = (int)$value;
 	}//end set_time
