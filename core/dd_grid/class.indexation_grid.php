@@ -166,7 +166,7 @@ class indexation_grid {
 						if (!isset($current_locator->tag_id)) {
 							debug_log(__METHOD__
 								. " Ignored locator without tag_id " . PHP_EOL
-								. ' locator: ' . $locator
+								. ' locator: ' . json_encode($current_locator, JSON_PRETTY_PRINT)
 								, logger::ERROR
 							);
 							continue;
