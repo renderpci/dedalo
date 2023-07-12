@@ -48,16 +48,16 @@ class XMLParser extends \XMLReader
     public $path = [];
 
     /** Callback to call when a new element tag starts */
-    public $startElementCallback = null;
+    public $startElementCallback;
 
     /** Callback to call when a element tag ends */
-    public $endElementCallback = null;
+    public $endElementCallback;
 
     /** Callback to call when text or cdata is encountered */
-    public $textCallback = null;
+    public $textCallback;
 
     /** Callback to call when significant whitespace is encountered */
-    public $whitespaceCallback = null;
+    public $whitespaceCallback;
 
     /** Parse an XML string. Calls the callback methods
      *  when various nodes of an XML document are encountered

@@ -67,7 +67,7 @@ class Client
      *
      * @var string
      */
-    private $uri = null;
+    private $uri;
 
     /**
      * Associative array of request headers
@@ -95,7 +95,7 @@ class Client
      *
      * @var string|null
      */
-    private $rawPostData = null;
+    private $rawPostData;
 
     /**
      * Redirection counter
@@ -489,8 +489,8 @@ class Client
             $response = Response::fromString($content);
 
             // If we got redirected, look for the Location header
-            if ($response->isRedirect() &&
-                   ($location = $response->getHeader('location'))
+            if ($response->isRedirect()
+                   && ($location = $response->getHeader('location'))
             ) {
                 // Avoid problems with buggy servers that add whitespace at the
                 // end of some headers (See ZF-11283)

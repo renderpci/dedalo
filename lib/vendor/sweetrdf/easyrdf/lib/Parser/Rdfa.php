@@ -378,7 +378,7 @@ class Rdfa extends Parser
             foreach (['rel', 'rev'] as $attr) {
                 if ($node->hasAttribute('property') && $node->hasAttribute($attr)) {
                     // Quick check in case there are no CURIEs to deal with.
-                    if (false === strpos($node->getAttribute($attr), ':')) {
+                    if (!str_contains($node->getAttribute($attr), ':')) {
                         $node->removeAttribute($attr);
                     } else {
                         // Only keep CURIEs.

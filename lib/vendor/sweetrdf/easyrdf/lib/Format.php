@@ -51,12 +51,12 @@ class Format
     private static $formats = [];
 
     private $name = [];
-    private $label = null;
-    private $uri = null;
+    private $label;
+    private $uri;
     private $mimeTypes = [];
     private $extensions = [];
-    private $parserClass = null;
-    private $serialiserClass = null;
+    private $parserClass;
+    private $serialiserClass;
 
     /** Get a list of format names
      *
@@ -148,15 +148,15 @@ class Format
      */
     public static function getFormat($query)
     {
-        if (!is_string($query) || (is_string($query) && 0 == strlen($query))) {
+        if (!\is_string($query) || (\is_string($query) && 0 == \strlen($query))) {
             throw new \InvalidArgumentException('$query should be a string and cannot be null or empty');
         }
 
         foreach (self::$formats as $format) {
-            if ($query == $format->name ||
-                $query == $format->uri ||
-                \array_key_exists($query, $format->mimeTypes) ||
-                \in_array($query, $format->extensions)) {
+            if ($query == $format->name
+                || $query == $format->uri
+                || \array_key_exists($query, $format->mimeTypes)
+                || \in_array($query, $format->extensions)) {
                 return $format;
             }
         }
@@ -184,7 +184,7 @@ class Format
         $mimeTypes = [],
         $extensions = []
     ) {
-        if (!is_string($name) || (is_string($name) && 0 == strlen($name))) {
+        if (!\is_string($name) || (\is_string($name) && 0 == \strlen($name))) {
             throw new \InvalidArgumentException('$name should be a string and cannot be null or empty');
         }
 

@@ -47,13 +47,13 @@ namespace EasyRdf;
 class ParsedUri
 {
     // For all URIs:
-    private $scheme = null;
-    private $fragment = null;
+    private $scheme;
+    private $fragment;
 
     // For hierarchical URIs:
-    private $authority = null;
-    private $path = null;
-    private $query = null;
+    private $authority;
+    private $path;
+    private $query;
 
     public const URI_REGEX = "|^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?|";
 

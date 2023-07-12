@@ -53,8 +53,8 @@ use EasyRdf\Http\Client;
 class Graph
 {
     /** The URI of the graph */
-    private $uri = null;
-    private $parsedUri = null;
+    private $uri;
+    private $parsedUri;
 
     /** Array of resources contained in the graph */
     private $resources = [];
@@ -185,9 +185,9 @@ class Graph
 
         // Parsers don't typically add a rdf:type to rdf:List, so we have to
         // do a bit of 'inference' here using properties.
-        if ('http://www.w3.org/1999/02/22-rdf-syntax-ns#nil' == $uri ||
-            isset($this->index[$uri]['http://www.w3.org/1999/02/22-rdf-syntax-ns#first']) ||
-            isset($this->index[$uri]['http://www.w3.org/1999/02/22-rdf-syntax-ns#rest'])
+        if ('http://www.w3.org/1999/02/22-rdf-syntax-ns#nil' == $uri
+            || isset($this->index[$uri]['http://www.w3.org/1999/02/22-rdf-syntax-ns#first'])
+            || isset($this->index[$uri]['http://www.w3.org/1999/02/22-rdf-syntax-ns#rest'])
         ) {
             return 'EasyRdf\Collection';
         }
@@ -308,7 +308,7 @@ class Graph
         $client->setMethod('GET');
 
         if ($format && 'guess' !== $format) {
-            if (false !== strpos($format, '/')) {
+            if (str_contains($format, '/')) {
                 if ($client instanceof Client) {
                     $client->setHeaders('Accept', $format);
                 } else {
@@ -443,8 +443,8 @@ class Graph
             if (isset($index[$subject][$property])) {
                 if (isset($value)) {
                     foreach ($this->index[$subject][$property] as $v) {
-                        if ($v['type'] == $value['type'] &&
-                            $v['value'] == $value['value']) {
+                        if ($v['type'] == $value['type']
+                            && $v['value'] == $value['value']) {
                             $matched[] = $this->resource($subject);
                             break;
                         }
@@ -1479,8 +1479,6 @@ class Graph
      * may be arbitrary.
      * This method will return null if the resource has no type.
      *
-     * @param mixed $resource
-     *
      * @return \EasyRdf\Resource|null A type associated with the resource
      */
     public function typeAsResource($resource = null)
@@ -1628,8 +1626,6 @@ class Graph
     }
 
     /** Get the primary topic of the graph
-     *
-     * @param mixed $resource
      *
      * @return \EasyRdf\Resource|null the primary topic of the document
      */
