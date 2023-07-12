@@ -837,7 +837,10 @@ abstract class common {
 		# Read string from database str
 		$propiedades = $this->RecordObj_dd->get_propiedades();
 
-		$propiedades_obj = json_decode($propiedades);
+		$propiedades_obj = !empty($propiedades)
+			? json_decode($propiedades)
+			: null;
+
 
 		return $propiedades_obj;
 	}//end get_propiedades

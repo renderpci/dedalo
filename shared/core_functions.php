@@ -417,7 +417,7 @@ function to_string(mixed $var=null) : string {
 
 	}else if (is_bool($var)) {
 
-		$var = (int)$var;
+		$var = json_encode($var, JSON_PRETTY_PRINT);
 	}
 
 	return "$var";
