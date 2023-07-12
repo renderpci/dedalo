@@ -1953,13 +1953,14 @@ class section extends common {
 	*/
 	public function set_created_date(string $timestamp) : void {
 
-		$date = dd_date::get_date_with_format(
-			$timestamp,
-			'Y-m-d H:i:s' // string format
+		$dd_date			= dd_date::get_dd_date_from_timestamp($timestamp);
+		$date_with_format	= $dd_date->get_dd_timestamp(
+			'Y-m-d H:i:s',
+			true
 		);
 
 		$dato = $this->get_dato(); // Force load
-		$dato->created_date = $date;
+		$dato->created_date = $date_with_format;
 		$this->set_dato($dato); // Force update
 	}//end set_created_date
 
@@ -1974,13 +1975,14 @@ class section extends common {
 	*/
 	public function set_modified_date(string $timestamp) : void {
 
-		$date = dd_date::get_date_with_format(
-			$timestamp,
-			'Y-m-d H:i:s' // string format
+		$dd_date			= dd_date::get_dd_date_from_timestamp($timestamp);
+		$date_with_format	= $dd_date->get_dd_timestamp(
+			'Y-m-d H:i:s',
+			true
 		);
 
 		$dato = $this->get_dato(); // Force load
-		$dato->modified_date = $date;
+		$dato->modified_date = $date_with_format;
 		$this->set_dato($dato); // Force update
 	}//end set_modified_date
 
@@ -3599,7 +3601,7 @@ class section extends common {
 							case ($current_ddo_tipo==='dd547'): // When (model: component_date) from activity section
 
 								$timestamp_tipo	= $current_ddo_tipo;
-								$model_name	= RecordObj_dd::get_modelo_name_by_tipo($timestamp_tipo,true);
+								$model_name		= RecordObj_dd::get_modelo_name_by_tipo($timestamp_tipo,true);
 								$component		= component_common::get_instance(
 									$model_name,
 									$timestamp_tipo,
@@ -3610,8 +3612,7 @@ class section extends common {
 								);
 
 								// dato
-									$dd_date = new dd_date();
-										$date = $dd_date->get_date_from_timestamp( $timestamp );
+									$date = dd_date::get_dd_date_from_timestamp( $timestamp );
 									$date_value = new stdClass();
 										$date_value->start = $date;
 									$component_dato = [$date_value];

@@ -1088,8 +1088,7 @@ class component_media_common extends component_common {
 
 		// file_time (creation or modification date timestamp). The time when the content of the file was changed
 			$file_time					= date("Y-m-d H:i:s", filemtime($file_path));
-			$dd_date					= new dd_date();
-			$file_time_dd				= $dd_date->get_date_from_timestamp($file_time);
+			$file_time_dd				= dd_date::get_dd_date_from_timestamp($file_time);
 			$file_time_dd->time			= dd_date::convert_date_to_seconds($file_time_dd);
 			$file_time_dd->timestamp	= $file_time;
 

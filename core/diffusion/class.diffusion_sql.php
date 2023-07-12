@@ -4667,18 +4667,18 @@ class diffusion_sql extends diffusion  {
 		// date_format
 		switch ($date_format) {
 			case 'year':
-				$dd_date = new dd_date($date_obj);
-				$value 	 = $dd_date->year;
+				$dd_date	= new dd_date($date_obj);
+				$value		= $dd_date->year;
 				break;
 			case 'unix_timestamp':
-				$dd_date = new dd_date($date_obj);
-				$value 	 = $dd_date->convert_date_to_unix_timestamp();
+				$dd_date	= new dd_date($date_obj);
+				$value		= $dd_date->get_unix_timestamp();
 				break;
 			case 'full':
 			default:
 				// Default
-				$dd_date = new dd_date($date_obj);
-				$value 	 = $dd_date->get_dd_timestamp($date_format="Y-m-d H:i:s", $padding=true);
+				$dd_date	= new dd_date($date_obj);
+				$value		= $dd_date->get_dd_timestamp($date_format="Y-m-d H:i:s", $padding=true);
 				break;
 		}
 
