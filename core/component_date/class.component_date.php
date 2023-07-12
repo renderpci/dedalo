@@ -1261,13 +1261,13 @@ class component_date extends component_common {
 
 			if($format==='dd_date'){
 				$data_obj->format = ($select==='period') ? 'period' : 'date';
-				return $data_obj; // Only one espected
+				return $data_obj; // Only one expected
 			}
 
 			// value to seconds
 			if (!empty($data_obj)) {
-				$dd_date 			= new dd_date($data_obj);
-				$unix_timestamp 	= $dd_date->convert_date_to_unix_timestamp();
+				$dd_date		= new dd_date($data_obj);
+				$unix_timestamp	= $dd_date->get_unix_timestamp();
 				$ar_data[] = $unix_timestamp ;
 			}
 		}
