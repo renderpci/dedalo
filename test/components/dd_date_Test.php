@@ -296,7 +296,7 @@ final class dd_date_test extends TestCase {
 		$timestamp	= '2023-07-12 13:01:33';
 		$dd_date	= dd_date::get_dd_date_from_timestamp($timestamp);
 
-		$unix_timestamp =  $dd_date->get_unix_timestamp();
+		$unix_timestamp = $dd_date->get_unix_timestamp();
 
 		$test = $unix_timestamp===1689159693;
 		$this->assertTrue(
