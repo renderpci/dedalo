@@ -13,9 +13,9 @@ if (!$dh) {
 
 $exampleList = [];
 while (($filename = readdir($dh)) !== false) {
-    if ('.' == substr($filename, 0, 1) ||
-        'index.php' == $filename ||
-        'html_tag_helpers.php' == $filename) {
+    if ('.' == substr($filename, 0, 1)
+        || 'index.php' == $filename
+        || 'html_tag_helpers.php' == $filename) {
         continue;
     }
 

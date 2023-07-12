@@ -39,6 +39,7 @@ namespace EasyRdf\Serialiser;
 use EasyRdf\Exception;
 use EasyRdf\Graph;
 use EasyRdf\Serialiser;
+use rdfHelpers\NtriplesUtil;
 
 /**
  * Class to serialise an EasyRdf\Graph to N-Triples
@@ -49,27 +50,127 @@ use EasyRdf\Serialiser;
  */
 class Ntriples extends Serialiser
 {
-    private $escChars = [];   // Character encoding cache
+    /**
+     * List of control characters that are escaped.
+     *
+     * @var array<string,string>
+     */
+    protected $escapeControlCharacters = [];
 
     /**
-     * @ignore
+     * Escapes a string literal according to the N-Triples specification.
+     *
+     * The sequence with which the characters are replaced is important.
+     *
+     * The sequence of replacements is:
+     * - Backslash (\) - Escape character. It is escaped first so that we do not
+     *   double escape other sequences that contain a backslash.
+     * - Control characters (0-31) and DEL (127) - except \t, \n, \r and \".
+     *   These are replaced with their unicode representation using a normal
+     *   str_replace because they break preg_replace_callback.
+     * - 8-byte characters - These are replaced with their unicode
+     *   representation using a preg_replace_callback. They are replaced first
+     *   so that they are not replaced as multiple characters down below.
+     * - 4-byte characters - These are replaced with their unicode
+     *   representation using a preg_replace_callback. They are replaced next so
+     *   that they are not replaced as multiple characters down below.
+     * - Characters from 127 to 255 - These are replaced with their unicode
+     *   representation using a normal str_replace because fail to match in
+     *   preg_replace_callback. This takes place here because otherwise, they
+     *   might be confused with multibyte characters if it takes place before
+     *   the two steps above. And it takes place after the above two steps, in
+     *   order to avoid replacing them as multiple characters.
+     * - Characters from 32 to 126 - These are not escaped as they are printable
+     *   characters. However, the double quote (\") is escaped above as it is a
+     *   special character in N-Triples.
+     *
+     * @see https://www.w3.org/TR/n-triples/#n-triples-grammar
+     *
+     * @param string $str The string to escape
+     *
+     * @return string The escaped string
      */
     protected function escapeString($str)
     {
-        $result = '';
-        $strLen = mb_strlen($str, 'UTF-8');
+        $special_control_chrs = $this->getEscapeControlCharacters();
+        $str = str_replace(array_keys($special_control_chrs), array_values($special_control_chrs), $str);
 
-        for ($i = 0; $i < $strLen; ++$i) {
-            $c = mb_substr($str, $i, 1, 'UTF-8');
-
-            if (!isset($this->escChars[$c])) {
-                $this->escChars[$c] = $this->escapedChar($c);
-            }
-
-            $result .= $this->escChars[$c];
+        // Handle all 8-byte characters first so that they are not replaced
+        // as multiple characters down below.
+        if (preg_match('/[\x{10000}-\x{10FFFF}]/u', $str)) {
+            $str = preg_replace_callback(
+                '/[\x{10000}-\x{10FFFF}]/u',
+                function ($matches) {
+                    return $this->unicodeChar($this->unicodeCharNo($matches[0]), 8);
+                },
+                $str
+            );
         }
 
-        return $result;
+        // Handle all 4-byte characters next, so that they are not replaced
+        // as multiple characters down below.
+        if (preg_match('/[\x{7F}-\x{FFFF}]/u', $str)) {
+            $str = preg_replace_callback(
+                '/[\x{7F}-\x{FFFF}]/u',
+                function ($matches) {
+                    return $this->unicodeChar($this->unicodeCharNo($matches[0]));
+                },
+                $str
+            );
+        }
+
+        // Replace characters from 127 to 255 with their unicode representation.
+        // This is done after the 4-byte characters so that we do not replace
+        // them as multiple characters.
+        $replacements = [];
+        foreach (range(127, 255) as $i) {
+            $replacements[\chr($i)] = $this->unicodeChar($i);
+        }
+        $str = str_replace(array_keys($replacements), array_values($replacements), $str);
+
+        // Handle the rest of the characters. From 32 to 126, except 34 (\)
+        // which we escaped earlier.
+        if (preg_match('/[\x{32}-\x{5B}\x{5D}-\x{7E}]/u', $str)) {
+            $str = preg_replace_callback(
+                '/[\x{32}-\x{5B}\x{5D}-\x{7E}]/u',
+                function ($matches) {
+                    $match = $this->unicodeCharNo($matches[0]);
+                    $replacements = [
+                        9 => '\t',
+                        10 => '\n',
+                        13 => '\r',
+                        34 => '\\"',
+                    ];
+
+                    if (92 === $match) {
+                        return $matches[0];
+                    }
+
+                    if (isset($replacements[$match])) {
+                        return $replacements[$match];
+                    }
+
+                    // Printable characters remain the same.
+                    if ($match >= 32 && $match <= 126 && 34 !== $match) {
+                        return $matches[0];
+                    }
+
+                    if ($match <= 0x10FFFF) {
+                        return $this->unicodeChar($match);
+                    }
+
+                    return $this->unicodeChar($match, 8);
+                },
+                $str
+            );
+        }
+
+        return $str;
+    }
+
+    private function unicodeChar($unicode_number, $pad = 4)
+    {
+        return (4 === $pad ? '\\u' : '\\U').sprintf('%0'.$pad.'X', $unicode_number);
     }
 
     /**
@@ -85,61 +186,22 @@ class Ntriples extends Serialiser
                 break;
             case 2: /* 110##### 10###### = 192+x 128+x */
                 $r = ((\ord($cUtf[0]) - 192) * 64) +
-                     (\ord($cUtf[1]) - 128);
+                    (\ord($cUtf[1]) - 128);
                 break;
             case 3: /* 1110#### 10###### 10###### = 224+x 128+x 128+x */
                 $r = ((\ord($cUtf[0]) - 224) * 4096) +
-                     ((\ord($cUtf[1]) - 128) * 64) +
-                     (\ord($cUtf[2]) - 128);
+                    ((\ord($cUtf[1]) - 128) * 64) +
+                    (\ord($cUtf[2]) - 128);
                 break;
             case 4: /* 1111#### 10###### 10###### 10###### = 240+x 128+x 128+x 128+x */
                 $r = ((\ord($cUtf[0]) - 240) * 262144) +
-                     ((\ord($cUtf[1]) - 128) * 4096) +
-                     ((\ord($cUtf[2]) - 128) * 64) +
-                     (\ord($cUtf[3]) - 128);
+                    ((\ord($cUtf[1]) - 128) * 4096) +
+                    ((\ord($cUtf[2]) - 128) * 64) +
+                    (\ord($cUtf[3]) - 128);
                 break;
         }
 
         return $r;
-    }
-
-    /**
-     * @ignore
-     */
-    protected function escapedChar($c)
-    {
-        $no = $this->unicodeCharNo($c);
-
-        /* see http://www.w3.org/TR/rdf-testcases/#ntrip_strings */
-        if ($no < 9) {
-            return '\\u'.sprintf('%04X', $no);  /* #x0-#x8 (0-8) */
-        } elseif (9 == $no) {
-            return '\t';                          /* #x9 (9) */
-        } elseif (10 == $no) {
-            return '\n';                          /* #xA (10) */
-        } elseif ($no < 13) {
-            return '\\u'.sprintf('%04X', $no);  /* #xB-#xC (11-12) */
-        } elseif (13 == $no) {
-            return '\r';                          /* #xD (13) */
-        } elseif ($no < 32) {
-            return '\\u'.sprintf('%04X', $no);  /* #xE-#x1F (14-31) */
-        } elseif ($no < 34) {
-            return $c;                            /* #x20-#x21 (32-33) */
-        } elseif (34 == $no) {
-            return '\"';                          /* #x22 (34) */
-        } elseif ($no < 92) {
-            return $c;                            /* #x23-#x5B (35-91) */
-        } elseif (92 == $no) {
-            return '\\\\'; // double backslash    /* #x5C (92) */
-        } elseif ($no < 127) {
-            return $c;                            /* #x5D-#x7E (93-126) */
-        } elseif ($no < 65536) {
-            return '\\u'.sprintf('%04X', $no);  /* #x7F-#xFFFF (128-65535) */
-        } elseif ($no < 1114112) {
-            return '\\U'.sprintf('%08X', $no);  /* #x10000-#x10FFFF (65536-1114111) */
-        } else {
-            return '';                            /* not defined => ignore */
-        }
     }
 
     /**
@@ -176,7 +238,7 @@ class Ntriples extends Serialiser
         if ('uri' == $value['type'] || 'bnode' == $value['type']) {
             return $this->serialiseResource($value['value']);
         } elseif ('literal' == $value['type']) {
-            $escaped = $this->escapeString($value['value']);
+            $escaped = NtriplesUtil::escapeLiteral($value['value']);
             if (isset($value['lang'])) {
                 $lang = $this->escapeString($value['lang']);
 
@@ -223,5 +285,35 @@ class Ntriples extends Serialiser
         } else {
             throw new Exception(__CLASS__." does not support: $format");
         }
+    }
+
+    /**
+     * Returns the list of control characters to escape.
+     *
+     * @return array the list of control characters to escape
+     */
+    private function getEscapeControlCharacters(): array
+    {
+        if (empty($this->escapeControlCharacters)) {
+            // List of characters indexed by their printed representation.
+            // Initialize it with the ['\\' => '\\\\'] in order to first replace the
+            // '\\' character.
+            $this->escapeControlCharacters = [\chr(92) => '\\\\'];
+
+            foreach (range(0, 31) as $i) {
+                $this->escapeControlCharacters[\chr($i)] = $this->unicodeChar($i);
+            }
+
+            // However, "\t", "\n", "\r" and "\"" are allowed.
+            $this->escapeControlCharacters[\chr(9)] = '\t';
+            $this->escapeControlCharacters[\chr(10)] = '\n';
+            $this->escapeControlCharacters[\chr(13)] = '\r';
+            $this->escapeControlCharacters[\chr(34)] = '\\"';
+
+            // Handle also the DEL character.
+            $this->escapeControlCharacters[\chr(127)] = $this->unicodeChar(127);
+        }
+
+        return $this->escapeControlCharacters;
     }
 }

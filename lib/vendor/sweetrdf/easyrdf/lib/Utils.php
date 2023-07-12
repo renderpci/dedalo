@@ -264,7 +264,7 @@ class Utils
              */
             $entries = [];
             foreach (array_merge([$command], $args) as $entry) {
-                if (is_string($entry)) {
+                if (\is_string($entry)) {
                     $entries[] = $entry;
                 }
             }
@@ -275,7 +275,7 @@ class Utils
             );
         } else {
             $fullCommand = escapeshellcmd($command);
-            if (is_string($args)) {
+            if (\is_string($args)) {
                 $fullCommand .= ' '.escapeshellcmd($args);
             }
         }

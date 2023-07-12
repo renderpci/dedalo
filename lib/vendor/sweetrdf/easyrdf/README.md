@@ -37,7 +37,7 @@ echo "My name is: ".$me->get('foaf:name')."\n";
 
 ## Requirements
 
-* PHP 7.1 or higher
+* PHP 8.0 or higher
 * PHP Extensions: dom, mbstring, pcre, xmlreader
 * PHP Libs: libxml
 

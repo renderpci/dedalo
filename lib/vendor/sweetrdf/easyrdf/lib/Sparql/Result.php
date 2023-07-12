@@ -50,10 +50,10 @@ use EasyRdf\XMLParser;
 class Result extends \ArrayIterator
 {
     /** The SPARQL Results type (either 'boolean' or 'bindings') */
-    private $type = null;
+    private $type;
 
     /** The value of a boolean result */
-    private $boolean = null;
+    private $boolean;
 
     /** Keep track of the XML parser state */
     private $fields = [];

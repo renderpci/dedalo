@@ -51,13 +51,17 @@ class Literal
     private static $classMap = [];
 
     /** @ignore The string value for this literal */
-    protected $value = null;
+    protected $value;
 
     /** @ignore The language of the literal (e.g. 'en') */
-    protected $lang = null;
+    protected $lang;
 
-    /** @ignore The datatype URI of the literal */
-    protected $datatype = null;
+    /**
+     * The datatype URI of the literal
+     *
+     * @var string|\EasyRdf\ParsedUri|null
+     */
+    protected $datatype;
 
     /** Create a new literal object
      *
@@ -130,11 +134,11 @@ class Literal
      */
     public static function setDatatypeMapping($datatype, $class)
     {
-        if (!is_string($datatype) || (is_string($datatype) && 0 == strlen($datatype))) {
+        if (!\is_string($datatype) || (\is_string($datatype) && 0 == \strlen($datatype))) {
             throw new \InvalidArgumentException('$datatype should be a string and cannot be null or empty');
         }
 
-        if (!is_string($class) || (is_string($class) && 0 == strlen($class))) {
+        if (!\is_string($class) || (\is_string($class) && 0 == \strlen($class))) {
             throw new \InvalidArgumentException('$class should be a string and cannot be null or empty');
         }
 
@@ -151,7 +155,7 @@ class Literal
      */
     public static function deleteDatatypeMapping($datatype)
     {
-        if (!is_string($datatype) || (is_string($datatype) && 0 == strlen($datatype))) {
+        if (!\is_string($datatype) || (\is_string($datatype) && 0 == \strlen($datatype))) {
             throw new \InvalidArgumentException('$datatype should be a string and cannot be null or empty');
         }
 
@@ -169,8 +173,6 @@ class Literal
      * Given a PHP value, it will return an XSD datatype
      * URI for that value, for example:
      * http://www.w3.org/2001/XMLSchema#integer
-     *
-     * @param mixed $value
      *
      * @return string|null a URI for the datatype of $value
      */
@@ -191,9 +193,9 @@ class Literal
 
     /** Constructor for creating a new literal
      *
-     * @param string $value    The value of the literal
-     * @param string $lang     The natural language of the literal or null (e.g. 'en')
-     * @param string $datatype The datatype of the literal or null (e.g. 'xsd:string')
+     * @param string|float                   $value    The value of the literal
+     * @param string                         $lang     The natural language of the literal or null (e.g. 'en')
+     * @param string|\EasyRdf\ParsedUri|null $datatype The datatype of the literal or null (e.g. 'xsd:string')
      *
      * @return Literal
      */
