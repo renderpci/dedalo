@@ -347,7 +347,7 @@ class tool_tr_print extends tool_common {
 			$dato    = $component->get_dato();
 			$value 	 = null;
 			if (!empty($dato[0])) {
-			$dd_date = new dd_date($dato[0]);	 // dd_date::get_date_with_format( $dato, $format="Y-m-d" );
+			$dd_date = new dd_date($dato[0]);
 			$value   = $dd_date->get_dd_timestamp($date_format="d-m-Y");
 			}
 			$tr_data->date = $value;
