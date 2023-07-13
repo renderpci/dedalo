@@ -1781,7 +1781,20 @@ abstract class common {
 						// section specific. relation_list // time_machine_list
 							// $dd_object->relation_list		= $this->get_relation_list_tipo();
 							// $dd_object->time_machine_list	= $this->get_time_machine_list_tipo();
-							// $dd_object->section_map 			= section::get_section_map( $section_tipo );
+							// $dd_object->section_map			= section::get_section_map( $section_tipo );
+
+						$ar_children_tipo = section::get_ar_children_tipo_by_model_name_in_section(
+							$this->tipo,
+							['relation_list'], // ar_model_name_required
+							true, // from cache
+							true, // resolve virtual
+							false, // bool recursive
+							true // bool search_exact
+						);
+						if (!isset($dd_object->config)) {
+							$dd_object->config = new stdClass();
+						}
+						$dd_object->config->relation_list_tipo = $ar_children_tipo[0] ?? null;
 				}
 
 			// view, all components has view, used to change the render view.
