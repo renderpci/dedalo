@@ -261,7 +261,7 @@ const get_content_data = function(self) {
 		// }
 
 	// relation_list container
-		if (self.caller.context.relation_list) {
+		if (self.caller.context.config && self.caller.context.config.relation_list_tipo) {
 			const relation_list = render_relation_list(self)
 			content_data.appendChild(relation_list)
 		}
@@ -1080,11 +1080,13 @@ const render_relation_list = function(self) {
 
 			relation_list_head.classList.add('up')
 
+			const relation_list_tipo = self.caller.context.config.relation_list_tipo
+
 			const relation_list	= (instance && instance.model==='relation_list')
 				? instance // pagination case do not need to init relation_list
 				: await instances.get_instance({
 					model			: 'relation_list',
-					tipo			: self.caller.context['relation_list'],
+					tipo			: relation_list_tipo, // self.caller.context['relation_list'],
 					section_tipo	: self.section_tipo,
 					section_id		: self.section_id,
 					mode			: self.mode
