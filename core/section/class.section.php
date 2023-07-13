@@ -3316,9 +3316,12 @@ class section extends common {
 							$this->dato->components = new stdClass();
 						}
 						if (!isset($this->dato->components->{$created_date['tipo']})) {
-							$this->dato->components->{$created_date['tipo']} = new stdClass();
+							$this->dato->components->{$created_date['tipo']} = (object)[
+								'dato' => new stdClass(),
+								'inf'	=> 'created_date [component_date]'
+							];
 						}
-						$this->dato->components->{$created_date['tipo']}->{DEDALO_DATA_NOLAN} = $component_dato;
+						$this->dato->components->{$created_date['tipo']}->dato->{DEDALO_DATA_NOLAN} = $component_dato;
 				break;
 
 			case 'update_record': // update_record (record already exists)
@@ -3351,16 +3354,19 @@ class section extends common {
 					);
 					$component->set_dato($date_now);
 					// $this->set_component_direct_dato($component); // (!) removed 11-02-2023 : interact with section save flow (tool register case)
-					$component_dato = $component->get_dato_unchanged(); ## IMPORTANT !!!!! (NO usar get_dato() aquí ya que puede cambiar el tipo fijo establecido por set_dato)
+					$component_dato = $component->get_dato_unchanged(); // (!) IMPORTANT !!!!! (NO usar get_dato() aquí ya que puede cambiar el tipo fijo establecido por set_dato)
 
 					// set value with safe path
 						if (!isset($this->dato->components)) {
 							$this->dato->components = new stdClass();
 						}
 						if (!isset($this->dato->components->{$modified_date['tipo']})) {
-							$this->dato->components->{$modified_date['tipo']} = new stdClass();
+							$this->dato->components->{$modified_date['tipo']} = (object)[
+								'dato'	=> new stdClass(),
+								'inf'	=> 'modified_date [component_date]'
+							];
 						}
-						$this->dato->components->{$modified_date['tipo']}->{DEDALO_DATA_NOLAN} = $component_dato;
+						$this->dato->components->{$modified_date['tipo']}->dato->{DEDALO_DATA_NOLAN} = $component_dato;
 				break;
 		}
 
