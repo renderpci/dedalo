@@ -16,10 +16,10 @@ $updates->$v = new stdClass();
 	$updates->$v->version_medium		= 0;
 	$updates->$v->version_minor			= 0;
 
-	# MINIM UPDATE FROM
+	# MINIMUM UPDATE FROM
 	$updates->$v->update_from_major		= 5;
-	$updates->$v->update_from_medium	= 8;
-	$updates->$v->update_from_minor		= 2;
+	$updates->$v->update_from_medium	= 9;
+	$updates->$v->update_from_minor		= 7;
 
 	// alert
 		$alert					= new stdClass();
@@ -318,3 +318,12 @@ $updates->$v = new stdClass();
 				$script_obj->script_method	= "update_search_presets_data";
 				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
 			$updates->$v->run_scripts[] = $script_obj;
+
+		// Fix v6 beta data errors (sample: modified_date, created_date, ...)
+			// require_once dirname(dirname(__FILE__)) .'/upgrade/class.v5_to_v6.php';
+			// $script_obj = new stdClass();
+			// 	$script_obj->info			= "Fix v6 beta issues";
+			// 	$script_obj->script_class	= "v5_to_v6";
+			// 	$script_obj->script_method	= "fix_v6_beta_issues";
+			// 	$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
+			// $updates->$v->run_scripts[] = $script_obj;
