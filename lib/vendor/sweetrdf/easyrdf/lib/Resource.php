@@ -51,10 +51,10 @@ namespace EasyRdf;
 class Resource implements \ArrayAccess
 {
     /** The URI for this resource */
-    protected $uri = null;
+    protected $uri;
 
     /** The Graph that this resource belongs to */
-    protected $graph = null;
+    protected $graph;
 
     /** Constructor
      *
@@ -65,7 +65,7 @@ class Resource implements \ArrayAccess
      */
     public function __construct($uri, $graph = null)
     {
-        if (!is_string($uri) || (is_string($uri) && 0 == strlen($uri))) {
+        if (!\is_string($uri) || (\is_string($uri) && 0 == \strlen($uri))) {
             throw new \InvalidArgumentException('$uri should be a string and cannot be null or empty');
         }
 
@@ -198,7 +198,7 @@ class Resource implements \ArrayAccess
             }
 
             // PHP 8.1 info: https://php.watch/versions/8.1/html-entity-default-value-changes
-            $html .= ' '.htmlspecialchars($key, ENT_COMPAT).'="'.
+            $html .= ' '.htmlspecialchars($key, \ENT_COMPAT).'="'.
                          htmlspecialchars($value).'"';
         }
         $html .= '>'.htmlspecialchars($text).'</a>';

@@ -62,7 +62,7 @@ class TypeMapper
      */
     public static function get($type)
     {
-        if (!is_string($type) || (is_string($type) && 0 == strlen($type))) {
+        if (!\is_string($type) || (\is_string($type) && 0 == \strlen($type))) {
             throw new \InvalidArgumentException('$type should be a string and cannot be null or empty');
         }
 
@@ -85,11 +85,11 @@ class TypeMapper
      */
     public static function set($type, $class)
     {
-        if (!is_string($type) || (is_string($type) && 0 == strlen($type))) {
+        if (!\is_string($type) || (\is_string($type) && 0 == \strlen($type))) {
             throw new \InvalidArgumentException('$type should be a string and cannot be null or empty');
         }
 
-        if (!is_string($class) || (is_string($class) && 0 == strlen($class))) {
+        if (!\is_string($class) || (\is_string($class) && 0 == \strlen($class))) {
             throw new \InvalidArgumentException('$class should be a string and cannot be null or empty');
         }
 
@@ -107,7 +107,7 @@ class TypeMapper
      */
     public static function delete($type)
     {
-        if (!is_string($type) || (is_string($type) && 0 == strlen($type))) {
+        if (!\is_string($type) || (\is_string($type) && 0 == \strlen($type))) {
             throw new \InvalidArgumentException('$type should be a string and cannot be null or empty');
         }
 
@@ -136,7 +136,7 @@ class TypeMapper
      */
     public static function setDefaultResourceClass($class)
     {
-        if (!is_string($class) || (is_string($class) && 0 == strlen($class))) {
+        if (!\is_string($class) || (\is_string($class) && 0 == \strlen($class))) {
             throw new \InvalidArgumentException('$class should be a string and cannot be null or empty');
         }
 

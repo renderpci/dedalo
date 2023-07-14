@@ -49,7 +49,7 @@ class Http
      *
      * @var Http\Client|\Zend\Http\Client|\Laminas\Http\Client|null
      */
-    private static $defaultHttpClient = null;
+    private static $defaultHttpClient;
 
     /** Set the HTTP Client object used to fetch RDF data
      *

@@ -51,8 +51,8 @@ class GraphStore
     public const DEFAULT_GRAPH = 'urn:easyrdf:default-graph';
 
     /** The address of the GraphStore endpoint */
-    private $uri = null;
-    private $parsedUri = null;
+    private $uri;
+    private $parsedUri;
 
     /** Create a new SPARQL Graph Store client
      *
@@ -292,7 +292,7 @@ class GraphStore
     {
         if (self::DEFAULT_GRAPH === $url) {
             $url = $this->uri.'?default';
-        } elseif (false === strpos($url, $this->uri)) {
+        } elseif (!str_contains($url, $this->uri)) {
             $url = $this->uri.'?graph='.urlencode($url);
         }
 

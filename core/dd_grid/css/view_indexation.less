@@ -171,6 +171,10 @@
 									// height: 1.05rem;
 									height: var(--icon_height)
 								}
+								img {
+									height: 1rem;
+									width: auto;
+								}
 							}
 
 							// column av section_id (reel)
@@ -393,7 +397,7 @@
 		}
 
 		// img
-		img {
+		img:not(.tc, .index) {
 			background-color: #e6e6e6;
 			object-fit: cover;
 			object-position: center;

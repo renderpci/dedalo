@@ -61,7 +61,7 @@ class RdfXml extends Parser
     private $sCount;
 
     /** @var object|resource|null */
-    private $xmlParser = null;
+    private $xmlParser;
 
     /**
      * Constructor
@@ -363,8 +363,8 @@ class RdfXml extends Parser
 
         /* any other attrs (skip rdf and xml, except rdf:_, rdf:value, rdf:Seq) */
         foreach ($a as $k => $v) {
-            if (((false === strpos($k, $this->xml)) && (false === strpos($k, $this->rdf))) ||
-                preg_match('/(\_[0-9]+|value|Seq|Bag|Alt|Statement|Property|List)$/', $k)) {
+            if (((!str_contains($k, $this->xml)) && (!str_contains($k, $this->rdf)))
+                || preg_match('/(\_[0-9]+|value|Seq|Bag|Alt|Statement|Property|List)$/', $k)) {
                 if (strpos($k, ':')) {
                     $this->add($s['value'], $k, $v, $s['type'], 'literal', null, $s['x_lang']);
                 }
@@ -493,9 +493,9 @@ class RdfXml extends Parser
         }
         /* any other attrs (skip rdf and xml) */
         foreach ($a as $k => $v) {
-            if (((false === strpos($k, $this->xml)) &&
-             (false === strpos($k, $this->rdf))) ||
-             preg_match('/(\_[0-9]+|value)$/', $k)) {
+            if (((!str_contains($k, $this->xml))
+             && (!str_contains($k, $this->rdf)))
+             || preg_match('/(\_[0-9]+|value)$/', $k)) {
                 if (strpos($k, ':')) {
                     if (!$o['value']) {
                         $o['value'] = $this->graph->newBNodeId();
@@ -550,7 +550,7 @@ class RdfXml extends Parser
             $name = $parts[1];
             if (!isset($this->nsp[$nsUri])) {
                 foreach ($this->nsp as $tmp1 => $tmp2) {
-                    if (0 === strpos($t, $tmp1)) {
+                    if (str_starts_with($t, $tmp1)) {
                         $nsUri = $tmp1;
                         $name = substr($t, \strlen($tmp1));
                         break;
@@ -731,7 +731,7 @@ class RdfXml extends Parser
                     $name = $parts[1];
                     if (!isset($this->nsp[$nsUri])) {
                         foreach ($this->nsp as $tmp1 => $tmp2) {
-                            if (0 === strpos($t, $tmp1)) {
+                            if (str_starts_with($t, $tmp1)) {
                                 $nsUri = $tmp1;
                                 $name = substr($t, \strlen($tmp1));
                                 break;

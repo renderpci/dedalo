@@ -108,9 +108,9 @@ class RdfNamespace
         'xsd' => 'http://www.w3.org/2001/XMLSchema#',
     ];
 
-    private static $namespaces = null;
+    private static $namespaces;
 
-    private static $default = null;
+    private static $default;
 
     /** Counter for numbering anonymous namespaces */
     private static $anonymousNamespaceCount = 0;
@@ -346,7 +346,7 @@ class RdfNamespace
 
             $local_part = substr($uri, \strlen($long));
 
-            if (false !== strpos($local_part, '/')) {
+            if (str_contains($local_part, '/')) {
                 // we can't have '/' in local part
                 continue;
             }

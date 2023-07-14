@@ -143,23 +143,20 @@ class Isomorphic
                         $objectIsBnode = false;
                     }
 
-                    if ($groundedStatementsMatch &&
-                        false === $subjectIsBnode &&
-                        false === $objectIsBnode &&
-                        false === $graphB->hasProperty($subject, $property, $value)
+                    if ($groundedStatementsMatch
+                        && false === $subjectIsBnode
+                        && false === $objectIsBnode
+                        && false === $graphB->hasProperty($subject, $property, $value)
                     ) {
                         $groundedStatementsMatch = false;
                     }
 
                     if ($subjectIsBnode || $objectIsBnode) {
-                        array_push(
-                            $anonStatements,
-                            [
-                                ['type' => $subjectIsBnode ? 'bnode' : 'uri', 'value' => $subject],
-                                ['type' => 'uri', 'value' => $property],
-                                $value,
-                            ]
-                        );
+                        $anonStatements[] = [
+                            ['type' => $subjectIsBnode ? 'bnode' : 'uri', 'value' => $subject],
+                            ['type' => 'uri', 'value' => $property],
+                            $value,
+                        ];
                     }
                 }
             }
@@ -383,9 +380,9 @@ class Isomorphic
         foreach ($statements as $statement) {
             if (\in_array($node, $statement)) {
                 foreach ($statement as $resource) {
-                    if ('bnode' != $node['type'] ||
-                        isset($hashes[$node['value']]) ||
-                        $resource == $node
+                    if ('bnode' != $node['type']
+                        || isset($hashes[$node['value']])
+                        || $resource == $node
                     ) {
                         $grounded = false;
                     }

@@ -40,6 +40,9 @@ parameters:
         # see: https://www.php.net/manual/en/language.oop5.overloading.php#object.unset
         - '#Method EasyRdf\\Graph::__unset\(\) with return type void returns int#'
 
+        - '#::__set\(\) with return type void returns int but should not return anything#'
+        - '#::__set\(\) with return type void returns mixed but should not return anything#'
+
         # lib/Resource.php: __unset method returns int, but it is of return type void
         # see: https://www.php.net/manual/en/language.oop5.overloading.php#object.unset
         - '#Method EasyRdf\\Resource::__unset\(\) with return type void returns#'

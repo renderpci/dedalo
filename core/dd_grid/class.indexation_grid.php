@@ -104,7 +104,8 @@ class indexation_grid {
 				// check empty cases (misconfigured Ontology indexation_list children)
 					if (empty($indexation_list)) {
 						debug_log(__METHOD__.
-							" Error. Ignored empty indexation_list. A config problem was detected. Fix ASAP. (misconfigured Ontology indexation_list children) section_tipo: ".to_string($current_section_tipo),
+							" Error. Ignored empty indexation_list. A config problem was detected. Fix ASAP. (misconfigured Ontology indexation_list children) section_tipo: ". PHP_EOL
+							.' current_section_tipo:' . to_string($current_section_tipo),
 							logger::ERROR
 						);
 						continue;
@@ -160,6 +161,16 @@ class indexation_grid {
 				// store the head rows to sum up with the total rows
 				$rows_max_count = [$head_row_count];
 				foreach ($ar_locators as $current_locator) {
+
+					// check tag_id
+						if (!isset($current_locator->tag_id)) {
+							debug_log(__METHOD__
+								. " Ignored locator without tag_id " . PHP_EOL
+								. ' locator: ' . json_encode($current_locator, JSON_PRETTY_PRINT)
+								, logger::ERROR
+							);
+							continue;
+						}
 
 					$ar_row_value = $this->get_grid_value($row_ddo_map, $current_locator);
 					// take the maximum number of rows (the columns can has 1, 2, 55 rows and we need the highest value, 55)

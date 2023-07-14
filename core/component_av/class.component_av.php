@@ -1559,9 +1559,8 @@ class component_av extends component_media_common {
 							}
 
 					// source_file_upload_date
-						$dd_date							= new dd_date();
 						$upload_date_timestamp				= date ("Y-m-d H:i:s", filemtime($file));
-						$source_file_upload_date			= $dd_date->get_date_from_timestamp($upload_date_timestamp);
+						$source_file_upload_date			= dd_date::get_dd_date_from_timestamp($upload_date_timestamp);
 						$source_file_upload_date->time		= dd_date::convert_date_to_seconds($source_file_upload_date);
 						$source_file_upload_date->timestamp	= $upload_date_timestamp;
 

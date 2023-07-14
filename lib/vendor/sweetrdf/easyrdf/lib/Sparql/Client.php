@@ -52,12 +52,12 @@ use EasyRdf\Utils;
 class Client
 {
     /** The query/read address of the SPARQL Endpoint */
-    private $queryUri = null;
+    private $queryUri;
 
     private $queryUri_has_params = false;
 
     /** The update/write address of the SPARQL Endpoint */
-    private $updateUri = null;
+    private $updateUri;
 
     /** Create a new SPARQL endpoint client
      *
@@ -73,7 +73,7 @@ class Client
 
         $parseUrlResult = parse_url($queryUri, \PHP_URL_QUERY) ?? '';
 
-        if (0 < strlen($parseUrlResult)) {
+        if ('' !== $parseUrlResult) {
             $this->queryUri_has_params = true;
         } else {
             $this->queryUri_has_params = false;
@@ -308,8 +308,8 @@ class Client
         // Check for undefined prefixes
         $prefixes = '';
         foreach (RdfNamespace::namespaces() as $prefix => $uri) {
-            if (false !== strpos($query, "{$prefix}:") &&
-                false === strpos($query, "PREFIX {$prefix}:")
+            if (str_contains($query, "{$prefix}:")
+                  && !str_contains($query, "PREFIX {$prefix}:")
             ) {
                 $prefixes .= "PREFIX {$prefix}: <{$uri}>\n";
             }
@@ -416,7 +416,7 @@ class Client
     {
         list($content_type) = Utils::parseMimeType($response->getHeader('Content-Type'));
 
-        if (0 === strpos($content_type, 'application/sparql-results')) {
+        if (str_starts_with($content_type, 'application/sparql-results')) {
             $result = new Result($response->getBody(), $content_type);
 
             return $result;

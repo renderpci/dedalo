@@ -144,8 +144,8 @@ function password_field_tag($name = 'password', $default = null, $options = [])
 
 function radio_button_tag($name, $value, $default = false, $options = [])
 {
-    if ((isset($_REQUEST[$name]) && $_REQUEST[$name] == $value) ||
-        (!isset($_REQUEST[$name]) && $default)) {
+    if ((isset($_REQUEST[$name]) && $_REQUEST[$name] == $value)
+        || (!isset($_REQUEST[$name]) && $default)) {
         $options = array_merge(['checked' => 'checked'], $options);
     }
     $options = array_merge(['id' => $name.'_'.$value], $options);
@@ -155,8 +155,8 @@ function radio_button_tag($name, $value, $default = false, $options = [])
 
 function check_box_tag($name, $value = '1', $default = false, $options = [])
 {
-    if ((isset($_REQUEST[$name]) && $_REQUEST[$name] == $value) ||
-        (!isset($_REQUEST['submit']) && $default)) {
+    if ((isset($_REQUEST[$name]) && $_REQUEST[$name] == $value)
+        || (!isset($_REQUEST['submit']) && $default)) {
         $options = array_merge(['checked' => 'checked'], $options);
     }
 
@@ -196,8 +196,8 @@ function select_tag($name, $options, $default = null, $html_options = [])
     $opts = '';
     foreach ($options as $key => $value) {
         $arr = ['value' => $value];
-        if ((isset($_REQUEST[$name]) && $_REQUEST[$name] == $value) ||
-            (!isset($_REQUEST[$name]) && $default == $value)) {
+        if ((isset($_REQUEST[$name]) && $_REQUEST[$name] == $value)
+            || (!isset($_REQUEST[$name]) && $default == $value)) {
             $arr = array_merge(['selected' => 'selected'], $arr);
         }
         $opts .= content_tag('option', $key, $arr);

@@ -51,7 +51,7 @@ use EasyRdf\Utils;
  */
 class Rapper extends Ntriples
 {
-    private $rapperCmd = null;
+    private $rapperCmd;
 
     /**
      * Constructor
