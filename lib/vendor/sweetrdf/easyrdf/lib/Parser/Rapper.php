@@ -47,7 +47,7 @@ use EasyRdf\Utils;
  */
 class Rapper extends Json
 {
-    private $rapperCmd = null;
+    private $rapperCmd;
 
     public const MINIMUM_RAPPER_VERSION = '1.4.17';
 

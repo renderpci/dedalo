@@ -1045,13 +1045,23 @@ final class component_text_area_test extends TestCase {
 		$dato = $component->get_dato();
 
 		$value = $component->build_geolocation_data(
-			$dato, // array raw_data
 			false // bool $geojson
 		);
 
 		$this->assertTrue(
 			gettype($value)==='array',
-				'expected value do not match:' . PHP_EOL
+				'expected value do not match1 :' . PHP_EOL
+				.' expected: array' . PHP_EOL
+				.' value: '.gettype($value)
+		);
+
+		$value = $component->build_geolocation_data(
+			true // bool $geojson
+		);
+
+		$this->assertTrue(
+			gettype($value)==='array',
+				'expected value do not match 2:' . PHP_EOL
 				.' expected: array' . PHP_EOL
 				.' value: '.gettype($value)
 		);

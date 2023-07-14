@@ -10,7 +10,8 @@ class component_iri extends component_common {
 
 	/**
 	* GET DATO
-	* Array with objects, every object have two properties: "iri" mandatory with string value and "title" optional with string value
+	* Array with objects, every object have two properties:
+	* "iri" mandatory with string value and "title" optional with string value
 	*[
 	*	{
 	*    "iri": "http://www.render.es/dedalo",
@@ -22,31 +23,30 @@ class component_iri extends component_common {
 
 		$dato = parent::get_dato();
 
-		/*
-		* For accept values from component_input_text
-		* we need change the string value of the input_text to object value of IRI
-		*/
-		$input_text = false;
-		if(!empty($dato)){
-			foreach ($dato as $key => $value) {
-				if(!is_object($value)){
-					$input_text = true;
-					$object = new stdClass();
-					$object->iri = $value;
-					$dato[$key] = $object;
+		// input_text. For accept values from component_input_text
+		// we need to change the string value of the input_text to object value of IRI
+			$input_text = false;
+			if(!empty($dato)){
+				foreach ($dato as $key => $value) {
+					if(!is_object($value)){
+						$input_text = true;
+						$object = new stdClass();
+							$object->iri = $value;
+						$dato[$key] = $object;
+					}
+				}
+				if($input_text===true){
+					$this->set_dato($dato);
+					$this->Save();
 				}
 			}
-			if($input_text===true){
-				$this->set_dato($dato);
-				$this->Save();
-			}
-
-		}
 
 
 		if(SHOW_DEBUG===true) {
 			if ( !is_null($dato) && !is_array($dato)  ) {
-				debug_log(__METHOD__." WRONG TYPE of dato. tipo: $this->tipo - section_tipo: $this->section_tipo - section_id: $this->parent. Expected array. Given: ".gettype($dato), logger::ERROR);
+				debug_log(__METHOD__
+					." WRONG TYPE of dato. tipo: $this->tipo - section_tipo: $this->section_tipo - section_id: $this->parent. Expected array. Given: ".gettype($dato)
+					, logger::ERROR);
 			}
 		}
 
@@ -141,7 +141,10 @@ class component_iri extends component_common {
 				if(SHOW_DEBUG===true) {
 					#dump($dato,'$dato');
 					#throw new Exception("Dato is not string!", 1);
-					debug_log(__METHOD__." Bad IRI format: ".to_string($dato), logger::ERROR);
+					debug_log(__METHOD__
+						." Bad IRI format: ". PHP_EOL
+						.' dato:' . to_string($dato)
+						, logger::ERROR);
 				}
 				return false;
 			}
@@ -166,9 +169,7 @@ class component_iri extends component_common {
 		$valor = $this->get_valor($lang);
 		$valor = strip_tags($valor); // Removes the span tag used in list mode
 
-		if(SHOW_DEBUG===true) {
-			#return "DATE: ".$valor;
-		}
+
 		return (string)$valor;
 	}//end get_valor_export
 
@@ -368,7 +369,6 @@ class component_iri extends component_common {
 	*	Edited/parsed version of received object
 	*/
 	public static function resolve_query_object_sql( object $query_object) : object {
-        #debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
 
 		$q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
 
@@ -417,15 +417,15 @@ class component_iri extends component_common {
 					#$new_query_json->$logical_operator[] = $clone;
 
 					$clone = clone($query_object);
-						$clone->operator = '=';
-						$clone->q_parsed = '\'\'';
-						$clone->lang 	 = $lang;
+						$clone->operator	= '=';
+						$clone->q_parsed	= '\'\'';
+						$clone->lang		= $lang;
 					$new_query_json->$logical_operator[] = $clone;
 
 					// legacy data (set as null instead '')
 					$clone = clone($query_object);
-						$clone->operator = 'IS NULL';
-						$clone->lang 	 = $lang;
+						$clone->operator	= 'IS NULL';
+						$clone->lang		= $lang;
 					$new_query_json->$logical_operator[] = $clone;
 
 				# override
@@ -435,9 +435,9 @@ class component_iri extends component_common {
 			case ($q==='*'):
 				$operator = 'IS NOT NULL';
 				$q_clean  = '';
-				$query_object->operator = $operator;
+				$query_object->operator	= $operator;
 				$query_object->q_parsed	= $q_clean;
-				$query_object->unaccent = false;
+				$query_object->unaccent	= false;
 
 				$logical_operator ='$and';
 				$new_query_json = new stdClass;
@@ -453,9 +453,9 @@ class component_iri extends component_common {
 						#$ar_query_object[] = $clone;
 
 						$clone = clone($query_object);
-							$clone->operator = '!=';
-							$clone->q_parsed = '\'\'';
-							$clone->lang 	 = DEDALO_DATA_NOLAN;
+							$clone->operator	= '!=';
+							$clone->q_parsed	= '\'\'';
+							$clone->lang		= DEDALO_DATA_NOLAN;
 						$ar_query_object[] = $clone;
 
 
@@ -581,15 +581,15 @@ class component_iri extends component_common {
 	public function search_operators_info() : array {
 
 		$ar_operators = [
-			'*' 	 => 'no_empty', // not null
-			'!*' 	 => 'empty', // null
-			'=' 	 => 'similar_to',
-			'!=' 	 => 'different_from',
-			'-' 	 => 'does_not_contain',
-			'*text*' => 'contains',
-			'text*'  => 'begins_with',
-			'*text'  => 'end_with',
-			'\'text\'' => 'literal',
+			'*'			=> 'no_empty', // not null
+			'!*'		=> 'empty', // null
+			'='			=> 'similar_to',
+			'!='		=> 'different_from',
+			'-'			=> 'does_not_contain',
+			'*text*'	=> 'contains',
+			'text*'		=> 'begins_with',
+			'*text'		=> 'end_with',
+			'\'text\''	=> 'literal',
 		];
 
 		return $ar_operators;
@@ -610,6 +610,7 @@ class component_iri extends component_common {
 
 		return $data_iri;
 	}//end url_to_iri
+
 
 
 }//end class component_iri

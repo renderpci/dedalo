@@ -1094,8 +1094,7 @@ class tool_import_dedalo_csv extends tool_common {
 		}else{
 			// is date timestamp. Builds complete date object from value
 
-			$dd_date = new dd_date();
-			$dd_date->get_date_from_timestamp( $value );
+			$dd_date = dd_date::get_dd_date_from_timestamp( $value );
 
 			$value_obj = new stdClass();
 				$value_obj->start = $dd_date;

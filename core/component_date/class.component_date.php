@@ -88,7 +88,10 @@ class component_date extends component_common {
 			if ( !is_array($dato) ) {
 				if(SHOW_DEBUG===true) {
 					dump($dato, ' component_date dato +++++++++++++++++++++++++++ '.to_string($this->tipo));
-					debug_log(__METHOD__." Bad date format. Expected array ".gettype($dato), logger::ERROR);
+					debug_log(__METHOD__
+						." Bad date format. Expected array ".gettype($dato)
+						, logger::ERROR
+					);
 				}
 				return null;
 			}
@@ -470,7 +473,7 @@ class component_date extends component_common {
 
 	/**
 	* GET_VALOR_EXPORT
-	* Return component value sended to export data
+	* Return component value sent to export data
 	* @return string $valor
 	*/
 	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
@@ -492,9 +495,9 @@ class component_date extends component_common {
 	* GET TIMESTAMP
 	* @param array $offset
 	* @return string $timestamp
-	* 	current time formated for saved to SQL timestamp field
+	* 	current time formatted for saved to SQL timestamp field
 	*	like 2013-01-22 22:33:29 ('Y-m-d H:i:s')
-	*	DateTime is avaliable for PHP >=5.3.0
+	*	DateTime is available for PHP >=5.3.0
 	*/
 	public static function get_timestamp_now_for_db( $offset=null ) : string {
 
@@ -514,7 +517,6 @@ class component_date extends component_common {
 				$timestamp 	= $date->format('Y-m-d H:i:s'); # Default as DB format
 				break;
 		}
-		#dump($timestamp,'$timestamp ');
 
 		return $timestamp;
 	}//end get_timestamp_now_for_db
@@ -967,53 +969,80 @@ class component_date extends component_common {
 	* Recoge el current dato recibido (de tipo stdClass) y lo usa para crear un objeto dd_date al que inyecta
 	* el time (seconds) calculado.
 	* Retorna el objeto dd_date creado
-	* @return object dd_date $dato
+	*
+	* @param object $current_dato
+	* 	dd_date object as
+	* {
+	*    "start": {
+	*        "errors": null,
+	*        "year": 2023,
+	*        "month": 7,
+	*        "day": 11
+	*    }
+	* }
+	* @return object dd_date $current_dato
 	*/
-	public static function add_time( $current_dato ) {
+	public static function add_time( object $current_dato ) : object {
 
-		if(empty($current_dato)) return $current_dato;
+		// empty case
+			if(empty($current_dato)) {
+				return $current_dato;
+			}
 
 		// Period date mode
-		if( isset($current_dato->period) ) {
-			$dd_date = new dd_date($current_dato->period);
-			$time 	 = dd_date::convert_date_to_seconds($dd_date);
-			if (isset($current_dato->period->time) && $current_dato->period->time!=$time) {
-				debug_log(__METHOD__." Unequal time seconds value: current: ".to_string($current_dato->period->time).", calculated: $time. Used calculated time. []", logger::WARNING);
+			if( isset($current_dato->period) ) {
+				$dd_date = new dd_date($current_dato->period);
+				$time 	 = dd_date::convert_date_to_seconds($dd_date);
+				if (isset($current_dato->period->time) && $current_dato->period->time!=$time) {
+					debug_log(__METHOD__
+						." Unequal time seconds value: current: ".to_string($current_dato->period->time).", calculated: $time. Used calculated time. []"
+						, logger::WARNING
+					);
+				}
+				$dd_date->set_time( $time );
+				$current_dato->period = $dd_date;
 			}
-			$dd_date->set_time( $time );
-			$current_dato->period = $dd_date;
-		}
 
 		// Range date mode
-		if( isset($current_dato->start) ) {
-			$dd_date = new dd_date($current_dato->start);
-			$time 	 = dd_date::convert_date_to_seconds($dd_date);
-			if (isset($current_dato->start->time) && $current_dato->start->time!=$time) {
-				debug_log(__METHOD__." Unequal time seconds value: current: ".to_string($current_dato->start->time).", calculated: $time. Used calculated time. []", logger::WARNING);
+			if( isset($current_dato->start) ) {
+				$dd_date = new dd_date($current_dato->start);
+				$time 	 = dd_date::convert_date_to_seconds($dd_date);
+				if (isset($current_dato->start->time) && $current_dato->start->time!=$time) {
+					debug_log(__METHOD__
+						." Unequal time seconds value: current: ".to_string($current_dato->start->time).", calculated: $time. Used calculated time. []"
+						, logger::WARNING
+					);
+				}
+				$dd_date->set_time( $time );
+				$current_dato->start = $dd_date;
 			}
-			$dd_date->set_time( $time );
-			$current_dato->start = $dd_date;
-		}
-		if( isset($current_dato->end) ) {
-			$dd_date = new dd_date($current_dato->end);
-			$time 	 = dd_date::convert_date_to_seconds($dd_date);
-			if (isset($current_dato->end->time) && $current_dato->end->time!=$time) {
-				debug_log(__METHOD__." Unequal time seconds value: current: ".to_string($current_dato->end->time).", calculated: $time. Used calculated time. []", logger::WARNING);
+			if( isset($current_dato->end) ) {
+				$dd_date = new dd_date($current_dato->end);
+				$time 	 = dd_date::convert_date_to_seconds($dd_date);
+				if (isset($current_dato->end->time) && $current_dato->end->time!=$time) {
+					debug_log(__METHOD__
+						." Unequal time seconds value: current: ".to_string($current_dato->end->time).", calculated: $time. Used calculated time. []"
+						, logger::WARNING
+					);
+				}
+				$dd_date->set_time( $time );
+				$current_dato->end = $dd_date;
 			}
-			$dd_date->set_time( $time );
-			$current_dato->end = $dd_date;
-		}
-		// Time date mode
-		else if( isset($current_dato->hour) ) {
-			$dd_date = new dd_date($current_dato);
-			$time 	 = dd_date::convert_date_to_seconds($dd_date);
 
-			if (isset($current_dato->time) && $current_dato->time!=$time) {
-				debug_log(__METHOD__." Unequal time seconds value: current: ".to_string($current_dato->time).", calculated: $time. Used calculated time. []", logger::WARNING);
+		// Time date mode
+			if( isset($current_dato->hour) ) {
+				$dd_date = new dd_date($current_dato);
+				$time 	 = dd_date::convert_date_to_seconds($dd_date);
+
+				if (isset($current_dato->time) && $current_dato->time!=$time) {
+					debug_log(__METHOD__
+						." Unequal time seconds value: current: ".to_string($current_dato->time).", calculated: $time. Used calculated time. []"
+						, logger::WARNING
+					);
+				}
+				$dd_date->set_time( $time );
+				$current_dato = $dd_date;
 			}
-			$dd_date->set_time( $time );
-			$current_dato = $dd_date;
-		}
 
 
 		return (object)$current_dato;
@@ -1204,13 +1233,13 @@ class component_date extends component_common {
 
 			if($format==='dd_date'){
 				$data_obj->format = ($select==='period') ? 'period' : 'date';
-				return $data_obj; // Only one espected
+				return $data_obj; // Only one expected
 			}
 
 			// value to seconds
 			if (!empty($data_obj)) {
-				$dd_date 			= new dd_date($data_obj);
-				$unix_timestamp 	= $dd_date->convert_date_to_unix_timestamp();
+				$dd_date		= new dd_date($data_obj);
+				$unix_timestamp	= $dd_date->get_unix_timestamp();
 				$ar_data[] = $unix_timestamp ;
 			}
 		}

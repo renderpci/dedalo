@@ -49,13 +49,13 @@ abstract class Parser
 
     /** The current graph to insert triples into */
     /** @var Graph */
-    protected $graph = null;
+    protected $graph;
 
     /** The format of the document currently being parsed */
-    protected $format = null;
+    protected $format;
 
     /** The base URI for the document currently being parsed */
-    protected $baseUri = null;
+    protected $baseUri;
 
     protected $tripleCount = 0;
 
@@ -92,8 +92,8 @@ abstract class Parser
      */
     protected function checkParseParams($graph, $data, $format, $baseUri)
     {
-        if (null == $graph || !\is_object($graph) ||
-            !($graph instanceof Graph)) {
+        if (null == $graph || !\is_object($graph)
+            || !($graph instanceof Graph)) {
             throw new \InvalidArgumentException('$graph should be an EasyRdf\Graph object and cannot be null');
         } else {
             $this->graph = $graph;

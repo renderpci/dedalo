@@ -837,7 +837,10 @@ abstract class common {
 		# Read string from database str
 		$propiedades = $this->RecordObj_dd->get_propiedades();
 
-		$propiedades_obj = json_decode($propiedades);
+		$propiedades_obj = !empty($propiedades)
+			? json_decode($propiedades)
+			: null;
+
 
 		return $propiedades_obj;
 	}//end get_propiedades
@@ -867,9 +870,12 @@ abstract class common {
 
 	/**
 	* GET_AR_RELATED_BY_MODEL
+	* @param string $model_name
+	* @param string $tipo
+	* @param bool $strict = true
 	* @return array $ar_related_by_model
 	*/
-	public static function get_ar_related_by_model(string $model_name, string $tipo, $strict=true) : array {
+	public static function get_ar_related_by_model(string $model_name, string $tipo, bool $strict=true) : array {
 
 		static $ar_related_by_model_data;
 		$uid = $model_name.'_'.$tipo;
@@ -898,7 +904,6 @@ abstract class common {
 				}
 			}
 		}
-		#debug_log(__METHOD__." ar_related_by_model - modelo_name:$model_name - tipo:$tipo - ar_related_by_model:".json_encode($ar_related_by_model), logger::DEBUG);
 
 		$ar_related_by_model_data[$uid] = $ar_related_by_model;
 
@@ -1776,7 +1781,20 @@ abstract class common {
 						// section specific. relation_list // time_machine_list
 							// $dd_object->relation_list		= $this->get_relation_list_tipo();
 							// $dd_object->time_machine_list	= $this->get_time_machine_list_tipo();
-							// $dd_object->section_map 			= section::get_section_map( $section_tipo );
+							// $dd_object->section_map			= section::get_section_map( $section_tipo );
+
+						$ar_children_tipo = section::get_ar_children_tipo_by_model_name_in_section(
+							$this->tipo,
+							['relation_list'], // ar_model_name_required
+							true, // from cache
+							true, // resolve virtual
+							false, // bool recursive
+							true // bool search_exact
+						);
+						if (!isset($dd_object->config)) {
+							$dd_object->config = new stdClass();
+						}
+						$dd_object->config->relation_list_tipo = $ar_children_tipo[0] ?? null;
 				}
 
 			// view, all components has view, used to change the render view.

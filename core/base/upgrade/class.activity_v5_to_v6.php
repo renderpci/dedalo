@@ -121,8 +121,7 @@ class activity_v5_to_v6 extends v5_to_v6 {
 				// if (!empty($activity_what_dato) && is_string($date_dato)) {
 				if ($date_dato!==null && is_string($date_dato)) {
 
-					$dd_date		= new dd_date();
-					$new_dd_date	= (object)$dd_date->get_date_from_timestamp( $date_dato );
+					$new_dd_date = dd_date::get_dd_date_from_timestamp( $date_dato );
 
 					$new_date = component_date::add_time($new_dd_date);
 

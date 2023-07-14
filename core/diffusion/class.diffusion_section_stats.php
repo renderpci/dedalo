@@ -185,10 +185,12 @@ class diffusion_section_stats extends diffusion {
 			}
 
 			// dd date object
-				$dd_date	= new dd_date();
-				$date_value	= $dd_date->get_date_from_timestamp( $activity_row->date );
+				$date_value	= dd_date::get_dd_date_from_timestamp( $activity_row->date );
 				if (empty($date_value->year)) {
-					debug_log(__METHOD__." Skip. Not valid date found for user $user_id ".to_string(), logger::ERROR);
+					debug_log(__METHOD__
+						." Skip. Not valid date found for user $user_id "
+						, logger::ERROR
+					);
 					$response->msg .= 'Not valid date found for user '.$user_id;
 					return $response;
 				}
@@ -564,14 +566,12 @@ class diffusion_section_stats extends diffusion {
 	public static function cross_users_range_data(string $date_in, string $date_out, ?int $user_id=null, string $lang=DEDALO_DATA_LANG) : ?object {
 
 		// dates parse. from 2020-12-30 to {"year":2020,"month":6,"day":1,"time":64937808000}
-			$dd_date_in = new dd_date();
-			$dd_date_in->get_date_from_timestamp( $date_in );
-			$time 		= dd_date::convert_date_to_seconds($dd_date_in);
+			$dd_date_in	= dd_date::get_dd_date_from_timestamp($date_in);
+			$time		= dd_date::convert_date_to_seconds($dd_date_in);
 			$dd_date_in->set_time($time);
 
-			$dd_date_out = new dd_date();
-			$dd_date_out->get_date_from_timestamp( $date_out );
-			$time 		= dd_date::convert_date_to_seconds($dd_date_out);
+			$dd_date_out	= dd_date::get_dd_date_from_timestamp($date_out);
+			$time			= dd_date::convert_date_to_seconds($dd_date_out);
 			$dd_date_out->set_time($time);
 
 		// user filter

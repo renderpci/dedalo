@@ -57,7 +57,7 @@ class Ntriples extends Parser
      **/
     protected function unescapeString($str)
     {
-        if (false === strpos($str, '\\')) {
+        if (!str_contains($str, '\\')) {
             return $str;
         }
 
@@ -78,8 +78,8 @@ class Ntriples extends Parser
             return $str;
         }
 
-        while (preg_match('/\\\(U)([0-9A-F]{8})/', $str, $matches) ||
-               preg_match('/\\\(u)([0-9A-F]{4})/', $str, $matches)) {
+        while (preg_match('/\\\(U)([0-9A-F]{8})/', $str, $matches)
+               || preg_match('/\\\(u)([0-9A-F]{4})/', $str, $matches)) {
             $no = hexdec($matches[2]);
             if ($no < 128) {                // 0x80
                 $char = \chr($no);

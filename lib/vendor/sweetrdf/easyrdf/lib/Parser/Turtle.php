@@ -1189,22 +1189,22 @@ class Turtle extends Ntriples
         $o = \ord($c);
 
         return
-            $o >= 0x41 && $o <= 0x5A ||     // A-Z
-            $o >= 0x61 && $o <= 0x7A ||     // a-z
-            $o >= 0x00C0 && $o <= 0x00D6 ||
-            $o >= 0x00D8 && $o <= 0x00F6;
+            $o >= 0x41 && $o <= 0x5A     // A-Z
+            || $o >= 0x61 && $o <= 0x7A     // a-z
+            || $o >= 0x00C0 && $o <= 0x00D6
+            || $o >= 0x00D8 && $o <= 0x00F6;
     }
 
     /** @ignore */
     public static function isNameStartChar($c)
     {
         return
-            '\\' == $c ||
-            '_' == $c ||
-            ':' == $c ||
-            '%' == $c ||
-            ctype_digit($c) ||
-            self::isPrefixStartChar($c);
+            '\\' == $c
+            || '_' == $c
+            || ':' == $c
+            || '%' == $c
+            || ctype_digit($c)
+            || self::isPrefixStartChar($c);
     }
 
     /** @ignore */
@@ -1214,10 +1214,10 @@ class Turtle extends Ntriples
         $o = \ord($c);
 
         return
-            self::isNameStartChar($c) ||
-            $o >= 0x30 && $o <= 0x39 ||     // 0-9
-            '-' == $c ||
-            0x00B7 == $o;
+            self::isNameStartChar($c)
+            || $o >= 0x30 && $o <= 0x39     // 0-9
+            || '-' == $c
+            || 0x00B7 == $o;
     }
 
     /** @ignore */
@@ -1238,13 +1238,13 @@ class Turtle extends Ntriples
         $o = \ord($c);
 
         return
-            '_' == $c ||
-            $o >= 0x30 && $o <= 0x39 ||     // 0-9
-            self::isPrefixStartChar($c) ||
-            '-' == $c ||
-            0x00B7 == $o ||
-            $c >= 0x0300 && $c <= 0x036F ||
-            $c >= 0x203F && $c <= 0x2040;
+            '_' == $c
+            || $o >= 0x30 && $o <= 0x39     // 0-9
+            || self::isPrefixStartChar($c)
+            || '-' == $c
+            || 0x00B7 == $o
+            || $c >= 0x0300 && $c <= 0x036F
+            || $c >= 0x203F && $c <= 0x2040;
     }
 
     /** @ignore */
@@ -1253,8 +1253,8 @@ class Turtle extends Ntriples
         $o = \ord($c);
 
         return
-            $o >= 0x41 && $o <= 0x5A ||   // A-Z
-            $o >= 0x61 && $o <= 0x7A;     // a-z
+            $o >= 0x41 && $o <= 0x5A   // A-Z
+            || $o >= 0x61 && $o <= 0x7A;     // a-z
     }
 
     /** @ignore */
@@ -1263,9 +1263,9 @@ class Turtle extends Ntriples
         $o = \ord($c);
 
         return
-            $o >= 0x41 && $o <= 0x5A ||   // A-Z
-            $o >= 0x61 && $o <= 0x7A ||   // a-z
-            $o >= 0x30 && $o <= 0x39 ||   // 0-9
-            '-' == $c;
+            $o >= 0x41 && $o <= 0x5A   // A-Z
+            || $o >= 0x61 && $o <= 0x7A   // a-z
+            || $o >= 0x30 && $o <= 0x39   // 0-9
+            || '-' == $c;
     }
 }

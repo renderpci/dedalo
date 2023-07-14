@@ -7,6 +7,7 @@
 class dd_date extends stdClass {
 
 
+
 	// Separator when format output
 	static $separator = '/';
 	// Separator when format output
@@ -15,15 +16,32 @@ class dd_date extends stdClass {
 	static $virtual_year_days  = 372;
 	// Virtual month days
 	static $virtual_month_days = 31;
-
 	// errors status
-	public $errors;
+	// public $errors;
+	// day
+	// protected $day;
+	// // month
+	// protected $month;
+	// // year
+	// protected $year;
+	// // time
+	// protected $time;
+	// // hour
+	// protected $hour;
+	// // minute
+	// protected $minute;
+	// // second
+	// protected $second;
+	// // ms
+	// protected $ms;
+
+
 
 	/**
 	* __CONSTRUCT
 	* @param object $data = null
 	* @param bool $constrain = false
-	* @return object response
+	* @return object dd_date
 	*/
 	public function __construct( $data=null, $constrain=false ) {
 
@@ -35,14 +53,16 @@ class dd_date extends stdClass {
 		// Nothing to do on construct (for now)
 			if (!is_object($data)) {
 
-				$msg = " wrong data format. object expected. Given type: ".gettype($data).' - data: '.to_string($data);
+				$msg = " wrong data format. object expected. Given type: ".gettype($data);
 				debug_log(__METHOD__
 					. $msg
+					.' data: ' . to_string($data)
 					, logger::ERROR
 				);
 				if(SHOW_DEBUG===true) {
 					dump(debug_backtrace()[0], $msg);
 				}
+
 				$this->errors[] = $msg;
 				return;
 			}
@@ -50,59 +70,47 @@ class dd_date extends stdClass {
 		// set properties
 			foreach ($data as $key => $value) {
 
-				if (!isset($value) || is_null($value)) continue; // Skip empty values
+				if (!isset($value) || is_null($value))  continue; // Skip empty non zero values
 
 				$method = 'set_'.$key;
 				if (method_exists($this, $method)) {
 
 					$set_value = $this->$method($value, $constrain);
-
-					if($set_value===false) {
+					if($set_value===false && empty($this->errors)) {
 						$this->errors[] = 'Invalid value for: '.$key.' . value: '.to_string($value);
 					}
 
 				}else{
 
 					debug_log(__METHOD__
-						.' Ignored received property: '.$key.' not defined as set method. Data: '.to_string($data)
+						.' Ignored received property: '.$key.' not defined as set method.'. PHP_EOL
+						.' data: ' . to_string($data)
 						, logger::ERROR
 					);
-					$this->errors[] = 'Ignored received property: '.$key.' not defined as set method. Data: '.to_string($data);
+					$this->errors[] = 'Ignored received property: '.$key.' not defined as set method. Data: '. json_encode($data, JSON_PRETTY_PRINT);
 				}
 			}
 
 		// check day
-		$check_day = $this->check_day();
-		if($check_day === false){
-			debug_log(__METHOD__
-				.' Invalid value for day value: '.to_string($this->day)
-				, logger::ERROR
-			);
-			$this->errors[] = 'Invalid value for day value: '.$this->day;
-		}
-
+			$check_day = $this->check_day();
+			if($check_day === false){
+				debug_log(__METHOD__
+					.' Invalid value for day value: '.to_string($this->day)
+					, logger::ERROR
+				);
+				$this->errors[] = 'Invalid value for day value: '.$this->day;
+			}
 	}//end __construct
-
-
-
-
-	/**
-	* SET_ERRORS
-	*/
-	public function set_errors($value) : void {
-
-		#$this->errors = $value;
-		debug_log(__METHOD__." Date error found. value: ".to_string($value), logger::WARNING);
-	}//end set_errors
 
 
 
 	/**
 	* SET_TIME
 	* Store absolute date value in seconds
+	* @param int $value
 	* @return void
 	*/
-	public function set_time($value) : void {
+	public function set_time(int $value) : void {
 
 		$this->time = (int)$value;
 	}//end set_time
@@ -110,10 +118,24 @@ class dd_date extends stdClass {
 
 
 	/**
-	* SET_YEAR
-	* @return bool true
+	* GET_TIME
+	* Return property value
+	* @return int|null $this->time
 	*/
-	public function set_year($value, $constrain=false) : bool {
+	public function get_time() : ?int {
+
+		return $this->time ?? null;
+	}//end get_time
+
+
+
+	/**
+	* SET_YEAR
+	* @param int|string $value
+	* @param bool $constrain = false
+	* @return bool
+	*/
+	public function set_year($value, bool $constrain=false) : bool {
 
 		$this->year = (int)$value;
 
@@ -123,15 +145,44 @@ class dd_date extends stdClass {
 
 
 	/**
-	* SET_MONTH
-	* @return bool true
+	* GET_YEAR
+	* Return property value
+	* @return int|null $this->year
 	*/
-	public function set_month($value, $constrain=false) {
+	public function get_year() : ?int {
+
+		return $this->year ?? null;
+	}//end get_year
+
+
+
+	/**
+	* SET_MONTH
+	* @param int|string $value
+	* @param bool $constrain = false
+	* @return bool
+	*/
+	public function set_month($value, bool $constrain=false) : bool {
 
 		// check valid value (constrain)
 			if( (int)$value<1 || (int)$value>12 ) {
-			  debug_log(__METHOD__." Error on set month. Value is not standard ".to_string($value), logger::WARNING);
-			  if ($constrain===true) return false;
+
+				$msg = 'Value is not standard (1 to 12) : '.to_string($value);
+
+				if ($constrain===true) {
+					debug_log(__METHOD__
+						.' Error on set month. ' . $msg
+						, logger::ERROR
+					);
+					$this->errors[] = 'Ignored set month. '. $msg;
+
+					return false;
+				}
+
+				debug_log(__METHOD__
+					.' Warning on set month. ' . $msg
+					, logger::WARNING
+				);
 			}
 
 		// set value
@@ -143,15 +194,44 @@ class dd_date extends stdClass {
 
 
 	/**
-	* SET_DAY
-	* @return bool true
+	* GET_MONTH
+	* Return property value
+	* @return int|null $this->month
 	*/
-	public function set_day($value, $constrain=false) {
+	public function get_month() : ?int {
+
+		return $this->month ?? null;
+	}//end get_month
+
+
+
+	/**
+	* SET_DAY
+	* @param int|string $value
+	* @param bool $constrain = false
+	* @return bool
+	*/
+	public function set_day($value, bool $constrain=false) : bool {
 
 		// check valid value (constrain)
 			if( (int)$value<1 || (int)$value>31 ) {
-				debug_log(__METHOD__." Error on set day. Value is not standard ".to_string($value), logger::WARNING);
-				if ($constrain===true) return false;
+
+				$msg = 'Value is not standard (1 to 31) : '.to_string($value);
+
+				if ($constrain===true) {
+					debug_log(__METHOD__
+						.' Error on set day. ' . $msg
+						, logger::ERROR
+					);
+					$this->errors[] = 'Ignored set day. '. $msg;
+
+					return false;
+				}
+
+				debug_log(__METHOD__
+					.' Warning on set day. ' . $msg
+					, logger::WARNING
+				);
 			}
 
 		// set value
@@ -163,46 +243,60 @@ class dd_date extends stdClass {
 
 
 	/**
+	* GET_DAY
+	* Return property value
+	* @return int|null $this->day
+	*/
+	public function get_day() : ?int {
+
+		return $this->day ?? null;
+	}//end get_day
+
+
+
+	/**
 	* CHECK_DAY
 	* Check if the max day value for specific month and leap years.
-	* @return bool true
+	* @return bool
 	*/
-	public function check_day() {
+	public function check_day() : bool {
 
-		$day	= $this->day;
-
+		$day = $this->day ?? null;
 		if(empty($day)){
-			return null;
+			return true;
 		}
-		$months_with_31_days = [1,3,5,7,8,10,12];
-		$months_with_30_days = [4,6,9,11];
-		$year	= $this->year;
-		$month	= $this->month;
+
+		$year	= $this->get_year();
+		$month	= $this->get_month();
 
 		// February case
-		if ($month === 2){
-			// check if the year is leap
-			$leap =((0 == $year % 4) && (0 != $year % 100) || (0 == $year % 400))
-				? true
-				: false;
+			if ($month===2 && !is_null($year)) {
+				// check if the year is leap
+				$leap = ((0 == $year % 4) && (0 != $year % 100) || (0 == $year % 400))
+					? true
+					: false;
 
-			// check if the day is in leap year
-			if($leap && $day > 29 ){
+				// check if the day is in leap year
+				if($leap === true && $day > 29){
+					return false;
+				}
+				if($leap === false && $day > 28){
+					return false;
+				}
+			}
+
+		// months with 30 days
+			$months_with_30_days = [4,6,9,11];
+			if(in_array($month, $months_with_30_days) && $day > 30){
 				return false;
 			}
-			if($leap === false && $day > 28){
+
+		// moths with 31 days
+			$months_with_31_days = [1,3,5,7,8,10,12];
+			if(in_array($month, $months_with_31_days) && $day > 31){
 				return false;
 			}
 
-		}
-		// other months, the moths with 31 days
-		// and the months with 30 days
-		if(in_array($month, $months_with_31_days) && $day > 31){
-			return false;
-		}
-		if(in_array($month, $months_with_30_days) && $day > 30){
-			return false;
-		}
 
 		return true;
 	}//end check_day
@@ -211,14 +305,31 @@ class dd_date extends stdClass {
 
 	/**
 	* SET_HOUR
-	* @return bool true
+	* @param int|string $value
+	* @param bool $constrain = false
+	* @return bool
 	*/
-	public function set_hour($value, $constrain=false) {
+	public function set_hour($value, bool $constrain=false) : bool {
 
 		// check valid value (constrain)
 			if( (int)$value<0 || (int)$value>23 ) {
-				debug_log(__METHOD__." Error on set hour. Value is invalid: ".to_string($value), logger::WARNING);
-				if ($constrain===true) return false;
+
+				$msg = 'Value is not standard (0 to 23) : '.to_string($value);
+
+				if ($constrain===true) {
+					debug_log(__METHOD__
+						.' Error on set hour. '. $msg
+						, logger::ERROR
+					);
+					$this->errors[] = 'Ignored set hour. '. $msg;
+
+					return false;
+				}
+
+				debug_log(__METHOD__
+					.' Warning on set hour. ' . $msg
+					, logger::WARNING
+				);
 			}
 
 		// set value
@@ -230,15 +341,44 @@ class dd_date extends stdClass {
 
 
 	/**
+	* GET_HOUR
+	* Return property value
+	* @return int|null $this->hour
+	*/
+	public function get_hour() : ?int {
+
+		return $this->hour ?? null;
+	}//end get_hour
+
+
+
+	/**
 	* SET_MINUTE
+	* @param int|string $value
+	* @param bool $constrain = false
 	* @return bool
 	*/
-	public function set_minute($value, $constrain=false) {
+	public function set_minute($value, bool $constrain=false) : bool {
 
 		// check valid value (constrain)
 			if( (int)$value<0 || (int)$value>59 ) {
-				debug_log(__METHOD__." Error on set minute. Value is invalid: ".to_string($value), logger::WARNING);
-				if ($constrain===true) return false;
+
+				$msg = 'Value is not standard (0 to 59) : '.to_string($value);
+
+				if ($constrain===true) {
+					debug_log(__METHOD__
+						.' Error on set minute. '. $msg
+						, logger::ERROR
+					);
+					$this->errors[] = 'Ignored set minute. '. $msg;
+
+					return false;
+				}
+
+				debug_log(__METHOD__
+					.' Warning on set minute. ' . $msg
+					, logger::WARNING
+				);
 			}
 
 		// set value
@@ -246,20 +386,48 @@ class dd_date extends stdClass {
 
 		return true;
 	}//end set_minute
-	#public function set_min($value, $constrain=false) {	return $this->set_minute($value, $constrain); }
+
+
+
+	/**
+	* GET_MINUTE
+	* Return property value
+	* @return int|null $this->minute
+	*/
+	public function get_minute() : ?int {
+
+		return $this->minute ?? null;
+	}//end get_minute
 
 
 
 	/**
 	* SET_SECOND
-	* @return bool true
+	* @param int|string $value
+	* @param bool $constrain = false
+	* @return bool
 	*/
-	public function set_second($value, $constrain=false) {
+	public function set_second($value, bool $constrain=false) : bool {
 
 		// check valid value (constrain)
 			if( (int)$value<0 || (int)$value>59 ) {
-				debug_log(__METHOD__." Error on set second. Value is invalid: ".to_string($value), logger::WARNING);
-				if ($constrain===true) return false;
+
+				$msg = 'Value is not standard (0 to 59) : '.to_string($value);
+
+				if ($constrain===true) {
+					debug_log(__METHOD__
+						.' Error on set second. '. $msg
+						, logger::ERROR
+					);
+					$this->errors[] = 'Ignored set second. '. $msg;
+
+					return false;
+				}
+
+				debug_log(__METHOD__
+					.' Warning on set second. ' . $msg
+					, logger::WARNING
+				);
 			}
 
 		// set value
@@ -271,15 +439,45 @@ class dd_date extends stdClass {
 
 
 	/**
-	* SET_MS
-	* @return bool true
+	* GET_SECOND
+	* Return property value
+	* @return int|null $this->second
 	*/
-	public function set_ms($value, $constrain=false) {
+	public function get_second() : ?int {
+
+		return $this->second ?? null;
+	}//end get_second
+
+
+
+	/**
+	* SET_MS
+	* @param int|string $value
+	* @param bool $constrain = false
+	* @return bool
+	*/
+	public function set_ms($value, bool $constrain=false) : bool {
 
 		// check valid value (constrain)
 			if( (int)$value<0 || (int)$value>999 ) {
-				debug_log(__METHOD__." Error on set ms. Value is invalid: ".to_string($value), logger::WARNING);
-				if ($constrain===true) return false;
+
+				$msg = 'Value is not standard (0 to 999) : '.to_string($value);
+
+				if ($constrain===true) {
+					debug_log(__METHOD__
+						.' Error on set ms. '. $msg
+						, logger::ERROR
+					);
+					$this->errors[] = 'Ignored set ms. '. $msg;
+
+					return false;
+				}
+
+				debug_log(__METHOD__
+					.' Warning on set ms. ' . $msg
+					, logger::WARNING
+				);
+
 			}
 
 		// set value
@@ -291,11 +489,24 @@ class dd_date extends stdClass {
 
 
 	/**
+	* GET_MS
+	* Return property value
+	* @return int|null $this->ms
+	*/
+	public function get_ms() : ?int {
+
+		return $this->ms ?? null;
+	}//end get_ms
+
+
+
+	/**
 	* SET_OP
 	* Only for search purposes
-	* @return bool true
+	* @param string $value
+	* @return bool
 	*/
-	public function set_op($value) {
+	public function set_op(string $value) : bool {
 		// set value
 			$this->op = (string)$value;
 
@@ -305,97 +516,117 @@ class dd_date extends stdClass {
 
 
 	/**
+	* GET_OP
+	* Return property value
+	* @return string|null $this->op
+	*/
+	public function get_op() : ?string {
+
+		return $this->op ?? null;
+	}//end get_op
+
+
+
+	/**
 	* GET_DD_TIMESTAMP
 	* Format default 'Y-m-d H:i:s'
 	* When any value if empty, default values are used, like 01 for month
+	* @param string $date_format = "Y-m-d H:i:s"
+	* @param bool $padding = true
 	* @return string $dd_timestamp
 	*/
-	public function get_dd_timestamp($date_format="Y-m-d H:i:s", $padding=true) {
+	public function get_dd_timestamp(string $date_format="Y-m-d H:i:s", bool $padding=true) : string {
 
-		if (isset($this->year)) {
-			$year = $this->year;
-		}
+		// year
+			$year = $this->year ?? '';
+			if($padding===true){
+				$year = sprintf("%04d", $year);
+			}
 
-		if (isset($this->month)) {
-			$month = $this->month;
-		}
+		// month
+			$month = $this->month ?? 0;
+			// fix negative wrong value
+				if ($month!==0 && (int)$month<1) {
+					debug_log(__METHOD__
+						. " Fixed to '0' invalid negative month value: " . PHP_EOL
+						. to_string($month)
+						, logger::ERROR
+					);
+					$month = 0;
+				}
+			if($padding===true) {
+				$month = sprintf("%02d", $month);
+			}
 
-		if (isset($this->day)) {
-			$day = $this->day;
-		}
+		// day
+			$day = $this->day ?? 0;
+			// fix negative wrong value
+				if ($day!==0 && (int)$day<1) {
+					debug_log(__METHOD__
+						. " Fixed to '0' invalid negative day value: " . PHP_EOL
+						. to_string($day)
+						, logger::ERROR
+					);
+					$day = 0;
+				}
+			if($padding===true) {
+				$day = sprintf("%02d", $day);
+			}
 
-		if (isset($this->hour)) {
-			$hour = $this->hour;
-		}
+		// hour
+			$hour = $this->hour ?? 0;
+			// fix negative wrong value
+				if ($hour!==0 && (int)$hour<1) {
+					debug_log(__METHOD__
+						. " Fixed to '0' invalid negative hour value: " . PHP_EOL
+						. to_string($hour)
+						, logger::ERROR
+					);
+					$hour = 0;
+				}
+			if($padding===true) {
+				$hour = sprintf("%02d", $hour);
+			}
 
-		if (isset($this->minute)) {
-			$minute = $this->minute;
-		}
+		// minute
+			$minute = $this->minute ?? 0;
+			// fix negative wrong value
+				if ($minute!==0 && (int)$minute<1) {
+					debug_log(__METHOD__
+						. " Fixed to '0' invalid negative minute value: " . PHP_EOL
+						. to_string($minute)
+						, logger::ERROR
+					);
+					$minute = 0;
+				}
+			if($padding===true) {
+				$minute = sprintf("%02d", $minute);
+			}
 
-		if (isset($this->second)) {
-			$second = $this->second;
-		}
+		// second
+			$second = $this->second ?? 0;
+			// fix negative wrong value
+				if ($second!==0 && (int)$second<1) {
+					debug_log(__METHOD__
+						. " Fixed to '0' invalid negative second value: " . PHP_EOL
+						. to_string($second)
+						, logger::ERROR
+					);
+					$second = 0;
+				}
+			if($padding===true) {
+				$second = sprintf("%02d", $second);
+			}
 
-		if (isset($this->ms)) {
-			$ms = $this->ms;
-		}
-
-
-		# year
-		if (!isset($year)) {
-			$year = '';
-		}
-		if($padding===true){
-			$year = sprintf("%04d", $year);
-		}
-
-		# month
-		if (!isset($month) || $month<1) {
-			$month = 0;
-		}
-		if($padding===true)
-		$month = sprintf("%02d", $month);
-
-		# day
-		if (!isset($day) || $day<1) {
-		  $day = 0;
-		}
-		if($padding===true)
-		$day = sprintf("%02d", $day);
-
-		# hour
-		if (!isset($hour)) {
-			$hour = 0;
-		}
-		if($padding===true)
-		$hour = sprintf("%02d", $hour);
-
-		# minute
-		if (!isset($minute)) {
-			$minute = 0;
-		}
-		if($padding===true)
-		$minute = sprintf("%02d", $minute);
-
-		# second
-		if (!isset($second)) {
-			$second = 0;
-		}
-		if($padding===true)
-		$second = sprintf("%02d", $second);
-
-		# ms
-		if (isset($ms)) {
-			if($padding===true)
-			$ms = sprintf("%03d", $ms);
-		}else{
-			$ms=null;
-		}
+		// ms
+			$ms = $this->get_ms();
+			if(!is_null($ms) && $padding===true) {
+				$ms = sprintf("%03d", $ms);
+			}
 
 		// OLD WORLD no compatible with negative years, etc..
 			// $time			= mktime($hour,$minute,$second,$month,$day,$year);
 			// $dd_timestamp	= date($date_format, $time);
-
 
 		$dd_timestamp = str_replace(
 			['Y','m','d','H','i','s','u'],
@@ -410,89 +641,112 @@ class dd_date extends stdClass {
 
 
 	/**
-	* GET_DATE_FROM_TIMESTAMP
-	* @return dd_date object $this
+	* GET_DD_DATE_FROM_TIMESTAMP
+	* @param string $timestamp
+	* @return dd_date object
 	*/
-	public function get_date_from_timestamp( string $timestamp ) {
+	public static function get_dd_date_from_timestamp( string $timestamp ) : object {
+
+		$dd_date = new dd_date();
 
 		$regex = "/^(-?[0-9]+)-?([0-9]+)?-?([0-9]+)? ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?/";
 		preg_match($regex, $timestamp, $matches);
 
-		if(isset($matches[1])) $this->set_year((int)$matches[1]);
-		if(isset($matches[2])) $this->set_month((int)$matches[2]);
-		if(isset($matches[3])) $this->set_day((int)$matches[3]);
-		if(isset($matches[4])) $this->set_hour((int)$matches[4]);
-		if(isset($matches[5])) $this->set_minute((int)$matches[5]);
-		if(isset($matches[6])) $this->set_second((int)$matches[6]);
+		if(isset($matches[1])) {
+			$dd_date->set_year( (int)$matches[1], true );
+		}
 
-		#if (!empty($this->year)) {
-		#	$this->correct_date();
-		#}
+		if(isset($matches[2])) {
+			$dd_date->set_month( (int)$matches[2], true );
+		}
 
-		return $this;
-	}//end get_date_from_timestamp
+		if(isset($matches[3])) {
+			$dd_date->set_day( (int)$matches[3], true );
+		}
+
+		if(isset($matches[4])) {
+			$dd_date->set_hour( (int)$matches[4], true );
+		}
+
+		if(isset($matches[5])) {
+			$dd_date->set_minute( (int)$matches[5], true );
+		}
+
+		if(isset($matches[6])) {
+			$dd_date->set_second( (int)$matches[6], true );
+		}
+
+
+		return $dd_date;
+	}//end get_dd_date_from_timestamp
 
 
 
 	/**
-	* SET_DATE_FROM_INPUT_FIELD
+	* SET_DATE_FROM_INPUT_FIELD (!) NOT USED !
+	* @param string $search_field_value
 	* @return dd_date object $this
 	*/
-	public function set_date_from_input_field( string $search_field_value ) {
+		// public function set_date_from_input_field( string $search_field_value ) : object {
 
-		#$regex   = "/^(-?[0-9]+)-?([0-9]+)?-?([0-9]+)? ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?/";
-		$regex   = "/^(([0-9]{1,2})-)?(([0-9]{1,2})-)?(-?[0-9]{1,12}) ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?$/";
-		preg_match($regex, $search_field_value, $matches);
-			#$elements = count($matches)-1;
+		// 	#$regex   = "/^(-?[0-9]+)-?([0-9]+)?-?([0-9]+)? ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?/";
+		// 	$regex   = "/^(([0-9]{1,2})-)?(([0-9]{1,2})-)?(-?[0-9]{1,12}) ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?$/";
+		// 	preg_match($regex, $search_field_value, $matches);
+		// 		#$elements = count($matches)-1;
 
-			# Year is mandatory
-			if (isset($matches[5])) {
-				$this->set_year((int)$matches[5]);
-			}
+		// 		# Year is mandatory
+		// 		if (isset($matches[5])) {
+		// 			$this->set_year((int)$matches[5]);
+		// 		}
 
-			# Month
-			if (!empty($matches[4])) {
-				$this->set_month((int)$matches[4]);
-				# Day (only when month exists)
-				if (!empty($matches[2])) {
-					$this->set_day((int)$matches[2]);
-				}
-			}else if(!empty($matches[2])) {
-				$this->set_month((int)$matches[2]);
-			}
+		// 		# Month
+		// 		if (!empty($matches[4])) {
+		// 			$this->set_month((int)$matches[4]);
+		// 			# Day (only when month exists)
+		// 			if (!empty($matches[2])) {
+		// 				$this->set_day((int)$matches[2]);
+		// 			}
+		// 		}else if(!empty($matches[2])) {
+		// 			$this->set_month((int)$matches[2]);
+		// 		}
 
-			# Hours
-			if (!empty($matches[6])) {
-				$this->set_hour((int)$matches[6]);
-			}
+		// 		# Hours
+		// 		if (!empty($matches[6])) {
+		// 			$this->set_hour((int)$matches[6]);
+		// 		}
 
-			# Minutes
-			if (!empty($matches[7])) {
-				$this->set_minute((int)$matches[7]);
-			}
+		// 		# Minutes
+		// 		if (!empty($matches[7])) {
+		// 			$this->set_minute((int)$matches[7]);
+		// 		}
 
-			# Seconds
-			if (!empty($matches[8])) {
-				$this->set_second((int)$matches[8]);
-			}
+		// 		# Seconds
+		// 		if (!empty($matches[8])) {
+		// 			$this->set_second((int)$matches[8]);
+		// 		}
 
 
-		return $this;
-	}//end set_date_from_input_field
+		// 	return $this;
+		// }//end set_date_from_input_field
 
 
 
 	/**
-	* GET_DATE_WITH_FORMAT
+	* GET_DATE_WITH_FORMAT (!) NOT USED !
 	* Format a date as is desired
 	* @param string $date
-	* @param string $format
+	* @param string $format = "Y-m-d H:i:s"
 	* @return string $date_with_format
 	*/
-	public static function get_date_with_format( $date, string $format="Y-m-d H:i:s" ) {
-		$date_with_format = date($format, strtotime($date));
-		return $date_with_format;
-	}//end get_date_with_format
+		// public static function get_date_with_format( string $date, string $format="Y-m-d H:i:s" ) : string {
+
+		// 	// $date_with_format = date($format, strtotime($date));
+
+		// 	$dd_date			= dd_date::get_dd_date_from_timestamp($date);
+		// 	$date_with_format	= $dd_date->get_dd_timestamp($format, true)
+
+		// 	return $date_with_format;
+		// }//end get_date_with_format
 
 
 
@@ -500,13 +754,14 @@ class dd_date extends stdClass {
 	* CONVERT_DATE_TO_SECONDS
 	* Calculate absolute "time" from dd_date object
 	* This operation is not reversible and is only for reference purposes
+	* @param object $source_dd_date
 	* @return int $seconds
 	*/
-	public static function convert_date_to_seconds( $source_dd_date, $mode=false ) {
+	public static function convert_date_to_seconds( object $source_dd_date ) : int {
 
 		$time = 0;
 
-		$dd_date = clone $source_dd_date; // IMPORTANT : Clone always dd_date whe you manipulate it
+		$dd_date = clone $source_dd_date; // IMPORTANT : Clone always dd_date when you manipulate it
 
 		$year  	= !empty($dd_date->year)   ? (int)$dd_date->year	: 0;
 		$month 	= !empty($dd_date->month)  ? (int)$dd_date->month  	: 0;
@@ -515,7 +770,7 @@ class dd_date extends stdClass {
 		$minute = !empty($dd_date->minute) ? (int)$dd_date->minute  : 0;
 		$second = !empty($dd_date->second) ? (int)$dd_date->second  : 0;
 
-			# Rectified 25-11-2017
+			// Rectified 25-11-2017
 			if(!empty($month)) {
 				$month--; // Remove 1
 			}
@@ -548,103 +803,114 @@ class dd_date extends stdClass {
 			// Add seconds
 			$time += $second;
 
+
 		return (int)$time;
 	}//end convert_date_to_seconds
 
 
 
 	/**
-	* CONVERT_SECONDS_TO_PERIOD
+	* CONVERT_SECONDS_TO_PERIOD (!) NOT USED !
 	* Calculate current seconds in minutes, hours, days, totals and approximate partials.
 	* Note that non total values are approximations because we need use
 	* a reference year of 365 days and a reference month of 30 days
 	* @param int $seconds
 	* @return object $response
 	*/
-	public static function convert_seconds_to_period( $seconds ) {
+		// public static function convert_seconds_to_period( int $seconds ) : object {
 
-		$response = new stdClass();
-			$response->result	= new stdClass();
-			$response->msg		= '';
+		// 	$response = new stdClass();
+		// 		$response->result	= new stdClass();
+		// 		$response->msg		= '';
 
-		# minutes (reliable measurement)
-		$minutes_total = ceil( (int)$seconds / 60 ); // Round to up
+		// 	// minutes (reliable measurement)
+		// 	$minutes_total = ceil( (int)$seconds / 60 ); // Round to up
 
-		# hours_total (reliable measurement)
-		$hours_total = ceil( (int)$seconds / 60 / 60 ); // Round to up
+		// 	// hours_total (reliable measurement)
+		// 	$hours_total = ceil( (int)$seconds / 60 / 60 ); // Round to up
 
-		# days_total (reliable measurement)
-		$days_total = ceil( (int)$seconds / 60 / 60 / 24 ); // Round to up
+		// 	// days_total (reliable measurement)
+		// 	$days_total = ceil( (int)$seconds / 60 / 60 / 24 ); // Round to up
 
-		# years (approximated measurement)
-		$years  	= $days_total/365;
-		$years_int  = floor($years); // Round to bottom
-		$rest_days 	= ceil( ($years - $years_int) *365);
+		// 	// years (approximated measurement)
+		// 	$years		= $days_total/365;
+		// 	$years_int	= floor($years); // Round to bottom
+		// 	$rest_days	= ceil( ($years - $years_int) *365);
 
-		# months (approximated measurement)
-		$months 	= $rest_days/30;
-		$months_int = floor($months); // Round to bottom
-		$rest_days 	= ceil( ($months - $months_int)*30 );
+		// 	// months (approximated measurement)
+		// 	$months 	= $rest_days/30;
+		// 	$months_int = floor($months); // Round to bottom
+		// 	$rest_days 	= ceil( ($months - $months_int)*30 );
 
-		# days (approximated measurement)
-		$days_int 	= $rest_days;
+		// 	// days (approximated measurement)
+		// 	$days_int 	= $rest_days;
+
+		// 	// Absolute values
+		// 	$response->result->seconds_total	= (int)$seconds;
+		// 	$response->result->minutes_total	= (int)$minutes_total;
+		// 	$response->result->days_total		= (int)$days_total;
+
+		// 	// Approximations
+		// 	$response->result->years	= (int)$years_int;
+		// 	$response->result->months	= (int)$months_int;
+		// 	$response->result->days		= (int)$days_int;
 
 
-		# Absolute values
-		$response->result->seconds_total	= (int)$seconds;
-		$response->result->minutes_total	= (int)$minutes_total;
-		$response->result->days_total		= (int)$days_total;
-
-		# Approximations
-		$response->result->years	= (int)$years_int;
-		$response->result->months	= (int)$months_int;
-		$response->result->days		= (int)$days_int;
-
-		return (object)$response;
-	}//end convert_seconds_to_period
+		// 	return (object)$response;
+		// }//end convert_seconds_to_period
 
 
 
 	/**
-	* CONVERT_DATE_TO_UNIT
+	* GET_UNIX_TIMESTAMP
 	* Change the date to the unit (day, month, year)
+	* @return int $unix_timestamp
 	*/
-	public function convert_date_to_unix_timestamp(){
+	public function get_unix_timestamp() : int {
 
-		$time 			= $this->get_dd_timestamp();
-		#$unix_timestamp = strtotime($time);
+		$time = $this->get_dd_timestamp();
 
-		$datetime = new DateTime($time);
- 		$unix_timestamp =$datetime->getTimestamp();
+		$datetime		= new DateTime($time);
+		$unix_timestamp	= $datetime->getTimestamp();
 
 
 		return $unix_timestamp;
-	}//end convert_date_to_unit
+	}//end get_unix_timestamp
 
 
 
 	/**
-	* GET METHODS
+	* __GET METHODS
 	* By accessors. When property exits, return property value, else return null
+	* @param string $name
 	*/
-	final public function __get($name) {
+		// final public function __get( string $name ) : mixed {
 
-		if (isset($this->$name)) {
-			return $this->$name;
-		}
+		// 		$trace = debug_backtrace();
+		// 		dump($this, ' this ++ '.$trace[1]['file'] . ' - '. $trace[1]['line']);
 
-		$trace = debug_backtrace();
-		debug_log(
-			__METHOD__
-			.' Undefined property via __get(): '.$name .
-			' in ' . $trace[0]['file'] .
-			' on line ' . $trace[0]['line'],
-			logger::DEBUG);
-		return null;
-	}//end __get
-	final public function __set($name, $value) {
-		$this->$name = $value;
-	}
+		// 	if (isset($this->{$name})) {
+		// 		return $this->{$name};
+		// 	}
+
+		// 	$trace = debug_backtrace();
+		// 	debug_log(__METHOD__
+		// 		.' Undefined property via __get(): '.$name .
+		// 		' in ' . $trace[0]['file'] .
+		// 		' on line ' . $trace[0]['line']
+		// 		, logger::WARNING
+		// 	);
+
+		// 	return null;
+		// }//end __get
+	/**
+	* __SET METHODS
+	* By accessors. When property exits, return property value, else return null
+	* @param string $name
+	*/
+		// final public function __set( string $name, mixed $value) : void {
+		// 	$this->$name = $value;
+		// }//end __set
 
 
 

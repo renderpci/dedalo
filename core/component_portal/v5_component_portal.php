@@ -178,7 +178,7 @@
 	* Return component value sent to export data
 	* @return string $valor
 	*/
-	$_get_valor_export = function ( $valor=null, $lang=DEDALO_DATA_LANG, $quotes='"', $add_id=false ) {
+	$_get_valor_export = function( $valor=null, $lang=DEDALO_DATA_LANG, $quotes='"', $add_id=false ) {
 
 		if (empty($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
@@ -266,9 +266,38 @@
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	$_get_diffusion_value =  function ( $lang=null , ?object $option_obj=null) { //  ?string
+	$_get_diffusion_value = function( $lang=null , ?object $option_obj=null) { //  ?string
 
 		$diffusion_value = null;
+
+		$propiedades = $this->get_propiedades();
+
+		// fields_separator. (!) Note here that more than one value can be returned by this method. To avoid duplicity of ',' separator, use '-' as default
+			$fields_separator_default = ', ';
+		// fields_separator
+			// $fields_separator   = $this->get_fields_separator();
+			switch (true) {
+				case isset($option_obj->divisor):
+					$fields_separator = $option_obj->divisor;
+					break;
+				case isset($propiedades->source->divisor):
+					$fields_separator = $propiedades->source->divisor;
+					break;
+				case isset($this->diffusion_properties->option_obj) &&
+					 isset($this->diffusion_properties->option_obj->divisor) :
+					$fields_separator = $this->diffusion_properties->option_obj->divisor;
+					break;
+				default:
+					$fields_separator = $fields_separator_default;
+					break;
+			}
+
+		// records_separator_default
+			$records_separator_default = ' | ';
+		// records_separator
+			$records_separator = (isset($propiedades->source->records_separator))
+				? $propiedades->source->records_separator
+				: $option_obj->divisor_parents ?? $records_separator_default;
 
 		# Propiedades of diffusion element that references this component
 		# (!) Note that is possible overwrite real component properties injecting properties from diffusion (see diffusion_sql::resolve_value)
@@ -281,8 +310,8 @@
 				$diffusion_value = $this->get_valor(
 					$lang,
 					'string', // string format
-					', ', // string fields_separator
-					'<br>', // string records_separator
+					$fields_separator, // ', ', // string fields_separator
+					$records_separator, // '<br>', // string records_separator
 					false, // array|bool ar_related_terms
 					$data_to_be_used // array data_to_be_used
 				);

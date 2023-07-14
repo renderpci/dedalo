@@ -423,7 +423,11 @@ class relation_list extends common {
 					// Check target is publicable
 					$current_is_publicable = diffusion::get_is_publicable($custom_locator);
 					if ($current_is_publicable!==true) {
-						debug_log(__METHOD__." + Skipped locator not publishable: ".to_string($custom_locator), logger::DEBUG);
+						debug_log(__METHOD__
+							." + Skipped locator not publishable: " . PHP_EOL
+							.' current_locator: ' . json_encode($custom_locator, JSON_PRETTY_PRINT)
+							, logger::DEBUG
+						);
 						continue;
 					}
 
@@ -528,7 +532,11 @@ class relation_list extends common {
 												// Check target is publicable
 													$filtered_current_is_publicable = diffusion::get_is_publicable($filtered_custom_locator);
 													if ($filtered_current_is_publicable!==true) {
-														debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($filtered_custom_locator), logger::DEBUG);
+														debug_log(__METHOD__
+															." + Skipped locator not publicable: ". PHP_EOL
+															.' filtered_custom_locator:' . to_string($filtered_custom_locator)
+															, logger::DEBUG
+														);
 														continue;
 													}
 
@@ -593,11 +601,20 @@ class relation_list extends common {
 			case 'valor':
 				$ar_values = [];
 				$ar_inverse_references = $this->get_inverse_references($sqo);
-				foreach ($ar_inverse_references as $current_locator) {
-				// Check target is publicable
+				foreach ($ar_inverse_references as $inverse_reference) {
+
+					$current_locator = new locator();
+						$current_locator->set_section_tipo($inverse_reference->section_tipo);
+						$current_locator->set_section_id($inverse_reference->section_id);
+
+					// Check target is publicable
 					$current_is_publicable = diffusion::get_is_publicable($current_locator);
 					if ($current_is_publicable!==true) {
-						debug_log(__METHOD__." + Skipped locator not publishable: ".to_string($current_locator), logger::DEBUG);
+						debug_log(__METHOD__
+							." + Skipped locator not publishable: ". PHP_EOL
+							. ' current_locator: ' . json_encode($current_locator, JSON_PRETTY_PRINT)
+							, logger::DEBUG
+						);
 						continue;
 					}
 					$ar_values[] = $current_locator;
@@ -610,12 +627,20 @@ class relation_list extends common {
 			case 'dato_full':
 				$ar_values = [];
 				$ar_inverse_references = $this->get_inverse_references($sqo);
-				foreach ($ar_inverse_references as $current_locator) {
+				foreach ($ar_inverse_references as $inverse_reference) {
+
+					$current_locator = new locator();
+						$current_locator->set_section_tipo($inverse_reference->section_tipo);
+						$current_locator->set_section_id($inverse_reference->section_id);
 
 					// Check target is publicable
 					$current_is_publicable = diffusion::get_is_publicable($current_locator);
 					if ($current_is_publicable!==true) {
-						debug_log(__METHOD__." + Skipped locator not publishable: ".to_string($current_locator), logger::DEBUG);
+						debug_log(__METHOD__
+							." + Skipped locator not publishable: ". PHP_EOL
+							. ' current_locator: ' . json_encode($current_locator, JSON_PRETTY_PRINT)
+							, logger::DEBUG
+						);
 						continue;
 					}
 					// if (count($ar_values)>10) {
