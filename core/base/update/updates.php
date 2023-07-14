@@ -19,7 +19,7 @@ $updates->$v = new stdClass();
 	# MINIM UPDATE FROM
 	$updates->$v->update_from_major		= 5;
 	$updates->$v->update_from_medium	= 9;
-	$updates->$v->update_from_minor		= 6;
+	$updates->$v->update_from_minor		= 7;
 
 	// alert
 		$alert					= new stdClass();
