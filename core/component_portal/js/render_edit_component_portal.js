@@ -969,7 +969,7 @@ export const render_references = function(ar_references) {
 * @return DocumentFragment
 */
 export const render_dataframe_table = async function(options) {
-console.log('options:', options);
+
 	// options
 		const self = options.self
 
