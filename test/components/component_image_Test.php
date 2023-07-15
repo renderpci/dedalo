@@ -636,7 +636,7 @@ final class component_image_test extends TestCase {
 
 		$this->assertTrue(
 			$result===true,
-			'expected true value : true ' . PHP_EOL
+			'expected true value : true (generate_default_quality_file from original_real) ' . PHP_EOL
 				. json_encode($result)
 		);
 	}//end test_generate_default_quality_file

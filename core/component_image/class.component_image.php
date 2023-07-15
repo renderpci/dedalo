@@ -458,12 +458,28 @@ class component_image extends component_media_common {
 					);
 					$original_image_path_real = $path['dirname'] . '/' .  $path['filename'] . '.' . $original_image_extension;
 					if (!file_exists($original_image_path_real)) {
-						debug_log(__METHOD__
-							. " Original image path file does not exists ". PHP_EOL
-							. ' original_image_path_real: ' . $original_image_path_real
-							, logger::WARNING
-						);
-						return false;
+
+						// notification
+							debug_log(__METHOD__
+								. " Original image path excluding converted file does not exists. Trying with standard extension: " .DEDALO_IMAGE_EXTENSION . PHP_EOL
+								. ' original_image_path_real: ' . $original_image_path_real
+								, logger::WARNING
+							);
+
+						// second try with standard extension (normally jpg)
+							$original_image_extension	= $this->get_original_extension(
+								false // bool exclude_converted
+							);
+							$original_image_path_real = $path['dirname'] . '/' .  $path['filename'] . '.' . $original_image_extension;
+							if (!file_exists($original_image_path_real)) {
+								debug_log(__METHOD__
+									. " Original image path file does not exists ". PHP_EOL
+									. ' original_image_path_real: ' . $original_image_path_real
+									, logger::WARNING
+								);
+
+								return false;
+							}
 					}
 
 				// target data (target quality is thumb)
@@ -637,9 +653,9 @@ class component_image extends component_media_common {
 			);
 
 		// debug
-			debug_log(__METHOD__." dd_thumb function called and executed in ".
-				exec_time_unit($start_time,'ms').' ms'.
-				". Created thumb file: ".to_string($image_thumb_path)
+			debug_log(__METHOD__
+				." dd_thumb function called and executed in ". exec_time_unit($start_time,'ms').' ms'. PHP_EOL
+				." Created thumb file: " . to_string($image_thumb_path)
 				, logger::DEBUG
 			);
 
@@ -755,7 +771,7 @@ class component_image extends component_media_common {
 	*/
 	public function remove_component_media_files(array $ar_quality=[]) : bool {
 
-		$date=date("Y-m-d_Hi");
+		$date = date("Y-m-d_Hi");
 
 		// ar_quality
 			if (empty($ar_quality)) {
@@ -932,11 +948,11 @@ class component_image extends component_media_common {
 	public function get_deleted_image(string $quality) : ?string {
 
 		// media_path
-		$media_path			= $this->get_media_filepath($quality);
-		$folder_path_del	= pathinfo($media_path,PATHINFO_DIRNAME).'/deleted';
-		$id					= $this->get_id();
-		$file_pattern		= $folder_path_del .'/'. $id .'_*.'. $this->get_extension();
-		$ar_files			= glob($file_pattern);
+			$media_path			= $this->get_media_filepath($quality);
+			$folder_path_del	= pathinfo($media_path,PATHINFO_DIRNAME).'/deleted';
+			$id					= $this->get_id();
+			$file_pattern		= $folder_path_del .'/'. $id .'_*.'. $this->get_extension();
+			$ar_files			= glob($file_pattern);
 
 		// no files found case
 			if (empty($ar_files)) {
