@@ -589,4 +589,114 @@ class v5_to_v6 {
 
 
 
+	/**
+	* FIX_V6_BETA_ISSUES
+	* Fix errors generated in section data on phase beta of v6
+	* @return bool
+	*/
+	public static function fix_v6_beta_issues() : bool {
+
+		$ar_tables = [
+			// 'new_matrix'
+			'matrix',
+			'matrix_activities',
+			'matrix_dataframe',
+			'matrix_dd',
+			'matrix_hierarchy',
+			'matrix_hierarchy_main',
+			'matrix_indexations',
+			// 'matrix_langs',
+			'matrix_layout',
+			'matrix_layout_dd',
+			'matrix_list',
+			'matrix_notes',
+			'matrix_profiles',
+			'matrix_projects',
+			// 'matrix_structurations',
+			'matrix_tools',
+			'matrix_users',
+			'matrix_stats'
+		];
+		$action = 'fix_data_action';
+
+		self::convert_table_data($ar_tables, $action);
+
+		return true;
+	}//end fix_v6_beta_issues
+
+
+
+	/**
+	* FIX_DATA_ACTION
+	* @return object $datos_column
+	* @return object $dato
+	*/
+	public static function fix_data_action( stdClass $datos_column ) : object {
+
+		$dato = clone $datos_column;
+
+		// clean component dato
+			if (!empty($dato->components)) {
+
+				foreach ($dato->components as $tipo => $component_data) {
+
+					if (isset($component_data->dato) && isset($component_data->{DEDALO_DATA_NOLAN})) {
+						unset($component_data->{DEDALO_DATA_NOLAN});
+					}
+
+					switch (true) {
+						case !isset($component_data->dato):
+							// fix missing dato path
+							if ($tipo==='dd199' ||  // created_date
+								$tipo===DEDALO_SECTION_INFO_MODIFIED_DATE) { // modified_date
+
+								$new_component_data = new stdClass();
+									$new_component_data->inf = $tipo==='dd199'
+										? 'created_date [component_date]'
+										: 'modified_date [component_date]';
+									$new_component_data->dato = clone $component_data;
+
+								// replace
+								$dato->components->{$tipo} = $new_component_data;
+							}
+							break;
+
+						case (	$tipo===DEDALO_ACTIVITY_WHEN
+							&& 	isset($component_data->dato->{DEDALO_DATA_NOLAN})
+							&&  isset($component_data->dato->{DEDALO_DATA_NOLAN}[0])
+							&&  isset($component_data->dato->{DEDALO_DATA_NOLAN}[0]->start)
+							&&  property_exists($component_data->dato->{DEDALO_DATA_NOLAN}[0]->start, 'errors')):
+
+							// date
+							$created_date = $dato->created_date ?? null;
+							if (!empty($created_date)) {
+								$dd_date = dd_date::get_dd_date_from_timestamp( $created_date );
+								// replace
+								$dato->components->{$tipo}->dato->{DEDALO_DATA_NOLAN} = [(object)[
+									'start' => $dd_date
+								]];
+							}
+							break;
+
+						default:
+							// nothing to do
+							break;
+					}
+				}//end foreach ($dato->components as $tipo => $component_data)
+			}
+
+
+		// clean section dato (rebuild the section object but excluded properties)
+			$new_dato = new StdClass();
+			foreach ($dato as $key => $value) {
+				$new_dato->{$key} = $value;
+			}
+
+
+		return $new_dato;
+	}//end fix_data_action
+
+
+
+
 }//end class v5_to_v6
