@@ -4286,7 +4286,7 @@ class diffusion_sql extends diffusion  {
 				case 'ds':
 					foreach ((array)$value as $current_locator) {
 						if (isset($current_locator->ds)) {
-							foreach ($current_locator->ds as $key => $locator_ds) {
+							foreach ($current_locator->ds as $locator_ds) {
 								$ar_term_ds[] = ts_object::get_term_by_locator( $locator_ds, $options->lang, $from_cache=true );
 							}
 						}
@@ -4329,8 +4329,8 @@ class diffusion_sql extends diffusion  {
 				// @see numisdata1028
 				if (is_array($ar_value)) {
 					$separator	= isset($process_dato_arguments->separator) ? $process_dato_arguments->separator : $default_separator;
-					$ar_value = array_unique($ar_value, SORT_REGULAR);
-					$value = implode($separator, $ar_value);
+					$ar_value	= array_unique($ar_value, SORT_REGULAR);
+					$value		= implode($separator, $ar_value);
 				}
 				break;
 			case 'merged_unique':

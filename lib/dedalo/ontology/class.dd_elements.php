@@ -33,7 +33,7 @@ class dd_elements {
 									?string $propiedades,
 									$properties, // null|object|array
 									?string $traducible,
-									string $norden) : string {
+									?string $norden) : string {
 
 		# Linea de iconos y término
 		#print("terminoID $terminoID,termino $termino,parent $parent,children $children,def $def,obs $obs,hijosD $hijosD,hijosND $hijosND,ncaptaciones $ncaptaciones,nordenV $nordenV,resalte $resalte,modo $modo ,usableIndex $usableIndex <hr>");

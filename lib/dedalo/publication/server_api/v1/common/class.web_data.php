@@ -363,9 +363,11 @@ class web_data {
 		/**
 		* GET_ROWS_DATA
 		* Función genérica de consulta a las tablas de difusión generadas por Dédalo tras la publicación web
-		* Devuelve array con los rows de los campos solicitados
-		* @param object $options . Object with options like table, ar_fields, lang, etc..
-		* @return array $ar_data . Rows result from search
+		* Devuelve objeto con el array de los rows de los campos solicitados
+		* @param object $request_options
+		* 	Object with options like table, ar_fields, lang, etc..
+		* @return object $response
+		* 	Rows result from search
 		*/
 		public static function get_rows_data( $request_options ) {
 
@@ -5259,9 +5261,9 @@ class web_data {
 								$ar_filter_final[] = '('.implode(' OR ', $ar_value).')';
 							}
 						}
-							dump($ar_filter_final, ' ar_filter_final ++ '.to_string());
 						if (!empty($ar_filter_final)) {
-							$filter = ' -- filter final '.PHP_EOL.' ('.implode(' '.$options->operator.' ', $ar_filter_final).')';
+							// $filter = ' -- filter final '.PHP_EOL.' ('.implode(' '.$options->operator.' ', $ar_filter_final).')';
+							$filter = ' '.PHP_EOL.' ('.implode(' '.$options->operator.' ', $ar_filter_final).')';
 						}
 
 				}

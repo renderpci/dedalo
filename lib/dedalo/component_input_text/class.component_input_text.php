@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS COMPONENT_INPUT_TEXT
 * Manage specific component input text logic
 * Common components properties and method are inherited of component_common class that are inherited from common class

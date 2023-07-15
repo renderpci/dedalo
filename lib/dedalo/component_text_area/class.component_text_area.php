@@ -7,7 +7,12 @@ require_once(DEDALO_LIB_BASE_PATH .'/media_engine/class.OptimizeTC.php');
 */
 class component_text_area extends component_common {
 
+
+
 	public $arguments;
+	public $component_state_tipo;
+	public $component_state;
+
 
 
 	/**

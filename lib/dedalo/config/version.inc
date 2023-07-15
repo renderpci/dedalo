@@ -2892,7 +2892,7 @@
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '2023-06-11T11:04:59+02:00');
+	define('DEDALO_BUILD'	, '2023-07-15T20:10:45+02:00');
 
 
 
