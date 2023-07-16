@@ -547,6 +547,9 @@ class DDModal extends HTMLElement {
 		}
 		self.drag_data.target = null;
 	}
+	remove_miniModal() {
+		this.shadowRoot.querySelector(".mini_modal").remove()
+	}
 }
 customElements.define('dd-modal',DDModal);
 }
