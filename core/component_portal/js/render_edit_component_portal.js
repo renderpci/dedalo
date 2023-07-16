@@ -365,10 +365,11 @@ const render_drag_node = function(options) {
 
 		// modal
 			const modal = ui.attach_to_modal({
-				header	: header,
-				body	: body,
-				footer	: footer,
-				size	: 'small' // string size big|normal|small
+				header		: header,
+				body		: body,
+				footer		: footer,
+				size		: 'small', // string size big|normal|small
+				minimizable	: false
 			})
 			// set the input field active
 			target_key_input.focus()
@@ -969,7 +970,7 @@ export const render_references = function(ar_references) {
 * @return DocumentFragment
 */
 export const render_dataframe_table = async function(options) {
-console.log('options:', options);
+
 	// options
 		const self = options.self
 
