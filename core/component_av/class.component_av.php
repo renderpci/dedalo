@@ -550,7 +550,10 @@ class component_av extends component_media_common {
 						if( !is_dir($folder_path_del) ) {
 							$create_dir = mkdir($folder_path_del, 0775, true);
 							if(!$create_dir) {
-								debug_log(__METHOD__." Error on read or create directory \"deleted\". Permission denied ".to_string($folder_path_del), logger::ERROR);
+								debug_log(__METHOD__
+									." Error on read or create directory \"deleted\". Permission denied ".to_string($folder_path_del)
+									, logger::ERROR
+								);
 								return false;
 							}
 						}
@@ -571,7 +574,10 @@ class component_av extends component_media_common {
 							return false;
 						}
 
-					debug_log(__METHOD__." Moved file \n$media_path to \n$media_path_moved ", logger::DEBUG);
+					debug_log(__METHOD__
+						." Moved file \n$media_path to \n$media_path_moved "
+						, logger::DEBUG
+					);
 				}
 			}//end if ($remove_posterframe===true)
 
