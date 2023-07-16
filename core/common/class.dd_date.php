@@ -43,7 +43,7 @@ class dd_date extends stdClass {
 	* @param bool $constrain = false
 	* @return object dd_date
 	*/
-	public function __construct( $data=null, $constrain=false ) {
+	public function __construct( object $data=null, bool $constrain=false ) {
 
 		// null case
 			if (is_null($data)) {
@@ -75,7 +75,7 @@ class dd_date extends stdClass {
 				$method = 'set_'.$key;
 				if (method_exists($this, $method)) {
 
-					$set_value = $this->$method($value, $constrain);
+					$set_value = $this->{$method}($value, $constrain);
 					if($set_value===false && empty($this->errors)) {
 						$this->errors[] = 'Invalid value for: '.$key.' . value: '.to_string($value);
 					}
