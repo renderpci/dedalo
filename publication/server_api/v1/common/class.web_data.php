@@ -5192,9 +5192,9 @@ class web_data {
 								$ar_filter_final[] = '('.implode(' OR ', $ar_value).')';
 							}
 						}
-							dump($ar_filter_final, ' ar_filter_final ++ '.to_string());
 						if (!empty($ar_filter_final)) {
-							$filter = ' -- filter final '.PHP_EOL.' ('.implode(' '.$options->operator.' ', $ar_filter_final).')';
+							// $filter = ' -- filter final '.PHP_EOL.' ('.implode(' '.$options->operator.' ', $ar_filter_final).')';
+							$filter = ' '.PHP_EOL.' ('.implode(' '.$options->operator.' ', $ar_filter_final).')';
 						}
 
 				}
