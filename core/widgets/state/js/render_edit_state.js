@@ -133,11 +133,14 @@ const get_value_element = (i, data, self) => {
 		// but when the component id non translatable, data has always the node reference (empty or with value)
 		const project_langs	= page_globals.dedalo_projects_default_langs
 		const nolan			= page_globals.dedalo_data_nolan
+
 		// select the current ipo.output
 		const output		= self.ipo[i].output
+
 		// we will store the nodes to re-create the value when the components change our data and send the 'update_widget_value' event
 		const ar_nodes = []
 
+	// li container
 		// every ipo has one output array whit the objects for every row
 		// get the output for reference of the rows
 		for (let o = 0; o < output.length; o++) {
@@ -169,16 +172,22 @@ const get_value_element = (i, data, self) => {
 														&& item.type ==='total')
 
 				// node for the column situation
-				const situation = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'situation',
-					parent			: container
-				})
+					const situation = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'situation',
+						parent			: container
+					})
 					// total
 					const situation_total_node = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'total',
 						parent			: situation
+					})
+					situation_total_node.addEventListener('mouseenter', function(e) {
+						situation_detail_container.classList.add('active')
+					})
+					situation_total_node.addEventListener('mouseleave', function(e) {
+						situation_detail_container.classList.remove('active')
 					})
 					// create the node with the total value
 					const situation_total_value = ui.create_dom_element({
@@ -199,55 +208,56 @@ const get_value_element = (i, data, self) => {
 					})
 
 				// detail node with all languages
-				const situation_detail = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'detail',
-					parent			: situation
-				})
-				// situation detail
-				for (let j = 0; j < situation_length; j++) {
-					// select the language of for the item 'lg-spa, lg-eng, lg-cat, etc' else select the 'lg-nolan'
-					const lang = situation_translatable ? project_langs[j].value : nolan
-					const situation_items_data = data.find(item => item.id === output_item.id
-																&& item.column === 'situation'
-																&& item.lang === lang
-																&& item.type ==='detail')
-					// build the label with the lang name
-					const label_situation = ui.create_dom_element({
-						element_type	: 'label',
-						inner_html		: (situation_translatable) ? project_langs[j].label+': ' : 'total :',
-						parent			: situation_detail
+					const situation_detail_container = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'detail',
+						parent			: situation
 					})
-					// create the node with the value
-					const item_situation = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'value',
-						inner_html		: (situation_items_data) ? situation_items_data.value+'%' : '0%',
-						parent			: situation_detail
-					})
-					// build the label with the list name
-					const datalist_item = (situation_items_data && situation_items_data.locator)
-						? self.datalist.find(item => item.value.section_tipo === situation_items_data.locator.section_tipo
-												&& item.value.section_id === situation_items_data.locator.section_id)
-						: {label: ''}
+					// situation detail (by lang)
+					for (let j = 0; j < situation_length; j++) {
+						// select the language of for the item 'lg-spa, lg-eng, lg-cat, etc' else select the 'lg-nolan'
+						const lang = situation_translatable ? project_langs[j].value : nolan
+						const situation_items_data = data.find(item => item.id === output_item.id
+																	&& item.column === 'situation'
+																	&& item.lang === lang
+																	&& item.type ==='detail')
+						// build the label with the lang name
+						const label_situation = ui.create_dom_element({
+							element_type	: 'label',
+							inner_html		: (situation_translatable) ? project_langs[j].label+': ' : 'total :',
+							parent			: situation_detail_container
+						})
+						// create the node with the value
+						const item_situation = ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'value',
+							inner_html		: (situation_items_data) ? situation_items_data.value+'%' : '0%',
+							parent			: situation_detail_container
+						})
+						// build the label with the list name
+						const datalist_item = (situation_items_data && situation_items_data.locator)
+							? self.datalist.find(item => item.value.section_tipo === situation_items_data.locator.section_tipo
+													&& item.value.section_id === situation_items_data.locator.section_id) || {label: ''}
+							: {label: ''}
 
-					const label_list_situation = ui.create_dom_element({
-						element_type	: 'label',
-						inner_html		: datalist_item.label,
-						parent			: situation_detail
-					})
-					// save the node for reuse later in 'update_widget_value' event
-					ar_nodes.push({
-						node_value		: item_situation,
-						node_label_list	: label_list_situation,
-						type			: 'detail',
-						value			: (situation_items_data) ? situation_items_data.value : 0,
-						lang			: lang,
-						id				: output_item.id,
-						key				: i,
-						column			: 'situation'
-					})
-				} // end for (let j = 0; j < situation_length; j++)
+						const label_list_situation = ui.create_dom_element({
+							element_type	: 'label',
+							inner_html		: datalist_item.label,
+							parent			: situation_detail_container
+						})
+						// save the node for reuse later in 'update_widget_value' event
+						ar_nodes.push({
+							node_value		: item_situation,
+							node_label_list	: label_list_situation,
+							type			: 'detail',
+							value			: (situation_items_data) ? situation_items_data.value : 0,
+							lang			: lang,
+							id				: output_item.id,
+							key				: i,
+							column			: 'situation'
+						})
+					}//end for (let j = 0; j < situation_length; j++)
+
 			// State
 				// check if the component is translatable, with the first item in the data of the current column
 				const state_item = data.find(item => item.id === output_item.id && item.column === 'state')
@@ -267,17 +277,23 @@ const get_value_element = (i, data, self) => {
 					parent 			: container
 				})
 					// total
-					const total_node = ui.create_dom_element({
+					const state_total_node = ui.create_dom_element({
 						element_type 	: 'div',
 						class_name		: 'total',
 						parent 			: state
+					})
+					state_total_node.addEventListener('mouseenter', function(e) {
+						state_detail_container.classList.add('active')
+					})
+					state_total_node.addEventListener('mouseleave', function(e) {
+						state_detail_container.classList.remove('active')
 					})
 					// create the node with the value
 					const total_value = ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'value',
 						inner_html 		: state_total.value+'%',
-						parent 			: total_node
+						parent 			: state_total_node
 					})
 					// save the node for reuse later in 'update_widget_value' event
 					ar_nodes.push({
@@ -290,13 +306,12 @@ const get_value_element = (i, data, self) => {
 						column		: 'state'
 					})
 
-					// detail with all languages
-					const detail = ui.create_dom_element({
-						element_type 	: 'div',
-						class_name		: 'detail',
-						parent 			: state
-					})
-
+				// detail with all languages
+				const state_detail_container = ui.create_dom_element({
+					element_type 	: 'div',
+					class_name		: 'detail',
+					parent 			: state
+				})
 				for (let k = 0; k < item_length; k++) {
 					// select the language of for the item 'lg-spa, lg-eng, lg-cat, etc' else select the 'lg-nolan'
 					const lang = state_translatable ? project_langs[k].value : nolan
@@ -310,7 +325,7 @@ const get_value_element = (i, data, self) => {
 					const label_state = ui.create_dom_element({
 						element_type	: 'label',
 						inner_html 		: (state_translatable) ? project_langs[k].label+': ' : 'total :',
-						parent 			: detail
+						parent 			: state_detail_container
 					})
 
 					// create the node with the value
@@ -318,18 +333,18 @@ const get_value_element = (i, data, self) => {
 						element_type	: 'span',
 						class_name		: 'value',
 						inner_html 		: (state_item_data) ? state_item_data.value+'%' : '0%',
-						parent 			: detail
+						parent 			: state_detail_container
 					})
 					// build the label with the list name
 					const datalist_item_status = (state_item_data && state_item_data.locator)
 						? self.datalist.find(item => item.value.section_tipo === state_item_data.locator.section_tipo
-												&& item.value.section_id === state_item_data.locator.section_id)
+												&& item.value.section_id === state_item_data.locator.section_id) || {label: ''}
 						: {label: ''}
 
 					const label_list_state = ui.create_dom_element({
 						element_type	: 'label',
 						inner_html		: datalist_item_status.label,
-						parent			: detail
+						parent			: state_detail_container
 					})
 					// save the node for reuse later in the event 'update_widget_value'
 					ar_nodes.push({
