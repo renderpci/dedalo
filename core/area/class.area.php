@@ -189,7 +189,12 @@ class area extends area_common  {
 	public static function get_config_areas() : object {
 
 		if( !include(DEDALO_CONFIG_PATH . '/config_areas.php') ) {
-			debug_log(__METHOD__." ERROR ON LOAD FILE config4_areas . Using empty values as default ".to_string(), logger::ERROR);
+
+			debug_log(__METHOD__
+				." ERROR ON LOAD FILE config4_areas . Using empty values as default "
+				, logger::ERROR
+			);
+
 			if(SHOW_DEBUG===true) {
 				throw new Exception("Error Processing Request. config4_areas file not found", 1);;
 			}

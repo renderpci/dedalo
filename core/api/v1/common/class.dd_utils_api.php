@@ -1954,7 +1954,10 @@ final class dd_utils_api {
 				// check contents
 				if ($contents===false) {
 					$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Contents from Dédalo code repository fail to download from: '.DEDALO_SOURCE_VERSION_URL;
-					debug_log(__METHOD__." $response->msg", logger::ERROR);
+					debug_log(__METHOD__
+						." $response->msg"
+						, logger::ERROR
+					);
 					return $response;
 				}
 				$result->download_file = [
@@ -1967,7 +1970,10 @@ final class dd_utils_api {
 				if (!is_dir(DEDALO_SOURCE_VERSION_LOCAL_DIR)) {
 					if( !mkdir(DEDALO_SOURCE_VERSION_LOCAL_DIR,  0775) ) {
 						$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Unable to create dir: '.DEDALO_SOURCE_VERSION_LOCAL_DIR;
-						debug_log(__METHOD__." $response->msg", logger::ERROR);
+						debug_log(__METHOD__
+							." $response->msg"
+							, logger::ERROR
+						);
 						return $response;
 					}
 				}
@@ -1976,7 +1982,10 @@ final class dd_utils_api {
 				$put_contents	= file_put_contents($target_file, $contents);
 				if (!$put_contents) {
 					$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Contents from Dédalo code repository fail to write on : '.$target_file;
-					debug_log(__METHOD__." $response->msg", logger::ERROR);
+					debug_log(__METHOD__
+						." $response->msg"
+						, logger::ERROR
+					);
 					return $response;
 				}
 				$result->write_file = [
@@ -1989,7 +1998,10 @@ final class dd_utils_api {
 				$res = $zip->open($target_file);
 				if ($res!==true) {
 					$response->msg = 'Error. Request failed ['.__FUNCTION__.']. ERROR ON ZIP file extraction to '.DEDALO_SOURCE_VERSION_LOCAL_DIR;
-					debug_log(__METHOD__." $response->msg", logger::ERROR);
+					debug_log(__METHOD__
+						." $response->msg"
+						, logger::ERROR
+					);
 					return $response;
 				}
 				$zip->extractTo(DEDALO_SOURCE_VERSION_LOCAL_DIR);
