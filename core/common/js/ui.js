@@ -2111,6 +2111,7 @@ export const ui = {
 			const size				= options.size || 'normal' // string size='normal'
 			const modal_parent		= options.modal_parent || document.querySelector('.wrapper.page') || document.body
 			const remove_overlay	= options.remove_overlay || false
+			const minimizable 		= options.minimizable ?? true
 
 		// page_y_offset. Current window scroll position (used to restore later)
 			const page_y_offset = window.pageYOffset || 0
@@ -2173,6 +2174,10 @@ export const ui = {
 					footer.classList.add('footer')
 				}
 				modal_container.appendChild(footer)
+			}
+
+			if(minimizable===false){
+				modal_container.remove_miniModal();
 			}
 
 		// size. Modal special features based on property 'size'
