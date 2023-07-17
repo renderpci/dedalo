@@ -313,9 +313,23 @@ const render_search_input = function(self) {
 
 		// event input. changes the input value fire the search
 			search_input.addEventListener('keyup', async function(e){
+				// console.log('e1:', e);
 
-				// arrow keys
-					if(e.which===40 || e.which===38 || e.which===13){
+				// ignore keys
+					const ignore_keys = [
+						'Escape',
+						'ArrowLeft',
+						'ArrowRight',
+						'ArrowUp',
+						'ArrowDown',
+						'Control',
+						'Meta',
+						'Alt',
+						'Shift',
+						'CapsLock',
+						'Enter'
+					]
+					if (ignore_keys.includes(e.key)) {
 						return
 					}
 
@@ -366,16 +380,30 @@ const render_search_input = function(self) {
 
 				// search fire is delayed to enable multiple simultaneous selections
 				// get final value (input events are fired one by one)
+			    	const ms = self.search_cache[q]
+			    		? 1
+			    		: 350
 					timeout = setTimeout(async()=>{
 
-						const api_response	= await self.autocomplete_search()
-						await render_datalist(self, api_response)
+						// api_response. Get from cache if exists
+							const api_response = self.search_cache[q]
+								? { result : self.search_cache[q] }
+								: await self.autocomplete_search()
+
+						// cache result. Add if not already exists
+							if (!self.search_cache[q]) {
+								self.search_cache[q] = api_response.result
+							}
+
+						// render datalist
+							await render_datalist(self, api_response.result)
 
 						// class searching
 							search_input.classList.remove('searching')
+
 						// spinner remove
 							spinner.remove()
-					}, 350)
+					}, ms)
 			});
 
 	return search_input
@@ -818,10 +846,11 @@ const render_operator_selector = function(self) {
 * RENDER_DATALIST
 * Render result data as DOM nodes and place it into self.datalist container
 * @param object self
-* @param object api_response
+* @param object result
+* 	api_response result
 * @return HTMLElement datalist
 */
-const render_datalist = async function(self, api_response) {
+const render_datalist = async function(self, result) {
 
 	// datalist container node
 		const datalist = self.datalist
@@ -832,7 +861,7 @@ const render_datalist = async function(self, api_response) {
 		}
 
 	// get the result from the API response
-		const result = api_response.result
+		// const result = api_response.result
 
 	// added result as datum because will be necessary to render ddinfo column
 	// ddinfo will get data from autocomplete service instead the section_record
@@ -846,7 +875,7 @@ const render_datalist = async function(self, api_response) {
 		}
 
 	// context
-		// const context	= result.context
+		// const context = result.context
 
 	// get the sections that was searched
 		// const ar_search_sections = self.ar_search_section_tipo
