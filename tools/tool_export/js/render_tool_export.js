@@ -214,23 +214,23 @@ const get_content_data_edit = async function(self) {
 				ui.create_dom_element({
 					element_type	: 'option',
 					inner_html		: get_label.standard || 'standard',
-					value			: 'standard',
+					value			: 'value',
 					parent			: select_data_format_export
 				})
 				// select_option_html
-				ui.create_dom_element({
-					element_type	: 'option',
-					inner_html		: get_label.html || 'HTML',
-					value			: 'html',
-					parent			: select_data_format_export
-				})
-				// select_option_breakdown
 				// ui.create_dom_element({
 				// 	element_type	: 'option',
-				// 	inner_html		: get_label.breakdown || 'breakdown',
-				// 	value			: 'breakdown',
+				// 	inner_html		: get_label.html || 'HTML',
+				// 	value			: 'html',
 				// 	parent			: select_data_format_export
 				// })
+				// select_option_breakdown
+				ui.create_dom_element({
+					element_type	: 'option',
+					inner_html		: get_label.breakdown || 'breakdown',
+					value			: 'grid_value',
+					parent			: select_data_format_export
+				})
 				// // select_option_breakdown_html
 				// ui.create_dom_element({
 				// 	element_type	: 'option',
