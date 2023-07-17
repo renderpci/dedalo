@@ -33,6 +33,7 @@ export const service_autocomplete = function() {
 	this.events_tokens	= []
 	this.type			= null
 	this.caller			= null
+	this.search_cache	= {}
 }//end service_autocomplete
 
 
@@ -427,7 +428,7 @@ service_autocomplete.prototype.dedalo_engine = async function() {
 		rqo_search.sqo.section_tipo	= search_sections
 
 	// filter_by_list, modify by user
-		const filter_by_list	= self.ar_filter_by_list.map(item => item.value)
+		const filter_by_list = self.ar_filter_by_list.map(item => item.value)
 
 	// rqo
 		const rqo = await self.rebuild_search_query_object({
