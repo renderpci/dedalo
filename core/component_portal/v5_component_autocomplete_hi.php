@@ -90,13 +90,13 @@
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	$_get_diffusion_value = function ($lang=DEDALO_DATA_LANG, $option_obj=null) : ?string {
+	$_get_diffusion_value = function ( ?string$lang=DEDALO_DATA_LANG, object $option_obj=null) : ?string {
 
 		$diffusion_value = null;
 
 		$propiedades			= $this->get_propiedades();
 		$diffusion_properties	= $this->get_diffusion_properties();
-			// dump($diffusion_properties, ' diffusion_properties tipo ++ '.to_string($this->tipo));
+			// dump($diffusion_properties, ' diffusion_properties (component_autocomplete) tipo ++ '.to_string($this->tipo));
 
 		// fields_separator. (!) Note here that more than one value can be returned by this method. To avoid duplicity of ',' separator, use '-' as default
 			$fields_separator_default = ' - ';
@@ -225,8 +225,9 @@
 									$show_parents, // bool show_parents
 									null // array|null ar_components_related
 								);
+
 								if (!empty($current_value)) {
-									$ar_diffusion_value[] = implode($fields_separator, $current_value);
+									$ar_diffusion_value[] = implode($fields_separator, (array)$current_value);
 								}
 
 							// // get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
