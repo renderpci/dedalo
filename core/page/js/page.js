@@ -616,7 +616,14 @@ page.prototype.add_events = function() {
 
 	// page click
 		document.addEventListener('mousedown', fn_deactivate_components)
-		function fn_deactivate_components() {
+		function fn_deactivate_components(e) {
+
+			// click on scrollbar case
+				const is_descendant_of_root = e.target.parentElement !== null;
+				if (is_descendant_of_root===false) {
+					return
+				}
+
 			if (page_globals.component_active) {
 
 				const component_instance = page_globals.component_active
