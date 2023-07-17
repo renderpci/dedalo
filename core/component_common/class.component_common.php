@@ -928,20 +928,8 @@ abstract class component_common extends common {
 					? $properties->records_separator
 					: ' | ');
 
-		// fallback value
-			if (!empty($data)) {
-
-				$fallback_value = $data;
-
-			}else{
-
-				// empty data case
-				$fallback_value	= component_common::extract_component_dato_fallback(
-					$this, // component instance this
-					$this->get_lang(), // string lang
-					DEDALO_DATA_LANG_DEFAULT // string main_lang
-				);
-			}
+		// fallback value. Overwrite in translatable components like input_text or text_area
+			$fallback_value = $data ?? null;
 
 		// dd_grid_cell_object
 			$dd_grid_cell_object = new dd_grid_cell_object();
