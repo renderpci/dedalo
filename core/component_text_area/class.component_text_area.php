@@ -237,7 +237,12 @@ class component_text_area extends component_common {
 			];
 
 		// data
-			$data = $this->get_dato();
+			$data			= $this->get_dato();
+			$fallback_value	= component_common::extract_component_dato_fallback(
+				$this, // component instance this
+				$this->get_lang(), // string lang
+				DEDALO_DATA_LANG_DEFAULT // string main_lang
+			);
 
 		// procesed_data
 			switch ($this->mode) {
@@ -285,6 +290,7 @@ class component_text_area extends component_common {
 				}
 				$value->set_records_separator($records_separator);
 				$value->set_value($procesed_data);
+				$value->set_fallback_value($fallback_value);
 
 
 		return $value;
