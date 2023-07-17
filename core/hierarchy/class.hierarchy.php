@@ -1111,7 +1111,8 @@ class hierarchy {
 	* Search in section HIERARCHY (DEDALO_HIERARCHY_SECTION_TIPO) the lang for requested 'thesaurus' section by section_tipo
 	* Do a direct db search request for speed and store results in a static var for avoid resolve the same main_lang twice
 	* Speed here is very important because this method is basic for thesaurus sections defined in hierarchies
-	* @return string $main_lang
+	* @param string $section_tipo
+	* @return string|null $main_lang
 	*/
 	public static function get_main_lang( string $section_tipo ) : ?string {
 
@@ -1188,10 +1189,10 @@ class hierarchy {
 						break;
 				}
 				debug_log(__METHOD__
-					." Error on get main lang for section. Fallback applied for safe lang to: $main_lang " . PHP_EOL
+					." Unable to get main lang for section. Fallback applied for safe lang to: $main_lang " . PHP_EOL
 					.' section_tipo: ' . $section_tipo . PHP_EOL
 					.' main_lang: ' . $main_lang
-					, logger::ERROR
+					, logger::WARNING
 				);
 			}
 
