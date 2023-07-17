@@ -804,7 +804,7 @@ class component_relation_parent extends component_relation_common {
 	/**
 	* GET_DIFFUSION_VALUE
 	* Overwrite component common method
-	* Calculate current component diffusion value for target field (usually a mysql field)
+	* Calculate current component diffusion value for target field (usually a MYSQL field)
 	* Used for diffusion_mysql to unify components diffusion value call
 	* @param string|null $lang = DEDALO_DATA_LANG
 	* @param object $option_obj = null
@@ -836,6 +836,7 @@ class component_relation_parent extends component_relation_common {
 				foreach ($ar_tipo as $tipo) {
 
 					$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+					// $model	= RecordObj_dd::get_legacy_model_name_by_tipo($tipo);
 					$component	= component_common::get_instance(
 						$model,
 						$tipo,
@@ -844,19 +845,25 @@ class component_relation_parent extends component_relation_common {
 						$lang,
 						$section_tipo
 					);
-					// $valor = $component->get_valor($lang);
-					$process_dato_arguments = $option_obj->process_dato_arguments ?? null;
-					$valor = $component->get_diffusion_value($lang, $process_dato_arguments);
-					if (empty($valor)) {
+					// process_dato_arguments
+						$process_dato_arguments = $option_obj->process_dato_arguments ?? null;
+					// valor
+						// $valor	= $component->get_valor($lang);
+						$valor		= $component->get_diffusion_value($lang, $process_dato_arguments);
+						if (empty($valor)) {
 
-						$main_lang = hierarchy::get_main_lang( $locator->section_tipo );
-
-						$dato_full	= $component->get_dato_full();
-						$valor		= component_common::get_value_with_fallback_from_dato_full($dato_full, true, $main_lang, $lang);
-						if (is_array($valor)) {
-							$valor = implode(', ', $valor);
+							$main_lang	= hierarchy::get_main_lang( $locator->section_tipo );
+							$dato_full	= $component->get_dato_full();
+							$valor		= component_common::get_value_with_fallback_from_dato_full(
+								$dato_full,
+								true,
+								$main_lang,
+								$lang
+							);
+							if (is_array($valor)) {
+								$valor = implode(', ', $valor);
+							}
 						}
-					}
 
 					if (!empty($valor)) {
 						$ar_value[] = $valor;
