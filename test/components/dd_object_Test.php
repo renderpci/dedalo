@@ -224,7 +224,6 @@ final class dd_object_test extends TestCase {
 				$eq,
 				'expected true (2), but received is: ' . to_string( $eq )
 			);
-
 	}//end test_in_array_ddo
 
 
