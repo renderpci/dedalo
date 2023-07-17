@@ -427,9 +427,24 @@ class tool_export extends tool_common {
 				}
 
 			// get component_value add
-				$component_value = ($this->data_format==='dedalo')
-					? $current_component->get_raw_value()
-					: $current_component->get_grid_value($ddo);
+				switch ($this->data_format) {
+					case 'dedalo_raw':
+						$component_value =	$current_component->get_raw_value();
+						break;
+
+					case 'grid_value':
+						$component_value = $current_component->get_grid_value($ddo);
+						break;
+
+					case 'value':
+					default:
+						$component_value = $current_component->get_grid_flat_value($ddo);
+						break;
+				}
+
+				// $component_value = ($this->data_format==='dedalo')
+				// 	? $current_component->get_raw_value()
+				// 	: $current_component->get_grid_value($ddo);
 
 			// get columns objects that the component had stored
 				$sub_ar_columns_obj	= $component_value->ar_columns_obj ?? [];
