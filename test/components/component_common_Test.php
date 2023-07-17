@@ -196,9 +196,11 @@ final class component_common_test extends TestCase {
 
 			$component->set_dato($new_data);
 
+			$last_error = $_ENV['DEDALO_LAST_ERROR'] ?? null;
 			$this->assertTrue(
-				empty($_ENV['DEDALO_LAST_ERROR']),
-				'expected running without errors'
+				empty($last_error),
+				'expected running without errors' . PHP_EOL
+				.' last_error: '. json_encode($last_error, JSON_PRETTY_PRINT)
 			);
 
 			$this->assertTrue(
@@ -956,12 +958,16 @@ final class component_common_test extends TestCase {
 				false
 			);
 
-			$response = $component->get_valor();
-				// dump($response, ' $response ++ '.to_string($element->model));
+			$result = $component->get_valor();
+
+			$last_error = $_ENV['DEDALO_LAST_ERROR'] ?? null;
 
 			$this->assertTrue(
-				empty($_ENV['DEDALO_LAST_ERROR']),
-				'expected running without errors'
+				empty($last_error),
+				'expected running without errors' . PHP_EOL
+					.'model: ' . $element->model . PHP_EOL
+					.'lang: ' . $element->lang . PHP_EOL
+					.'last_error: '. json_encode($last_error, JSON_PRETTY_PRINT)
 			);
 
 			// (!) Important. This method is still used by diffusion (v5)
