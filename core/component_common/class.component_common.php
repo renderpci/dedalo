@@ -461,9 +461,11 @@ abstract class component_common extends common {
 			}
 
 		// pagination. Set defaults
-			$this->pagination = new stdClass();
-				$this->pagination->offset	= 0;
-				$this->pagination->limit	= null;
+			if (!isset($this->pagination)) {
+				$this->pagination = new stdClass();
+					$this->pagination->offset	= 0;
+					$this->pagination->limit	= null;
+			}
 
 			// DES
 				// $request_config = ( isset($properties->source->request_config) )

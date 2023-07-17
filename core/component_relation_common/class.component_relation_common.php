@@ -70,7 +70,10 @@ class component_relation_common extends component_common {
 					$lang = DEDALO_DATA_LANG;
 				}else{
 					if ($lang===DEDALO_DATA_NOLAN) {
-						debug_log(__METHOD__." Changed component wrong lang [TRANSLATABLE $section_tipo - $tipo] from $lang to ".DEDALO_DATA_LANG, logger::ERROR);
+						debug_log(__METHOD__
+							." Changed component wrong lang [TRANSLATABLE $section_tipo - $tipo] from $lang to ".DEDALO_DATA_LANG
+							, logger::ERROR
+						);
 						$lang = DEDALO_DATA_LANG;
 					}
 				}
