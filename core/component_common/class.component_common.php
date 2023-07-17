@@ -928,6 +928,21 @@ abstract class component_common extends common {
 					? $properties->records_separator
 					: ' | ');
 
+		// fallback value
+			if (!empty($data)) {
+
+				$fallback_value = $data;
+
+			}else{
+
+				// empty data case
+				$fallback_value	= component_common::extract_component_dato_fallback(
+					$this, // component instance this
+					$this->get_lang(), // string lang
+					DEDALO_DATA_LANG_DEFAULT // string main_lang
+				);
+			}
+
 		// dd_grid_cell_object
 			$dd_grid_cell_object = new dd_grid_cell_object();
 				$dd_grid_cell_object->set_type('column');
@@ -940,6 +955,7 @@ abstract class component_common extends common {
 				$dd_grid_cell_object->set_fields_separator($fields_separator);
 				$dd_grid_cell_object->set_records_separator($records_separator);
 				$dd_grid_cell_object->set_value($data);
+				$dd_grid_cell_object->set_fallback_value($fallback_value);
 
 
 		return $dd_grid_cell_object;
