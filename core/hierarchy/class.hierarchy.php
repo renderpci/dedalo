@@ -1113,95 +1113,93 @@ class hierarchy {
 	* Speed here is very important because this method is basic for thesaurus sections defined in hierarchies
 	* @return string $main_lang
 	*/
-	public static function get_main_lang( string $section_tipo ) : string {
+	public static function get_main_lang( string $section_tipo ) : ?string {
 
-		static $ar_main_lang;
-
-		if(isset($ar_main_lang[$section_tipo])) return $ar_main_lang[$section_tipo];
-
-		# Always fixed langs as english
-		if ($section_tipo==='lg1') {
-			return 'lg-eng';
-		}
-
-		# Dedalo version parts
-		$ar_v = explode('.', DEDALO_VERSION);
-
-		$matrix_table			= 'matrix_hierarchy_main';
-		$hierarchy_lang_tipo 	= DEDALO_HIERARCHY_LANG_TIPO;
-		$hierarchy_section_tipo = DEDALO_HIERARCHY_SECTION_TIPO;
-		$hierarchy_tld_tipo 	= DEDALO_HIERARCHY_TLD2_TIPO;
-		$lang 					= DEDALO_DATA_NOLAN;
-
-		$prefix = RecordObj_dd::get_prefix_from_tipo($section_tipo);
-		$prefix = strtoupper($prefix); // data is stored always in uppercase
-
-		$strQuery  ='-- '.__METHOD__;
-		$strQuery .= "\nSELECT section_id, datos#>'{relations}' AS relations \nFROM $matrix_table WHERE";
-		$strQuery .= "\n section_tipo = '$hierarchy_section_tipo' AND";
-		#$strQuery .= "\n (datos#>>'{components,$hierarchy_tld_tipo,dato,$lang}' = '$prefix' OR ";
-		#$strQuery .= " datos#>>'{components,$hierarchy_tld_tipo,dato,$lang}' = '".strtolower($prefix)."' ) ";
-		#$strQuery .= "\n datos#>>'{components,$hierarchy_tld_tipo,dato,$lang}' = '$prefix' ";
-		$strQuery .= "\n datos#>'{components,$hierarchy_tld_tipo,dato,$lang}' ? '$prefix' "; // Now hierarchy tld is an array
-		$strQuery .= "LIMIT 1";
-			#dump(null, ' strQuery ++ '.to_string($strQuery));
-		$result	= JSON_RecordObj_matrix::search_free($strQuery);
-		$main_lang = null;
-		while ($rows = pg_fetch_assoc($result)) {
-
-			$section_id	= $rows['section_id'];
-			$relations	= json_decode($rows['relations']);
-
-			$ar_main_lang_locator = array_filter($relations, function($current_locator) use($hierarchy_lang_tipo) {
-				if(SHOW_DEBUG===true) {
-					#if (!isset($current_locator->from_component_tipo)) {
-					#	throw new Exception("Error Processing Request", 1);
-					#}
-				}
-				return (isset($current_locator->from_component_tipo) && $current_locator->from_component_tipo === $hierarchy_lang_tipo);
-			});
-
-			// dato in db is json string representation of locators array
-			if (empty($ar_main_lang_locator)) {
-				if(SHOW_DEBUG) {
-					dump($ar_main_lang_locator, ' ar_main_lang_locator ++ '.$hierarchy_lang_tipo.' '.to_string($relations));
-					throw new Exception("Error Processing Request. ar_main_lang_locator dato is not json valid!", 1);
-				}
-			}
-			$main_lang_locator	= reset($ar_main_lang_locator);
-
-
-			if ((int)$ar_v[0]>=4 && (int)$ar_v[1]>=5) {
-				# New way >= 4.5.0
-				$main_lang = lang::get_code_from_locator($main_lang_locator, $add_prefix=true);
-					#dump($main_lang, ' main_lang ++ $section_tipo: '.$section_tipo.' - '.to_string($main_lang_locator));
-			}else{
-				# OLD WAY < v4.5
-				$main_lang = $main_lang_locator->section_tipo;
+		// Always fixed langs as english
+			if ($section_tipo==='lg1') {
+				return 'lg-eng';
 			}
 
+		// cache
+			static $cache_main_lang;
+			if(isset($cache_main_lang[$section_tipo])) {
+				return $cache_main_lang[$section_tipo];
+			}
+
+		// default value
+			$main_lang		= null;
+			$fallback_value	= 'lg-eng';
+
+		// short vars
+			$matrix_table			= 'matrix_hierarchy_main';
+			$hierarchy_section_tipo	= DEDALO_HIERARCHY_SECTION_TIPO;
+			$hierarchy_tld_tipo		= DEDALO_HIERARCHY_TLD2_TIPO;
+			$lang					= DEDALO_DATA_NOLAN;
+			$prefix_lower			= RecordObj_dd::get_prefix_from_tipo($section_tipo);
+			$prefix_upper			= strtoupper($prefix_lower); // data is stored always in uppercase
+
+		// SQL query
+			$strQuery  = '-- '.__METHOD__;
+			$strQuery .= "\nSELECT section_id, datos#>'{relations}' AS relations \nFROM $matrix_table WHERE";
+			$strQuery .= "\n section_tipo = '$hierarchy_section_tipo' AND";
+			$strQuery .= "\n (datos#>'{components,$hierarchy_tld_tipo,dato,$lang}' ? '$prefix_lower' "; // Now hierarchy tld is an array
+			$strQuery .= " OR datos#>'{components,$hierarchy_tld_tipo,dato,$lang}' ? '$prefix_upper') ";
+			$strQuery .= "\n LIMIT 1 ;";
+
+		// search
+			$result		= JSON_RecordObj_matrix::search_free($strQuery);
+			while ($row = pg_fetch_assoc($result)) {
+
+				$relations = json_handler::decode($row['relations']);
+
+				// resolve locator
+					$main_lang_locator = array_find( (array)$relations, function($el){
+						return (isset($el->from_component_tipo) && $el->from_component_tipo===DEDALO_HIERARCHY_LANG_TIPO);
+					});
+					if (empty($main_lang_locator)) {
+						debug_log(__METHOD__
+							. " Empty main_lang_locator. not found into section relations. Fallback will be applied ($fallback_value)" . PHP_EOL
+							.' section_tipo: ' . $section_tipo . PHP_EOL
+							.' relations: ' . to_string($relations)
+							, logger::ERROR
+						);
+					}else{
+						$main_lang = lang::get_code_from_locator(
+							$main_lang_locator,
+							true // bool add_prefix
+						);
+					}
+
+				// only first record is used (limit = 1)
+				break;
+			}//end while
+
+		// fallback empty value
 			if (empty($main_lang)) {
 				switch (true) {
 					case ($section_tipo==='es1'):
 						$main_lang = 'lg-spa';
 						break;
+					case ($section_tipo===DEDALO_HIERARCHY_SECTION_TIPO): // hierarchy1
+						$main_lang = DEDALO_DATA_LANG_DEFAULT;
+						break;
 					default:
-						$main_lang = 'lg-eng';
+						$main_lang = $fallback_value;
 						break;
 				}
 				debug_log(__METHOD__
-					." Error on get main lang for section $section_tipo. Fallback for safe to lang: $main_lang "
+					." Error on get main lang for section. Fallback applied for safe lang to: $main_lang " . PHP_EOL
+					.' section_tipo: ' . $section_tipo . PHP_EOL
+					.' main_lang: ' . $main_lang
 					, logger::ERROR
 				);
 			}
 
-			# store cache
-			$ar_main_lang[$section_tipo] = $main_lang;
-			break;
-		}//end while
+		// store cache
+			$cache_main_lang[$section_tipo] = $main_lang;
 
 
-		return (string)$main_lang;
+		return $main_lang;
 	}//end get_main_lang
 
 
