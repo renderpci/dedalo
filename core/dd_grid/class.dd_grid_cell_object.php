@@ -393,7 +393,10 @@ class dd_grid_cell_object {
 
 				$row_columns_values = [];
 				foreach ($row_values as $dd_grid_column) {
-					$row_columns_values[] = dd_grid_cell_object::resolve_value($dd_grid_column);
+					$current_value = dd_grid_cell_object::resolve_value($dd_grid_column);
+					if (!empty($current_value)) {
+						$row_columns_values[] = $current_value;
+					}
 				}
 				$rows[] = implode($fields_separator, $row_columns_values);
 			}
@@ -412,9 +415,25 @@ class dd_grid_cell_object {
 
 			$ar_column_value = [];
 			foreach ($ar_column_values as $key => $value) {
+
+				// not resolved string case
+					if(is_object($value)){
+						if (!empty($value->value)) {
+							$current_value = dd_grid_cell_object::resolve_value($value);
+							if (!empty($current_value)) {
+								$ar_column_value[] = $current_value;
+							}
+						}
+						continue;
+					}
+
 				$fallback = (isset($value))
 					? $value
 					: $dd_grid->fallback_value[$key];
+
+				if (empty($fallback)) {
+					continue;
+				}
 
 				$ar_column_value[] = is_string($fallback)
 					? $fallback
