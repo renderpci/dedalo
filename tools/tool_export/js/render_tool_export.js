@@ -242,7 +242,7 @@ const get_content_data_edit = async function(self) {
 				ui.create_dom_element({
 					element_type	: 'option',
 					inner_html		: 'Dédalo (Raw)',
-					value			: 'dedalo',
+					value			: 'dedalo_raw',
 					parent			: select_data_format_export
 				})
 
