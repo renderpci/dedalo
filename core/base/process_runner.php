@@ -56,7 +56,10 @@
 
 
 // log write notification
-	debug_log(__METHOD__." Process runner job is done in time: ".exec_time_unit($start_time,'ms')." ms", logger::ERROR);
+	debug_log(__METHOD__
+		." Process runner job is done in time: ".exec_time_unit($start_time,'ms')." ms"
+		, logger::ERROR
+	);
 
 // write result to file as text
 	echo json_encode($output_result);
