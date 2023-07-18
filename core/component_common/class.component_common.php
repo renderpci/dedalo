@@ -461,9 +461,11 @@ abstract class component_common extends common {
 			}
 
 		// pagination. Set defaults
-			$this->pagination = new stdClass();
-				$this->pagination->offset	= 0;
-				$this->pagination->limit	= null;
+			if (!isset($this->pagination)) {
+				$this->pagination = new stdClass();
+					$this->pagination->offset	= 0;
+					$this->pagination->limit	= null;
+			}
 
 			// DES
 				// $request_config = ( isset($properties->source->request_config) )
@@ -928,6 +930,9 @@ abstract class component_common extends common {
 					? $properties->records_separator
 					: ' | ');
 
+		// fallback value. Overwrite in translatable components like input_text or text_area
+			$fallback_value = $data ?? null;
+
 		// dd_grid_cell_object
 			$dd_grid_cell_object = new dd_grid_cell_object();
 				$dd_grid_cell_object->set_type('column');
@@ -940,6 +945,7 @@ abstract class component_common extends common {
 				$dd_grid_cell_object->set_fields_separator($fields_separator);
 				$dd_grid_cell_object->set_records_separator($records_separator);
 				$dd_grid_cell_object->set_value($data);
+				$dd_grid_cell_object->set_fallback_value($fallback_value);
 
 
 		return $dd_grid_cell_object;

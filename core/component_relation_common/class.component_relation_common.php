@@ -70,7 +70,10 @@ class component_relation_common extends component_common {
 					$lang = DEDALO_DATA_LANG;
 				}else{
 					if ($lang===DEDALO_DATA_NOLAN) {
-						debug_log(__METHOD__." Changed component wrong lang [TRANSLATABLE $section_tipo - $tipo] from $lang to ".DEDALO_DATA_LANG, logger::ERROR);
+						debug_log(__METHOD__
+							." Changed component wrong lang [TRANSLATABLE $section_tipo - $tipo] from $lang to ".DEDALO_DATA_LANG
+							, logger::ERROR
+						);
 						$lang = DEDALO_DATA_LANG;
 					}
 				}
@@ -1044,12 +1047,6 @@ class component_relation_common extends component_common {
 		bool $include_self=true
 		) : ?array {
 
-		// debug
-			if(SHOW_DEBUG===true) {
-				$start_time=start_time();
-				#dump($ar_components_related, ' ar_components_related ++ '.to_string());
-			}
-
 		// locator
 			if (empty($locator) || !is_object($locator)) {
 				return null;
@@ -1058,7 +1055,7 @@ class component_relation_common extends component_common {
 			$locator = new locator($locator);
 
 		$ar_value = [];
-		if($ar_components_related!==false && !empty($ar_components_related)){
+		if(!empty($ar_components_related)){
 
 			$value = array();
 			foreach ($ar_components_related as $component_tipo) {
@@ -1121,17 +1118,12 @@ class component_relation_common extends component_common {
 
 			}else{
 
-				// $locator_value = ts_object::get_term_by_locator( $locator, $lang, true );
-				$ar_value[] = ts_object::get_term_by_locator( $locator, $lang, true );
+				$locator_value = ts_object::get_term_by_locator( $locator, $lang, true );
+
+				$ar_value[] = $locator_value;
 
 			}//end if ($show_parents===true)
 		}
-
-		// debug
-			if(SHOW_DEBUG===true) {
-				$total = exec_time_unit($start_time,'ms')." ms";
-				#debug_log(__METHOD__." Total time $total ".to_string(), logger::DEBUG);
-			}
 
 
 		return $ar_value;
