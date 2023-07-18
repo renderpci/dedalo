@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * CLASS DD_OBJECT (ddo)
 * Defines object with normalized properties and checks

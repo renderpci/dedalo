@@ -1,5 +1,6 @@
 <?php
-/*
+declare(strict_types=1);
+/**
 * CLASS COMPONENT_INPUT_TEXT
 * Manage specific component input text logic
 * Common components properties and method are inherited of component_common class that are inherited from common class
@@ -10,12 +11,13 @@ class component_input_text extends component_common {
 
 	/**
 	* GET DATO
+	* @return array|null $dato
 	*/
-	public function get_dato() : array {
+	public function get_dato() : ?array {
 
 		$dato = parent::get_dato();
 
-		return (array)$dato;
+		return $dato;
 	}//end get_dato
 
 

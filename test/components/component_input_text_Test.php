@@ -51,8 +51,8 @@ final class component_input_text_test extends TestCase {
 		$value = $component->get_dato();
 
 		$this->assertTrue(
-			gettype($value)==='array',
-			'expected type array : ' . PHP_EOL
+			gettype($value)==='array' || gettype($value)==='NULL',
+			'expected type array or NULL : ' . PHP_EOL
 				. gettype($value)
 		);
 	}//end test_get_dato
@@ -198,8 +198,8 @@ final class component_input_text_test extends TestCase {
 		$value = $component->get_grid_value(null);
 
 		$this->assertTrue(
-			gettype($value->value)==='array',
-			'expected type array : ' . PHP_EOL
+			gettype($value->value)==='array' || gettype($value->value)==='NULL',
+			'expected type array or NULL : ' . PHP_EOL
 				. gettype($value->value)
 		);
 		$this->assertTrue(
