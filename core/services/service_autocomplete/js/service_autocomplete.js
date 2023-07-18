@@ -34,6 +34,7 @@ export const service_autocomplete = function() {
 	this.type			= null
 	this.caller			= null
 	this.search_cache	= {}
+	this.limit			= 30
 }//end service_autocomplete
 
 
@@ -161,6 +162,15 @@ service_autocomplete.prototype.build = async function(options={}) {
 				label		: 'Info',
 				callback	: render_column_component_info
 			})
+		}
+
+	// limit. Get from localStorage if exists
+		const service_autocomplete_limit = localStorage.getItem('service_autocomplete_limit')
+		if (service_autocomplete_limit) {
+			const limit = parseInt(service_autocomplete_limit)
+			if (limit>0) {
+				self.limit = limit
+			}
 		}
 
 	// status update
@@ -400,6 +410,9 @@ service_autocomplete.prototype.rebuild_search_query_object = async function(opti
 
 	// allow_sub_select_by_id set to false to allow select deep fields
 		sqo.allow_sub_select_by_id = true
+
+	// limit
+		sqo.limit = self.limit
 
 
 	return rqo_search
@@ -759,6 +772,20 @@ service_autocomplete.prototype.zenon_engine = async function(options) {
 
 		})//end Promise
 }//end zenon_engine
+
+
+
+/**
+* GET_TOTAL
+* Only for paginator compatibility
+* @return int total
+*/
+service_autocomplete.prototype.get_total = function() {
+
+	const total = self.limit
+
+	return total
+}//end get_total
 
 
 
