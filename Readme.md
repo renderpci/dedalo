@@ -146,7 +146,7 @@ Dédalo have three main updates procedures:
 	-  Do the first update step
 	-  Log-in with any "developer" user.
 	-  You will see the menu in "orange" or "red" (in red, if you have the debugger active) and a "grey" sub-menu with a "tool administrator" (or in translation version of the app language) button, press it to go to the "admin utils" page.
-	-  Press the "import structure" button, if all go well you will see a "green" alert.
+	-  Press the "import ontology" button, if all go well you will see a "green" alert.
 	-  Log-out and log-in with a normal admin user.
 
 3. Update the data in your instalation
