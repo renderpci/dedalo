@@ -97,20 +97,43 @@
 				padding: 0.5em;
 			}
 
+			// search_operators_div
 			>div.search_operators_div {
 				background-color: @color_grey_light;
 				padding: 0.25em;
 				padding-left: 0.5em;
 				display: flex;
+				justify-content: space-between;
 
-				>* {
-					height: 1.5em;
-					line-height: 1.5em;
-					padding-right: 0.5em;
-					width: auto;
+				// select_container
+				.select_container {
+					>* {
+						height: 1.5em;
+						line-height: 1.5em;
+						padding-right: 0.5em;
+						width: auto;
+					}
 				}
-			}
-		}
+
+				// max_container
+				.max_container {
+					>* {
+						height: 1.5em;
+						line-height: 1.5em;
+						padding-right: 0.5em;
+					}
+
+					.label_max {
+						margin-left: 1rem;
+					}
+					.input_max {
+						width: 4.5rem;
+					}
+				}
+			}//end search_operators_div
+
+
+		}//end >.options_hidden
 
 		// button to hide/show search options box
 		>.button_options {

@@ -13,7 +13,6 @@
 
 
 
-
 /**
 * VIEW_DEFAULT_AUTOCOMPLETE
 * Manages the service's logic and appearance in client side
@@ -382,7 +381,7 @@ const render_search_input = function(self) {
 				// get final value (input events are fired one by one)
 			    	const ms = self.search_cache[q]
 			    		? 1
-			    		: 350
+			    		: 320
 					timeout = setTimeout(async()=>{
 
 						// api_response. Get from cache if exists
@@ -681,7 +680,7 @@ const render_option_chekbox = function(self, datalist_item) {
 
 				// force re-search with new options
 					const api_response	= await self.autocomplete_search()
-					render_datalist(self, api_response)
+					render_datalist(self, api_response.result)
 
 				// des
 					// if (self.search_fired===false) {
@@ -770,7 +769,7 @@ const render_inputs_list = function(self) {
 			component_input.addEventListener('change',async function () {
 				filter_item.q = component_input.value
 				const api_response	= await self.autocomplete_search()
-				render_datalist(self, api_response)
+				render_datalist(self, api_response.result)
 			})
 
 			// add node
@@ -800,24 +799,32 @@ const render_operator_selector = function(self) {
 			class_name		: 'search_operators_div'
 		})
 
+	// select_container
+		const select_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'select_container',
+			parent			: operator_selector
+		})
 	// label
 		ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: 'css_label label',
 			inner_html		: get_label.search_operators || 'Search operators',
-			parent			: operator_selector,
+			parent			: select_container
 		})
+	// select
 		const select = ui.create_dom_element({
 			element_type	: 'select',
 			class_name		: 'operator_selector',
-			parent			: operator_selector
+			parent			: select_container
 		})
-		select.addEventListener('change',async function(e){
+		select.addEventListener('change', async function(e){
 			// set the new operator selected
 			self.operator	= e.target.value
 
+			// launch search again
 			const api_response	= await self.autocomplete_search()
-			await render_datalist(self, api_response)
+			await render_datalist(self, api_response.result)
 		})
 		const option_or = ui.create_dom_element({
 			element_type	: 'option',
@@ -836,6 +843,58 @@ const render_operator_selector = function(self) {
 		}else{
 			option_and.setAttribute('selected', true)
 		}
+
+	// max_container
+		const max_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'max_container',
+			parent			: operator_selector
+		})
+	// label
+		ui.create_dom_element({
+			element_type	: 'label',
+			class_name		: 'css_label label_max',
+			inner_html		: get_label.max || 'Max.',
+			parent			: max_container
+		})
+	// input
+		const input_max = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'number',
+			class_name		: 'input_max',
+			value			: self.limit,
+			parent			: max_container
+		})
+		input_max.addEventListener('change', fn_change)
+		async function fn_change(e) {
+
+			const value = parseInt( e.target.value )
+			if (value<1) {
+				return
+			}
+
+			// update self limit
+			self.limit = value
+
+			// launch search again
+			const api_response	= await self.autocomplete_search()
+			await render_datalist(self, api_response.result)
+
+			// update localStorage limit value
+			localStorage.setItem('service_autocomplete_limit', self.limit )
+		}
+		input_max.addEventListener('keyup', fn_keyup)
+		async function fn_keyup(e) {
+			e.preventDefault()
+
+			if (e.key==='Enter') {
+				// Create the event
+				const change_event = new CustomEvent("change", {});
+				// Dispatch/Trigger/Fire the event
+				input_max.dispatchEvent(change_event);
+			}
+		}
+
 
 	return operator_selector
 }//end render_operator_selector
@@ -860,10 +919,13 @@ const render_datalist = async function(self, result) {
 			datalist.removeChild(datalist.firstChild)
 		}
 
-	// get the result from the API response
-		// const result = api_response.result
+	// total
+		const sections_data	= result.data.find(el => el.typo==='sections')
+		const total			= sections_data
+			? sections_data.value.length
+			: 0
 
-	// added result as datum because will be necessary to render ddinfo column
+	// datum. Added result as datum because will be necessary to render ddinfo column
 	// ddinfo will get data from autocomplete service instead the section_record
 	// ddinfo column is dependent of the caller (component_portal or in these case service autocomplete)
 		self.datum = result
@@ -880,13 +942,13 @@ const render_datalist = async function(self, result) {
 	// get the sections that was searched
 		// const ar_search_sections = self.ar_search_section_tipo
 
-	// get dd objects from the context that will be used to build the lists in correct order
-	const rqo_search =  await self.rqo_search
+	// rqo_search. Get dd objects from the context that will be used to build the lists in correct order
+		const rqo_search = await self.rqo_search
 
-	// get the fields_separator between columns
-	const fields_separator = (rqo_search.show.fields_separator)
-		? rqo_search.show.fields_separator
-		: ' | '
+	// fields_separator. Get the fields_separator between columns
+		const fields_separator = (rqo_search.show.fields_separator)
+			? rqo_search.show.fields_separator
+			: ' | '
 
 	// get the ar_locator founded in sections
 		// const data_locator	= data.find((item)=> item.tipo === rqo_search.source.tipo && item.typo === 'sections');
@@ -924,92 +986,35 @@ const render_datalist = async function(self, result) {
 				const locator = current_section_record.locator
 
 			// id_variant add to force unique components before render
-				current_section_record.id_variant = locator.section_tipo + '_' + locator.section_id
+				// current_section_record.id_variant = locator.section_tipo + '_' + locator.section_id
 
 			// get data that mach with the current section from the global data sent by the API
 			// get the full row with all items in the ddo that mach with the section_id
 			// const current_row = data.filter((item)=> item.section_tipo===section_tipo && item.section_id===section_id )
+				// const section_record_node = await current_section_record.render()
 
-			const section_record_node = await current_section_record.render()
-			// create the li node container
-			const li_node = ui.create_dom_element({
-				element_type	: 'li',
-				class_name		: 'autocomplete_data_li',
-				class_name		: 'autocomplete_data_li',
-				title			: ' [' + locator.section_tipo + '-' + locator.section_id + ']',
-				parent			: datalist
-			})
-			li_node.locator = locator
+			// li_node container
+				const li_node = ui.create_dom_element({
+					element_type	: 'li',
+					class_name		: 'autocomplete_data_li',
+					class_name		: 'autocomplete_data_li',
+					title			: ' [' + locator.section_tipo + '-' + locator.section_id + ']',
+					parent			: datalist
+				})
+				li_node.locator = locator
+				// click event. When the user do click in one row send the data to the caller_instance for save it.
+				li_node.addEventListener('click', click_handler)
+				// mouseenter event
+				li_node.addEventListener('mouseenter', mouseenter_handler)
+				// mouseleave event
+				li_node.addEventListener('mouseleave', mouseleave_handler);
 
-			li_node.appendChild(section_record_node)
-
-			// click event. When the user do click in one row send the data to the caller_instance for save it.
-			li_node.addEventListener('click', async function(e) {
-				e.stopPropagation()
-
-				// value
-					const value = this.locator
-
-				// events
-					const events = self.properties.events || null
-					if(events){
-
-						// custom events manager from properties
-
-						const add_value = events.find(el => el.event === 'add_value')
-						// caller is refreshed after add value
-						if(add_value){
-							if(typeof view_default_autocomplete[add_value.perform.function] === 'function'){
-
-								const params	= add_value.perform.params
-								const grid_node	= await view_default_autocomplete[add_value.perform.function](self, current_section_record , params)
-								if(!self.node.grid_choose_container){
-									self.node.grid_choose_container = grid_node
-									document.body.appendChild(self.node.grid_choose_container)
-								}
-
-								// clean the last list
-									while (datalist.firstChild) {
-										datalist.removeChild(datalist.firstChild)
-									}
-
-								// hide service
-									self.hide()
-
-							}else{
-								console.warn('Function sent is not defined to be exec by service autocomplete:', self.add_value);
-							}
-							return
-						}
-					}else{
-
-						// default click action
-
-						await self.caller.add_value(value)
-
-						// clean the last list
-							while (datalist.firstChild) {
-								datalist.removeChild(datalist.firstChild)
-							}
-
-						// hide service
-							self.hide()
-					}
-			});
-			// mouseenter event
-			li_node.addEventListener('mouseenter', async function(e){
-				// reset
-					const children = e.target.parentNode.children;
-					await [...children].map((el)=>{
-						if(el.classList.contains('selected')) el.classList.remove('selected')
-					})
-				// set as selected
-				e.target.classList.add('selected')
-			});
-			// mouseleave event
-			li_node.addEventListener('mouseleave', function(e){
-				e.target.classList.remove('selected')
-			});
+			// render and add section_record_node
+				// li_node.appendChild(section_record_node)
+				current_section_record.render()
+				.then(function(section_record_node){
+					li_node.appendChild(section_record_node)
+				})
 
 			// DES
 				// const instance_options = {
@@ -1123,6 +1128,76 @@ const render_datalist = async function(self, result) {
 				// 	});
 				// }
 		}// end for of current_section (section_tipo)
+
+	// mouseenter_handler
+		async function mouseenter_handler(e){
+			// reset
+				const children = e.target.parentNode.children;
+				await [...children].map((el)=>{
+					if(el.classList.contains('selected')) el.classList.remove('selected')
+				})
+			// set as selected
+				e.target.classList.add('selected')
+		}//end mouseenter_handler
+
+	// mouseleave_handler
+		async function mouseleave_handler(e){
+			e.target.classList.remove('selected')
+		}//end mouseleave_handler
+
+	// click_handler
+		async function click_handler(e) {
+			e.stopPropagation()
+
+			// value
+				const value = this.locator
+
+			// events
+				const events = self.properties.events || null
+				if(events){
+
+					// custom events manager from properties
+
+					const add_value = events.find(el => el.event === 'add_value')
+					// caller is refreshed after add value
+					if(add_value){
+						if(typeof view_default_autocomplete[add_value.perform.function] === 'function'){
+
+							const params	= add_value.perform.params
+							const grid_node	= await view_default_autocomplete[add_value.perform.function](self, current_section_record , params)
+							if(!self.node.grid_choose_container){
+								self.node.grid_choose_container = grid_node
+								document.body.appendChild(self.node.grid_choose_container)
+							}
+
+							// clean the last list
+								while (datalist.firstChild) {
+									datalist.removeChild(datalist.firstChild)
+								}
+
+							// hide service
+								self.hide()
+
+						}else{
+							console.warn('Function sent is not defined to be exec by service autocomplete:', self.add_value);
+						}
+						return
+					}
+				}else{
+
+					// default click action
+
+					await self.caller.add_value(value)
+
+					// clean the last list
+						while (datalist.firstChild) {
+							datalist.removeChild(datalist.firstChild)
+						}
+
+					// hide service
+						self.hide()
+				}
+		}//end click_handler
 
 
 	return datalist
