@@ -148,17 +148,17 @@ Dédalo has three main updates procedures:
 2. Update the ontology structure with the sections, components, list, etc.
     - Do the first update step
     - Log-in with any "developer" user.
-    - You will see the menu in "orange" or "red" (in red, if you have the debugger active) and a "grey" sub-menu with a "tool administrator" (or in translation version of the app language) button, press it to go to the "admin utils" page.
-    - Press the "import structure" button, if all go well you will see a "green" alert.
+    - You will see an indication, an "orange" or "red" box, to the left of menu (red box, if you have the debugger active) a "grey" sub-menu with your server configuration, and a new "Development" menu, press it to go to the "admin utils" page.
+    - Locate the "Update Ontology" panel and press the "Update Dédalo ontology to the latest version" button, if all go well you will see a "green" alert.
     - Log-out and log-in with a normal admin user.
 
 3. Update the data in your installation
     - Do the first and second update steps
     - Log-in with any "developer" user.
-    - You will see the menu in "orange" or "red" (in red, if you have the debugger active) and a "grey" sub-menu with a "tool administrator" (or in translation version of the app language) button, press it to go to the "admin utils" page.
-    - If your data version is different that the "code files" version, Dédalo will show that you need update, press the «update» link and wait for notifications.
+    - You will see an indication, an "orange" or "red" box, to the left of menu (red box, if you have the debugger active) a "grey" sub-menu with your server configuration, and a new "Development" menu, press it to go to the "admin utils" page.
+    - Locate the "Update Data" panel. If your data version is different that the "code files" version, Dédalo will show that you need update, press the «update» link and wait for notifications.
     - If all go well you will see a report with the changes.
-    - Reload the page 'Administration Tools'. Sometimes, if the update differs in several versions, you will need to update the data to each of the intermediate versions (v4.0.9 pass from v4.0.9 to -> v4.0.10, v4.0.10 to -> v4.0.11, etc) when the data and "code files" are in the same version, Dédalo will show that is consistent and stop the upgrade process.
+    - Reload the page 'Administration Tools'. Sometimes, if the update differs in several versions, you will need to update the data to each of the intermediate versions (v6.0.9 pass from v6.0.9 to -> v6.0.10, v6.0.10 to -> v6.0.11, etc) when the data and "code files" are in the same version, Dédalo will show that is consistent and stop the upgrade process.
     - Log-out and log-in with normal admin user.
     - Optional: in the inventory pages (OH, PCI, etc) press the "Update Cache" into the list of the sections for update some changes into the components (this task force to update all components with the new model no 1 to 1), and will apply the changes to the data into the databases.
 
