@@ -119,7 +119,10 @@ class component_image extends component_media_common {
 
 				if (empty($this->section_id)) {
 					debug_log(__METHOD__
-						." Error. Invalid instance with empty section_id "
+						." Error. Invalid instance with empty section_id " .PHP_EOL
+						.' tipo: ' . $this->tipo .PHP_EOL
+						.' section_tipo: ' . $this->section_tipo .PHP_EOL
+						.' model: ' . $this->model .PHP_EOL
 						, logger::WARNING
 					);
 					$id = null;
@@ -342,7 +345,12 @@ class component_image extends component_media_common {
 			// if ($target_quality===DEDALO_IMAGE_QUALITY_ORIGINAL || $target_quality===DEDALO_IMAGE_THUMB_DEFAULT) {
 			$original_quality = $this->get_original_quality();
 			if ($target_quality===$original_quality) {
-				debug_log(__METHOD__." Ignored wrong target quality: ".to_string($target_quality), logger::ERROR);
+				debug_log(__METHOD__
+					." Ignored wrong target quality [convert_quality]" .PHP_EOL
+					.' source_quality: ' . to_string($source_quality) .PHP_EOL
+					.' target_quality: ' . to_string($target_quality)
+					, logger::ERROR
+				);
 				return false;
 			}
 
@@ -394,7 +402,8 @@ class component_image extends component_media_common {
 				if(!mkdir($target_dir, 0775, true)) {
 					// throw new Exception(" Error on read or create directory \"$target_quality\". Permission denied $target_dir (2)");
 					debug_log(__METHOD__
-						. " Error on read or create directory \"$target_quality\". Permission denied $target_dir (2) " . PHP_EOL
+						. " Error on read or create directory \"$target_quality\". Permission denied (2) " . PHP_EOL
+						. ' target_quality: ' . $target_quality . PHP_EOL
 						. ' target_dir: ' . $target_dir
 						, logger::ERROR
 					);
@@ -814,10 +823,12 @@ class component_image extends component_media_common {
 						return false;
 					}
 
-				debug_log(__METHOD__
-					." >>> Moved file \n$media_path to \n$media_path_moved "
-					, logger::DEBUG
-				);
+					debug_log(__METHOD__
+						." >>> Moved file $media_path to $media_path_moved " . PHP_EOL
+						.' media_path: ' . $media_path . PHP_EOL
+						.' media_path_moved: ' . $media_path_moved
+						, logger::DEBUG
+					);
 
 				// Move original files too (PNG,TIF,Etc.)
 				// NOTE : 'original files' are NOT 'original quality'. Are uploaded files with extension different to DEDALO_IMAGE_EXTENSION
@@ -958,8 +969,7 @@ class component_image extends component_media_common {
 		// no files found case
 			if (empty($ar_files)) {
 				debug_log(__METHOD__
-					." No files were found for id:$id in quality:$quality"
-					.to_string()
+					." No files were found for id: $id in quality: $quality"
 					, logger::DEBUG
 				);
 				return null;
@@ -1123,8 +1133,14 @@ class component_image extends component_media_common {
 						$thumb = $this->generate_thumb();
 
 					// debug
-						debug_log(__METHOD__." SAVING COMPONENT IMAGE: generate_default_quality_file response: ".to_string($default), logger::DEBUG);
-						debug_log(__METHOD__." SAVING COMPONENT IMAGE: generate_thumb response: ".to_string($thumb), logger::DEBUG);
+						debug_log(__METHOD__
+							." SAVING COMPONENT IMAGE: generate_default_quality_file response: ".to_string($default)
+							, logger::DEBUG
+						);
+						debug_log(__METHOD__
+							." SAVING COMPONENT IMAGE: generate_thumb response: ".to_string($thumb)
+							, logger::DEBUG
+						);
 				}
 
 			// generate the SVG file. Only when original, retouched or default quality files change
@@ -1255,8 +1271,9 @@ class component_image extends component_media_common {
 		// default quality check file
 			$file_path = $this->get_media_filepath($source_quality);
 			if (!file_exists($file_path)) {
-				debug_log(
-					__METHOD__." Unable to create create_default_svg_string_node. Default quality file does not exists: ". PHP_EOL . $file_path,
+				debug_log(__METHOD__
+					." Unable to create create_default_svg_string_node. Default quality file does not exists: ". PHP_EOL
+					.' file_path: ' . $file_path,
 					logger::ERROR
 				);
 				return null;
@@ -1321,8 +1338,9 @@ class component_image extends component_media_common {
 		// check target folder is accessible (EXISTS AND PERMISSIONS)
 			if( !is_dir($media_path) ) {
 				if( !mkdir($media_path, 0775,  true) ) {
-					debug_log(
-						__METHOD__." Failed to create directory for default SVG file in media_path: " .$media_path
+					debug_log(__METHOD__
+						." Failed to create directory for default SVG file in media_path: " . PHP_EOL
+						.' media_path: ' . $media_path
 						, logger::ERROR
 					);
 					return false;
@@ -1331,8 +1349,9 @@ class component_image extends component_media_common {
 
 		// write string_node to disk file
 			if( !file_put_contents($file_path, $svg_string_node) ) {
-				debug_log(
-					__METHOD__." Failed to create file for default SVG file: " .$file_path
+				debug_log(__METHOD__
+					." Failed to create file for default SVG file: " . PHP_EOL
+					.' file_path: ' . $file_path
 					, logger::ERROR
 				);
 				return false;
@@ -1340,7 +1359,7 @@ class component_image extends component_media_common {
 
 		// debug
 			debug_log(__METHOD__
-				." Created svg file ".to_string($file_path)
+				." Created svg file file_path: ".to_string($file_path)
 				, logger::DEBUG
 			);
 
@@ -1526,7 +1545,11 @@ class component_image extends component_media_common {
 							if (!empty($svg_string_node)) {
 								$create_svg_file_result	= $component->create_svg_file($svg_string_node);
 								if ($create_svg_file_result===false) {
-									debug_log(__METHOD__." Error creating svg file form svg_string_node ".PHP_EOL. to_string($svg_string_node), logger::ERROR);
+									debug_log(__METHOD__
+										." Error creating svg file form svg_string_node ".PHP_EOL
+										.' svg_string_node: ' . json_encode($svg_string_node, JSON_PRETTY_PRINT)
+										, logger::ERROR
+									);
 								}
 							}
 						}
@@ -1607,7 +1630,11 @@ class component_image extends component_media_common {
 
 					// fix final dato with new format as array
 						$new_dato = [$dato_item];
-						debug_log(__METHOD__." update_version new_dato ".to_string($new_dato), logger::DEBUG);
+						debug_log(__METHOD__
+							." update_version new_dato ". PHP_EOL
+							.' new_dato: ' . json_encode($new_dato, JSON_PRETTY_PRINT)
+							, logger::DEBUG
+						);
 
 					$response = new stdClass();
 						$response->result	= 1;
@@ -1856,8 +1883,8 @@ class component_image extends component_media_common {
 				if(empty($width) || empty($height)) {
 					debug_log(__METHOD__
 						." Error. get_image_dimensions error 1 ". PHP_EOL
-						. 'filename: ' .$file_path . PHP_EOL
-						. ' exif: ' . to_string($exif)
+						.' filename: ' . $file_path . PHP_EOL
+						.' exif: ' . to_string($exif)
 						, logger::ERROR
 					);
 					return $image_dimensions;
@@ -1870,8 +1897,8 @@ class component_image extends component_media_common {
 		} catch (Exception $e) {
 			debug_log(__METHOD__
 				." Error. get_image_dimensions error 2 " . PHP_EOL
-				. 'filename: ' .$file_path .PHP_EOL
-				. 'Caught exception: '.  $e->getMessage()
+				.' filename: ' . $file_path .PHP_EOL
+				.' Caught exception: '.  $e->getMessage()
 				, logger::ERROR
 			);
 		}
@@ -1890,7 +1917,13 @@ class component_image extends component_media_common {
 
 		// check valid pixels
 			if((int)$source_pixels_width===0 || (int)$source_pixels_height===0) {
-				debug_log(__METHOD__." Invalid pixes received. source_pixels_width: '$source_pixels_width' , source_pixels_height: '$source_pixels_height' , target_quality: '$target_quality'  ".to_string(), logger::ERROR);
+				debug_log(__METHOD__
+					." Invalid pixels received." .PHP_EOL
+					.' source_pixels_width: ' . to_string($source_pixels_width) .PHP_EOL
+					.' source_pixels_height: ' . to_string($source_pixels_height) .PHP_EOL
+					.' target_quality: ' . to_string($target_quality) .PHP_EOL
+					, logger::ERROR
+				);
 				return null;
 			}
 
