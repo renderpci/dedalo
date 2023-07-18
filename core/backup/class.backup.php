@@ -172,7 +172,7 @@ abstract class backup {
 							." Building delayed backup file ($mysqlExportPath)" . PHP_EOL
 							.' Command: '.$command .PHP_EOL
 							.' PID: '.$PID
-							, logger::DEBUG
+							, logger::WARNING
 						);
 				}
 			}//end if($skip_backup_time_range===true)
