@@ -261,6 +261,40 @@ class component_text_area extends component_common {
 					break;
 			}
 
+		// fallback_value
+			if (empty($data)) {
+
+				$data = component_common::extract_component_dato_fallback(
+					$this, // component instance this
+					$this->get_lang(), // string lang
+					DEDALO_DATA_LANG_DEFAULT // string main_lang
+				);
+
+				switch ($this->mode) {
+					case 'indexation_list':
+						// process data to build the indexation custom columns
+						$procesed_fallback_value	= include 'component_text_area_value.php';
+						$cell_type					= null;
+						break;
+
+					default:
+						$procesed_fallback_value = [];
+						if (!empty($data)) {
+							foreach ($data as $current_value) {
+								// $current_value = trim($current_value);
+								if (!$this->is_empty($current_value)) {
+									$procesed_fallback_value[] = TR::add_tag_img_on_the_fly($current_value);
+								}
+							}
+						}
+						$cell_type = 'text'; // default
+						break;
+				}
+			}else{
+				$procesed_fallback_value = []; // unnecessary to calculate
+			}
+
+
 		// label
 			$label = $this->get_label();
 
@@ -285,6 +319,7 @@ class component_text_area extends component_common {
 				}
 				$value->set_records_separator($records_separator);
 				$value->set_value($procesed_data);
+				$value->set_fallback_value($procesed_fallback_value);
 
 
 		return $value;

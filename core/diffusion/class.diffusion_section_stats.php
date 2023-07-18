@@ -647,7 +647,7 @@ class diffusion_section_stats extends diffusion {
 			$search_result	= $search->search();
 			$ar_records		= $search_result->ar_records;
 			if (empty($ar_records)) {
-				return false;
+				return null;
 			}
 
 		// add selectors

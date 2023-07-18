@@ -692,39 +692,23 @@ class ts_object {
 					);
 					$current_value = $component->get_value();
 
+					if (empty($current_value)) {
+						$main_lang = hierarchy::get_main_lang( $locator->section_tipo );
+						$dato_full = $component->get_dato_full();
+						// get_value_with_fallback_from_dato_full( $dato_full_json, $decore_untranslated=false, $main_lang=DEDALO_DATA_LANG_DEFAULT)
+						$current_value = component_common::get_value_with_fallback_from_dato_full(
+							$dato_full,
+							true,
+							$main_lang
+						);
+					}
+
 					if (!empty($current_value)) {
 						$ar_valor[] = $current_value;
 					}
 				}
 				$valor = implode(', ', $ar_valor);
-
-				if (empty($valor)) {
-
-					$main_lang = hierarchy::get_main_lang( $locator->section_tipo );
-					#	#dump($main_lang, ' main_lang ++ '.to_string($locator->section_tipo));
-					#if($lang!==$main_lang) {
-					#	$component->set_lang($main_lang);
-					#	$valor = $component->get_valor($main_lang);
-					#	if (strlen($valor)>0) {
-					#		$valor = component_common::decore_untranslated( $valor );
-					#	}
-					#
-					#	# return component to previous lang
-					#	$component->set_lang($lang);
-					#}
-					#
-					#if (empty($valor)) {
-						$dato_full = $component->get_dato_full();
-						# get_value_with_fallback_from_dato_full( $dato_full_json, $decore_untranslated=false, $main_lang=DEDALO_DATA_LANG_DEFAULT)
-						$valor = component_common::get_value_with_fallback_from_dato_full($dato_full, true, $main_lang);
-						if (is_array($valor)) {
-							$valor = implode(', ', $valor);
-						}
-						#dump($valor, ' valor ++ '.to_string());
-					#}
-				}
 			}
-			#dump($valor, ' valor ++ '.to_string($locator->section_tipo."-".$locator->section_id));
 
 		/*
 			# En proceso. De momento devuelve el locator en formato json, sin resolver..
