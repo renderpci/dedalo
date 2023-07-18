@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS TS_OBJECT
 * Manage thesaurus hierarchical elements. Every element is a section used as thesaurus term
 *
@@ -34,7 +34,7 @@ class ts_object {
 	* @param string $mode
 	*	Default 'edit'
 	*/
-	public function __construct( int $section_id, string $section_tipo, object $options=null, string $mode='edit' ) {
+	public function __construct( int|string $section_id, string $section_tipo, object $options=null, string $mode='edit' ) {
 
 		$this->section_id   = $section_id;
 		$this->section_tipo = $section_tipo;
@@ -462,7 +462,7 @@ class ts_object {
 	* @param int $section_id
 	* @return bool
 	*/
-	public static function is_indexable( string $section_tipo, int $section_id ) : bool {
+	public static function is_indexable( string $section_tipo, int|string $section_id ) : bool {
 
 		if (strpos($section_tipo, 'hierarchy')===0) {
 			// Root hierarchies are always false

@@ -1,14 +1,10 @@
 <?php
-/*
+/**
 * CLASS SEARCH
 *
-
-Portal use:
-
-GROUP BY md1015.id
-HAVING count(*) > 1
-
-*
+* Portal use:
+* 	GROUP BY md1015.id
+* 	HAVING count(*) > 1
 */
 class search {
 
@@ -2791,7 +2787,7 @@ class search {
 				$response->msg		= array('Error. Request failed '.__METHOD__);
 
 		// section temp case
-			if (!empty($section_id) && strpos($section_id, DEDALO_SECTION_ID_TEMP)!==false) {
+			if (!empty($section_id) && strpos((string)$section_id, DEDALO_SECTION_ID_TEMP)!==false) {
 				$response->result	= true;
 				$response->msg		= 'OK. Request skipped for temp section: '.DEDALO_SECTION_ID_TEMP.' - '.__METHOD__;
 				return $response;

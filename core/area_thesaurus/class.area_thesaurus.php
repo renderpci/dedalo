@@ -218,9 +218,10 @@ class area_thesaurus extends area_common {
 
 	/**
 	* GET_TYPOLOGY_DATA
+	* @param int|string int|string $section_id
 	* @return object|null $locator
 	*/
-	public function get_typology_data( int $section_id ) : ?object {
+	public function get_typology_data( int|string $section_id ) : ?object {
 
 		$tipo			= DEDALO_HIERARCHY_TYPOLOGY_TIPO; // 'hierarchy9' component_select
 		$section_tipo	= DEDALO_HIERARCHY_SECTION_TIPO; // hierarchy1
