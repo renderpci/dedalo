@@ -1,5 +1,5 @@
 <?php
-declare(strict_types=1);
+// declare(strict_types=1);
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\TestDox;
 
@@ -46,6 +46,15 @@ final class dd_api_Test extends TestCase {
 		]);
 
 		$API_response = json_decode($response->result);
+		if (!is_object($API_response)) {
+			dump($API_response, ' API_response ++ '.to_string($rqo));
+			debug_log(__METHOD__
+				. " Invalid object received from API " . PHP_EOL
+				. ' rqo: ' . to_string($rqo) .PHP_EOL
+				. ' response: ' . to_string($response) .PHP_EOL
+				, logger::DEBUG
+			);
+		}
 
 		return $API_response;
 	}//end api_request

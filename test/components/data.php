@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 
 
 function random_string($length = 128) {
@@ -324,7 +326,7 @@ function random_3d_data() {
 
 function random_av_data() {
 
-	$file_name = substr(str_shuffle(str_repeat($x='0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', ceil(128/strlen($x)) )),1,128) . '_' . rand(0, 99);
+	$file_name = substr(str_shuffle(str_repeat($x='0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', (int)ceil(128/strlen($x)) )),1,128) . '_' . rand(0, 99);
 
 	$value = (object)[
 		"lib_data" => null,
