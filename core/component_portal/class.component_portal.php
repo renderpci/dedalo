@@ -1,5 +1,6 @@
 <?php
-/*
+declare(strict_types=1);
+/**
 * CLASS COMPONENT_PORTAL
 * former component_autocomplete
 *
@@ -168,7 +169,7 @@ class component_portal extends component_relation_common {
 		// 1 PROJECTS GET
 			// We get current portal filter data (projects) to heritage in the new portal record
 			$section_id				= $this->get_section_id();
-			$component_filter_dato	= (strpos($section_id, DEDALO_SECTION_ID_TEMP)!==false)
+			$component_filter_dato	= (strpos((string)$section_id, DEDALO_SECTION_ID_TEMP)!==false)
 				? null
 				: $this->get_current_section_filter_data();
 			if(empty($component_filter_dato)) {

@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * COMPONENT_COMMON
 * Common methods of all components
@@ -203,7 +204,7 @@ abstract class component_common extends common {
 								, logger::ERROR
 							);
 						}
-						if ( abs(intval($section_id))<1 && strpos($section_id, DEDALO_SECTION_ID_TEMP)===false ) {
+						if ( abs(intval($section_id))<1 && strpos((string)$section_id, DEDALO_SECTION_ID_TEMP)===false ) {
 							dump($section_id," section_id - DEDALO_SECTION_ID_TEMP:" . DEDALO_SECTION_ID_TEMP);
 							debug_log(__METHOD__
 								." Error: DEDALO_SECTION_ID_TEMP. Trying to use wrong var: section_id: '$section_id' to load as component " . PHP_EOL
@@ -3525,7 +3526,7 @@ abstract class component_common extends common {
 	* GET_COMPONENT_TM_DATO
 	* @return array|null $tm_dato
 	*/
-	public static function get_component_tm_dato(string $tipo, string $section_tipo, int $matrix_id) : ?array {
+	public static function get_component_tm_dato(string $tipo, string $section_tipo, int|string $matrix_id) : ?array {
 
 		// search query object
 			$sqo = json_decode('{

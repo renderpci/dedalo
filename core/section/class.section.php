@@ -1,7 +1,7 @@
 <?php
+declare(strict_types=1);
 /**
 * CLASS SECTION
-*
 *
 */
 class section extends common {
@@ -218,7 +218,7 @@ class section extends common {
 
 		// active_section_section_id : Set global var
 			if(		$mode==='edit'
-				&&	(isset($this->section_id) && ($this->section_id>0 || strpos($this->section_id, DEDALO_SECTION_ID_TEMP)!==false))
+				&&	(isset($this->section_id) && ($this->section_id>0 || strpos((string)$this->section_id, DEDALO_SECTION_ID_TEMP)!==false))
 				&&	!isset(section::$active_section_id) ) {
 
 					// fix active_section_id
@@ -318,7 +318,7 @@ class section extends common {
 		// save_handler session case
 			// If section_id have a temporal string, the save handier will be 'session'
 			// the section will be saved in memory, NOT in the database and you will get the data from there
-			if( strpos($this->section_id, DEDALO_SECTION_ID_TEMP)!==false ){
+			if( strpos((string)$this->section_id, DEDALO_SECTION_ID_TEMP)!==false ){
 				$this->save_handler = 'session';
 			}
 			// Sometimes we need use section as temporal element without save real data to database. Is this case
@@ -1346,7 +1346,7 @@ class section extends common {
 						throw new Exception("Error Processing Request. id_time_machine is empty", 1);
 					}
 					# Update time machine record
-					$RecordObj_time_machine = new RecordObj_time_machine($id_time_machine);
+					$RecordObj_time_machine = new RecordObj_time_machine( (string)$id_time_machine );
 						$RecordObj_time_machine->set_dato($this->get_dato());	// Update dato with the last data stored in this section before is deleted
 						$RecordObj_time_machine->set_state('deleted');			// Mark state as 'deleted' for fast recovery
 					$tm_save = (int)$RecordObj_time_machine->Save();			// Expected int id_time_machine returned if all is ok
@@ -1371,7 +1371,8 @@ class section extends common {
 						// $dato_section_compare		= json_decode( json_encode($dato_section) );
 
 					// check time machine dato
-						if ($dato_time_machine != $dato_section) {
+						$is_equal = $dato_time_machine == $dato_section;
+						if ($is_equal===false) {
 							debug_log(__METHOD__
 								." ERROR: The data_time_machine and data_section were expected to be different. (time machine record: $id_time_machine [Section:Delete]." .PHP_EOL
 								." Record is NOT deleted (3) "

@@ -1,7 +1,7 @@
 <?php
+declare(strict_types=1);
 /**
 * TOOLS_REGISTER
-*
 *
 */
 class tools_register {
@@ -20,6 +20,7 @@ class tools_register {
 	static $tipo_properties					= 'dd1335';
 	static $tools_configuration				= 'dd999'; // tools Configuration component_json
 	static $tools_default_configuration		= 'dd1633'; // tools default Configuration component_json
+
 
 
 	/**
@@ -343,7 +344,7 @@ class tools_register {
 	* @return object $tool_object
 	*	Simple and human readable JSON object to use with components, sections, areas..
 	*/
-	public static function create_simple_tool_object(string $section_tipo, int $section_id) : object {
+	public static function create_simple_tool_object(string $section_tipo, int|string $section_id) : object {
 
 		$tool_object = new stdClass();
 
@@ -400,7 +401,7 @@ class tools_register {
 				$section_tipo
 			);
 			$dato	= $component->get_dato();
-			$value	= reset($dato);
+			$value	= $dato[0] ?? null;
 			$tool_object->vesion = $value;
 
 		// dedalo version (minimal requirement)
@@ -415,7 +416,7 @@ class tools_register {
 				$section_tipo
 			);
 			$dato 	= $component->get_dato();
-			$value 	= reset($dato);
+			$value 	= $dato[0] ?? null;
 			$tool_object->dd_version = $value;
 
 		// description
@@ -492,7 +493,7 @@ class tools_register {
 				$component_lang,
 				$section_tipo
 			);
-			$dato        = $component->get_dato();
+			$dato		= $component->get_dato();
 			$dato_ref	= !empty($dato)
 				? reset($dato)->section_id
 				: null;

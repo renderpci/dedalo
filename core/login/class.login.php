@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * CLASS LOGIN
 *
@@ -141,7 +142,7 @@ class login extends common {
 			}
 
 		// password check
-			$user_id = $section_id = reset($ar_result);
+			$user_id = $section_id = (int)reset($ar_result);
 
 			# Search password
 			$password_encrypted	= component_password::encrypt_password($password);
