@@ -388,7 +388,7 @@ class component_svg extends component_media_common {
 					isset($dato_unchanged->section_id) || // v5 modern case
 					(isset($dato_unchanged[0]) && isset($dato_unchanged[0]->original_file_name)) // v6 alpha case
 				);
-				$is_old_dato = true; // force here
+				// $is_old_dato = true; // force here
 				if ($is_old_dato===true) {
 
 					// create the component svg
