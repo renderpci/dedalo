@@ -930,7 +930,11 @@ class diffusion_sql extends diffusion  {
 		// exec cue update_record_actions
 			if (!empty(diffusion::$update_record_actions)) {
 				#dump(diffusion::$update_record_actions, 'diffusion::$update_record_actions ++ '.to_string());
-				debug_log(__METHOD__." Executing update_record_actions ".to_string(diffusion::$update_record_actions), logger::DEBUG);
+				debug_log(__METHOD__
+					." Executing update_record_actions" . PHP_EOL
+					.to_string(diffusion::$update_record_actions)
+					, logger::DEBUG
+				);
 				foreach (diffusion::$update_record_actions as $ckey => $current_update_record_options) {
 
 					// clone options
