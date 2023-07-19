@@ -5,24 +5,24 @@
 */
 class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 
-	# MATRIX VARS
+	# matrix vars
 	protected $section_id;
 	protected $section_tipo;
 	protected $datos;
 
 
-	# ESPECIFIC VARS
-	protected $caller_obj; 	# optional
+	// specific vars
+	protected $caller_obj; 	// optional
 
-	# TABLE  matrix_table
+	// table matrix_table
 	protected $matrix_table ;
 
-	# TIME MACHINE LAST ID
+	// time machine last id
 	public $time_machine_last_id;
 
 	public $datos_time_machine;
 
-	# static cache for RecordObj_matrix instances
+	// static cache for RecordObj_matrix instances
 	static $ar_JSON_RecordObj_matrix_instances;
 
 
@@ -240,9 +240,15 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 
 		// debug
 			if (is_null($id)) {
-				debug_log(__METHOD__." Error on save record  ($this->matrix_table - $this->section_tipo - $this->section_id)".to_string(), logger::ERROR);
+				debug_log(__METHOD__
+					." Error on save record  ($this->matrix_table - $this->section_tipo - $this->section_id)"
+					, logger::ERROR
+				);
 			}else{
-				debug_log(__METHOD__." Saved record ($this->matrix_table - $this->section_tipo - $this->section_id): ".exec_time_unit($start_time).' ms', logger::DEBUG);
+				debug_log(__METHOD__
+					." Saved record ($this->matrix_table - $this->section_tipo - $this->section_id): ".exec_time_unit($start_time).' ms'
+					, logger::DEBUG
+				);
 			}
 
 
@@ -361,9 +367,10 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 							$new_options->time_machine_date = $created_date;
 						}
 					$this->save_time_machine( $new_options );
-					debug_log(
-						__METHOD__." Saved time machine NOT already saved component dato. tipo: $tipo, section_tipo: $section_tipo, section_id: $section_id".PHP_EOL.to_string($previous_component_dato),
-						logger::WARNING
+					debug_log(__METHOD__
+						." Saved time machine NOT already saved component dato. tipo: $tipo, section_tipo: $section_tipo, section_id: $section_id" . PHP_EOL
+						.' previous_component_dato: '. to_string($previous_component_dato)
+						, logger::WARNING
 					);
 				}
 			}//end if (!empty($previous_component_dato))

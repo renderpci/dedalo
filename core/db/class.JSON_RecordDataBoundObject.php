@@ -425,7 +425,7 @@ abstract class JSON_RecordDataBoundObject {
 	public function MarkForDeletion() {
 		$this->blForDeletion = true;
 	}
-	# DELETE. ALIAS OF MarkForDeletion
+	// DELETE. ALIAS OF MarkForDeletion
 	public function Delete() {
 		$this->MarkForDeletion();
 	}
@@ -464,7 +464,7 @@ abstract class JSON_RecordDataBoundObject {
 	* 	Full SQL query like "SELECT id FROM table WHERE id>0"
 	* @param bool $wait
 	* 	to set syc/async exec. Default us true
-	* @return resource|PgSql\Result|bool $result
+	* @return PgSql\Result|bool $result
 	*   resource (PHP<8) OR object (PHP>=8) | false $result
 	* 	Database resource/object from exec query
 	*/
@@ -541,7 +541,7 @@ abstract class JSON_RecordDataBoundObject {
 			}
 
 
-		return $result; # resource
+		return $result; // PgSql\Result or boolean
 	}//end search_free
 
 
@@ -834,14 +834,20 @@ abstract class JSON_RecordDataBoundObject {
 				# Safe tipo test
 				if (!$section_tipo = safe_tipo($this->section_tipo)) {
 					// die("Bad tipo ".htmlentities($this->section_tipo));
-					debug_log(__METHOD__." Bad tipo ".to_string($this->section_tipo), logger::ERROR);
+					debug_log(__METHOD__
+						." Bad tipo. section_tipo: ".to_string($this->section_tipo)
+						, logger::ERROR
+					);
 				}
 
 				$strQuery	= 'DELETE FROM "'. $this->strTableName .'" WHERE "section_id" = $1 AND "section_tipo" = $2';
 				$result		= pg_query_params( DBi::_getConnection(), $strQuery, array($section_id, $section_tipo) );
 				if($result===false) {
 					// echo "Error: sorry an error occurred on DELETE record (section_id:$section_id, section_tipo:$section_tipo). Data is not deleted";
-					debug_log(__METHOD__." Error Processing Request (result==false): an error occurred on DELETE record (section_id:$section_id, section_tipo:$section_tipo). Data is not deleted", logger::ERROR);
+					debug_log(__METHOD__
+						." Error Processing Request (result==false): an error occurred on DELETE record (section_id:$section_id, section_tipo:$section_tipo). Data is not deleted"
+						, logger::ERROR
+					);
 					if(SHOW_DEBUG===true) {
 						dump($strQuery,"Delete strQuery");
 						// throw new Exception("Error Processing Request (result==false): an error occurred on DELETE record (section_id:$section_id, section_tipo:$section_tipo). Data is not deleted", 1);

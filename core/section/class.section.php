@@ -118,7 +118,10 @@ class section extends common {
 
 		// check valid tipo
 			if (empty($tipo)) {
-				debug_log(__METHOD__." Error: on construct section : tipo is mandatory. section_id:$section_id, tipo:$tipo, mode:$mode ".to_string(), logger::ERROR);
+				debug_log(__METHOD__
+					." Error: on construct section : tipo is mandatory. section_id:$section_id, tipo:$tipo, mode:$mode"
+					, logger::ERROR
+				);
 				throw new Exception("Error: on construct section : tipo is mandatory. section_id:$section_id, tipo:$tipo, mode:$mode", 1);
 			}
 
@@ -2343,7 +2346,7 @@ class section extends common {
 	* GET_RESOURCE_ALL_SECTION_RECORDS_UNFILTERED
 	* @param string $section_tipo
 	* @param string $select = 'section_id'
-	* @return resource|PgSql\Result $result
+	* @return PgSql\Result|bool $result
 	*/
 	public static function get_resource_all_section_records_unfiltered( string $section_tipo, string $select='section_id' ) {
 
