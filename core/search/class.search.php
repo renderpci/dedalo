@@ -429,7 +429,21 @@ class search {
 				// debug_log(__METHOD__." 2 total time ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
 				// debug_log(__METHOD__." sql_query: ".to_string($sql_query), logger::DEBUG);
 				// error_log("sql_query: \n" . to_string($sql_query));
-				dd_core_api::$sql_query_search[] = '-- TIME ms: '. $exec_time . PHP_EOL . $sql_query;
+
+				// dd_core_api::$sql_query_search. Fulfill on API request
+					if (!empty(dd_core_api::$rqo)) {
+						dd_core_api::$sql_query_search[] = '-- TIME ms: '. $exec_time . PHP_EOL . $sql_query;
+					}
+
+				// warning on too much relations_cache (to prevent updates/import memory issues)
+					$total_relations = count($this->relations_cache);
+					if ($total_relations>1000) {
+						debug_log(__METHOD__
+							. " Search relations_cache big total " . PHP_EOL
+							. ' total_relations: ' .$total_relations
+							, logger::WARNING
+						);
+					}
 			}
 
 
