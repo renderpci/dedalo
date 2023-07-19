@@ -141,7 +141,17 @@ class section extends common {
 
 		// removed cache features temporally (!) Verify real speed benefits
 			// Direct construct without cache instance
+			// limit cache to 10000 items
+				// if ($cache===true && isset(self::$ar_section_instances) && count(self::$ar_section_instances) > 10000) {
+				// 	$cache = false;
+				// 	debug_log(__METHOD__
+				// 		. " WARNING: Turned OFF the section instances cache (bigger than maximum 10000) " . PHP_EOL
+				// 		.' maybe this is not an error, only a import or update big task. Removed to prevent memory issues'
+				// 		, logger::ERROR
+				// 	);
+				// }
 			// Use this config in imports
+				// $cache = false; // (!) Forced !
 				if ($cache===false) {
 					$section = new section($section_id, $tipo, $mode);
 					//dataframe case
@@ -286,7 +296,8 @@ class section extends common {
 				: JSON_RecordObj_matrix::get_instance(
 					$matrix_table,
 					(int)$this->section_id, // int section_id
-					$this->tipo // string section tipo
+					$this->tipo, // string section tipo
+					true // bool cache
 				);
 			$this->JSON_RecordObj_matrix = $JSON_RecordObj_matrix;
 			// force updates value
@@ -392,7 +403,8 @@ class section extends common {
 						: JSON_RecordObj_matrix::get_instance(
 							$matrix_table,
 							(int)$this->section_id, // int section_id
-							$this->tipo // string section tipo
+							$this->tipo, // string section tipo
+							true // bool cache
 						);
 					$this->JSON_RecordObj_matrix = $JSON_RecordObj_matrix;
 
@@ -428,7 +440,8 @@ class section extends common {
 					: JSON_RecordObj_matrix::get_instance(
 						$matrix_table, // string matrix_table
 						(int)$this->section_id, // int section_id
-						$this->tipo // string tipo
+						$this->tipo, // string tipo
+						true // bool cache
 					);
 				$JSON_RecordObj_matrix->set_dato($dato);
 				$JSON_RecordObj_matrix->set_blIsLoaded(true);
@@ -928,7 +941,8 @@ class section extends common {
 					$JSON_RecordObj_matrix = JSON_RecordObj_matrix::get_instance(
 						'dataframe', // string matrix_table
 						(int)$this->section_id, // int section_id
-						$tipo // string section_tipo
+						$tipo, // string section_tipo
+						true // bool cache
 					);
 					$JSON_RecordObj_matrix->save_time_machine($options);
 
@@ -973,7 +987,8 @@ class section extends common {
 					: JSON_RecordObj_matrix::get_instance(
 						$matrix_table,
 						(int)$this->section_id,
-						$tipo
+						$tipo,
+						true // bool cache
 					);
 				$JSON_RecordObj_matrix->set_dato($section_dato);
 				$saved_id_matrix = $JSON_RecordObj_matrix->Save( $options );
@@ -1099,7 +1114,8 @@ class section extends common {
 						: JSON_RecordObj_matrix::get_instance(
 							$matrix_table, // string matrix_table
 							(int)$this->section_id, // int section_id
-							$tipo // string tipo
+							$tipo, // string tipo
+							true // bool cache
 						);
 					$JSON_RecordObj_matrix->set_dato($this->dato);
 					#$JSON_RecordObj_matrix->set_section_id($this->section_id);
@@ -1323,7 +1339,7 @@ class section extends common {
 					// Get time machine id based on section tipo and section_id
 					$ar_id_time_machine = RecordObj_time_machine::get_ar_time_machine_of_this(
 						$section_tipo,
-						$this->section_id,
+						(int)$this->section_id,
 						DEDALO_DATA_NOLAN,
 						$section_tipo
 					);
@@ -1398,7 +1414,8 @@ class section extends common {
 							: JSON_RecordObj_matrix::get_instance(
 								$matrix_table,
 								(int)$this->section_id,
-								$section_tipo
+								$section_tipo,
+								true // bool cache
 							);
 						$JSON_RecordObj_matrix->MarkForDeletion();
 
@@ -4158,6 +4175,23 @@ class section extends common {
 
 		return $this->permissions;
 	}//end get_permissions
+
+
+
+	/**
+	* __DESTRUCT
+	*/
+		// public function __destruct() {
+
+		// 	$matrix_table	= common::get_matrix_table_from_tipo($this->tipo);
+		// 	$key			= $matrix_table.'_'.$this->section_id .'_'. $this->tipo;
+		// 		// dump(JSON_RecordObj_matrix::$ar_JSON_RecordObj_matrix_instances, ' JSON_RecordObj_matrix::$ar_JSON_RecordObj_matrix_instances var ++ '.to_string($key));
+		// 	if( isset(JSON_RecordObj_matrix::$ar_JSON_RecordObj_matrix_instances[$key]) ) {
+
+		// 		unset(JSON_RecordObj_matrix::$ar_JSON_RecordObj_matrix_instances[$key]);
+		// 			dump($key, ' Removed key from JSON_RecordObj_matrix::$ar_JSON_RecordObj_matrix_instances ++ '.to_string());
+		// 	}
+		// }//end __destruct
 
 
 
