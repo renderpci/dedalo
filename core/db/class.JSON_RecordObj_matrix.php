@@ -29,36 +29,33 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 
 	/**
 	* GET_INSTANCE
-	* Cache JSON_RecordObj_matrix  instances (singleton pattern)
+	* Cache JSON_RecordObj_matrix instances (singleton pattern)
 	* @param string $matrix_table = null
 	* @param string|int|null $section_id = null
 	* @param string $tipo = null
 	* @param bool $cache = true
 	*
-	* @return instance JSON_RecordObj_matrix
+	* @return JSON_RecordObj_matrix $instance
 	*/
-	public static function get_instance(string $matrix_table=null, int $section_id=null, string $section_tipo=null, bool $cache=true) : JSON_RecordObj_matrix {
-
-		// key for cache
-			$key = $matrix_table.'_'.$section_id .'_'. $section_tipo;
-
-		// limit cache to 10000 items
-			if ($cache=== true && isset(self::$ar_JSON_RecordObj_matrix_instances) && count(self::$ar_JSON_RecordObj_matrix_instances) > 10000) {
-				$cache = false;
-				debug_log(__METHOD__
-					. " WARNING: Turned OFF the JSON_RecordObj_matrix instances cache (bigger than maximum 10000) " . PHP_EOL
-					.' maybe this is not an error, only a import or update big task. Removed to prevent memory issues'
-					, logger::ERROR
-				);
-			}
+	public static function get_instance(string $matrix_table=null, int $section_id=null, string $section_tipo=null, bool $cache=false) : JSON_RecordObj_matrix {
 
 		// Not cache new sections (without section_id)
 			if (empty($section_id) || $cache===false) {
 				return new JSON_RecordObj_matrix($matrix_table, $section_id, $section_tipo);
 			}
 
+		// cache params
+			$max_cache_instances	= 2000; // 500
+			$cache_slice_on			= 750;  // 200 // $max_cache_instances/2;
+
+		// overload : If ar_JSON_RecordObj_matrix_instances > $max_cache_instances , not add current element to cache to prevent overload
+			if ( isset(self::$ar_JSON_RecordObj_matrix_instances) && count(self::$ar_JSON_RecordObj_matrix_instances) > $max_cache_instances ) {
+				self::$ar_JSON_RecordObj_matrix_instances = array_slice(self::$ar_JSON_RecordObj_matrix_instances, $cache_slice_on, null, true);
+			}
+
 		// find current instance in cache
-			if ( !array_key_exists($key, (array)self::$ar_JSON_RecordObj_matrix_instances) ) {
+			$key = $matrix_table.'_'.$section_id .'_'. $section_tipo;
+			if ($cache===true && !array_key_exists($key, (array)self::$ar_JSON_RecordObj_matrix_instances) ) {
 				self::$ar_JSON_RecordObj_matrix_instances[$key] = new JSON_RecordObj_matrix($matrix_table, $section_id, $section_tipo);
 			}
 
