@@ -436,7 +436,9 @@ class search {
 					}
 
 				// warning on too much relations_cache (to prevent updates/import memory issues)
-					$total_relations = count($this->relations_cache);
+					$total_relations = isset($this->relations_cache)
+						? count($this->relations_cache)
+						: 0;
 					if ($total_relations>1000) {
 						debug_log(__METHOD__
 							. " Search relations_cache big total " . PHP_EOL
