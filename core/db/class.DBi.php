@@ -11,22 +11,28 @@ abstract class DBi {
 	/**
 	* _GETCONNECTION
 	* Returns an PgSql\Connection instance on success, or false on failure.
-	* @return PgSql\Connection $pg_conn
+	* @param string|null $host = DEDALO_HOSTNAME_CONN
+	* @param string $user = DEDALO_USERNAME_CONN
+	* @param string $password = DEDALO_PASSWORD_CONN
+	* @param string $database = DEDALO_DATABASE_CONN
+	* @param string|int|null $port = DEDALO_DB_PORT_CONN
+	* @param string|null $socket = DEDALO_SOCKET_CONN
+	* @param bool $cache = true
+	* @return PgSql\Connection|bool $pg_conn
 	* 	>=8.1.0	Returns an PgSql\Connection instance now; previously, a resource was returned.
 	* 	false on failure
 	*/
 	public static function _getConnection(
-		string|null $host		= DEDALO_HOSTNAME_CONN,
-		string 		$user		= DEDALO_USERNAME_CONN,
-		string 		$password	= DEDALO_PASSWORD_CONN,
-		string 		$database	= DEDALO_DATABASE_CONN,
-		string|null $port		= DEDALO_DB_PORT_CONN,
-		string|null $socket		= DEDALO_SOCKET_CONN,
-		bool 		$cache		= true
+		string|null		$host		= DEDALO_HOSTNAME_CONN,
+		string			$user		= DEDALO_USERNAME_CONN,
+		string			$password	= DEDALO_PASSWORD_CONN,
+		string			$database	= DEDALO_DATABASE_CONN,
+		string|int|null	$port		= DEDALO_DB_PORT_CONN,
+		string|null		$socket		= DEDALO_SOCKET_CONN,
+		bool			$cache		= true
 		) : PgSql\Connection|bool {
 
 		static $pg_conn;
-
 		if($cache===true && isset($pg_conn)) {
 			return($pg_conn);
 		}
@@ -35,8 +41,8 @@ abstract class DBi {
 		$str_connect = "dbname=$database user=$user password=$password";
 
 		// Port is optional
-		if($port!==null) {
-			$str_connect = "port=$port ".$str_connect;
+		if(!empty($port)) {
+			$str_connect = 'port=' . (int)$port .' '.$str_connect;
 		}
 
 		// Host is optional. When false, use default socket connection
@@ -79,12 +85,12 @@ abstract class DBi {
 	* 	false on failure
 	*/
 	public static function _getNewConnection(
-		string|null $host		= DEDALO_HOSTNAME_CONN,
-		string 		$user		= DEDALO_USERNAME_CONN,
-		string 		$password	= DEDALO_PASSWORD_CONN,
-		string 		$database	= DEDALO_DATABASE_CONN,
-		string|null $port		= DEDALO_DB_PORT_CONN,
-		string|null $socket		= DEDALO_SOCKET_CONN
+		string|null		$host		= DEDALO_HOSTNAME_CONN,
+		string			$user		= DEDALO_USERNAME_CONN,
+		string			$password	= DEDALO_PASSWORD_CONN,
+		string			$database	= DEDALO_DATABASE_CONN,
+		string|int|null	$port		= DEDALO_DB_PORT_CONN,
+		string|null		$socket		= DEDALO_SOCKET_CONN
 		) : PgSql\Connection|bool {
 
 		$pg_conn = DBi::_getConnection(
@@ -104,28 +110,34 @@ abstract class DBi {
 
 	/**
 	* _GETCONNECTIONPDO
-	* Returns an PgSql\Connection instance on success, or false on failure.
-	* @return resource|object $pg_conn (object in PHP >=8.1)
-	* 8.1.0	Returns an PgSql\Connection instance now; previously, a resource was returned.
+	* Returns an PosgreSQL PDO instance on success, or false on failure.
+	* @param string|null $host = DEDALO_HOSTNAME_CONN
+	* @param string $user = DEDALO_USERNAME_CONN
+	* @param string $password = DEDALO_PASSWORD_CONN
+	* @param string $database = DEDALO_DATABASE_CONN
+	* @param string|int|null $port = DEDALO_DB_PORT_CONN
+	* @param string|null $socket = DEDALO_SOCKET_CONN
+	* @param bool $cache = true
+	* @return PDO|bool $pg_pdo_conn
 	*/
 	public static function _getConnectionPDO(
-		string|null $host	= DEDALO_HOSTNAME_CONN,
-		string $user		= DEDALO_USERNAME_CONN,
-		string $password	= DEDALO_PASSWORD_CONN,
-		string $database	= DEDALO_DATABASE_CONN,
-		string|null $port	= DEDALO_DB_PORT_CONN,
-		string|null $socket	= DEDALO_SOCKET_CONN,
-		bool $cache			= true
-		) : object|bool {
+		string|null		$host		= DEDALO_HOSTNAME_CONN,
+		string			$user		= DEDALO_USERNAME_CONN,
+		string			$password	= DEDALO_PASSWORD_CONN,
+		string			$database	= DEDALO_DATABASE_CONN,
+		string|int|null	$port		= DEDALO_DB_PORT_CONN,
+		string|null		$socket		= DEDALO_SOCKET_CONN,
+		bool			$cache		= true
+		) : PDO|bool {
 
-		static $pg_pdo_conn;
-		if($cache===true && isset($pg_pdo_conn)) {
-			return($pg_pdo_conn);
+		static $pdo_conn;
+		if($cache===true && isset($pdo_conn)) {
+			return($pdo_conn);
 		}
 
 		// PDO
 			try {
-				$pg_pdo_conn = new PDO(
+				$pdo_conn = new PDO(
 					'pgsql:host=' . $host . ';dbname=' . $database . ';', $user, $password, array(
 						PDO::ATTR_ERRMODE =>  PDO::ERRMODE_EXCEPTION,
 					)
@@ -134,24 +146,32 @@ abstract class DBi {
 				throw new \PDOException($e->getMessage(), (int)$e->getCode());
 			}
 
-		return $pg_pdo_conn;
+		return $pdo_conn;
 	}//end _getConnectionPDO
 
 
 
 	/**
 	* _GETCONNECTION_MYSQL
-	* @return resource|false $mysqli
+	* Returns an mysqli instance on success, or false on failure.
+	* @param string|null $host = MYSQL_DEDALO_HOSTNAME_CONN
+	* @param string $user = MYSQL_DEDALO_USERNAME_CONN
+	* @param string $password = MYSQL_DEDALO_PASSWORD_CONN
+	* @param string $database = MYSQL_DEDALO_DATABASE_CONN
+	* @param string|int|null $port = MYSQL_DEDALO_DB_PORT_CONN
+	* @param string|null $socket = MYSQL_DEDALO_SOCKET_CONN
+	* @param bool $cache = true
+	* @return mysqli|bool $mysqli
 	*/
 	public static function _getConnection_mysql(
-		$host=MYSQL_DEDALO_HOSTNAME_CONN,
-		$user=MYSQL_DEDALO_USERNAME_CONN,
-		$password=MYSQL_DEDALO_PASSWORD_CONN,
-		$database=MYSQL_DEDALO_DATABASE_CONN,
-		$port=MYSQL_DEDALO_DB_PORT_CONN,
-		$socket=MYSQL_DEDALO_SOCKET_CONN
-		) : object|bool {
-
+		string|null		$host		= MYSQL_DEDALO_HOSTNAME_CONN,
+		string			$user		= MYSQL_DEDALO_USERNAME_CONN,
+		string			$password	= MYSQL_DEDALO_PASSWORD_CONN,
+		string			$database	= MYSQL_DEDALO_DATABASE_CONN,
+		string|int|null	$port		= MYSQL_DEDALO_DB_PORT_CONN,
+		string|null		$socket		= MYSQL_DEDALO_SOCKET_CONN,
+		bool			$cache		= true
+		) : mysqli|bool {
 
 		// cache
 			static $mysqli;
