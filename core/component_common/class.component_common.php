@@ -3099,8 +3099,8 @@ abstract class component_common extends common {
 		$section = section::get_instance(
 			$this->section_id,
 			$this->section_tipo,
-			'edit',
-			true,
+			'edit', // 'edit',
+			false, // true,
 			$this->caller_dataframe ?? null
 		);
 		$this->section_obj = $section;
