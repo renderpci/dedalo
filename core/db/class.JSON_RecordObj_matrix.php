@@ -42,6 +42,16 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 		// key for cache
 			$key = $matrix_table.'_'.$section_id .'_'. $section_tipo;
 
+		// limit cache to 10000 items
+			if ($cache=== true && isset(self::$ar_JSON_RecordObj_matrix_instances) && count(self::$ar_JSON_RecordObj_matrix_instances) > 10000) {
+				$cache = false;
+				debug_log(__METHOD__
+					. " WARNING: Turned OFF the JSON_RecordObj_matrix instances cache (bigger than maximum 10000) " . PHP_EOL
+					.' maybe this is not an error, only a import or update big task. Removed to prevent memory issues'
+					, logger::ERROR
+				);
+			}
+
 		// Not cache new sections (without section_id)
 			if (empty($section_id) || $cache===false) {
 				return new JSON_RecordObj_matrix($matrix_table, $section_id, $section_tipo);
