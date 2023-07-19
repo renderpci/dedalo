@@ -41,6 +41,15 @@ class time_machine_v5_to_v6 {
 
 		foreach ($ar_tables as $table) {
 
+			debug_log(__METHOD__ . PHP_EOL
+				. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+				. " CONVERTING ... " . PHP_EOL
+				. " convert_table_data [TM] table: $table " . PHP_EOL
+				. " convert_table_data [TM] memory usage: " . dd_memory_usage() . PHP_EOL
+				. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+				, logger::WARNING
+			);
+
 			// Get last id in the table
 			$strQuery 	= "SELECT id FROM $table ORDER BY id DESC LIMIT 1 ";
 			$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
@@ -157,25 +166,47 @@ class time_machine_v5_to_v6 {
 						$result2		= pg_query_params(DBi::_getConnection(), $strQuery2, array( $safe_data, $id ));
 						if($result2===false) {
 							$msg = "Failed Update section_data $i";
-							debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
+							debug_log(__METHOD__
+								." ERROR: $msg ". PHP_EOL
+								.' strQuery: ' . $strQuery
+								, logger::ERROR
+							);
 							continue;
 						}
 					}else{
-						debug_log(__METHOD__." Empty datos from: $table - $id ".to_string(), logger::WARNING);
+						debug_log(__METHOD__
+							." Empty datos from: $table - $id "
+							, logger::WARNING
+						);
 					}
-				}
+				}//end while($rows = pg_fetch_assoc($result))
 
 				// log info each 1000
 					if ($i_ref===0) {
 						debug_log(__METHOD__
-							." Partial update of section data table: $table - id: $id - total: $n_rows - total min: ".exec_time_unit($start_time,'min')
+							." Partial update of section data table: $table - id: $id - total: $n_rows - total min: ".exec_time_unit($start_time,'min') .PHP_EOL
+							." memory usage: " . dd_memory_usage()
 							, logger::DEBUG
 						);
+
+						// clean vars
+						unset($result);
+
+						// let GC do the memory job
+						time_nanosleep(0, 500000000); // Slept for half a second
+						// Forces collection of any existing garbage cycles
+						gc_collect_cycles();
+
 					}else{
 						$i_ref = ($i_ref>10000) ? 0 : $i_ref + 1;
 					}
 			}
 			#break; // stop now
+
+			// let GC do the memory job
+			sleep(1);
+			// Forces collection of any existing garbage cycles
+			gc_collect_cycles();
 		}//end foreach ($ar_tables as $key => $table)
 
 

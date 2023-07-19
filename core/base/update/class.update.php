@@ -98,6 +98,15 @@ class update {
 			if(isset($update->SQL_update)){
 				foreach ((array)$update->SQL_update as $current_query) {
 
+					debug_log(__METHOD__ . PHP_EOL
+						. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+						. " EXECUTING SQL_UPDATE ... " . PHP_EOL
+						. " current_query: " . to_string($current_query) . PHP_EOL
+						. " memory usage: " . dd_memory_usage() . PHP_EOL
+						. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+						, logger::WARNING
+					);
+
 					$SQL_update	= update::SQL_update($current_query);
 					$cmsg		= $SQL_update->msg;
 					$msg[]		= "Updated sql: ".to_string($cmsg);
@@ -117,27 +126,57 @@ class update {
 							, logger::ERROR
 						);
 					}
-				}
+
+					// let GC do the memory job
+					sleep(1);
+					// Forces collection of any existing garbage cycles
+					gc_collect_cycles();
+				}//end foreach ((array)$update->SQL_update as $current_query)
 			}
 
 		// components_update
 			if(isset($update->components_update)){
 				foreach ((array)$update->components_update as $current_model) {
+
+					debug_log(__METHOD__ . PHP_EOL
+						. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+						. " EXECUTING COMPONENTS_UPDATE ... " . PHP_EOL
+						. " current_model: $current_model " . PHP_EOL
+						. " memory usage: " . dd_memory_usage() . PHP_EOL
+						. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+						, logger::WARNING
+					);
+
 					$components_update[] = update::components_update(
 						$current_model,
 						$update_version
 					);
 					$msg[] = "Updated component: ".to_string($current_model);
+
 					debug_log(__METHOD__
 						." Updated component ".to_string($current_model)
 						, logger::DEBUG
 					);
-				}
+
+					// let GC do the memory job
+					sleep(1);
+					// Forces collection of any existing garbage cycles
+					gc_collect_cycles();
+				}//end foreach ((array)$update->components_update as $current_model)
 			}
 
 		// run_scripts
 			if(isset($update->run_scripts)){
 				foreach ((array)$update->run_scripts as $current_script) {
+
+					debug_log(__METHOD__ . PHP_EOL
+						. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+						. " EXECUTING RUN_SCRIPTS ... " . PHP_EOL
+						. " current_script: " . to_string($current_script) . PHP_EOL
+						. " memory usage: " . dd_memory_usage() . PHP_EOL
+						. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+						, logger::WARNING
+					);
 
 					$run_scripts	= update::run_scripts($current_script);
 					$cmsg			= $run_scripts->msg;
@@ -158,7 +197,12 @@ class update {
 							, logger::ERROR
 						);
 					}
-				}
+
+					// let GC do the memory job
+					sleep(1);
+					// Forces collection of any existing garbage cycles
+					gc_collect_cycles();
+				}//end foreach ((array)$update->run_scripts as $current_script)
 			}
 
 		// Table matrix_updates data
@@ -206,7 +250,8 @@ class update {
 
 		// debug info
 			debug_log(__METHOD__
-				." Executed database update: ".to_string($SQL_update)
+				." Executed database update: ".to_string($SQL_update) .PHP_EOL
+				." memory usage: " . dd_memory_usage() . PHP_EOL
 				, logger::DEBUG
 			);
 
@@ -228,7 +273,6 @@ class update {
 	* @return bool
 	*/
 	public static function components_update( string $model_name, array $update_version ) : bool {
-
 		# Existing db tables
 		# Gets array of all db tables
 		$tables = (array)backup::get_tables();
@@ -236,223 +280,258 @@ class update {
 		$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name('section');
 		foreach ($ar_section_tipo as $current_section_tipo) {
 
-			// Activity data is not updated [REMOVED 29-08-2018 TO ALLOW FILTER AND FILTER MASTER UPDATES]
-			if($current_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
-				# component_ip, component_autocomplete, component_autocomplete_ts, component_date, component_input_text, component_filter
-				if ($model_name==='component_filter' || $model_name==='component_autocomplete' || $model_name==='component_ip') {
-					# Do the update
-				}else{
-					# Skip update
-					continue;
-				}
-			}
-
-			// Skip sections
-			$ar_section_skip = [
-				/*
-				#'lg1', // lenguajes
-				#'on1', // omomasticos
-				#'dc1', // cronologicos
-				#'ts1', // tematicos
-				#'hu1', // hungria
-				#'cu1', // cuba
-				"es1",
-				"fr1",
-				"dz1",
-				"pt1",
-				"lg1",
-				"ma1",
-				"mupreva2434",
-				"mupreva2435",
-				"mupreva2436",
-				"mupreva2437",
-				"mupreva2438",
-				"mupreva357",
-				"mupreva123",
-				"mupreva21",
-				"mupreva22",
-				"mupreva1",
-				"mupreva120",
-				"mupreva1258",
-				"mupreva1385",
-				"mupreva156",
-				"mupreva159",
-				"mupreva162",
-				"mupreva20",
-				"mupreva2384",
-				"mupreva2541",
-				"mupreva268",
-				"mupreva380",
-				"mupreva398",
-				"mupreva473",
-				"mupreva500",
-				"mupreva770",
-				"rsc332"
-				*/
-			];
-			if (in_array($current_section_tipo, $ar_section_skip)) {
-				continue;
-			}
-
-
-			// Test if target table exists (avoid errors on update components of "too much updated" structures)
-			$current_table = common::get_matrix_table_from_tipo($current_section_tipo);
-			if (!in_array($current_table, $tables) ) {
-				debug_log(__METHOD__
-					." Skipped section ($current_section_tipo) because table ($current_table) do not exists "
-					, logger::ERROR
-				);
-				continue;
-			}
-
-			// Search all records of current section
-			# $ar_section_id = section::get_ar_all_section_records_unfiltered($current_section_tipo);
-			# debug_log(__METHOD__." ar_section_id for $current_section_tipo : ".count($ar_section_id), logger::DEBUG);
-			$result = section::get_resource_all_section_records_unfiltered($current_section_tipo);
-			$n_rows = pg_num_rows($result);
-			if ($n_rows<1) {
-				# Skip empty sections
-				debug_log(__METHOD__
-					." Skipped current_section_tipo '$current_section_tipo'. (Empty records) "
-					, logger::WARNING
-				);
-				continue;
-			}
-
-			#
-			# SECTION COMPONENTS
-			#$ar_component_tipo = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_section_tipo, $model_name, 'children_recursive', $search_exact=true);
-			$ar_component_tipo = section::get_ar_children_tipo_by_model_name_in_section(
-				$current_section_tipo,
-				[$model_name], // array ar_model_name_required
-				true, // bool from_cache
-				true, // bool resolve_virtual
-				true, // bool recursive
-				true // bool search_exact
-			);
-			if (empty($ar_component_tipo)) {
-				// Skip empty components sections
-				debug_log(__METHOD__
-					." Skipped current_section_tipo '$current_section_tipo'. (Empty components of type $model_name)"
-					, logger::WARNING
-				);
-				continue;
-			}
-
-			# Notify to log to know script state
-			$n_components = count($ar_component_tipo);
-			debug_log(__METHOD__
-				." Updating components of section: $current_section_tipo (records: $n_rows, components $model_name: $n_components) Total: ". ($n_rows*$n_components)
+			debug_log(__METHOD__ . PHP_EOL
+				. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+				. " UPDATING COMPONENT ... " . PHP_EOL
+				. " components_update model_name: $model_name " . PHP_EOL
+				. " components_update current_section_tipo: $current_section_tipo " . PHP_EOL
+				. " components_update update_version: ".to_string($update_version) . PHP_EOL
+				. " components_update memory usage: " . dd_memory_usage() . PHP_EOL
+				. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
 				, logger::WARNING
 			);
 
-			$i=0; $tm=0;
+			$start_time = start_time();
+			$before = memory_get_usage();
+
+			// Activity data is not updated [REMOVED 29-08-2018 TO ALLOW FILTER AND FILTER MASTER UPDATES]
+				if($current_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
+					# component_ip, component_autocomplete, component_autocomplete_ts, component_date, component_input_text, component_filter
+					if ($model_name==='component_filter' || $model_name==='component_autocomplete' || $model_name==='component_ip') {
+						# Do the update
+					}else{
+						# Skip update
+						continue;
+					}
+				}
+
+			// Skip sections
+				$ar_section_skip = [
+					/*
+					#'lg1', // lenguajes
+					#'on1', // omomasticos
+					#'dc1', // cronologicos
+					#'ts1', // tematicos
+					#'hu1', // hungria
+					#'cu1', // cuba
+					"es1",
+					"fr1",
+					"dz1",
+					"pt1",
+					"lg1",
+					"ma1",
+					"mupreva2434",
+					"mupreva2435",
+					"mupreva2436",
+					"mupreva2437",
+					"mupreva2438",
+					"mupreva357",
+					"mupreva123",
+					"mupreva21",
+					"mupreva22",
+					"mupreva1",
+					"mupreva120",
+					"mupreva1258",
+					"mupreva1385",
+					"mupreva156",
+					"mupreva159",
+					"mupreva162",
+					"mupreva20",
+					"mupreva2384",
+					"mupreva2541",
+					"mupreva268",
+					"mupreva380",
+					"mupreva398",
+					"mupreva473",
+					"mupreva500",
+					"mupreva770",
+					"rsc332"
+					*/
+				];
+				if (in_array($current_section_tipo, $ar_section_skip)) {
+					continue;
+				}
+
+			// current_table. Test if target table exists (avoid errors on update components of "too much updated" structures)
+				$current_table = common::get_matrix_table_from_tipo($current_section_tipo);
+				if (!in_array($current_table, $tables) ) {
+					debug_log(__METHOD__
+						." Skipped section ($current_section_tipo) because table ($current_table) do not exists " .PHP_EOL
+						.' updating component: ' . $model_name
+						, logger::ERROR
+					);
+					continue;
+				}
+
+			// Search all records of current section
+				$result = section::get_resource_all_section_records_unfiltered($current_section_tipo);
+				$n_rows = pg_num_rows($result);
+				if ($n_rows<1) {
+					// Skip empty sections
+					debug_log(__METHOD__
+						." Skipped current_section_tipo '$current_section_tipo'. (Empty records) " .PHP_EOL
+						.' updating component: ' . $model_name
+						, logger::WARNING
+					);
+					continue;
+				}
+
+			// section components
+				$ar_component_tipo = section::get_ar_children_tipo_by_model_name_in_section(
+					$current_section_tipo,
+					[$model_name], // array ar_model_name_required
+					true, // bool from_cache
+					true, // bool resolve_virtual
+					true, // bool recursive
+					true // bool search_exact
+				);
+				if (empty($ar_component_tipo)) {
+					// Skip empty components sections
+					debug_log(__METHOD__
+						." Skipped current_section_tipo '$current_section_tipo'. (Empty components of type $model_name)" .PHP_EOL
+						.' updating component: ' . $model_name
+						, logger::WARNING
+					);
+					continue;
+				}
+
+			// Notify to log to know script state
+				$n_components = count($ar_component_tipo);
+				debug_log(__METHOD__
+					." Updating components of section: $current_section_tipo (records: $n_rows, components $model_name: $n_components) Total: ". ($n_rows*$n_components) . PHP_EOL
+					.' updating component: ' . $model_name
+					, logger::WARNING
+				);
+
 			// Iterate database resource directly to minimize memory requirements on large arrays
-			while ($rows = pg_fetch_assoc($result)) {
+				$i=0; $tm=0;
+				while ($rows = pg_fetch_assoc($result)) {
 
-				$section_id = $rows['section_id'];
+					$section_id = $rows['section_id'];
 
-				foreach ($ar_component_tipo as $current_component_tipo) {
+					foreach ($ar_component_tipo as $current_component_tipo) {
 
-					$RecordObj_dd	= new RecordObj_dd($current_component_tipo);
-					$translatable	= $RecordObj_dd->get_traducible();
-					$ar_langs		= ($translatable==='no') ? [DEDALO_DATA_NOLAN] : DEDALO_PROJECTS_DEFAULT_LANGS;
+						$RecordObj_dd	= new RecordObj_dd($current_component_tipo);
+						$translatable	= $RecordObj_dd->get_traducible();
+						$ar_langs		= ($translatable==='no') ? [DEDALO_DATA_NOLAN] : DEDALO_PROJECTS_DEFAULT_LANGS;
 
-					foreach ($ar_langs as $current_lang) {
+						foreach ($ar_langs as $current_lang) {
 
-						#
-						# COMPONENT . Update component dato
-						$component = component_common::get_instance(
-							$model_name,
-							$current_component_tipo,
-							$section_id,
-							'update',
-							$current_lang,
-							$current_section_tipo,
-							false
-						);
-						$component->get_dato();
-						$dato_unchanged	= $component->get_dato_unchanged();
-						$reference_id	= $current_section_tipo.'.'.$section_id.'.'.$current_component_tipo;
+							#
+							# COMPONENT . Update component dato
+							$component = component_common::get_instance(
+								$model_name,
+								$current_component_tipo,
+								$section_id,
+								'update',
+								$current_lang,
+								$current_section_tipo,
+								false
+							);
+							$component->get_dato();
+							$dato_unchanged	= $component->get_dato_unchanged();
+							$reference_id	= $current_section_tipo.'.'.$section_id.'.'.$current_component_tipo;
 
-						$update_options = new stdClass();
-							$update_options->update_version	= $update_version;
-							$update_options->dato_unchanged	= $dato_unchanged;
-							$update_options->reference_id	= $reference_id;
-							$update_options->tipo			= $current_component_tipo;
-							$update_options->section_id		= $section_id;
-							$update_options->section_tipo	= $current_section_tipo;
-							$update_options->context		= 'update_component_dato';
+							$update_options = new stdClass();
+								$update_options->update_version	= $update_version;
+								$update_options->dato_unchanged	= $dato_unchanged;
+								$update_options->reference_id	= $reference_id;
+								$update_options->tipo			= $current_component_tipo;
+								$update_options->section_id		= $section_id;
+								$update_options->section_tipo	= $current_section_tipo;
+								$update_options->context		= 'update_component_dato';
 
-						$response = $model_name::update_dato_version($update_options);
-						switch ((int)$response->result) {
-							case 0:
-								// skip all updates of current component because don't have update to this version
-								continue 4;
-								break;
+							$response = $model_name::update_dato_version($update_options);
+							switch ((int)$response->result) {
+								case 0:
+									// skip all updates of current component because don't have update to this version
+									continue 4;
+									break;
 
-							case 1:
-								// component data is modified. Set and save
-									$component->updating_dato = true;
-									$component->set_dato($response->new_dato);
-									$component->update_diffusion_info_propagate_changes = false;
-									$component->set_dato_resolved($response->new_dato); // Fix as resolved
+								case 1:
+									// component data is modified. Set and save
+										$component->updating_dato = true;
+										$component->set_dato($response->new_dato);
+										$component->update_diffusion_info_propagate_changes = false;
+										$component->set_dato_resolved($response->new_dato); // Fix as resolved
 
-								// section set as not save_modified
-									$component_section = $component->get_my_section();
-									$component_section->save_modified = false; # Change temporally section param 'save_modified' before save to avoid overwrite possible modified import data
+									// section set as not save_modified
+										$component_section = $component->get_my_section();
+										$component_section->save_modified = false; # Change temporally section param 'save_modified' before save to avoid overwrite possible modified import data
 
-								// save component
-									$component->Save();
-								break;
+									// save component
+										$component->Save();
 
-							case 2:
-								// Current dato don't need update or is already managed by component itself
-								break;
+									// section unset to free memory
+										unset($component_section);
+									break;
 
-							default:
-								// nothing to do here...
-								break;
-						}
+								case 2:
+									// Current dato don't need update or is already managed by component itself
+									break;
 
-						#
-						# TIME MACHINE . Update Time_machine component dato
-						/*
-						$ar_time_machine_obj = tool_time_machine::get_ar_component_time_machine($current_component_tipo, $section_id, $current_lang, $current_section_tipo, 0, 0);
-						foreach ($ar_time_machine_obj  as $current_time_machine_obj) {
-							$dato_unchanged = $current_time_machine_obj->get_dato();
-
-							# Different options override
-							$update_options->dato_unchanged = $dato_unchanged;
-							$update_options->context 		= 'update_time_machine_dato';
-
-							$response 		= $model_name::update_dato_version($update_options);
-							#debug_log(__METHOD__." UPDATE_DATO_VERSION TIME_MACHINE RESPONSE [$model_name][{$current_section_tipo}-{$section_id}]: result: ".to_string($response->result), logger::DEBUG);
-							if($response->result === 1){
-								$current_time_machine_obj->set_dato($response->new_dato);
-								$current_time_machine_obj->Save();
-								#debug_log(__METHOD__." UPDATED TIME MACHINE dato from component [$model_name][{$current_section_tipo}-{$current_component_tipo}-{$current_lang}-{$section_id}] ".to_string($tm), logger::DEBUG);
-								$tm++;
-								#$total_update[$current_section_tipo][$current_component_tipo][$current_lang]['tm'] = (int)$tm;
-								#echo $response->msg;
-							}else{
-								#echo $response->msg;
-								if($response->result === 0){
-									continue 5;
-								}
+								default:
+									// nothing to do here...
+									break;
 							}
-						}//end foreach ($ar_time_machine_obj  as $current_time_machine_obj)
-						*/
-					}//end foreach ($ar_langs as $current_lang) {
-				}//end foreach ($ar_component_tipo as $current_component_tipo) {
 
-			}//end while ($rows = pg_fetch_assoc($result)) {
+							// component unset to free memory
+								unset($component);
+
+							#
+							# TIME MACHINE . Update Time_machine component dato
+							/*
+							$ar_time_machine_obj = tool_time_machine::get_ar_component_time_machine($current_component_tipo, $section_id, $current_lang, $current_section_tipo, 0, 0);
+							foreach ($ar_time_machine_obj  as $current_time_machine_obj) {
+								$dato_unchanged = $current_time_machine_obj->get_dato();
+
+								# Different options override
+								$update_options->dato_unchanged = $dato_unchanged;
+								$update_options->context 		= 'update_time_machine_dato';
+
+								$response 		= $model_name::update_dato_version($update_options);
+								#debug_log(__METHOD__." UPDATE_DATO_VERSION TIME_MACHINE RESPONSE [$model_name][{$current_section_tipo}-{$section_id}]: result: ".to_string($response->result), logger::DEBUG);
+								if($response->result === 1){
+									$current_time_machine_obj->set_dato($response->new_dato);
+									$current_time_machine_obj->Save();
+									#debug_log(__METHOD__." UPDATED TIME MACHINE dato from component [$model_name][{$current_section_tipo}-{$current_component_tipo}-{$current_lang}-{$section_id}] ".to_string($tm), logger::DEBUG);
+									$tm++;
+									#$total_update[$current_section_tipo][$current_component_tipo][$current_lang]['tm'] = (int)$tm;
+									#echo $response->msg;
+								}else{
+									#echo $response->msg;
+									if($response->result === 0){
+										continue 5;
+									}
+								}
+							}//end foreach ($ar_time_machine_obj  as $current_time_machine_obj)
+							*/
+						}//end foreach ($ar_langs as $current_lang) {
+					}//end foreach ($ar_component_tipo as $current_component_tipo)
+
+				}//end while ($rows = pg_fetch_assoc($result))
+
+
+			// clean vars to free memory
+			unset($result);
+			unset($ar_component_tipo);
 
 			// let GC do the memory job
-			#time_nanosleep(0, 50000000); // 10 ms
+			sleep(1);
 
-			# Forces collection of any existing garbage cycles
+			// Forces collection of any existing garbage cycles
 			gc_collect_cycles();
+
+			// section_tipo summary
+				$after = memory_get_usage();
+				$allocatedSize = ($after - $before);
+				$total_time =  exec_time_unit($start_time, 'sec').' sec';
+				debug_log(__METHOD__
+					. " Finished section: $current_section_tipo " . PHP_EOL
+					. ' allocatedSize: ' . to_string($allocatedSize) . PHP_EOL
+					. ' section time secs: ' .$total_time
+					, logger::DEBUG
+				);
 
 		}//end foreach ($ar_section_tipo as $current_section_tipo)
 
@@ -494,11 +573,22 @@ class update {
 				$response->msg		= ' '.to_string($result);
 			}
 
+			debug_log(__METHOD__
+				. " Executed update script  " . PHP_EOL
+				. ' script_method: ' . $script_method .PHP_EOL
+				. ' memory usage: ' . dd_memory_usage() . PHP_EOL
+				, logger::DEBUG
+			);
+
+			// clean vars
+			unset($result);
+
 		} catch (Exception $e) {
 
 			debug_log(__METHOD__
 				." Caught exception on run_scripts ($script_method): ". PHP_EOL
-				. $e->getMessage()
+				. $e->getMessage() .PHP_EOL
+				.' memory usage: ' . dd_memory_usage() . PHP_EOL
 				, logger::ERROR
 			);
 		}
