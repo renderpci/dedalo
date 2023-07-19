@@ -89,7 +89,7 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 	* @param int $offset = 0
 	* @return array $ar_id
 	*/
-	public static function get_ar_time_machine_of_this(string $tipo=null, int $parent=null, string $lang=null, string $section_tipo=null, int $limit=10, int $offset=0) : array {
+	public static function get_ar_time_machine_of_this(string $tipo=null, int|string $parent=null, string $lang=null, string $section_tipo=null, int $limit=10, int $offset=0) : array {
 
 		/// Temporal !!!
 		#$limit = 1000000;
@@ -99,7 +99,7 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 		$arguments=array();
 		if(!empty($tipo))
 		$arguments['tipo']			= $tipo;
-		$arguments['section_id']	= $parent;
+		$arguments['section_id']	= (int)$parent;
 		$arguments['section_tipo']	= $section_tipo;
 		if(!empty($lang))
 		$arguments['lang']			= $lang;
