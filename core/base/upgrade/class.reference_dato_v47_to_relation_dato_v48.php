@@ -147,7 +147,10 @@ class reference_dato_v47_to_relation_dato_v48 {
 				$min = -1;
 			}
 
-			debug_log(__METHOD__." Processing table $table records from $min to $max ".to_string(), logger::ERROR);
+			debug_log(__METHOD__
+				." Processing table '$table' records from $min to $max "
+				, logger::WARNING
+			);
 
 			// iterate from 1 to last id
 			for ($i=$min; $i<=$max; $i++) {
@@ -189,7 +192,10 @@ class reference_dato_v47_to_relation_dato_v48 {
 						#debug_log(__METHOD__." Updated (removed old path components content) record from table: $table - $id - ".to_string($ar_models_to_change), logger::ERROR);
 
 					}else{
-						debug_log(__METHOD__." ERROR: Empty datos from: $table - $id ".to_string(), logger::ERROR);
+						debug_log(__METHOD__
+							." ERROR: Empty datos from: $table - $id "
+							, logger::ERROR
+						);
 					}
 				}//end while($rows = pg_fetch_assoc($result)) {
 				if(SHOW_DEBUG===true) {
@@ -224,9 +230,9 @@ class reference_dato_v47_to_relation_dato_v48 {
 
 	/**
 	* CHECK_FILES_ALOCATION
-	* @return
+	* @return object $response
 	*/
-	public static function check_files_alocation() {
+	public static function check_files_alocation() : object {
 
 		$response = new stdClass();
 			$response->result 	= false;

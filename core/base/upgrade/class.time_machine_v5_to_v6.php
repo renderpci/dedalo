@@ -57,7 +57,7 @@ class time_machine_v5_to_v6 {
 			if (!$min_rows) {
 				continue;
 			}
-			$min 		= $min_rows['id'];
+			$min = $min_rows['id'];
 
 			//$min = 1;
 
@@ -69,7 +69,11 @@ class time_machine_v5_to_v6 {
 				$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
 				if($result===false) {
 					$msg = "Failed Search id $i. Data is not found.";
-					debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
+					debug_log(__METHOD__
+						." ERROR: $msg ". PHP_EOL
+						.' strQuery: ' . $strQuery
+						, logger::ERROR
+					);
 					continue;
 				}
 				$n_rows = pg_num_rows($result);
@@ -127,13 +131,19 @@ class time_machine_v5_to_v6 {
 									$new_dato = json_decode($dato);
 								} catch (Exception $e) {
 									error_log( 'Caught exception: ' . $e->getMessage() );
-									debug_log(__METHOD__." ERROR: invalid JSON data id: ($id) ".$e->getMessage(), logger::ERROR);
+									debug_log(__METHOD__
+										." ERROR: invalid JSON data id: ($id) ".$e->getMessage()
+										, logger::ERROR
+									);
 									continue 2;
 								}
 								break;
 
 							default:
-								debug_log(__METHOD__." model_name not valid ".to_string(), logger::ERROR);
+								debug_log(__METHOD__
+									." model_name not valid: ".to_string($model_name)
+									, logger::ERROR
+								);
 								continue 2;
 								break;
 						}
