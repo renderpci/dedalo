@@ -3,7 +3,7 @@
  * CORE FUNCTIONS
  * Moved from core/base/core_functions.php to shared/core_functions.php
  * to prevent duplication of functions in publication classes
- * /
+ */
 
 
 
@@ -176,9 +176,6 @@ function debug_log(string $info, int $level=logger::DEBUG) : bool {
 		// error log print
 		error_log($msg);
 	}
-
-
-
 
 
 	return true;
@@ -405,10 +402,12 @@ function to_string(mixed $var=null) : string {
 			foreach ($var as $obj) {
 				$ar_ob[] = $obj;
 			}
-			return print_r($ar_ob, true);
+			// return print_r($ar_ob, true);
+			return json_encode($ar_ob, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
 		}
 
-		return print_r($var, true);
+		// return print_r($var, true);
+		return json_encode($var, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
 
 	}else if (is_object($var)) {
 
@@ -768,7 +767,7 @@ function sanitize_query(string $strQuery) : string {
 * @return mixed $var_value
 */
 // function fix_cascade_config_var(string $var_name, mixed $var_default_value) : mixed {
-function fix_cascade_config_var(string $var_name, $var_default_value) { // 7.4 compatible
+function fix_cascade_config_var(string $var_name, mixed $var_default_value) { // 7.4 compatible
 
 	switch (true) {
 		# REQUEST (GET/POST)
@@ -968,6 +967,8 @@ function ip_in_range(string $ip, string $range) : bool {
 
 /**
 * BR2NL
+* @param string $string
+* @return string
 */
 function br2nl(string $string) : string {
 
@@ -978,6 +979,8 @@ function br2nl(string $string) : string {
 
 /**
 * GET_HTTP_RESPONSE_CODE
+* @param string $theURL
+* @return int
 */
 function get_http_response_code(string $theURL) : int {
 	stream_context_set_default(
@@ -1066,7 +1069,7 @@ function str_lreplace(string $search, string $replace, string $subject) : string
 * @param object $sourceObject
 * @return object
 */
-function cast($destination, $sourceObject) {
+function cast($destination, $sourceObject) : object {
 
 	if (is_string($destination)) {
 		$destination = new $destination();
@@ -1122,8 +1125,10 @@ function log_messages($vars, string $level='error') : string {
 /**
 * NOTICE_TO_ACTIVE_USERS
 * Print a message in all pages to active users
+* @param array $ar_options
+* @return void
 */
-function notice_to_active_users(array $ar_options) {
+function notice_to_active_users(array $ar_options) : void {
 
 	$msg	= $ar_options['msg'];
 	$mode	= $ar_options['mode'];
@@ -1137,9 +1142,10 @@ function notice_to_active_users(array $ar_options) {
 * GET_REQUEST_VAR
 * Check if var exists in $_REQUEST environment. If not do a fallback to search var in php://input (for
 * example in trigger JSON requests)
-* @return mixed|bool $var_value
+* @param string $var_name
+* @return mixed $var_value
 */
-function get_request_var(string $var_name) {
+function get_request_var(string $var_name) : mixed {
 
 	$var_value = null;
 
@@ -1400,6 +1406,7 @@ function session_start_manager(array $request_options) : bool {
 /**
 * SAFE_TABLE
 * Remove extra malicious code
+* @param string $table
 * @return string|bool $table
 */
 function safe_table(string $table) {
@@ -1417,6 +1424,7 @@ function safe_table(string $table) {
 /**
 * SAFE_LANG
 * Remove extra malicious code
+* @param string $lang
 * @return string|bool $lang
 */
 function safe_lang(string $lang) {
@@ -1434,6 +1442,7 @@ function safe_lang(string $lang) {
 /**
 * SAFE_TIPO
 * Remove extra malicious code
+* @param string $tipo
 * @return string|bool $tipo
 */
 function safe_tipo(string $tipo) {
@@ -1458,11 +1467,12 @@ function safe_tipo(string $tipo) {
 /**
 * SAFE_SECTION_ID
 * Remove extra malicious code
+* @param int|string $section_id
 * @return string|bool $section_id
 */
 function safe_section_id( $section_id ) {
 
-	preg_match("/^[0-9]+$/", $section_id, $output_array);
+	preg_match("/^[0-9]+$/", (string)$section_id, $output_array);
 	if (empty($output_array[0])) {
 		return false;
 	}
@@ -1475,6 +1485,8 @@ function safe_section_id( $section_id ) {
 /**
 * FORMAT_SIZE_UNITS
 * Format bytes to more human readable unit like KG, MB, GB
+* @param int $bytes
+* @return string $bytes
 */
 function format_size_units(int $bytes) : string {
 	if ($bytes >= 1073741824) {
@@ -1498,6 +1510,7 @@ function format_size_units(int $bytes) : string {
 
 /**
 * ENCODEURICOMPONENT
+* @param string $str
 * @return string
 */
 function encodeURIComponent(string $str) : string {
@@ -1511,8 +1524,11 @@ function encodeURIComponent(string $str) : string {
 /**
 * SHOW_MSG
 * Decors msg with error, warning, etc. css
+* @param string $msg
+* @param string $type = 'ERROR'
+* @return string $msg
 */
-function show_msg(string $msg, string $type='ERROR') {
+function show_msg(string $msg, string $type='ERROR') : string  {
 
 	switch ($type) {
 		case 'WARNING':
