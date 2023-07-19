@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS ERROR
 *
 *
@@ -11,7 +11,7 @@ class dd_error {
 	/**
 	* CATCH-ABLE ERRORS : captureError
 	*/
-	public static function captureError( $number, $message, $file, $line ) {
+	public static function captureError( $number, $message, $file, $line ) : void {
 
 		// Insert all in one table
 		$error = array(
@@ -21,13 +21,21 @@ class dd_error {
 			'line'		=> $line
 		);
 
+		$info = print_r($error, true);
+
 		// $error_to_show['user']	= 'Ops.. [Error]             ' . $message;
 		// $error_to_show['debug']	= 'Ops.. [Error] '.$number.' ' . $message;
 		// $error_to_show['dump']	= print_r($error, true);
 
 		// PHP-APACHE LOG
 		// error_log('ERROR: '.$error_to_show['debug'].$error_to_show['dump']);
-		error_log('ERROR [captureError]: '. print_r($error, true));
+
+		// error_log('ERROR [dd_error::captureError]: '. print_r($error, true));
+		$error_msg = sprintf("\033[43m%s\033[0m", 'ERROR [dd_error::captureError]: '.$info);
+		error_log($error_msg);
+
+		// DEDALO_ERRORS ADD
+		$_ENV['DEDALO_LAST_ERROR'] = $info;
 	}//end captureError
 
 
@@ -35,7 +43,7 @@ class dd_error {
 	/**
 	* EXCEPTIONS : captureException
 	*/
-	public static function captureException( $exception ) {
+	public static function captureException( $exception ) : void {
 
 		try {
 
@@ -48,7 +56,7 @@ class dd_error {
 			$error_to_show['debug']	= 'Ops.. [Exception] ' . $message;
 			$error_to_show['dump']	= print_r($exception,true);
 
-			error_log($error_to_show['debug'] . $error_to_show['dump']);
+			error_log('Exception [dd_error::captureException] '.$error_to_show['debug'] . $error_to_show['dump']);
 		}
 		catch (Exception $exception2) {
 			// Another uncaught exception was thrown while handling the first one.
@@ -64,11 +72,11 @@ class dd_error {
 			$error_to_show['debug']	= "Ops.. [Exception2]  " . $message .PHP_EOL." Ops2.. [Exception2] " . $message2;
 			$error_to_show['dump']	= 'Additional uncaught exception thrown while handling exception.'.print_r($exception,true).PHP_EOL.print_r($exception2,true);
 
-			error_log('Exception 2 : '.$message2);
+			error_log('Exception 2 [dd_error::captureException]: '.$message2);
 		}
 
 		// PHP-APACHE LOG
-		error_log($error_to_show['debug'].$error_to_show['dump']);
+		error_log('ERROR [dd_error::captureException]:' . $error_to_show['debug'].$error_to_show['dump']);
 	}//end captureException
 
 
@@ -76,9 +84,9 @@ class dd_error {
 	/**
 	* UNCATCHABLE ERRORS : captureShutdown
 	*/
-	public static function captureShutdown() {
+	public static function captureShutdown() : void {
 
-		$error = error_get_last( );
+		$error = error_get_last();
 		if( $error ) {
 
 			## IF YOU WANT TO CLEAR ALL BUFFER, UNCOMMENT NEXT LINE:
@@ -89,14 +97,11 @@ class dd_error {
 			$error_to_show['debug']	= 'Ops.. [Fatal Error] ' . $error['message'];
 			$error_to_show['dump']	= print_r($error,true);
 
-			error_log('ERROR [captureShutdown]: '. print_r($error_to_show, true));
+			error_log('ERROR [dd_error::captureShutdown]: '. print_r($error_to_show, true));
 
-		} else {
-			return true;
+			// PHP-APACHE LOG
+			error_log('ERROR [dd_error::captureShutdown]: '.$error_to_show['debug'].$error_to_show['dump']);
 		}
-
-		// PHP-APACHE LOG
-		error_log($error_to_show['debug'].$error_to_show['dump']);
 	}//end captureShutdown
 
 
@@ -193,5 +198,4 @@ register_shutdown_function( array( 'dd_error', 'captureShutdown' ) );
 
 	// Same as error_reporting(E_ALL);
 	ini_set('error_reporting', E_ALL);
-
 */
