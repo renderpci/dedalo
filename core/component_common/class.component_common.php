@@ -97,6 +97,8 @@ abstract class component_common extends common {
 		public $ar_list_of_values;
 		// bool updating_dato. Used by updater script
 		public $updating_dato;
+		// static array $ar_component_instances
+		public static $ar_component_instances;
 
 
 
@@ -329,7 +331,7 @@ abstract class component_common extends common {
 			}
 
 		// cache. Get cache instance if it exists. Otherwise, create a new one
-			static $ar_component_instances;
+			// static $ar_component_instances;
 
 			// cache key
 				// $cache_key	= $tipo .'_'. $section_tipo .'_'. $section_id .'_'. $lang .'_'. $mode;
@@ -342,13 +344,13 @@ abstract class component_common extends common {
 				$cache_slice_on			= 40;  // 200 // $max_cache_instances/2;
 
 			// overload : If ar_component_instances > $max_cache_instances , not add current element to cache to prevent overload
-				if ( isset($ar_component_instances) && count($ar_component_instances)>$max_cache_instances ) {
-					$ar_component_instances = array_slice($ar_component_instances, $cache_slice_on, null, true);
+				if ( isset(self::$ar_component_instances) && count(self::$ar_component_instances) > $max_cache_instances ) {
+					self::$ar_component_instances = array_slice(self::$ar_component_instances, $cache_slice_on, null, true);
 				}
 
 			// new instance. If not already exists, create a new one and store in cache
-				if ( !isset($ar_component_instances) || !array_key_exists($cache_key, $ar_component_instances) ) {
-				// if ( !isset($ar_component_instances) || !isset($ar_component_instances[$cache_key]) ) {
+				if ( !isset(self::$ar_component_instances) || !array_key_exists($cache_key, self::$ar_component_instances) ) {
+				// if ( !isset(self::$ar_component_instances) || !isset(self::$ar_component_instances[$cache_key]) ) {
 
 					// __CONSTRUCT : Store new component in static array var
 					$component = new $component_name(
@@ -363,18 +365,18 @@ abstract class component_common extends common {
 						$component->set_caller_dataframe($caller_dataframe);
 					}
 
-					$ar_component_instances[$cache_key] = $component;
+					self::$ar_component_instances[$cache_key] = $component;
 				}
 				// else{
 
 					// Change mode if is needed
-						// if ($ar_component_instances[$cache_key]->get_mode()!==$mode) {
-						// 	$ar_component_instances[$cache_key]->set_mode($mode);
+						// if (self::$ar_component_instances[$cache_key]->get_mode()!==$mode) {
+						// 	self::$ar_component_instances[$cache_key]->set_mode($mode);
 						// }
 				// }
 
 
-		return $ar_component_instances[$cache_key];
+		return self::$ar_component_instances[$cache_key];
 	}//end get_instance
 
 
