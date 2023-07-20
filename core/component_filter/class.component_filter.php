@@ -33,13 +33,13 @@ class component_filter extends component_relation_common {
 	/**
 	* __CONSTRUCT
 	*/
-	protected function __construct(string $tipo=null, $section_id=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
+	protected function __construct(string $tipo=null, $section_id=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null, bool $cache=true) {
 
 		// force lang value always
 			$this->lang = DEDALO_DATA_NOLAN;
 
 		// Build the component normally
-			parent::__construct($tipo, $section_id, $mode, $this->lang, $section_tipo);
+			parent::__construct($tipo, $section_id, $mode, $this->lang, $section_tipo, $cache);
 
 		// dedalo_default_project
 		// If component is in edit mode and don't have data, we assign the default data defined in config

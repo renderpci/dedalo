@@ -11,14 +11,14 @@ class component_geolocation extends component_common {
 	/**
 	* __CONSTRUCT
 	*/
-	protected function __construct(string $tipo, $section_id=null, string $mode='list', string $lang=null, string $section_tipo=null) {
+	protected function __construct(string $tipo, $section_id=null, string $mode='list', string $lang=null, string $section_tipo=null, bool $cache=true) {
 
 
 		# Force always DEDALO_DATA_NOLAN
 		$this->lang = DEDALO_DATA_NOLAN;
 
 		# Build the component
-		parent::__construct($tipo, $section_id, $mode, $this->lang, $section_tipo);
+		parent::__construct($tipo, $section_id, $mode, $this->lang, $section_tipo, $cache);
 
 		# Dato verification, if the dato is empty, build the standard view of the map
 		// $dato = $this->get_dato();
