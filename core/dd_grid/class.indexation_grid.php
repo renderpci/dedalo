@@ -262,7 +262,8 @@ class indexation_grid {
 					$current_section_id,
 					'indexation_list',
 					$current_lang,
-					$current_section_tipo
+					$current_section_tipo,
+					true // bool cache
 				);
 				$current_component->set_locator($locator);
 				// set the first id of the column_obj, if the component is a related component it will used to create a path of the deeper components
@@ -483,7 +484,8 @@ class indexation_grid {
 			$this->section_id,
 			'list',
 			DEDALO_DATA_NOLAN,
-			$this->section_tipo
+			$this->section_tipo,
+			true // bool cache
 		);
 
 		$ar_locators = $component->get_dato();
