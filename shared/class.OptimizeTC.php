@@ -1,4 +1,5 @@
 <?php
+// declare(strict_types=1);
 /**
 * OPTIMIZETC
 * It is used for transcripts (component_text_area) but also for public parts.
@@ -72,8 +73,8 @@ abstract class OptimizeTC {
 		// prevent negative values
 		if($indexPos<0) $indexPos = 0;
 
-		// validation margin default
-		$margen = 55 ;
+		// validation margin chars default
+		$margen = 55;
 
 			// Previous TC position. fragment from start(0) to indexIN position
 			$frAnterior = mb_substr($text, 0, $indexPos);
@@ -182,7 +183,8 @@ abstract class OptimizeTC {
 			$indexPos 	= $indexPos + $in_margin;
 		}else{
 			// If finalPos if given, we are in search free case, do not use indexOUT here
-			$indexPos 	= mb_strpos($text, $end_position);
+			// $indexPos 	= mb_strpos($text, $end_position);
+			$indexPos 	= $end_position;
 			$indexPos 	= $end_position + $in_margin;
 		}
 
@@ -450,10 +452,10 @@ abstract class OptimizeTC {
 		$seconds = $floor_seg;
 		$mseconds = round((($seg - floor($seg))*1000));
 		# format 00
-		$hours 		= str_pad($hours, 2, '0', STR_PAD_LEFT);
-		$minutes 	= str_pad($minutes, 2, '0', STR_PAD_LEFT);
-		$seconds 	= str_pad($seconds, 2, '0', STR_PAD_LEFT);
-		$mseconds 	= str_pad($mseconds, 3, '0', STR_PAD_LEFT);
+		$hours 		= str_pad( (string)$hours, 2, '0', STR_PAD_LEFT);
+		$minutes 	= str_pad( (string)$minutes, 2, '0', STR_PAD_LEFT);
+		$seconds 	= str_pad( (string)$seconds, 2, '0', STR_PAD_LEFT);
+		$mseconds 	= str_pad( (string)$mseconds, 3, '0', STR_PAD_LEFT);
 
 		$tc = $hours .':'. $minutes. ':'. $seconds . '.' . $mseconds;
 
