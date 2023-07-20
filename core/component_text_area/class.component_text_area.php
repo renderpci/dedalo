@@ -295,7 +295,6 @@ class component_text_area extends component_common {
 				$procesed_fallback_value = []; // unnecessary to calculate
 			}
 
-
 		// label
 			$label = $this->get_label();
 
@@ -752,14 +751,14 @@ class component_text_area extends component_common {
 	* @param string $tag_type
 	* 	Like: 'index'
 	* @param string $raw_text
-	* @return array|null
+	* @return object|null $fragment_object
 	* [
 	* 	$fragment_text, // string like 'text enclosed by tags xxx to /xxx'
 	*	$tag_in_pos, // int like 1
 	*	$tag_out_pos // int like 1234
 	* ]
 	*/
-	public static function get_fragment_text_from_tag(string $tag_id, string $tag_type, string $raw_text) : ?array {
+	public static function get_fragment_text_from_tag(string $tag_id, string $tag_type, string $raw_text) : ?object {
 
 		// check tag_id, tag_type are valid
 			if(empty($tag_id) || empty($tag_type)) {
@@ -823,22 +822,31 @@ class component_text_area extends component_common {
 						$fragment_text = $match[$key_fragment][0];
 
 						// Clean fragment_text
-						if (!empty($fragment_text)) {
-							$fragment_text	= TR::deleteMarks($fragment_text);
-							$fragment_text	= htmlspecialchars_decode($fragment_text);
-						}
+							if (!empty($fragment_text)) {
+								$fragment_text	= TR::deleteMarks($fragment_text);
+								$fragment_text	= htmlspecialchars_decode($fragment_text);
+							}
 
 						// tag in position
 						$tag_in_pos = $match[0][1];
 
 						// tag out position
-						$tag_out_pos = $tag_in_pos + strlen($match[0][0]);
+						$tag_out_pos = $tag_in_pos + mb_strlen($match[0][0]);
 
-						return array(
-							$fragment_text,
-							$tag_in_pos,
-							$tag_out_pos
-						);
+						// tag_in like "[index-n-9--data::data]"
+						$tag_in		= $match[1][0];
+						// tag_out like "[/index-n-9--data::data]"
+						$tag_out	= $match[4][0];
+
+						$fragment_object = (object)[
+							'text'			=> $fragment_text,
+							'tag_in_pos'	=> $tag_in_pos,
+							'tag_out_pos'	=> $tag_out_pos,
+							'tag_in'		=> $tag_in,
+							'tag_out'		=> $tag_out
+						];
+
+						return $fragment_object;
 					}
 				}
 			}

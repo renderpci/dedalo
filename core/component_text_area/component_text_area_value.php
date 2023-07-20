@@ -1,6 +1,6 @@
 <?php
 // Process different values of the component_text_area
-// split the dato in columns, it depends of the format_column.
+// split the dato into columns, it depends of the format_column.
 // format_columns allowed: av, pdf, svg, geo, text
 
 	// component data
@@ -46,18 +46,25 @@
 		}
 
 	// fragment
-		if(isset($tag_id)){
-			$fragment_info	= component_text_area::get_fragment_text_from_tag(
+		if(isset($tag_id)) {
+			$fragment_info = component_text_area::get_fragment_text_from_tag(
 				$tag_id,
 				$tag_type,
 				$full_raw_text
 			);
 		}else{
-			$fragment_info = $this->get_value_fragment(100);
 			$tag_id = '';
+			$value_fragment	= $this->get_value_fragment(100);
+			$fragment_info	= (object)[
+				'text'			=> ($value_fragment[0] ?? ''),
+				'tag_in_pos'	=> null,
+				'tag_out_pos'	=> null,
+				'tag_in'		=> null,
+				'tag_out'		=> null
+			];
 		}
 
-		$text_fragment	= $fragment_info[0] ?? '';
+		$text_fragment	= $fragment_info->text ?? '';
 
 	// data
 		// reset data
@@ -66,21 +73,35 @@
 
 			case 'av':
 				// tc info
-					$tag_in_pos		= $fragment_info[1] ?? 0;
-					$tag_out_pos	= $fragment_info[2] ?? 0;
+					$tag_in_pos		= $fragment_info->tag_in_pos  ?? 0;
+					$tag_out_pos	= $fragment_info->tag_out_pos ?? 0;
 
+					// $tc_in = OptimizeTC::optimize_tc_in(
+					// 	$full_raw_text, // string text
+					// 	null, // string|null indexIN
+					// 	(int)$tag_in_pos, // int|null start_position
+					// 	0 // int in_margin
+					// );
 					$tc_in = OptimizeTC::optimize_tc_in(
 						$full_raw_text, // string text
-						null, // string|null indexIN
-						(int)$tag_in_pos, // int|null start_position
+						$fragment_info->tag_in, // string|null indexIN
+						null, // int|null start_position
 						0 // int in_margin
 					);
+
+					// $tc_out = OptimizeTC::optimize_tc_out(
+					// 	$full_raw_text, // string text
+					// 	null, // string|null indexOUT
+					// 	(int)$tag_out_pos, // int|null end_position
+					// 	100 // int in_margin
+					// );
 					$tc_out = OptimizeTC::optimize_tc_out(
 						$full_raw_text, // string text
-						null, // string|null indexOUT
-						(int)$tag_out_pos, // int|null end_position
+						$fragment_info->tag_out, // string|null indexOUT
+						null, // int|null end_position
 						100 // int in_margin
 					);
+
 
 					$tc_in_secs		= OptimizeTC::TC2seg($tc_in);
 					$tc_out_secs	= OptimizeTC::TC2seg($tc_out);
