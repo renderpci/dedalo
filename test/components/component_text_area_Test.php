@@ -277,22 +277,29 @@ final class component_text_area_test extends TestCase {
 			'My text raw [index-n-1-label in 1-data::data] text enclosed by tag [/index-n-1-label in 1-data::data] and more...' // string text_raw
 		);
 
+		$eq = gettype($value)==='object' || gettype($value)==='NULL';
 		$this->assertTrue(
-			$value[0]===' text enclosed by tag ',
+			$eq,
+			'expected true (gettype($value)===object || gettype($value)===NULL):' . PHP_EOL
+				.gettype($value)
+		);
+
+		$this->assertTrue(
+			$value->text===' text enclosed by tag ',
 				'expected string:' . PHP_EOL
 				.' text enclosed by tag ' . PHP_EOL
 				.'but received:'. PHP_EOL
-				.$value[0]
+				.$value->text
 		);
 		$this->assertTrue(
-			$value[1]===12,
-				'expected value[1] is 12:' . PHP_EOL
-				.$value[1]
+			$value->tag_in_pos===12,
+				'expected tag_in_pos is 12:' . PHP_EOL
+				.$value->tag_in_pos
 		);
 		$this->assertTrue(
-			$value[2]===101,
-				'expected value[2] is 101:' . PHP_EOL
-				.$value[2]
+			$value->tag_out_pos===101,
+				'expected tag_out_pos is 101:' . PHP_EOL
+				.$value->tag_out_pos
 		);
 	}//end test_get_fragment_text_from_tag
 
