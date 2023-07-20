@@ -398,16 +398,16 @@ class update {
 			// Notify to log to know script state
 				$n_components = count($ar_component_tipo);
 				debug_log(__METHOD__
-					." Updating components of section: $current_section_tipo (records: $n_rows, components $model_name: $n_components) Total: ". ($n_rows*$n_components) . PHP_EOL
+					." Updating components of section: $current_section_tipo (records: $n_rows, component: $model_name : $n_components) Total: ". ($n_rows*$n_components) . PHP_EOL
 					.' updating component: ' . $model_name
 					, logger::WARNING
 				);
 
 			// Iterate database resource directly to minimize memory requirements on large arrays
-				$i=0; $tm=0;
-				while ($rows = pg_fetch_assoc($result)) {
+				// $i=0; $tm=0;
+				while ($row = pg_fetch_assoc($result)) {
 
-					$section_id = $rows['section_id'];
+					$section_id = $row['section_id'];
 
 					foreach ($ar_component_tipo as $current_component_tipo) {
 
@@ -508,7 +508,7 @@ class update {
 						}//end foreach ($ar_langs as $current_lang) {
 					}//end foreach ($ar_component_tipo as $current_component_tipo)
 
-				}//end while ($rows = pg_fetch_assoc($result))
+				}//end while ($row = pg_fetch_assoc($result))
 
 
 			// clean vars to free memory
