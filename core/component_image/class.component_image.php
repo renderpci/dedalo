@@ -24,10 +24,10 @@ class component_image extends component_media_common {
 	/**
 	* __CONSTRUCT
 	*/
-	protected function __construct(string $tipo, $section_id, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
+	protected function __construct(string $tipo, $section_id, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null, bool $cache=true) {
 
 		// common constructor. Creates the component as normally do with parent class
-			parent::__construct($tipo, $section_id, $mode, $lang, $section_tipo);
+			parent::__construct($tipo, $section_id, $mode, $lang, $section_tipo, $cache);
 
 		// fix component main properties
 			if (!empty($this->section_id)) {

@@ -67,7 +67,7 @@ class component_media_common extends component_common {
 	/**
 	* __CONSTRUCT
 	*/
-	protected function __construct(string $tipo, $section_id=null, string $mode='list', string $lang=DEDALO_DATA_LANG, string $section_tipo=null) {
+	protected function __construct(string $tipo, $section_id=null, string $mode='list', string $lang=DEDALO_DATA_LANG, string $section_tipo=null, bool $cache=true) {
 
 		// lang. Force always DEDALO_DATA_NOLAN when is not translatable
 		// (note that PDF can be translatable)
@@ -77,7 +77,7 @@ class component_media_common extends component_common {
 			}
 
 		// common constructor. Creates the component as normally do with parent class
-			parent::__construct($tipo, $section_id, $mode, $lang, $section_tipo);
+			parent::__construct($tipo, $section_id, $mode, $lang, $section_tipo, $cache);
 
 		// quality
 			$this->quality = $this->get_quality();

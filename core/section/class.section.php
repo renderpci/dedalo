@@ -11,33 +11,33 @@ class section extends common {
 	/**
 	* CLASS VARS
 	*/
-		# FIELDS
+		// FIELDS
 		// protected $section_id;
 		// protected $dato;
 
-		# Buttons objects
+		// Buttons objects
 		public $ar_buttons;
 
 		public $ar_all_project_langs;
 
-		public $show_inspector = true;	# default show: true
+		public $show_inspector = true; // default show: true
 
 		public $section_virtual = false;
 		public $section_real_tipo;
 
 		static $active_section_id;
 
-		public $is_temp = false;	# Used to force save data to session instead database. Default is false
+		public $is_temp = false; // Used to force save data to session instead database. Default is false
 
 		public $options;
 
-		# SAVE_HANDLER
-		# Default is 'database'. Other options like 'session' are accepted
-		# Note that section change automatically this value (to 'session' for example) when received section_id is like 'temp1' for manage this cases as temporal section
+		// SAVE_HANDLER
+		// Default is 'database'. Other options like 'session' are accepted
+		// Note that section change automatically this value (to 'session' for example) when received section_id is like 'temp1' for manage this cases as temporal section
 		public $save_handler = 'database';
 
-		# static cache for section instances
-		static $ar_section_instances;
+		// static cache for section instances
+		public static $ar_section_instances;
 
 		public $save_modified = true; # Default is true
 
@@ -112,93 +112,78 @@ class section extends common {
 	* @param string|null $mode = 'list'
 	* @param bool $cache = true
 	*
-	* @return instance section
+	* @return object $section
 	*/
 	public static function get_instance($section_id=null, string $tipo=null, string $mode='list', bool $cache=true, object $caller_dataframe=null) : section {
 
-		// check valid tipo
+		// tipo check. Is mandatory
 			if (empty($tipo)) {
+				$msg = "Error: on construct section : tipo is mandatory. section_id:'$section_id', tipo:'$tipo', mode:'$mode'";
 				debug_log(__METHOD__
-					." Error: on construct section : tipo is mandatory. section_id:$section_id, tipo:$tipo, mode:$mode"
+					. $msg
 					, logger::ERROR
 				);
-				throw new Exception("Error: on construct section : tipo is mandatory. section_id:$section_id, tipo:$tipo, mode:$mode", 1);
+				throw new Exception($msg, 1);
 			}
 
-		// Not cache new sections (without section_id)
-			if (empty($section_id)) {
+		// cache note: Use always (cache=false) in imports (!)
+		// Not cache new sections (without section_id or cache=false)
+			if ($cache===false || empty($section_id)) {
 
-				$section = new section(null, $tipo, $mode);
-					//dataframe case
-					if(isset($caller_dataframe)){
-						$section->set_caller_dataframe($caller_dataframe);
-					}
-
-				return $section;
-			}
-
-		// return new section($section_id, $tipo, $mode);
-
-		// removed cache features temporally (!) Verify real speed benefits
-			// Direct construct without cache instance
-			// limit cache to 10000 items
-				// if ($cache===true && isset(self::$ar_section_instances) && count(self::$ar_section_instances) > 10000) {
-				// 	$cache = false;
-				// 	debug_log(__METHOD__
-				// 		. " WARNING: Turned OFF the section instances cache (bigger than maximum 10000) " . PHP_EOL
-				// 		.' maybe this is not an error, only a import or update big task. Removed to prevent memory issues'
-				// 		, logger::ERROR
-				// 	);
-				// }
-			// Use this config in imports
-				// $cache = false; // (!) Forced !
-				if ($cache===false) {
-					$section = new section($section_id, $tipo, $mode);
-					//dataframe case
-					if(isset($caller_dataframe)){
-						$section->set_caller_dataframe($caller_dataframe);
-					}
-
-					return $section;
-				}
-
-			# key for cache
-			$key = $section_id .'_'. $tipo .'_'. $mode;
-			if(isset($caller_dataframe)){
-				$key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->section_id;
-			}
-
-			// $max_cache_instances = 300*3; // Default 300
-			// $cache_slice_on 	 = 100*3; // Default 100
-
-			// # OVERLOAD : If ar_section_instances > 99 , not add current section to cache to avoid overload
-			// # array_slice ( array $array , int $offset [, int $length = NULL [, bool $preserve_keys = false ]] )
-			// if (isset(self::$ar_section_instances) && sizeof(self::$ar_section_instances)>$max_cache_instances) {
-			// 	self::$ar_section_instances = array_slice(self::$ar_section_instances, $cache_slice_on, null, true);
-			// 	if(SHOW_DEBUG===true) {
-			// 		debug_log(__METHOD__.' '.DEDALO_HOST." Overload sections prevent (max $max_cache_instances). Unset first $cache_slice_on cache items [$key]", logger::DEBUG);
-			// 	}
-
-			// 	// let GC do the memory job
-			// 	//time_nanosleep(0, 10000000); // 10 ms
-			// 	time_nanosleep(0, 2000000); // 02 ms
-			// }
-
-		// find current instance in cache
-			if ( !array_key_exists($key, (array)self::$ar_section_instances) ) {
+				// instance new section
 				$section = new section($section_id, $tipo, $mode);
 				// dataframe case
 				if(isset($caller_dataframe)){
 					$section->set_caller_dataframe($caller_dataframe);
 				}
 
-				self::$ar_section_instances[$key] = $section;
+				return $section;
+			}//end if ($cache===false || empty($section_id))
+
+		// cache. Get cache instance if it exists. Otherwise, create a new one
+			// cache key
+				$cache_key = implode('_', [$section_id, $tipo, $mode]);
+				if(isset($caller_dataframe)){
+					$cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->section_id;
+				}
+
+			// overload : If ar_section_instances > $max_cache_instances , not add current element to cache to prevent overload
+			// (!) Deactivated 20-07-2023 because it's unnecessary. The control of overload is made in JSON_RecordObj_matrix
+				// $max_cache_instances	= 300*3;
+				// $cache_slice_on			= 100*3;
+				// if (isset(self::$ar_section_instances) && sizeof(self::$ar_section_instances)>$max_cache_instances) {
+				// 	self::$ar_section_instances = array_slice(self::$ar_section_instances, $cache_slice_on, null, true);
+				// 	if(SHOW_DEBUG===true) {
+				// 		debug_log(__METHOD__
+				// 			.' '.DEDALO_HOST." Overload sections prevent (max $max_cache_instances). Unset first $cache_slice_on cache items [$cache_key]"
+				// 			, logger::DEBUG
+				// 		);
+				// 	}
+				// 	// let GC do the memory job
+				// 	time_nanosleep(0, 2000000); // 02 ms
+				// }
+
+		// new instance. If not already exists, create a new one and store in cache, else get from cache array
+			if ( !isset(self::$ar_section_instances) || !array_key_exists($cache_key, (array)self::$ar_section_instances) ) {
+
+				// instance newsection
+				$section = new section($section_id, $tipo, $mode);
+				// dataframe case
+				if(isset($caller_dataframe)){
+					$section->set_caller_dataframe($caller_dataframe);
+				}
+
+				// store instance in cache
+				self::$ar_section_instances[$cache_key] = $section;
+
 			}else{
-				// debug_log(__METHOD__." Getting section instance from cache ".to_string($key), logger::ERROR);
+
+				// get from cache
+				$section = self::$ar_section_instances[$cache_key];
 			}
 
 
-		return self::$ar_section_instances[$key];
+		return $section;
 	}//end get_instance
 
 
@@ -1549,7 +1534,7 @@ class section extends common {
 					}else{
 
 						debug_log(__METHOD__
-							." Dataframe section has not defined source property"
+							." Dataframe section has not defined source property (delete_dataframe)"
 							, logger::ERROR
 						);
 						return false;

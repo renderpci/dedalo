@@ -99,6 +99,8 @@ abstract class component_common extends common {
 		public $updating_dato;
 		// static array $ar_component_instances
 		public static $ar_component_instances;
+		// public bool cache
+		public $cache;
 
 
 
@@ -114,14 +116,19 @@ abstract class component_common extends common {
 	* @param string $section_tipo = null
 	* @param bool $cache = true
 	*
-	* @return object|null
+	* @return object|null $component
 	*/
 	final public static function get_instance(string $component_name=null, string $tipo=null, $section_id=null, string $mode='edit', string $lang=DEDALO_DATA_LANG, string $section_tipo=null, bool $cache=true, object $caller_dataframe=null) : ?object {
 		// $start_time = start_time();
 
 		// tipo check. Is mandatory
 			if (empty($tipo)) {
-				throw new Exception("Error: on construct component (1): tipo is mandatory. tipo:'$tipo', section_id:'$section_id', mode:'$mode', lang:'$lang'", 1);
+				$msg = "Error: on construct component (1): tipo is mandatory. component_name:'$component_name', tipo:'$tipo', section_id:'$section_id', mode:'$mode', lang:'$lang'";
+				debug_log(__METHOD__
+					. $msg
+					, logger::ERROR
+				);
+				throw new Exception($msg, 1);
 			}
 
 		// model check. Verify 'component_name' and 'tipo' are correct
@@ -129,7 +136,7 @@ abstract class component_common extends common {
 			if (empty($component_name)) {
 
 				// calculate component name (is ontology element model)
-					$component_name = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+					$component_name = $model_name;
 
 			}else if (!empty($component_name) && $model_name!==$component_name) {
 
@@ -313,70 +320,79 @@ abstract class component_common extends common {
 					}
 			}//end if(SHOW_DEBUG===true)
 
+		// update mode prevents to set cache as true
+			if ($mode==='update' && $cache===true) {
+				debug_log(__METHOD__
+					. " Forced wrong cache value (true) to false when mode is 'update'  " . PHP_EOL
+					. ' mode: ' . $mode . PHP_EOL
+					. ' cache: ' . $cache . PHP_EOL
+					, logger::ERROR
+				);
+				$cache = false;
+			}
+
 		// no cache. Direct construct without cache instance. Use this config in imports
-			if ($cache===false || empty($section_id)) {
-				// instance the component
+			if ($cache===false || empty($section_id) || $mode==='update') {
+
+				// instance new component
 				$component = new $component_name(
 					$tipo,
 					$section_id,
 					$mode,
 					$lang,
-					$section_tipo
+					$section_tipo,
+					$cache
 				);
 				// dataframe
 				if(isset($caller_dataframe)){
 					$component->set_caller_dataframe($caller_dataframe);
 				}
+
 				return $component;
-			}
+			}//end if ($cache===false || empty($section_id))
 
 		// cache. Get cache instance if it exists. Otherwise, create a new one
-			// static $ar_component_instances;
-
 			// cache key
-				// $cache_key	= $tipo .'_'. $section_tipo .'_'. $section_id .'_'. $lang .'_'. $mode;
-				$cache_key		= implode('_', [$tipo, $section_tipo, $section_id, $lang, $mode]);
+				$cache_key = implode('_', [$tipo, $section_tipo, $section_id, $lang, $mode]);
 				if(isset($caller_dataframe)){
 					$cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->section_id;
 				}
-			// cache params
-				$max_cache_instances	= 160; // 500
-				$cache_slice_on			= 40;  // 200 // $max_cache_instances/2;
 
 			// overload : If ar_component_instances > $max_cache_instances , not add current element to cache to prevent overload
+				$max_cache_instances	= 160;
+				$cache_slice_on			= 40;
 				if ( isset(self::$ar_component_instances) && count(self::$ar_component_instances) > $max_cache_instances ) {
 					self::$ar_component_instances = array_slice(self::$ar_component_instances, $cache_slice_on, null, true);
 				}
 
-			// new instance. If not already exists, create a new one and store in cache
+			// new instance. If not already exists, create a new one and store in cache, else get from cache array
 				if ( !isset(self::$ar_component_instances) || !array_key_exists($cache_key, self::$ar_component_instances) ) {
-				// if ( !isset(self::$ar_component_instances) || !isset(self::$ar_component_instances[$cache_key]) ) {
 
-					// __CONSTRUCT : Store new component in static array var
+					// instance new component
 					$component = new $component_name(
 						$tipo,
 						$section_id,
 						$mode,
 						$lang,
-						$section_tipo
+						$section_tipo,
+						$cache
 					);
 					// dataframe
 					if(isset($caller_dataframe)){
 						$component->set_caller_dataframe($caller_dataframe);
 					}
 
+					// store instance in cache
 					self::$ar_component_instances[$cache_key] = $component;
+
+				}else{
+
+					// get from cache
+					$component = self::$ar_component_instances[$cache_key];
 				}
-				// else{
-
-					// Change mode if is needed
-						// if (self::$ar_component_instances[$cache_key]->get_mode()!==$mode) {
-						// 	self::$ar_component_instances[$cache_key]->set_mode($mode);
-						// }
-				// }
 
 
-		return self::$ar_component_instances[$cache_key];
+		return $component;
 	}//end get_instance
 
 
@@ -390,7 +406,7 @@ abstract class component_common extends common {
 	* @param string $section_tipo = null
 	* @return void
 	*/
-	protected function __construct(string $tipo, $section_id=null, string $mode='edit', string $lang=DEDALO_DATA_LANG, string $section_tipo=null) {
+	protected function __construct(string $tipo, $section_id=null, string $mode='edit', string $lang=DEDALO_DATA_LANG, string $section_tipo=null, bool $cache=true) {
 
 		// uid
 			$this->uid = hrtime(true); // nanoseconds
@@ -435,6 +451,9 @@ abstract class component_common extends common {
 				throw new Exception("Error Processing Request. section_tipo is mandatory !", 1);
 			}
 			$this->section_tipo = $section_tipo;
+
+		// cache
+			$this->cache = (bool)$cache;
 
 		// structure data (load from Ontology)
 			// We set the received type and load the structure previously to determine if this type is translatable
@@ -613,7 +632,7 @@ abstract class component_common extends common {
 							$this->set_dato($dato_default);
 
 						// temp section cases do not save anything
-							if ( strpos($this->section_id, DEDALO_SECTION_ID_TEMP)===false ) {
+							if ( strpos((string)$this->section_id, DEDALO_SECTION_ID_TEMP)===false ) {
 								$this->Save();
 							}
 
@@ -1096,7 +1115,7 @@ abstract class component_common extends common {
 			$section_id			= $section->save_component_dato($this, 'direct', $save_to_database);
 
 		// section_id : Check valid section_id returned
-		// if (abs($section_id)<1 && strpos($section_id, DEDALO_SECTION_ID_TEMP)===false) {
+		// if (abs($section_id)<1 && strpos((string)$section_id, DEDALO_SECTION_ID_TEMP)===false) {
 			if ( empty($section_id) || (abs(intval($section_id))<1 && strpos((string)$section_id, DEDALO_SECTION_ID_TEMP)===false) ) {
 				trigger_error("Error on component Save: received id ($section_id) is not valid!");
 				return null;
@@ -3038,6 +3057,7 @@ abstract class component_common extends common {
 	/**
 	* REMOVE_FIRST_AND_LAST_QUOTES
 	* Removes first and last quotes (single or doubles) respecting existing operators
+	* @param string $string
 	* @return string $string
 	*/
 	public static function remove_first_and_last_quotes(string $string) : string {
@@ -3090,20 +3110,24 @@ abstract class component_common extends common {
 	*/
 	public function get_my_section() : object {
 
-		// Removed 6-02-2022 because the section cache has not conflicts with same instance in list or edit modes
+		// Note that (06-02-2022) the section cache has not conflicts with same instance in list or edit modes
 		// now the JSON_RecordObj_matrix has the cache of section data. (same data for list and edit)
-		if (isset($this->section_obj)) {
-			return $this->section_obj;
-		}
+			if (isset($this->section_obj)) {
+				return $this->section_obj;
+			}
 
-		$section = section::get_instance(
-			$this->section_id,
-			$this->section_tipo,
-			'edit', // 'edit',
-			false, // true,
-			$this->caller_dataframe ?? null
-		);
-		$this->section_obj = $section;
+		// cache. Note that component cache will be sync with section. Set as false for component update
+			$cache = $this->cache;
+
+		// section build instance
+			$section = section::get_instance(
+				$this->section_id,
+				$this->section_tipo,
+				'list', // 'edit',
+				$cache, // bool cache (synced whit this component)
+				$this->caller_dataframe ?? null
+			);
+			$this->section_obj = $section;
 
 		return $this->section_obj;
 	}//end get_my_section

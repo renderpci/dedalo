@@ -417,8 +417,7 @@ class update {
 
 						foreach ($ar_langs as $current_lang) {
 
-							#
-							# COMPONENT . Update component dato
+							// component . Update component dato
 							$component = component_common::get_instance(
 								$model_name,
 								$current_component_tipo,
@@ -426,7 +425,7 @@ class update {
 								'update',
 								$current_lang,
 								$current_section_tipo,
-								false
+								false // bool cache (!) Set false always for update to prevent memory issues (is sync with section cache)
 							);
 							$component->get_dato();
 							$dato_unchanged	= $component->get_dato_unchanged();
