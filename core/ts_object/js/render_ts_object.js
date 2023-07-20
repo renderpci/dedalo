@@ -529,7 +529,7 @@ export const render_ts_list = function(options) {
 			})
 
 		// INDEXATIONS CONTAINER
-			const indexations_container_id	= 'u' + ar_children_data[i].section_tipo + '_' + ar_children_data[i].section_id
+			const indexations_container_id	= 'u' + ar_children_data[i].section_tipo + '_' + ar_children_data[i].section_id +'_'+ (new Date()).getTime()
 			const indexations_container		= ui.create_dom_element({
 				element_type	: 'div',
 				parent			: wrap_ts_object,

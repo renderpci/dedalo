@@ -1418,7 +1418,8 @@ export const ts_object = new function() {
 				mode			: 'list',
 				view			: 'indexation',
 				lang			: page_globals.dedalo_data_lang,
-				rqo				: rqo
+				rqo				: rqo,
+				id_variant		: container_id// (new Date()).getTime()
 			})
 			await dd_grid.build(true)
 			dd_grid.render()
