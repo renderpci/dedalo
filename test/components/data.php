@@ -279,7 +279,7 @@ function random_security_access() {
 
 function random_3d_data() {
 
-	$file_name = random_string(128) . '_' . random_number(99);
+	$file_name = random_string(64) . '_' . random_number(99);
 
 	$value = (object)[
 		'lib_data' 	 => null,
@@ -326,7 +326,8 @@ function random_3d_data() {
 
 function random_av_data() {
 
-	$file_name = substr(str_shuffle(str_repeat($x='0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', (int)ceil(128/strlen($x)) )),1,128) . '_' . rand(0, 99);
+	// $file_name = substr(str_shuffle(str_repeat($x='0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', (int)ceil(128/strlen($x)) )),1,128) . '_' . rand(0, 99);
+	$file_name = random_string(64) . '_' . random_number(99) . '';
 
 	$value = (object)[
 		"lib_data" => null,
@@ -391,7 +392,7 @@ function random_av_data() {
 
 function random_image_data() {
 
-	$file_name = random_string(128) . '_' . random_number(99) . '';
+	$file_name = random_string(64) . '_' . random_number(99) . '';
 
 	$value = (object)[
 		"lib_data" => null,
@@ -503,7 +504,7 @@ function random_pdf_data() {
 
 function random_svg_data() {
 
-	$file_name = random_string(128) . '_' . random_number(99);
+	$file_name = random_string(64) . '_' . random_number(99);
 
 	$value = (object)[
 		"lib_data" => null,

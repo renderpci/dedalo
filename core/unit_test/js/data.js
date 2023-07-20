@@ -230,7 +230,7 @@
 
 	export const random_3d_data = function() {
 
-		const file_name = random_string(128) + '_' + random_number(99) + ''
+		const file_name = random_string(64) + '_' + random_number(99) + ''
 
 		const value = [
 		  {
@@ -276,7 +276,7 @@
 
 	export const random_av_data = function() {
 
-		const file_name = random_string(128) + '_' + random_number(99) + ''
+		const file_name = random_string(64) + '_' + random_number(99) + ''
 
 		const value = [
 		  {
@@ -339,7 +339,7 @@
 
 	export const random_image_data = function() {
 
-		const file_name = random_string(128) + '_' + random_number(99) + ''
+		const file_name = random_string(64) + '_' + random_number(99) + ''
 
 		const value = [
 		  {
@@ -402,7 +402,7 @@
 
 	export const random_pdf_data = function() {
 
-		const file_name = random_string(128) + '_' + random_number(99) + ''
+		const file_name = random_string(64) + '_' + random_number(99) + ''
 
 		const value = [
 		  {
@@ -448,7 +448,7 @@
 
 	export const random_svg_data = function() {
 
-		const file_name = random_string(128) + '_' + random_number(99) + ''
+		const file_name = random_string(64) + '_' + random_number(99) + ''
 
 		const value = [
 		  {
