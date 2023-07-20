@@ -392,7 +392,7 @@ function to_string(mixed $var=null) : string {
 
 		if(empty($var)) {
 			return 'Array(empty)';
-		}else if ( is_string(current($var)) || is_numeric(current($var)) ) {
+		}else if ( is_string( current($var) ) || is_numeric( current($var) ) ) {
 			if (is_associative($var)) {
 				return json_encode($var, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
 			}else{

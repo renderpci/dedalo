@@ -1,7 +1,35 @@
 <?php
 /**
 * RecordDataBoundObject
+* Connect with Ontology tables in PostgreSQL:
+* Note that, for speed, all DB
+* 	jer_dd
+* 		id	integer Auto Increment [nextval('jer_dd_id_seq')]
+*		terminoID	character varying(32) NULL
+*		parent	character varying(32) NULL
+*		modelo	character varying(8) NULL
+*		esmodelo	sino NULL
+*		esdescriptor	sino NULL
+*		visible	sino NULL
+*		norden	numeric(4,0) NULL
+*		tld	character varying(32) NULL
+*		traducible	sino NULL
+*		relaciones	text NULL
+*		propiedades	text NULL
+*		properties	jsonb NULL
 *
+* 	matrix_descriptors_dd
+* 		id	integer Auto Increment [nextval('matrix_descriptors_dd_id_seq')]
+*		parent	character varying(32)
+*		dato	text NULL
+*		tipo	character varying(8)
+*		lang	character varying(8)
+*
+*	main_dd
+* 		id	integer Auto Increment [nextval('main_dd_id_seq')]
+*		tld	character varying(32) NULL
+*		counter	integer NULL
+*		name	character varying(255) NULL
 *
 */
 abstract class RecordDataBoundObject {
@@ -54,9 +82,11 @@ abstract class RecordDataBoundObject {
 
 	/**
 	* GET_CONNECTION
-	* @return resource|object pg database connection
+	* Use this connector in this class to allow discriminate
+	* Ontology tables (they are treated differently)
+	* @return PgSql\Connection|bool $connection
 	*/
-	private function get_connection() {
+	private function get_connection() : PgSql\Connection|bool {
 
 		$ontology_tables = [
 			'jer_dd',
@@ -82,7 +112,10 @@ abstract class RecordDataBoundObject {
 					false // use cache
 				);
 				if($ontology_pg_conn===false) {
-					debug_log(__METHOD__." Invalid DDBB connection. Unable to connect (52-2)".to_string(), logger::ERROR);
+					debug_log(__METHOD__
+						." Invalid DDBB connection. Unable to connect (52-2)"
+						, logger::ERROR
+					);
 					throw new Exception("Error. Could not connect to database (52-2)", 1);
 				}
 
@@ -99,7 +132,10 @@ abstract class RecordDataBoundObject {
 		);
 		// check valid connection
 		if ($connection===false) {
-			debug_log(__METHOD__." Invalid DDBB connection. Unable to connect (52-1)".to_string(), logger::ERROR);
+			debug_log(__METHOD__
+				." Invalid DDBB connection. Unable to connect (52-1)"
+				, logger::ERROR
+			);
 		}
 
 
@@ -108,24 +144,29 @@ abstract class RecordDataBoundObject {
 
 
 
-	# GET_DATO : GET DATO UNIFICADO (JSON)
+	/**
+	* GET_DATO
+	* Get dato unified method (JSON)
+	* Force lo load all DBB data
+	* and return the 'dato' column / property
+	*/
 	public function get_dato() {
 
 		if($this->blIsLoaded!==true) {
 			$this->Load();
 		}
 
-		if (!isset($this->dato)) {
-			#error_log("Calling get dato from ".get_called_class().''.print_r(debug_backtrace(),true) );
-			return null;
-		}
+		$dato = $this->dato ?? null;
 
-		return $this->dato;
+		return $dato;
 	}//end get_dato
 
 
 
-	# SET_DATO : SET DATO UNIFIED (JSON)
+	/**
+	* SET_DATO :
+	* Set dato unified method (JSON)
+	*/
 	public function set_dato($dato, bool $raw=false) {
 
 		// Always set dato as modified
@@ -142,7 +183,11 @@ abstract class RecordDataBoundObject {
 	* @return bool
 	*/
 	public function Load() : bool {
-		if(SHOW_DEBUG===true) $start_time = start_time();
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				$start_time = start_time();
+			}
 
 		// Prevent load if $this->ID is not set
 			if(!isset($this->ID) || $this->ID===false) {
@@ -177,9 +222,13 @@ abstract class RecordDataBoundObject {
 		$use_cache = $this->use_cache;
 		if ($use_cache===true && isset($ar_RecordDataObject_load_query_cache[$strQuery])) {
 
-			$arRow = $ar_RecordDataObject_load_query_cache[$strQuery];
+			// from cache data case
+
+			$row = $ar_RecordDataObject_load_query_cache[$strQuery];
 
 		}else{
+
+			// from DB request case
 
 			// exec query
 				$connection = $this->get_connection();
@@ -198,9 +247,6 @@ abstract class RecordDataBoundObject {
 						. ' strQuery: '.to_string($strQuery)
 						, logger::ERROR
 					);
-					// if(SHOW_DEBUG===true) {
-					// 	throw new Exception("Error Processing Request Load: (".DEDALO_DATABASE_CONN.") ".pg_last_error(DBi::_getConnection())." <hr>$strQuery", 1);
-					// }
 
 					return false;
 				}
@@ -227,12 +273,27 @@ abstract class RecordDataBoundObject {
 				// }
 
 			// rows. pg_fetch_assoc: false is returned if row exceeds the number of rows in the set, there are no more rows, or on any other error.
-				$arRow = pg_fetch_assoc($result); // array|false
-				if($arRow===false)	{
+				$row = pg_fetch_assoc($result); // assoc array|false
+					// sample row assoc array:
+					// {
+					//     "terminoID": "test24",
+					//     "parent": "dd627",
+					//     "modelo": "dd626",
+					//     "esmodelo": "no",
+					//     "esdescriptor": "si",
+					//     "visible": "si",
+					//     "norden": "18",
+					//     "tld": "test",
+					//     "traducible": "no",
+					//     "relaciones": null,
+					//     "propiedades": "{\r\n  \"inverse_relations\": false\r\n}",
+					//     "properties": "{\"inverse_relations\": false}"
+					// }
+				if($row===false)	{
 					// if(SHOW_DEBUG===true) {
 					// 	// dump($this,"WARNING: No result on Load arRow : strQuery:".$strQuery);
 					// 	// throw new Exception("Error Processing Request (".DEDALO_DATABASE_CONN.") strQuery:$strQuery", 1);
-					// 	dump($arRow, ' strQuery +++++++++++++++++++++++++++++++++++ '.DEDALO_DATABASE_CONN.PHP_EOL.to_string($strQuery)).PHP_EOL;
+					// 	dump($row, ' strQuery +++++++++++++++++++++++++++++++++++ '.DEDALO_DATABASE_CONN.PHP_EOL.to_string($strQuery)).PHP_EOL;
 					// 	$bt = debug_backtrace();
 					// 	dump($bt, ' Load pg_fetch_assoc bt +++++++++++++++++++++ '.to_string($this->ID));
 					// }
@@ -250,14 +311,13 @@ abstract class RecordDataBoundObject {
 			// cache
 				if ($use_cache===true) {
 					// store value
-					$ar_RecordDataObject_load_query_cache[$strQuery] = $arRow;
+					$ar_RecordDataObject_load_query_cache[$strQuery] = $row;
 				}
 		}
 
-
 		// arRelationMap assign values
-			if(isset($arRow) && is_array($arRow)) {
-				foreach($arRow as $key => $value) {
+			if(isset($row) && is_array($row)) {
+				foreach($row as $key => $value) {
 					$strMember = $this->arRelationMap[$key];
 					if(property_exists($this, $strMember)) {
 						$this->{$strMember} = $value;
@@ -291,7 +351,8 @@ abstract class RecordDataBoundObject {
 	/**
 	* SAVE
 	* Update current record
-	* @return mixed|null $this->ID
+	* @return mixed $this->ID
+	* 	string|bool
 	*/
 	public function Save() {
 

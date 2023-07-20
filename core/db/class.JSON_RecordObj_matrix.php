@@ -23,7 +23,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 	public $datos_time_machine;
 
 	// static cache for RecordObj_matrix instances
-	static $ar_JSON_RecordObj_matrix_instances;
+	public static $ar_JSON_RecordObj_matrix_instances;
 
 
 
@@ -44,11 +44,10 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 				return new JSON_RecordObj_matrix($matrix_table, $section_id, $section_tipo);
 			}
 
-		// cache params
-			$max_cache_instances	= 2000; // 500
-			$cache_slice_on			= 750;  // 200 // $max_cache_instances/2;
-
-		// overload : If ar_JSON_RecordObj_matrix_instances > $max_cache_instances , not add current element to cache to prevent overload
+		// cache overload : If ar_JSON_RecordObj_matrix_instances > $max_cache_instances , not add current element to cache to prevent overload
+		// Note: normally, a file like oh1 in edit mode, uses about 60 JSON_RecordObj_matrix items in cache
+			$max_cache_instances	= 2000;
+			$cache_slice_on			= 750;
 			if ( isset(self::$ar_JSON_RecordObj_matrix_instances) && count(self::$ar_JSON_RecordObj_matrix_instances) > $max_cache_instances ) {
 				self::$ar_JSON_RecordObj_matrix_instances = array_slice(self::$ar_JSON_RecordObj_matrix_instances, $cache_slice_on, null, true);
 			}

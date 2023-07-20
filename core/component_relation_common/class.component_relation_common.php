@@ -2317,12 +2317,13 @@ class component_relation_common extends component_common {
 								);
 
 								$component_dato = $component->get_dato();
-
-								foreach ($component_dato as $current_section_tipo) {
-									if (!empty($current_section_tipo)) {
-										$section_model_name = RecordObj_dd::get_modelo_name_by_tipo($current_section_tipo,true);
-										if (!empty($section_model_name)) {
-											$ar_section_tipo[] = $current_section_tipo;
+								if (!empty($component_dato)) {
+									foreach ($component_dato as $current_section_tipo) {
+										if (!empty($current_section_tipo)) {
+											$section_model_name = RecordObj_dd::get_modelo_name_by_tipo($current_section_tipo,true);
+											if (!empty($section_model_name)) {
+												$ar_section_tipo[] = $current_section_tipo;
+											}
 										}
 									}
 								}
