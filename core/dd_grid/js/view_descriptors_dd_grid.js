@@ -81,8 +81,11 @@ const get_grid_nodes = function(data) {
 				// column
 					if(current_data.type==='column' && current_data.cell_type) {
 
-						const current_value	= current_data.value[0] || current_data.fallback_value[0]
-						const found			= ar_values.find(el => el.label===current_value)
+						const current_value	= current_data.value && current_data.value[0]
+							? current_data.value[0]
+							: current_data.fallback_value[0]
+
+						const found = ar_values.find(el => el.label===current_value)
 						if (found) {
 							found.total++
 						}else{
