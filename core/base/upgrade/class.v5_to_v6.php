@@ -1,4 +1,5 @@
 <?php
+// declare(strict_types=1);
 /**
 * CLASS v5_to_v6
 *
@@ -67,10 +68,10 @@ class v5_to_v6 {
 
 				if ($n_rows<1) continue;
 
-				while($rows = pg_fetch_assoc($result)) {
+				while($row = pg_fetch_assoc($result)) {
 
-					$id		= $rows['id'];
-					$datos	= json_decode($rows['datos']);
+					$id		= $row['id'];
+					$datos	= json_handler::decode($row['datos']);
 
 					if (!empty($datos)) {
 
@@ -82,9 +83,12 @@ class v5_to_v6 {
 
 						$strQuery	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
 						$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $section_data_encoded, $id ));
-						if(!$result) {
+						if($result===false) {
 							$msg = "Failed Update section_data $i";
-							debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
+							debug_log(__METHOD__
+								." ERROR: $msg "
+								, logger::ERROR
+							);
 							continue;
 						}
 					}else{
@@ -98,20 +102,22 @@ class v5_to_v6 {
 				// log info each 1000
 					if ($i_ref===0) {
 						debug_log(__METHOD__
-							. " Partial update of section data table: $table - id: $id - total: $n_rows - total min: ".exec_time_unit($start_time,'min')
+							. " Partial update of section data table: $table - id: $id - total: $max - time min: ".exec_time_unit($start_time,'min')
 							, logger::DEBUG
 						);
 
 						// clean vars
-						unset($result);
-
+						// unset($result);
 						// let GC do the memory job
-						time_nanosleep(0, 500000000); // Slept for half a second
+						time_nanosleep(0, 5000); // Slept for 5000 nanoseconds
 						// Forces collection of any existing garbage cycles
 						gc_collect_cycles();
+					}
 
-					}else{
-						$i_ref = ($i_ref>1000) ? 0 : $i_ref + 1;
+				// reset counter
+					$i_ref++;
+					if ($i_ref > 1000) {
+						$i_ref = 0;
 					}
 			}
 			#break; // stop now

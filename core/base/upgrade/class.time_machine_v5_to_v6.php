@@ -1,4 +1,5 @@
 <?php
+// declare(strict_types=1);
 /**
 * CLASS time_machine_v5_to_v6
 *
@@ -57,7 +58,7 @@ class time_machine_v5_to_v6 {
 			if (!$rows) {
 				continue;
 			}
-			$max 		= $rows['id'];
+			$max = $rows['id'];
 
 			// Get first id in the table
 			$min_strQuery 	= "SELECT id FROM $table ORDER BY id LIMIT 1 ";
@@ -89,22 +90,22 @@ class time_machine_v5_to_v6 {
 
 				if ($n_rows<1) continue;
 
-				while($rows = pg_fetch_assoc($result)) {
+				while($row = pg_fetch_assoc($result)) {
 
 					// columns
-						$id					= $rows['id'];
-						// $id_matrix		= $rows['id_matrix'];
-						// $section_id		= $rows['section_id'];
-						// $section_tipo	= $rows['section_tipo'];
-						$tipo				= $rows['tipo'];
-						// $lang			= $rows['lang'];
+						$id					= $row['id'];
+						// $id_matrix		= $row['id_matrix'];
+						// $section_id		= $row['section_id'];
+						// $section_tipo	= $row['section_tipo'];
+						$tipo				= $row['tipo'];
+						// $lang			= $row['lang'];
 
 					// skip empty data
-						if (empty($rows['dato'])) {
+						if (empty($row['dato'])) {
 							continue;
 						}
 
-					$dato = json_decode($rows['dato']);
+					$dato = json_decode($row['dato']);
 					if (!empty($dato)) {
 
 						$model_name = RecordObj_dd::get_modelo_name_by_tipo($tipo);
@@ -179,28 +180,29 @@ class time_machine_v5_to_v6 {
 							, logger::WARNING
 						);
 					}
-				}//end while($rows = pg_fetch_assoc($result))
+				}//end while($row = pg_fetch_assoc($result))
 
-				// log info each 1000
+				// log info each 10000
 					if ($i_ref===0) {
 						debug_log(__METHOD__
-							." Partial update of section data table: $table - id: $id - total: $n_rows - total min: ".exec_time_unit($start_time,'min') .PHP_EOL
-							." memory usage: " . dd_memory_usage()
+							." Partial update of section data table: $table - id: $id - total: $max - time min: ".exec_time_unit($start_time,'min')
 							, logger::DEBUG
 						);
 
 						// clean vars
-						unset($result);
-
+						// unset($result);
 						// let GC do the memory job
-						time_nanosleep(0, 500000000); // Slept for half a second
+						time_nanosleep(0, 5000000); // Slept for 5000000 nanoseconds
 						// Forces collection of any existing garbage cycles
 						gc_collect_cycles();
-
-					}else{
-						$i_ref = ($i_ref>10000) ? 0 : $i_ref + 1;
 					}
-			}
+
+				// reset counter
+					$i_ref++;
+					if ($i_ref > 10000) {
+						$i_ref = 0;
+					}
+			}//end for ($i=$min; $i<=$max; $i++)
 			#break; // stop now
 
 			// let GC do the memory job
