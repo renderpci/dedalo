@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS COMPONENT_GEOLOCATION
 *
 *
@@ -246,10 +246,15 @@ class component_geolocation extends component_common {
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value_socrata() : object {
+	public function get_diffusion_value_socrata() : ?object {
 
-		$dato 			= $this->get_dato();
-		$socrata_data 	= 'POINT ('.$dato->lat.', '.$dato->lon.')';
+		$dato = $this->get_dato();
+		if (empty($dato) || empty($dato[0]) ) {
+			return null;
+		}
+
+		$dato			= $dato[0];
+		$socrata_data	= 'POINT ('.$dato->lat.', '.$dato->lon.')';
 
 		# {
 		#   "type": "Point",
@@ -316,10 +321,9 @@ class component_geolocation extends component_common {
 		$value = $dato[0] ?? null;
 
 		// check empty
-		if (empty($value) || !isset($value->lon) || !isset($value->lat)) {
-			return null;
-		}
-
+			if (empty($value) || !isset($value->lon) || !isset($value->lat)) {
+				return null;
+			}
 
 		// default dato test
 			// default values
@@ -340,8 +344,8 @@ class component_geolocation extends component_common {
 			}
 
 		// coordinates. Converts float number to 16 decimals number using '.' separator
-			$lon = number_format( trim($value->lon), 16, '.', ''); // string as "2.012151410452" (use dot notation to preserve JSON integrity)
-			$lat = number_format( trim($value->lat), 16, '.', ''); // string as "41.562363467527" (use dot notation to preserve JSON integrity)
+			$lon = number_format( $value->lon, 16, '.', ''); // string as "2.012151410452" (use dot notation to preserve JSON integrity)
+			$lat = number_format( $value->lat, 16, '.', ''); // string as "41.562363467527" (use dot notation to preserve JSON integrity)
 
 		// geojson
 			$ar_value = json_decode('[

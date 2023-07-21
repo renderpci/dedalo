@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS COMPONENT_SECTION_ID
 *
 *

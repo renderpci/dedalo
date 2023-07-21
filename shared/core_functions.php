@@ -1,4 +1,5 @@
 <?php
+// declare(strict_types=1);
 /**
  * CORE FUNCTIONS
  * Moved from core/base/core_functions.php to shared/core_functions.php

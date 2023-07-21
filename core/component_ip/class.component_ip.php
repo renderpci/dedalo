@@ -30,54 +30,54 @@ class component_ip extends component_common {
 	* @param string $ip
 	* @return object $geoip_info
 	*/
-	public static function get_geoip_info( $ip, $mode='city' ) {
-		#$ip='188.79.248.133';
-		$geoip_info = new stdClass();
-			$geoip_info->city 	 	 = null;
-			$geoip_info->country 	 = null;
-			$geoip_info->code 	 	 = 'A1';
-			$geoip_info->region_name = null;
-			$geoip_info->continent 	 = null;
+		// public static function get_geoip_info( $ip, $mode='city' ) {
+		// 	#$ip='188.79.248.133';
+		// 	$geoip_info = new stdClass();
+		// 		$geoip_info->city 	 	 = null;
+		// 		$geoip_info->country 	 = null;
+		// 		$geoip_info->code 	 	 = 'A1';
+		// 		$geoip_info->region_name = null;
+		// 		$geoip_info->continent 	 = null;
 
-		try {
+		// 	try {
 
-			switch ($mode) {
-				case 'city':
-					$db_file = DEDALO_ROOT_PATH . '/vendor/maxmind-db/db/GeoLite2-City.mmdb';
-					$reader  = new Reader($db_file);
+		// 		switch ($mode) {
+		// 			case 'city':
+		// 				$db_file = DEDALO_ROOT_PATH . '/vendor/maxmind-db/db/GeoLite2-City.mmdb';
+		// 				$reader  = new Reader($db_file);
 
-					$record = $reader->city($ip);
-						#dump($record, ' $record ++ '.to_string());
+		// 				$record = $reader->city($ip);
+		// 					#dump($record, ' $record ++ '.to_string());
 
-					$geoip_info->city 	 	 = $record->city->names['en'];
-					$geoip_info->country 	 = $record->country->name;
-					$geoip_info->code 	 	 = $record->country->isoCode;
-					$geoip_info->region_name = $record->mostSpecificSubdivision->name;
-					$geoip_info->continent 	 = $record->continent->names['en'];
-					break;
+		// 				$geoip_info->city 	 	 = $record->city->names['en'];
+		// 				$geoip_info->country 	 = $record->country->name;
+		// 				$geoip_info->code 	 	 = $record->country->isoCode;
+		// 				$geoip_info->region_name = $record->mostSpecificSubdivision->name;
+		// 				$geoip_info->continent 	 = $record->continent->names['en'];
+		// 				break;
 
-				default:
-					$db_file = DEDALO_ROOT_PATH . '/vendor/maxmind-db/db/GeoLite2-Country.mmdb';
-					$reader  = new Reader($db_file);
+		// 			default:
+		// 				$db_file = DEDALO_ROOT_PATH . '/vendor/maxmind-db/db/GeoLite2-Country.mmdb';
+		// 				$reader  = new Reader($db_file);
 
-					$record  = $reader->country($ip);
-						#dump($record, ' $record ++ '.to_string());
+		// 				$record  = $reader->country($ip);
+		// 					#dump($record, ' $record ++ '.to_string());
 
-					$geoip_info->city 	 	 = null;
-					$geoip_info->country 	 = $record->country->names['en'];
-					$geoip_info->code 	 	 = $record->country->isoCode;
-					$geoip_info->region_name = null;
-					$geoip_info->continent 	 = null;
-					break;
-			}
+		// 				$geoip_info->city 	 	 = null;
+		// 				$geoip_info->country 	 = $record->country->names['en'];
+		// 				$geoip_info->code 	 	 = $record->country->isoCode;
+		// 				$geoip_info->region_name = null;
+		// 				$geoip_info->continent 	 = null;
+		// 				break;
+		// 		}
 
-		} catch (Exception $e) {
-		    #echo 'Caught exception: ',  $e->getMessage(), "\n";
-		}
+		// 	} catch (Exception $e) {
+		// 	    #echo 'Caught exception: ',  $e->getMessage(), "\n";
+		// 	}
 
 
-		return $geoip_info;
-	}//end get_geoip_info
+		// 	return $geoip_info;
+		// }//end get_geoip_info
 
 
 
@@ -88,9 +88,9 @@ class component_ip extends component_common {
 	public static function resolve_query_object_sql( object $query_object ) : object {
 
     	# Always set fixed values
-		$query_object->type 			= 'string';
-		$query_object->unaccent 		= false;
-		$query_object->component_path[] = 'lg-nolan';
+		$query_object->type				= 'string';
+		$query_object->unaccent			= false;
+		$query_object->component_path[]	= 'lg-nolan';
 
 		$q = $query_object->q;
 		$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));

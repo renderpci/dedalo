@@ -1,4 +1,5 @@
 <?php
+// declare(strict_types=1);
 /**
 * RecordObj_matrix
 *
@@ -50,7 +51,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 		if ( (int)$id>0 ) {
 
 			// Ignore other vars
-			parent::__construct( $id );
+			parent::__construct( (string)$id );
 
 		}else{
 
@@ -125,7 +126,9 @@ class RecordObj_matrix extends RecordDataBoundObject {
 			? $this->calculate_ID()
 			: parent::get_ID();
 
-		return $ID;
+		return !is_null($ID)
+			? (int)$ID
+			: null;
 	}//end get_ID
 
 
@@ -204,7 +207,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 		# CURRENT OBJ TEST COPY
 		if (!empty($this->ID) ) {
 			# Load dummy copy to test data (Avoid overwrite current object edited data)
-			$RecordObj_matrix_test 	= new RecordObj_matrix($this->matrix_table,$this->ID);
+			$RecordObj_matrix_test 	= new RecordObj_matrix($this->matrix_table, (int)$this->ID);
 		}
 
 		# TEST VALID TIPO

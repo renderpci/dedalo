@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS TOOL_LANG
 *
 *

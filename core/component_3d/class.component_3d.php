@@ -46,7 +46,7 @@ class component_3d extends component_media_common {
 					false // bool avoid_cache
 				);
 				$item->url = $this->quality_file_exist( $quality )
-					? $this->get_url(false)
+					? $this->get_url()
 					: null;
 
 		// label
@@ -1052,7 +1052,7 @@ class component_3d extends component_media_common {
 	* @param string $file_path
 	* @return object|null $media_attributes
 	*/
-	public function get_media_attributes(string $file_path) : ?object {
+	public function get_media_attributes(string $file_path)  {
 
 		debug_log(__METHOD__
 			. " Sorry. This method is not implemented yet " . PHP_EOL

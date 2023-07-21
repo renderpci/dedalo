@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS RELATION_LIST
 * Manage the relations of the sections
 * build the list of the relations between sections

@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * COMPONENT_RELATION_CHILDREN
 *
 *

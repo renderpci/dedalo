@@ -1,4 +1,5 @@
 <?php
+// declare(strict_types=1);
 /**
 * SUBTITLES
 * Constructs text formatted for standard subtitles from a time-coded transcript.
