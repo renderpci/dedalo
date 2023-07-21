@@ -159,7 +159,7 @@ abstract class DBi {
 	* @param string $user = MYSQL_DEDALO_USERNAME_CONN
 	* @param string $password = MYSQL_DEDALO_PASSWORD_CONN
 	* @param string $database = MYSQL_DEDALO_DATABASE_CONN
-	* @param string|int|null $port = MYSQL_DEDALO_DB_PORT_CONN
+	* @param int|null $port = MYSQL_DEDALO_DB_PORT_CONN
 	* @param string|null $socket = MYSQL_DEDALO_SOCKET_CONN
 	* @param bool $cache = true
 	* @return mysqli|bool $mysqli
@@ -169,7 +169,7 @@ abstract class DBi {
 		string			$user		= MYSQL_DEDALO_USERNAME_CONN,
 		string			$password	= MYSQL_DEDALO_PASSWORD_CONN,
 		string			$database	= MYSQL_DEDALO_DATABASE_CONN,
-		string|int|null	$port		= MYSQL_DEDALO_DB_PORT_CONN,
+		int|null		$port		= MYSQL_DEDALO_DB_PORT_CONN,
 		string|null		$socket		= MYSQL_DEDALO_SOCKET_CONN,
 		bool			$cache		= true
 		) : mysqli|bool {
