@@ -167,7 +167,7 @@ class navigator {
 		$html = 'NAVIGATOR:';
 		$html .= "<span style=\"margin-left:$distancia\">user_id:<b>" .self::$user_id." ".self::$username."</b> </span>";
 
-		$html .= "<span style=\"margin-left:$distancia\">root permissions:<b>" . DEDALO_PERMISSIONS_ROOT ."</b> </span>";
+		$html .= "<span style=\"margin-left:$distancia\">root permissions:<b>" . 1 ."</b> </span>";
 
 		#$html .= '<hr>';
 		/**/

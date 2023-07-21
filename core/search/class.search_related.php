@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS SEARCH_RELATED
 * Specific search related methods overwrite search methods
 *

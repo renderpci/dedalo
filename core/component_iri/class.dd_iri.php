@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS DD_IRI
 
 	Format:

@@ -1,7 +1,8 @@
 <?php
+// declare(strict_types=1);
 /**
 * RecordDataBoundObject
-* Connect with Ontology tables in PostgreSQL:
+* Connect with Ontology an matrix_time_machine tables in PostgreSQL:
 * Note that, for speed, all DB
 * 	jer_dd
 * 		id	integer Auto Increment [nextval('jer_dd_id_seq')]
@@ -383,7 +384,6 @@ abstract class RecordDataBoundObject {
 						#$strQuery_set .= "\"$key\" = '".pg_escape_string($current_val)."', ";	# Escape the text data
 						$strQuery_set .= "\"$key\" = " . pg_escape_literal($this->get_connection(), $current_val) . ", ";
 						#$strQuery_set .= "\"$key\" = '".$current_val."', ";	# Escape the text data
-							#dump($strQuery_set, ' strQuery_set ++ '.to_string());
 					}
 				}
 			}
@@ -448,8 +448,9 @@ abstract class RecordDataBoundObject {
 						}
 
 						$strValueList .= (is_int($actualVal) && $this->strTableName!=='matrix_time_machine')
-							? "$actualVal, "
-							: "'".pg_escape_string($this->get_connection(), $actualVal)."', "; # Escape the text data
+							? $actualVal . ', '
+							// : "'".pg_escape_string($this->get_connection(), (string)$actualVal)."', "; // Escape the text data
+							: pg_escape_literal($this->get_connection(), $actualVal) . ', '; // Escape the text data
 					}
 				}
 			}
@@ -836,7 +837,7 @@ abstract class RecordDataBoundObject {
 				$result = JSON_RecordObj_matrix::search_free($strQuery);
 				if($result===false) {
 					if(SHOW_DEBUG===true) {
-						$msg = __METHOD__." Failed Delete record (RDBO) from {$this->strPrimaryKeyName}: $this->ID \n" . $this->get_connection()->error ;
+						$msg = __METHOD__." Failed Delete record (RDBO) from {$this->strPrimaryKeyName}: $this->ID";
 					}else{
 						$msg = "Failed Delete record (RDBO). Record $this->ID is not deleted. Please contact with your admin" ;
 					}

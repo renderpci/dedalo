@@ -230,7 +230,7 @@ class component_password extends component_common {
 
 			$update_version	= $options->update_version;
 			$dato_unchanged	= $options->dato_unchanged;
-			$reference_id	= $options->reference_id;
+			$reference_id	= $options->reference_id ?? '';
 
 
 		$update_version = implode(".", $update_version);

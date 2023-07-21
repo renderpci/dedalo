@@ -48,7 +48,7 @@ class component_av extends component_media_common {
 					false // bool avoid_cache
 				);
 				$item->url = $this->quality_file_exist( $quality )
-					? $this->get_url(false)
+					? $this->get_url()
 					: null;
 
 		// label

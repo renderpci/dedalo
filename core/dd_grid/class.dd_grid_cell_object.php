@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 *  DD_GRID_CELL_OBJECT
 *
 *  Used as standard object format to use in client to render tables with unspecific data or component.

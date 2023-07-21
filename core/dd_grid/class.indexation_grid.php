@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS INDEXATION_GRID
 * Manage the indexations of the thesaurus term
 * build the grid of the indexation to show in the thesaurus

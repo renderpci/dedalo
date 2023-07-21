@@ -1,4 +1,5 @@
 <?php
+// declare(strict_types=1);
 # RecordObj_descriptors_dd
 # Extiende RecordObj_matrix, cambiándole la tabla y algunos métodos específicos
 # La tabla matrix_descriptors es similar a matrix pero el parent es VARCHAR(8) para soportar tipos like 'dd1'
@@ -89,7 +90,7 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 			}
 
 			# CONSTRUCT . parent construct formato: ($id=NULL, $parent=false, $tipo=false, $lang=DEDALO_DATA_LANG, $this='matrix')
-			parent::__construct($matrix_table, $id, $parent, $tipo, $lang);		#echo " id:$id, parent:$parent, tipo:$tipo, lang:$lang <hr>";
+			parent::__construct($matrix_table, (int)$id, $parent, $tipo, $lang);		#echo " id:$id, parent:$parent, tipo:$tipo, lang:$lang <hr>";
 
 
 			/*

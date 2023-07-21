@@ -1,4 +1,5 @@
 <?php
+// declare(strict_types=1);
 /**
 * JSON_RECORDOBJ_MATRIX
 *
@@ -410,7 +411,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 			$RecordObj_time_machine->Save();
 
 		// time_machine_id. get from saved record
-			$time_machine_id = $RecordObj_time_machine->get_ID();
+			$time_machine_id = (int)$RecordObj_time_machine->get_ID();
 
 
 		return $time_machine_id;

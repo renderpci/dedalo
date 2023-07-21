@@ -3773,7 +3773,7 @@ abstract class common {
 			$item->section_tipo			= $this->get_section_tipo();
 			$item->tipo					= $this->get_tipo();
 			$item->pagination			= $this->get_pagination();
-			$item->from_component_tipo	= isset($this->from_component_tipo) ? $this->from_component_tipo : $item->tipo;
+			$item->from_component_tipo	= $this->from_component_tipo ?? $this->get_tipo();
 			$item->value				= $value;
 
 		return $item;

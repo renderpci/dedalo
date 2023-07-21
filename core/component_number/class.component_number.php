@@ -213,12 +213,12 @@ class component_number extends component_common {
 
 				$query_object_one = clone $query_object;
 					$query_object_one->operator = '>=';
-					$first_val  = str_replace(',', '.', $first_val);
-					$query_object_one->q_parsed	= '\''.$first_val.'\'';
+					$first_val  = str_replace(',', '.', (string)$first_val);
+					$query_object_one->q_parsed	= '\''.(string)$first_val.'\'';
 
 				$query_object_two = clone $query_object;
 					$query_object_two->operator = '<=';
-					$second_val  = str_replace(',', '.', $second_val);
+					$second_val  = str_replace(',', '.', (string)$second_val);
 					$query_object_two->q_parsed	= '\''.$second_val.'\'';
 
 				// Return an array instead object

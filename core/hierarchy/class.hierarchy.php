@@ -1,4 +1,5 @@
 <?php
+// declare(strict_types=1);
 /**
 * HIERARCHY
 * Centralized hierarchy methods
@@ -832,7 +833,7 @@ class hierarchy {
 		if(strpos($terminoID, 'lg-')===0) {
 
 			$dato_childrens = array();
-				$ar_childrens = RecordObj_ts::get_ar_childrens($terminoID);
+				$ar_childrens = RecordObj_dd::get_ar_childrens($terminoID);
 				$from_component_tipo = DEDALO_THESAURUS_RELATION_CHIDRENS_TIPO;
 				foreach ($ar_childrens as $curent_tipo) {
 
@@ -849,7 +850,7 @@ class hierarchy {
 		}else{
 
 			$dato_childrens = array();
-				$ar_childrens = RecordObj_ts::get_ar_childrens($terminoID);
+				$ar_childrens = RecordObj_dd::get_ar_childrens($terminoID);
 				foreach ($ar_childrens as $curent_tipo) {
 
 					$children_id = substr($curent_tipo, 2);

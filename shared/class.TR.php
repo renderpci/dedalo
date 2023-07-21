@@ -1,4 +1,5 @@
 <?php
+// declare(strict_types=1);
 /**
 * TR
 * Da servicio a las transcripciones (component_text_area) pero también a las partes públicas.
