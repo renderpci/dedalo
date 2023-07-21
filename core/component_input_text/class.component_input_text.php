@@ -17,6 +17,23 @@ class component_input_text extends component_common {
 
 		$dato = parent::get_dato();
 
+		if (is_string($dato)) {
+			debug_log(__METHOD__
+				. " Expected dato type array, but type is string. Converted to array and saving " . PHP_EOL
+				. ' tipo: ' . $this->tipo . PHP_EOL
+				. ' section_tipo: ' . $this->section_tipo . PHP_EOL
+				. ' section_id: ' . $this->section_id
+				, logger::ERROR
+			);
+			dump($dato, ' dato ++ '.to_string());
+
+			$dato = [$dato];
+
+			// update
+			$this->set_dato($dato);
+			$this->Save();
+		}
+
 		return $dato;
 	}//end get_dato
 
@@ -31,12 +48,10 @@ class component_input_text extends component_common {
 	*/
 	public function set_dato($dato) : bool {
 
-
 		// remove data when data is null
-		if(is_null($dato)){
-			return parent::set_dato(null);
-		}
-
+			if(is_null($dato)){
+				return parent::set_dato(null);
+			}
 
 		// string case. (Tool Time machine case, dato is string)
 			if (is_string($dato)) {
@@ -59,7 +74,10 @@ class component_input_text extends component_common {
 		// debug
 			if(SHOW_DEBUG===true) {
 				if (!is_array($dato)) {
-					debug_log(__METHOD__." Warning. [$this->tipo,$this->parent]. Received dato is NOT array. Type is '".gettype($dato)."' and dato: '".to_string($dato)."' will be converted to array", logger::DEBUG);
+					debug_log(__METHOD__
+						." Warning. [$this->tipo,$this->parent]. Received dato is NOT array. Type is '".gettype($dato)."' and dato: '".to_string($dato)."' will be converted to array"
+						, logger::DEBUG
+					);
 				}
 				#debug_log(__METHOD__." dato [$this->tipo,$this->parent] Type is ".gettype($dato)." -> ".to_string($dato), logger::ERROR);
 			}
@@ -92,13 +110,13 @@ class component_input_text extends component_common {
 	*/
 	public function is_empty( ?string $value ) : bool {
 
-		if(is_null($value)){
+		if(is_null($value)) {
 			return true;
 		}
 
 		$value = trim($value);
 
-		if(empty($value)){
+		if($value!=='0' && empty($value)) {
 			return true;
 		}
 
