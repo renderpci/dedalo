@@ -26,8 +26,8 @@ class v5_to_v6 {
 			debug_log(__METHOD__ . PHP_EOL
 				. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
 				. " CONVERTING ... " . PHP_EOL
-				. " convert_table_data table: $table " . PHP_EOL
-				. " convert_table_data action: $action " . PHP_EOL
+				. " convert_table_data [v5_to_v6] table: $table " . PHP_EOL
+				. " convert_table_data [v5_to_v6] action: $action " . PHP_EOL
 				. " convert_table_data memory usage: " . dd_memory_usage() . PHP_EOL
 				. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
 				, logger::WARNING
@@ -61,7 +61,10 @@ class v5_to_v6 {
 				$result		= JSON_RecordDataBoundObject::search_free($strQuery);
 				if($result===false) {
 					$msg = "Failed Search id $i. Data is not found.";
-					debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
+					debug_log(__METHOD__
+						." ERROR: $msg "
+						, logger::ERROR
+					);
 					continue;
 				}
 				$n_rows = pg_num_rows($result);
@@ -102,7 +105,7 @@ class v5_to_v6 {
 				// log info each 1000
 					if ($i_ref===0) {
 						debug_log(__METHOD__
-							. " Partial update of section data table: $table - id: $id - total: $max - time min: ".exec_time_unit($start_time,'min')
+							. " Partial update of section (v5_to_v6) data table: $table - id: $id - total: $max - time min: ".exec_time_unit($start_time,'min')
 							, logger::DEBUG
 						);
 
@@ -116,7 +119,7 @@ class v5_to_v6 {
 
 				// reset counter
 					$i_ref++;
-					if ($i_ref > 1000) {
+					if ($i_ref > 1001) {
 						$i_ref = 0;
 					}
 			}

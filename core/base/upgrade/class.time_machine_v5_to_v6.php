@@ -185,7 +185,7 @@ class time_machine_v5_to_v6 {
 				// log info each 10000
 					if ($i_ref===0) {
 						debug_log(__METHOD__
-							." Partial update of section data table: $table - id: $id - total: $max - time min: ".exec_time_unit($start_time,'min')
+							." Partial update of section (time_machine) data table: $table - id: $id - total: $max - time min: ".exec_time_unit($start_time,'min')
 							, logger::DEBUG
 						);
 
@@ -199,7 +199,7 @@ class time_machine_v5_to_v6 {
 
 				// reset counter
 					$i_ref++;
-					if ($i_ref > 10000) {
+					if ($i_ref > 10001) {
 						$i_ref = 0;
 					}
 			}//end for ($i=$min; $i<=$max; $i++)

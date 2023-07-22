@@ -358,6 +358,15 @@ class security_v5_to_v6 {
 
 		foreach ($ar_tables as $table) {
 
+			debug_log(__METHOD__ . PHP_EOL
+				. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+				. " CONVERTING ... " . PHP_EOL
+				. " convert_table_data [security_v5_to_v6] table: $table " . PHP_EOL
+				. " convert_table_data [security_v5_to_v6] memory usage: " . dd_memory_usage() . PHP_EOL
+				. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+				, logger::WARNING
+			);
+
 			// Get last id in the table
 			$strQuery 	= "SELECT id FROM $table ORDER BY id DESC LIMIT 1 ";
 			$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
@@ -379,8 +388,11 @@ class security_v5_to_v6 {
 				$strQuery	= "SELECT id, datos FROM $table WHERE id = $i ORDER BY id ASC";
 				$result		= JSON_RecordDataBoundObject::search_free($strQuery);
 				if($result===false) {
-					$msg = "Failed Search id $i. Data is not found.";
-					debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
+					$msg = "Failed Search id $i. Data is not found (security_v5_to_v6).";
+					debug_log(__METHOD__
+						." ERROR: $msg "
+						, logger::ERROR
+					);
 					continue;
 				}
 				$n_rows = pg_num_rows($result);
@@ -399,23 +411,40 @@ class security_v5_to_v6 {
 						$strQuery	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
 						$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $section_data_encoded, $id ));
 						if($result===false) {
-							$msg = "Failed Update section_data $i";
-							debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
+							$msg = "Failed Update (security_v5_to_v6) section_data $i";
+							debug_log(__METHOD__
+								." ERROR: $msg "
+								, logger::ERROR
+							);
 							continue;
 						}
 					}else{
-						debug_log(__METHOD__." ERROR: Empty datos from: $table - $id ".to_string(), logger::ERROR);
+						debug_log(__METHOD__
+							." ERROR: Empty datos from: $table - $id "
+							, logger::ERROR
+						);
 					}
 				}
 
 				// log info each 1000
 					if ($i_ref===0) {
 						debug_log(__METHOD__
-							." Partial update of section data table: $table - id: $id - total: $n_rows - total min: ".exec_time_unit($start_time,'min')
+							." Partial update (security_v5_to_v6) of section data table: $table - id: $id - total: $n_rows - total min: ".exec_time_unit($start_time,'min')
 							, logger::DEBUG
 						);
-					}else{
-						$i_ref = ($i_ref>1000) ? 0 : $i_ref + 1;
+
+						// clean vars
+						// unset($result);
+						// let GC do the memory job
+						time_nanosleep(0, 5000000); // Slept for 5000000 nanoseconds
+						// Forces collection of any existing garbage cycles
+						gc_collect_cycles();
+					}
+
+				// reset counter
+					$i_ref++;
+					if ($i_ref > 10001) {
+						$i_ref = 0;
 					}
 			}
 			#break; // stop now
