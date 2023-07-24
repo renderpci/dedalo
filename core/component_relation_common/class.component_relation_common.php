@@ -1586,7 +1586,7 @@ class component_relation_common extends component_common {
 			if (isset($properties->source->source_overwrite) && isset($properties->source->component_to_search)) {
 
 				// overwrite source locator
-					$component_to_search_tipo	= reset($ar_component_to_search);
+					$component_to_search_tipo	= $component_to_search; // $ar_component_to_search[0] ?? null;
 					$model_name					= RecordObj_dd::get_modelo_name_by_tipo($component_to_search_tipo, true);
 					$component_to_search		= component_common::get_instance(
 						$model_name,
@@ -2189,12 +2189,24 @@ class component_relation_common extends component_common {
 			foreach ($result->ar_records as $row) {
 
 				if (empty($row->datos->components->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO}->dato->{DEDALO_DATA_NOLAN})) {
-					debug_log(__METHOD__." Skipped hierarchy without target section tipo: $row->section_tipo, $row->section_id ".to_string(), logger::ERROR);
+					debug_log(__METHOD__
+						." Skipped hierarchy without target section tipo: $row->section_tipo, $row->section_id ".to_string()
+						, logger::ERROR
+					);
 					continue;
 				}
 
 				$target_dato			= $row->datos->components->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO}->dato->{DEDALO_DATA_NOLAN};
-				$target_section_tipo	= reset($target_dato);
+				$target_section_tipo	= $target_dato[0] ?? null;
+
+				if (empty($target_section_tipo)) {
+					debug_log(__METHOD__
+						." Skipped hierarchy without target section tipo: $row->section_tipo, $row->section_id ". PHP_EOL
+						.' target_dato: '. to_string($target_dato)
+						, logger::ERROR
+					);
+					continue;
+				}
 
 				$hierarchy_sections_from_types[] = $target_section_tipo;
 			}
@@ -2662,7 +2674,7 @@ class component_relation_common extends component_common {
 
 						return $response;
 					}
-					$target_section_tipo = reset($ar_target_section_tipo);
+					$target_section_tipo = $ar_target_section_tipo[0] ?? null;
 				}
 
 			$ar_values = explode(',', $value);
