@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * CLASS TS_OBJECT
 * Manage thesaurus hierarchical elements. Every element is a section used as thesaurus term
@@ -554,15 +555,16 @@ class ts_object {
 		foreach ($ar_elements as $key => $obj_value) {
 
 			if ($obj_value->type==='term') {
-				if(SHOW_DEBUG===true) {
-					// if (!is_string($obj_value->value)) {
-						// dump($obj_value->value, '$obj_value->value ++ EXPECTED STRING. Instead received type: '.gettype($obj_value->value) ." - ".to_string($obj_value->value));
-						debug_log(__METHOD__
-							."  ".'$obj_value->value ++ EXPECTED STRING. But received type: '.gettype($obj_value->value) ." - value:".to_string($obj_value->value)
-							, logger::ERROR
-						);
-					// }
+
+				if (!is_string($obj_value->value)) {
+					debug_log(__METHOD__
+						."  ".'$obj_value->value ++ EXPECTED STRING. But received type: '.gettype($obj_value->value) . PHP_EOL
+						.' obj_value->value type: ' . gettype($obj_value->value) . PHP_EOL
+						.' obj_value->value: ' . to_string($obj_value->value)
+						, logger::ERROR
+					);
 				}
+
 				$ar_elements[$key]->value = $obj_value->value; //'<span class="no_descriptor">' .  . '</span>';
 				break;
 			}
@@ -575,9 +577,8 @@ class ts_object {
 
 	/**
 	* GET_TERM_DATO_BY_LOCATOR
-	*
-	* @return array $final_value
-	*	Default is bool false
+	* @param object $locator
+	* @return array|null $final_value
 	*/
 	public static function get_term_dato_by_locator(object $locator) : ?array {
 
@@ -590,12 +591,12 @@ class ts_object {
 				return null;
 			}
 
-		$section_map 	= section::get_section_map($locator->section_tipo);
-		$thesaurus_map 	= isset($section_map->thesaurus) ? $section_map->thesaurus : false;
+		$section_map	= section::get_section_map($locator->section_tipo);
+		$thesaurus_map	= isset($section_map->thesaurus) ? $section_map->thesaurus : false;
 
-		$ar_tipo 		= is_array($thesaurus_map->term) ? $thesaurus_map->term : [$thesaurus_map->term];
-		$section_id 	= $locator->section_id;
-		$section_tipo 	= $locator->section_tipo;
+		$ar_tipo		= is_array($thesaurus_map->term) ? $thesaurus_map->term : [$thesaurus_map->term];
+		$section_id		= $locator->section_id;
+		$section_tipo	= $locator->section_tipo;
 
 		$ar_value = [];
 		foreach ($ar_tipo as $tipo) {
@@ -666,6 +667,7 @@ class ts_object {
 					$valor .= '_'. $locator->component_tipo;
 				if(isset($locator->tag_id))
 					$valor .= '_'. $locator->tag_id;
+
 			}else{
 
 				$term		= is_array($thesaurus_map->term) ? $thesaurus_map->term : [$thesaurus_map->term]; // source could be an array or string
@@ -744,13 +746,15 @@ class ts_object {
 
 	/**
 	* GET_COMPONENT_ORDER_TIPO
+	* Alias of hierarchy::get_element_tipo_from_section_map
+	* @param string $section_tipo
 	* @return string|null $element_tipo
 	*/
 	public static function get_component_order_tipo( string $section_tipo ) : ?string {
 
-		# Calculated way
+		// Calculated way
 		$element_tipo = hierarchy::get_element_tipo_from_section_map( $section_tipo, 'order' );
-		#debug_log(__METHOD__." ORDER TIPO: ".to_string($element_tipo), logger::DEBUG);
+
 
 		return $element_tipo;
 	}//end get_component_order_tipo
