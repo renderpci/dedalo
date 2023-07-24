@@ -92,8 +92,8 @@ class area_thesaurus extends area_common {
 				}
 
 			// hierarchy target section tipo
-				$model = RecordObj_dd::get_modelo_name_by_tipo($hierarchy_target_section_tipo,true);
-				$target_section = component_common::get_instance(
+				$model			= RecordObj_dd::get_modelo_name_by_tipo($hierarchy_target_section_tipo,true);
+				$target_section	= component_common::get_instance(
 					$model,
 					$hierarchy_target_section_tipo,
 					$row->section_id,
@@ -101,10 +101,13 @@ class area_thesaurus extends area_common {
 					DEDALO_DATA_NOLAN,
 					$row->section_tipo
 				);
-				$target_section_tipo_dato = $target_section->get_dato();
-				$target_section_tipo = reset($target_section_tipo_dato);
+				$target_section_tipo_dato	= $target_section->get_dato();
+				$target_section_tipo		= $target_section_tipo_dato[0] ?? null;
 				if (empty($target_section_tipo)) {
-					debug_log(__METHOD__." Skipped row $row->section_id with empty target_section_tipo ".$row->section_id, logger::WARNING);
+					debug_log(__METHOD__
+						." Skipped row $row->section_id with empty target_section_tipo ".$row->section_id
+						, logger::WARNING
+					);
 					continue; // Skip
 				}
 
@@ -139,7 +142,7 @@ class area_thesaurus extends area_common {
 					$row->section_tipo
 				);
 				$hierarchy_target_order_dato	= $hierarchy_section_order->get_dato();
-				$hierarchy_target_order_value	= reset($hierarchy_target_order_dato);
+				$hierarchy_target_order_value	= $hierarchy_target_order_dato[0] ?? 0;
 
 			// item
 				$item = new stdClass();
@@ -303,13 +306,13 @@ class area_thesaurus extends area_common {
 				return $typology_order_values[$typology_section_id];
 			}
 
-		$tipo 			 = DEDALO_HIERARCHY_TYPES_ORDER;
-		$model_name 	 = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-		$parent 		 = $typology_section_id;
-		$mode 			 = 'list';
-		$lang 			 = DEDALO_DATA_LANG;
-		$section_tipo 	 = area_thesaurus::$typologies_section_tipo;
-		$component 		 = component_common::get_instance(
+		$tipo			= DEDALO_HIERARCHY_TYPES_ORDER;
+		$model_name		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		$parent			= $typology_section_id;
+		$mode			= 'list';
+		$lang			= DEDALO_DATA_LANG;
+		$section_tipo	= area_thesaurus::$typologies_section_tipo;
+		$component		= component_common::get_instance(
 			$model_name,
 			$tipo,
 			$parent,
@@ -318,7 +321,7 @@ class area_thesaurus extends area_common {
 			$section_tipo
 		);
 		$dato			= $component->get_dato();
-		$order_value	= reset($dato);
+		$order_value	= $dato[0] ?? 0;
 
 		// cache
 			$typology_order_values[$typology_section_id] = $order_value;

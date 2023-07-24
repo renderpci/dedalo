@@ -2787,7 +2787,7 @@ abstract class common {
 									$ddo->set_tipo($section_tipo);
 									$ddo->set_label(RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true, true));
 								return $ddo;
-							}, $ar_section_tipo);
+							}, (array)$ar_section_tipo);
 
 						// filter_by_list. get the filter_by_list (to set the pre-filter selector)
 							if (isset($item_request_config->sqo->filter_by_list)) {

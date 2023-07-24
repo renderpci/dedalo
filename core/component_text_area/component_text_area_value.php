@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 // Process different values of the component_text_area
 // split the dato into columns, it depends of the format_column.
 // format_columns allowed: av, pdf, svg, geo, text
@@ -52,11 +54,44 @@
 				$tag_type,
 				$full_raw_text
 			);
+			if (is_null($fragment_info)) {
+				debug_log(__METHOD__
+					. " Empty fragment info object. Check your tag_id, maybe the state is 'deleted'. Falling back to minimal fragment text " . PHP_EOL
+					. ' tag_id: ' . to_string($tag_id)
+					, logger::ERROR
+				);
+				// $value_fragment	= $this->get_value_fragment(220);
+				// $value_fragment	= $this->get_list_value((object)['max_chars'=>220]);
+				$value_fragment	= common::truncate_html(
+					220,
+					$full_raw_text,
+					true // isUtf8
+				);
+				$value_fragment	= !empty($value_fragment)
+					? TR::deleteMarks($value_fragment)
+					: '';
+				$fragment_info	= (object)[
+					'text'			=> $value_fragment,
+					'tag_in_pos'	=> null,
+					'tag_out_pos'	=> null,
+					'tag_in'		=> null,
+					'tag_out'		=> null
+				];
+			}
 		}else{
 			$tag_id = '';
-			$value_fragment	= $this->get_value_fragment(100);
+			// $value_fragment	= $this->get_value_fragment(220);
+			// $value_fragment	= $this->get_list_value((object)['max_chars'=>220]);
+			$value_fragment	= common::truncate_html(
+				220,
+				$full_raw_text,
+				true // isUtf8
+			);
+			$value_fragment	= !empty($value_fragment)
+				? TR::deleteMarks($value_fragment)
+				: '';
 			$fragment_info	= (object)[
-				'text'			=> ($value_fragment[0] ?? ''),
+				'text'			=> $value_fragment,
 				'tag_in_pos'	=> null,
 				'tag_out_pos'	=> null,
 				'tag_in'		=> null,
@@ -82,12 +117,14 @@
 					// 	(int)$tag_in_pos, // int|null start_position
 					// 	0 // int in_margin
 					// );
-					$tc_in = OptimizeTC::optimize_tc_in(
-						$full_raw_text, // string text
-						$fragment_info->tag_in, // string|null indexIN
-						null, // int|null start_position
-						0 // int in_margin
-					);
+					$tc_in = $fragment_info->tag_in
+						? OptimizeTC::optimize_tc_in(
+							$full_raw_text, // string text
+							$fragment_info->tag_in, // string|null indexIN
+							null, // int|null start_position
+							0 // int in_margin
+						  )
+						: null;
 
 					// $tc_out = OptimizeTC::optimize_tc_out(
 					// 	$full_raw_text, // string text
@@ -95,13 +132,14 @@
 					// 	(int)$tag_out_pos, // int|null end_position
 					// 	100 // int in_margin
 					// );
-					$tc_out = OptimizeTC::optimize_tc_out(
-						$full_raw_text, // string text
-						$fragment_info->tag_out, // string|null indexOUT
-						null, // int|null end_position
-						100 // int in_margin
-					);
-
+					$tc_out = $fragment_info->tag_out
+						? OptimizeTC::optimize_tc_out(
+							$full_raw_text, // string text
+							$fragment_info->tag_out, // string|null indexOUT
+							null, // int|null end_position
+							100 // int in_margin
+						  )
+						: null;
 
 					$tc_in_secs		= OptimizeTC::TC2seg($tc_in);
 					$tc_out_secs	= OptimizeTC::TC2seg($tc_out);
