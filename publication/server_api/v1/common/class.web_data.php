@@ -36,7 +36,7 @@ class web_data {
 
 	/**
 	* GET_DB_CONNECTION
-	* @return resource $mysql_conn
+	* @return object $mysql_conn
 	*/
 	public static function get_db_connection($db_name=false) {
 
@@ -347,9 +347,9 @@ class web_data {
 		* Función genérica de consulta a las tablas de difusión generadas por Dédalo tras la publicación web
 		* Devuelve array con los rows de los campos solicitados
 		* @param object $options . Object with options like table, ar_fields, lang, etc..
-		* @return array $ar_data . Rows result from search
+		* @return object $response
 		*/
-		public static function get_rows_data( $request_options ) {
+		public static function get_rows_data( $request_options ) : object {
 			// error_log('get_rows_data request_options: '.PHP_EOL. json_encode($request_options));
 			$start_time = microtime(1);
 
@@ -648,9 +648,9 @@ class web_data {
 					#dump($exec_query_response, ' exec_query_response ++ '.to_string());
 
 			// response
-				$response->result 	= $exec_query_response->result;
-				$response->total 	= $exec_query_response->total ?? false;
-				$response->msg    	= 'OK get rows_data done. ' . $exec_query_response->msg;
+				$response->result	= $exec_query_response->result;
+				$response->total	= $exec_query_response->total ?? false;
+				$response->msg		= 'OK get rows_data done. ' . $exec_query_response->msg;
 
 			// debug
 				$response->debug = (isset($exec_query_response->debug))
@@ -1684,7 +1684,13 @@ class web_data {
 			if (!isset($result) || !$result) {
 				if(SHOW_DEBUG) {
 					#dump($count_query, "<H2>DEBUG Error Processing Request</H2> " .$conn->error );
-					debug_log(__METHOD__." DEBUG Error Processing Request : $count_query - ".to_string($conn->error), logger::ERROR);
+					$current_error = isset($dbh) && isset($dbh->error)
+						? $dbh->error
+						: 'Unknown error';
+					debug_log(__METHOD__
+						." DEBUG Error Processing Request : $count_query - ". $current_error
+						, logger::ERROR
+					);
 					#trigger_error("Error Processing Request");
 					#echo "<div class=\"error\" >Error Processing Request</div>";
 					#throw new Exception("Error Processing Request", 1);
@@ -3506,7 +3512,7 @@ class web_data {
 		*	$response->result array List of indexation_node objects
 		*	$response->msg string Message to developer like ok / error
 		*/
-		public static function get_thesaurus_indexation_node( $request_options ) {
+		public static function get_thesaurus_indexation_node( $request_options ) : object {
 
 			$options = new stdClass();
 				$options->term_id		= null;
@@ -3543,40 +3549,61 @@ class web_data {
 				return $response;
 			}
 
-
 			$ar_indexation_node = array();
 			foreach ( (array)$options->ar_locators as $current_locator ) {
 
-				# Safe ar_locators (avoid show info of locators without interview / audiovisual)
-				$locator_av_section_id			= $current_locator->section_id;
-				$locator_interview_section_id	= $current_locator->section_top_id;
-				if(false===web_data::record_is_active(TABLE_INTERVIEW, $locator_interview_section_id)) {
-					debug_log(__METHOD__." INTERVIEW NOT ACTIVE SKIPPED !! ".to_string($locator_interview_section_id), logger::DEBUG);
-					continue;
-				}
-				if(false===web_data::record_is_active(TABLE_AUDIOVISUAL, $locator_av_section_id)) {
-					debug_log(__METHOD__." AUDIOVISUAL NOT ACTIVE SKIPPED !! ".to_string($locator_av_section_id), logger::DEBUG);
-					continue;
-				}
+				// check tag_id in locator
+					if (!isset($current_locator->tag_id)) {
+						error_log('current_locator do not have tag_id. Ignored locator ! '. PHP_EOL . json_encode($current_locator, JSON_PRETTY_PRINT));
+						debug_log(__METHOD__
+							." current_locator do not have tag_id. Ignored locator !". PHP_EOL
+							.' current_locator: ' . json_encode($current_locator, JSON_PRETTY_PRINT)
+							, logger::ERROR
+						);
+						continue;
+					}
 
-				$indexation_node = indexation_node::get_indexation_node_instance($options->term_id, $current_locator, null);
-				$indexation_node->image_type	= $options->image_type;
-				$indexation_node->indexations	= $options->ar_locators;
-				$indexation_node->lang			= $options->lang;
-				$indexation_node->load_data(); # Force load object data from DDBB
-				# Unset temporal property of indexation_node object for clean json data
-				unset($indexation_node->indexations);
-				# Remove temporal vars to clean data output
-				unset($indexation_node->options);
+				// Safe ar_locators (avoid show info of locators without interview / audiovisual)
+					$locator_av_section_id			= $current_locator->section_id;
+					$locator_interview_section_id	= $current_locator->section_top_id;
+					if(false===web_data::record_is_active(TABLE_INTERVIEW, $locator_interview_section_id)) {
+						debug_log(__METHOD__." INTERVIEW NOT ACTIVE SKIPPED !! ".to_string($locator_interview_section_id), logger::DEBUG);
+						continue;
+					}
+					if(false===web_data::record_is_active(TABLE_AUDIOVISUAL, $locator_av_section_id)) {
+						debug_log(__METHOD__." AUDIOVISUAL NOT ACTIVE SKIPPED !! ".to_string($locator_av_section_id), logger::DEBUG);
+						continue;
+					}
 
-				$ar_indexation_node[] = $indexation_node;
-			}
-			#debug_log(__METHOD__." ar_indexation_node ".to_string($ar_indexation_node), logger::DEBUG);
-			#dump($ar_indexation_node, ' ar_indexation_node ++ '.to_string()); die();
+				// indexation node
+					$indexation_node = indexation_node::get_indexation_node_instance($options->term_id, $current_locator, null);
+					if (empty($indexation_node)) {
+
+						debug_log(__METHOD__
+							." indexation_node invalid !! Ignored.". PHP_EOL
+							.' current_locator: ' . to_string($current_locator)
+							, logger::ERROR
+						);
+						continue;
+					}
+
+					$indexation_node->image_type	= $options->image_type ?? 'posterframe';
+					$indexation_node->indexations	= $options->ar_locators;
+					$indexation_node->lang			= $options->lang;
+					$indexation_node->load_data(); # Force load object data from DDBB
+					# Unset temporal property of indexation_node object for clean json data
+					unset($indexation_node->indexations);
+					# Remove temporal vars to clean data output
+					unset($indexation_node->options);
+
+				// add node
+					$ar_indexation_node[] = $indexation_node;
+			}//end foreach ( (array)$options->ar_locators as $current_locator )
+
 
 			$response = new stdClass();
 				$response->result	= $ar_indexation_node;
-				$response->msg		= 'Ok. Request thesaurus_indexation_node done';
+				$response->msg		= 'OK. Request thesaurus_indexation_node done';
 
 
 			return $response;
@@ -5403,9 +5430,9 @@ class web_data {
 	/**
 	* GET_MENU_TREE_PLAIN
 	* @param object $request_options
-	* @return array $ar_data
+	* @return object $response
 	*/
-	public static function get_menu_tree_plain( $request_options ) {
+	public static function get_menu_tree_plain( $request_options ) : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -5445,7 +5472,8 @@ class web_data {
 				$childrens_options = clone $options;
 					$childrens_options->term_id = $value->term_id;
 
-				$ar_data = array_merge($ar_data, self::get_menu_tree_plain($childrens_options)->result );
+				$current_data = self::get_menu_tree_plain($childrens_options);
+				$ar_data = array_merge($ar_data, $current_data->result);
 			}
 		}
 		#dump($ar_data, ' ar_data ++ '.to_string());
