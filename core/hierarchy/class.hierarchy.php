@@ -1353,12 +1353,27 @@ class hierarchy {
 
 		// Search map
 		$ar_elements = hierarchy::get_section_map_elemets($section_tipo);
-		foreach ($ar_elements as $object_value) {
-			if (property_exists($object_value, $type)) {
-				$element_tipo = $object_value->{$type};
-				break;
+
+		// sample
+		// {
+		//     "thesaurus": {
+		//         "term": "hierarchy25",
+		//         "model": "hierarchy27",
+		//         "parent": "hierarchy36",
+		//         "is_indexable": "hierarchy24",
+		//         "is_descriptor": "hierarchy23"
+		//     }
+		// }
+
+		if (!empty($ar_elements)) {
+			foreach ($ar_elements as $object_value) {
+				if (property_exists($object_value, $type)) {
+					$element_tipo = $object_value->{$type};
+					break;
+				}
 			}
 		}
+
 
 		return $element_tipo;
 	}//end get_element_tipo_from_section_map
