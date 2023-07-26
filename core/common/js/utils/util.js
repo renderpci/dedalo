@@ -67,6 +67,8 @@ export function JSON_parse_safely(str, error_value=null) {
 /**
 * GROUP_OBJECTS_BY
 * Group object inside an array by a given property
+* @param array xs
+* @param string|int key
 */
 export function group_objects_by(xs, key) {
 
@@ -89,11 +91,12 @@ export function group_objects_by(xs, key) {
 * @return promise
 */
 export function wait_for_global(name, timeout=300) {
+
 	return new Promise((resolve, reject) => {
 		let waited = 0
 
 		function wait(interval) {
-			console.log("waiting interval...... :",interval);
+			console.log("waiting interval...... :", interval);
 			setTimeout(() => {
 				waited += interval
 				// some logic to check if script is loaded
@@ -196,7 +199,7 @@ export function url_vars_to_object(query_string) {
 		for (const key of params.keys()) {
 			if (params.getAll(key).length > 1) {
 				vars_obj[key] = params.getAll(key);
-			} else {
+			}else{
 				vars_obj[key] = params.get(key);
 			}
 		}
@@ -401,7 +404,7 @@ export function array_equals(source, array) {
 	// 		}
 	// 	}
 	// }//end object_equals
-export function object_equals (o1, o2){
+export function object_equals(o1, o2) {
 
 	// check if the o1 is object
 	// null is a object but it's not possible check his keys, so use the ===
