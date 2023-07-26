@@ -101,7 +101,7 @@ export const on_dragstart_mosaic = function(node, event, options) {
 	event.dataTransfer.setData('text/plain', data);
 
 	// style the drag element to be showed in drag mode
-	// node.classList.add('dragging')
+	node.classList.add('dragging')
 
 	return true
 }//end ondrag_start

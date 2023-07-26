@@ -19,7 +19,6 @@
 	} from './render_edit_component_portal.js'
 
 
-
 /**
 * VIEW_DEFAULT_EDIT_PORTAL
 * Manage the components logic and appearance in client side
@@ -172,6 +171,8 @@ const get_content_data = async function(self, ar_section_record) {
 						// 	}
 						// })
 
+
+
 					// section_record NODE
 						// const row_container = ui.create_dom_element({
 						// 	element_type	: 'div',
@@ -225,6 +226,8 @@ const get_content_data = async function(self, ar_section_record) {
 
 	return content_data
 }//end get_content_data
+
+
 
 
 
