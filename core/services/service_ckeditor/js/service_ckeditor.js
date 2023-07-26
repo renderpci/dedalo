@@ -1032,7 +1032,8 @@ export const service_ckeditor = function() {
 			const range = writer.createRange(start, end);
 
 			writer.setSelection( range );
-			self.scroll_to_selection()
+
+			// self.scroll_to_selection()
 		});
 	}//end get_selection_from_tags
 
