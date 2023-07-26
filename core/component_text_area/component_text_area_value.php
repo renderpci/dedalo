@@ -149,6 +149,11 @@ declare(strict_types=1);
 					$section_top_tipo	= $locator->section_top_tipo ?? null;
 					$section_top_id		= $locator->section_top_id ?? null;
 
+				// tool_context. This component have a 'tool_indexation' tool
+					$tool_indexation_context = array_find($tools, function($el){
+						return $el->name==='tool_indexation';
+					});
+
 				// columns
 					// section_id
 						$data[] = new dd_grid_cell_object((object)[
@@ -164,16 +169,35 @@ declare(strict_types=1);
 					// tag_id
 						$data[] = new dd_grid_cell_object((object)[
 							'type'			=> 'column',
-							'cell_type'		=> 'text',
+							'cell_type'		=> 'button',
 							'class_list'	=> 'tag_id',
-							'value'			=> [$tag_id] // array value
+							// 'value'		=> [$tag_id] // array value
+							'value'			=> [(object)[
+								'class_list'	=> 'button tag_id',
+								'label'			=> (label::get_label('open') ?? 'Open') .' '. ($tool_indexation_context->label ?? ''),
+								'action'		=> (object)[
+									'event'			=> 'click',
+									'method'		=> 'open_tool',
+									'module_path'	=> '../../../tools/tool_common/js/tool_common.js',
+									'options'		=> (object)[
+										'caller'		=> (object)[
+											'tipo'			=> $this->section_tipo,
+											'section_tipo'	=> $this->section_tipo,
+											'section_id'	=> $this->get_section_id(),
+											'mode'			=> $this->get_mode(),
+											'model'			=> 'section', // expected caller section in tool_indexation
+											'lang'			=> $this->get_lang()
+										],
+										'caller_options' => (object)[
+											'tag_id'		=> $tag_id
+										],
+										'tool_context'	=> $tool_indexation_context
+									]
+								]
+							]]
 						]);
 
 					// button_tool_indexation
-						// tool_context. This component have a 'tool_indexation' tool
-							$tool_indexation_context = array_find($tools, function($el){
-								return $el->name==='tool_indexation';
-							});
 						// cell
 						$data[] = new dd_grid_cell_object((object)[
 							'type'			=> 'column',

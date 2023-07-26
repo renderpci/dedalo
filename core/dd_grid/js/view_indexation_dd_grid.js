@@ -291,6 +291,7 @@ export const get_text_column = function(data_item, use_fallback) {
 		inner_html		: value_string
 	})
 
+
 	// text_fragment case. Toggle class to display overflow hidden text
 		if (data_item.class_list==='text_fragment') {
 			console.log('data_item:', data_item);

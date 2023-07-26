@@ -500,8 +500,9 @@ export const open_tool = async (options) => {
 	}
 
 	// options
-		const caller		= options.caller
-		const tool_context	= clone(options.tool_context) // (!) full clone here to avoid circular references
+		const caller			= options.caller
+		const caller_options	= options.caller_options || null
+		const tool_context		= clone(options.tool_context) // (!) full clone here to avoid circular references
 
 	// open_as. Mode of tool visualization: modal, tab, popup
 		const open_as = tool_context && tool_context.properties && tool_context.properties.open_as
@@ -519,12 +520,14 @@ export const open_tool = async (options) => {
 			? view_window({
 				tool_context	: tool_context, // object
 				caller			: caller, // object like component_input_text instance
+				caller_options	: caller_options,
 				open_as			: open_as, // string like 'tab' | 'popup'
 				windowFeatures	: windowFeatures // string like 'left=100,top=100,width=320,height=320'
 			  })
 			: view_modal({
 				tool_context	: tool_context, // object
 				caller			: caller, // object like component_input_text instance
+				caller_options	: caller_options,
 				open_as			: open_as, // string like 'tab' | 'popup'
 				windowFeatures	: windowFeatures // string like 'left=100,top=100,width=320,height=320'
 			  })
@@ -639,6 +642,7 @@ const view_window = async function(options) {
 	// options
 		const tool_context		= options.tool_context
 		const caller			= options.caller
+		const caller_options 	= options.caller_options || null
 		// const open_as		= options.open_as
 		const windowFeatures	= options.windowFeatures || null
 		// windowFeatures sample:
@@ -687,7 +691,8 @@ const view_window = async function(options) {
 			JSON.stringify({
 				// caller_id	: caller.id,
 				caller_ddo		: caller_ddo,
-				tool_config		: tool_config
+				tool_config		: tool_config,
+				caller_options	: caller_options
 			})
 		)
 		const url = DEDALO_CORE_URL + `/page/?tool=${name}&menu=false&raw_data=` + raw_data
