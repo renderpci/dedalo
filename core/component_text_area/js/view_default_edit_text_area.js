@@ -10,6 +10,7 @@
 	import * as instances from '../../common/js/instances.js'
 	import {get_fallback_value} from '../../common/js/common.js'
 	import {pause, url_vars_to_object} from '../../common/js/utils/index.js'
+	import {LZString as lzstring} from '../../common/js/utils/lzstring.js'
 	// import {when_in_viewport} from '../../common/js/events.js'
 
 
@@ -240,12 +241,30 @@ const get_content_value = (i, current_value, self) => {
 			// tag selected case (URL) Normally from dd_grid indexation tag button
 				setTimeout(function(){
 					const url_vars = url_vars_to_object(window.location.search)
-					console.log('url_vars:', url_vars);
-					const tag_id = url_vars.tag_id ?? null
-					if (tag_id) {
-						console.log('tag_id:', tag_id);
+					const raw_data = url_vars.raw_data ?? null
+					if(raw_data){
+						const url_data_string	= lzstring.decompressFromEncodedURIComponent(raw_data)
+						const url_data_object	= JSON.parse(url_data_string)
+
+						const tag_id = url_data_object.caller_options.tag_id || null
+
+						if(tag_id){
+
+							// get the text_editor (service)
+							const id_base = self.id_base
+
+
+							// get the tag object selecting the tag into the text_area editor (get the tag attributes)
+							// is necessary to get the tag state, to show the tag info inside the tool_indexation
+							const tag = current_service_text_editor.get_view_tag_attributes({
+								type : 'indexIn',
+								tag_id : tag_id,
+							})
+							// fire the event to select tag
+							event_manager.publish('click_tag_index_'+ id_base, {tag: tag})
+						}
 					}
-				}, 50)
+				}, 1)
 
 
 			return current_service_text_editor
