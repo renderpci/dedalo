@@ -137,12 +137,16 @@ component_text_area.prototype.init = async function(options) {
 				// console.log("///// fn_click_tag_index options:",options);
 
 				// options
-					// const caller			= options.caller // not used
-					// const text_editor	= options.text_editor // not used
+					const key				= 0; // key (only one editor is available but component could support multiple)
 					const tag				= options.tag // DOM tag element
+					const text_editor		= self.text_editor[key]
+
+				// set focus to editor (if the event is fired by other components as portal indexation)
+					text_editor.editor.editing.view.focus()
 
 				// fix selected tag element
 					self.tag = tag
+					text_editor.set_selection_from_tag(tag)
 
 				return true
 			}//end fn_create_fragment
