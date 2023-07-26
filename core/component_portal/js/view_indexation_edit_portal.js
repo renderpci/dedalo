@@ -340,14 +340,19 @@ const render_tag_column = function(options) {
 				e.preventDefault()
 				// console.log('@todo : Add event and subscribe from component_text_area to allow auto selection of current tag:', current_locator.tag_id);
 
-				const editor = caller.caller.transcription_component.text_editor[0].editor
-				// console.log('editor:', editor);
+				const text_area_instance = caller.caller.transcription_component
+				// get the text_editor (service)
+				const text_editor = text_area_instance.text_editor[0]
+				const id_base = text_area_instance.id_base
 
-				// select_tag(
-				// 	current_locator.tag_id,
-				// 	editor,
-				// 	false
-				// )
+				// get the tag object selecting the tag into the text_area editor (get the tag attributes)
+				// is necessary to get the tag state, to show the tag info inside the tool_indexation
+				const tag = text_editor.get_view_tag_attributes({
+					type : 'indexIn',
+					tag_id : current_locator.tag_id,
+				})
+				// fire the event to select tag
+				event_manager.publish('click_tag_index_'+ id_base, {tag: tag})
 			})
 		}
 
