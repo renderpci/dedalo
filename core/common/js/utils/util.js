@@ -161,7 +161,7 @@ export async function observe_changes(element, config, once) {
 * @param object vars_obj
 * @return string url_vars
 */
-export function object_to_url_vars( vars_obj ) {
+export function object_to_url_vars(vars_obj) {
 
 	const pairs = []
 	for (const key in vars_obj) {
@@ -183,19 +183,23 @@ export function object_to_url_vars( vars_obj ) {
 */
 export function url_vars_to_object(query_string) {
 
-	// parse query string
-	const params = new URLSearchParams(query_string);
+	// default from window.location
+		if (!query_string) {
+			query_string = window.location.search
+		}
 
-	const vars_obj = {};
+	// parse query string
+		const params = new URLSearchParams(query_string);
 
 	// iterate over all keys
-	for (const key of params.keys()) {
-		if (params.getAll(key).length > 1) {
-			vars_obj[key] = params.getAll(key);
-		} else {
-			vars_obj[key] = params.get(key);
+		const vars_obj = {};
+		for (const key of params.keys()) {
+			if (params.getAll(key).length > 1) {
+				vars_obj[key] = params.getAll(key);
+			} else {
+				vars_obj[key] = params.get(key);
+			}
 		}
-	}
 
 	return vars_obj;
 }//end url_vars_to_object
