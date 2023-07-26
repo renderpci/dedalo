@@ -1473,6 +1473,9 @@ class component_text_area extends component_common {
 
 		$ar_annotations = [];
 		foreach ($dato as $key => $current_dato) {
+			if(empty($current_dato)){
+				continue;
+			}
 			$pattern = TR::get_mark_pattern('note', $standalone=true);
 			preg_match_all($pattern,  $current_dato,  $matches, PREG_PATTERN_ORDER);
 			if (empty($matches[0])) {
