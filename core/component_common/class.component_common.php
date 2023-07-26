@@ -1220,7 +1220,18 @@ abstract class component_common extends common {
 		// $observable_dato is defined by the type of the event fired by the user,
 		// if event fired is update we will use the final dato with all changes, the data that will stored in BBDD
 		// but if the event is delete, we will use the previous data, before delete the info, because we need know the sections referenced that need delete and update your own data / state
-			$observable_dato = $this->get_observable_dato();
+			$observable_dato = [];
+
+		// clone the original data to not touch the original in the observable save process
+			$original_data =  $this->get_observable_dato();
+			if(!empty($original_data)){
+				foreach ($original_data as $data) {
+					$copy_data = is_object($data)
+						? clone $data
+						: $data;
+					$observable_dato[] = $copy_data;
+				}
+			}
 
 		// observers_data
 			$observers_data = [];
