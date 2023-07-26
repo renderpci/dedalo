@@ -239,29 +239,25 @@ const get_content_value = (i, current_value, self) => {
 				)
 
 			// tag selected case (URL) Normally from dd_grid indexation tag button
-				setTimeout(function(){
+				setTimeout(function() {
 					const url_vars = url_vars_to_object(window.location.search)
 					const raw_data = url_vars.raw_data ?? null
-					if(raw_data){
+					if(raw_data) {
+
 						const url_data_string	= lzstring.decompressFromEncodedURIComponent(raw_data)
 						const url_data_object	= JSON.parse(url_data_string)
+						const tag_id			= url_data_object.caller_options?.tag_id || null
+						if(tag_id) {
 
-						const tag_id = url_data_object.caller_options?.tag_id || null
-
-						if(tag_id){
-
-							// get the text_editor (service)
-							const id_base = self.id_base
-
-
-							// get the tag object selecting the tag into the text_area editor (get the tag attributes)
-							// is necessary to get the tag state, to show the tag info inside the tool_indexation
+							// tag. Get the tag object selecting the tag into the text_area editor (get the tag attributes)
+							// needed to get the tag state, to show the tag info inside the tool_indexation
 							const tag = current_service_text_editor.get_view_tag_attributes({
-								type : 'indexIn',
-								tag_id : tag_id,
+								type	: 'indexIn',
+								tag_id	: tag_id
 							})
+
 							// fire the event to select tag
-							event_manager.publish('click_tag_index_'+ id_base, {tag: tag})
+							event_manager.publish('click_tag_index_'+ self.id_base, {tag: tag})
 						}
 					}
 				}, 1)
@@ -804,7 +800,6 @@ const get_custom_events = (self, i, text_editor) => {
 
 	// mouseup
 		custom_events.MouseUp = (evt, options) => {
-			// console.log("MouseUp options:", evt, options);
 
 			// user text selection event
 				const selection = options.selection
