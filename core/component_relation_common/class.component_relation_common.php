@@ -695,6 +695,7 @@ class component_relation_common extends component_common {
 						throw new Exception("Error Processing Request. Look server log for details", 1);
 					}
 
+
 				// section_id
 					if (!isset($current_locator->section_id) || !isset($current_locator->section_tipo)) {
 						debug_log(__METHOD__
@@ -706,25 +707,30 @@ class component_relation_common extends component_common {
 						continue;
 					}
 
+				// Clone locator to prevent issues with external data or observers (modification of the original locator).
+				// When the component is observed by other component, the locator is saved into the observer changed the from_component_tipo (get the component_tipo as his own from_component_tipo)
+				// if the locator is not cloned, the original locator of the original component will changed with the last from_component_tipo of the observers
+				// the original component will save normally but the changed locator will send to client with incorrect from_component_tipo.
+					$locator_copy = clone $current_locator;
+
 				// type
-					if (!isset($current_locator->type)) {
+					if (!isset($locator_copy->type)) {
 						debug_log(__METHOD__
-							." Fixing bad formed locator (empty type) [$this->section_tipo, $this->parent, $this->tipo] ". get_called_class().' - current_locator: '.to_string($current_locator)
+							." Fixing bad formed locator (empty type) [$this->section_tipo, $this->parent, $this->tipo] ". get_called_class().' - locator_copy: '.to_string($locator_copy)
 							, logger::WARNING
 						);
-						$current_locator->type = $relation_type;
+						$locator_copy->type = $relation_type;
 					}
 
 				// from_component_tipo
-					if (!isset($current_locator->from_component_tipo)) {
-						$current_locator->from_component_tipo = $from_component_tipo;
-					}else if ($current_locator->from_component_tipo!==$from_component_tipo) {
-						$locator_copy = clone($current_locator);
-						$current_locator->from_component_tipo = $from_component_tipo;
+					if (!isset($locator_copy->from_component_tipo)) {
+						$locator_copy->from_component_tipo = $from_component_tipo;
+					}else if ($locator_copy->from_component_tipo!==$from_component_tipo) {
+						$locator_copy->from_component_tipo = $from_component_tipo;
 						debug_log(__METHOD__
 							. " Fixed bad formed locator (bad from_component_tipo $locator_copy->from_component_tipo)" . PHP_EOL
-							. ' source_locator: ' . to_string($locator_copy) . PHP_EOL
-							. ' result_locator: ' . to_string($current_locator) . PHP_EOL
+							. ' source_locator: ' . to_string($current_locator) . PHP_EOL
+							. ' result_locator: ' . to_string($locator_copy) . PHP_EOL
 							. ' called_class: ' . get_called_class()
 							, logger::WARNING
 						);
@@ -732,35 +738,34 @@ class component_relation_common extends component_common {
 
 				// lang
 					if ($translatable==='si') {
-						if (!isset($current_locator->lang)) {
-							$current_locator->lang = $lang;
-						}else if ($current_locator->lang!==$lang) {
-							$locator_copy = clone($current_locator);
-							$current_locator->lang = $lang;
+						if (!isset($locator_copy->lang)) {
+							$locator_copy->lang = $lang;
+						}else if ($locator_copy->lang!==$lang) {
+							$locator_copy->lang = $lang;
 							debug_log(__METHOD__
-								. " Fixed bad formed locator (bad lang in translatable locator. Lang: $current_locator->lang) ". PHP_EOL
-								. ' source_locator: ' . to_string($locator_copy) . PHP_EOL
-								. ' result_locator: ' . to_string($current_locator) . PHP_EOL
+								. " Fixed bad formed locator (bad lang in translatable locator. Lang: $locator_copy->lang) ". PHP_EOL
+								. ' source_locator: ' . to_string($current_locator) . PHP_EOL
+								. ' result_locator: ' . to_string($locator_copy) . PHP_EOL
 								. ' called_class: ' . get_called_class()
 								, logger::WARNING
 							);
-						}// end if (!isset($current_locator->lang))
+						}// end if (!isset($locator_copy->lang))
 					}// end if ($translatable==='si')
 
 				// normalized locator
-					$normalized_locator = new locator($current_locator);
+					$normalized_locator = new locator($locator_copy);
 
 				// Add. Check if locator already exists
 					$ar_properties = ($translatable==='si')
 						? ['section_id','section_tipo','type','tag_id','lang']
 						: ['section_id','section_tipo','type','tag_id'];
-					$found = locator::in_array_locator( $current_locator, $safe_dato, $ar_properties);
+					$found = locator::in_array_locator($locator_copy, $safe_dato, $ar_properties);
 					if ($found===false) {
 						$safe_dato[] = $normalized_locator;
 					}else{
 						debug_log(__METHOD__
 							.' Ignored set_dato of already existing locator '. PHP_EOL
-							.' current_locator: ' . to_string($current_locator)
+							.' locator_copy: ' . to_string($locator_copy)
 							, logger::WARNING
 						);
 					}
