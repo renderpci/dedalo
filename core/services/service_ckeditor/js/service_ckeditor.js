@@ -1020,14 +1020,40 @@ export const service_ckeditor = function() {
 			);
 			// create the range of the new position
 			const range = writer.createRange(start, end);
+
 			writer.setSelection( range );
+			self.scroll_to_selection()
 		});
 	}//end get_selection_from_tags
 
 
 
 	/**
-	* GET_PAIR_TAG
+	 * SCROLL_TO_SELECTION
+	 * Scroll the editor to show the selection.
+	 * get the view selection and move the editor to center the range
+	 * @return void
+	 */
+	this.scroll_to_selection = function(){
+
+		const self 	 = this
+		const editor = self.editor
+
+		const selection	= editor.editing.view.document.selection;
+		const range		= selection.getFirstRange()
+
+		if(range){
+			editor.editing.view.scrollToTheSelection({
+				target: editor.editing.view.domConverter.viewRangeToDom(range),
+				viewportOffset: 40
+			});
+		}
+	}
+
+
+
+	/**
+	* GET_VIEW_TAG
 	* @param tag_obj
 	* Tag object with all parameters for search the tag inside the model structure of ckeditor
 	* @return
