@@ -13,6 +13,7 @@
 	// import {get_instance, delete_instance} from '../../common/js/instances.js'
 	// import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
 	// import {clone, dd_console} from '../../common/js/utils/index.js'
+	// import {select_tag} from '../../component_text_area/js/view_default_edit_text_area.js'
 	import {
 		render_column_component_info,
 		render_column_remove,
@@ -309,7 +310,8 @@ const render_tag_column = function(options) {
 
 	// options
 		const locator		= options.locator
-		const data			= options.caller.data || {}
+		const caller		= options.caller
+		const data			= caller.data || {}
 		const value			= data.value || []
 		const value_tags	= value.filter(el => el.section_tipo===locator.section_tipo && el.section_id==locator.section_id)
 		// const value_tags	= [locator]
@@ -334,17 +336,18 @@ const render_tag_column = function(options) {
 				parent			: fragment
 			})
 			tag_node.addEventListener('click', function(e) {
-				console.log('@todo : Add event and subscribe from component_text_area to allow auto selection of current tag:', current_locator.tag_id);
+				e.stopPropagation()
+				e.preventDefault()
+				// console.log('@todo : Add event and subscribe from component_text_area to allow auto selection of current tag:', current_locator.tag_id);
 
-				// @todo : Add event and subscribe from component_text_area to allow auto selection of current tag
+				const editor = caller.caller.transcription_component.text_editor[0].editor
+				// console.log('editor:', editor);
 
-				// const id_base = current_locator.section_tipo + '_' + current_locator.section_id + '_' + 'rsc36'; // like rsc167_14_rsc36
-				// event_manager.publish('click_tag_index_'+ self.id_base, {
-				// 	tag: tag_obj,
-				// 	caller: self,
-				// 	text_editor: text_editor
-				// })
-				// text_editor.set_selection_from_tag(tag_obj)
+				// select_tag(
+				// 	current_locator.tag_id,
+				// 	editor,
+				// 	false
+				// )
 			})
 		}
 
