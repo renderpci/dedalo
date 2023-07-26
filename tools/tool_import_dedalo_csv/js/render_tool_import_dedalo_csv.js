@@ -158,7 +158,7 @@ const get_content_data = async function(self) {
 						}
 					})
 					// console.log("selected_files:",selected_files);
-					// console.log("files:",files);
+					 // console.log("files:",files);
 
 				// time_machine_save
 					const time_machine_save = checkbox_time_machine_save.checked
@@ -796,8 +796,10 @@ const render_columns_mapper = async function(self, item) {
 						// update ar_columns_map object
 						ar_columns_map[i].checked	= true
 						ar_columns_map[i].map_to	= ar_components[k].value
-						ar_columns_map[i].column_name	= column_name
 					}
+
+					// in any case the column_name will be the csv column name as user has specify
+					ar_columns_map[i].column_name	= column_name
 				}
 				target_select.addEventListener("change", function(e){
 					// checkbox_file_selection update
