@@ -601,18 +601,19 @@ export const service_ckeditor = function() {
 				// get the parent of the img, it will be a span with the data of the tag in attributes
 				// const item = data.target.parent._attrs
 				const tag_obj =  {
-						node_name	: click_element,
-						// dataset
-						type		: item.getAttribute('data-type'),
-						tag_id		: item.getAttribute('data-tag_id'),
-						state		: item.getAttribute('data-state'),
-						label		: item.getAttribute('data-label'),
-						data		: item.getAttribute('data-data')
-					}
+					node_name	: click_element,
+					// dataset
+					type		: item.getAttribute('data-type'),
+					tag_id		: item.getAttribute('data-tag_id'),
+					state		: item.getAttribute('data-state'),
+					label		: item.getAttribute('data-label'),
+					data		: item.getAttribute('data-data')
+				}
 
 				if (custom_events.click) {
 					custom_events.click(data.domEvent, tag_obj)
 				}
+
 				if (custom_events.MouseUp && click_element==='img') {
 					// if the element clicked is not a img (any text or other elements in the editor) get the selection and fire mouseup
 					const options = {
@@ -969,7 +970,7 @@ export const service_ckeditor = function() {
 	* SET_SELECTION_FROM_TAG
 	* @param tag_obj
 	* Tag object with all parameters for search the tag inside the model structure of ckeditor
-	* @return
+	* @return void
 	*/
 	this.set_selection_from_tag = function (tag_obj) {
 
@@ -998,9 +999,9 @@ export const service_ckeditor = function() {
 
 	/**
 	* GET_SELECTION_FROM_TAGS
-	* @param tag_view_in
+	* @param object tag_view_in
 	* tag representation in ckeditor view structure, it's a object with the parameters of the ckeditor for tag in
-	* @param tag_view_out
+	* @param object tag_view_out
 	* tag representation in ckeditor view structure, it's a object with the parameters of the ckeditor for tag out
 	* @return void
 	*/
