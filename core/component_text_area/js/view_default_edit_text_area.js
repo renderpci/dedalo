@@ -246,7 +246,7 @@ const get_content_value = (i, current_value, self) => {
 						const url_data_string	= lzstring.decompressFromEncodedURIComponent(raw_data)
 						const url_data_object	= JSON.parse(url_data_string)
 
-						const tag_id = url_data_object.caller_options.tag_id || null
+						const tag_id = url_data_object.caller_options?.tag_id || null
 
 						if(tag_id){
 
