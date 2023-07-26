@@ -1021,14 +1021,40 @@ export const service_ckeditor = function() {
 			);
 			// create the range of the new position
 			const range = writer.createRange(start, end);
+
 			writer.setSelection( range );
+			self.scroll_to_selection()
 		});
 	}//end get_selection_from_tags
 
 
 
 	/**
-	* GET_PAIR_TAG
+	 * SCROLL_TO_SELECTION
+	 * Scroll the editor to show the selection.
+	 * get the view selection and move the editor to center the range
+	 * @return void
+	 */
+	this.scroll_to_selection = function(){
+
+		const self 	 = this
+		const editor = self.editor
+
+		const selection	= editor.editing.view.document.selection;
+		const range		= selection.getFirstRange()
+
+		if(range){
+			editor.editing.view.scrollToTheSelection({
+				target: editor.editing.view.domConverter.viewRangeToDom(range),
+				viewportOffset: 40
+			});
+		}
+	}
+
+
+
+	/**
+	* GET_VIEW_TAG
 	* @param tag_obj
 	* Tag object with all parameters for search the tag inside the model structure of ckeditor
 	* @return
@@ -1144,6 +1170,71 @@ export const service_ckeditor = function() {
 
 		return last_tag_id
 	}//end get_last_tag_id
+
+
+
+	/**
+	* GET_VIEW_TAG_ATTRIBUTES
+	* @param tag_obj
+	* Tag object with type and tag_id for search the tag inside the model structure of ckeditor
+	* @return object || null
+	* {data: '', label: 'label in 1', state: 'r', tag_id: '1', type: 'indexIn', …}
+	*/
+	this.get_view_tag_attributes = function(tag_obj) {
+
+		// the view type will need to be the same of the tag_obj
+			const type = tag_obj.type
+
+		// the view tag_id will need to be the same of the tag_obj
+			const tag_id = tag_obj.tag_id
+
+		// short vars
+			const self		= this
+			const editor	= self.editor
+
+		// root. Whole editor document to traverse
+			const root = editor.editing.view.document.getRoot();
+
+		// range. Create a range spanning over the entire root content:
+			const range = editor.editing.view.createRangeIn( root );
+
+		// Iterate over all items in this range:
+			for ( const value of range.getWalker({ ignoreElementEnd: true }) ) {
+
+				const item = value.item
+
+				if(item.name !== 'img'){
+					continue
+				}
+
+				// attributes. Get an object map like:
+				// {
+				//   attributes : {data: '', label: 'label in 1', state: 'r', tag_id: '1', type: 'indexIn', …}
+				//	 classes : ['index']
+				// }
+
+				const parent_item = item.parent
+
+				const attributes = parent_item._attrs
+
+				if(attributes && attributes.size > 0) {
+
+					const tag_attributes = {
+						type	: attributes.get('data-type'),
+						tag_id	: attributes.get('data-tag_id'),
+						state	: attributes.get('data-state'),
+						label	: attributes.get('data-label'),
+						data	: attributes.get('data-data')
+
+					}
+					if(tag_attributes.type===type && tag_attributes.tag_id===tag_id) {
+						return tag_attributes
+					}
+				}
+			}//end for ( const value of range.getWalker({ ignoreElementEnd: true }) )
+
+		return null
+	}//end get_pair_tag
 
 
 
@@ -1476,9 +1567,9 @@ export const service_ckeditor = function() {
 	*/
 
 	this._getValueFromFirstAllowedNode = function() {
-		const model = this.editor.model;
-		const schema = model.schema;
-		const selection = model.document.selection;
+		const model		= this.editor.model;
+		const schema	= model.schema;
+		const selection	= model.document.selection;
 
 		if ( selection.isCollapsed ) {
 			return selection.hasAttribute( this.attributeKey );
