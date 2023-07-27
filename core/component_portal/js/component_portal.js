@@ -174,6 +174,9 @@ component_portal.prototype.init = async function(options) {
 					if (tag_id) {
 						// overwrite/set tag_id
 						locator.tag_id	= tag_id
+					}else{
+						alert(get_label.seleccione_una_etiqueta_para_indexar || "Select a tag to index");
+						return
 					}
 
 				// tag_component_tipo
