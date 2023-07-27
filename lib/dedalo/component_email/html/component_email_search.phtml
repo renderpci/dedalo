@@ -20,10 +20,10 @@
 		case 0	:	$html_content .= "";
 					break;
 
-		case 1	: 	$html_content .= "<span class=\"css_span_dato\">$dato</span>";
-					break;
+		// case 1	: 	$html_content .= "<span class=\"css_span_dato\">$dato</span>";
+		// 			break;
 
-		case ($permissions>=2)	:
+		case ($permissions>=1)	:
 					# COMPARISON OPERATORS
 					#$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
 
