@@ -175,8 +175,9 @@ component_portal.prototype.init = async function(options) {
 						// overwrite/set tag_id
 						locator.tag_id	= tag_id
 					}else{
-						alert(get_label.seleccione_una_etiqueta_para_indexar || "Select a tag to index");
-						return
+						if (!confirm(get_label.no_hay_etiqueta_seleccionada || 'No tag selected. If you continue, the entire record will be indexed.')) {
+							return
+						}
 					}
 
 				// tag_component_tipo
