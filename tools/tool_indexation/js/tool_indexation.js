@@ -173,6 +173,7 @@ tool_indexation.prototype.init = async function(options) {
 				if(SHOW_DEVELOPER===true) {
 					dd_console(`+++++++ [tool_indexation] click_tag_index ${id_base}`, 'DEBUG', options)
 				}
+
 				// options
 					const tag				= options.tag // object
 					// const caller			= options.caller // instance of component text area
