@@ -17,7 +17,8 @@
 	import {
 		render_column_component_info,
 		render_column_remove,
-		render_references
+		render_references,
+		get_buttons
 	} from './render_edit_component_portal.js'
 
 
@@ -86,9 +87,16 @@ view_indexation_edit_portal.render = async function(self, options) {
 			return content_data
 		}
 
+	// buttons
+		self.show_interface.tools = true
+		const buttons = (self.permissions > 1)
+			? get_buttons(self)
+			: null
+
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : content_data
+			content_data	: content_data,
+			buttons			: buttons
 		})
 		wrapper.classList.add(
 			'portal',
