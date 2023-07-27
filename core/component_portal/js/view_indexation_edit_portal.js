@@ -153,6 +153,27 @@ const get_content_data = async function(self, ar_section_record) {
 				fragment.appendChild(references_node)
 			}
 
+	// active_tag
+		if (self.active_tag) {
+			const list_footer =  ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'list_footer',
+				parent			: fragment
+			})
+			const button_remove_filter = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'primary button_remove_filter icon eye',
+				inner_html		: get_label.remove_filter || 'Remove filter',
+				parent			: list_footer
+			})
+			button_remove_filter.addEventListener('click', fn_click)
+			function fn_click(e) {
+				e.stopPropagation()
+				// reset filter
+				self.reset_filter_data()
+			}
+		}
+
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 			  content_data.appendChild(fragment)
