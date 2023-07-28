@@ -977,10 +977,6 @@ export const render_dataframe_table = async function(options) {
 		const data_item		= self.datum.data.find(el => el.section_tipo===section_tipo)
 		const section_id	= data_item.section_id
 
-console.log('section_tipo:', section_tipo);
-console.log('section_id:', section_id);
-console.log('data_item:', data_item);
-
 	// section
 		const section = await get_instance({
 			model			: 'section',
