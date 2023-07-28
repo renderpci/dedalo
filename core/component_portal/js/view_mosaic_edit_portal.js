@@ -326,11 +326,6 @@ const drag_and_drop = function(options) {
 
 	// options
 		const drag_node			= options.section_record_node
-		// const source_key		= options.i
-		// const locator		= options.locator
-		// const section_id		= locator.section_id
-		// const section_tipo	= locator.section_tipo
-		// const total_records	= options.total_records
 
 	drag_node.draggable = true
 	drag_node.classList.add('draggable')
