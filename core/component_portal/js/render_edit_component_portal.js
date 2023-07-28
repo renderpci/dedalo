@@ -269,23 +269,11 @@ const render_drag_node = function(options) {
 				drag_node.classList.add('hide')
 			// }
 		});
-	// drag_id
-		// ui.create_dom_element({
-		// 	element_type	: 'span',
-		// 	class_name		: 'drag_section_id hide',
-		// 	text_content	: section_id,
-		// 	parent			: drag_node
-		// })
-	// drag_icon
-		// const drag_icon = ui.create_dom_element({
-		// 	element_type	: 'span',
-		// 	class_name		: 'drag_icon',
-		// 	parent			: drag_node
-		// })
 
 	drag_node.draggable	= true
-	drag_node.addEventListener('dragstart', function(e) { return on_dragstart(this, e, options)})
-	drag_node.addEventListener('dragend', function(e) { return on_dragend(this, e)})
+		drag_node.addEventListener('dragstart', function(e) { return on_dragstart(this, e, options)})
+		drag_node.addEventListener('dragend', function(e) { return on_dragend(this, e, options)})
+
 	drag_node.addEventListener('dblclick', function(e) {
 		e.stopPropagation()
 
