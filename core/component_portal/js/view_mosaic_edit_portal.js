@@ -537,27 +537,4 @@ const rebuild_columns_map = async function(base_columns_map, self, view_mosaic) 
 
 
 
-/**
-* RENDER_COLUMN_ID
-* @return DocumentFragment
-*/
-	// view_mosaic_edit_portal.render_column_id = function(options){
-
-	// 	// options
-	// 		const self			= options.caller
-	// 		const section_id	= options.section_id
-	// 		const section_tipo	= options.section_tipo
-
-	// 	const fragment = new DocumentFragment()
-
-	// 	// section_id
-	// 		ui.create_dom_element({
-	// 			element_type	: 'span',
-	// 			class_name		: 'section_id',
-	// 			text_content	: section_id,
-	// 			parent			: fragment
-	// 		})
-
-
-
 // @license-end
