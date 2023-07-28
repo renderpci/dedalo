@@ -279,6 +279,7 @@
     "field": "camp:",
     "tool_administration": "Eina d'administració",
     "remove_filter": "Traieu el filtre",
+    "no_hay_etiqueta_seleccionada": "No hi ha cap etiqueta seleccionada. Si continueu, s'indexarà tot el registre.",
     "preset": "Config",
     "componente_deprecado": "Camp en procés de desaparició. Aquest camp es fusiona amb: %s",
     "error_source_target_lang": "Llenguatge d0origen i destino NO poden ser el mateix idioma",
