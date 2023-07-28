@@ -30,6 +30,7 @@ export const on_dragstart = function(node, event, options) {
 
 	// data. The data will be transfer to drop in text format
 		const data = JSON.stringify(transfer_data)
+
 		event.dataTransfer.effectAllowed = 'move';
 		event.dataTransfer.setData('text/plain', data);
 
@@ -38,7 +39,7 @@ export const on_dragstart = function(node, event, options) {
 		// node.firstChild.classList.remove('hide')
 
 	// get the content_data of the component_portal, it has the all section records nodes
-		const content_data		= node.parentNode.parentNode.parentNode
+		const content_data		= options.caller.node.content_data
 		const ar_section_record	= content_data.childNodes
 
 	// it's necessary set every drop node with the view boundaries of the grid
@@ -149,7 +150,7 @@ export const on_dragleave = function(node, event) {
 * @param object options
 * @return void
 */
-export const on_dragend = function(node, event) {
+export const on_dragend = function(node, event, options) {
 	event.preventDefault();
 	event.stopPropagation();
 
@@ -157,7 +158,8 @@ export const on_dragend = function(node, event) {
 		node.classList.remove('dragging')
 
 	// get content data, it has the section_records nodes with the drop nodes.
-	const content_data		= node.parentNode.parentNode.parentNode
+	// const content_data		= node.parentNode.parentNode.parentNode
+	const content_data		= options.caller.node.content_data
 	const ar_section_record	= content_data.childNodes
 
 	for (let i = ar_section_record.length - 1; i >= 0; i--) {
