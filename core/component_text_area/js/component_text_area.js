@@ -941,6 +941,14 @@ component_text_area.prototype.create_fragment = function(key, text_editor) {
 		// wrap_selection_with_tags. Prepend and append tag image node to current editor text selection
 			const range_clon = text_editor.wrap_selection_with_tags(image_in, image_out)
 
+		// get the DOM node of the tag
+			const inserted_tag_in = text_editor.get_view_tag_node({
+				type	: 'indexIn',
+				tag_id	: tag_id
+			})
+		// Fire click into the image node of the tag
+			inserted_tag_in.firstChild.click()
+
 	return (range_clon)
 		? tag_id
 		: false
