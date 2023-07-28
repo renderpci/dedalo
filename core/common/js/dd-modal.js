@@ -314,7 +314,12 @@ class DDModal extends HTMLElement {
 	}
 	disconnectedCallback() {
 		// this.shadowRoot.querySelector("button").removeEventListener('click', this._showModal);
-		this.shadowRoot.querySelector(".mini_modal").removeEventListener('mousedown', this._miniModal.bind(this));
+
+		// mini_modal. Note that mini_modal may have been removed
+			const mini_modal = this.shadowRoot.querySelector(".mini_modal")
+			if (mini_modal) {
+				mini_modal.removeEventListener('mousedown', this._miniModal.bind(this));
+			}
 		this.shadowRoot.querySelector(".close_modal").removeEventListener('mousedown', this._hideModal.bind(this));
 		this.shadowRoot.querySelector(".modal").removeEventListener('mousedown', this._hideModal.bind(this));
 		document.removeEventListener('keyup', this.detect_key);
