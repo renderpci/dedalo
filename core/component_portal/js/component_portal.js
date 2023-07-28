@@ -172,7 +172,21 @@ component_portal.prototype.init = async function(options) {
 						? self.active_tag.tag.tag_id || null
 						: null
 					if (tag_id) {
+						// overwrite/set tag_id
 						locator.tag_id	= tag_id
+					}else{
+						if (!confirm(get_label.no_hay_etiqueta_seleccionada || 'No tag selected. If you continue, the entire record will be indexed.')) {
+							return
+						}
+					}
+
+				// tag_component_tipo
+					const tag_component_tipo = self.context.properties?.config_relation?.tag_component_tipo
+					if (tag_component_tipo) {
+						locator.tag_component_tipo = tag_component_tipo
+					}else{
+						console.error('tag_component_tipo is not defined into component properties->config_relation . This is mandatory in v6', self.context.properties);
+						return
 					}
 
 				// top_locator add

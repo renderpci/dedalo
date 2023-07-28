@@ -200,11 +200,14 @@ export const get_button_column = function(current_data) {
 		})
 
 	// icon
-		ui.create_dom_element({
+		const icon = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'icon ' + class_list, // 'icon indexation',
 			parent			: button
 		})
+		if (value.value) {
+			icon.innerHTML = value.value
+		}
 
 
 	// event

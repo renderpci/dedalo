@@ -62,12 +62,12 @@ render_tool_propagate_component_data.prototype.edit = async function(options) {
 */
 const get_content_data = async function(self) {
 
-	const fragment = new DocumentFragment()
+	// DocumentFragment
+		const fragment = new DocumentFragment()
 
 	// short vars
 		const section_tipo		= self.caller.section_tipo
 		const component_list	= self.component_list
-
 
 	// section_info
 		const section_info = ui.create_dom_element({
@@ -75,7 +75,6 @@ const get_content_data = async function(self) {
 			class_name		: 'section_info',
 			parent			: fragment
 		})
-
 		// section_name
 			ui.create_dom_element({
 				element_type	: 'h3',
@@ -109,7 +108,6 @@ const get_content_data = async function(self) {
 			}
 		})
 
-
 	// buttons_container
 		const buttons_container = ui.create_dom_element({
 			element_type	: 'div',
@@ -119,13 +117,26 @@ const get_content_data = async function(self) {
 
 	// info_text
 		const section = self.caller.caller?.caller
-		if (!section) {
-			console.error('Ignored order. Unable to get section. caller:', self.caller);
+		if (!section || section.model!=='section' || section.mode!=='edit') {
+			console.error('Ignored call. Unable to get valid section. caller:', self.caller);
+			console.log('section:', section);
 			const content_data = ui.tool.build_content_data(self)
+			let label = ''
+			switch (true) {
+				case !section:
+					label = 'Caller section is unavailable'
+					break;
+				case section.model!=='section':
+					label = 'Caller is ' + section.model + '. This tool only works in the context of editing sections.'
+					break;
+				case section.mode!=='edit':
+					label = 'Sorry. Only edit mode is allowed. This tool only works in the context of editing sections.'
+					break;
+			}
 			content_data.appendChild(ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'msg',
-				inner_html		: 'Caller section is unavailable'
+				inner_html		: label
 			}))
 			return content_data
 		}
@@ -160,7 +171,8 @@ const get_content_data = async function(self) {
 			inner_html		: self.get_tool_label('tool_do_replace') || 'Replace values',
 			parent			: buttons_container
 		})
-		button_replace.addEventListener('click', async function(e){
+		button_replace.addEventListener('click', fn_replace)
+		async function fn_replace(e) {
 			e.preventDefault()
 
 			await ui.component.deactivate(self.component_to_propagate)
@@ -182,7 +194,7 @@ const get_content_data = async function(self) {
 					response_text.innerHTML = response.msg
 				})
 			}
-		})
+		}//end fn_replace
 
 	// button_add
 		const button_add = ui.create_dom_element({
@@ -192,7 +204,8 @@ const get_content_data = async function(self) {
 			inner_html		: self.get_tool_label('tool_do_add') || 'Add',
 			parent			: buttons_container
 		})
-		button_add.addEventListener("click", function(e){
+		button_add.addEventListener('click', fn_add)
+		function fn_add(e){
 			e.preventDefault()
 			// propagate_component_data
 			if (confirm(get_label.sure || 'Sure?')) {
@@ -203,7 +216,7 @@ const get_content_data = async function(self) {
 					response_text.innerHTML = response.msg
 				})
 			}
-		})
+		}//end fn_add
 
 	// button_delete
 		const button_delete = ui.create_dom_element({
@@ -213,7 +226,8 @@ const get_content_data = async function(self) {
 			inner_html		: self.get_tool_label('tool_do_delete') || 'Delete',
 			parent			: buttons_container
 		})
-		button_delete.addEventListener("click", function(e){
+		button_delete.addEventListener('click', fn_delete)
+		function fn_delete(e){
 			e.preventDefault()
 			// propagate_component_data
 			if (confirm(get_label.sure || 'Sure?')) {
@@ -224,7 +238,7 @@ const get_content_data = async function(self) {
 					response_text.innerHTML = response.msg
 				})
 			}
-		})
+		}//end fn_delete
 
 	// content_data
 		const content_data = ui.tool.build_content_data(self)

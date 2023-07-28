@@ -7,7 +7,7 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	// import {clone,dd_console} from '../../common/js/utils/index.js'
+	import {clone,dd_console} from '../../common/js/utils/index.js'
 	import {common, create_source} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {tr} from '../../common/js/tr.js'
@@ -134,19 +134,33 @@ component_text_area.prototype.init = async function(options) {
 				event_manager.subscribe('click_tag_index_' + self.id_base, fn_click_tag_index)
 			)
 			function fn_click_tag_index(options) {
-				// console.log("///// fn_click_tag_index options:",options);
+				if(SHOW_DEVELOPER===true) {
+					dd_console(`+++++++ [component_text_area] click_tag_index ${self.id_base}`, 'DEBUG', options)
+				}
 
 				// options
-					const key				= 0; // key (only one editor is available but component could support multiple)
-					const tag				= options.tag // DOM tag element
-					const text_editor		= self.text_editor[key]
+					const tag = options.tag // object
 
-				// set focus to editor (if the event is fired by other components as portal indexation)
-					text_editor.editor.editing.view.focus()
+				// short vars
+					const key			= 0; // key (only one editor is available but component could support multiple)
+					const text_editor	= self.text_editor[key]
 
 				// fix selected tag element
 					self.tag = tag
-					text_editor.set_selection_from_tag(tag)
+
+					ui.component.activate(self)
+					.then(function(response){
+
+						// set_selection. Implies scroll to the tag into view (!)
+						text_editor.set_selection_from_tag(tag)
+						setTimeout(function(){
+							// set focus to editor (if the event is fired by other components as portal indexation)
+							text_editor.editor.editing.view.focus()
+							// scroll to allow display the selection into the view
+							text_editor.scroll_to_selection()
+						}, 10)
+					})
+
 
 				return true
 			}//end fn_create_fragment

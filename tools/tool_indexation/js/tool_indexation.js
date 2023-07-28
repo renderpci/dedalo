@@ -171,12 +171,12 @@ tool_indexation.prototype.init = async function(options) {
 			)
 			function fn_click_tag_index(options) {
 				if(SHOW_DEVELOPER===true) {
-					dd_console(`+++++++ click_tag_index`, 'DEBUG', options)
+					dd_console(`+++++++ [tool_indexation] click_tag_index ${id_base}`, 'DEBUG', options)
 				}
 
 				// options
-					// const caller			= options.caller // instance of component text area
 					const tag				= options.tag // object
+					// const caller			= options.caller // instance of component text area
 					// const text_editor	= options.text_editor // not used
 
 				// short vars
@@ -223,6 +223,8 @@ tool_indexation.prototype.init = async function(options) {
 
 /**
 * BUILD_CUSTOM
+* @param bool autoload = false
+* @return bool
 */
 tool_indexation.prototype.build = async function(autoload=false) {
 
@@ -338,16 +340,15 @@ tool_indexation.prototype.build = async function(autoload=false) {
 * Load transcriptions component (text area) configured with the given lang
 * @param string lang
 * Create / recover and build a instance of current component in the desired lang
-* @return object instance
+* @return object
+* component instance
 */
 tool_indexation.prototype.get_component = async function(lang) {
 
 	const self = this
 
-
 	// to_delete_instances. Select current self.transcription_component
 		const to_delete_instances = self.ar_instances.filter(el => el===self.transcription_component)
-
 
 	// options (clone and edit)
 		const options = Object.assign(clone(self.transcription_component.context),{
@@ -657,10 +658,9 @@ tool_indexation.prototype.active_value = function(name, callback) {
 * 	  },
 * 	  ..
 * 	]
-* @return boolean true
+* @return bool
 */
 tool_indexation.prototype.update_active_values = function(values) {
-
 
 	for (let i = 0; i < values.length; i++) {
 

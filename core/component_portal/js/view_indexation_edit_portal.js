@@ -10,14 +10,15 @@
 	// import {event_manager} from '../../common/js/event_manager.js'
 	// import {data_manager} from '../../common/js/data_manager.js'
 	// import {create_source} from '../../common/js/common.js'
-	// import {get_instance, delete_instance} from '../../common/js/instances.js'
+	import {instances} from '../../common/js/instances.js'
 	// import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
 	// import {clone, dd_console} from '../../common/js/utils/index.js'
 	// import {select_tag} from '../../component_text_area/js/view_default_edit_text_area.js'
 	import {
 		render_column_component_info,
 		render_column_remove,
-		render_references
+		render_references,
+		get_buttons
 	} from './render_edit_component_portal.js'
 
 
@@ -86,9 +87,16 @@ view_indexation_edit_portal.render = async function(self, options) {
 			return content_data
 		}
 
+	// buttons
+		self.show_interface.tools = true
+		const buttons = (self.permissions > 1)
+			? get_buttons(self)
+			: null
+
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : content_data
+			content_data	: content_data,
+			buttons			: buttons
 		})
 		wrapper.classList.add(
 			'portal',
@@ -152,6 +160,27 @@ const get_content_data = async function(self, ar_section_record) {
 				const references_node = render_references(self.data.references)
 				fragment.appendChild(references_node)
 			}
+
+	// active_tag
+		if (self.active_tag) {
+			const list_footer =  ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'list_footer',
+				parent			: fragment
+			})
+			const button_remove_filter = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'primary button_remove_filter icon eye',
+				inner_html		: get_label.remove_filter || 'Remove filter',
+				parent			: list_footer
+			})
+			button_remove_filter.addEventListener('click', fn_click)
+			function fn_click(e) {
+				e.stopPropagation()
+				// reset filter
+				self.reset_filter_data()
+			}
+		}
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
@@ -316,6 +345,8 @@ const render_tag_column = function(options) {
 		const value_tags	= value.filter(el => el.section_tipo===locator.section_tipo && el.section_id==locator.section_id)
 		// const value_tags	= [locator]
 
+	const self = caller
+
 	const fragment = new DocumentFragment()
 
 	// add a tag for each value
@@ -338,21 +369,55 @@ const render_tag_column = function(options) {
 			tag_node.addEventListener('click', function(e) {
 				e.stopPropagation()
 				e.preventDefault()
-				// console.log('@todo : Add event and subscribe from component_text_area to allow auto selection of current tag:', current_locator.tag_id);
 
-				const text_area_instance = caller.caller.transcription_component
-				// get the text_editor (service)
-				const text_editor = text_area_instance.text_editor[0]
-				const id_base = text_area_instance.id_base
+				if(SHOW_DEBUG===true) {
+					console.log('Clicked tag_id from column:', current_locator.tag_id);
+				}
 
-				// get the tag object selecting the tag into the text_area editor (get the tag attributes)
-				// is necessary to get the tag state, to show the tag info inside the tool_indexation
-				const tag = text_editor.get_view_tag_attributes({
-					type : 'indexIn',
-					tag_id : current_locator.tag_id,
-				})
-				// fire the event to select tag
-				event_manager.publish('click_tag_index_'+ id_base, {tag: tag})
+				// tag_component_tipo
+					if (!current_locator.tag_component_tipo) {
+						// get from properties
+						const tag_component_tipo = self.context.properties?.config_relation?.tag_component_tipo
+						if (tag_component_tipo) {
+							current_locator.tag_component_tipo = tag_component_tipo
+							console.warn('WARNING: locator tag_component_tipo is mandatory! Adding auto tag_component_tipo from properties', current_locator);
+						}else{
+							console.warn('ERROR: locator tag_component_tipo is mandatory! Not received into current locator and unable to get it from properties fallback', self.context.properties);
+							return
+						}
+					}
+
+				// id_base build like rsc167_5_rsc36
+					const id_base = [
+						caller.section_tipo,
+						caller.section_id,
+						current_locator.tag_component_tipo
+					].join('_')
+
+				// locate component into the global array of instances
+					const component = instances.find(el => el.id_base===id_base)
+					if (component) {
+
+						// text_area_instance
+						const text_area_instance = component
+
+						// get the text_editor (service)
+						const text_editor = text_area_instance.text_editor[0]
+
+						// id_base of component_text_area
+						const id_base = text_area_instance.id_base
+
+						// tag. Get the tag object selecting the tag into the text_area editor (get the tag attributes)
+						// needed to get the tag state, to show the tag info inside the tool_indexation
+						const tag = text_editor.get_view_tag_attributes({
+							type	: 'indexIn',
+							tag_id	: current_locator.tag_id
+						})
+						// fire the event to select tag
+						event_manager.publish('click_tag_index_'+ id_base, {tag: tag})
+					}else{
+						console.error('Unable to locate component into instances. id_base:', id_base);
+					}
 			})
 		}
 
