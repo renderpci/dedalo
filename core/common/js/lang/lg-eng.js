@@ -279,6 +279,7 @@
     "field": "field:",
     "tool_administration": "Administration tool",
     "remove_filter": "Remove filter",
+    "no_hay_etiqueta_seleccionada": "No tag selected. If you continue, the entire record will be indexed.",
     "preset": "Preset",
     "componente_deprecado": "Field in the process of disappearing. This field merges with: %s",
     "error_source_target_lang": "Source and target langs can't be the same languague",

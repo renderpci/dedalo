@@ -279,6 +279,7 @@
     "field": "Feld:",
     "tool_administration": "Administrationswerkzeug",
     "remove_filter": "Filter entfernen",
+    "no_hay_etiqueta_seleccionada": "Kein Tag ausgewählt. Wenn Sie fortfahren, wird der gesamte Datensatz indiziert.",
     "preset": "Konfig",
     "componente_deprecado": "Feld im Begriff zu verschwinden. Dieses Feld fusioniert mit: %s",
     "error_source_target_lang": "Ursprungssprache und Zielsprache dürfen nicht identisch sein.",

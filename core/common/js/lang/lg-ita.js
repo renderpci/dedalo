@@ -279,6 +279,7 @@
     "field": "Campo:",
     "tool_administration": "Strumento d'amministrazione",
     "remove_filter": "Rimuovi filtro",
+    "no_hay_etiqueta_seleccionada": "Nessun tag selezionato. Se continui, l'intero record verrà indicizzato.",
     "preset": "Config",
     "componente_deprecado": "Campo in processo di scomparsa. Questo campo si fonde con: ",
     "error_source_target_lang": "Linguaggio d'origine e destinazione NON possono avere la stessa lingua",
