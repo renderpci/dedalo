@@ -319,6 +319,9 @@ const get_content_data = async function(self, ar_section_record, hover_ar_sectio
 /**
 * DRAG_AND_DROP
 * Set section_record_node ready to drag and drop
+* Mosaic use his own node to be dragable and dropable
+* also it uses the drag node of default behavior (dependent of section_id node)
+* but doesn't use the drop node (dependent of section_id node)
 * @param object options
 * @return bool
 */
