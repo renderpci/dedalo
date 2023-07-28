@@ -1124,6 +1124,38 @@ export const service_ckeditor = function() {
 
 
 	/**
+	* GET_VIEW_TAG_NODE
+	* Get the DOM element of the tag
+	* If the tag is a index the DOM element will be the span (it context the img node as child)
+	* @param tag_obj
+	* Tag object with 'type' and 'tag_id' parameters for search the tag inside the model structure of ckeditor
+	* @return DOM node | tag_node
+	*/
+	this.get_view_tag_node = function(tag_obj) {
+
+		const self		= this
+		const editor	= self.editor
+
+		// the view type will need to be the same of the tag_obj
+			const type = tag_obj.type
+
+		// the view tag_id will need to be the same of the tag_obj
+			const tag_id = tag_obj.tag_id
+
+		// get view_tag
+			const view_tag = self.get_view_tag({
+				type	: type,
+				tag_id	: tag_id.toString()
+			})
+		// get the dom node of the view_tag, it will be the span node with the img node
+			const tag_node = editor.editing.view.domConverter.mapViewToDom(view_tag)
+
+		return tag_node
+	}//end get_view_tag_node
+
+
+
+	/**
 	* GET_LAST_TAG_ID
 	* Calculates all current text_editor editor tags id of given type (ex. 'tc') and get last used id
 	* @param object options
