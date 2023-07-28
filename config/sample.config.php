@@ -505,7 +505,7 @@
 
 // lock_components
 	// Set lock components function when users are editing fields. boolean
-	define('DEDALO_LOCK_COMPONENTS', false);
+	define('DEDALO_LOCK_COMPONENTS', true);
 
 
 // protect media files, when active the access to media files are controlled and only register users can access to it.

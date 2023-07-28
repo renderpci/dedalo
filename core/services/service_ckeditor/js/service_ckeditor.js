@@ -972,7 +972,7 @@ export const service_ckeditor = function() {
 	* Tag object with all parameters for search the tag inside the model structure of ckeditor
 	* @return void
 	*/
-	this.set_selection_from_tag = function (tag_obj) {
+	this.set_selection_from_tag = function(tag_obj) {
 
 		// short vars
 			const self = this
@@ -982,23 +982,29 @@ export const service_ckeditor = function() {
 				return false
 			}
 
-		// change the type to set it as indexIn and get the view tag in
-		tag_obj.type		= 'indexIn'
-		const tag_view_in	= self.get_view_tag(tag_obj)
-		// change the type to set it as indexOut and get the view tag out
-		tag_obj.type		= 'indexOut'
+		// tag_view_in. change the type to set it as indexIn and get the view tag in
+			const tag_obj_in	= { ...tag_obj };
+			tag_obj_in.type		= 'indexIn'
+			const tag_view_in	= self.get_view_tag(tag_obj_in)
 
-		const tag_view_out	= self.get_view_tag(tag_obj)
+		// tag_view_out. change the type to set it as indexOut and get the view tag out
+			const tag_obj_out	= { ...tag_obj };
+			tag_obj_out.type	= 'indexOut'
+			const tag_view_out	= self.get_view_tag(tag_obj_out)
 
-		if(tag_view_in && tag_view_out){
-			self.set_selection_from_view_tags(tag_view_in, tag_view_out)
-		}
+		// selection_from_view_tags
+			if(tag_view_in && tag_view_out){
+				self.set_selection_from_view_tags(tag_view_in, tag_view_out)
+			}else{
+				console.log('Invalid tag_view_in/tag_view_out:', tag_view_in, tag_view_out);
+			}
 	}//end set_selection_from_tag
 
 
 
 	/**
 	* GET_SELECTION_FROM_TAGS
+	* Set selection and scroll selection into the view
 	* @param object tag_view_in
 	* tag representation in ckeditor view structure, it's a object with the parameters of the ckeditor for tag in
 	* @param object tag_view_out
@@ -1011,19 +1017,23 @@ export const service_ckeditor = function() {
 		const editor = self.editor
 
 		editor.editing.view.change((writer) => {
+
 			const start = writer.createPositionAt(
 				tag_view_in,
 				"after"
 			);
+
 			const end = writer.createPositionAt(
 				tag_view_out,
 				"before"
 			);
+
 			// create the range of the new position
 			const range = writer.createRange(start, end);
 
 			writer.setSelection( range );
-			self.scroll_to_selection()
+
+			// self.scroll_to_selection()
 		});
 	}//end get_selection_from_tags
 
@@ -1035,7 +1045,7 @@ export const service_ckeditor = function() {
 	 * get the view selection and move the editor to center the range
 	 * @return void
 	 */
-	this.scroll_to_selection = function(){
+	this.scroll_to_selection = function() {
 
 		const self 	 = this
 		const editor = self.editor
@@ -1045,11 +1055,11 @@ export const service_ckeditor = function() {
 
 		if(range){
 			editor.editing.view.scrollToTheSelection({
-				target: editor.editing.view.domConverter.viewRangeToDom(range),
-				viewportOffset: 40
+				target			: editor.editing.view.domConverter.viewRangeToDom(range),
+				viewportOffset	: 40
 			});
 		}
-	}
+	}//end scroll_to_selection
 
 
 
@@ -1177,8 +1187,8 @@ export const service_ckeditor = function() {
 	* GET_VIEW_TAG_ATTRIBUTES
 	* @param tag_obj
 	* Tag object with type and tag_id for search the tag inside the model structure of ckeditor
-	* @return object || null
-	* {data: '', label: 'label in 1', state: 'r', tag_id: '1', type: 'indexIn', …}
+	* @return object|null
+	* 	sample: {data: '', label: 'label in 1', state: 'r', tag_id: '1', type: 'indexIn', …}
 	*/
 	this.get_view_tag_attributes = function(tag_obj) {
 
@@ -1203,9 +1213,10 @@ export const service_ckeditor = function() {
 
 				const item = value.item
 
-				if(item.name !== 'img'){
-					continue
-				}
+				// ignore non image elements
+					if(item.name !== 'img') {
+						continue
+					}
 
 				// attributes. Get an object map like:
 				// {
@@ -1248,7 +1259,7 @@ export const service_ckeditor = function() {
 	* 	tag_id : 1,
 	* 	new_data_obj : { type : n } (former dataset)
 	* }
-	* @return promise bool
+	* @return promise
 	*/
 	this.update_tag = function(options) {
 
@@ -1422,8 +1433,8 @@ export const service_ckeditor = function() {
 					continue
 				}
 				// create the node in the text_area render (common for all text_editors tinny, ckeditor, etc.)
-				const button_node = render_button(button_config)
-				button_config.node = button_node
+				const button_node	= render_button(button_config)
+				button_config.node	= button_node
 				// when the button need to be processed by the editor, use the factory
 				if(button_config.manager_editor === true){
 					self.factory_events_for_buttons(button_config)
@@ -1463,6 +1474,7 @@ export const service_ckeditor = function() {
 
 		return toolbar_container
 	}//end this.build_toolbar
+
 
 
 	/**
@@ -1531,7 +1543,7 @@ export const service_ckeditor = function() {
 					button.classList.remove('active')
 				}
 			};
-			editor.listenTo( command, 'change:value',(evt)=>{
+			editor.listenTo( command, 'change:value', (evt)=>{
 				if ( !new Set( [ 'undo', 'redo' ] ).has( name ) ) {
 					onValueChange();
 				}
@@ -1546,9 +1558,8 @@ export const service_ckeditor = function() {
 				}else{
 					button.classList.remove('disable')
 				}
-
 			};
-			editor.listenTo( command, 'change:isEnabled',(evt)=>{
+			editor.listenTo( command, 'change:isEnabled', (evt)=>{
 				onIsEnabledChange()
 			})
 
@@ -1561,9 +1572,9 @@ export const service_ckeditor = function() {
 	* _GETVALUEFROMFIRSTALLOWEDNODE
 	* Checks the attribute value of the first node in the selection that allows the attribute.
 	* For the collapsed selection returns the selection attribute.
-	*
 	* @private
-	* @returns {Boolean} The attribute value.
+	* @returns bool
+	*  The attribute value.
 	*/
 
 	this._getValueFromFirstAllowedNode = function() {
@@ -1626,7 +1637,7 @@ export const service_ckeditor = function() {
 				? selectedElement.getAttribute( 'reference' )
 				: selection.getAttribute( 'reference' )
 
-		//des
+		// des
 			// 	this.isEnabled = model.schema.checkAttribute( selectedElement, 'reference' );
 			// } else {
 			// 	this.value = selection.getAttribute( 'reference' );

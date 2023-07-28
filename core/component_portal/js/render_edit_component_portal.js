@@ -794,9 +794,9 @@ export const get_buttons = (self) => {
 
 	// buttons tools
 		if(self.show_interface.tools===true) {
-			if (!is_inside_tool && self.mode==='edit') {
+			// if (!is_inside_tool && self.mode==='edit') {
 				ui.add_tools(self, buttons_fold)
-			}
+			// }
 		}//end add tools
 
 

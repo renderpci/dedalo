@@ -175,6 +175,7 @@ declare(strict_types=1);
 							'value'			=> [(object)[
 								'class_list'	=> 'button tag_id',
 								'label'			=> (label::get_label('open') ?? 'Open') .' '. ($tool_indexation_context->label ?? ''),
+								'value'			=> [$tag_id], // array value
 								'action'		=> (object)[
 									'event'			=> 'click',
 									'method'		=> 'open_tool',
