@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * CLASS SEARCH
 *
@@ -11,61 +12,61 @@ class search {
 
 
 	// main vars
-		# matrix table relations name
+		// matrix table relations name
 		private static $relations_table = 'relations';
 
-		# json object untouched, before parse (for debug purposes)
+		// JSON object untouched, before parse (for debug purposes)
 		public $search_query_object_preparse;
-		# json object to parse
-		protected $search_query_object;
-		# from base, section tipo initial from
-		protected $main_from_sql;
-		# join_group
+		// JSON object to parse
+		public $search_query_object;
+		// from base, section tipo initial from
+		public $main_from_sql;
+		// join_group
 		protected $join_group;
-		# main_where_sql
+		// main_where_sql
 		protected $main_where_sql;
 
-		# preparsed search_query_object
-		#private $preparsed_search_query_object;
+		// preparsed search_query_object
+		// private $preparsed_search_query_object;
 
-		# matrix_table (fixed on get main select)
+		// matrix_table (fixed on get main select)
 		protected $matrix_table;
 
 		protected $order_columns;
 
-		# ALLOW_SUB_SELECT_BY_ID. Get value from search_query_object if exists. True by default set in set_up
-		# Is used by speed pagination in large tables
+		// ALLOW_SUB_SELECT_BY_ID. Get value from search_query_object if exists. True by default set in set_up
+		// Is used by speed pagination in large tables
 		protected $allow_sub_select_by_id;
 
-		# REMOVE_DISTINCT . By default, distinct clause is set in the search query for avoid duplicates on joins
-		# In some context (thesaurus search for example) we want "duplicate section_id's" because search is made against various section tipo
+		// REMOVE_DISTINCT . By default, distinct clause is set in the search query for avoid duplicates on joins
+		// In some context (thesaurus search for example) we want "duplicate section_id's" because search is made against various section tipo
 		protected $remove_distinct;
 
-		# skip_projects_filter
+		// skip_projects_filter
 		protected $skip_projects_filter;
 
-		# sql_query_order_default
+		// sql_query_order_default
 		protected $sql_query_order_default;
 
-		# sql_query_order_window_subselect
-		# Specific order SQL sentence for window sub-select
+		// sql_query_order_window_subselect
+		// Specific order SQL sentence for window sub-select
 		protected $sql_query_order_window_subselect;
 
-		# relations cache
-		# Store already selected relation columns to avoid overload query with multiple relations components
+		// relations cache
+		// Store already selected relation columns to avoid overload query with multiple relations components
 		protected $relations_cache;
 
-		# matrix tables
+		// matrix tables
 		protected $ar_matrix_tables;
 
-		# filter_by_locators
+		// filter_by_locators
 		protected $filter_by_locators;
 
-		# ar_direct_columns. Useful to calculate efficient order sentences
+		// ar_direct_columns. Useful to calculate efficient order sentences
 		public static $ar_direct_columns = ['section_id','section_tipo','id'];
 
-		# include_negative
-		# negative section_id used in profiles for the root user, root record could be avoid or include
+		// include_negative
+		// negative section_id used in profiles for the root user, root record could be avoid or include
 		public $include_negative;
 
 		// ar_section_tipo : array
@@ -88,7 +89,7 @@ class search {
 		protected $sql_query_order_custom;
 
 		// ar_sql_joins
-		protected $ar_sql_joins;
+		public $ar_sql_joins;
 
 
 
@@ -99,28 +100,24 @@ class search {
 	*/
 	public static function get_instance(object $search_query_object) : object {
 
-		// Accepted objects JSON encoded too
-		if (is_string($search_query_object)) {
-			$search_query_object = json_decode($search_query_object);
-		}
-		// $search_class = (isset($search_query_object->mode) && $search_query_object->mode==='tm') ? 'search_tm' : 'search';
+		// switch class from mode
+			$mode = $search_query_object->mode ?? null;
+			switch ($mode) {
+				case 'tm':
+					$search_class = 'search_tm';
+					break;
 
-		$mode = $search_query_object->mode ?? null;
-		switch ($mode) {
-			case 'tm':
-				$search_class = 'search_tm';
-				break;
+				case 'related':
+					$search_class = 'search_related';
+					break;
 
-			case 'related':
-				$search_class = 'search_related';
-				break;
+				default:
+					$search_class = 'search';
+					break;
+			}
 
-			default:
-				$search_class = 'search';
-				break;
-		}
-
-		$instance = new $search_class($search_query_object);
+		// construct new instance
+			$instance = new $search_class($search_query_object);
 
 
 		return $instance;
@@ -143,17 +140,18 @@ class search {
 	* @param object $search_query_object
 	* @return void
 	*/
-	public function set_up(object $search_query_object) : void {
+	protected function set_up(object $search_query_object) : void {
 
 		// // Accepted objects JSON encoded too
 		// if (is_string($search_query_object)) {
 		// 	$search_query_object = json_decode($search_query_object);
 		// }
 
-		if (SHOW_DEVELOPER===true && (!isset($this->search_query_object->parsed) || $this->search_query_object->parsed===false)) {
-			// Set and fix class property search_query_object
-			$this->search_query_object_preparse = json_decode(json_encode($search_query_object));
-		}
+		// removed 25-07-2023. Not used !
+			// if (SHOW_DEVELOPER===true && (!isset($this->search_query_object->parsed) || $this->search_query_object->parsed===false)) {
+			// 	// Set and fix class property search_query_object
+			// 	$this->search_query_object_preparse = json_decode(json_encode($search_query_object));
+			// }
 
 		// Set and fix class property search_query_object
 		$this->search_query_object = (object)$search_query_object;
@@ -258,7 +256,7 @@ class search {
 	* @return object $response
 	* {
 	* 	ar_records : [], // array
-	* 	debug : object
+	* 	debug : '' string
 	* }
 	*/
 	public function search() : object {
@@ -320,10 +318,10 @@ class search {
 						// $field_value	= $ar_relations_cache_solved[$property_name]; // Full relations data
 						//if (isset($ar_relations_cache_solved[$property_name])) {
 							$current_relations_cache_solved	= $ar_relations_cache_solved[$property_name];
-							$field_value					= self::get_filtered_relations(
-								$current_relations_cache_solved,
-								$component_tipo
-							); // Filtered by from_component_tipo
+							$field_value = array_filter((array)$current_relations_cache_solved, function($locator) use($component_tipo) {
+								return (isset($locator->from_component_tipo) && $locator->from_component_tipo===$component_tipo);
+							});
+							$field_value = array_values($field_value);
 						//}
 						// Add property
 						$row->{$field_name} = ($field_name==='datos' || $field_name==='dato')
@@ -460,7 +458,7 @@ class search {
 	* @return object $records_data
 	* like:
 	* {
-	* 	total : 369,
+	* 	total : 369, integer
 	* 	debug_info: ....
 	* }
 	*/
@@ -554,6 +552,7 @@ class search {
 			}
 
 			if(isset($filter->{$op_and})){
+
 				$add_children = new stdClass();
 				$add_children->{$op_or} = $children_filter;
 
@@ -574,27 +573,27 @@ class search {
 
 
 	/**
-	* GET_FILTERED_RELATIONS
+	* GET_FILTERED_RELATIONS (! UNUSED)
 	* @param array $relations_data
 	* @param string $component_tipo
 	* @return array $filtered_relations
 	*/
-	public static function get_filtered_relations(array $relations_data, string $component_tipo) : array {
+		// public static function get_filtered_relations(array $relations_data, string $component_tipo) : array {
 
-		$filtered_relations = [];
+		// 	$filtered_relations = [];
 
-		if(!empty($relations_data)) {
+		// 	if(!empty($relations_data)) {
 
-			$filtered_relations = array_filter($relations_data, function($locator) use($component_tipo) {
-				return (isset($locator->from_component_tipo) && $locator->from_component_tipo===$component_tipo);
-			});
+		// 		$filtered_relations = array_filter($relations_data, function($locator) use($component_tipo) {
+		// 			return (isset($locator->from_component_tipo) && $locator->from_component_tipo===$component_tipo);
+		// 		});
 
-			$filtered_relations = array_values($filtered_relations); // Avoid JSON encoding objects
-		}
+		// 		$filtered_relations = array_values($filtered_relations); // Avoid JSON encoding objects
+		// 	}
 
 
-		return $filtered_relations;
-	}//end get_filtered_relations
+		// 	return $filtered_relations;
+		// }//end get_filtered_relations
 
 
 
@@ -645,15 +644,16 @@ class search {
 	/**
 	* COMPONENT_PARSER_SELECT
 	* Call to component to parse select query (add component path)
+	* V5 inherited method, its not used in v6
 	* @param object $select_objec
 	* @return object $select_object
 	*/
-	public static function component_parser_select(object $select_object) {
+	public static function component_parser_select(object $select_object) : object {
 
 		$path			= $select_object->path;
 		$component_tipo	= end($path)->component_tipo;
 
-		// prevent direct columns (section_id, section_tipo, id) parse
+		// prevent to parse direct columns (section_id, section_tipo, id)
 			if (true===in_array($component_tipo, self::$ar_direct_columns)) {
 				return $select_object; // No parse section_id
 			}
@@ -673,7 +673,28 @@ class search {
 	* Call to components to conform final search_query_object, adding specific component path, search operators etc.
 	* Recursive
 	* @param string $op
+	* 	sample: '$and'
 	* @param array $ar_value
+	* 	sample:
+	* [
+	    {
+	        "q": {
+	            "section_id": "1",
+	            "section_tipo": "dd64",
+	            "type": "dd151",
+	            "from_component_tipo": "dd1354"
+	        },
+	        "q_operator": null,
+	        "path": [
+	            {
+	                "section_tipo": "dd1324",
+	                "component_tipo": "dd1354",
+	                "model": "component_radio_button",
+	                "name": "Active"
+	            }
+	        ]
+	    }
+	  ]
 	* @return object $new_ar_query_object
 	*/
 	public static function conform_search_query_object(string $op, array $ar_value) : object {
@@ -1114,6 +1135,7 @@ class search {
 	/**
 	* BUILD_UNION_QUERY
 	* Rewrite query string building SQL union for each different matrix table
+	* based on every section tipo table resolution
 	* @param string $sql_query
 	* @return string $sql_query
 	*/
@@ -1187,7 +1209,9 @@ class search {
 				// 	? $this->main_section_tipo_alias.'.dato'
 				// 	: $this->main_section_tipo_alias.'.datos';
 				$ar_sql_select[] = $this->main_section_tipo_alias.'.datos';
+
 			}else{
+
 				foreach ($search_query_object->select as $select_object) {
 
 					$path				= $select_object->path;
@@ -1205,7 +1229,7 @@ class search {
 
 					$sql_select = '';
 
-					if ($model_name==='component_section_id' || $model_name === 'section_id') {
+					if ($model_name==='component_section_id' || $model_name==='section_id') {
 
 						$sql_select .= $table_alias.'.section_id';
 						$sql_select .= ' as '.$column_alias;
@@ -1216,17 +1240,18 @@ class search {
 
 							if (!isset($this->relations_cache[$table_alias])) {
 
-								# Add original always to conserve row property position
+								// Add original always to conserve row property position
 								$ar_sql_select[] = '\'\''.' as '.$column_alias;
 
-								# New temporal column
+								// New temporal column
 								$sql_select .= $table_alias.'.datos#>\'{relations}\'';
 								$column_alias = 'relations_' . $table_alias; // Override table alias for generic name
 
 								$this->relations_cache[$table_alias][] = $component_tipo;
 
 							}else{
-								# Already exists a relations column. Skip select again
+
+								// Already exists a relations column. Skip select again
 								$sql_select .= '\'\'';
 							}
 
@@ -1271,16 +1296,17 @@ class search {
 					#	$this->join_group[] = $this->build_sql_join($select_object->path);
 					#}
 
-					$this->join_group[] = $this->build_sql_join($select_object->path);
+					// $this->join_group[] = $this->build_sql_join($select_object->path);
+					$this->build_sql_join($select_object->path);
 				}
 			}
 
-		# Add order columns to select when need
+		// Add order columns to select when need
 			foreach ((array)$this->order_columns as $select_line) {
 				$ar_sql_select[] = $select_line;
 			}
 
-		# Join all
+		// Join all
 			$sql_query_select = implode(','.PHP_EOL, $ar_sql_select);
 
 
@@ -1291,10 +1317,13 @@ class search {
 
 	/**
 	* BUILD_SQL_PROJECTS_FILTER
-	* Create the SQL code for filter records by user projects
+	* Create the SQL sentence for filter records by user projects
+	* It is based on user permissions and current section_tipo
+	* @param bool $force_calculate = false
+	* 	Optional force param for debug purposes
 	* @return string $sql_projects_filter
 	*/
-	public function build_sql_projects_filter() : string {
+	public function build_sql_projects_filter( bool $force_calculate=false ) : string {
 
 		$sql_projects_filter = '';
 
@@ -1316,223 +1345,224 @@ class search {
 				return $sql_projects_filter_data[$uid];
 			}
 
-		$is_global_admin = (bool)security::is_global_admin($user_id);
-		if ($is_global_admin!==true) {
+		// only for non global admins
+			$is_global_admin = (bool)security::is_global_admin($user_id);
+			if ($is_global_admin!==true || $force_calculate===true) {
 
-			$sql_filter = '';
+				$sql_filter = '';
 
-			switch (true) {
-				##### PROFILES ########################################################
-				case ($section_tipo===DEDALO_SECTION_PROFILES_TIPO) :
-					if(SHOW_DEBUG===true || DEVELOPMENT_SERVER===true) {
-						$sql_filter .= "\n-- filter_profiles [PROFILES SECTION] (no filter is used here) -- \n";
-					}
-					break;
-				##### PROJECTS ########################################################
-				case ($section_tipo===DEDALO_FILTER_SECTION_TIPO_DEFAULT) :
-					if(SHOW_DEBUG===true || DEVELOPMENT_SERVER===true) {
-						$sql_filter .= "\n-- filter_user_created [PROJECTS SECTION] -- (no filter is used here since 31-03-2018) -- \n";
-					}
-
-					##$sql_filter .= PHP_EOL . 'OR (' ;
-					##$sql_filter .= $section_alias.'.'.$datos_container.' @>\'{"created_by_userID":'.$user_id.'}\'::jsonb';
-					/*
-					# Current user authorized areas
-					$component_filter_master = component_common::get_instance('component_filter_master', DEDALO_FILTER_MASTER_TIPO, $user_id, 'list', DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);
-					$filter_master_dato 	 = (array)$component_filter_master->get_dato();
-
-					if (!empty($filter_master_dato)) {
-						$ar_id = [];
-						foreach ($filter_master_dato as $key => $current_locator) {
-							$ar_id[] = (int)$current_locator->section_id;
-						}
-						$ar_values_string 	= implode(',', $ar_id);
-						$sql_filter .= ' OR '.$section_alias.'.section_id IN ('.$ar_values_string.')';
-					}*/
-					##$sql_filter .= ')';
-					break;
-				##### USERS ###########################################################
-				case ($section_tipo===DEDALO_SECTION_USERS_TIPO) :
-
-					# AREAS FILTER
+				switch (true) {
+					##### PROFILES ########################################################
+					case ($section_tipo===DEDALO_SECTION_PROFILES_TIPO) :
 						if(SHOW_DEBUG===true || DEVELOPMENT_SERVER===true) {
-							$sql_filter .= "\n-- filter_users_by_profile_areas -- ";
+							$sql_filter .= "\n-- filter_profiles [PROFILES SECTION] (no filter is used here) -- \n";
 						}
-						$sql_filter .= PHP_EOL .'AND '.$section_alias.'.section_id>0 AND ';
-						$sql_filter .= PHP_EOL . $section_alias.'.'.$datos_container.' @>\'{"created_by_userID":'.$user_id.'}\'::jsonb OR ' .PHP_EOL;
-						$sql_filter .= '((';
+						break;
+					##### PROJECTS ########################################################
+					case ($section_tipo===DEDALO_FILTER_SECTION_TIPO_DEFAULT) :
+						if(SHOW_DEBUG===true || DEVELOPMENT_SERVER===true) {
+							$sql_filter .= "\n-- filter_user_created [PROJECTS SECTION] -- (no filter is used here since 31-03-2018) -- \n";
+						}
 
-						// areas. Iterate and clean array of authorized areas of this user like '[dd942-admin] => 2'
-							$security_areas_dato = security::get_ar_authorized_areas_for_user();
-							$ar_area_tipo = [];
-							foreach ($security_areas_dato as $item) {
-								if($item->value===2){
-									$ar_area_tipo[] = $item->tipo;
-								}
+						##$sql_filter .= PHP_EOL . 'OR (' ;
+						##$sql_filter .= $section_alias.'.'.$datos_container.' @>\'{"created_by_userID":'.$user_id.'}\'::jsonb';
+						/*
+						# Current user authorized areas
+						$component_filter_master = component_common::get_instance('component_filter_master', DEDALO_FILTER_MASTER_TIPO, $user_id, 'list', DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);
+						$filter_master_dato 	 = (array)$component_filter_master->get_dato();
+
+						if (!empty($filter_master_dato)) {
+							$ar_id = [];
+							foreach ($filter_master_dato as $key => $current_locator) {
+								$ar_id[] = (int)$current_locator->section_id;
 							}
-							// check empty ar_area_tipo case
-								if (empty($ar_area_tipo)) {
-									dump($security_areas_dato, ' security_areas_dato +++++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string());
+							$ar_values_string 	= implode(',', $ar_id);
+							$sql_filter .= ' OR '.$section_alias.'.section_id IN ('.$ar_values_string.')';
+						}*/
+						##$sql_filter .= ')';
+						break;
+					##### USERS ###########################################################
+					case ($section_tipo===DEDALO_SECTION_USERS_TIPO) :
+
+						# AREAS FILTER
+							if(SHOW_DEBUG===true || DEVELOPMENT_SERVER===true) {
+								$sql_filter .= "\n-- filter_users_by_profile_areas -- ";
+							}
+							$sql_filter .= PHP_EOL .'AND '.$section_alias.'.section_id>0 AND ';
+							$sql_filter .= PHP_EOL . $section_alias.'.'.$datos_container.' @>\'{"created_by_userID":'.$user_id.'}\'::jsonb OR ' .PHP_EOL;
+							$sql_filter .= '((';
+
+							// areas. Iterate and clean array of authorized areas of this user like '[dd942-admin] => 2'
+								$security_areas_dato = security::get_ar_authorized_areas_for_user();
+								$ar_area_tipo = [];
+								foreach ($security_areas_dato as $item) {
+									if($item->value===2){
+										$ar_area_tipo[] = $item->tipo;
+									}
+								}
+								// check empty ar_area_tipo case
+									if (empty($ar_area_tipo)) {
+										dump($security_areas_dato, ' security_areas_dato +++++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string());
+										debug_log(__METHOD__
+											." ERROR STOP EXECUTION. Non global user id ($user_id) without any allowed security_areas data!! "
+											, logger::ERROR
+										);
+										throw new Exception("Error Processing Request", 1);
+									}
+
+						# SEARCH PROFILES WITH CURRENT USER AREAS
+							$ar_profile_id = filter::get_profiles_for_areas( $ar_area_tipo );
+								// check empty ar_profile_id case
+								if (empty($ar_profile_id)) {
+									dump($ar_area_tipo, ' ar_area_tipo +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string());
 									debug_log(__METHOD__
-										." ERROR STOP EXECUTION. Non global user id ($user_id) without any allowed security_areas data!! "
+										." ERROR STOP EXECUTION. Non global user id ($user_id) without any allowed profile data!! "
 										, logger::ERROR
 									);
 									throw new Exception("Error Processing Request", 1);
 								}
-
-					# SEARCH PROFILES WITH CURRENT USER AREAS
-						$ar_profile_id = filter::get_profiles_for_areas( $ar_area_tipo );
-							// check empty ar_profile_id case
-							if (empty($ar_profile_id)) {
-								dump($ar_area_tipo, ' ar_area_tipo +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string());
-								debug_log(__METHOD__
-									." ERROR STOP EXECUTION. Non global user id ($user_id) without any allowed profile data!! "
-									, logger::ERROR
-								);
-								throw new Exception("Error Processing Request", 1);
+							$ar_filter_profile = [];
+							foreach ($ar_profile_id as $current_profile_id) {
+								$search_locator = new locator();
+									$search_locator->set_section_tipo(DEDALO_SECTION_PROFILES_TIPO);
+									$search_locator->set_section_id($current_profile_id);
+									$search_locator->set_type(DEDALO_RELATION_TYPE_LINK);
+								$ar_filter_profile[] = PHP_EOL . $section_alias.'.'.$datos_container.'#>\'{relations}\'@>\'['.json_encode($search_locator).']\'::jsonb';
 							}
-						$ar_filter_profile = [];
-						foreach ($ar_profile_id as $current_profile_id) {
-							$search_locator = new locator();
-								$search_locator->set_section_tipo(DEDALO_SECTION_PROFILES_TIPO);
-								$search_locator->set_section_id($current_profile_id);
-								$search_locator->set_type(DEDALO_RELATION_TYPE_LINK);
-							$ar_filter_profile[] = PHP_EOL . $section_alias.'.'.$datos_container.'#>\'{relations}\'@>\'['.json_encode($search_locator).']\'::jsonb';
-						}
-						$sql_filter .= implode(' OR ', $ar_filter_profile);
-						$sql_filter .= ')';
+							$sql_filter .= implode(' OR ', $ar_filter_profile);
+							$sql_filter .= ')';
 
-					# PROJECTS FILTER
-						$component_filter_master_model	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_FILTER_MASTER_TIPO,true);
-						$component_filter_master		= component_common::get_instance(
-							$component_filter_master_model, // 'component_filter_master',
-							DEDALO_FILTER_MASTER_TIPO,
-							$user_id,
-							'list',
-							DEDALO_DATA_NOLAN,
-							DEDALO_SECTION_USERS_TIPO
-						);
-						$filter_master_dato = (array)$component_filter_master->get_dato();
-						// check empty ar_area_tipo case
-							if (empty($filter_master_dato)) {
-								debug_log(__METHOD__
-									." Filter master without data!! "
-									, logger::ERROR
-								);
-								throw new Exception("Error Processing Request. Invalid filter master data", 1);
+						# PROJECTS FILTER
+							$component_filter_master_model	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_FILTER_MASTER_TIPO,true);
+							$component_filter_master		= component_common::get_instance(
+								$component_filter_master_model, // 'component_filter_master',
+								DEDALO_FILTER_MASTER_TIPO,
+								$user_id,
+								'list',
+								DEDALO_DATA_NOLAN,
+								DEDALO_SECTION_USERS_TIPO
+							);
+							$filter_master_dato = (array)$component_filter_master->get_dato();
+							// check empty ar_area_tipo case
+								if (empty($filter_master_dato)) {
+									debug_log(__METHOD__
+										." Filter master without data!! "
+										, logger::ERROR
+									);
+									throw new Exception("Error Processing Request. Invalid filter master data", 1);
+								}
+							if(SHOW_DEBUG===true) {
+								$sql_filter .= "\n-- filter_by_projects --";
 							}
-						if(SHOW_DEBUG===true) {
+							# Filter by any of user projects
+							$ar_query = [];
+							foreach ((array)$filter_master_dato as $current_project_locator) {
+								$search_locator = new locator();
+									$search_locator->set_section_tipo($current_project_locator->section_tipo);
+									$search_locator->set_section_id($current_project_locator->section_id);
+									$search_locator->set_type($current_project_locator->type);
+
+								$ar_query[] = $section_alias.'.'.$datos_container.'#>\'{relations}\'@>\'['.json_encode($search_locator).']\'::jsonb';
+							}
+							$sql_filter .= PHP_EOL . 'AND (' . implode(' OR ',$ar_query) . ')';
+
+							$sql_filter .= ')';
+						break;
+					##### DEFAULT #########################################################
+					default:
+						if(SHOW_DEBUG===true || DEVELOPMENT_SERVER===true) {
 							$sql_filter .= "\n-- filter_by_projects --";
 						}
-						# Filter by any of user projects
-						$ar_query = [];
-						foreach ((array)$filter_master_dato as $current_project_locator) {
-							$search_locator = new locator();
-								$search_locator->set_section_tipo($current_project_locator->section_tipo);
-								$search_locator->set_section_id($current_project_locator->section_id);
-								$search_locator->set_type($current_project_locator->type);
 
-							$ar_query[] = $section_alias.'.'.$datos_container.'#>\'{relations}\'@>\'['.json_encode($search_locator).']\'::jsonb';
-						}
-						$sql_filter .= PHP_EOL . 'AND (' . implode(' OR ',$ar_query) . ')';
-
-						$sql_filter .= ')';
-					break;
-				##### DEFAULT #########################################################
-				default:
-					if(SHOW_DEBUG===true || DEVELOPMENT_SERVER===true) {
-						$sql_filter .= "\n-- filter_by_projects --";
-					}
-
-					# SECTION FILTER TIPO : Actual component_filter of this section
-					$ar_component_filter = section::get_ar_children_tipo_by_model_name_in_section(
-						$section_tipo, // string section_tipo
-						['component_filter'], // array ar_modelo_name_required
-						true, // bool from_cache
-						true, // bool resolve_virtual
-						true, // bool recursive
-						true // bool search_exact
-					);
-					if (!isset($ar_component_filter[0])) {
-						$section_name = RecordObj_dd::get_termino_by_tipo($section_tipo);
-						debug_log(__METHOD__
-							." Error Processing Request. Filter not found is this section ($section_tipo) $section_name "
-							, logger::ERROR
+						# SECTION FILTER TIPO : Actual component_filter of this section
+						$ar_component_filter = section::get_ar_children_tipo_by_model_name_in_section(
+							$section_tipo, // string section_tipo
+							['component_filter'], // array ar_modelo_name_required
+							true, // bool from_cache
+							true, // bool resolve_virtual
+							true, // bool recursive
+							true // bool search_exact
 						);
-					}else{
-						$component_filter_tipo = $ar_component_filter[0];
-					}
-
-					$ar_projects = filter::get_user_projects($user_id); // return array of locators
-					if (empty($ar_projects)) {
-
-						// Invalid filter case
-						$sql_filter .= PHP_EOL . ' AND '. $section_alias.'.'.$datos_container.'#>>\'{components}\' = \'VALOR_IMPOSIBLE (User without projects)\' ';
-
-					}else{
-
-						// Default case. Filter by any of user projects
-						$ar_query 		= [];
-						$ar_filter_join = [];
-						foreach ($ar_projects as $current_project_locator) {
-							$search_locator = new locator();
-								$search_locator->set_section_tipo($current_project_locator->section_tipo);
-								$search_locator->set_section_id($current_project_locator->section_id);
-								$search_locator->set_type($current_project_locator->type);
-								if (property_exists($this->search_query_object, 'id') && $this->search_query_object->id!=='thesaurus') {
-								$search_locator->set_from_component_tipo($component_filter_tipo);
-								}
-
-							$ar_query[] = $section_alias.'.'.$datos_container.'#>\'{relations}\'@>\'['.json_encode($search_locator).']\'::jsonb';
-
-							$ar_filter_join[] = 'f.target_section_id='.(int)$current_project_locator->section_id;
+						if (!isset($ar_component_filter[0])) {
+							$section_name = RecordObj_dd::get_termino_by_tipo($section_tipo);
+							debug_log(__METHOD__
+								." Error Processing Request. Filter not found is this section ($section_tipo) $section_name "
+								, logger::ERROR
+							);
+						}else{
+							$component_filter_tipo = $ar_component_filter[0];
 						}
 
-						// SQL filter
-						$sql_filter .=  PHP_EOL . 'AND (' . implode(' OR ',$ar_query) . ')';
+						$ar_projects = filter::get_user_projects($user_id); // return array of locators
+						if (empty($ar_projects)) {
 
-						// Join of projects
-						$filter_join  = 'LEFT JOIN relations as f ON (f.section_tipo='.$this->main_section_tipo_alias.'.section_tipo AND f.section_id='.$this->main_section_tipo_alias.'.section_id ';
-						$filter_join .= 'AND f.from_component_tipo=\''.$component_filter_tipo.'\'';
-						#$filter_join .= ' f.section_tipo=\''.$this->main_section_tipo.'\' AND ';
-						#$filter_join .= ' AND f.target_section_tipo=\''.DEDALO_SECTION_PROJECTS_TIPO.'\' AND'.PHP_EOL.' ('. implode(' OR ',$ar_filter_join).')';
-						$filter_join .= ')';
-						$this->filter_join = $filter_join;
-						// $this->filter_join_where = PHP_EOL .' AND ('. implode(' OR ',$ar_filter_join).')';
-						$this->filter_join_where = PHP_EOL .' AND (f.target_section_id IN ('.  implode(',', array_map(function($locator){
-							return (int)$locator->section_id;
-						}, $ar_projects)).'))';
-					}
-					break;
-			}
+							// Invalid filter case
+							$sql_filter .= PHP_EOL . ' AND '. $section_alias.'.'.$datos_container.'#>>\'{components}\' = \'IMPOSSIBLE VALUE (User without projects)\' ';
 
-			# FILTER_USER_RECORDS_BY_ID
-			if (defined('DEDALO_FILTER_USER_RECORDS_BY_ID') && DEDALO_FILTER_USER_RECORDS_BY_ID===true) {
+						}else{
 
-				$filter_user_records_by_id = filter::get_filter_user_records_by_id( navigator::get_user_id() );
-				if ( isset($filter_user_records_by_id[$section_tipo]) ) {
+							// Default case. Filter by any of user projects
+							$ar_query 		= [];
+							$ar_filter_join = [];
+							foreach ($ar_projects as $current_project_locator) {
+								$search_locator = new locator();
+									$search_locator->set_section_tipo($current_project_locator->section_tipo);
+									$search_locator->set_section_id($current_project_locator->section_id);
+									$search_locator->set_type($current_project_locator->type);
+									if (property_exists($this->search_query_object, 'id') && $this->search_query_object->id!=='thesaurus') {
+									$search_locator->set_from_component_tipo($component_filter_tipo);
+									}
 
-					$ar_filter = array();
-					foreach ((array)$filter_user_records_by_id[$section_tipo] as $current_id) {
-						$ar_filter[] = $section_alias . '.section_id = ' . (int)$current_id;
-					}
-					if (!empty($ar_filter)) {
-						$filter_by_user_records = '';
-						if(SHOW_DEBUG===true || DEVELOPMENT_SERVER===true) {
-						$filter_by_user_records .= "\n-- filter_user_records_by_id --";
+								$ar_query[] = $section_alias.'.'.$datos_container.'#>\'{relations}\'@>\'['.json_encode($search_locator).']\'::jsonb';
+
+								$ar_filter_join[] = 'f.target_section_id='.(int)$current_project_locator->section_id;
+							}
+
+							// SQL filter
+							$sql_filter .=  PHP_EOL . 'AND (' . implode(' OR ',$ar_query) . ')';
+
+							// Join of projects
+							$filter_join  = 'LEFT JOIN relations as f ON (f.section_tipo='.$this->main_section_tipo_alias.'.section_tipo AND f.section_id='.$this->main_section_tipo_alias.'.section_id ';
+							$filter_join .= 'AND f.from_component_tipo=\''.$component_filter_tipo.'\'';
+							#$filter_join .= ' f.section_tipo=\''.$this->main_section_tipo.'\' AND ';
+							#$filter_join .= ' AND f.target_section_tipo=\''.DEDALO_SECTION_PROJECTS_TIPO.'\' AND'.PHP_EOL.' ('. implode(' OR ',$ar_filter_join).')';
+							$filter_join .= ')';
+							$this->filter_join = $filter_join;
+							// $this->filter_join_where = PHP_EOL .' AND ('. implode(' OR ',$ar_filter_join).')';
+							$this->filter_join_where = PHP_EOL .' AND (f.target_section_id IN ('.  implode(',', array_map(function($locator){
+								return (int)$locator->section_id;
+							}, $ar_projects)).'))';
 						}
-						$filter_by_user_records .= PHP_EOL . ' AND ('.implode(' OR ',$ar_filter) . ') ';
+						break;
+				}
 
-						// Fix filter_by_user_records
-						$this->filter_by_user_records = $filter_by_user_records;
+				# FILTER_USER_RECORDS_BY_ID
+				if (defined('DEDALO_FILTER_USER_RECORDS_BY_ID') && DEDALO_FILTER_USER_RECORDS_BY_ID===true) {
+
+					$filter_user_records_by_id = filter::get_filter_user_records_by_id( $user_id );
+					if ( isset($filter_user_records_by_id[$section_tipo]) ) {
+
+						$ar_filter = array();
+						foreach ((array)$filter_user_records_by_id[$section_tipo] as $current_id) {
+							$ar_filter[] = $section_alias . '.section_id = ' . (int)$current_id;
+						}
+						if (!empty($ar_filter)) {
+							$filter_by_user_records = '';
+							if(SHOW_DEBUG===true || DEVELOPMENT_SERVER===true) {
+							$filter_by_user_records .= "\n-- filter_user_records_by_id --";
+							}
+							$filter_by_user_records .= PHP_EOL . ' AND ('.implode(' OR ',$ar_filter) . ') ';
+
+							// Fix filter_by_user_records
+							$this->filter_by_user_records = $filter_by_user_records;
+						}
 					}
 				}
-			}
 
-			if (!empty( $sql_filter)) {
-				$sql_projects_filter = $sql_filter;
-			}
-		}//end if ($is_global_admin!==true) {
+				if (!empty( $sql_filter)) {
+					$sql_projects_filter = $sql_filter;
+				}
+			}//end if ($is_global_admin!==true) {
 
 		// cache
 			$sql_projects_filter_data[$uid] = $sql_projects_filter;
@@ -1613,9 +1643,10 @@ class search {
 					$component_tipo	= $end_path->component_tipo;
 					$column			= $end_path->column ?? null; // special optional full definition column (e.g. component date)
 
-					if(isset($column)){
+					if( isset($column) ) {
 
 						// column case. Special optional full definition column (e.g. component_date)
+
 						$alias	= $component_tipo . '_order';
 						$column	.= ' as ' . $alias; // add alias name
 
@@ -1628,6 +1659,7 @@ class search {
 					}else if (true===in_array($component_tipo, self::$ar_direct_columns)) {
 
 						// direct column case
+
 						$line = $component_tipo . ' ' . $direction;
 
 					}else{
@@ -1635,20 +1667,20 @@ class search {
 						// default case
 
 						// Add join if not exists
-						$this->build_sql_join($path);
+							$this->build_sql_join($path);
 
-						// short vars
-							$table_alias	= $this->get_table_alias_from_path($path);
+						// add sentence to line
+							$alias	= $component_tipo . '_order';
+							$line	= $alias . ' ' . $direction;
+
+						// column
 							$selector		= implode(',', $order_obj->component_path);
-							$alias			= $component_tipo . '_order';
+							$table_alias	= $this->get_table_alias_from_path($path);
 							$base			= $table_alias . '.datos#>>\'{'.$selector.'}\'';
 							$column			= $base .' as '. $alias;
-
-						// Add to global order columns (necessary for order...)
-						// This array is added when query select is calculated
-						$this->order_columns[] = $column;
-
-						$line = $alias . ' ' . $direction;
+							// Add to global order columns (necessary for order...)
+							// This array is added when query select is calculated
+							$this->order_columns[] = $column;
 					}
 
 					// line add
@@ -1737,24 +1769,25 @@ class search {
 	*/
 	public function build_sql_filter() : string {
 
-		$filter_query  = '';
+		$filter_query = '';
 
-		if (!empty($this->search_query_object->filter)) {
-
-			$operator	= array_key_first(get_object_vars($this->search_query_object->filter));
-			$ar_value	= $this->search_query_object->filter->{$operator};
-
-			if(!empty($ar_value)) {
-
-				$filter_query	.= ' AND (';
-				$filter_query	.= $this->filter_parser($operator, $ar_value);
-				$filter_query	.= ')';
-
-				#if (isset($this->global_group_query)) {
-				#	$filter_query .= "\n" . $this->global_group_query;
-				#}
-			}
+		if (empty($this->search_query_object->filter)) {
+			return $filter_query;
 		}
+
+		$operator	= array_key_first(get_object_vars($this->search_query_object->filter));
+		$ar_value	= $this->search_query_object->filter->{$operator};
+		if(!empty($ar_value)) {
+
+			$filter_query	.= ' AND (';
+			$filter_query	.= $this->filter_parser($operator, $ar_value);
+			$filter_query	.= ')';
+
+			#if (isset($this->global_group_query)) {
+			#	$filter_query .= "\n" . $this->global_group_query;
+			#}
+		}
+
 
 		return $filter_query;
 	}//end build_sql_filter
@@ -1875,9 +1908,8 @@ class search {
 
 		$string_query = '';
 
-		$total = count($ar_value);
-			#dump($total, ' total 1 ++ '.to_string());
-		$operator = strtoupper( substr($op, 1) );
+		$total		= count($ar_value);
+		$operator	= strtoupper( substr($op, 1) );
 
 		// Portal various values case
 			/*
@@ -1910,11 +1942,12 @@ class search {
 			*/
 
 		foreach ($ar_value as $key => $search_object) {
-			#if (self::is_search_operator($search_object)===true) {
-			if (!property_exists($search_object,'path')) {
-				# Case operator
-				// $op2	= key($search_object); deprecated PHP>=8.1
-				$op2		= array_key_first(get_object_vars($search_object));
+
+			if (!property_exists($search_object, 'path')) {
+
+				// Case operator
+
+				$op2 = array_key_first(get_object_vars($search_object));
 
 				$ar_value2 	= $search_object->$op2;
 
@@ -1931,11 +1964,14 @@ class search {
 				}
 
 			}else{
-				# Case elements
+
+				// Case elements
+
 				#if (!empty($search_object->q)) {
 					$n_levels = count($search_object->path);
 					if ($n_levels>1) {
-						$this->join_group[] = $this->build_sql_join($search_object->path);
+						// $this->join_group[] = $this->build_sql_join($search_object->path);
+						$this->build_sql_join($search_object->path);
 					}
 
 					$string_query .= $this->get_sql_where($search_object);
@@ -1972,6 +2008,21 @@ class search {
 	* BUILD_SQL_JOIN
 	* Builds one table join based on requested path
 	* @param array $path
+	*  sample:
+		[
+	        {
+	            "name": "Publication",
+	            "model": "component_publication",
+	            "section_tipo": "rsc167",
+	            "component_tipo": "rsc20"
+	        },
+	        {
+	            "name": "Value",
+	            "model": "component_input_text",
+	            "section_tipo": "dd64",
+	            "component_tipo": "dd62"
+	        }
+		]
 	* @return bool true
 	*/
 	public function build_sql_join(array $path) : bool {
@@ -2046,12 +2097,13 @@ class search {
 	* @param int $max = 2
 	* @return string $trimmed_tipo
 	*/
-	public static function trim_tipo(string $tipo, int $max=2) : string {
+	public static function trim_tipo(string $tipo, int $max=2) : ?string {
 
 		// empty case
 			if (empty($tipo)) {
 				debug_log(__METHOD__
-					." Error empty tipo is received "
+					." Error empty tipo is received " .PHP_EOL
+					.' tipo: ' . to_string($tipo)
 					, logger::ERROR
 				);
 				if(SHOW_DEBUG===true) {
@@ -2074,6 +2126,7 @@ class search {
 					.'tipo: '.to_string($tipo)
 					, logger::ERROR
 				);
+				return null;
 			}
 
 		$name	= $matches[1];
