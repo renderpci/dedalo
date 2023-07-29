@@ -1777,12 +1777,30 @@ abstract class common {
 
 				}else if($model==='section') {
 
+					// section_map.
+					// Used to point specific components into common definitions
+					// ex:  "hierarchy25" in thesaurus or "tch152" components can be mapped to "term" to be searched in the same way
+					// term will be "hierarchy25" in thesaurus or will be object name in tangible heritage.
+					// Uses: 	to show children option in search panel
+					// 			to show the term in the thesaurus tree
+					// sample:
+						// {
+						//	"thesaurus": {
+						//		"term": "hierarchy25",
+						//		"model": "hierarchy27",
+						//		"order": "hierarchy48",
+						//		"parent": "hierarchy36",
+						//		"is_indexable": "hierarchy24",
+						//		"is_descriptor": "hierarchy23"
+						//	}
+						// }
+						$dd_object->section_map = section::get_section_map( $section_tipo );
+
 					// (!) Removed 01-06-2023 because don't follow dd_object definitions
 					// and apparently is not used by anyone
 						// section specific. relation_list // time_machine_list
 							// $dd_object->relation_list		= $this->get_relation_list_tipo();
 							// $dd_object->time_machine_list	= $this->get_time_machine_list_tipo();
-							// $dd_object->section_map			= section::get_section_map( $section_tipo );
 
 						$ar_children_tipo = section::get_ar_children_tipo_by_model_name_in_section(
 							$this->tipo,

@@ -84,8 +84,6 @@ class dd_object extends stdClass {
 		public $toolbar_buttons;
 		// bool value_with_parents
 		public $value_with_parents;
-		// object tool_config
-		public $tool_config;
 		// array search_operators_info
 		public $search_operators_info;
 		// string search_options_title
@@ -1202,6 +1200,49 @@ class dd_object extends stdClass {
 
 		return $this->role ?? null;
 	}//end get_role
+
+
+
+	/*
+	* SET_SECTION_MAP
+	* Used to point specific components into common definitions
+	* ex:  "hierarchy25" in thesaurus or "tch152" components can be mapped to "term" to be searched in the same way
+	* term will be "hierarchy25" in thesaurus or will be object name in tangible heritage.
+	* Uses: 	to show children option in search panel
+	* 			to show the term in the thesaurus tree
+	* sample:
+	* 	{
+	* 		"thesaurus": {
+	* 			"term": "hierarchy25",
+	* 			"model": "hierarchy27",
+	* 			"order": "hierarchy48",
+	* 			"parent": "hierarchy36",
+	* 			"is_indexable": "hierarchy24",
+	* 			"is_descriptor": "hierarchy23"
+	* 		}
+	* 	}
+	* Used by tools
+	* @param object|null $value
+	* @return bool
+	*/
+	public function set_section_map(?object $value) : bool {
+
+		$this->section_map = $value;
+
+		return true;
+	}//end set_section_map
+
+
+
+	/**
+	* GET_SECTION_MAP
+	* Return property value
+	* @return object|null $this->section_map
+	*/
+	public function get_section_map() : ?object {
+
+		return $this->section_map ?? null;
+	}//end get_section_map
 
 
 
