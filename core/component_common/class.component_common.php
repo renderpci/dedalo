@@ -2891,11 +2891,11 @@ abstract class component_common extends common {
 
 
 	/**
-	* GET_SELECT_QUERY2
+	* GET_SELECT_QUERY
 	* @param object $select_object
 	* @return object $select_object
 	*/
-	public static function get_select_query2( object $select_object ) : object {
+	public static function get_select_query( object $select_object ) : object {
 
 		// ref
 			// [path] => Array
@@ -2945,7 +2945,7 @@ abstract class component_common extends common {
 
 
 		return $select_object;
-	}//end get_select_query2
+	}//end get_select_query
 
 
 
