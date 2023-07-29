@@ -13,10 +13,10 @@
 | oh | production | 100% | 100% | 100% | All definitions are ready |
 | numisdata | rc | 90% | 90% | 100% | All components are ready but need more testing, all tools ready. |
 | isad | production | 100% | 100% | 100% | All definitions are ready |
-| ich | beta | 60% | 80% | 20%  | All definitions in ich1 are done, ich100 will need more work, state components need to be rebuilt |
+| ich | beta | 70% | 90% | 60%  | All definitions in ich1 are done, ich100 will need more work, state components need to be rebuilt |
 | dmm | alpha | 0% | 0% | 0% |  |
 | mdcat | alpha | 0% | 0% |0%  |  |
-| catalog | alpha | 0% | 0% |0%  |  |
+| tch | alpha | 10% | 0% |0%  |  |
 
 ## 1. What is Dédalo?
 
