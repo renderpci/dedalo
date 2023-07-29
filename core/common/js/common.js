@@ -2501,6 +2501,7 @@ common.prototype.get_section_elements_context = async function(options) {
 	// section_tipo (string|array)
 		const section_tipo			= options.section_tipo
 		const ar_components_exclude	= options.ar_components_exclude
+		const use_real_sections		= options.use_real_sections
 
 	// components
 		const get_components = async () => {
@@ -2520,6 +2521,7 @@ common.prototype.get_section_elements_context = async function(options) {
 						options			: {
 							context_type			: 'simple',
 							ar_section_tipo			: section_tipo,
+							use_real_sections		: use_real_sections,
 							ar_components_exclude	: ar_components_exclude
 						}
 					}

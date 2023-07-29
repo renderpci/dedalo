@@ -1371,6 +1371,7 @@ final class dd_core_api {
 	*		options			: {
 	*			context_type			: 'simple',
 	*			ar_section_tipo			: section_tipo,
+	* 			use_real_sections 		: true,
 	*			ar_components_exclude	: ar_components_exclude
 	*		}
 	*	}
@@ -1380,8 +1381,9 @@ final class dd_core_api {
 
 		// options
 			$options				= $rqo->options;
-			$ar_section_tipo		= (array)$options->ar_section_tipo;
 			$context_type			= $options->context_type;
+			$ar_section_tipo		= (array)$options->ar_section_tipo;
+			$use_real_sections		= $options->use_real_sections ?? false;
 			$ar_components_exclude	= $options->ar_components_exclude ?? null;
 
 		// response
@@ -1393,6 +1395,7 @@ final class dd_core_api {
 		// section_elements_context_options
 			$section_elements_context_options = (object)[
 				'ar_section_tipo'	=> $ar_section_tipo,
+				'use_real_sections'	=> $use_real_sections,
 				'context_type'		=> $context_type
 			];
 			if (isset($ar_components_exclude)) {

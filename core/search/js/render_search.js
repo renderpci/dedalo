@@ -48,6 +48,7 @@ render_search.prototype.list = async function() {
 	// components_list. render section component list [left]
 		const section_elements = await self.get_section_elements_context({
 			section_tipo			: self.target_section_tipo,
+			use_real_sections		: true,
 			ar_components_exclude	: self.ar_components_exclude
 		})
 		render_components_list({
@@ -900,11 +901,18 @@ const render_sections_selector = (self) => {
 
 /**
 * BUILD_SECTIONS_CHECK_BOXES
+* Render the checkbox list of available sections in current type
+* For example, for type 2 (Toponymy) the list display your loaded countries
+* This list is interactive and updates the 'Fields' list on every change to
+* preserve the list coherence
+* @param object self
+* @param int|string typology_id
+* @param HTMLElement parent
 */
 const build_sections_check_boxes =  (self, typology_id, parent) => {
 
-	const ar_sections 	= self.sections_selector_data.filter(item => item.typology_section_id === typology_id)
-	const ul 			= parent
+	const ar_sections	= self.sections_selector_data.filter(item => item.typology_section_id===typology_id)
+	const ul			= parent
 
 	//reset the sqo sections
 		self.target_section_tipo.splice(0,self.target_section_tipo.length)
@@ -915,6 +923,7 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 		}
 
 	// li nodes
+		const ar_check_box = []
 		const ar_sections_len = ar_sections.length
 		for (let i = 0; i < ar_sections_len; i++) {
 
@@ -944,29 +953,79 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 					// name			: item.hierarchy_target_section_tipo,
 					value			: item.target_section_tipo
 				})
+				ar_check_box.push(check_box)
 				check_box.checked = true
-				check_box.addEventListener('change', async function() {
-
-					if(check_box.checked){
-						self.target_section_tipo.push(check_box.value)
-					}else{
-						const index = self.target_section_tipo.findIndex(item => item === check_box.value)
-						self.target_section_tipo.splice(index, 1)
-					}
-
-					const section_elements = await self.get_section_elements_context({
-						section_tipo			: self.target_section_tipo,
-						ar_components_exclude	: self.ar_components_exclude
-					})
-					self.render_components_list({
-						section_tipo		: self.target_section_tipo,
-						target_div			: self.search_container_selector,
-						path				: [],
-						section_elements	: section_elements
-					})
-				})
+				check_box.addEventListener('change', update_list)
 				label.prepend(check_box)
 		}//end for (let i = 0; i < ar_sections_len; i++)
+
+	// select all option
+		if (ar_check_box.length>1) {
+			// li
+				const li = ui.create_dom_element({
+					element_type	: 'li',
+					class_name		: 'dd_input',
+					parent			: ul
+				})
+			// label
+				const label = ui.create_dom_element({
+					element_type	: 'label',
+					parent			: li,
+					inner_html		: get_label.all || 'All'
+				})
+			// checkbox
+				const check_box = ui.create_dom_element({
+					element_type	: 'input',
+					type			: 'checkbox',
+					value			: null
+				})
+				check_box.checked = true
+				label.prepend(check_box)
+				check_box.addEventListener('change', fn_change)
+				function fn_change() {
+					// update checked states in all elements
+					ar_check_box.map(el => {
+						el.checked = this.checked
+					})
+					// fire update_list
+					update_list()
+				}
+		}//end if (ar_check_box.length>1)
+
+	// update sections components list (left)
+		async function update_list() {
+
+			// reset and update var value
+				self.target_section_tipo = []
+				const ar_check_box_length = ar_check_box.length
+				for (let i = 0; i < ar_check_box_length; i++) {
+					const item = ar_check_box[i]
+					if (item.checked) {
+						self.target_section_tipo.push(item.value)
+					}
+				}
+
+			// loading add
+				self.search_container_selector.classList.add('loading')
+
+			// refresh the section list at left (use_real_sections)
+				const section_elements = await self.get_section_elements_context({
+					section_tipo			: self.target_section_tipo,
+					use_real_sections		: true,
+					ar_components_exclude	: self.ar_components_exclude
+				})
+				render_components_list({
+					self				: self,
+					section_tipo		: self.target_section_tipo,
+					target_div			: self.search_container_selector,
+					path				: [],
+					section_elements	: section_elements
+				})
+
+			// loading remove
+				self.search_container_selector.classList.remove('loading')
+		}//end update_list
+
 
 	// Store selected value as cookie to recover later
 		const cookie_name  = 'selected_typology'
