@@ -635,7 +635,7 @@ class search {
 
 		// call to component to resolve each select sentence (are different results depends of the component)
 		$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-		$select_object	= $model_name::get_select_query2($select_object);
+		$select_object	= $model_name::get_select_query($select_object);
 
 
 		return $select_object;
