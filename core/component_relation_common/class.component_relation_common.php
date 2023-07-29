@@ -1214,10 +1214,10 @@ class component_relation_common extends component_common {
 
 
 	/**
-	* GET_SELECT_QUERY2
+	* GET_SELECT_QUERY
 	* @return object
 	*/
-	public static function get_select_query2( object $select_object ) : object {
+	public static function get_select_query( object $select_object ) : object {
 		/*
 		[path] => Array
 			(
@@ -1248,7 +1248,7 @@ class component_relation_common extends component_common {
 
 
 		return $select_object;
-	}//end get_select_query2
+	}//end get_select_query
 
 
 
