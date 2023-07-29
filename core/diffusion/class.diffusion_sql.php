@@ -1268,9 +1268,10 @@ class diffusion_sql extends diffusion  {
 					// DS resolution with v6 model
 					case (is_object($properties) && property_exists($properties, 'data_to_be_used') && $properties->data_to_be_used==='ds'):
 						if(isset($properties->v6)){
-							$ar_term_ds = [];
-							// get the component_tipo to be used as ds
+
+							// ds_tipo. get the component_tipo to be used as ds
 							$ds_tipo = $properties->v6->data_to_be_used;
+
 							// create the caller section to get his data
 							$caller_section = section::get_instance(
 								$options->parent,
@@ -1279,16 +1280,26 @@ class diffusion_sql extends diffusion  {
 							// get the relations data of the section to get the data of the component
 							$caller_section_relations = $caller_section->get_relations();
 
+							$ar_term_ds = [];
 							$ar_locator_ds = array_filter($caller_section_relations, function($el) use ($ds_tipo) {
+								if (!isset($el->from_component_tipo)) {
+									debug_log(__METHOD__
+										. "  Bad locator found (caller_section_relations). Ignored " . PHP_EOL
+										. ' locator: ' . to_string($el)
+										, logger::ERROR
+									);
+									return false;
+								}
 								return $el->from_component_tipo === $ds_tipo;
 							});
 							// create the term resolution of the data
 							foreach ($ar_locator_ds  as $locator_ds) {
 								$ar_term_ds[] = ts_object::get_term_by_locator( $locator_ds, $options->lang, $from_cache=true );
 							}
-						}
-						if (!empty($ar_term_ds)) {
-							$ar_field_data['field_value'] = implode('|', $ar_term_ds);
+							// add if not empty
+							if (!empty($ar_term_ds)) {
+								$ar_field_data['field_value'] = implode('|', $ar_term_ds);
+							}
 						}
 						break;
 					// NEED TO BE FIXED
@@ -4451,12 +4462,12 @@ class diffusion_sql extends diffusion  {
 										$locator->section_tipo,
 										'list')
 					: component_common::get_instance($model_name,
-										 $target_component_tipo,
-										 $locator->section_id,
-										 'list',
-										 $options->lang,
-										 $locator->section_tipo,
-										 false);
+										$target_component_tipo,
+										$locator->section_id,
+										'list',
+										$options->lang,
+										$locator->section_tipo,
+										false);
 
 			// method
 				$method = isset($process_dato_arguments->component_method)
@@ -4558,15 +4569,38 @@ class diffusion_sql extends diffusion  {
 					break;
 
 				case 'ds':
-					foreach ((array)$value as $current_locator) {
-						if (isset($current_locator->ds)) {
-							foreach ($current_locator->ds as $locator_ds) {
-								$ar_term_ds[] = ts_object::get_term_by_locator( $locator_ds, $options->lang, $from_cache=true );
+					if (isset($process_dato_arguments->v6)) {
+
+						// ds_tipo. get the component_tipo to be used as ds
+						$ds_tipo = $process_dato_arguments->v6->data_to_be_used;
+
+						// create the caller section to get his data
+						$caller_section = section::get_instance(
+							$locator->section_id,
+							$locator->section_tipo
+						);
+						// get the relations data of the section to get the data of the component
+						$caller_section_relations = $caller_section->get_relations();
+
+						$ar_term_ds = [];
+						$ar_locator_ds = array_filter($caller_section_relations, function($el) use ($ds_tipo) {
+							if (!isset($el->from_component_tipo)) {
+								debug_log(__METHOD__
+									. "  Bad locator found (caller_section_relations). Ignored " . PHP_EOL
+									. ' locator: ' . to_string($el)
+									, logger::ERROR
+								);
+								return false;
 							}
+							return $el->from_component_tipo === $ds_tipo;
+						});
+						// create the term resolution of the data
+						foreach ($ar_locator_ds  as $locator_ds) {
+							$ar_term_ds[] = ts_object::get_term_by_locator( $locator_ds, $options->lang, $from_cache=true );
 						}
-					}
-					if (!empty($ar_term_ds)) {
-						$ar_value[] = implode('|', $ar_term_ds);
+						if (!empty($ar_term_ds)) {
+							$ar_value[] = implode('|', $ar_term_ds);
+						}
 					}
 					break;
 
