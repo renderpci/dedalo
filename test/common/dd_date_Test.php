@@ -6,8 +6,6 @@ use PHPUnit\Framework\Attributes\TestDox;
 // require_once dirname(dirname(__FILE__)). '/lib/vendor/autoload.php';
 	require_once dirname(dirname(dirname(__FILE__))) . '/config/config.php';
 	require_once dirname(dirname(__FILE__)) . '/login/login_Test.php';
-	require_once 'data.php';
-	require_once 'elements.php';
 
 // check is development server. if not, throw to prevent malicious access
 	if (!defined('DEVELOPMENT_SERVER') || DEVELOPMENT_SERVER!==true) {
