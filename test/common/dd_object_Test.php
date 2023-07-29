@@ -6,8 +6,6 @@ use PHPUnit\Framework\Attributes\TestDox;
 // require_once dirname(dirname(__FILE__)). '/lib/vendor/autoload.php';
 	require_once dirname(dirname(dirname(__FILE__))) . '/config/config.php';
 	require_once dirname(dirname(__FILE__)) . '/login/login_Test.php';
-	require_once 'data.php';
-	require_once 'elements.php';
 
 // check is development server. if not, throw to prevent malicious access
 	if (!defined('DEVELOPMENT_SERVER') || DEVELOPMENT_SERVER!==true) {
@@ -93,6 +91,16 @@ final class dd_object_test extends TestCase {
 				'records_separator'	=> ' | ',
 				'autoload'			=> true,
 				'role'				=> 'my role',
+				'section_map'		=> json_decode('{
+			 		"thesaurus": {
+			 			"term": "hierarchy25",
+			 			"model": "hierarchy27",
+			 			"order": "hierarchy48",
+			 			"parent": "hierarchy36",
+			 			"is_indexable": "hierarchy24",
+			 			"is_descriptor": "hierarchy23"
+			 		}
+			 	}')
 			];
 
 		foreach ($ar_test as $property => $current_value) {
