@@ -931,7 +931,9 @@ class section extends common {
 					);
 					$JSON_RecordObj_matrix->save_time_machine($options);
 
-				return $this->section_id;
+				return !empty($this->section_id)
+					? (int)$this->section_id
+					: null;
 			}
 
 		// matrix table. Note that this function fallback to real section if virtual section don't have table defined
