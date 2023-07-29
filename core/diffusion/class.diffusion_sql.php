@@ -1265,15 +1265,26 @@ class diffusion_sql extends diffusion  {
 						$function_name = $properties->process_dato;
 						$ar_field_data['field_value'] = call_user_func($function_name, $options, $dato);
 						break;
-					// NEED TO BE FIXED
+					// DS resolution with v6 model
 					case (is_object($properties) && property_exists($properties, 'data_to_be_used') && $properties->data_to_be_used==='ds'):
-						foreach ((array)$dato as $current_locator) {
-							if (isset($current_locator->ds)) {
-								foreach ($current_locator->ds as $key => $ar_locator_ds) {
-									foreach ($ar_locator_ds  as $locator_ds) {
-										$ar_term_ds[] = ts_object::get_term_by_locator( $locator_ds, $options->lang, $from_cache=true );
-									}
-								}
+						if(isset($properties->v6)){
+							$ar_term_ds = [];
+							// get the component_tipo to be used as ds
+							$ds_tipo = $properties->v6->data_to_be_used;
+							// create the caller section to get his data
+							$caller_section = section::get_instance(
+								$options->parent,
+								$options->section_tipo
+							);
+							// get the relations data of the section to get the data of the component
+							$caller_section_relations = $caller_section->get_relations();
+
+							$ar_locator_ds = array_filter($caller_section_relations, function($el) use ($ds_tipo) {
+								return $el->from_component_tipo === $ds_tipo;
+							});
+							// create the term resolution of the data
+							foreach ($ar_locator_ds  as $locator_ds) {
+								$ar_term_ds[] = ts_object::get_term_by_locator( $locator_ds, $options->lang, $from_cache=true );
 							}
 						}
 						if (!empty($ar_term_ds)) {
