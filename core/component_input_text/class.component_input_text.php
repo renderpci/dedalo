@@ -552,6 +552,17 @@ class component_input_text extends component_common {
 				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
 				$query_object->unaccent	= true;
 				break;
+			# DUPLICATED
+			case (strpos($q, '!!')===0 || $q_operator==='!!'):
+				$operator = '=';
+				$query_object->operator 	= $operator;
+				$query_object->unaccent		= false; // (!) always false
+				$query_object->duplicated	= true;
+				// Resolve lang based on if is translatable
+					$path_end		= end($query_object->path);
+					$component_tipo	= $path_end->component_tipo;
+				$query_object->lang 	= RecordObj_dd::get_translatable($component_tipo) ?  DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+				break;
 			# DEFAULT CONTAIN
 			default:
 				$operator = '~*';
@@ -580,6 +591,7 @@ class component_input_text extends component_common {
 			'='			=> 'similar_to',
 			'!='		=> 'different_from',
 			'-'			=> 'does_not_contain',
+			'!!'		=> 'duplicate',
 			'*text*'	=> 'contains',
 			'text*'		=> 'begins_with',
 			'*text'		=> 'end_with',
