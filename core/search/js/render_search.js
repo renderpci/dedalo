@@ -1153,6 +1153,10 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 	export const toggle_type = (self) => {
 
 		const wrapper_sections_selector = self.wrapper_sections_selector
+		// check if exists (only exists in thesaurus)
+		if (!wrapper_sections_selector) {
+			return false
+		}
 
 		// cookie to track state
 		const cookie_name = 'type_panel'
