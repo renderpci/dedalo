@@ -38,8 +38,8 @@ export const render_components_list = function(options) {
 
 	// First item check
 		if (!section_elements || typeof section_elements[0]==="undefined") {
-			console.error(`[render_components_list] Error. Empty section_elements on get_section_elements_context ${section_tipo}`, section_elements);
-			return false
+			console.warn(`[render_components_list] Warning. Empty section_elements on get_section_elements_context ${section_tipo} Nothing to render`, section_elements);
+			return []
 		}
 
 	// list_container

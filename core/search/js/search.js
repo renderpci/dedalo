@@ -81,7 +81,8 @@ export const search = function() {
 
 /**
 * INIT
-* @return bool promise true
+* @param object options
+* @return bool
 */
 search.prototype.init = async function(options) {
 
@@ -228,9 +229,11 @@ search.prototype.build = async function() {
 
 				self.get_section_elements_context({
 					section_tipo			: self.section_tipo,
-					ar_components_exclude	: self.ar_components_exclude
+					ar_components_exclude	: self.ar_components_exclude,
+					use_real_sections		: false
 				})
 				.then(function(response){
+					console.log('response:', response, self.section_tipo);
 					resolve(response)
 				})
 			}))

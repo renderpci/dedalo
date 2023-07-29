@@ -3834,6 +3834,7 @@ abstract class common {
 		// options
 			$context_type				= $options->context_type ?? 'simple';
 			$ar_section_tipo			= $options->ar_section_tipo ?? null;
+			$use_real_sections			= $options->use_real_sections ?? false;
 			$path						= $options->path ?? [];
 			$ar_tipo_exclude_elements	= $options->ar_tipo_exclude_elements ?? false;
 			$ar_components_exclude		= $options->ar_components_exclude ?? [
@@ -3873,27 +3874,34 @@ abstract class common {
 
 		// Manage multiple sections
 		// section_tipo can be an array of section_tipo. To prevent duplicates, check and group similar sections (like es1, co1, ..)
-		// $resolved_section = [];
-		$context = [];
+		$resolved_section	= [];
+		$context			= [];
 		foreach ((array)$ar_section_tipo as $section_tipo) {
-			// $section_real_tipo = section::get_section_real_tipo_static($section_tipo);
-			// if (in_array($section_real_tipo, $resolved_section)) {
-			// 	continue;
-			// }
-			// $resolved_section[] = $section_real_tipo;
 
 			$section_permisions = security::get_security_permissions($section_tipo, $section_tipo);
 			$user_id_logged 	= navigator::get_user_id();
 
-			if ( $section_tipo!==DEDALO_THESAURUS_SECTION_TIPO
-				&& $user_id_logged!=DEDALO_SUPERUSER
-				&& ((int)$section_permisions<1)) {
-				// user don't have access to current section. skip section
-				continue;
-			}
+			// skip section if permissions are not enough
+				if ( $section_tipo!==DEDALO_THESAURUS_SECTION_TIPO
+					&& $user_id_logged!=DEDALO_SUPERUSER
+					&& ((int)$section_permisions<1)) {
+					// user don't have access to current section. skip section
+					continue;
+				}
 
-			// $section_tipo = $section_real_tipo;
-			//create the section instance and get the context_simple
+			// use_real_sections. If true, replace current section_tipo to prevent duplicates in output (thesaurus case)
+				if ($use_real_sections===true) {
+					$section_real_tipo = section::get_section_real_tipo_static($section_tipo);
+					if (in_array($section_real_tipo, $resolved_section)) {
+						continue;
+					}
+					$resolved_section[] = $section_real_tipo;
+
+					// replace section_tipo value from here (!)
+					$section_tipo = $section_real_tipo;
+				}
+
+			// create the section instance and get the context_simple
 				$dd_section = section::get_instance(
 					null, // string|null section_tipo
 					$section_tipo, // string section_tipo
@@ -3909,8 +3917,8 @@ abstract class common {
 				// 	$element_json = $dd_section->get_json($get_json_options);
 
 			// item context add to context
-				// $item_context	= $element_json->context;
-				$item_context	= [
+				// $item_context = $element_json->context;
+				$item_context = [
 					$dd_section->get_structure_context_simple(
 						$section_permisions,
 						false // bool add_rqo
