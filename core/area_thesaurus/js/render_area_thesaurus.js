@@ -49,9 +49,24 @@ render_area_thesaurus.prototype.list = async function(options) {
 
 			if (data.ts_search) {
 
-				self.ts_object.parse_search_result(data.ts_search.result, null, false)
 				// prevent to recreate content_data again
-				const content_data = self.node.querySelector('.content_data.area')
+				const content_data = self.node.content_data
+
+				// clean children_container nodes (inside categories)
+					const children_container = content_data.querySelectorAll('[data-role="children_container"]')
+					const children_container_length = children_container.length
+					for (let i = 0; i < children_container_length; i++) {
+						const item = children_container[i]
+						while (item.firstChild) {
+							item.removeChild(item.firstChild);
+						}
+					}
+
+				// render. parse_search_result
+					setTimeout(function(){
+						self.ts_object.parse_search_result(data.ts_search.result, null, false)
+					}, 1)
+
 				return content_data
 
 			}else{

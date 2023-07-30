@@ -25,6 +25,7 @@ export const render_ts_line = function(options) {
 		const indexations_container_id	= options.indexations_container_id
 		const show_arrow_opened			= options.show_arrow_opened
 		const is_descriptor				= options.is_descriptor
+		const mode						= options.mode
 
 	// DocumentFragment
 		const fragment = new DocumentFragment()
@@ -408,6 +409,7 @@ export const render_ts_list = function(options) {
 		const parent_nd_container			= options.parent_nd_container
 		const children_container_is_loaded	= options.children_container_is_loaded
 		const show_arrow_opened				= options.show_arrow_opened
+		const mode							= options.mode
 
 	const ar_children_c = []
 
@@ -721,7 +723,7 @@ export const render_ts_list = function(options) {
 
 						// ORDER number element
 							if (ar_children_data[i].permissions_button_new>=2) {
-								if(is_descriptor===true && node_type!=='hierarchy_node') {
+								if(is_descriptor===true && node_type!=='hierarchy_node' && mode!=='search') {
 									// var event_function = [{'type':'click','name':'ts_object.build_order_form'}];
 									const order_number = ui.create_dom_element({
 										element_type	: 'a',

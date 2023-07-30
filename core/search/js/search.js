@@ -94,7 +94,6 @@ search.prototype.init = async function(options) {
 		self.mode		= options.mode
 		self.lang		= options.lang || page_globals.dedalo_data_lang
 
-
 	// short vars
 		self.type					= 'filter'
 		self.section_tipo			= self.caller.section_tipo
@@ -233,7 +232,6 @@ search.prototype.build = async function() {
 					use_real_sections		: false
 				})
 				.then(function(response){
-					console.log('response:', response, self.section_tipo);
 					resolve(response)
 				})
 			}))
@@ -902,20 +900,23 @@ search.prototype.update_state = async function(options) {
 			caller_instance.rqo.sqo.filter				= json_query_obj.filter || null
 			caller_instance.rqo.sqo.filter_by_locators	= filter_by_locators
 			caller_instance.rqo.sqo.children_recursive	= json_query_obj.children_recursive || false
+			caller_instance.rqo.sqo.section_tipo		= self.target_section_tipo
 
 		// request_config_object. Copy rqo.sqo pagination values to request_config_object
 			caller_instance.request_config_object.sqo.limit		= caller_instance.rqo.sqo.limit
 			caller_instance.request_config_object.sqo.offset	= caller_instance.rqo.sqo.offset
 
-
 		switch (caller_instance.model) {
 			case 'area_thesaurus':
 
-				const area_ts_promise = caller_instance.navigate({
-					callback			: null,
-					navigation_history	: false,
-					action				: 'search'
-				})
+				// area. refresh current area using navigation
+					const area_ts_promise = caller_instance.navigate({
+						callback			: null,
+						navigation_history	: false,
+						action				: 'search'
+					})
+
+				return area_ts_promise
 				break;
 
 			case 'section':
@@ -946,14 +947,12 @@ search.prototype.update_state = async function(options) {
 					})
 
 				return section_promise
-
 				break;
 
 			default:
-
+				return new Promise(()=>{})
 				break;
 		}
-
 	}//end update_caller
 
 
