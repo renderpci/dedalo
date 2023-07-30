@@ -79,14 +79,14 @@ class search {
 		public $main_section_tipo_alias;
 
 		// filter_join
-		protected $filter_join;
-		protected $filter_join_where;
+		public $filter_join;
+		public $filter_join_where;
 
 		// filter_by_user_records
-		protected $filter_by_user_records;
+		public $filter_by_user_records;
 
 		// sql_query_order_custom
-		protected $sql_query_order_custom;
+		public $sql_query_order_custom;
 
 		// ar_sql_joins
 		public $ar_sql_joins;
@@ -2136,6 +2136,7 @@ class search {
 	/**
 	* TRIM_TIPO
 	* Contract the tipo to prevent large names in SQL sentences
+	* @see search_Test::test_trim_tipo
 	* @param string $tipo
 	* @param int $max = 2
 	* @return string $trimmed_tipo
@@ -2420,7 +2421,7 @@ class search {
 
 
 	/**
-	* RESOLVE_ARRAY_elements
+	* RESOLVE_ARRAY_ELEMENTS
 	* Recursive
 	* @param object $array_elements {"$or":[{...}]}
 	* @return string $sql_where
@@ -2638,7 +2639,7 @@ class search {
 	* @param bool $count = false
 	* @return array $ar_inverse_locators
 	*/
-	public static function calculate_inverse_locators( object $reference_locator, int $limit=null, int $offset=null, bool $count=false ) : array {
+	public static function calculate_inverse_locators(object $reference_locator, int $limit=null, int $offset=null, bool $count=false) : array {
 		#debug_log(__METHOD__." locator received:  ".to_string($reference_locator), logger::DEBUG);
 
 		# compare

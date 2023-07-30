@@ -694,39 +694,39 @@ final class search_test extends TestCase {
 		// single
 			$sqo = json_decode('{
 				"section_tipo": [
-			        "rsc167","rsc176"
-			    ],
-			    "limit": 10,
-			    "offset": 0,
-			    "order": [
-			        {
-			            "direction": "DESC",
-			            "path": [
-			                {
-			                    "name": "Publication",
-			                    "model": "component_publication",
-			                    "section_tipo": "rsc167",
-			                    "component_tipo": "rsc20"
-			                },
-			                {
-			                    "name": "Value",
-			                    "model": "component_input_text",
-			                    "section_tipo": "dd64",
-			                    "component_tipo": "dd62"
-			                }
-			            ],
-			            "component_path": [
-			                "components",
-			                "dd62",
-			                "dato",
-			                "lg-eng"
-			            ],
-			            "type": "string"
-			        }
-			    ],
-			    "select": [],
-			    "full_count": false,
-			    "parsed": true
+					"rsc167","rsc176"
+				],
+				"limit": 10,
+				"offset": 0,
+				"order": [
+					{
+						"direction": "DESC",
+						"path": [
+							{
+								"name": "Publication",
+								"model": "component_publication",
+								"section_tipo": "rsc167",
+								"component_tipo": "rsc20"
+							},
+							{
+								"name": "Value",
+								"model": "component_input_text",
+								"section_tipo": "dd64",
+								"component_tipo": "dd62"
+							}
+						],
+						"component_path": [
+							"components",
+							"dd62",
+							"dato",
+							"lg-eng"
+						],
+						"type": "string"
+					}
+				],
+				"select": [],
+				"full_count": false,
+				"parsed": true
 			}');
 
 			$search = search::get_instance(
@@ -770,8 +770,8 @@ final class search_test extends TestCase {
 		// single
 			$sqo = json_decode('{
 				"section_tipo": [
-			        "rsc167"
-			    ]
+					"rsc167"
+				]
 			}');
 
 			$search = search::get_instance(
@@ -804,9 +804,9 @@ final class search_test extends TestCase {
 		// multiple
 			$sqo = json_decode('{
 				"section_tipo": [
-			        "rsc167",
-			        "rsc176"
-			    ]
+					"rsc167",
+					"rsc176"
+				]
 			}');
 
 			$search = search::get_instance(
@@ -838,8 +838,8 @@ final class search_test extends TestCase {
 		// single
 			$sqo = json_decode('{
 				"section_tipo": [
-			        "rsc167"
-			    ]
+					"rsc167"
+				]
 			}');
 
 			$search = search::get_instance(
@@ -872,9 +872,9 @@ final class search_test extends TestCase {
 		// multiple
 			$sqo = json_decode('{
 				"section_tipo": [
-			        "rsc167",
-			        "rsc176"
-			    ]
+					"rsc167",
+					"rsc176"
+				]
 			}');
 
 			$search = search::get_instance(
@@ -905,35 +905,35 @@ final class search_test extends TestCase {
 
 		// single
 			$sqo = json_decode('{
-		        "section_tipo": [
-		            "rsc170"
-		        ],
-		        "limit": 10,
-		        "offset": 0,
-		        "filter": {
-		            "$and": [
-		                {
-		                    "q": [
-		                        {
-		                            "section_id": "1",
-		                            "section_tipo": "dd64",
-		                            "from_component_tipo": "rsc20"
-		                        }
-		                    ],
-		                    "q_operator": null,
-		                    "path": [
-		                        {
-		                            "section_tipo": "rsc170",
-		                            "component_tipo": "rsc20",
-		                            "model": "component_publication",
-		                            "name": "Publication"
-		                        }
-		                    ],
-		                    "type": "jsonb"
-		                }
-		            ]
-		        }
-		    }');
+				"section_tipo": [
+					"rsc170"
+				],
+				"limit": 10,
+				"offset": 0,
+				"filter": {
+					"$and": [
+						{
+							"q": [
+								{
+									"section_id": "1",
+									"section_tipo": "dd64",
+									"from_component_tipo": "rsc20"
+								}
+							],
+							"q_operator": null,
+							"path": [
+								{
+									"section_tipo": "rsc170",
+									"component_tipo": "rsc20",
+									"model": "component_publication",
+									"name": "Publication"
+								}
+							],
+							"type": "jsonb"
+						}
+					]
+				}
+			}');
 
 			$search = search::get_instance(
 				$sqo // object sqo
@@ -977,18 +977,18 @@ final class search_test extends TestCase {
 
 		// single
 			$sqo = json_decode('{
-		        "section_tipo": [
-		            "oh1"
-		        ],
-		        "limit": 10,
-		        "offset": 0,
-		        "filter_by_locators": [
-		            {
-		                "section_tipo": "oh1",
-		                "section_id": "2"
-		            }
-		        ]
-		    }');
+				"section_tipo": [
+					"oh1"
+				],
+				"limit": 10,
+				"offset": 0,
+				"filter_by_locators": [
+					{
+						"section_tipo": "oh1",
+						"section_id": "2"
+					}
+				]
+			}');
 
 			$search = search::get_instance(
 				$sqo // object sqo
@@ -1031,18 +1031,18 @@ final class search_test extends TestCase {
 
 		// single
 			$sqo = json_decode('{
-		        "section_tipo": [
-		            "oh1"
-		        ],
-		        "limit": 10,
-		        "offset": 0,
-		        "filter_by_locators": [
-		            {
-		                "section_tipo": "oh1",
-		                "section_id": "2"
-		            }
-		        ]
-		    }');
+				"section_tipo": [
+					"oh1"
+				],
+				"limit": 10,
+				"offset": 0,
+				"filter_by_locators": [
+					{
+						"section_tipo": "oh1",
+						"section_id": "2"
+					}
+				]
+			}');
 
 			$search = search::get_instance(
 				$sqo // object sqo
@@ -1084,64 +1084,64 @@ final class search_test extends TestCase {
 
 		// single
 			$sqo = json_decode('{
-		        "section_tipo": [
-		            "rsc170"
-		        ],
-		        "limit": 10,
-		        "offset": 0,
-		        "filter": {
-		            "$and": [
-		                {
-		                    "q": [
-		                        {
-		                            "section_id": "1",
-		                            "section_tipo": "dd64",
-		                            "from_component_tipo": "rsc20"
-		                        }
-		                    ],
-		                    "q_operator": null,
-		                    "path": [
-		                        {
-		                            "section_tipo": "rsc170",
-		                            "component_tipo": "rsc20",
-		                            "model": "component_publication",
-		                            "name": "Publication"
-		                        }
-		                    ],
-		                    "type": "jsonb"
-		                }
-		            ]
-		        }
-		    }');
+				"section_tipo": [
+					"rsc170"
+				],
+				"limit": 10,
+				"offset": 0,
+				"filter": {
+					"$and": [
+						{
+							"q": [
+								{
+									"section_id": "1",
+									"section_tipo": "dd64",
+									"from_component_tipo": "rsc20"
+								}
+							],
+							"q_operator": null,
+							"path": [
+								{
+									"section_tipo": "rsc170",
+									"component_tipo": "rsc20",
+									"model": "component_publication",
+									"name": "Publication"
+								}
+							],
+							"type": "jsonb"
+						}
+					]
+				}
+			}');
 
 			$op			= '$and';
 			$ar_value	= json_decode('[
-			    {
-			        "q": [
-			            {
-			                "section_id": "1",
-			                "section_tipo": "dd64",
-			                "from_component_tipo": "rsc20"
-			            }
-			        ],
-			        "q_operator": null,
-			        "path": [
-			            {
-			                "section_tipo": "rsc170",
-			                "component_tipo": "rsc20",
-			                "model": "component_publication",
-			                "name": "Publication"
-			            }
-			        ],
-			        "type": "jsonb",
-			        "component_path": [
-			            "relations"
-			        ],
-			        "lang": "all",
-			        "unaccent": false,
-			        "operator": "@>",
-			        "q_parsed": "\'[{\"section_id\":\"1\",\"section_tipo\":\"dd64\",\"from_component_tipo\":\"rsc20\"}]\'"
-			    }
+				{
+					"q": [
+						{
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "rsc20"
+						}
+					],
+					"q_operator": null,
+					"path": [
+						{
+							"section_tipo": "rsc170",
+							"component_tipo": "rsc20",
+							"model": "component_publication",
+							"name": "Publication"
+						}
+					],
+					"type": "jsonb",
+					"component_path": [
+						"relations"
+					],
+					"lang": "all",
+					"unaccent": false,
+					"operator": "@>",
+					"q_parsed": "\'[{\"section_id\":\"1\",\"section_tipo\":\"dd64\",\"from_component_tipo\":\"rsc20\"}]\'"
+				}
 			]');
 
 			$search = search::get_instance(
@@ -1188,12 +1188,12 @@ final class search_test extends TestCase {
 
 		// single
 			$sqo = json_decode('{
-		        "section_tipo": [
-		            "rsc170"
-		        ],
-		        "limit": 10,
-		        "offset": 0
-		    }');
+				"section_tipo": [
+					"rsc170"
+				],
+				"limit": 10,
+				"offset": 0
+			}');
 
 			$search = search::get_instance(
 				$sqo // object sqo
@@ -1225,12 +1225,12 @@ final class search_test extends TestCase {
 
 		// multiple
 			$sqo = json_decode('{
-		        "section_tipo": [
-		            "rsc170", "rsc167"
-		        ],
-		        "limit": 10,
-		        "offset": 0
-		    }');
+				"section_tipo": [
+					"rsc170", "rsc167"
+				],
+				"limit": 10,
+				"offset": 0
+			}');
 
 			$search = search::get_instance(
 				$sqo // object sqo
@@ -1265,58 +1265,58 @@ final class search_test extends TestCase {
 		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
 		$sqo = json_decode('{
-	       "section_tipo": [
-		        "rsc167","rsc176"
-		    ],
-		    "limit": 10,
-		    "offset": 0,
-		    "order": [
-		        {
-		            "direction": "DESC",
-		            "path": [
-		                {
-		                    "name": "Publication",
-		                    "model": "component_publication",
-		                    "section_tipo": "rsc167",
-		                    "component_tipo": "rsc20"
-		                },
-		                {
-		                    "name": "Value",
-		                    "model": "component_input_text",
-		                    "section_tipo": "dd64",
-		                    "component_tipo": "dd62"
-		                }
-		            ],
-		            "component_path": [
-		                "components",
-		                "dd62",
-		                "dato",
-		                "lg-eng"
-		            ],
-		            "type": "string"
-		        }
-		    ],
-		    "select": [],
-		    "full_count": false,
-		    "parsed": true
-	    }');
+		   "section_tipo": [
+				"rsc167","rsc176"
+			],
+			"limit": 10,
+			"offset": 0,
+			"order": [
+				{
+					"direction": "DESC",
+					"path": [
+						{
+							"name": "Publication",
+							"model": "component_publication",
+							"section_tipo": "rsc167",
+							"component_tipo": "rsc20"
+						},
+						{
+							"name": "Value",
+							"model": "component_input_text",
+							"section_tipo": "dd64",
+							"component_tipo": "dd62"
+						}
+					],
+					"component_path": [
+						"components",
+						"dd62",
+						"dato",
+						"lg-eng"
+					],
+					"type": "string"
+				}
+			],
+			"select": [],
+			"full_count": false,
+			"parsed": true
+		}');
 
-	    $path = json_decode('
-	    	[
-                {
-                    "name": "Publication",
-                    "model": "component_publication",
-                    "section_tipo": "rsc167",
-                    "component_tipo": "rsc20"
-                },
-                {
-                    "name": "Value",
-                    "model": "component_input_text",
-                    "section_tipo": "dd64",
-                    "component_tipo": "dd62"
-                }
-            ]
-	    ');
+		$path = json_decode('
+			[
+				{
+					"name": "Publication",
+					"model": "component_publication",
+					"section_tipo": "rsc167",
+					"component_tipo": "rsc20"
+				},
+				{
+					"name": "Value",
+					"model": "component_input_text",
+					"section_tipo": "dd64",
+					"component_tipo": "dd62"
+				}
+			]
+		');
 
 		$search = search::get_instance(
 			$sqo // object sqo
@@ -1493,6 +1493,519 @@ final class search_test extends TestCase {
 				'expected true $result===NULL and received: ' . json_encode($result)
 			);
 	}//end test_trim_tipo
+
+
+
+	/**
+	* TEST_get_sql_where
+	* @return void
+	*/
+	public function test_get_sql_where(): void {
+
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
+		// single
+			$sqo = json_decode('{
+				"section_tipo": [
+					"rsc170"
+				],
+				"limit": 10,
+				"offset": 0,
+				"filter": {
+					"$and": [
+						{
+							"q": [
+								{
+									"section_id": "1",
+									"section_tipo": "dd64",
+									"from_component_tipo": "rsc20"
+								}
+							],
+							"q_operator": null,
+							"path": [
+								{
+									"section_tipo": "rsc170",
+									"component_tipo": "rsc20",
+									"model": "component_publication",
+									"name": "Publication"
+								}
+							],
+							"type": "jsonb"
+						}
+					]
+				}
+			}');
+
+			$search = search::get_instance(
+				$sqo // object sqo
+			);
+			$search->search();
+				// dump($search, ' search ++ '.to_string());
+
+			$search_object = $search->search_query_object->filter->{'$and'}[0];
+				// dump($search_object, ' search_object ++ '.to_string());
+
+			$result = $search->get_sql_where(
+				$search_object
+			);
+				// dump($result, ' result ++ '.to_string());
+
+			// sample expected
+				// rs170.datos#>'{relations}' @> '[{"section_id":"1","section_tipo":"dd64","from_component_tipo":"rsc20"}]'
+
+			$this->assertTrue(
+				empty($_ENV['DEDALO_LAST_ERROR']),
+				'expected running without errors. DEDALO_LAST_ERROR: ' .$_ENV['DEDALO_LAST_ERROR']
+			);
+
+			$type	= gettype($result);
+			$eq		= $type==='string';
+			$this->assertTrue(
+				$eq,
+				'expected true (type===string) and received type: ' .$type
+			);
+
+			$value = 'rs170.datos#>\'{relations}\' @> \'[{"section_id":"1","section_tipo":"dd64","from_component_tipo":"rsc20"}]\'';
+			$eq		= trim($result)===$value;
+			$this->assertTrue(
+				$eq,
+				'expected true '.$value.' and received: ' . json_encode($result)
+			);
+	}//end test_get_sql_where
+
+
+
+	/**
+	* TEST_resolve_array_elements
+	* @return void
+	*/
+	public function test_resolve_array_elements(): void {
+
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
+		$array_elements = json_decode('{
+			"$or": [
+				{
+					"$and": [
+						{
+							"component_path": [
+								"start",
+								"time"
+							],
+							"operator": "<=",
+							"q_parsed": "\'64699430400\'",
+							"type": "jsonb"
+						},
+						{
+							"component_path": [
+								"end",
+								"time"
+							],
+							"operator": ">=",
+							"q_parsed": "\'64699430400\'",
+							"type": "jsonb"
+						}
+					]
+				},
+				{
+					"$and": [
+						{
+							"component_path": [
+								"start",
+								"time"
+							],
+							"operator": ">=",
+							"q_parsed": "\'64699430400\'",
+							"type": "jsonb"
+						},
+						{
+							"component_path": [
+								"start",
+								"time"
+							],
+							"operator": "<=",
+							"q_parsed": "\'64731571199\'",
+							"type": "jsonb"
+						}
+					]
+				}
+			]
+		}');
+
+		$component_tipo = 'rsc26';
+
+		$result = search::resolve_array_elements(
+			$array_elements,
+			$component_tipo
+		);
+			// dump( null, ' result ++ '.to_string($result));
+
+		// sample expected
+			// ((rsc26_array_elements#>'{start,time}' <= '64699430400' AND rsc26_array_elements#>'{end,time}' >= '64699430400')  OR (rsc26_array_elements#>'{start,time}' >= '64699430400' AND rsc26_array_elements#>'{start,time}' <= '64731571199') )
+
+		$this->assertTrue(
+			empty($_ENV['DEDALO_LAST_ERROR']),
+			'expected running without errors. DEDALO_LAST_ERROR: ' .$_ENV['DEDALO_LAST_ERROR']
+		);
+
+		$type	= gettype($result);
+		$eq		= $type==='string';
+		$this->assertTrue(
+			$eq,
+			'expected true (type===string) and received type: ' .$type
+		);
+
+		$value	= "((rsc26_array_elements#>'{start,time}' <= '64699430400' AND rsc26_array_elements#>'{end,time}' >= '64699430400')  OR (rsc26_array_elements#>'{start,time}' >= '64699430400' AND rsc26_array_elements#>'{start,time}' <= '64731571199') )";
+		$eq		= trim($result)===$value;
+		$this->assertTrue(
+			$eq,
+			'expected true '.$value.' and received: ' . json_encode($result)
+		);
+	}//end test_resolve_array_elements
+
+
+
+	/**
+	* TEST_is_search_operator
+	* @return void
+	*/
+	public function test_is_search_operator(): void {
+
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
+		// true
+			$search_object = json_decode('{
+				"$or": [
+					{
+						"$and": [
+							{
+								"component_path": [
+									"start",
+									"time"
+								],
+								"operator": "<=",
+								"q_parsed": "\'64699430400\'",
+								"type": "jsonb"
+							},
+							{
+								"component_path": [
+									"end",
+									"time"
+								],
+								"operator": ">=",
+								"q_parsed": "\'64699430400\'",
+								"type": "jsonb"
+							}
+						]
+					}
+				]
+			}');
+
+			$result = search::is_search_operator(
+				$search_object
+			);
+				// dump( null, ' result ++ '.to_string($result));
+
+			// sample expected
+				// ((rsc26_array_elements#>'{start,time}' <= '64699430400' AND rsc26_array_elements#>'{end,time}' >= '64699430400')  OR (rsc26_array_elements#>'{start,time}' >= '64699430400' AND rsc26_array_elements#>'{start,time}' <= '64731571199') )
+
+			$this->assertTrue(
+				empty($_ENV['DEDALO_LAST_ERROR']),
+				'expected running without errors. DEDALO_LAST_ERROR: ' .$_ENV['DEDALO_LAST_ERROR']
+			);
+
+			$type	= gettype($result);
+			$eq		= $type==='boolean';
+			$this->assertTrue(
+				$eq,
+				'expected true (type===boolean) and received type: ' .$type
+			);
+
+			$value	= true;
+			$eq		= $result===$value;
+			$this->assertTrue(
+				$eq,
+				'expected true and received: ' . json_encode($result)
+			);
+
+		// false
+			$search_object = json_decode('{
+				"component_path": [
+					"start",
+					"time"
+				],
+				"operator": "<=",
+				"q_parsed": "\'64699430400\'",
+				"type": "jsonb"
+			}');
+
+			$result = search::is_search_operator(
+				$search_object
+			);
+
+			$value	= false;
+			$eq		= $result===$value;
+			$this->assertTrue(
+				$eq,
+				'expected false and received: ' . json_encode($result)
+			);
+	}//end test_is_search_operator
+
+
+
+	/**
+	* TEST_get_table_alias_from_path
+	* @return void
+	*/
+	public function test_get_table_alias_from_path(): void {
+
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
+		// single
+			$sqo = json_decode('{
+				"section_tipo": [
+					"rsc170"
+				],
+				"limit": 10,
+				"offset": 0,
+				"filter": {
+					"$and": [
+						{
+							"q": [
+								{
+									"section_id": "1",
+									"section_tipo": "dd64",
+									"from_component_tipo": "rsc20"
+								}
+							],
+							"q_operator": null,
+							"path": [
+								{
+									"section_tipo": "rsc170",
+									"component_tipo": "rsc20",
+									"model": "component_publication",
+									"name": "Publication"
+								}
+							],
+							"type": "jsonb"
+						}
+					]
+				}
+			}');
+
+			$search = search::get_instance(
+				$sqo // object sqo
+			);
+			// $search->search();
+				// dump($search, ' search ++ '.to_string());
+
+			$path = json_decode('
+				[
+					{
+						"section_tipo": "dd1244",
+						"component_tipo": "dd1242",
+						"model": "component_input_text",
+						"name": "Tipo"
+					}
+				]
+			');
+
+			$result = $search->get_table_alias_from_path(
+				$path
+			);
+			// dump($result, ' result ++ '.to_string($result));
+
+			// sample expected
+				// rs170
+
+			$this->assertTrue(
+				empty($_ENV['DEDALO_LAST_ERROR']),
+				'expected running without errors. DEDALO_LAST_ERROR: ' .$_ENV['DEDALO_LAST_ERROR']
+			);
+
+			$type	= gettype($result);
+			$eq		= $type==='string';
+			$this->assertTrue(
+				$eq,
+				'expected true (type===string) and received type: ' .$type
+			);
+
+			$value = 'rs170';
+			$eq		= $result===$value;
+			$this->assertTrue(
+				$eq,
+				'expected true '.$value.' and received: ' . json_encode($result)
+			);
+
+		// multiple
+			$path = json_decode('
+				[
+					{
+						"section_tipo": "dd1244",
+						"component_tipo": "dd1242",
+						"model": "component_input_text",
+						"name": "Tipo"
+					},
+					{
+						"section_tipo": "dd1245",
+						"component_tipo": "dd1243",
+						"model": "component_input_text",
+						"name": "Tipo2"
+					}
+				]
+			');
+
+			$result = $search->get_table_alias_from_path(
+				$path
+			);
+			// dump($result, ' result 2  ++ '.to_string($result));
+
+			// sample expected
+				// dd1244_dd1242_dd1245
+
+			$value = 'dd1244_dd1242_dd1245';
+			$eq		= $result===$value;
+			$this->assertTrue(
+				$eq,
+				'expected true '.$value.' and received: ' . json_encode($result)
+			);
+	}//end test_get_table_alias_from_path
+
+
+
+	/**
+	* TEST_get_query_path
+	* @return void
+	*/
+	public function test_get_query_path(): void {
+
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
+
+		$tipo			= 'rsc85';
+		$section_tipo	= 'rsc194';
+
+		$result = search::get_query_path(
+			$tipo,
+			$section_tipo
+		);
+		// dump($result, ' result ++ '.to_string());
+
+		// sample expected
+			// [
+			// 	{
+			// 		"name": "Name",
+			// 		"model": "component_input_text",
+			// 		"section_tipo": "rsc194",
+			// 		"component_tipo": "rsc85"
+			// 	}
+			// ]
+
+		$this->assertTrue(
+			empty($_ENV['DEDALO_LAST_ERROR']),
+			'expected running without errors. DEDALO_LAST_ERROR: ' .$_ENV['DEDALO_LAST_ERROR']
+		);
+
+		$type	= gettype($result);
+		$eq		= $type==='array';
+		$this->assertTrue(
+			$eq,
+			'expected true (type===array) and received type: ' .$type
+		);
+
+		$value = json_decode('[
+			{
+				"name": "Name",
+				"model": "component_input_text",
+				"section_tipo": "rsc194",
+				"component_tipo": "rsc85"
+			}
+		]');
+		$eq		= $result==$value;
+		$this->assertTrue(
+			$eq,
+			'expected true and received: ' . json_encode($result)
+		);
+	}//end test_get_query_path
+
+
+
+	/**
+	* TEST_get_sql_joins
+	* @return void
+	*/
+	public function test_get_sql_joins(): void {
+
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
+		$sqo = json_decode('{
+		   "section_tipo": [
+				"rsc167","rsc176"
+			],
+			"limit": 10,
+			"offset": 0,
+			"order": [
+				{
+					"direction": "DESC",
+					"path": [
+						{
+							"name": "Publication",
+							"model": "component_publication",
+							"section_tipo": "rsc167",
+							"component_tipo": "rsc20"
+						},
+						{
+							"name": "Value",
+							"model": "component_input_text",
+							"section_tipo": "dd64",
+							"component_tipo": "dd62"
+						}
+					],
+					"component_path": [
+						"components",
+						"dd62",
+						"dato",
+						"lg-eng"
+					],
+					"type": "string"
+				}/
+			],
+			"select": [],
+			"full_count": false,
+			"parsed": true
+		}');
+
+		$search = search::get_instance(
+			$sqo // object sqo
+		);
+		$search->search();
+		$result = $search->get_sql_joins(); // only returns bool
+		// dump($result, ' result ++ '.to_string());
+
+		// sample expected
+			// '{rs167_rs20_dd64": "\n LEFT JOIN relations AS r_rs167_rs20_dd64 ON (mix.section_id=r_rs167_rs20_dd64.section_id AND mix.section_tipo=r_rs167_rs20_dd64.section_tipo AND r_rs167_rs20_dd64.from_component_tipo=\'rsc20\')\n LEFT JOIN matrix_dd AS rs167_rs20_dd64 ON (r_rs167_rs20_dd64.target_section_id=rs167_rs20_dd64.section_id AND r_rs167_rs20_dd64.target_section_tipo=rs167_rs20_dd64.section_tipo)}'
+
+		$this->assertTrue(
+			empty($_ENV['DEDALO_LAST_ERROR']),
+			'expected running without errors. DEDALO_LAST_ERROR: ' .$_ENV['DEDALO_LAST_ERROR']
+		);
+
+		$type	= gettype($result);
+		$eq		= $type==='string';
+		$this->assertTrue(
+			$eq,
+			'expected true (type===string) and received type: ' .$type
+		);
+
+		$value_compare  = 'LEFT JOIN relations AS r_rs167_rs20_dd64 ON (mix.section_id=r_rs167_rs20_dd64.section_id AND mix.section_tipo=r_rs167_rs20_dd64.section_tipo AND r_rs167_rs20_dd64.from_component_tipo=\'rsc20\')';
+		$value_compare .= PHP_EOL.' LEFT JOIN matrix_dd AS rs167_rs20_dd64 ON (r_rs167_rs20_dd64.target_section_id=rs167_rs20_dd64.section_id AND r_rs167_rs20_dd64.target_section_tipo=rs167_rs20_dd64.section_tipo)';
+
+		$eq		= trim($result)===$value_compare;
+		$this->assertTrue(
+			$eq,
+			'expected true trim($result)==="LEFT JOIN relations AS r_rs167_rs20_dd64 ON ..." and received: ' . json_encode($result)
+		);
+	}//end test_get_sql_joins
 
 
 
