@@ -125,17 +125,22 @@ export const get_content_data_player = function(options) {
 				video.setAttribute('tabindex', 0)
 				video.appendChild(source)
 
-			// subtitles track
-				const subtitles	= self.data.subtitles
-				if(subtitles && subtitles.subtitles_url) {
-					const subtitles_track = document.createElement('track')
-					subtitles_track.type	= 'text/vtt'
-					subtitles_track.label	= subtitles.lang_name
-					subtitles_track.srclang	= subtitles.lang
-					subtitles_track.src		= subtitles.subtitles_url
-					subtitles_track.default	= true
-					// Add new track to video
-						video.appendChild(subtitles_track)
+			// subtitles track.
+				if (tc_in) {
+					// Add only if its not a fragment
+					console.warn('Skip create subtitles track to fragment. tc_in: ', tc_in);
+				}else{
+					const subtitles	= self.data.subtitles
+					if(subtitles && subtitles.subtitles_url) {
+						const subtitles_track = document.createElement('track')
+						subtitles_track.type	= 'text/vtt'
+						subtitles_track.label	= subtitles.lang_name
+						subtitles_track.srclang	= subtitles.lang
+						subtitles_track.src		= subtitles.subtitles_url
+						subtitles_track.default	= true
+						// Add new track to video
+							video.appendChild(subtitles_track)
+					}
 				}
 
 			// append the video node to the instance
