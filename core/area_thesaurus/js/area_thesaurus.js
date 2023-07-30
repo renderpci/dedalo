@@ -348,6 +348,9 @@ area_thesaurus.prototype.navigate = async function(options) {
 			? options.navigation_history
 			: false
 
+	// loading
+		self.node.content_data.classList.add('loading')
+
 	// callback execute
 		if (callback) {
 			await callback()
@@ -358,7 +361,14 @@ area_thesaurus.prototype.navigate = async function(options) {
 		}
 
 	// refresh
-		await self.refresh()
+		await self.refresh({
+			build_autoload	: true,
+			render_level	: 'content',
+			destroy			: false
+		})
+
+	// loading
+		self.node.content_data.classList.remove('loading')
 
 
 	return true
