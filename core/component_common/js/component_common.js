@@ -463,8 +463,9 @@ component_common.prototype.save = async function(changed_data) {
 					}
 
 				// data_manager API request
+				// Using worker increments about 22%. Sample in master: from 208 to 255 ms
 					const api_response = await data_manager.request({
-						use_worker	: true,
+						use_worker	: false,
 						body		: rqo
 					})
 					// debug
