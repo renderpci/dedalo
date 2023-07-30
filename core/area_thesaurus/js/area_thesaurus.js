@@ -224,8 +224,7 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 				// // request_config_object
 				// 	self.request_config_object	= self.context.request_config.find(el => el.api_engine==='dedalo')
 
-			// // rqo build
-			// 	self.rqo = await self.build_rqo_show(self.request_config_object, 'get_data')
+			// rqo config
 				if(self.context.hierarchy_sections){
 					self.rqo.source.hierarchy_sections = self.context.hierarchy_sections
 				}
@@ -235,6 +234,9 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 				if(self.context.thesaurus_mode){
 					self.rqo.source.thesaurus_mode = self.context.thesaurus_mode
 				}
+				// limit
+				self.rqo.sqo.limit = self.rqo.sqo.limit || 30
+
 			// rqo regenerate
 				await generate_rqo()
 				console.log("AREA self.rqo after load:", clone(self.rqo));
@@ -272,7 +274,7 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 
 	// ts_object. Set from global var
 		self.ts_object = ts_object
-
+		self.ts_object.mode = self.mode
 
 	// debug
 		if(SHOW_DEBUG===true) {
@@ -357,6 +359,7 @@ area_thesaurus.prototype.navigate = async function(options) {
 
 	// refresh
 		await self.refresh()
+
 
 	return true
 }//end get_sections_selector_data

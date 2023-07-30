@@ -71,7 +71,7 @@ export const render_components_list = function(options) {
 				const section_bar = ui.create_dom_element({
 					element_type	: 'li',
 					class_name		: "section_bar_label",
-					inner_html		: element.label,
+					inner_html		: element.label || element.tipo,
 					parent			: list_container
 				})
 				if (path.length===0) {

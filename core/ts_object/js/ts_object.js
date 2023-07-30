@@ -49,6 +49,7 @@ export const ts_object = new function() {
 		// component_name Caller component name for relations
 		this.component_name = url_vars.component_name || null
 
+
 		return true
 	}//end init
 
@@ -232,6 +233,7 @@ export const ts_object = new function() {
 			const show_arrow_opened				= typeof options.show_arrow_opened!=='undefined' ? options.show_arrow_opened : false
 			const pagination					= options.pagination || {}
 			const wrap							= children_container.parentNode
+			const mode							= options.mode || 'list'
 			// const element_children_target	= ts_object.get_link_children_from_wrap(wrap)
 
 		// Clean children container before build contents
@@ -270,7 +272,8 @@ export const ts_object = new function() {
 					children_container_is_loaded	: children_container_is_loaded,
 					node_type						: node_type,
 					next_node_type					: next_node_type,
-					show_arrow_opened				: show_arrow_opened
+					show_arrow_opened				: show_arrow_opened,
+					mode							: mode
 				})
 
 			// pagination
@@ -1521,6 +1524,11 @@ export const ts_object = new function() {
 
 	/**
 	* PARSER_SEARCH_RESULT
+	* Recursive parser for results of the search
+	* Only used for search result, not for regular tree render
+	* @param object data
+	* @param HTMLElement main_div
+	* @param bool is_recursion
 	* @return bool
 	*/
 	this.current_main_div = null;
@@ -1529,120 +1537,64 @@ export const ts_object = new function() {
 
 		const self = this
 
-		/*
-		var data = [
-				    [
-				        {
-				            "section_tipo": "hierarchy1",
-				            "section_id": "1",
-				            "mode": "edit",
-				            "lang": "lg-spa",
-				            "ar_elements": [
-				                {
-				                    "type": "term",
-				                    "tipo": "hierarchy5",
-				                    "value": "hierarchy1"
-				                },
-				                {
-				                    "type": "link_children",
-				                    "tipo": "hierarchy45",
-				                    "value": "button show children"
-				                }
-				            ]
-				        },
-				        {
-				            "section_tipo": "ts1",
-				            "section_id": "65",
-				            "mode": "edit",
-				            "lang": "lg-spa",
-				            "ar_elements": [
-				                {
-				                    "type": "link",
-				                    "tipo": "hierarchy42",
-				                    "value": 0
-				                },
-				                {
-				                    "type": "term",
-				                    "tipo": "hierarchy25",
-				                    "value": "76"
-				                },
-				                {
-				                    "type": "icon",
-				                    "tipo": "hierarchy49",
-				                    "value": "CH"
-				                },
-				                {
-				                    "type": "link_children",
-				                    "tipo": "hierarchy49",
-				                    "value": "button show children"
-				                }
-				            ]
-				        },
-				        {
-				            "section_tipo": "ts1",
-				            "section_id": "73",
-				            "mode": "edit",
-				            "lang": "lg-spa",
-				            "ar_elements": [
-				                {
-				                    "type": "link",
-				                    "tipo": "hierarchy42",
-				                    "value": 0
-				                },
-				                {
-				                    "type": "term",
-				                    "tipo": "hierarchy25",
-				                    "value": "80"
-				                },
-				                {
-				                    "type": "icon",
-				                    "tipo": "hierarchy49",
-				                    "value": "CH"
-				                },
-				                {
-				                    "type": "link_children",
-				                    "tipo": "hierarchy49",
-				                    "value": "button show children"
-				                }
-				            ]
-				        },
-				        {
-				            "section_tipo": "ts1",
-				            "section_id": "74",
-				            "mode": "edit",
-				            "lang": "lg-spa",
-				            "ar_elements": [
-				                {
-				                    "type": "link",
-				                    "tipo": "hierarchy42",
-				                    "value": 0
-				                },
-				                {
-				                    "type": "term",
-				                    "tipo": "hierarchy25",
-				                    "value": "78"
-				                },
-				                {
-				                    "type": "icon",
-				                    "tipo": "hierarchy49",
-				                    "value": "CH"
-				                },
-				                {
-				                    "type": "link_children",
-				                    "tipo": "hierarchy49",
-				                    "value": "button show children"
-				                }
-				            ]
-				        }
-				    ]
-				]
-		*/
-		//if(is_recursion===false) {
-		//	ar_resolved = [] // reset array
-		//	if(SHOW_DEBUG===true) {
-		//		console.log("[ts_object.parse_search_result] data",data);
-		//	}
-		//}
+		// data sample:
+			// {
+			// 	"hierarchy1_66": {
+			// 		"section_tipo": "hierarchy1",
+			// 		"section_id": "66",
+			// 		"mode": "edit",
+			// 		"lang": "lg-eng",
+			// 		"is_descriptor": true,
+			// 		"is_indexable": false,
+			// 		"permissions_button_new": 3,
+			// 		"permissions_button_delete": 0,
+			// 		"permissions_indexation": 0,
+			// 		"permissions_structuration": 0,
+			// 		"ar_elements": [
+			// 			{
+			// 				"type": "term",
+			// 				"tipo": "hierarchy5",
+			// 				"value": "Spain",
+			// 				"model": "component_input_text"
+			// 			},
+			// 			{
+			// 				"type": "link_children",
+			// 				"tipo": "hierarchy45",
+			// 				"value": "button show children",
+			// 				"model": "component_relation_children"
+			// 			}
+			// 		],
+			// 		"heritage": {
+			// 			"es1_1": {
+			// 				"section_tipo": "es1",
+			// 				"section_id": "1",
+			// 				"mode": "edit",
+			// 				"lang": "lg-eng",
+			// 				"is_descriptor": true,
+			// 				"is_indexable": true,
+			// 				"permissions_button_new": 3,
+			// 				"permissions_button_delete": 3,
+			// 				"permissions_indexation": 3,
+			// 				"permissions_structuration": 0,
+			// 				"ar_elements": [
+			// 					{
+			// 						"type": "term",
+			// 						"tipo": "hierarchy25",
+			// 						"value": "Spain",
+			// 						"model": "component_input_text"
+			// 					},
+			// 					{
+			// 						"type": "icon",
+			// 						"tipo": "hierarchy28",
+			// 						"value": "NA",
+			// 						"model": "component_text_area"
+			// 					}, ...
+			// 				],
+			// 				"heritage": { ... }
+			// 			}
+			// 		}
+			// 	}
+			// }
 
 		// iterate data object
 		for (const key in data) {
@@ -1674,7 +1626,7 @@ export const ts_object = new function() {
 					if (main_div) {
 						// Clean main div (Clean previous nodes from root)
 						while (main_div.firstChild) {
-						    main_div.removeChild(main_div.firstChild);
+							main_div.removeChild(main_div.firstChild);
 						}
 					}else{
 						//console.log("[ts_object.parse_search_result] Error on locate main_div:  "+'.hierarchy_root_node[data-section_id="'+element.section_id+'"] > .children_container')
@@ -1691,15 +1643,20 @@ export const ts_object = new function() {
 				const ar_children_data = []
 					  ar_children_data.push(element)
 
-				const options = {
+				const render_options = {
 					clean_children_container		: false, // Elements are added to existing main_div instead replace
 					children_container_is_loaded	: false, // Set children container as loaded
 					show_arrow_opened				: false, // Set icon arrow as opened
-					target_section_tipo				: target_section_tipo // add always !
+					target_section_tipo				: target_section_tipo, // add always !
+					mode							: 'search'
 				}
 
-				// dom_parse_children (returns a promise)
-				ts_object.dom_parse_children(ar_children_data, main_div, options)
+				// render children. dom_parse_children (returns a promise)
+					ts_object.dom_parse_children(
+						ar_children_data,
+						main_div,
+						render_options
+					)
 			}
 
 			// des

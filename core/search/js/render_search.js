@@ -43,7 +43,7 @@ render_search.prototype.list = async function() {
 	const self = this
 
 	// wrapper base html bounds
-		const filter_wrapper = self.render_base()
+		const wrapper = self.render_base()
 
 	// components_list. render section component list [left]
 		const section_elements = await self.get_section_elements_context({
@@ -101,7 +101,7 @@ render_search.prototype.list = async function() {
 		})
 
 
-	return filter_wrapper
+	return wrapper
 }//end list
 
 
@@ -473,7 +473,7 @@ render_search.prototype.render_search_buttons = function(){
 			e.stopPropagation()
 			// always blur active component to force set dato (!)
 				document.activeElement.blur()
-			// exec search command
+			// exec search command (return promise resolved as bool)
 				self.exec_search()
 			// toggle filter container
 				toggle_search_panel(self) // toggle to open from default state close
@@ -835,7 +835,7 @@ const render_sections_selector = (self) => {
 			inner_html		: get_label.type || 'Type',
 			parent			: fragment
 		})
-		.addEventListener('click',function(e){
+		.addEventListener('click', function(e){
 			e.stopPropagation()
 			toggle_type(self)
 		})
@@ -860,9 +860,11 @@ const render_sections_selector = (self) => {
 				class_name 		: 'dd_input typology_selector',
 				parent			: wrapper_sections_selector
 			})
-			typology_selector.addEventListener('change',function(event){
-				const typology_id 	= event.target.value
+			typology_selector.addEventListener('change', function(event){
+				const typology_id = event.target.value
 				build_sections_check_boxes(self, typology_id, wrapper_sections_selector_ul)
+				// update_sections_list fire
+				event_manager.publish('update_sections_list_' + self.id)
 			})
 
 		// options for selector
@@ -891,7 +893,11 @@ const render_sections_selector = (self) => {
 			})
 
 		// trigger first selected value
-			build_sections_check_boxes(self, typology_selector.value, wrapper_sections_selector_ul)
+			build_sections_check_boxes(
+				self,
+				typology_selector.value,
+				wrapper_sections_selector_ul
+			)
 
 
 	return fragment
@@ -909,12 +915,12 @@ const render_sections_selector = (self) => {
 * @param int|string typology_id
 * @param HTMLElement parent
 */
-const build_sections_check_boxes =  (self, typology_id, parent) => {
+const build_sections_check_boxes = (self, typology_id, parent) => {
 
 	const ar_sections	= self.sections_selector_data.filter(item => item.typology_section_id===typology_id)
 	const ul			= parent
 
-	//reset the sqo sections
+	// reset the sqo sections
 		self.target_section_tipo.splice(0,self.target_section_tipo.length)
 
 	// clean wrapper_sections_selector_ul
@@ -955,7 +961,7 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 				})
 				ar_check_box.push(check_box)
 				check_box.checked = true
-				check_box.addEventListener('change', update_list)
+				check_box.addEventListener('change', update_sections_list)
 				label.prepend(check_box)
 		}//end for (let i = 0; i < ar_sections_len; i++)
 
@@ -987,13 +993,13 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 					ar_check_box.map(el => {
 						el.checked = this.checked
 					})
-					// fire update_list
-					update_list()
+					// fire update_sections_list
+					update_sections_list()
 				}
 		}//end if (ar_check_box.length>1)
 
 	// update sections components list (left)
-		async function update_list() {
+		async function update_sections_list() {
 
 			// reset and update var value
 				self.target_section_tipo = []
@@ -1024,7 +1030,10 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 
 			// loading remove
 				self.search_container_selector.classList.remove('loading')
-		}//end update_list
+		}//end update_sections_list
+
+	// event subscription. Fire update on each publication of update_sections_list_
+		event_manager.subscribe('update_sections_list_' + self.id, update_sections_list)
 
 
 	// Store selected value as cookie to recover later

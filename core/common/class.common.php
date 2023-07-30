@@ -3937,9 +3937,11 @@ abstract class common {
 					$ar_tipo_exclude_elements // exclude_elements
 				);
 
-			// Add common section info elements
-				foreach ($section_info_elements as $current_section_info_el) {
-					$ar_elements[] = $current_section_info_el;
+			// Add common section info elements (only if ar_elements if not empty)
+				if (!empty($ar_elements)) {
+					foreach ($section_info_elements as $current_section_info_el) {
+						$ar_elements[] = $current_section_info_el;
+					}
 				}
 
 			foreach ($ar_elements as $element_tipo) {
