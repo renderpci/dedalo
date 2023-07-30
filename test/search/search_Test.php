@@ -678,7 +678,6 @@ final class search_test extends TestCase {
 				$eq,
 				'expected true ($result===\'mix.section_id ASC\') and received: ' . json_encode($result)
 			);
-
 	}//end test_build_sql_query_order_default
 
 
@@ -1265,7 +1264,7 @@ final class search_test extends TestCase {
 		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
 		$sqo = json_decode('{
-		   "section_tipo": [
+			"section_tipo": [
 				"rsc167","rsc176"
 			],
 			"limit": 10,
@@ -1939,7 +1938,7 @@ final class search_test extends TestCase {
 		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
 		$sqo = json_decode('{
-		   "section_tipo": [
+			"section_tipo": [
 				"rsc167","rsc176"
 			],
 			"limit": 10,
@@ -1968,7 +1967,7 @@ final class search_test extends TestCase {
 						"lg-eng"
 					],
 					"type": "string"
-				}/
+				}
 			],
 			"select": [],
 			"full_count": false,

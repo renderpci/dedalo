@@ -206,9 +206,9 @@ const render_content_data = function(self) {
 						})
 
 					// hierarchy elements container
-						const elements_contanier = ui.create_dom_element({
+						const elements_container = ui.create_dom_element({
 							element_type	: 'div',
-							class_name		:'elements_contanier',
+							class_name		:'elements_container',
 							parent			: hierarchy_wrapper
 
 						})
@@ -221,7 +221,7 @@ const render_content_data = function(self) {
 													tipo	: hierarchy_sections[j].children_tipo,
 													type 	: 'link_children'
 												 },
-								parent			: elements_contanier
+								parent			: elements_container
 							})
 					// hierarchy children_container
 							ui.create_dom_element({
