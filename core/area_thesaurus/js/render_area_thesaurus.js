@@ -201,7 +201,7 @@ const render_content_data = function(self) {
 												section_tipo		: hierarchy_sections[j].section_tipo,
 												section_id			: hierarchy_sections[j].section_id,
 												target_section_tipo	: hierarchy_sections[j].target_section_tipo,
-											 },
+											  },
 							parent			: children_container
 						})
 
@@ -254,7 +254,7 @@ const render_content_data = function(self) {
 * GET_BUTTONS
 * @param object self
 * 	area instance
-* @return HTMLElement fragment
+* @return DocumentFragment fragment
 */
 const get_buttons = function(self) {
 
@@ -264,7 +264,8 @@ const get_buttons = function(self) {
 			return null;
 		}
 
-	const fragment = new DocumentFragment()
+	// DocumentFragment
+		const fragment = new DocumentFragment()
 
 	// buttons_container
 		const buttons_container = ui.create_dom_element({
@@ -329,8 +330,10 @@ const get_buttons = function(self) {
 	// tools
 		ui.add_tools(self, buttons_container)
 
+
 	return fragment
 }//end get_buttons
+
 
 
 // @license-end

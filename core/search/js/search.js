@@ -187,7 +187,7 @@ search.prototype.init = async function(options) {
 /**
 * BUILD
 * Load from API the user editing_preset (current state) and user_presets (stored states)
-* @return promise
+* @return bool
 */
 search.prototype.build = async function() {
 
@@ -360,6 +360,9 @@ search.prototype.get_section_id = function() {
 
 /**
 * BUILD_DOM_GROUP
+* @param object filter
+* @param HTMLElement dom_element
+* @param object options = {}
 * @return HTMLElement dom_group
 */
 search.prototype.ar_resolved_elements = []
@@ -440,7 +443,8 @@ search.prototype.build_dom_group = function(filter, dom_element, options={}) {
 /**
 * GET_COMPONENT_INSTANCE
 * Called by render.build_search_component to create the component instance
-* @return promise
+* @param object options
+* @return object component_instance
 */
 search.prototype.get_component_instance = async function(options) {
 
@@ -510,8 +514,12 @@ search.prototype.get_component_instance = async function(options) {
 
 
 // GET the SQO from DOM components
+
+
+
 /**
 * PARSE_DOM_TO_JSON_FILTER
+* @param object options
 * @return object json_query_obj
 */
 search.prototype.parse_dom_to_json_filter = function(options) {
@@ -564,6 +572,9 @@ search.prototype.parse_dom_to_json_filter = function(options) {
 
 /**
 * RECURSIVE_GROUPS
+* @param HTMLElement group_dom_obj
+* @param bool add_arguments
+* @param string mode
 * @return object query_group
 */
 search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode) {
@@ -653,7 +664,7 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 /**
 * GET_SEARCH_GROUP_OPERATOR
 * @param object search_group
-* @return string search_group_operator
+* @return string operator_value
 * 	Like '$and' | '$or'
 */
 search.prototype.get_search_group_operator = function(search_group) {
@@ -960,6 +971,7 @@ search.prototype.update_state = async function(options) {
 /**
 * TRACK_SHOW_PANEL
 * Manage cookies of user opened/closed panels
+* @param object options
 * @return bool true
 */
 search.prototype.track_show_panel = async function(options) {
@@ -1002,7 +1014,7 @@ search.prototype.track_show_panel = async function(options) {
 /**
 * GET_PANELS_STATUS
 * Get local DDBB record if exists and return result object
-* @return object | undefined
+* @return object|undefined panels_status
 */
 search.prototype.get_panels_status = async function() {
 
@@ -1077,6 +1089,7 @@ search.prototype.get_panels_status = async function() {
 /**
 * FILTER_IS_EMPTY
 * Check if filter is empty
+* @param object filter_obj
 * @return bool is_empty
 */
 search.prototype.filter_is_empty = function(filter_obj) {

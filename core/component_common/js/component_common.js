@@ -244,6 +244,7 @@ component_common.prototype.build = async function(autoload=false) {
 
 	// update instance properties from context:
 	// 	type, label, tools, value_separator, permissions
+	// Note that 'show_interface' is assigned here with criteria: self.context.properties.show_interface || self.request_config_object.show_interface
 		set_context_vars(self, self.context)
 
 	// subscribe to the observer events (important: only once)

@@ -1712,9 +1712,10 @@ export const ts_object = new function() {
 
 	/**
 	* BUILD_ORDER_FORM
-	* @return
+	* @param HTMLElement button_obj
+	* @return bool
 	*/
-	this.build_order_form = function(button_obj, evt) {
+	this.build_order_form = function(button_obj) {
 
 		// Remove previous inputs
 			const order_inputs	= document.querySelectorAll('input.input_order')
@@ -1752,6 +1753,7 @@ export const ts_object = new function() {
 			input.focus();
 			input.select();
 
+
 		return true
 	}//end build_order_form
 
@@ -1759,6 +1761,8 @@ export const ts_object = new function() {
 
 	/**
 	* SAVE_ORDER
+	* @param HTMLElement button_obj
+	* @param mixed new_value
 	* @return promise
 	*/
 	this.save_order = function(button_obj, new_value) {
@@ -1945,7 +1949,9 @@ export const ts_object = new function() {
 	/**
 	* GET_MY_PARENT_CONTAINER
 	* Returns current element (list_thesaurus_element) container of type inside his ts_element
-	* @return object | null
+	* @param HTMLElement button_obj
+	* @param string role
+	* @return HTMLElement|null parent_container
 	*/
 	this.get_my_parent_container = function(button_obj, role) {
 
@@ -1975,8 +1981,8 @@ export const ts_object = new function() {
 
 	/**
 	* GET_LINK_CHILDREN_FROM_WRAP
-	* @param DON node wrap
-	* @return HTMLElement link_children
+	* @param HTMLElement wrap
+	* @return HTMLElement|null link_children
 	*/
 	this.get_link_children_from_wrap = function(wrap) {
 
