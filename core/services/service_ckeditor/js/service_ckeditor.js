@@ -513,7 +513,7 @@ export const service_ckeditor = function() {
 		// set a timer to wait until user is writing
 		// when user stop set the dirty and change data
 		let timer;              // Timer identifier
-		const waitTime = 650;   // Wait time in milliseconds
+		const waitTime = 500;   // Wait time in milliseconds
 		// the editor send a event when the data is changed and change the is_dirty state
 		editor.model.document.on( 'change:data', () => {
 

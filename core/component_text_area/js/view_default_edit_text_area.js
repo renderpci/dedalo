@@ -285,7 +285,7 @@ const get_content_value = (i, current_value, self) => {
 					// .then(()=>{
 						value_container.classList.remove('loading')
 					// })
-				}, 75)
+				}, 35)
 
 			}else{
 
@@ -898,6 +898,12 @@ const get_custom_events = (self, i, text_editor) => {
 					// set the new tag at caret position in the text.
 					text_editor.set_content(node_tag_lang)
 					break;
+
+				// Tab
+				case evt.code==='Tab':
+					// prevent to jump cursor to another input
+					evt.preventDefault()
+				break;
 
 				// case evt.code==='Backspace' || evt.code==='Delete':
 				// 	console.log(options)
