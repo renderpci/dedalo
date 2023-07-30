@@ -733,7 +733,7 @@ export const render_ts_list = function(options) {
 									})
 									order_number.addEventListener('click', (e)=>{
 										e.stopPropagation()
-										self.build_order_form(order_number, e)
+										self.build_order_form(order_number)
 									})
 								}//if(is_descriptor===true && node_type!=='hierarchy_node')
 							}
