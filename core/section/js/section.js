@@ -18,11 +18,12 @@
 		push_browser_history,
 		build_autoload
 	} from '../../common/js/common.js'
+	import {ui} from '../../common/js/ui.js'
+	import {check_unsaved_data} from '../../component_common/js/component_common.js'
 	import {paginator} from '../../paginator/js/paginator.js'
 	import {search} from '../../search/js/search.js'
 	import {toggle_search_panel} from '../../search/js/render_search.js'
 	import {inspector} from '../../inspector/js/inspector.js'
-	import {ui} from '../../common/js/ui.js'
 	import {render_edit_section} from './render_edit_section.js'
 	import {render_list_section} from './render_list_section.js'
 	import {render_common_section} from './render_common_section.js'
@@ -1063,13 +1064,13 @@ section.prototype.navigate = async function(options) {
 			? options.navigation_history
 			: false
 
-	// unsaved_data check
-		if (window.unsaved_data===true) {
-			if (!confirm('section: '+get_label.discard_changes || 'Discard unsaved changes?')) {
-				return false
-			}
-			// reset unsaved_data state by the user
-			window.unsaved_data = false
+	// check_unsaved_data
+		const result = await check_unsaved_data({
+			confirm_msg : 'section: ' + (get_label.discard_changes || 'Discard unsaved changes?')
+		})
+		if (!result) {
+			// user selects 'cancel' in dialog confirm. Stop navigation
+			return false
 		}
 
 	// remove aux items
