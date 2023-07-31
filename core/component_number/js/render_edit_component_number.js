@@ -116,17 +116,24 @@ const get_content_value = (i, current_value, self) => {
 			parent			: content_value
 		})
 		input.step = self.get_steps()
-		input.addEventListener('keyup', function(e) {
-			// page unload event
-			keyup_handler(e, i, self)
-		})//end keyup
-		input.addEventListener('blur', function(e) {
-			// saves changed data
-			blur_handler(e, i, self)
-		})//end blur
-		input.addEventListener('click', function(e) {
-			e.stopPropagation()
-		})//end click
+		// keyup event
+			input.addEventListener('keyup', function(e) {
+				// page unload event
+				keyup_handler(e, i, self)
+			})//end keyup
+		// blur event
+			input.addEventListener('blur', function(e) {
+				// saves changed data
+				blur_handler(e, i, self)
+			})//end blur
+		// click event. Capture event propagation
+			input.addEventListener('click', (e) => {
+				e.stopPropagation()
+			})
+		// mousedown event. Capture event propagation
+			input.addEventListener('mousedown', (e) => {
+				e.stopPropagation()
+			})
 
 	// button remove
 		const mode				= self.mode
@@ -138,7 +145,8 @@ const get_content_value = (i, current_value, self) => {
 				class_name		: 'button remove hidden_button',
 				parent			: content_value
 			})
-			button_remove.addEventListener('mouseup', function() {
+			button_remove.addEventListener('mouseup', fn_remove_mouseup)
+			function fn_remove_mouseup() {
 				// force possible input change before remove
 				document.activeElement.blur()
 
@@ -154,7 +162,7 @@ const get_content_value = (i, current_value, self) => {
 					label			: current_value,
 					refresh			: true
 				})
-			})
+			}//end fn_remove_mouseup
 		}//end if((mode==='edit') && !is_inside_tool)
 
 

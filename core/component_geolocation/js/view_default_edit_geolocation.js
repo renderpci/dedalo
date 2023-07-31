@@ -145,14 +145,21 @@ export const get_content_value = (i, current_value, self) =>{
 					value			: current_value.lat,
 					parent			: inputs_container
 				})
-				lat_node.addEventListener('change', function() {
+				lat_node.addEventListener('change', fn_lat_change)
+				function fn_lat_change() {
 					// format and set value
 					self.current_value[i].lat = (lat_node.value.length>0)
 						? JSON.parse(lat_node.value)
 						: null
 					// move the map to current value
-					self.map.panTo(new L.LatLng(self.current_value[i].lat, self.current_value[i].lon));
-				})
+					self.map.panTo(new L.LatLng(
+						self.current_value[i].lat,
+						self.current_value[i].lon)
+					);
+					if(SHOW_DEBUG===true) {
+						console.log('changed latitude value to:', self.current_value[i].lat);
+					}
+				}//end fn_lat_change
 
 		// longitude
 			// label field longitude
@@ -171,14 +178,21 @@ export const get_content_value = (i, current_value, self) =>{
 					value			: current_value.lon,
 					parent			: inputs_container
 				})
-				lon_node.addEventListener('change', function() {
+				lon_node.addEventListener('change', fn_lon_change)
+				function fn_lon_change() {
 					// format and set value
 					self.current_value[i].lon = (lon_node.value.length>0)
 						? JSON.parse(lon_node.value)
 						: null
 					// move the map to current value
-					self.map.panTo(new L.LatLng(self.current_value[i].lat, self.current_value[i].lon));
-				})
+					self.map.panTo(
+						new L.LatLng(self.current_value[i].lat,
+						self.current_value[i].lon)
+					);
+					if(SHOW_DEBUG===true) {
+						console.log('changed longitude value to:', self.current_value[i].lon);
+					}
+				}//end fn_lon_change
 
 		// zoom
 			// label field zoom
@@ -197,14 +211,18 @@ export const get_content_value = (i, current_value, self) =>{
 					value			: current_value.zoom,
 					parent			: inputs_container
 				})
-				zoom_node.addEventListener('change', function() {
+				zoom_node.addEventListener('change', fn_zoom_change)
+				function fn_zoom_change() {
 					// format and set value
 					self.current_value[i].zoom = (zoom_node.value.length>0)
 						? JSON.parse(zoom_node.value)
 						: null
 					// zoom the map to current value
 					self.map.setZoom(self.current_value[i].zoom);
-				})
+					if(SHOW_DEBUG===true) {
+						console.log('changed zoom value to:', self.current_value[i].zoom);
+					}
+				}//end fn_zoom_change
 
 		// altitude
 			// label field altitude
@@ -223,12 +241,16 @@ export const get_content_value = (i, current_value, self) =>{
 					value			: current_value.alt,
 					parent			: inputs_container
 				})
-				alt_node.addEventListener('change', function() {
+				alt_node.addEventListener('change', fn_altitude_change)
+				function fn_altitude_change() {
 					// format and set value
 					self.current_value[i].alt = (alt_node.value.length>0)
 						? JSON.parse(alt_node.value)
 						: null
-				})
+					if(SHOW_DEBUG===true) {
+						console.log('changed altitude value to:', self.current_value[i].alt);
+					}
+				}
 
 		// refresh
 			const refresh_node = ui.create_dom_element({
@@ -269,7 +291,8 @@ export const get_content_value = (i, current_value, self) =>{
 				parent			: inputs_container,
 				class_name		: 'map_point'
 			})
-			add_point_node.addEventListener('click', function(e) {
+			add_point_node.addEventListener('click', fn_click_add_point)
+			function fn_click_add_point(e) {
 				e.stopPropagation()
 
 				const point = {
@@ -279,7 +302,7 @@ export const get_content_value = (i, current_value, self) =>{
 
 				// create the point in the coordinates
 					self.create_point(point)
-			})
+			}//end fn_click_add_point
 
 	// map container
 		const map_container = ui.create_dom_element({
@@ -305,7 +328,7 @@ export const get_content_value = (i, current_value, self) =>{
 						new ResizeObserver( function(){
 							setTimeout(function(){
 								self.refresh_map(self.map)
-							}, 3)
+							}, 5)
 						})
 						.observe( content_value )
 					})

@@ -141,7 +141,8 @@ const get_content_value = (i, current_value, self) => {
 			// 	}
 			// })
 		// change event
-			input_email.addEventListener('change',function(e) {
+			input_email.addEventListener('change', fn_change)
+			function fn_change(e) {
 				e.preventDefault();
 
 				// validate
@@ -174,9 +175,10 @@ const get_content_value = (i, current_value, self) => {
 					}else{
 						input_email.classList.add('mandatory')
 					}
-			})//end change
+			}//end change
 		// keyup event
-			input_email.addEventListener('keyup', async function(e) {
+			input_email.addEventListener('keyup', fn_keyup)
+			async function fn_keyup(e) {
 
 				// Enter key force to save changes
 					if (e.key==='Enter') {
@@ -199,7 +201,7 @@ const get_content_value = (i, current_value, self) => {
 					})
 				// fix instance changed_data
 					self.set_changed_data(changed_data_item)
-			})//end keyup
+			}//end keyup
 
 	// add buttons to the email row
 		if((mode==='edit') && !is_inside_tool) {
@@ -210,7 +212,8 @@ const get_content_value = (i, current_value, self) => {
 					class_name		: 'button remove hidden_button',
 					parent			: content_value
 				})
-				button_remove.addEventListener('mouseup', function(e) {
+				button_remove.addEventListener('mouseup', fn_remove)
+				function fn_remove(e) {
 					// force possible input change before remove
 					document.activeElement.blur()
 
@@ -226,7 +229,7 @@ const get_content_value = (i, current_value, self) => {
 					})
 					.then(()=>{
 					})
-				})
+				}//end fn_remove
 
 			// button email
 				const button_email = ui.create_dom_element({
@@ -235,6 +238,7 @@ const get_content_value = (i, current_value, self) => {
 					parent			: content_value
 				})
 				button_email.addEventListener('mouseup', function(e) {
+					e.stopPropagation()
 					self.send_email(current_value)
 				})
 		}

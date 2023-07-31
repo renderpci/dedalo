@@ -291,6 +291,7 @@ const get_content_value = (i, current_value, self) => {
 
 				// activate on user click
 
+				// click event
 				content_value.addEventListener('click', fn_click_init)
 				function fn_click_init(e) {
 					e.stopPropagation()
@@ -310,7 +311,11 @@ const get_content_value = (i, current_value, self) => {
 					})
 					// once only. Remove event to prevent duplicates
 					content_value.removeEventListener('click', fn_click_init)
-				}
+				}//end fn_click_init
+				// mousedown event. Capture event propagation
+				content_value.addEventListener('mousedown', (e) => {
+					e.stopPropagation()
+				})
 			}
 		}//end if (self.show_interface.read_only!==true)
 
@@ -988,8 +993,9 @@ const render_layer_selector = function(self, data_tag, tag_id, text_editor){
 			class_name		: 'button add',
 			parent			: fragment
 		})
-		add_layer.addEventListener("click", (e) =>{
+		add_layer.addEventListener('click', (e) =>{
 			e.preventDefault()
+			e.stopPropagation()
 
 			data_tag.data = '[' + data_tag.last_layer_id + ']'
 			const tag 	= self.build_view_tag_obj(data_tag, tag_id)
@@ -1011,8 +1017,9 @@ const render_layer_selector = function(self, data_tag, tag_id, text_editor){
 			class_name		: 'button close',
 			parent			: fragment
 		})
-		close.addEventListener("click", (e) =>{
+		close.addEventListener('click', (e) =>{
 			e.preventDefault()
+			e.stopPropagation()
 			layer_selector.remove()
 		})
 
@@ -1311,8 +1318,10 @@ const render_note = async function(options) {
 			// When the user click on remove button, two actions happens:
 			// first, delete the section in the server
 			// second, remove the tag from the text_area
-			button_remove.addEventListener('click', function(e){
+			button_remove.addEventListener('click', fn_remove)
+			function fn_remove(e){
 				e.stopPropagation()
+
 				// ask to user if really want delete the note
 				const delete_label = get_label.are_you_sure_to_delete_note || 'Are you sure you want to delete this note?' +' '+ view_tag.tag_id
 				// if yes, delete the note section in the server
@@ -1347,7 +1356,7 @@ const render_note = async function(options) {
 							modal.remove()
 					})
 				}
-			})
+			}//end fn_remove
 
 	// save editor changes to prevent conflicts with modal components changes
 		// text_editor.save()

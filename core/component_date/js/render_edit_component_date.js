@@ -230,18 +230,22 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 			placeholder		: self.get_placeholder_value(),
 			parent			: input_wrap
 		})
-		input.addEventListener('focus', function() {
-			// force activate on input focus (tabulating case)
-			if (!self.active) {
-				ui.component.activate(self)
-			}
-		})
-		input.addEventListener('keyup', function(e) {
-			keyup_handler({
-				e : e
+		// focus event
+			input.addEventListener('focus', function() {
+				// force activate on input focus (tabulating case)
+				if (!self.active) {
+					ui.component.activate(self)
+				}
 			})
-		})
-		input.addEventListener('change', function() {
+		// keyup event
+			input.addEventListener('keyup', function(e) {
+				keyup_handler({
+					e : e
+				})
+			})
+		// change event
+			input.addEventListener('change', fn_change)
+			function fn_change() {
 
 			return change_handler({
 				self		: self,
@@ -314,11 +318,15 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 				// 		refresh			: false
 				// 	})
 				// }
-		})
-		// click event
-		input.addEventListener('click', function(e) {
-			e.stopPropagation()
-		})
+		}//end fn_change
+		// click event. Capture event propagation
+			input.addEventListener('click', (e) => {
+				e.stopPropagation()
+			})
+		// mousedown event. Capture event propagation
+			input.addEventListener('mousedown', (e) => {
+				e.stopPropagation()
+			})
 
 	// button_calendar
 		const button_calendar = ui.create_dom_element({
@@ -326,7 +334,8 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 			class_name		: 'input-group-addon button calendar hidden_button ',
 			parent			: input_wrap
 		})
-		button_calendar.addEventListener('mouseup', function() {
+		button_calendar.addEventListener('mouseup', fn_calendar_mouseup)
+		function fn_calendar_mouseup() {
 			const dd_date_format = page_globals.DEDALO_DATE_ORDER  || 'dmy'
 
 			const ar_date_format = (dd_date_format === 'dmy')
@@ -352,7 +361,7 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 					}
 				})
 				datePicker.open()
-		})
+		}//end fn_calendar_mouseup
 
 
 	return input_wrap
