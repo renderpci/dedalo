@@ -70,7 +70,7 @@ export const events_subscription = function() {
 		// )
 		// function fn_deactivate (component) {
 		// 	if ( component.id === self.id ) {
-		// 		console.log('self.changed_data:', self.changed_data);
+		// 		console.log('self.data.changed_data:', self.data.changed_data);
 		// 		// self.save()
 		// 		return
 		// 	}

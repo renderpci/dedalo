@@ -364,7 +364,7 @@ export const init_events_subscription = function(self) {
 * SAVE
 * Exec a save action calling the API
 * Returns the updated data after save (useful to re-assign data value array keys)
-* @param array changed_data
+* @param array new_changed_data
 * [{
 * 	action : "update",
 * 	key : 0,
@@ -372,18 +372,19 @@ export const init_events_subscription = function(self) {
 * }]
 * @return promise save_promise
 */
-component_common.prototype.save = async function(changed_data) {
+component_common.prototype.save = async function(new_changed_data) {
 
 	const self = this
 
-	// fallback to self.changed_data if not received
-		changed_data = changed_data || self.changed_data
+	// fallback to self.data.changed_data if not received
+		const changed_data = new_changed_data || self.data.changed_data
 
 	// check changed_data format
 		if (typeof changed_data==='undefined' || !Array.isArray(changed_data) || changed_data.length<1) {
 			if(SHOW_DEBUG===true) {
 				console.warn("Invalid changed_data [stop save]:", changed_data)
 				console.trace()
+				console.log('self:', self);
 			}
 			const msg = "Ignored save. changed_data is undefined or empty!"
 			// console.error('msg:', msg);
