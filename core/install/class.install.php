@@ -539,7 +539,10 @@ class install extends common {
 			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
 			if ($exec) {
 				$command_res = shell_exec($command);
-				debug_log(__METHOD__." Exec response 1 (shell_exec): ".json_encode($command_res), logger::DEBUG);
+				debug_log(__METHOD__
+					." Exec response 1 (shell_exec): ".json_encode($command_res)
+					, logger::DEBUG
+				);
 			}
 
 		// terminal command psql copy data from file 'dedalo4_install.pgsql'
@@ -549,9 +552,17 @@ class install extends common {
 				$command_res = shell_exec($command);
 				debug_log(__METHOD__." Exec response 2 (shell_exec): ".json_encode($command_res), logger::DEBUG);
 				if (empty($command_res)) {
-					$response->msg = 'Error. Database import failed! Verify your .pgpass file';
+
+					$response->msg = 'Error. Database import failed! Verify your .pgpass file and look for errors in php error file. PHP get_current_user: ' .get_current_user() .' - PHP whoami: '.trim(shell_exec('whoami'));
 					trigger_error($response->msg);
-					debug_log(__METHOD__." -> failed command: ".PHP_EOL.$command, logger::ERROR);
+					debug_log(__METHOD__
+						." -> failed command execution ".PHP_EOL
+						.' command: ' .$command .PHP_EOL
+						.' php user get_current_user: ' .  get_current_user() .PHP_EOL
+						.' php user whoami: ' 			.  trim(shell_exec('whoami')) .PHP_EOL
+						, logger::ERROR
+					);
+
 					return $response;
 				}
 			}
