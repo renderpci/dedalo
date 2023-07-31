@@ -549,22 +549,50 @@ class install extends common {
 			$command = DB_BIN_PATH.'psql -d '.DEDALO_DATABASE_CONN.' -U '.DEDALO_USERNAME_CONN.' '.$config->host_line.' '.$config->port_line.' --echo-errors --file "'.$uncompressed_file.'"';
 			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
 			if ($exec) {
-				$command_res = shell_exec($command);
-				debug_log(__METHOD__." Exec response 2 (shell_exec): ".json_encode($command_res), logger::DEBUG);
+
+				// $command_res = shell_exec($command);
+				// debug_log(__METHOD__." Exec response 2 (shell_exec): ".json_encode($command_res), logger::DEBUG);
+
+				$output = null;
+				$result_code = null;
+				exec($command, $output, $result_code);
+				$command_res = $output;
+				debug_log(__METHOD__
+					." Exec response 2 (exec) " . PHP_EOL
+					.' output: ' 		. to_string($output) . PHP_EOL
+					.' result_code: ' 	. to_string($result_code) . PHP_EOL
+					, logger::WARNING
+				);
+
 				if (empty($command_res)) {
 
+					$php_whoami					= trim(shell_exec('whoami'));
+					$php_get_current_user		= get_current_user();
+					$user_home_dir				= trim(shell_exec('echo $HOME'));
+					$pgpass_file_path			= $user_home_dir.'/.pgpass';
+					$pgpass_file_exists			= file_exists($pgpass_file_path);
+					$pgpass_file_permissions	= $pgpass_file_exists
+						? substr(sprintf('%o', fileperms($pgpass_file_path)), -4)
+						: 'file not found!';
+
 					$response->msg = 'Error. Database import failed! Verify your .pgpass file and look for errors in php error file. '
-						.' - PHP get_current_user: ' . get_current_user()
-						.' - PHP whoami: ' . trim(shell_exec('whoami'))
-						.' - PHP home: ' . trim(shell_exec('echo $HOME'));
+						.' - PHP get_current_user: '		. $php_get_current_user
+						.' - PHP whoami: '					. $php_whoami
+						.' - PHP home: '					. $user_home_dir
+						.' - .pgpass file permissions: '	. $pgpass_file_permissions;
 					trigger_error($response->msg);
+
 					debug_log(__METHOD__
 						." -> failed command execution ".PHP_EOL
-						.' command: ' .$command .PHP_EOL
-						.' PHP user get_current_user: ' . get_current_user() .PHP_EOL
-						.' PHP user whoami: ' 			. trim(shell_exec('whoami')) .PHP_EOL
-						.' PHP $HOME dir: ' 			. trim(shell_exec('echo $HOME')) .PHP_EOL
-
+						.' command: '					. $command .PHP_EOL
+						.' command output: '			. to_string($output) .PHP_EOL
+						.' command result_code: '		. to_string($result_code) .PHP_EOL
+						.' PHP user get_current_user: ' . $php_get_current_user . PHP_EOL
+						.' PHP user whoami: '			. $php_whoami . PHP_EOL
+						.' PHP $HOME dir: '				. $user_home_dir . PHP_EOL
+						.' .pgpass file path: '			. $pgpass_file_path . PHP_EOL
+						.' .pgpass file exists: '		. json_encode($pgpass_file_exists) . PHP_EOL
+						.' .pgpass file permissions: '	. $pgpass_file_permissions . PHP_EOL
 						, logger::ERROR
 					);
 
