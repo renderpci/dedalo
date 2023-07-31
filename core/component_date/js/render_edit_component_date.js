@@ -28,7 +28,7 @@ export const render_edit_component_date = function() {
 * EDIT
 * Render node for use in edit
 * @param object options
-* @return HTMLElement|null
+* @return HTMLElement
 */
 render_edit_component_date.prototype.edit = async function(options) {
 
@@ -57,9 +57,6 @@ render_edit_component_date.prototype.edit = async function(options) {
 		default:
 			return view_default_edit_date.render(self, options)
 	}
-
-
-	return null
 }//end edit
 
 

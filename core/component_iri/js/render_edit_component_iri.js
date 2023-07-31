@@ -29,7 +29,7 @@ export const render_edit_component_iri = function() {
 * EDIT
 * Render node for use in current mode
 * @param object options
-* @return HTMLElement|null
+* @return HTMLElement wrapper
 */
 render_edit_component_iri.prototype.edit = async function(options) {
 

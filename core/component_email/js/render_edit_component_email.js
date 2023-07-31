@@ -27,7 +27,7 @@ export const render_edit_component_email = function() {
 * EDIT
 * Render node for use in edit
 * @param object options
-* @return HTMLElement|null
+* @return HTMLElement wrapper
 */
 render_edit_component_email.prototype.edit = async function(options) {
 
@@ -56,14 +56,13 @@ render_edit_component_email.prototype.edit = async function(options) {
 		default:
 			return view_default_edit_email.render(self, options)
 	}
-
-	return null
 }//end edit
 
 
 
 /**
 * GET_CONTENT_DATA
+* @param object self
 * @return HTMLElement content_data
 */
 export const get_content_data = function(self) {
@@ -94,6 +93,9 @@ export const get_content_data = function(self) {
 
 /**
 * GET_CONTENT_VALUE
+* @param int i
+* @param string current_value
+* @param object self
 * @return HTMLElement content_value
 */
 const get_content_value = (i, current_value, self) => {
