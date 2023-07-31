@@ -1028,15 +1028,6 @@ component_portal.prototype.navigate = async function(options) {
 	// options
 		const callback = options.callback
 
-	// unsaved_data check
-		// if (window.unsaved_data===true) {
-		// 	if (!confirm(get_label.discard_changes || 'Discard unsaved changes?')) {
-		// 		return false
-		// 	}else{
-		// 		window.unsaved_data===false
-		// 	}
-		// }
-
 	// callback execute
 		if (callback) {
 			await callback()
