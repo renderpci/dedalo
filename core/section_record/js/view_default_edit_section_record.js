@@ -59,14 +59,16 @@ view_default_edit_section_record.render = async function(self, options) {
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			wrapper.addEventListener("click", function(e){
+			wrapper.addEventListener('click', fn_click_debug)
+			function fn_click_debug(e){
+				e.stopPropagation()
 				if (e.altKey) {
 					e.stopPropagation()
 					e.preventDefault()
 					// common.render_tree_data(instance, document.getElementById('debug'))
 					console.log("/// selected instance:", self);
 				}
-			})
+			}//end fn_click_debug
 			// wrapper.classList.add('_'+self.id)
 		}
 

@@ -206,7 +206,8 @@ export const ui = {
 					}
 
 				// event click . Activate component on event
-					wrapper.addEventListener('mousedown', (e) => {
+					wrapper.addEventListener('mousedown', fn_wrapper_mousedown)
+					function fn_wrapper_mousedown(e) {
 						e.stopPropagation()
 						ui.component.activate(instance)
 
@@ -229,7 +230,7 @@ export const ui = {
 								return
 							}
 						}
-					})
+					}//end fn_wrapper_mousedown
 
 			// label. If node label received, it is placed at first. Else a new one will be built from scratch (default)
 				if (options.label===null) { //  || options.label===null

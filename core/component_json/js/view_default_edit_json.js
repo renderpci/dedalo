@@ -126,14 +126,15 @@ const get_content_value = (key, current_value, self) => {
 						inner_html		: get_label.save || 'Save',
 						parent			: content_value
 					})
-					button_save.addEventListener('click', function(e) {
+					button_save.addEventListener('click', fn_save)
+					function fn_save(e) {
 						e.stopPropagation()
 
 						self.save_sequence(editor)
 						.then(function(){
 							editor.frame.classList.remove('isDirty')
 						})
-					})
+					}//end fn_save
 
 				// validated. Changed to false after init parse
 				let is_first_validation = true
@@ -263,7 +264,8 @@ const get_buttons = (self) => {
 			class_name	 : 'button full_screen',
 			parent 		 : fragment
 		})
-		button_fullscreen.addEventListener('click', function() {
+		button_fullscreen.addEventListener('click', function(e) {
+			e.stopPropagation()
 			ui.enter_fullscreen(self.node)
 		})
 
@@ -274,7 +276,8 @@ const get_buttons = (self) => {
 			title 		 : "Download data",
 			parent 		 : fragment
 		})
-		button_download.addEventListener("click", function() {
+		button_download.addEventListener('click', function(e) {
+			e.stopPropagation()
 			const export_obj  = self.data.value[0]
 			const export_name = self.id
 			download_object_as_json(export_obj, export_name)

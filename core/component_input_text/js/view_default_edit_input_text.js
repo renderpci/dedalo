@@ -137,8 +137,12 @@ const get_content_value = (i, current_value, self) => {
 			input.addEventListener('keyup', function(e) {
 				keyup_handler(e, i, self)
 			})
-		// click event
-			input.addEventListener('click', function(e) {
+		// click event. Capture event propagation
+			input.addEventListener('click', (e) => {
+				e.stopPropagation()
+			})
+		// mousedown event. Capture event propagation
+			input.addEventListener('mousedown', (e) => {
 				e.stopPropagation()
 			})
 		// blur event

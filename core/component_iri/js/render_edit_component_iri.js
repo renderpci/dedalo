@@ -139,14 +139,14 @@ const get_content_value = (i, current_value, self) => {
 					parent			: content_value
 				})
 				//end change
-				input_title.addEventListener('keyup', function(e) {
-
+				input_title.addEventListener('keyup', fn_keyup)
+				function fn_keyup(e) {
 					// update property title
 						current_value.title = input_title.value
 
 					// update_value(self, i, current_value)
 						self.keyup_handler(e, i, current_value, self)
-				})//end keyup
+				}//end keyup
 		}// end if(use_title)
 
 
@@ -160,7 +160,8 @@ const get_content_value = (i, current_value, self) => {
 			value			: iri,
 			parent			: content_value
 		})
-		input_iri.addEventListener('keyup', function(e) {
+		input_iri.addEventListener('keyup', fn_keyup)
+		function fn_keyup(e) {
 
 			// check if url is valid
 				const regex = /(https?)?:\/\/.*\..+/;
@@ -181,7 +182,7 @@ const get_content_value = (i, current_value, self) => {
 
 			// update_value(self, i, current_value)
 				self.keyup_handler(e, i, current_value, self)
-		})//end keyup
+		}//end keyup
 
 	// active
 		const use_active_check = typeof(self.context.properties.use_active_check) !== 'undefined'
@@ -199,17 +200,17 @@ const get_content_value = (i, current_value, self) => {
 				class_name		: 'input_iri_active',
 				parent			: content_value
 			})
-
 			input_iri_active.checked = dataframe_data
-
-			input_iri_active.addEventListener('change', async function(e){
+			input_iri_active.addEventListener('change', fn_chnage)
+			async function fn_chnage(e){
 
 				// add style modified to wrapper node
 					if (!self.node.classList.contains('modified')) {
 						self.node.classList.add('modified')
 					}
 
-				current_value.dataframe = input_iri_active.checked
+				// checked set for dataframe
+					current_value.dataframe = input_iri_active.checked
 
 				// set_changed_data
 					const changed_data_item = Object.freeze({
@@ -217,18 +218,16 @@ const get_content_value = (i, current_value, self) => {
 						key		: i,
 						value	: current_value
 					})
-						console.log("--> fixed changed_data_item:", changed_data_item);
 					// fix instance changed_data
 					await self.set_changed_data(changed_data_item)
 
 				// force to save on every change
 					const changed_data = self.data.changed_data || []
-						console.log("--> self.data.changed_data:",self.data.changed_data);
 					self.change_value({
 						changed_data	: changed_data,
 						refresh			: false
 					})
-		})//end change event
+			}//end change event
 		}
 
 		const active_check_class = (use_active_check) ? 'active_check' : ''

@@ -86,6 +86,7 @@ export const render_tree = (options) => {
 	// mousedown. document. do global click action on the document body
 		document.addEventListener('mousedown', fn_mousedown)
 		function fn_mousedown(e) {
+			e.stopPropagation()
 			// if the menu is inactive nothing to do
 			if(self.menu_active===false) {
 				return false
@@ -94,7 +95,7 @@ export const render_tree = (options) => {
 			if (e.target.tagName.toLowerCase()!=='a') {
 				close_all_drop_menu(self)
 			}
-		}
+		}//end fn_mousedown
 
 	// keydown. set the escape key to close al menu nodes
 		document.addEventListener('keydown', fn_keydown)
