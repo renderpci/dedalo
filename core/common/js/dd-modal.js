@@ -1,6 +1,11 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 
 
+
+// imports
+	import {check_unsaved_data} from '../../component_common/js/component_common.js'
+
+
 if (typeof HTMLElement!=='undefined') {
 class DDModal extends HTMLElement {
 	constructor() {
@@ -352,9 +357,9 @@ class DDModal extends HTMLElement {
 		this._modalVisible = true;
 		// this._modal.style.display = 'block';
 		this._modal.classList.add('modal_show')
-		this._modal.classList.add("modal_small")
-		if (this._modal.classList.contains("modal_big")) {
-			this._modal.classList.remove("modal_big")
+		this._modal.classList.add('modal_small')
+		if (this._modal.classList.contains('modal_big')) {
+			this._modal.classList.remove('modal_big')
 		}
 	}
 	_hideModal(e) {
@@ -376,7 +381,7 @@ class DDModal extends HTMLElement {
 
 				// already minified. un-minimize
 
-				this.shadowRoot.querySelector(".modal").classList.remove('mini')
+				this.shadowRoot.querySelector('.modal').classList.remove('mini')
 				// this.shadowRoot.querySelector(".header").classList.add('mini')
 				const header = this.querySelector("[slot='header']")
 				header.classList.remove('mini')
@@ -391,7 +396,7 @@ class DDModal extends HTMLElement {
 
 				// minimize
 
-				this.shadowRoot.querySelector(".modal").classList.add('mini')
+				this.shadowRoot.querySelector('.modal').classList.add('mini')
 				// this.shadowRoot.querySelector(".header").classList.add('mini')
 				const header = this.querySelector("[slot='header']")
 				header.classList.add('mini')
@@ -419,38 +424,49 @@ class DDModal extends HTMLElement {
 			}
 		}
 	}
-	_closeModal() {
+	async _closeModal() {
 
 		if (this.mini) {
 			return true
 		}
 
 		// unsaved_data check
-			if (window.unsaved_data===true) {
+			/* OLD WAY
+				if (window.unsaved_data===true) {
 
-				// check if the modified components is inside the modal
-					let unsaved_component_data = false
-					const components = this.querySelectorAll('.wrapper_component')
-					if (components) {
-						const components_length = components.length
-						for (let i = 0; i < components_length; i++) {
-							const item = components[i]
-							if (item.classList.contains('modified')) {
-								unsaved_component_data = true
-								break
+					// check if the modified components is inside the modal
+						let unsaved_component_data = false
+						const components = this.querySelectorAll('.wrapper_component')
+						if (components) {
+							const components_length = components.length
+							for (let i = 0; i < components_length; i++) {
+								const item = components[i]
+								if (item.classList.contains('modified')) {
+									unsaved_component_data = true
+									break
+								}
 							}
 						}
-					}
 
-				// if true, confirm exit by user
-					if (unsaved_component_data===true) {
-						if (!confirm(get_label.discard_changes || 'Discard unsaved changes?')) {
-							return false
-						}else{
-							window.unsaved_data===false
+					// if true, confirm exit by user
+						if (unsaved_component_data===true) {
+							if (!confirm(get_label.discard_changes || 'Discard unsaved changes?')) {
+								return false
+							}else{
+								window.unsaved_data===false
+							}
 						}
-					}
-			}
+				}
+				*/
+			// check_unsaved_data
+				const result = await check_unsaved_data({
+					confirm_msg : 'dd-modal: ' + (get_label.discard_changes || 'Discard unsaved changes?')
+				})
+				if (!result) {
+					// user selects 'cancel' in dialog confirm. Stop navigation
+					return false
+				}
+
 
 		this._modalVisible = false;
 		this._modal.style.display = 'none';
@@ -496,6 +512,7 @@ class DDModal extends HTMLElement {
 		return true
 	}
 	close() {
+		// alias of _closeModal
 		return this._closeModal()
 	}
 	/**

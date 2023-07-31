@@ -11,6 +11,7 @@
 	} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
+	import {check_unsaved_data} from '../../component_common/js/component_common.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {set_element_css} from '../../page/js/css.js'
 	// import {get_instance, delete_instance} from '../../common/js/instances.js'
@@ -743,6 +744,11 @@ export const ui = {
 
 			// publish activate_component event
 				event_manager.publish('activate_component', component)
+
+			// unsaved_data case
+			// This allow catch page mousedown event (inside any component) and check for unsaved components
+			// usually happens in component_text_area editions because the delay (500 ms) to set as changed
+				check_unsaved_data()
 
 				// console.log('ui Activating component:', component.id);
 

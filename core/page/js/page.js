@@ -22,6 +22,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {get_instance} from '../../common/js/instances.js'
 	import {common, push_browser_history} from '../../common/js/common.js'
+	import {check_unsaved_data} from '../../component_common/js/component_common.js'
 
 	// import {load_tool} from '../../../tools/tool_common/js/tool_common.js'
 	// import '../../common/js/components_list.js' // launch preload all components files in parallel
@@ -94,18 +95,19 @@ page.prototype.init = async function(options) {
 			if(SHOW_DEVELOPER===true) {
 				dd_console(`// page user_navigation received user_navigation_options`, 'DEBUG', user_navigation_options)
 			}
+
 			// options
 				const source			= user_navigation_options.source
 				const sqo				= user_navigation_options.sqo || null
 				const event_in_history	= user_navigation_options.event_in_history || false
 
-			// unsaved_data check
-				if (window.unsaved_data===true) {
-					if (!confirm('page: ' + get_label.discard_changes || 'Discard unsaved changes?')) {
-						return false
-					}
-					// reset unsaved_data state by the user
-					window.unsaved_data = false
+			// check_unsaved_data
+				const result = await check_unsaved_data({
+					confirm_msg : 'page: ' + (get_label.discard_changes || 'Discard unsaved changes?')
+				})
+				if (!result) {
+					// user selects 'cancel' in dialog confirm. Stop navigation
+					return false
 				}
 
 			// check valid vars
@@ -535,18 +537,29 @@ page.prototype.add_events = function() {
 		function beforeUnloadListener(event) {
 			// event.preventDefault();
 
-			// document.activeElement.blur()
-			if (typeof window.unsaved_data==='undefined' || window.unsaved_data!==true) {
-				// console.log('window.unsaved_data:', window.unsaved_data);
-				// removeEventListener('beforeunload', beforeUnloadListener, {capture: true})
-				return false
-			}
+			const unsaved_data = typeof window.unsaved_data!=='undefined'
+				? window.unsaved_data
+				: false
+
+			// unsaved_data case
+			// Check for unsaved components, usually happens in component_text_area editions because
+			// the delay (500 ms) to set as changed
+				if (unsaved_data===true) {
+					// check_unsaved_data
+					check_unsaved_data()
+				}
+
+			// unsaved_data is false. Nothing to worry about
+				if (unsaved_data!==true) {
+					// console.log('window.unsaved_data:', window.unsaved_data);
+					// removeEventListener('beforeunload', beforeUnloadListener, {capture: true})
+					return false
+				}
 
 			// set event.returnValue value to force browser standard message (unable to customize)
 			// like : 'Changes that you made may not be saved.'
-			event.returnValue = true
-			// return event.returnValue = get_label.discard_changes || 'Discard unsaved changes?';
-		}
+				event.returnValue = true
+		}//end beforeUnloadListener
 
 	// keydown events
 		document.addEventListener('keydown', fn_keydown)
@@ -614,13 +627,13 @@ page.prototype.add_events = function() {
 			}//end switch
 		}//end fn_keydown
 
-	// page click
+	// page click/mousedown
 		document.addEventListener('mousedown', fn_deactivate_components)
 		function fn_deactivate_components(e) {
 			e.stopPropagation()
 
-			// click on scrollbar case
-				const is_descendant_of_root = e.target.parentElement !== null;
+			// click on scrollbar case: capture event
+				const is_descendant_of_root = (e.target.parentElement !== null);
 				if (is_descendant_of_root===false) {
 					return
 				}
@@ -630,24 +643,30 @@ page.prototype.add_events = function() {
 				const component_instance = page_globals.component_active
 
 				// lock_component. launch worker
-				if (DEDALO_LOCK_COMPONENTS===true && component_instance.mode==='edit') {
-					data_manager.request({
-						use_worker	: true,
-						body		: {
-							dd_api	: 'dd_utils_api',
-							action	: 'update_lock_components_state',
-							options	: {
-								component_tipo	: component_instance.tipo,
-								section_tipo	: component_instance.section_tipo,
-								section_id		: component_instance.section_id,
-								action			: 'blur' // delete_user_section_locks | blur | focus
+					if (DEDALO_LOCK_COMPONENTS===true && component_instance.mode==='edit') {
+						data_manager.request({
+							use_worker	: true,
+							body		: {
+								dd_api	: 'dd_utils_api',
+								action	: 'update_lock_components_state',
+								options	: {
+									component_tipo	: component_instance.tipo,
+									section_tipo	: component_instance.section_tipo,
+									section_id		: component_instance.section_id,
+									action			: 'blur' // delete_user_section_locks | blur | focus
+								}
 							}
-						}
-					})
-				}
+						})
+					}
 
 				// deactivate
 					ui.component.deactivate(component_instance)
+			}else{
+
+				// unsaved_data case
+				// This allow catch page mousedown event (outside any component) and check for unsaved components
+				// usually happens in component_text_area editions because the delay (500 ms) to set as changed
+					check_unsaved_data()
 			}
 		}//end fn_deactivate_components
 }//end add_events

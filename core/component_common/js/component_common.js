@@ -1279,4 +1279,82 @@ component_common.prototype.set_changed_data = function(changed_data_item) {
 
 
 
+/**
+* CHECK_UNSAVED_DATA
+* If window.unsaved_data===true, iterate all component instances
+* searching unsaved data to force save it
+* Customized confirm message is enable when is not possible to save the changed component
+* @see page.js beforeunload event
+* @see page.js mousedown event
+* @see page.js user_navigation event
+* @see section.js navigate method
+* @see dd-modal.js _closeModal method
+* @see ui component activate method
+* @param object options
+* {
+* 	confirm_msg: "Discard unsaved changes?"
+* }
+* @return bool
+*/
+export const check_unsaved_data = async function(options={}) {
+
+	// options
+		const confirm_msg = options.confirm_msg ||
+							(get_label.discard_changes || 'Discard unsaved changes?')
+
+	// unsaved_data case
+	// Checks for unsaved components usually happens in component_text_area editions
+	// because the delay (500 ms) used to set as changed
+		if (typeof window.unsaved_data!=='undefined' && window.unsaved_data===true) {
+			// look in all component instances for unsaved data
+			await save_unsaved_components()
+			// reset unsaved_data value (unsaved component data will be saved before)
+			window.unsaved_data = false
+		}
+
+	// unsaved_data value check
+		if (window.unsaved_data===true) {
+
+			// let user decide if continue loosing unsaved changes
+			if ( !confirm(confirm_msg) ) {
+				return false
+			}
+
+			// reset unsaved_data state by the user
+			window.unsaved_data = false
+		}
+
+	return true
+}//end check_unsaved_data
+
+
+
+/**
+* SAVE_UNSAVED_COMPONENTS
+* Iterate all instances and save component data if data.changed_data is filled
+* @return bool
+*/
+export const save_unsaved_components = async function() {
+
+	const ar_instances = instances.get_all_instances()
+	const ar_instances_length = ar_instances.length
+	for (let i = 0; i < ar_instances_length; i++) {
+
+		const item = ar_instances[i]
+		if (item.type==='component') {
+			if (item.data.changed_data && item.data.changed_data.length>0) {
+				console.log('Saving component unsaved', item);
+				await item.save()
+
+				return true
+			}
+		}
+	}
+
+
+	return true
+}//end save_unsaved_components
+
+
+
 // @license-end
