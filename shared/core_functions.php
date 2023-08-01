@@ -1100,46 +1100,6 @@ function cast($destination, $sourceObject) : object {
 
 
 /**
-* LOG_MESSAGES
-* Print a message in all pages to active users
-* @param mixed $vars
-*/
-function log_messages($vars, string $level='error') : string {
-
-	$html ='';
-
-	if (is_array($vars)) {
-		foreach ($vars as $key => $value) {
-			$html .= "$key => $value";
-		}
-	}elseif (is_object($vars)) {
-		$html .= print_r($vars,true);
-	}else{
-		$html .= $vars;
-	}
-
-	return $html;
-}//end log_messages
-
-
-
-/**
-* NOTICE_TO_ACTIVE_USERS
-* Print a message in all pages to active users
-* @param array $ar_options
-* @return void
-*/
-function notice_to_active_users(array $ar_options) : void {
-
-	$msg	= $ar_options['msg'];
-	$mode	= $ar_options['mode'];
-
-	log_messages($msg, $mode);
-}//end notice_to_active_users
-
-
-
-/**
 * GET_REQUEST_VAR
 * Check if var exists in $_REQUEST environment. If not do a fallback to search var in php://input (for
 * example in trigger JSON requests)
