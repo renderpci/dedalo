@@ -215,14 +215,67 @@ const get_content_data = async function(self) {
 	// event page rendered (used by menu..)
 		event_manager.publish('render_page', self)
 
-	// // content_data
-	// 	const content_data = document.createElement("div")
-	// 		  content_data.classList.add("content_data", self.type)
-	// 	content_data.appendChild(fragment)
 
 
 	return content_data
 }//end get_content_data
+
+
+
+/**
+* RENDER_MAINTENANCE_MSG
+* Render HTML based in environment.js.php DEDALO_MAINTENANCE_MODE value
+* @return HTMLElement maintenance_container
+*/
+const render_maintenance_msg = function() {
+
+	// maintenance_container
+	const maintenance_container = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'maintenance_container'
+	})
+
+	// maintenance_msg
+	const maintenance_msg = ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'maintenance_msg',
+		inner_html		: get_label.site_under_maintenance || 'System in maintenance',
+		parent			: maintenance_container
+	})
+
+
+	return maintenance_container
+}//end render_maintenance_msg
+
+
+
+/**
+* RENDER_NOTIFICATION_MSG
+* Render HTML from environment.js.php notification data
+* @return HTMLElement notification_container
+*/
+const render_notification_msg = function() {
+
+	const msg			= DEDALO_NOTIFICATION.msg || 'Unknown notification'
+	const class_name	= DEDALO_NOTIFICATION.class_name || ''
+
+	// notification_container
+	const notification_container = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'notification_container'
+	})
+
+	// notification_msg
+	const notification_msg = ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'notification_msg ' + class_name,
+		inner_html		: msg,
+		parent			: notification_container
+	})
+
+
+	return notification_container
+}//end render_notification_msg
 
 
 
