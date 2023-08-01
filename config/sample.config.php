@@ -616,13 +616,13 @@
 // maintenance
 	// maintenance mode active / inactive
 	define('DEDALO_MAINTENANCE_MODE', false);
-		include(DEDALO_CORE_PATH.'/maintenance/maintenance.php');
-	}
 
 
 
 // notice_to_active_users : Warning to print in all pages to logged users
-	$notice = '<b>Warning</b>. In a few minutes the system will shut down about 5 minutes for maintenance updates. <br>
+	$notice = "<b>Warning</b>. In a few minutes the system will shut down about 5 minutes for maintenance updates. <br>
 	Please, save the unsaved work and log out as soon as possible.
-	After a few minutes, you can re-login to Dédalo and work again';
-	// notice_to_active_users(array('msg'=>$notice, 'mode'=>'warning'));
+	After a few minutes, you can re-login to Dédalo and work again";
+	// to activate it, uncomment the next line
+		// define('DEDALO_NOTIFICATION', ['msg' => $notice, 'class_name' => 'warning']);
+
