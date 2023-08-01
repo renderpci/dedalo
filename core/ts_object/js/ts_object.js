@@ -57,8 +57,8 @@ export const ts_object = new function() {
 
 	/**
 	* GET_CHILDREN
-	* Get the JSON data from the server using promise. When data is loaded, build DOM element
-	* Data is built from parent info (current object section_tipo and section_id)
+	* Get the JSON data from the server. When data is loaded, render DOM element
+	* Data is built from parent node info (current object section_tipo and section_id)
 	* @param HTMLElement children_element
 	* @return promise
 	*/
@@ -572,10 +572,10 @@ export const ts_object = new function() {
 										ts_object.update_arrow_state(link_children_element, true)
 
 									// refresh children container
-										ts_object.get_children(link_children_element).then(function(){
-
+										ts_object.get_children(link_children_element)
+										.then(function(){
 											// update parent arrow button
-												ts_object.update_arrow_state(link_children_element, true)
+											ts_object.update_arrow_state(link_children_element, true)
 										})
 
 									}
@@ -723,7 +723,6 @@ export const ts_object = new function() {
 
 			children_container.classList.remove('js_first_load');
 			link_children_element.firstChild.classList.add('ts_object_children_arrow_icon_open', 'arrow_spinner');
-
 
 			// Load element by AJAX
 				result = ts_object.get_children(link_children_element);

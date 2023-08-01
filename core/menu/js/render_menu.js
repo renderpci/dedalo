@@ -87,6 +87,7 @@ render_menu.prototype.edit = async function() {
 			menu_mobile_icon.addEventListener('click', fn_menu_mobile_click)
 			function fn_menu_mobile_click(e) {
 				e.stopPropagation()
+
 				if (!menu_mobile_wrapper) {
 					menu_mobile_wrapper = menu_mobile.render_menu({
 						self	: self,
@@ -103,7 +104,7 @@ render_menu.prototype.edit = async function() {
 				}else{
 					menu_mobile_wrapper.classList.toggle('hide')
 				}
-			}
+			}//end fn_menu_mobile_click
 			let menu_mobile_wrapper = null
 
 	// ontology link
