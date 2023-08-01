@@ -251,4 +251,4 @@ Then, install Dédalo manually, commands are for Ubuntu 22.04 (only as reference
 
 If you want to install Dédalo for Oral Memory or manage audiovisual files you can considered to install the h264 module to cut audiovisual files.
 
-Follow the instructions [here](../../install/http_modules/readme.md)
+Follow the instructions [here](install_h264_module.md)
