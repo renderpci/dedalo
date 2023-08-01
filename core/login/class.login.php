@@ -69,6 +69,11 @@ class login extends common {
 				$response->msg = "Error Processing Request: username is invalid!";
 				return $response;
 			}
+
+			if(DEDALO_MAINTENANCE_MODE===true && $username!=='root'){
+				$response->msg = label::get_label('site_under_maintenance') ?? "System under maintenance";
+				return $response;
+			}
 			// safe username
 			$username = safe_xss($username);
 
