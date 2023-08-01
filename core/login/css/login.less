@@ -14,37 +14,7 @@
 
 	--user_login_image : ''; // Added on login, like url('../../themes/default/raspas/raspa_pantalla_1.jpg');
 
-	// background image big Dédalo
-	&:before {
-		background-image: url('../../themes/default/dedalo_icon_big.png');
-		background-position: 0px top;
-		background-repeat: no-repeat;
-		background-size: 527px 1024px;
-		content: '';
-		position: fixed;
-		height: 100%;
-		width: 100%;
-		z-index: -1;
-		//-webkit-transform: rotate(30deg);
-		transform: scaleX(-1);
-		top: 0px;
-		left: 0px;
-		background-color: rgb(255 255 255 / 89%);
-	}
 
-	&:before {
-		background-image: var(--user_login_image);
-		background-size: cover;
-		content: '';
-		transform: unset;
-		opacity: 0;
-		transition: opacity 0.8s ease-in-out;
-	}
-	&.raspa_loading {
-		&:before {
-			opacity: 1;
-		}
-	}
 
 	>.content_data {
 		background-color: rgba(243, 243, 243, 0.76);
@@ -157,11 +127,12 @@
 		.powered_by {
 			width: 100%;
 			text-align: center;
+			margin-top: 2rem;
+			margin-bottom: 1rem;
 
 			.dedalo_logo {
-				height: 1.5rem;
+				height: 3rem;
 				width: 100%;
-				margin-top: 1rem;
 				margin-bottom: 0.25rem;
 			}
 			.dedalo_link {
@@ -207,22 +178,31 @@
 		border-radius: 100%;
 		position: relative;
 		text-align: center;
-
+		// load the user image or the Dédalo icon
 		&:after {
-		  position: absolute;
-		  display: block;
-		  height: 160px;
-		  width: 160px;
-		  left: 50%;
-		  top: 50%;
-		  box-shadow: inset 0px 0px 1em #e4e4e4;
-		  content: attr(data-pct); //'%';
-		  margin-top: -80px;
-		  margin-left: -80px;
-		  border-radius: 100%;
-		  line-height: 160px;
-		  font-size: 2em;
-		  // text-shadow: 0 0 0.5em black;
+			background-image: url('../../themes/default/dedalo_icon_big.png');
+			background-position: 0px top;
+			background-repeat: no-repeat;
+			background-size: 527px 1024px;
+			background-image: var(--user_login_image);
+			background-size: cover;
+			-webkit-transition: background-image 0.8s ease-in-out;
+			transition: background-image 0.8s ease-in-out;
+			position: absolute;
+			display: block;
+			height: 160px;
+			width: 160px;
+			left: 50%;
+			top: 50%;
+			box-shadow: inset 0px 0px 1em #e4e4e4;
+			content: attr(data-pct); //'%';
+			margin-top: -80px;
+			margin-left: -80px;
+			border-radius: 100%;
+			line-height: 160px;
+			font-size: 2em;
+			color: white;
+			text-shadow: 0 0 0.5em black;
 		}
 
 		#svg circle {
