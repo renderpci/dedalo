@@ -55,6 +55,13 @@ render_page.prototype.edit = async function(options) {
 			wrapper.prepend(notification_container)
 		}
 
+	// dedalo_maintenance_mode. maintenance_msg (defined in config and get from environment.js.php)
+		if(DEDALO_MAINTENANCE_MODE===true){
+			const maintenance_container = render_maintenance_msg()
+			wrapper.prepend(maintenance_container)
+		}
+
+
  	return wrapper
 }//end edit
 
