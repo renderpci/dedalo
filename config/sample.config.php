@@ -615,9 +615,7 @@
 
 // maintenance
 	// maintenance mode active / inactive
-	$maintenance_mode = false;
-	define('DEDALO_MAINTENANCE_MODE', $maintenance_mode);
-	if (DEDALO_MAINTENANCE_MODE===true) {
+	define('DEDALO_MAINTENANCE_MODE', false);
 		include(DEDALO_CORE_PATH.'/maintenance/maintenance.php');
 	}
 
