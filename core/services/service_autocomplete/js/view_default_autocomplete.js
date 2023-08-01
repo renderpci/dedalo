@@ -27,6 +27,8 @@ export const view_default_autocomplete = function() {
 /**
 * RENDER
 * Render node for use like button
+* @param object self
+* @param object options
 * @return HTMLElement wrapper
 */
 view_default_autocomplete.render = async function (self, options) {
@@ -59,23 +61,85 @@ view_default_autocomplete.render = async function (self, options) {
 
 	// position calculate based on caller node (usually a component_portal wrapper)
 		if (self.caller.node) {
-			const reference_node	= self.caller.node
-			const rect				= reference_node.getBoundingClientRect();
-			const top				= rect.bottom  + window.scrollY // + 20
-			const left				= rect.left  + window.scrollX // + 20
-			const width				= rect.width
 
-			// set coordinates. Same as reference_node position
-			wrapper.style.left	= left + 'px'
-			wrapper.style.top	= top + 'px'
-			wrapper.style.width	= width + 'px'
+			const reference_node = self.caller.node
 
-			window.addEventListener('resize', fn_on_resize)
-			function fn_on_resize(){
-				ui.component.deactivate(self.caller)
-				window.removeEventListener('resize', fn_on_resize)
-			}
-		}
+			// set_size (and position too)
+				function set_size(reference_node) {
+
+					const rect	= reference_node.getBoundingClientRect();
+					const top	= rect.bottom  + window.scrollY // + 20
+					const left	= rect.left  + window.scrollX // + 20
+					const width	= rect.width
+
+					// set coordinates. Same as reference_node position
+					wrapper.style.left	= left  + 'px'
+					wrapper.style.top	= top   + 'px'
+					wrapper.style.width	= width + 'px'
+				}
+				set_size(reference_node)
+
+			// window resize event
+				window.addEventListener('resize', fn_on_resize)
+				function fn_on_resize(){
+					ui.component.deactivate(self.caller)
+					window.removeEventListener('resize', fn_on_resize)
+				}
+
+			// resize observer. If reference_node changes size, the wrapper size is recalculated
+				const resizeObserver = new ResizeObserver((entries) => {
+					set_size(reference_node)
+				});
+				resizeObserver.observe(reference_node);
+
+			// scroll observer. On page scroll, update wrapper position
+				// function scroll_observer(node) {
+				// 	window.removeEventListener('scroll', fn_scroll)
+				// 	let lastKnownScrollPosition	= 0;
+				// 	let ticking					= false;
+				// 	function update_value(scrollPos) {
+				// 		const rect	= node.getBoundingClientRect();
+				// 		const top	= rect.bottom  + window.scrollY //- scrollPos
+				// 		// set coordinates. Same as node position
+				// 		wrapper.style.top = top + 'px'
+				// 	}
+				// 	window.addEventListener('scroll', fn_scroll)
+				// 	function fn_scroll(event) {
+				// 		lastKnownScrollPosition = window.scrollY;
+				// 		if (!ticking) {
+				// 			window.requestAnimationFrame(() => {
+				// 				update_value(lastKnownScrollPosition);
+				// 				ticking = false;
+				// 			});
+				// 			ticking = true;
+				// 		}
+				// 	};
+				// }//end scroll_observer
+
+			// set z-index to 4 if any ancestor is dd-modal
+				function set_zindex(node) {
+					let el = node
+					while (el.parentNode) {
+						el = el.parentNode;
+						if (el.tagName === 'DD-MODAL') {
+							// is inside modal
+
+							// increase z-index from 3 to 4 for modal
+							wrapper.style.zIndex = 4
+
+							// set wrapper position as fixed from absolute. Optionally use scroll_observer function
+							wrapper.style.position = 'fixed'
+
+							if(SHOW_DEBUG===true) {
+								console.log(')))) DD-MODAL wrapper inside. Set z-index to 4:', wrapper);
+							}
+							return
+						}
+					}
+				}
+				set_zindex(reference_node)
+
+		}//end if (self.caller.node)
 
 
 	// fix node
@@ -375,13 +439,13 @@ const render_search_input = function(self) {
 				// Clear the timeout if it has already been set.
 				// This will prevent the previous task from executing
 				// if it has been less than <MILLISECONDS>
-			    	clearTimeout(timeout);
+					clearTimeout(timeout);
 
 				// search fire is delayed to enable multiple simultaneous selections
 				// get final value (input events are fired one by one)
-			    	const ms = self.search_cache[q]
-			    		? 1
-			    		: 320
+					const ms = self.search_cache[q]
+						? 1
+						: 320
 					timeout = setTimeout(async()=>{
 
 						// api_response. Get from cache if exists
