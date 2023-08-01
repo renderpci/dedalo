@@ -49,6 +49,11 @@ render_page.prototype.edit = async function(options) {
 		// set pointers
 		wrapper.content_data = content_data
 
+	// dedalo_notification. notification_msg (defined in config and get from environment.js.php)
+		if(DEDALO_NOTIFICATION && page_globals.is_logged===true){
+			const notification_container = render_notification_msg()
+			wrapper.prepend(notification_container)
+		}
 
  	return wrapper
 }//end edit
