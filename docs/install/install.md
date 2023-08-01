@@ -246,3 +246,9 @@ Then, install Dédalo manually, commands are for Ubuntu 22.04 (only as reference
 9. Create an admin user.
 10. Log out and log in with the admin user.
 11. Create Users and Projects as you need.
+
+### 2.4. Options
+
+If you want to install Dédalo for Oral Memory or manage audiovisual files you can considered to install the h264 module to cut audiovisual files.
+
+Follow the instructions [here](../../install/http_modules/readme.md)
