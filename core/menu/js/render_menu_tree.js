@@ -232,21 +232,32 @@ const render_item_hierarchy = (options) => {
 
 							//first menu li nodes has parent 'dd1' and the position in the screen is calculated by the end of the parent li node
 							if(active_li.parentNode.id === 'dd1'){
-								open_ul.style.left = (active_li.getBoundingClientRect().left -1 )+'px'
+
+								open_ul.style.left = (active_li.getBoundingClientRect().left -1 ) + 'px'
+
 							}else{
+
+								const top_position = Math.ceil(
+									active_li.getBoundingClientRect().top
+									- ul_container.getBoundingClientRect().top // offset (maintenance messages, etc.)
+									+ (li.getBoundingClientRect().height - 6)
+								)
+								// console.log("active_li.getBoundingClientRect().top:",active_li.getBoundingClientRect().top);
+								// console.log("top_position:",top_position);
+
 								// the node is totally visible and don't need move to the top
-								open_ul.style.top = active_li.getBoundingClientRect().top+'px'
+								open_ul.style.top = top_position + 'px'
 								// normal calculation for the hierarchy menus
 								// get the bottom position of the ul and remove the height of the window
 								const ul_bottom_dif = open_ul.getBoundingClientRect().bottom - window.innerHeight//document.documentElement.clientHeight
 								// if the position is outside of the window (>0)
 								if (ul_bottom_dif>0) {
 									// get the top of the current li and remove the oversize outsize of the window
-									const total_top = active_li.getBoundingClientRect().top - ul_bottom_dif
-									open_ul.style.top = total_top +'px'
+									const total_top		= top_position - ul_bottom_dif
+									open_ul.style.top	= total_top + 'px'
 								}
 								// move the node to the right position of the selected li
-								open_ul.style.left = active_li.getBoundingClientRect().right+'px'
+								open_ul.style.left = active_li.getBoundingClientRect().right + 'px'
 							}//end if(active_li.parentNode.id === 'dd1')
 						}//end if(open_id)
 
