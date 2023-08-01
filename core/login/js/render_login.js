@@ -243,11 +243,13 @@ const get_content_data = function(self) {
 						console.log('api_response:', api_response);
 					}
 
-					if (api_response.errors && api_response.errors.length>0 || api_response.result===false) {
+					if (api_response.result===false) {
 
 						// errors found
 
-						const message	= api_response.errors || ['Unknown login error happen']
+						const message	= api_response.errors && api_response.errors.length>0
+							? api_response.errors
+							: api_response.msg || ['Unknown login error happen']
 						const msg_type	= 'error'
 						ui.show_message(messages_container, message, msg_type, 'component_message', true)
 
@@ -261,7 +263,7 @@ const get_content_data = function(self) {
 						// success case
 
 						const message	= api_response.msg
-						const msg_type	= api_response.result===true ? 'ok' : 'error'
+						const msg_type	= 'ok';
 						ui.show_message(messages_container, message, msg_type, 'component_message', true)
 
 						// hide spinner and show button label
