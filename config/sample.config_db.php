@@ -8,8 +8,8 @@
 // Default PotsgreSQL connection, for investigation system
 // DEDALO_DB_TYPE: string|null 'postgresql'
 define('DEDALO_DB_TYPE'				, 'postgresql');
-// DB_BIN_PATH: string '' . Ex. /Library/PostgreSQL/9.4/bin/'
-define('DB_BIN_PATH'				, '');
+// DB_BIN_PATH: string '' . Ex. /usr/bin/'
+define('DB_BIN_PATH'				, '/usr/bin/');
 // PHP_BIN_PATH: string '/usr/bin/php' . Ex. /usr/bin/php
 define('PHP_BIN_PATH'				, '/usr/bin/php');
 // DEDALO_HOSTNAME_CONN: string|null 'localhost'
