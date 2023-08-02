@@ -978,17 +978,20 @@ class login extends common {
 	/**
 	* VERIFY_LOGIN
 	* Check that the user is authenticated
-	* based in session existing properties
-	* @return bool (true/false)
+	* based in session existing properties.
+	* Note that if the system is under maintenance,
+	* only the root user is authorized
+	* @return bool
 	*/
 	private static function verify_login() : bool {
 
-		// not authenticated case
 		if( empty($_SESSION['dedalo']['auth']['user_id']) ||
 			empty($_SESSION['dedalo']['auth']['is_logged']) ||
 			$_SESSION['dedalo']['auth']['is_logged'] !== 1 ||
 			empty($_SESSION['dedalo']['auth']['salt_secure'])
 			) {
+
+			// not authenticated case
 
 			if (empty($_SESSION['dedalo']['auth']['user_id'])) {
 
@@ -1010,13 +1013,14 @@ class login extends common {
 
 			return false;
 
-		// authenticated case
 		}else{
 
-			#if( $_SESSION['dedalo']['auth']['salt_secure'] != '7PVecu9VSxLHnawfGF2oDCISXvsq2khsOKvPiTJ_D7a_wVaxqQwzRJElPxsecePnFzmrP34RIG0J0ykg3Mbobg,,') {
-			#	throw new Exception("Error Login: Incorrect security config", 1);
-			#	return false;
-			#}
+			// authenticated case
+
+			// maintenance mode. Only toot user is allowed in maintenance mode
+				if(DEDALO_MAINTENANCE_MODE===true && $_SESSION['dedalo']['auth']['username']!=='root') {
+					return false;
+				}
 
 			return true;
 		}
