@@ -2703,54 +2703,104 @@ export const ui = {
 		// to discus
 		return false
 
-
 		// Firefox skip. (prevents erratic Firefox behavior about canvas bg color)
 		if(navigator.userAgent.toLowerCase().indexOf('firefox') > -1){
 			return false
 		}
 
-		const canvas	= document.createElement('canvas');
-		canvas.width	= image.width;
-		canvas.height	= image.height;
+		// dominant color way
+			// function getAverageRGB(imgEl) {
 
-		try {
-			// canvas context 2d
-				const ctx = canvas.getContext("2d");
+			// 	var blockSize = 5, // only visit every 5 pixels
+			// 		defaultRGB = {r:0,g:0,b:0}, // for non-supporting envs
+			// 		canvas = document.createElement('canvas'),
+			// 		context = canvas.getContext && canvas.getContext('2d'),
+			// 		data, width, height,
+			// 		i = -4,
+			// 		length,
+			// 		rgb = {r:0,g:0,b:0},
+			// 		count = 0;
 
-			// draw image into canvas
-				ctx.drawImage(image, 0, 0, image.width, image.height);
+			// 	if (!context) {
+			// 		return defaultRGB;
+			// 	}
 
-			// get RGB data from canvas
-				const rgb = ctx.getImageData(0, 0, 1, 1).data;
+			// 	height = canvas.height = imgEl.naturalHeight || imgEl.offsetHeight || imgEl.height;
+			// 	width = canvas.width = imgEl.naturalWidth || imgEl.offsetWidth || imgEl.width;
 
-			// round RGB values
-				function correction(value) {
+			// 	context.drawImage(imgEl, 0, 0);
 
-					const factor = 1.016
+			// 	try {
+			// 		data = context.getImageData(0, 0, width, height);
+			// 	} catch(e) {
+			// 		/* security error, img on diff domain */alert('x');
+			// 		return defaultRGB;
+			// 	}
 
-					const result = (value>127)
-						? Math.floor(value * factor)
-						: Math.floor(value / factor)
+			// 	length = data.data.length;
 
-					return result
-				}
+			// 	while ( (i += blockSize * 4) < length ) {
+			// 		++count;
+			// 		rgb.r += data.data[i];
+			// 		rgb.g += data.data[i+1];
+			// 		rgb.b += data.data[i+2];
+			// 	}
 
-				const r = correction(rgb[0])
-				const g = correction(rgb[1])
-				const b = correction(rgb[2])
+			// 	// ~~ used to floor values
+			// 	rgb.r = ~~(rgb.r/count);
+			// 	rgb.g = ~~(rgb.g/count);
+			// 	rgb.b = ~~(rgb.b/count);
 
-			// build backgroundColor style string
-				const bg_color_rgb = 'rgb(' + r + ',' + g + ',' + b +')';
+			// 	return rgb;
+			// }
+			// const rgb = getAverageRGB(image)
+			// const bg_color_rgb = 'rgb(' + rgb.r + ',' + rgb.g + ',' + rgb.b +')';
+			// target_node.style.backgroundColor = bg_color_rgb
 
-			// set background color style (both container and image)
-				target_node.style.backgroundColor = bg_color_rgb
+		// first pixel way
+			const canvas	= document.createElement('canvas');
+			canvas.width	= image.width;
+			canvas.height	= image.height;
 
-		}catch(error){
-			console.warn("ui.set_background_image . Unable to get image canvas: ", image);
-		}
+			try {
+				// canvas context 2d
+					const ctx = canvas.getContext("2d");
 
-		// remove canvas on finish
-			canvas.remove()
+				// draw image into canvas
+					ctx.drawImage(image, 0, 0, image.width, image.height);
+
+				// get RGB data from canvas
+					const rgb = ctx.getImageData(0, 0, 1, 1).data;
+
+				// round RGB values
+					function correction(value) {
+
+						const factor = 1.016
+
+						const result = (value>127)
+							? Math.floor(value * factor)
+							: Math.floor(value / factor)
+
+						return result
+					}
+
+					const r = correction(rgb[0])
+					const g = correction(rgb[1])
+					const b = correction(rgb[2])
+
+				// build backgroundColor style string
+					const bg_color_rgb = 'rgb(' + r + ',' + g + ',' + b +')';
+
+				// set background color style (both container and image)
+					target_node.style.backgroundColor = bg_color_rgb
+
+			}catch(error){
+				console.warn("ui.set_background_image . Unable to get image canvas: ", image);
+			}
+
+			// remove canvas on finish
+				canvas.remove()
+
 
 		// loading style remove
 			// if (image.classList.contains('loading')) {
