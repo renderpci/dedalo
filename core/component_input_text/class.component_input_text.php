@@ -17,9 +17,10 @@ class component_input_text extends component_common {
 
 		$dato = parent::get_dato();
 
-		if (is_string($dato)) {
+		if (!is_null($dato) && !is_array($dato)) {
+			$type = gettype($dato);
 			debug_log(__METHOD__
-				. " Expected dato type array, but type is string. Converted to array and saving " . PHP_EOL
+				. " Expected dato type array, but type is $type. Converted to array of strings and saving " . PHP_EOL
 				. ' tipo: ' . $this->tipo . PHP_EOL
 				. ' section_tipo: ' . $this->section_tipo . PHP_EOL
 				. ' section_id: ' . $this->section_id
@@ -27,12 +28,13 @@ class component_input_text extends component_common {
 			);
 			dump($dato, ' dato ++ '.to_string());
 
-			$dato = [$dato];
+			$dato = [ to_string($dato) ];
 
 			// update
 			$this->set_dato($dato);
 			$this->Save();
 		}
+
 
 		return $dato;
 	}//end get_dato

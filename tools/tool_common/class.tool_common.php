@@ -129,6 +129,17 @@ class tool_common {
 							return $el->name===$label_name;
 						});
 						foreach ($all_langs_label as $item) {
+							if (!isset($item->lang)) {
+								// ignore
+								debug_log(__METHOD__
+									. " Ignored item without expected property 'lang'. Check this tool definition labels " . PHP_EOL
+									. ' item: ' . to_string($item) .PHP_EOL
+									. ' all_langs_label: ' . to_string($all_langs_label) .PHP_EOL
+									. ' tool_object: ' . to_string($tool_object)
+									, logger::ERROR
+								);
+							}
+
 							if ($item->lang===DEDALO_DATA_LANG) {
 								$labels[$label_name] = $item;
 								continue 2;

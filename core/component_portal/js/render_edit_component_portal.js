@@ -852,7 +852,8 @@ export const activate_autocomplete = async function(self, wrapper) {
 			await self.autocomplete.build()
 			// render. Build_autocomplete_input nodes
 			const autocomplete_node = await self.autocomplete.render()
-			document.body.appendChild(autocomplete_node)
+			// removed attach to document 02-08-2023. see view_default_autocomplete.render()
+			// document.body.appendChild(autocomplete_node)
 			self.autocomplete_active = true
 			// focus
 			self.autocomplete.search_input.focus({preventScroll:true});
