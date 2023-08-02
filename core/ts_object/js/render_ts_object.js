@@ -502,6 +502,13 @@ export const render_ts_list = function(options) {
 				})
 			}
 
+		// ID COLUMN . id column content
+			const id_column_content = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'id_column_content',
+				parent			: wrap_ts_object
+			})
+
 		// ELEMENTS CONTAINER . elements container
 			const elements_container = ui.create_dom_element({
 				element_type	: 'div',
@@ -511,11 +518,11 @@ export const render_ts_list = function(options) {
 			})
 
 		// ID COLUMN . id column content
-			const id_colum_content 	= ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'id_column_content',
-				parent			: elements_container
-			})
+			// const id_column_content = ui.create_dom_element({
+			// 	element_type	: 'div',
+			// 	class_name		: 'id_column_content',
+			// 	parent			: elements_container
+			// })
 
 		// DATA CONTAINER . elements data container
 			const data_container = ui.create_dom_element({
@@ -567,7 +574,7 @@ export const render_ts_list = function(options) {
 			}//end if (is_descriptor===true)
 
 
-			// ID_COLUM_CONTENT elements
+			// id_column_content elements
 				switch(self.thesaurus_mode) {
 
 					case 'relation':
@@ -579,7 +586,7 @@ export const render_ts_list = function(options) {
 								element_type	: 'a',
 								class_name		: 'id_column_link ts_object_related',
 								title_label		: 'add',
-								parent			: id_colum_content,
+								parent			: id_column_content,
 							})
 							const current_label_term = ar_children_data[i].ar_elements.find(el => el.type==='term')
 							link_related.data = {
@@ -629,7 +636,7 @@ export const render_ts_list = function(options) {
 										element_type	: 'a',
 										class_name		: 'id_column_link ts_object_add',
 										title_label		: 'add',
-										parent			: id_colum_content
+										parent			: id_column_content
 									})
 									link_add.addEventListener('click', function(){
 
@@ -679,7 +686,7 @@ export const render_ts_list = function(options) {
 										element_type	: 'div',
 										class_name		: 'id_column_link ts_object_drag',
 										title_label		: 'drag',
-										parent			: id_colum_content
+										parent			: id_column_content
 									})
 									link_drag.addEventListener("mousedown",(e)=>{
 										self.on_drag_mousedown(link_drag, e)
@@ -700,7 +707,7 @@ export const render_ts_list = function(options) {
 									element_type	: 'a',
 									class_name		: 'id_column_link ts_object_delete',
 									title_label		: 'delete',
-									parent			: id_colum_content
+									parent			: id_column_content
 								})
 								link_delete.addEventListener('click', (e)=>{
 									e.stopPropagation()
@@ -722,7 +729,7 @@ export const render_ts_list = function(options) {
 										element_type	: 'a',
 										class_name		: 'id_column_link ts_object_order_number',
 										text_node		: i+1,
-										parent			: id_colum_content
+										parent			: id_column_content
 									})
 									order_number.addEventListener('click', (e)=>{
 										e.stopPropagation()
@@ -738,11 +745,16 @@ export const render_ts_list = function(options) {
 								element_type	: 'a',
 								class_name		: 'id_column_link ts_object_edit',
 								title_label		: 'edit',
-								parent			: id_colum_content
+								parent			: id_column_content
 							})
 							link_edit.addEventListener('mousedown', (e)=>{
 								e.stopPropagation()
-								self.edit(link_edit, e)
+								self.edit(
+									link_edit,
+									e,
+									ar_children_data[i].section_id,
+									ar_children_data[i].section_tipo
+								)
 							})
 							// section_id number
 							const section_id_number = ui.create_dom_element({
