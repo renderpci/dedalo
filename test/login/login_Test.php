@@ -86,7 +86,7 @@ final class login_test extends TestCase {
 					'session_id'	=> session_id(),
 					'user_id'		=> $user_id
 				],
-				'file_name'		=> 'cache_tree.json',
+				'file_name'		=> 'cache_tree_'.DEDALO_DATA_LANG.'.json',
 				'wait'			=> false
 			]);
 

@@ -52,6 +52,18 @@ class component_security_access extends component_common {
 
 
 	/**
+	* GET_CACHE_TREE_FILE_NAME
+	* @param string $lang
+	* @return string $tree_file_name
+	*/
+	public static function get_cache_tree_file_name(string $lang) : string {
+
+		return 'cache_tree_'.$lang.'.json';
+	}//end get_cache_tree_file_name
+
+
+
+	/**
 	* GET_DATALIST
 	* Generates the whole component datalist (ontology tree) to set access permissions by admins
 	* Note that login sequence launch a background process to calculate this datalist because
@@ -70,7 +82,8 @@ class component_security_access extends component_common {
 				return $this->datalist;
 			}
 
-		$cache_file_name = 'cache_tree.json';
+		// cache_file_name. Like 'cache_tree_'.DEDALO_DATA_LANG.'.json'
+			$cache_file_name = component_security_access::get_cache_tree_file_name(DEDALO_DATA_LANG);
 
 		// cache cascade
 			$use_cache = true;
@@ -105,6 +118,20 @@ class component_security_access extends component_common {
 						);
 						return $datalist;
 					}
+
+				// precalculate profiles datalist security access in background
+				// This file is generated on every user login, launching the process in background
+				// or, when current lang is not cached yet (on user change data lang in menu)
+					dd_cache::process_and_cache_to_file((object)[
+						'process_file'	=> DEDALO_CORE_PATH . '/component_security_access/calculate_tree.php',
+						'data'			=> (object)[
+							'session_id'	=> session_id(),
+							'user_id'		=> $user_id
+						],
+						'file_name'		=> $cache_file_name,
+						'wait'			=> false
+					]);
+					debug_log(__METHOD__." Generating security access datalist in background... ", logger::DEBUG);
 			}
 
 		// short vars
@@ -336,7 +363,7 @@ class component_security_access extends component_common {
 					'tipo'			=> $element_tipo,
 					'section_tipo'	=> $tipo,
 					'model'			=> RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true),
-					'label'			=> RecordObj_dd::get_termino_by_tipo($element_tipo, DEDALO_APPLICATION_LANG, true, true),
+					'label'			=> RecordObj_dd::get_termino_by_tipo($element_tipo, DEDALO_DATA_LANG, true, true),
 					'parent'		=> $tipo
 				];
 				$ar_elements[] = $item;
