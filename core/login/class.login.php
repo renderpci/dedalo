@@ -738,13 +738,14 @@ class login extends common {
 
 		// precalculate profiles datalist security access in background
 		// This file is generated on every user login, launching the process in background
+			$cache_file_name = component_security_access::get_cache_tree_file_name(DEDALO_DATA_LANG);
 			dd_cache::process_and_cache_to_file((object)[
 				'process_file'	=> DEDALO_CORE_PATH . '/component_security_access/calculate_tree.php',
 				'data'			=> (object)[
 					'session_id'	=> session_id(),
 					'user_id'		=> $user_id
 				],
-				'file_name'		=> 'cache_tree.json',
+				'file_name'		=> $cache_file_name,
 				'wait'			=> false
 			]);
 			debug_log(__METHOD__." Generating security access datalist in background... ", logger::DEBUG);
@@ -978,17 +979,20 @@ class login extends common {
 	/**
 	* VERIFY_LOGIN
 	* Check that the user is authenticated
-	* based in session existing properties
-	* @return bool (true/false)
+	* based in session existing properties.
+	* Note that if the system is under maintenance,
+	* only the root user is authorized
+	* @return bool
 	*/
 	private static function verify_login() : bool {
 
-		// not authenticated case
 		if( empty($_SESSION['dedalo']['auth']['user_id']) ||
 			empty($_SESSION['dedalo']['auth']['is_logged']) ||
 			$_SESSION['dedalo']['auth']['is_logged'] !== 1 ||
 			empty($_SESSION['dedalo']['auth']['salt_secure'])
 			) {
+
+			// not authenticated case
 
 			if (empty($_SESSION['dedalo']['auth']['user_id'])) {
 
@@ -1010,13 +1014,14 @@ class login extends common {
 
 			return false;
 
-		// authenticated case
 		}else{
 
-			#if( $_SESSION['dedalo']['auth']['salt_secure'] != '7PVecu9VSxLHnawfGF2oDCISXvsq2khsOKvPiTJ_D7a_wVaxqQwzRJElPxsecePnFzmrP34RIG0J0ykg3Mbobg,,') {
-			#	throw new Exception("Error Login: Incorrect security config", 1);
-			#	return false;
-			#}
+			// authenticated case
+
+			// maintenance mode. Only toot user is allowed in maintenance mode
+				if(DEDALO_MAINTENANCE_MODE===true && $_SESSION['dedalo']['auth']['username']!=='root') {
+					return false;
+				}
 
 			return true;
 		}

@@ -502,52 +502,52 @@ export const render_ts_list = function(options) {
 				})
 			}
 
-
 		// ID COLUMN . id column content
-			const id_colum_content 	= ui.create_dom_element({
+			const id_column_content = ui.create_dom_element({
 				element_type	: 'div',
-				parent			: wrap_ts_object,
-				class_name		: 'id_column_content'
+				class_name		: 'id_column_content',
+				parent			: wrap_ts_object
 			})
 
 		// ELEMENTS CONTAINER . elements container
 			const elements_container = ui.create_dom_element({
 				element_type	: 'div',
-				parent			: wrap_ts_object,
 				class_name		: 'elements_container',
-				data_set		: {
-					role : 'elements_container'
-				}
+				data_set		: {role : 'elements_container'},
+				parent			: wrap_ts_object
 			})
+
+		// ID COLUMN . id column content
+			// const id_column_content = ui.create_dom_element({
+			// 	element_type	: 'div',
+			// 	class_name		: 'id_column_content',
+			// 	parent			: elements_container
+			// })
 
 		// DATA CONTAINER . elements data container
 			const data_container = ui.create_dom_element({
 				element_type	: 'div',
-				parent			: wrap_ts_object,
 				class_name		: 'data_container',
-				data_set		: {
-					role : 'data_container'
-				}
+				data_set		: {role : 'data_container'},
+				parent			: wrap_ts_object,
 			})
 
 		// INDEXATIONS CONTAINER
 			const indexations_container_id	= 'u' + ar_children_data[i].section_tipo + '_' + ar_children_data[i].section_id +'_'+ (new Date()).getTime()
 			const indexations_container		= ui.create_dom_element({
 				element_type	: 'div',
-				parent			: wrap_ts_object,
+				id				: indexations_container_id,
 				class_name		: 'indexations_container',
-				id				: indexations_container_id
+				parent			: wrap_ts_object,
 			})
 
 		// ND CONTAINER
 			if (is_descriptor===true && node_type!=='hierarchy_node') {
 				const nd_container = ui.create_dom_element({
 					element_type	: 'div',
-					parent			: wrap_ts_object,
 					class_name		: 'nd_container',
-					data_set		: {
-						role : 'nd_container'
-					}
+					data_set		: {role : 'nd_container'},
+					parent			: wrap_ts_object,
 				})
 			}
 
@@ -558,12 +558,12 @@ export const render_ts_list = function(options) {
 					: 'children_container js_first_load'
 				const children_c = ui.create_dom_element({
 					element_type	: 'div',
-					parent			: wrap_ts_object,
 					class_name		: children_c_class_name,
 					data_set		: {
 						role		:'children_container',
 						section_id	: ar_children_data[i].section_id
-					}
+					},
+					parent			: wrap_ts_object,
 				})
 				// Fix current main_div
 				// Important. Fix global var self.current_main_div used by search to parse results
@@ -574,7 +574,7 @@ export const render_ts_list = function(options) {
 			}//end if (is_descriptor===true)
 
 
-			// ID_COLUM_CONTENT elements
+			// id_column_content elements
 				switch(self.thesaurus_mode) {
 
 					case 'relation':
@@ -584,9 +584,9 @@ export const render_ts_list = function(options) {
 						// link_related
 							const link_related = ui.create_dom_element({
 								element_type	: 'a',
-								parent			: id_colum_content,
 								class_name		: 'id_column_link ts_object_related',
-								title_label		: 'add'
+								title_label		: 'add',
+								parent			: id_column_content,
 							})
 							const current_label_term = ar_children_data[i].ar_elements.find(el => el.type==='term')
 							link_related.data = {
@@ -636,7 +636,7 @@ export const render_ts_list = function(options) {
 										element_type	: 'a',
 										class_name		: 'id_column_link ts_object_add',
 										title_label		: 'add',
-										parent			: id_colum_content
+										parent			: id_column_content
 									})
 									link_add.addEventListener('click', function(){
 
@@ -684,9 +684,9 @@ export const render_ts_list = function(options) {
 									// var event_function 	= [{'type':'mousedown','name':'ts_object.on_drag_mousedown'}];
 									const link_drag = ui.create_dom_element({
 										element_type	: 'div',
-										parent			: id_colum_content,
 										class_name		: 'id_column_link ts_object_drag',
-										title_label		: 'drag'
+										title_label		: 'drag',
+										parent			: id_column_content
 									})
 									link_drag.addEventListener("mousedown",(e)=>{
 										self.on_drag_mousedown(link_drag, e)
@@ -694,8 +694,8 @@ export const render_ts_list = function(options) {
 									// drag icon
 									ui.create_dom_element({
 										element_type	: 'div',
-										parent			: link_drag,
-										class_name		: 'ts_object_drag_icon'
+										class_name		: 'ts_object_drag_icon',
+										parent			: link_drag
 									})
 								}//if(is_descriptor===true)
 							}
@@ -705,9 +705,9 @@ export const render_ts_list = function(options) {
 								// var event_function 	= [{'type':'click','name':'ts_object.delete'}];
 								const link_delete 	= ui.create_dom_element({
 									element_type	: 'a',
-									parent			: id_colum_content,
 									class_name		: 'id_column_link ts_object_delete',
-									title_label		: 'delete'
+									title_label		: 'delete',
+									parent			: id_column_content
 								})
 								link_delete.addEventListener('click', (e)=>{
 									e.stopPropagation()
@@ -716,8 +716,8 @@ export const render_ts_list = function(options) {
 								// delete icon
 								ui.create_dom_element({
 									element_type	: 'div',
-									parent			: link_delete,
-									class_name		: 'ts_object_delete_icon'
+									class_name		: 'ts_object_delete_icon',
+									parent			: link_delete
 								 })
 							}//end if (ar_children_data[i].permissions_button_delete>=2)
 
@@ -727,9 +727,9 @@ export const render_ts_list = function(options) {
 									// var event_function = [{'type':'click','name':'ts_object.build_order_form'}];
 									const order_number = ui.create_dom_element({
 										element_type	: 'a',
-										parent			: id_colum_content,
 										class_name		: 'id_column_link ts_object_order_number',
-										text_node		: i+1
+										text_node		: i+1,
+										parent			: id_column_content
 									})
 									order_number.addEventListener('click', (e)=>{
 										e.stopPropagation()
@@ -743,26 +743,31 @@ export const render_ts_list = function(options) {
 							// var event_function 		= [{'type':'click','name':'ts_object.edit'}];
 							const link_edit = ui.create_dom_element({
 								element_type	: 'a',
-								parent			: id_colum_content,
 								class_name		: 'id_column_link ts_object_edit',
-								title_label		: 'edit'
+								title_label		: 'edit',
+								parent			: id_column_content
 							})
 							link_edit.addEventListener('mousedown', (e)=>{
 								e.stopPropagation()
-								self.edit(link_edit, e)
+								self.edit(
+									link_edit,
+									e,
+									ar_children_data[i].section_id,
+									ar_children_data[i].section_tipo
+								)
 							})
 							// section_id number
 							const section_id_number = ui.create_dom_element({
 								element_type	: 'div',
-								parent			: link_edit,
 								class_name		: 'ts_object_section_id_number',
-								text_node		: ar_children_data[i].section_id
+								text_node		: ar_children_data[i].section_id,
+								parent			: link_edit
 							})
 							// edit icon
 							const edit_icon = ui.create_dom_element({
 								element_type	: 'div',
-								parent			: link_edit,
-								class_name		: 'ts_object_edit_icon'
+								class_name		: 'ts_object_edit_icon',
+								parent			: link_edit
 							})
 							//}//end if (node_type!=='hierarchy_node')
 
