@@ -261,12 +261,14 @@ login.prototype.action_dispatch = async function(api_response) {
 							console.error(error);
 						});
 					})();
-					self.node.classList.add('raspa_loading')
+					if (api_response.result_options?.user_id && api_response.result_options?.user_id===-1) {
+						self.node.classList.add('raspa_loading')
+					}
 					await (()=>{
 						return new Promise(function(resolve, reject){
 							setTimeout(function(){
 								resolve(true)
-							}, 150)
+							}, 160)
 						})
 					})();
 				}
@@ -301,7 +303,9 @@ login.prototype.action_dispatch = async function(api_response) {
 						self.node.content_data.top.classList.remove('hide')
 
 						// raspa_loading Development local only
-						self.node.classList.add('raspa_loading')
+						if (api_response.result_options?.user_id && api_response.result_options?.user_id===-1) {
+							self.node.classList.add('active')
+						}
 					}
 
 					// send message data to files_loader function
@@ -321,9 +325,11 @@ login.prototype.action_dispatch = async function(api_response) {
 				// result_options is defined when the user is root or developer and the tools are not loaded
 				// it's defined in dd_init_test to force to go to the development area to control the DDBB and ontology version
 				if (api_response.result_options && api_response.result_options.redirect) {
+
 					setTimeout(function(){
 						window.location.replace( api_response.result_options.redirect )
 					}, 3)
+
 				}else{
 
 					// has_tipo in url
