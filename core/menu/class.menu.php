@@ -54,7 +54,8 @@ class menu extends common {
 			return $ar_areas;
 		}
 
-		$is_global_admin = security::is_global_admin($user_id);
+		$is_global_admin	= security::is_global_admin($user_id);
+		$is_developer		= security::is_developer($user_id);
 
 		// get all areas of the current installation
 			$ar_full_areas = area::get_areas();
@@ -75,6 +76,11 @@ class menu extends common {
 				for ($i=0; $i < $ar_full_areas_length ; $i++) {
 
 					$area_item = $ar_full_areas[$i];
+
+					if ($area_item->tipo===DEDALO_AREA_DEVELOPMENT_TIPO && $is_developer===false) {
+						// skip menu developer to non developers, even if they have permissions
+						continue;
+					}
 
 					$found = array_find($ar_permisions_areas, function($permisions_item) use($area_item){
 						return $permisions_item->tipo===$area_item->tipo;

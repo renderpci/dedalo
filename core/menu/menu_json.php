@@ -49,7 +49,6 @@
 			$item->tree_datalist	= $tree_datalist;
 			$item->info_data		= $info_data;
 			$item->show_ontology	= security::is_developer($user_id); //  SHOW_DEVELOPER; // boolean from config file
-
 			$item->username			= navigator::get_username();
 
 		$data[] = $item;
