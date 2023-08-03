@@ -134,14 +134,6 @@
                     }
                 ]
             }
-        },
-        "dd1350": {
-            "inf": "Afecta a tipos: [component_json]",
-            "dato": {
-                "lg-nolan": [
-                    {}
-                ]
-            }
         }
     },
     "section_id": 6,
