@@ -362,8 +362,10 @@ class tools_register {
 				DEDALO_DATA_LANG,
 				$section_tipo
 			);
-			$dato    = $component->get_dato();
-			$value	= reset($dato);
+			$dato	= $component->get_dato();
+			$value	= is_array($dato) && isset($dato[0])
+				? $dato[0]
+				: null;
 			$tool_object->name = $value;
 
 		// label
@@ -401,7 +403,9 @@ class tools_register {
 				$section_tipo
 			);
 			$dato	= $component->get_dato();
-			$value	= $dato[0] ?? null;
+			$value	= is_array($dato) && isset($dato[0])
+				? $dato[0]
+				: null;
 			$tool_object->vesion = $value;
 
 		// dedalo version (minimal requirement)
@@ -416,7 +420,9 @@ class tools_register {
 				$section_tipo
 			);
 			$dato 	= $component->get_dato();
-			$value 	= $dato[0] ?? null;
+			$value	= is_array($dato) && isset($dato[0])
+				? $dato[0]
+				: null;
 			$tool_object->dd_version = $value;
 
 		// description
@@ -473,8 +479,10 @@ class tools_register {
 				DEDALO_DATA_LANG,
 				$section_tipo
 			);
-			$dato	= (array)$component->get_dato();
-			$value	= $dato[0] ?? null;
+			$dato	= $component->get_dato();
+			$value	= is_array($dato) && isset($dato[0])
+				? $dato[0]
+				: null;
 			// empty object case check
 			if (empty((array)$value)) {
 				$value = null;
@@ -566,8 +574,10 @@ class tools_register {
 				DEDALO_DATA_LANG,
 				$section_tipo
 			);
-			$dato	= (array)$component->get_dato();
-			$value	= $dato[0] ?? null;
+			$dato	= $component->get_dato();
+			$value	= is_array($dato) && isset($dato[0])
+				? $dato[0]
+				: null;
 			// empty object case check
 			if (empty($value) || empty((array)$value)) {
 				$value = null;
@@ -585,10 +595,12 @@ class tools_register {
 				DEDALO_DATA_LANG,
 				$section_tipo
 			);
-			$dato	= (array)$component->get_dato();
-			$value	= $dato[0] ?? null;
+			$dato	= $component->get_dato();
+			$value	= is_array($dato) && isset($dato[0])
+				? $dato[0]
+				: null;
 			// empty object case check
-			if (empty((array)$value)) {
+			if (empty($value) || empty((array)$value)) {
 				$value = null;
 			}
 			$tool_object->properties = $value;
@@ -604,10 +616,12 @@ class tools_register {
 				DEDALO_DATA_LANG,
 				$section_tipo
 			);
-			$dato	= (array)$component->get_dato();
-			$value	= $dato[0] ?? null;
+			$dato	= $component->get_dato();
+			$value	= is_array($dato) && isset($dato[0])
+				? $dato[0]
+				: null;
 			// empty object case check
-			if (empty((array)$value)) {
+			if (empty($value) || empty((array)$value)) {
 				$value = null;
 			}
 			$tool_object->labels = $value;
@@ -958,7 +972,9 @@ class tools_register {
 						$record->section_tipo
 					);
 					$dato	= $component->get_dato();
-					$name	= reset($dato);
+					$name	= !empty($dato)
+						? ($dato[0] ?? null)
+						: null;
 
 				// config
 					$model		= RecordObj_dd::get_modelo_name_by_tipo($config_tipo,true);
@@ -971,7 +987,9 @@ class tools_register {
 						$record->section_tipo
 					);
 					$dato	= $component->get_dato();
-					$config	= reset($dato);
+					$config	= !empty($dato)
+						? ($dato[0] ?? null)
+						: null;
 
 				$value = (object)[
 					'name'		=> $name,
@@ -1046,7 +1064,7 @@ class tools_register {
 		$ar_client_config = array_map(function($item){
 
 			$new_config = [];
-			if($item->config !== false){
+			if( !empty($item->config) ) {
 				foreach ($item->config as $key => $value) {
 					if (isset($value->client) && $value->client===true) {
 						$new_config[$key] = $value;

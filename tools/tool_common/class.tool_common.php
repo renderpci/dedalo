@@ -724,7 +724,7 @@ class tool_common {
 					foreach ($registered_tools as $tool) {
 
 						if( (isset($tool->always_active) && $tool->always_active===true) ||
-							in_array($tool->section_id, $ar_allowed_id)
+							 in_array($tool->section_id, $ar_allowed_id)
 							) {
 							$user_tools[] = $tool;
 						}

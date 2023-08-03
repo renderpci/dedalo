@@ -212,6 +212,7 @@ class component_security_access extends component_common {
 				, logger::DEBUG
 			);
 
+
 		return $datalist;
 	}//end get_datalist
 
@@ -515,8 +516,8 @@ class component_security_access extends component_common {
 		// $fiber = new Fiber(function() use($section_id, $user_id, $start_time) : array {
 
 			debug_log(__METHOD__
-				. " (1) user_id: " .$user_id
-				. ' ))) launching datalist /////////////////////////////////////////////////////////////////////////////////////////////////////////////// '
+				. " (1 start) user_id: " .$user_id
+				. ' ))) launching datalist //////////////////////////////////////////////////////////////////////////////////// '
 				, logger::WARNING
 			);
 
@@ -535,8 +536,8 @@ class component_security_access extends component_common {
 
 			// Fiber::suspend();
 			debug_log(__METHOD__
-				. " (2) count: " . count($datalist) .' '. exec_time_unit($start_time).' ms'
-				. ' ))) launching datalist ////////////////////////////////////////////////////////////////////////////////////////////// '
+				. " (2 end) count: " . count($datalist) .' '. exec_time_unit($start_time).' ms'
+				. ' ))) finished calculation datalist /////////////////////////////////////////////////////////////////////////// '
 				, logger::WARNING
 			);
 
