@@ -77,17 +77,20 @@ class component_security_access extends component_common {
 		// already resolved in current instance
 			if (isset($this->datalist)) {
 				if(SHOW_DEBUG===true) {
-					debug_log(__METHOD__.' Return already set datalist. count: '.count($this->datalist), logger::DEBUG);
+					debug_log(__METHOD__
+						.' Return already set datalist. count: '.count($this->datalist)
+						, logger::DEBUG
+					);
 				}
 				return $this->datalist;
 			}
 
-		// cache_file_name. Like 'cache_tree_'.DEDALO_DATA_LANG.'.json'
-			$cache_file_name = component_security_access::get_cache_tree_file_name(DEDALO_DATA_LANG);
-
-		// cache cascade
-			$use_cache = true;
+		// cache
+			$use_cache = defined('DEDALO_CACHE_MANAGER') && isset(DEDALO_CACHE_MANAGER['files_path']);
 			if ($use_cache===true) {
+
+				// cache_file_name. Like 'cache_tree_'.DEDALO_DATA_LANG.'.json'
+					$cache_file_name = component_security_access::get_cache_tree_file_name(DEDALO_DATA_LANG);
 
 				// cache from session
 					// if (isset($_SESSION['dedalo']['component_security_access']['datalist'][DEDALO_APPLICATION_LANG])) {
@@ -118,20 +121,6 @@ class component_security_access extends component_common {
 						);
 						return $datalist;
 					}
-
-				// precalculate profiles datalist security access in background
-				// This file is generated on every user login, launching the process in background
-				// or, when current lang is not cached yet (on user change data lang in menu)
-					dd_cache::process_and_cache_to_file((object)[
-						'process_file'	=> DEDALO_CORE_PATH . '/component_security_access/calculate_tree.php',
-						'data'			=> (object)[
-							'session_id'	=> session_id(),
-							'user_id'		=> $user_id
-						],
-						'file_name'		=> $cache_file_name,
-						'wait'			=> false
-					]);
-					debug_log(__METHOD__." Generating security access datalist in background... ", logger::DEBUG);
 			}
 
 		// short vars

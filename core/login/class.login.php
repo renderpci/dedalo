@@ -738,17 +738,22 @@ class login extends common {
 
 		// precalculate profiles datalist security access in background
 		// This file is generated on every user login, launching the process in background
-			$cache_file_name = component_security_access::get_cache_tree_file_name(DEDALO_DATA_LANG);
-			dd_cache::process_and_cache_to_file((object)[
-				'process_file'	=> DEDALO_CORE_PATH . '/component_security_access/calculate_tree.php',
-				'data'			=> (object)[
-					'session_id'	=> session_id(),
-					'user_id'		=> $user_id
-				],
-				'file_name'		=> $cache_file_name,
-				'wait'			=> false
-			]);
-			debug_log(__METHOD__." Generating security access datalist in background... ", logger::DEBUG);
+			if (defined('DEDALO_CACHE_MANAGER') && isset(DEDALO_CACHE_MANAGER['files_path'])) {
+				$cache_file_name = component_security_access::get_cache_tree_file_name(DEDALO_DATA_LANG);
+				debug_log(__METHOD__
+					." Generating security access datalist in background... [cache_file_name: $cache_file_name]"
+					, logger::DEBUG
+				);
+				dd_cache::process_and_cache_to_file((object)[
+					'process_file'	=> DEDALO_CORE_PATH . '/component_security_access/calculate_tree.php',
+					'data'			=> (object)[
+						'session_id'	=> session_id(),
+						'user_id'		=> $user_id
+					],
+					'file_name'		=> $cache_file_name,
+					'wait'			=> false
+				]);
+			}
 
 		// user image
 			$user_image = login::get_user_image($user_id);
@@ -1141,10 +1146,13 @@ class login extends common {
 				$cookie_properties->httponly
 			);
 			#unset($_SESSION);
-			debug_log(__METHOD__." Unset session and cookie. cookie_name: $cookie_name ".to_string(), logger::DEBUG);
+			debug_log(__METHOD__
+				." Unset session and cookie. cookie_name: $cookie_name ".to_string()
+				, logger::DEBUG
+			);
 
 		// delete previous cache files (prevents reuse of old files when the user does not quit from the browser)
-			if (defined('DEDALO_CACHE_MANAGER') && isset(DEDALO_CACHE_MANAGER->files_path)) {
+			if (defined('DEDALO_CACHE_MANAGER') && isset(DEDALO_CACHE_MANAGER['files_path'])) {
 				dd_cache::delete_cache_files();
 			}
 

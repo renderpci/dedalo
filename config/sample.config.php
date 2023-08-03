@@ -110,9 +110,10 @@
 
 
 // cache
-	// dedalo_cache_manager. bool|object.
+	// dedalo_cache_manager. bool|array.
 	// Default manager: files : write cache files with complex resolved data of current logged user (like profiles)
-	define('DEDALO_CACHE_MANAGER', (object)[
+	// sample: value ['manager' => 'files', 'files_path' => '/tmp']
+	define('DEDALO_CACHE_MANAGER', [
 		'manager'		=> 'files',
 		'files_path'	=> '/tmp'
 	]);

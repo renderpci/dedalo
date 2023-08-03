@@ -555,6 +555,36 @@ final class dd_utils_api {
 				$response->msg .= ' Changed dedalo_application_lang to '.$dedalo_application_lang;
 			}
 
+		// cache update
+			// precalculate profiles datalist security access in background
+			// This file is generated on every user login, launching the process in background
+			// or, when current lang is not cached yet (on user change data lang in menu)
+			// cache_file_name. Like 'cache_tree_'.DEDALO_DATA_LANG.'.json'
+			if (defined('DEDALO_CACHE_MANAGER') && isset(DEDALO_CACHE_MANAGER['files_path']) && login::is_logged()===true) {
+				$cache_file_name = component_security_access::get_cache_tree_file_name($dedalo_data_lang);
+				// check if cache file already exists
+				$cache_file_exists = dd_cache::cache_file_exists((object)[
+					'file_name' => $cache_file_name
+				]);
+				if ($cache_file_exists===false) {
+					// cache do not exists. Create a new one
+					debug_log(__METHOD__
+						." Generating security access datalist in background... " . PHP_EOL
+						.' cache_file_name: ' . $cache_file_name
+						, logger::DEBUG
+					);
+					dd_cache::process_and_cache_to_file((object)[
+						'process_file'	=> DEDALO_CORE_PATH . '/component_security_access/calculate_tree.php',
+						'data'			=> (object)[
+							'session_id'	=> session_id(),
+							'user_id'		=> navigator::get_user_id()
+						],
+						'file_name'		=> $cache_file_name,
+						'wait'			=> false
+					]);
+				}
+			}
+
 		// debug
 			debug_log(__METHOD__." response ".to_string($response), logger::DEBUG);
 
