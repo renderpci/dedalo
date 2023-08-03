@@ -124,8 +124,8 @@ session_write_close();
 			$obj->DEDALO_DATE_ORDER				= DEDALO_DATE_ORDER;
 			$obj->component_active				= null;
 			// debug only
-			if(SHOW_DEBUG===true) {
-				$obj->dedalo_db_name	= DEDALO_DATABASE_CONN;
+			if(SHOW_DEBUG===true || SHOW_DEVELOPER===true) {
+				$obj->dedalo_db_name = DEDALO_DATABASE_CONN;
 				if ($obj->is_logged===true && defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS==='installed') {
 					$obj->pg_version = (function() {
 						try {
