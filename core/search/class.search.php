@@ -1087,7 +1087,7 @@ class search {
 					}else{
 						// select
 						$query_inside .= 'SELECT ' . $sql_query_select;
-						$query_inside .= ', '.$this->main_section_tipo_alias.'.id'; // avoid ambiguity in pagination of equal values
+						// $query_inside .= ', '.$this->main_section_tipo_alias.'.id'; // avoid ambiguity in pagination of equal values
 						// from
 						$query_inside .= PHP_EOL . 'FROM ' . $main_from_sql;
 					}
