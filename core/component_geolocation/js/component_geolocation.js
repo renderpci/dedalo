@@ -293,9 +293,13 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 			case 'NUMISDATA':
 				// LAYER
 				// var dare = new L.TileLayer('http://dare.ht.lu.se/tiles/imperium/{z}/{x}/{y}.png');
-				dare = new L.tileLayer('http://pelagios.org/tilesets/imperium/{z}/{x}/{y}.png',{
+				// dare = new L.tileLayer('http://pelagios.org/tilesets/imperium/{z}/{x}/{y}.png',{
+				// 	maxZoom: 11
+				// });
+				dare = new L.TileLayer('https://dh.gu.se/tiles/imperium/{z}/{x}/{y}.png',{
 					maxZoom: 11
 				});
+
 
 				arcgis = new L.tileLayer('//server.arcgisonline.com/ArcGIS/' + 'rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
 
