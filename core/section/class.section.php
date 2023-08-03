@@ -1590,11 +1590,6 @@ class section extends common {
 				)
 			);
 
-		// DEDALO_CACHE_MANAGER : get_ar_filter_cache
-			if( DEDALO_CACHE_MANAGER===true ) {
-				cache::del_contains( $this->tipo );
-			}
-
 
 		return true;
 	}//end Delete

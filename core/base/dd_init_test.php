@@ -718,7 +718,7 @@
 		return $init_response;
 	}else{
 
-		$files_path = DEDALO_CACHE_MANAGER->files_path ?? null;
+		$files_path = DEDALO_CACHE_MANAGER['files_path'] ?? null;
 		if ( !is_dir($files_path) ) {
 
 			$init_response->msg[]	= 'Warning: Cache dir unavailable at: '.$files_path . PHP_EOL . ' Check your DEDALO_CACHE_MANAGER config to fix it';
