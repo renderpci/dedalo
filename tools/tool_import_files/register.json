@@ -145,12 +145,6 @@
         ]
       }
     },
-    "dd1334": {
-      "inf": "Ontologia [component_json]",
-      "dato": {
-        "lg-nolan": null
-      }
-    },
     "dd1335": {
       "inf": "Propiedades [component_json]",
       "dato": {
@@ -159,20 +153,6 @@
             "open_as": "window",
             "windowFeatures": null
           }
-        ]
-      }
-    },
-    "dd1350": {
-      "inf": "Afecta a tipos: [component_json]",
-      "dato": {
-        "lg-nolan": null
-      }
-    },
-    "dd1362": {
-      "inf": "Dev info [component_text_area]",
-      "dato": {
-        "lg-nolan": [
-          ""
         ]
       }
     },
