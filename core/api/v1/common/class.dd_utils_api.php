@@ -178,10 +178,10 @@ final class dd_utils_api {
 		  $size = preg_replace('/[^0-9\.]/', '', $size); // Remove the non-numeric characters from the size.
 		  if ($unit) {
 			// Find the position of the unit in the ordered string which is the power of magnitude to multiply a kilobyte by.
-			return round($size * pow(1024, stripos('bkmgtpezy', $unit[0])));
+			return round( floatval($size) * pow(1024, stripos('bkmgtpezy', $unit[0])));
 		  }
 		  else {
-			return round($size);
+			return round( floatval($size) );
 		  }
 		}
 
