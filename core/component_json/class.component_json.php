@@ -23,34 +23,65 @@ class component_json extends component_common {
 
 	/**
 	* GET_DATO
+	* @return array|null $dato
 	*/
-	public function get_dato() {
+	public function get_dato() : ?array {
 
-		// Compressed dato to avoid postgresql change index order
-		$dato = parent::get_dato() ?? [];
+		$dato = parent::get_dato();
 
-		if(!empty($dato) && !is_array($dato)) {
-			// trigger_error("Error. dato converted to empty object because is not as expected object. ". gettype($dato));
-			// dump($dato, ' dato ++ '.to_string());
-			try {
+		// OLD
+			// if(!empty($dato) && !is_array($dato)) {
+			// 	try {
 
-				$data_string = !is_string($dato)
-					? json_encode($dato)
-					: $dato;
+			// 		$data_string = !is_string($dato)
+			// 			? json_encode($dato)
+			// 			: $dato;
 
-				$data_object = json_decode($data_string);
-				$new_data = ($data_object)
-					? [$data_object]
-					: [];
+			// 		$data_object = json_decode($data_string);
+			// 		$new_data = ($data_object)
+			// 			? [$data_object]
+			// 			: [];
 
-			} catch (Exception $e) {
-				$new_data = [];
-			}
+			// 	} catch (Exception $e) {
+			// 		debug_log(__METHOD__
+			// 			. " Exception on read dato. Applying default data: [] " . PHP_EOL
+			// 			. ' exception: ' . $e->getMessage()
+			// 			, logger::ERROR
+			// 		);
+			// 		$new_data = [];
+			// 	}
 
-			$dato = $new_data;
+			// 	$dato = $new_data;
+
+			// 	// update
+			// 	$this->set_dato($dato);
+			// 	$this->Save();
+			// }
+
+		if (!is_null($dato) && !is_array($dato)) {
+			$type = gettype($dato);
+			debug_log(__METHOD__
+				. " Expected dato type array or null, but type is: $type. Converted to array and saving " . PHP_EOL
+				. ' tipo: ' . $this->tipo . PHP_EOL
+				. ' section_tipo: ' . $this->section_tipo . PHP_EOL
+				. ' section_id: ' . $this->section_id
+				, logger::ERROR
+			);
+			dump($dato, ' dato ++ '.to_string());
+
+			$dato = !empty($dato)
+				? [$dato]
+				: null;
+
+			dump($dato, ' dato_to_save ++ '.to_string());
+
+			// update
+			$this->set_dato($dato);
+			$this->Save();
 		}
 
-		return (array)$dato;
+
+		return $dato;
 	}//end get_dato
 
 
