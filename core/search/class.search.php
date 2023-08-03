@@ -751,10 +751,10 @@ class search {
 	* 	parsed final SQL query string
 	*/
 	public function parse_search_query_object( bool $full_count=false ) : string {
-		#$start_time=start_time();
-		#dump($this->search_query_object->filter, ' this->search_query_object->filter 1 ++ '.to_string());
-		#dump( json_encode($this->search_query_object,JSON_PRETTY_PRINT  ), '$this->search_query_object->filter 2 ++ '.to_string());
-		#debug_log(__METHOD__." JSONSEARCH ORIGINAL (ANTES DE PASAR POR COMPONENTES) ".json_encode($this->search_query_object->filter, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), logger::DEBUG);
+		// $start_time=start_time();
+		// dump($this->search_query_object->filter, ' this->search_query_object->filter 1 ++ '.to_string());
+		// dump( json_encode($this->search_query_object,JSON_PRETTY_PRINT  ), '$this->search_query_object->filter 2 ++ '.to_string());
+		// debug_log(__METHOD__." JSONSEARCH ORIGINAL (ANTES DE PASAR POR COMPONENTES) ".json_encode($this->search_query_object->filter, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), logger::DEBUG);
 
 		// pre_parse_search_query_object if not already parsed
 			if ($this->search_query_object->parsed!==true) {
@@ -764,11 +764,11 @@ class search {
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				#dump( json_encode($this->search_query_object,JSON_PRETTY_PRINT  ), '$this->search_query_object->filter 2 ++ '.to_string());
-				#dump( null, '$this->search_query_object->filter 2 ++ '.json_encode($this->search_query_object, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE ));  #die();
-				#$debug_json_string = json_encode($this->search_query_object->filter, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-				#debug_log(__METHOD__." DEBUG_JSON_STRING \n".to_string().$debug_json_string, logger::DEBUG);
-				#$this->remove_distinct=true;
+				// dump( json_encode($this->search_query_object,JSON_PRETTY_PRINT  ), '$this->search_query_object->filter 2 ++ '.to_string());
+				// dump( null, '$this->search_query_object->filter 2 ++ '.json_encode($this->search_query_object, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE ));  #die();
+				// $debug_json_string = json_encode($this->search_query_object->filter, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+				// debug_log(__METHOD__." DEBUG_JSON_STRING \n".to_string().$debug_json_string, logger::DEBUG);
+				// $this->remove_distinct=true;
 			}
 
 		// Search elements. Order is important
@@ -1092,7 +1092,7 @@ class search {
 						$query_inside .= PHP_EOL . 'FROM ' . $main_from_sql;
 					}
 
-						# join virtual tables
+					// join virtual tables
 						$query_inside .= $sql_joins;
 					// where
 						$query_inside .= PHP_EOL . 'WHERE ' . $main_where_sql;
@@ -1156,7 +1156,11 @@ class search {
 						}
 					if(SHOW_DEBUG===true) {
 						$sql_query = '-- Search With order' . PHP_EOL . $sql_query;
-						debug_log(__METHOD__." sql_query ".to_string($sql_query), logger::DEBUG);
+						debug_log(__METHOD__
+							. " sql_query ". PHP_EOL
+							. $sql_query
+							, logger::DEBUG
+						);
 					}
 				break;
 		}
@@ -1191,7 +1195,7 @@ class search {
 				if (empty($current_matrix_table)) {
 					debug_log(__METHOD__
 						. " Ignored invalid empty matrix table " . PHP_EOL
-						. ' section_tipo: ' . $current_section_tipo . ' '
+						. ' section_tipo: ' . $current_section_tipo
 						, logger::ERROR
 					);
 					continue;
