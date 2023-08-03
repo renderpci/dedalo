@@ -261,7 +261,7 @@ login.prototype.action_dispatch = async function(api_response) {
 							console.error(error);
 						});
 					})();
-					if (api_response.result_options?.user_id && api_response.result_options?.user_id===-1) {
+					if (api_response.result_options?.user_id && api_response.result_options?.user_id===-1 && DEVELOPMENT_SERVER===true) {
 						self.node.classList.add('raspa_loading')
 					}
 					await (()=>{

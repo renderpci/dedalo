@@ -370,7 +370,7 @@ class area_thesaurus extends area_common {
 		}
 
 		if (empty($hierarchy_name)) {
-			$hierarchy_name = 'Hierarchy unstranslated ' . $tipo .' '. $parent;
+			$hierarchy_name = 'Hierarchy untranslated ' . $tipo .' '. $parent;
 		}
 
 		# Store for speed
