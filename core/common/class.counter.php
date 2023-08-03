@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * COUNTER
 *
@@ -34,7 +35,10 @@ abstract class counter {
 			$counter_number = pg_fetch_result($result, 0, 0);
 		}else{
 			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__." counter not found in db ($matrix_table). Value $counter_number is returned instead (".str_replace(array('$1'), array($tipo), $strQuery).") ".to_string(), logger::DEBUG);
+				debug_log(__METHOD__
+					." counter not found in db ($matrix_table). Value $counter_number is returned instead (".str_replace(array('$1'), array($tipo), $strQuery).") "
+					, logger::DEBUG
+				);
 			}
 		}
 
@@ -112,7 +116,7 @@ abstract class counter {
 	public static function consolidate_counter(string $section_tipo, string $matrix_table, string $counter_matrix_table='matrix_counter') : bool {
 
 		# BIGGER_SECTION_ID . Search bigger section_tipo existent
-		$strQuery	= 'SELECT section_id FROM "'.$matrix_table.'" WHERE section_tipo = $1 ORDER BY section_id DESC LIMIT 1';
+		$strQuery	= 'SELECT section_id FROM "'.$matrix_table.'" WHERE section_tipo = $1 AND section_id > 0 ORDER BY section_id DESC LIMIT 1';
 		$result		= pg_query_params(DBi::_getConnection(), $strQuery, array($section_tipo));
 		if($result===false) {
 			throw new Exception("Error Processing Request. DB error on get last section_id of tipo: '$section_tipo' - table: '$matrix_table'", 1);
