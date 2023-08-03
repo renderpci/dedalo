@@ -59,7 +59,10 @@ abstract class backup {
 						$response->msg		= "Error on read or create backup directory. Permission denied ".__METHOD__;
 						return $response;
 					}
-					debug_log(__METHOD__." CREATED DIR: $file_path  ".to_string(), logger::DEBUG);
+					debug_log(__METHOD__
+						." CREATED DIR: $file_path  "
+						, logger::WARNING
+					);
 				}
 
 			// name : file name formatted as date . (one hour resolution)
@@ -72,7 +75,10 @@ abstract class backup {
 				if($skip_backup_time_range===true) {
 
 					// Direct backup is forced
-					debug_log(__METHOD__." Making backup without time range prevention ".to_string(), logger::DEBUG);
+					debug_log(__METHOD__
+						." Making backup without time range prevention "
+						, logger::WARNING
+					);
 
 				}else{
 
@@ -89,7 +95,10 @@ abstract class backup {
 					$difference_in_hours	= round( ($current_time_secs/3600) - round($last_modification_time_secs/3600), 0 );
 					if ( $difference_in_hours < DEDALO_BACKUP_TIME_RANGE ) {
 						$msg = " Skipped backup. A recent backup (about $difference_in_hours hours early) already exists. It is not necessary to build another one";
-						debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);
+						debug_log(__METHOD__
+							." $msg "
+							, logger::DEBUG
+						);
 
 						$response->result	= true;
 						$response->msg		= $msg . " ".__METHOD__;
@@ -103,7 +112,11 @@ abstract class backup {
 				$mysqlExportPath = $file_path .'/'. $db_name . '.custom.backup';
 				if (file_exists($mysqlExportPath)) {
 					$msg = " Skipped backup. A recent backup already exists ('$mysqlExportPath'). It is not necessary to build another one";
-					debug_log(__METHOD__." $msg ".to_string($db_name), logger::DEBUG);
+					debug_log(__METHOD__
+						. $msg  . PHP_EOL
+						. ' db_name: ' . to_string($db_name)
+						, logger::DEBUG
+					);
 
 					$response->result	= true;
 					$response->msg		= $msg . " ".__METHOD__;
@@ -121,7 +134,11 @@ abstract class backup {
 
 				$command = 'nice -n 19 ' . $command;
 
-				debug_log(__METHOD__." Building direct backup file ($mysqlExportPath). Command:\n ".to_string($command), logger::DEBUG);
+				debug_log(__METHOD__
+					." Building direct backup file ($mysqlExportPath)". PHP_EOL
+					." Command:\n ".to_string($command)
+					, logger::DEBUG
+				);
 
 				// exec directly and wait result
 				shell_exec($command);
@@ -153,7 +170,10 @@ abstract class backup {
 							chmod($prgfile, 0755);
 						}else{
 							$msg = "Error Processing backup. Script file do not exists or is not accessible. Please check folder '../backup/temp' permissions";
-							debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
+							debug_log(__METHOD__
+								." $msg "
+								, logger::ERROR
+							);
 							throw new Exception($msg, 1);
 						}
 
@@ -169,7 +189,8 @@ abstract class backup {
 						$PID = exec_::exec_sh_file($prgfile);
 
 						debug_log(__METHOD__
-							." Building delayed backup file ($mysqlExportPath)" . PHP_EOL
+							." Building delayed backup file" . PHP_EOL
+							.' mysqlExportPath: ' . $mysqlExportPath . PHP_EOL
 							.' Command: '.$command .PHP_EOL
 							.' PID: '.$PID
 							, logger::WARNING
@@ -249,7 +270,10 @@ abstract class backup {
 			if(SHOW_DEBUG===true) {
 				throw new Exception($msg, 1);
 			}
-			debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
+			debug_log(__METHOD__
+				." ERROR: $msg "
+				, logger::ERROR
+			);
 			return false;
 		}
 		$tableList = array();
@@ -266,35 +290,53 @@ abstract class backup {
 	* COPY_TO_FILE
 	* Copy rows from DB to file filtered by tld
 	* Copy is made using psql daemon
+	* @param string $table
+	* @param string $path_file
+	* @param string|null $tld
 	* @return string $res
 	*/
-	public static function copy_to_file(string $table, string $path_file, string $tld) : string {
+	public static function copy_to_file(string $table, string $path_file, ?string $tld= null) : string {
 
-		$res='';
+		$res = '';
 
-		$port_command = !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';
-		$command_base = DB_BIN_PATH.'psql '.DEDALO_DATABASE_CONN." -U ".DEDALO_USERNAME_CONN . $port_command . ' -h '.DEDALO_HOSTNAME_CONN;
-		switch ($table) {
-			case 'jer_dd':
-				$command = $command_base . " -c \"\copy (SELECT ".addslashes(backup::$jer_dd_columns)." FROM jer_dd WHERE ". '\"terminoID\"' ." LIKE '{$tld}%') TO '{$path_file}' \" " ;
-				$res .= shell_exec($command);
-				break;
+		// check tld var
+			if (empty($tld) && $table!=='matrix_dd') {
+				debug_log(__METHOD__
+					. " Error. Empty tld " . PHP_EOL
+					. ' table: ' . $table . PHP_EOL
+					. ' path_file: ' . $path_file . PHP_EOL
+					. ' tld: ' . to_string($tld)
+					, logger::ERROR
+				);
+				return '';
+			}
 
-			case 'matrix_descriptors_dd':
-				$command = $command_base . " -c \"\copy (SELECT ".addslashes(backup::$descriptors_dd_columns)." FROM \"matrix_descriptors_dd\" WHERE parent LIKE '{$tld}%') TO '{$path_file}' \" ";
-				$res .= shell_exec($command);
-				break;
+		// command
+			$port_command = !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';
+			$command_base = DB_BIN_PATH.'psql '.DEDALO_DATABASE_CONN." -U ".DEDALO_USERNAME_CONN . $port_command . ' -h '.DEDALO_HOSTNAME_CONN;
+			switch ($table) {
 
-			case 'matrix_dd':
-				$command = $command_base . " -c \"\copy (SELECT * FROM \"$table\") TO '{$path_file}' \" ";
-				$res .= shell_exec($command);
-				#debug_log(__METHOD__." matrix_dd copy command ".to_string($command), logger::ERROR);
-				break;
-		}
+				case 'jer_dd':
+					$command = $command_base . " -c \"\copy (SELECT ".addslashes(backup::$jer_dd_columns)." FROM jer_dd WHERE ". '\"terminoID\"' ." LIKE '{$tld}%') TO '{$path_file}' \" " ;
+					break;
 
-		if (!file_exists($path_file)) {
-			throw new Exception("Error Processing Request. File $path_file not created!", 1);
-		}
+				case 'matrix_descriptors_dd':
+					$command = $command_base . " -c \"\copy (SELECT ".addslashes(backup::$descriptors_dd_columns)." FROM \"matrix_descriptors_dd\" WHERE parent LIKE '{$tld}%') TO '{$path_file}' \" ";
+					break;
+
+				case 'matrix_dd':
+					$command = $command_base . " -c \"\copy (SELECT * FROM \"$table\") TO '{$path_file}' \" ";
+					break;
+			}
+
+		// exec command in terminal
+			$res = shell_exec($command);
+
+		// check created file
+			if (!file_exists($path_file)) {
+				throw new Exception("Error Processing Request. File $path_file not created!", 1);
+			}
+
 
 		return (string)$res;
 	}//end copy_to_file
@@ -371,7 +413,6 @@ abstract class backup {
 		}
 		$res = str_replace("\n",' ',$res);
 
-		#debug_log(__METHOD__." res:$res - command: ".implode('; ',$command_history), logger::DEBUG);
 
 		return (string)$res;
 	}//end copy_from_file
@@ -379,7 +420,7 @@ abstract class backup {
 
 
 	/**
-	* EXPORT_STRUCTURE
+	* EXPORT_STRUCTURE (Ontology)
 	* Exec pg_dump of selected tables and generate PostgreSQL 'copy' of tld independent files
 	* By default, jer_dd and matrix_descriptors_dd (and sequences) are excluded because they are saved as independent tld files
 	* When export structure is done, two versions are created: full and partial. Full contain all tld and sequences of dedalo *_dd tables
@@ -537,8 +578,11 @@ abstract class backup {
 			$response->msg		= '';
 
 		if (!defined('DEDALO_EXTRAS_PATH')) {
-			define('DEDALO_EXTRAS_PATH'		, DEDALO_CORE_PATH .'/extras');
-			debug_log(__METHOD__." WARNING: DEDALO_EXTRAS_PATH is not defined. Using default.. ",logger::WARNING);
+			define('DEDALO_EXTRAS_PATH', DEDALO_CORE_PATH .'/extras');
+			debug_log(__METHOD__
+				." WARNING: DEDALO_EXTRAS_PATH is not defined. Using default.. "
+				,logger::WARNING
+			);
 		}
 
 		#
@@ -546,8 +590,7 @@ abstract class backup {
 		# Get all main tlds like dd,oh,ich,rsc,et..
 		$strQuery = "SELECT tld FROM \"main_dd\" ORDER BY \"tld\" ";
 		$result	  = JSON_RecordObj_matrix::search_free($strQuery);
-		$ar_tld=array();
-		$ar_msg=array();
+		$ar_msg = array();
 		while ($rows = pg_fetch_assoc($result)) {
 
 			$current_tld = $rows['tld'];
@@ -600,8 +643,12 @@ abstract class backup {
 				if (empty($res2)) {
 					$msg .= "Error on export $table {$tld} . Please try again";
 					#print("<div class=\"error\">$msg</div>");
-					debug_log(__METHOD__." $msg ".to_string($res2), logger::ERROR);
-					$load_with_errors=true;
+					debug_log(__METHOD__
+						." $msg ". PHP_EOL
+						.' result: ' . to_string($res2)
+						, logger::ERROR
+					);
+					// $load_with_errors = true;
 					#throw new Exception(" Error on read or create file. Permission denied ({$path_file})");
 					$response->result 	= false;
 					$response->msg 		= "Error on read or create directory. Permission denied for copy_to_file ($path_file)";
@@ -628,8 +675,12 @@ abstract class backup {
 		if (empty($res3)) {
 			$msg .= "Error on export $table. Please try again";
 			#print("<div class=\"error\">$msg</div>");
-			debug_log(__METHOD__." $msg ".to_string($res3), logger::ERROR);
-			$load_with_errors=true;
+			debug_log(__METHOD__
+				." $msg " .PHP_EOL
+				.' res: ' . to_string($res3)
+				, logger::ERROR
+			);
+			// $load_with_errors = true;
 			#throw new Exception(" Error on read or create file. Permission denied ({$path_file})");
 			$response->result 	= false;
 			$response->msg 		= "Error on read or create directory. Permission denied for copy_to_file ($path_file)";
@@ -695,7 +746,7 @@ abstract class backup {
 
 				// Download once all str files from server
 				$all_str_files = backup::collect_all_str_files($dedalo_prefix_tipos);
-				foreach ($all_str_files as $key => $obj) {
+				foreach ($all_str_files as $obj) {
 					if($obj->type==="main_file") {
 						$file_path  = ONTOLOGY_DOWNLOAD_DIR;
 						$mysqlImportFilename = $file_path .'/'. $obj->name;
@@ -841,8 +892,11 @@ abstract class backup {
 			$ar_msg=array();
 
 		if (!defined('DEDALO_EXTRAS_PATH')) {
-			define('DEDALO_EXTRAS_PATH'		, DEDALO_CORE_PATH .'/extras');
-			debug_log(__METHOD__." WARNING: DEDALO_EXTRAS_PATH is not defined. Using default.. ", logger::WARNING);
+			define('DEDALO_EXTRAS_PATH', DEDALO_CORE_PATH .'/extras');
+			debug_log(__METHOD__
+				." WARNING: DEDALO_EXTRAS_PATH is not defined. Using default.. "
+				, logger::WARNING
+			);
 			$response->msg .= '<div class="warning">Please, define DEDALO_EXTRAS_PATH in your config ASAP</div>';
 		}
 
@@ -874,7 +928,7 @@ abstract class backup {
 					if (empty($res1)) {
 						$msg .= "<br>Error on import $table {$tld} copy_from_file $path_file.";
 						debug_log(__METHOD__." $msg ".to_string($res1), logger::ERROR);
-						$load_with_errors=true;
+						// $load_with_errors=true;
 						if(SHOW_DEBUG===true) {
 							$msg .= "<pre>".print_r($res1,true)."</pre>";
 						}
@@ -894,7 +948,7 @@ abstract class backup {
 					if (empty($res2)) {
 						$msg .= "<br>Error on import $table {$tld} copy_from_file $path_file.";
 						debug_log(__METHOD__." $msg ".to_string($res2), logger::ERROR);
-						$load_with_errors=true;
+						// $load_with_errors=true;
 						if(SHOW_DEBUG===true) {
 							$msg .= "<pre>".print_r($res2,true)."</pre>";
 						}
@@ -925,7 +979,7 @@ abstract class backup {
 			if (empty($res3)) {
 				$msg .= "<br>Error on import $table. copy_from_file $path_file.";
 				debug_log(__METHOD__." $msg ".to_string($res3), logger::ERROR);
-				$load_with_errors=true;
+				// $load_with_errors=true;
 				if(SHOW_DEBUG===true) {
 					$msg .= "<pre>".print_r($res3,true)."</pre>";
 				}
@@ -1023,8 +1077,12 @@ abstract class backup {
 
 					if (empty($res1)) {
 						$msg .= "<br>Error on import $table {$tld} . copy_from_file $path_file";
-						debug_log(__METHOD__." $msg ".to_string($res1), logger::ERROR);
-						$load_with_errors=true;
+						debug_log(__METHOD__
+							." $msg " . PHP_EOL
+							.' res: ' . to_string($res1)
+							, logger::ERROR
+						);
+						// $load_with_errors=true;
 
 						$response->result	= false;
 						$response->msg		.= $msg;
@@ -1058,7 +1116,7 @@ abstract class backup {
 				}
 
 			# SEQUENCE UPDATE (to the last table id)
-				$table 	 ='matrix_descriptors_dd';
+				$table = 'matrix_descriptors_dd';
 				$consolide_sequence = (object)self::consolide_sequence($table);
 				if ($consolide_sequence->result===false) {
 					$response->result 	 = false;
@@ -1094,13 +1152,13 @@ abstract class backup {
 		$msg='';
 
 		# SEQUENCE UPDATE (to the last table id)
-		$strQuery = 'SELECT id FROM "'.$table.'" ORDER BY "id" DESC LIMIT 1';	// get last id
-		$result   = pg_query(DBi::_getConnection(), $strQuery);
-		$row 	  = pg_fetch_row($result);
-		$last_id  = (int)$row[0];
+		$strQuery	= 'SELECT id FROM "'.$table.'" ORDER BY "id" DESC LIMIT 1';	// get last id
+		$result		= pg_query(DBi::_getConnection(), $strQuery);
+		$row		= pg_fetch_row($result);
+		$last_id	= (int)$row[0];
 		#$strQuery = 'ALTER SEQUENCE '.$table.'_id_seq RESTART WITH '.$last_id.';';	// get last id
-		$sequence_name = $table.'_id_seq';
-		$strQuery = "SELECT setval('$sequence_name', $last_id, true);";
+		$sequence_name	= $table.'_id_seq';
+		$strQuery		= "SELECT setval('$sequence_name', $last_id, true);";
 
 		$result   = pg_query(DBi::_getConnection(), $strQuery);
 			if ($result) {
@@ -1178,7 +1236,10 @@ abstract class backup {
 				$file			= $base_dir.'/.pgpass';
 
 			}catch(Exception $e) {
-				debug_log(__METHOD__."  ".$e->getMessage(), logger::ERROR);
+				debug_log(__METHOD__
+					."  ".$e->getMessage()
+					, logger::ERROR
+				);
 			}
 
 		#
@@ -1222,7 +1283,10 @@ abstract class backup {
 		static $ar_files;
 
 		if (isset($ar_files)) {
-			debug_log(__METHOD__." Returning previous calculated values ".to_string(), logger::DEBUG);
+			debug_log(__METHOD__
+				." Returning previous calculated values "
+				, logger::DEBUG
+			);
 			return $ar_files;
 		}
 
@@ -1281,10 +1345,17 @@ abstract class backup {
 			$folder_path = DEDALO_EXTRAS_PATH .'/'. $current_prefix;
 			if( !is_dir($folder_path) ) {
 				if(!mkdir($folder_path, 0700,true)) {
-					debug_log(__METHOD__." Error on read or create extras folder in extras directory. Permission denied ".to_string($folder_path), logger::ERROR);
+					debug_log(__METHOD__
+						." Error on read or create extras folder in extras directory. Permission denied ". PHP_EOL
+						.' folder_path: ' . to_string($folder_path)
+						, logger::ERROR
+					);
 					return false;
 				}
-				debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+				debug_log(__METHOD__
+					." CREATED DIR: $folder_path "
+					, logger::DEBUG
+				);
 			}
 		}
 
@@ -1342,7 +1413,11 @@ abstract class backup {
 			$ar_files_names = array_map(function($el){
 				return $el->name;
 			}, $ar_files);
-			debug_log(__METHOD__." collected ar_files: ".PHP_EOL. json_encode($ar_files_names, JSON_PRETTY_PRINT), logger::DEBUG);
+			debug_log(__METHOD__
+				." collected ar_files: ".PHP_EOL
+				.' ar_files_names: ' . json_encode($ar_files_names, JSON_PRETTY_PRINT)
+				, logger::DEBUG
+			);
 
 
 		return (array)$ar_files;
@@ -1399,7 +1474,10 @@ abstract class backup {
 						debug_log(__METHOD__." Error on read or create backup ONTOLOGY_DOWNLOAD_DIR directory. Permission denied ".to_string(), logger::ERROR);
 						return false;
 					}
-					debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+					debug_log(__METHOD__
+						." CREATED DIR: $folder_path "
+						, logger::DEBUG
+					);
 				}
 				self::$checked_download_str_dir = true;
 			}
@@ -1754,7 +1832,10 @@ abstract class backup {
 		// Remote server check
 			if(defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true) {
 
-				debug_log(__METHOD__." Checking remote_server status. Expected header code 200 .... ".to_string(), logger::DEBUG);
+				debug_log(__METHOD__
+					." Checking remote_server status. Expected header code 200 .... "
+					, logger::DEBUG
+				);
 
 				// Check remote server status before begins
 					$remote_server_response = (object)backup::check_remote_server();
