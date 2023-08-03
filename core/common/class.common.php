@@ -381,6 +381,11 @@ abstract class common {
 				return $matrix_table_from_tipo[$tipo];
 			}
 
+		// all case
+			if ($tipo==='all') {
+				return null;
+			}
+
 		// model
 			$model_name = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
 			// empty model case
