@@ -235,16 +235,26 @@ render_menu.prototype.edit = async function() {
 */
 const render_debug_info_bar = (self) => {
 
-	const debug_info_bar = ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'debug_info_bar'
-	})
+	// short vars
+		const info_data			= self.data.info_data || {}
+		const dedalo_version	= info_data.dedalo_version || page_globals.dedalo_version
+		const dedalo_db_name	= info_data.dedalo_db_name || page_globals.dedalo_db_name
+		const pg_version		= info_data.pg_version || page_globals.pg_version
+		const php_version		= info_data.php_version || page_globals.php_version
+		const php_memory		= info_data.php_memory || page_globals.php_memory
+		const php_sapi_name		= info_data.php_sapi_name || page_globals.php_sapi_name
+
+	// debug_info_bar
+		const debug_info_bar = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'debug_info_bar'
+		})
 
 	// dedalo_version
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'dedalo_version',
-			text_content	: 'Code v. ' + page_globals.dedalo_version,
+			text_content	: 'Code v. ' + dedalo_version,
 			parent			: debug_info_bar
 		})
 
@@ -252,7 +262,7 @@ const render_debug_info_bar = (self) => {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'dedalo_db_name',
-			text_content	: 'DB: ' + page_globals.dedalo_db_name,
+			text_content	: 'DB: ' + dedalo_db_name,
 			parent			: debug_info_bar
 		})
 
@@ -260,7 +270,7 @@ const render_debug_info_bar = (self) => {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'pg_version',
-			text_content	: 'PG v. ' + page_globals.pg_version,
+			text_content	: 'PG v. ' + pg_version,
 			parent			: debug_info_bar
 		})
 
@@ -268,7 +278,7 @@ const render_debug_info_bar = (self) => {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'php_version',
-			text_content	: 'PHP v. ' + page_globals.php_version,
+			text_content	: 'PHP v. ' + php_version,
 			parent			: debug_info_bar
 		})
 
@@ -276,14 +286,14 @@ const render_debug_info_bar = (self) => {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'php_memory',
-			text_content	: 'memory: ' + page_globals.php_memory,
+			text_content	: 'memory: ' + php_memory,
 			parent			: debug_info_bar
 		})
 	// php_sapi_name
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'php_sapi_name',
-			text_content	: 'sapi. ' + self.data.info_data.php_sapi_name,
+			text_content	: 'sapi. ' + php_sapi_name,
 			parent			: debug_info_bar
 		})
 
