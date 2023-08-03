@@ -994,7 +994,10 @@ class section extends common {
 
 			// prevent to save non authorized/valid section_id
 				if (!empty($this->section_id) && (int)$this->section_id < 1) {
-					debug_log(__METHOD__." Trying to save invalid section_id: ".to_string($this->section_id), logger::ERROR);
+					debug_log(__METHOD__
+						." Trying to save invalid section_id: ".to_string($this->section_id)
+						, logger::ERROR
+					);
 					return null;
 				}
 
