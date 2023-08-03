@@ -795,11 +795,14 @@ abstract class component_common extends common {
 					? '************'
 					: $dato;
 				debug_log(__METHOD__ . ' '
-					. '[GET] RECEIVED DATO IS NOT AS EXPECTED TYPE array|null. type: '. gettype($dato) .' - dato: ' . PHP_EOL
-					. to_string($dato_to_show) . PHP_EOL
-					. 'model: '. get_called_class() . PHP_EOL
-					. 'tipo: ' . $this->tipo . ' - section_tipo: ' . $this->section_tipo . ' - section_id: ' . $this->section_id . PHP_EOL
-					. 'table: '. $matrix_table
+					. '[GET] RECEIVED DATO IS NOT AS EXPECTED TYPE array|null ' .PHP_EOL
+					. 'type: '				. gettype($dato) . PHP_EOL
+					. 'dato: '				. json_encode($dato_to_show, JSON_PRETTY_PRINT) . PHP_EOL
+					. 'model: '				. get_called_class() . PHP_EOL
+					. 'table: '				. $matrix_table . PHP_EOL
+					. 'component_tipo: '	. $this->tipo . PHP_EOL
+					. 'section_tipo: '		. $this->section_tipo . PHP_EOL
+					. 'section_id: '		. $this->section_id
 					, logger::WARNING
 				);
 			}
