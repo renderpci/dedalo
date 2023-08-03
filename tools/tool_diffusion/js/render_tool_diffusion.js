@@ -168,11 +168,8 @@ const get_content_data = async function(self) {
 		const total = self.caller.mode==='edit'
 			? 1
 			: await self.caller.get_total()
-		const total_label = new Intl.NumberFormat(
-			page_globals.locale==='es-ES'
-				? 'es-CL' // updated minimumGroupingDigits to 1 ('es' is wrong: 2)
-				: page_globals.locale
-		).format(total);
+		const locale		= 'es-ES' // (page_globals.locale ?? 'es-CL').replace('_', '-')
+		const total_label	= new Intl.NumberFormat(locale, {}).format(total);
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'info_text',

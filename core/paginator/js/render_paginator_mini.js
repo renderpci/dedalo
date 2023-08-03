@@ -188,11 +188,8 @@ const get_content_data = async function(self) {
 			parent			: fragment
 		})
 		// page_info
-		const total_pages_label = new Intl.NumberFormat(
-			page_globals.locale==='es-ES'
-				? 'es-CL' // updated minimumGroupingDigits to 1 ('es' is wrong: 2)
-				: page_globals.locale
-		).format(total_pages);
+		const locale			= 'es-ES' // (page_globals.locale ?? 'es-CL').replace('_', '-')
+		const total_pages_label	= new Intl.NumberFormat(locale, {}).format(total_pages);
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'page_info',
@@ -200,11 +197,7 @@ const get_content_data = async function(self) {
 			parent			: paginator_info
 		})
 		// displayed_records
-		const total_label = new Intl.NumberFormat(
-			page_globals.locale==='es-ES'
-				? 'es-CL' // updated minimumGroupingDigits to 1 ('es' is wrong: 2)
-				: page_globals.locale
-		).format(total);
+		const total_label = new Intl.NumberFormat(locale, {}).format(total);
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'displayed_records',

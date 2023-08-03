@@ -182,11 +182,8 @@ const get_content_data_edit = async function(self) {
 			// section get total
 			self.caller.get_total()
 			.then(function(total){
-				const total_label = new Intl.NumberFormat(
-					page_globals.locale==='es-ES'
-						? 'es-CL' // updated minimumGroupingDigits to 1 ('es' is wrong: 2)
-						: page_globals.locale
-				).format(total);
+				const locale		= 'es-ES' // (page_globals.locale ?? 'es-CL').replace('_', '-')
+				const total_label	= new Intl.NumberFormat(locale, {}).format(total);
 				total_records.insertAdjacentHTML('afterbegin', total_label)
 			})
 

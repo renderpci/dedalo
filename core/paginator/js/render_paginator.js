@@ -242,7 +242,7 @@ const get_content_data = async function(self) {
 				fit_input_go_to_page_to_value(input_go_to_page, page_number)
 
 			// page_info label
-			const locale			= (page_globals.locale ?? 'es-CL').replace('_', '-')
+			const locale			= 'es-ES' // (page_globals.locale ?? 'es-CL').replace('_', '-')
 			const total_pages_label	= new Intl.NumberFormat(locale, {}).format(total_pages);
 			ui.create_dom_element({
 				element_type	: 'span',
