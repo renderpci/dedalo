@@ -512,6 +512,13 @@ class area_development extends area_common {
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
+		// environment
+			$item = new stdClass();
+				$item->id		= 'environment';
+				$item->typo		= 'widget';
+				$item->label	= 'Environment';
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
 
 		// sequences_status
 			require(DEDALO_CORE_PATH.'/db/class.data_check.php');
