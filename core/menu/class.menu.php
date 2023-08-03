@@ -213,19 +213,33 @@ class menu extends common {
 	*/
 	public function get_info_data() : object {
 
-		$jit_enabled = opcache_get_status()['jit']['enabled'] ?? false;
-
 		$info_data = new stdClass();
+			// vars already included in environment
+			$info_data->dedalo_version		= DEDALO_VERSION;
+			$info_data->dedalo_db_name		= DEDALO_DATABASE_CONN;
+			$info_data->pg_version			= (function() {
+												try {
+													$conn = DBi::_getConnection() ?? false;
+													if ($conn) {
+														return pg_version(DBi::_getConnection())['server'];
+													}
+													return 'Failed!';
+												}catch(Exception $e){
+													return 'Failed with Exception!';
+												}
+											  })();
+			$info_data->php_version			= PHP_VERSION;
+			$info_data->php_version			.= ' jit:'. (int)(opcache_get_status()['jit']['enabled'] ?? false);
+			$info_data->memory				= to_string(ini_get('memory_limit'));
+			$info_data->php_sapi_name		= php_sapi_name();
+			// other vars
 			$info_data->entity				= DEDALO_ENTITY;
 			$info_data->php_user			= get_current_user();
-			$info_data->php_version			= phpversion() .'-'. json_encode($jit_enabled);
 			$info_data->php_session_handler	= ini_get('session.save_handler');
 			$info_data->pg_db				= pg_version(DBi::_getConnection())['server'];
-			$info_data->pg_db_name			= DEDALO_DATABASE_CONN;
 			$info_data->server_software		= $_SERVER['SERVER_SOFTWARE'] ?? 'unknown';
-			$info_data->dedalo_version		= DEDALO_VERSION;
 			$info_data->dedalo_build		= DEDALO_BUILD;
-			$info_data->php_sapi_name		= php_sapi_name();
+
 
 		return $info_data;
 	}//end get_info_data
