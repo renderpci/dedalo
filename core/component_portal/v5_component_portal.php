@@ -10,7 +10,6 @@
 	* @return string|null $valor
 	*/
 	$_get_valor = function( $lang=DEDALO_DATA_LANG, $format='string', $fields_separator=', ', $records_separator='<br>', $ar_related_terms=false, $data_to_be_used='valor' ) {
-		// $start_time = start_time();
 
 		$options = new stdClass();
 			$options->lang				= $lang;
@@ -24,9 +23,10 @@
 		* @param object $request_options
 		* @return object $valor_from_ar_locators {result,info}
 		*/
-		$get_valor_from_ar_locators = function ( $request_options ) {
+		$get_valor_from_ar_locators = function( $request_options ) {
 
 			$start_time = start_time();
+
 			$valor_from_ar_locators	= new stdClass();
 
 			$options = new stdClass();
@@ -104,9 +104,11 @@
 			$strQuery_where='';
 			foreach ($ar_locators as $current_locator) {
 				if (empty($current_locator->section_id)) {
-					#throw new Exception("Error Processing Request BAD LOCATOR", 1);
-
-					debug_log(__METHOD__." IGNORED BAD LOCATOR:  ".to_string($current_locator), logger::ERROR);
+					debug_log(__METHOD__
+						." IGNORED BAD LOCATOR: ". PHP_EOL
+						.' locator' . to_string($current_locator)
+						, logger::ERROR
+					);
 					continue;
 				}
 				$current_section_id 	= $current_locator->section_id;
@@ -135,24 +137,19 @@
 
 			$valor_from_ar_locators->result = implode($options->records_separator, $ar_final);
 
-			if(SHOW_DEBUG===true) {
-				$html_info='';
-				$limit_time=SLOW_QUERY_MS/100;
-				$total_list_time = round(start_time()-$start_time,3);
-				$style='';
-				if ($total_list_time>$limit_time || $total_list_time>0.020) {
-					$style = "color:red";
+			// debug
+				if(SHOW_DEBUG===true) {
+					$limit_time			= SLOW_QUERY_MS/100;
+					$total_list_time	= exec_time_unit($start_time,'ms');
+					if ($total_list_time > $limit_time) {
+						debug_log(__METHOD__
+							. " v5 component_portal get_valor SLOW QUERY: " . PHP_EOL
+							. ' strQuery: ' . $strQuery . PHP_EOL
+							. ' time: '. $total_list_time.' ms'
+							, logger::WARNING
+						);
+					}
 				}
-				$html_info .= "<div class=\"debug_info get_valor_from_ar_locators\" style=\"{$style}\" onclick=\"$(this).children('pre').toggle()\"> Time: ";
-				$html_info .= $total_list_time;
-				$html_info .= "<pre style=\"display:none\"> ".$strQuery ."</pre>";
-				$html_info .= "</div>";
-				$valor_from_ar_locators->debug = $html_info;
-				if ($total_list_time>$limit_time) {
-					debug_log(__METHOD__.' '.$total_list_time."ms. SLOW QUERY: ".$strQuery);
-				}
-				#debug_log(__METHOD__.' '.$total_list_time."ms. QUERY: ".$strQuery);
-			}//end if(SHOW_DEBUG===true)
 
 			return (object)$valor_from_ar_locators;
 		};//end get_valor_from_ar_locators
