@@ -1993,7 +1993,7 @@ final class search_test extends TestCase {
 		);
 		$search->search();
 		$result = $search->get_sql_joins(); // only returns bool
-		dump($result, ' result ++ '.to_string());
+		// dump($result, ' result ++ '.to_string());
 
 		// sample expected
 			// '{rs167_rs20_dd64": "\n LEFT JOIN relations AS r_rs167_rs20_dd64 ON (mix.section_id=r_rs167_rs20_dd64.section_id AND mix.section_tipo=r_rs167_rs20_dd64.section_tipo AND r_rs167_rs20_dd64.from_component_tipo=\'rsc20\')\n LEFT JOIN matrix_dd AS rs167_rs20_dd64 ON (r_rs167_rs20_dd64.target_section_id=rs167_rs20_dd64.section_id AND r_rs167_rs20_dd64.target_section_tipo=rs167_rs20_dd64.section_tipo)}'
