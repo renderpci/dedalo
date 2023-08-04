@@ -291,8 +291,12 @@ class component_select_lang extends component_relation_common {
 
 		// sort the list for easy access
 			usort($datalist, function($a, $b) {
-				$a_label = $a->label ?? '';
-				$b_label = $b->label ?? '';
+				$a_label = isset($a) && isset($a->label)
+					? $a->label
+					: '';
+				$b_label = isset($b) && isset($b->label)
+					? $b->label
+					: '';
 				return strcmp($a_label, $b_label);
 			});
 
