@@ -142,7 +142,6 @@ self.get_parents = function(item, datalist) {
 
 	const ar_parents = []
 
-	// old way
 		const parents = (item.tipo===item.section_tipo)
 			? datalist.filter(el => el.tipo === item.parent)
 			: datalist.filter(el => el.tipo === item.parent && el.section_tipo === item.section_tipo)
@@ -152,7 +151,7 @@ self.get_parents = function(item, datalist) {
 			ar_parents.push(...parents)
 			for (let i = 0; i < parents_length; i++) {
 				const recursive_parents = self.get_parents( parents[i], datalist )
-				parents.push(...recursive_parents)
+				ar_parents.push(...recursive_parents)
 			}
 		}
 
