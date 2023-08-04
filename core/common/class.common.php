@@ -2302,7 +2302,7 @@ abstract class common {
 		// debug
 			if(SHOW_DEBUG===true) {
 				$time = exec_time_unit($start_time,'ms');
-				$time_string = $time>100
+				$time_string = $time>50
 					? sprintf("\033[31m%s\033[0m", $time)
 					: $time;
 				$len = !empty($this->tipo)

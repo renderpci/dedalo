@@ -97,8 +97,8 @@ const get_content_data = function(self) {
 		})
 
 	// values (inputs)
-		const inputs_value	= value.length>0 ? value : ['']
-		const value_length	= inputs_value.length
+		const inputs_value	= value || []
+		const value_length	= inputs_value.length || 1
 		for (let i = 0; i < value_length; i++) {
 			const input_element_node = get_input_element(i, inputs_value[i], self)
 			content_data.appendChild(input_element_node)

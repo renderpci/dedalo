@@ -566,7 +566,7 @@ class component_date extends component_common {
 	* @param object $request_query_object
 	* @return object $query_object
 	*/
-	public static function resolve_query_object_sql( object $request_query_object) : object {
+	public static function resolve_query_object_sql(object $request_query_object) : object {
 
 		// query_object clone to prevent unwanted changes in the original object
 			$query_object = clone $request_query_object;

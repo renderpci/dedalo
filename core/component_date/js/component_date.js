@@ -233,9 +233,9 @@ component_date.prototype.parse_string_date = function(string_date) {
 	const date_obj = {}
 	// only year, common to all date order
 	if(ar_date_values.length === 1){
-		 date_obj.year = (ar_date_values[0])
-			 ? parseInt(ar_date_values[0])
-			 : null
+		date_obj.year = (ar_date_values[0])
+			? parseInt(ar_date_values[0])
+			: null
 	}else{
 		switch (date_order) {
 			case 'mdy':
