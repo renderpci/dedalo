@@ -1186,7 +1186,7 @@ abstract class diffusion  {
 				$current_date_dato->start = component_date::get_date_now();
 
 		// current user dato
-			$user_id = navigator::get_user_id();
+			$user_id = get_user_id();
 
 		// first . component publication first. save if not exist
 			// date

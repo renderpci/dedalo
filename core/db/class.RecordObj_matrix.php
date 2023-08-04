@@ -254,7 +254,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 		}
 
 		# TEST VALID USER
-		#$userID		= navigator::get_user_id();
+		#$userID		= get_user_id();
 		$userID	= $_SESSION['dedalo']['auth']['user_id'];
 		if (
 			empty($userID)
@@ -353,7 +353,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 			$dato = $this->dato;
 
 		// user_id
-			$user_id = (int)navigator::get_user_id();
+			$user_id = get_user_id();
 
 		// RecordObj_time_machine
 			$RecordObj_time_machine = new RecordObj_time_machine();

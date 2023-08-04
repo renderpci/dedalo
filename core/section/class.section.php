@@ -894,7 +894,7 @@ class section extends common {
 					: $this->get_section_real_tipo();
 
 		// user id. Current logged user id
-			$user_id  = (int)navigator::get_user_id();
+			$user_id  = get_user_id();
 
 		// date now
 			$date_now = component_date::get_timestamp_now_for_db();
@@ -1316,7 +1316,7 @@ class section extends common {
 				$section_tipo = $this->get_section_real_tipo();
 			}
 			// user id
-			$user_id = navigator::get_user_id();
+			$user_id = get_user_id();
 			// matrix_table
 			$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
 
@@ -1341,7 +1341,7 @@ class section extends common {
 							$RecordObj_time_machine_new->set_tipo((string)$section_tipo);
 							$RecordObj_time_machine_new->set_lang((string)$this->get_lang());
 							$RecordObj_time_machine_new->set_timestamp((string)component_date::get_timestamp_now_for_db());	# Format 2012-11-05 19:50:44
-							$RecordObj_time_machine_new->set_userID((int)navigator::get_user_id());
+							$RecordObj_time_machine_new->set_userID(get_user_id());
 							$RecordObj_time_machine_new->set_dato((object)$this->dato);
 						$id_time_machine = (int)$RecordObj_time_machine_new->Save();
 					}else{
@@ -2620,7 +2620,7 @@ class section extends common {
 		if (!isset($dato->diffusion_info->$diffusion_element_tipo)) {
 
 			$date		= date('Y-m-d H:i:s');
-			$user_id	= navigator::get_user_id();
+			$user_id	= get_user_id();
 
 			$dato->diffusion_info->{$diffusion_element_tipo} = (object)[
 				'date'		=> $date,
@@ -3272,7 +3272,7 @@ class section extends common {
 				$modified_date 		= array_find($modified_section_tipos, function($item){ return $item['name']==='modified_date'; }); 		// array('tipo'=>'dd201', 'model'=>'component_date');
 
 		// Current user locator
-			$user_id		= navigator::get_user_id();
+			$user_id		= get_user_id();
 			$user_locator	= new locator();
 				$user_locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO); // dd128
 				$user_locator->set_section_id($user_id); // logged user
@@ -4143,7 +4143,7 @@ class section extends common {
 		$this->permissions = common::get_permissions($this->tipo, $this->tipo);
 
 		// logged user id
-			$user_id = navigator::get_user_id() ?? null;
+			$user_id = get_user_id() ?? null;
 
 		// user section . Allow user edit self data (used by tool_user_admin)
 			if ($this->permissions<2 &&

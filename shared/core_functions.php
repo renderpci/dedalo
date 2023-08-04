@@ -96,6 +96,22 @@ function dump(mixed $val, string $var_name=null, array $arguments=null) : string
 
 
 /**
+* GET_USER_ID
+* Resolve current logged user id
+* @return int|null
+*/
+function get_user_id() : ?int {
+
+	$user_id = isset($_SESSION['dedalo']) && isset($_SESSION['dedalo']['auth'])
+		? (int)$_SESSION['dedalo']['auth']['user_id']
+		: null;
+
+	return $user_id;
+}//end get_user_id
+
+
+
+/**
 * DEBUG_LOG
 * Print a php error log message
 * @param string $info

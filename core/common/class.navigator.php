@@ -70,7 +70,7 @@ class navigator {
 	}
 	# Alias of get_user_id (not used)
 		// public static function get_userID_matrix() : ?int {
-		// 	return navigator::get_user_id();
+		// 	return get_user_id();
 		// }
 
 

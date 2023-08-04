@@ -11,7 +11,7 @@
 
 // user_id fix if not already defined
 	if (!isset($user_id)) {
-		$user_id = navigator::get_user_id() ?? null;
+		$user_id = get_user_id() ?? null;
 	}
 
 

@@ -1229,7 +1229,7 @@ class tool_import_dedalo_csv extends tool_common {
 			$key_dir	= $file_data->key_dir; // string upload caller name like 'tool_upload'
 			$tmp_name	= $file_data->tmp_name; // string like 'phpJIQq4e'
 
-			$user_id = navigator::get_user_id();
+			$user_id = get_user_id();
 			$tmp_dir = DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $key_dir;
 
 			$source_file = $tmp_dir . '/' . $tmp_name;
