@@ -156,40 +156,8 @@ self.get_parents = function(item, datalist) {
 			}
 		}
 
-	// by generator
-		// for (const el of parents_generator(item, datalist)) {
-		// 	ar_parents.push(el)
-		// }
-
 	return ar_parents
 }//end get_parents
-
-
-
-/**
-* PARENTS_gENERATOR
-* 	Recursive parents generator
-* @param object item
-* @param array datalist
-* @yield array
-*/
-const parents_generator = function*(item, datalist) {
-
-	const parents = (item.tipo===item.section_tipo)
-		? datalist.filter(el => el.tipo === item.parent)
-		: datalist.filter(el => el.tipo === item.parent && el.section_tipo === item.section_tipo)
-
-	const parents_length = parents.length
-	if(parents_length>0){
-		for (let i = 0; i < parents_length; i++) {
-			yield parents[i]
-			// recursion
-			for (const el of parents_generator(parents[i], datalist)) {
-				yield el
-			}
-		}
-	}
-}//end parents_generator
 
 
 
