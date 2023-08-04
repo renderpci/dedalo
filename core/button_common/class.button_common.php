@@ -25,7 +25,7 @@ class button_common extends common {
 
 		$this->define_id(NULL);
 		$this->define_lang(DEDALO_APPLICATION_LANG);
-		$this->define_mode(navigator::get_selected('mode'));
+		// $this->define_mode(navigator::get_selected('mode'));
 
 		parent::load_structure_data();
 

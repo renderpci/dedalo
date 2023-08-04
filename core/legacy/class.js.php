@@ -126,11 +126,11 @@ class js {
 				#$html .= self::build_tag( DEDALO_CORE_URL . '/component_relation/js/component_relation.js' );
 
 				# button delete .En algunos contextos es necesario el js de button_delete aunque no tengamos cargado el componente. Por tanto lo cargaremos siempre
-				if(navigator::get_selected('modo')==='list') {
+				// if(navigator::get_selected('modo')==='list') {
 				$html .= self::build_tag( DEDALO_CORE_URL . '/button_delete/js/button_delete.js' );
 				$html .= self::build_tag( DEDALO_CORE_URL . '/button_stats/js/button_stats.js' );
 				#$html .= self::build_tag( DEDALO_CORE_URL . '/component_date/js/component_date.js' );
-				}
+				// }
 
 				# tool common
 				#$html .= self::build_tag( DEDALO_CORE_URL . '/tools/tool_common/js/tool_common.js' );
