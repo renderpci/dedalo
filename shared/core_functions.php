@@ -108,9 +108,7 @@ function debug_log(string $info, int $level=logger::DEBUG) : bool {
 	// see config file to check minimum log level
 	// Note that if SHOW_DEBUG is true, all messages will be printed to the log file (level will be ignored)
 		if(!defined('LOGGER_LEVEL') || ($level > LOGGER_LEVEL && SHOW_DEBUG===false)) {
-			// if (navigator::get_user_id()!=DEDALO_SUPERUSER) {
-				return false;
-			// }
+			return false;
 		}
 
 	// level ref
