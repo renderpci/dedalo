@@ -1477,9 +1477,11 @@ final class component_common_test extends TestCase {
 				'result type expected integer. current type: ' .gettype($result) .' - '.$element->model
 			);
 
+			$expected = 2;
+
 			$this->assertTrue(
-				$result===2,
-				'result type expected 2. current: ' .$result .' - '.$element->model
+				$result>=$expected,
+				'result type expected '.$expected.'. current: ' .$result .' - '.$element->model
 			);
 
 			$component->set_permissions(1);

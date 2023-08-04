@@ -53,7 +53,7 @@ abstract class DBi {
 
 		// Connecting, selecting database
 		$pg_conn_real = pg_connect($str_connect);
-		if($pg_conn===false) {
+		if($pg_conn_real===false) {
 			debug_log(__METHOD__
 				.' Error. Could not connect to database (52) : '.to_string($database)
 				, logger::ERROR
