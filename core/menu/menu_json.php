@@ -40,7 +40,7 @@
 				break;
 		}
 
-		$user_id = navigator::get_user_id(); // CURRENT_LOGGED_USED_ID
+		$user_id = get_user_id(); // CURRENT_LOGGED_USED_ID
 
 		// data item
 		$item = new stdClass();

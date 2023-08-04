@@ -52,7 +52,7 @@ class component_filter extends component_relation_common {
 				if(empty($dato)) {
 
 					// filter always save default project.
-						$user_id				= navigator::get_user_id();
+						$user_id				= get_user_id();
 						$default_dato_for_user	= $this->get_default_dato_for_user($user_id);
 						// set current user projects default
 						if (!empty($default_dato_for_user)) {
@@ -78,7 +78,7 @@ class component_filter extends component_relation_common {
 			// $dato = self::convert_dato_pre_490( $dato, $this->tipo );
 
 		// preserve projects that user do not have access
-			$user_id			= navigator::get_user_id();
+			$user_id			= get_user_id();
 			$is_global_admin	= security::is_global_admin($user_id);
 			if ($is_global_admin===true) {
 
@@ -419,7 +419,7 @@ class component_filter extends component_relation_common {
 			}
 
 		// User logged now
-			$user_id		= navigator::get_user_id();
+			$user_id		= get_user_id();
 			$ar_projects	= filter::get_user_authorized_projects($user_id, $this->tipo);
 
 		// dato
@@ -493,7 +493,7 @@ class component_filter extends component_relation_common {
 	public function get_valor($lang=DEDALO_DATA_LANG, $format='html') {
 
 		# User loged now
-		$user_id 	 = navigator::get_user_id();
+		$user_id 	 = get_user_id();
 		$ar_projects = filter::get_user_authorized_projects($user_id, $this->tipo);
 
 		$dato 		= $this->get_dato();
@@ -557,7 +557,7 @@ class component_filter extends component_relation_common {
 		$start_time = start_time();
 
 		// ar_projects. Projects authorized to the current user
-			$user_id		= navigator::get_user_id();
+			$user_id		= get_user_id();
 			$ar_projects	= filter::get_user_authorized_projects($user_id, $this->tipo);
 
 		// ar_projects_parsed
@@ -1174,7 +1174,7 @@ class component_filter extends component_relation_common {
 
 		// (!) Note that only user authorized projects will be added, discarding others
 		// maybe this behavior must be changed in future
-		$user_id		= navigator::get_user_id();
+		$user_id		= get_user_id();
 		$ar_projects	= filter::get_user_authorized_projects($user_id, $this->tipo);
 
 		$list_value = [];

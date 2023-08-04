@@ -401,7 +401,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 			// timestamp
 				$RecordObj_time_machine->set_timestamp( $time_machine_date );
 			// userID
-				$RecordObj_time_machine->set_userID( navigator::get_user_id() );
+				$RecordObj_time_machine->set_userID( get_user_id() );
 			// dato
 				if (!empty($time_machine_data)) {
 					$RecordObj_time_machine->set_dato( $time_machine_data );

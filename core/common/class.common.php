@@ -2539,7 +2539,7 @@ abstract class common {
 			$mode			= $this->get_mode();
 			$tipo			= $this->get_tipo();
 			$section_tipo	= $this->get_section_tipo();
-			$user_id		= navigator::get_user_id();
+			$user_id		= get_user_id();
 
 		// 1. From user preset
 			$user_preset = request_config_presets::search_request_config(
@@ -2644,7 +2644,7 @@ abstract class common {
 			// 		if(empty($request_ddo)) {
 			// 			// preset request_ddo
 			// 				if (!isset($user_preset)) {
-			// 					$user_preset = layout_map::search_user_preset($tipo, $section_tipo, navigator::get_user_id(), $mode, null);
+			// 					$user_preset = layout_map::search_user_preset($tipo, $section_tipo, get_user_id(), $mode, null);
 			// 				}
 			// 				if (!empty($user_preset)) {
 			// 					$request_ddo = array_find($user_preset, function($item){
@@ -3884,7 +3884,7 @@ abstract class common {
 		foreach ((array)$ar_section_tipo as $section_tipo) {
 
 			$section_permisions = security::get_security_permissions($section_tipo, $section_tipo);
-			$user_id_logged 	= navigator::get_user_id();
+			$user_id_logged 	= get_user_id();
 
 			// skip section if permissions are not enough
 				if ( $section_tipo!==DEDALO_THESAURUS_SECTION_TIPO
@@ -4061,7 +4061,7 @@ abstract class common {
 		$tools = [];
 
 		// user_tools
-			$user_id	= navigator::get_user_id();
+			$user_id	= get_user_id();
 			$user_tools	= tool_common::get_user_tools($user_id);
 
 		// short vars

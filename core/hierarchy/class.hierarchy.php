@@ -506,7 +506,7 @@ class hierarchy {
 			$ar_section_tipo = (isset($default_section_tipo_model))
 				? [$default_section_tipo_term, $default_section_tipo_model]
 				: [$default_section_tipo_term];
-			$user_id = navigator::get_user_id();
+			$user_id = get_user_id();
 
 			$set_permissions_result = component_security_access::set_section_permissions((object)[
 				'ar_section_tipo'	=> $ar_section_tipo,
@@ -606,7 +606,7 @@ class hierarchy {
 		// 		$ar_sections	= $options->ar_sections	?? null;
 
 		// 	// user_id
-		// 		$user_id = navigator::get_user_id();
+		// 		$user_id = get_user_id();
 		// 		if (SHOW_DEBUG===true || $user_id<1) {
 		// 			return true;
 		// 		}

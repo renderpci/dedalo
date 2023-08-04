@@ -66,7 +66,7 @@ final class dd_component_3d_api {
 			);
 
 		// move file
-			$user_id = navigator::get_user_id();
+			$user_id = get_user_id();
 			$tmp_dir = DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $file_data->key_dir;
 
 			$source_file_path	= $tmp_dir . '/' . $file_data->tmp_name;
