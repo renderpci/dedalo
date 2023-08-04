@@ -184,10 +184,10 @@ export const get_ar_raw_data_value = (self) => {
 				ar_raw_value.push(input_time_value)
 				break;
 
-			case 'datetime':
+			case 'date_time':
 				{
 				const input_time_value = (current_value)
-					? self.datetime_to_string(current_value.start)
+					? self.date_time_to_string(current_value.start)
 					: ''
 				ar_raw_value.push(input_time_value)
 				}
@@ -718,7 +718,9 @@ export const change_handler = function(options) {
 		ui.component.error(false, input_wrap)
 
 	// new value. New parsed value
-		const new_value = response.result
+		const new_value = Object.keys(response.result).length===0 && response.result.constructor===Object
+			? null // empty object case
+			: response.result
 
 	// data_value. Current data value for current key
 		const data_value = self.data.value[key]
@@ -732,7 +734,9 @@ export const change_handler = function(options) {
 		const changed_data_item = Object.freeze({
 			action	: 'update',
 			key		: key,
-			value	: data_value
+			value	: new_value
+				? data_value
+				: null
 		})
 
 	if (self.mode==='search') {

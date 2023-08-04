@@ -297,8 +297,11 @@ component_date.prototype.parse_string_date = function(string_date) {
 
 	// final dd_date
 		const dd_date = {}
-		dd_date.year = date_obj.year
 
+		// dd_date.year = date_obj.year
+		if(typeof date_obj.year==='number'){
+			dd_date.year = date_obj.year
+		}
 		if(date_obj.month){
 			dd_date.month = month_ok ? date_obj.month : month_ok
 		}
@@ -503,7 +506,7 @@ component_date.prototype.time_to_string = function(time) {
 
 
 /**
-* DATETIME_TO_STRING
+* DATE_TIME_TO_STRING
 * Converts object dd_date to flat string
 * mixing time_to_string and date_to_string results
 * @param object time
@@ -520,7 +523,7 @@ component_date.prototype.time_to_string = function(time) {
 * @return string string_time
 *	 sample: '22/07/2023 13:54:00'
 */
-component_date.prototype.datetime_to_string = function(time) {
+component_date.prototype.date_time_to_string = function(time) {
 
 	const self	= this
 
@@ -532,11 +535,11 @@ component_date.prototype.datetime_to_string = function(time) {
 	const string_time	= self.time_to_string(time)
 
 
-	const string_datetime = string_date + ' ' + string_time
+	const string_date_time = string_date + ' ' + string_time
 
 
-	return string_datetime
-}//end datetime_to_string
+	return string_date_time
+}//end date_time_to_string
 
 
 
@@ -710,10 +713,10 @@ component_date.prototype.parse_string_period = function(values) {
 		}
 
 	// year check
-		if(year){
+		// allow 0 as value
+		if(typeof year==='number'){
 			dd_date.year = year
 		}
-
 
 	// response
 		const response = {
