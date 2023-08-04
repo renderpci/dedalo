@@ -34,7 +34,7 @@
 			case 'edit':
 			default:
 				// tree_datalist
-				$tree_datalist 	= $this->get_tree_datalist();
+				$tree_datalist	= $this->get_tree_datalist();
 				// info_data
 				$info_data		= $this->get_info_data();
 				break;
@@ -49,7 +49,7 @@
 			$item->tree_datalist	= $tree_datalist;
 			$item->info_data		= $info_data;
 			$item->show_ontology	= security::is_developer($user_id); //  SHOW_DEVELOPER; // boolean from config file
-			$item->username			= navigator::get_username();
+			$item->username			= $_SESSION['dedalo']['auth']['username'] ?? null;
 
 		$data[] = $item;
 	}//end if($options->get_data===true && $permissions>0)

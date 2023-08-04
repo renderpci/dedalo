@@ -19,7 +19,7 @@ include(DEDALO_CORE_PATH . '/db/class.json_handler.php');
 include DEDALO_CORE_PATH . '/backup/class.backup.php';
 include(DEDALO_CORE_PATH . '/common/class.common.php');
 include(DEDALO_CORE_PATH . '/common/class.lang.php');
-include(DEDALO_CORE_PATH . '/common/class.navigator.php');
+// include(DEDALO_CORE_PATH . '/common/class.navigator.php');
 include(DEDALO_CORE_PATH . '/common/class.filter.php');
 include(DEDALO_CORE_PATH . '/common/class.counter.php');
 // include(DEDALO_CORE_PATH . '/common/class.tools.php');
@@ -203,4 +203,4 @@ $autoloader	= new class_loader();
 
 
 // INIT NAVIGATOR at end
-$navigator	= new navigator();
+// $navigator	= new navigator();
