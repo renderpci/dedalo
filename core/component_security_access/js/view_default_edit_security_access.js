@@ -75,8 +75,11 @@ const get_content_data = async function(self) {
 		const data		= self.data || {}
 		// array of objects with all elements from Ontology
 		const datalist	= data.datalist || []
-		// array from DB
-		const value		= data.value || []
+		// NOTE: value here is not data.value!!!!
+		// Used filled_value because the data.value do not have values with 0 (no access)
+		// filled_value is the full value that will not save in DDBB
+		// the name value of const is used to maintain the content_data uniformity between components
+		const value		= self.filled_value || [] // data.value || []
 
 	// debug
 		if(SHOW_DEBUG===true) {

@@ -204,7 +204,6 @@ component_security_access.prototype.update_value = function(item, input_value) {
 		event_manager.publish(name, input_value)
 		// console.log("changed_value:", item.tipo, item.section_tipo, changed_value);
 
-
 	return value
 }//end update_value
 
