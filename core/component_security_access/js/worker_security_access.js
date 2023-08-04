@@ -125,7 +125,7 @@ const children_generator = function*(item, datalist) {
 
 
 /**
-* GET_PARENTS OLD
+* GET_PARENTS
 * Get parents recursively from given item
 * @param object item
 * 	datalist item with info about tipo, model, value as
