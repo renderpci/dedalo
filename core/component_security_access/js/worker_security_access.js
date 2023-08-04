@@ -125,7 +125,7 @@ const children_generator = function*(item, datalist) {
 
 
 /**
-* GET_PARENTS OLD
+* GET_PARENTS
 * Get parents recursively from given item
 * @param object item
 * 	datalist item with info about tipo, model, value as
@@ -142,7 +142,6 @@ self.get_parents = function(item, datalist) {
 
 	const ar_parents = []
 
-	// old way
 		const parents = (item.tipo===item.section_tipo)
 			? datalist.filter(el => el.tipo === item.parent)
 			: datalist.filter(el => el.tipo === item.parent && el.section_tipo === item.section_tipo)
@@ -152,44 +151,12 @@ self.get_parents = function(item, datalist) {
 			ar_parents.push(...parents)
 			for (let i = 0; i < parents_length; i++) {
 				const recursive_parents = self.get_parents( parents[i], datalist )
-				parents.push(...recursive_parents)
+				ar_parents.push(...recursive_parents)
 			}
 		}
-
-	// by generator
-		// for (const el of parents_generator(item, datalist)) {
-		// 	ar_parents.push(el)
-		// }
 
 	return ar_parents
 }//end get_parents
-
-
-
-/**
-* PARENTS_gENERATOR
-* 	Recursive parents generator
-* @param object item
-* @param array datalist
-* @yield array
-*/
-const parents_generator = function*(item, datalist) {
-
-	const parents = (item.tipo===item.section_tipo)
-		? datalist.filter(el => el.tipo === item.parent)
-		: datalist.filter(el => el.tipo === item.parent && el.section_tipo === item.section_tipo)
-
-	const parents_length = parents.length
-	if(parents_length>0){
-		for (let i = 0; i < parents_length; i++) {
-			yield parents[i]
-			// recursion
-			for (const el of parents_generator(parents[i], datalist)) {
-				yield el
-			}
-		}
-	}
-}//end parents_generator
 
 
 

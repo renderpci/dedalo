@@ -75,8 +75,11 @@ const get_content_data = async function(self) {
 		const data		= self.data || {}
 		// array of objects with all elements from Ontology
 		const datalist	= data.datalist || []
-		// array from DB
-		const value		= data.value || []
+		// NOTE: value here is not data.value!!!!
+		// Used filled_value because the data.value do not have values with 0 (no access)
+		// filled_value is the full value that will not save in DDBB
+		// the name value of const is used to maintain the content_data uniformity between components
+		const value		= self.filled_value || [] // data.value || []
 
 	// debug
 		if(SHOW_DEBUG===true) {
@@ -700,7 +703,10 @@ const create_global_radio_group = function(self, item, permissions, datalist, co
 	// child_value
 		// const children		= self.get_children(item) // already given
 		const children_length	= children.length
-		let child_value			= null
+		// by default the child_value is 0 (without any permission)
+		// if all children has the same value (0,1 or 2) child_value will be the this common value
+		// else (if any child has a different value) the value has to be null, because is not possible represent all values in the node
+		let child_value			= 0
 		let last_value			= null
 		for (let i = children_length - 1; i >= 0; i--) {
 
@@ -717,7 +723,8 @@ const create_global_radio_group = function(self, item, permissions, datalist, co
 				last_value	= data_found.value
 				child_value	= data_found.value
 			}else{
-				child_value = null
+				// if any child has data, all of them will has 0
+				child_value = 0
 				break;
 			}
 		}
@@ -733,8 +740,11 @@ const create_global_radio_group = function(self, item, permissions, datalist, co
 				name			: item.section_tipo + '_' + item.tipo
 			})
 
-		// checked status set
-			if (child_value && radio_value===child_value) {
+		// checked status of the child_value
+		// child_value could be:
+		// null: the children has different values between then
+		// 0 or 1 or 2: all children has the same value 0 or 1 or 2
+			if (child_value!==null && radio_value===child_value) {
 				radio_input.checked = true
 			}
 
