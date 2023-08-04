@@ -1154,6 +1154,7 @@ final class search_test extends TestCase {
 				// dump($result, ' result ++ '.to_string());
 
 			// sample expected
+				// -- DIRECT FORMAT - table_alias:rs170 - rsc20 - Publication - relations - COMPONENT_PUBLICATION
 				// "rs170.datos#>'{relations}' @> '[{"section_id":"1","section_tipo":"dd64","from_component_tipo":"rsc20"}]'"
 
 			$this->assertTrue(
@@ -1168,10 +1169,15 @@ final class search_test extends TestCase {
 				'expected true (type===string) and received type: ' .$type
 			);
 
-			$eq		= trim($result)==='rs170.datos#>\'{relations}\' @> \'[{"section_id":"1","section_tipo":"dd64","from_component_tipo":"rsc20"}]\'';
+			$expected = 'rs170.datos#>\'{relations}\' @> \'[{"section_id":"1","section_tipo":"dd64","from_component_tipo":"rsc20"}]\'';
+			if(SHOW_DEBUG===true) {
+				$expected = '-- DIRECT FORMAT - table_alias:rs170 - rsc20 - Publication - relations - COMPONENT_PUBLICATION' . PHP_EOL . $expected;
+			}
+
+			$eq		= trim($result)===$expected;
 			$this->assertTrue(
 				$eq,
-				'expected true trim($result)===\'rs170.datos#>\'{relations}\' @> \'[{"section_id":"1","section_tipo":"dd64","from_component_tipo":"rsc20"}\'" and received: ' . json_encode($result)
+				'expected true trim($result)==='.$expected.' and received: ' . json_encode($result)
 			);
 	}//end test_filter_parser
 
@@ -1341,11 +1347,15 @@ final class search_test extends TestCase {
 			'expected true (type===array) and received type: ' .$type
 		);
 
-		$value_compare  = 'LEFT JOIN relations AS r_rs167_rs20_dd64 ON (mix.section_id=r_rs167_rs20_dd64.section_id AND mix.section_tipo=r_rs167_rs20_dd64.section_tipo AND r_rs167_rs20_dd64.from_component_tipo=\'rsc20\')';
-		$value_compare .= PHP_EOL.' LEFT JOIN matrix_dd AS rs167_rs20_dd64 ON (r_rs167_rs20_dd64.target_section_id=rs167_rs20_dd64.section_id AND r_rs167_rs20_dd64.target_section_tipo=rs167_rs20_dd64.section_tipo)';
+		$expected  = 'LEFT JOIN relations AS r_rs167_rs20_dd64 ON (mix.section_id=r_rs167_rs20_dd64.section_id AND mix.section_tipo=r_rs167_rs20_dd64.section_tipo AND r_rs167_rs20_dd64.from_component_tipo=\'rsc20\')';
+		$expected .= PHP_EOL.' LEFT JOIN matrix_dd AS rs167_rs20_dd64 ON (r_rs167_rs20_dd64.target_section_id=rs167_rs20_dd64.section_id AND r_rs167_rs20_dd64.target_section_tipo=rs167_rs20_dd64.section_tipo)';
+
+		if(SHOW_DEBUG===true) {
+			$expected  = "-- JOIN GROUP matrix_dd - rs167_rs20_dd64 - Si/No" . PHP_EOL ." ". $expected;
+		}
 
 		// dump( trim($result['rs167_rs20_dd64']), ' $result[rs167_rs20_dd64] ++ '.to_string());
-		$eq		= trim($result['rs167_rs20_dd64'])===$value_compare;
+		$eq		= trim($result['rs167_rs20_dd64'])===$expected;
 		$this->assertTrue(
 			$eq,
 			'expected true trim($result)==="LEFT JOIN relations AS r_rs167_rs20_dd64 ON ..." and received: ' . json_encode($result)
@@ -1547,7 +1557,7 @@ final class search_test extends TestCase {
 			$result = $search->get_sql_where(
 				$search_object
 			);
-				// dump($result, ' result ++ '.to_string());
+			// dump($result, ' result ++ '.to_string());
 
 			// sample expected
 				// rs170.datos#>'{relations}' @> '[{"section_id":"1","section_tipo":"dd64","from_component_tipo":"rsc20"}]'
@@ -1564,11 +1574,15 @@ final class search_test extends TestCase {
 				'expected true (type===string) and received type: ' .$type
 			);
 
-			$value = 'rs170.datos#>\'{relations}\' @> \'[{"section_id":"1","section_tipo":"dd64","from_component_tipo":"rsc20"}]\'';
-			$eq		= trim($result)===$value;
+			$expected = 'rs170.datos#>\'{relations}\' @> \'[{"section_id":"1","section_tipo":"dd64","from_component_tipo":"rsc20"}]\'';
+			if(SHOW_DEBUG===true) {
+				$expected = '-- DIRECT FORMAT - table_alias:rs170 - rsc20 - Publication - relations - COMPONENT_PUBLICATION' .PHP_EOL. $expected;
+			}
+
+			$eq		= trim($result)===$expected;
 			$this->assertTrue(
 				$eq,
-				'expected true '.$value.' and received: ' . json_encode($result)
+				'expected true '.$expected.' and received: ' . json_encode($result)
 			);
 	}//end test_get_sql_where
 
@@ -1979,7 +1993,7 @@ final class search_test extends TestCase {
 		);
 		$search->search();
 		$result = $search->get_sql_joins(); // only returns bool
-		// dump($result, ' result ++ '.to_string());
+		dump($result, ' result ++ '.to_string());
 
 		// sample expected
 			// '{rs167_rs20_dd64": "\n LEFT JOIN relations AS r_rs167_rs20_dd64 ON (mix.section_id=r_rs167_rs20_dd64.section_id AND mix.section_tipo=r_rs167_rs20_dd64.section_tipo AND r_rs167_rs20_dd64.from_component_tipo=\'rsc20\')\n LEFT JOIN matrix_dd AS rs167_rs20_dd64 ON (r_rs167_rs20_dd64.target_section_id=rs167_rs20_dd64.section_id AND r_rs167_rs20_dd64.target_section_tipo=rs167_rs20_dd64.section_tipo)}'
@@ -1996,10 +2010,15 @@ final class search_test extends TestCase {
 			'expected true (type===string) and received type: ' .$type
 		);
 
-		$value_compare  = 'LEFT JOIN relations AS r_rs167_rs20_dd64 ON (mix.section_id=r_rs167_rs20_dd64.section_id AND mix.section_tipo=r_rs167_rs20_dd64.section_tipo AND r_rs167_rs20_dd64.from_component_tipo=\'rsc20\')';
-		$value_compare .= PHP_EOL.' LEFT JOIN matrix_dd AS rs167_rs20_dd64 ON (r_rs167_rs20_dd64.target_section_id=rs167_rs20_dd64.section_id AND r_rs167_rs20_dd64.target_section_tipo=rs167_rs20_dd64.section_tipo)';
+		$expected  = 'LEFT JOIN relations AS r_rs167_rs20_dd64 ON (mix.section_id=r_rs167_rs20_dd64.section_id AND mix.section_tipo=r_rs167_rs20_dd64.section_tipo AND r_rs167_rs20_dd64.from_component_tipo=\'rsc20\')';
+		$expected .= PHP_EOL.' LEFT JOIN matrix_dd AS rs167_rs20_dd64 ON (r_rs167_rs20_dd64.target_section_id=rs167_rs20_dd64.section_id AND r_rs167_rs20_dd64.target_section_tipo=rs167_rs20_dd64.section_tipo)';
 
-		$eq		= trim($result)===$value_compare;
+		if(SHOW_DEBUG===true) {
+			$expected = '-- JOIN GROUP matrix_dd - rs167_rs20_dd64 - Si/No' .PHP_EOL . ' ' . $expected;
+		}
+
+
+		$eq		= trim($result)===$expected;
 		$this->assertTrue(
 			$eq,
 			'expected true trim($result)==="LEFT JOIN relations AS r_rs167_rs20_dd64 ON ..." and received: ' . json_encode($result)
