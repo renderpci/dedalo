@@ -456,6 +456,11 @@ final class dd_utils_api {
 
 			error_log( 'Caught exception: ' . $e->getMessage() );
 
+			$update_version_response = (object)[
+				'result'	=> false,
+				'msg'		=> 'ERROR on update_version .Caught exception: ' . $e->getMessage()
+			];
+
 			// log line
 				$update_log_file = DEDALO_CONFIG_PATH . '/update.log';
 				$log_line  = PHP_EOL . date('c') . ' ERROR [Exception] ';
