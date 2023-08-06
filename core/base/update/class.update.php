@@ -122,8 +122,8 @@ class update {
 					);
 
 					// log line
-						$log_line  = PHP_EOL . date('c') . ' Updating [SQL_update] '.$key.' )))))))))))))))))))))))))))))))))))))))';
-						$log_line .= PHP_EOL . 'query: ' . $current_query;
+						$log_line  = PHP_EOL . date('c') . ' Updating [SQL_update] '. ($key+1) .' )))))))))))))))))))))))))))))))))))))))';
+						$log_line .= PHP_EOL . 'query: ' . to_string($current_query);
 						file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
 
 					$SQL_update	= update::SQL_update($current_query);
@@ -146,7 +146,7 @@ class update {
 						);
 
 						// log line
-							$log_line  = PHP_EOL . 'ERROR [SQL_update] ' . $key;
+							$log_line  = PHP_EOL . 'ERROR [SQL_update] ' . ($key+1);
 							$log_line .= PHP_EOL . 'The result is false. Check your query sentence';
 							file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
 					}
@@ -176,7 +176,7 @@ class update {
 					);
 
 					// log line
-						$log_line  = PHP_EOL . date('c') . ' Updating [components_update] '.$key.' )))))))))))))))))))))))))))))))))))))))';
+						$log_line  = PHP_EOL . date('c') . ' Updating [components_update] '. ($key+1) .' )))))))))))))))))))))))))))))))))))))))';
 						$log_line .= PHP_EOL . 'model: ' . $current_model;
 						file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
 
@@ -216,8 +216,8 @@ class update {
 					);
 
 					// log line
-						$log_line  = PHP_EOL . date('c') . ' Updating [run_scripts] '.$key.' )))))))))))))))))))))))))))))))))))))))';
-						$log_line .= PHP_EOL . 'current_script: ' . $current_script;
+						$log_line  = PHP_EOL . date('c') . ' Updating [run_scripts] '. ($key+1) .' )))))))))))))))))))))))))))))))))))))))';
+						$log_line .= PHP_EOL . 'current_script: ' . to_string($current_script);
 						file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
 
 					$run_scripts	= update::run_scripts($current_script);
@@ -240,7 +240,7 @@ class update {
 						);
 
 						// log line
-							$log_line  = PHP_EOL . 'ERROR [run_scripts] ' . $key;
+							$log_line  = PHP_EOL . 'ERROR [run_scripts] ' . ($key+1);
 							$log_line .= PHP_EOL . 'The result is false. Check your script';
 							file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
 					}
