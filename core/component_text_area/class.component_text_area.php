@@ -2647,7 +2647,7 @@ class component_text_area extends component_common {
 									);
 									// Search math pastern tags
 									preg_match_all($pattern,  $dato, $ar_draw_tags, PREG_PATTERN_ORDER);
-									if(empty($ar_draw_tags)){
+									if(empty($ar_draw_tags) || empty($ar_draw_tags[0])){
 										continue 2;
 									}
 
@@ -2701,7 +2701,7 @@ class component_text_area extends component_common {
 									$options->section_tipo
 								);
 								$geo_dato = $geo_component->get_dato();
-								if(!empty($geo_dato[0]->lib_data)){
+								if(!empty($geo_dato[0]) && !empty($geo_dato[0]->lib_data)) {
 									$lib_data = $geo_dato[0]->lib_data;
 								}
 
@@ -2712,7 +2712,7 @@ class component_text_area extends component_common {
 								);
 								// Search math pattern tags
 								preg_match_all($pattern,  $dato, $ar_geo_tags, PREG_PATTERN_ORDER);
-								if(empty($ar_geo_tags)){
+								if(empty($ar_geo_tags) || empty($ar_geo_tags[0])){
 									continue 2;
 								}
 
@@ -2737,6 +2737,10 @@ class component_text_area extends component_common {
 									}else{
 										$lib_data[$ar_layer_key[0]] = $tag_data;
 									}
+								}
+
+								if (empty($geo_dato) || empty($geo_dato[0])) {
+									$geo_dato = [ new stdClass() ];
 								}
 
 								$geo_dato[0]->lib_data = $lib_data;
