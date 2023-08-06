@@ -447,8 +447,21 @@ final class dd_utils_api {
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
-		// exec update_version. return object response
-			$update_version_response = update::update_version();
+		try {
+
+			// exec update_version. return object response
+				$update_version_response = update::update_version();
+
+		} catch (Exception $e) {
+
+			error_log( 'Caught exception: ' . $e->getMessage() );
+
+			// log line
+				$update_log_file = DEDALO_CONFIG_PATH . '/update.log';
+				$log_line  = PHP_EOL . date('c') . ' ERROR [Exception] ';
+				$log_line .= PHP_EOL . 'Caught exception: ' . $e->getMessage();
+				file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
+		}
 
 		$response->result	= $update_version_response->result ?? false;
 		$response->msg		= $update_version_response->msg ?? 'Error. Request failed ['.__FUNCTION__.']';

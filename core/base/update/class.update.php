@@ -94,9 +94,23 @@ class update {
 				}
 			}
 
+		// update log file
+			$update_log_file = DEDALO_CONFIG_PATH . '/update.log';
+			if(!file_exists($update_log_file)) {
+				if(!file_put_contents($update_log_file, '')) {
+					$response->msg = 'Error (1). It\'s not possible set update_log file, review the PHP permissions to write in this directory';
+					debug_log(__METHOD__
+						." ".$response->msg . PHP_EOL
+						. ' update_log_file: ' . $update_log_file
+						, logger::ERROR
+					);
+					return $response;
+				}
+			}
+
 		// SQL_update
 			if(isset($update->SQL_update)){
-				foreach ((array)$update->SQL_update as $current_query) {
+				foreach ((array)$update->SQL_update as $key => $current_query) {
 
 					debug_log(__METHOD__ . PHP_EOL
 						. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
@@ -106,6 +120,11 @@ class update {
 						. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
 						, logger::WARNING
 					);
+
+					// log line
+						$log_line  = PHP_EOL . date('c') . ' Updating [SQL_update] '.$key.' )))))))))))))))))))))))))))))))))))))))';
+						$log_line .= PHP_EOL . 'query: ' . $current_query;
+						file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
 
 					$SQL_update	= update::SQL_update($current_query);
 					$cmsg		= $SQL_update->msg;
@@ -125,7 +144,16 @@ class update {
 							. 'Note that the update SQL_update loop to be continue with the next one'
 							, logger::ERROR
 						);
+
+						// log line
+							$log_line  = PHP_EOL . 'ERROR [SQL_update] ' . $key;
+							$log_line .= PHP_EOL . 'The result is false. Check your query sentence';
+							file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
 					}
+
+					// log line
+						$log_line  = PHP_EOL . 'result: ' . to_string($SQL_update->result);
+						file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
 
 					// let GC do the memory job
 					sleep(1);
@@ -136,7 +164,7 @@ class update {
 
 		// components_update
 			if(isset($update->components_update)){
-				foreach ((array)$update->components_update as $current_model) {
+				foreach ((array)$update->components_update as $key => $current_model) {
 
 					debug_log(__METHOD__ . PHP_EOL
 						. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
@@ -147,6 +175,11 @@ class update {
 						, logger::WARNING
 					);
 
+					// log line
+						$log_line  = PHP_EOL . date('c') . ' Updating [components_update] '.$key.' )))))))))))))))))))))))))))))))))))))))';
+						$log_line .= PHP_EOL . 'model: ' . $current_model;
+						file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
+
 					$components_update[] = update::components_update(
 						$current_model,
 						$update_version
@@ -154,9 +187,13 @@ class update {
 					$msg[] = "Updated component: ".to_string($current_model);
 
 					debug_log(__METHOD__
-						." Updated component ".to_string($current_model)
+						." Updated component " . $current_model
 						, logger::DEBUG
 					);
+
+					// log line
+						$log_line  = PHP_EOL . 'result: Updated component: ' . $current_model;
+						file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
 
 					// let GC do the memory job
 					sleep(1);
@@ -167,7 +204,7 @@ class update {
 
 		// run_scripts
 			if(isset($update->run_scripts)){
-				foreach ((array)$update->run_scripts as $current_script) {
+				foreach ((array)$update->run_scripts as $key => $current_script) {
 
 					debug_log(__METHOD__ . PHP_EOL
 						. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
@@ -177,6 +214,11 @@ class update {
 						. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
 						, logger::WARNING
 					);
+
+					// log line
+						$log_line  = PHP_EOL . date('c') . ' Updating [run_scripts] '.$key.' )))))))))))))))))))))))))))))))))))))))';
+						$log_line .= PHP_EOL . 'current_script: ' . $current_script;
+						file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
 
 					$run_scripts	= update::run_scripts($current_script);
 					$cmsg			= $run_scripts->msg;
@@ -196,7 +238,16 @@ class update {
 							. 'Note that the run_scripts loop to be continue with the next one'
 							, logger::ERROR
 						);
+
+						// log line
+							$log_line  = PHP_EOL . 'ERROR [run_scripts] ' . $key;
+							$log_line .= PHP_EOL . 'The result is false. Check your script';
+							file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
 					}
+
+					// log line
+						$log_line  = PHP_EOL . 'result: script executed: ' . to_string($run_scripts->result);
+						file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
 
 					// let GC do the memory job
 					sleep(1);
