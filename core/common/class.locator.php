@@ -60,18 +60,113 @@ class locator extends stdClass {
 	*/
 	public function __construct( object $data=null ) {
 
-		if (is_null($data)) return;
+		// null case
+			if (is_null($data)) {
+				return;
+			}
 
-		# Nothing to do on construct (for now)
-		if (!is_object($data)) {
-			trigger_error("wrong data format. Object expected. Given: ".gettype($data));
-			return;
-		}
-		foreach ($data as $key => $value) {
-			$method = 'set_'.$key;
-			$this->$method($value);
-		}
+		// Nothing to do on construct (for now)
+			if (!is_object($data)) {
+
+				$msg = " wrong data format. object expected. Given type: ".gettype($data);
+				debug_log(__METHOD__
+					. $msg
+					.' data: ' . to_string($data)
+					, logger::ERROR
+				);
+				if(SHOW_DEBUG===true) {
+					dump(debug_backtrace()[0], $msg);
+				}
+
+				// $this->errors[] = $msg;
+				return;
+			}
+
+		// set all properties
+			foreach ($data as $key => $value) {
+
+				$method	= 'set_'.$key;
+
+				$this->{$method}($value); // using accessors when not defined
+
+				if (method_exists($this, $method)) {
+
+					// $set_value = $this->{$method}($value);
+					// if($set_value===false && empty($this->errors)) {
+						// $this->errors[] = 'Invalid value for: '.$key.' . value: '.to_string($value);
+					// }
+
+				}else{
+
+					debug_log(__METHOD__
+						.' Ignored received property: '.$key.' not defined as set method.'. PHP_EOL
+						.' data: ' . to_string($data)
+						, logger::ERROR
+					);
+					// $this->errors[] = 'Ignored received property: '.$key.' not defined as set method. Data: '. json_encode($data, JSON_PRETTY_PRINT);
+				}
+			}
 	}//end __construct
+
+
+
+	/**
+	* SET_PAGINATED_KEY
+	* @param int $value
+	* @return bool
+	*/
+	public function set_paginated_key(int $value) : bool  {
+
+		$this->paginated_key = $value;
+
+		return true;
+	}//end set_paginated_key
+
+
+
+	/**
+	* SET_LABEL
+	* @param int $value
+	* @return bool
+	*/
+	public function set_label(mixed $value) : bool  {
+
+		// nothing to do. label is used only in pseudo-locators but not in normalized locator
+
+		return true;
+	}//end set_label
+
+
+
+	/**
+	* SET_TYPE
+	* Only allow types defined in common::get_allowed_relation_types
+	* @param string $value
+	* @return bool
+	*/
+	public function set_type(string $value) : bool  {
+		/*
+		$ar_allowed = common::get_allowed_relation_types();
+		if( !in_array($value, $ar_allowed) ) {
+
+			// $msg = 'Value is not allowed (invalid type) : '.to_string($value);
+
+			debug_log(__METHOD__
+				." Invalid type: " .PHP_EOL
+				.' value: ' . to_string($value) .PHP_EOL
+				.' Only are allowed: ' .PHP_EOL
+				. json_encode($ar_allowed, JSON_PRETTY_PRINT)
+				, logger::ERROR
+			);
+			// $this->errors[] = 'Ignored set type. '. $msg;
+
+			return false;
+		}
+		*/
+		$this->type = $value;
+
+		return true;
+	}//end set_type
 
 
 
@@ -163,22 +258,7 @@ class locator extends stdClass {
 		$this->tag_component_tipo = $value;
 	}
 
-	/**
-	* SET_TYPE
-	* Only defined relation types (structure) ar allowed
-	*/
-	public function set_type(string $value) {
-		$ar_allowed = common::get_allowed_relation_types();
-		if( !in_array($value, $ar_allowed) ) {
-			debug_log(__METHOD__
-				. " Error Processing Request. Invalid locator type: ". json_encode($value) .PHP_EOL
-				. ' allowed type: '. to_string($ar_allowed)
-				, logger::ERROR
-			);
-			throw new Exception("Error Processing Request. Invalid locator type: $value. Only are allowed: ".to_string($ar_allowed), 1);
-		}
-		$this->type = $value;
-	}
+
 	/**
 	* SET_TYPE_REL
 	* Only defined relation direction
@@ -195,7 +275,7 @@ class locator extends stdClass {
 		if($value < 0) {
 			throw new Exception("Error Processing Request. Invalid section_id_key: $value", 1);
 		}
-		$this->type = $value;
+		$this->section_id_key = $value;
 	}//end set_section_id_key
 	/**
 	* SET_TIPO
