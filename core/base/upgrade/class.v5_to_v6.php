@@ -487,8 +487,42 @@ class v5_to_v6 {
 
 			$component_data = $datos->components->dd625->dato->{$lang}[0];
 
-			// passed by reference (recursive)
-			self::parse_filter($component_data);
+			if (is_object($component_data)) {
+
+				// passed by reference (recursive)
+				self::parse_filter($component_data);
+
+			}else{
+
+				// try to json_decode
+				if (is_string($component_data) && !empty($component_data)) {
+					try {
+						$component_data_object = json_handler::decode($component_data);
+						if (is_object($component_data_object)) {
+							// passed by reference (recursive)
+							$component_data = $component_data_object;
+							self::parse_filter($component_data);
+						}
+					} catch (Exception $e) {
+						debug_log(__METHOD__
+							. " Exception decoding JSON data " . PHP_EOL
+							. ' msg: ' . $e->getMessage() . PHP_EOL
+							. ' component_data: ' . to_string($component_data)
+							, logger::ERROR
+						);
+					}
+				}
+
+				if (!is_object($component_data)) {
+					debug_log(__METHOD__
+						. " Ignored non object component_data (2) " . PHP_EOL
+						. ' type: ' . gettype($component_data) . PHP_EOL
+						. ' component_data: ' . to_string($component_data)
+						, logger::ERROR
+					);
+					$component_data = null;
+				}
+			}
 
 			// update section dato
 			$datos->components->dd625->dato->{$lang}[0] = $component_data;
