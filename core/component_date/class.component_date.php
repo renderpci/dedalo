@@ -384,15 +384,24 @@ class component_date extends component_common {
 				// start
 				$valor_start = '';
 				if(isset($data_item->start)) {
-					$dd_date = new dd_date($data_item->start);
-					if(isset($data_item->start->day)) {
-						$valor_start = $dd_date->get_dd_timestamp('Y'.$sep.'m'.$sep.'d');
+					if (!is_object($data_item->start)) {
+						debug_log(__METHOD__
+							. " Ignored invalid date. Expected data_item->start is object " . PHP_EOL
+							.' type: '. gettype($data_item->start) . PHP_EOL
+							.' data_item->start: '. to_string($data_item->start)
+							, logger::ERROR
+						);
 					}else{
-						$valor_start = isset($data_item->start->month)
-							? $dd_date->get_dd_timestamp('Y'.$sep.'m')
-							: $dd_date->get_dd_timestamp('Y', $padding=false);
+						$dd_date = new dd_date($data_item->start);
+						if(isset($data_item->start->day)) {
+							$valor_start = $dd_date->get_dd_timestamp('Y'.$sep.'m'.$sep.'d');
+						}else{
+							$valor_start = isset($data_item->start->month)
+								? $dd_date->get_dd_timestamp('Y'.$sep.'m')
+								: $dd_date->get_dd_timestamp('Y', $padding=false);
+						}
+						$item_value .= $valor_start;
 					}
-					$item_value .= $valor_start;
 				}
 				break;
 		}
