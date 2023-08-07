@@ -257,6 +257,19 @@ class component_image extends component_media_common {
 
 
 	/**
+	* GET_THUMB_QUALITY
+	* @return string $thumb_quality
+	*/
+	public function get_thumb_quality() : string {
+
+		$thumb_quality = DEDALO_IMAGE_THUMB_DEFAULT;
+
+		return $thumb_quality;
+	}//end get_thumb_quality
+
+
+
+	/**
 	* GET_AR_QUALITY
 	* Get the list of defined image qualities in Dédalo config
 	* @return array $ar_image_quality
