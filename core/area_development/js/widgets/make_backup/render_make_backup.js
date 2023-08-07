@@ -12,7 +12,7 @@
 
 /**
 * RENDER_MAKE_BACKUP
-* Manages the component's logic and appearance in client side
+* Manages the widget logic and appearance in client side
 */
 export const render_make_backup = function() {
 
