@@ -457,7 +457,9 @@ page.prototype.build = async function(autoload=false) {
 					const api_response = await data_manager.request({
 						body : rqo
 					});
-					console.log('page build api_response:', api_response);
+					if(SHOW_DEBUG===true) {
+						console.log('page build api_response:', api_response);
+					}
 
 				// error case
 					if (!api_response || !api_response.result) {
