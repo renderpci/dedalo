@@ -187,6 +187,7 @@ const get_content_data = async function(self, ar_section_record) {
 		const content_data = ui.component.build_content_data(self,{button_close: null})
 			  content_data.appendChild(fragment)
 
+
 	return content_data
 }//end get_content_data
 

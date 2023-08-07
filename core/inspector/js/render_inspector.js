@@ -581,7 +581,7 @@ export const render_section_info = function(self) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			inner_html		: get_label.publicado || 'Published',
+			inner_html		: (get_label.publicado || 'Published') + ' (first/last)',
 			parent			: fragment
 		})
 		// value

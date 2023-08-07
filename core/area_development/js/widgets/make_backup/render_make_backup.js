@@ -41,7 +41,7 @@ render_make_backup.prototype.list = async function(options) {
 	const render_level = options.render_level || 'full'
 
 	// content_data
-		const content_data = await get_content_data_edit(self)
+		const content_data = await get_content_data(self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -60,11 +60,11 @@ render_make_backup.prototype.list = async function(options) {
 
 
 /**
-* GET_CONTENT_DATA_EDIT
+* GET_CONTENT_DATA
 * @param object self
 * @return HTMLElement content_data
 */
-const get_content_data_edit = async function(self) {
+const get_content_data = async function(self) {
 
 	// short vars
 		const value					= self.value || {}
@@ -121,7 +121,7 @@ const get_content_data_edit = async function(self) {
 
 
 	return content_data
-}//end get_content_data_edit
+}//end get_content_data
 
 
 
