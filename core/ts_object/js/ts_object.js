@@ -7,6 +7,7 @@
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import * as instances from '../../common/js/instances.js'
+	import {url_vars_to_object} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {
@@ -42,7 +43,10 @@ export const ts_object = new function() {
 	*/
 	this.init = function() {
 
-		const url_vars = get_current_url_vars()
+		const self = this
+
+		// const url_vars = get_current_url_vars()
+		const url_vars = url_vars_to_object(window.location.search)
 
 		// THESAURUS_MODE
 		this.thesaurus_mode = url_vars.thesaurus_mode || 'default'

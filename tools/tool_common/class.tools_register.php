@@ -59,7 +59,7 @@ class tools_register {
 					if (preg_match('/^tool_\w+$/', $basename, $output_array)!==1) {
 						debug_log(__METHOD__
 							. " Ignored non tool valid directory:" .PHP_EOL
-							. 'dirname: ' . $basename
+							. ' dirname: ' . $basename
 							, logger::ERROR
 						);
 						continue;
