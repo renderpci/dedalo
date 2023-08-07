@@ -8,7 +8,7 @@
 		common,
 		build_autoload
 	} from '../../common/js/common.js'
-	import {clone, dd_console} from '../../common/js/utils/index.js'
+	import {clone, dd_console, url_vars_to_object} from '../../common/js/utils/index.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {area_common} from '../../area_common/js/area_common.js'
@@ -136,6 +136,18 @@ area_thesaurus.prototype.init = async function(options) {
 					}
 				})
 		}
+
+	// linker
+		const url_vars = url_vars_to_object(window.location.search)
+		// linker. Get component caller id from url (needed to link terms for DS callers)
+		if (url_vars.initiator) {
+			const caller_id = JSON.parse(url_vars.initiator)
+			self.linker = {
+				id		: caller_id,
+				caller	: null // passed as null for DS call identification. Indexation callers have value here
+			}
+		}
+
 
 
 	return common_init
