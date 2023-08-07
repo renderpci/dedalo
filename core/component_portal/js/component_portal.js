@@ -219,7 +219,9 @@ component_portal.prototype.init = async function(options) {
 			)
 			function fn_deactivate_component(component) {
 				if (component.id===self.id) {
-					console.log('self.autocomplete_active:', self.autocomplete_active);
+					if(SHOW_DEBUG===true) {
+						console.log('self.autocomplete_active:', self.autocomplete_active);
+					}
 					if(self.autocomplete_active===true){
 						self.autocomplete.destroy(
 							true, // bool delete_self

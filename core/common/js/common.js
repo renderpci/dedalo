@@ -2669,7 +2669,9 @@ export const push_browser_history = function(options) {
 			title, // string unused (only safari)
 			url // string url optional
 		)
-		console.log("[common.push_browser_history] -> navigation history state push:", state, title, url);
+		if(SHOW_DEBUG===true) {
+			console.log("[common.push_browser_history] -> navigation history state push:", state, title, url);
+		}
 
 
 	return true
