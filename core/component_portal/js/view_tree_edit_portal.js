@@ -6,9 +6,10 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
-	import {get_section_records} from '../../section/js/section.js'
 	import {ui} from '../../common/js/ui.js'
 	import {object_to_url_vars} from '../../common/js/utils/index.js'
+	import {get_section_records} from '../../section/js/section.js'
+	import {set_element_css} from '../../page/js/css.js'
 	import {render_column_remove} from './render_edit_component_portal.js'
 
 
@@ -62,10 +63,27 @@ view_tree_edit_portal.render = async function(self, options) {
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
 			content_data	: content_data,
-			label 			: null,
-			buttons			: buttons
+			label			: null,
+			buttons			: buttons,
+			add_styles		: ['portal','view_line'] // added to the wrapper before view style
 		})
-		wrapper.classList.add('portal', 'view_line')
+		// set pointers
+		wrapper.content_data = content_data
+
+		// on-the-fly css
+		// if expected number of columns (2) change, updates the columns CSS
+		// This happen, for sample, when user do not have enough permissions to delete
+		if (self.columns_map.length!==2) {
+			const items				= ui.flat_column_items(self.columns_map);
+			const template_columns	= items.join(' '); // like 1fr auto'
+			const css_object = {
+				".content_data" : {
+					"grid-template-columns" : template_columns
+				}
+			}
+			const selector = `${self.section_tipo}_${self.tipo}.edit.view_${self.view}`
+			set_element_css(selector, css_object)
+		}
 
 	// events
 		add_events(self, wrapper)
@@ -83,8 +101,9 @@ view_tree_edit_portal.render = async function(self, options) {
 export const add_events = function(self, wrapper) {
 
 	// click delegated
-		wrapper.addEventListener("click", fn_warpper_click)
+		wrapper.addEventListener('click', fn_warpper_click)
 		function fn_warpper_click(e){
+			e.stopPropagation() // Prevent to activate autocomplete behind
 
 			// remove row
 				if(e.target.matches('.button.remove')) {
@@ -262,11 +281,14 @@ const get_buttons = (self) => {
 			class_name		: 'button link',
 			parent			: fragment
 		})
-		button_link.addEventListener("click", async function(){
+		button_link.addEventListener('click', fn_link)
+		async function fn_link(e) {
+			e.stopPropagation()
+
 			// const section_tipo	= select_section.value
 			// const section_label	= select_section.options[select_section.selectedIndex].innerHTML;
 			const section_tipo	= target_section[0].tipo
-			const section_label	= target_section[0].label;
+			const section_label	= target_section[0].label
 
 			// iframe
 				( () => {
@@ -326,17 +348,19 @@ const get_buttons = (self) => {
 						})
 				})()
 				return
-		})
+		}
 
 
 	// button tree terms selector
 		const button_tree_selector = ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'button add',
+			class_name		: 'button tree',
 			parent			: fragment
 		})
 		// add listener to the select
-		button_tree_selector.addEventListener('mouseup',function(e){
+		button_tree_selector.addEventListener('mouseup', fn_mousedown)
+		function fn_mousedown(e){
+			e.stopPropagation()
 
 			const caller_id = self.id || null
 			const hierarchy_sections = self.rqo.sqo.section_tipo || null
@@ -407,7 +431,7 @@ const get_buttons = (self) => {
 				)
 			}
 			window.rel_window.focus()
-		})
+		}
 
 	// buttons tools
 		if (!is_inside_tool && mode==='edit') {

@@ -152,6 +152,7 @@ export const ui = {
 						mode,
 						...wrapper_structure_css
 					]
+					if (options.add_styles) {ar_css.push(...options.add_styles)}
 					if (view) {ar_css.push('view_'+view)}
 					if (mode==='search') ar_css.push('tooltip_toggle')
 					wrapper.classList.add(...ar_css)
