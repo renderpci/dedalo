@@ -26,7 +26,9 @@ export const view_default_edit_number = function() {
 
 /**
 * RENDER
-* Render node for use in modes: edit, edit_in_list
+* Render node for use in current view
+* @param object self
+* @param object options
 * @return HTMLElement wrapper
 */
 view_default_edit_number.render = async function(self, options) {
