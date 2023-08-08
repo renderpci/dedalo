@@ -64,7 +64,7 @@ class component_relation_children extends component_relation_common {
 	* @param string|int $section_id
 	* @return bool
 	*/
-	public function make_me_your_child(string $section_tipo, $section_id) : bool {
+	public function make_me_your_child( string $section_tipo, $section_id ) : bool {
 
 		$locator = new locator();
 			$locator->set_section_tipo($section_tipo);

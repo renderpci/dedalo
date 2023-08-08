@@ -2,7 +2,7 @@
 /**
 * COMPONENT_RELATION_PARENT
 * Class to manage parent relation between section.
-* Not store his own data, only manage component_relation_childrens data in 'reverse' mode
+* It does not store its own data, it only manages the component_relation_children data in 'reverse' mode
 */
 class component_relation_parent extends component_relation_common {
 
