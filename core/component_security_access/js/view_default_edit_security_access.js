@@ -25,7 +25,7 @@ export const view_default_edit_security_access = function() {
 
 /**
 * RENDER
-* Render node for use in modes: edit, edit_in_list
+* Render node for use in current view
 * @param object self
 * @param object options
 * @return HTMLElement wrapper
@@ -48,8 +48,8 @@ view_default_edit_security_access.render = async function(self, options) {
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper_options = {
-			content_data : content_data,
-			buttons 	 : buttons
+			content_data	: content_data,
+			buttons			: buttons
 		}
 		if (self.view==='line') {
 			wrapper_options.label = null // prevent to create label node

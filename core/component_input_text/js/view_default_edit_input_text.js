@@ -24,8 +24,10 @@ export const view_default_edit_input_text = function() {
 
 
 /**
-* EDIT
-* Render node for use in modes: edit, edit_in_list
+* RENDER
+* Render node for use in current view
+* @param object self
+* @param object options
 * @return HTMLElement wrapper
 */
 view_default_edit_input_text.render = async function(self, options) {

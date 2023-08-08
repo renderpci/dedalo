@@ -21,7 +21,9 @@ export const view_default_edit_inverse = function() {
 
 /**
 * RENDER
-* Render node for use current view
+* Render node for use in current view
+* @param object self
+* @param object options
 * @return HTMLElement wrapper
 */
 view_default_edit_inverse.render = async function(self, options) {
@@ -77,7 +79,7 @@ const get_content_data = function(self) {
 		for (let i = 0; i < value_length; i++) {
 
 			const current_value = inputs_value[i] || {}
-			
+
 			const content_value_node = get_content_value(i, current_value, self)
 			content_data.appendChild(content_value_node)
 			// set the pointer

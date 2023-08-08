@@ -26,7 +26,7 @@ export const view_default_edit_3d = function() {
 
 /**
 * RENDER
-* Render node for use in modes: edit, edit_in_list
+* Render node for use in current view
 * @param object self
 * @param object options
 * @return HTMLElement wrapper
@@ -50,10 +50,9 @@ view_default_edit_3d.render = async function(self, options) {
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
 			content_data	: content_data,
-			buttons			: buttons
+			buttons			: buttons,
+			add_styles		: ['media_wrapper'] // common media classes
 		})
-		// common media classes
-		wrapper.classList.add('media_wrapper')
 		// set pointers
 		wrapper.content_data = content_data
 
