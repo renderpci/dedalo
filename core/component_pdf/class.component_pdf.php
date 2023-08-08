@@ -17,11 +17,27 @@ class component_pdf extends component_media_common {
 
 	/**
 	* GET_DEFAULT_QUALITY
+	* @return string $default_quality
+	* Defined in config file
 	*/
 	public function get_default_quality() : string {
 
 		return DEDALO_PDF_QUALITY_DEFAULT;
 	}//end get_default_quality
+
+
+
+	/**
+	* GET_THUMB_QUALITY
+	* @return string $thumb_quality
+	* Defined in config file
+	*/
+	public function get_thumb_quality() : string {
+
+		return DEDALO_PDF_THUMB_DEFAULT;
+	}//end get_thumb_quality
+
+
 
 
 
