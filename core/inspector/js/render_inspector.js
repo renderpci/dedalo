@@ -104,6 +104,9 @@ const get_content_data = function(self) {
 			element_type	: 'div',
 			class_name		: 'content_data inspector_content_data hide'
 		})
+		content_data.addEventListener('mousedown', function(e) {
+			e.stopPropagation();
+		})
 
 	// paginator container
 		const paginator_container = ui.create_dom_element({
@@ -431,6 +434,8 @@ export const render_section_info = function(self) {
 	// values from caller (section)
 		const section_tipo				= section.section_tipo
 		const label						= section.label
+		const mode						= section.mode
+		const view						= section.view || 'default'
 		const created_date				= section_data.created_date
 		const modified_date				= section_data.modified_date
 		const created_by_user_name		= section_data.created_by_user_name
@@ -528,6 +533,23 @@ export const render_section_info = function(self) {
 				})
 			}
 
+	// model
+		// label
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'key',
+				inner_html		: get_label.model || 'Model',
+				parent			: fragment
+			})
+		// value
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'value',
+				inner_html		: section.model,
+				parent			: fragment
+			})
+			console.log('section:', section);
+
 	// section_id
 		// label
 		ui.create_dom_element({
@@ -541,6 +563,22 @@ export const render_section_info = function(self) {
 			element_type	: 'span',
 			class_name		: 'value',
 			inner_html		: section.section_id,
+			parent			: fragment
+		})
+
+	// view
+		// label
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'key',
+			inner_html		: 'View',
+			parent			: fragment
+		})
+		// value
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'value',
+			inner_html		: view + ' - ' + mode,
 			parent			: fragment
 		})
 
@@ -634,7 +672,10 @@ export const render_component_info = function(self, component) {
 		// 	? JSON.stringify(component.data.value, null, 1)
 		// 	: ''
 
-	const fragment = new DocumentFragment();
+	// DocumentFragment
+		const fragment = new DocumentFragment();
+
+	// container
 
 	// component label
 		// // label
@@ -723,35 +764,35 @@ export const render_component_info = function(self, component) {
 
 	// model
 		// label
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'key',
-			inner_html		: get_label.model || 'Model',
-			parent			: fragment
-		})
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'key',
+				inner_html		: get_label.model || 'Model',
+				parent			: fragment
+			})
 		// value
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'value',
-			inner_html		: model,
-			parent			: fragment
-		})
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'value',
+				inner_html		: model,
+				parent			: fragment
+			})
 
 	// translatable
 		// label
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'key',
-			inner_html		: get_label.translatable || 'Translatable',
-			parent			: fragment
-		})
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'key',
+				inner_html		: get_label.translatable || 'Translatable',
+				parent			: fragment
+			})
 		// value
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'value',
-			inner_html		: translatable,
-			parent			: fragment
-		})
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'value',
+				inner_html		: translatable,
+				parent			: fragment
+			})
 
 	// view
 		// label
@@ -803,7 +844,7 @@ export const render_component_info = function(self, component) {
 			})
 		}, 50)
 
-		// track collapse toggle state of content
+	// track collapse toggle state of content
 		ui.collapse_toggle_track({
 			toggler				: value_label_node,
 			container			: value_node,
@@ -818,7 +859,6 @@ export const render_component_info = function(self, component) {
 		function expose() {
 			value_label_node.classList.add('up')
 		}
-
 
 	// clean container
 		while (container.firstChild) {
