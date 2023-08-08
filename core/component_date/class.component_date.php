@@ -372,6 +372,14 @@ class component_date extends component_common {
 				$item_value	= $dd_date->get_dd_timestamp('H:i:s', true);
 				break;
 
+			case 'datetime':
+				debug_log(__METHOD__
+					. " Received wrong mode 'datetime'. Fix the date mode to 'date_time' " . PHP_EOL
+					. to_string( debug_backtrace()[0] )
+					, logger::ERROR
+				);
+				// don't break here !
+
 			case 'date_time':
 				if(isset($data_item->start)) {
 					$dd_date	= new dd_date($data_item->start);
@@ -688,7 +696,6 @@ class component_date extends component_common {
 				return $new_query_json;
 			};
 
-
 		// date_mode cases
 		switch ($date_mode) {
 
@@ -899,7 +906,22 @@ class component_date extends component_common {
 				}
 				break;
 
+			case 'datetime':
+				debug_log(__METHOD__
+					. " Received wrong mode 'datetime'. Fix the date mode to 'date_time' " . PHP_EOL
+					. to_string( debug_backtrace()[0] )
+					, logger::ERROR
+				);
+				// don't break here !
+
 			case 'date_time':
+				// Extract directly from calculated time in JAVASCRIPT
+				$dd_date		= isset($q_object->start) ? new dd_date($q_object->start) : null;
+				$final_range	= self::get_final_search_range_seconds($dd_date);
+				$q_clean		= !empty($q_object->start->time)
+					? $q_object->start->time
+					: (isset($dd_date) ? dd_date::convert_date_to_seconds($dd_date) : 0);
+
 				// sample 'dd547' (Activity)
 				switch ($operator) {
 					case '!*': // empty case
@@ -908,6 +930,82 @@ class component_date extends component_common {
 
 					case '*': // not empty case
 						$final_query_object = $is_not_empty( $query_object );
+						break;
+
+					case '<':
+					case '>=':
+						// array elements sub_group2
+						$query1 = new stdClass();
+							$query1->component_path		= ['start','time'];
+							$query1->operator			= $operator;
+							$query1->q_parsed			= '\''.$q_clean.'\'';
+							$query1->type				= 'jsonb';
+
+						$group_op_name = '$or';
+						$group_array_elements = new stdClass();
+							$group_array_elements->{$group_op_name} = [$query1];
+
+						// query_object config
+							$query_object->q_info			= '';
+							$query_object->q_parsed			= null;
+							$query_object->format			= 'array_elements';
+							$query_object->array_elements	= $group_array_elements;
+
+						// set final_query_object
+						$final_query_object = $query_object;
+						break;
+
+					case '>':
+					case '<=':
+						// array elements sub_group2
+						$query1 = new stdClass();
+							$query1->component_path		= ['start','time'];
+							$query1->operator			= $operator;
+							$query1->q_parsed			= '\''.$final_range.'\'';
+							$query1->type				= 'jsonb';
+
+						$group_op_name = '$or';
+						$group_array_elements = new stdClass();
+							$group_array_elements->{$group_op_name} = [$query1];
+
+						// query_object config
+							$query_object->q_info			= '';
+							$query_object->q_parsed			= null;
+							$query_object->format			= 'array_elements';
+							$query_object->array_elements	= $group_array_elements;
+
+						// set final_query_object
+						$final_query_object = $query_object;
+						break;
+
+					case '=':
+					default:
+						// array elements sub_group2
+						$query1 = new stdClass();
+							$query1->component_path	= ['start','time'];
+							$query1->operator		= '>=';
+							$query1->q_parsed		= '\''.$q_clean.'\'';
+							$query1->type			= 'jsonb';
+
+						$query2 = new stdClass();
+							$query2->component_path	= ['start','time'];
+							$query2->operator		= '<=';
+							$query2->q_parsed		= '\''.$final_range.'\'';
+							$query2->type			= 'jsonb';
+
+						// Add to sub_group2
+						$sub_group2 = new stdClass();
+							$sub_name2 = '$and';
+							$sub_group2->$sub_name2 = [$query1,$query2];
+
+						// query_object config
+							$query_object->q_info			= '';
+							$query_object->q_parsed			= null;
+							$query_object->format			= 'array_elements';
+							$query_object->array_elements	= $sub_group2;
+
+						// set final_query_object
+						$final_query_object = $query_object;
 						break;
 				}
 				break;
@@ -969,11 +1067,16 @@ class component_date extends component_common {
 	* GET_FINAL_SEARCH_RANGE_SECONDS
 	* Calculate current request date + 1 day/month/year to allow
 	* search for example, 1930 and find all 130 appearances (1930-01, 1930-15-10, etc..)
+	* @param object|null $dd_date
 	* @return int $final_range
 	*/
-	protected static function get_final_search_range_seconds(object $dd_date) : int {
+	protected static function get_final_search_range_seconds(?object $dd_date) : int {
 
 		$final_search_range_seconds = 0;
+
+		if (is_null($dd_date)) {
+			return $final_search_range_seconds;
+		}
 
 		# Time
 		if (isset($dd_date->second)) {
