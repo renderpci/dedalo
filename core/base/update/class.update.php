@@ -556,9 +556,14 @@ class update {
 								}
 							}//end foreach ($ar_time_machine_obj  as $current_time_machine_obj)
 							*/
-						}//end foreach ($ar_langs as $current_lang) {
+						}//end foreach ($ar_langs as $current_lang)
+
 					}//end foreach ($ar_component_tipo as $current_component_tipo)
 
+					// wait for 30 milliseconds
+					usleep(30000);
+					// Forces collection of any existing garbage cycles
+					gc_collect_cycles();
 				}//end while ($row = pg_fetch_assoc($result))
 
 
@@ -573,9 +578,9 @@ class update {
 			gc_collect_cycles();
 
 			// section_tipo summary
-				$after = memory_get_usage();
-				$allocatedSize = ($after - $before);
-				$total_time =  exec_time_unit($start_time, 'sec').' sec';
+				$after			= memory_get_usage();
+				$allocatedSize	= ($after - $before);
+				$total_time		= exec_time_unit($start_time, 'sec').' sec';
 				debug_log(__METHOD__
 					. " Finished section: $current_section_tipo " . PHP_EOL
 					. ' allocatedSize: ' . to_string($allocatedSize) . PHP_EOL
