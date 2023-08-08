@@ -1321,7 +1321,13 @@ class login extends common {
 			$properties->info[] = [
 				'type'	=> 'version',
 				'label'	=> 'Code version',
-				'value'	=> DEDALO_VERSION . ' - Build ' . DEDALO_BUILD
+				'value'	=> DEDALO_VERSION
+			];
+		// build
+			$properties->info[] = [
+				'type'	=> 'version',
+				'label'	=> 'Code Build',
+				'value'	=> DEDALO_BUILD
 			];
 		// dedalo data version
 			$properties->info[] = [
@@ -1356,6 +1362,7 @@ class login extends common {
 		// Demo is an account used to open and public demo installation
 		// if depends of the entity name, do not used in production.
 			if(DEDALO_ENTITY==='dedalo_demo'){
+
 				$demo_user = new stdClass();
 					$demo_user->user	= 'dedalo';
 					$demo_user->pw		= '76&_MbdCs3#17_Vhm';
