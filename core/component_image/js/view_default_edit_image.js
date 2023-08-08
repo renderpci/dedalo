@@ -49,14 +49,13 @@ view_default_edit_image.render = function(self, options) {
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper_options = {
 			content_data	: content_data,
-			buttons			: buttons
+			buttons			: buttons,
+			add_styles		: ['media_wrapper'] // common media classes
 		}
 		if (self.view==='line') {
 			wrapper_options.label = null // prevent to crate label node
 		}
 		const wrapper = ui.component.build_wrapper_edit(self, wrapper_options)
-		// common media classes
-		wrapper.classList.add('media_wrapper')
 		// set pointers
 		wrapper.content_data = content_data
 

@@ -30,8 +30,9 @@ export const view_default_edit_date = function() {
 /**
 * RENDER
 * Render node for use in current view
+* @param object self
 * @param object options
-* @return HTMLElement
+* @return HTMLElement wrapper
 */
 view_default_edit_date.render = async function(self, options) {
 

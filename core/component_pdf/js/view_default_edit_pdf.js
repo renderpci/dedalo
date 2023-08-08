@@ -25,6 +25,8 @@ export const view_default_edit_pdf = function() {
 /**
 * RENDER
 * Render node for use in current view
+* @param object self
+* @param object options
 * @return HTMLElement wrapper
 */
 view_default_edit_pdf.render = async function(self, options) {
@@ -46,14 +48,13 @@ view_default_edit_pdf.render = async function(self, options) {
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper_options = {
 			content_data	: content_data,
-			buttons			: buttons
+			buttons			: buttons,
+			add_styles		: ['media_wrapper'] // common media classes
 		}
 		if (self.view==='line') {
 			wrapper_options.label = null // prevent to create label node
 		}
 		const wrapper = ui.component.build_wrapper_edit(self, wrapper_options)
-		// common media classes
-		wrapper.classList.add('media_wrapper')
 		// set pointers
 		wrapper.content_data = content_data
 
