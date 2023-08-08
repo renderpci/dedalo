@@ -17,11 +17,25 @@ class component_pdf extends component_media_common {
 
 	/**
 	* GET_DEFAULT_QUALITY
+	* @return string $default_quality
+	* Defined in config file
 	*/
 	public function get_default_quality() : string {
 
 		return DEDALO_PDF_QUALITY_DEFAULT;
 	}//end get_default_quality
+
+
+
+	/**
+	* GET_THUMB_QUALITY
+	* @return string $thumb_quality
+	* Defined in config file
+	*/
+	public function get_thumb_quality() : string {
+
+		return DEDALO_PDF_THUMB_DEFAULT;
+	}//end get_thumb_quality
 
 
 
@@ -531,7 +545,8 @@ class component_pdf extends component_media_common {
 							$this->section_id,
 							'edit',
 							DEDALO_DATA_LANG,
-							$this->section_tipo
+							$this->section_tipo,
+							false
 						);
 						$component_text_area->set_dato($text_from_pdf_response->result); // Text with page numbers
 						$component_text_area->Save();
@@ -557,7 +572,8 @@ class component_pdf extends component_media_common {
 						$current_section_id,
 						'edit',
 						DEDALO_DATA_NOLAN,
-						$target_section_tipo
+						$target_section_tipo,
+						false
 					);
 					$component_target_filename->set_dato( $original_file_name );
 					$component_target_filename->Save();
@@ -888,7 +904,8 @@ class component_pdf extends component_media_common {
 							$options->section_id,
 							'list',
 							DEDALO_DATA_NOLAN,
-							$options->section_tipo
+							$options->section_tipo,
+							false
 						);
 
 					// get existing files data

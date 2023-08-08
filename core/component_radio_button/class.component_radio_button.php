@@ -131,4 +131,5 @@ class component_radio_button extends component_relation_common {
 	}//end get_sortable
 
 
+
 }//end class component_radio_button

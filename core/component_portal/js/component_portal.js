@@ -166,37 +166,50 @@ component_portal.prototype.init = async function(options) {
 			)
 			function fn_link_term(locator) {
 
-				// empty tag_id is allowed too
-				// add tag_id. Note that 'self.active_tag' is an object with 3 properties (caller, text_editor and tag)
-					const tag_id = self.active_tag && self.active_tag.tag
-						? self.active_tag.tag.tag_id || null
-						: null
-					if (tag_id) {
-						// overwrite/set tag_id
-						locator.tag_id	= tag_id
-					}else{
-						if (!confirm(get_label.no_hay_etiqueta_seleccionada || 'No tag selected. If you continue, the entire record will be indexed.')) {
-							return
-						}
-					}
+				switch (self.view) {
+					case 'indexation':
+						// empty tag_id is allowed too
+						// add tag_id. Note that 'self.active_tag' is an object with 3 properties (caller, text_editor and tag)
+							const tag_id = self.active_tag && self.active_tag.tag
+								? self.active_tag.tag.tag_id || null
+								: null
+							if (tag_id) {
+								// overwrite/set tag_id
+								locator.tag_id	= tag_id
+							}else{
+								if (!confirm(get_label.no_hay_etiqueta_seleccionada || 'No tag selected. If you continue, the entire record will be indexed.')) {
+									return
+								}
+							}
 
-				// tag_component_tipo
-					const tag_component_tipo = self.context.properties?.config_relation?.tag_component_tipo
-					if (tag_component_tipo) {
-						locator.tag_component_tipo = tag_component_tipo
-					}else{
-						console.error('tag_component_tipo is not defined into component properties->config_relation . This is mandatory in v6', self.context.properties);
-						return
-					}
+						// tag_component_tipo
+							const tag_component_tipo = self.context.properties?.config_relation?.tag_component_tipo
+							if (tag_component_tipo) {
+								locator.tag_component_tipo = tag_component_tipo
+							}else{
+								console.error('tag_component_tipo is not defined into component properties->config_relation . This is mandatory in v6', self.context.properties);
+								return
+							}
 
-				// top_locator add
-					const top_locator = self.caller.top_locator // property from tool_indexation
-					// check active tag is already set
-					if (!top_locator) {
-						alert("Error. No top_locator exists");
-						return
-					}
-					Object.assign(locator, top_locator)
+						// top_locator add
+							const top_locator = self.caller.top_locator // property from tool_indexation
+							// check active tag is already set
+							if (!top_locator) {
+								alert("Error. No top_locator exists");
+								return
+							}
+							Object.assign(locator, top_locator)
+						break;
+
+					case 'tree':
+						// set relation type standard portal (dd151)
+						locator.type = DD_TIPOS.DEDALO_RELATION_TYPE_LINK ?? 'dd151'
+						break;
+
+					default:
+						console.warn('Warning: this view do not have custom manager', self.view);
+						break;
+				}
 
 				// debug
 					if(SHOW_DEBUG===true) {
@@ -219,7 +232,9 @@ component_portal.prototype.init = async function(options) {
 			)
 			function fn_deactivate_component(component) {
 				if (component.id===self.id) {
-					console.log('self.autocomplete_active:', self.autocomplete_active);
+					if(SHOW_DEBUG===true) {
+						console.log('self.autocomplete_active:', self.autocomplete_active);
+					}
 					if(self.autocomplete_active===true){
 						self.autocomplete.destroy(
 							true, // bool delete_self

@@ -457,7 +457,7 @@ class component_relation_index extends component_relation_common {
 	* @param string $section_tipo
 	* @return array $references
 	*/
-	public static function get_references_to_section(string $section_tipo) : array {
+	public static function get_references_to_section( string $section_tipo ) : array {
 		$start_time=start_time();
 
 		$references = [];

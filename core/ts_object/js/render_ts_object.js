@@ -612,8 +612,11 @@ export const render_ts_list = function(options) {
 									}
 									// linker id. A component_portal instance is expected as linker
 									const linker_id = self.linker.id
-									// source_window.event_manager.publish('link_term_' + linker_id, {
-									event_manager.publish('link_term_' + linker_id, {
+									// source_window.event_manager.publish('link_term_' + linker_id,
+									const window_base = !self.linker.caller
+										? window.opener // case DS opening new window
+										: window // default case (indexation)
+									window_base.event_manager.publish('link_term_' + linker_id, {
 										section_tipo	: ar_children_data[i].section_tipo,
 										section_id		: ar_children_data[i].section_id,
 										label			: current_label_term ? current_label_term.value : ''

@@ -980,7 +980,8 @@ class component_av extends component_media_common {
 						$this->get_section_id(), // section_id
 						'edit', // mode
 						DEDALO_DATA_NOLAN, // lang
-						$this->get_section_tipo() // section_tipo
+						$this->get_section_tipo(), // section_tipo
+						false
 					);
 					$component_target_filename->set_dato($original_file_name);
 					$component_target_filename->Save();
@@ -1000,7 +1001,8 @@ class component_av extends component_media_common {
 						$this->get_section_id(), // section_id
 						'edit', // mode
 						DEDALO_DATA_NOLAN, // lang
-						$this->get_section_tipo() // section_tipo
+						$this->get_section_tipo(), // section_tipo
+						false
 					);
 					$secs		= $this->get_duration($quality); // float secs
 					$duration	= OptimizeTC::seg2tc($secs); // string TimeCode as '00:05:20:125'
@@ -1529,7 +1531,8 @@ class component_av extends component_media_common {
 							$options->section_id,
 							'list',
 							DEDALO_DATA_NOLAN,
-							$options->section_tipo
+							$options->section_tipo,
+							false
 						);
 
 					// get existing files data
@@ -1624,7 +1627,8 @@ class component_av extends component_media_common {
 									$component->get_section_id(), // section_id
 									'edit', // mode
 									DEDALO_DATA_NOLAN, // lang
-									$component->get_section_tipo() // section_tipo
+									$component->get_section_tipo(), // section_tipo
+									false
 								);
 
 								$duration	= OptimizeTC::seg2tc($secs); // string TimeCode as '00:05:20:125'

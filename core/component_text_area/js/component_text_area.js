@@ -247,7 +247,9 @@ component_text_area.prototype.init = async function(options) {
 				if ( component.id === self.id ) {
 					// (!) If self.data.changed_data has changed, save is fired automatically
 					// from ui.component.deactivate
-					console.log('+++++ custom fn_deactivate self.data.changed_data:', self.data.changed_data);
+					if(SHOW_DEBUG===true) {
+						console.log('+++++ custom fn_deactivate self.data.changed_data:', self.data.changed_data);
+					}
 
 					// self.save()
 

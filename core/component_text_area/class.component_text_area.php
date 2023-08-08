@@ -2159,7 +2159,8 @@ class component_text_area extends component_common {
 				$this->section_id, // string section_id
 				'list', // string mode
 				DEDALO_DATA_NOLAN, // string lang
-				$this->section_tipo // string section_tipo
+				$this->section_tipo, // string section_tipo
+				false
 			);
 
 		// component_geolocation data
@@ -2619,7 +2620,8 @@ class component_text_area extends component_common {
 										$section_id,
 										'edit',
 										DEDALO_DATA_NOLAN,
-										$section_tipo
+										$section_tipo,
+										false
 									);
 
 								// image_dato
@@ -2698,7 +2700,8 @@ class component_text_area extends component_common {
 									$options->section_id,
 									'edit',
 									DEDALO_DATA_NOLAN,
-									$options->section_tipo
+									$options->section_tipo,
+									false
 								);
 								$geo_dato = $geo_component->get_dato();
 								if(!empty($geo_dato[0]) && !empty($geo_dato[0]->lib_data)) {

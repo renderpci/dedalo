@@ -102,7 +102,8 @@ class component_image extends component_media_common {
 					$this->section_id,
 					'edit',
 					DEDALO_DATA_NOLAN,
-					$this->section_tipo
+					$this->section_tipo,
+					false
 				);
 				$valor	= trim($component->get_valor());
 				$id		= (!empty($valor) && strlen($valor)>0)
@@ -253,6 +254,19 @@ class component_image extends component_media_common {
 
 		return $default_quality;
 	}//end get_default_quality
+
+
+
+	/**
+	* GET_THUMB_QUALITY
+	* @return string $thumb_quality
+	*/
+	public function get_thumb_quality() : string {
+
+		$thumb_quality = DEDALO_IMAGE_THUMB_DEFAULT;
+
+		return $thumb_quality;
+	}//end get_thumb_quality
 
 
 
@@ -1108,7 +1122,8 @@ class component_image extends component_media_common {
 						$current_section_id,
 						'edit',
 						DEDALO_DATA_NOLAN,
-						$target_section_tipo
+						$target_section_tipo,
+						false
 					);
 					$component_target_filename->set_dato( $original_file_name );
 					$component_target_filename->Save();
@@ -1503,7 +1518,8 @@ class component_image extends component_media_common {
 							$section_id,
 							'list',
 							DEDALO_DATA_NOLAN,
-							$section_tipo
+							$section_tipo,
+							false
 						);
 
 					// get existing files data
@@ -1576,7 +1592,8 @@ class component_image extends component_media_common {
 								$section_id,
 								'list',
 								DEDALO_DATA_NOLAN,
-								$section_tipo
+								$section_tipo,
+								false
 							);
 							$name_component_dato	= $original_name_component->get_dato();
 							$source_file_name		= isset($name_component_dato[0]) ? $name_component_dato[0] : $name_component_dato;
@@ -1592,7 +1609,8 @@ class component_image extends component_media_common {
 								$section_id,
 								'list',
 								DEDALO_DATA_NOLAN,
-								$section_tipo
+								$section_tipo,
+								false
 							);
 							$code_component_dato	= $previous_code_component->get_dato();
 							$source_file_name		= isset($code_component_dato[0]) ? $code_component_dato[0] : $code_component_dato;

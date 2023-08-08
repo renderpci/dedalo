@@ -689,12 +689,17 @@ class component_relation_common extends component_common {
 
 				// is_object check
 					if (!is_object($current_locator)) {
-						$msg = " Error on set locator (is not object) json_ecoded: ".json_encode($current_locator);
-						trigger_error( __METHOD__ . $msg );
-						debug_log( __METHOD__ . $msg, logger::ERROR);
-						throw new Exception("Error Processing Request. Look server log for details", 1);
+						$msg = " Error on set locator (is not object)";
+						debug_log(__METHOD__
+							. $msg . PHP_EOL
+							. ' type: ' . gettype($current_locator) . PHP_EOL
+							.' locator: ' . json_encode($current_locator)
+							, logger::ERROR
+						);
+						dump($current_locator, '$current_locator ++ '.to_string());
+						// throw new Exception("Error Processing Request. Look server log for details", 1);
+						continue;
 					}
-
 
 				// section_id
 					if (!isset($current_locator->section_id) || !isset($current_locator->section_tipo)) {
