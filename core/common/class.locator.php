@@ -98,11 +98,13 @@ class locator extends stdClass {
 
 				}else{
 
-					debug_log(__METHOD__
-						.' Ignored received property: '.$key.' not defined as set method.'. PHP_EOL
-						.' data: ' . to_string($data)
-						, logger::ERROR
-					);
+					if(SHOW_DEBUG===true) {
+						debug_log(__METHOD__
+							.' Remember: received property: "'.$key.'" is not defined as set method. Using setter accessors'. PHP_EOL
+							.' locator data: ' . to_string($data)
+							, logger::WARNING
+						);
+					}
 					// $this->errors[] = 'Ignored received property: '.$key.' not defined as set method. Data: '. json_encode($data, JSON_PRETTY_PRINT);
 				}
 			}
