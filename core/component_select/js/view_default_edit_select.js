@@ -38,7 +38,10 @@ view_default_edit_select.render = async function(self, options) {
 		const render_level = options.render_level || 'full'
 
 	// content_data
-		const content_data = get_content_data(self)
+		const content_data = get_content_data(self, {
+			render_content_data			: get_content_value,
+			render_content_value_read	: get_content_value_read
+		})
 		if (render_level==='content') {
 			return content_data
 		}
