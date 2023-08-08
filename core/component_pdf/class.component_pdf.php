@@ -39,8 +39,6 @@ class component_pdf extends component_media_common {
 
 
 
-
-
 	/**
 	* GET_AR_QUALITY
 	* Get the list of defined image qualities in Dédalo config
