@@ -90,35 +90,41 @@ render_search_component_portal.prototype.search = async function(options) {
 */
 const render_content_data = async function(self, ar_section_record) {
 
-	const fragment = new DocumentFragment()
+	// DocumentFragment
+		const fragment = new DocumentFragment()
 
 	// q operator (search only)
-		const q_operator = self.data.q_operator
-		const input_q_operator = ui.create_dom_element({
-			element_type	: 'input',
-			type			: 'text',
-			value			: q_operator,
-			class_name		: 'q_operator',
-			parent			: fragment
-		})
-		input_q_operator.addEventListener('click', function(e){
-			e.stopPropagation()
-		})
-		input_q_operator.addEventListener('change', function(){
-			// value
-				const value = (input_q_operator.value.length>0) ? input_q_operator.value : null
-			// q_operator. Fix the data in the instance previous to save
-				self.data.q_operator = value
-			// publish search. Event to update the DOM elements of the instance
-				event_manager.publish('change_search_element', self)
-		})
+		const non_q_operator_models = [
+			'component_relation_parent'
+		]
+		if (!non_q_operator_models.includes(self.model)) {
+			const q_operator = self.data.q_operator
+			const input_q_operator = ui.create_dom_element({
+				element_type	: 'input',
+				type			: 'text',
+				value			: q_operator,
+				class_name		: 'q_operator',
+				parent			: fragment
+			})
+			input_q_operator.addEventListener('click', function(e){
+				e.stopPropagation()
+			})
+			input_q_operator.addEventListener('change', function(){
+				// value
+					const value = (input_q_operator.value.length>0) ? input_q_operator.value : null
+				// q_operator. Fix the data in the instance previous to save
+					self.data.q_operator = value
+				// publish search. Event to update the DOM elements of the instance
+					event_manager.publish('change_search_element', self)
+			})
+		}
 
 	// ar_section_record
 		const ar_section_record_length = ar_section_record.length
 		for (let i = 0; i < ar_section_record_length; i++) {
 			// section_record
 			const section_record_node = await ar_section_record[i].render()
-			console.log('>> section_record TO RENDER:', ar_section_record[i]);
+			// console.log('>> section_record TO RENDER:', ar_section_record[i]);
 			fragment.appendChild(section_record_node)
 		}
 
