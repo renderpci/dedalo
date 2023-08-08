@@ -208,6 +208,10 @@ export const ui = {
 					}
 
 				// event click . Activate component on event
+					wrapper.addEventListener('click', function(e){
+						e.stopPropagation()
+					})
+
 					wrapper.addEventListener('mousedown', fn_wrapper_mousedown)
 					function fn_wrapper_mousedown(e) {
 						e.stopPropagation()
