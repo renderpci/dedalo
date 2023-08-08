@@ -69,7 +69,11 @@ render_edit_component_select.prototype.edit = async function(options) {
 * @param instance self
 * @return HTMLElement content_data
 */
-export const get_content_data = function(self) {
+export const get_content_data = function(self, options) {
+
+	// options
+		const render_content_data		= options.render_content_data
+		const render_content_value_read	= options.render_content_value_read
 
 	// short vars
 		const data				= self.data || {}
@@ -95,7 +99,7 @@ export const get_content_data = function(self) {
 					if(current_datalist_item){
 						const current_value = current_datalist_item.label || ''
 						// build options
-						const content_value_node = get_content_value_read(0, current_value, self)
+						const content_value_node = render_content_value_read(0, current_value, self)
 						content_data.appendChild(content_value_node)
 						// set pointers
 						content_data[i] = content_value_node
@@ -105,7 +109,7 @@ export const get_content_data = function(self) {
 			// fill empty value cases with one empty content_value node
 				if(!content_data[0]) {
 					const current_value = '';
-					const content_value_node = get_content_value_read(0, current_value, self)
+					const content_value_node = render_content_value_read(0, current_value, self)
 					content_data.appendChild(content_value_node)
 					// set pointers
 					content_data[0] = content_value_node
@@ -118,7 +122,7 @@ export const get_content_data = function(self) {
 				const value_length	= inputs_value.length
 				for (let i = 0; i < value_length; i++) {
 					// get the content_value
-					const content_value = get_content_value(i, inputs_value[i], self)
+					const content_value = render_content_data(i, inputs_value[i], self)
 					// add node to content_data
 					content_data.appendChild(content_value)
 					// set pointers
