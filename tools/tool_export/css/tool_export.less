@@ -89,7 +89,8 @@
 						border-left: 1px solid @color_orange_dedalo;
 						// border-left: 1px solid darken(@tool_color, 10%);
 						border-bottom: 1px solid #f2f2f2ee;
-						transition: padding 275ms;
+						// transition: padding 275ms;
+						transition: opacity 150ms;
 
 						&:last-of-type {
 							// background-color: #f2e797;
@@ -103,17 +104,16 @@
 								position: absolute;
 								top: 1.7rem;
 								left: 0;
-								// opacity: 0;
 							}
 
-							&.displaced:after {
-								top: 3.66rem;
-							}
+							// &.displaced:after {
+							// 	top: 3.66rem;
+							// }
 						}
 
 						&.displaced {
-							padding-top: 2rem;
-							border: none;
+							// padding-top: 2rem;
+							opacity: 0.3;
 						}
 
 						&:hover {

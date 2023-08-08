@@ -239,10 +239,10 @@ const render_item_hierarchy = (options) => {
 
 								const top_position = Math.ceil(
 									active_li.getBoundingClientRect().top
-									- ul_container.getBoundingClientRect().top // offset (maintenance messages, etc.)
-									+ (li.getBoundingClientRect().height - 6)
+									- root_ul.getBoundingClientRect().top // offset (maintenance messages, etc.)
 								)
 								// console.log("active_li.getBoundingClientRect().top:",active_li.getBoundingClientRect().top);
+								// console.log("root_ul.getBoundingClientRect().top:",root_ul.getBoundingClientRect().top);
 								// console.log("top_position:",top_position);
 
 								// the node is totally visible and don't need move to the top

@@ -59,7 +59,7 @@ class tools_register {
 					if (preg_match('/^tool_\w+$/', $basename, $output_array)!==1) {
 						debug_log(__METHOD__
 							. " Ignored non tool valid directory:" .PHP_EOL
-							. 'dirname: ' . $basename
+							. ' dirname: ' . $basename
 							, logger::ERROR
 						);
 						continue;
@@ -285,6 +285,95 @@ class tools_register {
 
 
 	/**
+	* GET_TOOLS_FILES_LIST
+	* Scan tool directory and get tools name and version in array of objects
+	* Used by class area-development to get the tools list
+	* @return array $files_list
+	*/
+	public static function get_tools_files_list() : array {
+
+		$files_list = [];
+
+		$files = glob(DEDALO_TOOLS_PATH . '/*', GLOB_ONLYDIR);
+		foreach ($files as $path) {
+
+			// ignore folders with name different from pattern 'tool_*'
+				if (	1!==preg_match('/tools\/tool_*/', $path, $output_array)
+					 || 1===preg_match('/tools\/tool_dev_template/', $path, $output_array)
+					 || 1===preg_match('/tools\/tool_common/', $path, $output_array)
+					) {
+					continue;
+				}
+
+			// tool name
+				$tool_name = str_replace(DEDALO_TOOLS_PATH.'/', '', $path);
+
+			// item
+				$item = (object)[
+					'name'				=> $tool_name,
+					'warning'			=> null,
+					'version'			=> null,
+					'installed_version'	=> null
+				];
+
+			// check file register is ready
+				$register_contents = file_get_contents($path.'/register.json');
+				if($register_contents===false) {
+
+					debug_log(__METHOD__
+						." Invalid register.json file from tool ".to_string($tool_name)
+						, logger::ERROR
+					);
+					$item->warning = '(!) Invalid register.json file';
+
+				}else{
+
+					// compare register.json file.
+					$ar_tool_info = tool_common::get_client_registered_tools([$tool_name]);
+					if(!isset($ar_tool_info[0])) {
+						debug_log(__METHOD__
+							." Tool '$tool_name' not found in client_registered_tools."
+							, logger::WARNING
+						);
+						$item->warning = '(!) Not registered tool';
+					}
+
+					// version
+					// info object (JSON encoded)
+						$info_object = json_handler::decode( $register_contents );
+						if( !$info_object ) {
+							debug_log(__METHOD__
+								." ERROR. Wrong file register.json . Is not a JSON valid file "
+								, logger::ERROR
+							);
+						}else{
+							$tipo_version	= self::$tipo_version;
+							if (	isset($info_object->components->{$tipo_version})
+								 && isset($info_object->components->{$tipo_version}->dato)
+								 && isset($info_object->components->{$tipo_version}->dato->{'lg-nolan'})
+								 && isset($info_object->components->{$tipo_version}->dato->{'lg-nolan'}[0])
+								) {
+								$item->version = $info_object->components->{$tipo_version}->dato->{'lg-nolan'}[0];
+							}
+						}
+
+					// installed_version
+						if (!empty($ar_tool_info[0])) {
+							$item->installed_version = $ar_tool_info[0]->version  ?? null;
+						}
+				}
+
+			// add
+				$files_list[] = $item;
+		}
+
+
+		return $files_list;
+	}//end get_tools_files_list
+
+
+
+	/**
 	* GET_TOOL_DATA_BY_NAME
 	* Gets current tool data from the tool name
 	* Note that this function can search in any virtual of section 'Tools' (dd73)
@@ -406,7 +495,7 @@ class tools_register {
 			$value	= is_array($dato) && isset($dato[0])
 				? $dato[0]
 				: null;
-			$tool_object->vesion = $value;
+			$tool_object->version = $value;
 
 		// dedalo version (minimal requirement)
 			$component_tipo	= self::$tipo_dedalo_version_minimal; // 'dd1328';

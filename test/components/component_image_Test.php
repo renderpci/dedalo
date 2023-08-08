@@ -400,6 +400,45 @@ final class component_image_test extends TestCase {
 
 
 	/**
+	* TEST_get_thumb_quality
+	* @return void
+	*/
+	public function test_get_thumb_quality() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'edit';
+		$lang			= DEDALO_DATA_NOLAN;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo
+		);
+
+		$result = $component->get_thumb_quality();
+
+		$this->assertTrue(
+			gettype($result)==='string',
+			'expected type string : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$this->assertTrue(
+			$result===DEDALO_IMAGE_THUMB_DEFAULT,
+			'expected DEDALO_IMAGE_THUMB_DEFAULT ' . PHP_EOL
+				. $result
+		);
+	}//end test_get_thumb_quality
+
+
+
+	/**
 	* TEST_get_ar_quality
 	* @return void
 	*/

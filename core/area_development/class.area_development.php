@@ -98,45 +98,10 @@ class area_development extends area_common {
 				$item->id		= 'register_tools';
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
+				// $item->parent	= $this->tipo;
 				$item->label	= label::get_label('register_tools');
-				$list = array_map(function($path){
-					// ignore folders with name different from pattern 'tool_*'
-					if (1!==preg_match('/tools\/tool_*/', $path, $output_array) || 1===preg_match('/tools\/tool_dev_template/', $path, $output_array)) {
-						return null;
-					}else{
-						$tool_name = str_replace(DEDALO_TOOLS_PATH.'/', '', $path);
-						// skip tool common
-						if ($tool_name==='tool_common') return null;
-						// check file register is ready
-						$register_contents = file_get_contents($path.'/register.json');
-						if($register_contents===false) {
-							debug_log(__METHOD__." Invalid register.json file from tool ".to_string($tool_name), logger::ERROR);
-							$tool_name .= ' <danger>(!) Invalid register.json file from tool</danger>';
-						}else{
-							// compare register.json file. WORKING HERE (!)
-							$ar_tool_info = tool_common::get_client_registered_tools([$tool_name]);
-							if(!isset($ar_tool_info[0])) {
-								debug_log(__METHOD__." Tool '$tool_name' not found in client_registered_tools.".to_string(), logger::WARNING);
-								$tool_name .= ' <danger>(!) Not registered tool</danger>';
-							}
-						}
-
-						return $tool_name;
-					}
-				}, glob(DEDALO_TOOLS_PATH . '/*', GLOB_ONLYDIR));
-				$item->body		= '<strong>Read tools folder and update the tools register in database</strong><br><br>';
-				$item->body		.= implode('<br>', array_filter($list));
-				$item->run[]	= (object)[
-					'fn' 	  => 'init_form',
-					'options' => (object)[
-						'confirm_text' => label::get_label('sure') ?? 'Sure?'
-					]
-				];
-				$item->trigger 	= (object)[
-					'dd_api'	=> 'dd_utils_api',
-					'action'	=> 'register_tools',
-					'options'	=> null
+				$item->value	= (object)[
+					'datalist' => tools_register::get_tools_files_list()
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;

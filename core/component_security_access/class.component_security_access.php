@@ -530,7 +530,8 @@ class component_security_access extends component_common {
 				$section_id, // string|null section_id
 				'list', // string mode
 				DEDALO_DATA_LANG, // string lang
-				$section_tipo // string section_tipo
+				$section_tipo, // string section_tipo
+				false
 			);
 			$datalist = $component_security_access->get_datalist( $user_id );
 

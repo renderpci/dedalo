@@ -2,7 +2,7 @@
 /**
 * COMPONENT_RELATION_PARENT
 * Class to manage parent relation between section.
-* Not store his own data, only manage component_relation_childrens data in 'reverse' mode
+* It does not store its own data, it only manages the component_relation_children data in 'reverse' mode
 */
 class component_relation_parent extends component_relation_common {
 
@@ -1003,21 +1003,24 @@ class component_relation_parent extends component_relation_common {
 		# [type] => dd48
 		# [from_component_tipo] => hierarchy49
 
-		$parent_locators = json_decode($q);
+		$parent_locators = is_string($q)
+			? json_decode($q)
+			: $q;
 		if (!is_array($parent_locators)) {
 			$parent_locators = [$parent_locators];
 		}
 
-		$ar_childrens = [];
+		$ar_children = [];
 		foreach ($parent_locators as $current_locator) {
 
 			$current_component_relation_parent_tipo	= $current_locator->from_component_tipo;
-			$target_component_children_tipos		= component_relation_parent::get_target_component_children_tipos($current_component_relation_parent_tipo);
+			$target_component_children_tipos		= component_relation_parent::get_target_component_children_tipos(
+				$current_component_relation_parent_tipo
+			);
 
-			$parents = [];
 			foreach ($target_component_children_tipos as $children_component_tipo) {
 
-				$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($children_component_tipo,true); // component_relation_children
+				$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($children_component_tipo, true); // component_relation_children
 				$component 		= component_common::get_instance(
 					$model_name,
 					$children_component_tipo,
@@ -1028,102 +1031,24 @@ class component_relation_parent extends component_relation_common {
 				);
 				$component_children_dato = $component->get_dato();
 				foreach ($component_children_dato as $children_locator) {
-					$ar_childrens[] = $children_locator->section_id;
+					$ar_children[] = $children_locator->section_id;
 				}
 			}
 		}
-		#dump($ar_childrens, ' ar_childrens ++ '.to_string());
 
-		# Always set fixed values
-		$query_object->type = 'number';
+		// q_clean
+			$q_clean = array_map(function($el){
+				return (int)$el;
+			}, $ar_children);
 
-		# Always set format to column
-		$query_object->format = 'column';
-
-		# component path
-		$query_object->component_path = ['section_id'];
-
-		# unaccent
-		$query_object->unaccent = false;
-
-		// old format
-			// {
-			//		"q": "{\"section_tipo\":\"es1\",\"section_id\":\"8842\",\"type\":\"dd151\",\"from_component_tipo\":\"hierarchy36\"}",
-			//		"q_operator": null,
-			//		"path": [{
-			//			"section_tipo": "es1",
-			//			"component_tipo": "hierarchy36",
-			//			"model": "component_relation_parent",
-			//			"name": "Dependent of"
-			//		}],
-			//		"component_path": [
-			//			"section_id"
-			//		],
-			//		"lang": "all",
-			//		"type": "number",
-			//		"format": "column",
-			//		"unaccent": false,
-			//		"operator": "=",
-			//		"q_parsed": 8125
-			// }
-
-		// new format
-			$base_sqo = (object)[
-				'format'		=> 'column',
-				'q_parsed'		=> null,
-				'operator'		=> '=',
-				'column_name'	=> 'section_id',
-				'path'			=> []
-			];
-			// {
-			//		"format": "column",
-			//		"q_parsed": 8125,
-			//		"operator": "=",
-			//		"column_name": "section_id"
-			// }
-
-		$ar_parts 	= $ar_childrens;
-		$ar_result  = [];
-		foreach ($ar_parts as $key => $value) {
-			$value = (int)$value;
-			if ($value<1) continue;
-			$query_object_current = clone $query_object;
-				$query_object_current->operator = '=';
-				$query_object_current->q_parsed	= $value;
-			$ar_result[] = $query_object_current;
-		}
-		// Return an subquery instead object
-		$cop = '$or';
-		$new_object = new stdClass();
-			$new_object->{$cop} = $ar_result;
-		$query_object = $new_object;
-
-
-			/*
-			{
-			    "q": "3",
-			    "q_operator": null,
-			    "path": [
-			        {
-			            "section_tipo": "oh1",
-			            "component_tipo": "oh62",
-			            "model": "component_section_id",
-			            "name": "Id"
-			        }
-			    ],
-			    "type": "number",
-			    "component_path": [
-			        "section_id"
-			    ],
-			    "lang": "all",
-			    "format": "column",
-			    "unaccent": false,
-			    "column_name": "section_id",
-			    "operator": "=",
-			    "q_parsed": 3
-			}
-			*/
-			dump($query_object, ' query_object WORKING HERE ++///////////////////////////******************//////////////////////////////////////// '.to_string());
+		// query_object
+			$query_object->operator			= 'IN';
+			$query_object->q_parsed			= implode(',', $q_clean);
+			$query_object->format			= 'in_column';
+			$query_object->type				= 'number';
+			$query_object->column_name		= 'section_id';
+			$query_object->component_path	= ['section_id'];
+			$query_object->unaccent			= false;
 
 
 		return $query_object;

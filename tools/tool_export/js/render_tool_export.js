@@ -108,10 +108,10 @@ const get_content_data_edit = async function(self) {
 			parent			: grid_top
 		})
 		// user_selection_list drag and drop events
-		user_selection_list.addEventListener('dragover',function(e){self.on_dragover(this,e)})
-		user_selection_list.addEventListener('dragleave',function(e){self.on_dragleave(this,e)})
-		// user_selection_list.addEventListener('dragend',function(e){self.on_drag_end(this,e)})
-		user_selection_list.addEventListener('drop',function(e){self.on_drop(this,e)})
+		user_selection_list.addEventListener('dragover', function(e){self.on_dragover(this,e)})
+		user_selection_list.addEventListener('dragleave', function(e){self.on_dragleave(this,e)})
+		// user_selection_list.addEventListener('dragend', function(e){self.on_drag_end(this,e)})
+		user_selection_list.addEventListener('drop', function(e){self.on_drop(this,e)})
 
 		// title
 			ui.create_dom_element({

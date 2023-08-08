@@ -399,7 +399,8 @@ class component_svg extends component_media_common {
 							$options->section_id,
 							'list',
 							DEDALO_DATA_NOLAN,
-							$options->section_tipo
+							$options->section_tipo,
+							false
 						);
 
 					// get existing files data

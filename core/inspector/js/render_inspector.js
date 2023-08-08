@@ -445,20 +445,20 @@ export const render_section_info = function(self) {
 		const fragment = new DocumentFragment();
 
 	// section name
-		// label
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'key',
-			inner_html		: get_label.section || 'Section',
-			parent			: fragment
-		})
-		// value
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'value',
-			inner_html		: label,
-			parent			: fragment
-		})
+		// // label
+		// ui.create_dom_element({
+		// 	element_type	: 'span',
+		// 	class_name		: 'key',
+		// 	inner_html		: get_label.section || 'Section',
+		// 	parent			: fragment
+		// })
+		// // value
+		// ui.create_dom_element({
+		// 	element_type	: 'span',
+		// 	class_name		: 'value',
+		// 	inner_html		: label,
+		// 	parent			: fragment
+		// })
 
 	// tipo
 		// label
@@ -581,7 +581,7 @@ export const render_section_info = function(self) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			inner_html		: get_label.publicado || 'Published',
+			inner_html		: (get_label.publicado || 'Published') + ' (first/last)',
 			parent			: fragment
 		})
 		// value

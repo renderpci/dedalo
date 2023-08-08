@@ -812,6 +812,27 @@ class component_media_common extends component_common {
 
 
 	/**
+	* GET_THUMB_QUALITY
+	* Method used only to capture non defined cases. Define in every media component
+	* Called from get_grid_value method in non edit mode
+	* @return string $fake_quality
+	*/
+	public function get_thumb_quality() : string {
+
+		debug_log(__METHOD__
+			. " Calling unimplemented method get_thumb_quality catch by component_media_common " . PHP_EOL
+			. ' Define a real get_thumb_quality method ASAP'
+			, logger::DEBUG
+		);
+
+		$fake_quality = $this->get_default_quality();
+
+		return $fake_quality;
+	}//end get_thumb_quality
+
+
+
+	/**
 	* DELETE_FILE
 	* Remove quality version moving the file to a deleted files directory
 	* @see component_image->remove_component_media_files
