@@ -38,7 +38,7 @@ view_line_edit_select.render = async function(self, options) {
 		const render_level = options.render_level || 'full'
 
 	// button_exit_edit
-		const button_exit_edit = ui.component.build_button_exit_edit(self)
+		// const button_exit_edit = ui.component.build_button_exit_edit(self)
 
 	// content_data
 		const content_data = get_content_data(self, {
