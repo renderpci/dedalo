@@ -10,7 +10,6 @@
 	import {ui} from '../../common/js/ui.js'
 	import {
 		get_content_data,
-		get_buttons
 	} from './render_edit_component_select.js'
 
 
