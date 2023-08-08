@@ -32,7 +32,7 @@ export const view_default_edit_portal = function() {
 
 /**
 * RENDER
-* Manages the component's logic and appearance in client side
+* Render node for use in current view
 * @param object self
 * @param object options
 * @return HTMLElement wrapper

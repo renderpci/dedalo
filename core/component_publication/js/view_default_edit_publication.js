@@ -27,7 +27,9 @@ export const view_default_edit_publication = function() {
 
 /**
 * RENDER
-* Render node for use in edit mode
+* Render node for use in current view
+* @param object self
+* @param object options
 * @return HTMLElement wrapper
 */
 view_default_edit_publication.render = async function(self, options) {

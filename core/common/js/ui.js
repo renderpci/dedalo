@@ -137,6 +137,9 @@ export const ui = {
 				const label			= instance.label // instance.context.label
 				const element_css	= instance.context.css || {}
 
+			// options
+				const add_styles = options.add_styles || null
+
 			// fragment
 				const fragment = new DocumentFragment()
 
@@ -152,7 +155,7 @@ export const ui = {
 						mode,
 						...wrapper_structure_css
 					]
-					if (options.add_styles) {ar_css.push(...options.add_styles)}
+					if (add_styles) {ar_css.push(...add_styles)}
 					if (view) {ar_css.push('view_'+view)}
 					if (mode==='search') ar_css.push('tooltip_toggle')
 					wrapper.classList.add(...ar_css)
@@ -208,10 +211,9 @@ export const ui = {
 					}
 
 				// event click . Activate component on event
-					wrapper.addEventListener('click', function(e){
+					wrapper.addEventListener('click', (e)=>{
 						e.stopPropagation()
 					})
-
 					wrapper.addEventListener('mousedown', fn_wrapper_mousedown)
 					function fn_wrapper_mousedown(e) {
 						e.stopPropagation()
