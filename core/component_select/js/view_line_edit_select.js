@@ -6,7 +6,7 @@
 
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
-	// import {object_to_url_vars} from '../../common/js/utils/index.js'
+	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {
 		get_content_data
