@@ -1609,6 +1609,7 @@ export const ts_object = new function() {
 				? Object.values(element.heritage)[0].section_tipo
 				: element.section_tipo
 
+
 			// checks already exists
 				if (ar_resolved.indexOf(key) !== -1) {
 					if(SHOW_DEBUG===true) {
@@ -1627,12 +1628,20 @@ export const ts_object = new function() {
 					// Search children place
 					main_div = document.querySelector('.hierarchy_root_node[data-section_id="'+element.section_id+'"]>.children_container')
 					if (main_div) {
+
 						// Clean main div (Clean previous nodes from root)
 						while (main_div.firstChild) {
 							main_div.removeChild(main_div.firstChild);
 						}
+
 					}else{
-						//console.log("[ts_object.parse_search_result] Error on locate main_div:  "+'.hierarchy_root_node[data-section_id="'+element.section_id+'"] > .children_container')
+						// console.log("[ts_object.parse_search_result] Error on locate main_div:  "+'.hierarchy_root_node[data-section_id="'+element.section_id+'"] > .children_container')
+
+						// not parent elements case, attach to root node
+						// It search result node don't have parent, use root node as parent to allow display the term
+						if (!element.heritage) {
+							main_div = document.querySelector('.hierarchy_root_node[data-target_section_tipo="'+target_section_tipo+'"]>.children_container')
+						}
 					}
 				}
 
