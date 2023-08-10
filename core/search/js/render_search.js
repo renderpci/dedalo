@@ -865,6 +865,10 @@ const render_sections_selector = (self) => {
 				build_sections_check_boxes(self, typology_id, wrapper_sections_selector_ul)
 				// update_sections_list fire
 				event_manager.publish('update_sections_list_' + self.id)
+
+				// Store selected value as cookie to recover later
+				const cookie_name = 'selected_typology'
+				create_cookie(cookie_name, typology_id, 365)
 			})
 
 		// options for selector
@@ -879,8 +883,8 @@ const render_sections_selector = (self) => {
 			}
 
 		// cookie. previous cookie stored value
-			const cookie_name  		= "selected_typology"
-			const selected_typology = read_cookie(cookie_name)
+			const cookie_name		= 'selected_typology'
+			const selected_typology	= read_cookie(cookie_name)
 			if (selected_typology) {
 				typology_selector.value = selected_typology
 			}
@@ -923,6 +927,23 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 	// reset the sqo sections
 		self.target_section_tipo.splice(0,self.target_section_tipo.length)
 
+	// cookie value (selected_search_sections)
+		const cookie_name						= 'selected_search_sections'
+		const selected_search_sections_value	= read_cookie(cookie_name)
+		const selected_search_sections			= selected_search_sections_value
+			? JSON.parse(selected_search_sections_value)
+			: {}
+		// sample expected parsed format
+			// {
+			// 	"1": [
+			// 		"numisdata665"
+			// 	],
+			// 	"2": [
+			// 		"es1",
+			// 		"fr1"
+			// 	]
+			// }
+
 	// clean wrapper_sections_selector_ul
 		while (ul.hasChildNodes()) {
 			ul.removeChild(ul.lastChild);
@@ -960,7 +981,18 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 					value			: item.target_section_tipo
 				})
 				ar_check_box.push(check_box)
-				check_box.checked = true
+
+				// selected
+				if (selected_search_sections[typology_id]) {
+					// defined cookie value case
+					if(selected_search_sections[typology_id].includes(item.target_section_tipo)){
+						check_box.checked = true
+					}
+				}else{
+					// non defined cookie value case
+					check_box.checked = true
+				}
+
 				check_box.addEventListener('change', update_sections_list)
 				label.prepend(check_box)
 		}//end for (let i = 0; i < ar_sections_len; i++)
@@ -985,7 +1017,9 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 					type			: 'checkbox',
 					value			: null
 				})
-				check_box.checked = true
+				if (!selected_search_sections[typology_id]) {
+					check_box.checked = true
+				}
 				label.prepend(check_box)
 				check_box.addEventListener('change', fn_change)
 				function fn_change() {
@@ -1028,17 +1062,20 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 					section_elements	: section_elements
 				})
 
+			// Store selected value as cookie to recover later
+				selected_search_sections[typology_id] = self.target_section_tipo
+				create_cookie(
+					cookie_name,
+					JSON.stringify(selected_search_sections),
+					365
+				)
+
 			// loading remove
 				self.search_container_selector.classList.remove('loading')
 		}//end update_sections_list
 
 	// event subscription. Fire update on each publication of update_sections_list_
 		event_manager.subscribe('update_sections_list_' + self.id, update_sections_list)
-
-
-	// Store selected value as cookie to recover later
-		const cookie_name  = 'selected_typology'
-		create_cookie(cookie_name, typology_id, 365)
 
 
 	return true
