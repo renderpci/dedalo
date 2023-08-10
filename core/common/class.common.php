@@ -2686,7 +2686,7 @@ abstract class common {
 
 		// short vars
 			$tipo				= $this->get_tipo();
-			// $external		= false;
+			$external			= false;
 			$section_tipo		= $this->get_section_tipo();
 			$section_id			= $this->get_section_id();
 			$mode				= $this->get_mode();
@@ -2702,11 +2702,11 @@ abstract class common {
 		// cache
 			static $resolved_request_properties_parsed = [];
 			// resolved_key
-			// $resolved_key = $tipo .'_'. $section_tipo .'_'. (int)$external .'_'. $mode .'_'. $section_id;
+			$resolved_key = $tipo .'_'. $section_tipo .'_'. (int)$external .'_'. $mode .'_'. $section_id;
 			// (!) Removed $section_id from resolved_key 10-08-2023 because is necessary only in case that sqo->fixed_filter is defined.
 			// (!) Removed $external from resolved_key 10-08-2023 because is not longer used
 			// In those cases, prevent to cache this result
-			$resolved_key = $tipo .'_'. $section_tipo .'_'. $mode;
+			// $resolved_key = $tipo .'_'. $section_tipo .'_'. $mode;
 			// define use_cache as true. Change before set value if needed
 			$use_cache = true;
 			if ($use_cache===true && isset($resolved_request_properties_parsed[$resolved_key])) {
