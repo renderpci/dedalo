@@ -52,8 +52,8 @@ Before you start upgrading to update it is important to be aware of some of thes
         The update will run this commands in ../dedalo/media/pdf directory automatically.
 
         ```shell
-        mv standar original
-        cp original web
+            mv standar original
+            cp original web
         ```
 
         !!! warning ""
@@ -86,10 +86,10 @@ Before update you will prepare your v5 installation doing:
 2. Go to Administration panel.
 3. Make backup of your Dédalo installation.
 4. Update v5 to last code.
-    * Ensure that your code is >= 5.9.5
-    * Ensure that your data is updated to 5.8.2
+    * Ensure that your code is >= 5.9.7
+    * Ensure that your data is updated to 5.8.7
 5. Update v5 to last ontology version
-    * Ensure that your ontology version is > 01-04-2023
+    * Ensure that your ontology version is > 01-07-2023
 6. Duplicate your current database and rename as your own project. Do not update your current database directly. It is recommended to use a duplicate database. You can do it this step in several ways:
 
     * If you want duplicate with SQL you could use something as:
@@ -162,7 +162,8 @@ Ready to update.
 
 6. Run Dédalo in your browser.
 
-    You will see the install / update script.
+    Dédalo will check all config files and his own installation, if you see an error (in red text), check your php log and fix the issue.
+    When all will be ready Dédalo will show the install / update script.
 
     ![install script](assets/20230403_172538_to_update.png){: .small}
 
@@ -176,11 +177,11 @@ Ready to update.
 
     ![Administration panel](assets/20230403_171028_admin_panel.png){: .large}
 
-9. Update the Ontology to > 01-04-2023
+9. Update the Ontology to > 01-07-2023
 
     ![Update ontology](assets/20230403_171133_ontology_update.png){: .medium}
 
-10. Run the update scripts. It will take time to change your Database and files. It's highly recommended to see your PHP log (`tail -f php.log`)
+10. Run the update scripts. It will take time to change your Database and files. It's highly recommended to see your PHP log (`tail -f php_error.log`)
 
     ![Update data](assets/20230403_171234_update_data.png){: .large}
 
@@ -189,6 +190,10 @@ Ready to update.
     ![Ok button in bottom script](assets/20230403_171425_update_data2.png){: .large}
 
     Wait until you see the ok, this process could be long.
+
+    !!! Note
+        The update process will review all records in your database, if your project is a large dataset and you have millions of records in activity or time machine, the update will need time and RAM.
+        In large project PHP can exhausted at any time, to avoid it, we recommend to change the `memory_limit` in php.ini to -1 (to use all available memory).
 
 11. Run the tool register.
 
