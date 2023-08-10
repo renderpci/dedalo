@@ -51,8 +51,8 @@ view_line_edit_date.render = async function(self, options) {
 		const content_data = get_content_data(self)
 
 	// button_exit_edit
-		const button_exit_edit = ui.component.build_button_exit_edit(self)
-		content_data.appendChild(button_exit_edit)
+		// const button_exit_edit = ui.component.build_button_exit_edit(self)
+		// content_data.appendChild(button_exit_edit)
 
 		if (render_level==='content') {
 			return content_data
