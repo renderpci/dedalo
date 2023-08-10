@@ -224,7 +224,8 @@
 				}
 			}
 
-			>ul.layer_ul {
+			// ul layer_ul
+			>.layer_ul {
 				text-align: left;
 				clear: both;
 				// border: 0.5px solid #777;
@@ -248,10 +249,10 @@
 						background-color: #ffffff;
 						color: initial;
 					}
+					&:first-child {
+						border-top: 0.5px solid #777777;
+					}
 
-					// .layer_icon {
-					//
-					// }
 					.layer_id {
 						justify-self: center;
 					}
@@ -267,9 +268,6 @@
 					// 	}
 					// }
 				}
-				>li:first-child {
-					border-top: 0.5px solid #777777;
-				}
 			}
 		}
 
@@ -278,14 +276,6 @@
 			.content_data.component {
 				pointer-events: unset !important;
 			}
-			// .toolbar_container {
-			// 	pointer-events: none;
-			// 	display: none !important;
-			// }
-			// .create_fragment {
-			// 	pointer-events: none;
-			// 	display: none !important;
-			// }
 		}
 	}//end .edit
 
@@ -327,35 +317,35 @@
 		display: block;
 
 		.toolbar_container{
-			display				: flex;
-			flex-wrap			: wrap;
-			position			: absolute;
-			background-color	: #fff;
-			outline				: 1px solid @color_orange_dedalo;
-			left				: 0px;
-			top					: -21px;
-			height				: auto;
-			width				: auto;
-			padding				: 0.05rem;
-			z-index				: 1;
+			display: flex;
+			flex-wrap: wrap;
+			position: absolute;
+			background-color: #fff;
+			outline: 1px solid @color_orange_dedalo;
+			left: 0px;
+			top: -21px;
+			height: auto;
+			width: auto;
+			padding: 0.05rem;
+			z-index: 1;
 
 			>.toolbar_button {
-				&.button_save{
+				&.button_save {
 					padding: 1px;
 					padding-right: 0.5rem;
 				}
 			}
 		}
-		>.content_data{
-			min-height	: 3em;
-			max-height	: 6em;
-			overflow	: auto;
-			>.content_value>.editor_container{
+		>.content_data {
+			min-height: 3em;
+			max-height: 6em;
+			overflow: auto;
+
+			>.content_value >.editor_container {
 				padding	: 0.4em;
 				margin	: 0px;
 			}
 		}
-
 	}
 
 	// with suffix _mini like 'component_text_area_mini'
@@ -369,67 +359,6 @@
 			display: contents;
 		}
 	}
-
-
-	// dd-tiny
-	dd-tiny {
-		width: 100%;
-		height: 100%;
-		// background-color: #F76CE4;
-		// height: 650px;
-		// border-bottom: 1px solid #ffffff;
-		// margin-bottom: 1em;
-		transition: opacity 0.115s ease-in-out;
-		// min-height: 27em;
-		// min-height: @media_max_height;
-
-
-		.mce-container {
-			// display: none !important;
-
-			// div.mce-fullscreen {
-				// z-index: 1;
-			// }
-
-			.mce-branding-powered-by {
-				display: none;
-			}
-
-			iframe {
-			}
-		}
-
-		.mce-path {
-			padding: 5px;
-		}
-
-		// Container, container body, iframe
-			// .mce-tinymce, .mce-container-body {
-			// 	min-height: 100% !important;
-			// }
-			// // Container body
-			// .mce-container-body {
-			// 	position: absolute;
-			// 	bottom: 0;
-			// 	left: 0;
-			// 	right: 0;
-			// }
-			// // Editing area
-			// .mce-container-body .mce-edit-area {
-			// 	position: absolute;
-			// 	top: 30px;
-			// 	bottom: 30px; // 37px;
-			// 	left: 0;
-			// 	right: 0;
-			// }
-			// // Footer
-			// .mce-tinymce .mce-statusbar {
-			// 	position: absolute;
-			// 	bottom: 0;
-			// 	left: 0;
-			// 	right: 0;
-			// }
-	}//end dd-tiny
 }//end .component_text_area
 
 
@@ -487,7 +416,6 @@ dd-modal {
 	// langs list into modal
 	>.text_area_project_langs_container {
 		color: initial;
-		// padding: 1rem;
 		line-height: 1.6rem;
 
 		>.lang_container {
