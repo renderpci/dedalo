@@ -7,7 +7,7 @@
 // imports
 	import {view_default_edit_text_area} from './view_default_edit_text_area.js'
 	import {view_mini_text_area} from './view_mini_text_area.js'
-
+	import {view_line_edit_text_area} from './view_line_edit_text_area.js'
 
 
 /**
@@ -48,6 +48,8 @@ render_edit_component_text_area.prototype.edit = async function(options) {
 			self.permissions = 1
 
 		case 'line':
+			return view_line_edit_text_area.render(self, options)
+
 		case 'html_text':
 		case 'default':
 		default:
