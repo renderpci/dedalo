@@ -2686,10 +2686,10 @@ abstract class common {
 
 		// short vars
 			$tipo				= $this->get_tipo();
-			$external			= false;
+			// $external		= false;
 			$section_tipo		= $this->get_section_tipo();
-			$mode				= $this->get_mode();
 			$section_id			= $this->get_section_id();
+			$mode				= $this->get_mode();
 			$model				= get_called_class();
 			$requested_source	= dd_core_api::$rqo->source ?? null;
 			$requested_sqo		= dd_core_api::$rqo->sqo ?? null;
@@ -2701,8 +2701,15 @@ abstract class common {
 
 		// cache
 			static $resolved_request_properties_parsed = [];
-			$resolved_key = $tipo .'_'. $section_tipo .'_'. (int)$external .'_'. $mode .'_'. $section_id;
-			if (isset($resolved_request_properties_parsed[$resolved_key])) {
+			// resolved_key
+			// $resolved_key = $tipo .'_'. $section_tipo .'_'. (int)$external .'_'. $mode .'_'. $section_id;
+			// (!) Removed $section_id from resolved_key 10-08-2023 because is necessary only in case that sqo->fixed_filter is defined.
+			// (!) Removed $external from resolved_key 10-08-2023 because is not longer used
+			// In those cases, prevent to cache this result
+			$resolved_key = $tipo .'_'. $section_tipo .'_'. $mode;
+			// define use_cache as true. Change before set value if needed
+			$use_cache = true;
+			if ($use_cache===true && isset($resolved_request_properties_parsed[$resolved_key])) {
 				// debug_log(__METHOD__." Return ar_request_config from cached value. resolved_key: ".to_string($resolved_key), logger::ERROR);
 				return $resolved_request_properties_parsed[$resolved_key];
 			}
@@ -2753,7 +2760,7 @@ abstract class common {
 				: 0;
 			$limit	= isset($this->pagination->limit)
 				? $this->pagination->limit
-				: (function() use($model, $mode, $properties){
+				: (function() use($model, $mode, $properties) {
 					// from properties try
 					if (isset($properties->source) && isset($properties->source->request_config)) {
 						$found = array_find($properties->source->request_config, function($el){
@@ -2819,7 +2826,14 @@ abstract class common {
 
 						// fixed_filter
 							if (isset($item_request_config->sqo->fixed_filter)) {
-								$parsed_item->sqo->fixed_filter = component_relation_common::get_fixed_filter($item_request_config->sqo->fixed_filter, $section_tipo, $section_id);
+								$parsed_item->sqo->fixed_filter = component_relation_common::get_fixed_filter(
+									$item_request_config->sqo->fixed_filter,
+									$section_tipo,
+									$section_id
+								);
+								// cache. Note that this parse could be different based on ar_fixed[]->source->component_dato using $section_id
+								// to prevent unwanted cache items, remove save value in cache from here
+								$use_cache = false;
 							}
 
 						// limit. Add default if not already set
@@ -3411,7 +3425,9 @@ abstract class common {
 
 
 		// cache
-			$resolved_request_properties_parsed[$resolved_key] = $ar_request_query_objects;
+			if ($use_cache===true) {
+				$resolved_request_properties_parsed[$resolved_key] = $ar_request_query_objects;
+			}
 
 		// debug
 			if(SHOW_DEBUG===true) {
