@@ -245,7 +245,7 @@ class tool_export extends tool_common {
 				foreach ($column_tipos as $column_key => $column_tipo) {
 					// set the column name, if the format is Dédalo use the $tipo and section_id
 					// for standard format use the name
-					if($this->data_format==='dedalo'){
+					if($this->data_format==='dedalo_raw'){
 						$model_name = RecordObj_dd::get_modelo_name_by_tipo($column_tipo);
 						$column_labels[] = ($model_name === 'component_section_id')
 							? 'section_id'
