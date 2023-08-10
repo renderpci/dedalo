@@ -49,8 +49,10 @@ render_area_thesaurus.prototype.list = async function(options) {
 
 			if (data.ts_search) {
 
-				// prevent to recreate content_data again
-				const content_data = self.node.content_data
+				// search result case
+
+				// prevent to re-create content_data again
+					const content_data = self.node.content_data
 
 				// clean children_container nodes (inside categories)
 					const children_container = content_data.querySelectorAll('[data-role="children_container"]')
@@ -62,9 +64,13 @@ render_area_thesaurus.prototype.list = async function(options) {
 						}
 					}
 
-				// render. parse_search_result
+				// render. parse_search_result with ts_object
 					setTimeout(function(){
-						self.ts_object.parse_search_result(data.ts_search.result, null, false)
+						self.ts_object.parse_search_result(
+							data.ts_search.result, // object data
+							null, // HTMLElement main_div
+							false // bool is_recursion
+						)
 					}, 1)
 
 				return content_data

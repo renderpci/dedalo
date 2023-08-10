@@ -495,7 +495,6 @@ class area_thesaurus extends area_common {
 				#dump($ar_data_combined, ' ar_data_combined ++ '.to_string());
 
 		$result = self::walk_hierarchy_data($ar_data_combined);
-			#dump($result, ' result ++ '.json_encode($result));
 
 		$total_records = count($ar_records);
 
@@ -669,6 +668,14 @@ class area_thesaurus extends area_common {
 	/**
 	* WALK_HIERARCHY_DATA
 	* Walk recursively $ar_data_combined resolving ts_object and add children as 'heritage'
+	* @param array $ar_data_combined
+	* Sample assoc array:
+	* [
+	* 	"ts1_1" => {
+	* 		"ts1_258": []
+	* 		"ts1_259": []
+	* 	}
+	* ]
 	* @return array $ar_mix
 	*/
 	public static function walk_hierarchy_data( array $ar_data_combined ) : array {
