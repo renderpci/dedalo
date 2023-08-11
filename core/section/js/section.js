@@ -441,7 +441,7 @@ section.prototype.init = async function(options) {
 			}//end fn_render
 
 	// load additional files as css used by section_tool in self.config
-		if(self.config && self.config.source_model==='section_tool'){
+		if(self.config && self.config.source_model==='section_tool') {
 			self.load_section_tool_files()
 		}
 

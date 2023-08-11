@@ -264,7 +264,9 @@ const get_content_data_edit = async function(self) {
 				inner_html		: get_label.tool_export || 'Export',
 				parent			: export_buttons_config
 			})
-			button_export.addEventListener('click', async function() {
+			button_export.addEventListener('click', async function(e) {
+				e.stopPropagation()
+
 				// clean target_div
 					while (export_data_container.hasChildNodes()) {
 						export_data_container.removeChild(export_data_container.lastChild);

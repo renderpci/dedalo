@@ -2561,16 +2561,18 @@ abstract class common {
 				);
 			}
 
-		// 2. From structure
+		// 2. From Ontology
 			if (empty($request_config)) {
 
 				$request_config = $this->get_ar_request_config();
 			}
 
+
 		// fix request_config value
 			$this->request_config = $request_config;
 
-		// ddo_map (dd_core_api static var)
+
+		// fix ddo_map (dd_core_api static var)
 			$dedalo_request_config = array_find($request_config, function($el){
 				return $el->api_engine==='dedalo';
 			});
