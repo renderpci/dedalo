@@ -2694,7 +2694,7 @@ export const build_autoload = async function(self) {
 
 	// debug last server error. Only for development
 		if(SHOW_DEVELOPER===true || SHOW_DEBUG===true) {
-			console.log(`${self.model} build api_response:`, api_response);
+			console.log(`${self.model} build api_response:`, JSON.parse( JSON.stringify(api_response) ) );
 			if (api_response && api_response.dedalo_last_error) {
 				console.error('SERVER: api_response.dedalo_last_error:', api_response.dedalo_last_error);
 			}

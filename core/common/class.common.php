@@ -2408,6 +2408,15 @@ abstract class common {
 				return $this->request_config;
 			}
 
+		// cache. Experimental 10-08-2023. Note that 'get_ar_request_config' is affected by section_id when sqo->fixed_filter is defined
+			static $resolved_request_config_parsed = [];
+			$resolved_key = $this->tipo .'_'. $this->get_section_tipo() .'_'. $this->mode .'_'. $this->section_id;
+			$use_cache = false;
+			if ($use_cache===true && isset($resolved_request_config_parsed[$resolved_key])) {
+				return $resolved_request_config_parsed[$resolved_key];
+			}
+
+
 		// debug
 			if(SHOW_DEBUG===true) {
 				// $idd = $this->tipo . ' ' . RecordObj_dd::get_modelo_name_by_tipo($this->tipo,true);
@@ -2561,16 +2570,18 @@ abstract class common {
 				);
 			}
 
-		// 2. From structure
+		// 2. From Ontology
 			if (empty($request_config)) {
 
 				$request_config = $this->get_ar_request_config();
 			}
 
+
 		// fix request_config value
 			$this->request_config = $request_config;
 
-		// ddo_map (dd_core_api static var)
+
+		// fix ddo_map (dd_core_api static var)
 			$dedalo_request_config = array_find($request_config, function($el){
 				return $el->api_engine==='dedalo';
 			});
@@ -2583,18 +2594,27 @@ abstract class common {
 				$model	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 				$sqo_id	= ($model==='section') ? implode('_', ['section', $tipo]) : null; // cache key sqo_id
 				if ($model==='section') {
-
 					// dd_core_api::$rqo->sqo is set case
 					// Fixed in dd_core_api::start if user browser has SQO value for this section on local DDBB
-					if (!empty(dd_core_api::$rqo->sqo)) {
+					// Note that $requested_sqo is dd_core_api::$rqo->sqo
+					if (!empty($requested_sqo)) {
 						foreach ($requested_sqo as $sqo_key => $sqo_value) {
-							if ($sqo_key==='section_tipo') {
-								continue;
-							}
+
 							if (!isset($dedalo_request_config->sqo)) {
 								$dedalo_request_config->sqo = new stdClass();
 							}
-							$dedalo_request_config->sqo->{$sqo_key} = $sqo_value;
+
+							// ignore section_tipo
+							if ($sqo_key==='section_tipo') {
+								continue;
+							}
+
+							if ($sqo_key==='limit') {
+								// limit null value from server NOT overwrite request config value if exists
+								$dedalo_request_config->sqo->{$sqo_key} = $sqo_value ?? $dedalo_request_config->sqo->{$sqo_key} ?? null;
+							}else{
+								$dedalo_request_config->sqo->{$sqo_key} = $sqo_value;
+							}
 						}
 					}
 					// fallback to session (note that always is saved navigation SQO in session to allow preserve records on tools like tool_export)
@@ -2632,6 +2652,11 @@ abstract class common {
 					dd_core_api::$ddo_map,
 					$current_request_config->show->ddo_map
 				);
+			}
+
+		// cache
+			if ($use_cache===true) {
+				$resolved_request_config_parsed[$resolved_key] = $this->request_config;
 			}
 
 		// des
@@ -2688,8 +2713,8 @@ abstract class common {
 			$tipo				= $this->get_tipo();
 			$external			= false;
 			$section_tipo		= $this->get_section_tipo();
-			$mode				= $this->get_mode();
 			$section_id			= $this->get_section_id();
+			$mode				= $this->get_mode();
 			$model				= get_called_class();
 			$requested_source	= dd_core_api::$rqo->source ?? null;
 			$requested_sqo		= dd_core_api::$rqo->sqo ?? null;
@@ -2701,8 +2726,15 @@ abstract class common {
 
 		// cache
 			static $resolved_request_properties_parsed = [];
+			// resolved_key
 			$resolved_key = $tipo .'_'. $section_tipo .'_'. (int)$external .'_'. $mode .'_'. $section_id;
-			if (isset($resolved_request_properties_parsed[$resolved_key])) {
+			// (!) Removed $section_id from resolved_key 10-08-2023 because is necessary only in case that sqo->fixed_filter is defined.
+			// (!) Removed $external from resolved_key 10-08-2023 because is not longer used
+			// In those cases, prevent to cache this result
+			// $resolved_key = $tipo .'_'. $section_tipo .'_'. $mode;
+			// define use_cache as true. Change before set value if needed
+			$use_cache = true;
+			if ($use_cache===true && isset($resolved_request_properties_parsed[$resolved_key])) {
 				// debug_log(__METHOD__." Return ar_request_config from cached value. resolved_key: ".to_string($resolved_key), logger::ERROR);
 				return $resolved_request_properties_parsed[$resolved_key];
 			}
@@ -2753,7 +2785,7 @@ abstract class common {
 				: 0;
 			$limit	= isset($this->pagination->limit)
 				? $this->pagination->limit
-				: (function() use($model, $mode, $properties){
+				: (function() use($model, $mode, $properties) {
 					// from properties try
 					if (isset($properties->source) && isset($properties->source->request_config)) {
 						$found = array_find($properties->source->request_config, function($el){
@@ -2819,7 +2851,14 @@ abstract class common {
 
 						// fixed_filter
 							if (isset($item_request_config->sqo->fixed_filter)) {
-								$parsed_item->sqo->fixed_filter = component_relation_common::get_fixed_filter($item_request_config->sqo->fixed_filter, $section_tipo, $section_id);
+								$parsed_item->sqo->fixed_filter = component_relation_common::get_fixed_filter(
+									$item_request_config->sqo->fixed_filter,
+									$section_tipo,
+									$section_id
+								);
+								// cache. Note that this parse could be different based on ar_fixed[]->source->component_dato using $section_id
+								// to prevent unwanted cache items, remove save value in cache from here
+								$use_cache = false;
 							}
 
 						// limit. Add default if not already set
@@ -3411,7 +3450,9 @@ abstract class common {
 
 
 		// cache
-			$resolved_request_properties_parsed[$resolved_key] = $ar_request_query_objects;
+			if ($use_cache===true) {
+				$resolved_request_properties_parsed[$resolved_key] = $ar_request_query_objects;
+			}
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -4456,6 +4497,41 @@ abstract class common {
 
 		return $children_view;
 	}//end get_children_view
+
+
+
+	/**
+	* RESOLVE_LIMIT
+	* @return int|null
+	*/
+	public function resolve_limit() : ?int {
+
+		// properties check for request_config
+		$properties = $this->get_properties();
+		if (!property_exists($properties, 'source') ||
+			!property_exists($properties->source, 'request_config')
+			) {
+			return null;
+		}
+
+		$request_config			= $properties->source->request_config;
+		$request_config_item	= array_find($request_config, function($el){
+			return $el->api_engine==='dedalo';
+		});
+
+		// sqo try
+		if (isset($request_config_item->sqo) && isset($request_config_item->sqo->limit)) {
+			return (int)$request_config_item->sqo->limit;
+		}
+
+		// show try
+		if (isset($request_config_item->show->sqo_config) && isset($request_config_item->show->sqo_config->limit)) {
+			return (int)$request_config_item->show->sqo_config->limit;
+		}
+
+
+		return null;
+	}//end resolve_limit
 
 
 
