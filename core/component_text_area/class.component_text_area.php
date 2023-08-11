@@ -2605,157 +2605,161 @@ class component_text_area extends component_common {
 					// new dato
 					$dato = $dato_unchanged;
 
-					$ar_realated_tipo = RecordObj_dd::get_ar_terminos_relacionados($tipo, false, true);
-					foreach ($ar_realated_tipo as $current_tipo) {
+					// related tipo process (component_image, component_geolocation)
+						$trim_dato = trim($dato);
+						if (!empty($trim_dato)) {
+							$ar_realated_tipo = RecordObj_dd::get_ar_terminos_relacionados($tipo, false, true);
+							foreach ($ar_realated_tipo as $current_tipo) {
 
-						$model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true);
-						switch (true) {
+								$model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true);
+								switch (true) {
 
-							case $model==='component_image':
+									case $model==='component_image':
 
-								// image_component. Create the component relation for save the layers
-									$image_component = component_common::get_instance(
-										$model,
-										$current_tipo,
-										$section_id,
-										'edit',
-										DEDALO_DATA_NOLAN,
-										$section_tipo,
-										false
-									);
+										// image_component. Create the component relation for save the layers
+											$image_component = component_common::get_instance(
+												$model,
+												$current_tipo,
+												$section_id,
+												'edit',
+												DEDALO_DATA_NOLAN,
+												$section_tipo,
+												false
+											);
 
-								// image_dato
-									$image_dato	= $image_component->get_dato();
+										// image_dato
+											$image_dato	= $image_component->get_dato();
 
-								// lib_data
-									$lib_data = [];
-									if(empty($image_dato[0]->lib_data)){
-										$raster_layer = new stdClass();
-											$raster_layer->layer_id			= 0;
-											$raster_layer->user_layer_name	= 'raster';
-											$raster_layer->layer_data		= [];
+										// lib_data
+											$lib_data = [];
+											if(empty($image_dato[0]->lib_data)){
+												$raster_layer = new stdClass();
+													$raster_layer->layer_id			= 0;
+													$raster_layer->user_layer_name	= 'raster';
+													$raster_layer->layer_data		= [];
 
-										$lib_data[] = $raster_layer;
-									}else{
-										$lib_data = $image_dato[0]->lib_data;
-									}
+												$lib_data[] = $raster_layer;
+											}else{
+												$lib_data = $image_dato[0]->lib_data;
+											}
 
-								// draw_tags
-									$ar_draw_tags = [];
-									// get the draw pattern
-									$pattern = TR::get_mark_pattern(
-										'draw', // string mark
-										true // bool standalone
-									);
-									// Search math pastern tags
-									preg_match_all($pattern,  $dato, $ar_draw_tags, PREG_PATTERN_ORDER);
-									if(empty($ar_draw_tags) || empty($ar_draw_tags[0])){
-										continue 2;
-									}
+										// draw_tags
+											$ar_draw_tags = [];
+											// get the draw pattern
+											$pattern = TR::get_mark_pattern(
+												'draw', // string mark
+												true // bool standalone
+											);
+											// Search math pastern tags
+											preg_match_all($pattern,  $dato, $ar_draw_tags, PREG_PATTERN_ORDER);
+											if(empty($ar_draw_tags) || empty($ar_draw_tags[0])){
+												continue 2;
+											}
 
-								// Array result key 7 is the layer into the data stored in the result of the preg_match_all
-								// The layer data inside the tag are with ' and is necessary change to "
-								foreach ($ar_draw_tags[4] as $match_key => $layer_id) {
-									$layer_id	= (int)$layer_id;
-									$tag_data	= new stdClass();
-										$tag_data->layer_id			= $layer_id;
-										$tag_data->user_layer_name	= 'layer_'.$layer_id;
-										$tag_data->layer_data		= json_decode( str_replace('\'', '"', $ar_draw_tags[7][$match_key]) );
-									$ar_layer_key = array_filter($lib_data, function($layer_item, $layer_key) use($layer_id){
-										if(isset($layer_item->layer_id) && $layer_item->layer_id==$layer_id){
-											return $layer_key;
+										// Array result key 7 is the layer into the data stored in the result of the preg_match_all
+										// The layer data inside the tag are with ' and is necessary change to "
+										foreach ($ar_draw_tags[4] as $match_key => $layer_id) {
+											$layer_id	= (int)$layer_id;
+											$tag_data	= new stdClass();
+												$tag_data->layer_id			= $layer_id;
+												$tag_data->user_layer_name	= 'layer_'.$layer_id;
+												$tag_data->layer_data		= json_decode( str_replace('\'', '"', $ar_draw_tags[7][$match_key]) );
+											$ar_layer_key = array_filter($lib_data, function($layer_item, $layer_key) use($layer_id){
+												if(isset($layer_item->layer_id) && $layer_item->layer_id==$layer_id){
+													return $layer_key;
+												}
+											},ARRAY_FILTER_USE_BOTH);
+											if(empty($ar_layer_key[0])){
+												$lib_data[] = $tag_data;
+											}else{
+												$lib_data[$ar_layer_key[0]] = $tag_data;
+											}
 										}
-									},ARRAY_FILTER_USE_BOTH);
-									if(empty($ar_layer_key[0])){
-										$lib_data[] = $tag_data;
-									}else{
-										$lib_data[$ar_layer_key[0]] = $tag_data;
-									}
-								}
 
-								if (isset($image_dato[0])) {
-									$image_dato[0]->lib_data = $lib_data;
-								}else{
-									$image_dato = [(object)[
-										'lib_data'		=> $lib_data, // to preserve lib data even when not file is available
-										'section_id'	=> $section_id // (!) only to force update when update_dato_version component_image
-									]];
-								}
-
-								$image_component->set_dato($image_dato);
-								$image_component->save();
-
-								// re-create tags with the new simple format
-								$dato = preg_replace($pattern, "[$2-$3-$4--data:[$4]:data]", $dato);
-								break;
-
-							case $model==='component_geolocation':
-
-								$lib_data = [];
-
-								// create the component relation for save the layers
-								$geo_component = component_common::get_instance(
-									$model,
-									$current_tipo,
-									$options->section_id,
-									'edit',
-									DEDALO_DATA_NOLAN,
-									$options->section_tipo,
-									false
-								);
-								$geo_dato = $geo_component->get_dato();
-								if(!empty($geo_dato[0]) && !empty($geo_dato[0]->lib_data)) {
-									$lib_data = $geo_dato[0]->lib_data;
-								}
-
-								$ar_geo_tags = null;
-								$pattern = TR::get_mark_pattern(
-									'geo', // string mark
-									true // bool standalone
-								);
-								// Search math pattern tags
-								preg_match_all($pattern,  $dato, $ar_geo_tags, PREG_PATTERN_ORDER);
-								if(empty($ar_geo_tags) || empty($ar_geo_tags[0])){
-									continue 2;
-								}
-
-								// Array result key 7 is the layer into the data stored in the result of the preg_match_all
-								// The layer data inside the tag are with ' and is necessary change to "
-								foreach ($ar_geo_tags[4] as $match_key => $layer_id) {
-
-									$layer_id			= (int)$layer_id;
-									$layer_data_string	= str_replace('\'', '"', $ar_geo_tags[7][$match_key]);
-
-									$tag_data = new stdClass();
-										$tag_data->layer_id		= $layer_id;
-										$tag_data->layer_data	= json_decode( $layer_data_string );
-
-									$ar_layer_key = array_filter($lib_data, function($layer_item, $layer_key) use($layer_id){
-										if(isset($layer_item->layer_id) && $layer_item->layer_id==$layer_id){
-											return $layer_key;
+										if (isset($image_dato[0])) {
+											$image_dato[0]->lib_data = $lib_data;
+										}else{
+											$image_dato = [(object)[
+												'lib_data'		=> $lib_data, // to preserve lib data even when not file is available
+												'section_id'	=> $section_id // (!) only to force update when update_dato_version component_image
+											]];
 										}
-									}, ARRAY_FILTER_USE_BOTH);
-									if(empty($ar_layer_key[0])){
-										$lib_data[] = $tag_data;
-									}else{
-										$lib_data[$ar_layer_key[0]] = $tag_data;
-									}
+
+										$image_component->set_dato($image_dato);
+										$image_component->save();
+
+										// re-create tags with the new simple format
+										$dato = preg_replace($pattern, "[$2-$3-$4--data:[$4]:data]", $dato);
+										break;
+
+									case $model==='component_geolocation':
+
+										$lib_data = [];
+
+										// create the component relation for save the layers
+										$geo_component = component_common::get_instance(
+											$model,
+											$current_tipo,
+											$options->section_id,
+											'edit',
+											DEDALO_DATA_NOLAN,
+											$options->section_tipo,
+											false
+										);
+										$geo_dato = $geo_component->get_dato();
+										if(!empty($geo_dato[0]) && !empty($geo_dato[0]->lib_data)) {
+											$lib_data = $geo_dato[0]->lib_data;
+										}
+
+										$ar_geo_tags = null;
+										$pattern = TR::get_mark_pattern(
+											'geo', // string mark
+											true // bool standalone
+										);
+										// Search math pattern tags
+										preg_match_all($pattern,  $dato, $ar_geo_tags, PREG_PATTERN_ORDER);
+										if(empty($ar_geo_tags) || empty($ar_geo_tags[0])){
+											continue 2;
+										}
+
+										// Array result key 7 is the layer into the data stored in the result of the preg_match_all
+										// The layer data inside the tag are with ' and is necessary change to "
+										foreach ($ar_geo_tags[4] as $match_key => $layer_id) {
+
+											$layer_id			= (int)$layer_id;
+											$layer_data_string	= str_replace('\'', '"', $ar_geo_tags[7][$match_key]);
+
+											$tag_data = new stdClass();
+												$tag_data->layer_id		= $layer_id;
+												$tag_data->layer_data	= json_decode( $layer_data_string );
+
+											$ar_layer_key = array_filter($lib_data, function($layer_item, $layer_key) use($layer_id){
+												if(isset($layer_item->layer_id) && $layer_item->layer_id==$layer_id){
+													return $layer_key;
+												}
+											}, ARRAY_FILTER_USE_BOTH);
+											if(empty($ar_layer_key[0])){
+												$lib_data[] = $tag_data;
+											}else{
+												$lib_data[$ar_layer_key[0]] = $tag_data;
+											}
+										}
+
+										if (empty($geo_dato) || empty($geo_dato[0])) {
+											$geo_dato = [ new stdClass() ];
+										}
+
+										$geo_dato[0]->lib_data = $lib_data;
+
+										$geo_component->set_dato($geo_dato);
+										$geo_component->save();
+
+										// re-create tags with the new simple format
+										$dato = preg_replace($pattern, "[$2-$3-$4--data:[$4]:data]", $dato);
+										break;
 								}
-
-								if (empty($geo_dato) || empty($geo_dato[0])) {
-									$geo_dato = [ new stdClass() ];
-								}
-
-								$geo_dato[0]->lib_data = $lib_data;
-
-								$geo_component->set_dato($geo_dato);
-								$geo_component->save();
-
-								// re-create tags with the new simple format
-								$dato = preg_replace($pattern, "[$2-$3-$4--data:[$4]:data]", $dato);
-								break;
+							}
 						}
-					}
 
 					// update the <br> tag to <p> and </p>, the new editor, ckeditor, it doesn't use <br> as return. (<br> tags are deprecated)
 						$format_dato	= '<p>'.$dato.'</p>';
