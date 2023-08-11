@@ -894,6 +894,9 @@ const render_operator_selector = function(self) {
 			class_name		: 'operator_selector',
 			parent			: select_container
 		})
+		select.addEventListener('click', function(e) {
+			e.stopPropagation()
+		})
 		select.addEventListener('change', async function(e){
 			// set the new operator selected
 			self.operator	= e.target.value
