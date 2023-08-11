@@ -126,7 +126,7 @@ class component_text_area extends component_common {
 	/**
 	*  SET_DATO
 	* @param array $dato
-	* 	Dato now is multiple. For this expected type is array
+	* 	Dato now is multiple. For this, expected type is array
 	*	but in some cases can be an array JSON encoded or some rare times as plain string
 	* @return bool
 	*/
@@ -138,26 +138,26 @@ class component_text_area extends component_common {
 		}
 
 		// check string
-		if (is_string($dato)) { // Tool Time machine case, dato is string
+			if (is_string($dato)) { // Tool Time machine case, dato is string
 
-			// check the dato for determinate the original format and if the $dato is correct.
-			$dato_trim				= trim($dato);
-			$dato_first_character	= substr($dato_trim, 0, 1);
-			$dato_last_character	= substr($dato_trim, -1);
+				// check the dato for determinate the original format and if the $dato is correct.
+				$dato_trim				= trim($dato);
+				$dato_first_character	= substr($dato_trim, 0, 1);
+				$dato_last_character	= substr($dato_trim, -1);
 
-			if ($dato_first_character==='[' && $dato_last_character===']') {
-				// dato is JSON encoded
-				$dato = json_handler::decode($dato_trim);
-			}else{
-				// dato is string plain value
-				$dato = array($dato);
-				debug_log(__METHOD__
-					." Warning. [$this->tipo,$this->parent] Dato received is a plain string. Support for this type is deprecated. Use always an array to set dato." .PHP_EOL
-					.'dato: '. to_string($dato)
-					, logger::WARNING
-				);
+				if ($dato_first_character==='[' && $dato_last_character===']') {
+					// dato is JSON encoded
+					$dato = json_handler::decode($dato_trim);
+				}else{
+					// dato is string plain value
+					$dato = array($dato);
+					debug_log(__METHOD__
+						." Warning. [$this->tipo,$this->parent] Dato received is a plain string. Support for this type is deprecated. Use always an array to set dato." .PHP_EOL
+						.'dato: '. to_string($dato)
+						, logger::WARNING
+					);
+				}
 			}
-		}
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -168,7 +168,6 @@ class component_text_area extends component_common {
 						, logger::ERROR
 					);
 				}
-				#debug_log(__METHOD__." dato [$this->tipo,$this->parent] Type is ".gettype($dato)." -> ".to_string($dato), logger::ERROR);
 			}
 
 		$safe_dato = array();
