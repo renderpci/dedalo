@@ -1138,7 +1138,6 @@ abstract class component_common extends common {
 			$this->propagate_to_observers();
 
 
-
 		return (int)$section_id;
 	}//end Save
 

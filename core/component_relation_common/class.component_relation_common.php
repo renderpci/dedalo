@@ -2387,9 +2387,12 @@ class component_relation_common extends component_common {
 
 	/**
 	* GET_FIXED_FILTER
+	* @param array $ar_fixed
+	* @param string $section_tipo
+	* @param mixed $section_id
 	* @return array $ar_fixed_filter
 	*/
-	public static function get_fixed_filter(array $ar_fixed, string $section_tipo, $section_id) : array {
+	public static function get_fixed_filter(array $ar_fixed, string $section_tipo, mixed $section_id) : array {
 
 		$ar_fixed_filter = [];
 
