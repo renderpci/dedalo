@@ -2409,12 +2409,13 @@ class component_text_area extends component_common {
 				// Resolve lang based on if is translatable
 					$path_end		= end($query_object->path);
 					$component_tipo	= $path_end->component_tipo;
-					$RecordObj_dd	= new RecordObj_dd($component_tipo);
-					$lang			= $RecordObj_dd->get_traducible()!=='si' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+					$lang			= RecordObj_dd::get_translatable($component_tipo)===true
+						? DEDALO_DATA_LANG
+						: DEDALO_DATA_NOLAN;
 
 					$clone = clone($query_object);
 						$clone->operator	= '=';
-						$clone->q_parsed	= '\'""\'';
+						$clone->q_parsed	= '\'[null]\'';
 						$clone->lang		= $lang;
 
 					$new_query_json->$logical_operator[] = $clone;
@@ -2469,6 +2470,27 @@ class component_text_area extends component_common {
 				$logical_operator ='$and';
 				$new_query_json = new stdClass;
 					$new_query_json->$logical_operator = [$query_object, $clone];
+
+				// Search empty only in current lang
+				// Resolve lang based on if is translatable
+					$path_end		= end($query_object->path);
+					$component_tipo	= $path_end->component_tipo;
+					$lang			= RecordObj_dd::get_translatable($component_tipo)===true
+						? DEDALO_DATA_LANG
+						: DEDALO_DATA_NOLAN;
+
+					// null data in current lang
+					$clone = clone($query_object);
+						$clone->operator	= 'IS NOT NULL';
+						$clone->lang		= $lang;
+					$new_query_json->$logical_operator[] = $clone;
+
+					// empty string
+					$clone = clone($query_object);
+						$clone->operator	= '!=';
+						$clone->q_parsed	= '\'[null]\'';
+						$clone->lang		= $lang;
+					$new_query_json->$logical_operator[] = $clone;
 
 				# override
 				$query_object = $new_query_json ;

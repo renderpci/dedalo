@@ -311,6 +311,8 @@ class section extends common {
 					." section_id <1 is not allowed . section_id: ".to_string($this->section_id)
 					, logger::ERROR
 				);
+				$dbt = debug_backtrace();
+				dump($dbt, ' dbt debug_backtrace ++ '.to_string());
 				throw new Exception("Error Processing Request. get_component_data of section section_id <1 is not allowed (section_id:'$this->section_id')", 1);
 			}
 
