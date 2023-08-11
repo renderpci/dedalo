@@ -2408,6 +2408,15 @@ abstract class common {
 				return $this->request_config;
 			}
 
+		// cache. Experimental 10-08-2023. Note that 'get_ar_request_config' is affected by section_id when sqo->fixed_filter is defined
+			static $resolved_request_config_parsed = [];
+			$resolved_key = $this->tipo .'_'. $this->get_section_tipo() .'_'. $this->mode .'_'. $this->section_id;
+			$use_cache = false;
+			if ($use_cache===true && isset($resolved_request_config_parsed[$resolved_key])) {
+				return $resolved_request_config_parsed[$resolved_key];
+			}
+
+
 		// debug
 			if(SHOW_DEBUG===true) {
 				// $idd = $this->tipo . ' ' . RecordObj_dd::get_modelo_name_by_tipo($this->tipo,true);
@@ -2643,6 +2652,11 @@ abstract class common {
 					dd_core_api::$ddo_map,
 					$current_request_config->show->ddo_map
 				);
+			}
+
+		// cache
+			if ($use_cache===true) {
+				$resolved_request_config_parsed[$resolved_key] = $this->request_config;
 			}
 
 		// des
