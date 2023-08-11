@@ -2585,18 +2585,27 @@ abstract class common {
 				$model	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 				$sqo_id	= ($model==='section') ? implode('_', ['section', $tipo]) : null; // cache key sqo_id
 				if ($model==='section') {
-
 					// dd_core_api::$rqo->sqo is set case
 					// Fixed in dd_core_api::start if user browser has SQO value for this section on local DDBB
-					if (!empty(dd_core_api::$rqo->sqo)) {
+					// Note that $requested_sqo is dd_core_api::$rqo->sqo
+					if (!empty($requested_sqo)) {
 						foreach ($requested_sqo as $sqo_key => $sqo_value) {
-							if ($sqo_key==='section_tipo') {
-								continue;
-							}
+
 							if (!isset($dedalo_request_config->sqo)) {
 								$dedalo_request_config->sqo = new stdClass();
 							}
-							$dedalo_request_config->sqo->{$sqo_key} = $sqo_value;
+
+							// ignore section_tipo
+							if ($sqo_key==='section_tipo') {
+								continue;
+							}
+
+							if ($sqo_key==='limit') {
+								// limit null value from server NOT overwrite request config value if exists
+								$dedalo_request_config->sqo->{$sqo_key} = $sqo_value ?? $dedalo_request_config->sqo->{$sqo_key} ?? null;
+							}else{
+								$dedalo_request_config->sqo->{$sqo_key} = $sqo_value;
+							}
 						}
 					}
 					// fallback to session (note that always is saved navigation SQO in session to allow preserve records on tools like tool_export)
