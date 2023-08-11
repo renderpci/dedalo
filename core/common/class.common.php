@@ -4500,4 +4500,39 @@ abstract class common {
 
 
 
+	/**
+	* RESOLVE_LIMIT
+	* @return int|null
+	*/
+	public function resolve_limit() : ?int {
+
+		// properties check for request_config
+		$properties = $this->get_properties();
+		if (!property_exists($properties, 'source') ||
+			!property_exists($properties->source, 'request_config')
+			) {
+			return null;
+		}
+
+		$request_config			= $properties->source->request_config;
+		$request_config_item	= array_find($request_config, function($el){
+			return $el->api_engine==='dedalo';
+		});
+
+		// sqo try
+		if (isset($request_config_item->sqo) && isset($request_config_item->sqo->limit)) {
+			return (int)$request_config_item->sqo->limit;
+		}
+
+		// show try
+		if (isset($request_config_item->show->sqo_config) && isset($request_config_item->show->sqo_config->limit)) {
+			return (int)$request_config_item->show->sqo_config->limit;
+		}
+
+
+		return null;
+	}//end resolve_limit
+
+
+
 }//end class common
