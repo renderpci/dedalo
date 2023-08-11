@@ -448,5 +448,4 @@ class dd_grid_cell_object {
 
 
 
-
 }//end class dd_grid_cell_object
