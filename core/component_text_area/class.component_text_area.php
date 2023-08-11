@@ -2627,8 +2627,10 @@ class component_text_area extends component_common {
 					// new dato
 					$dato = $dato_unchanged;
 
+					// trim_dato
+					$trim_dato = trim($dato);
+
 					// related tipo process (component_image, component_geolocation)
-						$trim_dato = trim($dato);
 						if (!empty($trim_dato)) {
 							$ar_realated_tipo = RecordObj_dd::get_ar_terminos_relacionados($tipo, false, true);
 							foreach ($ar_realated_tipo as $current_tipo) {
@@ -2784,10 +2786,12 @@ class component_text_area extends component_common {
 						}
 
 					// update the <br> tag to <p> and </p>, the new editor, ckeditor, it doesn't use <br> as return. (<br> tags are deprecated)
-						$format_dato	= '<p>'.$dato.'</p>';
-						$dato			= preg_replace('/(<\/? ?br>)/i', '</p><p>', $format_dato);
+						if (!empty($trim_dato)) {
+							$format_dato	= '<p>'.$dato.'</p>';
+							$dato			= preg_replace('/(<\/? ?br>)/i', '</p><p>', $format_dato);
+						}
 
-					// fix final dato with new format as array
+					// fix final dato with new format as array or null
 						$new_dato = [$dato];
 
 					$response = new stdClass();
