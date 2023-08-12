@@ -138,7 +138,10 @@ class menu extends common {
 
 								$ar_tool_object	= tool_common::get_client_registered_tools([$tool_name]);
 								if (empty($ar_tool_object)) {
-									debug_log(__METHOD__." WARNING. Ignored area '$current_area->tipo'. No tool found for tool name '$tool_name' in current_area ".to_string($current_area), logger::WARNING);
+									debug_log(__METHOD__
+										." WARNING. Ignored area '$current_area->tipo'. No tool found for tool name '$tool_name' in current_area: ".to_string($current_area)
+										, logger::ERROR
+									);
 									continue;
 								}else{
 
@@ -152,7 +155,7 @@ class menu extends common {
 									$datalist_item->config->tool_context = $tool_context;
 								}
 							}
-					}//end if($current_area->model==='section_tool'){
+					}//end if($current_area->model==='section_tool')
 
 				// add
 					$tree_datalist[] = $datalist_item;

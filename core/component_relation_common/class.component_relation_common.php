@@ -1525,15 +1525,14 @@ class component_relation_common extends component_common {
 	* @see used by component_autocomplete and component_portal
 	* @return bool
 	*/
-	public function set_dato_external($options) : bool {
+	public function set_dato_external(object $options) : bool {
+		$start_time=start_time();
 
 		// options
-		$save				= $options->save ?? false;
-		$changed			= $options->changed ?? false;
-		$current_dato		= $options->current_dato ?? false;
-		$references_limit	= $options->references_limit ?? 10;
-
-		$start_time=start_time();
+			$save				= $options->save ?? false;
+			$changed			= $options->changed ?? false;
+			$current_dato		= $options->current_dato ?? false;
+			$references_limit	= $options->references_limit ?? 10;
 
 		// dato set
 			$dato = ($current_dato!==false)
@@ -1558,10 +1557,10 @@ class component_relation_common extends component_common {
 				$set_observed_data = $properties->source->set_observed_data;
 				foreach ($set_observed_data as $current_ddo) {
 
-					$current_component_tipo = $current_ddo->tipo;
-					$model_name			= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo, true);
-					$is_translatable	= RecordObj_dd::get_translatable($current_component_tipo);
-					$observer_component	= component_common::get_instance(
+					$current_component_tipo	= $current_ddo->tipo;
+					$model_name				= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo, true);
+					$is_translatable		= RecordObj_dd::get_translatable($current_component_tipo);
+					$observer_component		= component_common::get_instance(
 						$model_name,
 						$current_component_tipo,
 						$section_id,
@@ -1578,6 +1577,7 @@ class component_relation_common extends component_common {
 							? $params_definition
 							: [$params_definition];
 						$final_data = call_user_func_array(array($observer_component, $function), $params);
+
 					}else{
 						// get the dato from components with data locators
 						$final_data = $observer_component->get_dato();
