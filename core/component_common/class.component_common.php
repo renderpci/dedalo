@@ -674,7 +674,7 @@ abstract class component_common extends common {
 	public function set_dato($dato) : bool {
 
 		// dato format check
-			if (!is_null($dato) && !is_array($dato)) {
+			if (!is_null($dato) && !is_array($dato) && $this->mode!=='update') {
 
 				$matrix_table = common::get_matrix_table_from_tipo($this->section_tipo);
 				if ($matrix_table==='matrix_dd') {
@@ -791,20 +791,22 @@ abstract class component_common extends common {
 				// v5 matrix_dd list compatibility
 				$dato = [$dato];
 			}else{
-				$dato_to_show = get_called_class()==='component_password'
-					? '************'
-					: $dato;
-				debug_log(__METHOD__ . ' '
-					. '[GET] RECEIVED DATO IS NOT AS EXPECTED TYPE array|null ' .PHP_EOL
-					. 'type: '				. gettype($dato) . PHP_EOL
-					. 'dato: '				. json_encode($dato_to_show, JSON_PRETTY_PRINT) . PHP_EOL
-					. 'model: '				. get_called_class() . PHP_EOL
-					. 'table: '				. $matrix_table . PHP_EOL
-					. 'component_tipo: '	. $this->tipo . PHP_EOL
-					. 'section_tipo: '		. $this->section_tipo . PHP_EOL
-					. 'section_id: '		. $this->section_id
-					, logger::WARNING
-				);
+				if ($this->mode!=='update') {
+					$dato_to_show = get_called_class()==='component_password'
+						? '************'
+						: $dato;
+					debug_log(__METHOD__ . ' '
+						. '[GET] RECEIVED DATO IS NOT AS EXPECTED TYPE array|null ' .PHP_EOL
+						. 'type: '				. gettype($dato) . PHP_EOL
+						. 'dato: '				. json_encode($dato_to_show, JSON_PRETTY_PRINT) . PHP_EOL
+						. 'model: '				. get_called_class() . PHP_EOL
+						. 'table: '				. $matrix_table . PHP_EOL
+						. 'component_tipo: '	. $this->tipo . PHP_EOL
+						. 'section_tipo: '		. $this->section_tipo . PHP_EOL
+						. 'section_id: '		. $this->section_id
+						, logger::WARNING
+					);
+				}
 			}
 		}
 
