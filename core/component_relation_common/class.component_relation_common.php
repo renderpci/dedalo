@@ -1576,7 +1576,20 @@ class component_relation_common extends component_common {
 						$params = is_array($params_definition)
 							? $params_definition
 							: [$params_definition];
+
+						// check function exits
+							if (!method_exists($observer_component, $function)) {
+								debug_log(__METHOD__
+									. " An error occurred calling function - Method do not exists !  " . PHP_EOL
+									. ' function: ' . to_string($function) . PHP_EOL
+									. ' component_name: ' . $model_name . PHP_EOL
+									. ' component_tipo: ' . $current_component_tipo
+									, logger::ERROR
+								);
+							}
+
 						$final_data = call_user_func_array(array($observer_component, $function), $params);
+
 
 					}else{
 						// get the dato from components with data locators
