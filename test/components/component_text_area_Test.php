@@ -176,14 +176,14 @@ final class component_text_area_test extends TestCase {
 		$tipo			= self::$tipo;
 		$section_tipo	= self::$section_tipo;
 		$section_id		= 1;
-		$mode			= 'edit';
+		$mode			= 'list';
 		$lang			= DEDALO_DATA_LANG;
 
 		$component = component_common::get_instance(
 			$model, // string model
 			$tipo, // string tipo
 			$section_id,
-			'list',
+			$mode,
 			$lang,
 			$section_tipo,
 			false
@@ -250,14 +250,14 @@ final class component_text_area_test extends TestCase {
 		$tipo			= self::$tipo;
 		$section_tipo	= self::$section_tipo;
 		$section_id		= 1;
-		$mode			= 'edit';
+		$mode			= 'list';
 		$lang			= DEDALO_DATA_LANG;
 
 		$component = component_common::get_instance(
 			$model, // string model
 			$tipo, // string tipo
 			$section_id,
-			'list',
+			$mode,
 			$lang,
 			$section_tipo,
 			false
