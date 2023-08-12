@@ -468,28 +468,34 @@ class component_text_area extends component_common {
 		// options
 			$ar_mark_tag = $options->ar_mark_tag ?? ['svg'];
 
+		// default value
+			$ar_locators = [];
+
 		// data
 			$data			= $this->get_dato() ?? [];
 			$current_data	= reset($data); // (!) Note that only one value is expected in component_text_area but format is array
+			if (empty($current_data)) {
+				return $ar_locators;
+			}
 
-		$ar_locators = [];
-		foreach ($ar_mark_tag as $current_tag) {
+		// ar_mark_tag iteration
+			foreach ($ar_mark_tag as $current_tag) {
 
-			$pattern = TR::get_mark_pattern($current_tag);
-			preg_match_all($pattern, $current_data, $ar_tag);
+				$pattern = TR::get_mark_pattern($current_tag);
+				preg_match_all($pattern, $current_data, $ar_tag);
 
-			// Array result key 7 is the locator stored in the result of the preg_match_all
-			$data_key = 7;
+				// Array result key 7 is the locator stored in the result of the preg_match_all
+				$data_key = 7;
 
-			// The locator inside the tag are with ' and is necessary change to "
-			foreach ($ar_tag[$data_key] as $pseudo_locator) {
-				$current_locator = str_replace("'", "\"", $pseudo_locator);
-				$current_locator = json_decode($current_locator);
-				if(!in_array($current_locator, $ar_locators)){
-					$ar_locators[] = $current_locator;
+				// The locator inside the tag are with ' and is necessary change to "
+				foreach ($ar_tag[$data_key] as $pseudo_locator) {
+					$current_locator = str_replace("'", "\"", $pseudo_locator);
+					$current_locator = json_decode($current_locator);
+					if(!in_array($current_locator, $ar_locators)){
+						$ar_locators[] = $current_locator;
+					}
 				}
 			}
-		}
 
 		return $ar_locators;
 	}//end get_locators_of_tag
