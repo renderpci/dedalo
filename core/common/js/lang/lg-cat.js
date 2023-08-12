@@ -1,5 +1,6 @@
 {
     "breakdown": "Desglossament",
+    "update_ontology": "Actualitzar Ontologia",
     "total_records": "Registres totals",
     "transcripcion_automatica": "Transcripció automàtica",
     "version": "Versió",
@@ -320,7 +321,6 @@
     "uploaded_file_exceeds_the_maximum_size": "El fitxer carregat excedeix la mida màxima permès",
     "failed_to_writte_file_to_disk": "No s'ha pogut escriure el fitxer al disc",
     "format": "Format",
-    "update_ontology": "Actualitzar ontologia",
     "numero_inventario": "Número d'inventari",
     "recuperar": "recuperar",
     "recuperar_seccion": "Recuperar secció",
@@ -329,10 +329,10 @@
     "mostrar_inspector": "Mostra Inspector",
     "jerarquias": "jerarquies",
     "el_directorio_no_existe": "El directori no existeix o no és accessible",
+    "export_json_ontology": "Exportar Ontologia JSON",
     "crear_nuevo_fragmento": "Crear nou fragment amb la selecció",
     "delete_only_the_link": "Esborrar només el vincle",
     "filesize_is_too_big": "El pes de l'arxiu és massa gran",
-    "export_json_ontology": "Exportar ontologia json",
     "show_buttons": "Mostrar botons",
     "error_invalid_date_format": "Error: format de data invalid",
     "nombre_fichero_completo": "Nom complet del fitxer",
@@ -404,7 +404,7 @@
     "mover_datos_de_componentes": "Moure dades de components",
     "latest_changes": "Darrers canvis",
     "renumerar_secciones": "Renumerar seccions",
-    "import_json_ontology": "Importar ontologia JSON",
+    "import_json_ontology": "Importar Ontologia JSON",
     "register_tools": "Registrar eines",
     "value": "Valor",
     "duplicate": "Duplicar",
@@ -443,5 +443,6 @@
     "previous": "Previ",
     "email_limit_explanation": "<mark>Los correos seleccionados para enviar superan el límite máximo de su sistema operativo, por lo que se ha procedido a crear paquetes que no superen este máximo. Haga click en los siguientes botones para crear los correos.<\/mark>",
     "alert_limit_of_emails": "<mark>Atención, superado el límite de correos.<\/mark>",
-    "email": "<mark>E-mail<\/mark>"
+    "email": "<mark>E-mail<\/mark>",
+    "build_install_version": "Construir una versió d'instal·lació"
 }
