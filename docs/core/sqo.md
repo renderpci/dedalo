@@ -102,7 +102,7 @@ Search Query Object is used to get data from database. It use section_tipo to po
 
 If you want to get any person with name "Ana" the sqo will be:
 
-```` json
+``` json
 {
   "section_tipo": "rsc197",
   "filter": {
@@ -115,11 +115,11 @@ If you want to get any person with name "Ana" the sqo will be:
       }]
   }
 }
-````
+```
 
 The SQO say: search in people under study (section_tipo [rsc197](https://dedalo.dev/ontology/rsc197)) with the path to name field (component_tipo [rsc85](https://dedalo.dev/ontology/rsc85)) with the Ana text. SQO will parse the filter with the component_input_text rsc85 and will render into SQL to be used in postgreSQL:
 
-````sql
+```sql
 
 SELECT DISTINCT ON (rs197.section_id) rs197.section_id,
 rs197.section_tipo,
@@ -138,7 +138,7 @@ WHERE rs197.id in (
 ORDER BY rs197.section_id ASC
 LIMIT 10;
 
-````
+```
 
 ## Definitions
 
@@ -146,9 +146,11 @@ LIMIT 10;
 
 The property id is used to identify a SQO in the process to build, send and retrieve information from server.
 
-In Dédalo API calls it's possible send multiple request and it's necesary a way to identify the original SQO with the result. The property id is used to this function.
+In Dédalo API calls it's possible send multiple request and it's necessary a way to identify the original SQO with the result. The property id is used to this function.
 
-```` json
+Example: Search 'Ana' in the field name [rsc85](https://dedalo.dev/ontology/rsc85) of the section People under study [rsc197](https://dedalo.dev/ontology/rsc197)
+
+``` json
 {
   "id": "my_id_for_the_request",
   "section_tipo": "rsc197",
@@ -162,10 +164,217 @@ In Dédalo API calls it's possible send multiple request and it's necesary a way
       }]
   }
 }
-````
+```
 
-### section_tipo
+### section_tipo *mandatory*
 
-Defines the section/s of the search. It can be a string when the search is for one section or it can be array when the search is multiple.
+Defines the section/s of the search. It can be a string when the search is for one section or it can be array when the search is with multiple sections as toponymy search in multiple countries as Spain, France, ... (es1, fr1, ...).
 
 Definition : `array || string` array of section_tipo or string with the section_tipo for search **mandatory** | ex : ['oh1']
+
+Section is a mandatory property, it define where we want to do the search, where the data is that we are looking for.
+Is possible use a string or array when the section to search is only one, but it's recommendable to use always a array definition. Using the array is extensible and it's possible add new section easily.
+
+Example with one section: Search '87C_g25' in the field Code [oh14](https://dedalo.dev/ontology/oh14) of the section Oral History [oh1](https://dedalo.dev/ontology/oh1)
+
+```json
+{
+  "section_tipo": "oh1",
+  "filter": {
+    "$and": [{
+        "q": "87C_g25",
+        "path": [{
+            "section_tipo": "oh1",
+            "component_tipo": "oh14"
+          }]
+      }]
+  }
+}
+```
+
+Example with multiple sections: Search 'Benimamet' in the field Term [hierarchy25](https://dedalo.dev/ontology/hierarchy25) of the sections Spain es1 and France fr1
+
+```json
+{
+  "section_tipo": ["es1", "fr1"],
+  "filter": {
+    "$and": [{
+        "q": "Benimamet",
+        "path": [{
+            "section_tipo": "es1",
+            "component_tipo": "hierarchy25"
+          },{
+            "section_tipo": "fr1",
+            "component_tipo": "hierarchy25"
+          }]
+      }]
+  }
+}
+```
+
+In previous example, the section_tipo is an array: `["es1", "fr1"]` with multiple sections to be searched. This kind of search could be useful to use in multiple situations, and it could be used with mixed fields, the sections has not to be equals (in these situations Dédalo do not create a UNION SQL, it will resolve as a normal WHERE statement)
+
+#### all
+
+In some cases is not possible to define the section_tipo to be searcher because you want to get any result in any place that match with your query. For this situations is possible to define the section_tipo as `all`. The result will be; all sections fonded with the query. Take account that the result will be not consistent, every section will have his own components(fields).
+
+Example with multiple sections, using `all` section: Search 'Benimamet' in the field Term [hierarchy25](https://dedalo.dev/ontology/hierarchy25) of all sections.
+
+```json
+{
+  "section_tipo": ["all"],
+  "filter": {
+    "$and": [{
+        "q": "Benimamet",
+        "path": [{
+            "section_tipo": "all",
+            "component_tipo": "hierarchy25"
+          }
+      }]
+  }
+}
+```
+
+the result here could be:
+```json
+{"result:[
+  {
+
+  }
+]}
+```
+
+
+### mode
+
+Defines what kind of search will be done, in previous version yo v5 mode was used to create the lists or the edit views of the search, but, after v6, mode property is using to define the type of the search, if the search is in time machine or regular matrix tables or if you want search in hierarchies (to get children) or you want get the relations instead to get the main section search.
+
+Definition: `string` ('edit' || 'list' || 'tm' || 'related') configure the sqo for search witch different models of matrix tables into the DDBB **optional** | ex : 'list'
+
+Example with one section: Search '87C_g25' in the field Code [oh14](https://dedalo.dev/ontology/oh14) of the section Oral History [oh1](https://dedalo.dev/ontology/oh1)
+
+````json
+{
+  "section_tipo": "oh1",
+  "filter": {
+    "$and": [{
+        "q": "87C_g25",
+        "path": [{
+            "section_tipo": "oh1",
+            "component_tipo": "oh14"
+          }]
+      }]
+  }
+}
+````
+
+
+### filter
+
+Filter object defines the properties to be applied to the search, filter options will be interpreted in the same way than SQL WHERE clause.
+Filter will be interpreted by any component to apply hiw own rules so filter has two states, parsed or not, when the SQO, by default filter is un parsed, because when create a new sqo it's not possible to identified the operators or data forms of every component, and the filter need to be created in the same way to different situations, when the sqo is send to the Dédalo server, every component will interpreted his part of the search and parse his own part to the final format.
+
+Definition: `object` definition of the filter to be apply at search **optional**
+
+#### operator
+
+Defines which boolean operator will be applied to the query. Operator is an array or queries objects, every query object has his own properties and the operator will be applied between every of this query objects.
+
+Definition : `array of objects` operator key define the operator ('\$and' || '\$or') they are identified by the use of a dollar sign (\$) prefix in the name property, array value has the arguments `objects` to be affected by operator. **mandatory**, `{"$operator": [arguments]}`
+
+The filter object need to has at least one operator defined as property of the object. By default, 'AND' operator is added as `$and` key of the filter object.
+
+Example to search with `$and` operator :
+
+```json
+"filter":{
+  "$and":[{
+    "q" : "Isis"
+  }]
+}
+```
+
+It will be parsed as SQL WHERE sentence like:
+
+```sql
+...
+  WHERE q = "Isis"
+... 
+```
+
+And some other filter items could be added as objects in array, ex with `$or`operator:
+
+```json
+"filter":{
+  "$or":[{
+    "q" : "Isis"
+  },
+  {
+    "q" : "Raspa"
+  }]
+}
+```
+
+It will be parsed as SQL WHERE sentence like:
+
+```sql
+...
+  WHERE (q = 'Isis') OR (q = 'Raspa')
+... 
+```
+
+And nested operators could be added:
+
+```json
+"filter":{
+  "$or":[{
+    "q" : "Isis"
+  },
+  {
+    "q" : "Raspa"
+  },
+  {
+    "$and" : [{
+      "q" : "Osiris"
+    }]
+  }]
+}
+```
+
+So nested operations will be parsed as SQL WHERE sentence like:
+
+```sql
+...
+  WHERE ((q = 'Isis' OR q = 'Raspa') AND q = 'Osiris')
+... 
+```
+
+!!! Note: "Use of q name"
+  In the examples q name is used as SQL column name to better comprehension, but in real SQL parsed search, q column is not used, it need to be a component path or relation path.
+
+##### q
+
+Defines the value (literal or locator) to be searcher. 'q' property (as query) has two states: first, 'q' has the value that user input in the client user interface, and second one when this data was parsed after component analyze the operators to add some modifications into the literal format, or in the case of q is a locator, it will analyze to add some properties to adapt q to the user want to search foe ex: time machine or inverse mode.
+
+Definition : `string` string to search **mandatory**, ex: 'John'
+
+To define a filter to search 'Isis' name
+
+```json
+"filter":{
+  "$and":[{
+    "q" : "Isis"
+  }]
+}
+```
+
+```mermaid
+    graph LR
+    A((Filter user interface :: search.js | q='orange cat')) --is send to--> B((API :: read ))
+    B --is send to--> C((search :: search ))
+    C --is send to--> D((search :: pre_parse_search_query_object() ))
+    D --is send to--> E((search :: conform_search_query_object() ))
+    E --is send to--> F((component :: get_search_query() ))
+    G --true--> H((component :: get_search_query() ))
+    G --false--> H((component :: return(q='orange cat')) ))
+```
