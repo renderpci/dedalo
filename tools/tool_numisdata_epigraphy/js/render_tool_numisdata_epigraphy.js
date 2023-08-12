@@ -315,17 +315,31 @@ const get_content_data_edit = async function(self) {
 				parent 			: right_container
 			})
 
-				const mark_node = await self.mark.render()
-				marks_container.appendChild(mark_node)
+				const obverse_mark_node = await self.obverse_mark.render()
+				marks_container.appendChild(obverse_mark_node)
 				self.events_tokens.push(
-					event_manager.subscribe('save_'+ self.mark.id_base, update_mark)
+					event_manager.subscribe('save_'+ self.obverse_mark.id_base, update_obverse_mark)
 				)
-				function update_mark(options) {
+				function update_obverse_mark(options) {
 					update_text_nodes({
-						caller	: self.mark,
-						node	: mark_text_container,
+						caller	: self.obverse_mark,
+						node	: obverse_mark_text_container,
 						role	: 'mark_text',
-						name	: 'mark_text'
+						name	: 'obverse_mark_text'
+					})
+				}
+
+				const reverse_mark_node = await self.reverse_mark.render()
+				marks_container.appendChild(reverse_mark_node)
+				self.events_tokens.push(
+					event_manager.subscribe('save_'+ self.reverse_mark.id_base, update_reverse_mark)
+				)
+				function update_reverse_mark(options) {
+					update_text_nodes({
+						caller	: self.reverse_mark,
+						node	: reverse_mark_text_container,
+						role	: 'mark_text',
+						name	: 'reverse_mark_text'
 					})
 				}
 				const marks_text_container = ui.create_dom_element({
@@ -333,13 +347,19 @@ const get_content_data_edit = async function(self) {
 					class_name 		: 'portal_container desings_container',
 					parent 			: right_container
 				})
-					const mark_text_container = ui.create_dom_element({
+					const obverse_mark_text_container = ui.create_dom_element({
 						element_type	: 'div',
-						class_name 		: 'text_container mark_text_container',
+						class_name 		: 'text_container obverse_mark_text_container',
+						parent 			: marks_text_container
+					})
+					const reverse_mark_text_container = ui.create_dom_element({
+						element_type	: 'div',
+						class_name 		: 'text_container reverse_mark_text_container',
 						parent 			: marks_text_container
 					})
 				// first load of the text data
-					update_mark()
+					update_obverse_mark()
+					update_reverse_mark()
 
  		// edges nodes
 			const edges_container = ui.create_dom_element({
