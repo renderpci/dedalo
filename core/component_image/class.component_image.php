@@ -1642,9 +1642,10 @@ class component_image extends component_media_common {
 						}
 
 					// create new dato
-						$dato_item = new stdClass();
-							$dato_item->files_info	= $files_info;
-							$dato_item->lib_data	= $lib_data;
+						$dato_item = (object)[
+							'files_info'	=> $files_info,
+							'lib_data'		=> $lib_data
+						];
 
 					// fix final dato with new format as array
 						$new_dato = [$dato_item];
@@ -1658,6 +1659,12 @@ class component_image extends component_media_common {
 						$response->result	= 1;
 						$response->new_dato	= $new_dato;
 						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+
+					// clean vars
+						unset($source_file_upload_date);
+						unset($files_info);
+						unset($lib_data);
+
 				}else{
 
 					$response = new stdClass();

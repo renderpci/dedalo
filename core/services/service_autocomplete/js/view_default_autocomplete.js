@@ -59,6 +59,9 @@ view_default_autocomplete.render = async function (self, options) {
 				e.stopPropagation()
 			}
 		})
+		wrapper.addEventListener('click', function(e) {
+			e.stopPropagation()
+		})
 
 	// position calculate based on caller node (usually a component_portal wrapper)
 		if (self.caller.node) {
@@ -1082,7 +1085,15 @@ const render_datalist = async function(self, result) {
 				})
 				li_node.locator = locator
 				// click event. When the user do click in one row send the data to the caller_instance for save it.
-				li_node.addEventListener('click', click_handler)
+				li_node.addEventListener('click', function(e){
+					e.stopPropagation()
+					click_handler({
+						e						: e,
+						current_section_record	: current_section_record,
+						locator					: this.locator,
+						datalist				: datalist
+					})
+				})
 				// mouseenter event
 				li_node.addEventListener('mouseenter', mouseenter_handler)
 				// mouseleave event
@@ -1225,11 +1236,16 @@ const render_datalist = async function(self, result) {
 		}//end mouseleave_handler
 
 	// click_handler
-		async function click_handler(e) {
-			e.stopPropagation()
+		async function click_handler(options) {
+
+			// options
+				const e							= options.e
+				const current_section_record	= options.current_section_record
+				const locator					= options.locator
+				const datalist					= options.datalist
 
 			// value
-				const value = this.locator
+				const value = locator
 
 			// events
 				const events = self.properties.events || null

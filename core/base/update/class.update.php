@@ -444,6 +444,14 @@ class update {
 						, logger::WARNING
 					);
 					continue;
+				}else{
+					debug_log(__METHOD__
+						.' Updating section_tipo: ' . $current_section_tipo .PHP_EOL
+						.' updating component: ' . $model_name .PHP_EOL
+						.' n components: ' . count($ar_component_tipo) .PHP_EOL
+						.' n langs: ' . count(DEDALO_PROJECTS_DEFAULT_LANGS)
+						, logger::WARNING
+					);
 				}
 
 			// Notify to log to know script state
@@ -455,18 +463,18 @@ class update {
 				);
 
 			// Iterate database resource directly to minimize memory requirements on large arrays
-				// $i=0; $tm=0;
+				$i=0; // $tm=0;
 				while ($row = pg_fetch_assoc($result)) {
 
 					$section_id = $row['section_id'];
 
-					foreach ($ar_component_tipo as $current_component_tipo) {
+					foreach($ar_component_tipo as $current_component_tipo) {
 
 						$RecordObj_dd	= new RecordObj_dd($current_component_tipo);
 						$translatable	= $RecordObj_dd->get_traducible();
 						$ar_langs		= ($translatable==='no') ? [DEDALO_DATA_NOLAN] : DEDALO_PROJECTS_DEFAULT_LANGS;
 
-						foreach ($ar_langs as $current_lang) {
+						foreach($ar_langs as $current_lang) {
 
 							// component . Update component dato
 							$component = component_common::get_instance(
@@ -558,12 +566,23 @@ class update {
 							*/
 						}//end foreach ($ar_langs as $current_lang)
 
-					}//end foreach ($ar_component_tipo as $current_component_tipo)
+					}//end foreach($ar_component_tipo as $current_component_tipo)
 
-					// wait for 30 milliseconds
-					usleep(30000);
+					// wait for 15 milliseconds
+					usleep(15000);
 					// Forces collection of any existing garbage cycles
 					gc_collect_cycles();
+
+					if ($i===0) {
+						debug_log(__METHOD__
+							. " Updated section: $current_section_tipo - section_id: $section_id"
+							, logger::DEBUG
+						);
+					}
+					$i++;
+					if ($i>1000) {
+						$i = 0;
+					}
 				}//end while ($row = pg_fetch_assoc($result))
 
 
