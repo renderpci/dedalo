@@ -140,7 +140,7 @@ class menu extends common {
 								if (empty($ar_tool_object)) {
 									debug_log(__METHOD__
 										." WARNING. Ignored area '$current_area->tipo'. No tool found for tool name '$tool_name' in current_area: ".to_string($current_area)
-										, logger::ERROR
+										, logger::WARNING
 									);
 									continue;
 								}else{

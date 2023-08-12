@@ -457,7 +457,7 @@ class component_text_area extends component_common {
 
 
 	/**
-	* GET_LOCATORS_OF_TAG
+	* GET_LOCATORS_OF_TAGS
 	* (!) Called by observer numisdata563 of section_tipo: numisdata41 (legends)
 	* Resolve the data from text_area for a mark and get the locators to be used as dato
 	* @param object $options
@@ -498,7 +498,7 @@ class component_text_area extends component_common {
 			}
 
 		return $ar_locators;
-	}//end get_locators_of_tag
+	}//end get_locators_of_tags
 
 
 
