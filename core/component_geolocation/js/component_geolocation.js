@@ -179,7 +179,8 @@ component_geolocation.prototype.init = async function(options) {
 				new Promise(function(resolve){
 					data_manager.request({
 						url		: '../common/js/lang.json',
-						method	: 'GET'
+						method	: 'GET',
+						cache	: 'force-cache' // force use cache because the file do not changes
 					})
 					.then(function(response){
 						// set json_langs
