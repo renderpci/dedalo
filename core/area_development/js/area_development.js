@@ -5,7 +5,7 @@
 
 
 // imports
-	import {common} from '../../common/js/common.js'
+	import {common, build_autoload} from '../../common/js/common.js'
 	import {area_common} from '../../area_common/js/area_common.js'
 	// import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {data_manager} from '../../common/js/data_manager.js'
@@ -87,8 +87,13 @@ area_development.prototype.build = async function(autoload=true) {
 	// load from DDBB
 		if (autoload===true) {
 
-			// load data
-				const api_response = await data_manager.request({body:self.rqo})
+			// build_autoload
+			// Use unified way to load context and data with
+			// errors and not login situation managing
+				const api_response = await build_autoload(self)
+				if (!api_response) {
+					return false
+				}
 
 			// debug
 				if(SHOW_DEBUG===true) {
