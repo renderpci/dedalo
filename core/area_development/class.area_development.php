@@ -98,7 +98,6 @@ class area_development extends area_common {
 				$item->id		= 'register_tools';
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
-				// $item->parent	= $this->tipo;
 				$item->label	= label::get_label('register_tools');
 				$item->value	= (object)[
 					'datalist' => tools_register::get_tools_files_list()
@@ -107,83 +106,33 @@ class area_development extends area_common {
 			$ar_widgets[] = $widget;
 
 
-		// export_structure_to_json
+		// export_ontology_to_json
 			$item = new stdClass();
-				$item->id		= 'export_structure_to_json';
+				$item->id		= 'export_ontology_to_json';
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
-				$item->label	= label::get_label('export_json_ontology');
-				$item->info		= null;
-
-				$file_name		= 'structure.json';
-				$file_path		= 'Target: '.(defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : ONTOLOGY_DOWNLOAD_DIR) . '/' . $file_name;
-				// $file_url		= DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . DEDALO_LIB_BASE_URL . '/backup/backups_structure/srt_download' . '/' . $file_name;
-				$item->body		= $file_path;
-				$confirm_text	= label::get_label('sure') ?? 'Sure?';
-				$item->run[]	= (object)[
-					'fn'		=> 'init_form',
-					'options'	=> (object)[
-						'inputs' => [
-							(object)[
-								'type'		=> 'text',
-								'name'		=> 'dedalo_prefix_tipos',
-								'label'		=> 'Dédalo prefix tipos to export',
-								'value'		=> implode(',', $DEDALO_PREFIX_TIPOS),
-								'mandatory'	=> true
-							]
-						],
-						'confirm_text' => $confirm_text
-					]
-				];
-				$item->trigger 	= (object)[
-					'dd_api'	=> 'dd_utils_api',
-					'action'	=> 'structure_to_json',
-					'options'	=> null
+				$item->label	= label::get_label('export_json_ontology') ?? 'Export JSON ontology';;
+				$item->value	= (object)[
+					'file_name'	=> 'structure.json',
+					'file_path'	=> (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : ONTOLOGY_DOWNLOAD_DIR),
+					'tipos'		=> $DEDALO_PREFIX_TIPOS
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
 
-		// import_structure_from_json
+		// import_ontology_from_json
 			$item = new stdClass();
-				$item->id		= 'import_structure_from_json';
+				$item->id		= 'import_ontology_from_json';
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
 				$item->label	= label::get_label('import_json_ontology') ?? 'Import JSON ontology';
-				$item->info		= null;
-
-				if (defined('ONTOLOGY_DB')) {
-					$item->body	= 'Disabled update Ontology. You are using config ONTOLOGY_DB !';
-				}else{
-					$file_name		= 'structure.json';
-					$file_path		= 'Source: '.(defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : ONTOLOGY_DOWNLOAD_DIR) . '/' . $file_name;
-					// $file_url	= DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . DEDALO_LIB_BASE_URL . '/backup/backups_structure/srt_download' . '/' . $file_name;
-					$item->body		= $file_path;
-					$confirm_text	= label::get_label('sure') ?? 'Sure?';
-
-					$item->run[]	= (object)[
-						'fn'		=> 'init_form',
-						'options'	=> (object)[
-							'inputs' => [
-								(object)[
-									'type'		=> 'text',
-									'name'		=> 'dedalo_prefix_tipos',
-									'label'		=> 'Dédalo prefix tipos to import',
-									'value'		=> implode(',', $DEDALO_PREFIX_TIPOS),
-									'mandatory'	=> false
-								]
-							],
-							'confirm_text' => $confirm_text
-						]
-					];
-					$item->trigger 	= (object)[
-						'dd_api'	=> 'dd_utils_api',
-						'action'	=> 'import_structure_from_json',
-						'options'	=> null
-					];
-				}
+				$item->value	= (object)[
+					'ontology_db'	=> (defined('ONTOLOGY_DB') ? ONTOLOGY_DB : null),
+					'file_name'		=> 'structure.json',
+					'file_path'		=> (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : ONTOLOGY_DOWNLOAD_DIR),
+					'tipos'			=> $DEDALO_PREFIX_TIPOS
+				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
@@ -216,19 +165,11 @@ class area_development extends area_common {
 				$item->id		= 'build_install_version';
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
-				$item->label	= label::get_label('build_install_version');
-				$item->body		= 'Clone the current database '.DEDALO_DATABASE_CONN.' to "'.install::$db_install_name.'" and export it to file: /install/db/'.install::$db_install_name.'.pgsql.gz ';
-				$item->run[]	= (object)[
-					'fn'		=> 'init_form',
-					'options'	=> (object)[
-						'confirm_text' => label::get_label('sure') ?? 'Sure?'
-					]
-				];
-				$item->trigger 	= (object)[
-					'dd_api'	=> 'dd_utils_api',
-					'action'	=> 'build_install_version',
-					'options'	=> null
+				$item->label	= label::get_label('build_install_version') ?? 'Build install version';
+				$item->value	= (object)[
+					'source_db'		=> DEDALO_DATABASE_CONN,
+					'target_db'		=> install::$db_install_name,
+					'target_file'	=> '/install/db/'.install::$db_install_name.'.pgsql.gz'
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
