@@ -986,9 +986,10 @@ class component_pdf extends component_media_common {
 						}
 
 					// create new dato
-						$dato_item = new stdClass();
-							$dato_item->files_info	= $files_info;
-							$dato_item->lib_data	= $lib_data;
+						$dato_item = (object)[
+							'files_info'	=> $files_info,
+							'lib_data'		=> $lib_data
+						];
 
 					// fix final dato with new format as array
 						$new_dato = [$dato_item];
