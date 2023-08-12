@@ -1,5 +1,6 @@
 {
     "breakdown": "<mark>Desglose<\/mark>",
+    "update_ontology": "<mark>Actualizar Ontología<\/mark>",
     "total_records": "<mark>Registros totales<\/mark>",
     "transcripcion_automatica": "<mark>Transcripción automática<\/mark>",
     "version": "<mark>Versión<\/mark>",
@@ -320,7 +321,6 @@
     "uploaded_file_exceeds_the_maximum_size": "<mark>El archivo subido excede el tamaño máximo permitido<\/mark>",
     "failed_to_writte_file_to_disk": "<mark>No se pudo escribir el archivo en el disco<\/mark>",
     "format": "<mark>Formato<\/mark>",
-    "update_ontology": "<mark>Actualizar ontología<\/mark>",
     "numero_inventario": "<mark>Número de inventario<\/mark>",
     "recuperar": "<mark>recuperar<\/mark>",
     "recuperar_seccion": "<mark>Recuperar sección<\/mark>",
@@ -329,10 +329,10 @@
     "mostrar_inspector": "<mark>Mostrar Inspector<\/mark>",
     "jerarquias": "<mark>jerarquías<\/mark>",
     "el_directorio_no_existe": "<mark>El directorio no existe o no es accesible<\/mark>",
+    "export_json_ontology": "<mark>Exportar Ontología JSON<\/mark>",
     "crear_nuevo_fragmento": "<mark>Crear nuevo fragmento con selección<\/mark>",
     "delete_only_the_link": "<mark>Borrar sólo el vínculo<\/mark>",
     "filesize_is_too_big": "<mark>El tamaño de archivo es demasiado grande<\/mark>",
-    "export_json_ontology": "<mark>Exportar ontología json<\/mark>",
     "show_buttons": "<mark>Mostrar botones<\/mark>",
     "error_invalid_date_format": "<mark>Error: formato de fecha invalido<\/mark>",
     "nombre_fichero_completo": "<mark>Nombre completo del fichero<\/mark>",
@@ -443,5 +443,6 @@
     "previous": "<mark>Previo<\/mark>",
     "email_limit_explanation": "<mark>Los correos seleccionados para enviar superan el límite máximo de su sistema operativo, por lo que se ha procedido a crear paquetes que no superen este máximo. Haga click en los siguientes botones para crear los correos.<\/mark>",
     "alert_limit_of_emails": "<mark>Atención, superado el límite de correos.<\/mark>",
-    "email": "<mark>E-mail<\/mark>"
+    "email": "<mark>E-mail<\/mark>",
+    "build_install_version": "Crie uma versão de instalação"
 }
