@@ -575,7 +575,7 @@ class update {
 
 					if ($i===0) {
 						debug_log(__METHOD__
-							. " Updated section: $current_section_tipo - section_id: $section_id.  " . PHP_EOL
+							. " Updated section: $current_section_tipo - section_id: $section_id"
 							, logger::DEBUG
 						);
 					}
