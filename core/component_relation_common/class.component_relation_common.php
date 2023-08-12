@@ -1590,13 +1590,15 @@ class component_relation_common extends component_common {
 
 						$final_data = call_user_func_array(array($observer_component, $function), $params);
 
-
 					}else{
 						// get the dato from components with data locators
 						$final_data = $observer_component->get_dato();
 					}
 					$this->set_dato($final_data);
-					debug_log(__METHOD__."Set observed data ($model_name - $current_component_tipo - $section_tipo - $section_id)".to_string(), logger::DEBUG);
+					debug_log(__METHOD__
+						."Set observed data ($model_name - $current_component_tipo - $section_tipo - $section_id)"
+						, logger::DEBUG
+					);
 					$this->Save();
 				// task done. return
 					return true;
