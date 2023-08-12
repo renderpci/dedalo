@@ -2104,16 +2104,32 @@ class component_text_area extends component_common {
 	*/
 	public function regenerate_component() : bool {
 
-		# Force loads dato always !IMPORTANT
+		// Force loads dato always !IMPORTANT
 		$dato = $this->get_dato();
 
-		# Converts old timecodes
-		$old_pattern = '/(\[TC_([0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2})_TC\])/';
-		$new_dato 	 = preg_replace($old_pattern, "[TC_$2.000_TC]", $dato);
 
-		$this->set_dato($new_dato);
+		if (!empty($dato) && isset($dato[0])) {
 
-		# Save component data. Defaults arguments: $update_all_langs_tags_state=false, $clean_text=true
+			$old_tc_pattern = '/(\[TC_([0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2})_TC\])/';
+
+			$new_dato = [];
+			foreach ($dato as $value) {
+
+				if (is_null($value)) {
+					continue;
+				}
+
+				// Converts old timecodes
+				$new_value = preg_replace($old_tc_pattern, "[TC_$2.000_TC]", (string)$value);
+
+				$new_dato[] = $new_value;
+			}
+
+			$this->set_dato($new_dato);
+		}
+
+
+		// Save component data. Defaults arguments: $update_all_langs_tags_state=false, $clean_text=true
 		$this->Save(
 			false, // bool update_all_langs_tags_state
 			true // bool clean_text
