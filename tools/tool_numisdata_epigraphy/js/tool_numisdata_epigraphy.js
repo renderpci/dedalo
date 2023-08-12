@@ -92,7 +92,7 @@ tool_numisdata_epigraphy.prototype.init = async function(options) {
 tool_numisdata_epigraphy.prototype.build = async function(autoload=false) {
 
 	const self = this
-
+	console.log("self.tool_config:",self.tool_config);
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 
@@ -106,7 +106,8 @@ tool_numisdata_epigraphy.prototype.build = async function(autoload=false) {
 			'reverse_desing',
 			'obverse_symbol',
 			'reverse_symbol',
-			'mark',
+			'obverse_mark',
+			'reverse_mark',
 			'edge_desing',
 			'edge_legend'
 		];
