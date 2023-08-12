@@ -2415,6 +2415,16 @@ abstract class component_common extends common {
 						'dato'		=> $dato
 					];
 
+				// check function exits
+					if (!method_exists($class_name, $method_name)) {
+						debug_log(__METHOD__
+							. " An error occurred calling function - Method do not exists !  " . PHP_EOL
+							. ' method_name: ' . to_string($method_name) . PHP_EOL
+							. ' class_name: '  . $class_name
+							, logger::ERROR
+						);
+					}
+
 				$value = call_user_func_array([$class_name, $method_name], $custom_arguments);
 
 			}else{

@@ -677,6 +677,16 @@ abstract class diffusion  {
 			false
 		);
 
+		// check function exits
+			if (!method_exists($component, $method)) {
+				debug_log(__METHOD__
+					. " An error occurred calling function - Method do not exists !  " . PHP_EOL
+					. ' method: ' . to_string($method) . PHP_EOL
+					. ' model_name: '  . $model_name
+					, logger::ERROR
+				);
+			}
+
 		$value = call_user_func_array(array($component, $method), $custom_arguments);
 
 		# Do not change output format (!)
