@@ -1240,11 +1240,12 @@ abstract class component_common extends common {
 		// observers_data
 			$observers_data = [];
 			foreach ($ar_observers as $current_observer) {
+
 				$current_observer_data = component_common::update_observer_dato(
-					$current_observer,
-					$current_locator,
-					$observable_dato,
-					$this->tipo
+					$current_observer, // object $observer
+					$current_locator, // object $locator
+					$observable_dato, // ?array $observable_dato
+					$this->tipo // string observable_tipo
 				);
 				$observers_data = array_merge($observers_data, $current_observer_data);
 			}
@@ -1308,124 +1309,122 @@ abstract class component_common extends common {
 	*/
 	public static function update_observer_dato(object $observer, object $locator, ?array $observable_dato, string $observable_tipo) : array {
 
-		// create the observer component
-		$RecordObj_dd	= new RecordObj_dd($observer->component_tipo);
-		$properties		= $RecordObj_dd->get_properties();
+		// ar_observe. Create the observer component
+			$RecordObj_dd	= new RecordObj_dd($observer->component_tipo);
+			$properties		= $RecordObj_dd->get_properties();
+			$ar_observe		= $properties->observe ?? [];
 
-		$ar_observe = $properties->observe;
+		// current_observer. Get the current observe preference in ontology to be processed
+			$current_observer = array_find($ar_observe, function($item) use ($observable_tipo){
+				return $item->component_tipo === $observable_tipo;
+			});
 
-		// get the current observe preference in ontology to be processed
-		$current_observer = array_find($ar_observe, function($item) use ($observable_tipo){
-			return $item->component_tipo === $observable_tipo;
-		});
+		// empty observer->server case
+			if(!isset($current_observer) || !isset($current_observer->server)) {
+				return []; // nothing to do
+			}
 
-		if(!isset($current_observer->server)){
-			return []; // nothing to do
-		}
-		// used to search some data with one criteria defined by filter
+		// ar_section. Used to search some data with one criteria defined by filter
 		// see numisdata595, it get the data of portal numisdata77 to be used as main data.
-		if(isset($current_observer->server->filter) && $current_observer->server->filter!==false) {
+			if(isset($current_observer->server->filter) && $current_observer->server->filter!==false) {
 
-			// from_component_tipo. Get the from_component_tipo of the filter to set at observable locator
-			// the observable can't know what is the path to own section and we used the path of the sqo to get the caller component(portal, autocomplete, etc)
-				// $elements	= reset($current_observer->filter);
-				// $element	= reset($elements);
-				// php v8 compatible
-					$filter			= $current_observer->server->filter; // object as {"$and":[{"q":null,"path":[{"section_tipo":"oh1","component_tipo":"oh25"}],"q_operator":null}]}
-					$objIterator	= new ArrayIterator($filter);
-					$first_key		= $objIterator->key(); // string as '$and'
-					$elements		= $filter->{$first_key}; // array of objects
-					if (empty($elements) || empty($elements[0])) {
-						debug_log(__METHOD__
-							." ERROR: No elements are defined for current_observer filter " .PHP_EOL
-							.' observer->server: ' . to_string($current_observer->server)
-							, logger::ERROR
-						);
-						return [];
+				// from_component_tipo. Get the from_component_tipo of the filter to set at observable locator
+				// the observable can't know what is the path to own section and we used the path of the sqo to get the caller component(portal, autocomplete, etc)
+					// $elements	= reset($current_observer->filter);
+					// $element	= reset($elements);
+					// php v8 compatible
+						$filter			= $current_observer->server->filter; // object as {"$and":[{"q":null,"path":[{"section_tipo":"oh1","component_tipo":"oh25"}],"q_operator":null}]}
+						$objIterator	= new ArrayIterator($filter);
+						$first_key		= $objIterator->key(); // string as '$and'
+						$elements		= $filter->{$first_key}; // array of objects
+						if (empty($elements) || empty($elements[0])) {
+							debug_log(__METHOD__
+								." ERROR: No elements are defined for current_observer filter " .PHP_EOL
+								.' observer->server: ' . to_string($current_observer->server)
+								, logger::ERROR
+							);
+							return [];
+						}
+						$element = reset($elements); // object as {"q":null,"path":[{"section_tipo":"oh1","component_tipo":"oh25"}],"q_operator":null}
+
+					$from_component_tipo = end($element->path)->component_tipo;
+
+				// locator set from_component_tipo
+					$locator->set_from_component_tipo($from_component_tipo);
+
+				// q . The sqo base is defined into properties of the observer component.
+				// and is update the q of the filter with the locator of the component that had changed
+				// update the q with the locator of the observable component
+				// the locator is the section_tipo and section_id of the own observable section.
+					// $elements = reset($current_observer->filter);
+					foreach ($elements as $key => $item_value) {
+						$elements[$key]->q = $locator;
 					}
-					$element = reset($elements); // object as {"q":null,"path":[{"section_tipo":"oh1","component_tipo":"oh25"}],"q_operator":null}
 
-				$from_component_tipo = end($element->path)->component_tipo;
+				// sqo. Build the search_query_object to use in the search.
+					$sqo = new stdClass();
+						$sqo->section_tipo	= $observer->section_tipo;
+						$sqo->full_count	= false;
+						$sqo->limit			= 0;
+						$sqo->filter		= $current_observer->server->filter;
 
-			// locator set from_component_tipo
-				$locator->set_from_component_tipo($from_component_tipo);
+				// search the sections that has reference to the observable component, the component that had changed
+					$search		= search::get_instance($sqo);
+					$result		= $search->search();
 
-			// q . The sqo base is defined into properties of the observer component.
-			// and is update the q of the filter with the locator of the component that had changed
-			// update the q with the locator of the observable component
-			// the locator is the section_tipo and section_id of the own observable section.
-				// $elements = reset($current_observer->filter);
-				foreach ($elements as $key => $item_value) {
-					$elements[$key]->q = $locator;
-				}
+					$ar_section	= $result->ar_records;
+			}else{
+				// if observer don't has filter to get the sections to be updated, get the observable section to use
+				// the observe component will be created width this locator (observable section_id and section_tipo but with your own tipo)
+					$ar_section = [$locator];
+			}
 
-			// sqo. Build the search_query_object to use in the search.
-				$sqo = new stdClass();
-					$sqo->section_tipo	= $observer->section_tipo;
-					$sqo->full_count	= false;
-					$sqo->limit			= 0;
-					$sqo->filter		= $current_observer->server->filter;
-
-			// search the sections that has reference to the observable component, the component that had changed
-				$search		= search::get_instance($sqo);
-				$result		= $search->search();
-				$ar_section	= $result->ar_records;
-		}else{
-			// if observer don't has filter to get the sections to be updated, get the observable section to use
-			// the observe component will be created width this locator (observable section_id and section_tipo but with your own tipo)
-				$ar_section = [$locator];
-		}
-
-		// get the dato of the observable component to be used to create the observer component
+		// config. Get the dato of the observable component to be used to create the observer component
 		// in case of any relation component will be used to find "the component that I call" or "use my relations"
-		$config = $current_observer->server->config ?? null;
-
-		if(isset($config)){
-			switch (true) {
-				case (((isset($config->use_observable_dato) && $config->use_observable_dato===true)
-					 && (isset($config->use_self_section) && $config->use_self_section===true))):
+			$config = $current_observer->server->config ?? null;
+			if(isset($config)){
+				switch (true) {
+					case (((isset($config->use_observable_dato) && $config->use_observable_dato===true)
+						 && (isset($config->use_self_section) && $config->use_self_section===true))):
 						if (!empty($observable_dato)) {
 							$ar_section = array_merge($ar_section, $observable_dato);
 						}
-					break;
+						break;
 
-				case (((isset($config->use_observable_dato) && $config->use_observable_dato===true)
-					 && (isset($config->use_self_section) && $config->use_self_section===false))):
-					$ar_section = $observable_dato;
-					break;
+					case (((isset($config->use_observable_dato) && $config->use_observable_dato===true)
+						 && (isset($config->use_self_section) && $config->use_self_section===false))):
+						$ar_section = $observable_dato;
+						break;
 
-				// when the section is not the observer section ($locator) or the section of the observable dato ($observable_dato)
-				// use the inverse relations to get all sections that call to the observable section
-				case(isset($config->use_inverse_relations) && $config->use_inverse_relations===true):
-					$section_observable = section::get_instance(
-						$locator->section_id,
-						$locator->section_tipo,
-						'edit',
-						true
-					);
-					$inverse_locators = $section_observable->get_inverse_references();
-
-					$ar_section = [];
-					foreach ($inverse_locators as $inv_locator) {
-							// create the locator of the current component, this locator will be use to search, from the observer section, the component that are changed.
-							$current_locator = new locator();
-								$current_locator->set_section_tipo($inv_locator->from_section_tipo);
-								$current_locator->set_section_id($inv_locator->from_section_id);
-						$ar_section[] = $current_locator;
-					}
-
-					break;
-				default:
-					break;
+					// when the section is not the observer section ($locator) or the section of the observable dato ($observable_dato)
+					// use the inverse relations to get all sections that call to the observable section
+					case(isset($config->use_inverse_relations) && $config->use_inverse_relations===true):
+						$section_observable = section::get_instance(
+							$locator->section_id,
+							$locator->section_tipo,
+							'edit',
+							true
+						);
+						$inverse_locators = $section_observable->get_inverse_references();
+						$ar_section = [];
+						foreach ($inverse_locators as $inv_locator) {
+								// create the locator of the current component, this locator will be use to search, from the observer section, the component that are changed.
+								$current_locator = new locator();
+									$current_locator->set_section_tipo($inv_locator->from_section_tipo);
+									$current_locator->set_section_id($inv_locator->from_section_id);
+							$ar_section[] = $current_locator;
+						}
+						break;
+				}
 			}
-		}
-
-		$component_name = RecordObj_dd::get_modelo_name_by_tipo($observer->component_tipo,true);
 
 		// ar_data. Collect all observer components data
 		// with all locators collected by the different methods, it will create the observable components to be updated.
 			$ar_data = [];
-			if(!empty($ar_section )){
+			if(!empty($ar_section)) {
+
+				$component_name = RecordObj_dd::get_modelo_name_by_tipo($observer->component_tipo,true);
+
 				foreach ($ar_section as $current_section) {
 					// create the observer component that will be update
 					$component = component_common::get_instance(
@@ -1434,7 +1433,8 @@ abstract class component_common extends common {
 						$current_section->section_id,
 						'list',
 						DEDALO_DATA_LANG,
-						$current_section->section_tipo
+						$current_section->section_tipo,
+						false // bool cache
 					);
 					// get the specific event function in preferences to be fired (instead the default get_dato)
 					if(isset($current_observer->server->perform)){
@@ -1444,7 +1444,31 @@ abstract class component_common extends common {
 						$params = is_array($params_definition)
 							? $params_definition
 							: [$params_definition];
-						call_user_func_array(array($component, $function), $params);
+
+						// check function exits
+							if (!method_exists($component, $function)) {
+								debug_log(__METHOD__
+									. " An error occurred calling function- Method do not exists !  " . PHP_EOL
+									. ' function: ' . to_string($function) . PHP_EOL
+									. ' component_name: ' . $component_name . PHP_EOL
+									. ' component_tipo: ' . $observer->component_tipo . PHP_EOL
+									, logger::ERROR
+								);
+							}
+
+						// exec call
+						$result = call_user_func_array(array($component, $function), $params);
+
+						// check errors on call
+							if ($result===false) {
+								debug_log(__METHOD__
+									. " An error occurred executing call_user_func_array  " . PHP_EOL
+									. ' function: ' . to_string($function) . PHP_EOL
+									. ' component_name: ' . $component_name . PHP_EOL
+									. ' component_tipo: ' . $observer->component_tipo . PHP_EOL
+									, logger::ERROR
+								);
+							}
 
 					}else{
 

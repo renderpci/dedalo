@@ -458,40 +458,41 @@ class component_text_area extends component_common {
 
 	/**
 	* GET_LOCATORS_OF_TAG
-	* (!) Removed 22-05-2023 because nobody calls here
+	* (!) Called by observer numisdata563 of section_tipo: numisdata41 (legends)
 	* Resolve the data from text_area for a mark and get the locators to be used as dato
 	* @param object $options
 	* @return array $ar_locators
 	*/
-		// public function get_locators_of_tags(object $options) : array {
+	public function get_locators_of_tags(object $options) : array {
 
-		// 	// options
-		// 		$ar_mark_tag = $options->ar_mark_tag ?? ['svg'];
+		// options
+			$ar_mark_tag = $options->ar_mark_tag ?? ['svg'];
 
-		// 	// data
-		// 		$data			= $this->get_dato() ?? [];
-		// 		$current_data	= reset($data); // (!) Note that only one value is expected in component_text_area but format is array
+		// data
+			$data			= $this->get_dato() ?? [];
+			$current_data	= reset($data); // (!) Note that only one value is expected in component_text_area but format is array
 
-		// 	$ar_locators = [];
-		// 	foreach ($ar_mark_tag as $current_tag) {
+		$ar_locators = [];
+		foreach ($ar_mark_tag as $current_tag) {
 
-		// 		$pattern = TR::get_mark_pattern($current_tag);
-		// 		preg_match_all($pattern, $current_data, $ar_tag);
+			$pattern = TR::get_mark_pattern($current_tag);
+			preg_match_all($pattern, $current_data, $ar_tag);
 
-		// 		// Array result key 7 is the locator stored in the result of the preg_match_all
-		// 		$data_key = 7;
+			// Array result key 7 is the locator stored in the result of the preg_match_all
+			$data_key = 7;
 
-		// 		// The locator inside the tag are with ' and is necessary change to "
-		// 		foreach ($ar_tag[$data_key] as $pseudo_locator) {
-		// 			$current_locator = str_replace("'", "\"", $pseudo_locator);
-		// 			$current_locator = json_decode($current_locator);
-		// 			if(!in_array($current_locator, $ar_locators)){
-		// 				$ar_locators[] = $current_locator;
-		// 			}
-		// 		}
-		// 	}
-		// 	return $ar_locators;
-		// }//end get_locators_of_tag
+			// The locator inside the tag are with ' and is necessary change to "
+			foreach ($ar_tag[$data_key] as $pseudo_locator) {
+				$current_locator = str_replace("'", "\"", $pseudo_locator);
+				$current_locator = json_decode($current_locator);
+				if(!in_array($current_locator, $ar_locators)){
+					$ar_locators[] = $current_locator;
+				}
+			}
+		}
+
+		return $ar_locators;
+	}//end get_locators_of_tag
 
 
 
