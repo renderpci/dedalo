@@ -483,6 +483,11 @@ class component_svg extends component_media_common {
 						$response->result	= 1;
 						$response->new_dato	= $new_dato;
 						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+
+					// clean vars
+						unset($source_file_upload_date);
+						unset($files_info);
+						unset($lib_data);
 				}else{
 
 					$response = new stdClass();
