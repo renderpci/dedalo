@@ -1,5 +1,6 @@
 {
     "breakdown": "Επαθε βλάβη",
+    "update_ontology": "<mark>Actualizar Ontología<\/mark>",
     "total_records": "συνολικές εγγραφές",
     "transcripcion_automatica": "αυτόματη μεταγραφή",
     "version": "εκδοχή",
@@ -320,7 +321,6 @@
     "uploaded_file_exceeds_the_maximum_size": "Το αρχείο που μεταφορτώθηκε υπερβαίνει το μέγιστο επιτρεπόμενο μέγεθος",
     "failed_to_writte_file_to_disk": "Δεν θα μπορούσε να γράψει το αρχείο στο δίσκο",
     "format": "Μορφή",
-    "update_ontology": "<mark>Actualizar ontología<\/mark>",
     "numero_inventario": "Αριθμός απογραφής",
     "recuperar": "ανάκτηση",
     "recuperar_seccion": "χάνεται τμήμα",
@@ -329,10 +329,10 @@
     "mostrar_inspector": "Εμφάνιση Επιθεωρητής",
     "jerarquias": "ιεραρχίες",
     "el_directorio_no_existe": "Ο κατάλογος δεν υπάρχει ή δεν είναι προσβάσιμο",
+    "export_json_ontology": "εξαγωγή json οντολογίας",
     "crear_nuevo_fragmento": "Δημιουργία νέου κομματιού με την επιλογή",
     "delete_only_the_link": "Διαγράψτε μόνο το σύνδεσμο",
     "filesize_is_too_big": "Το μέγεθος του αρχείου είναι πολύ μεγάλο",
-    "export_json_ontology": "εξαγωγή json οντολογίας",
     "show_buttons": "εμφάνιση κουμπιών",
     "error_invalid_date_format": "Σφάλμα: Η μορφή ημερομηνίας δεν είναι έγκυρη",
     "nombre_fichero_completo": "πλήρες όνομα του αρχείου",
@@ -404,7 +404,7 @@
     "mover_datos_de_componentes": "<mark>Mover datos de componentes<\/mark>",
     "latest_changes": "<mark>Últimos cambios<\/mark>",
     "renumerar_secciones": "<mark>Renumerar secciones<\/mark>",
-    "import_json_ontology": "εισαγωγή οντολογίας json",
+    "import_json_ontology": "εισαγωγή οντολογίας JSON",
     "register_tools": "Εγγραφή εργαλείου",
     "value": "αξία",
     "duplicate": "Αντίγραφο",
@@ -443,5 +443,6 @@
     "previous": "Προηγούμενος",
     "email_limit_explanation": "<mark>Los correos seleccionados para enviar superan el límite máximo de su sistema operativo, por lo que se ha procedido a crear paquetes que no superen este máximo. Haga click en los siguientes botones para crear los correos.<\/mark>",
     "alert_limit_of_emails": "<mark>Atención, superado el límite de correos.<\/mark>",
-    "email": "<mark>E-mail<\/mark>"
+    "email": "<mark>E-mail<\/mark>",
+    "build_install_version": "Δημιουργήστε μια έκδοση εγκατάστασης"
 }

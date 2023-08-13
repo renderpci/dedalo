@@ -1,5 +1,6 @@
 {
     "breakdown": "Décomposition",
+    "update_ontology": "Mise à jour de l'Ontologie",
     "total_records": "Nombre total d'enregistrements",
     "transcripcion_automatica": "Transcription automatique",
     "version": "Version",
@@ -320,7 +321,6 @@
     "uploaded_file_exceeds_the_maximum_size": "Le fichier téléchargé dépasse la taille maximale autorisée",
     "failed_to_writte_file_to_disk": "Le fichier n'a pas pu être écrit sur le disque",
     "format": "Format",
-    "update_ontology": "Mise à jour de l'ontologie",
     "numero_inventario": "Numéro d'inventaire",
     "recuperar": "récupérer",
     "recuperar_seccion": "Récupérer la section",
@@ -329,10 +329,10 @@
     "mostrar_inspector": "Afficher l'inspecteur",
     "jerarquias": "hiérarchies",
     "el_directorio_no_existe": "Le répertoire n'existe pas ou n'est pas accessible",
+    "export_json_ontology": "Exporter Ontologie JSON",
     "crear_nuevo_fragmento": "Créer un nouveau fragment avec une sélection",
     "delete_only_the_link": "Suppression du lien uniquement",
     "filesize_is_too_big": "La taille du fichier est trop importante",
-    "export_json_ontology": "Nouveau",
     "show_buttons": "Afficher les boutons",
     "error_invalid_date_format": "Erreur : Format de date non valide",
     "nombre_fichero_completo": "Nom complet du dossier",
@@ -404,7 +404,7 @@
     "mover_datos_de_componentes": "Déplacer les données des composants",
     "latest_changes": "Dernières modifications",
     "renumerar_secciones": "Renuméroter les sections",
-    "import_json_ontology": "Importer une ontologie JSON",
+    "import_json_ontology": "Importer Ontologie JSON",
     "register_tools": "Outils d'enregistrement",
     "value": "Valeur",
     "duplicate": "Dupliquer",
@@ -443,5 +443,6 @@
     "previous": "Précédent",
     "email_limit_explanation": "Les mails sélectionnés pour l'envoi dépassent la limite maximale de votre système d'exploitation, nous avons donc procédé à la création de dossiers qui ne dépassent pas ce maximum. Cliquez sur les boutons suivants pour créer les courriers.",
     "alert_limit_of_emails": "Attention, la limite d'envoi a été dépassée.",
-    "email": "E-mail"
+    "email": "E-mail",
+    "build_install_version": "Créer une version d'installation"
 }

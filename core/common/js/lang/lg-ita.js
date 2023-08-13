@@ -1,5 +1,6 @@
 {
     "breakdown": "<mark>Desglose<\/mark>",
+    "update_ontology": "Aggiornare Ontologia",
     "total_records": "Registri totali",
     "transcripcion_automatica": "Trascrizione automatica",
     "version": "Versione",
@@ -320,7 +321,6 @@
     "uploaded_file_exceeds_the_maximum_size": "L'archivio caricato supera la grandezza massima consentita",
     "failed_to_writte_file_to_disk": "Impossibile scrivere l'archivio nel disco",
     "format": "<mark>Formato<\/mark>",
-    "update_ontology": "Aggiornare ontologia",
     "numero_inventario": "Numero d'inventario",
     "recuperar": "Recuperare",
     "recuperar_seccion": "Recuperare sezione",
@@ -329,10 +329,10 @@
     "mostrar_inspector": "Mostrare controllore",
     "jerarquias": "Gerarchie",
     "el_directorio_no_existe": "La cartella non esiste o non è accessibile",
+    "export_json_ontology": "Esporta l'Ontologia JSON",
     "crear_nuevo_fragmento": "Creare nuovo frammento con selezione",
     "delete_only_the_link": "Cancellare solo il collegamento",
     "filesize_is_too_big": "La grandezza dell'archivio è troppo grande",
-    "export_json_ontology": "Esporta l'ontologia json",
     "show_buttons": "Mostra i pulsanti",
     "error_invalid_date_format": "<mark>Error: formato de fecha invalido<\/mark>",
     "nombre_fichero_completo": "Nome completo del file",
@@ -404,7 +404,7 @@
     "mover_datos_de_componentes": "Muovere dati dei componenti",
     "latest_changes": "Ultime modifiche",
     "renumerar_secciones": "Rinumerare sezioni",
-    "import_json_ontology": "Importa l'ontologia json",
+    "import_json_ontology": "Importa l'Ontologia JSON",
     "register_tools": "Registro utensili",
     "value": "Valore",
     "duplicate": "Duplicare",
@@ -443,5 +443,6 @@
     "previous": "Precedente",
     "email_limit_explanation": "<mark>Los correos seleccionados para enviar superan el límite máximo de su sistema operativo, por lo que se ha procedido a crear paquetes que no superen este máximo. Haga click en los siguientes botones para crear los correos.<\/mark>",
     "alert_limit_of_emails": "<mark>Atención, superado el límite de correos.<\/mark>",
-    "email": "<mark>E-mail<\/mark>"
+    "email": "<mark>E-mail<\/mark>",
+    "build_install_version": "Crea una versione di installazione"
 }

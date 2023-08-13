@@ -566,7 +566,7 @@ render_tool_export.prototype.build_export_component = async function(ddo) {
 			ui.create_dom_element({
 				element_type	: 'li',
 				class_name		: 'component_label',
-				inner_html		: label,
+				inner_html		: label + '<span> [' + ddo.tipo + '] ' + ddo.model + '</span>',
 				parent			: export_component
 			})
 

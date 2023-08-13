@@ -1,5 +1,6 @@
 {
     "breakdown": "Desglose",
+    "update_ontology": "Actualizar Ontología",
     "total_records": "Registros totales",
     "transcripcion_automatica": "Transcripción automática",
     "version": "Versión",
@@ -320,7 +321,6 @@
     "uploaded_file_exceeds_the_maximum_size": "El archivo subido excede el tamaño máximo permitido",
     "failed_to_writte_file_to_disk": "No se pudo escribir el archivo en el disco",
     "format": "Formato",
-    "update_ontology": "Actualizar ontología",
     "numero_inventario": "Número de inventario",
     "recuperar": "recuperar",
     "recuperar_seccion": "Recuperar sección",
@@ -329,10 +329,10 @@
     "mostrar_inspector": "Mostrar Inspector",
     "jerarquias": "jerarquías",
     "el_directorio_no_existe": "El directorio no existe o no es accesible",
+    "export_json_ontology": "Exportar Ontología JSON",
     "crear_nuevo_fragmento": "Crear nuevo fragmento con selección",
     "delete_only_the_link": "Borrar sólo el vínculo",
     "filesize_is_too_big": "El tamaño de archivo es demasiado grande",
-    "export_json_ontology": "Exportar ontología json",
     "show_buttons": "Mostrar botones",
     "error_invalid_date_format": "Error: formato de fecha invalido",
     "nombre_fichero_completo": "Nombre completo del fichero",
@@ -443,5 +443,6 @@
     "previous": "Previo",
     "email_limit_explanation": "Los correos seleccionados para enviar superan el límite máximo de su sistema operativo, por lo que se ha procedido a crear paquetes que no superen este máximo. Haga click en los siguientes botones para crear los correos.",
     "alert_limit_of_emails": "Atención, superado el límite de correos.",
-    "email": "E-mail"
+    "email": "E-mail",
+    "build_install_version": "Construir una versión de instalación"
 }

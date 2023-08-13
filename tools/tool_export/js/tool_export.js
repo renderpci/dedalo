@@ -185,10 +185,11 @@ tool_export.prototype.get_export_grid = async function(options) {
 
 	// API request
 		const rqo = {
-			dd_api	: 'dd_tools_api',
-			action	: 'tool_request',
-			source	: source,
-			options	: {
+			dd_api			: 'dd_tools_api',
+			action			: 'tool_request',
+			source			: source,
+			prevent_lock	: true, // close session to unlock the browser and allow to abort
+			options			: {
 				section_tipo		: self.caller.section_tipo, // section that call to the tool, it will be used to get the records from db
 				model				: self.caller.model,
 				data_format			: data_format, // format selected by the user to get data

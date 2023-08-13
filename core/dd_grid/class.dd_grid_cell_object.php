@@ -350,7 +350,7 @@ class dd_grid_cell_object {
 	* @param array $value
 	* @return void
 	*/
-	public function set_fallback_value(array $value) : void {
+	public function set_fallback_value(?array $value) : void {
 		$this->fallback_value = $value;
 	}//end set_fallback_value
 

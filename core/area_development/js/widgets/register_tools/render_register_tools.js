@@ -69,7 +69,6 @@ const render_content_data = async function(self) {
 	// short vars
 		const value		= self.value || {}
 		const datalist	= value.datalist || []
-		console.log('datalist:', datalist);
 
 	// content_data
 		const content_data = ui.create_dom_element({

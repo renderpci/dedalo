@@ -1576,6 +1576,18 @@ class component_relation_common extends component_common {
 						$params = is_array($params_definition)
 							? $params_definition
 							: [$params_definition];
+
+						// check function exits
+							if (!method_exists($observer_component, $function)) {
+								debug_log(__METHOD__
+									. " An error occurred calling function - Method do not exists !  " . PHP_EOL
+									. ' function: ' . to_string($function) . PHP_EOL
+									. ' component_name: ' . $model_name . PHP_EOL
+									. ' component_tipo: ' . $current_component_tipo
+									, logger::ERROR
+								);
+							}
+
 						$final_data = call_user_func_array(array($observer_component, $function), $params);
 
 					}else{
@@ -1583,7 +1595,10 @@ class component_relation_common extends component_common {
 						$final_data = $observer_component->get_dato();
 					}
 					$this->set_dato($final_data);
-					debug_log(__METHOD__."Set observed data ($model_name - $current_component_tipo - $section_tipo - $section_id)".to_string(), logger::DEBUG);
+					debug_log(__METHOD__
+						."Set observed data ($model_name - $current_component_tipo - $section_tipo - $section_id)"
+						, logger::DEBUG
+					);
 					$this->Save();
 				// task done. return
 					return true;
