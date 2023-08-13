@@ -457,7 +457,7 @@ class component_text_area extends component_common {
 
 
 	/**
-	* GET_LOCATORS_OF_TAG
+	* GET_LOCATORS_OF_TAGS
 	* (!) Called by observer numisdata563 of section_tipo: numisdata41 (legends)
 	* Resolve the data from text_area for a mark and get the locators to be used as dato
 	* @param object $options
@@ -468,31 +468,37 @@ class component_text_area extends component_common {
 		// options
 			$ar_mark_tag = $options->ar_mark_tag ?? ['svg'];
 
+		// default value
+			$ar_locators = [];
+
 		// data
 			$data			= $this->get_dato() ?? [];
 			$current_data	= reset($data); // (!) Note that only one value is expected in component_text_area but format is array
+			if (empty($current_data)) {
+				return $ar_locators;
+			}
 
-		$ar_locators = [];
-		foreach ($ar_mark_tag as $current_tag) {
+		// ar_mark_tag iteration
+			foreach ($ar_mark_tag as $current_tag) {
 
-			$pattern = TR::get_mark_pattern($current_tag);
-			preg_match_all($pattern, $current_data, $ar_tag);
+				$pattern = TR::get_mark_pattern($current_tag);
+				preg_match_all($pattern, $current_data, $ar_tag);
 
-			// Array result key 7 is the locator stored in the result of the preg_match_all
-			$data_key = 7;
+				// Array result key 7 is the locator stored in the result of the preg_match_all
+				$data_key = 7;
 
-			// The locator inside the tag are with ' and is necessary change to "
-			foreach ($ar_tag[$data_key] as $pseudo_locator) {
-				$current_locator = str_replace("'", "\"", $pseudo_locator);
-				$current_locator = json_decode($current_locator);
-				if(!in_array($current_locator, $ar_locators)){
-					$ar_locators[] = $current_locator;
+				// The locator inside the tag are with ' and is necessary change to "
+				foreach ($ar_tag[$data_key] as $pseudo_locator) {
+					$current_locator = str_replace("'", "\"", $pseudo_locator);
+					$current_locator = json_decode($current_locator);
+					if(!in_array($current_locator, $ar_locators)){
+						$ar_locators[] = $current_locator;
+					}
 				}
 			}
-		}
 
 		return $ar_locators;
-	}//end get_locators_of_tag
+	}//end get_locators_of_tags
 
 
 
@@ -2098,16 +2104,32 @@ class component_text_area extends component_common {
 	*/
 	public function regenerate_component() : bool {
 
-		# Force loads dato always !IMPORTANT
+		// Force loads dato always !IMPORTANT
 		$dato = $this->get_dato();
 
-		# Converts old timecodes
-		$old_pattern = '/(\[TC_([0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2})_TC\])/';
-		$new_dato 	 = preg_replace($old_pattern, "[TC_$2.000_TC]", $dato);
 
-		$this->set_dato($new_dato);
+		if (!empty($dato) && isset($dato[0])) {
 
-		# Save component data. Defaults arguments: $update_all_langs_tags_state=false, $clean_text=true
+			$old_tc_pattern = '/(\[TC_([0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2})_TC\])/';
+
+			$new_dato = [];
+			foreach ($dato as $value) {
+
+				if (is_null($value)) {
+					continue;
+				}
+
+				// Converts old timecodes
+				$new_value = preg_replace($old_tc_pattern, "[TC_$2.000_TC]", (string)$value);
+
+				$new_dato[] = $new_value;
+			}
+
+			$this->set_dato($new_dato);
+		}
+
+
+		// Save component data. Defaults arguments: $update_all_langs_tags_state=false, $clean_text=true
 		$this->Save(
 			false, // bool update_all_langs_tags_state
 			true // bool clean_text

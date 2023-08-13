@@ -1,5 +1,6 @@
 {
     "breakdown": "Aufschlüsselung",
+    "update_ontology": "Ontologie aktualisieren",
     "total_records": "Totale Einträge",
     "transcripcion_automatica": "Automatische Transkription",
     "version": "Version",
@@ -320,7 +321,6 @@
     "uploaded_file_exceeds_the_maximum_size": "Das Volumen der hochgeladenen Datei überschreitet die maximal zugelssene Dateigrösse.",
     "failed_to_writte_file_to_disk": "Datei konnte nicht auf die Diskette überschrieben werden.",
     "format": "Format",
-    "update_ontology": "Ontologie aktualisieren",
     "numero_inventario": "Inventarnummer",
     "recuperar": "Wiederherstellen",
     "recuperar_seccion": "Sektion wiederherstellen",
@@ -329,10 +329,10 @@
     "mostrar_inspector": "Inspektor anzeigen",
     "jerarquias": "Hierarchien",
     "el_directorio_no_existe": "Das Verzeichnis existiert nicht oder ist nicht zugänglich.",
+    "export_json_ontology": "JSON-Ontologie exportieren",
     "crear_nuevo_fragmento": "Neuen Auszug aus Auswahl erstellen",
     "delete_only_the_link": "Nur Verknüpfungen löschen",
     "filesize_is_too_big": "Die Datei ist zu gross.",
-    "export_json_ontology": "JSON-Ontologie exportieren",
     "show_buttons": "Schaltflächen anzeigen",
     "error_invalid_date_format": "<mark>Error: formato de fecha invalido<\/mark>",
     "nombre_fichero_completo": "Vollständiger Dateiname",
@@ -443,5 +443,6 @@
     "previous": "Vorherige",
     "email_limit_explanation": "<mark>Los correos seleccionados para enviar superan el límite máximo de su sistema operativo, por lo que se ha procedido a crear paquetes que no superen este máximo. Haga click en los siguientes botones para crear los correos.<\/mark>",
     "alert_limit_of_emails": "<mark>Atención, superado el límite de correos.<\/mark>",
-    "email": "<mark>E-mail<\/mark>"
+    "email": "<mark>E-mail<\/mark>",
+    "build_install_version": "Erstellen Sie eine Installationsversion"
 }

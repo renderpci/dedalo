@@ -1,5 +1,6 @@
 {
     "breakdown": "Break down",
+    "update_ontology": "Update Ontology",
     "total_records": "Total records",
     "transcripcion_automatica": "Automatic transcription",
     "version": "Version",
@@ -320,7 +321,6 @@
     "uploaded_file_exceeds_the_maximum_size": "The uploaded file exceeds the maximum size allowed",
     "failed_to_writte_file_to_disk": "Failed to write file to disk",
     "format": "Format",
-    "update_ontology": "Update ontology",
     "numero_inventario": "Inventory number",
     "recuperar": "recover",
     "recuperar_seccion": "Recover section",
@@ -329,10 +329,10 @@
     "mostrar_inspector": "Toggle Inspector",
     "jerarquias": "hierarchies",
     "el_directorio_no_existe": "The directory does not exist or is not accessible",
+    "export_json_ontology": "Export JSON Ontology",
     "crear_nuevo_fragmento": "Create new fragment with the selection",
     "delete_only_the_link": "Delete only link",
     "filesize_is_too_big": "File size is too big",
-    "export_json_ontology": "Export json ontology",
     "show_buttons": "Show buttons",
     "error_invalid_date_format": "Error: Date format is invalid",
     "nombre_fichero_completo": "Full name of the file",
@@ -443,5 +443,6 @@
     "previous": "Previous",
     "email_limit_explanation": "The emails selected to send exceed the maximum limit of your operating system, so we have proceeded to create packages that do not exceed this maximum. Click on the following buttons to create the emails.",
     "alert_limit_of_emails": "Attention, exceeded the email limit.",
-    "email": "E-mail"
+    "email": "E-mail",
+    "build_install_version": "Build install version"
 }

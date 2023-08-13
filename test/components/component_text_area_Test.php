@@ -176,14 +176,14 @@ final class component_text_area_test extends TestCase {
 		$tipo			= self::$tipo;
 		$section_tipo	= self::$section_tipo;
 		$section_id		= 1;
-		$mode			= 'edit';
+		$mode			= 'list';
 		$lang			= DEDALO_DATA_LANG;
 
 		$component = component_common::get_instance(
 			$model, // string model
 			$tipo, // string tipo
 			$section_id,
-			'list',
+			$mode,
 			$lang,
 			$section_tipo,
 			false
@@ -205,6 +205,42 @@ final class component_text_area_test extends TestCase {
 
 
 	/**
+	* TEST_get_locators_of_tags
+	* @return void
+	*/
+	public function test_get_locators_of_tags() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'list';
+		$lang			= DEDALO_DATA_LANG;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo,
+			false
+		);
+
+		$value = $component->get_locators_of_tags((object)[
+			'ar_mark_tag' => ['svg']
+		]);
+			// dump($value, ' value ++ '.to_string());
+
+		$this->assertTrue(
+			gettype($value)==='array',
+			'expected array type for value. Current type: ' . gettype($value)
+		);
+	}//end test_get_locators_of_tags
+
+
+
+	/**
 	* TEST_get_valor_export
 	* @return void
 	*/
@@ -214,14 +250,14 @@ final class component_text_area_test extends TestCase {
 		$tipo			= self::$tipo;
 		$section_tipo	= self::$section_tipo;
 		$section_id		= 1;
-		$mode			= 'edit';
+		$mode			= 'list';
 		$lang			= DEDALO_DATA_LANG;
 
 		$component = component_common::get_instance(
 			$model, // string model
 			$tipo, // string tipo
 			$section_id,
-			'list',
+			$mode,
 			$lang,
 			$section_tipo,
 			false
