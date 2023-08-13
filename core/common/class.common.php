@@ -2046,7 +2046,7 @@ abstract class common {
 					// it will be calculated by his parent (in recursive loop)
 						if (isset($dd_object->parent) && $dd_object->parent!==$this->tipo) {
 							if(SHOW_DEBUG===true) {
-								dump($dd_object, ' SKIP dd_object ++'.to_string($this->tipo));
+								dump($dd_object, ' SKIP dd_object (parent!=$this->tipo) ++'.to_string($this->tipo));
 							}
 							continue;
 						}

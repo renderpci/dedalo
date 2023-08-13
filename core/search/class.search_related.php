@@ -157,7 +157,7 @@ class search_related extends search {
 		// debug
 			$total_records = count($result);
 			debug_log(__METHOD__
-				. " Calculated referenced_locators step 1 (total: $total_records) section_tipo:$reference_locator->section_tipo,  section_id:" . ($reference_locator->section_id ?? '')
+				. " Calculated referenced_locators step 1 (total: $total_records) section_tipo: $reference_locator->section_tipo,  section_id: " . ($reference_locator->section_id ?? '')
 				. ', time: ' . exec_time_unit($start_time, 'ms').' ms'
 				, logger::DEBUG
 			);
@@ -187,9 +187,9 @@ class search_related extends search {
 
 		// debug
 			debug_log(__METHOD__
-				. " Calculated referenced_locators step 2 section_tipo:$reference_locator->section_tipo, section_id:" . ($reference_locator->section_id ?? '')
+				. " Calculated referenced_locators step 2 section_tipo: $reference_locator->section_tipo, section_id: " . ($reference_locator->section_id ?? '')
 				. ', time: ' . exec_time_unit($start_time, 'ms').' ms'
-				. ' - memory: ' .dd_memory_usage()
+				// . ' - memory: ' .dd_memory_usage()
 				, logger::DEBUG
 			);
 

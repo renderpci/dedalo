@@ -567,7 +567,7 @@ class section extends common {
 				# Stop here (remember make a real section save later!)
 				# No component time machine data will be saved when section saves later
 				#debug_log(__METHOD__." Stopped section save process component_obj->save_to_database = true ".to_string(), logger::ERROR);
-				return $this->section_id;
+				return (int)$this->section_id;
 			}
 
 		// time machine data. We save only current component lang 'dato' in time machine
