@@ -317,6 +317,8 @@ abstract class JSON_RecordDataBoundObject {
 								$strQuery
 							);
 							dump($result, ' Save result. section_id: '.to_string($section_id) . PHP_EOL .'query:' . PHP_EOL . to_string($debug_strQuery));
+							$dbt = debug_backtrace();
+							dump($dbt, ' dbt ++ '.to_string());
 						}
 						// return false;
 						return null;
