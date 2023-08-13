@@ -8,7 +8,7 @@ abstract class filter {
 
 
 
-	public static $user_authorized_projects_cache;
+	public static $user_authorized_projects_cache = [];
 	public static $user_projects_cache;
 
 
@@ -150,14 +150,16 @@ abstract class filter {
 		$start_time = start_time();
 
 		// cache
-			$cache_key = 'user_authorized_projects_'.$user_id .'_'. $from_component_tipo;
-			// if (isset(filter::$user_authorized_projects_cache[$cache_key])) {
-			// 	// debug_log(__METHOD__." Total time: ".exec_time_unit($start_time,'ms')." ms ---- CACHED", logger::DEBUG);
-			// 	return filter::$user_authorized_projects_cache[$cache_key];
-			// }
-			$use_cache = (SHOW_DEVELOPER!==true);
-			if ($use_cache===true && isset($_SESSION['dedalo']['config'][$cache_key])) {
-				return $_SESSION['dedalo']['config'][$cache_key];
+			$use_cache = true; // (SHOW_DEVELOPER!==true);
+			if ($use_cache===true) {
+				$cache_key = 'user_authorized_projects_' . $user_id .'_'. $from_component_tipo;
+				if (isset(filter::$user_authorized_projects_cache[$cache_key])) {
+					// debug_log(__METHOD__." Total time: ".exec_time_unit($start_time,'ms')." ms ---- CACHED", logger::DEBUG);
+					return filter::$user_authorized_projects_cache[$cache_key];
+				}
+				if (isset($_SESSION['dedalo']['config'][$cache_key])) {
+					return $_SESSION['dedalo']['config'][$cache_key];
+				}
 			}
 
 		// projects_section_tipo
@@ -276,13 +278,16 @@ abstract class filter {
 
 		// cache
 			if ($use_cache===true) {
-				// filter::$user_authorized_projects_cache[$cache_key] = $ar_projects;
-				$_SESSION['dedalo']['config'][$cache_key] = $ar_projects;
+				filter::$user_authorized_projects_cache[$cache_key] = $ar_projects;
+				$_SESSION['dedalo']['config'][$cache_key]			= $ar_projects;
 			}
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__." Total time: ".exec_time_unit($start_time,'ms')." ms. ---- user_id: $user_id - from_component_tipo: $from_component_tipo", logger::DEBUG);
+				debug_log(__METHOD__
+					." Total time: ".exec_time_unit($start_time,'ms')." ms. ---- user_id: $user_id - from_component_tipo: $from_component_tipo"
+					, logger::DEBUG
+				);
 			}
 
 
