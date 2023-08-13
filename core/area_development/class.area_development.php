@@ -175,79 +175,28 @@ class area_development extends area_common {
 			$ar_widgets[] = $widget;
 
 
-		// update data version
+		// update_data_version
 			include_once DEDALO_CORE_PATH . '/base/update/class.update.php';
-			$updates		= update::get_updates();
-			$update_version	= update::get_update_version();
-			if(empty($update_version)) {
+			$updates				= update::get_updates();
+			$update_version			= update::get_update_version();
+			$update_version_plain	= empty($update_version)
+				? ''
+				: implode('', $update_version);
 
-				$item = new stdClass();
-					$item->id		= 'update_data_version';
-					$item->class	= 'success width_100';
-					$item->typo		= 'widget';
-					$item->tipo		= $this->tipo;
-					$item->parent	= $this->tipo;
-					$item->label	= label::get_label('update').' '.label::get_label('data');
-					$item->info		= null;
-					$item->body		= '<span style="color:green">Data format is updated: '.implode(".", get_current_version_in_db()).'</span>';
-					$item->trigger	= (object)[
-					];
-
-				$widget = $this->widget_factory($item);
-				$ar_widgets[] = $widget;
-
-			}else{
-
-				$current_dedalo_version	= implode(".", get_dedalo_version());
-				$current_version_in_db	= implode(".", get_current_version_in_db());
-				$update_version_plain	= implode('', $update_version);
-
-				$item = new stdClass();
-					$item->id		= 'update_data_version';
-					$item->class	= 'danger width_100';
-					$item->typo		= 'widget';
-					$item->tipo		= $this->tipo;
-					$item->parent	= $this->tipo;
-					$item->label	= label::get_label('update').' '.label::get_label('data');
-					// $item->info		= 'Click to update dedalo data version';
-					$item->body		= '<span style="color:red">Current data version: '.$current_version_in_db . '</span> -----> '. implode('.', $update_version);
-					// Actions list
-						#dump($updates->$update_version_plain, '$updates->$update_version_plain ++ '.to_string());
-						if (isset($updates->$update_version_plain)) {
-							foreach ($updates->$update_version_plain as $key => $value) {
-
-								if (is_object($value) || is_array($value)) {
-									$i=0;
-									foreach ($value as $vkey => $vvalue) {
-										if($key==='alert_update') {
-
-											$item->body .= '<div class="alert_update"><h2 class="vkey_value">'. $vvalue->command . '</h2></div>';
-											// continue;
-										}else{
-											if($i===0) $item->body .= "<h6>$key</h6>";
-											if(is_string($vvalue)) $vvalue = trim($vvalue);
-											$item->body .= '<div class="command"><span class="vkey">'.($vkey+1).'</span><span class="vkey_value">'. print_r($vvalue, true) .'</span></div>';
-											$i++;
-										}
-									}
-								}
-							}
-						}
-					$item->run[]	= (object)[
-						'fn' 	  => 'init_form',
-						'options' => (object)[
-							'confirm_text' => label::get_label('sure') ?? 'Sure?'
-						]
-					];
-					$item->trigger 	= (object)[
-						'dd_api'	=> 'dd_utils_api',
-						'action'	=> 'update_version',
-						'options'	=> null
-					];
-
-				$widget = $this->widget_factory($item);
-				$ar_widgets[] = $widget;
-			}
+			$item = new stdClass();
+				$item->id		= 'update_data_version';
+				$item->class	= empty($update_version) ? 'success width_100' : 'width_100';
+				$item->typo		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->label	= label::get_label('update').' '.label::get_label('data');
+				$item->value	= (object)[
+					'update_version'		=> $update_version,
+					'current_version_in_db'	=> get_current_version_in_db(),
+					'dedalo_version'		=> get_dedalo_version(),
+					'updates'				=> $updates->{$update_version_plain} ?? null
+				];
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
 
 
 		// update_code

@@ -428,7 +428,7 @@ final class dd_utils_api {
 
 
 	/**
-	* UPDATE_VERSION
+	* UPDATE_DATA_VERSION
 	* Updates Dédalo data version.
 	* Allow change components data format or add new tables or index
 	* Triggered by Area Development button 'UPDATE DATA'
@@ -436,7 +436,7 @@ final class dd_utils_api {
 	* @param object $rqo
 	* @return object $response
 	*/
-	public static function update_version(object $rqo) : object {
+	public static function update_data_version(object $rqo) : object {
 
 		// set time limit
 			set_time_limit ( 259200 );  // 3 days
@@ -449,16 +449,20 @@ final class dd_utils_api {
 
 		try {
 
-			// exec update_version. return object response
-				$update_version_response = update::update_version();
+			// exec update_data_version. return object response
+				$update_data_version_response = update::update_version();
 
 		} catch (Exception $e) {
 
-			error_log( 'Caught exception: ' . $e->getMessage() );
+			debug_log(__METHOD__
+				. " Caught exception [update_data_version]: " . PHP_EOL
+				. ' msg: ' . $e->getMessage()
+				, logger::ERROR
+			);
 
-			$update_version_response = (object)[
+			$update_data_version_response = (object)[
 				'result'	=> false,
-				'msg'		=> 'ERROR on update_version .Caught exception: ' . $e->getMessage()
+				'msg'		=> 'ERROR on update_data_version .Caught exception: ' . $e->getMessage()
 			];
 
 			// log line
@@ -468,12 +472,12 @@ final class dd_utils_api {
 				file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
 		}
 
-		$response->result	= $update_version_response->result ?? false;
-		$response->msg		= $update_version_response->msg ?? 'Error. Request failed ['.__FUNCTION__.']';
+		$response->result	= $update_data_version_response->result ?? false;
+		$response->msg		= $update_data_version_response->msg ?? 'Error. Request failed ['.__FUNCTION__.']';
 
 
 		return $response;
-	}//end update_version
+	}//end update_data_version
 
 
 
