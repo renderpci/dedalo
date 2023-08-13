@@ -1087,7 +1087,15 @@ abstract class component_common extends common {
 
 		// check component minimum vars before save
 			if( empty($section_id) || empty($tipo) || empty($lang) ) {
-				trigger_error(__METHOD__." Error on save: Few vars! section_tipo:$section_tipo, section_id:$section_id, tipo,$tipo, lang,$lang, model: ".get_class($this));
+				debug_log(__METHOD__
+					. " Error on save: Few vars! . Ignored order" . PHP_EOL
+					. ' section_id: ' . to_string($section_id) . PHP_EOL
+					. ' section_tipo: ' . $section_tipo . PHP_EOL
+					. ' tipo: ' . $tipo . PHP_EOL
+					. ' model: ' . get_class($this) . PHP_EOL
+					. ' lang: ' . $lang
+					, logger::ERROR
+				);
 				return null;
 			}
 
@@ -1122,7 +1130,13 @@ abstract class component_common extends common {
 		// section_id : Check valid section_id returned
 		// if (abs($section_id)<1 && strpos((string)$section_id, DEDALO_SECTION_ID_TEMP)===false) {
 			if ( empty($section_id) || (abs(intval($section_id))<1 && strpos((string)$section_id, DEDALO_SECTION_ID_TEMP)===false) ) {
-				trigger_error("Error on component Save: received id ($section_id) is not valid!");
+				debug_log(__METHOD__
+					. " Error on component Save: received id ($section_id) is not valid for save! Ignored order " . PHP_EOL
+					. ' section_id: ' . to_string($section_id) . PHP_EOL
+					. ' section_tipo: ' . $section_tipo . PHP_EOL
+					. ' tipo: ' . $tipo
+					, logger::ERROR
+				);
 				return null;
 			}
 

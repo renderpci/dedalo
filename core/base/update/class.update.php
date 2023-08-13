@@ -27,7 +27,6 @@ class update {
 	*/
 	public static function get_update_version() : ?array {
 
-		$update_version  = array();
 		$current_version = get_current_version_in_db();
 		if (empty($current_version)) {
 			#$current_version = array(4,0,9);	// Default minimun version
@@ -35,8 +34,8 @@ class update {
 			return null;
 		}
 
-		$updates = update::get_updates();
-
+		$update_version	= array();
+		$updates		= update::get_updates();
 		foreach ($updates as $key => $version_to_update) {
 			if($current_version[0] == $version_to_update->update_from_major){
 				if($current_version[1] == $version_to_update->update_from_medium){
