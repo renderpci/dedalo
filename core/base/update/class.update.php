@@ -567,12 +567,12 @@ class update {
 
 					}//end foreach($ar_component_tipo as $current_component_tipo)
 
-					// wait for 15 milliseconds
-					usleep(15000);
-					// Forces collection of any existing garbage cycles
-					gc_collect_cycles();
-
 					if ($i===0) {
+						// wait for 15 milliseconds every 1000 records
+						usleep(15000);
+						// Forces collection of any existing garbage cycles
+						gc_collect_cycles();
+
 						debug_log(__METHOD__
 							. " Updated section: $current_section_tipo - section_id: $section_id"
 							, logger::DEBUG
