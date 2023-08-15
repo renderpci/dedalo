@@ -282,25 +282,25 @@ class logger_backend_activity extends logger_backend {
 					? [$datos]
 					: $datos;
 				// When msg is load, include datos of url
-				if (strpos($message, 'LOAD')!==false) {
-					// URL
-					$url = 'unknown';
-					if (isset($_SERVER['REQUEST_URI'])) {
-						$request_uri = safe_xss($_SERVER['REQUEST_URI']);
-						// Remove possible attack chars like: ', %27, ;
-						$request_uri = str_replace(array('\'','%27',';'), '', $request_uri);
-						$request_uri = pg_escape_string(DBi::_getConnection(), $request_uri);
-						$url 		 = urldecode( DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . $request_uri );
-					}
-					$dato_array['url'] = build_link($url, ['url'=>$url,'css'=>'list_link']);
-					// Referrer
-					$referrer = 'unknown';
-					if (isset($_SERVER['HTTP_REFERER'])) {
-						$referrer 	= safe_xss($_SERVER['HTTP_REFERER']);
-						$referrer 	= str_replace('\'', '', $referrer);
-					}
-					$dato_array['ref'] = build_link($referrer, ['url'=>$referrer,'css'=>'list_link']);
-				}
+					// if (strpos($message, 'LOAD')!==false) {
+					// 	// URL
+					// 	$url = 'unknown';
+					// 	if (isset($_SERVER['REQUEST_URI'])) {
+					// 		$request_uri = safe_xss($_SERVER['REQUEST_URI']);
+					// 		// Remove possible attack chars like: ', %27, ;
+					// 		$request_uri = str_replace(array('\'','%27',';'), '', $request_uri);
+					// 		$request_uri = pg_escape_string(DBi::_getConnection(), $request_uri);
+					// 		$url 		 = urldecode( DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . $request_uri );
+					// 	}
+					// 	$dato_array['url'] = build_link($url, ['url'=>$url,'css'=>'list_link']);
+					// 	// Referrer
+					// 	$referrer = 'unknown';
+					// 	if (isset($_SERVER['HTTP_REFERER'])) {
+					// 		$referrer 	= safe_xss($_SERVER['HTTP_REFERER']);
+					// 		$referrer 	= str_replace('\'', '', $referrer);
+					// 	}
+					// 	$dato_array['ref'] = build_link($referrer, ['url'=>$referrer,'css'=>'list_link']);
+					// }
 			// add value
 				$components->{$component_tipo} = (object)[
 					'dato' => (object)[
