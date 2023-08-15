@@ -1996,3 +1996,34 @@ function is_empty_dato(mixed $dato) : bool {
 			return false;
 	}
 }//end is_empty_dato
+
+
+
+/**
+* MANAGE_CACHE_OVERLOAD
+* @return array
+*/
+	// function manage_cache_overload($current_array, $max_cache_items, $cache_slice_on) {
+
+	// 	$total = count($current_array);
+	// 	if ( $total > $max_cache_items ) {
+	// 		// self::$ar_section_instances = array_slice(self::$ar_section_instances, $cache_slice_on, null, true);
+	// 		// new array
+	// 		$new_array = [];
+	// 		$i = 1;
+	// 		foreach ($current_array as $inst_key => $inst_value) {
+	// 			if ($i > $cache_slice_on) {
+	// 				$new_array[$inst_key] = $inst_value;
+	// 			}else{
+	// 				$i++;
+	// 			}
+	// 		}
+	// 		// replace matrix_instances array
+	// 		$current_array = $new_array;
+
+	// 		error_log('))))))))))))))))))))))))))))))))))))))))) Replaced items cache from n '.$total.' to '.count($new_array));
+	// 		error_log('))))))))))))))))))))))))))))))))))))))))) Replaced items ('.$max_cache_items.'/'.$cache_slice_on.')');
+	// 	}
+
+	// 	return $current_array;
+	// }//end manage_cache_overload
