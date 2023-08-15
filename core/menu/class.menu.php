@@ -14,7 +14,7 @@ class menu extends common {
 		// id
 		protected $id;
 		// section_tipo
-		protected $section_tipo;
+		public $section_tipo;
 
 
 

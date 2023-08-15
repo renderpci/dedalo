@@ -11,10 +11,10 @@ class relation_list extends common {
 	/**
 	* CLASS VARS
 	*/
-		protected $section_id;
-		protected $section_tipo;
-		protected $sqo;
-		protected $count;
+		// protected $section_id;
+		public $section_tipo;
+		public $sqo;
+		public $count;
 
 		public $diffusion_properties;
 
