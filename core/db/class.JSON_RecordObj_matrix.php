@@ -24,7 +24,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 	public $datos_time_machine;
 
 	// static cache for RecordObj_matrix instances
-	public static $ar_JSON_RecordObj_matrix_instances;
+	public static $ar_JSON_RecordObj_matrix_instances = [];
 
 
 
@@ -40,27 +40,52 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 	*/
 	public static function get_instance(string $matrix_table=null, int $section_id=null, string $section_tipo=null, bool $cache=false) : JSON_RecordObj_matrix {
 
-		// Not cache new sections (without section_id)
-			if (empty($section_id) || $cache===false) {
-				return new JSON_RecordObj_matrix($matrix_table, $section_id, $section_tipo);
-			}
+		// cache
+			// $cache = false;
 
-		// cache overload : If ar_JSON_RecordObj_matrix_instances > $max_cache_instances , not add current element to cache to prevent overload
-		// Note: normally, a file like oh1 in edit mode, uses about 60 JSON_RecordObj_matrix items in cache
-			$max_cache_instances	= 2000;
-			$cache_slice_on			= 750;
-			if ( isset(self::$ar_JSON_RecordObj_matrix_instances) && count(self::$ar_JSON_RecordObj_matrix_instances) > $max_cache_instances ) {
-				self::$ar_JSON_RecordObj_matrix_instances = array_slice(self::$ar_JSON_RecordObj_matrix_instances, $cache_slice_on, null, true);
-			}
+		// cache is false case. Also, not cache new instances (without section_id)
+			if ($cache===false || empty($section_id)) {
+				return new JSON_RecordObj_matrix(
+					$matrix_table,
+					$section_id,
+					$section_tipo
+				);
+			}//end if ($cache===false || empty($section_id))
 
-		// find current instance in cache
-			$key = $matrix_table.'_'.$section_id .'_'. $section_tipo;
-			if ($cache===true && !array_key_exists($key, (array)self::$ar_JSON_RecordObj_matrix_instances) ) {
-				self::$ar_JSON_RecordObj_matrix_instances[$key] = new JSON_RecordObj_matrix($matrix_table, $section_id, $section_tipo);
-			}
+		// cache is true case. Get cache instance if it exists. Otherwise, create a new one
+			// cache overload : If ar_JSON_RecordObj_matrix_instances > $max_cache_instances , not add current element to cache to prevent overload
+			// Note: normally, a file like oh1 in edit mode, uses about 60 JSON_RecordObj_matrix items in cache
+				$max_cache_instances	= 1200;
+				$cache_slice_on			= 400;
+				$total					= count(self::$ar_JSON_RecordObj_matrix_instances);
+				if ( $total > $max_cache_instances ) {
+					// self::$ar_JSON_RecordObj_matrix_instances = array_slice(self::$ar_JSON_RecordObj_matrix_instances, $cache_slice_on, null, true);
+					// new array
+					$new_array = [];
+					$i = 1;
+					foreach (self::$ar_JSON_RecordObj_matrix_instances as $inst_key => $inst_value) {
+						if ($i > $cache_slice_on) {
+							$new_array[$inst_key] = $inst_value;
+						}else{
+							$i++;
+						}
+					}
+					// replace matrix_instances array
+					self::$ar_JSON_RecordObj_matrix_instances = $new_array;
+
+					// error_log('))))))))))))))))))))))))))))))))))))))))) Replaced JSON_RecordObj_matrix_instances cache from n '.$total.' to '.count($new_array));
+					// error_log('))))))))))))))))))))))))))))))))))))))))) Replaced JSON_RecordObj_matrix_instances (1200/400) key: '.$section_tipo .'_'. $section_id);
+				}
+
+			// find current instance in cache
+				// $cache_key = $matrix_table.'_'.$section_id .'_'. $section_tipo;
+				$cache_key = $section_tipo .'_'. $section_id;
+				if ( !isset(self::$ar_JSON_RecordObj_matrix_instances[$cache_key]) ) {
+					self::$ar_JSON_RecordObj_matrix_instances[$cache_key] = new JSON_RecordObj_matrix($matrix_table, $section_id, $section_tipo);
+				}
 
 
-		return self::$ar_JSON_RecordObj_matrix_instances[$key];
+		return self::$ar_JSON_RecordObj_matrix_instances[$cache_key];
 	}//end get_instance
 
 
