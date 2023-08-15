@@ -1208,8 +1208,13 @@ section.prototype.get_total = async function() {
 
 	const self = this
 
+	// debug
+		if(SHOW_DEBUG===true) {
+			console.warn('section get_total self.total:', self.total);
+		}
+
 	// already calculated case
-		if (self.total) {
+		if (self.total || self.total==0) {
 			return self.total
 		}
 
