@@ -14,10 +14,44 @@ So we came to define a search query object, because we knew that early PostgreSQ
 
 Search Query Object defines an object with normalized properties to create a database query. Dédalo SQO definition is inspired by Mango query language interface of Apache [CouchDB](https://docs.couchdb.org/en/stable/api/database/find.html).
 
+## Search flow
+
+Search Query Object is send as part of Request Query Object to be processed by server API, the Search Query Object is parsed by Search Class and processed by every component involve into the query, the SQO parsed will be used to create the final SQL to be sent to the DDBB. The final result will send to client in JSON format.
+
+```mermaid
+    graph TD
+    A(["User  search 
+     {q='orange cat'}"]) -- RQO with SQO--> B
+    B(("API :: read()
+    action : search"))
+    B --SQO--> C(("search :: search()" ))
+    C --is send to preparse--> D("search :: pre_parse_search_query_object()" )
+    D-- result preparsed -->C
+    D --is send to--> E("search :: conform_search_query_object()" )
+    E-- result -->D
+    E --is send to--> F("component_common :: get_search_query()" )
+    F-- result -->E
+    F-- is send to -->G
+    G("component :: resolve_query_object_sql() 
+      q='orange'")
+    F-- is send to -->H
+    H("component :: resolve_query_object_sql() 
+      q='cat' ")
+    G-- result -->F
+    H-- result -->F
+    C-- wait for preparse--> I("search :: parse_search_query_object()" )
+    I--SQL--> J("JSON_RecordOBJ_matrix :: search_free()" )
+    J--SQL-->Q[(matrix tables)]
+    Q --PgSql\Result--> K{{"result :: 
+    {ar_records:[{'Raspa'}]}"}}
+    K --Object--> B
+    B --JSON--> A
+```
+
 ## Parameters
 
 - **id** : `string` section_tipo and other params to define the unique id **optional** | ex : oh1
-- **section_tipo** : `array || string` array of section_tipo or string with the section_tipo for search **mandatory** | ex : ['oh1']
+- **section_tipo** : `array || string` array of section_tipo or string with the section_tipo for search **mandatory** | ex : `['oh1']`
 - **mode** : `string` ('edit' || 'list' || 'tm' || 'related') configure the sqo for search witch different models of matrix tables into the DDBB **optional** | ex : 'list'
 - **filter** : `object` definition of the filter to be apply at search **optional**
   - **operator** : `array of objects` operator key define the operator ('\$and' || '\$or') they are identified by the use of a dollar sign (\$) prefix in the name property, array value has the arguments `objects` to be affected by operator. **mandatory**, `{"$operator": [arguments]}`
@@ -29,22 +63,22 @@ Search Query Object defines an object with normalized properties to create a dat
     - **q_split** : `bool` (true || false) defines if the q need to be split into multiple WHERE queries. Default : true **optional**, ex: 'false'
     - **unaccent** : `bool` (true || false) defines if the q will us the unaccent function to remove accent characters in WHERE **optional**, ex: 'false'
     - **type** : `string` ('jsonb' || 'string)  defines the type of data to be searched **optional**, ex: 'jsonb'
-  - **limit** : `int` records limit **optional**, ex: 10
-  - **offset** : `int` records offset **optional**, ex: 10
-  - **full_count** : `bool || int` (true || false || 1) get the total records find . When int is passed disable the function for full count and get the number as total **optional**, ex: true
-  - **order** : `array of objects` set the order of the records, every object in the array will be a column with his paths and direction **optional** `[{"direction": "ASC", "path":[{ddo},{ddo}]}]]`
-    - **direction** : `string` (ASC || DESC) sort direction of the column **optional**, ex: 'DESC'
-    - **path** : `array of objects` the [ddo](dd_object.md) object that defines the path of the column beginning from the main section of the filter and path of ddo to the component in related section/s. **optional** `[{"section_tipo":"oh1","component_tipo":"oh24"},{"section_tipo":"rsc197", "component_tipo":"rsc85"}]`
-  - **order_custom** : `object` order by specific values **optional**, ex: `{"column_name": [values]}`
-    - **column_name** : `string` name of the column to be ordered **optional**
-    - **values** : `array` the array defines the order of the values **optional**
-  - **filter_by_locators** : `array of objects` set a order by locators, every object is a [locator](locator.md) and the order of the array will be respected **optional** ex : `[{"section_tipo":"oh1", "section_id":"8"},{"section_tipo":"oh1", "section_id":"3"}]`
-  - **allow_sub_select_by_id** : `bool` (true || false) create a window in the SQL query to select pass the filter and get the id to select the main section default : true **optional** .
-  - **children_recursive** : `bool` (true || false) filter the term of hierarchy and get the all children nodes dependents of the searched term. Default : false  **optional**
-  - **remove_distinct** : `bool` (true || false) remove duplicates records when the SQL query has a window with multiple criteria that can get duplicate records. Default : true **optional**
-  - **skip_projects_filter** : `bool` (true || false) remove the mandatory filter of the component_filter applied at all users except root and global admin users. Default : false **optional**
-  - **parsed** : `bool` (true || false) state of the sqo, it indicates if the filter was parsed by the components to add operators to the q. It's used as internal property, but is possible parse it manually and indicate this state. Default flase  **optional**
-  - **select** : `array of objects` array of ddo with defines the SELECT parameter **DEPRECATED DO NOT USED IN V6**
+- **limit** : `int` records limit **optional**, ex: 10
+- **offset** : `int` records offset **optional**, ex: 10
+- **full_count** : `bool || int` (true || false || 1) get the total records find . When int is passed disable the function for full count and get the number as total **optional**, ex: true
+- **order** : `array of objects` set the order of the records, every object in the array will be a column with his paths and direction **optional** `[{"direction": "ASC", "path":[{ddo},{ddo}]}]]`
+  - **direction** : `string` (ASC || DESC) sort direction of the column **optional**, ex: 'DESC'
+  - **path** : `array of objects` the [ddo](dd_object.md) object that defines the path of the column beginning from the main section of the filter and path of ddo to the component in related section/s. **optional** `[{"section_tipo":"oh1","component_tipo":"oh24"},{"section_tipo":"rsc197", "component_tipo":"rsc85"}]`
+- **order_custom** : `object` order by specific values **optional**, ex: `{"column_name": [values]}`
+  - **column_name** : `string` name of the column to be ordered **optional**
+  - **values** : `array` the array defines the order of the values **optional**
+- **filter_by_locators** : `array of objects` set a order by locators, every object is a [locator](locator.md) and the order of the array will be respected **optional** ex : `[{"section_tipo":"oh1", "section_id":"8"},{"section_tipo":"oh1", "section_id":"3"}]`
+- **allow_sub_select_by_id** : `bool` (true || false) create a window in the SQL query to select pass the filter and get the id to select the main section default : true **optional** .
+- **children_recursive** : `bool` (true || false) filter the term of hierarchy and get the all children nodes dependents of the searched term. Default : false  **optional**
+- **remove_distinct** : `bool` (true || false) remove duplicates records when the SQL query has a window with multiple criteria that can get duplicate records. Default : true **optional**
+- **skip_projects_filter** : `bool` (true || false) remove the mandatory filter of the component_filter applied at all users except root and global admin users. Default : false **optional**
+- **parsed** : `bool` (true || false) state of the sqo, it indicates if the filter was parsed by the components to add operators to the q. It's used as internal property, but is possible parse it manually and indicate this state. Default flase  **optional**
+- **select** : `array of objects` array of ddo with defines the SELECT parameter **DEPRECATED DO NOT USED IN V6**
 
 ### Summary
 
@@ -170,7 +204,7 @@ Example: Search 'Ana' in the field name [rsc85](https://dedalo.dev/ontology/rsc8
 
 Defines the section/s of the search. It can be a string when the search is for one section or it can be array when the search is with multiple sections as toponymy search in multiple countries as Spain, France, ... (es1, fr1, ...).
 
-Definition : `array || string` array of section_tipo or string with the section_tipo for search **mandatory** | ex : ['oh1']
+Definition : `array || string` array of section_tipo or string with the section_tipo for search **mandatory** | ex : `['oh1']`
 
 Section is a mandatory property, it define where we want to do the search, where the data is that we are looking for.
 Is possible use a string or array when the section to search is only one, but it's recommendable to use always a array definition. Using the array is extensible and it's possible add new section easily.
@@ -200,13 +234,15 @@ Example with multiple sections: Search 'Benimamet' in the field Term [hierarchy2
   "filter": {
     "$and": [{
         "q": "Benimamet",
-        "path": [{
-            "section_tipo": "es1",
-            "component_tipo": "hierarchy25"
-          },{
-            "section_tipo": "fr1",
-            "component_tipo": "hierarchy25"
-          }]
+        "path": [
+            {
+              "section_tipo": "es1",
+              "component_tipo": "hierarchy25"
+            },{
+              "section_tipo": "fr1",
+              "component_tipo": "hierarchy25"
+            }
+          ]
       }]
   }
 }
@@ -223,64 +259,90 @@ Example with multiple sections, using `all` section: Search 'Benimamet' in the f
 ```json
 {
   "section_tipo": ["all"],
-  "filter": {
-    "$and": [{
-        "q": "Benimamet",
-        "path": [{
-            "section_tipo": "all",
-            "component_tipo": "hierarchy25"
-          }
-      }]
+  "mode": "related",
+  "filter_by_locators" : [{
+    "section_tipo" : "rsc197",
+    "section_id" : "2"
+  }]
   }
+```
+
+the result will be a mix of data from different sections:
+
+```json
+{
+  "result":[
+    {
+      "section_tipo" : "oh1",
+      "section_id" : "2"
+      "datos":{
+        "components":{
+          "oh16":{
+            "inf": "Title",
+            "dato": {
+              "lg-spa": "my second interview"
+            }
+          }
+        }
+      }
+    },
+    {
+      "section_tipo" : "rsc197",
+      "section_id" : "88"
+      "datos":{
+        "relations":[{
+          "section_tipo" : "rsc197",
+          "section_id" : "2"
+        }]
+      }
+    }
+  ]
 }
 ```
 
-the result here could be:
-```json
-{"result:[
-  {
-
-  }
-]}
-```
-
-
 ### mode
 
-Defines what kind of search will be done, in previous version yo v5 mode was used to create the lists or the edit views of the search, but, after v6, mode property is using to define the type of the search, if the search is in time machine or regular matrix tables or if you want search in hierarchies (to get children) or you want get the relations instead to get the main section search.
+Defines what kind of search will be done, in previous versions to v6 mode was used to create the lists or the edit views of the search, but, after v6, mode property is using to define the type of the search, if the search is in time machine or regular matrix tables or if you want search in hierarchies (to get children) or you want get the relations instead to get the main section search.
 
 Definition: `string` ('edit' || 'list' || 'tm' || 'related') configure the sqo for search witch different models of matrix tables into the DDBB **optional** | ex : 'list'
 
-Example with one section: Search '87C_g25' in the field Code [oh14](https://dedalo.dev/ontology/oh14) of the section Oral History [oh1](https://dedalo.dev/ontology/oh1)
+Example: give me the time machine of the Oral History section [oh1](https://dedalo.dev/ontology/oh1)
 
 ````json
 {
   "section_tipo": "oh1",
-  "filter": {
-    "$and": [{
-        "q": "87C_g25",
-        "path": [{
-            "section_tipo": "oh1",
-            "component_tipo": "oh14"
-          }]
-      }]
-  }
+  "mode": "tm",
+  "order" : [{
+    "direction" : "DESC",
+    "path" : [
+      { 
+        "component_tipo" : "id" 
+      }
+      ]
+  }]
 }
 ````
-
 
 ### filter
 
 Filter object defines the properties to be applied to the search, filter options will be interpreted in the same way than SQL WHERE clause.
-Filter will be interpreted by any component to apply hiw own rules so filter has two states, parsed or not, when the SQO, by default filter is un parsed, because when create a new sqo it's not possible to identified the operators or data forms of every component, and the filter need to be created in the same way to different situations, when the sqo is send to the Dédalo server, every component will interpreted his part of the search and parse his own part to the final format.
+
+Filter will be parsed by the components to apply his own rules, therefore filter has two states, parsed or not. By default filter is unparsed because when create a new sqo it's not possible to identified the operators or data forms of every component, and the filter need to be created in the same way to different situations, when the sqo is send to the Dédalo server, every component will interpreted his part of the search and parse his own part to the final format, and the filter will change to parse state.
+
+In some cases the filter property is not necessary to be set, such as time machine searches, in these cases the sqo interprets that it is necessary to obtain all the data.
 
 Definition: `object` definition of the filter to be apply at search **optional**
+
+The filter is a object with at least one boolean operator as first property:
 
 #### operator
 
 Defines which boolean operator will be applied to the query. Operator is an array or queries objects, every query object has his own properties and the operator will be applied between every of this query objects.
 
 Definition : `array of objects` operator key define the operator ('\$and' || '\$or') they are identified by the use of a dollar sign (\$) prefix in the name property, array value has the arguments `objects` to be affected by operator. **mandatory**, `{"$operator": [arguments]}`
+
+!!! Note about the mandatory od the operator
+  this property is dependent of the filter. When the filter is present into the SQO the operator is mandatory, if the filter is not present it's not necessary define one operator.
 
 The filter object need to has at least one operator defined as property of the object. By default, 'AND' operator is added as `$and` key of the filter object.
 
@@ -368,13 +430,714 @@ To define a filter to search 'Isis' name
 }
 ```
 
+When the component to search is a input type text (such as component_text_area or component_input_text) q property could has operator inside the text. Every component defines his own operators as: begins, equal, etc.
+
+To define a filter to search any word that begins by 'Is' the operator will be: 'Is*'
+
+```json
+"filter":{
+  "$and":[{
+    "q" : "Is*"
+  }]
+}
+```
+
+##### q_operator
+
+Defines the operator to be used in components that has not an input type text. Some components, as selects, radio buttons, or portals, etc, has not a input to write the value to search, this kind of components use a parallel input text to define the operator to be used in combination of component data, the value of this input text is set to q_operator property.
+
+Definition : `string` operator to be applied to q ,  **optional**, ex: '<'
+
+Example: find if the component has some value
+
+```json
+"filter":{
+  "$and":[{
+    "q_opeator" : "*"
+  }]
+}
+```
+
+Example: find if the component doesn't has any value
+
+```json
+"filter":{
+  "$and":[{
+    "q_opeator" : "!*"
+  }]
+}
+```
+
+##### path
+
+Defines the path to the search component from current section. Sometimes the component to be searched could be linked by any portal (with a locator) so the component is not inside the current section, it's in other section and in this case SQO need follow the path to find the component. The path defines the deep into linked data sections.
+
+Definition: `array of objects` an array of components creating a sequential path of the component to be searched,  **mandatory**, ex: `[{"section_tipo":"oh1","component_tipo":"oh24"},{"section_tipo":"rsc197", "component_tipo":"rsc85"}]}`
+
+See this situation:
+
 ```mermaid
     graph LR
-    A((Filter user interface :: search.js | q='orange cat')) --is send to--> B((API :: read ))
-    B --is send to--> C((search :: search ))
-    C --is send to--> D((search :: pre_parse_search_query_object() ))
-    D --is send to--> E((search :: conform_search_query_object() ))
-    E --is send to--> F((component :: get_search_query() ))
-    G --true--> H((component :: get_search_query() ))
-    G --false--> H((component :: return(q='orange cat')) ))
+    A(("Oral History :: section"))-->B(Informants :: component_portal)
+    B-->C(("People under study :: section"))
 ```
+
+The Oral History section [rsc85](https://dedalo.dev/ontology/rsc85) is linked to People under study section [rsc197](https://dedalo.dev/ontology/rsc197) by the component Informants [oh24](https://dedalo.dev/ontology/oh24).
+
+!!! SQL equivalence
+  Path is equivalent to JOIN statement into SQL, the sections are equivalent to tables and the components are the columns that linked this tables.
+
+To search interviews of informants born in 1928 the SQO should follow previous path to locate the date of birth component [rsc89](https://dedalo.dev/ontology/rsc89).
+
+```json
+{
+  "section_tipo": ["oh1"],
+  "filter": {
+      "$and": [
+          {
+              "q": [
+                  {
+                      "mode": "start",
+                      "start": {
+                          "year": 1928
+                      }
+                  }
+              ],
+              "path": [
+                  {
+                      "section_tipo": "oh1",
+                      "component_tipo": "oh24",
+                      "model": "component_portal",
+                      "name": "Informants"
+                  },
+                  {
+                      "section_tipo": "rsc197",
+                      "component_tipo": "rsc89",
+                      "model": "component_date",
+                      "name": "Date of birth"
+                  }
+              ]
+          }
+      ]
+  }
+}
+```
+
+The last object of the path will be used to search the value of the query. The result data will be the interviews (in oral history section) that match with the query.
+
+##### format
+
+Defines the parse method to be applied to the SQO when it is transform into SQL.
+
+SQO can be interpreted as different SQL with different uses, the format property control how will be parsed and witch kind of search perform.
+
+Definition : `string` ('direct' || 'array_elements' || 'typeof' || 'column' || 'in_column' || 'function') used to change the WHERE format **optional**, ex: 'direct'
+
+Example: search the id's 1 and 6 of interviews [oh1](https://dedalo.dev/ontology/oh1).
+
+1.- format "column":
+
+```json
+{
+  "section_tipo": [ "oh1" ],
+  "filter": {
+      "$and": [
+          {
+              "q": [ "1,6" ],
+              "path": [
+                  {
+                      "section_tipo": "oh1",
+                      "component_tipo": "oh62",
+                      "model": "component_section_id"
+                  }
+              ],
+              "format": "column"
+          }
+      ]
+  }
+}
+```
+
+And it will be passed:
+
+```sql
+SELECT * 
+FROM matrix AS oh1
+WHERE (oh1.section_tipo='oh1') AND 
+  (oh1.section_id = 1 OR oh1.section_id = 6)
+ORDER BY oh1.section_id ASC 
+LIMIT 10
+```
+
+2.- format "in_column" the same SQO:
+
+```json
+{
+  "section_tipo": [ "oh1" ],
+  "filter": {
+      "$and": [
+          {
+              "q": ["1,6"],
+              "path": [
+                  {
+                      "section_tipo": "oh1",
+                      "component_tipo": "oh62",
+                      "model": "component_section_id"
+                  }
+              ],
+              "format": "in_column"
+          }
+      ]
+  }
+}
+```
+
+And it will be passed:
+
+```sql
+SELECT *
+FROM matrix AS oh1
+WHERE (oh1.section_tipo='oh1') AND 
+  (oh1.section_id IN(1,6))
+ORDER BY oh1.section_id ASC
+LIMIT 10
+```
+
+Both are valid SQL, but with different approach.
+
+##### use_function
+
+Defines the PostgreSQL function to be used in the query. The parameter is used in combination with [format](#format) parameter with value `function`, `format` say to the SQO that it will use a function and `use_function` defines the name of the function to be used.
+The function will be applied to WHERE statement enclosing the q and the main operator.
+
+Definition: `string` if format is function use_function define the PostgreSQL function to be used. **optional**, ex: 'relations_flat_fct_st_si'
+
+Example: Search the types [numisdata3](https://dedalo.dev/ontology/numisdata3) with the catalog [numisdata309](https://dedalo.dev/ontology/numisdata309) value = 1.
+
+Noramally this search will use a locator in this way:
+
+```json
+{
+    "section_tipo": "numisdata300",
+    "section_id": 1,
+    "from_component_tipo": "numisdata309"
+}
+```
+
+But in SQL is hard to index all locators because it's not static combination of properties, so, in theses cases is possible to use a flat version (string version of the locator) to speed up the search.
+
+The previous locator to search can be flatten as: `numisdata309_numisdata300_1` And use it to search in the indexed function 
+`relations_flat_fct_st_si` in this way:
+
+```json
+{
+  "section_tipo": [ "numisdata3" ],
+  "filter": {
+      "$and": [
+          {
+              "q": "\"numisdata309_numisdata300_1\"",
+              "path": [
+                  {
+                      "section_tipo": "numisdata3",
+                      "component_tipo": "numisdata309"
+                  }
+              ],
+              "format": "function",
+              "use_function": "relations_flat_fct_st_si"
+          }
+      ]
+  }
+}
+```
+
+It will be format as SQL:
+
+```sql
+SELECT * 
+FROM matrix AS nu3
+WHERE (nu3.section_tipo='numisdata3') AND nu3.section_id>0  AND (
+relations_flat_fct_st_si(nu3.datos)@> '["numisdata309_numisdata300_1"]')
+ORDER BY nu3.section_id ASC 
+LIMIT 10
+```
+
+This search is around x100 times faster than the same search with the full locator.
+
+##### q_split
+
+Defines if the words or the query (in [q](#q) parameter) need to be split into multiple WHERE statements. When q_split is set to true, it create multiple WHERE for every word in the query and add a AND operator between them because the words will be searched at any place of the text, be default it set in true.
+
+Defintion : `bool` (true || false) defines if the q need to be split into multiple WHERE queries. Default : true **optional**, ex: 'false'
+
+Example: Search the interviews [oh1](https://dedalo.dev/ontology/oh1) abstract [oh23](https://dedalo.dev/ontology/oh23) has the words "war 1939"
+
+Look the text:
+
+"... the Spanish Civil War ended at April 1th of 1939 ..."
+
+With q_split set in true the search will find it.
+With q_split set in false the search will not find it, because the words "war" and "1939" are not in the order to search, it has "ended at April 1th of" words in middle.
+
+```json
+{
+  "section_tipo": [ "oh1" ],
+  "filter": {
+      "$and": [
+          {
+              "q": "war 1939",
+              "path": [
+                  {
+                      "section_tipo": "oh1",
+                      "component_tipo": "oh23"
+                  }
+              ],
+              "q_split": true,
+          }
+      ]
+  }
+}
+```
+
+```sql
+SELECT *
+FROM matrix AS oh1
+WHERE (oh1.section_tipo='oh1') AND oh1.section_id>0  AND ( (
+  f_unaccent(oh1.datos#>>'{components,oh23,dato}') ~* f_unaccent('.*".*war.*') AND
+  f_unaccent(oh1.datos#>>'{components,oh23,dato}') ~* f_unaccent('.*".*1939.*') 
+))
+ORDER BY oh1.section_id ASC
+LIMIT 10
+```
+
+But when the q_split is set to false:
+
+```json
+{
+  "section_tipo": [ "oh1" ],
+  "filter": {
+      "$and": [
+          {
+              "q": "war 1939",
+              "path": [
+                  {
+                      "section_tipo": "oh1",
+                      "component_tipo": "oh23"
+                  }
+              ],
+              "q_split": false,
+          }
+      ]
+  }
+}
+```
+
+The SQL where sentence will has only 1 statement with the sentence to be search as exactly the user has input and, in these case, it do not match.
+
+```sql
+SELECT *
+FROM matrix AS oh1
+WHERE (oh1.section_tipo='oh1') AND oh1.section_id>0  AND ( (
+  f_unaccent(oh1.datos#>>'{components,oh23,dato}') ~* f_unaccent('.*".*war 1939.*')
+))
+ORDER BY oh1.section_id ASC
+LIMIT 10
+```
+
+##### unaccent
+
+Defines if the unaccent function will be applied to the [q](#q). Unaccented function search without the accent and all letters will searched in lowercase (without match the case of the letter), by default text search set this parameter to true. THis function is ussed by languages as Spanish, Catalan or French that use accent letters suck as: àáäâéèëêìíïîòóöôùúüû etc.
+
+Description: `bool` (true || false) defines if the q will us the unaccent function to remove accent characters in WHERE **optional**, ex: 'false'
+
+Example: Search interviews [oh1](https://dedalo.dev/ontology/oh1) abstract [oh23](https://dedalo.dev/ontology/oh23) has the word `Bèl·lic`, unaccent function will match any words as `bel·lic`, `Bel·lic`, `bèl·lic`, etc.
+
+```json
+{
+  "section_tipo": [ "oh1" ],
+  "filter": {
+      "$and": [
+          {
+              "q": "Bèl·lic",
+              "path": [
+                  {
+                      "section_tipo": "oh1",
+                      "component_tipo": "oh23"
+                  }
+              ],
+              "unaccent": true
+          }
+      ]
+  }
+}
+```
+
+It will be transform to SQL as:
+
+```sql
+SELECT DISTINCT *
+FROM matrix AS oh1
+WHERE (oh1.section_tipo='oh1') AND oh1.section_id>0  AND 
+  (f_unaccent(oh1.datos#>>'{components,oh23,dato}') ~* f_unaccent('.*".*Bèl·lic.*') )
+ORDER BY oh1.section_id ASC
+LIMIT 10
+```
+
+But, if we want to search exactly the word as user typed, it's possible to disable unaccent:
+
+```json
+{
+  "section_tipo": [ "oh1" ],
+  "filter": {
+      "$and": [
+          {
+              "q": "Bélic",
+              "path": [
+                  {
+                      "section_tipo": "oh1",
+                      "component_tipo": "oh23"
+                  }
+              ],
+              "unaccent": false
+          }
+      ]
+  }
+}
+```
+
+The SQL where sentence will doesn't have the unaccent function.
+
+```sql
+SELECT DISTINCT *
+FROM matrix AS oh1
+WHERE (oh1.section_tipo='oh1') AND oh1.section_id>0  AND 
+  (oh1.datos#>>'{components,oh23,dato}' ~* '.*".*Bélic.*')
+ORDER BY oh1.section_id ASC
+LIMIT 10
+```
+
+##### type
+
+Defines if the search will use json or string format into the WHERE SQL clause. In Dédalo all data is stored in JSON format, every component has his own data inside an array, but some components has a string as value and other has a object. If the component has object, such as component_date, the search will use the `json` type, but if the component has a string as value, as component_input_text, it will dicide if it will use the `jsonb` or `string` type dependent of the [q](#q).
+
+Definition: `string` ('jsonb' || 'string)  defines the type of data to be searched **optional**, ex: 'jsonb'
+
+Example: search interviews [oh1](https://dedalo.dev/ontology/oh1) with title [oh16](https://dedalo.dev/ontology/oh16) `mother` in jsonb format.
+
+```json
+{
+ "section_tipo": ["oh1"],
+    "filter": {
+        "$and": [
+            {
+                "q": [ "mother" ],
+                "path": [
+                    {
+                        "section_tipo": "oh1",
+                        "component_tipo": "oh16"
+                    }
+                ],
+                "type": "jsonb"
+            }
+        ]
+    }
+}
+```
+
+### limit
+
+Defines the maximum records to get from the database. It is equivalent to LIMIT in SQL.
+
+Definition: `int` records limit **optional**, ex: 10
+
+Example: search the first 10 interviews [oh1](https://dedalo.dev/ontology/oh1) with title [oh16](https://dedalo.dev/ontology/oh16) `mother`.
+
+```json
+{
+ "section_tipo": ["oh1"],
+    "filter": {
+        "$and": [
+            {
+                "q": [ "mother" ],
+                "path": [
+                    {
+                        "section_tipo": "oh1",
+                        "component_tipo": "oh16"
+                    }
+                ]
+            }
+        ]
+    },
+    "limit": 10
+}
+```
+
+### offset
+
+Defines the amount or distance is out of records to get records from the database. It is equivalent to OFFSET in SQL.
+`offset` says how many records to skip before beginning to return records. `offset` 0 is the same as omitting it or with null value. It is used in combination with limit to paginate / navigate between records.
+
+Definition: `int` records to skip **optional**, ex: 10
+
+Example: search the next 10 interviews [oh1](https://dedalo.dev/ontology/oh1) with title [oh16](https://dedalo.dev/ontology/oh16) `mother` after the first 10 interviews that match the criteria (it will return the 11 to 20 interviews)
+
+```json
+{
+ "section_tipo": ["oh1"],
+    "filter": {
+        "$and": [
+            {
+                "q": [ "mother" ],
+                "path": [
+                    {
+                        "section_tipo": "oh1",
+                        "component_tipo": "oh16"
+                    }
+                ]
+            }
+        ]
+    },
+    "limit": 10,
+    "offset" : 10
+}
+```
+
+### full_count
+
+Defines if the search will count the total records found. When full_count is enable, SQO will create 2 different SQL, first one with the search and second one to count the records, both SQL will be processed in parallel. This parameter is used to get the total records found, as this SQL could take lot of time and server resources, normally only is active in the first query, the following requests set this parameter with the total perviously calculated, this action remove the execution of get the total at every requests.
+
+Definition: `bool || int` (true || false || 1) get the total records find . When int is passed disable the function for full count and get the number as total **optional**, ex: true
+
+Example: search the first 10 interviews [oh1](https://dedalo.dev/ontology/oh1) with title [oh16](https://dedalo.dev/ontology/oh16) `mother` and count the total matches.
+
+```json
+{
+ "section_tipo": ["oh1"],
+    "filter": {
+        "$and": [
+            {
+                "q": [ "mother" ],
+                "path": [
+                    {
+                        "section_tipo": "oh1",
+                        "component_tipo": "oh16"
+                    }
+                ]
+            }
+        ]
+    },
+    "limit": 10,
+    "full_count": true
+}
+```
+
+```sql
+--1 search the records:
+SELECT *
+FROM matrix AS oh1
+WHERE (oh1.section_tipo='oh1') AND oh1.section_id>0  AND 
+  (f_unaccent(oh1.datos#>>'{components,oh16,dato}') ~* f_unaccent('.*\[".*mother.*'))
+ORDER BY oh1.section_id ASC 
+LIMIT 10;
+
+-- 2 count the total
+SELECT COUNT(*) as full_count FROM (
+  SELECT DISTINCT oh1.section_id
+  FROM matrix AS oh1
+  WHERE (oh1.section_tipo='oh1') AND oh1.section_id>0  AND 
+    (f_unaccent(oh1.datos#>>'{components,oh16,dato}') ~* f_unaccent('.*\[".*mother.*'))
+)
+x;
+```
+
+### order
+
+Defines the component or components that will use to order the records found. Order is set as array of columns that defines the configuration of the component to be used to configure the order, every object has a [path](#path-1) and [direction](#direction), the array order fix the priority.
+
+Definition: `array of objects` set the order of the records, every object in the array will be a column with his paths and direction **optional** `[{"direction": "ASC", "path":[{ddo},{ddo}]}]]`
+
+Example: give me the first 10 records of Numismatic objects [numisdata4](https://dedalo.dev/ontology/numisdata4) orderer by Collections [numisdata159](https://dedalo.dev/ontology/numisdata159) people name [rsc85](https://dedalo.dev/ontology/rsc85) in descendent order.
+
+```json
+{
+    "section_tipo": [ "numisdata4" ],
+    "limit": 10,
+    "offset": 0,
+    "order": [
+        {
+            "direction": "DESC",
+            "path": [
+                 {
+                    "component_tipo": "numisdata159",
+                    "model": "component_portal",
+                    "section_tipo": "numisdata4"
+                },
+                {
+                    "component_tipo": "rsc85",
+                    "model": "component_input_text",
+                    "section_tipo": "rsc194"
+                }
+            ]
+        }
+    ]
+}
+```
+
+It will be processed as SQL:
+
+```sql
+SELECT *
+FROM (
+  SELECT DISTINCT ON (nu4.section_id) nu4.section_id,
+  nu4.section_tipo,
+  nu4.datos,
+  nu4_nu159_rs194.datos#>>'{components,rsc85,dato,lg-nolan}' as rsc85_order
+  FROM matrix AS nu4
+  -- join Numisamtic object with the relations with Collections section
+  LEFT JOIN relations AS r_nu4_nu159_rs194 ON (nu4.section_id=r_nu4_nu159_rs194.section_id AND nu4.section_tipo=r_nu4_nu159_rs194.section_tipo AND r_nu4_nu159_rs194.from_component_tipo='numisdata159')
+  LEFT JOIN matrix AS nu4_nu159_rs194 ON (r_nu4_nu159_rs194.target_section_id=nu4_nu159_rs194.section_id AND r_nu4_nu159_rs194.target_section_tipo=nu4_nu159_rs194.section_tipo)
+  WHERE (nu4.section_tipo='numisdata4') AND nu4.section_id>0
+  ORDER BY nu4.section_id ASC
+) main_select
+ORDER BY rsc85_order DESC NULLS LAST , section_id ASC
+LIMIT 10;
+```
+
+#### direction
+
+Defines the order of the records. Used in combination with [order](#order).
+
+Definition: `string` (ASC || DESC) sort direction of the column **optional**, ex: 'DESC'
+
+Example: give me the first 10 records of Numismatic objects [numisdata4](https://dedalo.dev/ontology/numisdata4) orderer by Collections [numisdata159](https://dedalo.dev/ontology/numisdata159) people name [rsc85](https://dedalo.dev/ontology/rsc85) in ascendent order.
+
+```json
+{
+    "section_tipo": [ "numisdata4" ],
+    "limit": 10,
+    "offset": 0,
+    "order": [
+        {
+            "direction": "ASC",
+            "path": [
+                 {
+                    "component_tipo": "numisdata159",
+                    "model": "component_portal",
+                    "section_tipo": "numisdata4"
+                },
+                {
+                    "component_tipo": "rsc85",
+                    "model": "component_input_text",
+                    "section_tipo": "rsc194"
+                }
+            ]
+        }
+    ]
+}
+```
+
+It will be processed as SQL:
+
+```sql
+SELECT * 
+FROM (
+  SELECT DISTINCT ON (nu4.section_id) nu4.section_id,
+  nu4.section_tipo,
+  nu4.datos,
+  nu4_nu159_rs194.datos#>>'{components,rsc85,dato,lg-nolan}' as rsc85_order
+  FROM matrix AS nu4
+ -- join Numisamtic object with the relations with Collections section
+  LEFT JOIN relations AS r_nu4_nu159_rs194 ON (nu4.section_id=r_nu4_nu159_rs194.section_id AND nu4.section_tipo=r_nu4_nu159_rs194.section_tipo AND r_nu4_nu159_rs194.from_component_tipo='numisdata159')
+  LEFT JOIN matrix AS nu4_nu159_rs194 ON (r_nu4_nu159_rs194.target_section_id=nu4_nu159_rs194.section_id AND r_nu4_nu159_rs194.target_section_tipo=nu4_nu159_rs194.section_tipo)
+  WHERE (nu4.section_tipo='numisdata4') AND nu4.section_id>0
+  ORDER BY nu4.section_id ASC
+) main_select
+ORDER BY rsc85_order ASC NULLS LAST , section_id ASC
+LIMIT 10;
+```
+
+#### path
+
+Defines the path to follow to get the component to be used in the order.
+
+Sections are connected by locators, and is necessary follow the path to locate the component in the target section. For example, Numismatic object section [numisdata4](https://dedalo.dev/ontology/numisdata4) has a component named Collection [numisdata159](https://dedalo.dev/ontology/numisdata159) that point to People section [rsc194](https://dedalo.dev/ontology/rsc194). If we want to order by the name of the collection person, is necessary to locate the component Name [rsc85](https://dedalo.dev/ontology/rsc85) in the Person section. To do that, path defines the components to be followed until the target.
+
+```mermaid
+    graph LR
+    A(("Numismatic objects :: section"))-->B(Collections :: component_portal)
+    B-->C(("People :: section"))
+    C-->D("Name :: component_input_text")
+```
+
+To define the component is used the [ddo](dd_object.md) definition. The previous graph will be represented as:
+
+```json
+[
+  {
+    "component_tipo": "numisdata159",
+    "model": "component_portal",
+    "section_tipo": "numisdata4"
+  },
+  {
+    "component_tipo": "rsc85",
+    "model": "component_input_text",
+    "section_tipo": "rsc194"
+  }
+]
+```
+
+The last ddo in the array is the target component to use in the order.
+
+Definition: `array of objects` the [ddo](dd_object.md) object that defines the path of the column beginning from the main section of the filter and path of ddo to the component in related section/s. **optional** `[{"section_tipo":"oh1","component_tipo":"oh24"},{"section_tipo":"rsc197", "component_tipo":"rsc85"}]`
+
+Example: give me the first 10 records of Numismatic objects [numisdata4](https://dedalo.dev/ontology/numisdata4) orderer by Collections [numisdata159](https://dedalo.dev/ontology/numisdata159) people name [rsc85](https://dedalo.dev/ontology/rsc85) in ascendent order.
+
+```json
+{
+    "section_tipo": [ "numisdata4" ],
+    "limit": 10,
+    "offset": 0,
+    "order": [
+        {
+            "direction": "ASC",
+            "path": [
+                 {
+                    "component_tipo": "numisdata159",
+                    "model": "component_portal",
+                    "section_tipo": "numisdata4"
+                },
+                {
+                    "component_tipo": "rsc85",
+                    "model": "component_input_text",
+                    "section_tipo": "rsc194"
+                }
+            ]
+        }
+    ]
+}
+```
+
+It will be processed as SQL:
+
+```sql
+SELECT * 
+FROM (
+  SELECT DISTINCT ON (nu4.section_id) nu4.section_id,
+  nu4.section_tipo,
+  nu4.datos,
+  nu4_nu159_rs194.datos#>>'{components,rsc85,dato,lg-nolan}' as rsc85_order
+  FROM matrix AS nu4
+ -- join Numisamtic object with the relations with Collections section
+  LEFT JOIN relations AS r_nu4_nu159_rs194 ON (nu4.section_id=r_nu4_nu159_rs194.section_id AND nu4.section_tipo=r_nu4_nu159_rs194.section_tipo AND r_nu4_nu159_rs194.from_component_tipo='numisdata159')
+  LEFT JOIN matrix AS nu4_nu159_rs194 ON (r_nu4_nu159_rs194.target_section_id=nu4_nu159_rs194.section_id AND r_nu4_nu159_rs194.target_section_tipo=nu4_nu159_rs194.section_tipo)
+  WHERE (nu4.section_tipo='numisdata4') AND nu4.section_id>0
+  ORDER BY nu4.section_id ASC
+) main_select
+ORDER BY rsc85_order ASC NULLS LAST , section_id ASC
+LIMIT 10;
+```
+
+### order_custom
+
+
+
+Definition: `object` order by specific values **optional**, ex: `{"column_name": [values]}`

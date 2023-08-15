@@ -275,6 +275,9 @@ tool_time_machine.prototype.get_component = async function(lang, mode, matrix_id
 */
 tool_time_machine.prototype.apply_value = function(options) {
 
+	alert("USER HAS PRESED APPLY VALUE IN TIME MACHINE!!!!!!!!!!!!!!!!");
+	console.trace();
+
 	const self = this
 
 	// options
