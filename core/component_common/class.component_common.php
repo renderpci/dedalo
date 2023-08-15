@@ -16,32 +16,32 @@ abstract class component_common extends common {
 		// string section_id. Component's section section_id
 		// protected $section_id;
 		// string parent. Component's section section_id (alias of $section_id)
-		protected $parent;
+		public $parent;
 		// string section_tipo. Component's section tipo
-		protected $section_tipo;
-		protected $valor_lang;				// string language of the final value of the component (if it is a list of values, the language of the field it points to that can be translated even if the component is not data "1" value: "Si" or "yes"
+		public $section_tipo;
+		public $valor_lang;				// string language of the final value of the component (if it is a list of values, the language of the field it points to that can be translated even if the component is not data "1" value: "Si" or "yes"
 		// protected $dato;					// object dato (JSON encoded in db)
-		protected $valor;					// string usually dato
-		protected $dataframe;				// object dataframe
+		public $valor;					// string usually dato
+		public $dataframe;				// object dataframe
 		public $version_date;				// date normally resolved from time machine and assigned to current component
 		public $locator;					// full locator used to instance the component, the instance only use section_tipo,component_tipo,mode,lang of the locator but we need the full locator to use properties as tag_id, top_tipo, etc.
-		protected $required;				// field is required . Valorar de usar 'Usable en Indexación' (tesauro) para gestionar esta variable
-		protected $debugger;				// info for admin
+		public $required;				// field is required . Valorar de usar 'Usable en Indexación' (tesauro) para gestionar esta variable
+		public $debugger;				// info for admin
 		// ar_tools_name. Default list of tools for every component. Override if component don't need this minimum tools
-		protected $ar_tools_name = [
+		public $ar_tools_name = [
 			'tool_time_machine',
 			'tool_lang',
 			'tool_replace_component_data',
 			'tool_add_component_data'
 		];
-		protected $ar_tools_obj;
-		protected $ar_authorized_tool_name;
+		public $ar_tools_obj;
+		public $ar_authorized_tool_name;
 
-		protected $exists_dato_in_any_lan = false;
-		protected $dato_resolved;
+		public $exists_dato_in_any_lan = false;
+		public $dato_resolved;
 
 		// expected language for this component (used to verify that the structure is well formed)
-		protected $expected_lang;
+		public $expected_lang;
 
 		// parent section obj (optional, useful for component_av...)
 		public $section_obj;

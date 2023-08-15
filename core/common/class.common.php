@@ -11,23 +11,23 @@ abstract class common {
 	* CLASS VARS
 	*/
 		// string tipo. like 'dd4525'
-		protected $tipo;
+		public $tipo;
 		// string mode. like 'edit'
-		protected $mode;
+		public $mode;
 		// string model. like 'component_date'
-		protected $model;
+		public $model;
 		// string lang. like 'lg-eng'
-		protected $lang;
+		public $lang;
 		// string label. like 'component_section_id'
-		protected $label;
-		protected $dato; // object dato (JSON encoded in db)
-		protected $section_id;
+		public $label;
+		public $dato; // object dato (JSON encoded in db)
+		public $section_id;
 
 		// object RecordObj_dd. Ontology definition object
 		public $RecordObj_dd;
 
 		// norden
-		protected $norden;
+		public $norden;
 
 		// string traducible (si|no)
 		public $traducible;
@@ -56,9 +56,9 @@ abstract class common {
 		public $pagination;
 
 		// bl_loaded_structure_data. Set to true when element structure data is loaded. Avoid reload structure data again
-		protected $bl_loaded_structure_data;
+		public $bl_loaded_structure_data;
 		//bl_loaded_matrix_data. Set to true when element matrix data is loaded. Avoid reconnect to db data again
-		protected $bl_loaded_matrix_data = false;
+		public $bl_loaded_matrix_data = false;
 
 		// TABLE  matrix_table
 		// public $matrix_table;
