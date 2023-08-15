@@ -142,6 +142,12 @@ service_time_machine.prototype.build = async function(autoload=false) {
 			const action	= 'search'
 			const add_show	= true
 			self.rqo = self.rqo || await self.build_rqo_show(self.request_config_object, action, add_show)
+
+			// add component info. For API navigation track info only
+			// get tipo from caller (tool_time_machine) caller (component or section)
+				self.rqo.options = {
+					caller_tipo : self.caller.caller.tipo
+				}
 		}
 		await generate_rqo()
 
