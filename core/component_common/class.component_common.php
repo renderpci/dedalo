@@ -49,9 +49,6 @@ abstract class component_common extends common {
 		// referenced section tipo (used by component_autocomplete, compoent_radio_button.. for set target section_tipo (properties) - additional to referenced component tipo (TR)- )
 		public $referenced_section_tipo;
 
-		// cache components instances
-		// public static $ar_component_instances = array(); // array cache of called instances of components
-
 		public $render_vars;
 
 		// search_input_name. injected for records search
@@ -98,7 +95,7 @@ abstract class component_common extends common {
 		// bool updating_dato. Used by updater script
 		public $updating_dato;
 		// static array $ar_component_instances
-		public static $ar_component_instances;
+		public static $ar_component_instances = [];
 		// public bool cache
 		public $cache;
 
@@ -119,7 +116,6 @@ abstract class component_common extends common {
 	* @return object|null $component
 	*/
 	final public static function get_instance(string $component_name=null, string $tipo=null, $section_id=null, string $mode='edit', string $lang=DEDALO_DATA_LANG, string $section_tipo=null, bool $cache=true, object $caller_dataframe=null) : ?object {
-		// $start_time = start_time();
 
 		// tipo check. Is mandatory
 			if (empty($tipo)) {
@@ -170,7 +166,6 @@ abstract class component_common extends common {
 
 		// section_tipo check : optional (if empty, section_tipo is calculated from: 1. page globals, 2. structure -only useful for real sections-)
 			if (empty($section_tipo)) {
-
 				debug_log(__METHOD__
 					. '  Error. resolve_section_tipo is not supported anymore. Please fix this call ASASP '
 					. ' sectiom_tipo: ' . to_string($section_tipo)
@@ -186,7 +181,6 @@ abstract class component_common extends common {
 						, logger::ERROR
 					);
 				}
-
 				return null;
 			}
 
@@ -331,7 +325,10 @@ abstract class component_common extends common {
 				$cache = false;
 			}
 
-		// no cache. Direct construct without cache instance. Use this config in imports
+		// cache
+			// $cache = false;
+
+		// cache is false case. Direct construct without cache instance. Use this config in imports
 			if ($cache===false || empty($section_id) || $mode==='update') {
 
 				// instance new component
@@ -344,32 +341,45 @@ abstract class component_common extends common {
 					$cache
 				);
 				// dataframe
-				if(isset($caller_dataframe)){
+				if(isset($caller_dataframe)) {
 					$component->set_caller_dataframe($caller_dataframe);
 				}
 
 				return $component;
-			}//end if ($cache===false || empty($section_id))
+			}//end if ($cache===false || empty($section_id) || $mode==='update')
 
-		// cache. Get cache instance if it exists. Otherwise, create a new one
-			// cache key
+		// cache is true case. Get cache instance if it exists. Otherwise, create a new one
+			// cache overload
+				$max_cache_instances	= 1200;
+				$cache_slice_on			= 400;
+				$total					= count(self::$ar_component_instances);
+				if ( $total > $max_cache_instances ) {
+					// self::$ar_section_instances = array_slice(self::$ar_section_instances, $cache_slice_on, null, true);
+					// new array
+					$new_array = [];
+					$i = 1;
+					foreach (self::$ar_component_instances as $inst_key => $inst_value) {
+						if ($i > $cache_slice_on) {
+							$new_array[$inst_key] = $inst_value;
+						}else{
+							$i++;
+						}
+					}
+					// replace matrix_instances array
+					self::$ar_component_instances = $new_array;
+
+					// error_log('))))))))))))))))))))))))))))))))))))))))) Replaced ar_component_instances cache from n '.$total.' to '.count($new_array));
+					// error_log('))))))))))))))))))))))))))))))))))))))))) Replaced ar_component_instances (1200/400) key: '. implode('_', [$tipo, $section_tipo, $section_id, $lang, $mode]));
+				}
+
+			// find current instance in cache
 				$cache_key = implode('_', [$tipo, $section_tipo, $section_id, $lang, $mode]);
-				if(isset($caller_dataframe)){
+				if(isset($caller_dataframe)) {
 					$cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->section_id;
 				}
-
-			// overload : If ar_component_instances > $max_cache_instances , not add current element to cache to prevent overload
-				$max_cache_instances	= 160;
-				$cache_slice_on			= 40;
-				if ( isset(self::$ar_component_instances) && count(self::$ar_component_instances) > $max_cache_instances ) {
-					self::$ar_component_instances = array_slice(self::$ar_component_instances, $cache_slice_on, null, true);
-				}
-
-			// new instance. If not already exists, create a new one and store in cache, else get from cache array
-				if ( !isset(self::$ar_component_instances) || !array_key_exists($cache_key, self::$ar_component_instances) ) {
-
+				if ( !isset(self::$ar_component_instances[$cache_key]) ) {
 					// instance new component
-					$component = new $component_name(
+					self::$ar_component_instances[$cache_key] = new $component_name(
 						$tipo,
 						$section_id,
 						$mode,
@@ -378,21 +388,13 @@ abstract class component_common extends common {
 						$cache
 					);
 					// dataframe
-					if(isset($caller_dataframe)){
-						$component->set_caller_dataframe($caller_dataframe);
+					if(isset($caller_dataframe)) {
+						self::$ar_component_instances[$cache_key]->set_caller_dataframe($caller_dataframe);
 					}
-
-					// store instance in cache
-					self::$ar_component_instances[$cache_key] = $component;
-
-				}else{
-
-					// get from cache
-					$component = self::$ar_component_instances[$cache_key];
 				}
 
 
-		return $component;
+		return self::$ar_component_instances[$cache_key];
 	}//end get_instance
 
 

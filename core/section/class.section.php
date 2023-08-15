@@ -37,7 +37,7 @@ class section extends common {
 		public $save_handler = 'database';
 
 		// static cache for section instances
-		public static $ar_section_instances;
+		public static $ar_section_instances = [];
 
 		public $save_modified = true; # Default is true
 
@@ -126,9 +126,11 @@ class section extends common {
 				throw new Exception($msg, 1);
 			}
 
-		// cache note: Use always (cache=false) in imports (!)
-		// Not cache new sections (without section_id or cache=false)
-			if ($cache===false || empty($section_id)) {
+		// cache
+			// $cache = false;
+
+		// cache is false case. Use always (cache=false) in imports (!). Not cache new sections (without section_id)
+			if ($cache===false || empty($section_id) || $mode==='update') {
 
 				// instance new section
 				$section = new section($section_id, $tipo, $mode);
@@ -140,50 +142,45 @@ class section extends common {
 				return $section;
 			}//end if ($cache===false || empty($section_id))
 
-		// cache. Get cache instance if it exists. Otherwise, create a new one
-			// cache key
+		// cache is true case. Get cache instance if it exists. Otherwise, create a new one
+			// cache overload
+				$max_cache_instances	= 1200;
+				$cache_slice_on			= 400;
+				$total					= count(self::$ar_section_instances);
+				if ( $total > $max_cache_instances ) {
+					// self::$ar_section_instances = array_slice(self::$ar_section_instances, $cache_slice_on, null, true);
+					// new array
+					$new_array = [];
+					$i = 1;
+					foreach (self::$ar_section_instances as $inst_key => $inst_value) {
+						if ($i > $cache_slice_on) {
+							$new_array[$inst_key] = $inst_value;
+						}else{
+							$i++;
+						}
+					}
+					// replace matrix_instances array
+					self::$ar_section_instances = $new_array;
+
+					// error_log('))))))))))))))))))))))))))))))))))))))))) Replaced ar_section_instances cache from n '.$total.' to '.count($new_array));
+					// error_log('))))))))))))))))))))))))))))))))))))))))) Replaced ar_section_instances (1200/400) key: '. implode('_', [$section_id, $tipo, $mode]));
+				}
+
+			// find current instance in cache
 				$cache_key = implode('_', [$section_id, $tipo, $mode]);
 				if(isset($caller_dataframe)){
 					$cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->section_id;
 				}
-
-			// overload : If ar_section_instances > $max_cache_instances , not add current element to cache to prevent overload
-			// (!) Deactivated 20-07-2023 because it's unnecessary. The control of overload is made in JSON_RecordObj_matrix
-				// $max_cache_instances	= 300*3;
-				// $cache_slice_on			= 100*3;
-				// if (isset(self::$ar_section_instances) && sizeof(self::$ar_section_instances)>$max_cache_instances) {
-				// 	self::$ar_section_instances = array_slice(self::$ar_section_instances, $cache_slice_on, null, true);
-				// 	if(SHOW_DEBUG===true) {
-				// 		debug_log(__METHOD__
-				// 			.' '.DEDALO_HOST." Overload sections prevent (max $max_cache_instances). Unset first $cache_slice_on cache items [$cache_key]"
-				// 			, logger::DEBUG
-				// 		);
-				// 	}
-				// 	// let GC do the memory job
-				// 	time_nanosleep(0, 2000000); // 02 ms
-				// }
-
-		// new instance. If not already exists, create a new one and store in cache, else get from cache array
-			if ( !isset(self::$ar_section_instances) || !array_key_exists($cache_key, (array)self::$ar_section_instances) ) {
-
-				// instance newsection
-				$section = new section($section_id, $tipo, $mode);
-				// dataframe case
-				if(isset($caller_dataframe)){
-					$section->set_caller_dataframe($caller_dataframe);
+				if ( !isset(self::$ar_section_instances[$cache_key]) ) {
+					self::$ar_section_instances[$cache_key] = new section($section_id, $tipo, $mode);
+					// dataframe case
+					if(isset($caller_dataframe)) {
+						self::$ar_section_instances[$cache_key]->set_caller_dataframe($caller_dataframe);
+					}
 				}
 
-				// store instance in cache
-				self::$ar_section_instances[$cache_key] = $section;
 
-			}else{
-
-				// get from cache
-				$section = self::$ar_section_instances[$cache_key];
-			}
-
-
-		return $section;
+		return self::$ar_section_instances[$cache_key];
 	}//end get_instance
 
 
