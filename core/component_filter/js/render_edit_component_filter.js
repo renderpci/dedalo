@@ -277,6 +277,12 @@ export const get_input_element_read = (element, self) => {
 		const section_id		= element.section_id
 		const section_tipo		= element.section_tipo
 
+	// checked option set on match
+		const found = value.find(el => datalist_value &&
+			el.section_id===datalist_value.section_id &&
+			el.section_tipo===datalist_value.section_tipo
+		)
+
 	// li container
 		const li_class_name = (element.has_children) ? ' grouper' : ''
 		const li = ui.create_dom_element({
@@ -285,41 +291,33 @@ export const get_input_element_read = (element, self) => {
 		})
 
 	// label
-		const label_node = ui.create_dom_element({
-			element_type	: 'label',
-			class_name		: 'item_label',
-			inner_html		: label,
-			parent			: li
-		})
+		if(found){
+			// label
+				const label_node = ui.create_dom_element({
+					element_type	: 'label',
+					class_name		: 'item_label',
+					inner_html		: label,
+					parent			: li
+				})
 
-	// icon_node check
-		const icon_node = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'icon_button icon check transparent'
-		})
-		label_node.prepend(icon_node)
+			// icon_node check
+				const icon_node = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'icon_button icon check '
+				})
+				label_node.prepend(icon_node)
+		}
 
 	// has_children case
 		if(element.has_children) {
 			// branch
-				const branch = ui.create_dom_element({
-					element_type	: 'ul',
-					class_name		: 'branch',
-					parent 			: li
-				})
-				li.branch = branch
+			const branch = ui.create_dom_element({
+				element_type	: 'ul',
+				class_name		: 'branch',
+				parent 			: li
+			})
+			li.branch = branch
 		}
-
-	// checked option set on match
-		for (let j = 0; j < value_length; j++) {
-			if (value[j] && datalist_value &&
-				value[j].section_id===datalist_value.section_id &&
-				value[j].section_tipo===datalist_value.section_tipo
-				) {
-					icon_node.classList.remove('transparent')
-			}
-		}
-
 
 	return li
 }//end get_input_element_read
