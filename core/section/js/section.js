@@ -517,7 +517,9 @@ section.prototype.build = async function(autoload=false) {
 
 			// rqo build
 			const action	= 'search'
-			const add_show	= self.add_show ? self.add_show : self.mode==='tm' ? true : false
+			const add_show	= (self.add_show)
+				? self.add_show
+				: (self.mode==='tm') ? true	: false
 			self.rqo = self.rqo || await self.build_rqo_show(
 				self.request_config_object, // object request_config_object
 				action,  // string action like 'search'
