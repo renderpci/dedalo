@@ -101,7 +101,7 @@ tool_common.prototype.init = async function(options) {
 							self.caller.caller = self
 
 						if(caller_ddo.model!=='section'){
-							// build
+							// build only when the caller is a component, section will build by tm
 								await self.caller.build(true)
 						}
 
