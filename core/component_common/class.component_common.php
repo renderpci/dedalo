@@ -574,9 +574,15 @@ abstract class component_common extends common {
 	* Set dato default when properties->dato_default exists and current component dato is empty
 	* properties are loaded always (structure data) at beginning of build component. Because this
 	* is more fast verify if is set 'dato_default' and not load component data always as before
-	* @return mixed $dato_default
+	* @return bool
 	*/
-	private function set_dato_default() : mixed {
+	protected function set_dato_default() : bool {
+
+		// Data default only can be saved by users than have permissions to save.
+		// Read users can not change component data.
+			if($this->get_component_permissions() < 2){
+				return false;
+			}
 
 		$dato_default = null;
 
@@ -648,11 +654,14 @@ abstract class component_common extends common {
 
 						// matrix data : load matrix data again
 							$this->load_component_dato();
+
+						// dato default is fixed
+							return true;
 					}
 			}//end if (!empty($dato_default))
 
-
-		return $dato_default;
+		// data default is not fixed
+		return false;
 	}//end set_dato_default
 
 
