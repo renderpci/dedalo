@@ -41,28 +41,6 @@ class component_filter extends component_relation_common {
 		// Build the component normally
 			parent::__construct($tipo, $section_id, $mode, $this->lang, $section_tipo, $cache);
 
-		// dedalo_default_project
-		// If component is in edit mode and don't have data, we assign the default data defined in config
-			if ($mode==='edit' &&
-				get_called_class()==='component_filter' && // Remember that component_filter_master extends this class
-				!is_null($this->section_id) &&
-				$section_tipo!=='test3' // exclude unit_test 'test3' section to create default dato
-				) {
-				$dato = $this->get_dato();
-				if(empty($dato)) {
-
-					// filter always save default project.
-						$user_id				= get_user_id();
-						$default_dato_for_user	= $this->get_default_dato_for_user($user_id);
-						// set current user projects default
-						if (!empty($default_dato_for_user)) {
-							$this->set_dato($default_dato_for_user);
-							$this->Save();
-						}
-
-					debug_log(__METHOD__." Saved component filter (tipo:$tipo, section_id:$section_id, section_tipo:$section_tipo) DEDALO_DEFAULT_PROJECT as ".json_encode($default_dato_for_user), logger::DEBUG);
-				}
-			}
 	}//end __construct
 
 
@@ -135,14 +113,57 @@ class component_filter extends component_relation_common {
 
 	/**
 	* SET_DATO_DEFAULT
-	* Overwrite component common method
+	* Overwrite component common method.
+	* Set the dato default of the user for this component
+	* if the user has not write access to the component it will not set
+	* in these cases the component will be empty
+	* and only the user that create the section and the global administrator
+	* will can access to the record
 	* @return bool true
 	*/
-	public function set_dato_default() {
+	protected function set_dato_default() : bool {
 
-		// nothing to do here. Action is delegated to method set_default_dato_for_user
+		// Data default only can be saved by users than have permissions to save.
+		// Read users can not change component data.
+			if($this->get_component_permissions() < 2){
+				return false;
+			}
 
-		return true;
+		// dedalo_default_project
+		// If component is in edit mode and don't have data, we assign the default data defined in config
+			if ($this->mode==='edit' &&
+				get_called_class()==='component_filter' && // Remember that component_filter_master extends this class
+				!is_null($this->section_id) &&
+				$this->section_tipo!=='test3' // exclude unit_test 'test3' section to create default dato
+				) {
+
+					$dato = $this->get_dato();
+					if(empty($dato)) {
+
+						// filter always save default project.
+						$user_id				= get_user_id();
+						$default_dato_for_user	= $this->get_default_dato_for_user($user_id);
+
+						// set current user projects default
+						if (!empty($default_dato_for_user)) {
+
+							$this->set_dato($default_dato_for_user);
+							$this->Save();
+
+							debug_log(__METHOD__
+								." Saved component filter (tipo:$this->tipo, section_id:$this->section_id, section_tipo:$this->section_tipo) DEDALO_DEFAULT_PROJECT as ". PHP_EOL
+								. json_encode($default_dato_for_user, JSON_PRETTY_PRINT)
+								, logger::DEBUG
+							);
+
+							// dato default is fixed
+							return true;
+						}
+					}
+				}
+
+		// data default is not fixed
+		return false;
 	}//end set_dato_default
 
 
