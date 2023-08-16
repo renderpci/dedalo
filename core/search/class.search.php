@@ -1576,9 +1576,14 @@ class search {
 							$filter_join .= ')';
 							$this->filter_join = $filter_join;
 							// $this->filter_join_where = PHP_EOL .' AND ('. implode(' OR ',$ar_filter_join).')';
-							$this->filter_join_where = PHP_EOL .' AND (f.target_section_id IN ('.  implode(',', array_map(function($locator){
-								return (int)$locator->section_id;
-							}, $ar_projects)).'))';
+							$this->filter_join_where  = PHP_EOL .'AND (';
+							$this->filter_join_where .= 'f.target_section_id IN ('.  implode(',', array_map(function($locator){
+									return (int)$locator->section_id;
+								}, $ar_projects)).')';
+							$this->filter_join_where .= ' OR ' ;
+							$this->filter_join_where .= $section_alias.'.'.$datos_container.' @>\'{"created_by_userID":'.$user_id.'}\'::jsonb';
+							$this->filter_join_where .= ')';
+
 						}
 						break;
 				}
