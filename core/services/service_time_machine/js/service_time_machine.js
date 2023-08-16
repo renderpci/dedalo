@@ -143,6 +143,15 @@ service_time_machine.prototype.build = async function(autoload=false) {
 			const add_show	= true
 			self.rqo = self.rqo || await self.build_rqo_show(self.request_config_object, action, add_show)
 
+			// set the ddo_map with mode = list and permissions = 1
+			// This change is important because the components could be configured in edit mode
+			// if the component is loaded in edit mode it will fire the default data and save the section
+			// IT'S A VERY BAD SITUATION, BECAUSE THE SECTION IS SAVED WITH THE TM DATA (OLD DATA)
+			self.rqo.show.ddo_map.map(ddo => {
+				ddo.mode		= 'list'
+				ddo.permissions	= 1
+			})
+
 			// add component info. For API navigation track info only
 			// get tipo from caller (tool_time_machine) caller (component or section)
 				self.rqo.options = {

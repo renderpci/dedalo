@@ -3758,7 +3758,7 @@ class section extends common {
 										$component_model,
 										$component_tipo,
 										$section_id,
-										$ddo->mode,
+										'list', // the component always in list because the edit could fire a save with the dato_default
 										$lang,
 										$section_tipo
 									);
