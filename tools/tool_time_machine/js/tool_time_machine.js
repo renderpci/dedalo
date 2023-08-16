@@ -139,7 +139,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 			// fix main_element for convenience
 				const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==='main_element')
 
-			// section case. (!) note that section is not loaded traumatically from tool common build
+			// section case. (!) note that section is not loaded automatically from tool common build
 				if (main_element_ddo.model==='section') {
 					const element_options = {
 						model			: main_element_ddo.model,
@@ -162,6 +162,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 				self.main_element = self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
 
 			// ddo_map for service_time_machine. Section uses is request_config_object show
+			// NOTE: The ddo_map will be changed in service_time_machine to mode = list
 				const ddo_map = self.main_element.model==='section'
 					? self.main_element.request_config_object.show.ddo_map
 					: [{
