@@ -125,9 +125,9 @@ class component_filter extends component_relation_common {
 
 		// Data default only can be saved by users than have permissions to save.
 		// Read users can not change component data.
-			if($this->get_component_permissions() < 2){
-				return false;
-			}
+			// if($this->get_component_permissions() < 2){
+			// 	return false;
+			// }
 
 		// dedalo_default_project
 		// If component is in edit mode and don't have data, we assign the default data defined in config
