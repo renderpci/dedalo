@@ -147,10 +147,13 @@ service_time_machine.prototype.build = async function(autoload=false) {
 			// This change is important because the components could be configured in edit mode
 			// if the component is loaded in edit mode it will fire the default data and save the section
 			// IT'S A VERY BAD SITUATION, BECAUSE THE SECTION IS SAVED WITH THE TM DATA (OLD DATA)
-			self.rqo.show.ddo_map.map(ddo => {
-				ddo.mode		= 'list'
-				ddo.permissions	= 1
-			})
+				self.rqo.show.ddo_map.map(ddo => {
+
+					ddo.mode		= 'tm'
+					ddo.permissions	= 1
+
+					return ddo
+				})
 
 			// add component info. For API navigation track info only
 			// get tipo from caller (tool_time_machine) caller (component or section)
