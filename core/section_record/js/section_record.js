@@ -191,12 +191,12 @@ const build_instance = async (self, context, section_id, current_data, column_id
 				? self.id_variant + '_' + section_record_id_variant
 				: section_record_id_variant
 
-		// time machine matrix_id
+		// matrix_id. time machine matrix_id
 			if (self.matrix_id) {
 				instance_options.matrix_id = self.matrix_id
 			}
 
-		// column id
+		// column_id
 			if(column_id) {
 				instance_options.column_id = column_id
 			}
@@ -324,12 +324,12 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 		}
 
 	// short vars
-		// const mode		= self.mode
-		// const tipo		= self.tipo
+		// const mode			= self.mode
+		// const tipo			= self.tipo
 		// const section_tipo	= self.section_tipo
-		const section_id	= self.section_id
-		const matrix_id		= self.matrix_id // time machine case only
-		const columns_map	= await self.columns_map || []
+		const section_id		= self.section_id
+		const matrix_id			= self.matrix_id // time machine case only
+		const columns_map		= await self.columns_map || []
 
 	// request config
 	// get the request_config with all ddo, it will be use to create the instances
