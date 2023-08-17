@@ -3664,11 +3664,26 @@ abstract class component_common extends common {
 
 		// check bad data (old formats not array)
 			if (!empty($tm_dato) && !is_array($tm_dato)) {
-				debug_log(__METHOD__." Bad dato found in time machine data. Making array cast to found dato: ".gettype($tm_dato) .PHP_EOL
+				debug_log(__METHOD__
+					." Bad dato found in time machine data. Making array cast to found dato: ".gettype($tm_dato) .PHP_EOL
 					. ' tm_dato: ' .  to_string($tm_dato),
 					logger::ERROR
 				);
 				$tm_dato = (array)$tm_dato;
+			}
+
+		// check type
+			if (!is_null($tm_dato) && !is_array($tm_dato)) {
+				debug_log(__METHOD__
+					. " TM dato type is not as expected (array/null) . NULL will be return as temp value. review time_amchine record  " . PHP_EOL
+					. ' type: ' . gettype($tm_dato) . PHP_EOL
+					. ' tm_dato: ' . json_encode($tm_dato, JSON_PRETTY_PRINT) . PHP_EOL
+					. ' matrix_id: ' . to_string($matrix_id) . PHP_EOL
+					. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+					. ' tipo: ' . to_string($tipo)
+					, logger::WARNING
+				);
+				$tm_dato = null;
 			}
 
 
