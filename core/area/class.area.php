@@ -37,7 +37,7 @@ class area extends area_common  {
 	* GET AREAS RECURSIVE IN JSON FORMAT OF ALL MAJOR AREAS
 	* Iterate all major existing area types (area_root,area_resource,area_admin, ...)
 	* and get all tipos of every one mixed in one full ontology JSON array
-	* Used in menu and security access
+	* Used in menu (excluding config_areas->areas_deny) and security access (full view)
 	* @see menu, component_security_access
 	* @return array $areas
 	*/
@@ -125,7 +125,10 @@ class area extends area_common  {
 			if(SHOW_DEBUG===true) {
 				$total	= round( start_time() - $start_time, 3);
 				$n		= count($areas);
-				debug_log(__METHOD__." Total ($n): ".exec_time_unit($start_time,'ms')." ms - ratio(total/n): " . ($total/$n), logger::DEBUG);
+				debug_log(__METHOD__
+					." Total ($n): ".exec_time_unit($start_time,'ms')." ms - ratio(total/n): " . ($total/$n)
+					, logger::DEBUG
+				);
 			}
 
 		// gc_enable();
@@ -184,6 +187,8 @@ class area extends area_common  {
 
 	/**
 	* AREA_TO_REMOVE
+	* Read file 'config_areas.php' from config and set
+	* areas_deny and areas_allow array values
 	* @return object $config_areas
 	*/
 	public static function get_config_areas() : object {
