@@ -151,6 +151,9 @@ export const get_input_element = (element, self) => {
 			element_type	: 'li',
 			class_name		: 'item_li' + li_class_name
 		})
+		li.addEventListener('mousedown',function(e) {
+			e.stopPropagation()
+		})
 
 	// label
 		const label_string = (SHOW_DEBUG===true)
