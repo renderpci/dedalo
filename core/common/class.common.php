@@ -4276,6 +4276,7 @@ abstract class common {
 		// by default or edit mode get the properties of the term itself.
 			switch ($mode) {
 				case 'list':
+				case 'tm':
 				// case 'portal_list':
 					# in the case that section_list is defined
 					$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section_list', 'children', true);

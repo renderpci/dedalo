@@ -173,7 +173,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 							section_tipo	: self.main_element.section_tipo,
 							parent			: self.main_element.section_tipo,
 							label			: self.main_element.label,
-							mode			: 'list',
+							mode			: 'tm',
 							view			: 'text'
 					   }]
 

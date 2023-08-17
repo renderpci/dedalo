@@ -3492,7 +3492,7 @@ class section extends common {
 				// short vars
 					$source_model				= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 					$components_with_relations	= component_relation_common::get_components_with_relations();
-					$mode						= 'list';
+					$mode						= 'tm';
 
 				// if time machine is recovering sections, creates the section and inject his time machine dato to be used as normal section loaded from matrix
 				// all data and sub-data will get from this.
@@ -3534,7 +3534,7 @@ class section extends common {
 									'value'					=> $id,
 									'debug_model'			=> 'component_section_id',
 									'debug_label'			=> 'matrix ID',
-									'debug_mode'			=> 'list',
+									'debug_mode'			=> $mode,
 									'matrix_id'				=> $id
 								];
 								$ar_subdata[]		= $data_item;
@@ -3572,7 +3572,7 @@ class section extends common {
 										$note_model,
 										$current_ddo_tipo,
 										$note_section_id,
-										'list',
+										$mode,
 										$ddo->lang ?? DEDALO_DATA_LANG,
 										$sqo->section_tipo
 									);
@@ -3617,7 +3617,7 @@ class section extends common {
 									$model_name,
 									$timestamp_tipo,
 									$section_id,
-									'list',
+									$mode,
 									DEDALO_DATA_NOLAN,
 									$section_tipo
 								);
@@ -3667,7 +3667,7 @@ class section extends common {
 									'value'					=> $ar_values,
 									'debug_model'			=> 'component_select',
 									'debug_label'			=> 'modified by user',
-									'debug_mode'			=> 'list',
+									'debug_mode'			=> $mode,
 									'matrix_id'				=> $id
 								];
 
@@ -3706,7 +3706,7 @@ class section extends common {
 									'value'					=> $current_value, // .' ['.$section_tipo.']'
 									'debug_model'			=> 'component_input_text',
 									'debug_label'			=> 'Where',
-									'debug_mode'			=> 'list',
+									'debug_mode'			=> $mode,
 									'matrix_id'				=> $id
 								];
 								$ar_subdata[]		= $data_item;
@@ -3736,7 +3736,7 @@ class section extends common {
 									'value'					=> $dd_grid_value,
 									'debug_model'			=> $ddo->model,
 									'debug_label'			=> 'section',
-									'debug_mode'			=> 'mini',
+									'debug_mode'			=> $mode,
 									'matrix_id'				=> $id
 								];
 								$ar_subdata[] = $data_item;
@@ -3758,7 +3758,7 @@ class section extends common {
 										$component_model,
 										$component_tipo,
 										$section_id,
-										'list', // the component always in list because the edit could fire a save with the dato_default
+										$mode, // the component always in tm because the edit could fire a save with the dato_default
 										$lang,
 										$section_tipo
 									);
@@ -3834,8 +3834,29 @@ class section extends common {
 											'get_data'		=> true
 										]);
 
-									// ar_subcontext
+									// Check if the element json has his own request_config to change it as list
+									// when the component has his own definition in ontology, it can had a components in edit mode
+									// all this components need to be set to mode = list
+									// this change is important to maintain the data as is in time machine
+									// and prevent to save default data from components in edit mode inside the tool tm.
+										foreach ($element_json->context as $value) {
+											if(isset($value->request_config)){
+												// select the request config of dedalo api_engine
+												$new_request_config_object = array_find($value->request_config, function($el) {
+													return $el->api_engine==='dedalo';
+												});
+												// if the component has his own show and ddo_map, change it to mode = list
+												if(isset($new_request_config_object->show) && isset($new_request_config_object->show->ddo_map)){
+													foreach ($new_request_config_object->show->ddo_map as $new_ddo) {
+														$new_ddo->mode = 'tm';
+													}
+												}
+											}
+										}
+
+									// mix ar_subcontext
 										$ar_subcontext = array_merge($ar_subcontext, $element_json->context);
+
 
 									// empty data case. Generate and add a empty value item
 										if (empty($element_json->data) && $model!=='component_section_id') {
