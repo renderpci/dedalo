@@ -88,7 +88,7 @@
 
 				// add subdata
 				$ar_subdata = $subdatum->data;
-				if ($mode==='list') {
+				if ($mode==='list' || $mode==='tm') {
 					foreach ($ar_subdata as $current_data) {
 						$current_data->parent_tipo			= $tipo;
 						$current_data->parent_section_id	= $section_id;
