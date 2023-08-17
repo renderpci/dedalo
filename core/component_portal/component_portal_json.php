@@ -85,6 +85,7 @@
 			switch ($mode) {
 
 				case 'list':
+				case 'tm':
 					// data item (list mode result don't include self data, only subdata)
 					// (!) limit note that in list mode, limit is always 2
 					$value	= $this->get_dato_paginated($limit);

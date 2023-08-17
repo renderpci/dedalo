@@ -52,6 +52,7 @@
 		switch ($mode) {
 
 			case 'list':
+			case 'tm':
 				$value			= $this->get_list_value();
 				$fallback_value	= component_common::extract_component_dato_fallback(
 					$this,

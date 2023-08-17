@@ -39,6 +39,7 @@
 		// value
 			switch ($mode) {
 				case 'list':
+				case 'tm':
 				case 'edit':
 				default:
 					$value = $this->get_dato();
