@@ -147,10 +147,13 @@ service_time_machine.prototype.build = async function(autoload=false) {
 			// This change is important because the components could be configured in edit mode
 			// if the component is loaded in edit mode it will fire the default data and save the section
 			// IT'S A VERY BAD SITUATION, BECAUSE THE SECTION IS SAVED WITH THE TM DATA (OLD DATA)
-			self.rqo.show.ddo_map.map(ddo => {
-				ddo.mode		= 'list'
-				ddo.permissions	= 1
-			})
+				self.rqo.show.ddo_map.map(ddo => {
+
+					ddo.mode		= 'tm'
+					ddo.permissions	= 1
+
+					return ddo
+				})
 
 			// add component info. For API navigation track info only
 			// get tipo from caller (tool_time_machine) caller (component or section)
@@ -226,7 +229,7 @@ service_time_machine.prototype.build = async function(autoload=false) {
 		self.fixed_columns_map = false
 
 	// columns_map. Get the columns_map to use into the list
-		self.columns_map = get_columns_map(self.context)
+		self.columns_map = get_columns_map(self.context, self.datum.context)
 
 	// status update
 		self.status = 'built'
@@ -398,15 +401,7 @@ service_time_machine.prototype.build_request_config = function() {
 			if (config_ddo_map) {
 				const config_ddo_map_length = config_ddo_map.length
 				for (let i = 0; i < config_ddo_map_length; i++) {
-
 					const item = config_ddo_map[i]
-
-					// safe parent check
-						if (item.parent!==section_tipo) {
-							console.log('Fixed wrong ddo parent from:', config_ddo_map[i].parent, ' to ', section_tipo);
-							item.parent = section_tipo
-						}
-
 					ddo_map.push(item)
 				}
 			}

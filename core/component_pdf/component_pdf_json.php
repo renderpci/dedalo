@@ -48,6 +48,7 @@
 			switch ($mode) {
 
 				case 'list':
+				case 'tm':
 					$value = $this->get_list_value();
 					// datalist. files_info. For fast list we add directly the default image
 					$data_item = new stdClass();
