@@ -401,15 +401,7 @@ service_time_machine.prototype.build_request_config = function() {
 			if (config_ddo_map) {
 				const config_ddo_map_length = config_ddo_map.length
 				for (let i = 0; i < config_ddo_map_length; i++) {
-
 					const item = config_ddo_map[i]
-
-					// safe parent check
-						if (item.parent!==section_tipo) {
-							console.log('Fixed wrong ddo parent from:', config_ddo_map[i].parent, ' to ', section_tipo);
-							item.parent = section_tipo
-						}
-
 					ddo_map.push(item)
 				}
 			}
