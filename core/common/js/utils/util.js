@@ -465,6 +465,7 @@ export function is_equal(el1, el2) {
 /**
 * OPEN_WINDOW
 * Unified open window function
+* @param object options
 * @return object new_window
 */
 export function open_window(options) {
@@ -475,21 +476,31 @@ export function open_window(options) {
 
 	// options
 		const url		= options.url
-		const name		= options.name || 'New window'
+		const target	= options.target || options.name || 'New window'
 		const features	= options.features || null
-		const width	= options.width && options.width < window.screen.width
-			? options.width
-			: (default_width < window.screen.width ? default_width : window.screen.width)
-		const height = options.height && options.height < window.screen.height
-			? options.height
-			: (default_height < window.screen.height ? default_height : window.screen.height)
 
-		const final_features = `width=${width},height=${height}` + (features ? ','+features : '')
+	// window_features
+		const window_features = (()=>{
 
+			if (features==='new_tab') {
+				return  null
+			}
+
+			const width	= options.width && options.width < window.screen.width
+				? options.width
+				: (default_width < window.screen.width ? default_width : window.screen.width)
+			const height = options.height && options.height < window.screen.height
+				? options.height
+				: (default_height < window.screen.height ? default_height : window.screen.height)
+
+			return `width=${width},height=${height}` + (features ? ','+features : '')
+		})()
+
+	// window
 		const new_window = window.open(
 			url,
-			name,
-			final_features
+			target,
+			window_features
 		)
 		new_window.focus()
 

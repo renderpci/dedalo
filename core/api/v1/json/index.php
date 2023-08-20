@@ -91,8 +91,10 @@ $global_start_time = hrtime(true);
 
 
 // received files case. Uploading from tool_upload or text editor images upload
-	if (isset($_FILES)) {
-		if (!isset($rqo) && !empty($_FILES)) {
+	if (!empty($_FILES)) {
+
+		// files case
+		if (!isset($rqo)) {
 			$rqo = new stdClass();
 				$rqo->action	= 'upload';
 				$rqo->dd_api	= 'dd_utils_api';
@@ -106,6 +108,14 @@ $global_start_time = hrtime(true);
 		}
 		foreach($_FILES as $key => $value) {
 				$rqo->options->{$key} = $value;
+		}
+
+	}elseif (!empty($_REQUEST)) {
+
+		// GET/POST case
+		$rqo = new stdClass();
+		foreach($_REQUEST as $key => $value) {
+			$rqo->{$key} = safe_xss($value);
 		}
 	}
 
