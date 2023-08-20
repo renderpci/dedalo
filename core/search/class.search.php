@@ -309,7 +309,7 @@ class search {
 						: $field_value;
 				}
 
-				/* (!) NOTA: ESTA RESOLUCIÓN SÓLO ES VIABLE PARA EL PRIMER NIVEL. */
+				/* (!) NOTE: THIS RESOLUTION IS ONLY VIABLE FOR THE FIRST LEVEL. */
 				// Relation components. Get relations data from relations column and parse virtual columns values for each component
 				if (isset($this->relations_cache)) foreach ((array)$this->relations_cache as $table_alias => $ar_component_tipo) {
 					foreach ($ar_component_tipo as $component_tipo) {
