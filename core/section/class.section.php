@@ -130,7 +130,7 @@ class section extends common {
 			// $cache = false;
 
 		// cache is false case. Use always (cache=false) in imports (!). Not cache new sections (without section_id)
-			if ($cache===false || empty($section_id) || $mode==='update') {
+			if ($cache===false || empty($section_id) || $mode==='update' || $mode==='tm') {
 
 				// instance new section
 				$section = new section($section_id, $tipo, $mode);
