@@ -90,10 +90,10 @@ $global_start_time = hrtime(true);
 
 
 
-// received files case. Uploading from tool_upload or text editor images upload
+// non php://input cases
 	if (!empty($_FILES)) {
 
-		// files case
+		// files case. Received files case. Uploading from tool_upload or text editor images upload
 		if (!isset($rqo)) {
 			$rqo = new stdClass();
 				$rqo->action	= 'upload';
@@ -113,9 +113,19 @@ $global_start_time = hrtime(true);
 	}elseif (!empty($_REQUEST)) {
 
 		// GET/POST case
-		$rqo = new stdClass();
-		foreach($_REQUEST as $key => $value) {
-			$rqo->{$key} = safe_xss($value);
+		if (isset($_REQUEST['rqo'])) {
+			$rqo = json_handler::decode($_REQUEST['rqo']);
+		}else{
+			$rqo = (object)[
+				'source' => (object)[]
+			];
+			foreach($_REQUEST as $key => $value) {
+				if (in_array($key, request_query_object::$direct_keys)) {
+					$rqo->{$key} = safe_xss($value);
+				}else{
+					$rqo->source->{$key} = safe_xss($value);
+				}
+			}
 		}
 	}
 
