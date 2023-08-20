@@ -161,7 +161,10 @@ class component_security_access extends component_common {
 			foreach ($ar_areas as $area) {
 				$key = $area->tipo .'_'. $area->parent; // .'_' .$area->section_tipo
 				if (isset($ar_clean[$key])) {
-					debug_log(__METHOD__." Duplicate item ".to_string($area), logger::ERROR);
+					debug_log(__METHOD__
+						." Duplicate item ".to_string($area)
+						, logger::ERROR
+					);
 				}else{
 					$ar_clean[$key] = $area;
 				}
