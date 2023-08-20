@@ -24,11 +24,12 @@ export const events_subscription = function(self) {
 			function fn_hilite_element() {
 				// set instance as changed or not based on their value
 				const instance = self
-				const hilite = (
-					(instance.data.value && instance.data.value.length>0) ||
-					(instance.data.q_operator && instance.data.q_operator.length>0)
-				)
+
 				setTimeout(function(){ // used timeout to allow css background transition occurs
+					const hilite = (
+						(instance.data.value && instance.data.value.length>0) ||
+						(instance.data.q_operator && instance.data.q_operator.length>0)
+					)
 					ui.hilite({
 						instance	: instance, // instance object
 						hilite		: hilite // bool
