@@ -25,7 +25,7 @@ export const render_list_section_record = function() {
 /**
 * LIST
 * Render node for use in list with all columns and rendered components
-* @param array ar_instances
+* @param object options = {}
 * @return HTMLElement wrapper
 */
 render_list_section_record.prototype.list = async function(options={}) {

@@ -130,7 +130,7 @@ class section extends common {
 			// $cache = false;
 
 		// cache is false case. Use always (cache=false) in imports (!). Not cache new sections (without section_id)
-			if ($cache===false || empty($section_id) || $mode==='update') {
+			if ($cache===false || empty($section_id) || $mode==='update' || $mode==='tm') {
 
 				// instance new section
 				$section = new section($section_id, $tipo, $mode);
@@ -1382,7 +1382,7 @@ class section extends common {
 						$is_equal = $dato_time_machine == $dato_section;
 						if ($is_equal===false) {
 							debug_log(__METHOD__
-								." ERROR: The data_time_machine and data_section were expected to be different. (time machine record: $id_time_machine [Section:Delete]." .PHP_EOL
+								." ERROR: The data_time_machine and data_section were expected to be identical. (time machine record: $id_time_machine [Section:Delete]." .PHP_EOL
 								." Record is NOT deleted (3) "
 								// . ' dato_time_machine: '. PHP_EOL. json_encode($dato_time_machine, JSON_PRETTY_PRINT) . PHP_EOL
 								// . ' dato_section: '. PHP_EOL. json_encode($dato_section, JSON_PRETTY_PRINT)
