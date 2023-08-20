@@ -50,7 +50,7 @@ render_search_component_portal.prototype.search = async function(options) {
 	// ar_section_record
 		const ar_section_record = await get_section_records({
 			caller	: self,
-			mode	:'list',
+			mode	: self.mode, // 'search',
 			view	: children_view
 		})
 		// store to allow destroy later
@@ -151,15 +151,16 @@ const rebuild_columns_map = async function(self) {
 			return self.columns_map
 		}
 
-	const columns_map = []
+	// fixed_mode. To force section_record to preserve the search ddo_map items mode, add 'fixed_mode'
+	// to all if they don't already have it
+		if (self.request_config_object.search && self.request_config_object.search.ddo_map) {
+			console.log('self.request_config_object.search.ddo_map:', self.request_config_object.search.ddo_map);
+			self.request_config_object.search.ddo_map.map(el => {
+				el.fixed_mode = true
+			})
+		}
 
-	// column section_id check
-		// 	columns_map.push({
-		// 		id			: 'section_id',
-		// 		label		: 'Id',
-		// 		width		: 'auto',
-		// 		callback	: render_edit_view_line.render_column_id
-		// 	})
+	const columns_map = []
 
 	// base_columns_map
 		const base_columns_map = await self.columns_map
@@ -199,7 +200,6 @@ const rebuild_columns_map = async function(self) {
 * @return HTMLElement button_remove
 */
 export const render_column_remove = function(options) {
-	console.log('))) render_column_remove options:', options);
 
 	// options
 		const self				= options.caller
@@ -252,7 +252,7 @@ export const render_column_remove = function(options) {
 
 
 	return fragment
-}//end render_column_remove()
+}//end render_column_remove
 
 
 
