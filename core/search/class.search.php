@@ -466,6 +466,15 @@ class search {
 
 		$start_time=start_time();
 
+		// RECORDS_DATA BUILD TO OUTPUT
+			$records_data = new stdClass();
+
+		// children recursive, to count the children is necessary do a search to know if the term has children
+		if (isset($this->search_query_object->children_recursive) && $this->search_query_object->children_recursive===true) {
+			// search as normal search to get the children_recursive sqo to be used for count.
+			$this->search();
+		}
+
 		// ONLY_COUNT
 		// Exec a count query
 		// Converts JSON search_query_object to SQL query string
@@ -473,24 +482,24 @@ class search {
 			$count_result		= JSON_RecordObj_matrix::search_free($count_sql_query);
 			$row_count			= pg_fetch_assoc($count_result);
 			$total				= (int)$row_count['full_count'];
-			# Fix total value
+
+			if(SHOW_DEVELOPER===true) {
+				$exec_time = round(start_time()-$start_time, 3);
+				# Info about required time to exec the search
+				$records_data->debug = $records_data->debug ?? new stdClass();
+				$records_data->debug->generated_time['get_records_data'] = $exec_time;
+				# Query to database string
+				$records_data->debug->strQuery				= $count_sql_query;
+				$this->search_query_object->generated_time	= $exec_time;
+
+				dd_core_api::$sql_query_search[] = '-- TIME sec: '. $exec_time . PHP_EOL . $count_sql_query;
+			}
+
+		// Fix total value
 			$this->search_query_object->total = $total;
 
-		// RECORDS_DATA BUILD TO OUTPUT
-			$records_data = new stdClass();
-				// $records_data->search_query_object	= $this->search_query_object;
-				$records_data->total = $total;
-				if(SHOW_DEVELOPER===true) {
-					$exec_time = round(start_time()-$start_time, 3);
-					# Info about required time to exec the search
-					$records_data->debug = $records_data->debug ?? new stdClass();
-					$records_data->debug->generated_time['get_records_data'] = $exec_time;
-					# Query to database string
-					$records_data->debug->strQuery				= $count_sql_query;
-					$this->search_query_object->generated_time	= $exec_time;
-
-					dd_core_api::$sql_query_search[] = '-- TIME sec: '. $exec_time . PHP_EOL . $count_sql_query;
-				}
+		// $records_data->search_query_object	= $this->search_query_object;
+			$records_data->total = $total;
 
 
 		return $records_data;
