@@ -221,7 +221,6 @@ export const ui = {
 
 						if(SHOW_DEBUG===true) {
 							if (e.metaKey && e.altKey) {
-								e.stopPropagation()
 								e.preventDefault()
 								console.log('/// refreshing instance:', instance);
 								instance.refresh({
@@ -231,7 +230,6 @@ export const ui = {
 								return
 							}
 							if (e.altKey) {
-								e.stopPropagation()
 								e.preventDefault()
 								// common.render_tree_data(instance, document.getElementById('debug'))
 								console.log('/// selected instance:', instance);
