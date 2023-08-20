@@ -201,7 +201,9 @@ $global_start_time = hrtime(true);
 
 // output the response JSON string
 	// $output_string = json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-	$output_string = json_handler::encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+	$output_string = isset($rqo->pretty_print)
+		? json_handler::encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)
+		: json_handler::encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
 	// debug (browser Server-Timing)
 		// header('Server-Timing: miss, db;dur=53, app;dur=47.2');
