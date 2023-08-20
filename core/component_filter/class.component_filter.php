@@ -22,7 +22,7 @@ class component_filter extends component_relation_common {
 	public $propagate_filter = true;
 
 	// relation_type defaults
-	protected $default_relation_type		= DEDALO_RELATION_TYPE_LINK;
+	protected $default_relation_type		= DEDALO_RELATION_TYPE_FILTER;
 	protected $default_relation_type_rel	= null;
 
 	# test_equal_properties is used to verify duplicates when add locators
