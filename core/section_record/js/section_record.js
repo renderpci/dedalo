@@ -222,6 +222,7 @@ const build_instance = async (self, context, section_id, current_data, column_id
 		// ar_instances.push(current_instance)
 		// dd_console(`__Time to build_instance section_record: ${(performance.now()-t0).toFixed(3)} ms`,'DEBUG', [current_context.tipo,current_context.model])
 
+
 	return current_instance
 }//end build_instance
 
@@ -368,7 +369,8 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 						// but when ddo define is_dataframe (subsection to use as data_frame)
 						// the section_tipo need to be the section_tipo of the ddo
 						// (section_tipo has not really record in DDBB and his totally dependent of the caller locator section_id)
-						// Note: it's not the scenario of multiple section_tipo as fr1, es1 when section_record it depends of the locator that conform the section_record
+						// Note: it's not the scenario of multiple section_tipo as fr1, es1 when section_record it depends of
+						// the locator that conform the section_record
 						const section_tipo = (current_ddo.is_dataframe)
 							? current_ddo.section_tipo
 							: self.section_tipo
@@ -385,11 +387,17 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 								ar_column_ddo.push(current_ddo)
 
 							// current_data. get the component data to assign to it and create the instance
-								const current_data = self.get_component_data(current_ddo, section_tipo, section_id, matrix_id)
+								const current_data = self.get_component_data(
+									current_ddo,
+									section_tipo,
+									section_id,
+									matrix_id
+								)
 
 							// unify section_tipo as array, to get context when component is inside a virtual section
 							// sometimes it will need to be compatible in multiple sections (array > 1) as toponymy sections (es1, fr1, etc)
-							// sometimes the component is only for current ddo section (as publication component of media, rsc20 could be in rsc170, rsc167, ... but the context is not shared)
+							// sometimes the component is only for current ddo section (as publication component of media,
+							// rsc20 could be in rsc170, rsc167, ... but the context is not shared)
 								const current_ddo_section_tipo = Array.isArray(current_ddo.section_tipo)
 									? current_ddo.section_tipo
 									: [current_ddo.section_tipo]
