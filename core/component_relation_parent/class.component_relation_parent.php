@@ -436,6 +436,11 @@ class component_relation_parent extends component_relation_common {
 		$target_component_children_tipos = (array)component_relation_parent::get_target_component_children_tipos($this->tipo);
 
 		$parents = [];
+
+		if(empty($this->section_id)){
+			return $parents;
+		}
+
 		foreach ($target_component_children_tipos as $children_component_tipo) {
 			$parents = array_merge($parents, component_relation_parent::get_parents($this->section_id, $this->section_tipo, $children_component_tipo));
 		}
