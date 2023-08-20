@@ -542,7 +542,9 @@ final class dd_core_api {
 						switch (true) {
 
 							case ($mode==='edit'):
-								$section_id						= $json_rows->data[0]->value[0]->section_id;
+								$section_id						= isset($json_rows->data[0]) && isset($json_rows->data[0]->value[0])
+									? $json_rows->data[0]->value[0]->section_id
+									: null;
 								$dato_activity['id']			= $section_id;
 								$dato_activity['tipo']			= $rqo->source->tipo;
 								// $dato_activity['top_id']		= TOP_ID;	#$_SESSION['dedalo4']['config']['top_id'];
