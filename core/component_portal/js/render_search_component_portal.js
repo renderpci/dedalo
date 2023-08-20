@@ -151,10 +151,13 @@ const rebuild_columns_map = async function(self) {
 			return self.columns_map
 		}
 
-	// fixed_mode. To force section_record to preserve the search ddo_map items mode, add 'fixed_mode'
-	// to all if they don't already have it
-		if (self.request_config_object.search && self.request_config_object.search.ddo_map) {
-			self.request_config_object.search.ddo_map.map(el => {
+	// fixed_mode. To force section_record to preserve the search ddo_map items mode,
+	// add 'fixed_mode' to all if they don't already have it
+		const ddo_map_path = self.request_config_object.search && self.request_config_object.search.ddo_map
+			? 'search'
+			: 'show'
+		if (self.request_config_object[ddo_map_path] && self.request_config_object[ddo_map_path].ddo_map) {
+			self.request_config_object[ddo_map_path].ddo_map.map(el => {
 				el.fixed_mode = true
 			})
 		}
