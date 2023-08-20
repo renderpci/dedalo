@@ -388,14 +388,15 @@ search.prototype.build_dom_group = function(filter, dom_element, options={}) {
 				//console.log("q_operator:",filter);
 
 			// Resolved check (useful for sequences or split strings)
-				const resolved_string = JSON.stringify(filter.path) + current_value
-				if (self.ar_resolved_elements.indexOf(resolved_string)===-1) {
+				const section_id = self.get_section_id()
+
+				if (self.ar_resolved_elements.indexOf(section_id)===-1) {
 
 					if (clean_q===true) {
 						current_value	= ''
 						q_operator		= ''
 					}
-					 const section_id = self.get_section_id()
+
 					// Add. If not already resolved, add
 						self.build_search_component({
 							parent_div		: dom_element,
@@ -407,7 +408,7 @@ search.prototype.build_dom_group = function(filter, dom_element, options={}) {
 
 					// Set as resolved
 						if (allow_duplicates!==true) {
-							self.ar_resolved_elements.push(resolved_string)
+							self.ar_resolved_elements.push(section_id)
 						}
 				}
 
@@ -463,7 +464,7 @@ search.prototype.get_component_instance = async function(options) {
 		// instance key. Custom to get unique key
 			const lang		= page_globals.dedalo_data_lang
 			const serial	= performance.now()
-			const key		= section_tipo +'_'+ component_tipo +'_search_'+ lang +'_'+ serial
+			const key		= section_tipo +'_'+ section_id +'_'+ component_tipo +'_search_'+ lang +'_'+ serial
 		// context
 			// const context = {
 			// 	model			: model,
