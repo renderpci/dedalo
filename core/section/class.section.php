@@ -1378,21 +1378,19 @@ class section extends common {
 						// $dato_time_machine_compare	= json_decode( json_encode($dato_time_machine) );
 						// $dato_section_compare		= json_decode( json_encode($dato_section) );
 
-					// check time machine dato
-						$is_equal = $dato_time_machine == $dato_section;
+					// check time machine dato. JSON encode and decode each of them to unify types before compare
+						$a			= json_handler::decode(json_handler::encode($dato_time_machine));
+						$b			= json_handler::decode(json_handler::encode($dato_section));
+						$is_equal	= (bool)($a == $b);
 						if ($is_equal===false) {
 							debug_log(__METHOD__
 								." ERROR: The data_time_machine and data_section were expected to be identical. (time machine record: $id_time_machine [Section:Delete]." .PHP_EOL
-								." Record is NOT deleted (3) "
-								// . ' dato_time_machine: '. PHP_EOL. json_encode($dato_time_machine, JSON_PRETTY_PRINT) . PHP_EOL
-								// . ' dato_section: '. PHP_EOL. json_encode($dato_section, JSON_PRETTY_PRINT)
+								." Record is NOT deleted ! (3) "
 								, logger::ERROR
 							);
-							// if(SHOW_DEBUG===true) {
-								dump($dato_time_machine,"SHOW_DEBUG COMPARE ERROR dato_time_machine");
-								dump($dato_section,"SHOW_DEBUG COMPARE ERROR dato_section");
-							// }
-							// throw new Exception("ERROR: Failed compare data of time machine record $id_time_machine [Section:Delete]. Record is NOT deleted (3)", 1);
+							dump($dato_time_machine, 'SHOW_DEBUG COMPARE ERROR dato_time_machine');
+							dump($dato_section,		 'SHOW_DEBUG COMPARE ERROR dato_section');
+
 							return false;
 						}
 
