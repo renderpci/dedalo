@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+	<meta charset="utf-8"/>
+</head>
+<body>
+
+<h1 id="introductiontocomponents">Introduction to components</h1>
+
+<p>Components are re-usable objects that can be instantiated by the ontology definition. Components are part of the sections and are used as fields with specific properties.</p>
+
+<h2 id="nomenclatureoffiles">Nomenclature of files</h2>
+
+<p>Every component definition has its own class, controller, and views. The components have a server part, develop in PHP language, and client part, develop in JavaScript and CSS.</p>
+
+<p>CSS are develop with LESS language and it&#8217;s not complied by itself, the final CSS is included as part of page.css.</p>
+
+<p>The nomenclature of files follow this paths:</p>
+
+<ol>
+<li><p><strong>Server files:</strong></p>
+
+<p>Sever files are stored directly in the main directory of the component.</p>
+
+<p>Class: <code>class.component_xxx.php</code></p>
+
+<p>Controller: <code>component_xxx_json.php</code></p></li>
+<li><p><strong>Client files:</strong></p>
+
+<p>Client files with logical, render and views are stored inside a <code>/js</code> directory</p>
+
+<p>Class: <code>component_xxx.js</code></p>
+
+<p>Render: <code>render_yyy_component_xxx_.js</code></p>
+
+<p>View: <code>render_zzz_yyy_component_xxx_.js</code></p>
+
+<p>CSS client files are stored inside a <code>/css</code> directory.</p>
+
+<p>Style: <code>component_xxx.less</code></p></li>
+</ol>
+
+<hr />
+
+<ul>
+<li>xxx = specific name, (input_text | text_area | image | etc. )</li>
+<li>yyy = mode, (edit | list | search)</li>
+<li>zzz = view (default | line | mini | text | mosaic | etc.)</li>
+</ul>
+
+<h2 id="instantiation">Instantiation</h2>
+
+<p>Normally components are called by sections but it&#8217;s possible instantiate any component without his own section. In the server the components are instantiated by <code>component_common.php</code> class.</p>
+
+<pre><code class="php">$component = component_common::get_instance(
+    string $component_name      = null, // model or name of the component
+    string $tipo                = null, // ontology tipo
+    mixed $section_id           = null, // section id
+    string $mode                = 'edit', // mode used to load the component with data used to edit or list
+    string $lang                = DEDALO_DATA_LANG, // language 
+    string $section_tipo        = null,  // the ontology section tipo of the component
+    bool $cache                 = true, // load from cache if exist
+    object $caller_dataframe    = null // if the component is inside a subsection or dataframe.
+ );
+
+</code></pre>
+
+<p>In the client the components are instantiated by <code>instances.js</code> class.</p>
+
+<pre><code class="js">const component = get_instance({
+    model           : model,        
+    tipo            : tipo,         
+    section_tipo    : section_tipo, 
+    section_id      : section_id,   
+    mode            : mode,        
+    lang            : lang 
+})
+
+</code></pre>
+
+<p>!!! Note about JavaScript instantiation
+The <code>instances.js</code> class is a ES6 module and it can be include in this way:
+<code>js
+import {get_instance} from '../../common/js/instances.js'</code></p>
+
+<h2 id="datamanagement">Data management</h2>
+
+<p>Components manage his own data, but their are not connected directly to the database, only sections can get and save data in the database, so, components get and save his data through their own section.</p>
+
+<h2 id="translatablecomponents">Translatable components</h2>
+
+<p>Dédalo is a multi-language system, all information could be translatable in multiple languages. Components are translatable by default, but some components are not translatable as component_number.</p>
+
+<p>Translatable components manage only the instance in the current language and their data will be only the instantiated language part of the data, for example, a component_input_text instantiated in the Català language will only manage the Català part of its data, the component will get its data from the section but you can only get one language at a time.</p>
+
+<p>Non translatable components are instantiated with <code>lg-nolan</code> language.</p>
+
+</body>
+</html>
+

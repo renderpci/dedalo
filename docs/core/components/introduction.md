@@ -59,12 +59,12 @@ In the client the components are instantiated by `instances.js` class.
 
 ```js
 const component = get_instance({
-    model           : model,        // string, model or name of the component
-    tipo            : tipo,         // string, ontology tipo
-    section_tipo    : section_tipo, // string, ontology section tipo of the component
-    section_id      : section_id,   // string || int, section id
-    mode            : mode,         // string, mode used to load the component with data used to edit or list
-    lang            : lang          // string, language 
+    model           : model,        
+    tipo            : tipo,         
+    section_tipo    : section_tipo, 
+    section_id      : section_id,   
+    mode            : mode,        
+    lang            : lang 
 })
  ```
 
