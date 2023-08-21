@@ -1089,6 +1089,7 @@ abstract class component_common extends common {
 			$section_id		= $this->get_section_id();
 			$tipo			= $this->get_tipo();
 			$lang			= $this->get_lang() ?? DEDALO_DATA_LANG;
+			$mode			= $this->get_mode();
 
 			// Innecesario ???
 				// Si sabemos que el elemento no es traducible, fijamos su 'lang' en 'lg-nolan' (DEDALO_DATA_NOLAN)
@@ -1104,6 +1105,22 @@ abstract class component_common extends common {
 					. ' section_tipo: ' . $section_tipo . PHP_EOL
 					. ' tipo: ' . $tipo . PHP_EOL
 					. ' model: ' . get_class($this) . PHP_EOL
+					. ' mode: ' . $mode . PHP_EOL
+					. ' lang: ' . $lang
+					, logger::ERROR
+				);
+				return null;
+			}
+
+		// tm mode case
+			if ($mode==='tm') {
+				debug_log(__METHOD__
+					. " Error on save: invalid mode (tm)! . Ignored order" . PHP_EOL
+					. ' section_id: ' . to_string($section_id) . PHP_EOL
+					. ' section_tipo: ' . $section_tipo . PHP_EOL
+					. ' tipo: ' . $tipo . PHP_EOL
+					. ' model: ' . get_class($this) . PHP_EOL
+					. ' mode: ' . $mode . PHP_EOL
 					. ' lang: ' . $lang
 					, logger::ERROR
 				);
