@@ -141,7 +141,7 @@ class component_json extends component_common {
 
 	/**
 	* GET_DIFFUSION_VALUE
-	* Calculate current component diffusion value for target field (usually a mysql field)
+	* Calculate current component diffusion value for target field (usually a MYSQL field)
 	* Used for diffusion_mysql to unify components diffusion value call
 	* @return string $diffusion_value
 	*
@@ -152,10 +152,24 @@ class component_json extends component_common {
 		# Default behavior is get value
 		$dato = $this->get_dato();
 
-		# strip_tags all values (remove untranslated mark elements)
-		$diffusion_value = isset($dato[0])
-			? json_encode($dato[0])
+		$value = $dato[0] ?? null;
+		if (is_string($value)) {
+			// do not encode here
+			debug_log(__METHOD__
+				. ' Expected value type is NOT string ' . PHP_EOL
+				. ' type ' . gettype($value) . PHP_EOL
+				. ' value: ' . to_string($value)
+				, logger::WARNING
+			);
+		}else{
+			$value = json_handler::encode($value);
+		}
+
+		// diffusion_value
+		$diffusion_value = !empty($value)
+			? $value
 			: null;
+
 
 		return $diffusion_value;
 	}//end get_diffusion_value
