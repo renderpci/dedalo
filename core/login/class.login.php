@@ -692,7 +692,7 @@ class login extends common {
 			$_SESSION['dedalo']['auth']['is_global_admin'] = $is_global_admin;
 
 		// is_developer (before set user session vars)
-			$is_developer = (bool)login::is_developer($user_id);
+			$is_developer = (bool)security::is_developer($user_id);
 			$_SESSION['dedalo']['auth']['is_developer'] = $is_developer;
 
 		// session : If backup is ok, fix session data
@@ -1229,50 +1229,51 @@ class login extends common {
 	*	Normally current logged user id
 	* @return bool
 	*/
-	public static function is_developer( string|int $user_id) : bool {
+		// public static function is_developer( string|int $user_id) : bool {
 
-		$user_id = (int)$user_id;
+		// 	$user_id = (int)$user_id;
 
-		// Dedalo superuser case
-		if ($user_id==DEDALO_SUPERUSER) {
-			return true;
-		}
+		// 	// Dedalo superuser case
+		// 	if ($user_id==DEDALO_SUPERUSER) {
+		// 		return true;
+		// 	}
 
-		// Empty user_id
-		if ($user_id<1) {
-			return false;
-		}
+		// 	// Empty user_id
+		// 	if ($user_id<1) {
+		// 		return false;
+		// 	}
 
-		// If request user_id is the same as current logged user, return session value, without access to component
-			// if ( isset($_SESSION['dedalo']['auth']['user_id']) && $user_id==$_SESSION['dedalo']['auth']['user_id'] ) {
-			// 	return (bool)$_SESSION['dedalo']['auth']['is_developer'];
-			// }
+		// 	// If request user_id is the same as current logged user, return session value, without access to component
+		// 		// if ( isset($_SESSION['dedalo']['auth']['user_id']) && $user_id==$_SESSION['dedalo']['auth']['user_id'] ) {
+		// 		// 	return (bool)$_SESSION['dedalo']['auth']['is_developer'];
+		// 		// }
 
-		// Resolve from component data
-			$component = component_common::get_instance(
-				'component_radio_button',
-				DEDALO_USER_DEVELOPER_TIPO,
-				$user_id,
-				'edit',
-				DEDALO_DATA_NOLAN,
-				DEDALO_SECTION_USERS_TIPO
-			);
-			$dato = $component->get_dato();
+		// 	// Resolve from component data
+		// 		$model		= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_USER_DEVELOPER_TIPO,true);
+		// 		$component	= component_common::get_instance(
+		// 			$model,
+		// 			DEDALO_USER_DEVELOPER_TIPO,
+		// 			$user_id,
+		// 			'list',
+		// 			DEDALO_DATA_NOLAN,
+		// 			DEDALO_SECTION_USERS_TIPO
+		// 		);
+		// 		$dato = $component->get_dato();
 
-		// no data case
-			if (empty($dato)) {
-				return false;
-			}
+		// 	// no data case
+		// 		if (empty($dato)) {
+		// 			return false;
+		// 		}
 
-		// test radio button locator value
-			$locator = reset($dato); // value is always an array
-			if (isset($locator->section_id) && (int)$locator->section_id===1) {
-				return true;
-			}
+		// 	// test radio button locator value
+		// 		$locator = reset($dato); // value is always an array
+		// 		if (isset($locator->section_id) && (int)$locator->section_id===1) {
+		// 			return true;
+		// 		}
 
 
-		return false;
-	}//end is_developer
+		// 	return false;
+		// }//end is_developer
 
 
 

@@ -396,34 +396,37 @@ class security {
 		// cached value. If request user_id is the same as current logged user, return session value, without access to component
 			if ( isset($_SESSION['dedalo']['auth']['user_id']) && $user_id==$_SESSION['dedalo']['auth']['user_id'] ) {
 
-				return isset($_SESSION['dedalo']['auth']['is_global_admin'])
+				// get from session (set on user login)
+				$is_global_admin = isset($_SESSION['dedalo']['auth']['is_global_admin'])
 					? (bool)$_SESSION['dedalo']['auth']['is_global_admin']
 					: false;
+
+			}else{
+
+				// Resolve from component
+				$security_administrator_model		= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_SECURITY_ADMINISTRATOR_TIPO,true);
+				$component_security_administrator	= component_common::get_instance(
+					$security_administrator_model,
+					DEDALO_SECURITY_ADMINISTRATOR_TIPO,
+					$user_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					DEDALO_SECTION_USERS_TIPO
+				);
+
+				$security_administrator_dato = $component_security_administrator->get_dato();
+
+				// empty user data case
+					if (empty($security_administrator_dato)) {
+						return false;
+					}
+
+				// locator data
+					$dato = (int)$security_administrator_dato[0]->section_id;
+
+				// is_global_admin
+					$is_global_admin = ($dato===1);
 			}
-
-		// Resolve from component
-			$security_administrator_model		= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_SECURITY_ADMINISTRATOR_TIPO,true);
-			$component_security_administrator	= component_common::get_instance(
-				$security_administrator_model,
-				DEDALO_SECURITY_ADMINISTRATOR_TIPO,
-				$user_id,
-				'list',
-				DEDALO_DATA_NOLAN,
-				DEDALO_SECTION_USERS_TIPO
-			);
-
-			$security_administrator_dato = $component_security_administrator->get_dato();
-
-			// empty user data case
-				if (empty($security_administrator_dato)) {
-					return false;
-				}
-
-			// locator data
-				$dato = (int)$security_administrator_dato[0]->section_id;
-
-		// is_global_admin
-			$is_global_admin = ($dato===1);
 
 
 		return $is_global_admin;
@@ -434,7 +437,6 @@ class security {
 	/**
 	* IS_DEVELOPER
 	* Test if received user is developer
-	* @see login::is_developer()
 	* @param $user_id
 	*	User id · int · can be the current logged user or not.
 	* @return bool
@@ -449,13 +451,36 @@ class security {
 		// cached value. If request user_id is the same as current logged user, return session value, without access to component
 			if ( isset($_SESSION['dedalo']['auth']['user_id']) && $user_id==$_SESSION['dedalo']['auth']['user_id'] ) {
 
-				return isset($_SESSION['dedalo']['auth']['is_developer'])
+				// get from session value (set on user login)
+				$is_developer = isset($_SESSION['dedalo']['auth']['is_developer'])
 					? (bool)$_SESSION['dedalo']['auth']['is_developer']
 					: false;
-			}
 
-		// is_developer. Calculated from the component
-			$is_developer = login::is_developer($user_id);
+			}else{
+
+				// Resolve from component data
+				$model		= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_USER_DEVELOPER_TIPO,true);
+				$component	= component_common::get_instance(
+					$model,
+					DEDALO_USER_DEVELOPER_TIPO,
+					$user_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					DEDALO_SECTION_USERS_TIPO
+				);
+				$dato = $component->get_dato();
+
+				// empty user data case
+					if (empty($dato)) {
+						return false;
+					}
+
+				// locator data
+					$dato = (int)$dato[0]->section_id;
+
+				// is_developer
+					$is_developer = ($dato===1);
+			}
 
 
 		return $is_developer;
