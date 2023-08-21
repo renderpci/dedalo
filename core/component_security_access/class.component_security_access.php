@@ -223,21 +223,44 @@ class component_security_access extends component_common {
 
 	/**
 	* GET_ELEMENT_DATALIST
-	*
+	* Create the datalist items inside sections.
+	* Sometimes the section could have dataframe sections (sub-sections), in these cases
+	* the components inside the subsection will set as child of the subsection.
 	* @param string $section_tipo
-	* @return array $element_datalist
+	* @return array $datalist
 	*/
 	public static function get_element_datalist(string $section_tipo) : array {
 
 		$datalist = [];
 
+		// subsection as dataframe section are inside normal section
+		// sub_sections has his own components and need to be checked and set with the correct section_tipo
+		$sub_section_children_recursive = [];
+
+		// get all ontology nodes inside the main section (section_groups, components, tabs, sections, dataframes, etc.)
 		$children_recursive = self::get_children_recursive_security_acces($section_tipo);
 		foreach ($children_recursive as $current_child) {
+
+			// sub section case
+			// when a main section has a sub section
+			// get the children of this subsection to be checked in the loop
+			if($current_child->model === 'section'){
+				$sub_section_children_recursive = self::get_children_recursive_security_acces($current_child->tipo);
+			}
+
+			// check if the current child is inside a subsection
+			$found = array_find($sub_section_children_recursive, function($el) use ($current_child) {
+				return $el->tipo === $current_child->tipo;
+			});
+			// if the current child is inside a subsection, use the subsection tipo instead the main section tipo
+			$current_section_tipo = !empty($found)
+				? $found->section_tipo
+				: $section_tipo;
 
 			// add
 				$item = (object)[
 					'tipo'			=> $current_child->tipo,
-					'section_tipo'	=> $section_tipo,
+					'section_tipo'	=> $current_section_tipo,
 					'model'			=> $current_child->model,
 					'label'			=> $current_child->label,
 					'parent'		=> $current_child->parent
@@ -556,7 +579,7 @@ class component_security_access extends component_common {
 
 
 	/**
-	* SET_SECTION_PERMISSIONS (NOT USED)
+	* SET_SECTION_PERMISSIONS (USED BY GENERATE HIERARCHY BY USERS)
 	* Allow current user access to created default sections
 	* @param object $options
 	* @return bool
