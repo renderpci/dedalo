@@ -230,12 +230,13 @@ class request_query_object extends stdClass {
 			// object options
 				// public $options;
 
-		//
+		// direct_keys
 			public static $direct_keys = [
 				'id',
 				'api_engine',
 				'dd_api',
 				'action',
+				'source',
 				'sqo',
 				'show',
 				'search',

@@ -26,7 +26,7 @@ $global_start_time = hrtime(true);
 
 // PUBLIC API HEADERS (!) TEMPORAL 16-11-2022
 	// Allow CORS
-	header("Access-Control-Allow-Origin: *");
+	header('Access-Control-Allow-Origin: *');
 	// header("Access-Control-Allow-Credentials: true");
 	// header("Access-Control-Allow-Methods: GET,POST"); // GET,HEAD,OPTIONS,POST,PUT
 	$allow_headers = [
@@ -36,9 +36,9 @@ $global_start_time = hrtime(true);
 		'Content-Type',
 		// 'Access-Control-Request-Method',
 		// 'Access-Control-Request-Headers'
-		"Content-Range",
+		'Content-Range'
 	];
-	header("Access-Control-Allow-Headers: ". implode(', ', $allow_headers));
+	header('Access-Control-Allow-Headers: '. implode(', ', $allow_headers));
 
 
 
@@ -247,6 +247,7 @@ $global_start_time = hrtime(true);
 		// $current = (hrtime(true) - $global_start_time) / 1000000;
 		// error_log('--------------------------------------- current 3 (before echo) ms: '.$current);
 		// dump($_SESSION, ' _SESSION ++ '.to_string());
+
 
 
 // output_string_and_close_connection($output_string);
