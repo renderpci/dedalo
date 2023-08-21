@@ -69,15 +69,16 @@ Search Query Object is send as part of Request Query Object to be processed by s
 - **order** : `array of objects` set the order of the records, every object in the array will be a column with his paths and direction **optional** `[{"direction": "ASC", "path":[{ddo},{ddo}]}]]`
   - **direction** : `string` (ASC || DESC) sort direction of the column **optional**, ex: 'DESC'
   - **path** : `array of objects` the [ddo](dd_object.md) object that defines the path of the column beginning from the main section of the filter and path of ddo to the component in related section/s. **optional** `[{"section_tipo":"oh1","component_tipo":"oh24"},{"section_tipo":"rsc197", "component_tipo":"rsc85"}]`
-- **order_custom** : `object` order by specific values **optional**, ex: `{"column_name": [values]}`
+- **order_custom** : `object` order by specific values **optional**, ex: `[{"section_tipo": section_tipo, "column_name": column_name, "column_values": [values]}}`
+  - **section_tipo** : `string` name of section to be used to be ordered **optional**
   - **column_name** : `string` name of the column to be ordered **optional**
-  - **values** : `array` the array defines the order of the values **optional**
+  - **column_values** : `array` the array defines the order of the values **optional**
 - **filter_by_locators** : `array of objects` set a order by locators, every object is a [locator](locator.md) and the order of the array will be respected **optional** ex : `[{"section_tipo":"oh1", "section_id":"8"},{"section_tipo":"oh1", "section_id":"3"}]`
-- **allow_sub_select_by_id** : `bool` (true || false) create a window in the SQL query to select pass the filter and get the id to select the main section default : true **optional** .
+- **allow_sub_select_by_id** : `bool` (true || false) create a sub select in the SQL query to select pass the filter and get the id to select the main section default : true **optional** .
 - **children_recursive** : `bool` (true || false) filter the term of hierarchy and get the all children nodes dependents of the searched term. Default : false  **optional**
-- **remove_distinct** : `bool` (true || false) remove duplicates records when the SQL query has a window with multiple criteria that can get duplicate records. Default : true **optional**
+- **remove_distinct** : `bool` (true || false) remove duplicates records when the SQL query has a sub select with multiple criteria that can get duplicate records. Default : false **optional**
 - **skip_projects_filter** : `bool` (true || false) remove the mandatory filter of the component_filter applied at all users except root and global admin users. Default : false **optional**
-- **parsed** : `bool` (true || false) state of the sqo, it indicates if the filter was parsed by the components to add operators to the q. It's used as internal property, but is possible parse it manually and indicate this state. Default flase  **optional**
+- **parsed** : `bool` (true || false) state of the sqo, it indicates if the filter was parsed by the components to add operators to the q. It's used as internal property, but is possible parse it manually and indicate this state. Default false  **optional**
 - **select** : `array of objects` array of ddo with defines the SELECT parameter **DEPRECATED DO NOT USED IN V6**
 
 ### Summary
@@ -121,7 +122,7 @@ filter_by_locators      : [{
                             }]
 allow_sub_select_by_id  : (true || false) // default true
 children_recursive      : (true || false) // default false
-remove_distinct         : (true || false) // default true
+remove_distinct         : (true || false) // default false
 skip_projects_filter    : (true || false) // default false
 parsed                  : (true || false) // boolean, state of the sqo | default false
 select                  : [{    //DEPRECATED | array of objects optional
@@ -626,8 +627,7 @@ Noramally this search will use a locator in this way:
 
 But in SQL is hard to index all locators because it's not static combination of properties, so, in theses cases is possible to use a flat version (string version of the locator) to speed up the search.
 
-The previous locator to search can be flatten as: `numisdata309_numisdata300_1` And use it to search in the indexed function 
-`relations_flat_fct_st_si` in this way:
+The previous locator to search can be flatten as: `numisdata309_numisdata300_1` And use it to search in the indexed function `relations_flat_fct_st_si` in this way:
 
 ```json
 {
@@ -1138,6 +1138,199 @@ LIMIT 10;
 
 ### order_custom
 
+Defines a specific order of the search. Sometimes is necessary order the query result in specific way, instead alphabetic order or numeric order used by the default [order](#order), order_custom could order by any other criteria. For example: order a list by the creation time.
 
+Definition: `array of objects` order by specific values **optional**, ex: `[{"section_tipo": section_tipo, "column_name": column_name, "column_values": [values]}}`
 
-Definition: `object` order by specific values **optional**, ex: `{"column_name": [values]}`
+Example: give the list of Numismatic object section [numisdata4](https://dedalo.dev/ontology/numisdata4) with odd section_id in descending order (5,3,1).
+
+```json
+{
+  "section_tipo": [ "numisdata4"],
+  "order_custom": [{
+    "section_tipo":"numisdata4",
+    "column_name": "section_id",
+    "column_values": [5,3,1] 
+  }]
+}
+```
+
+The equivalent SQL:
+
+```sql
+SELECT * 
+FROM (
+  SELECT DISTINCT ON (nu4.section_id) nu4.section_id,
+  nu4.section_tipo,
+  nu4.datos
+  FROM matrix AS nu4
+  WHERE (nu4.section_tipo='numisdata4') AND nu4.section_id>0 
+  ORDER BY nu4.section_id ASC
+) main_select
+LEFT JOIN (VALUES ('numisdata4',5,1),('numisdata4',3,2),('numisdata4',1,3)) as x(ordering_section_tipo, ordering_id, ordering) ON main_select.section_id=x.ordering_id AND main_select.section_tipo=x.ordering_section_tipo 
+ORDER BY x.ordering ASC
+LIMIT 10
+```
+
+#### section_tipo
+
+Defines the section tipo of the colum that will used in the order_custom.
+
+Definition:  `string` name of section to be used to be ordered **optional**
+
+#### column_name
+
+Defines the name of the column to be ordered. The column name has to be defined the ontology inside the section_tipo.
+
+Definition: `string` name of the column to be ordered **optional**
+
+#### column_values
+
+Defines the values to be used in the custom order.
+
+Definition: `array` the array defines the order of the values **optional**
+
+### filter_by_locators
+
+Define a array with fixed [locators](locator.md) to be applied to the search. filter_by_locators is used when a query has a fixed data to be applied at any query, it is independent of the filter [q](#q) values and used to get a set of records previously than will be filtered by the q criteria. filter_by_locators has preference to other criteria define in filter.
+
+Definition: `array of objects` set a order by locators, every object is a [locator](locator.md) and the order of the array will be respected **optional** ex : `[{"section_tipo":"oh1", "section_id":"8"},{"section_tipo":"oh1", "section_id":"3"}]`
+
+Example: give me the section Types [numisdata3](https://dedalo.dev/ontology/numisdata3) that use the image [rsc170](https://dedalo.dev/ontology/rsc170) with section_id 69
+
+```json
+{
+  "section_tipo": ["numisdata3"],
+  "mode": "related",
+  "filter_by_locators": [
+    {
+      "section_tipo": "rsc170",
+      "section_id": "69"
+    }
+  ]
+}
+```
+
+The SQL equivalent:
+
+```sql
+SELECT section_tipo, section_id, datos
+FROM "matrix"
+WHERE (relations_flat_st_si(datos) @> '["rsc170_69"]'::jsonb)
+  AND (section_tipo = 'numisdata3')
+UNION ALL
+SELECT section_tipo, section_id, datos
+FROM "matrix_activities"
+WHERE (relations_flat_st_si(datos) @> '["rsc170_69"]'::jsonb)
+  AND (section_tipo = 'numisdata3')
+UNION ALL
+SELECT section_tipo, section_id, datos
+FROM "matrix_hierarchy"
+WHERE (relations_flat_st_si(datos) @> '["rsc170_69"]'::jsonb)
+  AND (section_tipo = 'numisdata3')
+UNION ALL
+SELECT section_tipo, section_id, datos
+FROM "matrix_list"
+WHERE (relations_flat_st_si(datos) @> '["rsc170_69"]'::jsonb)
+  AND (section_tipo = 'numisdata3')
+ORDER BY section_tipo, section_id ASC
+LIMIT 10
+OFFSET 0;
+```
+
+### allow_sub_select_by_id
+
+Defines if the query will use a sub select in SQL to get a pre-selection of the query with section_id as selector. Used to improve the search speed, the filter will be applied into the sub select WHERE statement and the section_ids of the selection will be used to get the main section in the main SQL. By default is set to true.
+
+Definition : `bool` (true || false) create a sub select in the SQL query to select pass the filter and get the id to select the main section default : true **optional** .
+
+Example: give me the first 5 sections of Numismatic object section [numisdata4](https://dedalo.dev/ontology/numisdata4) without preselecting sub select:
+
+```json
+{
+  "section_tipo": [ "numisdata4"],
+  "allow_sub_select_by_id":false,
+  "limit": 5
+}
+```
+
+The SQL equivalent:
+
+```sql
+SELECT DISTINCT ON (nu4.section_id) nu4.section_id,
+nu4.section_tipo,
+nu4.datos
+FROM matrix AS nu4
+WHERE (nu4.section_tipo='numisdata4') AND nu4.section_id>0
+ORDER BY nu4.section_id ASC
+LIMIT 5;
+```
+
+the same with preselecting sub select
+
+```json
+{
+  "section_tipo": [ "numisdata4"],
+  "allow_sub_select_by_id":true,
+  "limit": 5
+}
+```
+
+The SQL equivalent:
+
+```sql
+SELECT DISTINCT ON (nu4.section_id) nu4.section_id,
+nu4.section_tipo,
+nu4.datos
+FROM matrix AS nu4
+WHERE nu4.id in (
+  SELECT DISTINCT ON(nu4.section_id,nu4.section_tipo) nu4.id 
+  FROM matrix AS nu4
+  WHERE (nu4.section_tipo='numisdata4') AND nu4.section_id>0
+  ORDER BY nu4.section_id ASC
+  LIMIT 5
+)
+ORDER BY nu4.section_id ASC
+LIMIT 5;
+```
+
+### remove_distinct
+
+Defines if the query will return unique records. If the SQL has a sub select is possible that multiple records will be returned, this parameter prevent this result. By default is deactivate.
+
+Definition: `bool` (true || false) remove duplicates records when the SQL query has a sub select with multiple criteria that can get duplicate records. Default : false **optional**
+
+Example: give me the first 5 sections of Numismatic object section [numisdata4](https://dedalo.dev/ontology/numisdata4) without preselecting sub select and without DISTINCT:
+
+```json
+{
+  "section_tipo": [ "numisdata4"],
+  "allow_sub_select_by_id": false,
+  "remove_distinct": true,
+  "limit": 5
+}
+```
+
+The SQL equivalent:
+
+```sql
+SELECT nu4.section_id,
+nu4.section_tipo,
+nu4.datos
+FROM matrix AS nu4
+WHERE (nu4.section_tipo='numisdata4') AND nu4.section_id>0
+ORDER BY nu4.section_id ASC -- allow_sub_select_by_id=false
+LIMIT 5;
+```
+
+### skip_projects_filter
+
+Remove the projects filter applied to users. Every search inside Dédalo use the component_filter to restrict the section records that the user can get of any section. Every user has his own permissions to get one, two or more projects, projects are defined in section [dd153](https://dedalo.dev/ontology/dd153) and is assign to every user in the system. Only general-admin and the root user remove the projects restriction using this property. By default is false and is not possible to change in the fly.
+
+Definition: `bool` (true || false) remove the mandatory filter of the component_filter applied at all users except root and global admin users. Default : false **optional**
+
+### parsed
+
+Defines if the SQO has been parsed by the components and has his own operators.
+
+Definition: `bool` (true || false) state of the sqo, it indicates if the filter was parsed by the components to add operators to the q. It's used as internal property, but is possible parse it manually and indicate this state. Default false  **optional**
