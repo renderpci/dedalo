@@ -53,24 +53,24 @@ $component = component_common::get_instance(
     bool $cache                 = true, // load from cache if exist
     object $caller_dataframe    = null // if the component is inside a subsection or dataframe.
  );
- ```
+```
 
 In the client the components are instantiated by `instances.js` class.
 
-```js
+```javascript
 const component = get_instance({
-    model           : model,        
-    tipo            : tipo,         
-    section_tipo    : section_tipo, 
-    section_id      : section_id,   
-    mode            : mode,        
-    lang            : lang 
+    model           : model,        // string, model or name of the component
+    tipo            : tipo,         // string, ontology tipo
+    section_tipo    : section_tipo, // string, ontology section tipo of the component
+    section_id      : section_id,   // string || int, section id
+    mode            : mode,         // string, mode used to load the component with data used to edit or list
+    lang            : lang          // string, language 
 })
- ```
+```
 
  !!! Note about JavaScript instantiation
     The `instances.js` class is a ES6 module and it can be include in this way:
-    ```js
+    ```javascript
     import {get_instance} from '../../common/js/instances.js'
     ```
 
