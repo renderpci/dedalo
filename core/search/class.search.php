@@ -1592,7 +1592,6 @@ class search {
 							// $this->filter_join_where .= ' OR ' ;
 							// $this->filter_join_where .= $section_alias.'.'.$datos_container.' @>\'{"created_by_userID":'.$user_id.'}\'::jsonb';
 							$this->filter_join_where .= ')';
-
 						}
 						break;
 				}
@@ -1620,7 +1619,7 @@ class search {
 					}
 				}
 
-				if (!empty( $sql_filter)) {
+				if (!empty($sql_filter)) {
 					$sql_projects_filter = $sql_filter;
 				}
 			}//end if ($is_global_admin!==true) {
