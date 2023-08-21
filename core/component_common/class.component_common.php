@@ -3682,11 +3682,11 @@ abstract class component_common extends common {
 		// check bad data (old formats not array)
 			if (!empty($tm_dato) && !is_array($tm_dato)) {
 				debug_log(__METHOD__
-					." Bad dato found in time machine data. Making array cast to found dato: ".gettype($tm_dato) .PHP_EOL
-					. ' tm_dato: ' .  to_string($tm_dato),
+					." Bad dato found in time machine data. Making array cast to dato found: ".gettype($tm_dato) .PHP_EOL
+					.' tm_dato: ' .  to_string($tm_dato),
 					logger::ERROR
 				);
-				$tm_dato = (array)$tm_dato;
+				$tm_dato = [$tm_dato];
 			}
 
 		// check type
