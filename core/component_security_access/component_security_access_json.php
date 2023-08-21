@@ -62,7 +62,6 @@
 					$datalist	= $this->get_datalist($user_id);
 					break;
 			}
-
 		// data item
 			$item = $this->get_data_item($value);
 				$item->parent_tipo			= $this->get_tipo();
