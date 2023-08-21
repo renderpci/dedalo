@@ -3807,20 +3807,25 @@ abstract class component_common extends common {
 
 		}else{
 
-			// log JSON conversion error
-			debug_log(__METHOD__
-				." json_last_error: ".json_last_error()
-				, logger::ERROR
-			);
+			if(empty($import_value)){
+				$import_value = null;
+			}else{
 
-			$failed = new stdClass();
-				$failed->section_id		= $this->section_id;
-				$failed->data			= stripslashes( $import_value );
-				$failed->component_tipo	= $this->get_tipo();
-				$failed->msg			= 'IGNORED: malformed data '. to_string($import_value);
-			$response->errors[] = $failed;
+				// log JSON conversion error
+				debug_log(__METHOD__
+					." json_last_error: ".json_last_error()
+					, logger::ERROR
+				);
 
-			return $response;
+				$failed = new stdClass();
+					$failed->section_id		= $this->section_id;
+					$failed->data			= stripslashes( $import_value );
+					$failed->component_tipo	= $this->get_tipo();
+					$failed->msg			= 'IGNORED: malformed data '. to_string($import_value);
+				$response->errors[] = $failed;
+
+				return $response;
+			}
 		}
 
 		$response->result	= $import_value;
