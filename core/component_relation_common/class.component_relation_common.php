@@ -757,6 +757,12 @@ class component_relation_common extends component_common {
 						}// end if (!isset($locator_copy->lang))
 					}// end if ($translatable==='si')
 
+				// paginated_key
+					if (isset($locator_copy->paginated_key)) {
+						// remove temporal property paginated_key
+						unset($locator_copy->paginated_key);
+					}
+
 				// normalized locator
 					$normalized_locator = new locator($locator_copy);
 
