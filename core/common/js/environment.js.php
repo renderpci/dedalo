@@ -65,6 +65,7 @@ session_write_close();
 		$username			= $_SESSION['dedalo']['auth']['username'] ?? null;
 		$full_username		= $_SESSION['dedalo']['auth']['full_username'] ?? null;
 		$is_global_admin	= $_SESSION['dedalo']['auth']['is_global_admin'] ?? null;
+		$is_developer		= $_SESSION['dedalo']['auth']['is_developer'] ?? null;
 		$is_root			= $user_id==DEDALO_SUPERUSER;
 
 		$obj = new stdClass();
@@ -73,6 +74,7 @@ session_write_close();
 			// logged informative only
 			$obj->is_logged							= login::is_logged();
 			$obj->is_global_admin					= $is_global_admin;
+			$obj->is_developer						= $is_developer;
 			$obj->is_root							= $is_root;
 			$obj->user_id							= $user_id;
 			$obj->username							= $username;

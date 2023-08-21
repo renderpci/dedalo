@@ -24,6 +24,8 @@
 			(prevent PHP lock the session while the request is working. For example in 'count' calls)
 		options : object
 			For to send heterogeneous data to the API. Used by components, tools etc.
+		pretty_print : bool
+			(output JSON as pretty_print -using whitespace to format it- from API manager)
 
 		// info about
 			Mandatory	: dd_api, action, source
@@ -223,8 +225,27 @@ class request_query_object extends stdClass {
 				// public $data;
 			// bool prevent_lock
 				// public $prevent_lock;
+			// bool pretty_print
+				// public pretty_print
 			// object options
 				// public $options;
+
+		// direct_keys
+			public static $direct_keys = [
+				'id',
+				'api_engine',
+				'dd_api',
+				'action',
+				'source',
+				'sqo',
+				'show',
+				'search',
+				'choose',
+				'data',
+				'prevent_lock',
+				'options',
+				'pretty_print'
+			];
 
 
 

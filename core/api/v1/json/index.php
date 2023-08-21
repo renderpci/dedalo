@@ -26,7 +26,7 @@ $global_start_time = hrtime(true);
 
 // PUBLIC API HEADERS (!) TEMPORAL 16-11-2022
 	// Allow CORS
-	header("Access-Control-Allow-Origin: *");
+	header('Access-Control-Allow-Origin: *');
 	// header("Access-Control-Allow-Credentials: true");
 	// header("Access-Control-Allow-Methods: GET,POST"); // GET,HEAD,OPTIONS,POST,PUT
 	$allow_headers = [
@@ -36,9 +36,9 @@ $global_start_time = hrtime(true);
 		'Content-Type',
 		// 'Access-Control-Request-Method',
 		// 'Access-Control-Request-Headers'
-		"Content-Range",
+		'Content-Range'
 	];
-	header("Access-Control-Allow-Headers: ". implode(', ', $allow_headers));
+	header('Access-Control-Allow-Headers: '. implode(', ', $allow_headers));
 
 
 
@@ -90,9 +90,11 @@ $global_start_time = hrtime(true);
 
 
 
-// received files case. Uploading from tool_upload or text editor images upload
-	if (isset($_FILES)) {
-		if (!isset($rqo) && !empty($_FILES)) {
+// non php://input cases
+	if (!empty($_FILES)) {
+
+		// files case. Received files case. Uploading from tool_upload or text editor images upload
+		if (!isset($rqo)) {
 			$rqo = new stdClass();
 				$rqo->action	= 'upload';
 				$rqo->dd_api	= 'dd_utils_api';
@@ -106,6 +108,24 @@ $global_start_time = hrtime(true);
 		}
 		foreach($_FILES as $key => $value) {
 				$rqo->options->{$key} = $value;
+		}
+
+	}elseif (!empty($_REQUEST)) {
+
+		// GET/POST case
+		if (isset($_REQUEST['rqo'])) {
+			$rqo = json_handler::decode($_REQUEST['rqo']);
+		}else{
+			$rqo = (object)[
+				'source' => (object)[]
+			];
+			foreach($_REQUEST as $key => $value) {
+				if (in_array($key, request_query_object::$direct_keys)) {
+					$rqo->{$key} = safe_xss($value);
+				}else{
+					$rqo->source->{$key} = safe_xss($value);
+				}
+			}
 		}
 	}
 
@@ -191,7 +211,9 @@ $global_start_time = hrtime(true);
 
 // output the response JSON string
 	// $output_string = json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-	$output_string = json_handler::encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+	$output_string = isset($rqo->pretty_print)
+		? json_handler::encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)
+		: json_handler::encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
 	// debug (browser Server-Timing)
 		// header('Server-Timing: miss, db;dur=53, app;dur=47.2');
@@ -225,6 +247,7 @@ $global_start_time = hrtime(true);
 		// $current = (hrtime(true) - $global_start_time) / 1000000;
 		// error_log('--------------------------------------- current 3 (before echo) ms: '.$current);
 		// dump($_SESSION, ' _SESSION ++ '.to_string());
+
 
 
 // output_string_and_close_connection($output_string);

@@ -58,7 +58,7 @@ final class login_test extends TestCase {
 			$_SESSION['dedalo']['auth']['is_global_admin'] = $is_global_admin;
 
 		// is_developer (before set user session vars)
-			$is_developer = (bool)login::is_developer($user_id);
+			$is_developer = (bool)security::is_developer($user_id);
 			$_SESSION['dedalo']['auth']['is_developer'] = $is_developer;
 
 		// session : If backup is ok, fix session data
