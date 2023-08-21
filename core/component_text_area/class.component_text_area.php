@@ -3019,41 +3019,43 @@ class component_text_area extends component_common {
 
 					return $response;
 				}
+
 				$import_value	= $dato_from_json;
-
-			}else{
-
-				// check the begin and end of the value string, if it has a [] or other combination that seems array
-				// sometimes the value text could be [Ac], as numismatic legends, it's admit, but if the text has [" or "] it's not admitted.
-				$begins_one	= substr($import_value, 0, 1);
-				$ends_one	= substr($import_value, -1);
-				$begins_two	= substr($import_value, 0, 2);
-				$ends_two	= substr($import_value, -2);
-
-				if (($begins_two !== '["' && $ends_two !== '"]') ||
-					($begins_two !== '["' && $ends_one !== ']') ||
-					($begins_one !== '[' && $ends_two !== '"]')
-					){
-					$import_value = empty($import_value)
-						? null
-						: [$import_value];
-				}else{
-					// log JSON conversion error
-					debug_log(__METHOD__
-						." json_last_error: ".json_last_error()
-						, logger::ERROR
-					);
-
-					$failed = new stdClass();
-						$failed->section_id		= $this->section_id;
-						$failed->data			= stripslashes( $import_value );
-						$failed->component_tipo	= $this->get_tipo();
-						$failed->msg			= 'IGNORED: malformed data '. to_string($import_value);
-					$response->errors[] = $failed;
-
-					return $response;
-				}
 			}
+
+
+
+			// check the begin and end of the value string, if it has a [] or other combination that seems array
+			// sometimes the value text could be [Ac], as numismatic legends, it's admit, but if the text has [" or "] it's not admitted.
+			$begins_one	= substr($import_value, 0, 1);
+			$ends_one	= substr($import_value, -1);
+			$begins_two	= substr($import_value, 0, 2);
+			$ends_two	= substr($import_value, -2);
+
+			if (($begins_two !== '["' && $ends_two !== '"]') ||
+				($begins_two !== '["' && $ends_one !== ']') ||
+				($begins_one !== '[' && $ends_two !== '"]')
+				){
+				$import_value = empty($import_value)
+					? null
+					: [$import_value];
+			}else{
+				// log JSON conversion error
+				debug_log(__METHOD__
+					." json_last_error: ".json_last_error()
+					, logger::ERROR
+				);
+
+				$failed = new stdClass();
+					$failed->section_id		= $this->section_id;
+					$failed->data			= stripslashes( $import_value );
+					$failed->component_tipo	= $this->get_tipo();
+					$failed->msg			= 'IGNORED: malformed data '. to_string($import_value);
+				$response->errors[] = $failed;
+
+				return $response;
+			}
+
 
 			if(!empty($import_value)) {
 
