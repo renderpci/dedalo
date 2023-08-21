@@ -446,7 +446,7 @@ service_autocomplete.prototype.dedalo_engine = async function() {
 	// rqo
 		const rqo = await self.rebuild_search_query_object({
 			rqo_search		: rqo_search,
-			search_sections : search_sections,
+			search_sections	: search_sections,
 			filter_by_list	: filter_by_list
 		})
 

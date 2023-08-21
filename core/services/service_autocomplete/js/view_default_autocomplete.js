@@ -1006,6 +1006,10 @@ const render_datalist = async function(self, result) {
 		const total			= sections_data
 			? sections_data.value.length
 			: 0
+		// if the api doesn't send any data, do not continue, return empty datalist
+		if (total===0) {
+			return datalist
+		}
 
 	// datum. Added result as datum because will be necessary to render ddinfo column
 	// ddinfo will get data from autocomplete service instead the section_record
@@ -1013,10 +1017,20 @@ const render_datalist = async function(self, result) {
 		self.datum = result
 
 	// data. if the api doesn't send any data, do not continue, return empty datalist
-		const data = result.data.find(el=> el.tipo===self.tipo && el.typo==='sections')
-		if(!data){
-			return datalist
-		}
+		// const data = result.data.find(el=> el.tipo===self.tipo && el.typo==='sections')
+		// if(!data){
+		// 	return datalist
+		// }
+
+	// value. Remove unused value items properties (publication_first_date, publication_last_user, etc.)
+		const value = sections_data.value.map(el => {
+			const item = {
+				section_tipo	: el.section_tipo,
+				section_id		: el.section_id,
+				paginated_key	: el.paginated_key
+			}
+			return item
+		})
 
 	// context
 		// const context = result.context
@@ -1049,7 +1063,7 @@ const render_datalist = async function(self, result) {
 			mode				: 'list',
 			view				: 'text',
 			datum				: result,
-			value				: data.value,
+			value				: value,
 			request_config		: [self.rqo_search],
 			columns_map			: self.columns_map,
 			fields_separator	: fields_separator,

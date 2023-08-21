@@ -226,7 +226,16 @@ abstract class diffusion  {
 							case 'diffusion_mysql':
 								// check connection
 								try {
-									$conn = $conn ?? DBi::_getConnection_mysql();
+
+									$conn = $conn ?? DBi::_getConnection_mysql(
+										MYSQL_DEDALO_HOSTNAME_CONN,
+										MYSQL_DEDALO_USERNAME_CONN,
+										MYSQL_DEDALO_PASSWORD_CONN,
+										$item->database_name,
+										MYSQL_DEDALO_DB_PORT_CONN,
+										MYSQL_DEDALO_SOCKET_CONN
+									);
+
 								} catch (Exception $e) {
 									$conn = false;
 									debug_log(__METHOD__
