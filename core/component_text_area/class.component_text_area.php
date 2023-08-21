@@ -3012,6 +3012,13 @@ class component_text_area extends component_common {
 
 				// try to JSON decode (null on not decode)
 				$dato_from_json	= json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
+				// id data is a object it will be the Dédalo format and it's not necessary processed
+				if(is_object($dato_from_json)){
+					$response->result	= $dato_from_json;
+					$response->msg		= 'OK';
+
+					return $response;
+				}
 				$import_value	= $dato_from_json;
 
 			}else{
