@@ -2529,8 +2529,8 @@ class section extends common {
 				// Record already exists. Not continue
 				if($current_section_id_exists===true) {
 					debug_log(__METHOD__
-						." == SECTION : Record already exists ($this->section_id, $this->tipo)"
-						, logger::ERROR
+						." Record already exists, ignored !!!! ($this->section_id, $this->tipo)"
+						, logger::WARNING
 					);
 					return false;
 				}
