@@ -1225,7 +1225,7 @@ section.prototype.get_total = async function() {
 			return new Promise(function(resolve){
 				setTimeout(function(){
 					resolve( self.get_total() )
-				}, 100)
+				}, 600)
 			})
 		}
 
