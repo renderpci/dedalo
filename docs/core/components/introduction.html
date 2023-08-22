@@ -48,15 +48,167 @@
 <li>zzz = view (default | line | mini | text | mosaic | etc.)</li>
 </ul>
 
+<h2 id="typologiesofcomponents">Typologies of components</h2>
+
+<p>Mainly Dédalo define two different behavior for components; literal components and related components. This typologies defines if the component has a related data or his data its managed by itself.</p>
+
+<h3 id="literalcomponents">Literal components</h3>
+
+<p>Literal components manage direct data, final data, this data is independent of other ontology parts or components, this components save his data and does not need resolve it with others.</p>
+
+<p>Literal components has three different ways to manage data; direct, media and info.</p>
+
+<ul>
+<li>Direct components manage and control the format used.</li>
+<li>Media components share his data format definition between other media components.</li>
+<li>Info components give data from other components as information or calculations (summaries, state, etc ).</li>
+</ul>
+
+<p>!!! note &#8220;About info as literal component&#8221;
+Info components need other components to calculate his own data, but the result is save as direct data, so the component read and save like any other literal component.</p>
+
+<ol>
+<li>Direct components:</li>
+</ol>
+
+<ul>
+<li><p> component_date</p></li>
+<li><p> component_email</p></li>
+<li><p> component_external</p></li>
+<li><p> component_filter_records</p></li>
+<li><p> component_geolocation</p></li>
+<li><p> component_input_text</p></li>
+<li><p> component_iri</p></li>
+<li><p> component_json</p></li>
+<li><p> component_number</p></li>
+<li><p> component_password</p></li>
+<li><p> component_security_access</p></li>
+<li><p> component_section_id</p></li>
+<li><p> component_text_area</p>
+
+<p>This components extend component_common.php class</p></li>
+</ul>
+
+<ol>
+<li>Media components:</li>
+</ol>
+
+<ul>
+<li><p> component_3d</p></li>
+<li><p> component_av</p></li>
+<li><p> component_image</p></li>
+<li><p> component_pdf</p></li>
+<li><p> component_svg</p>
+
+<p>This components extend component_media_common.php class</p></li>
+</ul>
+
+<ol>
+<li>Info components:</li>
+</ol>
+
+<ul>
+<li><p> component_info</p></li>
+<li><p> component_inverse</p>
+
+<p>This components extend component_common.php class</p></li>
+</ul>
+
+<h3 id="relatedcomponents">Related components</h3>
+
+<p>Related components manage <a href="../locator.md">locators</a> to point at other sections or components, sections pointed could be the same of the related component or other sections. The locator can specify if the pointed components is a literal or other related component.</p>
+
+<ul>
+<li>component_check_box</li>
+<li>component_filter</li>
+<li>component_filter_master</li>
+<li>component_portal</li>
+<li>component_publication</li>
+<li>component_radio_button</li>
+<li>component_relation_children</li>
+<li>component_relation_index</li>
+<li>component_relation_model</li>
+<li>component_relation_parent</li>
+<li>component_relation_related</li>
+<li>component_select</li>
+<li>component_select_lang</li>
+</ul>
+
+<p>This components extend component_relation_common.php class</p>
+
+<h2 id="inheritance">Inheritance</h2>
+
+<p>In server context. components classes inherit from common classes dependent of the component typology. The main component class is <code>component_common.php</code> and some components, as media components, share his own common class as <code>compnent_media_commmon.php</code></p>
+
+<pre><code class="mermaid">    flowchart RL
+       B(&quot;component_common&quot;) -.-&gt; A(&quot;common&quot;)
+         subgraph inheritance[&quot;components inheritance&quot;]
+            BA(&quot;component_media_common&quot;) -.-&gt; B
+            BB(&quot;component_related_common&quot;)  -.-&gt; B
+            subgraph literal[&quot;literal components&quot;]
+                BC(&quot;component_date&quot;) -.-&gt; B
+                BD(&quot;component_email&quot;) -.-&gt; B
+                BE(&quot;component_external&quot;) -.-&gt; B
+                BF(&quot;component_filter_records&quot;) -.-&gt; B
+                BG(&quot;component_geolocation&quot;) -.-&gt; B
+                BH(&quot;component_input_text&quot;) -.-&gt; B
+                BI(&quot;component_iri&quot;) -.-&gt; B
+                BJ(&quot;component_json&quot;) -.-&gt; B
+                BK(&quot;component_number&quot;) -.-&gt; B
+                BL(&quot;component_password&quot;) -.-&gt; B
+                BM(&quot;component_security_access&quot;) -.-&gt; B
+                BN(&quot;component_section_id&quot;) -.-&gt; B
+                BO(&quot;component_text_area&quot;) -.-&gt; B
+                subgraph media[&quot;media components&quot;]
+                   BAA(&quot;component_3d&quot;) -.-&gt; BA
+                   BAB(&quot;component_av&quot;) -.-&gt; BA
+                   BAC(&quot;component_image&quot;) -.-&gt; BA
+                   BAD(&quot;component_pdf&quot;) -.-&gt; BA
+                   BAF(&quot;component_svg&quot;) -.-&gt; BA
+                    end
+                end
+            subgraph related[&quot;related Components&quot;]
+                BBA(&quot;component_check_box&quot;) -.-&gt; BB
+                BBB(&quot;component_filter&quot;) -.-&gt; BB
+                BBBA(&quot;component_filter_master&quot;) -.-&gt; BBB
+                BBC(&quot;component_portal&quot;) -.-&gt; BB
+                BBD(&quot;component_publication&quot;) -.-&gt; BB
+                BBE(&quot;component_radio_button&quot;) -.-&gt; BB
+                BBF(&quot;component_relation_children&quot;) -.-&gt; BB
+                BBG(&quot;component_relation_index&quot;) -.-&gt; BB
+                BBH(&quot;component_relation_model&quot;) -.-&gt; BB
+                BBI(&quot;component_relation_parent&quot;) -.-&gt; BB
+                BBJ(&quot;component_relation_related&quot;) -.-&gt; BB
+                BBK(&quot;component_select&quot;) -.-&gt; BB
+                BBL(&quot;component_select_lang&quot;) -.-&gt; BB
+            end
+        end
+        style inheritance fill:#eee,color:#555,stroke:#888;
+        style literal fill:#ccc,color:#ffffff,stroke:#888;
+        style media fill:#aaa,color:#ffffff,stroke:#888;
+        style related fill:#aaa,color:#ffffff,stroke:#888;
+</code></pre>
+
 <h2 id="instantiation">Instantiation</h2>
 
-<p>Normally components are called by sections but it&#8217;s possible instantiate any component without his own section. In the server the components are instantiated by <code>component_common.php</code> class.</p>
+<p>Normally components are called by sections but it&#8217;s possible instantiate any component directly.</p>
+
+<p>To instantiate a component is necessary indicate:</p>
+
+<ol>
+<li>His <code>model</code>, his name.</li>
+<li>His ontology <code>tipo</code></li>
+<li>His <code>section_tipo</code> (some components could be instantiated in different sections)</li>
+<li>The language to be loaded and used.</li>
+</ol>
+
+<p>In the server the components are instantiated with <code>get_instance()</code> method in <code>component_common.php</code> class.</p>
 
 <pre><code class="php">$component = component_common::get_instance(
-    string $component_name      = null, // model or name of the component
+    string $model               = null, // model or name of the component
     string $tipo                = null, // ontology tipo
-    mixed $section_id           = null, // section id
-    string $mode                = 'edit', // mode used to load the component with data used to edit or list
+    mixed $section_id           = null, // section id or null when is not known
+    string $mode                = 'edit', // mode used to load the component with the data used to edit or list
     string $lang                = DEDALO_DATA_LANG, // language 
     string $section_tipo        = null,  // the ontology section tipo of the component
     bool $cache                 = true, // load from cache if exist
@@ -76,7 +228,7 @@
 })
 </code></pre>
 
-<p>!!! Note about JavaScript instantiation
+<p>!!! example &#8220;JavaScript instantiation&#8221;
 The <code>instances.js</code> class is a ES6 module and it can be include in this way:
 <code>javascript
 import {get_instance} from '../../common/js/instances.js'</code></p>
@@ -85,13 +237,319 @@ import {get_instance} from '../../common/js/instances.js'</code></p>
 
 <p>Components manage his own data, but their are not connected directly to the database, only sections can get and save data in the database, so, components get and save his data through their own section.</p>
 
-<h2 id="translatablecomponents">Translatable components</h2>
+<h2 id="translatableproperty">Translatable property</h2>
 
 <p>Dédalo is a multi-language system, all information could be translatable in multiple languages. Components are translatable by default, but some components are not translatable as component_number.</p>
 
+<h3 id="translatablecomponents">Translatable components</h3>
+
 <p>Translatable components manage only the instance in the current language and their data will be only the instantiated language part of the data, for example, a component_input_text instantiated in the Català language will only manage the Català part of its data, the component will get its data from the section but you can only get one language at a time.</p>
 
-<p>Non translatable components are instantiated with <code>lg-nolan</code> language.</p>
+<h3 id="non-translatablecomponents">Non-translatable components</h3>
+
+<p>Every component has a language. Language need to be set when the component is instantiated, for non-translatable components language is defined as <code>lg-nolan</code>, and the component works in the same way that translatable component.</p>
+
+<h3 id="transliteratecomponents">Transliterate components</h3>
+
+<p>In special cases, such as personal names, the component can be define as transliterate, (1) in these cases the language is define as <code>lg-nolan</code> by default, but the component can handle other languages as English <code>lg-eng</code>.</p>
+
+<p>{ .annotate }</p>
+
+<ol>
+<li>To express or represent in the characters of another alphabet.</li>
+</ol>
+
+<h2 id="properties">Properties</h2>
+
+<p>The ontology define the properties that will be used when the component will be instantiated. Properties define specific context of the component, as CSS styles or the RQO used.</p>
+
+<p>Properties are write in JSON.</p>
+
+<h2 id="datum">datum</h2>
+
+<p>Datum is a JSON object with all needed to build and render the components. Datum object has two properties; <code>context</code> and <code>data</code>, <code>data</code> has a <code>value</code> property with the database value of the component.</p>
+
+<p>Datum structure in JSON</p>
+
+<pre><code class="json">{
+    &quot;context&quot;:{}
+    &quot;data&quot;:{
+        &quot;value&quot;:[]
+    }
+}
+</code></pre>
+
+<h2 id="context">context</h2>
+
+<p>Context defines his part of the ontology and all needed to build the component in client side.
+Components create his own context when the component is instantiated.</p>
+
+<p>Related components would need a subcontext to be instantiated such as component_portal, that need all context for all components pointed to be builded.</p>
+
+<p>Example of context for the Birth town <a href="https://dedalo.dev/ontology/rsc91">rsc91</a> a component_portal (relation component)</p>
+
+<pre><code class="json">{
+    &quot;context&quot;:{
+        &quot;label&quot;             : &quot;Birth town&quot;, // resolution of the name of the component in the application lang
+        &quot;tipo&quot;              : &quot;rsc91&quot;, // ontology tipo
+        &quot;section_tipo&quot;      : &quot;rsc197&quot;, // ontology section tipo
+        &quot;model&quot;             : &quot;component_portal&quot;, // component model to be instantiated
+        &quot;legacy_model&quot;      : &quot;component_autocomplete_hi&quot;, // old component model in versions &lt;v6
+        &quot;parent&quot;            : &quot;rsc197&quot;, // parent node in ontology
+        &quot;parent_grouper&quot;    : &quot;rsc76&quot;, // parent grouper in ontology
+        &quot;lang&quot;              : &quot;lg-nolan&quot;, // lang to be instantiated
+        &quot;mode&quot;              : &quot;edit&quot;, // mode to get data from database (edit, list, search, ...)
+        &quot;translatable&quot;      : false, // specify if the component could be translatable
+        &quot;properties&quot;        : {
+                                &quot;source&quot;: {
+                                    &quot;mode&quot;: &quot;autocomplete&quot;,
+                                    &quot;request_config&quot;: [{
+                                        &quot;sqo&quot;: {
+                                            &quot;section_tipo&quot;: [{
+                                                &quot;value&quot;: [2],
+                                                &quot;source&quot;: &quot;hierarchy_types&quot;
+                                            }]
+                                        },
+                                        &quot;show&quot;: {
+                                            &quot;ddo_map&quot;: [{
+                                                &quot;tipo&quot;: &quot;hierarchy25&quot;,
+                                                &quot;parent&quot;: &quot;self&quot;,
+                                                &quot;section_tipo&quot;: &quot;self&quot;,
+                                                &quot;value_with_parents&quot;: true
+                                            }],
+                                            &quot;fields_separator&quot;: &quot;, &quot;
+                                        },
+                                        &quot;choose&quot;: {
+                                            &quot;ddo_map&quot;: [
+                                                {
+                                                    &quot;tipo&quot;: &quot;hierarchy25&quot;,
+                                                    &quot;parent&quot;: &quot;self&quot;,
+                                                    &quot;section_tipo&quot;: &quot;self&quot;,
+                                                    &quot;value_with_parents&quot;: true
+                                                },{
+                                                    &quot;tipo&quot;: &quot;hierarchy27&quot;,
+                                                    &quot;parent&quot;: &quot;self&quot;,
+                                                    &quot;section_tipo&quot;: &quot;self&quot;
+                                                }
+                                            ],
+                                            &quot;sqo_config&quot;: {
+                                                &quot;limit&quot;: 30
+                                            },
+                                            &quot;fields_separator&quot;: &quot; | &quot;
+                                            }
+                                    }
+                                    ]
+                                }
+                             }, // properties defined in ontology
+        &quot;css&quot;               : {
+                                &quot;.wrapper_component&quot;: {
+                                &quot;grid-column&quot;: &quot;span 7&quot;
+                                }
+                              }, // style defined in ontology
+        &quot;permissions&quot;       : 2, // user permissions of the component
+        &quot;buttons&quot;           : [], // specific buttons
+        &quot;request_config&quot;    : [{
+                                &quot;api_engine&quot;: &quot;dedalo&quot;,
+                                &quot;type&quot;: &quot;main&quot;,
+                                &quot;sqo&quot;: {
+                                    &quot;section_tipo&quot;: [
+                                        {
+                                            &quot;typo&quot;: &quot;ddo&quot;,
+                                            &quot;tipo&quot;: &quot;es1&quot;,
+                                            &quot;model&quot;: &quot;section&quot;,
+                                            &quot;label&quot;: &quot;Spain&quot;
+                                        },
+                                        {
+                                            &quot;typo&quot;: &quot;ddo&quot;,
+                                            &quot;tipo&quot;: &quot;fr1&quot;,
+                                            &quot;model&quot;: &quot;section&quot;,
+                                            &quot;label&quot;: &quot;France&quot;
+                                        }
+                                    ],
+                                    &quot;limit&quot;: 10
+                                },
+                                &quot;show&quot;: {
+                                    &quot;ddo_map&quot;: [
+                                        {
+                                            &quot;tipo&quot;: &quot;hierarchy25&quot;,
+                                            &quot;parent&quot;: &quot;rsc91&quot;,
+                                            &quot;section_tipo&quot;: [
+                                                &quot;fr1&quot;,
+                                                &quot;es1&quot;
+                                            ],
+                                            &quot;value_with_parents&quot;: true,
+                                            &quot;label&quot;: &quot;Term&quot;,
+                                            &quot;mode&quot;: &quot;list&quot;,
+                                            &quot;model&quot;: &quot;component_input_text&quot;,
+                                            &quot;view&quot;: &quot;text&quot;,
+                                            &quot;column_id&quot;: &quot;rsc91&quot;
+                                        }
+                                    ],
+                                    &quot;fields_separator&quot;: &quot;, &quot;,
+                                    &quot;sqo_config&quot;: {
+                                        &quot;full_count&quot;: false,
+                                        &quot;limit&quot;: 10,
+                                        &quot;offset&quot;: 0,
+                                        &quot;mode&quot;: &quot;edit&quot;,
+                                        &quot;operator&quot;: &quot;$or&quot;
+                                    }
+                                },
+                                &quot;search&quot;: null,
+                                &quot;choose&quot;: {
+                                    &quot;ddo_map&quot;: [
+                                        {
+                                            &quot;tipo&quot;: &quot;hierarchy25&quot;,
+                                            &quot;parent&quot;: &quot;rsc91&quot;,
+                                            &quot;section_tipo&quot;: [
+                                                &quot;fr1&quot;,
+                                                &quot;es1&quot;
+                                            ],
+                                            &quot;value_with_parents&quot;: true,
+                                            &quot;label&quot;: &quot;Term&quot;,
+                                            &quot;mode&quot;: &quot;list&quot;
+                                        },
+                                        {
+                                            &quot;tipo&quot;: &quot;hierarchy27&quot;,
+                                            &quot;parent&quot;: &quot;rsc91&quot;,
+                                            &quot;section_tipo&quot;: [
+                                                &quot;fr1&quot;,
+                                                &quot;es1&quot;
+                                            ],
+                                            &quot;label&quot;: &quot;Model&quot;,
+                                            &quot;mode&quot;: &quot;list&quot;
+                                        }
+                                    ],
+                                    &quot;sqo_config&quot;: {
+                                        &quot;limit&quot;: 30
+                                    },
+                                    &quot;fields_separator&quot;: &quot; | &quot;
+                                }
+                              }], // parsed request config, ready to be used.
+        &quot;columns_map&quot;       : [], // columns to be render with the components
+        &quot;tools&quot;             : [{
+                                    &quot;typo&quot;: &quot;ddo&quot;,
+                                    &quot;model&quot;: &quot;tool_propagate_component_data&quot;,
+                                    &quot;name&quot;: &quot;tool_propagate_component_data&quot;,
+                                    &quot;label&quot;: &quot;Propaga datos de componentes&quot;,
+                                    &quot;section_tipo&quot;: &quot;dd1324&quot;,
+                                    &quot;mode&quot;: &quot;edit&quot;,
+                                    &quot;properties&quot;: null,
+                                    &quot;css&quot;: {
+                                        &quot;url&quot;: &quot;/dedalo/tools/tool_propagate_component_data/css/tool_propagate_component_data.css&quot;
+                                    },
+                                    &quot;icon&quot;: &quot;/dedalo/tools/tool_propagate_component_data/img/icon.svg&quot;,
+                                    &quot;show_in_inspector&quot;: true,
+                                    &quot;show_in_component&quot;: true,
+                                    &quot;type&quot;: &quot;tool&quot;
+                                },
+                                {
+                                    &quot;typo&quot;: &quot;ddo&quot;,
+                                    &quot;model&quot;: &quot;tool_time_machine&quot;,
+                                    &quot;name&quot;: &quot;tool_time_machine&quot;,
+                                    &quot;label&quot;: &quot;Máquina del tiempo&quot;,
+                                    &quot;section_tipo&quot;: &quot;dd1324&quot;,
+                                    &quot;mode&quot;: &quot;edit&quot;,
+                                    &quot;properties&quot;: {
+                                        &quot;open_as&quot;: &quot;window&quot;,
+                                        &quot;windowFeatures&quot;: null
+                                    },
+                                    &quot;css&quot;: {
+                                        &quot;url&quot;: &quot;/dedalo/tools/tool_time_machine/css/tool_time_machine.css&quot;
+                                    },
+                                    &quot;icon&quot;: &quot;/dedalo/tools/tool_time_machine/img/icon.svg&quot;,
+                                    &quot;show_in_inspector&quot;: true,
+                                    &quot;show_in_component&quot;: true,
+                                    &quot;type&quot;: &quot;tool&quot;
+                                }], // tools active for the component
+        &quot;sortable&quot;          : true, // indicate if the components can be used to sort in list,
+        &quot;type&quot;              : &quot;component&quot;, // type of the context object
+        &quot;typo&quot;              : &quot;ddo&quot;, // 
+        &quot;view&quot;              : &quot;line&quot; // view to be used in render process
+    }
+}
+</code></pre>
+
+<h2 id="data">data</h2>
+
+<p>Every component defines his own data structure, but all components has a <code>value</code> property with the database value. All components store his data as an array, so, value always is an array.</p>
+
+<p>Example of data for the Birth town <a href="https://dedalo.dev/ontology/rsc91">rsc91</a> a component_portal (relation component)</p>
+
+<pre><code class="json">{
+    &quot;section_id&quot;: &quot;1&quot;, // section_id of the component instance
+    &quot;section_tipo&quot;: &quot;rsc197&quot;, // section_tipo of the component instance
+    &quot;tipo&quot;: &quot;rsc91&quot;, // ontology tipo of the component instance
+    &quot;lang&quot;: &quot;lg-nolan&quot;, // language of the component instance
+    &quot;from_component_tipo&quot;: &quot;rsc91&quot;, // sub-data component_tipo (used to be linked if the component is called by other component)
+    &quot;value&quot;: [
+        {
+            &quot;type&quot;: &quot;dd151&quot;,
+            &quot;section_id&quot;: &quot;3896&quot;,
+            &quot;section_tipo&quot;: &quot;es1&quot;,
+            &quot;from_component_tipo&quot;: &quot;rsc91&quot;,
+        }
+    ], // database value
+    &quot;parent_tipo&quot;: &quot;rsc197&quot;, // section or component that call to this component
+    &quot;parent_section_id&quot;: &quot;1&quot;, // section_id of the section or that call to this component 
+    &quot;pagination&quot;: {
+        &quot;total&quot;: 1,
+        &quot;limit&quot;: 10,
+        &quot;offset&quot;: 0
+    },
+    &quot;row_section_id&quot;: &quot;1&quot;,
+    &quot;changed_data&quot;: [] // to set with new data or modify existing data
+}
+</code></pre>
+
+<h2 id="permissions">Permissions</h2>
+
+<p>Components can handle data and save, permissions define if the user can access, read, write or admin the component.</p>
+
+<p>In server context permissions are set with the data saved in database, and it&#8217;s checked every time that the system is required to load, save, etc.</p>
+
+<p>In client context, permissions are set and checked in every API call, they control the render and behavior of the component.</p>
+
+<p>!!! warning &#8220;unauthorized changes in permissions&#8221;
+To avoid unauthorized changes in permissions, every call to load and save is checked in the server context, previous to execute the call.</p>
+
+<p>Permission is set as int with the level of the access to the component instance.</p>
+
+<table>
+<colgroup>
+<col />
+<col />
+</colgroup>
+
+<thead>
+<tr>
+	<th>permission </th>
+	<th> level</th>
+</tr>
+</thead>
+
+<tbody>
+<tr>
+	<td>0 </td>
+	<td> no access</td>
+</tr>
+<tr>
+	<td>1 </td>
+	<td> read only</td>
+</tr>
+<tr>
+	<td>2 </td>
+	<td> read and write</td>
+</tr>
+<tr>
+	<td>3 </td>
+	<td> read, write and admin</td>
+</tr>
+</tbody>
+</table>
+
+<h2 id="tools">tools</h2>
+
+<p>Defines with tools can be used in the component instance. Tools add some functionalities to extend the standard behavior. For example if a component is translatable it will load the <code>tool_lang</code>.</p>
 
 </body>
 </html>
