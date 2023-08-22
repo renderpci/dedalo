@@ -878,6 +878,21 @@ class component_3d extends component_media_common {
 		);
 		if ($result===true) {
 
+			// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+				logger::$obj['activity']->log_message(
+					'DELETE FILE',
+					logger::INFO,
+					$this->tipo,
+					NULL,
+					[
+						'msg'		=> 'Deleted media file (file is renamed and moved to delete folder)',
+						'tipo'		=> $this->tipo,
+						'parent'	=> $this->section_id,
+						'id'		=> $this->id,
+						'quality'	=> $quality
+					]
+				);
+
 			// save To update valor_list
 				$this->Save();
 

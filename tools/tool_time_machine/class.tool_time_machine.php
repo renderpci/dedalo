@@ -10,7 +10,7 @@ class tool_time_machine extends tool_common {
 
 	/**
 	* APPLY_VALUE
-	* Set user selected value from time machine to current component data
+	* Set user selected value from time machine to current element data
 	* @param object $request_options
 	* @return object $response
 	*/
@@ -45,6 +45,7 @@ class tool_time_machine extends tool_common {
 
 		// apply time machine data to element and save
 			switch (true) {
+
 				case ($model==='section'):
 					// recovering section case
 
@@ -133,6 +134,23 @@ class tool_time_machine extends tool_common {
 
 					// Save the component with a new updated data from time machine
 						$result = $element->Save();
+
+					// LOGGER ACTIVITY
+						$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
+						logger::$obj['activity']->log_message(
+							'RECOVER COMPONENT',
+							logger::INFO,
+							$section_tipo,
+							null,
+							[
+								'msg'			=> 'Recovered component data from time machine',
+								'model'			=> $model,
+								'section_id'	=> $section_id,
+								'section_tipo'	=> $section_tipo,
+								'table'			=> $matrix_table,
+								'tm_id'			=> $matrix_id
+							]
+						);
 					break;
 
 				default:
@@ -147,7 +165,6 @@ class tool_time_machine extends tool_common {
 					return $response;
 					break;
 			}
-
 
 
 		$response->result	= true;

@@ -1152,6 +1152,21 @@ class component_av extends component_media_common {
 		);
 		if ($result===true) {
 
+			// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+				logger::$obj['activity']->log_message(
+					'DELETE FILE',
+					logger::INFO,
+					$this->tipo,
+					NULL,
+					[
+						'msg'		=> 'Deleted media file (file is renamed and moved to delete folder)',
+						'tipo'		=> $this->tipo,
+						'parent'	=> $this->section_id,
+						'id'		=> $this->id,
+						'quality'	=> $quality
+					]
+				);
+
 			// save To update valor_list
 				$this->Save();
 
@@ -1318,8 +1333,25 @@ class component_av extends component_media_common {
 				);
 			}
 
+		// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+			logger::$obj['activity']->log_message(
+				'NEW VERSION',
+				logger::INFO,
+				$this->tipo,
+				NULL,
+				[
+					'msg'				=> 'Built version. Generated av file',
+					'tipo'				=> $this->tipo,
+					'parent'			=> $this->section_id,
+					'id'				=> $id,
+					'quality'			=> $quality,
+					'source_quality'	=> $source_quality,
+					'target_quality'	=> $quality
+				]
+			);
+
 		// update component dato files info and save
-			// $this->Save();
+			// $this->Save(); // delayed (!)
 			// (!) Do not update here because process continues in background and
 			// a save action 'force_save' will be called from client from tool_media_versions
 			// when the new file is available (background process finish)
@@ -1331,23 +1363,6 @@ class component_av extends component_media_common {
 				: 'File built';
 			$response->command_response	= $command_response ?? null;
 
-		// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
-			logger::$obj['activity']->log_message(
-				'NEW VERSION',
-				logger::INFO,
-				$this->tipo,
-				NULL,
-				[
-					'msg'				=> 'Generated av file',
-					'tipo'				=> $this->tipo,
-					'parent'			=> $this->section_id,
-					'top_id'			=> TOP_ID ?? null,
-					'top_tipo'			=> TOP_TIPO ?? null,
-					'id'				=> $id,
-					'quality'			=> $quality,
-					'source_quality'	=> $source_quality
-				]
-			);
 
 		return $response;
 	}//end build_version

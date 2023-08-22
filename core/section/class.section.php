@@ -1582,8 +1582,8 @@ class section extends common {
 					'section_id'	=> $this->section_id,
 					'tipo'			=> $this->tipo,
 					'is_portal'		=> intval($is_portal),
-					'top_id'		=> TOP_ID,
-					'top_tipo'		=> TOP_TIPO,
+					// 'top_id'		=> TOP_ID ?? null,
+					// 'top_tipo'	=> TOP_TIPO ?? null,
 					'table'			=> $matrix_table,
 					'delete_mode'	=> $delete_mode,
 					'section_tipo'	=> $this->tipo
