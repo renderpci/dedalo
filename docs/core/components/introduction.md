@@ -199,7 +199,7 @@ const component = get_instance({
 })
 ```
 
-!!! example "JavaScript instantiation"
+!!! info "JavaScript instantiation"
     The `instances.js` class is a ES6 module and it can be include in this way:
     ```javascript
     import {get_instance} from '../../common/js/instances.js'
