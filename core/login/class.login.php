@@ -1174,13 +1174,15 @@ class login extends common {
 	* @param array $activity_datos = null
 	* @return void
 	*/
-	public static function login_activity_report(string $msg, string $login_label, array $activity_datos=null) {
+	public static function login_activity_report(string $msg, string $login_label, array $activity_datos=null) : void {
 
-		$datos = array("msg" => $msg);
-
-		// append activity_datos if exists
+		// data base
+			$data = [
+				'msg' => $msg
+			];
+			// append activity_datos if exists
 			if(!empty($activity_datos) && is_array($activity_datos)) {
-				$datos = array_merge($datos, $activity_datos);
+				$data = array_merge($data, $activity_datos);
 			}
 
 		// LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
@@ -1189,7 +1191,7 @@ class login extends common {
 				logger::INFO,
 				self::get_login_tipo(),
 				null,
-				$datos
+				$data
 			);
 	}//end login_activity_report
 

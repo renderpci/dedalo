@@ -8,6 +8,7 @@
 	import {view_default_list_input_text} from './view_default_list_input_text.js'
 	import {view_mini_input_text} from './view_mini_input_text.js'
 	import {view_text_input_text} from './view_text_input_text.js'
+	import {view_ip_list_input_text} from './view_ip_list_input_text.js'
 
 
 
@@ -25,6 +26,7 @@ export const render_list_component_input_text = function() {
 /**
 * LIST
 * Render component node to use in list
+* @param object options
 * @return HTMLElement wrapper
 */
 render_list_component_input_text.prototype.list = async function(options) {
@@ -41,11 +43,14 @@ render_list_component_input_text.prototype.list = async function(options) {
 
 	switch(view) {
 
+		case 'text':
+			return view_text_input_text.render(self, options)
+
 		case 'mini':
 			return view_mini_input_text.render(self, options)
 
-		case 'text':
-			return view_text_input_text.render(self, options)
+		case 'ip':
+			return view_ip_list_input_text.render(self, options)
 
 		case 'default':
 		default:
