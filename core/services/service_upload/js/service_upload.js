@@ -177,6 +177,7 @@ export const upload = async function(options) {
 		const key_dir				= options.key_dir // object {type: 'dedalo_config', value: 'DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH'}
 		const allowed_extensions	= options.allowed_extensions // array ['tiff', 'jpeg']
 		const max_size_bytes		= options.max_size_bytes // int 352142
+		const tipo					= options.tipo // self.caller.caller.tipo, like service_upload.tool_upload.component_image.tipo
 
 
 	return new Promise(function(resolve){
@@ -462,6 +463,7 @@ export const upload = async function(options) {
 					formdata.append('file_name', file.name);
 					formdata.append('chunked', chunked);
 					formdata.append('file_to_upload', file);
+					formdata.append('tipo', tipo);
 
 				// upload_load file (the upload ends successfully)
 					// xhr.upload.addEventListener("load", upload_load, false);
@@ -563,7 +565,8 @@ service_upload.prototype.upload_file = async function(options) {
 			file				: file, // object {name:'xxx.jpg',size:5456456}
 			key_dir				: key_dir, // string like 'image' used to target dir
 			allowed_extensions	: allowed_extensions, // array ['tiff', 'jpeg']
-			max_size_bytes		: self.max_size_bytes // int 352142
+			max_size_bytes		: self.max_size_bytes, // int 352142
+			tipo				: self.caller.caller?.tipo || null
 		})
 		if (!api_response.result) {
 			console.error("Error on api_response:", api_response);

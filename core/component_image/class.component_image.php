@@ -1729,6 +1729,23 @@ class component_image extends component_media_common {
 		// convert. Returns boolean
 			$result = $this->convert_quality($source_quality, $target_quality);
 
+		// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+			logger::$obj['activity']->log_message(
+				'NEW VERSION',
+				logger::INFO,
+				$this->tipo,
+				NULL,
+				[
+					'msg'				=> 'Built version. Generated image file',
+					'tipo'				=> $this->tipo,
+					'parent'			=> $this->section_id,
+					'id'				=> $id,
+					'quality'			=> $quality,
+					'source_quality'	=> $source_quality,
+					'target_quality'	=> $quality
+				]
+			);
+
 		// update component dato files info and save
 			$this->Save();
 
@@ -1737,23 +1754,6 @@ class component_image extends component_media_common {
 			$response->msg				= 'Building av file in background';
 			$response->command_response	= null;
 
-		// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
-			logger::$obj['activity']->log_message(
-				'NEW VERSION',
-				logger::INFO,
-				$this->tipo,
-				NULL,
-				[
-					'msg'				=> 'Generated av file',
-					'tipo'				=> $this->tipo,
-					'parent'			=> $this->section_id,
-					'top_id'			=> TOP_ID ?? null,
-					'top_tipo'			=> TOP_TIPO ?? null,
-					'id'			=> $id,
-					'quality'			=> $quality,
-					'source_quality'	=> $source_quality
-				]
-			);
 
 		return $response;
 	}//end build_version

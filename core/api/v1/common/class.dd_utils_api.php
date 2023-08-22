@@ -854,6 +854,7 @@ final class dd_utils_api {
 	* @return object $response
 	*/
 	public static function upload(object $rqo) : object {
+		$start_time=start_time();
 
 		session_write_close();
 
@@ -861,6 +862,7 @@ final class dd_utils_api {
 			$options		= $rqo->options;
 			$file_to_upload	= $options->file_to_upload ?? $options->file ?? $options->upload;	// assoc array Added from PHP input '$_FILES'
 			$key_dir		= $options->key_dir; // string like 'tool_upload'
+			$tipo			= $options->tipo ?? null;
 			$chunked		= isset($options->chunked) // received as string 'true'|'false'
 				? (bool)json_decode($options->chunked)
 				: false;
@@ -878,7 +880,7 @@ final class dd_utils_api {
 				if (
 					!isset($file_to_upload['error']) ||
 					is_array($file_to_upload['error'])
-				) {
+					) {
 					// throw new RuntimeException('Invalid parameters. (1)');
 					$msg = ' upload: Invalid parameters. (1)';
 					debug_log(__METHOD__
@@ -1092,6 +1094,7 @@ final class dd_utils_api {
 					$file_data->tmp_name		= $name; // like 'phpv75h2K'
 					$file_data->error			= $file_to_upload['error']; // like 0
 					$file_data->size			= $file_to_upload['size']; // like 878860 (bytes)
+					$file_data->time_sec		= exec_time_unit($start_time,'sec');
 					$file_data->extension		= $extension;
 					$file_data->thumbnail_url	= $thumbnail_url ?? null;
 					$file_data->chunked			= $chunked;
@@ -1122,6 +1125,29 @@ final class dd_utils_api {
 						$response->msg			= 'OK. '.label::get_label('file_uploaded_successfully');
 						break;
 				}
+
+			// logger activity
+			// (!) Don't use here because on chunk file, is not possible to know if current chunk is the last one (random upload order)
+			// (!) Moved this activity log to class tool_upload::process_uploaded_file method
+				// $finished = ($chunked===true)
+				// 	? ($chunk_index === ($total_chunks - 1)) // is last chunk
+				// 	: true;
+				// if ($finished===true && !empty($tipo)) {
+				// 	logger::$obj['activity']->log_message(
+				// 		'UPLOAD COMPLETE',
+				// 		logger::INFO,
+				// 		$tipo,
+				// 		NULL,
+				// 		[
+				// 			'msg'				=> 'Upload file complete',
+				// 			'file_data'			=> json_encode($file_data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
+				// 			'file_name' 		=> $file_data->name,
+				// 			'file_size' 		=> format_size_units($file_data->size),
+				// 			'time_sec' 			=> $file_data->time_sec,
+				// 			'f_error'			=> $file_data->error ?? null
+				// 		]
+				// 	);
+				// }
 
 		}catch (RuntimeException $e) {
 
