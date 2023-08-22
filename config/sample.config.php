@@ -614,6 +614,17 @@
 
 
 
+// ip_api. IP API end point. Optional, used in section Activity to resolve source Country from IP address
+// note that '$ip' string will be replaced by the real IP value in resolution
+	// ip-api.com ***
+		define('IP_API', [
+			'url'			=> 'http://ip-api.com/json/$ip', // only http is free
+			'href'			=> 'https://ip-api.com/#$ip', // page to jump
+			'country_code'	=> 'countryCode' // property where look country code fro flag
+		]);
+
+
+
 // maintenance
 	// maintenance mode active / inactive
 	define('DEDALO_MAINTENANCE_MODE', false);
