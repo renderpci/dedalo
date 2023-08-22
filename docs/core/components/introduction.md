@@ -158,10 +158,6 @@ In server context. components classes inherit from common classes dependent of t
                 BBL("component_select_lang") -.-> BB
             end
         end
-        style inheritance fill:#eee,color:#555,stroke:#888;
-        style literal fill:#ccc,color:#ffffff,stroke:#888;
-        style media fill:#aaa,color:#ffffff,stroke:#888;
-        style related fill:#aaa,color:#ffffff,stroke:#888;
 ```
 
 ## Instantiation
