@@ -59,7 +59,7 @@ view_ip_list_input_text.render = async function(self, options) {
 
 					// cache
 						// cache create if not exists or reset if is too big
-						if (!window.resolved_ip_data) { // || Object.keys(window.resolved_ip_data).length>100
+						if (!window.resolved_ip_data || Object.keys(window.resolved_ip_data).length>100) {
 							window.resolved_ip_data = {}
 						}
 						// cache set function call
