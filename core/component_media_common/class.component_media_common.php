@@ -846,11 +846,28 @@ class component_media_common extends component_common {
 			$response->msg		= 'Error. Request failed';
 
 		// remove_component_media_files returns bool value
-		$result = $this->remove_component_media_files([$quality]);
+		$result = $this->remove_component_media_files(
+			[$quality] // array ar_quality
+		);
 		if ($result===true) {
 
+			// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+				logger::$obj['activity']->log_message(
+					'DELETE FILE',
+					logger::INFO,
+					$this->tipo,
+					NULL,
+					[
+						'msg'		=> 'Deleted media file (file is renamed and moved to delete folder)',
+						'tipo'		=> $this->tipo,
+						'parent'	=> $this->section_id,
+						'id'		=> $this->id,
+						'quality'	=> $quality
+					]
+				);
+
 			// save to force update dato files_info
-			$this->Save();
+				$this->Save();
 
 			$response->result	= true;
 			$response->msg		= 'File deleted successfully. ' . $quality;
@@ -1578,13 +1595,6 @@ class component_media_common extends component_common {
 				);
 			}
 
-		// update component dato files info and save
-			$this->Save();
-
-		// response
-			$response->result	= true;
-			$response->msg		= 'Copied file. Remember overwrite this method to real conversion';
-
 		// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
 			logger::$obj['activity']->log_message(
 				'NEW VERSION',
@@ -1592,7 +1602,7 @@ class component_media_common extends component_common {
 				$this->tipo,
 				NULL,
 				[
-					'msg'				=> 'Built version',
+					'msg'				=> 'Built version (media common)',
 					'tipo'				=> $this->tipo,
 					'parent'			=> $this->section_id,
 					'id'				=> $id,
@@ -1601,6 +1611,14 @@ class component_media_common extends component_common {
 					'target_quality'	=> $quality
 				]
 			);
+
+		// update component dato files info and save
+			$this->Save();
+
+		// response
+			$response->result	= true;
+			$response->msg		= 'Copied file. Remember overwrite this method to real conversion';
+
 
 		return $response;
 	}//end build_version
