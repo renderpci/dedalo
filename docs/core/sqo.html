@@ -344,7 +344,7 @@ Is possible use a string or array when the section to search is only one, but it
 
 <p>Definition : <code>array of objects</code> operator key define the operator (&#8216;$and&#8217; || &#8216;$or&#8217;) they are identified by the use of a dollar sign ($) prefix in the name property, array value has the arguments <code>objects</code> to be affected by operator. <strong>mandatory</strong>, <code>{&quot;$operator&quot;: [arguments]}</code></p>
 
-<p>!!! Note about the mandatory of the operator
+<p>!!! note &#8220;About the mandatory of the operator&#8221;
 This property is dependent of the filter. When the filter is present into the SQO the operator is mandatory, if the filter is not present it&#8217;s not necessary define one operator.</p>
 
 <p>The filter object need to has at least one operator defined as property of the object. By default, &#8216;AND&#8217; operator is added as <code>$and</code> key of the filter object.</p>
@@ -408,7 +408,7 @@ This property is dependent of the filter. When the filter is present into the SQ
 ... 
 </code></pre>
 
-<p>!!! Note: &#8220;Use of q name&#8221;
+<p>!!! note &#8220;Use of q name&#8221;
 In the examples q name is used as SQL column name to better comprehension, but in real SQL parsed search, q column is not used, it need to be a component path or relation path.</p>
 
 <h5 id="q">q</h5>
@@ -476,7 +476,7 @@ In the examples q name is used as SQL column name to better comprehension, but i
 
 <p>The Oral History section <a href="https://dedalo.dev/ontology/rsc85">rsc85</a> is linked to People under study section <a href="https://dedalo.dev/ontology/rsc197">rsc197</a> by the component Informants <a href="https://dedalo.dev/ontology/oh24">oh24</a>.</p>
 
-<p>!!! SQL equivalence
+<p>!!! note &#8220;SQL equivalence&#8221;
 Path is equivalent to JOIN statement into SQL, the sections are equivalent to tables and the components are the columns that linked this tables.</p>
 
 <p>To search interviews of informants born in 1928 the SQO should follow previous path to locate the date of birth component <a href="https://dedalo.dev/ontology/rsc89">rsc89</a>.</p>
