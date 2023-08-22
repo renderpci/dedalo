@@ -342,7 +342,7 @@ Defines which boolean operator will be applied to the query. Operator is an arra
 
 Definition : `array of objects` operator key define the operator ('\$and' || '\$or') they are identified by the use of a dollar sign (\$) prefix in the name property, array value has the arguments `objects` to be affected by operator. **mandatory**, `{"$operator": [arguments]}`
 
-!!! Note about the mandatory of the operator
+!!! note "About the mandatory of the operator"
     This property is dependent of the filter. When the filter is present into the SQO the operator is mandatory, if the filter is not present it's not necessary define one operator.
 
 The filter object need to has at least one operator defined as property of the object. By default, 'AND' operator is added as `$and` key of the filter object.
@@ -412,7 +412,7 @@ So nested operations will be parsed as SQL WHERE sentence like:
 ... 
 ```
 
-!!! Note: "Use of q name"
+!!! note "Use of q name"
     In the examples q name is used as SQL column name to better comprehension, but in real SQL parsed search, q column is not used, it need to be a component path or relation path.
 
 ##### q
@@ -485,7 +485,7 @@ See this situation:
 
 The Oral History section [rsc85](https://dedalo.dev/ontology/rsc85) is linked to People under study section [rsc197](https://dedalo.dev/ontology/rsc197) by the component Informants [oh24](https://dedalo.dev/ontology/oh24).
 
-!!! SQL equivalence
+!!! note "SQL equivalence"
     Path is equivalent to JOIN statement into SQL, the sections are equivalent to tables and the components are the columns that linked this tables.
 
 To search interviews of informants born in 1928 the SQO should follow previous path to locate the date of birth component [rsc89](https://dedalo.dev/ontology/rsc89).
