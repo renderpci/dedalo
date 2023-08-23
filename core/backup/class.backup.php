@@ -1924,6 +1924,18 @@ abstract class backup {
 			}
 			// Thread::run();
 
+		// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+			logger::$obj['activity']->log_message(
+				'SAVE',
+				logger::INFO,
+				DEDALO_ROOT_TIPO,
+				NULL,
+				[
+					'msg'		=> 'Updated Ontology',
+					'version'	=> RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO,'lg-spa')
+				]
+			);
+
 		// response
 			$response->result	= true;
 			$response->msg		= 'OK. Request done ['.__FUNCTION__.'] ' .$response->msg ;
