@@ -167,7 +167,64 @@ component_input_text.prototype.is_unique = async function(new_value){
 		if(SHOW_DEBUG===true) {
 			console.log("+++++ is_unique api_response data:",data, record);
 		}
-
+	// render_views
+		// Definition of the rendering views that could de used.
+		// Tools or another components could add specific views dynamically
+		// Sample:
+		// {
+		// 		view	: 'default',
+		// 		mode	: 'edit',
+		// 		render	: 'view_default_edit_portal'
+		// 		path 	: './view_default_edit_portal.js'
+		// }
+		self.render_views = [
+			{
+				view	: 'text',
+				mode	: 'edit',
+				render	: 'view_text_input_text'
+			},
+			{
+				view	: 'line',
+				mode	: 'edit',
+				render	: 'view_line_edit_input_text'
+			},
+			{
+				view	: 'mini',
+				mode	: 'edit',
+				render	: 'view_mini_input_text'
+			},
+			{
+				view	: 'print',
+				mode	: 'edit',
+				render	: 'view_default_edit_input_text'
+			},
+			{
+				view	: 'default',
+				mode	: 'edit',
+				render	: 'view_default_edit_input_text',
+				path 	: './view_default_edit_input_text.js'
+			},
+			{
+				view	: 'ip',
+				mode	: 'list',
+				render	: 'view_ip_list_input_text'
+			},
+			{
+				view	: 'mini',
+				mode	: 'list',
+				render	: 'view_mini_input_text'
+			},
+			{
+				view	: 'text',
+				mode	: 'list',
+				render	: 'view_text_input_text'
+			},
+			{
+				view	: 'default',
+				mode	: 'list',
+				render	: 'view_default_list_input_text'
+			}
+		]
 	return record
 }//end is_unique
 
