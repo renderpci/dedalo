@@ -62,10 +62,10 @@ Literal components has three different ways to manage data; direct, media and in
   - component_external
   - component_filter_records
   - component_geolocation
-  - component_input_text
+  - [component_input_text](component_input_text.md)
   - component_iri
   - component_json
-  - component_number
+  - [component_number](component_number.md)
   - component_password
   - component_security_access
   - component_section_id
