@@ -1070,18 +1070,13 @@ final class dd_core_api {
 		switch ($type) {
 			case 'component':
 
-				// get the component information
-					$component_lang	= (RecordObj_dd::get_translatable($tipo)===true)
-						? $lang
-						: DEDALO_DATA_NOLAN;
-
 				// build the component
 					$component = component_common::get_instance(
 						$model,
 						$tipo,
 						$section_id,
 						$mode,
-						$component_lang,
+						$lang,
 						$section_tipo,
 						true,
 						$caller_dataframe ?? null
