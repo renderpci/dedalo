@@ -2042,9 +2042,12 @@ final class dd_utils_api {
 				}
 				$result->download_file = [
 					'Downloaded file: ' . DEDALO_SOURCE_VERSION_URL,
-					'Time: ' . exec_time_unit($start_time,'secs') . ' secs'
+					'Time: ' . exec_time_unit($start_time,'sec') . ' secs'
 				];
-				debug_log(__METHOD__." Downloaded file (".DEDALO_SOURCE_VERSION_URL.") in ".exec_time_unit($start_time,'secs'), logger::DEBUG);
+				debug_log(__METHOD__
+					." Downloaded file (".DEDALO_SOURCE_VERSION_URL.") in ".exec_time_unit($start_time,'sec') . ' secs'
+					, logger::DEBUG
+				);
 
 			// Save contents to local dir
 				if (!is_dir(DEDALO_SOURCE_VERSION_LOCAL_DIR)) {
@@ -2089,7 +2092,10 @@ final class dd_utils_api {
 				$result->extract = [
 					"Extracted ZIP file to: " . DEDALO_SOURCE_VERSION_LOCAL_DIR
 				];
-				debug_log(__METHOD__." ZIP file extracted successfully to ".DEDALO_SOURCE_VERSION_LOCAL_DIR, logger::DEBUG);
+				debug_log(__METHOD__
+					." ZIP file extracted successfully to ".DEDALO_SOURCE_VERSION_LOCAL_DIR
+					, logger::DEBUG
+				);
 
 			// rsync
 				$source		= (strpos(DEDALO_SOURCE_VERSION_URL, 'github.com'))
@@ -2104,7 +2110,10 @@ final class dd_utils_api {
 					"command: " . $command,
 					"output: "  . str_replace(["\n","\r"], '<br>', $output),
 				];
-				debug_log(__METHOD__." RSYNC command done ". PHP_EOL .to_string($command), logger::DEBUG);
+				debug_log(__METHOD__
+					." RSYNC command done ". PHP_EOL .to_string($command)
+					, logger::DEBUG
+				);
 
 			// remove temp used files and folders
 				$command_rm_dir		= "rm -R -f $source";
@@ -2119,19 +2128,44 @@ final class dd_utils_api {
 					"command_rm_file: " . $command_rm_file,
 					"output_rm_file: "  . $output_rm_file
 				];
-				debug_log(__METHOD__." Removed temp used files and folders ".to_string(), logger::DEBUG);
+				debug_log(__METHOD__
+					." Removed temp used files and folders"
+					, logger::DEBUG
+				);
 
-			// update javascript labels
+			// update JAVASCRIPT labels
 				$ar_langs = DEDALO_APPLICATION_LANGS;
 				foreach ($ar_langs as $lang => $label) {
 					backup::write_lang_file($lang);
 				}
 
+			// version info. Get from new downloaded file 'version.inc'
+				$command = 'ddversion=`'.PHP_BIN_PATH.' << \'EOF\'
+				<?php require "'.DEDALO_CONFIG_PATH.'/version.inc"; echo DEDALO_VERSION ." Build ". DEDALO_BUILD; ?>`
+				echo $ddversion';
+				// exec command
+				$new_version_info = exec($command); // string like '6.0.0_RC6 Build 2023-08-22T19:19:35+02:00'
+
 			// response OK
 				$response->result	= $result;
-				$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
+				$response->msg		= "OK. Updated Dédalo code successfully. " . $new_version_info;
 
-				debug_log(__METHOD__." Updated Dédalo code successfully ".to_string(), logger::DEBUG);
+			// debug
+				debug_log(__METHOD__
+					." Updated Dédalo code successfully. " . $new_version_info
+					, logger::DEBUG
+				);
+
+			// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+				logger::$obj['activity']->log_message(
+					'SAVE',
+					logger::INFO,
+					DEDALO_ROOT_TIPO,
+					NULL,
+					[
+						'msg' => 'Updated code to v. ' . $new_version_info
+					]
+				);
 
 
 		} catch (Exception $e) {

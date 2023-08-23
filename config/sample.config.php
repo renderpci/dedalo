@@ -614,13 +614,20 @@
 
 
 
-// ip_api. IP API end point. Optional, used in section Activity to resolve source Country from IP address
-// note that '$ip' string will be replaced by the real IP value in resolution
-	// ip-api.com ***
+// IP_API. IP geolocation API end point. Optional, used in section Activity to resolve source Country from IP address
+// note that '$ip' string will be replaced by the real IP value in resolution and 'country_code' value
+// property is used to generate the icon flag
+	// ip-api.com **
+		// define('IP_API', [
+		// 	'url'			=> 'http://ip-api.com/json/$ip', // only http is free
+		// 	'href'			=> 'https://ip-api.com/#$ip', // page to jump on click
+		// 	'country_code'	=> 'countryCode' // property where look country code for flag
+		// ]);
+	// ipapi ***
 		define('IP_API', [
-			'url'			=> 'http://ip-api.com/json/$ip', // only http is free
-			'href'			=> 'https://ip-api.com/#$ip', // page to jump
-			'country_code'	=> 'countryCode' // property where look country code fro flag
+			'url'			=> 'https://ipapi.co/$ip/json/', // https capable as free
+			'href'			=> 'https://ipapi.co/?q=$ip', // page to jump on click
+			'country_code'	=> 'country_code' // / property where look country code for flag
 		]);
 
 
