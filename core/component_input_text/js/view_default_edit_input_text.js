@@ -147,6 +147,17 @@ const get_content_value = (i, current_value, self) => {
 			input.addEventListener('mousedown', (e) => {
 				e.stopPropagation()
 			})
+
+		// transliterate value
+			if(with_lang_versions){
+				const transliterate_value = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'transliterate_value',
+					inner_html		: self.data.transliterate_value,
+					parent			: content_value
+				})
+			}
+
 		// blur event
 			// input.addEventListener('blur', function() {
 			// 	// force to save current input if changed (prevents override changed_data
