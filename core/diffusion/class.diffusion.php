@@ -1152,7 +1152,7 @@ abstract class diffusion  {
 									"class_name"				=> $class_name
 								];
 							}else{
-								$response->msg = "Unable to delete record ($table_name - $section_id). Maybe the record not exists in db ($database_name)";
+								$response->msg = "Unable to delete record ($table_name - $section_id). Maybe the record not exists in MySQL db: '$database_name' table: '$table_name' ";
 							}
 						}
 					break;

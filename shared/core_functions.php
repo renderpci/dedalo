@@ -496,7 +496,17 @@ function get_last_modification_date(string $path, array $allowedExtensions=null,
 * @param string $path
 * @return string|null $last_modified_file
 */
-function get_last_modified_file(string $path, array $allowed_extensions, $fn_validate=null) {
+function get_last_modified_file(string $path, array $allowed_extensions, $fn_validate=null) : ?string {
+
+	// path validate
+		if (!is_dir($path)) {
+			debug_log(__METHOD__
+				. " Invalid directory. null is returned " . PHP_EOL
+				. ' path: ' . to_string($path)
+				, logger::ERROR
+			);
+			return null;
+		}
 
 	// First we set up the iterator
 		$iterator			= new RecursiveDirectoryIterator($path);

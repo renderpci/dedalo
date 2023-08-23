@@ -89,7 +89,7 @@ class diffusion_mysql extends diffusion_sql  {
 				. " database_name " . PHP_EOL
 				. ' database_name: ' .$database_name .PHP_EOL
 				. ' msg: ' . $e->getMessage() .PHP_EOL
-				. ' connection error: '. $mysql_conn->error ?? 'Unknown'
+				. ' connection error: '. ((isset($mysql_conn) && isset($mysql_conn->error)) ? $mysql_conn->error : 'Unknown') .PHP_EOL
 				. ' sql: '.$sql
 				, logger::ERROR
 			);
