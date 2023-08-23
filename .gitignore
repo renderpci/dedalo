@@ -150,3 +150,6 @@ docs_site
 
 #count data
 /.VSCodeCounter/*
+
+# stub file (used by linters)
+stub.php
