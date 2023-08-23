@@ -873,6 +873,21 @@ class section extends common {
 				}
 			}
 
+		// tm mode case
+			if ($this->mode==='tm') {
+				debug_log(__METHOD__
+					. " Error on save: invalid mode (tm)! . Ignored order" . PHP_EOL
+					. ' section_id: ' . to_string($this->section_id) . PHP_EOL
+					. ' section_tipo: ' . $this->section_tipo . PHP_EOL
+					. ' tipo: ' . $tipo . PHP_EOL
+					. ' model: ' . get_class($this) . PHP_EOL
+					. ' mode: ' . $this->mode . PHP_EOL
+					. ' lang: ' . $this->lang
+					, logger::ERROR
+				);
+				return null;
+			}
+
 		// tipo. Current section tipo
 			$tipo = (isset($this->properties->section_tipo) && $this->properties->section_tipo==='real')
 				? $this->get_section_real_tipo()
