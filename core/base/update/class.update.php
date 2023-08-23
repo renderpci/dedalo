@@ -29,7 +29,7 @@ class update {
 
 		$current_version = get_current_version_in_db();
 		if (empty($current_version)) {
-			#$current_version = array(4,0,9);	// Default minimun version
+			#$current_version = array(4,0,9);	// Default minimum version
 			#return $current_version;
 			return null;
 		}
