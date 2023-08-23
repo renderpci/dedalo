@@ -70,7 +70,7 @@ When the component is instantiated as not translatable the lang is defined as `l
 }
 ```
 
-When the component is instantiated as transliterable the main lang is defined as `lg-nolan` and it's possible to add other translations.
+When the component is instantiated as transliterated the main lang is defined as `lg-nolan` and it's possible to add other translations.
 
 ```json
 {
@@ -79,8 +79,54 @@ When the component is instantiated as transliterable the main lang is defined as
 }
 ```
 
-
 ## Import model
+
+By default import model use the JSON format of his data, a object with lang properties and values in array.
+
+```json
+{
+    "lg-spa" : ["mi dato para importar", "Otro dato"],
+    "lg-eng" : ["my import data", "Other data to import"]
+}
+```
+
+Alternative forms to import:
+
+1. An array of values
+
+    ```json
+    ["mi dato para importar", "Otro dato"]
+    ```
+
+    In this case the import process assume the Dédalo data lang defined by the user in menu and will save into this lang, or if the component is non translatable will use `lg-nolan` to save import data.
+
+2. Plain text
+
+    ```json
+    new data to import
+    ```
+
+    In this case the import process assume the Dédalo data lang defined by the user in menu and will import the value ass unique value in the array, if exists previous data it will be replace with a new array with the import value.
+
+    If the previous data is:
+
+    ```json
+    {
+        "lg-spa" : ["mi dato para importar", "Otro dato"],
+        "lg-eng" : ["my import data", "Other data to import"]
+    }
+    ```
+
+    and the Dédalo data lang is set to English, the final data will be after import plain text:
+
+     ```json
+    {
+        "lg-spa" : ["mi dato para importar", "Otro dato"],
+        "lg-eng" : ["new data to import"]
+    }
+    ```
+
+    Plain text is easy to import, but it is limited in the data control. take account of the language set in the menu.
 
 ## Properties
 
@@ -90,11 +136,15 @@ used to admit multiple lines, the input will replace to textarea HTML node in re
 
 `with_lang_versions`
 
-used to export data with all languages in JSON format
+Used for transliterate components. When is set to true, the component remain to non translatable but it can be transliterated to other languages. The main lang of the component will be `lg-nolan` but it can handle other languages with the `tool_lang`
+
+Used to export data with all languages in JSON format.
 
 `unique`
 
 
 `mandatory`
+
+Inform to users that this component need a data value (user need to introduce any value, it's mandatory).
 
 ## buttons
