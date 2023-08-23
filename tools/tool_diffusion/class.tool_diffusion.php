@@ -306,7 +306,7 @@ class tool_diffusion extends tool_common {
 		// debug
 			// if(SHOW_DEBUG===true) {
 			// 	$debug = new stdClass();
-			// 		$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
+			// 		$debug->exec_time	= exec_time_unit($start_time,'sec')." secs";
 			// 		foreach($vars as $name) {
 			// 			$debug->{$name} = $$name;
 			// 		}
@@ -431,7 +431,7 @@ class tool_diffusion extends tool_common {
 			// 	}else{
 			// 		$memory_usage = memory_get_usage();
 			// 	}
-			// 	// $response->msg .= " Exec in ".exec_time_unit($start_time,'secs')." secs - MB: ". $memory_usage ."";
+			// 	// $response->msg .= " Exec in ".exec_time_unit($start_time,'sec')." secs - MB: ". $memory_usage ."";
 			// }
 
 
