@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+	<meta charset="utf-8"/>
+</head>
+<body>
+
+<h1 id="component_input_text">component_input_text</h1>
+
+<h2 id="overview">Overview</h2>
+
+<pre><code class="json">{
+    &quot;could_be_translatable&quot; : true,
+    &quot;is_literal&quot;: true,
+    &quot;is_related&quot;: false,
+    &quot;is_media&quot;: false,
+    &quot;modes&quot;: [&quot;edit&quot;,&quot;list&quot;,&quot;tm&quot;,&quot;search&quot;],
+    &quot;default_tools&quot; : [
+        &quot;tool_time_machine&quot;, 
+        &quot;tool_lang&quot;, 
+        &quot;tool_replace_component_data&quot;, 
+        &quot;tool_add_component_data&quot;
+    ],
+    &quot;render_views&quot; :[
+        {
+            &quot;view&quot;    : &quot;text | mini | default&quot;
+            &quot;mode&quot;    : &quot;edit | list&quot;
+        },
+        {
+            &quot;view&quot;    : &quot;line | print&quot;,
+            &quot;mode&quot;    : &quot;edit&quot;
+        },       
+        {
+            &quot;view&quot;    : &quot;ip&quot;,
+            &quot;mode&quot;    : &quot;list&quot;
+        }
+    ],
+    &quot;data&quot;: &quot;object&quot;,
+    &quot;sample_data&quot;: {
+        &quot;lg-spa&quot;:[&quot;mi título&quot;, &quot;Otro nombre&quot;],
+        &quot;lg-eng&quot;:[&quot;my title&quot;, &quot;Other name&quot;]
+    },
+    &quot;value&quot;: &quot;array of strings&quot;,
+    &quot;sample_value&quot;: [&quot;my title&quot;, &quot;Other name&quot;]
+}
+</code></pre>
+
+<h2 id="definition">Definition</h2>
+
+<p>Component input text is a basic text component to manage plain strings without format. Value do not support HTML code.</p>
+
+<h2 id="context">context</h2>
+
+<h2 id="datamodel">Data model</h2>
+
+<p><strong>Data:</strong> <code>object</code> with languages as properties.</p>
+
+<p><strong>Value:</strong> <code>array</code> the <code>strings</code>, or <code>null</code></p>
+
+<p><strong>Storage:</strong> In database component input text save his data as object with the languages as property and values as array of strings.</p>
+
+<pre><code class="json">{
+    &quot;lg-spa&quot; : [&quot;mi título&quot;, &quot;Otro nombre&quot;],
+    &quot;lg-eng&quot; : [&quot;my title&quot;, &quot;Other name&quot;]
+}
+</code></pre>
+
+<p>When the component is instantiated, the component get his data from his section and only get the value in the languages that is instantiated.</p>
+
+<p>When the component is instantiated as not translatable the lang is defined as <code>lg-nolan</code></p>
+
+<pre><code class="json">{
+    &quot;lg-nolan&quot; : [&quot;Augustus&quot;]
+}
+</code></pre>
+
+<p>When the component is instantiated as transliterated the main lang is defined as <code>lg-nolan</code> and it&#8217;s possible to add other translations.</p>
+
+<pre><code class="json">{
+    &quot;lg-nolan&quot;  : [&quot;Augustus&quot;],
+    &quot;lg-spa&quot;    : [&quot;Augusto&quot;]
+}
+</code></pre>
+
+<h2 id="importmodel">Import model</h2>
+
+<p>By default import model use the JSON format of his data, a object with lang properties and values in array.</p>
+
+<pre><code class="json">{
+    &quot;lg-spa&quot; : [&quot;mi dato para importar&quot;, &quot;Otro dato&quot;],
+    &quot;lg-eng&quot; : [&quot;my import data&quot;, &quot;Other data to import&quot;]
+}
+</code></pre>
+
+<p>Alternative forms to import:</p>
+
+<ol>
+<li><p>An array of values</p>
+
+<pre><code class="json">[&quot;mi dato para importar&quot;, &quot;Otro dato&quot;]
+</code></pre>
+
+<p>In this case the import process assume the Dédalo data lang defined by the user in menu and will save into this lang, or if the component is non translatable will use <code>lg-nolan</code> to save import data.</p></li>
+<li><p>Plain text</p>
+
+<pre><code class="json">new data to import
+</code></pre>
+
+<p>In this case the import process assume the Dédalo data lang defined by the user in menu and will import the value ass unique value in the array, if exists previous data it will be replace with a new array with the import value.</p>
+
+<p>If the previous data is:</p>
+
+<pre><code class="json">{
+    &quot;lg-spa&quot; : [&quot;mi dato para importar&quot;, &quot;Otro dato&quot;],
+    &quot;lg-eng&quot; : [&quot;my import data&quot;, &quot;Other data to import&quot;]
+}
+</code></pre>
+
+<p>and the Dédalo data lang is set to English, the final data will be after import plain text:</p>
+
+<pre><code class="```json">{
+    &quot;lg-spa&quot; : [&quot;mi dato para importar&quot;, &quot;Otro dato&quot;],
+    &quot;lg-eng&quot; : [&quot;new data to import&quot;]
+}
+</code></pre>
+
+<p>Plain text is easy to import, but it is limited in the data control. take account of the language set in the menu.</p></li>
+</ol>
+
+<h2 id="properties">Properties</h2>
+
+<p><code>multi_line</code></p>
+
+<p>used to admit multiple lines, the input will replace to textarea HTML node in render</p>
+
+<p><code>with_lang_versions</code></p>
+
+<p>Used for transliterate components. When is set to true, the component remain to non translatable but it can be transliterated to other languages. The main lang of the component will be <code>lg-nolan</code> but it can handle other languages with the <code>tool_lang</code></p>
+
+<p>Used to export data with all languages in JSON format.</p>
+
+<p><code>unique</code></p>
+
+<p><code>mandatory</code></p>
+
+<p>Inform to users that this component need a data value (user need to introduce any value, it&#8217;s mandatory).</p>
+
+<h2 id="buttons">buttons</h2>
+
+</body>
+</html>
+
