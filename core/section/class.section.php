@@ -2787,15 +2787,15 @@ class section extends common {
 				$model_name,
 				$component_tipo,
 				$section_id,
-				'edit',
+				'list',
 				DEDALO_DATA_NOLAN,
-				$section_tipo
+				$section_tipo,
 			);
 
 			$locator_to_remove = new locator();
-				$locator_to_remove->set_section_tipo($this->tipo);
-				$locator_to_remove->set_section_id($this->section_id);
 				$locator_to_remove->set_type($component->get_relation_type());
+				$locator_to_remove->set_section_id($this->section_id);
+				$locator_to_remove->set_section_tipo($this->tipo);
 				$locator_to_remove->set_from_component_tipo($component_tipo);
 
 			if (true === $component->remove_locator_from_dato( $locator_to_remove )) {
@@ -2806,8 +2806,8 @@ class section extends common {
 				}
 
 				$removed_locators[] = (object)[
-					"removed_from"		=> $current_locator,
-					"locator_to_remove"	=> $locator_to_remove
+					'removed_from'		=> $current_locator,
+					'locator_to_remove'	=> $locator_to_remove
 				];
 
 				if(SHOW_DEBUG===true) {
@@ -2817,10 +2817,21 @@ class section extends common {
 					);
 				}
 			}else{
+
 				debug_log(__METHOD__
-					." Error on remove reference to current_locator ".json_encode($current_locator)
+					." Error on remove reference to current_locator. locator_to_remove was not removed from inverse_locators! ". PHP_EOL
+					.' current_locator: ' . to_string($current_locator) . PHP_EOL
+					.' locator_to_remove: ' . to_string($locator_to_remove) . PHP_EOL
+					.' component: ' . $model_name . PHP_EOL
+					.' tipo: ' . $component_tipo . PHP_EOL
+					.' section_tipo: ' . $section_tipo . PHP_EOL
+					.' section_id: ' . $section_id
 					, logger::ERROR
 				);
+				if(SHOW_DEBUG===true) {
+					dump($inverse_locators, ' inverse_locators ++ save: '.to_string($save));
+					dump($component->get_dato(), ' component->get_dato() ++ '.to_string());
+				}
 			}
 		}
 
