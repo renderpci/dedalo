@@ -173,6 +173,27 @@ class component_image extends component_media_common {
 
 		// url
 			$url = $this->get_media_url_dir($quality) .'/'. $id .'.'. $this->get_extension();
+			// tm mode case
+			if ($this->mode==='tm') {
+
+				// get last deleted file
+				$last_deleted_file = get_last_modified_file(
+					$this->get_media_path_dir($quality).'/deleted',
+					[$this->get_extension()],
+					function($el) use($id) {
+						$needle = '/'.$id.'_deleted';
+						if (strpos($el, $needle)!==false) {
+							return true;
+						}
+						return false;
+					}
+				);
+				if (!empty($last_deleted_file)) {
+					$separator	= '/deleted/';
+					$parts		= explode($separator, $last_deleted_file);
+					$url		= $this->get_media_url_dir($quality) .$separator. $parts[1];
+				}
+			}
 
 		// File exists test : If not, show '0' dedalo image logo
 			if($test_file===true) {
