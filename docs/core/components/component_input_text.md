@@ -41,15 +41,13 @@
 
 ## Definition
 
-Component input text is a basic text component to manage plain strings without format. Value do not support HTML code.
-
-## context
+Component input text is a basic text component to manage plain strings without format. Value do not support HTML code. Data could be non translatable, translatable or transliterated.
 
 ## Data model
 
 **Data:** `object` with languages as properties.
 
-**Value:** `array` the `strings`, or `null`
+**Value:** `array` of `strings`, or `null`
 
 **Storage:** In database component input text save his data as object with the languages as property and values as array of strings.
 
@@ -90,9 +88,24 @@ By default import model use the JSON format of his data, a object with lang prop
 }
 ```
 
+As Dédalo import use a csv without format, JSON data need to be stringified in this way:
+
+The table to import
+
+| section_id    | oh14                                              |
+| ------------  | :----------------------------------------------:  |
+| 1             | {"lg-spa": \["mi dato para importar","Otro dato"]} |
+
+Will be encoded in csv format as:
+
+```csv
+section_id;rsc86
+1;"{""lg-spa"":[""mi dato para importar"",""Otro dato""]}"
+```
+
 Alternative forms to import:
 
-1. An array of values
+1. An array of string values
 
     ```json
     ["mi dato para importar", "Otro dato"]
@@ -100,28 +113,40 @@ Alternative forms to import:
 
     In this case the import process assume the Dédalo data lang defined by the user in menu and will save into this lang, or if the component is non translatable will use `lg-nolan` to save import data.
 
+    Example:
+
+    section_id | oh14
+    --- | ---
+    1 | \["mi dato para importar","Otro dato"]
+
 2. Plain text
 
     ```json
     new data to import
     ```
 
-    In this case the import process assume the Dédalo data lang defined by the user in menu and will import the value ass unique value in the array, if exists previous data it will be replace with a new array with the import value.
+    Example:
 
-    If the previous data is:
+    section_id | oh14
+    --- | ---
+    1 | new data to import
+
+    In this case the import process assume the Dédalo data lang defined by the user in menu and will import the value as unique value in the array, if exists previous data it will be replace with a new array with the import value.
+
+    If the data in database is:
 
     ```json
     {
-        "lg-spa" : ["mi dato para importar", "Otro dato"],
-        "lg-eng" : ["my import data", "Other data to import"]
+        "lg-spa" : ["mi dato importado", "Otro dato"],
+        "lg-eng" : ["my imported data", "Other data"]
     }
     ```
 
-    and the Dédalo data lang is set to English, the final data will be after import plain text:
+    and the Dédalo data lang is set to English, after import plain text, the final data will be:
 
      ```json
     {
-        "lg-spa" : ["mi dato para importar", "Otro dato"],
+        "lg-spa" : ["mi dato importado", "Otro dato"],
         "lg-eng" : ["new data to import"]
     }
     ```
@@ -130,11 +155,9 @@ Alternative forms to import:
 
 ## Properties
 
-`multi_line`
-
-used to admit multiple lines, the input will replace to textarea HTML node in render
-
 `with_lang_versions`
+
+options: true | false
 
 Used for transliterate components. When is set to true, the component remain to non translatable but it can be transliterated to other languages. The main lang of the component will be `lg-nolan` but it can handle other languages with the `tool_lang`
 
@@ -142,9 +165,18 @@ Used to export data with all languages in JSON format.
 
 `unique`
 
+options: true | false
+
+Add a request to the component to search equal values in all records in the section, when is set to true, an alert will show when the user introduce a duplicate value in the component.
 
 `mandatory`
 
+options: true | false
+
 Inform to users that this component need a data value (user need to introduce any value, it's mandatory).
 
-## buttons
+`multi_line` : *deprecated* (use a component_text_area instead)
+
+options: true | false
+
+Used to admit multiple lines, the input will replace to textarea HTML node in render
