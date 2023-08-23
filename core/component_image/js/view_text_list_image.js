@@ -44,7 +44,7 @@ view_text_list_image.render = function(self, options) {
 	// image
 		const image_node = ui.create_dom_element({
 			element_type	: 'img',
-			class_name		: 'component_svg svg view_' + self.view,
+			class_name		: 'component_image image view_' + self.view,
 			src				: url
 		})
 

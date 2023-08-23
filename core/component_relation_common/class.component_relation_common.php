@@ -922,48 +922,72 @@ class component_relation_common extends component_common {
 	* REMOVE_LOCATOR_FROM_DATO
 	* Removes from dato one or more locators that accomplish given locator equality
 	* (!) Not save the result
-	* @param array $ar_properties
+	* @param object $locator
+	* @param array $ar_properties = []
 	* @return bool
 	*/
-	public function remove_locator_from_dato( object $locator, array $ar_properties=[] ) : bool {
+	public function remove_locator_from_dato( object $locator_to_remove, array $ar_properties=[] ) : bool {
 
-		if (empty($locator)) {
-			return false;
-		}
-
-		$locator = clone($locator);
-
-		if (!isset($locator->type)) {
-			$locator->type = $this->relation_type;
-			debug_log(__METHOD__." Received locator to remove, don't have 'type'. Autoset type: $this->relation_type to locator: ".to_string($locator), logger::DEBUG);
-		}elseif ($locator->type!==$this->relation_type) {
-			trigger_error("Incorrect locator type ! Expected $this->relation_type and received $locator->type. tipo:$this->tipo, section_tipo:$this->section_tipo, parent:$this->parent");
-			return false;
-		}
-
-		$removed		= false;
-		$new_relations	= array();
-		$dato = (array)$this->get_dato();
-		foreach($dato as $key => $current_locator_obj) {
-
-			# Test if already exists
-			$equal = locator::compare_locators( $current_locator_obj, $locator, $ar_properties );
-			if ( $equal===true ) {
-
-				$removed = true;
-
-			}else{
-
-				$new_relations[] = $current_locator_obj;
+		// empty case
+			if (empty($locator_to_remove)) {
+				return false;
 			}
-		}
-		// error_log("Removed: ".json_encode($removed));
-		// debug_log(__METHOD__." ".get_called_class()." $this->tipo, $this->section_tipo, $this->parent. To remove:".to_string($locator)." - final dato:".to_string($new_relations)." - removed: ".to_string($removed), logger::DEBUG);
 
-		# Updates current dato relations with clean array of locators
-		if ($removed===true) {
-			$this->set_dato( $new_relations );
-		}
+		// clone for safe modification
+			$locator = clone($locator_to_remove);
+
+		// type issues check
+			if (!isset($locator->type)) {
+
+				// fix missing locator type property
+				$locator->type = $this->relation_type;
+
+				debug_log(__METHOD__
+					." Received locator to remove, don't have 'type'. Auto-set type: $this->relation_type to locator: " . PHP_EOL
+					.to_string($locator)
+					, logger::DEBUG
+				);
+			}elseif ($locator->type!==$this->relation_type) {
+				// trigger_error("Incorrect locator type ! Expected $this->relation_type and received $locator->type. tipo:$this->tipo, section_tipo:$this->section_tipo, parent:$this->parent");
+				debug_log(__METHOD__
+					." Error: Incorrect locator type property! Remove action was aborted" . PHP_EOL
+					.' expected: ' . $this->relation_type . PHP_EOL
+					.' received: ' . $locator->type . PHP_EOL
+					.' locator: ' . to_string($locator)
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		// iterate and add to new_relations only different locators
+			$removed		= false;
+			$new_relations	= array();
+			$dato			= $this->get_dato();
+			if (!empty($dato)) {
+				foreach($dato as $current_locator_obj) {
+
+					// Test if already exists
+					$equal = locator::compare_locators(
+						$current_locator_obj,
+						$locator,
+						['section_tipo','section_id','from_component_tipo','type'],//$ar_properties, // array check properties
+						['paginated_key'] // $ar_exclude_properties (prevent errors in accidental saved paginated_key cases)
+					);
+					if ($equal===true) {
+
+						$removed = true;
+
+					}else{
+
+						$new_relations[] = $current_locator_obj;
+					}
+				}
+			}
+
+		// Updates current dato relations with clean array of locators
+			if ($removed===true) {
+				$this->set_dato( $new_relations );
+			}
 
 
 		return (bool)$removed;
@@ -987,9 +1011,33 @@ class component_relation_common extends component_common {
 			$mode			= $this->get_mode();
 			$lang			= DEDALO_DATA_LANG;
 
-		// Verify component minimum vars before save
+		// check component minimum vars before save
 			if( empty($section_id) || empty($tipo) || empty($lang) ) {
-				trigger_error(__METHOD__." Error on save: Few vars! section_tipo:$section_tipo, section_id:$section_id, tipo,$tipo, lang,$lang, model: ".get_class($this));
+				debug_log(__METHOD__
+					. " Error on save: Few vars! . Ignored order" . PHP_EOL
+					. ' section_id: ' . to_string($section_id) . PHP_EOL
+					. ' section_tipo: ' . $section_tipo . PHP_EOL
+					. ' tipo: ' . $tipo . PHP_EOL
+					. ' model: ' . get_class($this) . PHP_EOL
+					. ' mode: ' . $mode . PHP_EOL
+					. ' lang: ' . $lang
+					, logger::ERROR
+				);
+				return null;
+			}
+
+		// tm mode case
+			if ($mode==='tm') {
+				debug_log(__METHOD__
+					. " Error on save: invalid mode (tm)! . Ignored order" . PHP_EOL
+					. ' section_id: ' . to_string($section_id) . PHP_EOL
+					. ' section_tipo: ' . $section_tipo . PHP_EOL
+					. ' tipo: ' . $tipo . PHP_EOL
+					. ' model: ' . get_class($this) . PHP_EOL
+					. ' mode: ' . $mode . PHP_EOL
+					. ' lang: ' . $lang
+					, logger::ERROR
+				);
 				return null;
 			}
 

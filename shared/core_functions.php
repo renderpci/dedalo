@@ -496,7 +496,17 @@ function get_last_modification_date(string $path, array $allowedExtensions=null,
 * @param string $path
 * @return string|null $last_modified_file
 */
-function get_last_modified_file(string $path, array $allowed_extensions) {
+function get_last_modified_file(string $path, array $allowed_extensions, $fn_validate=null) : ?string {
+
+	// path validate
+		if (!is_dir($path)) {
+			debug_log(__METHOD__
+				. " Invalid directory. null is returned " . PHP_EOL
+				. ' path: ' . to_string($path)
+				, logger::ERROR
+			);
+			return null;
+		}
 
 	// First we set up the iterator
 		$iterator			= new RecursiveDirectoryIterator($path);
@@ -508,9 +518,20 @@ function get_last_modified_file(string $path, array $allowed_extensions) {
 	// Then we walk through all the files inside all folders in the base folder
 		if (!empty($directory_iterator)) foreach ($directory_iterator as $name => $object) {
 
-			$ar_bits	= explode(".", $name);
-			$extension	= end($ar_bits);
-			if (!in_array($extension, $allowed_extensions)) continue;
+			// extension check
+				$ar_bits	= explode('.', $name);
+				$extension	= end($ar_bits);
+				if (!in_array($extension, $allowed_extensions)) {
+					continue;
+				}
+
+			// function validation check
+				if (isset($fn_validate) && is_callable($fn_validate)) {
+					$result = $fn_validate($name);
+					if ($result===false) {
+						continue;
+					}
+				}
 
 			// In the first iteration, we set the $lastModified
 			if (empty($last_modified_file)) {
@@ -530,7 +551,7 @@ function get_last_modified_file(string $path, array $allowed_extensions) {
 			debug_log(__METHOD__
 				." No files found in directory! empty last_modified_file"
 				.' path: ' . to_string($path)
-				, logger::ERROR
+				, logger::WARNING
 			);
 		}
 

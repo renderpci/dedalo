@@ -2054,7 +2054,9 @@ abstract class common {
 					// short vars
 						$current_tipo			= $dd_object->tipo;
 						$current_section_tipo	= $section_tipo; //$dd_object->section_tipo ?? $dd_object->tipo;
-						$mode					= $dd_object->mode ?? $this->get_mode();
+						$mode					= $this->mode==='tm'
+							? 'tm' // propagate tm mode from parent
+							: ($dd_object->mode ?? $this->get_mode());
 						$model					= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 						$view					= $dd_object->view ?? null;
 
