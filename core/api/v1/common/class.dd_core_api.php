@@ -1762,16 +1762,12 @@ final class dd_core_api {
 							);
 						}else{
 							// component
-								$component_lang	= (RecordObj_dd::get_translatable($tipo)===true)
-									? $lang
-									: DEDALO_DATA_NOLAN;
-
 								$element = component_common::get_instance(
 									$model,
 									$tipo,
 									$section_id,
 									$mode,
-									$component_lang,
+									$lang,
 									$section_tipo,
 									true, // cache
 									$caller_dataframe ?? null
