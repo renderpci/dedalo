@@ -990,6 +990,18 @@ class component_relation_common extends component_common {
 		// Verify component minimum vars before save
 			if( empty($section_id) || empty($tipo) || empty($lang) ) {
 				trigger_error(__METHOD__." Error on save: Few vars! section_tipo:$section_tipo, section_id:$section_id, tipo,$tipo, lang,$lang, model: ".get_class($this));
+		// tm mode case
+			if ($mode==='tm') {
+				debug_log(__METHOD__
+					. " Error on save: invalid mode (tm)! . Ignored order" . PHP_EOL
+					. ' section_id: ' . to_string($section_id) . PHP_EOL
+					. ' section_tipo: ' . $section_tipo . PHP_EOL
+					. ' tipo: ' . $tipo . PHP_EOL
+					. ' model: ' . get_class($this) . PHP_EOL
+					. ' mode: ' . $mode . PHP_EOL
+					. ' lang: ' . $lang
+					, logger::ERROR
+				);
 				return null;
 			}
 
