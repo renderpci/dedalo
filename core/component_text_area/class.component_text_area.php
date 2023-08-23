@@ -3002,65 +3002,19 @@ class component_text_area extends component_common {
 	public function conform_import_data(string $import_value, string $column_name) : object {
 
 		// Response
-		$response = new stdClass();
-			$response->result	= null;
-			$response->errors	= [];
-			$response->msg		= 'Error. Request failed';
-
-		// Check if is a JSON string. Is yes, decode
-			if(json_handler::is_json($import_value)){
-
-				// try to JSON decode (null on not decode)
-				$dato_from_json	= json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
-				// id data is a object it will be the Dédalo format and it's not necessary processed
-				if(is_object($dato_from_json)){
-					$response->result	= $dato_from_json;
-					$response->msg		= 'OK';
-
-					return $response;
-				}
-
-				$import_value	= $dato_from_json;
-			}
+			$response = new stdClass();
+				$response->result	= null;
+				$response->errors	= [];
+				$response->msg		= 'Error. Request failed';
 
 
-
-			// check the begin and end of the value string, if it has a [] or other combination that seems array
-			// sometimes the value text could be [Ac], as numismatic legends, it's admit, but if the text has [" or "] it's not admitted.
-			$begins_one	= substr($import_value, 0, 1);
-			$ends_one	= substr($import_value, -1);
-			$begins_two	= substr($import_value, 0, 2);
-			$ends_two	= substr($import_value, -2);
-
-			if (($begins_two !== '["' && $ends_two !== '"]') ||
-				($begins_two !== '["' && $ends_one !== ']') ||
-				($begins_one !== '[' && $ends_two !== '"]')
-				){
-				$import_value = empty($import_value)
-					? null
-					: [$import_value];
-			}else{
-				// log JSON conversion error
-				debug_log(__METHOD__
-					." json_last_error: ".json_last_error()
-					, logger::ERROR
-				);
-
-				$failed = new stdClass();
-					$failed->section_id		= $this->section_id;
-					$failed->data			= stripslashes( $import_value );
-					$failed->component_tipo	= $this->get_tipo();
-					$failed->msg			= 'IGNORED: malformed data '. to_string($import_value);
-				$response->errors[] = $failed;
-
-				return $response;
-			}
-
-
-			if(!empty($import_value)) {
+		// $normalize_value function to be used in any case, $import_value is an object, array or string
+		// values need to be HTML compatible with ck-editor
+			$normalize_value = function(array $import_value) : array {
 
 				$value = [];
 				foreach ($import_value as $text_value) {
+
 					$begins_three	= substr($text_value, 0, 3);
 					$ends_four		= substr($text_value, -4);
 
@@ -3077,12 +3031,76 @@ class component_text_area extends component_common {
 
 					$value[] = $text_value;
 				}
+
+				return $value;
+			};
+
+
+		// object | array case
+			// Check if is a JSON string. Is yes, decode
+			// if data is a object | array it will be the Dédalo format and it's not necessary processed
+			if(json_handler::is_json($import_value)){
+
+				// try to JSON decode (null on not decode)
+				$dato_from_json	= json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
+
+				if(is_array($dato_from_json)){
+					$value = $normalize_value($dato_from_json);
+				}else if (is_object($dato_from_json)) {
+					foreach ($dato_from_json as $key => $ar_values) {
+						$value = $normalize_value($ar_values);
+						$dato_from_json->$key = $value ;
+					}
+				}
+
+				$response->result	= $value;
+				$response->msg		= 'OK';
+
+				return $response;
+			}
+
+		// string case
+			// check the begin and end of the value string, if it has a [] or other combination that seems array
+			// sometimes the value text could be [Ac], as numismatic legends, it's admit, but if the text has [" or "] it's not admitted.
+			$begins_one	= substr($import_value, 0, 1);
+			$ends_one	= substr($import_value, -1);
+			$begins_two	= substr($import_value, 0, 2);
+			$ends_two	= substr($import_value, -2);
+
+			if (($begins_two !== '["' && $ends_two !== '"]') ||
+				($begins_two !== '["' && $ends_one !== ']') ||
+				($begins_one !== '[' && $ends_two !== '"]')
+				){
+
+				// inport_value is a string
+				$value = empty($import_value)
+					? null
+					: $normalize_value([$import_value]);
+
 			}else{
-				$value = null;
+
+				// import value seems to be a JSON malformed.
+				// it begin [" or end with "]
+				// log JSON conversion error
+				debug_log(__METHOD__
+					." invalid JSON value, seems a syntax error: ". PHP_EOL
+					. to_string($import_value)
+					, logger::ERROR
+				);
+
+				$failed = new stdClass();
+					$failed->section_id		= $this->section_id;
+					$failed->data			= stripslashes( $import_value );
+					$failed->component_tipo	= $this->get_tipo();
+					$failed->msg			= 'IGNORED: malformed data '. to_string($import_value);
+				$response->errors[] = $failed;
+
+				return $response;
 			}
 
 		$response->result	= $value;
 		$response->msg		= 'OK';
+
 
 		return $response;
 	}//end conform_import_data
