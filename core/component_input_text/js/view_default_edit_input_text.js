@@ -109,9 +109,14 @@ const get_content_value = (i, current_value, self) => {
 		const multi_line	= (self.context.properties && self.context.properties.hasOwnProperty('multi_line'))
 			? self.context.properties.multi_line
 			: false
-		const element_type	= (multi_line===true) ? 'textarea' : 'input'
-		const is_inside_tool= self.is_inside_tool
-		// const with_lang_versions	= self.context.properties.with_lang_versions || false
+		const element_type			= (multi_line===true) ? 'textarea' : 'input'
+		const is_inside_tool 		= self.is_inside_tool
+		const with_lang_versions	= self.context.properties.with_lang_versions || false
+
+	// check if the component is mandatory and it doesn't has value
+		const add_class			= self.context.properties.mandatory && !current_value
+			? ' mandatory'
+			: ''
 
 	// content_value node
 		const content_value = ui.create_dom_element({
@@ -123,7 +128,7 @@ const get_content_value = (i, current_value, self) => {
 		const input = ui.create_dom_element({
 			element_type	: element_type,
 			type			: 'text',
-			class_name		: 'input_value',
+			class_name		: 'input_value' + add_class,
 			value			: current_value,
 			placeholder		: (current_value) ? '' : self.data.fallback_value[i],
 			parent			: content_value
