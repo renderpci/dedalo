@@ -160,7 +160,7 @@ class json_handler {
 		return is_string($value) && is_array(json_decode($value, true)) && (json_last_error() == JSON_ERROR_NONE)
 			? true
 			: false;
-	}// end is_json
+	}//end is_json
 
 
 

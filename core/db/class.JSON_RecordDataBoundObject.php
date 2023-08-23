@@ -302,8 +302,10 @@ abstract class JSON_RecordDataBoundObject {
 				// error case
 					if ($id===false) {
 						debug_log(__METHOD__
-							. " !! Error Processing Request. Received response (id) is 'false'. Maybe you trying to update a non existing record" . PHP_EOL
-							. "Check the existence of record section_tipo: '$section_tipo' section_id: '$section_id' " . PHP_EOL
+							. " !! Error Processing Request. Received response (id) is 'false'. Maybe you are trying to update a non existing or deleted record" . PHP_EOL
+							. "Check the existence of record (you should check Time machine deleted records too)" . PHP_EOL
+							.' section_tipo: ' . $section_tipo . PHP_EOL
+							.' section_id: ' . $section_id . PHP_EOL
 							. "pg_last_error: " . PHP_EOL
 							. pg_last_error(DBi::_getConnection())
 							, logger::ERROR

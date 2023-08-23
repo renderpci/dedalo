@@ -28,5 +28,6 @@ define('DEDALO_SECTION_PROJECTS_TIPO', '');
 define('DEDALO_ROOT_WEB', '');
 define('DEDALO_PROTOCOL', '');
 define('DEDALO_MAJOR_VERSION', '');
+define('POSTPROCESSING_IMAGE_SCRIPT', '');
 function session_start_manager(){};
 function fix_cascade_config_var(){};
