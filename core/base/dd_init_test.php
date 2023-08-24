@@ -146,9 +146,14 @@
 		if( !is_dir($folder_path) ) {
 			if(!mkdir($folder_path, $create_dir_permissions, true)) {
 
-				$init_response->msg[]	= 'Error on read or create extras directory ('.$current_tipo.'). Permission denied';
+				$init_response->msg[]	= 'Error on read or create "extras" directory ("'.$current_tipo.'"). Permission denied';
 				$init_response->errors	= true;
-				debug_log(__METHOD__."  ".implode(PHP_EOL, $init_response->msg), logger::ERROR);
+				debug_log(__METHOD__
+					.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+					.' folder_path: ' .$folder_path . PHP_EOL
+					.' create_dir_permissions: ' . to_string($create_dir_permissions) . PHP_EOL
+					, logger::ERROR
+				);
 
 				return $init_response;
 			}
@@ -164,10 +169,12 @@
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, $create_dir_permissions,true)) {
 
-			$init_response->msg[]	= 'Error on read or create media directory. Permission denied';
+			$init_response->msg[]	= 'Error on read or create "media" directory. Permission denied';
 			$init_response->errors	= true;
 			debug_log(__METHOD__
-				."  ".implode(PHP_EOL, $init_response->msg)
+				.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+				.' folder_path: ' .$folder_path . PHP_EOL
+				.' create_dir_permissions: ' . to_string($create_dir_permissions) . PHP_EOL
 				, logger::ERROR
 			);
 
@@ -186,10 +193,12 @@
 		if( !is_dir($folder_path) ) {
 			if(!mkdir($folder_path, $create_dir_permissions, true)) {
 
-				$init_response->msg[]	= 'Error on read or create media quality ['.$quality.'] directory. Permission denied';
+				$init_response->msg[]	= 'Error on read or create media quality: "'.$quality.'" directory. Permission denied';
 				$init_response->errors	= true;
 				debug_log(__METHOD__
-					."  ".implode(PHP_EOL, $init_response->msg)
+					.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+					.' folder_path: ' .$folder_path . PHP_EOL
+					.' create_dir_permissions: ' . to_string($create_dir_permissions) . PHP_EOL
 					, logger::ERROR
 				);
 
@@ -210,10 +219,12 @@
 		if( !is_dir($folder_path) ) {
 			if(!mkdir($folder_path, $create_dir_permissions, true)) {
 
-				$init_response->msg[]	= 'Error on read or create image '.$quality.' directory. Permission denied';
+				$init_response->msg[]	= 'Error on read or create image quality "'.$quality.'" directory. Permission denied';
 				$init_response->errors	= true;
 				debug_log(__METHOD__
-					."  ".implode(PHP_EOL, $init_response->msg)
+					.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+					.' folder_path: ' .$folder_path . PHP_EOL
+					.' create_dir_permissions: ' . to_string($create_dir_permissions) . PHP_EOL
 					, logger::ERROR
 				);
 
@@ -242,10 +253,12 @@
 				if( !is_dir($folder_path) ) {
 					if(!mkdir($folder_path, $create_dir_permissions, true)) {
 
-						$init_response->msg[]	= 'Error on read or create pdf '.$quality.' directory. Permission denied';
+						$init_response->msg[]	= 'Error on read or create pdf quality "'.$quality.'" directory. Permission denied';
 						$init_response->errors	= true;
 						debug_log(__METHOD__
-							."  ".implode(PHP_EOL, $init_response->msg)
+							.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+							.' folder_path: ' .$folder_path . PHP_EOL
+							.' create_dir_permissions: ' . to_string($create_dir_permissions) . PHP_EOL
 							, logger::ERROR
 						);
 
@@ -267,10 +280,12 @@
 		if( !is_dir($folder_path) ) {
 			if(!mkdir($folder_path, $create_dir_permissions, true)) {
 
-				$init_response->msg[]	= 'Error on read or create 3d '.$quality.' directory. Permission denied';
+				$init_response->msg[]	= 'Error on read or create 3d quality "'.$quality.'" directory. Permission denied';
 				$init_response->errors	= true;
 				debug_log(__METHOD__
-					."  ".implode(PHP_EOL, $init_response->msg)
+					.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+					.' folder_path: ' .$folder_path . PHP_EOL
+					.' create_dir_permissions: ' . to_string($create_dir_permissions) . PHP_EOL
 					, logger::ERROR
 				);
 
@@ -300,7 +315,9 @@
 					$init_response->msg[]	= 'Error on read or create SVG directory. Permission denied';
 					$init_response->errors	= true;
 					debug_log(__METHOD__
-						."  ".implode(PHP_EOL, $init_response->msg)
+						.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+						.' folder_path: ' .$folder_path . PHP_EOL
+						.' create_dir_permissions: ' . to_string($create_dir_permissions) . PHP_EOL
 						, logger::ERROR
 					);
 
@@ -316,10 +333,12 @@
 				if( !is_dir($folder_path) ) {
 					if(!mkdir($folder_path, $create_dir_permissions, true)) {
 
-						$init_response->msg[]	= 'Error on read or create svg '.$quality.' directory. Permission denied';
+						$init_response->msg[]	= 'Error on read or create svg quality "'.$quality.'" directory. Permission denied';
 						$init_response->errors	= true;
 						debug_log(__METHOD__
-							."  ".implode(PHP_EOL, $init_response->msg)
+							.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+							.' folder_path: ' .$folder_path . PHP_EOL
+							.' create_dir_permissions: ' . to_string($create_dir_permissions) . PHP_EOL
 							, logger::ERROR
 						);
 
@@ -342,7 +361,9 @@
 				$init_response->msg[]	= 'Error on read or create media DEDALO_HTML_FILES_FOLDER default directory. Permission denied';
 				$init_response->errors	= true;
 				debug_log(__METHOD__
-					."  ".implode(PHP_EOL, $init_response->msg)
+					.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+					.' folder_path: ' .$folder_path . PHP_EOL
+					.' create_dir_permissions: ' . to_string($create_dir_permissions) . PHP_EOL
 					, logger::ERROR
 				);
 
@@ -364,7 +385,9 @@
 				$init_response->msg[]	= 'Error on read or create media DEDALO_IMAGE_WEB_FOLDER default directory. Permission denied';
 				$init_response->errors	= true;
 				debug_log(__METHOD__
-					."  ".implode(PHP_EOL, $init_response->msg)
+					.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+					.' folder_path: ' .$folder_path . PHP_EOL
+					.' create_dir_permissions: ' . to_string($create_dir_permissions) . PHP_EOL
 					, logger::ERROR
 				);
 
@@ -386,7 +409,9 @@
 				$init_response->msg[]	= 'Error on read or create media DEDALO_TOOL_EXPORT_FOLDER_PATH default directory. Permission denied';
 				$init_response->errors	= true;
 				debug_log(__METHOD__
-					."  ".implode(PHP_EOL, $init_response->msg)
+					.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+					.' folder_path: ' .$folder_path . PHP_EOL
+					.' create_dir_permissions: ' . to_string($create_dir_permissions) . PHP_EOL
 					, logger::ERROR
 				);
 
@@ -419,7 +444,9 @@
 			$init_response->msg[]	= 'Error on read or create DEDALO_UPLOAD_TMP_DIR directory. Permission denied';
 			$init_response->errors	= true;
 			debug_log(__METHOD__
-				."  ".implode(PHP_EOL, $init_response->msg)
+				.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+				.' folder_path: ' .$folder_path . PHP_EOL
+				.' create_dir_permissions: ' . to_string($create_dir_permissions) . PHP_EOL
 				, logger::ERROR
 			);
 
@@ -442,7 +469,9 @@
 			$init_response->msg[]	= 'Error: psql not found at: '.$path . PHP_EOL . ' Review your PostgreSQL installation or your db config file';
 			$init_response->errors	= true;
 			debug_log(__METHOD__
-				."  ".implode(PHP_EOL, $init_response->msg)
+				.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+				.' path: ' .$path . PHP_EOL
+				.' psql: ' . to_string($psql) . PHP_EOL
 				, logger::ERROR
 			);
 
@@ -460,7 +489,9 @@
 		$init_response->msg[]	= 'Warning: File .pgpass not found at: '.$path . PHP_EOL . ' Check your .pgpass file into php user home dir';
 		$init_response->errors	= true;
 		debug_log(__METHOD__
-			.'  '.implode(PHP_EOL, $init_response->msg)
+			.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+			.' php_user_home: ' . to_string($php_user_home) . PHP_EOL
+			.' path: ' . to_string($path) . PHP_EOL
 			, logger::ERROR
 		);
 
@@ -475,7 +506,11 @@
 
 					$init_response->msg[]	= 'Warning: File .pgpass permissions is : '.$file_permissions . PHP_EOL . ' Unable to automatic set. Check manually your .pgpass file permissions and set to: 0600';
 					$init_response->errors	= true;
-					debug_log(__METHOD__."  ".implode(PHP_EOL, $init_response->msg), logger::ERROR);
+					debug_log(__METHOD__
+						.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+						.' file_permissions: ' . to_string($file_permissions)
+						, logger::ERROR
+					);
 
 					// return $init_response; // continue here, don't stop the flow, only notify error
 
@@ -513,7 +548,8 @@
 		$init_response->msg[]	= 'Error on system test. ffmpeg lib not found';
 		$init_response->errors	= true;
 		debug_log(__METHOD__
-			."  ".implode(PHP_EOL, $init_response->msg)
+			."  ".implode(PHP_EOL, $init_response->msg) .PHP_EOL
+			.' DEDALO_AV_FFMPEG_PATH: ' . DEDALO_AV_FFMPEG_PATH
 			, logger::ERROR
 		);
 
@@ -529,7 +565,8 @@
 		$init_response->msg[]	= 'Error on system test. qt-faststart lib not found';
 		$init_response->errors	= true;
 		debug_log(__METHOD__
-			."  ".implode(PHP_EOL, $init_response->msg)
+			."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
+			.' DEDALO_AV_FASTSTART_PATH: ' . DEDALO_AV_FASTSTART_PATH
 			, logger::ERROR
 		);
 
@@ -544,7 +581,8 @@
 		$init_response->msg[]	= 'Error on system test. ffprobe lib not found';
 		$init_response->errors	= true;
 		debug_log(__METHOD__
-			."  ".implode(PHP_EOL, $init_response->msg)
+			."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
+			.' DEDALO_AV_FFPROBE_PATH: ' . DEDALO_AV_FFPROBE_PATH
 			, logger::ERROR
 		);
 
@@ -724,7 +762,8 @@
 			$init_response->msg[]	= 'Warning: Cache dir unavailable at: '.$files_path . PHP_EOL . ' Check your DEDALO_CACHE_MANAGER config to fix it';
 			$init_response->errors	= true;
 			debug_log(__METHOD__
-				."  ".implode(PHP_EOL, $init_response->msg)
+				."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
+				.' files_path: ' . $files_path
 				, logger::ERROR
 			);
 
