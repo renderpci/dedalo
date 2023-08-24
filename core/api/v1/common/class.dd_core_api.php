@@ -1104,7 +1104,9 @@ final class dd_core_api {
 					if (!is_array($changed_data)) {
 						$changed_data = [$changed_data];
 						debug_log(__METHOD__
-							." ERROR. var 'changed_data' expected to be array. Received type: ". gettype($changed_data)
+							." ERROR. var 'changed_data' expected to be array. Received type: " . PHP_EOL
+							.' type: ' 			. gettype($changed_data) . PHP_EOL
+							.' changed:data: ' 	. to_string($changed_data)
 							, logger::ERROR
 						);
 					}

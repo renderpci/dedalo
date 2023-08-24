@@ -480,7 +480,7 @@ abstract class component_common extends common {
 			$this->ar_tools_obj = null;
 
 		// set_dato_default (new way 28-10-2016)
-			if ( $this->mode==='edit' && !is_null($this->section_id) ) {
+			if ( $this->mode==='edit' && !is_null($this->section_id) && $this->data_source!=='tm' ) {
 				$this->set_dato_default();
 			}
 
@@ -581,6 +581,22 @@ abstract class component_common extends common {
 		// Data default only can be saved by users than have permissions to save.
 		// Read users can not change component data.
 			if($this->get_component_permissions() < 2){
+				return false;
+			}
+
+		// tm mode case
+			if ($this->mode==='tm' || $this->data_source==='tm') {
+				debug_log(__METHOD__
+					. " Warning on set_dato_default: invalid mode or data_source (tm) ! . Ignored order" . PHP_EOL
+					. ' section_id: ' . to_string($this->section_id) . PHP_EOL
+					. ' section_tipo: ' . $this->section_tipo . PHP_EOL
+					. ' tipo: ' . $this->tipo . PHP_EOL
+					. ' model: ' . get_class($this) . PHP_EOL
+					. ' mode: ' . $this->mode . PHP_EOL
+					. ' data_source: ' . $this->data_source . PHP_EOL
+					. ' lang: ' . $this->lang
+					, logger::WARNING
+				);
 				return false;
 			}
 
@@ -1113,7 +1129,7 @@ abstract class component_common extends common {
 			}
 
 		// tm mode case
-			if ($mode==='tm') {
+			if ($this->mode==='tm' || $this->data_source==='tm') {
 				debug_log(__METHOD__
 					. " Error on save: invalid mode (tm)! . Ignored order" . PHP_EOL
 					. ' section_id: ' . to_string($section_id) . PHP_EOL
@@ -1121,6 +1137,7 @@ abstract class component_common extends common {
 					. ' tipo: ' . $tipo . PHP_EOL
 					. ' model: ' . get_class($this) . PHP_EOL
 					. ' mode: ' . $mode . PHP_EOL
+					. ' data_source: ' . $this->data_source . PHP_EOL
 					. ' lang: ' . $lang
 					, logger::ERROR
 				);

@@ -2130,10 +2130,11 @@ abstract class common {
 									true,
 									$caller_dataframe // object|null
 								);
+
 								// pagination->limit. Get limit from component calculation or if it's defined from ddo
-								if(isset($dd_object->limit)){
-									$related_element->pagination->limit = $dd_object->limit;
-								}
+									if(isset($dd_object->limit)){
+										$related_element->pagination->limit = $dd_object->limit;
+									}
 
 								// data_source inherit
 									// if (isset($this->data_source)) {

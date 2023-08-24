@@ -174,7 +174,7 @@ class component_image extends component_media_common {
 		// url
 			$url = $this->get_media_url_dir($quality) .'/'. $id .'.'. $this->get_extension();
 			// tm mode case
-			if ($this->mode==='tm') {
+			if ($this->mode==='tm' || $this->data_source==='tm') {
 
 				// get last deleted file
 				$last_deleted_file = get_last_modified_file(
@@ -1025,9 +1025,9 @@ class component_image extends component_media_common {
 	* If uploaded file is not in Dedalo standard format (jpg), is converted, and original is conserved (like filename.tif)
 	* Used in tool_upload post-processing file
 	* @param string $uploaded_file_path
-	* @return string $file_path
+	* @return string|null $file_path
 	*/
-	public static function build_standard_image_format(string $uploaded_file_path) : string {
+	public static function build_standard_image_format(string $uploaded_file_path) : ?string {
 
 		$f_extension = strtolower(pathinfo($uploaded_file_path, PATHINFO_EXTENSION));
 		if ($f_extension!==DEDALO_IMAGE_EXTENSION) {
@@ -1042,7 +1042,7 @@ class component_image extends component_media_common {
 				$options->quality		= 100;
 
 			$result = ImageMagick::convert($options);
-			if (empty($result)) {
+			if ($result===false) {
 				debug_log(__METHOD__
 					. " Error on build standard_image_format from non Dédalo extension " . PHP_EOL
 					. ' f_extension: ' . $f_extension .PHP_EOL
@@ -1050,6 +1050,7 @@ class component_image extends component_media_common {
 					. ' convert options: ' . to_string($options)
 					, logger::ERROR
 				);
+				return null;
 			}
 
 			$file_path = $new_file_path;
