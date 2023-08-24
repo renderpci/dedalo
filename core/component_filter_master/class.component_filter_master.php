@@ -15,8 +15,11 @@ class component_filter_master extends component_filter {
 	*/
 	public function Save() : ?int {
 
-		// Reset cache session IMPORTANT !
-		unset($_SESSION['dedalo']['config']['get_user_projects']);
+		// Reset cache on every save action. IMPORTANT !
+			filter::clean_caches(
+				get_user_id(),  // user id. Current logged user id
+				$this->tipo // DEDALO_FILTER_MASTER_TIPO dd170
+			);
 
 		return parent::Save();
 	}//end Save

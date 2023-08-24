@@ -77,11 +77,12 @@ abstract class filter {
 		// check user_id
 			if (empty($user_id)) {
 				debug_log(__METHOD__
-					. " Invalid user id "
+					. " Invalid empty user id "
 					. to_string($user_id)
 					, logger::ERROR
 				);
-				throw new Exception("Error Processing Request. Invalid user id", 1);
+				// throw new Exception("Error Processing Request. Invalid user id", 1);
+				return [];
 			}
 
 		$user_projects = [];
@@ -139,6 +140,56 @@ abstract class filter {
 
 
 	/**
+	* GET_USER_AUTHORIZED_PROJECTS_CACHE_KEY
+	* @param int $user_id
+	* @param string $component_tipo
+	* @return string $cache_key
+	*/
+	public static function get_user_authorized_projects_cache_key(int $user_id, string $component_tipo) : string {
+
+		$cache_key = 'user_authorized_projects_' . $user_id .'_'. $component_tipo;
+
+		return $cache_key;
+	}//end get_user_authorized_projects_cache_key
+
+
+
+	/**
+	* CLEAN_CACHES
+	* @param int $user_id
+	* @param string $component_tipo
+	* @return bool
+	*/
+	public static function clean_caches(int $user_id, string $component_tipo) : bool {
+
+		// user_projects_cache
+		if( isset(filter::$user_projects_cache[$user_id]) ) {
+			unset(filter::$user_projects_cache[$user_id]);
+		}
+
+		// user_authorized_projects_cache
+		$cache_key = filter::get_user_authorized_projects_cache_key($user_id, $component_tipo);
+		if (isset(filter::$user_authorized_projects_cache[$cache_key])) {
+			unset(filter::$user_authorized_projects_cache[$cache_key]);
+		}
+		if (isset($_SESSION['dedalo']['config'][$cache_key])) {
+			unset($_SESSION['dedalo']['config'][$cache_key]);
+		}
+
+		debug_log(__METHOD__
+			. " Cleared filter caches " . PHP_EOL
+			. ' user_id: ' . $user_id . PHP_EOL
+			. ' cache_key: ' . $cache_key . PHP_EOL
+			, logger::DEBUG
+		);
+
+
+		return true;
+	}//end clean_caches
+
+
+
+	/**
 	* GET_USER_AUTHORIZED_PROJECTS
 	* Get all projects filtered by user authorized projects
 	* Works like ar_list_of_values but filtered by user authorized projects
@@ -152,7 +203,8 @@ abstract class filter {
 		// cache
 			$use_cache = true; // (SHOW_DEVELOPER!==true);
 			if ($use_cache===true) {
-				$cache_key = 'user_authorized_projects_' . $user_id .'_'. $from_component_tipo;
+				// $cache_key = 'user_authorized_projects_' . $user_id .'_'. $from_component_tipo;
+				$cache_key = filter::get_user_authorized_projects_cache_key($user_id, $from_component_tipo);
 				if (isset(filter::$user_authorized_projects_cache[$cache_key])) {
 					// debug_log(__METHOD__." Total time: ".exec_time_unit($start_time,'ms')." ms ---- CACHED", logger::DEBUG);
 					return filter::$user_authorized_projects_cache[$cache_key];
