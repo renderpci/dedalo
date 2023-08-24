@@ -174,7 +174,7 @@ class component_image extends component_media_common {
 		// url
 			$url = $this->get_media_url_dir($quality) .'/'. $id .'.'. $this->get_extension();
 			// tm mode case
-			if ($this->mode==='tm') {
+			if ($this->mode==='tm' || $this->data_source==='tm') {
 
 				// get last deleted file
 				$last_deleted_file = get_last_modified_file(

@@ -1027,7 +1027,7 @@ class component_relation_common extends component_common {
 			}
 
 		// tm mode case
-			if ($mode==='tm') {
+			if ($this->mode==='tm' || $this->data_source==='tm') {
 				debug_log(__METHOD__
 					. " Error on save: invalid mode (tm)! . Ignored order" . PHP_EOL
 					. ' section_id: ' . to_string($section_id) . PHP_EOL
@@ -1035,6 +1035,7 @@ class component_relation_common extends component_common {
 					. ' tipo: ' . $tipo . PHP_EOL
 					. ' model: ' . get_class($this) . PHP_EOL
 					. ' mode: ' . $mode . PHP_EOL
+					. ' data_source: ' . $this->data_source . PHP_EOL
 					. ' lang: ' . $lang
 					, logger::ERROR
 				);

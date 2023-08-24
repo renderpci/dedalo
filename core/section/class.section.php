@@ -873,7 +873,7 @@ class section extends common {
 			}
 
 		// tm mode case
-			if ($this->mode==='tm') {
+			if ($this->mode==='tm' || $this->data_source==='tm') {
 				debug_log(__METHOD__
 					. " Error on save: invalid mode (tm)! . Ignored order" . PHP_EOL
 					. ' section_id: ' . to_string($this->section_id) . PHP_EOL
