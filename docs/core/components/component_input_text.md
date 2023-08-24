@@ -17,7 +17,7 @@
     ],
     "render_views" :[
         {
-            "view"    : "text | mini | default"
+            "view"    : "text | mini | default",
             "mode"    : "edit | list"
         },
         {
@@ -79,7 +79,7 @@ When the component is instantiated as transliterated the main lang is defined as
 
 ## Import model
 
-By default import model use the JSON format of his data, a object with lang properties and values in array.
+By default import model use the JSON format of his data, an object with lang properties and values in array.
 
 ```json
 {
