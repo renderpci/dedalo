@@ -336,7 +336,7 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 		})
 		button_calendar.addEventListener('mouseup', fn_calendar_mouseup)
 		function fn_calendar_mouseup() {
-			const dd_date_format = page_globals.DEDALO_DATE_ORDER  || 'dmy'
+			const dd_date_format = page_globals.dedalo_date_order  || 'dmy'
 
 			const ar_date_format = (dd_date_format === 'dmy')
 				? ['d','m','Y']
