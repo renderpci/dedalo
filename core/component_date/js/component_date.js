@@ -123,7 +123,7 @@ component_date.prototype.date_to_string = function (date) {
 
 	const self	= this
 
-	const date_order = page_globals.DEDALO_DATE_ORDER || 'dmy'
+	const date_order = page_globals.dedalo_date_order || 'dmy'
 
 	// day. check if the date has defined the day and pad the start with 0 when the day has only 1 digit
 		const day	= (date.day && date.day>0)
@@ -208,7 +208,7 @@ component_date.prototype.parse_string_date = function(string_date) {
 
 	const self	= this
 
-	const date_order		= page_globals.DEDALO_DATE_ORDER || 'dmy'
+	const date_order		= page_globals.dedalo_date_order || 'dmy'
 	const ar_date_values	= string_date.split(self.date_separator)
 
 	if(ar_date_values.length === 1){
@@ -442,7 +442,7 @@ component_date.prototype.get_placeholder_value = function() {
 	const self = this
 
 	const date_mode			= self.get_date_mode()
-	const dd_date_format	= page_globals.DEDALO_DATE_ORDER  || 'dmy'
+	const dd_date_format	= page_globals.dedalo_date_order  || 'dmy'
 
 	// placeholder_value
 	// set the order of the placeholder by the date_format
