@@ -858,13 +858,12 @@ class section extends common {
 				$options->forced_create_record		= false;
 				$options->component_filter_dato		= false;
 
-				# Time machine options (overwrite when save component)
+				// Time machine options (overwrite when save component)
 				$options->time_machine_data			= false;
 				$options->time_machine_lang			= false;
 				$options->time_machine_tipo			= false;
 				$options->time_machine_section_id	= (int)$this->section_id; // always
 				$options->previous_component_dato	= null; // only when save from component
-
 
 			// save_options overwrite defaults
 			if (!empty($save_options)) {
@@ -878,8 +877,8 @@ class section extends common {
 				debug_log(__METHOD__
 					. " Error on save: invalid mode (tm)! . Ignored order" . PHP_EOL
 					. ' section_id: ' . to_string($this->section_id) . PHP_EOL
-					. ' section_tipo: ' . $this->section_tipo . PHP_EOL
-					. ' tipo: ' . $tipo . PHP_EOL
+					. ' section_tipo: ' . $this->tipo . PHP_EOL
+					. ' tipo: ' . $this->tipo . PHP_EOL
 					. ' model: ' . get_class($this) . PHP_EOL
 					. ' mode: ' . $this->mode . PHP_EOL
 					. ' lang: ' . $this->lang
@@ -892,14 +891,17 @@ class section extends common {
 			$tipo = (isset($this->properties->section_tipo) && $this->properties->section_tipo==='real')
 				? $this->get_section_real_tipo()
 				: $this->get_tipo();
-
 			// Verify tipo is structure data
 				if( !(bool)verify_dedalo_prefix_tipos($tipo) ) {
-					$msg = "EXCEPTION. Current tipo is not valid for save section: '$tipo'. Nothing will be saved!";
-					debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
-					throw new Exception("Current tipo is not valid: $tipo", 1);
+					// $msg = "EXCEPTION. Current tipo is not valid for save section: '$tipo'. Nothing will be saved!";
+					// throw new Exception("Current tipo is not valid: $tipo", 1);
+					debug_log(__METHOD__
+						." Error: Current tipo is not valid for save section. Nothing will be saved! ". PHP_EOL
+						.' tipo: ' . to_string($tipo)
+						, logger::ERROR
+					);
+					return null;
 				}
-
 			// section virtual . Correct tipo
 			// If we are in a virtual section, we will clear the real type (the destination section) and
 			// we will work with the real type from now on
@@ -908,21 +910,21 @@ class section extends common {
 					: $this->get_section_real_tipo();
 
 		// user id. Current logged user id
-			$user_id  = get_user_id();
+			$user_id = get_user_id();
 
 		// date now
 			$date_now = component_date::get_timestamp_now_for_db();
 
-		// Save_handler different to database case
+		// save_handler session case
 			// Sometimes we need use section as temporal element without save real data to database. Is this case
 			// data is saved to session as temporal data and can be recovered from $_SESSION['dedalo']['section_temp_data'] using key '$this->tipo.'_'.$this->section_id'
 			if (isset($this->save_handler) && $this->save_handler==='session') {
 
-				$temp_data_uid 		= $this->tipo.'_'.$this->section_id;
-				$section_temp_data 	= (object)$this->dato;
+				$temp_data_uid		= $this->tipo.'_'.$this->section_id;
+				$section_temp_data	= (object)$this->dato;
 
-				# Set value to session
-				# Always encode and decode data before store in session to avoid problems on unserialize not loaded classes
+				// Set value to session
+				// Always encode and decode data before store in session to avoid problems on unserialize not loaded classes
 				$_SESSION['dedalo']['section_temp_data'][$temp_data_uid] = json_decode( json_encode($section_temp_data) );
 
 				return (int)$this->section_id;
@@ -932,13 +934,8 @@ class section extends common {
 			if($this->source==='caller_section') {
 
 				// time machine. Save component data only
-					// $JSON_RecordObj_matrix	= new JSON_RecordObj_matrix(
-					// 	'dataframe', // fake table
-					// 	(int)$this->section_id,
-					// 	$tipo // string section_tipo
-					// );
 					$JSON_RecordObj_matrix = JSON_RecordObj_matrix::get_instance(
-						'dataframe', // string matrix_table
+						'dataframe', // string matrix_table (fake table)
 						(int)$this->section_id, // int section_id
 						$tipo, // string section_tipo
 						true // bool cache
@@ -994,10 +991,14 @@ class section extends common {
 				$JSON_RecordObj_matrix->set_dato($section_dato);
 				$saved_id_matrix = $JSON_RecordObj_matrix->Save( $options );
 				if (false===$saved_id_matrix || $saved_id_matrix < 1) { //  && $tipo!==DEDALO_ACTIVITY_SECTION_TIPO
-					debug_log(__METHOD__." Error on trying save->update record. Nothing is saved! ".to_string(), logger::ERROR);
-					if(SHOW_DEBUG===true) {
-						// throw new Exception("Section: Error Processing Request. Returned id_matrix on save (update) section is mandatory. Received id_matrix: ".to_string($saved_id_matrix), 1);
-					}
+					debug_log(__METHOD__
+						. ' Error trying to save->update record. Nothing was saved! ' . PHP_EOL
+						. ' section_id: ' . to_string($this->section_id) . PHP_EOL
+						. ' section_tipo: ' . $this->tipo . PHP_EOL
+						. ' model: ' . get_class($this) . PHP_EOL
+						. ' mode: ' . $this->mode
+						, logger::ERROR
+					);
 					return null;
 				}
 
@@ -1009,23 +1010,24 @@ class section extends common {
 			// prevent to save non authorized/valid section_id
 				if (!empty($this->section_id) && (int)$this->section_id < 1) {
 					debug_log(__METHOD__
-						." Trying to save invalid section_id: ".to_string($this->section_id)
+						. ' Error trying to save invalid section_id. Nothing was saved!' . PHP_EOL
+						. ' section_id: ' . to_string($this->section_id)
 						, logger::ERROR
 					);
 					return null;
 				}
 
-			# COUNTER : Counter table. Default is ¡matrix_counter¡
-			# Prepare the id of the counter based on the table we are working on (matrix, matrix_dd, etc.)
-			# By default it will be 'matrix_counter', but if our section table is different from 'matrix' we will use a counter table distinct
-			# formatted as 'matrix_counter' + substr($matrix_table, 6). For example 'matrix_counter_dd' for matrix_dd
+			// counter : Counter table. Default is ¡matrix_counter
+				// Prepare the id of the counter based on the table we are working on (matrix, matrix_dd, etc.)
+				// By default it will be 'matrix_counter', but if our section table is different from 'matrix' we will use a counter table distinct
+				// formatted as 'matrix_counter' + substr($matrix_table, 6). For example 'matrix_counter_dd' for matrix_dd
 				if ($options->forced_create_record===false) {
 
 					// Use normal incremental counter
 					$matrix_table_counter	= (substr($matrix_table, -3)==='_dd') ? 'matrix_counter_dd' : 'matrix_counter';
 					$current_id_counter		= (int)counter::get_counter_value($tipo, $matrix_table_counter);
 
-					// Create a counter if not exists
+					// Create a counter if not already exists
 						if ($current_id_counter===0 && $tipo!==DEDALO_ACTIVITY_SECTION_TIPO) {
 							// consolidate_counter
 							counter::consolidate_counter($tipo, $matrix_table, $matrix_table_counter);
@@ -1035,7 +1037,7 @@ class section extends common {
 
 					$new_section_id_counter = $current_id_counter+1;
 
-					# section_id. Fix section_id (point of no return, next calls to Save will be updates)
+					// section_id. Fix section_id (point of no return, next calls to Save will be updates)
 					$this->section_id = (int)$new_section_id_counter;
 				}
 
@@ -1048,28 +1050,28 @@ class section extends common {
 				# current first section data or not
 
 					// section dato
-						$section_dato = isset($this->dato) ? (object)$this->dato : new stdClass();
+						$section_dato						= isset($this->dato) ? (object)$this->dato : new stdClass();
 
 					// Section id
-						$section_dato->section_id		 = (int)$this->section_id;
+						$section_dato->section_id			= (int)$this->section_id;
 
 					// Section tipo
-						$section_dato->section_tipo 	 = (string)$tipo;
+						$section_dato->section_tipo			= (string)$tipo;
 
 					// Section real tipo
-						$section_dato->section_real_tipo = (string)$section_real_tipo;
+						$section_dato->section_real_tipo	= (string)$section_real_tipo;
 
 					// Section label
-						$section_dato->label 			 = (string)RecordObj_dd::get_termino_by_tipo($tipo,null,true);
+						$section_dato->label				= (string)RecordObj_dd::get_termino_by_tipo($tipo,null,true);
 
 					// Section created by userID
-						$section_dato->created_by_userID = (int)$user_id;
+						$section_dato->created_by_userID	= (int)$user_id;
 
 					// Section created date
-						$section_dato->created_date 	 = (string)$date_now;	# Format 2012-11-05 19:50:44
+						$section_dato->created_date			= (string)$date_now;	# Format 2012-11-05 19:50:44
 
 					// diffusion_info
-						$section_dato->diffusion_info 	 = null; // null by default
+						$section_dato->diffusion_info		= null; // null by default
 
 					// Components container
 						if (!empty($options->main_components_obj)) {
@@ -1126,15 +1128,22 @@ class section extends common {
 					#$JSON_RecordObj_matrix->set_section_tipo($tipo);
 					$saved_id_matrix = $JSON_RecordObj_matrix->Save( $save_options );
 					if (false===$saved_id_matrix || $saved_id_matrix < 1) { //  && $tipo!==DEDALO_ACTIVITY_SECTION_TIPO
-						debug_log(__METHOD__." Error on trying save->insert record. Nothing is saved! ".to_string($save_options), logger::ERROR);
-						if(SHOW_DEBUG===true) {
-							// throw new Exception("Error Processing Request. Returned id_matrix on save section is mandatory. Received id_matrix: $saved_id_matrix ", 1);
-						}
+						debug_log(__METHOD__
+							. ' Error trying to save->insert record. Nothing was saved! ' . PHP_EOL
+							. ' section_id: '   . to_string($this->section_id) . PHP_EOL
+							. ' save_options: ' . to_string($save_options)
+							, logger::ERROR
+						);
+						// if(SHOW_DEBUG===true) {
+						// 	throw new Exception("Error creating new section", 1);
+						// }
+						return null;
 					}
 
 			if($this->tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
 
-				# (!) Note that value returned by Save action, in case of activity, is the section_id auto created by table sequence 'matrix_activity_section_id_seq', not by counter
+				// (!) Note that value returned by Save action, in case of activity, is the section_id
+				// auto created by table sequence 'matrix_activity_section_id_seq', not by counter
 				$this->section_id = (int)$saved_id_matrix;
 
 			}else{
@@ -1151,13 +1160,13 @@ class section extends common {
 						counter::consolidate_counter($tipo, $matrix_table);
 					}
 				}else{
-					debug_log(__METHOD__." ERROR. Invalid saved_id_matrix: ".to_string($saved_id_matrix), logger::ERROR);
-				}
 
-				// Store in cached sections . (!) Important
-					# key for cache
-					// $key = $this->section_id .'_'. $tipo;
-					// self::$ar_section_instances[$key] = $this;
+					debug_log(__METHOD__
+						." ERROR. Invalid saved_id_matrix: ".to_string($saved_id_matrix)
+						, logger::ERROR
+					);
+					return null;
+				}
 
 				// Logger activity
 					logger::$obj['activity']->log_message(
@@ -1180,7 +1189,7 @@ class section extends common {
 					);
 
 				##
-				# FILTER DEFAULTS SET
+				# FILTER DEFAULTS SET (dd153)
 				if ($this->tipo===DEDALO_SECTION_PROJECTS_TIPO) {
 
 					##
@@ -1189,11 +1198,11 @@ class section extends common {
 					# User currently logged in
 						$component_filter_master = component_common::get_instance(
 							'component_filter_master',
-							DEDALO_FILTER_MASTER_TIPO,
+							DEDALO_FILTER_MASTER_TIPO, // dd170
 							$user_id,
 							'edit',
 							DEDALO_DATA_NOLAN,
-							DEDALO_SECTION_USERS_TIPO
+							DEDALO_SECTION_USERS_TIPO // dd153
 						);
 						$dato_filter_master = $component_filter_master->get_dato();
 
@@ -1206,7 +1215,14 @@ class section extends common {
 
 						$component_filter_master->set_dato($dato_filter_master);
 						$component_filter_master->Save();
-						debug_log(__METHOD__." Added locator from section save to component_filter_master: ".to_string($filter_master_locator), logger::DEBUG);
+						debug_log(__METHOD__
+							.' Added locator from section save to component_filter_master ' . PHP_EOL
+							.' User filter caches will be deleted to force refresh the data ' . PHP_EOL
+							.' user_id: ' .$user_id. PHP_EOL
+							.' filter_master_locator: ' . to_string($filter_master_locator)
+							, logger::DEBUG
+						);
+						// (!) Note that component_filter_master force refresh user projects caches on save
 
 				}else{
 
@@ -1227,7 +1243,12 @@ class section extends common {
 					if (empty($ar_tipo_component_filter[0])) {
 
 						// section without filter case (list of values mainly)
-						debug_log(__METHOD__." Ignored set filter default in section without filter: $this->tipo ".to_string(), logger::WARNING);
+						debug_log(__METHOD__
+							." Ignored set filter default in section without filter: $this->tipo" . PHP_EOL
+							.' section_tipo: ' . $this->tipo . PHP_EOL
+							.' section label ' . RecordObj_dd::get_termino_by_tipo($this->tipo, DEDALO_DATA_LANG)
+							, logger::WARNING
+						);
 
 					}else{
 
@@ -1270,6 +1291,7 @@ class section extends common {
 
 
 				// component state defaults set. Set default values on component_state when is present
+					/* DEACTIVATED 24-08-2023 by Paco because model component_state is not used in v6 (mapped to component_info)
 					$ar_component_state = section::get_ar_children_tipo_by_model_name_in_section(
 						$section_real_tipo, // section_tipo
 						['component_state'], // ar_model_name_required
@@ -1289,15 +1311,17 @@ class section extends common {
 						// (!) Note that set_defaults saves too. Here, current section is saved again if component_state is founded
 						$component_state->set_defaults();
 					}//end if (isset($ar_component_state[0]))
+					*/
 
 			}//end if($this->tipo!==DEDALO_ACTIVITY_SECTION_TIPO)
 		}//end if ($this->id >= 1)
 
 
 		// debug
-			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__." Saved section ($this->tipo - $this->section_id): ".exec_time_unit($start_time).' ms', logger::DEBUG);
-			}
+			debug_log(__METHOD__
+				." Saved section finish: ($this->tipo - $this->section_id) in time: ".exec_time_unit($start_time, 'ms').' ms'
+				, logger::DEBUG
+			);
 
 
 		return (int)$this->section_id;
