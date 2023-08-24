@@ -35,55 +35,319 @@ final class section_test extends TestCase {
 
 		$section_id		= self::$section_id;
 		$section_tipo	= self::$section_tipo;
+		$tipo			= $section_tipo;
 		$mode			= 'edit';
+		$cache_key		= implode('_', [$section_id, $tipo, $mode]);
 
-		$section = section::get_instance(
-			$section_id, // string|null section_id
-			$section_tipo, // string section_tipo
-			$mode
-		);
+		// cache true
+			$section = section::get_instance(
+				$section_id, // string|null section_id
+				$section_tipo, // string section_tipo
+				$mode,
+				true // default is true
+			);
 
-		$this->assertTrue(
-			gettype($section)==='object' ,
-			'expected type object. Current type: ' .gettype($section)
-		);
+			$this->assertTrue(
+				gettype($section)==='object' ,
+				'expected type object. Current type: ' .gettype($section)
+			);
 
-		$this->assertTrue(
-			count($section::$ar_section_instances)>0 ,
-			'expected count($section::$ar_section_instances)>0. Current type: ' .count($section::$ar_section_instances)
-		);
+			$this->assertTrue(
+				count($section::$ar_section_instances)>0 ,
+				'expected count($section::$ar_section_instances)>0. Current type: ' .count($section::$ar_section_instances)
+			);
 
-		# key for cache
-		$key = $section_id .'_'. $section_tipo .'_'. $mode;
+			$this->assertTrue(
+				isset($section::$ar_section_instances[$cache_key]) ,
+				'expected isset key in section instances cache ' .$cache_key
+			);
 
-		$this->assertTrue(
-			isset($section::$ar_section_instances[$key]) ,
-			'expected isset key in section instances cache ' .$key
-		);
+		// cache false
+			$section2 = section::get_instance(
+				$section_id, // string|null section_id
+				$section_tipo, // string section_tipo
+				$mode,
+				false // bool cache
+			);
 
-		$section2 = section::get_instance(
-			$section_id, // string|null section_id
-			$section_tipo, // string section_tipo
-			$mode,
-			false // bool cache
-		);
+			$this->assertTrue(
+				$section->uid!==$section2->uid ,
+				'expected non cache section (different uid) ' .$section->uid .' - '.$section2->uid
+			);
 
-		$this->assertTrue(
-			$section->uid!==$section2->uid ,
-			'expected non cache section (different uid) ' .$section->uid .' - '.$section2->uid
-		);
+			$section3 = section::get_instance(
+				$section_id, // string|null section_id
+				$section_tipo, // string section_tipo
+				$mode,
+				true // bool cache
+			);
 
-		$section3 = section::get_instance(
-			$section_id, // string|null section_id
-			$section_tipo, // string section_tipo
-			$mode,
-			true // bool cache
-		);
+			$this->assertTrue(
+				$section->uid===$section3->uid ,
+				'expected cached section (same uid) ' .$section->uid .' - '.$section3->uid
+			);
 
-		$this->assertTrue(
-			$section->uid===$section3->uid ,
-			'expected cached section (same uid) ' .$section->uid .' - '.$section3->uid
-		);
+		// time machine
+			// $get_json_options = new stdClass();
+			// 	$get_json_options->get_context	= true;
+			// 	$get_json_options->get_data		= true;
+			// $element_json = $section_tm->get_json($get_json_options);
+
+			// $rqo = json_handler::decode('
+			// 	{
+			// 		"id": "service_time_machine_test3_list_lg-eng_test3_tool_time_machine",
+			// 		"action": "read",
+			// 		"source": {
+			// 			"typo": "source",
+			// 			"type": "tm",
+			// 			"action": "search",
+			// 			"model": "service_time_machine",
+			// 			"tipo": "test3",
+			// 			"section_tipo": "test3",
+			// 			"section_id": null,
+			// 			"mode": "tm",
+			// 			"view": "tool",
+			// 			"lang": "lg-eng",
+			// 			"data_source": "tm"
+			// 		},
+			// 		"sqo": {
+			// 			"id": "tmp",
+			// 			"mode": "tm",
+			// 			"section_tipo": [
+			// 				"test3"
+			// 			],
+			// 			"limit": 10,
+			// 			"offset": 0,
+			// 			"order": [
+			// 				{
+			// 					"direction": "DESC",
+			// 					"path": [
+			// 						{
+			// 							"component_tipo": "id"
+			// 						}
+			// 					]
+			// 				}
+			// 			],
+			// 			"filter": {
+			// 				"and": [
+			// 					{
+			// 						"q_parsed": "\'deleted\'",
+			// 						"operator": "=",
+			// 						"format": "column",
+			// 						"column_name": "state",
+			// 						"path": [
+			// 							{
+			// 								"section_tipo": "test3"
+			// 							}
+			// 						]
+			// 					}
+			// 				]
+			// 			}
+			// 		},
+			// 		"show": {
+			// 			"ddo_map": [
+			// 				{
+			// 					"id": "matrix_id",
+			// 					"tipo": "dd1573",
+			// 					"type": "component",
+			// 					"typo": "ddo",
+			// 					"model": "component_section_id",
+			// 					"section_tipo": "test3",
+			// 					"parent": "test3",
+			// 					"label": "Matrix id",
+			// 					"mode": "tm",
+			// 					"view": "mini",
+			// 					"permissions": 1
+			// 				},
+			// 				{
+			// 					"id": "when",
+			// 					"tipo": "dd547",
+			// 					"type": "component",
+			// 					"typo": "ddo",
+			// 					"model": "component_date",
+			// 					"section_tipo": "test3",
+			// 					"parent": "test3",
+			// 					"debug_label": "When",
+			// 					"mode": "tm",
+			// 					"view": "mini",
+			// 					"permissions": 1
+			// 				},
+			// 				{
+			// 					"id": "who",
+			// 					"tipo": "dd543",
+			// 					"type": "component",
+			// 					"typo": "ddo",
+			// 					"model": "component_input_text",
+			// 					"section_tipo": "test3",
+			// 					"parent": "test3",
+			// 					"debug_label": "Who",
+			// 					"mode": "tm",
+			// 					"view": "mini",
+			// 					"permissions": 1
+			// 				},
+			// 				{
+			// 					"id": "where",
+			// 					"tipo": "dd546",
+			// 					"type": "component",
+			// 					"typo": "ddo",
+			// 					"model": "component_input_text",
+			// 					"section_tipo": "test3",
+			// 					"parent": "test3",
+			// 					"debug_label": "Where",
+			// 					"mode": "tm",
+			// 					"view": "mini",
+			// 					"permissions": 1
+			// 				},
+			// 				{
+			// 					"typo": "ddo",
+			// 					"tipo": "test52",
+			// 					"model": "component_input_text",
+			// 					"section_tipo": "test3",
+			// 					"parent": "test3",
+			// 					"mode": "tm",
+			// 					"view": null,
+			// 					"label": "<mark>input_text</mark>",
+			// 					"column_id": "test52",
+			// 					"permissions": 1
+			// 				},
+			// 				{
+			// 					"typo": "ddo",
+			// 					"tipo": "test17",
+			// 					"model": "component_text_area",
+			// 					"section_tipo": "test3",
+			// 					"parent": "test3",
+			// 					"mode": "tm",
+			// 					"view": null,
+			// 					"label": "<mark>text_area</mark>",
+			// 					"column_id": "test17",
+			// 					"permissions": 1
+			// 				},
+			// 				{
+			// 					"typo": "ddo",
+			// 					"tipo": "test85",
+			// 					"model": "component_pdf",
+			// 					"section_tipo": "test3",
+			// 					"parent": "test3",
+			// 					"mode": "tm",
+			// 					"view": null,
+			// 					"label": "<mark>pdf</mark>",
+			// 					"column_id": "test85",
+			// 					"permissions": 1
+			// 				},
+			// 				{
+			// 					"typo": "ddo",
+			// 					"tipo": "test177",
+			// 					"model": "component_svg",
+			// 					"section_tipo": "test3",
+			// 					"parent": "test3",
+			// 					"mode": "tm",
+			// 					"view": null,
+			// 					"label": "<mark>svg</mark>",
+			// 					"column_id": "test177",
+			// 					"permissions": 1
+			// 				},
+			// 				{
+			// 					"typo": "ddo",
+			// 					"tipo": "test26",
+			// 					"model": "component_3d",
+			// 					"section_tipo": "test3",
+			// 					"parent": "test3",
+			// 					"mode": "tm",
+			// 					"view": null,
+			// 					"label": "<mark>3d</mark>",
+			// 					"column_id": "test26",
+			// 					"permissions": 1
+			// 				},
+			// 				{
+			// 					"typo": "ddo",
+			// 					"tipo": "test94",
+			// 					"model": "component_av",
+			// 					"section_tipo": "test3",
+			// 					"parent": "test3",
+			// 					"mode": "tm",
+			// 					"view": null,
+			// 					"label": "<mark>av</mark>",
+			// 					"column_id": "test94",
+			// 					"permissions": 1
+			// 				},
+			// 				{
+			// 					"typo": "ddo",
+			// 					"tipo": "test99",
+			// 					"model": "component_image",
+			// 					"section_tipo": "test3",
+			// 					"parent": "test3",
+			// 					"mode": "tm",
+			// 					"view": null,
+			// 					"label": "<mark>image</mark>",
+			// 					"column_id": "test99",
+			// 					"permissions": 1
+			// 				}
+			// 			]
+			// 		},
+			// 		"options": {
+			// 			"caller_tipo": "test3"
+			// 		}
+			// 	}
+			// ');
+			// $response = dd_core_api::read($rqo);
+				// dump($response, ' response ++ '.to_string());
+
+			$sqo = json_decode('
+				{
+					"id": "tmp",
+					"mode": "tm",
+					"section_tipo": [
+						"test3"
+					],
+					"limit": 1,
+					"offset": 0,
+					"order": [
+						{
+							"direction": "DESC",
+							"path": [{"component_tipo": "id"}]
+						}
+					],
+					"filter": {
+						"and": [
+							{
+								"q_parsed": "\'deleted\'",
+								"operator": "=",
+								"format": "column",
+								"column_name": "state",
+								"path": [{"section_tipo": "test3"}]
+							}
+						]
+					}
+				}
+			');
+			$search = search::get_instance(
+				$sqo, // object sqo
+			);
+			$result = $search->search();
+				// dump($result, ' result ++ '.to_string());
+			foreach ($result->ar_records as $current_record) {
+
+				$section_id = $current_record->section_id;
+				// time machine
+				$section_tm = section::get_instance(
+					$section_id, // string|null section_id
+					$section_tipo, // string section_tipo
+					'tm',
+					false // bool cache
+				);
+				// dump($section_tm, ' section_tm ++ '.to_string());
+
+				$save = $section_tm->Save();
+
+				$this->assertTrue(
+					$save===null ,
+					'expected save result null. Current result: ' .to_string($save)
+				);
+
+				// break;
+			}
+
+
 	}//end test_get_instance
 
 
@@ -1653,11 +1917,11 @@ final class section_test extends TestCase {
 
 		$locator = json_decode('
 			 {
-                "section_tipo": "test3",
-                "section_id": "2",
-                "from_component_tipo": "test80",
-                "type": "'.DEDALO_RELATION_TYPE_LINK.'"
-            }
+				"section_tipo": "test3",
+				"section_id": "2",
+				"from_component_tipo": "test80",
+				"type": "'.DEDALO_RELATION_TYPE_LINK.'"
+			}
 		');
 
 		// Note that section is not saved
@@ -1700,11 +1964,11 @@ final class section_test extends TestCase {
 
 		$locator = json_decode('
 			 {
-                "section_tipo": "test3",
-                "section_id": "555",
-                "from_component_tipo": "test80",
-                "type": "'.DEDALO_RELATION_TYPE_LINK.'"
-            }
+				"section_tipo": "test3",
+				"section_id": "555",
+				"from_component_tipo": "test80",
+				"type": "'.DEDALO_RELATION_TYPE_LINK.'"
+			}
 		');
 
 		// remove 1
@@ -1771,11 +2035,11 @@ final class section_test extends TestCase {
 
 		$locator = json_decode('
 			 {
-                "section_tipo": "test3",
-                "section_id": "2",
-                "from_component_tipo": "test80",
-                "type": "'.DEDALO_RELATION_TYPE_LINK.'"
-            }
+				"section_tipo": "test3",
+				"section_id": "2",
+				"from_component_tipo": "test80",
+				"type": "'.DEDALO_RELATION_TYPE_LINK.'"
+			}
 		');
 
 		// add before remove
