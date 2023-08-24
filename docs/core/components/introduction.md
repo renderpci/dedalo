@@ -55,40 +55,40 @@ Literal components has three different ways to manage data; direct, media and in
 !!! note "About info as literal component"
     Info components need other components to calculate his own data, but the result is save as direct data, so the component read and save like any other literal component.
 
-- Direct components:
+#### Direct components
 
-  - component_date
-  - component_email
-  - component_external
-  - component_filter_records
-  - component_geolocation
-  - [component_input_text](component_input_text.md)
-  - component_iri
-  - component_json
-  - [component_number](component_number.md)
-  - component_password
-  - component_security_access
-  - component_section_id
-  - component_text_area
+- component_date
+- component_email
+- component_external
+- component_filter_records
+- component_geolocation
+- [component_input_text](component_input_text.md)
+- component_iri
+- component_json
+- [component_number](component_number.md)
+- component_password
+- component_security_access
+- component_section_id
+- component_text_area
 
-    This components extend component_common.php class
+This components extend component_common.php class
 
-- Media components:
+#### Media components
 
-  - component_3d
-  - component_av
-  - component_image
-  - component_pdf
-  - component_svg
+- component_3d
+- component_av
+- component_image
+- component_pdf
+- component_svg
   
-    This components extend component_media_common.php class
+This components extend component_media_common.php class
 
-- Info components:
+#### Info components
 
-  - component_info
-  - component_inverse
+- component_info
+- component_inverse
   
-    This components extend component_common.php class
+This components extend component_common.php class
 
 ### Related components
 
