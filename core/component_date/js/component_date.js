@@ -775,19 +775,29 @@ component_date.prototype.value_to_string_value = function(current_value) {
 			// period
 				const period = (current_value && current_value.period)
 					? current_value.period
-					: null
-			// parts
-				const year	= (period) ? period.year : ''
-				const month	= (period) ? period.month : ''
-				const day	= (period) ? period.day : ''
-			// labels
-				const label_year	= (year!=='' && year>1) 	? get_label.years : get_label.year
-				const label_month	= (month!=='' && month>1) 	? get_label.months : get_label.month
-				const label_day		= (day!=='' && day>1) 		? get_label.days : get_label.day
+					: {}
 
-			return  label_year 	+': '+ year +', '+
-					label_month +': '+ month +', '+
-					label_day 	+': '+ day
+			// date values
+				const year	= period.year  || 0
+				const month	= period.month || 0
+				const day	= period.day   || 0
+
+			// pairs
+				const pairs = []
+				if (year>0) {
+					const label_year	= (year>1) ? get_label.years : get_label.year
+					pairs.push(`${label_year}: ${year}`)
+				}
+				if (month>0) {
+					const label_month	= (month>1) ? get_label.months : get_label.month
+					pairs.push(`${label_month}: ${month}`)
+				}
+				if (day>0) {
+					const label_day	= (day>1) ? get_label.days : get_label.day
+					pairs.push(`${label_day}: ${day}`)
+				}
+
+			return  pairs.join(', ')
 
 		case 'time':
 
