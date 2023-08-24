@@ -57,7 +57,7 @@ Literal components has three different ways to manage data; direct, media and in
 
 #### Direct components
 
-- component_date
+- [component_date](component_date.md)
 - component_email
 - component_external
 - component_filter_records
