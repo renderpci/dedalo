@@ -94,7 +94,7 @@ class security {
 			}
 
 		// allow to read the global component_inverse of the section
-			if ($tipo===DEDALO_SECTION_INFO_INVERSE_RELATIONS) {
+			if ($tipo===DEDALO_SECTION_INFO_INVERSE_RELATIONS || $tipo==='all') {
 				return 1;
 			}
 
