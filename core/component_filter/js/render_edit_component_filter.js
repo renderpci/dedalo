@@ -276,7 +276,7 @@ export const get_input_element_read = (element, self) => {
 		const value				= self.data.value || []
 		const value_length		= value.length
 		const datalist_value	= element.value
-		const label				= element.label || ''
+		const label				= element.label || (element.section_tipo+'_'+element.section_id)
 		const section_id		= element.section_id
 		const section_tipo		= element.section_tipo
 
