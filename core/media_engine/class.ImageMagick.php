@@ -363,8 +363,11 @@ final class ImageMagick {
 
 		// debug info
 			debug_log(__METHOD__
-				." Command convert warning (not empty result): ".to_string($result) . PHP_EOL
-				." output: ".to_string($output)." - worked_result: ".to_string($worked_result)
+				.' Command convert info: ' . PHP_EOL
+				.' command: ' 		.to_string($command) . PHP_EOL
+				.' result: ' 		.to_string($result) . PHP_EOL
+				.' output: ' 		.to_string($output) . PHP_EOL
+				.' worked_result: ' .to_string($worked_result)
 				, logger::DEBUG
 			);
 
