@@ -129,6 +129,22 @@ class component_filter extends component_relation_common {
 			// 	return false;
 			// }
 
+		// tm mode case
+			if ($this->mode==='tm' || $this->data_source==='tm') {
+				debug_log(__METHOD__
+					. " Warning on set_dato_default: invalid mode or data_source (tm) ! . Ignored order" . PHP_EOL
+					. ' section_id: ' . to_string($this->section_id) . PHP_EOL
+					. ' section_tipo: ' . $this->section_tipo . PHP_EOL
+					. ' tipo: ' . $this->tipo . PHP_EOL
+					. ' model: ' . get_class($this) . PHP_EOL
+					. ' mode: ' . $this->mode . PHP_EOL
+					. ' data_source: ' . $this->data_source . PHP_EOL
+					. ' lang: ' . $this->lang
+					, logger::WARNING
+				);
+				return false;
+			}
+
 		// dedalo_default_project
 		// If component is in edit mode and don't have data, we assign the default data defined in config
 			if ($this->mode==='edit' &&
