@@ -1563,27 +1563,37 @@ function get_current_version_in_db() : array {
 
 	try {
 
-		// Query the last row of matrix_updates, it is the last update, and the current version.
-			$strQuery = 'SELECT id, datos
-						 FROM "matrix_updates"
-						 ORDER BY id DESC
-						 LIMIT 1';
-
+		// Query all updates records
+			$strQuery = '
+				SELECT datos
+				FROM "matrix_updates"
+				-- ORDER BY datos->>\'dedalo_version\' DESC
+				-- LIMIT 1
+			';
 			$result = JSON_RecordObj_matrix::search_free($strQuery);
-			// loop the rows
 			if ($result!==false) {
+
+				$ar_dedalo_version = [];
 				while ($rows = pg_fetch_assoc($result)) {
-					$id				= (int)$rows['id'];
 					$datos_encoded	= (string)$rows['datos'];
 					$datos			= (object)json_handler::decode($datos_encoded);
-					break;
+					// add dedalo_version
+					$ar_dedalo_version[] = $datos->dedalo_version;
 				}
+
+				// sort in natural way (ASC)
+				natsort($ar_dedalo_version);
+				$ar_dedalo_version = array_values($ar_dedalo_version);
+
+				// pick the last one
+				$key			= count($ar_dedalo_version) - 1;
+				$last_version	= $ar_dedalo_version[$key] ?? null;
 			}
 
 		// version
-			if (isset($datos)) {
+			if (isset($last_version)) {
 
-				$ar_version = explode(".", $datos->dedalo_version);
+				$ar_version = explode('.', $last_version);
 
 				$current_version[0]	= (int)$ar_version[0];
 				$current_version[1]	= (int)$ar_version[1];
