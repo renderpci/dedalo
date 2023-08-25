@@ -363,11 +363,11 @@ The reference tag is used to a link to any other section. It use the locator to 
 
 ###### referenceIn
 
-> \[reference-n-1-reference 1-data:\[{'section_tipo':'fr1','section_id':'1','paginated_key':0,'from_component_tipo':'rsc426','type':'dd151'}]:data]
+> \[reference-n-1-reference 1-data:\[{'section_tipo':'fr1','section_id':'1','type':'dd151'}]:data]
 
 ###### referenceOut
 
-> \[/reference-n-1-reference 1-data:\[{'section_tipo':'fr1','section_id':'1','paginated_key':0,'from_component_tipo':'rsc426','type':'dd151'}]:data]
+> \[/reference-n-1-reference 1-data:\[{'section_tipo':'fr1','section_id':'1','type':'dd151'}]:data]
 
 By default import model use the JSON format of his data, an object with lang properties and values in array.
 
@@ -439,7 +439,7 @@ section_id;rsc86
         "lg-cat" : ["<p>Nou text per <strong>importar</strong></p>"],
         "lg-eng" : ["<p>my imported data</p>", "<p>Other data</p>"]
     }
-    ``````
+    ```
 
 3. Plain text
 
