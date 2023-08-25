@@ -114,7 +114,7 @@ const get_content_value = (i, current_value, self) => {
 		const with_lang_versions	= self.context.properties.with_lang_versions || false
 
 	// check if the component is mandatory and it doesn't has value
-		const add_class			= self.context.properties.mandatory && !current_value
+		const add_class			= self.context.properties.mandatory && !current_value && self.lang===page_globals.dedalo_data_nolan
 			? ' mandatory'
 			: ''
 
