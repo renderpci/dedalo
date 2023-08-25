@@ -98,7 +98,9 @@ class component_date extends component_common {
 
 		// add_time to dato (always)
 			foreach ($dato as $key => $current_dato) {
-				$this->dato[$key] = self::add_time( $current_dato );
+				if(!empty($current_dato)){
+					$this->dato[$key] = self::add_time( $current_dato );
+				}
 			}
 
 		// from here, save normally

@@ -16,7 +16,7 @@
     ],
     "render_views" :[
         {
-            "view"    : " mini | default"
+            "view"    : "mini | default",
             "mode"    : "edit | list"
         },
         {
