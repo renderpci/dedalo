@@ -184,7 +184,6 @@ class component_filter extends component_relation_common {
 
 
 
-
 	/**
 	* GET_DEFAULT_DATO_FOR_USER
 	* // TO DO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -207,7 +206,10 @@ class component_filter extends component_relation_common {
 				$defaults = json_decode($contents);
 				if (!empty($defaults)) {
 					if (!is_array($defaults)) {
-						debug_log(__METHOD__." Ignored config_default_file value. Expected type was array but received is ". gettype($defaults), logger::ERROR);
+						debug_log(__METHOD__
+							." Ignored config_default_file value. Expected type was 'array' but received is ". gettype($defaults)
+							, logger::ERROR
+						);
 					}else{
 						$found = array_find($defaults, function($el){
 							return $el->tipo===$this->tipo; // Note that match only uses component tipo (case hierarchy25 problem)
@@ -219,7 +221,13 @@ class component_filter extends component_relation_common {
 						}
 					}
 				}else{
-					debug_log(__METHOD__." Ignored empty defaults file contents ! (Check if JSON is valid) ".to_string($defaults), logger::ERROR);
+					debug_log(__METHOD__
+						." Ignored empty defaults file contents ! (Check if JSON is valid) " . PHP_EOL
+						.' CONFIG_DEFAULT_FILE_PATH: ' . to_string(CONFIG_DEFAULT_FILE_PATH) . PHP_EOL
+						.' contents: ' .  to_string($contents) . PHP_EOL
+						.' defaults from file: ' . to_string($defaults)
+						, logger::ERROR
+					);
 				}
 			}
 
@@ -296,6 +304,10 @@ class component_filter extends component_relation_common {
 
 				if($is_global_admin===true) {
 
+					// nothing to do. Default dato is OK
+
+				}else{
+
 					// check current added project is accessible for my user
 					$in_my_projects = false;
 					foreach ($default_dato as $current_locator) {
@@ -325,27 +337,27 @@ class component_filter extends component_relation_common {
 				}
 			}
 
-
-		// if (!empty($user_projects)) {
-		// 	# First user project
-		// 	foreach ($user_projects as $user_projects_locator) {
-		// 		$filter_locator = new locator();
-		// 			$filter_locator->set_section_tipo($user_projects_locator->section_tipo);
-		// 			$filter_locator->set_section_id($user_projects_locator->section_id);
-		// 			$filter_locator->set_type(DEDALO_RELATION_TYPE_FILTER);
-		// 			$filter_locator->set_from_component_tipo($this->tipo);
-		// 		break;
-		// 	}
-		// 	$default_dato = [$filter_locator];
-		// }else{
-		// 	# Default project defined in config
-		// 	$filter_locator = new locator();
-		// 		$filter_locator->set_section_tipo(DEDALO_FILTER_SECTION_TIPO_DEFAULT);
-		// 		$filter_locator->set_section_id(DEDALO_DEFAULT_PROJECT);
-		// 		$filter_locator->set_type(DEDALO_RELATION_TYPE_FILTER);
-		// 		$filter_locator->set_from_component_tipo($this->tipo);
-		// 	$default_dato = [$filter_locator];
-		// }
+		// DES
+			// if (!empty($user_projects)) {
+			// 	# First user project
+			// 	foreach ($user_projects as $user_projects_locator) {
+			// 		$filter_locator = new locator();
+			// 			$filter_locator->set_section_tipo($user_projects_locator->section_tipo);
+			// 			$filter_locator->set_section_id($user_projects_locator->section_id);
+			// 			$filter_locator->set_type(DEDALO_RELATION_TYPE_FILTER);
+			// 			$filter_locator->set_from_component_tipo($this->tipo);
+			// 		break;
+			// 	}
+			// 	$default_dato = [$filter_locator];
+			// }else{
+			// 	# Default project defined in config
+			// 	$filter_locator = new locator();
+			// 		$filter_locator->set_section_tipo(DEDALO_FILTER_SECTION_TIPO_DEFAULT);
+			// 		$filter_locator->set_section_id(DEDALO_DEFAULT_PROJECT);
+			// 		$filter_locator->set_type(DEDALO_RELATION_TYPE_FILTER);
+			// 		$filter_locator->set_from_component_tipo($this->tipo);
+			// 	$default_dato = [$filter_locator];
+			// }
 
 		return $default_dato;
 	}//end get_default_dato_for_user
