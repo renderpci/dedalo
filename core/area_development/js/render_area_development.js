@@ -42,13 +42,9 @@ render_area_development.prototype.edit = async function(options) {
 			return content_data
 		}
 
-	// buttons
-		//const current_buttons = await buttons(self);
-
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper =	ui.area.build_wrapper_edit(self, {
 			content_data : content_data
-			// buttons 	 : current_buttons
 		})
 		// set pointers
 		wrapper.content_data = content_data
@@ -192,93 +188,94 @@ const build_widget = (item, self) => {
 				})
 		})
 		.catch((err) => {
-			// console.error(err)
+			console.error(err)
 
 			// old builder fallback
+				/*
+				// item info
+					if (item.info) {
+						const widget_info = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'link',
+							inner_html		: item.info || '',
+							parent			: body
+						})
+						// action
+						widget_info.addEventListener('mouseup',  async function(e){
+							e.stopPropagation()
 
-			// item info
-				if (item.info) {
-					const widget_info = ui.create_dom_element({
+							// confirm optional
+								if (item.confirm && !confirm(item.confirm)) {
+									return false
+								}
+
+							widget_info.classList.add('lock')
+
+							// spinner
+								const spinner = ui.create_dom_element({
+									element_type	: 'div',
+									class_name		: 'spinner'
+								})
+								body_response.prepend(spinner)
+
+							// data_manager
+								const api_response = await data_manager.request({
+									use_worker	: true,
+									body		: {
+										dd_api	: item.trigger.dd_api,
+										action	: item.trigger.action,
+										options	: item.trigger.options
+									}
+								})
+								print_response(body_response, api_response)
+								widget_info.classList.remove("lock")
+								spinner.remove()
+						})
+					}//end if (item.info) {
+
+				// body info
+					const body_info = ui.create_dom_element({
 						element_type	: 'div',
-						class_name		: 'link',
-						inner_html		: item.info || '',
+						class_name		: "body_info",
+						inner_html		: item.body || '',
 						parent			: body
 					})
-					// action
-					widget_info.addEventListener('mouseup',  async function(e){
-						e.stopPropagation()
 
-						// confirm optional
-							if (item.confirm && !confirm(item.confirm)) {
-								return false
-							}
-
-						widget_info.classList.add('lock')
-
-						// spinner
-							const spinner = ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'spinner'
-							})
-							body_response.prepend(spinner)
-
-						// data_manager
-							const api_response = await data_manager.request({
-								use_worker	: true,
-								body		: {
-									dd_api	: item.trigger.dd_api,
-									action	: item.trigger.action,
-									options	: item.trigger.options
-								}
-							})
-							print_response(body_response, api_response)
-							widget_info.classList.remove("lock")
-							spinner.remove()
+				// body_response
+					const body_response = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'body_response',
+						parent			: body
 					})
-				}//end if (item.info) {
 
-			// body info
-				const body_info = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: "body_info",
-					inner_html		: item.body || '',
-					parent			: body
-				})
+				// script (javascript code)
+					// if (item.script) {
+					// 	const script = ui.create_dom_element({
+					// 		element_type	: 'script',
+					// 		parent			: body,
+					// 		inner_html		: item.script
+					// 	})
+					// }
 
-			// body_response
-				const body_response = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'body_response',
-					parent			: body
-				})
+				// run widget scripts
+					if(item.run) {
+						for (let i = 0; i < item.run.length; i++) {
 
-			// script (javascript code)
-				// if (item.script) {
-				// 	const script = ui.create_dom_element({
-				// 		element_type	: 'script',
-				// 		parent			: body,
-				// 		inner_html		: item.script
-				// 	})
-				// }
+							const func			= item.run[i].fn
+							const func_options	= item.run[i].options
 
-			// run widget scripts
-				if(item.run) {
-					for (let i = 0; i < item.run.length; i++) {
-
-						const func			= item.run[i].fn
-						const func_options	= item.run[i].options
-
-						// promise
-						self[func].apply(self, [{
-							...item,
-							...func_options,
-							body_info		: body_info,
-							body_response	: body_response,
-							print_response	: print_response
-						}])
+							// promise
+							self[func].apply(self, [{
+								...item,
+								...func_options,
+								body_info		: body_info,
+								body_response	: body_response,
+								print_response	: print_response
+							}])
+						}
 					}
-				}
-		});
+				*/
+			});
 
 
 
@@ -295,7 +292,7 @@ const build_widget = (item, self) => {
 * @param object api_response
 * @return DON node container
 */
-const print_response = (container, api_response) => {
+export const print_response = (container, api_response) => {
 
 	// clean container
 		while (container.firstChild) {
@@ -490,6 +487,7 @@ export const build_form = function(widget_object) {
 
 	return form_container
 }//end build_form
+
 
 
 // @license-end
