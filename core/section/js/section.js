@@ -1091,6 +1091,9 @@ section.prototype.navigate = async function(options) {
 
 	// loading
 		self.node_body.classList.add('loading')
+		if (self.inspector && self.inspector.node) {
+			self.inspector.node.classList.add('loading')
+		}
 
 	// refresh
 		await self.refresh({
@@ -1099,6 +1102,9 @@ section.prototype.navigate = async function(options) {
 
 	// loading
 		self.node_body.classList.remove('loading')
+		if (self.inspector && self.inspector.node) {
+			self.inspector.node.classList.remove('loading')
+		}
 
 	// navigation history. When user paginates, store navigation history to allow browser navigation too
 		if (navigation_history===true) {
