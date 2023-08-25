@@ -77,92 +77,108 @@ const get_content_data_edit = async function(self) {
 			element_type : 'div'
 		})
 
-	// label
-		ui.create_dom_element({
-			element_type	: 'label',
-			inner_html		: 'API send RQO (Request Query Object) default dd_api is "dd_core_api"',
-			parent			: content_data
-		})
+	// load editor gracefully
+		const node = ui.load_item_with_spinner({
+			container			: content_data,
+			preserve_content	: false,
+			label				: self.name,
+			callback			: async () => {
 
-	// button_submit
-		const button_submit = ui.create_dom_element({
-			element_type	: 'button',
-			class_name		: 'button_submit border light',
-			inner_html		: `OK`,
-			parent			: content_data
-		})
-		button_submit.addEventListener('mousedown', async function(e) {
-			e.stopPropagation()
+				await load_json_editor_files()
 
-			const editor_text = self.editor.getText()
-			if (editor_text.length<3) {
-				return false
-			}
+				// container
+					const container = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'container',
+						parent			: content_data
+					})
 
-			const rqo = JSON.parse(editor_text)
-			if (!rqo) {
-				console.warn("Invalid editor text", rqo);
-				return false
-			}
+				// label
+					ui.create_dom_element({
+						element_type	: 'label',
+						inner_html		: 'API send RQO (Request Query Object) default dd_api is "dd_core_api"',
+						parent			: container
+					})
 
-			// loading
-			content_data.classList.add('loading')
+				// button_submit
+					const button_submit = ui.create_dom_element({
+						element_type	: 'button',
+						class_name		: 'button_submit border light',
+						inner_html		: `OK`,
+						parent			: container
+					})
+					button_submit.addEventListener('mousedown', async function(e) {
+						e.stopPropagation()
 
-			// data_manager
-			const api_response = await data_manager.request({
-				body : rqo
-			})
-			console.log("/// json_editor_api api_response:",api_response);
+						const editor_text = self.editor.getText()
+						if (editor_text.length<3) {
+							return false
+						}
 
-			// loading
-			content_data.classList.remove('loading')
+						const rqo = JSON.parse(editor_text)
+						if (!rqo) {
+							console.warn("Invalid editor text", rqo);
+							return false
+						}
 
-			print_response(body_response, api_response)
-		})
+						// loading
+						container.classList.add('loading')
 
-	// json_editor_api_container
-		const json_editor_api_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'editor_json',
-			parent			: content_data
-		})
+						// data_manager
+						const api_response = await data_manager.request({
+							body : rqo
+						})
+						console.log("/// json_editor_api api_response:",api_response);
 
-	// JSON editor
-		load_json_editor_files()
-		.then(function(){
+						// loading
+						container.classList.remove('loading')
 
-			const options	= {
-				mode	: 'code',
-				modes	: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
-				onError	: function (err) {
-					alert(err.toString());
-				},
-				onChange: async function () {
-					const editor_text = editor.getText()
-					if (editor_text.length<3) return
+						print_response(body_response, api_response)
+					})
 
-					// check is JSON valid and store
-					const body_options = JSON.parse(editor_text)
-					if (body_options) {
-						window.localStorage.setItem('json_editor_api', editor_text);
+				// json_editor_api_container
+					const json_editor_api_container = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'editor_json_container',
+						parent			: container
+					})
+
+				// JSON editor
+					const options	= {
+						mode	: 'code',
+						modes	: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
+						onError	: function (err) {
+							alert(err.toString());
+						},
+						onChange: async function () {
+							const editor_text = editor.getText()
+							if (editor_text.length<3) return
+
+							// check is JSON valid and store
+							const body_options = JSON.parse(editor_text)
+							if (body_options) {
+								window.localStorage.setItem('json_editor_api', editor_text);
+							}
+						}
 					}
-				}
-			}
-			// localStorage.removeItem('json_editor_api');
-			const sample_data	= [{"typo":"source","type":"component","action":"get_data","model":"component_input_text","tipo":"test159","section_tipo":"test65","section_id":"1","mode":"edit","lang":"lg-eng"}]
-			const saved_value	= localStorage.getItem('json_editor_api')
-			const editor_value	= JSON.parse(saved_value) || sample_data
-			const editor		= new JSONEditor(json_editor_api_container, options, editor_value)
-			// set pointer
-			self.editor = editor
-		})
+					// localStorage.removeItem('json_editor_api');
+					const sample_data	= [{"typo":"source","type":"component","action":"get_data","model":"component_input_text","tipo":"test159","section_tipo":"test65","section_id":"1","mode":"edit","lang":"lg-eng"}]
+					const saved_value	= localStorage.getItem('json_editor_api')
+					const editor_value	= JSON.parse(saved_value) || sample_data
+					const editor		= new JSONEditor(json_editor_api_container, options, editor_value)
+					// set pointer
+					self.editor = editor
 
-	// add at end body_response
-		const body_response = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'body_response',
-			parent			: content_data
-		})
+				// add at end body_response
+					const body_response = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'body_response',
+						parent			: container
+					})
+
+				return container
+			}
+		})//end ui.load_item_with_spinner
 
 
 	return content_data
