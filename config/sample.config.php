@@ -226,6 +226,10 @@
 		logger::register('activity'	, 'activity://auto:auto@auto:5432/log_data?table=matrix_activity');
 		// Store object in logger static array var
 		logger::$obj['activity'] = logger::get_instance('activity');
+	// update log. Administration update data version action, write status info to this file
+		// Default dir is inside Dédalo config folder (web read is forbidden) but you can
+		// use another more private dir outside httpdocs folder
+		define('UPDATE_LOG_FILE', DEDALO_CONFIG_PATH . '/update.log');
 
 
 
