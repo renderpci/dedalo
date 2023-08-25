@@ -2257,7 +2257,7 @@ final class dd_core_api {
 					// $obj->float_window_features		= json_decode('{"small":"menubar=no,location=no,resizable=yes,scrollbars=yes,status=no,width=600,height=540"}');
 					$obj->fallback_image				= DEDALO_CORE_URL . '/themes/default/0.jpg';
 					$obj->locale						= DEDALO_LOCALE;
-					$obj->DEDALO_DATE_ORDER				= DEDALO_DATE_ORDER;
+					$obj->dedalo_date_order				= DEDALO_DATE_ORDER;
 					$obj->component_active				= null;
 					// debug only
 					if(SHOW_DEBUG===true) {

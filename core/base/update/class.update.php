@@ -94,9 +94,11 @@ class update {
 			}
 
 		// update log file
-			$update_log_file = DEDALO_CONFIG_PATH . '/update.log';
+			$update_log_file = defined('UPDATE_LOG_FILE')
+				? UPDATE_LOG_FILE
+				: DEDALO_CONFIG_PATH . '/update.log';
 			if(!file_exists($update_log_file)) {
-				if(!file_put_contents($update_log_file, '')) {
+				if(!file_put_contents($update_log_file, ' '.PHP_EOL)) {
 					$response->msg = 'Error (1). It\'s not possible set update_log file, review the PHP permissions to write in this directory';
 					debug_log(__METHOD__
 						." ".$response->msg . PHP_EOL
