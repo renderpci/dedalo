@@ -12,7 +12,7 @@ Dédalo data model has a abstraction layer that use the ontology definitions to 
 
 ## Format
 
-Dédalo use the [standard csv](https://datatracker.ietf.org/doc/html/rfc4180) to import data with [UTF-8](http://www.unicode.org/versions/latest/) codification without BOM (Byte Order Mark).
+Dédalo use the [standard csv](https://datatracker.ietf.org/doc/html/rfc4180) to import data with [UTF-8](http://www.unicode.org/versions/latest/) encoding without BOM (Byte Order Mark).
 
 !!! warning
 
@@ -46,7 +46,7 @@ But is possible to use a plain text to import flat data.
 
 Example of text:
 
-```txt
+```text
 My plain text without double quotes
 ```
 
@@ -56,7 +56,7 @@ Will need to be encoded in csv format as:
 
 Example of text with double quotes inside:
 
-```txt
+```text
 my plain text with "double quotes"
 ```
 
@@ -95,7 +95,7 @@ Every csv import file represent a section, if you need import multiple sections 
 Every column represent a component(field) and every row represent a record, data will be the cell that crosses the column and the row.
 
 | column A | column B | column X |
-| ---------- | ---------- | ---------- |
+| -------- | -------- | -------- |
 | data1A   | data1B   | data1X   |
 | data1B   | data2B   | data2X   |
 
@@ -111,12 +111,13 @@ To import the component `Key` [numisdata81](https://dedalo.dev/ontology/numisdat
 | 2 | \["key2"] | \["685a"]  |
 
 !!! note "Columns with names instead ontology tipo"
+
     Is possible use "human" names in the columns, but the import tool will not match with the component and you will need to set manually before import.
 
     the previous csv could be named in this way:
 
-    | id | Key | Number |
-    | --- |   --- |   --- |
+    | id  | Key | Number |
+    | --- | --- | ------ |
     | 1 | \["key1"] | \["062"]  |
     | 2 | \["key2"] | \["685a"]  |
 
@@ -151,13 +152,13 @@ As Dédalo import use a csv without format, JSON data need to be stringified in 
 
 The table to import
 
-| section_id    | oh14                                              |
-| ------------  | :----------------------------------------------:  |
+| section_id    | oh14 |
+| ------------  | ---- |
 | 1             | {"lg-spa": \["mi dato para importar","Otro dato"]} |
 
 Will be encoded in csv format as:
 
-```csv
+```text
 section_id;rsc86
 1;"{""lg-spa"":[""mi dato para importar"",""Otro dato""]}"
 ```
@@ -180,13 +181,276 @@ section_id;rsc86
 
 2. Plain text
 
-    ```json
+    ```text
     new data to import
     ```
 
     Example:
 
     section_id | oh14
+    --- | ---
+    1 | new data to import
+
+    In this case the import process assume the Dédalo data lang defined by the user in menu and will import the value as unique value in the array, if exists previous data it will be replace with a new array with the import value.
+
+    If the data in database is:
+
+    ```json
+    {
+        "lg-spa" : ["mi dato importado", "Otro dato"],
+        "lg-eng" : ["my imported data", "Other data"]
+    }
+    ```
+
+    and the Dédalo data lang is set to English, after import plain text, the final data will be:
+
+     ```json
+    {
+        "lg-spa" : ["mi dato importado", "Otro dato"],
+        "lg-eng" : ["new data to import"]
+    }
+    ```
+
+    Plain text is easy to import, but it is limited in the data control. take account of the language set in the menu.
+
+---
+
+### Format text
+
+#### HTML
+
+Dédalo use HTML standard format to import formated text.
+
+As Dédalo use ck-editor as text editor, HTML tags accepted are the same than [ck-editor](https://ckeditor.com/docs/ckeditor5/latest/features/basic-styles.html#available-text-styles):
+
+Dédalo has two editors, `text_area` and `html_text`
+
+1. `text_area` accepts:
+
+    ```html
+    <p></p> // a Paragraph
+    <strong></strong> // Bold text
+    <i></i> // Italic text
+    <u></u> // Underscore text
+    ```
+
+2. `html_text` accepts:
+
+    ```html
+    <p></p> // a Paragraph
+    <strong></strong> // Bold text
+    <i></i> // italic text
+    <u></u> // underscore text
+    <s></s> // Strikethrough text
+    <Code></Code> // programming code
+    <sub></sub> // Subscript text
+    <sup></sup> // Superscript text
+    ```
+
+Besides, import format text support some compatible elements and css styles:
+
+```html
+<b>             <* style="font-weight: bold"> // (or numeric values that are greater or equal 600)
+<em>            <* style="font-style: italic">
+                <* style="text-decoration: underline">
+<del><strike>   <* style="text-decoration: line-through">
+                <* style="word-wrap: break-word">
+                <* style="vertical-align: sub">
+                <* style="vertical-align: super">
+```
+
+!!! note
+    This elements and styles will be changed to elements supported in the import process.
+
+#### Indexation tags
+
+Dédalo use a non standard HTML tags to define `indexation` `tags`, `tc`, `person`, `language`, `notes` and `references`.
+
+The main format of this tags follow this rules:
+
+1. The tag is enclosing by `[]`
+2. the element are separated by `-` character
+3. the first element is `tag_name` with the standard name of the tag
+4. the second element is the `state` of the tag with n|r|d options, n=normal, r=to review, d=deleted.
+5. unique id of the tag, int.
+6. data::data enclosing the locator in the case that this tag has a link to any data.
+7. locator is stringify version with double quotes `"` remplace with simple quotes `'`
+
+```text
+[tag_name-state-id-label-data:locator:data]
+```
+
+##### index
+
+index tag define a fragment inside of formatted text, index tag has a in and out format, the fragment will be in the middle of this tags.
+
+###### indexIn
+
+Mark the initial position of the indexation fragment.
+
+Example:
+
+> \[index-n-1-my tag label-data::data]
+
+###### indexOut
+
+Mark the out position of the indexation fragment.
+
+Example:
+
+> \[index-n-1-my tag label-data::data]
+
+##### tc
+
+Tc tag are using to point a specific audiovisual timecode at the beginning of paragraphs, it use to create a time relation between text and his audiovisual time.
+
+tc tags has his own format, the tc is enclosing by `TC_` and `_TC` marks.
+
+```text
+[TC:hh:mm:ss.ms_TC]
+```
+Example:
+
+> \[TC_00:01:25.627_TC]
+
+##### lang
+
+The lang tag is used to mark the change from the previous language. Example, an interview in Catalan in which the interviewee begin to speak in French.
+
+> \[lang-a-1-spa-data:['lg-spa']:data]
+
+##### svg
+
+The svg tag is used to add a graphic within the text. The tag uses a locator to point to the svg section. Example to add an Iberian symbol inside a legend text.
+
+Example:
+
+> \[svg-n-1--data:{'section_tipo':'sccmk1','section_id':'2','component_tipo':'hierarchy95'}:data]
+
+##### geo
+
+The geo tag is used to add some features as, polygons, points, or marks.
+
+Example:
+
+> \[geo-n-10-10-data::data]
+
+##### page
+
+The page tag is used to mark a page break inside text.
+
+Example:
+
+> \[page-n-3]
+
+##### person
+
+The person tag is used to mark a person that is begin to talk. The tag use a locator to point into People under study [rsc197](https://dedalo.dev/ontology/rsc197) section.
+
+> \[person-a-1-Pedpi-data:{'section_tipo':'rsc197','section_id':'1','component_tipo':'oh24'}:data]
+
+##### note
+
+The note tag is used to add a annotation in text. The annotation use a locator to point to Annotations [rsc326](https://dedalo.dev/ontology/rsc326) section. The state of the note could be a | b, a=private, b=public.
+
+Example:
+
+> \[note-a-1-1-data:{'section_tipo':'rsc326','section_id':1}:data]
+
+##### reference
+
+The reference tag is used to a link to any other section. It use the locator to point at any other sections. The reference works pointed as HTML `<a href><a>` element. References has a in and out tag to indicate the beginning and end fo the reference.
+
+##### referenceIn
+
+> \[reference-n-1-reference 1-data:\[{'section_tipo':'fr1','section_id':'1','paginated_key':0,'from_component_tipo':'rsc426','type':'dd151'}]:data]
+
+##### referenceOut
+
+> \[/reference-n-1-reference 1-data:\[{'section_tipo':'fr1','section_id':'1','paginated_key':0,'from_component_tipo':'rsc426','type':'dd151'}]:data]
+
+By default import model use the JSON format of his data, an object with lang properties and values in array.
+
+```json
+{
+    "lg-cat" : ["<p>Les meves dades per <strong>importar</strong></p><p>&nbsp;</p><p>Amb 2 paragraphs</p>"],
+    "lg-eng" : ["<p>My data to <strong>import</strong></p><p>&nbsp;</p><p>With 2 paragraphs</p>"]
+}
+```
+
+As Dédalo import use a csv without format, JSON data need to be stringified in this way:
+
+The table to import
+
+| section_id    | numisdata18 |
+| ------------  | ---- |
+| 1             | `{"lg-cat": ["<p>El meu text per <strong>importar</strong></p>","<p>Altra dada</p>"]}` |
+
+Will be encoded in csv format as:
+
+```text
+section_id;rsc86
+1;"{""lg-cat"": [""<p>El meu text per <strong>importar</strong></p>"",""<p>Altra dada</p>""]}"
+```
+
+#### Alternative formats to import formated text
+
+1. An array of string values
+
+    ```json
+    ["<p>El meu text per <strong>importar</strong></p>","<p>Altra dada</p>"]
+    ```
+
+    In this case the import process assume the Dédalo data lang defined by the user in menu and will save into this lang, or if the component is non translatable will use `lg-nolan` to save import data.
+
+    Example:
+
+    section_id | oh14
+    --- | ---
+    1 | `["<p>El meu text per <strong>importar</strong></p>","<p>Altra dada</p>"]`
+
+2. Formatted text
+
+    ```text
+    <p>Nou text per <strong>importar</strong></p>
+    ```
+
+    Example:
+
+    section_id | numisdata18
+    --- | ---
+    1 | ` <p>Nou text per <strong>importar</strong></p>`
+
+    In this case the import process assume the Dédalo data lang defined by the user in menu and will import the value as unique value in the array, if exists previous data it will be replace with a new array with the import value.
+
+    If the data in database is:
+
+    ```json
+    {
+        "lg-cat" : ["<p>la meva dada importada</p>", "<p>Altra dada</p>"],
+        "lg-eng" : ["<p>my imported data</p>", "<p>Other data</p>"]
+    }
+    ```
+
+    and the Dédalo data lang is set to Catalan, after import plain text, the final data will be:
+
+     ```json
+    {
+        "lg-cat" : ["<p>Nou text per <strong>importar</strong></p>"],
+        "lg-eng" : ["<p>my imported data</p>", "<p>Other data</p>"]
+    }
+
+3. Plain text
+
+    Some cases, the text could not use any format instead the components support the formats, so is possible import plain text (without HTML)
+
+    ```text
+    new data to import
+    ```
+
+    Example:
+
+    section_id | numisdata18
     --- | ---
     1 | new data to import
 
@@ -227,12 +491,12 @@ As Dédalo import use a csv without format, JSON data need to be stringified in 
 The table to import
 
 | section_id    | numisdata133     |
-| ------------  | :--------------: |
+| ------------  | ---------------- |
 | 1             | \[104,-75.35]    |
 
 Will be encoded in csv format as:
 
-```csv
+```text
 section_id;rsc86
 1;[104,-75.35]
 ```
@@ -241,15 +505,15 @@ section_id;rsc86
 
 1. Plain number
 
-    ```json
+    ```text
     33.85
     ```
 
     Example:
 
-    section_id   | numisdata133
-    ------------ | :--------------:
-    1            | 33.85
+    | section_id  | numisdata133 |
+    | ----------- | ------------ |
+    | 1           | 33.85        |
 
     In this case the import process assume this data as the full data, if exists previous data it will be replace with a new array with the import value.
 
@@ -291,13 +555,13 @@ As Dédalo import use a csv without format, JSON data need to be stringified in 
 
 The table to import
 
-| section_id    | tch56     |
-| ------------  | :--------------: |
-| 1             | \[{"start":{"year":1238,"month":10,"day":9}}]   |
+| section_id    | tch56  |
+| ------------  | ------ |
+| 1             | \[{"start":{"year":1238,"month":10,"day":9}}] |
 
 Will be encoded in csv format as:
 
-```csv
+```text
 section_id;tch56
 1;"[{""start"":{""year"":1238,""month"":10,""day"":9}}]"
 ```
@@ -306,15 +570,15 @@ section_id;tch56
 
 1. A punctual date in flat string :
 
-    ```json
+    ```text
     -205/05
     ```
 
     Example:
 
-    section_id   | tch56
-    ------------ | :--------------:
-    1            | -205/05
+    | section_id | tch56   |
+    | ---------- | ------- |
+    | 1          | -205/05 |
 
     It's allowed to use different [formats](#using-other-date-formats) indicating it in the name of the header as tch56_dmy.
 
@@ -324,7 +588,7 @@ section_id;tch56
 
     It's allowed to use different separator between [values of elements](#using-other-separators).
 
-    ```json
+    ```text
     -205-05
     15-11--50
     15.11.-50
@@ -332,7 +596,7 @@ section_id;tch56
 
 2. A range of dates in flat string:
 
-     ```json
+    ```text
     2023/10/26<>2023/10/27
     ```
 
@@ -355,13 +619,13 @@ section_id;tch56
 
     Is possible to leave spaces between dates and the separator.
 
-     ```json
+    ```text
     -150 <>      238
     ```
 
     Is a valid range date, but the separator will be always in same format, a space between marks are not allowed:
 
-     ```json
+    ```text
     -150< >238
     ```
 
@@ -369,20 +633,20 @@ section_id;tch56
 
     It's allowed to use different [formats](#using-other-date-formats) indicating it in the name of the header as tch56_dmy.
 
-    section_id   | tch56_mdy
-    ------------ | :--------------:
-    1            | 10/26/2023<>10/27/2023
+    | section_id | tch56_mdy |
+    | ---------- | --------- |
+    | 1          | 10/26/2023<>10/27/2023 |
 
      It's allowed to use different separator between [values of elements](#using-other-separators).
 
-    ```json
+    ```text
     10-26-2023<>10-27-2023
     10.26.2023<>10.27.2023
     ```
 
 3. Multi value date in flat string
 
-    ```json
+    ```text
     2023/10/26|1853/02/18
     ```
 
@@ -390,7 +654,7 @@ section_id;tch56
 
     The previous string date will be parse as:
 
-     ```json
+    ```json
     [
         {
             "start" : {
@@ -411,34 +675,34 @@ section_id;tch56
 
     Is possible to leave spaces between dates and the separator.
 
-    ```json
+    ```text
     -150 |          -25
     ```
 
     It's allowed to use different [formats](#using-other-date-formats) indicating it in the name of the header as tch56_dmy.
 
-    section_id   | tch56_mdy
-    ------------ | :--------------:
-    1            | 10/26/2023\|02/18/1853
+    | section_id | tch56_mdy |
+    | ---------- | --------- |
+    | 1          | 10/26/2023\|02/18/1853 |
 
     It's allowed to use different separator between [values of elements](#using-other-separators).
 
-    ```json
-    10-26-2023\|02-18-1853
-    10.26.2023\|02.18.1853
+    ```text
+    10-26-2023|02-18-1853
+    10.26.2023|02.18.1853
     ```
 
 4. Combination of multi value and range
 
-    ```json
+    ```text
     2023/10/26<>2023/10/27|1853/02/18
     ```
 
     To define multiple values with ranges is possible to use a combination of the '|' to indicate the multi value and the '<>' to indicate the range.
 
-     The previous string date will be parse as two date values with the range of the first value with star and end dates:
+        The previous string date will be parse as two date values with the range of the first value with star and end dates:
 
-     ```json
+    ```json
     [
         {
             "start" : {
@@ -464,11 +728,11 @@ section_id;tch56
 
     Is possible leave a part of the range blank:
 
-     ```json
+    ```text
     2023/10/26|<>1853/02/18
     ```
 
-     ```json
+    ```json
     [
         {
             "start" : {
@@ -489,19 +753,19 @@ section_id;tch56
 
     Is possible to leave spaces between dates and the separators.
 
-    ```json
+    ```text
     2023/10/26 |   <>  1853/02/18
     ```
 
     It's allowed to use different [formats](#using-other-date-formats) indicating it in the name of the header as tch56_dmy.
 
-    section_id   | tch56_mdy
-    ------------ | :--------------:
-    1            | 10/26/2023\|<>02/18/1853
+    | section_id   | tch56_mdy |
+    | ------------ | --------- |
+    | 1            | 10/26/2023\|<>02/18/1853 |
 
     It's allowed to use different separator between [values of elements](#using-other-separators).
 
-    ```json
+    ```text
     10-26-2023\|<>02-18-1853
     10.26.2023\|<>02.18.1853
 
@@ -509,30 +773,30 @@ section_id;tch56
 
 By default the string date formats use \[-]y/m/d, but its possible to import the date in other formats indicating in the column header the format as second parameter after the tipo, using the '_' as character between them.
 
-section_id   | tch56_dmy
------------- | :--------------:
-1            | 05/-205
+| section_id | tch56_dmy |
+| ---------- | --------- |
+| 1          | 05/-205   |
 
 Is possible to use this formats
 
-Format | Description
---- | ---
-ymd | year/moth/day as 2023/10/26
-mdy | moth/day/year as 10/26/2023
-dmy | day/moth/year as 26/10/2023
+| Format | Description |
+| --- | --- |
+| ymd | year/moth/day as 2023/10/26 |
+| mdy | moth/day/year as 10/26/2023 |
+| dmy | day/moth/year as 26/10/2023 |
 
 ##### Using other separators
 
 Default separator between day moth and year is `/` but is possible to use `-` and `.`
 
-```json
+```text
 20-10-1945
 2023-10-26|<>1853-02-18
 -200<>50-11|-150-10
 11-12--200|28-10-5
 ```
 
-```json
+```text
 20.10.1945
 2023.10.26|<>1853.02.18
 -200<>50.11|-150.10
@@ -603,7 +867,7 @@ And it could be represented in csv spreadsheet columns in this way:
 > types-numisdata3.csv
 
 | section_id    | numisdata30 |
-| ------------  | :--------:  |
+| ------------  | ----------- |
 | 1             | \[{"section_id":"5","section_tipo":"numisdata6","from_component_tipo": "numisdata30"}] |
 
 #### Importing
@@ -624,7 +888,7 @@ The table to import
 
 Will need to be encoded in csv format as:
 
-```csv
+```text
 section_id;tch191
 1;"[{""type"":""dd151"", ""section_id"":""2"", ""section_tipo"":""rsc723"", ""from_component_tipo"":""tch191""}]"
 ```
@@ -639,7 +903,7 @@ It's possible remove the `type` and `from_component_tipo` properties because the
 
 1. A comma separate int (as destination section_id):
 
-    ```json
+    ```text
     1,4,6
     ```
 
@@ -655,9 +919,9 @@ It's possible remove the `type` and `from_component_tipo` properties because the
 
     Example:
 
-    section_id | tch191_rsc723
-    --- | ---
-    1 | 1,4,6
+    | section_id | tch191_rsc723 |
+    | --- | --- |
+    | 1   | 1,4,6 |
 
     will be parse as:
 
@@ -677,9 +941,9 @@ It's possible remove the `type` and `from_component_tipo` properties because the
 
         Example:
 
-        section_id | tch191_rsc723
-        --- | ---
-        1 | 6
+        | section_id | tch191_rsc723 |
+        | --- | --- |
+        | 1 | 6 |
 
     2. Removing section_tipo reference in head.
 
@@ -687,9 +951,9 @@ It's possible remove the `type` and `from_component_tipo` properties because the
 
         Example:
 
-        section_id | tch191
-        --- | ---
-        1 | 1,4,6
+        | section_id | tch191 |
+        | --- | --- |
+        | 1 | 1,4,6 |
 
         !!! warning "Components using with multiple sections"
             This possibility is only available when the component point to 1 section. Multiple sections are not allowed to import in this way.
