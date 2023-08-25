@@ -2,7 +2,7 @@
 
 ## Introduction
 
-To import data is a important part of Dédalo projects. Dédalo is a high structured data system, it manage relations between data and the data normalization is in the core of the application. Dédalo use a list, thesaurus, resources and other related section to define his data.
+To import data is an important part of Dédalo projects. Dédalo is a high structured data system, Dédalo manage literal data and relationships between data. Data normalization is inside the core of the application. Mainly Dédalo use lists, thesaurus, resources and other related sections to define his data.
 
 Dédalo data model has a abstraction layer that use the ontology definitions to create components (as fields) and sections (as tables).
 
@@ -204,7 +204,7 @@ section_id;rsc86
 
     and the Dédalo data lang is set to English, after import plain text, the final data will be:
 
-     ```json
+    ```json
     {
         "lg-spa" : ["mi dato importado", "Otro dato"],
         "lg-eng" : ["new data to import"]
