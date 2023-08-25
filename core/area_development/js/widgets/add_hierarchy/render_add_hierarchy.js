@@ -70,11 +70,6 @@ const get_content_data_edit = async function(self) {
 	// short vars
 		const value = self.value || {}
 
-	// debug
-		if(SHOW_DEBUG===true) {
-			console.log('ad_hierarchy value:', value);
-		}
-
 	// content_data
 		const content_data = ui.create_dom_element({
 			element_type	: 'div',

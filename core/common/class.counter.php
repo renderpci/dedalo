@@ -261,7 +261,10 @@ abstract class counter {
 		}//end while ($rows = pg_fetch_assoc($result)) {
 
 		$t = exec_time_unit($start_time,'ms');
-		debug_log(__METHOD__." check_counters TOTAL ($i): $t ms".to_string(), logger::DEBUG);
+		debug_log(__METHOD__
+			." check_counters TOTAL ($i): $t ms"
+			, logger::DEBUG
+		);
 
 
 		return (object)$response;
