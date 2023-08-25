@@ -57,7 +57,7 @@ Literal components has three different ways to manage data; direct, media and in
 
 #### Direct components
 
-- component_date
+- [component_date](component_date.md)
 - component_email
 - component_external
 - component_filter_records
@@ -94,7 +94,7 @@ This components extend component_common.php class
 
 Related components manage [locators](../locator.md) to point at other sections or components, sections pointed could be the same of the related component or other sections. The locator can specify if the pointed components is a literal or other related component.
 
-- component_check_box
+- [component_check_box](component_check_box.md)
 - component_filter
 - component_filter_master
 - component_portal
