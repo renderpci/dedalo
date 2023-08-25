@@ -77,98 +77,114 @@ const get_content_data_edit = async function(self) {
 			element_type : 'div'
 		})
 
-	// label
-		ui.create_dom_element({
-			element_type	: 'label',
-			inner_html		: 'Test Search Query Object (SQO)',
-			parent			: content_data
-		})
+	// load editor gracefully
+		const node = ui.load_item_with_spinner({
+			container			: content_data,
+			preserve_content	: false,
+			label				: self.name,
+			callback			: async () => {
 
-	// button_submit
-		const button_submit = ui.create_dom_element({
-			element_type	: 'button',
-			class_name		: 'button_submit border light',
-			inner_html		: `OK`,
-			parent			: content_data
-		})
-		button_submit.addEventListener('mousedown', async function(e) {
-			e.stopPropagation()
+				await load_json_editor_files()
 
-			const editor_text = self.editor.getText()
-			if (editor_text.length<3) {
-				return false
-			}
+				// container
+					const container = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'container',
+						parent			: content_data
+					})
 
-			const sqo = JSON.parse(editor_text)
-			if (!sqo) {
-				console.warn("Invalid editor text", sqo);
-				return false
-			}
+				// label
+					ui.create_dom_element({
+						element_type	: 'label',
+						inner_html		: 'Test Search Query Object (SQO)',
+						parent			: content_data
+					})
 
-			const rqo = {
-				dd_api	: 'dd_utils_api',
-				action	: 'convert_search_object_to_sql_query',
-				options	: sqo
-			}
+				// button_submit
+					const button_submit = ui.create_dom_element({
+						element_type	: 'button',
+						class_name		: 'button_submit border light',
+						inner_html		: `OK`,
+						parent			: content_data
+					})
+					button_submit.addEventListener('mousedown', async function(e) {
+						e.stopPropagation()
 
-			// loading
-			content_data.classList.add('loading')
+						const editor_text = self.editor.getText()
+						if (editor_text.length<3) {
+							return false
+						}
 
-			// data_manager
-			const api_response = await data_manager.request({
-				body : rqo
-			})
-			console.log("/// json_editor_api api_response:",api_response);
+						const sqo = JSON.parse(editor_text)
+						if (!sqo) {
+							console.warn("Invalid editor text", sqo);
+							return false
+						}
 
-			// loading
-			content_data.classList.remove('loading')
+						const rqo = {
+							dd_api	: 'dd_utils_api',
+							action	: 'convert_search_object_to_sql_query',
+							options	: sqo
+						}
 
-			print_response(body_response, api_response)
-		})
+						// loading
+						content_data.classList.add('loading')
 
-	// json_editor_api_container
-		const json_editor_api_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'editor_json',
-			parent			: content_data
-		})
+						// data_manager
+						const api_response = await data_manager.request({
+							body : rqo
+						})
+						console.log("/// json_editor_api api_response:",api_response);
 
-	// JSON editor
-		load_json_editor_files()
-		.then(function(){
+						// loading
+						content_data.classList.remove('loading')
 
-			const options	= {
-				mode	: 'code',
-				modes	: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
-				onError	: function (err) {
-					alert(err.toString());
-				},
-				onChange: async function () {
-					const editor_text = editor.getText()
-					if (editor_text.length<3) return
+						print_response(body_response, api_response)
+					})
 
-					// check is JSON valid and store
-					const body_options = JSON.parse(editor_text)
-					if (body_options) {
-						window.localStorage.setItem('json_editor_api', editor_text);
+				// json_editor_api_container
+					const json_editor_api_container = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'editor_json_container',
+						parent			: content_data
+					})
+
+				// JSON editor
+					const options	= {
+						mode	: 'code',
+						modes	: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
+						onError	: function (err) {
+							alert(err.toString());
+						},
+						onChange: async function () {
+							const editor_text = editor.getText()
+							if (editor_text.length<3) return
+
+							// check is JSON valid and store
+							const body_options = JSON.parse(editor_text)
+							if (body_options) {
+								window.localStorage.setItem('json_editor_api', editor_text);
+							}
+						}
 					}
-				}
-			}
-			// localStorage.removeItem('json_editor_api');
-			const sample_data	= {"section_tipo":["rsc170"],"limit":5,"offset":0}
-			const saved_value	= localStorage.getItem('json_editor_sqo')
-			const editor_value	= JSON.parse(saved_value) || sample_data
-			const editor		= new JSONEditor(json_editor_api_container, options, editor_value)
-			// set pointer
-			self.editor = editor
-		})
+					// localStorage.removeItem('json_editor_api');
+					const sample_data	= {"section_tipo":["rsc170"],"limit":5,"offset":0}
+					const saved_value	= localStorage.getItem('json_editor_sqo')
+					const editor_value	= JSON.parse(saved_value) || sample_data
+					const editor		= new JSONEditor(json_editor_api_container, options, editor_value)
+					// set pointer
+					self.editor = editor
 
-	// add at end body_response
-		const body_response = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'body_response',
-			parent			: content_data
-		})
+				// add at end body_response
+					const body_response = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'body_response',
+						parent			: content_data
+					})
+
+				return container
+			}
+		})//end ui.load_item_with_spinner
 
 
 	return content_data
