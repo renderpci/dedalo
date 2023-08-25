@@ -232,7 +232,6 @@ Example:
 
 Will join locators (records) as text in this way: Santiago Ramón y Cajal | Gerty Cori
 
-
 `mandatory`
 
 options: true | false
