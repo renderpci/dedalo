@@ -53,7 +53,7 @@ render_edit_component_select.prototype.edit = async function(options) {
 			// as different view as default it will set in the class of the wrapper
 			// sample: <div class="wrapper_component component_select oh21 oh1_oh21 edit view_default disabled_component active">...</div>
 			// take account that to change the css when the component will render in print context
-			// for print we need to use read of the contect_value and it's necessary force permissions to use read only element render
+			// for print we need to use read of the content_value and it's necessary force permissions to use read only element render
 			self.permissions = 1
 
 		case 'default':
@@ -133,13 +133,6 @@ export const get_content_data = function(self, options) {
 
 	return content_data
 }//end get_content_data
-
-
-
-
-
-
-
 
 
 
