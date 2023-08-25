@@ -361,11 +361,11 @@ Example:
 
 The reference tag is used to a link to any other section. It use the locator to point at any other sections. The reference works pointed as HTML `<a href><a>` element. References has a in and out tag to indicate the beginning and end fo the reference.
 
-##### referenceIn
+###### referenceIn
 
 > \[reference-n-1-reference 1-data:\[{'section_tipo':'fr1','section_id':'1','paginated_key':0,'from_component_tipo':'rsc426','type':'dd151'}]:data]
 
-##### referenceOut
+###### referenceOut
 
 > \[/reference-n-1-reference 1-data:\[{'section_tipo':'fr1','section_id':'1','paginated_key':0,'from_component_tipo':'rsc426','type':'dd151'}]:data]
 
@@ -434,11 +434,12 @@ section_id;rsc86
 
     and the Dédalo data lang is set to Catalan, after import plain text, the final data will be:
 
-     ```json
+    ```json
     {
         "lg-cat" : ["<p>Nou text per <strong>importar</strong></p>"],
         "lg-eng" : ["<p>my imported data</p>", "<p>Other data</p>"]
     }
+    ``````
 
 3. Plain text
 
@@ -467,7 +468,7 @@ section_id;rsc86
 
     and the Dédalo data lang is set to English, after import plain text, the final data will be:
 
-     ```json
+    ```json
     {
         "lg-spa" : ["mi dato importado", "Otro dato"],
         "lg-eng" : ["new data to import"]
@@ -527,7 +528,7 @@ section_id;rsc86
 
     after import plain number, the final data will be:
 
-     ```json
+    ```json
     {
         "lg-nolan" : [33.85]
     }
@@ -768,6 +769,7 @@ section_id;tch56
     ```text
     10-26-2023\|<>02-18-1853
     10.26.2023\|<>02.18.1853
+    ```
 
 ##### Using other date formats
 
