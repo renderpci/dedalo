@@ -31,7 +31,13 @@
 
 		$init_response->msg[]	= 'Error. This php version '.PHP_VERSION.' is not supported by Dédalo. Update PHP to '.$minimum.' or higher ASAP';
 		$init_response->errors	= true;
-		debug_log(__METHOD__."  ".implode(PHP_EOL, $init_response->msg), logger::ERROR);
+		debug_log(__METHOD__
+			.' '.implode(PHP_EOL, $init_response->msg). PHP_EOL
+			.' test_php_version_supported: ' . to_string( test_php_version_supported() ) . PHP_EOL
+			.' PHP_VERSION: ' . PHP_VERSION . PHP_EOL
+			.' minimum: ' . $minimum
+			, logger::ERROR
+		);
 
 		return $init_response;
 	}
@@ -43,7 +49,10 @@
 
 		$init_response->msg[]	= 'Error. mb_internal_encoding is required by Dédalo. Please install php mbstring to continue';
 		$init_response->errors	= true;
-		debug_log(__METHOD__."  ".implode(PHP_EOL, $init_response->msg), logger::ERROR);
+		debug_log(__METHOD__
+			."  ".implode(PHP_EOL, $init_response->msg)
+			, logger::ERROR
+		);
 
 		return $init_response;
 	}
@@ -58,28 +67,44 @@
 
 			$init_response->msg[]	= 'Error on read or create backups directory. Permission denied';
 			$init_response->errors	= true;
-			debug_log(__METHOD__."  ".implode(PHP_EOL, $init_response->msg), logger::ERROR);
+			debug_log(__METHOD__
+				."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
+				.' folder_path: ' .$folder_path . PHP_EOL
+				.' create_dir_permissions: ' . to_string($create_dir_permissions)
+				, logger::ERROR
+			);
 
 			return $init_response;
 		}
-		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+		debug_log(__METHOD__
+			." CREATED DIR: $folder_path  "
+			, logger::DEBUG
+		);
 	}
 
 
 
 // BACKUP_PATH_ONTOLOGY
-	# Target folder exists test
+	// Target folder exists test
 	$folder_path = DEDALO_BACKUP_PATH_ONTOLOGY;
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, $create_dir_permissions, true)) {
 
 			$init_response->msg[]	= 'Error on read or create backup_path_ontology directory. Permission denied';
 			$init_response->errors	= true;
-			debug_log(__METHOD__."  ".implode(PHP_EOL, $init_response->msg), logger::ERROR);
+			debug_log(__METHOD__
+				."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
+				.' folder_path: ' .$folder_path . PHP_EOL
+				.' create_dir_permissions: ' . to_string($create_dir_permissions)
+				, logger::ERROR
+			);
 
 			return $init_response;
 		}
-		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+		debug_log(__METHOD__
+			." CREATED DIR: $folder_path  "
+			, logger::DEBUG
+		);
 	}
 
 
@@ -92,11 +117,19 @@
 
 			$init_response->msg[]	= 'Error on read or create backups_ontology_download_dir directory. Permission denied';
 			$init_response->errors	= true;
-			debug_log(__METHOD__."  ".implode(PHP_EOL, $init_response->msg), logger::ERROR);
+			debug_log(__METHOD__
+				."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
+				.' folder_path: ' .$folder_path . PHP_EOL
+				.' create_dir_permissions: ' . to_string($create_dir_permissions)
+				, logger::ERROR
+			);
 
 			return $init_response;
 		}
-		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+		debug_log(__METHOD__
+			." CREATED DIR: $folder_path  "
+			, logger::DEBUG
+		);
 	}
 
 
@@ -109,17 +142,25 @@
 
 			$init_response->msg[]	= 'Error on read or create backup temp directory. Permission denied';
 			$init_response->errors	= true;
-			debug_log(__METHOD__."  ".implode(PHP_EOL, $init_response->msg), logger::ERROR);
+			debug_log(__METHOD__
+				."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
+				.' folder_path: ' .$folder_path . PHP_EOL
+				.' create_dir_permissions: ' . to_string($create_dir_permissions)
+				, logger::ERROR
+			);
 
 			return $init_response;
 		}
-		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+		debug_log(__METHOD__
+			." CREATED DIR: $folder_path "
+			, logger::DEBUG
+		);
 	}
 
 
 
 // BACKUP_TEMP
-	# Target folder exists test
+	// Target folder exists test
 	if (defined('ONTOLOGY_DOWNLOAD_DIR') && ONTOLOGY_DOWNLOAD_DIR!==false) {
 		$folder_path = ONTOLOGY_DOWNLOAD_DIR;
 
@@ -128,11 +169,19 @@
 
 				$init_response->msg[]	= 'Error on read or create backup ' . ONTOLOGY_DOWNLOAD_DIR . ' directory. Permission denied';
 				$init_response->errors	= true;
-				debug_log(__METHOD__."  ".implode(PHP_EOL, $init_response->msg), logger::ERROR);
+				debug_log(__METHOD__
+					."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
+					.' folder_path: ' .$folder_path . PHP_EOL
+					.' create_dir_permissions: ' . to_string($create_dir_permissions)
+					, logger::ERROR
+				);
 
 				return $init_response;
 			}
-			debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+			debug_log(__METHOD__
+				." CREATED DIR: $folder_path  "
+				, logger::DEBUG
+			);
 		}
 	}
 
@@ -151,13 +200,16 @@
 				debug_log(__METHOD__
 					.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
 					.' folder_path: ' .$folder_path . PHP_EOL
-					.' create_dir_permissions: ' . to_string($create_dir_permissions) . PHP_EOL
+					.' create_dir_permissions: ' . to_string($create_dir_permissions)
 					, logger::ERROR
 				);
 
 				return $init_response;
 			}
-			debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+			debug_log(__METHOD__
+				." CREATED DIR: $folder_path "
+				, logger::DEBUG
+			);
 		}
 	}
 
@@ -180,7 +232,10 @@
 
 			return $init_response;
 		}
-		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+		debug_log(__METHOD__
+			." CREATED DIR: $folder_path "
+			, logger::DEBUG
+		);
 	}
 
 
@@ -204,7 +259,10 @@
 
 				return $init_response;
 			}
-			debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+			debug_log(__METHOD__
+				." CREATED DIR: $folder_path "
+				, logger::DEBUG
+			);
 		}
 	}
 
@@ -230,7 +288,10 @@
 
 				return $init_response;
 			}
-			debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+			debug_log(__METHOD__
+				." CREATED DIR: $folder_path "
+				, logger::DEBUG
+			);
 		}
 	}
 
@@ -264,7 +325,10 @@
 
 						return $init_response;
 					}
-					debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+					debug_log(__METHOD__
+						." CREATED DIR: $folder_path "
+						, logger::DEBUG
+					);
 				}
 			}
 	}
@@ -291,7 +355,10 @@
 
 				return $init_response;
 			}
-			debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+			debug_log(__METHOD__
+				." CREATED DIR: $folder_path "
+				, logger::DEBUG
+			);
 		}
 	}
 
@@ -323,7 +390,10 @@
 
 					return $init_response;
 				}
-				debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+				debug_log(__METHOD__
+					." CREATED DIR: $folder_path "
+					, logger::DEBUG
+				);
 			}
 
 		// quality folders create if not already exists
@@ -344,7 +414,10 @@
 
 						return $init_response;
 					}
-					debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+					debug_log(__METHOD__
+						." CREATED DIR: $folder_path "
+						, logger::DEBUG
+					);
 				}
 			}
 	}
@@ -369,7 +442,10 @@
 
 				return $init_response;
 			}
-			debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+			debug_log(__METHOD__
+				." CREATED DIR: $folder_path "
+				, logger::DEBUG
+			);
 		}
 	}
 
@@ -393,7 +469,10 @@
 
 				return $init_response;
 			}
-			debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+			debug_log(__METHOD__
+				." CREATED DIR: $folder_path "
+				, logger::DEBUG
+			);
 		}
 	}
 
@@ -417,7 +496,10 @@
 
 				return $init_response;
 			}
-			debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+			debug_log(__METHOD__
+				." CREATED DIR: $folder_path "
+				, logger::DEBUG
+			);
 		}
 	}
 
@@ -452,7 +534,10 @@
 
 			return $init_response;
 		}
-		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+		debug_log(__METHOD__
+			." CREATED DIR: $folder_path "
+			, logger::DEBUG
+		);
 	}
 
 
@@ -515,7 +600,10 @@
 					// return $init_response; // continue here, don't stop the flow, only notify error
 
 				}else{
-					debug_log(__METHOD__." Changed permissions of file .pgpass to 0600 ".to_string(), logger::ERROR);
+					debug_log(__METHOD__
+						." Changed permissions of file .pgpass to 0600 "
+						, logger::ERROR
+					);
 				}
 		}
 	}
@@ -844,7 +932,10 @@
 								, logger::ERROR
 							);
 						}
-						debug_log(__METHOD__." Created dir: ".$folder_path_to_delete, logger::WARNING);
+						debug_log(__METHOD__
+							." Created dir: ".$folder_path_to_delete
+							, logger::WARNING
+						);
 					}
 
 				// iterate found files checking the date
