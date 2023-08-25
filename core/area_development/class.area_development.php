@@ -43,7 +43,7 @@ class area_development extends area_common {
 		$DEDALO_PREFIX_TIPOS = get_legacy_constant_value('DEDALO_PREFIX_TIPOS');
 
 
-		// make_backup
+		// make_backup *
 			$item = new stdClass();
 				$item->id		= 'make_backup';
 				$item->typo		= 'widget';
@@ -57,7 +57,7 @@ class area_development extends area_common {
 			$ar_widgets[] = $widget;
 
 
-		// regenerate_relations . Delete and create again table relations records
+		// regenerate_relations * . Delete and create again table relations records
 			$item = new stdClass();
 				$item->id		= 'regenerate_relations';
 				$item->typo		= 'widget';
@@ -69,7 +69,7 @@ class area_development extends area_common {
 			$ar_widgets[] = $widget;
 
 
-		// update_ontology
+		// update_ontology *
 			$item = new stdClass();
 				$item->id		= 'update_ontology';
 				$item->typo		= 'widget';
@@ -93,7 +93,7 @@ class area_development extends area_common {
 			$ar_widgets[] = $widget;
 
 
-		// register_tools
+		// register_tools *
 			$item = new stdClass();
 				$item->id		= 'register_tools';
 				$item->typo		= 'widget';
@@ -106,7 +106,7 @@ class area_development extends area_common {
 			$ar_widgets[] = $widget;
 
 
-		// export_ontology_to_json
+		// export_ontology_to_json *
 			$item = new stdClass();
 				$item->id		= 'export_ontology_to_json';
 				$item->typo		= 'widget';
@@ -121,7 +121,7 @@ class area_development extends area_common {
 			$ar_widgets[] = $widget;
 
 
-		// import_ontology_from_json
+		// import_ontology_from_json *
 			$item = new stdClass();
 				$item->id		= 'import_ontology_from_json';
 				$item->typo		= 'widget';
@@ -160,7 +160,7 @@ class area_development extends area_common {
 			// $ar_widgets[] = $widget;
 
 
-		// build_install_version
+		// build_install_version *
 			$item = new stdClass();
 				$item->id		= 'build_install_version';
 				$item->typo		= 'widget';
@@ -175,7 +175,7 @@ class area_development extends area_common {
 			$ar_widgets[] = $widget;
 
 
-		// update_data_version
+		// update_data_version *
 			include_once DEDALO_CORE_PATH . '/base/update/class.update.php';
 			$updates				= update::get_updates();
 			$update_version			= update::get_update_version();
@@ -199,7 +199,7 @@ class area_development extends area_common {
 			$ar_widgets[] = $widget;
 
 
-		// update_code
+		// update_code *
 			$item = new stdClass();
 				$item->id		= 'update_code';
 				$item->typo		= 'widget';
@@ -208,7 +208,7 @@ class area_development extends area_common {
 			$ar_widgets[] = $widget;
 
 
-		// add_hierarchy
+		// add_hierarchy *
 			$item = new stdClass();
 				$item->id		= 'add_hierarchy';
 				$item->typo		= 'widget';
@@ -223,7 +223,7 @@ class area_development extends area_common {
 			$ar_widgets[] = $widget;
 
 
-		// publication_api
+		// publication_api *
 			$item = new stdClass();
 				$item->id		= 'publication_api';
 				$item->typo		= 'widget';
@@ -236,95 +236,66 @@ class area_development extends area_common {
 					'diffusion_map'						=> diffusion::get_diffusion_map(
 						DEDALO_DIFFUSION_DOMAIN,
 						true // bool connection_status
-					),
+					)
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
 
-		// Dédalo API test environment
+		// dedalo_api_test_environment *
 			$item = new stdClass();
 				$item->id		= 'dedalo_api_test_environment';
-				$item->class	= 'blue';
+				$item->class	= 'width_100';
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
 				$item->label	= 'DÉDALO API TEST ENVIRONMENT';
-				$item->info		= null;
-				$item->body		= '<textarea id="json_editor_api" class="hide"></textarea>';
-				$item->body		.= '<label>API send RQO (Request Query Object) default dd_api is "dd_core_api"</label>';
-				$item->body		.= '<label></label> <button id="submit_api" class="border light">OK</button>';
-				$item->body		.= '<div id="json_editor_api_container" class="editor_json"></div>';
-				$item->run[]	= (object)[
-					'fn'		=> 'init_json_editor_api',
-					'options'	=> (object)[
-						'editor_id'	=> 'json_editor_api'
-					]
-				];
-				$item->trigger 	= (object)[
-					'dd_api'	=> 'get_input_value:dd_api_base',
-					'action'	=> 'get_input_value:dd_api_fn',
-					'options'	=> null
-				];
+				$item->value	= (object)[];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
 
-		// search query object test environment
+		// sqo_test_environment *
 			$item = new stdClass();
-				$item->id		= 'search_query_object_test_environment';
-				$item->class	= 'blue';
+				$item->id		= 'sqo_test_environment';
+				$item->class	= 'blue width_100';
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
 				$item->label	= 'SEARCH QUERY OBJECT TEST ENVIRONMENT';
-				$item->info		= null;
-				$item->body		= '<textarea id="json_editor" class="hide"></textarea>';
-				$item->body		.= '<div id="json_editor_container" class="editor_json"></div>';
-				$item->run[]	= (object)[
-					'fn'		=> 'init_json_editor',
-					'options'	=> (object)['editor_id' => "json_editor"]
-				];
-				$item->trigger	= (object)[
-					'dd_api'	=> 'dd_utils_api',
-					'action'	=> 'convert_search_object_to_sql_query',
-					'options'	=> null
-				];
+				$item->value	= (object)[];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
 
-		// dedalo version
+		// dedalo_version *
 			$item = new stdClass();
 				$item->id		= 'dedalo_version';
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
 				$item->label	= 'DEDALO VERSION';
-				$item->info		= null;
-				$item->body		= 'Version '.DEDALO_VERSION;
-				$item->body		.= '<pre>v '.DEDALO_VERSION .' | Build: '.DEDALO_BUILD.'</pre>';
+				$item->value	= (object)[
+					'dedalo_version'	=> DEDALO_VERSION,
+					'dedalo_build'		=> DEDALO_BUILD
+				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
 
-		// database_info
+		// database_info *
 			$info = pg_version(DBi::_getConnection());
 			$info['host'] = to_string(DEDALO_HOSTNAME_CONN);
 			$item = new stdClass();
 				$item->id		= 'database_info';
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
 				$item->label	= 'DATABASE INFO';
-				$item->info		= null;
-				$item->body		= 'Database '.$info['IntervalStyle']. " ". $info['server']. " ".DEDALO_HOSTNAME_CONN;
-				$item->body		.= '<pre>'.json_encode($info, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES).'</pre>';
+				$item->value	= (object)[
+					'info' => $info
+				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
 
-		// php_user
+		// php_user *
 			$info = (function(){
 				try {
 					if (function_exists('posix_getpwuid') && function_exists('posix_geteuid')) {
@@ -346,20 +317,15 @@ class area_development extends area_common {
 				$item->id		= 'php_user';
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
 				$item->label	= 'PHP USER';
-				$item->info		= null;
-				if (empty($info)) {
-					$item->body	= 'PHP user unavailable';
-				}else{
-					$item->body	= 'PHP user '. $info['name'];
-					$item->body	.= '<pre>'.json_encode($info, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES).'</pre>';
-				}
+				$item->value	= (object)[
+					'info' => $info
+				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
 
-		// unit test (alpha)
+		// unit_test *
 			$item = new stdClass();
 				$item->id		= 'unit_test';
 				$item->typo		= 'widget';
@@ -367,7 +333,8 @@ class area_development extends area_common {
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
-		// environment
+
+		// environment *
 			$item = new stdClass();
 				$item->id		= 'environment';
 				$item->typo		= 'widget';
@@ -375,7 +342,8 @@ class area_development extends area_common {
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
-		// sequences_status
+
+		// sequences_status *
 			require(DEDALO_CORE_PATH.'/db/class.data_check.php');
 			$data_check = new data_check();
 			$response 	= $data_check->check_sequences();
@@ -383,10 +351,8 @@ class area_development extends area_common {
 				$item->id		= 'sequences_status';
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
 				$item->label	= 'DB SEQUENCES STATUS';
-				$item->info		= null;
-				$item->body		= $response->msg;
+				$item->value	= $response;
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
@@ -397,24 +363,21 @@ class area_development extends area_common {
 				$item->id		= 'counters_status';
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
 				$item->label	= 'DEDALO COUNTERS STATUS';
-				$item->info		= null;
-				$item->body		= $response->msg;
+				$item->value	= $response;
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
 
-		// php info
+		// php_info *
 			$item = new stdClass();
 				$item->id		= 'php_info';
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
 				$item->label	= 'PHP INFO';
-				$item->info		= null;
-				// $item->body	= '<iframe class="php_info_iframe" src="'.DEDALO_CORE_URL.'/area_development/php_info.php" onload="this.height=this.contentWindow.document.body.scrollHeight+50+\'px;\'"></iframe>';
-				$item->body		= '<iframe class="php_info_iframe" src="'.DEDALO_CORE_URL.'/area_development/php_info.php"></iframe>';
+				$item->value	= (object)[
+					'src' => DEDALO_CORE_URL.'/area_development/php_info.php'
+				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
@@ -432,19 +395,18 @@ class area_development extends area_common {
 	*/
 	public function widget_factory(object $item) : object {
 
-		// widget
-			$widget = new stdClass();
-				$widget->id			= $item->id;
-				$widget->class		= $item->class ?? null;
-				$widget->typo		= 'widget';
-				$widget->tipo		= $item->tipo ?? $this->tipo;
-				$widget->parent		= $item->parent ?? $this->tipo;
-				$widget->label		= $item->label ?? 'Undefined label for: '.$this->tipo;
-				$widget->info		= $item->info ?? null;
-				$widget->body		= $item->body  ?? null;
-				$widget->run		= $item->run ?? [];
-				$widget->trigger	= $item->trigger ?? null;
-				$widget->value		= $item->value ?? null;
+		$widget = new stdClass();
+			$widget->id			= $item->id;
+			$widget->class		= $item->class ?? null;
+			$widget->typo		= 'widget';
+			$widget->tipo		= $item->tipo ?? $this->tipo;
+			$widget->parent		= $item->parent ?? $this->tipo;
+			$widget->label		= $item->label ?? 'Undefined label for: '.$this->tipo;
+			$widget->info		= $item->info ?? null;
+			$widget->body		= $item->body  ?? null;
+			$widget->run		= $item->run ?? [];
+			$widget->trigger	= $item->trigger ?? null;
+			$widget->value		= $item->value ?? null;
 
 
 		return $widget;

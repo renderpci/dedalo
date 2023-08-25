@@ -224,6 +224,10 @@
 						padding: 0.5em;
 					}
 
+					.json-container {
+						margin-top: 0px;
+					}
+
 
 					//* {
 					//	max-width: 100%;
@@ -287,7 +291,7 @@
 			}
 
 
-			&#search_query_object_test_environment, &#dedalo_api_test_environment {
+			&#sqo_test_environment, &#dedalo_api_test_environment {
 				flex: 1 1 100%;
 				// min-height: 50vh;
 				// background-color: #3883fa;
@@ -306,7 +310,11 @@
 				}
 				>.widget_body {
 					padding: 0px;
-					// background-color: #f3f3f3;
+
+					.button_submit {
+						margin: 0.25rem;
+					}
+
 					>.body_info {
 						padding: 0px;
 					}
@@ -339,6 +347,16 @@
 					background-color: #21984b; // green instead default blue
 				}
 			}//end dedalo_api_test_environment
+
+			&#sqo_test_environment {
+				>.widget_body {
+					background-color: #cbdcf7;
+				}
+				.jsoneditor-menu {
+					background-color: #3170d8; // green instead default blue
+				}
+			}
+
 
 			&#register_tools {
 
