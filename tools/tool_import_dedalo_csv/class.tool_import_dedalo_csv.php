@@ -74,7 +74,7 @@ class tool_import_dedalo_csv extends tool_common {
 							return (object)[
 								'tipo'	=> $el,
 								'label'	=> RecordObj_dd::get_termino_by_tipo($el, DEDALO_APPLICATION_LANG, true),
-								'model'	=> $el!=='section_id' ? RecordObj_dd::get_modelo_name_by_tipo($el, true) : $el
+								'model'	=> $el!=='section_id' && !empty($el) ? RecordObj_dd::get_modelo_name_by_tipo($el, true) : $el
 							];
 						}, $file_info);
 
@@ -406,7 +406,12 @@ class tool_import_dedalo_csv extends tool_common {
 				}
 
 			// always force create/re use section
-				$section		= section::get_instance($section_id, $section_tipo, false);
+				$section = section::get_instance(
+					$section_id,
+					$section_tipo,
+					'list',
+					false
+				);
 				$create_record	= $section->forced_create_record();
 				$section_id		= $section->get_section_id();
 
