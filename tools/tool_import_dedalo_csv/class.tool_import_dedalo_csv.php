@@ -552,6 +552,11 @@ class tool_import_dedalo_csv extends tool_common {
 						// Set direct property also
 							$section_dato = $section->get_dato();
 							$section_dato->created_by_userID = (int)$section_id;
+
+						// Save section
+							$section->set_dato($section_dato);
+							$section->save_modified = false;
+							$section->Save();
 					}
 					elseif ($column_map->model==='modified_by_user' || $column_map->map_to===$modified_by_user['tipo']) {
 
@@ -587,6 +592,11 @@ class tool_import_dedalo_csv extends tool_common {
 						// Set direct property also
 							$section_dato = $section->get_dato();
 							$section_dato->modified_by_userID = (int)$section_id;
+
+						// Save section
+							$section->set_dato($section_dato);
+							$section->save_modified = false;
+							$section->Save();
 					}
 
 					// check if the component_tipo is empty, forgotten case.
