@@ -62,7 +62,7 @@ lib/vendor/*
 # !lib/vendor/composer
 !lib/vendor/myclabs
 !lib/vendor/sweetrdf
-!lib/vendor/sebastian
+# !lib/vendor/sebastian
 !lib/vendor/phpunit
 # !vendor/maxmind
 # !vendor/maxmind-db
