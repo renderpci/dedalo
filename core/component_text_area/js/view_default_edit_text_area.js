@@ -183,7 +183,7 @@ const get_content_value = (i, current_value, self) => {
 			? ui.create_dom_element({
 				element_type	: 'p',
 				class_name		: 'placeholder ck-placeholder',
-				inner_html		: fallback_fragment.firstChild.innerText,
+				inner_html		: fallback_value,
 				parent			: value_container
 			  })
 			: null
@@ -231,11 +231,10 @@ const get_content_value = (i, current_value, self) => {
 					caller				: self,
 					value_container		: value_container,
 					toolbar_container	: toolbar_container,
-					value				: value_string,
-					fallback_value 		: fallback_value,
+					fallback_value		: fallback_value,
 					key					: i,
 					editor_config		: editor_config,
-					editor_class		: self.context.view === 'html_text'
+					editor_class		: self.context.view==='html_text'
 						? 'InlineEditor'
 						: 'ddEditor' // ddEditor | InlineEditor
 				})

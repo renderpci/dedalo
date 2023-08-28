@@ -20,7 +20,7 @@
 export const view_line_edit_text_area = function() {
 
 	return true
-}//end view_line_edit_text_area 
+}//end view_line_edit_text_area
 
 
 
@@ -113,7 +113,9 @@ const get_content_value = (i, current_value, self) => {
 		const fallback_value = fallback_fragment.firstChild.innerText;
 
 	// value_string is a raw html without parse into nodes (txt format)
-		const value_string = self.tags_to_html(current_value)
+		const value_string = current_value
+			? self.tags_to_html(current_value)
+			: null
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -132,9 +134,18 @@ const get_content_value = (i, current_value, self) => {
 		const value_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'value_container editor_container',
-			parent			: content_value,
-			inner_html 		: value_string
+			inner_html 		: value_string,
+			parent			: content_value
 		})
+		// placeholder_node. Create a Place placeholder if no value found
+		const placeholder_node = (!value_string)
+			? ui.create_dom_element({
+				element_type	: 'p',
+				class_name		: 'placeholder ck-placeholder',
+				inner_html		: fallback_value,
+				parent			: value_container
+			  })
+			: null
 
 	// init_current_service_text_editor
 		const init_current_service_text_editor = async function() {
@@ -142,6 +153,11 @@ const get_content_value = (i, current_value, self) => {
 			// permissions check
 				if (!self.permissions || parseInt(self.permissions)<2) {
 					return
+				}
+
+			// placeholder_node. Remove it from value_container
+				if (placeholder_node) {
+					placeholder_node.remove()
 				}
 
 			// service_editor. Fixed on init
@@ -170,8 +186,7 @@ const get_content_value = (i, current_value, self) => {
 					caller				: self,
 					value_container		: value_container,
 					toolbar_container	: toolbar_container,
-					value				: value_string,
-					fallback_value 		: fallback_value,
+					fallback_value		: fallback_value,
 					key					: i,
 					editor_config		: editor_config,
 					editor_class		: 'ddEditor' // ddEditor | InlineEditor
