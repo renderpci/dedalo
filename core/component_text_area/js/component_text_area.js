@@ -1264,4 +1264,63 @@ component_text_area.prototype.add_component_history_note = async function(option
 
 
 
+/**
+* CHANGE_LANG
+* Set in Ontology properties client observer like:
+ {
+	"client": {
+		"info": "Sync selector value with the transcription lang. Is called on render/change value 'Original lang' selector",
+		"event": "change_lang_value",
+		"perform": {
+		  "function": "change_lang"
+		}
+	},
+	"component_tipo": "rsc263"
+ }
+* @param object|null datalist_item
+* @param int n_try = 1
+* 	Number of try (limited to 4)
+* @return bool
+*/
+component_text_area.prototype.change_lang = async function(datalist_item, n_try=1) {
+
+	const self = this
+
+	// datalist_item check
+		if (!datalist_item) {
+			return false
+		}
+
+	// lang check
+		const lang = datalist_item.section_id
+		if (!lang || lang===self.lang) {
+			return false
+		}
+
+	// n_try check
+		if (n_try>4) {
+			console.error('Unable to sync lang after 4 attempts', datalist_item);
+			return false
+		}
+
+	if (self.status==='rendered') {
+
+		self.lang = lang
+		await self.refresh()
+
+	}else{
+
+		// try new attempt after some ms
+		setTimeout(async function(){
+			self.change_lang(datalist_item, n_try++)
+		}, 300)
+		return false
+	}
+
+
+	return true
+}//end change_lang
+
+
+
 // @license-end

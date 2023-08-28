@@ -107,7 +107,7 @@ const get_content_value = (i, current_value, self) => {
 				}
 			})
 		// change event
-			select.addEventListener('change', function(){
+			select.addEventListener('change', function(e){
 
 				const value = this.value
 					? JSON.parse(this.value)
@@ -142,6 +142,16 @@ const get_content_value = (i, current_value, self) => {
 							select.button_edit.classList.add('hide')
 						}
 					}
+
+				// set_lang_value publish event
+					if (parsed_value) {
+						const datalist_item = datalist.find(el =>
+							el.value &&
+							el.value.section_id==parsed_value.section_id &&
+							el.value.section_tipo==parsed_value.section_tipo
+						)
+						event_manager.publish('set_lang_value_' + self.id_base , datalist_item)
+					}
 			})
 		// click event
 			select.addEventListener('click', function(e){
@@ -174,6 +184,11 @@ const get_content_value = (i, current_value, self) => {
 				current_value.section_tipo===datalist_item.value.section_tipo
 				) {
 				option_node.selected = true
+
+				// set_lang_value publish event
+				if (datalist_item) {
+					event_manager.publish('set_lang_value_' + self.id_base , datalist_item)
+				}
 			}
 
 			// developer_info
@@ -238,6 +253,9 @@ const get_content_value = (i, current_value, self) => {
 				button_edit.classList.add('hide')
 			}
 		}
+
+
+
 
 
 	return content_value
