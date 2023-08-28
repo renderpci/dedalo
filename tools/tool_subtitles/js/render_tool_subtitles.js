@@ -485,8 +485,8 @@ const render_subtitles = async function(self) {
 					const value_container = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'value_container ' +current_value.type,
-						parent			: text_container,
-						inner_html		: value
+						inner_html		: value,
+						parent			: text_container
 					})
 
 					const options = {
@@ -538,7 +538,6 @@ const init_current_service_text_editor = async function(self, i, options) {
 	// init the option variables
 		const value_container	= options.value_container
 		const toolbar_container	= options.toolbar_container
-		const value				= options.value
 
 	// service_editor. Fixed on init
 		const current_service_text_editor = new self.service_text_editor()
@@ -563,7 +562,6 @@ const init_current_service_text_editor = async function(self, i, options) {
 			caller				: self,
 			value_container		: value_container,
 			toolbar_container	: toolbar_container,
-			value				: value,
 			key					: i,
 			editor_config		: editor_config,
 			editor_class		: 'ddEditor'
