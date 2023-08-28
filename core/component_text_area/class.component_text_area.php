@@ -3073,9 +3073,9 @@ class component_text_area extends component_common {
 				){
 
 				// inport_value is a string
-				$value = empty($import_value)
-					? null
-					: $normalize_value([$import_value]);
+				$value = !empty($import_value) || $import_value==='0'
+				? $normalize_value([$import_value])
+				: null;
 
 			}else{
 
