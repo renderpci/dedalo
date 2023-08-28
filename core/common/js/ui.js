@@ -2953,12 +2953,26 @@ export const ui = {
 		// apply style fullscreen
 		node.classList.toggle('fullscreen')
 
+		const exit_button = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'exit_button',
+			parent			: node
+		})
+		exit_button.addEventListener('click', function(e) {
+			e.stopPropagation()
+
+			node.classList.remove('fullscreen')
+			exit_button.remove()
+		})
+
 		// set exit event
 		document.addEventListener('keyup', exit_fullscreen, { passive : true })
 		function exit_fullscreen(e) {
 			if (e.key==='Escape') {
 				document.removeEventListener('keyup', exit_fullscreen, { passive : true })
+
 				node.classList.remove('fullscreen')
+				exit_button.remove()
 			}
 		}
 
