@@ -17,7 +17,6 @@
 	import {render_search_component_text_area} from './render_search_component_text_area.js'
 	import {render_reference} from './render_reference.js'
 	import {service_ckeditor} from '../../services/service_ckeditor/js/service_ckeditor.js'
-	// import {service_tinymce} from '../../services/service_tinymce/js/service_tinymce.js'
 
 
 
@@ -41,7 +40,6 @@ export const component_text_area = function(){
 	this.tag			= null // user selected tag DOM element (set on event click_tag_index_)
 	this.text_editor	= [] // array. current active text_editor (service_tinymce) for current node
 	this.events_tokens	= []
-	// this.services	= []
 
 	// service_text_editor. Name of desired service  to call (service_ckeditor|service_tinymce)
 	this.service_text_editor			= null
@@ -135,7 +133,7 @@ component_text_area.prototype.init = async function(options) {
 			)
 			function fn_click_tag_index(options) {
 				if(SHOW_DEVELOPER===true) {
-					dd_console(`+++++++ [component_text_area] click_tag_index ${self.id_base}`, 'DEBUG', options)
+					dd_console(`[component_text_area] click_tag_index ${self.id_base}`, 'DEBUG', options)
 				}
 
 				// options
@@ -170,7 +168,6 @@ component_text_area.prototype.init = async function(options) {
 				event_manager.subscribe('text_selection_'+ self.id, fn_show_button_create_fragment)
 			)
 			function fn_show_button_create_fragment(options) {
-				// dd_console('--> show_button_create_fragment options', 'DEBUG', options)
 
 				// options
 					const selection	= options.selection
@@ -244,7 +241,7 @@ component_text_area.prototype.init = async function(options) {
 				event_manager.subscribe('create_geo_tag_'+ self.id_base, self.create_geo_tag)
 			)
 
-		// deactivate. Save content
+		// deactivate_component. Save content on deactivate
 			self.events_tokens.push(
 				event_manager.subscribe('deactivate_component', fn_deactivate)
 			)
@@ -270,12 +267,11 @@ component_text_area.prototype.init = async function(options) {
 				}
 			}
 
-	// call the generic method
+	// call the generic init method
 		const common_init = await component_common.prototype.init.call(self, options);
 
 	// service_text_editor
-		// self.service_text_editor	= service_tinymce
-		self.service_text_editor	= service_ckeditor
+		self.service_text_editor = service_ckeditor
 
 	// self.show_interface.read_only
 		if (self.permissions < 2) {
@@ -326,6 +322,8 @@ component_text_area.prototype.build = async function(options) {
 
 /**
 * DESTROY
+* Force service_ckeditor instances to destroy editors (ckeditor instance)
+* and later execute a standard self destroy from common
 * @return bool
 * 	Promise resolve bool
 */
@@ -333,16 +331,11 @@ component_text_area.prototype.destroy = async function(delete_self=true, delete_
 
 	const self = this
 
-	// destroy the editors too
+	// destroy the editors instances too
 		if (self.text_editor && self.text_editor.length>0) {
 			for (let i = 0; i < self.text_editor.length; i++) {
-				// console.log('destroying editor:', self.text_editor[i].editor );
-				// try {
-					self.text_editor[i].editor.destroy()
-				// } catch (error) {
-				// 	console.error(error)
-				// }
-
+				// self.text_editor[x] is a instance of service_ckeditor
+				self.text_editor[i].destroy()
 			}
 		}
 
@@ -413,10 +406,6 @@ component_text_area.prototype.save_value = async function(key, value) {
 
 	const new_data = await self.preprocess_text_to_save(value)
 
-	// const string_value = value.innerHTML
-	// const old_data = self.data.value[key]
-	// if(string_value === old_data) return false
-
 	const changed_data = [Object.freeze({
 		action	: 'update',
 		key		: key,
@@ -427,7 +416,7 @@ component_text_area.prototype.save_value = async function(key, value) {
 		refresh			: false
 	})
 	.then(()=>{
-		// event to update the dom elements of the instance
+		// event to update the DOM elements of the instance
 		// event_manager.publish('update_value_'+self.id, changed_data)
 
 		// reset is_data_changed state
@@ -465,7 +454,7 @@ component_text_area.prototype.save_editor = function(key=0) {
 /**
 * SAVE
 * 	Alias of component_common.prototype.save with component specific added actions
-* @param object changed_data
+* @param object changed_data = undefined
 * 	{
 * 		action : "update",
 * 		key : 0,
@@ -638,8 +627,9 @@ component_text_area.prototype.preprocess_text_to_save = async function(html_valu
 
 /**
 * UPDATE_CHANGED_DATA
+* @see service_editor.set_dirty
 * @param object options
-* @return bool
+* @return void
 */
 component_text_area.prototype.update_changed_data = function (options) {
 
@@ -652,18 +642,17 @@ component_text_area.prototype.update_changed_data = function (options) {
 	const value = text_editor.editor.getData();
 
 	self.preprocess_text_to_save(value)
-		.then(function(parsed_value){
-			const changed_data_item = Object.freeze({
-				action	: 'update',
-				key		: key,
-				value	: parsed_value || ''
-			})
+	.then(function(parsed_value) {
+
+		const changed_data_item = Object.freeze({
+			action	: 'update',
+			key		: key,
+			value	: parsed_value || ''
+		})
 
 		// fix instance changed_data
-			self.set_changed_data(changed_data_item)
-				// console.log('self.db_data.value[i]:', self.db_data.value[i]);
-				// console.log('parsed_value:', parsed_value);
-		})
+		self.set_changed_data(changed_data_item)
+	})
 }//end update_changed_data
 
 
@@ -703,7 +692,7 @@ component_text_area.prototype.update_tag = async function(options) {
 	const self = this
 
 	// check options value
-		if (typeof options==="undefined") {
+		if (typeof options==='undefined') {
 			alert("Please select tag");
 			console.error("[component_text_area.update_tag] ERROR. Stopped update_tag. Empty options:", options);
 			console.trace();
@@ -730,14 +719,12 @@ component_text_area.prototype.update_tag = async function(options) {
 			  })()
 			: [type]
 
-	// trigger service action
-		const update_options = {
+	// trigger service action. result is a promise resolve bool
+		const result = self.service_text_editor_instance[key].update_tag({
 			type			: ar_type, // string|array
 			tag_id			: tag_id, // int
 			new_data_obj	: new_data_obj // object
-		}
-		// result is a promise resolve bool
-		const result = self.service_text_editor_instance[key].update_tag(update_options)
+		})
 
 
 	return result
@@ -747,8 +734,14 @@ component_text_area.prototype.update_tag = async function(options) {
 
 /**
 * BUILD_DATA_TAG
-* Unified way of create Dedalo internal custom tags from javascript
+* Unified way of create Dedalo internal custom tags from JAVASCRIPT
 * i.e. '[index-d-7--data::data][/index-d-7--data::data]'
+* @param string type
+* @param string|int tag_id
+* @param string state
+* @param string label
+* @param string data
+*
 * @return string tag
 */
 component_text_area.prototype.build_data_tag = function(type, tag_id, state, label, data) {
@@ -756,7 +749,7 @@ component_text_area.prototype.build_data_tag = function(type, tag_id, state, lab
 	const self = this
 
 	// check tag type
-		const valid_types = ["indexIn","indexOut","tc","tc2","svg","draw","geo","page","person","note","lang","referenceIn","referenceOut"]
+		const valid_types = ['indexIn','indexOut','tc','tc2','svg','draw','geo','page','person','note','lang','referenceIn','referenceOut']
 		if (valid_types.includes(type)===false) {
 			console.warn("[component_text_area.build_data_tag] Invalid tag type:", type);
 			alert("[component_text_area.build_data_tag] Invalid tag type: " + type)
@@ -764,15 +757,15 @@ component_text_area.prototype.build_data_tag = function(type, tag_id, state, lab
 		}
 
 	// bracket_in. Is different for close tag
-		const bracket_in = (type.indexOf("Out")!==-1)
-			? "[/"
-			: "["
+		const bracket_in = (type.indexOf('Out')!==-1)
+			? '[/'
+			: '['
 
 	// type_name. Removes suffixes 'In' and 'Out'
 		const type_name = type.replace(/In|Out/, '')
 
 	// label. Truncate and replace - avoid future errors
-		const safe_label = (typeof label==="undefined")
+		const safe_label = (typeof label==='undefined')
 			? ''
 			: (label.substring(0,22)).replace(new RegExp('-', 'g'), '_');
 
@@ -782,14 +775,9 @@ component_text_area.prototype.build_data_tag = function(type, tag_id, state, lab
 			: 'data::data'
 
 	// dedalo_tag
-		const dedalo_tag = (type==="tc")
+		const dedalo_tag = (type==='tc')
 			? tag_id
-			: bracket_in + type_name + "-" + state + "-" + tag_id + "-" + safe_label + "-" + data_string + ']'
-
-	// debug
-		if(SHOW_DEBUG===true) {
-			// console.log("[component_text_area.build_data_tag] dedalo_tag:", dedalo_tag)
-		}
+			: bracket_in + type_name + '-' + state + '-' + tag_id + '-' + safe_label + '-' + data_string + ']'
 
 
 	return dedalo_tag
@@ -821,23 +809,23 @@ component_text_area.prototype.build_view_tag_obj = function(data_tag, tag_id) {
 		? self.tag_data_object_to_string(data_tag.data)
 		: null
 
-	const images_factory_url = "../component_text_area/tag/?id="
+	const images_factory_url = '../component_text_area/tag/?id='
 
 	// Bracket_in is different for close tag
-	const bracket_in = (type.indexOf("Out")!==-1)
-		? "[/"
-		: "["
+	const bracket_in = (type.indexOf('Out')!==-1)
+		? '[/'
+		: '['
 
 	// Removes sufixes 'In' and 'Out'
 	const type_name = type.replace(/In|Out/, '');
 
 	const src = (type==='tc')
-		? images_factory_url  + "[TC_" + tag_id + "_TC]"
+		? images_factory_url  + '[TC_' + tag_id + '_TC]'
 		: images_factory_url  + bracket_in + type_name + "-" + state + "-" + tag_id + "-" + label + "]"
 
 	const id = (type==='tc')
 		? tag_id
-		: bracket_in + type_name + "-" + state + "-" + tag_id + "-" + label + "]"
+		: bracket_in + type_name + '-' + state + '-' + tag_id + '-' + label + ']'
 
 	const class_name = (type==='tc')
 		? type
@@ -849,7 +837,7 @@ component_text_area.prototype.build_view_tag_obj = function(data_tag, tag_id) {
 		class_name	: class_name,
 		// dataset
 		type		: type,
-		tag_id		: (type==='tc') ? "[TC_" + tag_id + "_TC]" : String(tag_id),
+		tag_id		: (type==='tc') ? '[TC_' + tag_id + '_TC]' : String(tag_id),
 		state		: (type==='tc') ? 'n': state,
 		label		: (type==='tc') ? tag_id : label,
 		data		: (type==='tc') ? tag_id : data
@@ -862,6 +850,7 @@ component_text_area.prototype.build_view_tag_obj = function(data_tag, tag_id) {
 
 /**
 * TAG_DATA_OBJECT_TO_STRING
+* @param object data
 * @return string data_string
 */
 component_text_area.prototype.tag_data_object_to_string = function(data) {
@@ -873,8 +862,8 @@ component_text_area.prototype.tag_data_object_to_string = function(data) {
 		}
 
 	// convert the data_tag to string to be used it in html
-	// replace the " to ' to be compatible with the dataset of html5, the tag store his data ref inside the data-data html
-	// json use " but it's not compatible with the data-data storage in html5
+	// replace the " to ' to be compatible with the dataset of HTML5, the tag store his data ref inside the data-data html
+	// JSON use " but it's not compatible with the data-data storage in HTML5
 		const data_string = JSON.stringify(data).replace(/"/g, '\'')
 
 
@@ -886,10 +875,9 @@ component_text_area.prototype.tag_data_object_to_string = function(data) {
 /**
 * GET_LAST_TAG_ID
 * Calculates all current text_editor editor tags id of given type (ex. 'reference') and get last used id
-* @param ed
-*	Text editor instance (tinyMCE)
 * @param tag_type
 *	Class name of image searched like 'geo'
+* @param object text_editor
 *
 * @return int tag_id
 */
@@ -897,7 +885,9 @@ component_text_area.prototype.get_last_tag_id = function(tag_type, text_editor) 
 
 	const self = this
 
-	const last_tag_id = text_editor.get_last_tag_id({tag_type:tag_type})
+	const last_tag_id = text_editor.get_last_tag_id({
+		tag_type : tag_type
+	})
 
 	return last_tag_id
 }//end get_last_tag_id
@@ -907,7 +897,9 @@ component_text_area.prototype.get_last_tag_id = function(tag_type, text_editor) 
 /**
 * CREATE FRAGMENT (using index tags)
 * Create the images (with the tags) at the beginning and end of the selected text
-* @return bool false | int tag_id
+* @param int key
+* @param object text_editor
+* @return bool|int tag_id
 */
 component_text_area.prototype.create_fragment = function(key, text_editor) {
 
