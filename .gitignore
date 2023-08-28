@@ -72,7 +72,7 @@ lib/vendor/*
 # !vendor/composer
 # !vendor/leafo
 # files
-# !lib/autoload.php
+!lib/autoload.php
 # !composer.json
 # !composer.lock
 composer.json
