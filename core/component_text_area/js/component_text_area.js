@@ -501,6 +501,11 @@ component_text_area.prototype.preprocess_text_to_save = async function(html_valu
 
 	const self = this
 
+	// html_text case. Do not apply post-processing
+		if (self.context.legacy_model==='component_html_text') {
+			return html_value
+		}
+
 	// clone text. Avoid interactions between html nodes
 		const cloned_text = document.createElement('div')
 			  cloned_text.insertAdjacentHTML('afterbegin', html_value);
@@ -612,7 +617,7 @@ component_text_area.prototype.preprocess_text_to_save = async function(html_valu
 				bogus_elements[i].remove()
 			}
 
-		//remove <br> and change for <p> </p>
+		// remove <br> and change for <p> </p>
 			const string_text = cloned_text.innerHTML
 			const reg_ex = /(<\/? ?br>)/gmi;
 			const clean_text_value	= string_text.replace(reg_ex,'</p><p>')
