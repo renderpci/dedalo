@@ -678,9 +678,9 @@ class component_input_text extends component_common {
 			($begins_two !== '["' && $ends_one !== ']') ||
 			($begins_one !== '[' && $ends_two !== '"]')
 			){
-			$value = empty($import_value)
-				? null
-				: [$import_value];
+			$value = !empty($import_value) || $import_value==='0'
+				? [$import_value]
+				: null;
 		}else{
 			// import value seems to be a JSON malformed.
 			// it begin [" or end with "]
