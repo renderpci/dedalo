@@ -515,7 +515,7 @@ class tool_import_dedalo_csv extends tool_common {
 					// created_by_userID
 					if ($column_map->model==='created_by_user' || $column_map->map_to===$created_by_user['tipo']) {
 
-						$component_tipo	= $created_by_user['tipo'];
+						// $component_tipo	= $created_by_user['tipo'];
 
 
 						// $options = new stdClass();
@@ -532,16 +532,16 @@ class tool_import_dedalo_csv extends tool_common {
 						// 		if (!isset($section_dato->relations)) {
 						// 			$section_dato->relations = [];
 						// 		}
-						// 		$temp_relations = array_filter($section_dato->relations, function($el) use($user_locator){
-						// 			return !isset($el->from_component_tipo) || $el->from_component_tipo!==$user_locator->from_component_tipo;
+						// 		$temp_relations = array_filter($section_dato->relations, function($el) use($ar_user_locator){
+						// 			return !isset($el->from_component_tipo) || $el->from_component_tipo!==$ar_user_locator[0]->from_component_tipo;
 						// 		});
 						// 		// add current locator
-						// 		$temp_relations[] = $user_locator;
+						// 		$temp_relations[] = $ar_user_locator[0];
 						// 		// update relations container
 						// 		$section_dato->relations = array_values($temp_relations);
 
 						// 	// Set direct property also
-						// 		$section_dato->created_by_userID = (int)$user_locator->section_id;
+						// 		$section_dato->created_by_userID = (int)$ar_user_locator[0]->section_id;
 
 						// 	// Save section
 						// 		$section->set_dato($section_dato);
@@ -551,7 +551,7 @@ class tool_import_dedalo_csv extends tool_common {
 
 						// Set direct property also
 							$section_dato = $section->get_dato();
-							$section_dato->created_by_userID = (int)$section_id;
+							$section_dato->created_by_userID = (int)$value;
 
 						// Save section
 							$section->set_dato($section_dato);
@@ -591,7 +591,7 @@ class tool_import_dedalo_csv extends tool_common {
 
 						// Set direct property also
 							$section_dato = $section->get_dato();
-							$section_dato->modified_by_userID = (int)$section_id;
+							$section_dato->modified_by_userID = (int)$value;
 
 						// Save section
 							$section->set_dato($section_dato);
