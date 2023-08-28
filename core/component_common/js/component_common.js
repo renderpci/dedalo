@@ -314,7 +314,7 @@ export const init_events_subscription = function(self) {
 				const perform_function 	= perform
 					? perform.function
 					: null
-				if(perform && perform_function && typeof self[perform_function]==='function'){
+				if(perform && perform_function && typeof self[perform_function]==='function') {
 
 					// the event will listen the id_base ( section_tipo +'_'+ section_id +'_'+ component_tipo)
 					// the id_base is built when the component is instantiated
