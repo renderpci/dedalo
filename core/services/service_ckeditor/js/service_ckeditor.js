@@ -455,7 +455,7 @@ export const service_ckeditor = function() {
 					const found	= path.find(el => el===node)
 					if (!found) {
 						self.toolbar_container.classList.add('hide')
-						document.body.removeEventListener("mouseup", fn_remove)
+						document.body.removeEventListener('mouseup', fn_remove)
 					}
 				}
 			}
@@ -1886,6 +1886,23 @@ export const service_ckeditor = function() {
 			}
 		});
 	}//end remove_reference
+
+
+
+	/**
+	* DESTROY
+	* @return void
+	*/
+	this.destroy = function() {
+
+		this.editor.destroy()
+		.catch( error => {
+			console.error( error );
+		});
+	}//end destroy
+
+
+
 }//end service_ckeditor
 
 
