@@ -3053,7 +3053,7 @@ class component_text_area extends component_common {
 					}
 				}
 
-				$response->result	= $value;
+				$response->result	= $dato_from_json;
 				$response->msg		= 'OK';
 
 				return $response;
