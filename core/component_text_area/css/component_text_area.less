@@ -112,6 +112,12 @@
 						min-height: 1.3rem;
 					}
 
+					// h1/h2. Note that ckeditor converts h1 to h2
+					h1, h2 {
+						font-size: 2em;
+						margin: 0.67em 0;
+					}
+
 					// images are inside span .dd_tag
 					.person,
 					.lang,
@@ -196,7 +202,8 @@
 					height: 33px;
 				}
 
-			.ck.ck-editor__editable_inline>:first-child {
+			// .ck.ck-editor__editable_inline>:first-child {
+			.ck.ck-editor__editable_inline>p:first-of-type {
 				 margin-top: unset;
 			}
 
