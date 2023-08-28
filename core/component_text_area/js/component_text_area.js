@@ -1277,29 +1277,23 @@ component_text_area.prototype.add_component_history_note = async function(option
 	},
 	"component_tipo": "rsc263"
  }
-* @param object|null datalist_item
+* @param string|null lang
 * @param int n_try = 1
 * 	Number of try (limited to 4)
 * @return bool
 */
-component_text_area.prototype.change_lang = async function(datalist_item, n_try=1) {
+component_text_area.prototype.change_lang = async function(lang, n_try=1) {
 
 	const self = this
 
-	// datalist_item check
-		if (!datalist_item) {
-			return false
-		}
-
 	// lang check
-		const lang = datalist_item.section_id
 		if (!lang || lang===self.lang) {
 			return false
 		}
 
 	// n_try check
 		if (n_try>4) {
-			console.error('Unable to sync lang after 4 attempts', datalist_item);
+			console.error('Unable to sync lang after 4 attempts', lang);
 			return false
 		}
 
@@ -1312,7 +1306,7 @@ component_text_area.prototype.change_lang = async function(datalist_item, n_try=
 
 		// try new attempt after some ms
 		setTimeout(async function(){
-			self.change_lang(datalist_item, n_try++)
+			self.change_lang(lang, n_try++)
 		}, 300)
 		return false
 	}

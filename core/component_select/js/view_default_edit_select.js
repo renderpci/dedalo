@@ -150,7 +150,7 @@ const get_content_value = (i, current_value, self) => {
 							el.value.section_id==parsed_value.section_id &&
 							el.value.section_tipo==parsed_value.section_tipo
 						)
-						event_manager.publish('set_lang_value_' + self.id_base , datalist_item)
+						event_manager.publish('set_lang_value_' + self.id_base , datalist_item.section_id)
 					}
 			})
 		// click event
@@ -183,11 +183,12 @@ const get_content_value = (i, current_value, self) => {
 				current_value.section_id===datalist_item.value.section_id &&
 				current_value.section_tipo===datalist_item.value.section_tipo
 				) {
+
 				option_node.selected = true
 
 				// set_lang_value publish event
-				if (datalist_item) {
-					event_manager.publish('set_lang_value_' + self.id_base , datalist_item)
+				if (datalist_item && datalist_item.section_id) {
+					event_manager.publish('set_lang_value_' + self.id_base, datalist_item.section_id)
 				}
 			}
 
