@@ -2091,6 +2091,23 @@ class section extends common {
 
 
 	/**
+	* SET_CREATED_BY_USERID
+	* Set section dato property 'created_by_userID'
+	* @return bool
+	*/
+	public function set_created_by_userID(int $value) : bool {
+
+		// force get dato
+		$this->get_dato();
+
+		$this->dato->created_by_userID = $value;
+
+		return true;
+	}//end set_created_by_userID
+
+
+
+	/**
 	* GET_MODIFIED_BY_USERID
 	* Get section dato property 'modified_by_userID'
 	* @return int|null $modified_by_userID
@@ -2104,6 +2121,23 @@ class section extends common {
 
 		return null;
 	}//end get_modified_by_userID
+
+
+
+	/**
+	* SET_MODIFIED_BY_USERID
+	* Set section dato property 'modified_by_userID'
+	* @return bool
+	*/
+	public function set_modified_by_userID(int $value) : bool {
+
+		// force get dato
+		$this->get_dato();
+
+		$this->dato->modified_by_userID = $value;
+
+		return true;
+	}//end set_modified_by_userID
 
 
 
