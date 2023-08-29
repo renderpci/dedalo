@@ -86,7 +86,7 @@ The component has 4 different modes:
 
 **Value:** `array` of `objects`, or `null`
 
-**Storage:** In database component number save his data as object with `lg-nolan` as property and values as array of objects.
+**Storage:** In database component date save his data as object with `lg-nolan` as property and values as array of objects.
 
 **Modes supported:** date | range | period | time
 
