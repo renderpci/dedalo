@@ -87,7 +87,7 @@ When the component is instantiated, the component get his data from his section 
 
 ### Translatable uris.
 
-Is possible to define the component as translatable, in those cases, the component will use the translation tools.
+Is possible to define the component as translatable, in those cases, the component will use the translation tools and his behavior will be the same as other translatable components.
 
 ```json
 {
