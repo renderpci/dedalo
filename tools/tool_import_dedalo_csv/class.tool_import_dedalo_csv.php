@@ -331,7 +331,7 @@ class tool_import_dedalo_csv extends tool_common {
 	*	time			: string
 	* }
 	*/
-	public static function import_dedalo_csv_file(string $section_tipo, array $ar_csv_data, bool $time_machine_save, array $ar_columns_map) : object {
+	public static function import_dedalo_csv_file_OLD(string $section_tipo, array $ar_csv_data, bool $time_machine_save, array $ar_columns_map) : object {
 		$start_time = start_time();
 
 		// Disable logging activity # !IMPORTANT
@@ -615,19 +615,7 @@ class tool_import_dedalo_csv extends tool_common {
 						}
 
 					// component
-						$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
-						$RecordObj_dd	= new RecordObj_dd($component_tipo);
-						$translate		= RecordObj_dd::get_translatable($component_tipo); //==='si' ? true : false;
-						$lang			= $translate===false ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
-						$component		= component_common::get_instance(
-							$model_name,
-							$component_tipo,
-							$section_id,
-							'list',
-							$lang,
-							$section_tipo,
-							false
-						);
+
 						$properties			= $RecordObj_dd->get_properties(true);
 						$with_lang_versions	= isset($properties->with_lang_versions) ? $properties->with_lang_versions : false;
 
@@ -738,6 +726,361 @@ class tool_import_dedalo_csv extends tool_common {
 				}
 
 			// SAVE . ROW SAVE . Save edited by components section once per row
+				$section->Save();
+
+			// Forces collection of any existing garbage cycles
+				$counter++;
+				if ($counter===100) {
+					$counter = 0;
+					gc_collect_cycles();
+				}
+		}//end foreach ($ar_csv_data as $key => $value)
+
+		// Restore logging activity # !IMPORTANT
+			logger_backend_activity::$enable_log = true;
+
+		// response
+			if (!empty($updated_rows) || !empty($created_rows)) {
+				$response->result		= true;
+				$response->msg			= 'Section: '.$section_tipo.'. Total records created:'.count($created_rows).' - updated:'.count($updated_rows).' - failed:'.count($failed_rows);
+				$response->created_rows	= $created_rows;
+				$response->updated_rows	= $updated_rows;
+				$response->failed_rows	= $failed_rows;
+			}
+			$response->time = exec_time_unit($start_time,'ms');
+
+
+		return (object)$response;
+	}//end import_dedalo_csv_file
+
+
+
+	/**
+	* IMPORT_DEDALO_CSV_FILE
+	* 	Import CSV array data to Dédalo
+	*
+	* @param string $section_tipo
+	* @param array $ar_csv_data
+	* @param bool $time_machine_save
+	* @param array $ar_columns_map
+	*
+	* @return object $response
+	* {
+	* 	result			: bool,
+	* 	msg				: string
+	*	created_rows	: array
+	*	updated_rows	: array
+	*	failed_rows		: array;
+	*	time			: string
+	* }
+	*/
+	public static function import_dedalo_csv_file(string $section_tipo, array $ar_csv_data, bool $time_machine_save, array $ar_columns_map) : object {
+		$start_time = start_time();
+
+		// Disable logging activity (!) IMPORTANT
+			logger_backend_activity::$enable_log = false;
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed';
+				$response->errors	= [];
+
+		// csv_map
+			$csv_map = $ar_columns_map;
+			// Verify csv_map
+			$verify_csv_map = self::verify_csv_map($csv_map, $section_tipo);
+			if ($verify_csv_map->result!==true) {
+
+				// Restore logging activity # !IMPORTANT
+					logger_backend_activity::$enable_log = true;
+
+				$response->result	= false;
+				$response->msg		= 'Error. Current CSV file first row (headers) is invalid (1): '.$verify_csv_map->msg;
+
+				return $response;
+			}
+
+		// section_id key column
+			$columns		= array_column($csv_map, 'model');
+			$section_id_key	= array_search('component_section_id', $columns);
+
+		// Fixed private section tipos
+			$modified_section_tipos = section::get_modified_section_tipos();
+				$created_by_user	= array_find($modified_section_tipos, function($el){ return $el['name']==='created_by_user'; }); 	// array('tipo'=>'dd200', 'model'=>'component_select');
+				$created_date		= array_find($modified_section_tipos, function($el){ return $el['name']==='created_date'; }); 	// array('tipo'=>'dd199', 'model'=>'component_date');
+				$modified_by_user	= array_find($modified_section_tipos, function($el){ return $el['name']==='modified_by_user'; }); // array('tipo'=>'dd197', 'model'=>'component_select');
+				$modified_date		= array_find($modified_section_tipos, function($el){ return $el['name']==='modified_date'; }); 	// array('tipo'=>'dd201', 'model'=>'component_date');
+
+		// rows info statistics
+			$created_rows	= [];
+			$updated_rows	= [];
+			$failed_rows	= [];
+
+		$counter		= 0;
+		$csv_head_row	= $ar_csv_data[0];
+		foreach ($ar_csv_data as $rkey => $columns) {
+
+			// header row
+				if($rkey===0) continue; // Skip first row, the header row
+
+			// section_id (cast to int the section_id of the row)
+				$section_id = !empty($columns[$section_id_key]) ? (int)$columns[$section_id_key] : null;
+				if (empty($section_id)) {
+					$error = "ERROR on get MANDATORY section_id. SKIPPED record (section_tipo: $section_tipo - rkey: $rkey - section_id: $section_id)";
+					debug_log(__METHOD__
+						." $error". PHP_EOL
+						.' section_id: '. to_string($section_id),
+						logger::ERROR
+					);
+					$response->errors[] = $error;
+					continue;
+				}
+
+			// section. Always force create/re-use section
+				$section = section::get_instance(
+					$section_id,
+					$section_tipo,
+					'list',
+					true // set cache always to true important (!)
+				);
+				$create_record = $section->forced_create_record();
+
+			// Iterate fields/columns
+				foreach ($columns as $key => $value) {
+
+					$column_map = $csv_map[$key];
+					// column_map sample:
+						// {
+						// 	"tipo": "dd197",
+						// 	"label": "Modified by user",
+						// 	"model": "component_select",
+						// 	"column_name": "dd197",
+						// 	"checked": true,
+						// 	"map_to": "dd197"
+						// }
+
+					// excluded columns
+						// by name
+						if($column_map->model === 'section_id' || $column_map->model === 'component_section_id') {
+							continue; # Skip section_id value column
+						}
+						// by checked property
+						if(!isset($column_map->checked) || $column_map->checked=== false || !isset($column_map->map_to)) {
+							continue;
+						}
+						// by head comparison. Check if the column_map is correct with the current column in the csv file (match needed)
+						$current_csv_head_column = $csv_head_row[$key];
+						if($current_csv_head_column !== $column_map->tipo) {
+							continue;
+						}
+
+					// value general fixes
+						// Prevent wrong final return problems
+						$value = trim($value);
+						// Remove delimiter escape (U+003B for ;)
+						$value = str_replace('U+003B', ';', $value);
+
+					// component_tipo
+						$component_tipo	= $column_map->map_to;
+						// check if the component_tipo is empty, forgotten case.
+						if (empty($component_tipo)) {
+							debug_log(__METHOD__
+								. " Error: !!!!!!!! ignored empty component_tipo on csv_map key: $key ". PHP_EOL
+								. " csv_map: ".to_string($csv_map)
+								, logger::ERROR
+							);
+							continue;
+						}
+
+					// component base
+						$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+						$RecordObj_dd	= new RecordObj_dd($component_tipo);
+						$translate		= RecordObj_dd::get_translatable($component_tipo); //==='si' ? true : false;
+						$lang			= $translate===false ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+						$component		= component_common::get_instance(
+							$model_name,
+							$component_tipo,
+							$section_id,
+							'list',
+							$lang,
+							$section_tipo,
+							// false // cache
+						);
+
+						// with_lang_versions
+							$properties			= $RecordObj_dd->get_properties(true);
+							$with_lang_versions	= isset($properties->with_lang_versions)
+								? $properties->with_lang_versions
+								: false;
+
+						// configure component
+							// DIFFUSION_INFO
+							// Note that this process can be very long if there are many inverse locators in this section
+							// To optimize save process in scripts of importation, you can disable this option if is not really necessary
+							$component->update_diffusion_info_propagate_changes = false;
+							// SAVE_TO_DATABASE
+							// Set component to save data but tells section that don save updated section to DDBB for now
+							// No component time machine data will be saved when section saves later
+							// (based on checkbox value 'Save time machine history on import')
+							$component->save_to_database = ((bool)$time_machine_save===true)
+								? true
+								: false;
+
+						// conform imported value with every component rules.
+							$conform_import_data_response = $component->conform_import_data($value, $component_tipo);
+							// if the component has errors, include it into failed rows
+							if(!empty($conform_import_data_response->errors)){
+								foreach ($conform_import_data_response->errors as $current_error) {
+									$failed_rows[] = $current_error;
+								}
+								continue 2; // go to next row
+							}
+
+						// conformed_value. value conformed replacement
+							$conformed_value = $conform_import_data_response->result;
+								// dump($value, ' value ++ '.to_string($component_tipo).' - '.$model_name);
+								// dump($conformed_value, ' conformed_value ++ '.to_string($component_tipo).' - '.$model_name);
+
+					switch (true) {
+
+						// created_date
+						case ($component_tipo===$created_date['tipo']): // dd199
+						// modified_date. Place it at end columns to prevent overwrite
+						case ($component_tipo===$modified_date['tipo']): // dd201
+
+							// section set_created_date add
+								if (isset($conformed_value[0]) && isset($conformed_value[0]->start)) {
+									$dd_date	= new dd_date($conformed_value[0]->start);
+									$timestamp	= $dd_date->get_dd_timestamp();
+									// set value to section
+									if ($component_tipo===$created_date['tipo']) {
+										$component->get_my_section()->set_created_date($timestamp);
+									}elseif ($component_tipo===$modified_date['tipo']) {
+										$component->get_my_section()->set_modified_date($timestamp);
+									}
+								}
+
+							// save_modified. Only for modified_date, set section save_modified to false
+								if ($component_tipo===$modified_date['tipo']) {
+									$component->get_my_section()->save_modified = false; // (!) important set to false
+								}
+
+							// component save
+								$component->set_dato($conformed_value);
+								$component->Save();
+							break;
+
+						// created_by_user
+						case ($component_tipo===$created_by_user['tipo']): // dd200
+						// modified_by_user. Place it at end columns to prevent overwrite
+						case ($component_tipo===$modified_by_user['tipo']): // dd197
+
+							// section set_created_by_userID/set_modified_by_userID add
+								if (isset($conformed_value[0]) && isset($conformed_value[0]->section_id)) {
+									// set value to section
+									if ($component_tipo===$created_by_user['tipo']) {
+										$component->get_my_section()->set_created_by_userID(
+											(int)$conformed_value[0]->section_id
+										);
+									}elseif ($component_tipo===$modified_by_user['tipo']) {
+										$component->get_my_section()->set_modified_by_userID(
+											(int)$conformed_value[0]->section_id
+										);
+									}
+								}
+
+							// save_modified. Only for modified_by_user, set section save_modified to false
+								if ($component_tipo===$modified_by_user['tipo']) {
+									$component->get_my_section()->save_modified = false; // (!) important set to false
+								}
+
+							// component save
+								$component->set_dato($conformed_value);
+								$component->Save();
+							break;
+
+						default:
+
+							// Elements 'translatable' can be formatted as JSON values like {"lg-eng":"My value","lg-spa":"Mi valor"}
+							if (($translate===true || $with_lang_versions===true) && is_object($conformed_value)) {
+
+								debug_log(__METHOD__
+									. " Parsing multi-language value [$component_tipo - $section_tipo - $section_id]: " .PHP_EOL
+									. ' value:' . to_string($conformed_value)
+									, logger::DEBUG
+								);
+								foreach ($conformed_value as $v_key => $v_value) {
+
+									if (strpos($v_key, 'lg-')===0) {
+										$component->set_lang( $v_key );
+										$component->set_dato( $v_value );
+										$component->Save();
+									}else{
+										debug_log(__METHOD__
+											. " ERROR ON IMPORT VALUE FROM $model_name [$component_tipo]"
+											. ' value:' . to_string($conformed_value)
+											, logger::ERROR
+										);
+									}
+								}
+							}else{
+
+								// check every locator to be sure is valid!!
+									if( !empty($conformed_value) &&
+										in_array($model_name, component_relation_common::get_components_with_relations())
+										) {
+										foreach ((array)$conformed_value as $current_locator) {
+											if (empty($current_locator->section_tipo) || empty($current_locator->section_id)) {
+												$error = empty($current_locator->section_id)
+													? 'section_id is not valid'
+													: 'section_tipo is not valid';
+												$failed = new stdClass();
+													$failed->section_id		= $section_id;
+													$failed->data			= $current_locator;
+													$failed->component_tipo	= $component->get_tipo();
+													$failed->msg			= 'IGNORED: malformed locator '. $error;
+												$failed_rows[] = $failed;
+												continue 3;
+											}
+										}
+									}//end if(!empty($conformed_value))
+
+								// Nolan optional key check
+									if (is_object($conformed_value) && property_exists($conformed_value, 'lg-nolan')) {
+										$nolan				= 'lg-nolan';
+										$conformed_value	= $conformed_value->{$nolan};
+									}
+
+								// set dato
+									if ( is_object($conformed_value) &&
+										 property_exists($conformed_value, 'dataframe') &&
+										!property_exists($conformed_value, 'dato')) {
+										// Element without dato. Only the dataframe is saved
+									}else{
+										// Always set dato
+										$component->set_dato( $conformed_value );
+									}
+
+								// Save of course
+								// Note that $component->save_to_database = false, avoid real save.
+									$component->Save();
+							}
+							break;
+					}//end switch (true)
+				}//end foreach ($columns as $key => $value)
+
+			// action add for statistics
+				if($create_record===true) {
+					$created_rows[] = $section_id;
+				}else{
+					$updated_rows[] = $section_id;
+				}
+
+			// save. row save . Save edited by components section once per row
+			// note that if $component->save_to_database = false, this action save
+			// whole section and components value, but not generates time_machine record
+			// for every component (based on checkbox value 'Save time machine history on import')
 				$section->Save();
 
 			// Forces collection of any existing garbage cycles
