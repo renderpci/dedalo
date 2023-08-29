@@ -174,6 +174,11 @@ const get_content_data = async function(self) {
 							const result_container = current_file.result_container || null
 							if(result_container) {
 
+								// clean container
+									while (result_container.firstChild) {
+										result_container.removeChild(result_container.firstChild)
+									}
+
 								const class_button_response = current_rensponse.result
 									? 'success'
 									: 'danger'
@@ -565,7 +570,7 @@ const render_file_info = function(self, item) {
 			parent			: fragment
 		})
 
-	// result
+	// result_container
 		const result_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'result',
