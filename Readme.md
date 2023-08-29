@@ -13,7 +13,7 @@
 | oh | production | 100% | 100% | 100% | All definitions are ready |
 | numisdata | rc | 90% | 95% | 100% | All components are ready but need more testing, all tools ready. |
 | isad | production | 100% | 100% | 100% | All definitions are ready |
-| ich | beta | 80% | 90% | 90%  | All definitions in ich1 are done, ich100 will need more work, state components need to be rebuilt |
+| ich | rc | 90% | 100% | 90%  | All definitions in ich1 are done, state components need to be rebuilt |
 | dmm | alpha | 0% | 0% | 0% |  |
 | mdcat | alpha | 0% | 0% |0%  |  |
 | tch | alpha | 50% | 25% |25%  |  |
@@ -70,7 +70,7 @@ Here are some projects that use Dédalo to manage their Cultural Heritage and/or
 
 - PHP 8.1+
 - Apache 2.4.6+
-- Postgres 12.1+
+- Postgres 14.2+
 - MySQL 5.6+ (NOT REQUIRED unless you want use Dédalo for publication).
 
 ### 4.2. Libraries required for Dédalo

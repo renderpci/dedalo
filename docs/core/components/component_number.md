@@ -74,54 +74,7 @@ By default import model use the JSON format of his value, as the component do no
 [104,-75.35]
 ```
 
-As Dédalo import use a csv without format, JSON data need to be stringified in this way:
-
-The table to import
-
-| section_id    | numisdata133     |
-| ------------  | :--------------: |
-| 1             | \[104,-75.35]    |
-
-Will be encoded in csv format as:
-
-```csv
-section_id;rsc86
-1;[104,-75.35]
-```
-
-Alternative forms to import:
-
-1. Plain number
-
-    ```json
-    33.85
-    ```
-
-    Example:
-
-    section_id   | numisdata133
-    ------------ | :--------------:
-    1            | 33.85
-
-    In this case the import process assume this data as the full data, if exists previous data it will be replace with a new array with the import value.
-
-    If the data in database is:
-
-    ```json
-    {
-        "lg-nolan" : [104,-75.35]
-    }
-    ```
-
-    after import plain number, the final data will be:
-
-     ```json
-    {
-        "lg-nolan" : [33.85]
-    }
-    ```
-
-    Plain number is easy to import, but it is limited in the data control.
+See the full number import definition [here](../importing_data.md#numbers).
 
 ## Properties
 

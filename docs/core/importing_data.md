@@ -961,3 +961,70 @@ It's possible remove the `type` and `from_component_tipo` properties because the
             This possibility is only available when the component point to 1 section. Multiple sections are not allowed to import in this way.
 
         In this case the import process will ask to component in the server to get the section_tipo to be used, if the component has multiple sections it will fail to import, to avoid errors and inconsistences.
+
+---
+
+### URI
+
+By default import model use the JSON format of his value, as the component do not use languages the main format to import is the array of dd_iri objects.
+
+```json
+[{
+   "iri" : "https://dedalo.dev",
+   "title": "Dédalo website"
+}]
+```
+
+As Dédalo import use a csv without format, JSON data need to be stringified in this way:
+
+The table to import
+
+| section_id    | tch442  |
+| ------------  | ------ |
+| 1             | \[{"iri":"https://dedalo.dev","title":"Dédalo website"}]|
+
+Will be encoded in csv format as:
+
+```text
+section_id;tch56
+1;"[{""iri"":""https://dedalo.dev"",""title"":""Dédalo website""}]
+```
+
+#### Alternative formats to import URI's
+
+1. Flat string:
+
+    ```text
+    https://dedalo.dev
+    ```
+
+    | section_id    | tch442  |
+    | ------------  | ------ |
+    | 1             | https://dedalo.dev |
+
+    will be parse as:
+
+    ```json
+    [
+        {"iri":"https://dedalo.dev"}
+    ]
+    ```
+
+1. Array of strings:
+
+    ```text
+    ["https://dedalo.dev","https://dedalo.dev/docs"]
+    ```
+
+    | section_id    | tch442  |
+    | ------------  | ------ |
+    | 1             |  \["https://dedalo.dev","https://dedalo.dev/docs"]
+
+    will be parse as:
+
+    ```json
+    [
+        {"iri":"https://dedalo.dev"},
+        {"iri":"https://dedalo.dev/docs"}
+    ]
+    ```
