@@ -639,6 +639,11 @@ class section extends common {
 				// component dato already exists in section object. Only select it
 					$component_global_dato = $dato->components->{$component_tipo};
 
+				// component dato property
+					if (!isset($component_global_dato->dato)) {
+						$component_global_dato->dato = new stdClass();
+					}
+
 			}else{
 
 				// component dato NOT exists in section object. We build a new one with current info
