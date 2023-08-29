@@ -88,70 +88,7 @@ By default import model use the JSON format of his data, an object with lang pro
 }
 ```
 
-As Dédalo import use a csv without format, JSON data need to be stringified in this way:
-
-The table to import
-
-| section_id    | oh14                                              |
-| ------------  | :----------------------------------------------:  |
-| 1             | {"lg-spa": \["mi dato para importar","Otro dato"]} |
-
-Will be encoded in csv format as:
-
-```csv
-section_id;rsc86
-1;"{""lg-spa"":[""mi dato para importar"",""Otro dato""]}"
-```
-
-Alternative forms to import:
-
-1. An array of string values
-
-    ```json
-    ["mi dato para importar", "Otro dato"]
-    ```
-
-    In this case the import process assume the Dédalo data lang defined by the user in menu and will save into this lang, or if the component is non translatable will use `lg-nolan` to save import data.
-
-    Example:
-
-    section_id | oh14
-    --- | ---
-    1 | \["mi dato para importar","Otro dato"]
-
-2. Plain text
-
-    ```json
-    new data to import
-    ```
-
-    Example:
-
-    section_id | oh14
-    --- | ---
-    1 | new data to import
-
-    In this case the import process assume the Dédalo data lang defined by the user in menu and will import the value as unique value in the array, if exists previous data it will be replace with a new array with the import value.
-
-    If the data in database is:
-
-    ```json
-    {
-        "lg-spa" : ["mi dato importado", "Otro dato"],
-        "lg-eng" : ["my imported data", "Other data"]
-    }
-    ```
-
-    and the Dédalo data lang is set to English, after import plain text, the final data will be:
-
-     ```json
-    {
-        "lg-spa" : ["mi dato importado", "Otro dato"],
-        "lg-eng" : ["new data to import"]
-    }
-    ```
-
-    Plain text is easy to import, but it is limited in the data control. take account of the language set in the menu.
+See the full text import definition [here](../importing_data.md#plain-text).
 
 ## Properties
 
