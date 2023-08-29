@@ -1775,7 +1775,6 @@ class component_date extends component_common {
 				$value = null;
 			}
 
-
 		$response->result	= $value;
 		$response->msg		= 'OK';
 
