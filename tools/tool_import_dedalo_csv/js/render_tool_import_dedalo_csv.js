@@ -12,7 +12,7 @@
 
 
 /**
-* RENDER_TOOL_import_dedalo_csv
+* RENDER_TOOL_IMPORT_DEDALO_CSV
 * Manages the component's logic and appearance in client side
 */
 export const render_tool_import_dedalo_csv = function() {
@@ -105,16 +105,16 @@ const get_content_data = async function(self) {
 	// user_msg_container
 		const user_msg_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'user_msg_container',
-			parent 			: fragment
+			class_name		: 'user_msg_container',
+			parent			: fragment
 		})
 		self.user_msg_container = user_msg_container
 
 	// files_list
 		const files_list = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'files_list',
-			parent 			: fragment
+			class_name		: 'files_list',
+			parent			: fragment
 		})
 		const csv_files_list_length = self.csv_files_list.length
 		for (let i = 0; i < csv_files_list_length; i++) {
@@ -195,13 +195,13 @@ const get_content_data = async function(self) {
 
 								const result_info_container = ui.create_dom_element({
 									element_type	: 'div',
-									class_name 		: 'result_info_container',
+									class_name		: 'result_info_container',
 									parent			: result_container
 								})
 
 								const msg_container = ui.create_dom_element({
 									element_type	: 'div',
-									class_name 		: 'user_msg_container',
+									class_name		: 'user_msg_container',
 									inner_html		: current_rensponse.msg,
 									parent			: result_info_container
 								})
@@ -215,7 +215,7 @@ const get_content_data = async function(self) {
 
 										const header = ui.create_dom_element({
 											element_type	: 'div',
-											class_name 		: 'header',
+											class_name		: 'header',
 											parent			: result_info_container
 										})
 										// const created_nodes = current_rensponse.created_rows.map(el => '<span>'+el+',</span>')
@@ -231,14 +231,14 @@ const get_content_data = async function(self) {
 
 												const failed_id = ui.create_dom_element({
 													element_type	: 'div',
-													class_name 		: 'failed_container error',
+													class_name		: 'failed_container error',
 													inner_html		: failed.section_id +' | '+failed.component_tipo + ' | ' +failed.msg,
 													parent			: result_info_container
 												})
 
 												const failed_data= ui.create_dom_element({
 													element_type	: 'div',
-													class_name 		: 'failed_data_container error',
+													class_name		: 'failed_data_container error',
 													inner_html		: JSON.stringify( failed.data ),
 													parent			: result_info_container
 												})
@@ -476,7 +476,7 @@ const render_file_info = function(self, item) {
 				const valid_section_tipo = validate_tipo(item.section_tipo)
 				if (!valid_section_tipo) {
 					section_warn.classList.remove('hide')
-					section_warn.innerHTML = 'Autodetected file section tipo "'+section_tipo+'" appears to be invalid.'
+					section_warn.innerHTML = 'Auto-detected file section tipo "'+section_tipo+'" appears to be invalid.'
 				}else{
 					section_warn.classList.add('hide')
 					// render again columns_maper
@@ -498,7 +498,9 @@ const render_file_info = function(self, item) {
 				class_name		: 'button delete',
 				parent			: file_line
 			})
-			icon_delete.addEventListener("click", function(){
+			icon_delete.addEventListener('click', function(e){
+				e.stopPropagation()
+
 				if(confirm(get_label.sure || 'Sure?')) {
 					// remove file
 					self.remove_file(item)
@@ -709,14 +711,14 @@ const render_columns_mapper = async function(self, item) {
 					parent			: body
 				})
 
-			// // original position
-			// 	const position = ui.create_dom_element({
-			// 		element_type	: 'div',
-			// 		class_name		: 'position',
-			// 		// text_content	: i,
-			// 		parent			: line
-			// 	})
-			// 	position.textContent = i
+			// original position
+				// 	const position = ui.create_dom_element({
+				// 		element_type	: 'div',
+				// 		class_name		: 'position',
+				// 		// text_content	: i,
+				// 		parent			: line
+				// 	})
+				// 	position.textContent = i
 
 			// column_name (original in csv document)
 				ui.create_dom_element({
@@ -806,7 +808,7 @@ const render_columns_mapper = async function(self, item) {
 					// in any case the column_name will be the csv column name as user has specify
 					ar_columns_map[i].column_name	= column_name
 				}
-				target_select.addEventListener("change", function(e){
+				target_select.addEventListener('change', function(e){
 					// checkbox_file_selection update
 					if (e.target.value && e.target.value.length>0) {
 						checkbox_file_selection.checked = true
@@ -815,10 +817,9 @@ const render_columns_mapper = async function(self, item) {
 					}
 
 					// update ar_columns_map object
-					ar_columns_map[i].checked		= checkbox_file_selection.checked
-					ar_columns_map[i].map_to		= e.target.value
-					ar_columns_map[i].model			= e.target.options[e.target.selectedIndex].model
-
+					ar_columns_map[i].checked	= checkbox_file_selection.checked
+					ar_columns_map[i].map_to	= e.target.value
+					ar_columns_map[i].model		= e.target.options[e.target.selectedIndex].model
 				})
 
 			// sample_data (search non empty values)
