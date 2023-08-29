@@ -628,29 +628,25 @@ class component_iri extends component_common {
 				$response->msg		= 'Error. Request failed';
 
 
-		// $normalize_value function to be used in any case, $import_value is an array of objects (iri format) or array of strings or string
-		// values need to be begin with the protocol http or https
+		// $normalize_value function to be used in any case, $import_value is an array of objects (IRI format) or array of strings or string
+		// values need to be begin with the protocol HTTP or https
 			$normalize_value = function(string $text_value) : bool {
 
 				$begins_http	= substr($text_value, 0, 7);
 				$begins_https	= substr($text_value, 0, 8);
 
-				if($begins_http === 'http://' || $begins_https === 'https://'){
+				if($begins_http === 'http://' || $begins_https === 'https://') {
 
 					return true;
-
-				}else{
-
-					return false;
 				}
 
-				return $value;
+				return false;
 			};
 
 
 		// object | array case
 			// Check if is a JSON stringified. Is yes, decode
-			// if data is a object | array it will be the Dédalo format and check if the iri is ok.
+			// if data is a object | array it will be the Dédalo format and check if the IRI is OK.
 			if(json_handler::is_json($import_value)){
 
 				// try to JSON decode (null on not decode)
@@ -733,7 +729,7 @@ class component_iri extends component_common {
 					}
 				}
 
-				$response->result	= $value;
+				$response->result	= $value ?? null;
 				$response->msg		= 'OK';
 
 				return $response;

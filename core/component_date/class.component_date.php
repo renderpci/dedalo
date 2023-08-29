@@ -1752,6 +1752,28 @@ class component_date extends component_common {
 
 				foreach ($value as $current_date) {
 					foreach ($current_date as $key => $current_dd_date) {
+
+						// don't check null values
+							if (!is_null($current_dd_date)) {
+								continue;
+							}
+
+						// expected object only
+							if (!is_object($current_dd_date)) {
+								debug_log(__METHOD__
+									. " Wrong var type current_dd_date" . PHP_EOL
+									. ' type: ' . gettype($current_dd_date) . PHP_EOL
+									. ' current_dd_date: ' . to_string($current_dd_date) . PHP_EOL
+									. ' import_value: ' . to_string($import_value) . PHP_EOL
+									. ' column_name: ' . to_string($column_name) . PHP_EOL
+									. ' tipo: ' . $this->tipo . PHP_EOL
+									. ' section_tipo: ' . $this->section_tipo . PHP_EOL
+									. ' model: ' . get_class($this)
+									, logger::ERROR
+								);
+								continue;
+							}
+
 						$dd_date = new dd_date($current_dd_date, true);
 
 						// errors check
@@ -1774,7 +1796,6 @@ class component_date extends component_common {
 			if (!is_null($value) && empty($value)) {
 				$value = null;
 			}
-
 
 		$response->result	= $value;
 		$response->msg		= 'OK';

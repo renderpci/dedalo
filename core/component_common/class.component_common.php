@@ -709,9 +709,12 @@ abstract class component_common extends common {
 					// nothing to do here
 				}else{
 					debug_log(__METHOD__ . ' '
-						. '[SET] RECEIVED DATO IS NOT AS EXPECTED TYPE array|null. type: '. gettype($dato) .' - dato: '. to_string($dato) . PHP_EOL
+						. '[SET] RECEIVED DATO TO SET, IS NOT AS EXPECTED TYPE array|null' . PHP_EOL
+						. 'type: '. gettype($dato) .PHP_EOL
+						. 'dato: '. to_string($dato) .PHP_EOL
 						. 'model: '. get_called_class() .PHP_EOL
 						. 'tipo: ' . $this->tipo . ' - section_tipo: ' . $this->section_tipo . ' - section_id: ' . $this->section_id . PHP_EOL
+						. 'mode: '. $this->mode .PHP_EOL
 						. 'table: '. $matrix_table
 						, logger::ERROR
 					);

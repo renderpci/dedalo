@@ -12,7 +12,7 @@
 
 
 /**
-* RENDER_TOOL_import_dedalo_csv
+* RENDER_TOOL_IMPORT_DEDALO_CSV
 * Manages the component's logic and appearance in client side
 */
 export const render_tool_import_dedalo_csv = function() {
@@ -105,16 +105,16 @@ const get_content_data = async function(self) {
 	// user_msg_container
 		const user_msg_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'user_msg_container',
-			parent 			: fragment
+			class_name		: 'user_msg_container',
+			parent			: fragment
 		})
 		self.user_msg_container = user_msg_container
 
 	// files_list
 		const files_list = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'files_list',
-			parent 			: fragment
+			class_name		: 'files_list',
+			parent			: fragment
 		})
 		const csv_files_list_length = self.csv_files_list.length
 		for (let i = 0; i < csv_files_list_length; i++) {
@@ -133,11 +133,12 @@ const get_content_data = async function(self) {
 		// import_button
 			const import_button = ui.create_dom_element({
 				element_type	: 'button',
-				class_name		: 'warning import_button',
+				class_name		: 'warning import_button csv',
 				inner_html		: get_label.import || 'Import',
 				parent			: submit_container
 			})
-			import_button.addEventListener('click', function(){
+			import_button.addEventListener('click', function(e){
+				e.stopPropagation()
 
 				// selected files
 					const selected_files = self.csv_files_list.filter(el => el.checked===true)
@@ -145,10 +146,15 @@ const get_content_data = async function(self) {
 						alert( get_label.select_a_file || 'Select a file');
 						return
 					}
+
 				// loading
-					content_data.classList.add('loading')
-					api_response.classList.add('loading')
-					api_response.classList.remove('hide')
+					[content_data, api_response].map((el)=>{
+						el.classList.add('loading')
+						if (el.classList.contains('hide')) {
+							el.classList.remove('hide')
+						}
+					})
+
 				// array of file names
 					const files = selected_files.map(el => {
 						return {
@@ -195,13 +201,13 @@ const get_content_data = async function(self) {
 
 								const result_info_container = ui.create_dom_element({
 									element_type	: 'div',
-									class_name 		: 'result_info_container',
+									class_name		: 'result_info_container',
 									parent			: result_container
 								})
 
 								const msg_container = ui.create_dom_element({
 									element_type	: 'div',
-									class_name 		: 'user_msg_container',
+									class_name		: 'user_msg_container',
 									inner_html		: current_rensponse.msg,
 									parent			: result_info_container
 								})
@@ -215,7 +221,7 @@ const get_content_data = async function(self) {
 
 										const header = ui.create_dom_element({
 											element_type	: 'div',
-											class_name 		: 'header',
+											class_name		: 'header',
 											parent			: result_info_container
 										})
 										// const created_nodes = current_rensponse.created_rows.map(el => '<span>'+el+',</span>')
@@ -231,135 +237,150 @@ const get_content_data = async function(self) {
 
 												const failed_id = ui.create_dom_element({
 													element_type	: 'div',
-													class_name 		: 'failed_container error',
+													class_name		: 'failed_container error',
 													inner_html		: failed.section_id +' | '+failed.component_tipo + ' | ' +failed.msg,
 													parent			: result_info_container
 												})
 
 												const failed_data= ui.create_dom_element({
 													element_type	: 'div',
-													class_name 		: 'failed_data_container error',
+													class_name		: 'failed_data_container error',
 													inner_html		: JSON.stringify( failed.data ),
 													parent			: result_info_container
 												})
 											}
 									}//end if(current_rensponse.failed_rows.length>0)
 
-									if(current_rensponse.created_rows.length>0) {
+									// created_rows info
+										if(current_rensponse.created_rows.length>0) {
 
-										const header = ui.create_dom_element({
-											element_type	: 'div',
-											class_name 		: 'header',
-											parent			: result_info_container
-										})
-
-										// const created_nodes = current_rensponse.created_rows.map(el => '<span>'+el+',</span>')
-											const created_label = ui.create_dom_element({
-												element_type	: 'div',
-												class_name 		: 'label',
-												inner_html		: get_label.created || 'Created' + ':',
-												parent			: header
-											})
-
-											const copy_to_find_button = ui.create_dom_element({
-												element_type	: 'button',
-												class_name		: 'warning tool_update_cache',
-												inner_html		: get_label.copy_to_find || 'copy to find',
-												parent			: header
-											})
-
-											const copy_as_column_button = ui.create_dom_element({
-												element_type	: 'button',
-												class_name		: 'warning tool_update_cache',
-												inner_html		: get_label.copy_as_column || 'copy as column',
-												parent			: header
-											})
-
-
-										const created_rows = ui.create_dom_element({
-											element_type	: 'div',
-											class_name 		: 'section_id_container',
-											inner_html		: current_rensponse.created_rows.join('<br>'),
-											parent			: result_info_container
-										})
-
-
-										copy_to_find_button.addEventListener( 'click', () => {
-											navigator.clipboard.writeText(current_rensponse.created_rows.join(','))
-												.then(() => {
-													alert('Text copied to clipboard');
+											// header
+												const header = ui.create_dom_element({
+													element_type	: 'div',
+													class_name		: 'header',
+													parent			: result_info_container
 												})
-												.catch(err => {
-													alert('Error in copying text: ', err);
-												});
-										})
-										copy_as_column_button.addEventListener( 'click', () => {
-											navigator.clipboard.writeText(current_rensponse.created_rows.join('\n'))
-												.then(() => {
-													alert('Text copied to clipboard');
+
+											// created_label
+												const created_label = ui.create_dom_element({
+													element_type	: 'div',
+													class_name		: 'label',
+													inner_html		: get_label.created || 'Created' + ':',
+													parent			: header
 												})
-												.catch(err => {
-													alert('Error in copying text: ', err);
-												});
-										})
-									}//end if(current_rensponse.created_rows.length>0)
 
-									if(current_rensponse.updated_rows.length>0) {
-										// const updated_nodes = current_rensponse.updated_rows.map(el => '<span>'+el+',</span>')
-
-										const header = ui.create_dom_element({
-											element_type	: 'div',
-											class_name 		: 'header',
-											parent			: result_info_container
-										})
-
-											const updated_label = ui.create_dom_element({
-												element_type	: 'div',
-												class_name 		: 'label',
-												inner_html		: get_label.updated || 'Updated' + ':',
-												parent			: header
-											})
-
-											const copy_to_find_button = ui.create_dom_element({
-												element_type	: 'button',
-												class_name		: 'warning tool_update_cache',
-												inner_html		: get_label.copy_to_find || 'copy to find',
-												parent			: header
-											})
-
-											const copy_as_column_button = ui.create_dom_element({
-												element_type	: 'button',
-												class_name		: 'warning tool_update_cache',
-												inner_html		: get_label.copy_as_column || 'copy as column',
-												parent			: header
-											})
-
-										const updated_rows = ui.create_dom_element({
-											element_type	: 'div',
-											class_name 		: 'section_id_container',
-											inner_html		: current_rensponse.updated_rows.join('<br>'),
-											parent			: result_info_container
-										})
-
-										copy_to_find_button.addEventListener( 'click', () => {
-											navigator.clipboard.writeText(current_rensponse.updated_rows.join(','))
-												.then(() => {
-													alert('Text copied to clipboard');
+											// copy_to_find_button
+												const copy_to_find_button = ui.create_dom_element({
+													element_type	: 'button',
+													class_name		: 'warning copy_button copy',
+													inner_html		: get_label.copy_to_find || 'Copy as comma separated',
+													parent			: header
 												})
-												.catch(err => {
-													alert('Error in copying text: ', err);
-												});
-										})
-										copy_as_column_button.addEventListener( 'click', () => {
-											navigator.clipboard.writeText(current_rensponse.updated_rows.join('\n'))
-												.then(() => {
-													alert('Text copied to clipboard');
+												copy_to_find_button.addEventListener( 'click', (e) => {
+													e.stopPropagation()
+
+													navigator.clipboard.writeText(current_rensponse.created_rows.join(','))
+													.then(() => {
+														alert('Text copied to clipboard');
+													})
+													.catch(err => {
+														alert('Error in copying text: ', err);
+													});
 												})
-												.catch(err => {
-													alert('Error in copying text: ', err);
-												});
-										})
-									}//end f(current_rensponse.updated_rows.length>0)
+
+											// copy_as_column_button
+												const copy_as_column_button = ui.create_dom_element({
+													element_type	: 'button',
+													class_name		: 'warning copy_button copy',
+													inner_html		: get_label.copy_as_column || 'Copy as column',
+													parent			: header
+												})
+												copy_as_column_button.addEventListener( 'click', (e) => {
+													e.stopPropagation()
+
+													navigator.clipboard.writeText(current_rensponse.created_rows.join('\n'))
+													.then(() => {
+														alert('Text copied to clipboard');
+													})
+													.catch(err => {
+														alert('Error in copying text: ', err);
+													});
+												})
+
+											// created_rows
+												const created_rows = ui.create_dom_element({
+													element_type	: 'div',
+													class_name		: 'section_id_container',
+													inner_html		: current_rensponse.created_rows.join('<br>'),
+													parent			: result_info_container
+												})
+										}//end if(current_rensponse.created_rows.length>0)
+
+									// updated_rows info
+										if(current_rensponse.updated_rows.length>0) {
+											// const updated_nodes = current_rensponse.updated_rows.map(el => '<span>'+el+',</span>')
+
+											// header
+												const header = ui.create_dom_element({
+													element_type	: 'div',
+													class_name		: 'header',
+													parent			: result_info_container
+												})
+
+											// updated_label
+												const updated_label = ui.create_dom_element({
+													element_type	: 'div',
+													class_name		: 'label',
+													inner_html		: get_label.updated || 'Updated' + ':',
+													parent			: header
+												})
+
+											// copy_to_find_button
+												const copy_to_find_button = ui.create_dom_element({
+													element_type	: 'button',
+													class_name		: 'warning copy_button copy',
+													inner_html		: get_label.copy_to_find || 'Copy as comma separated',
+													parent			: header
+												})
+												copy_to_find_button.addEventListener( 'click', () => {
+													e.stopPropagation()
+
+													navigator.clipboard.writeText(current_rensponse.updated_rows.join(','))
+													.then(() => {
+														alert('Text copied to clipboard');
+													})
+													.catch(err => {
+														alert('Error in copying text: ', err);
+													});
+												})
+
+											// copy_as_column_button
+												const copy_as_column_button = ui.create_dom_element({
+													element_type	: 'button',
+													class_name		: 'warning copy_button copy',
+													inner_html		: get_label.copy_as_column || 'Copy as column',
+													parent			: header
+												})
+												copy_as_column_button.addEventListener( 'click', () => {
+													e.stopPropagation()
+
+													navigator.clipboard.writeText(current_rensponse.updated_rows.join('\n'))
+														.then(() => {
+															alert('Text copied to clipboard');
+														})
+														.catch(err => {
+															alert('Error in copying text: ', err);
+														});
+												})
+
+											// updated_rows
+												const updated_rows = ui.create_dom_element({
+													element_type	: 'div',
+													class_name		: 'section_id_container',
+													inner_html		: current_rensponse.updated_rows.join('<br>'),
+													parent			: result_info_container
+												})
+										}//end if(current_rensponse.updated_rows.length>0)
 								}//end if(current_rensponse.result)
 							}//end if(result_container)
 						}//end for (let i = result_len - 1; i >= 0; i--)
@@ -476,7 +497,7 @@ const render_file_info = function(self, item) {
 				const valid_section_tipo = validate_tipo(item.section_tipo)
 				if (!valid_section_tipo) {
 					section_warn.classList.remove('hide')
-					section_warn.innerHTML = 'Autodetected file section tipo "'+section_tipo+'" appears to be invalid.'
+					section_warn.innerHTML = 'Auto-detected file section tipo "'+section_tipo+'" appears to be invalid.'
 				}else{
 					section_warn.classList.add('hide')
 					// render again columns_maper
@@ -498,7 +519,9 @@ const render_file_info = function(self, item) {
 				class_name		: 'button delete',
 				parent			: file_line
 			})
-			icon_delete.addEventListener("click", function(){
+			icon_delete.addEventListener('click', function(e){
+				e.stopPropagation()
+
 				if(confirm(get_label.sure || 'Sure?')) {
 					// remove file
 					self.remove_file(item)
@@ -709,14 +732,14 @@ const render_columns_mapper = async function(self, item) {
 					parent			: body
 				})
 
-			// // original position
-			// 	const position = ui.create_dom_element({
-			// 		element_type	: 'div',
-			// 		class_name		: 'position',
-			// 		// text_content	: i,
-			// 		parent			: line
-			// 	})
-			// 	position.textContent = i
+			// original position
+				// 	const position = ui.create_dom_element({
+				// 		element_type	: 'div',
+				// 		class_name		: 'position',
+				// 		// text_content	: i,
+				// 		parent			: line
+				// 	})
+				// 	position.textContent = i
 
 			// column_name (original in csv document)
 				ui.create_dom_element({
@@ -806,7 +829,7 @@ const render_columns_mapper = async function(self, item) {
 					// in any case the column_name will be the csv column name as user has specify
 					ar_columns_map[i].column_name	= column_name
 				}
-				target_select.addEventListener("change", function(e){
+				target_select.addEventListener('change', function(e){
 					// checkbox_file_selection update
 					if (e.target.value && e.target.value.length>0) {
 						checkbox_file_selection.checked = true
@@ -815,10 +838,9 @@ const render_columns_mapper = async function(self, item) {
 					}
 
 					// update ar_columns_map object
-					ar_columns_map[i].checked		= checkbox_file_selection.checked
-					ar_columns_map[i].map_to		= e.target.value
-					ar_columns_map[i].model			= e.target.options[e.target.selectedIndex].model
-
+					ar_columns_map[i].checked	= checkbox_file_selection.checked
+					ar_columns_map[i].map_to	= e.target.value
+					ar_columns_map[i].model		= e.target.options[e.target.selectedIndex].model
 				})
 
 			// sample_data (search non empty values)
