@@ -1739,7 +1739,11 @@ class component_date extends component_common {
 						}
 						$date_obj->$mode = $dd_date;
 					}
-					$value[] = $date_obj;
+
+					$is_empty_object = !(array)$date_obj;
+					if (!$is_empty_object) {
+						$value[] = $date_obj;
+					}
 				}
 			}
 
@@ -1765,6 +1769,11 @@ class component_date extends component_common {
 					}
 				}
 			}//end if(!empty($value))
+
+		// to null when is empty
+			if (!is_null($value) && empty($value)) {
+				$value = null;
+			}
 
 
 		$response->result	= $value;
