@@ -3047,7 +3047,11 @@ class component_text_area extends component_common {
 				if(is_array($dato_from_json)){
 					$value = $normalize_value($dato_from_json);
 				}else if (is_object($dato_from_json)) {
-					foreach ($dato_from_json as $key => $ar_values) {
+					foreach ($dato_from_json as $key => $current_values) {
+						$ar_values = is_array($current_values)
+							? $current_values
+							: [$current_values];
+
 						$value = $normalize_value($ar_values);
 						$dato_from_json->$key = $value ;
 					}
