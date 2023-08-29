@@ -613,4 +613,205 @@ class component_iri extends component_common {
 
 
 
+	/**
+	* CONFORM_IMPORT_DATA
+	* @param string $import_value
+	* @param string $column_name
+	* @return object $response
+	*/
+	public function conform_import_data(string $import_value, string $column_name) : object {
+
+		// Response
+			$response = new stdClass();
+				$response->result	= null;
+				$response->errors	= [];
+				$response->msg		= 'Error. Request failed';
+
+
+		// $normalize_value function to be used in any case, $import_value is an array of objects (iri format) or array of strings or string
+		// values need to be begin with the protocol http or https
+			$normalize_value = function(string $text_value) : bool {
+
+				$begins_http	= substr($text_value, 0, 7);
+				$begins_https	= substr($text_value, 0, 8);
+
+				if($begins_http === 'http://' || $begins_https === 'https://'){
+
+					return true;
+
+				}else{
+
+					return false;
+				}
+
+				return $value;
+			};
+
+
+		// object | array case
+			// Check if is a JSON stringified. Is yes, decode
+			// if data is a object | array it will be the Dédalo format and check if the iri is ok.
+			if(json_handler::is_json($import_value)){
+
+				// try to JSON decode (null on not decode)
+				$dato_from_json	= json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
+
+				// the import support array of objects (default, iri data) of array of strings as:
+				// [{"iri":"https://dedalo.dev","title":"Dedalo webpage"},{"iri":"https://dedalo.dev/docs","title":"Dedalo documentation"}]
+				// ["https://dedalo.dev","https://dedalo.dev/docs"]
+				if(is_array($dato_from_json)){
+
+					$value = [];
+					foreach ($dato_from_json as $key => $current_value) {
+						// check if the value is a flat string with the uri
+						if(is_string($current_value)){
+							$result = $normalize_value($current_value);
+
+							if ($result === false) {
+
+								// import value seems to be a JSON malformed.
+								// it begin [" or end with "]
+								// log JSON conversion error
+								debug_log(__METHOD__
+									." invalid http uri value, seems a syntax error: ". PHP_EOL
+									. to_string($import_value)
+									, logger::ERROR
+								);
+
+								$failed = new stdClass();
+									$failed->section_id		= $this->section_id;
+									$failed->data			= to_string($import_value);
+									$failed->component_tipo	= $this->get_tipo();
+									$failed->msg			= 'IGNORED: malformed data '. to_string($import_value);
+								$response->errors[] = $failed;
+
+								return $response;
+							}
+
+							$data_iri = new stdClass();
+								$data_iri->iri = $current_value;
+
+							$value[] = $data_iri;
+						// check if the value is a object
+						}else if(is_object($current_value)){
+
+							$data_iri = new stdClass();
+
+							if(isset($current_value->iri)){
+
+								$result = $normalize_value($current_value->iri);
+
+								if($result===false){
+
+									// import value seems to be a JSON malformed.
+									// it begin [" or end with "]
+									// log JSON conversion error
+									debug_log(__METHOD__
+										." invalid http uri value, seems a syntax error: ". PHP_EOL
+										. to_string($import_value)
+										, logger::ERROR
+									);
+
+									$failed = new stdClass();
+										$failed->section_id		= $this->section_id;
+										$failed->data			= to_string($import_value);
+										$failed->component_tipo	= $this->get_tipo();
+										$failed->msg			= 'IGNORED: malformed data '. to_string($import_value);
+									$response->errors[] = $failed;
+
+									return $response;
+								}
+
+								$data_iri->iri = $current_value->iri;
+							}
+
+							if(isset($current_value->title)){
+								$data_iri->title = $current_value->title;
+							}
+							$value[] = $data_iri;
+						}
+					}
+				}
+
+				$response->result	= $value;
+				$response->msg		= 'OK';
+
+				return $response;
+			}
+
+	// string case
+		// check the begin and end of the value string, if it has a [] or other combination that seems array
+		// if the text has [" or "] it's not admitted, because it's a bad array of strings.
+		$begins_one	= substr($import_value, 0, 1);
+		$ends_one	= substr($import_value, -1);
+		$begins_two	= substr($import_value, 0, 2);
+		$ends_two	= substr($import_value, -2);
+
+		if (($begins_two !== '["' && $ends_two !== '"]') ||
+			($begins_two !== '["' && $ends_one !== ']') ||
+			($begins_one !== '[' && $ends_two !== '"]')
+			){
+
+			$value = null;
+			if(!empty($import_value)){
+
+				$result = $normalize_value($import_value);
+
+				if ($result === false) {
+
+					// import value seems to be a JSON malformed.
+					// it begin [" or end with "]
+					// log JSON conversion error
+					debug_log(__METHOD__
+						." invalid http uri value, seems a syntax error: ". PHP_EOL
+						. to_string($import_value)
+						, logger::ERROR
+					);
+
+					$failed = new stdClass();
+						$failed->section_id		= $this->section_id;
+						$failed->data			= to_string($import_value);
+						$failed->component_tipo	= $this->get_tipo();
+						$failed->msg			= 'IGNORED: malformed data '. to_string($import_value);
+					$response->errors[] = $failed;
+
+					return $response;
+
+				}
+
+				$data_iri = new stdClass();
+					$data_iri->iri = $import_value;
+
+				$value[] = $data_iri;
+			}
+
+
+		}else{
+			// import value seems to be a JSON malformed.
+			// it begin [" or end with "]
+			// log JSON conversion error
+			debug_log(__METHOD__
+				." invalid JSON value, seems a syntax error: ". PHP_EOL
+				. to_string($import_value)
+				, logger::ERROR
+			);
+
+			$failed = new stdClass();
+				$failed->section_id		= $this->section_id;
+				$failed->data			= stripslashes( $import_value );
+				$failed->component_tipo	= $this->get_tipo();
+				$failed->msg			= 'IGNORED: malformed data '. to_string($import_value);
+			$response->errors[] = $failed;
+
+			return $response;
+		}
+
+
+		$response->result	= $value;
+		$response->msg		= 'OK';
+
+		return $response;
+	}//end conform_import_data
+
+
 }//end class component_iri
