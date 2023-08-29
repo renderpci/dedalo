@@ -63,7 +63,7 @@ Literal components has three different ways to manage data; direct, media and in
 - component_filter_records
 - component_geolocation
 - [component_input_text](component_input_text.md)
-- component_iri
+- [component_iri](component_iri.md)
 - component_json
 - [component_number](component_number.md)
 - component_password
@@ -497,3 +497,24 @@ permission | level
 ## tools
 
 Defines with tools can be used in the component instance. Tools add some functionalities to extend the standard behavior. For example if a component is translatable it will load the `tool_lang`.
+
+## Observers and observables
+
+Components can be configured to be observable by other components or observe other components.
+
+Dédalo use two different configurations to create the observer/observable spaces. The server context and the client context. The main difference is that, in server context, observable/observer configuration is related to data changes, in client context can be configured to do other tasks as activate it, perform calculations, change his own data, etc. 
+
+### Server context
+
+When a component is set as observable in server context, any change of his data will be send to the observer. Observer component can be configured to do actions as update values or change his own data depending of the value of the observable component.
+
+### Client context
+
+In client context components use the event_manager to subscribe and publish his actions. The configuration is set in the ontology properties.
+
+When a component is set as observable in client context, any action do it by the user will be publish in the event_manager, components could to subscribe to this actions and perform some tasks.
+
+For example, when a component is activate by the user, the component will publish an `activate` action, and all other components, as are subscribe to this action, will be inactivated.
+
+Some components perform actions in other components, as component_text_area to control the component_av time position, when the user click in the time_code tag of a transcription the component_av jump to the specific time code.
+
