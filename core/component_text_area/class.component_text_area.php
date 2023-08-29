@@ -3015,6 +3015,11 @@ class component_text_area extends component_common {
 				$value = [];
 				foreach ($import_value as $text_value) {
 
+					// ignore empty and null values
+						if (empty($text_value)) {
+							continue;
+						}
+
 					$begins_three	= substr($text_value, 0, 3);
 					$ends_four		= substr($text_value, -4);
 

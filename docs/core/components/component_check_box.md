@@ -10,9 +10,9 @@
     "is_media": false,
     "modes": ["edit","list","tm","search"],
     "default_tools" : [
-        "tool_time_machine", 
-        "tool_lang", 
-        "tool_replace_component_data", 
+        "tool_time_machine",
+        "tool_lang",
+        "tool_replace_component_data",
         "tool_add_component_data"
     ],
     "render_views" :[
@@ -23,7 +23,7 @@
         {
             "view"    : "tools | line | print",
             "mode"    : "edit"
-        },       
+        },
         {
             "view"    : "mini | text",
             "mode"    : "list"
@@ -60,15 +60,15 @@
 
 ## Definition
 
-Component checkbox is a related component to manage a close list of values, normally component checkbox point a specific section in a List of values sections. Data is non translatable. And it can manage multiple values. In client show a checkboxes with the possibles values to be checked.
+Component checkbox is a related component to manage a closed list of values. Normally component checkbox points to a specific section in a list of values section. Data is non translatable, and it can manage multiple values. In client, display a check box's group with the possible values to be checked.
 
 ## Data model
 
-**Data:** `object` in server his data is save in relations object. In client data object has the `datalist` with the possibles values resolution.
+**Data:** `object` In server, his data is saved in relations object. In client, data object has the `datalist` with the possible values resolution.
 
 **Value:** `array` of `locators`, or `null`
 
-**Storage:** In database component checkbox save his data as a part of relations array. All relation components store his locators inside this.
+**Storage:** In database, component checkbox saves his data as a part of relations array. All relation components store his locators inside this container.
 
 ```json
 {
@@ -79,11 +79,11 @@ Component checkbox is a related component to manage a close list of values, norm
 }
 ```
 
-When the component is instantiated, the component get his data from his section and use `lg-nolan` to define his language.
+When the component is instantiated, get his data from his section and use `lg-nolan` to define his language.
 
 ## Import model
 
-By default import model use the JSON format of his data, an array of [locator](../locator.md).
+By default, import model use the JSON format of his data, an array of [locator](../locator.md).
 
 ```json
 [{"type":"dd151","section_id":"2","section_tipo":"rsc723","from_component_tipo":"tch191"}]
@@ -156,4 +156,4 @@ Will join locators (records) as text in this way: Santiago Ramón y Cajal | Gert
 
 options: true | false
 
-Inform to users that this component need a data value (user need to introduce any value, it's mandatory).
+Inform to users that this component needs a data value (user must to introduce any value, it's mandatory).

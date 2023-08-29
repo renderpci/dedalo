@@ -1752,8 +1752,8 @@ class component_relation_common extends component_common {
 				}
 			}
 
-		// // Add locator at end
-		// 	$new_relation_locators[] = $locator;
+		// Add locator at end
+		// $new_relation_locators[] = $locator;
 		// get the inverse references
 			//old way done in relations table
 				// $ar_result 	= $this->get_external_result_from_relations_table($new_relation_locators, $ar_component_to_search);
@@ -1793,8 +1793,6 @@ class component_relation_common extends component_common {
 
 					$ar_result[] = $current_locator;
 				}
-
-
 
 			$total_ar_result	= sizeof($ar_result);
 			$total_ar_dato		= sizeof($dato);
@@ -1840,7 +1838,6 @@ class component_relation_common extends component_common {
 							$changed = true;
 						}
 					}
-
 			}//end if ($total_ar_result>2000)
 
 
@@ -1877,7 +1874,10 @@ class component_relation_common extends component_common {
 		// debug
 			if(SHOW_DEBUG===true) {
 				$total = exec_time_unit($start_time,'ms')." ms";
-				debug_log(__METHOD__." Total time $total - $total_ar_result locators [$this->section_tipo, $this->tipo, $this->parent] ".get_class($this) .' : '. RecordObj_dd::get_termino_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true) . to_string(), logger::DEBUG);
+				debug_log(__METHOD__
+					." Total time $total - $total_ar_result locators [$this->section_tipo, $this->tipo, $this->parent] ".get_class($this) .' : '. RecordObj_dd::get_termino_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true)
+					, logger::DEBUG
+				);
 			}
 
 
