@@ -85,7 +85,7 @@
 							position: absolute;
 							right: 0px;
 						}
-					}
+					}//end >.file_line
 
 					>.warning {
 						background-color: #f76c1c;
@@ -174,10 +174,58 @@
 								}
 							}
 						}
-					}
+					}//end >.columns_mapper
 
 
-					.result {
+					.result_container {
+
+						// OK/Error message
+						>.response_msg {
+							border: none;
+						}
+
+						// like 'Section: numisdata41. Total records created:0 - updated:998 - failed:0'
+						>.user_msg_container {
+							padding: 0.66rem;
+							padding-left: 0px;
+						}
+
+						>.dedalo_last_error_container {
+							display: block;
+							padding: 0.66rem;
+							color: @color_danger;
+							font-weight: 500;
+							line-height: 1.1rem;
+
+							--icon-path : url('../../../core/themes/default/icons/warning.svg');
+							&:before {
+								background-color: @color_danger;
+								content: ' ';
+								display: inline-block;
+								height: 1.5em;
+								width: 1.5em;
+								margin-right: 0.5rem;
+								opacity: 1;
+								vertical-align: bottom;
+								// .fn_add_mask(@icon_name);
+								-webkit-mask-image: var(--icon-path);
+										mask-image: var(--icon-path);
+								-webkit-mask-size: contain;
+										mask-size: contain;
+								-webkit-mask-repeat: no-repeat;
+										mask-repeat: no-repeat;
+								-webkit-mask-position: center;
+										mask-position: center;
+
+								@media screen and (max-width: @width_break_point_1) {
+									margin-right: 0px;
+								}
+							}
+
+							>.error_pre {
+								background-color: unset;
+							}
+						}
 
 						>.result_info_container {
 							// padding-top: 1em;
