@@ -486,15 +486,18 @@ abstract class JSON_RecordDataBoundObject {
 		// connection to DDBB
 			$conn = DBi::_getConnection() ?? false;
 			if ($conn===false) {
-				debug_log(__METHOD__." Error. DDBB connection failed ", logger::ERROR);
+				debug_log(__METHOD__
+					." Error. DDBB connection failed "
+					, logger::ERROR
+				);
 				return false;
 			}
 
 		// $result = pg_query(DBi::_getConnection(), $strQuery);
 
 		// exec With prepared statement
-			$stmtname  = ''; //md5($strQuery); //'search_free_stmt';
-			$statement = pg_prepare($conn, $stmtname, $strQuery);
+			$stmtname	= ''; //md5($strQuery); //'search_free_stmt';
+			$statement	= pg_prepare($conn, $stmtname, $strQuery);
 			if ($statement===false) {
 				debug_log(__METHOD__
 					. " Error when pg_prepare statement for strQuery: "
