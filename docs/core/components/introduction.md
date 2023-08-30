@@ -518,3 +518,50 @@ For example, when a component is activate by the user, the component will publis
 
 Some components perform actions in other components, as component_text_area to control the component_av time position, when the user click in the time_code tag of a transcription the component_av jump to the specific time code.
 
+### configuration
+
+The observers and observables are configured in ontology properties of the components. The component the is observing the actions and changes has two way, what happen when is fire a event of the observable, what perform, in the client and in the server. Sometimes the perform action has parameters to configure the execution.
+
+Example of observer configuration:
+
+```json
+"observe": [{
+        "client": {
+            "event": "update_value",
+            "perform": {
+                "function": "refresh"
+            }
+        },
+        "server": {
+            "config": {
+                "use_self_section": true,
+                "use_observable_dato": true
+            },
+            "perform": {
+                "params": {
+                    "save": true,
+                    "changed": false,
+                    "current_dato": false,
+                    "references_limit": 0
+                },
+                "function": "set_dato_external"
+            }
+        },
+        "component_tipo": "numisdata36"
+ }]
+```
+
+Observables has a list of the components that observe it.
+
+Example of observable:
+
+```json
+"observers": [
+    {
+        "section_tipo": "numisdata3",
+        "component_tipo": "numisdata36"
+    }
+]
+```
+
+See the full definition of every component properties.
