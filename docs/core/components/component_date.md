@@ -10,8 +10,8 @@
     "is_media": false,
     "modes": ["edit","list","tm","search"],
     "default_tools" : [
-        "tool_time_machine", 
-        "tool_replace_component_data", 
+        "tool_time_machine",
+        "tool_replace_component_data",
         "tool_add_component_data"
     ],
     "render_views" :[
@@ -22,7 +22,7 @@
         {
             "view"    : "line | print",
             "mode"    : "edit"
-        },       
+        },
         {
             "view"    : "text",
             "mode"    : "list"
@@ -71,7 +71,7 @@
 
 ## Definition
 
-Component date manage any kind of dates in different modes. Data is non translatable and use `lg-nolan` to define his language.
+Component date manages any kind of dates in different modes. Data is non translatable and use `lg-nolan` to define his language.
 
 The component has 4 different modes:
 
@@ -86,7 +86,7 @@ The component has 4 different modes:
 
 **Value:** `array` of `objects`, or `null`
 
-**Storage:** In database component date save his data as object with `lg-nolan` as property and values as array of objects.
+**Storage:** In database, component date saves his data as object with `lg-nolan` as property and values as array of objects.
 
 **Modes supported:** date | range | period | time
 
@@ -96,9 +96,9 @@ The component has 4 different modes:
 
 object has the possibility to use:
 
-- start (optional object): indicate the initial date
-- end  (optional object): indicate the termination date
-- period (optional object): indicate a period of time indicated a range of time.
+- start (optional object): indicates the initial date
+- end  (optional object): indicates the termination date
+- period (optional object): indicates a period or range of time
 
 properties of the dd_date:
 
@@ -188,13 +188,13 @@ Example of time. A punctual time 17:33:49
 }]
 ```
 
-Component date use a dd_date object definition to create time base objects. Component data can handle objects with only one property assigned.
+Component date uses a dd_date object definition to create time base objects. Component data can handle objects with only one property assigned.
 
 When the component is instantiated, the component get his data from his section and only get the value without lang.
 
 ## Import model
 
-By default import model use the JSON format of his value, as the component do not use languages the main format to import is the array of dd_date objects.
+By default, import model uses the JSON format of his value, since the component do not use languages, the main format to import is the array of dd_date objects.
 
 ```json
 [{
@@ -214,7 +214,7 @@ See the full date import definition [here](../importing_data.md#dates).
 
 options: date | range | period | time
 
-Defines the type of date to be use. By default component_date set a `date` mode
+Defines the type of date to be use. By default, component_date set `date` mode.
 
 Example to set a range:
 
@@ -226,7 +226,7 @@ Example to set a range:
 
 `fields_separator`
 
-Used to define the character/s to be used between date ranges. Used to export, and show data inside other components.
+Used to define the character/s to be used between date ranges. Used to export, and display data inside other components.
 
 Example:
 
@@ -240,7 +240,7 @@ Will join text version of the date: -200 <> 50/11
 
 `records_separator`
 
-Used to define the character to be used between multiple values of the component.
+Used to define the character to be used between multiple component values.
 
 Example:
 
@@ -256,4 +256,4 @@ Will join locators (records) as text in this way: 26/10/2023 | 18/11/2000
 
 options: true | false
 
-Inform to users that this component need a data value (user need to introduce any value, it's mandatory).
+Informs users that this component requires a data value (user must to introduce any value, it's mandatory).
