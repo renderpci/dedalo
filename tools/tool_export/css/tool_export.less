@@ -8,9 +8,9 @@
 @import (once) '../../../core/page/css/layout/vars';
 
 
-@tool_color : #35a58c;
+
 @tool_color : #7152a5;
-// @tool_color : #428bca; // #7152a5;
+@tool_color_light : #faf9f9;
 
 
 
@@ -18,7 +18,6 @@
 	.wrapper_tool.tool_export {
 
 		>.content_data {
-			// background-color: #faf6f7;
 			width: 100%;
 
 			.spinner {
@@ -56,6 +55,7 @@
 					margin-left: 1rem;
 					overflow: auto;
 					max-height: calc(100vh - 7.5rem);
+					width: calc(100% - 2rem);
 
 					// h1 list_title
 					.list_title {
@@ -76,7 +76,7 @@
 					}
 
 					>.export_component {
-						background-color: #faf9f9;
+						background-color: @tool_color_light;
 						display: flex;
 						width: 100%;
 						position: relative;
@@ -143,7 +143,7 @@
 									color: #ffffff;
 								}
 								100% {
-									background-color: #faf9f9;
+									background-color: @tool_color_light;
 									color: unset;
 								}
 							}
@@ -175,7 +175,7 @@
 
 				// export_buttons_config. Mode selector and export button (at right)
 				>.export_buttons_config {
-					background-color: #faf9f9;
+					background-color: @tool_color_light;
 					padding: 1em;
 					padding-top: 0;
 					position: relative;
@@ -254,8 +254,6 @@
 				}//end .export_buttons_config
 			}//end .grid_top
 
-
-
 			// export_buttons_options. Download buttons for CSV, excel, HTML etc.
 			>.export_buttons_options {
 				width: 100%;
@@ -297,7 +295,7 @@
 					}
 				}
 			}
-		}
+		}//end >.content_data
 
 		// select style
 		.select_style {
