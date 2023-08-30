@@ -519,7 +519,7 @@ class component_relation_parent extends component_relation_common {
 	*/
 	public static function get_parents(int|string $section_id, string $section_tipo, ?string $from_component_tipo=null, ?array $ar_tables=null) : array {
 
-		$parents = array();
+		$parents = [];
 
 		// hierarchy1 case (root)
 			if ($section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
@@ -550,8 +550,19 @@ class component_relation_parent extends component_relation_common {
 			$sql_where	= 'datos#>\'{relations}\' @> \'['.$compare.']\'::jsonb';
 			if (is_null($ar_tables)) {
 				// Calculated from section_tipo (only search in current table)
-				$table 	   = common::get_matrix_table_from_tipo($section_tipo);
-				$strQuery .= "SELECT $sql_select FROM \"$table\" WHERE $sql_where ";
+				$table = common::get_matrix_table_from_tipo($section_tipo);
+				if (empty($table)) {
+					debug_log(__METHOD__
+						. " Error on get table from section. Empty result is received. Empty parents will be return" . PHP_EOL
+						. ' Check that section "' .$section_tipo . '" already exists. If not, check hierarchies to create it' . PHP_EOL
+						. ' section_id: ' . to_string($section_id) . PHP_EOL
+						. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+						. ' from_component_tipo: ' . to_string($from_component_tipo)
+						, logger::ERROR
+					);
+					return [];
+				}
+				$strQuery  .= "SELECT $sql_select FROM \"$table\" WHERE $sql_where ";
 			}else{
 				// Iterate tables and make union search
 				$ar_query = array();
@@ -571,7 +582,7 @@ class component_relation_parent extends component_relation_common {
 				$main_compare	= "{\"section_tipo\":\"$section_tipo\",\"section_id\":\"$section_id\",\"type\":\"$type\"".$main_filter."}";
 				$sql_where		= "datos#>'{relations}' @> '[$main_compare]'::jsonb";
 				$table			= hierarchy::$table;
-				$strQuery		.= "\nUNION ALL \nSELECT $sql_select FROM \"$table\" WHERE $sql_where ";
+				$strQuery	   .= "\nUNION ALL \nSELECT $sql_select FROM \"$table\" WHERE $sql_where ";
 			}
 
 		// Set order to maintain results stable
@@ -585,68 +596,80 @@ class component_relation_parent extends component_relation_common {
 
 		// search exec
 			$result	= JSON_RecordObj_matrix::search_free($strQuery);
-			while ($row = pg_fetch_object($result)) {
+			if ($result===false) {
+				debug_log(__METHOD__
+					. " Error on get search free result. False result is received " . PHP_EOL
+					. ' strQuery: ' . $strQuery . PHP_EOL
+					. ' section_id: ' . to_string($section_id) . PHP_EOL
+					. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+					. ' from_component_tipo: ' . to_string($from_component_tipo) . PHP_EOL
+					. ' ar_tables: ' . to_string($ar_tables)
+					, logger::ERROR
+				);
+			}else{
+				while ($row = pg_fetch_object($result)) {
 
-				$current_section_id		= $row->section_id;
-				$current_section_tipo	= $row->section_tipo;
-				$current_relations		= json_decode($row->relations);
+					$current_section_id		= $row->section_id;
+					$current_section_tipo	= $row->section_tipo;
+					$current_relations		= json_decode($row->relations);
 
-				// check infinite loop
-					if ($current_section_id==$section_id && $current_section_tipo===$section_tipo) {
-						debug_log(__METHOD__
-							." ERROR: Error on get parent. Parent is set a itself parent creating a infinite loop. Ignored locator"
-							.' section_id: ' .$section_id . PHP_EOL
-							.' section_tipo: ' .$section_tipo . PHP_EOL
-							, logger::ERROR
-						);
-						continue;
-					}
-
-				// Hierarchy parent case locator, force from_component_tipo
-					if ($current_section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) { // 'hierarchy1'
-						$from_component_tipo = DEDALO_HIERARCHY_CHILDREN_TIPO;
-					}
-
-				// from_component_tipo. Calculated_from_component_tipo on empty. Search 'from_component_tipo' in locators when no is received
-					if (empty($from_component_tipo)) {
-
-						$reference_locator = new locator();
-							$reference_locator->set_section_tipo($section_tipo);
-							$reference_locator->set_section_id($section_id);
-							$reference_locator->set_type($type);
-
-						foreach ((array)$current_relations as $current_locator) {
-							if(true===locator::compare_locators($current_locator, $reference_locator, ['section_tipo','section_id','type'])) {
-								if (!isset($current_locator->from_component_tipo)) {
-									dump($current_locator, "Bad locator.'from_component_tipo' property not found in locator (get_parents: $section_id, $section_tipo)");
-									debug_log(__METHOD__
-										." Bad locator.'from_component_tipo' property not found in locator (get_parents: $section_id, $section_tipo)" . PHP_EOL
-										.' current_locator:' . json_encode($current_locator, JSON_PRETTY_PRINT)
-										, logger::ERROR
-									);
-								}
-								// calculated_from_component_tipo overwrite empty value
-								$from_component_tipo = $current_locator->from_component_tipo;
-								break;
-							}
+					// check infinite loop
+						if ($current_section_id==$section_id && $current_section_tipo===$section_tipo) {
+							debug_log(__METHOD__
+								." ERROR: Error on get parent. Parent is set a itself parent creating a infinite loop. Ignored locator"
+								.' section_id: ' .$section_id . PHP_EOL
+								.' section_tipo: ' .$section_tipo . PHP_EOL
+								, logger::ERROR
+							);
+							continue;
 						}
-					}//end if (empty($from_component_tipo))
 
-				// parent_locator
-					$parent_locator = new locator();
-						$parent_locator->set_section_tipo($current_section_tipo);
-						$parent_locator->set_section_id($current_section_id);
-						$parent_locator->set_type(DEDALO_RELATION_TYPE_CHILDREN_TIPO);
-						$parent_locator->set_from_component_tipo($from_component_tipo);
+					// Hierarchy parent case locator, force from_component_tipo
+						if ($current_section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) { // 'hierarchy1'
+							$from_component_tipo = DEDALO_HIERARCHY_CHILDREN_TIPO;
+						}
 
-				// parents add locator
-					$parents[] = $parent_locator;
-			}//end while
+					// from_component_tipo. Calculated_from_component_tipo on empty. Search 'from_component_tipo' in locators when no is received
+						if (empty($from_component_tipo)) {
+
+							$reference_locator = new locator();
+								$reference_locator->set_section_tipo($section_tipo);
+								$reference_locator->set_section_id($section_id);
+								$reference_locator->set_type($type);
+
+							foreach ((array)$current_relations as $current_locator) {
+								if(true===locator::compare_locators($current_locator, $reference_locator, ['section_tipo','section_id','type'])) {
+									if (!isset($current_locator->from_component_tipo)) {
+										dump($current_locator, "Bad locator.'from_component_tipo' property not found in locator (get_parents: $section_id, $section_tipo)");
+										debug_log(__METHOD__
+											." Bad locator.'from_component_tipo' property not found in locator (get_parents: $section_id, $section_tipo)" . PHP_EOL
+											.' current_locator:' . json_encode($current_locator, JSON_PRETTY_PRINT)
+											, logger::ERROR
+										);
+									}
+									// calculated_from_component_tipo overwrite empty value
+									$from_component_tipo = $current_locator->from_component_tipo;
+									break;
+								}
+							}
+						}//end if (empty($from_component_tipo))
+
+					// parent_locator
+						$parent_locator = new locator();
+							$parent_locator->set_section_tipo($current_section_tipo);
+							$parent_locator->set_section_id($current_section_id);
+							$parent_locator->set_type(DEDALO_RELATION_TYPE_CHILDREN_TIPO);
+							$parent_locator->set_from_component_tipo($from_component_tipo);
+
+					// parents add locator
+						$parents[] = $parent_locator;
+				}//end while
+			}
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				#$total=round(start_time()-$start_time,3);
-				#debug_log(__METHOD__." section_id:$section_id, section_tipo:$section_tipo, from_component_tipo:$from_component_tipo, ar_tables:$ar_tables - $strQuery ".exec_time_unit($start_time,'ms').' ms' , logger::DEBUG);
+				// $total=round(start_time()-$start_time,3);
+				// debug_log(__METHOD__." section_id:$section_id, section_tipo:$section_tipo, from_component_tipo:$from_component_tipo, ar_tables:$ar_tables - $strQuery ".exec_time_unit($start_time,'ms').' ms' , logger::DEBUG);
 				// $total = exec_time_unit($start_time,'ms')." ms";
 				// dump($total, ' ///////// total ++ '.to_string("$section_id, $section_tipo, $from_component_tipo, $ar_tables") .PHP_EOL. " $strQuery");
 			}

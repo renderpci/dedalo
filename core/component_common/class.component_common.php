@@ -713,8 +713,11 @@ abstract class component_common extends common {
 						. 'type: '. gettype($dato) .PHP_EOL
 						. 'dato: '. to_string($dato) .PHP_EOL
 						. 'model: '. get_called_class() .PHP_EOL
-						. 'tipo: ' . $this->tipo . ' - section_tipo: ' . $this->section_tipo . ' - section_id: ' . $this->section_id . PHP_EOL
+						. 'tipo: ' . $this->tipo . PHP_EOL
+						. 'section_tipo: ' . $this->section_tipo . PHP_EOL
+						. 'section_id: ' . $this->section_id . PHP_EOL
 						. 'mode: '. $this->mode .PHP_EOL
+						. 'cache: '. to_string($this->cache) .PHP_EOL
 						. 'table: '. $matrix_table
 						, logger::ERROR
 					);
