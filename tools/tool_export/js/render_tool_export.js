@@ -682,6 +682,9 @@ const do_sortable = function(element, self) {
 
 				reset()
 
+				// remove dragover class from user_selection_list container
+				element.parentNode.classList.remove('dragover')
+
 				// data transfer
 					const data			= event.dataTransfer.getData('text/plain');// element that move
 					const parsed_data	= JSON.parse(data)
