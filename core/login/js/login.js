@@ -297,7 +297,7 @@ login.prototype.action_dispatch = async function(api_response) {
 							self.node.content_data.select_lang.classList.add('hide')
 						}
 						self.node.content_data.form.classList.add('hide')
-						// self.node.content_data.info.classList.add('hide')
+						// self.node.content_data.info_container.classList.add('hide')
 
 						// show things
 						self.node.content_data.top.classList.remove('hide')
