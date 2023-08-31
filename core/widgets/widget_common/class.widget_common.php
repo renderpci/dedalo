@@ -34,10 +34,8 @@ class widget_common {
 	/**
 	* GET_INSTANCE
 	* Returns the *widget* instance of this class.
-	*
-	* @return object $instance
-	* The "widget" instance.
-	* $options = {
+	* @param object $options
+	* {
 	*	widget_name 	: string, with the class name
 	*	path			: string, with the path to the class of the widget,
 	*	ipo				: Input-Process-Output; array with objects with the config defined in the ontology
@@ -45,13 +43,15 @@ class widget_common {
 	*	section_id 		: int in string format || null (for list mode)
 	* 	lang			: string
 	* }
+	* @return object $instance
+	* 	The "widget" instance
 	*/
 	public static function get_instance(object $options) : object {
 
 		$widget_name	= $options->widget_name;
 		$path			= $options->path;
 
-		include_once( DEDALO_WIDGETS_PATH . $path .'/class.'. $widget_name.'.php');
+		include_once DEDALO_WIDGETS_PATH . $path .'/class.'. $widget_name.'.php';
 
 		$instance = new $widget_name($options);
 
