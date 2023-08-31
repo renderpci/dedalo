@@ -7,8 +7,8 @@
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	// import * as instances from '../../common/js/instances.js'
 	import {common} from '../../common/js/common.js'
+	// import * as instances from '../../common/js/instances.js'
 	// import {ui} from '../../common/js/ui.js'
 
 
@@ -35,6 +35,7 @@ export const widget_common = function(){
 /**
 * INIT
 * Common init prototype to use in components as default
+* @param object options
 * @return bool true
 */
 widget_common.prototype.init = async function(options) {
@@ -70,7 +71,7 @@ widget_common.prototype.init = async function(options) {
 * BUILD
 * Generic widget build function. Load css files
 * @param bool autoload
-* @return  bool
+* @return bool
 */
 widget_common.prototype.build = async function(autoload=false) {
 
@@ -87,7 +88,7 @@ widget_common.prototype.build = async function(autoload=false) {
 		if (autoload===true) {
 
 			const rqo = {
-				action	: "get_widget_dato",
+				action	: 'get_widget_dato',
 				dd_api	: 'dd_component_info',
 				source	: {
 					tipo			: self.caller.tipo,
@@ -95,7 +96,7 @@ widget_common.prototype.build = async function(autoload=false) {
 					section_id		: self.caller.section_id,
 					mode			: self.mode
 				},
-				options : {
+				options	: {
 					widget_name	: self.name
 				}
 			}
@@ -103,7 +104,7 @@ widget_common.prototype.build = async function(autoload=false) {
 				body: rqo
 			});
 
-			if(api_response.result){
+			if(api_response.result) {
 				self.value = api_response.result
 			}
 		}
