@@ -107,7 +107,7 @@ abstract class counter {
 	/**
 	* CONSOLIDATE_COUNTER
 	* Get de bigger section_id of current section_tipo and set the counter with this value (useful for import records not sequentially)
-	* If counter not exists, a new counter is created
+	* If counter do not exists, a new counter is created
 	* @param string $section_tipo
 	* @param string $matrix_table
 	* @param string $counter_matrix_table default matrix_counter
@@ -159,7 +159,13 @@ abstract class counter {
 				debug_log(__METHOD__." Consolidated counter with value: dato:$bigger_section_id, section_tipo:$section_tipo (".str_replace(array('$1','$2'), array($bigger_section_id,$section_tipo), $strQuery).") ".to_string(), logger::DEBUG);
 			}
 		}
-		// debug_log(__METHOD__." Triggered consolidate_counter and update_counter with value: $current_value [$section_tipo - $matrix_table] ".to_string(), logger::DEBUG);
+
+		// debug
+			debug_log(__METHOD__
+				." Triggered consolidate_counter [$section_tipo - $matrix_table] counter_created: ".to_string($counter_created)
+				, logger::DEBUG
+			);
+
 
 		return true;
 	}//end consolidate_counter
@@ -186,88 +192,153 @@ abstract class counter {
 
 
 	/**
+	* MODIFY_COUNTER
+	* @see dd_utils_aì::modify_counter
+	* @param string $section_tipo
+	* @param string $counter_action
+	* 	reset|fix
+	* @return bool
+	*/
+	public static function modify_counter(string $section_tipo, string $counter_action) : bool {
+
+		// check user before proceed
+			$user_id			= get_user_id();
+			$is_global_admin	= security::is_global_admin($user_id);
+			if ($is_global_admin!==true) {
+				debug_log(__METHOD__
+					. " Error. Unable to reset counter. Insufficient privileges " . PHP_EOL
+					. ' To reset counters you must be global admin or higher'
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		// exec counter_action
+			switch ($counter_action) {
+				case 'reset':
+					$result = counter::delete_counter(
+						$section_tipo,
+						'matrix_counter'
+					);
+					break;
+
+				case 'fix':
+					$matrix_table	= common::get_matrix_table_from_tipo($section_tipo);
+					$result			= counter::consolidate_counter(
+						$section_tipo,
+						$matrix_table,
+						'matrix_counter'
+					);
+					break;
+
+				default:
+					$result = false;
+					break;
+			}
+
+
+		return $result;
+	}//end modify_counter
+
+
+
+	/**
 	* CHECK_COUNTERS
 	* Test all counters in DDBB
 	* @return object $response
+	* {
+	* 	result : bool,
+	* 	msg : string,
+	* 	errors : array,
+	* 	datalist: array
+	* }
 	*/
 	public static function check_counters() : object {
-
 		$start_time = start_time();
 
 		$response = new stdClass();
-			$response->result 	= true;
-			$response->msg 	 	= '';
+			$response->result	= true;
+			$response->msg		= "TEST ALL COUNTERS IN DATABASE: ".DEDALO_DATABASE_CONN;
+			$response->errors	= [];
+			$response->datalist	= [];
 
-		$response->msg .= "TEST ALL COUNTERS IN DATABASE: ".DEDALO_DATABASE_CONN;
+		// Find all db tables
+			$sql	= 'SELECT tipo, dato FROM matrix_counter ORDER BY tipo ASC';
+			$result	= JSON_RecordObj_matrix::search_free($sql);
+			if ($result===false) {
+				debug_log(__METHOD__
+					. " Error reading counters " . PHP_EOL
+					. to_string()
+					, logger::ERROR
+				);
 
-		# Find and iterate all db tables
-		$sql 	= 'SELECT tipo, dato FROM matrix_counter ORDER BY tipo ASC';
-		$result = JSON_RecordObj_matrix::search_free($sql);
+				$response->result	= false;
+				$response->errors[] = ' Error reading DB counters. Unable to access table matrix_counter';
 
-		$t = exec_time_unit($start_time,'ms');
-		debug_log(__METHOD__." check_counters SQL: $sql: $t ms".to_string(), logger::DEBUG);
+				return $response;
+			}
+
+			// debug
+				debug_log(__METHOD__
+					.' check_counters done ' . PHP_EOL
+					.' SQL: '  . $sql . PHP_EOL
+					.' time: ' . exec_time_unit($start_time,'ms') . ' ms'
+					, logger::DEBUG
+				);
 
 		$i=0;
 		while ($rows = pg_fetch_assoc($result)) {
 
-			$start_time = start_time();
+			$section_tipo	= $rows['tipo'];
+			$counter_value	= (int)$rows['dato'];
 
-			$section_tipo		= $rows['tipo'];
-			$counter_section_id	= (int)$rows['dato'];
+			// model check
+				$model_name = RecordObj_dd::get_modelo_name_by_tipo($section_tipo,true);
+				if ($model_name!=='section') {
+					$msg = " Counter row with tipo: $section_tipo is a $model_name . Only sections can use counters. Fix ASAP ";
+					debug_log(__METHOD__
+						. $msg
+						, logger::ERROR
+					);
+					$response->errors[] = $msg;
 
-			$model_name = RecordObj_dd::get_modelo_name_by_tipo($section_tipo,true);
-			if ($model_name!=='section') {
-				debug_log(__METHOD__." Counter row with tipo: $section_tipo is a $model_name . Only sections can use counters. Fix ASAP ".to_string(), logger::ERROR);
-				continue;
-			}
-
-			// Find last id in table
-			$table_name			= common::get_matrix_table_from_tipo($section_tipo);
-			$sql2				= 'SELECT section_id FROM "'.$table_name.'" WHERE section_tipo = \''.$section_tipo.'\' ORDER BY section_id DESC LIMIT 1 ';
-			$result2			= JSON_RecordObj_matrix::search_free($sql2);
-			$last_section_id	= (pg_num_rows($result2)===0)
-				? 0 // Skip empty tables
-				: (int)pg_fetch_result($result2, 0, 'section_id');
-
-			$section_name = RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG, true, true);
-			$response->msg .= "<hr><b>-- $section_tipo $section_name</b> - counter: $counter_section_id - last_section_id: $last_section_id ";
-			if ($last_section_id!=$counter_section_id) {
-				$response->msg .= "[?]";
-				if($last_section_id > 0){
-					$response->msg .= "<h5 style=\"padding:5px;padding-left:50px\"><span style=\"color:#b97800\">UPDATE \"matrix_counter\" SET dato = $last_section_id WHERE tipo = '$section_tipo'; </span></h5>";
-				}else{
-					$response->msg .= "<h5 style=\"padding:5px;padding-left:50px\"><span style=\"color:#b97800\">DELETE FROM \"matrix_counter\"  WHERE tipo = '$section_tipo'; </span></h5>";
+					continue;
 				}
 
-				#$response->msg .= "<br><b>   WARNING: last_section_id != counter_section_id [$last_section_id != $counter_section_id]</b>";
-				#$response->msg .= "<br>FIX AUTOMATIC TO $last_section_id start</pre>";
-				/*
-				$sql3 	 = "UPDATE \"matrix_counter\" SET \"dato\" = '$last_section_id' WHERE \"tipo\" = '$section_tipo';";
-				$result3 = JSON_RecordObj_matrix::search_free($sql3);
-				if (!$result3) {
-					$response->msg .= "Use: <b>SELECT setval('public.{$table_name}_id_seq', $last_section_id, true);</b>";
-				}
-				*/
-				$response->result = false;
+			// Find last id of current section
+				$table_name			= common::get_matrix_table_from_tipo($section_tipo);
+				$sql2				= 'SELECT section_id FROM "'.$table_name.'" WHERE section_tipo = \''.$section_tipo.'\' ORDER BY section_id DESC LIMIT 1 ';
+				$result2			= JSON_RecordObj_matrix::search_free($sql2);
+				$last_section_id	= (pg_num_rows($result2)===0)
+					? 0 // Skip empty tables
+					: (int)pg_fetch_result($result2, 0, 'section_id');
 
-			}else{
-				$response->msg .= "[ok]";
-			}
+			// item_info
+				$item_info = (object)[
+					'section_tipo'		=> $section_tipo,
+					'label'				=> RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG, true, true),
+					'counter_value'		=> $counter_value,
+					'last_section_id'	=> $last_section_id
+				];
 
-			#$t = exec_time_unit($start_time,'ms');
-			#debug_log(__METHOD__." sql2: $sql2  - $t ms".to_string(), logger::DEBUG);
+				$response->datalist[] = $item_info;
 
 			$i++;
 		}//end while ($rows = pg_fetch_assoc($result)) {
 
-		$t = exec_time_unit($start_time,'ms');
-		debug_log(__METHOD__
-			." check_counters TOTAL ($i): $t ms"
-			, logger::DEBUG
-		);
+		// debug
+			$response->debug = (object)[
+				'counters_total'	=> $i,
+				'time'				=> exec_time_unit($start_time,'ms')
+			];
+			debug_log(__METHOD__
+				." check_counters TOTAL ($i)" . PHP_EOL
+				.' time ms: ' . exec_time_unit($start_time,'ms')
+				, logger::DEBUG
+			);
 
 
-		return (object)$response;
+		return $response;
 	}//end check_counters
 
 

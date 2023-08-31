@@ -804,7 +804,7 @@ final class dd_utils_api {
 		// response
 			$response = new stdClass();
 				$response->result	= true;
-				$response->msg		= 'Ok. Request done ['.__METHOD__.']';
+				$response->msg		= 'OK. Request done ['.__METHOD__.']';
 
 		// tables value
 			$item_tables = array_find($options, function($item){
@@ -822,6 +822,53 @@ final class dd_utils_api {
 
 		return $response;
 	}//end regenerate_relations
+
+
+
+	/**
+	* MODIFY_COUNTER
+	* @param object $rqo
+	* @return object $response
+	*/
+	public static function modify_counter(object $rqo) : object {
+
+		session_write_close();
+
+		// options
+			$options = $rqo->options;
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__METHOD__.']';
+
+		// short vars
+			$section_tipo = $options->section_tipo;
+			if (empty($section_tipo)) {
+				$response->msg = 'Error: empty mandatory section_tipo';
+				return $response;
+			}
+			$counter_action = $options->counter_action; // reset|fix
+
+		// modify_counter
+			$result = counter::modify_counter(
+				$section_tipo,
+				$counter_action
+			);
+
+		// check_counters
+			$result_check_counters	= counter::check_counters();
+
+		// response
+			$response->result	= $result;
+			$response->msg		= $result===true
+				? 'OK. '.$counter_action.' counter successfully ' . $section_tipo
+				: 'Error on '.$counter_action.' counter ' . $section_tipo;
+			$response->datalist	= $result_check_counters->datalist ?? [];
+
+
+		return $response;
+	}//end modify_counter
 
 
 
