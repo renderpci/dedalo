@@ -357,7 +357,7 @@ class area_development extends area_common {
 			$ar_widgets[] = $widget;
 
 
-		// counters_status
+		// counters_status *
 			$response = counter::check_counters();
 			$item = new stdClass();
 				$item->id		= 'counters_status';

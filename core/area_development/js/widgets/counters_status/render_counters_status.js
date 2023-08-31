@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
+	// import {data_manager} from '../../../../common/js/data_manager.js'
 	// import {object_to_url_vars} from '../../../../common/js/utils/index.js'
 
 
@@ -67,26 +68,221 @@ render_counters_status.prototype.list = async function(options) {
 const get_content_data_edit = async function(self) {
 
 	// short vars
-		const value			= self.value || {}
-		const data_check	= value.data_check || {}
-		const list			= value.msg
+		const value		= self.value || {}
+		const datalist	= value.datalist
+		const errors	= value.errors
 
 	// content_data
 		const content_data = ui.create_dom_element({
 			element_type : 'div'
 		})
 
-	// version
+	// counters_total
 		ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: '',
-			inner_html		: list,
+			class_name		: 'counters_total',
+			inner_html		: 'Counters total: ' + datalist.length,
 			parent			: content_data
 		})
+
+	// errors
+		if (errors && errors.length>0) {
+			const errors_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'errors_container',
+				inner_html		: 'Some errors found',
+				parent			: content_data
+			})
+			ui.create_dom_element({
+				element_type	: 'pre',
+				class_name		: 'error_pre',
+				inner_html		: errors.join('\n'),
+				parent			: errors_container
+			})
+		}
+
+	// body_response
+		const body_response = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'body_response'
+		})
+
+	// datalist
+		const datalist_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'datalist_container',
+			parent			: content_data
+		})
+		// header
+
+		// list
+			const full_list = [{
+				type			: 'header',
+				section_tipo	: 'section_tipo',
+				label			: 'Section name',
+				counter_value	: 'Counter value',
+				last_section_id	: 'Last section_id'
+			}, ...datalist]
+			const full_list_length = full_list.length
+			for (let i = 0; i < full_list_length; i++) {
+
+				const item = full_list[i]
+
+				const last_section_id	= item.last_section_id || 'empty'
+				const out_of_sync		= item.counter_value!==last_section_id
+				const class_type		= item.type
+					? ' ' + item.type
+					: ''
+
+				// datalist_item_container
+					const ctn_class = item.type==='header' ? ' header' : ''
+					const datalist_item_container = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'datalist_item_container' + ctn_class,
+						parent			: datalist_container
+					})
+
+				// section_tipo
+					ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'item_column' + class_type,
+						inner_html		: item.section_tipo,
+						parent			: datalist_item_container
+					})
+
+				// section_name
+					ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'item_column' + class_type,
+						inner_html		: item.label,
+						parent			: datalist_item_container
+					})
+
+				// counter_value
+					ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'item_column right' + class_type,
+						inner_html		: item.counter_value,
+						parent			: datalist_item_container
+					})
+
+				// last_section_id
+					const lsid_class = item.type!=='header' && out_of_sync===true
+						? ' out_of_sync' + class_type
+						: class_type
+					ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'item_column right' + lsid_class,
+						inner_html		: last_section_id,
+						parent			: datalist_item_container
+					})
+
+				// fix_counter_container
+					const fix_counter_container = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'item_column right fix_counter_container' + class_type,
+						parent			: datalist_item_container
+					})
+					if (item.type==='header') {
+						fix_counter_container.insertAdjacentHTML('afterbegin', 'Fix counter')
+					}else if(out_of_sync) {
+						const button_fix = ui.create_dom_element({
+							element_type	: 'button',
+							class_name		: 'light button_action fix_counter',
+							inner_html		: 'Fix counter',
+							parent			: fix_counter_container
+						})
+						button_fix.addEventListener('click', fn_fix_counter)
+						async function fn_fix_counter(e) {
+							e.stopPropagation()
+
+							// confirm action
+								if (!confirm( get_label.sure || 'Sure?' )) {
+									return false;
+								}
+
+							// lock
+								content_data.classList.add('lock')
+
+							// spinner
+								const spinner = ui.create_dom_element({
+									element_type	: 'div',
+									class_name		: 'spinner'
+								})
+								body_response.prepend(spinner)
+
+							// modify_counter
+								await self.modify_counter({
+									counter_action	: 'fix',
+									section_tipo	: item.section_tipo,
+									body_response	: body_response
+								})
+
+							// lock
+								content_data.classList.remove('lock')
+								spinner.remove()
+						}//end fn_fix_counter
+					}
+
+				// reset_counter_container
+					const reset_counter_container = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'item_column right reset_counter_container' + class_type,
+						parent			: datalist_item_container
+					})
+					if (item.type==='header') {
+						reset_counter_container.insertAdjacentHTML('afterbegin', 'Reset counter')
+					}else{
+						const button_reset_counter = ui.create_dom_element({
+							element_type	: 'button',
+							class_name		: 'warning button_action reset_counter',
+							inner_html		: 'Reset counter',
+							parent			: reset_counter_container
+						})
+						button_reset_counter.addEventListener('click', fn_reset_counter)
+						async function fn_reset_counter(e) {
+							e.stopPropagation()
+
+							// confirm action
+								if (!confirm( 'Warning! \nReset counter will delete this section ['+item.section_tipo+'] counter. \nThis action cannot be undone.' )) {
+									return false;
+								}
+								if (!confirm( get_label.sure || 'Sure?' )) {
+									return false;
+								}
+
+							// lock
+								content_data.classList.add('lock')
+
+							// spinner
+								const spinner = ui.create_dom_element({
+									element_type	: 'div',
+									class_name		: 'spinner'
+								})
+								body_response.prepend(spinner)
+
+							// modify_counter
+								await self.modify_counter({
+									counter_action	: 'reset',
+									section_tipo	: item.section_tipo,
+									body_response	: body_response
+								})
+
+							// lock
+								content_data.classList.remove('lock')
+								spinner.remove()
+						}//end fn_reset_counter
+					}
+
+			}//end for (let i = 0; i < full_list_length; i++)
+
+	// add at end body_response
+		content_data.appendChild(body_response)
 
 
 	return content_data
 }//end get_content_data_edit
+
 
 
 // @license-end

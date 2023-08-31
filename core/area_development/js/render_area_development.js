@@ -408,7 +408,7 @@ export const build_form = function(widget_object) {
 							}
 						})
 						print_response(body_response, api_response)
-						form_container.classList.remove("lock")
+						form_container.classList.remove('lock')
 						spinner.remove()
 
 					// delegates get_children task to worker. When finish, create global radio for current area
