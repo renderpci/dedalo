@@ -196,28 +196,26 @@ const get_content_data = function(self) {
 				parent			: button_enter
 			})
 		// event click
-		button_enter.addEventListener('click', function(e) {
+		button_enter.addEventListener('click', fn_submit)
+		function fn_submit(e) {
+			e.stopPropagation()
 			e.preventDefault()
 
-			const username = user_input.value
-			if (username.length<2) {
-				const message = `Invalid username ${username}!`
-				ui.show_message(messages_container, message, 'error', 'component_message', true)
-				return false
-			}
+			// username check
+				const username = user_input.value
+				if (username.length<2) {
+					const message = `Invalid username ${username}!`
+					ui.show_message(messages_container, message, 'error', 'component_message', true)
+					return false
+				}
 
-			const auth = auth_input.value
-			if (auth.length<2) {
-				const message = `Invalid auth code!`
-				ui.show_message(messages_container, message, 'error', 'component_message', true)
-				return false
-			}
-
-			// show spinner and hide button label
-				button_enter_label.classList.add('hide')
-				button_enter_loading.classList.remove('hide')
-				button_enter.classList.add('white')
-				button_enter.blur()
+			// auth check
+				const auth = auth_input.value
+				if (auth.length<2) {
+					const message = `Invalid auth code!`
+					ui.show_message(messages_container, message, 'error', 'component_message', true)
+					return false
+				}
 
 			// check status
 				if (self.status==='login') {
@@ -226,6 +224,12 @@ const get_content_data = function(self) {
 
 			// status update
 				self.status = 'login'
+
+			// show spinner and hide button label
+				button_enter_label.classList.add('hide')
+				button_enter_loading.classList.remove('hide')
+				button_enter.classList.add('white')
+				button_enter.blur()
 
 			// data_manager API call
 				data_manager.request({
@@ -274,16 +278,22 @@ const get_content_data = function(self) {
 					// status update
 						self.status = 'rendered'
 				})
-		})//end button_enter.addEventListener('click', function(e)
+		}//end fn_submit
 
 	// info
-		const info = ui.create_dom_element({
+		// web version add
+		const browser_info = get_browser_info()
+		info_data.push({
+			label	: 'Browser info',
+			type	: 'version',
+			value	: browser_info.name + ' ' + browser_info.version
+		})
+		const info_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'info',
+			class_name		: 'info_container',
 			parent			: fragment
 		})
-		// const info_data			= self.context.properties.info || []
-		const info_data_length	= info_data.length
+		const info_data_length = info_data.length
 		for (let j = 0; j < info_data_length; j++) {
 
 			const item = info_data[j]
@@ -292,7 +302,7 @@ const get_content_data = function(self) {
 				ui.create_dom_element({
 					element_type	: 'span',
 					inner_html		: item.label,
-					parent			: info
+					parent			: info_container
 				})
 
 			// class_name custom for value
@@ -322,7 +332,7 @@ const get_content_data = function(self) {
 					element_type	: 'span',
 					inner_html		: value,
 					class_name		: class_name,
-					parent			: info
+					parent			: info_container
 				})
 		}
 
@@ -364,7 +374,7 @@ const get_content_data = function(self) {
 		content_data.top				= top
 		content_data.select_lang		= self.select_lang
 		content_data.form				= form
-		content_data.info				= info
+		content_data.info_container		= info_container
 		content_data.messages_container	= messages_container
 
 
@@ -375,7 +385,11 @@ const get_content_data = function(self) {
 
 /**
 * GET_BROWSER_INFO
-* @return object
+* @return object info
+* {
+* 	name : Chrome
+* 	version : 106
+* }
 */
 const get_browser_info = function() {
 
@@ -391,15 +405,12 @@ const get_browser_info = function() {
 	M=M[2]? [M[1], M[2]]: [navigator.appName, navigator.appVersion, '-?'];
 	if((tem=ua.match(/version\/(\d+)/i))!=null) {M.splice(1,1,tem[1]);}
 
-	const target_div = document.getElementById('login_ajax_response');
-	if (target_div) {
-		target_div.innerHTML = "Using " + M[0] + " " + M[1] + ""
-	}
-
-	return {
+	const info = {
 		name	: M[0],
 		version	: M[1]
-	};
+	}
+
+	return info
 }//end get_browser_info
 
 
@@ -412,13 +423,13 @@ const validate_browser = function() {
 
 	const browser_info = get_browser_info()
 	const min_version  = {
-		Chrome		: 76,
-		Firefox		: 65,
-		AppleWebKit	: 10
+		Chrome		: 100,
+		Firefox		: 100,
+		AppleWebKit	: 14
 	}
 
 	const msg = (browser, version, min_version) => {
-		return `Sorry, your ${browser} browser version is too old (${version}). \nPlease update your ${browser} version to ${min_version} or never`
+		return `Sorry, your browser ${browser} version is too old (${version}). \nPlease update your ${browser} version to ${min_version} or never`
 	}
 
 	try {
@@ -451,8 +462,8 @@ const validate_browser = function() {
 				break;
 		}
 
-	}catch (e) {
-		console.log("error",e)
+	}catch (error) {
+		console.error('error', error)
 	}
 
 	return true;
