@@ -58,7 +58,7 @@ Literal components has three different ways to manage data; direct, media and in
 #### Direct components
 
 - [component_date](component_date.md)
-- component_email
+- [component_email](component_email.md)
 - component_external
 - component_filter_records
 - component_geolocation
@@ -518,3 +518,52 @@ For example, when a component is activate by the user, the component will publis
 
 Some components perform actions in other components, as component_text_area to control the component_av time position, when the user click in the time_code tag of a transcription the component_av jump to the specific time code.
 
+### configuration
+
+The observers and observables are configured in ontology properties of the components. The component the is observing the actions and changes has two way, what happen when is fire a event of the observable, what perform, in the client and in the server. Sometimes the perform action has parameters to configure the execution.
+
+Example of observer configuration:
+
+When a Numismatic Object define his own Type [numisdata161](https://dedalo.dev/ontology/numisdata161), the Type [numisdata3](https://dedalo.dev/ontology/numisdata3) related and his equivalents types [numisdata36](https://dedalo.dev/ontology/numisdata36) will need to be update his own Coins field [numisdata77](https://dedalo.dev/ontology/numisdata77). The coins field in types get all coins in the equivalents types, so, when one type change all need to be update. In this situation the coins portal is observing the types field in numismatic object, the observable, any change in it will fire the process to update using `set_dato_external` function.
+
+Coins Update his own data when tipo is set in numismatic object:
+
+```json
+"observe": [{
+        "client": {
+            "event": "update_value",
+            "perform": {
+                "function": "refresh"
+            }
+        },
+        "server": {
+            "config": {
+                "use_self_section": true,
+                "use_observable_dato": true
+            },
+            "perform": {
+                "params": {
+                    "save": true,
+                    "changed": false,
+                    "current_dato": false,
+                    "references_limit": 0
+                },
+                "function": "set_dato_external"
+            }
+        },
+        "component_tipo": "numisdata36"
+ }]
+```
+
+And the observable has a list of the components that observe it.
+
+```json
+"observers": [
+    {
+        "section_tipo": "numisdata3",
+        "component_tipo": "numisdata36"
+    }
+]
+```
+
+See the full definition of every component properties.
