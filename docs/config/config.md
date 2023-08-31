@@ -1030,7 +1030,7 @@ Every tipo (typology of indirect programming object) defines a heritage field, a
 
 By default Dédalo load some common tipos for all project types.
 
-| | |
+| tld | defintion |
 | --- | --- |
 | **dd** | dedalo. Definition of default list and common uses and tools such as translation tools. |
 | **rsc** | resources. Definition for areas and sections commons to all projects such as people, images, audiovisual files, publications, documents, bibliography, etc. |
@@ -1039,18 +1039,24 @@ By default Dédalo load some common tipos for all project types.
 
 Besides, every installation can import the ontology tipo that will use in the inventory or research:
 
-| | |
+| tld | defintion |
 | --- | --- |
 | **oh** | Oral History, the definition sections and tools to be used for oral history projects such as interviews, transcription, indexation, etc. |
 | **ich** | Intangible Cultural Heritage, the definition sections and tools to use for intangible heritage, such as elements, processes, communities, symbolic acts, etc. |
 | **numisdata** | Numismatic heritage,  the definition sections and tools to use for numismatics project, such as mints, types, legends, hoards, finds, etc. |
-| **mupreva** | Archeological heritage, the definition of sections and tools to use for archeological heritage, such as archeological places, deposit, catalog, etc. |
-| **qdp** | Ethnological heritage, the definition of sections and tools to use for ethnological heritage, such as objects, collectors, informants, etc |
+| **tch** | Tangible heritage, the definition of sections and tools to use for tangible heritage, such as objects, collectors, informants, etc |
 | **dmm** | Memory and documentary heritage, the definition of sections and tools to be used for the heritage of memory, such as graves, deportees, exiles, tortured, etc. |
+| **isad** | Archives following the [ISAD(g) standard](https://www.ica.org/en/isadg-general-international-standard-archival-description-second-edition) (General International Standard Archival Description - Second edition), the definition of sections and tools to be used for cataloging documents with the standard structure, etc. |
 
 ```php
 define('DEDALO_PREFIX_TIPOS', [ 'dd', 'rsc', 'hierarchy', 'lg', 'oh', 'ich' ]);
 ```
+
+!!! note "Thesaurus dependencies"
+    Some tld has a thesaurus dependency, if you want to use a `tch` Dédalo installation will need to create the `material`, `technique`, or `objects` hierarchies. This hierarchies are not included into the main tld, because the hierarchies need to be activate and created by the users.
+
+!!! note "Applying changes in DEDALO_PREFIX_TIPOS"
+    Any change in `DEDALO_PREFIX_TIPOS` will need a update of the ontology, this changes are not directly applied. Dédalo need to get the ontology tld and install it, to do that update the ontology in Developers control panel.
 
 ---
 
