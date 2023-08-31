@@ -58,7 +58,7 @@ Literal components has three different ways to manage data; direct, media and in
 #### Direct components
 
 - [component_date](component_date.md)
-- component_email
+- [component_email](component_email.md)
 - component_external
 - component_filter_records
 - component_geolocation
@@ -524,6 +524,10 @@ The observers and observables are configured in ontology properties of the compo
 
 Example of observer configuration:
 
+When a Numismatic Object define his own Type [numisdata161](https://dedalo.dev/ontology/numisdata161), the Type [numisdata3](https://dedalo.dev/ontology/numisdata3) related and his equivalents types [numisdata36](https://dedalo.dev/ontology/numisdata36) will need to be update his own Coins field [numisdata77](https://dedalo.dev/ontology/numisdata77). The coins field in types get all coins in the equivalents types, so, when one type change all need to be update. In this situation the coins portal is observing the types field in numismatic object, the observable, any change in it will fire the process to update using `set_dato_external` function.
+
+Coins Update his own data when tipo is set in numismatic object:
+
 ```json
 "observe": [{
         "client": {
@@ -551,9 +555,7 @@ Example of observer configuration:
  }]
 ```
 
-Observables has a list of the components that observe it.
-
-Example of observable:
+And the observable has a list of the components that observe it.
 
 ```json
 "observers": [
