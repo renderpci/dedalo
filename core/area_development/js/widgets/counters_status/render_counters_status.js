@@ -7,7 +7,7 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	// import {data_manager} from '../../../../common/js/data_manager.js'
-	// import {object_to_url_vars} from '../../../../common/js/utils/index.js'
+	import {open_window, object_to_url_vars} from '../../../../common/js/utils/index.js'
 
 
 
@@ -143,12 +143,29 @@ const get_content_data_edit = async function(self) {
 					})
 
 				// section_tipo
-					ui.create_dom_element({
+					const section_tipo_node = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'item_column' + class_type,
 						inner_html		: item.section_tipo,
 						parent			: datalist_item_container
 					})
+					if (item.type!=='header') {
+						section_tipo_node.classList.add('link')
+						section_tipo_node.addEventListener('click', function(e) {
+							// open a new window
+							const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
+								tipo	: item.section_tipo,
+								mode	: 'list',
+								menu	: false
+							})
+							const new_window = open_window({
+								url		: url,
+								name	: 'section_view',
+								width	: 1280,
+								height	: 740
+							})
+						})
+					}
 
 				// section_name
 					ui.create_dom_element({
