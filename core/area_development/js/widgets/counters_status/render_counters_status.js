@@ -118,7 +118,7 @@ const get_content_data_edit = async function(self) {
 		// list
 			const full_list = [{
 				type			: 'header',
-				section_tipo	: 'section_tipo',
+				section_tipo	: 'Section tipo',
 				label			: 'Section name',
 				counter_value	: 'Counter value',
 				last_section_id	: 'Last section_id'
@@ -129,7 +129,7 @@ const get_content_data_edit = async function(self) {
 				const item = full_list[i]
 
 				const last_section_id	= item.last_section_id || 'empty'
-				const out_of_sync		= item.counter_value!==last_section_id
+				const out_of_sync		= last_section_id!=='empty' && item.counter_value!==last_section_id
 				const class_type		= item.type
 					? ' ' + item.type
 					: ''
