@@ -626,6 +626,10 @@ component_portal.prototype.build = async function(autoload=false) {
 									|| self.request_config_object?.show.records_separator
 									|| ' | '
 
+	// check if the target section is multiple to remove the add button
+		self.show_interface.button_add = (self.target_section.length > 1)
+			? false
+			: self.show_interface.button_add ?? true
 	// self.show_interface is defined in component_comom init()
 	// Default source external buttons configuration,
 	// if show.interface is defined in properties used the definition, else use this default
