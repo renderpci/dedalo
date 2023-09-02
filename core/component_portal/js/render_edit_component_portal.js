@@ -689,7 +689,62 @@ export const get_buttons = (self) => {
 					})
 					// add value to current data
 					if (api_response.result) {
-						self.refresh()
+
+						// save return the datum of the component
+						// to refresh the component, inject this api_response to use as "read" api_response
+						// the build process will use it and does not re-call to API.
+						await self.refresh({
+							tmp_api_response : api_response
+						})
+						// get the last value of the portal to open the new section
+						const last_value = self.data.value[self.data.value.length-1]
+
+						const section_tipo	= last_value.section_tipo
+						const section_id	= last_value.section_id
+
+						// create the new section instance
+						const section = await get_instance({
+							model			: 'section',
+							mode			: 'edit',
+							tipo			: section_tipo,
+							section_tipo	: section_tipo,
+							section_id		: section_id,
+							inspector		: false
+						})
+						await section.build(true)
+						const section_node = await section.render()
+
+						// create a modal to attach the section node
+						const modal = ui.attach_to_modal({
+							header		: get_label.new || 'New section',
+							body		: section_node
+						})
+						modal.on_close = function(){
+							self.refresh()
+						}
+						// get the first ddo in ddo_map to be focused
+						const first_ddo = self.request_config_object.show.ddo_map.find(el => el.model !== 'component_publication')
+
+						// get the instance of the component that was created by the section in build-render process
+						const all_instances	= get_all_instances()
+						const component		= all_instances.find( el =>
+							el.tipo === first_ddo.tipo &&
+							el.section_tipo === section_tipo &&
+							el.section_id === section_id &&
+							el.parent === section_tipo
+						)
+
+						// if the component is ready and the section is in DOM, activate it and focus his input node.
+						if(component && component.node){
+							when_in_dom(component.node, function(){
+								// activate the component in DOM
+								ui.component.activate(component)
+
+								// focus the input node of the component
+								component.node.content_data[0].querySelector('input').focus()
+							})
+						}
+
 					}else{
 						console.error('Error on api_response on try to create new row:', api_response);
 					}
