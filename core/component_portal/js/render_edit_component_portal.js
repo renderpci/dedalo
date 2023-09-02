@@ -834,6 +834,44 @@ export const get_buttons = (self) => {
 			}
 		}//end button_link
 
+	// button_open_section_list
+		if(self.show_interface.button_add===true) {
+
+			const first_section = target_section[0]
+
+			const label = (SHOW_DEBUG===true)
+				? `${first_section.label} [${first_section.tipo}]`
+				: first_section.label
+			const button_open_section_list = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button pen',
+				title			: label,
+				parent			: buttons_fold
+			})
+			button_open_section_list.addEventListener('click', function(e){
+				e.stopPropagation()
+
+				// open a new window
+					const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
+						tipo	: first_section.tipo,
+						mode	: 'list',
+						menu	: false
+					})
+					const new_window = open_window({
+						url		: url,
+						name	: 'section_view',
+						width	: 1280,
+						height	: 740
+					})
+					new_window.addEventListener('blur', function() {
+						// refresh current instance
+						self.refresh({
+							build_autoload : true
+						})
+					})
+			})
+		}
+
 	// button tree terms selector
 		if(self.show_interface.button_tree===true) {
 			const button_tree_selector = ui.create_dom_element({
