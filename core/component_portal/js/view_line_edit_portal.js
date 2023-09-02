@@ -85,6 +85,22 @@ view_line_edit_portal.render = async function(self, options) {
 			activate_autocomplete(self, wrapper)
 		})
 
+	// change_mode
+		wrapper.addEventListener('dblclick', function(e) {
+			e.stopPropagation()
+			e.preventDefault()
+			// self.show_interface.read_only = true
+
+			const change_mode = 'list'
+
+			const change_view = 'line'
+
+			self.change_mode({
+				mode	: change_mode,
+				view	: change_view
+			})
+		})
+
 
 	return wrapper
 }//end render
