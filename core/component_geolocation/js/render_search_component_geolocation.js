@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global */
 /*eslint no-undef: "error"*/
 
@@ -9,7 +10,7 @@
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {
-		get_content_data_edit
+		get_content_data
 	}
 	from './view_default_edit_geolocation.js'
 
@@ -29,7 +30,7 @@ export const render_search_component_geolocation = function() {
 /**
 * SEARCH
 * Render node for use in edit
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_search_component_geolocation.prototype.search = async function(options) {
 
@@ -39,7 +40,7 @@ render_search_component_geolocation.prototype.search = async function(options) {
 		const render_level = options.render_level || 'full'
 
 	// content_data
-		const content_data = await get_content_data_edit(self)
+		const content_data = await get_content_data(self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -54,3 +55,7 @@ render_search_component_geolocation.prototype.search = async function(options) {
 
 	return wrapper
 }//end search
+
+
+
+// @license-end

@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -22,8 +23,10 @@ export const view_default_edit_section_id = function() {
 
 /**
 * RENDER
-* Render node for use in edit
-* @return DOM node
+* Render node for use in current view
+* @param object self
+* @param object options
+* @return HTMLElement wrapper
 */
 view_default_edit_section_id.render = async function(self, options) {
 
@@ -37,13 +40,19 @@ view_default_edit_section_id.render = async function(self, options) {
 		}
 
 	// buttons
-		const buttons = get_buttons(self)
+		const buttons = (self.permissions > 1)
+			? get_buttons(self)
+			: null
 
 	// wrapper. ui build_edit returns component wrapper
-		const wrapper = ui.component.build_wrapper_edit(self, {
+		const wrapper_options = {
 			content_data	: content_data,
 			buttons			: buttons
-		})
+		}
+		if (self.view==='line') {
+			wrapper_options.label = null // prevent to create label node
+		}
+		const wrapper = ui.component.build_wrapper_edit(self, wrapper_options)
 		// set pointers
 		wrapper.content_data = content_data
 
@@ -56,7 +65,7 @@ view_default_edit_section_id.render = async function(self, options) {
 /**
 * CONTENT_DATA_EDIT
 * Note that this component it's editable only in search mode
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data_edit = function(self) {
 
@@ -68,7 +77,7 @@ const get_content_data_edit = function(self) {
 	// section_id value
 		ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'section_id',
+			class_name		: 'content_value section_id',
 			inner_html		: value,
 			parent			: content_data
 		})
@@ -81,7 +90,7 @@ const get_content_data_edit = function(self) {
 /**
 * GET_BUTTONS
 * @param object instance
-* @return DOM node buttons_container
+* @return HTMLElement buttons_container
 */
 const get_buttons = (self) => {
 
@@ -103,3 +112,7 @@ const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
+
+
+
+// @license-end

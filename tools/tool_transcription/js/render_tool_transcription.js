@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -5,6 +6,7 @@
 
 // imports
 	import {event_manager} from '../../../core/common/js/event_manager.js'
+	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {keyboard_codes} from '../../../core/common/js/utils/keyboard.js'
 	import {render_node_info} from '../../../core/common/js/utils/notifications.js'
@@ -26,14 +28,15 @@ export const render_tool_transcription = function() {
 
 /**
 * EDIT
-* Render node
-* @return DOM node
+* Render tool main node
+* @param object options = {}
+* @return HTMLElement wrapper
 */
-render_tool_transcription.prototype.edit = async function(options={render_level:'full'}) {
+render_tool_transcription.prototype.edit = async function(options={}) {
 
 	const self = this
 
-	// render level
+	// options
 		const render_level = options.render_level || 'full'
 
 	// content_data
@@ -47,27 +50,37 @@ render_tool_transcription.prototype.edit = async function(options={render_level:
 			content_data : content_data
 		})
 
-	// transcription_options are the buttons to get access to other tools (buttons in the header)
-		const tanscription_options = await render_tanscription_options(self, content_data)
-		wrapper.tool_buttons_container.appendChild(tanscription_options)
-
-	// status, render the status components for users and admins to control the process of the tool
-		const status_container = await render_status(self)
-		wrapper.tool_buttons_container.appendChild(status_container)
+	// headers items
+		const promises = []
+		// transcription_options are the buttons to get access to other tools (buttons in the header)
+		promises.push(
+			render_tanscription_options(self)
+		)
+		// process status, render the status components for users and admins to control the process of the tool
+		promises.push(
+			render_process_status(self)
+		)
+		// rendered in parallel but in the proper order
+		Promise.all(promises)
+		.then((nodes) => {
+			nodes.forEach(function (node, index) {
+				wrapper.tool_buttons_container.appendChild(node)
+			})
+		})
 
 	// render_activity_info are the information of the activity as "Save"
-		const activity_info = render_activity_info(self)
-		wrapper.activity_info_container.appendChild(activity_info)
+		const activity_info_node = await render_activity_info(self)
+		wrapper.activity_info_container.appendChild(activity_info_node)
 
 
 	return wrapper
-}//end render_tool_transcription
+}//end edit
 
 
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data_edit = async function(self) {
 
@@ -81,13 +94,11 @@ const get_content_data_edit = async function(self) {
 		})
 
 	// component_text_area. render another node of component caller and append to container
-		const component_text_area = self.transcription_component || await self.get_component(self.lang)
+		const component_text_area = self.transcription_component
 		// set auto_init_editor for convenience
 		component_text_area.auto_init_editor = true
-		component_text_area.render()
-		.then(function(node){
-			left_container.appendChild(node)
-		})
+		const component_text_area_node = await component_text_area.render()
+		left_container.appendChild(component_text_area_node)
 
 	// right_container
 		const right_container = ui.create_dom_element({
@@ -99,7 +110,6 @@ const get_content_data_edit = async function(self) {
 	// media_component
 		self.media_component.mode			= 'edit'
 		self.media_component.context.view	= 'player'
-		console.log('self---------/////////---------------:', self);
 		await self.media_component.build(false)
 		const media_component_node = await self.media_component.render();
 		right_container.appendChild(media_component_node)
@@ -118,7 +128,7 @@ const get_content_data_edit = async function(self) {
 				const slider_label = ui.create_dom_element({
 					element_type	: 'div',
 					class_name 		: 'slider_label',
-					inner_html 		: get_label.play_speed || 'Play speed',
+					inner_html 		: self.get_tool_label('play_speed') || 'Play speed',
 					parent 			: slider_container
 				})
 				const slider = ui.create_dom_element({
@@ -138,10 +148,10 @@ const get_content_data_edit = async function(self) {
 						type 			: 'range',
 						parent 			: slider
 					})
-					range.value = output.value
-					range.min = 0
-					range.max = 2
-					range.step = 0.1
+					range.value	= output.value
+					range.min	= 0
+					range.max	= 2
+					range.step	= 0.1
 					range.addEventListener('change', function(){
 						output.value = range.value
 						self.media_component.set_playback_rate(range.value)
@@ -162,7 +172,7 @@ const get_content_data_edit = async function(self) {
 						const playpause_key_label = ui.create_dom_element({
 							element_type	: 'div',
 							class_name		: 'label',
-							inner_html		: get_label.play_pause_key || 'Play/pause key',
+							inner_html		: self.get_tool_label('play_pause') || 'Play/pause key',
 							parent			: playpause_key
 						})
 						const playpause_key_input = ui.create_dom_element({
@@ -171,20 +181,19 @@ const get_content_data_edit = async function(self) {
 							parent 			: playpause_key
 						})
 						// get the cookie of the key
-						const av_playpause_key_value = localStorage.getItem('av_playpause_key')
-
-						const av_playpause_keyboard_code						= av_playpause_key_value ? av_playpause_key_value : 'Escape' // Default 'Escape'
+						const av_playpause_key_value		= localStorage.getItem('av_playpause_key')
+						const av_playpause_keyboard_code	= av_playpause_key_value ? av_playpause_key_value : 'Escape' // Default 'Escape'
 						// get the user friendly name of the key code based in specific object imported form /common/utils/js/keyborad.js
-						const av_playpause_keyboard_key							= keyboard_codes[av_playpause_keyboard_code]
+						const av_playpause_keyboard_key										= keyboard_codes[av_playpause_keyboard_code]
 						component_text_area.context.features.av_player.av_play_pause_code	= av_playpause_keyboard_code
-						playpause_key_input.value								= av_playpause_keyboard_key
+						playpause_key_input.value											= av_playpause_keyboard_key
 
 						playpause_key_input.addEventListener('keyup', function(event){
-							const keyborard_code					= event.code
-							const keyborard_key						= event.key
+							const keyborard_code	= event.code
+							const keyborard_key		= event.key
 							// set the cookie of the key
 							localStorage.setItem('av_playpause_key', keyborard_code);
-							playpause_key_input.value								= keyborard_key
+							playpause_key_input.value											= keyborard_key
 							component_text_area.context.features.av_player.av_play_pause_code	= keyborard_code
 						})
 					// rewind value is the time that the av rewind when is paused by the play/pause key
@@ -197,7 +206,7 @@ const get_content_data_edit = async function(self) {
 						const av_rewind_secs_label = ui.create_dom_element({
 							element_type	: 'div',
 							class_name		: 'label',
-							inner_html		: get_label.auto_rewind || 'Auto-rewind',
+							inner_html		: self.get_tool_label('auto_rewind') || 'Auto-rewind',
 							parent			: av_rewind_secs
 						})
 						const av_rewind_secs_input = ui.create_dom_element({
@@ -208,7 +217,7 @@ const get_content_data_edit = async function(self) {
 						const av_rewind_secs_name = ui.create_dom_element({
 							element_type	: 'span',
 							parent 			: av_rewind_secs,
-							inner_html		: get_label.seconds_abbr || 'sec/s.'
+							inner_html		: self.get_tool_label('seconds_abbr') || 'sec/s.'
 						})
 						// get the cookie of the key
 						const av_rewind_secs_value = localStorage.getItem('av_rewind_secs')
@@ -240,7 +249,7 @@ const get_content_data_edit = async function(self) {
 						const tag_insert_key_label = ui.create_dom_element({
 							element_type	: 'div',
 							class_name		: 'label',
-							inner_html		: get_label.insert_tag || 'Insert tag',
+							inner_html		: self.get_tool_label('insert_tag') || 'Insert tag',
 							parent			: tag_insert_key
 						})
 						const tag_insert_key_input = ui.create_dom_element({
@@ -269,7 +278,7 @@ const get_content_data_edit = async function(self) {
 			// subtitles_block
 				const subtitles_block = ui.create_dom_element({
 					element_type	: 'div',
-					class_name 		: 'subtitles_block',
+					class_name 		: 'subtitles_block block_separator',
 					parent 			: right_container
 				})
 
@@ -277,7 +286,7 @@ const get_content_data_edit = async function(self) {
 					const button_build_subtitles = ui.create_dom_element({
 						element_type	: 'button',
 						class_name		: 'light btn_subtitles',
-						inner_html		: get_label.build_subtitles || 'Build subtitles',
+						inner_html		: self.get_tool_label('build_subtitles') || 'Build subtitles',
 						parent			: subtitles_block
 					})
 					button_build_subtitles.addEventListener('click', function(evt) {
@@ -295,7 +304,7 @@ const get_content_data_edit = async function(self) {
 					ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'label',
-						inner_html		: get_label.characters_per_line || 'Characters per line',
+						inner_html		: self.get_tool_label('chars_per_line') || 'Characters per line',
 						parent			: subtitles_block
 					})
 
@@ -317,6 +326,29 @@ const get_content_data_edit = async function(self) {
 						input_characters_per_line.value				= value
 						// component_text_area.av_rewind_seconds	= value
 					})
+
+			// automatic_transcription block
+				const automatic_transcription_block = ui.create_dom_element({
+					element_type	: 'div',
+					class_name 		: 'automatic_transcription_block',
+					parent 			: right_container
+				})
+
+				// check if tool has transcriber engine configuration
+				const transcriber_engine = (self.context.config)
+					? self.context.config.transcriber_engine.value
+					: false
+
+				if (transcriber_engine) {
+					const automatic_transcription_node = build_automatic_transcription({
+						self					: self,
+						source_select_lang		: self.transcription_component.lang,
+						transcripton_container	: component_text_area_node
+					})
+					automatic_transcription_block.appendChild(automatic_transcription_node)
+				}//end if (transcriber_engine)
+
+
 		}//end if (self.media_component.model==='component_av') {
 
 	// content_data
@@ -356,8 +388,8 @@ const render_related_list = function(self){
 		})
 
 	// select -> options
-		const sections		= data.find(el => el.typo==='sections')
-		//if the section is not called by other sections (related sections) return empty node
+		const sections = data.find(el => el.typo==='sections')
+		// if the section is not called by other sections (related sections) return empty node
 		if(!sections){
 			return fragment
 		}
@@ -399,10 +431,11 @@ const render_related_list = function(self){
 
 		}//end for
 
-	// event . Change
-		select.addEventListener("change", async function(e){
+	// event change
+		select.addEventListener('change', async function(e){
 			self.top_locator = this.options[this.selectedIndex].locator
 		})
+
 
 	return fragment
 }//end render_related_list
@@ -412,9 +445,10 @@ const render_related_list = function(self){
 /**
 * RENDER_TANSCRIPTION_OPTIONS
 * This is used to build a optional buttons inside the header
-* @return DOM node fragment
+* @param object self
+* @return HTMLElement fragment
 */
-const render_tanscription_options = async function(self, content_data) {
+const render_tanscription_options = async function(self) {
 
 	const fragment = new DocumentFragment()
 
@@ -431,7 +465,7 @@ const render_tanscription_options = async function(self, content_data) {
 		const lang_label = ui.create_dom_element({
 			element_type	: 'div',
 			class_name 		: 'lang_label',
-			inner_html 		: get_label.idioma || 'Language',
+			inner_html 		: get_label.language || 'Language',
 			parent 			: lang_container
 		})
 		// the lang selector use the content_data pointer .left_container to remove the transcription text_area and rebuild the new node
@@ -439,17 +473,9 @@ const render_tanscription_options = async function(self, content_data) {
 			selected	: self.lang,
 			class_name	: 'dd_input selector',
 			action		: async function(e){
-				// create new one
-				const component = await self.get_component(e.target.value)
-				self.lang = e.target.value
-				component.render().then(function(node){
-					// remove previous nodes
-					while (content_data.left_container.lastChild) {//} && content_data.left_container.lastChild.id!==lang_selector.id) {
-						content_data.left_container.removeChild(content_data.left_container.lastChild)
-					}
-					// add the new one
-					content_data.left_container.appendChild(node)
-				})
+				const lang = e.target.value
+				self.transcription_component.lang = lang
+				self.transcription_component.refresh()
 			}
 		})
 		lang_container.appendChild(lang_selector)
@@ -514,14 +540,14 @@ const render_tanscription_options = async function(self, content_data) {
 
 
 /**
-* RENDER_STATUS
+* RENDER_PROCESS_STATUS
 * Render the status components to get control of the process of the tool
 * the components are defined in ontology as tool_config->name_of_the_tool->ddo_map
 * @param object self
 * 	instance of current tool
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
-const render_status = async function(self) {
+const render_process_status = async function(self) {
 
 	const fragment = new DocumentFragment()
 
@@ -545,7 +571,7 @@ const render_status = async function(self) {
 
 
 	return fragment
-}//end render_status
+}//end render_process_status
 
 
 
@@ -554,9 +580,9 @@ const render_status = async function(self) {
 * This is used to build a optional buttons inside the header
 * @param object self
 * 	instance of current tool
-* @return DOM node activity_info_body
+* @return HTMLElement activity_info_body
 */
-const render_activity_info = function(self) {
+const render_activity_info = async function(self) {
 
 	// activity alert
 		const activity_info_body = ui.create_dom_element({
@@ -570,8 +596,8 @@ const render_activity_info = function(self) {
 		)
 		function fn_saved(options) {
 
-			// recived options contains an object with instance and api_response
-			const node_info_options = Object.assign(options,{
+			// revived options contains an object with instance and api_response
+			const node_info_options = Object.assign(options, {
 				container : activity_info_body
 			})
 
@@ -583,3 +609,134 @@ const render_activity_info = function(self) {
 
 	return activity_info_body
 }//end render_activity_info
+
+
+
+/**
+* BUILD_AUTOMATIC_TRANSCRIPTION
+*/
+const build_automatic_transcription = (options) => {
+
+
+	const self						= options.self
+	const source_select_lang		= options.source_select_lang
+	const transcripton_container	= options.transcripton_container
+
+	const transcriber_engine = (self.context.config)
+		? self.context.config.transcriber_engine.value
+		: false
+
+	const transcriber_quality = (self.context.config)
+		? self.context.config.transcriber_quality
+		: false
+
+	// container
+		const automatic_transcription_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'automatic_transcription_container block_separator'
+		})
+
+	// button
+		const button_automatic_transcription = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'light button_automatic_transcription',
+			inner_html		: self.get_tool_label('automatic_transcription') || "Automatic transcription",
+			parent			: automatic_transcription_container
+		})
+
+		button_automatic_transcription.addEventListener('click', () => {
+
+			transcripton_container.classList.add('loading')
+
+			self.automatic_transcription({
+					transcriber_engine	: self.transcriber_engine_select.value,
+					transcriber_quality	: self.transcriber_engine_quality  && self.transcriber_engine_quality.value
+						? self.transcriber_engine_quality.value
+						: false,
+					source_lang			: source_select_lang
+			})
+			.then((response)=>{
+				transcripton_container.classList.remove('loading')
+				// user messages
+				const msg_type = (response.result===false) ? 'error' : 'ok'
+				ui.show_message(automatic_transcription_container, response.msg, msg_type)
+			})
+		})
+
+	// select engine
+		// label
+		ui.create_dom_element({
+			element_type	: 'span',
+			inner_html		: self.get_tool_label('engine') || 'Quality',
+			parent 			: automatic_transcription_container
+		})
+
+		self.transcriber_engine_select = ui.create_dom_element({
+			element_type	: 'select',
+			parent 			: automatic_transcription_container
+		})
+		for (let i = 0; i < transcriber_engine.length; i++) {
+
+			const engine = transcriber_engine[i]
+
+			const option = ui.create_dom_element({
+				element_type	: 'option',
+				value			: engine.name,
+				inner_html		: engine.label,
+				parent			: self.transcriber_engine_select
+			})
+			if (self.target_transcriber===engine.name) {
+				option.selected = true
+			}
+		}
+		self.transcriber_engine_select.addEventListener('change', function(){
+			data_manager.set_local_db_data({
+				id		: 'transcriber_engine_select',
+				value	: self.transcriber_engine_select.value
+			}, 'status')
+		})
+
+	// select quality of transcriber
+		if(transcriber_quality){
+			// label
+			ui.create_dom_element({
+				element_type	: 'span',
+				inner_html		: self.get_tool_label('quality') || 'Quality',
+				parent 			: automatic_transcription_container
+			})
+
+			self.transcriber_engine_quality = ui.create_dom_element({
+				element_type	: 'select',
+				parent 			: automatic_transcription_container
+			})
+			const quality_value = transcriber_quality.value
+			for (let i = 0; i < quality_value.length; i++) {
+
+				const quality	= quality_value[i]
+				const label		= self.get_tool_label(quality.label) || quality.label
+
+				const option = ui.create_dom_element({
+					element_type	: 'option',
+					value			: quality.name,
+					inner_html		: label,
+					parent			: self.transcriber_engine_quality
+				})
+				if (transcriber_quality.default===quality.name) {
+					option.selected = true
+				}
+			}
+			self.transcriber_engine_quality.addEventListener('change', function(){
+				data_manager.set_local_db_data({
+					id		: 'transcriber_engine_quality',
+					value	: self.transcriber_engine_quality.value
+				}, 'status')
+			})
+		}// end if(transcriber_quality)
+
+
+	return automatic_transcription_container
+}//end build_automatic_transcription
+
+
+
+// @license-end

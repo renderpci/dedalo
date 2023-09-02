@@ -110,9 +110,10 @@
 
 
 // cache
-	// dedalo_cache_manager. bool|object.
+	// dedalo_cache_manager. bool|array.
 	// Default manager: files : write cache files with complex resolved data of current logged user (like profiles)
-	define('DEDALO_CACHE_MANAGER', (object)[
+	// sample: value ['manager' => 'files', 'files_path' => '/tmp']
+	define('DEDALO_CACHE_MANAGER', [
 		'manager'		=> 'files',
 		'files_path'	=> '/tmp'
 	]);
@@ -121,7 +122,7 @@
 
 // required files
 	// core_functions. Basic common functions (before session start)
-	include(DEDALO_CORE_PATH . '/base/core_functions.php');
+	include(DEDALO_SHARED_PATH . '/core_functions.php');
 	// config_core. core definitions and status.
 	include(DEDALO_CONFIG_PATH . '/config_core.php');
 	// dd_tipos. List of main Dédalo resolved tipos
@@ -156,7 +157,7 @@
 			'save_handler'				=> 'files',
 			'timeout_seconds'			=> $timeout_seconds,
 			// 'save_path'				=> '/tmp', string optional
-			// 'aditional_save_path'	=> false, bool optional
+			// 'additional_save_path'	=> false, bool optional
 			'prevent_session_lock'		=> defined('PREVENT_SESSION_LOCK') ? PREVENT_SESSION_LOCK : false,
 			'session_name'				=> 'dedalo_'.DEDALO_ENTITY,
 			// cookie params
@@ -172,7 +173,7 @@
 	define('SHOW_DEBUG',
 		(isset($_SESSION['dedalo']['auth']['user_id']) && $_SESSION['dedalo']['auth']['user_id']==DEDALO_SUPERUSER)
 			? true
-			: false
+			: false // default false
 	);
 
 
@@ -182,7 +183,7 @@
 	define('SHOW_DEVELOPER',
 		(isset($_SESSION['dedalo']['auth']['is_developer']) && $_SESSION['dedalo']['auth']['is_developer']===true)
 			? true
-			: false // false
+			: false // default false
 	);
 
 
@@ -196,21 +197,19 @@
 // backup : Automatic backups control
 	# DEDALO_BACKUP_ON_LOGIN : true / false
 	define('DEDALO_BACKUP_ON_LOGIN'	 , true);
-	# DEDALO_BACKUP_TIME_RANGE Minimum lapse of time (in hours) for run backup script again. Default: (int) 4
-	define('DEDALO_BACKUP_TIME_RANGE', 4);
+	# DEDALO_BACKUP_TIME_RANGE Minimum lapse of time (in hours) for run backup script again. Default: (int) 8
+	define('DEDALO_BACKUP_TIME_RANGE', 8);
 	// backups paths. Try to keep backups directory out of httpdocs scope for security
-	define('DEDALO_BACKUP_PATH' 	 		, dirname(DEDALO_ROOT_PATH) . '/backups');
+	define('DEDALO_BACKUP_PATH' 	 		, dirname(dirname(DEDALO_ROOT_PATH)) . '/backups');
 	define('DEDALO_BACKUP_PATH_TEMP' 	 	, DEDALO_BACKUP_PATH . '/temp');
 	define('DEDALO_BACKUP_PATH_DB' 	 		, DEDALO_BACKUP_PATH . '/db');
-	define('DEDALO_BACKUP_PATH_STRUCTURE' 	, DEDALO_BACKUP_PATH . '/structure');
-	define('DEDALO_BACKUP_PATH_USERS' 		, DEDALO_BACKUP_PATH . '/users');
-	// structure_download. When ontology is updated, download files are saved here
-	define('STRUCTURE_DOWNLOAD_JSON_FILE', DEDALO_BACKUP_PATH_STRUCTURE);
+	define('DEDALO_BACKUP_PATH_ONTOLOGY' 	, DEDALO_BACKUP_PATH . '/ontology');
 
 
-
-// log and errors : Store application data info and errors
-	// logger_level. default: ERROR
+// log and errors : Store application activity data info and errors to DDBB
+	// server error log logger_level. Default: ERROR (will be ignored when SHOW_DEBUG===true)
+	// Note that log outputs to be the php.ini error_log config file like '/var/log/fpm-php.log'
+	// You can view the server log using terminal command 'tail -f /var/log/php_errors.log' with your own log path
 		// level error codes
 		// DEBUG	= 100;
 		// INFO		= 75;
@@ -218,32 +217,26 @@
 		// WARNING	= 25;
 		// ERROR	= 10;
 		// CRITICAL	= 5;
-		define('LOGGER_LEVEL', logger::DEBUG);
-	// Log messages in page
-		$log_messages = array();
-		global $log_messages;
-	// activity log db
+		define('LOGGER_LEVEL', (SHOW_DEBUG===true)
+			? logger::DEBUG // log all messages
+			: logger::ERROR // log only errors
+		);
+	// matrix_activity log db. Manages log write to the table
 		// Log application info in db
-		logger::register('activity'	, 'activity://auto:auto@auto:3306/log_data?table=matrix_activity');
+		logger::register('activity'	, 'activity://auto:auto@auto:5432/log_data?table=matrix_activity');
 		// Store object in logger static array var
 		logger::$obj['activity'] = logger::get_instance('activity');
-	// error log file
-		// Log application errors in file
-		// Logs dir (Maintain this directory inaccessible for security)
-		define('DEDALO_LOGS_DIR'  , dirname(DEDALO_ROOT_PATH) . '/temp/logs');	# !! In production mode log MUST BE out of site
-		// define('DEDALO_LOGS_DIR'  , DEDALO_LIB_PATH . '/logs');
-		// Set file. In production mode log MUST BE out of site
-		logger::register('error', 'file://'.DEDALO_LOGS_DIR.'/dedalo_errors.log');
-		// Store object in logger static array var
-		logger::$obj['error'] = logger::get_instance('error');
+	// update log. Administration update data version action, write status info to this file
+		// Default dir is inside Dédalo config folder (web read is forbidden) but you can
+		// use another more private dir outside httpdocs folder
+		define('UPDATE_LOG_FILE', DEDALO_CONFIG_PATH . '/update.log');
 
 
 
 // lang
-	# DEDALO STRUCTURE LANG (default 'lg-spa')
+	// dedalo structure lang. Ontology lang (default 'lg-spa'). Do not touch this value
 	define('DEDALO_STRUCTURE_LANG', 'lg-spa');
-
-	# APPLICATION LANG : Dedalo application lang
+	// dedalo_application_langs
 	define('DEDALO_APPLICATION_LANGS', [
 		'lg-eng'	=> 'English',
 		'lg-spa'	=> 'Castellano',
@@ -254,10 +247,10 @@
 	// dedalo_application_langs_default
 	define('DEDALO_APPLICATION_LANGS_DEFAULT', 'lg-eng');
 	// dedalo_application_lang. Current Dédalo application lang (cascade calculate from get, post, session vars, default)
-	define('DEDALO_APPLICATION_LANG',			fix_cascade_config4_var('dedalo_application_lang',DEDALO_APPLICATION_LANGS_DEFAULT));
+	define('DEDALO_APPLICATION_LANG',			fix_cascade_config_var('dedalo_application_lang',DEDALO_APPLICATION_LANGS_DEFAULT));
 	// dedalo_data_lang
 	define('DEDALO_DATA_LANG_DEFAULT',			'lg-eng');
-	define('DEDALO_DATA_LANG',					fix_cascade_config4_var('dedalo_data_lang',DEDALO_DATA_LANG_DEFAULT));
+	define('DEDALO_DATA_LANG',					fix_cascade_config_var('dedalo_data_lang',DEDALO_DATA_LANG_DEFAULT));
 	// dedalo_data_lang_selector. Show/hide menu data lang selector. bool default true
 	define('DEDALO_DATA_LANG_SELECTOR',			true);
 	// dedalo_data_nolan. string default 'lg-nolan'. Do not change this
@@ -281,21 +274,21 @@
 // dedalo default config values
 	// dedalo_prefix_tipos. Array of main active tipos of the ontology to be imported and managed by Dédalo.
 	// mandatory: ['dd','rsc','tool','hierarchy','lg']
+	// optional: ['test']
 	define('DEDALO_PREFIX_TIPOS', [
 		'dd',
 		'rsc',
 		'hierarchy',
 		'lg',
 		'oh',
-		'ich'
+		'ich',
+		'test'
 	]);
 	// main_fallback_section. Default section tipo to go when it's not defined any
 	define('MAIN_FALLBACK_SECTION', 'oh1'); # go after login (tipo inventory)
 	// numerical matrix values of list of values 'yes/no'. Do not change this values !
 	define('NUMERICAL_MATRIX_VALUE_YES', 1);
 	define('NUMERICAL_MATRIX_VALUE_NO',  2);
-	// dedalo_permissions_root. Default permissions
-	// define('DEDALO_PERMISSIONS_ROOT', 1); DEPRECATED !
 	// dedalo_max_rows_per_page . Default max record per page. int default 10
 	define('DEDALO_MAX_ROWS_PER_PAGE', 10);
 	// user profile by default. Default profile id. int default 2 (regular user)
@@ -311,6 +304,8 @@
 	// media_base paths
 	define('DEDALO_MEDIA_PATH'	, DEDALO_ROOT_PATH	. '/media');
 	define('DEDALO_MEDIA_URL'	, DEDALO_ROOT_WEB 	. '/media');
+
+
 
 	// av media
 		// dedalo_av_folder. string default '/av'
@@ -344,39 +339,13 @@
 		define('DEDALO_AV_STREAMER'					, null);
 		// av_watermark_file
 		define('DEDALO_AV_WATERMARK_FILE'			, DEDALO_MEDIA_PATH .'/'. DEDALO_AV_FOLDER . '/watermark/watermark.png');
-
-		// text_subtitles_engine (tool_subtitles)
-		// define('TEXT_SUBTITLES_ENGINE'			, DEDALO_CORE_PATH . '/tools/tool_subtitles'); (!) DEPRECATED
 		// dedalo_subtitles_folder (tool_subtitles)
 		define('DEDALO_SUBTITLES_FOLDER'			, '/subtitles');
 		// dedalo_av_subtitles_extension . Default is 'vtt'
 		define('DEDALO_AV_SUBTITLES_EXTENSION'		, 'vtt');
-
 		// dedalo_av_recompress_all. On 1, all video files are re-compressed to 960k/s variable bit rate and keyframe every 75 frames
 		define('DEDALO_AV_RECOMPRESS_ALL'			, 1); // 1 re-compress all av files uploaded, 0 to only copy av files uploaded (default 0)
 
-	// 3d media
-		// dedalo_3d_foler. string default '/3d'
-		define('DEDALO_3D_FOLDER'					, '/3d');
-		// dedalo_3d_extension. string default 'glb'
-		define('DEDALO_3D_EXTENSION'				, 'glb');
-		// dedalo_3d_extensions_supported. array default ['glb', 'gltf', 'obj', 'fbx', 'dae', 'zip']
-		define('DEDALO_3D_EXTENSIONS_SUPPORTED'		, ['glb', 'gltf', 'obj', 'fbx', 'dae', 'zip']);
-		// dedalo_3d_mime_type. string default 'model/gltf+json'
-		define('DEDALO_3D_MIME_TYPE'				, 'model/gltf-binary');
-		// dedalo_3d_quality_original. string default 'original'
-		define('DEDALO_3D_QUALITY_ORIGINAL'			, 'original');
-		// quality default normally 'original'
-		define('DEDALO_3D_QUALITY_DEFAULT'			, 'original');
-		// quality folders array (sort desc quality)
-		define('DEDALO_3D_AR_QUALITY'				, [DEDALO_3D_QUALITY_ORIGINAL]);
-
-		// dedalo_3d_gltfpack_path normally /usr/bin/gltfpack (converts and compresses .obj/.gltf to .glb/.gltf)
-		define('DEDALO_3D_GLTFPACK_PATH'			, '/usr/bin/gltfpack');
-		// dedalo_3d_fbx2gltf_path normally /usr/bin/FBX2glTF (converts .fbx to .glb/.gltf)
-		define('DEDALO_3D_FBX2GLTF_PATH'			, '/usr/bin/FBX2glTF');
-		// dedalo_3d_collada2gltf_path normally /usr/bin/COLLADA2GLTF-bin (converts .fbx to .glb/.gltf)
-		define('DEDALO_3D_COLLADA2GLTF_PATH'		, '/usr/bin/COLLADA2GLTF-bin');
 
 	// image media
 		// image_folder. Default: '/image'
@@ -401,8 +370,6 @@
 		define('DEDALO_IMAGE_AR_QUALITY'			, [DEDALO_IMAGE_QUALITY_ORIGINAL,DEDALO_IMAGE_QUALITY_RETOUCHED,'25MB','6MB','1.5MB',DEDALO_IMAGE_THUMB_DEFAULT]);
 		// image_print_dpi (default int 150. Used to calculate print size of images -tool_image_versions-)
 		define('DEDALO_IMAGE_PRINT_DPI'				, 150);
-		// image lib
-		// define('DEDALO_IMAGE_LIB'				, true);  (!) DEPRECATED
 		// image_file_url
 		define('DEDALO_IMAGE_FILE_URL'				, DEDALO_CORE_URL . '/media_engine/img.php');
 		// lib ImageMagick magick_path
@@ -424,22 +391,48 @@
 		define('DEDALO_PDF_EXTENSION'				, 'pdf');
 		// pdf_extensions_supported. Array default: ['pdf']
 		define('DEDALO_PDF_EXTENSIONS_SUPPORTED'	, ['pdf']);
-		// dedalo_pdf_quality_original. string default 'original'
-		define('DEDALO_PDF_QUALITY_ORIGINAL'		, 'original');
-		// pdf_quality_default. Default: 'standard'
-		define('DEDALO_PDF_QUALITY_DEFAULT'			, 'standard');
-		// pdf_ar_quality. Array of PDF quality definitions
-		define('DEDALO_PDF_AR_QUALITY'				, [DEDALO_PDF_QUALITY_DEFAULT]);
 		// pdf_mime_type. Default: 'application/pdf'
 		define('DEDALO_PDF_MIME_TYPE'				, 'application/pdf');
 		# pdf_type. Default: 'pdf'
 		define('DEDALO_PDF_TYPE'					, 'pdf');
+		// dedalo_pdf_quality_original. string default 'original'
+		define('DEDALO_PDF_QUALITY_ORIGINAL'		, 'original');
+		// pdf_quality_default. Default: 'web'
+		define('DEDALO_PDF_QUALITY_DEFAULT'			, 'web');
+		// pdf_ar_quality. Array of PDF quality definitions
+		define('DEDALO_PDF_AR_QUALITY'				, [DEDALO_PDF_QUALITY_ORIGINAL, DEDALO_PDF_QUALITY_DEFAULT]);
 		// pdf_thumb_default Default: 'thumb'
 		define('DEDALO_PDF_THUMB_DEFAULT'			, 'thumb');
 		// pdf_renderer (path of daemon pdf generator from html) Normally wkhtmltopdf (https://wkhtmltopdf.org) lib is used
 		define('DEDALO_PDF_RENDERER'				, '/usr/bin/wkhtmltopdf');
 		// automatic_transcription_engine (path of daemon generator of text files from PDF) Using XPDF from http://www.foolabs.com/xpdf/ or https://pdftotext.com
 		define('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE'	, '/usr/bin/pdftotext');
+
+
+
+	// 3d media
+		// dedalo_3d_foler. string default '/3d'
+		define('DEDALO_3D_FOLDER'					, '/3d');
+		// dedalo_3d_extension. string default 'glb'
+		define('DEDALO_3D_EXTENSION'				, 'glb');
+		// dedalo_3d_extensions_supported. array default ['glb', 'gltf', 'obj', 'fbx', 'dae', 'zip']
+		define('DEDALO_3D_EXTENSIONS_SUPPORTED'		, ['glb', 'gltf', 'obj', 'fbx', 'dae', 'zip']);
+		// dedalo_3d_mime_type. string default 'model/gltf+json'
+		define('DEDALO_3D_MIME_TYPE'				, 'model/gltf-binary');
+		// dedalo_3d_quality_original. string default 'original'
+		define('DEDALO_3D_QUALITY_ORIGINAL'			, 'original');
+		// quality default normally 'web'
+		define('DEDALO_3D_QUALITY_DEFAULT'			, 'web');
+		// Thumbs folders to store 1 render of the 3d file, used in list
+		define('DEDALO_3D_THUMB_DEFAULT', 			' thumb');
+		// quality folders array (sort desc quality)
+		define('DEDALO_3D_AR_QUALITY'				, [DEDALO_3D_QUALITY_ORIGINAL, DEDALO_3D_QUALITY_DEFAULT]);
+		// dedalo_3d_gltfpack_path normally /usr/local/bin/gltfpack or /opt/gltfpack (converts and compresses .obj/.gltf to .glb/.gltf)
+		define('DEDALO_3D_GLTFPACK_PATH'			, '/usr/local/bin/gltfpack');
+		// dedalo_3d_fbx2gltf_path normally /usr/local/bin/FBX2glTF or /opt/FBX2glTF (converts .fbx to .glb/.gltf)
+		define('DEDALO_3D_FBX2GLTF_PATH'			, '/usr/local/bin/FBX2glTF');
+		// dedalo_3d_collada2gltf_path normally /usr/local/bin/COLLADA2GLTF-bin or /opt/COLLADA2GLTF-bin (converts .dae to .glb/.gltf)
+		define('DEDALO_3D_COLLADA2GLTF_PATH'		, '/usr/local/bin/COLLADA2GLTF-bin');
 
 
 
@@ -456,29 +449,33 @@
 		define('DEDALO_SVG_EXTENSION'				, 'svg');
 		// svg_extensions_supported. Default ['svg']
 		define('DEDALO_SVG_EXTENSIONS_SUPPORTED'	, ['svg']);
-		// svg_quality_default. Default 'standard'
-		define('DEDALO_SVG_QUALITY_DEFAULT'			, 'standard');
-		// svg_ar_quality
-		define('DEDALO_SVG_AR_QUALITY'				, [DEDALO_SVG_QUALITY_DEFAULT]);
 		// svg_mime_type. Default 'image/svg+xml'
 		define('DEDALO_SVG_MIME_TYPE'				, 'image/svg+xml');
+		// svg_quality_original. Default 'original'
+		define('DEDALO_SVG_QUALITY_ORIGINAL'		, 'original');
+		// svg_quality_default. Default 'web'
+		define('DEDALO_SVG_QUALITY_DEFAULT'			, 'web');
+		// svg_ar_quality
+		define('DEDALO_SVG_AR_QUALITY'				, [DEDALO_SVG_QUALITY_ORIGINAL, DEDALO_SVG_QUALITY_DEFAULT]);
 
 
 
-// uploader config
-	define('DEDALO_UPLOADER_DIR', 	DEDALO_LIB_PATH . '/lib/jquery/jQuery-File-Upload');
-	define('DEDALO_UPLOADER_URL', 	DEDALO_LIB_URL . '/jquery/jQuery-File-Upload');
+// upload config
+	// DEDALO_UPLOAD_TMP_DIR
+	// it defines the temporary directory to use to store the files uploaded, moved from php/tmp upload directory
 	define('DEDALO_UPLOAD_TMP_DIR', DEDALO_MEDIA_PATH . '/upload/service_upload/tmp');
+	define('DEDALO_UPLOAD_TMP_URL', DEDALO_MEDIA_URL . '/upload/service_upload/tmp');
+	// DEDALO_UPLOAD_SERVICE_CHUNK_FILES
+	// split files into chunks before upload at max size defined
+	// values supported:
+	// bool: false -> the files will not chunked
+	// int: 95 -> files will be chunked in xMB fragments. 95MB files
+	define('DEDALO_UPLOAD_SERVICE_CHUNK_FILES', false); // 5 = 5MB
 
 
 
 // geo location. string from values: OSM | ARCGIS | GOOGLE | VARIOUS | ARCGIS . Default: 'VARIOUS'
 	define('DEDALO_GEO_PROVIDER', 'VARIOUS');
-
-
-
-// rest_config
-	// Deprecated. Not used here.
 
 
 
@@ -491,7 +488,7 @@
 
 
 // dedalo_test_install. bool
-	// On true, check current admin (root) user password on login page
+	// 	On true, check if the root user has set password at login page, if not set Dédalo will init the install process.
 	define('DEDALO_TEST_INSTALL', true);
 
 
@@ -513,40 +510,23 @@
 
 // lock_components
 	// Set lock components function when users are editing fields. boolean
-	define('DEDALO_LOCK_COMPONENTS', false);
+	define('DEDALO_LOCK_COMPONENTS', true);
 
+
+// protect media files, when active the access to media files are controlled and only register users can access to it.
+	define('DEDALO_PROTECT_MEDIA_FILES', false);
 
 
 // notifications
 	// Send notifications to user browser. E.g. Current lock components..
-	define('DEDALO_NOTIFICATIONS'			, false);
-	define('DEDALO_NODEJS'					, '/usr/bin/node');
-	define('DEDALO_NODEJS_PM2'				, '/usr/bin/pm2');
-
-
-
-// diffusion domain
-	// Set publication diffusion domain. Default value is 'default'
-	define('DEDALO_DIFFUSION_DOMAIN'			, 'default');
-	define('DEDALO_DIFFUSION_RESOLVE_LEVELS'	, 2);
-	define('DEDALO_PUBLICATION_ALERT'			, false);
-
-
-
-// diffusion_custom
-	// Optional custom class to manipulate diffusion options. string|bool . Default: false
-	define('DIFFUSION_CUSTOM', false);
-
+	define('DEDALO_NOTIFICATIONS', 	false);
+	define('DEDALO_NODEJS', 		'/usr/bin/node');
+	define('DEDALO_NODEJS_PM2', 	'/usr/bin/pm2');
 
 
 // dedalo_ar_exclude_components
 	// optional array of component tipo to exclude
 	define('DEDALO_AR_EXCLUDE_COMPONENTS', []);
-
-
-
-// dedalo_protect_media
-	// Deprecated. Not used here.
 
 
 
@@ -568,11 +548,43 @@
 
 
 
+// diffusion
+	// Set publication diffusion domain. Default value is 'default'
+	define('DEDALO_DIFFUSION_DOMAIN',			'default');
+	define('DEDALO_DIFFUSION_RESOLVE_LEVELS',	2);
+	// diffusion_custom
+	// Optional custom class to manipulate diffusion options. string|bool . Default: false
+	define('DIFFUSION_CUSTOM', false);
+	// api (publication). This definition is used in administration panels to auto-fill main vars
+	// Note that in the public server config file, you need to define again this values because
+	// the public API files could be place in another location/server as independent files
+	define('API_WEB_USER_CODE_MULTIPLE' , [
+		[
+			'db_name'	=> '', // like web_my_entity
+			'code'		=> ''  // like asd38kjlkasd6gadsg2fasdoijQks
+		]
+	]);
+
+
 // remote_structure_server_code
 	define('STRUCTURE_FROM_SERVER'		, true);
 	define('STRUCTURE_SERVER_CODE'		, 'x3a0B4Y020Eg9w');
 	define('STRUCTURE_SERVER_URL'		, 'https://master.render.es/dedalo/lib/dedalo/extras/str_manager/');
-	define('STRUCTURE_DOWNLOAD_DIR'		, DEDALO_BACKUP_PATH_STRUCTURE . '/download');
+	define('ONTOLOGY_DOWNLOAD_DIR'		, DEDALO_BACKUP_PATH_ONTOLOGY . '/download');
+	// structure_download. When ontology is updated, download files are saved here
+	define('STRUCTURE_DOWNLOAD_JSON_FILE', DEDALO_BACKUP_PATH_ONTOLOGY);
+	// SERVER_PROXY Optional IP and port like 'XXX.XXX.XXX.XXX:3128'. Do not remove comment if its not necessary
+	// define('SERVER_PROXY', 				'XXX.XXX.XXX.XXX:3128');
+
+
+// dedalo_code
+	// server side (master)
+		// Do not apply here. Only for master server
+	// client side
+		// target dir where git command send the compressed file like 'https://master.render.es/dedalo/code/dedalo5_code.zip'
+		define('DEDALO_SOURCE_VERSION_URL',			'https://master.render.es/dedalo/code/dedalo6_code.zip');
+		// target dir where git command send the compressed file like 'https://master.render.es/dedalo/code/dedalo5_code.zip'
+		define('DEDALO_SOURCE_VERSION_LOCAL_DIR',	'/tmp/'.DEDALO_ENTITY);
 
 
 
@@ -591,18 +603,6 @@
 
 
 
-// api (publication). This definition is used in administration panels to auto-fill main vars
-	// Note that in the public server config file, you need to define again this values because
-	// the public API files could be place in another location/server as independent files
-	define('API_WEB_USER_CODE_MULTIPLE' , [
-		[
-			'db_name'	=> '', // like web_my_entity
-			'code'		=> ''  // like asd38kjlkasd6gadsg2fasdoijQks
-		]
-	]);
-
-
-
 // socrata config
 	// Custom connection config. Not used here.
 
@@ -618,18 +618,34 @@
 
 
 
+// IP_API. IP geolocation API end point. Optional, used in section Activity to resolve source Country from IP address
+// note that '$ip' string will be replaced by the real IP value in resolution and 'country_code' value
+// property is used to generate the icon flag
+	// ip-api.com **
+		// define('IP_API', [
+		// 	'url'			=> 'http://ip-api.com/json/$ip', // only http is free
+		// 	'href'			=> 'https://ip-api.com/#$ip', // page to jump on click
+		// 	'country_code'	=> 'countryCode' // property where look country code for flag
+		// ]);
+	// ipapi ***
+		define('IP_API', [
+			'url'			=> 'https://ipapi.co/$ip/json/', // https capable as free
+			'href'			=> 'https://ipapi.co/?q=$ip', // page to jump on click
+			'country_code'	=> 'country_code' // / property where look country code for flag
+		]);
+
+
+
 // maintenance
 	// maintenance mode active / inactive
-	$maintenance_mode = false;
-	define('DEDALO_MAINTENANCE_MODE', $maintenance_mode);
-	if (DEDALO_MAINTENANCE_MODE===true) {
-		include(DEDALO_CORE_PATH.'/maintenance/maintenance.php');
-	}
+	define('DEDALO_MAINTENANCE_MODE', false);
 
 
 
 // notice_to_active_users : Warning to print in all pages to logged users
-	$notice = '<b>Warning</b>. In a few minutes the system will shut down about 5 minutes for maintenance updates. <br>
+	$notice = "<b>Warning</b>. In a few minutes the system will shut down about 5 minutes for maintenance updates. <br>
 	Please, save the unsaved work and log out as soon as possible.
-	After a few minutes, you can re-login to Dédalo and work again';
-	// notice_to_active_users(array('msg'=>$notice, 'mode'=>'warning'));
+	After a few minutes, you can re-login to Dédalo and work again";
+	// to activate it, uncomment the next line
+		// define('DEDALO_NOTIFICATION', ['msg' => $notice, 'class_name' => 'warning']);
+

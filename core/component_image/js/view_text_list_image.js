@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -22,8 +23,10 @@ export const view_text_list_image = function() {
 
 /**
 * RENDER
-* Render node to be used by service autocomplete or any datalist
-* @return DOM node
+* Render node as text. URL is return as text node
+* @param object self
+* @param object options
+* @return HTMLElement image_node
 */
 view_text_list_image.render = function(self, options) {
 
@@ -33,17 +36,22 @@ view_text_list_image.render = function(self, options) {
 	// url
 		const quality		= 'thumb'
 		const url_object	= datalist.find(item => item.quality===quality)
-		const url			= url_object
+		const default_image	= DEDALO_CORE_URL + '/themes/default/0.jpg'
+		const url			= url_object && url_object.file_url
 			? url_object.file_url
-			: DEDALO_CORE_URL + '/themes/default/0.jpg'
+			: default_image
 
 	// image
 		const image_node = ui.create_dom_element({
 			element_type	: 'img',
-			class_name		: 'component_image view_' + self.view,
+			class_name		: 'component_image image view_' + self.view,
 			src				: url
 		})
 
 
 	return image_node
 }//end render
+
+
+
+// @license-end

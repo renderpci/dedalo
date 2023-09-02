@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -23,7 +24,7 @@ export const render_search_component_filter_records = function() {
 /**
 * SEARCH
 * Render node for use in edit
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_search_component_filter_records.prototype.search = async function(options) {
 
@@ -149,19 +150,19 @@ const get_content_data = function(self) {
 			const header_tipo = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'tipo',
-				inner_html		: get_label.tipo || 'Tipo',
+				inner_html		: 'tipo',
 				parent			: header_li
 			})
 			const header_label = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'label',
-				inner_html		: get_label.seccion || 'Section',
+				inner_html		: get_label.section || 'Section',
 				parent			: header_li
 			})
 			const header_value = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'value',
-				inner_html		: get_label.valor || 'Value',
+				inner_html		: get_label.value || 'Value',
 				parent			: header_li
 			})
 
@@ -202,7 +203,7 @@ const get_content_data = function(self) {
 
 /**
 * GET_INPUT_ELEMENT
-* @return DOM node li
+* @return HTMLElement li
 */
 const get_input_element = (i, datalist_item, self) => {
 
@@ -253,3 +254,5 @@ const get_input_element = (i, datalist_item, self) => {
 }//end get_input_element
 
 
+
+// @license-end

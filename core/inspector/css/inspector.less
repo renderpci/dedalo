@@ -7,6 +7,7 @@
 .inspector {
 	display: block;
 	margin: 0px;
+	margin-bottom: 0.5rem;
 	padding: 0px;
 	width: 100%;
 	background-color: @color_grey_untralight;
@@ -37,7 +38,7 @@
 
 
 				&:after {
-					background-image: url('@{images_base_path}/icons/arrow_down.svg');
+					background-image: url('../../themes/default/icons/arrow_down.svg');
 					background-repeat: no-repeat;
 					// background-size: auto 88%;
 					content: ' ';
@@ -68,17 +69,24 @@
 
 			}
 
+		// selection_info
+			>.selection_info {
+				color: @color_orange_dedalo;
+				padding: 0.5rem;
+				font-size: 1.12rem;
+				text-align: center;
+			}
+
 		// element_info
 			>.element_info_wrap	>.element_info {
-				font-size: 0.8rem;
 				display: grid;
 				grid-gap: 2px;
 				grid-template-columns: minmax(min-content, 35%) minmax(65%, 80%);
 				margin-top: 0.15rem;
 				margin-bottom: 0.25rem;
-				font-size: 0.86rem;
+				font-size: 0.88rem;
 
-				.link, .pen, .edit {
+				.link, .pen, .edit, .tree {
 					background-color: @color_orange_dedalo;
 					margin-left: 0.33rem;
 				}
@@ -92,6 +100,7 @@
 					padding: 0.25rem;
 					text-align: right;
 					text-transform: capitalize;
+					font-size: 0.8rem;
 
 					&.wide {
 						grid-column-start: 1;
@@ -122,8 +131,17 @@
 				}
 			}
 
+		// project_wrap
+		.project_wrap {
+			.wrapper_component.component_filter {
+				>.label {
+					display: none;
+				}
+			}
+		}
+
 		// buttons_container
-			>.buttons_container {
+			>.buttons_container, >.tools_container {
 
 				&.top {
 					display: flex;

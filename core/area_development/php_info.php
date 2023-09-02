@@ -21,6 +21,6 @@ phpinfo();
 			if (php_info) {
 				php_info.height = h + 'px'
 			}
-		}, 200)
+		}, 150)
 	})
 </script>

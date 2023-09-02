@@ -8,7 +8,7 @@ abstract class filter {
 
 
 
-	public static $user_authorized_projects_cache;
+	public static $user_authorized_projects_cache = [];
 	public static $user_projects_cache;
 
 
@@ -76,15 +76,21 @@ abstract class filter {
 
 		// check user_id
 			if (empty($user_id)) {
-				debug_log(__METHOD__." Invalid user id ".to_string(), logger::ERROR);
-				throw new Exception("Error Processing Request. Invalid user id", 1);
+				debug_log(__METHOD__
+					. " Invalid empty user id "
+					. to_string($user_id)
+					, logger::ERROR
+				);
+				// throw new Exception("Error Processing Request. Invalid user id", 1);
+				return [];
 			}
 
 		$user_projects = [];
 		if ( abs($user_id)>0 ) {
 
 			// cache
-				if (isset(filter::$user_projects_cache[$user_id])) {
+				$use_cache = (SHOW_DEVELOPER!==true);
+				if ($use_cache===true && isset(filter::$user_projects_cache[$user_id])) {
 					return filter::$user_projects_cache[$user_id];
 				}
 
@@ -112,8 +118,12 @@ abstract class filter {
 
 					foreach ($children_data as $child_locator) {
 						// add if not already added
-						$found = locator::in_array_locator($child_locator, $user_projects, ['section_tipo','section_id']);
-						if(!$found){
+						$found = locator::in_array_locator(
+							$child_locator,
+							$user_projects,
+							['section_tipo','section_id','from_component_tipo']
+						);
+						if(!empty($found)) {
 							$user_projects[] = $child_locator;
 						}
 					}
@@ -130,6 +140,56 @@ abstract class filter {
 
 
 	/**
+	* GET_USER_AUTHORIZED_PROJECTS_CACHE_KEY
+	* @param int $user_id
+	* @param string $component_tipo
+	* @return string $cache_key
+	*/
+	public static function get_user_authorized_projects_cache_key(int $user_id, string $component_tipo) : string {
+
+		$cache_key = 'user_authorized_projects_' . $user_id .'_'. $component_tipo;
+
+		return $cache_key;
+	}//end get_user_authorized_projects_cache_key
+
+
+
+	/**
+	* CLEAN_CACHES
+	* @param int $user_id
+	* @param string $component_tipo
+	* @return bool
+	*/
+	public static function clean_caches(int $user_id, string $component_tipo) : bool {
+
+		// user_projects_cache
+		if( isset(filter::$user_projects_cache[$user_id]) ) {
+			unset(filter::$user_projects_cache[$user_id]);
+		}
+
+		// user_authorized_projects_cache
+		$cache_key = filter::get_user_authorized_projects_cache_key($user_id, $component_tipo);
+		if (isset(filter::$user_authorized_projects_cache[$cache_key])) {
+			unset(filter::$user_authorized_projects_cache[$cache_key]);
+		}
+		if (isset($_SESSION['dedalo']['config'][$cache_key])) {
+			unset($_SESSION['dedalo']['config'][$cache_key]);
+		}
+
+		debug_log(__METHOD__
+			. " Cleared filter caches " . PHP_EOL
+			. ' user_id: ' . $user_id . PHP_EOL
+			. ' cache_key: ' . $cache_key . PHP_EOL
+			, logger::DEBUG
+		);
+
+
+		return true;
+	}//end clean_caches
+
+
+
+	/**
 	* GET_USER_AUTHORIZED_PROJECTS
 	* Get all projects filtered by user authorized projects
 	* Works like ar_list_of_values but filtered by user authorized projects
@@ -141,13 +201,17 @@ abstract class filter {
 		$start_time = start_time();
 
 		// cache
-			$cache_key = 'user_authorized_projects_'.$user_id .'_'. $from_component_tipo;
-			// if (isset(filter::$user_authorized_projects_cache[$cache_key])) {
-			// 	// debug_log(__METHOD__." Total time: ".exec_time_unit($start_time,'ms')." ms ---- CACHED", logger::DEBUG);
-			// 	return filter::$user_authorized_projects_cache[$cache_key];
-			// }
-			if (isset($_SESSION['dedalo']['config'][$cache_key])) {
-				return $_SESSION['dedalo']['config'][$cache_key];
+			$use_cache = true; // (SHOW_DEVELOPER!==true);
+			if ($use_cache===true) {
+				// $cache_key = 'user_authorized_projects_' . $user_id .'_'. $from_component_tipo;
+				$cache_key = filter::get_user_authorized_projects_cache_key($user_id, $from_component_tipo);
+				if (isset(filter::$user_authorized_projects_cache[$cache_key])) {
+					// debug_log(__METHOD__." Total time: ".exec_time_unit($start_time,'ms')." ms ---- CACHED", logger::DEBUG);
+					return filter::$user_authorized_projects_cache[$cache_key];
+				}
+				if (isset($_SESSION['dedalo']['config'][$cache_key])) {
+					return $_SESSION['dedalo']['config'][$cache_key];
+				}
 			}
 
 		// projects_section_tipo
@@ -161,21 +225,29 @@ abstract class filter {
 				true // search_exact
 			);
 			$section_map = reset($ar_section_map); // expected 'dd267'
+			if ($section_map!=='dd267') {
+				debug_log(__METHOD__." Expected section_map value was 'dd267' and received value is: ".to_string($section_map), logger::ERROR);
+			}
 
 		// projects_name_tipo. Get ts_map for locate name component (for future )
 			$RecordObj_dd	= new RecordObj_dd($section_map);
 			$properties		= $RecordObj_dd->get_properties();
 			if (empty($properties)) {
 				dump($properties, ' properties ++ '.to_string($section_map));
-				throw new Exception("Error Processing Request. properties for section_map: $section_map is empty !", 1);
-				// trigger_error("Error Processing Request. properties for section_map: $section_map is empty !");
+				// throw new Exception("Error Processing Request. properties for section_map: $section_map is empty !", 1);
+				debug_log(__METHOD__." Error Processing Request. properties for section_map: $section_map is EMPTY ! ".to_string($properties), logger::ERROR);
+				return [];
 			}
 			$projects_name_tipo	= $properties->thesaurus->term; // dd156
+			if ($projects_name_tipo!=='dd156') {
+				debug_log(__METHOD__." Expected projects_name_tipo value was 'dd156' and received value is: ".to_string($projects_name_tipo), logger::ERROR);
+			}
 
-		// dato . Array of locators
+		// dato. Array of locators
 			$is_global_admin = security::is_global_admin($user_id);
-			$dato = [];
 			if ($is_global_admin===true) {
+
+				// global admin user case
 
 				// search all without limit
 				$search_query_object = json_decode('
@@ -188,6 +260,7 @@ abstract class filter {
 
 				$search = search::get_instance($search_query_object);
 				$result = $search->search();
+				$dato = [];
 				foreach ($result->ar_records as $row) {
 
 					$locator = new locator();
@@ -197,6 +270,8 @@ abstract class filter {
 					$dato[] = $locator;
 				}
 			}else{
+
+				// regular user case
 
 				// get current user assigned projects
 				$dato = filter::get_user_projects($user_id);
@@ -230,7 +305,11 @@ abstract class filter {
 				);
 				foreach ($ar_all_parents as $current_parent) {
 
-					$found = locator::in_array_locator($current_parent, $dato, ['section_tipo','section_id']);
+					$found = locator::in_array_locator(
+						$current_parent,
+						$dato,
+						['section_tipo','section_id']
+					);
 					if ( $found ) {
 						$locator = new locator();
 							$locator->set_section_tipo($current_parent->section_tipo);
@@ -250,13 +329,17 @@ abstract class filter {
 			}//end foreach ($dato as $current_locator)
 
 		// cache
-			// filter::$user_authorized_projects_cache[$cache_key] = $ar_projects;
-			$_SESSION['dedalo']['config'][$cache_key]			= $ar_projects;
-
+			if ($use_cache===true) {
+				filter::$user_authorized_projects_cache[$cache_key] = $ar_projects;
+				$_SESSION['dedalo']['config'][$cache_key]			= $ar_projects;
+			}
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__." Total time: ".exec_time_unit($start_time,'ms')." ms. ---- user_id: $user_id - from_component_tipo: $from_component_tipo", logger::DEBUG);
+				debug_log(__METHOD__
+					." Total time: ".exec_time_unit($start_time,'ms')." ms. ---- user_id: $user_id - from_component_tipo: $from_component_tipo"
+					, logger::DEBUG
+				);
 			}
 
 

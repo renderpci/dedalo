@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, DEDALO_API_URL, Promise */
 /*eslint no-undef: "error"*/
 
@@ -19,10 +20,9 @@ export const data_manager = function() {
 * @return promise api_response
 */
 data_manager.request = async function(options) {
-	// console.log("// request options:",options);
 
 	// options
-		this.url			= options.url || DEDALO_API_URL
+		this.url			= options.url || (typeof DEDALO_API_URL!=='undefined' ? DEDALO_API_URL : '../api/v1/json/')
 		this.method			= options.method || 'POST' // *GET, POST, PUT, DELETE, etc.
 		this.mode			= options.mode || 'cors' // no-cors, cors, *same-origin
 		this.cache			= options.cache || 'no-cache' // *default, no-cache, reload, force-cache, only-if-cached
@@ -31,6 +31,64 @@ data_manager.request = async function(options) {
 		this.redirect		= options.redirect || 'follow' // manual, *follow, error
 		this.referrer		= options.referrer || 'no-referrer' // no-referrer, *client
 		this.body			= options.body // body data type must match "Content-Type" header
+		this.use_worker		= options.use_worker ?? false
+
+
+	// using worker cases.
+	// Note that execution is slower, but it is useful for low priority
+	// calls like 'update_lock_components_state'
+		if (this.use_worker===true) {
+			const current_worker = new Worker(DEDALO_CORE_URL + '/common/js/worker_data.js', {
+				type : 'module'
+			});
+			current_worker.postMessage({
+				url		: this.url,
+				body	: this.body
+			});
+
+			current_worker.onerror = (event) => {
+				console.error("There is an error with current worker error!");
+				console.log('options:', options);
+				console.log('event:', event);
+			};
+
+			return new Promise(function(resolve, reject){
+
+				current_worker.onmessage = function(e) {
+					if (!e.data.api_response) {
+						console.error('Error worker_data onmessage. Rejected! e.data:', e.data);
+						current_worker.terminate()
+
+						reject({})
+					}
+
+					current_worker.terminate()
+
+					resolve(e.data.api_response)
+				}
+			})
+		}
+
+		// this.url			= options.url || DEDALO_API_URL
+		// this.method		= options.method || 'POST' // *GET, POST, PUT, DELETE, etc.
+		// this.mode		= options.mode || 'cors' // no-cors, cors, *same-origin
+		// this.cache		= options.cache || 'no-cache' // *default, no-cache, reload, force-cache, only-if-cached
+		// this.credentials	= options.credentials || 'include' // include, *same-origin, omit
+		// this.headers		= options.headers || {'Content-Type': 'application/json'}// 'Content-Type': 'application/x-www-form-urlencoded'
+		// this.redirect	= options.redirect || 'follow' // manual, *follow, error
+		// this.referrer	= options.referrer || 'no-referrer' // no-referrer, *client
+		// this.body		= options.body // body data type must match "Content-Type" header
+
+	// check url
+		if (!this.url || !this.url.length) {
+			const msg = 'Error: empty or invalid API URL'
+			console.error(msg + '. typeof:', typeof this.url, 'value:', this.url);
+			return {
+				result	: false,
+				msg		: msg,
+				error	: 'URL is not valid'
+			}
+		}
 
 	// handle_errors
 		const handle_errors = function(response) {
@@ -55,41 +113,61 @@ data_manager.request = async function(options) {
 		})
 		.then(handle_errors)
 		.then(response => {
-			// console.log("-> json response 1 ok:",response);
-			const json_parsed = response.json().then((result)=>{
-				// console.log("-> json result 2:",result);
+			const json_parsed = response.json()
+			.then((result)=>{
 
 				if (result.error) {
 
 					// debug console message
-						if (SHOW_DEBUG) {
-							console.error("result error:",result);
-						}
+						console.error("result error:", result);
 
 					// alert msg to user
 						const msg = result.msg || result.error
-						// alert("An error occurred in the connection with the API (data_manager). \n" + msg);
+						alert("An error occurred in the connection with the API (data_manager). \n" + msg);
 
 					// custom behaviors
-						switch (result.error) {
-							case 'not_logged':
-								// redirect to login page
-								location.reload();
-								break;
+						// switch (result.error) {
+						// 	case 'not_logged':
+						// 		// Alert user that is lot logged
+						// 		if (typeof alert==='function') {
+						// 			alert('Warning! User not logged');
+						// 		}
+						// 		console.warn('Warning! User not logged');
 
-							default:
-								// write message to the console
-								break;
-						}
+						// 		// main_container lock
+						// 			const main_container = document.querySelector('.wrapper.page')
+						// 			if (main_container) {
+						// 				main_container.classList.add('loading')
+						// 			}
+
+						// 		// render_relogin
+						// 			import('../../login/js/login.js')
+						// 			.then(function(login){
+						// 				login.render_relogin({
+						// 					on_success : function(){
+						// 						// main_container unlock
+						// 						if (main_container) {
+						// 							main_container.classList.remove('loading')
+						// 						}
+						// 					}
+						// 				})
+						// 			})
+						// 		break;
+
+						// 	default:
+						// 		// write message to the console
+						// 		break;
+						// }
 				}
 
 				return result
 			})
-			// console.log("-> api_response json_parsed:",json_parsed);
+
 			return json_parsed
-		})// parses JSON response into native JavaScript objects
+		})
 		.catch(error => {
-			console.warn("options:", options);
+			console.warn('request url:', typeof this.url, this.url);
+			console.warn("request options:", options);
 			console.error("!!!!! [data_manager.request] SERVER ERROR. Received data is not JSON valid. See your server log for details. catch ERROR:\n")
 			console.error('error:', error);
 			return {
@@ -187,11 +265,12 @@ data_manager.get_local_db = async function() {
 			console.error("Your browser doesn't support a stable version of IndexedDB. Such and such feature will not be available.");
 		}
 
-	// open db. Let us open our database (name, version)
-		const db_request = current_indexedDB.open("dedalo", 6);
 
 
 	return new Promise(function(resolve, reject){
+
+		// open db. Let us open our database (name, version)
+			const db_request = current_indexedDB.open('dedalo', 7);
 
 		// error case
 			db_request.onerror = function(event) {
@@ -216,18 +295,15 @@ data_manager.get_local_db = async function() {
 				console.log("-> get_local_db onupgradeneeded:", event.target);
 
 				const db = event.target.result;
+				console.log(`Upgrading to version ${db.version}`);
 
 				// objectStore
-				// Create an objectStore to hold information about our customers. We're
-				// going to use "ssn" as our key path because it's guaranteed to be
-				// unique - or at least that's what I was told during the kickoff meeting.
-					db.createObjectStore('rqo', { keyPath: "id" });
-					// context. Context information about some elements like 'search'
-					db.createObjectStore('context', { keyPath: "id" });
-					// status. Collapse status of section groups, inspector blocks,etc.
-					db.createObjectStore('status', { keyPath: "id" });
-					db.createObjectStore('data', { keyPath: "id" });
-					db.createObjectStore('ontology', { keyPath: "id" });
+				db.objectStoreNames.contains('rqo') || db.createObjectStore('rqo', { keyPath:'id' });
+				db.objectStoreNames.contains('context') || db.createObjectStore('context', { keyPath:'id' });
+				db.objectStoreNames.contains('status') || db.createObjectStore('status', { keyPath:'id' });
+				db.objectStoreNames.contains('data') || db.createObjectStore('data', { keyPath:'id' });
+				db.objectStoreNames.contains('ontology') || db.createObjectStore('ontology', { keyPath:'id' });
+				db.objectStoreNames.contains('sqo') || db.createObjectStore('sqo', { keyPath:'id' });
 
 				// index
 				// Create an index to search customers by name. We may have duplicates
@@ -307,8 +383,6 @@ data_manager.set_local_db_data = async function(data, table) {
 			const request = objectStore.put(data);
 
 			request.onsuccess = function(event) {
-				// event.target.result === customer.ssn;
-				// console.log("Yuppiii:", event.target);
 				resolve(event.target.result)
 			};
 			request.onerror = function(event) {
@@ -324,6 +398,7 @@ data_manager.set_local_db_data = async function(data, table) {
 * GET_LOCAL_DB_DATA
 * @param string id
 * @param string table
+* @param bool cache = false
 * Calling sample:
 *	current_data_manager.get_local_db_data('tool_export_config', 'data')
 * @return promise
@@ -375,8 +450,6 @@ data_manager.get_local_db_data = async function(id, table, cache=false) {
 			const request		= objectStore.get(id);
 
 			request.onsuccess = function(event) {
-				// event.target.result === customer.ssn;
-				// console.log("Yuppiii:", event.target);
 				resolve(event.target.result)
 			};
 			request.onerror = function(event) {
@@ -442,7 +515,7 @@ data_manager.delete_local_db_data = async function(id, table) {
 * DOWNLOAD_URL
 * @param string url
 * @param string filename
-* Download url blob data and create a temporal autofired link
+* Download url blob data and create a temporal auto-fired link
 */
 export function download_url(url, filename) {
 	fetch(url).then(function(t) {
@@ -463,7 +536,7 @@ export function download_url(url, filename) {
 * DOWNLOAD_DATA
 * @param mixed data
 * @param string filename
-* Download data blob data and create a temporal autofired link
+* Download data blob data and create a temporal auto-fired link
 */
 export function download_data(data, filename) {
 
@@ -570,3 +643,6 @@ data_manager.prototype.component_load_context = async function(component) {
 	return context
 }//end component_load_context
 */
+
+
+// @license-end

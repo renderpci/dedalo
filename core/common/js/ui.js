@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, Promise, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
@@ -10,6 +11,7 @@
 	} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
+	import {check_unsaved_data} from '../../component_common/js/component_common.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {set_element_css} from '../../page/js/css.js'
 	// import {get_instance, delete_instance} from '../../common/js/instances.js'
@@ -35,7 +37,7 @@ export const ui = {
 	* @param string message_node = 'component_message'
 	* @param bool clean = false
 	*
-	* @return DOM node message_wrap
+	* @return HTMLElement message_wrap
 	*/
 	message_timeout : null,
 	show_message : (wrapper, message, msg_type='error', message_node='component_message', clean=false) => {
@@ -121,7 +123,7 @@ export const ui = {
 		* @param object instance (self component instance)
 		* @param object options = {}
 		* 	Specific objects to place into the wrapper, like 'label', 'top', buttons, filter, paginator, content_data)
-		* @return DOM node wrapper
+		* @return HTMLElement wrapper
 		*/
 		build_wrapper_edit : (instance, options={}) => {
 
@@ -134,6 +136,9 @@ export const ui = {
 				const view			= instance.view || instance.context.view || 'default'
 				const label			= instance.label // instance.context.label
 				const element_css	= instance.context.css || {}
+
+			// options
+				const add_styles = options.add_styles || null
 
 			// fragment
 				const fragment = new DocumentFragment()
@@ -150,49 +155,50 @@ export const ui = {
 						mode,
 						...wrapper_structure_css
 					]
+					if (add_styles) {ar_css.push(...add_styles)}
 					if (view) {ar_css.push('view_'+view)}
 					if (mode==='search') ar_css.push('tooltip_toggle')
-					// if (mode==='tm') ar_css.push('edit')
 					wrapper.classList.add(...ar_css)
 
 				// legacy CSS
 					if (model!=='component_filter') {
-						// const legacy_selector = '.wrap_component'
-						// if (element_css[legacy_selector]) {
-						// 	// mixin
-						// 		if (element_css[legacy_selector].mixin){
-						// 			// width from mixin
-						// 			const found = element_css[legacy_selector].mixin.find(el=> el.substring(0,7)==='.width_') // like .width_33
-						// 			if (found) { //  && found!=='.width_50'
-						// 				// wrapper.style['flex-basis'] = found.substring(7) + '%'
-						// 				// wrapper.style['--width'] = found.substring(7) + '%'
-						// 				wrapper.style.setProperty('--component_width', found.substring(7) + '%');
-						// 			}
-						// 		}
-						// 	// style
-						// 		if (element_css[legacy_selector].style) {
-						// 			// width from style
-						// 			if (element_css[legacy_selector].style.width) {
-						// 				// wrapper.style['flex-basis'] = element_css[legacy_selector].style.width;
-						// 				// wrapper.style['--width'] = element_css[legacy_selector].style.width
-						// 				wrapper.style.setProperty('--component_width', element_css[legacy_selector].style.width);
-						// 			}
-						// 			// display none from style
-						// 			if (element_css[legacy_selector].style.display && element_css[legacy_selector].style.display==='none') {
-						// 				wrapper.classList.add('display_none')
-						// 			}
-						// 		}
-						// }
-						// const legacy_selector_content_data = '.content_data'
-						// if (element_css[legacy_selector_content_data] && options.content_data) {
-						// 	// style
-						// 		if (element_css[legacy_selector_content_data].style) {
-						// 			// height from style
-						// 			if (element_css[legacy_selector_content_data].style.height) {
-						// 				options.content_data.style.setProperty('height', element_css[legacy_selector_content_data].style.height);
-						// 			}
-						// 		}
-						// }
+						// DES
+							// const legacy_selector = '.wrap_component'
+							// if (element_css[legacy_selector]) {
+							// 	// mixin
+							// 		if (element_css[legacy_selector].mixin){
+							// 			// width from mixin
+							// 			const found = element_css[legacy_selector].mixin.find(el=> el.substring(0,7)==='.width_') // like .width_33
+							// 			if (found) { //  && found!=='.width_50'
+							// 				// wrapper.style['flex-basis'] = found.substring(7) + '%'
+							// 				// wrapper.style['--width'] = found.substring(7) + '%'
+							// 				wrapper.style.setProperty('--component_width', found.substring(7) + '%');
+							// 			}
+							// 		}
+							// 	// style
+							// 		if (element_css[legacy_selector].style) {
+							// 			// width from style
+							// 			if (element_css[legacy_selector].style.width) {
+							// 				// wrapper.style['flex-basis'] = element_css[legacy_selector].style.width;
+							// 				// wrapper.style['--width'] = element_css[legacy_selector].style.width
+							// 				wrapper.style.setProperty('--component_width', element_css[legacy_selector].style.width);
+							// 			}
+							// 			// display none from style
+							// 			if (element_css[legacy_selector].style.display && element_css[legacy_selector].style.display==='none') {
+							// 				wrapper.classList.add('display_none')
+							// 			}
+							// 		}
+							// }
+							// const legacy_selector_content_data = '.content_data'
+							// if (element_css[legacy_selector_content_data] && options.content_data) {
+							// 	// style
+							// 		if (element_css[legacy_selector_content_data].style) {
+							// 			// height from style
+							// 			if (element_css[legacy_selector_content_data].style.height) {
+							// 				options.content_data.style.setProperty('height', element_css[legacy_selector_content_data].style.height);
+							// 			}
+							// 		}
+							// }
 						if (instance.context.css) {
 							const selector = `${section_tipo}_${tipo}.${tipo}.${mode}`
 							set_element_css(selector, element_css)
@@ -200,16 +206,37 @@ export const ui = {
 					}//end if (model!=='component_filter')
 
 				// read only. Disable events on permissions <2
-					if (!instance.permissions || parseInt(instance.permissions) <2) {
+					if (!instance.permissions || parseInt(instance.permissions)<2) {
 						wrapper.classList.add('disabled_component')
-						console.warn('+++++ instance:', instance.tipo, instance);
 					}
 
 				// event click . Activate component on event
-					wrapper.addEventListener('click', (e) => {
+					wrapper.addEventListener('click', (e)=>{
+						e.stopPropagation()
+					})
+					wrapper.addEventListener('mousedown', fn_wrapper_mousedown)
+					function fn_wrapper_mousedown(e) {
 						e.stopPropagation()
 						ui.component.activate(instance)
-					})
+
+						if(SHOW_DEBUG===true) {
+							if (e.metaKey && e.altKey) {
+								e.preventDefault()
+								console.log('/// refreshing instance:', instance);
+								instance.refresh({
+									build_autoload : true,
+									render_level : 'content'
+								})
+								return
+							}
+							if (e.altKey) {
+								e.preventDefault()
+								// common.render_tree_data(instance, document.getElementById('debug'))
+								console.log('/// selected instance:', instance);
+								return
+							}
+						}
+					}//end fn_wrapper_mousedown
 
 			// label. If node label received, it is placed at first. Else a new one will be built from scratch (default)
 				if (options.label===null) { //  || options.label===null
@@ -265,7 +292,8 @@ export const ui = {
 						class_name		: 'paginator_container',
 						parent			: wrapper
 					})
-					instance.paginator.render().then(paginator_wrapper => {
+					instance.paginator.render()
+					.then(paginator_wrapper => {
 						paginator.appendChild(paginator_wrapper)
 					})
 				}
@@ -298,14 +326,25 @@ export const ui = {
 
 			// debug
 				if(SHOW_DEBUG===true) {
-					wrapper.addEventListener('click', function(e){
-						if (e.altKey) {
-							e.stopPropagation()
-							e.preventDefault()
-							// common.render_tree_data(instance, document.getElementById('debug'))
-							console.log('/// selected instance:', instance);
-						}
-					})
+					// wrapper.addEventListener('click', function(e){
+					// 	if (e.metaKey && e.altKey) {
+					// 		e.stopPropagation()
+					// 		e.preventDefault()
+					// 		console.log('/// refreshing instance:', instance);
+					// 		instance.refresh({
+					// 			build_autoload : true,
+					// 			render_level : 'content'
+					// 		})
+					// 		return
+					// 	}
+					// 	if (e.altKey) {
+					// 		e.stopPropagation()
+					// 		e.preventDefault()
+					// 		// common.render_tree_data(instance, document.getElementById('debug'))
+					// 		console.log('/// selected instance:', instance);
+					// 		return
+					// 	}
+					// })
 
 					// test css
 						// const my_css = {
@@ -347,7 +386,7 @@ export const ui = {
 		* Component
 		* @param object instance
 		* @param object options = {}
-		* @return DOM node content_data
+		* @return HTMLElement content_data
 		*/
 		build_content_data : (instance, options={}) => {
 
@@ -359,13 +398,16 @@ export const ui = {
 				const content_data = document.createElement('div')
 
 			// css
-				const content_data_structure_css = typeof component_css.content_data!=='undefined' ? component_css.content_data : []
+				const content_data_structure_css = typeof component_css.content_data!=='undefined'
+					? component_css.content_data
+					: []
 				const ar_css = [
 					'content_data',
 					type,
 					...content_data_structure_css
 				]
 				content_data.classList.add(...ar_css)
+
 
 			return content_data
 		},//end build_content_data
@@ -375,7 +417,7 @@ export const ui = {
 		/**
 		* BUILD_BUTTON_EXIT_EDIT
 		* @param object options = {}
-		* @return DOM node content_data
+		* @return HTMLElement content_data
 		*/
 		build_button_exit_edit : (instance, options={}) => {
 
@@ -386,7 +428,8 @@ export const ui = {
 				element_type	: 'span',
 				class_name		: 'button close button_exit_edit show_on_active'
 			})
-			button_close_node.addEventListener('click', async function(e){
+			button_close_node.addEventListener('click', fn_click)
+			async function fn_click(e) {
 				e.stopPropagation()
 
 				await ui.component.deactivate(instance)
@@ -408,7 +451,7 @@ export const ui = {
 					mode		: target_mode,
 					autoload	: autoload
 				})
-			})
+			}
 
 			return button_close_node;
 		},//end build_button_exit_edit
@@ -418,7 +461,7 @@ export const ui = {
 		/**
 		* BUILD_BUTTONS_CONTAINER
 		* @param object instance
-		* @return DOM node buttons_container
+		* @return HTMLElement buttons_container
 		*/
 		build_buttons_container : (instance) => {
 
@@ -437,7 +480,7 @@ export const ui = {
 		* Render a unified version of component wrapper in list mode
 		* @param object instance
 		* @param object options = {}
-		* @return DOM node wrapper
+		* @return HTMLElement wrapper
 		*/
 		build_wrapper_list : (instance, options={}) => {
 
@@ -462,7 +505,6 @@ export const ui = {
 						'list',
 						'view_' + view
 					]
-					if (view) {ar_css.push('view_'+view)}
 					wrapper.classList.add(...ar_css)
 
 				// properties CSS of view
@@ -529,7 +571,7 @@ export const ui = {
 		* BUILD_WRAPPER_MINI
 		* @param object instance
 		* @param object options = {}
-		* @return DOM node wrapper
+		* @return HTMLElement wrapper
 		*/
 		build_wrapper_mini : (instance, options={}) => {
 
@@ -560,7 +602,7 @@ export const ui = {
 		* @param object instance (self component instance)
 		* @param object items
 		* 	Specific objects to place into the wrapper, like 'label', 'top', buttons, filter, paginator, content_data)
-		* @return DOM node wrapper
+		* @return HTMLElement wrapper
 		*/
 		build_wrapper_search : (instance, items={}) => {
 
@@ -573,6 +615,7 @@ export const ui = {
 				const view			= instance.view || null
 				const label			= instance.label // instance.context.label
 				const element_css	= instance.context.css || {}
+				const content_data	= items.content_data || null
 
 			// DocumentFragment
 				const fragment = new DocumentFragment()
@@ -598,18 +641,17 @@ export const ui = {
 				}
 
 			// content_data
-				if (items.content_data) {
-					fragment.appendChild(items.content_data)
+				if (content_data) {
+					fragment.appendChild(content_data)
 				}
 
 			// tooltip
 				if (instance.context.search_options_title) {
-					//fragment.classList.add("tooltip_toggle")
 					ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'tooltip hidden_tooltip',
 						inner_html		: instance.context.search_options_title || '',
-						parent			: items.content_data // fragment
+						parent			: fragment
 					})
 				}
 
@@ -625,8 +667,12 @@ export const ui = {
 						mode,
 						...wrapper_structure_css
 					]
-					if (view) {ar_css.push('view_'+view)}
-					if (mode==='search') ar_css.push('tooltip_toggle')
+					if (view) {
+						ar_css.push('view_'+view)
+					}
+					if (mode==='search') {
+						ar_css.push('tooltip_toggle')
+					}
 					wrapper.classList.add(...ar_css)
 
 				// event click . Activate component on event
@@ -636,6 +682,7 @@ export const ui = {
 					})
 
 				wrapper.appendChild(fragment)
+
 
 			return wrapper
 		},//end build_wrapper_search
@@ -665,7 +712,7 @@ export const ui = {
 					return false
 				}
 
-			// deactivate others
+			// deactivate current active if exists
 				if (page_globals.component_active &&
 					page_globals.component_active.id!==component.id
 					) {
@@ -702,6 +749,11 @@ export const ui = {
 
 			// publish activate_component event
 				event_manager.publish('activate_component', component)
+
+			// unsaved_data case
+			// This allow catch page mousedown event (inside any component) and check for unsaved components
+			// usually happens in component_text_area editions because the delay (500 ms) to set as changed
+				check_unsaved_data()
 
 				// console.log('ui Activating component:', component.id);
 
@@ -767,6 +819,64 @@ export const ui = {
 
 			return true
 		},//end deactivate
+
+
+
+		/**
+		* LOCK
+		* @param object component
+		*	Full component instance
+		* @return promise
+		* 	Resolve bool
+		*/
+		lock : async (component) => {
+
+			// check already lock
+				if (component.lock===true) {
+					return false
+				}
+
+			// styles. Remove wrapper css active if exists
+				component.node.classList.add('lock')
+
+			// component lock status
+				component.lock = true
+
+			// publish event lock_component
+				// event_manager.publish('lock_component', component)
+
+
+			return true
+		},//end lock
+
+
+
+		/**
+		* UNLOCK
+		* @param object component
+		*	Full component instance
+		* @return promise
+		* 	Resolve bool
+		*/
+		unlock : async (component) => {
+
+			// check already lock
+				if (component.lock!==true) {
+					return false
+				}
+
+			// styles. Remove wrapper css active if exists
+				component.node.classList.remove('lock')
+
+			// component lock status
+				component.lock = false
+
+			// publish event lock_component
+				// event_manager.publish('unlock_component', component)
+
+
+			return true
+		},//end lock
 
 
 
@@ -870,6 +980,11 @@ export const ui = {
 
 				// remove previous save_success classes
 					if (self.node.classList.contains('save_success')) {
+
+						// animationPlayState. Allow restart animation. Not set state pause before animation ends (2 secs)
+						self.node.style.animationPlayState			= 'paused';
+						self.node.style.webkitAnimationPlayState	= 'paused';
+
 						self.node.classList.remove('save_success')
 					}
 
@@ -878,16 +993,19 @@ export const ui = {
 					// success. add save_success class to component wrappers (green line animation)
 						if (self.node) {
 							self.node.classList.add('save_success')
+							// animationPlayState.
+							self.node.style.animationPlayState			= 'running';
+							self.node.style.webkitAnimationPlayState	= 'running';
 						}
 
 					// remove save_success. after 2000ms, remove wrapper class to avoid issues on refresh
 						setTimeout(()=>{
 
 							if (self.node) {
-								// item.classList.remove('save_success')
-								// allow restart animation. Not set state pause before animation ends (2 secs)
-								self.node.style.animationPlayState = 'paused';
-								self.node.style.webkitAnimationPlayState = 'paused';
+
+								// animationPlayState. Allow restart animation. Not set state pause before animation ends (2 secs)
+								self.node.style.animationPlayState			= 'paused';
+								self.node.style.webkitAnimationPlayState	= 'paused';
 
 								// remove animation style
 								if (self.node.classList.contains('save_success')) {
@@ -921,7 +1039,7 @@ export const ui = {
 		/**
 		* BUILD_WRAPPER_EDIT
 		* Common method to create element wrapper in current mode
-		* @return DOM node wrapper
+		* @return HTMLElement wrapper
 		*/
 		build_wrapper_edit : (instance, items={}) => {
 
@@ -931,7 +1049,7 @@ export const ui = {
 				const tipo			= instance.tipo 	// like 'rsc26'
 				const section_tipo	= instance.section_tipo 	// like 'rsc26'
 				const mode			= instance.mode 	// like 'edit'
-				const view			= instance.view || instance.context.view || null
+				const view			= instance.view || null
 				const label			= instance.label 	// instance.context.label
 				const content_data	= items.content_data || null
 
@@ -999,7 +1117,7 @@ export const ui = {
 					wrapper.classList.add(...ar_css)
 
 				// context css new way v6
-					if (instance.context.css) {
+					if (instance.context && instance.context.css) {
 						const selector = `${section_tipo}_${tipo}.edit`
 						set_element_css(selector, instance.context.css)
 						// add_class
@@ -1184,7 +1302,7 @@ export const ui = {
 		/**
 		* BUILD_CONTENT_DATA
 		* @param object tool instance
-		* @return DOM node content_data
+		* @return HTMLElement content_data
 		*/
 		build_content_data : (instance, options) => {
 
@@ -1385,7 +1503,7 @@ export const ui = {
 	* CREATE_DOM_ELEMENT
 	* Builds a DOM node based on received options
 	* @param object options
-	* @return DOM node element
+	* @return HTMLElement element
 	*/
 	create_dom_element : function(options){
 
@@ -1436,7 +1554,8 @@ export const ui = {
 		// style. Add CSS style property to element
 			if(style) {
 				for(let key in style) {
-					element.style[key] = style[key]
+					// element.style[key] = style[key]
+					element.style.setProperty(key, style[key]) // changed 22-03-2023
 					//element.setAttribute("style", key +":"+ style[key]+";");
 				}
 			}
@@ -1798,7 +1917,7 @@ export const ui = {
 	* Render a lang selector with a given array of langs or the default
 	* page_globals.dedalo_projects_default_langs list
 	* @param object options
-	* @return DOM node select_lang
+	* @return HTMLElement select_lang
 	*/
 	build_select_lang : (options) => {
 
@@ -1836,15 +1955,15 @@ export const ui = {
 			const ar_langs_lenght = ar_langs.length
 			for (let i = 0; i < ar_langs_lenght; i++) {
 
-				const option = ui.create_dom_element({
+				const current_option = ui.create_dom_element({
 					element_type	: 'option',
 					value			: ar_langs[i].value,
-					text_content	: ar_langs[i].label,
+					inner_html		: ar_langs[i].label,
 					parent			: fragment
 				})
 				// selected options set on match
 				if (ar_langs[i].value===selected) {
-					option.selected = true
+					current_option.selected = true
 				}
 			}
 
@@ -1881,7 +2000,7 @@ export const ui = {
 
 	/**
 	* GET_CONTENTEDITABLE_BUTTONS
-	* @return DOM node contenteditable_buttons
+	* @return HTMLElement contenteditable_buttons
 	*/
 	get_contenteditable_buttons : () => {
 
@@ -1969,7 +2088,7 @@ export const ui = {
 	* 	size	: string
 	* 	remove_overlay : bool
 	* }
-	* @return DOM node modal_container
+	* @return HTMLElement modal_container
 	*/
 	attach_to_modal : (options) => {
 
@@ -2004,6 +2123,7 @@ export const ui = {
 			const size				= options.size || 'normal' // string size='normal'
 			const modal_parent		= options.modal_parent || document.querySelector('.wrapper.page') || document.body
 			const remove_overlay	= options.remove_overlay || false
+			const minimizable 		= options.minimizable ?? true
 
 		// page_y_offset. Current window scroll position (used to restore later)
 			const page_y_offset = window.pageYOffset || 0
@@ -2066,6 +2186,10 @@ export const ui = {
 					footer.classList.add('footer')
 				}
 				modal_container.appendChild(footer)
+			}
+
+			if(minimizable===false){
+				modal_container.remove_miniModal();
 			}
 
 		// size. Modal special features based on property 'size'
@@ -2213,7 +2337,7 @@ export const ui = {
 	* 	Parsed columns_map array as [{id: 'oh87', label: 'Information'}]
 	* @param object self
 	* 	Instance of section/component_portal
-	* @return DOM node header_wrapper
+	* @return HTMLElement header_wrapper
 	*/
 	render_list_header : (columns_map, self) =>{
 
@@ -2377,7 +2501,7 @@ export const ui = {
 	* @param DOM node header_item
 	* 	Container where place the sort buttons
 	* @param object column
-	* @return DOM node sort_node
+	* @return HTMLElement sort_node
 	*/
 	add_column_order_set(self, column, header_wrapper) {
 
@@ -2438,13 +2562,13 @@ export const ui = {
 
 				// update rqo (removed way. navigate from page directly wit a user_navigation event bellow)
 				// note that navigate only refresh current instance content_data, not the whole page
-					self.navigate(
-						() => { // callback
+					self.navigate({
+						callback : () => { // callback
 							self.request_config_object.sqo.order	= order
 							self.rqo.sqo.order						= order
 						},
-						true // bool navigation_history save
-					)
+						navigation_history : true // bool navigation_history save
+					})
 
 				// update current_direction
 					current_direction = direction
@@ -2533,13 +2657,14 @@ export const ui = {
 		// defaults definitions by model
 		// if ddo width is not defined, use this defaults
 			const width_defaults = {
-				section_id 				: 'minmax(auto, 6rem)',
+				section_id				: 'minmax(auto, 6rem)',
 				component_publication	: '5rem',
 				component_info			: 'minmax(9rem, 1fr)',
-				component_image			: '102px',
+				component_3d			: '102px',
 				component_av			: '102px',
-				component_svg			: '102px',
-				component_pdf			: '102px'
+				component_image			: '102px',
+				component_pdf			: '102px',
+				component_svg			: '102px'
 			}
 
 		let ar_elements = []
@@ -2575,48 +2700,120 @@ export const ui = {
 	* SET_BACKGROUND_IMAGE
 	* @param DOM node image
 	* @param DOM node target_node
-	* @return DOMnode image
+	* @return bool
 	*/
 	set_background_image : (image, target_node) => {
 
-		const canvas	= document.createElement('canvas');
-		canvas.width	= image.width;
-		canvas.height	= image.height;
+		// Deactivate, it's not useful repeat the first pixel of image.
+		// to discus
+		return false
 
-		try {
-			canvas.getContext('2d').drawImage(image, 0, 0, image.width, image.height);
-			const rgb = canvas.getContext('2d').getImageData(0, 0, 1, 1).data;
-
-			// round rgb values
-				function correction(value) {
-
-					const factor = 1.016
-
-					const result = (value>127)
-						? Math.floor(value * factor)
-						: Math.floor(value / factor)
-
-					return result
-				}
-
-				const r = correction(rgb[0])
-				const g = correction(rgb[1])
-				const b = correction(rgb[2])
-
-			// build backgroundColor style string
-			const bg_color_rgb = 'rgb(' + r + ',' + g + ',' + b +')';
-
-			// set background color style (both container and image)
-			target_node.style.backgroundColor = bg_color_rgb
-
-		}catch(error){
-			console.warn("ui.set_background_image . Unable to get image canvas: ", image);
+		// Firefox skip. (prevents erratic Firefox behavior about canvas bg color)
+		if(navigator.userAgent.toLowerCase().indexOf('firefox') > -1){
+			return false
 		}
 
-		canvas.remove()
-		image.classList.remove('loading')
+		// dominant color way
+			// function getAverageRGB(imgEl) {
 
-		return image
+			// 	var blockSize = 5, // only visit every 5 pixels
+			// 		defaultRGB = {r:0,g:0,b:0}, // for non-supporting envs
+			// 		canvas = document.createElement('canvas'),
+			// 		context = canvas.getContext && canvas.getContext('2d'),
+			// 		data, width, height,
+			// 		i = -4,
+			// 		length,
+			// 		rgb = {r:0,g:0,b:0},
+			// 		count = 0;
+
+			// 	if (!context) {
+			// 		return defaultRGB;
+			// 	}
+
+			// 	height = canvas.height = imgEl.naturalHeight || imgEl.offsetHeight || imgEl.height;
+			// 	width = canvas.width = imgEl.naturalWidth || imgEl.offsetWidth || imgEl.width;
+
+			// 	context.drawImage(imgEl, 0, 0);
+
+			// 	try {
+			// 		data = context.getImageData(0, 0, width, height);
+			// 	} catch(e) {
+			// 		/* security error, img on diff domain */alert('x');
+			// 		return defaultRGB;
+			// 	}
+
+			// 	length = data.data.length;
+
+			// 	while ( (i += blockSize * 4) < length ) {
+			// 		++count;
+			// 		rgb.r += data.data[i];
+			// 		rgb.g += data.data[i+1];
+			// 		rgb.b += data.data[i+2];
+			// 	}
+
+			// 	// ~~ used to floor values
+			// 	rgb.r = ~~(rgb.r/count);
+			// 	rgb.g = ~~(rgb.g/count);
+			// 	rgb.b = ~~(rgb.b/count);
+
+			// 	return rgb;
+			// }
+			// const rgb = getAverageRGB(image)
+			// const bg_color_rgb = 'rgb(' + rgb.r + ',' + rgb.g + ',' + rgb.b +')';
+			// target_node.style.backgroundColor = bg_color_rgb
+
+		// first pixel way
+			const canvas	= document.createElement('canvas');
+			canvas.width	= image.width;
+			canvas.height	= image.height;
+
+			try {
+				// canvas context 2d
+					const ctx = canvas.getContext("2d");
+
+				// draw image into canvas
+					ctx.drawImage(image, 0, 0, image.width, image.height);
+
+				// get RGB data from canvas
+					const rgb = ctx.getImageData(0, 0, 1, 1).data;
+
+				// round RGB values
+					function correction(value) {
+
+						const factor = 1.016
+
+						const result = (value>127)
+							? Math.floor(value * factor)
+							: Math.floor(value / factor)
+
+						return result
+					}
+
+					const r = correction(rgb[0])
+					const g = correction(rgb[1])
+					const b = correction(rgb[2])
+
+				// build backgroundColor style string
+					const bg_color_rgb = 'rgb(' + r + ',' + g + ',' + b +')';
+
+				// set background color style (both container and image)
+					target_node.style.backgroundColor = bg_color_rgb
+
+			}catch(error){
+				console.warn("ui.set_background_image . Unable to get image canvas: ", image);
+			}
+
+			// remove canvas on finish
+				canvas.remove()
+
+
+		// loading style remove
+			// if (image.classList.contains('loading')) {
+			// 	image.classList.remove('loading')
+			// }
+
+
+		return true
 	},//end set_background_image
 
 
@@ -2756,14 +2953,26 @@ export const ui = {
 		// apply style fullscreen
 		node.classList.toggle('fullscreen')
 
-		// set exit event
-		document.addEventListener('keyup', exit_fullscreen, {
-			passive : true
+		const exit_button = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'exit_button',
+			parent			: node
 		})
+		exit_button.addEventListener('click', function(e) {
+			e.stopPropagation()
+
+			node.classList.remove('fullscreen')
+			exit_button.remove()
+		})
+
+		// set exit event
+		document.addEventListener('keyup', exit_fullscreen, { passive : true })
 		function exit_fullscreen(e) {
 			if (e.key==='Escape') {
-				document.removeEventListener('keyup', exit_fullscreen)
+				document.removeEventListener('keyup', exit_fullscreen, { passive : true })
+
 				node.classList.remove('fullscreen')
+				exit_button.remove()
 			}
 		}
 
@@ -2775,7 +2984,7 @@ export const ui = {
 
 	/**
 	* GET_ONTOLY_TERM_LINK
-	* @return DOM node ontoly_link
+	* @return HTMLElement ontoly_link
 	*/
 	get_ontoly_term_link(tipo) {
 
@@ -2809,13 +3018,12 @@ export const ui = {
 	* like filter
 	* @param object options
 	* 	{
-	* 		container			: DOM node,
+	* 		container			: HTMLElement,
 	* 		preserve_content	: bool false
 	* 		label				: string,
 	* 		callback			: function
 	* 	}
-	* @return promise
-	* 	Resolve: DOM node result_node
+	* @return HTMLElement result_node
 	*/
 	load_item_with_spinner : async function(options) {
 
@@ -2846,7 +3054,7 @@ export const ui = {
 			// spinner
 			ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'spinner',
+				class_name		: 'spinner medium',
 				parent			: container_placeholder
 			})
 
@@ -2860,6 +3068,7 @@ export const ui = {
 
 		// replace node
 			await container_placeholder.replaceWith(result_node);
+
 
 		return result_node
 	}//end load_item_with_spinner
@@ -2980,3 +3189,7 @@ export const execute_function_by_name = function(functionName, context /*, args 
 	return context[func].apply(context, args);
 }//end execute_function_by_name
 */
+
+
+
+// @license-end

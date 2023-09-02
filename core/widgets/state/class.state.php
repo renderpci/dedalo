@@ -19,6 +19,7 @@ class state extends widget_common {
 		$ipo 			= $this->ipo;
 
 		$dato = [];
+
 		$project_langs = common::get_ar_all_langs();
 
 		// every state has a ipo that come from structure (input, process , output), state don't use process.

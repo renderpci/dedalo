@@ -46,6 +46,35 @@
 							$this->context->toolbar_buttons[] = 'button_note';
 					}
 
+				// lang (related_component_lang)
+					$ar_related_component_lang_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+						$this->tipo, // tipo
+						'component_select_lang', // model name
+						'termino_relacionado', // relation_type
+						true // search_exact
+					);
+					if (!empty($ar_related_component_lang_tipo)) {
+						$related_component_lang_tipo	= reset($ar_related_component_lang_tipo);
+						$related_component_lang_model	= RecordObj_dd::get_modelo_name_by_tipo($related_component_lang_tipo,true);
+						$related_component_lang = component_common::get_instance(
+							$related_component_lang_model, // string model
+							$related_component_lang_tipo, // string tipo
+							$this->section_id, // string section_id
+							'list', // string mode
+							$lang, // string lang
+							$this->section_tipo // string section_tipo
+						);
+						$related_component_lang_dato = $related_component_lang->get_dato();
+						if (!empty($related_component_lang_dato[0])) {
+							$original_lang = lang::get_code_from_locator($related_component_lang_dato[0]);
+							if (!property_exists($this->context, 'options')) {
+								$this->context->options = new stdClass();
+							}
+							// set original lang
+							$this->context->options->related_component_lang = $original_lang;
+						}
+					}
+
 				// geo
 					$related_component_geolocation = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
 						$this->tipo, // tipo
@@ -110,6 +139,7 @@
 			switch ($mode) {
 
 				case 'list':
+				case 'tm':
 					$value			= $this->get_list_value();
 					$fallback_value	= (empty($value[0]) || ($value[0]==='<br data-mce-bogus="1">'))
 						? $this->get_fallback_list_value((object)['max_chars'=>200])
@@ -124,7 +154,6 @@
 
 							// related_sections add
 								$related_sections = $this->get_related_sections();
-								$related_sections = $related_sections;
 
 							// tags_persons
 								$tags_persons = [];
@@ -164,7 +193,7 @@
 
 					// fallback_value. Is used to create a placeholder to display a reference data to the user
 						$fallback_value	= (empty($value[0]) || ($value[0]==='<br data-mce-bogus="1">'))
-							? $this->get_fallback_list_value((object)['max_chars'=>700])
+							? $this->get_fallback_edit_value((object)['max_chars'=>700])
 							: null;
 					break;
 			}
@@ -177,6 +206,7 @@
 				$item->parent_tipo			= $this->get_tipo();
 				$item->parent_section_id	= $this->get_section_id();
 				$item->fallback_value		= $fallback_value;
+
 				// optional data to add
 				if(isset($properties->tags_persons) && $mode==='edit') {
 					$item->related_sections	= $related_sections;

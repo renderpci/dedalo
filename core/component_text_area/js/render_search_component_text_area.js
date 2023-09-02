@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -24,7 +25,7 @@ export const render_search_component_text_area = function() {
 /**
 * SEARCH
 * Render node for use in current mode
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_search_component_text_area.prototype.search = async function(options) {
 
@@ -88,23 +89,6 @@ const add_events = function(self, wrapper) {
 				return true
 			}
 
-		// q_operator. get the input value of the q_operator
-			// q_operator: is a separate operator used with components that is impossible mark the operator in the input_value,
-			// like; radio_button, check_box, date, autocomplete, etc
-			// (!) Not used in input text
-			if (e.target.matches('input[type="text"].q_operator')) {
-
-				// input. Get the input node that has changed
-					const input = e.target
-				// value
-					const value = (input.value.length>0) ? input.value : null
-				// q_operator. Fix the data in the instance previous to save
-					self.data.q_operator = value
-				// publish search. Event to update the dom elements of the instance
-					event_manager.publish('change_search_element', self)
-
-				return true
-			}
 	})
 
 	return true
@@ -114,32 +98,23 @@ const add_events = function(self, wrapper) {
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 
 	// short vars
-		const value = self.data.value
+		const data	= self.data || {}
+		const value	= data.value || []
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 
 	// values (inputs)
-		const inputs_value	= value.length>0 ? value : ['']
-		const value_length	= inputs_value.length
+		const inputs_value	= value // .length>0 ? value : ['']
+		const value_length	= inputs_value.length || 1
 		for (let i = 0; i < value_length; i++) {
 
 			const current_value = inputs_value[i]
-
-			// q_operator
-				const q_operator = self.data.q_operator
-				ui.create_dom_element({
-					element_type	: 'input',
-					type			: 'text',
-					value			: q_operator,
-					class_name		: 'q_operator',
-					parent			: content_data
-				})
 
 			// input field
 				ui.create_dom_element({
@@ -155,3 +130,7 @@ const get_content_data = function(self) {
 
 	return content_data
 }//end get_content_data
+
+
+
+// @license-end

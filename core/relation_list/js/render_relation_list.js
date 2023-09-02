@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label */
 /*eslint no-undef: "error"*/
 
@@ -22,7 +23,7 @@ export const render_relation_list = function() {
 /**
 * EDIT
 * Render node for use in edit
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_relation_list.prototype.edit = async function(options={render_level:'full'}) {
 
@@ -43,7 +44,7 @@ render_relation_list.prototype.edit = async function(options={render_level:'full
 		})
 		wrapper.appendChild(current_content_data)
 
-	// add the paginator to the warpper
+	// add the paginator to the wrapper
 		parse_paginator_html(self, wrapper)
 
 	return wrapper
@@ -53,13 +54,13 @@ render_relation_list.prototype.edit = async function(options={render_level:'full
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 
 	// content_data
-	const content_data = document.createElement("div")
-		  content_data.classList.add("content_data", self.type)
+	const content_data = document.createElement('div')
+		  content_data.classList.add('content_data', self.type)
 
 	// Render the data html
 		parse_html(self.datum, content_data)
@@ -77,7 +78,7 @@ const parse_html = function(datum, content_data_node){
 
 	if(!datum) return false
 
-	// get the context and the data information of the JSON recived
+	// get the context and the data information of the JSON received
 		const context		= datum.context;
 		const data			= datum.data;
 		const context_id	= context.filter(main_header => main_header.component_tipo === 'id');
@@ -153,7 +154,7 @@ const build_grid_html = function(context, columns, data, count_data, CSS_style_s
 			parent			: grid
 		})
 
-		//create a labels colums info header, the name of the componets of the related sections
+		//create a labels columns info header, the name of the components of the related sections
 		columns.forEach(function(column){
 
 			const class_name = (column.component_label==='id')
@@ -200,7 +201,7 @@ const build_grid_html = function(context, columns, data, count_data, CSS_style_s
 				})
 
 			}else{
-				// the information colums of the components of the section
+				// the information columns of the components of the section
 				const data_row = ui.create_dom_element({
 					element_type	: 'li',
 					//class_name	: 'relation_list_data_hearder',
@@ -343,7 +344,7 @@ const next_records = function(self){
 */
 const edit_relation = function(self, current_data){
 
-	//get the locator of the related secion
+	//get the locator of the related section
 	const section_id	= current_data.section_id
 	const section_tipo	= current_data.section_tipo
 
@@ -381,3 +382,5 @@ const edit_relation = function(self, current_data){
 }//end edit_relation
 
 
+
+// @license-end

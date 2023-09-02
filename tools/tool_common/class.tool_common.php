@@ -1,8 +1,8 @@
 <?php
+declare(strict_types=1);
 /**
 * CLASS TOOL_COMMON
 * Add basic methods for general use in tools
-*
 */
 class tool_common {
 
@@ -23,7 +23,7 @@ class tool_common {
 	* @param string $section_tipo
 	* @return void
 	*/
-	public function __construct($section_id, string $section_tipo) {
+	public function __construct(string|int|null $section_id, string $section_tipo) {
 
 		// set tool name as class name
 		$this->name = get_called_class();
@@ -37,25 +37,23 @@ class tool_common {
 
 	/**
 	* GET_JSON
-	* @param object|null $request_options = null
+	* Gets tool context
+	* This function to preserve calls coherence,
+	* but only is used to get context, not data.
+	* @param object|null $options = null
 	* @return object $json
 	*/
-	public function get_json(object $request_options=null) : object {
+	public function get_json(object $options=null) : object {
 
-		// options parse
-			$options = new stdClass();
-				$options->get_context	= true;
-				$options->get_data		= true;
-				if($request_options!==null) foreach($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+		// options
+			$get_context	= $options->get_context ?? true;
+			$get_data		= $options->get_data ?? false;
 
-		// new way
+		// JSON object
 			$json = new stdClass();
-				if (true===$options->get_context) {
-					$json->context = $this->get_context();
+				if (true===$get_context) {
+					$json->context = [$this->get_structure_context()];
 				}
-				// if (true===$options->get_data) {
-				// 	$json->data = $this->get_data();
-				// }
 
 		return $json;
 	}//end get_json
@@ -63,11 +61,16 @@ class tool_common {
 
 
 	/**
-	* GET_CONTEXT
+	* GET_STRUCTURE_CONTEXT
 	* Parse the tool context
+	* Used when tools area loaded from different window
+	* like time_machine do
+	* The context data is stored in section 'dd1324' (Registered tools)
+	* preparsed into the component_json 'dd1353' as JSON 'simple_tool_obj'
+	* when tools are registered
 	* @return dd_object $dd_object
 	*/
-	public function get_context() : dd_object {
+	public function get_structure_context() : dd_object {
 
 		// check valid name
 			if ($this->name==='tool_common') {
@@ -90,8 +93,17 @@ class tool_common {
 			);
 			$simple_tool_obj_dato	= $simple_tool_component->get_dato();
 			$tool_object			= reset($simple_tool_obj_dato);
-
-		// $name = $tool_object->name;
+			// tool_object check
+			if (empty($tool_object)) {
+				debug_log(__METHOD__
+					. " Error. Invalid tool_object. Unable to continue !  " . PHP_EOL
+					. ' model: '.to_string($model) .PHP_EOL
+					. ' component_tipo: '.to_string($component_tipo) .PHP_EOL
+					. ' section_tipo: '.to_string($this->section_tipo) .PHP_EOL
+					. ' section_id: '.to_string($this->section_id) .PHP_EOL
+					, logger::ERROR
+				);
+			}
 
 		// label. (JSON list) Try match current lang else use the first lang value
 			$tool_label = array_find($tool_object->label, function($el){
@@ -108,7 +120,7 @@ class tool_common {
 			if(!empty($tool_object->labels) && !empty((array)$tool_object->labels)) {
 
 				// add label with lang fallback
-				foreach ($tool_object->labels as $key => $current_label_value) {
+				foreach ($tool_object->labels as $current_label_value) {
 
 					$label_name = $current_label_value->name;
 					if(!isset($labels[$label_name])) {
@@ -117,6 +129,17 @@ class tool_common {
 							return $el->name===$label_name;
 						});
 						foreach ($all_langs_label as $item) {
+							if (!isset($item->lang)) {
+								// ignore
+								debug_log(__METHOD__
+									. " Ignored item without expected property 'lang'. Check this tool definition labels " . PHP_EOL
+									. ' item: ' . to_string($item) .PHP_EOL
+									. ' all_langs_label: ' . to_string($all_langs_label) .PHP_EOL
+									. ' tool_object: ' . to_string($tool_object)
+									, logger::ERROR
+								);
+							}
+
 							if ($item->lang===DEDALO_DATA_LANG) {
 								$labels[$label_name] = $item;
 								continue 2;
@@ -145,6 +168,13 @@ class tool_common {
 				return $el->name===$name;
 			});
 
+			if(empty($ar_config)){
+				$ar_config		= tools_register::get_all_default_config_tool_client();
+				$config_data	= array_find($ar_config, function($el) use($name) {
+					return $el->name===$name;
+				});
+			}
+
 		// lang
 			$lang = DEDALO_DATA_LANG;
 
@@ -162,7 +192,7 @@ class tool_common {
 				'label'				=> $tool_label,
 				'tipo'				=> $component_tipo,
 				'section_tipo'		=> $tool_object->section_tipo,
-				'section_id'		=> $tool_object->section_id,
+				// 'section_id'		=> $tool_object->section_id,
 				'model'				=> $name,
 				'lang'				=> $lang,
 				'mode'				=> 'edit',
@@ -178,7 +208,7 @@ class tool_common {
 
 
 		return $dd_object;
-	}//end get_context
+	}//end get_structure_context
 
 
 
@@ -198,9 +228,9 @@ class tool_common {
 				})->value ?? reset($tool_object->label)->value;
 
 			// description. (text_area) Try match current lang else use the first lang value
-				$description = array_find((array)$tool_object->description, function($el){
-					return $el->lang===DEDALO_DATA_LANG;
-				})->value[0] ?? reset($tool_object->description)->value[0];
+				// $description = array_find((array)$tool_object->description, function($el){
+				// 	return $el->lang===DEDALO_DATA_LANG;
+				// })->value[0] ?? reset($tool_object->description)->value[0];
 
 			// css
 				$css = (object)[
@@ -212,22 +242,22 @@ class tool_common {
 
 			// context
 				$tool_simple_context = new dd_object((object)[
-					'name'					=> $tool_object->name,
-					'label'					=> $tool_label,
-					// 'tipo'				=> $component_tipo,
-					'section_tipo'			=> $tool_object->section_tipo,
-					'section_id'			=> $tool_object->section_id,
-					'model'					=> $tool_object->name,
-					// 'lang'				=> $lang,
-					'mode'					=> 'edit',
-					'properties'			=> $tool_object->properties,
-					'css'					=> $css,
-					'icon'					=> $icon,
-					// 'labels'				=> $labels,
-					// 'description'		=> $description,
-					// 'show_in_inspector'	=> $tool_object->show_in_inspector ?? null,
-					'show_in_component'		=> $tool_object->show_in_component ?? null,
-					// 'config'				=> !empty($config_data) ? $config_data->config : null
+					'name'				=> $tool_object->name,
+					'label'				=> $tool_label,
+					// 'tipo'			=> $component_tipo,
+					'section_tipo'		=> $tool_object->section_tipo,
+					// 'section_id'		=> $tool_object->section_id,
+					'model'				=> $tool_object->name,
+					// 'lang'			=> $lang,
+					'mode'				=> 'edit',
+					'properties'		=> $tool_object->properties,
+					'css'				=> $css,
+					'icon'				=> $icon,
+					// 'labels'			=> $labels,
+					// 'description'	=> $description,
+					'show_in_inspector'	=> $tool_object->show_in_inspector ?? null,
+					'show_in_component'	=> $tool_object->show_in_component ?? null,
+					// 'config'			=> !empty($config_data) ? $config_data->config : null
 				]);
 
 		// new way. (!) Unification with context in progress..
@@ -299,7 +329,7 @@ class tool_common {
 
 		// if(isset($_SESSION['dedalo']['registered_tools'])) {
 		// 	return $_SESSION['dedalo']['registered_tools'];
-		// } this
+		// }
 
 		// client_registered_tools_records
 			static $client_registered_tools_records;
@@ -307,7 +337,7 @@ class tool_common {
 
 				// get all active and registered tools
 					$sqo_tool_active = json_decode('{
-						"section_tipo": "dd1324",
+						"section_tipo": "'.DEDALO_REGISTER_TOOLS_SECTION_TIPO.'",
 						"limit": 0,
 						"filter": {
 							"$and": [
@@ -316,9 +346,9 @@ class tool_common {
 									"q_operator": null,
 									"path": [
 										{
-											"section_tipo": "dd1324",
+											"section_tipo": "'.DEDALO_REGISTER_TOOLS_SECTION_TIPO.'",
 											"component_tipo": "dd1354",
-											"modelo": "component_radio_button",
+											"model": "component_radio_button",
 											"name": "Active"
 										}
 									]
@@ -342,7 +372,6 @@ class tool_common {
 				$section		= section::get_instance($record->section_id, $record->section_tipo);
 				$section_dato	= $record->datos;
 				$section->set_dato($section_dato);
-				$section->set_bl_loaded_matrix_data(true);
 
 				$component_tipo	= 'dd1353';
 				$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
@@ -366,13 +395,23 @@ class tool_common {
 				}
 
 				// append config
-					$current_config = array_filter($ar_config, function($item) use($current_value){
-						if($item->name === $current_value->name) {
-							return $item;
-						}
+					$current_config	= array_find($ar_config, function($el) use($current_value) {
+						return $el->name===$current_value->name;
 					});
-					$current_value->config = !empty($current_config[0])
-						? $current_config[0]->config
+					// $current_config = array_filter($ar_config, function($item) use($current_value){
+					// 	if($item->name === $current_value->name) {
+					// 		return $item;
+					// 	}
+					// });
+
+					if(empty($current_config)){
+						$ar_config		= tools_register::get_all_default_config_tool_client();
+						$current_config	= array_find($ar_config, function($el) use($current_value) {
+							return $el->name===$current_value->name;
+						});
+					}
+					$current_value->config = !empty($current_config)
+						? $current_config->config
 						: null;
 
 				$registered_tools[] = $current_value;
@@ -403,6 +442,13 @@ class tool_common {
 				return $el->name===$tool_name;
 			});
 
+			if(empty($config)){
+				// get all tools config sections
+				$ar_config = tools_register::get_all_default_config();
+				$config = array_find($ar_config, function($el) use($tool_name) {
+					return $el->name===$tool_name;
+				});
+			}
 
 		return $config;
 	}//end get_config
@@ -418,14 +464,16 @@ class tool_common {
 
 		$ar_data = array();
 
-		// scan dir
+		// scan directory
 			try {
 				$root = is_dir($dir)
 					? scandir($dir)
 					: null;
 			} catch (Exception $e) {
-				debug_log(__METHOD__." Error on read dir ".to_string($dir), logger::ERROR);
-				//return($e);
+				debug_log(__METHOD__
+					." Error on read dir: ".to_string($dir)
+					, logger::ERROR
+				);
 			}
 
 		// error on read the dir or empty result
@@ -457,9 +505,9 @@ class tool_common {
 					// }
 			}
 
-		# SORT ARRAY (By custom core function build_sorter)
-		#usort($ar_data, build_sorter('numero_recurso'));
-		#dump($ar_data,'$ar_data');
+		// SORT ARRAY (By custom core function build_sorter)
+			// usort($ar_data, build_sorter('numero_recurso'));
+
 
 		return $ar_data;
 	}//end read_files
@@ -486,7 +534,11 @@ class tool_common {
 
 		// file not found case
 			if(!file_exists($file)) {
-				debug_log(__METHOD__." File not found ".to_string($file), logger::ERROR);
+				debug_log(__METHOD__
+					." File not found " . PHP_EOL
+					.' file: '.to_string($file)
+					, logger::ERROR
+				);
 				return [];
 			}
 
@@ -502,6 +554,7 @@ class tool_common {
 		// read contents line by line and store data
 			$csv_array			= array();
 			$convert_to_utf8	= false;
+			$bom				= pack('H*','EFBBBF');
 			$i=0;
 			while (($line = fgetcsv($f, 0, $csv_delimiter, $enclosure, $escape)) !== false) {
 
@@ -516,7 +569,7 @@ class tool_common {
 						$line = [$line];
 					}
 
-				// encoding check . Only UFT-8 is valid. Another encodings will be conteverted to UTF-8
+				// encoding check . Only UFT-8 is valid. Another encodings will be converted to UTF-8
 					// $sample = reset($line);
 					$sample = is_array($line) ? implode(', ', $line) : (string)$line;
 					if ($convert_to_utf8===true || !mb_check_encoding($sample, 'UTF-8')) {
@@ -531,7 +584,12 @@ class tool_common {
 
 				// iterate line cells (columns from split text line by $csv_delimiter)
 					foreach ($line as $cell) {
-						$csv_array[$i][] = trim($cell);
+						// remove BOM in the first line when is set.
+						$cell_clean = $i===0
+							? preg_replace("/^$bom/", '', $cell)
+							: $cell;
+
+						$csv_array[$i][] = trim($cell_clean);
 					}
 
 				$i++;
@@ -560,6 +618,8 @@ class tool_common {
 	public static function call_component_method(object $options) : object {
 
 		// Working here... (!)
+		throw new Exception("Error Processing Request", 1);
+
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -631,6 +691,7 @@ class tool_common {
 			if ($user_id==DEDALO_SUPERUSER) {
 
 				$user_tools = $registered_tools;
+
 			}else{
 
 				// tool permissions (DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO)
@@ -661,14 +722,20 @@ class tool_common {
 
 				// filter user authorized tools
 					foreach ($registered_tools as $tool) {
-						if(in_array($tool->section_id, $ar_allowed_id)) {
-							$user_tools[] = $tool;
-						}
-						if(isset($tool->always_active)){
+
+						if( (isset($tool->always_active) && $tool->always_active===true) ||
+							 in_array($tool->section_id, $ar_allowed_id)
+							) {
 							$user_tools[] = $tool;
 						}
 					}
 			}
+
+		// debug
+			// $names = array_map(function($el){
+			// 	return $el->name .' - '. $el->section_id;
+			// }, $user_tools);
+			// dump($names, '$names ++ '.to_string());
 
 
 		return $user_tools;

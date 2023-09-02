@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
@@ -7,9 +8,12 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	// import * as instances from '../../common/js/instances.js'
-	import {common,create_source} from '../../common/js/common.js'
-	// import {pause} from '../../common/js/utils/util.js'
-	import {render_login, render_files_loader} from './render_login.js'
+	import {common, create_source} from '../../common/js/common.js'
+	// import {pause} from '../../common/js/utils/index.js'
+	import {
+		render_login,
+		render_files_loader
+	} from './render_login.js'
 
 
 
@@ -34,11 +38,11 @@ export const login = function() {
 	this.node
 	this.ar_instances = []
 
-	this.custom_action_dispatch = null
+	this.custom_action_dispatch
+	this.add_select_lang
+	this.select_lang
 
 	this.status
-
-	return true
 }//end login
 
 
@@ -57,6 +61,7 @@ export const login = function() {
 
 /**
 * INIT
+* @param object options
 * @return bool
 */
 login.prototype.init = async function(options) {
@@ -64,24 +69,27 @@ login.prototype.init = async function(options) {
 	const self = this
 
 	// instance key used vars
-	self.model			= options.model
-	self.tipo			= options.tipo
-	self.mode			= options.mode
-	self.lang			= options.lang
+	self.model					= options.model
+	self.tipo					= options.tipo
+	self.mode					= options.mode
+	self.lang					= options.lang
+	self.add_select_lang		= options.add_select_lang ?? true
+
 
 	// DOM
-	self.node			= null
+	self.node					= null
 
-	self.events_tokens	= []
-	self.context		= options.context	|| null
-	self.data			= options.data		|| null
-	self.datum			= options.datum		|| null
+	self.events_tokens			= []
+	self.context				= options.context	|| null
+	self.data					= options.data		|| null
+	self.datum					= options.datum		|| null
+	self.custom_action_dispatch	= options.custom_action_dispatch
 
-	self.type			= 'login'
-	self.label			= null
+	self.type					= 'login'
+	self.label					= null
 
 	// status update
-		self.status = 'initiated'
+		self.status = 'initialized'
 
 
 	return true
@@ -91,9 +99,8 @@ login.prototype.init = async function(options) {
 
 /**
 * BUILD
-* @param bool autoload = true
-* @return promise
-*	object self
+* @param bool autoload = false
+* @return bool
 */
 login.prototype.build = async function(autoload=false) {
 
@@ -104,7 +111,7 @@ login.prototype.build = async function(autoload=false) {
 
 	// (!) Note that normally login only needs the context to operate and it is injected from page
 	// @see page.instantiate_page_element()
-	// because this the autoload here is false instead the true option in other components, section ...
+	// because this, the autoload here is false instead the true option in other components, section ...
 		if (autoload===true) {
 
 			// rqo build.
@@ -119,6 +126,9 @@ login.prototype.build = async function(autoload=false) {
 				const api_response = await data_manager.request({
 					body : rqo
 				})
+				if(SHOW_DEBUG===true) {
+					console.log('login api_response:', api_response);
+				}
 
 			// set context and data to current instance
 				self.context	= api_response.result.find(element => element.model===self.model);
@@ -135,7 +145,7 @@ login.prototype.build = async function(autoload=false) {
 		self.status = 'built'
 
 
-	return self
+	return true
 }//end build
 
 
@@ -153,6 +163,12 @@ login.prototype.build = async function(autoload=false) {
 */
 export const quit = async function(options) {
 
+	// set page style as loading
+		const main = document.getElementById('main')
+		if (main) {
+			main.classList.add('loading')
+		}
+
 	// data_manager API call
 		const api_response = await data_manager.request({
 			body : {
@@ -166,7 +182,7 @@ export const quit = async function(options) {
 		if (api_response.result===true) {
 
 			// SAML redirection check
-			if (typeof api_response.saml_redirect!=="undefined" && api_response.saml_redirect.length>2) {
+			if (typeof api_response.saml_redirect!=='undefined' && api_response.saml_redirect.length>2) {
 
 				window.location.href = api_response.saml_redirect
 
@@ -178,6 +194,11 @@ export const quit = async function(options) {
 		}else{
 
 			console.error(api_response.msg);
+		}
+
+	// set page style as loading
+		if (main) {
+			main.classList.remove('loading')
 		}
 
 
@@ -213,6 +234,45 @@ login.prototype.action_dispatch = async function(api_response) {
 	// default behavior
 		if (api_response.result===true) {
 
+			// hide component_message OK
+				const component_message = self.node.content_data.querySelector('.component_message.ok')
+				if (component_message) {
+					component_message.classList.add('hide')
+				}
+
+			// user image load
+				const bg_image = (api_response.result_options && api_response.result_options.user_image)
+					? api_response.result_options.user_image
+					: DEDALO_ROOT_WEB + '/core/themes/default/icons/dedalo_icon_grey.svg'
+				if (bg_image) {
+					// force load image
+					self.node.style.setProperty('--user_login_image', `url('${bg_image}')`);
+					await (()=>{
+						return new Promise(function(resolve, reject){
+							const img = new Image()
+							img.onload = () => {
+								resolve(true)
+							}
+							img.onerror = () => reject(false)
+							img.src = bg_image
+						})
+						.catch((error) => {
+							console.log('Error loading image:', bg_image);
+							console.error(error);
+						});
+					})();
+					if (api_response.result_options?.user_id && api_response.result_options?.user_id===-1 && DEVELOPMENT_SERVER===true) {
+						self.node.classList.add('raspa_loading')
+					}
+					await (()=>{
+						return new Promise(function(resolve, reject){
+							setTimeout(function(){
+								resolve(true)
+							}, 160)
+						})
+					})();
+				}
+
 			// files loader. Circle with progressive fill draw based on percentage of loaded files by worker (by messages info)
 				const files_loader = render_files_loader({
 					on_load_finish : load_finish
@@ -225,24 +285,26 @@ login.prototype.action_dispatch = async function(api_response) {
 				});
 				current_worker.postMessage({
 					action	: 'clear_cache',
-					url		: '../../api/v1/json/' // DEDALO_API_URL
+					url		: typeof DEDALO_API_URL!=='undefined'
+						? DEDALO_API_URL
+						: '../../api/v1/json/' // DEDALO_API_URL
 				});
 				current_worker.onmessage = function(e) {
 
 					if (e.data.status==='ready') {
 						// hide things
-						self.node.content_data.select_lang.classList.add('hide')
+						if (self.node.content_data.select_lang) {
+							self.node.content_data.select_lang.classList.add('hide')
+						}
 						self.node.content_data.form.classList.add('hide')
-						// self.node.content_data.info.classList.add('hide')
+						// self.node.content_data.info_container.classList.add('hide')
+
 						// show things
 						self.node.content_data.top.classList.remove('hide')
 
 						// raspa_loading Development local only
-						if (location.host.indexOf('127.0.0.1')===0 ||
-							location.host.indexOf('localhost')===0 ||
-							location.host.indexOf('v6.mib.numisdata.org')===0
-							) {
-							self.node.classList.add('raspa_loading')
+						if (api_response.result_options?.user_id && api_response.result_options?.user_id===-1) {
+							self.node.classList.add('active')
 						}
 					}
 
@@ -251,7 +313,9 @@ login.prototype.action_dispatch = async function(api_response) {
 
 					if (e.data.status==='finish') {
 						// login continue
-						load_finish()
+						setTimeout(function(){
+							load_finish()
+						}, 450)
 					}
 				}
 				// load_finish()
@@ -261,14 +325,31 @@ login.prototype.action_dispatch = async function(api_response) {
 				// result_options is defined when the user is root or developer and the tools are not loaded
 				// it's defined in dd_init_test to force to go to the development area to control the DDBB and ontology version
 				if (api_response.result_options && api_response.result_options.redirect) {
+
 					setTimeout(function(){
-						window.location.replace(api_response.result_options.redirect)
-					}, 1)
+						window.location.replace( api_response.result_options.redirect )
+					}, 3)
+
 				}else{
-					window.location.reload(false);
+
+					// has_tipo in url
+						const queryString	= window.location.search
+						const urlParams		= new URLSearchParams(queryString);
+						const has_tipo		= urlParams.has('t')
+
+					if (api_response.default_section && !has_tipo) {
+						// user defined default_section case
+						window.location.replace( DEDALO_CORE_URL + '/page/?t=' + api_response.default_section );
+					}else{
+						window.location.reload(false);
+					}
 				}
 			}
 		}
 
 	return true
 }//end action_dispatch
+
+
+
+// @license-end

@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * DD_CORE_API
 * Manage API REST data with Dédalo
@@ -42,25 +43,48 @@ final class dd_core_api {
 	* sample:
 	* {
 	*	"action": "start",
-	*	"search_obj": {
-	*		"t": "oh1",
-	*		"m": "edit"
+	*	"prevent_lock": true,
+	*	"options" : {
+	*		"search_obj": {
+	*			"t": "oh1",
+	*			"m": "edit"
+	*		 },
+	*		"menu": true
 	*	},
-	*	"menu": true,
-	*	"prevent_lock": true
+	*	"sqo": {		// optional to preserve navigation
+	*		"section_tipo": [
+	*			"dd1324"
+	*		],
+	*		"limit": 10,
+	*		"offset": 0
+	*	},
+	* 	"source": {		// optional to preserve navigation
+	*		"tipo": "dd1324",
+	*		"section_tipo": "dd1324",
+	*		"mode": "list"
+	*	}
 	* }
 	* @return object $response
 	*/
-	public static function start(object $options) : object {
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-			$response->error	= null;
+	public static function start(object $rqo) : object {
 
 		// options
+			$options	= $rqo->options ?? new StdClass();
 			$search_obj	= $options->search_obj ?? new StdClass(); // url vars
 			$menu		= $options->menu ?? false;
+			// (!) properties 'sqo' and 'source' could be received too, but they are not used here but in common->build_request_config
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+				$response->error	= null;
+
+		// fix rqo
+		// Note that this RQO is used later in common->build_request_config to recover SQO and source if they exists
+		// Properties 'sqo' and 'source' are used to preserve user last filter and pagination values fixed previously in browser local DDBB
+		// by section build method and get by page build method
+			dd_core_api::$rqo = $rqo;
 
 		// install check
 		// check if Dédalo was installed, if not, run the install process
@@ -79,13 +103,24 @@ final class dd_core_api {
 						$context[] = $install->get_structure_context();
 
 					// response to client
-						$response->result	= $context;
-						$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
+						$response->result = (object)[
+							'context'	=> $context,
+							'data'		=> []
+						];
+						$response->msg = 'OK. Request done ['.__FUNCTION__.']';
 
 						return $response;
 				}
 			}
 
+		// Notify invalid rqo->options if it happens (after install check)
+			if (!isset($rqo->options)) {
+				debug_log(__METHOD__
+					. " start rqo options is mandatory! " . PHP_EOL
+					. ' rqo: '.to_string($rqo)
+					, logger::ERROR
+				);
+			}
 
 		// page mode and tipo
 			$default_section_tipo = MAIN_FALLBACK_SECTION; // 'test38';
@@ -94,18 +129,20 @@ final class dd_core_api {
 				// tool case
 				$tool_name = $search_obj->tool;
 
-
 			}else if (isset($search_obj->locator)) {
 
-				// locator case
-				$locator	= json_decode($search_obj->locator);
-				$tipo		= $locator->section_tipo ?? $default_section_tipo;
-				$section_id	= $locator->section_id ?? null;
-				$mode		= $locator->mode ?? 'list';
+				// locator case (pseudo locator)
+				$locator		= is_string($search_obj->locator) ? json_decode($search_obj->locator) : $search_obj->locator;
+				$tipo			= $locator->tipo ?? $default_section_tipo;
+				$section_tipo	= $locator->section_tipo ?? $tipo;
+				$section_id		= $locator->section_id ?? null;
+				$mode			= $locator->mode ?? 'list';
+				$lang			= $search_obj->lang	?? $search_obj->lang ?? DEDALO_DATA_LANG;
+				$view			= $search_obj->view ?? null;
 
 			}else{
 
-				// default case
+				// default and fallback case
 				$tipo			= $search_obj->t	?? $search_obj->tipo			?? $default_section_tipo; // MAIN_FALLBACK_SECTION;
 				$section_tipo	= $search_obj->st	?? $search_obj->section_tipo	?? $tipo;
 				$section_id		= $search_obj->id	?? $search_obj->section_id		?? null;
@@ -125,6 +162,7 @@ final class dd_core_api {
 						$response->result	= false;
 						$response->error	= $msg;
 						$response->msg		= $msg;
+
 						return $response;
 					}
 
@@ -135,7 +173,11 @@ final class dd_core_api {
 					try {
 						$login_context = $login->get_structure_context();
 					} catch (Exception $e) {
-						debug_log(__METHOD__." Caught exception: Error on get login context ". $e->getMessage(), logger::DEBUG);
+						debug_log(__METHOD__
+							." Caught exception: Error on get login context: " . PHP_EOL
+							. ' exception message: '. $e->getMessage()
+							, logger::ERROR
+						);
 					}
 					if (empty($login_context) ||
 						empty($login_context->properties->login_items) // indicates table matrix_descriptors serious problem
@@ -146,7 +188,11 @@ final class dd_core_api {
 
 								// status is 'installed' but database it's not available
 								$msg = "Error. Your installation is set as 'installed' (DEDALO_INSTALL_STATUS) but the ontology tables are not available";
-								debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
+								debug_log(__METHOD__
+									. " $msg " . PHP_EOL
+									. ' rqo: '.to_string($rqo)
+									, logger::ERROR
+								);
 								$response->result	= false;
 								$response->error	= $msg;
 								$response->msg		= $msg;
@@ -205,7 +251,10 @@ final class dd_core_api {
 								if ($tool_name) {
 									$ar_tool_object	= tool_common::get_client_registered_tools([$tool_name]);
 									if (empty($ar_tool_object)) {
-										debug_log(__METHOD__." ERROR. No tool found for tool '$tool_name' in section_tool_tipo ".to_string($section_tool_tipo), logger::ERROR);
+										debug_log(__METHOD__
+											." ERROR. No tool found for tool '$tool_name' in section_tool_tipo: ".to_string($section_tool_tipo)
+											, logger::ERROR
+										);
 									}else{
 										$tool_config	= $properties->tool_config->{$tool_name} ?? false;
 										$tool_context	= tool_common::create_tool_simple_context($ar_tool_object[0], $tool_config);
@@ -226,7 +275,7 @@ final class dd_core_api {
 								true // add_request_config
 							);
 							// section_tool config
-							// the config is used by section_tool to set the tool to open, if is set inject the config into the context.
+							// the config is used by section_tool to set the tool to open, if is set, inject the config into the context.
 							if (isset($config)) {
 								$current_context->config = $config;
 							}
@@ -271,17 +320,18 @@ final class dd_core_api {
 							// add to page context
 								$current_context = $area->get_structure_context(1, true);
 
+							// set properties with received vars
 								if (isset($search_obj->thesaurus_mode)) {
-									$current_context->thesaurus_mode = $search_obj->thesaurus_mode;
+									$current_context->properties->thesaurus_mode = $search_obj->thesaurus_mode;
 								}
 								if (isset($search_obj->hierarchy_types)) {
-									$current_context->hierarchy_types = json_decode($search_obj->hierarchy_types);
+									$current_context->properties->hierarchy_types = json_decode($search_obj->hierarchy_types);
 								}
 								if (isset($search_obj->hierarchy_sections)) {
-									$current_context->hierarchy_sections = json_decode($search_obj->hierarchy_sections);
+									$current_context->properties->hierarchy_sections = json_decode($search_obj->hierarchy_sections);
 								}
 								if (isset($search_obj->hierarchy_terms)) {
-									$current_context->hierarchy_terms = json_decode($search_obj->hierarchy_terms);
+									$current_context->properties->hierarchy_terms = json_decode($search_obj->hierarchy_terms);
 								}
 
 							// add to page context
@@ -291,13 +341,16 @@ final class dd_core_api {
 						case (strpos($model, 'tool_')===0):
 
 							// resolve tool from name and user
-								$user_id			= (int)navigator::get_user_id();
+								$user_id			= get_user_id();
 								$registered_tools	= tool_common::get_user_tools($user_id);
 								$tool_found = array_find($registered_tools, function($el) use($model){
 									return $el->name===$model;
 								});
 								if (empty($tool_found)) {
-									debug_log(__METHOD__." Tool $model not found in tool_common::get_client_registered_tools ".to_string(), logger::ERROR);
+									debug_log(__METHOD__
+										." Tool $model not found in tool_common::get_client_registered_tools "
+										, logger::ERROR
+									);
 								}else{
 									$section_tipo	= $tool_found->section_tipo;
 									$section_id		= $tool_found->section_id;
@@ -310,7 +363,7 @@ final class dd_core_api {
 									$element_json = $element->get_json($get_json_options);
 
 									// context add
-									$context[] = $element_json->context;
+									$context[] = $element_json->context[0];
 								}
 							break;
 
@@ -375,11 +428,20 @@ final class dd_core_api {
 							// ..
 							break;
 					}//end switch (true)
+
+
+				// unlock user components. Normally this occurs when user force reload the page
+					if (DEDALO_LOCK_COMPONENTS===true) {
+						lock_components::force_unlock_all_components( get_user_id() );
+					}
 			}//end if (login::is_logged()!==true)
 
 		// response OK
-			$response->result	= $context;
-			$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
+			$response->result = (object)[
+				'context'	=> $context,
+				'data'		=> []
+			];
+			$response->msg = 'OK. Request done ['.__FUNCTION__.']';
 
 
 		return $response;
@@ -439,7 +501,12 @@ final class dd_core_api {
 
 		// validate input data
 			if (empty($rqo->source->section_tipo)) {
-				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty source \'section_tipo\' (is mandatory)';
+				$response->msg = 'Error: ('.__FUNCTION__.') Empty source \'section_tipo\' (is mandatory)';
+				debug_log(__METHOD__
+					." $response->msg " . PHP_EOL
+					.' rqo: ' . to_string($rqo)
+					, logger::ERROR
+				);
 				return $response;
 			}
 
@@ -452,6 +519,78 @@ final class dd_core_api {
 		// response success
 			$response->result	= $json_rows;
 			$response->msg		= 'OK. Request done';
+
+		// activity
+			if ($rqo->source->action==='search') {
+				// Prevent infinite loop saving self
+				if (!in_array($rqo->source->tipo, logger_backend_activity::$ar_elements_activity_tipo)) {
+
+					// mode. set mode_to_activity
+					// In cases like 'tool_transcription' the mode passed is neither 'edit' nor 'list' so we will
+					// force 'edit' in the logger as there are only 2 page load options defined: 'LOAD EDIT' and 'LOAD LIST'
+						$mode				= $rqo->source->mode;
+						$mode_to_activity	= $mode;
+						if ( strpos($mode, 'edit')===false && strpos($mode, 'list')===false ) {
+							$mode_to_activity = 'edit';
+						}
+
+					// activity dato
+						$dato_activity = [
+							'msg' => 'HTML Page is loaded in mode: '.$mode_to_activity .' ['.$mode.']'
+						];
+
+						switch (true) {
+
+							case ($mode==='edit'):
+								$section_id						= isset($json_rows->data[0]) && isset($json_rows->data[0]->value[0])
+									? $json_rows->data[0]->value[0]->section_id
+									: null;
+								$dato_activity['id']			= $section_id;
+								$dato_activity['tipo']			= $rqo->source->tipo;
+								// $dato_activity['top_id']		= TOP_ID;	#$_SESSION['dedalo4']['config']['top_id'];
+								// $dato_activity['top_tipo']	= TOP_TIPO;	#$_SESSION['dedalo4']['config']['top_tipo'];
+								break;
+
+							case ($mode==='list') :
+								$dato_activity['tipo']			= $rqo->source->tipo;
+								#$dato_activity['top_id']		= null;
+								// $dato_activity['top_tipo']	= TOP_TIPO;	#$tipo;
+								break;
+
+							case ($mode==='tm') :
+								$dato_activity['tipo']			= $rqo->options->caller_tipo;
+								#$dato_activity['top_id']		= null;
+								// $dato_activity['top_tipo']	= TOP_TIPO;	#$tipo;
+								break;
+
+							// case ( strpos($mode, 'tool_portal')!==false ) :
+							// 	#$dato_activity['id']		= $id;
+							// 	$dato_activity['tipo']		= $tipo;
+							// 	$dato_activity['top_id'] 	= $parent;	#$_SESSION['dedalo4']['config']['top_id'];
+							// 	$dato_activity['top_tipo'] 	= TOP_TIPO;	#$_SESSION['dedalo4']['config']['top_tipo'];
+							// 	break;
+
+							// case ( strpos($mode, 'tool_')!==false ) :
+							// 	#$dato_activity['id']		= $id;
+							// 	$dato_activity['tipo']		= $tipo;
+							// 	$dato_activity['top_id'] 	= $parent;	#$_SESSION['dedalo4']['config']['top_id'];
+							// 	$dato_activity['top_tipo'] 	= TOP_TIPO;	#$_SESSION['dedalo4']['config']['top_tipo'];
+							// 	break;
+
+							default:
+								break;
+						}
+
+					// LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+						logger::$obj['activity']->log_message(
+							'LOAD'.' '.strtoupper($mode_to_activity),
+							logger::INFO,
+							$rqo->source->tipo,
+							null,
+							$dato_activity
+						);
+				}//end if (in_array($tipo, logger_backend_activity::$ar_elements_activity_tipo))
+			}//end if ($rqo->source->action==='search')
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -495,7 +634,7 @@ final class dd_core_api {
 
 		// validate input data
 			if (empty($rqo->source->section_tipo)) {
-				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty source \'section_tipo\' (is mandatory)';
+				$response->msg = 'API Error: ('.__FUNCTION__.') Empty source \'section_tipo\' (is mandatory)';
 				return $response;
 			}
 
@@ -529,7 +668,7 @@ final class dd_core_api {
 	*        "section_tipo": "oh1"
 	*    }
 	* }
-	* @return array $result
+	* @return object $response
 	*/
 	public static function create(object $rqo) : object {
 
@@ -544,7 +683,7 @@ final class dd_core_api {
 
 		// section_tipo
 			if (empty($section_tipo)) {
-				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty section_tipo (is mandatory)';
+				$response->msg = 'API Error: ('.__FUNCTION__.') Empty section_tipo (is mandatory)';
 				return $response;
 			}
 
@@ -579,7 +718,7 @@ final class dd_core_api {
 	*    "action": "duplicate ",
 	*    "source": {
 	*        "section_tipo": "oh1"
-	* 		"section_id": "2"
+	* 		"section_id": 2 // integer
 	*    }
 	* }
 	* @return array $result
@@ -598,7 +737,7 @@ final class dd_core_api {
 
 		// section_tipo
 			if (empty($section_tipo)) {
-				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty section_tipo (is mandatory)';
+				$response->msg = 'API Error: ('.__FUNCTION__.') Empty section_tipo (is mandatory)';
 				return $response;
 			}
 
@@ -670,24 +809,44 @@ final class dd_core_api {
 			$model			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			if($model!=='section') {
 				$response->error = 1;
-				$response->msg 	.= 'Model is not expected section: '.$model;
+				$response->msg 	.= '[1] Model is not expected section: '.$model;
+				debug_log(__METHOD__
+					." $response->msg " . PHP_EOL
+					.' rqo: '.to_string($rqo)
+					, logger::ERROR
+				);
 				return $response;
 			}
-			$caller_dataframe 		= $ddo_source->caller_dataframe ?? null;
+			$caller_dataframe = $ddo_source->caller_dataframe ?? null;
 
 		// permissions
-			$permissions = common::get_permissions($section_tipo, $section_tipo);
+			if($delete_mode==='delete_dataframe'){
+				$permissions = common::get_permissions($caller_dataframe->section_tipo, $section_tipo);
+			}else{
+				$permissions = common::get_permissions($section_tipo, $section_tipo);
+			}
+
 			debug_log(__METHOD__." permissions: $permissions ".to_string($section_tipo), logger::DEBUG);
 			if ($permissions<2) {
 				$response->error = 2;
-				$response->msg 	.= 'Insufficient permissions: '.$permissions;
+				$response->msg 	.= '[2] Insufficient permissions: '.$permissions;
+				debug_log(__METHOD__
+					." $response->msg " . PHP_EOL
+					.' rqo: '.to_string($rqo)
+					, logger::ERROR
+				);
 				return $response;
 			}
 
 		// dataframe section case
 			if ($delete_mode==='delete_dataframe' && !empty($section_id)) {
-				$section 	= section::get_instance($section_id, $section_tipo);
-				$section->caller_dataframe = $caller_dataframe;
+				$section = section::get_instance(
+					$section_id,
+					$section_tipo,
+					'list',
+					false,
+					$caller_dataframe
+				);
 				$deleted 	= $section->Delete($delete_mode);
 
 				if ($deleted!==true) {
@@ -701,46 +860,76 @@ final class dd_core_api {
 				$response->error		= !empty($errors) ? $errors : null;
 				$response->delete_mode	= $delete_mode;
 				$response->msg			= !empty($errors)
-					? 'Some errors occurred when delete sections.'
+					? 'Some errors occurred when delete sections. delete_mode:' . $delete_mode
 					: 'OK. Request done successfully.';
+
+				debug_log(__METHOD__
+					." $response->msg " . PHP_EOL
+					.' rqo: '.to_string($rqo)
+					, logger::WARNING
+				);
 
 				return $response;
 			}
 
 		// sqo. search_query_object. If empty, we will create a new one with default values
-			$sqo = $rqo->sqo;
+			$sqo = $rqo->sqo ?? null;
 			if(empty($sqo)){
 				// we build a new sqo based on the current source section_id
 
 				// section_id check (is mandatory when no sqo is received)
 					if (empty($section_id)) {
 						$response->error = 3;
-						$response->msg 	.= 'section_id = null and $sqo = null, impossible to determinate the sections to delete. ';
+						$response->msg 	.= '[3] section_id = null and $sqo = null, impossible to determinate the sections to delete. ';
+						debug_log(__METHOD__
+							." $response->msg " . PHP_EOL
+							.' rqo: '.to_string($rqo)
+							, logger::ERROR
+						);
 						return $response;
 					}
 
 				// sqo to create new one
-					$limit			= null; // overwrite the default 10 records
-					$self_locator	= new locator();
+					$self_locator = new locator();
 						$self_locator->set_section_tipo($section_tipo);
 						$self_locator->set_section_id($section_id);
 					$sqo = new search_query_object();
 						$sqo->set_section_tipo([$section_tipo]);
-						$sqo->set_limit($limit);
 						$sqo->set_filter_by_locators([$self_locator]);
 			}
 
 		// search the sections to delete
-			$search		= search::get_instance($sqo);
-			$rows_data	= $search->search();
-			$ar_records = $rows_data->ar_records;
+			$sqo->offset	= 0;
+			$sqo->limit		= 0; // prevent pagination affects to deleted records
+			$search			= search::get_instance($sqo);
+			$rows_data		= $search->search();
+			$ar_records		= $rows_data->ar_records;
 			// check empty records
 			if (empty($ar_records)) {
 				$response->result = [];
 				$response->msg 	.= 'No records found to delete ';
+				debug_log(__METHOD__
+					." $response->msg " . PHP_EOL
+					.' rqo: '.to_string($rqo)
+					, logger::ERROR
+				);
 				return $response;
 			}
 
+		// check delete multiple
+		// only global admins can perform multiple deletes
+			$records_len = count($ar_records);
+			if($records_len > 1 && security::is_global_admin(get_user_id()) === false){
+				$response->result = [];
+				$response->msg 	.= 'forbidden delete multiple for this user';
+				debug_log(__METHOD__
+					." $response->msg " . PHP_EOL
+					.' rqo: '.to_string($rqo)
+					, logger::ERROR);
+				return $response;
+			}
+
+		// normal delete use
 			$errors = [];
 			foreach ($ar_records as $record) {
 
@@ -750,7 +939,6 @@ final class dd_core_api {
 				# Delete method
 				$section 	= section::get_instance($current_section_id, $current_section_tipo);
 				$deleted 	= $section->Delete($delete_mode);
-
 				if ($deleted!==true) {
 					$errors[] = (object)[
 						'section_tipo'	=> $current_section_tipo,
@@ -777,7 +965,12 @@ final class dd_core_api {
 					}, $check_ar_records);
 
 					$response->error = 4;
-					$response->msg 	.= 'Some records were not deleted: '.json_encode($check_ar_section_id, JSON_PRETTY_PRINT);
+					$response->msg 	.= '[4] Some records were not deleted: '.json_encode($check_ar_section_id, JSON_PRETTY_PRINT);
+					debug_log(__METHOD__
+						." $response->msg " . PHP_EOL
+						.' rqo: '.to_string($rqo)
+						, logger::ERROR
+					);
 					return $response;
 				}
 			}
@@ -839,11 +1032,11 @@ final class dd_core_api {
 	*        "debug_label": "Title",
 	*        "debug_mode": "edit",
 	*        "row_section_id": "124",
-	*        "changed_data": {
+	*        "changed_data": [{
 	*            "action": "update",
 	*            "key": 0,
 	*            "value": "title2"
-	*        }
+	*        }]
 	*    }
 	* }
 	* @return object $response
@@ -867,6 +1060,7 @@ final class dd_core_api {
 			$section_tipo		= $source->section_tipo;
 			$section_id			= $source->section_id;
 			$mode				= $source->mode ?? 'list';
+			$view				= $source->view ?? null;
 			$lang				= $source->lang;
 			$type				= $source->type; // the type of the dd_object that is calling to update like 'component'
 			$changed_data		= $data->changed_data ?? null;
@@ -876,39 +1070,45 @@ final class dd_core_api {
 		switch ($type) {
 			case 'component':
 
-				// get the component information
-					$component_lang	= (RecordObj_dd::get_translatable($tipo)===true)
-						? $lang
-						: DEDALO_DATA_NOLAN;
-
 				// build the component
 					$component = component_common::get_instance(
 						$model,
 						$tipo,
 						$section_id,
 						$mode,
-						$component_lang,
-						$section_tipo
+						$lang,
+						$section_tipo,
+						true,
+						$caller_dataframe ?? null
 					);
-					// component_semantic_node case
-						if(isset($data->row_locator) && $model==='component_semantic_node'){
-							$component->set_row_locator($data->row_locator);
-							$component->set_parent_section_tipo($data->parent_section_tipo);
-							$component->set_parent_section_id($data->parent_section_id);
-						}
 
-						if(isset($caller_dataframe)){
-							$component->set_caller_dataframe($caller_dataframe);
-						}
+				// view
+					if (!empty($view)) {
+						$component->set_view($view);
+					}
 
 				// permissions. Get the component permissions and check if the user can update the component
 					$permissions = $component->get_component_permissions();
-					if($permissions < 2) return $response;
+					if($permissions < 2) {
+						$response->error	= 1;
+						$response->msg		= 'Error. You don\'t have enough permissions to edit this component ('.$tipo.'). permissions:'.to_string($permissions);
+						debug_log(__METHOD__
+							. " $response->msg " . PHP_EOL
+							. " model:$model (tipo:$tipo - section_tipo:$section_tipo - section_id:$section_id) "
+							, logger::ERROR
+						);
+						return $response;
+					}
 
 				// changed_data is array always. Check to safe value
 					if (!is_array($changed_data)) {
 						$changed_data = [$changed_data];
-						debug_log(__METHOD__." ERROR. var 'changed_data' expected to be array. Received type: ". gettype($changed_data), logger::ERROR);
+						debug_log(__METHOD__
+							." ERROR. var 'changed_data' expected to be array. Received type: " . PHP_EOL
+							.' type: ' 			. gettype($changed_data) . PHP_EOL
+							.' changed:data: ' 	. to_string($changed_data)
+							, logger::ERROR
+						);
 					}
 
 				if ($mode==='search') {
@@ -927,14 +1127,24 @@ final class dd_core_api {
 							// update the dato with the changed data sent by the client
 							$update_result = (bool)$component->update_data_value($changed_data_item);
 							if ($update_result===false) {
-								$response->error	 = 1;
+								$response->error	 = 2;
 								$response->msg		.= ' Error on update_data_value. New data it\'s not saved! ';
+								debug_log(__METHOD__
+									. " $response->msg " . PHP_EOL
+									. " model:$model (tipo:$tipo - section_tipo:$section_tipo - section_id:$section_id) " . PHP_EOL
+									.' rqo: '.to_string($rqo)
+									, logger::ERROR
+								);
 								return $response;
 							}
 						}
 
 					// save
-						debug_log(__METHOD__." --> API ready to save record $model ($tipo - $section_tipo - $section_id): ".exec_time_unit($start_time).' ms', logger::DEBUG);
+						debug_log(__METHOD__
+							." --> API ready to save record $model ($tipo - $section_tipo - $section_id): "
+							.' exec time: '.exec_time_unit($start_time).' ms'
+							, logger::DEBUG
+						);
 						$component->Save();
 					// force recalculate dato
 						$component->get_dato();
@@ -944,11 +1154,17 @@ final class dd_core_api {
 					if (isset($data->pagination) && isset($data->pagination->offset)) {
 						$component->pagination->offset = $data->pagination->offset;
 					}
+					if (isset($data->pagination) && isset($data->pagination->limit)) {
+						$component->pagination->limit = $data->pagination->limit;
+					}
 
 				// datalist. if is received, inject to the component for recycle
 					if (isset($data->datalist)) {
 						$component->set_datalist($data->datalist);
 					}
+
+				// force recalculate dato
+					$component->set_dato_resolved(null);
 
 				// element JSON
 					$get_json_options = new stdClass();
@@ -967,12 +1183,17 @@ final class dd_core_api {
 				break;
 
 			default:
-				# code...
+				debug_log(__METHOD__
+					. " Error. This type '$type' is not defined and will be ignored. Use 'component' as type if you are saving a component data" . PHP_EOL
+					. " model:$model (tipo:$tipo - section_tipo:$section_tipo - section_id:$section_id) " . PHP_EOL
+					.' rqo: '.to_string($rqo)
+					, logger::ERROR
+				);
 				break;
 		}//end switch ($type)
 
-		// result. if the process is correct, we return the $result to the client
-			$response->result = $result;
+		// result. If the process is successful, we return the $element_json as result to client
+			$response->result = $result ?? false;
 			if (empty($response->error)) {
 				$response->msg = 'OK. Request save done successfully';
 			}
@@ -990,6 +1211,13 @@ final class dd_core_api {
 	* sample:
 	* {
 	*    "action": "count",
+	*    "source": {
+	*        "typo": "source",
+	*        "type": "tm",
+	*        "action": null,
+	*        "model": "service_time_machine",
+	*        ..
+	*    },
 	*    "sqo": {
 	*        "id": "tmp",
 	*        "mode": "tm",
@@ -997,25 +1225,28 @@ final class dd_core_api {
 	*            "oh1"
 	*        ]
 	*    },
-	*    "prevent_lock": true,
-	*    "source": {
-	*        "typo": "source",
-	*        "type": "tm",
-	*        "action": null,
-	*        "model": "service_time_machine",
-	*        ..
-	*    }
+	*    "prevent_lock": true
 	* }
 	* @return object $response
+	*
 	*/
 	public static function count(object $rqo) : object {
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-			$response->error	= null;
+		// rqo vars
+			$tipo	= $rqo->source->tipo;
+			$model	= $rqo->source->model ?? RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$sqo	= $rqo->sqo;
 
-		$sqo = $rqo->sqo;
+		// prevent_lock. Close session if not already closed
+			if (!isset($rqo->prevent_lock)) {
+				session_write_close();
+			}
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+				$response->error	= null;
 
 		// permissions check. If user don't have access to any section, set total to zero and prevent search
 			$ar_section_tipo = $sqo->section_tipo;
@@ -1031,8 +1262,6 @@ final class dd_core_api {
 		// session filter check
 			// If session filter exists from current section, add to the sqo
 			// to be consistent with the last search
-			$model			= $rqo->source->model;
-			$tipo			= $rqo->source->tipo;
 			$sqo_id			= ($model==='section') ? implode('_', ['section', $tipo]) : 'undefined';
 			$sqo_session	= $_SESSION['dedalo']['config']['sqo'][$sqo_id] ?? null;
 			if ( !isset($sqo->filter) && isset($sqo_session) && isset($sqo_session->filter) ) {
@@ -1067,20 +1296,20 @@ final class dd_core_api {
 
 		session_write_close();
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-			$response->error	= null;
-
 		// rqo vars
 			$source			= $rqo->source;
-
 			$tipo			= $source->tipo ?? null;
 			$section_tipo	= $source->section_tipo ?? $source->tipo ?? null;
 			$model			= $source->model ?? RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			$lang			= $source->lang ?? DEDALO_DATA_LANG;
 			$mode			= $source->mode ?? 'list';
-			$section_id 	= $source->section_id ?? null; // only used by tools (it needed to load the section_tool record to get the context )
+			$section_id		= $source->section_id ?? null; // only used by tools (it needed to load the section_tool record to get the context )
+
+		// response
+			$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->error	= null;
 
 		// build element
 			switch (true) {
@@ -1133,13 +1362,17 @@ final class dd_core_api {
 						// }
 
 					// resolve tool from name and user
-						$user_id			= (int)navigator::get_user_id();
+						$user_id			= get_user_id();
 						$registered_tools	= tool_common::get_user_tools($user_id);
 						$tool_found = array_find($registered_tools, function($el) use($model){
 							return $el->name===$model;
 						});
 						if (empty($tool_found)) {
-							debug_log(__METHOD__." Tool $model not found in tool_common::get_client_registered_tools ".to_string(), logger::ERROR);
+							debug_log(__METHOD__
+								." Tool $model not found in tool_common::get_client_registered_tools " .PHP_EOL
+								.' rqo: '.to_string($rqo)
+								, logger::ERROR
+							);
 						}else{
 							$section_tipo	= $tool_found->section_tipo;
 							$section_id		= $tool_found->section_id;
@@ -1156,7 +1389,10 @@ final class dd_core_api {
 						$element = new $model($mode);
 					} catch (Exception $e) {
 						// throw new Exception("Error Processing Request", 1);
-						debug_log(__METHOD__." invalid element ".$e->getMessage(), logger::ERROR);
+						debug_log(__METHOD__
+							." invalid element. exception msg: ".$e->getMessage()
+							, logger::ERROR
+						);
 						$response->msg = 'Error. model not found: '.$model;
 						return $response;
 					}
@@ -1186,27 +1422,49 @@ final class dd_core_api {
 	* GET_SECTION_ELEMENTS_CONTEXT
 	* Get all components of current section (used in section search filter and tool export)
 	* Used by filter and tool_export
-	* @param object $options
-	*	array $options->ar_section_tipo
+	* @param object $rqo
+	*	{
+	*		action			: 'get_section_elements_context',
+	*		prevent_lock	: true,
+	*		"source": {
+	*	        "typo": "source",
+	*	        "type": "filter",
+	*	        "action": null,
+	*	        "model": "search",
+	*	        "section_tipo": "numisdata4",
+	*	        "section_id": 0,
+	*	        "mode": "list",
+	*	        "view": null,
+	*	        "lang": "lg-eng"
+	*	    },
+	*		options			: {
+	*			context_type			: 'simple',
+	*			ar_section_tipo			: section_tipo,
+	* 			use_real_sections 		: true,
+	*			ar_components_exclude	: ar_components_exclude
+	*		}
+	*	}
 	* @return object $response
 	*/
-	public static function get_section_elements_context(object $options) : object {
-
-		session_write_close();
+	public static function get_section_elements_context(object $rqo) : object {
 
 		// options
-			$ar_section_tipo		= (array)$options->ar_section_tipo;
+			$options				= $rqo->options;
 			$context_type			= $options->context_type;
+			$ar_section_tipo		= (array)$options->ar_section_tipo;
+			$use_real_sections		= $options->use_real_sections ?? false;
 			$ar_components_exclude	= $options->ar_components_exclude ?? null;
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-			$response->error	= null;
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+				$response->error	= null;
 
 		// section_elements_context_options
 			$section_elements_context_options = (object)[
 				'ar_section_tipo'	=> $ar_section_tipo,
+				'use_real_sections'	=> $use_real_sections,
 				'context_type'		=> $context_type
 			];
 			if (isset($ar_components_exclude)) {
@@ -1217,6 +1475,7 @@ final class dd_core_api {
 			$filtered_components = common::get_section_elements_context(
 				$section_elements_context_options
 			);
+
 
 		// response
 			$response->result	= $filtered_components;
@@ -1251,7 +1510,7 @@ final class dd_core_api {
 
 		// 	// save_temp_preset
 		// 		$result = search::save_temp_preset(
-		// 			navigator::get_user_id(),
+		// 			get_user_id(),
 		// 			$section_tipo,
 		// 			$filter_obj
 		// 		);
@@ -1344,9 +1603,9 @@ final class dd_core_api {
 			$mode				= $ddo_source->mode ?? 'list';
 			$view				= $ddo_source->view ?? null;
 			$lang				= $ddo_source->lang ?? null;
+			$tipo				= $ddo_source->tipo ?? null;
 			$section_tipo		= $ddo_source->section_tipo ?? $ddo_source->tipo;
 			$section_id			= $ddo_source->section_id ?? null;
-			$tipo				= $ddo_source->tipo ?? null;
 			$model				= $ddo_source->model ?? RecordObj_dd::get_modelo_name_by_tipo($ddo_source->tipo,true);
 			$caller_dataframe	= $ddo_source->caller_dataframe ?? null;
 			$properties			= $ddo_source->properties ?? null;
@@ -1364,6 +1623,7 @@ final class dd_core_api {
 				if ( !isset($sqo->filter) && isset($sqo_session) && isset($sqo_session->filter) ) {
 					$sqo->filter = $_SESSION['dedalo']['config']['sqo'][$sqo_id]->filter;
 				}
+
 			}else{
 
 				// non received case
@@ -1382,10 +1642,10 @@ final class dd_core_api {
 							? $rqo->show->sqo_config->limit
 							: (function() use($tipo, $section_tipo, $mode){
 								// user preset check (defined sqo limit)
-								$user_preset = layout_map::search_user_preset_layout_map(
+								$user_preset = request_config_presets::search_request_config(
 									$tipo,
 									$section_tipo,
-									navigator::get_user_id(), // int $user_id
+									get_user_id(), // int $user_id
 									$mode,
 									null // view
 								);
@@ -1423,58 +1683,67 @@ final class dd_core_api {
 
 				case 'search': // Used by section and service autocomplete
 
-					// if ($model==='section'){
+					// DES resolve limit before use sqo
+						// if ( (property_exists($sqo, 'limit') && $sqo->limit===null)
+						// 	&& isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])
+						// 	&& isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit)
+						// ) {
+						// 	$sqo->limit = $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit;
+						// 	debug_log(__METHOD__." Set limit from session to $sqo->limit ".to_string(), logger::DEBUG);
+						// }
 
-						// resolve limit before use sqo
-							// if ( (property_exists($sqo, 'limit') && $sqo->limit===null)
-							// 	&& isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])
-							// 	&& isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit)
-							// ) {
-							// 	$sqo->limit = $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit;
-							// 	debug_log(__METHOD__." Set limit from session to $sqo->limit ".to_string(), logger::DEBUG);
-							// }
+					// prevent edit mode set limit greater than 1
+						if ($model==='section' && $mode==='edit' && (!isset($sqo->limit) || $sqo->limit>1)) {
+							$sqo->limit = 1;
+						}
 
-						// sections
-							$element = sections::get_instance(
-								null, // ?array $ar_locators
-								$sqo, // object $search_query_object = null
-								$tipo, //  string $caller_tipo = null
-								$mode, // string $mode = 'list'
-								$lang // string $lang = DEDALO_DATA_NOLAN
+					// sections instance
+						$element = sections::get_instance(
+							null, // ?array $ar_locators
+							$sqo, // object $search_query_object = null
+							$tipo, //  string $caller_tipo = null
+							$mode, // string $mode = 'list'
+							$lang // string $lang = DEDALO_DATA_NOLAN
+						);
+
+					// store sqo section in session.
+					// It's not used to main navigation, but it's needed by some tools like tool_export
+					// in addition to section_tool navigation (like transcription, translation, etc.)
+						if ($model==='section' && ($mode==='edit' || $mode==='list')) {
+							$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $sqo;
+							debug_log(__METHOD__
+								. " -> saved in session sqo sqo_id: '$sqo_id'" . PHP_EOL
+								. ' sqo:' . to_string($sqo)
+								, logger::DEBUG
 							);
+						}
 
-						// store sqo section in session
-							if ($model==='section' && ($mode==='edit' || $mode==='list')) {
-								$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $sqo;
-								debug_log(__METHOD__." -> saved in session sqo sqo_id: '$sqo_id'".PHP_EOL. to_string($sqo), logger::DEBUG);
-							}
+					// data_source. Used by time machine as 'tm' to force component to load data from different sources. data_source='tm'
+						if (isset($ddo_source->data_source)) {
+							$element->data_source = $ddo_source->data_source;
+						}
 
-						// data_source. Used by time machine as 'tm' to force component to load data from different sources. data_source='tm'
-							if (isset($ddo_source->data_source)) {
-								$element->data_source = $ddo_source->data_source;
-							}
+					// properties optional. If received, overwrite element properties
+						if (!empty($properties)){
+							$element->set_properties($properties);
+						}
 
-						// properties optional
-							if (!empty($properties)){
-								$element->set_properties($properties);
-							}
-
-					// }else if ($model==='area_thesaurus'){
-						// IN PROCESS TO IMPLEMENT
-						// // area_thesaurus
-						// 	$element = area::get_instance($model, $tipo, $mode);
-
-						// // search_action
-						// 	$obj = new stdClass();
-						// 		$obj->sqo	 = $sqo;
-						// 	$element->set_search_action($obj);
-					// }
+					// unlock user components. Normally this occurs when user navigate across sections or paginate
+						if (DEDALO_LOCK_COMPONENTS===true) {
+							lock_components::force_unlock_all_components( get_user_id() );
+						}
 					break;
 
 				case 'related_search': // Used to get the related sections that call to the source section
 
 					// sections
-						$element = sections::get_instance(null, $sqo, $tipo, $mode, $lang);
+						$element = sections::get_instance(
+							null,
+							$sqo,
+							$tipo,
+							$mode,
+							$lang ?? DEDALO_DATA_LANG
+						);
 
 					// store sqo section
 						if ($model==='section' && ($mode==='edit' || $mode==='list')) {
@@ -1488,21 +1757,22 @@ final class dd_core_api {
 
 						if ($section_id<1) {
 							// invalid call
-							debug_log(__METHOD__." WARNING data:get_data invalid section_id: ".to_string($section_id), logger::WARNING);
+							debug_log(__METHOD__
+								. " WARNING data:get_data invalid section_id: "
+								. to_string($section_id)
+								, logger::WARNING
+							);
 						}else{
 							// component
-								$component_lang	= (RecordObj_dd::get_translatable($tipo)===true)
-									? $lang
-									: DEDALO_DATA_NOLAN;
-
 								$element = component_common::get_instance(
 									$model,
 									$tipo,
 									$section_id,
 									$mode,
-									$component_lang,
+									$lang,
 									$section_tipo,
-									true // cache
+									true, // cache
+									$caller_dataframe ?? null
 								);
 
 							// time machine matrix_id.
@@ -1537,35 +1807,34 @@ final class dd_core_api {
 
 									$element->pagination = $pagination;
 								}
-							// dataframe. Set caller_dataframe information
-								if(isset($caller_dataframe)){
-									$element->set_caller_dataframe($caller_dataframe);
-								}
+
 						}//end if ($section_id>=1)
 
 					}else if (strpos($model, 'area')===0) {
 
 						// areas
 							$element = area::get_instance($model, $tipo, $mode);
+							$element->properties = $element->get_properties() ?? new stdClass();
 
 						// thesaurus_mode
-							if (isset($ddo_source->thesaurus_mode)) {
-								$element->thesaurus_mode = $ddo_source->thesaurus_mode;
+							if (isset($ddo_source->properties->thesaurus_mode)) {
+								$element->properties->thesaurus_mode = $ddo_source->properties->thesaurus_mode;
 							}
 
 						// search_action
 							$search_action = $ddo_source->search_action ?? 'show_all';
 
-							$obj = new stdClass();
-								$obj->action = $search_action;
-								$obj->sqo	 = $sqo;
-								if (isset($ddo_source->hierarchy_sections)) {
-									$obj->hierarchy_sections = $ddo_source->hierarchy_sections;
+								$element->properties->action = $search_action;
+								$element->properties->sqo	 = $sqo;
+								if (isset($ddo_source->properties->hierarchy_types)) {
+									$element->properties->hierarchy_types = $ddo_source->properties->hierarchy_types;
 								}
-								if (isset($ddo_source->hierarchy_terms)) {
-									$obj->hierarchy_terms = $ddo_source->hierarchy_terms;
+								if (isset($ddo_source->properties->hierarchy_sections)) {
+									$element->properties->hierarchy_sections = $ddo_source->properties->hierarchy_sections;
 								}
-							$element->set_search_action($obj);
+								if (isset($ddo_source->properties->hierarchy_terms)) {
+									$element->properties->hierarchy_terms = $ddo_source->properties->hierarchy_terms;
+								}
 
 					}else if ($model==='section') {
 
@@ -1583,7 +1852,7 @@ final class dd_core_api {
 
 						// others
 							// get data model not defined
-							debug_log(__METHOD__." WARNING data:get_data model not defined for tipo: $tipo ".to_string($model), logger::WARNING);
+							debug_log(__METHOD__." WARNING data:get_data model not defined for tipo: $tipo - model: $model", logger::WARNING);
 					}
 					break;
 
@@ -1620,13 +1889,24 @@ final class dd_core_api {
 
 						// others
 							// resolve_data model not defined
-							debug_log(__METHOD__." WARNING data:resolve_data model not defined for tipo: $tipo ".to_string($model), logger::WARNING);
+							debug_log(__METHOD__." WARNING data:resolve_data model not defined for tipo: $tipo - model: $model", logger::WARNING);
 					}
+					break;
+
+				case 'get_relation_list': // Used by relation list only (legacy compatibility)
+
+					$element = new relation_list(
+						$tipo,
+						$section_id,
+						$section_tipo,
+						$mode
+					);
+					$element->set_sqo($sqo);
 					break;
 
 				default:
 					// not defined model from context / data
-					debug_log(__METHOD__." 1. Ignored action '$action' - tipo: $tipo ".to_string(), logger::WARNING);
+					debug_log(__METHOD__." 1. Ignored action '$action' - tipo: $tipo ", logger::WARNING);
 					break;
 			}//end switch($action)
 
@@ -1656,13 +1936,30 @@ final class dd_core_api {
 
 				}//end if (isset($element))
 				else {
-					debug_log(__METHOD__." Ignored action '$action' - tipo: $tipo (No element was generated) ".to_string(), logger::WARNING);
+					debug_log(__METHOD__." Ignored action '$action' - tipo: $tipo (No element was generated) ", logger::WARNING);
 					$context = $data = [];
 				}
 
 		// result. Set result object
 			$result->context	= $context;
 			$result->data		= $data;
+
+		// permissions check. Prevent mistaken data resolutions
+			$permissions = common::get_permissions($section_tipo, $tipo);
+			if (!empty($result->data) && $permissions<1 && $element->get_model()!=='menu') {
+
+				// $result->data = [];
+
+				debug_log(__METHOD__
+					.' Catching non enough permissions call' . PHP_EOL
+					.' User: '. get_user_id() . PHP_EOL
+					.' tipo: '. $tipo . PHP_EOL
+					.' section_tipo: '. $section_tipo . PHP_EOL
+					.' Permissions: ' .$permissions . PHP_EOL
+					.' rqo: '.to_string($rqo)
+					, logger::ERROR
+				);
+			}
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -1762,30 +2059,47 @@ final class dd_core_api {
 	* GET_INDEXATION_GRID
 	* @see class.request_query_object.php
 	* @param object $rqo
+	* {
+	*	action	: 'get_indexation_grid',
+	*	source	: {
+	*		section_tipo	: section_tipo,
+	*		section_id		: section_id,
+	*		tipo			: "test25", component_tipo
+	*		value			: value // ["oh1",] array of section_tipo \ used to filter the locator with specific section_tipo (like 'oh1')
+	*	}
+	* }
 	* @return object $response
 	*/
 	public static function get_indexation_grid(object $rqo) : object {
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-			$response->error	= null;
-
-		// validate input data
-			if (empty($rqo->source->section_tipo) || empty($rqo->source->tipo) || empty($rqo->source->section_id)) {
-				$response->msg .= ' Trigger Error: ('.__FUNCTION__.') Empty source properties (is mandatory)';
-				$response->error = 1;
-				return $response;
-			}
-
-		// ddo_source
-			$ddo_source = $rqo->source;
-
-		// source vars
+		// rqo vars
+			// ddo_source
+			$ddo_source		= $rqo->source;
+			// source vars
 			$section_tipo	= $ddo_source->section_tipo ?? $ddo_source->tipo;
 			$section_id		= $ddo_source->section_id ?? null;
 			$tipo			= $ddo_source->tipo ?? null;
 			$value			= $ddo_source->value ?? null; // ["oh1",] array of section_tipo \ used to filter the locator with specific section_tipo (like 'oh1')
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+				$response->error	= null;
+
+		// validate input data
+			if (empty($rqo->source->section_tipo) || empty($rqo->source->tipo) || empty($rqo->source->section_id)) {
+				$response->msg .= ' Trigger Error: ('.__FUNCTION__.') Empty source properties (section_tipo, section_id, tipo are mandatory)';
+				$response->error = 1;
+
+				debug_log(__METHOD__
+					. " $response->msg " .PHP_EOL
+					. ' source: '. to_string($rqo->source)
+					, logger::ERROR
+				);
+
+				return $response;
+			}
 
 		// diffusion_index_ts
 			$indexation_grid	= new indexation_grid($section_tipo, $section_id, $tipo, $value);
@@ -1798,50 +2112,6 @@ final class dd_core_api {
 
 		return $response;
 	}//end get_indexation_grid
-
-
-
-	/**
-	* GET_RELATION_LIST
-	* @param object $rqo
-	* @return object $response
-	*/
-	public static function get_relation_list(object $rqo) : object {
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-			$response->error	= null;
-
-		// validate input data
-			if (empty($rqo->source->section_tipo) || empty($rqo->source->tipo) || empty($rqo->source->section_id)) {
-				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty source properties (is mandatory)';
-				return $response;
-			}
-
-		// ddo_source
-			$ddo_source = $rqo->source;
-
-		// source vars
-			$section_tipo	= $ddo_source->section_tipo ?? $ddo_source->tipo;
-			$section_id		= $ddo_source->section_id ?? null;
-			$tipo			= $ddo_source->tipo ?? null;
-			$mode			= $ddo_source->mode ?? 'edit'; // ["oh1",] array of section_tipo \ used to filter the locator with specific section_tipo (like 'oh1')
-			$sqo			= !empty($rqo->sqo) ? $rqo->sqo : null;
-
-		// relation_list
-			$relation_list 	= new relation_list($tipo, $section_id, $section_tipo, $mode);
-			$relation_list->set_sqo($sqo);
-
-			$relation_list_json = $relation_list->get_json();
-
-		// response OK
-			$response->result	= $relation_list_json;
-			$response->msg		= 'OK. Request done successful ['.__FUNCTION__.']';
-
-
-		return $response;
-	}//end get_relation_list
 
 
 
@@ -1873,54 +2143,54 @@ final class dd_core_api {
 	* 	error : int|null
 	* }
 	*/
-	public static function service_request(object $rqo) : object {
+		// public static function service_request(object $rqo) : object {
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__METHOD__.']. ';
-			$response->error	= null;
+		// 	$response = new stdClass();
+		// 		$response->result	= false;
+		// 		$response->msg		= 'Error. Request failed ['.__METHOD__.']. ';
+		// 		$response->error	= null;
 
-		// short vars
-			$source			= $rqo->source;
-			$service_name	= $source->model;
-			$service_method	= $source->action;
-			$arguments		= $source->arguments ?? new stdClass();
+		// 	// short vars
+		// 		$source			= $rqo->source;
+		// 		$service_name	= $source->model;
+		// 		$service_method	= $source->action;
+		// 		$arguments		= $source->arguments ?? new stdClass();
 
-		// load services class file
-			$class_file = DEDALO_CORE_PATH . '/services/' .$service_name. '/class.' . $service_name .'.php';
-			if (!file_exists($class_file)) {
-				$response->msg = 'Error. services class_file do not exists. Create a new one in format class.my_service_name.php ';
-				if(SHOW_DEBUG===true) {
-					$response->msg .= '. file: '.$class_file;
-				}
-				return $response;
-			}
-			require $class_file;
+		// 	// load services class file
+		// 		$class_file = DEDALO_CORE_PATH . '/services/' .$service_name. '/class.' . $service_name .'.php';
+		// 		if (!file_exists($class_file)) {
+		// 			$response->msg = 'Error. services class_file do not exists. Create a new one in format class.my_service_name.php ';
+		// 			if(SHOW_DEBUG===true) {
+		// 				$response->msg .= '. file: '.$class_file;
+		// 			}
+		// 			return $response;
+		// 		}
+		// 		require $class_file;
 
-		// method (static)
-			if (!method_exists($service_name, $service_method)) {
-				$response->msg = 'Error. services method \''.$service_method.'\' do not exists ';
-				return $response;
-			}
-			try {
+		// 	// method (static)
+		// 		if (!method_exists($service_name, $service_method)) {
+		// 			$response->msg = 'Error. services method \''.$service_method.'\' do not exists ';
+		// 			return $response;
+		// 		}
+		// 		try {
 
-				$fn_result = call_user_func(array($service_name, $service_method), $arguments);
+		// 			$fn_result = call_user_func(array($service_name, $service_method), $arguments);
 
-			} catch (Exception $e) { // For PHP 5
+		// 		} catch (Exception $e) { // For PHP 5
 
-				trigger_error($e->getMessage());
+		// 			trigger_error($e->getMessage());
 
-				$fn_result = new stdClass();
-					$fn_result->result	= false;
-					$fn_result->msg		= 'Error. Request failed on call_user_func service_method: '.$service_method;
+		// 			$fn_result = new stdClass();
+		// 				$fn_result->result	= false;
+		// 				$fn_result->msg		= 'Error. Request failed on call_user_func service_method: '.$service_method;
 
-			}
+		// 		}
 
-			$response = $fn_result;
+		// 		$response = $fn_result;
 
 
-		return $response;
-	}//end service_request
+		// 	return $response;
+		// }//end service_request
 
 
 
@@ -1954,6 +2224,8 @@ final class dd_core_api {
 					$obj->dedalo_entity						= DEDALO_ENTITY;
 					// version
 					$obj->dedalo_version					= DEDALO_VERSION;
+					// build
+					$obj->dedalo_build						= DEDALO_BUILD;
 					// mode
 					$obj->mode								= $mode ?? null;
 					// lang
@@ -1981,12 +2253,11 @@ final class dd_core_api {
 					$obj->dedalo_protect_media_files	= (defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) ? 1 : 0;
 					// notifications
 					$obj->DEDALO_NOTIFICATIONS			= defined("DEDALO_NOTIFICATIONS") ? (int)DEDALO_NOTIFICATIONS : 0;
-					$obj->DEDALO_PUBLICATION_ALERT		= defined("DEDALO_PUBLICATION_ALERT") ? (int)DEDALO_PUBLICATION_ALERT : 0;
 					// float_window_features
 					// $obj->float_window_features		= json_decode('{"small":"menubar=no,location=no,resizable=yes,scrollbars=yes,status=no,width=600,height=540"}');
 					$obj->fallback_image				= DEDALO_CORE_URL . '/themes/default/0.jpg';
 					$obj->locale						= DEDALO_LOCALE;
-					$obj->DEDALO_DATE_ORDER				= DEDALO_DATE_ORDER;
+					$obj->dedalo_date_order				= DEDALO_DATE_ORDER;
 					$obj->component_active				= null;
 					// debug only
 					if(SHOW_DEBUG===true) {
@@ -2000,7 +2271,11 @@ final class dd_core_api {
 									}
 									return 'Failed!';
 								}catch(Exception $e){
-									debug_log(__METHOD__." Error: ".$e->getMessage(), logger::ERROR);
+									debug_log(__METHOD__
+										." Exception Error: " . PHP_EOL
+										. $e->getMessage()
+										, logger::ERROR
+									);
 									return 'Failed with Exception!';
 								}
 							})();
@@ -2020,28 +2295,29 @@ final class dd_core_api {
 		// environment object
 			$environment = (object)[
 				// page_globals
-				'page_globals'				=> $page_globals,
+				'page_globals'						=> $page_globals,
 				// plain global vars
-				'DEDALO_ENVIRONMENT'		=> true,
-				// 'DEDALO_API_URL'			=> defined('DEDALO_API_URL') ? DEDALO_API_URL : (DEDALO_CORE_URL . '/api/v1/json/'),
-				'DEDALO_CORE_URL'			=> DEDALO_CORE_URL,
-				'DEDALO_ROOT_WEB'			=> DEDALO_ROOT_WEB,
-				'DEDALO_TOOLS_URL'			=> DEDALO_TOOLS_URL,
-				'SHOW_DEBUG'				=> SHOW_DEBUG,
-				'SHOW_DEVELOPER'			=> SHOW_DEVELOPER,
-				'DEVELOPMENT_SERVER'		=> DEVELOPMENT_SERVER,
-				'DEDALO_SECTION_ID_TEMP'	=> DEDALO_SECTION_ID_TEMP,
+				'DEDALO_ENVIRONMENT'				=> true,
+				// 'DEDALO_API_URL'					=> defined('DEDALO_API_URL') ? DEDALO_API_URL : (DEDALO_CORE_URL . '/api/v1/json/'),
+				'DEDALO_CORE_URL'					=> DEDALO_CORE_URL,
+				'DEDALO_ROOT_WEB'					=> DEDALO_ROOT_WEB,
+				'DEDALO_TOOLS_URL'					=> DEDALO_TOOLS_URL,
+				'SHOW_DEBUG'						=> SHOW_DEBUG,
+				'SHOW_DEVELOPER'					=> SHOW_DEVELOPER,
+				'DEVELOPMENT_SERVER'				=> DEVELOPMENT_SERVER,
+				'DEDALO_SECTION_ID_TEMP'			=> DEDALO_SECTION_ID_TEMP,
+				'DEDALO_UPLOAD_SERVICE_CHUNK_FILES'	=> DEDALO_UPLOAD_SERVICE_CHUNK_FILES,
+				'DEDALO_LOCK_COMPONENTS'			=> DEDALO_LOCK_COMPONENTS,
 				// DD_TIPOS . Some useful dd tipos (used in client by tool_user_admin for example)
 				'DD_TIPOS' => [
-					'DEDALO_SECTION_USERS_TIPO'			=> DEDALO_SECTION_USERS_TIPO,
-					'DEDALO_USER_PROFILE_TIPO'			=> DEDALO_USER_PROFILE_TIPO,
-					'DEDALO_USER_NAME_TIPO'				=> DEDALO_USER_NAME_TIPO,
-					'DEDALO_USER_PASSWORD_TIPO'			=> DEDALO_USER_PASSWORD_TIPO,
-					'DEDALO_FULL_USER_NAME_TIPO'		=> DEDALO_FULL_USER_NAME_TIPO,
-					'DEDALO_USER_EMAIL_TIPO'			=> DEDALO_USER_EMAIL_TIPO,
-					'DEDALO_FILTER_MASTER_TIPO'			=> DEDALO_FILTER_MASTER_TIPO,
-					'DEDALO_USER_IMAGE_TIPO'			=> DEDALO_USER_IMAGE_TIPO,
-					'DEDALO_RELATION_TYPE_INDEX_TIPO'	=> DEDALO_RELATION_TYPE_INDEX_TIPO
+					// 'DEDALO_SECTION_USERS_TIPO'			=> DEDALO_SECTION_USERS_TIPO,
+					// 'DEDALO_USER_PROFILE_TIPO'			=> DEDALO_USER_PROFILE_TIPO,
+					// 'DEDALO_FULL_USER_NAME_TIPO'			=> DEDALO_FULL_USER_NAME_TIPO,
+					// 'DEDALO_USER_EMAIL_TIPO'				=> DEDALO_USER_EMAIL_TIPO,
+					// 'DEDALO_FILTER_MASTER_TIPO'			=> DEDALO_FILTER_MASTER_TIPO,
+					// 'DEDALO_USER_IMAGE_TIPO'				=> DEDALO_USER_IMAGE_TIPO,
+					'DEDALO_RELATION_TYPE_INDEX_TIPO'		=> DEDALO_RELATION_TYPE_INDEX_TIPO,
+					'DEDALO_SECTION_INFO_INVERSE_RELATIONS'	=> DEDALO_SECTION_INFO_INVERSE_RELATIONS
 				],
 				// labels
 				// 'get_label' => include DEDALO_CORE_PATH . '/common/js/lang/'.DEDALO_APPLICATION_LANG.'.js'

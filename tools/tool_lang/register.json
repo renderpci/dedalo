@@ -89,7 +89,20 @@
             }
           }
         ]
-      }
+      },
+      "lg-nolan": [
+        {
+          "start": {
+            "day": 7,
+            "hour": 13,
+            "time": 65029440017,
+            "year": 2023,
+            "month": 4,
+            "minute": 20,
+            "second": 17
+          }
+        }
+      ]
     },
     "dd612": {
       "dato": {
@@ -118,6 +131,7 @@
       "dato": {
         "lg-nolan": [
           {
+            "info": "This is a sample configuration only. Since each installation may have different configurations, please use these values as a reference to create your own configuration for this tool. You can create a new record for this tool in the 'Tools Configuration' section.",
             "translator_config": {
               "type": "array",
               "value": [
@@ -246,18 +260,6 @@
         ]
       }
     },
-    "dd1350": {
-      "dato": {
-        "lg-nolan": [
-          null
-        ]
-      }
-    },
-    "dd1353": {
-      "dato": {
-        "lg-nolan": []
-      }
-    },
     "dd1362": {
       "dato": {
         "lg-nolan": [
@@ -266,7 +268,6 @@
       }
     },
     "dd1372": {
-      "inf": "Etiquetas [component_json]",
       "dato": {
         "lg-nolan": [
           [
@@ -428,7 +429,7 @@
   "section_id": 1,
   "created_date": "2019-11-05 16:06:56",
   "section_tipo": "dd1340",
-  "modified_date": "2022-06-06 11:07:02",
+  "modified_date": "2023-04-07 13:20:17",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd1324",

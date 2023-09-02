@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG*/
 /*eslint no-undef: "error"*/
 
@@ -27,14 +28,15 @@ export const view_default_edit_section_record = function() {
 * Render the node to use in edit mode
 * @param object self
 * @param object options
-* @return DOM node
+* @return HTMLElement wrapper
 */
 view_default_edit_section_record.render = async function(self, options) {
 
 	// options
 		const render_level = options.render_level || 'full'
 
-	const ar_instances = await self.get_ar_instances_edit()
+	// ar_instances calculate
+		const ar_instances = await self.get_ar_instances_edit()
 
 	// content_data
 		const content_data = await get_content_data_edit(self, ar_instances)
@@ -42,33 +44,31 @@ view_default_edit_section_record.render = async function(self, options) {
 			return content_data
 		}
 
-	// wrapper. ui build_edit returns component wrapper
-		// const wrapper =	ui.component.build_wrapper_edit(self, {
-		// 	label			: null,
-		// 	content_data	: content_data
-		// })
-		const wrapper = document.createElement('div')
-			  wrapper.classList.add(
-			  	'wrapper_section_record',
-			  	'section_record',
-			  	self.tipo,
-			  	self.mode,
-			  	self.view
-			  )
-			  wrapper.appendChild(content_data)
-
-	// wrapper_section_record section_record numisdata3 numisdata3_numisdata3 edit view_default disabled_component
+	// section_record wrapper
+		const wrapper = ui.create_dom_element({
+			element_type : 'div'
+		})
+		const ar_css = [
+			self.model,
+			self.tipo,
+			self.mode,
+			'view_'+self.context.view
+		]
+		wrapper.classList.add(...ar_css)
+		wrapper.appendChild(content_data)
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			wrapper.addEventListener("click", function(e){
+			wrapper.addEventListener('click', fn_click_debug)
+			function fn_click_debug(e){
+				e.stopPropagation()
 				if (e.altKey) {
 					e.stopPropagation()
 					e.preventDefault()
 					// common.render_tree_data(instance, document.getElementById('debug'))
 					console.log("/// selected instance:", self);
 				}
-			})
+			}//end fn_click_debug
 			// wrapper.classList.add('_'+self.id)
 		}
 
@@ -85,7 +85,7 @@ view_default_edit_section_record.render = async function(self, options) {
 * 	Component instance pointer
 * @param array ar_instances
 * 	Initialized and built instances
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data_edit = async function(self, ar_instances) {
 
@@ -129,7 +129,7 @@ const get_content_data_edit = async function(self, ar_instances) {
 				continue;
 			}
 
-			const current_instance		= ar_instances[i]
+			const current_instance = ar_instances[i]
 
 			// component_filter case . Send to inspector
 				if (current_instance.model==='component_filter') {
@@ -139,11 +139,7 @@ const get_content_data_edit = async function(self, ar_instances) {
 					continue;
 				}
 
-
-
 			const current_instance_node	= current_instance.node || await current_instance.render()
-
-
 
 			// parent_grouper. get the parent node inside the context
 				const parent_grouper = current_instance.context.parent_grouper
@@ -188,7 +184,6 @@ const get_content_data_edit = async function(self, ar_instances) {
 				}
 			}
 
-
 			// portals case
 			// if (current_instance.context.legacy_model==='component_portal') {
 				// setTimeout(async function(){
@@ -207,3 +202,7 @@ const get_content_data_edit = async function(self, ar_instances) {
 
 	return content_data
 }//end get_content_data_edit
+
+
+
+// @license-end

@@ -1,16 +1,16 @@
 <?php
+declare(strict_types=1);
 /**
 * TOOLS_REGISTER
-*
 *
 */
 class tools_register {
 
 
 
-	static $section_tools_tipo				= 'dd1324'; // Tools register section
+	static $section_registered_tools_tipo	= 'dd1324'; // Tools register section
 	static $simple_tool_obj_component_tipo	= 'dd1353';
-	static $tipo_tool_name					= 'dd1326';
+	static $tipo_tool_name					= 'dd1326'; // tool name like 'tool_transcription'
 	static $tipo_tool_label					= 'dd799';
 	static $tipo_ontology					= 'dd1334';
 	static $tipo_version					= 'dd1327';
@@ -19,6 +19,7 @@ class tools_register {
 	static $tipo_affeted_models				= 'dd1330';
 	static $tipo_properties					= 'dd1335';
 	static $tools_configuration				= 'dd999'; // tools Configuration component_json
+	static $tools_default_configuration		= 'dd1633'; // tools default Configuration component_json
 
 
 
@@ -52,35 +53,61 @@ class tools_register {
 					$basename = pathinfo($current_dir_tool)['basename'];
 
 				// ignore folders with name different from pattern 'tool_*'
-					if ($basename==='tool_common' || $basename==='tool_dev_template' || preg_match('/^tool_\w+$/', $basename, $output_array)!==1) {
-						debug_log(__METHOD__." Ignored dir  ".to_string($basename), logger::ERROR);
+					if ($basename==='tool_common' || $basename==='tool_dev_template' || $basename==='acc') {
+						continue;
+					}
+					if (preg_match('/^tool_\w+$/', $basename, $output_array)!==1) {
+						debug_log(__METHOD__
+							. " Ignored non tool valid directory:" .PHP_EOL
+							. ' dirname: ' . $basename
+							, logger::ERROR
+						);
 						continue;
 					}
 
 				// info_file register.json file check
 					$info_file = $current_dir_tool . '/register.json';
 					if(!file_exists($info_file)){
-						debug_log(__METHOD__." ERROR. File register.json does not exist into $current_dir_tool ".to_string(), logger::ERROR);
+						debug_log(__METHOD__
+							. " ERROR. File register.json does not exist into directory: ".PHP_EOL
+							. " $current_dir_tool "
+							, logger::ERROR
+						);
 						continue;
 					}
 
 				// info object (JSON encoded)
 					if( !$info_object = json_decode( file_get_contents($info_file) ) ){
-						debug_log(__METHOD__." ERROR. Wrong file register.json . Is not json valid file ".to_string(), logger::ERROR);
+						debug_log(__METHOD__
+							." ERROR. Wrong file register.json . Is not a JSON valid file "
+							, logger::ERROR
+						);
 						continue;
 					}
 
 					$new_info_object = clone $info_object;
 
 				// ontology from info object
-					$current_ontology = (isset($new_info_object->components->{$tipo_ontology}->dato->{'lg-nolan'}))
-						? $new_info_object->components->{$tipo_ontology}->dato->{'lg-nolan'}
+					$current_ontology = (isset($new_info_object->components->{$tipo_ontology}->dato->{DEDALO_DATA_NOLAN}))
+						? $new_info_object->components->{$tipo_ontology}->dato->{DEDALO_DATA_NOLAN}
 						: null;
 
-					if(!empty($current_ontology)){
+					if(!empty($current_ontology)) {
 
+						if (isset($current_ontology[0]) && empty((array)$current_ontology[0])) {
+							debug_log(__METHOD__
+								." ERROR. Ignored Wrong file register.json ONTOLOGY DATA (empty item value)" .PHP_EOL
+								. ' dir_tool: ' . $current_dir_tool
+								, logger::ERROR
+							);
+							continue;
+						}
 						if (isset($current_ontology[1])) {
-							debug_log(__METHOD__." ERROR. Ignored Wrong file register.json ONTOLOGY DATA (more than one value)".to_string(), logger::ERROR);
+							debug_log(__METHOD__
+								." ERROR. Ignored Wrong file register.json ONTOLOGY DATA (more than one value)" .PHP_EOL
+								. ' dir_tool: ' . $current_dir_tool
+								, logger::ERROR
+							);
 							continue;
 						}
 
@@ -89,15 +116,15 @@ class tools_register {
 						$ar_ontologies[] = $new_ontology;
 
 						// update ontology
-						$new_info_object->components->{$tipo_ontology}->dato->{'lg-nolan'} = $new_ontology;
+						$new_info_object->components->{$tipo_ontology}->dato->{DEDALO_DATA_NOLAN} = $new_ontology;
 
 					}else{
 
-						// debug_log(__METHOD__." The current register.json don't have ontology data ".to_string($current_dir_tool), logger::WARNING);
+						// debug_log(__METHOD__." The current register.json don't have ontology data ".to_string($current_dir_tool), logger::ERROR);
 					}
 
 				// add info_objects_parsed
-					$info_objects_parsed[] = $new_info_object;
+					$info_objects_parsed[$basename] = $new_info_object;
 
 				// info_file_processed
 					$name = isset($info_object->components->{$tipo_name})
@@ -123,7 +150,10 @@ class tools_register {
 
 				// import ontology (structure) in jer_dd
 					if (defined('ONTOLOGY_DB')) {
-						debug_log(__METHOD__." !!!!! ignored ontology import (ONTOLOGY_DB is defined) ".to_string(), logger::WARNING);
+						debug_log(__METHOD__
+							." !!!!! ignored ontology import (ONTOLOGY_DB is defined and this prevent to import ontology)"
+							, logger::WARNING
+						);
 					}else{
 						foreach ($ar_ontologies as $current_ontology) {
 							ontology::import($current_ontology);
@@ -137,42 +167,66 @@ class tools_register {
 			// section
 			if (!empty($info_objects_parsed)) {
 
-				// Clean. remove tools section records in the database
+				// Clean. remove tools section records in the database. (!) Removed to allow recycle records
 					// tools_register::clean_section_tools_data();
 
 				// import record (section tool) in db matrix_tools
-					$section_id_counter = 1; // first section_id to use
-					foreach ($info_objects_parsed as $current_tool_section_data) {
+					// $section_id_counter = 1; // first section_id to use
+					foreach ($info_objects_parsed as $basename => $current_tool_section_data) {
+
+						// check file placeholder
+							if (isset($current_tool_section_data->type) && $current_tool_section_data->type==='placeholder') {
+								$msg = isset($current_tool_section_data->info)
+									? $current_tool_section_data->info
+									: 'This file must be downloaded from current tool Dédalo Tools Development record using the button \'Download register file\' ';
+								debug_log(__METHOD__
+									. " Error. tool register file of basename: '$basename' is a placeholder !" . PHP_EOL
+									. $msg
+									, logger::ERROR);
+								continue;
+							}
 
 						// section save raw data
 							try {
 								$tool_name = reset($current_tool_section_data->components->{self::$tipo_tool_name}->dato->{DEDALO_DATA_NOLAN});
 							} catch (Exception $e) {
-								debug_log(__METHOD__." ERROR on get tool name ".$e->getMessage(), logger::ERROR);
-								debug_log(__METHOD__." Ignored tool ! ".to_string($current_tool_section_data->section_id), logger::ERROR);
+								debug_log(__METHOD__
+									. " ERROR on get tool name " .PHP_EOL
+									. ' Exception: '. $e->getMessage() . PHP_EOL
+									. ' The tool will be ignored. section_id: '. $current_tool_section_data->section_id
+									, logger::ERROR
+								);
+								continue;
+							}
+							if (empty($tool_name)) {
+								debug_log(__METHOD__
+									. " Error. tool name is empty ! Ignored tool" . PHP_EOL
+									. ' section_id: '.to_string($current_tool_section_data->section_id)
+									, logger::ERROR
+								);
 								continue;
 							}
 
-							if (empty($tool_name)) {
-								debug_log(__METHOD__." Error. tool name is empty ! ".to_string($current_tool_section_data->section_id), logger::ERROR);
-								continue;
-							}
-							$tool_found			= self::get_tool_by_name($tool_name, self::$section_tools_tipo); // return section record raw data or null
+						// look for already existing tools
+							$tool_found			= self::get_tool_data_by_name($tool_name, self::$section_registered_tools_tipo); // return section record raw data or null
 							$current_section_id	= !empty($tool_found->section_id)
 								? (int)$tool_found->section_id
 								: null;
-							$section = section::get_instance(
-								$current_section_id, // null if not found existing by name
-								self::$section_tools_tipo, // dd1324
-								'edit',
-								true // cache (!) it's important set true to prevent re-create later when a component saves)
-							);
 
-							// change section data
-								$current_tool_section_data->section_tipo = self::$section_tools_tipo; // Set dd1324 instead 'dd1340'
+							// section
+								$section = section::get_instance(
+									$current_section_id, // null if not found existing by name
+									self::$section_registered_tools_tipo, // dd1324
+									'edit',
+									true // cache (!) it's important set true to prevent re-create later when a component saves)
+								);
+
+							// change section data. Set dd1324 (register) instead 'dd1340' (development)
+								$current_tool_section_data->section_tipo	= self::$section_registered_tools_tipo;
+								$current_tool_section_data->section_id		= $current_section_id;
 
 							// section save
-								$section->set_dato($current_tool_section_data);
+								$section->set_dato( $current_tool_section_data );
 								$created_section_id = $section->Save();
 
 						// info_file_processed. Added info
@@ -187,8 +241,11 @@ class tools_register {
 						// save new record with serialized section_id
 							// $created_section_id = tools_register::import_info_object($current_tool_section_data, $section_id_counter);
 
-						// build tool_object (simple)
-							$tool_object = tools_register::create_simple_tool_object(self::$section_tools_tipo, $created_section_id);
+						// build tool_object (simple). Collect data from created section to create a imple_tool_object
+							$tool_object = tools_register::create_simple_tool_object(
+								$section->get_tipo(), // section_tools_tipo
+								$section->get_section_id()
+							);
 
 						// tool_obj . Set and save updated section
 							$component_tipo	= self::$simple_tool_obj_component_tipo; // 'dd1353'; // component_json (Simple tool object)
@@ -199,12 +256,12 @@ class tools_register {
 								$created_section_id,
 								'list',
 								DEDALO_DATA_NOLAN,
-								self::$section_tools_tipo,
+								self::$section_registered_tools_tipo,
 								true // cache
 							);
 							$component->set_dato([$tool_object]);
 							$component->Save();
-							$tool_config = tools_register::create_tool_config($tool_object->name);
+							tools_register::create_tool_config($tool_object->name);
 					}
 			}
 
@@ -214,7 +271,11 @@ class tools_register {
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__." Imported ".($counter+1)." ontology items from dirs: ".json_encode($info_file_processed, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), logger::DEBUG);
+				debug_log(__METHOD__
+					. " Imported ".($counter+1)." ontology items from dirs: ". PHP_EOL
+					. json_encode($info_file_processed, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
+					, logger::DEBUG
+				);
 			}
 
 
@@ -224,13 +285,102 @@ class tools_register {
 
 
 	/**
-	* GET_TOOL_BY_NAME
-	* Gets current tool from the tool name
+	* GET_TOOLS_FILES_LIST
+	* Scan tool directory and get tools name and version in array of objects
+	* Used by class area-development to get the tools list
+	* @return array $files_list
+	*/
+	public static function get_tools_files_list() : array {
+
+		$files_list = [];
+
+		$files = glob(DEDALO_TOOLS_PATH . '/*', GLOB_ONLYDIR);
+		foreach ($files as $path) {
+
+			// ignore folders with name different from pattern 'tool_*'
+				if (	1!==preg_match('/tools\/tool_*/', $path, $output_array)
+					 || 1===preg_match('/tools\/tool_dev_template/', $path, $output_array)
+					 || 1===preg_match('/tools\/tool_common/', $path, $output_array)
+					) {
+					continue;
+				}
+
+			// tool name
+				$tool_name = str_replace(DEDALO_TOOLS_PATH.'/', '', $path);
+
+			// item
+				$item = (object)[
+					'name'				=> $tool_name,
+					'warning'			=> null,
+					'version'			=> null,
+					'installed_version'	=> null
+				];
+
+			// check file register is ready
+				$register_contents = file_get_contents($path.'/register.json');
+				if($register_contents===false) {
+
+					debug_log(__METHOD__
+						." Invalid register.json file from tool ".to_string($tool_name)
+						, logger::ERROR
+					);
+					$item->warning = '(!) Invalid register.json file';
+
+				}else{
+
+					// compare register.json file.
+					$ar_tool_info = tool_common::get_client_registered_tools([$tool_name]);
+					if(!isset($ar_tool_info[0])) {
+						debug_log(__METHOD__
+							." Tool '$tool_name' not found in client_registered_tools."
+							, logger::WARNING
+						);
+						$item->warning = '(!) Not registered tool';
+					}
+
+					// version
+					// info object (JSON encoded)
+						$info_object = json_handler::decode( $register_contents );
+						if( !$info_object ) {
+							debug_log(__METHOD__
+								." ERROR. Wrong file register.json . Is not a JSON valid file "
+								, logger::ERROR
+							);
+						}else{
+							$tipo_version	= self::$tipo_version;
+							if (	isset($info_object->components->{$tipo_version})
+								 && isset($info_object->components->{$tipo_version}->dato)
+								 && isset($info_object->components->{$tipo_version}->dato->{'lg-nolan'})
+								 && isset($info_object->components->{$tipo_version}->dato->{'lg-nolan'}[0])
+								) {
+								$item->version = $info_object->components->{$tipo_version}->dato->{'lg-nolan'}[0];
+							}
+						}
+
+					// installed_version
+						if (!empty($ar_tool_info[0])) {
+							$item->installed_version = $ar_tool_info[0]->version  ?? null;
+						}
+				}
+
+			// add
+				$files_list[] = $item;
+		}
+
+
+		return $files_list;
+	}//end get_tools_files_list
+
+
+
+	/**
+	* GET_TOOL_DATA_BY_NAME
+	* Gets current tool data from the tool name
 	* Note that this function can search in any virtual of section 'Tools' (dd73)
 	* @param string $tool_name
 	* @return object|null $tool_full_data
 	*/
-	public static function get_tool_by_name(string $tool_name, string $section_tipo) : ?object {
+	public static function get_tool_data_by_name(string $tool_name, string $section_tipo) : ?object {
 
 		// search by tool name
 			$sqo = json_decode('{
@@ -270,7 +420,7 @@ class tools_register {
 		$tool_full_data = $result->ar_records[0] ?? null;
 
 		return $tool_full_data;
-	}//end get_tool_by_name
+	}//end get_tool_data_by_name
 
 
 
@@ -283,7 +433,7 @@ class tools_register {
 	* @return object $tool_object
 	*	Simple and human readable JSON object to use with components, sections, areas..
 	*/
-	public static function create_simple_tool_object(string $section_tipo, int $section_id) : object {
+	public static function create_simple_tool_object(string $section_tipo, int|string $section_id) : object {
 
 		$tool_object = new stdClass();
 
@@ -301,8 +451,10 @@ class tools_register {
 				DEDALO_DATA_LANG,
 				$section_tipo
 			);
-			$dato    = $component->get_dato();
-			$value	= reset($dato);
+			$dato	= $component->get_dato();
+			$value	= is_array($dato) && isset($dato[0])
+				? $dato[0]
+				: null;
 			$tool_object->name = $value;
 
 		// label
@@ -340,8 +492,10 @@ class tools_register {
 				$section_tipo
 			);
 			$dato	= $component->get_dato();
-			$value	= reset($dato);
-			$tool_object->vesion = $value;
+			$value	= is_array($dato) && isset($dato[0])
+				? $dato[0]
+				: null;
+			$tool_object->version = $value;
 
 		// dedalo version (minimal requirement)
 			$component_tipo	= self::$tipo_dedalo_version_minimal; // 'dd1328';
@@ -355,7 +509,9 @@ class tools_register {
 				$section_tipo
 			);
 			$dato 	= $component->get_dato();
-			$value 	= reset($dato);
+			$value	= is_array($dato) && isset($dato[0])
+				? $dato[0]
+				: null;
 			$tool_object->dd_version = $value;
 
 		// description
@@ -412,8 +568,10 @@ class tools_register {
 				DEDALO_DATA_LANG,
 				$section_tipo
 			);
-			$dato	= (array)$component->get_dato();
-			$value	= $dato[0] ?? null;
+			$dato	= $component->get_dato();
+			$value	= is_array($dato) && isset($dato[0])
+				? $dato[0]
+				: null;
 			// empty object case check
 			if (empty((array)$value)) {
 				$value = null;
@@ -432,7 +590,7 @@ class tools_register {
 				$component_lang,
 				$section_tipo
 			);
-			$dato        = $component->get_dato();
+			$dato		= $component->get_dato();
 			$dato_ref	= !empty($dato)
 				? reset($dato)->section_id
 				: null;
@@ -494,7 +652,7 @@ class tools_register {
 			$value		= $dato_ref=='1' ? true : false;
 			$tool_object->requirement_translatable = $value;
 
-		// ontology
+		// ontology -component_json-
 			$component_tipo	= self::$tipo_ontology; // 'dd1334';
 			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 			$component		= component_common::get_instance(
@@ -505,10 +663,12 @@ class tools_register {
 				DEDALO_DATA_LANG,
 				$section_tipo
 			);
-			$dato	= (array)$component->get_dato();
-			$value	= $dato[0] ?? null;
+			$dato	= $component->get_dato();
+			$value	= is_array($dato) && isset($dato[0])
+				? $dato[0]
+				: null;
 			// empty object case check
-			if (empty((array)$value)) {
+			if (empty($value) || empty((array)$value)) {
 				$value = null;
 			}
 			$tool_object->ontology = $value;
@@ -524,10 +684,12 @@ class tools_register {
 				DEDALO_DATA_LANG,
 				$section_tipo
 			);
-			$dato	= (array)$component->get_dato();
-			$value	= $dato[0] ?? null;
+			$dato	= $component->get_dato();
+			$value	= is_array($dato) && isset($dato[0])
+				? $dato[0]
+				: null;
 			// empty object case check
-			if (empty((array)$value)) {
+			if (empty($value) || empty((array)$value)) {
 				$value = null;
 			}
 			$tool_object->properties = $value;
@@ -543,10 +705,12 @@ class tools_register {
 				DEDALO_DATA_LANG,
 				$section_tipo
 			);
-			$dato	= (array)$component->get_dato();
-			$value	= $dato[0] ?? null;
+			$dato	= $component->get_dato();
+			$value	= is_array($dato) && isset($dato[0])
+				? $dato[0]
+				: null;
 			// empty object case check
-			if (empty((array)$value)) {
+			if (empty($value) || empty((array)$value)) {
 				$value = null;
 			}
 			$tool_object->labels = $value;
@@ -568,13 +732,13 @@ class tools_register {
 		// 	$info_object->section_id = $section_id_counter;
 		// 	$info_object->label 	 = 'Tools register';
 		// 	$datos 	 				 = json_handler::encode($info_object);
-		// 	$section_tools_tipo 	 = tools_register::$section_tools_tipo; //  'dd1324';
+		// 	$section_registered_tools_tipo 	 = tools_register::$section_registered_tools_tipo; //  'dd1324';
 
 		// 	$strQuery = 'INSERT INTO "matrix_tools" (section_id, section_tipo, datos) VALUES ($1, $2, $3) RETURNING section_id';
-		// 	$result   = pg_query_params(DBi::_getConnection(), $strQuery, array( $section_id_counter, $section_tools_tipo, $datos ));
+		// 	$result   = pg_query_params(DBi::_getConnection(), $strQuery, array( $section_id_counter, $section_registered_tools_tipo, $datos ));
 
 		// 	// update counter on every imported record
-		// 	counter::update_counter($section_tools_tipo, $matrix_table='matrix_counter', $current_value=$section_id_counter);
+		// 	counter::update_counter($section_registered_tools_tipo, $matrix_table='matrix_counter', $current_value=$section_id_counter);
 
 		// 	// if all is ok, update counter value
 		// 	$section_id_counter++;
@@ -593,12 +757,12 @@ class tools_register {
 		// private static function clean_section_tools_data() {
 
 		// 	// section
-		// 		$section_tools_tipo 	= 'dd1324';
-		// 		$sql_query 				= 'DELETE FROM "matrix_tools" WHERE "section_tipo" = \''.$section_tools_tipo.'\';';
+		// 		$section_registered_tools_tipo 	= 'dd1324';
+		// 		$sql_query 				= 'DELETE FROM "matrix_tools" WHERE "section_tipo" = \''.$section_registered_tools_tipo.'\';';
 		// 		$result_delete_section 	= pg_query(DBi::_getConnection(), $sql_query);
 
 		// 		// reset counter
-		// 		$sql_reset_counter 	  	= 'DELETE FROM "matrix_counter" WHERE "tipo" = \''.$section_tools_tipo.'\';';
+		// 		$sql_reset_counter 	  	= 'DELETE FROM "matrix_counter" WHERE "tipo" = \''.$section_registered_tools_tipo.'\';';
 		// 		$result_reset_counter 	= pg_query(DBi::_getConnection(), $sql_reset_counter);
 
 		// 	return true;
@@ -614,11 +778,21 @@ class tools_register {
 	*/
 	public static function renumerate_term_id(array $ontology, &$counter) : array {
 
+		// empty case
+			if (empty($ontology)) {
+				return $ontology;
+			}
+
 		foreach ($ontology as $item) {
 
 			// bad ontology error skip
 				if (!isset($item->tipo)) {
-					debug_log(__METHOD__." Skipped wrong ontology. ontology tipo is not set +++++++++++++++++++++++++++++++++++++++++++++ ".to_string(), logger::ERROR);
+					debug_log(__METHOD__
+						. " Skipped wrong ontology element. Item ontology tipo is not set" .PHP_EOL
+						. 'item: '.to_string($item) . PHP_EOL
+						. 'ontology: '.to_string($ontology)
+						, logger::ERROR
+					);
 					continue;
 				}
 
@@ -654,12 +828,12 @@ class tools_register {
 			$tools_configuration		= self::$tools_configuration; // 'dd999'
 
 		// search by tool name. (!) Note that section_tipo is dd996 (Tools configuration) a virtual of 'dd73'
-			$tool_by_name = self::get_tool_by_name($tool_name, $section_tools_config_tipo);
+			$tool_by_name = self::get_tool_data_by_name($tool_name, $section_tools_config_tipo);
 
 		// empty result case
 			if(empty($tool_by_name)) {
 
-				$section_tools_reg_tipo		= self::$section_tools_tipo; // 'dd1324';
+				$section_tools_reg_tipo		= self::$section_registered_tools_tipo; // 'dd1324';
 				$component_tipo_tool_name	= self::$tipo_tool_name; // 'dd1326';
 				// get the register tool
 				$reg_sqo = json_decode('{
@@ -813,7 +987,9 @@ class tools_register {
 						$record->section_tipo
 					);
 					$dato	= $component->get_dato();
-					$name	= reset($dato);
+					$name	= !empty($dato)
+						? reset($dato)
+						: null;
 
 				// config
 					$model		= RecordObj_dd::get_modelo_name_by_tipo($config_tipo,true);
@@ -826,7 +1002,9 @@ class tools_register {
 						$record->section_tipo
 					);
 					$dato	= $component->get_dato();
-					$config	= reset($dato);
+					$config	= !empty($dato)
+						? reset($dato)
+						: null;
 
 				$value = (object)[
 					'name'		=> $name,
@@ -843,10 +1021,126 @@ class tools_register {
 
 
 	/**
+	* GET_ALL_DEFAULT_CONFIG
+	* @return array $ar_config
+	*/
+	public static function get_all_default_config() : array {
+
+		// short vars
+			$section_tools_config_tipo	= self::$section_registered_tools_tipo; // 'dd1324'
+			$name_tipo					= self::$tipo_tool_name; // 'dd1326';
+			$config_tipo				= self::$tools_default_configuration; // 'dd1633' tools Configuration component_json
+
+		// sqo_config_tool_active
+			$sqo_config_tool_active = json_decode('{
+				"section_tipo": "'.$section_tools_config_tipo.'",
+				"limit": 0,
+				"filter": null,
+				"full_count": false
+			}');
+
+		// search
+			$config_search	= search::get_instance($sqo_config_tool_active);
+			$config_result	= $config_search->search();
+			$ar_records		= $config_result->ar_records ?? [];
+
+		// map result as ar_config
+			$ar_config = array_map(function($record) use($name_tipo, $config_tipo){
+
+				$section = section::get_instance($record->section_id, $record->section_tipo);
+				$section->set_dato($record->datos);
+
+				// name
+					$model		= RecordObj_dd::get_modelo_name_by_tipo($name_tipo,true);
+					$component	= component_common::get_instance(
+						$model,
+						$name_tipo,
+						$record->section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$record->section_tipo
+					);
+					$dato	= $component->get_dato();
+					$name	= !empty($dato)
+						? ($dato[0] ?? null)
+						: null;
+
+				// config
+					$model		= RecordObj_dd::get_modelo_name_by_tipo($config_tipo,true);
+					$component	= component_common::get_instance(
+						$model,
+						$config_tipo,
+						$record->section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$record->section_tipo
+					);
+					$dato	= $component->get_dato();
+					$config	= !empty($dato)
+						? ($dato[0] ?? null)
+						: null;
+
+				$value = (object)[
+					'name'		=> $name,
+					'config'	=> $config
+				];
+
+				return $value;
+			}, $ar_records);
+
+
+		return $ar_config;
+	}//end get_all_default_config
+
+
+
+	/**
 	* GET_ALL_CONFIG_TOOL_CLIENT
+	* Filter the client part of the config defined with the "client" property to true
+	* Config record without client property will be ignored
 	* @return array $ar_client_config
 	*/
 	public static function get_all_config_tool_client() : array {
+
+		static $cache_ar_client_default_config;
+		if (isset($cache_ar_client_default_config)) {
+			return $cache_ar_client_default_config;
+		}
+
+		// get all tools config sections
+		$ar_config = tools_register::get_all_config_tool();
+
+		$ar_client_defautl_config = array_map(function($item){
+
+			$new_config = [];
+			if($item->config !== false){
+				foreach ($item->config as $key => $value) {
+					if (isset($value->client) && $value->client===true) {
+						$new_config[$key] = $value;
+					}
+				}
+			}
+
+			$new_item = new stdClass();
+				$new_item->name		= $item->name;
+				$new_item->config	= !empty($new_config) ? (object)$new_config : null;
+
+			return $new_item;
+		}, $ar_config);
+
+		$cache_ar_client_default_config = $ar_client_defautl_config;
+
+		return $ar_client_defautl_config;
+	}//end get_all_config_tool_client
+
+
+
+	/**
+	* GET_ALL_default_CONFIG_TOOL_CLIENT
+	* filter the client part of the config defined with the "client" property to true
+	* @return array $ar_client_config
+	*/
+	public static function get_all_default_config_tool_client() : array {
 
 		static $cache_ar_client_config;
 		if (isset($cache_ar_client_config)) {
@@ -854,14 +1148,16 @@ class tools_register {
 		}
 
 		// get all tools config sections
-		$ar_config = tools_register::get_all_config_tool();
+		$ar_config = tools_register::get_all_default_config();
 
 		$ar_client_config = array_map(function($item){
 
 			$new_config = [];
-			foreach ($item->config as $key => $value) {
-				if (isset($value->client) && $value->client===true) {
-					$new_config[$key] = $value;
+			if( !empty($item->config) ) {
+				foreach ($item->config as $key => $value) {
+					if (isset($value->client) && $value->client===true) {
+						$new_config[$key] = $value;
+					}
 				}
 			}
 
@@ -876,7 +1172,7 @@ class tools_register {
 
 
 		return $ar_client_config;
-	}//end get_all_config_tool_client
+	}//end get_all_default_config_tool_client
 
 
 

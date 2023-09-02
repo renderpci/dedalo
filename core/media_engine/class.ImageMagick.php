@@ -222,96 +222,155 @@ final class ImageMagick {
 	}//end dd_thumb
 
 
-
 	/**
 	* CREATE ALTERNATE VIDEO OR AUDIO VERSION WITH RECEIVED SETTINGS
 	* @param string $source_file
 	* @param string $target_file
 	* @param string $flags = ''
 	*
-	* @return string|null $result
+	* @return string|bool $result
 	*	Terminal command response
 	*/
-	public static function convert( string $source_file, string $target_file, string $flags='' ) : ?string {
+	public static function convert( object $options) : string|bool {
+
+		$source_file	= $options->source_file; // file to be processed, mandatory.
+		$ar_layers		= $options->ar_layers ?? null; // in image is the layer of the image, by default all (false), in pdf is the number of page/s, by default all (false).
+		$target_file	= $options->target_file; // output file, mandatory.
+		// properties
+		$quality		= $options->quality ?? 90; // default quality to compress the jpg. int. default 90.
+		$thumbnail		= $options->thumbnail ?? false; // use the thumbnail preset as fixed width and height.
+		$colorspace		= $options->colorspace ?? 'sRGB'; // default color space to be used for output file.
+		$profile_in		= $options->profile_in ?? 'Generic_CMYK_Profile.icc';
+		$profile_out	= $options->profile_out ?? 'sRGB_Profile.icc';
+		$flatten		= $options->flatten ?? true;
+		$density		= $options->density ?? null; // resolution to process the source file, used to render pdf files. density = 150;
+		$strip			= $options->strip ?? false;
+		$antialias		= $options->antialias ?? true;
+		$resize			= $options->resize ?? null;  // sample: 25% | 1024x756
 
 		// Valid path verify
 		$folder_path = pathinfo($target_file)['dirname'];
 		if( !is_dir($folder_path) ) {
 			if(!mkdir($folder_path, 0777,true)) {
-				throw new Exception(" Error on read or create dd_thumb directory. Permission denied");
+				debug_log(__METHOD__
+					." Error on crate folder ". PHP_EOL
+					. 'folder_path: ' . $folder_path
+					, logger::ERROR
+				);
+				return false;
 			}
 		}
 
-
-		# convert 21900.jpg json: : Get info aboout source file Colorspace
-		#$colorspace_info	= MAGICK_PATH . "identify -verbose " .$source_file." | grep \"Colorspace:\" ";
-		$colorspace_command = MAGICK_PATH . "identify -format '%[colorspace]' -quiet " .$source_file. "[0]";
+		// convert 21900.jpg json: : Get info about source file color space
+		$colorspace_command	= MAGICK_PATH . "identify -format '%[colorspace]' -quiet " .$source_file. "[0]";
 		$colorspace_info	= shell_exec($colorspace_command);	//-format "%[EXIF:DateTimeOriginal]"
-			// dump($colorspace_info,'colorspace_info '.to_string($colorspace_command));
 
 		# Layers info
 		# get thumbnail identification
-		$layers_file_info = (array)self::get_layers_file_info( $source_file );
-		$ar_valid_layers  = array();
-		foreach ($layers_file_info as $layer_key => $layer_type) {
-			if ( strtoupper($layer_type) !== 'REDUCEDIMAGE' ) {
-				$ar_valid_layers[] = (int)$layer_key;
+		$ar_valid_layers = [];
+		if(!isset($ar_layers)){
+			$layers_file_info = (array)self::get_layers_file_info( $source_file );
+			foreach ($layers_file_info as $layer_key => $layer_type) {
+				if ( strtoupper($layer_type) !== 'REDUCEDIMAGE' ) {
+					$ar_valid_layers[] = (int)$layer_key;
+				}
 			}
+		}else{
+			$ar_valid_layers = $ar_layers;
 		}
+
 		$source_file_with_layers = '"'. $source_file . '"[' . implode(',', $ar_valid_layers) . ']';
 
-		#
-		# FLAGS : Command flags
-		#
-		if(!isset($flags))$flags='';
-		switch (true) {
+		// begin flags : Command flags before source file.
+			$begin_flags = '';
 
-			# CMYK to RGB
-			# Si la imagen orgiginal es CMYK, la convertimos a RGB aignándole un perfil de salida para la conversión. Una vez convertida (y flateada en caso de psd)
-			# le eliminamos el perfil orginal (cmyk) para evitar incoherencia con el nuevo espacio de color (rgb)
-			case ( !empty($colorspace_info) && strpos($colorspace_info, 'CMYK')!==false ) :
+			$begin_flags .= isset($density)
+				? '-density '. $density.' '
+				: '';
+			$begin_flags .= isset($antialias)
+				? '-antialias '
+				: '';
 
-				# Profile full path
-				$profile_file = COLOR_PROFILES_PATH.'sRGB_Profile.icc';
+		// Middle flags : Command flags between source and output files.
+			$middle_flags = '';
 
-				# Test profile exists
-				if(!file_exists($profile_file)) throw new Exception("Error Processing Request. Color profile not found in: $profile_file", 1);
+			$middle_flags .= ($thumbnail===true)
+				? '-thumbnail '.DEDALO_IMAGE_THUMB_WIDTH.'x'.DEDALO_IMAGE_THUMB_HEIGHT
+				: '';
 
-				// Remove possible '-thumbnail' flag when profile is used
-				$flags = str_replace('-thumbnail', '', $flags);
+			switch (true) {
 
-				# Command flags
-				$profile_source  = '';#'-profile "'.COLOR_PROFILES_PATH.'Generic_CMYK_Profile.icc"';
-				$flags 			.= "-profile \"$profile_file\" -flatten -strip"; #-negate.
-				break;
+				# CMYK to RGB
+				# If the original file is CMYK, convert it to RGB by assigning an output profile for the conversion. Once converted (and flattened in case of psd)
+				# Remove the original profile (CMYK) to avoid inconsistency with the new color space (sRGB)
+				case ( !empty($colorspace_info) && strpos($colorspace_info, 'CMYK')!==false ) :
 
-			# RBG TO RBG
-			default:
-				$flags 			.= " -flatten";
-				break;
-		}
+					# Profile full path
+					$profile_source	= COLOR_PROFILES_PATH.$profile_in; // Generic_CMYK_Profile
+					$profile_file	= COLOR_PROFILES_PATH.$profile_out; // sRGB_Profile
 
-		$flags .= " -auto-orient -quiet "; // Always add
+					# Test profile exists
+					if(!file_exists($profile_source)) {
+						throw new Exception("Error Processing Request. Color profile not found in: $profile_source", 1);
+					}
+					if(!file_exists($profile_file)) {
+						throw new Exception("Error Processing Request. Color profile not found in: $profile_file", 1);
+					}
 
+					// Remove possible '-thumbnail' flag when profile is used
+					$middle_flags = str_replace('-thumbnail', '', $middle_flags);
 
-		$command = MAGICK_PATH . "convert $source_file_with_layers $flags \"$target_file\" ";	# -negate -profile Profiles/sRGB.icc -colorspace sRGB -colorspace sRGB
-		#$command = 'nice -n 19 '.$command;
-			#if(SHOW_DEBUG) dump($command,'ImageMagick command');
-		debug_log(__METHOD__." Command ".to_string($command), logger::DEBUG);
+					# Command middle_flags
+					$middle_flags	.= '-profile "'.$profile_source.'" ';
+					$middle_flags	.= '-profile "'.$profile_file.'" ';
+					$middle_flags	.= '-flatten -strip '; #-negate.
+					break;
 
+				# RBG TO RBG
+				default:
+					$middle_flags	.= " -flatten ";
+					break;
+			}
 
-		# EXE COMMAND
-		#$result = exec_::exec_command($command);
-		$result = exec($command.' 2>&1', $output, $worked_result);
-		if(SHOW_DEBUG) {
+			$middle_flags .= '-quality '.$quality.' ';
+			$middle_flags .= ' -auto-orient -quiet '; // Always add
+			$middle_flags .= isset($resize)
+				? '-resize '. $resize.' ' // sample: 25% | 1024x756
+				: '';
+
+		// command
+			$command = MAGICK_PATH . 'convert '.$begin_flags.' '.$source_file_with_layers.' '.$middle_flags.' "'.$target_file.'" ';	# -negate -profile Profiles/sRGB.icc -colorspace sRGB -colorspace sRGB
+			// $command = 'nice -n 19 '.$command;
+
+		// debug
+			debug_log(__METHOD__
+				." Command ".to_string($command)
+				, logger::DEBUG
+			);
+
+		// exe command
+			$result = exec($command.' 2>&1', $output, $worked_result);
+
+		// error case
 			if ($worked_result!=0) {
-				#dump($worked_result, ' worked_result ++ '.to_string($output));
-				debug_log(__METHOD__."  worked_result : output: ".to_string($output)." - worked_result:".to_string($worked_result), logger::DEBUG);
+				debug_log(__METHOD__
+					."  worked_result : output: ".to_string($output)." - worked_result:"
+					.to_string($worked_result)
+					, logger::DEBUG
+				);
+				return false;
 			}
-			if (!empty($result)) {
-				debug_log(__METHOD__." Command convert warning (not empty result): ".to_string($result) ." - output: ".to_string($output)." - worked_result: ".to_string($worked_result), logger::WARNING);
-			}
-		}
+
+		// debug info
+			debug_log(__METHOD__
+				.' Command convert info: ' . PHP_EOL
+				.' command: ' 		.to_string($command) . PHP_EOL
+				.' result: ' 		.to_string($result) . PHP_EOL
+				.' output: ' 		.to_string($output) . PHP_EOL
+				.' worked_result: ' .to_string($worked_result)
+				, logger::DEBUG
+			);
+
 
 		return $result;
 	}//end convert

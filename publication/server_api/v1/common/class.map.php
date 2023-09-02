@@ -2,9 +2,9 @@
 /**
 * MAP
 * Util abstract class to manage data maps on results
-* Only static function are defined here 
+* Only static function are defined here
 */
-abstract class map {
+abstract class map extends stdClass {
 
 
 
@@ -26,21 +26,21 @@ abstract class map {
 		if (isset($resolved_geo[$cache_key])) {
 			return $resolved_geo[$cache_key];
 		}
-		
+
 		# Get all thesaurus geo terms resolved
 		$options = new stdClass();
-			$options->ar_term_id 	= $term_id;	
+			$options->ar_term_id 	= $term_id;
 			$options->lang 			= $lang;
-		
+
 		$rows_data = web_data::get_thesaurus_term($options);
 			#dump($rows_data, ' $rows_data ++ '.to_string($options));
-	
+
 		#$geolocation_obj = reset($ts_rows_data->result);
  		$geolocation_obj = $rows_data->result;
 
  		# Cahe resolved
  		$resolved_geo[$cache_key] = $geolocation_obj;
-		
+
 
 		return $geolocation_obj;
 	}//end resolve_geolocation
@@ -48,4 +48,3 @@ abstract class map {
 
 
 }//end class full_node
-?>

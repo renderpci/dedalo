@@ -1,3 +1,5 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
+
 "use strict";
 /**
 * BUTTON_DELETE
@@ -77,7 +79,7 @@ var button_delete = new function() {
 						element_type		: 'label',
 						class_name  		: 'relation_label',
 						parent				: relation_label_container,
-						text_node			: get_label['relaciones']
+						text_node			: get_label['relations']
 						})
 
 				// relation_list_button
@@ -117,7 +119,7 @@ var button_delete = new function() {
 			const button_cancel = document.createElement("button")
 				button_cancel.classList.add("btn","btn-default")
 				button_cancel.dataset.dismiss = "modal"
-				var t = document.createTextNode(get_label.cancelar)
+				var t = document.createTextNode(get_label.cancel)
 				// add
 				button_cancel.appendChild(t)
 				// add
@@ -127,7 +129,7 @@ var button_delete = new function() {
 			const button_delete_data = document.createElement("button")
 				button_delete_data.classList.add("btn","btn-warning")
 				//button_delete_data.dataset.dismiss = "modal"
-				var t = document.createTextNode(get_label.borrar_solo_datos)
+				var t = document.createTextNode(get_label.delete_data_only)
 				// add
 				button_delete_data.appendChild(t)
 				button_delete_data.addEventListener("click", function (e) {
@@ -141,7 +143,7 @@ var button_delete = new function() {
 			const button_delete_record = document.createElement("button")
 				button_delete_record.classList.add("btn","btn-danger")
 				//button_delete_record.dataset.dismiss = "modal"
-				var t = document.createTextNode(get_label.borrar_registro_completo)
+				var t = document.createTextNode(get_label.delete_data_and_record)
 				// add
 				button_delete_record.appendChild(t)
 				button_delete_record.addEventListener("click", function (e) {
@@ -179,7 +181,7 @@ var button_delete = new function() {
 		const label 		= document.getElementById('current_section_label').textContent || null
 		const delete_dialog = document.getElementById('delete_dialog')
 		const modal_body 	= delete_dialog.querySelector(".body_text")
-			modal_body.innerHTML = label +". "+ get_label.registro + " ID: " + this.delete_obj.dataset.section_id
+			modal_body.innerHTML = label +". "+ get_label.record + " ID: " + this.delete_obj.dataset.section_id
 
 		//
 		this.delete_obj.dataset.section_tipo = button_obj.dataset.section_tipo
@@ -390,3 +392,7 @@ var button_delete = new function() {
 
 
 }//end button__delete
+
+
+
+// @license-end

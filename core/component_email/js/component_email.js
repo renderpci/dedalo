@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -10,6 +11,7 @@
 	import {render_edit_component_email} from '../../component_email/js/render_edit_component_email.js'
 	import {render_list_component_email} from '../../component_email/js/render_list_component_email.js'
 	import {render_search_component_email} from '../../component_email/js/render_search_component_email.js'
+
 
 
 export const component_email = function(){
@@ -31,8 +33,6 @@ export const component_email = function(){
 	this.node			= null
 
 	this.tools			= null
-
-	return true
 }//end component_email
 
 
@@ -225,3 +225,5 @@ component_email.prototype.get_ar_emails = async function() {
 }//end get_ar_emails
 
 
+
+// @license-end

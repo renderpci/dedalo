@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * COMPONENT_RELATION_CHILDREN
 *
 *
@@ -64,7 +64,7 @@ class component_relation_children extends component_relation_common {
 	* @param string|int $section_id
 	* @return bool
 	*/
-	public function make_me_your_child(string $section_tipo, $section_id) : bool {
+	public function make_me_your_child( string $section_tipo, $section_id ) : bool {
 
 		$locator = new locator();
 			$locator->set_section_tipo($section_tipo);
@@ -154,13 +154,13 @@ class component_relation_children extends component_relation_common {
 	*  Recursive get children function
 	* @param string|int $section_id
 	* @param string $section_tipo
-	* @param string $component_tipo = null
+	* @param string|null $component_tipo = null
 	* @param bool $recursive = true
 	* @param bool $is_recursion = false
 	*
 	* @return array $ar_children_recursive
 	*/
-	public static function get_children($section_id, string $section_tipo, string $component_tipo=null, bool $recursive=true, bool $is_recursion=false) : array {
+	public static function get_children($section_id, string $section_tipo, ?string $component_tipo=null, bool $recursive=true, bool $is_recursion=false) : array {
 
 		static $locators_resolved = array();
 
@@ -193,6 +193,13 @@ class component_relation_children extends component_relation_common {
 					true, // bool search_exact
 					false // bool|array ar_tipo_exclude_elements
 				);
+				if (empty($ar_tipos)) {
+					debug_log(__METHOD__
+						." Ignored search get_children because this section ($section_tipo) do not have any component of model: component_relation_children "
+						, logger::WARNING
+					);
+					return $ar_children_recursive;
+				}
 				$component_tipo = reset($ar_tipos);
 			}
 

@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
@@ -8,6 +9,7 @@
 	import {data_manager} from '../../../common/js/data_manager.js'
 	import {clone} from '../../../common/js/utils/index.js'
 	import * as instances from '../../../common/js/instances.js'
+	// import {when_in_dom} from '../../../common/js/events.js'
 	import {get_section_records} from '../../../section/js/section.js'
 
 
@@ -26,7 +28,9 @@ export const view_default_autocomplete = function() {
 /**
 * RENDER
 * Render node for use like button
-* @return DOM node
+* @param object self
+* @param object options
+* @return HTMLElement wrapper
 */
 view_default_autocomplete.render = async function (self, options) {
 
@@ -49,13 +53,116 @@ view_default_autocomplete.render = async function (self, options) {
 		wrapper.appendChild(content_data)
 		// fix pointers
 		wrapper.content_data = content_data
+		// prevent to deactivate component on autocomplete click
+		wrapper.addEventListener('mousedown', function(e) {
+			if (!e.altKey) {
+				e.stopPropagation()
+			}
+		})
+		wrapper.addEventListener('click', function(e) {
+			e.stopPropagation()
+		})
+
+	// position calculate based on caller node (usually a component_portal wrapper)
+		if (self.caller.node) {
+
+			// when service wrapper is rendered, move to
+			// inside caller wrapper and activate it by style with opacity fade
+				self.caller.node.appendChild(wrapper)
+				setTimeout(function(){
+					wrapper.classList.add('active')
+				}, 1)
+
+			/*
+				const reference_node = self.caller.node
+
+				// set_size (and position too)
+					function set_size(reference_node) {
+
+						const rect	= reference_node.getBoundingClientRect();
+						const top	= rect.bottom  + window.scrollY // + 20
+						const left	= rect.left  + window.scrollX // + 20
+						const width	= rect.width
+
+						// set coordinates. Same as reference_node position
+						wrapper.style.left	= left  + 'px'
+						wrapper.style.top	= top   + 'px'
+						wrapper.style.width	= width + 'px'
+					}
+					set_size(reference_node)
+
+				// window resize event
+					window.addEventListener('resize', fn_on_resize)
+					function fn_on_resize(){
+						ui.component.deactivate(self.caller)
+						window.removeEventListener('resize', fn_on_resize)
+					}
+
+				// resize observer. If reference_node changes size, the wrapper size is recalculated
+					const resizeObserver = new ResizeObserver((entries) => {
+						set_size(reference_node)
+					});
+					resizeObserver.observe(reference_node);
+
+				// scroll observer. On page scroll, update wrapper position
+					function scroll_observer(node) {
+						window.removeEventListener('scroll', fn_scroll)
+						let lastKnownScrollPosition	= 0;
+						let ticking					= false;
+						function update_value(scrollPos) {
+							const rect	= node.getBoundingClientRect();
+							const top	= rect.bottom  + window.scrollY //- scrollPos
+							// set coordinates. Same as node position
+							wrapper.style.top = top + 'px'
+						}
+						window.addEventListener('scroll', fn_scroll)
+						function fn_scroll(event) {
+							lastKnownScrollPosition = window.scrollY;
+							if (!ticking) {
+								window.requestAnimationFrame(() => {
+									update_value(lastKnownScrollPosition);
+									ticking = false;
+								});
+								ticking = true;
+							}
+						};
+					}//end scroll_observer
+
+				// set z-index to 4 if any ancestor is dd-modal
+					function set_zindex(node) {
+						let el = node
+						while (el.parentNode) {
+							el = el.parentNode;
+							if (el.tagName === 'DD-MODAL') {
+								// is inside modal
+
+								// increase z-index from 3 to 4 for modal
+								wrapper.style.zIndex = 4
+
+								// set wrapper position as fixed from absolute. Optionally use scroll_observer function
+								// wrapper.style.position = 'fixed'
+
+								scroll_observer(node)
+
+								if(SHOW_DEBUG===true) {
+									console.log(')))) DD-MODAL wrapper inside. Set z-index to 4:', wrapper);
+								}
+								return
+							}
+						}
+					}
+					set_zindex(reference_node)
+					*/
+
+		}//end if (self.caller.node)
+
 
 	// fix node
 		self.node = wrapper
 
 
 	return wrapper
-}//end view_default_autocomplete
+}//end render
 
 
 
@@ -136,7 +243,7 @@ const get_content_data = function(self) {
 			parent			: fragment
 		})
 		// add listener to the select
-		button_options.addEventListener('mouseup',function(){
+		button_options.addEventListener('mouseup', function() {
 			options_container.classList.toggle('visible');
 		})
 
@@ -149,8 +256,18 @@ const get_content_data = function(self) {
 		})
 		document.addEventListener('keydown', fn_service_autocomplete_keys, false)
 		function fn_service_autocomplete_keys(e) {
+			// deactivate when the caller is not focused, it block keydown of other components.
+			if (!self.caller.active) {
+				return
+			}
 			self.service_autocomplete_keys(e)
 		}
+		// remove the event when the caller is deactivate to avoid conflicts between events
+		event_manager.subscribe('deactivate_component', function(component){
+			if (component.id===self.caller.id) {
+				document.removeEventListener('keydown', fn_service_autocomplete_keys, false)
+			}
+		})
 
 	// fix main nodes pointers
 		self.search_input		= search_input
@@ -166,7 +283,7 @@ const get_content_data = function(self) {
 /**
 * RENDER_SOURCE_SELECTOR
 * @param object self
-* @return DOM node source_selector
+* @return HTMLElement source_selector
 */
 const render_source_selector = function(self) {
 
@@ -254,7 +371,7 @@ const render_source_selector = function(self) {
 * RENDER_SEARCH_INPUT
 * Create the HTML of input search autocomplete
 * @param object self
-* @return DOM node search_input
+* @return HTMLElement search_input
 */
 const render_search_input = function(self) {
 
@@ -274,9 +391,23 @@ const render_search_input = function(self) {
 
 		// event input. changes the input value fire the search
 			search_input.addEventListener('keyup', async function(e){
+				// console.log('e1:', e);
 
-				// arrow keys
-					if(e.which===40 || e.which===38 || e.which===13){
+				// ignore keys
+					const ignore_keys = [
+						'Escape',
+						'ArrowLeft',
+						'ArrowRight',
+						'ArrowUp',
+						'ArrowDown',
+						'Control',
+						'Meta',
+						'Alt',
+						'Shift',
+						'CapsLock',
+						'Enter'
+					]
+					if (ignore_keys.includes(e.key)) {
 						return
 					}
 
@@ -323,20 +454,34 @@ const render_search_input = function(self) {
 				// Clear the timeout if it has already been set.
 				// This will prevent the previous task from executing
 				// if it has been less than <MILLISECONDS>
-			    	clearTimeout(timeout);
+					clearTimeout(timeout);
 
 				// search fire is delayed to enable multiple simultaneous selections
 				// get final value (input events are fired one by one)
+					const ms = self.search_cache[q]
+						? 1
+						: 320
 					timeout = setTimeout(async()=>{
 
-						const api_response	= await self.autocomplete_search()
-						await render_datalist(self, api_response)
+						// api_response. Get from cache if exists
+							const api_response = self.search_cache[q]
+								? { result : self.search_cache[q] }
+								: await self.autocomplete_search()
+
+						// cache result. Add if not already exists
+							if (!self.search_cache[q]) {
+								self.search_cache[q] = api_response.result
+							}
+
+						// render datalist
+							await render_datalist(self, api_response.result)
 
 						// class searching
 							search_input.classList.remove('searching')
+
 						// spinner remove
 							spinner.remove()
-					}, 350)
+					}, ms)
 			});
 
 	return search_input
@@ -347,7 +492,7 @@ const render_search_input = function(self) {
 /**
 * RENDER_FILTERS_SELECTOR
 * @param object self
-* @return DOM node filters_container
+* @return HTMLElement filters_container
 */
 const render_filters_selector = function(self) {
 
@@ -485,12 +630,12 @@ const render_filters_selector = function(self) {
 
 /**
 * BUILD_FILTER
-*
+* Render filter node checkbox items
 * @param object self
 * @param array filter_items
 * @param string filter_name
 * @param string filter_id
-* @return DOM node filter_node
+* @return HTMLElement filter_node
 */
 const build_filter = function(self, filter_items, filter_name, filter_id) {
 
@@ -499,13 +644,15 @@ const build_filter = function(self, filter_items, filter_name, filter_id) {
 		class_name		: 'filter_node' // css_autocomplete_hi_search_field
 	})
 
-	// select all
+	// all_selector li
 		const all_selector = ui.create_dom_element({
 			element_type	: 'li',
 			class_name		: 'all_selector', // css_autocomplete_hi_search_field
 			parent			: filter_node
 		})
-		cosnt label = get_label.all || 'All'
+
+	// label
+		const label = get_label.all || 'All'
 		const all_section_label = ui.create_dom_element({
 			element_type	: 'label',
 			inner_html		: label + ' ' + filter_name, //ddo_section.label ||
@@ -513,19 +660,21 @@ const build_filter = function(self, filter_items, filter_name, filter_id) {
 		})
 		all_section_label.setAttribute('for', filter_id + '_all')
 
-		const all_section_input = ui.create_dom_element({
+	// all_section_checkbox
+		const all_section_checkbox = ui.create_dom_element({
 			element_type	: 'input',
-			id				: filter_id + '_all',
 			type			: 'checkbox',
+			id				: filter_id + '_all',
 			parent			: all_selector
 		})
-		all_section_input.checked = false
-		all_section_input.addEventListener('change', function(e){
+		all_section_checkbox.checked = false
+		all_section_checkbox.addEventListener('change', function(e){
+
 			const checked_value	= e.target.checked
 			const container		= e.target.parentNode.parentNode
 			const inputs		= container.querySelectorAll('input')
 			for (let i = 0; i < inputs.length; i++) {
-				if (inputs[i]==all_section_input) continue;
+				if (inputs[i]==all_section_checkbox) continue;
 				if (inputs[i].checked!==checked_value) {
 					inputs[i].checked = checked_value
 					inputs[i].dispatchEvent(new Event('change'));
@@ -539,6 +688,7 @@ const build_filter = function(self, filter_items, filter_name, filter_id) {
 			filter_node.appendChild(chekbox_node)
 		}
 
+
 	return filter_node
 }//end build_filter
 
@@ -546,8 +696,10 @@ const build_filter = function(self, filter_items, filter_name, filter_id) {
 
 /**
 * RENDER_OPTION_CHEKBOX
+*
+* @param object self
 * @param object datalist_item
-* @return DOM node li
+* @return HTMLElement li
 */
 const render_option_chekbox = function(self, datalist_item) {
 
@@ -569,7 +721,7 @@ const render_option_chekbox = function(self, datalist_item) {
 		})
 		section_label.setAttribute('for', id)
 
-	// input
+	// input_checkbox
 		const input_checkbox = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'checkbox',
@@ -607,8 +759,9 @@ const render_option_chekbox = function(self, datalist_item) {
 
 				// force re-search with new options
 					const api_response	= await self.autocomplete_search()
-					render_datalist(self, api_response)
+					render_datalist(self, api_response.result)
 
+				// des
 					// if (self.search_fired===false) {
 					// 	// search fire is delayed to enable multiple simultaneous selections
 					// 	// get final value (input events are fired one by one)
@@ -659,7 +812,7 @@ const render_option_chekbox = function(self, datalist_item) {
 /**
 * RENDER_INPUTS_LIST
 * @param object self
-* @return DOM node inputs_list
+* @return HTMLElement inputs_list
 */
 const render_inputs_list = function(self) {
 
@@ -695,15 +848,12 @@ const render_inputs_list = function(self) {
 			component_input.addEventListener('change',async function () {
 				filter_item.q = component_input.value
 				const api_response	= await self.autocomplete_search()
-				render_datalist(self, api_response)
+				render_datalist(self, api_response.result)
 			})
 
 			// add node
 			self.filter_free_nodes.push(component_input)
 		}
-		// check if the current ddo is a dataframe node,
-		//if the caller is a portal the dataframe it's necessary remove it, because dataframes nodes has his own sqo (it's outside of the portal sqo )
-			//if(current_ddo.is_dataframe && current_ddo.is_dataframe===true ) continue;
 	}//end for (let operator in filter_free)
 
 
@@ -715,7 +865,7 @@ const render_inputs_list = function(self) {
 /**
 * RENDER_OPERATOR_SELECTOR
 * @param object self
-* @return DOM node operator_selector
+* @return HTMLElement operator_selector
 */
 const render_operator_selector = function(self) {
 
@@ -728,24 +878,35 @@ const render_operator_selector = function(self) {
 			class_name		: 'search_operators_div'
 		})
 
+	// select_container
+		const select_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'select_container',
+			parent			: operator_selector
+		})
 	// label
 		ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: 'css_label label',
 			inner_html		: get_label.search_operators || 'Search operators',
-			parent			: operator_selector,
+			parent			: select_container
 		})
+	// select
 		const select = ui.create_dom_element({
 			element_type	: 'select',
 			class_name		: 'operator_selector',
-			parent			: operator_selector
+			parent			: select_container
 		})
-		select.addEventListener('change',async function(e){
+		select.addEventListener('click', function(e) {
+			e.stopPropagation()
+		})
+		select.addEventListener('change', async function(e){
 			// set the new operator selected
 			self.operator	= e.target.value
 
+			// launch search again
 			const api_response	= await self.autocomplete_search()
-			await render_datalist(self, api_response)
+			await render_datalist(self, api_response.result)
 		})
 		const option_or = ui.create_dom_element({
 			element_type	: 'option',
@@ -765,19 +926,72 @@ const render_operator_selector = function(self) {
 			option_and.setAttribute('selected', true)
 		}
 
+	// max_container
+		const max_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'max_container',
+			parent			: operator_selector
+		})
+	// label
+		ui.create_dom_element({
+			element_type	: 'label',
+			class_name		: 'css_label label_max',
+			inner_html		: get_label.max || 'Max.',
+			parent			: max_container
+		})
+	// input
+		const input_max = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'number',
+			class_name		: 'input_max',
+			value			: self.limit,
+			parent			: max_container
+		})
+		input_max.addEventListener('change', fn_change)
+		async function fn_change(e) {
+
+			const value = parseInt( e.target.value )
+			if (value<1) {
+				return
+			}
+
+			// update self limit
+			self.limit = value
+
+			// launch search again
+			const api_response	= await self.autocomplete_search()
+			await render_datalist(self, api_response.result)
+
+			// update localStorage limit value
+			localStorage.setItem('service_autocomplete_limit', self.limit )
+		}
+		input_max.addEventListener('keyup', fn_keyup)
+		async function fn_keyup(e) {
+			e.preventDefault()
+
+			if (e.key==='Enter') {
+				// Create the event
+				const change_event = new CustomEvent("change", {});
+				// Dispatch/Trigger/Fire the event
+				input_max.dispatchEvent(change_event);
+			}
+		}
+
+
 	return operator_selector
 }//end render_operator_selector
 
 
 
 /**
-* AUTOCOMPLETE_BUILD_OPTIONS to choose it by user
+* RENDER_DATALIST
 * Render result data as DOM nodes and place it into self.datalist container
 * @param object self
-* @param object api_response
-* @return DOM node datalist
+* @param object result
+* 	api_response result
+* @return HTMLElement datalist
 */
-const render_datalist = async function(self, api_response) {
+const render_datalist = async function(self, result) {
 
 	// datalist container node
 		const datalist = self.datalist
@@ -787,30 +1001,50 @@ const render_datalist = async function(self, api_response) {
 			datalist.removeChild(datalist.firstChild)
 		}
 
-	// get the result from the API response
-		const result = api_response.result
-
-	// data. if the api doesn't send any data, do not continue, return empty datalist
-		const data = result.data.find(el=> el.tipo ===self.tipo && el.typo==='sections')
-		if(!data){
+	// total
+		const sections_data	= result.data.find(el => el.typo==='sections')
+		const total			= sections_data
+			? sections_data.value.length
+			: 0
+		// if the api doesn't send any data, do not continue, return empty datalist
+		if (total===0) {
 			return datalist
 		}
 
+	// datum. Added result as datum because will be necessary to render ddinfo column
+	// ddinfo will get data from autocomplete service instead the section_record
+	// ddinfo column is dependent of the caller (component_portal or in these case service autocomplete)
+		self.datum = result
+
+	// data. if the api doesn't send any data, do not continue, return empty datalist
+		// const data = result.data.find(el=> el.tipo===self.tipo && el.typo==='sections')
+		// if(!data){
+		// 	return datalist
+		// }
+
+	// value. Remove unused value items properties (publication_first_date, publication_last_user, etc.)
+		const value = sections_data.value.map(el => {
+			const item = {
+				section_tipo	: el.section_tipo,
+				section_id		: el.section_id,
+				paginated_key	: el.paginated_key
+			}
+			return item
+		})
+
 	// context
-		// const context	= result.context
+		// const context = result.context
 
 	// get the sections that was searched
 		// const ar_search_sections = self.ar_search_section_tipo
 
-	// get dd objects from the context that will be used to build the lists in correct order
-	const rqo_search =  await self.rqo_search
+	// rqo_search. Get dd objects from the context that will be used to build the lists in correct order
+		const rqo_search = await self.rqo_search
 
-	// get the fields_separator between columns
-	const fields_separator = (rqo_search.show.fields_separator)
-		? rqo_search.show.fields_separator
-		: ' | '
-
-	// const columns = rqo_search.show.columns
+	// fields_separator. Get the fields_separator between columns
+		const fields_separator = (rqo_search.show.fields_separator)
+			? rqo_search.show.fields_separator
+			: ' | '
 
 	// get the ar_locator founded in sections
 		// const data_locator	= data.find((item)=> item.tipo === rqo_search.source.tipo && item.typo === 'sections');
@@ -819,16 +1053,21 @@ const render_datalist = async function(self, api_response) {
 	// reset ar_instances
 		self.ar_instances = []
 
+	// id_variant. Don't allow cache instances here because interact with page instances.
+	// Use always a custom id_variant to prevent it
+		const id_variant = (self.id_variant || '') + '_' + new Date().getTime()
+
 	// ar_section_record
 		const ar_section_record	= await get_section_records({
 			caller				: self,
 			mode				: 'list',
-			view				: 'default',
+			view				: 'text',
 			datum				: result,
-			value				: data.value,
+			value				: value,
 			request_config		: [self.rqo_search],
 			columns_map			: self.columns_map,
-			fields_separator	: fields_separator
+			fields_separator	: fields_separator,
+			id_variant			: id_variant
 		})
 		// store to allow destroy later
 		self.ar_instances.push(...ar_section_record)
@@ -836,76 +1075,50 @@ const render_datalist = async function(self, api_response) {
 	// iterate the section_records
 		for (let i = 0; i < ar_section_record.length; i++) {
 
-			const current_section_record = ar_section_record[i]
+			// section_record
+				const current_section_record = ar_section_record[i]
 
 			// locator
 				const locator = current_section_record.locator
 
 			// id_variant add to force unique components before render
-				current_section_record.id_variant = locator.section_tipo + '_' + locator.section_id
+				// current_section_record.id_variant = locator.section_tipo + '_' + locator.section_id
 
 			// get data that mach with the current section from the global data sent by the API
 			// get the full row with all items in the ddo that mach with the section_id
 			// const current_row = data.filter((item)=> item.section_tipo===section_tipo && item.section_id===section_id )
+				// const section_record_node = await current_section_record.render()
 
-			const section_record_node = await current_section_record.render()
-			// create the li node container
-			const li_node = ui.create_dom_element({
-				element_type	: 'li',
-				class_name		: 'autocomplete_data_li',
-				title			: ' [' + locator.section_tipo + '-' + locator.section_id + ']',
-				parent			: datalist
-			})
-			li_node.locator = locator
-
-			li_node.appendChild(section_record_node)
-
-			// click event. When the user do click in one row send the data to the caller_instance for save it.
-			li_node.addEventListener('click', async function(e){
-				e.stopPropagation()
-				const value = this.locator
-
-				// if(self.caller.mode==='search'){
-					// self.caller.datum.data.push({value: current_locator})
-				// }
-				const events = self.properties.events || null
-				if(events){
-					const add_value = events.find(el => el.event === 'add_value')
-					// caller is refreshed after add value
-					if(add_value){
-						if(typeof view_default_autocomplete[add_value.perform.function] === 'function'){
-							const params	= add_value.perform.params
-							const grid_node	= await view_default_autocomplete[add_value.perform.function](self, current_section_record , params)
-							if(!self.node.grid_choose_container){
-								self.node.grid_choose_container = grid_node
-								document.body.appendChild(self.node.grid_choose_container)
-							}
-
-							// clean the last list
-							while (datalist.firstChild) {
-								datalist.removeChild(datalist.firstChild)
-							}
-						}else{
-							console.warn('Function sent is not defined to be exec by service autocomplete:', self.add_value);
-						}
-						return
-					}
-				}
-				// default action
-				self.caller.add_value(value)
-			});
-			// mouseenter event
-			li_node.addEventListener('mouseenter', async function(e){
-				const children = e.target.parentNode.children;
-				await [...children].map((el)=>{
-					if(el.classList.contains('selected')) el.classList.remove('selected')
+			// li_node container
+				const li_node = ui.create_dom_element({
+					element_type	: 'li',
+					class_name		: 'autocomplete_data_li',
+					class_name		: 'autocomplete_data_li',
+					title			: ' [' + locator.section_tipo + '-' + locator.section_id + ']',
+					parent			: datalist
 				})
-				e.target.classList.add('selected')
-			});
-			// mouseleave event
-			li_node.addEventListener('mouseleave', function(e){
-				e.target.classList.remove('selected')
-			});
+				li_node.locator = locator
+				// click event. When the user do click in one row send the data to the caller_instance for save it.
+				li_node.addEventListener('click', function(e){
+					e.stopPropagation()
+					click_handler({
+						e						: e,
+						current_section_record	: current_section_record,
+						locator					: this.locator,
+						datalist				: datalist
+					})
+				})
+				// mouseenter event
+				li_node.addEventListener('mouseenter', mouseenter_handler)
+				// mouseleave event
+				li_node.addEventListener('mouseleave', mouseleave_handler);
+
+			// render and add section_record_node
+				// li_node.appendChild(section_record_node)
+				current_section_record.render()
+				.then(function(section_record_node){
+					li_node.appendChild(section_record_node)
+				})
 
 			// DES
 				// const instance_options = {
@@ -1020,6 +1233,81 @@ const render_datalist = async function(self, api_response) {
 				// }
 		}// end for of current_section (section_tipo)
 
+	// mouseenter_handler
+		async function mouseenter_handler(e){
+			// reset
+				const children = e.target.parentNode.children;
+				await [...children].map((el)=>{
+					if(el.classList.contains('selected')) el.classList.remove('selected')
+				})
+			// set as selected
+				e.target.classList.add('selected')
+		}//end mouseenter_handler
+
+	// mouseleave_handler
+		async function mouseleave_handler(e){
+			e.target.classList.remove('selected')
+		}//end mouseleave_handler
+
+	// click_handler
+		async function click_handler(options) {
+
+			// options
+				const e							= options.e
+				const current_section_record	= options.current_section_record
+				const locator					= options.locator
+				const datalist					= options.datalist
+
+			// value
+				const value = locator
+
+			// events
+				const events = self.properties.events || null
+				if(events){
+
+					// custom events manager from properties
+
+					const add_value = events.find(el => el.event === 'add_value')
+					// caller is refreshed after add value
+					if(add_value){
+						if(typeof view_default_autocomplete[add_value.perform.function] === 'function'){
+
+							const params	= add_value.perform.params
+							const grid_node	= await view_default_autocomplete[add_value.perform.function](self, current_section_record , params)
+							if(!self.node.grid_choose_container){
+								self.node.grid_choose_container = grid_node
+								document.body.appendChild(self.node.grid_choose_container)
+							}
+
+							// clean the last list
+								while (datalist.firstChild) {
+									datalist.removeChild(datalist.firstChild)
+								}
+
+							// hide service
+								self.hide()
+
+						}else{
+							console.warn('Function sent is not defined to be exec by service autocomplete:', self.add_value);
+						}
+						return
+					}
+				}else{
+
+					// default click action
+
+					await self.caller.add_value(value)
+
+					// clean the last list
+						while (datalist.firstChild) {
+							datalist.removeChild(datalist.firstChild)
+						}
+
+					// hide service
+						self.hide()
+				}
+		}//end click_handler
+
 
 	return datalist
 }//end render_datalist
@@ -1027,15 +1315,48 @@ const render_datalist = async function(self, api_response) {
 
 
 /**
- * GET_LAST_DDO_DATA_VALUE
- * Recursive function
- * follow the path of the columns to get the correct data to the last component in the chain, the last component has the text to show.
- * all others ddo in the middle of the chain are portals with locator value, and only will show the last component.
- * @param array current_path
- * @param array value
- * @param array data
- * @return ddo object current_element_data
- * */
+* SHOW
+* Remove hide class from main node
+* @return bool
+*/
+view_default_autocomplete.show = function () {
+
+	if (this.node && this.node.classList.contains('hide')) {
+		this.node.classList.remove('hide')
+	}
+
+	return true
+}//end show
+
+
+
+/**
+* HIDE
+* Add hide class to main node
+* @return bool
+*/
+view_default_autocomplete.hide = function () {
+
+	if (this.node && !this.node.classList.contains('hide')) {
+		this.node.classList.add('hide')
+	}
+
+	return true
+}//end hide
+
+
+
+
+/**
+* GET_LAST_DDO_DATA_VALUE
+* Recursive function
+* follow the path of the columns to get the correct data to the last component in the chain, the last component has the text to show.
+* all others ddo in the middle of the chain are portals with locator value, and only will show the last component.
+* @param array current_path
+* @param array value
+* @param array data
+* @return ddo object current_element_data
+*/
 const get_last_ddo_data_value = function(current_path, value, data) {
 
 	// check the path length sent, the first loop is the full path, but it is changed with the check data
@@ -1071,16 +1392,33 @@ const get_last_ddo_data_value = function(current_path, value, data) {
 * RENDER_GRID_CHOOSE
 * Render result data as DOM grid nodes and place it into document body as
 * float draggable div preserving position across calls
+* Used by 'numisdata575'
 * @param object self
-* @param object selected_instance
-* 	Current section_record
+* @param object section_record
+* 	Current section_record instance
 * @param object params
-* @return DOM node grid_choose_container
+* sample:
+* {
+* 	mode: "list"
+*	request_config_type: "secondary"
+*	view: "tag"
+* }
+* @return HTMLElement grid_choose_container
 */
-view_default_autocomplete.render_grid_choose = async function( self, selected_instance, params ) {
+view_default_autocomplete.render_grid_choose = async function( self, section_record, params ) {
+
+	// selection (from user selected section_record)
+		const selected_section_id	= section_record.section_id
+		const selected_section_tipo	= section_record.section_tipo
+		const data_selection		= section_record.datum.data.find(
+			el => el.section_id==selected_section_id && el.section_tipo==selected_section_tipo
+		)
+		const selected_label = data_selection
+			? data_selection.value
+			: selected_section_tipo + '_' + selected_section_tipo
 
 	// data from API
-		const grid_choose_data = await get_grid_choose_data(self, selected_instance, params)
+		const grid_choose_data = await get_grid_choose_data(self, section_record, params)
 
 	// get dd objects from the context that will be used to build the lists in correct order
 		const rqo_search	= grid_choose_data.rqo_search
@@ -1113,9 +1451,9 @@ view_default_autocomplete.render_grid_choose = async function( self, selected_in
 			}
 
 	// label. From section_record node
-		const label = selected_instance.node
-			? selected_instance.node.firstChild.innerHTML
-			: ''
+		const label = Array.isArray(selected_label)
+			? selected_label.join(', ')
+			: selected_label
 
 	// header
 		const header = ui.create_dom_element({
@@ -1125,10 +1463,11 @@ view_default_autocomplete.render_grid_choose = async function( self, selected_in
 			parent			: grid_choose_container
 		});
 		// drag move set
-		(function(){
 			let x, y, target, margin_left, margin_top = null
+
 			// header is the drag area
-			header.addEventListener('mousedown', function(e) {
+			header.addEventListener('mousedown', fn_mousedown)
+			function fn_mousedown(e) {
 
 				const path = e.composedPath();
 
@@ -1155,18 +1494,19 @@ view_default_autocomplete.render_grid_choose = async function( self, selected_in
 						return;
 					}
 				}
-			});
+			};
 
-			document.addEventListener('mouseup', function() {
+			document.addEventListener('mouseup', fn_mouseup)
+			function fn_mouseup() {
 				// if (target !== null) {
 				if (target) {
 					target.classList.remove('dragging');
 				}
 				target = null;
-			});
+			};
 
-			document.addEventListener('mousemove', function(e) {
-
+			document.addEventListener('mousemove', fn_mousemove)
+			function fn_mousemove(e) {
 				// no target case (mouse position changes but target is null or undefined)
 					if (!target) {
 						return;
@@ -1191,8 +1531,7 @@ view_default_autocomplete.render_grid_choose = async function( self, selected_in
 					if (tgtRect.bottom > (pRect.bottom)) {
 						target.style.top = (pRect.height - tgtRect.height - margin_top - 1) + 'px';
 					}
-			});
-		})();
+			};
 
 	// button_close
 		const button_close = ui.create_dom_element({
@@ -1200,7 +1539,8 @@ view_default_autocomplete.render_grid_choose = async function( self, selected_in
 			class_name		: 'button close white',
 			parent			: header
 		})
-		button_close.addEventListener('click', function(e) {
+		button_close.addEventListener('click', fn_function)
+		function fn_function(e) {
 			e.stopPropagation()
 			while (grid_choose_container.firstChild) {
 				grid_choose_container.removeChild(grid_choose_container.firstChild)
@@ -1209,7 +1549,10 @@ view_default_autocomplete.render_grid_choose = async function( self, selected_in
 			if (self.node && self.node.grid_choose_container) {
 				delete self.node.grid_choose_container
 			}
-		})
+
+			document.removeEventListener('mouseup', fn_mouseup)
+			document.removeEventListener('mousemove', fn_mousemove)
+		}
 
 	// ar_search_sections. get the sections that was searched
 		// const ar_search_sections = rqo_search.sqo.section_tipo
@@ -1218,7 +1561,7 @@ view_default_autocomplete.render_grid_choose = async function( self, selected_in
 		const columns = rqo_search.show.columns
 
 	// get the ar_locator founded in sections
-		const data_locator	= data.find((item)=> item.tipo === rqo_search.source.tipo && item.typo==='sections');
+		const data_locator	= data.find((item)=> item.tipo===rqo_search.source.tipo && item.typo==='sections');
 		const ar_locator	= (data_locator) ? data_locator.value : []
 
 	// iterate the sections
@@ -1247,10 +1590,13 @@ view_default_autocomplete.render_grid_choose = async function( self, selected_in
 
 					// the columns has the last element in the chain in the first position of the array,
 					// the first position is the only component that is necessary to build and show
-						const ddo_item = current_path[0]
-						const current_element_data = get_last_ddo_data_value(current_path, [current_locator], data)
-					// if the element doesn't has data continue to the next element.
-						if(current_element_data === false) continue;
+						const ddo_item				= current_path[0]
+						const current_element_data	= get_last_ddo_data_value(current_path, [current_locator], data)
+						// if the element doesn't has data continue to the next element.
+						if (typeof current_element_data==='undefined' || current_element_data===false) {
+							console.warn('[render_datalist] Ignored tipo not found in row:', ddo_item.tipo, ddo_item);
+							continue
+						}
 
 					// context of the element
 						const current_element_context = context.find( (item) =>
@@ -1262,15 +1608,11 @@ view_default_autocomplete.render_grid_choose = async function( self, selected_in
 							continue;
 						}
 
-						// mode and view
-							current_element_context.mode	= params.mode || 'list'
-							current_element_context.view	= params.view || 'default'
+					// mode and view
+						current_element_context.mode	= params.mode || 'list'
+						current_element_context.view	= params.view || 'default'
 
-						if (typeof current_element_data==='undefined') {
-							console.warn('[render_datalist] Ignored tipo not found in row:', ddo_item.tipo, ddo_item);
-							continue
-						}
-
+					// instance
 						const instance_options = {
 							context			: current_element_context,
 							data			: current_element_data,
@@ -1283,12 +1625,11 @@ view_default_autocomplete.render_grid_choose = async function( self, selected_in
 							lang			: current_element_context.lang,
 							id_variant		: self.id
 						}
-
 						const current_instance = await instances.get_instance(instance_options)
 						current_instance.build(false)
 						const node = await current_instance.render()
 
-						// append node
+					// append instance rendered node
 						grid_choose_container.appendChild(node)
 				}//end for ddo_item
 		}//end for (const current_locator of ar_locator)
@@ -1301,12 +1642,24 @@ view_default_autocomplete.render_grid_choose = async function( self, selected_in
 
 /**
 * GET_GRID_CHOOSE_DATA
+* Used by render_grid_choose to call API and resolve
+* the data to display into the grid viewer
+* @param object self
+* @param object section_record
+* Current section_record instance
+* @param object params
+* sample:
+* {
+* 	mode: "list"
+*	request_config_type: "secondary"
+*	view: "tag"
+* }
 * @return object grid_choose_data
 */
-const get_grid_choose_data = async function(self, selected_instance, params) {
+const get_grid_choose_data = async function(self, section_record, params) {
 
 	// request_config
-		const request_config = self.request_config.find(el => el.type === params.request_config_type)
+		const request_config = self.request_config.find(el => el.type===params.request_config_type)
 		if(!request_config){
 			console.warn("Called request_config is not defined with type: ", params.request_config_type);
 			return
@@ -1315,19 +1668,29 @@ const get_grid_choose_data = async function(self, selected_instance, params) {
 	// rqo
 		const rqo_search = await self.caller.build_rqo_search(request_config, 'search')
 
+		// remove non used search params
 		delete rqo_search.sqo_options.filter_free
 		delete rqo_search.sqo_options.filter_by_list
+
 		// const rqo = await self.rebuild_search_query_object({
 		// 	rqo_search		: rqo_search
 		// });
+
 		rqo_search.sqo.filter_by_locators = [{
-			section_id		: selected_instance.section_id,
-			section_tipo	: selected_instance.section_tipo
+			section_id		: section_record.section_id,
+			section_tipo	: section_record.section_tipo
 		}]
 
+		// limit. Increase default limit (25) to allow more results
+		rqo_search.sqo.limit = 200
+
+		// section_tipo. Search only in section tipo of selected instance
+		rqo_search.sqo.section_tipo = [section_record.section_tipo]
+
 	// API read request
-		const api_response	= await data_manager.request({
-			body : rqo_search
+		const api_response = await data_manager.request({
+			body		: rqo_search,
+			use_worker	: true
 		})
 
 	// grid_choose_data
@@ -1340,3 +1703,7 @@ const get_grid_choose_data = async function(self, selected_instance, params) {
 
 	return grid_choose_data
 }//end get_grid_choose_data
+
+
+
+// @license-end

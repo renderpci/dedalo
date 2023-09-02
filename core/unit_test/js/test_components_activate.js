@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global it, describe, assert, page_globals */
 /*eslint no-undef: "error"*/
 
@@ -10,8 +11,8 @@ import {ui} from '../../common/js/ui.js'
 
 describe("COMPONENTS ACTIVATE", async function() {
 
-	const content = document.getElementById('content');
-	content.addEventListener('click', function(e) {
+	const container = document.getElementById('content');
+	container.addEventListener('click', function(e) {
 		e.preventDefault()
 
 	})
@@ -60,11 +61,12 @@ describe("COMPONENTS ACTIVATE", async function() {
 					const wrapper = instance.node
 
 					// activate by click event
-					wrapper.click()
+					// wrapper.click()
+					wrapper.dispatchEvent(new Event('mousedown'));
 					assert( wrapper.classList.contains('active'), `wrapper activated styles are NOT found`)
 					assert( instance.active===true, `instance property active is NOT set as true`)
 					assert( page_globals.component_active===instance, `page_globals.component_active is NOT set correctly`)
-					content.prepend(wrapper)
+					container.prepend(wrapper)
 
 					// skip save compare test on some components like password
 					if (element.test_save===false) {
@@ -117,3 +119,7 @@ async function get_instance_rendered(options) {
 
 	return component_instance
 }
+
+
+
+// @license-end

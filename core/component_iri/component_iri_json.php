@@ -39,6 +39,7 @@
 		// value
 			switch ($mode) {
 				case 'list':
+				case 'tm':
 				case 'edit':
 				default:
 					$value = $this->get_dato();
@@ -47,8 +48,8 @@
 
 		// data item
 		$item  = $this->get_data_item($value);
-			$item->parent_tipo 			= $this->get_tipo();
-			$item->parent_section_id 	= $this->get_section_id();
+			$item->parent_tipo			= $this->get_tipo();
+			$item->parent_section_id	= $this->get_section_id();
 
 		$data[] = $item;
 	}//end if($options->get_data===true && $permissions>0)

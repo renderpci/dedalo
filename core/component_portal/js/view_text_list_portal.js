@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, Promise, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -6,6 +7,9 @@
 // imports
 	import {get_section_records} from '../../section/js/section.js'
 	// import {ui} from '../../common/js/ui.js'
+	import {
+		render_column_component_info
+	} from './render_edit_component_portal.js'
 
 
 
@@ -23,7 +27,7 @@ export const view_text_list_portal = function() {
 /**
 * RENDER
 * Render node as text view
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_text_list_portal.render = async function(self, options) {
 
@@ -37,6 +41,15 @@ view_text_list_portal.render = async function(self, options) {
 	// const text_node = document.createTextNode(value_string)
 
 	// return text_node
+
+	// column component_info
+	if (self.add_component_info===true) {
+		self.columns_map.push({
+			id			: 'ddinfo',
+			label		: 'Info',
+			callback	: render_column_component_info
+		})
+	}
 
 	// options
 		const render_level = options.render_level || 'full'
@@ -57,16 +70,20 @@ view_text_list_portal.render = async function(self, options) {
 		const ar_section_record_length = ar_section_record.length
 		for (let i = 0; i < ar_section_record_length; i++) {
 
-			// child.
-			const child_item = await ar_section_record[i].render()
-			fragment.appendChild(child_item)
+			// child
+				const child_item = await ar_section_record[i].render()
+				fragment.appendChild(child_item)
 
 			// records_separator
-			if(i < ar_section_record_length-1) {
-				const node_records_separator = document.createTextNode(self.context.records_separator)
-				fragment.appendChild(node_records_separator)
-			}
+				if(i < ar_section_record_length-1) {
+					const node_records_separator = document.createTextNode(self.context.records_separator)
+					fragment.appendChild(node_records_separator)
+				}
 		}
 
 	return fragment
 }//end render
+
+
+
+// @license-end

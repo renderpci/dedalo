@@ -1,3 +1,5 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
+
 /**
 * DD CLASS
 *
@@ -8,7 +10,7 @@ var dd = new function() {
 
 	'use strict';
 
-	
+
 	this.trigger_url 		 = 'trigger.dd.php'
 	this.descriptors_trigger = 'trigger.descriptors_dd.php'
 
@@ -16,28 +18,28 @@ var dd = new function() {
 
 	// DOCUMENT READY
 	$(function() {
-	  
+
 		// OPEN COOKIE TRACKED DIVS
 			if( cookieOpenDivsArray !== -1 && typeof terminoIDresalte !== 'undefined' ) {
 				dd.openTrackedDivs(terminoIDresalte)
 			}
-		
+
 		// KEYBOARD FUNCIONS
 			$("body").keydown(function(e){
-				//console.log(e.ctrlKey, e.keyCode);	
-			     
+				//console.log(e.ctrlKey, e.keyCode);
+
 				// CONTROL + M (ctrlKey+77) SHOW/HIDE INSPECTOR
-				if (e.ctrlKey===true && e.keyCode===77) { // m=77	 
+				if (e.ctrlKey===true && e.keyCode===77) { // m=77
 					// do something
 					dd.toggleModelo()
 				}
 
-				if (e.ctrlKey===true && e.keyCode===80) { // m=80 (P) 
+				if (e.ctrlKey===true && e.keyCode===80) { // m=80 (P)
 					// Toggle properties
 					dd.toggle_properties()
 				}
 
-				if (e.ctrlKey===true && e.keyCode===84) { // t=84	 
+				if (e.ctrlKey===true && e.keyCode===84) { // t=84
 					// do something
 					$( ".tesauro_button_show_tr" ).each(function( index ) {
 					  //console.log( index + ": " + $( this ).text() );
@@ -50,17 +52,17 @@ var dd = new function() {
 		// SORT TR DRAG ACTIVATION
 			const button_show_tr_obj = $('.tesauro_button_show_tr');
 			$(document.body).on('click', button_show_tr_obj.selector, function(e){
-				
+
 				 $( ".tesauro_tr_sortable" ).sortable({
 					update: function( event, ui ) {
-						
+
 						// Recorremos los elementos li que contienen los valores
-						const ar_childrens 	= $(this).contents().filter('li')			//if(SHOW_DEBUG===true) console.log( ar_childrens );				
+						const ar_childrens 	= $(this).contents().filter('li')			//if(SHOW_DEBUG===true) console.log( ar_childrens );
 						const len			= ar_childrens.length
 						const ar_values		= []
 
 						if(ar_childrens && len>0) for(let i=0; i<len ; i++) {
-							
+
 							// (SELECT BY NAME[value=i] IS IMPORTANT)
 							const current_obj	= ar_childrens[i]
 							const modelo		= $(current_obj).data('modelo')
@@ -71,7 +73,7 @@ var dd = new function() {
 
 							if( value ) ar_values.push( value )
 						}
-						
+
 						const current_termino_id	= $(this).data('termino_id')
 						const dato					= ar_values;
 						dd.update_tr_order(current_termino_id, dato, $(this))
@@ -82,7 +84,7 @@ var dd = new function() {
 			});
 	});//end dom ready
 
-	
+
 
 	/**
 	* VALIDATE_FORM
@@ -90,8 +92,8 @@ var dd = new function() {
 	this.validate_form = function() {
 		return true
 	}//end validate_form
-	
-	
+
+
 	/*
 	* OPENTRACKEDDIVS
 	* Abrimos secuencialmente todos los divs cuyos terminoID estén contenidos en el array "openDivs"
@@ -115,7 +117,7 @@ var dd = new function() {
 		const openDivs_length = (openDivs && openDivs.length)
 			? openDivs.length
 			: false
-		
+
 		// Loop
 			if (openDivs_length && openDivs_length>0) {
 
@@ -130,7 +132,7 @@ var dd = new function() {
 							dd.load_tree(terminoID, div_destino, modo, slide, terminoIDresalte, null, null, null) // (terminoID, div_destino, modo, slide, terminoIDresalte, target, reloaded, parent)
 						}else{
 							await dd.load_tree(terminoID, div_destino, modo, slide, terminoIDresalte, null, null, null) // (terminoID, div_destino, modo, slide, terminoIDresalte, target, reloaded, parent)
-						}						
+						}
 					}
 				}//end if(le!=-1) for(var x=0; x < le ; x++)
 			}
@@ -141,7 +143,7 @@ var dd = new function() {
 		// OLD
 			// // Create a deferred object
 			// const dfd = $.Deferred()
-			
+
 			// // Add handlers to be called when dfd is resolved
 			// dfd.done(function() {
 
@@ -153,11 +155,11 @@ var dd = new function() {
 			// 			var terminoID 	= openDivs[x],
 			// 				div_destino = 'div_' + terminoID,
 			// 				slide 		= 'block'
-						
-			// 			const current_promise = dd.load_tree(terminoID, div_destino, modo, slide, terminoIDresalte, null, null, null) // (terminoID, div_destino, modo, slide, terminoIDresalte, target, reloaded, parent)				
-						
-			// 		}							
-					
+
+			// 			const current_promise = dd.load_tree(terminoID, div_destino, modo, slide, terminoIDresalte, null, null, null) // (terminoID, div_destino, modo, slide, terminoIDresalte, target, reloaded, parent)
+
+			// 		}
+
 			// 	}//end if(le!=-1) for(var x=0; x < le ; x++)
 			// });//end done
 			// //console.log(dfd)
@@ -204,13 +206,25 @@ var dd = new function() {
 	* EDIT_INLINE . Edit terms inline
 	*/
 	this.edit_inline = function(button_obj) {
-		
-		//if(ts_lang!='') return(alert(" Edit inline only in main lang... \n Use the button edit to modify translations.")) 
-			
-		const $termino_span_obj	= $(button_obj)
-		const terminoID			= $termino_span_obj.attr('alt')		
 
-		// input 
+		//if(ts_lang!='') return(alert(" Edit inline only in main lang... \n Use the button edit to modify translations."))
+
+		// remove others
+			const found = document.querySelectorAll('.input_field_inline')
+			const found_length = found.length
+			for (let i = 0; i < found_length; i++) {
+				const element = found[i]
+				if(element.previousElementSibling) {
+					$(element.previousElementSibling).show(150)
+				}
+				element.remove()
+			}
+
+
+		const $termino_span_obj	= $(button_obj)
+		const terminoID			= $termino_span_obj.attr('alt')
+
+		// input
 			const input_field = create_dom_element({
 				element_type	: 'input',
 				type			: 'text',
@@ -220,47 +234,99 @@ var dd = new function() {
 				title			: "To validate changes press enter"
 			})
 			const $input_field_obj = $(input_field)
-		
-		// hide termino and add input field
+
+		// hide termino and append input field
 			$termino_span_obj
 				.hide()
-				.after($input_field_obj)				
-		
+				.after($input_field_obj)
+
 		// show created input
 			$input_field_obj
 				.hide()
 				.fadeIn(150)
 				.focus()
 
-		// events : keypress / blur
-			$input_field_obj
-				.keypress(function(event) {
-					if ( event.which===13 ) { // Enter ky is pressed
+		// events : keypress
+			input_field.addEventListener('keyup', function(e) {
+				switch (e.key) {
+					case 'Escape':
+						console.log('e.key:', 'Escape');
+						save_sequence(false)
+
+						break;
+					case 'Enter':
+						console.log('e.key:', 'Enter');
 						save_sequence(true)
+						break;
+					default:
+						break;
+				}
+			})
+
+		// auto value fro dd1
+			if (terminoID==='dd1') {
+
+				// const timeElapsed	= Date.now();
+				// const today			= new Date() //new Date(timeElapsed);
+				const str				= input_field.value
+				let result				= ''
+
+				function toIsoString(date) {
+				  const tzo = -date.getTimezoneOffset(),
+				        dif = tzo >= 0 ? '+' : '-',
+				        pad = function(num) {
+				          return (num < 10 ? '0' : '') + num;
+				      	};
+
+				  return date.getFullYear() +
+				      '-' + pad(date.getMonth() + 1) +
+				      '-' + pad(date.getDate()) +
+				      'T' + pad(date.getHours()) +
+				      ':' + pad(date.getMinutes()) +
+				      ':' + pad(date.getSeconds()) +
+				      dif + pad(Math.floor(Math.abs(tzo) / 60)) +
+				      ':' + pad(Math.abs(tzo) % 60);
+				}
+				const today = toIsoString(new Date());
+
+				// try 1. ISO with time offset like '2023-04-15T10:54:11+02:00'
+					// const regex = /[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}[A-Z]{1}/gm;
+					const regex = /[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\+[0-9]{2}:[0-9]{2}/gm;
+					const match = regex.exec(str)
+					if (match) {
+						result = str.replace(regex, today);
+					}else{
+						// try old format like '15-04-2023 10:30'
+						const regex1 = /[0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2}/gm;
+						result = str.replace(regex1, today);
 					}
-				})
-				// .blur(function() {
-				// 	save_sequence(false)
-				// });
+
+				// The substituted value will be contained in the result variable
+					// console.log('Substitution result: ', result);
+					if (result.length > 1) {
+						input_field.value = result
+					}
+			}
+
 
 		function isTranslationPreview(string) {
 			// verifica si el texto que se muestra es un preview para un término no traducido (con estilo <span class='unTranslated'>)
 			const reg		= /^<span/
 			const reg2		= /^<mark/
 			const result	= (reg.test(string) || reg2.test(string))
-			
+
 			return result
 		}//end isTranslationPreview
-		
+
 		function save_sequence(save) {
 
 			let result = false
-			
+
 			const current_value	= $termino_span_obj.html()
 			const new_value		= $input_field_obj.val()
-			
+
 			// save_descriptor. set and save content alert . If save id false, only remove input field
-			// si el termino del input es igual al original no lo guardamos a menos que sea un preview de traducción	
+			// si el termino del input es igual al original no lo guardamos a menos que sea un preview de traducción
 				if(save===true && (termino!==new_value || isTranslationPreview(current_value)===true)) {
 
 					// dd.saveDescriptorFromList(input_field, terminoID, new_value)
@@ -288,7 +354,7 @@ var dd = new function() {
 
 					result = true
 				}//end if(save===true && (termino!==new_value || isTranslationPreview(current_value)===true))
-			
+
 			// remove element
 				$input_field_obj.remove()
 				$termino_span_obj.show(150)
@@ -296,7 +362,7 @@ var dd = new function() {
 			return result
 		}//end save_sequence
 
-		return true		
+		return true
 	}//end edit_inline
 
 
@@ -308,18 +374,18 @@ var dd = new function() {
 
 		const divTexto = document.getElementById("info")
 		if(n==='n') divTexto = document.getElementById("infoN")
-		
+
 		if(divTexto.style.display==="block") {
 			divTexto.style.display = "none"
 		}else{
 			// capturamos la posición del icono que envia la orden
 			const posX = div.x + 18
 			const posY = div.y + 15
-			
+
 			// posicionamos la caja
 			divTexto.style.top 	= posY+'px'
 			divTexto.style.left = posX+'px'
-			
+
 			divTexto.style.display = "block"
 		}
 
@@ -327,12 +393,12 @@ var dd = new function() {
 	}//end mostrarinfo
 
 
-	
+
 	/**
 	* LOAD_TREE
 	* Carga el arbol jerárquico de Navegación temática
 	* Si accion == buildTree lo construye completo
-	* Si accion == list construye el primer nivel 
+	* Si accion == list construye el primer nivel
 	* Si se llama con la función "dd.openTrackedDivs", construirá como "list" todos los divs almacenados en la cookie de forma recursiva
 	*/
 	this.last_parent=null;
@@ -345,10 +411,10 @@ var dd = new function() {
 		const time 	= 110
 
 		return new Promise(function(resolve){
-			
+
 			if(!target_node) {
 
-				if( typeof terminoID==='undefined' || terminoID.length===0 ) {			
+				if( typeof terminoID==='undefined' || terminoID.length===0 ) {
 					resolve(false)
 					return
 				}
@@ -357,21 +423,21 @@ var dd = new function() {
 				// Si NO existe el div, paso la orden de eliminarlo del listado de divs abiertos
 				//
 				actualizarPostAjax(terminoID,0)	//setTimeout("alert('No existe elemento "+terminoID+" ')",1000);
-				
+
 				resolve(false)
 				return
 			}//end if(!target_node)
 
 
-			const index = loadedDivs.indexOf(terminoID) // Find the index in array 'loadedDivs'	
+			const index = loadedDivs.indexOf(terminoID) // Find the index in array 'loadedDivs'
 
 			// already loaded
 				if(index!==-1) {
 					resolve(false)
 					return
-				}					
-			
-			// not loaded. Si NO está en el array de loadedDivs, es que NO está cargado y por tanto ejecutamos el ajax						
+				}
+
+			// not loaded. Si NO está en el array de loadedDivs, es que NO está cargado y por tanto ejecutamos el ajax
 				const data = {
 					mode				: 'listadoHijos',
 					modo				: modo,
@@ -399,7 +465,7 @@ var dd = new function() {
 				})
 				.then(response => {
 					// console.log('response.msg', response.msg)
-					
+
 					const html = response.result
 
 					// append html
@@ -415,7 +481,7 @@ var dd = new function() {
 
 						// des
 							// if(slide==='block'){
-							// 	$(divJQobj).css({'display':'block'}) // se usa sólo al cargar la página								
+							// 	$(divJQobj).css({'display':'block'}) // se usa sólo al cargar la página
 							// }else{
 							// 	$(divJQobj).slideDown(time, function(){ })
 							// }
@@ -434,18 +500,18 @@ var dd = new function() {
 	* ACTUALIZARLIST : Actualiza la rama recibida (desde le parent hacia abajo)
 	*/
 	this.actualizarList = function(parent, current_terminoID) {
-		
+
 		// Reset all resalted termns
 		// $('.resalte').first().removeClass('resalte')
 		$('.resalte').first().removeClass('resalte')
 
-		// Set parent and term as not loaded in cookie 'loadedDivTrack' (accion=0)		
+		// Set parent and term as not loaded in cookie 'loadedDivTrack' (accion=0)
 		const accion	= 0
-		loadedDivTrack(parent,accion) // elimina parent como cargado en el array "loadedDivs"	
+		loadedDivTrack(parent,accion) // elimina parent como cargado en el array "loadedDivs"
 		loadedDivTrack(current_terminoID,accion) // elimina terminoID como cargado en el array "loadedDivs"
-		
+
 		// Force reset all loaded divs (empty array value)
-		/*		
+		/*
 		remove_localStorage('cookieLoadedDivs_dd');// Reset cookie loaded divs
 		remove_localStorage('cookieOpenDivs_dd');// Reset cookie loaded divs
 		resetView();
@@ -464,7 +530,7 @@ var dd = new function() {
 		const target			= 'manual'
 
 		const current_promise = dd.load_tree(parent, div_destino, modo, slide, terminoIDresalte, target, null, parent)	// (terminoID, div_destino, modo, slide, terminoIDresalte, target, reloaded, parent)
-	
+
 		return current_promise
 	}//end actualizarList
 
@@ -476,13 +542,13 @@ var dd = new function() {
 	this.ToggleTS = function( terminoID, accion, force, parent ) {
 
 		const div_terminoID = document.getElementById('div_'+terminoID);
-		const time 			= 110		
+		const time 			= 110
 		//alert("ToggleTS \n\n terminoID:"+terminoID + " accion:"+accion + " modo:"+modo +" div_terminoID.style.display:"+ div_terminoID.style.display)
 
-		if ( div_terminoID.style.display === "none" || force === 1 ) {  
+		if ( div_terminoID.style.display === "none" || force === 1 ) {
 			// ABRIMOS MANUALMENTE
-				const x = loadedDivs.indexOf(terminoID) ; // buscamos este div en el array de divs cargados. Si existe, su contenido ya fué cargado		
-				
+				const x = loadedDivs.indexOf(terminoID) ; // buscamos este div en el array de divs cargados. Si existe, su contenido ya fué cargado
+
 				if(accion === 'abrir' && x === -1)	// si no hay cookie (x), cargamos los hijos de este termino
 				{
 					const div_destino 		= 'div_' + terminoID
@@ -490,22 +556,22 @@ var dd = new function() {
 					const terminoIDresalte 	= ''
 					const target			= 'manual'
 
-					dd.load_tree(terminoID, div_destino, modo, slide, terminoIDresalte, target, null, parent) // (terminoID, div_destino, modo, slide, terminoIDresalte, target, reloaded, parent)		
-									
+					dd.load_tree(terminoID, div_destino, modo, slide, terminoIDresalte, target, null, parent) // (terminoID, div_destino, modo, slide, terminoIDresalte, target, reloaded, parent)
+
 				}else{								// Mostramos el contenido (los hijos) del termino acual (ya fueron cargados previamente, x==1)
-					
+
 					$('#div_'+terminoID).slideDown(time, function(){ })
 				}
-				
+
 				// estado = 'open';
 				flechasTSestado(terminoID,'open')
-			
+
 		} else {
 			// CERRAMOS MANUALMENTE
-				$('#div_'+terminoID).slideUp(time, function(){	
-					div_terminoID.style.display = "none"								   
+				$('#div_'+terminoID).slideUp(time, function(){
+					div_terminoID.style.display = "none"
 				});
-				
+
 				openDivTrack(terminoID,0) // Elimina terminoID como abierto en el array "openDivs"
 				// estado = 'close';
 				flechasTSestado(terminoID,'close') // fija el aspecto de las flechas
@@ -524,16 +590,16 @@ var dd = new function() {
 		console.log(editwindow);
 		console.log(top.editwindow);
 		console.log(parent.editwindow);
-		console.log(window.opener.current_editwindow)		
-		return 	
+		console.log(window.opener.current_editwindow)
+		return
 		*/
 
-		// Editando desde tesauro edit términos relacionados		
+		// Editando desde tesauro edit términos relacionados
 		const terminoID = obj.dataset.termino_id
 
 		window.opener.linkTS(terminoID)
 		//linkTS(terminoID)
-		
+
 		return false
 	}//end add_index_common
 
@@ -545,8 +611,8 @@ var dd = new function() {
 	this.add_index_common__OLD = function(obj) {
 
 		// Editando en dedalo 4 para asignar relaciones
-		if ( parent.page_globals.modo.indexOf("tesauro") === -1 ) {	
-			// return alert("edit d4")	
+		if ( parent.page_globals.modo.indexOf("tesauro") === -1 ) {
+			// return alert("edit d4")
 			parent.tool_indexation.add_index(obj)
 
 		// Editando desde tesauro edit términos relacionados
@@ -568,7 +634,7 @@ var dd = new function() {
 
 		const myurl		= this.trigger_url
 		const accion	= 'update_tr_order'
-		const mydata	= { 
+		const mydata	= {
 			accion		: accion,
 			terminoID	: terminoID,
 			dato		: dato,
@@ -584,21 +650,21 @@ var dd = new function() {
 		})
 		// DONE
 		.done(function(data_response) {
-			
+
 			// Search 'error' string in response
-			const error_response = /error/i.test(data_response)							
+			const error_response = /error/i.test(data_response)
 
 			// If data_response contain 'error' show alert error with (data_response) else reload the page
 			if(error_response) {
 				// Alert error
 				alert("[update_tr_order] Request failed: \n" + data_response + $(data_response).text() )
-			}else{			
+			}else{
 				//alert("Ok. TR order updated! "+data_response)
 				//console.log(obj)
 				$(obj).fadeOut(0).fadeIn(150)
 			}
 		})
-		// FAIL ERROR	 
+		// FAIL ERROR
 		.fail(function(jqXHR, textStatus) {
 			const msg = "[update_tr_order] Request failed: " + textStatus
 			alert( msg )
@@ -613,7 +679,7 @@ var dd = new function() {
 	/**
 	* OPENTSEDIT : Abre la ventana de edición del termino (ts_edit.php)
 	*/
-	let editwindow;	
+	let editwindow;
 	this.openTSedit = function(terminoID) {
 
 		const theUrl		= "dd_edit.php?terminoID="+terminoID
@@ -629,7 +695,7 @@ var dd = new function() {
 		}else{
 			alert("Error focus window (openTSedit). \n\nPlease disable 'Block Pop-Up Windows' option in your browser ")
 		}
-		
+
 		return editwindow
 	}//end opentsedit
 
@@ -654,26 +720,26 @@ var dd = new function() {
 	*/
 	this.delete_term = function(divContTesauroID, terminoID, children, indexaciones, parent, termino) {
 		//return alert('function delete_term\n\n divContTesauroID:' + divContTesauroID + '\n terminoID:' + terminoID + '\n children:'+ children + '\n indexaciones:' + indexaciones + '\n parent:' + parent + '\n termino:' + termino)
-		
+
 		if(children !== 0) {
 			return alert( el_descriptor_tiene_hijos_title )
 		}
 		if (indexaciones > 0){
 			return alert( el_descriptor_tiene_indexaciones_title )
 		}
-			
+
 		termino = urldecode(termino)
 		termino = termino.replace(/(<([^>]+)>)/ig,"")
-		
+
 		const r=confirm( seguro_que_quiere_borrar_este_termino_title  + "\n\n" +  termino + "\nID: "+ terminoID + "\n" + hijos_title +': ' + children + "\n\n"  )
 		if( r !== true ) return false
-				
+
 		const divObj = $('#'+divContTesauroID)
 		if ($(divObj).length !== 1) {
 			return alert("delete_term: Element "+ divContTesauroID + " unavalible!")
-		}		
-		
-		const mydata = { 
+		}
+
+		const mydata = {
 			accion		: 'deleteTS',
 			modo		: modo,
 			terminoID	: terminoID,
@@ -689,7 +755,7 @@ var dd = new function() {
 		})
 		// DONE
 		.done(function(data_response) {
-			//divObj.html(received_data);							
+			//divObj.html(received_data);
 			switch(data_response) {
 				// Case tree
 				case 'ok_tree': divObj.html('<div class=\"ok\"> Deleted ' + termino + ' (' + terminoID +') ok ! </div>')
@@ -723,23 +789,23 @@ var dd = new function() {
 	* INSERTTS : Petición AJAX insert Tesauro
 	*/
 	this.insertTS = function(termino_id, hijosD, parent2) {
-		//return false; // DESACTIVA	
+		//return false; // DESACTIVA
 		//alert('function insertTS \n parent:' + parent  )
-		
+
 		const divContTerminoID 	= 'divCont' + termino_id
 		const divObj	 		= document.getElementById('divCont' + termino_id)
-		
-		if( $(divObj).length!==1 ){			
-			return alert("Element "+ divContTerminoID + " unavalible! "+$(divObj).length)		
-		}			
-			
+
+		if( $(divObj).length!==1 ){
+			return alert("Element "+ divContTerminoID + " unavalible! "+$(divObj).length)
+		}
+
 		const data = {
 			accion		: 'insertTS',
 			modo		: modo,
 			parent		: termino_id,
 			top_tipo	: page_globals.top_tipo
 		}
-		
+
 		const current_promise = $.ajax({
 			url		: this.trigger_url,
 			data	: data,
@@ -770,7 +836,7 @@ var dd = new function() {
 		})
 		.always(function() {
 		})
-			
+
 		return current_promise
 	}//end insertTS
 
@@ -778,7 +844,7 @@ var dd = new function() {
 
 	/**
 	* CAMBIAR_N_ORDEN
-	* Abrir Pop-up de formulario cambio orden 
+	* Abrir Pop-up de formulario cambio orden
 	*/
 	this.cambiar_n_orden = function(nordenV, terminoID, padre, termino) {
 
@@ -812,12 +878,12 @@ remove_localStorage('cookieLoadedDivs_dd') // Reset cookie loaded divs
 //
 let openDivs = []
 if( get_localStorage('cookieOpenDivs_dd')===null || get_localStorage('cookieOpenDivs_dd')===-1 ) {
-	//set_localStorage('cookieOpenDivs_dd','',7); 
+	//set_localStorage('cookieOpenDivs_dd','',7);
 	remove_localStorage('cookieOpenDivs_dd')// Reset cookie loaded divs
 }
 
 
-	
+
 
 // COOKIEOPENDIVSSTRING : leemos el valor del cookie que está como string
 const cookieOpenDivsString = get_localStorage('cookieOpenDivs_dd')
@@ -843,7 +909,7 @@ if( cookieOpenDivsString!=='undefined'&& cookieOpenDivsString!==null) {
 
 
 /**
-* MULTITOOGLE : TESAURO NAV Multi toogle 
+* MULTITOOGLE : TESAURO NAV Multi toogle
 */
 function multiToogle(divName, activa, desactiva) {
 
@@ -852,15 +918,15 @@ function multiToogle(divName, activa, desactiva) {
 	  alert(' Opss. Sorry: Beta function. ' + div1 +' - '+ activa +' - '+ desactiva )
 
 	}else{
-	  if (div.style.display === desactiva || div.style.display === '') {	  
-			// $(div).slideDown(100, function(){	
+	  if (div.style.display === desactiva || div.style.display === '') {
+			// $(div).slideDown(100, function(){
 				div.style.display = activa
-				div.classList.add('activa')	
+				div.classList.add('activa')
 			// })
 	  }else{
-			// $(div).slideUp(100, function(){	
+			// $(div).slideUp(100, function(){
 				div.style.display = desactiva
-				div.classList.remove('activa')	
+				div.classList.remove('activa')
 			// })
 	  }
 	}
@@ -870,22 +936,22 @@ function multiToogle(divName, activa, desactiva) {
 /**
 * LOADEDDIVTRACK : Tracking de divs cargados (1 cargado, 0 no cargado)
 * Lleva un registro mediante cookie de los terminos abiertos
-* Al cargar la página se resetea 
+* Al cargar la página se resetea
 */
 function loadedDivTrack(terminoID,accion) {
-	
+
 	if(accion===1) {	// guardamos en el array "loadedDivs" el div abierto
-	
-		loadedDivs.push(terminoID) // añadimnos este terminoID al array de disvs cargados ("loadedDivs")				
-		
+
+		loadedDivs.push(terminoID) // añadimnos este terminoID al array de disvs cargados ("loadedDivs")
+
 	}else{		 		// localizamos y eliminamos en el array "loadedDivs" el div cerrado
-		
+
 		const index	= loadedDivs.indexOf(terminoID) // Find the index
 		if(index!==-1) {
 			loadedDivs.splice(index,1) // Remove it if really found!
 				//console.log("removed index "+index+ " of terminoID:"+terminoID)
 		}
-		
+
 	}
 	//remove_localStorage('cookieLoadedDivs_dd');
 	set_localStorage('cookieLoadedDivs_dd',loadedDivs,7) // actualizamos la cookie "cookieLoadedDivs"
@@ -902,28 +968,28 @@ function loadedDivTrack(terminoID,accion) {
 */
 let resalte
 function openDivTrack(terminoID, accion, resaltar) {
-	
+
 	//alert("funcion: openDivTrack \n array openDivs: "+openDivs + "\ncookie: " + get_localStorage('cookieOpenDivs_dd') + "\naccion: " + accion + "\n resaltar: " + resaltar)
-	
+
 	const r = resaltar
-	
+
 	if(accion==1) {	// guardamos en el array "openDivs" el div abierto
-	
+
 		openDivs.push(terminoID) // añadimnos este terminoID al array de divs abiertos ("openDivs")
-		
+
 	}else{		 	// localizamos y eliminamos en el array "openDivs" el div cerrado
-		
+
 		const index	= openDivs.indexOf(terminoID) // Find the index
 		if(index!==-1) {
 			openDivs.splice(index,1) // Remove it if really found!
-		}	
+		}
 	}
-	
+
 	// Actualizamos la cookie
 	//remove_localStorage('cookieOpenDivs_dd');
 	set_localStorage('cookieOpenDivs_dd', openDivs, 7); // actualizamos la cookie "cookieOpenDivs"
-	
-	if(accion===1 && r!==null) {		
+
+	if(accion===1 && r!==null) {
 		resalte = r
 		setTimeout(function() {
 			const parent 			= terminoID
@@ -933,7 +999,7 @@ function openDivTrack(terminoID, accion, resaltar) {
 		}, 300);	//alert(r)
 	}
 
-	return true ;	
+	return true ;
 }//end openDivTrack
 
 
@@ -943,22 +1009,22 @@ function openDivTrack(terminoID, accion, resaltar) {
 * Tras cargarse mediante dd.load_tree, por ejemplo, queda como cargado y abierto
 */
 function actualizarPostAjax(terminoID, cargadoObjeto) {
-	
+
 	if(cargadoObjeto===1) {
 
 		loadedDivTrack(terminoID,1) // almacena terminoID como cargado en el array "loadedDivs"
-		
+
 		const index = openDivs.indexOf(terminoID) // Find the index
 		if(index===-1){
 			openDivTrack(terminoID,1) // almacena terminoID como abierto en el array "openDivs"
 		}
-		
+
 		flechasTSestado(terminoID,'open')	// fija el aspecto de las flechas
 
 	}else{
 
-		loadedDivTrack(terminoID,0) // elimina terminoID como cargado en el array "loadedDivs"	
-		
+		loadedDivTrack(terminoID,0) // elimina terminoID como cargado en el array "loadedDivs"
+
 		const index = openDivs.indexOf(terminoID) // Find the index
 		if(index!==-1)	{
 			openDivTrack(terminoID,0) // elimina terminoID como abierto en el array "openDivs"
@@ -980,26 +1046,26 @@ function flechasTSestado(terminoID, estado) {
 
 	const flechaOpen_name 	= 'fopen' + terminoID
 	const flechaClose_name 	= 'fclose'+ terminoID
-	
+
 	const flechaOpen 	= document.getElementById(flechaOpen_name)
 	const flechaClose 	= document.getElementById(flechaClose_name)
 
 	if (flechaOpen && flechaClose) {
 		if(estado==='open') {
-		
-			flechaOpen.style.display	= "none"; 	// ocultamos la flecha de abrir
-			flechaClose.style.display	= "block";	// mostramos la flecha de cerrar		
 
-		}else if(estado==='close') {			
-			
+			flechaOpen.style.display	= "none"; 	// ocultamos la flecha de abrir
+			flechaClose.style.display	= "block";	// mostramos la flecha de cerrar
+
+		}else if(estado==='close') {
+
 			flechaOpen.style.display	= "block";	// mostramos la flecha de abrir
-			flechaClose.style.display	= "none";	// ocultamos la flecha de cerrar			
+			flechaClose.style.display	= "none";	// ocultamos la flecha de cerrar
 		}else{
 			console.warn("[flechasTSestado] invalid estado:",estado);
 		}
 	}else{
 		console.warn("[flechasTSestado] invalid flechaOpen/flechaClose:",flechaOpen_name,flechaClose_name,estado,flechaOpen,flechaClose);
-	}	
+	}
 
 
 	return true
@@ -1012,8 +1078,8 @@ function flechasTSestado(terminoID, estado) {
 *******************************/
 
 function urldecode (str) {
-	// Decodes URL-encoded string  
-	// 
+	// Decodes URL-encoded string
+	//
 	// version: 1008.1718
 	// discuss at: http://phpjs.org/functions/urldecode    // +   original by: Philip Peterson
 	// +   improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
@@ -1033,17 +1099,17 @@ function urldecode (str) {
 	// *     example 2: urldecode('http%3A%2F%2Fkevin.vanzonneveld.net%2F');
 	// *     returns 2: 'http://kevin.vanzonneveld.net/'    // *     example 3: urldecode('http%3A%2F%2Fwww.google.nl%2Fsearch%3Fq%3Dphp.js%26ie%3Dutf-8%26oe%3Dutf-8%26aq%3Dt%26rls%3Dcom.ubuntu%3Aen-US%3Aunofficial%26client%3Dfirefox-a');
 	// *     returns 3: 'http://www.google.nl/search?q=php.js&ie=utf-8&oe=utf-8&aq=t&rls=com.ubuntu:en-US:unofficial&client=firefox-a'
-	
+
 	return decodeURIComponent(str.replace(/\+/g, '%20'));
 }
 
 function resetView() {
 	try {
-		remove_localStorage('cookieOpenDivs_dd'); 
+		remove_localStorage('cookieOpenDivs_dd');
 		//document.location"ts_list.php?modo=list";
 	}catch(err){
-		if(SHOW_DEBUG===true) alert(err)	
-	}	
+		if(SHOW_DEBUG===true) alert(err)
+	}
 }
 
 // RESET_WINDOW_AND_RELOAD : Elimina las cookies y recarga la página
@@ -1067,7 +1133,7 @@ function anadirTesauro(terminoID5) {
 * Relaciona descriptores entre sí
 */
 function relTesauro(terminoID) {
-	window.opener.relTS(terminoID);	
+	window.opener.relTS(terminoID);
 }
 
 /*
@@ -1080,14 +1146,14 @@ function posicionarVentana() {
 }
 
 function newLang(val) {
-	
+
 	const currentURL = remove_url_variable('ts_lang', window.location.href)
 
 	const final_url = currentURL.indexOf('?')===-1
 		? currentURL + '?&ts_lang='+val
-		: currentURL + '&ts_lang='+val;		
-		
-	
+		: currentURL + '&ts_lang='+val;
+
+
 	window.location.href = final_url;
 }
 
@@ -1107,3 +1173,5 @@ function uniq_fast(a) {
 }
 
 
+
+// @license-end

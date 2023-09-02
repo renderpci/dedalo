@@ -21,48 +21,72 @@ class json_handler {
 
 	/**
 	* JSON ENCODE
+	* Unified json_encode method with error control
+	* @param mixed $value
+	* @param mixed $options = JSON_UNESCAPED_UNICODE
+	* @return mixed $result
 	*/
 	public static function encode($value, $options=JSON_UNESCAPED_UNICODE) {
 
 		$result = json_encode($value, $options);
 
-		if($result!==false) {
-			return $result;
-		}
-
-		if(SHOW_DEBUG===true) {
-
-			$type = gettype($value);
-			dump($result, ' result ++ '.to_string());
-			dump($value, ' type ++ type: '.to_string($type));
-			trigger_error("json_handler GETTYPE: ".$type);
-
-			if ($type==='string') {
-				$encoding = mb_detect_encoding($value);
-				trigger_error("MB_DETECT_ENCODING: ".$encoding);
+		// success case
+			if($result!==false) {
+				return $result;
 			}
-		}
 
-		throw new RuntimeException(static::$_messages[json_last_error()]);
+		// error case
+			if(SHOW_DEBUG===true) {
+
+				$type = gettype($value);
+				dump($result, ' result (json_encoded) ++ '.to_string());
+				dump($value,  ' value - type: '.to_string($type));
+				trigger_error("json_handler GETTYPE: ".$type);
+
+				if ($type==='string') {
+					$encoding = mb_detect_encoding($value);
+					trigger_error("MB_DETECT_ENCODING: ".$encoding);
+				}
+				dump(debug_backtrace(), ')))) debug_backtrace() ++ '.to_string());
+			}
+
+			debug_log(__METHOD__
+				. " JSON encode error " .PHP_EOL
+				. 'value: ' . print_r($value, true) .PHP_EOL
+				. 'json_last_error: '.json_last_error() .PHP_EOL
+				. 'json_last_error_msg: '.json_last_error_msg() .PHP_EOL
+				. json_handler::$_messages[json_last_error()] ?? 'Unknown error'
+				, logger::ERROR
+			);
+
+			throw new RuntimeException(static::$_messages[json_last_error()]);
 	}//end encode
 
 
 
 	/**
 	* JSON DECODE
+	* @param string $json
+	* @param bool $assoc = false
+	* @return mixed $result
 	*/
 	public static function decode(string $json, bool $assoc=false) {
 
-		#if(is_string($json))
-		#$json = stripslashes($json);
-		/*
-		if (is_string($json)) {
-			dump($json," ");
-			dump(gettype($json),"tipe of var $json ");
-			dump(debug_backtrace() );
-		}
-		*/
+		$result = json_decode($json, $assoc);
 
+		// check errors
+			if (json_last_error()!==JSON_ERROR_NONE) {
+				debug_log(__METHOD__
+					. " Error on decode JSON value: " .PHP_EOL
+					. 'json_last_error: '.json_last_error() .PHP_EOL
+					. 'json_last_error_msg: '.json_last_error_msg() .PHP_EOL
+					, logger::ERROR
+				);
+			}
+
+		return $result;
+
+		/*
 		# NORMAL FUNCTION
 		if(SHOW_DEBUG!==true) {
 
@@ -76,10 +100,10 @@ class json_handler {
 			try{
 
 				$result = json_decode($json, $assoc);
-
 				if($result) {
 					return $result;
 				}
+
 				if(SHOW_DEBUG) {
 					#dump(debug_backtrace(), "JSON ERROR BACKTRACE");#die();
 					#throw new Exception("Error Processing Request", 1);
@@ -99,9 +123,14 @@ class json_handler {
 				#dump($e);
 				dump($json, "json catch Exception ".to_string($msg));
 				trigger_error("$msg", E_USER_ERROR);
-				#throw new RuntimeException(static::$_messages[json_last_error()]);
+				debug_log(__METHOD__
+					. " Error on decode JSON value: " .PHP_EOL
+					. $msg.PHP_EOL
+					. json_last_error_msg()
+					, logger::ERROR
+				);
 			}
-		}
+		}*/
 	}//end decode
 
 
@@ -110,14 +139,28 @@ class json_handler {
 	* TEST_JSON
 	* @param string $value
 	*/
-	public static function test_json( string $value ) {
+		// public static function test_json( string $value ) {
 
-		if ((substr($value, 0, 1) === '{' || substr($value, 0, 1) === '[') && ($json = json_decode($value, true))) {
-			return $json;
-		}
+		// 	if ((substr($value, 0, 1) === '{' || substr($value, 0, 1) === '[') && ($json = json_decode($value, true))) {
+		// 		return $json;
+		// 	}
 
-		return $value;
-	}//end test_json
+		// 	return $value;
+		// }//end test_json
+
+
+
+	/**
+	* IS_JSON
+	* Checks if the value is a valid JSON
+	* @param mixed $value
+	* @return bool
+	*/
+	public static function is_json($value) : bool {
+		return is_string($value) && is_array(json_decode($value, true)) && (json_last_error() == JSON_ERROR_NONE)
+			? true
+			: false;
+	}//end is_json
 
 
 

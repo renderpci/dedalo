@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /* global  */
 /*eslint no-undef: "error"*/
 
@@ -29,7 +30,7 @@ export const render_search_component_date = function() {
 /**
 * SEARCH
 * Render node for use in search
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_search_component_date.prototype.search = async function(options) {
 
@@ -62,7 +63,7 @@ render_search_component_date.prototype.search = async function(options) {
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 
@@ -96,8 +97,8 @@ const get_content_data = function(self) {
 		})
 
 	// values (inputs)
-		const inputs_value	= value.length>0 ? value : ['']
-		const value_length	= inputs_value.length
+		const inputs_value	= value || []
+		const value_length	= inputs_value.length || 1
 		for (let i = 0; i < value_length; i++) {
 			const input_element_node = get_input_element(i, inputs_value[i], self)
 			content_data.appendChild(input_element_node)
@@ -116,7 +117,7 @@ const get_content_data = function(self) {
 * @param int i
 * @param object|null current_value
 * @param object self
-* @return DOM node content_value
+* @return HTMLElement content_value
 */
 const get_input_element = (i, current_value, self) => {
 
@@ -153,3 +154,7 @@ const get_input_element = (i, current_value, self) => {
 
 	return content_value
 }//end get_input_element
+
+
+
+// @license-end

@@ -47,11 +47,12 @@
 
 	if($options->get_data===true && $permissions>0) {
 
-		$user_id = navigator::get_user_id();
+		$user_id = get_user_id();
 
 		// value
 			switch ($mode) {
 				case 'list':
+				case 'tm':
 					$value		= $this->get_list_value();
 					break;
 
@@ -61,7 +62,6 @@
 					$datalist	= $this->get_datalist($user_id);
 					break;
 			}
-
 		// data item
 			$item = $this->get_data_item($value);
 				$item->parent_tipo			= $this->get_tipo();

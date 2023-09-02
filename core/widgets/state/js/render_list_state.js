@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -23,7 +24,7 @@ export const render_list_state = function() {
 /**
 * LIST
 * Render node for use in modes: list, edit_in_list
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_list_state.prototype.list = async function(options) {
 
@@ -48,7 +49,7 @@ render_list_state.prototype.list = async function(options) {
 
 /**
 * GET_CONTENT_DATA_LIST
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data_list = async function(self) {
 
@@ -79,7 +80,7 @@ const get_content_data_list = async function(self) {
 
 /**
 * GET_VALUE_ELEMENT
-* @return DOM node value_element
+* @return HTMLElement value_element
 */
 const get_value_element = (i, data, self) => {
 
@@ -398,3 +399,7 @@ const get_value_tooltip = (output_item, data, self) => {
 
 	return fragment
 }// end get_value_tooltip
+
+
+
+// @license-end

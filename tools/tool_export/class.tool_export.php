@@ -29,37 +29,6 @@ class tool_export extends tool_common {
 
 
 	/**
-	* __CONSTRUCT (OLD CONSTRUCT)
-	*/
-		// public function __construct(string $section_tipo, string $model, string $data_format='standard', array $ar_ddo_map=[], object $sqo=null) {
-
-		// 	// Fix mode
-		// 	$this->mode = 'tool_export';
-
-		// 	// fix section_tipo
-		// 	$this->section_tipo = $section_tipo;
-
-		// 	// fix model
-		// 	$this->model = $model;
-
-		// 	// Fix data_format
-		// 	$this->data_format = $data_format;
-
-		// 	// fix ar_ddo_map
-		// 	$this->ar_ddo_map = $ar_ddo_map;
-
-		// 	// Fix sqo
-		// 	$this->sqo = $sqo;
-
-		// 	// Fix records
-		// 	$this->ar_records = null;
-
-		// 	return true;
-		// }//end __construct
-
-
-
-	/**
 	* SETUP
 	* Fix main class vars to de accessible
 	* @param object options
@@ -202,7 +171,7 @@ class tool_export extends tool_common {
 
 		foreach ($records as $current_locator) {
 
-			$ar_row_value = $this->get_value($ar_ddo_map, $current_locator);
+			$ar_row_value = $this->get_grid_value($ar_ddo_map, $current_locator);
 
 			// take the maximum number of rows (the rows can has 1, 2, 55 rows and we need the highest value, 55)
 			$row_count = max($ar_row_value->ar_row_count);
@@ -276,7 +245,7 @@ class tool_export extends tool_common {
 				foreach ($column_tipos as $column_key => $column_tipo) {
 					// set the column name, if the format is Dédalo use the $tipo and section_id
 					// for standard format use the name
-					if($this->data_format==='dedalo'){
+					if($this->data_format==='dedalo_raw'){
 						$model_name = RecordObj_dd::get_modelo_name_by_tipo($column_tipo);
 						$column_labels[] = ($model_name === 'component_section_id')
 							? 'section_id'
@@ -290,6 +259,7 @@ class tool_export extends tool_common {
 				}
 				$column_obj->ar_labels	= $column_labels;
 				$column_obj->label_tipo	= end($column_tipos);
+				$column_obj->ar_tipos 	= $column_tipos;
 
 				// create the grid cell of the section
 					$section_grid = new dd_grid_cell_object();
@@ -362,14 +332,14 @@ class tool_export extends tool_common {
 
 
 	/**
-	* GET_VALUE
+	* GET_GRID_VALUE
 	* Builds ddgrid value object
 	* @param array $ar_ddo
 	* @param object $locator
 	*
 	* @return object $value
 	*/
-	protected function get_value(array $ar_ddo, object $locator) {
+	protected function get_grid_value(array $ar_ddo, object $locator) : object {
 
 		$ar_cells		= [];
 		$ar_row_count	= [];
@@ -383,10 +353,10 @@ class tool_export extends tool_common {
 			$ddo		= ($first_path->section_tipo===$locator->section_tipo) ? $first_path : null;
 
 			// set the separator if the ddo has a specific separator, it will be used instead the component default separator
-				$fields_separator	= $ddo->fields_separator ?? null;
-				$records_separator	= $ddo->records_separator ?? null;
-				$format_columns		= $ddo->format_columns ?? null;
-				$class_list			= $ddo->class_list ?? null;
+				// $fields_separator	= $ddo->fields_separator ?? null;
+				// $records_separator	= $ddo->records_separator ?? null;
+				// $format_columns		= $ddo->format_columns ?? null;
+				// $class_list			= $ddo->class_list ?? null;
 
 			// component. Create the component to get the value of the column
 				$RecordObj_dd		= new RecordObj_dd($ddo->component_tipo);
@@ -438,8 +408,18 @@ class tool_export extends tool_common {
 					$current_component->request_config = [$request_config];
 
 					// inject the locator as dato for the component
-						$component_dato = array_filter($locator->datos->relations, function($el) use($ddo){
-							return $el->from_component_tipo === $ddo->component_tipo;
+						$component_dato = array_filter($locator->datos->relations, function($el) use($ddo, $current_component){
+							if (!isset($el->from_component_tipo)) {
+								debug_log(__METHOD__
+									. " Error. Ignored WRONG locator without from_component_tipo ". PHP_EOL
+									. "(model: $current_component->get_model(), tipo: $current_component->get_tipo(),
+									  section_tipo: $current_component->get_section_tipo(), section_id: $current_component->get_section_id())". PHP_EOL
+									. to_string($el)
+									, logger::ERROR
+								);
+								return false;
+							}
+							return $el->from_component_tipo===$ddo->component_tipo;
 						});
 
 						// $ar_dato = [$locator];
@@ -447,9 +427,24 @@ class tool_export extends tool_common {
 				}
 
 			// get component_value add
-				$component_value = ($this->data_format==='dedalo')
-					? $current_component->get_raw_value()
-					: $current_component->get_value($current_lang, $ddo);
+				switch ($this->data_format) {
+					case 'dedalo_raw':
+						$component_value =	$current_component->get_raw_value();
+						break;
+
+					case 'grid_value':
+						$component_value = $current_component->get_grid_value($ddo);
+						break;
+
+					case 'value':
+					default:
+						$component_value = $current_component->get_grid_flat_value($ddo);
+						break;
+				}
+
+				// $component_value = ($this->data_format==='dedalo')
+				// 	? $current_component->get_raw_value()
+				// 	: $current_component->get_grid_value($ddo);
 
 			// get columns objects that the component had stored
 				$sub_ar_columns_obj	= $component_value->ar_columns_obj ?? [];
@@ -474,7 +469,7 @@ class tool_export extends tool_common {
 
 
 		return $value;
-	}//end get_value
+	}//end get_grid_value
 
 
 

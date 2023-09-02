@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS COMPONENT_INVERSE
 *
 *
@@ -15,26 +15,156 @@ class component_inverse extends component_common {
 	*/
 	public function get_dato() {
 
-		// $section	= section::get_instance($this->parent, $this->section_tipo);
-		$section	= $this->get_my_section();
-
-		$ar_locators = $section->get_inverse_locators();
-
-			foreach ($ar_locators as $key => $locator_item) {
-
-				$item = new stdClass();
-				$item->locator = $locator_item;
-				$item->datalist = $this->get_inverse_value($locator_item);
-
-				if (is_null($item->datalist)) {
-					$item->datalist = [];
-				}
-
-				$dato[] = $item;
+		// dato_resolved. Already resolved case
+			if(isset($this->dato_resolved)) {
+				return $this->dato_resolved;
 			}
 
-		return (array)$dato;
+		// section search for inverse locators
+			$section	= $this->get_my_section();
+			$dato		= $section->get_inverse_references();
+
+		// fix dato
+			$this->dato = $dato;
+
+		// Set as loaded
+			$this->bl_loaded_matrix_data = true;
+
+		return $dato;
 	}//end get_dato
+
+
+
+	/**
+	* GET_DATO_FULL
+	* Alias of get_dato
+	* @return array $dato
+	*/
+	public function get_dato_full() {
+
+		return $this->get_dato();
+	}//end get_dato_full
+
+
+
+	/**
+	* GET_GRID_VALUE
+	* Get the value of the component.
+	* For component inverse, data is the locators of sections that call to his section
+	* every instance of the component is a unique row with multiple columns for every section that call
+	* ex: informant is called by oh and pci
+	* informant is the row and has two columns: oh and pci with his section_id as value
+	* Data of this component do not create rows, instead the portal data
+	* the row is always 1, the current instance of the component, his data doesn't create rows, because data are the locators of different callers
+	* the locators will be 1 for every section that call and component (it's not possible had the same locator in the same portal)
+	* the total columns will be the combination of different section_tipo of callers and component_tipo (portal that call)
+	* format:
+	* {
+	* 	type : column 			// the global column of the component
+	* 	value : [{
+	* 		type : row 			// the row of the instance of the component, it's not the data length, always 1
+	* 		value : [{
+	* 			type : column 	// every locator will create 1 column (from_section_tipo and "from_compoennt_tipo")
+	* 			value : ["1"] 	// from_section_id , section_id of the caller
+	* 		}]
+	* 	}]
+	* }
+	* @param object|null $ddo = null
+	*
+	* @return dd_grid_cell_object $dd_grid_cell_object
+	*/
+	public function get_grid_value(object $ddo=null) : dd_grid_cell_object {
+
+		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
+			$fields_separator	= $ddo->fields_separator ?? null;
+			$records_separator	= $ddo->records_separator ?? null;
+			$format_columns		= $ddo->format_columns ?? null;
+			$class_list			= $ddo->class_list ?? null;
+
+		// short vars
+			$data		= $this->get_dato();
+			$label		= $this->get_label();
+			$properties	= $this->get_properties();
+
+		// fields_separator
+			$fields_separator = isset($fields_separator)
+				? $fields_separator
+				: (isset($properties->fields_separator)
+					? $properties->fields_separator
+					: ', ');
+
+		// records_separator
+			$records_separator = isset($records_separator)
+				? $records_separator
+				: (isset($properties->records_separator)
+					? $properties->records_separator
+					: ' | ');
+
+
+		$ar_columns_obj = [];
+		$ar_cells 		= [];
+		foreach ($data as $current_locator) {
+			// get the locator section_tipo and section_id of the section that call (from_section_tipo and from_section_id)
+			$from_section_id		= $current_locator->from_section_id;
+			$from_section_tipo		= $current_locator->from_section_tipo;
+			$from_component_tipo	= $current_locator->from_component_tipo;
+
+			$section_label 	= RecordObj_dd::get_termino_by_tipo($from_section_tipo,DEDALO_APPLICATION_LANG, true);
+
+			$column_obj_id = $this->section_tipo.'_'.$from_section_tipo.'_'.$this->tipo.'_'.$from_component_tipo;
+
+			$column_obj = array_find($ar_columns_obj, function($column)use ($column_obj_id){
+				return $column->id === $column_obj_id;
+			});
+
+			if(empty($column_obj)){
+				$column_obj = new stdClass();
+					$column_obj->id		= $column_obj_id;
+				$ar_columns_obj[] = $column_obj;
+			}
+			//create the column for every locator of every section_tipo and component_tipo with the section_id as value
+			$grid_column = new dd_grid_cell_object();
+				$grid_column->set_type('column');
+				$grid_column->set_cell_type('text');
+				$grid_column->set_label($section_label);
+				$grid_column->set_value([$from_section_id]);
+				$grid_column->set_ar_columns_obj([$column_obj]);
+			// store the current column with all values
+				$ar_cells[] = $grid_column;
+		}
+
+		//create the row of the component, every instance of the component has 1 unique row and multiple columns.
+			$grid_row = new dd_grid_cell_object();
+				$grid_row->set_type('row');
+				$grid_row->set_value($ar_cells);
+			// store the current column with all values
+				$ar_cells[] = $grid_row;
+
+		// always 1 data size it's not the rows
+			$row_count	= 1;
+
+		// get the total of columns
+			$column_count	= sizeof($ar_columns_obj);
+
+		// dd_grid_cell_object, final columns that has the row and his columns
+			$dd_grid_cell_object = new dd_grid_cell_object();
+				$dd_grid_cell_object->set_type('column');
+				$dd_grid_cell_object->set_label($label);
+				// $dd_grid_cell_object->set_cell_type('text');
+				$dd_grid_cell_object->set_ar_columns_obj($ar_columns_obj);
+				$dd_grid_cell_object->set_row_count($row_count);
+				$dd_grid_cell_object->set_column_count($column_count);
+				if(isset($class_list)){
+					$dd_grid_cell_object->set_class_list($class_list);
+				}
+				$dd_grid_cell_object->set_fields_separator($fields_separator);
+				$dd_grid_cell_object->set_records_separator($records_separator);
+				$dd_grid_cell_object->set_value([$grid_row]);
+
+		// dump($dd_grid_cell_object, '$dd_grid_cell_object ++ '.to_string());
+
+		return $dd_grid_cell_object;
+	}//end get_grid_value
 
 
 
@@ -53,7 +183,7 @@ class component_inverse extends component_common {
 
 	/**
 	* GET_VALOR_EXPORT
-	* Return component value sended to export data
+	* Return component value sent to export data
 	* @return string $valor
 	*/
 	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
@@ -127,83 +257,14 @@ class component_inverse extends component_common {
 
 
 	/**
-	* BUILD_SEARCH_COMPARISON_OPERATORS
-	* Note: Override in every specific component
-	* @param array $comparison_operators . Like array('=','!=')
-	* @return object stdClass $search_comparison_operators
+	* EXTRACT_COMPONENT_VALUE_FALLBACK
+	* Catch common method calls
+	* @return string
 	*/
-	public function build_search_comparison_operators($comparison_operators=array('=','!=')) {
-		return (object)parent::build_search_comparison_operators($comparison_operators);
-	}//end build_search_comparison_operators
+	public static function extract_component_value_fallback(object $component, string $lang=DEDALO_DATA_LANG, bool $mark=true, string $main_lang=DEDALO_DATA_LANG_DEFAULT) : string {
 
-
-
-	/**
-	* GET_SEARCH_QUERY_OLD
-	* Build search query for current component . Overwrite for different needs in other components
-	* (is static to enable direct call from section_records without construct component)
-	* Params
-	* @param string $json_field . JSON container column Like 'dato'
-	* @param string $search_tipo . Component tipo Like 'dd421'
-	* @param string $tipo_de_dato_search . Component dato container Like 'dato' or 'valor'
-	* @param string $current_lang . Component dato lang container Like 'lg-spa' or 'lg-nolan'
-	* @param string $search_value . Value received from search form request Like 'paco'
-	* @param string $comparison_operator . SQL comparison operator Like 'ILIKE'
-	*
-	* @see class.section_records.php get_rows_data filter_by_search
-	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
-	*/
-		// public static function get_search_query_old($json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='=') {
-		// 	debug_log(__METHOD__." DISABLED OPTION !!! ".to_string(), logger::ERROR);
-		// }//end get_search_query_old
-
-
-
-	/**
-	* GET_INVERSE_VALUE
-	* @return array|null $inverse_value
-	*/
-	public function get_inverse_value(object $locator) : ?array {
-
-		$tipo = $this->get_tipo();
-
-		$ar_look_section_tipo = common::get_ar_related_by_model('section', $tipo);
-		if (!isset($ar_look_section_tipo[0])) {
-			return null;
-		}
-		$look_section_tipo = $ar_look_section_tipo[0];
-		if ($locator->from_section_tipo!==$look_section_tipo) {
-			//debug_log(__METHOD__." Ignored section tipo ".to_string(), logger::DEBUG);
-			return null;
-		}
-
-		$ar_value=array();
-		$ar_related = $this->RecordObj_dd->get_relaciones();
-		foreach ($ar_related as $key => $value) {
-			$current_tipo = reset($value);
-			$model_name  = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-				//dump($model_name, ' model_name ++ '.to_string());
-			if ($model_name!=='section') {
-				# Components
-				$component = component_common::get_instance(
-					$model_name,
-					$current_tipo,
-					$locator->from_section_id,
-					'list',
-					DEDALO_DATA_LANG,
-					$locator->from_section_tipo
-				);
-
-				$list_item = new stdClass();
-					$list_item->label	= $component->get_label();
-					$list_item->value	= $component->get_valor();
-
-				$ar_value[] = $list_item;
-			}
-		}
-
-		return (array)$ar_value;
-	}//end get_inverse_value
+		return '';
+	}//end extract_component_value_fallback
 
 
 

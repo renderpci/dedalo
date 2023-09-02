@@ -2,8 +2,8 @@
 // require_once( dirname(dirname(dirname(__FILE__))) .'/media_engine/class.OptimizeTC.php');
 // require_once( dirname(dirname(dirname(__FILE__))) .'/tools/tool_subtitles/class.subtitles.php');
 
-/*
-* CLASS tool_tr_print
+/**
+* CLASS TOOL_TR_PRINT
 */
 class tool_tr_print extends tool_common {
 
@@ -347,7 +347,7 @@ class tool_tr_print extends tool_common {
 			$dato    = $component->get_dato();
 			$value 	 = null;
 			if (!empty($dato[0])) {
-			$dd_date = new dd_date($dato[0]);	 // dd_date::get_date_with_format( $dato, $format="Y-m-d" );
+			$dd_date = new dd_date($dato[0]);
 			$value   = $dd_date->get_dd_timestamp($date_format="d-m-Y");
 			}
 			$tr_data->date = $value;
@@ -411,7 +411,7 @@ class tool_tr_print extends tool_common {
 		$lang 		  = $this->component_obj->get_lang();
 
 		$section = section::get_instance($parent, $section_tipo);
-		$inverse_locators = $section->get_inverse_locators();
+		$inverse_locators = $section->get_inverse_references();
 			#dump($inverse_locators, ' $inverse_locators ++ '.to_string());
 
 		$ar_interviews = array();

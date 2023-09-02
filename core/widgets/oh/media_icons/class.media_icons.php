@@ -19,21 +19,21 @@ class media_icons extends widget_common {
 		$ipo			= $this->ipo;
 
 		$dato = [];
-		$project_langs = common::get_ar_all_langs();
 
-		// every state has a ipo that come from structure (input, process , output).
+		// every state has a IPO that come from structure (input, process , output).
 		foreach ($ipo as $key => $current_ipo) {
 
-			$input 		= $current_ipo->input;
+			$input		= $current_ipo->input;
 			$output		= $current_ipo->output;
 			// get the paths to the source data
-			$source 	= $input->source;
-			$ar_paths 	= $input->paths;
+			$source		= $input->source;
+			$ar_paths	= $input->paths;
 
 			// check the type for input,
 			// if it's a filter will use search_query_object to find data
 			$type 		= $input->type;
 			switch($type) {
+
 				case 'component_data':
 					$ar_locator = [];
 					foreach ($source as $current_source) {
@@ -89,13 +89,11 @@ class media_icons extends widget_common {
 				// get the section pointed by the last component_tipo
 				$component_tipo = $last_path->component_tipo;
 
-
-
 				// create items with the every locator
 				foreach ($ar_locator as $locator) {
 
 					$model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-					$component		= component_common::get_instance(
+					$component	= component_common::get_instance(
 						$model_name,
 						$component_tipo,
 						$locator->section_id,
@@ -106,58 +104,92 @@ class media_icons extends widget_common {
 
 					$object_value = new stdClass();
 
-					// output, use the ipo output for create the items to send to compoment_info and client side
+					// output, use the IPO output for create the items to send to compoment_info and client side
 					foreach ($output as $data_map) {
 
 						// begin with empty tool_context
 							$tool_context = null;
 
 						// value
-						switch ($data_map->id) {
+							switch ($data_map->id) {
 
-							case 'id':
-								$value = $locator->section_id;
-								break;
+								case 'id':
+									$value = $locator->section_id;
+									break;
 
-							case 'tc':
-								$duration_seconds	= $component->get_duration();
-								$tc					= OptimizeTC::seg2tc($duration_seconds);
-								$value				= $tc;
-								break;
+								case 'tc':
+									// component that store duration (rsc54). Updated on file upload post-processing
+										$duration_tipo			= 'rsc54';
+										$duration_model_name	= RecordObj_dd::get_modelo_name_by_tipo($duration_tipo,true);
+										$duration_component		= component_common::get_instance(
+											$duration_model_name,
+											$duration_tipo,
+											$locator->section_id,
+											'list',
+											DEDALO_DATA_NOLAN,
+											$locator->section_tipo
+										);
+										$duration_dato = $duration_component->get_dato();
+										if (isset($duration_dato[0])) {
 
-							case 'transcription':
-							case 'indexation':
-							case 'translation':
-							default:
-								$value = null;
-								//get the section_tool of the $data_map
-								$section_tool_tipo	= $data_map->process_section_tipo;
-								$section_tool		= new RecordObj_dd($section_tool_tipo);
-								// and get the tool_name, it need to be the same that the tool_name in the section_tool (see ontology)
-								$tool_name			= $data_map->label ?? false;
-								// get the config for this tool, and get the ddo_map
-								$properties			= $section_tool->get_properties();
-								$tool_config		= $properties->tool_config->{$tool_name} ?? false;
-								$ar_tool_ddo_map	= $tool_config->ddo_map;
+											// use already stored value from DDBB
+											$tc	= $duration_dato[0];
 
-								// add the section_id to the ddo_map, only when the section_id is for components in audiovisual section. (ts doesn't has section_id)
-								for ($i=0; $i < sizeof($ar_tool_ddo_map); $i++) {
-									$current_ddo = $ar_tool_ddo_map[$i];
-									if($current_ddo->section_id==='self'){
-										$current_ddo->section_id = $locator->section_id;
-									}
-								}
-								// build the tool_context
-									if ($tool_name) {
-										$ar_tool_object	= tool_common::get_client_registered_tools([$tool_name]);
-										if (empty($ar_tool_object)) {
-											debug_log(__METHOD__." ERROR. No tool found for tool '$tool_name' in media_icons widget ", logger::ERROR);
 										}else{
-											$tool_context = tool_common::create_tool_simple_context($ar_tool_object[0], $tool_config);
+
+											// fallback to real calculation from av file
+											$duration_seconds	= $component->get_duration();
+											$tc					= OptimizeTC::seg2tc($duration_seconds);
+											$duration_component->set_dato([$tc]);
+											$duration_component->Save();
+											debug_log(__METHOD__ . PHP_EOL
+												. ' Falling back to real file duration calculation and save it ' . PHP_EOL
+												. ' section_tipo: ' . $locator->section_tipo . PHP_EOL
+												. ' section_id: ' . $locator->section_id . PHP_EOL
+												. ' tc: ' . to_string($tc)
+												, logger::WARNING
+											);
+										}
+
+									$value = $tc;
+									break;
+
+								case 'transcription':
+								case 'indexation':
+								case 'translation':
+								default:
+									$value = null;
+									//get the section_tool of the $data_map
+									$section_tool_tipo	= $data_map->process_section_tipo;
+									$section_tool		= new RecordObj_dd($section_tool_tipo);
+									// and get the tool_name, it need to be the same that the tool_name in the section_tool (see ontology)
+									$tool_name			= $data_map->label ?? false;
+									// get the config for this tool, and get the ddo_map
+									$properties			= $section_tool->get_properties();
+									$tool_config		= $properties->tool_config->{$tool_name} ?? false;
+									$ar_tool_ddo_map	= $tool_config->ddo_map;
+
+									// add the section_id to the ddo_map, only when the section_id is for components in audiovisual section. (ts doesn't has section_id)
+									for ($i=0; $i < sizeof($ar_tool_ddo_map); $i++) {
+										$current_ddo = $ar_tool_ddo_map[$i];
+										if($current_ddo->section_id==='self'){
+											$current_ddo->section_id = $locator->section_id;
 										}
 									}
-								break;
-						}
+									// build the tool_context
+										if ($tool_name) {
+											$ar_tool_object	= tool_common::get_client_registered_tools([$tool_name]);
+											if (empty($ar_tool_object)) {
+												debug_log(__METHOD__
+													." ERROR. No tool found for tool '$tool_name' in media_icons widget "
+													, logger::ERROR
+												);
+											}else{
+												$tool_context = tool_common::create_tool_simple_context($ar_tool_object[0], $tool_config);
+											}
+										}
+									break;
+							}//end switch ($data_map->id)
 
 						// get the current row id and the items into the $result
 							$current_id = $data_map->id;
@@ -166,18 +198,18 @@ class media_icons extends widget_common {
 								$current_data->widget		= get_class($this);
 								$current_data->key			= $key; // ipo key
 								$current_data->id			= $current_id;
-								if (isset($value)) {
-								$current_data->value		= $value;
-								}
 								$current_data->locator		= $locator;
+								if (isset($value)) {
+									$current_data->value	= $value;
+								}
 								if (isset($tool_context)) {
-								$current_data->tool_context	= $tool_context;
+									$current_data->tool_context	= $tool_context;
 								}
 
 							$object_value->{$current_id} = $current_data;
 							$object_value->widget = get_class($this);
 							// $dato[] = $current_data;
-					}
+					}//end foreach ($output as $data_map)
 
 					// set the final data to the widget
 					$dato[] = $object_value;

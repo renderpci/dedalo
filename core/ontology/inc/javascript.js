@@ -1,4 +1,5 @@
-// JavaScript Document
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
+
 
 // control de documento modificado
 var modificado =  0 ;
@@ -647,3 +648,7 @@ function var_dump(obj) {
       return "Type: "+typeof(obj)+"\nValue: "+obj;
    }
 }//end function var_dump
+
+
+
+// @license-end

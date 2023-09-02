@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, tool_dummy */
 /*eslint no-undef: "error"*/
 
@@ -11,7 +12,7 @@
 
 
 /**
-* render_tool_dev_template
+* RENDER_TOOL_DEV_TEMPLATE
 * Manages the component's logic and appearance in client side
 */
 export const render_tool_dev_template = function() {
@@ -26,7 +27,7 @@ export const render_tool_dev_template = function() {
 * Render tool DOM nodes
 * This function is called by render common attached in 'tool_dummy.js'
 * @param object options
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_tool_dev_template.prototype.edit = async function(options) {
 
@@ -56,7 +57,7 @@ render_tool_dev_template.prototype.edit = async function(options) {
 * GET_CONTENT_DATA
 * Render tool body or 'content_data'
 * @param instance self
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = async function(self) {
 
@@ -115,7 +116,10 @@ export const add_component_sample = async (self, component_container, lang) => {
 			return false
 		}
 
-	const component = await self.load_component(lang)
+	const component = await self.load_component_sample({
+		lang	: self,
+		ddo		: self.main_element
+	})
 	const node 		= await component.render()
 
 	// clean container
@@ -131,3 +135,5 @@ export const add_component_sample = async (self, component_container, lang) => {
 }//end add_component_sample
 
 
+
+// @license-end

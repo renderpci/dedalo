@@ -1,14 +1,13 @@
 /**
-* TOOL_numismatic_epigraphy
+* TOOL_NUMISMATIC_ORDER_COINS
 *
 * Loaded on tool init
 */
-
 // imports
-	@import '../../../core/page/css/layout/vars';
+@import (once) '../../../core/page/css/layout/vars';
 
 // local vars
-	@color_bg_tool: #fd7f26; // @color_orange_dedalo;
+@color_bg_tool: #fd7f26; // @color_orange_dedalo;
 
 
 
@@ -430,6 +429,7 @@
 								// first level co
 								>.column {
 									height: inherit;
+									width: inherit;
 								}
 
 								.column {
@@ -486,7 +486,7 @@
 // tool_numismatic_epigraphy_icon
 	.tool_numisdata_order_coins_icon {
 		background-color: @color_bg_tool;
-		background-image: url(../../../themes/default/icon_transcription_hover.svg);
+		background-image: url('../../themes/default/icon_transcription_hover.svg');
 		// Adjust icon size
 		background-size: 18px !important;
 	    background-position-y: 3px !important;
@@ -498,9 +498,7 @@
 /* HEADER
 ------------------------------------------------------ */
 	.header_tool {
-
-		}
-		.header_tool #header_info {
+		#header_info {
 			display:block;
 			float: left;
 			position: relative;
@@ -508,3 +506,4 @@
 			top: 8px;
 			line-height: 1em;
 		}
+	}

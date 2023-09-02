@@ -1,7 +1,7 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
+
 /*eslint no-undef: "error"*/
 /*eslint no-unused-vars: "error"*/
-
-
 
 
 // imports
@@ -308,7 +308,7 @@ const get_table_columns = function(current_data) {
 /**
 * GET_DIV_CONTAINER
 * @param object
-* @return DOM node div_container (div)
+* @return HTMLElement div_container
 */
 	// const get_row_container = function() {
 
@@ -345,8 +345,12 @@ const get_header_column = function(current_data) {
 */
 const get_text_column = function(current_data) {
 
+	const records_separator = (current_data.records_separator)
+		? current_data.records_separator
+		: ' | '
+
 	const text = current_data.value && Array.isArray(current_data.value)
-		? current_data.value.join(' ')
+		? current_data.value.join(records_separator)
 		: (current_data.value || '')
 
 	// value
@@ -427,3 +431,7 @@ const get_section_id_column = function(current_data) {
 
 	return value
 }//end get_section_id_column
+
+
+
+// @license-end

@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -23,7 +24,7 @@ export const render_tags= function() {
 /**
 * EDIT
 * Render node for use in modes: edit, edit_in_list
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_tags.prototype.edit = async function(options) {
 
@@ -50,7 +51,7 @@ render_tags.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data_edit = async function(self) {
 
@@ -90,7 +91,7 @@ const get_content_data_edit = async function(self) {
 
 /**
 * GET_VALUE_ELEMENT
-* @return DOM node li
+* @return HTMLElement li
 */
 const get_value_element = (i, data, values_container, self) => {
 
@@ -112,11 +113,6 @@ const get_value_element = (i, data, values_container, self) => {
 		)
 		li.appendChild(total_tc)
 		reactive_items.push(total_tc)
-
-	// ar_tc_wrong
-		// const ar_tc_wrong = item_value_factory('ar_tc_wrong', get_label.etiqueta_revisar, data)
-		// li.appendChild(ar_tc_wrong)
-		// reactive_items.push(ar_tc_wrong)
 
 	// total_index
 		const total_index = item_value_factory(
@@ -223,7 +219,7 @@ const get_value_element = (i, data, values_container, self) => {
 * @param string id (like 'total_real_chars')
 * @param string label (like 'CHARS REAL')
 * @param array data
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 * 	ready to update using wrapper.value.innerHTML = 'my value'
 */
 const item_value_factory = function(id, label, data) {
@@ -261,3 +257,7 @@ const item_value_factory = function(id, label, data) {
 
 	return wrapper
 }//end item_value_factory
+
+
+
+// @license-end

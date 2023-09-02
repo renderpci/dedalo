@@ -5,39 +5,105 @@
 */
 .component_3d {
 
-	&.edit, &.view_player {
+	// shared quality_selector
+	.quality_selector {
+		margin: 0px;
+		position: absolute;
+		top: 0.5rem;
+		width: 5rem;
+		right: 1rem;
+		height: 1.25rem;
+		font-size: 0.9rem;
+		border: 0px;
+		outline: none;
+		padding: 0px;
+		z-index: 1;
 
-		&.view_player {
-			box-shadow: none;
-			display: block;
+		.fullscreen& {
+			width: auto !important;
+		}
+	}
 
-			.label {
-				display: none;
-			}
-			>.content_data {
-				display: grid;
-				height: 100%;
+	&.disabled_component {
+		.content_data.component {
+			pointer-events: unset !important;
+		}
+	}
+
+	&.edit {
+
+		&.fullscreen {
+			>.content_data >.content_value {
+				height: 100% !important;
 			}
 		}
 
 		>.content_data {
-			justify-content: center;
-			max-height: @media_max_height;
-			min-height: @media_min_height;
 
-			@media screen and (max-width: @width_break_point_1) {
-				min-height: unset;
-			}
+			// moved to layout.less.media_wrapper.edit
+				// // Note that height is always the media min height (392px)
+				// // (!) Do not use max o min height here to prevent to affect canvas reference size
+				// height: @media_min_height;
+				// display: table;
 
-			// video_container
+				// justify-content: center;
+				// max-height: @media_max_height;
+				// min-height: @media_min_height;
+				// overflow: hidden;
+
+				// @media screen and (max-width: @width_break_point_1) {
+				// 	min-height: unset;
+				// }
+
+			// 3d_container
 			>.content_value {
-				background-color: #faf8fc;
-				height: 404px;
-				width: 100%;
 
-				@media screen and (max-width: @width_break_point_1) {
-					height: unset;
-					max-height: 404px;
+				// moved to layout.less.media_wrapper.edit
+					// display: flex;
+					// justify-content: center;
+					// width: 100%;
+					// height: inherit;
+					// flex-grow: 1;
+					// flex-shrink: 1;
+					// top: 0;
+					// min-height: @media_min_height; // 404px;
+
+					// resize: vertical;
+					// overflow: hidden;
+
+					// @media screen and (max-width: @width_break_point_1) {
+					// 	height: unset;
+					// 	max-height: 600px;
+					// }
+
+				canvas {
+					// background-color: #f5f5f5;
+					max-width: 100%;
+				}
+				.canvas[resize] {
+					// height: 100%;
+					// width: 100%;
+				}
+
+				.axes {
+					width: 100px;
+					height: 100px;
+					margin: 20px;
+					padding: 0px;
+					position: absolute;
+					left: 0px;
+					bottom: 0px;
+					z-index: 10;
+					pointer-events: none;
+				}
+				.gui-wrapper {
+					position: absolute;
+					top: 0;
+					right: 0;
+					bottom: 0;
+					overflow: auto;
+					max-height: 100%;
+					height: fit-content;
 				}
 			}
 
@@ -60,38 +126,31 @@
 				object-position: center;
 				align-self: center;
 
-				// on focus adds a soft shadow and outline
+				on focus adds a soft shadow and outline
 				&:focus {
 					.hilite_mixin(-1px);
 				}
 			}
 
-			.quality_selector {
-				margin: 0px;
-				position: absolute;
-				// bottom: 0;
-				// margin-left: 1em;
-				// width: calc(100% - 2em);
-				// margin-bottom: 1em;
-				// background-color: @color_grey_dark;
-				// opacity: 1;
-				// color: white;
-				top: 0.5rem;
-				width: 5rem;
-				right: 1rem;
-				height: 1.25rem;
-				font-size: 0.9rem;
-				border: 0px;
-				outline: none;
-				padding: 0px;
-				z-index: 1;
 
-				.fullscreen& {
-					width: auto !important;
-				}
-			}
 		}
 	}//end .edit
+
+
+	&.list {
+		height: @view_line_height;
+		width: 100%;
+		cursor: pointer;
+
+		img {
+			display: block;
+			padding: 0;
+			width: 100%;
+			height: 100%;
+			object-fit: contain;
+			object-position: center;
+		}
+	}
 
 
 	// player 3d_control_buttons
@@ -118,26 +177,20 @@
 				margin-right: 0px;
 			}
 		}
-		.smpte {
-			// width: 9rem;
-			// padding-left: 0.75rem;
-			// padding-right: 0.75rem;
-			// font-size: 1.2rem;
-			color: #fd7f26;
-			padding: 0px;
-			margin-left: 1rem;
-			margin-right: 1rem;
-			font-family: Verdana, Geneva, sans-serif;
-			font-size: 1.65rem;
-			width: auto;
-			height: 1em;
-			display: inline-block;
-			vertical-align: baseline;
-			text-shadow: 1px 2px 2px #b9b9b9;
-		}
+
 	}//end .threeD_control_buttons
 
 
+	&.view_viewer {
+		height: 100%;
+
+		.content_value.media_content_value {
+			height: 93.4vh;
+		}
+	}
+
+
+	// used ??????
 	&.viewer {
 		display: flex;
 		align-items: center;

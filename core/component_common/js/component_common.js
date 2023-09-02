@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /* global get_label, SHOW_DEBUG, SHOW_DEVELOPER */
 /*eslint no-undef: "error"*/
 
@@ -12,6 +13,7 @@
 	import {set_context_vars, create_source} from '../../common/js/common.js'
 	import {events_subscription} from './events_subscription.js'
 	import {ui} from '../../common/js/ui.js'
+	import {render_relogin} from '../../login/js/render_login.js'
 
 
 
@@ -63,15 +65,12 @@ component_common.prototype.init = async function(options) {
 	// var containers
 		self.events_tokens	= [] // array of events of current component
 		self.ar_instances	= [] // array of children instances of current instance (used for autocomplete, etc.)
-		// self.tools		= []
-		//rqo
-		// self.rqo			= {}
 
 	// view
 		self.view = options.view
 
 	// caller pointer
-		self.caller = options.caller
+		self.caller			= options.caller
 
 	// standalone
 		// Set the component to manage his data by itself, calling to the database and it doesn't share his data with other through datum
@@ -156,7 +155,7 @@ component_common.prototype.init = async function(options) {
 		//event_manager.publish('component_init', self)
 
 	// status update
-		self.status = 'initiated'
+		self.status = 'initialized'
 
 
 	return true
@@ -169,9 +168,9 @@ component_common.prototype.init = async function(options) {
 * Set the main component properties.
 * Could be from database context and data or injected by caller section, tools, etc.
 * @param bool autoload = false
-* @return object self
+* @return bool
 */
-component_common.prototype.build = async function(autoload=false){
+component_common.prototype.build = async function(autoload=false) {
 	// const t0 = performance.now()
 
 	const self = this
@@ -245,6 +244,7 @@ component_common.prototype.build = async function(autoload=false){
 
 	// update instance properties from context:
 	// 	type, label, tools, value_separator, permissions
+	// Note that 'show_interface' is assigned here with criteria: self.context.properties.show_interface || self.request_config_object.show_interface
 		set_context_vars(self, self.context)
 
 	// subscribe to the observer events (important: only once)
@@ -261,7 +261,8 @@ component_common.prototype.build = async function(autoload=false){
 
 	// dd_console(`__Time to build component: ${(performance.now()-t0).toFixed(3)} ms`,'DEBUG', [self.tipo,self.model])
 
-	return self
+
+	return true
 }//end component_common.prototype.build
 
 
@@ -302,16 +303,19 @@ export const init_events_subscription = function(self) {
 			const observe_length = observe.length
 			for (let i = observe_length - 1; i >= 0; i--) {
 
+				// Ignore non client events (server events for example)
 				if(!observe[i].client){
 					continue;
 				}
+
 				const component_tipo	= observe[i].component_tipo // string target event component tipo
 				const event_name		= observe[i].client.event || null // string event name as 'update_data'
 				const perform			= observe[i].client.perform || null // string action to exec like 'update_data'
 				const perform_function 	= perform
 					? perform.function
 					: null
-				if(perform && perform_function && typeof self[perform_function]==='function'){
+				if(perform && perform_function && typeof self[perform_function]==='function') {
+
 					// the event will listen the id_base ( section_tipo +'_'+ section_id +'_'+ component_tipo)
 					// the id_base is built when the component is instantiated
 					// this event can be fired by:
@@ -319,13 +323,16 @@ export const init_events_subscription = function(self) {
 					// or the sort format with the id_base of the observable component:
 					// 		event_manager.publish(event +'_'+ self.id_base, data_to_send)
 					const id_base = self.section_tipo +'_'+ self.section_id +'_'+ component_tipo
+
 					// debug
-						// console.log('SUBSCRIBE [init_events_subscription] event:', event_name +'_'+ id_base);
-						// console.log("SUBSCRIBE info ",
-						// 	'self.id:', self.id,
-						// 	'id_base:', id_base,
-						// 	'perform:', perform
-						// );
+						if(SHOW_DEBUG===true) {
+							console.log('SUBSCRIBE [init_events_subscription] event:', event_name +'_'+ id_base);
+							// console.log("SUBSCRIBE info ",
+							// 	'self.id:', self.id,
+							// 	'id_base:', id_base,
+							// 	'perform:', perform
+							// );
+						}
 
 					self.events_tokens.push(
 						event_manager.subscribe(event_name +'_'+ id_base, self[perform_function].bind(self))
@@ -357,7 +364,7 @@ export const init_events_subscription = function(self) {
 * SAVE
 * Exec a save action calling the API
 * Returns the updated data after save (useful to re-assign data value array keys)
-* @param object changed_data
+* @param array new_changed_data
 * [{
 * 	action : "update",
 * 	key : 0,
@@ -365,18 +372,19 @@ export const init_events_subscription = function(self) {
 * }]
 * @return promise save_promise
 */
-component_common.prototype.save = async function(changed_data) {
+component_common.prototype.save = async function(new_changed_data) {
 
 	const self = this
 
-	// fallback to self.changed_data if not received
-		changed_data = changed_data || self.changed_data
+	// fallback to self.data.changed_data if not received
+		const changed_data = new_changed_data || self.data.changed_data
 
 	// check changed_data format
 		if (typeof changed_data==='undefined' || !Array.isArray(changed_data) || changed_data.length<1) {
 			if(SHOW_DEBUG===true) {
 				console.warn("Invalid changed_data [stop save]:", changed_data)
 				console.trace()
+				console.log('self:', self);
 			}
 			const msg = "Ignored save. changed_data is undefined or empty!"
 			// console.error('msg:', msg);
@@ -456,24 +464,23 @@ component_common.prototype.save = async function(changed_data) {
 					}
 
 				// data_manager API request
+				// Using worker increments about 22%. Sample in master: from 208 to 255 ms
 					const api_response = await data_manager.request({
-						body : rqo
+						use_worker	: false,
+						body		: rqo
 					})
-					if(SHOW_DEVELOPER===true) {
-						dd_console(`[component_common.save] api_response ${self.model} ${self.tipo}`, 'DEBUG', api_response)
-					}
-				// debug
+					// debug
 					if(SHOW_DEBUG===true) {
+						dd_console(`[component_common.save] api_response ${self.model} ${self.tipo}`, 'DEBUG', api_response)
 						if (api_response.result) {
 							// const changed_data_value = typeof changed_data.value!=="undefined" ? changed_data.value : 'Value not available'
 							// const api_response_data_value = typeof api_response.result.data[0]!=="undefined" ? api_response.result.data[0] : 'Value not available'
 							const changed_data_length = changed_data.length
 							for (let i = 0; i < changed_data_length; i++) {
 								const item = changed_data[i]
-								console.log(`[component_common.save] action:'${item.action}' lang:'${self.context.lang}', key:'${item.key}'`);
+								// console.log(`[component_common.save] action:'${item.action}' lang:'${self.context.lang}', key:'${item.key}, i:'${item.i}'`);
 							}
-							// console.log(`[component_common.save] api_response value:`, api_response_data_value);
-							console.log('[component_common.save] api_response:', api_response);
+							// console.log('[component_common.save] api_response:', api_response);
 						}else{
 							console.error('[component_common.save] api_response ERROR:',api_response);
 						}
@@ -501,6 +508,7 @@ component_common.prototype.save = async function(changed_data) {
 				self.node.classList.remove('loading')
 			}
 
+
 	// check result for errors
 	// result expected is current section_id. False is returned if a problem found
 		const result = response.result
@@ -510,14 +518,33 @@ component_common.prototype.save = async function(changed_data) {
 
 			self.node.classList.add('error')
 
-			if (response.error) {
-				console.error(response.error)
-			}
-			if (response.msg) {
-				alert('Error on save self '+self.model+' data: \n' + response.msg)
-			}
+			switch (response.error) {
+				case 'not_logged':
 
-			console.error('ERROR response:',response);
+					// display login window
+					await render_relogin({
+						on_success : function(){
+
+							// login success actions
+
+							// restore styles
+							self.node.classList.remove('error')
+
+							// force save again this component
+							self.save(changed_data)
+						}
+					})
+					break;
+
+				default:
+					// write message to the console
+					console.error(response.error)
+					if (response.msg) {
+						alert('Error on save self '+self.model+'. msg: \n' + response.msg)
+					}
+					break;
+			}
+			// console.error('ERROR response:',response);
 
 		}else{
 
@@ -526,7 +553,9 @@ component_common.prototype.save = async function(changed_data) {
 			// data
 				const data = result.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id)
 				if(!data){
-					console.warn('data not found in result:', result);
+					if(SHOW_DEBUG===true) {
+						console.log(`Warn: data not found for ${self.tipo} in API result. Could be an error or just an empty data case. API result:`, result);
+					}
 				}
 				self.data = data || {}
 
@@ -710,8 +739,7 @@ component_common.prototype.update_datum = function(new_data) {
 			// new way multi. Iterate data and instances with equal data
 			for (let i = new_data_length - 1; i >= 0; i--) {
 
-				const data_item			= new_data[i]
-				// console.log("data_item:",data_item);
+				const data_item = new_data[i]
 
 				const current_instances	= ar_instances.filter(el =>
 					el.tipo===data_item.tipo &&
@@ -735,7 +763,16 @@ component_common.prototype.update_datum = function(new_data) {
 						// console.log("____ updated instance data:", inst);
 					}
 				}else{
-					console.warn(`(!) [update_datum] Not found current instance: tipo:${data_item.tipo}, section_tipo:${data_item.section_tipo}, section_id:${data_item.section_id} in instances:`, current_instances)
+					console.warn(`(!) [update_datum] The instance to update was not found:
+						tipo: ${data_item.tipo},
+						section_tipo: ${data_item.section_tipo},
+						section_id: ${data_item.section_id},
+						lang: ${data_item.lang}
+						data_item:`,
+						data_item,
+						' in instances:',
+						clone(current_instances)
+					)
 				}
 			}
 
@@ -868,17 +905,18 @@ component_common.prototype.change_value = async function(options) {
 
 	// options
 		const changed_data			= options.changed_data
-		const action				= changed_data.action
 		const label					= options.label
 		const refresh				= typeof options.refresh!=='undefined' ? options.refresh : false
 		const build_autoload		= typeof options.build_autoload!=='undefined' ? options.build_autoload : false
 		const custom_remove_dialog	= options.remove_dialog // undefined|function|bool
 
+	// check changed_data valid format
 		if (!Array.isArray(changed_data)) {
 			throw `Exception: changed_data is not as expected (array). ` + typeof changed_data;
 		}
 
 	// remove dialog. Check the remove dialog (default or sent by caller )user confirmation prevents remove accidentally
+		const action = changed_data[0]
 		if (action==='remove') {
 
 			// generate default remove dialog to confirm the remove option is correct
@@ -927,6 +965,12 @@ component_common.prototype.change_value = async function(options) {
 				self.data.changed_data = []
 			}
 
+		// update datum
+			if(self.model==='component_portal' && self.standalone===true){
+				self.datum.context	= api_response.result.context
+				self.datum.data		= api_response.result.data
+			}
+
 		// refresh
 			if (refresh===true) {
 				await self.refresh({
@@ -938,7 +982,8 @@ component_common.prototype.change_value = async function(options) {
 		self.status = prev_status
 
 	// event to update the DOM elements of the instance
-		event_manager.publish('update_value_'+self.id_base, {
+		const id_base_lang = self.id_base + '_' + self.lang
+		event_manager.publish('update_value_'+id_base_lang, {
 			caller			: self,
 			changed_data	: changed_data
 		})
@@ -1013,9 +1058,8 @@ component_common.prototype.update_node_contents = async (current_node, new_node)
 * Render a fresh full element node in the new mode
 * Replace every old placed DOM node with the new one
 * Active element (using event manager publish)
-* @param string new_node
-* @param bool autoload
-* @return bool true
+* @param object options
+* @return bool
 */
 component_common.prototype.change_mode = async function(options) {
 
@@ -1034,6 +1078,16 @@ component_common.prototype.change_mode = async function(options) {
 			: mode==='edit'
 				? 'line'
 				: self.mode
+
+	// check interface and permissions
+		if (self.show_interface.read_only!==true) {
+			console.error('Error. calling component change_mode from show_interface.read_only = true ');
+			return false
+		}
+		if (self.permissions<1) {
+			console.error('Error. calling component change_mode with permissions: ',self.permissions);
+			return false
+		}
 
 	// short vars
 		// set
@@ -1222,3 +1276,85 @@ component_common.prototype.set_changed_data = function(changed_data_item) {
 
 	return true
 }//end set_changed_data
+
+
+
+/**
+* CHECK_UNSAVED_DATA
+* If window.unsaved_data===true, iterate all component instances
+* searching unsaved data to force save it
+* Customized confirm message is enable when is not possible to save the changed component
+* @see page.js beforeunload event
+* @see page.js mousedown event
+* @see page.js user_navigation event
+* @see section.js navigate method
+* @see dd-modal.js _closeModal method
+* @see ui component activate method
+* @param object options
+* {
+* 	confirm_msg: "Discard unsaved changes?"
+* }
+* @return bool
+*/
+export const check_unsaved_data = async function(options={}) {
+
+	// options
+		const confirm_msg = options.confirm_msg ||
+							(get_label.discard_changes || 'Discard unsaved changes?')
+
+	// unsaved_data case
+	// Checks for unsaved components usually happens in component_text_area editions
+	// because the delay (500 ms) used to set as changed
+		if (typeof window.unsaved_data!=='undefined' && window.unsaved_data===true) {
+			// look in all component instances for unsaved data
+			await save_unsaved_components()
+			// reset unsaved_data value (unsaved component data will be saved before)
+			window.unsaved_data = false
+		}
+
+	// unsaved_data value check
+		if (window.unsaved_data===true) {
+
+			// let user decide if continue loosing unsaved changes
+			if ( !confirm(confirm_msg) ) {
+				return false
+			}
+
+			// reset unsaved_data state by the user
+			window.unsaved_data = false
+		}
+
+	return true
+}//end check_unsaved_data
+
+
+
+/**
+* SAVE_UNSAVED_COMPONENTS
+* Iterate all instances and save component data if data.changed_data is filled
+* @return bool
+*/
+export const save_unsaved_components = async function() {
+
+	const ar_instances = instances.get_all_instances()
+	const ar_instances_length = ar_instances.length
+	for (let i = 0; i < ar_instances_length; i++) {
+
+		const item = ar_instances[i]
+		if (item.type==='component') {
+			if (item.data.changed_data && item.data.changed_data.length>0) {
+				console.log('Saving component unsaved', item);
+				await item.save()
+
+				return true
+			}
+		}
+	}
+
+
+	return true
+}//end save_unsaved_components
+
+
+
+// @license-end

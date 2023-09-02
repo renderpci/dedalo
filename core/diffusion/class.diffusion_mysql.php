@@ -1,24 +1,26 @@
 <?php
 // Loads parent class diffusion_sql
 include_once(DEDALO_CORE_PATH . '/diffusion/class.diffusion_sql.php');
-/*
+/**
 * CLASS DIFFUSION_MYSQL
-* Se encarga de gestionar la comunicación y el trasvase de datos desde Dédalo 4 hacia bases de datos de diffusión
-* basados en modelos sql convencionales (tipo dedalo3)
+* It is in charge of managing the communication and the transfer of data from Dédalo
+* to diffusion databases based on conventional MYSQL models
 */
 class diffusion_mysql extends diffusion_sql  {
+
 
 
 	static $insert_id;
 
 
+
 	/**
 	* CONSTRUCT
-	* @param object $options . Default null
+	* @param object $options = null
 	*/
-	function __construct($options=null) {
+	function __construct(?object $options=null) {
 
-		parent::__construct($options=null);
+		parent::__construct($options);
 	}//end __construct
 
 
@@ -45,47 +47,56 @@ class diffusion_mysql extends diffusion_sql  {
 	* Returns false on failure. For successful queries which produce a result set, such as
 	* SELECT, SHOW, DESCRIBE or EXPLAIN, mysqli_query() will return a mysqli_result object.
 	* For other successful queries, mysqli_query() will return true.
-	* @return object|resource
+	* @return object|resource|bool
 	*/
-	public static function exec_mysql_query(string $sql, ?string $table_name=null, $database_name=false, bool $multi_query=false) {
+	public static function exec_mysql_query(string $sql, ?string $table_name=null, $database_name=false, bool $multi_query=false) : mixed {
 
-		#debug_log(__METHOD__." Connecting database: $database_name - table: $table_name ".to_string(), logger::DEBUG);
+		// empty database_name case
+			if (empty($database_name)) {
+				debug_log(__METHOD__
+					." Error. database name is mandatory "
+					, logger::ERROR
+				);
+				return false;
+			}
 
-		if (empty($database_name)) {
-			throw new Exception("Error Processing Request. database_name is mandatory !", 1);
-		}
+		try {
 
-		$mysql_conn = self::get_conn($database_name);
+			$mysql_conn = self::get_conn($database_name);
 
-		// debug
-			// error_log("++++++++++ sql 1 : ".$sql);
+			// result
+			$result = ($multi_query===true)
+				? $mysql_conn->multi_query( $sql )
+				: $mysql_conn->query( $sql );
+			if ($result===false || !empty($mysql_conn->error)) {
+				debug_log(
+					__METHOD__.' INFO: Data skipped in SQL table : '. $table_name . PHP_EOL
+					.' error: '. $mysql_conn->error,
+					logger::ERROR
+				);
+			}
+			// $mysql_conn->close();
 
-		// result
-		$result = ($multi_query===true)
-			? $mysql_conn->multi_query( $sql )
-			: $mysql_conn->query( $sql );
+			if( strpos($sql, 'INSERT')!==false ) {
+				self::$insert_id = $mysql_conn->insert_id;
+			}
 
-		if ($result===false || !empty($mysql_conn->error)) {
-			// debug_log(__METHOD__." ERROR for database: $database_name : error: ".to_string($mysql_conn->error), logger::ERROR);
-			// if(SHOW_DEBUG===true) {
-			// 	#dump( $mysql_conn->error, "error".to_string() );
-			// 	// error_log("++++++++++ SQL ERROR QUERY : ".$sql);
-			// 	// error_log("error_log sql: ".$sql);
-			// 	dump($mysql_conn->error, ' sql ERROR: query ++ '.PHP_EOL.to_string($sql).PHP_EOL);
-			// 	#throw new Exception("Error Processing Request. MySQL query_insert_data error ".to_string($mysql_conn->error), 1);
-			// }
-			// $msg = "INFO: Data skipped in SQL table : ". $table_name .' : '. to_string($mysql_conn->error);
-			debug_log(
-				__METHOD__.' INFO: Data skipped in SQL table : '. $table_name .' , error: '. $mysql_conn->error,
-				logger::ERROR
+		} catch (Exception $e) {
+
+			error_log( 'Caught exception: ' . $e->getMessage() );
+
+			debug_log(__METHOD__
+				. " database_name " . PHP_EOL
+				. ' database_name: ' .$database_name .PHP_EOL
+				. ' msg: ' . $e->getMessage() .PHP_EOL
+				. ' connection error: '. ((isset($mysql_conn) && isset($mysql_conn->error)) ? $mysql_conn->error : 'Unknown') .PHP_EOL
+				. ' sql: '.$sql
+				, logger::ERROR
 			);
-		}
-		#$mysql_conn->close();
 
-		if( strpos($sql, 'INSERT')!==false ) {
-			self::$insert_id = $mysql_conn->insert_id;
-			#dump(self::$insert_id, ' insert_id ++ '.to_string($sql));
+			$result = false;
 		}
+
 
 		return $result;
 	}//end exec_mysql_query
@@ -110,50 +121,66 @@ class diffusion_mysql extends diffusion_sql  {
     *                [field_options] => 12
     *            )   ..
     * )
-    * @return bool true
+    * @return bool
 	*/
 	public static function create_table(array $table_data, bool $drop=true) : bool {
 
-		$database_name	= $table_data['database_name'];	# nombre base de datos
-		$table_name		= $table_data['table_name'];	# nombre tabla
-		$ar_fields		= $table_data['ar_fields'];		# campos de la tabla
-		$engine			= isset($table_data['engine']) ? $table_data['engine'] : 'MyISAM';
-		$table_type		= $table_data['table_type'];	# table type: default | tm
+		// short vars
+			$database_name	= $table_data['database_name'];	# nombre base de datos
+			$table_name		= $table_data['table_name'];	# nombre tabla
+			$ar_fields		= $table_data['ar_fields'];		# campos de la tabla
+			$engine			= isset($table_data['engine']) ? $table_data['engine'] : 'MyISAM';
+			$table_type		= $table_data['table_type'];	# table type: default | tm
 
-		#
-		# DROP (default is true)
-			if($drop===true) {
-				$sql_query  = (string)'';
-				$sql_query .= "DROP TABLE IF EXISTS `$database_name`.`$table_name` ; ";
-				#
-				# EXEC SINGLE QUERY TO DATABASE
-				$result = self::exec_mysql_query( $sql_query, $table_name, $database_name );
+		// database_name is mandatory
+			if (empty($database_name)) {
+				debug_log(__METHOD__
+					. " Error on create_table: database name is mandatory ". PHP_EOL
+					. 'table_data: ' . to_string($table_data)
+					, logger::ERROR
+				);
+				return false;
 			}
 
-		#
-		# CREATE
-			$sql_query  = (string)'';
-			$sql_query .= "\nCREATE TABLE `$database_name`.`$table_name` (";
+
+		// DROP (default is true)
+			if($drop===true) {
+				$sql_query = "DROP TABLE IF EXISTS `$database_name`.`$table_name`;";
+				// exec single query to database
+				$result = self::exec_mysql_query(
+					$sql_query,
+					$table_name,
+					$database_name
+				);
+			}
+
+		// create
+			$sql_query = "CREATE TABLE `$database_name`.`$table_name` (";
+
 			// generate fields
 			$sql_query .= self::generate_fields($ar_fields);
 			$sql_query .= ",\n";
+
 			// generate keys
 			$sql_query .= self::generate_keys($ar_fields, $table_type);
 			switch ($engine) {
 				case 'InnoDB':
-					$sql_query .= "\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Self-generated table in Dédalo4 for diffusion' AUTO_INCREMENT=1 ;\n";
+					$sql_query .= "\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Self-generated table in Dédalo for diffusion' AUTO_INCREMENT=1 ;\n";
 					break;
 				case 'MyISAM':
 				default:
-					$sql_query .= "\n) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci PACK_KEYS=0 COMMENT='Self-generated table in Dédalo4 for diffusion' AUTO_INCREMENT=1 ;\n";
+					$sql_query .= "\n) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci PACK_KEYS=0 COMMENT='Self-generated table in Dédalo for diffusion' AUTO_INCREMENT=1 ;\n";
 					break;
 			}
 
-			#
-			# EXEC SINGLE QUERY TO DATABASE
+			// exec single query to database
 			$result = self::exec_mysql_query( $sql_query, $table_name, $database_name );
 			if ($result===false) {
-				debug_log(__METHOD__." Error on created new table $database_name.$table_name ".to_string($sql_query), logger::ERROR);
+				debug_log(__METHOD__
+					." Error on created new table $database_name.$table_name " .PHP_EOL
+					.to_string($sql_query)
+					, logger::ERROR
+				);
 			}else{
 				debug_log(__METHOD__." Created new table $database_name.$table_name ".to_string($sql_query), logger::DEBUG);
 			}
@@ -209,7 +236,7 @@ class diffusion_mysql extends diffusion_sql  {
 			}
 
 		// SQL add column
-		$sql_query = 'ALTER TABLE `'.$table_name.'` ADD '.$column_sql .', '.$index_sql .';';
+		$sql_query = 'ALTER TABLE '.$database_name.'.`'.$table_name.'` ADD '.$column_sql .', '.$index_sql .';';
 
 		// exec single query to database
 		$result = self::exec_mysql_query(
@@ -218,9 +245,17 @@ class diffusion_mysql extends diffusion_sql  {
 			$database_name
 		);
 		if ($result===false) {
-			debug_log(__METHOD__." Erroro on created new column $database_name.$table_name $field_name ".to_string($sql_query), logger::ERROR);
+			debug_log(__METHOD__
+				. " Err on created new column $database_name.$table_name $field_name "
+				.'sql_query:' . to_string($sql_query)
+				, logger::ERROR
+			);
 		}else{
-			debug_log(__METHOD__." Created new column $database_name.$table_name $field_name ".to_string($sql_query), logger::WARNING);
+			debug_log(__METHOD__
+				. " Created new column $database_name.$table_name $field_name "
+				. 'sql_query:' . to_string($sql_query)
+				, logger::WARNING
+			);
 		}
 
 
@@ -522,14 +557,18 @@ class diffusion_mysql extends diffusion_sql  {
 	/**
 	* SAVE_RECORD
 	* Insert / Update one MySQL row (one for lang)
+	* @param object $request_options
 	* @return object $response
 	*/
-	public static function save_record( $request_options ) : OBJECT {
-		if(SHOW_DEBUG===true) $start_time=microtime(1);
+	public static function save_record( object $request_options ) : object {
+		if(SHOW_DEBUG===true) {
+			$start_time=start_time();
+		}
 
-		$response = new stdClass();
-			$response->result = false;
-			$response->msg 	  = array();
+		// response default
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= array();
 
 		// options
 			$options = new stdClass();
@@ -551,6 +590,9 @@ class diffusion_mysql extends diffusion_sql  {
 			$section_tipo			= $options->section_tipo;
 			$diffusion_element_tipo	= $options->diffusion_element_tipo;
 
+		// conn
+			$conn = DBi::_getConnection_mysql();
+
 		// check mandatory vars
 			if (empty($database_name) || empty($table_name)) {
 				throw new Exception("Error Processing Request. Database / table_name name not found (database_name:$database_name / table_name:$table_name)", 1);
@@ -559,6 +601,7 @@ class diffusion_mysql extends diffusion_sql  {
 		// create table if not exits
 			static $ar_verified_tables;
 			if ( !in_array($table_name, (array)$ar_verified_tables) ) {
+
 				if(!self::table_exits($database_name, $table_name)) {
 
 					// table do not exists case. Create a new one
@@ -590,22 +633,30 @@ class diffusion_mysql extends diffusion_sql  {
 					#}
 
 					// table create
-						self::create_table( 	array('database_name'	=> $database_name,
-													  'table_name'		=> $table_name,
-													  'engine'			=> $engine,
-													  'ar_fields'		=> $create_table_ar_fields['ar_fields'],
-													  'table_type'		=> 'default'
-													  ), true);
+						self::create_table(
+							[
+								'database_name'	=> $database_name,
+								'table_name'	=> $table_name,
+								'engine'		=> $engine,
+								'ar_fields'		=> $create_table_ar_fields['ar_fields'],
+								'table_type'	=> 'default'
+							],
+							true
+						);
 
 					// table dedalo_diffusion_tm create
 						if(defined('DEDALO_DIFFUSION_TM') && DEDALO_DIFFUSION_TM){
-							#create the BBDD clone version for store all publications versions (time marks with unix time stamp)
-							self::create_table( array('database_name'	=> $database_name,
-													  'table_name'		=> 'tm_'.$table_name,
-													  'engine'			=> $engine,
-													  'ar_fields'		=> $create_table_ar_fields['ar_fields'],
-													  'table_type'		=> 'tm'
-													  ), false);
+							// create the BBDD clone version for store all publications versions (time marks with UNIX time stamp)
+							self::create_table(
+								[
+									'database_name'	=> $database_name,
+									'table_name'	=> 'tm_'.$table_name,
+									'engine'		=> $engine,
+									'ar_fields'		=> $create_table_ar_fields['ar_fields'],
+									'table_type'	=> 'tm'
+								],
+								false
+							);
 						}
 				}else{
 
@@ -666,7 +717,10 @@ class diffusion_mysql extends diffusion_sql  {
 						$field_value	= $field['field_value'];
 
 						if (!in_array($field_name, $real_table_fields)) {
-							debug_log(__METHOD__." Skipped create field '$field_name' because not exists in table '$table_name' [section_id: $section_id]", logger::WARNING);
+							debug_log(__METHOD__
+								." Skipped create field '$field_name' because not exists in table '$table_name' [section_id: $section_id]"
+								, logger::WARNING
+							);
 							continue; # Skip
 						}
 
@@ -677,7 +731,7 @@ class diffusion_mysql extends diffusion_sql  {
 						$ar_field_value[]	= $field_value;
 					}
 
-					// dedalo_diffusion_tm. Insert mysql record. if the difusion_versions is active we store all changes
+					// dedalo_diffusion_tm. Insert MySQL record. if the difusion_versions is active we store all changes
 						if(defined('DEDALO_DIFFUSION_TM') && DEDALO_DIFFUSION_TM){
 
 							$strQuery_tm = "INSERT INTO `$database_name`.`tm_{$table_name}` (".implode(',', $ar_field_name).") VALUES (".implode(',', $ar_field_value).");";
@@ -688,10 +742,13 @@ class diffusion_mysql extends diffusion_sql  {
 								$database_name
 							);
 							if ($result===false) {
-								#throw new Exception("Error Processing Request. MySQL insert error".DBi::_getConnection_mysql()->error, 1);
+								#throw new Exception("Error Processing Request. MySQL insert error".$conn->error, 1);
 								$response->result = false;
-								$response->msg    = "Error Processing Request. Nothing is saved. MySQL insert error ".DBi::_getConnection_mysql()->error;
-								debug_log(__METHOD__." $response->msg ", logger::ERROR);
+								$response->msg    = "Error Processing Request. Nothing is saved. MySQL insert error ".$conn->error;
+								debug_log(__METHOD__
+									." $response->msg "
+									, logger::ERROR
+								);
 								return (object)$response;
 							}
 						}
@@ -706,29 +763,27 @@ class diffusion_mysql extends diffusion_sql  {
 							$database_name
 						);
 						if ($result===false) {
-							#throw new Exception("Error Processing Request. MySQL insert error".DBi::_getConnection_mysql()->error, 1);
-							debug_log(__METHOD__." Error on insert MySQL data ". DBi::_getConnection_mysql()->error, logger::ERROR);
+							#throw new Exception("Error Processing Request. MySQL insert error".$conn->error, 1);
+							debug_log(__METHOD__." Error on insert MySQL data ". $conn->error, logger::ERROR);
 
 							$response->result = false;
-							$response->msg    = "Error Processing Request. Nothing is saved. MySQL insert error".DBi::_getConnection_mysql()->error;
+							$response->msg    = "Error Processing Request. Nothing is saved. MySQL insert error".$conn->error;
 							return (object)$response;
 						}
-
-
 
 						$response->msg[] = "Inserted record section_id:$section_id, table:$table_name, lang:$lang";
 				}//end foreach ($ar_fields as $lang => $fields) iterate langs
 			}//end foreach ($ar_section_id as $section_id)
 
 
-		// response ok
-			$response->result = true;
-			$response->new_id = self::$insert_id;
-			$response->msg    = implode(",\n", $response->msg);		#dump($response, ' response');
+		// response OK
+			$response->result	= true;
+			$response->new_id	= self::$insert_id;
+			$response->msg		= implode(",\n", $response->msg);		#dump($response, ' response');
 
 		// response debug
 			if(SHOW_DEBUG===true) {
-				$response->debug = exec_time($start_time);
+				$response->debug = exec_time_unit($start_time, 'ms');
 			}
 
 
@@ -751,7 +806,7 @@ class diffusion_mysql extends diffusion_sql  {
 
 		$real_table_fields = [];
 
-		$strQuery	= "DESCRIBE $table_name ;";
+		$strQuery	= "DESCRIBE {$database_name}.$table_name ;";
 		$result		= self::exec_mysql_query( $strQuery, $table_name, $database_name );
 		if ($result===false) {
 			return $real_table_fields;
@@ -978,27 +1033,74 @@ class diffusion_mysql extends diffusion_sql  {
 
 
 	/**
+	* DATABASE_EXITS
+	* Check if target database already exists
+	* @string $database_name
+	* @return $database_exits bool
+	*/
+	public static function database_exits(string $database_name) : bool {
+
+		$database_exits = false;
+
+		// connect
+			$mysql_conn = self::get_conn($database_name);
+			if ($mysql_conn===false) {
+				return $database_exits;
+			}
+
+		// query
+			$strQuery = "
+			SELECT SCHEMA_NAME
+			FROM INFORMATION_SCHEMA.SCHEMATA
+			WHERE SCHEMA_NAME = \"$database_name\"
+			";
+			// result
+			$result = $mysql_conn->query( $strQuery );
+			if ($result===false || !empty($mysql_conn->error)) {
+				debug_log(
+					__METHOD__.' ERROR. unable to exec query '. PHP_EOL
+					. $strQuery .PHP_EOL
+					.' error: '. $mysql_conn->error,
+					logger::ERROR
+				);
+				return $database_exits;
+			}
+
+		// count result
+			$row_cnt = $result->num_rows;
+			if (!empty($row_cnt) && $row_cnt>0) {
+				$database_exits = true;
+			}
+
+		// $mysql_conn->close();
+
+		return (bool)$database_exits;
+	}//end database_exits
+
+
+
+	/**
 	* IS_PUBLICABLE
 	* Check is field 'publication' is present and if value is 'no' return false. Else return true
 	* @return bool
 	*//* DEPRECATED
-	public static function is_publicable($section_id, $ar_fields) {
+		public static function is_publicable($section_id, $ar_fields) {
 
-		$ar_fields = reset($ar_fields); // Only need first lang
+			$ar_fields = reset($ar_fields); // Only need first lang
 
-		foreach ($ar_fields as $key => $ar_value) {
-			#dump($ar_value, ' $ar_value ++ '.to_string());
-			if (
-				($ar_value['field_name']==='publication' || $ar_value['field_name']==='publicacion') &&
-				($ar_value['field_value']==='no' || empty($ar_value['field_value']))
-				) {
-				return false;
+			foreach ($ar_fields as $key => $ar_value) {
+				#dump($ar_value, ' $ar_value ++ '.to_string());
+				if (
+					($ar_value['field_name']==='publication' || $ar_value['field_name']==='publicacion') &&
+					($ar_value['field_value']==='no' || empty($ar_value['field_value']))
+					) {
+					return false;
+				}
 			}
-		}
 
-		return true;
-	}//end is_publicable
-	*/
+			return true;
+		}//end is_publicable
+		*/
 
 
 
@@ -1097,7 +1199,9 @@ class diffusion_mysql extends diffusion_sql  {
 		$strQuery = "REPLACE INTO `$database_name`.`$table_name` (`id`, `data`) VALUES ($id, '$data');"; // ON DUPLICATE KEY UPDATE data='$data'
 		$result   = self::exec_mysql_query( $strQuery, $table_name, $database_name );
 			if ($result===false) {
-				if(SHOW_DEBUG===true) { dump($strQuery, 'ERROR ON $strQuery '.to_string(DBi::_getConnection_mysql()->error)); }
+				if(SHOW_DEBUG===true) {
+					dump($strQuery, 'ERROR ON $strQuery '. DBi::_getConnection_mysql()->error);
+				}
 				$response->result = false;
 				$response->msg    = "Error Processing Request. Nothing is added. MySQL error".DBi::_getConnection_mysql()->error;
 				return (object)$response;
@@ -1113,7 +1217,7 @@ class diffusion_mysql extends diffusion_sql  {
 
 	/**
 	* CREATE_publication_schema_TABLE
-	* Build MySQL table 'map' with standar options
+	* Build MySQL table 'map' with standard options
 	* @return object $response
 	*/
 	private static function create_publication_schema_table( $database_name, $table_name ) {
@@ -1126,7 +1230,9 @@ class diffusion_mysql extends diffusion_sql  {
 			$strQuery = "DROP TABLE IF EXISTS `$table_name`;";
 			$result  = self::exec_mysql_query( $strQuery, $table_name, $database_name);
 			if ($result===false) {
-				if(SHOW_DEBUG===true) { dump($strQuery, 'ERROR ON $strQuery '.to_string(DBi::_getConnection_mysql()->error)); }
+				if(SHOW_DEBUG===true) {
+					dump($strQuery, 'ERROR ON $strQuery '.to_string(DBi::_getConnection_mysql()->error));
+				}
 				$response->result = false;
 				$response->msg    = "Error Processing Request. Nothing is created 1. MySQL error".DBi::_getConnection_mysql()->error;
 				return (object)$response;

@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global   */
 /*eslint no-undef: "error"*/
 
@@ -25,7 +26,8 @@ export const render_section_group = function() {
 /**
 * EDIT
 * Render node for use in edit
-* @return DOM node
+* @param object options
+* @return HTMLElement wrapper
 */
 render_section_group.prototype.edit = async function(options) {
 
@@ -106,7 +108,7 @@ render_section_group.prototype.edit = async function(options) {
 /**
 * LIST
 * Alias of edit
-* @return DOM node
+* @return HTMLElement
 */
 render_section_group.prototype.list = render_section_group.prototype.edit;
 
@@ -115,7 +117,7 @@ render_section_group.prototype.list = render_section_group.prototype.edit;
 /**
 * GET_WRAPPER
 * Render node for use in edit
-* @return DOM node
+* @return HTMLElement
 */
 const get_wrapper = function(self) {
 
@@ -131,7 +133,6 @@ const get_wrapper = function(self) {
 			set_element_css(selector, self.context.css)
 		}
 
-
 	return wrapper
 }//end get_wrapper
 
@@ -139,7 +140,8 @@ const get_wrapper = function(self) {
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @param object self
+* @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 
@@ -147,6 +149,9 @@ const get_content_data = function(self) {
 		const content_data = document.createElement('div')
 			  content_data.classList.add('content_data', self.type, 'hide')
 
-
 	return content_data
 }//end get_content_data
+
+
+
+// @license-end

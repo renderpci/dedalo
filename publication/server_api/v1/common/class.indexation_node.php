@@ -4,10 +4,10 @@
 * Object like indexation
 *
 */
-class indexation_node {
-	
+class indexation_node extends stdClass {
 
-	
+
+
 	# Version. Important!
 	static $version = "1.0.0"; // 05-06-2017
 
@@ -15,7 +15,7 @@ class indexation_node {
 	public $term_id; 	// string like ts52
 	public $locator; 	// object
 	public $options;	// object
-	
+
 
 
 	/**
@@ -28,8 +28,8 @@ class indexation_node {
 		if (!isset($locator->section_top_id) || !isset($locator->section_id) || !isset($locator->tag_id)) {
 			return false;
 		}
-		
-		return new indexation_node($term_id, $locator, $request_options);    	
+
+		return new indexation_node($term_id, $locator, $request_options);
 	}//end get_ts_term_instance
 
 
@@ -42,7 +42,7 @@ class indexation_node {
 		$this->term_id 	 = $term_id;
 		$this->node_id 	 = $locator->section_top_id ;	//.'_'. $locator->section_id .'_'. $locator->tag_id;
 		$this->locator 	 = $locator;
-		$this->options 	 = $request_options;		
+		$this->options 	 = $request_options;
 	}//end __construct
 
 
@@ -52,21 +52,21 @@ class indexation_node {
 	* @return bool
 	*/
 	public function load_data() {
-		
+
 		# Load image
 		$this->image_url 	  = $this->get_image_url();
 		# Create group locators used as param for link to video
-		$this->group_locators = $this->get_group_locators(); /// UNACTIVE IN TEST MODE !!!! 
+		$this->group_locators = $this->get_group_locators(); /// UNACTIVE IN TEST MODE !!!!
 	}//end load_data
 
 
 
 	/**
 	* GET_IMAGE_URL
-	* @return string 
+	* @return string
 	*/
 	public function get_image_url() {
-	
+
 		$image_url = null;	//'../images/bg_foto_search_free.png'; // Default
 
 		switch (true) {
@@ -75,14 +75,14 @@ class indexation_node {
 				$identify_image_url = $this->get_identify_image_url();
 				$image_url = $identify_image_url;
 				break;
-			
+
 			case (isset($this->image_type) && $this->image_type==='posterframe'):
 			default:
 				# POSTERFRAME
-				$path = DEDALO_MEDIA_URL . DEDALO_AV_FOLDER .'/posterframe/'; // __CONTENT_BASE_URL__ .
+				$path = DEDALO_MEDIA_BASE_URL . DEDALO_AV_FOLDER .'/posterframe/'; // __CONTENT_BASE_URL__ .
 				#$path = __WEB_BASE_URL__ . DEDALO_AV_FOLDER .'/posterframe/';
 				#$path = __WEB_BASE_URL__ . '/dedalo/media/av/posterframe/';
-				$name = DEDALO_COMPONENT_RESOURCES_AV_TIPO .'_'. $this->locator->section_tipo .'_'. $this->locator->section_id .'.'.DEDALO_AV_POSTERFRAME_EXTENSION; 
+				$name = DEDALO_COMPONENT_RESOURCES_AV_TIPO .'_'. $this->locator->section_tipo .'_'. $this->locator->section_id .'.'.DEDALO_AV_POSTERFRAME_EXTENSION;
 				$image_url = $path . $name;
 				break;
 		}
@@ -97,8 +97,8 @@ class indexation_node {
 	* @return array of objects rows_data
 	*/
 	public function get_identify_image_url() {
-		
-		# Get interview 
+
+		# Get interview
 		$row_interview_data = $this->get_row_interview_data();
 			#dump($row_interview_data, ' row_interview_data ++ '.to_string());
 
@@ -117,7 +117,7 @@ class indexation_node {
 				$options->table 		= (string)TABLE_IMAGE;
 				$options->ar_fields 	= array(FIELD_IMAGE);
 				$options->order 		= null;
-				$options->sql_filter 	= "section_id = ".$section_id . PUBLICACION_FILTER_SQL; // 				
+				$options->sql_filter 	= "section_id = ".$section_id . PUBLICATION_FILTER_SQL; //
 
 			$rows_data = (object)web_data::get_rows_data( $options );
 			if (!empty($rows_data->result)) {
@@ -130,47 +130,46 @@ class indexation_node {
 		return (string)$identify_image_url;
 	}//end get_identify_image_url
 
-	
+
 
 	/**
 	* GET_ROW_INTERVIEW_data
 	* @return object rows_data
 	*/
 	public function get_row_interview_data() {
-		
+
 		$locator = $this->locator;
 
 		$options = new stdClass();
-			$options->table 		= (string)TABLE_INTERVIEW;
-			$options->ar_fields 	= array(FIELD_IMAGE);
-			$options->order 		= null;
-			$options->sql_filter 	= "section_id = " . $locator->section_top_id . PUBLICACION_FILTER_SQL;
+			$options->table			= (string)TABLE_INTERVIEW;
+			$options->ar_fields		= array(FIELD_IMAGE);
+			$options->order			= null;
+			$options->sql_filter	= "section_id = " . $locator->section_top_id . PUBLICATION_FILTER_SQL;
 
 		$row_interview_data	= (object)web_data::get_rows_data( $options );
-			#dump($row_interview_data, ' row_interview_data ++ '.to_string($options)); die();
-		
+
 
 		return $row_interview_data;
 	}//end get_row_interview_data
-	
+
 
 
 	/**
 	* GET_GROUP_LOCATORS
-	* Select all locators cof current interview and sort with actual as first
-	* @return array
+	* Select all locators of current interview and sort with actual as first
+	* @return array $ar_locators_grouped
 	*/
 	public function get_group_locators() {
-		
+
 		if (!isset($this->indexations)) {
 			return array();
 		}
 
-		$indexations 	  = $this->indexations;		
-		$locator 			  = $this->locator;
-		$interview_section_id = $locator->section_top_id;
+		$indexations			= $this->indexations;
+		$locator				= $this->locator;
+		$interview_section_id	= $locator->section_top_id;
 
-		$ar_locators_grouped=array();
+		$ar_locators_grouped = array();
 		foreach ($indexations as $current_locator) {
 			if ($current_locator->section_top_id == $interview_section_id) {
 				/*
@@ -185,7 +184,7 @@ class indexation_node {
 					$ar_locators_grouped[] = $current_locator;
 				}
 				*/
-				$ar_locators_grouped[] = $current_locator;			
+				$ar_locators_grouped[] = $current_locator;
 			}
 		}
 		// Prepend main locatoer at begining of array
@@ -193,9 +192,8 @@ class indexation_node {
 			#dump($ar_locators_grouped, ' ar_locators_grouped ++ '.to_string());
 
 		return $ar_locators_grouped;
-	}//end get_group_locators	
+	}//end get_group_locators
 
 
 
 }//end class indexation_node
-?>

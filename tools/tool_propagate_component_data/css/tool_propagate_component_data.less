@@ -3,9 +3,8 @@
 *
 * Loaded on tool init
 */
-
 // imports
-@import '../../../core/page/css/layout/vars.less';
+@import (once) '../../../core/page/css/layout/vars';
 
 
 
@@ -35,9 +34,16 @@
 				display: block;
 				width: 100%;
 				border: none;
+				min-height: 8rem;
+				background-color: transparent;
+
+				>.container_placeholder {
+					// height: 8rem;
+				}
 
 				.wrapper_component {
 					// width: 100% !important;
+
 
 					// >.buttons_container {
 					// 	display: none !important;

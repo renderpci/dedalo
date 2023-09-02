@@ -85,8 +85,9 @@
 			switch ($mode) {
 
 				case 'list':
+				case 'tm':
 					// data item (list mode result don't include self data, only subdata)
-					$limit	= $limit; // (!) note than in list mode, limit is always 2
+					// (!) limit note that in list mode, limit is always 2
 					$value	= $this->get_dato_paginated($limit);
 					break;
 
@@ -122,7 +123,6 @@
 
 				// subdatum
 					$subdatum = $this->get_subdatum($tipo, $value);
-						// dump($subdatum, ' subdatum +--------------------------------+ '.to_string());
 
 					$ar_subcontext = $subdatum->context;
 					foreach ($ar_subcontext as $current_context) {
@@ -151,7 +151,6 @@
 			}//end if (!empty($dato))
 		// }// end get_data
 	}//end if $options->get_data===true && $permissions>0
-
 
 // JSON string
 	return common::build_element_json_output($context, $data);

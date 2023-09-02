@@ -23,7 +23,6 @@ class area_development extends area_common {
 		'matrix_test',
 		'matrix_indexations',
 		'matrix_structurations',
-		'matrix_dataframe',
 		'matrix_dd',
 		'matrix_layout_dd',
 		'matrix_activity',
@@ -44,441 +43,259 @@ class area_development extends area_common {
 		$DEDALO_PREFIX_TIPOS = get_legacy_constant_value('DEDALO_PREFIX_TIPOS');
 
 
-		// make_backup
+		// make_backup *
 			$item = new stdClass();
 				$item->id		= 'make_backup';
 				$item->typo		= 'widget';
-				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
-				$item->label	= label::get_label('hacer_backup');
-				$item->info		= null;
-				$file_name		= date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $_SESSION['dedalo']['auth']['user_id'] .'_forced_dbv' . implode('-', get_current_version_in_db()).'.custom.backup';
-				$item->body		= 'Force to make a full backup now like:<br><br><div>'.DEDALO_BACKUP_PATH_DB.'/<br>'.$file_name.'</div>';
-				$item->run[]	= (object)[
-					'fn'		=> 'init_form',
-					'options'	=> (object)[
-						'confirm_text' => label::get_label('sure') || 'Sure?'
-					]
-				];
-				$item->trigger 	= (object)[
-					'dd_api'	=> 'dd_utils_api',
-					'action'	=> 'make_backup',
-					'options'	=> null
+				$item->label	= label::get_label('make_backup') ?? 'Make backup';
+				$item->value	= (object)[
+					'dedalo_db_management'	=> DEDALO_DB_MANAGEMENT,
+					'backup_path'			=> DEDALO_BACKUP_PATH_DB,
+					'file_name'				=> date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $_SESSION['dedalo']['auth']['user_id'] .'_forced_dbv' . implode('-', get_current_version_in_db()).'.custom.backup'
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
 
-		// regenerate_relations . Delete and create again table relations records
+		// regenerate_relations * . Delete and create again table relations records
 			$item = new stdClass();
 				$item->id		= 'regenerate_relations';
 				$item->typo		= 'widget';
-				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
-				$item->label	= 'REGENERATE TABLE RELATIONS DATA';
-				$item->info		= null;
-				$item->body		= 'Delete and create again table relations records based on locators data of sections in current table';
-				$item->run[]	= (object)[
-					'fn'		=> 'init_form',
-					'options'	=> (object)[
-						'inputs' => [
-							(object)[
-								'type'		=> 'text',
-								'name'		=> 'tables',
-								'label'		=> 'Table name/s like "matrix,matrix_hierarchy" or "*" for all',
-								'mandatory'	=> true
-							]
-						],
-						'confirm_text' => label::get_label('sure') || 'Sure?'
-					]
-				];
-				$item->trigger 	= (object)[
-					'dd_api'	=> 'dd_utils_api',
-					'action'	=> 'regenerate_relations',
-					'options'	=> null
+				$item->label	= 'Regenerate relations table data';
+				$item->value	= (object)[
+					'body' => 'Delete and create again table relations records based on locators data of sections in current selected table/s',
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
 
-		// update_ontology
+		// update_ontology *
 			$item = new stdClass();
 				$item->id		= 'update_ontology';
 				$item->typo		= 'widget';
-				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
-				$item->info		= null;
-				$item->label	= label::get_label('update_ontology');
-
-				if (defined('ONTOLOGY_DB')) {
-					$item->body = 'Disabled update Ontology. You are using config ONTOLOGY_DB !';
-				}else{
-					$item->body		= (defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true && !empty(STRUCTURE_SERVER_URL)) ?
-						'Current: <b>' . RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO,'lg-spa') .'</b>'.
-						'<hr>TLD: <tt>' . implode(', ', $DEDALO_PREFIX_TIPOS).'</tt>' :
-						label::get_label('update_ontology')." is a disabled for ".DEDALO_ENTITY;
-					$item->body 	.= "<hr>url: ".STRUCTURE_SERVER_URL;
-					$item->body 	.= "<hr>code: ".STRUCTURE_SERVER_CODE;
-					$confirm_text	 = '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! WARNING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'.PHP_EOL;
-					$confirm_text	.= '!!!!!!!!!!!!!! DELETING ACTUAL DATABASE !!!!!!!!!!!!!!!!'.PHP_EOL;
-					$confirm_text	.= 'Are you sure to IMPORT and overwrite current ontology data with LOCAL FILE: ';
-					$confirm_text	.= '"dedalo4_development_str.custom.backup" ?'.PHP_EOL;
-					$item->run[]	= (object)[
-						'fn' 	  => 'init_form',
-						'options' => (object)[
-							'inputs' => [
-								(object)[
-									'type'		=> 'text',
-									'name'		=> 'dedalo_prefix_tipos',
-									'label'		=> 'Dédalo prefix tipos to update',
-									'value'		=> implode(',', $DEDALO_PREFIX_TIPOS),
-									'mandatory'	=> true
-								]
-							],
-							'confirm_text' => $confirm_text
-						]
-					];
-					$item->trigger 	= (object)[
-						'dd_api'	=> 'dd_utils_api',
-						'action'	=> 'update_ontology',
-						'options'	=> null
-					];
-				}
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
-
-
-		// export_structure_to_json
-			$item = new stdClass();
-				$item->id		= 'export_structure_to_json';
-				$item->typo		= 'widget';
-				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
-				$item->label	= label::get_label('exportar_estructura_json');
-				$item->info		= null;
-
-				$file_name		= 'structure.json';
-				$file_path		= 'Target: '.(defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : STRUCTURE_DOWNLOAD_DIR) . '/' . $file_name;
-				// $file_url		= DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . DEDALO_LIB_BASE_URL . '/backup/backups_structure/srt_download' . '/' . $file_name;
-				$item->body		= $file_path;
-				$confirm_text	= label::get_label('seguro');
-				$item->run[]	= (object)[
-					'fn'		=> 'init_form',
-					'options'	=> (object)[
-						'inputs' => [
-							(object)[
-								'type'		=> 'text',
-								'name'		=> 'dedalo_prefix_tipos',
-								'label'		=> 'Dédalo prefix tipos to export',
-								'value'		=> implode(',', $DEDALO_PREFIX_TIPOS),
-								'mandatory'	=> true
-							]
-						],
-						'confirm_text' => $confirm_text
-					]
-				];
-				$item->trigger 	= (object)[
-					'dd_api'	=> 'dd_utils_api',
-					'action'	=> 'structure_to_json',
-					'options'	=> null
+				$item->label	= label::get_label('update_ontology') ?? 'Update Ontology';
+				$item->value	= (object)[
+					'current_ontology'		=> RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO,'lg-spa'),
+					'prefix_tipos'			=> $DEDALO_PREFIX_TIPOS,
+					'structure_from_server'	=> (defined('STRUCTURE_FROM_SERVER') ? STRUCTURE_FROM_SERVER : null),
+					'structure_server_url'	=> (defined('STRUCTURE_SERVER_URL') ? STRUCTURE_SERVER_URL : null),
+					'structure_server_code'	=> (defined('STRUCTURE_SERVER_CODE') ? STRUCTURE_SERVER_CODE : null),
+					'ontology_db'			=> (defined('ONTOLOGY_DB') ? ONTOLOGY_DB : null),
+					'body'					=> defined('ONTOLOGY_DB')
+						? 'Disabled update Ontology. You are using config ONTOLOGY_DB !'
+						: label::get_label('update_ontology')." is disabled for ".DEDALO_ENTITY,
+					'confirm_text'			=> '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! WARNING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!' . PHP_EOL
+						.'!!!!!!!!!!!!!! DELETING ACTUAL DATABASE !!!!!!!!!!!!!!!!' . PHP_EOL
+						.'Are you sure to overwrite current Ontology data ? ' .PHP_EOL.PHP_EOL
+						.'You will lose all changes made to the current Ontology'
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
 
-		// import_structure_from_json
-			$item = new stdClass();
-				$item->id		= 'import_structure_from_json';
-				$item->class	= 'danger';
-				$item->typo		= 'widget';
-				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
-				$item->label	= label::get_label('importar_estructura_json');
-				$item->info		= null;
-
-				if (defined('ONTOLOGY_DB')) {
-					$item->body	= 'Disabled update Ontology. You are using config ONTOLOGY_DB !';
-				}else{
-					$file_name		= 'structure.json';
-					$file_path		= 'Source: '.(defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : STRUCTURE_DOWNLOAD_DIR) . '/' . $file_name;
-					// $file_url	= DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . DEDALO_LIB_BASE_URL . '/backup/backups_structure/srt_download' . '/' . $file_name;
-					$item->body		= $file_path;
-					$confirm_text	= label::get_label('sure'); || 'Sure?'
-
-					$item->run[]	= (object)[
-						'fn'		=> 'init_form',
-						'options'	=> (object)[
-							'inputs' => [
-								(object)[
-									'type'		=> 'text',
-									'name'		=> 'dedalo_prefix_tipos',
-									'label'		=> 'Dédalo prefix tipos to import',
-									'value'		=> implode(',', $DEDALO_PREFIX_TIPOS),
-									'mandatory'	=> false
-								]
-							],
-							'confirm_text' => $confirm_text
-						]
-					];
-					$item->trigger 	= (object)[
-						'dd_api'	=> 'dd_utils_api',
-						'action'	=> 'import_structure_from_json',
-						'options'	=> null
-					];
-				}
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
-
-
-		// register_tools
+		// register_tools *
 			$item = new stdClass();
 				$item->id		= 'register_tools';
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
-				$item->label	= label::get_label('registrar_herramientas');
-				$list = array_map(function($path){
-					// ignore folders with name different from pattern 'tool_*'
-					if (1!==preg_match('/tools\/tool_*/', $path, $output_array) || 1===preg_match('/tools\/tool_dev_template/', $path, $output_array)) {
-						return null;
-					}else{
-						$tool_name = str_replace(DEDALO_TOOLS_PATH.'/', '', $path);
-						// skip tool common
-						if ($tool_name==='tool_common') return null;
-						// check file register is ready
-						if(!$register_contents = file_get_contents($path.'/register.json')) {
-							debug_log(__METHOD__." Invalid register.json file from tool ".to_string($tool_name), logger::ERROR);
-							$tool_name .= ' <danger>(!) Invalid register.json file from tool</danger>';
-						}else{
-							// compare register.json file. WORKING HERE (!)
-							$ar_tool_info	= tool_common::get_client_registered_tools([$tool_name]);
-							if(isset($ar_tool_info[0])) {
-								$tool_info = $ar_tool_info[0];
-								// dump($tool_info, ' tool_info ++ '.to_string($tool_name));
-								// dump($register_contents, ' register_contents ++ '.to_string());
-							}else{
-								debug_log(__METHOD__." Tool '$tool_name' not found in client_registered_tools.".to_string(), logger::WARNING);
-								$tool_name .= ' <danger>(!) Not registered tool</danger>';
-							}
-						}
-
-						return $tool_name;
-					}
-				}, glob(DEDALO_TOOLS_PATH . '/*', GLOB_ONLYDIR));
-				$item->body		= '<strong>Read tools folder and update the tools register in database</strong><br><br>';
-				$item->body		.= implode('<br>', array_filter($list));
-				$item->run[]	= (object)[
-					'fn' 	  => 'init_form',
-					'options' => (object)[
-						'confirm_text' => label::get_label('sure') || 'Sure?'
-					]
+				$item->label	= label::get_label('register_tools');
+				$item->value	= (object)[
+					'datalist' => tools_register::get_tools_files_list()
 				];
-				$item->trigger 	= (object)[
-					'dd_api'	=> 'dd_utils_api',
-					'action'	=> 'register_tools',
-					'options'	=> null
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
+
+
+		// export_ontology_to_json *
+			$item = new stdClass();
+				$item->id		= 'export_ontology_to_json';
+				$item->typo		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->label	= label::get_label('export_json_ontology') ?? 'Export JSON ontology';;
+				$item->value	= (object)[
+					'file_name'	=> 'structure.json',
+					'file_path'	=> (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : ONTOLOGY_DOWNLOAD_DIR),
+					'tipos'		=> $DEDALO_PREFIX_TIPOS
+				];
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
+
+
+		// import_ontology_from_json *
+			$item = new stdClass();
+				$item->id		= 'import_ontology_from_json';
+				$item->typo		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->label	= label::get_label('import_json_ontology') ?? 'Import JSON ontology';
+				$item->value	= (object)[
+					'ontology_db'	=> (defined('ONTOLOGY_DB') ? ONTOLOGY_DB : null),
+					'file_name'		=> 'structure.json',
+					'file_path'		=> (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : ONTOLOGY_DOWNLOAD_DIR),
+					'tipos'			=> $DEDALO_PREFIX_TIPOS
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
 
 		// build_structure_css
-			$item = new stdClass();
-				$item->id		= 'build_structure_css';
-				$item->typo		= 'widget';
-				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
-				$item->label	= label::get_label('build_structure_css');
-				$item->body		= 'Regenerate css from actual structure (Ontology)';
-				$item->run[]	= (object)[
-					'fn'		=> 'init_form',
-					'options'	=> (object)[
-						'confirm_text' => label::get_label('sure') || 'Sure?'
-					]
-				];
-				$item->trigger 	= (object)[
-					'dd_api'	=> 'dd_utils_api',
-					'action'	=> 'build_structure_css',
-					'options'	=> null
-				];
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
+			// $item = new stdClass();
+			// 	$item->id		= 'build_structure_css';
+			// 	$item->typo		= 'widget';
+			// 	$item->tipo		= $this->tipo;
+			// 	$item->parent	= $this->tipo;
+			// 	$item->label	= label::get_label('build_structure_css');
+			// 	$item->body		= 'Regenerate css from actual structure (Ontology)';
+			// 	$item->run[]	= (object)[
+			// 		'fn'		=> 'init_form',
+			// 		'options'	=> (object)[
+			// 			'confirm_text' => label::get_label('sure') ?? 'Sure?'
+			// 		]
+			// 	];
+			// 	$item->trigger 	= (object)[
+			// 		'dd_api'	=> 'dd_utils_api',
+			// 		'action'	=> 'build_structure_css',
+			// 		'options'	=> null
+			// 	];
+			// $widget = $this->widget_factory($item);
+			// $ar_widgets[] = $widget;
 
 
-		// build_install_version
+		// build_install_version *
 			$item = new stdClass();
 				$item->id		= 'build_install_version';
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
-				$item->label	= label::get_label('build_install_version');
-				$item->body		= 'Clone the current database '.DEDALO_DATABASE_CONN.' to "dedalo_install_v6" and export it to file: /install/db/dedalo_install_v6.pgsql.gz ';
-				$item->run[]	= (object)[
-					'fn'		=> 'init_form',
-					'options'	=> (object)[
-						'confirm_text' => label::get_label('sure') || 'Sure?'
-					]
-				];
-				$item->trigger 	= (object)[
-					'dd_api'	=> 'dd_utils_api',
-					'action'	=> 'build_install_version',
-					'options'	=> null
+				$item->label	= label::get_label('build_install_version') ?? 'Build install version';
+				$item->value	= (object)[
+					'source_db'		=> DEDALO_DATABASE_CONN,
+					'target_db'		=> install::$db_install_name,
+					'target_file'	=> '/install/db/'.install::$db_install_name.'.pgsql.gz'
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
 
-		// update data version
+		// update_data_version *
 			include_once DEDALO_CORE_PATH . '/base/update/class.update.php';
-			$updates		= update::get_updates();
-			$update_version	= update::get_update_version();
-			if(empty($update_version)) {
+			$updates				= update::get_updates();
+			$update_version			= update::get_update_version();
+			$update_version_plain	= empty($update_version)
+				? ''
+				: implode('', $update_version);
 
-				$item = new stdClass();
-					$item->id		= 'update_data_version';
-					$item->typo		= 'widget';
-					$item->tipo		= $this->tipo;
-					$item->parent	= $this->tipo;
-					$item->label	= label::get_label('actualizar').' '.label::get_label('datos');
-					$item->info		= null;
-					$item->body		= '<span style="color:green">Data format is updated: '.implode(".", get_current_version_in_db()).'</span>';
-					$item->trigger	= (object)[
-					];
-
-				$widget = $this->widget_factory($item);
-				$ar_widgets[] = $widget;
-
-			}else{
-
-				$current_dedalo_version	= implode(".", get_dedalo_version());
-				$current_version_in_db	= implode(".", get_current_version_in_db());
-				$update_version_plain	= implode('', $update_version);
-
-				$item = new stdClass();
-					$item->id		= 'update_data_version';
-					$item->typo		= 'widget';
-					$item->tipo		= $this->tipo;
-					$item->parent	= $this->tipo;
-					$item->label	= label::get_label('actualizar').' '.label::get_label('datos');
-					// $item->info		= 'Click to update dedalo data version';
-					$item->body		= '<span style="color:red">Current data version: '.$current_version_in_db . '</span> -----> '. implode('.', $update_version);
-					// Actions list
-						#dump($updates->$update_version_plain, '$updates->$update_version_plain ++ '.to_string());
-						if (isset($updates->$update_version_plain)) {
-							foreach ($updates->$update_version_plain as $key => $value) {
-
-								if (is_object($value) || is_array($value)) {
-									$i=0;
-									foreach ($value as $vkey => $vvalue) {
-										if($key==='alert_update') continue;
-										if($i===0) $item->body .= "<h6>$key</h6>";
-										if(is_string($vvalue)) $vvalue = trim($vvalue);
-										$item->body .= '<div class="command"><span class="vkey">'.($vkey+1).'</span><span class="vkey_value">'. print_r($vvalue, true) .'</span></div>';
-										$i++;
-									}
-								}
-							}
-						}
-					$item->run[]	= (object)[
-						'fn' 	  => 'init_form',
-						'options' => (object)[
-							'confirm_text' => label::get_label('sure') || 'Sure?'
-						]
-					];
-					$item->trigger 	= (object)[
-						'dd_api'	=> 'dd_utils_api',
-						'action'	=> 'update_version',
-						'options'	=> null
-					];
-
-				$widget = $this->widget_factory($item);
-				$ar_widgets[] = $widget;
-			}
+			$item = new stdClass();
+				$item->id		= 'update_data_version';
+				$item->class	= empty($update_version) ? 'success width_100' : 'width_100';
+				$item->typo		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->label	= label::get_label('update').' '.label::get_label('data');
+				$item->value	= (object)[
+					'update_version'		=> $update_version,
+					'current_version_in_db'	=> get_current_version_in_db(),
+					'dedalo_version'		=> get_dedalo_version(),
+					'updates'				=> $updates->{$update_version_plain} ?? null
+				];
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
 
 
-		// Dédalo API test environment
+		// update_code *
+			$item = new stdClass();
+				$item->id		= 'update_code';
+				$item->typo		= 'widget';
+				$item->label	= label::get_label('update') .' '. label::get_label('code');
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
+
+
+		// add_hierarchy *
+			$item = new stdClass();
+				$item->id		= 'add_hierarchy';
+				$item->typo		= 'widget';
+				$item->class	= 'success width_100';
+				$item->label	= label::get_label('instalar') .' '. label::get_label('jerarquias');
+				$item->value	= (object)[
+					'hierarchies'				=> install::get_available_hierarchy_files()->result,
+					'active_hierarchies'		=> array_values( hierarchy::get_active_hierarchies() ),
+					'hierarchy_files_dir_path'	=> install::get_config()->hierarchy_files_dir_path
+				];
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
+
+
+		// publication_api *
+			$item = new stdClass();
+				$item->id		= 'publication_api';
+				$item->typo		= 'widget';
+				$item->label	= 'Publication server API';
+				$item->value	= (object)[
+					'dedalo_diffusion_domain'			=> DEDALO_DIFFUSION_DOMAIN,
+					'dedalo_diffusion_resolve_levels'	=> DEDALO_DIFFUSION_RESOLVE_LEVELS,
+					'api_web_user_code_multiple'		=> API_WEB_USER_CODE_MULTIPLE,
+					'dedalo_diffusion_langs'			=> DEDALO_DIFFUSION_LANGS,
+					'diffusion_map'						=> diffusion::get_diffusion_map(
+						DEDALO_DIFFUSION_DOMAIN,
+						true // bool connection_status
+					)
+				];
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
+
+
+		// dedalo_api_test_environment *
 			$item = new stdClass();
 				$item->id		= 'dedalo_api_test_environment';
-				$item->class	= 'blue';
+				$item->class	= 'width_100';
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
 				$item->label	= 'DÉDALO API TEST ENVIRONMENT';
-				$item->info		= null;
-				$item->body		= '<textarea id="json_editor_api" class="hide"></textarea>';
-				$item->body		.= '<label>API send RQO (Request Query Object) default dd_api is "dd_core_api"</label>';
-				$item->body		.= '<label></label> <button id="submit_api" class="border light">OK</button>';
-				$item->body		.= '<div id="json_editor_api_container" class="editor_json"></div>';
-				$item->run[]	= (object)[
-					'fn'		=> 'init_json_editor_api',
-					'options'	=> (object)[
-						'editor_id'	=> 'json_editor_api'
-					]
-				];
-				$item->trigger 	= (object)[
-					'dd_api'	=> 'get_input_value:dd_api_base',
-					'action'	=> 'get_input_value:dd_api_fn',
-					'options'	=> null
-				];
+				$item->value	= (object)[];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
 
-		// search query object test environment
+		// sqo_test_environment *
 			$item = new stdClass();
-				$item->id		= 'search_query_object_test_environment';
-				$item->class	= 'blue';
+				$item->id		= 'sqo_test_environment';
+				$item->class	= 'blue width_100';
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
 				$item->label	= 'SEARCH QUERY OBJECT TEST ENVIRONMENT';
-				$item->info		= null;
-				$item->body		= '<textarea id="json_editor" class="hide"></textarea>';
-				$item->body		.= '<div id="json_editor_container" class="editor_json"></div>';
-				$item->run[]	= (object)[
-					'fn'		=> 'init_json_editor',
-					'options'	=> (object)['editor_id' => "json_editor"]
-				];
-				$item->trigger	= (object)[
-					'dd_api'	=> 'dd_utils_api',
-					'action'	=> 'convert_search_object_to_sql_query',
-					'options'	=> null
-				];
+				$item->value	= (object)[];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
 
-		// dedalo version
+		// dedalo_version *
 			$item = new stdClass();
 				$item->id		= 'dedalo_version';
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
 				$item->label	= 'DEDALO VERSION';
-				$item->info		= null;
-				$item->body		= 'Version '.DEDALO_VERSION;
-				$item->body		.= '<pre>v '.DEDALO_VERSION .' | Build: '.DEDALO_BUILD.'</pre>';
+				$item->value	= (object)[
+					'dedalo_version'	=> DEDALO_VERSION,
+					'dedalo_build'		=> DEDALO_BUILD
+				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
 
-		// database_info
+		// database_info *
 			$info = pg_version(DBi::_getConnection());
 			$info['host'] = to_string(DEDALO_HOSTNAME_CONN);
 			$item = new stdClass();
 				$item->id		= 'database_info';
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
 				$item->label	= 'DATABASE INFO';
-				$item->info		= null;
-				$item->body		= 'Database '.$info['IntervalStyle']. " ". $info['server']. " ".DEDALO_HOSTNAME_CONN;
-				$item->body		.= '<pre>'.json_encode($info, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES).'</pre>';
+				$item->value	= (object)[
+					'info' => $info
+				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
 
-		// php_user
+		// php_user *
 			$info = (function(){
 				try {
 					if (function_exists('posix_getpwuid') && function_exists('posix_geteuid')) {
@@ -492,7 +309,7 @@ class area_development extends area_common {
 						];
 					}
 				} catch (Exception $e) {
-					error_log('Exception: '.$e->getMessage());
+					debug_log(__METHOD__." Exception:".$e->getMessage(), logger::ERROR);
 				}
 				return $info;
 			})();
@@ -500,46 +317,33 @@ class area_development extends area_common {
 				$item->id		= 'php_user';
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
 				$item->label	= 'PHP USER';
-				$item->info		= null;
-				if (empty($info)) {
-					$item->body	= 'PHP user unavailable';
-				}else{
-					$item->body	= 'PHP user '. $info['name'];
-					$item->body	.= '<pre>'.json_encode($info, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES).'</pre>';
-				}
+				$item->value	= (object)[
+					'info' => $info
+				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
 
-		// unit test (alpha)
+		// unit_test *
 			$item = new stdClass();
 				$item->id		= 'unit_test';
 				$item->typo		= 'widget';
-				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
-				$item->label	= 'TEST';
-				$item->info		= null;
-				$item->body		= '<button class="light" onclick="window.open(\'../unit_test\')">Open alpha unit test</button>';
-				$item->run[]	= (object)[
-					'fn' 	  => 'init_form',
-					'options' => (object)[
-						'submit_label' => 'Create new empty test record',
-						'confirm_text' => label::get_label('sure') || 'Sure?'
-					]
-				];
-				$item->trigger 	= (object)[
-					'dd_api'	=> 'dd_utils_api',
-					'action'	=> 'create_test_record',
-					'options'	=> null
-				];
-
+				$item->label	= 'Unit test area';
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
 
-		// sequences_status
+		// environment *
+			$item = new stdClass();
+				$item->id		= 'environment';
+				$item->typo		= 'widget';
+				$item->label	= 'Environment';
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
+
+
+		// sequences_status *
 			require(DEDALO_CORE_PATH.'/db/class.data_check.php');
 			$data_check = new data_check();
 			$response 	= $data_check->check_sequences();
@@ -547,38 +351,33 @@ class area_development extends area_common {
 				$item->id		= 'sequences_status';
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
 				$item->label	= 'DB SEQUENCES STATUS';
-				$item->info		= null;
-				$item->body		= $response->msg;
+				$item->value	= $response;
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
 
-		// counters_status
+		// counters_status *
 			$response = counter::check_counters();
 			$item = new stdClass();
 				$item->id		= 'counters_status';
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
 				$item->label	= 'DEDALO COUNTERS STATUS';
-				$item->info		= null;
-				$item->body		= $response->msg;
+				$item->value	= $response;
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
 
-		// php info
+		// php_info *
 			$item = new stdClass();
 				$item->id		= 'php_info';
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
-				$item->parent	= $this->tipo;
 				$item->label	= 'PHP INFO';
-				$item->info		= null;
-				// $item->body	= '<iframe class="php_info_iframe" src="'.DEDALO_CORE_URL.'/area_development/php_info.php" onload="this.height=this.contentWindow.document.body.scrollHeight+50+\'px;\'"></iframe>';
-				$item->body		= '<iframe class="php_info_iframe" src="'.DEDALO_CORE_URL.'/area_development/php_info.php"></iframe>';
+				$item->value	= (object)[
+					'src' => DEDALO_CORE_URL.'/area_development/php_info.php'
+				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
@@ -596,17 +395,19 @@ class area_development extends area_common {
 	*/
 	public function widget_factory(object $item) : object {
 
-		// widget
-			$widget = new stdClass();
-				$widget->id			= $item->id;
-				$widget->typo		= 'widget';
-				$widget->tipo		= $item->tipo ?? $this->tipo;
-				$widget->parent		= $item->parent ?? $this->tipo;
-				$widget->label		= $item->label ?? 'Undefined label for: '.$this->tipo;
-				$widget->info		= $item->info ?? null;
-				$widget->body		= $item->body  ?? null;
-				$widget->run		= $item->run ?? [];
-				$widget->trigger	= $item->trigger ?? null;
+		$widget = new stdClass();
+			$widget->id			= $item->id;
+			$widget->class		= $item->class ?? null;
+			$widget->typo		= 'widget';
+			$widget->tipo		= $item->tipo ?? $this->tipo;
+			$widget->parent		= $item->parent ?? $this->tipo;
+			$widget->label		= $item->label ?? 'Undefined label for: '.$this->tipo;
+			$widget->info		= $item->info ?? null;
+			$widget->body		= $item->body  ?? null;
+			$widget->run		= $item->run ?? [];
+			$widget->trigger	= $item->trigger ?? null;
+			$widget->value		= $item->value ?? null;
+
 
 		return $widget;
 	}//end widget_factory

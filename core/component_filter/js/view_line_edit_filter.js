@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -7,8 +8,10 @@
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {
-		get_content_data
+		get_content_data,
+		get_buttons
 	} from './render_edit_component_filter.js'
+
 
 
 /**
@@ -23,9 +26,9 @@ export const view_line_edit_filter = function() {
 
 
 /**
-* EDIT
-* Render node for use in edit
-* @return DOM node
+* RENDER
+* Render node for use in current view
+* @return HTMLElement wrapper
 */
 view_line_edit_filter.render = async function(self, options) {
 
@@ -42,17 +45,23 @@ view_line_edit_filter.render = async function(self, options) {
 			return content_data
 		}
 
+	// buttons
+		const buttons = (self.permissions > 1)
+			? get_buttons(self)
+			: null
 
 	// ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
 			content_data	: content_data,
+			buttons			: buttons,
 			label			: null
 		})
-		// set pointer s
+		// set pointers
 		wrapper.content_data = content_data
 
 
-
-
 	return wrapper
-}//end edit
+}//end render
+
+
+// @license-end

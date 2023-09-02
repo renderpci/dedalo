@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -14,7 +15,7 @@
 
 /**
 * TOOL_DD_LABEL
-* Tool to easy create labels in diferent languages for tools
+* Tool to easy create labels in different languages for tools
 * (!) It's only used in section 'dd1340' component 'dd1372' (Tool labels)
 */
 export const tool_dd_label = function () {
@@ -49,6 +50,8 @@ export const tool_dd_label = function () {
 
 /**
 * INIT
+* @param object options
+* @return bool common_init
 */
 tool_dd_label.prototype.init = async function(options) {
 
@@ -57,12 +60,41 @@ tool_dd_label.prototype.init = async function(options) {
 	// call the generic common tool init
 		const common_init = await tool_common.prototype.init.call(this, options);
 
-	// languages
-		self.loaded_langs	= page_globals.dedalo_projects_default_langs
-		self.ar_data		= typeof self.caller.data.value[0]==="object" && JSON.stringify(self.caller.data.value[0])==="{}"
-			? []
-			: self.caller.data.value[0] || []
-		self.ar_names		= [...new Set(self.ar_data.map(item => item.name))];
+	try {
+
+		// languages
+			self.loaded_langs = page_globals.dedalo_projects_default_langs
+
+		// editor
+			const editor = self.caller.editors[0]
+
+		// data.
+			// Get directly from editor instead from component. This allow get the current
+			// edited version even when user has not saved
+			const editor_data = (function(){
+				let e_data
+				try {
+					e_data = editor.get()
+				} catch (error) {
+					e_data = [{}]
+				}
+				return e_data
+			})()
+
+			const ar_data = Array.isArray(editor_data)
+				? editor_data
+				: [editor_data]
+
+		// fix ar_data
+			self.ar_data = ar_data
+
+		// ar_names. Columns name array
+			self.ar_names = [...new Set(self.ar_data.map(item => item.name))];
+
+	} catch (error) {
+		self.error = error
+		console.error(error)
+	}
 
 
 	return common_init
@@ -73,24 +105,28 @@ tool_dd_label.prototype.init = async function(options) {
 /**
 * UPDATE_DATA
 * Set new JSON data to JSON editor
+* @return bool
 */
 tool_dd_label.prototype.update_data = function() {
 
 	const self = this
 
-	self.caller.set_value(self.ar_data)
+	// editor
+		const editor = self.caller.editors[0]
+		editor.set(self.ar_data)
 
 
 	return true
 }//end update_data
 
 
+
 /**
 * ON_CLOSE_ACTIONS
 * Executes specific action on close the tool
 * @param string open_as
-* 	modal | window
-* @return promise: bool
+* 	modal|window
+* @return bool
 */
 tool_dd_label.prototype.on_close_actions = async function(open_as) {
 
@@ -103,3 +139,7 @@ tool_dd_label.prototype.on_close_actions = async function(open_as) {
 
 	return true
 }//end on_close_actions
+
+
+
+// @license-end

@@ -1,6 +1,5 @@
 // Import general vars
-// @import '../../page/css/layout/vars.less';
-
+@import (once) '../../page/css/layout/vars';
 
 @ts_object_line_height: 20px;
 
@@ -8,8 +7,9 @@
 	.inline_common {
 		display: inline-table;
 		float: left;
-		font-size: 1em;
-		height: @ts_object_line_height;
+		font-size: 1rem;
+		// height: @ts_object_line_height;
+		// line-height: 1.5rem;
 	}
 
 
@@ -30,8 +30,8 @@
 			opacity: 1;
 		}
 
-		>.elements_contanier {
-
+		>.hierarchy_elements_container {
+			padding: 0px;
 		}
 
 		>.children_container {
@@ -61,12 +61,15 @@
 			.inline_common;
 			//margin-left: 5px;
 			opacity: 0.5;
+			display: inline-flex;
+			flex-wrap: nowrap;
 		}
 
 		.id_column_link {
 			display: inline-table;
 			float: left;
-    		height: 1.4em;
+			height: 1.4em;
+			line-height: 1.5rem;
 
     		&:active {
     			opacity: 0.5;
@@ -129,11 +132,11 @@
 		.ts_object_order_number {
 			min-width: 14px;
 			text-align: right;
-			padding-top: 3px;
+			padding-top: 0px;
 			margin-right: 3px;
 			font-size: 9px;
 			font-family: monospace;
-			//background-color: aqua;
+			// background-color: aqua;
 		}
 		.input_order {
 			text-align: center;
@@ -172,7 +175,7 @@
 
 			// edit_icon
 			.ts_object_edit_icon {
-				background-image: url('../../themes/default/icons/icon_edit.svg');
+				background-image: url('../../themes/default/icons/edit.svg');
 				background-repeat: no-repeat;
 				background-size: 70%;
 				background-position: center;
@@ -207,9 +210,11 @@
 			min-width: 150px;
 			margin-left: 0px;
 			min-height: 22px;
+			display: flex;
 
 			// list_thesaurus commons
 			.list_thesaurus_element {
+				position: relative;
 				display: table-cell;
 				min-width: 24px;
 				padding: 2px;
@@ -220,13 +225,18 @@
 				cursor: pointer;
 				border-left: 1px solid #c3c3c3;
 
+				//padding-top: 4px;
+				//font-family: 'Menlo',monospace;
+				opacity: 0.3;
+
 				// En pruebas
 				width: 29px;
 				vertical-align: top;
 
-				//padding-top: 4px;
-				//font-family: 'Menlo',monospace;
-				opacity: 0.3;
+				&.term_img {
+					height: 1.3rem;
+					opacity: 1;
+				}
 
 				&:hover {
 					color: #ef7d00 !important;
@@ -237,6 +247,40 @@
 					color: #333333 !important;
 					font-style: italic;
 				}
+
+				img {
+					height: 100%;
+				}
+
+				&.loading {
+					background-color: transparent;
+					>span {
+						opacity: 0.12;
+					}
+
+					img {
+						opacity: 0;
+					}
+
+					&:after {
+						content: " ";
+						display: block;
+						position: absolute;
+						top: 2px;
+						left: 30%;
+						width: 1.1rem;
+						height: 1.1rem;
+
+						// background: url('../../themes/default/icons/spinner.svg');
+						// background-repeat: no-repeat;
+
+						border: 2px solid #d1d5db;
+						border-top-color: @color_orange_dedalo;
+						border-radius: 50%;
+
+						animation: run_spinner 800ms linear infinite;
+					}
+				}
 			}
 
 			// term
@@ -246,7 +290,36 @@
 				//min-width: 200px;
 				opacity: 1;
 				text-align: left;
-				white-space: nowrap;
+				// white-space: nowrap;
+				inline-size: auto;
+				overflow-wrap: break-word;
+				hyphens: auto;
+
+				&.loading {
+					// background-color: transparent;
+					>span {
+						opacity: 0.12;
+					}
+
+					&:after {
+						content: " ";
+						display: block;
+						position: absolute;
+						top: 2px;
+						left: 0px;
+						width: 1.1rem;
+						height: 1.1rem;
+
+						// background: url('../../themes/default/icons/spinner.svg');
+						// background-repeat: no-repeat;
+
+						border: 2px solid #d1d5db;
+						border-top-color: @color_orange_dedalo;
+						border-radius: 50%;
+
+						animation: run_spinner 800ms linear infinite;
+					}
+				}
 			}
 
 			.element_hilite > span {
@@ -262,38 +335,81 @@
 				font-size: 80%;
 				/* font-family: 'Menlo',monospace; */
 				/* word-wrap: break-word; */
-				vertical-align: sub;
-				position: relative;
-				top: -1px;
+				vertical-align: super;
 				padding-left: 5px;
-				padding-right: 10px;
+				padding-right: 0.25rem;
 				user-select: auto;
+				line-height: 1.4rem;
 			}
 
-			.list_thesaurus_element[data-tipo='hierarchy40'],
-			.list_thesaurus_element[data-tipo='hierarchy91'] {
-				background-color: @color_grey_medium;
-				opacity: 0.8;
+			// indexations
+			.list_thesaurus_element.show_indexations,
+			.list_thesaurus_element.default	{
+				// background-color: @color_grey_medium;
+				background-color: @color_orange_dedalo;
+				opacity: 0.6;
 				border: 0px;
 				padding-left: 4px;
 				padding-right: 3px;
-				color: #717171;
+				// color: #717171;
+				color: #ffffff;
 				border-radius: 3px;
-				display: inline-block;
+				// display: inline-block;
 				margin: 0px;
 				height: 19px;
 				width: initial;
 				font-size: 12px;
 				margin-right: 5px;
+				line-height: 1.2rem;
+
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+
+				&.default {
+					// background-color: transparent;
+				}
 
 				&:hover {
-					background-color: #ffb666;
+					// background-color: #ffb666;
 					color: #ffffff !important;
+					opacity: 1;
+				}
+				&:active {
+					background-color: @color_grey_medium;
+					color: #717171 !important;
+					// opacity: 0.5;
+				}
+
+				&.loading {
+					background-color: transparent;
+					>span {
+						opacity: 0;
+					}
+
+					&:after {
+						content: " ";
+						display: block;
+						position: absolute;
+						top: 2px;
+						left: 32%;
+						width: 1.1rem;
+						height: 1.1rem;
+
+						// background: url('../../themes/default/icons/spinner.svg');
+						// background-repeat: no-repeat;
+
+						border: 2px solid #d1d5db;
+						border-top-color: @color_orange_dedalo;
+						border-radius: 50%;
+
+						animation: run_spinner 800ms linear infinite;
+					}
 				}
 			}
 
 			// ts_object_children_arrow_icon mixins
-			@triangle_color:#ff8600;
+			@triangle_color: @color_orange_dedalo; // #ff8600;
 			.triangle_down {
 				width: 0px;
 				height: 0px;
@@ -328,15 +444,30 @@
 			}
 
 			.arrow_spinner {
-				background: url('../../themes/default/icons/spinner.svg');
-				background-repeat: no-repeat;
-				border: 0px;
-				height: 18px;
-				width: 20px;
-				top: 0px;
-				left: 0px;
-				padding: 0px;
+				border: none;
 				margin: 0px;
+				padding: 0px;
+				opacity: 1;
+				position: relative;
+
+				&:after {
+					content: " ";
+					display: block;
+					position: absolute;
+					top: 0;
+					left: 0;
+					width: 1.1rem;
+					height: 1.1rem;
+
+					// background: url('../../themes/default/icons/spinner.svg');
+					// background-repeat: no-repeat;
+
+					border: 2px solid #d1d5db;
+					border-top-color: @color_orange_dedalo;
+					border-radius: 50%;
+
+					animation: run_spinner 800ms linear infinite;
+				}
 			}
 
 			.arrow_unactive {
@@ -349,9 +480,9 @@
 			}
 
 			// nd_button
-			.list_thesaurus_element[data-type='link_children_nd'] {
+			// .list_thesaurus_element[data-type='link_children_nd'] {
 				//background-color: #E1F01B
-			}
+			// }
 
 		}//end .elements_container
 
@@ -367,29 +498,47 @@
 
 
 		// data_container
-		.data_container {
-			background-color: rgba(156, 156, 156, 0.15);
-			.inline_common ;
+		>.data_container {
+			// background-color: rgba(156, 156, 156, 0.15);
+			// .inline_common ;
+			// height: 0px;
 			width: 100%;
-			height: 0px;
+			padding-left: 7rem;
+			display: block;
+			height: auto;
+			margin-top: 1rem;
+			margin-bottom: 1rem;
 
-			 // only first level of inside divs
-			> div {
-				padding: 10px;
-				border-bottom: 1px solid #c2c2c2;
-				float: left;
-				width: 100%;
-			}
-			 // all components showed inside
-			.wrap_component {
+
+			// only first level of inside divs
+			// > div {
+			// 	padding: 1rem;
+			// 	// border-bottom: 1px solid #c2c2c2;
+			// 	float: left;
+			// 	width: 100%;
+			// }
+
+			// all components showed inside
+			>.wrapper_component {
 				min-height: initial;
-				padding: 0px;
+				padding: 1rem;
+				width: auto;
+				min-width: 50%;
+				margin-top: 0.5rem;
+				margin-bottom: 0.5rem;
+				float: left;
+				// background-color: #dc9ebd;
+				clear: both;
+
+				// padding: 0px;
+				// box-shadow: none;
 			}
+
 		}//end .data_container
 
 
 		// children_container
-		.children_container {
+		>.children_container {
 			//background-color: rgba(248, 182, 175, 0.49);
 			.inline_common ;
 			height: 0px;
@@ -410,6 +559,14 @@
 			height: 0px;
 			margin-left: 50px;
 			width: 100%;
+
+			>.wrap_ts_object {
+				width: calc(100% - 4rem);
+			}
+
+			.data_container {
+				padding-left: 3rem;
+			}
 		}
 
 		// indexations_container
@@ -449,7 +606,7 @@
 		}
 
 		.wrap_ts_object_nd {
-			background-color: #f5f5f5;
+			// background-color: #f5f5f5;
 			color: #797979;
 			padding: 2px;
 			padding-left: 0px;
@@ -463,22 +620,22 @@
 		}
 
 		// loading
-		.loading_list_thesaurus_data {
-			min-height: 42px;
-			//background-color: transparent !important;
+			// .loading_list_thesaurus_data {
+			// 	min-height: 42px;
+			// 	//background-color: transparent !important;
 
-			&:after {
-				background: url('../../themes/default/icons/spinner.svg');
-				background-position: 10px;
-				background-repeat: no-repeat;
-				background-size: 30px;
-				content: ' loading... ';
-				display: table-cell;
-				margin-left: 50px;
-				padding: 10px;
-				padding-left: 45px;
-			}
-		}
+			// 	&:after {
+			// 		background: url('../../themes/default/icons/spinner.svg');
+			// 		background-position: 10px;
+			// 		background-repeat: no-repeat;
+			// 		background-size: 30px;
+			// 		content: ' loading... ';
+			// 		display: table-cell;
+			// 		margin-left: 50px;
+			// 		padding: 10px;
+			// 		padding-left: 45px;
+			// 	}
+			// }
 
 		.visible_element {
 			background-color: #81c943;

@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global */
 /*eslint no-undef: "error"*/
 
@@ -23,9 +24,11 @@ export const view_default_edit_input_text = function() {
 
 
 /**
-* EDIT
-* Render node for use in modes: edit, edit_in_list
-* @return DOM node wrapper
+* RENDER
+* Render node for use in current view
+* @param object self
+* @param object options
+* @return HTMLElement wrapper
 */
 view_default_edit_input_text.render = async function(self, options) {
 
@@ -39,7 +42,9 @@ view_default_edit_input_text.render = async function(self, options) {
 		}
 
 	// buttons
-		const buttons = get_buttons(self)
+		const buttons = (self.permissions > 1)
+			? get_buttons(self)
+			: null
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
@@ -51,13 +56,14 @@ view_default_edit_input_text.render = async function(self, options) {
 
 
 	return wrapper
-}//end edit
+}//end render
 
 
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return DOM node content_data
+* @param object self
+* @return HTMLElement content_data
 */
 const get_content_data_edit = function(self) {
 
@@ -73,12 +79,16 @@ const get_content_data_edit = function(self) {
 		const value_length	= inputs_value.length
 
 		for (let i = 0; i < value_length; i++) {
-			const input_element_node = get_content_value(i, inputs_value[i], self)
+			// get the content_value
+			const content_value = (self.permissions===1)
+				? get_content_value_read(i, inputs_value[i], self)
+				: get_content_value(i, inputs_value[i], self)
 			// set the pointer
-			content_data[i] = input_element_node
+			content_data[i] = content_value
 			// add node to content_data
-			content_data.appendChild(input_element_node)
+			content_data.appendChild(content_value)
 		}
+
 
 	return content_data
 }//end get_content_data_edit
@@ -99,9 +109,14 @@ const get_content_value = (i, current_value, self) => {
 		const multi_line	= (self.context.properties && self.context.properties.hasOwnProperty('multi_line'))
 			? self.context.properties.multi_line
 			: false
-		const element_type	= (multi_line===true) ? 'textarea' : 'input'
-		const is_inside_tool= self.is_inside_tool
-		// const with_lang_versions	= self.context.properties.with_lang_versions || false
+		const element_type			= (multi_line===true) ? 'textarea' : 'input'
+		const is_inside_tool 		= self.is_inside_tool
+		const with_lang_versions	= self.context.properties.with_lang_versions || false
+
+	// check if the component is mandatory and it doesn't has value
+		const add_class			= self.context.properties.mandatory && !current_value && self.lang===page_globals.dedalo_data_nolan
+			? ' mandatory'
+			: ''
 
 	// content_value node
 		const content_value = ui.create_dom_element({
@@ -113,7 +128,7 @@ const get_content_value = (i, current_value, self) => {
 		const input = ui.create_dom_element({
 			element_type	: element_type,
 			type			: 'text',
-			class_name		: 'input_value',
+			class_name		: 'input_value' + add_class,
 			value			: current_value,
 			placeholder		: (current_value) ? '' : self.data.fallback_value[i],
 			parent			: content_value
@@ -129,6 +144,25 @@ const get_content_value = (i, current_value, self) => {
 			input.addEventListener('keyup', function(e) {
 				keyup_handler(e, i, self)
 			})
+		// click event. Capture event propagation
+			input.addEventListener('click', (e) => {
+				e.stopPropagation()
+			})
+		// mousedown event. Capture event propagation
+			input.addEventListener('mousedown', (e) => {
+				e.stopPropagation()
+			})
+
+		// transliterate value
+			if(with_lang_versions){
+				const transliterate_value = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'transliterate_value',
+					inner_html		: self.data.transliterate_value,
+					parent			: content_value
+				})
+			}
+
 		// blur event
 			// input.addEventListener('blur', function() {
 			// 	// force to save current input if changed (prevents override changed_data
@@ -186,9 +220,31 @@ const get_content_value = (i, current_value, self) => {
 
 
 /**
+* GET_CONTENT_VALUE_READ
+* Creates the current value DOM node
+* @param int i
+* @param string current_value
+* @param object self
+* @return HTMLElement content_value
+*/
+const get_content_value_read = (i, current_value, self) => {
+
+	// content_value node
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value read_only',
+			inner_html		: current_value
+		})
+
+	return content_value
+}//end get_content_value_read
+
+
+
+/**
 * GET_BUTTONS
 * @param object instance
-* @return DOM node buttons_container
+* @return HTMLElement buttons_container
 */
 const get_buttons = (self) => {
 
@@ -258,3 +314,7 @@ const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
+
+
+
+// @license-end

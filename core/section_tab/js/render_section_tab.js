@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG*/
 /*eslint no-undef: "error"*/
 
@@ -25,7 +26,7 @@ export const render_section_tab = function() {
 /**
 * EDIT
 * Render node for use in edit
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_section_tab.prototype.edit = async function(options) {
 
@@ -58,9 +59,9 @@ render_section_tab.prototype.edit = async function(options) {
 					const status_table	= 'status'
 
 				// children
-					const children = self.context.children
-					const children_length = children.length
-					const children_object = {}
+					const children			= self.context.children
+					const children_length	= children.length
+					const children_object	= {}
 					for (let i = 0; i < children_length; i++) {
 						const child = children[i]
 						const child_node = ui.create_dom_element({
@@ -109,7 +110,7 @@ render_section_tab.prototype.edit = async function(options) {
 					const ui_status		= await data_manager.get_local_db_data(status_id, status_table)
 					const selected_tipo	= ui_status && ui_status.value
 						? ui_status.value
-						: children[0].tipo // fisrt tab tipo fallback
+						: children[0].tipo // first tab tipo fallback
 					active_tab( children_object[selected_tipo] )
 
 				break;
@@ -124,14 +125,15 @@ render_section_tab.prototype.edit = async function(options) {
 /**
 * GET_WRAPPER
 * Render node for use in edit
-* @return DOM node
+* @param object self
+* @return HTMLElement wrapper
 */
 const get_wrapper = function(self) {
 
 	// wrapper
 		const wrapper = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: `${'wrapper_'+self.type} ${self.model} ${self.tipo} ${self.section_tipo+'_'+self.tipo} ${self.context.view} ${self.mode}`
+			class_name		: `${'wrapper_'+self.type} ${self.tipo} ${self.section_tipo+'_'+self.tipo} ${self.context.view} ${self.mode}`
 		})
 	// CSS
 		// const element_css = self.context.css || {}
@@ -170,7 +172,7 @@ const get_wrapper = function(self) {
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 	// const get_content_data = function(self) {
 
@@ -183,3 +185,5 @@ const get_wrapper = function(self) {
 	// }//end get_content_data
 
 
+
+// @license-end

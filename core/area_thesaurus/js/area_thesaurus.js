@@ -1,10 +1,14 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, ts_object */
 /*eslint no-undef: "error"*/
 
 
 // imports
-	import {common} from '../../common/js/common.js'
-	import {clone, dd_console} from '../../common/js/utils/index.js'
+	import {
+		common,
+		build_autoload
+	} from '../../common/js/common.js'
+	import {clone, dd_console, url_vars_to_object} from '../../common/js/utils/index.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {area_common} from '../../area_common/js/area_common.js'
@@ -51,8 +55,6 @@ export const area_thesaurus = function() {
 
 	// display mode: 'default' | 'relation'
 	this.thesaurus_mode
-
-	return true
 }//end area_thesaurus
 
 
@@ -75,6 +77,7 @@ export const area_thesaurus = function() {
 
 /**
 * INIT
+* @pram object options
 * @return bool
 */
 area_thesaurus.prototype.init = async function(options) {
@@ -87,9 +90,10 @@ area_thesaurus.prototype.init = async function(options) {
 	// events subscription
 		// toggle_search_panel. Triggered by button 'search' placed into section inspector buttons
 		self.events_tokens.push(
-			event_manager.subscribe('toggle_search_panel', fn_toggle_search_panel)
+			event_manager.subscribe('toggle_search_panel_'+self.id, fn_toggle_search_panel)
 		)
 		async function fn_toggle_search_panel() {
+
 			if (self.search_container.children.length===0) {
 				// await add_to_container(self.search_container, self.filter)
 				await ui.load_item_with_spinner({
@@ -133,6 +137,18 @@ area_thesaurus.prototype.init = async function(options) {
 				})
 		}
 
+	// linker
+		const url_vars = url_vars_to_object(window.location.search)
+		// linker. Get component caller id from url (needed to link terms for DS callers)
+		if (url_vars.initiator) {
+			const caller_id = JSON.parse(url_vars.initiator)
+			self.linker = {
+				id		: caller_id,
+				caller	: null // passed as null for DS call identification. Indexation callers have value here
+			}
+		}
+
+
 
 	return common_init
 }//end init
@@ -141,15 +157,15 @@ area_thesaurus.prototype.init = async function(options) {
 
 /**
 * BUILD
-* @return promise
-*	bool true
+* @param bool autoload = true
+* @return bool
 */
 area_thesaurus.prototype.build = async function(autoload=true) {
 	const t0 = performance.now()
 
 	const self = this
 
-	// call the generic common tool build
+	// call the generic common build
 		// const common_build = await area_common.prototype.build.call(this, options);
 
 	// status update
@@ -161,12 +177,6 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 			context	: []
 		}
 		self.data = self.data || []
-
-	// // request_config_object
-	// 	self.request_config_object	= self.context.request_config.find(el => el.api_engine==='dedalo')
-
-	// // rqo build
-	// 	self.rqo = self.rqo || await self.build_rqo_show(self.request_config_object, 'get_data')
 
 	// rqo
 		const generate_rqo = async function(){
@@ -182,12 +192,26 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 		}
 		await generate_rqo()
 
-	// load data if not yet received as an option
+	// load from DDBB
 		if (autoload===true) {
-			// get context and data
-				// const api_response = await data_manager.read(self.dd_request.show)
-				const api_response = await data_manager.request({body:self.rqo})
-					// console.log("AREA_THESAURUS api_response:", self.id, api_response);
+
+			// build_autoload
+			// Use unified way to load context and data with
+			// errors and not login situation managing
+				const api_response = await build_autoload(self)
+				if (!api_response) {
+					return false
+				}
+
+			// reset errors
+				self.running_with_errors = null
+
+			// destroy dependencies
+				await self.destroy(
+					false, // bool delete_self
+					true, // bool delete_dependencies
+					false // bool remove_dom
+				)
 
 			// set the result to the datum
 				self.datum = api_response.result
@@ -208,12 +232,11 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 				// self.dd_request.show = self.build_rqo('show', self.context.request_config, 'get_data')
 				// console.log("-----------------------self.dd_request.show", self.dd_request.show);
 
-			// // rebuild the request_config_object and rqo in the instance
-			// // request_config_object
-			// 	self.request_config_object	= self.context.request_config.find(el => el.api_engine==='dedalo')
+			// rebuild the request_config_object and rqo in the instance
+				// // request_config_object
+				// 	self.request_config_object	= self.context.request_config.find(el => el.api_engine==='dedalo')
 
-			// // rqo build
-			// 	self.rqo = await self.build_rqo_show(self.request_config_object, 'get_data')
+			// rqo config
 				if(self.context.hierarchy_sections){
 					self.rqo.source.hierarchy_sections = self.context.hierarchy_sections
 				}
@@ -223,11 +246,13 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 				if(self.context.thesaurus_mode){
 					self.rqo.source.thesaurus_mode = self.context.thesaurus_mode
 				}
+				// limit
+				self.rqo.sqo.limit = self.rqo.sqo.limit || 30
+
 			// rqo regenerate
 				await generate_rqo()
-				console.log("SECTION self.rqo after load:", clone(self.rqo));
-	}//end if (autoload===true)
-
+				console.log("AREA self.rqo after load:", clone(self.rqo));
+		}//end if (autoload===true)
 
 	// label
 		self.label = self.context.label
@@ -261,7 +286,7 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 
 	// ts_object. Set from global var
 		self.ts_object = ts_object
-
+		self.ts_object.mode = self.mode
 
 	// debug
 		if(SHOW_DEBUG===true) {
@@ -319,3 +344,48 @@ area_thesaurus.prototype.get_sections_selector_data = function() {
 }//end get_sections_selector_data
 
 
+
+/**
+* NAVIGATE
+* @param object options
+* @return bool
+*/
+area_thesaurus.prototype.navigate = async function(options) {
+
+	const self = this
+
+	// options
+		const callback				= options.callback
+		const navigation_history	= options.navigation_history!==undefined
+			? options.navigation_history
+			: false
+
+	// loading
+		self.node.content_data.classList.add('loading')
+
+	// callback execute
+		if (callback) {
+			await callback()
+
+			if(SHOW_DEBUG===true) {
+				// console.log("-> Executed section navigate received callback:", callback);
+			}
+		}
+
+	// refresh
+		await self.refresh({
+			build_autoload	: true,
+			render_level	: 'content',
+			destroy			: false
+		})
+
+	// loading
+		self.node.content_data.classList.remove('loading')
+
+
+	return true
+}//end get_sections_selector_data
+
+
+
+// @license-end

@@ -3,7 +3,11 @@
 *
 * Loaded on tool init
 */
+// imports
+@import (once) '../../../core/page/css/layout/vars';
 
+
+@tool_main_color: #17a2b8;
 
 
 // tool wrapper
@@ -11,7 +15,6 @@
 	.wrapper_tool.tool_import_dedalo_csv {
 
 		>.service_upload_container {
-			// margin-bottom: 1rem;
 			width: 100%;
 			min-height: 138px;
 			position: relative;
@@ -26,6 +29,11 @@
 		}
 
 		>.content_data {
+
+			// generic box
+			.container {
+				padding: 0.5rem;
+			}
 
 			>.files_list {
 
@@ -64,7 +72,7 @@
 							color: #a0a0a0;
 
 							>input {
-								width: 6rem;
+								width: 9rem;
 								text-align: center;
 								font-size: 0.9rem;
 								margin-left: 0.33rem;
@@ -77,7 +85,7 @@
 							position: absolute;
 							right: 0px;
 						}
-					}
+					}//end >.file_line
 
 					>.warning {
 						background-color: #f76c1c;
@@ -93,6 +101,8 @@
 
 					.button_preview {
 						text-transform: capitalize;
+						opacity: 0.8;
+						line-height: 1.3rem;
 					}
 
 					>.preview {
@@ -118,13 +128,16 @@
 
 							>.columns_mapper_line {
 								display: contents;
-								> *{
+								position: relative;
+
+								> * {
 									padding: 0.12rem;
 									// border-bottom: 1px solid #e6e2e2;
 									// align-items: center;
 									// justify-items: start;
 									line-height: 1.2em;
 									align-self: center;
+									overflow: auto;
 								}
 
 								&.names > div{
@@ -161,39 +174,98 @@
 								}
 							}
 						}
-					}
+					}//end >.columns_mapper
 
-					.result{
-						>.result_info_container{
-							padding-top: 1em;
+
+					.result_container {
+
+						// OK/Error message
+						>.response_msg {
+							border: none;
+						}
+
+						// like 'Section: numisdata41. Total records created:0 - updated:998 - failed:0'
+						>.user_msg_container {
+							padding: 0.66rem;
+							padding-left: 0px;
+						}
+
+						>.dedalo_last_error_container {
+							display: block;
+							padding: 0.66rem;
+							color: @color_danger;
+							font-weight: 500;
+							line-height: 1.1rem;
+
+							--icon-path : url('../../../core/themes/default/icons/warning.svg');
+							&:before {
+								background-color: @color_danger;
+								content: ' ';
+								display: inline-block;
+								height: 1.5em;
+								width: 1.5em;
+								margin-right: 0.5rem;
+								opacity: 1;
+								vertical-align: bottom;
+								// .fn_add_mask(@icon_name);
+								-webkit-mask-image: var(--icon-path);
+										mask-image: var(--icon-path);
+								-webkit-mask-size: contain;
+										mask-size: contain;
+								-webkit-mask-repeat: no-repeat;
+										mask-repeat: no-repeat;
+								-webkit-mask-position: center;
+										mask-position: center;
+
+								@media screen and (max-width: @width_break_point_1) {
+									margin-right: 0px;
+								}
+							}
+
+							>.error_pre {
+								background-color: unset;
+							}
+						}
+
+						>.result_info_container {
+							// padding-top: 1em;
 							margin-top: 1em;
 							border-top: 1px solid #e6e2e2;
-							>.headder{
+							padding: 1rem;
+
+							>.header {
 								display: flex;
 								align-items: center;
+								margin-top: 1rem;
+
 								>.label{
 									flex: 1;
 									margin-top: 1em;
+									margin-bottom: 1rem;
+									font-size: 1.25rem;
 									font-weight: 500;
-									// text-align: center;
-									border-bottom: 1px solid #e6e2e2;
-									margin-bottom: 0.5em;
-									padding-bottom: 0.5em;
+								}
+
+								>.copy_button {
+									margin-bottom: 1rem;
 								}
 							}
-							>.section_id_container{
+							>.section_id_container {
 								columns: 5em auto;
+								border-left: 2px solid @color_orange_dedalo;
+								padding-left: 2rem;
+								line-height: 1.2rem;
 								// display: grid;
 								// grid-template-columns: repeat(auto-fill, minmax(5em, 1fr));
 							}
-							>.failed_container{
+							>.failed_container {
 								padding-top: 1em;
 								padding-left: 1em;
 								// columns: 5em auto;
 								// display: grid;
 								// grid-template-columns: repeat(auto-fill, minmax(5em, 1fr));
 							}
-							>.failed_data_container{
+							>.failed_data_container {
 								padding-top: 1em;
 								padding-left: 2em;
 								padding-bottom: 0.5em;
@@ -213,8 +285,13 @@
 				display: flex;
 				align-items: center;
 
-				>button {
+				>.import_button {
 					margin-right: 1rem;
+					margin-left: 0.75rem;
+					margin-bottom: 0.5rem;
+
+					// background-color: @tool_main_color;
+					// border-color: darken(@tool_main_color, 5%);
 				}
 
 				>label {
@@ -230,5 +307,5 @@
 
 // modal header tool modification
 	.tool_header.tool_import_dedalo_csv {
-		background-color: #17a2b8;
+		background-color: @tool_main_color;
 	}

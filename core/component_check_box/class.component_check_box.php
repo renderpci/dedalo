@@ -40,6 +40,10 @@ class component_check_box extends component_relation_common {
 				}
 			}
 
+		if (empty($lang)) {
+			$lang = DEDALO_DATA_LANG;
+		}
+
 		$ar_list_of_values = $this->get_ar_list_of_values($lang); # Importante: Buscamos el valor en el idioma actual
 		$ar_values = [];
 		foreach ($ar_list_of_values->result as $key => $item) {
@@ -88,27 +92,16 @@ class component_check_box extends component_relation_common {
 	*/
 	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
-		$diffusion_value = $this->get_valor($lang, 'string');
+		$diffusion_value = $this->get_valor(
+			$lang ?? DEDALO_DATA_LANG,
+			'string'
+		);
 		$diffusion_value = !empty($diffusion_value)
 			? strip_tags($diffusion_value)
 			: null;
 
 		return $diffusion_value;
 	}//end get_diffusion_value
-
-
-
-	/**
-	* GET_DATAFRAME_VALUE
-	* @param string $type
-	* @return string $dataframe_value
-	*/
-		// public function get_dataframe_value(string $type) : string {
-
-		// 	$dataframe_value = RecordObj_dd::get_termino_by_tipo($type, DEDALO_APPLICATION_LANG, true);
-
-		// 	return $dataframe_value;
-		// }//end get_dataframe_value
 
 
 

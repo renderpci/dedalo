@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
@@ -7,7 +8,6 @@
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {event_manager} from '../../common/js/event_manager.js'
-	// import {clone} from '../../common/js/utils/index.js'
 	import {render_edit_component_security_access} from './render_edit_component_security_access.js'
 	import {render_list_component_security_access} from './render_list_component_security_access.js'
 	import {render_search_component_security_access} from './render_search_component_security_access.js'
@@ -35,8 +35,6 @@ export const component_security_access = function(){
 	this.tools
 
 	this.worker_path
-
-	return true
 }//end component_security_access
 
 
@@ -73,6 +71,7 @@ export const component_security_access = function(){
 
 /**
 * INIT
+* @param object options
 * @return promise bool
 */
 component_security_access.prototype.init = async function(options) {
@@ -84,7 +83,7 @@ component_security_access.prototype.init = async function(options) {
 
 	// check worker support. Manages get_children and get_parents expensive recursive functions mainly
 		if(!window.Worker) {
-			console.error('Your browser doesn\'t support web workers.');
+			console.error('Your browser does not support web workers..');
 			// throw new Error('Unable to continue. workers are needed');
 		}
 		self.worker_path = '../component_security_access/js/worker_security_access.js'
@@ -92,6 +91,50 @@ component_security_access.prototype.init = async function(options) {
 
 	return common_init
 }//end  init
+
+
+
+/**
+* BUILD
+* @param object options
+* @return promise bool
+* 	Resolve bool
+*/
+component_security_access.prototype.build = async function(options) {
+
+	const self = this
+
+	// call the generic common method
+		const common_build = await component_common.prototype.build.call(self, options);
+
+	// fill value zero on data.
+	// Note that items with value 0 will not be saved in DDBB, but they will need to be added to data
+	// to be processed by client interface (to propagate values)
+		const filled_value		= []
+		const data				= self.data || {}
+		const datalist			= data.datalist || []
+		const datalist_length	= datalist.length
+		for (let i = datalist_length - 1; i >= 0; i--) {
+
+			const item = self.data.datalist[i]
+			const found = self.data.value.find(el => el.tipo===item.tipo && el.section_tipo===item.section_tipo)
+			if (found) {
+				filled_value.push(found)
+			}else{
+				filled_value.push({
+					tipo			: item.tipo,
+					section_tipo	: item.section_tipo,
+					value			: 0
+				})
+			}
+		}
+		// replace value
+		self.filled_value = filled_value
+
+
+	return common_build
+}//end build
+
 
 
 /**
@@ -127,9 +170,9 @@ component_security_access.prototype.update_value = function(item, input_value) {
 	const self = this
 
 	// value . Copy of current data.value
-		const value = self.data.value
-				? [...self.data.value]
-				: []
+		const value = self.filled_value
+			? [...self.filled_value]
+			: []
 
 	// item check
 		if (!item) {
@@ -154,13 +197,12 @@ component_security_access.prototype.update_value = function(item, input_value) {
 		}
 
 	// fix updated changed_value
-		self.data.value = value
+		self.filled_value = value
 
 	// event. publish update_value_xx event on change data.value
 		const name = 'update_value_' + self.id + '_' + item.tipo + '_' + item.section_tipo
 		event_manager.publish(name, input_value)
-
-	// console.log("changed_value:", item.tipo, item.section_tipo, changed_value);
+		// console.log("changed_value:", item.tipo, item.section_tipo, changed_value);
 
 	return value
 }//end update_value
@@ -179,9 +221,12 @@ component_security_access.prototype.update_value = function(item, input_value) {
 		tipo: "mht55"
 		section_tipo: "mht5"
 	}
-* @return array ar_parents
+* @param array datalist
+* @return promise
+* 	resolve array ar_parents
 */
 component_security_access.prototype.get_parents = function(item, datalist) {
+	const t1 = performance.now()
 
 	const self = this
 
@@ -194,12 +239,18 @@ component_security_access.prototype.get_parents = function(item, datalist) {
 		})
 		current_worker.onmessage = function(e) {
 			const parents = e.data.result
-			// current_worker.terminate()
-			// console.log('parents:', parents);
+			current_worker.terminate()
+
+			// debug
+				if(SHOW_DEBUG===true) {
+					// console.log('parents:', parents);
+					console.log("__***Time performance.now()-t1 get_parents:", item.tipo, parents.length, performance.now()-t1);
+				}
+
 			resolve( parents )
 		}
 		current_worker.onerror = function(e) {
-			console.error('Worker error:', e);
+			console.error('Worker error [get_parents]:', e);
 		}
 		current_worker.postMessage({
 			fn		: 'get_parents',
@@ -222,9 +273,12 @@ component_security_access.prototype.get_parents = function(item, datalist) {
 		tipo: "mht55"
 		section_tipo: "mht5"
 	}
-* @return array ar_children
+* @param array datalist
+* @return promise
+* 	resolve array ar_children
 */
 component_security_access.prototype.get_children = function(item, datalist) {
+	const t1 = performance.now()
 
 	const self = this
 
@@ -237,12 +291,18 @@ component_security_access.prototype.get_children = function(item, datalist) {
 		})
 		current_worker.onmessage = function(e) {
 			const children = e.data.result
-			// current_worker.terminate()
-			// console.log('children:', children);
+			current_worker.terminate()
+
+			// debug
+				if(SHOW_DEBUG===true) {
+					// console.log('children:', children);
+					console.log("__***Time performance.now()-t1 get_children:", item.tipo, children.length, performance.now()-t1);
+				}
+
 			resolve( children )
 		}
 		current_worker.onerror = function(e) {
-			console.error('Worker error:', e);
+			console.error('Worker error [get_children]:', e);
 		}
 		current_worker.postMessage({
 			fn		: 'get_children',
@@ -285,35 +345,45 @@ component_security_access.prototype.update_parents_radio_butons = async function
 
 		const current_parent = parents[i]
 
-		if(diff_value===false) {
-			// check values of every child finding a different value from last value found
-			const current_children = await self.get_children(current_parent)
-			const current_children_length = current_children.length
-			for (let k = current_children_length - 1; k >= 0; k--) {
+		// different value case
+			if(diff_value===false) {
 
-				const child = current_children[k]
+				// check values of every child finding a different value from last value found
+				const current_children			= await self.get_children(current_parent)
+				const current_children_length	= current_children.length
+				for (let k = current_children_length - 1; k >= 0; k--) {
 
-				// exclude sections and areas
-				if(child.tipo===child.section_tipo) continue
+					const child = current_children[k]
 
-				const data_found = self.data.value.find(el => el.tipo===child.tipo && el.section_tipo===child.section_tipo)
-				if (!data_found) {
-					diff_value = true
-					break
+					// exclude sections and areas
+					if(child.tipo===child.section_tipo) {
+						continue
+					}
+
+					const data_found = self.filled_value.find(el => el.tipo===child.tipo && el.section_tipo===child.section_tipo)
+					if (!data_found) {
+						diff_value = true
+						break
+					}
+					if(data_found.value!==input_value) {
+						diff_value = true
+						break
+					}
 				}
-				if(data_found.value !== input_value) {
-					diff_value = true
-					break
-				}
-			}
-		}//end if(diff_value===false)
+			}//end if(diff_value===false)
 
-		const value_to_propagete = (diff_value===false)
-			? input_value
-			: null
+		// value_to_propagete
+			const value_to_propagete = (diff_value===false)
+				? input_value
+				: null
+
 		// parent target value update
-		event_manager.publish('update_area_radio_' + self.id + '_' + current_parent.tipo + '_' + current_parent.section_tipo, value_to_propagete)
+			event_manager.publish(
+				'update_area_radio_' + self.id + '_' + current_parent.tipo + '_' + current_parent.section_tipo,
+				value_to_propagete
+			)
 	}//end for
+
 
 	return diff_value
 }//end update_parents_radio_butons
@@ -321,9 +391,33 @@ component_security_access.prototype.update_parents_radio_butons = async function
 
 
 /**
+* CHANGE_VALUE
+* Overwrite component_common method
+* @return promise
+* Resolve bool|object (API response) from change_value()
+*/
+	// component_security_access.prototype.change_value = async function(options) {
+
+	// 	const self = this
+
+	// 	// options
+	// 		const from_save_changes = options.from_save_changes || false
+
+	// 	const api_response = (from_save_changes===true)
+	// 		? await component_common.prototype.change_value.call(this, options) // internal call from self save_changes. Pass untouched to component_common
+	// 		: await self.save_changes() // Prepare as save changes mode that triggers change_value again
+
+
+	// 	return api_response
+	// }//end change_value
+
+
+
+/**
 * SAVE_CHANGES
 * Rebuild self.data.value removing empty zero values and save result
 * @return promise
+* 	Resolve bool|object (API response) from change_value()
 */
 component_security_access.prototype.save_changes = async function() {
 
@@ -331,15 +425,16 @@ component_security_access.prototype.save_changes = async function() {
 
 	// rebuild value removing empty zero values
 		const clean_changed_value	= []
-		const value_length			= self.data.value.length
+		const value_length			= self.filled_value.length
 		for (let i = 0; i < value_length; i++) {
-			const value_item = self.data.value[i]
+			const value_item = self.filled_value[i]
 			if (value_item.value>0) {
 				clean_changed_value.push(value_item)
 			}
 		}
 
-	// changed_data build. (!) Note that action is 'set_data' instead 'insert' or 'update', to save whole array data as raw
+	// changed_data build
+	// (!) Note that action is 'set_data' instead 'insert' or 'update', to save whole array data as raw value
 		const changed_data = [Object.freeze({
 			action	: 'set_data',
 			value	: clean_changed_value
@@ -347,10 +442,15 @@ component_security_access.prototype.save_changes = async function() {
 
 	// change_value to save
 		const result = self.change_value({
-			changed_data	: changed_data,
-			refresh			: false
+			changed_data			: changed_data,
+			refresh					: false,
+			// from_save_changes	: true
 		})
 
 
 	return result
 }//end save_changes
+
+
+
+// @license-end

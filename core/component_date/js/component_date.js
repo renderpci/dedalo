@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, DEDALO_ROOT_WEB */
 /*eslint no-undef: "error"*/
 
@@ -35,9 +36,6 @@ export const component_date = function(){
 
 	this.date_separator	= '/'
 	this.time_separator	= ':'
-
-
-	return true
 }//end component_date
 
 
@@ -125,7 +123,7 @@ component_date.prototype.date_to_string = function (date) {
 
 	const self	= this
 
-	const date_order = page_globals.DEDALO_DATE_ORDER || 'dmy'
+	const date_order = page_globals.dedalo_date_order || 'dmy'
 
 	// day. check if the date has defined the day and pad the start with 0 when the day has only 1 digit
 		const day	= (date.day && date.day>0)
@@ -210,7 +208,7 @@ component_date.prototype.parse_string_date = function(string_date) {
 
 	const self	= this
 
-	const date_order		= page_globals.DEDALO_DATE_ORDER || 'dmy'
+	const date_order		= page_globals.dedalo_date_order || 'dmy'
 	const ar_date_values	= string_date.split(self.date_separator)
 
 	if(ar_date_values.length === 1){
@@ -235,9 +233,9 @@ component_date.prototype.parse_string_date = function(string_date) {
 	const date_obj = {}
 	// only year, common to all date order
 	if(ar_date_values.length === 1){
-		 date_obj.year = (ar_date_values[0])
-			 ? parseInt(ar_date_values[0])
-			 : null
+		date_obj.year = (ar_date_values[0])
+			? parseInt(ar_date_values[0])
+			: null
 	}else{
 		switch (date_order) {
 			case 'mdy':
@@ -299,8 +297,11 @@ component_date.prototype.parse_string_date = function(string_date) {
 
 	// final dd_date
 		const dd_date = {}
-		dd_date.year = date_obj.year
 
+		// dd_date.year = date_obj.year
+		if(typeof date_obj.year==='number'){
+			dd_date.year = date_obj.year
+		}
 		if(date_obj.month){
 			dd_date.month = month_ok ? date_obj.month : month_ok
 		}
@@ -416,6 +417,7 @@ component_date.prototype.is_leap_year = function(year) {
 /**
 * GET_DATE_MODE
 * @return string date_mode
+* 	default: 'date'
 */
 component_date.prototype.get_date_mode = function() {
 
@@ -440,7 +442,7 @@ component_date.prototype.get_placeholder_value = function() {
 	const self = this
 
 	const date_mode			= self.get_date_mode()
-	const dd_date_format	= page_globals.DEDALO_DATE_ORDER  || 'dmy'
+	const dd_date_format	= page_globals.dedalo_date_order  || 'dmy'
 
 	// placeholder_value
 	// set the order of the placeholder by the date_format
@@ -500,6 +502,44 @@ component_date.prototype.time_to_string = function(time) {
 
 	return string_time
 }//end time_to_string
+
+
+
+/**
+* DATE_TIME_TO_STRING
+* Converts object dd_date to flat string
+* mixing time_to_string and date_to_string results
+* @param object time
+* sample:
+* {
+* 	day: 25,
+* 	month 4,
+* 	year: 2022
+*	hour: 14
+*	minute: 46
+*	second: 0
+*	time: 53160
+* }
+* @return string string_time
+*	 sample: '22/07/2023 13:54:00'
+*/
+component_date.prototype.date_time_to_string = function(time) {
+
+	const self	= this
+
+	if (!time) {
+		return ''
+	}
+
+	const string_date	= self.date_to_string(time)
+	const string_time	= self.time_to_string(time)
+
+
+	const string_date_time = string_date + ' ' + string_time
+
+
+	return string_date_time
+}//end date_time_to_string
 
 
 
@@ -673,10 +713,10 @@ component_date.prototype.parse_string_period = function(values) {
 		}
 
 	// year check
-		if(year){
+		// allow 0 as value
+		if(typeof year==='number'){
 			dd_date.year = year
 		}
-
 
 	// response
 		const response = {
@@ -693,82 +733,87 @@ component_date.prototype.parse_string_period = function(values) {
 
 
 /**
-* FORMAT_DATE (DES)
-* @param string date_value
-* @return object result
+* VALUE_TO_STRING_VALUE
+* Convert standard value item to string date based on
+* current date_mode (range, period, time, date)
+* Used by get_content_value_read to unify print and read only output
+* It is necessary because edit mode do no send values resolved as string like list mode do
+* @param string current_value
+* 	Sample:
+	{
+	    "mode": "start",
+	    "start": {
+	        "day": 12,
+	        "time": 65027145600,
+	        "year": 2023,
+	        "month": 3
+	    }
+	}
+* @return string
 */
-	// component_date.prototype.format_date = function (date_value) {
+component_date.prototype.value_to_string_value = function(current_value) {
 
-	// 	const self = this
+	const self	= this
 
-	// 	const current_input_date = date_value // Raw string from input field
+	// date mode
+	const date_mode	= self.get_date_mode()
 
-	// 	// Note: Added operators in regex for allow search (9-2-2018)
-	// 	const regex_full 		= /^(>=|<=|>|<)?(0?[0-9]|[12][0-9]|3[01])[-\/.](0?[0-9]|1[012])[-\/.](-?[0-9]+)$/
-	// 	const regex_year_month 	= /^(>=|<=|>|<)?(0?[0-9]|1[012])[-\/.](-?[0-9]+)$/
-	// 	const regex_year 		= /^(>=|<=|>|<)?(-?[0-9]+)$/
+	// build date base on date_mode
+	switch(date_mode) {
 
-	// 	// dd_date object
-	// 	const dd_date = {}
-	// 		if(regex_full.test(current_input_date)) {
+		case 'range':
+			const input_value_start	= (current_value && current_value.start)
+				? self.date_to_string(current_value.start)
+				: ''
+			const input_value_end	= (current_value && current_value.end)
+				? self.date_to_string(current_value.end)
+				: ''
 
-	// 			const res = regex_full.exec(current_input_date)
+			return input_value_start +'<>'+ input_value_end
 
-	// 			dd_date.op 		= res[1] || null
-	// 			dd_date.day 	= parseInt(res[2])
-	// 			dd_date.month 	= parseInt(res[3])
-	// 			dd_date.year 	= parseInt(res[4])
+		case 'period':
+			// period
+				const period = (current_value && current_value.period)
+					? current_value.period
+					: {}
 
-	// 		}else if(regex_year_month.test(current_input_date)){
+			// date values
+				const year	= period.year  || 0
+				const month	= period.month || 0
+				const day	= period.day   || 0
 
-	// 			const res = regex_year_month.exec(current_input_date)
+			// pairs
+				const pairs = []
+				if (year>0) {
+					const label_year	= (year>1) ? get_label.years : get_label.year
+					pairs.push(`${label_year}: ${year}`)
+				}
+				if (month>0) {
+					const label_month	= (month>1) ? get_label.months : get_label.month
+					pairs.push(`${label_month}: ${month}`)
+				}
+				if (day>0) {
+					const label_day	= (day>1) ? get_label.days : get_label.day
+					pairs.push(`${label_day}: ${day}`)
+				}
 
-	// 			dd_date.op 		= res[1] || null
-	// 			dd_date.month 	= parseInt(res[2])
-	// 			dd_date.year 	= parseInt(res[3])
+			return  pairs.join(', ')
 
-	// 		}else if(regex_year.test(current_input_date)){
+		case 'time':
 
-	// 			const res = regex_year.exec(current_input_date)
+			return (current_value)
+				? self.time_to_string(current_value.start)
+				: ''
 
-	// 			dd_date.op 		= res[1] || null
-	// 			dd_date.year 	= parseInt(res[2])
+		case 'date':
+		default:
 
-	// 		}else if(current_input_date.length > 1){
-	// 			alert("Error[format_date]: Date format is invalid : "+current_input_date)
-	// 			return false
-	// 		}
-	// 		// // Add calculated absolute "time" to dd_date object
-	// 		// 	const time = self.convert_date_to_seconds(dd_date, "date")
-	// 		// 	if (time!==false) {
-	// 		// 		dd_date.time = time
-	// 		// 	}
-
-	// 	// res_formatted. Format dd_date to show in browser input string
-	// 	let res_formatted = ''
-
-	// 		// Day format
-	// 		if(dd_date.day){
-	// 			res_formatted += self.pad(dd_date.day,2) + self.separator
-	// 		}
-
-	// 		// Month format
-	// 		if(dd_date.month){
-	// 			res_formatted += self.pad(dd_date.month,2) + self.separator
-	// 		}
-
-	// 		// Year format
-	// 		if(dd_date && typeof dd_date.year!=="undefined"){
-	// 			if (dd_date.year!=='') {
-	// 				res_formatted += dd_date.year
-	// 			}
-	// 		}
-
-	// 	const result = {
-	// 		res_formatted	: res_formatted,	// Viewed value (input text)
-	// 		dd_date			: dd_date			// Object
-	// 	}
+			return (current_value && current_value.start)
+				? self.date_to_string(current_value.start)
+				: ''
+	}
+}//end value_to_string_value
 
 
-	// 	return result
-	// }//end format_date
+
+// @license-end

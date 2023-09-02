@@ -1,6 +1,6 @@
 <?php
-/*
-* CLASS COMPONENT LAYOUT
+/**
+* CLASS COMPONENT_JSON
 *
 *
 */
@@ -11,44 +11,75 @@ class component_json extends component_common {
 	/**
 	* __CONSTRUCT
 	*/
-	public function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
+	protected function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null, bool $cache=true) {
 
 		// Force always DEDALO_DATA_NOLAN
-		$lang = DEDALO_DATA_NOLAN;
+		$this->lang = DEDALO_DATA_NOLAN;
 
-		return parent::__construct($tipo, $parent, $mode, $lang, $section_tipo);
+		parent::__construct($tipo, $parent, $mode, $this->lang, $section_tipo, $cache);
 	}//end __construct
 
 
 
 	/**
 	* GET_DATO
+	* @return array|null $dato
 	*/
-	public function get_dato() {
+	public function get_dato() : ?array {
 
-		// Compressed dato to avoid postgresql change index order
-		$dato = parent::get_dato() ?? [];
+		$dato = parent::get_dato();
 
-		if(!empty($dato) && !is_array($dato)) {
-			// trigger_error("Error. dato converted to empty object because is not as expected object. ". gettype($dato));
-			// dump($dato, ' dato ++ '.to_string());
-			try {
+		// OLD
+			// if(!empty($dato) && !is_array($dato)) {
+			// 	try {
 
-				$data_string = !is_string($dato)
-					? json_encode($dato)
-					: $dato;
+			// 		$data_string = !is_string($dato)
+			// 			? json_encode($dato)
+			// 			: $dato;
 
-				$data_object = json_decode($data_string);
-				$new_data = ($data_object)
-					? [$data_object]
-					: [];
+			// 		$data_object = json_decode($data_string);
+			// 		$new_data = ($data_object)
+			// 			? [$data_object]
+			// 			: [];
 
-			} catch (Exception $e) {
-				$new_data = [];
-			}
+			// 	} catch (Exception $e) {
+			// 		debug_log(__METHOD__
+			// 			. " Exception on read dato. Applying default data: [] " . PHP_EOL
+			// 			. ' exception: ' . $e->getMessage()
+			// 			, logger::ERROR
+			// 		);
+			// 		$new_data = [];
+			// 	}
 
-			$dato = $new_data;
+			// 	$dato = $new_data;
+
+			// 	// update
+			// 	$this->set_dato($dato);
+			// 	$this->Save();
+			// }
+
+		if (!is_null($dato) && !is_array($dato)) {
+			$type = gettype($dato);
+			debug_log(__METHOD__
+				. " Expected dato type array or null, but type is: $type. Converted to array and saving " . PHP_EOL
+				. ' tipo: ' . $this->tipo . PHP_EOL
+				. ' section_tipo: ' . $this->section_tipo . PHP_EOL
+				. ' section_id: ' . $this->section_id
+				, logger::ERROR
+			);
+			dump($dato, ' dato ++ '.to_string());
+
+			$dato = !empty($dato)
+				? [$dato]
+				: null;
+
+			dump($dato, ' dato_to_save ++ '.to_string());
+
+			// update
+			$this->set_dato($dato);
+			$this->Save();
 		}
+
 
 		return $dato;
 	}//end get_dato
@@ -57,8 +88,9 @@ class component_json extends component_common {
 
 	/**
 	* SET_DATO
+	* @return bool
 	*/
-	public function set_dato($dato) {
+	public function set_dato($dato) : bool {
 
 		if (!empty($dato)) {
 
@@ -75,14 +107,13 @@ class component_json extends component_common {
 			}
 		}
 
-		parent::set_dato( $dato );
+		return parent::set_dato( $dato );
 	}//end set_dato
 
 
 
 	/**
 	* GET_VALOR
-	* @return
 	*/
 	public function get_valor() {
 		$dato  = $this->get_dato();
@@ -105,6 +136,43 @@ class component_json extends component_common {
 
 		return $allowed_extensions;
 	}//end get_allowed_extensions
+
+
+
+	/**
+	* GET_DIFFUSION_VALUE
+	* Calculate current component diffusion value for target field (usually a MYSQL field)
+	* Used for diffusion_mysql to unify components diffusion value call
+	* @return string $diffusion_value
+	*
+	* @see class.diffusion_mysql.php
+	*/
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
+
+		# Default behavior is get value
+		$dato = $this->get_dato();
+
+		$value = $dato[0] ?? null;
+		if (is_string($value)) {
+			// do not encode here
+			debug_log(__METHOD__
+				. ' Expected value type is NOT string ' . PHP_EOL
+				. ' type ' . gettype($value) . PHP_EOL
+				. ' value: ' . to_string($value)
+				, logger::WARNING
+			);
+		}else{
+			$value = json_handler::encode($value);
+		}
+
+		// diffusion_value
+		$diffusion_value = !empty($value)
+			? $value
+			: null;
+
+
+		return $diffusion_value;
+	}//end get_diffusion_value
 
 
 
@@ -258,7 +326,7 @@ class component_json extends component_common {
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed ['.__METHOD__.'] ';
 
-		// imported_data. (Is json decoded data from raw uploaded file content)
+		// imported_data. (Is JSON decoded data from raw uploaded file content)
 			$imported_data = $file_data->imported_parsed_data;
 
 		// wrap data with array to maintain component data format
@@ -270,7 +338,7 @@ class component_json extends component_common {
 
 		$response = new stdClass();
 			$response->result 	= true;
-			$response->msg 		= 'Ok. Request done';
+			$response->msg 		= 'OK. Request done';
 
 		return $response;
 	}//end process_uploaded_file

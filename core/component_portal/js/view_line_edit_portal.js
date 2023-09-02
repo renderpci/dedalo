@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, DEDALO_CORE_URL, Promise */
 /*eslint no-undef: "error"*/
 
@@ -5,14 +6,14 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	import {event_manager} from '../../common/js/event_manager.js'
+	// import {event_manager} from '../../common/js/event_manager.js'
 	import {get_section_records} from '../../section/js/section.js'
-	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {
 		render_column_component_info,
 		activate_autocomplete,
 		get_buttons,
-		render_references
+		render_references,
+		render_dataframe_table
 	} from './render_edit_component_portal.js'
 
 
@@ -43,8 +44,7 @@ view_line_edit_portal.render = async function(self, options) {
 		const render_level = options.render_level || 'full'
 
 	// columns_map
-		const columns_map	= rebuild_columns_map(self)
-		self.columns_map	= columns_map
+		self.columns_map = await rebuild_columns_map(self)
 
 	// view
 		const children_view	= self.context.children_view || self.context.view || 'default'
@@ -65,19 +65,23 @@ view_line_edit_portal.render = async function(self, options) {
 		}
 
 	// buttons
-		const buttons = get_buttons(self)
+		const buttons = (self.permissions > 1)
+			? get_buttons(self)
+			: null
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
 			content_data	: content_data,
-			buttons			: buttons
+			buttons			: buttons,
+			// label			: null
 		})
 		wrapper.classList.add('portal')
 		// set pointers
 		wrapper.content_data = content_data
 
 	// autocomplete
-		wrapper.addEventListener('click', function() {
+		wrapper.addEventListener('click', function(e) {
+			e.stopPropagation()
 			activate_autocomplete(self, wrapper)
 		})
 
@@ -92,7 +96,7 @@ view_line_edit_portal.render = async function(self, options) {
 * Render all received section records and place it into a new div 'content_data'
 * @param object self
 * @param array ar_section_record
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = async function(self, ar_section_record) {
 
@@ -145,9 +149,15 @@ const get_content_data = async function(self, ar_section_record) {
 /**
 * REBUILD_COLUMNS_MAP
 * Adding control columns to the columns_map that will processed by section_recod
+* @param object self
 * @return obj columns_map
 */
 const rebuild_columns_map = async function(self) {
+
+	// columns_map already rebuilt case
+		if (self.fixed_columns_map===true) {
+			return self.columns_map
+		}
 
 	const columns_map = []
 
@@ -155,7 +165,7 @@ const rebuild_columns_map = async function(self) {
 		columns_map.push({
 			id			: 'section_id',
 			label		: 'Id',
-			width 		: 'auto',
+			width		: 'auto',
 			callback	: view_line_edit_portal.render_column_id
 		})
 
@@ -172,15 +182,31 @@ const rebuild_columns_map = async function(self) {
 			})
 		}
 
+	// column dataframe. (!) Working here
+	// @todo
+		// const caller_dataframe = self.rqo.source?.caller_dataframe
+		// if (caller_dataframe) {
+		// 	columns_map.push({
+		// 		id			: 'dataframe',
+		// 		label		: 'dataframe', // get_label.delete || 'Delete',
+		// 		width		: 'auto',
+		// 		callback	: view_line_edit_portal.render_column_dataframe
+		// 	})
+		// }
+
+
 	// column remove
-		if ( self.context.properties.source?.mode !=='external' && self.permissions>1) {
+		if ( self.context.properties.source?.mode !== 'external' && self.permissions > 1) {
 			columns_map.push({
 				id			: 'remove',
 				label		: '', // get_label.delete || 'Delete',
-				width 		: 'auto',
+				width		: 'auto',
 				callback	: view_line_edit_portal.render_column_remove
 			})
 		}
+
+	// fixed as calculated
+		self.fixed_columns_map = true
 
 
 	return columns_map
@@ -192,12 +218,12 @@ const rebuild_columns_map = async function(self) {
 * RENDER_COLUMN_ID
 * It is called by section_record to create the column id with custom options
 * @param object options
-* @return DOM DocumentFragment
+* @return DocumentFragment
 */
-view_line_edit_portal.render_column_id = function(options){
+view_line_edit_portal.render_column_id = function(options) {
 
 	// options
-		const self 			= options.caller
+		const self			= options.caller
 		const section_id	= options.section_id
 		const section_tipo	= options.section_tipo
 
@@ -211,40 +237,11 @@ view_line_edit_portal.render_column_id = function(options){
 		})
 		button_edit.addEventListener('click', function(e) {
 			e.stopPropagation()
-
-			// open a new window
-				const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
-					tipo			: section_tipo,
-					section_tipo	: section_tipo,
-					id				: section_id,
-					mode			: 'edit',
-					menu			: false
-				})
-				const new_window = open_window({
-					url		: url,
-					name	: 'record_view',
-					width	: 1280,
-					height	: 740
-				})
-				new_window.addEventListener('blur', function() {
-
-					// refresh. Get the proper element to refresh based on some criteria.
-					// Note that portals in text view are not self refresh able
-						function get_edit_caller(instance) {
-							if(instance.caller && instance.caller.mode==='edit' && instance.caller.type==='component') {
-								return instance.caller
-							}else if(instance.caller) {
-								return get_edit_caller(instance.caller)
-							}
-							return self
-						}
-						const edit_caller = get_edit_caller(self)
-						if (edit_caller) {
-							edit_caller.refresh({
-								build_autoload : true
-							})
-						}
-				})
+			// edit_record_handler
+			self.edit_record_handler({
+				section_tipo	: section_tipo,
+				section_id		: section_id,
+			})
 		})
 
 	// edit icon
@@ -267,7 +264,7 @@ view_line_edit_portal.render_column_id = function(options){
 * Render column_remov node
 * Shared across views
 * @param object options
-* @return DOM DocumentFragment
+* @return HTMLElement button_remove
 */
 view_line_edit_portal.render_column_remove = function(options) {
 
@@ -284,63 +281,14 @@ view_line_edit_portal.render_column_remove = function(options) {
 			element_type	: 'button',
 			class_name		: 'button_remove'
 		})
-		button_remove.addEventListener('click', function(e) {
+		button_remove.addEventListener('click', fn_remove)
+		async function fn_remove(e) {
 			e.stopPropagation()
 
 			// stop if the user don't confirm
 				if (!confirm(get_label.sure)) {
 					return
 				}
-
-			// unlink_record
-				const unlink_record = function() {
-					// changed_data
-					const changed_data = [Object.freeze({
-						action	: 'remove',
-						key		: paginated_key,
-						value	: null
-					})]
-					// change_value (implies saves too)
-					// remove the remove_dialog it's controlled by the event of the button that call
-					// prevent the double confirmation
-					self.change_value({
-						changed_data	: changed_data,
-						label			: section_id,
-						refresh			: false,
-						remove_dialog	: ()=>{
-							return true
-						}
-					})
-					.then(async (response)=>{
-						// the user has selected cancel from delete dialog
-							if (response===false) {
-								// modal. Close modal if isset
-								// if (modal) {
-								// 	modal.on_close()
-								// }
-								return
-							}
-
-						// update pagination offset
-							self.update_pagination_values('remove')
-
-						// refresh
-							await self.refresh({
-								build_autoload : true // when true, force reset offset
-							})
-
-						// check if the caller has active a tag_id
-							if(self.active_tag){
-								// filter component data by tag_id and re-render content
-								self.filter_data_by_tag_id(self.active_tag)
-							}
-
-						// event to update the DOM elements of the instance
-							event_manager.publish('remove_element_'+self.id, row_key)
-					})
-				}
-				// fire the unlink
-				unlink_record()
 
 			// data pagination offset. Check and update self data to allow save API request return the proper paginated data
 				const key = parseInt(row_key)
@@ -351,7 +299,20 @@ view_line_edit_portal.render_column_remove = function(options) {
 						? next_offset
 						: 0
 				}
-		})
+
+			// fire the unlink_record method
+			// Note that this function refresh current instance
+				await self.unlink_record({
+					paginated_key	: paginated_key,
+					row_key			: row_key,
+					section_id		: section_id
+				})
+
+			// delete_dataframe_record
+				await self.delete_dataframe_record({
+					section_id : section_id
+				})
+		}//end fn_remove
 
 	// remove_icon
 		ui.create_dom_element({
@@ -362,4 +323,67 @@ view_line_edit_portal.render_column_remove = function(options) {
 
 
 	return button_remove
-}//end render_column_remove()
+}//end render_column_remove
+
+
+
+/**
+* RENDER_COLUMN_DATAFRAME
+* It is called by section_record to create the column dataframe icon
+* @param object options
+* sample:
+* {
+* 	caller: component_portal {id: 'component_portal_ …}
+*	locator: {type: 'dd151', section_id: '5', section_tipo: 'numisdata33', from_component_tipo: 'numisdata34', paginated_key: 0}
+*	matrix_id: null
+*	modification_date: null
+*	offset: undefined
+*	paginated_key: 0
+*	row_key: 0
+*	section_id: "5"
+*	section_tipo: "numisdata33"
+* }
+* @return DocumentFragment
+*/
+view_line_edit_portal.render_column_dataframe = function(options) {
+
+	// options
+		const self			= options.caller
+		const row_key		= options.row_key
+		const paginated_key	= options.paginated_key
+		const section_tipo	= options.section_tipo
+		const section_id	= options.section_id
+
+	// button_remove
+		const button_remove = ui.create_dom_element({
+			element_type	: 'button',
+			title			: 'dataframe',
+			class_name		: 'button_dataframe'
+		})
+		button_remove.addEventListener('click', fn_open_dataframe)
+		async function fn_open_dataframe(e) {
+			e.stopPropagation()
+
+			render_dataframe_table({
+				self			: self,
+				row_key			: row_key,
+				paginated_key	: paginated_key,
+				section_tipo	: section_tipo,
+				section_id		: section_id
+			})
+		}//end fn_open_dataframe
+
+	// remove_icon
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button uncertainty icon grey',
+			parent			: button_remove
+		})
+
+
+	return button_remove
+}//end render_column_dataframe
+
+
+
+// @license-end

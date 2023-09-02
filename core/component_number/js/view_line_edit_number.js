@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
  /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -7,6 +8,7 @@
 	import {ui} from '../../common/js/ui.js'
 	import {
 		keyup_handler,
+		blur_handler,
 		remove_handler
 	} from './render_edit_component_number.js'
 
@@ -26,7 +28,7 @@ export const view_line_edit_number = function() {
 /**
 * RENDER
 * Render node for use in modes: edit, edit_in_list
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_line_edit_number.render = async function(self, options) {
 
@@ -34,11 +36,11 @@ view_line_edit_number.render = async function(self, options) {
 		const render_level = options.render_level || 'full'
 
 	// button_exit_edit
-		const button_exit_edit = ui.component.build_button_exit_edit(self)
+		// const button_exit_edit = ui.component.build_button_exit_edit(self)
 
 	// content_data
-		const content_data = get_content_data_edit(self)
-		content_data.appendChild(button_exit_edit)
+		const content_data = get_content_data(self)
+		// content_data.appendChild(button_exit_edit)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -58,10 +60,10 @@ view_line_edit_number.render = async function(self, options) {
 
 
 /**
-* GET_CONTENT_DATA_EDIT
-* @return DOM node content_data
+* GET_CONTENT_DATA
+* @return HTMLElement content_data
 */
-const get_content_data_edit = function(self) {
+const get_content_data = function(self) {
 
 	// short vars
 		const data	= self.data || {}
@@ -82,13 +84,13 @@ const get_content_data_edit = function(self) {
 
 
 	return content_data
-}//end get_content_data_edit
+}//end get_content_data
 
 
 
 /**
 * GET_CONTENT_VALUE
-* @return DOM element content_value
+* @return HTMLElement content_value
 */
 const get_content_value = (i, current_value, self) => {
 
@@ -101,7 +103,7 @@ const get_content_value = (i, current_value, self) => {
 	// input field
 		const input = ui.create_dom_element({
 			element_type	: 'input',
-			type			: 'number',
+			type			: 'text',
 			class_name		: 'input_value',
 			value			: current_value,
 			parent			: content_value
@@ -109,9 +111,21 @@ const get_content_value = (i, current_value, self) => {
 		input.step = self.get_steps()
 		input.addEventListener('keyup', function(e) {
 			// page unload event
-				keyup_handler(e, i, self)
+			keyup_handler(e, i, self)
 		})//end keyup
+		input.addEventListener('blur', function(e) {
+			// saves changed data
+			blur_handler(e, i, self)
+		})//end blur
+		input.addEventListener('click', function(e) {
+			e.stopPropagation()
+		})//end click
+
 
 	return content_value
 }//end get_content_value
 
+
+
+
+// @license-end

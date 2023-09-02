@@ -15,17 +15,18 @@ class data_check {
 	public function check_sequences() : object {
 
 		$response = new stdClass();
-			$response->result 	= true;
-			$response->msg 	 	= '';
+			$response->result	= true;
+			$response->msg		= '';
+			$response->values	= [];
 
 		try {
 
 			// SHOW server_version;
-			$sql 	 		= " SHOW server_version; ";
-			$result_v 		= JSON_RecordObj_matrix::search_free($sql);
-			$server_version = pg_fetch_result($result_v, 0, 'server_version');
-			$ar_parts 		= explode('.', $server_version);
-			$server_major_version = (int)$ar_parts[0];
+			$sql					= " SHOW server_version; ";
+			$result_v				= JSON_RecordObj_matrix::search_free($sql);
+			$server_version			= pg_fetch_result($result_v, 0, 'server_version');
+			$ar_parts				= explode('.', $server_version);
+			$server_major_version	= (int)$ar_parts[0];
 				#dump($server_major_version, ' server_version ++ '.to_string());
 
 			$response->msg .= "TEST ALL SEQUENCES IN DATABASE: ".DEDALO_DATABASE_CONN;
@@ -50,8 +51,8 @@ class data_check {
 				}
 
 				# Find last id in table
-				$sql 	 = " SELECT id FROM $table_name ORDER BY id DESC LIMIT 1 ";
-				$result2 = JSON_RecordObj_matrix::search_free($sql);
+				$sql		= " SELECT id FROM $table_name ORDER BY id DESC LIMIT 1 ";
+				$result2	= JSON_RecordObj_matrix::search_free($sql);
 				if (pg_num_rows($result2) === 0) {
 					continue;	// Skip empty tables
 				}
@@ -59,19 +60,30 @@ class data_check {
 
 				# Find vars in current sequence
 				if ($server_major_version>=10) {
-					$search_table = 'sequencename';
-					$sql = " SELECT last_value, start_value FROM pg_sequences WHERE $search_table = '".$table_name."_id_seq' ; ";
+					$search_table	= 'sequencename';
+					$sql			= " SELECT last_value, start_value FROM pg_sequences WHERE $search_table = '".$table_name."_id_seq' ; ";
 				}else{
-					$search_table = $table_name."_id_seq";
-					$sql = " SELECT last_value, start_value FROM $search_table ; ";
+					$search_table	= $table_name."_id_seq";
+					$sql			= " SELECT last_value, start_value FROM $search_table ; ";
 				}
 				$result_seq 	= JSON_RecordObj_matrix::search_free($sql);
 				if (pg_num_rows($result_seq) === 0) {
-					debug_log(__METHOD__." Warning. {$table_name}_id_seq not found in $search_table ".to_string(), logger::WARNING);
+					debug_log(__METHOD__
+						." Warning. {$table_name}_id_seq not found in $search_table "
+						, logger::WARNING
+					);
 					continue;	// Skip empty tables
 				}
 				$last_value 	= pg_fetch_result($result_seq, 0, 'last_value');
 				$start_value 	= pg_fetch_result($result_seq, 0, 'start_value');
+
+				$response->values[] = (object)[
+					'table_name'	=> $table_name,
+					'start_value'	=> $start_value,
+					'last_value'	=> $last_value,
+					'last_id'		=> $last_id,
+					'last_id'		=> $last_id
+				];
 
 				$response->msg .= "<hr><b>$table_name</b> - start_value: $start_value - seq last_value: $last_value ";
 				if ($last_value!=$last_id) {
@@ -102,13 +114,11 @@ class data_check {
 
 					$response->result = false;
 				}
-
 			}//end while ($rows = pg_fetch_assoc($result))
 
-
 		} catch (Exception $e) {
-			$response->result 	= false;
-			$response->msg 		= 'Caught exception: ' .  $e->getMessage();
+			$response->result	= false;
+			$response->msg		= 'Caught exception: ' .  $e->getMessage();
 			return $response;
 		}
 

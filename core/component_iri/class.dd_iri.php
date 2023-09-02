@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS DD_IRI
 
 	Format:
@@ -51,6 +51,7 @@ class dd_iri extends stdClass {
 	}
 
 
+
 	/**
 	* SET  METHODDS
 	* Verify values and set property to current object
@@ -83,8 +84,6 @@ class dd_iri extends stdClass {
 
 
 
-
-
 	/**
 	* SET_IRI_FROM_URL_PARTS
 	* @param object $url_parts
@@ -93,12 +92,12 @@ class dd_iri extends stdClass {
 
 		$scheme		= $url_parts->scheme;//mandatory
 		$host		= $url_parts->host;//mandatory
-		$port 		= isset($url_parts->port) ? $url_parts->port :null;//optional
-		$user 		= isset($url_parts->user) ? $url_parts->user :null;//optional
-		$pass 		= isset($url_parts->pass) ? $url_parts->pass :null;//optional
-		$path 		= isset($url_parts->path) ? $url_parts->path :null;//optional
-		$query 		= isset($url_parts->query) ? $url_parts->query :null;//optional
-		$fragment 	= isset($url_parts->fragment) ? $url_parts->fragment :null;//optional
+		$port		= isset($url_parts->port) ? $url_parts->port :null;//optional
+		$user		= isset($url_parts->user) ? $url_parts->user :null;//optional
+		$pass		= isset($url_parts->pass) ? $url_parts->pass :null;//optional
+		$path		= isset($url_parts->path) ? $url_parts->path :null;//optional
+		$query		= isset($url_parts->query) ? $url_parts->query :null;//optional
+		$fragment	= isset($url_parts->fragment) ? $url_parts->fragment :null;//optional
 
 		if(empty($scheme) || empty($host)){
 			throw new Exception("Error Processing Request. Invalid url_parts: ".to_string($url_parts), 1);
@@ -166,7 +165,7 @@ class dd_iri extends stdClass {
 
 	/**
 	* DESTRUCT
-	* On destruct object, test if minimun data is set or not
+	* On destruct object, test if minimum data is set or not
 	*/
 	function __destruct() {
 
@@ -175,4 +174,3 @@ class dd_iri extends stdClass {
 
 
 }//end dd_iri
-?>

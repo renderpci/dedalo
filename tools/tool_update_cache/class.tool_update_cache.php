@@ -17,6 +17,10 @@ class tool_update_cache extends tool_common {
 	*/
 	public static function update_cache(object $options) : object {
 
+		// unlock session
+			session_write_close();
+			ignore_user_abort();
+
 		// options
 			$section_tipo		= $options->section_tipo ?? null;
 			$ar_component_tipo	= $options->ar_component_tipo ?? null;
@@ -33,13 +37,49 @@ class tool_update_cache extends tool_common {
 		// RECORDS. Use actual list search options as base to build current search
 			$sqo_id	= implode('_', ['section', $section_tipo]); // cache key sqo_id
 			if (empty($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
-				$response->msg .= ' section session sqo is not found!';
-				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
+				$response->msg .= ' Section session sqo not found!';
+				debug_log(__METHOD__
+					. " $response->msg ". PHP_EOL
+					. ' sqo_id: ' .$sqo_id
+					, logger::ERROR
+				);
 				return $response;
 			}
+
+		// process_chunk
 			$sqo			= clone $_SESSION['dedalo']['config']['sqo'][$sqo_id];
-			$sqo->limit		= 0;
+			$sqo->limit		= 1000;
 			$sqo->offset	= 0;
+
+		// recursive process_chunk. Chunked by sqo limit to prevent memory issues
+			tool_update_cache::process_chunk($sqo, $section_tipo, $ar_component_tipo);
+
+		// Enable logging activity and time machine # !IMPORTANT
+			logger_backend_activity::$enable_log				= true;
+			RecordObj_time_machine::$save_time_machine_version	= true;
+
+		// response
+			$response->result	= true;
+			$response->msg		= "Updated cache of section '$section_tipo' successfully." . PHP_EOL
+				." where components count: " . count($ar_component_tipo);
+
+
+		return $response;
+	}//end update_cache
+
+
+
+	/**
+	* PROCESS_CHUNK
+	* Recursive
+	* Chunk the process into chunks by sqo limit
+	* @param object object $sqo
+	* @param string $section_tipo
+	* @param array $ar_component_tipo
+	* @return bool
+	*/
+	public static function process_chunk(object $sqo, string $section_tipo, array $ar_component_tipo) : bool {
+		$start_time=start_time();
 
 		// search
 			$search		= search::get_instance($sqo);
@@ -55,7 +95,7 @@ class tool_update_cache extends tool_common {
 					// model
 						$model = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
 						if (strpos($model, 'component_')===false) {
-							debug_log(__METHOD__." Skipped element '$model' tipo: $current_component_tipo (is not a component) ".to_string(), logger::DEBUG);
+							debug_log(__METHOD__." Skipped element '$model' tipo: $current_component_tipo (is not a component) ", logger::DEBUG);
 							continue;
 						}
 
@@ -74,52 +114,74 @@ class tool_update_cache extends tool_common {
 						$current_component->get_dato(); # !! Important get dato before regenerate
 						$result = $current_component->regenerate_component();
 						if ($result!==true) {
-							debug_log(__METHOD__." Error on regenerate component $model - $current_component_tipo - $section_tipo - $section_id ", logger::ERROR);
+							debug_log(__METHOD__
+								. ' Error on regenerate component ' .PHP_EOL
+								. ' model: ' .$model .PHP_EOL
+								. ' current_component_tipo: ' .$current_component_tipo .PHP_EOL
+								. ' section_tipo: ' .$section_tipo .PHP_EOL
+								. ' section_id: ' .$section_id
+								, logger::ERROR
+							);
 						}
 				}//end foreach ($related_terms as $current_component_tipo)
+
 			}//end foreach ($records_data->result as $key => $ar_value)
 
-		// Enable logging activity and time machine # !IMPORTANT
-			logger_backend_activity::$enable_log 				= true;
-			RecordObj_time_machine::$save_time_machine_version 	= true;
 
-		// response
-			$response->result	= true;
-			$response->msg		= "Updated cache of section $section_tipo successfully. Total records: "
-				.count($rows_data->ar_records)
-				." where components count: "
-				.count($ar_component_tipo);
+		// debug info
+			debug_log(__METHOD__
+				. ' Updating cache chunk of ('.$sqo->limit.') records' .PHP_EOL
+				. ' chunk memory usage: ' . dd_memory_usage() .PHP_EOL
+				. ' chunk time secs: ' . exec_time_unit($start_time, 'sec')
+				, logger::DEBUG
+			);
+
+		// recursion
+			if (!empty($rows_data->ar_records)) {
+
+				// Forces collection of any existing garbage cycles
+					unset($rows_data);  // ~ 40MB/1000
+					gc_collect_cycles();
+
+				$sqo->offset = $sqo->offset + $sqo->limit;
+				return tool_update_cache::process_chunk($sqo, $section_tipo, $ar_component_tipo);
+			}
+
+		// Forces collection of any existing garbage cycles
+			unset($rows_data);  // ~ 40MB/1000
+			gc_collect_cycles();
+
+		// debug info
+			debug_log(__METHOD__
+				. ' Updating cache finish' .PHP_EOL
+				. ' total memory usage: ' . dd_memory_usage()
+				, logger::DEBUG
+			);
 
 
-		return $response;
-	}//end update_cache
+		return true;
+	}//end process_chunk
 
 
 
 	/**
 	* GET_COMPONENT_LIST
 	* List of components ready to update cache
-	*
+	* @param object $options
 	* @return object $response
 	* 	->result = array of objects
 	*/
-	public static function get_component_list(object $request_options) : object {
+	public static function get_component_list(object $options) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// options
-			$options = new stdClass();
-				$options->section_tipo	= null;
-				$options->lang			= DEDALO_DATA_LANG;
-				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-		// short vars
 			$section_tipo	= $options->section_tipo;
-			$lang			= $options->lang;
+			$lang			= $options->lang ?? DEDALO_DATA_LANG;
 
-		# All section components
+		// All section components
 			$related_terms = section::get_ar_children_tipo_by_model_name_in_section(
 				$section_tipo, // section_tipo
 				['component_'], // ar_model_name_required
@@ -148,7 +210,10 @@ class tool_update_cache extends tool_common {
 			foreach ($related_terms as $current_component_tipo) {
 				$model = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
 				if (strpos($model, 'component_')===false) {
-					debug_log(__METHOD__." Skipped element '$model' tipo: $current_component_tipo (is not a component) ".to_string(), logger::DEBUG);
+					debug_log(__METHOD__
+						." Skipped element model: '$model' tipo: $current_component_tipo (is not a component)"
+						, logger::DEBUG
+					);
 					continue;
 				}
 

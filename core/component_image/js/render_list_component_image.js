@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -29,43 +30,41 @@ export const render_list_component_image = function() {
 /**
 * LIST
 * Render node for use in list
-* @return DOM node wrapper
+* @param object options
+* @return HTMLElement wrapper
 */
 render_list_component_image.prototype.list = function(options) {
 
 	const self = this
 
-	// options
-		// const render_level = options.render_level
-
 	// view
-		const view	= self.context.view
+		const view	= self.context.view || 'default'
 
-	// wrapper
-		let wrapper
-		switch(view) {
+	switch(view) {
 
-			case 'viewer':
-				wrapper = view_viewer_image.render(self, options)
-				break;
+		case 'viewer':
+			return view_viewer_image.render(self, options)
+			break;
 
-			case 'mini':
-				wrapper = view_mini_image.render(self, options)
-				break;
+		case 'mini':
+			return view_mini_image.render(self, options)
+			break;
 
-			case 'text':
-				wrapper = view_text_list_image.render(self, options)
-				break;
+		case 'text':
+			return view_text_list_image.render(self, options)
+			break;
 
-			case 'mosaic':
-				wrapper = view_mosaic_list_image.render(self, options)
-				break;
+		case 'mosaic':
+			return view_mosaic_list_image.render(self, options)
+			break;
 
-			case 'default':
-			default:
-				wrapper = view_default_list_image.render(self, options)
-				break;
-		}
-
-	return wrapper
+		case 'default':
+		default:
+			return view_default_list_image.render(self, options)
+			break;
+	}
 }//end list
+
+
+
+// @license-end

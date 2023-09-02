@@ -1,5 +1,5 @@
 <?php
-// JSON data component controller
+// JSON data component controller (this controls the context and the data, coming from the PHP class, that are sent to client -> JS object)
 
 
 
@@ -31,7 +31,7 @@
 					$current_context->features->ar_quality				= $this->get_ar_quality(); // defined in config
 					$current_context->features->default_quality			= $this->get_default_quality();
 					$current_context->features->quality					= $this->get_quality(); // current instance quality
-					$current_context->features->resource_type			= '3d';
+					$current_context->features->key_dir					= '3d';
 
 				$context[] = $current_context;
 
@@ -49,6 +49,7 @@
 		// value
 			switch ($mode) {
 				case 'list':
+				case 'tm':
 					$value = $this->get_list_value();
 					break;
 
@@ -62,12 +63,17 @@
 			$item = $this->get_data_item($value);
 			// add useful properties
 			// posterframe_url
-				$item->posterframe_url	= $this->get_posterframe_url(true, false, false, false); // $test_file=true, $absolute=false, $avoid_cache=false
-			// default quality video URL (usually from 404)
-				$item->video_url		= $this->file_exist()
+				$item->posterframe_url = $this->get_posterframe_url(
+					false, // test_file
+					false, // absolute
+					false // avoid_cache
+				);
+			// model_url. Default quality video URL (usually from 404)
+				$default_quality = $this->get_default_quality();
+				$item->model_url = $this->quality_file_exist($default_quality)
 					? $this->get_url(false)
 					: null;
-			//  files info datalist. Used for tools to know available quality versions and characteristics (size, URL, etc.)
+			// datalist. Files info datalist. Used for tools to know available quality versions and characteristics (size, URL, etc.)
 				// $item->datalist = $this->get_files_info();
 				$item->datalist = $this->get_datalist();
 
@@ -76,16 +82,9 @@
 
 				// media info
 					$item->media_info = $this->get_media_streams();
-
-				// subtitles info
-					$item->subtitles = (object)[
-						'subtitles_url'	=> $this->get_subtitles_url(),
-						'lang_name'		=> lang::get_name_from_code(DEDALO_DATA_LANG),
-						'lang'			=> lang::get_alpha2_from_code(DEDALO_DATA_LANG)
-					];
 			}
 
-		$data[] = $item;
+		$data[] = $item;  // append to the end of the array
 	}//end if($options->get_data===true && $permissions>0)
 
 

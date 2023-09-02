@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /* global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL,Promise */
 /*eslint no-undef: "error"*/
 
@@ -18,7 +19,6 @@
 	} from './render_edit_component_portal.js'
 
 
-
 /**
 * VIEW_DEFAULT_EDIT_PORTAL
 * Manage the components logic and appearance in client side
@@ -32,10 +32,10 @@ export const view_default_edit_portal = function() {
 
 /**
 * RENDER
-* Manages the component's logic and appearance in client side
+* Render node for use in current view
 * @param object self
 * @param object options
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_default_edit_portal.render = async function(self, options) {
 
@@ -61,12 +61,16 @@ view_default_edit_portal.render = async function(self, options) {
 		const content_data = await get_content_data(self, ar_section_record)
 		if (render_level==='content') {
 			// show header_wrapper_list if is hidden
+			const header_wrapper_list = self.node.list_body
+				? self.node.list_body.querySelector(":scope >.header_wrapper_list")
+				: null;
+			if (header_wrapper_list) {
 				if (ar_section_record.length>0) {
-					// self.node.querySelector(":scope >.list_body>.header_wrapper_list").classList.remove('hide')
 					self.node.list_body.querySelector(":scope >.header_wrapper_list").classList.remove('hide')
 				}else{
 					self.node.list_body.querySelector(":scope >.header_wrapper_list").classList.add('hide')
 				}
+			}
 
 			return content_data
 		}
@@ -80,21 +84,9 @@ view_default_edit_portal.render = async function(self, options) {
 			class_name		: 'list_body'
 		})
 
-		// const n_columns = list_header_node.children.length
-		// // id (auto), repeat x columns, delete (25px)
-		// const template_columns = (self.permissions>1)
-		// 	? "auto repeat("+(n_columns-2)+", 1fr) auto"
-		// 	: "auto repeat("+(n_columns-1)+", 1fr)"
-
 		const items				= ui.flat_column_items(columns_map);
 		const template_columns	= items.join(' ')
-		// old way inline
-			// Object.assign(
-			// 	list_body.style,
-			// 	{
-			// 		"grid-template-columns": template_columns
-			// 	}
-			// )
+
 		// new way on-the-fly css
 			const css_object = {
 				".list_body" : {
@@ -108,24 +100,26 @@ view_default_edit_portal.render = async function(self, options) {
 		list_body.appendChild(content_data)
 
 	// buttons
-		const buttons = get_buttons(self)
-
-	// top
-		// const top = get_top(self)
+		const buttons = (self.permissions > 1)
+			? get_buttons(self)
+			: null
 
 	// wrapper. ui build_edit returns component wrapper
-		const wrapper = ui.component.build_wrapper_edit(self, {
+		const wrapper_options = {
+			list_body	: list_body,
 			buttons		: buttons,
-			list_body	: list_body
-		})
-		wrapper.classList.add('portal', 'view_'+self.context.view)
+			add_styles	: ['portal'] // added to the wrapper before view style
+		}
+		const wrapper = ui.component.build_wrapper_edit(self, wrapper_options)
+		// wrapper.classList.add('portal', 'view_'+self.context.view)
 
 	// set pointers
 		wrapper.list_body		= list_body
 		wrapper.content_data	= content_data
 
-	// autocomplete
-		wrapper.addEventListener('click', function() {
+	// service autocomplete
+		wrapper.addEventListener('click', function(e) {
+			e.stopPropagation()
 			activate_autocomplete(self, wrapper)
 		})
 
@@ -177,6 +171,8 @@ const get_content_data = async function(self, ar_section_record) {
 						// 		e.target.classList.add("row_active")
 						// 	}
 						// })
+
+
 
 					// section_record NODE
 						// const row_container = ui.create_dom_element({
@@ -234,12 +230,20 @@ const get_content_data = async function(self, ar_section_record) {
 
 
 
+
+
 /**
 * REBUILD_COLUMNS_MAP
 * Adding control columns to the columns_map that will processed by section_recods
-* @return obj columns_map
+* @param object options
+* @return array columns_map
 */
 const rebuild_columns_map = async function(self) {
+
+	// columns_map already rebuilt case
+		if (self.fixed_columns_map===true) {
+			return self.columns_map
+		}
 
 	const columns_map = []
 
@@ -265,14 +269,23 @@ const rebuild_columns_map = async function(self) {
 		}
 
 	// button_remove
-		if ( self.context.properties.source?.mode !=='external' && self.permissions>1) {
+		if ( self.context.properties.source?.mode!=='external' && self.permissions>1) {
 			columns_map.push({
 				id			: 'remove',
 				label		: '', // get_label.delete || 'Delete',
 				width 		: 'auto',
 				callback	: render_column_remove
 			})
+		}else{
+			columns_map.push({
+				id			: 'empty',
+				label		: '',
+				width 		: 'auto',
+			})
 		}
+
+	// fixed as calculated
+		self.fixed_columns_map = true
 
 
 	return columns_map
@@ -280,126 +293,4 @@ const rebuild_columns_map = async function(self) {
 
 
 
-/**
-* RENDER_COLUMN_ID
-* @return DocumentFragment
-*/
-	// view_default_edit_portal.render_column_id = function(options){
-
-	// 	// options
-	// 		const self			= options.caller
-	// 		const section_id	= options.section_id
-	// 		const section_tipo	= options.section_tipo
-
-	// 	const fragment = new DocumentFragment()
-
-	// 	// section_id
-	// 		ui.create_dom_element({
-	// 			element_type	: 'span',
-	// 			class_name		: 'section_id',
-	// 			text_content	: section_id,
-	// 			parent			: fragment
-	// 		})
-
-	// 	// edit_button
-	// 		const edit_button = ui.create_dom_element({
-	// 			element_type	: 'span',
-	// 			class_name		: 'button edit',
-	// 			parent			: fragment
-	// 		})
-	// 		edit_button.addEventListener("click", function(){
-	// 			const user_navigation_rqo = {
-	// 				caller_id	: self.id,
-	// 				source		: {
-	// 					action			: 'search',
-	// 					model			: 'section',
-	// 					tipo			: section_tipo,
-	// 					section_tipo	: section_tipo,
-	// 					mode			: 'edit',
-	// 					lang			: self.lang
-	// 				},
-	// 				sqo : {
-	// 					section_tipo		: [{tipo : section_tipo}],
-	// 					filter				: null,
-	// 					limit				: 1,
-	// 					filter_by_locators	: [{
-	// 						section_tipo	: section_tipo,
-	// 						section_id		: section_id,
-	// 					}]
-	// 				}
-	// 			}
-	// 			event_manager.publish('user_navigation', user_navigation_rqo)
-	// 		})
-
-	// 	return fragment
-	// }// end render_column_id()
-
-
-
-/**
-* GET_INPUT_ELEMENT
-* @return dom element li
-*/
-	// const get_input_element = function(current_section_record){
-
-	// 	 // key. when portal is in search mode, is undefined, fallback to zero
-	// 	const key = current_section_record.paginated_key || 0
-
-	// 	// li
-	// 		const li = ui.create_dom_element({
-	// 			element_type	: 'li',
-	// 			dataset			: { key : key }
-	// 		})
-
-	// 	// input field
-	// 		current_section_record.render()
-	// 		.then(function(section_record_node){
-
-	// 			// section_record_node append
-	// 				li.appendChild(section_record_node)
-
-	// 			// button remove
-	// 				const button_remove = ui.create_dom_element({
-	// 					element_type	: 'span',
-	// 					class_name		: 'button remove',
-	// 					dataset			: { key : key },
-	// 					parent			: li
-	// 				})
-	// 		})
-
-
-	// 	return li
-	// }//end get_input_element
-
-
-
-/**
-* GET_INPUT_ELEMENT_AWAIT
-* @return dom element li
-*/
-	// const get_input_element_await = async function(current_section_record){
-
-	// 	 // key. when portal is in search mode, is undefined, fallback to zero
-	// 	const key = current_section_record.paginated_key || 0
-
-	// 	// li
-	// 		const li = ui.create_dom_element({
-	// 			element_type	: 'li',
-	// 			dataset			: { key : key }
-	// 		})
-
-	// 	// input field
-	// 		const section_record_node = await current_section_record.render()
-	// 		// section_record_node append
-	// 			li.appendChild(section_record_node)
-	// 		// button remove
-	// 			const button_remove = ui.create_dom_element({
-	// 				element_type	: 'span',
-	// 				class_name		: 'button remove',
-	// 				dataset			: { key : key },
-	// 				parent			: li
-	// 			})
-
-
-	// 	return li
-	// }//end get_input_element_await
+// @license-end

@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -27,20 +28,28 @@ export const render_edit_component_filter = function() {
 * EDIT
 * Render node for use in edit
 * @param object options
-* @return DOM node
+* @return HTMLElement
 */
 render_edit_component_filter.prototype.edit = async function(options) {
 
 	const self = this
 
 	// view
-		const view	= self.context.view || 'default'
+		const view = self.context.view || 'default'
 
 	switch(view) {
 
 		case 'line':
 			return view_line_edit_filter.render(self, options)
 			break;
+
+		case 'print':
+			// view print use the same view as default, except it will use read only to render content_value
+			// as different view as default it will set in the class of the wrapper
+			// sample: <div class="wrapper_component component_input_text oh14 oh1_oh14 edit view_print disabled_component">...</div>
+			// take account that to change the css when the component will render in print context
+			// for print we need to use read of the content_value and it's necessary force permissions to use read only element render
+			self.permissions = 1
 
 		case 'default':
 		default:
@@ -54,7 +63,8 @@ render_edit_component_filter.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @param object self
+* @return HTMLElement content_data
 */
 export const get_content_data = function(self) {
 
@@ -65,35 +75,33 @@ export const get_content_data = function(self) {
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
-			  // content_data.classList.add('nowrap')
 
 		// ul
 			const ul_branch = ui.create_dom_element({
 				element_type	: 'ul',
-				class_name		: 'branch',
+				class_name		: 'content_value branch',
 				parent			: content_data
 			})
 
 		// get tree nodes with children recursively
-		const get_children_node = function(element){
+		const get_children_node = function(element) {
 
 			const children_elements = datalist.filter(
 				el => el.parent && el.parent.section_tipo === element.section_tipo
 				&& el.parent.section_id === element.section_id
 			)
 			const children_elements_len = children_elements.length
+			element.has_children = (children_elements_len > 0)
 
-			const has_children = (children_elements_len > 0)
-				? true
-				: false
+			// element_node
+			const element_node = (self.permissions===1)
+				? get_input_element_read(element, self)
+				: get_input_element(element, self)
 
-			element.has_children = has_children
-
-			const element_node = get_input_element(element, self)
 			if(children_elements_len > 0) {
 				for (let i = 0; i < children_elements_len; i++) {
-					const current_child = children_elements[i]
-					const child_node = get_children_node(current_child)
+					const current_child	= children_elements[i]
+					const child_node	= get_children_node(current_child)
 					element_node.branch.appendChild(child_node)
 				}
 			}
@@ -108,7 +116,6 @@ export const get_content_data = function(self) {
 			const current_element = root_elements[i]
 			const element_node = get_children_node(current_element)
 			ul_branch.appendChild(element_node)
-
 		}
 
 
@@ -119,18 +126,24 @@ export const get_content_data = function(self) {
 
 /**
 * GET_INPUT_ELEMENT
-* @return DOM node li
+* Render li node with given element data and value
+* @param object element
+* 	sample: {type: 'project', label: 'Camino de la Justicia', section_tipo: 'dd153', section_id: '9', value: {…}, …}
+* @param object self
+* @return HTMLElement li
 */
 export const get_input_element = (element, self) => {
 
 	// short vars
 		const value				= self.data.value || []
 		const value_length		= value.length
-		const datalist_value	= element.value
-		const label				= element.label
+		const label				= element.label || ''
 		const section_id		= element.section_id
 		const section_tipo		= element.section_tipo
-
+		const datalist_value	= element.value
+		if (datalist_value) {
+			datalist_value.from_component_tipo = self.tipo
+		}
 
 	// li container
 		const li_class_name = (element.has_children) ? ' grouper' : ''
@@ -138,9 +151,14 @@ export const get_input_element = (element, self) => {
 			element_type	: 'li',
 			class_name		: 'item_li' + li_class_name
 		})
+		li.addEventListener('mousedown',function(e) {
+			e.stopPropagation()
+		})
 
 	// label
-		const label_string = (SHOW_DEBUG===true) ? label + ' [' + section_id + ']' : label
+		const label_string = (SHOW_DEBUG===true)
+			? label + ' [' + section_id + ']'
+			: label
 		const label_node = ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: 'item_label',
@@ -167,8 +185,23 @@ export const get_input_element = (element, self) => {
 			// 	value	: changed_value
 			// })
 
-			// // fix instance changed_data
+			// fix instance changed_data
 			// 	self.set_changed_data(changed_data_item)
+
+			// check all values
+				const checked_items = []
+				const all_inputs = self.node.content_data.querySelectorAll('.item_input')
+				for (let i = 0; i < all_inputs.length; i++) {
+					if(all_inputs[i].checked) {
+						checked_items.push(all_inputs[i])
+					}
+				}
+				if (checked_items.length<1 && self.mode!=='search') {
+					// restore checked
+					input_node.checked = true
+					alert( get_label.select_one_project || 'You must select at least one project' );
+					return
+				}
 
 			self.change_handler({
 				self			: self,
@@ -230,9 +263,74 @@ export const get_input_element = (element, self) => {
 
 
 /**
+* GET_INPUT_ELEMENT_read
+* Render li node with given element data and value in read only mode
+* @param object element
+* 	sample: {type: 'project', label: 'Camino de la Justicia', section_tipo: 'dd153', section_id: '9', value: {…}, …}
+* @param object self
+* @return HTMLElement li
+*/
+export const get_input_element_read = (element, self) => {
+
+	// short vars
+		const value				= self.data.value || []
+		const value_length		= value.length
+		const datalist_value	= element.value
+		const label				= element.label || (element.section_tipo+'_'+element.section_id)
+		const section_id		= element.section_id
+		const section_tipo		= element.section_tipo
+
+	// checked option set on match
+		const found = value.find(el => datalist_value &&
+			el.section_id===datalist_value.section_id &&
+			el.section_tipo===datalist_value.section_tipo
+		)
+
+	// li container
+		const li_class_name = (element.has_children) ? ' grouper' : ''
+		const li = ui.create_dom_element({
+			element_type	: 'li',
+			class_name		: 'item_li' + li_class_name
+		})
+
+	// label
+		if(found){
+			// label
+				const label_node = ui.create_dom_element({
+					element_type	: 'label',
+					class_name		: 'item_label',
+					inner_html		: label,
+					parent			: li
+				})
+
+			// icon_node check
+				const icon_node = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'icon_button icon check '
+				})
+				label_node.prepend(icon_node)
+		}
+
+	// has_children case
+		if(element.has_children) {
+			// branch
+			const branch = ui.create_dom_element({
+				element_type	: 'ul',
+				class_name		: 'branch',
+				parent 			: li
+			})
+			li.branch = branch
+		}
+
+	return li
+}//end get_input_element_read
+
+
+
+/**
 * GET_BUTTONS
-* @param object instance
-* @return DOM node buttons_container
+* @param object self
+* @return HTMLElement buttons_container
 */
 export const get_buttons = (self) => {
 
@@ -262,15 +360,6 @@ export const get_buttons = (self) => {
 				})
 				button_edit.addEventListener('click', function(e){
 					e.stopPropagation()
-
-					// navigate link
-						// event_manager.publish('user_navigation', {
-						// 	source : {
-						// 		tipo	: item.tipo,
-						// 		model	: 'section',
-						// 		mode	: 'list'
-						// 	}
-						// })
 
 					// open a new window
 						const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
@@ -333,3 +422,8 @@ export const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
+
+
+
+// @license-end
+

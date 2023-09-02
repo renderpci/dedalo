@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
@@ -36,7 +37,6 @@ export const tool_update_cache = function () {
 
 	this.component_list = null
 
-
 	return true
 }//end page
 
@@ -61,6 +61,8 @@ export const tool_update_cache = function () {
 /**
 * INIT
 * Custom tool init
+* @param object options
+* @return bool common_init
 */
 tool_update_cache.prototype.init = async function(options) {
 
@@ -72,7 +74,6 @@ tool_update_cache.prototype.init = async function(options) {
 	// set the self specific vars not defined by the generic init (in tool_common)
 
 
-
 	return common_init
 }//end init
 
@@ -81,6 +82,8 @@ tool_update_cache.prototype.init = async function(options) {
 /**
 * BUILD
 * Custom tool build
+* @param bool autoload
+* @return bool common_build
 */
 tool_update_cache.prototype.build = async function(autoload=false) {
 
@@ -88,7 +91,6 @@ tool_update_cache.prototype.build = async function(autoload=false) {
 
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(this, autoload);
-
 
 	// specific actions.. like fix main_element for convenience
 		self.component_list = await self.get_component_list()
@@ -101,8 +103,9 @@ tool_update_cache.prototype.build = async function(autoload=false) {
 
 /**
 * GET_COMPONENT_LIST
-* 	Get the list of section components selectables to update cache
-* @return promise > bool
+* 	Get the list of section components available to update cache
+* @return promise
+* 	resolve array result
 */
 tool_update_cache.prototype.get_component_list = function() {
 
@@ -111,25 +114,25 @@ tool_update_cache.prototype.get_component_list = function() {
 	const section_tipo = self.caller.section_tipo
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'get_component_list')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			section_tipo : section_tipo
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				section_tipo : section_tipo
+			}
 		}
 
 	// call to the API, fetch data and get response
 		return new Promise(function(resolve){
 
 			data_manager.request({
-				body : rqo
+				use_worker	: true,
+				body		: rqo
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {
@@ -146,8 +149,9 @@ tool_update_cache.prototype.get_component_list = function() {
 
 
 /**
-* update_cache
-* 	Get the llist of section components selectables to update cache
+* UPDATE_CACHE
+* Get the list of section components available to update cache
+* @param array ar_component_tipo
 * @return promise > bool
 */
 tool_update_cache.prototype.update_cache = function(ar_component_tipo) {
@@ -157,27 +161,27 @@ tool_update_cache.prototype.update_cache = function(ar_component_tipo) {
 	const section_tipo = self.caller.section_tipo
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'update_cache')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			section_tipo		: section_tipo,
-			ar_component_tipo	: ar_component_tipo,
-			lang				: page_globals.dedalo_application_lang
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				section_tipo		: section_tipo,
+				ar_component_tipo	: ar_component_tipo,
+				lang				: page_globals.dedalo_application_lang
+			}
 		}
 
 	// call to the API, fetch data and get response
 		return new Promise(function(resolve){
 
 			data_manager.request({
-				body : rqo
+				use_worker	: true,
+				body		: rqo
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {
@@ -190,3 +194,7 @@ tool_update_cache.prototype.update_cache = function(ar_component_tipo) {
 			})
 		})
 }//end update_cache
+
+
+
+// @license-end

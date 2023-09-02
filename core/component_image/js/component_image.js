@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -11,6 +12,7 @@
 	import {vector_editor} from '../../component_image/js/vector_editor.js'
 	import {render_edit_component_image} from '../../component_image/js/render_edit_component_image.js'
 	import {render_list_component_image} from '../../component_image/js/render_list_component_image.js'
+	import {render_search_component_image} from '../../component_image/js/render_search_component_image.js'
 
 
 
@@ -37,9 +39,6 @@ export const component_image = function(){
 
 	this.file_name
 	this.file_dir
-
-
-	return true
 }//end component_image
 
 
@@ -68,12 +67,14 @@ export const component_image = function(){
 	component_image.prototype.list				= render_list_component_image.prototype.list
 	component_image.prototype.tm				= render_list_component_image.prototype.list
 	component_image.prototype.edit				= render_edit_component_image.prototype.edit
-	component_image.prototype.search			= render_edit_component_image.prototype.search
+	component_image.prototype.search			= render_search_component_image.prototype.search
 
 
 
 /**
 * INIT
+* @param object options
+* @return bool
 */
 component_image.prototype.init = async function(options) {
 
@@ -191,7 +192,8 @@ component_image.prototype.get_last_layer_id = function() {
 
 
 /**
-* LOAD_VECTOR_EDITOR
+* LOAD_VECTOR_EDITOR-
+* @param object options
 * @return bool true
 */
 component_image.prototype.load_vector_editor = async function(options) {
@@ -273,6 +275,7 @@ component_image.prototype.load_vector_editor = async function(options) {
 /**
 * LOAD_TAG_INTO_VECTOR_EDITOR
 * usually fire with 'click_tag_draw' event
+* @param object options
 * @return bool true
 */
 component_image.prototype.load_tag_into_vector_editor = function(options) {
@@ -286,7 +289,6 @@ component_image.prototype.load_tag_into_vector_editor = function(options) {
 	try {
 
 		const ar_layer_id			= JSON.parse(tag.data)
-		console.log("---> ar_layer_id:",ar_layer_id);
 		const ar_layer_id_length	= ar_layer_id.length
 		for (let i = 0; i < ar_layer_id_length; i++) {
 
@@ -421,3 +423,7 @@ component_image.prototype.update_draw_data = function() {
 
 	return true
 }//end update_draw_data
+
+
+
+// @license-end

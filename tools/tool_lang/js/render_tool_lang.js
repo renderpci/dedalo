@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global page_globals, SHOW_DEBUG, DEDALO_CORE_URL, get_label */
 /*eslint no-undef: "error"*/
 
@@ -26,7 +27,7 @@ export const render_tool_lang = function() {
 * EDIT
 * Render node for use in edit mode
 * @param object options
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_tool_lang.prototype.edit = async function(options) {
 
@@ -45,20 +46,22 @@ render_tool_lang.prototype.edit = async function(options) {
 		const wrapper = ui.tool.build_wrapper_edit(self, {
 			content_data : content_data
 		})
-
+		// set pointers
+		wrapper.content_data = content_data
 
 	// status, render the status components for users and admins to control the process of the tool
 		const status_container = await render_status(self)
 		wrapper.tool_buttons_container.appendChild(status_container)
 
+
 	return wrapper
-}//end render_tool_lang
+}//end edit
 
 
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data_edit = async function(self) {
 
@@ -101,7 +104,11 @@ const get_content_data_edit = async function(self) {
 				})
 				source_select_lang.addEventListener("change", function(e){
 					const lang = e.target.value
-					add_component(self, source_component_container, lang)
+					change_component_lang({
+						self		: self,
+						component	: self.main_element,
+						lang		: lang
+					})
 				})
 				top_left.appendChild(source_select_lang)
 
@@ -114,15 +121,14 @@ const get_content_data_edit = async function(self) {
 				})
 
 		// source component
-			self.main_element.show_interface.read_only = true
 			const source_component_container = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'source_component_container',
 				parent			: left_block
 			})
+			self.main_element.show_interface.read_only = true
 			self.main_element.render()
 			.then(function(node){
-				// node.classList.add('disabled_component')
 				source_component_container.appendChild(node)
 			})
 
@@ -148,10 +154,10 @@ const get_content_data_edit = async function(self) {
 				})
 				target_select_lang.addEventListener("change", async function(e){
 					const lang = e.target.value
-					// self.target_component = await add_component(self, target_component_container, lang)
-					add_component(self, target_component_container, lang)
-					.then(function(response){
-						self.target_component = response
+					change_component_lang({
+						self		: self,
+						component	: self.target_component,
+						lang		: lang
 					})
 
 					const data = {
@@ -174,16 +180,17 @@ const get_content_data_edit = async function(self) {
 				})
 
 		// target component
-			const target_component_container = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'target_component_container',
-				parent			: right_block
-			})
-			if (target_select_lang.value) {
-				add_component(self, target_component_container, target_select_lang.value)
-				.then(function(response){
-					self.target_component = response
+		// if the target component has the same lang than source component block the edition to avoid errors
+		// ck-editor can not manage 2 instances of the same component in edit
+			if (self.target_component) {
+				self.target_component.show_interface.read_only = (self.target_component.lang===self.source_lang)
+				const target_component_node = await self.target_component.render()
+				const target_component_container = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'target_component_container',
+					parent			: right_block
 				})
+				target_component_container.appendChild(target_component_node)
 			}
 
 	// buttons container
@@ -235,11 +242,11 @@ const get_content_data_edit = async function(self) {
 
 				// save value. (Expected only one value in the array)
 					for (let i = 0; i < source_value.length; i++) {
-						self.target_component.save({
+						self.target_component.save([{
 							action	: 'update',
 							key		: i,
 							value	: source_value[i]
-						})
+						}])
 					}
 
 				// refresh the target component
@@ -266,7 +273,7 @@ const get_content_data_edit = async function(self) {
 /**
 * RENDER_PROPAGATE_MARKS_BLOCK
 * (!) WORKING HERE. Note that this functionality it's not finished in v5
-* @return DOM node propagate_marks_container
+* @return HTMLElement propagate_marks_container
 */
 const render_propagate_marks_block = function(self) {
 
@@ -359,7 +366,7 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 
 		// const button_automatic_translation = document.createElement('button');
 		// 	  button_automatic_translation.type = 'button'
-		// 	  button_automatic_translation.textContent = get_label['traduccion_automatica'] || "Automatic translation"
+		// 	  button_automatic_translation.textContent = get_label['automatic_translation'] || "Automatic translation"
 		// 	  automatic_translation_container.appendChild(button_automatic_translation)
 		button_automatic_translation.addEventListener('click', () => {
 
@@ -408,45 +415,47 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 
 
 /**
-* ADD_COMPONENT
+* CHANGE_COMPONENT_LANG
 * Load and render a new component for translate
-* @return DOM node|bool
+* @param property object
+* 	self		: instance of the tool
+* 	component	: instance of the component to change, it could be source or target component
+* 	lang		: the lang selected by user
+* @return HTMLElement|bool
 * 	component wrapper node
 */
-export const add_component = async (self, component_container, lang) => {
+export const change_component_lang = async (options) => {
 
-	// user select blank lang case
-		if (!lang) {
-			// remove node from DOM (not component instance)
-			while (component_container.firstChild) {
-				component_container.removeChild(component_container.firstChild)
-			}
-			return false
-		}
+	// options
+		const self		= options.self
+		const component	= options.component
+		const lang		= options.lang
+
+	// check if source component or target component has the lang selected to lock the component edition
+	// if not release read_only property
+		// if (lang===self.main_element.lang || lang===self.target_component.lang) {
+		// 	// node.classList.add('disabled_component')
+		// 	component.show_interface.read_only = true
+		// }else{
+		// 	component.show_interface.read_only = false
+		// }
+
+	// id_variant: tool_lang / target_component
+		const is_main = component.id_variant==='tool_lang'
+
+	// read_only
+		component.show_interface.read_only = is_main || (lang===self.source_lang)
 
 	// render component
-		const component	= await self.load_component(lang)
+		component.lang = lang
 		// set auto_init_editor for convenience
 		component.auto_init_editor = true
-		const node		= await component.render()
 
-	// source lang lock
-		if (lang===self.source_lang || component_container.classList.contains('source_component_container')) {
-			// node.classList.add('disabled_component')
-			component.show_interface.read_only = true
-		}
+		await component.refresh()
+		// const node		= await component.render()
 
-	// clean container before append
-		while (component_container.firstChild) {
-			component_container.removeChild(component_container.firstChild)
-		}
-
-	// append node
-		component_container.appendChild(node)
-
-
-	return component
-}//end add_component
+	return true
+}//end change_component_lang
 
 
 
@@ -456,7 +465,7 @@ export const add_component = async (self, component_container, lang) => {
 * the components are defined in ontology as tool_config->name_of_the_tool->ddo_map
 * @param object self
 * 	instance of current tool
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const render_status = async function(self) {
 
@@ -483,3 +492,6 @@ const render_status = async function(self) {
 
 	return fragment
 }//end render_status
+
+
+// @license-end

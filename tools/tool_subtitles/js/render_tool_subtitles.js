@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -12,9 +13,10 @@
 	// import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 
 
+
 /**
 * RENDER_TOOL_SUBTITLES
-* Manages the component's logic and apperance in client side
+* Manages the component's logic and appearance in client side
 */
 export const render_tool_subtitles = function() {
 
@@ -26,7 +28,7 @@ export const render_tool_subtitles = function() {
 /**
 * EDIT
 * Render node
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_tool_subtitles.prototype.edit = async function(options={render_level:'full'}) {
 
@@ -56,13 +58,13 @@ render_tool_subtitles.prototype.edit = async function(options={render_level:'ful
 
 
 	return wrapper
-}//end render_tool_subtitles
+}//end edit
 
 
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data_edit = async function(self) {
 
@@ -327,7 +329,7 @@ const get_content_data_edit = async function(self) {
 /**
 * RENDER_SUBTITLES_OPTIONS
 * This is used to build a optional buttons inside the header
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const render_subtitles_options = async function(self, content_data) {
 
@@ -342,7 +344,7 @@ const render_subtitles_options = async function(self, content_data) {
 		const lang_label = ui.create_dom_element({
 			element_type	: 'div',
 			class_name 		: 'lang_label',
-			inner_html 		: get_label.idioma || 'Language',
+			inner_html 		: get_label.language || 'Language',
 			parent 			: lang_container
 		})
 		// the lang selector use the content_data pointer .left_container to remove the transcription text_area and rebuild the new node
@@ -406,7 +408,7 @@ const render_subtitles_options = async function(self, content_data) {
 * This is used to build a optional buttons inside the header
 * @param object self
 * 	instance of current tool
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const render_activity_info = function(self) {
 
@@ -436,7 +438,7 @@ const render_activity_info = function(self) {
 /**
 * RENDER_SUBTITLES
 * This is used to build a optional buttons inside the header
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const render_subtitles = async function(self) {
 
@@ -483,8 +485,8 @@ const render_subtitles = async function(self) {
 					const value_container = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'value_container ' +current_value.type,
-						parent			: text_container,
-						inner_html		: value
+						inner_html		: value,
+						parent			: text_container
 					})
 
 					const options = {
@@ -536,7 +538,6 @@ const init_current_service_text_editor = async function(self, i, options) {
 	// init the option variables
 		const value_container	= options.value_container
 		const toolbar_container	= options.toolbar_container
-		const value				= options.value
 
 	// service_editor. Fixed on init
 		const current_service_text_editor = new self.service_text_editor()
@@ -561,7 +562,6 @@ const init_current_service_text_editor = async function(self, i, options) {
 			caller				: self,
 			value_container		: value_container,
 			toolbar_container	: toolbar_container,
-			value				: value,
 			key					: i,
 			editor_config		: editor_config,
 			editor_class		: 'ddEditor'
@@ -1023,49 +1023,4 @@ const get_custom_events = (self, i, text_editor) => {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+// @license-end

@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * DBI
 * DB CONNECTION
@@ -11,21 +12,28 @@ abstract class DBi {
 	/**
 	* _GETCONNECTION
 	* Returns an PgSql\Connection instance on success, or false on failure.
-	* @return resource|object $pg_conn
-	* 8.1.0	Returns an PgSql\Connection instance now; previously, a resource was returned.
+	* @param string|null $host = DEDALO_HOSTNAME_CONN
+	* @param string $user = DEDALO_USERNAME_CONN
+	* @param string $password = DEDALO_PASSWORD_CONN
+	* @param string $database = DEDALO_DATABASE_CONN
+	* @param string|int|null $port = DEDALO_DB_PORT_CONN
+	* @param string|null $socket = DEDALO_SOCKET_CONN
+	* @param bool $cache = true
+	* @return PgSql\Connection|bool $pg_conn
+	* 	>=8.1.0	Returns an PgSql\Connection instance now; previously, a resource was returned.
+	* 	false on failure
 	*/
 	public static function _getConnection(
-		string|null $host		= DEDALO_HOSTNAME_CONN,
-		string 		$user		= DEDALO_USERNAME_CONN,
-		string 		$password	= DEDALO_PASSWORD_CONN,
-		string 		$database	= DEDALO_DATABASE_CONN,
-		string|null $port		= DEDALO_DB_PORT_CONN,
-		string|null $socket		= DEDALO_SOCKET_CONN,
-		bool 		$cache		= true
-		) : object|false {
+		string|null		$host		= DEDALO_HOSTNAME_CONN,
+		string			$user		= DEDALO_USERNAME_CONN,
+		string			$password	= DEDALO_PASSWORD_CONN,
+		string			$database	= DEDALO_DATABASE_CONN,
+		string|int|null	$port		= DEDALO_DB_PORT_CONN,
+		string|null		$socket		= DEDALO_SOCKET_CONN,
+		bool			$cache		= true
+		) : PgSql\Connection|bool {
 
 		static $pg_conn;
-
 		if($cache===true && isset($pg_conn)) {
 			return($pg_conn);
 		}
@@ -34,8 +42,8 @@ abstract class DBi {
 		$str_connect = "dbname=$database user=$user password=$password";
 
 		// Port is optional
-		if($port!==null) {
-			$str_connect = "port=$port ".$str_connect;
+		if(!empty($port)) {
+			$str_connect = 'port=' . (int)$port .' '.$str_connect;
 		}
 
 		// Host is optional. When false, use default socket connection
@@ -45,8 +53,11 @@ abstract class DBi {
 
 		// Connecting, selecting database
 		$pg_conn_real = pg_connect($str_connect);
-		if($pg_conn===false) {
-			debug_log(__METHOD__.' Error. Could not connect to database (52) : '.to_string($database), logger::ERROR);
+		if($pg_conn_real===false) {
+			debug_log(__METHOD__
+				.' Error. Could not connect to database (52) : '.to_string($database)
+				, logger::ERROR
+			);
 			if(SHOW_DEBUG===true) {
 				// throw new Exception("Error. Could not connect to database (52)", 1);
 			}
@@ -70,17 +81,18 @@ abstract class DBi {
 	* _GETNEWCONNECTION
 	* Alias of _getConnection, but with param cache=false
 	* Get a new PostgreSQL database connection without reuse existing connections
-	* @return resource|object $pg_conn (object in PHP >=8.1)
-	* 8.1.0	Returns an PgSql\Connection instance now; previously, a resource was returned.
+	* @return PgSql\Connection $pg_conn
+	* 	>=8.1.0	Returns an PgSql\Connection instance now; previously, a resource was returned.
+	* 	false on failure
 	*/
 	public static function _getNewConnection(
-		string|null $host		= DEDALO_HOSTNAME_CONN,
-		string 		$user		= DEDALO_USERNAME_CONN,
-		string 		$password	= DEDALO_PASSWORD_CONN,
-		string 		$database	= DEDALO_DATABASE_CONN,
-		string|null $port		= DEDALO_DB_PORT_CONN,
-		string|null $socket		= DEDALO_SOCKET_CONN
-		) : object|false {
+		string|null		$host		= DEDALO_HOSTNAME_CONN,
+		string			$user		= DEDALO_USERNAME_CONN,
+		string			$password	= DEDALO_PASSWORD_CONN,
+		string			$database	= DEDALO_DATABASE_CONN,
+		string|int|null	$port		= DEDALO_DB_PORT_CONN,
+		string|null		$socket		= DEDALO_SOCKET_CONN
+		) : PgSql\Connection|bool {
 
 		$pg_conn = DBi::_getConnection(
 			$host,
@@ -99,53 +111,68 @@ abstract class DBi {
 
 	/**
 	* _GETCONNECTIONPDO
-	* Returns an PgSql\Connection instance on success, or false on failure.
-	* @return resource|object $pg_conn (object in PHP >=8.1)
-	* 8.1.0	Returns an PgSql\Connection instance now; previously, a resource was returned.
+	* Returns an PosgreSQL PDO instance on success, or false on failure.
+	* @param string|null $host = DEDALO_HOSTNAME_CONN
+	* @param string $user = DEDALO_USERNAME_CONN
+	* @param string $password = DEDALO_PASSWORD_CONN
+	* @param string $database = DEDALO_DATABASE_CONN
+	* @param string|int|null $port = DEDALO_DB_PORT_CONN
+	* @param string|null $socket = DEDALO_SOCKET_CONN
+	* @param bool $cache = true
+	* @return PDO|bool $pg_pdo_conn
 	*/
 	public static function _getConnectionPDO(
-		string|null $host	= DEDALO_HOSTNAME_CONN,
-		string $user		= DEDALO_USERNAME_CONN,
-		string $password	= DEDALO_PASSWORD_CONN,
-		string $database	= DEDALO_DATABASE_CONN,
-		string|null $port	= DEDALO_DB_PORT_CONN,
-		string|null $socket	= DEDALO_SOCKET_CONN,
-		bool $cache			= true
-		) : object|false {
+		string|null		$host		= DEDALO_HOSTNAME_CONN,
+		string			$user		= DEDALO_USERNAME_CONN,
+		string			$password	= DEDALO_PASSWORD_CONN,
+		string			$database	= DEDALO_DATABASE_CONN,
+		string|int|null	$port		= DEDALO_DB_PORT_CONN,
+		string|null		$socket		= DEDALO_SOCKET_CONN,
+		bool			$cache		= true
+		) : PDO|bool {
 
-		static $pg_pdo_conn;
-		if($cache===true && isset($pg_pdo_conn)) {
-			return($pg_pdo_conn);
+		static $pdo_conn;
+		if($cache===true && isset($pdo_conn)) {
+			return($pdo_conn);
 		}
 
 		// PDO
 			try {
-				$pg_pdo_conn = new PDO(
-				'pgsql:host=' . $host . ';dbname=' . $database . ';', $user, $password, array(
-					PDO::ATTR_ERRMODE   =>  PDO::ERRMODE_EXCEPTION,
-				));
+				$pdo_conn = new PDO(
+					'pgsql:host=' . $host . ';dbname=' . $database . ';', $user, $password, array(
+						PDO::ATTR_ERRMODE =>  PDO::ERRMODE_EXCEPTION,
+					)
+				);
 			} catch (\PDOException $e) {
 				throw new \PDOException($e->getMessage(), (int)$e->getCode());
 			}
 
-		return $pg_pdo_conn;
+		return $pdo_conn;
 	}//end _getConnectionPDO
 
 
 
 	/**
 	* _GETCONNECTION_MYSQL
-	* @return resource $mysqli
+	* Returns an mysqli instance on success, or false on failure.
+	* @param string|null $host = MYSQL_DEDALO_HOSTNAME_CONN
+	* @param string $user = MYSQL_DEDALO_USERNAME_CONN
+	* @param string $password = MYSQL_DEDALO_PASSWORD_CONN
+	* @param string $database = MYSQL_DEDALO_DATABASE_CONN
+	* @param int|null $port = MYSQL_DEDALO_DB_PORT_CONN
+	* @param string|null $socket = MYSQL_DEDALO_SOCKET_CONN
+	* @param bool $cache = true
+	* @return mysqli|bool $mysqli
 	*/
 	public static function _getConnection_mysql(
-		$host=MYSQL_DEDALO_HOSTNAME_CONN,
-		$user=MYSQL_DEDALO_USERNAME_CONN,
-		$password=MYSQL_DEDALO_PASSWORD_CONN,
-		$database=MYSQL_DEDALO_DATABASE_CONN,
-		$port=MYSQL_DEDALO_DB_PORT_CONN,
-		$socket=MYSQL_DEDALO_SOCKET_CONN
-		) : object|false {
-
+		string|null		$host		= MYSQL_DEDALO_HOSTNAME_CONN,
+		string			$user		= MYSQL_DEDALO_USERNAME_CONN,
+		string			$password	= MYSQL_DEDALO_PASSWORD_CONN,
+		string			$database	= MYSQL_DEDALO_DATABASE_CONN,
+		int|null		$port		= MYSQL_DEDALO_DB_PORT_CONN,
+		string|null		$socket		= MYSQL_DEDALO_SOCKET_CONN,
+		bool			$cache		= true
+		) : mysqli|bool {
 
 		// cache
 			static $mysqli;
@@ -168,47 +195,70 @@ abstract class DBi {
 		// @see https://www.php.net/manual/en/mysqli-driver.report-mode.php
 			mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 			// mysqli_report(MYSQLI_REPORT_ALL ^ MYSQLI_REPORT_STRICT);
+			// mysqli_report(MYSQLI_REPORT_ERROR);
 
-		// INIT
-			// $mysqli = mysqli_init();
+		// init
 			$mysqli = new mysqli($host, $user, $password, $database, $port);
-
 			if ($mysqli===false) {
-				#die('Dedalo '.__METHOD__ . ' Failed mysqli_init');
-				throw new Exception(' Dedalo '.__METHOD__ . ' Failed mysqli_init ', 1);
+				// throw new Exception(' Dedalo '.__METHOD__ . ' Failed mysqli_init ', 1);
+				debug_log(__METHOD__
+					. " Error on connect to MYSQL database. Failed mysqli_init ". PHP_EOL
+					, logger::DEBUG
+				);
+				return false;
+			}
+			if ($mysqli->connect_errno) {
+			    debug_log(__METHOD__
+					. " Error on connect to MYSQL database [2]. ". PHP_EOL
+					. ' connect_error: ' . $mysqli->connect_error
+					, logger::DEBUG
+				);
+				return false;
 			}
 
 		// $mysqli->options(MYSQLI_OPT_INT_AND_FLOAT_NATIVE, 1);
 
-		// AUTOCOMMIT : SET AUTOCOMMIT (Needed for InnoDB save)
-		if (!$mysqli->options(MYSQLI_INIT_COMMAND, 'SET AUTOCOMMIT = 1')) {
-			// die('Dedalo '.'Setting MYSQLI_INIT_COMMAND failed');
-			throw new Exception(' Connect Error. Setting MYSQLI_INIT_COMMAND failed ', 1);
-		}
+		// auto-commit : set autocommit (needed for INNODB save)
+			if (!$mysqli->options(MYSQLI_INIT_COMMAND, 'SET AUTOCOMMIT = 1')) {
+				// die('Dedalo '.'Setting MYSQLI_INIT_COMMAND failed');
+				// throw new Exception(' Connect Error. Setting MYSQLI_INIT_COMMAND failed ', 1);
+				debug_log(__METHOD__
+					. " Error on connect to MYSQL database [3].  Setting MYSQLI_INIT_COMMAND failed". PHP_EOL
+					. 'connect_error: ' . $mysqli->connect_error
+					, logger::DEBUG
+				);
+			}
 
-		// TIMEOUT : SET CONNECT_TIMEOUT
-		if (!$mysqli->options(MYSQLI_OPT_CONNECT_TIMEOUT, 10)) {
-			// die('Dedalo '.'Setting MYSQLI_OPT_CONNECT_TIMEOUT failed');
-			throw new Exception(' Connect Error. Setting MYSQLI_OPT_CONNECT_TIMEOUT failed ', 1);
-		}
+		// timeout : set connect_timeout
+			if (!$mysqli->options(MYSQLI_OPT_CONNECT_TIMEOUT, 10)) {
+				// die('Dedalo '.'Setting MYSQLI_OPT_CONNECT_TIMEOUT failed');
+				// throw new Exception(' Connect Error. Setting MYSQLI_OPT_CONNECT_TIMEOUT failed ', 1);
+				debug_log(__METHOD__
+					. " Error on connect to MYSQL database [4].  Setting MYSQLI_OPT_CONNECT_TIMEOUT failed". PHP_EOL
+					. 'connect_error: ' . $mysqli->connect_error
+					, logger::DEBUG
+				);
+			}
 
-		// CONNECT
-		if (!$mysqli->real_connect($host, $user, $password, $database,  $port, $socket)) {
-			throw new Exception(' Connect Error on mysqli->real_connect '.mysqli_connect_errno().' - '.mysqli_connect_error(), 1);
-			// die( wrap_pre('Dedalo '.'Connect Error (' . mysqli_connect_errno() . ') ' . mysqli_connect_error()) );
-		}
+		// connect
+			if (!$mysqli->real_connect($host, $user, $password, $database,  $port, $socket)) {
+				debug_log(__METHOD__
+					. " Error on connect to MYSQL database ". PHP_EOL
+					. ' mysqli_connect_errno: ' .mysqli_connect_errno() . PHP_EOL
+					. ' mysqli_connect_error: ' .mysqli_connect_error()
+					, logger::DEBUG
+				);
+				return false;
+			}
 
 		// UTF8 : Change character set to utf8mb4
-		if (!$mysqli->set_charset('utf8mb4')) {
-			// printf("Error loading character set utf8mb4: %s\n", $mysqli->error);
-			debug_log(__METHOD__." Error loading character set utf8mb4: ".to_string($mysqli->error), logger::DEBUG);
-		}
-
-		// errors
-			// $errno = mysqli_connect_errno();
-			// $error = mysqli_connect_error();
-			// 	dump($errno, '$errno ++ '.to_string());
-			// 	dump($error, '$error ++ '.to_string());
+			if (!$mysqli->set_charset('utf8mb4')) {
+				debug_log(__METHOD__
+					." Error loading character set utf8mb4: ". PHP_EOL
+					. 'mysqli->error: ' . $mysqli->error
+					, logger::DEBUG
+				);
+			}
 
 
 		return $mysqli;

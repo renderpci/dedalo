@@ -1,10 +1,10 @@
 <?php
 /**
 * TS_TERM
-* Object like tesaurus term
+* Object like thesaurus term
 *
 */
-class ts_term {
+class ts_term extends stdClass {
 
 
 
@@ -39,13 +39,13 @@ class ts_term {
 		$key = $term_id .'_'. $lang;
 
 		# OVERLOAD : If ar_ts_term_instances > 99 , not add current element to cache to avoid overload
-		if ( isset($ar_ts_term_instances) && count($ar_ts_term_instances)>1000) {    		
-			$ar_ts_term_instances = array_slice($ar_ts_term_instances,300,null,true); // 300   		
+		if ( isset($ar_ts_term_instances) && count($ar_ts_term_instances)>1000) {
+			$ar_ts_term_instances = array_slice($ar_ts_term_instances,300,null,true); // 300
 		}
 
-		# FIND CURRENT INSTANCE IN CACHE    	
-		if ( !isset($ar_ts_term_instances) || !array_key_exists($key, $ar_ts_term_instances) ) {	
-			$ar_ts_term_instances[$key] = new ts_term($term_id, $lang, $request_options);    		   		
+		# FIND CURRENT INSTANCE IN CACHE
+		if ( !isset($ar_ts_term_instances) || !array_key_exists($key, $ar_ts_term_instances) ) {
+			$ar_ts_term_instances[$key] = new ts_term($term_id, $lang, $request_options);
 		}
 
 		return $ar_ts_term_instances[$key];
@@ -73,8 +73,6 @@ class ts_term {
 		if (!isset($this->table)) {
 			$this->table = TABLE_THESAURUS;
 		}
-
-		return true;
 	}//end __construct
 
 
@@ -85,7 +83,7 @@ class ts_term {
 	* @return string $term | null
 	*/
 	public function load_data() {
-	
+
 		if (!isset($this->term) || !isset($this->indexation)) {
 
 			$options = new stdClass();
@@ -93,7 +91,7 @@ class ts_term {
 				#$options->ar_fields 	= array(FIELD_TERM,'indexation','time','space','scope_note');
 				$options->ar_fields 	= array('*');
 				$options->lang 			= $this->lang;
-				$options->sql_filter 	= "term_id = '".$this->term_id."'" . PUBLICACION_FILTER_SQL;
+				$options->sql_filter 	= "term_id = '".$this->term_id."'" . PUBLICATION_FILTER_SQL;
 				$options->order 		= null;
 				#$options->limit 		= 1;
 
@@ -109,16 +107,16 @@ class ts_term {
                     [tld] => on1
                     [term_id] => on1_2398
                     [term] => Descriptors of the media
-                    [model] => 
+                    [model] =>
                     [parent] => ["hierarchy1_245"]
                     [childrens] => [{"type":"dd48","section_id":"2399","section_tipo":"on1","from_component_tipo":"hierarchy49"},{"type":"dd48","section_id":"2466","section_tipo":"on1","from_component_tipo":"hierarchy49"},{"type":"dd48","section_id":"5621","section_tipo":"on1","from_component_tipo":"hierarchy49"}]
                     [indexation] => []
                     [related] => []
-                    [time] => 
-                    [code] => 
+                    [time] =>
+                    [code] =>
                     [space] => {"lat":"39.462571","lon":"-0.376295","zoom":12,"alt":16}
                     [norder] => 7
-                    [space_marc] => 
+                    [space_marc] =>
                     [indexation_cens] => []
                     [indexation_espais] => []
                     [indexation_bibliografia] => []
@@ -143,7 +141,7 @@ class ts_term {
 					}
 			}
 		}
-		
+
 		if (!isset($this->ar_childrens)) {
 			$ar_childrens 		= ts_term::get_ar_children($this->term_id, $this->table);
 			$this->ar_childrens = $ar_childrens;
@@ -164,7 +162,7 @@ class ts_term {
 		$ar_children=array();
 
 		$current_term_id = $term_id;
-		
+
 		# Compatibility with old parent data (single)
 		$term_filter = '';
 		if (strpos($current_term_id,'["')===false) {
@@ -180,12 +178,12 @@ class ts_term {
 			$options->table 		= (string)$table;
 			$options->ar_fields 	= array('term_id',FIELD_NORDER,'descriptor');
 			$options->lang 			= WEB_CURRENT_LANG_CODE;
-			#options->sql_filter 	= "parent = '$term_id'" . PUBLICACION_FILTER_SQL;
+			#options->sql_filter 	= "parent = '$term_id'" . PUBLICATION_FILTER_SQL;
 			$options->sql_filter 	= $term_filter;
 			$options->order 		= '`'.FIELD_NORDER.'` ASC';
 
 			$rows_data	= (object)web_data::get_rows_data( $options );
-			
+
 		if (!empty($rows_data->result)) {
 
 			$ar_restricted_terms = json_decode(AR_RESTRICTED_TERMS);
@@ -232,7 +230,7 @@ class ts_term {
 	* @return bool $have_childrens
 	*/
 	public static function have_childrens($current_term_id, $table=TABLE_THESAURUS) {
-		
+
 		# Compatibility with old parent data (single)
 		$term_filter = '';
 		if (strpos($current_term_id,'["')===false) {
@@ -243,10 +241,10 @@ class ts_term {
 
 		# Remove unused terms
 		#$term_filter .= ' AND (indexation IS NOT NULL OR childrens IS NOT NULL)';
-		
+
 		$options = new stdClass();
 			$options->table 		= (string)$table;
-			$options->ar_fields 	= array('id');			
+			$options->ar_fields 	= array('id');
 			$options->lang 			= WEB_CURRENT_LANG_CODE;
 			$options->sql_filter 	= $term_filter;
 			$options->limit 		= 1;
@@ -257,7 +255,7 @@ class ts_term {
 		}else{
 			$have_childrens = false;
 		}
-	
+
 		return (bool)$have_childrens;
 	}//end have_childrens
 
@@ -268,7 +266,7 @@ class ts_term {
 	* @return bool
 	*/
 	public static function have_indexations($current_term_id, $table=TABLE_THESAURUS) {
-		
+
 		$term_filter  = 'term_id = \''.$current_term_id.'\'';
 
 		# Remove unused terms
@@ -308,12 +306,12 @@ class ts_term {
 		foreach ($ar_index as $key => $locator) {
 
 			$current_section_id = $locator->section_id;
-			
+
 			$options = new stdClass();
 				$options->table 		= (string)TABLE_AUDIOVISUAL;
-				$options->ar_fields 	= array('id');			
+				$options->ar_fields 	= array('id');
 				$options->lang 			= WEB_CURRENT_LANG_CODE;
-				$options->sql_filter 	= "section_id = '$current_section_id'" . PUBLICACION_FILTER_SQL;
+				$options->sql_filter 	= "section_id = '$current_section_id'" . PUBLICATION_FILTER_SQL;
 				$options->limit 		= 1;
 
 			$rows_data	= (object)web_data::get_rows_data( $options );
@@ -324,7 +322,7 @@ class ts_term {
 
 		}//end foreach ($ar_index as $key => $value) {
 
-		return $ar_public_index;		
+		return $ar_public_index;
 	}#end public_index
 	*/
 
@@ -335,22 +333,22 @@ class ts_term {
 	* @return array $ar_index_valid (json decode of $this->index thas is a locators array as text encoded json)
 	*/
 	public function get_ar_indexation() {
-		
-		$ar_indexation_valid = $ar_indexation = array();		
 
-		if ($ar_indexation = json_decode($this->indexation)) {			
-			
+		$ar_indexation_valid = $ar_indexation = array();
+
+		if ($ar_indexation = json_decode($this->indexation)) {
+
 			#
-			# VERIFY RESOURCE IS AHORIZED FOR DIFFUSION (diffusion='yes')		
-			foreach ($ar_indexation as $current_locator) {			
-				
-				$publication = self::get_publication_from_locator($current_locator);			
+			# VERIFY RESOURCE IS AHORIZED FOR DIFFUSION (diffusion='yes')
+			foreach ($ar_indexation as $current_locator) {
+
+				$publication = self::get_publication_from_locator($current_locator);
 				if ($publication==='yes') {
 					$ar_indexation_valid[] = $current_locator;
 				}else{
 					#dump($current_locator, 'EXCLUDED current_locator ++ '.to_string());
 				}
-				
+
 			}//end foreach ($ar_indexation as $current_locator) {
 		}
 
@@ -367,35 +365,35 @@ class ts_term {
 	public static function get_publication_from_locator( $locator, $lang=WEB_CURRENT_LANG_CODE ) {
 
 		$publication = 'no';	// Default. Options: 'yes'|'no'
-		
+
 		$current_section_id = (int)$locator->section_id;
 
 
 			#
-			# MODO USANDO EL FILTRO ('PUBLICACION_FILTER_SQL')
+			# MODO USANDO EL FILTRO ('PUBLICATION_FILTER_SQL')
 				$options = new stdClass();
 					$options->table 		= TABLE_AUDIOVISUAL;
 					$options->ar_fields 	= array('section_id');
-					$options->sql_filter 	= "section_id = $current_section_id " . PUBLICACION_FILTER_SQL;
-					$options->limit 		= 1;		
-					
+					$options->sql_filter 	= "section_id = $current_section_id " . PUBLICATION_FILTER_SQL;
+					$options->limit 		= 1;
+
 				$rows_data = (object)web_data::get_rows_data( $options );
 				if (!empty($rows_data->result)) {
 					$publication = 'yes';
 				}else{
 					#dump($current_section_id, ' $current_section_id ++ '.to_string());
 				}
-				
+
 
 				# Si la cinta es publicable, verificamos además el estado de la entrevista
 				if ($publication!='no') {
-					
+
 					$options = new stdClass();
 						$options->table 		= TABLE_INTERVIEW;
 						$options->ar_fields 	= array('id');
-						$options->sql_filter 	= "audiovisual LIKE '%\"{$current_section_id}\"%' " . PUBLICACION_FILTER_SQL;
+						$options->sql_filter 	= "audiovisual LIKE '%\"{$current_section_id}\"%' " . PUBLICATION_FILTER_SQL;
 						$options->limit 		= 1;
-						
+
 					$rows_data_interview = (object)web_data::get_rows_data( $options );
 
 					if (!empty($rows_data_interview->result)) {
@@ -412,8 +410,8 @@ class ts_term {
 				$options->table 		= TABLE_AUDIOVISUAL;
 				$options->ar_fields 	= array('publication');
 				$options->sql_filter 	= "section_id = $current_section_id AND lang = '$lang'";
-				$options->limit 		= 1;		
-				
+				$options->limit 		= 1;
+
 				$rows_data = (object)web_data::get_rows_data( $options );
 
 				if (isset($rows_data->result[0]['publication'])) {
@@ -422,13 +420,13 @@ class ts_term {
 
 			# Si la cinta es publicable, verificamos además el estado de la entrevista
 			if ($publication!='no') {
-				
+
 				$options = new stdClass();
 					$options->table 		= TABLE_INTERVIEW;
 					$options->ar_fields 	= array('publication');
 					$options->sql_filter 	= "audiovisual LIKE '%\"{$current_section_id}\"%' AND lang = '$lang'";
 					$options->limit 		= 1;
-					
+
 				$rows_data_interview = (object)web_data::get_rows_data( $options );
 
 				if (isset($rows_data_interview->result[0]['publication'])) {
@@ -440,7 +438,7 @@ class ts_term {
 		*/
 	}//end get_publication_from_locator
 
-	
+
 
 	/**
 	* GET_AR_PARENT
@@ -450,29 +448,29 @@ class ts_term {
 		$ar_parent=array();
 
 		#$parent_zero 	= $tld . (int)$top_parent;	// normally 0
-		
+
 		# First parent add
-		$parent = $parent_inicial;		
-		
+		$parent = $parent_inicial;
+
 		do {
 			if ($include_hierarchy===true) {
-				$ar_parent[] = $parent;		
+				$ar_parent[] = $parent;
 			}else if(strpos($parent, 'hierarchy')===false) {
-				$ar_parent[] = $parent;	
-			}		
-			
+				$ar_parent[] = $parent;
+			}
+
 			$parent = self::get_parent( $parent );
 
 		} while ( !empty($parent) && $parent!==$parent_inicial );
 
 		krsort($ar_parent);
-		
+
 		# recreate index of array
 		$ar_parent = array_values($ar_parent);
 
 
 		return $ar_parent;
-	}//end get_ar_parent 
+	}//end get_ar_parent
 
 
 
@@ -490,18 +488,18 @@ class ts_term {
 				$thesaurus_table = $tvalue; break;
 			}
 		}
-		
+
 		$options = new stdClass();
 			$options->table 		= (string)$thesaurus_table;
-			$options->ar_fields 	= array('parent');
+			$options->ar_fields 	= array('id','parent');
 			$options->lang 			= WEB_CURRENT_LANG_CODE;
-			$options->sql_filter 	= "term_id = '$term_id'" . PUBLICACION_FILTER_SQL;
+			$options->sql_filter 	= "term_id = '$term_id'" . PUBLICATION_FILTER_SQL;
 			$options->limit 		= 1;
-		
+
 		$rows_data	= (object)web_data::get_rows_data( $options );
 		if ($rows_data->result!==false) {
 			$row 	= reset($rows_data->result);
-		}		
+		}
 		$parent 	= isset($row['parent']) ? $row['parent'] : false;
 
 		if (strpos($parent,'[')===0) {
@@ -523,8 +521,8 @@ class ts_term {
 		preg_match("/\D+/", $term_id, $output_array);
 		if (empty($output_array[0])) {
 			if(SHOW_DEBUG===true) {
-				#throw new Exception("Error Processing Request from term_id:'$term_id' ", 1);	
-				dump(debug_backtrace()[0]," debug_backtrace Invalid term_id received ". json_encode($term_id));	
+				#throw new Exception("Error Processing Request from term_id:'$term_id' ", 1);
+				dump(debug_backtrace()[0]," debug_backtrace Invalid term_id received ". json_encode($term_id));
 			}
 			error_log(__METHOD__." Error: Invalid term_id received. Impossible get_prefix_from_term_id this term_id : ". json_encode($term_id)." " );
 			return false;
@@ -540,12 +538,12 @@ class ts_term {
 	* @return array $ar_terms
 	*//*
 	public static function get_terms_from_tag( $locator ) {
-		
+
 		$options = new stdClass();
 			$options->table 		= (string)TABLE_THESAURUS;
 			$options->ar_fields 	= array('id');
 			$options->lang 			= WEB_CURRENT_LANG_CODE;
-			$options->sql_filter 	= "indexation LIKE '%$term_id%'" . PUBLICACION_FILTER_SQL;
+			$options->sql_filter 	= "indexation LIKE '%$term_id%'" . PUBLICATION_FILTER_SQL;
 			$options->limit 		= 1;
 
 		$rows_data	= (object)web_data::get_rows_data( $options );
@@ -555,4 +553,3 @@ class ts_term {
 
 
 }//end class ts_term
-?>

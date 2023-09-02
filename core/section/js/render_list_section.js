@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
@@ -7,6 +8,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
+	import {clone, get_font_fit_size} from '../../common/js/utils/index.js'
 	import {view_default_list_section} from './view_default_list_section.js'
 
 
@@ -25,14 +27,20 @@ export const render_list_section = function() {
 /**
 * LIST
 * Render node for use in list
-* @return DOM node
+* @param object options
+* sample:
+* {
+*    "render_level": "full",
+*    "render_mode": "list"
+* }
+* @return HTMLElement wrapper
 */
 render_list_section.prototype.list = async function(options) {
 
 	const self = this
 
 	// view
-		const view	= self.context.view
+		const view = self.context?.view || null
 
 	// wrapper
 		switch(view) {
@@ -43,7 +51,7 @@ render_list_section.prototype.list = async function(options) {
 
 			default:
 				// dynamic try
-					const render_view = self.render_views.find(el => el.view === view && el.mode === self.mode)
+					const render_view = self.render_views.find(el => el.view===view && el.mode===self.mode)
 					if (render_view) {
 						const path			= render_view.path || './' + render_view.render +'.js'
 						const render_method	= await import (path)
@@ -51,16 +59,15 @@ render_list_section.prototype.list = async function(options) {
 					}
 
 				return view_default_list_section.render(self, options)
-				break;
 		}
-
-	return null
 }//end list
 
 
 
 /**
 * RENDER_COLUMN_ID
+* Custom render to generate the section list column id.
+* Is called as callback from section_record
 * @param object options
 * @return DOM DocumentFragment
 */
@@ -87,10 +94,18 @@ export const render_column_id = function(options) {
 		if(SHOW_DEBUG===true) {
 			section_id_node.title = 'paginated_key: ' + paginated_key
 		}
+		// adjust the font size to fit it into the column
+		// @see https://www.freecodecamp.org/news/learn-css-units-em-rem-vh-vw-with-code-examples/#what-are-vw-units
+		const base_size	= 1.25 // defined as --font_size: 1.25rem; into CSS (list.less)
+		const font_size	= get_font_fit_size(section_id, base_size, 4)
+		if (font_size!==base_size) {
+			section_id_node.style.setProperty('--font_size', `${font_size}rem`);
+		}
 
 	// buttons
 		switch(true){
 
+			// initiator. is a url var used in iframe containing section list to link to opener portal
 			case (self.initiator && self.initiator.indexOf('component_')!==-1):
 
 				// link_button. component portal caller (link)
@@ -101,121 +116,126 @@ export const render_column_id = function(options) {
 					})
 					link_button.addEventListener('click', function(e) {
 						e.stopPropagation()
+
+						const top_window = window.parent
+						if (!top_window.event_manager) {
+							console.error('Unable to get top_window event_manager:', top_window);
+							return
+						}
+
 						// top window event
-						top.event_manager.publish('initiator_link_' + self.initiator, {
+						top_window.event_manager.publish('initiator_link_' + self.initiator, {
 							section_tipo	: section_tipo,
 							section_id		: section_id
 						})
 					})
+					link_button.appendChild(section_id_node)
 					// link_icon
-						ui.create_dom_element({
-							element_type	: 'span',
-							class_name		: 'button link icon',
-							parent			: link_button
-						})
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'button link icon',
+						parent			: link_button
+					})
 
-				if (permissions>1) {
-					// button_edit
-						const button_edit = ui.create_dom_element({
-							element_type	: 'button',
-							class_name		: 'button_edit',
-							parent			: fragment
-						})
-						button_edit.addEventListener('click', async function(){
-							// navigate link
-								// const user_navigation_options = {
-								// 	tipo		: section_tipo,
-								// 	section_id	: section_id,
-								// 	model		: self.model,
-								// 	mode		: 'edit'
-								// }
-								const user_navigation_rqo = {
-									caller_id	: self.id,
-									source		: {
-										action			: 'search',
-										model			: 'section',
-										tipo			: section_tipo,
-										section_tipo	: section_tipo,
-										mode			: 'edit',
-										lang			: self.lang
-									},
-									sqo : {
-										section_tipo		: [{tipo : section_tipo}],
-										limit				: 1,
-										offset				: 0,
-										filter_by_locators	: [{
-											section_tipo : section_tipo,
-											section_id : section_id
-										}]
-									}
-								}
+				// button_edit
+					// const button_edit = ui.create_dom_element({
+					// 	element_type	: 'button',
+					// 	class_name		: 'button_edit',
+					// 	parent			: fragment
+					// })
+					// button_edit.addEventListener('click', async function(){
+					// 	// navigate link
+					// 		// const user_navigation_options = {
+					// 		// 	tipo		: section_tipo,
+					// 		// 	section_id	: section_id,
+					// 		// 	model		: self.model,
+					// 		// 	mode		: 'edit'
+					// 		// }
+					// 		const user_navigation_rqo = {
+					// 			caller_id	: self.id,
+					// 			source		: {
+					// 				action			: 'search',
+					// 				model			: 'section',
+					// 				tipo			: section_tipo,
+					// 				section_tipo	: section_tipo,
+					// 				mode			: 'edit',
+					// 				lang			: self.lang
+					// 			},
+					// 			sqo : {
+					// 				section_tipo		: [{tipo : section_tipo}],
+					// 				limit				: 1,
+					// 				offset				: 0,
+					// 				filter_by_locators	: [{
+					// 					section_tipo : section_tipo,
+					// 					section_id : section_id
+					// 				}]
+					// 			}
+					// 		}
 
-								if(SHOW_DEBUG===true) {
-									console.log("// section_record build_id_column user_navigation_rqo initiator component:", user_navigation_rqo);
-								}
-								event_manager.publish('user_navigation', user_navigation_rqo)
+					// 		if(SHOW_DEBUG===true) {
+					// 			console.log("// section_record build_id_column user_navigation_rqo initiator component:", user_navigation_rqo);
+					// 		}
+					// 		event_manager.publish('user_navigation', user_navigation_rqo)
 
-							// detail_section
-								// ( async () => {
-								// 	const options = {
-								// 		model 			: 'section',
-								// 		type 			: 'section',
-								// 		tipo  			: self.section_tipo,
-								// 		section_tipo  	: self.section_tipo,
-								// 		section_id 		: self.section_id,
-								// 		mode 			: 'edit',
-								// 		lang 			: page_globals.dedalo_data_lang
-								// 	}
-								// 	const page_element_call	= await data_manager.get_page_element(options)
-								// 	const page_element		= page_element_call.result
+					// 	// detail_section
+					// 		// ( async () => {
+					// 		// 	const options = {
+					// 		// 		model 			: 'section',
+					// 		// 		type			: 'section',
+					// 		// 		tipo			: self.section_tipo,
+					// 		// 		section_tipo  	: self.section_tipo,
+					// 		// 		section_id 		: self.section_id,
+					// 		// 		mode 			: 'edit',
+					// 		// 		lang 			: page_globals.dedalo_data_lang
+					// 		// 	}
+					// 		// 	const page_element_call	= await data_manager.get_page_element(options)
+					// 		// 	const page_element		= page_element_call.result
 
-								// 	// detail_section instance. Create target section page element and instance
-								// 		const detail_section = await get_instance(page_element)
+					// 		// 	// detail_section instance. Create target section page element and instance
+					// 		// 		const detail_section = await get_instance(page_element)
 
-								// 		// set self as detail_section caller (!)
-								// 			detail_section.caller = initiator
+					// 		// 		// set self as detail_section caller (!)
+					// 		// 			detail_section.caller = initiator
 
-								// 		// load data and render wrapper
-								// 			await detail_section.build(true)
-								// 			const detail_section_wrapper = await detail_section.render()
+					// 		// 		// load data and render wrapper
+					// 		// 			await detail_section.build(true)
+					// 		// 			const detail_section_wrapper = await detail_section.render()
 
-								// 	// modal container (header, body, footer, size)
-								// 		const header = ui.create_dom_element({
-								// 			element_type	: 'div',
-								// 			text_content 	: detail_section.label
-								// 		})
-								// 		const modal = ui.attach_to_modal(header, detail_section_wrapper, null, 'big')
-								// 		modal.on_close = () => {
-								// 			detail_section.destroy(true, true, true)
-								// 		}
-								// })()
+					// 		// 	// modal container (header, body, footer, size)
+					// 		// 		const header = ui.create_dom_element({
+					// 		// 			element_type	: 'div',
+					// 		// 			text_content 	: detail_section.label
+					// 		// 		})
+					// 		// 		const modal = ui.attach_to_modal(header, detail_section_wrapper, null, 'big')
+					// 		// 		modal.on_close = () => {
+					// 		// 			detail_section.destroy(true, true, true)
+					// 		// 		}
+					// 		// })()
 
-							// iframe
-								// ( async () => {
-								// 	const iframe = ui.create_dom_element({
-								// 		element_type	: 'iframe',
-								// 		src 			: DEDALO_CORE_URL + '/page/?tipo=' + self.section_tipo + '&section_id=' + self.section_id + '&mode=edit'
-								// 	})
-								// 	// modal container (header, body, footer, size)
-								// 		const header = ui.create_dom_element({
-								// 			element_type	: 'div',
-								// 			text_content 	: detail_section.label
-								// 		})
-								// 		const modal = ui.attach_to_modal(header, iframe, null, 'big')
-								// 		modal.on_close = () => {
-								// 			detail_section.destroy(true, true, true)
-								// 	}
-								// })()
-						})
-						button_edit.appendChild(section_id_node)
-
-					// edit_icon
-						ui.create_dom_element({
-							element_type	: 'span',
-							class_name		: 'button edit icon',
-							parent			: button_edit
-						})
-				}
+					// 	// iframe
+					// 		// ( async () => {
+					// 		// 	const iframe = ui.create_dom_element({
+					// 		// 		element_type	: 'iframe',
+					// 		// 		src 			: DEDALO_CORE_URL + '/page/?tipo=' + self.section_tipo + '&section_id=' + self.section_id + '&mode=edit'
+					// 		// 	})
+					// 		// 	// modal container (header, body, footer, size)
+					// 		// 		const header = ui.create_dom_element({
+					// 		// 			element_type	: 'div',
+					// 		// 			text_content 	: detail_section.label
+					// 		// 		})
+					// 		// 		const modal = ui.attach_to_modal(header, iframe, null, 'big')
+					// 		// 		modal.on_close = () => {
+					// 		// 			detail_section.destroy(true, true, true)
+					// 		// 	}
+					// 		// })()
+					// })
+					// button_edit.appendChild(section_id_node)
+					// // edit_icon
+					// 	ui.create_dom_element({
+					// 		element_type	: 'span',
+					// 		class_name		: 'button edit icon',
+					// 		parent			: button_edit
+					// 	})
 				break
 
 			// case (self.initiator && self.initiator.indexOf('tool_time_machine')!==-1):
@@ -260,7 +280,7 @@ export const render_column_id = function(options) {
 							class_name		: 'button_edit list_'+ self.config.tool_context.name,
 							parent			: fragment
 						})
-						button_edit.addEventListener("click", function(e){
+						button_edit.addEventListener('click', function(e){
 							e.stopPropagation();
 
 							// tool_context
@@ -300,9 +320,22 @@ export const render_column_id = function(options) {
 					}
 				break;
 
+			case (self.tipo==='dd542') :
+
+				// activity case
+
+				const button_edit = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'section_id_container',
+					parent			: fragment
+				})
+
+				button_edit.appendChild(section_id_node)
+				break;
+
 			default:
 
-				// edit button (pen)
+				// button_edit (pen)
 					if (permissions>1) {
 						// button_edit
 							const button_edit = ui.create_dom_element({
@@ -313,7 +346,7 @@ export const render_column_id = function(options) {
 							button_edit.addEventListener('click', function(){
 
 								// sqo. Note that sqo will be used as request_config.sqo on navigate
-									const sqo = self.request_config_object.sqo
+									const sqo = clone(self.request_config_object.sqo)
 									// set updated filter
 									sqo.filter = self.rqo.sqo.filter
 									// reset pagination
@@ -322,13 +355,14 @@ export const render_column_id = function(options) {
 
 								// source
 									const source = {
-										action			: 'search',
-										model			: self.model, // 'section'
-										tipo			: section_tipo,
-										section_tipo	: section_tipo,
-										// section_id	: section_id, // (!) enabling affect local db stored rqo's
-										mode			: 'edit',
-										lang			: self.lang
+										action				: 'search',
+										model				: self.model, // 'section'
+										tipo				: section_tipo,
+										section_tipo		: section_tipo,
+										// section_id		: section_id, // (!) enabling affect local db stored rqo's
+										section_id_selected	: section_id,
+										mode				: 'edit',
+										lang				: self.lang
 									}
 
 								// user_navigation
@@ -350,7 +384,7 @@ export const render_column_id = function(options) {
 							})
 					}
 
-				// remove button
+				// button_delete (trash can)
 					const button_delete = self.context.buttons
 						? self.context.buttons.find(el => el.model==='button_delete')
 						: null
@@ -361,7 +395,9 @@ export const render_column_id = function(options) {
 								class_name		: 'button_delete',
 								parent			: fragment
 							})
-							delete_button.addEventListener("click", function(){
+							delete_button.addEventListener('click', function(e){
+								e.stopPropagation()
+
 								// fire delete_section event, see section.init
 								event_manager.publish('delete_section_' + options.caller.id, {
 									section_tipo	: section_tipo,
@@ -376,8 +412,6 @@ export const render_column_id = function(options) {
 										limit				: 1
 									}
 								})
-
-
 							})
 						// delete_icon
 							ui.create_dom_element({
@@ -392,3 +426,7 @@ export const render_column_id = function(options) {
 
 	return fragment
 }//end render_column_id
+
+
+
+// @license-end

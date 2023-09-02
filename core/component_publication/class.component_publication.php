@@ -1,7 +1,8 @@
 <?php
-/*
+/**
 * CLASS COMPONENT_PUBLICATION
-*
+* Manages record publishable status.
+* Possible values are null | locator yes | locator no
 *
 */
 class component_publication extends component_relation_common {
@@ -19,28 +20,29 @@ class component_publication extends component_relation_common {
 
 	/**
 	* __CONSTRUCT
-	* @return bool
 	*/
-	function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
+	protected function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null, bool $cache=true) {
 
-		# Force always DEDALO_DATA_NOLAN
-		$lang = DEDALO_DATA_NOLAN;
+		// Force always DEDALO_DATA_NOLAN
+		$this->lang = DEDALO_DATA_NOLAN;
 
-		# construct the component normally
-		return parent::__construct($tipo, $parent, $mode, $lang, $section_tipo);
+		// construct the component normally
+		parent::__construct($tipo, $parent, $mode, $this->lang, $section_tipo, $cache);
 	}//end __construct
 
 
 
 	/**
 	* GET_VALOR
-	* Get value . default is get dato . overwrite in every different specific component
+	* Get value. default is get dato . overwrite in every different specific component
+	* @param string $lang = DEDALO_DATA_LANG
+	* @return string|null $valor
 	*/
 	public function get_valor( $lang=DEDALO_DATA_LANG ) {
 
 		$dato = $this->get_dato();
 
-		# Test dato format (b4 changed to object)
+		// Test dato format (b4 changed to object)
 			if(SHOW_DEBUG===true) {
 				if (!empty($dato)) foreach ($dato as $key => $value) {
 					if (!empty($value) && !is_object($value)) {
@@ -89,7 +91,7 @@ class component_publication extends component_relation_common {
 					}
 				}
 				break;
-		}#end switch
+		}//end switch
 
 
 		return $valor;

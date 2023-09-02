@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
@@ -153,7 +154,7 @@ relation_list.prototype.init = function(options) {
 	self.total			= options.total || null
 
 	// status update
-	self.status = 'initiated'
+	self.status = 'initialized'
 
 	return true
 }//end init
@@ -184,7 +185,8 @@ relation_list.prototype.build = async function(autoload=true){
 			section_id		: self.section_id,
 			tipo			: self.tipo,
 			mode			: self.mode,
-			model 			: self.model
+			model			: self.model,
+			action			: 'get_relation_list'
 		}
 	// sqo, use the "related" mode to get related sections that call to the current record (current section_tipo and section_id)
 		const sqo = {
@@ -199,8 +201,14 @@ relation_list.prototype.build = async function(autoload=true){
 			}]
 		}
 	// rqo, use the 'get_realtion_list' action from the API
+		// const rqo = {
+		// 	action	: 'get_relation_list',
+		// 	source	: source,
+		// 	sqo		: sqo
+		// }
+		// (!) Unified 17-04-2023 using API 'read' instead custom function 'get_relation_list'
 		const rqo = {
-			action	: 'get_relation_list',
+			action	: 'read',
 			source	: source,
 			sqo		: sqo
 		}
@@ -209,7 +217,10 @@ relation_list.prototype.build = async function(autoload=true){
 	// load data if not yet received as an option
 		if (autoload===true) {
 
-			const api_response = await data_manager.request({body:self.rqo})
+			const api_response = await data_manager.request({
+				use_worker	: true,
+				body		: self.rqo
+			})
 				// console.log("RELATION_LIST api_response:", self.id, api_response);
 
 			// set the result to the datum
@@ -241,7 +252,8 @@ relation_list.prototype.build = async function(autoload=true){
 
 			// set the response to the self.total
 			self.total = await data_manager.request({
-				body : rqo
+				body		: rqo,
+				use_worker	: true
 			})
 			.then(function(response){
 				if(response.result !== false){
@@ -255,3 +267,7 @@ relation_list.prototype.build = async function(autoload=true){
 
 	return true
 }//end build
+
+
+
+// @license-end

@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
@@ -100,6 +101,7 @@ tool_diffusion.prototype.build = async function(autoload=false) {
 		console.error(error)
 	}
 
+
 	return common_build
 }//end build_custom
 
@@ -114,21 +116,22 @@ tool_diffusion.prototype.get_diffusion_info = function() {
 
 	const self = this
 
-	const section_tipo = self.caller.section_tipo
+	// short vars
+		const section		= self.caller
+		const section_tipo	= section.section_tipo
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'get_diffusion_info')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			section_tipo : section_tipo
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options : {
+				section_tipo : section_tipo
+			}
 		}
 
 	// call to the API, fetch data and get response
@@ -151,9 +154,10 @@ tool_diffusion.prototype.get_diffusion_info = function() {
 
 /**
 * EXPORT
-*
+* Exec export command in API
 * @param object options
-* @return promise > bool
+* @return promise
+* 	Resolve bool
 */
 tool_diffusion.prototype.export = function(options) {
 
@@ -163,36 +167,35 @@ tool_diffusion.prototype.export = function(options) {
 		const diffusion_element_tipo	= options.diffusion_element_tipo
 		const resolve_levels			= options.resolve_levels || self.resolve_levels
 
-		// sort vars
+	// sort vars
 		const mode						= self.caller.mode
 		const section_tipo				= self.caller.section_tipo
 		const section_id				= self.caller.section_id || null
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'export')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			section_tipo			: section_tipo,
-			section_id				: section_id,
-			mode					: mode,
-			diffusion_element_tipo	: diffusion_element_tipo,
-			resolve_levels			: resolve_levels
-		}
-		// console.log('export source:', source);
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options : {
+				section_tipo			: section_tipo,
+				section_id				: section_id,
+				mode					: mode,
+				diffusion_element_tipo	: diffusion_element_tipo,
+				resolve_levels			: resolve_levels
+			}
 		}
 
 	// call to the API, fetch data and get response
 		return new Promise(function(resolve){
 
 			data_manager.request({
-				body : rqo
+				use_worker	: true,
+				body		: rqo
 			})
 			.then(function(api_response){
 				// dd_console("-> export API api_response:",'DEBUG',api_response);
@@ -221,3 +224,7 @@ tool_diffusion.prototype.on_close_actions = async function(open_as) {
 
 	return true
 }//end on_close_actions
+
+
+
+// @license-end

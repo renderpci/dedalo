@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /* global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
 /* eslint no-undef: "error" */
 
@@ -26,8 +27,9 @@ export const render_edit_component_iri = function() {
 
 /**
 * EDIT
-* Render node for use in modes: edit, edit_in_list
-* @return DOM node
+* Render node for use in current mode
+* @param object options
+* @return HTMLElement wrapper
 */
 render_edit_component_iri.prototype.edit = async function(options) {
 
@@ -44,25 +46,32 @@ render_edit_component_iri.prototype.edit = async function(options) {
 		case 'mini':
 			return view_mini_iri.render(self, options)
 
+		case 'print':
+			// view print use the same view as default, except it will use read only to render content_value
+			// as different view as default it will set in the class of the wrapper
+			// sample: <div class="wrapper_component component_input_text oh14 oh1_oh14 edit view_print disabled_component">...</div>
+			// take account that to change the css when the component will render in print context
+			// for print we need to use read of the content_value and it's necessary force permissions to use read only element render
+			self.permissions = 1
+
 		case 'default':
 		default:
 			return view_default_edit_iri.render(self, options)
 	}
-
-	return null
 }//end edit
 
 
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @param object self
+* @return HTMLElement content_data
 */
 export const get_content_data = function(self) {
 
-	const value				= self.data.value
-	// const mode			= self.mode
-	// const is_inside_tool	= self.is_inside_tool
+	// short vars
+		const data	= self.data || {}
+		const value	= data.value || []
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
@@ -72,10 +81,12 @@ export const get_content_data = function(self) {
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 			const current_value = inputs_value[i]
-			const content_value = get_content_value(i, current_value, self)
-			content_data.appendChild(content_value)
+			const content_value_node = (self.permissions===1)
+				? get_content_value_read(i, current_value, self)
+				: get_content_value(i, current_value, self)
+			content_data.appendChild(content_value_node)
 			// set pointers
-			content_data[i] = content_value
+			content_data[i] = content_value_node
 		}
 
 
@@ -86,7 +97,10 @@ export const get_content_data = function(self) {
 
 /**
 * GET_CONTENT_VALUE
-* @return DOM node content_value
+* @param int i
+* @param object current_value
+* @param object self
+* @return HTMLElement content_value
 */
 const get_content_value = (i, current_value, self) => {
 
@@ -104,41 +118,40 @@ const get_content_value = (i, current_value, self) => {
 			class_name		: 'content_value'
 		})
 
-	const use_title = typeof(self.context.properties.use_title) !== 'undefined'
-		? self.context.properties.use_title
-		: true
+	// title
+		const use_title = typeof(self.context.properties.use_title) !== 'undefined'
+			? self.context.properties.use_title
+			: true
+		if(use_title){
+			// placeholder. Strip label HTML tags
+				const placeholder_label = mode.indexOf('edit')!==-1
+					? (get_label.title || 'Title')
+					: null
+				const placeholder_text = placeholder_label ? strip_tags(placeholder_label) : null
 
-	if(use_title){
-		// placeholder. Strip label HTML tags
-			const placeholder_label = mode.indexOf('edit')!==-1
-				? (get_label.title || 'Tilte')
-				: null
-			const placeholder_text = placeholder_label ? strip_tags(placeholder_label) : null
+			// input title field
+				const input_title = ui.create_dom_element({
+					element_type	: 'input',
+					type			: 'text',
+					class_name		: 'input_value',
+					placeholder		: placeholder_text,
+					value			: title,
+					parent			: content_value
+				})
+				//end change
+				input_title.addEventListener('keyup', fn_keyup)
+				function fn_keyup(e) {
+					// update property title
+						current_value.title = input_title.value
 
-		// input title field
-			const input_title = ui.create_dom_element({
-				element_type	: 'input',
-				type			: 'text',
-				class_name		: 'input_value',
-				placeholder		: placeholder_text,
-				value			: title,
-				parent			: content_value
-			})
-			//end change
-			input_title.addEventListener('keyup', function(e) {
-
-				// update property title
-					current_value.title = input_title.value
-
-				// update_value(self, i, current_value)
-					self.keyup_handler(e, i, current_value, self)
-			})//end keyup
-	} // end if(use_title)
+					// update_value(self, i, current_value)
+						self.keyup_handler(e, i, current_value, self)
+				}//end keyup
+		}// end if(use_title)
 
 
-	// input iri field
-	// const regex = /^((https?):\/\/)?([w|W]{3}\.)+[a-zA-Z0-9\-\.]{3,}\.[a-zA-Z]{2,}(\.[a-zA-Z]{2,})?$/;
-
+	// IRI input field
+		// const regex = /^((https?):\/\/)?([w|W]{3}\.)+[a-zA-Z0-9\-\.]{3,}\.[a-zA-Z]{2,}(\.[a-zA-Z]{2,})?$/;
 		const input_iri = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'url',
@@ -147,7 +160,8 @@ const get_content_value = (i, current_value, self) => {
 			value			: iri,
 			parent			: content_value
 		})
-		input_iri.addEventListener('keyup', function(e) {
+		input_iri.addEventListener('keyup', fn_keyup)
+		function fn_keyup(e) {
 
 			// check if url is valid
 				const regex = /(https?)?:\/\/.*\..+/;
@@ -168,7 +182,7 @@ const get_content_value = (i, current_value, self) => {
 
 			// update_value(self, i, current_value)
 				self.keyup_handler(e, i, current_value, self)
-		})//end keyup
+		}//end keyup
 
 	// active
 		const use_active_check = typeof(self.context.properties.use_active_check) !== 'undefined'
@@ -186,17 +200,17 @@ const get_content_value = (i, current_value, self) => {
 				class_name		: 'input_iri_active',
 				parent			: content_value
 			})
-
 			input_iri_active.checked = dataframe_data
-
-			input_iri_active.addEventListener('change', async function(e){
+			input_iri_active.addEventListener('change', fn_chnage)
+			async function fn_chnage(e){
 
 				// add style modified to wrapper node
 					if (!self.node.classList.contains('modified')) {
 						self.node.classList.add('modified')
 					}
 
-				current_value.dataframe = input_iri_active.checked
+				// checked set for dataframe
+					current_value.dataframe = input_iri_active.checked
 
 				// set_changed_data
 					const changed_data_item = Object.freeze({
@@ -204,18 +218,16 @@ const get_content_value = (i, current_value, self) => {
 						key		: i,
 						value	: current_value
 					})
-						console.log("--> fixed changed_data_item:", changed_data_item);
 					// fix instance changed_data
 					await self.set_changed_data(changed_data_item)
 
 				// force to save on every change
 					const changed_data = self.data.changed_data || []
-						console.log("--> self.data.changed_data:",self.data.changed_data);
 					self.change_value({
 						changed_data	: changed_data,
 						refresh			: false
 					})
-		})//end change event
+			}//end change event
 		}
 
 		const active_check_class = (use_active_check) ? 'active_check' : ''
@@ -260,16 +272,60 @@ const get_content_value = (i, current_value, self) => {
 		})
 
 
-
 	return content_value
 }//end get_content_value
 
 
 
 /**
+* GET_CONTENT_VALUE_READ
+* @param int i
+* @param object current_value
+* @param object self
+* @return HTMLElement content_value
+*/
+const get_content_value_read = (i, current_value, self) => {
+
+	// current_value. (!) Fallback to {} because could be null when new blank value is added
+		current_value = current_value || {}
+
+	// short vars
+		const mode	= self.mode
+		const title	= current_value.title || ''
+		const iri	= current_value.iri || ''
+
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value read_only'
+		})
+
+	// title
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'title',
+			inner_html		: title,
+			parent			: content_value
+		})
+
+	// iri
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'iri',
+			inner_html		: iri,
+			parent			: content_value
+		})
+
+
+	return content_value
+}//end get_content_value_read
+
+
+
+/**
 * GET_BUTTONS
-* @param object instance
-* @return DOM node buttons_container
+* @param object self
+* @return HTMLElement buttons_container
 */
 export const get_buttons = (self) => {
 
@@ -331,3 +387,8 @@ export const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
+
+
+
+// @license-end
+

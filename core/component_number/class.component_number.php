@@ -1,8 +1,16 @@
 <?php
-/*
+/**
 * CLASS COMPONENT_NUMBER
-*
-*
+* Manage numbers with specific precision
+* types supported : int || float
+* data format : [number,xx]
+* data example : [6.12]
+* example multiple : [6.12,88]
+* Default type : float
+* Default precision: 2
+* Properties can define the type and precision as "type":"float", "precision":4
+* Notes: Data storage format does not support internationalization for numbers the float point is always . and does not use thousand separator
+* but is possible format it in render->view to accommodate to specific formats as Spanish format 1.234,56 from data 1234.56
 */
 class component_number extends component_common {
 
@@ -11,13 +19,11 @@ class component_number extends component_common {
 	/**
 	* __CONSTRUCT
 	*/
-	function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
+	protected function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null, bool $cache=true) {
 
-		$lang = DEDALO_DATA_NOLAN;
+		$this->lang = DEDALO_DATA_NOLAN;
 
-		parent::__construct($tipo, $parent, $mode, $lang, $section_tipo);
-
-		return true;
+		parent::__construct($tipo, $parent, $mode, $this->lang, $section_tipo, $cache);
 	}//end __construct
 
 
@@ -41,21 +47,27 @@ class component_number extends component_common {
 
 	/**
 	* SET_DATO
+	* @return bool
 	*/
-	public function set_dato($dato) {
+	public function set_dato($dato) : bool {
 
-		$safe_dato=array();
-		foreach ((array)$dato as $key => $value) {
+		$safe_dato = array();
+		foreach ((array)$dato as  $value) {
 			if (is_null($value) || $value==='') {
 				$safe_dato[] = null;
 			}elseif (is_numeric($value)) {
 				$safe_dato[] = $this->set_format_form_type($value);
 			}else{
-				trigger_error("Invalid value! [component_number.set_dato] value: ".json_encode($value));
+				// trigger_error("Invalid value! [component_number.set_dato] value: ".json_encode($value));
+				debug_log(__METHOD__
+					." Invalid value! [component_number.set_dato] value: "
+					.to_string($value)
+					, logger::ERROR
+				);
 			}
 		}
 
-		parent::set_dato( $safe_dato );
+		return parent::set_dato( $safe_dato );
 	}//end set_dato
 
 
@@ -98,7 +110,7 @@ class component_number extends component_common {
 
 	/*
 	* SET_FORMAT_FORM_TYPE
-	* Format the dato into the standard format or the properties format of the current intance of the component
+	* Format the dato into the standard format or the properties format of the current instance of the component
 	*/
 	public function set_format_form_type( $dato_value ) {
 
@@ -110,81 +122,28 @@ class component_number extends component_common {
 		if(empty($properties->type)){
 			return (float)$dato_value;
 		}else{
-			foreach ($properties->type as $key => $value) {
+			switch ($properties->type) {
 
-				switch ($key) {
+				case 'int':
+					return (int)$dato_value;
+					break;
 
-					case 'int':
-						if($value===0 || empty($value)){
-							return (int)$dato_value;
-						}
-						if ( strpos($dato_value, '-')===0 )  {
-							$dato_value = '-'.substr($dato_value,1,$value);
-							$dato_value = (int)$dato_value;
-						}else{
-							$dato_value = (int)substr($dato_value,0,$value);
-						}
-						break;
+				case 'float':
+				default:
+					$precision = $properties->precision ?? 2;
 
-					default:
-						$dato_value = (float)round($dato_value,$value);
-						break;
-				}
-
-			}//end foreach ($properties->type as $key => $value)
+					$dato_value = (float)round($dato_value, $precision);
+					break;
+			}
 		}//end if(empty($properties->type))
 
 		return $dato_value;
 	}//end set_format_form_type
 
 
-
 	/*
 	* NUMBER_TO_STRING
-	* Format the dato into the standard format or the properties format of the current intance of the component
-	*/
-		// public function number_to_string_OLD( $dato_value ) {
-
-		// 	if($dato_value===null || empty($dato_value)){
-		// 		return $dato_value;
-		// 	}
-
-		// 	$properties = $this->get_properties();
-		// 	if(empty($properties->type)){
-		// 		return (string)$dato_value;
-		// 	}else{
-		// 		foreach ($properties->type as $key => $value) {
-
-		// 			switch ($key) {
-		// 				case 'int':
-		// 					if($value === 0 || empty($value)){
-		// 						return (string)$dato_value;
-		// 					}
-		// 					if ( strpos($dato_value, '-')===0 )  {
-		// 						$dato_value = '-'.substr($dato_value,1,$value);
-		// 						$dato_value = (string)$dato_value;
-
-		// 					}else{
-		// 						$dato_value = (string)substr($dato_value,0,$value);
-		// 					}
-		// 					break;
-
-		// 				default:
-		// 					$dato_value = number_format($dato_value,$value,'.','');
-		// 					break;
-		// 			}
-
-		// 		}//end foreach ($properties->type as $key => $value)
-		// 	}//end if(empty($properties->type))
-
-		// 	return $dato_value;
-		// }//end number_to_string
-
-
-
-	/*
-	* NUMBER_TO_STRING
-	* Format the dato into the standard format or the properties format of the current intance of the component
+	* Format the dato into the standard format or the properties format of the current instance of the component
 	*/
 	public function number_to_string( $dato ) {
 
@@ -195,34 +154,21 @@ class component_number extends component_common {
 
 		if (!empty($dato) && !empty($properties->type)) {
 
-			foreach ($properties->type as $key => $value) {
+			switch ($properties->type ) {
+				case 'int':
+					// nothing to do
+					break;
 
-				switch ($key) {
-					case 'int':
-						if($value===0 || empty($value)){
-							// nothing to do
+				case 'float':
+				default:
+					$precision = $properties->precision ?? 2;
 
-						}elseif ( strpos($dato, '-')===0 )  {
-
-							$string_value = '-'.substr($dato,1,$value);
-
-						}else{
-
-							$string_value = substr($dato,0,$value);
-						}
-						break;
-
-					default:
-						$string_value = number_format($dato,$value,'.','');
-						break;
-				}
-			}//end foreach ($properties->type as $key => $value)
-
+					$string_value = number_format($dato,$precision,'.','');
+					break;
+			}
 		}//end if (!empty($dato))
 
-
 		$string_value = str_replace(',', '.', (string)$string_value);
-
 
 		return (string)$string_value;
 	}//end number_to_string
@@ -267,12 +213,12 @@ class component_number extends component_common {
 
 				$query_object_one = clone $query_object;
 					$query_object_one->operator = '>=';
-					$first_val  = str_replace(',', '.', $first_val);
-					$query_object_one->q_parsed	= '\''.$first_val.'\'';
+					$first_val  = str_replace(',', '.', (string)$first_val);
+					$query_object_one->q_parsed	= '\''.(string)$first_val.'\'';
 
 				$query_object_two = clone $query_object;
 					$query_object_two->operator = '<=';
-					$second_val  = str_replace(',', '.', $second_val);
+					$second_val  = str_replace(',', '.', (string)$second_val);
 					$query_object_two->q_parsed	= '\''.$second_val.'\'';
 
 				// Return an array instead object
@@ -361,13 +307,11 @@ class component_number extends component_common {
 	public function search_operators_info() : array {
 
 		$ar_operators = [
-			'...' 	=> 'entre',
-			#',' 	=> 'secuencia',
-			'>=' 	=> 'mayor_o_igual_que',
-			'<='	=> 'menor_o_igual_que',
-			'>' 	=> 'mayor_que',
-			'<'		=> 'menor_que',
-			#'=' 	=> 'igual'
+			'...' 	=> 'between',
+			'>=' 	=> 'greater_than_or_equal',
+			'<='	=> 'less_than_or_equal',
+			'>' 	=> 'greater_than',
+			'<'		=> 'less_than'
 		];
 
 		return $ar_operators;

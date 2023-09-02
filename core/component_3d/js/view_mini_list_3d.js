@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_LIB_URL*/
 /*eslint no-undef: "error"*/
 
@@ -16,27 +17,27 @@
 export const view_mini_list_3d = function() {
 
 	return true
-}//end  view_mini_list_3d
+}//end view_mini_list_3d
 
 
 
 /**
-* MINI
-* Render node to be used by service autocomplete or any datalist
-* @return DOM node
+* RENDER
+* Render node to be used in this view
+* @return HTMLElement wrapper
 */
-view_mini_list_3d.mini = async function() {
+view_mini_list_3d.render = async function() {
 
 	const self = this
 
 	// short vars
-		const data = self.data
+		const data = self.data || {}
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self)
 
 	// url
-		const posterframe_url	= data.posterframe_url
+		const posterframe_url	= data.posterframe_url || ''
 		const url				= posterframe_url // (!posterframe_url || posterframe_url.length===0) ? DEDALO_LIB_URL + "/themes/default/0.jpg" : posterframe_url
 
 	// image
@@ -49,4 +50,7 @@ view_mini_list_3d.mini = async function() {
 
 
 	return wrapper
-}//end  mini
+}//end render
+
+
+// @license-end

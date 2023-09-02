@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, tinymce */
 /*eslint no-undef: "error"*/
 
@@ -398,7 +399,7 @@ export const service_tinymce = function() {
 
 	/**
 	* GET_EDITOR_CONTENT_DATA
-	* @return DOM node | false
+	* @return HTMLElement | false
 	*/
 	this.get_editor_content_data = function() {
 
@@ -483,7 +484,7 @@ export const service_tinymce = function() {
 	/**
 	* DOM_SELECT
 	* @param string selector_str (CSS selector like .greyhound, #greyhound, etc.)
-	* @return DOM node (one or more)
+	* @return HTMLElement (one or more)
 	*/
 	this.dom_select = function(selector_str) {
 
@@ -706,3 +707,8 @@ export const service_tinymce = function() {
 	return last_tag_id
 	}//end get_last_tag_id
 }//end service_tinymce
+
+
+
+// @license-end
+

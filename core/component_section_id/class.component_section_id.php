@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS COMPONENT_SECTION_ID
 *
 *
@@ -13,7 +13,48 @@ class component_section_id extends component_common {
 	*/
 	public function get_dato() {
 
-		return (int)$this->section_id;
+		$dato = (int)$this->section_id;
+
+		// Set as loaded
+			$this->bl_loaded_matrix_data = true;
+
+		return $dato;
+	}//end get_dato
+
+
+
+	/**
+	* SET_DATO
+	* @param int|null $dato
+	* @return bool
+	*/
+	public function set_dato($dato) : bool {
+
+		// dato format check
+			if (!is_null($dato) && !is_integer($dato)) {
+
+				debug_log(__METHOD__ . ' '
+					. '[SET] RECEIVED DATO IS NOT AS EXPECTED TYPE integer|null. type: '. gettype($dato) .' - dato: '. to_string($dato) . PHP_EOL
+					. 'model: '. get_called_class() .PHP_EOL
+					. 'tipo: ' . $this->tipo . ' - section_tipo: ' . $this->section_tipo . ' - section_id: ' . $this->section_id
+					, logger::ERROR
+				);
+
+			}
+
+		// unset previous calculated valor
+			if (isset($this->valor)) {
+				unset($this->valor);
+			}
+
+		// set dato
+			$this->dato = $dato;
+
+		// resolved set
+			$this->dato_resolved = $dato;
+
+
+		return true;
 	}//end get_dato
 
 
@@ -39,17 +80,16 @@ class component_section_id extends component_common {
 
 
 	/**
-	* GET_RAW_VALUE
-	* Get the raw value of the components. By default will be get_dato().
+	* GET_GRID_VALUE
+	* Get the value of the components. By default will be get_dato().
 	* overwrite in every different specific component
 	* The direct components can set the value with the dato directly
 	* The relation components will separate the locator in rows
-	* @param string $lang = DEDALO_DATA_LANG
 	* @param object|null $ddo = null
 	*
 	* @return object $value
 	*/
-	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : dd_grid_cell_object {
+	public function get_grid_value(object $ddo=null) : dd_grid_cell_object {
 
 		// column_obj
 			if(isset($this->column_obj)){
@@ -73,7 +113,7 @@ class component_section_id extends component_common {
 
 
 		return $value;
-	}//end get_raw_value
+	}//end get_grid_value
 
 
 
@@ -106,10 +146,10 @@ class component_section_id extends component_common {
 		// 	$q = json_decode($q);
 		// }
 
-		# Always set fixed values
+		// Always set fixed values
 		$query_object->type = 'number';
 
-		# format. Always set format to column (but in sequence case)
+		// format. Always set format to column (but in sequence case)
 		$query_object->format = 'column';
 
 		$between_separator  = '...';
@@ -120,7 +160,7 @@ class component_section_id extends component_common {
 			$q = implode($sequence_separator, $q);
 		}
 
-		# component path
+		// component path
 		$query_object->component_path = ['section_id'];
 
 		$query_object->unaccent = false;
@@ -235,17 +275,38 @@ class component_section_id extends component_common {
 	public function search_operators_info() : array {
 
 		$ar_operators = [
-			'...'	=> 'entre',
-			','		=> 'secuencia',
-			'>='	=> 'mayor_o_igual_que',
-			'<='	=> 'menor_o_igual_que',
-			'>'		=> 'mayor_que',
-			'<'		=> 'menor_que'
-			#'='	=> 'igual'
+			'...'	=> 'between',
+			','		=> 'sequence',
+			'>='	=> 'greater_than_or_equal',
+			'<='	=> 'less_than_or_equal',
+			'>'		=> 'greater_than',
+			'<'		=> 'less_than'
 		];
 
 		return $ar_operators;
 	}//end search_operators_info
+
+
+
+	/**
+	* EXTRACT_COMPONENT_DATO_FALLBACK
+	* Catch extract_component_dato_fallback common method calls
+	* @return array $dato_fb
+	*/
+	public static function extract_component_dato_fallback(object $component, string $lang=DEDALO_DATA_LANG, string $main_lang=DEDALO_DATA_LANG_DEFAULT) : array {
+		return [];
+	}
+
+
+
+	/**
+	* EXTRACT_COMPONENT_VALUE_FALLBACK
+	* Catch common method calls
+	* @return string $value
+	*/
+	public static function extract_component_value_fallback(object $component, string $lang=DEDALO_DATA_LANG, bool $mark=true, string $main_lang=DEDALO_DATA_LANG_DEFAULT) : string {
+		return '';
+	}
 
 
 

@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -23,7 +24,7 @@ export const render_search_component_check_box = function() {
 /**
 * SEARCH
 * Render node for use in search
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_search_component_check_box.prototype.search = async function(options) {
 
@@ -54,7 +55,7 @@ render_search_component_check_box.prototype.search = async function(options) {
 /**
 * GET_CONTENT_DATA
 * @param instance self
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 
@@ -107,7 +108,7 @@ const get_content_data = function(self) {
 * @param object current_value
 * @param object self
 *
-* @return DOM node content_value
+* @return HTMLElement content_value
 */
 const get_input_element = (i, current_value, self) => {
 
@@ -115,9 +116,12 @@ const get_input_element = (i, current_value, self) => {
 		const value				= self.data.value || []
 		const value_length		= value.length
 		const datalist_item		= current_value // is object as {label, section_id, value}
-		const datalist_value	= datalist_item.value // is locator like {section_id:"1",section_tipo:"dd174"}
 		const label				= datalist_item.label
 		const section_id		= datalist_item.section_id
+		const datalist_value	= datalist_item.value // is locator like {section_id:"1",section_tipo:"dd174"}
+		if (datalist_value) {
+			datalist_value.from_component_tipo = self.tipo
+		}
 
 	// create content_value
 		const content_value = ui.create_dom_element({
@@ -126,7 +130,6 @@ const get_input_element = (i, current_value, self) => {
 		})
 
 	// label
-		// const label_string = (SHOW_DEBUG===true) ? label + " [" + section_id + "]" : label
 		const option_label = ui.create_dom_element({
 			element_type	: 'label',
 			inner_html		: label,
@@ -172,3 +175,7 @@ const get_input_element = (i, current_value, self) => {
 
 	return content_value
 }//end get_input_element
+
+
+// @license-end
+

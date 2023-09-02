@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, JSONEditor */
 /*eslint no-undef: "error"*/
 
@@ -16,7 +17,7 @@
 export const view_default_edit_json = function() {
 
 	return true
-}; //end view_default_edit_json
+}//end view_default_edit_json
 
 
 
@@ -25,17 +26,12 @@ export const view_default_edit_json = function() {
 * Render node for use in edit
 * @param object self
 * @param object options
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_default_edit_json.render = async function(self, options) {
 
 	// options
 		const render_level = options.render_level || 'full'
-
-	// fix non value scenarios
-		self.data.value = (!self.data.value || self.data.value.length<1)
-			? [null]
-			: self.data.value
 
 	// content_data
 		const content_data = get_content_data(self)
@@ -44,13 +40,19 @@ view_default_edit_json.render = async function(self, options) {
 		}
 
 	// buttons
-		const buttons = get_buttons(self)
+		const buttons = (self.permissions > 1)
+			? get_buttons(self)
+			: null
 
 	// wrapper. ui build_edit returns component wrapper
-		const wrapper = ui.component.build_wrapper_edit(self, {
+		const wrapper_options = {
 			content_data	: content_data,
 			buttons			: buttons
-		})
+		}
+		if (self.view==='line') {
+			wrapper_options.label = null // prevent to create label
+		}
+		const wrapper = ui.component.build_wrapper_edit(self, wrapper_options)
 		// set pointers
 		wrapper.content_data = content_data
 
@@ -63,7 +65,7 @@ view_default_edit_json.render = async function(self, options) {
 /**
 * GET_CONTENT_DATA
 * @param object self
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 
@@ -71,19 +73,20 @@ const get_content_data = function(self) {
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
-			  content_data.classList.add('nowrap')
 
 	// values (inputs)
-		const inputs_value	= value
-		const value_length	= inputs_value.length
+		const inputs_value	= value || []
+		const value_length	= inputs_value.length || 1
 		if (value_length>1) {
 			console.warn('More than one value in component_json is not allowed at now. Ignored next values. N values: ', value_length);
 		}
 		for (let i = 0; i < value_length; i++) {
-			const content_value = get_content_value(i, inputs_value[i], self)
-			content_data.appendChild(content_value)
+			const content_value_node = (self.permissions===1)
+				? get_content_value_read(i, inputs_value[i], self)
+				: get_content_value(i, inputs_value[i], self)
+			content_data.appendChild(content_value_node)
 			// set pointers
-			content_data[i] = content_value
+			content_data[i] = content_value_node
 			break; // only one is used for the time being
 		}
 
@@ -99,7 +102,7 @@ const get_content_data = function(self) {
 * @param int key
 * @param mixed current_value
 * @param object self
-* @return DOM node content_value
+* @return HTMLElement content_value
 */
 const get_content_value = (key, current_value, self) => {
 
@@ -123,14 +126,15 @@ const get_content_value = (key, current_value, self) => {
 						inner_html		: get_label.save || 'Save',
 						parent			: content_value
 					})
-					button_save.addEventListener('click', function(e) {
+					button_save.addEventListener('click', fn_save)
+					function fn_save(e) {
 						e.stopPropagation()
 
 						self.save_sequence(editor)
 						.then(function(){
 							editor.frame.classList.remove('isDirty')
 						})
-					})
+					}//end fn_save
 
 				// validated. Changed to false after init parse
 				let is_first_validation = true
@@ -164,6 +168,14 @@ const get_content_value = (key, current_value, self) => {
 						current_value
 					)
 					self.editors.push(editor) // append current editor
+
+					// add resize content_value event to allow user to resize the map
+						new ResizeObserver( function(){
+							setTimeout(function(){
+								editor.resize();
+							}, 3)
+						})
+						.observe( content_value )
 			})
 
 			// blur event
@@ -196,14 +208,48 @@ const get_content_value = (key, current_value, self) => {
 
 
 	return content_value
-}; //end get_content_value
+}//end get_content_value
+
+
+
+/**
+* GET_CONTENT_VALUE_read
+* Render JSON editor for current value
+* @param int key
+* @param mixed current_value
+* @param object self
+* @return HTMLElement content_value
+*/
+const get_content_value_read = (key, current_value, self) => {
+
+	const parsed_value = current_value
+		? JSON.stringify(current_value, null, 2)
+		: ''
+
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value read_only'
+		})
+
+	// value
+		ui.create_dom_element({
+			element_type	: 'pre',
+			class_name		: 'value',
+			inner_html		: parsed_value,
+			parent			: content_value
+		})
+
+
+	return content_value
+}//end get_content_value_read
 
 
 
 /**
 * GET_BUTTONS
 * @param object self
-* @return DOM node buttons_container
+* @return HTMLElement buttons_container
 */
 const get_buttons = (self) => {
 
@@ -218,7 +264,8 @@ const get_buttons = (self) => {
 			class_name	 : 'button full_screen',
 			parent 		 : fragment
 		})
-		button_fullscreen.addEventListener('click', function() {
+		button_fullscreen.addEventListener('click', function(e) {
+			e.stopPropagation()
 			ui.enter_fullscreen(self.node)
 		})
 
@@ -229,7 +276,8 @@ const get_buttons = (self) => {
 			title 		 : "Download data",
 			parent 		 : fragment
 		})
-		button_download.addEventListener("click", function() {
+		button_download.addEventListener('click', function(e) {
+			e.stopPropagation()
 			const export_obj  = self.data.value[0]
 			const export_name = self.id
 			download_object_as_json(export_obj, export_name)
@@ -280,3 +328,7 @@ const download_object_as_json = function(export_obj, export_name) {
     download_anchor_node.click();
     download_anchor_node.remove();
 }//end download_object_as_json
+
+
+
+// @license-end

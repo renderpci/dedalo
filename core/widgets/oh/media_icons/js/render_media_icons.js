@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
@@ -25,7 +26,7 @@ export const render_media_icons = function() {
 /**
 * EDIT
 * Render node for use in modes: edit, edit_in_list
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_media_icons.prototype.edit = async function(options) {
 
@@ -53,7 +54,7 @@ render_media_icons.prototype.edit = async function(options) {
 /**
 * LIST
 * Render node for use in modes: list, list_in_list
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_media_icons.prototype.list = async function(options) {
 
@@ -80,11 +81,13 @@ render_media_icons.prototype.list = async function(options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return DOM node content_data
+* @param object self
+* @return HTMLElement content_data
 */
 const get_content_data_edit = async function(self) {
 
-	const fragment = new DocumentFragment()
+	// DocumentFragment
+		const fragment = new DocumentFragment()
 
 	// values container
 		const values_container = ui.create_dom_element({
@@ -125,7 +128,7 @@ const get_content_data_edit = async function(self) {
 
 /**
 * GET_VALUE_ELEMENT
-* @return DOM node li
+* @return HTMLElement li
 */
 const get_value_element = (i, data, self, current_ipo) => {
 
@@ -289,3 +292,8 @@ const get_value_element = (i, data, self, current_ipo) => {
 
 	return li
 }//end get_value_element
+
+
+
+
+// @license-end

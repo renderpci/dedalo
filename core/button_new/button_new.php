@@ -12,7 +12,7 @@
 
 	$debugger				= $this->get_debugger();
 	$permissions			= common::get_permissions($section_tipo, $tipo); 	
-	$html_title				= label::get_label('nuevo');	
+	$html_title				= label::get_label('new') || 'New';
 	$file_name 				= $mode;
 
 

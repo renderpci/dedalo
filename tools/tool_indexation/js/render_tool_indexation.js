@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -25,7 +26,7 @@ export const render_tool_indexation = function() {
 /**
 * EDIT
 * Render node for use like button
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_tool_indexation.prototype.edit = async function (options={render_level:'full'}) {
 
@@ -65,14 +66,14 @@ render_tool_indexation.prototype.edit = async function (options={render_level:'f
 
 
 	return wrapper
-}//end render_tool_indexation
+}//end edit
 
 
 
 /**
 * GET_CONTENT_DATA_EDIT
 * Render tool content_data
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data_edit = async function(self) {
 
@@ -320,11 +321,12 @@ const get_tag_info = function(self) {
 		// fragment_id_label
 		ui.create_dom_element({
 			element_type	: 'span',
-			inner_html		: get_label.etiqueta || 'Tag',
+			inner_html		: get_label.tag || 'Tag',
 			parent			: fragment_id_info
 		})
 		const fragment_id_tag_id = ui.create_dom_element({
 			element_type	: 'span',
+			class_name		: 'fragment_id_tag_id',
 			inner_html		: tag_id,
 			parent			: fragment_id_info
 		})
@@ -334,7 +336,7 @@ const get_tag_info = function(self) {
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'wrap_tag_state_selector',
-				inner_html		: get_label.estado || 'State',
+				inner_html		: get_label.state || 'State',
 				parent			: tag_info_container
 			})
 		// state selector
@@ -410,7 +412,7 @@ const get_tag_info = function(self) {
 		// label delete
 			const button_delete_label = ui.create_dom_element({
 				element_type	: 'label',
-				inner_html		: get_label.borrar || 'Delete',
+				inner_html		: get_label.delete || 'Delete',
 				parent			: wrap_delete_tag
 			})
 
@@ -419,7 +421,7 @@ const get_tag_info = function(self) {
 
 			tag_id							= value // update current tag_id var (let)
 			fragment_id_tag_id.textContent	= value // update fragment label
-			button_delete_label.textContent	= get_label.borrar //  + ' ' + value // update delete label
+			button_delete_label.textContent	= get_label.delete || 'Delete' //  + ' ' + value // update delete label
 
 			// show/hide info_container
 				if (self.tag_info_container.classList.contains('hide')) {
@@ -450,36 +452,6 @@ const get_tag_info = function(self) {
 
 
 
-/**
-* ADD_COMPONENT
-*/
-	// export const add_component = async (self, component_container, value) => {
-
-	// 	// user select blank value case
-	// 		if (!value) {
-	// 			while (component_container.firstChild) {
-	// 				// remove node from dom (not component instance)
-	// 				component_container.removeChild(component_container.firstChild)
-	// 			}
-	// 			return false
-	// 		}
-
-	// 	const component	= await self.load_component(value)
-	// 	const node		= await component.render()
-
-	// 	// clean container
-	// 		while (component_container.firstChild) {
-	// 			component_container.removeChild(component_container.firstChild)
-	// 		}
-
-	// 	// append node
-	// 		component_container.appendChild(node)
-
-
-	// 	return true
-	// }//end add_component
-
-
 
 /**
 * RENDER_RELATED_LIST
@@ -500,7 +472,7 @@ const render_related_list = function(self){
 		const related_list_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'related_list_container',
-			inner_html		: (get_label.enfoque || 'Aproch') + ': &nbsp;',
+			inner_html		: (get_label.approach || 'Aproch') + ': &nbsp;',
 			parent			: fragment
 		})
 
@@ -595,6 +567,12 @@ const render_related_list = function(self){
 				select.value = db_data.value
 				// select.dispatchEvent(new Event('change'))
 			}
+
+			// select first options if no value
+				if (!select.value && value_length===1) {
+					select.selectedIndex = 0
+				}
+
 			select.classList.remove('hidden')
 		})
 
@@ -727,7 +705,7 @@ const render_viewer_selector = function(self, wrapper){
 * the components are defined in ontology as tool_config->name_of_the_tool->ddo_map
 * @param object self
 * 	instance of current tool
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const render_status = async function(self) {
 
@@ -754,3 +732,6 @@ const render_status = async function(self) {
 
 	return fragment
 }//end render_status
+
+
+// @license-end

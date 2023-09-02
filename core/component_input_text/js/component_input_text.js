@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -37,9 +38,6 @@ export const component_input_text = function(){
 	this.tools			= null
 
 	this.duplicates		= false
-
-
-	return true
 }//end component_input_text
 
 
@@ -69,21 +67,22 @@ export const component_input_text = function(){
 	// component_input_text.prototype.build_rqo_choose	= common.prototype.build_rqo_choose
 
 	// render
-	component_input_text.prototype.edit					= render_edit_component_input_text.prototype.edit
-	component_input_text.prototype.tm					= render_edit_component_input_text.prototype.edit
 	component_input_text.prototype.list					= render_list_component_input_text.prototype.list
+	component_input_text.prototype.tm					= render_edit_component_input_text.prototype.list
+	component_input_text.prototype.edit					= render_edit_component_input_text.prototype.edit
 	component_input_text.prototype.search				= render_search_component_input_text.prototype.search
 
 	component_input_text.prototype.change_mode			= component_common.prototype.change_mode
 
 	// output
-	// component_input_text.prototype.get_raw_string		= render_view_text.prototype.get_raw_string
+	// component_input_text.prototype.get_raw_string	= render_view_text.prototype.get_raw_string
 
 
 
 /**
 * INIT
-* @return promise bool
+* @param object options
+* @return bool
 */
 component_input_text.prototype.init = async function(options) {
 
@@ -93,7 +92,7 @@ component_input_text.prototype.init = async function(options) {
 		const common_init = await component_common.prototype.init.call(self, options);
 
 	return common_init
-}//end  init
+}//end init
 
 
 
@@ -168,7 +167,64 @@ component_input_text.prototype.is_unique = async function(new_value){
 		if(SHOW_DEBUG===true) {
 			console.log("+++++ is_unique api_response data:",data, record);
 		}
-
+	// render_views
+		// Definition of the rendering views that could de used.
+		// Tools or another components could add specific views dynamically
+		// Sample:
+		// {
+		// 		view	: 'default',
+		// 		mode	: 'edit',
+		// 		render	: 'view_default_edit_portal'
+		// 		path 	: './view_default_edit_portal.js'
+		// }
+		self.render_views = [
+			{
+				view	: 'text',
+				mode	: 'edit',
+				render	: 'view_text_input_text'
+			},
+			{
+				view	: 'line',
+				mode	: 'edit',
+				render	: 'view_line_edit_input_text'
+			},
+			{
+				view	: 'mini',
+				mode	: 'edit',
+				render	: 'view_mini_input_text'
+			},
+			{
+				view	: 'print',
+				mode	: 'edit',
+				render	: 'view_default_edit_input_text'
+			},
+			{
+				view	: 'default',
+				mode	: 'edit',
+				render	: 'view_default_edit_input_text',
+				path 	: './view_default_edit_input_text.js'
+			},
+			{
+				view	: 'ip',
+				mode	: 'list',
+				render	: 'view_ip_list_input_text'
+			},
+			{
+				view	: 'mini',
+				mode	: 'list',
+				render	: 'view_mini_input_text'
+			},
+			{
+				view	: 'text',
+				mode	: 'list',
+				render	: 'view_text_input_text'
+			},
+			{
+				view	: 'default',
+				mode	: 'list',
+				render	: 'view_default_list_input_text'
+			}
+		]
 	return record
 }//end is_unique
 
@@ -204,3 +260,7 @@ component_input_text.prototype.is_unique = async function(new_value){
 
 	// 	return fallback
 	// }//end get_fallback_value
+
+
+
+// @license-end

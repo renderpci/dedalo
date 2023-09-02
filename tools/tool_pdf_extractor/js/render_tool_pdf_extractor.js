@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_tool_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -23,7 +24,8 @@ export const render_tool_pdf_extractor = function() {
 /**
 * EDIT
 * Render node
-* @return DOM node
+* @param object options
+* @return HTMLElement wrapper
 */
 render_tool_pdf_extractor.prototype.edit = async function (options) {
 
@@ -43,63 +45,26 @@ render_tool_pdf_extractor.prototype.edit = async function (options) {
 			content_data : current_content_data
 		})
 
-	// // buttons container
-		// 	const buttons_container = ui.create_dom_element({
-		// 		element_type	: 'div',
-		// 		class_name 		: 'buttons_container',
-		// 		parent 			: wrapper
-		// 	})
-
-
-	// tool_container
-		//const tool_container = document.getElementById('tool_container')
-		//if(tool_container!==null){
-		//	tool_container.appendChild(wrapper)
-		//}else{
-		//	const main = document.getElementById('main')
-		//	const new_tool_container = ui.create_dom_element({
-		//		id 				: 'tool_container',
-		//		element_type	: 'div',
-		//		parent 			: main
-		//	})
-		//	new_tool_container.appendChild(wrapper)
-		//}
-
-	// modal container
-		// if (!window.opener) {
-		// 	const header	= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
-		// 	const modal		= ui.attach_to_modal(header, wrapper, null)
-		// 	modal.on_close	= () => {
-		// 		self.destroy(true, true, true)
-		// 	}
-		// }
-
-	// events
-		// click
-			// wrapper.addEventListener("click", function(e){
-			// 	e.stopPropagation()
-			// 	console.log("e:",e);
-			// 	return
-			// })
-
 
 	return wrapper
-}//end render_tool_pdf_extractor
+}//end edit
 
 
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @param object self
+* @return HTMLElement content_data
 */
 const get_content_data = async function(self) {
 
-	const fragment = new DocumentFragment()
+	// DocumentFragment
+		const fragment = new DocumentFragment()
 
-	// range page
-		const page_range = ui.create_dom_element({
+	// options_container
+		const options_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'page_in',
+			class_name		: 'options_container',
 			inner_html		: '',
 			parent			: fragment
 		})
@@ -107,143 +72,201 @@ const get_content_data = async function(self) {
 		// page_in
 			const page_in_label = ui.create_dom_element({
 				element_type	: 'span',
-				class_name		: 'page_in',
+				class_name		: 'options_label',
 				inner_html		: self.get_tool_label('page_in'),
-				parent			: page_range
+				parent			: options_container
 			})
-			const page_in = ui.create_dom_element({
+			const page_in_input = ui.create_dom_element({
 				element_type	: 'input',
 				type 			: 'number',
-				class_name		: 'page_in',
-				parent 			: page_range
+				class_name		: 'options_input page_in',
+				parent 			: options_container
 			})
-			page_in.addEventListener('change',(e)=>{
+			page_in_input.addEventListener('change',(e)=>{
 				self.config.page_in = (!e.target.value || e.target.value==='')
 					? false
 					: e.target.value
 			})
+
 		// page_out
 			const page_out_label = ui.create_dom_element({
 				element_type	: 'span',
-				class_name		: 'page_in',
+				class_name		: 'options_label',
 				inner_html		: self.get_tool_label('page_out'),
-				parent			: page_range
+				parent			: options_container
 			})
 			const page_out = ui.create_dom_element({
 				element_type	: 'input',
 				type 			: 'number',
-				class_name		: 'page_out',
-				parent 			: page_range
+				class_name		: 'options_input page_out',
+				parent 			: options_container
 			})
 			page_out.addEventListener('change',(e)=>{
 				self.config.page_out = (!e.target.value || e.target.value==='')
 					? false
 					: e.target.value
 			})
-		// method
-		// the user can choose the methof of the extaction, it can be "text" or "html", the process will change the daemon into the server
-			const method_label = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'page_in',
-				inner_html		: self.get_tool_label('proces_method'),
-				parent			: page_range
-			})
-				// ul
-				const radio_ul = ui.create_dom_element({
-					element_type	: 'ul',
-					parent 			: page_range
-				})
-				// li
-					const radio_li = ui.create_dom_element({
-						element_type	: 'li',
-						parent 			: radio_ul
-					})
-					// option txt
-						const option_txt = ui.create_dom_element({
-							element_type	: 'input',
-							type			: 'radio',
-							value			: 'txt',
-							name			: self.id,
-							parent			: radio_li
-						})
-						option_txt.checked = 'checked'
-						option_txt.addEventListener('change', ()=>{
-							self.config.method = 'text_engine'
-						})
-						const option_txt_label = ui.create_dom_element({
-							element_type	: 'label',
-							inner_html		: 'txt',
-							parent			: radio_li
-						})
-					// option html
-						const option_html = ui.create_dom_element({
-							element_type	: 'input',
-							type			: 'radio',
-							value			: 'html',
-							name			: self.id,
-							parent			: radio_li
-						})
-						option_html.addEventListener('change',()=>{
-							self.config.method = 'html_engine'
-						})
-						const option_html_label = ui.create_dom_element({
-							element_type	: 'label',
-							inner_html		: 'html',
-							parent			: radio_li
-						})
-		// buton submit
 
+		// method
+			// the user can choose the method of the extraction, it can be "text" or "html",
+			// the process will change the daemon into the server
+				const method_label = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'options_label',
+					inner_html		: self.get_tool_label('proces_method'),
+					parent			: options_container
+				})
+			// method_selector
+				const method_selector = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'method_selector',
+					parent			: options_container
+				})
+
+			// option txt
+				const option_txt_label = ui.create_dom_element({
+					element_type	: 'label',
+					class_name		: 'label',
+					inner_html		: 'txt',
+					parent			: method_selector
+				})
+				// option txt
+				const option_txt = ui.create_dom_element({
+					element_type	: 'input',
+					type			: 'radio',
+					value			: 'txt',
+					name			: self.id
+				})
+				option_txt.checked = 'checked'
+				option_txt.addEventListener('change', ()=>{
+					self.config.method = 'text_engine'
+				})
+				option_txt_label.prepend(option_txt)
+
+			// option html
+				const option_html_label = ui.create_dom_element({
+					element_type	: 'label',
+					class_name		: 'label',
+					inner_html		: 'html',
+					parent			: method_selector
+				})
+				const option_html = ui.create_dom_element({
+					element_type	: 'input',
+					type			: 'radio',
+					value			: 'html',
+					name			: self.id
+				})
+				option_html.addEventListener('change',()=>{
+					self.config.method = 'html_engine'
+				})
+				option_html_label.prepend(option_html)
+
+	// button_submit
 		const button_submit = ui.create_dom_element({
 			element_type	: 'button',
-			class_name		: 'warning',
+			class_name		: 'button_submit warning',
 			inner_html		: self.get_tool_label('do_process'),
-			parent			: page_range
+			parent			: fragment
 		})
-		button_submit.addEventListener('mouseup', async ()=>{
-			const extracted_data 	= await self.get_pdf_data(self)
-			const pdf_data 			= await self.process_pdf_data(extracted_data.result)
-			const changed_data 		= {
-				key 	: 0,
-				value 	: pdf_data
-			}
-			event_manager.publish('set_pdf_data' +'_'+ self.caller.id_base, changed_data)
-		})
+		button_submit.addEventListener('mouseup', async (e)=>{
+			e.stopPropagation()
 
+			// cleanup
+				response_msg.innerHTML = '<br>'
+				response_msg.classList.remove('error')
+
+			// loading css
+				const elements = [
+					options_container,
+					button_submit,
+					icon_gear
+				]
+				elements.map(el => el.classList.add('loading'))
+
+			// pdf_data. Extract PDF file text/html
+				const extracted_data_response = await self.get_pdf_data()
+				if(!extracted_data_response || !extracted_data_response.result || !extracted_data_response.result==='error') {
+
+					// loading css
+					elements.map(el => el.classList.remove('loading'))
+
+					// msg
+					const msg = extracted_data_response.msg || 'Unknown error on get_pdf_data'
+					console.warn('extracted_data_response:', extracted_data_response);
+					// alert(msg);
+					response_msg.innerHTML = msg
+					response_msg.classList.add('error')
+
+					return false
+				}
+
+				// API response msg
+				response_msg.innerHTML = extracted_data_response.msg
+
+			// process_pdf_data. Apply result to target component value
+				const raw_pdf_string	= extracted_data_response.result
+				const pdf_data			= await self.process_pdf_data(raw_pdf_string)
+				// debug
+					if(SHOW_DEBUG===true) {
+						// console.log('raw_pdf_string:', raw_pdf_string);
+						// console.log('process_pdf_data -> pdf_data:', pdf_data);
+						// console.log('self:', self);
+					}
+				// id_base like 'rsc176_3_rsc37'. Note that target component tipo comes from properties->tool_config->target_tipo
+				const id_base = self.caller.section_tipo + '_' + self.caller.section_id + '_' + self.caller.tipo
+				// set_pdf_data_ event is observed by component_text_area (init function) and get pdf_data and set as component value (set_value)
+				// The published value must be an object like as expected by component_text_area->set_value
+				event_manager.publish('set_pdf_data_'+ id_base, {
+					key		: 0,
+					value	: pdf_data
+				})
+
+			// preview
+				preview.innerHTML = pdf_data
+
+			// loading css
+				elements.map(el => el.classList.remove('loading'))
+		})
+		// icon
+		const icon_gear = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button white icon gear'
+		})
+		button_submit.prepend(icon_gear)
 
 	// response_container
 		const response_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'response_container',
-			parent 			: fragment
+			parent			: fragment
 		})
 		// response_msg
 		const response_msg = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'response_msg',
-			parent 			: response_container
+			parent			: response_container
+		})
+		// preview
+		const preview = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'preview',
+			parent			: response_container
 		})
 
 	// info
 		// container info
-		const info = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'info',
-			// inner_html 	: '',
-			parent 			: fragment
-		})
+		// const info = ui.create_dom_element({
+		// 	element_type	: 'div',
+		// 	class_name		: 'info',
+		// 	// inner_html	: '',
+		// 	parent			: fragment
+		// })
 		// caller component
-		ui.create_dom_element({
-			element_type	: 'div',
-			inner_html	 	: '<label>Caller component</label>' + self.caller.model,
-			parent 			: info
-		})
-
-	// buttons container
-		// 	const buttons_container = ui.create_dom_element({
-		// 		element_type	: 'div',
-		// 		class_name 		: 'buttons_container',
-		// 		parent 			: components_container
-		// 	})
+		// ui.create_dom_element({
+		// 	element_type	: 'div',
+		// 	inner_html		: '<label>Caller component</label>' + self.caller.model,
+		// 	parent			: info
+		// })
 
 	// content_data
 		const content_data = ui.tool.build_content_data(self)
@@ -254,3 +277,5 @@ const get_content_data = async function(self) {
 }//end get_content_data
 
 
+
+// @license-end

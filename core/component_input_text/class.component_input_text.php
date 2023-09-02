@@ -1,5 +1,6 @@
 <?php
-/*
+declare(strict_types=1);
+/**
 * CLASS COMPONENT_INPUT_TEXT
 * Manage specific component input text logic
 * Common components properties and method are inherited of component_common class that are inherited from common class
@@ -10,12 +11,34 @@ class component_input_text extends component_common {
 
 	/**
 	* GET DATO
+	* @return array|null $dato
 	*/
-	public function get_dato() : array {
+	public function get_dato() : ?array {
 
 		$dato = parent::get_dato();
 
-		return (array)$dato;
+		if (!is_null($dato) && !is_array($dato)) {
+			$type = gettype($dato);
+			debug_log(__METHOD__
+				. " Expected dato type array or null, but type is: $type. Converted to array of strings and saving " . PHP_EOL
+				. ' tipo: ' . $this->tipo . PHP_EOL
+				. ' section_tipo: ' . $this->section_tipo . PHP_EOL
+				. ' section_id: ' . $this->section_id
+				, logger::ERROR
+			);
+			dump($dato, ' dato ++ '.to_string());
+
+			$dato = !empty($dato)
+				? [to_string($dato)]
+				: null;
+
+			// update
+			$this->set_dato($dato);
+			$this->Save();
+		}
+
+
+		return $dato;
 	}//end get_dato
 
 
@@ -23,10 +46,16 @@ class component_input_text extends component_common {
 	/**
 	* SET_DATO
 	* @param array|null $dato
-	* 	Dato now is multiple. For this expected type is array
-	*	but in some cases can be an array json encoded or some rare times a plain string
+	* 	Dato now is multiple. Because this, expected type is array
+	*	but in some cases can be an array JSON encoded or some rare times a plain string
+	* @return bool
 	*/
-	public function set_dato($dato) {
+	public function set_dato($dato) : bool {
+
+		// remove data when data is null
+			if(is_null($dato)){
+				return parent::set_dato(null);
+			}
 
 		// string case. (Tool Time machine case, dato is string)
 			if (is_string($dato)) {
@@ -37,7 +66,7 @@ class component_input_text extends component_common {
 				$dato_last_character	= substr($dato_trim, -1);
 
 				if ($dato_first_character==='[' && $dato_last_character===']') {
-					# dato is json encoded
+					# dato is JSON encoded
 					$dato = json_handler::decode($dato_trim);
 				}else{
 					# dato is string plain value
@@ -49,38 +78,68 @@ class component_input_text extends component_common {
 		// debug
 			if(SHOW_DEBUG===true) {
 				if (!is_array($dato)) {
-					debug_log(__METHOD__." Warning. [$this->tipo,$this->parent]. Received dato is NOT array. Type is '".gettype($dato)."' and dato: '".to_string($dato)."' will be converted to array", logger::DEBUG);
+					debug_log(__METHOD__
+						." Warning. [$this->tipo,$this->parent]. Received dato is NOT array. Type is '".gettype($dato)."' and dato: '".to_string($dato)."' will be converted to array"
+						, logger::DEBUG
+					);
 				}
 				#debug_log(__METHOD__." dato [$this->tipo,$this->parent] Type is ".gettype($dato)." -> ".to_string($dato), logger::ERROR);
 			}
 
-		$safe_dato=array();
-		foreach ((array)$dato as $key => $value) {
-			if (!is_string($value)) {
-				$safe_dato[] = to_string($value);
-			}else{
-				$safe_dato[] = $value;
+		// safe dato
+			$safe_dato = array();
+			foreach ((array)$dato as $value) {
+				if($this->is_empty($value)){
+					$safe_dato[] = null;
+				}else{
+					$safe_dato[] = (!is_string($value))
+						? to_string($value)
+						: $value;
+					}
 			}
-		}
-		$dato = $safe_dato;
+			$dato = $safe_dato;
 
-		parent::set_dato( (array)$dato );
+
+		return parent::set_dato( (array)$dato );
 	}//end set_dato
 
 
 
 	/**
-	* GET_VALUE
+	* IS_EMPTY
+	* @param string $value
+	* Check if given value is or not empty considering
+	* spaces and '<p></p>' as empty values
+	* @return bool
+	*/
+	public function is_empty( ?string $value ) : bool {
+
+		if(is_null($value)) {
+			return true;
+		}
+
+		$value = trim($value);
+
+		if($value!=='0' && empty($value)) {
+			return true;
+		}
+
+		return false;
+	}//end is_empty
+
+
+
+	/**
+	* GET_GRID_VALUE
 	* Get the value of the components. By default will be get_dato().
 	* overwrite in every different specific component
 	* Some the text components can set the value with the dato directly
 	* the relation components need to process the locator to resolve the value
-	* @param string $lang = DEDALO_DATA_LANG
 	* @param object|null $ddo = null
 	*
 	* @return dd_grid_cell_object $value
 	*/
-	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : dd_grid_cell_object {
+	public function get_grid_value( object $ddo=null) : dd_grid_cell_object {
 
 		// column_obj. Set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			if(isset($this->column_obj)){
@@ -94,7 +153,7 @@ class component_input_text extends component_common {
 			$dato			= $this->get_dato();
 			$fallback_value	= component_common::extract_component_dato_fallback(
 				$this, // component instance this
-				$lang, // string lang
+				$this->get_lang(), // string lang
 				DEDALO_DATA_LANG_DEFAULT // string main_lang
 			);
 
@@ -127,7 +186,7 @@ class component_input_text extends component_common {
 
 
 		return $value;
-	}//end get_value
+	}//end get_grid_value
 
 
 
@@ -174,18 +233,18 @@ class component_input_text extends component_common {
 
 
 	/**
-	* LOAD TOOLS
+	* LOAD TOOLS (DEPRECATED)
 	*/
-	public function load_tools( bool $check_lang_tools=true ) : array {
+		// public function load_tools( bool $check_lang_tools=true ) : array {
 
-		$properties = $this->get_properties();
-		if (isset($properties->with_lang_versions) && $properties->with_lang_versions===true) {
-			# Allow tool lang on non translatable components
-			$check_lang_tools = false;
-		}
+		// 	$properties = $this->get_properties();
+		// 	if (isset($properties->with_lang_versions) && $properties->with_lang_versions===true) {
+		// 		# Allow tool lang on non translatable components
+		// 		$check_lang_tools = false;
+		// 	}
 
-		return parent::load_tools( $check_lang_tools );
-	}//end load_tools
+		// 	return parent::load_tools( $check_lang_tools );
+		// }//end load_tools
 
 
 
@@ -299,7 +358,6 @@ class component_input_text extends component_common {
 	*	Edited/parsed version of received object
 	*/
 	public static function resolve_query_object_sql( object $query_object) : object | array {
-		#debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
 
 		// if (isset($query_object->type) && $query_object->type==='jsonb') {
 		// 	$q = json_decode($q);
@@ -498,6 +556,17 @@ class component_input_text extends component_common {
 				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
 				$query_object->unaccent	= true;
 				break;
+			# DUPLICATED
+			case (strpos($q, '!!')===0 || $q_operator==='!!'):
+				$operator = '=';
+				$query_object->operator 	= $operator;
+				$query_object->unaccent		= false; // (!) always false
+				$query_object->duplicated	= true;
+				// Resolve lang based on if is translatable
+					$path_end		= end($query_object->path);
+					$component_tipo	= $path_end->component_tipo;
+				$query_object->lang 	= RecordObj_dd::get_translatable($component_tipo) ?  DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+				break;
 			# DEFAULT CONTAIN
 			default:
 				$operator = '~*';
@@ -521,14 +590,15 @@ class component_input_text extends component_common {
 	public function search_operators_info() : array {
 
 		$ar_operators = [
-			'*'			=> 'no_vacio', // not null
-			'!*'		=> 'campo_vacio', // null
-			'='			=> 'similar_a',
-			'!='		=> 'distinto_de',
-			'-'			=> 'no_contiene',
-			'*text*'	=> 'contiene',
-			'text*'		=> 'empieza_con',
-			'*text'		=> 'acaba_con',
+			'*'			=> 'no_empty', // not null
+			'!*'		=> 'empty', // null
+			'='			=> 'similar_to',
+			'!='		=> 'different_from',
+			'-'			=> 'does_not_contain',
+			'!!'		=> 'duplicate',
+			'*text*'	=> 'contains',
+			'text*'		=> 'begins_with',
+			'*text'		=> 'end_with',
 			'\'text\''	=> 'literal'
 		];
 
@@ -565,6 +635,78 @@ class component_input_text extends component_common {
 
 		return $diffusion_value;
 	}//end get_diffusion_value
+
+
+
+	/**
+	* CONFORM_IMPORT_DATA
+	* @param string $import_value
+	* @param string $column_name
+	* @return object $response
+	*/
+	public function conform_import_data(string $import_value, string $column_name) : object {
+
+		// Response
+			$response = new stdClass();
+				$response->result	= null;
+				$response->errors	= [];
+				$response->msg		= 'Error. Request failed';
+
+		// object | array case
+			// Check if is a JSON string. Is yes, decode
+			// if data is a object | array it will be the Dédalo format and it's not necessary processed
+			if(json_handler::is_json($import_value)){
+
+				// try to JSON decode (null on not decode)
+				$dato_from_json	= json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
+
+				$response->result	= $dato_from_json;
+				$response->msg		= 'OK';
+
+				return $response;
+			}
+
+	// string case
+		// check the begin and end of the value string, if it has a [] or other combination that seems array
+		// sometimes the value text could be [Ac], as numismatic legends, it's admit, but if the text has [" or "] it's not admitted.
+		$begins_one	= substr($import_value, 0, 1);
+		$ends_one	= substr($import_value, -1);
+		$begins_two	= substr($import_value, 0, 2);
+		$ends_two	= substr($import_value, -2);
+
+		if (($begins_two !== '["' && $ends_two !== '"]') ||
+			($begins_two !== '["' && $ends_one !== ']') ||
+			($begins_one !== '[' && $ends_two !== '"]')
+			){
+			$value = !empty($import_value) || $import_value==='0'
+				? [$import_value]
+				: null;
+		}else{
+			// import value seems to be a JSON malformed.
+			// it begin [" or end with "]
+			// log JSON conversion error
+			debug_log(__METHOD__
+				." invalid JSON value, seems a syntax error: ". PHP_EOL
+				. to_string($import_value)
+				, logger::ERROR
+			);
+
+			$failed = new stdClass();
+				$failed->section_id		= $this->section_id;
+				$failed->data			= stripslashes( $import_value );
+				$failed->component_tipo	= $this->get_tipo();
+				$failed->msg			= 'IGNORED: malformed data '. to_string($import_value);
+			$response->errors[] = $failed;
+
+			return $response;
+		}
+
+
+		$response->result	= $value;
+		$response->msg		= 'OK';
+
+		return $response;
+	}//end conform_import_data
 
 
 

@@ -26,11 +26,30 @@
 	// 	}
 	// }
 
+
+	// shared
+	>.search_container {
+		width: 100%;
+		position: relative;
+
+		>.spinner {
+			position: relative;
+			margin: 20px;
+		}
+	}
+
 	&.edit {
 		width: calc(100vw - @inspector_width - 0.25rem);
+		margin-bottom: 10rem;
 
 		&.no_inspector {
 			width: 100%;
+		}
+
+		// inside modal box body
+		.body & {
+			width: 100%;
+			margin-bottom: 0px;
 		}
 
 		@media screen and (max-width: @width_break_point_0) {
@@ -54,29 +73,32 @@
 			position: fixed;
 			// top: @top_distance;
 			left: calc(100vw - @inspector_width - 0.75rem);
-
+			z-index: 1;
 
 			// prevent content from shifting left when the vertical scrollbar appears
 			overflow-y: overlay;
 			padding-right: 13px;
+			padding-left: 1px;
 
 			@media screen and (max-width: @width_break_point_0) {
-				display: contents;
+				// display: contents;
+				display: inline;
 				width: 100%;
 				left: 0px;
 				position: initial;
-				margin-bottom: 1rem;
+				// margin-bottom: 0.25rem;
+
+				>.wrapper_inspector {
+					>.label {
+						background-color: @color_grey_medium
+					}
+				}
 			}
+
 		}//end .inspector_container
 
 		>.search_container {
-			width: 100%;
-			position: relative;
 
-			>.spinner {
-				position: relative;
-				margin: 20px;
-			}
 		}
 
 		>.content_data {
@@ -155,43 +177,37 @@
 				}
 			}
 
-			// >.button {
-			// 	background-color: @color_orange_dedalo;
-			// 	color: #ffffff;
-			// 	display: inherit;
-			// 	width: auto;
-			// 	height: auto;
-			// 	padding: 1em;
-			// 	padding-top: 0;
-			// 	padding-bottom: 0;
-			// 	border-radius: 0.25em;
-			// 	margin: 0.25em;
-			// 	// margin-top: 0.25em;
-			// 	// margin-bottom: 0.25em;
+			// des
+				// >.button {
+				// 	background-color: @color_orange_dedalo;
+				// 	color: #ffffff;
+				// 	display: inherit;
+				// 	width: auto;
+				// 	height: auto;
+				// 	padding: 1em;
+				// 	padding-top: 0;
+				// 	padding-bottom: 0;
+				// 	border-radius: 0.25em;
+				// 	margin: 0.25em;
+				// 	// margin-top: 0.25em;
+				// 	// margin-bottom: 0.25em;
 
-			// 	// icons inside, like export icon
-			// 	>.button {
-			// 		margin-left: 0;
-			// 	}
+				// 	// icons inside, like export icon
+				// 	>.button {
+				// 		margin-left: 0;
+				// 	}
 
-			// 	&:hover {
-			// 		color: #000000;
-			// 	}
-			// 	&:active {
-			// 		color: #ffffff;
-			// 	}
-			// }
+				// 	&:hover {
+				// 		color: #000000;
+				// 	}
+				// 	&:active {
+				// 		color: #ffffff;
+				// 	}
+				// }
 		}
 
 		>.search_container {
-			// background-color: #b0feee;
-			width: 100%;
-			position: relative;
 
-			>.spinner {
-				position: relative;
-				margin: 20px;
-			}
 		}
 
 		>.paginator_container {

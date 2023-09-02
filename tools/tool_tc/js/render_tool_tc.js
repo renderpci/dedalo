@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -23,46 +24,39 @@ export const render_tool_tc = function() {
 /**
 * EDIT
 * Render node
-* @return DOM node
+* @param object options
+* @return HTMLElement wrapper
 */
-render_tool_tc.prototype.edit = async function (options={render_level:'full'}) {
+render_tool_tc.prototype.edit = async function (options) {
 
 	const self = this
 
-	const render_level 	= options.render_level
+	// options
+		const render_level = options.render_level || 'full'
 
 	// content_data
-		const current_content_data = await content_data_edit(self)
+		const content_data = await content_data_edit(self)
 		if (render_level==='content') {
-			return current_content_data
+			return content_data
 		}
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.tool.build_wrapper_edit(self, {
-			content_data : current_content_data
+			content_data : content_data
 		})
-
-	// fix wrapper
-		self.wrapper = wrapper
-
-	// modal container
-		// if (!window.opener) {
-		// 	const header	= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
-		// 	const modal		= ui.attach_to_modal(header, wrapper, null)
-		// 	modal.on_close	= () => {
-		// 		self.destroy(true, true, true)
-		// 	}
-		// }
+		// set pointers
+		wrapper.content_data = content_data
 
 
 	return wrapper
-}//end render_tool_tc
+}//end edit
 
 
 
 /**
 * CONTENT_DATA_EDIT
-* @return DOM node content_data
+* @param object self
+* @return HTMLElement content_data
 */
 const content_data_edit = async function(self) {
 
@@ -71,30 +65,29 @@ const content_data_edit = async function(self) {
 	// components container
 		const components_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'components_container',
-			parent 			: fragment
+			class_name		: 'components_container',
+			parent			: fragment
 		})
 
-	// source
+	// source component
 		const source_component_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'source_component_container',
-			parent 			: components_container
+			class_name		: 'source_component_container',
+			parent			: components_container
+		})
+		// main_element render
+		self.main_element.show_interface.read_only	= true
+		self.main_element.auto_init_editor			= false
+		self.main_element.render()
+		.then(function(node){
+			source_component_container.appendChild(node)
 		})
 
-	// target
-		// const target_component_container = ui.create_dom_element({
-		// 	element_type	: 'div',
-		// 	class_name 		: 'target_component_container',
-		// 	parent 			: components_container
-		// })
-
-
-	// offset_management_container. Language selection and time codes management container
+	// tc_management_container. Language selection and time codes management container
 		const tc_management_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'offset_management_container',
-			parent 			: components_container
+			class_name		: 'tc_management_container',
+			parent			: components_container
 		})
 
 	// source_select_lang
@@ -103,23 +96,14 @@ const content_data_edit = async function(self) {
 			selected	: self.source_lang,
 			class_name	: 'source_lang'
 		})
-		source_select_lang.addEventListener('change', function(){
-			const lang = source_select_lang.value
-			add_component(self, source_component_container, lang)
-			// self.target_component = add_component(self, target_component_container, lang)
-		})
-		// source default value check
-		if (source_select_lang.value) {
-			// left side component (use already loaded on build, self.main_element)
-			self.main_element.render()
-			.then(function(node){
-				node.classList.add('disabled_component')
-				source_component_container.appendChild(node)
-			})
-			// right side component
-			// self.target_component = add_component(self, target_component_container, source_select_lang.value)
-		}
 		tc_management_container.appendChild(source_select_lang)
+		source_select_lang.addEventListener('change', async function(e) {
+			change_component_lang({
+				self		: self,
+				component	: self.main_element,
+				lang		: e.target.value
+			})
+		})
 
 	// offset_input in seconds
 		const offset_input = ui.create_dom_element({
@@ -132,28 +116,10 @@ const content_data_edit = async function(self) {
 		// fix input
 		self.offset_input = offset_input
 
-	// preview button
-		// const button_preview = ui.create_dom_element({
-		// 	element_type	: 'button',
-		// 	class_name		: 'secondary button_preview',
-		// 	inner_html		: get_label.preview || "Preview",
-		// 	parent			: tc_management_container
-		// })
-		// button_preview.addEventListener("click", () => {
-		// 	// loading add
-		// 	components_container.classList.add('loading')
-
-		// 	self.change_all_time_codes(false)
-		// 	.then(function(){
-		// 		// loading remove
-		// 		components_container.classList.remove('loading')
-		// 	})
-		// })
-
 	// apply button
 		const button_apply = ui.create_dom_element({
 			element_type	: 'button',
-			class_name		: 'warning button_apply',
+			class_name		: 'button_apply',
 			inner_html		: self.get_tool_label('apply') || 'Apply',
 			parent			: tc_management_container
 		})
@@ -174,8 +140,7 @@ const content_data_edit = async function(self) {
 
 			// change_all_time_codes
 				self.change_all_time_codes(offset_seconds, true)
-				.then(function(){
-
+				.then(function() {
 					// refresh target
 					self.main_element.refresh()
 					.then(function(){
@@ -187,10 +152,9 @@ const content_data_edit = async function(self) {
 
 	// response div
 		const response_div = ui.create_dom_element({
-			id				: 'response_div',
 			element_type	: 'div',
-			class_name 		: 'response_div',
-			parent 			: tc_management_container
+			class_name		: 'response_div',
+			parent			: tc_management_container
 		})
 
 	// content_data
@@ -204,38 +168,39 @@ const content_data_edit = async function(self) {
 
 
 /**
-* ADD_COMPONENT
+* CHANGE_COMPONENT_LANG
 * Create a component instance, clean container and
 * render the component inside
 * @param object self
-* @param DOM node component_container
+* @param object component
 * @param string lang
-* @return object component
+* @return bool
 * 	Instance of component in given lang
 */
-export const add_component = async (self, component_container, lang) => {
+export const change_component_lang = async (options) => {
 
-	// user select blank lang case
-		if (!lang) {
-			while (component_container.firstChild) {
-				// remove node from dom (not component instance)
-				component_container.removeChild(component_container.firstChild)
-			}
-			return false
-		}
+	// options
+		const self		= options.self
+		const component	= options.component
+		const lang		= options.lang
 
-	// instance
-		const component = await self.load_component(lang)
+	// loading add
+		component.node.classList.add('loading')
+
+	// configure always
+		component.show_interface.read_only	= true
+		component.lang						= lang
+		component.auto_init_editor			= false
 
 	// render
-		const node = await component.render()
-		node.classList.add('disabled_component')
+		await component.refresh()
 
-		while (component_container.firstChild) {
-			component_container.removeChild(component_container.firstChild)
-		}
-		component_container.appendChild(node)
+	// loading remove
+		component.node.classList.remove('loading')
 
 
-	return component
-}//end add_component
+	return true
+}//end change_component_lang
+
+
+// @license-end

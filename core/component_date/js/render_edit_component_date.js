@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /* global get_label, page_globals, flatpickr */
 /*eslint no-undef: "error"*/
 
@@ -27,14 +28,14 @@ export const render_edit_component_date = function() {
 * EDIT
 * Render node for use in edit
 * @param object options
-* @return DOM node
+* @return HTMLElement
 */
 render_edit_component_date.prototype.edit = async function(options) {
 
 	const self = this
 
 	// view
-		const view	= self.context.view || 'default'
+		const view = self.context.view || 'default'
 
 	switch(view) {
 
@@ -44,13 +45,56 @@ render_edit_component_date.prototype.edit = async function(options) {
 		case 'line':
 			return view_line_edit_date.render(self, options)
 
+		case 'print':
+			// view print use the same view as default, except it will use read only to render content_value
+			// as different view as default it will set in the class of the wrapper
+			// sample: <div class="wrapper_component component_input_text oh14 oh1_oh14 edit view_print disabled_component">...</div>
+			// take account that to change the css when the component will render in print context
+			// for print we need to use read of the content_value and it's necessary force permissions to use read only element render
+			self.permissions = 1
+
 		case 'default':
 		default:
 			return view_default_edit_date.render(self, options)
 	}
-
-	return null
 }//end edit
+
+
+
+/**
+* GET_CONTENT_VALUE_READ
+* Render a element based on passed value
+* @param int i
+* 	data.value array key
+* @param object current_value
+* 	Sample:
+	{
+	    "mode": "start",
+	    "start": {
+	        "day": 12,
+	        "time": 65027145600,
+	        "year": 2023,
+	        "month": 3
+	    }
+	}
+* @param object self
+*
+* @return HTMLElement content_value
+*/
+export const get_content_value_read = (i, current_value, self) => {
+
+	// string_value
+		const string_value = self.value_to_string_value(current_value)
+
+	// create content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value read_only',
+			inner_html		: string_value
+		})
+
+	return content_value
+}//end get_content_value_read
 
 
 
@@ -70,6 +114,7 @@ export const get_ar_raw_data_value = (self) => {
 	for (let i = 0; i < value_length; i++) {
 
 		const current_value = inputs_value[i]
+		// invalid/empty value case
 		if (!current_value) {
 			console.error('Ignored component_date empty value:', self.tipo, i, inputs_value);
 			console.log('Check this component value:', self);
@@ -136,8 +181,16 @@ export const get_ar_raw_data_value = (self) => {
 				const input_time_value = (current_value)
 					? self.time_to_string(current_value.start)
 					: ''
-
 				ar_raw_value.push(input_time_value)
+				break;
+
+			case 'date_time':
+				{
+				const input_time_value = (current_value)
+					? self.date_time_to_string(current_value.start)
+					: ''
+				ar_raw_value.push(input_time_value)
+				}
 				break;
 
 			case 'date':
@@ -158,7 +211,7 @@ export const get_ar_raw_data_value = (self) => {
 
 /**
 * GET_INPUT_DATE_NODE
-* @return DOM node input_wrap
+* @return HTMLElement input_wrap
 */
 export const get_input_date_node = (i, mode, input_value, self) => {
 
@@ -177,18 +230,22 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 			placeholder		: self.get_placeholder_value(),
 			parent			: input_wrap
 		})
-		input.addEventListener('focus', function() {
-			// force activate on input focus (tabulating case)
-			if (!self.active) {
-				ui.component.activate(self)
-			}
-		})
-		input.addEventListener('keyup', function(e) {
-			keyup_handler({
-				e : e
+		// focus event
+			input.addEventListener('focus', function() {
+				// force activate on input focus (tabulating case)
+				if (!self.active) {
+					ui.component.activate(self)
+				}
 			})
-		})
-		input.addEventListener('change', function() {
+		// keyup event
+			input.addEventListener('keyup', function(e) {
+				keyup_handler({
+					e : e
+				})
+			})
+		// change event
+			input.addEventListener('change', fn_change)
+			function fn_change() {
 
 			return change_handler({
 				self		: self,
@@ -261,7 +318,15 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 				// 		refresh			: false
 				// 	})
 				// }
-		})
+		}//end fn_change
+		// click event. Capture event propagation
+			input.addEventListener('click', (e) => {
+				e.stopPropagation()
+			})
+		// mousedown event. Capture event propagation
+			input.addEventListener('mousedown', (e) => {
+				e.stopPropagation()
+			})
 
 	// button_calendar
 		const button_calendar = ui.create_dom_element({
@@ -269,8 +334,9 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 			class_name		: 'input-group-addon button calendar hidden_button ',
 			parent			: input_wrap
 		})
-		button_calendar.addEventListener('mouseup', function() {
-			const dd_date_format = page_globals.DEDALO_DATE_ORDER  || 'dmy'
+		button_calendar.addEventListener('mouseup', fn_calendar_mouseup)
+		function fn_calendar_mouseup() {
+			const dd_date_format = page_globals.dedalo_date_order  || 'dmy'
 
 			const ar_date_format = (dd_date_format === 'dmy')
 				? ['d','m','Y']
@@ -295,7 +361,7 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 					}
 				})
 				datePicker.open()
-		})
+		}//end fn_calendar_mouseup
 
 
 	return input_wrap
@@ -305,7 +371,7 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 
 /**
 * INPUT_ELEMENT_DATE
-* @return DOM node node
+* @return HTMLElement node
 */
 export const input_element_date = (i, current_value, self) => {
 
@@ -322,7 +388,7 @@ export const input_element_date = (i, current_value, self) => {
 
 /**
 * INPUT_ELEMENT_RANGE
-* @return DOM DocumentFragment
+* @return HTMLElement DocumentFragment
 */
 export const input_element_range = (i, current_value, self) => {
 
@@ -361,7 +427,7 @@ export const input_element_range = (i, current_value, self) => {
 
 /**
 * INPUT_ELEMENT_PERIOD
-* @return DOM node input_wrap
+* @return HTMLElement input_wrap
 */
 export const input_element_period = (i, current_value, self) => {
 
@@ -494,7 +560,7 @@ export const input_element_period = (i, current_value, self) => {
 
 /**
 * INPUT_ELEMENT_TIME
-* @return DOM node input_wrap
+* @return HTMLElement input_wrap
 */
 export const input_element_time = (i, current_value, self) => {
 
@@ -652,7 +718,9 @@ export const change_handler = function(options) {
 		ui.component.error(false, input_wrap)
 
 	// new value. New parsed value
-		const new_value = response.result
+		const new_value = Object.keys(response.result).length===0 && response.result.constructor===Object
+			? null // empty object case
+			: response.result
 
 	// data_value. Current data value for current key
 		const data_value = self.data.value[key]
@@ -666,7 +734,9 @@ export const change_handler = function(options) {
 		const changed_data_item = Object.freeze({
 			action	: 'update',
 			key		: key,
-			value	: data_value
+			value	: new_value
+				? data_value
+				: null
 		})
 
 	if (self.mode==='search') {
@@ -689,3 +759,7 @@ export const change_handler = function(options) {
 
 	return true
 }//end change_handler
+
+
+
+// @license-end

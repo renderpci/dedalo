@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
@@ -7,6 +8,7 @@
 	import {view_default_list_json} from './view_default_list_json.js'
 	import {view_mini_json} from './view_mini_json.js'
 	import {view_text_json} from './view_text_json.js'
+	import {view_collapse_list_json} from './view_collapse_list_json.js'
 
 
 
@@ -24,14 +26,15 @@ export const render_list_component_json = function() {
 /**
 * LIST
 * Render node for use in list
-* @return DOM node wrapper
+* @param object options
+* @return HTMLElement|null
 */
 render_list_component_json.prototype.list = async function(options) {
 
 	const self = this
 
 	// view
-		const view	= self.context.view || 'default'
+		const view = self.context.view || 'default'
 
 	switch(view) {
 
@@ -41,10 +44,18 @@ render_list_component_json.prototype.list = async function(options) {
 		case 'text':
 			return view_text_json.render(self, options)
 
+		case 'collapse':
+			return view_collapse_list_json.render(self, options)
+
 		case 'default':
 		default:
 			return view_default_list_json.render(self, options)
 	}
 
+
 	return null
 }//end list
+
+
+
+// @license-end

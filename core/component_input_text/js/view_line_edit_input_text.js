@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global */
 /*eslint no-undef: "error"*/
 
@@ -25,7 +26,7 @@ export const view_line_edit_input_text = function() {
 /**
 * EDIT
 * Render node for use in modes: edit, edit_in_list
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_line_edit_input_text.render = async function(self, options) {
 
@@ -54,7 +55,7 @@ view_line_edit_input_text.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data_edit = function(self) {
 
@@ -90,7 +91,7 @@ const get_content_data_edit = function(self) {
 * @param int i
 * @param string current_value
 * @param object self
-* @return DOM node content_value
+* @return HTMLElement content_value
 */
 const get_content_value = (i, current_value, self) => {
 
@@ -127,7 +128,15 @@ const get_content_value = (i, current_value, self) => {
 			input.addEventListener('keyup', function(e) {
 				keyup_handler(e, i, self)
 			})
+		// click event
+			input.addEventListener('click', function(e) {
+				e.stopPropagation()
+			})
 
 
 	return content_value
 }//end get_content_value
+
+
+
+// @license-end

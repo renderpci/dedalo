@@ -14,7 +14,7 @@ class sections extends common {
 		// FIELDS
 		protected $ar_locators;
 		protected $ar_section_tipo;
-		protected $dato;
+		// protected $dato;
 
 		// dd_request. Full dd_request
 		public $dd_request;
@@ -29,30 +29,26 @@ class sections extends common {
 
 	/**
 	* GET_INSTANCE
-    * Singleton pattern
-    * @param array|null $ar_locators
-    * @param object $search_query_object = null
-    * @param string $caller_tipo = null
-    * @param string $mode = list
-    * @param string $lang = DEDALO_DATA_NOLAN
-    * @return object $instance
-    * 	Instance of sections class
-    */
-    public static function get_instance(?array $ar_locators, object $search_query_object=null, string $caller_tipo=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN) {
+	* Singleton pattern
+	* @param array|null $ar_locators
+	* @param object $search_query_object = null
+	* @param string $caller_tipo = null
+	* @param string $mode = list
+	* @param string $lang = DEDALO_DATA_NOLAN
+	* @return object $instance
+	* 	Instance of sections class
+	*/
+	public static function get_instance(?array $ar_locators, object $search_query_object=null, string $caller_tipo=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN) {
 
 		$instance = new sections($ar_locators, $search_query_object, $caller_tipo, $mode, $lang);
 
-        return $instance;
-    }//end get_instance
+		return $instance;
+	}//end get_instance
 
 
 
 	/**
 	* CONSTRUCT
-	* Extends parent abstract class common
-	* La sección, a diferencia de los componentes, se comporta de un mode particular:
-	* Si se le pasa sólo el tipo, se espera un listado (mode list)
-	* Si se le pasa sólo el section_id, se espera una ficha (mode edit)
 	*/
 	private function __construct(?array $ar_locators, object $search_query_object, string $caller_tipo, string $mode, string $lang) {
 
@@ -80,6 +76,32 @@ class sections extends common {
 
 		// sqo. Use sqo.mode to define the search class manager to run your search
 			$search_query_object = $this->search_query_object;
+			// $search_query_object = clone($this->search_query_object);
+
+		// limit check
+			if (!isset($search_query_object->limit)) {
+
+				if ($this->model==='edit') {
+
+					$search_query_object->limit = 1;
+
+				}else{
+
+					$section = section::get_instance(
+						null, // string|null section_id
+						$this->caller_tipo // string section_tipo
+					);
+					$request_config = $section->build_request_config();
+					$found = array_find($request_config, function($el){
+						return isset($el->api_engine) && $el->api_engine==='dedalo';
+					});
+					if (!empty($found)) {
+						if (isset($found->sqo) && isset($found->sqo->limit)) {
+							$search_query_object->limit = $found->sqo->limit;
+						}
+					}
+				}
+			}
 
 		// search
 			$search		= search::get_instance($search_query_object);

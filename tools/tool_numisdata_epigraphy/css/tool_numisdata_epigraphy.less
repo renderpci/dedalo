@@ -1,16 +1,13 @@
 /**
-* TOOL_numismatic_epigraphy
+* TOOL_NUMISMATIC_EPIGRAPHY
 *
 * Loaded on tool init
 */
-
 // imports
-	@import '../../../core/page/css/layout/vars';
+@import (once) '../../../core/page/css/layout/vars';
 
 // local vars
-	@color_bg_tool: #fd7f26; // @color_orange_dedalo;
-
-
+@color_bg_tool: #fd7f26; // @color_orange_dedalo;
 
 // column_id (section_tool list)
 	.column_section_id > .button_edit.list_tool_numisdata_epigraphy {
@@ -23,8 +20,6 @@
 			mask-image: url('../img/icon.svg');
 		}
 	}
-
-
 
 // wrapper_tool
 	.wrapper_tool.tool_numisdata_epigraphy {
@@ -137,15 +132,17 @@
 			.right_container {
 				// height: calc(100vh - 8rem);
 				// background-color: #e4ca4f;
-				.wrapper_component {
+				>.wrapper_component {
 					// background-color: #dee789;
 					// box-shadow: none;
 				}
 			}
 
+			// left only
 			.left_container {
 				>.wrapper_component {
 					height: 100%;
+					z-index: 4;
 					>.content_data {
 
 						@media screen and (max-width: @width_break_point_0) {
@@ -155,6 +152,7 @@
 				}
 			}
 
+			// right only
 			.right_container {
 				.coins_container{
 					position: sticky;
@@ -166,16 +164,16 @@
 					display: grid;
 					grid-template-columns: 50% 50%;
 
-					>*{
+					>* {
 						grid-area: unset;
 					}
 				}
-				.text_container{
-					>.wrapper_component >.content_data{
+				.text_container {
+					>.wrapper_component >.content_data {
 						min-height: 1.5em;
 					}
 
-					>.wrapper_component >.count{
+					>.wrapper_component >.count {
 						color: #a8a8a8;
 						margin: 0.5em;
 						z-index: 2;
@@ -190,7 +188,7 @@
 // tool_numismatic_epigraphy_icon
 	.tool_numisdata_epigraphy_icon {
 		background-color: @color_bg_tool;
-		background-image: url(../../../themes/default/icon_transcription_hover.svg);
+		background-image: url('../../themes/default/icon_transcription_hover.svg');
 		// Adjust icon size
 		background-size: 18px !important;
 	    background-position-y: 3px !important;
@@ -201,14 +199,13 @@
 
 /* HEADER
 ------------------------------------------------------ */
-	.header_tool {
-
-		}
-		.header_tool #header_info {
-			display:block;
-			float: left;
-			position: relative;
-			margin-left: 15px;
-			top: 8px;
-			line-height: 1em;
-		}
+	// .header_tool {
+	// 	#header_info {
+	// 		display:block;
+	// 		float: left;
+	// 		position: relative;
+	// 		margin-left: 15px;
+	// 		top: 8px;
+	// 		line-height: 1em;
+	// 	}
+	// }

@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global it, describe, assert */
 /*eslint no-undef: "error"*/
 
@@ -64,7 +65,7 @@ async function fn_change_search_element(instance) {
 	const pairs_length		= pairs.length
 
 	// DOM containers
-	const content			= document.getElementById('content');
+	const container = document.getElementById('content');
 	for (let i = 0; i < pairs_length; i++) {
 
 		const pair = pairs[i]
@@ -72,7 +73,7 @@ async function fn_change_search_element(instance) {
 		const pair_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'pair_container',
-			parent			: content
+			parent			: container
 		})
 		pair.container = pair_container
 
@@ -165,3 +166,7 @@ async function rendering_test(options, container) {
 		});
 	});//end describe(options.model, function()
 }//end rendering_test
+
+
+
+// @license-end

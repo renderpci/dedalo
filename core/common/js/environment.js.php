@@ -54,7 +54,6 @@ session_write_close();
 	// 	$page_globals->dedalo_protect_media_files 	= (defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) ? 1 : 0;
 	// 	# notifications
 	// 	$page_globals->DEDALO_NOTIFICATIONS 	  	= defined("DEDALO_NOTIFICATIONS") ? (int)DEDALO_NOTIFICATIONS : 0;
-	// 	$page_globals->DEDALO_PUBLICATION_ALERT 	= defined("DEDALO_PUBLICATION_ALERT") ? (int)DEDALO_PUBLICATION_ALERT : 0;
 	// 	# float_window_features
 	// 	$page_globals->float_window_features 		= json_decode('{"small":"menubar=no,location=no,resizable=yes,scrollbars=yes,status=no,width=470,height=415"}');
 
@@ -66,12 +65,16 @@ session_write_close();
 		$username			= $_SESSION['dedalo']['auth']['username'] ?? null;
 		$full_username		= $_SESSION['dedalo']['auth']['full_username'] ?? null;
 		$is_global_admin	= $_SESSION['dedalo']['auth']['is_global_admin'] ?? null;
+		$is_developer		= $_SESSION['dedalo']['auth']['is_developer'] ?? null;
 		$is_root			= $user_id==DEDALO_SUPERUSER;
 
 		$obj = new stdClass();
+			// $obj->server_errors					= !empty($_ENV['DEDALO_LAST_ERROR']);
+			$obj->dedalo_last_error					= $_ENV['DEDALO_LAST_ERROR'] ?? null;
 			// logged informative only
 			$obj->is_logged							= login::is_logged();
 			$obj->is_global_admin					= $is_global_admin;
+			$obj->is_developer						= $is_developer;
 			$obj->is_root							= $is_root;
 			$obj->user_id							= $user_id;
 			$obj->username							= $username;
@@ -80,6 +83,8 @@ session_write_close();
 			$obj->dedalo_entity						= DEDALO_ENTITY;
 			// version
 			$obj->dedalo_version					= DEDALO_VERSION;
+			// build
+			$obj->dedalo_build						= DEDALO_BUILD;
 			// mode
 			$obj->mode								= $mode ?? null;
 			// lang
@@ -87,15 +92,22 @@ session_write_close();
 			$obj->dedalo_application_lang			= DEDALO_APPLICATION_LANG;
 			$obj->dedalo_data_lang					= DEDALO_DATA_LANG;
 			$obj->dedalo_data_nolan					= DEDALO_DATA_NOLAN;
-			// dedalo_projects_default_langs
-			if ($obj->is_logged===true && defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS==='installed') {
-				$obj->dedalo_projects_default_langs	= array_map(function($current_lang) {
-					$lang_obj = new stdClass();
-						$lang_obj->label = lang::get_name_from_code($current_lang);
-						$lang_obj->value = $current_lang;
-					return $lang_obj;
-				}, DEDALO_PROJECTS_DEFAULT_LANGS);
-			}
+			$obj->dedalo_application_langs			= (function(){
+				$result = [];
+				foreach (DEDALO_APPLICATION_LANGS as $value => $label) {
+					$result[] = (object)[
+						'label'	=> $label,
+						'value'	=> $value
+					];
+				}
+				return $result;
+			})();
+			$obj->dedalo_projects_default_langs	= array_map(function($current_lang) {
+				return (object)[
+					'label'	=> lang::get_name_from_code($current_lang),
+					'value'	=> $current_lang
+				];
+			}, DEDALO_PROJECTS_DEFAULT_LANGS);
 			// quality defaults
 			$obj->dedalo_image_quality_default	= DEDALO_IMAGE_QUALITY_DEFAULT;
 			$obj->dedalo_av_quality_default		= DEDALO_AV_QUALITY_DEFAULT;
@@ -106,17 +118,18 @@ session_write_close();
 			// dedalo_protect_media_files
 			$obj->dedalo_protect_media_files	= (defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) ? 1 : 0;
 			// notifications
-			$obj->DEDALO_NOTIFICATIONS			= defined("DEDALO_NOTIFICATIONS") ? (int)DEDALO_NOTIFICATIONS : 0;
-			$obj->DEDALO_PUBLICATION_ALERT		= defined("DEDALO_PUBLICATION_ALERT") ? (int)DEDALO_PUBLICATION_ALERT : 0;
+			$obj->DEDALO_NOTIFICATIONS			= defined('DEDALO_NOTIFICATIONS') ? (int)DEDALO_NOTIFICATIONS : 0;
+			// ip_api
+			$obj->ip_api						= defined('IP_API') ? IP_API : null;
 			// float_window_features
 			// $obj->float_window_features		= json_decode('{"small":"menubar=no,location=no,resizable=yes,scrollbars=yes,status=no,width=600,height=540"}');
 			$obj->fallback_image				= DEDALO_CORE_URL . '/themes/default/0.jpg';
 			$obj->locale						= DEDALO_LOCALE;
-			$obj->DEDALO_DATE_ORDER				= DEDALO_DATE_ORDER;
+			$obj->dedalo_date_order				= DEDALO_DATE_ORDER;
 			$obj->component_active				= null;
 			// debug only
-			if(SHOW_DEBUG===true) {
-				$obj->dedalo_db_name	= DEDALO_DATABASE_CONN;
+			if(SHOW_DEBUG===true || SHOW_DEVELOPER===true) {
+				$obj->dedalo_db_name = DEDALO_DATABASE_CONN;
 				if ($obj->is_logged===true && defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS==='installed') {
 					$obj->pg_version = (function() {
 						try {
@@ -141,31 +154,39 @@ session_write_close();
 
 // plain global vars
 	$plain_vars = [
-		'DEDALO_ENVIRONMENT'		=> true,
-		'DEDALO_API_URL'			=> defined('DEDALO_API_URL') ? DEDALO_API_URL : (DEDALO_CORE_URL . '/api/v1/json/'),
-		'DEDALO_CORE_URL'			=> DEDALO_CORE_URL,
-		'DEDALO_ROOT_WEB'			=> DEDALO_ROOT_WEB,
-		'DEDALO_TOOLS_URL'			=> DEDALO_TOOLS_URL,
-		'SHOW_DEBUG'				=> SHOW_DEBUG,
-		'SHOW_DEVELOPER'			=> SHOW_DEVELOPER,
-		'DEVELOPMENT_SERVER'		=> DEVELOPMENT_SERVER,
-		'DEDALO_SECTION_ID_TEMP'	=> DEDALO_SECTION_ID_TEMP,
+		'DEDALO_ENVIRONMENT'				=> true,
+		'DEDALO_API_URL'					=> defined('DEDALO_API_URL') ? DEDALO_API_URL : (DEDALO_CORE_URL . '/api/v1/json/'),
+		'DEDALO_CORE_URL'					=> DEDALO_CORE_URL,
+		'DEDALO_ROOT_WEB'					=> DEDALO_ROOT_WEB,
+		'DEDALO_TOOLS_URL'					=> DEDALO_TOOLS_URL,
+		'SHOW_DEBUG'						=> SHOW_DEBUG,
+		'SHOW_DEVELOPER'					=> SHOW_DEVELOPER,
+		'DEVELOPMENT_SERVER'				=> DEVELOPMENT_SERVER,
+		'DEDALO_SECTION_ID_TEMP'			=> DEDALO_SECTION_ID_TEMP,
+		'DEDALO_UPLOAD_SERVICE_CHUNK_FILES'	=> DEDALO_UPLOAD_SERVICE_CHUNK_FILES,
+		'DEDALO_LOCK_COMPONENTS'			=> DEDALO_LOCK_COMPONENTS,
+		'DEDALO_MAINTENANCE_MODE'			=> defined('DEDALO_MAINTENANCE_MODE') ? DEDALO_MAINTENANCE_MODE : null,
+		'DEDALO_NOTIFICATION'				=> defined('DEDALO_NOTIFICATION') ? DEDALO_NOTIFICATION : null,
 		// DD_TIPOS . Some useful dd tipos (used in client by tool_user_admin for example)
 		'DD_TIPOS' => [
-			'DEDALO_SECTION_USERS_TIPO'			=> DEDALO_SECTION_USERS_TIPO,
-			'DEDALO_USER_PROFILE_TIPO'			=> DEDALO_USER_PROFILE_TIPO,
-			'DEDALO_USER_NAME_TIPO'				=> DEDALO_USER_NAME_TIPO,
-			'DEDALO_USER_PASSWORD_TIPO'			=> DEDALO_USER_PASSWORD_TIPO,
-			'DEDALO_FULL_USER_NAME_TIPO'		=> DEDALO_FULL_USER_NAME_TIPO,
-			'DEDALO_USER_EMAIL_TIPO'			=> DEDALO_USER_EMAIL_TIPO,
-			'DEDALO_FILTER_MASTER_TIPO'			=> DEDALO_FILTER_MASTER_TIPO,
-			'DEDALO_USER_IMAGE_TIPO'			=> DEDALO_USER_IMAGE_TIPO,
-			'DEDALO_RELATION_TYPE_INDEX_TIPO'	=> DEDALO_RELATION_TYPE_INDEX_TIPO
+			// 'DEDALO_SECTION_USERS_TIPO'			=> DEDALO_SECTION_USERS_TIPO,
+			// 'DEDALO_USER_PROFILE_TIPO'			=> DEDALO_USER_PROFILE_TIPO,
+			// 'DEDALO_FULL_USER_NAME_TIPO'			=> DEDALO_FULL_USER_NAME_TIPO,
+			// 'DEDALO_USER_EMAIL_TIPO'				=> DEDALO_USER_EMAIL_TIPO,
+			// 'DEDALO_FILTER_MASTER_TIPO'			=> DEDALO_FILTER_MASTER_TIPO,
+			// 'DEDALO_USER_IMAGE_TIPO'				=> DEDALO_USER_IMAGE_TIPO,
+			'DEDALO_RELATION_TYPE_INDEX_TIPO'		=> DEDALO_RELATION_TYPE_INDEX_TIPO,
+			'DEDALO_SECTION_INFO_INVERSE_RELATIONS'	=> DEDALO_SECTION_INFO_INVERSE_RELATIONS,
+			'DEDALO_RELATION_TYPE_LINK'				=> DEDALO_RELATION_TYPE_LINK
 		]
 	];
 
 // headers
 	header('Content-type: application/javascript; charset=utf-8');
+	// no cache
+		header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+		header("Cache-Control: post-check=0, pre-check=0", false);
+		header("Pragma: no-cache");
 	// cache optional
 		// $seconds_to_cache = 3600;
 		// $ts = gmdate('D, d M Y H:i:s', time() + $seconds_to_cache) . ' GMT';
@@ -174,19 +195,32 @@ session_write_close();
 		// // header("Cache-Control: max-age=$seconds_to_cache");
 		// header("Cache-Control: Cache-Control: stale-while-revalidate=$seconds_to_cache");
 ?>
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
+
 "use strict";
-const page_globals=<?php
+// page_globals. Set var to window to allow easy access from opened windows
+window.page_globals=<?php
 	echo (SHOW_DEBUG===true)
 		? json_encode($page_globals, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)
-		: json_encode($page_globals, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+		: json_encode($page_globals, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)
 ?>;
 const <?php // plain_vars
 echo implode(',', array_map(function ($v, $k) {
 	return sprintf('%s=%s', $k, json_encode($v, JSON_UNESCAPED_SLASHES));
 }, $plain_vars, array_keys($plain_vars))) .';'. PHP_EOL;
 // Lang labels
+$lang_path = '/common/js/lang/'.DEDALO_APPLICATION_LANG.'.js';
 echo 'const get_label=';
-include dirname(__FILE__) . '/lang/'.DEDALO_APPLICATION_LANG.'.js';
+if (!include DEDALO_CORE_PATH . $lang_path) {
+	$msg = 'Invalid lang file: ' . $lang_path;
+	debug_log(__METHOD__.' '.$msg, logger::ERROR);
+	echo '{
+		"invalid_lang_file" : "Error on get current lang file. '.$msg.'"
+	}';
+}
 // json_elements_data array
 // echo ';'.PHP_EOL.js::get_json_elements_data();
 // debug_log('exec_time: ' .exec_time_unit($global_start_time,'ms').' ms', logger::DEBUG);
+?>
+
+// @license-end

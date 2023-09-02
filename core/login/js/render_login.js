@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /* global get_label, page_globals, SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
@@ -5,6 +6,7 @@
 
 // imports
 	import {data_manager} from '../../common/js/data_manager.js'
+	import * as instances from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
 	import {strip_tags} from '../../../core/common/js/utils/index.js'
 
@@ -25,7 +27,7 @@ export const render_login = function() {
 * EDIT
 * Render node for use in edit
 * @param object options
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_login.prototype.edit = async function(options) {
 
@@ -69,11 +71,12 @@ render_login.prototype.edit = async function(options) {
 /**
 * GET_CONTENT_DATA
 * @param instance self
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 
-	const fragment = new DocumentFragment()
+	const fragment	= new DocumentFragment()
+	const info_data	= self.context.properties.info || []
 
 	// top
 		const top = ui.create_dom_element({
@@ -84,30 +87,35 @@ const get_content_data = function(self) {
 		// const files_loader = render_files_loader()
 		// top.appendChild(files_loader)
 
-	// select lang
-		const langs			= self.context.properties.dedalo_application_langs
-		const select_lang	= ui.build_select_lang({
-			langs 	 : langs,
-			selected : page_globals.dedalo_application_lang,
-			action 	 : async (e) => {
-				const lang = e.target.value || null
-				if (lang) {
-					// data_manager api call
-					await data_manager.request({
-						body : {
-							action	: 'change_lang',
-							dd_api	: 'dd_utils_api',
-							options  : {
-								dedalo_data_lang		: lang,
-								dedalo_application_lang	: lang
+	// select_lang
+		if (self.add_select_lang) {
+			const langs			= page_globals.dedalo_application_langs
+			const select_lang	= ui.build_select_lang({
+				langs 	 : langs,
+				selected : page_globals.dedalo_application_lang,
+				action 	 : async (e) => {
+					const lang = e.target.value || null
+					if (lang) {
+						// data_manager api call
+						await data_manager.request({
+							use_worker	: true,
+							body		: {
+								action	: 'change_lang',
+								dd_api	: 'dd_utils_api',
+								options	: {
+									dedalo_data_lang		: lang,
+									dedalo_application_lang	: lang
+								}
 							}
-						}
-					})
-					window.location.reload(false);
+						})
+						window.location.reload(false);
+					}
 				}
-			}
-		})
-		fragment.appendChild(select_lang)
+			})
+			fragment.appendChild(select_lang)
+			// fix
+			self.select_lang = select_lang
+		}
 
 	// form
 		const form = ui.create_dom_element({
@@ -156,6 +164,16 @@ const get_content_data = function(self) {
 		})
 		auth_input.autocomplete= 'current-password'
 
+	// DEMO user
+	// add demo user if the installation is the open public demo: demo.dedalo.dev
+	// do not use this user pw and entity in production
+		const dedalo_entity =  info_data.find(el => el.type === 'dedalo_entity')
+		if(dedalo_entity && dedalo_entity.value === 'dedalo_demo'){
+			const dedalo_demo_user = info_data.find(el => el.type === 'demo_user')
+			user_input.value = dedalo_demo_user.value.user || ''
+			auth_input.value = dedalo_demo_user.value.pw || ''
+		}
+
 	// button submit
 		const login_item_enter = login_items.find(el => el.tipo==='dd259')
 		const button_enter = ui.create_dom_element({
@@ -178,22 +196,34 @@ const get_content_data = function(self) {
 				parent			: button_enter
 			})
 		// event click
-		button_enter.addEventListener('click', function(e) {
+		button_enter.addEventListener('click', fn_submit)
+		function fn_submit(e) {
+			e.stopPropagation()
 			e.preventDefault()
 
-			const username = user_input.value
-			if (username.length<2) {
-				const message = `Invalid username ${username}!`
-				ui.show_message(messages_container, message, 'error', 'component_message', true)
-				return false
-			}
+			// username check
+				const username = user_input.value
+				if (username.length<2) {
+					const message = `Invalid username ${username}!`
+					ui.show_message(messages_container, message, 'error', 'component_message', true)
+					return false
+				}
 
-			const auth = auth_input.value
-			if (auth.length<2) {
-				const message = `Invalid auth code!`
-				ui.show_message(messages_container, message, 'error', 'component_message', true)
-				return false
-			}
+			// auth check
+				const auth = auth_input.value
+				if (auth.length<2) {
+					const message = `Invalid auth code!`
+					ui.show_message(messages_container, message, 'error', 'component_message', true)
+					return false
+				}
+
+			// check status
+				if (self.status==='login') {
+					return
+				}
+
+			// status update
+				self.status = 'login'
 
 			// show spinner and hide button label
 				button_enter_label.classList.add('hide')
@@ -217,41 +247,53 @@ const get_content_data = function(self) {
 						console.log('api_response:', api_response);
 					}
 
-					// hide spinner and show button label
-						button_enter_label.classList.remove('hide')
-						button_enter_loading.classList.add('hide')
-						button_enter.classList.remove('white')
-
-
-					if (api_response.errors && api_response.errors.length>0 || api_response.result===false) {
+					if (api_response.result===false) {
 
 						// errors found
 
-						const message	= api_response.errors || ['Unknown login error happen']
+						const message	= api_response.errors && api_response.errors.length>0
+							? api_response.errors
+							: api_response.msg || ['Unknown login error happen']
 						const msg_type	= 'error'
 						ui.show_message(messages_container, message, msg_type, 'component_message', true)
+
+						// hide spinner and show button label
+						button_enter_label.classList.remove('hide')
+						button_enter_loading.classList.add('hide')
+						button_enter.classList.remove('white')
 
 					}else{
 
 						// success case
 
 						const message	= api_response.msg
-						const msg_type	= api_response.result===true ? 'ok' : 'error'
+						const msg_type	= 'ok';
 						ui.show_message(messages_container, message, msg_type, 'component_message', true)
+
+						// hide spinner and show button label
 
 						self.action_dispatch(api_response)
 					}
+
+					// status update
+						self.status = 'rendered'
 				})
-		})//end button_enter.addEventListener('click', function(e)
+		}//end fn_submit
 
 	// info
-		const info = ui.create_dom_element({
+		// web version add
+		const browser_info = get_browser_info()
+		info_data.push({
+			label	: 'Browser info',
+			type	: 'version',
+			value	: browser_info.name + ' ' + browser_info.version
+		})
+		const info_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'info',
+			class_name		: 'info_container',
 			parent			: fragment
 		})
-		const info_data			= self.context.properties.info || []
-		const info_data_length	= info_data.length
+		const info_data_length = info_data.length
 		for (let j = 0; j < info_data_length; j++) {
 
 			const item = info_data[j]
@@ -260,7 +302,7 @@ const get_content_data = function(self) {
 				ui.create_dom_element({
 					element_type	: 'span',
 					inner_html		: item.label,
-					parent			: info
+					parent			: info_container
 				})
 
 			// class_name custom for value
@@ -290,9 +332,30 @@ const get_content_data = function(self) {
 					element_type	: 'span',
 					inner_html		: value,
 					class_name		: class_name,
-					parent			: info
+					parent			: info_container
 				})
 		}
+
+	// powered by
+		const powered_by = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'powered_by',
+			parent			: fragment
+		})
+		ui.create_dom_element({
+			element_type	: 'img',
+			class_name		: 'dedalo_logo',
+			src				: '../themes/default/dedalo_logo.svg',
+			parent			: powered_by
+		})
+		const link = ui.create_dom_element({
+			element_type	: 'a',
+			class_name		: 'dedalo_link',
+			href			: 'https://dedalo.dev',
+			text_content	: 'Dédalo Cultural Heritage Management System',
+			parent			: powered_by
+		})
+		link.target = '_blank'
 
 	// messages_container
 		const messages_container = ui.create_dom_element({
@@ -309,10 +372,11 @@ const get_content_data = function(self) {
 		content_data.appendChild(fragment)
 		// set pointers
 		content_data.top				= top
-		content_data.select_lang		= select_lang
+		content_data.select_lang		= self.select_lang
 		content_data.form				= form
-		content_data.info				= info
+		content_data.info_container		= info_container
 		content_data.messages_container	= messages_container
+
 
 	return content_data
 }//end get_content_data
@@ -321,7 +385,11 @@ const get_content_data = function(self) {
 
 /**
 * GET_BROWSER_INFO
-* @return object
+* @return object info
+* {
+* 	name : Chrome
+* 	version : 106
+* }
 */
 const get_browser_info = function() {
 
@@ -337,15 +405,12 @@ const get_browser_info = function() {
 	M=M[2]? [M[1], M[2]]: [navigator.appName, navigator.appVersion, '-?'];
 	if((tem=ua.match(/version\/(\d+)/i))!=null) {M.splice(1,1,tem[1]);}
 
-	const target_div = document.getElementById('login_ajax_response');
-	if (target_div) {
-		target_div.innerHTML = "Using " + M[0] + " " + M[1] + ""
-	}
-
-	return {
+	const info = {
 		name	: M[0],
 		version	: M[1]
-	};
+	}
+
+	return info
 }//end get_browser_info
 
 
@@ -358,13 +423,13 @@ const validate_browser = function() {
 
 	const browser_info = get_browser_info()
 	const min_version  = {
-		Chrome		: 76,
-		Firefox		: 65,
-		AppleWebKit	: 10
+		Chrome		: 100,
+		Firefox		: 100,
+		AppleWebKit	: 14
 	}
 
 	const msg = (browser, version, min_version) => {
-		return `Sorry, your ${browser} browser version is too old (${version}). \nPlease update your ${browser} version to ${min_version} or never`
+		return `Sorry, your browser ${browser} version is too old (${version}). \nPlease update your ${browser} version to ${min_version} or never`
 	}
 
 	try {
@@ -397,8 +462,8 @@ const validate_browser = function() {
 				break;
 		}
 
-	}catch (e) {
-		console.log("error",e)
+	}catch (error) {
+		console.error('error', error)
 	}
 
 	return true;
@@ -490,3 +555,68 @@ export const render_files_loader = function() {
 
 	return fragment
 }//end render_files_loader
+
+
+
+/**
+* RENDER_RELOGIN
+* Create a new login instance, and after rendering it, place the node in the body of the DOM.
+* Used to allow user login after session with server is lost due to timeout or error
+* @see component_common.save()
+* @param object options
+* {
+* 	on_success : function|null,
+* 	main_container : HTMLElement
+* }
+* @return object loggin_instance
+*/
+export const render_relogin = async function(options={}) {
+
+	// options
+		const on_success		= options.on_success || null
+		const main_container	= options.main_container || document.querySelector('.wrapper.page')
+
+	// lock main container (normally page)
+		if (main_container) {
+			main_container.classList.add('loading')
+		}
+
+	// loggin_instance
+		const loggin_instance = await instances.get_instance({
+			model					: 'login',
+			tipo					: 'dd229',
+			mode					: 'edit',
+			add_select_lang			: false,
+			custom_action_dispatch	: function() {
+
+				// work done! Destroy this login instance and DOM
+				loggin_instance.destroy(true, true, true)
+
+				// unlock main container (normally page)
+				if (main_container) {
+					main_container.classList.remove('loading')
+				}
+
+				// exec possible on_success callback function if exists
+				if (on_success && typeof on_success==='function') {
+					on_success(this)
+				}
+			}
+		})
+		await loggin_instance.build(true)
+		const loggin_node = await loggin_instance.render()
+		loggin_node.content_data.classList.add('overlay')
+
+		// powered_by
+		loggin_node.querySelector('.powered_by').classList.add('hide')
+
+	// add to DOM
+		document.body.appendChild(loggin_node)
+
+
+	return loggin_instance
+}//end render_relogin
+
+
+
+// @license-end

@@ -1,21 +1,52 @@
 <?php
+// declare(strict_types=1);
 /**
 * RecordDataBoundObject
+* Connect with Ontology an matrix_time_machine tables in PostgreSQL:
+* Note that, for speed, all DB
+* 	jer_dd
+* 		id	integer Auto Increment [nextval('jer_dd_id_seq')]
+*		terminoID	character varying(32) NULL
+*		parent	character varying(32) NULL
+*		modelo	character varying(8) NULL
+*		esmodelo	sino NULL
+*		esdescriptor	sino NULL
+*		visible	sino NULL
+*		norden	numeric(4,0) NULL
+*		tld	character varying(32) NULL
+*		traducible	sino NULL
+*		relaciones	text NULL
+*		propiedades	text NULL
+*		properties	jsonb NULL
 *
+* 	matrix_descriptors_dd
+* 		id	integer Auto Increment [nextval('matrix_descriptors_dd_id_seq')]
+*		parent	character varying(32)
+*		dato	text NULL
+*		tipo	character varying(8)
+*		lang	character varying(8)
+*
+*	main_dd
+* 		id	integer Auto Increment [nextval('main_dd_id_seq')]
+*		tld	character varying(32) NULL
+*		counter	integer NULL
+*		name	character varying(255) NULL
 *
 */
 abstract class RecordDataBoundObject {
 
 	protected $ID;
 	protected $strTableName;
-	public $arRelationMap;
+	protected $arRelationMap;
 	protected $strPrimaryKeyName ;	# usually id
 	protected $blForDeletion;
-	protected $blIsLoaded;
+	public $blIsLoaded;
 	public $arModifiedRelations;
 
 	public $use_cache = true; // default is true (for structure only)
 	public $use_cache_manager = false;
+
+	public $dato;
 
 	#protected static $db_connection;
 
@@ -31,8 +62,9 @@ abstract class RecordDataBoundObject {
 
 	/**
 	* __CONSTRUCT
-	* @param string $id
+	* @param string|null $id
 	*	Like 'dd73'
+	* @return void
 	*/
 	public function __construct( ?string $id=null ) {
 
@@ -51,9 +83,11 @@ abstract class RecordDataBoundObject {
 
 	/**
 	* GET_CONNECTION
-	* @return resource|object pg database connection
+	* Use this connector in this class to allow discriminate
+	* Ontology tables (they are treated differently)
+	* @return PgSql\Connection|bool $connection
 	*/
-	private function get_connection() {
+	private function get_connection() : PgSql\Connection|bool {
 
 		$ontology_tables = [
 			'jer_dd',
@@ -78,46 +112,65 @@ abstract class RecordDataBoundObject {
 					ONTOLOGY_DB['DEDALO_SOCKET_CONN'], // socket
 					false // use cache
 				);
-				if($ontology_pg_conn===false){
+				if($ontology_pg_conn===false) {
+					debug_log(__METHOD__
+						." Invalid DDBB connection. Unable to connect (52-2)"
+						, logger::ERROR
+					);
 					throw new Exception("Error. Could not connect to database (52-2)", 1);
 				}
 
 				return $ontology_pg_conn;
 			}
 
-		return DBi::_getConnection(
-			$host=DEDALO_HOSTNAME_CONN,
-			$user=DEDALO_USERNAME_CONN,
-			$password=DEDALO_PASSWORD_CONN,
-			$database=DEDALO_DATABASE_CONN,
-			$port=DEDALO_DB_PORT_CONN,
-			$socket=DEDALO_SOCKET_CONN
+		$connection = DBi::_getConnection(
+			DEDALO_HOSTNAME_CONN, // string host
+			DEDALO_USERNAME_CONN, // string user
+			DEDALO_PASSWORD_CONN, // string password
+			DEDALO_DATABASE_CONN, // string database
+			DEDALO_DB_PORT_CONN, // ?string port
+			DEDALO_SOCKET_CONN // ?string socket
 		);
+		// check valid connection
+		if ($connection===false) {
+			debug_log(__METHOD__
+				." Invalid DDBB connection. Unable to connect (52-1)"
+				, logger::ERROR
+			);
+		}
+
+
+		return $connection;
 	}//end get_connection
 
 
 
-	# GET_DATO : GET DATO UNIFICADO (JSON)
+	/**
+	* GET_DATO
+	* Get dato unified method (JSON)
+	* Force lo load all DBB data
+	* and return the 'dato' column / property
+	*/
 	public function get_dato() {
 
 		if($this->blIsLoaded!==true) {
 			$this->Load();
 		}
 
-		if (!isset($this->dato)) {
-			#error_log("Calling get dato from ".get_called_class().''.print_r(debug_backtrace(),true) );
-			return null;
-		}
+		$dato = $this->dato ?? null;
 
-		return $this->dato;
+		return $dato;
 	}//end get_dato
 
 
 
-	# SET_DATO : SET DATO UNIFIED (JSON)
+	/**
+	* SET_DATO :
+	* Set dato unified method (JSON)
+	*/
 	public function set_dato($dato, bool $raw=false) {
 
-		# Always set dato as modified
+		// Always set dato as modified
 		$this->arModifiedRelations['dato'] = 1;
 
 		$this->dato = $dato;
@@ -128,10 +181,14 @@ abstract class RecordDataBoundObject {
 	/**
 	* LOAD
 	* Get one row from database based on current section_tipo and section_id
-	* @return bool true
+	* @return bool
 	*/
 	public function Load() : bool {
-		if(SHOW_DEBUG===true) $start_time = start_time();
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				$start_time = start_time();
+			}
 
 		// Prevent load if $this->ID is not set
 			if(!isset($this->ID) || $this->ID===false) {
@@ -166,17 +223,31 @@ abstract class RecordDataBoundObject {
 		$use_cache = $this->use_cache;
 		if ($use_cache===true && isset($ar_RecordDataObject_load_query_cache[$strQuery])) {
 
-			$arRow = $ar_RecordDataObject_load_query_cache[$strQuery];
+			// from cache data case
+
+			$row = $ar_RecordDataObject_load_query_cache[$strQuery];
 
 		}else{
 
+			// from DB request case
+
 			// exec query
-				$result = pg_query($this->get_connection(), $strQuery) ;//or die("Cannot (2) execute query: $strQuery <br>\n". pg_last_error(DBi::_getConnection()));
+				$connection = $this->get_connection();
+				if ($connection===false) {
+					debug_log(__METHOD__
+						." Connection error. get_connection return false "
+						, logger::ERROR
+					);
+					return false;
+				}
+				$result = pg_query($connection, $strQuery) ;//or die("Cannot (2) execute query: $strQuery <br>\n". pg_last_error(DBi::_getConnection()));
 				if ($result===false) {
-					debug_log(__METHOD__." Error: DDBB query error ". PHP_EOL . pg_last_error(DBi::_getConnection()) .PHP_EOL . to_string($strQuery), logger::ERROR);
-					// if(SHOW_DEBUG===true) {
-					// 	throw new Exception("Error Processing Request Load: (".DEDALO_DATABASE_CONN.") ".pg_last_error(DBi::_getConnection())." <hr>$strQuery", 1);
-					// }
+					debug_log(__METHOD__
+						. " Error: DDBB query error ". PHP_EOL
+						. ' error: ' .pg_last_error(DBi::_getConnection()) .PHP_EOL
+						. ' strQuery: '.to_string($strQuery)
+						, logger::ERROR
+					);
 
 					return false;
 				}
@@ -203,17 +274,37 @@ abstract class RecordDataBoundObject {
 				// }
 
 			// rows. pg_fetch_assoc: false is returned if row exceeds the number of rows in the set, there are no more rows, or on any other error.
-				$arRow = pg_fetch_assoc($result); // array|false
-				if($arRow===false)	{
+				$row = pg_fetch_assoc($result); // assoc array|false
+					// sample row assoc array:
+					// {
+					//     "terminoID": "test24",
+					//     "parent": "dd627",
+					//     "modelo": "dd626",
+					//     "esmodelo": "no",
+					//     "esdescriptor": "si",
+					//     "visible": "si",
+					//     "norden": "18",
+					//     "tld": "test",
+					//     "traducible": "no",
+					//     "relaciones": null,
+					//     "propiedades": "{\r\n  \"inverse_relations\": false\r\n}",
+					//     "properties": "{\"inverse_relations\": false}"
+					// }
+				if($row===false)	{
 					// if(SHOW_DEBUG===true) {
 					// 	// dump($this,"WARNING: No result on Load arRow : strQuery:".$strQuery);
 					// 	// throw new Exception("Error Processing Request (".DEDALO_DATABASE_CONN.") strQuery:$strQuery", 1);
-					// 	dump($arRow, ' strQuery +++++++++++++++++++++++++++++++++++ '.DEDALO_DATABASE_CONN.PHP_EOL.to_string($strQuery)).PHP_EOL;
+					// 	dump($row, ' strQuery +++++++++++++++++++++++++++++++++++ '.DEDALO_DATABASE_CONN.PHP_EOL.to_string($strQuery)).PHP_EOL;
 					// 	$bt = debug_backtrace();
 					// 	dump($bt, ' Load pg_fetch_assoc bt +++++++++++++++++++++ '.to_string($this->ID));
 					// }
 					// // trigger_error('WARNING: No result on Load arRow. $strQuery: ' .PHP_EOL. $strQuery);
-					debug_log(__METHOD__." 'WARNING: No result found on Load arRow: ".to_string($arRow), logger::WARNING);
+					debug_log(__METHOD__
+						." 'WARNING: No result found on Load arRow" .PHP_EOL
+						. ' last_error: ' .pg_last_error(DBi::_getConnection()) .PHP_EOL
+						. ' strQuery: '.to_string($strQuery)
+						, logger::WARNING
+					);
 
 					return false;
 				}
@@ -221,14 +312,13 @@ abstract class RecordDataBoundObject {
 			// cache
 				if ($use_cache===true) {
 					// store value
-					$ar_RecordDataObject_load_query_cache[$strQuery] = $arRow;
+					$ar_RecordDataObject_load_query_cache[$strQuery] = $row;
 				}
 		}
 
-
 		// arRelationMap assign values
-			if(isset($arRow) && is_array($arRow)) {
-				foreach($arRow as $key => $value) {
+			if(isset($row) && is_array($row)) {
+				foreach($row as $key => $value) {
 					$strMember = $this->arRelationMap[$key];
 					if(property_exists($this, $strMember)) {
 						$this->{$strMember} = $value;
@@ -243,7 +333,14 @@ abstract class RecordDataBoundObject {
 		// debug
 			if(SHOW_DEBUG===true) {
 				$total_time_ms = exec_time_unit($start_time,'ms');
-				if($total_time_ms>SLOW_QUERY_MS) error_log($total_time_ms." - LOAD_SLOW_QUERY: $strQuery - records:".count($arRow));
+				if($total_time_ms>SLOW_QUERY_MS) {
+					debug_log(__METHOD__
+						." 'WARNING: LOAD_SLOW_QUERY IN RECORDDATABOUNCEOBJECT !" .PHP_EOL
+						. ' total_time_ms: ' .$total_time_ms . PHP_EOL
+						. ' strQuery: '.to_string($strQuery)
+						, logger::WARNING
+					);
+				}
 			}
 
 
@@ -255,7 +352,8 @@ abstract class RecordDataBoundObject {
 	/**
 	* SAVE
 	* Update current record
-	* @return mixed|null $this->ID
+	* @return mixed $this->ID
+	* 	string|bool
 	*/
 	public function Save() {
 
@@ -286,7 +384,6 @@ abstract class RecordDataBoundObject {
 						#$strQuery_set .= "\"$key\" = '".pg_escape_string($current_val)."', ";	# Escape the text data
 						$strQuery_set .= "\"$key\" = " . pg_escape_literal($this->get_connection(), $current_val) . ", ";
 						#$strQuery_set .= "\"$key\" = '".$current_val."', ";	# Escape the text data
-							#dump($strQuery_set, ' strQuery_set ++ '.to_string());
 					}
 				}
 			}
@@ -309,19 +406,23 @@ abstract class RecordDataBoundObject {
 				$strQuery_set = str_replace(['\\u0000','\u0000'], ' ', $strQuery_set);
 
 			// remove last 2 chars
-				$strQuery .= substr($strQuery_set,0,-2);
+				$strQuery .= substr($strQuery_set, 0, -2);
 
 			// where sentence
 				$strQuery .= (is_int($this->ID))
-					? ' WHERE "'. $this->strPrimaryKeyName .'" = ' . $this->ID
-					: ' WHERE "'. $this->strPrimaryKeyName .'" = ' . "'$this->ID'";
+					? ' WHERE "' . $this->strPrimaryKeyName .'" = ' . $this->ID
+					: ' WHERE "' . $this->strPrimaryKeyName .'" = ' . "'$this->ID'";
 
 			$result = pg_query($this->get_connection(), $strQuery);
 			if($result===false) {
-				echo "Error: sorry an error occurred on UPDATE record '$this->ID'. Data is not saved";
+				debug_log(__METHOD__
+					. " Error: sorry an error occurred on UPDATE record ID: '$this->ID'. Data is not saved " .PHP_EOL
+					. ' strQuery: ' . $strQuery . PHP_EOL
+					. ' last_error: ' .pg_last_error(DBi::_getConnection())
+					, logger::ERROR
+				);
 				if(SHOW_DEBUG===true) {
-					dump($strQuery,"strQuery");
-					dump(pg_last_error(DBi::_getConnection()),"pg_last_error(DBi::_getConnection())");
+					dump($strQuery, "strQuery");
 					throw new Exception("Error Processing Request", 1);;
 				}
 			}
@@ -339,18 +440,17 @@ abstract class RecordDataBoundObject {
 
 				if(isset($actualVal)) {
 					if(array_key_exists($value, $this->arModifiedRelations)) {
-						$strQuery			.= "\"$key\", ";
+
+						$strQuery .= "\"$key\", ";
 
 						if (is_object($actualVal) || is_array($actualVal)) {
 							$actualVal = json_handler::encode($actualVal);
 						}
 
-						if(is_int($actualVal) && $this->strTableName !== 'matrix_time_machine') {
-							$strValueList	.= "$actualVal, ";
-						}else{
-							#$actualVal 	= $this->get_connection()->real_escape_string($actualVal);
-							$strValueList	.= "'".pg_escape_string($this->get_connection(), $actualVal)."', "; # Escape the text data
-						}
+						$strValueList .= (is_int($actualVal) && $this->strTableName!=='matrix_time_machine')
+							? $actualVal . ', '
+							// : "'".pg_escape_string($this->get_connection(), (string)$actualVal)."', "; // Escape the text data
+							: pg_escape_literal($this->get_connection(), $actualVal) . ', '; // Escape the text data
 					}
 				}
 			}
@@ -358,24 +458,36 @@ abstract class RecordDataBoundObject {
 			// prevent null encoded errors
 				$strValueList = str_replace(['\\u0000','\u0000'], ' ', $strValueList);
 
-			$strQuery 	 = substr($strQuery,0,strlen($strQuery)-2);
-			$strValueList= substr($strValueList,0,strlen($strValueList)-2);
-			$strQuery	.= ') VALUES (';
-			$strQuery	.= $strValueList;
-			$strQuery	.= ') RETURNING "'.$this->strPrimaryKeyName.'" ';
+			// strQuery
+				$strQuery		= substr($strQuery, 0, strlen($strQuery)-2);
+				$strValueList	= substr($strValueList, 0, strlen($strValueList)-2);
+				$strQuery		.= ') VALUES (';
+				$strQuery		.= $strValueList;
+				$strQuery		.= ') RETURNING "'.$this->strPrimaryKeyName.'" ';
 
-
-			$result = pg_query($this->get_connection(), $strQuery);
-			if ($result===false) {
-				debug_log(__METHOD__." Error: DDBB query error. INSERT record. Data is not saved ". PHP_EOL . pg_last_error(DBi::_getConnection()) .PHP_EOL . to_string($strQuery), logger::ERROR);
-				if(SHOW_DEBUG===true) {
-					throw new Exception("Error Processing Save Insert Request (1). error: ". pg_last_error(DBi::_getConnection()), 1);
+			// exec query
+				$result = pg_query($this->get_connection(), $strQuery);
+				if ($result===false) {
+					debug_log(__METHOD__
+						." Error: DDBB query error. INSERT record. Data is not saved ". PHP_EOL
+						. pg_last_error(DBi::_getConnection()) .PHP_EOL
+						. to_string($strQuery)
+						, logger::ERROR
+					);
+					if(SHOW_DEBUG===true) {
+						throw new Exception("Error Processing Save Insert Request (1). error: ". pg_last_error(DBi::_getConnection()), 1);
+					}
+					return false;
 				}
-				return false;
-			}
 
 			$id = pg_fetch_result($result, 0, '"'.$this->strPrimaryKeyName.'"');
 			if ($id===false) {
+				debug_log(__METHOD__
+					. " Error Processing Request (1-b) ". PHP_EOL
+					. ' last_error: '. pg_last_error(DBi::_getConnection()) .PHP_EOL
+					. ' strQuery: ' . to_string($strQuery)
+					, logger::ERROR
+				);
 				if(SHOW_DEBUG===true) {
 					dump($strQuery,"strQuery");
 					throw new Exception("Error Processing Request (1-b): ".pg_last_error(DBi::_getConnection()), 1);
@@ -404,20 +516,25 @@ abstract class RecordDataBoundObject {
 	# ARRAY EDITABLE FIELDS
 	public function get_ar_editable_fields() : array {
 
-		static $ar_editable_fields;
-
-		if(isset($ar_editable_fields)) {
-			return($ar_editable_fields);
-		}
-
-		if(is_array($this->arRelationMap)) {
-
-			foreach($this->arRelationMap as $field_name => $property_name) {
-
-				if($property_name !== 'ID') $ar_editable_fields[] = $field_name ;
+		// cache
+			static $ar_editable_fields;
+			if(isset($ar_editable_fields)) {
+				return $ar_editable_fields;
 			}
-			return $ar_editable_fields ;
-		}
+
+		// arRelationMap values
+			if(is_array($this->arRelationMap)) {
+
+				foreach($this->arRelationMap as $field_name => $property_name) {
+
+					if($property_name!=='ID') {
+						$ar_editable_fields[] = $field_name;
+					}
+				}
+
+				return $ar_editable_fields ;
+			}
+
 
 		return [];
 	}//end get_ar_editable_fields
@@ -428,20 +545,20 @@ abstract class RecordDataBoundObject {
 	* SEARCH
 	* Generic search. Needs array key-value as field => value
 	* TIPO $arguments['parent'] = 14 ...
+	* @param array $ar_arguments
+	* @param string|null $matrix_table = null
 	* @return array $ar_records
 	*/
-	public function search(array $ar_arguments=null, string $matrix_table=null) : array {
-
-		# DEBUG INFO SHOWED IN FOOTER
+	public function search(array $ar_arguments, string $matrix_table=null) : array {
 		if(SHOW_DEBUG===true) $start_time = start_time();
 
-		$ar_records = array();
+		// default value
+			$ar_records = [];
 
-		# TABLE . Optionally change table temporally for search
-		if (!empty($matrix_table)) {
-			$this->strTableName = $matrix_table;
-		}
-		#dump($ar_arguments, " ar_arguments ".to_string());
+		// matrix_table. Optionally change table temporally for search
+			if (!empty($matrix_table)) {
+				$this->strTableName = $matrix_table;
+			}
 
 		$strPrimaryKeyName	= $this->strPrimaryKeyName;
 		$strQuery			= '';
@@ -625,7 +742,7 @@ abstract class RecordDataBoundObject {
 			}
 
 		// strQuery
-		$strQuery = trim('SELECT '. $SQL_CACHE .'"'.$strPrimaryKeyName. '" FROM "'.$this->strTableName.'" WHERE '. $strQuery . $strQuery_limit . $strQuery_offset) ;	#$strQuery .= 'SQL_CACHE ';
+		$strQuery = trim('SELECT '. $SQL_CACHE .'"'.$strPrimaryKeyName. '" FROM "'.$this->strTableName.'" WHERE '. $strQuery . $strQuery_limit . $strQuery_offset);
 		// error_log('------ '.$strQuery);
 
 		# CACHE : Static var
@@ -646,13 +763,23 @@ abstract class RecordDataBoundObject {
 
 			# DATA IS NOT IN CACHE . Searching real data in DB
 
+			$connection = $this->get_connection();
+			if ($connection===false) {
+				debug_log(__METHOD__." Connection error. Return empty array ".to_string(), logger::ERROR);
+				return [];
+			}
 			$result = pg_query($this->get_connection(), $strQuery);
 			if ($result===false) {
+				debug_log(__METHOD__
+					. " Error on DB query " . PHP_EOL
+					. ' last_error: ' . pg_last_error(DBi::_getConnection()) . PHP_EOL
+					. ' strQuery: ' . $strQuery
+					, logger::ERROR
+				);
 				if(SHOW_DEBUG===true) {
 					// throw new Exception("Error Processing Request . ".pg_last_error(DBi::_getConnection()), 1);
 					// }else{
 					// trigger_error("Error on DB query");
-					debug_log(__METHOD__."  Error on DB query ". pg_last_error(DBi::_getConnection()), logger::ERROR);
 				}
 				return [];
 			}
@@ -665,7 +792,7 @@ abstract class RecordDataBoundObject {
 			# QUE SE GUARDA EN UN ARRAY ESTÁTICO
 			# IMPORTANT Only store in cache positive results, NOT EMPTY RESULTS
 			# (Store empty results is problematic for example with component_common::get_id_by_tipo_parent($tipo, $parent, $lang) when matrix relation record is created and more than 1 call is made,
-			# the nexts results are 0 and duplicate records are built in matrix)
+			# the next results are 0 and duplicate records are built in matrix)
 			# Nota: en algunos casos interesa forzar el refresco de los datos (como por ejemplo en counter). Es esos caso NO guardaremos el resultado en caché
 			$n_records = is_countable($ar_records) ? sizeof($ar_records) : 0;
 			if($use_cache===true && $n_records>0) {
@@ -677,7 +804,14 @@ abstract class RecordDataBoundObject {
 				if(SHOW_DEBUG===true) {
 					$total_time_ms = exec_time_unit($start_time,'ms');
 					#$_SESSION['debug_content'][__METHOD__][] = " ". str_replace("\n",'',$strQuery) ." count:".count($ar_records)." [$total_time_ms ms]";
-					if($total_time_ms>SLOW_QUERY_MS) error_log($total_time_ms."ms. SEARCH_SLOW_QUERY: $strQuery - records:".count($ar_records));
+					if($total_time_ms>SLOW_QUERY_MS) {
+						debug_log(__METHOD__
+							." 'WARNING: LOAD_SLOW_QUERY IN RECORDDATABOUNCEOBJECT !" .PHP_EOL
+							. ' total_time_ms: ' .$total_time_ms . PHP_EOL
+							. ' strQuery: ' . $strQuery
+							, logger::WARNING
+						);
+					}
 				}
 		}
 
@@ -695,22 +829,24 @@ abstract class RecordDataBoundObject {
 			if($this->blForDeletion===true) {
 
 				if (is_int($this->ID)) {
-					$strQuery 	= "DELETE FROM \"$this->strTableName\" WHERE \"$this->strPrimaryKeyName\" = $this->ID";
+					$strQuery = "DELETE FROM \"$this->strTableName\" WHERE \"$this->strPrimaryKeyName\" = $this->ID";
 				}else{
-					$strQuery 	= "DELETE FROM \"$this->strTableName\" WHERE \"$this->strPrimaryKeyName\" = '$this->ID' ";
+					$strQuery = "DELETE FROM \"$this->strTableName\" WHERE \"$this->strPrimaryKeyName\" = '$this->ID' ";
 				}
 
-				#$result 		= mysql_query($strQuery, $this->get_connection());
-				#$result 		= $this->get_connection()->query($strQuery);
-				$result		= JSON_RecordObj_matrix::search_free($strQuery);
-
+				$result = JSON_RecordObj_matrix::search_free($strQuery);
 				if($result===false) {
 					if(SHOW_DEBUG===true) {
-						$msg = __METHOD__." Failed Delete record (RDBO) from {$this->strPrimaryKeyName}: $this->ID \n" . $this->get_connection()->error ;
+						$msg = __METHOD__." Failed Delete record (RDBO) from {$this->strPrimaryKeyName}: $this->ID";
 					}else{
 						$msg = "Failed Delete record (RDBO). Record $this->ID is not deleted. Please contact with your admin" ;
 					}
 					trigger_error($msg);
+					debug_log(__METHOD__
+						. ' ' . $msg .PHP_EOL
+						. 'strQuery: ' . to_string($strQuery)
+						, logger::ERROR
+					);
 					throw new Exception($msg, 1);
 				}
 			}

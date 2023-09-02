@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS COMPONENT_SVG
 * Manage specific component input text logic
 * Common components properties and method are inherited of component_common class that are inherited from common class
@@ -15,111 +15,8 @@ class component_svg extends component_media_common {
 
 
 	/**
-	* GET_INITIAL_MEDIA_PATH
-	*/
-	public function get_initial_media_path() : string {
-
-		$component_tipo		= $this->tipo;
-		// $parent_section	= section::get_instance($this->parent, $this->section_tipo);
-		$parent_section		= $this->get_my_section();
-		$properties			= $parent_section->get_properties();
-			#dump($properties," properties component_tipo:$component_tipo");
-			#dump($properties->initial_media_path->$component_tipo," ");
-
-		if (isset($properties->initial_media_path->$component_tipo)) {
-			$this->initial_media_path = $properties->initial_media_path->$component_tipo;
-			# Add / at begin if not exits
-			if ( substr($this->initial_media_path, 0, 1) != '/' ) {
-				$this->initial_media_path = '/'.$this->initial_media_path;
-			}
-		}else{
-			$this->initial_media_path = false;
-		}
-
-		return $this->initial_media_path;
-	}//end get_initial_media_path
-
-
-
-	/**
-	* GET_ADDITIONAL_PATH
-	* Calculate image additional path from 'properties' JSON config.
-	* @return string|null $additional_path
-	*/
-	public function get_additional_path() : ?string {
-
-		# Already resolved
-		if(isset($this->additional_path)) {
-			return $this->additional_path;
-		}
-
-		$additional_path	= false;
-		$id			= $this->get_id();
-		$parent			= $this->get_parent();
-		$section_tipo	= $this->get_section_tipo();
-
-		$properties = $this->get_properties();
-		if (isset($properties->additional_path) && !empty($parent) ) {
-
-			$component_tipo		= $properties->additional_path;
-			$component_model	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			$component			= component_common::get_instance(
-				$component_model,
-				$component_tipo,
-				$parent,
-				'edit',
-				DEDALO_DATA_NOLAN,
-				$section_tipo
-			);
-			$dato = trim($component->get_valor());
-
-			# Add / at begin if not exits
-			if ( substr($dato, 0, 1)!=='/' ) {
-				$dato = '/'.$dato;
-			}
-			# Remove / at end if exists
-			if ( substr($dato, -1)==='/' ) {
-				$dato = substr($dato, 0, -1);
-			}
-
-			# User defined additional_path path
-			$additional_path = $dato;
-
-			# Auto filled additional_path path
-			# If the user not enter component dato, dato is filled by auto value when properties->max_items_folder is defined
-			if(empty($dato) && isset($properties->max_items_folder)) {
-
-				$max_items_folder  = $properties->max_items_folder;
-				$parent_section_id = $parent;
-
-				$additional_path = '/'.$max_items_folder*(floor($parent_section_id / $max_items_folder));
-
-				# Final dato must be an array to saved into component_input_text
-				$final_dato = array( $additional_path );
-				$component->set_dato( $final_dato );
-				$component->Save();
-			}
-
-		}else if(isset($properties->max_items_folder)) {
-
-			$max_items_folder  = $properties->max_items_folder;
-			$parent_section_id = $parent;
-
-			$additional_path = '/'.$max_items_folder*(floor($parent_section_id / $max_items_folder));
-
-		}//end if (isset($properties->additional_path) && !empty($parent) )
-
-		# Fix
-		$this->additional_path = $additional_path;
-
-
-		return $additional_path;
-	}//end get_additional_path
-
-
-
-	/**
 	* GET_DEFAULT_QUALITY
+	* @return string
 	*/
 	public function get_default_quality() : string {
 
@@ -143,96 +40,19 @@ class component_svg extends component_media_common {
 
 
 	/**
-	* GET_PATH
-	* @param string $quality = null
-	* @return string $file_path
-	*/
-	public function get_path(string $quality=null) : string {
-
-		if(empty($quality)) {
-			$quality = $this->get_quality();
-		}
-
-		$additional_path = $this->get_additional_path();
-
-		$file_name 	= $this->get_id() .'.'. DEDALO_SVG_EXTENSION;
-		$file_path 	= DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER . '/' . $quality . $additional_path . '/' . $file_name;
-
-		return $file_path;
-	}//end get_path
-
-
-
-	/**
 	* GET_FILE_CONTENT
+	* Get the SVG file data as text
 	* @return string|null $file_content
 	*/
 	public function get_file_content() : ?string {
 
-		$file_path		= $this->get_path();
+		$file_path		= $this->get_media_filepath();
 		$file_content	= (file_exists($file_path))
 			? file_get_contents($file_path)
 			: null;
 
 		return $file_content;
 	}//end get_file_content
-
-
-
-	/**
-	* GET_TARGET_DIR
-	* @param string|null $quality
-	* @return string $target_dir
-	*/
-	public function get_target_dir(?string $quality) : string {
-
-		if(empty($quality)) {
-			$quality = $this->get_quality();
-		}
-
-		$target_dir = $this->get_media_path($quality);
-
-		return $target_dir;
-	}//end get_target_dir
-
-
-
-	/**
-	* GET_MEDIA_PATH
-	* 	Creates the absolute path to the media in current quality as:
-	* 	'/user/myuser/httpddocs/dedalo//media/svg/standard'
-	* @param string $quality
-	* @return string $media_path
-	* 	Absolute media path
-	*/
-	public function get_media_path(string $quality) : string {
-
-		$initial_media_path	= $this->initial_media_path;
-		$additional_path	= $this->additional_path;
-		$base_path			= DEDALO_SVG_FOLDER . $initial_media_path . '/' . $quality . $additional_path;
-		$media_path			= DEDALO_MEDIA_PATH . $base_path;
-
-		return $media_path;
-	}//end get_media_path
-
-
-
-	/**
-	* GET_MEDIA_DIR
-	* 	Creates the relative url path in current quality as
-	* 	'/dedalo/media/pd/standard'
-	* @param string $quality
-	* @return string $media_path
-	*/
-	public function get_media_dir(string $quality) : string {
-
-		$initial_media_path	= $this->initial_media_path;
-		$additional_path	= $this->additional_path;
-		$base_path			= DEDALO_SVG_FOLDER . $initial_media_path . '/' . $quality . $additional_path;
-		$media_dir			= DEDALO_MEDIA_URL . $base_path;
-
-		return $media_dir;
-	}//end get_media_dir
 
 
 
@@ -261,7 +81,7 @@ class component_svg extends component_media_common {
 	* @return string|null $image_url
 	*	Return relative o absolute url. Default false (relative)
 	*/
-	public function get_url(string $quality=null, bool $test_file=true, bool $absolute=false, bool $default_add=true) : ?string {
+	public function get_url(?string $quality=null, bool $test_file=true, bool $absolute=false, bool $default_add=true) : ?string {
 
 		// quality fallback to default
 			if(empty($quality)) {
@@ -269,7 +89,7 @@ class component_svg extends component_media_common {
 			}
 
 		// image id
-			$image_id 	= $this->get_id();
+			$image_id = $this->get_id();
 
 		// url
 			$additional_path	= $this->get_additional_path();
@@ -279,7 +99,7 @@ class component_svg extends component_media_common {
 
 		// File exists test : If not, show '0' dedalo image logo
 			if($test_file===true) {
-				$file = $this->get_path();
+				$file = $this->get_media_filepath($quality);
 				if(!file_exists($file)) {
 					if ($default_add===false) {
 						return null;
@@ -368,37 +188,6 @@ class component_svg extends component_media_common {
 
 
 	/**
-	* DELETE_FILE
-	* Remove quality version moving the file to a deleted files dir
-	* @see component_image->remove_component_media_files
-	*
-	* @param string $quality
-	* @return object $response
-	*/
-	public function delete_file(string $quality) : object {
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed';
-
-		// remove_component_media_files returns bool value
-		$result = $this->remove_component_media_files([$quality]);
-		if ($result===true) {
-
-			// save To update valor_list
-				$this->Save();
-
-			$response->result	= true;
-			$response->msg		= 'File deleted successfully. ' . $quality;
-		}
-
-
-		return $response;
-	}//end delete_file
-
-
-
-	/**
 	* GET_EXTENSION
 	* @return string DEDALO_SVG_EXTENSION from config
 	*/
@@ -423,6 +212,13 @@ class component_svg extends component_media_common {
 
 	/**
 	* PROCESS_UPLOADED_FILE
+	* Note that this is the last method called in a sequence started on upload file.
+	* The sequence order is:
+	* 	1 - dd_utils_api::upload
+	* 	2 - tool_upload::process_uploaded_file
+	* 	3 - component_media_common::add_file
+	* 	4 - component:process_uploaded_file
+	* The target quality is defined by the component quality set in tool_upload::process_uploaded_file
 	* @param object $file_data
 	*	Data from trigger upload file
 	* Format:
@@ -441,75 +237,117 @@ class component_svg extends component_media_common {
 
 		// short vars
 			$original_file_name	= $file_data->original_file_name;	// kike "my file785.svg"
-			$full_file_name		= $file_data->full_file_name;		// like "test175_test65_1.svg"
 			$full_file_path		= $file_data->full_file_path;		// like "/mypath/media/svg/standard/test81_test65_2.svg"
 
-		// extension
-			$file_ext = pathinfo($original_file_name, PATHINFO_EXTENSION);
-			if (empty($file_ext)) {
-				// throw new Exception("Error Processing Request. File extension is unknow", 1);
-				$msg = ' Error Processing Request. File extension is unknow';
-				debug_log(__METHOD__.$msg, logger::ERROR);
-				$response->msg .= $msg;
-				return $response;
-			}
+		// debug
+			debug_log(__METHOD__
+				. " process_uploaded_file " . PHP_EOL
+				. ' original_file_name: ' . $original_file_name .PHP_EOL
+				. ' full_file_path: ' . $full_file_path
+				, logger::WARNING
+			);
 
-		// quality default in upload is 'original' (!)
-			$quality  = $this->get_quality();
+		try {
 
-		// add data with the file uploaded
-			// if ($quality===DEDALO_SVG_QUALITY_DEFAULT) {
-			// 	$dato			= $this->get_dato();
-			// 	$value			= empty($dato) ? new stdClass() : reset($dato);
-			// 	$media_value	= $this->build_media_value((object)[
-			// 		'value'		=> $value,
-			// 		'file_name'	=> $original_file_name
-			// 	]);
-			// 	$this->set_dato([$media_value]);
-			// 	$this->Save();
-			// }
-
-		// get files info
-			$files_info	= [];
-			$ar_quality = DEDALO_SVG_AR_QUALITY;
-			foreach ($ar_quality as $current_quality) {
-				if ($current_quality==='thumb') continue;
-				// read file if exists to get file_info
-				$file_info = $this->get_quality_file_info($current_quality);
-				// add non empty quality files data
-				if (!empty($file_info)) {
-					$files_info[] = $file_info;
+			// extension
+				$file_ext = pathinfo($original_file_name, PATHINFO_EXTENSION);
+				if (empty($file_ext)) {
+					// throw new Exception("Error Processing Request. File extension is unknown", 1);
+					$response->msg .= ' Error Processing Request. File extension is unknown';
+					debug_log(__METHOD__
+						. ' '.$response->msg
+						, logger::ERROR
+					);
+					return $response;
 				}
-			}
 
-		// save component dato
-			$dato		= $this->get_dato();
-			$save_dato	= false;
-			if (isset($dato[0])) {
-				if (!is_object($dato[0])) {
-					// bad dato
-					debug_log(__METHOD__." ERROR. BAD COMPONENT DATO ".to_string($dato), logger::ERROR);
+			// id (without extension, like 'test81_test65_2')
+				$id = $this->get_id();
+				if (empty($id)) {
+					$response->msg .= ' Error Processing Request. Invalid id';
+					debug_log(__METHOD__
+						. ' '.$response->msg
+						, logger::ERROR
+					);
+					return $response;
+				}
+
+			// copy from original to default quality
+				$original_file_path			= $full_file_path;
+				$default_quality			= $this->get_default_quality();
+				$default_quality_file_path	= $this->get_media_filepath($default_quality);
+				if ($original_file_path===$default_quality_file_path) {
+					debug_log(__METHOD__
+						. " File is already in default quality " . PHP_EOL
+						. ' Nothing is moved '
+						, logger::WARNING
+					);
 				}else{
-					// update property files_info
-					$dato[0]->files_info = $files_info;
+					if (!copy($original_file_path, $default_quality_file_path)) {
+						debug_log(__METHOD__
+							. " Error on copy original file to default quality file " . PHP_EOL
+							. 'original_file_path: ' .$original_file_path .PHP_EOL
+							. 'default_quality_file_path: ' .$default_quality_file_path
+							, logger::ERROR
+						);
+						$response->msg = 'Error on copy original file to default quality file';
+						return $response;
+					}
+				}
+
+			// get files info
+				$files_info	= [];
+				$ar_quality = $this->get_ar_quality();
+				foreach ($ar_quality as $current_quality) {
+					if ($current_quality==='thumb') continue;
+					// read file if exists to get file_info
+					$file_info = $this->get_quality_file_info($current_quality);
+					// add non empty quality files data
+					if (!empty($file_info)) {
+						$files_info[] = $file_info;
+					}
+				}
+
+			// save component dato
+				$dato		= $this->get_dato();
+				$save_dato	= false;
+				if (isset($dato[0])) {
+					if (!is_object($dato[0])) {
+						// bad dato
+						debug_log(__METHOD__
+							." ERROR. BAD COMPONENT DATO ".to_string($dato)
+							, logger::ERROR
+						);
+					}else{
+						// update property files_info
+						$dato[0]->files_info = $files_info;
+						$save_dato = true;
+					}
+				}else{
+					// create a new dato from scratch
+					$dato_item = (object)[
+						'files_info' => $files_info
+					];
+					$dato = [$dato_item];
 					$save_dato = true;
 				}
-			}else{
-				// create a new dato from scratch
-				$dato_item = (object)[
-					'files_info' => $files_info
-				];
-				$dato = [$dato_item];
-				$save_dato = true;
-			}
-			if ($save_dato===true) {
-				$this->set_dato($dato);
-				$this->Save();
-			}
+				if ($save_dato===true) {
+					$this->set_dato($dato);
+					$this->Save();
+				}
 
-		// all is OK
-			$response->result	= true;
-			$response->msg		= 'OK. Request done ['.__METHOD__.'] ';
+			// response OK
+				$response->result	= true;
+				$response->msg		= 'OK. successful request';
+
+		} catch (Exception $e) {
+			$msg = 'Exception[process_uploaded_file]: ' .  $e->getMessage() . "\n";
+			debug_log(__METHOD__
+				." $msg "
+				, logger::ERROR
+			);
+			$response->msg .= ' - '.$msg;
+		}
 
 
 		return $response;
@@ -550,7 +388,7 @@ class component_svg extends component_media_common {
 					isset($dato_unchanged->section_id) || // v5 modern case
 					(isset($dato_unchanged[0]) && isset($dato_unchanged[0]->original_file_name)) // v6 alpha case
 				);
-				$is_old_dato = true; // force here
+				// $is_old_dato = true; // force here
 				if ($is_old_dato===true) {
 
 					// create the component svg
@@ -561,7 +399,8 @@ class component_svg extends component_media_common {
 							$options->section_id,
 							'list',
 							DEDALO_DATA_NOLAN,
-							$options->section_tipo
+							$options->section_tipo,
+							false
 						);
 
 					// get existing files data
@@ -597,9 +436,8 @@ class component_svg extends component_media_common {
 							}
 
 					// source_file_upload_date
-						$dd_date							= new dd_date();
 						$upload_date_timestamp				= date ("Y-m-d H:i:s", filemtime($file));
-						$source_file_upload_date			= $dd_date->get_date_from_timestamp($upload_date_timestamp);
+						$source_file_upload_date			= dd_date::get_dd_date_from_timestamp($upload_date_timestamp);
 						$source_file_upload_date->time		= dd_date::convert_date_to_seconds($source_file_upload_date);
 						$source_file_upload_date->timestamp	= $upload_date_timestamp;
 
@@ -632,9 +470,10 @@ class component_svg extends component_media_common {
 						}
 
 					// create new dato
-						$dato_item = new stdClass();
-							$dato_item->files_info	= $files_info;
-							$dato_item->lib_data	= $lib_data;
+						$dato_item = (object)[
+							'files_info'	=> $files_info,
+							'lib_data'		=> $lib_data
+						];
 
 					// fix final dato with new format as array
 						$new_dato = [$dato_item];
@@ -644,6 +483,11 @@ class component_svg extends component_media_common {
 						$response->result	= 1;
 						$response->new_dato	= $new_dato;
 						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+
+					// clean vars
+						unset($source_file_upload_date);
+						unset($files_info);
+						unset($lib_data);
 				}else{
 
 					$response = new stdClass();
@@ -662,6 +506,61 @@ class component_svg extends component_media_common {
 
 		return $response;
 	}//end update_dato_version
+
+
+
+	/**
+	* RESTORE_COMPONENT_MEDIA_FILES (! Moved to media common)
+	* "Restore" last version of deleted media files (renamed and stored in 'deleted' folder)
+	* Is triggered when tool_time_machine recover a section
+	* @see tool_time_machine::recover_section_from_time_machine
+	* @return bool
+	*/
+		// public function restore_component_media_files() : bool {
+
+		// 	// element restore
+		// 	$ar_quality	= $this->get_ar_quality();
+		// 	$extension	= $this->get_extension();
+		// 	foreach ($ar_quality as $current_quality) {
+
+		// 		// media_path
+		// 		$media_path	= $this->get_media_path_dir($current_quality) . '/deleted';
+		// 		$id			= $this->get_id();
+
+		// 		$file_pattern	= $media_path .'/'. $id .'_*.'. $extension;
+		// 		$ar_files		= glob($file_pattern);
+		// 		if (empty($ar_files)) {
+		// 			debug_log(__METHOD__
+		// 				." No files to restore were found for id:$id. Nothing was restored (1) "
+		// 				, logger::WARNING
+		// 			);
+		// 			continue; // Skip
+		// 		}
+
+		// 		natsort($ar_files);	# sort the files from newest to oldest
+		// 		$last_file_path	= end($ar_files);
+		// 		$new_file_path	= $this->get_media_filepath($current_quality);
+
+		// 		// move file
+		// 		if( !rename($last_file_path, $new_file_path) ) {
+		// 			debug_log(__METHOD__
+		// 				. " Error on move files to restore folder. Permission denied . Nothing was restored (2) " . PHP_EOL
+		// 				. 'last_file_path: '. $last_file_path . PHP_EOL
+		// 				. 'new_file_path: '. $new_file_path
+		// 				, logger::ERROR
+		// 			);
+		// 			// throw new Exception(" Error on move files to restore folder. Permission denied . Nothing was restored (2)");
+		// 		}
+
+		// 		debug_log(__METHOD__
+		// 			." Moved file $last_file_path to $new_file_path "
+		// 			, logger::WARNING
+		// 		);
+		// 	}//end foreach
+
+
+		// 	return true;
+		// }//end restore_component_media_files
 
 
 

@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -6,6 +7,8 @@
 // imports
 	import {common,create_source} from '../../common/js/common.js'
 	import {data_manager} from '../../common/js/data_manager.js'
+	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
+	import {quit} from '../../login/js/login.js'
 	import {render_menu} from './render_menu.js'
 
 
@@ -28,8 +31,6 @@ export const menu = function(){
 	this.events_tokens
 
 	this.ar_instances
-
-	return true
 }//end menu
 
 
@@ -40,20 +41,21 @@ export const menu = function(){
 */
 // prototypes assign
 	// lifecycle
-	menu.prototype.render			= common.prototype.render
-	menu.prototype.destroy			= common.prototype.destroy
-	menu.prototype.refresh			= common.prototype.refresh
-	// menu.prototype.create_source	= common.prototype.create_source
+	menu.prototype.render				= common.prototype.render
+	menu.prototype.destroy				= common.prototype.destroy
+	menu.prototype.refresh				= common.prototype.refresh
 
 	// render
-	menu.prototype.list				= render_menu.prototype.list
-	menu.prototype.edit				= render_menu.prototype.edit
+	menu.prototype.list					= render_menu.prototype.edit
+	menu.prototype.edit					= render_menu.prototype.edit
+	menu.prototype.update_section_label	= render_menu.prototype.update_section_label
 
 
 
 /**
 * INIT
-* @return bool true
+* @param object options
+* @return bool
 */
 menu.prototype.init = function(options) {
 
@@ -71,8 +73,9 @@ menu.prototype.init = function(options) {
 	self.data			= options.data
 	self.events_tokens	= []
 
+
 	// status update
-		self.status = 'initiated'
+		self.status = 'initialized'
 
 	return true
 }//end init
@@ -82,10 +85,9 @@ menu.prototype.init = function(options) {
 /**
 * BUILD
 * @param bool autoload
-* @return promise
-* 	resolve bool true
+* @return true
 */
-menu.prototype.build = async function(autoload=true){
+menu.prototype.build = async function(autoload=true) {
 	const t0 = performance.now()
 
 	const self = this
@@ -153,9 +155,104 @@ menu.prototype.build = async function(autoload=true){
 			console.log(`__Time to build ${self.model} [autoload:${autoload}] ms:`, performance.now()-t0);
 		}
 
+	// fix menu instance as global to be available
+		window.menu = self
+
 	// status update
 		self.status = 'built'
 
 
 	return true
 }//end build
+
+
+
+/**
+* OPEN_ONTOLOGY
+* Shared function to manage open Ontology window
+* from regular menu and mobile menu
+* @return void
+*/
+menu.prototype.open_ontology = function() {
+	const url = DEDALO_CORE_URL + '/ontology'
+	const win = window.open(url, '_blank');
+		  win.focus();
+}//end open_ontology
+
+
+
+/**
+* QUIT_HANDLER
+* Shared function to manage quit sequence
+* @param object event e
+* @return void
+*/
+menu.prototype.quit_handler = async function(e) {
+	e.stopPropagation()
+
+	const self = this
+
+	// local_db_data remove in all langs
+		const langs			= page_globals.dedalo_application_langs
+		const langs_length	= langs.length
+		for (let i = 0; i < langs_length; i++) {
+			const lang	= langs[i].value
+			const regex	= /lg-[a-z]{2,5}$/
+			const id	= self.id.replace(regex, lang)
+			await data_manager.delete_local_db_data(id, 'data')
+		}
+	// exec login quit sequence
+		quit({
+			caller : self
+		})
+}//end quit_handler
+
+
+
+/**
+* SECTION_LABEL_HANDLER
+* Shared function to manage section_label.on_click execution (from edit mode)
+* from regular menu and mobile menu
+* @param object event e
+* @return void
+*/
+menu.prototype.section_label_handler = function(e) {
+	e.stopPropagation()
+	e.preventDefault();
+
+	const section_label = e.target
+	if (typeof section_label.on_click==='function') {
+		section_label.on_click(e)
+	}
+}//end section_label_handler
+
+
+
+/**
+* OPEN_TOOL_USER_ADMIN_HANDLER
+* Shared function to manage open tool tool_user_admin
+* @param object event e
+* @return void
+*/
+menu.prototype.open_tool_user_admin_handler = function(e) {
+	e.stopPropagation();
+
+	const self = this
+
+	// tool_user_admin Get the user_admin tool to be fired
+		const tool_user_admin = self.context.tools.find(el => el.model==='tool_user_admin')
+		if (!tool_user_admin) {
+			console.error('Tool user admin is not available in tools:', self.context.tools);
+			return
+		}
+
+	// open_tool (tool_common)
+		open_tool({
+			tool_context	: tool_user_admin,
+			caller			: self
+		})
+}//end open_tool_user_admin_handler
+
+
+
+// @license-end

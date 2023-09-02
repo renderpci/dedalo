@@ -5,6 +5,8 @@
 
 
 	// STRUCTURE
+		id 		: Optional id of the API request
+		api_engine : Optional engine name. Default auto added is 'dedalo'
 		dd_api	: API class that will be used
 		action	: API method that will be used (like 'get_menu')
 		source	: component, section, menu, etc that made the call
@@ -20,6 +22,10 @@
 			(object used like pre-calculated container (datalist, pagination, etc.) to minimize cpu usage on calls to 'save')
 		prevent_lock : bool
 			(prevent PHP lock the session while the request is working. For example in 'count' calls)
+		options : object
+			For to send heterogeneous data to the API. Used by components, tools etc.
+		pretty_print : bool
+			(output JSON as pretty_print -using whitespace to format it- from API manager)
 
 		// info about
 			Mandatory	: dd_api, action, source
@@ -76,12 +82,21 @@
 				},
 				"choose"		: {
 					"ddo_map"		: array [array {ddo}, {ddo}] // layout map will be used, with specific path
-				}
+				},
+				options: {
+			 		file_data : {
+						"name"			: "test26_test3_1.jpg",
+						"tmp_dir"		: "DEDALO_UPLOAD_TMP_DIR",
+						"key_dir"		: "3d",
+						"tmp_name"		: "tmp_test26_test3_1.jpg"
+			 		}
+			 		target_dir : 'posterframe' // string with the quality folder name.
+			 	}
 			}
 		]
 
 
-	@see class.request.config.php
+	@see class.request_config_object.php
 	// REQUEST_CONFIG (request configuration for Dédalo API or others API):
 		[
 			{
@@ -181,7 +196,7 @@
 		]
 
 */
-class request_query_object {
+class request_query_object extends stdClass {
 
 
 
@@ -196,6 +211,8 @@ class request_query_object {
 			public $api_engine;
 
 		// optional (disabled to prevent null values)
+			// string id
+				// public $id;
 			// object sqo
 				// public $sqo;
 			// object show
@@ -208,6 +225,27 @@ class request_query_object {
 				// public $data;
 			// bool prevent_lock
 				// public $prevent_lock;
+			// bool pretty_print
+				// public pretty_print
+			// object options
+				// public $options;
+
+		// direct_keys
+			public static $direct_keys = [
+				'id',
+				'api_engine',
+				'dd_api',
+				'action',
+				'source',
+				'sqo',
+				'show',
+				'search',
+				'choose',
+				'data',
+				'prevent_lock',
+				'options',
+				'pretty_print'
+			];
 
 
 
@@ -226,7 +264,7 @@ class request_query_object {
 			// }
 
 		// default always is 'dedalo'
-		$this->api_engine ='dedalo';
+			$this->api_engine = 'dedalo';
 
 		// set all properties
 			foreach ($data as $key => $value) {
@@ -318,6 +356,18 @@ class request_query_object {
 
 		$this->choose = $value;
 	}//end set_choose
+
+
+
+	/**
+	* SET_OPTIONS
+	* @param object $value
+	* @return void
+	*/
+	public function set_options(object $value) {
+
+		$this->options = $value;
+	}//end set_options
 
 
 

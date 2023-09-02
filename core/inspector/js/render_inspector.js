@@ -1,4 +1,5 @@
-/*global get_label, page_globals, SHOW_DEBUG, SHOW_DEVELOPER, DEDALO_CORE_URL */
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
+/*global get_label, page_globals, SHOW_DEVELOPER, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -11,6 +12,8 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {render_node_info} from '../../common/js/utils/notifications.js'
 	import * as instances from '../../common/js/instances.js'
+	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
+	import {open_window, object_to_url_vars} from '../../common/js/utils/index.js'
 
 
 
@@ -29,7 +32,7 @@ export const render_inspector = function() {
 * EDIT
 * Render node for use in this mode
 * @param object options
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_inspector.prototype.edit = async function(options) {
 
@@ -54,7 +57,7 @@ render_inspector.prototype.edit = async function(options) {
 		ui.collapse_toggle_track({
 			toggler				: label,
 			container			: content_data,
-			collapsed_id		: 'inspector_element_info_block',
+			collapsed_id		: 'inspector_main_block',
 			collapse_callback	: collapse,
 			expose_callback		: expose
 		})
@@ -73,10 +76,6 @@ render_inspector.prototype.edit = async function(options) {
 		})
 		// set pointers
 		wrapper.content_data = content_data
-		wrapper.addEventListener('click', function(e) {
-			// prevents deactivate selected component when user clicks the inspector
-			e.stopPropagation()
-		})
 
 	// add elements
 		wrapper.appendChild(label)
@@ -93,7 +92,7 @@ render_inspector.prototype.edit = async function(options) {
 * Renders the whole content_data node
 * @param object self
 * 	inspector instance
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 
@@ -105,6 +104,9 @@ const get_content_data = function(self) {
 		const content_data = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'content_data inspector_content_data hide'
+		})
+		content_data.addEventListener('mousedown', function(e) {
+			e.stopPropagation();
 		})
 
 	// paginator container
@@ -132,7 +134,8 @@ const get_content_data = function(self) {
 			})
 			button_search.addEventListener('click', function(e){
 				e.stopPropagation()
-				event_manager.publish('toggle_search_panel', this)
+				const section_id = self.caller.id
+				event_manager.publish('toggle_search_panel_'+section_id)
 			})
 
 		// button_new . Call API to create new section and navigate to the new record
@@ -140,8 +143,8 @@ const get_content_data = function(self) {
 			if (section_button_new) {
 				const button_new = ui.create_dom_element({
 					element_type	: 'button',
-					class_name		: 'light add',
-					title			: section_button_new.label || "New",
+					class_name		: 'light add_light',
+					title			: section_button_new.label || 'New',
 					parent			: buttons_container
 				})
 				button_new.addEventListener('click', (e) => {
@@ -150,31 +153,13 @@ const get_content_data = function(self) {
 				})
 			}
 
-		// button_delete . Call API to delete current record
-			const section_button_delete = section_buttons.find(el => el.model==='button_delete')
-			if (section_button_delete) {
-				const button_delete = ui.create_dom_element({
-					element_type	: 'button',
-					class_name		: 'light remove',
-					title			: section_button_delete.label || "Delete",
-					parent			: buttons_container
-				})
-				button_delete.addEventListener('click', (e) => {
-					e.stopPropagation()
-					event_manager.publish('delete_section_' + self.caller.id, {
-						section_tipo	: self.section_tipo,
-						section_id		: self.section_id,
-						caller			: self.caller // section
-					})
-				})
-			}
 		// button_duplicate . Call API to duplicate current record
-		// use th section_button_new, if it's defined user can create or duplicate the section
+		// use the section_button_new, if it's defined user can create or duplicate the section
 			if (section_button_new) {
 				const button_duplicate = ui.create_dom_element({
 					element_type	: 'button',
 					class_name		: 'light duplicate',
-					title			: get_label.duplicar || "Duplicate",
+					title			: get_label.duplicate || "Duplicate",
 					parent			: buttons_container
 				})
 				button_duplicate.addEventListener('click', (e) => {
@@ -187,7 +172,81 @@ const get_content_data = function(self) {
 				})
 			}
 
-	// element_info
+		// button_delete . Call API to delete current record
+			const section_button_delete = section_buttons.find(el => el.model==='button_delete')
+			if (section_button_delete) {
+				const button_delete = ui.create_dom_element({
+					element_type	: 'button',
+					class_name		: 'light remove',
+					title			: section_button_delete.label || 'Delete',
+					parent			: buttons_container
+				})
+				button_delete.addEventListener('click', (e) => {
+					e.stopPropagation()
+					event_manager.publish('delete_section_' + self.caller.id, {
+						section_tipo	: self.section_tipo,
+						section_id		: self.section_id,
+						caller			: self.caller // section
+					})
+				})
+			}
+
+		// button_diffusion
+			const tool_diffusion = self.caller.tools.find(el => el.name==='tool_diffusion')
+			if (tool_diffusion) {
+				const button_diffusion = ui.create_dom_element({
+					element_type	: 'button',
+					class_name		: 'light diffusion',
+					title			: get_label.diffusion || 'Diffusion',
+					parent			: buttons_container
+				})
+				button_diffusion.addEventListener('click', (e) => {
+					e.stopPropagation()
+					// open_tool (tool_common)
+					open_tool({
+						tool_context	: tool_diffusion, // tool context
+						caller			: self.caller // section instance
+					})
+				})
+			}
+
+	// tools_container. Section tools buttons
+		const inspector_tools			= self.caller.context.tools.filter(el => el.show_in_inspector && el.properties && el.properties?.mode==='edit')
+		const inspector_tools_length	= inspector_tools.length
+		if (inspector_tools_length>0) {
+			const tools_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'tools_container top',
+				parent			: content_data
+			})
+			for (let i = 0; i < inspector_tools_length; i++) {
+				const tool_context = inspector_tools[i]
+				// button_tool
+					const button_tool = ui.create_dom_element({
+						element_type	: 'button',
+						class_name		: 'light blank',
+						style			: {
+							'--icon-path'	: "url('" +tool_context.icon +"')"
+						},
+						title			: tool_context.label,
+						parent			: tools_container
+					})
+					button_tool.addEventListener('click', function(e){
+						e.stopPropagation()
+						// open_tool (tool_common)
+							open_tool({
+								tool_context	: tool_context,
+								caller			: self.caller
+							})
+					})
+			}
+		}
+
+	// selection info
+		const selection_info = render_selection_info(self)
+		content_data.appendChild(selection_info)
+
+	// element_info. Selected element information
 		const element_info = render_element_info(self)
 		content_data.appendChild(element_info)
 
@@ -206,7 +265,7 @@ const get_content_data = function(self) {
 		// }
 
 	// relation_list container
-		if (self.caller.context.relation_list) {
+		if (self.caller.context.config && self.caller.context.config.relation_list_tipo) {
 			const relation_list = render_relation_list(self)
 			content_data.appendChild(relation_list)
 		}
@@ -241,44 +300,56 @@ const get_content_data = function(self) {
 				text_content	: 'View record data',
 				parent			: buttons_bottom_container
 			})
-			data_link.addEventListener('click', (e)=>{
+			data_link.addEventListener('mousedown', fn_data_link)
+			function fn_data_link(e) {
 				e.stopPropagation()
 				e.preventDefault()
 
-				// read from Dédalo API
-				const rqo = {
-					action	: 'read_raw',
-					source	: create_source(self.caller)
-				}
-				data_manager.request({
-					body : rqo
+				open_window({
+					url : DEDALO_API_URL + '?' +  object_to_url_vars({
+						action			: 'read_raw',
+						section_tipo	: self.caller.section_tipo,
+						section_id		: self.caller.section_id,
+						pretty_print	: true
+					}),
+					features : 'new_tab'
 				})
-				.then(function(api_response){
 
-					// error case
-						if (api_response.result===false || api_response.error) {
-							// alert("An error occurred. " + api_response.error);
-							return
-						}
+				// OLD way
+					// // read from Dédalo API
+					// const rqo = {
+					// 	action	: 'read_raw',
+					// 	source	: create_source(self.caller)
+					// }
+					// data_manager.request({
+					// 	body : rqo
+					// })
+					// .then(function(api_response){
 
-					// open window
-						const target_window	= window.open('', '_blank', '');
+					// 	// error case
+					// 		if (api_response.result===false || api_response.error) {
+					// 			// alert("An error occurred. " + api_response.error);
+					// 			return
+					// 		}
 
-					// raw_data_node
-						const data_string = JSON.stringify(api_response.result, null, 2)
-						const raw_data_node = ui.create_dom_element({
-							element_type	: 'pre',
-							inner_html		: data_string
-						})
+					// 	// open window
+					// 		const target_window	= window.open('', '_blank', '');
 
-					// add data content to new window body
-						const body = target_window.document.body
-						if (body) {
-							body.appendChild(raw_data_node)
-							target_window.document.title = 'View record data ' + self.caller.section_id
-						}
-				})
-			})//end data_link.addEventListener("click"
+					// 	// raw_data_node
+					// 		const data_string = JSON.stringify(api_response.result, null, 2)
+					// 		const raw_data_node = ui.create_dom_element({
+					// 			element_type	: 'pre',
+					// 			inner_html		: data_string
+					// 		})
+
+					// 	// add data content to new window body
+					// 		const body = target_window.document.body
+					// 		if (body) {
+					// 			body.appendChild(raw_data_node)
+					// 			target_window.document.title = 'View record data ' + self.caller.section_id
+					// 		}
+					// })
+			}//end data_link.addEventListener("click"
 
 		// tool register files.	dd1340
 			if (self.section_tipo==='dd1340') {
@@ -288,7 +359,8 @@ const get_content_data = function(self) {
 					text_content	: 'Download register file',
 					parent			: buttons_bottom_container
 				})
-				register_download.addEventListener("click", (e)=>{
+				register_download.addEventListener('mousedown', fn_register)
+				function fn_register(e) {
 					e.preventDefault()
 
 					const file_name = 'register.json'
@@ -318,12 +390,40 @@ const get_content_data = function(self) {
 								const data = api_response.result;
 								download_data(data, file_name)
 						})
-				})
-			}
+				}//end fn_register
+			}//end if (self.section_tipo==='dd1340')
 
 
 	return content_data
 }//end get_content_data
+
+
+
+/**
+* RENDER_SELECTION_INFO
+* Display current selected element name like 'Description'
+* @param object self
+* @return HTMLElement selection_info_node
+*/
+const render_selection_info = function(self) {
+
+	// selection_info_node
+		const selection_info_node = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'selection_info'
+		})
+		// fix pointer
+		self.selection_info_node = selection_info_node
+
+		selection_info_node.addEventListener('click', function(e) {
+			if (selection_info_node.caller) {
+				console.log('node info caller:', selection_info_node.caller);
+			}
+		})
+
+
+	return selection_info_node
+}//end render_selection_info
 
 
 
@@ -336,45 +436,53 @@ const get_content_data = function(self) {
 */
 export const render_section_info = function(self) {
 
-	const container		= self.element_info_container
-	const section		= self.caller
-	const section_data	= section.data.value && section.data.value[0]
-		? section.data.value[0]
-		: {}
-
+	// short vars
+		const container		= self.element_info_container
+		const section		= self.caller
+		const section_data	= section.data.value && section.data.value[0]
+			? section.data.value[0]
+			: {}
 
 	// values from caller (section)
-		const section_tipo			= section.section_tipo
-		const label					= section.label
-		const created_date			= section_data.created_date
-		const modified_date			= section_data.modified_date
-		const created_by_user_name	= section_data.created_by_user_name
-		const modified_by_user_name	= section_data.modified_by_user_name
+		const section_tipo				= section.section_tipo
+		const label						= section.label
+		const mode						= section.mode
+		const view						= section.view || 'default'
+		const created_date				= section_data.created_date
+		const modified_date				= section_data.modified_date
+		const created_by_user_name		= section_data.created_by_user_name
+		const modified_by_user_name		= section_data.modified_by_user_name
+		const publication_first_date	= section_data.publication_first_date
+		const publication_last_date		= section_data.publication_last_date
+		const publication_first_user	= section_data.publication_first_user
+		const publication_last_user		= section_data.publication_last_user
 
-	const fragment = new DocumentFragment();
+
+	// DocumentFragment
+		const fragment = new DocumentFragment();
 
 	// section name
-		// label
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'key',
-			inner_html		: get_label.seccion || 'Section',
-			parent			: fragment
-		})
-		// value
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'value',
-			inner_html		: label,
-			parent			: fragment
-		})
+		// // label
+		// ui.create_dom_element({
+		// 	element_type	: 'span',
+		// 	class_name		: 'key',
+		// 	inner_html		: get_label.section || 'Section',
+		// 	parent			: fragment
+		// })
+		// // value
+		// ui.create_dom_element({
+		// 	element_type	: 'span',
+		// 	class_name		: 'value',
+		// 	inner_html		: label,
+		// 	parent			: fragment
+		// })
 
 	// tipo
 		// label
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'key',
-				inner_html		: get_label.tipo || 'Tipo',
+				inner_html		: 'tipo',
 				parent			: fragment
 			})
 		// value
@@ -422,20 +530,83 @@ export const render_section_info = function(self) {
 					open_ontology_window(section_tipo, custom_url)
 				})
 			}
+		// local ontology tree search
+			if (SHOW_DEVELOPER===true) {
+				const local_ontology_search = ui.create_dom_element({
+					element_type	: 'a',
+					class_name		: 'button tree',
+					title			: 'Local Ontology tree search',
+					parent			: tipo_info
+				})
+				local_ontology_search.addEventListener('click', function(e){
+					e.stopPropagation()
+					const custom_url = DEDALO_CORE_URL + `/ontology/trigger.dd.php?modo=tesauro_edit&terminoID=${section_tipo}&accion=searchTSform`
+					open_ontology_window(section_tipo, custom_url)
+				})
+			}
 
-	// section created
+	// model
+		// label
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'key',
+				inner_html		: get_label.model || 'Model',
+				parent			: fragment
+			})
+		// value
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'value',
+				inner_html		: section.model,
+				parent			: fragment
+			})
+			console.log('section:', section);
+
+	// section_id
 		// label
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			inner_html		: get_label.creado || 'Created',
+			inner_html		: 'section_id',
 			parent			: fragment
 		})
 		// value
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			inner_html		: created_date + ' ' + created_by_user_name,
+			inner_html		: section.section_id,
+			parent			: fragment
+		})
+
+	// view
+		// label
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'key',
+			inner_html		: 'View',
+			parent			: fragment
+		})
+		// value
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'value',
+			inner_html		: view + ' - ' + mode,
+			parent			: fragment
+		})
+
+	// section created
+		// label
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'key',
+			inner_html		: get_label.created || 'Created',
+			parent			: fragment
+		})
+		// value
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'value',
+			inner_html		: created_date + '<br>' + created_by_user_name,
 			parent			: fragment
 		})
 
@@ -444,16 +615,36 @@ export const render_section_info = function(self) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			inner_html		: get_label.modificado || 'Modified',
+			inner_html		: get_label.modified || 'Modified',
 			parent			: fragment
 		})
 		// value
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			inner_html		: modified_date + ' ' + modified_by_user_name,
+			inner_html		: modified_date + '<br>' + modified_by_user_name,
 			parent			: fragment
 		})
+
+	// published
+		// label
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'key',
+			inner_html		: (get_label.publicado || 'Published') + ' (first/last)',
+			parent			: fragment
+		})
+		// value
+		const publication_value = publication_first_date
+			? publication_first_date + '<br>' + publication_first_user + '<br>' + publication_last_date + '<br>' + publication_last_user
+			: get_label.nunca || 'Never'
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'value',
+			inner_html		: publication_value,
+			parent			: fragment
+		})
+
 
 	// clean and set container
 		while (container.firstChild) {
@@ -484,6 +675,8 @@ export const render_component_info = function(self, component) {
 		const tipo			= component.tipo
 		const label			= component.label
 		const model			= component.model
+		const mode			= component.mode
+		const view			= component.view || 'default'
 		const translatable	= component.context.translatable
 			? JSON.stringify(component.context.translatable)
 			: 'no'
@@ -491,30 +684,33 @@ export const render_component_info = function(self, component) {
 		// 	? JSON.stringify(component.data.value, null, 1)
 		// 	: ''
 
-	const fragment = new DocumentFragment();
+	// DocumentFragment
+		const fragment = new DocumentFragment();
 
-	// section name
-		// label
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'key',
-			inner_html		: get_label.componente || 'Component',
-			parent			: fragment
-		})
-		// value
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'value',
-			inner_html		: label,
-			parent			: fragment
-		})
+	// container
+
+	// component label
+		// // label
+		// ui.create_dom_element({
+		// 	element_type	: 'span',
+		// 	class_name		: 'key',
+		// 	inner_html		: get_label.component || 'Component',
+		// 	parent			: fragment
+		// })
+		// // value
+		// ui.create_dom_element({
+		// 	element_type	: 'span',
+		// 	class_name		: 'value',
+		// 	inner_html		: label,
+		// 	parent			: fragment
+		// })
 
 	// tipo
 		// label
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'key',
-				inner_html		: get_label.tipo || 'Tipo',
+				inner_html		: 'tipo',
 				parent			: fragment
 			})
 		// value
@@ -563,36 +759,66 @@ export const render_component_info = function(self, component) {
 					open_ontology_window(tipo, custom_url)
 				})
 			}
+		// local ontology tree search
+			if (SHOW_DEVELOPER===true) {
+				const local_ontology_search = ui.create_dom_element({
+					element_type	: 'a',
+					class_name		: 'button tree',
+					title			: 'Local Ontology tree search',
+					parent			: tipo_info
+				})
+				local_ontology_search.addEventListener('click', function(e){
+					e.stopPropagation()
+					const custom_url = DEDALO_CORE_URL + `/ontology/trigger.dd.php?modo=tesauro_edit&terminoID=${tipo}&accion=searchTSform`
+					open_ontology_window(tipo, custom_url)
+				})
+			}
 
 	// model
 		// label
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'key',
-			inner_html		: get_label.modelo || 'Model',
-			parent			: fragment
-		})
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'key',
+				inner_html		: get_label.model || 'Model',
+				parent			: fragment
+			})
 		// value
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'value',
-			inner_html	: model,
-			parent			: fragment
-		})
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'value',
+				inner_html		: model,
+				parent			: fragment
+			})
 
 	// translatable
+		// label
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'key',
+				inner_html		: get_label.translatable || 'Translatable',
+				parent			: fragment
+			})
+		// value
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'value',
+				inner_html		: translatable,
+				parent			: fragment
+			})
+
+	// view
 		// label
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			inner_html		: get_label.traducible || 'Translatable',
+			inner_html		: 'View',
 			parent			: fragment
 		})
 		// value
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			inner_html		: translatable,
+			inner_html		: view + ' - ' + mode,
 			parent			: fragment
 		})
 
@@ -601,7 +827,7 @@ export const render_component_info = function(self, component) {
 		const value_label_node = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key wide icon_arrow',
-			inner_html		: get_label.dato || 'Data',
+			inner_html		: get_label.data || 'Data',
 			parent			: fragment
 		})
 		// value
@@ -630,7 +856,7 @@ export const render_component_info = function(self, component) {
 			})
 		}, 50)
 
-		// track collapse toggle state of content
+	// track collapse toggle state of content
 		ui.collapse_toggle_track({
 			toggler				: value_label_node,
 			container			: value_node,
@@ -645,7 +871,6 @@ export const render_component_info = function(self, component) {
 		function expose() {
 			value_label_node.classList.add('up')
 		}
-
 
 	// clean container
 		while (container.firstChild) {
@@ -665,7 +890,7 @@ export const render_component_info = function(self, component) {
 * RENDER_ELEMENT_INFO
 * Note that self.element_info_containe is fixed to allow inspector init event
 * to locate the target node when is invoked
-* @return DOM node element_info_wrap
+* @return HTMLElement element_info_wrap
 */
 const render_element_info = function(self) {
 
@@ -673,6 +898,10 @@ const render_element_info = function(self) {
 	const element_info_wrap = ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'element_info_wrap'
+	})
+	element_info_wrap.addEventListener('mousedown', function(e) {
+		// prevents deactivate selected component when user clicks the inspector
+		e.stopPropagation()
 	})
 
 	// element_info_head
@@ -719,7 +948,7 @@ const render_element_info = function(self) {
 * to allow user configure section projects
 * @param object self
 * 	inspector instance
-* @return DOM node project_wrap
+* @return HTMLElement project_wrap
 */
 const render_project_block = function(self) {
 
@@ -733,7 +962,7 @@ const render_project_block = function(self) {
 		const project_head = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'project_head icon_arrow up',
-			inner_html		: get_label.proyecto || "Project",
+			inner_html		: get_label.project || "Project",
 			parent			: project_wrap
 		})
 
@@ -791,9 +1020,9 @@ export const update_project_container_body = function(self) {
 
 /**
 * RENDER_INDEXATION_LIST
-* @return DOM node indexation_list_container
+* @return HTMLElement indexation_list_container
 */
-const render_indexation_list = function(self) {
+const render_indexation_list = function() {
 
 	// wrapper
 		const indexation_list_container = ui.create_dom_element({
@@ -805,7 +1034,7 @@ const render_indexation_list = function(self) {
 		const indexation_list_head = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'indexation_list_head icon_arrow',
-			inner_html		: get_label.indexaciones || 'Indexations',
+			inner_html		: get_label.indexings || 'Indexations',
 			parent			: indexation_list_container
 		})
 
@@ -841,7 +1070,7 @@ const render_indexation_list = function(self) {
 
 /**
 * RENDER_RELATION_LIST
-* @return DOM node relation_list_container
+* @return HTMLElement relation_list_container
 */
 const render_relation_list = function(self) {
 
@@ -855,7 +1084,7 @@ const render_relation_list = function(self) {
 		const relation_list_head = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'relation_list_head icon_arrow',
-			inner_html		: get_label.relaciones || "Relations",
+			inner_html		: get_label.relations || "Relations",
 			parent			: relation_list_container
 		})
 
@@ -903,11 +1132,13 @@ const render_relation_list = function(self) {
 
 			relation_list_head.classList.add('up')
 
+			const relation_list_tipo = self.caller.context.config.relation_list_tipo
+
 			const relation_list	= (instance && instance.model==='relation_list')
 				? instance // pagination case do not need to init relation_list
 				: await instances.get_instance({
 					model			: 'relation_list',
-					tipo			: self.caller.context['relation_list'],
+					tipo			: relation_list_tipo, // self.caller.context['relation_list'],
 					section_tipo	: self.section_tipo,
 					section_id		: self.section_id,
 					mode			: self.mode
@@ -940,7 +1171,7 @@ const render_relation_list = function(self) {
 * Show whole section recent activity (component value changes) list
 * @param object self
 * 	inspector instance
-* @return DOM node time_machine_list_wrap
+* @return HTMLElement time_machine_list_wrap
 */
 export const render_time_machine_list = function(self) {
 
@@ -1007,7 +1238,7 @@ export const render_time_machine_list = function(self) {
 * Get section time_machine history records
 * @param object self
 * 	inspector instance
-* @return DOM node|null component_history_wrap
+* @return HTMLElement|null container
 */
 export const load_time_machine_list = async function(self) {
 
@@ -1081,7 +1312,7 @@ export const load_time_machine_list = async function(self) {
 * to locate the target node when is invoked
 * @param object self
 * 	inspector instance
-* @return DOM node element_info_wrap
+* @return HTMLElement component_history_wrap
 */
 const render_component_history = function(self) {
 
@@ -1089,6 +1320,10 @@ const render_component_history = function(self) {
 		const component_history_wrap = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'component_history'
+		})
+		component_history_wrap.addEventListener('mousedown', function(e) {
+			// prevents deactivate selected component when user clicks the inspector
+			e.stopPropagation()
 		})
 
 	// component_history_head
@@ -1114,7 +1349,8 @@ const render_component_history = function(self) {
 			container			: component_history_body,
 			collapsed_id		: 'inspector_component_history_block',
 			collapse_callback	: collapse,
-			expose_callback		: expose
+			expose_callback		: expose,
+			default_state		: 'closed'
 		})
 		function collapse() {
 			component_history_head.classList.remove('up')
@@ -1137,7 +1373,7 @@ const render_component_history = function(self) {
 * 	inspector instance
 * @param object|null component
 * 	component instance
-* @return DOM node|null component_history_wrap
+* @return HTMLElement|null component_history_wrap
 */
 export const load_component_history = async function(self, component) {
 
@@ -1253,7 +1489,7 @@ export const load_component_history = async function(self, component) {
 * Show component save and error messages
 * @param object self
 * 	inspector instance
-* @return DOM node time_machine_list_wrap
+* @return HTMLElement wrapper
 */
 const render_activity_info = function(self) {
 
@@ -1267,7 +1503,7 @@ const render_activity_info = function(self) {
 		const activity_info_head = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'activity_info_head icon_arrow',
-			inner_html		: get_label.actividad || 'Activity',
+			inner_html		: get_label.activity || 'Activity',
 			parent			: wrapper
 		})
 
@@ -1308,7 +1544,7 @@ const render_activity_info = function(self) {
 * 	inspector instance
 * @param object options
 * 	event save subscription received options
-* @return DOM node|null activity_info_wrap
+* @return HTMLElement|null container
 */
 export const load_activity_info = async function(self, options) {
 
@@ -1338,9 +1574,10 @@ export const load_activity_info = async function(self, options) {
 * Opens Dédalo Ontology page in a new window
 * @param string tipo
 * @param string|null custom_url
+* @param bool focus = true
 * @return bool
 */
-const open_ontology_window = function(tipo, custom_url) {
+export const open_ontology_window = function(tipo, custom_url, focus=true) {
 
 	window.docu_window = window.docu_window || null
 
@@ -1352,7 +1589,9 @@ const open_ontology_window = function(tipo, custom_url) {
 
 	if (window.docu_window && !window.docu_window.closed) {
 		window.docu_window.location = url
-		window.docu_window.focus()
+		if (focus===true) {
+			window.docu_window.focus()
+		}
 	}else{
 		const window_width	= 1001
 		const screen_width	= window.screen.width
@@ -1366,3 +1605,7 @@ const open_ontology_window = function(tipo, custom_url) {
 
 	return true
 }//end open_ontology_window
+
+
+
+// @license-end

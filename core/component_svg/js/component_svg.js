@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
@@ -8,6 +9,7 @@
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_edit_component_svg} from './render_edit_component_svg.js'
 	import {render_list_component_svg} from './render_list_component_svg.js'
+	import {render_search_component_svg} from './render_search_component_svg.js'
 
 
 
@@ -34,8 +36,6 @@ export const component_svg = function(){
 
 	this.file_name
 	this.file_dir
-
-	return true
 }//end component_svg
 
 
@@ -65,3 +65,8 @@ export const component_svg = function(){
 	component_svg.prototype.list				= render_list_component_svg.prototype.list
 	component_svg.prototype.tm					= render_list_component_svg.prototype.list
 	component_svg.prototype.edit				= render_edit_component_svg.prototype.edit
+	component_svg.prototype.search				= render_search_component_svg.prototype.search
+
+
+
+// @license-end

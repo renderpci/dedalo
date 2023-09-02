@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global */
 /*eslint no-undef: "error"*/
 
@@ -23,7 +24,7 @@ export const render_search_component_av = function() {
 /**
 * search
 * Render node for use in modes: search
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_search_component_av.prototype.search = async function(options) {
 
@@ -54,7 +55,7 @@ render_search_component_av.prototype.search = async function(options) {
 /**
 * GET_CONTENT_DATA
 * @param object self
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 
@@ -83,7 +84,7 @@ const get_content_data = function(self) {
 
 /**
 * GET_CONTENT_VALUE
-* @return DOM node content_value
+* @return HTMLElement content_value
 */
 const get_content_value = (i, current_value, self) => {
 
@@ -101,7 +102,8 @@ const get_content_value = (i, current_value, self) => {
 			value			: current_value,
 			parent			: content_value
 		})
-		input.addEventListener('change', function() {
+		input.addEventListener('change', fn_change)
+		function fn_change() {
 
 			// parsed_value
 				const parsed_value = (input.value.length>0) ? input.value : null
@@ -119,9 +121,12 @@ const get_content_value = (i, current_value, self) => {
 				// self.data.changed_data = changed_data
 			// publish search. Event to update the dom elements of the instance
 				event_manager.publish('change_search_element', self)
-		})//end event change
+		}//end fn_change
 
 
 	return content_value
 }//end get_content_value
 
+
+
+// @license-end

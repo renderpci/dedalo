@@ -52,7 +52,9 @@
 		switch ($mode) {
 
 			case 'list':
+			case 'tm':
 				$value			= $this->get_list_value();
+
 				$fallback_value	= component_common::extract_component_dato_fallback(
 					$this,
 					DEDALO_DATA_LANG, // lang
@@ -68,6 +70,7 @@
 			case 'edit':
 			default:
 				$value			= $this->get_dato();
+
 				$fallback_value	= component_common::extract_component_dato_fallback(
 					$this,
 					DEDALO_DATA_LANG, // lang
@@ -103,7 +106,33 @@
 				$item->parent_tipo				= $this->get_tipo();
 				$item->parent_section_id		= $this->get_section_id();
 				$item->fallback_value			= $fallback_value;
-				// $item->fallback_lang_applied	= $fallback_lang_applied ?? false;
+
+		// Transliterate components
+		// the main lang is set to nolan, the component has translatable property set to false.
+		// if the component has with_lang_versions = true in properties
+		// it could be transliterate to other languages (translatable with the tool_lang)
+		// transliterate_value is used to inform the users than this data has a translation
+		// or inside the tool_lang, inform what is the original data in nolan.
+			$with_lang_versions	= $properties->with_lang_versions ?? false;
+			if($with_lang_versions===true){
+
+				$original_lang = $this->lang;
+
+				// if the original_lang is nolan change to get the transliterable data in current data lang.
+				// if the original_lang is any lang set to nolan (is use into translate component inside tool_lang)
+				$tranliterable_lang = ($original_lang === DEDALO_DATA_NOLAN)
+					? DEDALO_DATA_LANG
+					: DEDALO_DATA_NOLAN;
+
+				$this->set_lang($tranliterable_lang);
+				$item->transliterate_value = $this->get_dato();
+
+				// revert to the original lang to the component
+				$this->set_lang($original_lang);
+			}
+
+
+		// $item->fallback_lang_applied	= $fallback_lang_applied ?? false;
 
 		// Debug
 			// if(SHOW_DEBUG===true) {

@@ -1,4 +1,5 @@
 <?php
+// declare(strict_types=1);
 /*
 * CLASS COMPONENT_RELATION_COMMON
 * Used as common base from all components that works from section relations data, instead standard component dato
@@ -61,7 +62,7 @@ class component_relation_common extends component_common {
 	*
 	* @return bool
 	*/
-	public function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=null, string $section_tipo=null) {
+	protected function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=null, string $section_tipo=null, bool $cache=true) {
 
 		// lang. translatable conditioned
 			$translatable = RecordObj_dd::get_translatable($tipo);
@@ -70,7 +71,10 @@ class component_relation_common extends component_common {
 					$lang = DEDALO_DATA_LANG;
 				}else{
 					if ($lang===DEDALO_DATA_NOLAN) {
-						debug_log(__METHOD__." Changed component wrong lang [TRANSLATABLE $section_tipo - $tipo] from $lang to ".DEDALO_DATA_LANG, logger::ERROR);
+						debug_log(__METHOD__
+							." Changed component wrong lang [TRANSLATABLE $section_tipo - $tipo] from $lang to ".DEDALO_DATA_LANG
+							, logger::ERROR
+						);
 						$lang = DEDALO_DATA_LANG;
 					}
 				}
@@ -101,7 +105,7 @@ class component_relation_common extends component_common {
 					: $this->default_relation_type_rel;
 
 		// Build the component normally
-			parent::__construct($tipo, $parent, $mode, $lang, $section_tipo);
+			parent::__construct($tipo, $parent, $mode, $lang, $section_tipo, $cache);
 	}//end __construct
 
 
@@ -129,7 +133,8 @@ class component_relation_common extends component_common {
 			'component_relation_related',
 			'component_relation_struct',
 			'component_select',
-			'component_select_lang'
+			'component_select_lang',
+			'component_inverse',
 		];
 
 		return $components_with_relations;
@@ -251,53 +256,54 @@ class component_relation_common extends component_common {
 
 
 	/**
-	* GET_VALUE
+	* GET_GRID_VALUE
 	* Get the value of the components. By default will be get_dato().
 	* overwrite in every different specific component
 	* Some the text components can set the value with the dato directly
 	* the relation components need to process the locator to resolve the value
-	* @param string $lang = DEDALO_DATA_LANG
 	* @param object|null $ddo = null
 	*
-	* @return object $value
+	* @return dd_grid_cell_object $value
 	*/
-	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : dd_grid_cell_object {
+	public function get_grid_value(object $ddo=null) : dd_grid_cell_object {
 
 		// ddo customs: set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$fields_separator	= $ddo->fields_separator ?? null;
 			$records_separator	= $ddo->records_separator ?? null;
-			$format_columns		= $ddo->format_columns ?? null;
 			$class_list			= $ddo->class_list ?? null;
 
-		$data = $this->get_dato();
+		// data
+			$data = $this->get_dato() ?? [];
 
 		// set the label of the component as column label
-		$label = $this->get_label();
-		// get the request request_config of the component
+			$label = $this->get_label();
+
+		// request_config. Get/build the request_config of the component
 		// the caller can built a request_config that will used instead the default request_config
-		$request_config = isset($this->request_config)
-			? $this->request_config
-			: $this->build_request_config();
+			$request_config = isset($this->request_config)
+				? $this->request_config
+				: $this->build_request_config();
 
 		// get the correct rqo (use only the dedalo api_engine)
-		$dedalo_request_config = array_find($request_config, function($el){
-			return $el->api_engine==='dedalo';
-		});
+			$dedalo_request_config = array_find($request_config, function($el){
+				return $el->api_engine==='dedalo';
+			});
 
-		// get the ddo_map to be used to create the components related to the portal
-		$ddo_map = $dedalo_request_config->show->ddo_map;
+		// ddo_map. Get the ddo_map to be used to create the components related to the portal
+			$ddo_map = $dedalo_request_config->show->ddo_map;
 
-		$ar_cells			= [];
-		$ar_columns_obj		= [];
-		$sub_row_count		= 0;
-		$sub_column_count	= null;
-		// the column_object could be injected for the caller or build new one
-		if(isset($this->column_obj)){
-			$column_obj = $this->column_obj;
-		}else{
-			$column_obj = new stdClass();
-				$column_obj->id = $this->section_tipo.'_'.$this->tipo;
-		}
+		// short vars
+			$ar_cells				= [];
+			$ar_columns_obj			= [];
+			$sub_row_count			= 0;
+			// $sub_column_count	= null;
+			// the column_object could be injected for the caller or build new one
+			if(isset($this->column_obj)){
+				$column_obj = $this->column_obj;
+			}else{
+				$column_obj = new stdClass();
+					$column_obj->id = $this->section_tipo.'_'.$this->tipo;
+			}
 
 		// children_recursive function, get all ddo chain that depends of this component
 			if (!function_exists('get_children_recursive')) {
@@ -337,31 +343,78 @@ class component_relation_common extends component_common {
 			$ddo_direct_children = array_filter($ddo_map, function($el){
 				return $el->parent === $this->tipo;
 			});
+			if (empty($ddo_direct_children)) {
+				debug_log(__METHOD__
+					. " WARNING! Empty direct_children for tipo: $this->tipo" .PHP_EOL
+					. 'ddo: ' . to_string($ddo)
+					, logger::WARNING
+				);
+			}
 
-		$components_with_relations	= component_relation_common::get_components_with_relations();
+		$components_with_relations = component_relation_common::get_components_with_relations();
+		// removed at 18-03-2023 because portal error, it's not possible resolve section_tipo here
+		// if(empty($data)){
+		// 	$pseudo_locator = new stdClass();
+		// 		$pseudo_locator->type			= DEDALO_RELATION_TYPE_LINK; // 'dd151';
+		// 		$pseudo_locator->section_tipo	= null;
+		// 		$pseudo_locator->section_id		= null;
+		// 	$data[] = $pseudo_locator;
+		// }
+		foreach($data as $current_key => $locator) {
 
-		if(empty($data)){
-			$pseudo_locator = new stdClass();
-				$pseudo_locator->type			= DEDALO_RELATION_TYPE_LINK; // 'dd151';
-				$pseudo_locator->section_tipo	= null;
-				$pseudo_locator->section_id		= null;
-			$data[] = $pseudo_locator;
-		}
-		foreach($data as $current_key => $locator){
+			// component_relation_index case, it doesn't has request_config and it's necessary calculate it
+			// get the locator to build pointed section and get his request config of relation_list.
+			// if($this->model==='dd432' && empty($ddo_direct_children)) {
+			if (get_called_class()==='component_relation_index' && empty($ddo_direct_children)) {
+
+				$datum		= $this->get_section_datum_from_locator($locator);
+				$context	= $datum->context;
+
+				$section_context = array_find($context, function($el) use ($locator){
+					return $el->section_tipo === $locator->section_tipo;
+				});
+
+				// get the correct rqo (use only the dedalo api_engine)
+				$dd_request_config = array_find($section_context->request_config, function($el){
+					return $el->api_engine==='dedalo';
+				});
+
+				// section_id_tipo
+				$ar_section_id_tipo	= section::get_ar_children_tipo_by_model_name_in_section(
+					$locator->section_tipo,
+					['component_section_id'],
+					true, // bool from cache
+					true, // bool resolve_virtual
+					true, // bool recursive
+					true // search_exact
+				);
+				$section_id_tipo = reset($ar_section_id_tipo);
+
+				$ddo_section_id = new dd_object();
+					$ddo_section_id->set_tipo($section_id_tipo);
+					$ddo_section_id->set_section_tipo($locator->section_tipo);
+					$ddo_section_id->set_parent($this->tipo);
+
+				// ddo_map. Get the ddo_map to be used to create the components related to the portal
+				$ddo_map = array_merge([$ddo_section_id], $dd_request_config->show->ddo_map);
+				$ddo_direct_children = array_filter($ddo_map, function($el){
+					return $el->parent === $this->tipo;
+				});
+			}
+
 			$locator_column_obj	= [];
-			$ar_columns = [];
+			$ar_columns			= [];
 			foreach ($ddo_direct_children as $ddo) {
+
 				// the the ddo has a multiple section_tipo (such as toponymy component_autocomplete), reset the section_tipo
 				$ddo_section_tipo		= is_array($ddo->section_tipo) ? reset($ddo->section_tipo) : $ddo->section_tipo;
-				$locator->section_tipo	= $locator->section_tipo ?? $ddo_section_tipo ;
-				$section_tipo			= $locator->section_tipo;
+				$locator->section_tipo	= $locator->section_tipo ?? $ddo_section_tipo;
 				// set the path that will be used to create the column_obj id
-				$current_path			= $section_tipo.'_'.$ddo->tipo;
+				$current_path			= $locator->section_tipo.'_'.$ddo->tipo;
 				$translatable			= RecordObj_dd::get_translatable($ddo->tipo);
 				$current_lang			= $translatable===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 				$component_model		= RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
-				// dump($component_model,'$component_model');
-				$current_component 	= component_common::get_instance(
+				$current_component		= component_common::get_instance(
 					$component_model,
 					$ddo->tipo,
 					$locator->section_id,
@@ -369,6 +422,7 @@ class component_relation_common extends component_common {
 					$current_lang,
 					$locator->section_tipo
 				);
+
 				// set the locator to the new component, it will used in the next loop
 				$current_component->set_locator($this->locator);
 
@@ -407,7 +461,7 @@ class component_relation_common extends component_common {
 				$current_component->column_obj = $current_column_obj;
 
 				// get the value and fallback_value of the component and stored to be joined
-				$current_column		= $current_component->get_value($lang, $ddo);
+				$current_column		= $current_component->get_grid_value($ddo);
 				$sub_row_count		= $current_column->row_count ?? 0;
 				// if (in_array($component_model, $components_with_relations)) {
 				// 	$current_column = get_last_column_recursive([$current_column]);
@@ -417,7 +471,7 @@ class component_relation_common extends component_common {
 
 				// store the columns into the full columns array
 				$ar_columns[] = $current_column;
-			}// end foreach ($ddo_direct_children as $ddo)
+			}//end foreach ($ddo_direct_children as $ddo)
 
 			// in the case that the portals has sub-data, this sub-data will separated only in columns, not in rows
 			if(isset($this->sub_columns_divison) && $this->sub_columns_divison || $this->section_id === null){
@@ -437,10 +491,12 @@ class component_relation_common extends component_common {
 			// 'photograph' locators will be exploded in columns not in rows and the column is identify by the section_id of the photograph
 			// the final format will be: name ; surname ; name|1 ; surname|1 ; name|2 etc of the photograph
 			foreach ($locator_column_obj as $column_pos => $current_column_obj) {
+
 				// check if the current column exists in the full column array
 				$id_obj = array_find($ar_columns_obj, function($el) use($current_column_obj){
 					return ($el->id===$current_column_obj->id);
 				});
+
 				// if not exist we need add it, the columns are joined from the deep of the portals to the parents
 				if($id_obj===null){
 					// check if the current column_id is a locator column, else add the column_object at the end
@@ -474,23 +530,23 @@ class component_relation_common extends component_common {
 				$row_count = 1;
 			}
 		// get the total of columns
-			$column_count	= sizeof($ar_columns_obj);
+			$column_count = sizeof($ar_columns_obj);
 
 		// set the separator text that will be used to render the column
 		// separator will be the "glue" to join data in the client and can be set by caller or could be defined in preferences of the component.
-		$properties = $this->get_properties();
+			$properties = $this->get_properties();
 
-		$fields_separator = isset($fields_separator)
-			? $fields_separator
-			: (isset($properties->fields_separator)
-				? $properties->fields_separator
-				: ', ');
+			$fields_separator = isset($fields_separator)
+				? $fields_separator
+				: (isset($properties->fields_separator)
+					? $properties->fields_separator
+					: ', ');
 
-		$records_separator = isset($records_separator)
-			? $records_separator
-			: (isset($properties->records_separator)
-				? $properties->records_separator
-				: ' | ');
+			$records_separator = isset($records_separator)
+				? $records_separator
+				: (isset($properties->records_separator)
+					? $properties->records_separator
+					: ' | ');
 
 		// value object (dd_grid_cell_object)
 			$value = new dd_grid_cell_object();
@@ -508,7 +564,7 @@ class component_relation_common extends component_common {
 
 
 		return $value;
-	}//end get_value
+	}//end get_grid_value
 
 
 
@@ -587,12 +643,13 @@ class component_relation_common extends component_common {
 	* Usually, dato is built element by element, adding one locator to existing dato, but some times we need
 	* insert complete array of locators at once. Use this method in this cases
 	*/
-	public function set_dato($dato) {
+	public function set_dato($dato) : bool {
 
 		$safe_dato = [];
 
-		$translatable = $this->RecordObj_dd->get_traducible();
-		$lang = $this->get_lang();
+		// translatable
+			$translatable	= $this->RecordObj_dd->get_traducible();
+			$lang			= $this->get_lang();
 
 		if (!empty($dato)) {
 
@@ -632,61 +689,103 @@ class component_relation_common extends component_common {
 
 				// is_object check
 					if (!is_object($current_locator)) {
-						$msg = " Error on set locator (is not object) json_ecoded: ".json_encode($current_locator);
-						trigger_error( __METHOD__ . $msg );
-						debug_log( __METHOD__ . $msg, logger::ERROR);
-						throw new Exception("Error Processing Request. Look server log for details", 1);
+						$msg = " Error on set locator (is not object)";
+						debug_log(__METHOD__
+							. $msg . PHP_EOL
+							. ' type: ' . gettype($current_locator) . PHP_EOL
+							.' locator: ' . json_encode($current_locator)
+							, logger::ERROR
+						);
+						dump($current_locator, '$current_locator ++ '.to_string());
+						// throw new Exception("Error Processing Request. Look server log for details", 1);
+						continue;
 					}
 
 				// section_id
 					if (!isset($current_locator->section_id) || !isset($current_locator->section_tipo)) {
-						debug_log(__METHOD__." IGNORED bad formed locator (empty section_id or section_tipo) [$this->section_tipo, $this->parent, $this->tipo] ". get_called_class().' - current_locator: '.to_string($current_locator), logger::ERROR);
+						debug_log(__METHOD__
+							." IGNORED bad formed locator (empty section_id or section_tipo) [$this->section_tipo, $this->parent, $this->tipo] ". PHP_EOL
+							. ' called_class: ' . get_called_class() .PHP_EOL
+							. ' current_locator: '.to_string($current_locator)
+							, logger::ERROR
+						);
 						continue;
 					}
 
+				// Clone locator to prevent issues with external data or observers (modification of the original locator).
+				// When the component is observed by other component, the locator is saved into the observer changed the from_component_tipo (get the component_tipo as his own from_component_tipo)
+				// if the locator is not cloned, the original locator of the original component will changed with the last from_component_tipo of the observers
+				// the original component will save normally but the changed locator will send to client with incorrect from_component_tipo.
+					$locator_copy = clone $current_locator;
+
 				// type
-					if (!isset($current_locator->type)) {
-						debug_log(__METHOD__." Fixing bad formed locator (empty type) [$this->section_tipo, $this->parent, $this->tipo] ". get_called_class().' - current_locator: '.to_string($current_locator), logger::WARNING);
-						$current_locator->type = $relation_type;
+					if (!isset($locator_copy->type)) {
+						debug_log(__METHOD__
+							." Fixing bad formed locator (empty type) [$this->section_tipo, $this->parent, $this->tipo] ". get_called_class().' - locator_copy: '.to_string($locator_copy)
+							, logger::WARNING
+						);
+						$locator_copy->type = $relation_type;
 					}
 
 				// from_component_tipo
-					if (!isset($current_locator->from_component_tipo)) {
-						$current_locator->from_component_tipo = $from_component_tipo;
-					}else if ($current_locator->from_component_tipo!==$from_component_tipo) {
-						debug_log(__METHOD__." Fixed bad formed locator (bad from_component_tipo $current_locator->from_component_tipo) [$this->section_tipo, $this->parent, $from_component_tipo] ".get_called_class().' '.to_string(), logger::WARNING);
-						$current_locator->from_component_tipo = $from_component_tipo;
+					if (!isset($locator_copy->from_component_tipo)) {
+						$locator_copy->from_component_tipo = $from_component_tipo;
+					}else if ($locator_copy->from_component_tipo!==$from_component_tipo) {
+						$locator_copy->from_component_tipo = $from_component_tipo;
+						debug_log(__METHOD__
+							. " Fixed bad formed locator (bad from_component_tipo $locator_copy->from_component_tipo)" . PHP_EOL
+							. ' source_locator: ' . to_string($current_locator) . PHP_EOL
+							. ' result_locator: ' . to_string($locator_copy) . PHP_EOL
+							. ' called_class: ' . get_called_class()
+							, logger::WARNING
+						);
 					}
 
 				// lang
 					if ($translatable==='si') {
-						if (!isset($current_locator->lang)) {
-							$current_locator->lang = $lang;
-						}else if ($current_locator->lang!==$lang) {
-							debug_log(__METHOD__." Fixed bad formed locator (bad lang $current_locator->lang) [$this->section_tipo, $this->parent, $lang] ".get_called_class().' '.to_string(), logger::WARNING);
-							$current_locator->lang = $lang;
-						}// end if (!isset($current_locator->lang))
+						if (!isset($locator_copy->lang)) {
+							$locator_copy->lang = $lang;
+						}else if ($locator_copy->lang!==$lang) {
+							$locator_copy->lang = $lang;
+							debug_log(__METHOD__
+								. " Fixed bad formed locator (bad lang in translatable locator. Lang: $locator_copy->lang) ". PHP_EOL
+								. ' source_locator: ' . to_string($current_locator) . PHP_EOL
+								. ' result_locator: ' . to_string($locator_copy) . PHP_EOL
+								. ' called_class: ' . get_called_class()
+								, logger::WARNING
+							);
+						}// end if (!isset($locator_copy->lang))
 					}// end if ($translatable==='si')
 
+				// paginated_key
+					if (isset($locator_copy->paginated_key)) {
+						// remove temporal property paginated_key
+						unset($locator_copy->paginated_key);
+					}
+
 				// normalized locator
-					$normalized_locator = new locator($current_locator);
+					$normalized_locator = new locator($locator_copy);
 
 				// Add. Check if locator already exists
 					$ar_properties = ($translatable==='si')
 						? ['section_id','section_tipo','type','tag_id','lang']
 						: ['section_id','section_tipo','type','tag_id'];
-					$found = locator::in_array_locator( $current_locator, $safe_dato, $ar_properties);
+					$found = locator::in_array_locator($locator_copy, $safe_dato, $ar_properties);
 					if ($found===false) {
 						$safe_dato[] = $normalized_locator;
 					}else{
-						debug_log(__METHOD__.' Ignored set_dato of already existing locator '.to_string($current_locator), logger::ERROR);
+						debug_log(__METHOD__
+							.' Ignored set_dato of already existing locator '. PHP_EOL
+							.' locator_copy: ' . to_string($locator_copy)
+							, logger::WARNING
+						);
 					}
 			}
 		}
 
-		// set again the safe dato to current component dato (this action force to refresh component property 'dato' with the new safe values)
+		// set again the safe dato to current component dato
+		// (this action force to refresh component property 'dato' with the new safe values)
 			parent::set_dato( (array)$safe_dato );
-
 
 		// translatable cases
 			if ($translatable==='si') {
@@ -710,28 +809,28 @@ class component_relation_common extends component_common {
 
 
 	/**
-	* GET_VALOR_LANG
+	* GET_VALOR_LANG (DEPRECATED)
 	* Return the component lang depending of is translatable or not
 	* If the component need change this langs (selects, radio buttons...) overwrite this function
 	* @return string $lang
 	*/
-	public function get_valor_lang() : string {
+		// public function get_valor_lang() : string {
 
-		$related = (array)$this->RecordObj_dd->get_relaciones();
-		if(empty($related)){
-			return $this->lang;
-		}
+		// 	$related = (array)$this->RecordObj_dd->get_relaciones();
+		// 	if(empty($related)){
+		// 		return $this->lang;
+		// 	}
 
-		$termonioID_related	= array_values($related[0])[0];
-		$translatable		= RecordObj_dd::get_translatable($termonioID_related);
+		// 	$termonioID_related	= array_values($related[0])[0];
+		// 	$translatable		= RecordObj_dd::get_translatable($termonioID_related);
 
-		$lang = $translatable===true
-			? DEDALO_DATA_LANG
-			: DEDALO_DATA_NOLAN;
+		// 	$lang = $translatable===true
+		// 		? DEDALO_DATA_LANG
+		// 		: DEDALO_DATA_NOLAN;
 
 
-		return $lang;
-	}//end get_valor_lang
+		// 	return $lang;
+		// }//end get_valor_lang
 
 
 
@@ -753,42 +852,13 @@ class component_relation_common extends component_common {
 		$valor_export = $this->get_valor($lang);
 
 		// replace html '<br>'' for plain text return '\nl'
-		$valor_export = br2nl($valor_export);
+		if(!empty($valor_export)) {
+			$valor_export = br2nl($valor_export);
+		}
+
 
 		return $valor_export;
 	}//end get_valor_export
-
-
-
-	/**
-	* LOAD_COMPONENT_DATAFRAME
-	* @return bool
-	*/
-	public function load_component_dataframe() : bool {
-
-		// check vars
-			if( empty($this->section_id) || $this->mode==='dummy' || $this->mode==='search') {
-				return false;
-			}
-
-		$dato = $this->get_dato();
-
-		$this->dataframe = [];
-
-		foreach ($dato as $key => $current_locator) {
-			if (isset($current_locator->dataframe)) {
-				foreach ($current_locator->dataframe as $dataframe_obj) {
-					$this->dataframe[] = $dataframe_obj;
-				}
-			}
-		}
-
-		# Set as loaded
-		$this->bl_loaded_matrix_data = true;
-
-
-		return true;
-	}//end load_component_dataframe
 
 
 
@@ -805,7 +875,7 @@ class component_relation_common extends component_common {
 			if(SHOW_DEBUG===true) {
 				throw new Exception("Error Processing Request. var 'locator' not contains property 'type' ", 1);
 			}
-			debug_log(__METHOD__." Invalid locator is received to add. Locator was ignored (type:".gettype($locator).") ".to_string($locator), logger::WARNING);
+			debug_log(__METHOD__." Invalid locator is received to add. Locator was ignored (type:".gettype($locator).") ".to_string($locator), logger::ERROR);
 			return false;
 		}
 
@@ -834,7 +904,7 @@ class component_relation_common extends component_common {
 
 			$added = true;
 		}else{
-			debug_log(__METHOD__." Ignored add locator action: locator ".json_encode($locator)." already exists. Tested properties: ".to_string(), logger::DEBUG);
+			debug_log(__METHOD__." Ignored add locator action: locator ".json_encode($locator)." already exists. Tested properties: ".to_string(), logger::ERROR);
 		}
 
 		# Updates current dato
@@ -852,48 +922,72 @@ class component_relation_common extends component_common {
 	* REMOVE_LOCATOR_FROM_DATO
 	* Removes from dato one or more locators that accomplish given locator equality
 	* (!) Not save the result
-	* @param array $ar_properties
+	* @param object $locator
+	* @param array $ar_properties = []
 	* @return bool
 	*/
-	public function remove_locator_from_dato( object $locator, array $ar_properties=[] ) : bool {
+	public function remove_locator_from_dato( object $locator_to_remove, array $ar_properties=[] ) : bool {
 
-		if (empty($locator)) {
-			return false;
-		}
-
-		$locator = clone($locator);
-
-		if (!isset($locator->type)) {
-			$locator->type = $this->relation_type;
-			debug_log(__METHOD__." Received locator to remove, don't have 'type'. Autoset type: $this->relation_type to locator: ".to_string($locator), logger::DEBUG);
-		}elseif ($locator->type!==$this->relation_type) {
-			trigger_error("Incorrect locator type ! Expected $this->relation_type and received $locator->type. tipo:$this->tipo, section_tipo:$this->section_tipo, parent:$this->parent");
-			return false;
-		}
-
-		$removed		= false;
-		$new_relations	= array();
-		$dato = (array)$this->get_dato();
-		foreach($dato as $key => $current_locator_obj) {
-
-			# Test if already exists
-			$equal = locator::compare_locators( $current_locator_obj, $locator, $ar_properties );
-			if ( $equal===true ) {
-
-				$removed = true;
-
-			}else{
-
-				$new_relations[] = $current_locator_obj;
+		// empty case
+			if (empty($locator_to_remove)) {
+				return false;
 			}
-		}
-		// error_log("Removed: ".json_encode($removed));
-		// debug_log(__METHOD__." ".get_called_class()." $this->tipo, $this->section_tipo, $this->parent. To remove:".to_string($locator)." - final dato:".to_string($new_relations)." - removed: ".to_string($removed), logger::DEBUG);
 
-		# Updates current dato relations with clean array of locators
-		if ($removed===true) {
-			$this->set_dato( $new_relations );
-		}
+		// clone for safe modification
+			$locator = clone($locator_to_remove);
+
+		// type issues check
+			if (!isset($locator->type)) {
+
+				// fix missing locator type property
+				$locator->type = $this->relation_type;
+
+				debug_log(__METHOD__
+					." Received locator to remove, don't have 'type'. Auto-set type: $this->relation_type to locator: " . PHP_EOL
+					.to_string($locator)
+					, logger::DEBUG
+				);
+			}elseif ($locator->type!==$this->relation_type) {
+				// trigger_error("Incorrect locator type ! Expected $this->relation_type and received $locator->type. tipo:$this->tipo, section_tipo:$this->section_tipo, parent:$this->parent");
+				debug_log(__METHOD__
+					." Error: Incorrect locator type property! Remove action was aborted" . PHP_EOL
+					.' expected: ' . $this->relation_type . PHP_EOL
+					.' received: ' . $locator->type . PHP_EOL
+					.' locator: ' . to_string($locator)
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		// iterate and add to new_relations only different locators
+			$removed		= false;
+			$new_relations	= array();
+			$dato			= $this->get_dato();
+			if (!empty($dato)) {
+				foreach($dato as $current_locator_obj) {
+
+					// Test if already exists
+					$equal = locator::compare_locators(
+						$current_locator_obj,
+						$locator,
+						['section_tipo','section_id','from_component_tipo','type'],//$ar_properties, // array check properties
+						['paginated_key'] // $ar_exclude_properties (prevent errors in accidental saved paginated_key cases)
+					);
+					if ($equal===true) {
+
+						$removed = true;
+
+					}else{
+
+						$new_relations[] = $current_locator_obj;
+					}
+				}
+			}
+
+		// Updates current dato relations with clean array of locators
+			if ($removed===true) {
+				$this->set_dato( $new_relations );
+			}
 
 
 		return (bool)$removed;
@@ -917,48 +1011,34 @@ class component_relation_common extends component_common {
 			$mode			= $this->get_mode();
 			$lang			= DEDALO_DATA_LANG;
 
-		// // dataframe mode. Save caller and stop
-		// 	if (strpos($mode,'dataframe')===0 && isset($this->caller_dataset)) {
-
-		// 		// new_component
-		// 			$new_tipo			= $this->caller_dataset->component_tipo;
-		// 			$new_section_tipo	= $this->caller_dataset->section_tipo;
-		// 			$new_parent			= $this->caller_dataset->section_id;
-		// 			$new_model_name		= RecordObj_dd::get_modelo_name_by_tipo($new_tipo, true);
-		// 			$new_component		= component_common::get_instance(
-		// 				$new_model_name,
-		// 				$new_tipo,
-		// 				$new_parent,
-		// 				'edit',
-		// 				$lang,
-		// 				$new_section_tipo
-		// 			);
-
-		// 		// Force load current db dato to avoid loose it
-		// 		// component that will be marked with dataframe (the original component)
-		// 			$component_dato = $new_component->get_dato();
-
-		// 		// Set dataframe data
-		// 			$new_component->update_dataframe_element($this->dato, $this->caller_dataset->caller_key, $this->caller_dataset->type);
-
-		// 		// debug
-		// 			if (isset($this->save_to_database) && $this->save_to_database===false) {
-		// 				debug_log(__METHOD__." Stopped ?? dataframe save to DDBB $this->section_tipo : $new_section_tipo , $this->parent : $new_parent ".to_string(), logger::WARNING);
-		// 				#$new_component->save_to_database = false;
-		// 			}
-
-		// 		// set_dato
-		// 			if(isset($component_dato[$this->caller_dataset->caller_key])){
-		// 				$component_dato[$this->caller_dataset->caller_key]->dataframe = $new_component->dataframe;
-		// 				$new_component->set_dato($component_dato);
-		// 			}
-
-		// 		return $new_component->Save(); // type int|null
-		// 	}//end if (strpos($mode,'dataframe')===0 && isset($this->caller_dataset))
-
-		// Verify component minimum vars before save
+		// check component minimum vars before save
 			if( empty($section_id) || empty($tipo) || empty($lang) ) {
-				trigger_error(__METHOD__." Error on save: Few vars! section_tipo:$section_tipo, section_id:$section_id, tipo,$tipo, lang,$lang, model: ".get_class($this));
+				debug_log(__METHOD__
+					. " Error on save: Few vars! . Ignored order" . PHP_EOL
+					. ' section_id: ' . to_string($section_id) . PHP_EOL
+					. ' section_tipo: ' . $section_tipo . PHP_EOL
+					. ' tipo: ' . $tipo . PHP_EOL
+					. ' model: ' . get_class($this) . PHP_EOL
+					. ' mode: ' . $mode . PHP_EOL
+					. ' lang: ' . $lang
+					, logger::ERROR
+				);
+				return null;
+			}
+
+		// tm mode case
+			if ($this->mode==='tm' || $this->data_source==='tm') {
+				debug_log(__METHOD__
+					. " Error on save: invalid mode (tm)! . Ignored order" . PHP_EOL
+					. ' section_id: ' . to_string($section_id) . PHP_EOL
+					. ' section_tipo: ' . $section_tipo . PHP_EOL
+					. ' tipo: ' . $tipo . PHP_EOL
+					. ' model: ' . get_class($this) . PHP_EOL
+					. ' mode: ' . $mode . PHP_EOL
+					. ' data_source: ' . $this->data_source . PHP_EOL
+					. ' lang: ' . $lang
+					, logger::ERROR
+				);
 				return null;
 			}
 
@@ -1033,12 +1113,6 @@ class component_relation_common extends component_common {
 		bool $include_self=true
 		) : ?array {
 
-		// debug
-			if(SHOW_DEBUG===true) {
-				$start_time=start_time();
-				#dump($ar_components_related, ' ar_components_related ++ '.to_string());
-			}
-
 		// locator
 			if (empty($locator) || !is_object($locator)) {
 				return null;
@@ -1047,7 +1121,7 @@ class component_relation_common extends component_common {
 			$locator = new locator($locator);
 
 		$ar_value = [];
-		if($ar_components_related!==false && !empty($ar_components_related)){
+		if(!empty($ar_components_related)){
 
 			$value = array();
 			foreach ($ar_components_related as $component_tipo) {
@@ -1110,17 +1184,12 @@ class component_relation_common extends component_common {
 
 			}else{
 
-				// $locator_value = ts_object::get_term_by_locator( $locator, $lang, true );
-				$ar_value[] = ts_object::get_term_by_locator( $locator, $lang, true );
+				$locator_value = ts_object::get_term_by_locator( $locator, $lang, true );
+
+				$ar_value[] = $locator_value;
 
 			}//end if ($show_parents===true)
 		}
-
-		// debug
-			if(SHOW_DEBUG===true) {
-				$total = exec_time_unit($start_time,'ms')." ms";
-				#debug_log(__METHOD__." Total time $total ".to_string(), logger::DEBUG);
-			}
 
 
 		return $ar_value;
@@ -1205,10 +1274,10 @@ class component_relation_common extends component_common {
 
 
 	/**
-	* GET_SELECT_QUERY2
+	* GET_SELECT_QUERY
 	* @return object
 	*/
-	public static function get_select_query2( object $select_object ) : object {
+	public static function get_select_query( object $select_object ) : object {
 		/*
 		[path] => Array
 			(
@@ -1239,76 +1308,121 @@ class component_relation_common extends component_common {
 
 
 		return $select_object;
-	}//end get_select_query2
+	}//end get_select_query
 
 
 
 	/**
 	* RESOLVE_QUERY_OBJECT_SQL
+	* Parses given SQO to use it into the SQL query
+	* @param object $query_object
 	* @return object $query_object
 	*/
 	public static function resolve_query_object_sql( object $query_object ) : object {
-		# Always set fixed values
-		$query_object->type 	= 'jsonb';
-		$query_object->unaccent = false;
 
-		# component path
+		// Always set fixed values
+		$query_object->type		= 'jsonb';
+		$query_object->unaccent	= false;
+
+		// component path
 		$query_object->component_path = ['relations'];
 
 		$q = $query_object->q;
 
 
-		# For unification, all non string are json encoded
-		# This allow accept mixed values (encoded and no encoded)
+		// For unification, all non string are JSON encoded
+		// This allow accept mixed values (encoded and no encoded)
 		if (!is_string($q)) {
 			$q = json_encode($q);
 		}
 
-		$q = str_replace(array('[',']'), '', $q);
+		// remove initial and final array square brackets if they exists
+		// $q = str_replace(array('[',']'), '', $q);
+		if (strpos($q, '[')===0) {
+			$re	= '/^(\[)(.*)(\])$/m';
+			$q	= preg_replace($re, '$2', $q);
+		}
 
-		$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
-
+		$q_operator		= $query_object->q_operator ?? null;
+		$component_tipo	= end($query_object->path)->component_tipo;
 
 		switch (true) {
-			# IS DIFFERENT
+			// IS DIFFERENT
 			case ($q_operator==='!=' && !empty($q)):
 				$operator = '@>';
 				$q_clean  = '\'['.$q.']\'::jsonb=FALSE';
 				$query_object->operator = $operator;
 				$query_object->q_parsed = $q_clean;
 				break;
-			# IS NULL
+			// IS NULL
 			case ($q_operator==='!*'):
 				$operator = '@>';
 				$q_obj = new stdClass();
-					$q_obj->from_component_tipo = end($query_object->path)->component_tipo;
+					$q_obj->from_component_tipo = $component_tipo ;
 				$ar_q 	  = array($q_obj);
 				$q_clean  = '\''.json_encode($ar_q).'\'::jsonb=FALSE';
 				$query_object->operator = $operator;
 				$query_object->q_parsed	= $q_clean;
 				break;
-			# IS NOT NULL
+			// IS NOT NULL
 			case ($q_operator==='*'):
 				$operator = '@>';
 				$q_obj = new stdClass();
-					$q_obj->from_component_tipo = end($query_object->path)->component_tipo;
+					$q_obj->from_component_tipo = $component_tipo ;
 				$ar_q 	  = array($q_obj);
 				$q_clean  = '\''.json_encode($ar_q).'\'';
 				$query_object->operator = $operator;
 				$query_object->q_parsed = $q_clean;
 				break;
-			# CONTAIN
+			// CONTAIN
 			default:
 				$operator = '@>';
 				$q_clean  = '\'['.$q.']\'';
 				$query_object->operator = $operator;
 				$query_object->q_parsed	= $q_clean;
 				break;
-		}//end switch (true) {
+		}//end switch (true)
+
+
+		// relations_search. only for component_autocomplete_hi
+			$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($component_tipo);
+			if ($legacy_model==='component_autocomplete_hi'){
+				$query_object = component_relation_common::add_relations_search($query_object);
+			}
 
 
 		return $query_object;
 	}//end resolve_query_object_sql
+
+
+
+	/**
+	* ADD_RELATIONS_SEARCH
+	* @param object $query_object
+	* @return object $new_query_object
+	*/
+	protected static function add_relations_search( object $query_object) : object {
+
+		// q_operator
+			$q_operator = $query_object->q_operator ?? null;
+
+		# Clone and modify query_object for search in relations_search too if the operator is different to ==
+			$relation_search_obj = clone $query_object;
+			if ($q_operator!=='==') {
+				$relation_search_obj->component_path = ['relations_search'];
+			}
+
+		# Group the two query_object in a 'or' clause
+		$operator = '$or';
+		if ($q_operator==='!=') {
+			$operator = '$and';
+		}
+		$new_query_object = new stdClass();
+			$new_query_object->{$operator} = [$query_object,$relation_search_obj];
+
+
+		return $new_query_object;
+	}//end add_relations_search
 
 
 
@@ -1320,9 +1434,9 @@ class component_relation_common extends component_common {
 	public function search_operators_info() : array {
 
 		$ar_operators = [
-			'!='	=> 'distinto_de',
-			'!*'	=> 'vacio',
-			'*'		=> 'no_vacio' // not null
+			'!='	=> 'different_from',
+			'!*'	=> 'empty',
+			'*'		=> 'no_empty' // not null
 		];
 
 		return $ar_operators;
@@ -1342,12 +1456,89 @@ class component_relation_common extends component_common {
 	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
 		$dato = $this->get_dato();
+
 		$diffusion_value = !empty($dato)
 			? json_encode($dato)
 			: null;
 
 		return $diffusion_value;
 	}//end get_diffusion_value
+
+
+
+	/**
+	* GET_DIFFUSION_DATO
+	* @return string $diffusion_value
+	*/
+	public function get_diffusion_dato() : ?string {
+
+		$dato = $this->get_dato();
+		if (is_array($dato)) {
+			$ar_id = array();
+			foreach ($dato as $current_locator) {
+				$ar_id[] = $current_locator->section_id;
+			}
+			$final_dato = $ar_id;
+		}
+		$diffusion_value = isset($final_dato)
+			? json_encode($final_dato)
+			: null; // json_encode([]);
+
+		return $diffusion_value;
+	}//end get_diffusion_dato
+
+
+
+	/**
+	* GET_DIFFUSION_RESOLVE_VALUE
+	* Alias of static diffusion_sql::resolve_value
+	* @return mixed
+	*/
+	public function get_diffusion_resolve_value(object $option_obj=null) : mixed {
+
+		$args_list = func_get_args();
+		if (count($args_list)>1) {
+
+			$dato = $this->get_dato();
+
+			$ar_value = [];
+			foreach ($args_list as $current_option_obj) {
+
+				$lang = $current_option_obj->lang; // $this->lang
+
+				$options = new stdClass();
+					$options->lang			= $lang;
+					$options->properties	= $current_option_obj;
+
+				$value = diffusion_sql::resolve_value($options, $dato);
+
+				$ar_value[] = $value;
+			}
+
+			return $ar_value;
+		}
+
+		// example $option_obj
+			// {
+			//     "process_dato_arguments": {
+			//         "target_component_tipo": "numisdata698",
+			//         "component_method": "get_diffusion_value"
+			//     },
+			//	   "lang" : "lg-spa"
+			// }
+
+		$dato = $this->get_dato();
+
+		$lang = $option_obj->lang; // $this->lang
+
+		$options = new stdClass();
+			$options->lang			= $lang;
+			$options->properties	= $option_obj;
+
+		$value = diffusion_sql::resolve_value($options, $dato);
+
+		return $value;
+	}//end get_diffusion_resolve_value
 
 
 
@@ -1389,15 +1580,14 @@ class component_relation_common extends component_common {
 	* @see used by component_autocomplete and component_portal
 	* @return bool
 	*/
-	public function set_dato_external($options) : bool {
+	public function set_dato_external(object $options) : bool {
+		$start_time=start_time();
 
 		// options
-		$save				= $options->save ?? false;
-		$changed			= $options->changed ?? false;
-		$current_dato		= $options->current_dato ?? false;
-		$references_limit	= $options->references_limit ?? 10;
-
-		$start_time=start_time();
+			$save				= $options->save ?? false;
+			$changed			= $options->changed ?? false;
+			$current_dato		= $options->current_dato ?? false;
+			$references_limit	= $options->references_limit ?? 10;
 
 		// dato set
 			$dato = ($current_dato!==false)
@@ -1422,10 +1612,10 @@ class component_relation_common extends component_common {
 				$set_observed_data = $properties->source->set_observed_data;
 				foreach ($set_observed_data as $current_ddo) {
 
-					$current_component_tipo = $current_ddo->tipo;
-					$model_name			= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo, true);
-					$is_translatable	= RecordObj_dd::get_translatable($current_component_tipo);
-					$observer_component	= component_common::get_instance(
+					$current_component_tipo	= $current_ddo->tipo;
+					$model_name				= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo, true);
+					$is_translatable		= RecordObj_dd::get_translatable($current_component_tipo);
+					$observer_component		= component_common::get_instance(
 						$model_name,
 						$current_component_tipo,
 						$section_id,
@@ -1441,13 +1631,29 @@ class component_relation_common extends component_common {
 						$params = is_array($params_definition)
 							? $params_definition
 							: [$params_definition];
+
+						// check function exits
+							if (!method_exists($observer_component, $function)) {
+								debug_log(__METHOD__
+									. " An error occurred calling function - Method do not exists !  " . PHP_EOL
+									. ' function: ' . to_string($function) . PHP_EOL
+									. ' component_name: ' . $model_name . PHP_EOL
+									. ' component_tipo: ' . $current_component_tipo
+									, logger::ERROR
+								);
+							}
+
 						$final_data = call_user_func_array(array($observer_component, $function), $params);
+
 					}else{
 						// get the dato from components with data locators
 						$final_data = $observer_component->get_dato();
 					}
 					$this->set_dato($final_data);
-					debug_log(__METHOD__."Set observed data ($model_name - $current_component_tipo - $section_tipo - $section_id)".to_string(), logger::DEBUG);
+					debug_log(__METHOD__
+						."Set observed data ($model_name - $current_component_tipo - $section_tipo - $section_id)"
+						, logger::DEBUG
+					);
 					$this->Save();
 				// task done. return
 					return true;
@@ -1460,7 +1666,7 @@ class component_relation_common extends component_common {
 			if (isset($properties->source->source_overwrite) && isset($properties->source->component_to_search)) {
 
 				// overwrite source locator
-					$component_to_search_tipo	= reset($ar_component_to_search);
+					$component_to_search_tipo	= $component_to_search; // $ar_component_to_search[0] ?? null;
 					$model_name					= RecordObj_dd::get_modelo_name_by_tipo($component_to_search_tipo, true);
 					$component_to_search		= component_common::get_instance(
 						$model_name,
@@ -1546,8 +1752,8 @@ class component_relation_common extends component_common {
 				}
 			}
 
-		// // Add locator at end
-		// 	$new_relation_locators[] = $locator;
+		// Add locator at end
+		// $new_relation_locators[] = $locator;
 		// get the inverse references
 			//old way done in relations table
 				// $ar_result 	= $this->get_external_result_from_relations_table($new_relation_locators, $ar_component_to_search);
@@ -1587,8 +1793,6 @@ class component_relation_common extends component_common {
 
 					$ar_result[] = $current_locator;
 				}
-
-
 
 			$total_ar_result	= sizeof($ar_result);
 			$total_ar_dato		= sizeof($dato);
@@ -1634,7 +1838,6 @@ class component_relation_common extends component_common {
 							$changed = true;
 						}
 					}
-
 			}//end if ($total_ar_result>2000)
 
 
@@ -1671,7 +1874,10 @@ class component_relation_common extends component_common {
 		// debug
 			if(SHOW_DEBUG===true) {
 				$total = exec_time_unit($start_time,'ms')." ms";
-				debug_log(__METHOD__." Total time $total - $total_ar_result locators [$this->section_tipo, $this->tipo, $this->parent] ".get_class($this) .' : '. RecordObj_dd::get_termino_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true) . to_string(), logger::DEBUG);
+				debug_log(__METHOD__
+					." Total time $total - $total_ar_result locators [$this->section_tipo, $this->tipo, $this->parent] ".get_class($this) .' : '. RecordObj_dd::get_termino_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true)
+					, logger::DEBUG
+				);
 			}
 
 
@@ -2063,12 +2269,24 @@ class component_relation_common extends component_common {
 			foreach ($result->ar_records as $row) {
 
 				if (empty($row->datos->components->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO}->dato->{DEDALO_DATA_NOLAN})) {
-					debug_log(__METHOD__." Skipped hierarchy without target section tipo: $row->section_tipo, $row->section_id ".to_string(), logger::ERROR);
+					debug_log(__METHOD__
+						." Skipped hierarchy without target section tipo: $row->section_tipo, $row->section_id ".to_string()
+						, logger::ERROR
+					);
 					continue;
 				}
 
 				$target_dato			= $row->datos->components->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO}->dato->{DEDALO_DATA_NOLAN};
-				$target_section_tipo	= reset($target_dato);
+				$target_section_tipo	= $target_dato[0] ?? null;
+
+				if (empty($target_section_tipo)) {
+					debug_log(__METHOD__
+						." Skipped hierarchy without target section tipo: $row->section_tipo, $row->section_id ". PHP_EOL
+						.' target_dato: '. to_string($target_dato)
+						, logger::ERROR
+					);
+					continue;
+				}
 
 				$hierarchy_sections_from_types[] = $target_section_tipo;
 			}
@@ -2082,7 +2300,7 @@ class component_relation_common extends component_common {
 	/**
 	* GET_CONFIG_CONTEXT_SECTION_TIPO
 	* @param array $ar_section_tipo_sources
-	* @param string|null $retrieved_section_tipo=null
+	* @param string|null $retrieved_section_tipo = null
 	* @return array $ar_section_tipo
 	*/
 	public static function get_request_config_section_tipo(array $ar_section_tipo_sources, $retrieved_section_tipo=null) : array {
@@ -2097,7 +2315,15 @@ class component_relation_common extends component_common {
 					// 	$source_item = is_array($retrieved_section_tipo) ? reset($retrieved_section_tipo) : $retrieved_section_tipo;
 					// }
 					if ($source_item==='self') {
-						throw new Exception("***** Error Processing get_request_config_section_tipo (1) invalid section_tipo format. Use an object like \"section_tipo\": [{\"source\": \"self\"}] . ".to_string($source_item), 1);
+						debug_log(__METHOD__
+							." Exception ERROR Processing get_request_config_section_tipo (1) invalid section_tipo format. Use an object like \"section_tipo\": [{\"source\": \"self\"}] "
+							. to_string($source_item)
+							, logger::ERROR
+						);
+						if(SHOW_DEBUG===true) {
+							throw new Exception("***** Error Processing get_request_config_section_tipo (1) invalid section_tipo format
+								. Use an object like \"section_tipo\": [{\"source\": \"self\"}] . ".to_string($source_item), 1);
+						}
 					}
 
 				$ar_section_tipo[] = $source_item;
@@ -2121,67 +2347,96 @@ class component_relation_common extends component_common {
 					// $ar_section_tipo = is_array($retrieved_section_tipo) ? reset($retrieved_section_tipo) : $retrieved_section_tipo;
 					$ar_section_tipo = is_array($retrieved_section_tipo) ? $retrieved_section_tipo : [$retrieved_section_tipo];
 					break;
+
 				case 'hierarchy_types':
 					$hierarchy_types = component_relation_common::get_hierarchy_sections_from_types($source_item->value);
 					$ar_section_tipo = array_merge($ar_section_tipo, $hierarchy_types);
 					break;
+
 				case 'field_value':
 					// this case is used in component_relation_children in the hierarchy section
 					// in these case the array of sections will get from the value of specific field
-					$target_values = $source_item->value;
-					foreach ((array)$target_values as $key => $current_component_tipo) {
+					$target_values = $source_item->value; // target thesaurus like ['hierarchy53']
+					foreach ((array)$target_values as $current_component_tipo) {
 
-						$sqo = new stdClass();
-							$sqo->section_tipo			= $retrieved_section_tipo;
-							$sqo->limit					= 0;
-							$sqo->offset				= 0;
-							$sqo->order					= false;
-							$sqo->skip_projects_filter	= true;
-
-						// sections
-							$sections = sections::get_instance(
-								null,
-								$sqo,
-								$retrieved_section_tipo,
-								'list',
-								DEDALO_DATA_LANG
-							);
-							$dato = $sections->get_dato();
+						// short vars
 							$model_name		= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
 							$current_lang	= common::get_element_lang($current_component_tipo, DEDALO_DATA_LANG);
 
-						// data
-							foreach ($dato as $current_record) {
+						// sections (all hierarchy sections -hierarchy1- normally)
+							if (!isset($records)) {
+								// calculate once
+								$sqo = new stdClass();
+									$sqo->section_tipo			= $retrieved_section_tipo;
+									$sqo->limit					= 0;
+									$sqo->offset				= 0;
+									$sqo->order					= false;
+									$sqo->skip_projects_filter	= true;
+								$sections = sections::get_instance(
+									null,
+									$sqo,
+									$retrieved_section_tipo,
+									'list',
+									DEDALO_DATA_LANG
+								);
+								$records = $sections->get_dato();
+							}
 
-								$section = section::get_instance($current_record->section_id, $current_record->section_tipo, 'list', $cache=true);
+						// data
+							foreach ($records as $current_record) {
+
+								$section = section::get_instance(
+									$current_record->section_id,
+									$current_record->section_tipo,
+									'list',
+									true
+								);
 
 								// inject datos to section and set as loaded
 								$datos = $current_record->datos ?? null;
 								if (!is_null($datos)) {
 									$section->set_dato($datos);
-									$section->set_bl_loaded_matrix_data(true);
 								}
+
+								// component
 								$component = component_common::get_instance(
 									$model_name,
 									$current_component_tipo,
 									$current_record->section_id,
-									$mode='list',
+									'list', // string mode
 									$current_lang,// $lang=DEDALO_DATA_LANG,
 									$current_record->section_tipo
 								);
 
 								$component_dato = $component->get_dato();
-
-
-								foreach ($component_dato as $current_section_tipo) {
-									if (!empty($current_section_tipo)) {
-										$section_model_name = RecordObj_dd::get_modelo_name_by_tipo($current_section_tipo,true);
-										if (!empty($section_model_name)) {
-											$ar_section_tipo[] = $current_section_tipo;
+								if (!empty($component_dato)) {
+									foreach ($component_dato as $current_section_tipo) {
+										if (!empty($current_section_tipo)) {
+											$section_model_name = RecordObj_dd::get_modelo_name_by_tipo($current_section_tipo,true);
+											if (!empty($section_model_name)) {
+												$ar_section_tipo[] = $current_section_tipo;
+											}
 										}
 									}
 								}
 							}//end foreach ($dato as $current_record)
+					}
+					break;
+
+				case 'hierarchy_terms':
+					// sample data item:
+						// {
+						//     "value": [
+						//         {
+						//             "recursive": true,
+						//             "section_id": "202",
+						//             "section_tipo": "aa1"
+						//         }
+						//     ],
+						//     "source": "hierarchy_terms"
+						// }
+					foreach ($source_item->value as $item) {
+						$ar_section_tipo[] = $item->section_tipo;
 					}
 					break;
 				case 'section':
@@ -2191,6 +2446,7 @@ class component_relation_common extends component_common {
 			}
 		}//end foreach ((array)$ar_section_tipo_sources as $source_item)
 
+		// remove duplicates
 		$ar_section_tipo = array_unique($ar_section_tipo);
 
 
@@ -2201,9 +2457,12 @@ class component_relation_common extends component_common {
 
 	/**
 	* GET_FIXED_FILTER
+	* @param array $ar_fixed
+	* @param string $section_tipo
+	* @param mixed $section_id
 	* @return array $ar_fixed_filter
 	*/
-	public static function get_fixed_filter(array $ar_fixed, string $section_tipo, $section_id) : array {
+	public static function get_fixed_filter(array $ar_fixed, string $section_tipo, mixed $section_id) : array {
 
 		$ar_fixed_filter = [];
 
@@ -2417,7 +2676,7 @@ class component_relation_common extends component_common {
 
 		$list_value = [];
 		$ar_list_of_values = $this->get_ar_list_of_values(DEDALO_DATA_LANG);
-		foreach ($ar_list_of_values->result as $key => $item) {
+		foreach ($ar_list_of_values->result as $item) {
 
 			$locator = $item->value;
 			if ( true===locator::in_array_locator($locator, $dato, array('section_id','section_tipo')) ) {
@@ -2427,6 +2686,116 @@ class component_relation_common extends component_common {
 
 		return $list_value;
 	}//end get_list_value
+
+
+
+	/**
+	* CONFORM_IMPORT_DATA
+	* @param string $import_value
+	* @param string $column_name
+	* @return object $response
+	*/
+	public function conform_import_data(string $import_value, string $column_name) : object {
+
+		// Response
+		$response = new stdClass();
+			$response->result	= null;
+			$response->errors	= [];
+			$response->msg		= 'Error. Request failed';
+
+		// Check if is a JSON string. Is yes, decode
+		if(json_handler::is_json($import_value)){
+
+			// try to JSON decode (null on not decode)
+			$dato_from_json	= json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
+			$import_value	= $dato_from_json;
+		}
+
+		// short vars
+			$type			= $this->get_relation_type();
+			$section_tipo	= $this->section_tipo;
+			$value			= $import_value;
+
+		// no value case
+			if (empty($value)) {
+				return $response;
+			}
+
+		// return value
+			$ar_locators = [];
+
+		// column name could be only the tipo as "rsc85" or a identifier as "rsc85_rsc197"
+		// the component tipo are always the first tipo in the column name
+		$ar_tipos				= explode(locator::DELIMITER, $column_name);
+		$from_component_tipo	= $ar_tipos[0];
+		$target_section_tipo	= $ar_tipos[1] ?? null;
+
+		// check if the value is not a valid json or if it's a int,
+		// cases: 1 || 4,5
+		// 1 is an int and 4,5 is string
+		// but not the locator [{"section_tipo":"oh1","section_id":"1"}] it's valid json
+		if (is_string($value) || is_int($value)) {
+
+			// $target_section_tipo
+				if( empty($target_section_tipo)) {
+
+					$ar_target_section_tipo = $this->get_ar_target_section_tipo();
+					if(count($ar_target_section_tipo)>1) {
+
+						debug_log(__METHOD__
+							." Trying to import multiple section_tipo without clear target" .PHP_EOL
+							.' ar_target_section_tipo: '. json_encode($ar_target_section_tipo, JSON_PRETTY_PRINT)
+							, logger::ERROR
+						);
+
+						$failed = new stdClass();
+							$failed->section_id		= $this->section_id;
+							$failed->data			= stripslashes( $import_value );
+							$failed->component_tipo	= $this->get_tipo();
+							$failed->msg			= 'IGNORED: mTry to import multiple section_tipo without clear target ';
+						$response->errors[] = $failed;
+
+						return $response;
+					}
+					$target_section_tipo = $ar_target_section_tipo[0] ?? null;
+				}
+
+			$ar_values = explode(',', $value);
+			foreach ($ar_values as $section_id) {
+				// old format (section_id)
+				// is int. Builds complete locator and set section_id from value
+				$locator = new locator();
+					$locator->set_type($type);
+					$locator->set_section_tipo($target_section_tipo);
+					$locator->set_from_component_tipo($from_component_tipo);
+					$locator->set_section_id(trim($section_id));
+
+				$ar_locators[] = $locator;
+			}
+		}else{
+
+			// Locator case
+			$value = !is_array($value) ? [$value] : $value;
+			foreach ($value as $current_locator) {
+
+			// is full locator. Inject safe fixed properties to avoid errors
+				$locator = new locator($current_locator);
+					if (!property_exists($current_locator, 'type')) {
+						$locator->set_type($type);
+					}
+					if (!property_exists($current_locator, 'from_component_tipo')) {
+						$locator->set_from_component_tipo($from_component_tipo);
+					}
+
+				$ar_locators[] = $locator;
+			}
+		}
+
+		$response->result	= $ar_locators;
+		$response->msg		= 'OK';
+
+		return $response;
+	}//end conform_import_data
 
 
 

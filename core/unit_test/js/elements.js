@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /* global page_globals */
 /* eslint no-undef: "error" */
 
@@ -19,16 +20,16 @@ import * as fn from './data.js'
 
 
 	// component_3d
-		// elements.push({
-		// 	model				: 'component_3d',
-		// 	tipo				: 'test212',
-		// 	section_tipo		: section_tipo,
-		// 	section_id			: section_id,
-		// 	mode				: mode,
-		// 	lang				: page_globals.dedalo_data_nolan,
-		// 	new_value			: fn.random_3d_data, // return array
-		// 	new_value_params	: [section_tipo, section_id, 'test212']
-		// })
+		elements.push({
+			model				: 'component_3d',
+			tipo				: 'test26',
+			section_tipo		: section_tipo,
+			section_id			: section_id,
+			mode				: mode,
+			lang				: page_globals.dedalo_data_nolan,
+			new_value			: fn.random_3d_data, // return array
+			new_value_params	: [section_tipo, section_id, 'test26']
+		})
 
 	// component_av
 		elements.push({
@@ -42,18 +43,30 @@ import * as fn from './data.js'
 			new_value_params	: [section_tipo, section_id, 'test94']
 		})
 
+	// button
+		// elements.push({
+		// 	model			: 'button',
+		// 	tipo			: 'test212',
+		// 	section_tipo	: section_tipo,
+		// 	section_id		: section_id,
+		// 	mode			: mode,
+		// 	lang			: page_globals.dedalo_data_nolan,
+		// 	new_value		: fn.random_string,
+		// 	test_save		: false
+		// })
+
 	// component_calculation -to disappear-  (WORKING HERE)
 
 	// component_check_box
 		elements.push({
 			model				: 'component_check_box',
-			tipo				: 'test146',
+			tipo				: 'test88',
 			section_tipo		: section_tipo,
 			section_id			: section_id,
 			mode				: mode,
 			lang				: page_globals.dedalo_data_nolan,
 			new_value			: fn.random_locator,
-			new_value_params	: ['dd501','test146']
+			new_value_params	: ['dd501','test88']
 		})
 
 	// component_date
@@ -130,17 +143,6 @@ import * as fn from './data.js'
 
 	// component grouper/sync ?????? (WORKING HERE)
 
-	// component_html_text (called as model 'component_text_area' to work)
-		elements.push({
-			model			: 'component_text_area',
-			tipo			: 'test135',
-			section_tipo	: section_tipo,
-			section_id		: section_id,
-			mode			: mode,
-			lang			: lang,
-			new_value		: fn.random_string
-		})
-
 	// component_image
 		elements.push({
 			model				: 'component_image',
@@ -166,7 +168,16 @@ import * as fn from './data.js'
 			new_value		: fn.random_string
 		})
 
-	// component_inverse -section_id from caller- (WORKING HERE)
+	// component_inverse -section_id from caller-
+		elements.push({
+			model			: 'component_inverse',
+			tipo			: 'test68',
+			section_tipo	: section_tipo,
+			section_id		: section_id,
+			mode			: mode,
+			lang			: lang, // is nolan ?
+			test_save		: false
+		})
 
 	// component_ip -to disappear- (WORKING HERE)
 
@@ -177,14 +188,14 @@ import * as fn from './data.js'
 			section_tipo	: section_tipo,
 			section_id		: section_id,
 			mode			: mode,
-			lang			: lang,
+			lang			: lang, // is nolan ?
 			new_value		: fn.random_iri_data
 		})
 
 	// component_json
 		elements.push({
 			model			: 'component_json',
-			tipo			: 'test150',
+			tipo			: 'test18',
 			section_tipo	: section_tipo,
 			section_id		: section_id,
 			mode			: mode,
@@ -195,11 +206,11 @@ import * as fn from './data.js'
 	// component_number
 		elements.push({
 			model			: 'component_number',
-			tipo			: 'test139',
+			tipo			: 'test211',
 			section_tipo	: section_tipo,
 			section_id		: section_id,
 			mode			: mode,
-			lang			: lang,
+			lang			: page_globals.dedalo_data_nolan,
 			new_value		: fn.random_number
 		})
 
@@ -234,7 +245,7 @@ import * as fn from './data.js'
 			section_tipo		: section_tipo,
 			section_id			: section_id,
 			mode				: mode,
-			lang				: lang,
+			lang				: page_globals.dedalo_data_nolan,
 			new_value			: fn.random_locator,
 			new_value_params	: ['test38', 'test80', 0] // [section_tipo, from_component_tipo, paginated_key]
 		})
@@ -246,7 +257,7 @@ import * as fn from './data.js'
 			section_tipo		: section_tipo,
 			section_id			: section_id,
 			mode				: mode,
-			lang				: lang,
+			lang				: page_globals.dedalo_data_nolan,
 			new_value			: fn.random_locator,
 			new_value_params	: ['dd64','test92']
 		})
@@ -254,13 +265,13 @@ import * as fn from './data.js'
 	// component_radio_button
 		elements.push({
 			model				: 'component_radio_button',
-			tipo				: 'test144',
+			tipo				: 'test87',
 			section_tipo		: section_tipo,
 			section_id			: section_id,
 			mode				: mode,
-			lang				: lang,
+			lang				: page_globals.dedalo_data_nolan,
 			new_value			: fn.random_locator,
-			new_value_params	: ['dd501','test144']
+			new_value_params	: ['dd501','test87']
 		})
 
 	// component_relation_children
@@ -270,7 +281,7 @@ import * as fn from './data.js'
 			section_tipo		: section_tipo,
 			section_id			: section_id,
 			mode				: mode,
-			lang				: lang,
+			lang				: page_globals.dedalo_data_nolan,
 			new_value			: fn.random_locator,
 			new_value_params	: [section_tipo,'test201']
 		})
@@ -282,7 +293,7 @@ import * as fn from './data.js'
 			section_tipo		: section_tipo,
 			section_id			: section_id,
 			mode				: mode,
-			lang				: lang,
+			lang				: page_globals.dedalo_data_nolan,
 			new_value			: fn.random_locator,
 			new_value_params	: ['es1','test25'],
 			test_save			: false
@@ -298,7 +309,7 @@ import * as fn from './data.js'
 			section_tipo		: section_tipo,
 			section_id			: section_id,
 			mode				: mode,
-			lang				: lang,
+			lang				: page_globals.dedalo_data_nolan,
 			new_value			: fn.random_locator,
 			new_value_params	: ['es2','test169']
 		})
@@ -310,7 +321,7 @@ import * as fn from './data.js'
 			section_tipo		: section_tipo,
 			section_id			: section_id,
 			mode				: mode,
-			lang				: lang,
+			lang				: page_globals.dedalo_data_nolan,
 			new_value			: fn.random_locator,
 			new_value_params	: ['es1','test71'],
 			test_save			: false
@@ -323,7 +334,7 @@ import * as fn from './data.js'
 			section_tipo		: section_tipo,
 			section_id			: section_id,
 			mode				: mode,
-			lang				: lang,
+			lang				: page_globals.dedalo_data_nolan,
 			new_value			: fn.random_locator,
 			new_value_params	: [section_tipo,'test54']
 		})
@@ -335,7 +346,7 @@ import * as fn from './data.js'
 			section_tipo	: section_tipo,
 			section_id		: section_id,
 			mode			: mode,
-			lang			: lang,
+			lang			: page_globals.dedalo_data_nolan,
 			new_value		: fn.random_string,
 			test_save		: false
 		})
@@ -347,20 +358,8 @@ import * as fn from './data.js'
 			section_tipo		: section_tipo,
 			section_id			: section_id,
 			mode				: mode,
-			lang				: lang,
+			lang				: page_globals.dedalo_data_nolan,
 			new_value			: fn.random_security_access
-		})
-
-	// component_select_lang
-		elements.push({
-			model				: 'component_select_lang',
-			tipo				: 'test89',
-			section_tipo		: section_tipo,
-			section_id			: section_id,
-			mode				: mode,
-			lang				: lang,
-			new_value			: fn.random_locator,
-			new_value_params	: ['lg1','test89']
 		})
 
 	// component_select
@@ -370,12 +369,22 @@ import * as fn from './data.js'
 			section_tipo		: section_tipo,
 			section_id			: section_id,
 			mode				: mode,
-			lang				: lang,
+			lang				: page_globals.dedalo_data_nolan,
 			new_value			: fn.random_locator,
 			new_value_params	: ['es1','test91']
 		})
 
-	// component_semantic_node -render portal column- (WORKING HERE)
+	// component_select_lang
+		elements.push({
+			model				: 'component_select_lang',
+			tipo				: 'test89',
+			section_tipo		: section_tipo,
+			section_id			: section_id,
+			mode				: mode,
+			lang				: page_globals.dedalo_data_nolan,
+			new_value			: fn.random_locator,
+			new_value_params	: ['lg1','test89']
+		})
 
 	// component_svg
 		elements.push({
@@ -384,7 +393,7 @@ import * as fn from './data.js'
 			section_tipo		: section_tipo,
 			section_id			: section_id,
 			mode				: mode,
-			lang				: lang,
+			lang				: page_globals.dedalo_data_nolan,
 			new_value			: fn.random_svg_data
 		})
 
@@ -398,3 +407,7 @@ import * as fn from './data.js'
 			lang			: lang,
 			new_value		: fn.random_string
 		})
+
+
+
+// @license-end

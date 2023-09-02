@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS COMPONENT SECURITY ACCESS
 * Manages ontology elements access and permissions
 *
@@ -34,8 +34,9 @@ class component_security_access extends component_common {
 	/**
 	* SET_DATO
 	* @param array $dato
+	* @return bool
 	*/
-	public function set_dato($dato) {
+	public function set_dato($dato) : bool {
 
 		if (!is_array($dato)) {
 			if(empty($dato)) {
@@ -51,6 +52,18 @@ class component_security_access extends component_common {
 
 
 	/**
+	* GET_CACHE_TREE_FILE_NAME
+	* @param string $lang
+	* @return string $tree_file_name
+	*/
+	public static function get_cache_tree_file_name(string $lang) : string {
+
+		return 'cache_tree_'.$lang.'.json';
+	}//end get_cache_tree_file_name
+
+
+
+	/**
 	* GET_DATALIST
 	* Generates the whole component datalist (ontology tree) to set access permissions by admins
 	* Note that login sequence launch a background process to calculate this datalist because
@@ -58,22 +71,26 @@ class component_security_access extends component_common {
 	* @param int $user_id
 	* @return array $datalist
 	*/
-	public function get_datalist( int $user_id ) : array {
+	public function get_datalist(int $user_id) : array {
 		$start_time = start_time();
 
 		// already resolved in current instance
 			if (isset($this->datalist)) {
 				if(SHOW_DEBUG===true) {
-					debug_log(__METHOD__.' Return already set datalist. count: '.count($this->datalist), logger::DEBUG);
+					debug_log(__METHOD__
+						.' Return already set datalist. count: '.count($this->datalist)
+						, logger::DEBUG
+					);
 				}
 				return $this->datalist;
 			}
 
-		$cache_file_name = 'cache_tree.json';
-
-		// cache cascade
-			$use_cache = true;
+		// cache
+			$use_cache = defined('DEDALO_CACHE_MANAGER') && isset(DEDALO_CACHE_MANAGER['files_path']);
 			if ($use_cache===true) {
+
+				// cache_file_name. Like 'cache_tree_'.DEDALO_DATA_LANG.'.json'
+					$cache_file_name = component_security_access::get_cache_tree_file_name(DEDALO_DATA_LANG);
 
 				// cache from session
 					// if (isset($_SESSION['dedalo']['component_security_access']['datalist'][DEDALO_APPLICATION_LANG])) {
@@ -96,37 +113,47 @@ class component_security_access extends component_common {
 						: null;
 					if (!empty($datalist)) {
 						$this->datalist = $datalist;
-						$total = exec_time_unit($start_time,'ms').' ms';
-						debug_log(
-							__METHOD__." Return already calculated and cached in file datalist. Total items: ". count($datalist).' in time: '.$total,
-							logger::DEBUG
+						debug_log(__METHOD__
+							. " Return already calculated and cached in file datalist. Total items: "
+							. count($datalist).' in time: '
+							. exec_time_unit($start_time,'ms').' ms'
+							, logger::DEBUG
 						);
 						return $datalist;
 					}
 			}
 
 		// short vars
-			$is_global_admin	= security::is_global_admin($user_id);
-			$ar_areas			= [];
+			$is_global_admin = security::is_global_admin($user_id);
+
+		// full areas and sections list
+			$ar_areas = area::get_areas();
 
 		// areas (including sections)
 			if($user_id===DEDALO_SUPERUSER || $is_global_admin===true){
 
-				// full areas and sections list
-				$ar_areas = area::get_areas();
+				// unfiltered case
 
 			}else{
 
-				// only areas and sections already included into the dato
-				$dato = $this->get_dato();
+				// filtered by user data case
 
-				$ar_permisions_areas = array_filter($dato, function($item) {
-					return (isset($item->type) && $item->type==='area') ? $item : null;
-				});
+				$user_component_security_access	= security::get_user_security_access($user_id);
+				$user_dato						= $user_component_security_access->get_dato();
 
-				foreach ($ar_permisions_areas as $item) {
-					$ar_areas[]	= ontology::tipo_to_json_item($item->tipo);
+				$ar_auth_areas = [];
+				foreach ($ar_areas as $current_area) {
+
+					$found = array_find($user_dato, function($el) use($current_area){
+						return $el->tipo===$current_area->tipo;
+					});
+					if ($found!==null) {
+						$ar_auth_areas[] = $current_area;
+					}
 				}
+
+				// replace whole list by user authorized areas
+				$ar_areas = $ar_auth_areas;
 			}
 
 		// duplicates check
@@ -134,7 +161,10 @@ class component_security_access extends component_common {
 			foreach ($ar_areas as $area) {
 				$key = $area->tipo .'_'. $area->parent; // .'_' .$area->section_tipo
 				if (isset($ar_clean[$key])) {
-					debug_log(__METHOD__." Duplicate item ".to_string($area), logger::ERROR);
+					debug_log(__METHOD__
+						." Duplicate item ".to_string($area)
+						, logger::ERROR
+					);
 				}else{
 					$ar_clean[$key] = $area;
 				}
@@ -179,10 +209,12 @@ class component_security_access extends component_common {
 			}
 
 		// debug
-			debug_log(
-				__METHOD__.' Calculated datalist (total: '.count($datalist).') in  '.exec_time_unit($start_time,'ms').' ms',
-				logger::DEBUG
+			debug_log(__METHOD__
+				.' Calculated datalist (total: '.count($datalist).') in  '
+				. exec_time_unit($start_time,'ms').' ms'
+				, logger::DEBUG
 			);
+
 
 		return $datalist;
 	}//end get_datalist
@@ -191,21 +223,44 @@ class component_security_access extends component_common {
 
 	/**
 	* GET_ELEMENT_DATALIST
-	*
+	* Create the datalist items inside sections.
+	* Sometimes the section could have dataframe sections (sub-sections), in these cases
+	* the components inside the subsection will set as child of the subsection.
 	* @param string $section_tipo
-	* @return array $element_datalist
+	* @return array $datalist
 	*/
 	public static function get_element_datalist(string $section_tipo) : array {
 
 		$datalist = [];
 
+		// subsection as dataframe section are inside normal section
+		// sub_sections has his own components and need to be checked and set with the correct section_tipo
+		$sub_section_children_recursive = [];
+
+		// get all ontology nodes inside the main section (section_groups, components, tabs, sections, dataframes, etc.)
 		$children_recursive = self::get_children_recursive_security_acces($section_tipo);
 		foreach ($children_recursive as $current_child) {
+
+			// sub section case
+			// when a main section has a sub section
+			// get the children of this subsection to be checked in the loop
+			if($current_child->model === 'section'){
+				$sub_section_children_recursive = self::get_children_recursive_security_acces($current_child->tipo);
+			}
+
+			// check if the current child is inside a subsection
+			$found = array_find($sub_section_children_recursive, function($el) use ($current_child) {
+				return $el->tipo === $current_child->tipo;
+			});
+			// if the current child is inside a subsection, use the subsection tipo instead the main section tipo
+			$current_section_tipo = !empty($found)
+				? $found->section_tipo
+				: $section_tipo;
 
 			// add
 				$item = (object)[
 					'tipo'			=> $current_child->tipo,
-					'section_tipo'	=> $section_tipo,
+					'section_tipo'	=> $current_section_tipo,
 					'model'			=> $current_child->model,
 					'label'			=> $current_child->label,
 					'parent'		=> $current_child->parent
@@ -324,7 +379,7 @@ class component_security_access extends component_common {
 					'tipo'			=> $element_tipo,
 					'section_tipo'	=> $tipo,
 					'model'			=> RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true),
-					'label'			=> RecordObj_dd::get_termino_by_tipo($element_tipo, DEDALO_APPLICATION_LANG, true, true),
+					'label'			=> RecordObj_dd::get_termino_by_tipo($element_tipo, DEDALO_DATA_LANG, true, true),
 					'parent'		=> $tipo
 				];
 				$ar_elements[] = $item;
@@ -460,16 +515,16 @@ class component_security_access extends component_common {
 
 	/**
 	* CALCULATE_TREE
+	* @param int $user_id
 	* @return array $datalist
 	*/
-	public static function calculate_tree( $user_id ) : array {
+	public static function calculate_tree(int $user_id) : array {
 		$start_time = start_time();
 
 		// profile_section_id
 			if($user_id===DEDALO_SUPERUSER || security::is_global_admin($user_id)===true){
 
 				$section_id = null;
-				// dump($section_id, ' IM ROOT  -section_id ++ '.to_string($is_global_admin));
 
 			}else{
 
@@ -477,13 +532,20 @@ class component_security_access extends component_common {
 				if (!empty($user_profile_locator)) {
 					$section_id = (int)$user_profile_locator->section_id;
 				}else{
-					debug_log(__METHOD__." ERROR on get user_profile_locator: user_id: ".to_string($user_id), logger::ERROR);
+					debug_log(__METHOD__.
+						" ERROR on get user_profile_locator: user_id: ".to_string($user_id),
+						logger::ERROR
+					);
 				}
 			}
 
-		// $fiber = new Fiber(function() use($section_id) : void {
-		// $fiber = new Fiber(function() use($section_id) : array {
-			debug_log(__METHOD__." (1) user_id: " .$user_id." launching datalist /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// ".to_string(), logger::ERROR);
+		// $fiber = new Fiber(function() use($section_id, $user_id, $start_time) : array {
+
+			debug_log(__METHOD__
+				. " (1 start) user_id: " .$user_id
+				. ' ))) launching datalist //////////////////////////////////////////////////////////////////////////////////// '
+				, logger::WARNING
+			);
 
 			$section_tipo				= DEDALO_SECTION_PROFILES_TIPO;
 			$tipo						= DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO;
@@ -494,20 +556,189 @@ class component_security_access extends component_common {
 				$section_id, // string|null section_id
 				'list', // string mode
 				DEDALO_DATA_LANG, // string lang
-				$section_tipo // string section_tipo
+				$section_tipo, // string section_tipo
+				false
 			);
 			$datalist = $component_security_access->get_datalist( $user_id );
 
 			// Fiber::suspend();
-			debug_log(__METHOD__." (2) count: " . count($datalist) .' '. exec_time_unit($start_time).' ms launching datalist ////////////////////////////////////////////////////////////////////////////////////////////// ', logger::ERROR);
+			debug_log(__METHOD__
+				. " (2 end) count: " . count($datalist) .' '. exec_time_unit($start_time).' ms'
+				. ' ))) finished calculation datalist /////////////////////////////////////////////////////////////////////////// '
+				, logger::WARNING
+			);
 
-			return $datalist;
+			// return $datalist;
 		// });
 		// $fiber->start(); // running a Fiber
-		// var_dump($fiber->getReturn());
+		// return $fiber->getReturn();
 
-		// return $fiber;
+		return $datalist;
 	}//end calculate_tree
+
+
+
+	/**
+	* SET_SECTION_PERMISSIONS (USED BY GENERATE HIERARCHY BY USERS)
+	* Allow current user access to created default sections
+	* @param object $options
+	* @return bool
+	*/
+	public static function set_section_permissions(object $options) : bool {
+
+		// options
+			$ar_section_tipo	= $options->ar_section_tipo ?? null;
+			$permissions		= $options->permissions ?? 2; // (zero is accepted)
+			$user_id			= $options->user_id;
+
+		// user_id
+			if (empty($user_id)) {
+				debug_log(__METHOD__.
+					" Error: User id in mandatory. Unable to set permissions for ".to_string($ar_section_tipo),
+					logger::ERROR
+				);
+				return false;
+			}
+
+		// component_security_access
+			$component_security_access = security::get_user_security_access($user_id);
+			if (empty($component_security_access)) {
+				debug_log(__METHOD__.
+					" Error: Unable to get component_security_access for user id ".to_string($user_id),
+					logger::ERROR
+				);
+				return false;
+			}
+			// current DDBB dato
+			$component_security_access_dato	= $component_security_access->get_dato() ?? [];
+
+		// Iterate sections (normally like ts1,ts2)
+			// $new_values = [];
+			// $ar_section_tipo_length = sizeof($ar_section_tipo);
+			// for ($i=0; $i < $ar_section_tipo_length; $i++) {
+
+			// 	$current_section_tipo = $ar_section_tipo[$i];
+
+			// 	// current section
+			// 		// sample data:
+			// 			// {
+			// 			//     "tipo": "test28",
+			// 			//     "value": 1,
+			// 			//     "section_tipo": "test3"
+			// 			// }
+			// 		$new_values[] = (object)[
+			// 			'tipo'			=> $current_section_tipo,
+			// 			'section_tipo'	=> $current_section_tipo,
+			// 			'value'			=> (int)$permissions
+			// 		];
+
+			// 	// Components inside section
+			// 		$real_section	= section::get_section_real_tipo_static( $current_section_tipo );
+			// 		$ar_children	= section::get_ar_children_tipo_by_model_name_in_section(
+			// 			$real_section, // section_tipo
+			// 			['component','button','section_group','relation_list','time_machine_list'], // ar_model_name_required
+			// 			true, // from_cache
+			// 			false, // resolve_virtual
+			// 			true, // recursive
+			// 			false // search_exact
+			// 		);
+			// 		foreach ($ar_children as $children_tipo) {
+
+			// 			// new element case
+			// 			$new_values[] = (object)[
+			// 				'tipo'			=> $children_tipo,
+			// 				'section_tipo'	=> $current_section_tipo,
+			// 				'value'			=> (int)$permissions
+			// 			];
+			// 			debug_log(__METHOD__.
+			// 				" Added item $children_tipo to section $current_section_tipo".to_string(),
+			// 				logger::DEBUG
+			// 			);
+			// 		}
+			// }//end foreach ($ar_section_tipo as $current_section_tipo)
+
+
+		// Iterate sections (normally like ts1,ts2) Generator version
+			$values_list_generator = function() use($ar_section_tipo, $permissions) {
+
+				$ar_section_tipo_length = sizeof($ar_section_tipo);
+				for ($i=0; $i < $ar_section_tipo_length; $i++) {
+
+					$current_section_tipo = $ar_section_tipo[$i];
+
+					// current section
+						// sample data:
+							// {
+							//     "tipo": "test28",
+							//     "value": 1,
+							//     "section_tipo": "test3"
+							// }
+						yield (object)[
+							'tipo'			=> $current_section_tipo,
+							'section_tipo'	=> $current_section_tipo,
+							'value'			=> (int)$permissions
+						];
+
+					// Components inside section
+						$real_section	= section::get_section_real_tipo_static( $current_section_tipo );
+						$ar_children	= section::get_ar_children_tipo_by_model_name_in_section(
+							$real_section, // section_tipo
+							['component','button','section_group','relation_list','time_machine_list'], // ar_model_name_required
+							true, // from_cache
+							false, // resolve_virtual
+							true, // recursive
+							false // search_exact
+						);
+						foreach ($ar_children as $children_tipo) {
+
+							// new element case
+							yield (object)[
+								'tipo'			=> $children_tipo,
+								'section_tipo'	=> $current_section_tipo,
+								'value'			=> (int)$permissions
+							];
+							debug_log(__METHOD__
+								. " Added item $children_tipo to section $current_section_tipo"
+								, logger::DEBUG
+							);
+						}
+				}//end foreach ($ar_section_tipo as $current_section_tipo)
+			};
+
+		// add values
+			$unique_values = [];
+			foreach ($values_list_generator() as $value) {
+				// check if already exists
+				$found = array_find($component_security_access_dato, function($el) use($value) {
+					return ($el->tipo===$value->tipo && $el->section_tipo===$value->section_tipo);
+				});
+				if ($found!==null) {
+					$found->permissions = $permissions;
+					debug_log(__METHOD__." Updated already existing value ".to_string($found), logger::WARNING);
+				}else{
+					$unique_values[] = $value;
+				}
+			}
+			$new_dato = array_merge($component_security_access_dato, $unique_values);
+
+		// Save calculated data
+			$component_security_access->set_dato($new_dato);
+			$component_security_access->Save();
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				$added = array_filter($new_dato, function($el) use($ar_section_tipo) {
+					return in_array($el->section_tipo, $ar_section_tipo);
+				});
+				dump($added, ' added ++ '.to_string($ar_section_tipo));
+			}
+
+		// Regenerate permissions table
+			security::reset_permissions_table();
+
+
+		return true;
+	}//end set_section_permissions
 
 
 

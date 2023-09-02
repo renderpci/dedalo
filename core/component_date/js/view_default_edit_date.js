@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /* global  */
 /*eslint no-undef: "error"*/
 
@@ -6,6 +7,7 @@
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import {
+		get_content_value_read,
 		input_element_date,
 		input_element_range,
 		input_element_period,
@@ -28,8 +30,9 @@ export const view_default_edit_date = function() {
 /**
 * RENDER
 * Render node for use in current view
+* @param object self
 * @param object options
-* @return DOM node
+* @return HTMLElement wrapper
 */
 view_default_edit_date.render = async function(self, options) {
 
@@ -43,13 +46,15 @@ view_default_edit_date.render = async function(self, options) {
 		await self.load_editor()
 
 	// content_data
-		const content_data = get_content_data_edit(self)
+		const content_data = get_content_data(self)
 		if (render_level==='content') {
 			return content_data
 		}
 
 	// buttons
-		const buttons = get_buttons(self)
+		const buttons = (self.permissions > 1)
+			? get_buttons(self)
+			: null
 
 	// ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
@@ -64,51 +69,51 @@ view_default_edit_date.render = async function(self, options) {
 
 
 	return wrapper
-}//end edit
+}//end render
 
 
 
 /**
-* GET_CONTENT_DATA_EDIT
+* GET_CONTENT_DATA
 * @param object self
 * 	component instance
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
-const get_content_data_edit = function(self) {
+export const get_content_data = function(self) {
 
-	const value	= self.data.value
+	// short vars
+		const data	= self.data || {}
+		const value	= data.value || []
 
 	// content_data
-		const content_data = ui.component.build_content_data(self, {
-			autoload : true
-		})
+		const content_data = ui.component.build_content_data(self)
 
 	// build values
 		const inputs_value	= (value.length<1) ? [''] : value
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			const input_element_edit = get_input_element_edit(i, inputs_value[i], self)
+			const input_element_edit = (self.permissions===1)
+				? get_content_value_read(i, inputs_value[i], self)
+				: get_content_value(i, inputs_value[i], self)
 			content_data.appendChild(input_element_edit)
-			// set the pointer
+			// set pointers
 			content_data[i] = input_element_edit
 		}
 
 
 	return content_data
-}//end get_content_data_edit
+}//end get_content_data
 
 
 
 /**
-* GET_INPUT_ELEMENT_EDIT
+* get_content_value
 * @param int i
 * @param object|null current_value
 * @param object self
-* @return DOM node content_value
+* @return HTMLElement content_value
 */
-export const get_input_element_edit = (i, current_value, self) => {
-
-	const date_mode	= self.get_date_mode()
+export const get_content_value = (i, current_value, self) => {
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -117,27 +122,27 @@ export const get_input_element_edit = (i, current_value, self) => {
 		})
 
 	// input node
-		let input_node = ''
-		// build date base on date_mode
-		switch(date_mode) {
+		const input_node = (()=>{
 
-			case 'range':
-				input_node = input_element_range(i, current_value, self)
-				break;
+			// date mode
+			const date_mode	= self.get_date_mode()
 
-			case 'period':
-				input_node = input_element_period(i, current_value, self)
-				break;
+			// build date base on date_mode
+			switch(date_mode) {
+				case 'range':
+					return input_element_range(i, current_value, self)
 
-			case 'time':
-				input_node = input_element_time(i, current_value, self)
-				break;
+				case 'period':
+					return input_element_period(i, current_value, self)
 
-			case 'date':
-			default:
-				input_node = input_element_date(i, current_value, self)
-				break;
-		}
+				case 'time':
+					return input_element_time(i, current_value, self)
+
+				case 'date':
+				default:
+					return input_element_date(i, current_value, self)
+			}
+		})()
 
 	// add input_node to the content_value
 		content_value.appendChild(input_node)
@@ -166,15 +171,16 @@ export const get_input_element_edit = (i, current_value, self) => {
 			})
 		})
 
+
 	return content_value
-}//end get_input_element_edit
+}//end get_content_value
 
 
 
 /**
 * GET_BUTTONS
 * @param object instance
-* @return DOM node buttons_container
+* @return HTMLElement buttons_container
 */
 const get_buttons = (self) => {
 
@@ -205,8 +211,8 @@ const get_buttons = (self) => {
 				.then(()=>{
 					const inputs_container = self.node.content_data.inputs_container
 
-					// add new dom input element
-					const new_input = get_input_element_edit(changed_data.key, changed_data.value, self)
+					// add new DOM input element
+					const new_input = get_content_value(changed_data.key, changed_data.value, self)
 					inputs_container.appendChild(new_input)
 					// set the pointer
 					inputs_container[changed_data.key] = new_input
@@ -228,3 +234,7 @@ const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
+
+
+
+// @license-end

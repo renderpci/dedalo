@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, SHOW_DEBUG, Promise */
 /*eslint no-undef: "error"*/
 
@@ -9,6 +10,9 @@
 	import {clone} from '../../../common/js/utils/index.js'
 	import {common, get_columns_map} from '../../../common/js/common.js'
 	import {view_default_autocomplete} from './view_default_autocomplete.js'
+	import {
+		render_column_component_info
+	} from '../../../component_portal/js/render_edit_component_portal.js'
 
 
 
@@ -16,7 +20,6 @@
 * SERVICE_AUTOCOMPLETE
 * Used as service by component_portal, (old component_autocomplete, component_autocomplete_hi)
 * component_relation_parent, component_relation_children, component_relation_related
-*
 */
 export const service_autocomplete = function() {
 
@@ -30,6 +33,8 @@ export const service_autocomplete = function() {
 	this.events_tokens	= []
 	this.type			= null
 	this.caller			= null
+	this.search_cache	= {}
+	this.limit			= 30
 }//end service_autocomplete
 
 
@@ -40,13 +45,15 @@ export const service_autocomplete = function() {
 */
 // prototypes assign
 	// life-cycle
-	service_autocomplete.prototype.destroy		= common.prototype.destroy
+	service_autocomplete.prototype.destroy	= common.prototype.destroy
+	// others
+	service_autocomplete.prototype.hide		= view_default_autocomplete.hide
+	service_autocomplete.prototype.show		= view_default_autocomplete.show
 
 
 
 /**
 * INIT
-*
 * @param object options
 * @return bool
 */
@@ -65,17 +72,17 @@ service_autocomplete.prototype.init = async function(options) {
 		self.id_variant		= options.id_variant || self.model
 
 	// set properties
-		self.model					= 'service_autocomplete'
-		self.id						= 'service_autocomplete' +'_'+ self.tipo +'_'+ self.section_tipo
-		self.mode 					= 'search'
-		self.context 				= {
+		self.model			= 'service_autocomplete'
+		self.id				= 'service_autocomplete' +'_'+ self.tipo +'_'+ self.section_tipo
+		self.mode			= 'search'
+		self.context		= {
 			tipo			: self.tipo,
 			section_tipo	: self.section_tipo,
-			model 			: self.model,
+			model			: self.model,
 			view			: self.view,
 			children_view	: self.children_view,
 			request_config	: self.request_config,
-			mode 			: self.mode
+			mode			: self.mode
 		}
 		self.filter_free_nodes = []
 
@@ -91,8 +98,12 @@ service_autocomplete.prototype.init = async function(options) {
 		// 	document.removeEventListener('keydown', fn_service_autocomplete_keys, false)
 		// })
 
+	// fix service instance as global
+		window.page_globals.service_autocomplete = self
+
 	// status update
-	self.status = 'initiated'
+		self.status = 'initialized'
+
 
 	return true
 }//end init
@@ -117,11 +128,11 @@ service_autocomplete.prototype.build = async function(options={}) {
 			: self.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
 
 	// reset search options
-		self.sqo					= {}
-		self.ar_filter_by_list		= []
-		self.ar_instances 			= []
-		self.list_name				= 's_'+new Date().getUTCMilliseconds()
-		self.search_fired			= false
+		self.sqo				= {}
+		self.ar_filter_by_list	= []
+		self.ar_instances		= []
+		self.list_name			= 's_'+new Date().getUTCMilliseconds()
+		self.search_fired		= false
 
 	// operator
 		self.operator = self.request_config_object.search && self.request_config_object.search.sqo_config && self.request_config_object.search.sqo_config.operator
@@ -130,10 +141,10 @@ service_autocomplete.prototype.build = async function(options={}) {
 				? self.request_config_object.show.sqo_config.operator
 				: '$and'
 
-	// engine. get the search_engine sended or set the default value
+	// engine. get the search_engine sent or set the default value
 		self.search_engine = (self.request_config_object) ? self.request_config_object.api_engine : 'dedalo';
 
-	// rqo_search, it's necesary do it by caller, because rqo is dependent of the source.
+	// rqo_search, it's necessary do it by caller, because rqo is dependent of the source.
 	// API get rqo to do the search as the caller.
 		self.rqo_search	= await self.caller.build_rqo_search(self.request_config_object, 'search')
 
@@ -144,8 +155,27 @@ service_autocomplete.prototype.build = async function(options={}) {
 	// use the rqo_search as request_config, and the columns of rqo_search as columns_maps
 		self.columns_map = await get_columns_map(self.context)
 
+	// column component_info
+		if (self.caller.add_component_info===true) {
+			self.columns_map.push({
+				id			: 'ddinfo',
+				label		: 'Info',
+				callback	: render_column_component_info
+			})
+		}
+
+	// limit. Get from localStorage if exists
+		const service_autocomplete_limit = localStorage.getItem('service_autocomplete_limit')
+		if (service_autocomplete_limit) {
+			const limit = parseInt(service_autocomplete_limit)
+			if (limit>0) {
+				self.limit = limit
+			}
+		}
+
 	// status update
 		self.status = 'built'
+
 
 	return true
 }//end build
@@ -234,7 +264,7 @@ service_autocomplete.prototype.service_autocomplete_keys = function(e) {
 * {
 * 	render_level : string full|autocomplete_wrapper
 * }
-* @return DOM node wrapper | null
+* @return HTMLElement wrapper
 */
 service_autocomplete.prototype.render = async function(options={}) {
 
@@ -248,22 +278,17 @@ service_autocomplete.prototype.render = async function(options={}) {
 
 			case 'grid_chooser':
 				return view_default_autocomplete.render(self, options)
-				break;
-
 
 			default:
 				return view_default_autocomplete.render(self, options)
-				break;
 		}
-
-	return null
 }//end render
 
 
 
 /**
 * AUTOCOMPLETE_SEARCH
-* @return promise
+* @return promise js_promise
 */
 service_autocomplete.prototype.autocomplete_search = function() {
 
@@ -285,15 +310,13 @@ service_autocomplete.prototype.autocomplete_search = function() {
 
 	// check valid filters_selector
 		if (self.ar_search_section_tipo.length<1) {
-			alert('Please, select search section');
+			// const label = get_label.select_search_section || 'Select a search section'
+			// alert(label);
 			return new Promise(()=>{})
 		}
 
 	// exec search self.search_engine = dedalo_engine || zenon_engine, the method that will called
 		const js_promise = self[engine]()
-
-	// debug
-		// console.log('autocomplete_search js_promise >>', js_promise );
 
 
 	return js_promise
@@ -321,13 +344,10 @@ service_autocomplete.prototype.rebuild_search_query_object = async function(opti
 			return null
 		}
 
+		const sqo			= rqo_search.sqo
 		const sqo_options	= rqo_search.sqo_options
 		const fixed_filter	= sqo_options.fixed_filter //self.request_config_object.find((current_item)=> current_item.typo==='fixed_filter')
 		const filter_free	= sqo_options.filter_free	//self.request_config_object.find((current_item)=> current_item.typo==='filter_free')
-		// const operador	= sqo_options.operador
-
-		const sqo			= rqo_search.sqo
-		// sqo.section_tipo	= search_sections || sqo.section_tipo
 
 	// delete the sqo_options to the final rqo_options
 		delete rqo_search.sqo_options
@@ -348,27 +368,27 @@ service_autocomplete.prototype.rebuild_search_query_object = async function(opti
 				filter_free_parse[new_operator]	= []
 
 				// get the array of the filters objects, they have the default operator
-				const current_filter = filter_free[operator]
-				const current_filter_length = current_filter.length
+				const current_filter		= filter_free[operator]
+				const current_filter_length	= current_filter.length
 				for (let i = 0; i < current_filter_length; i++) {
 
 					const filter_item = current_filter[i]
 
-					const q =  filter_item.q
+					const q = filter_item.q
 
-					if( !q || q === "" ){
+					if(!q || q==='') {
 						continue
 					}
 
 					filter_item.q = q
 					filter_item.q_split = true
 
-					// create the filter with the operator choosed by the user
+					// create the filter with the operator selected by the user
 					filter_free_parse[new_operator].push(filter_item)
 				}
 
 				const filter_empty = filter_free_parse[new_operator].length === 0
-				if(filter_empty){
+				if(filter_empty) {
 					return null
 				}
 			}
@@ -382,7 +402,7 @@ service_autocomplete.prototype.rebuild_search_query_object = async function(opti
 				}
 			}
 
-			if(filter_by_list && filter_by_list.length > 0){
+			if(filter_by_list && filter_by_list.length > 0) {
 				sqo.filter.$and.push({
 					$or:[...filter_by_list]
 				})
@@ -390,6 +410,9 @@ service_autocomplete.prototype.rebuild_search_query_object = async function(opti
 
 	// allow_sub_select_by_id set to false to allow select deep fields
 		sqo.allow_sub_select_by_id = true
+
+	// limit
+		sqo.limit = self.limit
 
 
 	return rqo_search
@@ -418,12 +441,12 @@ service_autocomplete.prototype.dedalo_engine = async function() {
 		rqo_search.sqo.section_tipo	= search_sections
 
 	// filter_by_list, modify by user
-		const filter_by_list	= self.ar_filter_by_list.map(item => item.value)
+		const filter_by_list = self.ar_filter_by_list.map(item => item.value)
 
 	// rqo
 		const rqo = await self.rebuild_search_query_object({
 			rqo_search		: rqo_search,
-			search_sections : search_sections,
+			search_sections	: search_sections,
 			filter_by_list	: filter_by_list
 		})
 
@@ -446,7 +469,8 @@ service_autocomplete.prototype.dedalo_engine = async function() {
 
 	// API read request
 		const load_section_data_promise	= data_manager.request({
-			body : rqo
+			body		: rqo,
+			use_worker	: true
 		})
 
 	// render section on load data
@@ -749,3 +773,20 @@ service_autocomplete.prototype.zenon_engine = async function(options) {
 		})//end Promise
 }//end zenon_engine
 
+
+
+/**
+* GET_TOTAL
+* Only for paginator compatibility
+* @return int total
+*/
+service_autocomplete.prototype.get_total = function() {
+
+	const total = self.limit
+
+	return total
+}//end get_total
+
+
+
+// @license-end

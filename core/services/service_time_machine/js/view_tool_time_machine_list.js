@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
@@ -8,6 +9,7 @@
 	import {get_section_records} from '../../../../core/section/js/section.js'
 	import {set_element_css} from '../../../../core/page/js/css.js'
 	import {event_manager} from '../../../../core/common/js/event_manager.js'
+	import {when_in_dom} from '../../../../core/common/js/events.js'
 	import {
 		get_content_data
 	} from './render_service_time_machine_list.js'
@@ -30,7 +32,7 @@ export const view_tool_time_machine_list = function() {
 * Renders main element wrapper for current view
 * @param object self
 * @param object options
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_tool_time_machine_list.render = async function(self, options) {
 
@@ -118,7 +120,7 @@ view_tool_time_machine_list.render = async function(self, options) {
 * 	Array of section_record instances
 * @param object self
 * 	service_time_machine instance
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 	// const get_content_data = async function(ar_section_record, self) {
 
@@ -174,6 +176,11 @@ view_tool_time_machine_list.render = async function(self, options) {
 */
 const rebuild_columns_map = async function(self) {
 
+	// columns_map already rebuilt case
+		if (self.fixed_columns_map===true) {
+			return self.columns_map
+		}
+
 	const columns_map = []
 
 	// column section_id check
@@ -196,20 +203,21 @@ const rebuild_columns_map = async function(self) {
 				'dd543', // who
 				'dd546' // where
 			  ])
-		// map names to tipo (columns already parse id for another uses)
-		.map(el => {
-			switch (el) {
-				case 'matrix_id': return 'dd1573';
-				case 'when'		: return 'dd547';
-				case 'who'		: return 'dd543';
-				case 'where'	: return 'dd546';
-				default			: return el;
-			}
-		})
+			// map names to tipo (columns already parse id for another uses)
+			.map(el => {
+				switch (el) {
+					case 'matrix_id': return 'dd1573';
+					case 'when'		: return 'dd547';
+					case 'who'		: return 'dd543';
+					case 'where'	: return 'dd546';
+					default			: return el;
+				}
+			})
 
 	// modify list and labels
 		const base_columns_map_length = base_columns_map.length
 		for (let i = 0; i < base_columns_map_length; i++) {
+
 			const el = base_columns_map[i]
 
 			// ignore some columns
@@ -219,6 +227,9 @@ const rebuild_columns_map = async function(self) {
 
 			columns_map.push(el)
 		}
+
+	// fixed as calculated
+		self.fixed_columns_map = true
 
 
 	return columns_map
@@ -253,12 +264,12 @@ const render_column_id = function(options) {
 			class_name		: 'button_view',
 			parent			: fragment
 		})
-		button_view.addEventListener('click', function() {
+		button_view.addEventListener('click', function(e) {
+			e.stopPropagation()
 
 			if (main_caller.model==='section') {
 
 				// section case
-
 				// user confirmation
 					const msg = tool.get_tool_label('recover_section_alert') || '*Are you sure you want to restore this section?'
 					if (!confirm(msg)) {
@@ -291,6 +302,7 @@ const render_column_id = function(options) {
 						}
 					})
 			}else{
+
 				// component case
 
 				// publish event
@@ -302,6 +314,23 @@ const render_column_id = function(options) {
 						mode		: 'tm'
 					}
 					event_manager.publish('tm_edit_record', data)
+					const dom_buttons_view = document.querySelectorAll('.button_view')
+					for (let i = dom_buttons_view.length - 1; i >= 0; i--) {
+						dom_buttons_view[i].classList.remove('warning')
+					}
+					button_view.classList.add('warning')
+			}
+		})
+		// siblings can use click too to easy set preview value
+		when_in_dom(button_view, () => {
+			const children = button_view.parentNode.parentNode.children
+			for (let i = children.length - 1; i >= 0; i--) {
+				if(children[i]!==button_view) {
+					children[i].classList.add('link')
+					children[i].addEventListener('click', function(e) {
+						button_view.click()
+					})
+				}
 			}
 		})
 
@@ -322,4 +351,8 @@ const render_column_id = function(options) {
 
 
 	return fragment
-}//end render_column_id()
+}//end render_column_id
+
+
+
+// @license-end

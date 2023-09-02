@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 *  DD_GRID_CELL_OBJECT
 *
 *  Used as standard object format to use in client to render tables with unspecific data or component.
@@ -190,6 +190,28 @@ class dd_grid_cell_object {
 
 
 	/**
+	* GET METHODS
+	* By accessors. When property exits, return property value, else return null
+	*/
+	final public function __get($name) {
+
+		if (isset($this->$name)) {
+			return $this->$name;
+		}
+
+		$trace = debug_backtrace();
+		debug_log(
+			__METHOD__
+			.' Undefined property via __get(): '.$name .
+			' in ' . $trace[0]['file'] .
+			' on line ' . $trace[0]['line'],
+			logger::DEBUG);
+		return null;
+	}//end __get
+
+
+
+	/**
 	* SET_CLASS_LIST
 	* @param string $value
 	* @return void
@@ -328,7 +350,7 @@ class dd_grid_cell_object {
 	* @param array $value
 	* @return void
 	*/
-	public function set_fallback_value(array $value) : void {
+	public function set_fallback_value(?array $value) : void {
 		$this->fallback_value = $value;
 	}//end set_fallback_value
 
@@ -346,25 +368,83 @@ class dd_grid_cell_object {
 
 
 	/**
-	* GET METHODS
-	* By accessors. When property exits, return property value, else return null
+	* RESOLVE_VALUE
+	* get dd_grid and flat his columns and rows join it as string value
+	* @param dd_grid_cell_object $dd_grid
+	* @return string $column_value
 	*/
-	final public function __get($name) {
+	public static function resolve_value(dd_grid_cell_object $dd_grid) : string {
 
-		if (isset($this->$name)) {
-			return $this->$name;
+		$value_check = $dd_grid->value;
+		if(isset($value_check[0]) && is_object($value_check[0]) &&
+			isset($value_check[0]->type) && $value_check[0]->type==='row') {
+
+			// rows case
+
+			$ar_row_values = $dd_grid->value;
+
+			$records_separator = $dd_grid->records_separator ?? ' | ';
+			$fields_separator = $dd_grid->fields_separator ?? ', ';
+
+			$rows = [];
+			foreach ($ar_row_values as $row) {
+
+				$row_values = $row->value;
+
+				$row_columns_values = [];
+				foreach ($row_values as $dd_grid_column) {
+					$current_value = dd_grid_cell_object::resolve_value($dd_grid_column);
+					if (!empty($current_value)) {
+						$row_columns_values[] = $current_value;
+					}
+				}
+				$rows[] = implode($fields_separator, $row_columns_values);
+			}
+
+			$row_value = implode($records_separator, $rows);
+
+			return $row_value;
+
+		}else{
+
+			// case columns
+
+			$ar_column_values = (array)$dd_grid->value;
+
+			$fields_separator = $dd_grid->fields_separator ?? ', ';
+
+			$ar_column_value = [];
+			foreach ($ar_column_values as $key => $value) {
+
+				// not resolved string case
+					if(is_object($value)){
+						if (!empty($value->value)) {
+							$current_value = dd_grid_cell_object::resolve_value($value);
+							if (!empty($current_value)) {
+								$ar_column_value[] = $current_value;
+							}
+						}
+						continue;
+					}
+
+				$fallback = (isset($value))
+					? $value
+					: $dd_grid->fallback_value[$key];
+
+				if (empty($fallback)) {
+					continue;
+				}
+
+				$ar_column_value[] = is_string($fallback)
+					? $fallback
+					: to_string($fallback);
+			}
+
+			$column_value = implode($fields_separator, $ar_column_value);
+
+			return $column_value;
 		}
-
-		$trace = debug_backtrace();
-		debug_log(
-			__METHOD__
-			.' Undefined property via __get(): '.$name .
-			' in ' . $trace[0]['file'] .
-			' on line ' . $trace[0]['line'],
-			logger::DEBUG);
-		return null;
-	}//end __get
-
+	}//end resolve_value
 
 
 

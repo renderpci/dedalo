@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -26,7 +27,7 @@ export const render_area = function() {
 /**
 * EDIT
 * Render node for use in edit
-* @return DOM node
+* @return HTMLElement
 */
 render_area.prototype.edit = async function(options) {
 
@@ -88,7 +89,7 @@ render_area.prototype.edit = async function(options) {
 /**
 * LIST
 * Alias of edit
-* @return DOM node
+* @return HTMLElement
 */
 render_area.prototype.list = async function(options={render_level:'full'}) {
 
@@ -99,7 +100,7 @@ render_area.prototype.list = async function(options={render_level:'full'}) {
 
 /**
 * CONTENT_DATA
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 
@@ -116,3 +117,4 @@ const get_content_data = function(self) {
 }//end content_data
 
 
+// @license-end
