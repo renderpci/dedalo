@@ -256,8 +256,8 @@ common.prototype.render = async function (options={}) {
 	const self = this
 
 	// options
-		const render_level	= options.render_level || 'full'
 		const render_mode	= options.render_mode || self.mode
+		const render_level	= options.render_level || 'full'
 
 	// running_with_errors case
 		if (self.running_with_errors) {
@@ -551,6 +551,9 @@ common.prototype.refresh = async function(options={}) {
 			await self.render({
 				render_level : render_level // Note that default value is 'content'
 			})
+			if (self.paginator) {
+				self.paginator.refresh()
+			}
 			result = true
 		}else{
 			console.warn(`[common.refresh] Ignored render '${self.model}' (expected status 'built') with status:`, self.status);
