@@ -248,7 +248,7 @@ view_line_edit_portal.render_column_id = function(options) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			// class_name	: 'button pen icon grey',
-			class_name		: 'button edit icon grey',
+			class_name		: 'button pen icon grey',
 			parent			: button_edit
 		})
 
