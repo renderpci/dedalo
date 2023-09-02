@@ -7,7 +7,7 @@
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	// import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
+	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {object_to_url_vars} from '../../common/js/utils/index.js'
 
 
@@ -64,6 +64,7 @@ view_default_list_image.render = function(self, options) {
 			}
 		}
 
+
 	// image background color
 		image.addEventListener('load', set_bg_color, false)
 		function set_bg_color() {
@@ -84,14 +85,14 @@ view_default_list_image.render = function(self, options) {
 			const file_does_not_exist = data.datalist.find(item => item.file_exist === false)
 			if(file_does_not_exist){
 
-				// // get the upload tool to be fired
-				// 	const tool_upload = self.tools.find(el => el.model === 'tool_upload')
+				// get the upload tool to be fired
+					const tool_upload = self.tools.find(el => el.model === 'tool_upload')
 
-				// // open_tool (tool_common)
-				// 	open_tool({
-				// 		tool_context	: tool_upload,
-				// 		caller			: self
-				// 	})
+				// open_tool (tool_common)
+					open_tool({
+						tool_context	: tool_upload,
+						caller			: self
+					})
 			}else{
 
 				// open a new window
