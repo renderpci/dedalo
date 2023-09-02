@@ -1,3 +1,11 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
+
+
+
+// imports
+	import {check_unsaved_data} from '../../component_common/js/component_common.js'
+
+
 if (typeof HTMLElement!=='undefined') {
 class DDModal extends HTMLElement {
 	constructor() {
@@ -5,6 +13,7 @@ class DDModal extends HTMLElement {
 		this._modalVisible = false;
 		this.mini = false;
 		this._modal;
+		this.drag_data;
 		// this.caller_instance;
 		this.on_close;
 		this.publish_close;
@@ -41,6 +50,7 @@ class DDModal extends HTMLElement {
 					margin: auto;
 					margin-top: 3.5vh;
 					padding: 0;
+					padding-bottom: 1.5rem;
 					width: 80%;
 					/*min-width: 390px;*/
 					min-width: 15rem;
@@ -51,12 +61,20 @@ class DDModal extends HTMLElement {
 					border-radius: 7px;
 					overflow: auto;
 					resize: auto;
+					z-index: 2;
 					/*
 					-webkit-animation-name: animatetop;
 					-webkit-animation-duration: 0.4s;
 					animation-name: animatetop;
 					animation-duration: 0.4s;
 					*/
+					display: grid;
+					/*grid-template-rows: minmax(4rem, 4rem) auto minmax(4rem, 4rem);*/
+				}
+				@media screen and (max-width: 1024px) {
+					.modal-content {
+						width: 98%;
+					}
 				}
 				.dragging {
 					cursor: move;
@@ -125,6 +143,11 @@ class DDModal extends HTMLElement {
 					*/
 				}
 
+			/* modal footer */
+				.modal-footer {
+
+				}
+
 			/* modal_big version */
 				.modal_big {
 					padding: 0;
@@ -163,6 +186,11 @@ class DDModal extends HTMLElement {
 					height: auto;
 					margin-top: 20vh;
 					overflow: auto;
+				}
+				@media screen and (max-width: 1024px) {
+					.modal_small > .modal-content {
+						max-width: unset;
+					}
 				}
 				.modal_small .modal-body {
 
@@ -241,7 +269,16 @@ class DDModal extends HTMLElement {
 		window.modal = this // fix modal in window for easy access to close
 
 		// draggable modal feature
-			let x, y, target, margin_left, margin_top = null
+			const self = this
+
+			self.drag_data = {
+				target		: null,
+				x			: null,
+				y			: null,
+				margin_left	: null,
+				margin_top	: null
+			}
+
 			// header is the drag area
 			const header = this.shadowRoot.querySelector(".modal-header")
 			header.addEventListener('mousedown', function(e) {
@@ -257,65 +294,42 @@ class DDModal extends HTMLElement {
 					}
 					else if (clickedDragger===true && path[i].classList.contains('draggable')) {
 						// draggable is set (all modal-content)
-						target = path[i];
-						target.classList.add('dragging');
-						x = e.clientX - target.style.left.slice(0, -2);
-						y = e.clientY - target.style.top.slice(0, -2);
+						self.drag_data.target = path[i];
+						self.drag_data.target.classList.add('dragging');
+						self.drag_data.x = e.clientX - self.drag_data.target.style.left.slice(0, -2);
+						self.drag_data.y = e.clientY - self.drag_data.target.style.top.slice(0, -2);
 
 						// this is calculated once, every time that user clicks on header
 						// to get the whole container margin and use it as position offset
-						const compStyles	= window.getComputedStyle(target);
-						margin_left			= parseInt(compStyles.getPropertyValue('margin-left'))
-						margin_top			= parseInt(compStyles.getPropertyValue('margin-top'))
+						const compStyles			= window.getComputedStyle(self.drag_data.target);
+						self.drag_data.margin_left	= parseInt(compStyles.getPropertyValue('margin-left'))
+						self.drag_data.margin_top	= parseInt(compStyles.getPropertyValue('margin-top'))
 
 						return;
 					}
 				}
 			});
 
-			document.addEventListener('mouseup', function() {
-				// if (target !== null) {
-				if (target) {
-					target.classList.remove('dragging');
-				}
-				target = null;
-			});
+			// mouseup
+				document.addEventListener('mouseup', this.mouseup)
 
-			document.addEventListener('mousemove', function(e) {
-
-				// no target case (mouse position changes but target is null or undefined)
-					if (!target) {
-						return;
-					}
-
-				// re-position element based on mouse position
-					target.style.left	= e.clientX - x + 'px';
-					target.style.top	= e.clientY - y + 'px';
-
-				// limit boundaries. take care of initial margin offset
-					const pRect		= target.parentElement.getBoundingClientRect();
-					const tgtRect	= target.getBoundingClientRect();
-					if (tgtRect.left < pRect.left) {
-						target.style.left = (0 - margin_left) + 'px';
-					}
-					if (tgtRect.top < pRect.top) {
-						target.style.top = (0 - margin_top) + 'px';
-					}
-					if (tgtRect.right > (pRect.right)) {
-						target.style.left = (pRect.width - tgtRect.width - margin_left) + 'px';
-					}
-					if (tgtRect.bottom > (pRect.bottom)) {
-						target.style.top = (pRect.height - tgtRect.height - margin_top - 1) + 'px';
-					}
-			});
+			// mousemove
+				document.addEventListener('mousemove', this.mousemove)
 
 	}
 	disconnectedCallback() {
 		// this.shadowRoot.querySelector("button").removeEventListener('click', this._showModal);
-		this.shadowRoot.querySelector(".mini_modal").removeEventListener('mousedown', this._miniModal.bind(this));
+
+		// mini_modal. Note that mini_modal may have been removed
+			const mini_modal = this.shadowRoot.querySelector(".mini_modal")
+			if (mini_modal) {
+				mini_modal.removeEventListener('mousedown', this._miniModal.bind(this));
+			}
 		this.shadowRoot.querySelector(".close_modal").removeEventListener('mousedown', this._hideModal.bind(this));
 		this.shadowRoot.querySelector(".modal").removeEventListener('mousedown', this._hideModal.bind(this));
 		document.removeEventListener('keyup', this.detect_key);
+		document.removeEventListener('mouseup', this.mouseup);
+		document.removeEventListener('mousemove', this.mousemove);
 	}
 	_showModal() {
 		this._modalVisible = true;
@@ -343,9 +357,9 @@ class DDModal extends HTMLElement {
 		this._modalVisible = true;
 		// this._modal.style.display = 'block';
 		this._modal.classList.add('modal_show')
-		this._modal.classList.add("modal_small")
-		if (this._modal.classList.contains("modal_big")) {
-			this._modal.classList.remove("modal_big")
+		this._modal.classList.add('modal_small')
+		if (this._modal.classList.contains('modal_big')) {
+			this._modal.classList.remove('modal_big')
 		}
 	}
 	_hideModal(e) {
@@ -354,7 +368,7 @@ class DDModal extends HTMLElement {
 		if (e.target.matches('.close_modal')) {
 			this.mini = false
 		}
-		// only click over base modal or button close are aceppted
+		// only click over base modal or button close are accepted
 		if (e.target.matches('.modal') || e.target.matches('.close_modal')) {
 			this._closeModal()
 		}
@@ -367,7 +381,7 @@ class DDModal extends HTMLElement {
 
 				// already minified. un-minimize
 
-				this.shadowRoot.querySelector(".modal").classList.remove('mini')
+				this.shadowRoot.querySelector('.modal').classList.remove('mini')
 				// this.shadowRoot.querySelector(".header").classList.add('mini')
 				const header = this.querySelector("[slot='header']")
 				header.classList.remove('mini')
@@ -382,7 +396,7 @@ class DDModal extends HTMLElement {
 
 				// minimize
 
-				this.shadowRoot.querySelector(".modal").classList.add('mini')
+				this.shadowRoot.querySelector('.modal').classList.add('mini')
 				// this.shadowRoot.querySelector(".header").classList.add('mini')
 				const header = this.querySelector("[slot='header']")
 				header.classList.add('mini')
@@ -410,20 +424,49 @@ class DDModal extends HTMLElement {
 			}
 		}
 	}
-	_closeModal() {
+	async _closeModal() {
 
 		if (this.mini) {
 			return true
 		}
 
 		// unsaved_data check
-			if (window.unsaved_data===true) {
-				if (!confirm(get_label.discard_changes || 'Discard unsaved changes?')) {
-					return false
-				}else{
-					window.unsaved_data===false
+			/* OLD WAY
+				if (window.unsaved_data===true) {
+
+					// check if the modified components is inside the modal
+						let unsaved_component_data = false
+						const components = this.querySelectorAll('.wrapper_component')
+						if (components) {
+							const components_length = components.length
+							for (let i = 0; i < components_length; i++) {
+								const item = components[i]
+								if (item.classList.contains('modified')) {
+									unsaved_component_data = true
+									break
+								}
+							}
+						}
+
+					// if true, confirm exit by user
+						if (unsaved_component_data===true) {
+							if (!confirm(get_label.discard_changes || 'Discard unsaved changes?')) {
+								return false
+							}else{
+								window.unsaved_data===false
+							}
+						}
 				}
-			}
+				*/
+			// check_unsaved_data
+				const result = await check_unsaved_data({
+					confirm_msg : 'dd-modal: ' + (get_label.discard_changes || 'Discard unsaved changes?')
+				})
+				if (!result) {
+					// user selects 'cancel' in dialog confirm. Stop navigation
+					return false
+				}
+
 
 		this._modalVisible = false;
 		this._modal.style.display = 'none';
@@ -434,8 +477,12 @@ class DDModal extends HTMLElement {
 			}
 
 		// exec optional on-close callback (normally defined in component caller)
-			if (typeof this.on_close==="function") {
+			if (typeof this.on_close==='function') {
 				this.on_close(this)
+				// remove aux items
+					if (window.page_globals.service_autocomplete) {
+						window.page_globals.service_autocomplete.destroy(true, true, true)
+					}
 			}
 
 		// remove caller instance if exists on close
@@ -465,6 +512,7 @@ class DDModal extends HTMLElement {
 		return true
 	}
 	close() {
+		// alias of _closeModal
 		return this._closeModal()
 	}
 	/**
@@ -481,6 +529,52 @@ class DDModal extends HTMLElement {
 	get_modal_node() {
 		return this._modal
 	}
+	get_modal_content() {
+		return this.shadowRoot.querySelector(".modal-content")
+	}
+	mousemove(e) {
+
+		const self = window.modal
+
+		// no target case (mouse position changes but target is null or undefined)
+			if (!self.drag_data.target) {
+				return;
+			}
+
+		// re-position element based on mouse position
+			self.drag_data.target.style.left	= e.clientX - self.drag_data.x + 'px';
+			self.drag_data.target.style.top		= e.clientY - self.drag_data.y + 'px';
+
+		// limit boundaries. take care of initial margin offset
+			const pRect		= self.drag_data.target.parentElement.getBoundingClientRect();
+			const tgtRect	= self.drag_data.target.getBoundingClientRect();
+			if (tgtRect.left < pRect.left) {
+				self.drag_data.target.style.left = (0 - self.drag_data.margin_left) + 'px';
+			}
+			if (tgtRect.top < pRect.top) {
+				self.drag_data.target.style.top = (0 - self.drag_data.margin_top) + 'px';
+			}
+			if (tgtRect.right > (pRect.right)) {
+				self.drag_data.target.style.left = (pRect.width - tgtRect.width - self.drag_data.margin_left) + 'px';
+			}
+			if (tgtRect.bottom > (pRect.bottom)) {
+				self.drag_data.target.style.top = (pRect.height - tgtRect.height - self.drag_data.margin_top - 1) + 'px';
+			}
+	}
+	mouseup(e) {
+		const self = window.modal
+
+		if (self.drag_data.target) {
+			self.drag_data.target.classList.remove('dragging');
+		}
+		self.drag_data.target = null;
+	}
+	remove_miniModal() {
+		this.shadowRoot.querySelector(".mini_modal").remove()
+	}
 }
 customElements.define('dd-modal',DDModal);
 }
+
+
+// @license-end

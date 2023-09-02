@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
@@ -9,17 +10,18 @@ const t0 = performance.now()
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {get_instance} from '../../common/js/instances.js'
 	import {url_vars_to_object, JSON_parse_safely} from '../../common/js/utils/index.js'
+	import {render_server_response_error} from '../../common/js/render_common.js'
 	import {render_page} from '../js/render_page.js'
-	// import {config_client} from '../../../config/config_client.js'
+	// import {config_client} from '../../../config/config_client.js' // working here !
 
 
 	( async () => {
 
 		// environment from API
 			// // config_client. Set vars as global
-			// 	for (const [key, value] of Object.entries(config_client)) {
-			// 		window[key] = value
-			// 	}
+			// 	// for (const [key, value] of Object.entries(config_client)) {
+			// 	// 	window[key] = value
+			// 	// }
 			// // dedalo_environment
 			// 	const rqo_environment = { // rqo (request query object)
 			// 		action			: 'get_environment',
@@ -34,69 +36,87 @@ const t0 = performance.now()
 			// 		window[key] = value
 			// 	}
 
-
-		// main events init
+		// main events init (visibility change, save,..)
 			events_init()
 
 		// main CSS add loading
 			const main = document.getElementById('main')
 				  main.classList.add('loading')
 
-		// searchParams
-			const searchParams = new URLSearchParams(window.location.href);
+		/* DES (moved to page build method)
+			// searchParams
+				const searchParams = new URLSearchParams(window.location.href);
 
-		// menu
-			const menu = searchParams.has('menu')
-				? JSON_parse_safely(
-					searchParams.get('menu'), // string from url
-					true // fallback on exception parsing string
-				  )
-				: true
+			// menu
+				const menu = searchParams.has('menu')
+					? JSON_parse_safely(
+						searchParams.get('menu'), // string from url
+						true // fallback on exception parsing string
+					  )
+					: true
 
-		// start bootstrap
-			const rqo = { // rqo (request query object)
-				action			: 'start',
-				search_obj		: url_vars_to_object(location.search),
-				menu			: menu,
-				prevent_lock	: true
-			}
+			// start bootstrap
+				const rqo = { // rqo (request query object)
+					action			: 'start',
+					prevent_lock	: true,
+					options : {
+						search_obj	: url_vars_to_object(location.search),
+						menu		: menu //  bool
+					}
+				}
 
-			// request page context (usually menu and section context)
-			const api_response = await data_manager.request({
-				body : rqo
-			});
-			// api_response.result = false
-			console.log(`+++ API start: ${(performance.now()-t0).toFixed(3)} rqo:`, rqo, 'api_response', api_response);
+				// request page context (usually menu and section context)
+				const api_response = await data_manager.request({
+					body : rqo
+				});
+				// api_response.result = false
+				console.log(`+++ API start: ${(performance.now()-t0).toFixed(3)} rqo:`, rqo, 'api_response', api_response);
 
-		// error case
-			if (!api_response || !api_response.result) {
+			// error case
+				if (!api_response || !api_response.result) {
 
-				const wrapper_page = render_page.render_server_response_error(api_response.msg || 'Invalid result')
-				main.appendChild(wrapper_page)
-				main.classList.remove('loading','hide')
+					// running_with_errors
+						const running_with_errors = [
+							{
+								msg		: api_response.msg || 'Invalid API result',
+								error	: api_response.error || 'unknown'
+							}
+						]
+					const wrapper_page = render_server_response_error(
+						running_with_errors
+					)
+					main.appendChild(wrapper_page)
+					main.classList.remove('loading','hide')
 
-				return
-			}
+					return
+				}
+				// server_errors check (page and environment)
+				if (api_response.dedalo_last_error) {
+					console.error('Page running with server errors. dedalo_last_error: ', api_response.dedalo_last_error);
+				}
+				if (page_globals.dedalo_last_error) {
+					console.error('Environment running with server errors. dedalo_last_error: ', page_globals.dedalo_last_error);
+				}
+
+			// page instance init
+				const page_instance = await get_instance({
+					model	: 'page',
+					context	: api_response.result.context // array page context items (usually menu, section )
+				});
+		*/
 
 		// page instance init
 			const page_instance = await get_instance({
-				model	: 'page',
-				context	: api_response.result // array page context items (usually menu, section )
+				model : 'page'
 			});
 
 		// page instance build and render
-			const build			= await page_instance.build()
+			const build			= await page_instance.build(true)
 			const wrapper_page	= await page_instance.render()
 
 		// main. Add wrapper page node and restore class
 			main.appendChild(wrapper_page)
 			main.classList.remove('loading','hide')
-
-		// page title update
-			const section_info = api_response.result.find(el => el.model==='section' || el.model.indexOf('area')===0)
-			if (section_info) {
-				document.title =  'V6 ' + section_info.tipo + ' ' + section_info.label
-			}
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -104,3 +124,7 @@ const t0 = performance.now()
 				// dd_console(`__Time to Page init, build and render: ${Math.round(performance.now()-t0)} ms`)
 			}
 	})()
+
+
+
+// @license-end

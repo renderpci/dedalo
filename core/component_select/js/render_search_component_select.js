@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -23,7 +24,7 @@ export const render_search_component_select = function() {
 /**
 * SEARCH
 * Render node for use in current mode
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_search_component_select.prototype.search = async function(options) {
 
@@ -53,7 +54,7 @@ render_search_component_select.prototype.search = async function(options) {
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 
@@ -88,7 +89,7 @@ const get_content_data = function(self) {
 * 	Current locator value as {section_id: '2', section_tipo: 'rsc740'}
 * @param object self
 * 	Component instance pointer
-* @return DOM node content_value
+* @return HTMLElement content_value
 */
 const get_content_value = (i, current_value, self) => {
 
@@ -164,9 +165,14 @@ const get_content_value = (i, current_value, self) => {
 				? datalist_item.label + (current_section_id ? " [" + current_section_id + "]" : '')
 				: datalist_item.label
 
+			const datalist_value = datalist_item.value
+			if (datalist_value) {
+				datalist_value.from_component_tipo = self.tipo
+			}
+
 			const option = ui.create_dom_element({
 				element_type	: 'option',
-				value			: JSON.stringify(datalist_item.value),
+				value			: JSON.stringify(datalist_value),
 				inner_html		: current_label,
 				parent			: select
 			})
@@ -182,3 +188,7 @@ const get_content_value = (i, current_value, self) => {
 
 	return content_value
 }//end get_content_value
+
+
+
+// @license-end

@@ -11,7 +11,7 @@ class section_group extends common {
 	/**
 	* VARS
 	*/
-		protected $section_tipo;
+		public $section_tipo;
 
 
 

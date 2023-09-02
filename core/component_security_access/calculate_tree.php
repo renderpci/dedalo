@@ -22,7 +22,7 @@
 	$_SERVER = $data['server'];
 
 // user_id
-	$user_id = $data['user_id'];
+	$user_id = (int)$data['user_id'];
 
 // session_id. Is used mainly to verify that user is logged or not.
 	// get current session id and force new session name as equal

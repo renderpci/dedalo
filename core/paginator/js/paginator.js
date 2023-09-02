@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /* global, Promise, SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
@@ -43,9 +44,6 @@ export const paginator = function() {
 	this.status				= null
 
 	this.id_variant			= null
-
-
-	return true
 }//end paginator
 
 
@@ -56,9 +54,9 @@ export const paginator = function() {
 */
 // prototypes assign
 	paginator.prototype.edit			= render_paginator.prototype.edit
-	paginator.prototype.tm				= render_paginator.prototype.edit
 	paginator.prototype.edit_in_list	= render_paginator.prototype.edit
 	paginator.prototype.list			= render_paginator.prototype.edit // same as edit
+	paginator.prototype.tm				= render_paginator.prototype.edit
 	paginator.prototype.mini			= render_paginator_mini.prototype.mini
 	paginator.prototype.micro			= render_paginator_micro.prototype.micro
 	paginator.prototype.render			= common.prototype.render
@@ -90,7 +88,7 @@ paginator.prototype.init = function(options) {
 		self.id = 'paginator_'+self.caller.id
 
 	// status update
-		self.status = 'initied'
+		self.status = 'initialized'
 
 
 	return true
@@ -203,9 +201,11 @@ paginator.prototype.get_total = async function() {
 	paginator.loading_total_status = 'resolving'
 
 	// const total = (Boolean(this.caller.total && typeof this.caller.total.then==="function"))
-	const total = (this.caller.total && typeof this.caller.total==="function")
-		? await this.caller.total()
-		: this.caller.total
+	// const total = (this.caller.total && typeof this.caller.total==="function")
+	// 	? await this.caller.total()
+	// 	: this.caller.total
+
+	const total = await this.caller.get_total()
 
 	paginator.loading_total_status = 'resolved'
 
@@ -259,14 +259,14 @@ paginator.prototype.paginate = async function(offset) {
 	const self = this
 
 	// avoid overlap section calls if not ready
-		if (self.caller.model !== 'time_machine' && self.caller.status!=='rendered') {
-			console.warn(`/// [paginator.paginate] Ignored (1) paginate offset (element is not ready status: ${self.caller.status}) :`, offset);
+		if (self.caller.model!=='time_machine' && self.caller.status!=='rendered') {
+			console.warn(`/// [paginator.paginate] Ignored (1) paginate offset (element is not ready status: ${self.caller.status}). offset:`, offset);
 			return false
 		}
 
 	// avoid overlap section calls if not ready
 		if (self.status!=='rendered') {
-			console.warn(`/// [paginator.paginate] Ignored (2) paginate offset (element is not ready status: ${self.status}) :`, offset);
+			console.warn(`/// [paginator.paginate] Ignored (2) paginate offset (paginator is not ready status: ${self.status}). offset:`, offset);
 			return false
 		}
 
@@ -281,7 +281,6 @@ paginator.prototype.paginate = async function(offset) {
 	// publish event (section is listen this event to refresh)
 		event_manager.publish('paginator_goto_'+self.id, offset)
 
-		// self.status = 'rendered'
 	// paginator content data update
 		self.refresh()
 
@@ -402,3 +401,34 @@ paginator.prototype.navigate_to_previous_page = function() {
 
 	return self.go_to_page_json(page)
 }//end navigate_to_previous_page
+
+
+
+/**
+* SHOW_ALL
+* Trigger event paginator_show_all_.. that caller is listen
+* to set total and refresh
+* @return bool
+*/
+paginator.prototype.show_all = function(limit) {
+
+	const self = this
+
+	// publish event (section is listen this event to refresh)
+		event_manager.publish(
+			'paginator_show_all_' + self.id,
+			limit
+		)
+
+	// paginator content data update
+		setTimeout(function(){
+			self.refresh()
+		}, 300)
+
+
+	return true
+}//end show_all
+
+
+
+// @license-end

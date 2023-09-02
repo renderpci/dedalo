@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
@@ -5,7 +6,9 @@
 
 // imports
 	import {dd_console} from '../../common/js/utils/index.js'
-	// import {data_manager} from '../../common/js/data_manager.js'
+	import {data_manager} from '../../common/js/data_manager.js'
+	import * as instances from '../../common/js/instances.js'
+	import {object_to_url_vars, download_file} from '../../common/js/utils/index.js'
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_edit_component_av} from '../../component_av/js/render_edit_component_av.js'
@@ -45,9 +48,6 @@ export const component_av = function(){
 	this.quality
 
 	this.fragment = null
-
-
-	return true
 }//end  component_av
 
 
@@ -310,4 +310,152 @@ component_av.prototype.set_playback_rate = function(rate) {
 		self.video.playbackRate = rate;
 
 	return rate
-}//end  set_playback_rate
+}//end set_playback_rate
+
+
+
+/**
+* OPEN_AV_PLAYER
+* static method called by dd_grid_indexation
+* Creates a new url with the vars needed to create a av player
+* and open it in a new window
+* @param object options
+* @return bool
+*/
+export const open_av_player = async function(options) {
+
+	// options
+		const component_tipo	= options.component_tipo
+		const section_id		= options.section_id
+		const section_tipo		= options.section_tipo
+		const tc_in_secs		= options.tc_in_secs ?? 0 // as seconds
+		const tc_out_secs		= options.tc_out_secs ?? null // as seconds
+
+	// open new window. Let page collect url params and create a new instance of component_av
+		const url_vars = {
+			tipo			: component_tipo,
+			section_tipo	: section_tipo,
+			id				: section_id,
+			mode			: 'edit',
+			view			: 'viewer',
+			menu			: false,
+			tc_in			: tc_in_secs,
+			tc_out			: tc_out_secs
+		}
+		const url			= DEDALO_CORE_URL + '/page/?' + object_to_url_vars(url_vars)
+		const new_window	= window.open(url, 'av_viewer', 'width=1024,height=860')
+		new_window.focus()
+
+
+	return true
+}//end open_av_player
+
+
+
+/**
+* DOWNLOAD_AV_FRAGMENT
+* static method called by dd_grid_indexation
+* Request to the API the creation of an av fragment and
+* force download the result URL of the created file
+* @param object options
+* @return promise
+* 	Resolve api_response
+*/
+export const download_av_fragment = async function(options) {
+
+	// options
+		const tipo			= options.tipo
+		const section_tipo	= options.section_tipo
+		const section_id	= options.section_id
+		const tag_id		= options.tag_id
+		const lang			= options.lang
+		const quality		= options.quality
+		const tc_in_secs	= options.tc_in_secs || 0 // as seconds
+		const tc_out_secs	= options.tc_out_secs || null // as seconds
+		const watermark		= options.watermark!==undefined ? options.watermark : false
+		const button_caller = options.button_caller
+
+		if (button_caller) {
+			button_caller.classList.add('loading')
+		}
+
+	/*
+		// trigger url
+			const trigger_url = null
+
+		// watermark
+			const watermark = null
+
+		// url
+			const url_vars = {
+				mode			: 'download_file',
+				quality			: quality,
+				tipo			: tipo,
+				section_tipo	: section_tipo,
+				section_id		: section_id,
+				tc_in			: tc_in,
+				tc_out			: tc_out,
+				watermark		: watermark
+			}
+			const pairs = []
+			for (const key in url_vars) {
+				pairs.push( key+'='+url_vars[key] )
+			}
+			const url = self.trigger_url + '?' + pairs.join('&')
+			*/
+
+	return new Promise(function(resolve){
+
+		data_manager.request({
+			body : {
+				action	: 'download_fragment',
+				dd_api	: 'dd_component_av_api', // component_av
+				source	: {
+					tipo			: tipo,
+					section_tipo	: section_tipo,
+					section_id		: section_id,
+					tag_id			: tag_id,
+					lang			: lang
+				},
+				options : {
+					quality		: quality,
+					tc_in_secs	: tc_in_secs,
+					tc_out_secs	: tc_out_secs,
+					watermark	: watermark
+				}
+			}
+		})
+		.then(async function(api_response){
+
+			if (button_caller) {
+				button_caller.classList.remove('loading')
+			}
+
+			if (api_response.result===false) {
+
+				// error case
+				const msg = api_response.msg || 'Error on create fragment'
+				console.error(msg)
+				alert(msg);
+
+			}else{
+
+				// success case
+
+				const url		= api_response.result;
+				const file_name	= `dedalo_download_${quality}_` + url.substring(url.lastIndexOf('/')+1);
+
+				download_file({
+					url			: url,
+					file_name	: file_name
+				})
+			}
+
+			resolve(api_response)
+		})
+	})
+}//end download_av_fragment
+
+
+
+// @license-end

@@ -2,9 +2,9 @@
 # DEDALO4 FOR PUBLIC GITHUB PUBLICATION
 
 # Ignore configuration files that may contain sensitive information.
-config4*
-config_db*
-config_areas*
+config.php
+config_db.php
+config_areas.php
 config.php
 config_private
 config.json
@@ -24,7 +24,6 @@ config/*
 acc
 _acc
 des
-test
 .DS_Store
 .eslintrc
 .lesshintrc
@@ -37,8 +36,11 @@ test
 *.data
 .smbdelete*
 * copy.*
+test
+!/test
 
-install/import/hierarchy
+
+# install/import/hierarchy
 str_data*
 
 # lib ignore all except dedalo
@@ -56,7 +58,12 @@ core/extras/*
 !core/extras/muvaet
 
 # vendor ignore all except used public
-vendor
+lib/vendor/*
+# !lib/vendor/composer
+!lib/vendor/myclabs
+!lib/vendor/sweetrdf
+# !lib/vendor/sebastian
+!lib/vendor/phpunit
 # !vendor/maxmind
 # !vendor/maxmind-db
 # !vendor/react
@@ -66,9 +73,13 @@ vendor
 # !vendor/socrata
 # !vendor/composer
 # !vendor/leafo
-autoload.php
+# files
+# !lib/autoload.php
+# !composer.json
+# !composer.lock
 composer.json
 composer.lock
+composer.phar
 
 # Ignore paths that contain generated content.
 /media
@@ -97,6 +108,7 @@ robots.txt
 
 # Ignore some special files
 config.codekit3
+prepros.config
 .jsbeautifyrc
 
 # various minified
@@ -129,3 +141,14 @@ core/common/css/structure.css
 .phpintel
 .vscode
 libs_dev
+
+package-lock.json
+package.json
+
+node_modules
+
+# generated html documentation files
+docs_site
+
+#count data
+/.VSCodeCounter/*

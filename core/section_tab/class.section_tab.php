@@ -10,7 +10,7 @@ class section_tab extends common {
 	/**
 	* VARS
 	*/
-		protected $section_tipo;
+		public $section_tipo;
 
 
 

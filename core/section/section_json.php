@@ -64,6 +64,7 @@
 
 					$ar_subcontext = $subdatum->context;
 					foreach ($ar_subcontext as $current_context) {
+						$current_context->mode ='tm';
 						$context[] = $current_context;
 					}
 

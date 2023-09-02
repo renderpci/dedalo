@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS SEARCH_RELATED
 * Specific search related methods overwrite search methods
 *
@@ -10,7 +10,7 @@ class search_related extends search {
 
 	/**
 	* PARSE_SEARCH_QUERY_OBJECT NEW
-	* Build full final sql query to send to DDBB
+	* Build full final SQL query to send to DDBB
 	* @param bool $full_count
 	*	default false
 	* @return string $sql_query
@@ -30,8 +30,8 @@ class search_related extends search {
 
 		// add filter of sections when the filter is not 'all', it's possible add specific section to get the related records only for these sections.
 		// if the section has all, the filter don't add any section to the WHERE
-			$ar_section_tipo = $this->ar_section_tipo;
-			$ar_section_filter = [];
+			$ar_section_tipo	= $this->ar_section_tipo;
+			$ar_section_filter	= [];
 			foreach ($ar_section_tipo as $section_tipo) {
 				if ($section_tipo !=='all') {
 					$ar_section_filter[] = 'section_tipo = \''.$section_tipo.'\'';
@@ -55,15 +55,28 @@ class search_related extends search {
 				$locators_query = [];
 				foreach ($ar_locators as $locator) {
 
-					$base_flat_locator = locator::get_term_id_from_locator($locator);
-
 					switch (true) {
+
+						case !isset($locator->section_id) && isset($locator->type):
+							// relation index case
+							$locator_index = $locator->type.'_'.$locator->section_tipo;
+							$locators_query[] = PHP_EOL.'relations_flat_ty_st(datos) @> \'['. json_encode($locator_index) . ']\'::jsonb';
+							break;
+
 						case isset($locator->from_component_tipo):
-							$locator_index = $locator->from_component_tipo.'_'.$base_flat_locator;
+							$base_flat_locator	= locator::get_term_id_from_locator($locator);
+							$locator_index		= $locator->from_component_tipo.'_'.$base_flat_locator;
 							$locators_query[] = PHP_EOL.'relations_flat_fct_st_si(datos) @> \'['. json_encode($locator_index) . ']\'::jsonb';
 							break;
 
+						case isset($locator->type):
+							$base_flat_locator	= locator::get_term_id_from_locator($locator);
+							$locator_index		= $locator->type.'_'.$base_flat_locator;
+							$locators_query[] = PHP_EOL.'relations_flat_ty_st_si(datos) @> \'['. json_encode($locator_index) . ']\'::jsonb';
+							break;
+
 						default:
+							$base_flat_locator = locator::get_term_id_from_locator($locator);
 							$locators_query[] = PHP_EOL.'relations_flat_st_si(datos) @> \'['. json_encode($base_flat_locator) . ']\'::jsonb';
 							break;
 					}
@@ -84,6 +97,7 @@ class search_related extends search {
 		// final query union with all tables
 			$str_query = implode(PHP_EOL .' UNION ALL ', $ar_query);
 
+
 		// Set order to maintain results stable
 		// count and pagination optional
 			if($full_count===false) {
@@ -98,6 +112,7 @@ class search_related extends search {
 
 		$str_query .= ';';
 
+
 		return $str_query;
 	}//end parse_search_query_object
 
@@ -106,7 +121,7 @@ class search_related extends search {
 	/**
 	* GET_REFERENCED_LOCATORS
 	* Get the sections that is pointed by any kind of locator to the caller (reference_locator)
-	* @see section::get_inverse_locators
+	* @see section::get_inverse_references
 	*
 	* @param object $reference_locator
 	*	Basic locator with section_tipo and section_id properties
@@ -135,8 +150,17 @@ class search_related extends search {
 			// fix result ar_records as dato
 			$result	= $rows_data->ar_records;
 
+
 			# Note that row relations contains all relations and not only searched because we need
 			# filter relations array for each records to get only desired coincidences
+
+		// debug
+			$total_records = count($result);
+			debug_log(__METHOD__
+				. " Calculated referenced_locators step 1 (total: $total_records) section_tipo: $reference_locator->section_tipo,  section_id: " . ($reference_locator->section_id ?? '')
+				. ', time: ' . exec_time_unit($start_time, 'ms').' ms'
+				, logger::DEBUG
+			);
 
 			// Compare all properties of received locator in each relations locator
 			$ar_properties = array();
@@ -162,8 +186,10 @@ class search_related extends search {
 			}
 
 		// debug
-			debug_log(__METHOD__." Calculated referenced_locators $reference_locator->section_tipo, $reference_locator->section_id "
-				. exec_time_unit($start_time).' ms'
+			debug_log(__METHOD__
+				. " Calculated referenced_locators step 2 section_tipo: $reference_locator->section_tipo, section_id: " . ($reference_locator->section_id ?? '')
+				. ', time: ' . exec_time_unit($start_time, 'ms').' ms'
+				// . ' - memory: ' .dd_memory_usage()
 				, logger::DEBUG
 			);
 

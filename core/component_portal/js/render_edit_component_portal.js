@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -5,11 +6,11 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {get_instance} from '../../common/js/instances.js'
 	import {when_in_dom} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {create_source} from '../../common/js/common.js'
 	import {clone, object_to_url_vars, open_window} from '../../common/js/utils/index.js'
-	import {get_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
 	import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
 	import {view_default_edit_portal} from './view_default_edit_portal.js'
@@ -48,50 +49,56 @@ export const render_edit_component_portal = function() {
 * {
 * 	render_level : string full|content_data
 * }
-* @return DOM node wrapper | null
+* @return HTMLElement|null
 */
 render_edit_component_portal.prototype.edit = async function(options) {
 
 	const self = this
 
 	// view
-		const view	= self.context.view
-
+		const view = self.view || self.context?.view || null
 
 	// wrapper
-		switch(view) {
+	switch(view) {
 
-			case 'text':
-				return view_text_list_portal.render(self, options)
+		case 'text':
+			return view_text_list_portal.render(self, options)
 
-			case 'line':
-				return view_line_edit_portal.render(self, options)
+		case 'line':
+			return view_line_edit_portal.render(self, options)
 
-			case 'tree':
-				return view_tree_edit_portal.render(self, options)
+		case 'tree':
+			return view_tree_edit_portal.render(self, options)
 
-			case 'mosaic':
-				return view_mosaic_edit_portal.render(self, options)
+		case 'mosaic':
+			return view_mosaic_edit_portal.render(self, options)
 
-			case 'indexation':
-				return view_indexation_edit_portal.render(self, options)
+		case 'indexation':
+			return view_indexation_edit_portal.render(self, options)
 
-			case 'content':
-				return view_content_edit_portal.render(self, options)
+		case 'content':
+			return view_content_edit_portal.render(self, options)
 
-			default:
-				// dynamic try
-					const render_view = self.render_views.find(el => el.view===view && el.mode===self.mode)
-					if (render_view) {
-						const path			= render_view.path || './' + render_view.render +'.js'
-						const render_method	= await import (path)
-						return render_method[render_view.render].render(self, options)
-					}
+		case 'print':
+			// view print use the same view as default, except it will use read only to render content_value
+			// as different view as default it will set in the class of the wrapper
+			// sample: <div class="wrapper_component component_portal oh24 oh1_oh24 edit view_print disabled_component">...</div>
+			// take account that to change the css when the component will render in print context
+			// for print we need to use read of the content_value and it's necessary force permissions to use read only element render
+			self.permissions = 1
 
-				return view_default_edit_portal.render(self, options)
-		}
+		case 'default':
+		default:
+			// dynamic try
+				const render_view = self.render_views.find(el => el.view===view && el.mode===self.mode)
+				if (render_view) {
+					const path			= render_view.path || './' + render_view.render +'.js'
+					const render_method	= await import (path)
+					return render_method[render_view.render].render(self, options)
+				}
 
-	return null
+			return view_default_edit_portal.render(self, options)
+	}
 }//end edit
 
 
@@ -103,15 +110,12 @@ render_edit_component_portal.prototype.edit = async function(options) {
 * @param object options
 * @return DocumentFragment
 */
-export const render_column_id = function(options){
+export const render_column_id = function(options) {
 
 	// options
-		const self				= options.caller
-		const section_id		= options.section_id
-		const section_tipo		= options.section_tipo
-		// const paginated_key	= options.paginated_key
-		// const locator		= options.locator
-		// const total_records	= self.total
+		const self			= options.caller
+		const section_id	= options.section_id
+		const section_tipo	= options.section_tipo
 
 	// DocumentFragment
 		const fragment = new DocumentFragment()
@@ -148,6 +152,7 @@ export const render_column_id = function(options){
 				// }
 				// event_manager.publish('user_navigation', user_navigation_rqo)
 
+			/*
 			// open a new window
 				const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
 					tipo			: section_tipo,
@@ -172,6 +177,11 @@ export const render_column_id = function(options){
 
 			// button_edit_click event. Subscribed to close current modal if exists (mosaic view case)
 				event_manager.publish('button_edit_click', this)
+			*/
+			self.edit_record_handler({
+				section_tipo	: section_tipo,
+				section_id		: section_id
+			})
 		})
 		button_edit.addEventListener('mouseenter', function(e) {
 			e.stopPropagation()
@@ -228,7 +238,8 @@ export const render_column_id = function(options){
 
 /**
 * RENDER_DRAG_NODE
-* @return DOM node
+* @param object options
+* @return HTMLElement
 */
 const render_drag_node = function(options) {
 
@@ -258,23 +269,11 @@ const render_drag_node = function(options) {
 				drag_node.classList.add('hide')
 			// }
 		});
-	// drag_id
-		// ui.create_dom_element({
-		// 	element_type	: 'span',
-		// 	class_name		: 'drag_section_id hide',
-		// 	text_content	: section_id,
-		// 	parent			: drag_node
-		// })
-	// drag_icon
-		// const drag_icon = ui.create_dom_element({
-		// 	element_type	: 'span',
-		// 	class_name		: 'drag_icon',
-		// 	parent			: drag_node
-		// })
 
 	drag_node.draggable	= true
-	drag_node.addEventListener('dragstart', function(e) { return on_dragstart(this, e, options)})
-	drag_node.addEventListener('dragend', function(e) { return on_dragend(this, e)})
+		drag_node.addEventListener('dragstart', function(e) { return on_dragstart(this, e, options)})
+		drag_node.addEventListener('dragend', function(e) { return on_dragend(this, e, options)})
+
 	drag_node.addEventListener('dblclick', function(e) {
 		e.stopPropagation()
 
@@ -315,7 +314,8 @@ const render_drag_node = function(options) {
 					text_content	: 'OK',
 					parent			: footer
 				})
-				button_ok.addEventListener('click',function(){
+				button_ok.addEventListener('click', function(e){
+					e.stopPropagation()
 					change_order_modal()
 				})
 				// CHANGE_ORDER_MODAL
@@ -353,10 +353,11 @@ const render_drag_node = function(options) {
 
 		// modal
 			const modal = ui.attach_to_modal({
-				header	: header,
-				body	: body,
-				footer	: footer,
-				size	: 'small' // string size big|normal|small
+				header		: header,
+				body		: body,
+				footer		: footer,
+				size		: 'small', // string size big|normal|small
+				minimizable	: false
 			})
 			// set the input field active
 			target_key_input.focus()
@@ -381,7 +382,7 @@ const render_drag_node = function(options) {
 * RENDER_COLUMN_COMPONENT_INFO
 * Render node for use in edit
 * @param object options
-* @return DOM DocumentFragment
+* @return DocumentFragment
 */
 export const render_column_component_info = function(options) {
 
@@ -400,7 +401,7 @@ export const render_column_component_info = function(options) {
 		)
 		if (component_info) {
 
-			const info_value = component_info.value.join(' ')
+			const info_value = component_info.value.join(', ')
 
 			ui.create_dom_element({
 				element_type	: 'span',
@@ -420,7 +421,7 @@ export const render_column_component_info = function(options) {
 * Render column_remov node
 * Shared across views
 * @param object options
-* @return DOM DocumentFragment
+* @return DocumentFragment
 */
 export const render_column_remove = function(options) {
 
@@ -428,11 +429,11 @@ export const render_column_remove = function(options) {
 		const self			= options.caller
 		const row_key		= options.row_key
 		const paginated_key	= options.paginated_key
-		const section_id 	= options.section_id
+		const section_id	= options.section_id
 		const section_tipo	= options.section_tipo
-		// const locator		= options.locator
 
-	const fragment = new DocumentFragment()
+	// DocumentFragment
+		const fragment = new DocumentFragment()
 
 	// button_remove
 		const button_remove = ui.create_dom_element({
@@ -443,9 +444,10 @@ export const render_column_remove = function(options) {
 		button_remove.addEventListener('click', function(e){
 			e.stopPropagation()
 
-			if (self.permissions<2) {
-				return
-			}
+			// invalid permissions
+				if (self.permissions<2) {
+					return
+				}
 
 			// header
 				const header = ui.create_dom_element({
@@ -462,7 +464,8 @@ export const render_column_remove = function(options) {
 			// body
 				const body = ui.create_dom_element({
 					element_type	: 'div',
-					class_name		: 'body content'
+					class_name		: 'body content',
+					inner_html		: ' '
 				})
 
 			// footer
@@ -472,21 +475,43 @@ export const render_column_remove = function(options) {
 				})
 
 			// button_unlink_and_delete
-				const button_unlink_and_delete = ui.create_dom_element({
-					element_type	: 'button',
-					class_name		: 'danger remove',
-					text_content	: get_label.delete_resource_and_links || 'Delete resource and all links',
-					parent			: footer
-				})
-				button_unlink_and_delete.addEventListener("click", function(){
-					// stop if the user don't confirm
-					if (!confirm(get_label.sure)) {
-						return
-					}
-					delete_linked_record()
-					unlink_record()
-					delete_dataframe_record()
-				})
+				const display_delete_record = options.caller.view!=='indexation'
+				if (display_delete_record) {
+					const button_unlink_and_delete = ui.create_dom_element({
+						element_type	: 'button',
+						class_name		: 'danger remove',
+						text_content	: get_label.delete_resource_and_links || 'Delete resource and all links',
+						parent			: footer
+					})
+					button_unlink_and_delete.addEventListener('click', async function(e) {
+						e.stopPropagation()
+
+						// stop if the user don't confirm
+						if (!confirm(get_label.sure)) {
+							return
+						}
+
+						footer.classList.add('loading')
+
+						await self.delete_linked_record({
+							section_tipo	: section_tipo,
+							section_id		: section_id
+						})
+
+						self.unlink_record({
+							paginated_key	: paginated_key,
+							row_key			: row_key,
+							section_id		: section_id
+						})
+						.then(modal.on_close)
+
+						self.delete_dataframe_record({
+							section_id : section_id
+						})
+
+						footer.classList.remove('loading')
+					})
+				}
 
 			// button_unlink_record
 				const button_unlink_record = ui.create_dom_element({
@@ -495,139 +520,29 @@ export const render_column_remove = function(options) {
 					text_content 	: get_label.delete_only_the_link || 'Delete only the link',
 					parent			: footer
 				})
-				button_unlink_record.addEventListener("click", function(){
+				button_unlink_record.addEventListener('click', function(e){
+					e.stopPropagation()
+
 					// stop if the user don't confirm
 					if (!confirm(get_label.sure)) {
 						return
 					}
-					unlink_record()
-					delete_dataframe_record()
-				})
 
-			const unlink_record = function() {
-				// changed_data
-				const changed_data = [Object.freeze({
-					action	: 'remove',
-					key		: paginated_key,
-					value	: null
-				})]
-				// change_value (implies saves too)
-				// remove the remove_dialog it's controlled by the event of the button that call
-				// prevent the double confirmation
-				self.change_value({
-					changed_data	: changed_data,
-					label			: section_id,
-					refresh			: false,
-					remove_dialog	: ()=>{
-						return true
-					}
-				})
-				.then(async (response)=>{
-					// the user has selected cancel from delete dialog
-						if (response===false) {
-							// modal. Close modal if isset
-							modal.on_close()
-							return
-						}
+					footer.classList.add('loading')
 
-					// update pagination offset
-						self.update_pagination_values('remove')
+					self.unlink_record({
+						paginated_key	: paginated_key,
+						row_key			: row_key,
+						section_id		: section_id
+					})
+					.then(modal.on_close)
 
-					// refresh
-						await self.refresh({
-							build_autoload : true // when true, force reset offset
-						})
-
-					// check if the caller has active a tag_id
-						if(self.active_tag){
-							// filter component data by tag_id and re-render content
-							self.filter_data_by_tag_id(self.active_tag)
-						}
-
-					// event to update the DOM elements of the instance
-						event_manager.publish('remove_element_'+self.id, row_key)
-
-					// modal. Close modal if it's set
-						modal.on_close()
-				})
-			}
-
-			const delete_linked_record = async function() {
-
-				// create the instance of the section called by the row of the portal,
-				// section will be in list because it's not necessary get all data, only the instance context to be deleted it.
-					const instance_options = {
-						model			: 'section',
-						tipo			: section_tipo,
-						section_tipo	: section_tipo,
-						section_id		: section_id,
-						mode			: 'list',
-						lang			: self.lang,
-						caller			: self,
-						inspector		: false,
-						filter			: false
-					}
-				// get the instance
-					const section =	await get_instance(instance_options)
-
-				// create the sqo to be used to find the section will be deleted
-					const sqo = {
-						section_tipo		: [section_tipo],
-						filter_by_locators	: [{
-							section_tipo	: section_tipo,
-							section_id		: section_id
-						}],
-						limit				: 1
-					}
-				// call to the section and delete it
-				section.delete_section({
-					sqo			: sqo,
-					delete_mode	: 'delete_record'
-				})
-				.then(function(){
-					modal.on_close()
-				})
-			}
-
-			const delete_dataframe_record = async function() {
-				// check if the show has any ddo that call to any dataframe section.
-				const ddo_dataframe = self.request_config_object.show.ddo_map.find(el => el.is_dataframe===true)
-
-				if(!ddo_dataframe){
-					return
-				}
-				// create the instance of the section called by the row of the portal,
-				// section will be in list because it's not necessary get all data, only the instance context to be deleted it.
-					const instance_options = {
-						model			: 'section',
-						tipo			: ddo_dataframe.section_tipo,
-						section_tipo	: ddo_dataframe.section_tipo,
-						section_id		: section_id,
-						mode			: 'list',
-						lang			: self.lang,
-						caller			: self,
-						inspector		: false,
-						filter			: false
-					}
-				// get the instance
-					const section =	await get_instance(instance_options)
-
-				// caller_dataframe
-					const caller_dataframe = (self.caller && self.caller.model==='section_record' && self.caller.caller)
-						? {
-							section_tipo	: self.caller.caller.section_tipo,
-							section_id		: self.caller.caller.section_id
-						  }
-						: null
-
-				// call to the section and delete it
-					section.delete_section({
-						delete_mode			: 'delete_dataframe',
-						caller_dataframe	: caller_dataframe
+					self.delete_dataframe_record({
+						section_id : section_id
 					})
 
-
-			}
+					footer.classList.remove('loading')
+				})
 
 			// modal
 				const modal = ui.attach_to_modal({
@@ -643,8 +558,11 @@ export const render_column_remove = function(options) {
 				// the unlink option will be fired
 				function focus_the_button() {
 					// set the focus to the button_unlink
-					button_unlink_record.focus()
-					button_unlink_record.addEventListener('keyup',(e)=>{
+					setTimeout(function(){
+						button_unlink_record.focus()
+						button_unlink_record.classList.add('focus')
+					}, 100)
+					button_unlink_record.addEventListener('keyup', (e)=>{
 						if(e.key==='Enter'){
 							button_unlink_record.click()
 						}
@@ -679,26 +597,19 @@ export const render_column_remove = function(options) {
 * GET_BUTTONS
 * Render buttons DOM node
 * @param object self instance
-* @return DOM node buttons_container
+* @return HTMLElement buttons_container
 */
 export const get_buttons = (self) => {
 
 	// short vars
-		const is_inside_tool = self.caller && self.caller.type==='tool'
-		const target_section		= self.target_section
+		const is_inside_tool		= self.caller && self.caller.type==='tool'
+		const target_section		= self.target_section || []
 		const target_section_lenght	= target_section.length
 			  // sort section by label ascendant
 			  target_section.sort((a, b) => (a.label > b.label) ? 1 : -1)
 
-		// if (is_inside_tool===true){
-		// 	// fragment
-		// 		const fragment = new DocumentFragment()
-		// 	return fragment
-		// }
-
 		// buttons container
 			const buttons_container = ui.component.build_buttons_container(self)
-			  // buttons_container.appendChild(fragment)
 
 		// buttons_fold (allow sticky position on large components)
 			const buttons_fold = ui.create_dom_element({
@@ -708,43 +619,49 @@ export const get_buttons = (self) => {
 			})
 
 		// button_update_data_external
-			if( self.show_interface.button_external===true){
-
+			if(self.show_interface.button_external===true) {
 				// button_update data external
 					const button_update_data_external = ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'button sync',
 						parent			: buttons_fold
 					})
-					button_update_data_external.addEventListener("click", async function(){
-
+					button_update_data_external.addEventListener('click', fn_update_data_external)
+					async function fn_update_data_external(e){
+						e.stopPropagation()
+						// force server data to calculate external data
 						const source = self.rqo.source
 						source.build_options = {
 							get_dato_external : true
 						}
-						const built = await self.build(true)
-						// render
-						if (built) {
-							self.render({render_level : 'content'})
-						}
-					})
+						// const built = await self.build(true)
+						// if (built) {
+						// 	self.render({render_level : 'content'})
+						// }
+						self.refresh({
+							build_autoload	: true,
+							render_level	: 'content'
+						})
+					}
 			}//end button external
 
 	// button_add
-		if( self.show_interface.button_add===true){
+		if(self.show_interface.button_add===true) {
 			const button_add = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button add',
 				parent			: buttons_fold
 			})
-			button_add.addEventListener('click', async function(){
+			button_add.addEventListener('click', fn_add)
+			async function fn_add(e){
+				e.stopPropagation()
 
 				// target_section_tipo. to add section selector
 					const target_section_tipo = target_section_lenght > 1
 						? false
 						: target_section[0].tipo
 					if (!target_section_tipo) {
-						alert("Error. Empty target_section");
+						alert('Error. Empty target_section');
 						return
 					}
 
@@ -776,17 +693,23 @@ export const get_buttons = (self) => {
 					}else{
 						console.error('Error on api_response on try to create new row:', api_response);
 					}
-			})
+
+				// remove aux items
+					if (window.page_globals.service_autocomplete) {
+						window.page_globals.service_autocomplete.destroy(true, true, true)
+					}
+			}
 		}//end button_add
 
 	// button_link
-		if( self.show_interface.button_link===true){
+		if(self.show_interface.button_link===true) {
 			const button_link = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button link',
 				parent			: buttons_fold
 			})
-			button_link.addEventListener("click", async function(e){
+			button_link.addEventListener('click', fn_link)
+			async function fn_link(e){
 				e.stopPropagation()
 
 				// const section_tipo	= select_section.value
@@ -814,7 +737,7 @@ export const get_buttons = (self) => {
 								element_type	: 'select',
 								class_name		: 'select_section' + (target_section_lenght===1 ? ' mono' : '')
 							})
-							select_section.addEventListener("change", function(){
+							select_section.addEventListener('change', function(){
 								iframe.src = iframe_url(this.value)
 							})
 							// options for select_section
@@ -823,7 +746,7 @@ export const get_buttons = (self) => {
 									ui.create_dom_element({
 										element_type	: 'option',
 										value			: item.tipo,
-										inner_html		: item.label + " [" + item.tipo + "]",
+										inner_html		: item.label + ' [' + item.tipo + ']',
 										parent			: select_section
 									})
 								}
@@ -831,7 +754,7 @@ export const get_buttons = (self) => {
 						// header label
 							const header = ui.create_dom_element({
 								element_type	: 'span',
-								inner_html		: get_label.seccion,
+								inner_html		: get_label.section,
 								class_name		: 'label'
 							})
 
@@ -853,11 +776,11 @@ export const get_buttons = (self) => {
 
 					})()
 					return
-			})
+			}
 		}//end button_link
 
 	// button tree terms selector
-		if( self.show_interface.button_tree===true){
+		if(self.show_interface.button_tree===true) {
 			const button_tree_selector = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button gear',
@@ -870,11 +793,12 @@ export const get_buttons = (self) => {
 		}//end button_external
 
 	// buttons tools
-		if( self.show_interface.tools===true){
-			if (!is_inside_tool && self.mode==='edit') {
+		if(self.show_interface.tools===true) {
+			// if (!is_inside_tool && self.mode==='edit') {
 				ui.add_tools(self, buttons_fold)
-			}
+			// }
 		}//end add tools
+
 
 	return buttons_container
 }//end get_buttons
@@ -886,10 +810,23 @@ export const get_buttons = (self) => {
 * Shared across views
 * Activate service autocomplete. Enable the service_autocomplete when the user do click
 * @param object self
-* @param DOM node wrapper
+* @param HTMLElement wrapper
 * @return bool
 */
 export const activate_autocomplete = async function(self, wrapper) {
+
+	// permissions check
+		if (self.permissions<2) {
+			return
+		}
+
+	// already active
+		if (self.autocomplete_active===true) {
+			self.autocomplete.show()
+			// focus
+			self.autocomplete.search_input.focus({preventScroll:true});
+			return true
+		}
 
 	// Default source external buttons configuration,
 	// if show.interface is defined in properties used the definition, else use this default
@@ -897,27 +834,31 @@ export const activate_autocomplete = async function(self, wrapper) {
 			self.show_interface.show_autocomplete = false
 		}//end if external
 
-	if( self.show_interface.show_autocomplete===true
-		&& self.autocomplete!==false
-		&& self.autocomplete_active!==undefined
-		&& self.autocomplete_active===false ){
+	// service_autocomplete instance
+		if( self.show_interface.show_autocomplete===true
+			&& self.autocomplete!==false
+			&& self.autocomplete_active!==undefined
+			&& self.autocomplete_active===false ){
 
-		self.autocomplete = new service_autocomplete()
-		await self.autocomplete.init({
-			caller			: self,
-			tipo			: self.tipo,
-			section_tipo	: self.section_tipo,
-			request_config	: self.context.request_config,
-			properties		: self.context.properties.service_autocomplete || null
-		})
+			self.autocomplete = new service_autocomplete()
+			await self.autocomplete.init({
+				caller			: self,
+				tipo			: self.tipo,
+				section_tipo	: self.section_tipo,
+				request_config	: self.context.request_config,
+				properties		: self.context.properties.service_autocomplete || null
+			})
 
-		await self.autocomplete.build()
-		// render. Build_autocomplete_input nodes
-		const autocomplete_node = await self.autocomplete.render()
-		wrapper.appendChild(autocomplete_node)
-		self.autocomplete_active = true
-		self.autocomplete.search_input.focus({preventScroll:true});
-	}//end if(self.autocomplete_active!==undefined && self.autocomplete_active===false)
+			await self.autocomplete.build()
+			// render. Build_autocomplete_input nodes
+			const autocomplete_node = await self.autocomplete.render()
+			// removed attach to document 02-08-2023. see view_default_autocomplete.render()
+			// document.body.appendChild(autocomplete_node)
+			self.autocomplete_active = true
+			// focus
+			self.autocomplete.search_input.focus({preventScroll:true});
+		}//end if(self.autocomplete_active!==undefined && self.autocomplete_active===false)
+
 
 	return true
 }//end activate_autocomplete
@@ -934,7 +875,7 @@ export const activate_autocomplete = async function(self, wrapper) {
 * @param object columns_map
 * @param array ar_section_record
 * @param instance self
-* @return DOM node content_data
+* @return HTMLElement list_header_node
 */
 export const build_header = function(columns_map, ar_section_record, self) {
 
@@ -943,7 +884,7 @@ export const build_header = function(columns_map, ar_section_record, self) {
 
 	// hide list_header_node if no records found
 		if (ar_section_record.length<1) {
-			list_header_node.classList.add("hide")
+			list_header_node.classList.add('hide')
 		}
 
 	return list_header_node;
@@ -953,6 +894,7 @@ export const build_header = function(columns_map, ar_section_record, self) {
 
 /**
 * RENDER_REFERENCES
+* @param array ar_references
 * @return DocumentFragment
 */
 export const render_references = function(ar_references) {
@@ -983,26 +925,87 @@ export const render_references = function(ar_references) {
 				element_type	: 'li',
 				parent			: ul
 			})
-			// button_link
-				const button_link = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'button link',
-					parent			: li
-				})
-				button_link.addEventListener("click", function(e){
-					e.stopPropagation()
-					window.location.href = DEDALO_CORE_URL + '/page/?tipo=' + reference.value.section_tipo + '&id='+ reference.value.section_id
-					// window.open(url,'ref_edit')
-				})
-			// label
-				const button_edit = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'label',
-					inner_html		: reference.label,
-					parent			: li
-				})
-	}//end for
+		// button_link
+			const button_link = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button link',
+				parent			: li
+			})
+			button_link.addEventListener('click', function(e){
+				e.stopPropagation()
+				window.location.href = DEDALO_CORE_URL + '/page/?tipo=' + reference.value.section_tipo + '&id='+ reference.value.section_id
+				// window.open(url,'ref_edit')
+			})
+		// label
+			const button_edit = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'label',
+				inner_html		: reference.label,
+				parent			: li
+			})
+	}//end for (let i = 0; i < ref_length; i++)
 
 
 	return fragment
 }//end render_references
+
+
+
+/**
+* RENDER_DATAFRAME_TABLE
+* Render column_remov node
+* Shared across views
+* @param object options
+* @return DocumentFragment
+*/
+export const render_dataframe_table = async function(options) {
+
+	// options
+		const self = options.self
+
+	// DocumentFragment
+		const fragment = new DocumentFragment()
+
+	// ddo_map
+		const ddo_map			= self.request_config_object.show.ddo_map || []
+		const column_dataframe	= ddo_map.find(el => el.is_dataframe===true)
+		if (!column_dataframe) {
+			return fragment
+		}
+		const section_tipo	= column_dataframe.section_tipo
+
+	// data
+		const data_item		= self.datum.data.find(el => el.section_tipo===section_tipo)
+		const section_id	= data_item.section_id
+
+	// section
+		const section = await get_instance({
+			model			: 'section',
+			mode			: 'list',
+			tipo			: section_tipo,
+			section_tipo	: section_tipo,
+			section_id		: section_id
+		})
+		await section.build(true)
+		const section_node = await section.render()
+
+	// body
+		const body = ui.create_dom_element({ // string case. auto-create the body node
+			element_type	: 'div',
+			class_name		: 'body content'
+		})
+		body.appendChild(section_node)
+
+		ui.attach_to_modal({
+			header : 'Dataframe',
+			body : body
+		})
+
+
+	return fragment
+}//end render_dataframe_table
+
+
+
+// @license-end
+

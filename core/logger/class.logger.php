@@ -5,6 +5,8 @@
 */
 class logger {
 
+
+
 	private $h_log_file;
 	private $log_level;
 
@@ -32,30 +34,19 @@ class logger {
 
 	/**
 	* LEVEL TO STRING CONVERSION
+	* @param int $log_level
+	* @return string
 	*/
 	public static function level_to_string(int $log_level) : string {
 
 		switch ($log_level) {
-			case logger::DEBUG:
-				return 'DEBUG';
-				break;
-			case logger::INFO:
-				return 'INFO';
-				break;
-			case logger::NOTICE:
-				return 'NOTICE';
-				break;
-			case logger::WARNING:
-				return 'WARNING';
-				break;
-			case logger::ERROR:
-				return 'ERROR';
-				break;
-			case logger::CRITICAL:
-				return 'CRITICAL';
-				break;
-			default:
-				return '[unknow]';
+			case logger::DEBUG:		return 'DEBUG';
+			case logger::INFO:		return 'INFO';
+			case logger::NOTICE:	return 'NOTICE';
+			case logger::WARNING:	return 'WARNING';
+			case logger::ERROR:		return 'ERROR';
+			case logger::CRITICAL:	return 'CRITICAL';
+			default:				return '[unknown]';
 		}
 	}//end level_to_string
 
@@ -63,19 +54,24 @@ class logger {
 
 	/**
 	* REGISTER
+	* @param string $log_name
+	* 	Sample: 'activity'
+	* @param string $connection_string
+	* 	Sample: 'activity://auto:auto@auto:5432/log_data?table=matrix_activity'
+	* @return bool
 	*/
 	public static function register(string $log_name, string $connection_string) : bool {
 
 		$url_data = parse_url($connection_string);
 
-		# Verify connection_string
+		// Verify connection_string
 		if (!isset($url_data['scheme'])) {
 			throw new Exception("Invalid log connection string ", 1);
 		}
 
-		# Include back end logger
+		// Include back end logger
 		$class_name = 'logger_backend_'.$url_data['scheme'];
-		include_once( DEDALO_CORE_PATH .'/logger/class.' . $class_name . '.php' );
+		// include_once( DEDALO_CORE_PATH .'/logger/class.' . $class_name . '.php' );
 
 		if (!class_exists($class_name)) {
 			throw new Exception("No login backend available for ".$url_data['scheme'], 1);
@@ -83,9 +79,9 @@ class logger {
 
 		$obj_back = new $class_name($url_data);
 
-
-		# manage current backend class
+		// manage current backend class
 		logger::manage_backends($log_name, $obj_back);
+
 
 		return true;
 	}//end register
@@ -94,6 +90,7 @@ class logger {
 
 	/**
 	* GET INSTANCE
+	* @param string $name
 	*/
 	public static function get_instance(string $name) {
 
@@ -104,6 +101,9 @@ class logger {
 
 	/**
 	* MANAGE BACKENDS
+	* @param string $name
+	* @param logger_backend $obj_back = null
+	* @return object|null
 	*/
 	private static function manage_backends(string $name, logger_backend $obj_back=null) {
 
@@ -114,14 +114,14 @@ class logger {
 		}
 
 		if ($obj_back === null) {
-			# We are recovering
+			// We are recovering
 			if (isset($backends[$name])) {
 				return $backends[$name];
 			}else{
 				throw new Exception("The specific backend $name was not registered with logger.", 1);
 			}
 		}else{
-			# We are adding
+			// We are adding
 			$backends[$name] = $obj_back;
 		}
 

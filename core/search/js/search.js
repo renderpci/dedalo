@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global page_globals, SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
@@ -32,7 +33,6 @@
 		// read_cookie,
 		// erase_cookie
 	// } from '../../common/js/utils/cookie.js'
-
 
 
 
@@ -81,7 +81,8 @@ export const search = function() {
 
 /**
 * INIT
-* @return bool promise true
+* @param object options
+* @return bool
 */
 search.prototype.init = async function(options) {
 
@@ -92,7 +93,6 @@ search.prototype.init = async function(options) {
 		self.context	= options.caller.context
 		self.mode		= options.mode
 		self.lang		= options.lang || page_globals.dedalo_data_lang
-
 
 	// short vars
 		self.type					= 'filter'
@@ -139,6 +139,7 @@ search.prototype.init = async function(options) {
 			'component_info',
 			'component_state',
 			'component_semantic_node',
+			'component_inverse',
 			'section_tab'
 		];
 
@@ -171,19 +172,11 @@ search.prototype.init = async function(options) {
 			})
 		}
 
-		// toggle_search_panel. Triggered by button 'search' placed into section inspector buttons
-			// self.events_tokens.push(
-			// 	event_manager.subscribe('toggle_search_panel', fn_toggle_search_panel)
-			// )
-			// function fn_toggle_search_panel(button_node) {
-			// 	toggle_search_panel(self)
-			// }
-
-	//permissions
+	// permissions
 		self.permissions = 2
 
 	// status update
-		self.status = 'initiated'
+		self.status = 'initialized'
 
 
 	return true
@@ -194,7 +187,7 @@ search.prototype.init = async function(options) {
 /**
 * BUILD
 * Load from API the user editing_preset (current state) and user_presets (stored states)
-* @return promise
+* @return bool
 */
 search.prototype.build = async function() {
 
@@ -206,39 +199,50 @@ search.prototype.build = async function() {
 	// ar_promises
 		const ar_promises = []
 
-	// editing_preset. Get json_filter from DDBB temp presets section
-		ar_promises.push( new Promise(function(resolve){
+	try {
 
-			get_editing_preset_json_filter(self)
-			.then(function(json_filter){
+		// editing_preset. Get json_filter from DDBB temp presets section
+			ar_promises.push( new Promise(function(resolve){
 
-				// debug
-					if(SHOW_DEBUG===true) {
-						if (!json_filter) {
-							console.log("[search.build] No preset was found (search editing_preset). Using default filter:", self.section_tipo, json_filter);
+				get_editing_preset_json_filter(self)
+				.then(function(json_filter){
+
+					// debug
+						if(SHOW_DEBUG===true) {
+							if (!json_filter) {
+								console.log(
+									'[search.build] No preset was found (search editing_preset). Using default filter:',
+									self.section_tipo, json_filter
+								);
+							}
 						}
-					}
-				// fix value
-				self.json_filter = json_filter || {"$and":[]}
+					// fix value
+					self.json_filter = json_filter || {"$and":[]}
 
-				resolve(self.json_filter)
-			})
-		}))
+					resolve(self.json_filter)
+				})
+			}))
 
-	// section_elements. Get section elements context list
-		ar_promises.push( new Promise(function(resolve){
+		// section_elements. Get section elements context list
+			ar_promises.push( new Promise(function(resolve){
 
-			self.get_section_elements_context({
-				section_tipo			: self.section_tipo,
-				ar_components_exclude	: self.ar_components_exclude
-			})
-			.then(function(response){
-				resolve(response)
-			})
-		}))
+				self.get_section_elements_context({
+					section_tipo			: self.section_tipo,
+					ar_components_exclude	: self.ar_components_exclude,
+					use_real_sections		: false
+				})
+				.then(function(response){
+					resolve(response)
+				})
+			}))
 
-	// wait until all request are resolved
+		// wait until all request are resolved or rejected
 		await Promise.allSettled(ar_promises);
+
+	} catch (error) {
+		self.error = error
+		console.error(error)
+	}
 
 
 	// status update
@@ -356,7 +360,10 @@ search.prototype.get_section_id = function() {
 
 /**
 * BUILD_DOM_GROUP
-* @return DOM node dom_group
+* @param object filter
+* @param HTMLElement dom_element
+* @param object options = {}
+* @return HTMLElement dom_group
 */
 search.prototype.ar_resolved_elements = []
 search.prototype.build_dom_group = function(filter, dom_element, options={}) {
@@ -381,14 +388,15 @@ search.prototype.build_dom_group = function(filter, dom_element, options={}) {
 				//console.log("q_operator:",filter);
 
 			// Resolved check (useful for sequences or split strings)
-				const resolved_string = JSON.stringify(filter.path) + current_value
-				if (self.ar_resolved_elements.indexOf(resolved_string)===-1) {
+				const section_id = self.get_section_id()
+
+				if (self.ar_resolved_elements.indexOf(section_id)===-1) {
 
 					if (clean_q===true) {
 						current_value	= ''
 						q_operator		= ''
 					}
-					 const section_id = self.get_section_id()
+
 					// Add. If not already resolved, add
 						self.build_search_component({
 							parent_div		: dom_element,
@@ -400,7 +408,7 @@ search.prototype.build_dom_group = function(filter, dom_element, options={}) {
 
 					// Set as resolved
 						if (allow_duplicates!==true) {
-							self.ar_resolved_elements.push(resolved_string)
+							self.ar_resolved_elements.push(section_id)
 						}
 				}
 
@@ -436,7 +444,8 @@ search.prototype.build_dom_group = function(filter, dom_element, options={}) {
 /**
 * GET_COMPONENT_INSTANCE
 * Called by render.build_search_component to create the component instance
-* @return promise
+* @param object options
+* @return object component_instance
 */
 search.prototype.get_component_instance = async function(options) {
 
@@ -455,7 +464,7 @@ search.prototype.get_component_instance = async function(options) {
 		// instance key. Custom to get unique key
 			const lang		= page_globals.dedalo_data_lang
 			const serial	= performance.now()
-			const key		= section_tipo +'_'+ component_tipo +'_search_'+ lang +'_'+ serial
+			const key		= section_tipo +'_'+ section_id +'_'+ component_tipo +'_search_'+ lang +'_'+ serial
 		// context
 			// const context = {
 			// 	model			: model,
@@ -506,8 +515,12 @@ search.prototype.get_component_instance = async function(options) {
 
 
 // GET the SQO from DOM components
+
+
+
 /**
 * PARSE_DOM_TO_JSON_FILTER
+* @param object options
 * @return object json_query_obj
 */
 search.prototype.parse_dom_to_json_filter = function(options) {
@@ -560,6 +573,9 @@ search.prototype.parse_dom_to_json_filter = function(options) {
 
 /**
 * RECURSIVE_GROUPS
+* @param HTMLElement group_dom_obj
+* @param bool add_arguments
+* @param string mode
 * @return object query_group
 */
 search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode) {
@@ -649,7 +665,7 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 /**
 * GET_SEARCH_GROUP_OPERATOR
 * @param object search_group
-* @return string search_group_operator
+* @return string operator_value
 * 	Like '$and' | '$or'
 */
 search.prototype.get_search_group_operator = function(search_group) {
@@ -676,7 +692,7 @@ search.prototype.get_search_group_operator = function(search_group) {
 
 /**
 * GET_SEARCH_JSON_OBJECT
-* Resolve and configure the final search json object used for build sql query
+* Resolve and configure the final search JSON object used for build SQL query
 * @return object search_json_object
 */
 	// this.get_search_json_object = function() {
@@ -752,60 +768,60 @@ search.prototype.get_search_group_operator = function(search_group) {
 
 
 
-// Save editing preset
-	/**
-	* UPDATE_STATE
-	* get the save state of the presets
-	* @param object options
-	* @return promise
-	*/
-	search.prototype.update_state = async function(options) {
+/**
+* UPDATE_STATE
+* Save editing preset
+* get the save state of the presets
+* @param object options
+* @return bool
+*/
+search.prototype.update_state = async function(options) {
 
-		const self = this
+	const self = this
 
-		// options
-			const state						= options.state // string
-			const editing_section_id		= options.editing_section_id || null // string|null
-			const editing_save_arguments	= options.editing_save_arguments || null // string|null
+	// options
+		const state						= options.state // string
+		const editing_section_id		= options.editing_section_id || null // string|null
+		const editing_save_arguments	= options.editing_save_arguments || null // string|null
 
-		// fix vars
-			self.search_layout_state = state
+	// fix vars
+		self.search_layout_state = state
 
-		// search_container_selection_presets. Store current editing section_id in search_container_selection_presets dataset
-			const search_container_selection_presets = self.search_container_selection_presets
+	// search_container_selection_presets. Store current editing section_id in search_container_selection_presets dataset
+		const search_container_selection_presets = self.search_container_selection_presets
 
-		// editing_section_id case
-			if (editing_section_id) {
-				// Set dataset section_id
-				search_container_selection_presets.dataset.section_id = editing_section_id
-				// Set dataset save_arguments
-				search_container_selection_presets.dataset.save_arguments = editing_save_arguments
-			}
+	// editing_section_id case
+		if (editing_section_id) {
+			// Set dataset section_id
+			search_container_selection_presets.dataset.section_id = editing_section_id
+			// Set dataset save_arguments
+			search_container_selection_presets.dataset.save_arguments = editing_save_arguments
+		}
 
-		// button save preset
-			const button_save_preset = self.button_save_preset
-			if (button_save_preset) {
+	// button save preset
+		const button_save_preset = self.button_save_preset
+		if (button_save_preset) {
 
-				if (state==='changed' && self.user_preset_section_id) {
-					// Show save preset button
-					button_save_preset.classList.remove('hide')
-				}else{
-					// Hide save preset button
-					if (!button_save_preset.classList.contains('hide')) {
-						button_save_preset.classList.add('hide')
-					}
+			if (state==='changed' && self.user_preset_section_id) {
+				// Show save preset button
+				button_save_preset.classList.remove('hide')
+			}else{
+				// Hide save preset button
+				if (!button_save_preset.classList.contains('hide')) {
+					button_save_preset.classList.add('hide')
 				}
 			}
+		}
 
-		// save temp preset if changed
-			if (state==='changed') {
-				// Save temp preset
-				await save_temp_preset(self)
-			}
+	// save temp preset if changed
+		if (state==='changed') {
+			// Save temp preset
+			await save_temp_preset(self)
+		}
 
 
-		return true
-	}//end update_state
+	return true
+}//end update_state
 
 
 
@@ -821,16 +837,16 @@ search.prototype.get_search_group_operator = function(search_group) {
 		// source search_action
 			self.source.search_action = 'search'
 
-		// section
-			const section = self.caller
+		// section || area thesaurus
+			const caller = self.caller
 
 		// json_query_obj. Recalculate json_query_obj from DOM in default mode (include components with empty values)
 			const json_query_obj = self.parse_dom_to_json_filter({
 				mode : "search"
 			})
 
-		const js_promise = update_section(
-			section,
+		const js_promise = update_caller(
+			caller,
 			json_query_obj,
 			null, // filter_by_locator
 			self
@@ -861,9 +877,9 @@ search.prototype.get_search_group_operator = function(search_group) {
 				filter : {$and:[]}
 			}
 
-		// update_section
-			const js_promise = await update_section(
-				self.caller, // section_instance,
+		// update_caller
+			const js_promise = await update_caller(
+				self.caller, // section_instance || area_thesaurus_instance,
 				json_query_obj, // json_query_obj
 				null, // filter_by_locators,
 				self
@@ -878,10 +894,11 @@ search.prototype.get_search_group_operator = function(search_group) {
 
 
 	/**
-	* UPDATE_SECTION
+	* UPDATE_CALLER
+	* caller could be section or area_thesaurus
 	* @return promise
 	*/
-	const update_section = async function(section_instance, json_query_obj, filter_by_locators, self) {
+	const update_caller = async function(caller_instance, json_query_obj, filter_by_locators, self) {
 
 		// limit
 			const limit = self.limit && self.limit>0
@@ -889,44 +906,73 @@ search.prototype.get_search_group_operator = function(search_group) {
 				: 10
 
 		// pagination
-			section_instance.total						= null
-			section_instance.rqo.sqo.limit				= limit
-			section_instance.rqo.sqo.offset				= 0
-			section_instance.rqo.sqo.filter				= json_query_obj.filter || null
-			section_instance.rqo.sqo.filter_by_locators	= filter_by_locators
-			section_instance.rqo.sqo.children_recursive	= json_query_obj.children_recursive || false
+			caller_instance.total						= null
+			caller_instance.rqo.sqo.limit				= limit
+			caller_instance.rqo.sqo.offset				= 0
+			caller_instance.rqo.sqo.filter				= json_query_obj.filter || null
+			caller_instance.rqo.sqo.filter_by_locators	= filter_by_locators
+			caller_instance.rqo.sqo.children_recursive	= json_query_obj.children_recursive || false
+			caller_instance.rqo.sqo.section_tipo		= self.target_section_tipo
 
-		// paginator_node (could exist or not --area_thesaurus case--)
-			const paginator_node = section_instance?.paginator?.node || null
-			if (paginator_node) {
-				paginator_node.classList.add('hide')
-			}
+		// request_config_object. Copy rqo.sqo pagination values to request_config_object
+			caller_instance.request_config_object.sqo.limit		= caller_instance.rqo.sqo.limit
+			caller_instance.request_config_object.sqo.offset	= caller_instance.rqo.sqo.offset
 
-		// section. refresh current section and set history navigation
-			const js_promise = section_instance.navigate(
-				null, // callback
-				true // navigation_history
-			)
-			js_promise.then(()=>{
-				// loading css remove
-					// section_node.classList.remove('loading')
-				// refresh section paginator
+		switch (caller_instance.model) {
+			case 'area_thesaurus':
+
+				// area. refresh current area using navigation
+					const area_ts_promise = caller_instance.navigate({
+						callback			: null,
+						navigation_history	: false,
+						action				: 'search'
+					})
+
+				return area_ts_promise
+				break;
+
+			case 'section':
+
+				// paginator_node (could exist or not --area_thesaurus case--)
+					const paginator_node = caller_instance?.paginator?.node || null
 					if (paginator_node) {
-						section_instance.paginator.refresh()
-						.then(function(){
-							paginator_node.classList.remove('hide')
-						})
+						paginator_node.classList.add('hide')
 					}
-			})
 
-		return js_promise
-	}//end update_section
+				// section. refresh current section and set history navigation
+					const section_promise = caller_instance.navigate({
+						callback			: null,
+						navigation_history	: true,
+						action				: 'search'
+					})
+					section_promise.then(()=>{
+						// loading css remove
+							// section_node.classList.remove('loading')
+						// refresh section paginator
+							if (paginator_node) {
+								// caller_instance.paginator.refresh()
+								// .then(function(){
+								// 	paginator_node.classList.remove('hide')
+								// })
+								paginator_node.classList.remove('hide')
+							}
+					})
+
+				return section_promise
+				break;
+
+			default:
+				return new Promise(()=>{})
+				break;
+		}
+	}//end update_caller
 
 
 
 /**
 * TRACK_SHOW_PANEL
 * Manage cookies of user opened/closed panels
+* @param object options
 * @return bool true
 */
 search.prototype.track_show_panel = async function(options) {
@@ -969,7 +1015,7 @@ search.prototype.track_show_panel = async function(options) {
 /**
 * GET_PANELS_STATUS
 * Get local DDBB record if exists and return result object
-* @return object | undefined
+* @return object|undefined panels_status
 */
 search.prototype.get_panels_status = async function() {
 
@@ -998,13 +1044,15 @@ search.prototype.get_panels_status = async function() {
 	// 	const section_tipo = self.section_tipo // search.prototype.section_tipo
 
 
-
 	// 	// // Read cookie to auto open search_panel
 	// 	// const cookie_obj 	= JSON.parse( read_cookie("search") || '{"'+section_tipo+'":{}}' )
 	// 	// const cookie_track 	= (cookie_obj[section_tipo]) ? cookie_obj[section_tipo][name] : false
 
-	// 	// local_db_data. get value if exists
-	// 		const saved_search_state = await data_manager.get_local_db_data(self.id, 'context')
+	// // local_db_data. get value if exists
+	// 	const saved_search_state = await data_manager.get_local_db_data(
+	// 		self.id,
+	// 		'context'
+	// 	)
 
 	// 		const cookie_track = saved_search_state
 	// 			? ((saved_search_state.value[name] && saved_search_state.value[name].is_open) || false)
@@ -1042,6 +1090,7 @@ search.prototype.get_panels_status = async function() {
 /**
 * FILTER_IS_EMPTY
 * Check if filter is empty
+* @param object filter_obj
 * @return bool is_empty
 */
 search.prototype.filter_is_empty = function(filter_obj) {
@@ -1073,3 +1122,7 @@ search.prototype.filter_is_empty = function(filter_obj) {
 
 	// 	return true;
 	// }//end init_tipology_selector
+
+
+
+// @license-end

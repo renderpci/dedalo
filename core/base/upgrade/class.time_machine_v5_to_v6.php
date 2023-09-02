@@ -1,4 +1,5 @@
 <?php
+// declare(strict_types=1);
 /**
 * CLASS time_machine_v5_to_v6
 *
@@ -41,6 +42,15 @@ class time_machine_v5_to_v6 {
 
 		foreach ($ar_tables as $table) {
 
+			debug_log(__METHOD__ . PHP_EOL
+				. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+				. " CONVERTING ... " . PHP_EOL
+				. " convert_table_data [TM] table: $table " . PHP_EOL
+				. " convert_table_data [TM] memory usage: " . dd_memory_usage() . PHP_EOL
+				. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+				, logger::WARNING
+			);
+
 			// Get last id in the table
 			$strQuery 	= "SELECT id FROM $table ORDER BY id DESC LIMIT 1 ";
 			$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
@@ -48,7 +58,7 @@ class time_machine_v5_to_v6 {
 			if (!$rows) {
 				continue;
 			}
-			$max 		= $rows['id'];
+			$max = $rows['id'];
 
 			// Get first id in the table
 			$min_strQuery 	= "SELECT id FROM $table ORDER BY id LIMIT 1 ";
@@ -57,7 +67,7 @@ class time_machine_v5_to_v6 {
 			if (!$min_rows) {
 				continue;
 			}
-			$min 		= $min_rows['id'];
+			$min = $min_rows['id'];
 
 			//$min = 1;
 
@@ -69,29 +79,33 @@ class time_machine_v5_to_v6 {
 				$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
 				if($result===false) {
 					$msg = "Failed Search id $i. Data is not found.";
-					debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
+					debug_log(__METHOD__
+						." ERROR: $msg ". PHP_EOL
+						.' strQuery: ' . $strQuery
+						, logger::ERROR
+					);
 					continue;
 				}
 				$n_rows = pg_num_rows($result);
 
 				if ($n_rows<1) continue;
 
-				while($rows = pg_fetch_assoc($result)) {
+				while($row = pg_fetch_assoc($result)) {
 
 					// columns
-						$id					= $rows['id'];
-						// $id_matrix		= $rows['id_matrix'];
-						// $section_id		= $rows['section_id'];
-						// $section_tipo	= $rows['section_tipo'];
-						$tipo				= $rows['tipo'];
-						// $lang			= $rows['lang'];
+						$id					= $row['id'];
+						// $id_matrix		= $row['id_matrix'];
+						// $section_id		= $row['section_id'];
+						// $section_tipo	= $row['section_tipo'];
+						$tipo				= $row['tipo'];
+						// $lang			= $row['lang'];
 
 					// skip empty data
-						if (empty($rows['dato'])) {
+						if (empty($row['dato'])) {
 							continue;
 						}
 
-					$dato = json_decode($rows['dato']);
+					$dato = json_decode($row['dato']);
 					if (!empty($dato)) {
 
 						$model_name = RecordObj_dd::get_modelo_name_by_tipo($tipo);
@@ -127,13 +141,19 @@ class time_machine_v5_to_v6 {
 									$new_dato = json_decode($dato);
 								} catch (Exception $e) {
 									error_log( 'Caught exception: ' . $e->getMessage() );
-									debug_log(__METHOD__." ERROR: invalid JSON data id: ($id) ".$e->getMessage(), logger::ERROR);
+									debug_log(__METHOD__
+										." ERROR: invalid JSON data id: ($id) ".$e->getMessage()
+										, logger::ERROR
+									);
 									continue 2;
 								}
 								break;
 
 							default:
-								debug_log(__METHOD__." model_name not valid ".to_string(), logger::ERROR);
+								debug_log(__METHOD__
+									." model_name not valid: ".to_string($model_name)
+									, logger::ERROR
+								);
 								continue 2;
 								break;
 						}
@@ -147,22 +167,48 @@ class time_machine_v5_to_v6 {
 						$result2		= pg_query_params(DBi::_getConnection(), $strQuery2, array( $safe_data, $id ));
 						if($result2===false) {
 							$msg = "Failed Update section_data $i";
-							debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
+							debug_log(__METHOD__
+								." ERROR: $msg ". PHP_EOL
+								.' strQuery: ' . $strQuery
+								, logger::ERROR
+							);
 							continue;
 						}
 					}else{
-						debug_log(__METHOD__." Empty datos from: $table - $id ".to_string(), logger::WARNING);
+						debug_log(__METHOD__
+							." Empty datos from: $table - $id "
+							, logger::WARNING
+						);
 					}
-				}
+				}//end while($row = pg_fetch_assoc($result))
 
-				// log info each 1000
+				// log info each 10000
 					if ($i_ref===0) {
-						debug_log(__METHOD__." Partial update of section data table: $table - id: $id - total: $n_rows - total time secs: ".exec_time_unit($start_time,'sec'), logger::DEBUG);
-					}else{
-						$i_ref = ($i_ref>10000) ? 0 : $i_ref + 1;
+						debug_log(__METHOD__
+							." Partial update of section (time_machine) data table: $table - id: $id - total: $max - time min: ".exec_time_unit($start_time,'min')
+							, logger::DEBUG
+						);
+
+						// clean vars
+						// unset($result);
+						// let GC do the memory job
+						time_nanosleep(0, 5000000); // Slept for 5000000 nanoseconds
+						// Forces collection of any existing garbage cycles
+						gc_collect_cycles();
 					}
-			}
+
+				// reset counter
+					$i_ref++;
+					if ($i_ref > 10001) {
+						$i_ref = 0;
+					}
+			}//end for ($i=$min; $i<=$max; $i++)
 			#break; // stop now
+
+			// let GC do the memory job
+			sleep(1);
+			// Forces collection of any existing garbage cycles
+			gc_collect_cycles();
 		}//end foreach ($ar_tables as $key => $table)
 
 

@@ -18,6 +18,15 @@
 		padding-bottom: 0.5em;
 		padding-left: 0.5em;
 
+		.show_all {
+			margin-right: 0.5rem;
+			cursor: pointer;
+
+			&:hover {
+				color: #000000;
+			}
+		}
+
 		// buttons definitions
 		.btn {
 			&.paginator_first_icon {
@@ -65,9 +74,8 @@
 				margin-right: 0px;
 				margin-left: 0px;
 				// user-select: none;
-
+				background-color: @color_grey_dark;
 				mask-size: contain;
-				// background-color: #f08447;
 				// -webkit-mask-image: none;
 
 				&.paginator_first_icon, &.paginator_last_icon {

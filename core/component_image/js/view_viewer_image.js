@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -5,12 +6,13 @@
 
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
+	import {download_file} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 
 
 
 /**
-* view_viewer_image
+* VIEW_VIEWER_IMAGE
 * Manage the components logic and appearance in client side
 */
 export const view_viewer_image = function() {
@@ -23,7 +25,7 @@ export const view_viewer_image = function() {
 /**
 * RENDER
 * Render node to be used by service autocomplete or any datalist
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_viewer_image.render = function(self, options) {
 
@@ -34,7 +36,7 @@ view_viewer_image.render = function(self, options) {
 		// const wrapper = ui.component.build_wrapper_mini(self)
 		const wrapper = document.createElement('div')
 			  wrapper.classList.add('component_image')
-			  wrapper.classList.add('viewer')
+			  wrapper.classList.add('view_viewer')
 
 	// url
 		const quality		= page_globals.dedalo_image_quality_default // '1.5MB'
@@ -43,17 +45,18 @@ view_viewer_image.render = function(self, options) {
 			? url_object.file_url
 			: page_globals.fallback_image
 
-	// thumb
-		// const thumb_url = datalist.find(item => item.quality==='thumb').file_url
-
 	// image
 		const image = ui.create_dom_element({
 			element_type	: 'img',
-			// src			: thumb_url,
 			class_name		: 'viewer_image hidden',
 			parent			: wrapper
 		})
 		// ui.component.add_image_fallback(image)
+
+		// mousedown event
+			image.addEventListener('mousedown', function() {
+				window.close()
+			})
 
 		// image background color
 			image.addEventListener('load', set_bg_color, false)
@@ -103,11 +106,6 @@ view_viewer_image.render = function(self, options) {
 			})
 		})
 
-	// close window when the user click in the image
-		image.addEventListener('mousedown', function() {
-			window.close()
-		})
-
 
 	return wrapper
 }//end render
@@ -119,7 +117,7 @@ view_viewer_image.render = function(self, options) {
 * create a temp <a> node with the original quality or default quality if the original file is missing
 * set the node to be downloadable with the original filename uploaded by user
 * download the file
-* @param DOM node image
+* @param HTMLElement image
 * @return boo
 */
 const resize_window_to_image_size = function(image) {
@@ -172,19 +170,14 @@ const download_original_image = function (options) {
 	const download_url	= options.download_url
 	const name			= options.name
 
-	// Create a temporal 'a' element and click it
-	const download_image_temp = document.createElement('a');
-		  download_image_temp.href = download_url
-		  download_image_temp.setAttribute('download', name);
-		  download_image_temp.style.display = 'none';
-
-	document.body.appendChild(download_image_temp);
-
-	// do click to the image to be downloaded
-	download_image_temp.click();
-
-	// remove the temp node
-	document.body.removeChild(download_image_temp);
+	download_file({
+		url			: download_url,
+		file_name	: `dedalo_download_` + name
+	})
 
 	return true
 }//end download_original_image
+
+
+
+// @license-end

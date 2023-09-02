@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS SEARCH_TM
 *
 *

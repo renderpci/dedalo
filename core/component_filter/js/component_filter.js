@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -32,8 +33,6 @@ export const component_filter = function(){
 	this.node			= null
 
 	this.tools			= null
-
-	return true
 }//end component_filter
 
 
@@ -70,6 +69,10 @@ export const component_filter = function(){
 
 /**
 * GET_CHANGED_KEY
+* @param string action
+* 	sample: insert
+* @param object value
+* 	sample: {section_tipo: 'dd153', section_id: '6'}
 */
 component_filter.prototype.get_changed_key = function(action, value) {
 
@@ -149,7 +152,7 @@ component_filter.prototype.change_handler = async function(options) {
 			self.update_data_value(changed_data_item)
 		// set data.changed_data. The change_data to the instance
 			// self.data.changed_data = changed_data
-		// publish search. Event to update the dom elements of the instance
+		// publish search. Event to update the DOM elements of the instance
 			event_manager.publish('change_search_element', self)
 
 	}else{
@@ -173,3 +176,7 @@ component_filter.prototype.change_handler = async function(options) {
 
 	return true
 }//end change_handler
+
+
+// @license-end
+

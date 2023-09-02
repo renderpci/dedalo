@@ -33,28 +33,22 @@
 		switch ($mode) {
 			case 'edit':
 			default:
-				$tree_datalist 	= $this->get_tree_datalist();
-
-				$langs_datalist = [];
-				foreach(DEDALO_APPLICATION_LANGS as $key => $value) {
-					$obj_langs = new stdClass();
-						$obj_langs->value	= $key;
-						$obj_langs->label	= $value;
-					$langs_datalist[] = $obj_langs;
-				}
-
+				// tree_datalist
+				$tree_datalist	= $this->get_tree_datalist();
+				// info_data
 				$info_data		= $this->get_info_data();
 				break;
 		}
+
+		$user_id = get_user_id(); // CURRENT_LOGGED_USED_ID
 
 		// data item
 		$item = new stdClass();
 			$item->tipo				= $this->get_tipo();
 			$item->model			= 'menu';
 			$item->tree_datalist	= $tree_datalist;
-			$item->langs_datalist	= $langs_datalist;
 			$item->info_data		= $info_data;
-			$item->show_ontology	= SHOW_DEVELOPER; // boolean from config file
+			$item->show_ontology	= security::is_developer($user_id); //  SHOW_DEVELOPER; // boolean from config file
 			$item->username			= $_SESSION['dedalo']['auth']['username'] ?? null;
 
 		$data[] = $item;

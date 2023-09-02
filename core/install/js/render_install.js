@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG*/
 /*eslint no-undef: "error"*/
 
@@ -28,7 +29,7 @@ export const render_install = function() {
 * RENDER
 * Render node for use in install mode
 * @param object options
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_install.prototype.render = async function(options) {
 
@@ -60,7 +61,7 @@ render_install.prototype.render = async function(options) {
 /**
 * GET_CONTENT_DATA
 * @param instance self
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 
@@ -86,7 +87,7 @@ const get_content_data = function(self) {
 		// title
 		ui.create_dom_element({
 			element_type	: 'h1',
-			inner_html		: get_label.instalation_help || 'Installation help',
+			inner_html		: get_label.installation_help || 'Installation help',
 			parent			: help_block
 		})
 		// content
@@ -134,18 +135,30 @@ const get_content_data = function(self) {
 		// title
 		ui.create_dom_element({
 			element_type	: 'h1',
-			inner_html		: get_label.instalation_config_test || 'Configuration',
+			inner_html		: get_label.installation_config_test || 'Configuration',
 			parent			: config_block
 		})
 		// content
-		const config_block_content = ui.create_dom_element({
+		const config_block_status = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'content',
 			parent			: config_block
 		})
-		config_block_content.appendChild(
+		config_block_status.appendChild(
 			render_config_block(self)
 		)
+		content_data.config_block.config_block_status = config_block_status
+
+		// content
+		const config_block_options = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content',
+			parent			: config_block
+		})
+		config_block_options.appendChild(
+			render_config_options(self)
+		)
+		content_data.config_block.config_block_options = config_block_options
 
 	// install_db_block
 		const install_db_block = ui.create_dom_element({
@@ -240,8 +253,17 @@ const get_content_data = function(self) {
 			class_name		: 'content',
 			parent			: hierarchies_import_block
 		})
+
+		const hierarchies_import_options = {
+			hierarchies		: self.context.properties.hierarchies,
+			default_checked	: self.context.properties.install_checked_default,
+			callback		: function() {
+				// show next block
+				self.node.content_data.install_finish_block.classList.remove('hide')
+			}
+		}
 		hierarchies_import_block_content.appendChild(
-			render_hierarchies_import_block(self)
+			render_hierarchies_import_block(hierarchies_import_options)
 		)
 
 	// install_finish_block
@@ -288,7 +310,7 @@ const render_help_block = function(self) {
 		const install_info_node = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'description install_info_node',
-			inner_html		: get_label.Instalation_help_info || 'Installation info: ',
+			inner_html		: get_label.installation_help_info || 'Installation info: ',
 			parent			: fragment
 		})
 		ui.create_dom_element({
@@ -298,19 +320,21 @@ const render_help_block = function(self) {
 			parent			: install_info_node
 		})
 		// link
-		ui.create_dom_element({
+		const link_install = ui.create_dom_element({
 			element_type	: 'a',
 			class_name		: 'link',
-			href			: 'https://dedalo.dev/v5',
-			inner_html		: 'dedalo.dev/v5',
+			href			: 'https://dedalo.dev/docs/install/install/',
+			inner_html		: 'https://dedalo.dev/docs/install/install/',
 			parent			: install_info_node
 		})
+		link_install.target	= '_blank'
+		// link_install.rel	= 'noopener noreferrer'
 
 	// installation config
 		const install_config_node = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'description install_config_node',
-			inner_html		: get_label.Instalation_config || 'Installation config: ',
+			inner_html		: get_label.installation_config || 'Installation config: ',
 			parent			: fragment
 		})
 		ui.create_dom_element({
@@ -319,13 +343,17 @@ const render_help_block = function(self) {
 			src				: 'https://dedalo.dev/tpl/assets/img/logos/logo_dedalo.svg',
 			parent			: install_config_node
 		})
-		ui.create_dom_element({
+		const link_configuration = ui.create_dom_element({
 			element_type	: 'a',
 			class_name		: 'link',
-			href			: 'https://dedalo.dev/v5_config',
-			inner_html		: 'dedalo.dev/v5',
+			href			: 'https://dedalo.dev/docs/config/configuration/',
+			inner_html		: 'https://dedalo.dev/docs/config/configuration/',
+			target			: '_blank',
 			parent			: install_config_node
 		})
+		link_configuration.target	= '_blank'
+		// link_configuration.rel	= 'noopener noreferrer'
+
 
 	return fragment
 }//end render_help_block
@@ -336,7 +364,7 @@ const render_help_block = function(self) {
 * RENDER_INIT_TEST_BLOCK
 * Creates contents nodes for current block
 * @param object self
-* @return DOM node
+* @return HTMLElement
 */
 const render_init_test_block = function(self) {
 
@@ -392,7 +420,7 @@ const render_init_test_block = function(self) {
 * RENDER_CONFIG_BLOCK
 * Creates contents nodes for current block
 * @param object self
-* @return DOM node
+* @return HTMLElement
 */
 const render_config_block = function(self) {
 
@@ -541,6 +569,21 @@ const render_config_block = function(self) {
 			inner_html		: get_label.config_has_passed || 'Configuration test passed!',
 			parent			: fragment
 		})
+	return fragment;
+}//end render_config_block
+
+
+
+
+/**
+* RENDER_CONFIG_OPTIONS
+* Creates contents nodes with options of install
+* @param object self
+* @return HTMLElement
+*/
+const render_config_options = function(self) {
+
+	const fragment = new DocumentFragment()
 
 	// install_db_button
 		const install_button = ui.create_dom_element({
@@ -552,12 +595,115 @@ const render_config_block = function(self) {
 		install_button.addEventListener('mouseup', async function() {
 			// show the install_db
 			self.node.content_data.install_db_block.classList.remove('hide')
-			this.remove();
+			self.node.content_data.config_block.config_block_options.remove();
+		})//end mouse_up event
+
+	// db_data_version. Update option
+		const db_data_version = (self.context.properties && self.context.properties.db_data_version)
+			? self.context.properties.db_data_version
+			: null
+		if (db_data_version && db_data_version[0] && parseInt(db_data_version[0])<6) {
+
+			const update_button = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'primary update_button',
+				inner_html		: get_label.to_update || 'To update',
+				parent			: fragment
+			})
+			update_button.addEventListener('mouseup', async function() {
+
+				// lock button
+					update_button.classList.add('loading')
+
+				// remove other options
+					install_button.remove()
+
+				// add spinner
+				const spinner = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'spinner',
+					parent			: to_update_status
+				})
+
+				// data_manager API call
+					const api_response = await data_manager.request({
+						body : {
+							action	: 'install',
+							dd_api	: 'dd_utils_api',
+							options	: {
+								action : 'to_update'
+							}
+						}
+					})
+
+				// manage result
+					if (api_response.result===false) {
+
+						// fail case
+
+						console.error("to_update api_response:", api_response);
+
+					}else{
+
+						// all is OK case
+
+						console.log("to_update api_response:", api_response);
+
+						let counter = 5;
+						const interval = setInterval(() => {
+							to_update_status.innerHTML = 'Initializing in ' + counter
+							counter--;
+							if (counter < 0 ) {
+								spinner.remove()
+								clearInterval(interval);
+								location.reload()
+							}
+						}, 1000);
+
+						update_button.remove()
+					}
+
+				// unlock button
+					self.node.content_data.config_block.config_block_options.remove();
+			})//end mouse_up event
+
+			const to_update_status = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'msg',
+				parent			: fragment
+			})
+		}
+
+	// to reset root pw
+		const reset_root_button = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'primary install_button',
+			inner_html		: get_label.to_change_pw || 'To change root',
+			parent			: fragment
+		})
+		reset_root_button.addEventListener('mouseup', async function() {
+			// show the install_db
+			self.node.content_data.set_root_password_block.classList.remove('hide')
+			self.node.content_data.config_block.config_block_options.remove();
 		})//end mouse_up event
 
 
+	// to install hierarchies. (!) Moved to area_development widget
+		// const install_hierarchies_button = ui.create_dom_element({
+		// 	element_type	: 'button',
+		// 	class_name		: 'primary install_button',
+		// 	inner_html		: get_label.to_install_hierarchies || 'To install hierarchies',
+		// 	parent			: fragment
+		// })
+		// install_hierarchies_button.addEventListener('mouseup', async function() {
+		// 	// show the install_db
+		// 	self.node.content_data.login_block.classList.remove('hide')
+		// 	self.node.content_data.config_block.config_block_options.remove();
+		// })//end mouse_up event
+
+
 	return fragment;
-}//end render_config_block
+}//end render_config_options
 
 
 
@@ -695,7 +841,7 @@ const render_install_db_block = function(self) {
 /**
 * RENDER_SET_ROOT_PASSWORD_BLOCK
 * @param object self
-* @return DOM node content_value
+* @return HTMLElement content_value
 */
 const render_set_root_password_block = function(self) {
 
@@ -722,7 +868,8 @@ const render_set_root_password_block = function(self) {
 			class_name		: 'description',
 			inner_html		: get_label.type_root_password || `Type and retype your desired superuser password and keep it in a safe place.
 							  Use a strong password from 8 to 32 characters containing, at least, an upper-case letter, a lower-case
-							  letter, and a number. Identical characters in sequential order are not allowed ('aa', '11', 'BB', etc.).`,
+							  letter, and a number. Identical characters in sequential order are not allowed ('aa', '11', 'BB', etc.).
+							  Numerical ('123', '345', etc.) nor alphabetical ('aBC', 'hIjK', etc.) order are allowed.`,
 			parent			: fragment
 		})
 
@@ -961,7 +1108,7 @@ const render_set_root_password_block = function(self) {
 /**
 * RENDER_LOGIN_BLOCK
 * @param object self
-* @return DOM node content_value
+* @return HTMLElement content_value
 */
 const render_login_block = async function(self) {
 
@@ -1052,14 +1199,21 @@ const render_login_block = async function(self) {
 /**
 * RENDER_HIERARCHIES_IMPORT_BLOCK
 * @param object self
-* @return DOM node content_value
+* @return HTMLElement content_value
 */
-const render_hierarchies_import_block = function(self) {
+export const render_hierarchies_import_block = function(options) {
 
-	// short vars
-		const properties = self.context.properties
+	// options
+		const hierarchies				= options.hierarchies || []
+		const default_checked			= options.default_checked || []
+		const active_hierarchies		= options.active_hierarchies || [] // already activated hierarchies
+		const hierarchy_files_dir_path	= options.hierarchy_files_dir_path || '' // informative only
+		const callback					= options.callback // executed on finish importation
 
-	const fragment = new DocumentFragment();
+	// DocumentFragment
+		const fragment = new DocumentFragment();
+
+		hierarchies.sort((a,b) => (a.label < b.label) ? 1 : ((b.label < a.label) ? -1 : 0))
 
 	// info
 		ui.create_dom_element({
@@ -1073,21 +1227,18 @@ const render_hierarchies_import_block = function(self) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'description source_files',
-			inner_html		: get_label.import_hierarchies_directory_description || 'Source files directory: '+ properties.hierarchy_files_dir_path,
+			inner_html		: get_label.import_hierarchies_directory_description || 'Source files directory: ' + hierarchy_files_dir_path,
 			parent			: fragment
 		})
 
 	// list of hierarchies
-		const default_checked	= properties.install_checked_default || []
-		const hierarchies		= properties.hierarchies || []
-		const hierarchies_len	= hierarchies.length
-
 		const hierachy_ul = ui.create_dom_element({
 			element_type	: 'ul',
 			class_name		: 'hierachy_ul',
 			parent			: fragment
 		})
 		const hierarchies_to_install = []
+		const hierarchies_len = hierarchies.length
 		for (let i = hierarchies_len - 1; i >= 0; i--) {
 
 			// hierarchy object
@@ -1097,7 +1248,7 @@ const render_hierarchies_import_block = function(self) {
 				}
 
 			// is_default check
-				const is_default_checked	= default_checked.find(el => el === current_hierarchy.tld)
+				const is_default_checked	= default_checked.find(el => el===current_hierarchy.tld)
 				const checked				= is_default_checked
 					? true
 					: false
@@ -1112,9 +1263,17 @@ const render_hierarchies_import_block = function(self) {
 				const hierachy_label = ui.create_dom_element({
 					element_type	: 'label',
 					class_name		: 'hierarchy_label',
-					inner_html		: current_hierarchy.label,
+					inner_html		: current_hierarchy.label + ' [' + current_hierarchy.tld + ']',
 					parent			: hierachy_li
 				})
+				if (active_hierarchies.includes( current_hierarchy.tld.toLowerCase() )) {
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'active_hierarchy',
+						inner_html		: ' [active]',
+						parent			: hierachy_label
+					})
+				}
 
 			// checkbox
 				const hierarchy_checkbox = ui.create_dom_element({
@@ -1146,7 +1305,19 @@ const render_hierarchies_import_block = function(self) {
 			inner_html		: get_label.import_hierarchies_button || ' Import hierarchies ',
 			parent			: fragment
 		})
-		import_hierarchies_button.addEventListener('mouseup', async function(){
+		import_hierarchies_button.addEventListener('mouseup', fn_import_hierarchies)
+		async function fn_import_hierarchies(){
+
+			// empty selection warning
+				if (hierarchies_to_install.length<1) {
+					alert( get_label.select_a_file || 'Select one or more items' );
+					return
+				}
+
+			// confirm action
+				if (!confirm( hierarchies_to_install.length + ' ' + get_label.jerarquias +'. '+ get_label.sure )) {
+					return false
+				}
 
 			// lock button
 				import_hierarchies_button.classList.add('loading')
@@ -1201,8 +1372,10 @@ const render_hierarchies_import_block = function(self) {
 
 						import_hierarchies_button.remove()
 
-						// show next block
-						self.node.content_data.install_finish_block.classList.remove('hide')
+						// callback on success
+						if (typeof callback==='function') {
+							callback(api_response)
+						}
 					}
 				}
 
@@ -1210,7 +1383,7 @@ const render_hierarchies_import_block = function(self) {
 				import_hierarchies_button.classList.remove('loading')
 				hierachy_ul.classList.remove('loading')
 				spinner.remove()
-		})
+		}
 
 	// import_hiearachies_status msg
 		const import_hiearachies_status = ui.create_dom_element({
@@ -1225,11 +1398,10 @@ const render_hierarchies_import_block = function(self) {
 
 
 
-
 /**
 * RENDER_INSTALL_FINISH_BLOCK
 * @param object self
-* @return DOM node content_value
+* @return HTMLElement content_value
 */
 const render_install_finish_block = function(self) {
 
@@ -1322,3 +1494,7 @@ const render_install_finish_block = function(self) {
 
 	return fragment
 }//end render_install_finish_block
+
+
+
+// @license-end

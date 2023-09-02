@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
@@ -37,8 +38,8 @@ export const render_components_list = function(options) {
 
 	// First item check
 		if (!section_elements || typeof section_elements[0]==="undefined") {
-			console.error(`[render_components_list] Error. Empty section_elements on get_section_elements_context ${section_tipo}`, section_elements);
-			return false
+			console.warn(`[render_components_list] Warning. Empty section_elements on get_section_elements_context ${section_tipo} Nothing to render`, section_elements);
+			return []
 		}
 
 	// list_container
@@ -70,7 +71,7 @@ export const render_components_list = function(options) {
 				const section_bar = ui.create_dom_element({
 					element_type	: 'li',
 					class_name		: "section_bar_label",
-					inner_html		: element.label,
+					inner_html		: element.label || element.tipo,
 					parent			: list_container
 				})
 				if (path.length===0) {
@@ -151,7 +152,8 @@ export const render_components_list = function(options) {
 
 						// Event on click load "children" section inside target_list_container recursively
 						const target_section = element.target_section_tipo[0] // Select first only
-						component.addEventListener('click', async function(){
+						component.addEventListener('click', fn_click)
+						async function fn_click(e) {
 							// section_elements_context
 								const current_section_elements = await self.get_section_elements_context({
 									section_tipo			: target_section,
@@ -173,7 +175,7 @@ export const render_components_list = function(options) {
 								}
 							// Active current
 							this.classList.add('active');
-						})
+						}//end fn_click
 					}
 				break;
 		}//end switch (true)
@@ -186,3 +188,149 @@ export const render_components_list = function(options) {
 
 	return ar_components
 }//end render_components_list
+
+
+
+/**
+* RENDER_SERVER_RESPONSE_ERROR
+* Render generic page error (Raspa background)
+* @param array errors
+* 	sample:
+* 	[
+* 		{
+* 			msg : 'Invalid result',
+* 			error : 'not_logged'
+* 		}
+* 	]
+* @param add_wrapper = false
+* @return HTMLElement wrapper|error_container
+*/
+export const render_server_response_error = function(errors, add_wrapper=false) {
+
+	// wrapper
+		const wrapper = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'wrapper page'
+		})
+
+	// error_container
+		const error_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'page_error_container',
+			parent			: wrapper
+		})
+
+	// icon_dedalo
+		ui.create_dom_element({
+			element_type	: 'img',
+			class_name		: 'icon_dedalo',
+			src				: DEDALO_CORE_URL + '/themes/default/dedalo_logo.svg',
+			parent			: error_container
+		})
+
+	// errors
+		const errors_length = errors.length
+		for (let i = 0; i < errors_length; i++) {
+
+			const msg				= errors[i].msg
+			const error				= errors[i].error
+			const dedalo_last_error	= errors[i].dedalo_last_error || null
+
+			switch (error) {
+				case 'not_logged':
+					// server_response_error h1
+						ui.create_dom_element({
+							element_type	: 'h1',
+							class_name		: 'server_response_error',
+							inner_html		: msg,
+							parent			: error_container
+						})
+					// link reload
+						const link = ui.create_dom_element({
+							element_type	: 'a',
+							class_name		: 'link reload',
+							inner_html		: 'Reload',
+							parent			: error_container
+						})
+						link.addEventListener('click', function(e) {
+							e.stopPropagation()
+							location.reload()
+						})
+					// not_logged_error add once
+						if (!error_container.classList.contains('not_logged_error')) {
+							error_container.classList.add('not_logged_error')
+						}
+					break;
+
+				default:
+					// server_response_error h1
+						if (msg) {
+							ui.create_dom_element({
+								element_type	: 'h1',
+								class_name		: 'server_response_error',
+								inner_html		: 'Server response msg: ',
+								parent			: error_container
+							})
+							ui.create_dom_element({
+								element_type	: 'h2',
+								class_name		: 'server_response_error',
+								inner_html		: msg,
+								parent			: error_container
+							})
+						}
+					// dedalo_last_error
+						if (dedalo_last_error) {
+							ui.create_dom_element({
+								element_type	: 'h1',
+								class_name		: 'server_response_error',
+								inner_html		: 'Server error (last): ',
+								parent			: error_container
+							})
+							ui.create_dom_element({
+								element_type	: 'h2',
+								class_name		: 'server_response_error',
+								inner_html		: dedalo_last_error,
+								parent			: error_container
+							})
+						}
+					// link home
+						const link_home = ui.create_dom_element({
+							element_type	: 'a',
+							class_name		: 'link home',
+							href			: DEDALO_ROOT_WEB,
+							inner_html		: 'Home',
+							parent			: error_container
+						})
+						link_home.addEventListener('click', function(e) {
+							e.stopPropagation()
+							// location.href = DEDALO_ROOT_WEB
+						})
+					// more_info
+						ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'more_info',
+							inner_html		: 'Received data format is not as expected. See your server log for details',
+							parent			: error_container
+						})
+
+					// raspa_error add once
+						if (!error_container.classList.contains('raspa_error')) {
+							error_container.classList.add('raspa_error')
+						}
+					break;
+			}
+		}
+
+
+	// add_wrapper false  case
+		if (add_wrapper===false) {
+			return error_container
+		}
+
+
+	return wrapper
+}//end render_server_response_error
+
+
+
+// @license-end

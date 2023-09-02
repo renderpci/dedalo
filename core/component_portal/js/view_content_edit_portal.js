@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /* global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL,Promise */
 /*eslint no-undef: "error"*/
 
@@ -16,7 +17,7 @@
 
 
 /**
-* view_content_edit_portal
+* VIEW_CONTENT_EDIT_PORTAL
 * Manage the components logic and appearance in client side
 */
 export const view_content_edit_portal = function() {
@@ -29,6 +30,7 @@ export const view_content_edit_portal = function() {
 /**
 * RENDER
 * Manages the component's logic and appearance in client side
+* @return HTMLElement wrapper
 */
 view_content_edit_portal.render = async function(self, options) {
 
@@ -159,9 +161,15 @@ const get_content_data = async function(self, ar_section_record) {
 /**
 * REBUILD_COLUMNS_MAP
 * Adding control columns to the columns_map that will processed by section_recods
-* @return obj columns_map
+* @param object self
+* @return array columns_map
 */
 const rebuild_columns_map = async function(self) {
+
+	// columns_map already rebuilt case
+		if (self.fixed_columns_map===true) {
+			return self.columns_map
+		}
 
 	const columns_map = []
 
@@ -169,6 +177,14 @@ const rebuild_columns_map = async function(self) {
 		const base_columns_map = await self.columns_map
 		columns_map.push(...base_columns_map)
 
+	// fixed as calculated
+		self.fixed_columns_map = true
+
+
 	return columns_map
 }//end rebuild_columns_map
+
+
+
+// @license-end
 

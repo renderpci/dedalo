@@ -302,11 +302,18 @@ class dato_v4_to_section_data_v5 {
 
 				// log info each 1000
 					if ($i_ref===0) {
-						debug_log(__METHOD__." Partial update of section data table: $table - id: $id - total: $n_rows - total time secs: ".exec_time_unit($start_time,'sec'), logger::DEBUG);
-					}else{
-						$i_ref = ($i_ref>1000) ? 0 : $i_ref + 1;
+						debug_log(__METHOD__
+							." Partial update of section (v4_to_section_data_v5) data table: $table - id: $id - total: $n_rows - total min: ".exec_time_unit($start_time,'min')
+							, logger::DEBUG
+						);
 					}
-			}
+
+				// reset counter
+					$i_ref++;
+					if ($i_ref > 10001) {
+						$i_ref = 0;
+					}
+			}//end for ($i=$min; $i<=$max; $i++)
 			#break; // stop now
 		}//end foreach ($ar_tables as $key => $table)
 

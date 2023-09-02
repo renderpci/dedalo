@@ -11,7 +11,7 @@ class tool_import_rdf extends tool_common {
 
 
 	# component
-	protected $section_tipo;
+	public $section_tipo;
 
 
 
@@ -67,12 +67,14 @@ class tool_import_rdf extends tool_common {
 		$lang			=  ($translatable==='no')
 			? DEDALO_DATA_NOLAN
 			: DEDALO_DATA_LANG;
-		$component_tipo = component_common::get_instance($model,
-														 $component_tipo,
-														 $section_id,
-														 'list',
-														 $lang,
-														 $this->section_tipo);
+		$component_tipo = component_common::get_instance(
+			$model,
+			$component_tipo,
+			$section_id,
+			'list',
+			$lang,
+			$this->section_tipo
+		);
 
 		$component_dato = $component_tipo->get_dato();
 
@@ -127,7 +129,7 @@ class tool_import_rdf extends tool_common {
 				$rdf_graph->load();
 			} catch (Exception $e) {
 
-				debug_log(__METHOD__." Ignored broken link in rdf ".to_string($rdf_uri), logger::DEBUG);
+				debug_log(__METHOD__." Ignored broken link in rdf ".to_string($rdf_uri), logger::ERROR);
 				continue;
 			}
 
@@ -159,6 +161,8 @@ class tool_import_rdf extends tool_common {
 
 	}//end get_rdf_data
 
+
+
 	/**
 	* GET_CLASS_MAP_TO_DD
 	* @return
@@ -174,6 +178,7 @@ class tool_import_rdf extends tool_common {
 				$current_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($owl_class_tipo, 'section', 'termino_relacionado', false);
 			}
 		}
+
 		$section_tipo = reset($current_section_tipo);
 		$section_tipo_label		= RecordObj_dd::get_termino_by_tipo($section_tipo);
 		//main section
@@ -191,6 +196,7 @@ class tool_import_rdf extends tool_common {
 
 		return $dd_object;
 	}//end get_class_map_to_dd
+
 
 
 	/**
@@ -396,8 +402,8 @@ class tool_import_rdf extends tool_common {
 								$ar_literal_section_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($class_dd_tipo[0], 'section', 'termino_relacionado', false);
 
 								// check if the current literal has a record inside Dédalo.
-									$RecordObj_dd = new RecordObj_dd($class_dd_tipo[0]);
-									$class_properties = $RecordObj_dd->get_properties(true);
+									$class_dd_tipo_RecordObj_dd = new RecordObj_dd($class_dd_tipo[0]);
+									$class_properties = $class_dd_tipo_RecordObj_dd->get_properties(true);
 
 									if(isset($class_properties->match)){
 										$literal_section_tipo_to_check = reset($ar_literal_section_tipo);
@@ -474,11 +480,9 @@ class tool_import_rdf extends tool_common {
 									debug_log(__METHOD__." Ignored broken link in rdf ".to_string($resource_uri), logger::DEBUG);
 									continue;
 								}
-
-
 							// check if the current resource has a record inside Dédalo.
-								$RecordObj_dd = new RecordObj_dd($class_dd_tipo[0]);
-								$class_properties = $RecordObj_dd->get_properties(true);
+								$class_dd_tipo_RecordObj_dd = new RecordObj_dd($class_dd_tipo[0]);
+								$class_properties = $class_dd_tipo_RecordObj_dd->get_properties(true);
 
 								if(isset($class_properties->match)){
 									$section_tipo_to_check = reset($current_section_tipo);
@@ -532,6 +536,7 @@ class tool_import_rdf extends tool_common {
 
 		return $procesed_data;
 	}//end process_data
+
 
 
 	/**
@@ -590,12 +595,14 @@ class tool_import_rdf extends tool_common {
 		$ar_records		= $search_result->ar_records;
 		$count			= count($ar_records);
 
-
 		if($count>1) {
 
 			// more than one exists with same value
 				dump('', ' SQO +++++++++++++++++ '.to_string($sqo));
-				throw new Exception("Error Processing Request [get_solved_select_value]. Search in section_tipo: $section_tipo get more than one result. Only one is expected ! ($count)", 1);
+				debug_log(__METHOD__." Error Processing Request [get_solved_select_value]. Search in section_tipo: $section_tipo get more than one result. Only one is expected ! ($count) ".to_string(), logger::DEBUG);
+
+			// use the first one
+				$section_id = reset($ar_records)->section_id;
 
 		}elseif ($count===1) {
 
@@ -619,8 +626,8 @@ class tool_import_rdf extends tool_common {
 					: $value;
 
 			// save new value
-				$RecordObj_dd	= new RecordObj_dd($component_tipo);
-				$lang			= ($RecordObj_dd->get_traducible()==='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+				$component_tipo_RecordObj_dd	= new RecordObj_dd($component_tipo);
+				$lang			= ($component_tipo_RecordObj_dd->get_traducible()==='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
 				$code_component	= component_common::get_instance($model_name,
 																 $component_tipo,
 																 $section_id,
@@ -658,13 +665,15 @@ class tool_import_rdf extends tool_common {
 			$RecordObj_dd	= new RecordObj_dd($component_tipo);
 			$lang			= ($RecordObj_dd->get_traducible()==='no') ? DEDALO_DATA_NOLAN : $lang;
 
-			$code_component	= component_common::get_instance($model_name,
-															 $component_tipo,
-															 $section_id,
-															 'edit',
-															 $lang,
-															 $section_tipo,
-															 false);
+			$code_component	= component_common::get_instance(
+				$model_name,
+				$component_tipo,
+				$section_id,
+				'edit',
+				$lang,
+				$section_tipo,
+				false
+			);
 
 
 			$old_data = $code_component->get_dato();
@@ -677,8 +686,8 @@ class tool_import_rdf extends tool_common {
 				if($count===0) $old_data=[];
 			};
 
-			// if($component_tipo==='numisdata98'){
-			// 		dump($value, ' value +-----------+ '.to_string(empty($old_data)));
+			// if($component_tipo==='numisdata64'){
+			// 		dump($lang, ' lang <>+-----////////////////////------+ '.to_string(empty($old_data)));
 			// }
 
 			if($model_name==='component_iri' && !empty($old_data)){

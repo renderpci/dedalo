@@ -118,7 +118,7 @@ class babel {
 	public static function sanitize_result($result) {
 
 		// Strip tags is applied to remove tags added to non translatable elements (apertium tags like '<apertium-notrans>')
-		$sanitized = strip_tags($result, '<br><strong><em>');	//'<br><strong><em><apertium-notrans>'
+		$sanitized = strip_tags($result, '<p><br><strong><em>');	//'<br><strong><em><apertium-notrans>'
 
 		return $sanitized;
 	}//end sanitize_result

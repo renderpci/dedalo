@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, tool_update_cache */
 /*eslint no-undef: "error"*/
 
@@ -25,7 +26,7 @@ export const render_tool_update_cache = function() {
 * Render tool DOM nodes
 * This function is called by render common attached in 'tool_update_cache.js'
 * @param object options
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_tool_update_cache.prototype.edit = async function(options) {
 
@@ -66,7 +67,7 @@ render_tool_update_cache.prototype.edit = async function(options) {
 * GET_CONTENT_DATA
 * Render tool body or 'content_data'
 * @param instance self
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = async function(self) {
 
@@ -154,7 +155,7 @@ const get_content_data = async function(self) {
 		const button_apply = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'success button_apply',
-			inner_html		: get_label.actualizar || 'Update',
+			inner_html		: get_label.update || 'Update',
 			parent			: buttons_container
 		})
 		button_apply.addEventListener('click', function(e){
@@ -166,7 +167,7 @@ const get_content_data = async function(self) {
 				const checked_list_length	= checked_list.length
 			// empty case
 				if (checked_list_length<1) {
-					alert(get_label.seleccion_vacia || 'Empty selection');
+					alert(get_label.empty_selection || 'Empty selection');
 					return
 				}
 			// update_cache
@@ -210,3 +211,7 @@ const get_content_data = async function(self) {
 
 	return content_data
 }//end get_content_data
+
+
+
+// @license-end

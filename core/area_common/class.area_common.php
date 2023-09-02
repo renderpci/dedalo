@@ -44,7 +44,7 @@ class area_common extends common  {
 	* @param string $tipo
 	* @param string $mode
 	*/
-	private function __construct(string $tipo, string $mode) {
+	protected function __construct(string $tipo, string $mode) {
 
 		// fix main vars
 		$this->set_tipo($tipo);

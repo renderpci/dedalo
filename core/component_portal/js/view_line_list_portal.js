@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global Promise */
 /*eslint no-undef: "error"*/
 
@@ -94,7 +95,7 @@ view_line_list_portal.render = async function(self, options) {
 /**
 * GET_CONTENT_DATA
 * Render all received section records and place it into a new div 'content_data'
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = async function(self, ar_section_record) {
 
@@ -139,3 +140,7 @@ const get_content_data = async function(self, ar_section_record) {
 
 	return content_data
 }//end get_content_data
+
+
+
+// @license-end

@@ -1,6 +1,10 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
+
+
 // import
 	import {ui} from '../../common/js/ui.js'
 	// import {common} from '../../common/js/common.js'
+
 
 
 /**
@@ -15,9 +19,9 @@ export const view_default_list_inverse = function() {
 
 
 /**
-* LIST
+* RENDER
 * Render node for use in list
-* @return DOM node
+* @return HTMLElement wrapper
 */
 view_default_list_inverse.render = async function(self, options) {
 
@@ -37,4 +41,8 @@ view_default_list_inverse.render = async function(self, options) {
 
 
 	return wrapper
-}//end list
+}//end render
+
+
+
+// @license-end

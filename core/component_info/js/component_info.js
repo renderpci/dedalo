@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -32,8 +33,6 @@ export const component_info = function(){
 	this.node
 
 	this.tools
-
-	return true
 }//end component_info
 
 
@@ -52,27 +51,32 @@ export const component_info = function(){
 
 	// render
 	component_info.prototype.list		= render_list_component_info.prototype.list
+	component_info.prototype.tm			= render_edit_component_info.prototype.list
 	component_info.prototype.edit		= render_edit_component_info.prototype.edit
-	component_info.prototype.tm			= render_edit_component_info.prototype.edit
 	component_info.prototype.search		= render_edit_component_info.prototype.edit
 
 
 
 /**
 * GET_WIDGETS
-* @return promise
+* @return array|bool self.ar_instances
 * 	Resolve: array|false self.ar_instances
 */
-component_info.prototype.get_widgets = async function(){
+component_info.prototype.get_widgets = async function() {
 
 	const self = this
 
-	const value = self.data.value
-
-	const datalist = self.data.datalist
-	// self data verification
+	const datalist	= self.data.datalist
+	const value		= self.data.value
+		// self data verification
 		if (!value || value.length===0) {
 			return false
+		}
+		const value_length = value.length
+		for (let i = 0; i < value_length; i++) {
+			if(!value[i]) {
+				console.error('Error. empty value item received:', i, value);
+			}
 		}
 
 	const widgets_properties		= self.context.properties.widgets
@@ -89,7 +93,7 @@ component_info.prototype.get_widgets = async function(){
 
 			const loaded_widget		= self.ar_instances.find(item => item.id === widget_id)
 
-			const widget_value		= value.filter(item => item.widget === widget_name)
+			const widget_value		= value.filter(item => item && item.widget===widget_name)
 			const widget_datalist	= (datalist) ? datalist.filter(item => item.widget === widget_name) : []
 
 			if(loaded_widget){
@@ -172,9 +176,9 @@ component_info.prototype.get_widgets = async function(){
 
 /**
 * UPDATE_DATA
-* @return promise
+* @return bool
 */
-component_info.prototype.update_data = async function(){
+component_info.prototype.update_data = async function() {
 
 	const self = this
 
@@ -208,9 +212,14 @@ component_info.prototype.update_data = async function(){
 /**
 * CHANGE_MODE
 * Catch method only. Nothing to do here
-* @return promise
+* @return bool
 */
 component_info.prototype.change_mode = async function() {
 
 	return true
 }//end change_mode
+
+
+
+// @license-end
+

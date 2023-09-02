@@ -102,15 +102,28 @@
 		// get pagination of the result of search
 			$limit	= $this->search_query_object->limit;
 			$offset	= $this->search_query_object->offset;
-			$pagination = new stdClass();
-				$pagination->limit	= $limit;
-				$pagination->offset	= $offset;
+			// $pagination = new stdClass();
+			// 	$pagination->limit	= $limit;
+			// 	$pagination->offset	= $offset;
 
 		// subdatum
 			foreach ($dato as $key => $current_record) {
 
 				$section_tipo	= $current_record->section_tipo;
 				$section_id		= $current_record->section_id;
+
+				// load data into JSON_RecordObj_matrix (used by section to get his data)
+					$matrix_table			= common::get_matrix_table_from_tipo($section_tipo);
+					$JSON_RecordObj_matrix	= JSON_RecordObj_matrix::get_instance(
+						$matrix_table,
+						$section_id,
+						$section_tipo,
+						true // bool cache
+					);
+					$datos = $current_record->datos ?? null;
+					if (!is_null($datos)) {
+						$JSON_RecordObj_matrix->set_dato($datos);
+					}
 
 				// section instance
 					$section = $section_class::get_instance(
@@ -121,7 +134,7 @@
 					);
 
 				// permissions check
-					$permissions	= $section->get_section_permissions();
+					$permissions = $section->get_section_permissions();
 					if($permissions<1){
 						continue;
 					}
@@ -132,22 +145,22 @@
 					}
 
 				// pagination. fix pagination vars (defined in class component_common)
-					$section->pagination = $pagination;
+					// $section->pagination = $pagination;
 
 				// set dato
 					if ($mode==='tm') {
 						$section->set_record($current_record); // inject whole db record as var
-					}else{
-						// inject dato to section when the dato come from db and set as loaded
-						$datos = $current_record->datos ?? null;
-						if (!is_null($datos)) {
-							$section->set_dato($datos);
-							$section->set_bl_loaded_matrix_data(true);
-						}else{
-							// inject dato when the dato come from ar_locators
-							$section->set_dato($current_record);
-						}
 					}
+					// else{
+						// inject dato to section when the dato come from db and set as loaded
+						// $datos = $current_record->datos ?? null;
+						// if (!is_null($datos)) {
+						// 	$section->set_dato($datos);
+						// }else{
+						// 	// inject dato when the dato comes from ar_locators
+						// 	// $section->set_dato($current_record);
+						// }
+					// }
 
 				// get the instance JSON context and data
 					$section_json = $section->get_json();
@@ -173,15 +186,15 @@
 
 				// item sections value. Update in each iteration
 					$current_value = new stdClass();
-						$current_value->section_tipo			= $section_tipo;
-						$current_value->section_id				= $section_id;
-					// section info
-						$current_value->created_date			= $section->get_created_date();
-						$current_value->modified_date			= $section->get_modified_date();
-						$current_value->created_by_user_name	= $section->get_created_by_user_name();
-						$current_value->modified_by_user_name	= $section->get_modified_by_user_name();
-
-						$current_value->paginated_key			= $key + $offset;
+						$current_value->section_tipo	= $section_tipo;
+						$current_value->section_id		= $section_id;
+					// section info (information about creation, modification and publication of current section)
+						$section_info = $section->get_section_info();
+						foreach ($section_info as $si_key => $si_value) {
+							$current_value->{$si_key} = $si_value;
+						}
+					// paginated_key
+						$current_value->paginated_key = $key + $offset;
 					// tm case
 						if($mode==='tm'){
 							$current_value->matrix_id	= $current_record->id;

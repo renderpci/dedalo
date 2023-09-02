@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -24,6 +25,7 @@ if (typeof window.unsaved_data==='undefined') {
 * event as visibilityState or beforeunload are init at load of the page
 * this events are global and use to control the unsaved data of the page
 * see the main page initialization in /page/index.html
+* @return bool
 */
 export const events_init = function(){
 
@@ -40,10 +42,13 @@ export const events_init = function(){
 			}
 		}
 
-	const saving = event_manager.subscribe('save', function(result){
-		console.log('save result:', result);
-		// saved = true
-	})
+	// save
+		const saving = event_manager.subscribe('save', fn_save)
+		function fn_save(result) {
+			console.log('events_init save result:', result);
+			// saved = true
+		}
+
 
 	return true
 }//end events_init
@@ -150,21 +155,31 @@ export const when_in_dom = function(node, callback) {
 export const when_in_viewport = function(node, callback, once=true) {
 
 	// observer. Exec the callback when element is in viewport
-	const observer = new IntersectionObserver(function(entries) {
-		// if(entries[0].isIntersecting === true) {}
-		const entry = entries[1] || entries[0]
-		if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
+	const observer = new IntersectionObserver(
+		function(entries, observer) {
 
-			// default is true (executes the callback once)
-			if (once===true) {
-				observer.disconnect();
+			const entry = entries[1] || entries[0]
+			if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
+
+				// default is true (executes the callback once)
+				if (once===true) {
+					observer.disconnect();
+				}
+
+				// callback()
+				window.requestAnimationFrame(callback)
 			}
-
-			// callback()
-			window.requestAnimationFrame(callback)
+		},
+		{
+			rootMargin: "0px",
+			threshold: [0]
 		}
-	}, { threshold: [0] });
+	);
 	observer.observe(node);
 
 	return observer
 }//end when_in_viewport
+
+
+
+// @license-end

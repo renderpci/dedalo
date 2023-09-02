@@ -1,10 +1,11 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
 
 
 /**
-* VIEW_TEXT_list_EMAIL
+* VIEW_TEXT_LIST_EMAIL
 * Manages the component's logic to get the values of the data without DOM elements or structure
 */
 export const view_text_list_email = function() {
@@ -22,12 +23,17 @@ export const view_text_list_email = function() {
 view_text_list_email.render = async function(self, options) {
 
 	// short vars
-		const data = self.data
+		const data	= self.data || {}
+		const value	= data.value || []
 
 	// Value as string
-		const value_string = data.value.join(self.context.fields_separator)
+		const value_string = value.join(self.context.fields_separator)
 
 		const text_node = document.createTextNode(value_string)
 
 	return text_node
 }//end render
+
+
+
+// @license-end

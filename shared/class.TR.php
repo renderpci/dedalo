@@ -1,4 +1,5 @@
 <?php
+// declare(strict_types=1);
 /**
 * TR
 * Da servicio a las transcripciones (component_text_area) pero también a las partes públicas.
@@ -55,16 +56,20 @@ abstract class TR {
 			case 'indexIn' :
 				if ($id) {
 					$string = "(\[index-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
+					// $string = "(\[index\-[a-z]\-{$id}(\-[^-]{0,22}\-data:.*?:data)?\])";
 				}else{
 					$string = "(\[(index)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])";
+					// $string = "(\[(index)\-([a-z])\-([0-9]{1,6})(\-([^-]{0,22})\-data:(.*?):data)?\])";
 				}
 				break;
 
 			case 'indexOut':
 				if ($id) {
 					$string = "(\[\/index-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
+					// $string = "(\[\/index\-[a-z]\-{$id}(\-[^-]{0,22}\-data:.*?:data)?\])";
 				}else{
 					$string = "(\[\/(index)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])";
+					// $string = "(\[\/(index)\-([a-z])\-([0-9]{1,6})(\-([^-]{0,22})\-data:(.*?):data)?\])";
 				}
 				break;
 
@@ -168,6 +173,10 @@ abstract class TR {
 				break;
 
 			# OTHERS
+			case 'br' :
+					$string = '\<br>';
+					break;
+
 			case 'p' :
 				$string = '(\<\/?p\>)';
 				break;
@@ -187,6 +196,7 @@ abstract class TR {
 				break;
 
 			default :
+				trigger_error("Error Processing Request. Error: mark: '$mark' is not valid !");
 				throw new Exception("Error Processing Request. Error: mark: '$mark' is not valid !", 1);
 		}
 
@@ -200,7 +210,7 @@ abstract class TR {
 
 
 	/**
-	* ADDTAGIMGONTHEFLY
+	* ADD_TAG_IMG_ON_THE_FLY
 	* Convert Dédalo tags like index, tc, etc. to images
 	* @param string $text
 	* @param object $request_options = null
@@ -232,14 +242,14 @@ abstract class TR {
 			}
 
 		// hilite
-			$codeHiliteIn = ($options->hilite===true)
-				? '<span class="hilite">'
-				: '';
-			$codeHiliteOut = ($options->hilite===true)
-				? '</span>'
-				: '';
+			// $codeHiliteIn = ($options->hilite===true)
+			// 	? '<span class="hilite">'
+			// 	: '';
+			// $codeHiliteOut = ($options->hilite===true)
+			// 	? '</span>'
+			// 	: '';
 
-		// tag_URL. url path to php script thats render image
+		// tag_URL. url path to php script that render image
 			$tag_url = (defined('TR_TAGS_CDN') && $options->force_tr_tags_cdn!==false)
 				? TR_TAGS_CDN . '/?id='
 				: $options->tag_url . '/?id='; //'?'
@@ -253,7 +263,6 @@ abstract class TR {
 		$pattern 	= TR::get_mark_pattern('indexOut');
 		$text		= preg_replace($pattern, "<img id=\"[/\$2-$3-$4-$6]\" src=\"{$tag_url}[/\$2-$3-$4-$6]\" class=\"index\" data-type=\"indexOut\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
 		#$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"\" class=\"index\" data-type=\"indexIn\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">" , $text);
-
 
 		# REFERENCE IN
 		$pattern 	= TR::get_mark_pattern('referenceIn');
@@ -342,13 +351,12 @@ abstract class TR {
 		$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$tag_url}[$2-$3-$4-$6]\" class=\"note\" data-type=\"note\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
 		#$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"\" class=\"note\" data-type=\"note\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
 
-		# IMAGE
+		# lang
 		$pattern 	= TR::get_mark_pattern('lang'); // $string = "(\[lang-([a-z])-(.+)-data:.*?:data\])";
-		#$text		= preg_replace($pattern, "<img id=\"$1\" src=\"{$tag_url}/$1\" class=\"image\" />$codeHiliteOut", $text);
-		$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$tag_url}[$2-$7]\" class=\"image\" data-type=\"image\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
+		$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$tag_url}[$2-$3-$4-$6]\" class=\"lang\" data-type=\"lang\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
 
 
-		return (string)$text;
+		return $text;
 	}//end add_tag_img_on_the_fly
 
 

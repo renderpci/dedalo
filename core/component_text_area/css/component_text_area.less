@@ -36,7 +36,6 @@
 
 				>.toolbar_container {
 
-
 					>.toolbar_button {
 						// height: 1.8em;
 						// padding: 0.33rem;
@@ -75,12 +74,14 @@
 
 				// value_container
 				// Where component value is placed and parsed by the editor inline
-				>.editor_container {
+				&.editor_container, >.editor_container {
 					// background-color: #d9fdaf;
+					display: block;
 					margin: 0.5rem;
 					margin-bottom: 1.5rem;
 					padding: 0.5rem;
-					padding-top: 1rem;
+					padding-top: 0.33rem;
+					padding-bottom: 0px;
 					height: calc(100% - 1.5rem);
 					overflow: auto;
 					// outline: 1px solid #e6e6e6;
@@ -106,8 +107,20 @@
 					// 	}
 					// }
 
+
+					p {
+						min-height: 1.3rem;
+					}
+
+					// h1/h2. Note that ckeditor converts h1 to h2
+					h1, h2 {
+						font-size: 2em;
+						margin: 0.67em 0;
+					}
+
 					// images are inside span .dd_tag
 					.person,
+					.lang,
 					.note,
 					.index,
 					.tc,
@@ -122,7 +135,7 @@
 						vertical-align: text-bottom;
 					}
 
-					.note {
+					.note, .lang, .person {
 						margin-left: 2px;
 						margin-right: 2px;
 					}
@@ -143,28 +156,40 @@
 					}
 				}//end >.value_container
 
-				// >.editor_container {
-				// 	margin-top: 0.5rem;
-				// 	padding-top: 0px;
+				// editor_container
+					// >.editor_container {
+					// 	margin-top: 0.5rem;
+					// 	padding-top: 0px;
 
-				// 	// background-color: antiquewhite;
-				// 	// width: inherit;
-				// 	// min-width: 28rem;
-				// 	// margin: 0;
-				// 	// padding: 0;
-				// 	height: 100%;
-				// }
+					// 	// background-color: antiquewhite;
+					// 	// width: inherit;
+					// 	// min-width: 28rem;
+					// 	// margin: 0;
+					// 	// padding: 0;
+					// 	height: 100%;
+					// }
 
 				// source ckeditor
 				>.ck-source-editing-area {
-					width: 100%;
-					height: calc(100% - 1.5rem);
+					width: calc(100% - 2rem);
+					height: calc(100% - 2rem);
 					margin: 0.5rem;
 					margin-left: 1rem;
 					margin-right: 1rem;
+					margin-top: 0.33rem;
 					z-index: 0;
+					background-color: #f8f9fa;
+
 					>textarea {
 						overflow: auto;
+						line-height: 1.1rem;
+						font-size: .9rem;
+						transition: none;
+						border: 0;
+						padding: 0px;
+						padding-top: 0.5rem;
+						box-shadow: none;
+						// background-color: #f8f9fa;
 					}
 				}
 
@@ -177,7 +202,8 @@
 					height: 33px;
 				}
 
-			.ck.ck-editor__editable_inline>:first-child {
+			// .ck.ck-editor__editable_inline>:first-child {
+			.ck.ck-editor__editable_inline>p:first-of-type {
 				 margin-top: unset;
 			}
 
@@ -205,7 +231,8 @@
 				}
 			}
 
-			>ul.layer_ul {
+			// ul layer_ul
+			>.layer_ul {
 				text-align: left;
 				clear: both;
 				// border: 0.5px solid #777;
@@ -229,10 +256,10 @@
 						background-color: #ffffff;
 						color: initial;
 					}
+					&:first-child {
+						border-top: 0.5px solid #777777;
+					}
 
-					// .layer_icon {
-					//
-					// }
 					.layer_id {
 						justify-self: center;
 					}
@@ -248,9 +275,13 @@
 					// 	}
 					// }
 				}
-				>li:first-child {
-					border-top: 0.5px solid #777777;
-				}
+			}
+		}
+
+		// disabled_component
+		&.disabled_component {
+			.content_data.component {
+				pointer-events: unset !important;
 			}
 		}
 	}//end .edit
@@ -258,10 +289,11 @@
 
 	&.list {
 		// background-color: #bc00ae;
-		max-height: 10em;
+		// max-height: 9.3rem;
+		max-height: 4.3rem;
 		overflow: hidden;
 		img {
-			height: 1rem;
+			height: 0.9rem;
 		}
 	}
 
@@ -288,74 +320,52 @@
 		}
 	}
 
+	&.view_line {
+		display: block;
+
+		.toolbar_container{
+			display: flex;
+			flex-wrap: wrap;
+			position: absolute;
+			background-color: #fff;
+			outline: 1px solid @color_orange_dedalo;
+			left: 0px;
+			top: -21px;
+			height: auto;
+			width: auto;
+			padding: 0.05rem;
+			z-index: 1;
+
+			>.toolbar_button {
+				&.button_save {
+					padding: 1px;
+					padding-right: 0.5rem;
+				}
+			}
+		}
+		>.content_data {
+			min-height: 3em;
+			max-height: 6em;
+			overflow: auto;
+
+			>.content_value >.editor_container {
+				padding	: 0.4em;
+				margin	: 0px;
+			}
+		}
+	}
+
 	// with suffix _mini like 'component_text_area_mini'
 	&_mini {
 		// prevent index images height exceed text height
 		img {
 			height: 1em;
+			vertical-align: middle;
+		}
+		p {
+			display: contents;
 		}
 	}
-
-
-	// dd-tiny
-	dd-tiny {
-		width: 100%;
-		height: 100%;
-		// background-color: #F76CE4;
-		// height: 650px;
-		// border-bottom: 1px solid #ffffff;
-		// margin-bottom: 1em;
-		transition: opacity 0.115s ease-in-out;
-		// min-height: 27em;
-		// min-height: @media_max_height;
-
-
-		.mce-container {
-			// display: none !important;
-
-			// div.mce-fullscreen {
-				// z-index: 1;
-			// }
-
-			.mce-branding-powered-by {
-				display: none;
-			}
-
-			iframe {
-			}
-		}
-
-		.mce-path {
-			padding: 5px;
-		}
-
-		// Container, container body, iframe
-			// .mce-tinymce, .mce-container-body {
-			// 	min-height: 100% !important;
-			// }
-			// // Container body
-			// .mce-container-body {
-			// 	position: absolute;
-			// 	bottom: 0;
-			// 	left: 0;
-			// 	right: 0;
-			// }
-			// // Editing area
-			// .mce-container-body .mce-edit-area {
-			// 	position: absolute;
-			// 	top: 30px;
-			// 	bottom: 30px; // 37px;
-			// 	left: 0;
-			// 	right: 0;
-			// }
-			// // Footer
-			// .mce-tinymce .mce-statusbar {
-			// 	position: absolute;
-			// 	bottom: 0;
-			// 	left: 0;
-			// 	right: 0;
-			// }
-	}//end dd-tiny
 }//end .component_text_area
 
 
@@ -413,7 +423,6 @@ dd-modal {
 	// langs list into modal
 	>.text_area_project_langs_container {
 		color: initial;
-		// padding: 1rem;
 		line-height: 1.6rem;
 
 		>.lang_container {

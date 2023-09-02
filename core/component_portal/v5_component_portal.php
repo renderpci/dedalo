@@ -10,7 +10,6 @@
 	* @return string|null $valor
 	*/
 	$_get_valor = function( $lang=DEDALO_DATA_LANG, $format='string', $fields_separator=', ', $records_separator='<br>', $ar_related_terms=false, $data_to_be_used='valor' ) {
-		// $start_time = start_time();
 
 		$options = new stdClass();
 			$options->lang				= $lang;
@@ -24,9 +23,10 @@
 		* @param object $request_options
 		* @return object $valor_from_ar_locators {result,info}
 		*/
-		$get_valor_from_ar_locators = function ( $request_options ) {
+		$get_valor_from_ar_locators = function( $request_options ) {
 
 			$start_time = start_time();
+
 			$valor_from_ar_locators	= new stdClass();
 
 			$options = new stdClass();
@@ -40,8 +40,8 @@
 				}
 
 			#
-			# LOCATORS (If empty, return '') if we sent the ar_locator property to resolve it, the resolution will be directly wihtout check the structure of the component.
-			# if the caller is a component that send your own dato is necesary calculate the component structure.
+			# LOCATORS (If empty, return '') if we sent the ar_locator property to resolve it, the resolution will be directly without check the structure of the component.
+			# if the caller is a component that send your own dato is necessary calculate the component structure.
 			if($options->ar_locators === false){
 				$ar_locators = (array)$this->get_dato();
 				if (empty($ar_locators)) {
@@ -104,9 +104,11 @@
 			$strQuery_where='';
 			foreach ($ar_locators as $current_locator) {
 				if (empty($current_locator->section_id)) {
-					#throw new Exception("Error Processing Request BAD LOCATOR", 1);
-
-					debug_log(__METHOD__." IGNORED BAD LOCATOR:  ".to_string($current_locator), logger::ERROR);
+					debug_log(__METHOD__
+						." IGNORED BAD LOCATOR: ". PHP_EOL
+						.' locator' . to_string($current_locator)
+						, logger::ERROR
+					);
 					continue;
 				}
 				$current_section_id 	= $current_locator->section_id;
@@ -135,24 +137,19 @@
 
 			$valor_from_ar_locators->result = implode($options->records_separator, $ar_final);
 
-			if(SHOW_DEBUG===true) {
-				$html_info='';
-				$limit_time=SLOW_QUERY_MS/100;
-				$total_list_time = round(start_time()-$start_time,3);
-				$style='';
-				if ($total_list_time>$limit_time || $total_list_time>0.020) {
-					$style = "color:red";
+			// debug
+				if(SHOW_DEBUG===true) {
+					$limit_time			= SLOW_QUERY_MS/100;
+					$total_list_time	= exec_time_unit($start_time,'ms');
+					if ($total_list_time > $limit_time) {
+						debug_log(__METHOD__
+							. " v5 component_portal get_valor SLOW QUERY: " . PHP_EOL
+							. ' strQuery: ' . $strQuery . PHP_EOL
+							. ' time: '. $total_list_time.' ms'
+							, logger::WARNING
+						);
+					}
 				}
-				$html_info .= "<div class=\"debug_info get_valor_from_ar_locators\" style=\"{$style}\" onclick=\"$(this).children('pre').toggle()\"> Time: ";
-				$html_info .= $total_list_time;
-				$html_info .= "<pre style=\"display:none\"> ".$strQuery ."</pre>";
-				$html_info .= "</div>";
-				$valor_from_ar_locators->debug = $html_info;
-				if ($total_list_time>$limit_time) {
-					debug_log(__METHOD__.' '.$total_list_time."ms. SLOW QUERY: ".$strQuery);
-				}
-				#debug_log(__METHOD__.' '.$total_list_time."ms. QUERY: ".$strQuery);
-			}//end if(SHOW_DEBUG===true)
 
 			return (object)$valor_from_ar_locators;
 		};//end get_valor_from_ar_locators
@@ -178,7 +175,7 @@
 	* Return component value sent to export data
 	* @return string $valor
 	*/
-	$_get_valor_export = function ( $valor=null, $lang=DEDALO_DATA_LANG, $quotes='"', $add_id=false ) {
+	$_get_valor_export = function( $valor=null, $lang=DEDALO_DATA_LANG, $quotes='"', $add_id=false ) {
 
 		if (empty($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
@@ -266,9 +263,38 @@
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	$_get_diffusion_value =  function ( $lang=null , ?object $option_obj=null) { //  ?string
+	$_get_diffusion_value = function( $lang=null , ?object $option_obj=null) { //  ?string
 
 		$diffusion_value = null;
+
+		$propiedades = $this->get_propiedades();
+
+		// fields_separator. (!) Note here that more than one value can be returned by this method. To avoid duplicity of ',' separator, use '-' as default
+			$fields_separator_default = ', ';
+		// fields_separator
+			// $fields_separator   = $this->get_fields_separator();
+			switch (true) {
+				case isset($option_obj->divisor):
+					$fields_separator = $option_obj->divisor;
+					break;
+				case isset($propiedades->source->divisor):
+					$fields_separator = $propiedades->source->divisor;
+					break;
+				case isset($this->diffusion_properties->option_obj) &&
+					 isset($this->diffusion_properties->option_obj->divisor) :
+					$fields_separator = $this->diffusion_properties->option_obj->divisor;
+					break;
+				default:
+					$fields_separator = $fields_separator_default;
+					break;
+			}
+
+		// records_separator_default
+			$records_separator_default = ' | ';
+		// records_separator
+			$records_separator = (isset($propiedades->source->records_separator))
+				? $propiedades->source->records_separator
+				: $option_obj->divisor_parents ?? $records_separator_default;
 
 		# Propiedades of diffusion element that references this component
 		# (!) Note that is possible overwrite real component properties injecting properties from diffusion (see diffusion_sql::resolve_value)
@@ -281,8 +307,8 @@
 				$diffusion_value = $this->get_valor(
 					$lang,
 					'string', // string format
-					', ', // string fields_separator
-					'<br>', // string records_separator
+					$fields_separator, // ', ', // string fields_separator
+					$records_separator, // '<br>', // string records_separator
 					false, // array|bool ar_related_terms
 					$data_to_be_used // array data_to_be_used
 				);

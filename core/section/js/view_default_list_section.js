@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, Promise */
 /*eslint no-undef: "error"*/
 
@@ -10,10 +11,7 @@
 	import {ui} from '../../common/js/ui.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {set_element_css} from '../../page/js/css.js'
-	import {
-		render_server_response_error,
-		no_records_node
-	} from './render_common_section.js'
+	import {no_records_node} from './render_common_section.js'
 	import {
 		render_column_id
 	} from './render_list_section.js'
@@ -36,31 +34,44 @@ export const view_default_list_section = function() {
 * Render node for use current view
 * @param object self
 * @para object options
-* @return DOM node
+* sample:
+* {
+*    "render_level": "full",
+*    "render_mode": "list"
+* }
+* @return HTMLElement wrapper
 */
 view_default_list_section.render = async function(self, options) {
 
-	const render_level = options.render_level || 'full'
-
-	// running_with_errors case
-		if (self.running_with_errors) {
-			return render_server_response_error(
-				self.running_with_errors
-			);
-		}
+	// options
+		const render_level = options.render_level || 'full'
 
 	// columns_map
 		const columns_map	= await rebuild_columns_map(self)
 		self.columns_map	= columns_map
 
-	// ar_section_record. section_record instances (initied and built)
+	// ar_section_record. section_record instances (initialized and built)
 		self.ar_instances = self.ar_instances && self.ar_instances.length>0
 			? self.ar_instances
 			: await get_section_records({caller: self})
 
 	// content_data
-		const content_data = await get_content_data(self.ar_instances, self)
+		const content_data = await get_content_data(self, self.ar_instances)
 		if (render_level==='content') {
+
+			// paginator. Force to refresh paginator
+				if (self.paginator) {
+					self.paginator.refresh()
+				}
+
+			// list_header_node. Remove possible style 'hide' if not empty
+				if (self.ar_instances.length>0) {
+					const wrapper = self.node
+					if (wrapper.list_header_node && wrapper.list_header_node.classList.contains('hide')) {
+						wrapper.list_header_node.classList.remove('hide')
+					}
+				}
+
 			return content_data
 		}
 
@@ -114,10 +125,10 @@ view_default_list_section.render = async function(self, options) {
 			const selector = `${self.section_tipo}_${self.tipo}.list`
 
 		// custom properties defined css
-			if (self.context.css) {
+			// if (self.context.css) {
 				// use defined section css
-				set_element_css(selector, self.context.css)
-			}
+				// set_element_css(selector, self.context.css)
+			// }
 			// flat columns create a sequence of grid widths taking care of sub-column space
 			// like 1fr 1fr 1fr 3fr 1fr
 			const items				= ui.flat_column_items(columns_map)
@@ -146,14 +157,21 @@ view_default_list_section.render = async function(self, options) {
 					'grid-template-columns' : template_columns
 				}
 			}
+			if (self.context.css) {
+				// use defined section css
+				for(const property in self.context.css) {
+					css_object[property] = self.context.css[property]
+				}
+			}
 			// use calculated css
 			set_element_css(selector, css_object)
 
 	// list_header_node. Create and append if ar_instances is not empty
-		// if (self.ar_instances.length>0) {
-			const list_header_node = ui.render_list_header(columns_map, self)
-			list_body.appendChild(list_header_node)
-		// }
+		const list_header_node = ui.render_list_header(columns_map, self)
+		list_body.appendChild(list_header_node)
+		if (self.ar_instances.length<1) {
+			list_header_node.classList.add('hide')
+		}
 
 	// content_data append
 		list_body.appendChild(content_data)
@@ -162,26 +180,27 @@ view_default_list_section.render = async function(self, options) {
 		const wrapper = ui.create_dom_element({
 			element_type	: 'section',
 			id				: self.id,
-			//class_name	: self.model + ' ' + self.tipo + ' ' + self.mode
-			// class_name	: 'wrapper_' + self.type + ' ' + self.model + ' ' + self.tipo + ' ' + self.mode
 			class_name		: `wrapper_${self.type} ${self.model} ${self.tipo} ${self.section_tipo+'_'+self.tipo} list`
 		})
 		wrapper.appendChild(fragment)
 		// set pointers
-		wrapper.content_data	= content_data
-		wrapper.list_body		= list_body
+		wrapper.content_data		= content_data
+		wrapper.list_body			= list_body
+		wrapper.list_header_node	= list_header_node
 
 
 	return wrapper
-}//end list
+}//end render
 
 
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @param array ar_section_record
+* @para object self
+* @return HTMLElement content_data
 */
-const get_content_data = async function(ar_section_record, self) {
+const get_content_data = async function(self, ar_section_record) {
 
 	const fragment = new DocumentFragment()
 
@@ -212,8 +231,8 @@ const get_content_data = async function(ar_section_record, self) {
 		}
 
 	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.mode, self.type) // ,"nowrap","full_width"
+		const content_data = document.createElement('div')
+			  content_data.classList.add('content_data', self.mode, self.type)
 			  content_data.appendChild(fragment)
 
 
@@ -225,9 +244,15 @@ const get_content_data = async function(ar_section_record, self) {
 /**
 * REBUILD_COLUMNS_MAP
 * Adding control columns to the columns_map that will processed by section_recods
+* @param object self
 * @return obj columns_map
 */
 const rebuild_columns_map = async function(self) {
+
+	// columns_map already rebuilt case
+		if (self.fixed_columns_map===true) {
+			return self.columns_map
+		}
 
 	const columns_map = []
 
@@ -264,6 +289,9 @@ const rebuild_columns_map = async function(self) {
 		const base_columns_map = await self.columns_map
 		columns_map.push(...base_columns_map)
 
+	// fixed as calculated
+		self.fixed_columns_map = true
+
 
 	return columns_map
 }//end rebuild_columns_map
@@ -273,8 +301,7 @@ const rebuild_columns_map = async function(self) {
 /**
 * GET_BUTTONS
 * @param object self
-* 	area instance
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const get_buttons = function(self) {
 
@@ -284,7 +311,8 @@ const get_buttons = function(self) {
 			return null;
 		}
 
-	const fragment = new DocumentFragment()
+	// DocumentFragment
+		const fragment = new DocumentFragment()
 
 	// buttons_container
 		const buttons_container = ui.create_dom_element({
@@ -302,7 +330,8 @@ const get_buttons = function(self) {
 		})
 		filter_button.addEventListener('mousedown', function(e) {
 			e.stopPropagation()
-			event_manager.publish('toggle_search_panel', this)
+			// Note that self section is who is observing this event (init)
+			event_manager.publish('toggle_search_panel_'+self.id)
 		})
 
 	// other_buttons_block
@@ -317,6 +346,12 @@ const get_buttons = function(self) {
 		for (let i = 0; i < ar_buttons_length; i++) {
 
 			const current_button = ar_buttons[i]
+
+			// button_delete multiple
+			// check if user is global admin to activate the button delete (avoid users to delete multiple sections)
+				if(current_button.model==='button_delete' && page_globals.is_global_admin===false){
+					continue
+				}
 
 			// button node
 				const class_name	= 'warning ' + current_button.model.replace('button_', '')
@@ -333,37 +368,34 @@ const get_buttons = function(self) {
 						case 'button_new':
 							event_manager.publish('new_section_' + self.id)
 							break;
-						case 'button_delete':
 
+						case 'button_delete':
+							// sqo conform
 							const delete_sqo = clone(self.rqo.sqo)
 							delete_sqo.limit = null
 							delete delete_sqo.offset
 
 							// delete_record
-								self.delete_record({
-									section			: self,
-									section_id		: null,
-									section_tipo	: self.section_tipo,
-									sqo				: delete_sqo
-								})
+							self.delete_record({
+								section			: self,
+								section_id		: null,
+								section_tipo	: self.section_tipo,
+								sqo				: delete_sqo
+							})
 
-							// event_manager.publish('delete_section_' + self.id, {
-							// 	section_tipo	: self.section_tipo,
-							// 	section_id		: null,
-							// 	caller			: self,
-							// 	sqo				: delete_sqo
-							// })
 							break;
+						// button_import and button_trigger cases for compatibility with v5 ontology
+						// in future version will be merge both with new model button_tool
+						// in the mid-time use button_trigger for general cases to dispatch tools.
 						case 'button_import':
-
+						case 'button_trigger':
 							// open_tool (tool_common)
-								open_tool({
-									tool_context	: current_button.tools[0],
-									caller			: self
-								})
-
-
+							open_tool({
+								tool_context	: current_button.tools[0],
+								caller			: self
+							})
 							break;
+
 						default:
 							event_manager.publish('click_' + current_button.model)
 							break;
@@ -375,7 +407,7 @@ const get_buttons = function(self) {
 		ui.add_tools(self, other_buttons_block)
 
 	// show_other_buttons_button
-		const show_other_buttons_label	= get_label.mostrar_botones || 'Show buttons'
+		const show_other_buttons_label	= get_label.show_buttons || 'Show buttons'
 		const show_other_buttons_button	= ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'icon_arrow show_other_buttons_button',
@@ -408,3 +440,7 @@ const get_buttons = function(self) {
 
 	return fragment
 }//end get_buttons
+
+
+
+// @license-end

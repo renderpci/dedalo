@@ -35,6 +35,7 @@
 
 		>.wrapper_component {
 			flex-grow: 1;
+			display: grid;
 
 			>.label {
 				padding: 0.5em;
@@ -92,12 +93,13 @@
 			z-index: 1;
 			outline: 0.5px solid #dcdcdc;
 
-			.list& {
+			.list&, .relation& {
 				margin-top: 0.5em;
 			}
 			.edit& {
 				margin-bottom: 0.5em;
 			}
+
 
 			&.hide {
 				padding: 0px;
@@ -106,6 +108,10 @@
 			// toggle_container_selector
 			>.toggle_container_selector {
 				margin: 0px;
+
+				&.sections {
+					background-color: #a0a0a0;
+				}
 			}
 
 			// search_container_selector
@@ -125,6 +131,7 @@
 
 				.search_group_container {
 					display: flex;
+					justify-content: flex-end;
 					position: -webkit-sticky;
 					position: -moz-sticky;
 					position: sticky;
@@ -238,12 +245,13 @@
 							flex-direction: column;
 						}
 
-
 						.button {
 							height: 100%;
 							width: 100%;
 							margin: 0px;
 							padding: 0px;
+							padding-left: 0.25rem;
+							padding-right: 0.25rem;
 							font-size: 1em;
 							background-color: #f99c29;
 							opacity: 1;
@@ -414,6 +422,8 @@
 
 				// component_presets_label at top
 				>.component_presets_label {
+					display: inline-flex;
+					width: 100%;
 					background-color: #575a5c;
 					color: #ffffff;
 					text-align: center;
@@ -428,7 +438,6 @@
 					>.button.add {
 						color: #565a5c;
 						background-color: #f3f3f3;
-						float: right;
 						cursor: pointer;
 						z-index: 9;
 					}

@@ -1,4 +1,5 @@
 <?php
+// declare(strict_types=1);
 /**
 * RecordObj_matrix
 *
@@ -6,20 +7,23 @@
 */
 class RecordObj_matrix extends RecordDataBoundObject {
 
-	# MATRIX VARS
+
+
+	// matrix vars
 	protected $parent;
-	protected $dato;
 	protected $tipo;
 	protected $lang;
 
-	# SPECIFIC VARS
-	protected $ar_matrix_childrens_of_this;
-	protected $caller_obj; 	# optional
+	public $dato;
 
-	# TABLE  matrix_table
+	// specific vars
+	protected $ar_matrix_childrens_of_this;
+	protected $caller_obj; 	// optional
+
+	// table  matrix_table
 	protected $matrix_table ;
 
-	# TIME MACHINE LAST ID
+	// time machine last id
 	public $time_machine_last_id;
 
 	public $save_time_machine_version = true;
@@ -31,35 +35,33 @@ class RecordObj_matrix extends RecordDataBoundObject {
 	*/
 	public function __construct(string $matrix_table=null, int $id=null, string $parent=null, string $tipo=null, string $lang=null) {
 
-		if(empty($matrix_table)) {
-			if(SHOW_DEBUG===true) {
-				dump($matrix_table, "id:$id - parent:$parent - tipo:$tipo - lang:$lang");
+		// matrix table check
+			if(empty($matrix_table)) {
+				debug_log(__METHOD__." Error Processing Request. matrix_table is mandatory ", logger::ERROR);
+				if(SHOW_DEBUG===true) {
+					dump($matrix_table, "id:$id - parent:$parent - tipo:$tipo - lang:$lang");
+				}
+				return;
 			}
-			// throw new Exception("Error Processing Request. Matrix wrong name ", 1);
-			trigger_error(__METHOD__." Error Processing Request. matrix_table is mandatory ");
-			return false;
-		}
 
-		# TABLE SET ALWAYS BEFORE CONSTRUCT RECORDATABOUNDOBJECT
-		$this->matrix_table = $matrix_table;
+		// table set always before construct recordataboundobject
+			$this->matrix_table = $matrix_table;
 
 
-		if ($id>0) {
+		if ( (int)$id>0 ) {
 
-			# Ignore other vars
-			parent::__construct($id);
+			// Ignore other vars
+			parent::__construct( (string)$id );
 
 		}else{
 
-			# Set know vars
-			if(!empty($parent))	$this->set_parent($parent) ;
-			if(!empty($tipo))	$this->set_tipo($tipo) ;
-			if(!empty($lang))	$this->set_lang($lang) ; # DEDALO_DATA_LANG
+			// Sets the known variables
+			if(!empty($parent))	$this->set_parent($parent);
+			if(!empty($tipo))	$this->set_tipo($tipo);
+			if(!empty($lang))	$this->set_lang($lang);
 
-			parent::__construct(null);
+			parent::__construct( null );
 		}
-
-		return true;
 	}//end __construct
 
 
@@ -124,7 +126,9 @@ class RecordObj_matrix extends RecordDataBoundObject {
 			? $this->calculate_ID()
 			: parent::get_ID();
 
-		return $ID;
+		return !is_null($ID)
+			? (int)$ID
+			: null;
 	}//end get_ID
 
 
@@ -203,7 +207,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 		# CURRENT OBJ TEST COPY
 		if (!empty($this->ID) ) {
 			# Load dummy copy to test data (Avoid overwrite current object edited data)
-			$RecordObj_matrix_test 	= new RecordObj_matrix($this->matrix_table,$this->ID);
+			$RecordObj_matrix_test 	= new RecordObj_matrix($this->matrix_table, (int)$this->ID);
 		}
 
 		# TEST VALID TIPO
@@ -250,7 +254,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 		}
 
 		# TEST VALID USER
-		#$userID		= navigator::get_user_id();
+		#$userID		= get_user_id();
 		$userID	= $_SESSION['dedalo']['auth']['user_id'];
 		if (
 			empty($userID)
@@ -349,7 +353,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 			$dato = $this->dato;
 
 		// user_id
-			$user_id = (int)navigator::get_user_id();
+			$user_id = get_user_id();
 
 		// RecordObj_time_machine
 			$RecordObj_time_machine = new RecordObj_time_machine();
@@ -386,138 +390,6 @@ class RecordObj_matrix extends RecordDataBoundObject {
 		return $id;
 	}//end save_time_machine
 
-
-
-	/* PASADO AL PARENT (RecordDataBounceObject) +++
-	function get_dato() {
-
-		if($this->ID==NULL) $this->calculate_ID();
-
-		$dato = parent::get_dato();		#dump($dato);
-
-		# FORMATOS RECIBIDOS:
-			# String:				María
-			# String JSON:			"María"
-			# Array secuencial:		["María","Begoña"] (Cualquier array cuyo key sea consecutivo y que comience en 0)
-			# Array no secuencial	{"nombre":"María","apellidos":"Pérez"} (Arrays asociativos o cualquier array cuyo key sea no consecutivo o que no comience en 0)
-		#
-		# Test dato . Decode and convert in array is have various values ( format json_decode($dato,true) )
-		$dato_decoded = json_decode($dato,true);
-
-		if($dato_decoded != NULL) $dato = $dato_decoded ;
-
-		#dump($dato);
-
-		if(is_string($dato)) $dato = htmlspecialchars($dato);
-
-		return $dato;
-	}//end get_dato
-	*/
-
-
-
-	/* NOT USED !
-	// PASARÁ A COMPONENT SECURITY ACCESS
-	function add_security_dato($ar_dato) {
-
-		if(!is_array($ar_dato)) return null;
-
-		$ar_dato_matrix = $this->get_dato();				#echo "+++";var_dump($ar_dato_matrix);	#die();
-
-		foreach($ar_dato as $key => $value) {
-
-			$ar_dato_matrix[$key] = intval($value);			#echo "add_security_dato:"; var_dump($ar_dato_matrix);
-
-			#$ar_dato_matrix = json_encode($ar_dato_matrix);	print_r($ar_dato_matrix);
-			#$this->set_dato($ar_dato_matrix);
-		}
-
-		return $ar_dato_matrix;
-	}//end add_security_dato
-	*/
-
-
-
-	/* NOT USED !
-	public function get_ar_matrix_childrens_of_this() {
-
-		# STATIC CACHE
-		static $ar_stat_data;
-		if(isset($ar_stat_data[$this->ID])) return $ar_stat_data[$this->ID];
-
-		$id 	= $this->calculate_ID();		#var_dump($id);
-		$lang 	= $this->lang;
-
-		if(!$this->ID) die("<br><span class='error'>". __METHOD__ . " Error: id is unknow! I can't calculate current ID .</span>" );
-
-		$ar_matrix_childrens_of_this = array();		#echo " this->id:".$this->get_ID()."<hr>";
-
-		$arguments=array();
-		$arguments['parent']	= $id ;
-		#if($lang!='*')
-		#$arguments['lang']		= $lang;
-
-		$ar_id					= $this->search($arguments);
-
-		# create array with all records founded
-		foreach($ar_id as $current_id) {
-
-			$ar_matrix_childrens_of_this[]	= $current_id ;
-		}
-
-		# STORE CACHE DATA
-		$ar_stat_data[$this->ID] = $ar_matrix_childrens_of_this;
-
-		return $ar_matrix_childrens_of_this ;
-	}
-	*/
-
-
-
-	# BUSQUEDA ESPECÍFICA.. VER DE HACER GENÉRICA EN ORIGEN..
-	/*
-	public static function get_records_by_search($id=false, $parent=false, $dato=false,  $tipo=false, $lang=false) {
-
-		$ar_arguments = array();
-
-		if($id!==false)			$ar_arguments['id']		= $id;
-		if($parent!==false)		$ar_arguments['parent']	= $parent;
-		if($dato!==false)		$ar_arguments['dato']	= $dato;
-		if($tipo!==false)		$ar_arguments['tipo']	= $tipo;
-		if($lang!==false)		$ar_arguments['lang']	= $lang;
-
-			dump($lang,'get_records_by_search',"id:$id, parent:$parent, dato:$dato,  tipo:$tipo, lang:$lang");
-
-		# CASE DATO ARRAY
-		if( is_array($dato) )  {
-			$str_dato = '';
-			foreach($dato as $key => $value) {
-				#echo "dato: ";print_r($dato);
-				$str_dato .= "dato LIKE $value OR ";
-			}
-			unset($ar_arguments['dato']);	#echo substr($str_dato,0,-4);
-			$ar_arguments['sql_code']	= " AND (".  substr($str_dato,0,-4) . ")";
-		}
-
-		# CASE PARENT ARRAY
-		if( is_array($parent) )  {
-			$str_dato = '';
-			foreach($parent as $key => $value) {
-				#echo "dato: ";print_r($dato);
-				$str_dato .= "parent LIKE $value OR ";
-			}
-			unset($ar_arguments['parent']);	#echo substr($str_dato,0,-4);
-			$ar_arguments['sql_code']	= " AND (".  substr($str_dato,0,-4) . ")";
-		}
-
-		$matrix_table 			= common::get_matrix_table_from_tipo($section_tipo);
-		$RecordObj_matrix		= new RecordObj_matrix($matrix_table,NULL);
-		$ar_records_by_search	= $RecordObj_matrix->search($ar_arguments);
-			#dump($ar_arguments,'ar_arguments');
-
-		return $ar_records_by_search;
-	}
-	*/
 
 
 }//end class RecordObj_matrix

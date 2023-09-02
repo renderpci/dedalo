@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global SHOW_DEBUG, Promise, DEDALO_ROOT_WEB, JsonView */
 /*eslint no-undef: "error"*/
 
@@ -10,6 +11,8 @@
 	import {delete_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
 	import {get_elements_css_object} from '../../page/js/css.js'
+	import {render_relogin} from '../../login/js/render_login.js'
+	import {render_server_response_error} from '../../common/js/render_common.js'
 
 
 
@@ -48,22 +51,36 @@ common.prototype.init = async function(options) {
 	// type
 		self.type 			= options.type
 
-	// RQO - optional, used to define specific rqo for the instance, used in dd_grid (every dd_grind is loaded with specific rqo)
+	// optional vars
+		self.context		= options.context	|| null // structure context of current component (include properties, tools, etc.)
+		self.data			= options.data		|| null // current specific data of this component
+		self.datum			= options.datum		|| null // global data including dependent data (used in portals, etc.)
+
+	// rqo - optional, used to define specific rqo for the instance, used in dd_grid (every dd_grind is loaded with specific rqo)
 		self.rqo			= options.rqo
+
+	// properties
+		self.properties		= options.properties
+
+	// var containers
+		self.events_tokens	= [] // array of events of current component
+		self.ar_instances	= [] // array of children instances of current instance (used for autocomplete, etc.)
 
 	// DOM
 		self.node			= null // component node place in light DOM
 
-		self.events_tokens	= [] // array of events of current component
-		self.ar_instances	= [] // array of children instances of current instance (used for autocomplete, etc.)
+	// view
+		self.view			= options.view
 
+	// render_level
 		self.render_level	= null
 
-	// caller
-		self.caller = options.caller
+	// caller pointer
+		self.caller			= options.caller
 
 	// status update
-		self.status = 'initiated'
+		self.status = 'initialized'
+
 
 	return true
 }//end common.prototype.init
@@ -75,9 +92,10 @@ common.prototype.init = async function(options) {
 * Generic agnostic build function created to maintain
 * unity of calls.
 * (!) For components, remember use always component_common.build()
-* @return bool true
+* @param bool autoload = false
+* @return bool
 */
-common.prototype.build = async function () {
+common.prototype.build = async function(autoload=false) {
 
 	const self = this
 
@@ -115,10 +133,23 @@ export const set_context_vars = function(self) {
 					return self.context.view
 						? self.context.view
 						: null
-					// return self.context.view || self.view;
 				},
 				set : function(value) {
 					return self.context.view = value;
+				}
+			});
+
+		// properties. Swaps the value with the context value and makes it a getter/setter of the context value
+		// this allow sync self.properties and self.context.properties after building the instance
+			self.properties = self.context.properties || self.properties
+			Object.defineProperty(self, 'properties', {
+				get : function() {
+					return self.context.properties
+						? self.context.properties
+						: null
+				},
+				set : function(value) {
+					return self.context.properties = value;
 				}
 			});
 
@@ -139,16 +170,17 @@ export const set_context_vars = function(self) {
 		// of some common component behaviors
 		// if show_interface is defined in properties used the definition, else use this default
 			const default_show_interface = {
-				read_only 			: false, // bool false
-				save_animation		: true, // bool true
+				read_only				: false, // bool false
+				save_animation			: true, // bool true
 				// buttons_container	: true, // bool false
-				value_buttons		: true,  // bool true
-				button_add			: true, // bool true
-				button_link			: true, // bool true
-				tools				: true, // bool true
-				button_external		: false, // bool false
-				button_tree			: false, // bool false
-				show_autocomplete 	: true // bool true
+				value_buttons			: true,  // bool true
+				button_add				: true, // bool true
+				button_link				: true, // bool true
+				button_edit				: false, // bool false. Ex. component_select User profile (dd1725)
+				tools					: true, // bool true
+				button_external			: false, // bool false
+				button_tree				: false, // bool false
+				show_autocomplete		: true // bool true
 			}
 			// set the instance show_interface
 			self.show_interface = (!self.context.properties?.show_interface && !self.request_config_object?.show?.interface)
@@ -215,7 +247,7 @@ export const set_context_vars = function(self) {
 * RENDER
 * @param object options = {}
 *	render_level : level of deep that is rendered (full | content)
-* @return promise
+* @return HTMLElement|bool node
 *	node first DOM node stored in instance 'node' array
 */
 common.prototype.render = async function (options={}) {
@@ -227,12 +259,26 @@ common.prototype.render = async function (options={}) {
 		const render_level	= options.render_level || 'full'
 		const render_mode	= options.render_mode || self.mode
 
+	// running_with_errors case
+		if (self.running_with_errors) {
+			const node = render_server_response_error(
+				self.running_with_errors
+			);
+			self.node = node
+
+			return node
+		}
+
 	// permissions
 		const permissions = parseInt(self.permissions)
-		if(permissions<1){
+		if(permissions<1) {
+
+			const label = (get_label.no_access || 'You don\'t have access here')
+						+ ' [' + self.tipo + ']'
 			const node = ui.create_dom_element({
 				element_type	: 'span',
-				class_name		: 'no_access'
+				class_name		: 'no_access',
+				inner_html		: label
 			})
 			self.node = node
 
@@ -309,7 +355,7 @@ common.prototype.render = async function (options={}) {
 		//}
 		//console.log("typeof self[render_mode]:",typeof self[render_mode], self.model);
 
-	// render node. Method name is element node like 'edit' or 'list'. If not exists, fallback to 'list'
+	// render mode. Method name is element node like 'edit' or 'list'. If not exists, fallback to 'list'
 		const current_render_mode = (typeof self[render_mode]!=='function')
 			? (function(){
 				console.warn(`Invalid function (render_mode: ${render_mode} ) using fallback to 'list' mode on instance:`, self);
@@ -327,7 +373,6 @@ common.prototype.render = async function (options={}) {
 
 	// result_node render based in render_level
 		const result_node = await (async () => {
-			// console.warn("///////////////////// render_level:",render_level, self.id);
 
 			// render_level
 			switch(render_level) {
@@ -347,9 +392,7 @@ common.prototype.render = async function (options={}) {
 					// new content data node
 						const new_content_data_node = node
 							? node // use already calculated node
-							: await self[render_mode]({
-								render_level : render_level
-							  });
+							: await self[render_mode](render_options);
 
 					// replace
 						old_content_data_node.replaceWith(new_content_data_node);
@@ -384,7 +427,7 @@ common.prototype.render = async function (options={}) {
 								// console.log('self.node:', self.node);
 								// console.log('self.node.nodeType:', self.node.nodeType);
 								// console.log('node:', node);
-								console.warn('Ignored node replacement for: non ELEMENT_NODE', self.node.nodeType);
+								console.warn('Ignored node replacement for: non ELEMENT_NODE', self.node, 'nodeType:', self.node.nodeType);
 							}else{
 								self.node.replaceWith(node);
 							}
@@ -441,8 +484,10 @@ common.prototype.refresh = async function(options={}) {
 	const self = this
 
 	// options
-		const build_autoload	= options.build_autoload!==undefined ? options.build_autoload : true
-		const render_level		= options.render_level || 'content' // string full|content
+		const build_autoload		= options.build_autoload ?? true
+		const render_level			= options.render_level ?? 'content' // string full|content
+		const destroy				= options.destroy ?? true
+		const refresh_id_base_lang	= options.refresh_id_base_lang ?? false
 
 	// loading css add
 		// const nodes_lenght = self.node.length
@@ -450,17 +495,19 @@ common.prototype.refresh = async function(options={}) {
 		// 	self.node[i].classList.add('loading')
 		// }
 
-	// destroy dependencies only
+	// destroy (dependencies only)
 		if (self.status!=='rendered') {
 			console.warn("/// destroyed fail (expected status 'rendered') with actual status:", self.model, self.status);
 			return false
 		}
 		// destroy with params
-		await self.destroy(
-			false, // bool delete_self
-			true, // bool delete_dependencies
-			false // bool remove_dom
-		)
+		if (destroy===true) {
+			await self.destroy(
+				false, // bool delete_self
+				true, // bool delete_dependencies
+				false // bool remove_dom
+			)
+		}
 
 	// debug
 		if(SHOW_DEBUG===true) {
@@ -483,15 +530,11 @@ common.prototype.refresh = async function(options={}) {
 			// var t2 = performance.now()
 		}
 
-	// copy original ar_node
-		// const ar_node		= self.node
-		// const ar_node_length	= ar_node.length
-
 	// render. Only render content_data, not the whole element wrapper
 		let result
 		if (self.status==='built') {
 			await self.render({
-				render_level : render_level // Default value is 'content'
+				render_level : render_level // Note that default value is 'content'
 			})
 			result = true
 		}else{
@@ -503,6 +546,16 @@ common.prototype.refresh = async function(options={}) {
 		// for (let i = nodes_lenght - 1; i >= 0; i--) {
 		// 	self.node[i].classList.remove('loading')
 		// }
+
+	// refresh_id_base_lang. On true, force to refresh components with same 'id_base_lang'
+	// @see render_tool_upload.upload_done
+		if (refresh_id_base_lang===true) {
+			const id_base_lang = self.id_base + '_' + self.lang
+			event_manager.publish('update_value_'+id_base_lang, {
+				caller			: self,
+				changed_data	: null
+			})
+		}
 
 	// debug
 		if(SHOW_DEBUG===true) {
@@ -709,6 +762,10 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 			self.node = null
 		}
 
+	// event publish
+		event_manager.publish('destroy_'+self.id)
+
+
 	// status update
 		self.status = 'destroyed'
 
@@ -748,7 +805,7 @@ export const create_source = function (self, action) {
 			section_tipo	: self.section_tipo || self.tipo,
 			section_id		: self.section_id,
 			mode			: self.mode,
-			view			: self.view || null, // 'default',
+			view			: get_view(self), // self.view || self.context?.view || null, // 'default',
 			lang			: self.lang
 		}
 
@@ -785,6 +842,21 @@ export const create_source = function (self, action) {
 
 
 /**
+* GET_VIEW
+* Normalized get view from element with context fallback
+* @param object self
+* @return string|null view
+*/
+const get_view = function(self) {
+
+	const view = self.view || self.context?.view || null
+
+	return view
+}//end get_view
+
+
+
+/**
 * GET_RQO_TEST
 * Build a basic rqo of the component for test and debug purposes.
 * It could be copy and paste in the Area Development Playground environment
@@ -808,14 +880,16 @@ const get_rqo_test = function(self) {
 
 /**
 * LOAD_STYLE
-* @param object self
+* @param string src
+* @return promise
+* 	resolve/reject src
 */
 common.prototype.load_style = function (src) {
 
 	return new Promise(function(resolve, reject) {
 
 		// check already loaded
-			const links 	= document.getElementsByTagName("link");
+			const links 	= document.getElementsByTagName('link');
 			const links_len = links.length
 			for (let i = links_len - 1; i >= 0; i--) {
 				if(links[i].getAttribute('href')===src) {
@@ -825,19 +899,20 @@ common.prototype.load_style = function (src) {
 			}
 
 		// DOM tag
-			const element 	  = document.createElement("link")
-				  element.rel = "stylesheet"
+			const element 	  = document.createElement('link')
+				  element.rel = 'stylesheet'
 
-			element.onload = function() {
+			element.addEventListener('load', function(e) {
 				resolve(src);
-			};
-			element.onerror = function() {
+			})
+
+			element.addEventListener('error', function(e) {
 				reject(src);
-			};
+			})
 
 			element.href = src
 
-			document.getElementsByTagName("head")[0].appendChild(element)
+			document.getElementsByTagName('head')[0].appendChild(element)
 	})
 	.catch(err => { console.error(err) });
 }//end load_style
@@ -846,14 +921,16 @@ common.prototype.load_style = function (src) {
 
 /**
 * LOAD_SCRIPT
-* @param object self
+* @param string src
+* @return promise
+* 	resolve/reject src
 */
-common.prototype.load_script = async function(src) {
+common.prototype.load_script = async function(src, content=null) {
 
 	return new Promise(function(resolve, reject) {
 
 		// check already loaded
-			const scripts 	  = document.getElementsByTagName("script");
+			const scripts 	  = document.getElementsByTagName('script');
 			const scripts_len = scripts.length
 			for (let i = scripts_len - 1; i >= 0; i--) {
 				if(scripts[i].getAttribute('src')===src) {
@@ -863,16 +940,20 @@ common.prototype.load_script = async function(src) {
 			}
 
 		// DOM tag
-			const element = document.createElement("script")
-			element.setAttribute("defer", "defer");
+			const element = document.createElement('script')
+			element.setAttribute('defer', 'defer');
 
-			element.onload = function() {
+			if(content) {
+				element.innerHTML = content
+			}
 
+			element.addEventListener('load', function(e) {
 				resolve(src);
-			};
-			element.onerror = function() {
+			})
+
+			element.addEventListener('error', function(e) {
 				reject(src);
-			};
+			})
 
 			element.src = src
 
@@ -934,9 +1015,7 @@ export const get_columns_map = function(context, datum_context) {
 		// by default the columns are for every component that has direct link to the component(portal) or section
 		// if the portal has more component in deep, it can define as columns in the properties,
 		// but by default, the portal will be only one column (with all components joined in the cell).
-		const source_columns_map = (context.columns_map)
-			? context.columns_map
-			: false
+		const source_columns_map = context.columns_map || []
 	// view
 		const view			= context.view
 		const children_view	= context.children_view || null
@@ -1064,7 +1143,7 @@ export const get_columns_map = function(context, datum_context) {
 							dd_object.column_id = dd_object.tipo
 							break;
 					}//end switch
-				}//end if (dd_object.column_id && source_columns_map)
+				}//end if (dd_object.column_id && source_columns_map.length > 0)
 			}//end for (let j = 0; j < ar_first_level_ddo_len; j++)
 		}//end for (let i = 0; i < request_config_length; i++)
 
@@ -1155,7 +1234,7 @@ export const get_columns_map = function(context, datum_context) {
 * get the path in inverse format, the last in the chain will be the first object [0]
 * @return array ar_inverted_paths the the specific paths, with inverse path format.
 */
-export const get_ar_inverted_paths = function(full_ddo_map){
+export const get_ar_inverted_paths = function(full_ddo_map) {
 
 	// get the parents for the column, creating the inverse path
 	// (from the last component to the main parent, the column will be with the data of the first item of the column)
@@ -1189,7 +1268,7 @@ export const get_ar_inverted_paths = function(full_ddo_map){
 
 			// join all with the inverse format
 			// name -> people to study -> interview
-			column.push(current_ddo,...parents)
+			column.push(current_ddo, ...parents)
 			ar_inverted_paths.push(column)
 		}
 
@@ -1334,14 +1413,17 @@ export const get_ar_inverted_paths = function(full_ddo_map){
 
 /**
 * BUILD_RQO_SHOW
+* @param object _request_config_object
+* @param string action
+* @param bool add_show = false
 * @return object rqo
 */
-common.prototype.build_rqo_show = async function(request_config_object, action, add_show=false){
+common.prototype.build_rqo_show = async function(_request_config_object, action, add_show=false){
 
 	const self = this
 
 	// clone request_config_object
-		request_config_object = clone(request_config_object)
+		const request_config_object = clone(_request_config_object)
 
 	// local_db_data. get value if exists.
 	// Allow, for example, to return to the last paginated list preserving the user's
@@ -1409,8 +1491,9 @@ common.prototype.build_rqo_show = async function(request_config_object, action, 
 				? sqo_config.section_tipo.map(el=>el.tipo)
 				: [self.section_tipo]
 
-	sqo.section_tipo = ar_sections
+		sqo.section_tipo = ar_sections
 
+	// pagination
 	// Get the limit, offset, full count, and filter by locators.
 	// When these options comes with the sqo it passed to the final sqo, if not, it get the show.sqo_config parameters
 	// and finally if the request_config_object don't has sqo or sqo_config, set the default parameter to each.
@@ -1418,7 +1501,8 @@ common.prototype.build_rqo_show = async function(request_config_object, action, 
 		if (sqo.limit===undefined) {
 			sqo.limit = (sqo_config && sqo_config.limit!==undefined)
 				? sqo_config.limit
-				: null; // force to generate default limit from server (!)
+				// : self.mode==='edit' ? 1 : null; // force to generate default limit from server (!)
+				: null
 		}
 		// sqo.offset
 		if (sqo.offset===undefined) {
@@ -1434,26 +1518,25 @@ common.prototype.build_rqo_show = async function(request_config_object, action, 
 			// 		? sqo_config.full_count
 			// 		: false
 
-		// filter_by_locators
-			const filter_by_locators = (sqo.filter_by_locators)
-				? sqo.filter_by_locators
-				: (sqo_config && sqo_config.filter_by_locators)
-					? sqo_config.filter_by_locators
-					: null
-			if (filter_by_locators) {
-				sqo.filter_by_locators = filter_by_locators
-			}else if(self.section_id && self.section_tipo){
-				sqo.filter_by_locators = [{
-					section_tipo	:self.section_tipo,
-					section_id		: self.section_id
-				}]
+	// filter_by_locators
+		const filter_by_locators = (sqo.filter_by_locators)
+			? sqo.filter_by_locators
+			: (sqo_config && sqo_config.filter_by_locators)
+				? sqo_config.filter_by_locators
+				: null
+		if (filter_by_locators) {
+			sqo.filter_by_locators = filter_by_locators
+		}else if(self.section_id && self.section_tipo){
+			sqo.filter_by_locators = [{
+				section_tipo	:self.section_tipo,
+				section_id		: self.section_id
+			}]
 
-			}
+		}
 
 	// sqo clean
 		delete sqo.generated_time
 		delete sqo.parsed
-
 
 	// build the rqo
 		const rqo = {
@@ -1575,8 +1658,6 @@ common.prototype.build_rqo_search = async function(request_config_object, action
 					// reverse path and set the list
 					const new_path = []
 					ddo: for (let j = current_path_length - 1; j >= 0; j--) {
-						// Semantic node is outside the portal sqo (it has his own sqo) and need to be excluded, only when the caller it's a semantic node include it
-						if(current_path[j].model==='component_semantic_node' && (current_path[j].model !== self.model)){continue paths}
 						// Dataframe nodes are outside the portal sqo (it has his own sqo) and need to be excluded
 						if(current_path[j].is_dataframe && current_path[j].is_dataframe===true){continue paths}
 						// create a copy of the current ddo, it ensure that the original path is not touched
@@ -1618,16 +1699,19 @@ common.prototype.build_rqo_search = async function(request_config_object, action
 		// 	: false
 
 	// fields_separator
-		const fields_separator = sqo_config.fields_separator
-			? sqo_config.fields_separator
-			: ', '
+		const fields_separator = request_config_object.choose && request_config_object.choose.fields_separator
+				? request_config_object.choose.fields_separator
+				: request_config_object.show && request_config_object.show.fields_separator
+					? request_config_object.show.fields_separator
+					: ', '
+
 
 	// optional configuration to use when the search will be built
 		const sqo_options = {
-			filter_free				: filter_free,
-			fixed_filter			: fixed_filter,
-			filter_by_list			: filter_by_list,
-			operator				: operator
+			filter_free		: filter_free,
+			fixed_filter	: fixed_filter,
+			filter_by_list	: filter_by_list,
+			operator		: operator
 		}
 
 	// DDO_MAP
@@ -2158,7 +2242,7 @@ common.prototype.build_rqo_search = async function(request_config_object, action
 * 	API request response from current section/area
 * @param object rqo_show_original
 * 	Request query object sent to the API by current section/area
-* @return DOM node document fragment
+* @return HTMLElement document fragment
 */
 export const load_data_debug = async function(self, load_data_promise, rqo_show_original) {
 
@@ -2168,7 +2252,7 @@ export const load_data_debug = async function(self, load_data_promise, rqo_show_
 		}
 
 	// check caller instance is section or are
-		if (self.type!=="section" && self.type!=="area") {
+		if (self.type!=='section' && self.type!=='area') {
 			return false
 		}
 
@@ -2178,7 +2262,7 @@ export const load_data_debug = async function(self, load_data_promise, rqo_show_
 
 	// load_data_promise response check
 		if (response.result===false) {
-			console.error("API EXCEPTION:",response.msg);
+			console.error('API EXCEPTION:',response.msg);
 			return false
 		}
 
@@ -2417,6 +2501,7 @@ common.prototype.get_section_elements_context = async function(options) {
 	// section_tipo (string|array)
 		const section_tipo			= options.section_tipo
 		const ar_components_exclude	= options.ar_components_exclude
+		const use_real_sections		= options.use_real_sections
 
 	// components
 		const get_components = async () => {
@@ -2426,14 +2511,22 @@ common.prototype.get_section_elements_context = async function(options) {
 
 			}else{
 
+				const source = create_source(self, null)
+
 				// load data
-					const api_response = await data_manager.request({
-						body : {
-							action					: 'get_section_elements_context',
+					const rqo = {
+						action			: 'get_section_elements_context',
+						prevent_lock	: true,
+						source			: source,
+						options			: {
 							context_type			: 'simple',
 							ar_section_tipo			: section_tipo,
+							use_real_sections		: use_real_sections,
 							ar_components_exclude	: ar_components_exclude
 						}
+					}
+					const api_response = await data_manager.request({
+						body : rqo
 					})
 
 				// fix
@@ -2576,8 +2669,101 @@ export const push_browser_history = function(options) {
 			title, // string unused (only safari)
 			url // string url optional
 		)
-		console.log("[common.push_browser_history] -> navigation history state push:", state, title, url);
+		if(SHOW_DEBUG===true) {
+			console.log("[common.push_browser_history] -> navigation history state push:", state, title, url);
+		}
 
 
 	return true
 }//end push_browser_history
+
+
+
+/**
+* BUILD_AUTOLOAD
+* Unified way to manage section, area and portals build API request
+* @param object self
+* @return bool
+*/
+export const build_autoload = async function(self) {
+
+	// load context and data
+		const api_response = await data_manager.request({
+			body : self.rqo
+		})
+
+	// debug last server error. Only for development
+		if(SHOW_DEVELOPER===true || SHOW_DEBUG===true) {
+			console.log(`${self.model} build api_response:`, JSON.parse( JSON.stringify(api_response) ) );
+			if (api_response && api_response.dedalo_last_error) {
+				console.error('SERVER: api_response.dedalo_last_error:', api_response.dedalo_last_error);
+			}
+		}
+
+	// response check
+		if (!api_response || !api_response.result) {
+
+			// running_with_errors.
+				// It's important to set instance as running_with_errors because this
+				// generates a temporal wrapper. Once solved the problem, (usually a not login scenario)
+				// the instance could be built and rendered again replacing the temporal wrapper
+				self.running_with_errors = [
+					{
+						msg					: `${self.model} build autoload api_response: `+ (api_response.msg),
+						error				: api_response.error || 'unknown',
+						dedalo_last_error	: api_response.dedalo_last_error || null
+					}
+				]
+				// debug
+				if(SHOW_DEVELOPER===true || SHOW_DEBUG===true) {
+					console.error('SERVER: self.running_with_errors:', self.running_with_errors);
+				}
+
+			// previous_status
+				const previous_status = 'initialized'
+
+			// custom behaviors
+				switch (api_response.error) {
+					case 'not_logged':
+						// display login window
+						await render_relogin({
+							on_success : async function(){
+
+								// login success actions
+
+								self.status = previous_status
+
+								const unsaved_data = typeof window.unsaved_data!=='undefined'
+									? window.unsaved_data
+									: false
+
+								// login success actions
+								if (unsaved_data===false) {
+									await self.build(true)
+									await self.render({
+										render_level	: 'full', // content|full
+										render_mode		: self.mode
+									})
+								}
+							}
+						})
+						break;
+
+					default:
+						// nothing to do here
+						break;
+				}
+
+			// status update
+				self.status = previous_status // 'initialized' or 'rendered'
+
+			return false
+		}//end if (!api_response || !api_response.result)
+
+
+	return api_response
+}//end build_autoload
+
+
+
+// @license-end

@@ -1,25 +1,27 @@
 <?php
-/*
+declare(strict_types=1);
+/**
 * CLASS TS_OBJECT
-* Manage tesaurus hierarchycal elements. Every element is a section used as thesaurus term
+* Manage thesaurus hierarchical elements. Every element is a section used as thesaurus term
 *
 */
 class ts_object {
 
 
-	# int (mandatory)
-	protected $section_id;
-	# string (mandatory)
-	protected $section_tipo;
-	# object
-	protected $section;
-	# mixed object|null (default null)
-	protected $options;
-	# string (default 'edit')
-	protected $mode;
-	# int
-	public $order;
 
+	// int (mandatory)
+	protected $section_id;
+	// string (mandatory)
+	protected $section_tipo;
+	// object
+	protected $section;
+	// mixed object|null (default null)
+	protected $options;
+	// string (default 'edit')
+	protected $mode;
+	// int
+	public $order;
+	// ar_elements
 	public $ar_elements;
 
 
@@ -33,7 +35,7 @@ class ts_object {
 	* @param string $mode
 	*	Default 'edit'
 	*/
-	public function __construct( int $section_id, string $section_tipo, object $options=null, string $mode='edit' ) {
+	public function __construct( int|string $section_id, string $section_tipo, object $options=null, string $mode='edit' ) {
 
 		$this->section_id   = $section_id;
 		$this->section_tipo = $section_tipo;
@@ -50,21 +52,6 @@ class ts_object {
 		# Set default order
 		$this->order = 1000; // Default is 1000. When get_html is called, this var is updated with component value if exits and have data
 	}//end __construct
-
-
-
-	/**
-	* GET_HTML
-	* @return string $html
-	*/
-	public function get_html() : string {
-
-		ob_start();
-		include ( dirname(__FILE__) .'/'. get_class() .'.php' );
-		$html = ob_get_clean();
-
-		return (string)$html;
-	}//end get_html
 
 
 
@@ -210,9 +197,8 @@ class ts_object {
 	* @return object $children_data
 	*/
 	public function get_children_data() : object {
-		if(SHOW_DEBUG===true) $start_time=start_time();
 
-		# Global object
+		// Global object
 		$children_data = new stdClass();
 			$children_data->section_tipo				= $this->section_tipo;
 			$children_data->section_id					= $this->section_id;
@@ -224,7 +210,7 @@ class ts_object {
 			$children_data->permissions_button_delete	= $this->get_permissions_element('button_delete');
 			$children_data->permissions_indexation		= $this->get_permissions_element('component_relation_index');
 			$children_data->permissions_structuration	= $this->get_permissions_element('component_relation_struct');
-			$children_data->ar_elements = array();
+			$children_data->ar_elements					= [];
 
 		// model
 			$model = $this->options->model ?? null; // options are fixed on construct the class
@@ -234,18 +220,20 @@ class ts_object {
 
 		# elements
 		$ar_elements = ts_object::get_ar_elements($this->section_tipo, $model);
-		foreach ($ar_elements as $k_element_tipo => $current_object) {
+		foreach ($ar_elements as $current_object) {
+
+			$render_vars = $current_object;
 
 			// element_tipo
-				$current_element_tipo	= $current_object->tipo;
-				$render_vars			= $current_object;
-
-
+				$current_element_tipo = $current_object->tipo;
 				if (empty($current_element_tipo)) {
-					debug_log(__METHOD__." Error. Empty element_tipo in current_object: ".to_string($current_object), logger::DEBUG);
+					debug_log(__METHOD__
+						." Error. Empty element_tipo in current_object: " . PHP_EOL
+						.' current_object:'. to_string($current_object)
+						, logger::ERROR
+					);
 					continue;
 				}
-
 
 			// No descriptors do not have children. Avoid calculate children
 				if ($children_data->is_descriptor===false && $render_vars->type==='link_children') {
@@ -253,20 +241,21 @@ class ts_object {
 				}
 
 			// allow array for terms
-				$ar_element_tipo = is_array($current_element_tipo) ? $current_element_tipo : [$current_element_tipo];
+				$ar_element_tipo = is_array($current_element_tipo)
+					? $current_element_tipo
+					: [$current_element_tipo];
 
 			// Each element
 				$element_obj = new stdClass();
 					$element_obj->type	= $render_vars->type;
 					$element_obj->tipo	= $current_element_tipo;
 
-
 				// element_tipo iterate tipo
 				foreach ($ar_element_tipo as $element_tipo) {
 
 					$model_name				= RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
 					// $legacy_model_name	= RecordObj_dd::get_legacy_model_name_by_tipo($element_tipo);
-					$lang					= common::get_element_lang($element_tipo, $data_lang=DEDALO_DATA_LANG);
+					$lang					= common::get_element_lang($element_tipo, DEDALO_DATA_LANG);
 					$component				= component_common::get_instance(
 						$model_name,
 						$element_tipo,
@@ -276,13 +265,21 @@ class ts_object {
 						$this->section_tipo
 					);
 					$dato = $component->get_dato();
+
+					// re-format dato in some cases:
 					if ($model_name==='component_autocomplete_hi' || $model_name==='component_portal') {
 
-						$dato = $component->get_valor();
-
-					}else if ($model_name==='component_input_text') {
-
-						$dato = $component->get_valor();
+						if (!empty($dato)) {
+							$values = [];
+							foreach ($dato as $current_locator) {
+								$values[] = ts_object::get_term_by_locator(
+									$current_locator,
+									DEDALO_DATA_LANG,
+									true
+								);
+							}
+							$dato = $values;
+						}
 
 					}else if ($model_name==='component_relation_related') {
 
@@ -296,10 +293,10 @@ class ts_object {
 							$dato = array_merge($dato, $component_rel);
 						}
 
-					}else if ($model_name==='component_svg'){
+					}else if ($model_name==='component_svg') {
 
 						# file exists check
-						$file_path	= $component->get_path();
+						$file_path	= $component->get_media_filepath(DEDALO_SVG_QUALITY_DEFAULT);
 						$file_url	= (file_exists($file_path)===true)
 							? $component->get_url() . '?' . start_time()
 							: '';
@@ -307,34 +304,18 @@ class ts_object {
 						$dato = $file_url;
 					}
 
-
-					#if ($element_tipo==='hierarchy25') {
-					#	debug_log(__METHOD__." dato $model_name - element_tipo:$element_tipo - section_id:$this->section_id - $lang - valor:". $component->get_valor($lang).' - dato:'. to_string($dato), logger::DEBUG);
-					#}
-
-					#if (isset($ar_elements[$k_element_tipo])) {
-						#dump($element_obj->type, ' $element_obj->type ++ '.to_string());
-					#debug_log(__METHOD__." render_vars ".to_string($render_vars), logger::DEBUG);
-					#}
-					#debug_log(__METHOD__." k_element_tipo ".to_string($k_element_tipo), logger::DEBUG);
-					#debug_log(__METHOD__." element_obj ".to_string($element_obj), logger::DEBUG);
-					#debug_log(__METHOD__." render_vars ".to_string($render_vars), logger::DEBUG);
-
+					// value
 					switch (true) {
+
 						case ($element_obj->type==='term'):
-							# term Is traducible and uses lang fallback here
-							// $value, $tipo, $parent, $mode, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null
-							if (empty($dato)) {
-								$element_value 		= component_common::extract_component_value_fallback($component);
-							}else{
-								$element_value = $dato;
-							}
+							// term Is translatable and uses lang fallback here
+							$element_value = empty($dato)
+								? component_common::extract_component_value_fallback($component)
+								: $dato;
+
 							$element_obj->value = isset($element_obj->value)
-									? $element_obj->value . $separator . $element_value
-									: $element_value;
-								#dump($element_obj->value, '$element_obj->value ++ '.to_string( $element_tipo));
-								#debug_log(__METHOD__." dato $model_name - element_tipo:$element_tipo - section_id:$this->section_id - $lang - valor:". $component->get_valor($lang).' - dato:'. to_string($dato), logger::DEBUG);
-								#debug_log(__METHOD__." element_obj->value $element_tipo ".to_string($dato).' - '.DEDALO_DATA_LANG, logger::DEBUG);
+								? to_string($element_obj->value) . $separator . to_string($element_value)
+								: to_string($element_value);
 							break;
 
 						case ($element_obj->type==='icon'):
@@ -347,7 +328,9 @@ class ts_object {
 								if($render_vars->icon==='ND') {
 									#debug_log(__METHOD__." children_data->ar_elements ".to_string($children_data->ar_elements), logger::DEBUG);
 									#debug_log(__METHOD__." dato->section_id ".to_string($dato), logger::DEBUG);
-									if (isset($dato[0]) && isset($dato[0]->section_id) && (int)$dato[0]->section_id===2) {
+									if (isset($dato[0])
+										&& isset($dato[0]->section_id)
+										&& (int)$dato[0]->section_id===2) {
 										ts_object::set_term_as_nd($children_data->ar_elements);
 										$children_data->is_descriptor = false;
 									}
@@ -358,7 +341,10 @@ class ts_object {
 							$element_obj->value = $render_vars->icon;
 
 							// dato check
-								if(empty($dato)) continue 3; // Skip empty icon value links
+								$considered_empty_dato = (bool)is_empty_dato($dato);
+								if($considered_empty_dato===true) {
+									continue 3; // Skip empty icon value links
+								}
 
 							if ($model_name==='component_relation_index' || $model_name==='component_relation_struct') {
 								#dump($dato, ' dato ++ '.to_string($element_tipo));
@@ -369,13 +355,14 @@ class ts_object {
 
 						case ($element_obj->type==='link_children'):
 
-							# D : Descriptors
+							// D : Descriptors
 							$element_obj->value = ($this->have_children_of_type($dato, 'descriptor')===true)
 								? 'button show children'
 								: 'button show children unactive';
 
-							# ND : No descriptors case
-							if($this->have_children_of_type($dato, 'nd')===true) {
+							// ND : No descriptors case
+							$have_children_of_type_result = $this->have_children_of_type($dato, 'nd');
+							if($have_children_of_type_result===true) {
 
 								$nd_element = new stdClass();
 									$nd_element->type	= 'link_children_nd';
@@ -390,6 +377,7 @@ class ts_object {
 							$element_obj->value = $dato;
 							break;
 					}
+
 					// set model. Only first element if more than one exists (multiple term cases with same model)
 					if (!isset($element_obj->model)) {
 						$element_obj->model = $model_name;
@@ -416,6 +404,10 @@ class ts_object {
 
 	/**
 	* HAVE_CHILDREN_OF_TYPE
+	* @param array $ar_children
+	* 	Array of locators
+	* @param string $type
+	* 	As 'descriptor'
 	* @return bool
 	*/
 	public function have_children_of_type( array $ar_children, string $type ) : bool {
@@ -426,26 +418,35 @@ class ts_object {
 
 		$descriptor_value = ($type==='descriptor') ? 1 : 2;  # 1 for descriptors, 2 for non descriptors
 
-		foreach($ar_children as $key => $current_locator) {
+		foreach($ar_children as $current_locator) {
 
 			$section_map = section::get_section_map( $current_locator->section_tipo );
 			if (empty($section_map) || !isset($section_map->thesaurus->is_descriptor)) {
-				debug_log(__METHOD__." Invalid section_map 'is_descriptor' property from section $current_locator->section_tipo ".to_string($section_map), logger::ERROR);
+				debug_log(__METHOD__
+					." Invalid section_map 'is_descriptor' property " .PHP_EOL
+					.' section_map: ' . json_encode($section_map, JSON_PRETTY_PRINT) . PHP_EOL
+					.' Please, define a valid section_map for section ' .$current_locator->section_tipo
+					, logger::ERROR
+				);
 				continue;
 			}
 
 			$component_tipo	= $section_map->thesaurus->is_descriptor;
 			$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			$component		= component_common::get_instance($model_name,
-															 $component_tipo,
-															 $current_locator->section_id,
-															 'list',
-															 DEDALO_DATA_NOLAN,
-															 $current_locator->section_tipo);
+			$component		= component_common::get_instance(
+				$model_name,
+				$component_tipo,
+				$current_locator->section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$current_locator->section_tipo
+			);
 			$dato = $component->get_dato();
 
 			// When first element is found, return true
-			if (isset($dato[0]) && isset($dato[0]->section_id) && (int)$dato[0]->section_id===$descriptor_value) {
+			if (isset($dato[0])
+				&& isset($dato[0]->section_id)
+				&& (int)$dato[0]->section_id==$descriptor_value) {
 				return true;
 			}
 		}
@@ -458,39 +459,43 @@ class ts_object {
 
 	/**
 	* IS_INDEXABLE
+	* @param string $section_tipo
+	* @param int $section_id
 	* @return bool
 	*/
-	public static function is_indexable( string $section_tipo, int $section_id ) : bool {
+	public static function is_indexable( string $section_tipo, int|string $section_id ) : bool {
 
 		if (strpos($section_tipo, 'hierarchy')===0) {
-			# Root hierarchies are always false
+			// Root hierarchies are always false
 			return false;
 		}
 
 		$section_map = section::get_section_map( $section_tipo );
 		if (!isset($section_map->thesaurus->is_indexable)) {
-			debug_log(__METHOD__." Invalid section_map 'is_indexable' property from section $section_tipo ".to_string($section_map), logger::DEBUG);
+			debug_log(__METHOD__." Invalid section_map 'is_indexable' property from section $section_tipo ".to_string($section_map), logger::ERROR);
 			return false;
 		}
 
 		if ($section_map->thesaurus->is_indexable===false) {
-			# properties set as false case
+			// properties set as false case
 			return false;
 		}
 
-		$component_tipo = $section_map->thesaurus->is_indexable;
-		$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-		$component 	 	= component_common::get_instance($model_name,
-														 $component_tipo,
-														 $section_id,
-														 'list',
-														 DEDALO_DATA_NOLAN,
-														 $section_tipo);
+		$component_tipo	= $section_map->thesaurus->is_indexable;
+		$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		$component		= component_common::get_instance(
+			$model_name,
+			$component_tipo,
+			$section_id,
+			'list',
+			DEDALO_DATA_NOLAN,
+			$section_tipo
+		);
 		$dato = $component->get_dato();
 
 		$indexable_value = 1; // Yes
 
-		// When firts element is found, return true
+		// When first element is found, return true
 		if (isset($dato[0]) && isset($dato[0]->section_id) && (int)$dato[0]->section_id===$indexable_value) {
 			return true;
 		}
@@ -550,13 +555,17 @@ class ts_object {
 		foreach ($ar_elements as $key => $obj_value) {
 
 			if ($obj_value->type==='term') {
-				if(SHOW_DEBUG===true) {
-					if (!is_string($obj_value->value)) {
-						#dump($obj_value->value, '$obj_value->value ++ EXPECTED STRING. Instead received type: '.gettype($obj_value->value) ." - ".to_string($obj_value->value));
-						debug_log(__METHOD__."  ".'$obj_value->value ++ EXPECTED STRING. But received type: '.gettype($obj_value->value) ." - value:".to_string($obj_value->value), logger::ERROR);
-					}
+
+				if (!is_string($obj_value->value)) {
+					debug_log(__METHOD__
+						."  ".'$obj_value->value ++ EXPECTED STRING. But received type: '.gettype($obj_value->value) . PHP_EOL
+						.' obj_value->value type: ' . gettype($obj_value->value) . PHP_EOL
+						.' obj_value->value: ' . to_string($obj_value->value)
+						, logger::ERROR
+					);
 				}
-				$ar_elements[$key]->value = '<span class="no_descriptor">' . $obj_value->value . '</span>';
+
+				$ar_elements[$key]->value = $obj_value->value; //'<span class="no_descriptor">' .  . '</span>';
 				break;
 			}
 		}
@@ -568,9 +577,8 @@ class ts_object {
 
 	/**
 	* GET_TERM_DATO_BY_LOCATOR
-	*
-	* @return array $final_value
-	*	Default is bool false
+	* @param object $locator
+	* @return array|null $final_value
 	*/
 	public static function get_term_dato_by_locator(object $locator) : ?array {
 
@@ -583,12 +591,12 @@ class ts_object {
 				return null;
 			}
 
-		$section_map 	= section::get_section_map($locator->section_tipo);
-		$thesaurus_map 	= isset($section_map->thesaurus) ? $section_map->thesaurus : false;
+		$section_map	= section::get_section_map($locator->section_tipo);
+		$thesaurus_map	= isset($section_map->thesaurus) ? $section_map->thesaurus : false;
 
-		$ar_tipo 		= is_array($thesaurus_map->term) ? $thesaurus_map->term : [$thesaurus_map->term];
-		$section_id 	= $locator->section_id;
-		$section_tipo 	= $locator->section_tipo;
+		$ar_tipo		= is_array($thesaurus_map->term) ? $thesaurus_map->term : [$thesaurus_map->term];
+		$section_id		= $locator->section_id;
+		$section_tipo	= $locator->section_tipo;
 
 		$ar_value = [];
 		foreach ($ar_tipo as $tipo) {
@@ -659,6 +667,7 @@ class ts_object {
 					$valor .= '_'. $locator->component_tipo;
 				if(isset($locator->tag_id))
 					$valor .= '_'. $locator->tag_id;
+
 			}else{
 
 				$term		= is_array($thesaurus_map->term) ? $thesaurus_map->term : [$thesaurus_map->term]; // source could be an array or string
@@ -679,44 +688,29 @@ class ts_object {
 						$model_name,
 						$tipo,
 						$parent,
-						'edit',
+						'list',
 						$lang,
 						$section_tipo
 					);
-					$current_value = $component->get_valor($lang);
+					$current_value = $component->get_value();
+
+					if (empty($current_value)) {
+						$main_lang = hierarchy::get_main_lang( $locator->section_tipo );
+						$dato_full = $component->get_dato_full();
+						// get_value_with_fallback_from_dato_full( $dato_full_json, $decore_untranslated=false, $main_lang=DEDALO_DATA_LANG_DEFAULT)
+						$current_value = component_common::get_value_with_fallback_from_dato_full(
+							$dato_full,
+							true,
+							$main_lang
+						);
+					}
+
 					if (!empty($current_value)) {
 						$ar_valor[] = $current_value;
 					}
 				}
 				$valor = implode(', ', $ar_valor);
-
-				if (empty($valor)) {
-
-					$main_lang = hierarchy::get_main_lang( $locator->section_tipo );
-					#	#dump($main_lang, ' main_lang ++ '.to_string($locator->section_tipo));
-					#if($lang!==$main_lang) {
-					#	$component->set_lang($main_lang);
-					#	$valor = $component->get_valor($main_lang);
-					#	if (strlen($valor)>0) {
-					#		$valor = component_common::decore_untranslated( $valor );
-					#	}
-					#
-					#	# return component to previous lang
-					#	$component->set_lang($lang);
-					#}
-					#
-					#if (empty($valor)) {
-						$dato_full = $component->get_dato_full();
-						# get_value_with_fallback_from_dato_full( $dato_full_json, $decore_untranslated=false, $main_lang=DEDALO_DATA_LANG_DEFAULT)
-						$valor = component_common::get_value_with_fallback_from_dato_full($dato_full, true, $main_lang);
-						if (is_array($valor)) {
-							$valor = implode(', ', $valor);
-						}
-						#dump($valor, ' valor ++ '.to_string());
-					#}
-				}
 			}
-			#dump($valor, ' valor ++ '.to_string($locator->section_tipo."-".$locator->section_id));
 
 		/*
 			# En proceso. De momento devuelve el locator en formato json, sin resolver..
@@ -740,14 +734,27 @@ class ts_object {
 
 
 	/**
+	* RESOLVE_LOCATOR
+	* Alias of get_term_by_locator
+	* @return string|null $valor
+	*/
+	public function resolve_locator(object $locator, string $lang=DEDALO_DATA_LANG, bool $from_cache=false) {
+		return ts_object::get_term_by_locator($locator, $lang, $from_cache);
+	}//end resolve_locator
+
+
+
+	/**
 	* GET_COMPONENT_ORDER_TIPO
+	* Alias of hierarchy::get_element_tipo_from_section_map
+	* @param string $section_tipo
 	* @return string|null $element_tipo
 	*/
 	public static function get_component_order_tipo( string $section_tipo ) : ?string {
 
-		# Calculated way
+		// Calculated way
 		$element_tipo = hierarchy::get_element_tipo_from_section_map( $section_tipo, 'order' );
-		#debug_log(__METHOD__." ORDER TIPO: ".to_string($element_tipo), logger::DEBUG);
+
 
 		return $element_tipo;
 	}//end get_component_order_tipo

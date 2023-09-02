@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -9,7 +10,7 @@
 	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
-	import {tool_common} from '../../tool_common/js/tool_common.js'
+	import {tool_common, load_component} from '../../tool_common/js/tool_common.js'
 	import {render_tool_time_machine, add_component} from './render_tool_time_machine.js'
 	// import {render_time_machine_view} from './render_time_machine_view.js'
 	// import {paginator} from '../../../core/paginator/js/paginator.js'
@@ -59,6 +60,8 @@ export const tool_time_machine = function () {
 
 /**
 * INIT
+* @param object options
+* @return bool
 */
 tool_time_machine.prototype.init = async function(options) {
 
@@ -136,7 +139,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 			// fix main_element for convenience
 				const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==='main_element')
 
-			// section case. (!) note that section is not loaded traumatically from tool common build
+			// section case. (!) note that section is not loaded automatically from tool common build
 				if (main_element_ddo.model==='section') {
 					const element_options = {
 						model			: main_element_ddo.model,
@@ -159,6 +162,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 				self.main_element = self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
 
 			// ddo_map for service_time_machine. Section uses is request_config_object show
+			// NOTE: The ddo_map will be changed in service_time_machine to mode = list
 				const ddo_map = self.main_element.model==='section'
 					? self.main_element.request_config_object.show.ddo_map
 					: [{
@@ -169,7 +173,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 							section_tipo	: self.main_element.section_tipo,
 							parent			: self.main_element.section_tipo,
 							label			: self.main_element.label,
-							mode			: 'list',
+							mode			: 'tm',
 							view			: 'text'
 					   }]
 
@@ -213,6 +217,10 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 			// add to self instances list
 				self.ar_instances.push(self.service_time_machine)
 
+			// (!) force self.caller_is_calculated as false to avoid to re-use calculated
+			// component instances on lang change
+				self.caller_is_calculated = false
+
 		} catch (error) {
 			self.error = error
 			console.error(error)
@@ -225,19 +233,24 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 
 
 /**
-* LOAD_COMPONENT
+* GET_COMPONENT
 * Loads component to place in respective containers: current preview and preview version
+* @param string lang
+* @param string mode
+* @param string|int|null matrix_id
+* @return object component_instance
 */
-tool_time_machine.prototype.load_component = async function(lang, mode, matrix_id=null) {
-	// console.log("load_component:",lang, mode, matrix_id);
+tool_time_machine.prototype.get_component = async function(lang, mode, matrix_id=null) {
+	// console.log("))))))))))) get_component:",lang, mode, matrix_id);
 
 	const self = this
 
 	// to_delete_instances. Select instances with same tipo and property matrix_id not empty
 		const to_delete_instances = self.ar_instances.filter(el => el.tipo===self.main_element.tipo && el.matrix_id)
 
-	// instance_options (clone and edit)
-		const instance_options = Object.assign(clone(self.main_element.context), {
+	// instance_options (clone context and edit)
+		const options = Object.assign(clone(self.main_element.context), {
+			self				: self,
 			lang				: lang,
 			mode				: 'edit', // mode,
 			section_id			: self.main_element.section_id,
@@ -247,11 +260,11 @@ tool_time_machine.prototype.load_component = async function(lang, mode, matrix_i
 		})
 
 	// call generic common tool build
-		const component_instance = await tool_common.prototype.load_component.call(self, instance_options);
+		const component_instance = await load_component(options);
 
 
 	return component_instance
-}//end load_component
+}//end get_component
 
 
 
@@ -273,27 +286,26 @@ tool_time_machine.prototype.apply_value = function(options) {
 		const matrix_id		= options.matrix_id
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'apply_value')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			section_id		: section_id,
-			section_tipo	: section_tipo,
-			tipo			: tipo,
-			lang			: lang,
-			matrix_id		: matrix_id
-		}
-
-	// dataframe caller
-		if (self.caller_dataframe) {
-			source.arguments.caller_dataframe = self.caller_dataframe
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				section_id		: section_id,
+				section_tipo	: section_tipo,
+				tipo			: tipo,
+				lang			: lang,
+				matrix_id		: matrix_id
+			}
+		}
+
+	// dataframe caller
+		if (self.caller_dataframe) {
+			rqo.options.caller_dataframe = self.caller_dataframe
 		}
 
 	// call to the API, fetch data and get response
@@ -318,3 +330,6 @@ tool_time_machine.prototype.apply_value = function(options) {
 			})
 		})
 }//end apply_value
+
+
+// @license-end

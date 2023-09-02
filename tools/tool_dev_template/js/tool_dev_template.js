@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
@@ -16,7 +17,7 @@
 // import common to use destroy, render, refresh and other useful methods
 	import {common, create_source} from '../../../core/common/js/common.js'
 // tool_common, basic methods used by all the tools
-	import {tool_common} from '../../tool_common/js/tool_common.js'
+	import {tool_common, load_component} from '../../tool_common/js/tool_common.js'
 // specific render of the tool
 	import {render_tool_dev_template} from './render_tool_dev_template.js' // self tool rendered (called from render common)
 
@@ -41,9 +42,6 @@ export const tool_dev_template = function () {
 	this.target_lang	= null
 	this.langs			= null
 	this.caller			= null
-
-
-	return true
 }//end page
 
 
@@ -56,9 +54,9 @@ export const tool_dev_template = function () {
 	// render : using common render entry point, use the tool_common render to prepare the tool to be rendered, it will call to specific render defined in render_tool_dev_template
 	tool_dev_template.prototype.render		= tool_common.prototype.render
 	// destroy: using common destroy method
-	tool_dev_template.prototype.destroy	= common.prototype.destroy
+	tool_dev_template.prototype.destroy		= common.prototype.destroy
 	// refresh: using common refresh method
-	tool_dev_template.prototype.refresh	= common.prototype.refresh
+	tool_dev_template.prototype.refresh		= common.prototype.refresh
 	// render mode edit (default). Set the tool custom manager to build the DOM nodes view
 	tool_dev_template.prototype.edit		= render_tool_dev_template.prototype.edit
 
@@ -67,6 +65,8 @@ export const tool_dev_template = function () {
 /**
 * INIT
 * Custom tool init
+* @param object options
+* @return bool common_init
 */
 tool_dev_template.prototype.init = async function(options) {
 
@@ -83,10 +83,18 @@ tool_dev_template.prototype.init = async function(options) {
 	// set the caller if it was defined or create it and set the tool_config or create new one if tool_config was not defined.
 		const common_init = await tool_common.prototype.init.call(this, options);
 
-	// set the self specific vars not defined by the generic init (in tool_common)
-		self.lang	= options.lang // you can call to 'page_globals.dedalo_data_lang' if you want to use the actual configuration of Dédalo
-		self.langs	= page_globals.dedalo_projects_default_langs
-		self.etc	= options.etc // you own vars
+	try {
+
+		// set the self specific vars not defined by the generic init (in tool_common)
+			self.lang	= options.lang // you can call to 'page_globals.dedalo_data_lang' if you want to use the actual configuration of Dédalo
+			self.langs	= page_globals.dedalo_projects_default_langs
+			self.etc	= options.etc // you own vars
+
+	} catch (error) {
+		self.error = error
+		console.error(error)
+	}
+
 
 	return common_init
 }//end init
@@ -96,6 +104,8 @@ tool_dev_template.prototype.init = async function(options) {
 /**
 * BUILD
 * Custom tool build
+* @param bool autoload
+* @return bool common_build
 */
 tool_dev_template.prototype.build = async function(autoload=false) {
 
@@ -167,22 +177,20 @@ tool_dev_template.prototype.load_component_sample = async function(options) {
 			self.main_element.context = api_response.result.context
 
 	// second when you have the context you could load full component with full datum (context and data)
-		// context (clone and edit)
-			const context = Object.assign(clone(self.main_element.context),{
+		// use the main_elemetn context (clone and edit) and change the properties
+		// it's possible use other needs doing this function generic
+			const options = Object.assign(clone(self.main_element.context),{
+				self 		: self, // added tool instance, it will be used to assign the instance built to ar_instaces of the current tool
 				lang		: lang,
 				mode		: 'edit',
 				section_id	: self.main_element.section_id
 			})
 
-		// options
-			const options = {
-				context : context
-			}
-
 		// call generic tool common load_component
-			const component_instance = await tool_common.prototype.load_component.call(self, options);
+			const component_instance = await load_component(options);
 
-	// optional create the instance by your own instead use the tool_common load_component
+	// optional: It's possible to create the instance by your own instead use the tool_common.load_component()
+	// in this way
 			const instance_options = {
 				model			: main_element.model,
 				mode			: main_element.mode,
@@ -197,6 +205,11 @@ tool_dev_template.prototype.load_component_sample = async function(options) {
 		// get instance and init
 			const own_component_instance = await get_instance(instance_options)
 
-	// at this point component_instance and own_component_instance should be the same, the component initiated and ready to be build and render
+	// at this point component_instance and own_component_instance should be the same, the component initialized and ready to be build and render
+	// in this example we use only one of this: component_instance
 	return component_instance
 }//end load_component_sample
+
+
+
+// @license-end

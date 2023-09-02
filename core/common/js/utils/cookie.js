@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global SHOW_DEBUG, QUOTA_EXCEEDED_ERR */
 /*eslint no-undef: "error"*/
 
@@ -50,3 +51,7 @@ export const erase_cookie = (name) => {
 
 	return false
 }//end  erase_cookie
+
+
+
+// @license-end

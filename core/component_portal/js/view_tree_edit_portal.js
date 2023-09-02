@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, Promise, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -5,9 +6,10 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
-	import {get_section_records} from '../../section/js/section.js'
 	import {ui} from '../../common/js/ui.js'
 	import {object_to_url_vars} from '../../common/js/utils/index.js'
+	import {get_section_records} from '../../section/js/section.js'
+	import {set_element_css} from '../../page/js/css.js'
 	import {render_column_remove} from './render_edit_component_portal.js'
 
 
@@ -27,6 +29,8 @@ export const view_tree_edit_portal = function() {
 /**
 * RENDER
 * Manages the component's logic and appearance in client side
+* @param object self
+* @param object options
 */
 view_tree_edit_portal.render = async function(self, options) {
 
@@ -34,7 +38,7 @@ view_tree_edit_portal.render = async function(self, options) {
 		const render_level = options.render_level || 'full'
 
 	// columns_map
-		const columns_map = rebuild_columns_map(self)
+		const columns_map = await rebuild_columns_map(self)
 		self.columns_map = columns_map
 
 	// ar_section_record
@@ -52,22 +56,41 @@ view_tree_edit_portal.render = async function(self, options) {
 		}
 
 	// buttons
-		const buttons = get_buttons(self)
+		const buttons = (self.permissions > 1)
+			? get_buttons(self)
+			: null
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
 			content_data	: content_data,
-			label 			: null,
-			buttons			: buttons
+			label			: null,
+			buttons			: buttons,
+			add_styles		: ['portal','view_line'] // added to the wrapper before view style
 		})
-		wrapper.classList.add('portal', 'view_line')
+		// set pointers
+		wrapper.content_data = content_data
+
+		// on-the-fly css
+		// if expected number of columns (2) change, updates the columns CSS
+		// This happen, for sample, when user do not have enough permissions to delete
+		if (self.columns_map.length!==2) {
+			const items				= ui.flat_column_items(self.columns_map);
+			const template_columns	= items.join(' '); // like 1fr auto'
+			const css_object = {
+				".content_data" : {
+					"grid-template-columns" : template_columns
+				}
+			}
+			const selector = `${self.section_tipo}_${self.tipo}.edit.view_${self.view}`
+			set_element_css(selector, css_object)
+		}
 
 	// events
 		add_events(self, wrapper)
 
 
 	return wrapper
-}//end edit
+}//end render
 
 
 
@@ -78,57 +101,60 @@ view_tree_edit_portal.render = async function(self, options) {
 export const add_events = function(self, wrapper) {
 
 	// click delegated
-		wrapper.addEventListener("click", function(e){
+		wrapper.addEventListener('click', fn_warpper_click)
+		function fn_warpper_click(e){
+			e.stopPropagation() // Prevent to activate autocomplete behind
 
-		// remove row
-			if(e.target.matches('.button.remove')) {
-				e.preventDefault()
+			// remove row
+				if(e.target.matches('.button.remove')) {
+					e.preventDefault()
 
-				// label
-					const children = e.target.parentNode.parentNode.children
-					const ar_label = []
-					for (let i = 0; i < children.length; i++) {
-						if(children[i].textContent.length>0) {
-							ar_label.push(children[i].textContent)
+					// label
+						const children = e.target.parentNode.parentNode.children
+						const ar_label = []
+						for (let i = 0; i < children.length; i++) {
+							if(children[i].textContent.length>0) {
+								ar_label.push(children[i].textContent)
+							}
 						}
-					}
-					const label = ar_label.join(', ')
+						const label = ar_label.join(', ')
 
-				const changed_data = [Object.freeze({
-					action	: 'remove',
-					key		: JSON.parse(e.target.dataset.key),
-					value	: null
-				})]
+					const changed_data = [Object.freeze({
+						action	: 'remove',
+						key		: JSON.parse(e.target.dataset.key),
+						value	: null
+					})]
 
-				const changed = self.change_value({
-					changed_data	: changed_data,
-					label			: label,
-					refresh			: false,
-					build_autoload	: false
-				})
-				changed.then(async (api_response)=>{
+					const changed = self.change_value({
+						changed_data	: changed_data,
+						label			: label,
+						refresh			: false,
+						build_autoload	: false
+					})
+					changed.then(async (api_response)=>{
 
-					// update pagination offset
-						self.update_pagination_values('remove')
+						// update pagination offset
+							self.update_pagination_values('remove')
 
-					// refresh
-						await self.refresh({
-							build_autoload : false
-						})
+						// refresh
+							await self.refresh({
+								build_autoload : false
+							})
 
-					// check if the caller has active a tag_id
-						if(self.active_tag){
-							// filter component data by tag_id and re-render content
-							self.filter_data_by_tag_id(self.active_tag)
-						}
+						// check if the caller has active a tag_id
+							if(self.active_tag){
+								// filter component data by tag_id and re-render content
+								self.filter_data_by_tag_id(self.active_tag)
+							}
 
-					// event to update the DOM elements of the instance
-						event_manager.publish('remove_element_'+self.id, e.target.dataset.key)
-				})
+						// event to update the DOM elements of the instance
+							event_manager.publish('remove_element_'+self.id, e.target.dataset.key)
+					})
 
-				return true
-			}//end if(e.target.matches('.button.remove'))
-		})//end click event
+					return true
+				}//end if(e.target.matches('.button.remove'))
+
+		}//end fn_warpper_click
 
 
 	return true
@@ -139,7 +165,7 @@ export const add_events = function(self, wrapper) {
 /**
 * GET_CONTENT_DATA
 * Render all received section records and place it into a new div 'content_data'
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = async function(self, ar_section_record) {
 
@@ -180,6 +206,7 @@ const get_content_data = async function(self, ar_section_record) {
 		const content_data = ui.component.build_content_data(self,{button_close: null})
 			  content_data.appendChild(fragment)
 
+
 	return content_data
 }//end get_content_data
 
@@ -188,9 +215,15 @@ const get_content_data = async function(self, ar_section_record) {
 /**
 * REBUILD_COLUMNS_MAP
 * Adding control columns to the columns_map that will processed by section_recods
+* @param object self
 * @return obj columns_map
 */
 const rebuild_columns_map = async function(self) {
+
+	// columns_map already rebuilt case
+		if (self.fixed_columns_map===true) {
+			return self.columns_map
+		}
 
 	const columns_map = []
 
@@ -203,10 +236,14 @@ const rebuild_columns_map = async function(self) {
 			columns_map.push({
 				id			: 'remove',
 				label		: '', // get_label.delete || 'Delete',
-				width 		: 'auto',
+				width		: 'auto',
 				callback	: render_column_remove
 			})
 		}
+
+	// fixed as calculated
+		self.fixed_columns_map = true
+
 
 	return columns_map
 }//end rebuild_columns_map
@@ -216,7 +253,7 @@ const rebuild_columns_map = async function(self) {
 /**
 * GET_BUTTONS
 * @param object self instance
-* @return DOM node buttons_container
+* @return HTMLElement buttons_container
 */
 const get_buttons = (self) => {
 
@@ -244,11 +281,14 @@ const get_buttons = (self) => {
 			class_name		: 'button link',
 			parent			: fragment
 		})
-		button_link.addEventListener("click", async function(){
+		button_link.addEventListener('click', fn_link)
+		async function fn_link(e) {
+			e.stopPropagation()
+
 			// const section_tipo	= select_section.value
 			// const section_label	= select_section.options[select_section.selectedIndex].innerHTML;
 			const section_tipo	= target_section[0].tipo
-			const section_label	= target_section[0].label;
+			const section_label	= target_section[0].label
 
 			// iframe
 				( () => {
@@ -287,7 +327,7 @@ const get_buttons = (self) => {
 					// header label
 						const header = ui.create_dom_element({
 							element_type	: 'span',
-							inner_html		: get_label.seccion,
+							inner_html		: get_label.section,
 							class_name		: 'label'
 						})
 
@@ -308,17 +348,19 @@ const get_buttons = (self) => {
 						})
 				})()
 				return
-		})
+		}
 
 
 	// button tree terms selector
 		const button_tree_selector = ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'button add',
+			class_name		: 'button tree',
 			parent			: fragment
 		})
 		// add listener to the select
-		button_tree_selector.addEventListener('mouseup',function(e){
+		button_tree_selector.addEventListener('mouseup', fn_mousedown)
+		function fn_mousedown(e){
+			e.stopPropagation()
 
 			const caller_id = self.id || null
 			const hierarchy_sections = self.rqo.sqo.section_tipo || null
@@ -389,7 +431,7 @@ const get_buttons = (self) => {
 				)
 			}
 			window.rel_window.focus()
-		})
+		}
 
 	// buttons tools
 		if (!is_inside_tool && mode==='edit') {
@@ -408,7 +450,7 @@ const get_buttons = (self) => {
 
 /**
 * RENDER_REFERENCES
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const render_references = function(ar_references) {
 
@@ -462,3 +504,7 @@ const render_references = function(ar_references) {
 
 	return fragment
 }//end render_references
+
+
+
+// @license-end

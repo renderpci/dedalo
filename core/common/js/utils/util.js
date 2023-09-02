@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /* global Promise, structuredClone */
 /*eslint no-undef: "error"*/
 
@@ -66,6 +67,8 @@ export function JSON_parse_safely(str, error_value=null) {
 /**
 * GROUP_OBJECTS_BY
 * Group object inside an array by a given property
+* @param array xs
+* @param string|int key
 */
 export function group_objects_by(xs, key) {
 
@@ -88,11 +91,12 @@ export function group_objects_by(xs, key) {
 * @return promise
 */
 export function wait_for_global(name, timeout=300) {
+
 	return new Promise((resolve, reject) => {
 		let waited = 0
 
 		function wait(interval) {
-			console.log("waiting interval...... :",interval);
+			console.log("waiting interval...... :", interval);
 			setTimeout(() => {
 				waited += interval
 				// some logic to check if script is loaded
@@ -160,7 +164,7 @@ export async function observe_changes(element, config, once) {
 * @param object vars_obj
 * @return string url_vars
 */
-export function object_to_url_vars( vars_obj ) {
+export function object_to_url_vars(vars_obj) {
 
 	const pairs = []
 	for (const key in vars_obj) {
@@ -182,19 +186,23 @@ export function object_to_url_vars( vars_obj ) {
 */
 export function url_vars_to_object(query_string) {
 
-	// parse query string
-	const params = new URLSearchParams(query_string);
+	// default from window.location
+		if (!query_string) {
+			query_string = window.location.search
+		}
 
-	const vars_obj = {};
+	// parse query string
+		const params = new URLSearchParams(query_string);
 
 	// iterate over all keys
-	for (const key of params.keys()) {
-		if (params.getAll(key).length > 1) {
-			vars_obj[key] = params.getAll(key);
-		} else {
-			vars_obj[key] = params.get(key);
+		const vars_obj = {};
+		for (const key of params.keys()) {
+			if (params.getAll(key).length > 1) {
+				vars_obj[key] = params.getAll(key);
+			}else{
+				vars_obj[key] = params.get(key);
+			}
 		}
-	}
 
 	return vars_obj;
 }//end url_vars_to_object
@@ -336,7 +344,8 @@ export function array_equals(source, array) {
 		// Check if we have nested arrays
 		if (source[i] instanceof Array && array[i] instanceof Array) {
 			// recurse into the nested arrays
-			if (!source[i].equals(array[i]))
+			// if (!source[i].equals(array[i]))
+			if (!is_equal(source[i], array[i]))
 				return false;
 		}
 		// else if (source[i] != array[i]) {
@@ -395,7 +404,7 @@ export function array_equals(source, array) {
 	// 		}
 	// 	}
 	// }//end object_equals
-export function  object_equals (o1, o2){
+export function object_equals(o1, o2) {
 
 	// check if the o1 is object
 	// null is a object but it's not possible check his keys, so use the ===
@@ -456,6 +465,7 @@ export function is_equal(el1, el2) {
 /**
 * OPEN_WINDOW
 * Unified open window function
+* @param object options
 * @return object new_window
 */
 export function open_window(options) {
@@ -466,21 +476,31 @@ export function open_window(options) {
 
 	// options
 		const url		= options.url
-		const name		= options.name || 'New window'
+		const target	= options.target || options.name || 'New window'
 		const features	= options.features || null
-		const width	= options.width && options.width < window.screen.width
-			? options.width
-			: (default_width < window.screen.width ? default_width : window.screen.width)
-		const height = options.height && options.height < window.screen.height
-			? options.height
-			: (default_height < window.screen.height ? default_height : window.screen.height)
 
-		const final_features = `width=${width},height=${height}` + (features ? ','+features : '')
+	// window_features
+		const window_features = (()=>{
 
+			if (features==='new_tab') {
+				return  null
+			}
+
+			const width	= options.width && options.width < window.screen.width
+				? options.width
+				: (default_width < window.screen.width ? default_width : window.screen.width)
+			const height = options.height && options.height < window.screen.height
+				? options.height
+				: (default_height < window.screen.height ? default_height : window.screen.height)
+
+			return `width=${width},height=${height}` + (features ? ','+features : '')
+		})()
+
+	// window
 		const new_window = window.open(
 			url,
-			name,
-			final_features
+			target,
+			window_features
 		)
 		new_window.focus()
 
@@ -491,13 +511,37 @@ export function open_window(options) {
 
 
 /**
+* DOWNLOAD_FILE
+* Unified download files function
+* @return object new_window
+*/
+export function download_file(options) {
+
+	// options
+		const url		= options.url
+		const file_name	= options.file_name || url.substring(url.lastIndexOf('/')+1)
+
+	// anchor pseudo-link
+		const anchor	= document.createElement('a');
+		anchor.href		= url
+		anchor.target	= '_blank'
+		anchor.download	= file_name
+		anchor.click();
+		anchor.remove()
+
+	return true
+}//end download_file
+
+
+
+/**
 * FIND_UP_NODE
 * Search parent node recursively until reach the target
 * @param DOM node el
 * @param string target_tag
 * 	Sample: 'div'
 * @param function compare
-* @return DOM node|null
+* @return HTMLElement|null
 */
 export function find_up_node(el, target_tag, compare) {
 
@@ -534,3 +578,32 @@ export function pause(milliseconds) {
 		}, milliseconds)
 	})
 }//end pause
+
+
+
+/**
+* GET_FONT_FIT_SIZE
+* Calculate the convenient font size based on text length
+* and threshold. Usually vw units are used.
+* The idea is to apply a reduction factor to size when the string
+* size exceed the desired font base size
+* Used mainly by section_id column font size fit
+* @param string text
+* @param float base_size = 1.07
+* @param int threshold = 4
+* @return float font_size
+*/
+export const get_font_fit_size = (text, base_size=1.7, threshold=4) => {
+
+	const text_length = String(text).length
+
+	const font_size = (text_length > Math.floor(base_size + threshold) )
+		? base_size - (text_length * 0.037)
+		: base_size
+
+	return font_size
+}//end get_font_fit_size
+
+
+
+// @license-end

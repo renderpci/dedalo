@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_ROOT_WEB */
 /*eslint no-undef: "error"*/
 
@@ -39,8 +40,6 @@ export const component_json = function(){
 
 	// save_on_deactivate. Prevent to auto-save value when component is deactivated
 	this.save_on_deactivate	= false
-
-	return true
 }//end component_json
 
 
@@ -67,8 +66,8 @@ export const component_json = function(){
 
 	// render
 	component_json.prototype.list				= render_list_component_json.prototype.list
+	component_json.prototype.tm					= render_edit_component_json.prototype.list
 	component_json.prototype.edit				= render_edit_component_json.prototype.edit
-	component_json.prototype.tm					= render_edit_component_json.prototype.edit
 	component_json.prototype.search				= render_search_component_json.prototype.search
 	component_json.prototype.change_mode		= component_common.prototype.change_mode
 
@@ -108,6 +107,7 @@ component_json.prototype.load_editor_files = async function() {
 * SET_VALUE
 * Overwrites component_common method
 * @param mixed value
+* @param int key = 0
 * @return bool
 */
 component_json.prototype.set_value = async function(value, key=0) {
@@ -188,14 +188,14 @@ component_json.prototype.save_sequence = async function(editor) {
 			try {
 				v = clone(current_value)
 			}catch(e) {
-				console.warn("Error. JSON value is invalid!",);
+				console.warn('Error. JSON value is invalid!',);
 			}
 
 			if (!v) {
 				// styles as error
-					self.node.classList.add("error")
+					self.node.classList.add('error')
 
-				alert("Error: component_json. Trying so save non validated json value!");
+				alert('Error: component_json. Trying so save non validated json value!');
 				return false
 			}
 		}
@@ -204,7 +204,7 @@ component_json.prototype.save_sequence = async function(editor) {
 		const db_value 	= typeof self.data.value[0]!=="undefined" ? self.data.value[0] : null
 		const changed 	= JSON.stringify(db_value)!==JSON.stringify(current_value)
 		if (!changed) {
-			console.log("No changes are detected. Stop save");
+			console.log('No changes are detected. Stop save');
 			return false
 		}
 
@@ -221,5 +221,10 @@ component_json.prototype.save_sequence = async function(editor) {
 			refresh			: false
 		})
 
+
 	return save_response
 }//end save_sequence
+
+
+
+// @license-end

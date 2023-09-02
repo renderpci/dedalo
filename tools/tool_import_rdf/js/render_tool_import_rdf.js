@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -5,7 +6,7 @@
 
 // imports
 	import {ui} from '../../../core/common/js/ui.js'
-	// import {clone, dd_console} from '../../../core/common/js/utils/index.js'
+	import {data_manager} from '../../../core/common/js/data_manager.js'
 
 
 
@@ -23,7 +24,7 @@ export const render_tool_import_rdf = function() {
 /**
 * RENDER_TOOL_IMPORT_RDF
 * Render node for use like button
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_tool_import_rdf.prototype.edit = async function(options={render_level:'full'}) {
 
@@ -44,16 +45,6 @@ render_tool_import_rdf.prototype.edit = async function(options={render_level:'fu
 		})
 
 
-	// modal container
-		// if (!window.opener) {
-		// 	const header	= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
-		// 	const modal		= ui.attach_to_modal(header, wrapper, null)
-		// 	modal.on_close	= () => {
-		// 		self.destroy(true, true, true)
-		// 	}
-		// }
-
-
 	return wrapper
 }//end render_tool_import_rdf
 
@@ -61,7 +52,7 @@ render_tool_import_rdf.prototype.edit = async function(options={render_level:'fu
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data_edit = async function(self) {
 
@@ -75,9 +66,43 @@ const get_content_data_edit = async function(self) {
 		})
 
 	// get the component_iri data
-	const iri_node = render_component_dato(self)
+		const iri_node = render_component_dato(self)
+		components_container.appendChild(iri_node)
 
-	components_container.appendChild(iri_node)
+
+	// application lang selector
+
+		// default_lang_of_file_to_import
+
+		const default_lang_of_file_to_import = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'default_lang',
+			inner_html 		: get_label.default_lang_of_file_to_import || 'Default language of the file to import. Data without specified language will be imported in:',
+			parent 			: components_container
+		})
+
+
+		const lang_datalist = page_globals.dedalo_projects_default_langs
+		const dedalo_aplication_langs_selector = ui.build_select_lang({
+			langs		: lang_datalist,
+			selected	: page_globals.dedalo_application_lang,
+			class_name	: 'dedalo_aplication_langs_selector'
+		})
+		components_container.appendChild(dedalo_aplication_langs_selector)
+
+		dedalo_aplication_langs_selector.addEventListener('change', async function(){
+			const api_response = await data_manager.request({
+				body : {
+					action	: 'change_lang',
+					dd_api	: 'dd_utils_api',
+					options	: {
+						dedalo_data_lang		: dedalo_aplication_langs_selector.value,
+						dedalo_application_lang	: dedalo_aplication_langs_selector.value
+					}
+				}
+			})
+			// window.location.reload(false);
+		})
 
 	// buttons container
 		const buttons_container = ui.create_dom_element({
@@ -199,3 +224,5 @@ const render_component_dato = function(self) {
 }//end render_component_dato
 
 
+
+// @license-end

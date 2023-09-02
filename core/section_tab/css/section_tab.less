@@ -3,11 +3,12 @@
 *
 * Included from main.less file
 */
-.section_tab {
-	// background-color: #50f9af;
+.wrapper_grouper.section_tab {
 
 	&.edit {
 		width: 100%;
+		margin-top: 1rem;
+		margin-bottom: 1rem;
 
 		// tab headers
 		>.tab_label {
@@ -45,24 +46,20 @@
 				background-color: #ffffff;
 				color: #555555;
 				border: 1px solid #dddddd;
-				border-top: 2px solid orange;
-				border-bottom: 1px solid #ffffff;
+				border-top: 2px solid @color_orange_dedalo;
+				border-bottom: 2px solid #ffffff;
 				margin-bottom: 0px;
+				z-index: 1;
 			}
 		}
 
 		// tab content
 		>.tab {
-			//background-color: #A3E1BF;
-			display: none;
-			// padding-top: 5px;
-			// border: 1px solid #ddd;
-			// background-color: rgba(249,249,249,0.65);
 			width: 100%;
+			display: none;
 
 			&.active {
-				display: table;
-				// padding-top: 2px;
+				display: grid;
 			}
 		}
 	}

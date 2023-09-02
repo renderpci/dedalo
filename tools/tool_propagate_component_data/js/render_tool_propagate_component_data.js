@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, tool_propagate_component_data */
 /*eslint no-undef: "error"*/
 
@@ -7,7 +8,7 @@
 	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	// import {get_tool_label} from '../../tool_common/js/tool_common.js'
-	// import {printf} from '../../../core/common/js/utils/index.js'
+	// import {pause} from '../../../core/common/js/utils/util.js'
 
 
 
@@ -27,7 +28,7 @@ export const render_tool_propagate_component_data = function() {
 * Render tool DOM nodes
 * This function is called by render common attached in 'tool_propagate_component_data.js'
 * @param object options
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_tool_propagate_component_data.prototype.edit = async function(options) {
 
@@ -47,17 +48,6 @@ render_tool_propagate_component_data.prototype.edit = async function(options) {
 			content_data : content_data
 		})
 
-	// modal container
-		// if (!window.opener) {
-		// 	const header	= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
-		// 	const modal		= ui.attach_to_modal(header, wrapper, null)
-		// 	modal.on_close	= () => {
-		// 		self.caller.refresh()
-		// 		// when closing the modal, common destroy is called to remove tool and elements instances
-		// 		self.destroy(true, true, true)
-		// 	}
-		// }
-
 
 	return wrapper
 }//end edit
@@ -67,17 +57,17 @@ render_tool_propagate_component_data.prototype.edit = async function(options) {
 /**
 * GET_CONTENT_DATA
 * Render tool body or 'content_data'
-* @param instance self
-* @return DOM node content_data
+* @param object self
+* @return HTMLElement content_data
 */
 const get_content_data = async function(self) {
 
-	const fragment = new DocumentFragment()
+	// DocumentFragment
+		const fragment = new DocumentFragment()
 
 	// short vars
 		const section_tipo		= self.caller.section_tipo
 		const component_list	= self.component_list
-
 
 	// section_info
 		const section_info = ui.create_dom_element({
@@ -85,7 +75,6 @@ const get_content_data = async function(self) {
 			class_name		: 'section_info',
 			parent			: fragment
 		})
-
 		// section_name
 			ui.create_dom_element({
 				element_type	: 'h3',
@@ -109,9 +98,14 @@ const get_content_data = async function(self) {
 		})
 
 	// component caller
-		self.component_to_propagate.render()
-		.then(function(component_node){
-			components_list_container.appendChild(component_node)
+		ui.load_item_with_spinner({
+			container	: components_list_container,
+			callback	: async () => {
+				// await pause(2000)
+				await self.get_component_to_propagate()
+				const component_node = await self.component_to_propagate.render()
+				return component_node
+			}
 		})
 
 	// buttons_container
@@ -122,8 +116,39 @@ const get_content_data = async function(self) {
 		})
 
 	// info_text
-		const section		= self.caller.caller.caller
-		const text_string	= self.get_tool_label('content_will_be_added_removed', section.total)
+		const section = self.caller.caller?.caller
+		if (!section || section.model!=='section' || section.mode!=='edit') {
+			console.error('Ignored call. Unable to get valid section. caller:', self.caller);
+			console.log('section:', section);
+			const content_data = ui.tool.build_content_data(self)
+			let label = ''
+			switch (true) {
+				case !section:
+					label = 'Caller section is unavailable'
+					break;
+				case section.model!=='section':
+					label = 'Caller is ' + section.model + '. This tool only works in the context of editing sections.'
+					break;
+				case section.mode!=='edit':
+					label = 'Sorry. Only edit mode is allowed. This tool only works in the context of editing sections.'
+					break;
+			}
+			content_data.appendChild(ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'msg',
+				inner_html		: label
+			}))
+			return content_data
+		}
+
+	// filter. Check the filter to know if the user has apply some filter or if will apply to all records
+		const filter = section.rqo && section.rqo.sqo && section.rqo.sqo.filter
+			? section.rqo.sqo.filter.$and.length > 0
+			: false
+
+		const total = await section.get_total()
+
+		const text_string = self.get_tool_label('content_will_be_added_removed', total)
 			|| 'The content of the component in the current {0} records will be added or removed'
 		ui.create_dom_element({
 			element_type	: 'div',
@@ -143,15 +168,23 @@ const get_content_data = async function(self) {
 		const button_replace = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'warning add button_replace',
-			// inner_html	: get_label.tool_do_add || 'Add',
 			inner_html		: self.get_tool_label('tool_do_replace') || 'Replace values',
 			parent			: buttons_container
 		})
-		button_replace.addEventListener("click", async function(e){
+		button_replace.addEventListener('click', fn_replace)
+		async function fn_replace(e) {
 			e.preventDefault()
 
 			await ui.component.deactivate(self.component_to_propagate)
 
+			if(filter === false){
+				const alert_replace_all = (self.get_tool_label('will_replaced_all_records') || 'All records will be replaced') + ' '+
+				(get_label.total || 'Total') + ': '  + total
+
+				if (!confirm(alert_replace_all)){
+					return false
+				}
+			}
 			// propagate_component_data
 			if (confirm(get_label.sure || 'Sure?')) {
 				content_data.classList.add('loading')
@@ -161,7 +194,7 @@ const get_content_data = async function(self) {
 					response_text.innerHTML = response.msg
 				})
 			}
-		})
+		}//end fn_replace
 
 	// button_add
 		const button_add = ui.create_dom_element({
@@ -171,7 +204,8 @@ const get_content_data = async function(self) {
 			inner_html		: self.get_tool_label('tool_do_add') || 'Add',
 			parent			: buttons_container
 		})
-		button_add.addEventListener("click", function(e){
+		button_add.addEventListener('click', fn_add)
+		function fn_add(e){
 			e.preventDefault()
 			// propagate_component_data
 			if (confirm(get_label.sure || 'Sure?')) {
@@ -182,17 +216,18 @@ const get_content_data = async function(self) {
 					response_text.innerHTML = response.msg
 				})
 			}
-		})
+		}//end fn_add
 
 	// button_delete
 		const button_delete = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'warning remove button_delete',
-			// inner_html	: get_label.elminar_contenido || 'Remove',
+			// inner_html	: get_label.delete_content || 'Remove',
 			inner_html		: self.get_tool_label('tool_do_delete') || 'Delete',
 			parent			: buttons_container
 		})
-		button_delete.addEventListener("click", function(e){
+		button_delete.addEventListener('click', fn_delete)
+		function fn_delete(e){
 			e.preventDefault()
 			// propagate_component_data
 			if (confirm(get_label.sure || 'Sure?')) {
@@ -203,7 +238,7 @@ const get_content_data = async function(self) {
 					response_text.innerHTML = response.msg
 				})
 			}
-		})
+		}//end fn_delete
 
 	// content_data
 		const content_data = ui.tool.build_content_data(self)
@@ -212,3 +247,6 @@ const get_content_data = async function(self) {
 
 	return content_data
 }//end get_content_data
+
+
+// @license-end

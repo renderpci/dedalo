@@ -16,6 +16,7 @@
 			user-select: none !important;
 			animation-play-state: paused;
 			/*transition: opacity 0.25s*/
+			cursor: wait;
 		}
 		.hide {
 			display: none !important;
@@ -29,12 +30,23 @@
 			margin: 0!important;
 		}
 	</style>
-	<link rel="stylesheet" href="../page/css/main.css" media="print" onload="this.media='all'; this.onload=null;">
-	<script defer="defer" rel="preload" src="../common/js/environment.js.php" as="script"></script>
+	<link href='../api/v1/json/' rel='preconnect'>
+	<!-- <link rel="preload" href="../page/css/main.css" as=style /> -->
+	<!-- <link rel="preload" href="../common/js/environment.js.php" as="script" /> -->
+	<link rel="stylesheet" href="../page/css/main.css" />
+	<script defer="defer" src="../common/js/environment.js.php"></script>
+	<script type="importmap">
+		{
+			"imports": {
+				"three"			: "../../lib/threejs/build/three.module.js",
+				"three/addons/"	: "../../lib/threejs/jsm/"
+			}
+		}
+	</script>
 </head>
 <body>
 	<div id="main" class=""></div>
 	<div id="debug" class="debug hide"></div>
-	<script defer="defer" type="module" src="../page/js/index.js"></script>
+	<script defer="defer" type="module" src="js/index.js"></script>
 </body>
 </html>

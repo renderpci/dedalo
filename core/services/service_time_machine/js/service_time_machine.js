@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global page_globals, SHOW_DEVELOPER */
 /*eslint no-undef: "error"*/
 
@@ -20,16 +21,17 @@
 */
 export const service_time_machine = function () {
 
-	this.id				= null
-	this.model			= null
-	this.mode			= null
-	this.lang			= null
-	this.node			= null
-	this.ar_instances	= null
-	this.status			= null
-	this.events_tokens	= []
-	this.type			= null
-	this.caller			= null
+	this.id					= null
+	this.model				= null
+	this.mode				= null
+	this.lang				= null
+	this.node				= null
+	this.ar_instances		= null
+	this.status				= null
+	this.events_tokens		= []
+	this.type				= null
+	this.caller				= null
+	this.fixed_columns_map	= null
 }//end service_time_machine
 
 
@@ -51,6 +53,8 @@ export const service_time_machine = function () {
 
 /**
 * INIT
+* @param object options
+* @return bool
 */
 service_time_machine.prototype.init = async function(options) {
 
@@ -90,7 +94,8 @@ service_time_machine.prototype.init = async function(options) {
 	self.request_config	= await self.build_request_config()
 
 	// status update
-	self.status = 'initiated'
+	self.status = 'initialized'
+
 
 	return true
 }//end init
@@ -100,14 +105,12 @@ service_time_machine.prototype.init = async function(options) {
 /**
 * BUILD
 * @param bool autoload = false
-* @return promise
+* @return bool
 *	resolve bool true
 */
 service_time_machine.prototype.build = async function(autoload=false) {
 
 	const self = this
-
-	// console.log("===================== 1 build service_time_machine:",self);
 
 	// status update
 		self.status = 'building'
@@ -139,6 +142,24 @@ service_time_machine.prototype.build = async function(autoload=false) {
 			const action	= 'search'
 			const add_show	= true
 			self.rqo = self.rqo || await self.build_rqo_show(self.request_config_object, action, add_show)
+
+			// set the ddo_map with mode = list and permissions = 1
+			// This change is important because the components could be configured in edit mode
+			// if the component is loaded in edit mode it will fire the default data and save the section
+			// IT'S A VERY BAD SITUATION, BECAUSE THE SECTION IS SAVED WITH THE TM DATA (OLD DATA)
+				self.rqo.show.ddo_map.map(ddo => {
+
+					ddo.mode		= 'tm'
+					ddo.permissions	= 1
+
+					return ddo
+				})
+
+			// add component info. For API navigation track info only
+			// get tipo from caller (tool_time_machine) caller (component or section)
+				self.rqo.options = {
+					caller_tipo : self.caller.caller.tipo
+				}
 		}
 		await generate_rqo()
 
@@ -147,45 +168,19 @@ service_time_machine.prototype.build = async function(autoload=false) {
 
 			// API request. Get context and data
 				const api_response = await data_manager.request({
-					body : self.rqo
+					body		: self.rqo,
+					use_worker	: true
 				})
-				if(SHOW_DEVELOPER===true) {
-					dd_console("2 [service_time_machine.build] by "+self.caller.model+" api_response:",
-						'DEBUG',
-						[self.id, clone(api_response), api_response.debug ? api_response.debug.real_execution_time : '']
-					);
-				}
 
 			// set the result to the datum
-				self.datum		= api_response.result
+				self.datum		= api_response.result || []
 				self.data		= self.datum.data.find(el => el.tipo===self.tipo && el.typo==='sections')
 				self.context	= self.datum.context.find(el => el.type==='section')
 
+
 			// count rows
 				if (!self.total) {
-					const count_sqo = clone(self.rqo.sqo)
-					delete count_sqo.limit
-					delete count_sqo.offset
-					delete count_sqo.select
-					delete count_sqo.generated_time
-					const source	= create_source(self, null)
-					const rqo_count = {
-						action			: 'count',
-						sqo				: count_sqo,
-						prevent_lock	: true,
-						source			: source
-					}
-					self.total = function() {
-						return new Promise(function(resolve){
-							data_manager.request({
-								body : rqo_count
-							})
-							.then(function(api_count_response){
-								self.total = api_count_response.result.total
-								resolve(self.total)
-							})
-						})
-					}
+					self.get_total()
 				}
 		}//end if (autoload===true)
 
@@ -230,11 +225,15 @@ service_time_machine.prototype.build = async function(autoload=false) {
 				)
 		}//end if (!self.paginator)
 
+	// reset fixed_columns_map (prevents to apply rebuild_columns_map more than once)
+		self.fixed_columns_map = false
+
 	// columns_map. Get the columns_map to use into the list
-		self.columns_map = get_columns_map(self.context)
+		self.columns_map = get_columns_map(self.context, self.datum.context)
 
 	// status update
 		self.status = 'built'
+
 
 	return true
 }//end build
@@ -402,15 +401,7 @@ service_time_machine.prototype.build_request_config = function() {
 			if (config_ddo_map) {
 				const config_ddo_map_length = config_ddo_map.length
 				for (let i = 0; i < config_ddo_map_length; i++) {
-
 					const item = config_ddo_map[i]
-
-					// safe parent check
-						if (item.parent!==section_tipo) {
-							console.log('Fixed wrong ddo parent from:', config_ddo_map[i].parent, ' to ', section_tipo);
-							item.parent = section_tipo
-						}
-
 					ddo_map.push(item)
 				}
 			}
@@ -428,3 +419,75 @@ service_time_machine.prototype.build_request_config = function() {
 
 	return request_config
 }//end build_request_config
+
+
+
+/**
+* GET_TOTAL
+* Exec a async API call to count the current sqo records
+* @return int total
+*/
+service_time_machine.prototype.get_total = async function() {
+
+	const self = this
+
+	// debug
+		if(SHOW_DEBUG===true) {
+			console.warn('service_time_machine get_total self.total:', self.total);
+		}
+
+	// already calculated case
+		if (self.total || self.total==0) {
+			return self.total
+		}
+
+	// queue. Prevent double resolution calls to API
+		if (self.loading_total_status==='resolving') {
+			return new Promise(function(resolve){
+				setTimeout(function(){
+					resolve( self.get_total() )
+				}, 100)
+			})
+		}
+
+	// loading status update
+		self.loading_total_status = 'resolving'
+
+	// API request
+		const count_sqo = clone(self.rqo.sqo)
+		delete count_sqo.limit
+		delete count_sqo.offset
+		delete count_sqo.select
+		delete count_sqo.generated_time
+		const source	= create_source(self, null)
+		const rqo_count = {
+			action			: 'count',
+			sqo				: count_sqo,
+			prevent_lock	: true,
+			source			: source
+		}
+		const api_count_response = await data_manager.request({
+			body		: rqo_count,
+			use_worker	: true
+		})
+
+	// API error case
+		if (!api_count_response.result || api_count_response.error) {
+			console.error('Error on count total : api_count_response:', api_count_response);
+			return
+		}
+
+	// set result
+		self.total = api_count_response.result.total
+
+
+	// loading status update
+		self.loading_total_status = 'resolved'
+
+
+	return self.total
+}//end get_total
+
+
+
+// @license-end

@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label*/
 /*eslint no-undef: "error"*/
 
@@ -9,10 +10,7 @@
 	// import {pause} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {set_element_css} from '../../page/js/css.js'
-	import {
-		render_server_response_error,
-		no_records_node
-	} from '../../section/js/render_common_section.js'
+	import {no_records_node} from '../../section/js/render_common_section.js'
 	import {edit_user_search_preset, load_search_preset} from './search_user_presets.js'
 	import {render_filter} from './render_search.js'
 
@@ -34,19 +32,12 @@ export const view_search_user_presets = function() {
 * Render wrapper node
 * @param object self
 * @param object options
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_search_user_presets.render = async function(self, options) {
 
 	// options
 		const render_level = options.render_level || 'full'
-
-	// running_with_errors case
-		if (self.running_with_errors) {
-			return render_server_response_error(
-				self.running_with_errors
-			)
-		}
 
 	// columns_map
 		const columns_map	= await rebuild_columns_map(self)
@@ -136,7 +127,7 @@ view_search_user_presets.render = async function(self, options) {
 * Render content data
 * @param array ar_section_record
 * @param object self
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = async function(ar_section_record, self) {
 
@@ -241,7 +232,7 @@ const rebuild_columns_map = async function(self) {
 /**
 * RENDER_COLUMN_APPLY_PRESET
 * @param object options
-* @return DOM node button_apply
+* @return HTMLElement button_apply
 */
 export const render_column_apply_preset = function(options) {
 
@@ -293,7 +284,7 @@ export const render_column_apply_preset = function(options) {
 /**
 * RENDER_COLUMN_ID
 * @param object options
-* @return DOM node button_edit
+* @return HTMLElement button_edit
 */
 export const render_column_id = function(options) {
 
@@ -351,7 +342,7 @@ export const render_column_id = function(options) {
 /**
 * RENDER_COLUMN_REMOVE
 * @param object options
-* @return DOM node delete_button
+* @return HTMLElement delete_button
 */
 export const render_column_remove = function(options) {
 
@@ -385,3 +376,7 @@ export const render_column_remove = function(options) {
 
 	return delete_button
 }//end render_column_remove()
+
+
+
+// @license-end

@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -23,7 +24,7 @@ export const render_search_component_email = function() {
 /**
 * SEARCH
 * Render node for use in search
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_search_component_email.prototype.search = async function(options) {
 
@@ -52,7 +53,7 @@ render_search_component_email.prototype.search = async function(options) {
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 
@@ -131,3 +132,5 @@ const get_input_element = (i, current_value, self) => {
 }//end get_input_element
 
 
+
+// @license-end

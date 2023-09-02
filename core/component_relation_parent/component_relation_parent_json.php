@@ -14,8 +14,6 @@
 
 
 // context
-
-
 	// if($options->get_context===true && $permissions>0){
 	// 	switch ($options->context_type) {
 	// 		case 'simple':
@@ -80,14 +78,14 @@
 				$subdatum = $this->get_subdatum($tipo, $value);
 
 				// add subcontext
-				$ar_subcontext	= $subdatum->context;
+				$ar_subcontext = $subdatum->context;
 				foreach ($ar_subcontext as $current_context) {
 					$context[] = $current_context;
 				}
 
 				// add subdata
 				$ar_subdata = $subdatum->data;
-				if ($mode==='list') {
+				if ($mode==='list' || $mode==='tm') {
 					foreach ($ar_subdata as $current_data) {
 
 						$current_data->parent_tipo			= $tipo;

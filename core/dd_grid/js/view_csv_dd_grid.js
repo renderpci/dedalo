@@ -1,7 +1,8 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
+
+
 /*eslint no-undef: "error"*/
 /*eslint no-unused-vars: "error"*/
-
-
 
 
 // imports
@@ -316,7 +317,7 @@ const get_table_columns = function(current_data) {
 /**
 * GET_DIV_CONTAINER
 * @param object
-* @return DOM node div_container (div)
+* @return HTMLElement div_container
 */
 	// const get_row_container = function() {
 
@@ -353,15 +354,43 @@ const get_header_column = function(current_data) {
 */
 const get_text_column = function(current_data) {
 
-	const text = current_data.value && Array.isArray(current_data.value)
-		? current_data.value.join(' ')
+	const records_separator = (current_data.records_separator)
+		? current_data.records_separator
+		: ' | '
+
+	const flat_html = current_data.value && Array.isArray(current_data.value)
+		? current_data.value.join(records_separator)
 		: (current_data.value || '')
 
+	const decode_escaped_html = (str) =>
+		str.replace( /&(\D+);/gi,
+		(tag) =>
+			({
+				'&nbsp;'	: ' ',
+				'&amp;'		: '&',
+				'&#38;'		: '&',
+				'&lt;'		: '<',
+				'&#60;'		: '<',
+				'&gt;'		: '>',
+				'&#62;'		: '>',
+				'&apos;'	: "'",
+				'&#39;'		: "'",
+				'&quot;'	: '"',
+				'&#34;'		: '"'
+			}[tag])
+	)
+
+	// convert paragraphs to return and remove first and last p tags
+	const html_with_return	= flat_html.replace(/<\/p><p>/g, '\n')
+	const html_string		= html_with_return.replace('<p>', '').replace('</p>', '')
+	const text				= decode_escaped_html(html_string)
 	// value
 		const value = text
 
 	return value
 }//end get_text_column
+
+
 
 
 
@@ -435,3 +464,7 @@ const get_section_id_column = function(current_data) {
 
 	return value
 }//end get_section_id_column
+
+
+
+// @license-end

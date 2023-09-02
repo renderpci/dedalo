@@ -132,7 +132,7 @@ final class Ffmpeg {
 			#$file = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . "/{$quality}/{$name}.{$extension}";
 
 				#
-				# Search for every possible file whit this name and unknow extension
+				# Search for every possible file whit this name and unknown extension
 				$target_dir = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . "/{$quality}";
 				if (is_dir($target_dir)) {
 
@@ -211,17 +211,26 @@ final class Ffmpeg {
 	* @param $setting
 	*	ffmpeg_settings to apply like '404_pal_16x9' (in folder /media_engine/class/ffmpeg_settings)
 	*
-	* @return string|null $av_alternate_command_exc
-	*	Terminal command response
+	* @return object $response
 	*/
-	public function create_av_alternate(AVObj $AVObj, string $setting) : ?string {
+	public function create_av_alternate(AVObj $AVObj, string $setting) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
 
 		// load ar_settings
 			$this->ar_settings = $this->get_ar_settings();
 
 		// verify setting exists
 			if( !in_array($setting, $this->ar_settings) ) {
-				die("Error: setting: '$setting' not exits! (create_av_alternate). Please contact with your admin to create");
+				// die("Error: setting: '$setting' not exits! (create_av_alternate). Please contact with your admin to create");
+				$response->msg .= " Error: setting: '$setting' do not exits! (create_av_alternate). Please contact with your admin to create";
+				debug_log(__METHOD__.
+					" $response->msg"
+					, logger::ERROR
+				);
+				return $response;
 			}
 
 		// import vars from settings file
@@ -263,12 +272,22 @@ final class Ffmpeg {
 				try{
 					$create_dir = @mkdir($final_target_path, 0777);
 				}catch(Exception $e) {
-					echo 'Exception: ',  $e->getMessage(), "\n";
+					$response->msg .= " Exception Error on create directory";
+					debug_log(__METHOD__
+						. " $response->msg " . PHP_EOL
+						. 'exception message: ' . $e->getMessage()
+						, logger::ERROR
+					);
+					return $response;
 				}
 				if(!$create_dir) {
-					$msg = "Error on read or create directory for \"$setting\". Permission denied !";
-					if(SHOW_DEBUG===true) $msg .= " final_target_path: $final_target_path";
-					throw new Exception($msg, 1);
+					$response->msg .= " Error on read or create directory for \"$setting\". Permission denied !";
+					debug_log(__METHOD__
+						. " $response->msg " . PHP_EOL
+						. 'final_target_path: ' .$final_target_path
+						, logger::ERROR
+					);
+					return $response;
 				}
 			}
 			// dir set permissions 0777
@@ -277,7 +296,14 @@ final class Ffmpeg {
 				if($actualPerms < $wantedPerms) {
 					$chmod = chmod($final_target_path, $wantedPerms);
 					if(!$chmod) {
-						throw new Exception("Error on set valid permissions to directory for \"$setting\".", 1);
+						$response->msg .= "Error on set valid permissions to directory";
+						debug_log(__METHOD__
+							. " $response->msg " . PHP_EOL
+							. 'setting: ' .to_string($setting) . PHP_EOL
+							. 'final_target_path: ' .$final_target_path
+							, logger::ERROR
+						);
+						return $response;
 					}
 				}
 
@@ -290,7 +316,14 @@ final class Ffmpeg {
 				$is_all_ok = false;
 				$vob_files = array();
 				if(!is_dir($src_file.'/VIDEO_TS')){
-					throw new Exception("Error: is necessary the DVD structure (VIDEO_TS)", 1);
+					$response->msg .= " Error: is necessary the DVD structure (VIDEO_TS)";
+					debug_log(__METHOD__
+						. " $response->msg " . PHP_EOL
+						. 'setting: ' .to_string($setting) . PHP_EOL
+						. 'final_target_path: ' .$final_target_path
+						, logger::ERROR
+					);
+					return $response;
 				}
 				//minimum size of the initial vob (512KB)
 				$vob_filesize = 512*1000;
@@ -311,9 +344,17 @@ final class Ffmpeg {
 					foreach ($vob_files as $vob_file) {
 						$concat .= $vob_file.'|';
 					}
-					$src_file	= '\'concat:'.$concat.'\'';
+					$src_file = '\'concat:'.$concat.'\'';
 				}else{
-					throw new Exception("Error: is necessary the DVD structure (.VOB files)", 1);
+					$response->msg .= " Error: is necessary the DVD structure (.VOB files)";
+					debug_log(__METHOD__
+						. " $response->msg " . PHP_EOL
+						. 'setting: ' .to_string($setting) . PHP_EOL
+						. 'src_file: ' .$src_file .PHP_EOL
+						. 'vob_files: ' .to_string($vob_files)
+						, logger::ERROR
+					);
+					return $response;
 				}
 			}// end if source file is directory
 
@@ -330,7 +371,14 @@ final class Ffmpeg {
 			if( !is_dir($tmp_folder) ) {
 				$create_dir = mkdir($tmp_folder, 0777);
 				if(!$create_dir) {
-					throw new Exception("Error on read or create directory for \"tmp\" folder. Permission denied ! ", 1);
+					$response->msg .= " Error on read or create directory for \"tmp\" folder. Permission denied !";
+					debug_log(__METHOD__
+						. " $response->msg " . PHP_EOL
+						. 'setting: ' .to_string($setting) . PHP_EOL
+						. 'tmp_folder: ' .$tmp_folder
+						, logger::ERROR
+					);
+					return $response;
 				}
 			}
 
@@ -339,7 +387,18 @@ final class Ffmpeg {
 			$actualPerms = fileperms($tmp_folder);
 			if($actualPerms < $wantedPerms) {
 				$chmod = chmod($tmp_folder, $wantedPerms);
-				if(!$chmod) die(" Sorry. Error on set valid permissions to directory for \"tmp\".  ") ;
+				if(!$chmod) {
+					// die(" Sorry. Error on set valid permissions to directory for \"tmp\".  ") ;
+					$response->msg .= " Error on set valid permissions to directory for \"tmp\" ";
+					debug_log(__METHOD__
+						. " $response->msg " . PHP_EOL
+						. 'setting: ' .to_string($setting) . PHP_EOL
+						. 'tmp_folder: '.$tmp_folder . PHP_EOL
+						. 'chmod: ' . to_string($chmod)
+						, logger::ERROR
+					);
+					return $response;
+				}
 			}
 
 		# target quality
@@ -376,7 +435,8 @@ final class Ffmpeg {
 				case ($source_with_audio===false):
 					#
 					# SOURCE NOT CONTAINS ANY AUDIO TRACK
-					return null;
+					$response->msg .= 'Source does not contains audio';
+					return $response;
 					break;
 
 				default:
@@ -454,29 +514,39 @@ final class Ffmpeg {
 		}//end if($setting=='audio') {
 
 
-		if(SHOW_DEBUG===true) {
-			debug_log(__METHOD__." Creating AV version:\n ".to_string($command), logger::DEBUG);
-		}
+		// debug
+			debug_log(__METHOD__
+				." Creating AV version:".PHP_EOL
+				.' command: ' . $command
+				, logger::DEBUG
+			);
 		#$av_alternate_command_exc = exec_::exec_command($command);
 
-		# SH FILE
-		#if(is_resource($prgfile)) chmod($prgfile, 0755);
-		$fp = fopen($prgfile, "w");
-		fwrite($fp, "#!/bin/bash\n");
-		fwrite($fp, "$command\n");
-		fclose($fp);
+		// SH FILE
+			$fp = fopen($prgfile, "w");
+			fwrite($fp, "#!/bin/bash\n");
+			fwrite($fp, "$command\n");
+			fclose($fp);
+			// check the file and permissions
+			if(file_exists($prgfile)) {
+				chmod($prgfile, 0755);
+			}else{
+				// throw new Exception("Error Processing Media. Script file do not exists or is not accessible", 1);
+				debug_log(__METHOD__
+					. " Error Processing Media. Script file do not exists or is not accessible " . PHP_EOL
+					. 'command: '. $command
+					, logger::ERROR
+				);
+			}
 
-		if(file_exists($prgfile)) {
-			chmod($prgfile, 0755);
-		}else{
-			throw new Exception("Error Processing Media. Script file not exists or is not accessible", 1);
-			#trigger_error("Error Processing Media. Script file not exists or is not accessible");
-		}
-
-		$av_alternate_command_exc = exec_::exec_sh_file($prgfile);
+		$response = new stdClass();
+			$response->result	= true;
+			$response->msg		= 'OK. Request done';
+			$response->command	= $command;
+			$response->prgfile	= $prgfile;
 
 
-		return $av_alternate_command_exc;
+		return $response;
 	}//end create_av_alternate
 
 
@@ -501,16 +571,24 @@ final class Ffmpeg {
 
 		// aspect_ratio_cmd
 			$aspect_ratio = strtolower($AVObj->get_aspect_ratio());
-			$aspect_ratio_cmd = ($aspect_ratio==='4x3')
-				? '-vf scale=540:404:force_original_aspect_ratio'
-				: '';
+			if($aspect_ratio==='4x3') {
+				// $aspect_ratio = '-vf scale=540:404:force_original_aspect_ratio';
+				$aspect_ratio = '540x404';
+			}else{
+				$aspect_ratio = '720x404';
+			}
+			$aspect_ratio_cmd = '-s ' . $aspect_ratio;
 
 		// src_file. If the default does not exist, we look for another from higher to lower
 			if(!file_exists($src_file)) {
 				$src_file = $this->get_master_media_file($AVObj);
 			}
 			if (!$src_file) {
-				debug_log(__METHOD__." Error: src_file not found src_file 2. ".to_string($src_file), logger::ERROR);
+				debug_log(__METHOD__
+					." Error: src_file not found src_file 2. " .PHP_EOL
+					.' src_file: ' . $src_file
+					, logger::ERROR
+				);
 				return false;
 			}
 
@@ -530,7 +608,11 @@ final class Ffmpeg {
 			if( !is_dir($target_path) ) {
 				$create_dir = mkdir($target_path, 0775);
 				if(!$create_dir) {
-					trigger_error('Sorry. Error on read or create directory for "posterframe" folder. Permission denied !');
+					debug_log(__METHOD__
+						. " Error on read or create directory for \"posterframe\" folder. Permission denied ! " . PHP_EOL
+						. ' target_path: '. $target_path
+						, logger::DEBUG
+					);
 					return false;
 				}
 				# image zero 0.jpg from dedalo images to posterframe images
@@ -548,7 +630,11 @@ final class Ffmpeg {
 			if($actualPerms < $wantedPerms) {
 				$chmod = chmod($target_path, $wantedPerms);
 				if(!$chmod) {
-					trigger_error("Error Processing Request. Sorry. Error on set valid permissions to directory for \"posterframe\".");
+					debug_log(__METHOD__
+						. " Error Processing Request. Sorry. Error on set valid permissions to directory for \"posterframe\". " . PHP_EOL
+						. ' target_path: ' . $target_path
+						, logger::ERROR
+					);
 					return false;
 				}
 			}
@@ -574,74 +660,197 @@ final class Ffmpeg {
 
 
 	/**
-	* BUILD_FRAGMENT
+	* BUILD_FRAGMENT_OLD
 	* @return string $file_url
 	*/
-	public function build_fragment(AVObj $AVObj, string $tcin, string $tcout, string $target_filename, int $watermark=0) : string {
+		// public function build_fragment_OLD(AVObj $AVObj, string $tcin, string $tcout, string $target_filename, int $watermark=0) : string {
 
-		$ffmpeg_installed_path	= DEDALO_AV_FFMPEG_PATH;
-		$reelID					= $AVObj->get_reelID();
-		$source_file			= $AVObj->get_media_path_abs() . $reelID .'.'. $AVObj->get_extension();
-		$target_filename_path	= $AVObj->get_media_path_abs() . 'fragments/' . $target_filename;
+		// 	$ffmpeg_installed_path	= DEDALO_AV_FFMPEG_PATH;
+		// 	$reelID					= $AVObj->get_reelID();
+		// 	$source_file			= $AVObj->get_media_path_abs() . $reelID .'.'. $AVObj->get_extension();
+		// 	$target_filename_path	= $AVObj->get_media_path_abs() . 'fragments/' . $target_filename;
 
-		$tcin_secs	= OptimizeTC::TC2seg($tcin);
-		$tcout_secs	= OptimizeTC::TC2seg($tcout);
-		$duration	= $tcout_secs - $tcin_secs;
-		# duration is float like 538.521 and need to be converted to tc like 00:06:53.734
-		$duration	= OptimizeTC::seg2tc($duration);
+		// 	$tcin_secs	= OptimizeTC::TC2seg($tcin);
+		// 	$tcout_secs	= OptimizeTC::TC2seg($tcout);
+		// 	$duration	= $tcout_secs - $tcin_secs;
+		// 	# duration is float like 538.521 and need to be converted to tc like 00:06:53.734
+		// 	$duration	= OptimizeTC::seg2tc($duration);
 
-		debug_log(__METHOD__." ++ build_fragment duration ".$duration, logger::WARNING);
+		// 	debug_log(__METHOD__." ++ build_fragment duration ".$duration, logger::WARNING);
 
-		$watermark_file = DEDALO_AV_WATERMARK_FILE;
+		// 	$watermark_file = DEDALO_AV_WATERMARK_FILE;
 
-			# fragments dir exists
-			$fragments_folder = $AVObj->get_media_path_abs() . 'fragments';
-			if( !is_dir($fragments_folder) ) {
-				$create_dir = mkdir($fragments_folder, 0777);
-				if(!$create_dir) {
-					if(SHOW_DEBUG===true) {
-						debug_log(__METHOD__." Error trying to create: $fragments_folder ".to_string(), logger::ERROR);
-					}
-					throw new Exception("Error on read or create directory for \"fragments\" folder. Permission denied ! ", 1);
+		// 		# fragments dir exists
+		// 		$fragments_folder = $AVObj->get_media_path_abs() . 'fragments';
+		// 		if( !is_dir($fragments_folder) ) {
+		// 			$create_dir = mkdir($fragments_folder, 0777);
+		// 			if(!$create_dir) {
+		// 				if(SHOW_DEBUG===true) {
+		// 					debug_log(__METHOD__." Error trying to create: $fragments_folder ".to_string(), logger::ERROR);
+		// 				}
+		// 				throw new Exception("Error on read or create directory for \"fragments\" folder. Permission denied ! ", 1);
+		// 			}
+		// 		}
+
+		// 		# fragments dir set permissions 0777
+		// 		$wantedPerms = 0777;
+		// 		$actualPerms = fileperms($fragments_folder);
+		// 		if($actualPerms < $wantedPerms) {
+		// 			$chmod = chmod($fragments_folder, $wantedPerms);
+		// 			if(!$chmod) die(" Sorry. Error on set valid permissions to directory for \"fragments\".  ") ;
+		// 		}
+
+		// 	if ($watermark==1) {
+
+		// 		$target_filename_path_temp = $AVObj->get_media_path_abs() .'fragments/temp_'. $target_filename;
+
+		// 		#$command = "nice -n 19 $ffmpeg_installed_path -i $source_file -ss $tcin -t $duration -vcodec copy -acodec copy -y $target_filename_path_temp";
+		// 		$command  = "nice -n 19 $ffmpeg_installed_path -ss $tcin  -i $source_file -t ".$duration." -vcodec copy -acodec copy -y $target_filename_path_temp";
+
+		// 		$command .= " && nice -n 19 $ffmpeg_installed_path -i $target_filename_path_temp -vf 'movie=$watermark_file [watermark]; [in][watermark] overlay=main_w-overlay_w-10:10 [out]' -y $target_filename_path";
+
+		// 		# EXEC COMMAND
+		// 		#$command_exc = Exec::exec_command($command);
+		// 		$command_exc = shell_exec( $command );
+
+		// 	}else{
+
+		// 		# nice -n 19
+		// 		#$command = "$ffmpeg_installed_path -i $source_file -ss $tcin -t $duration -vcodec copy -acodec copy -y $target_filename_path";
+		// 		$command = "$ffmpeg_installed_path -ss $tcin -i $source_file -t ".$duration." -vcodec copy -acodec copy -y $target_filename_path";
+
+		// 		# EXEC COMMAND
+		// 		$command_exc = exec_::exec_command($command);
+
+		// 		error_log($command);
+		// 	}
+
+		// 	$file_url = 'http://' . $_SERVER['HTTP_HOST'] . $AVObj->get_media_path() .'fragments/'. $target_filename;
+
+		// 	return $file_url;
+		// }//end build_fragment
+
+
+
+	/**
+	* BUILD_FRAGMENT
+	* Process a av fragment based on given time codes in and out
+	* @param object $options
+	* @return object $response
+	*/
+	public static function build_fragment(object $options) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+
+		// options
+			$source_file_path	= $options->source_file_path;
+			$target_filename	= $options->target_filename;
+			$fragments_dir_path	= $options->fragments_dir_path;
+			$tc_in_secs			= $options->tc_in_secs;
+			$tc_out_secs		= $options->tc_out_secs;
+			$watermark			= $options->watermark;
+
+		// duration
+			$duration_secs = $tc_out_secs - $tc_in_secs;
+			// duration_secs is float like 538.521 and need to be converted to time-code like 00:06:53.734
+			$duration_tc	= OptimizeTC::seg2tc($duration_secs);
+			$tc_in			= OptimizeTC::seg2tc($tc_in_secs); // as time code like 00:00:03.125
+
+		// watermark_file path
+			$watermark_file = DEDALO_AV_WATERMARK_FILE;
+
+		// fragments_dir_path
+			$fragments_dir_path = rtrim($fragments_dir_path, '/');
+			if (!is_dir($fragments_dir_path)) {
+				debug_log(__METHOD__.
+					" fragments directory do not exists. Trying to create a new one in: " .PHP_EOL
+					. to_string($fragments_dir_path)
+					, logger::WARNING
+				);
+				if(!mkdir($fragments_dir_path, 0755)) {
+					$response->msg .= " Error trying to create fragments_dir ";
+					debug_log(__METHOD__
+						." $response->msg " .PHP_EOL
+						.to_string($fragments_dir_path)
+						, logger::ERROR
+					);
+					return $response;
 				}
 			}
 
-			# fragments dir set permissions 0777
-			$wantedPerms = 0777;
-			$actualPerms = fileperms($fragments_folder);
-			if($actualPerms < $wantedPerms) {
-				$chmod = chmod($fragments_folder, $wantedPerms);
-				if(!$chmod) die(" Sorry. Error on set valid permissions to directory for \"fragments\".  ") ;
+		// target_file_path
+			$target_file_path = $fragments_dir_path . '/' . $target_filename;
+
+		// ffmpeg bin path
+			$ffmpeg_bin = DEDALO_AV_FFMPEG_PATH;
+
+		// debug
+			debug_log(__METHOD__
+				." Building fragment '$target_filename'. Duration secs: ".$duration_secs
+				, logger::WARNING
+			);
+
+		// command
+			if ($watermark===true) {
+
+				// check watermark file
+					if (!file_exists($watermark_file)) {
+						$response->msg .= " Error. watermark file do not exists! ";
+						debug_log(__METHOD__.
+							" $response->msg. Check your config file and make sure the watermark file exists and is accessible. watermark_file: " .PHP_EOL
+							. to_string($watermark_file),
+							logger::ERROR
+						);
+						return $response;
+					}
+
+				// temporal fragment file
+				$target_file_path_temp = $fragments_dir_path .'/temp_'. $target_filename;
+
+				$command  = "   nice -n 19 $ffmpeg_bin -ss $tc_in  -i $source_file_path -t ".$duration_tc." -vcodec copy -acodec copy -y $target_file_path_temp ";
+				$command .= "&& nice -n 19 $ffmpeg_bin -i $target_file_path_temp -vf 'movie=$watermark_file [watermark]; [in][watermark] overlay=main_w-overlay_w-10:10 [out]' -y $target_file_path";
+
+			}else{
+
+				$command = "$ffmpeg_bin -ss $tc_in -i $source_file_path -t ".$duration_tc." -vcodec copy -acodec copy -y $target_file_path";
 			}
 
-		if ($watermark==1) {
+		// exec command and wait to finish
+			$command_exc = exec($command, $output, $result_code);
+			if ($command_exc===false) {
+				$response->msg .= " Error executing command to build fragment ";
+				debug_log(__METHOD__
+					." $response->msg . output: ".to_string($output).' - result_code: '.to_string($result_code)
+					, logger::ERROR
+				);
+				return $response;
+			}
 
-			$target_filename_path_temp = $AVObj->get_media_path_abs() .'fragments/temp_'. $target_filename;
+		// response. command result code is 0 for success and 1 for errors
+			if ($result_code===0 && file_exists($target_file_path)) {
 
-			#$command = "nice -n 19 $ffmpeg_installed_path -i $source_file -ss $tcin -t $duration -vcodec copy -acodec copy -y $target_filename_path_temp";
-			$command  = "nice -n 19 $ffmpeg_installed_path -ss $tcin  -i $source_file -t ".$duration." -vcodec copy -acodec copy -y $target_filename_path_temp";
+				$response->result	= true;
+				$response->msg		= 'OK. Created fragment successfully. file name: '.$target_filename;
+				debug_log(__METHOD__
+					." $response->msg "
+					, logger::DEBUG
+				);
 
-			$command .= " && nice -n 19 $ffmpeg_installed_path -i $target_filename_path_temp -vf 'movie=$watermark_file [watermark]; [in][watermark] overlay=main_w-overlay_w-10:10 [out]' -y $target_filename_path";
+			}else{
 
-			# EXEC COMMAND
-			#$command_exc = Exec::exec_command($command);
-			$command_exc = shell_exec( $command );
+				$response->msg		= 'Error on create av fragment. file name: '.$target_filename;
+				debug_log(__METHOD__
+					." $response->msg ". PHP_EOL
+					.' command: ' . PHP_EOL
+					. $command
+					, logger::ERROR
+				);
+			}
 
-		}else{
 
-			# nice -n 19
-			#$command = "$ffmpeg_installed_path -i $source_file -ss $tcin -t $duration -vcodec copy -acodec copy -y $target_filename_path";
-			$command = "$ffmpeg_installed_path -ss $tcin -i $source_file -t ".$duration." -vcodec copy -acodec copy -y $target_filename_path";
-
-			# EXEC COMMAND
-			$command_exc = exec_::exec_command($command);
-
-			error_log($command);
-		}
-
-		$file_url = 'http://' . $_SERVER['HTTP_HOST'] . $AVObj->get_media_path() .'fragments/'. $target_filename;
-
-		return $file_url;
+		return $response;
 	}//end build_fragment
 
 
@@ -701,7 +910,10 @@ final class Ffmpeg {
 		#$conform_header_command_exc = Exec::exec_command($command);
 
 		if(SHOW_DEBUG===true) {
-			debug_log(__METHOD__." Exec command conform headers: sudo -u _www $command .".to_string($result), logger::DEBUG);
+			debug_log(__METHOD__." Exec command conform headers:".PHP_EOL.
+				" sudo -u _www $command .".to_string($result),
+				logger::DEBUG
+			);
 		}
 
 		return $result;
@@ -750,7 +962,12 @@ final class Ffmpeg {
 			// $conform_header_command_exc = Exec::exec_command($command);
 
 		// debug
-			debug_log(__METHOD__." Executed command: $command . result: ".to_string($result), logger::DEBUG);
+			debug_log(__METHOD__." Executed command: ".
+				PHP_EOL.$command .
+				PHP_EOL." result: " .
+				to_string($result),
+				logger::DEBUG
+			);
 
 
 		return $result;
@@ -786,7 +1003,7 @@ final class Ffmpeg {
 		# Processed command only fast start
 		#$command = "nice $qt_faststart_path $source_file $target_file";
 
-		debug_log(__METHOD__." command: $command ", logger::DEBUG);
+		debug_log(__METHOD__." command:".PHP_EOL. $command, logger::DEBUG);
 
 		if ($async) {
 			# Exec without wait finish
@@ -839,8 +1056,10 @@ final class Ffmpeg {
 
 	/**
 	* GET_MEDIA_STREAMS
+	* @param string $source_file
+	* @return object|null $output
 	*/
-	public static function get_media_streams( string $source_file ) {
+	public static function get_media_streams( string $source_file ) : ?object {
 
 		$command = DEDALO_AV_FFPROBE_PATH . ' -v quiet -show_streams -print_format json ' . $source_file . ' 2>&1';
 		$output  = json_decode( shell_exec($command) );

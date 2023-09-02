@@ -1,11 +1,12 @@
 <?php
 if (defined('DIFFUSION_CUSTOM') && DIFFUSION_CUSTOM!==false) {
-	include(DIFFUSION_CUSTOM);
+	include_once(DIFFUSION_CUSTOM);
 }
-/*
+/**
 * CLASS DIFUSSION
 */
 abstract class diffusion  {
+
 
 
 	// class vars
@@ -14,10 +15,10 @@ abstract class diffusion  {
 
 		public static $update_record_actions = [];
 
-		public static $publication_first_tipo 		= 'dd271';
-		public static $publication_last_tipo  		= 'dd1223';
-		public static $publication_first_user_tipo  = 'dd1224';
-		public static $publication_last_user_tipo  	= 'dd1225';
+		public static $publication_first_tipo		= 'dd271';
+		public static $publication_last_tipo		= 'dd1223';
+		public static $publication_first_user_tipo	= 'dd1224';
+		public static $publication_last_user_tipo	= 'dd1225';
 
 		public $ar_records;
 
@@ -25,13 +26,11 @@ abstract class diffusion  {
 
 	/**
 	* CONSTRUCT
-	* @param object $options . Default null
+	* @param object $options = null
 	*/
-	function __construct($options=null) {
+	function __construct( ?object $options=null ) {
 
 		$this->domain = DEDALO_DIFFUSION_DOMAIN;
-
-		return true;
 	}//end __construct
 
 
@@ -39,8 +38,9 @@ abstract class diffusion  {
 	/**
 	* UPDATE_RECORD
 	* All extended classes must to implement this method (mandatory)
+	* @param object $options
 	*/
-	public function update_record( $request_options, $resolve_references=false ) {
+	public function update_record( object $options ) {
 		// Override in every heritage class
 		throw new Exception("Error Processing Request. Please, call from correct class", 1);
 	}//end update_record
@@ -49,13 +49,17 @@ abstract class diffusion  {
 
 	/**
 	* GET_DIFFUSION_DOMAINS
-	* Get array of ALL diffusion domains in struture
+	* Get array of ALL diffusion domains in structure
+	* @return array $diffusion_domains
 	*/
-	public static function get_diffusion_domains() {
+	public static function get_diffusion_domains() : array {
 
-		$diffusion_domains = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(DEDALO_DIFFUSION_TIPO,
-																						$model_name='diffusion_domain',
-																						$relation_type='children');
+		$diffusion_domains = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+			DEDALO_DIFFUSION_TIPO,
+			'diffusion_domain', // string model_name=
+			'children' // string relation_type=
+		);
+
 		return $diffusion_domains;
 	}//end get_diffusion_domains
 
@@ -65,42 +69,33 @@ abstract class diffusion  {
 	* GET_MY_DIFFUSION_DOMAIN
 	* Get only one diffusion domain by tipo
 	* Note: Define 'class_name' in properties of current desired diffusion element like {"class_name":"diffusion_index_ts"}
-	* @param string $diffusion_domain_name like 'dedalo'
-	* @param string $current_children like 'diffusion_index_ts'
-	* @return string $current_children like 'dd15'
+	* @param string $diffusion_domain_name
+	* 	like 'dedalo'
+	* @param string $caller_class_name
+	* 	like 'diffusion_sql'
+	* @return string|null $current_children
+	* 	like 'dd15'
 	*/
-	public static function get_my_diffusion_domain($diffusion_domain_name, $caller_class_name) {
+	public static function get_my_diffusion_domain(string $diffusion_domain_name, string $caller_class_name) : ?string {
 
-		# Array of all diffusion domains
+		// Array of all diffusion domains
 		$diffusion_domains = (array)diffusion::get_diffusion_domains();
-			#dump($diffusion_domains,'$diffusion_domains');
-
 		foreach ($diffusion_domains as $current_tipo) {
 
 			$current_name = RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_DATA_LANG, true, true);
 
 			if($current_name===$diffusion_domain_name) {
 
-				#
-				# NUEVO MODO (más rápido) : Por propiedad 'class_name' . Evita la necesidad de utilizar el modelo cuando no es un modelo estándar de Dédalo
+				// NUEVO MODO (más rápido) : Por propiedad 'class_name' . Evita la necesidad de utilizar el modelo cuando no es un modelo estándar de Dédalo
 				$ar_childrens = RecordObj_dd::get_ar_childrens($current_tipo);
 				foreach ($ar_childrens as $current_children) {
 
-					$RecordObj_dd = new RecordObj_dd($current_children);
-					$properties  = $RecordObj_dd->get_propiedades(true);
-						#dump($properties, ' properties '.$current_children);
-
-					if ($properties && property_exists($properties->diffusion, 'class_name') && $properties->diffusion->class_name===$caller_class_name) {
+					$RecordObj_dd	= new RecordObj_dd($current_children);
+					$properties		= $RecordObj_dd->get_propiedades(true);
+					if (!empty($properties) && property_exists($properties->diffusion, 'class_name') && $properties->diffusion->class_name===$caller_class_name) {
 						return (string)$current_children;
 					}
 				}
-
-				/* OLD WORLD
-				$my_diffusion_domain = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_tipo, $model_name=$caller_class_name, $relation_type='children');
-					dump($my_diffusion_domain, "current_name:$current_name - diffusion_domain_name:$diffusion_domain_name - caller_class_name:$caller_class_name");
-
-				return (array)$my_diffusion_domain;
-				*/
 			}
 		}
 
@@ -108,13 +103,28 @@ abstract class diffusion  {
 	}//end get_my_diffusion_domain
 
 
+
 	/**
 	* GET_AR_DIFFUSION_MAP
 	* Get and set diffusion_map of current domain ($this->domain)
 	* @param string $diffusion_domain_name . Like 'aup'
+	* @param bool $connection_status = false
+	* 	On true, check connection status (usually MySQL database)
 	* @return object $entity_diffusion_tables
+	* 	Sample:
+	* 	{
+	*	    "murapa2": [
+	*	        {
+	*	            "element_tipo": "murapa3",
+	*	            "name": "Publicar en web",
+	*	            "class_name": "diffusion_mysql",
+	*	            "database_name": "web_murapa",
+	*	            "database_tipo": "murapa4"
+	*	        }
+	*	    ]
+	*	}
 	*/
-	public static function get_diffusion_map( $diffusion_domain_name=DEDALO_DIFFUSION_DOMAIN ) : object {
+	public static function get_diffusion_map( string $diffusion_domain_name=DEDALO_DIFFUSION_DOMAIN, $connection_status=false ) : object {
 
 		// cache
 			static $diffusion_map;
@@ -203,16 +213,75 @@ abstract class diffusion  {
 						$diffusion_database_name = RecordObj_dd::get_termino_by_tipo($diffusion_database_tipo, DEDALO_STRUCTURE_LANG, true, false);
 					}
 
-				$data = new stdClass();
-					$data->element_tipo		= $element_tipo;
-					$data->name				= $name;
-					$data->class_name		= $diffusion_class_name;
-					$data->database_name	= $diffusion_database_name;
-					$data->database_tipo	= $diffusion_database_tipo;
+				$item = new stdClass();
+					$item->element_tipo		= $element_tipo;
+					$item->name				= $name;
+					$item->class_name		= $diffusion_class_name;
+					$item->database_name	= $diffusion_database_name;
+					$item->database_tipo	= $diffusion_database_tipo;
 
-				$diffusion_map->{$diffusion_group_tipo}[] = $data;
+				// add connection DDBB status. Check connection is reachable
+					if ($connection_status===true) {
+						switch ($item->class_name) {
+							case 'diffusion_mysql':
+								// check connection
+								try {
 
-			}#foreach ($ar_diffusion_element_tipo as $element_tipo)
+									$conn = $conn ?? DBi::_getConnection_mysql(
+										MYSQL_DEDALO_HOSTNAME_CONN,
+										MYSQL_DEDALO_USERNAME_CONN,
+										MYSQL_DEDALO_PASSWORD_CONN,
+										$item->database_name,
+										MYSQL_DEDALO_DB_PORT_CONN,
+										MYSQL_DEDALO_SOCKET_CONN
+									);
+
+								} catch (Exception $e) {
+									$conn = false;
+									debug_log(__METHOD__
+										."  Caught exception on connect to MySQL (database_name: $item->database_name): ". PHP_EOL
+										. $e->getMessage()
+										, logger::ERROR
+									);
+								}
+								if ($conn===false) {
+									$item->connection_status = (object)[
+										'result'	=> false,
+										'msg'		=> 'Unable to connect to database'
+									];
+								}else{
+									// check database
+									$db_available = diffusion_mysql::database_exits($item->database_name);
+									if ($db_available===true) {
+										$item->connection_status = (object)[
+											'result'	=> true,
+											'msg'		=> 'Database is ready'
+										];
+									}else{
+										$item->connection_status = (object)[
+											'result'	=> false,
+											'msg'		=> 'Database is NOT ready'
+										];
+									}
+								}
+								// error log when fails
+									if ($item->connection_status->result===false) {
+										debug_log(__METHOD__
+											." ".$item->connection_status->msg . ' ['.$item->database_name.']'
+											, logger::ERROR
+										);
+									}
+								break;
+
+							default:
+								// ignore
+								break;
+						}
+					}//end if ($connection_status===true)
+
+				// add diffusion_map item
+					$diffusion_map->{$diffusion_group_tipo}[] = $item;
+			}//end foreach ($ar_diffusion_element_tipo as $element_tipo)
 
 		}//end foreach ($ar_diffusion_group as $diffusion_group_tipo)
 		#dump($diffusion_map, ' diffusion_map by diffusion_group_tipo ++ '.to_string());
@@ -224,14 +293,25 @@ abstract class diffusion  {
 
 	/**
 	* GET_AR_DIFFUSION_MAP_ELEMENTS
+	* @param string $diffusion_domain_name = DEDALO_DIFFUSION_DOMAIN
 	* @return array $ar_diffusion_map_elements
+	* 	Sample (assoc array):
+	* 	{
+	*	    "murapa3": {
+	*	        "element_tipo": "murapa3",
+	*	        "name": "Publish to web",
+	*	        "class_name": "diffusion_mysql",
+	*	        "database_name": "web_murapa",
+	*	        "database_tipo": "murapa4"
+	*	    }
+	*	}
 	*/
-	public static function get_ar_diffusion_map_elements( $diffusion_domain_name=DEDALO_DIFFUSION_DOMAIN ) {
+	public static function get_ar_diffusion_map_elements( string $diffusion_domain_name=DEDALO_DIFFUSION_DOMAIN ) : array {
 
 		$diffusion_map = self::get_diffusion_map($diffusion_domain_name);
 
 		# Get only diffusion_elements, ignore groups
-		$diffusion_map_elements=array();
+		$diffusion_map_elements = array();
 		foreach ($diffusion_map as $ar_value) foreach ($ar_value as $group_tipo => $obj_value) {
 			$diffusion_map_elements[$obj_value->element_tipo] = $obj_value;
 		}
@@ -243,12 +323,94 @@ abstract class diffusion  {
 
 	/**
 	* DIFFUSION_COMPLETE_DUMP
-	* @return
+	* catch calls only
 	*/
-	public function diffusion_complete_dump($diffusion_element, $resolve_references = true) {
+	public function diffusion_complete_dump($diffusion_element, bool $resolve_references=true) {
 		// Override in every heritage class
 		throw new Exception("Error Processing Request", 1);
 	}//end diffusion_complete_dump
+
+
+
+	/**
+	* HAVE_SECTION_DIFFUSION
+	* Return correspondence of current section in diffusion domain
+	* Note: For better control, sections are related terms of diffusion_elements.
+	* This correspondence always must exists in diffusion map
+	* @param string $section_tipo
+	* @param array $ar_diffusion_map_elements = null
+	* @return bool $have_section_diffusion
+	*/
+	public static function have_section_diffusion(string $section_tipo, array $ar_diffusion_map_elements=null) : bool {
+
+		$have_section_diffusion = false;
+
+		if (is_null($ar_diffusion_map_elements)) {
+			# calculate all
+			$ar_diffusion_map_elements = diffusion::get_ar_diffusion_map_elements(DEDALO_DIFFUSION_DOMAIN);
+		}
+		// dump($ar_diffusion_map_elements, ' ar_diffusion_map_elements ++ '.to_string($section_tipo).' - DEDALO_DIFFUSION_DOMAIN:'.DEDALO_DIFFUSION_DOMAIN);
+		foreach ($ar_diffusion_map_elements as $diffusion_group_tipo => $obj_value) {
+
+			$diffusion_element_tipo = $obj_value->element_tipo;
+
+			$ar_related = diffusion::get_diffusion_sections_from_diffusion_element($diffusion_element_tipo, $obj_value->class_name);
+			if(in_array($section_tipo, $ar_related)) {
+				$have_section_diffusion = true;
+				break;
+			}
+		}
+
+		return $have_section_diffusion;
+	}//end have_section_diffusion
+
+
+
+	/**
+	* GET_DIFFUSION_SECTIONS_FROM_DIFFUSION_ELEMENT
+	* @param string $diffusion_element_tipo
+	* @return array $ar_diffusion_sections
+	*/
+	public static function get_diffusion_sections_from_diffusion_element(string $diffusion_element_tipo, string $class_name) : array {
+
+		// cache
+			// static $diffusion_sections_from_diffusion_element;
+			// if (isset($diffusion_sections_from_diffusion_element[$diffusion_element_tipo])) {
+			// 	return $diffusion_sections_from_diffusion_element[$diffusion_element_tipo];
+			// }
+
+		// if(SHOW_DEVELOPER!==true) {
+			// if( isset($_SESSION['dedalo']['config']['ar_diffusion_sections'][$diffusion_element_tipo]) ) {
+			// 	return $_SESSION['dedalo']['config']['ar_diffusion_sections'][$diffusion_element_tipo];
+			// }
+		// }
+
+		include_once(DEDALO_CORE_PATH . '/diffusion/class.'.$class_name.'.php');
+
+		$ar_diffusion_sections = $class_name::get_diffusion_sections_from_diffusion_element($diffusion_element_tipo);
+
+		// cache
+			// $_SESSION['dedalo']['config']['ar_diffusion_sections'][$diffusion_element_tipo] = $ar_diffusion_sections;
+			// $diffusion_sections_from_diffusion_element[$diffusion_element_tipo] = $ar_diffusion_sections;
+
+		return $ar_diffusion_sections;
+	}//end get_diffusion_sections_from_diffusion_element
+
+
+
+	/**
+	* GET_RESOLVE_LEVELS
+	* Get resolve levels value form config file or from session if defined
+	* @return int $resolve_levels
+	*/
+	public static function get_resolve_levels() : int {
+
+		$resolve_levels = isset($_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS'])
+			? $_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS']
+			: (defined('DEDALO_DIFFUSION_RESOLVE_LEVELS') ? DEDALO_DIFFUSION_RESOLVE_LEVELS : 2);
+
+		return $resolve_levels;
+	}//end get_resolve_levels
 
 
 
@@ -259,12 +421,14 @@ abstract class diffusion  {
 	/**
 	* BUILD_ID
 	* @param string $section_tipo
-	* @param int $section_id
+	* @param string|int $section_id
 	* @return string $id like 'oh_1'
+	* @return string $id
 	*/
-	public static function build_id($section_tipo, $section_id, $lang) {
+	public static function build_id(string $section_tipo, string|int $section_id, string $lang) {
 
 		$id = $section_tipo .'_'. $section_id .'_'. $lang ;
+
 		return $id;
 	}//end build_id
 
@@ -272,45 +436,41 @@ abstract class diffusion  {
 
 	/**
 	* BUILD_JSON_ROW
-	* @param object $request_options
+	* @param object $options
 	* @return object $json_row
 	*	JSON object with all field : field_value in given lang
 	*/
-	public static function build_json_row($request_options) {
+	public static function build_json_row(object $options) : stdClass {
 
 		// options
-			$options = new stdClass();
-				$options->section_tipo 			= null;
-				$options->section_id   			= null;
-				$options->diffusion_element_tipo= null;
-				$options->lang 					= null;
-				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-					#dump($options, ' options ++ '.to_string());
+			$section_tipo			= $options->section_tipo ?? null;
+			$section_id				= $options->section_id ?? null;
+			$diffusion_element_tipo	= $options->diffusion_element_tipo ?? null;
+			$lang					= $options->lang ?? null;
 
 		// fields
-			$ar_fields = self::get_table_fields( $options->diffusion_element_tipo, $options->section_tipo );
-				#dump($ar_fields, ' ar_fields ++ '.to_string());
+			$ar_fields = self::get_table_fields( $diffusion_element_tipo, $section_tipo );
 
 		// value
 			$row = new stdClass();
 
 				$item = new stdClass();
-					$item->value = diffusion::build_id($options->section_tipo, $options->section_id, $options->lang);
+					$item->value = diffusion::build_id($section_tipo, $section_id, $lang);
 					$item->model = 'field_text';
 				$row->id = $item;
 
 				$item = new stdClass();
-					$item->value = $options->section_tipo;
+					$item->value = $section_tipo;
 					$item->model = 'field_text';
 				$row->section_tipo = $item;
 
 				$item = new stdClass();
-					$item->value = $options->section_id;
+					$item->value = $section_id;
 					$item->model = 'field_int';
 				$row->section_id = $item;
 
 				$item = new stdClass();
-					$item->value = $options->lang;
+					$item->value = $lang;
 					$item->model = 'field_text';
 				$row->lang = $item;
 
@@ -323,7 +483,7 @@ abstract class diffusion  {
 				foreach ($ar_fields as $field) {
 					#if ($field->label==='publication') continue;
 
-					$value = self::get_field_value($field->tipo, $options->section_tipo, $options->section_id, $options->lang, $request_options);
+					$value = self::get_field_value($field->tipo, $section_tipo, $section_id, $lang, $options);
 
 					#if (is_array($value) || is_object($value)) {
 					#	$value = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -337,7 +497,6 @@ abstract class diffusion  {
 					// Add value
 					$row->{$field->label} = $item;
 				}
-				#dump($row, ' row ++ '.to_string());
 
 
 		return $row;
@@ -356,12 +515,12 @@ abstract class diffusion  {
 	* @param string $lang
 	*	Current lang like 'lg-eng'
 	* @param object $request_options
-	*	Is passthrough update record request_options param
+	*	Is pass-through update record request_options param
 	*
 	* @return mixed $field_value
 	*	Is the diffusion value of component called by field. Can be null, array, string, int
 	*/
-	public static function get_field_value($tipo, $section_tipo, $section_id, $lang, $request_options) {
+	public static function get_field_value(string $tipo, string $section_tipo, $section_id, string $lang, object $request_options) {
 
 		$field_value = null;
 
@@ -371,24 +530,24 @@ abstract class diffusion  {
 			#$diffusion_model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 
 		// Component
-			$ar_related 		= common::get_ar_related_by_model('component_', $tipo, $strict=false);
+			$ar_related 		= common::get_ar_related_by_model('component_', $tipo, false);
 			$component_tipo 	= reset($ar_related); //RecordObj_dd::get_ar_terminos_relacionados($tipo, false, true)[0];
 			$model_name 		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 			#$real_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($component_tipo, 'section', 'parent')[0];
-			$current_component 	= component_common::get_instance($model_name,
-																 $component_tipo,
-																 $section_id,
-																 'list', // Note that 'list' mode have dato fallback (in section)
-																 $lang,
-																 $section_tipo,
-																 false);
+			$current_component 	= component_common::get_instance(
+				$model_name,
+				$component_tipo,
+				$section_id,
+				'list', // Note that 'list' mode have dato fallback (in section)
+				$lang,
+				$section_tipo,
+				false
+			);
 
-			if(property_exists($properties, 'get_field_value') && isset($properties->get_field_value->get_dato_method)){
-				$get_dato_method = $properties->get_field_value->get_dato_method;
-				$dato = $current_component->{$get_dato_method}();
-			}else{
-				$dato = $current_component->get_dato();
-			}
+			// dato
+			$dato = (property_exists($properties, 'get_field_value') && isset($properties->get_field_value->get_dato_method))
+				? $current_component->{$properties->get_field_value->get_dato_method}()
+				: $current_component->get_dato();
 
 
 		# switch cases
@@ -413,6 +572,7 @@ abstract class diffusion  {
 								*/
 							$field_value = $dato;
 							break;
+						// NEED TO BE FIXED NEW DATAFRAME
 						case 'ds':
 							$ar_term_ds = [];
 							foreach ((array)$dato as $current_locator) {
@@ -426,6 +586,7 @@ abstract class diffusion  {
 								$field_value = implode('|', $ar_term_ds);
 							}
 							break;
+						// NEED TO BE FIXED NEW DATAFRAME
 						case 'dataframe':
 							$ar_term_dataframe = [];
 							foreach ((array)$dato as $current_locator) {
@@ -446,10 +607,10 @@ abstract class diffusion  {
 				case (is_object($properties) && property_exists($properties, 'process_dato')):
 					# Process dato with function
 					$options = $request_options;
-						$options->properties 	= $properties;
-						$options->tipo 			= $tipo;
-						$options->component_tipo= $component_tipo;
-						$options->section_id 	= $section_id;
+						$options->properties		= $properties;
+						$options->tipo				= $tipo;
+						$options->component_tipo	= $component_tipo;
+						$options->section_id		= $section_id;
 
 					$function_name 	= $properties->process_dato;
 					$field_value 	= call_user_func($function_name, $options, $dato);
@@ -469,12 +630,12 @@ abstract class diffusion  {
 
 	/**
 	* RESOLVE_COMPONENT_VALUE
-	* Intermediathe method to call component methods from diffusion
+	* Intermediate method to call component methods from diffusion
+	* @param object $options
+	* @param mixed $dato
 	* @return mixed $value
 	*/
-	public static function resolve_component_value( $options, $dato ) {
-		// dump($options, ' options ++ '.to_string());
-		// dump($dato, ' dato ++ '.to_string());
+	public static function resolve_component_value( object $options, $dato ) {
 
 		# Ref. $options
 		# [typology] =>
@@ -497,9 +658,9 @@ abstract class diffusion  {
 		#     )
 		# [diffusion_element_tipo] => mdcat353
 
-		$process_dato_arguments = (object)$options->properties->process_dato_arguments;
-		$method 				= $process_dato_arguments->component_method;
-		$custom_arguments 		= isset($process_dato_arguments->custom_arguments) ? $process_dato_arguments->custom_arguments : [];
+		$process_dato_arguments	= (object)$options->properties->process_dato_arguments;
+		$method					= $process_dato_arguments->component_method;
+		$custom_arguments		= isset($process_dato_arguments->custom_arguments) ? $process_dato_arguments->custom_arguments : [];
 
 
 		$component_tipo = isset($options->component_tipo) ? $options->component_tipo : common::get_ar_related_by_model('component_', $options->tipo, $strict=false)[0];
@@ -515,14 +676,25 @@ abstract class diffusion  {
 			array_unshift($custom_arguments, $options->lang);
 		}
 
-		$component 		= component_common::get_instance($model_name,
-														 $component_tipo,
-														 $section_id,
-														 'list',
-														 $options->lang,
-														 $options->section_tipo,
-														 false);
+		$component = component_common::get_instance(
+			$model_name,
+			$component_tipo,
+			$section_id,
+			'list',
+			$options->lang,
+			$options->section_tipo,
+			false
+		);
 
+		// check function exits
+			if (!method_exists($component, $method)) {
+				debug_log(__METHOD__
+					. " An error occurred calling function - Method do not exists !  " . PHP_EOL
+					. ' method: ' . to_string($method) . PHP_EOL
+					. ' model_name: '  . $model_name
+					, logger::ERROR
+				);
+			}
 
 		$value = call_user_func_array(array($component, $method), $custom_arguments);
 
@@ -540,11 +712,12 @@ abstract class diffusion  {
 	/**
 	* GET_TABLE_FIELDS
 	* Resolve all fields of a 'table' element inside a given 'diffusion_element'
-	* Uses diffusion mysql tables model
+	* Uses diffusion MYSQL tables model
 	* @param string $diffusion_element_tipo
+	* @param string $section_tipo
 	* @return array $ar_table_children
 	*/
-	public static function get_table_fields($diffusion_element_tipo, $section_tipo) {
+	public static function get_table_fields(string $diffusion_element_tipo, string $section_tipo) : array {
 
 		$diffusion_element_tables_map = diffusion_sql::get_diffusion_element_tables_map( $diffusion_element_tipo );
 			#dump($diffusion_element_tables_map, ' diffusion_element_tables_map ++ '.to_string());
@@ -552,7 +725,7 @@ abstract class diffusion  {
 		$RecordObj_dd 	   = new RecordObj_dd($diffusion_element_tables_map->{$section_tipo}->table);
 		$ar_table_children = $RecordObj_dd->get_ar_childrens_of_this();
 
-		# Add childrens from table alias too
+		# Add children from table alias too
 			if (!empty($diffusion_element_tables_map->from_alias)) {
 				$RecordObj_dd_alias 	 = new RecordObj_dd($diffusion_element_tables_map->{$section_tipo}->from_alias);
 				$ar_table_alias_children = (array)$RecordObj_dd_alias->get_ar_childrens_of_this();
@@ -583,9 +756,11 @@ abstract class diffusion  {
 
 	/**
 	* MAP_SECTION_ID_TO_SUBTITLES_URL
+	* @param object $options
+	* @param mixed $dato
 	* @return string $subtitles_url
 	*/
-	public static function map_section_id_to_subtitles_url($options, $dato) {
+	public static function map_section_id_to_subtitles_url(object $options, mixed $dato) : string {
 
 		require_once(DEDALO_SHARED_PATH . '/class.subtitles.php');
 
@@ -600,48 +775,63 @@ abstract class diffusion  {
 
 	/**
 	* MAP_IMAGE_INFO
+	* @param object $options
+	* sample:
+	* {
+	* 	"typology": null,
+	*    "value": null,
+	*    "tipo": "mht136",
+	*    "parent": "612",
+	*    "lang": "lg-spa",
+	*    "section_tipo": "rsc170",
+	*    "caler_id": 3,
+	*    "properties": {
+	*        "varchar": 1000,
+	*        "process_dato": "diffusion::map_image_info"
+	*    },
+	*    "diffusion_element_tipo": "mht50",
+	*    "component": { ... }
+	* }
 	* @param $dato
-	*	object locator like (
-	*	    [section_id] => 248
-	*	    [section_tipo] => rsc170
-	*	    [component_tipo] => rsc29
-	*	)
+	* sample:
+	* [{
+	*	    "lib_data": null,
+	*	    "files_info": [
+	*	        {
+	*	            "quality": "original",
+	*	            "file_url": "/dedalo/media/image/original/0/rsc29_rsc170_704.jpg",
+	*	            "file_name": "rsc29_rsc170_704.jpg",
+	*	            ...
+	*	        }, ...
+	*	 	]
+	* }]
 	* @return object $image_size
 	*/
-	public static function map_image_info($options, $dato) {
+	public static function map_image_info(object $options, $dato) : ?object {
 
-		//dump($options, ' options ++ '.to_string());
-		//dump($dato, ' dato ++ '.to_string());
-
-		$locator = $dato;
+		// dato check
+			if (empty($dato)) {
+				return null;
+			}
 
 		// component image
-			$model_name = RecordObj_dd::get_modelo_name_by_tipo($locator->component_tipo,true);
-			$component 	 = component_common::get_instance($model_name,
-														  $locator->component_tipo,
-														  $locator->section_id,
-														  'list',
-														  DEDALO_DATA_NOLAN,
-														  $locator->section_tipo);
+			$component = $options->component;
+
 		// Dimensions from default quality
 			$image_dimensions = $component->get_image_dimensions(DEDALO_IMAGE_QUALITY_DEFAULT);
-
-		// Response (from imagemagick)
-			# [0] => 617
-			# [1] => 849
-			# [2] => 2
-			# [3] => width="617" height="849"
-			# [bits] => 8
-			# [channels] => 3
-			# [mime] => image/jpeg
+			if (empty($image_dimensions)) {
+				return null;
+			}
+			// Response sample (from PHP exif_read_data)
+			// {
+			// 	width => 720,
+			// 	height => 404
+			// }
 
 		// image_info object
 			$image_info = new stdClass();
-				$image_info->width  	= $image_dimensions[0];
-				$image_info->height 	= $image_dimensions[1];
-				$image_info->bits   	= $image_dimensions['bits'];
-				$image_info->channels  	= $image_dimensions['channels'];
-				$image_info->mime  		= $image_dimensions['mime'];
+				$image_info->width	= $image_dimensions->width ?? null;
+				$image_info->height	= $image_dimensions->height ?? null;
 
 
 		return $image_info;
@@ -851,21 +1041,21 @@ abstract class diffusion  {
 	public static function delete_record($section_tipo, $section_id) {
 
 		$response = new stdClass();
-			$response->result 		= false;
-			$response->msg 			= __METHOD__ . ' Warning. Nothing is deleted for '.$section_tipo.'-'.$section_id;
-			$response->ar_deleted 	= [];
+			$response->result		= false;
+			$response->msg			= __METHOD__ . ' Warning. Nothing is deleted for '.$section_tipo.'-'.$section_id;
+			$response->ar_deleted	= [];
 
 
 		$ar_diffusion_element = self::get_ar_diffusion_map_elements();
 		foreach ($ar_diffusion_element as $diffusion_element) {
 
-			$diffusion_element_tipo = $diffusion_element->element_tipo;
-			$class_name 			= $diffusion_element->class_name;
+			$diffusion_element_tipo	= $diffusion_element->element_tipo;
+			$class_name				= $diffusion_element->class_name;
 
 			switch ($class_name) {
 				case 'diffusion_mysql':
 
-					$database_name 	= $diffusion_element->database_name;
+					$database_name = $diffusion_element->database_name;
 
 					$table_name = false;
 
@@ -954,27 +1144,40 @@ abstract class diffusion  {
 								$response->result 		= true;
 								$response->msg 			= "Deleted record successful ($table_name - $section_id) in db $database_name (all langs)";
 								$response->ar_deleted[] = (object)[
-									"section_id" 			 => $section_id,
-									"section_tipo" 			 => $section_tipo,
-									"database_name" 		 => $database_name,
-									"table_name" 			 => $table_name,
-									"diffusion_element_tipo" => $diffusion_element_tipo,
-									"class_name" 			 => $class_name
+									"section_id"				=> $section_id,
+									"section_tipo"				=> $section_tipo,
+									"database_name"				=> $database_name,
+									"table_name"				=> $table_name,
+									"diffusion_element_tipo"	=> $diffusion_element_tipo,
+									"class_name"				=> $class_name
 								];
 							}else{
-								$response->msg = "Unable to delete record ($table_name - $section_id). Maybe the record not exists in db ($database_name)";
+								$response->msg = "Unable to delete record ($table_name - $section_id). Maybe the record not exists in MySQL db: '$database_name' table: '$table_name' ";
 							}
 						}
 					break;
 
+				case 'diffusion_rdf':
+					$response->result	= true;
+					$response->msg		= __METHOD__ . ' Ignored delete_record call for diffusion_rdf. Class diffusion_rdf do not provide delete feature';
+					break;
+
 				default:
-					debug_log(__METHOD__." ERROR. Ignored class name not defined for delete: ".to_string($class_name), logger::ERROR);
+					debug_log(__METHOD__
+						." WARNING. Ignored delete_record for class (name not defined for delete: ".to_string($class_name)
+						, logger::WARNING
+					);
 					break;
 
 			}//end switch ($class_name)
 
 		}//end foreach ($ar_diffusion_element as $diffusion_element)
-		debug_log(__METHOD__." response:  ".json_encode($response, JSON_PRETTY_PRINT), logger::DEBUG);
+
+		// debug
+			debug_log(__METHOD__
+				." response:  ".json_encode($response, JSON_PRETTY_PRINT)
+				, logger::DEBUG
+			);
 
 
 		return $response;
@@ -984,28 +1187,30 @@ abstract class diffusion  {
 
 	/**
 	* UPDATE_PUBLICATION_DATA
+	*
+	* @param string $section_tipo
+	* @param string|int $section_id
 	* @return bool
 	*/
-	public static function update_publication_data($section_tipo, $section_id) {
+	public static function update_publication_data(string $section_tipo, string|int $section_id) : bool {
 
 		// tipos
-			$publication_first_tipo 		= diffusion::$publication_first_tipo;
-			$publication_last_tipo 			= diffusion::$publication_last_tipo;
-			$publication_first_user_tipo 	= diffusion::$publication_first_user_tipo;
-			$publication_last_user_tipo 	= diffusion::$publication_last_user_tipo;
+			$publication_first_tipo			= diffusion::$publication_first_tipo;
+			$publication_last_tipo			= diffusion::$publication_last_tipo;
+			$publication_first_user_tipo	= diffusion::$publication_first_user_tipo;
+			$publication_last_user_tipo		= diffusion::$publication_last_user_tipo;
 
 		// current date in dd_date format (usable as dato)
 			$current_date_dato = new stdClass();
 				$current_date_dato->start = component_date::get_date_now();
 
 		// current user dato
-			$user_id = navigator::get_user_id();
-
+			$user_id = get_user_id();
 
 		// first . component publication first. save if not exist
 			// date
-				$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($publication_first_tipo,true);
-				$component 		= component_common::get_instance(
+				$model_name	= RecordObj_dd::get_modelo_name_by_tipo($publication_first_tipo,true);
+				$component	= component_common::get_instance(
 					$model_name,
 					$publication_first_tipo,
 					$section_id,
@@ -1086,8 +1291,9 @@ abstract class diffusion  {
 					$section->save_modified = false;
 				$component->Save();
 
+		// debug
+			debug_log(__METHOD__." Updated publication date in section: $section_tipo, $section_id ".to_string(), logger::DEBUG);
 
-		debug_log(__METHOD__." Updated publication date in section: $section_tipo, $section_id ".to_string(), logger::DEBUG);
 
 		return true;
 	}//end update_publication_data
@@ -1182,6 +1388,65 @@ abstract class diffusion  {
 
 		return $ar_table_tipo_edit;
 	}//end parse_database_alias_tables
+
+
+
+	/**
+	* UPDATE_PUBLICATION_SCHEMA
+	* @param string $diffusion_element_tipo
+	* @return object $response
+	*/
+	public static function update_publication_schema(string $diffusion_element_tipo) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= __METHOD__. ' Error. Request failed';
+
+
+		$RecordObj_dd	= new RecordObj_dd($diffusion_element_tipo);
+		$propiedades	= $RecordObj_dd->get_propiedades(true);
+		$schema_obj		= (is_object($propiedades) && isset($propiedades->publication_schema))
+			? $propiedades->publication_schema
+			: false;
+
+		// no propiedades configured case
+			if (empty($schema_obj)) {
+				return $response;
+			}
+
+		$class_name = isset($propiedades->diffusion->class_name) ? $propiedades->diffusion->class_name : false;
+
+		switch ($class_name) {
+			case 'diffusion_mysql':
+				// databases
+				$databases = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+					$diffusion_element_tipo, // string tipo
+					'database', // string modelo_name
+					'children', // string relation_type
+					false // bool search_exact switch between 'database' or contains 'database' like 'database_alias'
+				);
+				if (isset($databases[0])) {
+					// Loads parent class diffusion
+					// include_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.'.$class_name.'.php');
+					// get_termino_by_tipo($terminoID, $lang=NULL, $from_cache=false, $fallback=true)
+					$database_name	= RecordObj_dd::get_termino_by_tipo($databases[0]);
+
+					// save_table_schema. Use save_table_schema response as this method response
+					$response = (object)diffusion_sql::save_table_schema( $database_name, $schema_obj );
+				}else{
+					$response->msg .= " Database not found in structure for diffusion element: '$diffusion_element_tipo' ";
+				}
+				break;
+
+			default:
+				// Nothing to do
+				$response->result	= true;
+				$response->msg		= "Ignored publication_schema for class_name: '$class_name' ";
+				break;
+		}
+
+		return $response;
+	}//end update_publication_schema
 
 
 

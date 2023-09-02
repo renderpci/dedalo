@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -21,10 +22,10 @@ export const view_mini_password = function() {
 
 
 /**
-* REDNER
+* RENDER
 * Render node to be used by service autocomplete or any datalist
 * It shouldn't be use but just in case someone added it to a list the page would work properly
-* @return DOM node
+* @return HTMLElement wrapper
 */
 view_mini_password.render = async function(self, options) {
 
@@ -33,7 +34,7 @@ view_mini_password.render = async function(self, options) {
 		const value	= data.value || []
 
 	// Value as string
-		const value_string = value
+		const value_string = '****************' // value
 
 
 	// wrapper
@@ -45,3 +46,7 @@ view_mini_password.render = async function(self, options) {
 
 	return wrapper
 }//end render
+
+
+
+// @license-end

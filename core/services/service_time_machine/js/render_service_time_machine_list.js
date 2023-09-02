@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global page_globals, SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
@@ -11,6 +12,8 @@
 	import {view_mini_time_machine_list} from './view_mini_time_machine_list.js'
 	import {view_tool_time_machine_list} from './view_tool_time_machine_list.js'
 	import {view_history_time_machine_list} from './view_history_time_machine_list.js'
+
+
 
 /**
 * RENDER_SERVICE_TIME_MACHINE_LIST
@@ -26,7 +29,8 @@ export const render_service_time_machine_list = function() {
 /**
 * LIST
 * Render node for use in list
-* @return DOM node|null wrapper
+* @param object options
+* @return HTMLElement wrapper
 */
 render_service_time_machine_list.prototype.list = async function(options) {
 
@@ -53,8 +57,6 @@ render_service_time_machine_list.prototype.list = async function(options) {
 		default:
 			return view_default_time_machine_list.render(self, options)
 	}
-
-	return null
 }//end list
 
 
@@ -64,7 +66,7 @@ render_service_time_machine_list.prototype.list = async function(options) {
 * Renders main element wrapper for current view
 * @param object self
 * @param object options
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 export const common_render = async function(self, options) {
 
@@ -160,7 +162,7 @@ export const common_render = async function(self, options) {
 * 	Array of section_record instances
 * @param object self
 * 	service_time_machine instance
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 export const get_content_data = async function(ar_section_record, self) {
 
@@ -218,6 +220,11 @@ export const get_content_data = async function(ar_section_record, self) {
 */
 export const rebuild_columns_map = async function(self) {
 
+	// columns_map already rebuilt case
+		if (self.fixed_columns_map===true) {
+			return self.columns_map
+		}
+
 	const columns_map = []
 
 	// columns base
@@ -263,6 +270,13 @@ export const rebuild_columns_map = async function(self) {
 			columns_map.push(el)
 		}
 
+	// fixed as calculated
+		self.fixed_columns_map = true
+
 
 	return columns_map
 }//end rebuild_columns_map
+
+
+
+// @license-end

@@ -8,6 +8,7 @@
 	>.content_data {
 		padding: 1rem;
 		position: relative;
+		padding-bottom: 0;
 
 		>form {
 			display: flex;
@@ -15,13 +16,14 @@
 			align-items: center;
 
 			>label {
-				padding: 0.9em;
+				padding: 1.5rem;
 				padding-left: 1.75em;
 				padding-right: 1.75em;
 				background-color: #ececec;
-				border: 1px dashed #ff9800;
+				border: 1px dashed #f78a1c;
 				border-radius: 0.25em;
 				cursor: pointer;
+				width: 100%;
 
 				&.hover {
 					// border: 1px dashed #20F41B;
@@ -125,13 +127,21 @@
 		// response_container
 		>.response_container {
 			padding-top: 0.5em;
-    		// padding-bottom: 1.5em;
-    		display: flex;
+			// padding-bottom: 1.5em;
+			display: flex;
 
-    		>.response_msg {
-    			flex: 1 1 70%;
 
-    			.blink {
+			>.response_msg {
+				flex: 1 1 70%;
+
+				&.success {
+					color: green;
+				}
+				&.failed {
+					color: red;
+				}
+
+				.blink {
 				  animation: blinker 1s linear infinite;
 				}
 				@keyframes blinker {
@@ -139,36 +149,32 @@
 				    opacity: 0;
 				  }
 				}
-    		}
-
-    		>img.preview_image {
-    			height: 120px;
-    			object-fit: contain;
-				object-position: center;
-    		}
+			}
 		}
-
 
 		// system info
 		.button.info {
 			background-color: #000000;
 			position: absolute;
 			right: 0.75rem;
-			top: 4rem;
+			top: 6.5rem;
 		}
-		.info {
+
+		.info_container {
 			background-color: #f5f5f5;
 			color: #8c8c8c;
 			margin-top: 1.5em;
+			display: grid;
+			grid-template-columns: 1fr 3fr;
 
-			>* {
-				display: grid;
-				grid-template-columns: 1fr 5fr;
-				padding: 0.5em;
+			>label, >div {
+				padding: 0.75em;
+			}
+			>label {
+				padding-right: 2em;
+			}
+			>div {
 
-				>label {
-					padding-right: 2em;
-				}
 			}
 		}
 	}//end content_data

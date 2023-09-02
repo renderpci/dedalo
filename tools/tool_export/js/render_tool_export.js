@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*eslint no-unused-vars: "error"*/
 /*global get_label, SHOW_DEBUG*/
 /*eslint no-undef: "error"*/
@@ -19,8 +20,6 @@
 * Manages the component's logic and appearance in client side
 */
 export const render_tool_export = function() {
-
-	return true
 }//end render_tool_export
 
 
@@ -28,7 +27,8 @@ export const render_tool_export = function() {
 /**
 * EDIT
 * Render DOM nodes of the tool
-* @return DOM node wrapper
+* @param object options
+* @return HTMLElement wrapper
 */
 render_tool_export.prototype.edit = async function (options) {
 
@@ -50,19 +50,6 @@ render_tool_export.prototype.edit = async function (options) {
 		// set pointers
 		wrapper.content_data = content_data
 
-	// tool_container container
-		// if (!window.opener) {
-		// 	const header			= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
-		// 	const tool_container	= ui.attach_to_modal(header, wrapper, null, 'big')
-		// 	tool_container.on_close	= async () => {
-		// 		// tool destroy
-		// 			await self.destroy(true, true, true)
-		// 		// refresh source component text area
-		// 			if (self.caller) {
-		// 				self.caller.refresh()
-		// 			}
-		// 	}
-		// }
 
 	return wrapper
 }//end render_tool_export
@@ -71,17 +58,25 @@ render_tool_export.prototype.edit = async function (options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return DOM node content_data
+* @param object self
+* @return HTMLElement content_data
 */
 const get_content_data_edit = async function(self) {
 
 	const fragment = new DocumentFragment()
 
+	// grid_top
+		const grid_top = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'grid_top',
+			parent			: fragment
+		})
+
 	// components_list_container (left side)
 		const components_list_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'components_list_container',
-			parent			: fragment
+			parent			: grid_top
 		})
 		// fields list . List of section fields usable in search
 			// const search_container_selector = ui.create_dom_element({
@@ -110,19 +105,19 @@ const get_content_data_edit = async function(self) {
 		const user_selection_list = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'user_selection_list',
-			parent			: fragment
+			parent			: grid_top
 		})
 		// user_selection_list drag and drop events
-		user_selection_list.addEventListener('dragover',function(e){self.on_dragover(this,e)})
-		user_selection_list.addEventListener('dragleave',function(e){self.on_dragleave(this,e)})
-		// user_selection_list.addEventListener('dragend',function(e){self.on_drag_end(this,e)})
-		user_selection_list.addEventListener('drop',function(e){self.on_drop(this,e)})
+		user_selection_list.addEventListener('dragover', function(e){self.on_dragover(this,e)})
+		user_selection_list.addEventListener('dragleave', function(e){self.on_dragleave(this,e)})
+		// user_selection_list.addEventListener('dragend', function(e){self.on_drag_end(this,e)})
+		user_selection_list.addEventListener('drop', function(e){self.on_drop(this,e)})
 
 		// title
 			ui.create_dom_element({
 				element_type	: 'h1',
 				class_name		: 'list_title',
-				inner_html		: get_label.elementos_activos || 'Active elements',
+				inner_html		: get_label.active_elements || 'Active elements',
 				parent			: user_selection_list
 			})
 
@@ -158,7 +153,7 @@ const get_content_data_edit = async function(self) {
 		const export_buttons_config = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'export_buttons_config',
-			parent			: fragment
+			parent			: grid_top
 		})
 
 		// records info
@@ -175,7 +170,7 @@ const get_content_data_edit = async function(self) {
 			})
 			const total_records_label = ui.create_dom_element({
 				element_type	: 'span',
-				class_name		: 'total_records',
+				class_name		: 'total_records_label',
 				inner_html		: (get_label.total_records || 'Total records:') + ': ',
 				parent			: export_buttons_config
 			})
@@ -184,16 +179,19 @@ const get_content_data_edit = async function(self) {
 				class_name		: 'total_records',
 				parent			: total_records_label
 			})
-			self.caller.total()
-			.then(function(response){
-				total_records.insertAdjacentHTML('afterbegin', response)
+			// section get total
+			self.caller.get_total()
+			.then(function(total){
+				const locale		= 'es-ES' // (page_globals.locale ?? 'es-CL').replace('_', '-')
+				const total_label	= new Intl.NumberFormat(locale, {}).format(total);
+				total_records.insertAdjacentHTML('afterbegin', total_label)
 			})
 
 		// data_format selectors
 			const data_format = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'data_format',
-				inner_html		: (get_label.formato || 'Format'),
+				inner_html		: (get_label.format || 'Format'),
 				parent			: export_buttons_config
 			})
 			// select
@@ -212,51 +210,72 @@ const get_content_data_edit = async function(self) {
 				// select_option_standard
 				ui.create_dom_element({
 					element_type	: 'option',
-					inner_html		: get_label.estandar || 'standard',
-					value			: 'standard',
+					inner_html		: get_label.standard || 'standard',
+					value			: 'value',
 					parent			: select_data_format_export
 				})
 				// select_option_html
-				ui.create_dom_element({
-					element_type	: 'option',
-					inner_html		: get_label.html || 'HTML',
-					value			: 'html',
-					parent			: select_data_format_export
-				})
+				// ui.create_dom_element({
+				// 	element_type	: 'option',
+				// 	inner_html		: get_label.html || 'HTML',
+				// 	value			: 'html',
+				// 	parent			: select_data_format_export
+				// })
 				// select_option_breakdown
 				ui.create_dom_element({
 					element_type	: 'option',
-					inner_html		: get_label.desglose || 'breakdown',
-					value			: 'breakdown',
+					inner_html		: get_label.breakdown || 'breakdown',
+					value			: 'grid_value',
 					parent			: select_data_format_export
 				})
-				// select_option_breakdown_html
-				ui.create_dom_element({
-					element_type	: 'option',
-					inner_html		: (get_label.desglose || 'breakdown' ) + ' ' +(get_label.html || 'HTML'),
-					value			: 'breakdown_html',
-					parent			: select_data_format_export
-				})
+				// // select_option_breakdown_html
+				// ui.create_dom_element({
+				// 	element_type	: 'option',
+				// 	inner_html		: (get_label.breakdown || 'breakdown' ) + ' ' +(get_label.html || 'HTML'),
+				// 	value			: 'breakdown_html',
+				// 	parent			: select_data_format_export
+				// })
 				// select_option_dedalo
 				ui.create_dom_element({
 					element_type	: 'option',
 					inner_html		: 'Dédalo (Raw)',
-					value			: 'dedalo',
+					value			: 'dedalo_raw',
 					parent			: select_data_format_export
 				})
+
+		// show labels check
+			const show_tipo_in_label = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'show_tipo_in_label',
+				inner_html		: get_label.show_tipo_in_label || 'Show ontology tipo',
+				parent			: export_buttons_config
+			})
+			const show_tipo_in_label_check = ui.create_dom_element({
+				element_type	: 'input',
+				type			: 'checkbox',
+				class_name		: 'show_tipo_in_label_check',
+				parent			: show_tipo_in_label
+			})
 
 		// button_export
 			const button_export = ui.create_dom_element({
 				element_type	: 'button',
-				class_name		: 'button_export success',
+				class_name		: 'button_export table success',
 				inner_html		: get_label.tool_export || 'Export',
 				parent			: export_buttons_config
 			})
-			button_export.addEventListener('click', async function() {
+			button_export.addEventListener('click', async function(e) {
+				e.stopPropagation()
+
 				// clean target_div
 					while (export_data_container.hasChildNodes()) {
 						export_data_container.removeChild(export_data_container.lastChild);
 					}
+					const data_spinner = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'spinner',
+						parent			: export_data_container
+					});
 
 				// export_grid API call
 					// self.data_format = select_data_format_export.value
@@ -280,32 +299,46 @@ const get_content_data_edit = async function(self) {
 						class_name		: 'spinner',
 						parent			: export_buttons_config
 					})
+					const show_tipo_in_label = show_tipo_in_label_check.checked;
+
+				// loading class elements
+					[components_list_container, user_selection_list, export_buttons_options].map(
+						el => el.classList.add('loading')
+					)
 
 				// export_grid
 					const export_grid_options = {
 						data_format			: self.data_format,
 						ar_ddo_to_export	: self.ar_ddo_to_export,
+						show_tipo_in_label	: show_tipo_in_label,
 						view				: 'table'
 					}
 					const dd_grid				= await self.get_export_grid(export_grid_options)
 					const dd_grid_export_node	= await dd_grid.render()
 					if (dd_grid_export_node) {
+						data_spinner.remove()
 						export_data_container.appendChild(dd_grid_export_node)
-						export_data_container.scrollIntoView(true)
+						// export_data_container.scrollIntoView(true)
+						export_buttons_options.scrollIntoView(true)
 					}
 
 				// spinner remove
 					[button_export, activate_all_columns, deactivate_all_columns].map(
 						el => el.classList.remove('hide')
 					)
-					spinner.remove()
+					spinner.remove();
+
+				// loading class elements
+					[components_list_container, user_selection_list, export_buttons_options].map(
+						el => el.classList.remove('loading')
+					)
 			})
 
 		// activate_all_columns
 			const activate_all_columns = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'activation light activate_all_columns',
-				inner_html		: get_label.activar_todas_las_columnas || 'Activate all columns',
+				inner_html		: get_label.activate_all_columns || 'Activate all columns',
 				parent			: export_buttons_config
 			})
 			activate_all_columns.addEventListener('click', function(e) {
@@ -360,7 +393,7 @@ const get_content_data_edit = async function(self) {
 			const deactivate_all_columns = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'activation light deactivate_all_columns',
-				inner_html		: get_label.desactivar_todas_las_columnas || 'Disable all columns',
+				inner_html		: get_label.disable_all_columns || 'Disable all columns',
 				parent			: export_buttons_config
 			})
 			deactivate_all_columns.addEventListener('click', function(e) {
@@ -384,8 +417,8 @@ const get_content_data_edit = async function(self) {
 		// csv. button_export_csv
 			const button_export_csv = ui.create_dom_element({
 				element_type	: 'button',
-				class_name		: 'processing_import success',
-				inner_html		: (get_label.descargar || 'Export') + ' csv',
+				class_name		: 'processing_import success download',
+				inner_html		: (get_label.download || 'Download') + ' csv',
 				parent			: export_buttons_options
 			})
 			button_export_csv.addEventListener('click', async function() {
@@ -397,12 +430,12 @@ const get_content_data_edit = async function(self) {
 					const csv_string	= await dd_grid.render()
 
 				// Download it
-					const filename	= filename + '.csv';
-					const link		= document.createElement('a');
+					const file	= filename + '.csv';
+					const link	= document.createElement('a');
 					link.style.display = 'none';
 					link.setAttribute('target', '_blank');
 					link.setAttribute('href', 'data	:text/csv;charset=utf-8,' + encodeURIComponent(csv_string));
-					link.setAttribute('download', filename);
+					link.setAttribute('download', file);
 					document.body.appendChild(link);
 					link.click();
 					document.body.removeChild(link);
@@ -411,8 +444,8 @@ const get_content_data_edit = async function(self) {
 		// tsv. button_export_tsv
 			const button_export_tsv = ui.create_dom_element({
 				element_type	: 'button',
-				class_name		: 'processing_import success',
-				inner_html		: (get_label.descargar || 'Export') + ' tsv',
+				class_name		: 'processing_import success download',
+				inner_html		: (get_label.download || 'Export') + ' tsv',
 				parent			: export_buttons_options
 			})
 			button_export_tsv.addEventListener('click', async function() {
@@ -424,12 +457,12 @@ const get_content_data_edit = async function(self) {
 					const tsv_string	= await dd_grid.render()
 
 				// Download it
-					const filename	= filename + '.tsv';
-					const link		= document.createElement('a');
+					const file	= filename + '.tsv';
+					const link	= document.createElement('a');
 					link.style.display = 'none';
 					link.setAttribute('target', '_blank');
 					link.setAttribute('href', 'data	:text/tsv;charset=utf-8,' + encodeURIComponent(tsv_string));
-					link.setAttribute('download', filename);
+					link.setAttribute('download', file);
 					document.body.appendChild(link);
 					link.click();
 					document.body.removeChild(link);
@@ -438,19 +471,19 @@ const get_content_data_edit = async function(self) {
 		// excel. button_export Excel
 			const button_export_excel = ui.create_dom_element({
 				element_type	: 'button',
-				class_name		: 'processing_import success',
-				inner_html		: (get_label.descargar || 'Export') + ' Excel',
+				class_name		: 'processing_import success download',
+				inner_html		: (get_label.download || 'Export') + ' Excel',
 				parent			: export_buttons_options
 			})
 			button_export_excel.addEventListener('click', function() {
 
 				// Download it
-					const filename	= filename+ '.xls';
-					const link		= document.createElement('a');
+					const file	= filename+ '.xls';
+					const link	= document.createElement('a');
 					link.style.display = 'none';
 					link.setAttribute('target', '_blank');
 					link.setAttribute('href', 'data	:text/html;charset=utf-8,' +  export_data_container.innerHTML);
-					link.setAttribute('download', filename);
+					link.setAttribute('download', file);
 					document.body.appendChild(link);
 					link.click();
 					document.body.removeChild(link);
@@ -459,19 +492,19 @@ const get_content_data_edit = async function(self) {
 		// html. button export html
 			const button_export_html = ui.create_dom_element({
 				element_type	: 'button',
-				class_name		: 'processing_import success',
-				inner_html		: (get_label.descargar || 'Export') + ' html',
+				class_name		: 'processing_import success download',
+				inner_html		: (get_label.download || 'Export') + ' html',
 				parent			: export_buttons_options
 			})
 			button_export_html.addEventListener('click', function() {
 
 				// Download it
-					const filename	= filename + '.html';
-					const link		= document.createElement('a');
+					const file	= filename + '.html';
+					const link	= document.createElement('a');
 					link.style.display = 'none';
 					link.setAttribute('target', '_blank');
 					link.setAttribute('href', 'data	:text/html;charset=utf-8,' +  export_data_container.innerHTML);
-					link.setAttribute('download', filename);
+					link.setAttribute('download', file);
 					document.body.appendChild(link);
 					link.click();
 					document.body.removeChild(link);
@@ -480,8 +513,8 @@ const get_content_data_edit = async function(self) {
 		// print. button export print
 			const button_export_print = ui.create_dom_element({
 				element_type	: 'button',
-				class_name		: 'processing_import success',
-				inner_html		: get_label.imprimir || 'Print',
+				class_name		: 'processing_import success print',
+				inner_html		: get_label.print || 'Print',
 				parent			: export_buttons_options
 			})
 			button_export_print.addEventListener('click', function(e) {
@@ -509,7 +542,7 @@ const get_content_data_edit = async function(self) {
 * BUILD_EXPORT_COMPONENT
 * Creates export_component DOM item
 * @param object ddo
-* @return DOM node export_component
+* @return HTMLElement export_component
 */
 render_tool_export.prototype.build_export_component = async function(ddo) {
 
@@ -533,7 +566,7 @@ render_tool_export.prototype.build_export_component = async function(ddo) {
 			ui.create_dom_element({
 				element_type	: 'li',
 				class_name		: 'component_label',
-				inner_html		: label,
+				inner_html		: label + '<span> [' + ddo.tipo + '] ' + ddo.model + '</span>',
 				parent			: export_component
 			})
 
@@ -649,6 +682,9 @@ const do_sortable = function(element, self) {
 
 				reset()
 
+				// remove dragover class from user_selection_list container
+				element.parentNode.classList.remove('dragover')
+
 				// data transfer
 					const data			= event.dataTransfer.getData('text/plain');// element that move
 					const parsed_data	= JSON.parse(data)
@@ -728,3 +764,7 @@ const do_sortable = function(element, self) {
 				}
 			});
 }//end do_sortable
+
+
+
+// @license-end

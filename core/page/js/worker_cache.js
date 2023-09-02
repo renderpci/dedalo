@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global*/
 /*eslint no-undef: "error"*/
 
@@ -97,22 +98,50 @@ self.onmessage = async function(e) {
 		});
 
 	// headers
-		const headers = new Headers();
-		// time: on week = 604800
-		headers.append('Cache-Control', 'stale-while-revalidate=604800');
-		// mime: text/javascript
-		headers.append('Content-Type', 'text/javascript');
+		const get_headers = (item) => {
 
-	// fetch each file
+			const headers = new Headers();
+
+			switch (item.type) {
+				case 'js':
+					// time: one week = 604800 (7 x 24 x 60 x 60)
+					headers.append('Cache-Control', 'stale-while-revalidate=604800');
+					// mime: text/javascript
+					headers.append('Content-Type', 'text/javascript');
+					break;
+
+				case 'css':
+					// time: one day = 86400 (1 x 24 x 60 x 60)
+					headers.append('Cache-Control', 'stale-while-revalidate=86400');
+					// mime: text/css
+					headers.append('Content-Type', 'text/css');
+					break;
+				default:
+
+					break;
+			}
+
+			return headers
+		}
+
+	// fetch each file. Force cache reload (https://hacks.mozilla.org/2016/03/referrer-and-cache-control-apis-for-fetch/)
 		const ar_promises = []
 		for (let i = 0; i < api_response_result_length; i++) {
 
 			const item = api_response.result[i]
+
+			const headers	= get_headers(item)
+			// const cache	= item.type==='css'
+			// 	? 'no-cache'
+			// 	: 'reload'
+			// @see https://developer.mozilla.org/en-US/docs/Web/API/Request/cache
+			const cache = 'reload';
+
 			ar_promises.push(
 				fetch(item.url, {
 					headers		: headers,
 					method		: 'GET',
-					cache		: 'no-cache',
+					cache		: cache, // "no-store","reload","no-cache","force-cache"
 					credentials	: 'same-origin',
 					credentials	: 'omit'
 				})
@@ -240,3 +269,7 @@ data_manager.request = async function(options) {
 
 	return api_response
 }//end request
+
+
+
+// @license-end

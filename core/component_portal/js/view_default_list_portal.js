@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /* global get_label, Promise, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
@@ -26,8 +27,7 @@ export const view_default_list_portal = function() {
 * Render component nodes in current view
 * @param component_portal instance self
 * @param object options
-* @return promise
-* 	DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_default_list_portal.render = async function(self, options) {
 
@@ -126,7 +126,7 @@ view_default_list_portal.render = async function(self, options) {
 /**
 * GET_CONTENT_DATA
 * Render all received section records and place it into a new div 'content_data'
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = async function(self, ar_section_record) {
 
@@ -164,3 +164,7 @@ const get_content_data = async function(self, ar_section_record) {
 
 	return content_data
 }//end get_content_data
+
+
+
+// @license-end

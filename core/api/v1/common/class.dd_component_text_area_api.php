@@ -1,8 +1,8 @@
 <?php
 /**
 * DD_COMPONENT_TEXT_AREA_API
-* Manage API REST data flow of component_text_area with Dédalo
-* This class is a collection of component exposed methods to the API across
+* Manage API REST data flow of the component with Dédalo
+* This class is a collection of component exposed methods to the API using
 * a normalized RQO (Request Query Object)
 *
 */
@@ -24,9 +24,12 @@ final class dd_component_text_area_api {
 	*		section_tipo	: 'rsc167', // current component_text_area section_tipo
 	*		section_id		: '2', // component_text_area section_id
 	*		tipo			: 'rsc36', // component_text_area tipo
-	*		lang			: 'lg-spa', // component_text_area lang
-	*		tag_id			: '2' // current selected tag
-	*	}
+	*		lang			: 'lg-spa' // component_text_area lang	*
+	*	},
+	* 	options : {
+	* 		tag_id : '2', // current selected tag
+	* 		type : 'index' // string e.g. 'index'
+	* 	}
 	* }
 	* @return object $response
 	*/
@@ -38,14 +41,17 @@ final class dd_component_text_area_api {
 				$response->msg		= [];
 				$response->error	= null;
 
-		// short vars from rqo
+		// source
 			$source			= $rqo->source;
 			$section_tipo	= $source->section_tipo;
 			$section_id		= $source->section_id;
 			$tipo			= $source->tipo;
 			$lang			= $source->lang; // string e.g. 'lg-spa'
-			$tag_id			= $source->tag_id; // string e.g. '2'
-			$type			= $source->type; // string e.g. 'index'
+
+		// options
+			$options	= $rqo->options;
+			$tag_id		= $options->tag_id; // string e.g. '2'
+			$type		= $options->type; // string e.g. 'index'
 
 		// component_text_area. Remove tag in all langs
 			$model_name				= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);

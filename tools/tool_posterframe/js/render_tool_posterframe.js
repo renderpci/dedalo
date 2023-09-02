@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, tool_posterframe */
 /*eslint no-undef: "error"*/
 
@@ -25,7 +26,7 @@ export const render_tool_posterframe = function() {
 * Render tool DOM nodes
 * This function is called by render common attached in 'tool_posterframe.js'
 * @param object options
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_tool_posterframe.prototype.edit = async function(options) {
 
@@ -94,7 +95,7 @@ render_tool_posterframe.prototype.edit = async function(options) {
 * GET_CONTENT_DATA
 * Render tool body or 'content_data'
 * @param instance self
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = async function(self) {
 
@@ -143,7 +144,7 @@ const get_content_data = async function(self) {
 /**
 * GET_BUTTONS
 * @param object instance self
-* @return DOM node buttons_wrapper
+* @return HTMLElement buttons_wrapper
 */
 const get_buttons = function(self) {
 
@@ -160,7 +161,7 @@ const get_buttons = function(self) {
 			const button_create_identifying_image = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'light create_identifying_image',
-				inner_html		: get_label.crear_imagen_identificativa || 'Create identifying image',
+				inner_html		: get_label.create_identify_image || 'Create identifying image',
 				parent			: identifying_image_block
 			})
 			button_create_identifying_image.addEventListener('click', async function(){
@@ -206,7 +207,7 @@ const get_buttons = function(self) {
 			const button_create_posterframe = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'warning gear create_posterframe',
-				inner_html		: get_label.crear || 'Create',
+				inner_html		: get_label.create || 'Create',
 				parent			: manage_posterframe_block
 			})
 			button_create_posterframe.addEventListener('click', async function(){
@@ -225,7 +226,7 @@ const get_buttons = function(self) {
 			const button_delete_posterframe = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'light delete delete_posterframe',
-				inner_html		: get_label.borrar || 'Delete',
+				inner_html		: get_label.delete || 'Delete',
 				parent			: manage_posterframe_block
 			})
 			button_delete_posterframe.addEventListener('click', async function(){
@@ -266,3 +267,4 @@ const get_buttons = function(self) {
 
 
 
+// @license-end

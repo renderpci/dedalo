@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label,  SHOW_DEBUG, DEDALO_ROOT_WEB, paper, iro */
 /*eslint no-undef: "error"*/
 
@@ -96,33 +97,35 @@ vector_editor.prototype.init_canvas = async function(self) {
 		//get the current resized canvas size
 
 	// Paste svg clipboard to active layer
-		document.addEventListener('paste', function(event) {
+		document.addEventListener('paste', fn_paste)
+		function fn_paste(event) {
 			// get the clipboard data
-				const clipboard = event.clipboardData.getData('text/plain')
+			const clipboard = event.clipboardData.getData('text/plain')
 			// check if the clipboard is a svg data
-				if ( clipboard.indexOf('<svg version="')!=-1 ) {
+			if ( clipboard.indexOf('<svg version="')!=-1 ) {
 
-					const pasted_svg = self.current_paper.project.importSVG( clipboard )
-					pasted_svg.clipped = true;
+				const pasted_svg = self.current_paper.project.importSVG( clipboard )
+				pasted_svg.clipped = true;
 
-					// optional: remove the clipped path
-						// pasted_svg.clipped = false;
-						// pasted_svg.children[0].remove()
-						// pasted_svg.parent.insertChildren(pasted_svg.index,pasted_svg.removeChildren());
-						// pasted_svg.remove();
+				// optional: remove the clipped path
+					// pasted_svg.clipped = false;
+					// pasted_svg.children[0].remove()
+					// pasted_svg.parent.insertChildren(pasted_svg.index,pasted_svg.removeChildren());
+					// pasted_svg.remove();
 			}
-		})
-
-		document.addEventListener('copy', function (event) {
+		}
+	// copy event
+		document.addEventListener('copy', fn_copy)
+		function fn_copy(event) {
 			// copy the path and convert to svg to export in the clipboard
-				event.preventDefault();
-				const project_svg = project.exportSVG({asString:true,precision:3})
-				if (event.clipboardData) {
-					event.clipboardData.setData('text/plain', project_svg);
-				} else if (window.clipboardData) {
-					window.clipboardData.setData('Text', project_svg);
-				}
-		});
+			event.preventDefault();
+			const project_svg = project.exportSVG({asString:true,precision:3})
+			if (event.clipboardData) {
+				event.clipboardData.setData('text/plain', project_svg);
+			} else if (window.clipboardData) {
+				window.clipboardData.setData('Text', project_svg);
+			}
+		};
 
 	// create the main layer
 		// main layer is the layer that define the area to be cropped.
@@ -695,6 +698,12 @@ vector_editor.prototype.init_tools = function(self) {
 */
 vector_editor.prototype.render_tools_buttons = function(self) {
 
+	// check vector_editor_tools
+		if (!self.vector_editor_tools) {
+			console.error('Error: vector_editor_tools is not available:', self.vector_editor_tools);
+			return
+		}
+
 	// Tool buttons. Show
 		// const view			= self.current_paper.view
 		const buttons_container	= self.vector_editor_tools
@@ -1188,7 +1197,7 @@ vector_editor.prototype.activate_layer = function(self, layer, load='full') {
 
 /**
 * RENDER_LAYER_SELECTOR
-* @return DOM node layer_selector
+* @return HTMLElement layer_selector
 */
 vector_editor.prototype.render_layer_selector = function(self) {
 
@@ -1251,7 +1260,7 @@ vector_editor.prototype.render_layer_selector = function(self) {
 
 /**
 * RENDER_LAYER_ROW
-* @return DOM node layer_li
+* @return HTMLElement layer_li
 */
 vector_editor.prototype.render_layer_row = function(self, layer) {
 
@@ -1412,7 +1421,7 @@ vector_editor.prototype.render_layer_row = function(self, layer) {
 				// footer
 					const footer = ui.create_dom_element({
 						element_type	: 'div',
-						class_name		: 'footer'
+						class_name		: 'content footer'
 					})
 
 					// button_delete
@@ -1494,3 +1503,8 @@ vector_editor.prototype.render_layer_row = function(self, layer) {
 
 	return layer_li
 }//end layer_selector
+
+
+
+// @license-end
+

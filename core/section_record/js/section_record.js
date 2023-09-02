@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /* global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
@@ -33,7 +34,7 @@ export const section_record = function() {
 	this.data			= null
 
 	this.paginated_key	= null
-	this.row_key 		= null
+	this.row_key		= null
 	// control
 	//this.built		= false
 
@@ -49,9 +50,6 @@ export const section_record = function() {
 	this.column_id		= null
 
 	this.offset			= null
-
-
-	return true
 }//end section
 
 
@@ -128,7 +126,7 @@ section_record.prototype.init = async function(options) {
 		//})
 
 	// status update
-		self.status = 'initied'
+		self.status = 'initialized'
 
 
 	return self
@@ -147,7 +145,7 @@ section_record.prototype.init = async function(options) {
 * @param int column_id
 *
 * @return promise current_instance
-* 	Instance of component / section_group initiated and built
+* 	Instance of component / section_group initialized and built
 */
 const build_instance = async (self, context, section_id, current_data, column_id, autoload) => {
 
@@ -188,17 +186,17 @@ const build_instance = async (self, context, section_id, current_data, column_id
 		}
 
 		// id_variant . Propagate a custom instance id to children
-			const section_record_id_variant = self.tipo +'_'+ section_id
+			const section_record_id_variant = `${self.tipo}_${section_id}_${self.caller.section_tipo}_${self.caller.section_id}`
 			instance_options.id_variant = self.id_variant
 				? self.id_variant + '_' + section_record_id_variant
 				: section_record_id_variant
 
-		// time machine matrix_id
+		// matrix_id. time machine matrix_id
 			if (self.matrix_id) {
 				instance_options.matrix_id = self.matrix_id
 			}
 
-		// column id
+		// column_id
 			if(column_id) {
 				instance_options.column_id = column_id
 			}
@@ -223,6 +221,7 @@ const build_instance = async (self, context, section_id, current_data, column_id
 	// add
 		// ar_instances.push(current_instance)
 		// dd_console(`__Time to build_instance section_record: ${(performance.now()-t0).toFixed(3)} ms`,'DEBUG', [current_context.tipo,current_context.model])
+
 
 	return current_instance
 }//end build_instance
@@ -326,12 +325,12 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 		}
 
 	// short vars
-		// const mode		= self.mode
-		// const tipo		= self.tipo
+		// const mode			= self.mode
+		// const tipo			= self.tipo
 		// const section_tipo	= self.section_tipo
-		const section_id	= self.section_id
-		const matrix_id		= self.matrix_id // time machine case only
-		const columns_map	= await self.columns_map || []
+		const section_id		= self.section_id
+		const matrix_id			= self.matrix_id // time machine case only
+		const columns_map		= await self.columns_map || []
 
 	// request config
 	// get the request_config with all ddo, it will be use to create the instances
@@ -367,11 +366,12 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 
 						const current_ddo = ar_first_level_ddo[k]
 						// By default section_tipo will be the section_tipo of the locator
-						// but when ddo define is_dataframe (subsection to use as data_frame or semantic_node)
+						// but when ddo define is_dataframe (subsection to use as data_frame)
 						// the section_tipo need to be the section_tipo of the ddo
 						// (section_tipo has not really record in DDBB and his totally dependent of the caller locator section_id)
-						// Note: it's not the scenario of multiple section_tipo as fr1, es1 when section_record it depends of the locator that conform the section_record
-						const section_tipo	= (current_ddo.is_dataframe)
+						// Note: it's not the scenario of multiple section_tipo as fr1, es1 when section_record it depends of
+						// the locator that conform the section_record
+						const section_tipo = (current_ddo.is_dataframe)
 							? current_ddo.section_tipo
 							: self.section_tipo
 						// if the ddo has column_id (normally all component has it, you can see it in common.js get_columns() method)
@@ -387,14 +387,27 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 								ar_column_ddo.push(current_ddo)
 
 							// current_data. get the component data to assign to it and create the instance
-								const current_data = self.get_component_data(current_ddo, section_tipo, section_id, matrix_id)
+								const current_data = self.get_component_data(
+									current_ddo,
+									section_tipo,
+									section_id,
+									matrix_id
+								)
 
-							// current_context. check if the section_tipo of the component match
-								// const current_context = Array.isArray(current_ddo.section_tipo)
-								// 	? self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode)
-								// 	: self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode && el.section_tipo===current_ddo.section_tipo)
+							// unify section_tipo as array, to get context when component is inside a virtual section
+							// sometimes it will need to be compatible in multiple sections (array > 1) as toponymy sections (es1, fr1, etc)
+							// sometimes the component is only for current ddo section (as publication component of media,
+							// rsc20 could be in rsc170, rsc167, ... but the context is not shared)
+								const current_ddo_section_tipo = Array.isArray(current_ddo.section_tipo)
+									? current_ddo.section_tipo
+									: [current_ddo.section_tipo]
+
+							// current_context. check if the section_tipo is multiple to use it or not to match component
+								const current_context = current_ddo_section_tipo.length > 1
+									? self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode)
+									: self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode && el.section_tipo===current_ddo_section_tipo[0])
 								// (!) Unified 09-11-2022 because time machine portal sub-context does not match in cases where section_tipo is not array (case oh18)
-								const current_context = self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode)
+								// const current_context = self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode)
 
 								// const current_context = Array.isArray(current_ddo.section_tipo)
 								// 	? self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode)
@@ -409,12 +422,34 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 
 								// check is valid context
 									if (!current_context) {
-										console.group(`+ [get_ar_columns_instances_list] Ignored context not found for model: ${current_ddo.model}, section_tipo: ${current_ddo.section_tipo}, tipo: ${current_ddo.tipo}`);
-										console.log('ddo:', current_ddo);
-										console.log("self.datum.context:", self.datum.context);
-										console.log('current_data:', current_data);
-										console.log("self:", self);
-										console.groupEnd()
+
+										if(SHOW_DEBUG===true) {
+											// Note that this message is not an error, but a warning when some columns
+											// are defined and not used (like Zenon columns in Bibliography if no Zenon data is added)
+											// Remember that subcontext is only calculated when subdata exists !
+											console.groupCollapsed(`+ [get_ar_columns_instances_list] Ignored context not found for model: ${current_ddo.model}, section_tipo: ${current_ddo.section_tipo}, tipo: ${current_ddo.tipo}`);
+											console.warn('Check your hierarchy definitions to make sure it is defined (Remember that subcontext is only calculated when subdata exists)', current_ddo.tipo);
+											console.log('ddo:', current_ddo);
+											console.log("self.datum.context:", self.datum.context);
+											console.log('current_data:', current_data);
+											console.log("self:", self);
+											console.groupEnd()
+										}
+
+										// const new_context = clone(current_ddo)
+
+										// const current_instance = await build_instance(
+										// 	self, // current section_record instance
+										// 	new_context, // edit context
+										// 	section_id, // current section_id
+										// 	current_data, // already calculated instance data
+										// 	current_column.id, // column id
+										// 	false // build autoload
+										// )
+
+										// // add built instance
+										// self.ar_instances.push(current_instance)
+
 										continue;
 									}
 
@@ -470,7 +505,7 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 								}
 								// set is_dataframe property to be used by tools or other components
 								if(current_ddo.is_dataframe){
-									new_context.is_dataframe	= current_ddo.is_dataframe
+									new_context.is_dataframe = current_ddo.is_dataframe
 								}
 
 							// instance create and set
@@ -502,9 +537,15 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 
 /**
 * GET_COMPONENT_DATA
-* Compares received section_tipo, section_id, matrix_id with elements inside datum.data for try to match.
+* Compares received section_tipo, section_id, matrix_id with elements inside datum.data trying to get match.
 * If no elements matches, a empty object is created to prevent gaps
+* @param object ddo
+* 	Could be an ddo or and full context from datum
+* @param string section_tipo
+* @param string|int section_id
+* @param string|int|null matrix_id
 * @return object component_data
+* 	If no component data is found, a special component data for empty cases is created
 */
 section_record.prototype.get_component_data = function(ddo, section_tipo, section_id, matrix_id=null) {
 
@@ -522,10 +563,26 @@ section_record.prototype.get_component_data = function(ddo, section_tipo, sectio
 				el.section_tipo===section_tipo // match section_tipo
 				) {
 
+				// dataframe case
+				// if ddo is inside a dataframe get his data matching row_section_id of ddo with the section_id of the caller and his own section_tipo and section_id
+				// ex: portal with section_tipo = numisdata3 and section_id = 1
+				// has a dataframe with section_tipo = numisdata_1016 and section_id_8
+				// the match for components inside numisdata_1016 has to be ddo row_section_id === caller (portal) section_id
+				// data of components inside dataframe sections are conditioned by his caller section_tipo and section_id and his own section_tipo and section_id
+				if (ddo.is_dataframe && el.row_section_id) {
+					// return parseInt(el.row_section_id)===parseInt(self.caller.section_id)
+
+					// (Changed 15-06-2023 by Paco to allow add terms viewing dataframe elements, -saving sequence-)
+					return parseInt(el.row_section_id)===parseInt(self.caller.section_id) // portal calling trough section
+						|| parseInt(el.row_section_id)===parseInt(self.section_id) // portal calling self alone
+				}
+
+				// time machine case
 				if (el.matrix_id && matrix_id) {
 					// console.error("match matrix_id:", el.matrix_id);
 					return parseInt(el.matrix_id)===parseInt(matrix_id)
 				}
+
 				return true
 			}
 			return false
@@ -886,3 +943,8 @@ section_record.prototype.get_component_info = function(){
 
 	// 	return load_items_promise
 	// }//end load_items
+
+
+
+// @license-end
+

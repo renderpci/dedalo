@@ -40,8 +40,30 @@
 				// 	padding: 0.25rem;
 				// }
 
+				.situation, .state {
+					position: relative;
+				}
+
+				.total {
+					cursor: pointer;
+				}
+
 				.detail {
 					display: none;
+					position: absolute;
+					background-color: white;
+					padding: 0.5rem;
+					border: 1px solid #eeeeee;
+					right: 0px;
+					top: -50%;
+
+					&.active {
+						display: block;
+					}
+
+					.value {
+						padding-right: 0.33rem;
+					}
 				}
 			}
 		}

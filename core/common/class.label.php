@@ -56,66 +56,66 @@ abstract class label {
 
 
 
- 	/**
-	* GET_LABEL_CACHE_KEY_NAME
-	*//*
-	public function get_label_cache_key_name() {
-		return DEDALO_DATABASE_CONN.'_label_'.DEDALO_APPLICATION_LANG;
-	}*/
-
-
-
 	/**
 	* GET LABEL
 	* @param $name
 	*	String var name like 'quit'
 	* Get label data static
+	* @param string $name
+	* @param string $lang = DEDALO_APPLICATION_LANG
+	* @return string $label
 	*/
-	public static function get_label($name, $lang=DEDALO_APPLICATION_LANG) {
+	public static function get_label(string $name, string $lang=DEDALO_APPLICATION_LANG) : string {
 
 		if ($lang==='lg-vlca') {
 			$lang = 'lg-cat';
 		}
 
-		# Calculate values (is calculated once)
+		// Calculate values (is calculated once)
 		self::get_ar_label($lang);
 
+		$label = (!isset(label::$ar_label[$lang][$name]))
+			? component_common::decore_untranslated($name)
+			: label::$ar_label[$lang][$name];
+
 		if(!isset(label::$ar_label[$lang][$name])) {
-			#return "Sorry, $name is untranslated";
-			#return '<span class="untranslated">'.$name .'</span>';
 			return component_common::decore_untranslated($name);
 		}
-		#dump(label::$ar_label,'label::$ar_label');
 
-		return label::$ar_label[$lang][$name];
+		return $label;
 	}//end get_label
 
 
 
 	/**
 	* GET VAR FROM LABEL
-	* @param $label
+	* @param string $label
+	* @param string $lang = DEDALO_APPLICATION_LANG
 	*	String label like 'Relaciones'
 	* Resolve inverse label
+	* @return string|null
 	*/
-	public static function get_var_from_label($label, $lang=DEDALO_APPLICATION_LANG) {
+	public static function get_var_from_label($label, $lang=DEDALO_APPLICATION_LANG) : ?string {
 
 		if ($lang==='lg-vlca') {
 			$lang = 'lg-cat';
 		}
 
-		# Calculate values (is calculated once)
+		// Calculate values (is calculated once)
 		self::get_ar_label($lang);
 
-		if(!isset(label::$ar_label[$lang])) return NULL;
+		if(!isset(label::$ar_label[$lang])) {
+			return null;
+		}
 
-		# Search in array to resolve
+		// Search in array to resolve
 		foreach (label::$ar_label[$lang] as $key => $value) {
-			#echo $key .'<br>';
 			if ( strtolower($value) === strtolower($label) ) {
 				return $key;
 			}
 		}
+
+		return null;
 	}//end get_var_from_label
 
 
@@ -123,8 +123,10 @@ abstract class label {
 	/**
 	* SET STATIC VARS
 	* Calculate an fix all labels values from structure (all terms with model 'label')
+	* @param string $lang = DEDALO_APPLICATION_LANG
+	* @return array $ar_label
 	*/
-	protected static function set_static_label_vars( $lang=DEDALO_APPLICATION_LANG ) {
+	protected static function set_static_label_vars( string $lang=DEDALO_APPLICATION_LANG ) : array {
 
 		if(SHOW_DEBUG===true) $start_time = start_time();
 
@@ -133,29 +135,27 @@ abstract class label {
 				$lang = 'lg-cat';
 			}
 
-		$ar_term = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name('label');
-
 		$ar_label	= array();
 		$cached		= true;
 		$fallback	= true;
 
+		$ar_term = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name('label');
 		foreach ($ar_term as $current_terminoID) {
 
 			$RecordObj_dd	= new RecordObj_dd($current_terminoID);
 			$properties		= $RecordObj_dd->get_properties();
 
-			# No data in field 'properties'
+			// No data in field 'properties'
 			if(empty($properties) || empty($properties->name)) {
-				debug_log(__METHOD__." Ignored Term $current_terminoID with model 'label' dont't have properly configurated 'properties'. Please solve this ASAP ".to_string($properties), logger::ERROR);
+				debug_log(__METHOD__." Ignored Term $current_terminoID with model 'label' don't have properly configured 'properties'. Please solve this ASAP ".to_string($properties), logger::ERROR);
 				continue;
 			}
 
-			# Set value
+			// Set value
 			$ar_label[$properties->name] = RecordObj_dd::get_termino_by_tipo($current_terminoID, $lang, $cached, $fallback);
 		}
 
 		if(SHOW_DEBUG===true) {
-			#error_log("Calculated labels ".count($ar_term));
 			debug_log(__METHOD__." for lang: $lang ".exec_time_unit($start_time,'ms').' ms', logger::WARNING);
 		}
 
@@ -168,8 +168,10 @@ abstract class label {
 	/**
 	* GET_TERMINOID_FROM_LABEL
 	* Resolve terminoID from label properties property 'label'
+	* @param string $label
+	* @return ?string $terminoID
 	*/
-	public static function get_terminoID_from_label( $label ) {
+	public static function get_terminoID_from_label( string $label ) : ?string {
 
 		if(SHOW_DEBUG===true) {
 			$start_time = start_time();
@@ -177,30 +179,25 @@ abstract class label {
 
 		$terminoID = null;
 
-
 		$ar_term_id_by_model_name = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name('label');
-			#dump($ar_term_id_by_model_name,'$ar_term_id_by_model_name',"label: label ");
-
 		foreach ($ar_term_id_by_model_name as $current_terminoID) {
 
 			$RecordObj_dd	= new RecordObj_dd($current_terminoID);
 			$properties		= $RecordObj_dd->get_properties();
-			$vars_obj		= json_decode($properties);
 
-			# No data in field 'properties'
-			if(empty($vars_obj) || empty($vars_obj->name)) {
-				trigger_error("Term $current_terminoID with model 'label' dont't have properly configurated 'properties'. Please solve this ASAP");
+			// No data in field 'properties'
+			if(empty($properties) || empty($properties->name)) {
+				trigger_error("Term $current_terminoID with model 'label' don't have properly configured 'properties'. Please solve this ASAP");
 				continue;
 			}
 
-			if ($vars_obj->name===$label) {
+			if ($properties->name===$label) {
 				$terminoID = $current_terminoID;
 				break;
 			}
 		}
 
 		if(SHOW_DEBUG===true) {
-			#error_log("Calculated labels ".count($ar_term_id_by_model_name));
 			debug_log(__METHOD__." Total  ".exec_time_unit($start_time,'ms').' ms');
 		}
 

@@ -11,6 +11,7 @@
 	.list_body {
 		display: grid;
 		height: 100%;
+		position: relative;
 
 		@media screen and (max-width: @width_break_point_0) {
 			display: block;
@@ -21,7 +22,13 @@
 		}
 		>.content_data {
 			display: contents;
-			outline: 1px solid @color_grey_light;
+			// outline: 1px solid @color_grey_light;
+
+			.no_records {
+				// position: absolute;
+				// top: 2rem;
+				grid-column: 1/-1; // expand across all empty columns
+			}
 
 			// DES
 				// .column_section_id {
@@ -128,6 +135,7 @@
 		background-color: #dedede42;
 		display: block;
 		position: absolute;
+
 		z-index: 1;
 		box-shadow: 0px 2px 4px 0px #8e8e8e;
 
@@ -145,9 +153,18 @@
 		.header_wrapper_list.section {
 			display: none;
 		}
+
 		// set section_record as grid
 		.content_data.list.section {
 			display: block;
+			padding-top: 0.25rem;
+			// margin-top: -2rem; // compensate section_record margin-top
+
+			.section_record:first-of-type {
+				.column:first-of-type {
+					margin-top: 0.25rem !important;
+				}
+			}
 
 			>.section_record.list {
 				display: grid;
@@ -157,6 +174,20 @@
 				>.column {
 					font-size: 0.9rem;
 					width: 100%;
+					padding-bottom: 0;
+					padding-top: 0.5rem;
+
+					span {
+						padding: unset;
+					}
+
+					.ddinfo_value {
+						display: contents;
+					}
+
+					.section_record  {
+						display: contents;
+					}
 
 					&:before {
 						display: flex;
@@ -169,6 +200,13 @@
 						padding-left: 0.5rem;
 						word-break: break-word;
 						font-size: 0.9rem;
+						// add
+						margin-right: 0.25rem;
+						position: relative;
+						left: -0.2rem;
+						top: -0.5rem;
+						height: calc(100% + 0.5rem);
+						border-bottom: 1px solid #e6e6e6;
 					}
 					&.column_section_id {
 						position: -webkit-sticky;
@@ -180,6 +218,9 @@
 						font-size: 1.5rem;
 						overflow: hidden;
 
+						margin-top: 2rem;
+						margin-bottom: 0.25rem;
+
 						grid-template-columns: 22% 1fr 1fr;
 						display: grid;
 
@@ -187,11 +228,25 @@
 							font-size: 1.5rem;
 							text-transform: uppercase;
 							width: auto;
+							top: 0rem;
+							margin-right: 0rem;
+						}
+
+						.button_edit {
+							justify-content: flex-start;
 						}
 
 						span {
 							// height: 1.5rem;
 							// min-width: 1.5rem;
+
+							&.section_id {
+								font-size: 1.3rem;
+							}
+
+							&.icon {
+								margin-left: 0.5rem;
+							}
 
 							&.remove {
 								margin-left: auto;
@@ -239,8 +294,18 @@
 			padding-left: 0.25rem;
 			padding-right: 0.25rem;
 
+			&.empty{
+				padding-left: unset;
+				padding-right: unset;
+				width: 0;
+			}
+
 			&.section_id {
 				border-top-left-radius: 5px;
+				text-align: right;
+				>.name {
+					margin-right: 0.25rem;
+				}
 			}
 
 			&:last-of-type {
@@ -309,12 +374,15 @@
 			>.name {
 				.truncate_text(100%);
 				margin-right: 0.1rem;
+				margin-left: 0px;
+				font-size: 0.95rem;
+				line-height: 1.15rem;
 			}
 
 			// order. column_order_group
 			>.order {
 				width: 13px;
-				min-width: 13px;
+				// min-width: 13px;
 				height: 15px;
 				margin-left: 0px;
 				vertical-align: text-bottom;
@@ -390,9 +458,11 @@
 		align-items: flex-start; // vertical alignment
 		justify-content: flex-start; // vertical distribution
 		align-content: flex-start; // vertical distribution
+		height: auto;
 
 		// cell outline
-		outline: 1px solid @color_grey_light;
+		// outline: 1px solid @color_grey_light;
+		box-shadow: 0px 1px 0px 0px #e6e6e6;
 
 		// mobile custom
 		@media screen and (max-width: @width_break_point_0) {
@@ -408,8 +478,9 @@
 		&.column_service_time_machine {
 			align-items: center; // vertical alignment
 			padding: 0.5rem;
+			max-height: 3.6rem;
+			overflow: hidden;
 		}
-
 
 		&.column_info {
 			// padding: 0.5em;
@@ -432,7 +503,11 @@
 		}
 
 		&.component_portal {
+		}
 
+		&.empty{
+			padding: 0px;
+			width: 0px;
 		}
 
 		.mini & {
@@ -441,6 +516,10 @@
 			img {
 				height: 3rem;
 			}
+		}
+
+		svg {
+			height: 0.9rem;
 		}
 
 		// >*:not(.media):not(.portal):not(.edit_button) {
@@ -464,8 +543,12 @@
 			margin: 0px;
 			height: inherit;
 
-			>span {
+			@media screen and (max-width: @width_break_point_0) {
 				padding: 0.25rem;
+			}
+
+			>span {
+				padding: 0.3rem;
 				display: inline-block;
 				word-break: break-word;
 
@@ -485,21 +568,42 @@
 
 		// has section_record
 		// (!) has pseudo element its only supported by Chrome and Webkit, not by Firefox (October 2022)
-		&:has(>.section_record) {
+		// &:has(>.section_record) {
 			padding: 0.25rem;
-		}
-	}
+		// }
 
-	// rows in section in list mode must be min-height: 3rem;
-	.wrapper_section.list {
-		.column {
-
-			&.column_section_id {
-				min-width: 70px;
-				font-size: 1.2rem;
+		// columns inside another list_body do not have box-shadow (https://developer.mozilla.org/en-US/docs/Web/CSS/:has)
+		&:has(.list_body) {
+			.column {
+				box-shadow: none;
 			}
 		}
-	}
+
+		// with parent autocomplete_data (service autocomplete datalist)
+		.autocomplete_data & {
+			box-shadow: none;
+		}
+	}//end .column
+
+	// .autocomplete_data_li {
+	// 	.column {
+
+	// 	}
+	// }
+
+
+	// rows in section in list mode must be min-height: 3rem;
+	// .wrapper_section.list {
+	// 	.column {
+
+	// 		&.column_section_id {
+	// 			min-width: 70px;
+
+	// 			--font_size : 1.1vw;
+	// 			font-size: var(--font_size);
+	// 		}
+	// 	}
+	// }
 
 
 	// view_line case
@@ -586,19 +690,18 @@
 			justify-content: flex-end;
 
 			&.link_button {
-				height: 3rem;
 				// padding-right: 0.33rem;
 				font-size: 1.25rem;
+				height: 3rem;
+				height: 100%;
 			}
 
 			&.button_edit {
-				@media screen and (max-width: @width_break_point_0) {
-					justify-content: flex-start;
-				}
+
 			}
 
 			&.button_delete {
-				// justify-content: flex-end;
+
 			}
 
 			&:hover {
@@ -622,10 +725,13 @@
 			}
 
 			>.section_id {
-				font-size: 1.25rem;
+				// font-size: 1.25rem;
 				padding-right: 3px;
 				padding-left: 2px;
 				pointer-events: none;
+
+				--font_size: 1.25rem;
+				font-size: var(--font_size);
 
 				&.small {
 					font-size: 1rem;
@@ -639,6 +745,14 @@
 				pointer-events: none;
 			}
 		}//end >button
+
+		>.section_id_container {
+			padding: 0.75rem;
+			font-size: 0.95rem;
+			text-align: right;
+			width: 100%;
+		}
+
 	}//end .column_section_id
 
 
@@ -656,7 +770,7 @@
 			width: 100%;
 			margin: 0px;
 			padding: 0.5em;
-			padding-top: 0.75rem;
+			// padding-top: 0.75rem;
 			padding-bottom: 0.75rem;
 			border-radius: 0px;
 			justify-content: space-between;

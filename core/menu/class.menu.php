@@ -14,7 +14,7 @@ class menu extends common {
 		// id
 		protected $id;
 		// section_tipo
-		protected $section_tipo;
+		public $section_tipo;
 
 
 
@@ -27,7 +27,7 @@ class menu extends common {
 		$this->tipo			= 'dd85'; // string class menu (dd85)
 		$this->lang			= DEDALO_DATA_LANG;
 		$this->mode			= $mode;
-		$this->section_tipo	= 'dd1';
+		$this->section_tipo	= DEDALO_ROOT_TIPO; // 'dd1';
 
 		parent::load_structure_data();
 	}//end __construct
@@ -45,36 +45,51 @@ class menu extends common {
 
 		$ar_areas = [];
 
-		$user_id			= navigator::get_user_id();
+		$user_id = get_user_id();
+		if (empty($user_id)) {
+			debug_log(__METHOD__
+				. " Warning. Empty user id "
+				, logger::WARNING
+			);
+			return $ar_areas;
+		}
+
 		$is_global_admin	= security::is_global_admin($user_id);
+		$is_developer		= security::is_developer($user_id);
 
-		if($user_id===DEDALO_SUPERUSER || $is_global_admin===true){
-
-			// get all areas of the current installation
-			$ar_areas = area::get_areas();
-
-		}else{
-
-			// ar_full_areas. Is needed to preserve the order of elements
+		// get all areas of the current installation
 			$ar_full_areas = area::get_areas();
 
-			// get authorized areas for the current user with the data of component_security_access
-			$ar_permisions_areas = security::get_ar_authorized_areas_for_user();
+		// filter areas to non root users
+			if($user_id===DEDALO_SUPERUSER){
 
-			// foreach ($ar_full_areas as $area_item) {
-			$ar_full_areas_length = sizeof($ar_full_areas);
-			for ($i=0; $i < $ar_full_areas_length ; $i++) {
+				// unfiltered areas
+				$ar_areas = $ar_full_areas;
 
-				$area_item = $ar_full_areas[$i];
+			}else{
 
-				$found = array_find($ar_permisions_areas, function($permisions_item) use($area_item){
-					return $permisions_item->tipo===$area_item->tipo;
-				});
-				if (!is_null($found)) {
-					$ar_areas[] = $area_item;
+				// get authorized areas for the current user with the data of component_security_access
+				$ar_permisions_areas = security::get_ar_authorized_areas_for_user();
+
+				// foreach ($ar_full_areas as $area_item) {
+				$ar_full_areas_length = sizeof($ar_full_areas);
+				for ($i=0; $i < $ar_full_areas_length ; $i++) {
+
+					$area_item = $ar_full_areas[$i];
+
+					if ($area_item->tipo===DEDALO_AREA_DEVELOPMENT_TIPO && $is_developer===false) {
+						// skip menu developer to non developers, even if they have permissions
+						continue;
+					}
+
+					$found = array_find($ar_permisions_areas, function($permisions_item) use($area_item){
+						return $permisions_item->tipo===$area_item->tipo;
+					});
+					if (!is_null($found)) {
+						$ar_areas[] = $area_item;
+					}
 				}
 			}
-		}
 
 		// section_tool case
 		// section_tool is an alias of the section that will be use to load the information to the specific tool
@@ -91,33 +106,15 @@ class menu extends common {
 				return !in_array($item->tipo, DEDALO_ENTITY_MENU_SKIP_TIPOS);
 			});
 			// rearrange the array to remunerate the arrays
-			$skip_parents	= array_values($skip_parents);
-			$acces_areas	= array_values($acces_areas);
-
-			// get parents recursively to get the show parent
-			if (!function_exists('get_my_parent')) {
-				function get_my_parent($area, $skip_parents){
-					// find if the my parent is in skip parents
-					$current_parent = array_find($skip_parents, function($item) use ($area){
-						return $area->parent === $item->tipo;
-					});
-					// if my parent is in skip recursion to search if his parent is in skip parents
-					// else the parent is the current area->parent, the last parent in the chain
-					if(!empty($current_parent)){
-						return get_my_parent($current_parent, $skip_parents);
-					}else{
-						return $area->parent;
-					}
-				}
-			}
-
-			$ar_areas_length = sizeof($acces_areas);
+			$skip_parents		= array_values($skip_parents);
+			$acces_areas		= array_values($acces_areas);
+			$ar_areas_length	= sizeof($acces_areas);
 			for ($i=0; $i < $ar_areas_length ; $i++) {
 
 				$current_area = $acces_areas[$i];
 
 				// get my parent recursively
-				$parent = get_my_parent($current_area, $skip_parents);
+				$parent = self::get_my_parent($current_area, $skip_parents);
 
 				// item
 					$datalist_item = (object)[
@@ -130,8 +127,7 @@ class menu extends common {
 				// section_tool case
 					if($current_area->model==='section_tool') {
 
-						$section_tool_tipo	= $current_area->tipo;
-						$properties			= $current_area->properties;
+						$properties	= $current_area->properties;
 
 						// tool_context
 							$tool_name = isset($properties->tool_config) && is_object($properties->tool_config)
@@ -142,7 +138,10 @@ class menu extends common {
 
 								$ar_tool_object	= tool_common::get_client_registered_tools([$tool_name]);
 								if (empty($ar_tool_object)) {
-									debug_log(__METHOD__." WARNING. Ignored area '$current_area->tipo'. No tool found for tool name '$tool_name' in current_area ".to_string($current_area), logger::WARNING);
+									debug_log(__METHOD__
+										." WARNING. Ignored area '$current_area->tipo'. No tool found for tool name '$tool_name' in current_area: ".to_string($current_area)
+										, logger::WARNING
+									);
 									continue;
 								}else{
 
@@ -156,7 +155,7 @@ class menu extends common {
 									$datalist_item->config->tool_context = $tool_context;
 								}
 							}
-					}//end if($current_area->model==='section_tool'){
+					}//end if($current_area->model==='section_tool')
 
 				// add
 					$tree_datalist[] = $datalist_item;
@@ -175,25 +174,75 @@ class menu extends common {
 
 
 	/**
+	* GET_MY_PARENT
+	* Recursive find parent area function
+	* @param object $area
+	* @param array $skip_parents
+	* @return object $parent
+	* Sample:
+	* {
+	*	"tipo": "test1",
+	*	"model": "area",
+	*	"parent": "dd770",
+	*	"properties": {
+	*		"mykey2": 2
+	*	},
+	*	"label": "<mark>AREA DE PRUEBAS (TESTS) YYYY</mark>"
+	* }
+	*/
+	private static function get_my_parent($area, $skip_parents) {
+
+		// find if the my parent is in skip parents
+		$current_parent = array_find($skip_parents, function($item) use ($area){
+			return $area->parent === $item->tipo;
+		});
+		// if my parent is in skip recursion to search if his parent is in skip parents
+		// else the parent is the current area->parent, the last parent in the chain
+		if(!empty($current_parent)){
+			return self::get_my_parent($current_parent, $skip_parents);
+		}
+
+		$parent = $area->parent;
+
+		return $parent;
+	}//end get_my_parent
+
+
+
+	/**
 	* GET_INFO_DATA
 	* get the global information of the current installation.
 	* @return object $info_data
 	*/
 	public function get_info_data() : object {
 
-		$jit_enabled = opcache_get_status()['jit']['enabled'] ?? false;
-
 		$info_data = new stdClass();
+			// vars already included in environment
+			$info_data->dedalo_version		= DEDALO_VERSION;
+			$info_data->dedalo_db_name		= DEDALO_DATABASE_CONN;
+			$info_data->pg_version			= (function() {
+												try {
+													$conn = DBi::_getConnection() ?? false;
+													if ($conn) {
+														return pg_version(DBi::_getConnection())['server'];
+													}
+													return 'Failed!';
+												}catch(Exception $e){
+													return 'Failed with Exception!';
+												}
+											  })();
+			$info_data->php_version			= PHP_VERSION;
+			$info_data->php_version			.= ' jit:'. (int)(opcache_get_status()['jit']['enabled'] ?? false);
+			$info_data->memory				= to_string(ini_get('memory_limit'));
+			$info_data->php_sapi_name		= php_sapi_name();
+			// other vars
 			$info_data->entity				= DEDALO_ENTITY;
 			$info_data->php_user			= get_current_user();
-			$info_data->php_version			= phpversion() .'-'. json_encode($jit_enabled);
 			$info_data->php_session_handler	= ini_get('session.save_handler');
 			$info_data->pg_db				= pg_version(DBi::_getConnection())['server'];
-			$info_data->pg_db_name			= DEDALO_DATABASE_CONN;
-			$info_data->server_software		= $_SERVER['SERVER_SOFTWARE'];
-			$info_data->dedalo_version		= DEDALO_VERSION;
+			$info_data->server_software		= $_SERVER['SERVER_SOFTWARE'] ?? 'unknown';
 			$info_data->dedalo_build		= DEDALO_BUILD;
-			$info_data->php_sapi_name		= php_sapi_name();
+
 
 		return $info_data;
 	}//end get_info_data
@@ -202,6 +251,8 @@ class menu extends common {
 
 	/**
 	* GET_STRUCTURE_CONTEXT
+	* @param int $permissions = 1
+	* @param bool $add_request_config = false
 	* @return dd_object $dd_object
 	*/
 	public function get_structure_context(int $permissions=1, bool $add_request_config=false) : dd_object {
@@ -216,14 +267,23 @@ class menu extends common {
 		// tools
 			$tools		= [];
 			$tools_list	= $this->get_tools();
-
 			foreach ($tools_list as $tool_object) {
-				$tool_config	= isset($properties->tool_config->{$tool_object->name})
+
+				$properties		= $tool_object->properties;
+				$tool_config	= !empty($properties) && isset($properties->tool_config->{$tool_object->name})
 					? $properties->tool_config->{$tool_object->name}
 					: null;
-				$current_tool_section_tipo = $this->section_tipo ?? $this->tipo;
-				$tool_context	= tool_common::create_tool_simple_context($tool_object, $tool_config, $this->tipo, $current_tool_section_tipo);
-				$tools[]		= $tool_context;
+
+				$current_tool_section_tipo	= $this->section_tipo ?? $this->tipo;
+				$tool_context				= tool_common::create_tool_simple_context(
+					$tool_object,
+					$tool_config,
+					$this->tipo,
+					$current_tool_section_tipo
+				);
+
+				// add tool
+				$tools[] = $tool_context;
 			}//end foreach ($tools_list as $item)
 
 		// dd_object
@@ -236,6 +296,7 @@ class menu extends common {
 				'permissions'	=> $permissions,
 				'tools'			=> $tools
 			]);
+
 
 		return $dd_object;
 	}//end get_structure_context

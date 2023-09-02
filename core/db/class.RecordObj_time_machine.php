@@ -1,4 +1,5 @@
 <?php
+// declare(strict_types=1);
 /**
 * RecordObj_time_machine
 *
@@ -6,8 +7,10 @@
 */
 class RecordObj_time_machine extends RecordDataBoundObject {
 
-	# MATRIX VARS
-	#protected $id_matrix;
+
+
+	// matrix vars
+	// protected $id_matrix;
 	protected $section_id;
 	protected $section_tipo;
 	protected $tipo;
@@ -15,12 +18,13 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 	protected $timestamp;
 	protected $userID;
 	protected $state;
-	protected $dato;
 
-	# ESPECIFIC VARS
+	public $dato;
+
+	// specific vars
 	protected $ar_time_machine_of_this;
 
-	# TABLE  matrix_table
+	// table  matrix_table
 	protected static $time_machine_matrix_table = 'matrix_time_machine';
 
 	static $save_time_machine_version = true;
@@ -29,7 +33,7 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 	public $use_cache_manager = false;
 
 
-	public function __construct($id=NULL) {
+	public function __construct( ?string $id=null ) {
 		parent::__construct($id);
 	}
 
@@ -44,14 +48,14 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 	# array of pairs db field name, obj property name like fieldName => propertyName
 	protected function defineRelationMap() {
 		return (array(
-			# db fieldn ame			# property name
+			# db field name		# property name
 			'id'			=> 'ID',			// integer
 			#'id_matrix'	=> 'id_matrix',		// integer
 			'section_id'	=> 'section_id',	// integer
-			'section_tipo'	=> 'section_tipo',	// string charvar 32
-			'tipo'			=> 'tipo',			// string charvar 32
+			'section_tipo'	=> 'section_tipo',	// string varchar 32
+			'tipo'			=> 'tipo',			// string varchar 32
 			'lang'			=> 'lang',			// string 16
-			'timestamp'		=> 'timestamp',		// timestamp standar db format
+			'timestamp'		=> 'timestamp',		// timestamp standard db format
 			'userID'		=> 'userID',		// integer
 			'state'			=> 'state',			// string char 32
 			'dato'			=> 'dato'			// jsonb format
@@ -69,9 +73,7 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 
 
 	public function set_dato($dato, $raw=false) {
-		#dump($dato,"dato before");
 		$dato = json_handler::encode($dato);
-		#dump($dato,"dato after");
 		parent::set_dato( $dato, $raw );
 	}//end set_dato
 
@@ -79,10 +81,16 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 
 	/**
 	* GET_AR_TIME_MACHINE_OF_THIS
-	* AR TIME MACHINE : Array de registros de time_machine para el id_matrix recibido
+	* AR TIME MACHINE : Array of time_machine records for the received id_matrix
+	* @param string $tipo = null
+	* @param int $parent=null
+	* @param string $lang=null
+	* @param string $section_tipo = null
+	* @param int $limit = 10
+	* @param int $offset = 0
 	* @return array $ar_id
 	*/
-	public static function get_ar_time_machine_of_this(string $tipo=null, int $parent=null, string $lang=null, string $section_tipo=null, int $limit=10, int $offset=0) : array {
+	public static function get_ar_time_machine_of_this(string $tipo=null, int|string $parent=null, string $lang=null, string $section_tipo=null, int $limit=10, int $offset=0) : array {
 
 		/// Temporal !!!
 		#$limit = 1000000;
@@ -92,7 +100,7 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 		$arguments=array();
 		if(!empty($tipo))
 		$arguments['tipo']			= $tipo;
-		$arguments['section_id']	= $parent;
+		$arguments['section_id']	= (int)$parent;
 		$arguments['section_tipo']	= $section_tipo;
 		if(!empty($lang))
 		$arguments['lang']			= $lang;

@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global */
 /*eslint no-undef: "error"*/
 
@@ -13,7 +14,8 @@
 		load_time_machine_list,
 		load_component_history,
 		load_activity_info,
-		update_project_container_body
+		update_project_container_body,
+		open_ontology_window
 	} from './render_inspector.js'
 	// import * as instances from '../../common/js/instances.js'
 
@@ -80,6 +82,9 @@ inspector.prototype.init = async function(options) {
 				load_time_machine_list(self)
 				// component_history remove content id exists
 				load_component_history(self, null)
+				// selection info. Display current selected component label as 'Description'
+				self.selection_info_node.innerHTML	= self.caller.label
+				self.selection_info_node.caller		= self.caller
 			}
 		// activate_component (when user focus it in DOM)
 			self.events_tokens.push(
@@ -87,10 +92,22 @@ inspector.prototype.init = async function(options) {
 			)
 			function fn_activate_component(actived_component) {
 				self.actived_component = actived_component
-				// component_history load history changes list
-				load_component_history(self, actived_component)
-
+				// selection info. Display current selected component label as 'Description'
+				self.selection_info_node.innerHTML	= actived_component.label
+				self.selection_info_node.caller		= actived_component
+				// component_info. Render tipo, model, translatable, etc.
 				render_component_info(self, actived_component)
+				// component_history. Load component history changes list
+				load_component_history(self, actived_component)
+				// open ontology window if already open to preserve component selected coherence
+				if(SHOW_DEVELOPER===true) {
+					setTimeout(function(){
+						if (window.docu_window && !window.docu_window.closed) {
+							const custom_url = DEDALO_CORE_URL + '/ontology/dd_edit.php?terminoID=' + actived_component.tipo
+							open_ontology_window(actived_component.tipo, custom_url, false)
+						}
+					}, 5)
+				}
 			}
 		// save. When selected component is saved, update component_history, time_machine_list and activity_info
 			self.events_tokens.push(
@@ -125,7 +142,7 @@ inspector.prototype.init = async function(options) {
 			}
 
 	// status update
-		self.status = 'initiated'
+		self.status = 'initialized'
 
 
 	return true
@@ -151,3 +168,7 @@ inspector.prototype.build = async function() {
 
 	return true
 }//end build
+
+
+
+// @license-end

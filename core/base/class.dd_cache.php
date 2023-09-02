@@ -34,9 +34,9 @@ class dd_cache {
 		// sh_data
 			$sh_data = [
 				'server' => [
-					'HTTP_HOST'		=> $_SERVER['HTTP_HOST'],
-					'REQUEST_URI'	=> $_SERVER['REQUEST_URI'],
-					'SERVER_NAME'	=> $_SERVER['SERVER_NAME']
+					'HTTP_HOST'		=> $_SERVER['HTTP_HOST'] ?? 'localhost',
+					'REQUEST_URI'	=> $_SERVER['REQUEST_URI'] ?? '',
+					'SERVER_NAME'	=> $_SERVER['SERVER_NAME'] ?? 'development'
 				]
 			];
 			foreach ($data as $key => $value) {
@@ -47,11 +47,14 @@ class dd_cache {
 			$server_vars = json_encode($sh_data, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
 
 		// base_path. Used to save the files. Usually '/tmp'
-			if (!defined('DEDALO_CACHE_MANAGER') || !isset(DEDALO_CACHE_MANAGER->files_path)) {
-				debug_log(__METHOD__." Error: Check your DEDALO_CACHE_MANAGER config to fix it ".to_string(), logger::ERROR);
+			if (!defined('DEDALO_CACHE_MANAGER') || !isset(DEDALO_CACHE_MANAGER['files_path'])) {
+				debug_log(__METHOD__
+					." Error: Check your DEDALO_CACHE_MANAGER config to fix it "
+					, logger::ERROR
+				);
 				return false;
 			}
-			$base_path = DEDALO_CACHE_MANAGER->files_path;
+			$base_path = DEDALO_CACHE_MANAGER['files_path'];
 
 		// output. $output = '> /dev/null &';
 			$output	= '> '.$base_path .'/'. $prefix . $file_name.' ';
@@ -65,10 +68,14 @@ class dd_cache {
 			$command = PHP_BIN_PATH ." $process_file '$server_vars' $output";
 
 		// debug
-			debug_log(__METHOD__.
-				" ------> COMMAND PROCESS_AND_CACHE_TO_FILE: $file_name --------------------------------------------------------:"
-				.PHP_EOL.PHP_EOL. $command .PHP_EOL,
-				logger::DEBUG
+			debug_log(__METHOD__
+				." ------> COMMAND PROCESS_AND_CACHE_TO_FILE ------------------------------------------------:" . PHP_EOL
+				.'file_name: ' .$file_name . PHP_EOL
+				.'wait: ' . to_string($wait) . PHP_EOL
+				.'command: ' . PHP_EOL
+				. $command   . PHP_EOL
+				." -------------------------------------------------------------------------------------------"
+				, logger::DEBUG
 			);
 
 		// exec command
@@ -99,11 +106,14 @@ class dd_cache {
 			$prefix		= $options->prefix ?? dd_cache::get_cache_file_prefix();
 
 		// base_path. Used to save the files. Usually '/tmp'
-			if (!defined('DEDALO_CACHE_MANAGER') || !isset(DEDALO_CACHE_MANAGER->files_path)) {
-				debug_log(__METHOD__." Error: Check your DEDALO_CACHE_MANAGER config to fix it ".to_string(), logger::ERROR);
+			if (!defined('DEDALO_CACHE_MANAGER') || !isset(DEDALO_CACHE_MANAGER['files_path'])) {
+				debug_log(__METHOD__
+					." Error: Check your DEDALO_CACHE_MANAGER config to fix it "
+					, logger::ERROR
+				);
 				return false;
 			}
-			$base_path = DEDALO_CACHE_MANAGER->files_path;
+			$base_path = DEDALO_CACHE_MANAGER['files_path'];
 
 		// file_path
 			$file_path	= $base_path . '/' . $prefix . $file_name;
@@ -119,9 +129,10 @@ class dd_cache {
 
 		// debug
 			debug_log(__METHOD__.
-				" ------> CACHE_TO_FILE: $file_name --------------------------------------------------------:"
-				.PHP_EOL.PHP_EOL. $result .PHP_EOL,
-				logger::DEBUG
+				" ------> CACHE_TO_FILE: $file_name ------------------------------------------------------:" .PHP_EOL
+				.' result: ' . to_string($result) .PHP_EOL
+				." ----------------------------------------------------------------------------------------"
+				, logger::DEBUG
 			);
 
 
@@ -138,18 +149,17 @@ class dd_cache {
 	* @return string
 	*/
 	public static function get_cache_file_prefix() : string {
-		return DEDALO_ENTITY .'_'. navigator::get_user_id() . '_';
+		return DEDALO_ENTITY .'_'. get_user_id() . '_';
 	}//end get_cache_file_prefix
 
 
 
 	/**
 	* CACHE_FROM_FILE
-	* Write result of process to cache to manage large calculations like
-	* component_security_access datalist
+	* Reads cache file contents
 	* @param object $options
-	* @return string|bool $status
-	* 	Returns string content of file or false on failure.
+	* @return string|bool $contents
+	* 	Returns string content of the file or false on failure.
 	*/
 	public static function cache_from_file(object $options) : string|bool {
 
@@ -160,11 +170,14 @@ class dd_cache {
 			$prefix		= $options->prefix ?? dd_cache::get_cache_file_prefix();
 
 		// base_path. Used to save the files. Usually '/tmp'
-			if (!defined('DEDALO_CACHE_MANAGER') || !isset(DEDALO_CACHE_MANAGER->files_path)) {
-				debug_log(__METHOD__." Error on get cache manager files_path. Check your config file! ".to_string(), logger::ERROR);
+			if (!defined('DEDALO_CACHE_MANAGER') || !isset(DEDALO_CACHE_MANAGER['files_path'])) {
+				debug_log(__METHOD__
+					." Error on get cache manager files_path. Check your config file! "
+					, logger::ERROR
+				);
 				return false;
 			}
-			$base_path = DEDALO_CACHE_MANAGER->files_path;
+			$base_path = DEDALO_CACHE_MANAGER['files_path'];
 
 		// file_path
 			$file_path	= $base_path . '/' . $prefix . $file_name;
@@ -173,7 +186,11 @@ class dd_cache {
 			$contents = file_get_contents($file_path);
 			if ($contents===false) {
 				// error reading the file
-				debug_log(__METHOD__." Error: reading cache file fail:  ".to_string($file_path), logger::ERROR);
+				debug_log(__METHOD__
+					. ' Warning: cache file not found ! . This could be an error or and tes' . PHP_EOL
+					. ' file_path: '.to_string($file_path)
+					, logger::WARNING
+				);
 			}
 			// debug_log(__METHOD__." Returning file cache contents successfully:  ".to_string($file_path), logger::ERROR);
 
@@ -184,20 +201,59 @@ class dd_cache {
 
 
 	/**
+	* CACHE_FILE_EXISTS
+	* Reads cache file to check its existence
+	* @param object $options
+	* @return bool $result
+	*/
+	public static function cache_file_exists(object $options) : bool {
+
+		// options
+			// string file_name. Sample: 1.cache_tree.json
+			$file_name	= $options->file_name;
+			// prefix. (!) If you set custom prefix, the file created will not be deleted automatically on logout/quit
+			$prefix		= $options->prefix ?? dd_cache::get_cache_file_prefix();
+
+		// base_path. Used to save the files. Usually '/tmp'
+			if (!defined('DEDALO_CACHE_MANAGER') || !isset(DEDALO_CACHE_MANAGER['files_path'])) {
+				debug_log(__METHOD__
+					." Error on get cache manager files_path. Check your config file! "
+					, logger::ERROR
+				);
+				return false;
+			}
+			$base_path = DEDALO_CACHE_MANAGER['files_path'];
+
+		// file_path
+			$file_path	= $base_path . '/' . $prefix . $file_name;
+
+		// result
+			$result = file_exists($file_path);
+
+
+		return $result;
+	}//end cache_file_exists
+
+
+
+	/**
 	* DELETE_CACHE_FILES
-	* Remove existing cache files in DEDALO_CACHE_MANAGER->files_path
+	* Remove existing cache files in DEDALO_CACHE_MANAGER['files_path']
 	* @param array $cache_files = null
 	* 	If null, all files with default prefix will be deleted
 	* @return bool
 	*/
-	public static function delete_cache_files( array $cache_files=null ) {
+	public static function delete_cache_files( array $cache_files=null ) : bool {
 
 		// check base_path
-			if (!defined('DEDALO_CACHE_MANAGER') || !isset(DEDALO_CACHE_MANAGER->files_path)) {
-				debug_log(__METHOD__." Error on get cache manager files_path. Check your config file! ".to_string(), logger::ERROR);
+			if (!defined('DEDALO_CACHE_MANAGER') || !isset(DEDALO_CACHE_MANAGER['files_path'])) {
+				debug_log(__METHOD__
+					. " Error on get cache manager files_path. Check your config file! "
+					, logger::ERROR
+				);
 				return false;
 			}
-			$base_path = DEDALO_CACHE_MANAGER->files_path;
+			$base_path = DEDALO_CACHE_MANAGER['files_path'];
 
 		// files
 			$cache_files = !empty($cache_files)
@@ -220,10 +276,18 @@ class dd_cache {
 						if ($deleted===true) {
 							debug_log(__METHOD__." Deleted file $file_path ", logger::DEBUG);
 						}else{
-							debug_log(__METHOD__." Error on deleted file $file_path ", logger::ERROR);
+							debug_log(__METHOD__
+								. " Error on deleted file " .PHP_EOL
+								. ' file_path: ' . $file_path
+								, logger::ERROR
+							);
 						}
 					}else{
-						debug_log(__METHOD__." Warning. Ignored non found file to deleted: $file_path ", logger::ERROR);
+						debug_log(__METHOD__
+							. " Warning. Ignored non found file to deleted " .PHP_EOL
+							. ' file_path: ' . $file_path
+							, logger::ERROR
+						);
 					}
 				}
 			}

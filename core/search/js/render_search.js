@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label*/
 /*eslint no-undef: "error"*/
 
@@ -35,18 +36,19 @@ export const render_search = function() {
 /**
 * LIST
 * Render whole search in list mode
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_search.prototype.list = async function() {
 
 	const self = this
 
 	// wrapper base html bounds
-		const filter_wrapper = self.render_base()
+		const wrapper = self.render_base()
 
 	// components_list. render section component list [left]
 		const section_elements = await self.get_section_elements_context({
 			section_tipo			: self.target_section_tipo,
+			use_real_sections		: true,
 			ar_components_exclude	: self.ar_components_exclude
 		})
 		render_components_list({
@@ -89,11 +91,17 @@ render_search.prototype.list = async function() {
 						// Open search panel
 						toggle_presets(self) // toggle to open from default state close
 					}
+				// type_panel cookie state track
+					// if(self.cookie_track("type_panel")===true) {
+					if(ui_status.value.type_panel && ui_status.value.type_panel.is_open) {
+						// Open search panel
+						toggle_type(self) // toggle to open from default state close
+					}
 			}//end if (ui_status)
 		})
 
 
-	return filter_wrapper
+	return wrapper
 }//end list
 
 
@@ -101,7 +109,7 @@ render_search.prototype.list = async function() {
 /**
 * RENDER_BASE
 * Render basic nodes
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_search.prototype.render_base = function() {
 
@@ -130,7 +138,7 @@ render_search.prototype.render_base = function() {
 		// ui.create_dom_element({
 		// 	element_type	: 'button',
 		// 	class_name		: 'button_save_preset hide99',
-		// 	inner_html		: get_label.salvar +' '+ get_label.cambios,
+		// 	inner_html		: get_label.save +' '+ get_label.changes,
 		// 	parent			: search_global_container
 		// })
 		// .addEventListener('click',function(e) {
@@ -144,7 +152,7 @@ render_search.prototype.render_base = function() {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'toggle_container_selector',
-			inner_html		: get_label.campos,
+			inner_html		: get_label.fields || 'Fields',
 			parent			: search_global_container
 		})
 		.addEventListener('click',function(e){
@@ -247,7 +255,7 @@ render_search.prototype.render_base = function() {
 			const button_save_preset = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'button_save_preset hide',
-				inner_html		: get_label.save +' '+ get_label.cambios,
+				inner_html		: get_label.save +' '+ get_label.changes,
 				parent			: search_container_selection_presets
 			})
 			button_save_preset.addEventListener('click', function(e) {
@@ -265,7 +273,7 @@ render_search.prototype.render_base = function() {
 					save_preset({
 						self			: self,
 						section_id		: section_id,
-						section_tipo	: 'dd623' // presets_section_tipo
+						section_tipo	: 'dd623' // Search presets
 					})
 					.then(function(response){
 						console.log('Preset saved!', response);
@@ -345,7 +353,7 @@ export const render_filter = function(options) {
 /**
 * RENDER_SEARCH_BUTTONS
 * Creates search buttons group: max, show all, apply
-* @return DOM node search_buttons_container
+* @return HTMLElement search_buttons_container
 */
 render_search.prototype.render_search_buttons = function(){
 
@@ -383,21 +391,26 @@ render_search.prototype.render_search_buttons = function(){
 
 	// recursive children
 		if (self.caller.context.section_map && self.caller.context.section_map.thesaurus) {
-			const recursive_label = ui.create_dom_element({
-				element_type	: 'label',
-				text_content	: get_label['children_recursive'] || 'Children',
-				class_name		: 'children_recursive_label',
-				parent			: max_group
-			})
-			const search_children_recursive_node = ui.create_dom_element({
-				element_type	: 'input',
-				type			: 'checkbox',
-				value			: '',
-				class_name		: 'children_recursive'
-			})
-			recursive_label.prepend(search_children_recursive_node)
-			// fix node
-			self.search_children_recursive_node	= search_children_recursive_node
+			// re-check if this section have really a component_relation_children before create the option
+			const section_components_list		= self.components_list[self.section_tipo]
+			const component_relation_children	= section_components_list.find(el => el.model==='component_relation_children')
+			if (component_relation_children) {
+				const recursive_label = ui.create_dom_element({
+					element_type	: 'label',
+					text_content	: get_label['children_recursive'] || 'Children',
+					class_name		: 'children_recursive_label',
+					parent			: max_group
+				})
+				const search_children_recursive_node = ui.create_dom_element({
+					element_type	: 'input',
+					type			: 'checkbox',
+					value			: '',
+					class_name		: 'children_recursive'
+				})
+				recursive_label.prepend(search_children_recursive_node)
+				// fix node
+				self.search_children_recursive_node	= search_children_recursive_node
+			}
 		}
 
 	// reset group
@@ -410,7 +423,7 @@ render_search.prototype.render_search_buttons = function(){
 		const reset_button = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'button reload',
-			title			: get_label.recargar || 'Reload',
+			title			: get_label.reload || 'Reload',
 			parent			: reset_group
 
 		})
@@ -439,29 +452,31 @@ render_search.prototype.render_search_buttons = function(){
 		const show_all_button = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'button show_all',
-			inner_html		: get_label.mostrar_todos || 'Show all',
+			inner_html		: get_label.show_all || 'Show all',
 			parent			: reset_group
 		})
 		show_all_button.addEventListener('click', function(e){
 			e.stopPropagation()
 			self.show_all(this)
 			// Close search div
-			//self.toggle_search_panel()
+				toggle_search_panel(self) // toggle to open from default state close
 		})
 	// Submit button
 		const submit_button = ui.create_dom_element({
 			element_type	: 'button',
 			id				: 'button_submit',
 			class_name		: 'button submit',
-			inner_html		: get_label.aplicar || 'Submit',
+			inner_html		: get_label.apply || 'Apply',
 			parent			: search_buttons_container
 		})
 		submit_button.addEventListener('click', function(e){
 			e.stopPropagation()
 			// always blur active component to force set dato (!)
-			document.activeElement.blur()
-			// exec search command
-			self.exec_search()
+				document.activeElement.blur()
+			// exec search command (return promise resolved as bool)
+				self.exec_search()
+			// toggle filter container
+				toggle_search_panel(self) // toggle to open from default state close
 		})
 
 
@@ -476,7 +491,7 @@ render_search.prototype.render_search_buttons = function(){
 * 	operator, button add, search_component wrapper
 * @param DOM node parent_div
 * @param object options = {}
-* @return DOM node search_group
+* @return HTMLElement search_group
 */
 render_search.prototype.render_search_group = function(parent_div, options={}) {
 
@@ -758,7 +773,7 @@ render_search.prototype.render_user_preset_list = async function(ar_elements, pe
 				class_name		: 'css_span_dato',
 				data_set		: {
 					parent			: element.section_id,
-					section_tipo	: 'dd623',
+					section_tipo	: 'dd623', // Search presets
 					tipo			: 'dd624'
 				}
 			})
@@ -801,32 +816,38 @@ render_search.prototype.render_user_preset_list = async function(ar_elements, pe
 
 
 /**
-* RENDER_sections_selector
+* RENDER_SECTIONS_SELECTOR
 * Render and insert nodes into wrapper
+* @param object self
+* @return DocumentFragment
 */
 const render_sections_selector = (self) => {
 
 	if(!self.sections_selector_data) return false
 
-	// button toggle fields (Show/hide where section fields list are loaded)
-		// const toggle_container_selector = ui.create_dom_element({
-		// 	element_type	: 'div',
-		// 	class_name		: 'toggle_container_selector',
-		// 	inner_html		: get_label.campos,
-		// 	parent			: search_global_container
-		// })
-		// .addEventListener('click',function(){
-		// 	toggle_fields(self)
-		// })
+	// fragment
+		const fragment = new DocumentFragment()
 
-	//wrapper
+	// button toggle type
+		const toggle_container_selector = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'toggle_container_selector sections',
+			inner_html		: get_label.type || 'Type',
+			parent			: fragment
+		})
+		.addEventListener('click', function(e){
+			e.stopPropagation()
+			toggle_type(self)
+		})
+
+	// wrapper
 		const wrapper_sections_selector = ui.create_dom_element({
-			class_name 		: 'wrapper_sections_selector',
-			element_type	: 'div'
+			class_name		: 'wrapper_sections_selector display_none',
+			element_type	: 'div',
+			parent			: fragment
 		})
 		// set wrapper_sections_selector
 		self.wrapper_sections_selector = wrapper_sections_selector
-
 
 	// typologies
 		const typologies = self.sections_selector_data.filter(item => item.type === 'typology')
@@ -839,9 +860,15 @@ const render_sections_selector = (self) => {
 				class_name 		: 'dd_input typology_selector',
 				parent			: wrapper_sections_selector
 			})
-			typology_selector.addEventListener('change',function(event){
-				const typology_id 	= event.target.value
+			typology_selector.addEventListener('change', function(event){
+				const typology_id = event.target.value
 				build_sections_check_boxes(self, typology_id, wrapper_sections_selector_ul)
+				// update_sections_list fire
+				event_manager.publish('update_sections_list_' + self.id)
+
+				// Store selected value as cookie to recover later
+				const cookie_name = 'selected_typology'
+				create_cookie(cookie_name, typology_id, 365)
 			})
 
 		// options for selector
@@ -856,8 +883,8 @@ const render_sections_selector = (self) => {
 			}
 
 		// cookie. previous cookie stored value
-			const cookie_name  		= "selected_typology"
-			const selected_typology = read_cookie(cookie_name)
+			const cookie_name		= 'selected_typology'
+			const selected_typology	= read_cookie(cookie_name)
 			if (selected_typology) {
 				typology_selector.value = selected_typology
 			}
@@ -870,24 +897,52 @@ const render_sections_selector = (self) => {
 			})
 
 		// trigger first selected value
-			build_sections_check_boxes(self, typology_selector.value, wrapper_sections_selector_ul)
+			build_sections_check_boxes(
+				self,
+				typology_selector.value,
+				wrapper_sections_selector_ul
+			)
 
 
-	return wrapper_sections_selector
+	return fragment
 }//end render_sections_selector
 
 
 
 /**
 * BUILD_SECTIONS_CHECK_BOXES
+* Render the checkbox list of available sections in current type
+* For example, for type 2 (Toponymy) the list display your loaded countries
+* This list is interactive and updates the 'Fields' list on every change to
+* preserve the list coherence
+* @param object self
+* @param int|string typology_id
+* @param HTMLElement parent
 */
-const build_sections_check_boxes =  (self, typology_id, parent) => {
+const build_sections_check_boxes = (self, typology_id, parent) => {
 
-	const ar_sections 	= self.sections_selector_data.filter(item => item.typology_section_id === typology_id)
-	const ul 			= parent
+	const ar_sections	= self.sections_selector_data.filter(item => item.typology_section_id===typology_id)
+	const ul			= parent
 
-	//reset the sqo sections
+	// reset the sqo sections
 		self.target_section_tipo.splice(0,self.target_section_tipo.length)
+
+	// cookie value (selected_search_sections)
+		const cookie_name						= 'selected_search_sections'
+		const selected_search_sections_value	= read_cookie(cookie_name)
+		const selected_search_sections			= selected_search_sections_value
+			? JSON.parse(selected_search_sections_value)
+			: {}
+		// sample expected parsed format
+			// {
+			// 	"1": [
+			// 		"numisdata665"
+			// 	],
+			// 	"2": [
+			// 		"es1",
+			// 		"fr1"
+			// 	]
+			// }
 
 	// clean wrapper_sections_selector_ul
 		while (ul.hasChildNodes()) {
@@ -895,6 +950,7 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 		}
 
 	// li nodes
+		const ar_check_box = []
 		const ar_sections_len = ar_sections.length
 		for (let i = 0; i < ar_sections_len; i++) {
 
@@ -924,33 +980,102 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 					// name			: item.hierarchy_target_section_tipo,
 					value			: item.target_section_tipo
 				})
-				check_box.checked = true
-				check_box.addEventListener('change', async function() {
+				ar_check_box.push(check_box)
 
-					if(check_box.checked){
-						self.target_section_tipo.push(check_box.value)
-					}else{
-						const index = self.target_section_tipo.findIndex(item => item === check_box.value)
-						self.target_section_tipo.splice(index, 1)
+				// selected
+				if (selected_search_sections[typology_id]) {
+					// defined cookie value case
+					if(selected_search_sections[typology_id].includes(item.target_section_tipo)){
+						check_box.checked = true
 					}
+				}else{
+					// non defined cookie value case
+					check_box.checked = true
+				}
 
-					const section_elements = await self.get_section_elements_context({
-						section_tipo			: self.target_section_tipo,
-						ar_components_exclude	: self.ar_components_exclude
-					})
-					self.render_components_list({
-						section_tipo		: self.target_section_tipo,
-						target_div			: self.search_container_selector,
-						path				: [],
-						section_elements	: section_elements
-					})
-				})
+				check_box.addEventListener('change', update_sections_list)
 				label.prepend(check_box)
 		}//end for (let i = 0; i < ar_sections_len; i++)
 
-	// Store selected value as cookie to recover later
-		const cookie_name  = "selected_typology"
-		create_cookie(cookie_name, typology_id, 365)
+	// select all option
+		if (ar_check_box.length>1) {
+			// li
+				const li = ui.create_dom_element({
+					element_type	: 'li',
+					class_name		: 'dd_input',
+					parent			: ul
+				})
+			// label
+				const label = ui.create_dom_element({
+					element_type	: 'label',
+					parent			: li,
+					inner_html		: get_label.all || 'All'
+				})
+			// checkbox
+				const check_box = ui.create_dom_element({
+					element_type	: 'input',
+					type			: 'checkbox',
+					value			: null
+				})
+				if (!selected_search_sections[typology_id]) {
+					check_box.checked = true
+				}
+				label.prepend(check_box)
+				check_box.addEventListener('change', fn_change)
+				function fn_change() {
+					// update checked states in all elements
+					ar_check_box.map(el => {
+						el.checked = this.checked
+					})
+					// fire update_sections_list
+					update_sections_list()
+				}
+		}//end if (ar_check_box.length>1)
+
+	// update sections components list (left)
+		async function update_sections_list() {
+
+			// reset and update var value
+				self.target_section_tipo = []
+				const ar_check_box_length = ar_check_box.length
+				for (let i = 0; i < ar_check_box_length; i++) {
+					const item = ar_check_box[i]
+					if (item.checked) {
+						self.target_section_tipo.push(item.value)
+					}
+				}
+
+			// loading add
+				self.search_container_selector.classList.add('loading')
+
+			// refresh the section list at left (use_real_sections)
+				const section_elements = await self.get_section_elements_context({
+					section_tipo			: self.target_section_tipo,
+					use_real_sections		: true,
+					ar_components_exclude	: self.ar_components_exclude
+				})
+				render_components_list({
+					self				: self,
+					section_tipo		: self.target_section_tipo,
+					target_div			: self.search_container_selector,
+					path				: [],
+					section_elements	: section_elements
+				})
+
+			// Store selected value as cookie to recover later
+				selected_search_sections[typology_id] = self.target_section_tipo
+				create_cookie(
+					cookie_name,
+					JSON.stringify(selected_search_sections),
+					365
+				)
+
+			// loading remove
+				self.search_container_selector.classList.remove('loading')
+		}//end update_sections_list
+
+	// event subscription. Fire update on each publication of update_sections_list_
+		event_manager.subscribe('update_sections_list_' + self.id, update_sections_list)
 
 
 	return true
@@ -1125,6 +1250,50 @@ const build_sections_check_boxes =  (self, typology_id, parent) => {
 
 
 
+	/**
+	* TOGGLE_TYPE
+	* @param object self
+	* @return bool
+	*/
+	export const toggle_type = (self) => {
+
+		const wrapper_sections_selector = self.wrapper_sections_selector
+		// check if exists (only exists in thesaurus)
+		if (!wrapper_sections_selector) {
+			return false
+		}
+
+		// cookie to track state
+		const cookie_name = 'type_panel'
+
+		if (wrapper_sections_selector.classList.contains('display_none')) {
+
+			wrapper_sections_selector.classList.remove('display_none')
+
+			// Set search panel as closed
+				self.track_show_panel({
+					name	: cookie_name,
+					action	: 'open'
+				})
+
+		}else{
+
+			if (wrapper_sections_selector && !wrapper_sections_selector.classList.contains('display_none')) {
+				wrapper_sections_selector.classList.add('display_none')
+			}
+
+			// Set search panel as closed
+				self.track_show_panel({
+					name	: cookie_name,
+					action	: 'close'
+				})
+		}
+
+		return true
+	}//end toggle_type
+
+
+
 /**
 * LOCALIZE_OPERATOR
 * @return string localized
@@ -1134,8 +1303,8 @@ const localize_operator = (operator) => {
 	// Remove '$' (first char)
 	const clean_operator = operator.slice(1)
 
-	const name = (clean_operator==='and') ? 'y' :
-				 (clean_operator==='or') ? 'o' :
+	const name = (clean_operator==='and') ? 'and' :
+				 (clean_operator==='or') ? 'or' :
 				 clean_operator
 
 	const localized = get_label[name] || ''
@@ -1143,3 +1312,7 @@ const localize_operator = (operator) => {
 
 	return localized
 }//end localize_operator
+
+
+
+// @license-end

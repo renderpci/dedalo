@@ -1,14 +1,26 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /* global get_label, SHOW_DEBUG, SHOW_DEVELOPER */
 /* eslint no-undef: "error" */
 
 
 
 // imports
-	import {clone, dd_console} from '../../common/js/utils/index.js'
+	import {
+		clone,
+		dd_console,
+		object_to_url_vars,
+		open_window
+	} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	// import * as instances from '../../common/js/instances.js'
+	import {get_instance} from '../../common/js/instances.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	import {common, set_context_vars, get_columns_map} from '../../common/js/common.js'
+	import {
+		common,
+		set_context_vars,
+		get_columns_map,
+		build_autoload
+	} from '../../common/js/common.js'
 	import {component_common, init_events_subscription} from '../../component_common/js/component_common.js'
 	import {paginator} from '../../paginator/js/paginator.js'
 	// import {render_component_portal} from '../../component_portal/js/render_component_portal.js'
@@ -23,7 +35,7 @@
 */
 export const component_portal = function() {
 
-	this.id = null
+	this.id						= null
 
 	// element properties declare
 	this.model					= null
@@ -39,7 +51,7 @@ export const component_portal = function() {
 	this.modal					= null
 	this.caller					= null
 
-	self.standalone 			= null
+	self.standalone				= null
 
 	// context - data
 	this.datum					= null
@@ -58,8 +70,7 @@ export const component_portal = function() {
 	this.request_config_object	= null
 	this.rqo					= null
 
-
-	return true
+	this.fixed_columns_map		= null
 }//end  component_portal
 
 
@@ -133,6 +144,10 @@ component_portal.prototype.init = async function(options) {
 				event_manager.subscribe('initiator_link_' + self.id, fn_initiator_link)
 			)
 			async function fn_initiator_link(locator) {
+				// debug
+					if(SHOW_DEBUG===true) {
+						console.log('-> event fn_initiator_link locator:', locator);
+					}
 				// add locator selected
 					const result = await self.add_value(locator)
 					if (result===false) {
@@ -151,23 +166,50 @@ component_portal.prototype.init = async function(options) {
 			)
 			function fn_link_term(locator) {
 
-				// empty tag_id is allowed too
-				// add tag_id. Note that 'self.active_tag' is an object with 3 properties (caller, text_editor and tag)
-					const tag_id = self.active_tag && self.active_tag.tag
-						? self.active_tag.tag.tag_id || null
-						: null
-					if (tag_id) {
-						locator.tag_id	= tag_id
-					}
+				switch (self.view) {
+					case 'indexation':
+						// empty tag_id is allowed too
+						// add tag_id. Note that 'self.active_tag' is an object with 3 properties (caller, text_editor and tag)
+							const tag_id = self.active_tag && self.active_tag.tag
+								? self.active_tag.tag.tag_id || null
+								: null
+							if (tag_id) {
+								// overwrite/set tag_id
+								locator.tag_id	= tag_id
+							}else{
+								if (!confirm(get_label.no_hay_etiqueta_seleccionada || 'No tag selected. If you continue, the entire record will be indexed.')) {
+									return
+								}
+							}
 
-				// top_locator add
-					const top_locator = self.caller.top_locator // property from tool_indexation
-					// check active tag is already set
-					if (!top_locator) {
-						alert("Error. No top_locator exists");
-						return
-					}
-					Object.assign(locator, top_locator)
+						// tag_component_tipo
+							const tag_component_tipo = self.context.properties?.config_relation?.tag_component_tipo
+							if (tag_component_tipo) {
+								locator.tag_component_tipo = tag_component_tipo
+							}else{
+								console.error('tag_component_tipo is not defined into component properties->config_relation . This is mandatory in v6', self.context.properties);
+								return
+							}
+
+						// top_locator add
+							const top_locator = self.caller.top_locator // property from tool_indexation
+							// check active tag is already set
+							if (!top_locator) {
+								alert("Error. No top_locator exists");
+								return
+							}
+							Object.assign(locator, top_locator)
+						break;
+
+					case 'tree':
+						// set relation type standard portal (dd151)
+						locator.type = DD_TIPOS.DEDALO_RELATION_TYPE_LINK ?? 'dd151'
+						break;
+
+					default:
+						console.warn('Warning: this view do not have custom manager', self.view);
+						break;
+				}
 
 				// debug
 					if(SHOW_DEBUG===true) {
@@ -190,7 +232,9 @@ component_portal.prototype.init = async function(options) {
 			)
 			function fn_deactivate_component(component) {
 				if (component.id===self.id) {
-					console.log('self.autocomplete_active:', self.autocomplete_active);
+					if(SHOW_DEBUG===true) {
+						console.log('self.autocomplete_active:', self.autocomplete_active);
+					}
 					if(self.autocomplete_active===true){
 						self.autocomplete.destroy(
 							true, // bool delete_self
@@ -288,6 +332,9 @@ component_portal.prototype.build = async function(autoload=false) {
 
 	const self = this
 
+	// previous status
+		const previous_status = clone(self.status)
+
 	// status update
 		self.status = 'building'
 
@@ -355,17 +402,27 @@ component_portal.prototype.build = async function(autoload=false) {
 		// 	}
 		// }
 
-	// load data if not yet received as an option
+	// load from DDBB
 		if (autoload===true) {
 
-			// get context and data
-				const api_response = await data_manager.request({
-					body : self.rqo
-				})
-				// console.log("COMPONENT PORTAL api_response:",self.id, api_response);
-				if(SHOW_DEVELOPER===true) {
-					dd_console(`[component_portal.build] COMPONENT ${self.model} build autoload api_response:`, 'DEBUG', [api_response.debug.real_execution_time, api_response])
+			// build_autoload
+			// Use unified way to load context and data with
+			// errors and not login situation managing
+				const api_response = await build_autoload(self)
+				if (!api_response) {
+					return false
 				}
+
+			// reset errors
+				self.running_with_errors = null
+
+			// destroy dependencies
+				await self.destroy(
+					false, // bool delete_self
+					true, // bool delete_dependencies
+					false // bool remove_dom
+				)
+
 			// set Context
 				// context is only set when it's empty the origin context,
 				// if the instance has previous context, it will need to preserve.
@@ -375,7 +432,7 @@ component_portal.prototype.build = async function(autoload=false) {
 				// 		{ mode: list, view: line, children_view: text ... }
 				// if you call to API to get the context of the rsc368 the context will be the default config
 				// 		{ mode: edit, view: default }
-				// but it's necessary preserve the specific ddo_map configuration in the new context.
+				// but it's necessary to preserve the specific ddo_map configuration in the new context.
 				// Context is set and changed in section_record.js to get the ddo_map configuration
 				if(!self.context){
 					const context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
@@ -461,17 +518,33 @@ component_portal.prototype.build = async function(autoload=false) {
 					})
 					await self.paginator.build()
 
-					self.events_tokens.push(
-						event_manager.subscribe('paginator_goto_'+self.paginator.id, fn_paginator_goto)
-					)//end events push
-					function fn_paginator_goto(offset) {
-						// navigate
-						self.navigate(
-							() => {
-								self.rqo.sqo.offset = offset
-							}
-						)
-					}//end fn_paginator_goto
+					// paginator_goto_ event
+						self.events_tokens.push(
+							event_manager.subscribe('paginator_goto_'+self.paginator.id, fn_paginator_goto)
+						)//end events push
+						function fn_paginator_goto(offset) {
+							// navigate
+							self.navigate({
+								callback : () => {
+									self.rqo.sqo.offset = offset
+								}
+							})
+						}//end fn_paginator_goto
+
+					// paginator_show_all_
+						self.events_tokens.push(
+							event_manager.subscribe('paginator_show_all_'+self.paginator.id, fn_paginator_show_all)
+						)//end events push
+						function fn_paginator_show_all(limit) {
+							// navigate
+							self.navigate({
+								callback : async () => {
+									// rqo and request_config_object set offset and limit
+									self.rqo.sqo.offset	= self.request_config_object.sqo.offset = 0
+									self.rqo.sqo.limit	= self.request_config_object.sqo.limit 	= limit
+								}
+							})
+						}//end fn_paginator_goto
 
 				}else{
 					// refresh existing
@@ -518,9 +591,12 @@ component_portal.prototype.build = async function(autoload=false) {
 			: null
 		// self.target_section = self.rqo.sqo.section_tipo
 
+	// reset fixed_columns_map (prevents to apply rebuild_columns_map more than once)
+		self.fixed_columns_map = false
+
 	// columns
 		// if(self.mode!=='list'){
-			self.columns_map = get_columns_map(self.context)
+			self.columns_map = await get_columns_map(self.context)
 		// }
 
 	// component_info add
@@ -541,13 +617,13 @@ component_portal.prototype.build = async function(autoload=false) {
 		self.db_data = clone(self.data)
 
 	// set fields_separator
-		self.context.fields_separator = self.context.fields_separator
-									|| self.request_config_object.show.fields_separator
+		self.context.fields_separator = self.context?.fields_separator
+									|| self.request_config_object?.show.fields_separator
 									|| ' | '
 
 	// set records_separator
-		self.context.records_separator = self.context.records_separator
-									|| self.request_config_object.show.records_separator
+		self.context.records_separator = self.context?.records_separator
+									|| self.request_config_object?.show.records_separator
 									|| ' | '
 
 	// self.show_interface is defined in component_comom init()
@@ -587,31 +663,32 @@ component_portal.prototype.build = async function(autoload=false) {
 /**
 * ADD_VALUE
 * Called from service autocomplete when the user selects a datalist option
-* @param object value (locator)
+* @param object value
+* 	(locator)
 * @return bool
 */
 component_portal.prototype.add_value = async function(value) {
 
 	const self = this
 
-	// get the current_value of the component
-	const current_value	= self.data.value || []
+	// current_value. Get the current_value of the component
+		const current_value	= self.data.value || []
 
-	// check if the component has a data_limit (it could be defined in properties as data_limit with int value)
+	// data_limit. Check if the component has a data_limit (it could be defined in properties as data_limit with int value)
 		const data_limit = self.context.properties.data_limit
-
-		if(data_limit, current_value.length>=data_limit){
-			console.log("[add_value] Data limit is surpass!");
+		if(data_limit && current_value.length>=data_limit){
+			console.log("[add_value] Data limit is exceeded!");
 			// notify to user about the limit
 			const data_limit_label = (get_label.exceeded_limit || 'The maximum number of values for this field has been exceeded. Limit =') + ' ' + data_limit
 			window.alert(data_limit_label)
 			// stop the process
 			return false
 		}
-	// check if value already exists. (!) Note that only current loaded paginated values are available for compare, not the whole portal data
+
+	// exists. Check if value already exists. (!) Note that only current loaded paginated values are available for compare, not the whole portal data
 		const exists = current_value.find(item => item.section_tipo===value.section_tipo && item.section_id==value.section_id)
-		if (typeof exists!=="undefined") {
-			console.log("[add_value] Value already exists (1) !");
+		if (typeof exists!=='undefined') {
+			console.log('[add_value] Value already exists (1) !');
 			return false
 		}
 
@@ -642,13 +719,13 @@ component_portal.prototype.add_value = async function(value) {
 	// total_before
 		const total_before = clone(self.total)
 
-	// change_value (and save)
+	// api_response : change_value (and save)
 		const api_response = await self.change_value({
 			changed_data	: changed_data,
 			refresh			: false // not refresh here (!)
 		})
 
-	// total (after save)
+	// total check (after save)
 		const current_data = api_response.result.data.find(el => el.tipo===self.tipo)
 		const total = current_data
 			? current_data.pagination.total
@@ -657,7 +734,7 @@ component_portal.prototype.add_value = async function(value) {
 			console.warn("// add_value api_response.result.data (unexpected total):",api_response.result.data);
 		}
 
-	// check if value already existed. (!) Note that here, the whole portal data has been compared in server
+	// check if value already exist. (!) Note that here, the whole portal data has been compared in server
 		if (parseInt(total) <= parseInt(total_before)) {
 			// self.update_pagination_values('remove') // remove added pagination value
 			console.log("[add_value] Value already exists (2) !");
@@ -672,24 +749,63 @@ component_portal.prototype.add_value = async function(value) {
 	// updates pagination values offset and total
 		// self.update_pagination_values('add')
 
-	// Update data from save API response (note that build_autoload will be passed as false later -when refresh- to avoid call to the API again)
-		// set context and data to current instance
-			await self.update_datum(api_response.result.data) // (!) Updated on save too (add/delete elements)
+	// (v1) Update data from save API response (note that build_autoload will be passed as false later -when refresh- to avoid call to the API again)
+		// // set context and data to current instance
+		// 	await self.update_datum(api_response.result.data) // (!) Updated on save too (add/delete elements)
 
-		// context. update instance properties from context (type, label, tools, fields_separator, permissions)
-			self.context		= api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
-			self.datum.context	= api_response.result.context
+		// // context. update instance properties from context (type, label, tools, fields_separator, permissions)
+		// 	self.context		= api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
+		// 	self.datum.context	= api_response.result.context
 
 		// // data. update instance properties from data (locators)
-			self.data		= api_response.result.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id)
-			self.datum.data	= api_response.result.data
+		// 	self.data		= api_response.result.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id)
+		// 	self.datum.data	= api_response.result.data
+
+	// (v2) Update data (Coherent with portal build)
+		// reset errors
+			self.running_with_errors = null
+
+		// set Context
+			// context is only set when it's empty the origin context,
+			// if the instance has previous context, it will need to preserve.
+			// because the context could be modified by ddo configuration and it can no be changed
+			// ddo_map -----> context
+			// ex: oh27 define the specific ddo_map for rsc368
+			// 		{ mode: list, view: line, children_view: text ... }
+			// if you call to API to get the context of the rsc368 the context will be the default config
+			// 		{ mode: edit, view: default }
+			// but it's necessary to preserve the specific ddo_map configuration in the new context.
+			// Context is set and changed in section_record.js to get the ddo_map configuration
+			if(!self.context){
+				const context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
+				if (!context) {
+					console.error("context not found in api_response:", api_response);
+				}else{
+					self.context = context
+				}
+			}
+
+		// set Data
+			const data = api_response.result.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id)
+			if(!data){
+				console.warn("data not found in api_response:",api_response);
+			}
+			self.data = data || {}
+
+		// Update datum when the component is not standalone, it's dependent of section or others with common datum
+			if(!self.standalone){
+				await self.update_datum(api_response.result.data)
+			}else{
+				self.datum.context	= api_response.result.context
+				self.datum.data		= api_response.result.data
+			}
 
 		// force re-assign self.total and pagination values on build
 			self.total = null
 
 	// refresh self component
 		await self.refresh({
-			build_autoload	: false, //(self.mode==='search' ? true : false),
+			build_autoload	: false,
 			render_level	: 'content'
 		})
 
@@ -701,16 +817,18 @@ component_portal.prototype.add_value = async function(value) {
 
 	// mode specifics
 		switch(self.mode) {
+
 			case 'search' :
 				// publish change. Event to update the DOM elements of the instance
 				event_manager.publish('change_search_element', self)
-				self.node.classList.remove("active")
-
+				self.node.classList.remove('active')
 				break;
+
 			default:
 
 				break;
 		}
+
 
 	return true
 }//end add_value
@@ -806,7 +924,10 @@ component_portal.prototype.update_pagination_values = function(action) {
 * FILTER_DATA_BY_TAG_ID
 * Filtered data with the tag clicked by the user
 * The portal will show only the locators for the tag selected
-* @param DOM node tag
+* @param object options
+* sample
+* {
+* }
 * @return promise self.render
 */
 component_portal.prototype.filter_data_by_tag_id = function(options) {
@@ -846,7 +967,7 @@ component_portal.prototype.filter_data_by_tag_id = function(options) {
 		return self.render({
 			render_level : 'content'
 		})
-}// end filter_data_by_tag_id
+}//end filter_data_by_tag_id
 
 
 
@@ -912,21 +1033,15 @@ component_portal.prototype.get_search_value = function() {
 * NAVIGATE
 * Refresh the portal instance with new sqo params.
 * Used to paginate and sort records
-* @param function callback
-* @return promise
+* @param object options
+* @return bool
 */
-component_portal.prototype.navigate = async function(callback) {
+component_portal.prototype.navigate = async function(options) {
 
 	const self = this
 
-	// unsaved_data check
-		// if (window.unsaved_data===true) {
-		// 	if (!confirm(get_label.discard_changes || 'Discard unsaved changes?')) {
-		// 		return false
-		// 	}else{
-		// 		window.unsaved_data===false
-		// 	}
-		// }
+	// options
+		const callback = options.callback
 
 	// callback execute
 		if (callback) {
@@ -941,7 +1056,9 @@ component_portal.prototype.navigate = async function(callback) {
 		container.classList.add('loading')
 
 	// refresh
-		await self.refresh()
+		await self.refresh({
+			destroy : false // avoid to destroy here to allow component to recover from loosed login scenarios
+		})
 
 	// loading
 		container.classList.remove('loading')
@@ -971,13 +1088,15 @@ component_portal.prototype.delete_locator = function(locator, ar_properties) {
 
 	return data_manager.request({
 		body : {
-			action	: "delete_locator",
-			dd_api	: 'dd_'+self.model+'_api', // component_portal
+			action	: 'delete_locator',
+			dd_api	: 'dd_component_portal_api', // component_portal
 			source	: {
 				section_tipo	: self.section_tipo, // current component_text_area section_tipo
 				section_id		: self.section_id, // component_text_area section_id
 				tipo			: self.tipo, // component_text_area tipo
-				lang			: self.lang, // component_text_area lang
+				lang			: self.lang // component_text_area lang
+			},
+			options : {
 				locator			: locator,
 				ar_properties	: ar_properties
 			}
@@ -1027,34 +1146,268 @@ component_portal.prototype.sort_data = async function(options) {
 
 
 /**
-* GET_LAST_OFFSET
+* GET_TOTAL
+* this function is for compatibility with section and paginator
+* total is resolved in server and comes in data, so it's not necessary call to server to get it
+*
+* @return int self.total
 */
-	// component_portal.prototype.get_last_offset = function() {
-	// 	//console.log("[get_last_offset] self:",self);
+component_portal.prototype.get_total = async function() {
 
-	// 	const self = this
+	const self = this
 
-	// 	const total = self.pagination.total
-	// 	const limit = self.pagination.limit
+	return self.total
+}//end get_total
 
-	// 	const _calculate = () => {
 
-	// 		if (total>0 && limit>0) {
 
-	// 			const total_pages = Math.ceil(total / limit)
+/**
+* UNLINK_RECORD
+* @param object options
+* {
+* 	paginated_key: paginated_key
+*	section_id : section_id
+* }
+* @return bool
+*/
+component_portal.prototype.unlink_record = async function(options) {
 
-	// 			return parseInt( limit * (total_pages -1) )
+	const self = this
 
-	// 		}else{
+	// options
+		const paginated_key	= options.paginated_key
+		const row_key		= options.row_key
+		const section_id	= options.section_id
 
-	// 			return 0
-	// 		}
-	// 	}
-	// 	const offset_last = _calculate()
+	// changed_data
+		const changed_data = [Object.freeze({
+			action	: 'remove',
+			key		: paginated_key,
+			value	: null
+		})]
 
-	// 	if(SHOW_DEBUG===true) {
-	// 		console.log("====get_last_offset offset_last:",offset_last, "total",total, "limit",limit);
-	// 	}
+	// change_value (implies saves too)
+	// remove the remove_dialog it's controlled by the event of the button that call
+	// prevent the double confirmation
+		const response = await self.change_value({
+			changed_data	: changed_data,
+			label			: section_id,
+			refresh			: false,
+			remove_dialog	: ()=>{
+				return true
+			}
+		})
 
-	// 	return offset_last
-	// }//end  get_last_offset
+	// the user has selected cancel from delete dialog
+		if (response===false) {
+			return false
+		}
+
+	// update pagination offset
+		self.update_pagination_values('remove')
+
+	// refresh
+		await self.refresh({
+			build_autoload : true // when true, force reset offset
+		})
+
+	// check if the caller has active a tag_id
+		if(self.active_tag){
+			// filter component data by tag_id and re-render content
+			self.filter_data_by_tag_id(self.active_tag)
+		}
+
+	// event to update the DOM elements of the instance
+		event_manager.publish('remove_element_'+self.id, row_key)
+
+
+	return true
+}//end unlink_record
+
+
+
+/**
+* DELETE_LINKED_RECORD
+* Generic section remove in mode 'delete_record'
+* @param object options
+* {
+*	section_tipo : section_tipo,
+*	section_id : section_id
+* }
+* @return bool delete_section_result
+*/
+component_portal.prototype.delete_linked_record = async function(options) {
+
+	const self = this
+
+	// options
+		const section_id	= options.section_id
+		const section_tipo	= options.section_tipo
+
+	// create the instance of the section called by the row of the portal,
+	// section will be in list because it's not necessary get all data, only the instance context to be deleted it.
+		const instance_options = {
+			model			: 'section',
+			tipo			: section_tipo,
+			section_tipo	: section_tipo,
+			section_id		: section_id,
+			mode			: 'list',
+			lang			: self.lang,
+			caller			: self,
+			inspector		: false,
+			filter			: false
+		}
+	// get the instance
+		const section =	await get_instance(instance_options)
+
+	// create the sqo to be used to find the section will be deleted
+		const sqo = {
+			section_tipo		: [section_tipo],
+			filter_by_locators	: [{
+				section_tipo	: section_tipo,
+				section_id		: section_id
+			}],
+			limit				: 1
+		}
+
+	// call to the section and delete it
+		const delete_section_result = section.delete_section({
+			sqo			: sqo,
+			delete_mode	: 'delete_record'
+		})
+
+
+	return delete_section_result
+}//end delete_linked_record
+
+
+
+/**
+* DELETE_DATAFRAME_RECORD
+* Remove section in mode 'delete_dataframe'
+* @param object options
+* {
+*	section_id : section_id
+* }
+* @return bool delete_section_result
+*/
+component_portal.prototype.delete_dataframe_record = async function(options) {
+
+	const self = this
+
+	// options
+		const section_id = options.section_id
+
+	// ddo_dataframe.
+	// check if the show has any ddo that call to any dataframe section.
+		const ddo_dataframe = self.request_config_object.show.ddo_map.find(el => el.is_dataframe===true)
+		if(!ddo_dataframe){
+			return false
+		}
+
+	// create the instance of the section called by the row of the portal,
+	// section will be in list because it's not necessary get all data, only the instance context to be deleted it.
+		const instance_options = {
+			model			: 'section',
+			tipo			: ddo_dataframe.section_tipo,
+			section_tipo	: ddo_dataframe.section_tipo,
+			section_id		: section_id,
+			mode			: 'list',
+			lang			: self.lang,
+			caller			: self,
+			inspector		: false,
+			filter			: false
+		}
+	// get the instance
+		const section =	await get_instance(instance_options)
+
+	// caller_dataframe
+		const caller_dataframe = (self.caller && self.caller.model==='section_record' && self.caller.caller)
+			? {
+				section_tipo	: self.caller.caller.section_tipo,
+				section_id		: self.caller.caller.section_id
+			  }
+			: null
+
+	// call to the section and delete it
+		const delete_section_result = await section.delete_section({
+			delete_mode			: 'delete_dataframe',
+			caller_dataframe	: caller_dataframe
+		})
+
+
+	return delete_section_result
+}//end delete_dataframe_record
+
+
+
+/**
+* EDIT_RECORD_HANDLER
+* Unified way to open new window
+* Event 'button_edit_click' will be fired
+* On window blur, a event is published
+* @param object options
+* {
+* 	section_tipo: oh1
+*	section_id : 16
+* }
+* @return object new_window
+*/
+component_portal.prototype.edit_record_handler = async function(options) {
+
+	const self = this
+
+	// options
+		const section_tipo	= options.section_tipo
+		const section_id	= options.section_id
+
+	// open a new window
+		const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
+			tipo			: section_tipo,
+			section_tipo	: section_tipo,
+			id				: section_id,
+			mode			: 'edit',
+			menu			: false
+		})
+
+		const new_window = open_window({
+			url		: url,
+			name	: 'record_view',
+			width	: 1280,
+			height	: 760
+		})
+		new_window.addEventListener('blur', fn_widow_blur)
+		function fn_widow_blur() {
+
+			// refresh. Get the proper element to refresh based on some criteria.
+			// Note that portals in text view are not self refresh able
+				function get_edit_caller(instance) {
+					if(instance.caller && instance.caller.mode==='edit' && instance.caller.type==='component') {
+						return instance.caller
+					}else if(instance.caller) {
+						return get_edit_caller(instance.caller)
+					}
+					return self
+				}
+				const edit_caller = get_edit_caller(self)
+				if (edit_caller) {
+					edit_caller.refresh({
+						build_autoload : true
+					})
+					.then(function(response){
+						// fire window_bur event
+						event_manager.publish('window_bur_'+self.id, self)
+					})
+				}
+		}//end blur event
+
+	// button_edit_click event. Subscribed to close current modal if exists (mosaic view case)
+		event_manager.publish('button_edit_click', this)
+
+
+	return new_window
+}//end edit_record_handler
+
+
+
+// @license-end

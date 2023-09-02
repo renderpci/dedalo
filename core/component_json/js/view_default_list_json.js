@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, JSONEditor */
 /*eslint no-undef: "error"*/
 
@@ -21,9 +22,9 @@ export const view_default_list_json = function() {
 
 
 /**
-* LIST
-* Render node for use in list
-* @return DOM node
+* RENDER
+* Render node for use in this view
+* @return HTMLElement wrapper
 */
 view_default_list_json.render = async function(self, options) {
 
@@ -37,13 +38,13 @@ view_default_list_json.render = async function(self, options) {
 
 
 	return wrapper
-}//end list
+}//end render
 
 
 
 /**
 * GET_VALUE_STRING
-* Get component value as string
+* Get component value as limited length string for list mode uses
 * @return string value_string
 */
 export const get_value_string = function(self) {
@@ -52,22 +53,20 @@ export const get_value_string = function(self) {
 		const data	= self.data
 		const value	= data.value || []
 
-	// value_string
-		if(self.section_tipo==='dd542'){
-
-			// activity section case
-			const ar_values	= []
-			const value_len	= value.length
-			for (let i = 0; i < value_len; i++) {
-				const value_map = new Map(Object.entries(value[i]))
-				for (let [key, value] of value_map) {
-					ar_values.push( key + ': ' + value )
-				}
-			}
-			const value_string = ar_values.join('<br>')
-
-			return value_string
-		}
+	// value_string Activity. Moved to view 'collapse' (view_collapse_list_json)
+		// if(self.section_tipo==='dd542'){
+		// 	// activity section case
+		// 	const ar_values	= []
+		// 	const value_len	= value.length
+		// 	for (let i = 0; i < value_len; i++) {
+		// 		const value_map = new Map(Object.entries(value[i]))
+		// 		for (let [key, value] of value_map) {
+		// 			ar_values.push( key + ': ' + value )
+		// 		}
+		// 	}
+		// 	const value_string = ar_values.join('<br>')
+		// 	return value_string
+		// }
 
 	// default cases
 		const list_show_key = typeof self.context.properties!=='undefined'
@@ -83,3 +82,8 @@ export const get_value_string = function(self) {
 
 	return value_string
 }//end get_value_string
+
+
+
+// @license-end
+

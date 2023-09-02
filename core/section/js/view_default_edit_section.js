@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, Promise, SHOW_DEVELOPER, SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
@@ -7,12 +8,11 @@
 	import {get_section_records} from '../../section/js/section.js'
 	import {set_element_css} from '../../page/js/css.js'
 	import {ui} from '../../common/js/ui.js'
-	import {render_server_response_error} from './render_common_section.js'
 
 
 
 /**
-* view_default_edit_section
+* VIEW_DEFAULT_EDIT_SECTION
 * Manages the component's logic and appearance in client side
 */
 export const view_default_edit_section = function() {
@@ -23,22 +23,18 @@ export const view_default_edit_section = function() {
 
 
 /**
-* EDIT
+* RENDER
 * Render node for use in edit
-* @return DOM node
+* @param object self
+* @param object options
+* @return HTMLElement wrapper
 */
 view_default_edit_section.render = async function(self, options) {
 
-	const render_level = options.render_level || 'full'
+	// options
+		const render_level = options.render_level || 'full'
 
-	// running_with_errors case
-		if (self.running_with_errors) {
-			return render_server_response_error(
-				self.running_with_errors
-			);
-		}
-
-	// ar_section_record. section_record instances (initied and built)
+	// ar_section_record. section_record instances (initialized and built)
 		self.ar_instances = self.ar_instances && self.ar_instances.length>0
 			? self.ar_instances
 			: await get_section_records({caller: self})
@@ -69,7 +65,7 @@ view_default_edit_section.render = async function(self, options) {
 					// inspector_wrapper append
 						inspector_container.appendChild(inspector_wrapper)
 
-					// paginatior inside
+					// paginator inside
 						if (self.paginator) {
 							self.paginator.build().then(()=>{
 								self.paginator.render().then(paginator_wrapper =>{
@@ -89,14 +85,6 @@ view_default_edit_section.render = async function(self, options) {
 				parent			: fragment
 			})
 			self.search_container = search_container
-			// if (self.filter.search_panel_is_open===true) {
-			// 	event_manager.publish('toggle_search_panel')
-			// }
-			// self.filter.build().then(()=>{
-			// 	self.filter.render().then(filter_wrapper =>{
-			// 		search_container.appendChild(filter_wrapper)
-			// 	})
-			// })
 		}
 
 	// content_data add to fragment
@@ -148,13 +136,13 @@ view_default_edit_section.render = async function(self, options) {
 
 
 	return wrapper
-}//end edit
+}//end render
 
 
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = async function(self, ar_section_record) {
 	// const t0 = performance.now()
@@ -190,8 +178,8 @@ const get_content_data = async function(self, ar_section_record) {
 		}
 
 	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add('content_data', self.mode) // ,"nowrap","full_width"
+		const content_data = document.createElement('div')
+			  content_data.classList.add('content_data', self.mode) // ,'nowrap','full_width'
 			  content_data.appendChild(fragment)
 
 	// debug
@@ -208,7 +196,7 @@ const get_content_data = async function(self, ar_section_record) {
 
 /**
 * GET_BUTTONS
-* @return DOM node buttons
+* @return HTMLElement buttons
 */
 const get_buttons = function(self) {
 
@@ -222,17 +210,19 @@ const get_buttons = function(self) {
 
 /**
 * NO_RECORDS_NODE
-* @return DOM node
+* @return HTMLElement node
 */
 const no_records_node = () => {
 
 	const node = ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'no_records',
-		inner_html		: get_label.no_records || "No records found"
+		inner_html		: get_label.no_records || 'No records found'
 	})
 
 	return node
 }//end no_records_node
 
 
+
+// @license-end

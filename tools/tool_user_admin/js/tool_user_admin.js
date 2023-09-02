@@ -1,4 +1,5 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, DD_TIPOS */
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -13,8 +14,9 @@
 	import {render_tool_user_admin} from './render_tool_user_admin.js' // self tool rendered (called from render common)
 
 
+
 /**
-* tool_user_admin
+* TOOL_USER_ADMIN
 * Tool to make interesting things
 */
 export const tool_user_admin = function () {
@@ -32,9 +34,6 @@ export const tool_user_admin = function () {
 	this.target_lang	= null
 	this.langs			= null
 	this.caller			= null
-
-
-	return true
 }//end page
 
 
@@ -53,6 +52,7 @@ export const tool_user_admin = function () {
 	// others
 	tool_user_admin.prototype.build_rqo_show	= common.prototype.build_rqo_show
 	// render mode edit (default). Set the tool custom manager to build the DOM nodes view
+	tool_user_admin.prototype.edit				= render_tool_user_admin.prototype.edit
 	tool_user_admin.prototype.list				= render_tool_user_admin.prototype.edit
 
 
@@ -60,6 +60,8 @@ export const tool_user_admin = function () {
 /**
 * INIT
 * Custom tool init
+* @param object options
+* @return bool
 */
 tool_user_admin.prototype.init = async function(options) {
 
@@ -79,6 +81,8 @@ tool_user_admin.prototype.init = async function(options) {
 /**
 * BUILD
 * Custom tool build
+* @param bool autoload = false
+* @return bool
 */
 tool_user_admin.prototype.build = async function(autoload=false) {
 
@@ -105,12 +109,13 @@ tool_user_admin.prototype.build = async function(autoload=false) {
 
 /**
 * GET_DDO_MAP
+* Builds the default ddo_map of users section to use in this tool
 * @return array ddo_map
 */
 tool_user_admin.prototype.get_ddo_map = function() {
 
-	// section_tipo from environment DD_TIPOS
-	const section_tipo = DD_TIPOS.DEDALO_SECTION_USERS_TIPO
+	// section_tipo
+	const section_tipo = 'dd128'
 
 	const ddo_map = [
 		// section id . read only (!)
@@ -128,7 +133,7 @@ tool_user_admin.prototype.get_ddo_map = function() {
 		},
 		// username . read only (!)
 		{
-			tipo			: DD_TIPOS.DEDALO_USER_NAME_TIPO,
+			tipo			: 'dd132',
 			type			: 'component',
 			typo			: 'ddo',
 			model			: 'component_input_text',
@@ -137,12 +142,12 @@ tool_user_admin.prototype.get_ddo_map = function() {
 			// label		: 'User name',
 			mode			: 'edit',
 			properties		: {css:{}},
-			view 			: 'line',
+			// view 			: 'line',
 			permissions		: 1
 		},
 		// user profile . read only (!)
 		{
-			tipo			: DD_TIPOS.DEDALO_USER_PROFILE_TIPO,
+			tipo			: 'dd1725',
 			type			: 'component',
 			typo			: 'ddo',
 			model			: 'component_select',
@@ -151,12 +156,12 @@ tool_user_admin.prototype.get_ddo_map = function() {
 			// label		: 'User profile',
 			mode			: 'edit',
 			properties		: {css:{}},
-			view 			: 'line',
+			// view 			: 'line',
 			permissions		: 1,
 		},
 		// user full name . editable
 		{
-			tipo			: DD_TIPOS.DEDALO_FULL_USER_NAME_TIPO,
+			tipo			: 'dd452',
 			type			: 'component',
 			typo			: 'ddo',
 			model			: 'component_input_text',
@@ -168,7 +173,7 @@ tool_user_admin.prototype.get_ddo_map = function() {
 		},
 		// password . editable
 		{
-			tipo			: DD_TIPOS.DEDALO_USER_PASSWORD_TIPO,
+			tipo			: 'dd133',
 			type			: 'component',
 			typo			: 'ddo',
 			model			: 'component_password',
@@ -180,7 +185,7 @@ tool_user_admin.prototype.get_ddo_map = function() {
 		},
 		// email . editable
 		{
-			tipo			: DD_TIPOS.DEDALO_USER_EMAIL_TIPO,
+			tipo			: 'dd134',
 			type			: 'component',
 			typo			: 'ddo',
 			model			: 'component_email',
@@ -192,7 +197,7 @@ tool_user_admin.prototype.get_ddo_map = function() {
 		},
 		// projects . read only (!)
 		// {
-		// 	tipo			: DD_TIPOS.DEDALO_FILTER_MASTER_TIPO,
+		// 	tipo			: 'dd170',
 		// 	type			: 'component',
 		// 	typo			: 'ddo',
 		// 	model			: 'component_filter_master',
@@ -205,7 +210,7 @@ tool_user_admin.prototype.get_ddo_map = function() {
 		// },
 		// user image . editable
 		{
-			tipo			: DD_TIPOS.DEDALO_USER_IMAGE_TIPO,
+			tipo			: 'dd522',
 			type			: 'component',
 			typo			: 'ddo',
 			model			: 'component_image',
@@ -217,22 +222,25 @@ tool_user_admin.prototype.get_ddo_map = function() {
 		}
 	]
 
+
 	return ddo_map
 }//end get_ddo_map
 
 
 
 /**
-* BUILD_user_section
-* Build a new custom request config
+* BUILD_USER_SECTION
+* Initiate a new custom section (dd128)
+* Note that, for speed, is built only when render is called
+* @return object section
 */
 tool_user_admin.prototype.build_user_section = async function() {
 
 	const self = this
 
 	// short vars
-		const section_tipo	= DD_TIPOS.DEDALO_SECTION_USERS_TIPO // self.section_tipo
-		const section_id	= page_globals.user_id
+		const section_tipo	= 'dd128' // self.section_tipo
+		const section_id	= '' + page_globals.user_id
 
 	// ddo_map. Note that this ddo_map overwrite the default section request_config show ddo_map (!)
 		const ddo_map = self.get_ddo_map()
@@ -256,7 +264,8 @@ tool_user_admin.prototype.build_user_section = async function() {
 			lang			: page_globals.dedalo_data_nolan,
 			mode			: 'edit',
 			model			: 'section',
-			add_show 		: true,
+			add_show		: true,
+			caller			: self,
 			request_config	: request_config,
 			id_variant		: section_tipo +'_'+ section_id + '_build_user_section'
 		}
@@ -266,8 +275,6 @@ tool_user_admin.prototype.build_user_section = async function() {
 			section.filter = false
 		// inspector disallow
 			section.inspector = false
-		// build
-			await section.build(true)
 
 
 	return section
@@ -293,3 +300,7 @@ tool_user_admin.prototype.on_close_actions = async function(open_as) {
 
 	return true
 }//end on_close_actions
+
+
+
+// @license-end

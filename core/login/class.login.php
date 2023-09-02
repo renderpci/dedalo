@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * CLASS LOGIN
 *
@@ -68,6 +69,11 @@ class login extends common {
 				$response->msg = "Error Processing Request: username is invalid!";
 				return $response;
 			}
+
+			if(DEDALO_MAINTENANCE_MODE===true && $username!=='root'){
+				$response->msg = label::get_label('site_under_maintenance') ?? "System under maintenance";
+				return $response;
+			}
 			// safe username
 			$username = safe_xss($username);
 
@@ -105,7 +111,9 @@ class login extends common {
 					$activity_datos
 				);
 				// delay failed output after 2 seconds to prevent brute force attacks
-		        sleep(2);
+				if (DEVELOPMENT_SERVER!==true) {
+					sleep(2);
+				}
 				// response
 				$response->msg = "Error: User does not exists or password is invalid!";
 				error_log("DEDALO LOGIN ERROR : Invalid user or password");
@@ -129,7 +137,9 @@ class login extends common {
 					$activity_datos
 				);
 				# delay failed output after 2 seconds to prevent brute force attacks
-		        sleep(2);
+		        if (DEVELOPMENT_SERVER!==true) {
+					sleep(2);
+				}
 				#exit("Error: User $username not exists !");
 				$response->msg = 'Error: User ambiguous';
 				error_log("DEDALO LOGIN ERROR : Invalid user or password. User ambiguous ($username)");
@@ -137,7 +147,7 @@ class login extends common {
 			}
 
 		// password check
-			$user_id = $section_id = reset($ar_result);
+			$user_id = $section_id = (int)reset($ar_result);
 
 			# Search password
 			$password_encrypted	= component_password::encrypt_password($password);
@@ -170,8 +180,9 @@ class login extends common {
 						$activity_datos
 					);
 					# delay failed output by 2 seconds to prevent brute force attacks
-	        		sleep(2);
-
+					if (DEVELOPMENT_SERVER!==true) {
+						sleep(2);
+					}
 					$response->msg = 'Error: Wrong password [1]';
 					error_log("DEDALO LOGIN ERROR : Wrong password [1] (".DEDALO_ENTITY.")");
 					return $response;
@@ -205,7 +216,9 @@ class login extends common {
 				);
 
 				# delay failed output by 2 seconds to prevent brute force attacks
-				sleep(2);
+				if (DEVELOPMENT_SERVER!==true) {
+					sleep(2);
+				}
 				$response->msg = 'Error: Account inactive or not defined [1]';
 				error_log("DEDALO LOGIN ERROR : Account inactive");
 				return $response;
@@ -219,7 +232,7 @@ class login extends common {
 				# PROFILE
 					$user_have_profile = login::user_have_profile_check($user_id);
 					if ($user_have_profile!==true) {
-						$response->msg = label::get_label('error_usuario_sin_perfil');
+						$response->msg = label::get_label('user_without_profile_error');
 						return $response;
 					}
 
@@ -227,7 +240,7 @@ class login extends common {
 				# PROJECTS : TEST FILTER MASTER VALUES
 					$user_have_projects = login::user_have_projects_check($user_id);
 					if ($user_have_projects!==true) {
-						$response->msg = label::get_label('error_usuario_sin_proyectos');
+						$response->msg = label::get_label('user_without_projects_error');
 						return $response;
 					}
 
@@ -236,7 +249,11 @@ class login extends common {
 
 		// Login (all is ok) - init login sequence when all is ok
 			$full_username				= login::get_full_username($user_id);
-			$init_user_login_sequence	= login::init_user_login_sequence($user_id, $username, $full_username);
+			$init_user_login_sequence	= login::init_user_login_sequence(
+				$user_id,
+				$username,
+				$full_username
+			);
 			if ($init_user_login_sequence->result===false) {
 
 				// return false
@@ -247,11 +264,12 @@ class login extends common {
 
 			}else if($init_user_login_sequence->result===true) {
 
-				// return ok and reload page
+				// return OK and reload page
 				$response->result			= true;
 				$response->msg				= " Login.. ";
 				$response->errors			= isset($init_user_login_sequence->errors) ? $init_user_login_sequence->errors : [];
 				$response->result_options	= $init_user_login_sequence->result_options;
+				$response->default_section	= login::get_default_section($user_id);
 			}
 
 
@@ -339,7 +357,9 @@ class login extends common {
 							);
 
 							# delay failed output by 2 seconds to prevent brute force attacks
-							sleep(2);
+							if (DEVELOPMENT_SERVER!==true) {
+								sleep(2);
+							}
 							$response->msg = "[Login_SAML] Error: Account inactive or not defined [1]";
 							error_log("[Login_SAML] DEDALO LOGIN ERROR : Account inactive");
 							return $response;
@@ -363,7 +383,7 @@ class login extends common {
 							# PROJECTS : TEST FILTER MASTER VALUES
 								$user_have_projects = login::user_have_projects_check($section_id);
 								if ($user_have_projects!==true) {
-									$response->msg = label::get_label('error_usuario_sin_proyectos');
+									$response->msg = label::get_label('user_without_projects_error');
 									return $response;
 								}
 
@@ -417,8 +437,10 @@ class login extends common {
 						);
 
 					# delay failed output after 2 seconds to prevent brute force attacks
-			        sleep(2);
-					$response->msg = label::get_label('error_el_codigo_de_usuario_no_existe'); # "Error: User Code not exists! Please try again";
+			        if (DEVELOPMENT_SERVER!==true) {
+						sleep(2);
+					}
+					$response->msg = label::get_label('user_code_does_not_exist_error'); # "Error: User Code not exists! Please try again";
 					error_log("[Login_SAML] DEDALO LOGIN ERROR : Invalid saml code");
 					return $response;
 			}
@@ -432,9 +454,9 @@ class login extends common {
 	/**
 	* GET_USERNAME
 	* @param string|int $section_id (is user section id)
-	* @return string $full_username
+	* @return string $username
 	*/
-	public static function get_username($section_id) : string {
+	public static function get_username(string|int $section_id) : string {
 
 		$component = component_common::get_instance(
 			'component_input_text',
@@ -444,7 +466,11 @@ class login extends common {
 			DEDALO_DATA_NOLAN,
 			DEDALO_SECTION_USERS_TIPO
 		);
-		$username = $component->get_valor();
+		$dato = $component->get_dato();
+
+		$username = !empty($dato)
+			? implode(' ', (array)$dato)
+			: '';
 
 		return $username;
 	}//end get_username
@@ -466,10 +492,47 @@ class login extends common {
 			DEDALO_DATA_NOLAN,
 			DEDALO_SECTION_USERS_TIPO
 		);
-		$full_username = $component->get_valor();
+		$dato = $component->get_valor();
+
+		$full_username = !empty($dato)
+			? implode(' ', (array)$dato)
+			: '';
 
 		return $full_username;
 	}//end get_full_username
+
+
+
+	/**
+	* GET_USER_IMAGE
+	* @param string|int $section_id (is user section id)
+	* @return string|null $user_image
+	* 	Local url of user image path as /v6/media/media_development/image/1.5MB/dd522_dd128_1.jpg
+	*/
+	public static function get_user_image($section_id) : ?string {
+
+		$component = component_common::get_instance(
+			'component_image',
+			DEDALO_USER_IMAGE_TIPO, // 'dd522'
+			$section_id,
+			'list',
+			DEDALO_DATA_NOLAN,
+			DEDALO_SECTION_USERS_TIPO
+		);
+		$user_image = $component->get_url(
+			DEDALO_IMAGE_QUALITY_DEFAULT,
+			true, // test_file
+			false, // absolute
+			false // default_add
+		);
+
+		if(empty($user_image) && $section_id<1) {
+			$user_image = DEDALO_ROOT_WEB . '/core/themes/default/raspas/raspa_screen.jpg';
+		}
+
+
+		return $user_image;
+	}//end get_user_image
 
 
 
@@ -505,30 +568,18 @@ class login extends common {
 
 	/**
 	* USER_HAVE_PROFILE_CHECK
+	* Check if the given user id have profile data
 	* @param string|int $section_id
-	* @return bool
+	* @return bool $have_profile
 	*/
 	public static function user_have_profile_check($section_id) : bool {
 
-		$user_have_profile = false; // Default false
+		$locator		= security::get_user_profile($section_id);
+		$have_profile	= !empty($locator)
+			? true
+			: false;
 
-		$model = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_USER_PROFILE_TIPO,true);
-
-		$component_profile = component_common::get_instance(
-			$model,
-			DEDALO_USER_PROFILE_TIPO,
-			$section_id,
-			'list',
-			DEDALO_DATA_NOLAN,
-			DEDALO_SECTION_USERS_TIPO
-		);
-		$profile_dato = $component_profile->get_dato();
-		if (!empty($profile_dato)) {
-
-			$user_have_profile = true;
-		}
-
-		return (bool)$user_have_profile;
+		return (bool)$have_profile;
 	}//end user_have_profile_check
 
 
@@ -555,20 +606,52 @@ class login extends common {
 			$user_have_projects = true;
 		}
 
-
 		return (bool)$user_have_projects;
 	}//end user_have_projects_check
 
 
 
 	/**
-	* INIT_USER_LOGIN_SEqUENCE
+	* GET_DEFAULT_SECTION
+	* @param string|int $section_id (is user section id)
+	* @return string $full_username
+	*/
+	private static function get_default_section($section_id) : ?string {
+
+		// root user case
+			if ($section_id==-1) {
+				return DEDALO_AREA_DEVELOPMENT_TIPO;
+			}
+
+		$component = component_common::get_instance(
+			'component_input_text',
+			'dd1603',
+			$section_id,
+			'list',
+			DEDALO_DATA_NOLAN,
+			DEDALO_SECTION_USERS_TIPO
+		);
+		$dato				= $component->get_dato();
+		$default_section	= !empty($dato) && !empty($dato[0])
+			? $dato[0]
+			: null;
+
+		return $default_section;
+	}//end get_default_section
+
+
+
+	/**
+	* INIT_USER_LOGIN_SEQUENCE
 	* init login sequence when all is OK
-	* @param string|int $user_id
+	* @param int $user_id
 	* @param string $username
+	* @param string $full_username
+	* @param bool $init_test = true
+	* @param string $login_type = 'default'
 	* @return object $response
 	*/
-	private static function init_user_login_sequence($user_id, string $username, string $full_username, bool $init_test=true, string $login_type='default') : object {
+	private static function init_user_login_sequence(int $user_id, string $username, string $full_username, bool $init_test=true, string $login_type='default') : object {
 
 		$response = new stdClass();
 			$response->result			= false;
@@ -576,12 +659,7 @@ class login extends common {
 			$response->errors			= [];
 			$response->result_options	= null;
 
-		#ob_implicit_flush(true);
-
-		# RESET ALL SESSION VARS BEFORE INIT
-		#if(isset($_SESSION)) foreach ($_SESSION as $key => $value) {
-			# Nothing to delete
-		#}
+		// ob_implicit_flush(true);
 
 		// dedalo init test sequence
 			if ($init_test===true) {
@@ -591,7 +669,11 @@ class login extends common {
 
 				// errors found on init test (Don't stop execution here)
 					if ($init_response->result===false) {
-						debug_log(__METHOD__." Init test error: ".to_string($init_response->msg), logger::ERROR);
+						debug_log(__METHOD__
+							." Init test error (dd_init_test): ". PHP_EOL
+							.' init_response: ' . $init_response->msg
+							, logger::ERROR
+						);
 						// Don't stop here. Only inform user of init error via JavaScript
 							# $response->result 	= false;
 							# $response->msg 		= $init_response->msg;
@@ -610,7 +692,7 @@ class login extends common {
 			$_SESSION['dedalo']['auth']['is_global_admin'] = $is_global_admin;
 
 		// is_developer (before set user session vars)
-			$is_developer = (bool)login::is_developer($user_id);
+			$is_developer = (bool)security::is_developer($user_id);
 			$_SESSION['dedalo']['auth']['is_developer'] = $is_developer;
 
 		// session : If backup is ok, fix session data
@@ -634,11 +716,10 @@ class login extends common {
 			if( DEDALO_BACKUP_ON_LOGIN ) {
 				# Close script session
 				session_write_close();
-				require_once DEDALO_CORE_PATH.'/backup/class.backup.php';
-				$backup_secuence_response = backup::init_backup_secuence($user_id, $username);
-				$backup_info = $backup_secuence_response->msg;
+				$backup_secuence_response	= backup::init_backup_secuence($user_id, $username, false);
+				$backup_info				= $backup_secuence_response->msg;
 			}else{
-				$backup_info = 'Deactivated "on login backup" for this domain';
+				$backup_info				= 'Deactivated "on login backup" for this domain';
 			}
 
 		// remove lock_components elements
@@ -657,18 +738,33 @@ class login extends common {
 
 		// precalculate profiles datalist security access in background
 		// This file is generated on every user login, launching the process in background
-			$status = dd_cache::process_and_cache_to_file((object)[
-				'process_file'	=> DEDALO_CORE_PATH . '/component_security_access/calculate_tree.php',
-				'data'			=> (object)[
-					'session_id'	=> session_id(),
-					'user_id'		=> $user_id
-				],
-				'file_name'		=> 'cache_tree.json'
-			]);
-			debug_log(__METHOD__." Generating security access datalist in background... ".to_string($status), logger::DEBUG);
+			if (defined('DEDALO_CACHE_MANAGER') && isset(DEDALO_CACHE_MANAGER['files_path'])) {
+				$cache_file_name = component_security_access::get_cache_tree_file_name(DEDALO_DATA_LANG);
+				debug_log(__METHOD__
+					." Generating security access datalist in background... [cache_file_name: $cache_file_name]"
+					, logger::DEBUG
+				);
+				dd_cache::process_and_cache_to_file((object)[
+					'process_file'	=> DEDALO_CORE_PATH . '/component_security_access/calculate_tree.php',
+					'data'			=> (object)[
+						'session_id'	=> session_id(),
+						'user_id'		=> $user_id
+					],
+					'file_name'		=> $cache_file_name,
+					'wait'			=> false
+				]);
+			}
+
+		// user image
+			$user_image = login::get_user_image($user_id);
+			if (!isset($response->result_options)) {
+				$response->result_options = new stdClass();
+			}
+			$response->result_options->user_image	= $user_image;
+			$response->result_options->user_id		= $user_id;
 
 		// log : Prepare and save login action
-			$browser = $_SERVER['HTTP_USER_AGENT'];
+			$browser = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
 			if (strpos($browser, 'AppleWebKit')===false) $browser = '<i style="color:red">'.$browser.'</i>';
 
 			$activity_datos['result']		= 'allow';
@@ -677,7 +773,7 @@ class login extends common {
 			$activity_datos['browser']		= $browser;
 			$activity_datos['DB-backup']	= $backup_info;
 
-		// login activity report
+			// login activity report
 			self::login_activity_report(
 				"User $user_id is logged. Hello $username",
 				'LOG IN',
@@ -876,7 +972,7 @@ class login extends common {
 	* IS_LOGGED
 	* Test if current user is logged (alias of verify_login)
 	* @see login::verify_login
-	* @return bool (true/false)
+	* @return bool
 	*/
 	public static function is_logged() : bool {
 
@@ -888,19 +984,20 @@ class login extends common {
 	/**
 	* VERIFY_LOGIN
 	* Check that the user is authenticated
-	* based in session existing properties
-	* @return bool (true/false)
+	* based in session existing properties.
+	* Note that if the system is under maintenance,
+	* only the root user is authorized
+	* @return bool
 	*/
 	private static function verify_login() : bool {
-		#global $maintenance_mode;
-		#debug_log(__METHOD__." maintenance_mode ".to_string($maintenance_mode), logger::DEBUG);
 
-		// not authenticated case
 		if( empty($_SESSION['dedalo']['auth']['user_id']) ||
 			empty($_SESSION['dedalo']['auth']['is_logged']) ||
 			$_SESSION['dedalo']['auth']['is_logged'] !== 1 ||
 			empty($_SESSION['dedalo']['auth']['salt_secure'])
 			) {
+
+			// not authenticated case
 
 			if (empty($_SESSION['dedalo']['auth']['user_id'])) {
 
@@ -922,13 +1019,14 @@ class login extends common {
 
 			return false;
 
-		// authenticated case
 		}else{
 
-			#if( $_SESSION['dedalo']['auth']['salt_secure'] != '7PVecu9VSxLHnawfGF2oDCISXvsq2khsOKvPiTJ_D7a_wVaxqQwzRJElPxsecePnFzmrP34RIG0J0ykg3Mbobg,,') {
-			#	throw new Exception("Error Login: Incorrect security config", 1);
-			#	return false;
-			#}
+			// authenticated case
+
+			// maintenance mode. Only toot user is allowed in maintenance mode
+				if(DEDALO_MAINTENANCE_MODE===true && $_SESSION['dedalo']['auth']['username']!=='root') {
+					return false;
+				}
 
 			return true;
 		}
@@ -938,7 +1036,8 @@ class login extends common {
 
 	/**
 	* GET_LOGIN_TIPO
-	* @return string
+	* @return string $tipo
+	* 	value 'dd229'
 	*/
 	private static function get_login_tipo() : string {
 
@@ -955,7 +1054,7 @@ class login extends common {
 	* @param object $options
 	* @return bool
 	*/
-	public static function Quit(object $options) {
+	public static function Quit(object $options) : bool {
 
 		// options
 			$mode	= $options->mode ?? null;
@@ -963,6 +1062,14 @@ class login extends common {
 
 		// already login check
 			if (self::is_logged()!==true) {
+				$user_id = isset($_SESSION['dedalo'])
+					? $_SESSION['dedalo']['auth']['user_id']
+					: null;
+				debug_log(__METHOD__
+					. " User is already logged " . PHP_EOL
+					. ' user_id: '. $user_id
+					, logger::WARNING
+				);
 				return false;
 			}
 
@@ -974,6 +1081,9 @@ class login extends common {
 			if (defined('DEDALO_LOCK_COMPONENTS') && DEDALO_LOCK_COMPONENTS===true) {
 				lock_components::force_unlock_all_components($user_id);
 			}
+
+		// user activity update stats
+			diffusion_section_stats::update_user_activity_stats( (int)$user_id );
 
 		// login activity report
 			self::login_activity_report(
@@ -1036,10 +1146,13 @@ class login extends common {
 				$cookie_properties->httponly
 			);
 			#unset($_SESSION);
-			debug_log(__METHOD__." Unset session and cookie. cookie_name: $cookie_name ".to_string(), logger::DEBUG);
+			debug_log(__METHOD__
+				." Unset session and cookie. cookie_name: $cookie_name ".to_string()
+				, logger::DEBUG
+			);
 
 		// delete previous cache files (prevents reuse of old files when the user does not quit from the browser)
-			if (defined('DEDALO_CACHE_MANAGER') && isset(DEDALO_CACHE_MANAGER->files_path)) {
+			if (defined('DEDALO_CACHE_MANAGER') && isset(DEDALO_CACHE_MANAGER['files_path'])) {
 				dd_cache::delete_cache_files();
 			}
 
@@ -1061,13 +1174,15 @@ class login extends common {
 	* @param array $activity_datos = null
 	* @return void
 	*/
-	public static function login_activity_report(string $msg, string $login_label, array $activity_datos=null) {
+	public static function login_activity_report(string $msg, string $login_label, array $activity_datos=null) : void {
 
-		$datos = array("msg" => $msg);
-
-		// append activity_datos if exists
+		// data base
+			$data = [
+				'msg' => $msg
+			];
+			// append activity_datos if exists
 			if(!empty($activity_datos) && is_array($activity_datos)) {
-				$datos = array_merge($datos, $activity_datos);
+				$data = array_merge($data, $activity_datos);
 			}
 
 		// LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
@@ -1076,7 +1191,7 @@ class login extends common {
 				logger::INFO,
 				self::get_login_tipo(),
 				null,
-				$datos
+				$data
 			);
 	}//end login_activity_report
 
@@ -1116,52 +1231,58 @@ class login extends common {
 	*	Normally current logged user id
 	* @return bool
 	*/
-	public static function is_developer($user_id) : bool {
+		// public static function is_developer( string|int $user_id) : bool {
 
-		$is_developer = false;
+		// 	$user_id = (int)$user_id;
 
-		$user_id = (int)$user_id;
+		// 	// Dedalo superuser case
+		// 	if ($user_id==DEDALO_SUPERUSER) {
+		// 		return true;
+		// 	}
 
-		# Dedalo superuser case
-		if ($user_id==DEDALO_SUPERUSER) return true;
+		// 	// Empty user_id
+		// 	if ($user_id<1) {
+		// 		return false;
+		// 	}
 
-		# Empty user_id
-		if ($user_id<1) return false;
+		// 	// If request user_id is the same as current logged user, return session value, without access to component
+		// 		// if ( isset($_SESSION['dedalo']['auth']['user_id']) && $user_id==$_SESSION['dedalo']['auth']['user_id'] ) {
+		// 		// 	return (bool)$_SESSION['dedalo']['auth']['is_developer'];
+		// 		// }
 
-		# If request user_id is the same as current logged user, return session value, without acces to component
-		#if ( isset($_SESSION['dedalo']['auth']['user_id']) && $user_id==$_SESSION['dedalo']['auth']['user_id'] ) {
-			#return (bool)$_SESSION['dedalo']['auth']['is_developer'];
-		#}
+		// 	// Resolve from component data
+		// 		$model		= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_USER_DEVELOPER_TIPO,true);
+		// 		$component	= component_common::get_instance(
+		// 			$model,
+		// 			DEDALO_USER_DEVELOPER_TIPO,
+		// 			$user_id,
+		// 			'list',
+		// 			DEDALO_DATA_NOLAN,
+		// 			DEDALO_SECTION_USERS_TIPO
+		// 		);
+		// 		$dato = $component->get_dato();
 
-		# Resolve from component
-		$component = component_common::get_instance(
-			'component_radio_button',
-			DEDALO_USER_DEVELOPER_TIPO,
-			$user_id,
-			'edit',
-			DEDALO_DATA_NOLAN,
-			DEDALO_SECTION_USERS_TIPO
-		);
-		$dato = $component->get_dato();
+		// 	// no data case
+		// 		if (empty($dato)) {
+		// 			return false;
+		// 		}
 
-		if (empty($dato)) {
-			return false;
-		}
-
-		# test radio button locator value
-		$locator = reset($dato); # value is always an array
-		if (isset($locator->section_id) && (int)$locator->section_id===1) {
-			$is_developer = true;
-		}
+		// 	// test radio button locator value
+		// 		$locator = reset($dato); // value is always an array
+		// 		if (isset($locator->section_id) && (int)$locator->section_id===1) {
+		// 			return true;
+		// 		}
 
 
-		return $is_developer;
-	}//end is_developer
+		// 	return false;
+		// }//end is_developer
 
 
 
 	/**
 	* GET_STRUCTURE_CONTEXT
+	* @param int $permissions = 1
+	* @param bool $add_request_config = false
 	* @return dd_object $dd_object
 	*/
 	public function get_structure_context(int $permissions=1, bool $add_request_config=false) : dd_object {
@@ -1203,7 +1324,13 @@ class login extends common {
 			$properties->info[] = [
 				'type'	=> 'version',
 				'label'	=> 'Code version',
-				'value'	=> DEDALO_VERSION . ' - Build ' . DEDALO_BUILD
+				'value'	=> DEDALO_VERSION
+			];
+		// build
+			$properties->info[] = [
+				'type'	=> 'version',
+				'label'	=> 'Code Build',
+				'value'	=> DEDALO_BUILD
 			];
 		// dedalo data version
 			$properties->info[] = [
@@ -1234,8 +1361,21 @@ class login extends common {
 					];
 			}
 
-		// langs list
-			$properties->dedalo_application_langs = DEDALO_APPLICATION_LANGS;
+		// demo user
+		// Demo is an account used to open and public demo installation
+		// if depends of the entity name, do not used in production.
+			if(DEDALO_ENTITY==='dedalo_demo'){
+
+				$demo_user = new stdClass();
+					$demo_user->user	= 'dedalo';
+					$demo_user->pw		= '76&_MbdCs3#17_Vhm';
+
+				$properties->info[] = [
+					'type'	=> 'demo_user',
+					'label'	=> 'Demo user',
+					'value'	=> $demo_user
+				];
+			}
 
 		// dd_object
 			$dd_object = new dd_object((object)[
@@ -1254,6 +1394,8 @@ class login extends common {
 
 
 }//end login class
+
+
 
 class exec {
     /**
@@ -1292,4 +1434,4 @@ class exec {
            return true;
        }else return false;
    }
-};
+}//end exec

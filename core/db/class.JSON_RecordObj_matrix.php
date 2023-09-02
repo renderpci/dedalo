@@ -1,26 +1,92 @@
 <?php
+// declare(strict_types=1);
 /**
 * JSON_RECORDOBJ_MATRIX
 *
 */
 class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 
-	# MATRIX VARS
+	# matrix vars
 	protected $section_id;
 	protected $section_tipo;
 	protected $datos;
 
 
-	# ESPECIFIC VARS
-	protected $caller_obj; 	# optional
+	// specific vars
+	protected $caller_obj; 	// optional
 
-	# TABLE  matrix_table
+	// table matrix_table
 	protected $matrix_table ;
 
-	# TIME MACHINE LAST ID
+	// time machine last id
 	public $time_machine_last_id;
 
 	public $datos_time_machine;
+
+	// static cache for RecordObj_matrix instances
+	public static $ar_JSON_RecordObj_matrix_instances = [];
+
+
+
+	/**
+	* GET_INSTANCE
+	* Cache JSON_RecordObj_matrix instances (singleton pattern)
+	* @param string $matrix_table = null
+	* @param string|int|null $section_id = null
+	* @param string $tipo = null
+	* @param bool $cache = true
+	*
+	* @return JSON_RecordObj_matrix $instance
+	*/
+	public static function get_instance(string $matrix_table=null, int $section_id=null, string $section_tipo=null, bool $cache=false) : JSON_RecordObj_matrix {
+
+		// cache
+			// $cache = false;
+
+		// cache is false case. Also, not cache new instances (without section_id)
+			if ($cache===false || empty($section_id)) {
+				return new JSON_RecordObj_matrix(
+					$matrix_table,
+					$section_id,
+					$section_tipo
+				);
+			}//end if ($cache===false || empty($section_id))
+
+		// cache is true case. Get cache instance if it exists. Otherwise, create a new one
+			// cache overload : If ar_JSON_RecordObj_matrix_instances > $max_cache_instances , not add current element to cache to prevent overload
+			// Note: normally, a file like oh1 in edit mode, uses about 60 JSON_RecordObj_matrix items in cache
+				$max_cache_instances	= 1200;
+				$cache_slice_on			= 400;
+				$total					= count(self::$ar_JSON_RecordObj_matrix_instances);
+				if ( $total > $max_cache_instances ) {
+					// self::$ar_JSON_RecordObj_matrix_instances = array_slice(self::$ar_JSON_RecordObj_matrix_instances, $cache_slice_on, null, true);
+					// new array
+					$new_array = [];
+					$i = 1;
+					foreach (self::$ar_JSON_RecordObj_matrix_instances as $inst_key => $inst_value) {
+						if ($i > $cache_slice_on) {
+							$new_array[$inst_key] = $inst_value;
+						}else{
+							$i++;
+						}
+					}
+					// replace matrix_instances array
+					self::$ar_JSON_RecordObj_matrix_instances = $new_array;
+
+					// error_log('))))))))))))))))))))))))))))))))))))))))) Replaced JSON_RecordObj_matrix_instances cache from n '.$total.' to '.count($new_array));
+					// error_log('))))))))))))))))))))))))))))))))))))))))) Replaced JSON_RecordObj_matrix_instances (1200/400) key: '.$section_tipo .'_'. $section_id);
+				}
+
+			// find current instance in cache
+				// $cache_key = $matrix_table.'_'.$section_id .'_'. $section_tipo;
+				$cache_key = $section_tipo .'_'. $section_id;
+				if ( !isset(self::$ar_JSON_RecordObj_matrix_instances[$cache_key]) ) {
+					self::$ar_JSON_RecordObj_matrix_instances[$cache_key] = new JSON_RecordObj_matrix($matrix_table, $section_id, $section_tipo);
+				}
+
+
+		return self::$ar_JSON_RecordObj_matrix_instances[$cache_key];
+	}//end get_instance
 
 
 
@@ -35,7 +101,13 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 			if(SHOW_DEBUG===true) {
 				dump($matrix_table, "section_id: $section_id - tipo: $section_tipo");
 			}
-			throw new Exception("Error Processing Request. Matrix wrong name ", 1);
+			debug_log(__METHOD__
+				. " Error Processing Request. matrix_table is empty" . PHP_EOL
+				. ' section_tipo: '. $section_tipo . PHP_EOL
+				. ' section_id: '. $section_id . PHP_EOL
+				, logger::ERROR
+			);
+			throw new Exception("Error Processing Request. matrix_table is empty. section_tipo: $section_tipo, section_id: $section_id ", 1);
 		}
 
 		if(empty($section_id)) {
@@ -46,8 +118,16 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 		}
 
 		if(empty($section_tipo)) {
-			if(SHOW_DEBUG===true)
+			if(SHOW_DEBUG===true) {
 				dump($section_tipo,"section_id:$section_id - matrix_table:$matrix_table");
+			}
+			debug_log(__METHOD__
+				. " Error Processing Request. section_tipo is empty " . PHP_EOL
+				. ' matrix_table: '. $matrix_table . PHP_EOL
+				. ' section_tipo: '. $section_tipo . PHP_EOL
+				. ' section_id: '. $section_id . PHP_EOL
+				, logger::ERROR
+			);
 			throw new Exception("Error Processing Request. section_tipo is empty ", 1);
 		}
 
@@ -192,9 +272,15 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 
 		// debug
 			if (is_null($id)) {
-				debug_log(__METHOD__." Error on save record  ($this->matrix_table - $this->section_tipo - $this->section_id)".to_string(), logger::ERROR);
+				debug_log(__METHOD__
+					." Error on save record  ($this->matrix_table - $this->section_tipo - $this->section_id)"
+					, logger::ERROR
+				);
 			}else{
-				debug_log(__METHOD__." Saved record ($this->matrix_table - $this->section_tipo - $this->section_id): ".exec_time_unit($start_time).' ms', logger::DEBUG);
+				debug_log(__METHOD__
+					." Saved record ($this->matrix_table - $this->section_tipo - $this->section_id): ".exec_time_unit($start_time).' ms'
+					, logger::DEBUG
+				);
 			}
 
 
@@ -308,12 +394,15 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 						// clean previous component dato to prevent infinite loop
 						$new_options->previous_component_dato = null;
 						// date
-						$created_date = $this->datos->created_date;
-						$new_options->time_machine_date = $created_date;
+						if (isset($this->datos) && isset($this->datos->created_date)) {
+							$created_date = $this->datos->created_date;
+							$new_options->time_machine_date = $created_date;
+						}
 					$this->save_time_machine( $new_options );
-					debug_log(
-						__METHOD__." Saved time machine NOT already saved component dato. tipo: $tipo, section_tipo: $section_tipo, section_id: $section_id".PHP_EOL.to_string($previous_component_dato),
-						logger::WARNING
+					debug_log(__METHOD__
+						." Saved time machine NOT already saved component dato. tipo: $tipo, section_tipo: $section_tipo, section_id: $section_id" . PHP_EOL
+						.' previous_component_dato: '. to_string($previous_component_dato)
+						, logger::WARNING
 					);
 				}
 			}//end if (!empty($previous_component_dato))
@@ -337,7 +426,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 			// timestamp
 				$RecordObj_time_machine->set_timestamp( $time_machine_date );
 			// userID
-				$RecordObj_time_machine->set_userID( navigator::get_user_id() );
+				$RecordObj_time_machine->set_userID( get_user_id() );
 			// dato
 				if (!empty($time_machine_data)) {
 					$RecordObj_time_machine->set_dato( $time_machine_data );
@@ -347,7 +436,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 			$RecordObj_time_machine->Save();
 
 		// time_machine_id. get from saved record
-			$time_machine_id = $RecordObj_time_machine->get_ID();
+			$time_machine_id = (int)$RecordObj_time_machine->get_ID();
 
 
 		return $time_machine_id;

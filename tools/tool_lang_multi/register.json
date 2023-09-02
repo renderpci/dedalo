@@ -66,10 +66,6 @@
             }
           }
         ]
-      },
-      "info": {
-        "label": "Fecha de creación",
-        "model": "component_date"
       }
     },
     "dd201": {
@@ -88,20 +84,25 @@
           }
         ]
       },
-      "info": {
-        "label": "Fecha de modificación",
-        "model": "component_date"
-      }
+      "lg-nolan": [
+        {
+          "start": {
+            "day": 21,
+            "hour": 21,
+            "time": 65028000196,
+            "year": 2023,
+            "month": 3,
+            "minute": 23,
+            "second": 16
+          }
+        }
+      ]
     },
     "dd612": {
       "dato": {
         "lg-eng": [
           "Tool for translate the content to any other language configured."
         ]
-      },
-      "info": {
-        "label": "Descripción",
-        "model": "component_text_area"
       }
     },
     "dd799": {
@@ -110,12 +111,8 @@
           "Tool: Multi-language"
         ],
         "lg-spa": [
-          "Herramienta: Multi-lenguaje"
+          "Herramienta: Multi-lengua"
         ]
-      },
-      "info": {
-        "label": "Etiqueta",
-        "model": "component_input_text"
       }
     },
     "dd1326": {
@@ -123,21 +120,13 @@
         "lg-nolan": [
           "tool_lang_multi"
         ]
-      },
-      "info": {
-        "label": "Nombre de la herramienta",
-        "model": "component_input_text"
       }
     },
     "dd1327": {
       "dato": {
         "lg-nolan": [
-          "2.0.0"
+          "2.0.1"
         ]
-      },
-      "info": {
-        "label": "Versión",
-        "model": "component_input_text"
       }
     },
     "dd1328": {
@@ -145,28 +134,6 @@
         "lg-nolan": [
           "6.0.0"
         ]
-      },
-      "info": {
-        "label": "Versión Dédalo mínima",
-        "model": "component_input_text"
-      }
-    },
-    "dd1334": {
-      "dato": {
-        "lg-nolan": []
-      },
-      "info": {
-        "label": "Ontologia",
-        "model": "component_json"
-      }
-    },
-    "dd1353": {
-      "dato": {
-        "lg-nolan": []
-      },
-      "info": {
-        "label": "Simple tool object",
-        "model": "component_json"
       }
     },
     "dd1362": {
@@ -174,22 +141,15 @@
         "lg-nolan": [
           "For automatic translation, constant 'DEDALO_TRANSLATOR_ENGINE' with all translators must be defined in Dédalo /config/tools/config_tool_lang.json file like:<br><br>define('DEDALO_TRANSLATOR_ENGINE',&nbsp; '[<br>{<br>&nbsp; name\": \"babel\",<br>&nbsp; \"label\": \"Babel\",<br>&nbsp; \"uri\": \"https://babel.render.es/babel_engine/\",<br>&nbsp; \"key\": \"9Fre!ksadas132aPlsdiugJKAH\"<br>}<br>]');"
         ]
-      },
-      "info": {
-        "label": "Dev info",
-        "model": "component_text_area"
       }
     }
   },
   "section_id": 4,
   "created_date": "2020-02-17 18:04:18",
   "section_tipo": "dd1340",
-  "modified_date": "2020-02-24 14:56:48",
+  "modified_date": "2023-03-21 21:23:16",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd1324",
-  "modified_by_userID": -1,
-  "section_creator_top_tipo": "",
-  "section_creator_portal_tipo": "",
-  "section_creator_portal_section_tipo": ""
+  "modified_by_userID": -1
 }

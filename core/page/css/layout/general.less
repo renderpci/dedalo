@@ -57,6 +57,24 @@
 		//display: grid;
 	}
 
+// maintenance_container
+	.maintenance_container {
+		padding: 1.5rem;
+		background-color: @color_orange_dedalo;
+		color: white;
+		font-size: 1.5rem;
+		text-align: center;
+	}
+
+// notification_container
+	.notification_container {
+		padding: 1rem;
+		// background-color: #ba4040;
+		background-color: darken(@color_danger, 10%);
+		color: white;
+		font-size: 1.2rem;
+		text-align: center;
+	}
 
 // general styles
 	.mark {
@@ -85,8 +103,20 @@
 
 	// lock
 	.lock {
-		opacity: 0.35;
-		pointer-events: none;
+		opacity: 0.6;
+		pointer-events: none !important;
+		position: relative;
+
+		// lock icon at top right
+		&:after {
+			content: " ";
+			.fn_build_button('lock.svg', red, 1);
+			position: absolute;
+			top: 4px;
+			right: 4px;
+			opacity: 0.5;
+			// color: #fd0000;
+		}
 	}
 
 	.no_margin {
@@ -198,14 +228,17 @@
 	// 	}
 	// }
 
-
 	.spinner {
-		/* Size */
-		height: 3rem;
-		width: 3rem;
+		@color_base: #d1d5db;
+
+		// position
 		position: absolute;
 		left: 40%;
 		top: 40%;
+
+		// size
+		height: 3rem;
+		width: 3rem;
 
 		// bg
 			// &:before {
@@ -222,10 +255,24 @@
 			// 	height: 85%;
 			// }
 
-		/* Create a curve at the top */
-		border: 4px solid #d1d5db;
-		border-top-color: @color_orange_dedalo;
+		// Create a curve at the top
 		border-radius: 50%;
+		border: 4px solid @color_base;
+		border-top-color: @color_orange_dedalo;
+
+		&.medium {
+			height: 2rem;
+			width: 2rem;
+			border: 3px solid @color_base;
+			border-top-color: @color_orange_dedalo;
+		}
+
+		&.small {
+			height: 1.5rem;
+			width: 1.5rem;
+			border: 2px solid @color_base;
+			border-top-color: @color_orange_dedalo;
+		}
 
 		animation: run_spinner 800ms linear infinite;
 	}
@@ -260,6 +307,10 @@
 		to { opacity: 0 }
 	}
 
+	.no_access {
+		display: inline-block;
+		padding: 0.5rem;
+	}
 
 
 // icon_arrow
@@ -413,9 +464,15 @@
 
 // error
 	.error {
-		background-color: red !important;
+		background-color: @color_danger !important;
 		transition: background-color 0.3s ease;
 		color: white;
+	}
+	.success_text {
+		color: @color_success;
+	}
+	.error_text {
+		color: @color_danger;
 	}
 
 	.alert {
@@ -466,6 +523,14 @@
 	}
 
 
+// warning
+	.warning_text {
+		background-color: @color_orange_dedalo !important;
+		transition: background-color 0.3s ease;
+		color: white;
+	}
+
+
 
 // success
 	.save_success {
@@ -483,9 +548,9 @@
 			position: absolute;
 			left: 0px;
 			top: 1px;
-			z-index: 9;
+			z-index: 4;
 
-			animation: success_animation_line 2s ease-out;
+			animation: success_animation_line 1.7s ease-out;
 			// animation-name: success_animation_line;
 			// animation-duration: 2s;
 			// animation-iteration-count: 1;
@@ -615,8 +680,8 @@
 		>.spinner {
 			left: 0.75rem;
 			top: 0.5rem;
-			height: 2rem;
-			width: 2rem;
+			// height: 2rem;
+			// width: 2rem;
 			z-index: 2;
 			margin: 0px;
 			// border-top: 1px @color_orange_dedalo solid;
@@ -654,9 +719,11 @@
 
 // no_records
 	.no_records {
-		color: #fd7600;
+		color: @color_orange_dedalo;
 		font-size: 1em;
 		padding: 1em;
+		width: 100%;
+		white-space: pre;
 	}
 
 

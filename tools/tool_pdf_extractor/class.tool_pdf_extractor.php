@@ -10,52 +10,64 @@ class tool_pdf_extractor extends tool_common {
 
 	/**
 	* GET_PDF_DATA
+	* @param object $options
 	* @return object $response
 	*/
-	public function get_pdf_data(object $options) {
+	public static function get_pdf_data(object $options) {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// options
-			$component_options 	= $options->component;
-			$extractor_config 	= $options->extractor_config;
+			// $component_options 	= $options->component;
+			// $extractor_config 	= $options->extractor_config;
+			$component_tipo	= $options->component_tipo;
+			$section_tipo	= $options->section_tipo;
+			$section_id		= $options->section_id;
+			$lang			= $options->lang;
+			$method			= $options->method; // string text|html
+			$page_in		= $options->page_in;
+			$page_out		= $options->page_out;
 
-		// config
-			$config = tool_common::get_config(get_called_class());
-
-
-		// create the component to get the file path
-			$model		= RecordObj_dd::get_modelo_name_by_tipo($component_options->component_tipo,true);
-			$component	= component_common::get_instance($model,
-														 $component_options->component_tipo,
-														 $component_options->section_id,
-														 'list',
-														 DEDALO_DATA_NOLAN,
-														 $component_options->section_tipo);
-			$pdf_path = $component->get_path();
+		// component_pdf. Create the component to get the file path
+			$model		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component	= component_common::get_instance(
+				$model,
+				$component_tipo,
+				$section_id,
+				'list',
+				$lang,
+				$section_tipo
+			);
+			$pdf_path = $component->get_media_filepath();
 
 		// pdf_path error on missing properties
 			if (empty($pdf_path) || !file_exists($pdf_path)) {
-				$response->result = 'error';
+				$response->result = false;
 				$response->msg 	  = "Error Processing Request pdf_automatic_transcription: source pdf file not found";
+				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
 				return $response;
 			}
 
 		// test engine PDF to text
-			$method				= $extractor_config->method;
-			$extactor_engine	= $config->{$method}->default;
+			$config				= tool_common::get_config('tool_pdf_extractor');
+			$extactor_engine	= $config->config->{$method}->default ?? null;
 
 			if (!isset($extactor_engine)) {
-				$response->result = 'error';
+
+				$response->result = false;
 				$response->msg 	  = "Error Processing Request pdf_automatic_transcription: config extractor engine is not defined";
+				debug_log(__METHOD__." $response->msg ".PHP_EOL.to_string($config), logger::ERROR);
 				return $response;
+
 			}else{
-				$transcription_engine = trim(shell_exec('type -P '.$extactor_engine));
+
+				$transcription_engine = trim( shell_exec('type -P '.$extactor_engine) ?? '' );
 				if (empty($transcription_engine)) {
-					$response->result = 'error';
+					$response->result = false;
 					$response->msg 	  = "Error Processing Request pdf_automatic_transcription: daemon engine not found";
+					debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
 					return $response;
 				}
 			}
@@ -82,11 +94,11 @@ class tool_pdf_extractor extends tool_common {
 
 			$engine_config = '';
 
-			if(!empty($extractor_config->page_in)){
-				$engine_config .= ' -f ' .$extractor_config->page_in;
+			if(!empty($page_in)){
+				$engine_config .= ' -f ' .$page_in;
 			}
-			if(!empty($extractor_config->page_out)){
-				$engine_config .= ' -l ' .$extractor_config->page_out;
+			if(!empty($page_out)){
+				$engine_config .= ' -l ' .$page_out;
 			}
 
 			$file_extension = '.txt';
@@ -95,32 +107,41 @@ class tool_pdf_extractor extends tool_common {
 				$file_extension = '.html';
 			}
 
-		// FILE TEXT FROM PDF . Create a new text file from pdf text content (.txt for text, .html for html)
-		$extraction_filename = substr($pdf_path, 0, -4) . $file_extension;
+		// file text from PDF. Create a new text file from pdf text content (.txt for text, .html for html)
+			$extraction_filename = substr($pdf_path, 0, -4) . $file_extension;
 
 		// exec the extraction
-			$command  = $extactor_engine ." -enc UTF-8 $engine_config $pdf_path";
-			dump($command, ' command ++ '.to_string());
-			$output   = exec( "$command 2>&1", $result);	# Generate text version file in same dir as pdf
+			// $command  = $extactor_engine ." -enc UTF-8 $engine_config $pdf_path 2>&1";
+			$command  = $extactor_engine ." -enc UTF-8 $engine_config $pdf_path $extraction_filename";
+			debug_log(__METHOD__." Executing command: ".PHP_EOL. $command, logger::DEBUG);
+			$output   = exec($command, $result);	// Generate text version file in same dir as pdf
 			if ( strpos( strtolower($output), 'error')) {
-				$response->result = 'error';
+				$response->result = false;
 				$response->msg 	  = "$output";
+				debug_log(__METHOD__." $response->msg ".PHP_EOL. 'result: '.to_string($result), logger::ERROR);
 				return $response;
 			}
+
 		// test if the file is saved
 			if (!file_exists($extraction_filename)) {
-				$response->result = 'error';
+				$response->result = false;
 				$response->msg 	  = "Error Processing Request pdf_automatic_transcription: Extraction file not found";
+				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
 				return $response;
 			}
 
 		// pdf_text contents
-			$pdf_text = file_get_contents($extraction_filename); // Read current text file
+			$pdf_text = file_get_contents($extraction_filename); // Read current text/html file
 
 		// response
-			$response->result  = $pdf_text;
+			$response->result  = htmlentities($pdf_text);
 			$response->msg 	   = "OK Processing Request pdf_automatic_transcription: text processed";
 			// $response->original = trim($original_text);
+				dump($response, ' response ++ '.to_string());
+
+		// (!) Note: This tool is not finished!
+
+			// Work in progress !
 
 		// #
 		// # PAGES TAGS
@@ -142,7 +163,7 @@ class tool_pdf_extractor extends tool_common {
 
 
 		return $response;
-	}//end get_system_info
+	}//end get_pdf_data
 
 
 
@@ -182,14 +203,14 @@ class tool_pdf_extractor extends tool_common {
 		# Test JSON conversion before save
 		$pdf_text 	= json_handler::encode($pdf_text);
 		if (!$pdf_text) {
-			$response->result = 'error';
+			$response->result = false;
 			$response->msg 	  = "Error Processing Request pdf_automatic_transcription: String is not valid because format encoding is wrong";
 			return $response;
 		}
 		$pdf_text 	= json_handler::decode($pdf_text);	# JSON is valid. We turn object to string
 		$pdf_text 	= trim($pdf_text);	// Trim before check is empty
 		if (empty($pdf_text)) {
-			$response->result = 'error';
+			$response->result = false;
 			$response->msg 	  = "Error Processing Request pdf_automatic_transcription: Empty text";
 			return $response;
 		}

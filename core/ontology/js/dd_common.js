@@ -1,4 +1,4 @@
-// JavaScript Document
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 
 /*******************************
 * OTRAS FUNCIONES GENERALES
@@ -291,8 +291,8 @@ function save_descriptor(input_node) {
 					alert(response.msg || 'Undefined error')
 			}else{
 				// SUCCESS case
-				// refresh tree from parent if openere
-					if (window.opener) {
+				// refresh tree from parent if opener
+					if (window.opener && form.parent) {
 						const parent_term = form.parent.value
 						// Reload only de parent div
 						window.opener.openDivTrack(parent_term, 1, terminoID)
@@ -308,3 +308,8 @@ function save_descriptor(input_node) {
 		})
 	})
 }//end save_descriptor
+
+
+
+// @license-end
+

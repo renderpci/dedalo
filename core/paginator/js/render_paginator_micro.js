@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -22,7 +23,7 @@ export const render_paginator_micro = function() {
 /**
 * MICRO
 * Render node for use in current mode
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_paginator_micro.prototype.micro = async function(options) {
 
@@ -63,7 +64,7 @@ render_paginator_micro.prototype.micro = async function(options) {
 const add_events = (wrapper, self) => {
 
 	// mousedown
-		wrapper.addEventListener("mousedown", function(e){
+		wrapper.addEventListener('mousedown', function(e){
 			e.stopPropagation()
 			//e.preventDefault()
 			// prevent bubble event to container element
@@ -78,7 +79,7 @@ const add_events = (wrapper, self) => {
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = async function(self) {
 
@@ -105,16 +106,56 @@ const get_content_data = async function(self) {
 			// console.log(`++++++++++++++++++++++ total_pages: ${total_pages}, page_number: ${page_number}, offset: ${offset}, offset_first: ${offset_first}, model: ${model} `);
 		}
 
-	// display none with empty case, or when pages are <2
-		if (!total_pages || total_pages<2) {
+	// display none with empty case, or when pages are <2 and show_all_status is not set
+		if((!total_pages || total_pages<2) && !self.show_all_status) {
 			const wrap_rows_paginator = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'content_data paginator display_none ' +total_pages
+				class_name		: 'content_data paginator display_none ' + total_pages
 			})
 			return wrap_rows_paginator
 		}
 
-	const fragment = new DocumentFragment()
+	// DocumentFragment
+		const fragment = new DocumentFragment()
+
+	// show_all_button. Don't show in mosaics of 1 item (limit 1)
+		if (self.limit>1) {
+			if (!self.show_all_status && total_pages>1) {
+
+				const show_all_button = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'show_all',
+					inner_html		: get_label.show_all || 'Show all',
+					parent			: fragment
+				})
+				show_all_button.addEventListener('click', function(e) {
+					e.stopPropagation()
+					// fix show_all_status (store the previous limit value to use wen reset)
+					self.show_all_status = {
+						limit : self.limit
+					}
+					// trigger show_all (publish a event listened by the section)
+					self.show_all( self.total )
+				})
+
+			}else if(self.show_all_status){
+
+				const reset_show_all_button = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'show_all',
+					inner_html		: get_label.reset || 'Reset',
+					parent			: fragment
+				})
+				reset_show_all_button.addEventListener('click', function(e) {
+					e.stopPropagation()
+					// trigger show_all (publish a event listened by the section)
+					self.show_all( self.show_all_status.limit )
+					// reset show_all_status
+					self.show_all_status = null
+				})
+			}
+		}
+
 
 	// nav_buttons
 		const paginator_div_links = ui.create_dom_element({
@@ -212,3 +253,5 @@ const get_content_data = async function(self) {
 }//end get_content_data
 
 
+
+// @license-end

@@ -10,7 +10,8 @@ class component_iri extends component_common {
 
 	/**
 	* GET DATO
-	* Array with objects, every object have two properties: "iri" mandatory with string value and "title" optional with string value
+	* Array with objects, every object have two properties:
+	* "iri" mandatory with string value and "title" optional with string value
 	*[
 	*	{
 	*    "iri": "http://www.render.es/dedalo",
@@ -22,31 +23,30 @@ class component_iri extends component_common {
 
 		$dato = parent::get_dato();
 
-		/*
-		* For accept values from component_input_text
-		* we need change the string value of the input_text to object value of IRI
-		*/
-		$input_text = false;
-		if(!empty($dato)){
-			foreach ($dato as $key => $value) {
-				if(!is_object($value)){
-					$input_text = true;
-					$object = new stdClass();
-					$object->iri = $value;
-					$dato[$key] = $object;
+		// input_text. For accept values from component_input_text
+		// we need to change the string value of the input_text to object value of IRI
+			$input_text = false;
+			if(!empty($dato)){
+				foreach ($dato as $key => $value) {
+					if(!is_object($value)){
+						$input_text = true;
+						$object = new stdClass();
+							$object->iri = $value;
+						$dato[$key] = $object;
+					}
+				}
+				if($input_text===true){
+					$this->set_dato($dato);
+					$this->Save();
 				}
 			}
-			if($input_text===true){
-				$this->set_dato($dato);
-				$this->Save();
-			}
-
-		}
 
 
 		if(SHOW_DEBUG===true) {
 			if ( !is_null($dato) && !is_array($dato)  ) {
-				debug_log(__METHOD__." WRONG TYPE of dato. tipo: $this->tipo - section_tipo: $this->section_tipo - section_id: $this->parent. Expected array. Given: ".gettype($dato), logger::ERROR);
+				debug_log(__METHOD__
+					." WRONG TYPE of dato. tipo: $this->tipo - section_tipo: $this->section_tipo - section_id: $this->parent. Expected array. Given: ".gettype($dato)
+					, logger::ERROR);
 			}
 		}
 
@@ -56,9 +56,10 @@ class component_iri extends component_common {
 
 
 	/**
-	*  SET_DATO
+	* SET_DATO
+	* @return bool
 	*/
-	public function set_dato($dato) {
+	public function set_dato($dato) : bool {
 
 		if (is_string($dato)) { # Tool Time machine case, dato is string
 			$dato = json_handler::decode($dato);
@@ -71,7 +72,7 @@ class component_iri extends component_common {
 			#debug_log(__METHOD__." dato [$this->tipo,$this->parent] Type is ".gettype($dato)." -> ".to_string($dato), logger::ERROR);
 		}
 
-		parent::set_dato( (array)$dato );
+		return parent::set_dato( (array)$dato );
 	}//end set_dato
 
 
@@ -129,9 +130,9 @@ class component_iri extends component_common {
 		// dato candidate to save
 			$dato = $this->dato;
 
-		// deleting iri
+		// deleting IRI
 			if (empty($dato)) {
-				# Save in standar empty format
+				# Save in standard empty format
 				return parent::Save();
 			}
 
@@ -140,12 +141,15 @@ class component_iri extends component_common {
 				if(SHOW_DEBUG===true) {
 					#dump($dato,'$dato');
 					#throw new Exception("Dato is not string!", 1);
-					error_log("Bad iri format:".to_string($dato));
+					debug_log(__METHOD__
+						." Bad IRI format: ". PHP_EOL
+						.' dato:' . to_string($dato)
+						, logger::ERROR);
 				}
 				return false;
 			}
 
-		// Save in standar format
+		// Save in standard format
 		return parent::Save();
 	}//end Save
 
@@ -165,24 +169,21 @@ class component_iri extends component_common {
 		$valor = $this->get_valor($lang);
 		$valor = strip_tags($valor); // Removes the span tag used in list mode
 
-		if(SHOW_DEBUG===true) {
-			#return "DATE: ".$valor;
-		}
+
 		return (string)$valor;
 	}//end get_valor_export
 
 
 
 	/**
-	* GET_VALUE
+	* GET_GRID_VALUE
 	* Get the value of the component.
 	* component filter return a array of values
-	* @param string $lang = DEDALO_DATA_LANG
 	* @param object|null $ddo = null
 	*
 	* @return dd_grid_cell_object $value
 	*/
-	public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : dd_grid_cell_object {
+	public function get_grid_value( object $ddo=null ) : dd_grid_cell_object {
 
 		// column_obj. Set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$fields_separator	= $ddo->fields_separator ?? null;
@@ -240,7 +241,7 @@ class component_iri extends component_common {
 
 
 		return $value;
-	}//end get_value
+	}//end get_grid_value
 
 
 
@@ -368,7 +369,6 @@ class component_iri extends component_common {
 	*	Edited/parsed version of received object
 	*/
 	public static function resolve_query_object_sql( object $query_object) : object {
-        #debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
 
 		$q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
 
@@ -417,15 +417,15 @@ class component_iri extends component_common {
 					#$new_query_json->$logical_operator[] = $clone;
 
 					$clone = clone($query_object);
-						$clone->operator = '=';
-						$clone->q_parsed = '\'\'';
-						$clone->lang 	 = $lang;
+						$clone->operator	= '=';
+						$clone->q_parsed	= '\'\'';
+						$clone->lang		= $lang;
 					$new_query_json->$logical_operator[] = $clone;
 
 					// legacy data (set as null instead '')
 					$clone = clone($query_object);
-						$clone->operator = 'IS NULL';
-						$clone->lang 	 = $lang;
+						$clone->operator	= 'IS NULL';
+						$clone->lang		= $lang;
 					$new_query_json->$logical_operator[] = $clone;
 
 				# override
@@ -435,9 +435,9 @@ class component_iri extends component_common {
 			case ($q==='*'):
 				$operator = 'IS NOT NULL';
 				$q_clean  = '';
-				$query_object->operator = $operator;
+				$query_object->operator	= $operator;
 				$query_object->q_parsed	= $q_clean;
-				$query_object->unaccent = false;
+				$query_object->unaccent	= false;
 
 				$logical_operator ='$and';
 				$new_query_json = new stdClass;
@@ -453,9 +453,9 @@ class component_iri extends component_common {
 						#$ar_query_object[] = $clone;
 
 						$clone = clone($query_object);
-							$clone->operator = '!=';
-							$clone->q_parsed = '\'\'';
-							$clone->lang 	 = DEDALO_DATA_NOLAN;
+							$clone->operator	= '!=';
+							$clone->q_parsed	= '\'\'';
+							$clone->lang		= DEDALO_DATA_NOLAN;
 						$ar_query_object[] = $clone;
 
 
@@ -581,20 +581,233 @@ class component_iri extends component_common {
 	public function search_operators_info() : array {
 
 		$ar_operators = [
-			'*' 	 => 'no_vacio', // not null
-			'!*' 	 => 'campo_vacio', // null
-			'=' 	 => 'similar_a',
-			'!=' 	 => 'distinto_de',
-			'-' 	 => 'no_contiene',
-			'*text*' => 'contiene',
-			'text*'  => 'empieza_con',
-			'*text'  => 'acaba_con',
-			'\'text\'' => 'literal',
+			'*'			=> 'no_empty', // not null
+			'!*'		=> 'empty', // null
+			'='			=> 'similar_to',
+			'!='		=> 'different_from',
+			'-'			=> 'does_not_contain',
+			'*text*'	=> 'contains',
+			'text*'		=> 'begins_with',
+			'*text'		=> 'end_with',
+			'\'text\''	=> 'literal',
 		];
 
 		return $ar_operators;
 	}//end search_operators_info
 
+
+
+	/**
+	* URL_TO_IRI
+	* Return valid operators for search in current component
+	* @param string $url
+	* @return object $data_iri
+	*/
+	public function url_to_iri( string $url) : object {
+
+		$data_iri = new stdClass();
+			$data_iri->iri = $url;
+
+		return $data_iri;
+	}//end url_to_iri
+
+
+
+	/**
+	* CONFORM_IMPORT_DATA
+	* @param string $import_value
+	* @param string $column_name
+	* @return object $response
+	*/
+	public function conform_import_data(string $import_value, string $column_name) : object {
+
+		// Response
+			$response = new stdClass();
+				$response->result	= null;
+				$response->errors	= [];
+				$response->msg		= 'Error. Request failed';
+
+
+		// $normalize_value function to be used in any case, $import_value is an array of objects (IRI format) or array of strings or string
+		// values need to be begin with the protocol HTTP or https
+			$normalize_value = function(string $text_value) : bool {
+
+				$begins_http	= substr($text_value, 0, 7);
+				$begins_https	= substr($text_value, 0, 8);
+
+				if($begins_http === 'http://' || $begins_https === 'https://') {
+
+					return true;
+				}
+
+				return false;
+			};
+
+
+		// object | array case
+			// Check if is a JSON stringified. Is yes, decode
+			// if data is a object | array it will be the Dédalo format and check if the IRI is OK.
+			if(json_handler::is_json($import_value)){
+
+				// try to JSON decode (null on not decode)
+				$dato_from_json	= json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
+
+				// the import support array of objects (default, iri data) of array of strings as:
+				// [{"iri":"https://dedalo.dev","title":"Dedalo webpage"},{"iri":"https://dedalo.dev/docs","title":"Dedalo documentation"}]
+				// ["https://dedalo.dev","https://dedalo.dev/docs"]
+				if(is_array($dato_from_json)){
+
+					$value = [];
+					foreach ($dato_from_json as $key => $current_value) {
+						// check if the value is a flat string with the uri
+						if(is_string($current_value)){
+							$result = $normalize_value($current_value);
+
+							if ($result === false) {
+
+								// import value seems to be a JSON malformed.
+								// it begin [" or end with "]
+								// log JSON conversion error
+								debug_log(__METHOD__
+									." invalid http uri value, seems a syntax error: ". PHP_EOL
+									. to_string($import_value)
+									, logger::ERROR
+								);
+
+								$failed = new stdClass();
+									$failed->section_id		= $this->section_id;
+									$failed->data			= to_string($import_value);
+									$failed->component_tipo	= $this->get_tipo();
+									$failed->msg			= 'IGNORED: malformed data '. to_string($import_value);
+								$response->errors[] = $failed;
+
+								return $response;
+							}
+
+							$data_iri = new stdClass();
+								$data_iri->iri = $current_value;
+
+							$value[] = $data_iri;
+						// check if the value is a object
+						}else if(is_object($current_value)){
+
+							$data_iri = new stdClass();
+
+							if(isset($current_value->iri)){
+
+								$result = $normalize_value($current_value->iri);
+
+								if($result===false){
+
+									// import value seems to be a JSON malformed.
+									// it begin [" or end with "]
+									// log JSON conversion error
+									debug_log(__METHOD__
+										." invalid http uri value, seems a syntax error: ". PHP_EOL
+										. to_string($import_value)
+										, logger::ERROR
+									);
+
+									$failed = new stdClass();
+										$failed->section_id		= $this->section_id;
+										$failed->data			= to_string($import_value);
+										$failed->component_tipo	= $this->get_tipo();
+										$failed->msg			= 'IGNORED: malformed data '. to_string($import_value);
+									$response->errors[] = $failed;
+
+									return $response;
+								}
+
+								$data_iri->iri = $current_value->iri;
+							}
+
+							if(isset($current_value->title)){
+								$data_iri->title = $current_value->title;
+							}
+							$value[] = $data_iri;
+						}
+					}
+				}
+
+				$response->result	= $value ?? null;
+				$response->msg		= 'OK';
+
+				return $response;
+			}
+
+	// string case
+		// check the begin and end of the value string, if it has a [] or other combination that seems array
+		// if the text has [" or "] it's not admitted, because it's a bad array of strings.
+		$begins_one	= substr($import_value, 0, 1);
+		$ends_one	= substr($import_value, -1);
+		$begins_two	= substr($import_value, 0, 2);
+		$ends_two	= substr($import_value, -2);
+
+		if (($begins_two !== '["' && $ends_two !== '"]') ||
+			($begins_two !== '["' && $ends_one !== ']') ||
+			($begins_one !== '[' && $ends_two !== '"]')
+			){
+
+			$value = null;
+			if(!empty($import_value)){
+
+				$result = $normalize_value($import_value);
+
+				if ($result === false) {
+
+					// import value seems to be a JSON malformed.
+					// it begin [" or end with "]
+					// log JSON conversion error
+					debug_log(__METHOD__
+						." invalid http uri value, seems a syntax error: ". PHP_EOL
+						. to_string($import_value)
+						, logger::ERROR
+					);
+
+					$failed = new stdClass();
+						$failed->section_id		= $this->section_id;
+						$failed->data			= to_string($import_value);
+						$failed->component_tipo	= $this->get_tipo();
+						$failed->msg			= 'IGNORED: malformed data '. to_string($import_value);
+					$response->errors[] = $failed;
+
+					return $response;
+
+				}
+
+				$data_iri = new stdClass();
+					$data_iri->iri = $import_value;
+
+				$value[] = $data_iri;
+			}
+
+
+		}else{
+			// import value seems to be a JSON malformed.
+			// it begin [" or end with "]
+			// log JSON conversion error
+			debug_log(__METHOD__
+				." invalid JSON value, seems a syntax error: ". PHP_EOL
+				. to_string($import_value)
+				, logger::ERROR
+			);
+
+			$failed = new stdClass();
+				$failed->section_id		= $this->section_id;
+				$failed->data			= stripslashes( $import_value );
+				$failed->component_tipo	= $this->get_tipo();
+				$failed->msg			= 'IGNORED: malformed data '. to_string($import_value);
+			$response->errors[] = $failed;
+
+			return $response;
+		}
+
+
+		$response->result	= $value;
+		$response->msg		= 'OK';
+
+		return $response;
+	}//end conform_import_data
 
 
 }//end class component_iri

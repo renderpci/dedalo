@@ -60,6 +60,46 @@
 				word-break: break-all;
 			}
 		}
+		// value
+			.column:nth-child(4) {
+				img {
+					max-height: 3rem;
+					// vertical-align: text-bottom;
+					&.tc, &.index, &.note, &.person, &.lang, &.geo {
+						max-height: 1rem;
+					}
+					&.view_text {
+						max-height: 4rem;
+					}
+					&.svg {
+						min-height: 2rem;
+					}
+					&.draw{
+						max-height: 1.2rem;
+					}
+				}
+			}
+	}
+
+	&.time_machine_list{
+		// value
+			.column:nth-child(4) {
+				img {
+					max-height: 4rem;
+					// vertical-align: text-bottom;
+
+					&.view_text {
+						max-height: 4rem;
+					}
+					&.svg {
+						min-height: 2rem;
+					}
+					&.draw{
+						max-height: 1.2rem;
+					}
+				}
+			}
+
 	}
 
 	// view_tool. Used in tool_time_machine section and components list
@@ -68,14 +108,31 @@
 
 		.content_data > .section_record {
 
-			img {
-				max-height: 1rem;
+			.column_service_time_machine {
+				max-height: 5rem;
 
-				&.view_text {
-					max-height: 4rem;
+				&:has(.component_image) {
+					padding: 1px;
 				}
-				&.svg {
-					min-height: 2rem;
+
+				img {
+					max-height: 1rem;
+
+					&.view_text {
+						max-height: 5rem;
+					}
+					&.svg {
+						min-height: 2rem;
+					}
+				}
+
+				.component_image {
+					height: 5rem;
+					max-height: 5rem;
+					// max-height: 4rem;
+					// background-color: #f0f0f0;
+					width: 100%;
+					object-fit: contain;
 				}
 			}
 		}
@@ -87,12 +144,16 @@
 			display: contents;
 		}
 
+		.no_records {
+			position: relative;
+			top: 0px;
+		}
+
 		.content_data > .section_record {
 			// pointer-events: none;
 			display: grid;
 			grid-template-columns: 1fr 1fr 1fr 2.65rem;
 			border-left: 2px solid @color_orange_dedalo;
-
 
 			.column {
 				display: grid;
@@ -121,6 +182,7 @@
 				word-break: break-all;
 				img {
 					max-height: 1rem;
+					vertical-align: text-bottom;
 
 					&.view_text {
 						max-height: 4rem;

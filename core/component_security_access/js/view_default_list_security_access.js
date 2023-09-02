@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -24,7 +25,7 @@ export const view_default_list_security_access = function() {
 /**
 * RENDER
 * Render node for use in list
-* @return DOM node
+* @return HTMLElement wrapper
 */
 view_default_list_security_access.render = async function(self, options) {
 
@@ -33,7 +34,8 @@ view_default_list_security_access.render = async function(self, options) {
 		const value	= data.value || []
 
 	// Value as string
-		const value_string = JSON.stringify(value, null, 2)
+		// const value_string = JSON.stringify(value, null, 2)
+		const value_string = 'View list unavailable'
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
@@ -43,3 +45,7 @@ view_default_list_security_access.render = async function(self, options) {
 
 	return wrapper
 }//end render
+
+
+
+// @license-end

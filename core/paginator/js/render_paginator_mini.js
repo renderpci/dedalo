@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, Promise */
 /*eslint no-undef: "error"*/
 
@@ -23,7 +24,7 @@ export const render_paginator_mini = function() {
 * MINI
 * Render node for use in current mode
 * @param object options
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_paginator_mini.prototype.mini = async function(options) {
 
@@ -79,7 +80,7 @@ const add_events = (wrapper, self) => {
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = async function(self) {
 
@@ -187,17 +188,20 @@ const get_content_data = async function(self) {
 			parent			: fragment
 		})
 		// page_info
+		const locale			= 'es-ES' // (page_globals.locale ?? 'es-CL').replace('_', '-')
+		const total_pages_label	= new Intl.NumberFormat(locale, {}).format(total_pages);
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'page_info',
-			inner_html		: (get_label.pagina || 'Page') + ` ${page_number} ` + (get_label.de || 'of') + ` ${total_pages} `,
+			inner_html		: (get_label.page || 'Page') + ` ${page_number} ` + (get_label.of || 'of') + ` ${total_pages_label} `,
 			parent			: paginator_info
 		})
 		// displayed_records
+		const total_label = new Intl.NumberFormat(locale, {}).format(total);
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'displayed_records',
-			inner_html		: `Showing ${page_row_begin}-${page_row_end} of ${total}. `,
+			inner_html		: `Showing ${page_row_begin}-${page_row_end} of ${total_label}`,
 			parent			: paginator_info
 		})
 
@@ -211,3 +215,7 @@ const get_content_data = async function(self) {
 
 	return content_data
 }//end get_content_data
+
+
+
+// @license-end

@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
@@ -37,9 +38,6 @@ export const tool_import_dedalo_csv = function () {
 	this.caller			= null
 
 	this.csv_files_list	= null
-
-
-	return true
 }//end page
 
 
@@ -64,6 +62,8 @@ export const tool_import_dedalo_csv = function () {
 /**
 * INIT
 * Custom tool init
+* @param object options
+* @return bool common_init
 */
 tool_import_dedalo_csv.prototype.init = async function(options) {
 
@@ -94,6 +94,8 @@ tool_import_dedalo_csv.prototype.init = async function(options) {
 /**
 * BUILD
 * Custom tool build
+* @param bool autoload = false
+* @return bool common_build
 */
 tool_import_dedalo_csv.prototype.build = async function(autoload=false) {
 
@@ -120,7 +122,8 @@ tool_import_dedalo_csv.prototype.build = async function(autoload=false) {
 				model				: 'service_upload',
 				mode				: 'edit',
 				allowed_extensions	: ['csv'],
-				caller				: self
+				caller				: self,
+				key_dir 			: 'csv'
 			})
 			// console.log("self.service_upload:",self.service_upload);
 			// store to destroy on close modal
@@ -139,31 +142,34 @@ tool_import_dedalo_csv.prototype.build = async function(autoload=false) {
 
 /**
 * LOAD_CSV_FILES_LIST
+* Call to API and get the list of uploaded CSV files
+* @return promise
+* 	Resolve array result
 */
 tool_import_dedalo_csv.prototype.load_csv_files_list = async function() {
 
 	const self = this
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'get_csv_files')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			// dir : use default as fallback (DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH)
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options : {
+				// dir : use default as fallback (DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH)
+			}
 		}
 
 	// call to the API, fetch data and get response
 		return new Promise(function(resolve){
 
 			data_manager.request({
-				body : rqo
+				use_worker	: true,
+				body		: rqo
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {
@@ -200,18 +206,17 @@ tool_import_dedalo_csv.prototype.remove_file = function(item) {
 	const self = this
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'delete_csv_file')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			file_name : item.name
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				file_name : item.name
+			}
 		}
 
 	// call to the API, fetch data and get response
@@ -253,26 +258,26 @@ tool_import_dedalo_csv.prototype.import_files = function(files, time_machine_sav
 	const self = this
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'import_files')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			files				: files,
-			time_machine_save	: time_machine_save
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				files				: files,
+				time_machine_save	: time_machine_save
+			}
 		}
 
 	// call to the API, fetch data and get response
 		return new Promise(function(resolve){
 
 			data_manager.request({
-				body : rqo
+				use_worker	: true,
+				body		: rqo
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {
@@ -302,25 +307,25 @@ tool_import_dedalo_csv.prototype.get_section_components_list = function(section_
 		}
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'get_section_components_list')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			section_tipo : section_tipo
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				section_tipo : section_tipo
+			}
 		}
 
 	// call to the API, fetch data and get response
 		return new Promise(function(resolve){
 
 			data_manager.request({
-				body : rqo
+				body		: rqo,
+				use_worker	: true
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {
@@ -336,7 +341,7 @@ tool_import_dedalo_csv.prototype.get_section_components_list = function(section_
 					return
 				}
 
-				// chache result
+				// cache result
 				self.resolved_section_components_list[section_tipo] = {
 					list	: response.result,
 					label	: response.label,
@@ -371,25 +376,25 @@ tool_import_dedalo_csv.prototype.process_uploaded_file = function(file_data) {
 	const self = this
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'process_uploaded_file')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			file_data : file_data
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				file_data : file_data
+			}
 		}
 
 	// call to the API, fetch data and get response
 		return new Promise(function(resolve){
 
 			data_manager.request({
-				body : rqo
+				use_worker	: true,
+				body		: rqo
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {
@@ -400,3 +405,7 @@ tool_import_dedalo_csv.prototype.process_uploaded_file = function(file_data) {
 			})
 		})
 }//end process_uploaded_file
+
+
+
+// @license-end

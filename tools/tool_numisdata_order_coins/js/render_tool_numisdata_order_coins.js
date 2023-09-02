@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -27,7 +28,7 @@ export const render_tool_numisdata_order_coins = function() {
 /**
 * EDIT
 * Render node
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_tool_numisdata_order_coins.prototype.edit = async function(options={render_level:'full'}) {
 
@@ -61,14 +62,15 @@ render_tool_numisdata_order_coins.prototype.edit = async function(options={rende
 		wrapper.content_data = content_data
 		get_ordered_coins(self)
 
+
 	return wrapper
-}//end render_tool_numisdata_order_coins
+}//end edit
 
 
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data_edit = async function(self) {
 
@@ -121,7 +123,7 @@ const get_content_data_edit = async function(self) {
 /**
 * RENDER_HEADER_OPTIONS
 * This is used to build a optional buttons inside the header
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const render_header_options = async function(self, content_data) {
 
@@ -259,7 +261,7 @@ const render_header_options = async function(self, content_data) {
 * This is used to build a optional buttons inside the header
 * @param object self
 * 	instance of current tool
-* @return DOM node activity_info_body
+* @return HTMLElement activity_info_body
 */
 const render_activity_info = function(self) {
 
@@ -296,7 +298,7 @@ const render_activity_info = function(self) {
 * This is used to build the ordered coins node ans assign the drop
 * @param object self
 * 	instance of current tool
-* @return DOM node activity_info_body
+* @return HTMLElement activity_info_body
 */
 const get_ordered_coins = async function(self){
 
@@ -404,3 +406,6 @@ const drop = function (options) {
 	}// end for (let i = drop_zones_len - 1; i >= 0; i--)
 
 }// end drop
+
+
+// @license-end

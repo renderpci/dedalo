@@ -12,10 +12,8 @@
 *		$locator->from_component_tipo	= (string)$component_tipo; // source component tipo
 *		$locator->tag_id				= (string)$tag_id;
 *		$locator->tag_component_tipo	= (string)$tag_component_tipo; // component that has the tag, in the same section (used for component_relation_index)
-*		$locator->state					= (object)$state;
 * 		$locator->type					= (string)$type;
-*		$locator->ds					= (array)$ds;
-*		$locator->from_key				= (int)$from_key; // dataframe index array number of the data that reference
+*		$locator->section_id_key		= (int)$section_id_key; // dataframe index array number of the data that reference
 *
 *	Note that properties could exists or not (they are created on the fly). Final result object only contain set properties and locator object could be empty or partially set.
 *	For example, component portal only use section_tipo an section_id in many cases.
@@ -34,9 +32,7 @@ class locator extends stdClass {
 		private $component_tipo;
 		private $tag_id;
 		private $tag_component_tipo;
-		private $state;
-		private $ds;
-		private $from_key;
+		private $section_id_key;
 	*/
 
 	# Mandatory and protected (use set/get to access)
@@ -64,18 +60,115 @@ class locator extends stdClass {
 	*/
 	public function __construct( object $data=null ) {
 
-		if (is_null($data)) return;
+		// null case
+			if (is_null($data)) {
+				return;
+			}
 
-		# Nothing to do on construct (for now)
-		if (!is_object($data)) {
-			trigger_error("wrong data format. Object expected. Given: ".gettype($data));
-			return;
-		}
-		foreach ($data as $key => $value) {
-			$method = 'set_'.$key;
-			$this->$method($value);
-		}
+		// Nothing to do on construct (for now)
+			if (!is_object($data)) {
+
+				$msg = " wrong data format. object expected. Given type: ".gettype($data);
+				debug_log(__METHOD__
+					. $msg
+					.' data: ' . to_string($data)
+					, logger::ERROR
+				);
+				if(SHOW_DEBUG===true) {
+					dump(debug_backtrace()[0], $msg);
+				}
+
+				// $this->errors[] = $msg;
+				return;
+			}
+
+		// set all properties
+			foreach ($data as $key => $value) {
+
+				$method	= 'set_'.$key;
+
+				$this->{$method}($value); // using accessors when not defined
+
+				if (method_exists($this, $method)) {
+
+					// $set_value = $this->{$method}($value);
+					// if($set_value===false && empty($this->errors)) {
+						// $this->errors[] = 'Invalid value for: '.$key.' . value: '.to_string($value);
+					// }
+
+				}else{
+
+					if(SHOW_DEBUG===true) {
+						debug_log(__METHOD__
+							.' Remember: received property: "'.$key.'" is not defined as set method. Using setter accessors'. PHP_EOL
+							.' locator data: ' . to_string($data)
+							, logger::WARNING
+						);
+					}
+					// $this->errors[] = 'Ignored received property: '.$key.' not defined as set method. Data: '. json_encode($data, JSON_PRETTY_PRINT);
+				}
+			}
 	}//end __construct
+
+
+
+	/**
+	* SET_PAGINATED_KEY
+	* @param int $value
+	* @return bool
+	*/
+	public function set_paginated_key(int $value) : bool  {
+
+		$this->paginated_key = $value;
+
+		return true;
+	}//end set_paginated_key
+
+
+
+	/**
+	* SET_LABEL
+	* @param int $value
+	* @return bool
+	*/
+	public function set_label(mixed $value) : bool  {
+
+		// nothing to do. label is used only in pseudo-locators but not in normalized locator
+
+		return true;
+	}//end set_label
+
+
+
+	/**
+	* SET_TYPE
+	* Only allow types defined in common::get_allowed_relation_types
+	* @param string $value
+	* @return bool
+	*/
+	public function set_type(string $value) : bool  {
+		/*
+		$ar_allowed = common::get_allowed_relation_types();
+		if( !in_array($value, $ar_allowed) ) {
+
+			// $msg = 'Value is not allowed (invalid type) : '.to_string($value);
+
+			debug_log(__METHOD__
+				." Invalid type: " .PHP_EOL
+				.' value: ' . to_string($value) .PHP_EOL
+				.' Only are allowed: ' .PHP_EOL
+				. json_encode($ar_allowed, JSON_PRETTY_PRINT)
+				, logger::ERROR
+			);
+			// $this->errors[] = 'Ignored set type. '. $msg;
+
+			return false;
+		}
+		*/
+		$this->type = $value;
+
+		return true;
+	}//end set_type
 
 
 
@@ -114,8 +207,8 @@ class locator extends stdClass {
 	* SET_SECTION_ID
 	*/
 	public function set_section_id($value) {
-		#if(abs($value)<1 && $value!='unknow' && strpos($value, DEDALO_SECTION_ID_TEMP)===false) {
-		if(abs(intval($value))<0 && $value!='unknow' && strpos($value, DEDALO_SECTION_ID_TEMP)===false) {
+		#if(abs($value)<1 && $value!='unknown' && strpos($value, DEDALO_SECTION_ID_TEMP)===false) {
+		if(abs(intval($value))<0 && $value!='unknown' && strpos((string)$value, DEDALO_SECTION_ID_TEMP)===false) {
 			throw new Exception("Error Processing Request. Invalid section_id: $value", 1);
 		}
 
@@ -166,26 +259,8 @@ class locator extends stdClass {
 		}
 		$this->tag_component_tipo = $value;
 	}
-	/**
-	* SET_STATE
-	*/
-	public function set_state(object $value) {
-		// if(!is_object($value)) {
-		// 	throw new Exception("Error Processing Request. Invalid state: $value", 1);
-		// }
-		$this->state = $value;
-	}
-	/**
-	* SET_TYPE
-	* Only defined relation types (structure) ar allowed
-	*/
-	public function set_type(string $value) {
-		$ar_allowed = common::get_allowed_relation_types();
-		if( !in_array($value, $ar_allowed) ) {
-			throw new Exception("Error Processing Request. Invalid locator type: $value. Only are allowed: ".to_string($ar_allowed), 1);
-		}
-		$this->type = $value;
-	}
+
+
 	/**
 	* SET_TYPE_REL
 	* Only defined relation direction
@@ -195,24 +270,15 @@ class locator extends stdClass {
 		$this->type_rel = $value;
 	}
 	/**
-	* SET_SEMANTIC
-	*/
-	public function set_ds(array $value) {
-		if(!is_array($value)) {
-			throw new Exception("Error Processing Request. Invalid dedalo semantic ds:". to_string($value), 1);
-		}
-		$this->ds = $value;
-	}
-	/**
-	* SET_FROM_KEY
+	* SET_section_id_key
 	* @return
 	*/
-	public function set_from_key(int $value) {
-		if(int($value)<0) {
-			throw new Exception("Error Processing Request. Invalid from_key: $value", 1);
+	public function set_section_id_key(int $value) {
+		if($value < 0) {
+			throw new Exception("Error Processing Request. Invalid section_id_key: $value", 1);
 		}
-		$this->type = $value;
-	}//end set_from_key
+		$this->section_id_key = $value;
+	}//end set_section_id_key
 	/**
 	* SET_TIPO
 	*/
@@ -231,45 +297,6 @@ class locator extends stdClass {
 		}
 		$this->lang = $value;
 	}//end set_lang
-
-
-
-	/**
-	* GET_FLAT
-	* Compound a chained plain flat locator string for use as media componet name, etc..
-	* @return string $name Like 'dd42_dd207_1'
-	*/
-	public function get_flat() : string {
-
-		if ( empty($this->get_component_tipo() ) ) {
-			throw new Exception("Error Processing Request. empty component_tipo", 1);
-		}
-		if ( empty($this->get_section_tipo() ) ) {
-			throw new Exception("Error Processing Request. empty section_tipo", 1);
-		}
-		if ( empty($this->get_section_id() ) ) {
-			throw new Exception("Error Processing Request. empty section_id", 1);
-		}
-
-		$name = $this->component_tipo . locator::DELIMITER . $this->section_tipo . locator::DELIMITER . $this->section_id;
-
-		/*
-		if ( !empty($this->component_tipo) {
-			$name .= locator::DELIMITER . $this->component_tipo;
-		}
-
-		if ( !empty($this->from_component_tipo) {
-			$name .= locator::DELIMITER . $this->from_component_tipo;
-		}
-
-		if ( !empty($this->tag_id) {
-			$name .= locator::DELIMITER . $this->tag_id;
-		}
-		*/
-
-		return $name;
-	}//end get_flat
-
 
 
 	/**
@@ -340,7 +367,7 @@ class locator extends stdClass {
 
 		$locator = json_encode($locator);
 		$locator = json_decode($locator);
-		
+
 		return $locator;
 
 		// $std_object = new stdClass();
@@ -390,7 +417,7 @@ class locator extends stdClass {
 	* COMPARE_LOCATORS
 	* @return bool $equal
 	*/
-	public static function compare_locators(object $locator1, object $locator2, array $ar_properties=[], array $ar_exclude_properties=['dataframe','ds']) : bool {
+	public static function compare_locators(object $locator1, object $locator2, array $ar_properties=[], array $ar_exclude_properties=[]) : bool {
 
 		if (!is_object($locator1) || !is_object($locator2)) {
 			return false;
@@ -469,6 +496,10 @@ class locator extends stdClass {
 
 	/**
 	* IN_ARRAY_LOCATOR
+	* Search given locator into array of locators matching the properties given
+	* @param object $locator
+	* @param array $ar_locator
+	* @param array $ar_properties = []
 	* @return bool $found
 	*/
 	public static function in_array_locator(object $locator, array $ar_locator, array $ar_properties=[]) : bool {
@@ -562,7 +593,7 @@ class locator extends stdClass {
 			}
 		}else{
 			if (!isset($this->section_tipo) || !isset($this->section_id)) {
-				error_log("ERROR: wrong locator format detected. Please fix this ASAP : ".to_string($this));
+				debug_log(__METHOD__." ERROR: wrong locator format detected. Please fix this ASAP : ".to_string($this), logger::DEBUG);
 			}
 		}
 	}//end __destruct

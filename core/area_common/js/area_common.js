@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -36,14 +37,13 @@ export const area_common = function() {
 	this.status
 
 	this.id_variant
-
-	return true
 }//end area_common
 
 
 
 /**
 * INIT
+* @param object options
 * @return bool
 */
 area_common.prototype.init = async function(options) {
@@ -51,48 +51,81 @@ area_common.prototype.init = async function(options) {
 	const self = this
 
 	// instance key used vars
-	self.model 				= options.model
-	self.tipo 				= options.tipo
-	self.section_tipo 		= options.section_tipo || self.tipo
-	self.mode 				= options.mode
-	self.lang 				= options.lang
+	self.model			= options.model
+	self.tipo			= options.tipo
+	self.section_tipo	= options.section_tipo || self.tipo
+	self.mode			= options.mode
+	self.lang			= options.lang
+	self.properties		= options.properties
 
 	// DOM
-	self.node 				= null
+	self.node			= null
 
-	self.parent 			= options.parent
+	self.parent			= options.parent
 
-	self.events_tokens		= []
-	self.ar_instances		= []
+	self.events_tokens	= []
+	self.ar_instances	= []
 
 	// dd request
-	self.dd_request			= {
+	self.dd_request		= {
 		show	: null,
 		search	: null,
 		select	: null
 	}
 
-	self.datum 	 			= options.datum   		|| null
-	self.context 			= options.context 		|| null
-	self.data 	 			= options.data 	  		|| null
-	self.pagination 		= { // pagination info
+	self.datum		= options.datum   		|| null
+	self.context	= options.context 		|| null
+	self.data		= options.data 	  		|| null
+	self.pagination	= { // pagination info
 		total : 0,
 		offset: 0
 	}
 
-	self.type 				= 'area'
-	self.label 				= null
+	self.type	= 'area'
+	self.label	= null
 
-	self.widgets 	 		= options.widgets 	  	|| null
-	self.permissions 		= options.permissions 	|| null
+	self.widgets		= options.widgets 	  	|| null
+	self.permissions	= options.permissions 	|| null
 
 
 	// events subscription
+		// render_ event
+			self.events_tokens.push(
+				event_manager.subscribe('render_'+self.id, fn_render)
+			)
+			function fn_render() {
+				// menu label control
+					const update_menu = () => {
+						// ignore sections inside tool (tool_user_admin case)
+						if (self.caller && self.caller.type==='tool') {
+							return
+						}
+						// menu label control
+						// menu. Note that menu is set as global var on menu build
+						const retry_timeout = setTimeout(fn_render, 2000);
+						const menu = window.menu
+						if (menu) {
+							clearTimeout(retry_timeout);
 
+							menu.update_section_label({
+								value		: self.label,
+								mode		: self.mode,
+								on_click	: null
+							})
+						}else{
+							console.log('menu is not available. Try in 2 secs');
+						}//end if (menu)
+					}
+					update_menu()
+			}
 
 	// status update
-		self.status = 'initiated'
+		self.status = 'initialized'
 
 
 	return true
 }//end init
+
+
+
+// @license-end

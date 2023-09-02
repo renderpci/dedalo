@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
@@ -93,11 +94,27 @@ tool_propagate_component_data.prototype.build = async function(autoload=false) {
 
 	// specific actions.. like fix main_element for convenience
 		// main_element. Set and config
-		const main_element_ddo			= self.tool_config.ddo_map.find(el => el.role==="main_element")
-		self.main_element				= self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
+		const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_element")
+		self.main_element		= self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
+
+
+	return common_build
+}//end build_custom
+
+
+
+/**
+* GET_COMPONENT_TO_PROPAGATE
+* Instance, build and save temporal data, self.main_element
+* @return promise
+*/
+tool_propagate_component_data.prototype.get_component_to_propagate = function() {
+
+	const self = this
+
+	return new Promise(async function(resolve){
 
 		const instance_options = {
-			// datum			: self.main_element.datum,
 			section_tipo	: self.main_element.section_tipo,
 			section_id		: 'tmp',
 			model			: self.main_element.model,
@@ -110,36 +127,43 @@ tool_propagate_component_data.prototype.build = async function(autoload=false) {
 			standalone		: true,
 			caller			: self
 		}
+		// init
+			self.component_to_propagate = await get_instance(instance_options)
 
-		self.component_to_propagate			= await get_instance(instance_options)
-		await self.component_to_propagate.build(true)
-		self.component_to_propagate.datum			= self.main_element.datum
-		self.component_to_propagate.data			= self.main_element.data
-		self.component_to_propagate.data.section_id	='tmp'
-		// change the show_interface to add link and add buttons
-		self.component_to_propagate.show_interface.button_add	= true
-		self.component_to_propagate.show_interface.button_link	= true
-		// self.component_to_propagate.db_data.value = {}
+		// build
+			await self.component_to_propagate.build(true)
 
-		self.component_to_propagate.changed_data = [Object.freeze({
-			action	: 'set_data',
-			value	: self.main_element.data.value || []
-		})]
+		// configure the component
+			self.component_to_propagate.datum			= self.main_element.datum
+			self.component_to_propagate.data			= self.main_element.data
+			self.component_to_propagate.data.section_id	= 'tmp'
 
-		self.component_to_propagate.save()
-			console.log("self.component_to_propagate.show_interface:------------------------<>",self.component_to_propagate.data);
+		// show_interface. Change to add link and add buttons and remove save animation
+			self.component_to_propagate.show_interface.button_add		= true
+			self.component_to_propagate.show_interface.button_link		= true
+			self.component_to_propagate.show_interface.save_animation	= false
 
-	return common_build
-}//end build_custom
+		// set value
+			self.component_to_propagate.changed_data = [Object.freeze({
+				action	: 'set_data',
+				value	: self.main_element.data.value || []
+			})]
+
+		// save
+			await self.component_to_propagate.save()
+
+		resolve(true)
+	})
+}//end get_component_to_propagate
 
 
 
 /**
 * PROPAGATE_COMPONENT_DATA
-* 	Get the llist of section components selectables to update cache
+* Call API to propagate current value to all selected components
 * @param string action
-* 	'add' | 'remove'
-* @return promise > bool
+* 	values: add|remove
+* @return promise
 */
 tool_propagate_component_data.prototype.propagate_component_data = function(action) {
 
@@ -153,30 +177,30 @@ tool_propagate_component_data.prototype.propagate_component_data = function(acti
 		const propagate_data_value	= self.component_to_propagate.data.value
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'propagate_component_data')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			section_tipo			: section_tipo,
-			section_id				: section_id,
-			component_tipo			: component_tipo,
-			action					: action,
-			lang					: lang,
-			propagate_data_value	: propagate_data_value
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				section_tipo			: section_tipo,
+				section_id				: section_id,
+				component_tipo			: component_tipo,
+				action					: action,
+				lang					: lang,
+				propagate_data_value	: propagate_data_value
+			}
 		}
 
 	// call to the API, fetch data and get response
 		return new Promise(function(resolve){
 
 			data_manager.request({
-				body : rqo
+				use_worker	: true,
+				body		: rqo
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {
@@ -208,3 +232,6 @@ tool_propagate_component_data.prototype.on_close_actions = async function(open_a
 
 	return true
 }//end on_close_actions
+
+
+// @license-end

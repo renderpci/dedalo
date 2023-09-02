@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -43,8 +44,8 @@ export const install = function() {
 * extend component functions from component common
 */
 // prototypes assign
-	install.prototype.install	= render_install.prototype.install
 	install.prototype.render	= common.prototype.render
+	install.prototype.install	= render_install.prototype.render
 	install.prototype.list		= render_install.prototype.render
 	install.prototype.edit		= render_install.prototype.render
 	install.prototype.destroy	= common.prototype.destroy
@@ -79,7 +80,7 @@ install.prototype.init = async function(options) {
 
 
 	// status update
-		self.status = 'initiated'
+		self.status = 'initialized'
 
 
 	return true
@@ -133,3 +134,7 @@ install.prototype.build = async function(autoload=false) {
 
 	return true
 }//end build
+
+
+
+// @license-end

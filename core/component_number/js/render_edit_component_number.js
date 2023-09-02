@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /* global get_label, page_globals, SHOW_DEBUG, flatpickr */
 /*eslint no-undef: "error"*/
 
@@ -9,6 +10,7 @@
 	import {view_default_edit_number} from './view_default_edit_number.js'
 	import {view_line_edit_number} from './view_line_edit_number.js'
 	import {view_mini_number} from './view_mini_number.js'
+
 
 
 /**
@@ -26,14 +28,14 @@ export const render_edit_component_number = function() {
 * EDIT
 * Render node for use in edit
 * @param object options
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_edit_component_number.prototype.edit = async function(options) {
 
 	const self = this
 
 	// view
-		const view	= self.context.view || 'default'
+		const view = self.context.view || 'default'
 
 	switch(view) {
 
@@ -43,21 +45,28 @@ render_edit_component_number.prototype.edit = async function(options) {
 		case 'mini':
 			return view_mini_number.render(self, options)
 
+		case 'print':
+			// view print use the same view as default, except it will use read only to render content_value
+			// as different view as default it will set in the class of the wrapper
+			// sample: <div class="wrapper_component component_input_text oh14 oh1_oh14 edit view_print disabled_component">...</div>
+			// take account that to change the css when the component will render in print context
+			// for print we need to use read of the content_value and it's necessary force permissions to use read only element render
+			self.permissions = 1
+
 		case 'default':
 		default:
 			return view_default_edit_number.render(self, options)
 	}
-
-	return null
 }//end edit
 
 
 
 /**
-* GET_CONTENT_DATA_EDIT
-* @return DOM node content_data
+* GET_CONTENT_DATA
+* @param object self
+* @return HTMLElement content_data
 */
-export const get_content_data_edit = function(self) {
+export const get_content_data = function(self) {
 
 	// short vars
 		const data	= self.data || {}
@@ -67,24 +76,28 @@ export const get_content_data_edit = function(self) {
 		const content_data = ui.component.build_content_data(self)
 
 	// build values
-		const inputs_value	= (value.length<1) ? [null] : value // force one empty input at least
-		const value_length	= inputs_value.length
+		const value_length = value.length || 1
 		for (let i = 0; i < value_length; i++) {
-			const content_value = get_content_value(i, inputs_value[i], self)
-			content_data.appendChild(content_value)
+			const content_value_node = (self.permissions===1)
+				? get_content_value_read(i, value[i], self)
+				: get_content_value(i, value[i], self)
+			content_data.appendChild(content_value_node)
 			// set pointers
-			content_data[i] = content_value
+			content_data[i] = content_value_node
 		}
 
 
 	return content_data
-}//end get_content_data_edit
+}//end get_content_data
 
 
 
 /**
 * GET_CONTENT_VALUE
-* @return DOM element content_value
+* @param int i
+* @param int|null current_value
+* @param object self
+* @return HTMLElement content_value
 */
 const get_content_value = (i, current_value, self) => {
 
@@ -97,16 +110,30 @@ const get_content_value = (i, current_value, self) => {
 	// input field
 		const input = ui.create_dom_element({
 			element_type	: 'input',
-			type			: 'number',
+			type			: 'text',
 			class_name		: 'input_value',
 			value			: current_value,
 			parent			: content_value
 		})
-		input.addEventListener('keyup', function(e) {
-			// page unload event
-			keyup_handler(e, i, self)
-		})//end keyup
 		input.step = self.get_steps()
+		// keyup event
+			input.addEventListener('keyup', function(e) {
+				// page unload event
+				keyup_handler(e, i, self)
+			})//end keyup
+		// blur event
+			input.addEventListener('blur', function(e) {
+				// saves changed data
+				blur_handler(e, i, self)
+			})//end blur
+		// click event. Capture event propagation
+			input.addEventListener('click', (e) => {
+				e.stopPropagation()
+			})
+		// mousedown event. Capture event propagation
+			input.addEventListener('mousedown', (e) => {
+				e.stopPropagation()
+			})
 
 	// button remove
 		const mode				= self.mode
@@ -118,7 +145,8 @@ const get_content_value = (i, current_value, self) => {
 				class_name		: 'button remove hidden_button',
 				parent			: content_value
 			})
-			button_remove.addEventListener('mouseup', function() {
+			button_remove.addEventListener('mouseup', fn_remove_mouseup)
+			function fn_remove_mouseup() {
 				// force possible input change before remove
 				document.activeElement.blur()
 
@@ -134,7 +162,7 @@ const get_content_value = (i, current_value, self) => {
 					label			: current_value,
 					refresh			: true
 				})
-			})
+			}//end fn_remove_mouseup
 		}//end if((mode==='edit') && !is_inside_tool)
 
 
@@ -144,9 +172,31 @@ const get_content_value = (i, current_value, self) => {
 
 
 /**
+* GET_CONTENT_VALUE_READ
+* @param int i
+* @param int|null current_value
+* @param object self
+* @return HTMLElement content_value
+*/
+const get_content_value_read = (i, current_value, self) => {
+
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value read_only',
+			inner_html		: current_value
+		})
+
+
+	return content_value
+}//end get_content_value_read
+
+
+
+/**
 * GET_BUTTONS
 * @param object instance
-* @return DOM node buttons_container
+* @return HTMLElement buttons_container
 */
 export const get_buttons = (self) => {
 
@@ -222,38 +272,63 @@ export const get_buttons = (self) => {
 export const keyup_handler = function(e, key, self) {
 	e.preventDefault()
 
-	// Enter key force to save changes
-		if (e.key==='Enter') {
-
-			// force to save current input if changed
-				const changed_data = self.data.changed_data || []
-				// change_value (save data)
-				self.change_value({
-					changed_data	: changed_data,
-					refresh			: false
-				})
-		}else{
-
-			const safe_value = (e.target.value.length>0)
-				? self.fix_number_format(e.target.value)
-				: null
-
-			e.target.value = safe_value
-
-			// change data
-				const changed_data_item = Object.freeze({
-					action	: 'update',
-					key		: key,
-					value	: safe_value || ''
-				})
-
-			// fix instance changed_data
-				self.set_changed_data(changed_data_item)
+	// when tab is pressed the node and self is the target component,
+	// so the change data is not for the source component and user has enter (and don't changed nothing)
+		if (e.key==='Tab' || e.key==='Shift') {
+			return false
 		}
 
+	// Enter key force to save changes as the same way that blur
+		if (e.key==='Enter') {
+			blur_handler(e, key, self)
+		}
 
 	return true
 }//end keyup_handler
+
+
+
+/**
+* BLUR_HANDLER
+* Store current value in self.data.changed_data
+* @param event e
+* @param int key
+* @param object self
+* @return bool
+*/
+export const blur_handler = function(e, key, self) {
+	e.preventDefault()
+
+	// fix value to valid format as '5.21' from '5,21'
+	const safe_value = (e.target.value.length>0)
+		? self.fix_number_format(e.target.value)
+		: null
+
+	// if the safe_value is different than the value of user had enter set the safe_value
+		if(safe_value!=e.target.value) {
+			e.target.value = safe_value
+		}
+
+	// change data
+		const changed_data_item = Object.freeze({
+			action	: 'update',
+			key		: key,
+			value	: safe_value
+		})
+
+	// fix instance changed_data
+		self.set_changed_data(changed_data_item)
+
+	// force to save current input if changed
+		const changed_data = self.data.changed_data || []
+		// change_value (save data)
+		self.change_value({
+			changed_data	: changed_data,
+			refresh			: false
+		})
+
+	return true
+}//end blur_handler
 
 
 
@@ -290,3 +365,7 @@ export const remove_handler = function(input, key, self) {
 
 	return response
 }//end remove_handler
+
+
+
+// @license-end

@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG*/
 /*eslint no-undef: "error"*/
 
@@ -29,7 +30,7 @@ export const render_edit_section_record = function() {
 * EDIT
 * Render the node to use in edit mode using current context view
 * @param object options
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_edit_section_record.prototype.edit = async function(options) {
 
@@ -51,3 +52,7 @@ render_edit_section_record.prototype.edit = async function(options) {
 			return view_default_edit_section_record.render(self, options)
 	}
 }//end edit
+
+
+
+// @license-end

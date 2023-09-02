@@ -8,7 +8,6 @@
 	$mode			= $this->get_mode();
 
 
-
 // context
 	$context = [];
 
@@ -50,6 +49,7 @@
 			switch ($mode) {
 
 				case 'list':
+				case 'tm':
 					$value		= $this->get_list_value();
 					break;
 

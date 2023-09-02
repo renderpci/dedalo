@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_ROOT_WEB, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
@@ -25,7 +26,8 @@ export const render_page = function() {
 /**
 * EDIT
 * Render node for use in section
-* @return DOM node
+* @param object options
+* @return HTMLElement wrapper
 */
 render_page.prototype.edit = async function(options) {
 
@@ -47,25 +49,28 @@ render_page.prototype.edit = async function(options) {
 		// set pointers
 		wrapper.content_data = content_data
 
-	// events
-		// page click
-			// wrapper.addEventListener('click', fn_deactivate_components)
-			window.addEventListener('click', fn_deactivate_components)
-			function fn_deactivate_components() {
-				if (page_globals.component_active) {
-					ui.component.deactivate(page_globals.component_active)
-				}
-			}
+	// dedalo_notification. notification_msg (defined in config and get from environment.js.php)
+		if(DEDALO_NOTIFICATION && page_globals.is_logged===true){
+			const notification_container = render_notification_msg()
+			wrapper.prepend(notification_container)
+		}
+
+	// dedalo_maintenance_mode. maintenance_msg (defined in config and get from environment.js.php)
+		if(DEDALO_MAINTENANCE_MODE===true){
+			const maintenance_container = render_maintenance_msg()
+			wrapper.prepend(maintenance_container)
+		}
 
 
  	return wrapper
-}//end render_page.prototype.edit
+}//end edit
 
 
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @param object self
+* @return HTMLElement content_data
 */
 const get_content_data = async function(self) {
 
@@ -77,7 +82,22 @@ const get_content_data = async function(self) {
 
 	// check page context is valid
 		if (!self.context) {
-			const response_error = render_page.render_server_response_error('Invalid context', false)
+
+			// running_with_errors.
+			// It's important to set instance as running_with_errors because this
+			// generates a temporal wrapper. Once solved the problem, (usually a not login scenario)
+			// the instance could be built and rendered again replacing the temporal wrapper
+				self.running_with_errors = [
+					{
+						msg		: 'Invalid context',
+						error	: 'invalid_context'
+					}
+				]
+
+			const wrapper_page = render_server_response_error(
+				self.running_with_errors
+			)
+
 			return response_error
 		}
 
@@ -143,12 +163,24 @@ const get_content_data = async function(self) {
 								current_context // object is used as source
 							)
 
+							// store instance to locate on destroy
 							self.ar_instances.push(current_instance)
 
 							// build (load data)
 							const autoload = true // Note that it's necessary to load data here (in addition to context)
 							await current_instance.build(autoload)
-							return current_instance.render()
+
+							// render node
+							const node = await current_instance.render()
+
+							// debug
+							// console.log('))) PAGE RENDERED NODE )))', node);
+
+							return node || ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'error',
+								inner_html		: 'Error on render element ' + current_instance.model
+							})
 						}
 					})
 				/*
@@ -163,7 +195,7 @@ const get_content_data = async function(self) {
 					// spinner
 					ui.create_dom_element({
 						element_type	: 'div',
-						class_name		: 'spinner',
+						class_name		: 'spinner medium',
 						parent			: container_placeholder
 					})
 
@@ -195,10 +227,6 @@ const get_content_data = async function(self) {
 	// event page rendered (used by menu..)
 		event_manager.publish('render_page', self)
 
-	// // content_data
-	// 	const content_data = document.createElement("div")
-	// 		  content_data.classList.add("content_data", self.type)
-	// 	content_data.appendChild(fragment)
 
 
 	return content_data
@@ -207,8 +235,65 @@ const get_content_data = async function(self) {
 
 
 /**
+* RENDER_MAINTENANCE_MSG
+* Render HTML based in environment.js.php DEDALO_MAINTENANCE_MODE value
+* @return HTMLElement maintenance_container
+*/
+const render_maintenance_msg = function() {
+
+	// maintenance_container
+	const maintenance_container = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'maintenance_container'
+	})
+
+	// maintenance_msg
+	const maintenance_msg = ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'maintenance_msg',
+		inner_html		: get_label.site_under_maintenance || 'System in maintenance',
+		parent			: maintenance_container
+	})
+
+
+	return maintenance_container
+}//end render_maintenance_msg
+
+
+
+/**
+* RENDER_NOTIFICATION_MSG
+* Render HTML from environment.js.php notification data
+* @return HTMLElement notification_container
+*/
+const render_notification_msg = function() {
+
+	const msg			= DEDALO_NOTIFICATION.msg || 'Unknown notification'
+	const class_name	= DEDALO_NOTIFICATION.class_name || ''
+
+	// notification_container
+	const notification_container = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'notification_container'
+	})
+
+	// notification_msg
+	const notification_msg = ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'notification_msg ' + class_name,
+		inner_html		: msg,
+		parent			: notification_container
+	})
+
+
+	return notification_container
+}//end render_notification_msg
+
+
+
+/**
 * RENDER_MENU
-* @return DOM node render_menu
+* @return HTMLElement render_menu
 */
 	// const render_menu = async function(self) {
 
@@ -230,52 +315,56 @@ const get_content_data = async function(self) {
 * RENDER_SERVER_RESPONSE_ERROR
 * Render generic page error (Raspa background)
 * @param string msg
-* @return DOM node wrapper|error_container
+* @return HTMLElement wrapper|error_container
 */
-render_page.render_server_response_error = function(msg, add_wrapper=true) {
+	// render_page.render_server_response_error = function(msg, add_wrapper=true) {
 
-	// wrapper
-		const wrapper = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'wrapper page'
-		})
+	// 	// wrapper
+	// 		const wrapper = ui.create_dom_element({
+	// 			element_type	: 'div',
+	// 			class_name		: 'wrapper page'
+	// 		})
 
-	// error_container
-		const error_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'page_error_container',
-			parent			: wrapper
-		})
+	// 	// error_container
+	// 		const error_container = ui.create_dom_element({
+	// 			element_type	: 'div',
+	// 			class_name		: 'page_error_container',
+	// 			parent			: wrapper
+	// 		})
 
-	// icon_dedalo
-		ui.create_dom_element({
-			element_type	: 'img',
-			class_name		: 'icon_dedalo',
-			src				: DEDALO_CORE_URL + '/themes/default/dedalo_logo.svg',
-			parent			: error_container
-		})
+	// 	// icon_dedalo
+	// 		ui.create_dom_element({
+	// 			element_type	: 'img',
+	// 			class_name		: 'icon_dedalo',
+	// 			src				: DEDALO_CORE_URL + '/themes/default/dedalo_logo.svg',
+	// 			parent			: error_container
+	// 		})
 
-	// server_response_error h1
-		ui.create_dom_element({
-			element_type	: 'h1',
-			class_name		: 'server_response_error',
-			inner_html		: 'Server response error: <br>' + msg,
-			parent			: error_container
-		})
+	// 	// server_response_error h1
+	// 		ui.create_dom_element({
+	// 			element_type	: 'h1',
+	// 			class_name		: 'server_response_error',
+	// 			inner_html		: 'Server response error: <br>' + msg,
+	// 			parent			: error_container
+	// 		})
 
-	// more_info
-		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'more_info',
-			inner_html		: 'Received data format is not as expected. See your server log for details',
-			parent			: error_container
-		})
+	// 	// more_info
+	// 		ui.create_dom_element({
+	// 			element_type	: 'div',
+	// 			class_name		: 'more_info',
+	// 			inner_html		: 'Received data format is not as expected. See your server log for details',
+	// 			parent			: error_container
+	// 		})
 
-	// add_wrapper false  case
-		if (add_wrapper===false) {
-			return error_container
-		}
+	// 	// add_wrapper false  case
+	// 		if (add_wrapper===false) {
+	// 			return error_container
+	// 		}
 
 
-	return wrapper
-}//end render_server_response_error
+	// 	return wrapper
+	// }//end render_server_response_error
+
+
+
+// @license-end

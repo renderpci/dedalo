@@ -5,10 +5,10 @@
 */
 
 // imports
-@import '../../../core/page/css/layout/vars.less';
+@import (once) '../../../core/page/css/layout/vars';
 
 // local vars
-@bg_color : #0336a8;
+@bg_color : #818181;
 
 
 
@@ -18,10 +18,11 @@
 
 		>.content_data {
 
-			>.label_matix{
+			>.label_matix {
 				display: grid;
+				margin-top: 1rem;
 
-				>li {
+				>.row {
 					display: contents;
 
 					>* {
@@ -31,8 +32,16 @@
 						padding: 0.25rem;
 					}
 
-					&.label_header{
-						>.label{
+					>.button {
+						margin-top: 0.25rem;
+					}
+
+					&.label_header {
+						>.button {
+							padding: 0.6em;
+							margin-top: 0.5rem;
+						}
+						>.label {
 							padding: 0.6em;
 							text-align: center;
 							background-color: @bg_color;
@@ -42,12 +51,12 @@
 							border-right: 1px solid #ffffff;
 
 							&.name {
-								background-color: #818181;
+								background-color: darken(@bg_color, 15%);
 							}
 						}
 					}
 
-					&.row{
+					&.label_data {
 						// system info
 						>.label {
 							&[contentEditable=true]:empty:not(:focus):before{

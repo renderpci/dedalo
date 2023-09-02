@@ -16,105 +16,26 @@ class component_pdf extends component_media_common {
 
 
 	/**
-	* GET_ADDITIONAL_PATH
-	* Calculate image additional path from 'properties' JSON config.
-	* @return
-	*/
-	public function get_additional_path() {
-
-		static $ar_additional_path;
-
-		// return if already calculated
-			if(isset($this->additional_path)) {
-				return $this->additional_path;
-			}
-
-		$properties = $this->get_properties();
-			// dump($properties, ' get_additional_path properties ++ '.to_string($this->tipo)); // die();
-		if (isset($properties->additional_path)) {
-
-			$component_tipo		= $properties->additional_path;
-			$component_model	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			$component			= component_common::get_instance(
-				$component_model,
-				$component_tipo,
-				$this->get_section_id(),
-				'edit',
-				DEDALO_DATA_NOLAN,
-				$this->get_section_tipo()
-			);
-			$dato = trim($component->get_valor());
-
-			# Add / at begin if not exits
-			if ( substr($dato, 0, 1) != '/' ) {
-				$dato = '/'.$dato;
-			}
-
-			# Remove / at end if exists
-			if ( substr($dato, -1) === '/' ) {
-				$dato = substr($dato, 0, -1);
-			}
-
-			$ar_additional_path[$this->id] = $dato;
-
-			if(isset($properties->max_items_folder) && empty($dato)) {
-
-				$max_items_folder  = $properties->max_items_folder;
-				$parent_section_id = $this->section_id;
-
-				$ar_additional_path[$this->id] = '/'.$max_items_folder*(floor($parent_section_id / $max_items_folder));
-
-				$component->set_dato( $ar_additional_path[$this->id] );
-				if (!empty($parent_section_id)) {
-					$component->Save();
-				}
-			}
-		}else{
-
-			$ar_additional_path[$this->id] = false;
-		}
-
-		// fix additional_path
-			$this->additional_path = $ar_additional_path[$this->id];
-
-
-		return $ar_additional_path[$this->id];
-	}//end get_additional_path
-
-
-
-	/**
-	* GET_INITIAL_MEDIA_PATH
-	*/
-	public function get_initial_media_path() : string {
-
-		$component_tipo		= $this->tipo;
-		// $parent_section	= section::get_instance($this->parent, $this->section_tipo);
-		$parent_section		= $this->get_my_section();
-		$properties			= $parent_section->get_properties();
-
-		if (isset($properties->initial_media_path->$component_tipo)) {
-			$this->initial_media_path = $properties->initial_media_path->$component_tipo;
-			# Add / at begin if not exits
-			if ( substr($this->initial_media_path, 0, 1) != '/' ) {
-				$this->initial_media_path = '/'.$this->initial_media_path;
-			}
-		}else{
-			$this->initial_media_path = false;
-		}
-
-		return $this->initial_media_path;
-	}//end get_initial_media_path
-
-
-
-	/**
 	* GET_DEFAULT_QUALITY
+	* @return string $default_quality
+	* Defined in config file
 	*/
 	public function get_default_quality() : string {
 
 		return DEDALO_PDF_QUALITY_DEFAULT;
 	}//end get_default_quality
+
+
+
+	/**
+	* GET_THUMB_QUALITY
+	* @return string $thumb_quality
+	* Defined in config file
+	*/
+	public function get_thumb_quality() : string {
+
+		return DEDALO_PDF_THUMB_DEFAULT;
+	}//end get_thumb_quality
 
 
 
@@ -133,17 +54,16 @@ class component_pdf extends component_media_common {
 
 
 	/**
-	* GET_VALUE
+	* GET_GRID_VALUE
 	* Get the value of the components. By default will be get_dato().
 	* overwrite in every different specific component
 	* Some the text components can set the value with the dato directly
 	* the relation components need to process the locator to resolve the value
-	* @param string $lang = DEDALO_DATA_LANG
 	* @param object|null $ddo = null
 	*
 	* @return dd_grid_cell_object $grid_cell_object
 	*/
-	public function get_value(string $lang=DEDALO_DATA_LANG, ?object $ddo=null) : dd_grid_cell_object {
+	public function get_grid_value(object $ddo=null) : dd_grid_cell_object {
 
 		// column_obj. Set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$column_obj = isset($this->column_obj)
@@ -173,7 +93,9 @@ class component_pdf extends component_media_common {
 			$label = $this->get_label();
 
 		// class_list
-			$class_list = $ddo->class_list ?? null;
+			$class_list = isset($ddo)
+				? ($ddo->class_list ?? null)
+				: null;
 
 		// value
 			$grid_cell_object = new dd_grid_cell_object();
@@ -188,7 +110,7 @@ class component_pdf extends component_media_common {
 
 
 		return $grid_cell_object;
-	}//end get_value
+	}//end get_grid_value
 
 
 
@@ -216,11 +138,11 @@ class component_pdf extends component_media_common {
 			$id = $this->get_id();
 
 		// url
-			$url = $this->get_media_dir($quality) .'/'. $id .'.'. $this->get_extension();
+			$url = $this->get_media_url_dir($quality) .'/'. $id .'.'. $this->get_extension();
 
 		// File exists test : If not, show '0' dedalo image logo
 			if($test_file===true) {
-				$file = $this->get_local_full_path($quality);
+				$file = $this->get_media_filepath($quality);
 				if(!file_exists($file)) {
 					if ($default_add===false) {
 						return null;
@@ -255,7 +177,7 @@ class component_pdf extends component_media_common {
 		// 	$ar_quality = DEDALO_PDF_AR_QUALITY;
 		// 	foreach ($ar_quality as $current_quality) {
 		// 		# media_path
-		// 		$media_path = $this->get_path($current_quality);
+		// 		$media_path = $this->get_media_filepath($current_quality);
 
 		// 		if (!file_exists($media_path)) continue; # Skip
 
@@ -286,45 +208,57 @@ class component_pdf extends component_media_common {
 
 
 	/**
-	* RESTORE_COMPONENT_MEDIA_FILES
+	* RESTORE_COMPONENT_MEDIA_FILES (! Moved to media common)
 	* "Restore" last version of deleted media files (renamed and stored in 'deleted' folder)
 	* Is triggered when tool_time_machine recover a section
 	* @see tool_time_machine::recover_section_from_time_machine
 	* @return bool
 	*/
-	public function restore_component_media_files() : bool {
+		// public function restore_component_media_files() : bool {
 
-		// PDF restore
-		$ar_quality	= DEDALO_PDF_AR_QUALITY;
-		$extension	= $this->get_extension();
-		foreach ($ar_quality as $current_quality) {
+		// 	// element restore
+		// 	$ar_quality	= $this->get_ar_quality();
+		// 	$extension	= $this->get_extension();
+		// 	foreach ($ar_quality as $current_quality) {
 
-			// media_path
-			$media_path = $this->get_media_path($current_quality) . '/deleted';
-			$id 	= $this->get_id();
+		// 		// media_path
+		// 		$media_path	= $this->get_media_path_dir($current_quality) . '/deleted';
+		// 		$id			= $this->get_id();
 
-			$file_pattern 	= $media_path .'/'. $id .'_*.'. $extension;
-			$ar_files 		= glob($file_pattern);
-			if (empty($ar_files)) {
-				debug_log(__METHOD__." No files to restore were found for id:$id. Nothing was restored (1) ".to_string(), logger::WARNING);
-				continue; // Skip
-			}
+		// 		$file_pattern	= $media_path .'/'. $id .'_*.'. $extension;
+		// 		$ar_files		= glob($file_pattern);
+		// 		if (empty($ar_files)) {
+		// 			debug_log(__METHOD__
+		// 				." No files to restore were found for id:$id. Nothing was restored (1) "
+		// 				, logger::WARNING
+		// 			);
+		// 			continue; // Skip
+		// 		}
 
-			natsort($ar_files);	# sort the files from newest to oldest
-			$last_file_path	= end($ar_files);
-			$new_file_path	= $this->get_local_full_path($current_quality);
+		// 		natsort($ar_files);	# sort the files from newest to oldest
+		// 		$last_file_path	= end($ar_files);
+		// 		$new_file_path	= $this->get_media_filepath($current_quality);
 
-			// move file
-			if( !rename($last_file_path, $new_file_path) ) {
-				throw new Exception(" Error on move files to restore folder. Permission denied . Nothing was restored (2)");
-			}
+		// 		// move file
+		// 		if( !rename($last_file_path, $new_file_path) ) {
+		// 			// throw new Exception(" Error on move files to restore folder. Permission denied . Nothing was restored (2)");
+		// 			debug_log(__METHOD__
+		// 				. " Error on move files to restore folder. Permission denied . Nothing was restored (2) " . PHP_EOL
+		// 				. 'last_file_path: '. $last_file_path . PHP_EOL
+		// 				. 'new_file_path: '. $new_file_path
+		// 				, logger::ERROR
+		// 			);
+		// 		}
 
-			debug_log(__METHOD__." Moved file \n$last_file_path to \n$new_file_path ".to_string(), logger::WARNING);
-		}//end foreach
+		// 		debug_log(__METHOD__
+		// 			." Moved file $last_file_path to $new_file_path "
+		// 			, logger::WARNING
+		// 		);
+		// 	}//end foreach
 
 
-		return true;
-	}//end restore_component_media_files
+		// 	return true;
+		// }//end restore_component_media_files
 
 
 
@@ -355,10 +289,10 @@ class component_pdf extends component_media_common {
 
 		// thumb_path
 			$file_name  = $this->get_id();
-			$thumb_path = DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
+			$target_file = DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
 
 		// thumb already exists case
-			if (!$force_create && file_exists($thumb_path)) {
+			if (!$force_create && file_exists($target_file)) {
 				$url = DEDALO_MEDIA_URL . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
 				# ABSOLUTE (Default false)
 				if ($absolute) {
@@ -368,23 +302,34 @@ class component_pdf extends component_media_common {
 			}
 
 		// thumb not exists case: generate from PDF
-			$quality	= $this->get_default_quality();
-			$path		= $this->get_local_full_path($quality);
-			if (file_exists($path)) {
+			$quality		= $this->get_default_quality();
+			$source_file	= $this->get_media_filepath($quality);
+			if (file_exists($source_file)) {
 
 				// dimensions . Like "102x57"
 					$width		= defined('DEDALO_IMAGE_THUMB_WIDTH')  ? DEDALO_IMAGE_THUMB_WIDTH  : 224;
 					$height		= defined('DEDALO_IMAGE_THUMB_HEIGHT') ? DEDALO_IMAGE_THUMB_HEIGHT : 149;
-					$dimensions	= $width.'x'.$height.'>';
+					$dimensions	= $width.'x'.$height;
+
+					$thumb_pdf_options = new stdClass();
+						$thumb_pdf_options->source_file = $source_file;
+						$thumb_pdf_options->ar_layers 	= [0];
+						$thumb_pdf_options->target_file = $target_file;
+						$thumb_pdf_options->density		= 150;
+						$thumb_pdf_options->antialias	= true;
+						$thumb_pdf_options->quality		= 75;
+						$thumb_pdf_options->resize		= $dimensions;
+
+					$result = ImageMagick::convert($thumb_pdf_options);
 
 				// command
 					// $flags 		= '-debug all';
 					// $flags 		= " -scale 200x200 -background white -flatten ";
-					$command = MAGICK_PATH ."convert -alpha off {$path}[0] -thumbnail '$dimensions' -background white -flatten -gravity center -unsharp 0x.5 -quality 90 $thumb_path";
+					// $command = MAGICK_PATH ."convert -alpha off {$path}[0] -thumbnail '$dimensions' -background white -flatten -gravity center -unsharp 0x.5 -quality 90 $target_file";
 
 				// exec command
-					exec($command.' 2>&1', $output, $result_code);
-					if ($result_code==0) {
+					// exec($command.' 2>&1', $output, $result_code);
+					if ($result!==false) {
 
 						// url. All is OK
 						$url = DEDALO_MEDIA_URL . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
@@ -393,14 +338,51 @@ class component_pdf extends component_media_common {
 						if ($absolute===true) {
 							$url = DEDALO_PROTOCOL . DEDALO_HOST . $url;
 						}
-					}else{
-						// Error. An error occurred
-						debug_log(__METHOD__." An error occurred! Failed command: '$command'  - result_code: ".to_string($result_code), logger::ERROR);
 					}
 			}
 
 		return $url;
 	}//end get_pdf_thumb
+
+
+
+	/**
+	* CREATE_IMAGE
+	*
+	* Once the full path is specified, the command is working as desired.
+	* @param object $options
+	* @return string|false $path
+	*/
+	public function create_image(?object $options=null) : string|bool {
+
+		// options
+			$page		= $options->page ?? 0;
+			$quality	= $options->quality ?? $this->get_original_quality();
+
+		// pdf path
+			$file_name		= $this->get_id();
+			$target_file	= DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER . '/tmp/' . $file_name . '.' . DEDALO_IMAGE_EXTENSION;
+
+		// generate from PDF
+			$source_file	= $this->get_media_filepath($quality);
+			if (file_exists($source_file)) {
+
+				$image_pdf_options = new stdClass();
+					$image_pdf_options->source_file	= $source_file;
+					$image_pdf_options->ar_layers	= [$page];
+					$image_pdf_options->target_file	= $target_file;
+					$image_pdf_options->density		= 600;
+					$image_pdf_options->antialias	= true;
+					$image_pdf_options->quality		= 75;
+					$image_pdf_options->resize		= '25%';
+
+				ImageMagick::convert($image_pdf_options);
+			}
+
+			$result = (file_exists($target_file)) ? $target_file : false;
+
+		return $result;
+	}//end create_image
 
 
 
@@ -417,10 +399,10 @@ class component_pdf extends component_media_common {
 			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
 		}
 
-		$force_create 	= false;
-		$absolute 		= true;	// output absolute path like 'http://myhost/mypath/myimage.jpg';
+		$force_create	= false;
+		$absolute		= true;	// output absolute path like 'http://myhost/mypath/myimage.jpg';
 
-		$valor 			= $this->get_pdf_thumb($force_create, $absolute);	// Note this absolute url is converted to image on export
+		$valor			= $this->get_pdf_thumb($force_create, $absolute);	// Note this absolute url is converted to image on export
 
 		return $valor;
 	}//end get_valor_export
@@ -458,7 +440,7 @@ class component_pdf extends component_media_common {
 
 	/**
 	* GET_ORIGINAL_QUALITY
-	* @return $original_quality
+	* @return string $original_quality
 	*/
 	public function get_original_quality() : string {
 
@@ -473,7 +455,7 @@ class component_pdf extends component_media_common {
 
 	/**
 	* GET_PREVIEW_URL
-	* @return string $url
+	* @return string $preview_url
 	*/
 	public function get_preview_url() : string {
 
@@ -486,7 +468,13 @@ class component_pdf extends component_media_common {
 
 	/**
 	* PROCESS_UPLOADED_FILE
-	* Manages after upload (using service or tool upload) actions
+	* Note that this is the last method called in a sequence started on upload file.
+	* The sequence order is:
+	* 	1 - dd_utils_api::upload
+	* 	2 - tool_upload::process_uploaded_file
+	* 	3 - component_media_common::add_file
+	* 	4 - component:process_uploaded_file
+	* The target quality is defined by the component quality set in tool_upload::process_uploaded_file
 	* @param object $file_data
 	*	Data from trigger upload file
 	* @return object $response
@@ -500,7 +488,32 @@ class component_pdf extends component_media_common {
 		// short vars
 			$original_file_name	= $file_data->original_file_name; 	// like "my doc is beaty.psdf"
 			$full_file_name		= $file_data->full_file_name;		// like "test175_test65_1.pdf"
-			$full_file_path		= $file_data->full_file_path;		// like "/mypath/media/pdf/1.5MB/test175_test65_1.jpg"
+			$full_file_path		= $file_data->full_file_path;		// like "/mypath/media/pdf/original/test175_test65_1.jpg"
+			$first_page			= $file_data->first_page ?? 1; 		// used to assign the correct number to page tag of the transcription text
+
+		// copy original to default quality (in the future, a quality conversion script will be placed here)
+			$default_quality		= $this->get_default_quality();
+			$default_quality_path	= $this->get_media_path_dir($default_quality);
+			$target_file_path		= $default_quality_path . '/' . $full_file_name;
+			$copy_result			= copy(
+				$full_file_path, // from original quality directory
+				$target_file_path // to default quality directory
+			);
+			if ($copy_result===false) {
+				debug_log(__METHOD__ . PHP_EOL
+					. " Error: Unable to copy pdf file : " . PHP_EOL
+					. ' Source path: ' . $full_file_path . PHP_EOL
+					. ' Target path: ' . $target_file_path
+					, logger::ERROR
+				);
+			}else{
+				debug_log(__METHOD__ . PHP_EOL
+					. " Copied pdf file (".$full_file_path." -> ".$target_file_path.") : " . PHP_EOL
+					. ' Source path: ' . $full_file_path . PHP_EOL
+					. ' Target path: ' . $target_file_path
+					, logger::DEBUG
+				);
+			}
 
 		// thumb : Create pdf_thumb image
 			$thumb_url = $this->get_pdf_thumb(
@@ -514,12 +527,12 @@ class component_pdf extends component_media_common {
 				$related_component_text_area_tipo	= reset($ar_related_component_text_area_tipo);
 				$related_component_text_area_model	= RecordObj_dd::get_modelo_name_by_tipo($related_component_text_area_tipo,true);
 				$quality							= $this->get_default_quality();
-				$target_pdf_path					= $this->get_local_full_path($quality);
+				$target_pdf_path					= $this->get_media_filepath($quality);
 
 				try {
 					$options = new stdClass();
-						$options->path_pdf 	 = (string)$target_pdf_path;	# full source pdf file path
-						#$options->first_page = (int)$pagina_inicial;		# number of first page. default is 1
+						$options->path_pdf		= (string)$target_pdf_path;	# full source pdf file path
+						$options->first_page	= (int)$first_page;		# number of first page. default is 1
 					$text_from_pdf_response = (object)component_pdf::get_text_from_pdf( $options );
 						#debug_log(__METHOD__." tool_transcription response ".to_string($text_from_pdf_response), logger::DEBUG);
 						// dump($text_from_pdf_response, ' text_from_pdf_response ++ '.to_string());
@@ -532,7 +545,8 @@ class component_pdf extends component_media_common {
 							$this->section_id,
 							'edit',
 							DEDALO_DATA_LANG,
-							$this->section_tipo
+							$this->section_tipo,
+							false
 						);
 						$component_text_area->set_dato($text_from_pdf_response->result); // Text with page numbers
 						$component_text_area->Save();
@@ -558,7 +572,8 @@ class component_pdf extends component_media_common {
 						$current_section_id,
 						'edit',
 						DEDALO_DATA_NOLAN,
-						$target_section_tipo
+						$target_section_tipo,
+						false
 					);
 					$component_target_filename->set_dato( $original_file_name );
 					$component_target_filename->Save();
@@ -633,7 +648,7 @@ class component_pdf extends component_media_common {
 
 	/**
 	* GET_TEXT_FROM_PDF
-	* Extract text from pdf file
+	* Extract text from PDF file
 	* @param object $new_options
 	* @return object $response
 	*/
@@ -642,8 +657,8 @@ class component_pdf extends component_media_common {
 		$response = new stdClass();
 
 		$options = new stdClass();
-			$options->path_pdf 	 = null;	# full source pdf file path
-			$options->first_page = 1; 		# number of first page. default is 1
+			$options->path_pdf		= null;	# full source pdf file path
+			$options->first_page	= 1; 		# number of first page. default is 1
 
 		// new_options overwrite options defaults
 			foreach ((object)$new_options as $key => $value) {
@@ -654,15 +669,15 @@ class component_pdf extends component_media_common {
 
 		// error on missing properties
 			if (empty($options->path_pdf) || !file_exists($options->path_pdf)) {
-				$response->result = 'error';
-				$response->msg 	  = "Error Processing Request pdf_automatic_transcription: source pdf file not found";
+				$response->result	= 'error';
+				$response->msg		= "Error Processing Request pdf_automatic_transcription: source pdf file not found";
 				return $response;
 			}
 
 		// test engine pdf to text
 			if (defined('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE')===false) {
-				$response->result = 'error';
-				$response->msg 	  = "Error Processing Request pdf_automatic_transcription: config PDF_AUTOMATIC_TRANSCRIPTION_ENGINE is not defined";
+				$response->result	= 'error';
+				$response->msg		= "Error Processing Request pdf_automatic_transcription: config PDF_AUTOMATIC_TRANSCRIPTION_ENGINE is not defined";
 				return $response;
 			}else{
 				$transcription_engine = shell_exec('type -P '.PDF_AUTOMATIC_TRANSCRIPTION_ENGINE);
@@ -680,14 +695,14 @@ class component_pdf extends component_media_common {
 		$command  = PDF_AUTOMATIC_TRANSCRIPTION_ENGINE . " -enc UTF-8 $options->path_pdf";
 		$output   = exec( "$command 2>&1", $result);	# Generate text version file in same dir as pdf
 		if ( strpos( strtolower($output), 'error')) {
-			$response->result = 'error';
-			$response->msg 	  = "$output";
+			$response->result	= 'error';
+			$response->msg		= "$output";
 			return $response;
 		}
 
 		if (!file_exists($text_filename)) {
-			$response->result = 'error';
-			$response->msg 	  = "Error Processing Request pdf_automatic_transcription: Text file not found";
+			$response->result	= 'error';
+			$response->msg		= "Error Processing Request pdf_automatic_transcription: Text file not found";
 			return $response;
 		}
 		$pdf_text = file_get_contents($text_filename);	# Read current text file
@@ -698,7 +713,7 @@ class component_pdf extends component_media_common {
 		# Test is valid utf8
 		$test_utf8 = self::valid_utf8($pdf_text);
 		if (!$test_utf8) {
-			error_log("WARNING: Current string is NOT utf8 valid. Anyway continue ...");
+			debug_log(__METHOD__." WARNING: Current string is NOT utf8 valid. Anyway continue ... ".to_string(), logger::WARNING);
 		}
 
 		# Remove non utf8 chars
@@ -707,29 +722,32 @@ class component_pdf extends component_media_common {
 		# Test JSON conversion before save
 		$pdf_text 	= json_handler::encode($pdf_text);
 		if (!$pdf_text) {
-			$response->result = 'error';
-			$response->msg 	  = "Error Processing Request pdf_automatic_transcription: String is not valid because format encoding is wrong";
+			$response->result	= 'error';
+			$response->msg		= "Error Processing Request pdf_automatic_transcription: String is not valid because format encoding is wrong";
 			return $response;
 		}
 		$pdf_text 	= json_handler::decode($pdf_text);	# JSON is valid. We turn object to string
 		$pdf_text 	= trim($pdf_text);	// Trim before check is empty
 		if (empty($pdf_text)) {
-			$response->result = 'error';
-			$response->msg 	  = "Error Processing Request pdf_automatic_transcription: Empty text";
+			$response->result	= 'error';
+			$response->msg		= "Error Processing Request pdf_automatic_transcription: Empty text";
 			return $response;
 		}
 
 		#
 		# PAGES TAGS
-		$original_text = str_replace("","", $pdf_text);
-		$pages = explode("", $pdf_text);
-		$i=(int)$options->first_page;
-		$pdf_text='';
+		$original_text	= str_replace("","", $pdf_text);
+		$pages			= explode("", $pdf_text);
+		$i				= (int)$options->first_page;
+		$pdf_text		= '';
 		foreach ($pages as $current_page) {
-		    $pdf_text .= '[page-n-'. $i .']';
-		    $pdf_text .= '<br>';
-		    $pdf_text .= nl2br($current_page);
-		    $i++;
+			$pdf_text .= '<p>';
+			$pdf_text .= '[page-n-'. $i .']';
+			$pdf_text .= '</p>';
+			$pdf_text .= '<p>';
+			$pdf_text .= str_replace(["\r\n", "\n\r", "\n", "\r"], '</p><p>' , $current_page);
+			$pdf_text .= '</p>';
+			$i++;
 		}
 
 		$response->result	= (string)$pdf_text;
@@ -742,16 +760,16 @@ class component_pdf extends component_media_common {
 
 
 
-	#
-	# FUNCTIONS
-	#
-	# VALID_UTF8
-	# utf8 encoding validation developed based on Wikipedia entry at:
-	# http://en.wikipedia.org/wiki/UTF-8
-	# Implemented as a recursive descent parser based on a simple state machine
-	# copyright 2005 Maarten Meijer
-	# This cries out for a C-implementation to be included in PHP core
-	# @return bool
+
+	/**
+	*  VALID_UTF8
+	* utf8 encoding validation developed based on Wikipedia entry at:
+	* http://en.wikipedia.org/wiki/UTF-8
+	* Implemented as a recursive descent parser based on a simple state machine
+	* copyright 2005 Maarten Meijer
+	* This cries out for a C-implementation to be included in PHP core
+	* @return bool
+	*/
 	public static function valid_utf8(string $string) : bool {
 		$len = strlen($string);
 
@@ -812,40 +830,10 @@ class component_pdf extends component_media_common {
 	*/
 	public static function utf8_clean(string $string='', bool $control=false) : string {
 
-	    $string = iconv('UTF-8', 'UTF-8//IGNORE', $string);
+		$string = iconv('UTF-8', 'UTF-8//IGNORE', $string);
 
 		return $string;
 	}//end utf8_clean
-
-
-
-	/**
-	* DELETE_FILE
-	* Remove quality version moving the file to a deleted files dir
-	* @see component_image->remove_component_media_files
-	*
-	* @return object $response
-	*/
-	public function delete_file(string $quality) : object {
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed';
-
-		// remove_component_media_files returns bool value
-		$result = $this->remove_component_media_files([$quality]);
-		if ($result===true) {
-
-			// save To update valor_list
-				$this->Save();
-
-			$response->result	= true;
-			$response->msg		= 'File deleted successfully. ' . $quality;
-		}
-
-
-		return $response;
-	}//end delete_file
 
 
 
@@ -916,7 +904,8 @@ class component_pdf extends component_media_common {
 							$options->section_id,
 							'list',
 							DEDALO_DATA_NOLAN,
-							$options->section_tipo
+							$options->section_tipo,
+							false
 						);
 
 					// get existing files data
@@ -952,9 +941,8 @@ class component_pdf extends component_media_common {
 							}
 
 					// source_file_upload_date
-						$dd_date							= new dd_date();
 						$upload_date_timestamp				= date ("Y-m-d H:i:s", filemtime($file));
-						$source_file_upload_date			= $dd_date->get_date_from_timestamp($upload_date_timestamp);
+						$source_file_upload_date			= dd_date::get_dd_date_from_timestamp($upload_date_timestamp);
 						$source_file_upload_date->time		= dd_date::convert_date_to_seconds($source_file_upload_date);
 						$source_file_upload_date->timestamp	= $upload_date_timestamp;
 
@@ -977,7 +965,7 @@ class component_pdf extends component_media_common {
 
 					// get files info
 						$files_info	= [];
-						$ar_quality = DEDALO_PDF_AR_QUALITY;
+						$ar_quality	= DEDALO_PDF_AR_QUALITY;
 						foreach ($ar_quality as $current_quality) {
 							if ($current_quality==='thumb') continue;
 							// read file if exists to get file_info
@@ -998,9 +986,10 @@ class component_pdf extends component_media_common {
 						}
 
 					// create new dato
-						$dato_item = new stdClass();
-							$dato_item->files_info	= $files_info;
-							$dato_item->lib_data	= $lib_data;
+						$dato_item = (object)[
+							'files_info'	=> $files_info,
+							'lib_data'		=> $lib_data
+						];
 
 					// fix final dato with new format as array
 						$new_dato = [$dato_item];
@@ -1010,6 +999,11 @@ class component_pdf extends component_media_common {
 						$response->result	= 1;
 						$response->new_dato	= $new_dato;
 						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+
+					// clean vars
+						unset($source_file_upload_date);
+						unset($files_info);
+						unset($lib_data);
 				}else{
 
 					$response = new stdClass();

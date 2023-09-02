@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_ROOT_WEB */
 /*eslint no-undef: "error"*/
 
@@ -24,7 +25,9 @@ export const view_default_edit_pdf = function() {
 /**
 * RENDER
 * Render node for use in current view
-* @return DOM node
+* @param object self
+* @param object options
+* @return HTMLElement wrapper
 */
 view_default_edit_pdf.render = async function(self, options) {
 
@@ -38,32 +41,33 @@ view_default_edit_pdf.render = async function(self, options) {
 		}
 
 	// buttons
-		const buttons = get_buttons(self)
+		const buttons = (self.permissions > 1)
+			? get_buttons(self)
+			: null
 
 	// wrapper. ui build_edit returns component wrapper
-		const wrapper = ui.component.build_wrapper_edit(self, {
+		const wrapper_options = {
 			content_data	: content_data,
-			buttons			: buttons
-		})
+			buttons			: buttons,
+			add_styles		: ['media_wrapper'] // common media classes
+		}
+		if (self.view==='line') {
+			wrapper_options.label = null // prevent to create label node
+		}
+		const wrapper = ui.component.build_wrapper_edit(self, wrapper_options)
 		// set pointers
 		wrapper.content_data = content_data
 
-	// fix editor height. This guarantees that content_data grow to the maximum possible height
-		// when_in_viewport(wrapper, ()=> {
-		// 	const wrapper_height	= wrapper.offsetHeight
-		// 	const label_height		= wrapper.label ? wrapper.label.offsetHeight : 0
-		// 	wrapper.content_data.style.height = (wrapper_height - label_height) + 'px'
-		// })
-
 
 	return wrapper
-}//end edit
+}//end render
 
 
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return DOM node content_data
+* @param object self
+* @return HTMLElement content_data
 */
 export const get_content_data_edit = function(self) {
 
@@ -73,12 +77,16 @@ export const get_content_data_edit = function(self) {
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
+		// common media classes
+		content_data.classList.add('media_content_data')
 
 	// values (documents)
 		const inputs_value	= (value.length<1) ? [null] : value // force one empty element at least
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
+			// get the content_value
 			const content_value = get_content_value(i, inputs_value[i], self)
+			// add node to content_data
 			content_data.appendChild(content_value)
 			// set the pointer
 			content_data[i] = content_value
@@ -109,7 +117,8 @@ export const get_content_data_edit = function(self) {
       "second": 1
     }
   }
-* @return DOM node content_value
+* @param object self
+* @return HTMLElement content_value
 */
 const get_content_value = function(i, current_value, self) {
 
@@ -123,7 +132,7 @@ const get_content_value = function(i, current_value, self) {
 	// content_value node
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'content_value'
+			class_name		: 'content_value media_content_value'
 		})
 
 	// pdf_url
@@ -136,26 +145,13 @@ const get_content_value = function(i, current_value, self) {
 			return content_value
 		}
 
-	// DES
-		// const pdf_viewer = ui.create_dom_element({
-		//    	element_type	: "div",
-		//    	class_name 		: 'pdf_viewer_frame',
-		//    	parent 			: li
+	// DES browser plug-in
+		// const iframe = ui.create_dom_element({
+		// 	element_type	: 'embed',
+		// 	class_name		: 'pdf_viewer_frame',
+		// 	parent			: content_value,
+		// 	src 			: pdf_url +'#toolbar=0&navpanes=0' // #toolbar=0&navpanes=0&scrollbar=0&page=5
 		// })
-		//
-		// const shadow = pdf_viewer.attachShadow({mode: 'open'});
-		//
-		// const response =  await fetch(viewer_url)
-		// // console.log("response", response);
-		// // .then(response => response.text())
-		// // .then( txt =>  new DOMParser().parseFromString(txt, 'text/html'))
-		// const txt = await response.text();
-		// // console.log("txt", txt);
-		// const html =  new DOMParser().parseFromString(txt, 'text/html');
-		//
-		// console.log("html", html);
-		//
-		// shadow.appendChild(html.querySelector('html') )// = txt;
 
 	// iframe. PDF viewer (pdfjs) is loaded inside a iframe
 		const iframe = ui.create_dom_element({
@@ -181,6 +177,24 @@ const get_content_value = function(i, current_value, self) {
 					return
 				}
 
+				// add css to change the interface
+				iframe.classList.add('loading')
+				iframe.addEventListener('load', function(e) {
+
+						const doc = iframe.contentDocument
+						const href_css = (self.permissions===1)
+							? DEDALO_CORE_URL + '/component_pdf/css/pdfjs_default_read_only.css' // css for read_only
+							: DEDALO_CORE_URL + '/component_pdf/css/pdfjs_default_edit.css' // css for edit
+
+						const css_link = document.createElement("link");
+						css_link.href = href_css
+						css_link.rel = 'stylesheet';
+						css_link.type = 'text/css';
+						doc.head.appendChild(css_link);
+
+						iframe.classList.remove('loading')
+				})
+
 				// options
 					const pdf_viewer_options = await iframe.contentWindow['PDFViewerApplicationOptions'];
 					if (pdf_viewer_options) {
@@ -188,6 +202,7 @@ const get_content_value = function(i, current_value, self) {
 						pdf_viewer_options.set('defaultUrl', '');
 						// set correct locale
 						pdf_viewer_options.set('locale', locale_code);
+						pdf_viewer_options.set("enablePermissions", true); //allow PDF documents to disable copying in the viewer
 					}
 
 				// pdf_viewer
@@ -200,7 +215,9 @@ const get_content_value = function(i, current_value, self) {
 				// console.log("/// pdf_url:",pdf_url);
 
 				// load the pdf in the viewer
-				self.pdf_viewer.open(pdf_url)
+				self.pdf_viewer.open({
+					url:pdf_url
+				})
 				.then(function() {
 					// PDFViewerApplicationOptions.document.webL10n.setLanguage(locale_code)
 					// PDFViewerApplicationOptions.set('locale', locale_code);
@@ -211,7 +228,7 @@ const get_content_value = function(i, current_value, self) {
 
 				// listener. Remove the listener to prevent navigation problems
 				top.document.removeEventListener('webviewerloaded', fn_webviewerloaded, false)
-			}//end fn_webviewerloaded
+			};//end fn_webviewerloaded
 
 		// viewer_url. the standard html viewer of the pdf.js library
 			const viewer_url = DEDALO_ROOT_WEB + '/lib/pdfjs/web/viewer.html'
@@ -233,7 +250,7 @@ const get_content_value = function(i, current_value, self) {
 		// offset label
 		ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'label',
+			class_name		: 'offset',
 			text_node		: 'offset',
 			parent			: fields
 		})
@@ -274,7 +291,7 @@ const get_content_value = function(i, current_value, self) {
 /**
 * GET_BUTTONS
 * @param object instance
-* @return DOM node buttons_container
+* @return HTMLElement buttons_container
 */
 const get_buttons = (self) => {
 
@@ -285,6 +302,16 @@ const get_buttons = (self) => {
 		if (self.caller && self.caller.type==='tool') {
 			return fragment
 		}
+
+	// button_fullscreen
+		const button_fullscreen = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button full_screen',
+			parent			: fragment
+		})
+		button_fullscreen.addEventListener('click', function() {
+			ui.enter_fullscreen(self.node)
+		})
 
 	// buttons tools
 		if( self.show_interface.tools === true){
@@ -305,3 +332,7 @@ const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
+
+
+
+// @license-end

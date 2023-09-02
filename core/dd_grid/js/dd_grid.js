@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -16,23 +17,22 @@
 
 export const dd_grid = function(){
 
-	// // element properties declare
-		this.model
-		this.tipo
-		this.section_tipo
-		this.section_id
-		this.mode
-		this.data_format
-		this.lang
+	// element properties declare
+	this.model
+	this.tipo
+	this.section_tipo
+	this.section_id
+	this.mode
+	this.data_format
+	this.lang
 
-		this.rqo
+	this.rqo
 
-		this.data
-		this.node
-		this.id
+	this.data
+	this.node
+	this.id
 
-		this.events_tokens = []
-	return true
+	this.events_tokens = []
 }//end dd_grid
 
 
@@ -61,8 +61,7 @@ export const dd_grid = function(){
 * Custom init method.
 * Call common init and then add custom properties
 * @param object options
-* @return promise
-* 	bool true
+* @return bool
 */
 dd_grid.prototype.init	= async function(options) {
 
@@ -77,6 +76,8 @@ dd_grid.prototype.init	= async function(options) {
 		self.column_id = options.column_id
 	// view. When caller is section_record, the view is inside context
 		self.view = options.view || (options.context ? options.context.view : 'default')
+	// show_tipo_in_label
+		self.show_tipo_in_label = options.show_tipo_in_label || false
 
 
 	return common_init
@@ -88,7 +89,7 @@ dd_grid.prototype.init	= async function(options) {
 * BUILD
 * Custom element builder
 * @param bool autoload = false
-* @return bool true
+* @return bool
 */
 dd_grid.prototype.build	= async function(autoload=false) {
 
@@ -112,3 +113,7 @@ dd_grid.prototype.build	= async function(autoload=false) {
 
 	return true
 }//end build
+
+
+
+// @license-end

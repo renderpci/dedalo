@@ -26,7 +26,7 @@ $global_start_time = hrtime(true);
 
 // PUBLIC API HEADERS (!) TEMPORAL 16-11-2022
 	// Allow CORS
-	header("Access-Control-Allow-Origin: *");
+	header('Access-Control-Allow-Origin: *');
 	// header("Access-Control-Allow-Credentials: true");
 	// header("Access-Control-Allow-Methods: GET,POST"); // GET,HEAD,OPTIONS,POST,PUT
 	$allow_headers = [
@@ -36,16 +36,35 @@ $global_start_time = hrtime(true);
 		'Content-Type',
 		// 'Access-Control-Request-Method',
 		// 'Access-Control-Request-Headers'
+		'Content-Range'
 	];
-	header("Access-Control-Allow-Headers: ". implode(', ', $allow_headers));
+	header('Access-Control-Allow-Headers: '. implode(', ', $allow_headers));
 
 
 
 	// CORS preflight OPTIONS requests
 		if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD']==='OPTIONS') {
-			error_log('Ignored '.print_r($_SERVER['REQUEST_METHOD'], true));
+			// error_log('Ignored '.print_r($_SERVER['REQUEST_METHOD'], true));
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Ignored call ' . $_SERVER['REQUEST_METHOD'];
+			error_log('Error: '.$response->msg);
+			echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 			exit( 0 );
 		}
+
+
+
+// php version check
+	$version = explode('.', phpversion());
+	if ($version[0]<8 || ($version[0]==8 && $version[1]<1)) {
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed. This PHP version is not supported ('.phpversion().'). You need: >=8.1';
+		error_log('Error: '.$response->msg);
+		echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+		die();
+	}
 
 
 
@@ -57,9 +76,10 @@ $global_start_time = hrtime(true);
 
 
 
-// get post vars
+// get post vars. file_get_contents returns a string
 	$str_json = file_get_contents('php://input');
-	//error_log(print_r($str_json,true));
+	// error_log(print_r($str_json,true));
+	// error_log(print_r($_REQUEST,true));
 	if (!empty($str_json)) {
 		$rqo = json_decode( $str_json );
 	}
@@ -70,21 +90,42 @@ $global_start_time = hrtime(true);
 
 
 
-// received files case. Uploading from tool_upload or text editor images upload
-	if (isset($_FILES)) {
-		if (!isset($rqo) && !empty($_FILES)) {
+// non php://input cases
+	if (!empty($_FILES)) {
+
+		// files case. Received files case. Uploading from tool_upload or text editor images upload
+		if (!isset($rqo)) {
 			$rqo = new stdClass();
-				$rqo->action = 'upload';
-				$rqo->dd_api = 'dd_utils_api';
+				$rqo->action	= 'upload';
+				$rqo->dd_api	= 'dd_utils_api';
+				$rqo->options	= new stdClass();
 		}
 		foreach($_POST as $key => $value) {
-				$rqo->{$key} = safe_xss($value);
+				$rqo->options->{$key} = safe_xss($value);
 		}
 		foreach($_GET as $key => $value) {
-				$rqo->{$key} = safe_xss($value);
+				$rqo->options->{$key} = safe_xss($value);
 		}
 		foreach($_FILES as $key => $value) {
-				$rqo->{$key} = $value;
+				$rqo->options->{$key} = $value;
+		}
+
+	}elseif (!empty($_REQUEST)) {
+
+		// GET/POST case
+		if (isset($_REQUEST['rqo'])) {
+			$rqo = json_handler::decode($_REQUEST['rqo']);
+		}else{
+			$rqo = (object)[
+				'source' => (object)[]
+			];
+			foreach($_REQUEST as $key => $value) {
+				if (in_array($key, request_query_object::$direct_keys)) {
+					$rqo->{$key} = safe_xss($value);
+				}else{
+					$rqo->source->{$key} = safe_xss($value);
+				}
+			}
 		}
 	}
 
@@ -92,8 +133,12 @@ $global_start_time = hrtime(true);
 
 // rqo check. Some cases like preflight, do not generates a rqo
 	if (empty($rqo)) {
-		error_log('! Ignored empty rqo');
-		// debug_log(__METHOD__." Error on API : Empty rqo ".to_string($_REQUEST), logger::ERROR);
+		error_log('API JSON index. ! Ignored empty rqo');
+		debug_log(__METHOD__
+			." Error on API : Empty rqo (Some cases like preflight, do not generates a rqo) " . PHP_EOL
+			.' $_REQUEST: '. to_string($_REQUEST)
+			, logger::ERROR
+		);
 		exit( 0 );
 	}
 
@@ -113,7 +158,7 @@ $global_start_time = hrtime(true);
 	// try {
 
 		$dd_manager	= new dd_manager();
-		$result		= $dd_manager->manage_request( $rqo );
+		$response	= $dd_manager->manage_request( $rqo );
 
 		// debug
 			// $current = (hrtime(true) - $global_start_time) / 1000000;
@@ -127,9 +172,13 @@ $global_start_time = hrtime(true);
 		// debug
 			if(SHOW_DEBUG===true) {
 				// real_execution_time add
-				$result->debug						= $result->debug ?? new stdClass();
-				$result->debug->real_execution_time	= exec_time_unit($global_start_time,'ms').' ms';
+				$response->debug						= $response->debug ?? new stdClass();
+				$response->debug->real_execution_time	= exec_time_unit($global_start_time,'ms').' ms';
 			}
+
+		// server_errors. bool true on debug_log write log with LOGGER_LEVEL as 'ERROR' or 'CRITICAL'
+			$response->dedalo_last_error	= $_ENV['DEDALO_LAST_ERROR'] ?? null;
+			// $response->dedalo_last_error	= 'fake error!';
 
 	// } catch (Throwable $e) { // For PHP 7
 
@@ -160,8 +209,11 @@ $global_start_time = hrtime(true);
 
 
 
-// output the result JSON string
-	$output_string = json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+// output the response JSON string
+	// $output_string = json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+	$output_string = isset($rqo->pretty_print)
+		? json_handler::encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)
+		: json_handler::encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
 	// debug (browser Server-Timing)
 		// header('Server-Timing: miss, db;dur=53, app;dur=47.2');
@@ -195,6 +247,7 @@ $global_start_time = hrtime(true);
 		// $current = (hrtime(true) - $global_start_time) / 1000000;
 		// error_log('--------------------------------------- current 3 (before echo) ms: '.$current);
 		// dump($_SESSION, ' _SESSION ++ '.to_string());
+
 
 
 // output_string_and_close_connection($output_string);

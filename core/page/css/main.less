@@ -7,7 +7,7 @@
 // layout general
 	@import './layout/reset';
 	@import './layout/vars';
-	@import './layout/functions';
+	@import '../layout/functions';
 	@import './layout/fonts';
 	@import './layout/general';
 	@import './layout/progress_bar';
@@ -23,12 +23,14 @@
 	@import '../../search/css/search';
 	@import '../../menu/css/menu';
 	@import '../../dd_grid/css/dd_grid';
-	@import '../../../tools/tool_common/css/tool_common';
+	@import '../../dd_grid/css/view_indexation';
 	@import '../../services/service_autocomplete/css/service_autocomplete';
 	@import '../../services/service_upload/css/service_upload';
 	@import '../../services/service_ckeditor/css/service_ckeditor';
 	@import '../../services/service_time_machine/css/service_time_machine';
-	// @import '../../services/service_tinymce/css/service_tinymce';
+	@import '../../services/service_dropzone/css/service_dropzone';
+	@import '../../services/service_tmp_section/css/service_tmp_section';
+	@import '../../../tools/tool_common/css/tool_common';
 
 // login
 	@import '../../login/css/login';
@@ -53,6 +55,7 @@
 	@import '../../section_tab/css/section_tab';
 
 // components
+	@import '../../component_3d/css/component_3d';
 	@import '../../component_av/css/component_av';
 	@import '../../component_check_box/css/component_check_box';
 	@import '../../component_date/css/component_date';
@@ -85,7 +88,6 @@
 	@import '../../component_security_access/css/component_security_access';
 	@import '../../component_select/css/component_select';
 	@import '../../component_select_lang/css/component_select_lang';
-	@import '../../component_semantic_node/css/component_semantic_node';
 	@import '../../component_svg/css/component_svg';
 	@import '../../component_text_area/css/component_text_area';
 
@@ -97,3 +99,4 @@
 	@import '../../widgets/oh/media_icons/css/media_icons';
 	@import '../../widgets/oh/tags/css/tags';
 	@import '../../widgets/state/css/state';
+	@import '../../widgets/dd/user_activity/css/user_activity';

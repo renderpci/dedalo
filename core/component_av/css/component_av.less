@@ -25,9 +25,34 @@
 		outline: none;
 		padding: 0px;
 		z-index: 1;
+		box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px;
 
 		.fullscreen& {
 			width: auto !important;
+		}
+	}
+
+	// posterframe
+	.posterframe {
+		// height: 100%;
+		max-height: 100%;
+		width: 100%;
+		height: 100%;
+		max-width: 100%;
+
+		//min-height: 14em;
+		//background-position: initial;
+		//background-size: cover;
+		background-repeat: no-repeat;
+		background-size: contain;
+		background-position: center;
+		object-fit: contain;
+		object-position: center;
+		align-self: center;
+
+		// on focus adds a soft shadow and outline
+		&:focus {
+			.hilite_mixin(-1px);
 		}
 	}
 
@@ -60,7 +85,7 @@
 			// padding-left: 0.75rem;
 			// padding-right: 0.75rem;
 			// font-size: 1.2rem;
-			color: #fd7f26;
+			color: @color_orange_dedalo;
 			padding: 0px;
 			margin-left: 1rem;
 			margin-right: 1rem;
@@ -70,93 +95,57 @@
 			height: 1em;
 			display: inline-block;
 			vertical-align: baseline;
-			text-shadow: 1px 2px 2px #b9b9b9;
+			// text-shadow: 1px 2px 2px #b9b9b9;
+			text-shadow: 1px 1px 2px #c3c3c3;
 		}
 	}
 
-	&.view_default, &.view_player {
-
-		&.list {
-			height: 5rem;
-		}
-
-		&.view_player {
-			box-shadow: none;
-			display: block;
-
-			.label {
-				display: none;
-			}
-			>.content_data {
-				display: grid;
-				height: 100%;
-			}
-		}
+	&.edit {
 
 		>.content_data {
-			justify-content: center;
-			max-height: @media_max_height;
-			min-height: @media_min_height;
 
-			@media screen and (max-width: @width_break_point_1) {
-				min-height: unset;
-			}
+			// moved to layout.less.media_wrapper.edit
+				// // Note that height is always the media min height (392px)
+				// // (!) Do not use max o min height here to prevent to affect canvas reference size
+				// height: @media_min_height;
+				// display: table;
+
+				// justify-content: center;
+				// max-height: @media_max_height;
+				// min-height: @media_min_height;
+
+				// @media screen and (max-width: @width_break_point_1) {
+				// 	min-height: unset;
+				// }
 
 			// video_container
 			>.content_value {
-				background-color: #faf8fc;
-				height: 404px;
-				width: 100%;
 
-				@media screen and (max-width: @width_break_point_1) {
-					height: unset;
-					max-height: 404px;
-				}
+				// moved to layout.less.media_wrapper.edit
+					// height: inherit;
+					// min-height: 404px;
+					// width: 100%;
+					// min-width: 540px;
+
+					// resize: vertical;
+					// overflow: hidden;
+
+					// @media screen and (max-width: @width_break_point_1) {
+					// 	height: unset;
+					// 	max-height: 404px;
+					// }
 			}
 
 			// posterframe
 			.posterframe {
-				height: 100%;
-				max-height: 100%;
-				width: 100%;
-				// width: 100%;
-				max-width: 100%;
-				min-width: 100%;
-
-				//min-height: 14em;
-				//background-position: initial;
-				//background-size: cover;
-				background-repeat: no-repeat;
-				background-size: contain;
-				background-position: center;
-				object-fit: contain;
-				object-position: center;
-				align-self: center;
-
-				// on focus adds a soft shadow and outline
-				&:focus {
-					.hilite_mixin(-1px);
-				}
+				// specific styles here
 			}
 		}
 
-		&.search {
-			>.content_data {
-				min-height: unset;
-				>.content_value {
-					height: unset;
-				}
+		&.disabled_component {
+			.content_data {
+				pointer-events: initial !important;
 			}
-		}
-	}//end .edit
-
-	&.view_line {
-		&.list {
-			height: 5rem;
-		}
-
-		.content_value {
-			text-align: center;
 		}
 	}
 
@@ -164,9 +153,47 @@
 		img {
 			cursor: zoom-in;
 		}
-	}//end .list
+	}
 
-	&.viewer {
+	&.search {
+		>.content_data {
+			min-height: unset;
+			>.content_value {
+				height: unset;
+			}
+		}
+	}
+
+	&.view_default {
+		// &.list {
+		// 	height: @view_line_height; // 5rem;
+		// }
+	}
+
+	&.view_player {
+		box-shadow: none;
+		display: block;
+
+		.label {
+			display: none;
+		}
+		>.content_data {
+			display: grid;
+			height: 100%;
+		}
+	}
+
+	&.view_line {
+		display: inline-block;
+		&.list {
+			height: 5rem;
+		}
+		.content_value {
+			text-align: center;
+		}
+	}
+
+	&.view_viewer {
 		background-color: #000000;
 		position: absolute;
 		width: 100%;
@@ -205,10 +232,6 @@
 		}
 	}//end &.viewer
 
-	// &.view_text {
-	// 	height: 3rem;
-	// }
-
 	// with suffix _mini like 'component_av_mini'
 	&_mini {
 		img {
@@ -218,6 +241,10 @@
 
 	&.view_text {
 		height: 2rem;
+	}
+
+	&.view_print {
+
 	}
 
 }//end .component_av

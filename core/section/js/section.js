@@ -1,19 +1,29 @@
-/*global get_label, SHOW_DEBUG, SHOW_DEVELOPER, DEDALO_TOOLS_URL, Promise */
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
+/*global get_label, SHOW_DEBUG, SHOW_DEVELOPER, DEDALO_TOOLS_URL */
 /*eslint no-undef: "error"*/
 
 
 
 // imports
-	import {clone} from '../../common/js/utils/index.js'
+	import {clone, url_vars_to_object, object_to_url_vars} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import * as instances from '../../common/js/instances.js'
-	import {common, set_context_vars, create_source, load_data_debug, get_columns_map, push_browser_history} from '../../common/js/common.js'
+	import {
+		common,
+		set_context_vars,
+		create_source,
+		load_data_debug,
+		get_columns_map,
+		push_browser_history,
+		build_autoload
+	} from '../../common/js/common.js'
+	import {ui} from '../../common/js/ui.js'
+	import {check_unsaved_data} from '../../component_common/js/component_common.js'
 	import {paginator} from '../../paginator/js/paginator.js'
 	import {search} from '../../search/js/search.js'
 	import {toggle_search_panel} from '../../search/js/render_search.js'
 	import {inspector} from '../../inspector/js/inspector.js'
-	import {ui} from '../../common/js/ui.js'
 	import {render_edit_section} from './render_edit_section.js'
 	import {render_list_section} from './render_list_section.js'
 	import {render_common_section} from './render_common_section.js'
@@ -25,7 +35,7 @@
 */
 export const section = function() {
 
-	this.id				= null
+	this.id						= null
 
 	// element properties declare
 	this.model					= null
@@ -61,9 +71,7 @@ export const section = function() {
 	this.rqo					= null
 
 	this.config					= null
-
-
-	return true
+	this.fixed_columns_map		= null
 }//end section
 
 
@@ -162,10 +170,6 @@ section.prototype.init = async function(options) {
 				event_manager.subscribe('new_section_' + self.id, fn_create_new_section)
 			)
 			async function fn_create_new_section() {
-
-				if (!confirm(get_label.sure || 'Sure?')) {
-					return false
-				}
 
 				// data_manager. create
 				const rqo = {
@@ -283,9 +287,10 @@ section.prototype.init = async function(options) {
 
 		// toggle_search_panel event. Triggered by button 'search' placed into section inspector buttons
 			self.events_tokens.push(
-				event_manager.subscribe('toggle_search_panel', fn_toggle_search_panel)
+				event_manager.subscribe('toggle_search_panel_'+self.id, fn_toggle_search_panel)
 			)
 			async function fn_toggle_search_panel() {
+
 				if (!self.search_container || !self.filter) {
 					console.log('stop event no filter 1:', this);
 					return
@@ -309,40 +314,140 @@ section.prototype.init = async function(options) {
 				event_manager.subscribe('render_'+self.id, fn_render)
 			)
 			function fn_render() {
-				if (!self.search_container || !self.filter) {
-					console.log('stop event no filter 2:', this);
-					return
-				}
-				// open_search_panel. local DDBB table status
-				const status_id			= 'open_search_panel'
-				const collapsed_table	= 'status'
-				data_manager.get_local_db_data(status_id, collapsed_table, true)
-				.then(async function(ui_status){
-					// (!) Note that ui_status only exists when element is open
-					const is_open = typeof ui_status==='undefined' || ui_status.value===false
-						? false
-						: true
-					if (is_open===true && self.search_container && self.search_container.children.length===0) {
-						// add_to_container(self.search_container, self.filter)
-						await ui.load_item_with_spinner({
-							container	: self.search_container,
-							label		: 'filter',
-							callback	: async () => {
-								await self.filter.build()
-								return self.filter.render()
+				// menu label control
+					const update_menu = () => {
+						// ignore sections inside tool (tool_user_admin case)
+						if (self.caller && self.caller.type==='tool') {
+							return
+						}
+						// menu. Note that menu is set as global var on menu build
+						const retry_timeout = setTimeout(update_menu, 2000);
+						const menu = window.menu
+						if (menu) {
+							clearTimeout(retry_timeout);
+
+							// ignore search presets case
+							if (self.tipo==='dd623') {
+								return
 							}
-						})
-						toggle_search_panel(self.filter)
+
+							menu.update_section_label({
+								value		: self.label,
+								mode		: self.mode,
+								on_click	: on_click
+							})
+							async function on_click(e) {
+
+								if (self.mode!=='edit') {
+									console.log('Ignored non edit call to on_click');
+									return
+								}
+
+								// navigate browser from edit to list
+								/* OLD
+									// Note that internal navigation (based on injected browser history) uses the stored local database
+									// saved_rqo if exists. Page real navigation (reload page for instance) uses server side sessions to
+									// preserve offset and order
+
+									// saved_sqo from local_db_data. On section paginate, local_db_data is saved. Recover saved sqo here to
+									// go to list mode in the same position (offset) that the user saw
+										const section_tipo	= self.tipo
+										const sqo_id		= ['section', section_tipo].join('_')
+										const saved_sqo		= await data_manager.get_local_db_data(
+											sqo_id,
+											'sqo'
+										)
+
+									// sqo. Note that we are changing from edit to list mode and current offset it's not applicable
+									// The list offset will be get from server session if exists
+										const sqo = saved_sqo
+											? saved_sqo.value
+											: {
+												filter	: self.rqo.sqo.filter,
+												order	: self.rqo.sqo.order || null
+											 }
+										// always use section request_config_object format instead parsed sqo format
+										sqo.section_tipo = self.request_config_object.sqo.section_tipo
+									*/
+								// saved_sqo
+								// Note that section build method store SQO in local DDBB to preserve user
+								// navigation section filter and pagination. It's recovered here when exists
+								// to pass values to API server
+								const saved_sqo	= await data_manager.get_local_db_data(
+									self.tipo +'_list',
+									'sqo',
+									true
+								);
+								const sqo = saved_sqo
+									? saved_sqo.value
+									: {
+										filter	: self.rqo.sqo.filter,
+										order	: self.rqo.sqo.order || null
+									  }
+								// always use section request_config_object format instead parsed sqo format
+								sqo.section_tipo = self.request_config_object.sqo.section_tipo
+
+								// source
+									const source = {
+										action			: 'search',
+										model			: self.model, // section
+										tipo			: self.tipo,
+										section_tipo	: self.section_tipo,
+										mode			: 'list',
+										lang			: self.lang
+									 }
+
+								// navigation
+									const user_navigation_rqo = {
+										caller_id	: self.id,
+										source		: source,
+										sqo			: sqo  // new sqo to use in list mode
+									}
+									event_manager.publish('user_navigation', user_navigation_rqo)
+							}//end on_click
+						}else{
+							console.log('menu is not available. Try in 2 secs');
+						}//end if (menu)
 					}
-				})
+					update_menu()
+
+				// search control
+					if (!self.search_container || !self.filter) {
+						console.log('stop event no filter 2:', this);
+						return
+					}
+					// open_search_panel. local DDBB table status
+					const status_id			= 'open_search_panel'
+					const collapsed_table	= 'status'
+					data_manager.get_local_db_data(status_id, collapsed_table, true)
+					.then(async function(ui_status){
+						// (!) Note that ui_status only exists when element is open
+						const is_open = typeof ui_status==='undefined' || ui_status.value===false
+							? false
+							: true
+						if (is_open===true && self.search_container && self.search_container.children.length===0) {
+							// add_to_container(self.search_container, self.filter)
+							await ui.load_item_with_spinner({
+								container	: self.search_container,
+								label		: 'filter',
+								callback	: async () => {
+									await self.filter.build()
+									return self.filter.render()
+								}
+							})
+							toggle_search_panel(self.filter)
+						}
+					})
 			}//end fn_render
 
 	// load additional files as css used by section_tool in self.config
-		if(self.config && self.config.source_model==='section_tool'){
+		if(self.config && self.config.source_model==='section_tool') {
 			self.load_section_tool_files()
 		}
 
 	// render_views
+		// Definition of the rendering views that could de used.
+		// Tools or another components could add specific views dynamically
 		self.render_views = [
 			{
 				view	: 'default',
@@ -357,7 +462,7 @@ section.prototype.init = async function(options) {
 		]
 
 	// status update
-		self.status = 'initiated'
+		self.status = 'initialized'
 
 
 	return true
@@ -376,6 +481,9 @@ section.prototype.build = async function(autoload=false) {
 
 	const self = this
 
+	// previous status
+		const previous_status = clone(self.status)
+
 	// status update
 		self.status = 'building'
 
@@ -384,8 +492,7 @@ section.prototype.build = async function(autoload=false) {
 			data	: [],
 			context	: []
 		}
-		self.data		= self.data || {}
-		// self.context	= self.context || {}
+		self.data	= self.data || {}
 
 	// rqo
 		const generate_rqo = async function(){
@@ -402,9 +509,17 @@ section.prototype.build = async function(autoload=false) {
 					: {}
 			}
 
+			// check request_config_object misconfigured issues (type = 'main' missed in request_config cases)
+				if (self.request_config && !self.request_config_object) {
+					console.warn('Warning: no request_config was found into the request_config. Maybe the request_config type is not set to "main" ');
+					console.warn('self.request_config:', self.request_config);
+				}
+
 			// rqo build
 			const action	= 'search'
-			const add_show	= self.add_show ? self.add_show : self.mode==='tm' ? true : false
+			const add_show	= (self.add_show)
+				? self.add_show
+				: (self.mode==='tm') ? true	: false
 			self.rqo = self.rqo || await self.build_rqo_show(
 				self.request_config_object, // object request_config_object
 				action,  // string action like 'search'
@@ -412,11 +527,6 @@ section.prototype.build = async function(autoload=false) {
 			)
 		}
 		await generate_rqo()
-
-	// debug check
-		if(SHOW_DEBUG===true) {
-			// console.log("SECTION self.rqo before load:", clone(self.rqo) );
-		}
 
 	// filter search
 		if (self.filter===null && self.mode!=='tm') {
@@ -427,27 +537,26 @@ section.prototype.build = async function(autoload=false) {
 			})
 		}
 
-	// load data if is not already received as option
+	// load from DDBB
 		if (autoload===true) {
-			// const t0 = performance.now()
 
-			// get context and data
-				const api_response = await data_manager.request({
-					body : self.rqo
-				})
-				if(SHOW_DEVELOPER===true) {
-					// const response	= clone(api_response)
-					// const exec_time	= (performance.now()-t0).toFixed(3)
-					// dd_console('SECTION api_response:', 'DEBUG', [self.id, response, exec_time]);
-					// console.log('section build api_response:', api_response);
-				}
-				if (!api_response || !api_response.result) {
-					self.running_with_errors = [
-						'section build autoload api_response: '+ (api_response.error || api_response.msg)
-					]
-					console.error("Error: section build autoload api_response:", api_response);
+			// build_autoload
+			// Use unified way to load context and data with
+			// errors and not login situation managing
+				const api_response = await build_autoload(self)
+				if (!api_response) {
 					return false
 				}
+
+			// reset errors
+				self.running_with_errors = null
+
+			// destroy dependencies
+				await self.destroy(
+					false, // bool delete_self
+					true, // bool delete_dependencies
+					false // bool remove_dom
+				)
 
 			// set the result to the datum
 				self.datum = api_response.result
@@ -506,38 +615,7 @@ section.prototype.build = async function(autoload=false) {
 
 			// count rows
 				if (!self.total) {
-					const count_sqo = clone(self.rqo.sqo )
-					delete count_sqo.limit
-					delete count_sqo.offset
-					delete count_sqo.select
-					delete count_sqo.order
-					delete count_sqo.generated_time
-					const source	= create_source(self, null)
-					const rqo_count	= {
-						action			: 'count',
-						sqo				: count_sqo,
-						prevent_lock	: true,
-						source			: source
-					}
-					self.total = function() {
-						return new Promise(function(resolve){
-							data_manager.request({
-								body : rqo_count
-							})
-							.then(function(api_count_response){
-								self.total = api_count_response.result.total
-								console.log('api_count_response:', api_count_response);
-								resolve(self.total)
-							})
-						})
-					}
-
-					// set_local_db_data updated rqo
-						// const rqo = self.rqo
-						// data_manager.set_local_db_data(
-						// 	rqo,
-						// 	'rqo'
-						// )
+					self.get_total()
 				}
 
 			// set_local_db_data updated rqo
@@ -555,6 +633,10 @@ section.prototype.build = async function(autoload=false) {
 							event_manager.unsubscribe(event_token)
 
 							const debug = document.getElementById("debug")
+							if (!debug) {
+								console.log('Ignored debug');
+								return
+							}
 
 							// clean
 								while (debug.firstChild) {
@@ -636,6 +718,8 @@ section.prototype.build = async function(autoload=false) {
 				: false
 		// fix initiator
 			self.initiator = initiator
+				? initiator.split('#')[0]
+				: initiator
 
 	// paginator
 		if (self.paginator===null) {
@@ -651,23 +735,32 @@ section.prototype.build = async function(autoload=false) {
 					event_manager.subscribe('paginator_goto_'+self.paginator.id, fn_paginator_goto)
 				)
 				async function fn_paginator_goto(offset) {
+
+					// fix new offset value
+						self.request_config_object.sqo.offset	= offset
+						self.rqo.sqo.offset						= offset
+
 					// navigate section rows
-						self.navigate(
-							() => { // callback
-								// fix new offset value
-									self.request_config_object.sqo.offset	= offset
-									self.rqo.sqo.offset			= offset
-								// set_local_db_data updated rqo
-									if (self.mode==='list') {
-										const rqo = self.rqo
-										data_manager.set_local_db_data(
-											rqo,
-											'rqo'
-										)
-									}
+						self.navigate({
+							callback			: () => { // callback
+
+								// (!) This code is unified in function 'navigate' ⬇︎
+
+								// // fix new offset value
+								// 	self.request_config_object.sqo.offset	= offset
+								// 	self.rqo.sqo.offset						= offset
+								// // set_local_db_data updated rqo
+								// 	if (self.mode==='list') {
+								// 		const rqo = self.rqo
+								// 		data_manager.set_local_db_data(
+								// 			rqo,
+								// 			'rqo'
+								// 		)
+								// 	}
 							},
-							true // bool navigation_history save
-						)
+							navigation_history	: true, // bool navigation_history save
+							action				: 'paginate'
+						})
 				}
 		}//end if (!self.paginator)
 
@@ -690,8 +783,20 @@ section.prototype.build = async function(autoload=false) {
 			// }
 		}
 
+	// reset fixed_columns_map (prevents to apply rebuild_columns_map more than once)
+		self.fixed_columns_map = false
+
 	// columns_map. Get the columns_map to use into the list
 		self.columns_map = get_columns_map(self.context, self.datum.context)
+
+	// fix SQO to local DDBB. Used later to preserve section filter and pagination across pagination
+		data_manager.set_local_db_data(
+			{
+				id		: self.tipo + '_' + self.mode,
+				value	: self.rqo.sqo
+			},
+			'sqo'
+		)
 
 	// debug
 		if(SHOW_DEBUG===true) {
@@ -762,8 +867,10 @@ section.prototype.render = async function(options={}) {
 * Generate a section_record instance for each data value
 * Create (init and build) a section_record for each component value
 * Used by portals to get all rows for render
+* @param object options
+* @return array section_records
 */
-export const get_section_records = async function(options){
+export const get_section_records = async function(options) {
 
 	// options
 		const self				= options.caller
@@ -774,10 +881,11 @@ export const get_section_records = async function(options){
 		const view				= options.view || 'default'
 		const column_id			= options.column_id || self.column_id || null
 		const datum				= options.datum || self.datum || {}
+		const context			= self.context || {}
 		const request_config	= (options.request_config)
 			? clone(options.request_config)
-			: clone(self.context.request_config)
-		const fields_separator	= options.fields_separator || self.context.fields_separator || {}
+			: clone(context.request_config)
+		const fields_separator	= options.fields_separator || context.fields_separator || {}
 		const lang				= options.lang || self.section_lang || self.lang
 		const value				= options.value || ((self.data && self.data.value)
 			? self.data.value
@@ -814,7 +922,8 @@ export const get_section_records = async function(options){
 				paginated_key	: locator.paginated_key,
 				columns_map		: columns_map,
 				column_id		: column_id,
-				locator			: locator
+				locator			: locator,
+				id_variant		: id_variant
 			}
 
 			// id_variant . Propagate a custom instance id to children
@@ -857,6 +966,7 @@ export const get_section_records = async function(options){
 			return ready_instances
 		});
 
+
 	return section_records
 }//end get_section_records
 
@@ -864,30 +974,23 @@ export const get_section_records = async function(options){
 
 /**
 * LOAD_SECTION_TOOL_FILES
-* @return promise
+* Used by section_tool to set the tool icon from tool css definition
+* Normally mask-image: url('../img/icon.svg');
+* @return void
 */
 section.prototype.load_section_tool_files = function() {
 
 	const self = this
 
-	// load dependencies js/css
-		// const load_promises = []
+	// css file load
+		const model	= self.config.tool_context.model
+		const url	= DEDALO_TOOLS_URL + '/' + model + '/css/' + model + '.css'
+		common.prototype.load_style(url)
 
-		// css file load
-			// const lib_css_file = self.config.tool_context && self.config.tool_context.css
-			// 	? self.config.tool_context.css.url
-			// 	: null
-			// if (lib_css_file) {
-			// 	load_promises.push( common.prototype.load_style(lib_css_file) )
-			// }
-			const model = self.config.tool_context.model
-			const url = DEDALO_TOOLS_URL + '/' + model + '/css/' + model + '.css'
-			const js_promise = common.prototype.load_style(url)
-
-	// const js_promise = Promise.all(load_promises)
-
-
-	return js_promise
+	// debug
+		if(SHOW_DEBUG===true) {
+			console.log('loaded section_tool files:', url);
+		}
 }//end load_section_tool_files
 
 
@@ -899,7 +1002,7 @@ section.prototype.load_section_tool_files = function() {
 * 	sqo : object,
 * 	delete_mode : string
 * }
-* @return promise
+* @return bool
 */
 section.prototype.delete_section = async function (options) {
 
@@ -930,9 +1033,15 @@ section.prototype.delete_section = async function (options) {
 			body : rqo
 		})
 		if (api_response.result && api_response.result.length>0) {
-			// const ar_section_id = api_response.result
+
+			// force to recalculate total records
+			self.total = null
+			// refresh self section
 			self.refresh()
+		}else{
+			console.error( api_response.msg || 'Error on delete records!');
 		}
+
 
 	return true
 }//end delete_section
@@ -943,20 +1052,32 @@ section.prototype.delete_section = async function (options) {
 * NAVIGATE
 * Refresh the section instance with new sqo params creating a
 * history footprint. Used to paginate and sort records
-* @param function callback
-* @return promise
+* @param object options
+* @return bool
 */
-section.prototype.navigate = async function(callback, navigation_history=false) {
+section.prototype.navigate = async function(options) {
 
 	const self = this
 
-	// unsaved_data check
-		if (window.unsaved_data===true) {
-			if (!confirm('section: ' +get_label.discard_changes || 'Discard unsaved changes?')) {
-				return false
-			}
-			// reset unsaved_data state by the user
-			window.unsaved_data = false
+	// options
+		const action				= options.action || 'paginate'
+		const callback				= options.callback
+		const navigation_history	= options.navigation_history!==undefined
+			? options.navigation_history
+			: false
+
+	// check_unsaved_data
+		const result = await check_unsaved_data({
+			confirm_msg : 'section: ' + (get_label.discard_changes || 'Discard unsaved changes?')
+		})
+		if (!result) {
+			// user selects 'cancel' in dialog confirm. Stop navigation
+			return false
+		}
+
+	// remove aux items
+		if (window.page_globals.service_autocomplete) {
+			window.page_globals.service_autocomplete.destroy(true, true, true)
 		}
 
 	// callback execute
@@ -970,12 +1091,20 @@ section.prototype.navigate = async function(callback, navigation_history=false) 
 
 	// loading
 		self.node_body.classList.add('loading')
+		if (self.inspector && self.inspector.node) {
+			self.inspector.node.classList.add('loading')
+		}
 
 	// refresh
-		await self.refresh()
+		await self.refresh({
+			destroy : false // avoid to destroy here to allow section to recover from loosed login scenarios
+		})
 
 	// loading
 		self.node_body.classList.remove('loading')
+		if (self.inspector && self.inspector.node) {
+			self.inspector.node.classList.remove('loading')
+		}
 
 	// navigation history. When user paginates, store navigation history to allow browser navigation too
 		if (navigation_history===true) {
@@ -983,7 +1112,10 @@ section.prototype.navigate = async function(callback, navigation_history=false) 
 			const source	= create_source(self, null)
 			const sqo		= self.request_config_object.sqo
 			const title		= self.id
-			const url		= '#section_nav' // '?t='+ self.tipo + '&m=' + self.mode
+
+			// url search. Append section_id if exists
+				const url_vars = url_vars_to_object(location.search)
+				const url = '?' + object_to_url_vars(url_vars)
 
 			// browser navigation update
 				push_browser_history({
@@ -994,5 +1126,155 @@ section.prototype.navigate = async function(callback, navigation_history=false) 
 				})
 		}
 
+
 	return true
 }//end navigate
+
+
+
+/**
+* CHANGE_MODE
+* Destroy current instance and dependencies without remove HTML nodes (used to get target parent node placed in DOM)
+* Create a new instance in the new mode (for example, from list to edit) and view (ex, from default to line )
+* Render a fresh full element node in the new mode
+* Replace every old placed DOM node with the new one
+* @param object options
+* @return bool
+*/
+section.prototype.change_mode = async function(options) {
+
+	/*
+		@todo
+		under construction !
+	*/
+
+	const self = this
+
+	// options vars
+		// mode check. When mode is undefined, fallback to 'list'. From 'list', change to 'edit'
+		const mode = (options.mode)
+			? options.mode
+			: self.mode==='list' ? 'edit' : 'list'
+		const autoload = (typeof options.autoload!=='undefined')
+			? options.autoload
+			: true
+		const view = options.view ?? null
+
+	// short vars
+		// set
+		const current_context		= self.context
+		const section_lang			= self.section_lang
+		const old_node				= self.node
+		const id_variant			= self.id_variant
+
+	// set the new view to context
+		current_context.view = view
+		current_context.mode = mode
+
+	// element. Create the instance options for build it. The instance is reflect of the context and section_id
+		const new_instance = await instances.get_instance({
+			model			: current_context.model,
+			tipo			: current_context.tipo,
+			section_tipo	: current_context.section_tipo,
+			mode			: mode,
+			lang			: current_context.lang,
+			section_lang	: section_lang,
+			type			: current_context.type,
+			id_variant		: id_variant
+		})
+
+	// build
+		await new_instance.build(autoload)
+
+	// render
+		const new_node = await new_instance.render({
+			render_level : 'full'
+		})
+
+	// replace the node with the new render
+		// old_node.parentNode.replaceChild(new_node, old_node)
+		old_node.replaceWith(new_node);
+
+	// destroy self instance (delete_self=true, delete_dependencies=false, remove_dom=false)
+		self.destroy(
+			true, // delete_self
+			true, // delete_dependencies
+			true // remove_dom
+		)
+
+	return true
+}//end change_mode
+
+
+
+/**
+* GET_TOTAL
+* Exec a async API call to count the current sqo records
+* @return int total
+*/
+section.prototype.get_total = async function() {
+
+	const self = this
+
+	// debug
+		if(SHOW_DEBUG===true) {
+			console.warn('section get_total self.total:', self.total);
+		}
+
+	// already calculated case
+		if (self.total || self.total==0) {
+			return self.total
+		}
+
+	// queue. Prevent double resolution calls to API
+		if (self.loading_total_status==='resolving') {
+			return new Promise(function(resolve){
+				setTimeout(function(){
+					resolve( self.get_total() )
+				}, 600)
+			})
+		}
+
+	// loading status update
+		self.loading_total_status = 'resolving'
+
+	// API request
+		const count_sqo = clone(self.rqo.sqo )
+		delete count_sqo.limit
+		delete count_sqo.offset
+		delete count_sqo.select
+		delete count_sqo.order
+		delete count_sqo.generated_time
+		const source	= create_source(self, null)
+		const rqo_count	= {
+			action			: 'count',
+			sqo				: count_sqo,
+			prevent_lock	: true,
+			source			: source
+		}
+		const api_count_response = await data_manager.request({
+			body		: rqo_count,
+			use_worker	: true
+		})
+
+	// API error case
+		if (!api_count_response.result || api_count_response.error) {
+			console.error('Error on count total : api_count_response:', api_count_response);
+			return
+		}
+
+	// set result
+		self.total = api_count_response.result.total
+
+
+	// loading status update
+		self.loading_total_status = 'resolved'
+
+
+	return self.total
+}//end get_total
+
+
+
+
+// @license-end

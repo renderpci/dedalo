@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -15,21 +16,19 @@
 export const component_section_id = function(){
 
 	// element properties declare
-		this.model			= null
-		this.tipo			= null
-		this.section_tipo	= null
-		this.section_id		= null
-		this.mode			= null
-		this.lang			= null
+	this.model			= null
+	this.tipo			= null
+	this.section_tipo	= null
+	this.section_id		= null
+	this.mode			= null
+	this.lang			= null
 
-		this.section_lang	= null
-		this.context		= null
-		this.data			= null
-		this.parent			= null
-		this.node			= null
-		this.id				= null
-
-	return true
+	this.section_lang	= null
+	this.context		= null
+	this.data			= null
+	this.parent			= null
+	this.node			= null
+	this.id				= null
 }//end component_section_id
 
 
@@ -54,9 +53,13 @@ export const component_section_id = function(){
 	component_section_id.prototype.build_rqo			= common.prototype.build_rqo
 
 	// render
-	component_section_id.prototype.edit					= render_edit_component_section_id.prototype.edit
-	component_section_id.prototype.tm					= render_edit_component_section_id.prototype.edit
 	component_section_id.prototype.list					= render_list_component_section_id.prototype.list
+	component_section_id.prototype.tm					= render_edit_component_section_id.prototype.list
+	component_section_id.prototype.edit					= render_edit_component_section_id.prototype.edit
 	component_section_id.prototype.search				= render_search_component_section_id.prototype.search
 
 	component_section_id.prototype.change_mode			= component_common.prototype.change_mode
+
+
+
+// @license-end

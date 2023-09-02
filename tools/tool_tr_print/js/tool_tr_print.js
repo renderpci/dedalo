@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -34,9 +35,6 @@ export const tool_tr_print = function () {
 	this.langs						= null
 	this.caller						= null
 	this.transcription_component	= null // component text area where we are working into the tool
-	// this.relation_list				= null // datum of relation_list (to obtaim list of top_section_tipo/id)
-
-	return true
 }//end page
 
 
@@ -55,6 +53,8 @@ export const tool_tr_print = function () {
 
 /**
 * INIT
+* @param object options
+* @return bool true
 */
 tool_tr_print.prototype.init = async function(options) {
 
@@ -78,6 +78,8 @@ tool_tr_print.prototype.init = async function(options) {
 
 /**
 * BUILD
+* @param bool autoload = false
+* @return object self
 */
 tool_tr_print.prototype.build = async function(autoload=false) {
 
@@ -101,45 +103,6 @@ tool_tr_print.prototype.build = async function(autoload=false) {
 
 	return common_build
 }//end build_custom
-
-
-
-/**
-* GET_COMPONENT
-* Load transcriptions component (text area) configured with the given lang
-* @param string lang
-* Create / recover and build a instance of current component in the desired lang
-* @return object instance
-*/
-tool_tr_print.prototype.get_component = async function(lang) {
-
-	const self = this
-
-	// to_delete_instances. Select current self.transcription_component
-		const to_delete_instances = self.ar_instances.filter(el => el===self.transcription_component)
-
-	// context (clone and edit)
-		const context = Object.assign(clone(self.transcription_component.context),{
-			lang		: lang,
-			mode		: 'edit',
-			section_id	: self.transcription_component.section_id
-		})
-
-	// options
-		const options = {
-			context				: context, // reference context ...
-			to_delete_instances	: to_delete_instances // array of instances to delete after create the new one
-		}
-
-	// call generic common tool build
-		const component_instance = await tool_common.prototype.load_component.call(self, options);
-
-	// fix instance (overwrite)
-		self.transcription_component = component_instance
-
-
-	return component_instance
-}//end get_component
 
 
 
@@ -234,3 +197,7 @@ tool_tr_print.prototype.build_subtitles = async function() {
 
 	return self.service_subtitles
 }// end build_subtitles
+
+
+
+// @license-end

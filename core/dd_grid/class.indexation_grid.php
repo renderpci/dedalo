@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS INDEXATION_GRID
 * Manage the indexations of the thesaurus term
 * build the grid of the indexation to show in the thesaurus
@@ -7,8 +7,9 @@
 class indexation_grid {
 
 
+
 	/**
-	* VARS
+	* @var
 	*/
 		protected $tipo;
 		protected $section_id;
@@ -41,52 +42,85 @@ class indexation_grid {
 
 		$ar_indexation_grid = [];
 
-		$ar_section_top_tipo = $this->get_ar_section_top_tipo();
+		// ar_section_top_tipo
+			$ar_section_top_tipo = $this->get_ar_section_top_tipo();
+			// result sample
+			// {
+			//     "oh1": {
+			//         "4": [
+			//             {
+			//                 "type": "dd96",
+			//                 "section_tipo": "rsc167",
+			//                 "section_id": "227",
+			//                 "tag_id": "1",
+			//                 "section_top_id": "4",
+			//                 "section_top_tipo": "oh1",
+			//                 "from_component_top_tipo": "rsc860",
+			//                 "from_component_tipo": "hierarchy40"
+			//             }
+			//         ],
+			//         "128": [
+			//             {
+			//                 "type": "dd96",
+			//                 "section_tipo": "rsc167",
+			//                 "section_id": "231",
+			//                 "tag_id": "1",
+			//                 "section_top_id": "128",
+			//                 "section_top_tipo": "oh1",
+			//                 "from_component_top_tipo": "rsc860",
+			//                 "from_component_tipo": "hierarchy40"
+			//             }
+			//         ]
+			//     }
+			// }
+
 		foreach ($ar_section_top_tipo as $current_section_tipo => $ar_values) {
 
-			// dd_grid_cell_object. Create the row of the section
+			// section_grid_row: dd_grid_cell_object. Create the row of the section
 				$section_grid_row = new dd_grid_cell_object();
 					$section_grid_row->set_type('row');
 
-			// get the label of the current section
+			// label. Get the label of the current section
 				$label = RecordObj_dd::get_termino_by_tipo($current_section_tipo, DEDALO_APPLICATION_LANG, true, true);
 
-			// create the grid cell of the section
+			// section_grid. Create the grid cell of the section
 				$section_grid = new dd_grid_cell_object();
 					$section_grid->set_type('column');
 					$section_grid->set_label($label);
 					$section_grid->set_render_label(true);
-					$section_grid->set_class_list('caption section');
+					$section_grid->set_class_list('caption section '.$current_section_tipo);
 					// $section_grid->set_cell_type('text');
 
 			// add the column to the row
 				$section_grid_row->set_value([$section_grid]);
 
-			// get the term in the section that has the indexation_list information
-				$indexation_list = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+			// indexation_list. Get the term in the section that has the indexation_list information
+				$ar_found = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
 					$current_section_tipo,
-					'indexation_list',
-					'children'
+					'indexation_list', // string model
+					'children' // string relation_type
 				);
-				// debug
-					if(SHOW_DEBUG===true) {
-						// dump($indexation_list, ' indexation_list ++ '.to_string($current_section_tipo));
-					}
-
+				$indexation_list = $ar_found[0] ?? null;
 				// check empty cases (misconfigured Ontology indexation_list children)
 					if (empty($indexation_list)) {
-						debug_log(__METHOD__." Error. Ignored empty indexation_list. A config problem was detected. Fix ASAP. (misconfigured Ontology indexation_list children) section_tipo: ".to_string($current_section_tipo), logger::ERROR);
+						debug_log(__METHOD__
+							. " Error. Ignored empty indexation_list. A config problem was detected. Fix ASAP. (misconfigured Ontology indexation_list children)". PHP_EOL
+							. ' section_tipo: ' . to_string($current_section_tipo)
+							, logger::ERROR
+						);
 						continue;
 					}
+					// if (!isset($indexation_list[0])) {
+					// 	$msg  = "Error Processing Request build_indexation_grid:  section indexation_list is empty. Please configure structure for ($current_section_tipo) ";
+					// 	$msg .= "Please check the consistency and model for 'relation_list'.";
+					// 	debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
+					// 	// throw new Exception($msg, 1);
+					// 	continue;
+					// }
 
-				if (!isset($indexation_list[0])) {
-					$msg  = "Error Processing Request build_indexation_grid:  section indexation_list is empty. Please configure structure for ($current_section_tipo) ";
-					$msg .= "Please check the consistency and model for 'relation_list'.";
-					throw new Exception($msg, 1);
-				}
 			// get the properties of the indexation_list with all ddo_map
 			// the ddo_map need to be processed to get a full ddo_map with all section_tipo resolved.
-				$RecordObj_dd	= new RecordObj_dd($indexation_list[0]);
+				$RecordObj_dd	= new RecordObj_dd($indexation_list);
 				$properties		= $RecordObj_dd->get_properties();
 
 				$head_ddo_map = isset($properties->head)
@@ -105,14 +139,13 @@ class indexation_grid {
 				$head_render_label	= $properties->head->render_label ?? false;
 				$row_render_label	= $properties->row->render_label ?? false;
 
-
-			# get the section values
+			// section_grid_values.Get the section values
 			$section_grid_values	= [];
-			// store the rows count for every portal inside the section
+			// ar_section_rows_count. Store the rows count for every portal inside the section
 			$ar_section_rows_count	= [];
 			foreach ($ar_values as $current_section_id => $ar_locators) {
-				// dump($ar_locators, ' current_section_id ++ '.to_string());
-				$ar_head_value = $this->get_value($head_ddo_map, $ar_locators[0]);
+
+				$ar_head_value = $this->get_grid_value($head_ddo_map, $ar_locators[0]);
 				// take the maximum number of rows (the columns can has 1, 2, 55 rows and we need the highest value, 55)
 				$head_row_count = max($ar_head_value->ar_row_count);
 
@@ -129,7 +162,17 @@ class indexation_grid {
 				$rows_max_count = [$head_row_count];
 				foreach ($ar_locators as $current_locator) {
 
-					$ar_row_value = $this->get_value($row_ddo_map, $current_locator);
+					// check tag_id
+						if (!isset($current_locator->tag_id)) {
+							debug_log(__METHOD__
+								. " Ignored locator without tag_id " . PHP_EOL
+								. ' locator: ' . json_encode($current_locator, JSON_PRETTY_PRINT)
+								, logger::ERROR
+							);
+							continue;
+						}
+
+					$ar_row_value = $this->get_grid_value($row_ddo_map, $current_locator);
 					// take the maximum number of rows (the columns can has 1, 2, 55 rows and we need the highest value, 55)
 					$row_count = max($ar_row_value->ar_row_count);
 					// store the result to sum with the head rows
@@ -151,7 +194,7 @@ class indexation_grid {
 
 			$section_grid->set_value($section_grid_values);
 
-			// sum the total rows for the sectiona and add the total rows to the section row
+			// sum the total rows for the section and add the total rows to the section row
 			$section_grid_row->set_row_count(array_sum($ar_section_rows_count));
 
 			// add row
@@ -165,14 +208,14 @@ class indexation_grid {
 
 
 	/**
-	* GET_VALUE
+	* GET_GRID_VALUE
 	*
 	* @param array $ar_ddo
 	* @param object $locator
 	*
 	* @return object $value
 	*/
-	public function get_value(array $ar_ddo, object $locator) : object {
+	public function get_grid_value(array $ar_ddo, object $locator) : object {
 
 		// top properties add
 			$locator->section_top_tipo	= $locator->section_top_tipo ?? $locator->section_tipo;
@@ -190,10 +233,10 @@ class indexation_grid {
 		foreach ($ar_children_ddo as $ddo) {
 
 			// set the separator if the ddo has a specific separator, it will be used instead the component default separator
-				$fields_separator	= $ddo->fields_separator ?? null;
-				$records_separator	= $ddo->records_separator ?? null;
-				$format_columns		= $ddo->format_columns ?? null;
-				$class_list			= $ddo->class_list ?? null;
+				// $fields_separator	= $ddo->fields_separator ?? null;
+				// $records_separator	= $ddo->records_separator ?? null;
+				// $format_columns		= $ddo->format_columns ?? null;
+				// $class_list			= $ddo->class_list ?? null;
 
 			// section_tipo. Check if the locator has section_top_tipo and set the section_tipo to be used
 			// some locators has top_tipo and top_id because are indexation of the resources and the locator stored the inventory section that call the resource
@@ -219,7 +262,8 @@ class indexation_grid {
 					$current_section_id,
 					'indexation_list',
 					$current_lang,
-					$current_section_tipo
+					$current_section_tipo,
+					true // bool cache
 				);
 				$current_component->set_locator($locator);
 				// set the first id of the column_obj, if the component is a related component it will used to create a path of the deeper components
@@ -262,7 +306,7 @@ class indexation_grid {
 				}
 
 			// component_value add
-				$component_value	= $current_component->get_value($current_lang, $ddo);
+				$component_value	= $current_component->get_grid_value($ddo);
 				$ar_row_count[]		= $component_value->row_count ?? 0;
 				$ar_cells[]			= $component_value;
 		}// end foreach ($ar_children_ddo as $ddo)
@@ -275,15 +319,15 @@ class indexation_grid {
 
 
 		return $value;
-	}//end get_value
+	}//end get_grid_value
 
 
 
 	/**
 	* PROCESS_DDO_MAP
-	* @return
+	* @return array $final_ddo_map
 	*/
-	public function process_ddo_map($ar_ddo_map, $section_tipo ) {
+	public function process_ddo_map(array $ar_ddo_map, string $section_tipo) : array {
 
 		$final_ddo_map = [];
 		foreach ($ar_ddo_map as $current_ddo_map) {
@@ -316,6 +360,7 @@ class indexation_grid {
 			$final_ddo_map[] = $current_ddo_map;
 		}//end foreach ($ar_ddo_map as $current_ddo_map)
 
+
 		return $final_ddo_map;
 	}//end process_ddo_map
 
@@ -323,15 +368,15 @@ class indexation_grid {
 
 	/**
 	* GET_AR_SECTION_TOP_TIPO
-	* Map/group ar_locators (indexations of current term) as formated array section[id] = ar_data
+	* Map/group ar_locators (indexations of current term) as formatted array section[id] = ar_data
 	* Filter locators for current user (by project)
 	* @return array $ar_section_top_tipo
 	*/
-	protected function get_ar_section_top_tipo() {
+	protected function get_ar_section_top_tipo() : array {
 		$start_time=start_time();
 
 		$ar_section_top_tipo	= array();
-		$user_id				= navigator::get_user_id();
+		$user_id				= get_user_id();
 		$ar_locators			= $this->get_ar_locators();
 
 		foreach ($ar_locators as $current_locator) {
@@ -350,9 +395,7 @@ class indexation_grid {
 
 			# AR_SECTION_TOP_TIPO MAP
 			$ar_section_top_tipo[$section_top_tipo][$section_top_id][] = $current_locator;
-
 		}
-		// dump($ar_section_top_tipo,'$ar_section_top_tipo');
 
 		#
 		# FILTER RESULT BY USER PROJECTS
@@ -365,44 +408,48 @@ class indexation_grid {
 			# Filter
 			foreach ($ar_section_top_tipo as $section_top_tipo => $ar_values) {
 
-				# COMPONENT FILTER BY SECTION TIPO
-				$section_real_tipo 		= section::get_section_real_tipo_static($section_top_tipo);
-				$component_filter_tipo  = section::get_ar_children_tipo_by_model_name_in_section($section_real_tipo, ['component_filter'])[0];
-				if (empty($component_filter_tipo)) {
-					if(SHOW_DEBUG===true) {
-						throw new Exception("Error Processing Request. component_filter_tipo not found in section tipo: $section_top_tipo", 1);
+				// component filter by section tipo
+					$section_real_tipo		= section::get_section_real_tipo_static($section_top_tipo);
+					$component_filter_tipo	= section::get_ar_children_tipo_by_model_name_in_section($section_real_tipo, ['component_filter'])[0];
+					if (empty($component_filter_tipo)) {
+						debug_log(__METHOD__
+							. " Error: component_filter_tipo not found" . PHP_EOL
+							. ' section_top_tipo: ' . $section_top_tipo
+							, logger::ERROR
+						);
+						continue;	// Skip this
 					}
-					continue;	// Skip this
-				}
 
-				# ar_keys are section_id of current section tipo records
-				$ar_keys = array_keys($ar_values);
-					#dump($ar_keys,"ar_keys for $section_top_tipo , $component_filter_tipo");
+				// ar_keys are section_id of current section tipo records
+					$ar_keys = array_keys($ar_values);
+					foreach ($ar_keys as $current_id_section) {
+						// get the user projects
+						$component_filter = component_common::get_instance(
+							'component_filter',
+							$component_filter_tipo,
+							$current_id_section,
+							'list',
+							DEDALO_DATA_NOLAN,
+							$section_top_tipo
+						);
+						$component_filter_dato = (array)$component_filter->get_dato();
 
-				foreach ($ar_keys as $current_id_section) {
-					// get the user projects
-					$component_filter = component_common::get_instance(
-						'component_filter',
-						$component_filter_tipo,
-						$current_id_section,
-						'edit',
-						DEDALO_DATA_NOLAN,
-						$section_top_tipo
-					);
-					$component_filter_dato = (array)$component_filter->get_dato();
-
-					$in_user_projects = false;
-					foreach ($ar_user_projects as $user_project_locator) {
-						if (true===locator::in_array_locator($user_project_locator, $component_filter_dato, $ar_properties=['section_id','section_tipo'])) {
-							$in_user_projects = true;
-							break;
+						$in_user_projects = false;
+						foreach ($ar_user_projects as $user_project_locator) {
+							if (true===locator::in_array_locator($user_project_locator, $component_filter_dato, $ar_properties=['section_id','section_tipo'])) {
+								$in_user_projects = true;
+								break;
+							}
+						}
+						if ($in_user_projects===false) {
+							debug_log(__METHOD__
+								." Removed row from thesaurus index_ts list (project not match with user projects) ". PHP_EOL
+								.' row: ' . to_string($ar_section_top_tipo[$section_top_tipo][$current_id_section])
+								, logger::DEBUG
+							);
+							unset($ar_section_top_tipo[$section_top_tipo][$current_id_section]);
 						}
 					}
-					if ($in_user_projects===false) {
-						debug_log(__METHOD__." Removed row from thesaurus index_ts list (project not mathc with user projects) ".to_string($ar_section_top_tipo[$section_top_tipo][$current_id_section]), logger::DEBUG);
-						unset($ar_section_top_tipo[$section_top_tipo][$current_id_section]);
-					}
-				}
 			}
 		}//end if( ($is_global_admin = security::is_global_admin($user_id))!==true ) {
 
@@ -424,9 +471,9 @@ class indexation_grid {
 	/**
 	* GET_AR_LOCATORS
 	* Get all indexations (locators) of current thesaurus term
-	* @return array of locator objects $ar_locators
+	* @return array $ar_locators
 	*/
-	public function get_ar_locators() {
+	public function get_ar_locators() : array {
 
 		$model = RecordObj_dd::get_modelo_name_by_tipo($this->tipo, true);
 
@@ -437,7 +484,8 @@ class indexation_grid {
 			$this->section_id,
 			'list',
 			DEDALO_DATA_NOLAN,
-			$this->section_tipo
+			$this->section_tipo,
+			true // bool cache
 		);
 
 		$ar_locators = $component->get_dato();

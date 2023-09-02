@@ -10,38 +10,9 @@
 	top: 0px;
 	height: 100%;
 	width: 100%;
+	z-index: 999;
 
-	// background image big Dédalo
-	&:before {
-		background-image: url('../../themes/default/dedalo_icon_big.png');
-		background-position: 0px top;
-		background-repeat: no-repeat;
-		background-size: 527px 1024px;
-		content: '';
-		position: fixed;
-		height: 100%;
-		width: 100%;
-		z-index: -1;
-		//-webkit-transform: rotate(30deg);
-		transform: scaleX(-1);
-		top: 0px;
-		left: 0px;
-		background-color: rgb(255 255 255 / 89%);
-	}
-
-	&:before {
-		background-image: url('../../themes/default/raspas/raspa_pantalla_1.jpg');
-		background-size: cover;
-		content: '';
-		transform: unset;
-		opacity: 0;
-		transition: opacity 0.75s ease-in-out;
-	}
-	&.raspa_loading {
-		&:before {
-			opacity: 1;
-		}
-	}
+	--user_login_image : ''; // Added on login, like url('../../themes/default/raspas/raspa_pantalla_1.jpg');
 
 	>.content_data {
 		background-color: rgba(243, 243, 243, 0.76);
@@ -50,8 +21,17 @@
 		.centered;
 		max-width: 24em;
 		padding: 2em;
+		padding-bottom: 1em;
 
+		&.overlay {
+			background-color: rgb(255 255 255);
+			box-shadow: 10px 10px 62px 0px rgba(0,0,0,0.43);
+		}
 
+		@media screen and (max-width: @width_break_point_1) {
+			width: 70vw;
+			// max-width: unset;
+		}
 
 		>.top {
 			text-align: center;
@@ -132,13 +112,32 @@
 			}
 		}//end form
 
-		// info container where is placed server info like data version..
-		>.info {
+		// info_container where is placed server info like data version..
+		>.info_container {
 			display: grid;
 			grid-template-columns: 1.2fr 2fr;
 			font-size: 0.8em;
-			opacity: 0.6;
+			opacity: 0.5;
 			line-height: 1.3em;
+		}
+
+		// powered by
+		.powered_by {
+			width: 100%;
+			text-align: center;
+			margin-top: 2rem;
+			margin-bottom: 1rem;
+
+			.dedalo_logo {
+				height: 3rem;
+				width: 100%;
+				margin-bottom: 0.25rem;
+			}
+			.dedalo_link {
+				font-size: 0.87rem;
+				text-decoration: none;
+				color: @color_orange_dedalo;
+			}
 		}
 
 		// messages from API are showed here
@@ -178,21 +177,33 @@
 		position: relative;
 		text-align: center;
 
+		// load the user image or the Dédalo icon
 		&:after {
-		  position: absolute;
-		  display: block;
-		  height: 160px;
-		  width: 160px;
-		  left: 50%;
-		  top: 50%;
-		  box-shadow: inset 0px 0px 1em #e4e4e4;
-		  content: attr(data-pct); //'%';
-		  margin-top: -80px;
-		  margin-left: -80px;
-		  border-radius: 100%;
-		  line-height: 160px;
-		  font-size: 2em;
-		  // text-shadow: 0 0 0.5em black;
+			// background-image: url('../../themes/default/dedalo_icon_big.png');
+			background-position: 0px top;
+			background-repeat: no-repeat;
+			background-size: 527px 1024px;
+			background-image: var(--user_login_image);
+			background-size: cover;
+			// -webkit-transition: background-image 0.8s ease-in-out;
+			// transition: background-image 0.8s ease-in-out;
+			position: absolute;
+			display: block;
+			height: 160px;
+			width: 160px;
+			left: 50%;
+			top: 50%;
+			margin-top: -80px;
+			margin-left: -80px;
+			border-radius: 100%;
+
+			// text counter like '80%'
+			box-shadow: inset 0px 0px 1em #e4e4e4;
+			content: attr(data-pct); //'%';
+			font-size: 2em;
+			color: white;
+			text-shadow: 0 0 0.5em black;
+			line-height: 160px;
 		}
 
 		#svg circle {
@@ -206,5 +217,42 @@
 			stroke: @color_orange_dedalo;
 		}
 	}// end cont
+
+	// raspa_loading. Only for root user
+	&.raspa_loading {
+
+		&:before {
+			content: ' ';
+			position: fixed;
+			height: 100%;
+			width: 100%;
+			z-index: -1;
+			//-webkit-transform: rotate(30deg);
+			transform: scaleX(-1);
+			top: 0px;
+			left: 0px;
+			// background-color: rgb(255 255 255 / 89%);
+			background-image: var(--user_login_image);
+			background-size: cover;
+			background-position: 0px top;
+			background-repeat: no-repeat;
+			content: '';
+			transform: unset;
+			opacity: 0;
+			transition: opacity 0.8s ease-in-out;
+		}
+
+		&.active {
+			&:before {
+				opacity: 1;
+			}
+		}
+
+		.cont {
+			// &:after {
+			// 	background-image: none;
+			// }
+		}
+	}
 
 }

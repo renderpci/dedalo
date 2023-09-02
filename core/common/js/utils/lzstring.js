@@ -1,3 +1,5 @@
+// @license magnet:?xt=urn:btih:723febf9f6185544f57f0660a41489c7d6b4931b&dn=wtfpl.txt WTFPL
+
 // Copyright (c) 2013 Pieroxy <pieroxy@pieroxy.net>
 // This work is free. You can redistribute it and/or modify it
 // under the terms of the WTFPL, Version 2
@@ -507,3 +509,8 @@ export const LZString = (function() {
 // 		return LZString;
 // 	});
 // }
+
+
+// @license-end
+
+

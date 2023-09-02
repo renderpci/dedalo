@@ -7,6 +7,8 @@
 require_once( DEDALO_CONFIG_PATH .'/config.php');
 require_once( DEDALO_CORE_PATH . '/backup/class.backup.php');
 
+session_write_close();
+
 // DATA . The only one var received is a json encoded var called "data"
 	$data = json_decode($_REQUEST['data']);
 
@@ -25,7 +27,7 @@ require_once( DEDALO_CORE_PATH . '/backup/class.backup.php');
 
 // SELECTED_OBJ. Get local str files info (paths, names, etc.) to find the requested
 	$selected_obj  = null;
-	$all_str_files = backup::collect_all_str_files();	
+	$all_str_files = backup::collect_all_str_files();
 	foreach ($all_str_files as $key => $obj) {
 		if ($data->name === $obj->name) {
 			$selected_obj = $all_str_files[$key];

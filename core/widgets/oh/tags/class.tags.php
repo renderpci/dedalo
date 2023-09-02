@@ -23,6 +23,7 @@ class tags extends widget_common {
 		$mode			= 'list';
 
 		$dato = [];
+
 		foreach ($ipo as $ipo_key => $current_ipo) {
 
 			$input	= $current_ipo->input;
@@ -36,7 +37,7 @@ class tags extends widget_common {
 			$current_component_tipo = $transcription_source->component_tipo;
 
 			// raw_text. From the original lang always (!)
-				$original_lang	= component_text_area::force_change_lang($current_component_tipo, $section_id, $mode, $lang, $section_tipo);
+				$original_lang	= component_text_area::force_change_lang($current_component_tipo, $section_id, $lang, $section_tipo);
 				$component		= component_common::get_instance(
 					'component_text_area',
 					$current_component_tipo,

@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS RELATION_LIST
 * Manage the relations of the sections
 * build the list of the relations between sections
@@ -11,10 +11,12 @@ class relation_list extends common {
 	/**
 	* CLASS VARS
 	*/
-		protected $section_id;
-		protected $section_tipo;
-		protected $sqo;
-		protected $count;
+		// protected $section_id;
+		public $section_tipo;
+		public $sqo;
+		public $count;
+
+		public $diffusion_properties;
 
 
 
@@ -40,19 +42,6 @@ class relation_list extends common {
 	*/
 	public function get_inverse_references(object $sqo) : array {
 
-		// if (empty($this->section_id)) {
-		// 	# Section not exists yet. Return empty $arrayName = array('' => , );
-		// 	return array();
-		// }
-
-		// # Create a minimal locator based on current section
-		// $reference_locator = new locator();
-		// 	$reference_locator->set_section_tipo($this->section_tipo);
-		// 	$reference_locator->set_section_id($this->section_id);
-
-		# Get calculated inverse locators for all matrix tables
-		//$inverse_locators = search::calculate_inverse_locators( $reference_locator, $limit, $offset, $count);
-
 		// sections
 			$sections			= sections::get_instance(null, $sqo, $this->section_tipo, $this->mode);
 			$inverse_sections	= $sections->get_dato();
@@ -64,7 +53,7 @@ class relation_list extends common {
 
 	/**
 	* GET_RELATION_LIST_OBJ
-	* @retutn object $json
+	* @return object $json
 	*/
 	public function get_relation_list_obj(array $ar_inverse_references) : object {
 
@@ -113,7 +102,7 @@ class relation_list extends common {
 					$ar_relation_components[$current_section_tipo] = $recordObjdd->get_relaciones();
 					if(isset($ar_relation_components[$current_section_tipo])){
 						foreach ($ar_relation_components[$current_section_tipo] as $current_relation_component) {
-							foreach ($current_relation_component as $modelo => $tipo) {
+							foreach ($current_relation_component as $tipo) {
 
 								$current_relation_list = new stdClass;
 									$current_relation_list->section_tipo 	= $current_section_tipo;
@@ -139,8 +128,8 @@ class relation_list extends common {
 		}// end foreach
 
 		// $context = 'context';
-		$json->context = $ar_context;
-		$json->data 	= $ar_data;
+		$json->context	= $ar_context;
+		$json->data		= $ar_data;
 
 		return $json;
 	}//get_relation_list_obj
@@ -148,7 +137,7 @@ class relation_list extends common {
 
 
 	/**
-	* GET_DATA
+	* GET_AR_DATA
 	* @param object $current_record
 	* @param array $ar_components
 	* @return array $data
@@ -166,13 +155,12 @@ class relation_list extends common {
 			$datos = $current_record->datos ?? null;
 			if (!is_null($datos)) {
 				$section->set_dato($datos);
-				$section->set_bl_loaded_matrix_data(true);
 			}
 
 		$current_id = new stdClass;
-					$current_id->section_tipo 		= $section_tipo;
-					$current_id->section_id 		= $section_id;
-					$current_id->component_tipo		= 'id';
+			$current_id->section_tipo	= $section_tipo;
+			$current_id->section_id		= $section_id;
+			$current_id->component_tipo	= 'id';
 
 		$data[] = $current_id;
 
@@ -226,6 +214,513 @@ class relation_list extends common {
 
 		return $json;
 	}//end get_json
+
+
+
+	/**
+	* GET_DIFFUSION_DATO
+	* Calculates the diffusion dato of current relation_list using inverse locators
+	* @see numisdata1021 (relations_coins)
+	* @return array $ar_values
+	*/
+	public function get_diffusion_dato() : array {
+
+		// Properties of diffusion element that references this component
+		// (!) Note that is possible overwrite real component properties injecting properties from diffusion (see diffusion_sql::resolve_value)
+		// 	  This is useful to change the 'data_to_be_used' param of target component (indirectly)
+		$diffusion_properties	= $this->get_diffusion_properties();
+		$process_dato_arguments	= isset($diffusion_properties->process_dato_arguments)
+			? $diffusion_properties->process_dato_arguments
+			: null;
+
+		// sqo . COmmon used to get inverse locators
+			$sqo = (object)[
+				'section_tipo'			=> ['all'],
+				'mode'					=> 'related',
+				'limit'					=> false,
+				'offset'				=> 0,
+				'filter_by_locators'	=> [
+					(object)[
+						'section_tipo'	=> $this->section_tipo,
+						'section_id'	=> $this->section_id
+					]
+				]
+			];
+
+		// inverse_references
+			$ar_inverse_references = $this->get_inverse_references($sqo);
+				// sample. Full section dato
+				// {
+			    //     "section_tipo": "numisdata300",
+			    //     "section_id": "1",
+			    //     "datos": {
+			    //         "label": "Catálogo",
+			    //         "relations": [
+			    //             {
+			    //                 "type": "dd675",
+			    //                 "section_id": "1",
+			    //                 "section_tipo": "dd153",
+			    //                 "from_component_tipo": "numisdata304"
+			    //             }, ...
+			    //          ]
+			    //     }
+				// }
+
+		// clean references as locators that point here (this section_tipo, this section_id)
+			$ar_locators = [];
+			foreach ($ar_inverse_references as $section_dato) {
+				if (isset($section_dato->datos->relations)) {
+					foreach ($section_dato->datos->relations as $current_locator) {
+						if ($current_locator->section_tipo===$this->section_tipo && $current_locator->section_id==$this->section_id) {
+							// add modified version
+							$pseudo_locator = new stdClass();
+								// same data
+								$pseudo_locator->section_tipo			= $current_locator->section_tipo;
+								$pseudo_locator->section_id				= $current_locator->section_id;
+								$pseudo_locator->from_component_tipo	= $current_locator->from_component_tipo;
+								// add useful data
+								$pseudo_locator->from_section_tipo		= $section_dato->section_tipo;
+								$pseudo_locator->from_section_id		= $section_dato->section_id;
+
+							$ar_locators[] = $pseudo_locator;
+						}
+					}
+				}
+			}
+
+		$ar_values = [];
+		foreach ($ar_locators as $current_locator) {
+
+			// filter_section
+				if (isset($process_dato_arguments->filter_section)) {
+					if (!in_array($current_locator->from_section_tipo, $process_dato_arguments->filter_section)) {
+						continue;
+					}
+				}
+
+			// filter_component
+				if (isset($process_dato_arguments->filter_component)) {
+					if (!in_array($current_locator->from_component_tipo, $process_dato_arguments->filter_component)) {
+						continue;
+					}
+				}
+
+			// locator restored from inverse
+				$locator = new locator();
+					$locator->set_section_tipo($current_locator->from_section_tipo);
+					$locator->set_section_id($current_locator->from_section_id);
+
+			// Check target is publishable
+				$current_is_publicable = diffusion::get_is_publicable($locator);
+				if ($current_is_publicable!==true) {
+					// debug_log(__METHOD__." + Skipped locator not publishable: ".to_string($locator), logger::DEBUG);
+					continue;
+				}
+
+			// value. Default is locator. To override it, set:  diffusion_properties->process_dato_arguments->format
+				$value = (isset($process_dato_arguments->format))
+					? (function($locator, $format) {
+						switch ($format) {
+							case 'section_id':
+								return $locator->section_id;
+								break;
+							default:
+								# code...
+								break;
+						}
+						return $locator;
+					  })($locator, $process_dato_arguments->format)
+					: $locator;// default is built locator
+
+
+			$ar_values[] = $value;
+		}//end foreach ($ar_locators as $current_locator)
+
+
+		return $ar_values;
+	}//end get_diffusion_dato
+
+
+
+	/**
+	* GET_DIFFUSION_VALUE
+	* Overwrite component common method
+	* Calculate current component diffusion value for target field (usually a mysql field)
+	* Used for diffusion_mysql to unify components diffusion value call
+	* @see class.diffusion_mysql.php
+	*
+	* @param string|null $lang = null
+	* @return array|string|null $diffusion_value
+	*/
+	public function get_diffusion_value($lang=null) {
+
+		// dump(func_get_args(), 'func_get_args() ++ /////////////// '.to_string($this->tipo));
+		// dump($this, ' this ++ '.to_string());
+		// dump($this->tipo, ' this->tipo ++ '.to_string());
+
+		$diffusion_value = null;
+
+		# Propiedades of diffusion element that references this component
+		# (!) Note that is possible overwrite real component properties injecting properties from diffusion (see diffusion_sql::resolve_value)
+		# 	  This is useful to change the 'data_to_be_used' param of target component (indirectly)
+		$diffusion_properties = $this->get_diffusion_properties();
+
+		$data_to_be_used = isset($diffusion_properties->data_to_be_used)
+			? $diffusion_properties->data_to_be_used
+			: 'dato';
+
+		// overwrite data_to_be_used
+			if (isset($diffusion_properties->process_dato_arguments) && isset($diffusion_properties->process_dato_arguments->data_to_be_used)) {
+				$data_to_be_used = $diffusion_properties->process_dato_arguments->data_to_be_used;
+			}
+
+		// sqo
+			$sqo = (object)[
+				'section_tipo'			=> ['all'],
+				'mode'					=> 'related',
+				'limit'					=> false,
+				'offset'				=> 0,
+				'filter_by_locators'	=> [
+					(object)[
+						'section_tipo'	=> $this->section_tipo,
+						'section_id'	=> $this->section_id
+					]
+				]
+			];
+
+		switch ($data_to_be_used) {
+
+			case 'custom':
+				// see sample at: qdp341, mdcat4338
+				$ar_values = [];
+
+				$custom_map				= $diffusion_properties->process_dato_arguments->custom_map;
+				$ar_inverse_references	= $this->get_inverse_references($sqo);
+
+				// foreach ($ar_inverse_references as $current_locator) {
+				foreach ($ar_inverse_references as $section_dato) {
+
+					$current_locator = (object)[
+						'from_section_tipo'	=> $section_dato->section_tipo,
+						'from_section_id'	=> $section_dato->section_id
+					];
+
+					if (!isset($current_locator->from_section_tipo) || !isset($current_locator->from_section_id)) {
+						debug_log(__METHOD__
+							. " Error: Invalid locator. Expected from_section_tipo and from_section_id " . PHP_EOL
+							. ' current_locator: ' . json_encode($current_locator, JSON_PRETTY_PRINT) . PHP_EOL
+							. ' custom_map: ' . json_encode($custom_map, JSON_PRETTY_PRINT) . PHP_EOL
+							. ' sqo: ' . json_encode($sqo, JSON_PRETTY_PRINT)
+							, logger::ERROR
+						);
+						throw new Exception("Error Processing Request", 1);
+					}
+
+					$custom_locator = new locator();
+						$custom_locator->set_section_tipo($current_locator->from_section_tipo);
+						$custom_locator->set_section_id($current_locator->from_section_id);
+
+					// Check target is publicable
+					$current_is_publicable = diffusion::get_is_publicable($custom_locator);
+					if ($current_is_publicable!==true) {
+						debug_log(__METHOD__
+							." + Skipped locator not publishable: " . PHP_EOL
+							.' current_locator: ' . json_encode($custom_locator, JSON_PRETTY_PRINT)
+							, logger::DEBUG
+						);
+						continue;
+					}
+
+					// custom_map reference
+						// [
+						// {
+						// 	"section_tipo": "qdp1",
+						// 	"table": "objects",
+						// 	"image": {
+						// 	  "component_method": "get_diffusion_resolve_value",
+						// 	  "custom_arguments": {
+						// 		"process_dato_arguments": {
+						// 		  "target_component_tipo": "qdp66",
+						// 		  "dato_splice": [
+						// 			1
+						// 		  ],
+						// 		  "component_method": "get_diffusion_resolve_value",
+						// 		  "custom_arguments": [
+						// 			{
+						// 			  "process_dato_arguments": {
+						// 				"target_component_tipo": "rsc29",
+						// 				"component_method": "get_diffusion_value",
+						// 				"dato_splice": [
+						// 				  1
+						// 				]
+						// 			  }
+						// 			}
+						// 		  ]
+						// 		}
+						// 	  }
+						// 	},
+						// 	"title": {
+						// 	  "component_method": "get_diffusion_resolve_value",
+						// 	  "custom_arguments": {
+						// 		"process_dato_arguments": {
+						// 		  "target_component_tipo": "qdp152",
+						// 		  "component_method": "get_diffusion_value",
+						// 		  "dato_splice": [
+						// 			1
+						// 		  ]
+						// 		}
+						// 	  }
+						// 	}
+						// }
+						// ]
+					foreach ((array)$custom_map as $map_item) {
+						// error_log( json_encode($map_item, JSON_PRETTY_PRINT));
+
+						// match current locator section tipo with defined maps section_tipo. If not exist, ignore it
+						if ($map_item->section_tipo===$current_locator->from_section_tipo) {
+
+							$value_obj = new stdClass();
+								$value_obj->section_tipo	= $current_locator->from_section_tipo;
+								$value_obj->section_id		= $current_locator->from_section_id;
+
+							$related_value_obj = new stdClass();
+
+							$is_related = false;
+
+							// iterate object map_item
+							foreach ($map_item as $map_key => $map_obj) {
+
+								// section_tipo
+									if ($map_key==='section_tipo') {
+										continue;
+									}
+
+								// table
+									if ($map_key==='table') {
+										$value_obj->table			= $map_obj;
+										$related_value_obj->table	= $map_obj;
+										continue;
+									}
+
+								// related case (@see mdcat4338 properties)
+									if(isset($map_obj->related)) {
+
+										$related = new relation_list(
+											$map_obj->related->target_component_tipo, //string tipo
+											$current_locator->from_section_id, // mixed section_id
+											$current_locator->from_section_tipo, // string section_tipo
+											'edit'
+										);
+
+										$current_dato = $related->get_inverse_references($sqo);
+										$filtered_result = [];
+										foreach ((array)$current_dato as $current_dato_value) {
+											// filter_section
+											if (!in_array($current_dato_value->from_section_tipo, (array)$map_obj->related->filter_section)) {
+												continue;
+											}
+											$filtered_result[] = $current_dato_value; // add locator
+										}
+
+										if (!empty($filtered_result)) {
+											foreach ($filtered_result as $filtered_value) {
+
+												$filtered_custom_locator = new locator();
+													$filtered_custom_locator->set_section_tipo($filtered_value->from_section_tipo);
+													$filtered_custom_locator->set_section_id($filtered_value->from_section_id);
+
+												// Check target is publicable
+													$filtered_current_is_publicable = diffusion::get_is_publicable($filtered_custom_locator);
+													if ($filtered_current_is_publicable!==true) {
+														debug_log(__METHOD__
+															." + Skipped locator not publicable: ". PHP_EOL
+															.' filtered_custom_locator:' . to_string($filtered_custom_locator)
+															, logger::DEBUG
+														);
+														continue;
+													}
+
+												// current_value
+													$current_dato			= [$filtered_custom_locator];
+													$process_dato_arguments	= $map_obj->custom_arguments->process_dato_arguments;
+														$process_dato_arguments->lang = $lang;
+													$current_value 			= diffusion_sql::resolve_value(
+														$process_dato_arguments, // mixed options
+														$current_dato, // mixed dato
+														' | ' // string default_separator
+													);
+
+												if ($is_related===false) {
+													$related_value_obj->section_tipo	= $filtered_value->from_section_tipo;
+													$related_value_obj->section_id		= $filtered_value->from_section_id;
+												}
+
+												$related_value_obj->{$map_key}	= $current_value;
+
+											}//end foreach ($filtered_result as $filtered_value)
+										}
+										$is_related = true;
+										continue;
+									}
+
+								// reference
+									// "type": "dd151",
+									// "section_id": "7",
+									// "section_tipo": "technique1",
+									// "from_component_tipo": "qdp168",
+									// "from_section_tipo": "qdp1",
+									// "from_section_id": "2"
+
+								$custom_locator = new locator();
+									$custom_locator->set_section_tipo($current_locator->from_section_tipo);
+									$custom_locator->set_section_id($current_locator->from_section_id);
+
+								$current_dato = [$custom_locator];
+
+								$process_dato_arguments	= $map_obj->custom_arguments->process_dato_arguments;
+									$process_dato_arguments->lang = $lang;
+
+								$current_value = diffusion_sql::resolve_value($process_dato_arguments, $current_dato, $separator=' | ');
+
+								$value_obj->{$map_key} = $current_value;
+							}//end foreach ($map_item as $map_key => $map_obj)
+
+							if (!in_array($value_obj, $ar_values) && $is_related===false) {
+								$ar_values[] = $value_obj;
+							}else if(!in_array($related_value_obj, $ar_values) && $is_related===true){
+								$ar_values[] = $related_value_obj;
+							}
+						}
+
+					}//end foreach ($custom_map as $map_item)
+				}//end foreach ($ar_inverse_references as $section_dato) {
+
+				$diffusion_value = $ar_values;
+				break;
+
+			case 'valor':
+				$ar_values = [];
+				$ar_inverse_references = $this->get_inverse_references($sqo);
+				foreach ($ar_inverse_references as $inverse_reference) {
+
+					$current_locator = new locator();
+						$current_locator->set_section_tipo($inverse_reference->section_tipo);
+						$current_locator->set_section_id($inverse_reference->section_id);
+
+					// Check target is publicable
+					$current_is_publicable = diffusion::get_is_publicable($current_locator);
+					if ($current_is_publicable!==true) {
+						debug_log(__METHOD__
+							." + Skipped locator not publishable: ". PHP_EOL
+							. ' current_locator: ' . json_encode($current_locator, JSON_PRETTY_PRINT)
+							, logger::DEBUG
+						);
+						continue;
+					}
+					$ar_values[] = $current_locator;
+				}
+
+				$ar_relations_lists	= $this->get_relation_list_obj($ar_values);
+				$diffusion_value	= $ar_relations_lists;
+				break;
+
+			case 'dato_full':
+				$ar_values = [];
+				$ar_inverse_references = $this->get_inverse_references($sqo);
+				foreach ($ar_inverse_references as $inverse_reference) {
+
+					$current_locator = new locator();
+						$current_locator->set_section_tipo($inverse_reference->section_tipo);
+						$current_locator->set_section_id($inverse_reference->section_id);
+
+					// Check target is publicable
+					$current_is_publicable = diffusion::get_is_publicable($current_locator);
+					if ($current_is_publicable!==true) {
+						debug_log(__METHOD__
+							." + Skipped locator not publishable: ". PHP_EOL
+							. ' current_locator: ' . json_encode($current_locator, JSON_PRETTY_PRINT)
+							, logger::DEBUG
+						);
+						continue;
+					}
+					// if (count($ar_values)>10) {
+					// 	break;
+					// }
+					$ar_values[] = $current_locator;
+				}
+
+				$diffusion_value = $ar_values;
+				break;
+
+			case 'filtered_values': // inject each relation value (locator) to target component and request the processed value
+				// see sample at: numisdata1302
+
+				// get relations filtered dato (by section_tipo and component_tipo)
+					$diffusion_value = $this->get_diffusion_dato();
+
+				// params from properties
+					$target_component_tipo	= $diffusion_properties->process_dato_arguments->target_component_tipo;
+					$output					= $diffusion_properties->process_dato_arguments->output ?? 'array';
+					$separator				= $diffusion_properties->process_dato_arguments->separator ?? ' | ';
+
+				// ar_value. Iterate locators and store component processed value
+					$ar_value = [];
+					foreach ($diffusion_value as $current_locator) {
+
+						$modelo_name		= RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo,true);
+						$current_component	= component_common::get_instance(
+							$modelo_name,
+							$target_component_tipo,
+							$this->section_id,
+							'list',
+							DEDALO_DATA_LANG,
+							$this->section_tipo
+						);
+						$current_component->set_dato($current_locator); // force set dato
+						$ar_value[] = $current_component->get_valor();
+					}
+
+				// diffusion_value as string or array (default array)
+					$diffusion_value = ($output==='string')
+						? implode($separator, $ar_value)
+						: $ar_value;
+				break;
+
+			case 'dato':
+			default:
+				// DES
+					// $ar_values = [];
+					// $ar_inverse_references = $this->get_inverse_references($limit=false, $offset=0, $count=false);
+					// foreach ($ar_inverse_references as $current_locator) {
+
+					// 	// Check target is publicable
+					// 	$current_is_publicable = diffusion::get_is_publicable($current_locator);
+					// 	if ($current_is_publicable!==true) {
+					// 		debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($current_locator), logger::DEBUG);
+					// 		continue;
+					// 	}
+					// 	$ar_values[] = $current_locator->section_tipo;
+					// }
+
+					// $diffusion_value = array_unique($ar_values);
+
+				$diffusion_value = $this->get_diffusion_dato();
+				break;
+		}
+
+		// remove duplicates option
+			if (isset($diffusion_properties->process_dato_arguments)
+				&& isset($diffusion_properties->process_dato_arguments->remove_duplicates)
+				&& $diffusion_properties->process_dato_arguments->remove_duplicates===true) {
+
+				if (is_array($diffusion_value)) {
+					$diffusion_value = array_unique($diffusion_value, SORT_REGULAR);
+				}
+			}
+
+
+		return $diffusion_value;
+	}//end get_diffusion_value
 
 
 

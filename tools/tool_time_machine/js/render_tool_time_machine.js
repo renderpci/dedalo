@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
@@ -22,7 +23,7 @@ export const render_tool_time_machine = function() {
 /**
 * EDIT
 * Render node for use like button
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_tool_time_machine.prototype.edit = async function (options) {
 
@@ -46,7 +47,7 @@ render_tool_time_machine.prototype.edit = async function (options) {
 
 
 	return wrapper
-}//end render_tool_time_machine
+}//end edit
 
 
 
@@ -55,7 +56,7 @@ render_tool_time_machine.prototype.edit = async function (options) {
 * Renders the whole content_data node
 * @param instance self
 * 	Tool instance pointer
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = async function(self) {
 
@@ -75,7 +76,7 @@ const get_content_data = async function(self) {
 				self, // tool instance
 				current_component_container, // DOM node container
 				self.main_element.lang, // string lang
-				get_label.ahora || 'Now', // string label 'Now'
+				get_label.now || 'Now', // string label 'Now'
 				'edit', // string mode = 'edit'
 				null // int|null  matrix_id (time machine variant)
 			)
@@ -105,7 +106,7 @@ const get_content_data = async function(self) {
 					// label
 					ui.create_dom_element({
 						element_type	: 'label',
-						inner_html		: get_label.idioma,
+						inner_html		: get_label.language,
 						parent			: tool_bar
 					})
 					// selector
@@ -118,9 +119,20 @@ const get_content_data = async function(self) {
 					function on_change_select(e) {
 						const lang = e.target.value
 						if (lang!==self.lang) {
+
+							content_data.classList.add('loading')
+
 							self.lang				= lang
 							self.main_element.lang	= lang
-							self.refresh()
+							// refresh
+							self.refresh({
+								build_autoload	: false, // default true
+								render_level	: 'content', // default content
+								destroy			: true // default true
+							})
+							.then(function(response){
+								content_data.classList.remove('loading')
+							})
 						}
 					}
 					tool_bar.appendChild(select_lang)
@@ -133,7 +145,7 @@ const get_content_data = async function(self) {
 					inner_html		: self.get_tool_label('apply_and_save') || 'Apply and save',
 					parent			: tool_bar
 				})
-				self.button_apply.addEventListener("click", function(){
+				self.button_apply.addEventListener('click', function(){
 
 					self.apply_value({
 						section_id		: self.main_element.section_id,
@@ -151,8 +163,8 @@ const get_content_data = async function(self) {
 							}
 						}else{
 							// error case
-							console.warn("response:",response);
-							alert(response.msg || 'Error. Unknow error on apply tm value');
+							console.warn('response:',response);
+							alert(response.msg || 'Error. Unknown error on apply tm value');
 						}
 					})
 				})
@@ -184,7 +196,7 @@ const get_content_data = async function(self) {
 * @param string mode
 * @param string|int matrix_id = null
 *
-* @return DOM node|bool
+* @return HTMLElement|bool
 */
 export const add_component = async (self, component_container, lang_value, label, mode, matrix_id=null) => {
 
@@ -203,16 +215,22 @@ export const add_component = async (self, component_container, lang_value, label
 			preserve_content	: false,
 			label				: label,
 			callback			: async () => {
+
 				// component load
 					const component = matrix_id===null
 						? self.main_element
-						: await self.load_component(lang_value, mode, matrix_id)
+						: await self.get_component(lang_value, mode, matrix_id)
+
+				// set permissions as read
+					component.context.permissions = 1
 
 				// render node
 					const node = await component.render({
 						render_mode : 'edit'//mode // 'edit'
 					})
-					node.classList.add('disabled_component')
+					if (node) {
+						node.classList.add('disabled_component')
+					}
 
 				return node
 			}
@@ -229,3 +247,7 @@ export const add_component = async (self, component_container, lang_value, label
 
 	return node
 }//end add_component
+
+
+
+// @license-end

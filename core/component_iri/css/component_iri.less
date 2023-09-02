@@ -4,9 +4,8 @@
 * Included from main.less file
 */
 .component_iri {
-	// background-color: #f496a1;
 
-	&.view_default {
+	&.edit {
 
 		>.content_data {
 
@@ -52,6 +51,36 @@
 
 	}//end &.edit
 
+	&.search {
+		>.content_data {
+
+			>.q_operator {
+				width: 3rem;
+				text-align: center;
+			}
+
+			>.content_value {
+				width: calc(100% - 3.5rem);
+
+				.input_value {
+
+				}
+			}
+		}
+	}
+
+	&.view_line {
+		display: block;
+	}
+
+	&.view_print {
+		.content_value {
+			>.title {
+				padding-right: 1rem;
+			}
+		}
+	}
+
 	&.view_line {
 		>.content_data {
 			display: contents;
@@ -70,26 +99,6 @@
 		}
 	}
 
-
-
-
-	&.search {
-		>.content_data {
-
-			>.q_operator {
-				width: 3rem;
-				text-align: center;
-			}
-
-			>.content_value {
-				width: calc(100% - 3.5rem);
-
-				.input_value {
-
-				}
-			}
-		}
-	}
 
 
 }//end .component_iri

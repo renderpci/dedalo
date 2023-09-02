@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global it, describe, assert */
 /*eslint no-undef: "error"*/
 
@@ -10,7 +11,8 @@ import {clone} from '../../common/js/utils/util.js'
 
 // vars
 	const ar_view_edit = [
-		'line_edit'
+		'line_edit',
+		'print'
 	]
 	const ar_view_list = [
 		'mini',
@@ -135,7 +137,7 @@ async function life_cycle_test(element, view) {
 				new_instance = await get_instance(options)
 
 			// asserts
-				assert.equal(new_instance.status, 'initiated', 'Instance status must be initiated ');
+				assert.equal(new_instance.status, 'initialized', 'Instance status must be initialized ');
 				assert.equal(new_instance.mode, options.mode);
 				assert.equal(new_instance.context, null);
 				assert.equal(new_instance.node, null);
@@ -197,16 +199,29 @@ async function life_cycle_test(element, view) {
 						null,
 						`label must be a DOM node on edit mode. (view: ${new_instance.view} - mode: ${new_instance.mode})`
 					);
-
-					assert.notEqual(new_instance.node.querySelector('.buttons_container'), null);
+					const buttons_container = new_instance.node.querySelector('.buttons_container')
+					assert.notEqual(buttons_container, null);
 					assert.notEqual(new_instance.node.querySelector('.content_data'), null);
 				}
 				else if(new_instance.mode==='list') {
 					// console.log('+++ new_instance.node:', new_instance.node);
 					if (new_instance.view!=='text') {
 						// console.log('new_instance.node:', new_instance.node, new_instance.mode, new_instance.view);
-						if (new_instance.model!=='component_portal' && new_instance.model.indexOf('component_relation')===-1) {
-							assert.equal(new_instance.node.content_data, undefined, 'content_data must be undefined on list mode');
+						const skip_models = [
+							'component_portal',
+							'component_relation',
+							'component_3d',
+							'component_av',
+							'component_image',
+							'component_pdf',
+							'component_svg',
+							'component_relation_children',
+							'component_relation_index',
+							'component_relation_related',
+							'component_relation_parent'
+						]
+						if (!skip_models.includes(new_instance.model)) {
+							// assert.equal(new_instance.node.content_data, undefined, 'content_data must be undefined on list mode');
 							assert.equal(new_instance.node.querySelector('.content_data'), null, 'content_data must be null on list mode');
 						}
 						assert.equal(new_instance.node.querySelector('.label'), null, 'label must be null on list mode');
@@ -232,3 +247,7 @@ async function life_cycle_test(element, view) {
 
 	});//end describe(element.model, function()
 }//end life_cycle_test
+
+
+
+// @license-end

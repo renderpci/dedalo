@@ -1,4 +1,5 @@
 <?php
+// declare(strict_types=1);
 /**
 * SUBTITLES
 * Constructs text formatted for standard subtitles from a time-coded transcript.
@@ -9,13 +10,14 @@
 abstract class subtitles {
 
 
-	# Version. Important!
-	static $version = "1.0.2"; // 15-01-2019
+	// Version. Important!
+	// static $version = "1.0.2"; // 15-01-2019
+	static $version = "1.0.3"; // 26-04-2023
 
-	# int $maxCharLine . Max number of chars for subtitle line. Default 144
+	// int $maxCharLine . Max number of chars for subtitle line. Default 144
 	static $maxCharLine;
 
-	# float $charTime . Number of seconds that each character is long
+	// float $charTime . Number of seconds that each character is long
 	static $charTime;
 
 
@@ -23,7 +25,7 @@ abstract class subtitles {
 	/**
 	* BUILD_SUBTITLES_TEXT
 	* @param object $request_options
-	* @return string | false $srt
+	* @return object$response
 	*/
 	public static function build_subtitles_text(object $request_options) : object {
 
@@ -312,7 +314,7 @@ abstract class subtitles {
 
 			$ar_final[] = subtitles::fragment_split($text, $tcin, $tcout);
 		}
-		#dump($ar_final,'ar_final en get_ar_lines'); die();
+		// dump($ar_final,'ar_final en get_ar_lines'); die();
 
 		# Plain formatted
 		$ar_final_formatted = array();
@@ -331,150 +333,130 @@ abstract class subtitles {
 	/**
 	* FRAGMENT_SPLIT
 	* LINES . Return lines of fragment
-	* @param string $text (raw text)
-	* @param string $tc_in_tag (tc tag like [TC_00:01:02_TC])
-	* @param string $tc_out_tag (tc tag like [TC_00:01:02_TC])
-	* @return
+	* @param string $text
+	* 	(raw text)
+	* @param string $tc_in_tag
+	* 	(tc tag like [TC_00:01:02_TC])
+	* @param string|null $tc_out_tag
+	* 	(tc tag like [TC_00:01:02_TC])
+	* @return array $ar_lines
 	*/
-	public static function fragment_split(string $text, string $tcin, string $tcout) : array {
+	public static function fragment_split(string $text, ?string $tcin, ?string $tcout) : array {
 
-		$siguiente_linea_add_b 	= '';
-		$siguiente_linea_add_i 	= '';
-		$lastLine				= false;
-		$ar_lines 				= array();
-		$refPos					= 0;
-		$offsetSecs 			= OptimizeTC::TC2seg($tcin); 	#dump($offsetSecs, ' offsetSecs');
-		$maxCharLine 			= subtitles::$maxCharLine;
-		$current_charTime 		= subtitles::$charTime; // milliseconds
-
-		# calculate duration of char (secs)
-		# there is a general calculation, but to optimize the approximation it is calculated with the current fragment tc's if it has tc's
-		#dump($current_charTime, 'current_charTime GLOBAL', array());
-		if(!empty($tcin) && !empty($tcout)) {
-
-			$current_durationSecs = OptimizeTC::TC2seg($tcout) - OptimizeTC::TC2seg($tcin);
-
-			if ($current_durationSecs<0) {
-				trigger_error("ERROR: fragment_split : el tcout ($tcout) es menor que el tcin ($tcin)");
-				#return array();
-			}else{
-				$current_lenChar		= subtitles::text_lenght($text);
-				$current_charTime		= $current_durationSecs / $current_lenChar ;
-				if ($current_charTime<0) {
-					#$current_charTime= (float)$this->full_char_time_ms/1000; // Fallback to general chartime
-					$current_charTime=0;
-				}
-			}
-		}
-		#dump($current_charTime, 'current_charTime AFTER', array()); die();
-
-		$reference_text = $text;
-		#$reference_text = strip_tags($reference_text);
-		#$reference_text = utf8_decode($text);
-
-		$i=0; do{
-			# First line
-
-			$current_line = mb_substr( $text, $refPos, $maxCharLine );
-
-			# search a blank space from end to begin . If n char of line < maxCharLine, this is the last line.
-			$line_length = subtitles::text_lenght($current_line);
-
-			// exception on large words
-				#dump(strpos($current_line, " "), 'strpos ++ '.$line_length.' - '.to_string($maxCharLine));
-
-			#if (strpos($current_line, " ")===false) {
-			#	error_log("$i - line length; $line_length - maxCharLine: $maxCharLine ");
-			#	$current_line = substr_replace($current_line, " ", ($line_length/2), 0);
-			#	$line_length = subtitles::text_lenght($current_line);
-			#}
-
-			if($line_length < $maxCharLine) {
-
-				$lastLine = true;
-				$spacePos = $line_length;
-					#dump($lastLine, ' LASTLINE .........................................................');
-			}else{
-				#dump(strrpos($current_line, '. '), 'strrpos($current_line, '. ')');
-				/*
-				if ( strrpos($current_line, '. ') >0 ) {
-					$spacePos = strrpos($current_line, '. ')+1;
-					#$spacePos 	= mb_strlen($current_line) - $last_appear;
-				}else{
-					$spacePos = strrpos($current_line, ' '); # Locate the last space
-					#$spacePos 	 = mb_strlen($current_line) - $last_appear;
-				}
-				*/
-				$spacePos = mb_strrpos($current_line, ' '); # Locate the last space
-					#$spacePos 	 = mb_strlen($current_line) - $last_appear;
+		// empty case
+			if (empty($text)) {
+				return [];
 			}
 
-			# save fragment text line
-			$current_line_cut = ''.trim( mb_substr($text, $refPos,  $spacePos) );
-				#dump($current_line_cut, "current_line_cut $refPos, $spacePos");
+		// short vars
+			$siguiente_linea_add_b	= '';
+			$siguiente_linea_add_i	= '';
+			$is_last_Line			= false;
+			$ar_lines				= array();
+			$refPos					= 0;
+			$offsetSecs				= OptimizeTC::TC2seg($tcin);
+			$maxCharLine			= subtitles::$maxCharLine;
+			$current_charTime		= subtitles::$charTime; // in milliseconds
 
-			#
-			# Bold & italics
-				#dump($current_line_cut, '$siguiente_linea_add_b', array());
+		// calculate duration of char (secs)
+		// there is a general calculation, but to optimize the approximation it is calculated
+		// with the current fragment tc's if it has tc's
+			if(!empty($tcin) && !empty($tcout)) {
 
-				#add bold and italics at the beginning of a paragraph that has continuity in bold or italics, the previous paragraph does not end and we transfer the label				$current_line_cut	= $siguiente_linea_add_b .=$current_line_cut;
-				$current_line_cut	= $siguiente_linea_add_i .=$current_line_cut;
-
-				# check if the bold has continuity in more than one line
-				$numero_br = str_replace('<b>', '<b>', $current_line_cut, $br_in);
-				$numero_br = str_replace('</b>', '</b>', $current_line_cut, $br_out);
-
-				if ($br_in>$br_out){
-					$current_line_cut .= '</b>';
-					$siguiente_linea_add_b = '<b>';
+				$current_durationSecs = OptimizeTC::TC2seg($tcout) - OptimizeTC::TC2seg($tcin);
+				if ($current_durationSecs<0) {
+					debug_log(__METHOD__
+						." Error: tcout ($tcout) is bigger than tc_in ($tcin) "
+						, logger::ERROR
+					);
 				}else{
-					$siguiente_linea_add_b = '';
+					$current_lenChar	= subtitles::text_lenght($text);
+					$current_charTime	= $current_durationSecs / $current_lenChar ;
+					if ($current_charTime<0) {
+						#$current_charTime= (float)$this->full_char_time_ms/1000; // Fallback to general chartime
+						$current_charTime = 0;
+					}
 				}
+			}
+
+		// build lines
+			$i=0;
+			do{
+				// First line
+				$current_line = mb_substr( $text, $refPos, $maxCharLine );
+
+				// search a blank space from end to begin . If n char of line < maxCharLine, this is the last line.
+				$line_length = subtitles::text_lenght($current_line);
+
+				// exception on large words
+					// if (strpos($current_line, " ")===false) {
+					// 	error_log("$i - line length; $line_length - maxCharLine: $maxCharLine ");
+					// 	$current_line = substr_replace($current_line, " ", ($line_length/2), 0);
+					// 	$line_length = subtitles::text_lenght($current_line);
+					// }
+
+				// spacePos
+					if($line_length <= $maxCharLine) {
+
+						$spacePos		= $line_length;
+						$is_last_Line	= true;
+
+					}else{
+
+						$spacePos = mb_strrpos($current_line, ' '); // Locate the last space
+					}
+
+				// save fragment text line
+					$current_line_cut = trim( mb_substr($text, $refPos,  $spacePos) );
 
 
-				# check if the italics have continuity in more than one line
-				$numero_br = str_replace('<i>', '<i>', $current_line_cut, $br_in);
-				$numero_br = str_replace('</i>', '</i>', $current_line_cut, $br_out);
+				// Bold & italics
+					// add bold and italics at the beginning of a paragraph that has continuity in bold or italics,
+					// the previous paragraph does not end and we transfer the label
+					$current_line_cut = $siguiente_linea_add_i .= $current_line_cut;
+					$current_line_cut = $siguiente_linea_add_b .= $current_line_cut;
 
-				if ($br_in>$br_out){
-					//echo "need a br $br_in $br_out";
-					$current_line_cut .= '</i>';
-					$siguiente_linea_add_i = '<i>';
-				}else{
-					$siguiente_linea_add_i = '';
-				}
+					// bold. check if the bold has continuity in more than one line
+						str_replace('<b>', '<b>', $current_line_cut, $count_br_in);
+						str_replace('</b>', '</b>', $current_line_cut, $count_br_out);
+						if ($count_br_in > $count_br_out) {
+							$current_line_cut .= '</b>';
+							$siguiente_linea_add_b = '<b>';
+						}else{
+							$siguiente_linea_add_b = '';
+						}
 
-			# PROVISIONAL : Bold and italic formatting sometimes fails. To make sure there are no form errors in html we check
-			# the final result of the line to debug the number and positioning of the labels
-			#if(SHOW_DEBUG) {
-				$current_line_cut = subtitles::revise_tag_in_line($current_line_cut,'b');
-				$current_line_cut = subtitles::revise_tag_in_line($current_line_cut,'i');
-			#}
+					// italic. check if the italics have continuity in more than one line
+						str_replace('<i>', '<i>', $current_line_cut, $count_br_in_italic);
+						str_replace('</i>', '</i>', $current_line_cut, $count_br_out_italic);
+						if ($count_br_in_italic > $count_br_out_italic){
+							$current_line_cut .= '</i>';
+							$siguiente_linea_add_i = '<i>';
+						}else{
+							$siguiente_linea_add_i = '';
+						}
 
-			$ar_lines[$i]['text'] = trim($current_line_cut);
-			#$current_tcin_secs	  = $offsetSecs - ($this->tcin);	// Eliminada esta parte (verificar su influencia): + ($this->dif_ms_in/1000);
-			$current_tcin_secs	  = $offsetSecs;
+				// PROVISIONAL : Bold and italic formatting sometimes fails. To make sure there are no form errors in html
+				// we check the final result of the line to debug the number and positioning of the labels
+					$current_line_cut = subtitles::revise_tag_in_line($current_line_cut,'b');
+					$current_line_cut = subtitles::revise_tag_in_line($current_line_cut,'i');
 
-			#$current_tcin_secs	= floatval(number_format($current_tcin_secs, 3));
-				#dump($current_tcin_secs, ' current_tcin_secs');
+				$ar_lines[$i]['text']	= trim($current_line_cut);
+				$current_tcin_secs		= $offsetSecs;
 
-			$ar_lines[$i]['tcin']	= OptimizeTC::ms_format($current_tcin_secs);
+				$ar_lines[$i]['tcin']	= OptimizeTC::ms_format($current_tcin_secs);
 
-			$duracion_linea = $spacePos * $current_charTime;
-			$offsetSecs += $duracion_linea ;
-				#dump($duracion_linea,"duracion_linea offsetSecs: $offsetSecs -  spacePos: $spacePos - current_charTime: $current_charTime");
+				$duracion_linea = $spacePos * $current_charTime;
+				$offsetSecs += $duracion_linea ;
 
-			# add refPos for next iteration
-			$refPos += $spacePos;
+				// add refPos for next iteration
+				$refPos += $spacePos;
 
-			$i++;
-		}while ($lastLine === false);
+				$i++;
+			}while($is_last_Line===false);
 
-		#dump($ar_lines, ' ar_lines ++ '.to_string());
-		#die();
-		#dump($ar_lines, 'ar_lines', array());
 
-		return (array)$ar_lines ;
+		return $ar_lines;
 	}//end fragment_split
 
 
@@ -483,30 +465,28 @@ abstract class subtitles {
 	* CALCULATE_GLOBAL_CHAR_TIME
 	* @param string $sourceText (removed non TC tags)
 	* @param int $total_ms
-	* @return float $global_charTime (in seconds)
+	* @return float $global_charTime
+	* 	value in seconds
 	*/
-	public static function calculate_global_char_time(string $sourceText, $total_ms) {
-		$global_charTime=0;
-		# count number of char
+	public static function calculate_global_char_time(string $sourceText, $total_ms) : float {
+
+		$global_charTime = 0;
+
+		// count number of char
 		$n_char = subtitles::text_lenght( $sourceText );
 
-		# charTime in secs
+		// charTime in secs
 		if($total_ms>0 && $n_char>0) {
+
 			$global_charTime = $total_ms / $n_char;
 
-			# Lo devolvemos en segundos
 			if ($global_charTime>0) {
 				$global_charTime = $global_charTime / 1000;
 			}
 		}
-		/*
-		dump($global_charTime, 'global_charTime', array(
-			'n_char' => $n_char,
-			'total_ms' => $total_ms,
-			));
-		*/
 
-		return $global_charTime;
+
+		return floatval($global_charTime);
 	}//end calculate_global_char_time
 
 
@@ -666,8 +646,19 @@ abstract class subtitles {
 	public static function get_subtitles_url($section_id, $tc_in=null, $tc_out=null, string $lang=DEDALO_DATA_LANG) : string {
 
 		// Subtitles url base
-			$TEXT_SUBTITLES_URL_BASE = DEDALO_CORE_URL . '/publication/server_api/v1/subtitles/';
-			#define('TEXT_SUBTITLES_URL_BASE', DEDALO_CORE_URL . '/publication/server_api/v1/subtitles/');
+			// define('TEXT_SUBTITLES_URL_BASE', DEDALO_CORE_URL . '/publication/server_api/v1/subtitles/');
+			// $TEXT_SUBTITLES_URL_BASE = DEDALO_CORE_URL . '/publication/server_api/v1/subtitles/';
+			$TEXT_SUBTITLES_URL_BASE = defined('TEXT_SUBTITLES_URL_BASE')
+				? TEXT_SUBTITLES_URL_BASE // defined in publication server config
+				: (defined('DEDALO_CORE_URL')
+					? DEDALO_CORE_URL . '/publication/server_api/v1/subtitles/'
+					: null);
+			if (empty($TEXT_SUBTITLES_URL_BASE)) {
+				debug_log(__METHOD__
+					." Error: Unable to get any TEXT_SUBTITLES_URL_BASE definition"
+					, logger::ERROR
+				);
+			}
 
 		// url vars
 			$url_vars = [];

@@ -6,6 +6,7 @@
 // component configuration vars
 	$permissions	= $this->get_component_permissions();
 	$mode			= $this->get_mode();
+	$quality		= $this->get_quality();
 
 
 
@@ -31,7 +32,7 @@
 					$current_context->features->ar_quality				= $this->get_ar_quality(); // defined in config
 					$current_context->features->default_quality			= $this->get_default_quality();
 					$current_context->features->quality					= $this->get_quality(); // current instance quality
-					$current_context->features->resource_type			= 'av';
+					$current_context->features->key_dir					= 'av';
 
 				$context[] = $current_context;
 				break;
@@ -49,6 +50,7 @@
 			switch ($mode) {
 
 				case 'list':
+				case 'tm':
 					$value = $this->get_list_value();
 					break;
 
@@ -58,17 +60,21 @@
 					break;
 			}
 
+		// $quality
+
+
 		// item
 			$item = $this->get_data_item($value);
 			// add useful properties
 			// posterframe_url
 				$item->posterframe_url	= $this->get_posterframe_url(
-					true, // bool test_file
+					($mode==='edit'), // bool test_file
 					false, // bool absolute
 					false // avoid_cache
 				);
 			// default quality video URL (usually from 404)
-				$item->video_url		= $this->file_exist()
+				$default_quality	= $this->get_default_quality();
+				$item->video_url	= $this->quality_file_exist( $default_quality )
 					? $this->get_url(false)
 					: null;
 			// files info datalist. Used for tools to know available quality versions and characteristics (size, URL, etc.)
@@ -78,7 +84,7 @@
 			if($mode==='edit') {
 
 				// media info
-					$item->media_info = $this->get_media_streams();
+					$item->media_info = $this->get_media_streams( $quality );
 
 				// subtitles info
 					$item->subtitles = (object)[

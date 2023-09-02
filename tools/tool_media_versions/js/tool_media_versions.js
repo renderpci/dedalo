@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, DEDALO_TOOLS_URL */
 /*eslint no-undef: "error"*/
 
@@ -15,7 +16,7 @@
 
 
 /**
-* tool_media_versions
+* TOOL_MEDIA_VERSIONS
 * Tool to make interesting things
 */
 export const tool_media_versions = function () {
@@ -38,7 +39,7 @@ export const tool_media_versions = function () {
 
 
 	return true
-}//end page
+}//end tool_media_versions
 
 
 
@@ -61,6 +62,8 @@ export const tool_media_versions = function () {
 /**
 * INIT
 * Custom tool init
+* @param object options
+* @return bool
 */
 tool_media_versions.prototype.init = async function(options) {
 
@@ -68,9 +71,6 @@ tool_media_versions.prototype.init = async function(options) {
 
 	// call the generic common tool init
 		const common_init = await tool_common.prototype.init.call(this, options);
-
-	// set the self specific vars not defined by the generic init (in tool_common)
-		self.trigger_url = `${DEDALO_TOOLS_URL}/${self.model}/trigger.${self.model}.php`;
 
 
 	return common_init
@@ -82,8 +82,7 @@ tool_media_versions.prototype.init = async function(options) {
 * BUILD
 * Custom tool build
 * @param bool autoload = false
-* @return promise
-* 	resolve: bool
+* @return bool
 */
 tool_media_versions.prototype.build = async function(autoload=false) {
 
@@ -95,18 +94,19 @@ tool_media_versions.prototype.build = async function(autoload=false) {
 	try {
 
 		// specific actions.. like fix main_element for convenience
-			const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_element")
+			const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==='main_element')
 			self.main_element		= self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
 
 			// self.main_element_quality.
-			// (!) It's used to force a specific main_element quality before render the component
+			// (!) It's used to force a specific quality for main_element before render the component
 				if (self.main_element_quality) {
 					self.main_element.context.features.quality = self.main_element_quality
 				}
 
 		// fix important vars
 			self.ar_quality	= self.caller.context.features.ar_quality
-			self.files_info	= self.caller.data.datalist
+			// self.files_info	= self.caller.data.datalist
+			self.files_info	= self.main_element.data.datalist
 
 	} catch (error) {
 		self.error = error
@@ -121,37 +121,67 @@ tool_media_versions.prototype.build = async function(autoload=false) {
 
 /**
 * GET_FILES_INFO
-* Check if every quality file exists
-* Note that files_info is called 'datalist' in caller component data
+* Check every quality file exists
+* Note that 'files_info' is called 'datalist' in caller and main component data
 * @return promise
-* 	resolve: array of objects
+* 	resolve: result (array of objects)
+* 	sample:
+* [
+    {
+        "quality": "original",
+        "file_exist": true,
+        "file_name": "rsc35_rsc167_238.mp4",
+        "file_path": "/path/dedalo/media/av/original/rsc35_rsc167_238.mp4",
+        "file_url": "/v6/media/av/original/rsc35_rsc167_238.mp4",
+        "file_size": 13975035,
+        "file_time": {...}
+    },
+    {
+        "quality": "404",
+        "file_exist": true,
+        "file_name": "rsc35_rsc167_238.mp4",
+        "file_path": "/path/dedalo/media/av/404/rsc35_rsc167_238.mp4",
+        "file_url": "/v6/media/av/404/rsc35_rsc167_238.mp4",
+        "file_size": 14455274,
+        "file_time": {...}
+    },
+    {
+        "quality": "audio",
+        "file_exist": false,
+        "file_name": null,
+        "file_path": null,
+        "file_url": null,
+        "file_size": null,
+        "file_time": null
+    }
+* ]
 */
 tool_media_versions.prototype.get_files_info = async function() {
 
 	const self = this
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'get_files_info')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			tipo			: self.main_element.tipo,
-			section_tipo	: self.main_element.section_tipo,
-			section_id		: self.main_element.section_id
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				tipo			: self.main_element.tipo,
+				section_tipo	: self.main_element.section_tipo,
+				section_id		: self.main_element.section_id
+			}
 		}
 
 	// call to the API, fetch data and get response
 		return new Promise(function(resolve){
 
 			data_manager.request({
-				body : rqo
+				body		: rqo,
+				use_worker	: true
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {
@@ -184,21 +214,20 @@ tool_media_versions.prototype.delete_file = async function(quality) {
 		}
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'delete_file')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			tipo			: self.main_element.tipo,
-			section_tipo	: self.main_element.section_tipo,
-			section_id		: self.main_element.section_id,
-			quality			: quality
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				tipo			: self.main_element.tipo,
+				section_tipo	: self.main_element.section_tipo,
+				section_id		: self.main_element.section_id,
+				quality			: quality
+			}
 		}
 
 	// call to the API, fetch data and get response
@@ -238,21 +267,20 @@ tool_media_versions.prototype.build_version = async function(quality) {
 		}
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'build_version')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			tipo			: self.main_element.tipo,
-			section_tipo	: self.main_element.section_tipo,
-			section_id		: self.main_element.section_id,
-			quality			: quality
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				tipo			: self.main_element.tipo,
+				section_tipo	: self.main_element.section_tipo,
+				section_id		: self.main_element.section_id,
+				quality			: quality
+			}
 		}
 
 	// call to the API, fetch data and get response
@@ -264,6 +292,10 @@ tool_media_versions.prototype.build_version = async function(quality) {
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {
 					dd_console("-> build_version API response:",'DEBUG',response);
+				}
+
+				if (response.result===false && response.msg) {
+					alert(response.msg);
 				}
 
 				const result = response.result // array of objects
@@ -292,21 +324,20 @@ tool_media_versions.prototype.conform_headers = async function(quality) {
 		}
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'conform_headers')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			tipo			: self.main_element.tipo,
-			section_tipo	: self.main_element.section_tipo,
-			section_id		: self.main_element.section_id,
-			quality			: quality
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				tipo			: self.main_element.tipo,
+				section_tipo	: self.main_element.section_tipo,
+				section_id		: self.main_element.section_id,
+				quality			: quality
+			}
 		}
 
 	// call to the API, fetch data and get response
@@ -333,7 +364,7 @@ tool_media_versions.prototype.conform_headers = async function(quality) {
 * ROTATE
 * 	Apply a rotation process to the selected file
 * @param string quality
-* @param string degrees
+* @param string|int degrees
 * 	-90 / 90
 * @return promise
 * 	resolve: array of objects
@@ -348,22 +379,21 @@ tool_media_versions.prototype.rotate = async function(quality, degrees) {
 		}
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'rotate')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			tipo			: self.main_element.tipo,
-			section_tipo	: self.main_element.section_tipo,
-			section_id		: self.main_element.section_id,
-			quality			: quality,
-			degrees			: degrees
-		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source
+			source	: source,
+			options	: {
+				tipo			: self.main_element.tipo,
+				section_tipo	: self.main_element.section_tipo,
+				section_id		: self.main_element.section_id,
+				quality			: quality,
+				degrees			: degrees
+			}
 		}
 
 	// call to the API, fetch data and get response
@@ -383,3 +413,8 @@ tool_media_versions.prototype.rotate = async function(quality, degrees) {
 			})
 		})
 }//end rotate
+
+
+
+// @license-end
+

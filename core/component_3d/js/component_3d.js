@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
@@ -5,11 +6,14 @@
 
 // imports
 	import {dd_console} from '../../common/js/utils/index.js'
-	// import {data_manager} from '../../common/js/data_manager.js'
-	import {common} from '../../common/js/common.js'
+	import {data_manager} from '../../common/js/data_manager.js'
+	import {common, create_source} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_edit_component_3d} from '../../component_3d/js/render_edit_component_3d.js'
 	import {render_list_component_3d} from '../../component_3d/js/render_list_component_3d.js'
+	import {render_search_component_3d} from '../../component_3d/js/render_search_component_3d.js'
+
+	import {upload} from '../../services/service_upload/js/service_upload.js'
 	// import {render_mini_component_3d} from '../../component_3d/js/render_mini_component_3d.js'
 	// import {render_player_component_3d} from '../../component_3d/js/render_player_component_3d.js'
 	// import {render_viewer_component_3d} from '../../component_3d/js/render_viewer_component_3d.js'
@@ -43,10 +47,7 @@ export const component_3d = function(){
 	this.video
 	this.quality
 
-	this.fragment = null
-
-
-	return true
+	this.fragment
 }//end  component_3d
 
 
@@ -73,9 +74,9 @@ export const component_3d = function(){
 
 	// render
 	component_3d.prototype.list					= render_list_component_3d.prototype.list
+	component_3d.prototype.tm					= render_edit_component_3d.prototype.list
 	component_3d.prototype.edit					= render_edit_component_3d.prototype.edit
-	component_3d.prototype.tm					= render_edit_component_3d.prototype.edit
-	component_3d.prototype.search				= render_edit_component_3d.prototype.search
+	component_3d.prototype.search				= render_search_component_3d.prototype.search
 	// component_3d.prototype.player			= render_player_component_3d.prototype.player
 	// component_3d.prototype.viewer			= render_viewer_component_3d.prototype.viewer
 
@@ -84,229 +85,95 @@ export const component_3d = function(){
 
 
 /**
-* GO_TO_TIME
-* the information could to come from in two ways:
-* 1 from a tag, with the information in tc format (00:00:08.000), the information in this case is stored in options.tag.data
-* 	usually fired by 'click_tag_tc' event
-* 2 direct in seconds (8)
-* the video player use seconds, if the information comes from tag it will convert this tc to seconds.
-* @param object options
-* Sample from component_text_area event :
-* {
-*  	caller : instance
-*	tag : object {node_name: 'img', type: 'tc', tag_id: '[TC_00:00:00.000_TC]', state: 'n', label: '00:00:00.000', …}
-*	text_editor : service_ckeditor instance
-* }
-* Sample from component_3d direct call :
-* {
-*  	seconds : float 16
-* }
-* @return double-precision floating-point seconds
+* CREATE_POSTERFRAME
+* 	Creates a new posterframe file from current_view overwriting old file if exists
+* @param object viewer
+* @return bool
 */
-component_3d.prototype.go_to_time = function(options) {
+component_3d.prototype.create_posterframe = async function( viewer ) {
 
 	const self = this
 
-	if (!self.video) {
-		dd_console("Ignored go_to_time call. No self.video is set", 'warning', [self.tipo, self.id]);
-		return false
-	}
-
-	const seconds = options.seconds
-		? options.seconds
-		: (options.tag && options.tag.data)
-			? self.tc_to_seconds(options.tag.data)
-			: 0
-
-	self.video.currentTime = seconds;
-
-	return seconds
-}//end  go_to_time
-
-
-
-/**
-* PLAY_PAUSE
-* @param int rewind_seconds = 0
-* @return bool self.video.paused
-*/
-component_3d.prototype.play_pause = function(rewind_seconds=0) {
-
-	const self = this
-
-	if (!self.video) {
-		dd_console("Ignored play_pause call. No self.video is set", 'warning', [self.tipo, self.id]);
-		return false
-	}
-
-	if (self.video.paused) {
-		self.video.play();
-	} else {
-		self.video.pause();
-		if(rewind_seconds > 0){
-			self.rewind(rewind_seconds)
-		}
-	}
-
-	return self.video.paused
-}//end play_pause
-
-
-
-/**
-* REWIND
-* @param int seconds
-* @return float self.video.currentTime
-*/
-component_3d.prototype.rewind = function(seconds) {
-
-	const self = this
-	self.video.currentTime = parseFloat(self.video.currentTime - seconds);
-
-	return self.video.currentTime
-}//end rewind
-
-
-
-/**
-* GET_DATA_TAG
-* Builds a tag object using current timecode
-* @return object data_tag
-*/
-component_3d.prototype.get_data_tag = function() {
-
-	const self 	= this
-
-	const tc 	= self.get_current_tc()
-	const data_tag = {
-		type	: 'tc',
-		tag_id	: tc,
-		state	: 'n',
-		label	: tc,
-		data	: tc
-	}
-
-	return data_tag
-}//end get_data_tag
-
-
-
-/**
-* GET_CURRENT_TC
-* Get current timecode
-*/
-component_3d.prototype.get_current_tc = function(){
-
-	const self = this
-
-	const tc = self.time_to_tc(self.video.currentTime)
-
-	return tc
-}//end get_current_tc
-
-
-
-/**
-* TC_TO_SECONDS
-* tc to seconds . convert tc like 00:12:19.878 to total seconds like 139.878
-* @param string tc
-* @return float total_seconds
-*/
-component_3d.prototype.tc_to_seconds = function(tc) {
-
-	if(Number.isInteger(tc)) {
-		return tc
-	}
-
-	//var tc		= "00:09:52.432";
-	const ar		= tc.split(":")
-	const ar_ms		= tc.split(".")
-
-	const hours		= parseFloat(ar[0])>0 ? parseFloat(ar[0]) : 0
-	const minutes	= parseFloat(ar[1])>0 ? parseFloat(ar[1]) : 0
-	const seconds	= parseFloat(ar[2])>0 ? parseFloat(ar[2]) : 0
-	const mseconds	= parseFloat(ar_ms[1])>0 ? parseFloat(ar_ms[1]) : 0
-
-	const total_seconds = parseFloat( (hours * 3600) + (minutes * 60) + seconds +'.'+ mseconds)
-
-
-	return total_seconds
-}//end  tc_to_seconds
-
-
-
-/**
-* TIME_TO_TC
-* Get the time of the video and convert to tc
-* with the 00:00:00.000 format
-* @param float time
-* @return string tc
-*/
-component_3d.prototype.time_to_tc = function(time) {
-
-	// date
-		const date = (new Date())
-		date.setHours(0); // reset the hours to 0
-		date.setMinutes(0); // reset the minutes to 0
-		date.setSeconds(0); // reset the seconds to 0
-		date.setMilliseconds(time * 1000); // set the date with the time of the video in ms
-
-	// format the tc with 09
-	// current_date can be; hour, min or second
-	function wrap(current_date) {
-		return ((current_date < 10)
-			? '0' + current_date
-			: current_date);
-	}
-	//format the ms with 001 or 010 or 100
-	function wrap_ms(ms) {
-		return ((ms < 1)
-			? '000'
-			: (ms < 10)
-				? '00' + ms
-				:  (ms < 100)
-					? '0' + ms
-					: ms);
-	}
-
-	const hours		= wrap(date.getHours() < 13
-		? date.getHours()
-		: (date.getHours() - 12));
-	const minutes	= wrap(date.getMinutes());
-	const seconds	= wrap(date.getSeconds());
-	const mseconds	= wrap_ms(date.getMilliseconds()) //fps: wrap(Math.floor(((time % 1) * frame_rate)));
-
-	// tc
-		const tc = `${hours}:${minutes}:${seconds}.${mseconds}`
-
-
-	return tc
-}//end time_to_tc
-
-
-
-/**
-* SET_PLAYBACK_RATE
-* set the video playback to specific speed rate
-* @param int rate
-* @return float rate
-*/
-component_3d.prototype.set_playback_rate = function(rate) {
-
-	const self = this
-
-	// no video case
-		if (!self.video) {
-			dd_console("Ignored rate call. No self.video is set", 'warning', [self.tipo, self.id]);
-			return false
+	// fallback to fixed self.viewer
+		if (!viewer) {
+			viewer = self.viewer
 		}
 
-	// Format number as float, precision 1
-		rate = parseFloat(rate)
-		rate = rate.toPrecision(1)
+	// image_blob
+		const image_blob = await viewer.get_image({
+			width	: 720,
+			height	: 404
+		})
+		image_blob.name = self.tipo +'_'+ self.section_tipo +'_'+ self.section_id +'.jpg' // added name to the tmp file
 
-	// fix value
-		self.video.playbackRate = rate;
+	// debug
+		if(SHOW_DEBUG===true) {
+			console.log('3d create_posterframe image_blob:', image_blob);
+		}
 
-	return rate
-}//end  set_playback_rate
+	// upload file (using service_upload)
+		// upload file as another images to tmp directory
+		const api_response = await upload({
+			id					: self.id,
+			file				: image_blob, // binary data as file
+			resource_type		: '3d', // target dir
+			allowed_extensions	: ['jpg'],
+			key_dir				: '3d',
+			max_size_bytes		: image_blob.size
+		})
+		if (!api_response.result) {
+			console.error("Error on api_response:", api_response);
+			return {
+				result	: false,
+				msg		: api_response.msg || 'Error on api_response'
+			}
+		}
+		// file_data set
+		const file_data = api_response.file_data
+		// force to name as image_blob.name to prevent chunk mode issues
+		file_data.name = image_blob.name
+
+
+	// debug
+		if(SHOW_DEBUG===true) {
+			console.log('3d file_data (on upload finish):', file_data);
+		}
+
+	return new Promise(function(resolve){
+
+		// move_file_to_dir
+		const rqo = {
+			dd_api	: 'dd_component_3d_api',
+			action	: 'move_file_to_dir',
+			source	: create_source(self),
+			options	: {
+				target_dir	: 'posterframe',
+				file_data	: file_data
+			}
+		}
+		// call to the API, fetch data and get response
+		data_manager.request({
+			body : rqo
+		})
+		.then(function(response){
+			if(SHOW_DEVELOPER===true) {
+				dd_console("-> upload_blob API response:",'DEBUG',response);
+			}
+
+			const result = response.result // array of objects
+
+			resolve(result)
+		})
+	})
+	// save file
+	// const posterframe =  viewer.renderer.domElement.toDataURL("image/jpeg", 0.95);
+	// const a = document.createElement('a');
+	//	a.href = posterframe;
+	//	a.download = 'a.jpg';
+	//	document.body.appendChild(a);
+	//	a.click();
+}//end create_posterframe
+
+
+
+// @license-end

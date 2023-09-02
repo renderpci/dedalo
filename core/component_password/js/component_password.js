@@ -1,9 +1,17 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*eslint no-undef: "error"*/
+
+
+
 // imports
 	// import {data_manager} from '../../common/js/data_manager.js'
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_edit_component_password} from '../../component_password/js/render_edit_component_password.js'
 	import {render_list_component_password} from '../../component_password/js/render_list_component_password.js'
+
+
 
 export const component_password = function(){
 
@@ -26,8 +34,6 @@ export const component_password = function(){
 	this.tools
 
 	this.duplicates = false
-
-	return true
 }//end component_password
 
 
@@ -144,13 +150,13 @@ component_password.prototype.validate_password_format = function (pw, options) {
 		}
 
 	// enforce the no sequential, identical characters rule
-		if (o.noSequential && /([\S\s])\1/.test(pw)) {
-			const response = {
-				result	: false,
-				msg		: 'identical characters in sequential order are not allowed'
-			}
-			return response;
-		}
+		// if (o.noSequential && /([\S\s])\1/.test(pw)) {
+		// 	const response = {
+		// 		result	: false,
+		// 		msg		: 'identical characters in sequential order are not allowed'
+		// 	}
+		// 	return response;
+		// }
 
 	// enforce alphanumeric/qwerty sequence ban rules
 		if (o.badSequenceLength) {
@@ -207,3 +213,7 @@ component_password.prototype.validate_password_format = function (pw, options) {
 	// great success!
 	return response;
 }//end password validator
+
+
+
+// @license-end

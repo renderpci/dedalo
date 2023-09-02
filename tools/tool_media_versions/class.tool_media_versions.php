@@ -16,19 +16,12 @@ class tool_media_versions extends tool_common {
 	/**
 	* GET_FILES_INFO
 	* Get file info for every quality like 'datalist' do
-	* @param object $request_options
+	* @param object $options
 	* @return object $response
 	*/
-	public static function get_files_info(object $request_options) : object {
+	public static function get_files_info(object $options) : object {
 
 		// options
-			$options = new stdClass();
-				$options->tipo			= null;
-				$options->section_tipo	= null;
-				$options->section_id	= null;
-				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-		// short vars
 			$tipo			= $options->tipo;
 			$section_tipo	= $options->section_tipo;
 			$section_id		= $options->section_id;
@@ -40,12 +33,14 @@ class tool_media_versions extends tool_common {
 
 		// component
 			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$component	= component_common::get_instance($model,
-														 $tipo,
-														 $section_id,
-														 'list',
-														 DEDALO_DATA_NOLAN,
-														 $section_tipo);
+			$component	= component_common::get_instance(
+				$model,
+				$tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
 
 			$files_info = $component->get_files_info();
 
@@ -65,30 +60,24 @@ class tool_media_versions extends tool_common {
 	* @param object $request_options
 	* @return object $response
 	*/
-	public static function delete_file(object $request_options) : object {
+	public static function delete_file(object $options) : object {
 
 		// options
-			$options = new stdClass();
-				$options->tipo			= null;
-				$options->section_tipo	= null;
-				$options->section_id	= null;
-				$options->quality		= null;
-				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-		// short vars
-			$tipo			= $options->tipo;
-			$section_tipo	= $options->section_tipo;
-			$section_id		= $options->section_id;
-			$quality		= $options->quality;
+			$tipo			= $options->tipo ?? null;
+			$section_tipo	= $options->section_tipo ?? null;
+			$section_id		= $options->section_id ?? null;
+			$quality		= $options->quality ?? null;
 
 		// component
 			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$component	= component_common::get_instance($model,
-														 $tipo,
-														 $section_id,
-														 'list',
-														 DEDALO_DATA_NOLAN,
-														 $section_tipo);
+			$component	= component_common::get_instance(
+				$model,
+				$tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
 
 			$response = $component->delete_file($quality);
 
@@ -101,33 +90,27 @@ class tool_media_versions extends tool_common {
 	/**
 	* BUILD_VERSION
 	* Creates a new version from original in given quality
-	* @param object $request_options
+	* @param object $options
 	* @return object $response
 	*/
-	public static function build_version(object $request_options) : object {
+	public static function build_version(object $options) : object {
 
 		// options
-			$options = new stdClass();
-				$options->tipo			= null;
-				$options->section_tipo	= null;
-				$options->section_id	= null;
-				$options->quality		= null;
-				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-		// short vars
-			$tipo			= $options->tipo;
-			$section_tipo	= $options->section_tipo;
-			$section_id		= $options->section_id;
-			$quality		= $options->quality;
+			$tipo			= $options->tipo ?? null;
+			$section_tipo	= $options->section_tipo ?? null;
+			$section_id		= $options->section_id ?? null;
+			$quality		= $options->quality ?? null;
 
 		// component
 			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$component	= component_common::get_instance($model,
-														 $tipo,
-														 $section_id,
-														 'list',
-														 DEDALO_DATA_NOLAN,
-														 $section_tipo);
+			$component	= component_common::get_instance(
+				$model,
+				$tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
 
 			$response = $component->build_version($quality);
 
@@ -140,20 +123,12 @@ class tool_media_versions extends tool_common {
 	/**
 	* CONFORM_HEADERS
 	* Creates a new version from original in given quality rebuilding headers
-	* @param object $request_options
+	* @param object $options
 	* @return object $response
 	*/
-	public static function conform_headers(object $request_options) : object {
+	public static function conform_headers(object $options) : object {
 
 		// options
-			$options = new stdClass();
-				$options->tipo			= null;
-				$options->section_tipo	= null;
-				$options->section_id	= null;
-				$options->quality		= null;
-				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-		// short vars
 			$tipo			= $options->tipo;
 			$section_tipo	= $options->section_tipo;
 			$section_id		= $options->section_id;
@@ -161,12 +136,14 @@ class tool_media_versions extends tool_common {
 
 		// component
 			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$component	= component_common::get_instance($model,
-														 $tipo,
-														 $section_id,
-														 'list',
-														 DEDALO_DATA_NOLAN,
-														 $section_tipo);
+			$component	= component_common::get_instance(
+				$model,
+				$tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
 
 			$response = $component->conform_headers($quality);
 

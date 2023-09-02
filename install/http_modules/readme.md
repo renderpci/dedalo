@@ -1,0 +1,1 @@
+Follow the instructions [here](../../docs/install/install_h264_module.md)

@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_TOOLS_URL */
 /*eslint no-undef: "error"*/
 
@@ -24,7 +25,7 @@ export const view_tools_edit_check_box = function() {
 /**
 * RENDER
 * Render node for use in edit
-* @return DOM node
+* @return HTMLElement
 */
 view_tools_edit_check_box.render = async function(self, options) {
 
@@ -38,7 +39,9 @@ view_tools_edit_check_box.render = async function(self, options) {
 		}
 
 	// buttons
-		const buttons = get_buttons(self)
+		const buttons = (self.permissions > 1)
+			? get_buttons(self)
+			: null
 
 	// ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
@@ -59,7 +62,7 @@ view_tools_edit_check_box.render = async function(self, options) {
 * GET_CONTENT_DATA
 * Render content_data node with all included contents
 * @param instance object self
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 
@@ -94,7 +97,7 @@ const get_content_data = function(self) {
 
 /**
 * GET_INPUT_ELEMENT
-* @return DOM node content_value
+* @return HTMLElement content_value
 */
 const get_input_element = (i, current_value, self) => {
 
@@ -178,3 +181,7 @@ const get_input_element = (i, current_value, self) => {
 
 	return content_value
 }//end get_input_element
+
+
+
+// @license-end

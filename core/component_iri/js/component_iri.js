@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -12,8 +13,8 @@
 	import {output_component_iri} from '../../component_iri/js/output_component_iri.js'
 
 
-export const component_iri = function(){
 
+export const component_iri = function(){
 
 	this.id
 
@@ -30,8 +31,6 @@ export const component_iri = function(){
 	this.data
 	this.parent
 	this.node
-
-	return true
 }//end component_iri
 
 
@@ -104,6 +103,11 @@ component_iri.prototype.build_value = function(key) {
 component_iri.prototype.keyup_handler = function(e, key, current_value, self) {
 	e.preventDefault()
 
+	// tab/shift case catch
+		if (e.key==='Tab' || e.key==='Shift') {
+			return
+		}
+
 	// Enter key force to save changes
 		if (e.key==='Enter') {
 
@@ -129,3 +133,8 @@ component_iri.prototype.keyup_handler = function(e, key, current_value, self) {
 
 	return true
 }//end keyup_handler
+
+
+
+// @license-end
+

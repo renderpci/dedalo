@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, DEDALO_API_URL */
 /*eslint no-undef: "error"*/
 
@@ -6,7 +7,7 @@
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {when_in_viewport} from '../../common/js/events.js'
-	// import {data_manager} from '../../common/js/data_manager.js'
+	import {data_manager} from '../../common/js/data_manager.js'
 	import {render_tree_data} from '../../common/js/common.js'
 	import {ui} from '../../common/js/ui.js'
 
@@ -27,7 +28,7 @@ export const render_area_development = function() {
 * EDIT
 * Render node for use in edit
 * @param object options
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_area_development.prototype.edit = async function(options) {
 
@@ -41,13 +42,9 @@ render_area_development.prototype.edit = async function(options) {
 			return content_data
 		}
 
-	// buttons
-		//const current_buttons = await buttons(self);
-
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper =	ui.area.build_wrapper_edit(self, {
-			content_data : content_data,
-			// buttons 	 : current_buttons
+			content_data : content_data
 		})
 		// set pointers
 		wrapper.content_data = content_data
@@ -61,7 +58,7 @@ render_area_development.prototype.edit = async function(options) {
 /**
 * LIST
 * Alias of edit
-* @return DOM node
+* @return HTMLElement
 */
 render_area_development.prototype.list = async function(options) {
 
@@ -72,7 +69,8 @@ render_area_development.prototype.list = async function(options) {
 
 /**
 * CONTENT_DATA
-* @return DOM node content_data
+* @param object self
+* @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 
@@ -86,25 +84,6 @@ const get_content_data = function(self) {
 
 			const widget_dom = build_widget(widget, self);
 			fragment.appendChild(widget_dom)
-
-			// load external
-				/*
-				const load_promises = []
-				if(widget.load_style) {
-
-					for (let i = 0; i < widget.load_style.length; i++) {
-						const src = widget.load_style[i]
-						load_promises.push( common.prototype.load_style(src) )
-					}
-				}
-				if(widget.load_script) {
-
-					for (let i = 0; i < widget.load_script.length; i++) {
-						const src = widget.load_script[i]
-						load_promises.push( common.prototype.load_script(src) )
-					}
-				}
-				*/
 		}
 
 	// content_data
@@ -131,6 +110,7 @@ const get_content_data = function(self) {
 * @param object item
 * @param object self
 * 	Instance of current area
+* @return HTMLElement container
 */
 const build_widget = (item, self) => {
 
@@ -176,109 +156,127 @@ const build_widget = (item, self) => {
 		}
 
 
-		// item info
-			if (item.info) {
-				const widget_info = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'link',
-					inner_html		: item.info || '',
-					parent			: body
+	// widget module check. Use if exists
+		const path = './widgets/'+ item.id +'/'+ item.id + '.js'
+		import(path)
+		.then(async function(module){
+
+			// instance widget
+				const widget = new module[item.id]()
+
+			// init widget
+				await widget.init({
+					id				: item.id,
+					section_tipo	: self.section_tipo,
+					section_id		: self.section_id,
+					lang			: self.lang,
+					mode			: self.mode, // list
+					model			: 'widget',
+					name			: item.label,
+					value			: item.value,
+					caller			: self
 				})
+			// build
+				await widget.build(false)
+			// render
+				widget.render()
+				.then(function(node){
+					if (node) {
+						node.classList.add('body_info')
+						body.appendChild(node)
+					}
+				})
+		})
+		.catch((err) => {
+			console.error(err)
 
-				// action
-					widget_info.addEventListener('mouseup',  async function(e){
-						e.stopPropagation()
+			// old builder fallback
+				/*
+				// item info
+					if (item.info) {
+						const widget_info = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'link',
+							inner_html		: item.info || '',
+							parent			: body
+						})
+						// action
+						widget_info.addEventListener('mouseup',  async function(e){
+							e.stopPropagation()
 
-						// confirm optional
-							if (item.confirm && !confirm(item.confirm)) {
-								return false
-							}
+							// confirm optional
+								if (item.confirm && !confirm(item.confirm)) {
+									return false
+								}
 
-						widget_info.classList.add('lock')
+							widget_info.classList.add('lock')
 
-						// spinner
-							const spinner = ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'spinner'
-							})
-							body_response.prepend(spinner)
+							// spinner
+								const spinner = ui.create_dom_element({
+									element_type	: 'div',
+									class_name		: 'spinner'
+								})
+								body_response.prepend(spinner)
 
-						// data_manager
-							// const api_response = await data_manager.request({
-							// 	body : {
-							// 		dd_api	: item.trigger.dd_api,
-							// 		action	: item.trigger.action,
-							// 		options	: item.trigger.options
-							// 	}
-							// })
-							// print_response(body_response, api_response)
-							// widget_info.classList.remove("lock")
-							// spinner.remove()
-
-						// delegates get_children task to worker. When finish, create global radio for current area
-							const current_worker = new Worker('../area_development/js/worker_area_development.js', {
-								type : 'module'
-							});
-							current_worker.postMessage({
-								url		: DEDALO_API_URL,
-								dd_api	: item.trigger.dd_api,
-								action	: item.trigger.action,
-								options	: item.trigger.options
-							});
-							current_worker.onmessage = function(e) {
-
-								const api_response = e.data.api_response
-
+							// data_manager
+								const api_response = await data_manager.request({
+									use_worker	: true,
+									body		: {
+										dd_api	: item.trigger.dd_api,
+										action	: item.trigger.action,
+										options	: item.trigger.options
+									}
+								})
 								print_response(body_response, api_response)
 								widget_info.classList.remove("lock")
 								spinner.remove()
+						})
+					}//end if (item.info) {
 
-								current_worker.terminate()
-							}
+				// body info
+					const body_info = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: "body_info",
+						inner_html		: item.body || '',
+						parent			: body
 					})
-			}//end if (item.info) {
 
-		// body info
-			const body_info = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: "body_info",
-				parent			: body,
-				inner_html		: item.body || ''
-			})
+				// body_response
+					const body_response = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'body_response',
+						parent			: body
+					})
 
-		// script (javascript code)
-			// if (item.script) {
-			// 	const script = ui.create_dom_element({
-			// 		element_type	: 'script',
-			// 		parent			: body,
-			// 		inner_html		: item.script
-			// 	})
-			// }
+				// script (javascript code)
+					// if (item.script) {
+					// 	const script = ui.create_dom_element({
+					// 		element_type	: 'script',
+					// 		parent			: body,
+					// 		inner_html		: item.script
+					// 	})
+					// }
 
-		// body response
-			const body_response = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'body_response',
-				parent			: body
-			})
+				// run widget scripts
+					if(item.run) {
+						for (let i = 0; i < item.run.length; i++) {
 
-	// run widget scripts
-		if(item.run) {
-			for (let i = 0; i < item.run.length; i++) {
+							const func			= item.run[i].fn
+							const func_options	= item.run[i].options
 
-				const func			= item.run[i].fn
-				const func_options	= item.run[i].options
+							// promise
+							self[func].apply(self, [{
+								...item,
+								...func_options,
+								body_info		: body_info,
+								body_response	: body_response,
+								print_response	: print_response
+							}])
+						}
+					}
+				*/
+			});
 
-				// promise
-				self[func].apply(self, [{
-					...item,
-					...func_options,
-					body_info		: body_info,
-					body_response	: body_response,
-					print_response	: print_response
-				}])
-			}
-		}
 
 
 	return container
@@ -294,7 +292,7 @@ const build_widget = (item, self) => {
 * @param object api_response
 * @return DON node container
 */
-const print_response = (container, api_response) => {
+export const print_response = (container, api_response) => {
 
 	// clean container
 		while (container.firstChild) {
@@ -343,34 +341,17 @@ const print_response = (container, api_response) => {
 
 
 /**
-* BUTTONS
-* @return DOM node buttons
-*/
-	// const buttons = async function(self) {
-
-	// 	const buttons = []
-
-	// 	return buttons
-	// }//end buttons
-
-
-
-/**
 * BUILD_FORM
 * Render a form for given widget_object
 * @param object widget_object
-* @return DOM node form_container
+* @return HTMLElement form_container
 */
 export const build_form = function(widget_object) {
 
-	// const self = this
-
 	// widget_object
-		// const trigger		= widget_object.trigger
 		const body_info			= widget_object.body_info
 		const body_response		= widget_object.body_response
-		const print_response	= widget_object.print_response
-		const confirm_text		= widget_object.confirm_text
+		const confirm_text		= widget_object.confirm_text || get_label.sure || 'Sure?'
 		const inputs			= widget_object.inputs || []
 		const submit_label		= widget_object.submit_label || 'OK'
 
@@ -384,7 +365,7 @@ export const build_form = function(widget_object) {
 		form_container.addEventListener('submit', async function(e){
 			e.preventDefault()
 
-			if ( confirm( (confirm_text || get_label.sure || 'Sure?') ) ) {
+			if ( confirm(confirm_text) ) {
 
 				// check mandatory values
 					for (let i = 0; i < input_nodes.length; i++) {
@@ -418,37 +399,38 @@ export const build_form = function(widget_object) {
 						: values
 
 					// data_manager
-						// const api_response = await data_manager.request({
-						// 	body : {
-						// 		dd_api	: widget_object.trigger.dd_api,
-						// 		action	: widget_object.trigger.action,
-						// 		options	: options
-						// 	}
-						// })
-						// print_response(body_response, api_response)
-						// form_container.classList.remove("lock")
-						// spinner.remove()
+						const api_response = await data_manager.request({
+							use_worker	: true,
+							body		: {
+								dd_api	: widget_object.trigger.dd_api,
+								action	: widget_object.trigger.action,
+								options	: options
+							}
+						})
+						print_response(body_response, api_response)
+						form_container.classList.remove('lock')
+						spinner.remove()
 
 					// delegates get_children task to worker. When finish, create global radio for current area
-						const current_worker = new Worker('../area_development/js/worker_area_development.js', {
-							type : 'module'
-						});
-						current_worker.postMessage({
-							url		: DEDALO_API_URL,
-							dd_api	: widget_object.trigger.dd_api,
-							action	: widget_object.trigger.action,
-							options	: options
-						});
-						current_worker.onmessage = function(e) {
-							const api_response = e.data.api_response
+						// const current_worker = new Worker('../area_development/js/worker_area_development.js', {
+						// 	type : 'module'
+						// });
+						// current_worker.postMessage({
+						// 	url		: DEDALO_API_URL,
+						// 	dd_api	: widget_object.trigger.dd_api,
+						// 	action	: widget_object.trigger.action,
+						// 	options	: options
+						// });
+						// current_worker.onmessage = function(e) {
+						// 	const api_response = e.data.api_response
 
-							print_response(body_response, api_response)
+						// 	print_response(body_response, api_response)
 
-							form_container.classList.remove('lock')
-							spinner.remove()
+						// 	form_container.classList.remove('lock')
+						// 	spinner.remove()
 
-							current_worker.terminate()
-						}
+						// 	current_worker.terminate()
+						// }
 			}
 		})
 
@@ -491,7 +473,7 @@ export const build_form = function(widget_object) {
 		})
 		button_submit.addEventListener('click', function(){
 
-			// if (confirm( (get_label["seguro"] || "Sure?") )) {
+			// if (confirm( (get_label["sure"] || "Sure?") )) {
 			// 	for (let i = 0; i < input_nodes.length; i++) {
 			// 		if(input_nodes[i].classList.contains("mandatory") && input_nodes[i].value.length<1) {
 			// 			input_nodes[i].focus()
@@ -505,3 +487,7 @@ export const build_form = function(widget_object) {
 
 	return form_container
 }//end build_form
+
+
+
+// @license-end

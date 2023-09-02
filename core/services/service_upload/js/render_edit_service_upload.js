@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
@@ -23,7 +24,7 @@ export const render_edit_service_upload = function() {
 /**
 * EDIT
 * Render node for use like button
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_edit_service_upload.prototype.edit = async function (options) {
 
@@ -44,16 +45,18 @@ render_edit_service_upload.prototype.edit = async function (options) {
 			class_name		: 'service_upload'
 		})
 		wrapper.appendChild(content_data)
+		// set pointers
+		wrapper.content_data = content_data
 
 
 	return wrapper
-}//end render_edit_service_upload
+}//end edit
 
 
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 export const get_content_data = function(self) {
 
@@ -68,6 +71,8 @@ export const get_content_data = function(self) {
 		form.name		= 'form_upload'
 		form.enctype	= 'multipart/form-data'
 		form.method		= 'post'
+		// fix form
+		self.form		= form
 
 	// input_file
 		const input_file = ui.create_dom_element({
@@ -101,6 +106,8 @@ export const get_content_data = function(self) {
 	// progress_bar_container
 		const progress_bar_container = render_progress_bar(self)
 		fragment.appendChild(progress_bar_container)
+		// fix progress_bar_container
+		self.progress_bar_container = progress_bar_container
 
 	// response_container
 		const response_container = ui.create_dom_element({
@@ -145,20 +152,26 @@ export const get_content_data = function(self) {
 
 /**
 * RENDER_INFO
-* @return DOM node info
+* @param object self
+* @return HTMLElement info
 */
 export const render_info = function(self) {
 
 	// container info
 		const info = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'info'
+			class_name		: 'info_container '
 		})
 
 	// caller component
 		ui.create_dom_element({
+			element_type	: 'label',
+			inner_html		: 'Caller',
+			parent			: info
+		})
+		ui.create_dom_element({
 			element_type	: 'div',
-			inner_html		: '<label>Caller</label>' + self.caller.model,
+			inner_html		: self.caller.model,
 			parent			: info
 		})
 
@@ -168,46 +181,91 @@ export const render_info = function(self) {
 			: null
 		if (target_quality) {
 			ui.create_dom_element({
+				element_type	: 'label',
+				inner_html		: 'Target quality',
+				parent			: info
+			})
+			ui.create_dom_element({
 				element_type	: 'div',
-				inner_html		: '<label>Target quality</label>' + target_quality,
+				inner_html		: target_quality,
 				parent			: info
 			})
 		}
 
 	// allowed extensions
 		ui.create_dom_element({
+			element_type	: 'label',
+			inner_html		: 'Allowed extensions',
+			parent			: info
+		})
+		ui.create_dom_element({
 			element_type	: 'div',
-			inner_html		: '<label>Allowed extensions</label>' + self.allowed_extensions.join(", "),
+			inner_html		: self.allowed_extensions.join(", "),
 			parent			: info
 		})
 
-	// max upload file size
+	// max file size upload file size
 		const max_mb = Math.floor(self.max_size_bytes / (1024*1024))
+		ui.create_dom_element({
+			element_type	: 'label',
+			inner_html		: 'Max file size',
+			parent			: info
+		})
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: (max_mb < 100) ? 'warning' : '',
-			inner_html		: '<label>Max file size</label>' + max_mb.toLocaleString() + ' MB',
+			inner_html		: max_mb.toLocaleString() + ' MB',
+			parent			: info
+		})
+
+	// DEDALO_UPLOAD_SERVICE_CHUNK_FILES
+		ui.create_dom_element({
+			element_type	: 'label',
+			inner_html		: 'Chunk files size',
+			parent			: info
+		})
+		const chunk_text = self.upload_service_chunk_files
+			? self.upload_service_chunk_files + ' MB'
+			: JSON.stringify(self.upload_service_chunk_files)
+		ui.create_dom_element({
+			element_type	: 'div',
+			inner_html		: chunk_text,
 			parent			: info
 		})
 
 	// sys_get_temp_dir
 		ui.create_dom_element({
+			element_type	: 'label',
+			inner_html		: 'System temp dir',
+			parent			: info
+		})
+		ui.create_dom_element({
 			element_type	: 'div',
-			inner_html		: '<label>System temp dir</label>' + self.sys_get_temp_dir,
+			inner_html		: self.sys_get_temp_dir,
 			parent			: info
 		})
 
 	// upload_tmp_dir
 		ui.create_dom_element({
+			element_type	: 'label',
+			inner_html		: 'User upload tmp dir',
+			parent			: info
+		})
+		ui.create_dom_element({
 			element_type	: 'div',
-			inner_html		: '<label>User upload tmp dir</label>' + self.upload_tmp_dir,
+			inner_html		: self.upload_tmp_dir,
 			parent			: info
 		})
 
 	// upload_tmp_perms
 		ui.create_dom_element({
+			element_type	: 'label',
+			inner_html		: 'User upload tmp perms',
+			parent			: info
+		})
+		ui.create_dom_element({
 			element_type	: 'div',
-			inner_html		: '<label>User upload tmp perms</label>' + self.upload_tmp_perms,
+			inner_html		: self.upload_tmp_perms,
 			parent			: info
 		})
 
@@ -216,8 +274,13 @@ export const render_info = function(self) {
 			? (self.session_cache_expire / (60 * 24)).toLocaleString() + ' Days'
 			: (self.session_cache_expire / 60).toLocaleString() + ' Hours'
 		ui.create_dom_element({
+			element_type	: 'label',
+			inner_html		: 'Session cache expire',
+			parent			: info
+		})
+		ui.create_dom_element({
 			element_type	: 'div',
-			inner_html	 	: '<label>Session cache expire</label>' + session_cache_expire + ' [' + self.session_cache_expire.toLocaleString() + ' minutes]',
+			inner_html	 	: session_cache_expire + ' [' + self.session_cache_expire.toLocaleString() + ' minutes]',
 			parent 			: info
 		})
 
@@ -229,7 +292,7 @@ export const render_info = function(self) {
 
 /**
 * RENDER_FILEDRAG
-* @return DOM node filedrag
+* @return HTMLElement filedrag
 */
 export const render_filedrag = function(self) {
 
@@ -237,7 +300,7 @@ export const render_filedrag = function(self) {
 		const filedrag = ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: 'filedrag'
-			// text_content	: 'Select a file to upload or drop it here', // get_label.seleccione_un_fichero ||
+			// text_content	: 'Select a file to upload or drop it here', // get_label.select_a_file ||
 			// parent		: form
 		})
 		filedrag.setAttribute('for','file_to_upload')
@@ -304,6 +367,10 @@ export const render_filedrag = function(self) {
 /**
 * FILE_SELECTED
 * Manages user drag file or user file selection
+* Trigger upload file action
+* @param object self
+* @param object file
+* @return object response
 */
 export const file_selected = async function(self, file) {
 
@@ -317,11 +384,18 @@ export const file_selected = async function(self, file) {
 	// show filedrag again
 		self.filedrag.classList.remove('loading_file')
 
+	// reset classes
+		self.response_msg.classList.remove('failed')
+		self.response_msg.classList.remove('success')
+
 	// on finish actions
 		if (response.result===true) {
 			self.response_msg.innerHTML = response.msg || 'OK. File uploaded'
+			self.response_msg.classList.add('success')
+
 		}else{
 			self.response_msg.innerHTML = response.msg || 'Error on upload file'
+			self.response_msg.classList.add('failed')
 		}
 
 
@@ -332,6 +406,8 @@ export const file_selected = async function(self, file) {
 
 /**
 * RENDER_PROGRESS_BAR
+* @param object options
+* @return HTMLElement progress_bar_container
 */
 export const render_progress_bar = function(self) {
 
@@ -369,6 +445,8 @@ export const render_progress_bar = function(self) {
 
 /**
 * FILE_DRAG_HOVER
+* @param event e
+* return bool
 */
 export const file_drag_hover = function(e) {
 
@@ -385,3 +463,5 @@ export const file_drag_hover = function(e) {
 }//end file_drag_hover
 
 
+
+// @license-end

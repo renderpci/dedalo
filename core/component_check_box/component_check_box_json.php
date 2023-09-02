@@ -41,7 +41,6 @@
 	}//end if($options->get_context===true)
 
 
-
 // data
 	$data = [];
 
@@ -51,6 +50,7 @@
 			switch($mode) {
 
 				case 'list':
+				case 'tm':
 					$value				= $this->get_list_value();
 					break;
 
@@ -75,8 +75,6 @@
 
 		$data[] = $item;
 	}//end if($options->get_data===true && $permissions>0)
-
-
 
 // JSON string
 	return common::build_element_json_output($context, $data);

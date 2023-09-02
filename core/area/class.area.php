@@ -16,10 +16,28 @@ class area extends area_common  {
 
 
 	/**
+	* GET_IDENTIFIER
+	* Compound a chained plain flat identifier string for use as media component name, etc..
+	* @return string $name Like 'dd42_dd207_1'
+	*/
+	public function get_identifier() : string {
+
+		if ( empty($this->get_tipo() ) ) {
+			throw new Exception("Error Processing Request. empty tipo", 1);
+		}
+
+		$identifier = $this->tipo;
+
+		return $identifier;
+	}//end get_identifier
+
+
+
+	/**
 	* GET AREAS RECURSIVE IN JSON FORMAT OF ALL MAJOR AREAS
 	* Iterate all major existing area types (area_root,area_resource,area_admin, ...)
 	* and get all tipos of every one mixed in one full ontology JSON array
-	* Used in menu and security access
+	* Used in menu (excluding config_areas->areas_deny) and security access (full view)
 	* @see menu, component_security_access
 	* @return array $areas
 	*/
@@ -78,8 +96,12 @@ class area extends area_common  {
 					$ar_group_areas	= self::get_ar_children_areas_recursive($area_tipo);
 
 					// get the JSON format of the ontology for all children
-					foreach ($ar_group_areas as $children_area) {
-						$areas[] = ontology::tipo_to_json_item($children_area, [
+					foreach ($ar_group_areas as $child_area_tipo) {
+
+						// skip the areas_deny
+						if(in_array($child_area_tipo, $config_areas->areas_deny)) continue;
+
+						$areas[] = ontology::tipo_to_json_item($child_area_tipo, [
 							'tipo'			=> true,
 							'tld'			=> false,
 							'is_model'		=> false,
@@ -103,7 +125,10 @@ class area extends area_common  {
 			if(SHOW_DEBUG===true) {
 				$total	= round( start_time() - $start_time, 3);
 				$n		= count($areas);
-				debug_log(__METHOD__." Total ($n): ".exec_time_unit($start_time,'ms')." ms - ratio(total/n): " . ($total/$n), logger::DEBUG);
+				debug_log(__METHOD__
+					." Total ($n): ".exec_time_unit($start_time,'ms')." ms - ratio(total/n): " . ($total/$n)
+					, logger::DEBUG
+				);
 			}
 
 		// gc_enable();
@@ -162,12 +187,19 @@ class area extends area_common  {
 
 	/**
 	* AREA_TO_REMOVE
+	* Read file 'config_areas.php' from config and set
+	* areas_deny and areas_allow array values
 	* @return object $config_areas
 	*/
 	public static function get_config_areas() : object {
 
 		if( !include(DEDALO_CONFIG_PATH . '/config_areas.php') ) {
-			debug_log(__METHOD__." ERROR ON LOAD FILE config4_areas . Using empty values as default ".to_string(), logger::ERROR);
+
+			debug_log(__METHOD__
+				." ERROR ON LOAD FILE config4_areas . Using empty values as default "
+				, logger::ERROR
+			);
+
 			if(SHOW_DEBUG===true) {
 				throw new Exception("Error Processing Request. config4_areas file not found", 1);;
 			}
@@ -205,27 +237,27 @@ class area extends area_common  {
 	* @param callable $callback Function must return boolean value indicating whether to remove the node.
 	* @return array
 	*/
-	public static function walk_recursive_remove(array $array, callable $callback) : array {
+		// public static function walk_recursive_remove(array $array, callable $callback) : array {
 
-		$user_id = (int)$_SESSION['dedalo']['auth']['user_id'];
+		// 	$user_id = (int)$_SESSION['dedalo']['auth']['user_id'];
 
-	    foreach ($array as $k => $v) {
+		//     foreach ($array as $k => $v) {
 
-	    	if (SHOW_DEBUG===true && $user_id===DEDALO_SUPERUSER ) {
-	    		$to_remove = false;
-	    	}else{
-	    		$to_remove = area::area_to_remove($k);
-	    	}
+		//     	if (SHOW_DEBUG===true && $user_id===DEDALO_SUPERUSER ) {
+		//     		$to_remove = false;
+		//     	}else{
+		//     		$to_remove = area::area_to_remove($k);
+		//     	}
 
-            if ($to_remove===true) {
-                unset($array[$k]);
-            }else if(is_array($v)) {
-            	$array[$k] = area::walk_recursive_remove($v, $callback);
-            }
-	    }
+	    //         if ($to_remove===true) {
+	    //             unset($array[$k]);
+	    //         }else if(is_array($v)) {
+	    //         	$array[$k] = area::walk_recursive_remove($v, $callback);
+	    //         }
+		//     }
 
-	    return $array;
-	}//end walk_recursive_remove
+		//     return $array;
+		// }//end walk_recursive_remove
 
 
 

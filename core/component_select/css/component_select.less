@@ -5,7 +5,8 @@
 * Included from main.less file
 */
 .component_select,
-.component_select_lang {
+.component_select_lang,
+.component_relation_model {
 
 	// shared
 	>.content_data {
@@ -67,6 +68,12 @@
 
 	&.view_line {
 		display: inline-block;
+
+		>.content_data >.content_value >.select {
+			// width: auto;
+			height: 1.5rem;
+			margin-left: 0.5rem;
+		}
 	}
 
 }//end .component_select

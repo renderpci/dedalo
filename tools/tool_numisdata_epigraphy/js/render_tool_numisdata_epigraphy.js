@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -28,7 +29,7 @@ export const render_tool_numisdata_epigraphy = function() {
 /**
 * EDIT
 * Render node
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_tool_numisdata_epigraphy.prototype.edit = async function(options={render_level:'full'}) {
 
@@ -62,13 +63,13 @@ render_tool_numisdata_epigraphy.prototype.edit = async function(options={render_
 
 
 	return wrapper
-}//end render_tool_numisdata_epigraphy
+}//end edit
 
 
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data_edit = async function(self) {
 
@@ -314,17 +315,31 @@ const get_content_data_edit = async function(self) {
 				parent 			: right_container
 			})
 
-				const mark_node = await self.mark.render()
-				marks_container.appendChild(mark_node)
+				const obverse_mark_node = await self.obverse_mark.render()
+				marks_container.appendChild(obverse_mark_node)
 				self.events_tokens.push(
-					event_manager.subscribe('save_'+ self.mark.id_base, update_mark)
+					event_manager.subscribe('save_'+ self.obverse_mark.id_base, update_obverse_mark)
 				)
-				function update_mark(options) {
+				function update_obverse_mark(options) {
 					update_text_nodes({
-						caller	: self.mark,
-						node	: mark_text_container,
+						caller	: self.obverse_mark,
+						node	: obverse_mark_text_container,
 						role	: 'mark_text',
-						name	: 'mark_text'
+						name	: 'obverse_mark_text'
+					})
+				}
+
+				const reverse_mark_node = await self.reverse_mark.render()
+				marks_container.appendChild(reverse_mark_node)
+				self.events_tokens.push(
+					event_manager.subscribe('save_'+ self.reverse_mark.id_base, update_reverse_mark)
+				)
+				function update_reverse_mark(options) {
+					update_text_nodes({
+						caller	: self.reverse_mark,
+						node	: reverse_mark_text_container,
+						role	: 'mark_text',
+						name	: 'reverse_mark_text'
 					})
 				}
 				const marks_text_container = ui.create_dom_element({
@@ -332,13 +347,19 @@ const get_content_data_edit = async function(self) {
 					class_name 		: 'portal_container desings_container',
 					parent 			: right_container
 				})
-					const mark_text_container = ui.create_dom_element({
+					const obverse_mark_text_container = ui.create_dom_element({
 						element_type	: 'div',
-						class_name 		: 'text_container mark_text_container',
+						class_name 		: 'text_container obverse_mark_text_container',
+						parent 			: marks_text_container
+					})
+					const reverse_mark_text_container = ui.create_dom_element({
+						element_type	: 'div',
+						class_name 		: 'text_container reverse_mark_text_container',
 						parent 			: marks_text_container
 					})
 				// first load of the text data
-					update_mark()
+					update_obverse_mark()
+					update_reverse_mark()
 
  		// edges nodes
 			const edges_container = ui.create_dom_element({
@@ -485,7 +506,7 @@ const render_related_list = function(self){
 /**
 * RENDER_HEADER_OPTIONS
 * This is used to build a optional buttons inside the header
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const render_header_options = async function(self, content_data) {
 
@@ -500,7 +521,7 @@ const render_header_options = async function(self, content_data) {
 		const lang_label = ui.create_dom_element({
 			element_type	: 'div',
 			class_name 		: 'lang_label',
-			inner_html 		: get_label.idioma || 'Language',
+			inner_html 		: get_label.language || 'Language',
 			parent 			: lang_container
 		})
 		// the lang selector use the content_data pointer .left_container to remove the transcription text_area and rebuild the new node
@@ -534,7 +555,7 @@ const render_header_options = async function(self, content_data) {
 * the components are defined in ontology as tool_config->name_of_the_tool->ddo_map
 * @param object self
 * 	instance of current tool
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const render_status = async function(self) {
 
@@ -569,7 +590,7 @@ const render_status = async function(self) {
 * This is used to build a optional buttons inside the header
 * @param object self
 * 	instance of current tool
-* @return DOM node activity_info_body
+* @return HTMLElement activity_info_body
 */
 const render_activity_info = function(self) {
 
@@ -598,3 +619,7 @@ const render_activity_info = function(self) {
 
 	return activity_info_body
 }//end render_activity_info
+
+
+
+// @license-end

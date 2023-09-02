@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS COMPONENT_RELATION_MODEL
 *
 *
@@ -12,7 +12,7 @@ class component_relation_model extends component_relation_common {
 	protected $default_relation_type		= DEDALO_RELATION_TYPE_MODEL_TIPO;
 	protected $default_relation_type_rel	= null;
 
-	# test_equal_properties is used to verify duplicates when add locators
+	// test_equal_properties is used to verify duplicates when add locators
 	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
 
 
@@ -47,11 +47,14 @@ class component_relation_model extends component_relation_common {
 			// current_label array|null
 			$current_label = component_relation_common::get_locator_value(
 				$locator, // object locator
-				$lang, // string lang
+				$lang ?? DEDALO_DATA_LANG, // string lang
 				false // bool show_parents
 			);
-			$ar_values[] = $current_label;
+			$ar_values[] = is_array($current_label)
+				? implode($separator, $current_label)
+				: $current_label;
 		}
+
 		$valor = implode($separator, $ar_values);
 
 
@@ -102,15 +105,15 @@ class component_relation_model extends component_relation_common {
 		switch ($target_mode) {
 
 			case 'free':
-				# Defined in structure
+				// Defined in structure
 				$ar_target_section_tipo = (array)$this->properties->target_values;
 				break;
 
 			default:
 				// try to calculate from hierarchy section looking in target model value of hierarchy
-					$section_tipo 				= $this->section_tipo;
-					$hierarchy_component_tipo 	= DEDALO_HIERARCHY_TARGET_SECTION_TIPO;
-					$section_id = hierarchy::get_hierarchy_section($section_tipo, $hierarchy_component_tipo);
+					$section_tipo				= $this->section_tipo;
+					$hierarchy_component_tipo	= DEDALO_HIERARCHY_TARGET_SECTION_TIPO;
+					$section_id					= hierarchy::get_hierarchy_section($section_tipo, $hierarchy_component_tipo);
 
 					if (!empty($section_id)) {
 						// get target section model component value

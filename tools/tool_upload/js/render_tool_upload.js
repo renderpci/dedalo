@@ -1,10 +1,12 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_TOOLS_URL */
 /*eslint no-undef: "error"*/
 
 
 
 // imports
-	// import {event_manager} from '../../../core/common/js/event_manager.js'
+	import {event_manager} from '../../../core/common/js/event_manager.js'
+	import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
 	import {ui} from '../../../core/common/js/ui.js'
 
 
@@ -23,7 +25,8 @@ export const render_tool_upload = function() {
 /**
 * EDIT
 * Render node for use like button
-* @return DOM node
+* @param object options
+* @return HTMLElement wrapper
 */
 render_tool_upload.prototype.edit = async function (options) {
 
@@ -43,27 +46,6 @@ render_tool_upload.prototype.edit = async function (options) {
 			content_data : content_data
 		})
 
-	// buttons container
-		// 	const buttons_container = ui.create_dom_element({
-		// 		element_type	: 'div',
-		// 		class_name 		: 'buttons_container',
-		// 		parent 			: wrapper
-		// 	})
-
-	// tool_container
-		//const tool_container = document.getElementById('tool_container')
-		//if(tool_container!==null){
-		//	tool_container.appendChild(wrapper)
-		//}else{
-		//	const main = document.getElementById('main')
-		//	const new_tool_container = ui.create_dom_element({
-		//		id 				: 'tool_container',
-		//		element_type	: 'div',
-		//		parent 			: main
-		//	})
-		//	new_tool_container.appendChild(wrapper)
-		//}
-
 	// service_upload
 		// Use the service_upload to get and render the button to upload the file,
 		// get functionality defined (drag, drop, create folder, etc..)
@@ -73,7 +55,6 @@ render_tool_upload.prototype.edit = async function (options) {
 			class_name		: 'service_upload_container'
 		})
 		wrapper.tool_header.after(service_upload_container)
-		// content_data.appendChild(service_upload_container)
 		// spinner
 		const spinner = ui.create_dom_element({
 			element_type	: 'div',
@@ -90,16 +71,6 @@ render_tool_upload.prototype.edit = async function (options) {
 			})
 		})
 
-	// modal container
-		// if (!window.opener) {
-		// 	const header	= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
-		// 	const modal		= ui.attach_to_modal(header, wrapper, null)
-		// 	modal.on_close	= () => {
-		// 		// when closing the modal, common destroy is called to remove tool and elements instances
-		// 		self.destroy(true, true, true)
-		// 	}
-		// }
-
 
 	return wrapper
 }//end edit
@@ -108,7 +79,8 @@ render_tool_upload.prototype.edit = async function (options) {
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @param object self
+* @return HTMLElement content_data
 */
 export const get_content_data = function(self) {
 
@@ -122,18 +94,14 @@ export const get_content_data = function(self) {
 		})
 		self.process_file = process_file
 
-	// preview_image
-		const preview_image = ui.create_dom_element({
-			element_type	: 'img',
-			class_name		: 'preview_image',
+	// preview_component_container
+		const preview_component_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'preview_component_container',
 			parent			: fragment
 		})
-		preview_image.addEventListener("click", function(e){
-			e.stopPropagation()
-			window.open(this.src)
-		})
 		// fix
-		self.preview_image = preview_image
+		self.preview_component_container = preview_component_container
 
 	// content_data
 		const content_data = ui.tool.build_content_data(self)
@@ -150,7 +118,7 @@ export const get_content_data = function(self) {
 * Called on service_upload has finished of upload file using a event
 * @see event subscription at 'init' function
 * @param object options
-* @return promise
+* @return bool
 */
 render_tool_upload.prototype.upload_done = async function (options) {
 
@@ -176,33 +144,99 @@ render_tool_upload.prototype.upload_done = async function (options) {
 		})
 		self.process_file.appendChild(spinner)
 
-	// reset preview_image
-		self.preview_image.src = ''
-
 	// process uploaded file (move temp uploaded file to definitive location and name)
-		self.process_uploaded_file(file_data)
-		.then(function(response) {
+		const response = await self.process_uploaded_file(file_data)
 
-			spinner.remove()
+	// spinner remove
+		spinner.remove()
 
-			// process_file remove info loading
-			if (!response.result) {
-				// error case
-				process_file_info.innerHTML = response.msg || 'Error on processing file!'
+	// reset classes
+		process_file_info.classList.remove('failed')
+		process_file_info.classList.remove('success')
 
-			}else{
-				// OK case
-				process_file_info.innerHTML = response.msg || 'Processing file done successfully.'
+	// response ERROR case
+		if (!response.result) {
 
-				// preview image update
-					if (response.preview_url) {
-						self.preview_image.src = response.preview_url
-					}
+			// ERROR case
+			process_file_info.innerHTML = response.msg || 'Error on processing file!'
+			process_file_info.classList.add('failed')
 
-				// caller update. (usually media component like component_image)
-					// self.caller.refresh() (!) Unnecessary because on close this tool window, component is refresh too
-			}
-		})
+			return false
+		}
+
+	// response OK case
+		process_file_info.innerHTML = response.msg || 'Processing file done successfully.'
+		process_file_info.classList.add('success')
+
+	// hide service_upload elements. To upload again, user must to reload the page
+		setTimeout(function(){
+			[self.service_upload.form, self.service_upload.progress_bar_container].map(el => el.classList.add('hide'));
+		}, 1)
+
+	// preview_component_container
+		if (self.caller.type==='component') {
+
+			// component_instance. Get instance and init, build
+			// Must be a new one, not use the caller instance to prevent problems
+			// with data update on build
+				const component_instance = await get_instance({
+					model			: self.caller.model,
+					mode			: 'edit',
+					view			: 'default',
+					permissions		: 1,
+					tipo			: self.caller.tipo,
+					section_tipo	: self.caller.section_tipo,
+					section_id		: self.caller.section_id,
+					lang			: self.caller.lang,
+					id_variant		: self.name + '_upload_' + self.caller.id, // id_variant prevents id conflicts
+					caller			: self // set current tool as component caller (to check if component is inside tool or not)
+				})
+				// add to tool instances to allow delete on destroy
+				self.ar_instances.push(component_instance)
+				// build
+				await component_instance.build(true)
+
+			// create_posterframe when viewer is rendered and viewer ready
+				if(typeof component_instance.create_posterframe==='function') {
+
+					// prevent to show previous posterframe using default image instead
+					component_instance.data.posterframe_url = page_globals.fallback_image
+
+					// on viewer ready, create the posterframe from the viewer
+					event_manager.subscribe('viewer_ready_'+component_instance.id, function(element) {
+						console.log('creating posterframe ', component_instance.id);
+						component_instance.create_posterframe(element)
+						.then(function(response){
+							console.log('create_posterframe done. response:', response);
+						})
+					})
+				}
+
+			// render component
+				const component_node = await component_instance.render()
+
+			// preview. add rendered component node
+				self.preview_component_container.appendChild(component_node)
+
+			// refresh the caller (in window opener). (!) Commented because tool_common already refresh on blur (close window)
+				// const source_window = window.opener || window
+				// if (source_window && source_window.page_globals && source_window.page_globals.component_active) {
+				// 	source_window.page_globals.component_active.refresh({
+				// 		refresh_id_base_lang : true
+				// 	})
+				// }
+		}
+
+	// event to update the DOM elements of the instance
+		// console.log('self.caller.data:', self.caller);
+		// event_manager.publish('update_value_'+self.caller.id_base, {
+		// 	caller			: self.caller,
+		// 	changed_data	: component_instance.data.changed_data
+		// })
+
+	// caller update. (usually media component like component_image)
+		// self.caller.refresh() (!) Unnecessary because on close this tool window, component is refresh too
+
 
 	return true
 }//end upload_done
@@ -211,7 +245,7 @@ render_tool_upload.prototype.upload_done = async function (options) {
 
 /**
 * RENDER_FILEDRAG
-* @return DOM node filedrag
+* @return HTMLElement filedrag
 */
 	// export const render_filedrag = function(self) {
 
@@ -219,7 +253,7 @@ render_tool_upload.prototype.upload_done = async function (options) {
 	// 		const filedrag = ui.create_dom_element({
 	// 			element_type	: 'label',
 	// 			class_name		: 'filedrag'
-	// 			// text_content	: 'Select a file to upload or drop it here', // get_label.seleccione_un_fichero ||
+	// 			// text_content	: 'Select a file to upload or drop it here', // get_label.select_a_file ||
 	// 			// parent		: form
 	// 		})
 	// 		filedrag.setAttribute('for','file_to_upload')
@@ -436,6 +470,7 @@ render_tool_upload.prototype.upload_done = async function (options) {
 	// }//end file_select_handler
 
 
+
 // Removed for the time being (!)
 	// // output information
 	// function msg_output(msg) {
@@ -478,3 +513,7 @@ render_tool_upload.prototype.upload_done = async function (options) {
 
 	// 	return true
 	// }//end parse_local_file
+
+
+
+// @license-end

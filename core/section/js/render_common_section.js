@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG*/
 /*eslint no-undef: "error"*/
 
@@ -28,7 +29,7 @@ export const render_common_section = function() {
 * @param object options
 * @return bool
 */
-render_common_section.prototype.delete_record = (options) => {
+render_common_section.prototype.delete_record = async (options) => {
 
 	// options
 		const section		= options.section
@@ -37,7 +38,7 @@ render_common_section.prototype.delete_record = (options) => {
 		const sqo			= options.sqo
 
 	// short vars
-		const total			= section.total
+		const total			= await section.get_total()
 		const label 		= section.label || section_tipo
 
 		const id_label 		= section_id
@@ -148,7 +149,8 @@ render_common_section.prototype.delete_record = (options) => {
 
 /**
 * RENDER_RELATION_LIST
-* @return DOM node relation_list_container
+* @param object options
+* @return HTMLElement relation_list_container
 */
 const render_relation_list = function(options) {
 
@@ -171,7 +173,7 @@ const render_relation_list = function(options) {
 		const relation_list_head = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'relation_list_head icon_arrow',
-			inner_html		: get_label.relaciones || "Relations",
+			inner_html		: get_label.relations || "Relations",
 			parent			: relation_list_container
 		})
 
@@ -184,7 +186,6 @@ const render_relation_list = function(options) {
 
 	// relation_list events
 		event_manager.subscribe('relation_list_paginator', fn_relation_list_paginator)
-
 		function fn_relation_list_paginator(relation_list) {
 			relation_list_body.classList.add('loading')
 			load_relation_list(relation_list)
@@ -210,7 +211,7 @@ const render_relation_list = function(options) {
 				? instance // pagination case do not need to init relation_list
 				: await instances.get_instance({
 					model			: 'relation_list',
-					tipo			: tipo,
+					tipo			: section_tipo,
 					section_tipo	: section_tipo,
 					section_id		: section_id,
 					mode			: mode
@@ -238,64 +239,8 @@ const render_relation_list = function(options) {
 
 
 /**
-* RENDER_SERVER_RESPONSE_ERROR
-* Render generic page error (Raspa background)
-* @param string msg
-* @return DOM node wrapper|error_container
-*/
-export const render_server_response_error = function(msg, add_wrapper=false) {
-
-	// wrapper
-		const wrapper = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'wrapper page'
-		})
-
-	// error_container
-		const error_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'page_error_container',
-			parent			: wrapper
-		})
-
-	// icon_dedalo
-		ui.create_dom_element({
-			element_type	: 'img',
-			class_name		: 'icon_dedalo',
-			src				: DEDALO_CORE_URL + '/themes/default/dedalo_logo.svg',
-			parent			: error_container
-		})
-
-	// server_response_error h1
-		ui.create_dom_element({
-			element_type	: 'h1',
-			class_name		: 'server_response_error',
-			inner_html		: 'Server response error: <br>' + msg,
-			parent			: error_container
-		})
-
-	// more_info
-		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'more_info',
-			inner_html		: 'Received data format is not as expected. See your server log for details',
-			parent			: error_container
-		})
-
-	// add_wrapper false  case
-		if (add_wrapper===false) {
-			return error_container
-		}
-
-
-	return wrapper
-}//end render_server_response_error
-
-
-
-/**
 * NO_RECORDS_NODE
-* @return DOM node
+* @return HTMLElement node
 */
 export const no_records_node = () => {
 
@@ -307,3 +252,7 @@ export const no_records_node = () => {
 
 	return node
 }//end no_records_node
+
+
+
+// @license-end

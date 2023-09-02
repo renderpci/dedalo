@@ -6,6 +6,7 @@ define('DEDALO_ROOT_TIPO'								, 'dd1');
 define('DEDALO_TESAURO_TIPO'							, 'dd100');
 define('DEDALO_MEDIA_AREA_TIPO'							, 'rsc1');
 define('DEDALO_AREA_ROOT_TIPO'							, 'dd242');
+define('DEDALO_AREA_DEVELOPMENT_TIPO'					, 'dd770');
 
 // Activity
 define('DEDALO_ACTIVITY_SECTION_TIPO'					, 'dd542');
@@ -118,12 +119,12 @@ define('DEDALO_THESAURUS_BUTTON_NEW_TIPO'				, 'hierarchy38');
 define('DEDALO_THESAURUS_BUTTON_DELETE_TIPO'			, 'hierarchy39');
 
 // Relation types
+define('DEDALO_RELATION_TYPE_LINK'						, 'dd151');
 define('DEDALO_RELATION_TYPE_CHILDREN_TIPO'				, 'dd48');
 define('DEDALO_RELATION_TYPE_PARENT_TIPO'				, 'dd47');
 define('DEDALO_RELATION_TYPE_INDEX_TIPO'				, 'dd96');
 define('DEDALO_RELATION_TYPE_STRUCT_TIPO'				, 'dd490');
 define('DEDALO_RELATION_TYPE_MODEL_TIPO'				, 'dd98');
-define('DEDALO_RELATION_TYPE_LINK'						, 'dd151');
 define('DEDALO_RELATION_TYPE_FILTER'					, 'dd675');
 define('DEDALO_RELATION_TYPE_ONTOLOGY'					, 'dd77');
 
@@ -163,7 +164,7 @@ define('DEDALO_TS_REFERENCES_COMPONENT_TIPO'			, 'rsc426');
 // Section default components (information about section, created, modify, etc)
 define('DEDALO_SECTION_INFO_SECTION_GROUP'				, 'dd196');
 
-define('DEDALO_TEXTAREA_FIX_BROQUEN_TAGS_TIPOS'			, serialize( array(DEDALO_COMPONENT_RESOURCES_TR_TIPO)) );
+define('DEDALO_TEXTAREA_FIX_BROQUEN_TAGS_TIPOS'			, serialize([DEDALO_COMPONENT_RESOURCES_TR_TIPO]));
 
 // LANGS
 define('DEDALO_LANGS_SECTION_TIPO'						, 'lg1');
@@ -184,6 +185,7 @@ define('DEDALO_REGISTER_TOOLS_SECTION_TIPO'				, 'dd1324');
 // section info
 define('DEDALO_SECTION_INFO_MODIFIED_BY_USER'			, 'dd197');
 define('DEDALO_SECTION_INFO_MODIFIED_DATE'				, 'dd201');
+define('DEDALO_SECTION_INFO_INVERSE_RELATIONS'			, 'dd1596');
 
 // ontology section tipos
 define('ONTOLOGY_SECTION_TIPOS', [

@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -26,8 +27,10 @@ export const view_default_edit_publication = function() {
 
 /**
 * RENDER
-* Render node for use in edit mode
-* @return DOM node wrapper
+* Render node for use in current view
+* @param object self
+* @param object options
+* @return HTMLElement wrapper
 */
 view_default_edit_publication.render = async function(self, options) {
 
@@ -41,18 +44,23 @@ view_default_edit_publication.render = async function(self, options) {
 		}
 
 	// buttons
-		const buttons = self.mode==='edit_in_list'
-			? null
-			: get_buttons(self)
+		const buttons = (self.permissions > 1)
+			? get_buttons(self)
+			: null
 
 	// wrapper. ui build_edit returns component wrapper
-		const wrapper = ui.component.build_wrapper_edit(self, {
+		const wrapper_options = {
 			content_data	: content_data,
 			buttons			: buttons
-		})
+		}
+		const wrapper = ui.component.build_wrapper_edit(self, wrapper_options)
 		// set pointers
 		wrapper.content_data = content_data
 
 
 	return wrapper
 }//end render
+
+
+
+// @license-end

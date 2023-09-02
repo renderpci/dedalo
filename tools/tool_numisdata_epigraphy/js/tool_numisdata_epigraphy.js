@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -9,34 +10,32 @@
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
 	// import {ui} from '../../../core/common/js/ui.js'
-	import {tool_common} from '../../tool_common/js/tool_common.js'
+	import {tool_common, load_component} from '../../tool_common/js/tool_common.js'
 	import {render_tool_numisdata_epigraphy} from './render_tool_numisdata_epigraphy.js'
 
 
 
 /**
-* tool_numisdata_epigraphy
+* TOOL_NUMISDATA_EPIGRAPHY
 * Tool to translate contents from one language to other in any text component
 */
 export const tool_numisdata_epigraphy = function () {
 
-	this.id							= null
-	this.model						= null
-	this.mode						= null
-	this.node						= null
-	this.ar_instances				= null
-	this.status						= null
-	this.events_tokens				= []
-	this.type						= null
-	this.source_lang				= null
-	this.target_lang				= null
-	this.langs						= null
-	this.caller						= null
-	this.media_component			= null // component av that will be transcribed (it could be the caller)
-	this.epigraphy	= null // component text area where we are working into the tool
-	this.relation_list				= null // datum of relation_list (to obtaim list of top_section_tipo/id)
-
-	return true
+	this.id					= null
+	this.model				= null
+	this.mode				= null
+	this.node				= null
+	this.ar_instances		= null
+	this.status				= null
+	this.events_tokens		= []
+	this.type				= null
+	this.source_lang		= null
+	this.target_lang		= null
+	this.langs				= null
+	this.caller				= null
+	this.media_component	= null // component av that will be transcribed (it could be the caller)
+	this.epigraphy			= null // component text area where we are working into the tool
+	this.relation_list		= null // datum of relation_list (to obtain list of top_section_tipo/id)
 }//end page
 
 
@@ -55,6 +54,8 @@ export const tool_numisdata_epigraphy = function () {
 
 /**
 * INIT
+* @param object options
+* @return bool
 */
 tool_numisdata_epigraphy.prototype.init = async function(options) {
 
@@ -85,11 +86,13 @@ tool_numisdata_epigraphy.prototype.init = async function(options) {
 
 /**
 * BUILD
+* @param bool autoload = true
+* @return bool
 */
 tool_numisdata_epigraphy.prototype.build = async function(autoload=false) {
 
 	const self = this
-
+	console.log("self.tool_config:",self.tool_config);
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 
@@ -103,7 +106,8 @@ tool_numisdata_epigraphy.prototype.build = async function(autoload=false) {
 			'reverse_desing',
 			'obverse_symbol',
 			'reverse_symbol',
-			'mark',
+			'obverse_mark',
+			'reverse_mark',
 			'edge_desing',
 			'edge_legend'
 		];
@@ -153,7 +157,8 @@ tool_numisdata_epigraphy.prototype.get_component = async function(options) {
 
 	const ddo	= self.tool_config.ddo_map.find(el => el.role===role)
 
-	const instance_options	= {
+	const component_options	= {
+		self 			: self,
 		model			: ddo.model,
 		mode 			: ddo.mode,
 		tipo			: ddo.tipo,
@@ -167,7 +172,7 @@ tool_numisdata_epigraphy.prototype.get_component = async function(options) {
 	}
 
 	// call generic common tool build
-		const component_instance = await tool_common.prototype.load_component.call(self, instance_options);
+		const component_instance = await load_component(component_options);
 
 	// set auto_init_editor if the ddo has his definition
 		if(ddo.auto_init_editor){
@@ -252,10 +257,12 @@ tool_numisdata_epigraphy.prototype.get_user_tools = async function(ar_requested_
 
 	// rqo
 		const rqo = {
-			dd_api				: 'dd_tools_api',
-			action				: 'user_tools',
-			source				: source,
-			ar_requested_tools	: ar_requested_tools
+			dd_api	: 'dd_tools_api',
+			action	: 'user_tools',
+			source	: source,
+			options	: {
+				ar_requested_tools	: ar_requested_tools
+			}
 		}
 
 	// call to the API, fetch data and get response
@@ -278,3 +285,4 @@ tool_numisdata_epigraphy.prototype.get_user_tools = async function(ar_requested_
 
 
 
+// @license-end

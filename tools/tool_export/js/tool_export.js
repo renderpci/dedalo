@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global page_globals*/
 /*eslint no-undef: "error"*/
 
@@ -39,8 +40,6 @@ export const tool_export = function () {
 	this.caller				= null // section or component
 	this.components_list	= {}
 	this.data_format		= null
-
-	return true
 }//end tool_export
 
 
@@ -80,6 +79,7 @@ export const tool_export = function () {
 *	tipo: "rsc36"
 *	tool_config: {section_id: "2", section_tipo: "dd1324", name: "tool_export", label: "Tool Indexation", icon: "/v6/tools/tool_export/img/icon.svg", …}
 * }
+* @return bool common_init
 */
 tool_export.prototype.init = async function(options) {
 
@@ -106,9 +106,9 @@ tool_export.prototype.init = async function(options) {
 		self.limit					= self.sqo.limit || 10
 		self.ar_ddo_to_export		= []
 
-
 		// const load_promise = import('../../../lib/sheetjs/dist/xlsx.full.min.js')
 		// await common.prototype.load_script(DEDALO_ROOT_WEB + '/lib/sheetjs/dist/xlsx.full.min.js')
+
 
 	return common_init
 }//end init
@@ -117,8 +117,8 @@ tool_export.prototype.init = async function(options) {
 
 /**
 * BUILD
-* @param autoload = bool
-* @param bool autoload
+* @param bool autoload = false
+* @return bool common_build
 */
 tool_export.prototype.build = async function(autoload=false) {
 
@@ -129,6 +129,7 @@ tool_export.prototype.build = async function(autoload=false) {
 
 	try {
 
+		// nothing to do here
 
 	} catch (error) {
 		self.error = error
@@ -144,6 +145,7 @@ tool_export.prototype.build = async function(autoload=false) {
 /**
 * GET_SECTION_ID
 * @return string
+* 	as 'tmp_export_1'
 */
 tool_export.prototype.get_section_id = function() {
 
@@ -157,16 +159,20 @@ tool_export.prototype.get_section_id = function() {
 
 /**
 * GET_EXPORT_GRID
-* Load the export grid data and build a DOM node with the result
+* Load the export grid data and build a dd_grid instance
+* @param object options
+* @return object dd_grid
+* 	Instance ready to render
 */
 tool_export.prototype.get_export_grid = async function(options) {
 
 	const self = this
 
 	// options
-		const data_format		= options.data_format
-		const ar_ddo_to_export	= options.ar_ddo_to_export
-		const view				= options.view || 'table'
+		const data_format			= options.data_format
+		const ar_ddo_to_export		= options.ar_ddo_to_export
+		const view					= options.view || 'table'
+		const show_tipo_in_label	= options.show_tipo_in_label
 
 	// sqo
 		const sqo = clone(self.sqo)
@@ -174,73 +180,68 @@ tool_export.prototype.get_export_grid = async function(options) {
 		sqo.offset	= 0
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'get_export_grid'
-	// this generates a call as my_tool_name::my_function_name(arguments)
+	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'get_export_grid')
-		// add the necessary arguments used in the given function
-		source.arguments = {
-			section_tipo		: self.caller.section_tipo, // section that call to the tool, it will be used to get the records from db
-			model				: self.caller.model,
-			data_format			: data_format, // format selected by the user to get data
-			ar_ddo_to_export	: ar_ddo_to_export, // array with the ddo map and paths to get the info
-			sqo					: sqo
-		}
 
-	// rqo
+	// API request
 		const rqo = {
-			dd_api	: 'dd_tools_api',
-			action	: 'tool_request',
-			source	: source
+			dd_api			: 'dd_tools_api',
+			action			: 'tool_request',
+			source			: source,
+			prevent_lock	: true, // close session to unlock the browser and allow to abort
+			options			: {
+				section_tipo		: self.caller.section_tipo, // section that call to the tool, it will be used to get the records from db
+				model				: self.caller.model,
+				data_format			: data_format, // format selected by the user to get data
+				ar_ddo_to_export	: ar_ddo_to_export, // array with the ddo map and paths to get the info
+				sqo					: sqo
+			}
 		}
 		const api_response = await data_manager.request({
-			body : rqo
+			use_worker	: true,
+			body		: rqo
 		})
 		if (!api_response.result) {
 			console.error('Error:', api_response.msg || 'Unknown error on API tool_request');
 		}
 
-	// already exists dd_grid
+	// already exists dd_grid case. Returns it
 		if (self.dd_grid) {
 			// inject data
 			self.dd_grid.data = api_response.result
 			// reset view
 			self.dd_grid.view = view
+			// reset show_tipo_in_label
+			self.dd_grid.show_tipo_in_label = show_tipo_in_label
 			// build
 			await self.dd_grid.build(false)
 			// reset node
 			self.dd_grid.node = null
+
 			// return instance ready to render
 			return self.dd_grid
 		}
 
-	// delete previous instances
-		// const previous_dd_grid = self.ar_instances.find(el => el.model === 'dd_grid')
-		// if(previous_dd_grid){
-		// 	await previous_dd_grid.destroy()
-		// }
-
-	// dd_grid. Init instance
+	// dd_grid. Init the dd_grid instance if it isn't already
 		const dd_grid = self.dd_grid || await instances.get_instance({
-			model			: 'dd_grid',
-			section_tipo	: self.caller.section_tipo,
-			tipo			: self.caller.section_tipo,
-			mode			: 'list',
-			view			: view, // 'table',
-			lang			: page_globals.dedalo_data_lang,
-			data			: api_response.result
+			model				: 'dd_grid',
+			section_tipo		: self.caller.section_tipo,
+			tipo				: self.caller.section_tipo,
+			mode				: 'list',
+			view				: view, // 'table',
+			show_tipo_in_label	: show_tipo_in_label, // true of false
+			lang				: page_globals.dedalo_data_lang,
+			data				: api_response.result
 		})
 
-	// build. Do not autoload
-		await dd_grid.build(false)
+		// build. Do not autoload
+			await dd_grid.build(false)
 
-	// fix dd_grid
-		self.dd_grid = dd_grid
+		// fix dd_grid
+			self.dd_grid = dd_grid
 
-	// ar_instances. Add/replaces current dd_grid instance. (Will be removed on destroy)
-		// const found_index = self.ar_instances.findIndex(el => el.model==='dd_grid')
-		// if (found_index > -1) {
-		// 	self.ar_instances.splice(found_index, 1)
-		// }
-		self.ar_instances.push(dd_grid)
+		// ar_instances. Add current dd_grid instance. (Will be removed on destroy)
+			self.ar_instances.push(dd_grid)
 
 
 	return dd_grid
@@ -288,8 +289,9 @@ tool_export.prototype.get_export_grid = async function(options) {
 
 /**
 * GET_EXPORT_XSL
-* Load the export grid data and convert to XLS format
+* Load the export grid data and convert it to XLS format
 * @param object options
+* @return bool
 */
 tool_export.prototype.get_export_xsl = async function (options) {
 
@@ -301,7 +303,6 @@ tool_export.prototype.get_export_xsl = async function (options) {
 	// XLSX.utils.book_append_sheet(workbook, ws1, "Sheet1");
  	// 	// const workbook = XLSX.read(table, {type:'string'});
 	// XLSX.writeFile(workbook, 'out.csv' );
-
 
 	const table		= options.export_data.firstChild //.outerHTML
 	const name		= self.caller.section_tipo
@@ -330,6 +331,8 @@ tool_export.prototype.get_export_xsl = async function (options) {
 	link.download = filename;
 	link.href = uri + base64(format(template, ctx));
 	link.click();
+
+	return true
 }//end get_export_xsl
 
 
@@ -338,7 +341,7 @@ tool_export.prototype.get_export_xsl = async function (options) {
 * ON_CLOSE_ACTIONS
 * Executes specific action on close the tool
 * @param string open_as
-* 	modal | window
+* 	modal|window
 * @return promise: bool
 */
 tool_export.prototype.on_close_actions = async function(open_as) {
@@ -417,3 +420,7 @@ tool_export.prototype.update_local_db_data = async function() {
 
 	return true
 }//end update_local_db_data
+
+
+
+// @license-end

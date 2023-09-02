@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -23,9 +24,11 @@ export const view_default_edit_filter_records = function() {
 
 
 /**
-* EDIT
-* Render node for use in edit
-* @return DOM node
+* RENDER
+* Render node for use in current view
+* @param object self
+* @param object options
+* @return HTMLElement wrapper
 */
 view_default_edit_filter_records.render = async function(self, options) {
 
@@ -39,75 +42,119 @@ view_default_edit_filter_records.render = async function(self, options) {
 		}
 
 	// buttons
-		const buttons = get_buttons(self)
+		const buttons = (self.permissions > 1)
+			? get_buttons(self)
+			: null
+
 
 	// ui build_edit returns component wrapper
-		const wrapper = ui.component.build_wrapper_edit(self, {
+		const wrapper_options = {
 			content_data	: content_data,
 			buttons			: buttons
-		})
+		}
+		if (self.view==='line') {
+			wrapper_options.label = null // remove label
+		}
+		const wrapper = ui.component.build_wrapper_edit(self, wrapper_options)
 		// set pointers
 		wrapper.content_data = content_data
 
 
 	return wrapper
-}//end edit
+}//end render
 
 
 
 /**
 * GET_CONTENT_DATA
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 
 	// short vars
-		const datalist			= self.data.datalist
+		const data				= self.data || {}
+		const datalist			= data.datalist || []
 		const datalist_length	= datalist.length
+		const value				= data.value || []
+		const permissions		= self.permissions
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
-			  content_data.classList.add("nowrap")
 
-		// header_row
-			const header_row = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'header_row',
-				parent			: content_data
-			})
-			// header_tipo
-			ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'label_item tipo',
-				inner_html		: get_label.tipo || 'Tipo',
-				parent			: header_row
-			})
-			// header_label
-			ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'label_item label',
-				inner_html		: get_label.seccion || 'Section',
-				parent			: header_row
-			})
-			// header_value
-			ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'label_item value',
-				inner_html		: get_label.valor || 'Value',
-				parent			: header_row
-			})
+	// header_row
+		const header_row = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'header_row',
+			parent			: content_data
+		})
+		// header_tipo
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'label_item tipo',
+			inner_html		: 'tipo',
+			parent			: header_row
+		})
+		// header_label
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'label_item label',
+			inner_html		: get_label.section || 'Section',
+			parent			: header_row
+		})
+		// header_value
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'label_item value',
+			inner_html		: get_label.value || 'Value',
+			parent			: header_row
+		})
 
-		// content_value items
-			// render all items sequentially
-			for (let i = 0; i < datalist_length; i++) {
-				// input
-				const content_value = get_content_value(i, datalist[i], self)
-				content_data.appendChild(content_value)
-				// set pointer
-				content_data[i] = content_value
-			}
+	// body rows
+	// permissions switch
+		if (permissions===1) {
 
-		// realocate rendered dom items
+			// filtered_datalist. Datalist values that exists into component value
+				for (let i = 0; i < value.length; i++) {
+					const data_value = value[i]
+					const current_datalist_item	= datalist.find(el =>
+						el.tipo===data_value.tipo
+					)
+					if(current_datalist_item){
+						const current_value = {
+							label	: current_datalist_item.label,
+							tipo	: data_value.tipo,
+							value	: data_value.value
+						}
+						// build options
+						const content_value_node = get_content_value_read(0, current_value, self)
+						content_data.appendChild(content_value_node)
+						// set pointers
+						content_data[i] = content_value_node
+					}
+				}
+
+			// fill empty value cases with one empty content_value node
+				if(!content_data[0]) {
+					const current_value = {}
+					const content_value_node = get_content_value_read(0, current_value, self)
+					content_data.appendChild(content_value_node)
+					// set pointers
+					content_data[0] = content_value_node
+				}
+
+		}else{
+
+			// build options
+				for (let i = 0; i < datalist_length; i++) {
+					const input_element_node = get_content_value(i, datalist[i], self)
+					content_data.appendChild(input_element_node)
+					// set pointers
+					content_data[i] = input_element_node
+				}
+		}
+
+
+	// realocate rendered DOM items
 			// const nodes_lenght = inputs_container.childNodes.length
 			// // iterate in reverse order to avoid problems on move nodes
 			// for (let i = nodes_lenght - 1; i >= 0; i--) {
@@ -138,7 +185,7 @@ const get_content_data = function(self) {
 * 	tipo		: "rsc23",
 *	permissions	: 2
 * }
-* @return DOM node li
+* @return HTMLElement li
 */
 const get_content_value = (i, datalist_item, self) => {
 
@@ -258,9 +305,57 @@ const get_content_value = (i, datalist_item, self) => {
 
 
 /**
+* GET_CONTENT_VALUE_READ
+* Render a element based on passed value
+* @param int i
+* 	data.value array key
+* @param object current_value
+* @param object self
+*
+* @return HTMLElement content_value
+*/
+const get_content_value_read = (i, current_value, self) => {
+
+	// create content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value read_only'
+		})
+
+	// tipo
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'label',
+			inner_html		: current_value.tipo || '',
+			parent			: content_value
+		})
+
+	// label
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'label',
+			inner_html		: current_value.label || '',
+			parent			: content_value
+		})
+
+	// value
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'label',
+			inner_html		: current_value.value || '',
+			parent			: content_value
+		})
+
+
+	return content_value
+}//end get_content_value_read
+
+
+
+/**
 * GET_BUTTONS
 * @param object instance
-* @return DOM node buttons_container
+* @return HTMLElement buttons_container
 */
 const get_buttons = (self) => {
 
@@ -283,3 +378,7 @@ const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
+
+
+
+// @license-end

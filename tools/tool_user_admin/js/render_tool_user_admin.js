@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, tool_user_admin */
 /*eslint no-undef: "error"*/
 
@@ -8,6 +9,7 @@
 	// import {tool_common} from '../../tool_common/js/tool_common.js'
 	import * as instances from '../../../core/common/js/instances.js'
 	import {ui} from '../../../core/common/js/ui.js'
+	// import {pause} from '../../../core/common/js/utils/index.js'
 
 
 
@@ -27,7 +29,7 @@ export const render_tool_user_admin = function() {
 * Render tool DOM nodes
 * This function is called by render common attached in 'tool_user_admin.js'
 * @param object options
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_tool_user_admin.prototype.edit = async function(options) {
 
@@ -46,16 +48,8 @@ render_tool_user_admin.prototype.edit = async function(options) {
 		const wrapper = ui.tool.build_wrapper_edit(self, {
 			content_data : content_data
 		})
-
-	// modal container
-		// if (!window.opener) {
-		// 	const header	= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
-		// 	const modal		= ui.attach_to_modal(header, wrapper, null)
-		// 	modal.on_close	= () => {
-		// 		// when closing the modal, common destroy is called to remove tool and elements instances
-		// 		self.destroy(true, true, true)
-		// 	}
-		// }
+		// set pointers
+		wrapper.content_data = content_data
 
 
 	return wrapper
@@ -66,8 +60,8 @@ render_tool_user_admin.prototype.edit = async function(options) {
 /**
 * GET_CONTENT_DATA
 * Render tool body or 'content_data'
-* @param instance self
-* @return DOM node content_data
+* @param object self
+* @return HTMLElement content_data
 */
 const get_content_data = async function(self) {
 
@@ -81,10 +75,18 @@ const get_content_data = async function(self) {
 		})
 
 	// section
-		self.user_section.render()
-		.then(function(section_node){
-			components_container.appendChild(section_node)
-
+		ui.load_item_with_spinner({
+			container	: components_container,
+			label		: 'User',
+			style : {
+				height : '458px'
+			},
+			callback	: async function() {
+				// section load
+				await self.user_section.build(true)
+				const section_node = await self.user_section.render()
+				return section_node
+			}
 		})
 
 	// content_data
@@ -97,37 +99,4 @@ const get_content_data = async function(self) {
 
 
 
-/**
-* ADD_COMPONENT_SAMPLE
-* @param instance self
-* @param DOM node component_container
-* @param string lang
-* @return bool true
-*/
-export const add_component_sample = async (self, component_container, lang) => {
-
-	// user select blank lang case
-		if (!lang) {
-			while (component_container.firstChild) {
-				// remove node from DOM (not component instance)
-				component_container.removeChild(component_container.firstChild)
-			}
-			return false
-		}
-
-	const component = await self.load_component(lang)
-	const node 		= await component.render()
-
-	// clean container
-		while (component_container.firstChild) {
-			component_container.removeChild(component_container.firstChild)
-		}
-
-	// append node
-		component_container.appendChild(node)
-
-
-	return true
-}//end add_component_sample
-
-
+// @license-end

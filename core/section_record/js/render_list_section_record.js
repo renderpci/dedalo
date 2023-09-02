@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG*/
 /*eslint no-undef: "error"*/
 
@@ -7,6 +8,7 @@
 	import {view_default_list_section_record} from './view_default_list_section_record.js'
 	import {view_mini_section_record} from './view_mini_section_record.js'
 	import {view_text_section_record} from './view_text_section_record.js'
+
 
 
 /**
@@ -23,8 +25,8 @@ export const render_list_section_record = function() {
 /**
 * LIST
 * Render node for use in list with all columns and rendered components
-* @param array ar_instances
-* @return Promise DOM node wrapper
+* @param object options = {}
+* @return HTMLElement wrapper
 */
 render_list_section_record.prototype.list = async function(options={}) {
 
@@ -45,6 +47,8 @@ render_list_section_record.prototype.list = async function(options={}) {
 		default:
 			return view_default_list_section_record.render(self, options)
 	}
+}//end list
 
-	return null
-}//end render_list_section_record.prototype.list
+
+
+// @license-end

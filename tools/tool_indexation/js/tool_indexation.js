@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DD_TIPOS */
 /*eslint no-undef: "error"*/
 
@@ -9,7 +10,7 @@
 	// import {instances, get_instance, delete_instance} from '../../../core/common/js/instances.js'
 	import {common} from '../../../core/common/js/common.js'
 	// import {ui} from '../../../core/common/js/ui.js'
-	import {tool_common} from '../../tool_common/js/tool_common.js'
+	import {tool_common, load_component} from '../../tool_common/js/tool_common.js'
 	import {render_tool_indexation} from './render_tool_indexation.js'
 	import {event_manager} from '../../../core/common/js/event_manager.js'
 
@@ -170,12 +171,12 @@ tool_indexation.prototype.init = async function(options) {
 			)
 			function fn_click_tag_index(options) {
 				if(SHOW_DEVELOPER===true) {
-					dd_console(`+++++++ click_tag_index`, 'DEBUG', options)
+					dd_console(`+++++++ [tool_indexation] click_tag_index ${id_base}`, 'DEBUG', options)
 				}
 
 				// options
-					const caller			= options.caller // instance of component text area
 					const tag				= options.tag // object
+					// const caller			= options.caller // instance of component text area
 					// const text_editor	= options.text_editor // not used
 
 				// short vars
@@ -222,6 +223,8 @@ tool_indexation.prototype.init = async function(options) {
 
 /**
 * BUILD_CUSTOM
+* @param bool autoload = false
+* @return bool
 */
 tool_indexation.prototype.build = async function(autoload=false) {
 
@@ -337,32 +340,27 @@ tool_indexation.prototype.build = async function(autoload=false) {
 * Load transcriptions component (text area) configured with the given lang
 * @param string lang
 * Create / recover and build a instance of current component in the desired lang
-* @return object instance
+* @return object
+* component instance
 */
 tool_indexation.prototype.get_component = async function(lang) {
 
 	const self = this
 
-
 	// to_delete_instances. Select current self.transcription_component
 		const to_delete_instances = self.ar_instances.filter(el => el===self.transcription_component)
 
-
-	// context (clone and edit)
-		const context = Object.assign(clone(self.transcription_component.context),{
-			lang		: lang,
-			mode		: 'edit',
-			section_id	: self.transcription_component.section_id
+	// options (clone and edit)
+		const options = Object.assign(clone(self.transcription_component.context),{
+			self				: self,
+			lang				: lang,
+			mode				: 'edit',
+			section_id			: self.transcription_component.section_id,
+			to_delete_instances	: to_delete_instances // array of instances to delete after create the new one
 		})
 
-	// options
-		const options = {
-			context				: context, // reference context ...
-			to_delete_instances	: to_delete_instances // array of instances to delete after create the new one
-		}
-
 	// call generic common tool build
-		const component_instance = await tool_common.prototype.load_component.call(self, options);
+		const component_instance = await load_component(options);
 
 	// fix instance (overwrite)
 		self.transcription_component = component_instance
@@ -660,10 +658,9 @@ tool_indexation.prototype.active_value = function(name, callback) {
 * 	  },
 * 	  ..
 * 	]
-* @return boolean true
+* @return bool
 */
 tool_indexation.prototype.update_active_values = function(values) {
-
 
 	for (let i = 0; i < values.length; i++) {
 
@@ -771,3 +768,6 @@ tool_indexation.prototype.delete_tag = function(tag_id) {
 		resolve(response)
 	})
 }//end delete_tag
+
+
+// @license-end

@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS ERROR
 *
 *
@@ -11,7 +11,7 @@ class dd_error {
 	/**
 	* CATCH-ABLE ERRORS : captureError
 	*/
-	public static function captureError( $number, $message, $file, $line ) {
+	public static function captureError( $number, $message, $file, $line ) : void {
 
 		// Insert all in one table
 		$error = array(
@@ -21,19 +21,21 @@ class dd_error {
 			'line'		=> $line
 		);
 
-		$message = safe_xss($message);
+		$info = print_r($error, true);
 
-		$error_to_show['user']	= "<span class='error'>Ops.. [Error]        " . $message ."</span>";
-		$error_to_show['debug']	= "<span class='error'>Ops.. [Error]$number " . $message ."</span>";
-		$error_to_show['dump']	= '<pre>' . print_r($error,true) . '</pre>';
+		// $error_to_show['user']	= 'Ops.. [Error]             ' . $message;
+		// $error_to_show['debug']	= 'Ops.. [Error] '.$number.' ' . $message;
+		// $error_to_show['dump']	= print_r($error, true);
 
-		# DEDALO FILE LOGGER
-		if ( class_exists('logger') && isset(logger::$obj['error']) ) {
-			logger::$obj['error']->log_message($error_to_show['debug'].$error_to_show['dump'], logger::ERROR, __METHOD__);
-		}
-		# PHP-APACHE LOG
-		error_log('ERROR: '.$error_to_show['debug'].$error_to_show['dump']);
+		// PHP-APACHE LOG
+		// error_log('ERROR: '.$error_to_show['debug'].$error_to_show['dump']);
 
+		// error_log('ERROR [dd_error::captureError]: '. print_r($error, true));
+		$error_msg = sprintf("\033[43m%s\033[0m", 'ERROR [dd_error::captureError]: '.$info);
+		error_log($error_msg);
+
+		// DEDALO_ERRORS ADD
+		$_ENV['DEDALO_LAST_ERROR'] = $info;
 	}//end captureError
 
 
@@ -41,18 +43,20 @@ class dd_error {
 	/**
 	* EXCEPTIONS : captureException
 	*/
-	public static function captureException( $exception ) {
+	public static function captureException( $exception ) : void {
 
 		try {
 
 			$message = safe_xss($exception->getMessage());
 			// Display content $exception variable
-			$error_to_show['user']	= "<span class='error'>Ops.. [Exception] " . $message ."</span>";
-			$error_to_show['debug']	= "<span class='error'>Ops.. [Exception] " . $message ."</span>";
-			$error_to_show['dump']	= '<pre>' . print_r($exception,true) . '</pre>';
+			// $error_to_show['user']	= "<span class='error'>Ops.. [Exception] " . $message ."</span>";
+			// $error_to_show['debug']	= "<span class='error'>Ops.. [Exception] " . $message ."</span>";
+			// $error_to_show['dump']	= '<pre>' . print_r($exception,true) . '</pre>';
+			$error_to_show['user']	= 'Ops.. [Exception] ' . $message;
+			$error_to_show['debug']	= 'Ops.. [Exception] ' . $message;
+			$error_to_show['dump']	= print_r($exception,true);
 
-			// $log_messages 	= self::wrap_error( implode('<br>', $GLOBALS['log_messages']) );
-			error_log($error_to_show['debug'].$error_to_show['dump']);
+			error_log('Exception [dd_error::captureException] '.$error_to_show['debug'] . $error_to_show['dump']);
 		}
 		catch (Exception $exception2) {
 			// Another uncaught exception was thrown while handling the first one.
@@ -60,23 +64,19 @@ class dd_error {
 			$message2 = safe_xss($exception2->getMessage());
 
 			// Display content $exception variable
-			$error_to_show['user']	= "<span class='error'>Ops2.. [Exception2] " . $message2 ."</span>";
-			$error_to_show['debug']	= "<span class='error'>Ops.. [Exception2] " . $message ."</span>" . "<span class='error'>Ops2.. [Exception2] " . $message2 ."</span>";
-			$error_to_show['dump']	= '<pre><h1>Additional uncaught exception thrown while handling exception.</h1>'.print_r($exception,true).'<hr>'.print_r($exception2,true).'</pre>';
+			// $error_to_show['user']	= "<span class='error'>Ops2.. [Exception2] " . $message2 ."</span>";
+			// $error_to_show['debug']	= "<span class='error'>Ops.. [Exception2] " . $message ."</span>" . "<span class='error'>Ops2.. [Exception2] " . $message2 ."</span>";
+			// $error_to_show['dump']	= '<pre><h1>Additional uncaught exception thrown while handling exception.</h1>'.print_r($exception,true).'<hr>'.print_r($exception2,true).'</pre>';
 
-			// $log_messages 	= self::wrap_error( implode('<br>', $GLOBALS['log_messages']) );
-			// print safe_xss($log_messages);
-			error_log('Exception 2 : '.$message2);
+			$error_to_show['user']	= "Ops2.. [Exception2] " . $message2 ;
+			$error_to_show['debug']	= "Ops.. [Exception2]  " . $message .PHP_EOL." Ops2.. [Exception2] " . $message2;
+			$error_to_show['dump']	= 'Additional uncaught exception thrown while handling exception.'.print_r($exception,true).PHP_EOL.print_r($exception2,true);
+
+			error_log('Exception 2 [dd_error::captureException]: '.$message2);
 		}
 
-
-		# DEDALO FILE LOGGER
-		if ( isset(logger::$obj['error']) ) {
-			logger::$obj['error']->log_message($error_to_show['debug'].$error_to_show['dump'], logger::CRITICAL, __METHOD__);
-		}
-		# PHP-APACHE LOG
-		error_log($error_to_show['debug'].$error_to_show['dump']);
-
+		// PHP-APACHE LOG
+		error_log('ERROR [dd_error::captureException]:' . $error_to_show['debug'].$error_to_show['dump']);
 	}//end captureException
 
 
@@ -84,32 +84,24 @@ class dd_error {
 	/**
 	* UNCATCHABLE ERRORS : captureShutdown
 	*/
-	public static function captureShutdown() {
+	public static function captureShutdown() : void {
 
-		$error = error_get_last( );
+		$error = error_get_last();
 		if( $error ) {
 
 			## IF YOU WANT TO CLEAR ALL BUFFER, UNCOMMENT NEXT LINE:
 			# ob_end_clean( );
 
 			// Display content $exception variable
-			$error_to_show['user']	= "<span class='error'>Ops.. [Fatal Error] " . $error['message'] ." </span>";
-			$error_to_show['debug']	= "<span class='error'>Ops.. [Fatal Error] " . $error['message'] ." </span>";
-			$error_to_show['dump']	= '<pre>' . print_r($error,true) . '</pre>';
+			$error_to_show['user']	= 'Ops.. [Fatal Error] ' . $error['message'];
+			$error_to_show['debug']	= 'Ops.. [Fatal Error] ' . $error['message'];
+			$error_to_show['dump']	= print_r($error,true);
 
-			error_log( json_encode($error_to_show) );
+			error_log('ERROR [dd_error::captureShutdown]: '. print_r($error_to_show, true));
 
-		} else {
-			return true;
+			// PHP-APACHE LOG
+			error_log('ERROR [dd_error::captureShutdown]: '.$error_to_show['debug'].$error_to_show['dump']);
 		}
-
-		# DEDALO FILE LOGGER
-		if ( isset(logger::$obj['error']) ) {
-			logger::$obj['error']->log_message($error_to_show['debug'].$error_to_show['dump'], logger::CRITICAL, __METHOD__);
-		}
-		# PHP-APACHE LOG
-		error_log($error_to_show['debug'].$error_to_show['dump']);
-
 	}//end captureShutdown
 
 
@@ -117,38 +109,38 @@ class dd_error {
 	/**
 	* WRAP_ERROR
 	*/
-	public static function wrap_error($string_error, $show_option=true, $span_error_class=null) : string {
+		// public static function wrap_error($string_error, $show_option=true, $span_error_class=null) : string {
 
-		$html = '';
-		$html .= '<!DOCTYPE html>';
-		$html .= '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US" lang="en-US">';
-		$html .= '<head>';
-		$html .= ' <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />';
-		$html .= ' <link rel="stylesheet" href="'.DEDALO_CORE_URL.'/common/css/common.css" type="text/css" />';
-		$html .= ' <link rel="stylesheet" href="'.DEDALO_CORE_URL.'/html_page/css/html_page.css" type="text/css" />';
-		$html .= '</head>';
-		$html .= '<body style="padding:20px">';
+		// 	$html = '';
+		// 	$html .= '<!DOCTYPE html>';
+		// 	$html .= '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US" lang="en-US">';
+		// 	$html .= '<head>';
+		// 	$html .= ' <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />';
+		// 	$html .= ' <link rel="stylesheet" href="'.DEDALO_CORE_URL.'/common/css/common.css" type="text/css" />';
+		// 	$html .= ' <link rel="stylesheet" href="'.DEDALO_CORE_URL.'/html_page/css/html_page.css" type="text/css" />';
+		// 	$html .= '</head>';
+		// 	$html .= '<body style="padding:20px">';
 
-		$html .= " <span class='$span_error_class'>".$string_error."</span>";
+		// 	$html .= " <span class='$span_error_class'>".$string_error."</span>";
 
-		if($show_option) {
-			$html .= '
-					<div class="" style="padding:0px">
-					<a href="'.DEDALO_CORE_URL.'/main/?home" style="padding:5px">Home</a>
-					<a href="javascript:history.go(-1)" style="padding:5px">Back</a> Sorry, an error was found
-					<img src="'.DEDALO_CORE_URL.'/themes/default/favicon.ico" style="position:relative;top:1px" />
-					</div>';
-		}
+		// 	if($show_option) {
+		// 		$html .= '
+		// 				<div class="" style="padding:0px">
+		// 				<a href="'.DEDALO_CORE_URL.'/main/?home" style="padding:5px">Home</a>
+		// 				<a href="javascript:history.go(-1)" style="padding:5px">Back</a> Sorry, an error was found
+		// 				<img src="'.DEDALO_CORE_URL.'/themes/default/favicon.ico" style="position:relative;top:1px" />
+		// 				</div>';
+		// 	}
 
-		$html .= '</body>';
-		$html .= '</html>';
+		// 	$html .= '</body>';
+		// 	$html .= '</html>';
 
-		return $html;
-	}//end wrap_error
+		// 	return $html;
+		// }//end wrap_error
 
 
 
-};//end class
+}//end class dd_error
 
 
 
@@ -206,5 +198,4 @@ register_shutdown_function( array( 'dd_error', 'captureShutdown' ) );
 
 	// Same as error_reporting(E_ALL);
 	ini_set('error_reporting', E_ALL);
-
 */

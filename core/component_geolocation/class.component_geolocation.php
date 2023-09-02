@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS COMPONENT_GEOLOCATION
 *
 *
@@ -11,17 +11,17 @@ class component_geolocation extends component_common {
 	/**
 	* __CONSTRUCT
 	*/
-	function __construct(string $tipo, $section_id=null, string $mode='list', string $lang=null, string $section_tipo=null) {
+	protected function __construct(string $tipo, $section_id=null, string $mode='list', string $lang=null, string $section_tipo=null, bool $cache=true) {
 
 
 		# Force always DEDALO_DATA_NOLAN
-		$lang = DEDALO_DATA_NOLAN;
+		$this->lang = DEDALO_DATA_NOLAN;
 
 		# Build the component
-		parent::__construct($tipo, $section_id, $mode, $lang, $section_tipo);
+		parent::__construct($tipo, $section_id, $mode, $this->lang, $section_tipo, $cache);
 
 		# Dato verification, if the dato is empty, build the standard view of the map
-		$dato = $this->get_dato();
+		// $dato = $this->get_dato();
 
 		// # if the section_id is not empty and the dato is empty create the basic and standard dato
 		// $need_save=false;
@@ -60,14 +60,15 @@ class component_geolocation extends component_common {
 			// 		trigger_error("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP");
 			// 	}
 			// }
-
-
-		return true;
 	}//end __construct
 
 
 
-	# GET DATO : Format [{lat: 39.462571354311095, lon: -0.3763031959533692, zoom: 15, alt: 16}]
+	/**
+	* GET_DATO
+	* Format [{lat: 39.462571354311095, lon: -0.3763031959533692, zoom: 15, alt: 16}]
+	* @return array|null $dato
+	*/
 	public function get_dato() {
 		$dato = parent::get_dato();
 
@@ -80,19 +81,26 @@ class component_geolocation extends component_common {
 
 
 
-	# SET_DATO
-	public function set_dato($dato) {
+	/**
+	* SET_DATO
+	* @param array|null $dato
+	* 	Dato now is multiple. Because this, expected type is array
+	* @return bool
+	*/
+	public function set_dato($dato) : bool {
 
-		# json encoded dato
+		// JSON encoded dato case
 		if (is_string($dato)) {
+			debug_log(__METHOD__." Trying to decode string dato ".to_string($dato), logger::ERROR);
 			$dato = json_decode($dato);
 		}
 
-		// if (!isset($dato->zoom)) {
-		// 	$dato->zoom = 12;
-		// }
+		if (!empty($dato) && !is_array($dato)) {
+			debug_log(__METHOD__." Converted non array dato to array ".to_string($dato), logger::ERROR);
+			$dato = [$dato];
+		}
 
-		parent::set_dato( (array)$dato );
+		return parent::set_dato( (array)$dato );
 	}//end set_dato
 
 
@@ -134,16 +142,15 @@ class component_geolocation extends component_common {
 
 
 	/**
-	* GET_VALUE
-	* Alias of component_common->get_value
-	* @param string $lang = DEDALO_DATA_LANG
+	* GET_GRID_VALUE
+	* Alias of component_common->get_grid_value
 	* @param object|null $ddo = null
 	*
 	* @return dd_grid_cell_object $dd_grid_cell_object
 	*/
-		// public function get_value(string $lang=DEDALO_DATA_LANG, object $ddo=null) : dd_grid_cell_object {
+		// public function get_grid_value(object $ddo=null) : dd_grid_cell_object {
 
-		// 	$dd_grid_cell_object = parent::get_value($lang, $ddo);
+		// 	$dd_grid_cell_object = parent::get_grid_value($lang, $ddo);
 
 		// 	// map values to JOSN to allow render it in list
 		// 		if (!empty($dd_grid_cell_object->value)) {
@@ -154,7 +161,7 @@ class component_geolocation extends component_common {
 
 
 		// 	return $dd_grid_cell_object;
-		// }//end get_value
+		// }//end get_grid_value
 
 
 
@@ -239,10 +246,15 @@ class component_geolocation extends component_common {
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value_socrata() : object {
+	public function get_diffusion_value_socrata() : ?object {
 
-		$dato 			= $this->get_dato();
-		$socrata_data 	= 'POINT ('.$dato->lat.', '.$dato->lon.')';
+		$dato = $this->get_dato();
+		if (empty($dato) || empty($dato[0]) ) {
+			return null;
+		}
+
+		$dato			= $dato[0];
+		$socrata_data	= 'POINT ('.$dato->lat.', '.$dato->lon.')';
 
 		# {
 		#   "type": "Point",
@@ -272,6 +284,100 @@ class component_geolocation extends component_common {
 
 
 	/**
+	* GET_DIFFUSION_VALUE_AS_GEOJSON
+	* Sample
+	* [
+	*    {
+	*      "layer_id": 1,
+	*      "text": "...",
+	*      "layer_data": {
+	*        "type": "FeatureCollection",
+	*        "features": [
+	*          {
+	*            "type": "Feature",
+	*            "properties": {},
+	*            "geometry": {
+	*              "type": "Point",
+	*              "coordinates": [
+	*                2.011618, // longitude
+	*                41.562546 // latitude
+	*              ]
+	*            }
+	*          }
+	*        ]
+	*      }
+	*    }
+	* ]
+	* @see ontology publication use in mdcat4091
+	* @see diffusion_sql::build_geolocation_data_geojson
+	* @return string $value
+	* 	Encoded geojson data
+	*/
+	public function get_diffusion_value_as_geojson() : ?string {
+
+		$dato = $this->get_dato(); // object as {"alt": 281, "lat": "41.56236346", "lon": "2.01215141", "zoom": 15}
+
+		// select first
+		$value = $dato[0] ?? null;
+
+		// check empty
+			if (empty($value) || !isset($value->lon) || !isset($value->lat)) {
+				return null;
+			}
+
+		// default dato test
+			// default values
+			// "alt": 16,
+			// "lat": 39.462571,
+			// "lon": -0.376295,
+			// "zoom": 12
+			$value_lat_str	= isset($value->lat)
+				? strval($value->lat)
+				: null;
+			$value_lon_str	= isset($value->lon)
+				? strval($value->lon)
+				: null;
+			$value_lat_str	= str_replace(',', '.', $value_lat_str);
+			$value_lon_str	= str_replace(',', '.', $value_lon_str);
+			if ($value_lat_str==='39.462571' && $value_lon_str==='-0.376295') {
+				return null;
+			}
+
+		// coordinates. Converts float number to 16 decimals number using '.' separator
+			$lon = number_format( $value->lon, 16, '.', ''); // string as "2.012151410452" (use dot notation to preserve JSON integrity)
+			$lat = number_format( $value->lat, 16, '.', ''); // string as "41.562363467527" (use dot notation to preserve JSON integrity)
+
+		// geojson
+			$ar_value = json_decode('[
+			  {
+			      "layer_id": 1,
+			      "text": "",
+			      "layer_data": {
+			        "type": "FeatureCollection",
+			        "features": [
+			          {
+			            "type": "Feature",
+			            "properties": {},
+			            "geometry": {
+			              "type": "Point",
+			              "coordinates": ['.$lon.','.$lat.']
+			            }
+			          }
+			        ]
+			      }
+			  }
+			]');
+
+		// value . Encode as cleaned text to publish
+			$diffusion_value = json_encode($ar_value);
+
+
+		return $diffusion_value;
+	}//end get_diffusion_value_as_geojson
+
+
+
+	/**
 	* GET_SORTABLE
 	* @return bool
 	* 	Default is true. Override when component is sortable
@@ -280,6 +386,69 @@ class component_geolocation extends component_common {
 
 		return false;
 	}//end get_sortable
+
+
+
+	/**
+	* UPDATE_DATO_VERSION
+	* @param object $request_options
+	* @return object $response
+	*	$response->result = 0; // the component don't have the function "update_dato_version"
+	*	$response->result = 1; // the component do the update"
+	*	$response->result = 2; // the component try the update but the dato don't need change"
+	*/
+	public static function update_dato_version(object $request_options) : object {
+
+		$options = new stdClass();
+			$options->update_version	= null;
+			$options->dato_unchanged	= null;
+			$options->reference_id		= null;
+			$options->tipo				= null;
+			$options->section_id		= null;
+			$options->section_tipo		= null;
+			$options->context			= 'update_component_dato';
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+			$update_version	= $options->update_version;
+			$dato_unchanged	= $options->dato_unchanged;
+			$reference_id	= $options->reference_id;
+
+		$update_version_string = implode('.', $update_version);
+		switch ($update_version_string) {
+
+			case '6.0.0':
+				if ( (!empty($dato_unchanged) || $dato_unchanged==='') && !is_array($dato_unchanged) ) {
+
+					//  Change the dato from object to array
+
+					// new dato
+						$dato = $dato_unchanged;
+
+					// fix final dato with new format as array
+						$new_dato = [$dato];
+
+					$response = new stdClass();
+						$response->result	= 1;
+						$response->new_dato	= $new_dato;
+						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+				}else{
+
+					$response = new stdClass();
+						$response->result	= 2;
+						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+				}
+				break;
+
+			default:
+				$response = new stdClass();
+					$response->result	= 0;
+					$response->msg		= "This component ".get_called_class()." don't have update to this version ($update_version_string). Ignored action";
+				break;
+		}
+
+
+		return $response;
+	}//end update_dato_version
 
 
 

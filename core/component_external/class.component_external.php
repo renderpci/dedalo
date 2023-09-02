@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS COMPONENT_EXTERNAL
 * Manage specific component logic
 * Common components properties and method are inherited of component_common class that are inherited from common class
@@ -15,7 +15,7 @@ class component_external extends component_common {
 	public function load_data_from_remote() : ?object {
 
 		// short vars
-			$section_id		= $this->get_parent();
+			$section_id		= $this->get_section_id();
 			$section_tipo	= $this->section_tipo;
 			$lang			= DEDALO_DATA_LANG;
 
@@ -51,23 +51,31 @@ class component_external extends component_common {
 
 		// check properties config
 			if (!isset($section_properties->external_data)) {
-				debug_log(__METHOD__." ERROR. Empty properties section external_data" .PHP_EOL. to_string($section_properties), logger::ERROR);
+				debug_log(__METHOD__
+					." ERROR. Unable to load data from_remote. Empty properties section external_data (1)" .PHP_EOL
+					.' tipo: '. $this->tipo .PHP_EOL
+					.' section_tipo: '. $section_tipo .PHP_EOL
+					.' section_id: '. $section_id .PHP_EOL
+					.' section_properties type: ' . gettype($section_properties) .PHP_EOL
+					.' section_properties: ' . json_encode($section_properties, JSON_PRETTY_PRINT)
+					, logger::ERROR
+				);
 				return null;
 			}
 
 		// properties external_data vars
-			$external_data  = $section_properties->external_data;
-			$api_url 		= $external_data->api_url;
-			$response_map 	= $external_data->response_map;
-			$entity 		= $external_data->entity;
+			$external_data	= $section_properties->external_data;
+			$api_url		= $external_data->api_url;
+			$response_map	= $external_data->response_map;
+			$entity			= $external_data->entity;
 
 			// fields
 				$ar_fields = [];
 				# get_ar_children_tipo_by_model_name_in_section($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false, $ar_tipo_exclude_elements=false)
 				$ar_component_tipo = section::get_ar_children_tipo_by_model_name_in_section($section_tipo, ['component'], true, true, true, false, false);
 				foreach ($ar_component_tipo as $component_tipo) {
-					$RecordObj_dd 		 	= new RecordObj_dd($component_tipo);
-					$component_properties 	= $RecordObj_dd->get_properties();
+					$RecordObj_dd			= new RecordObj_dd($component_tipo);
+					$component_properties	= $RecordObj_dd->get_properties();
 					if (empty($component_properties)) {
 						continue;
 					}
@@ -84,10 +92,10 @@ class component_external extends component_common {
 				include_once( dirname(__FILE__) . '/entities/class.'.$entity.'.php' );
 
 				$options = new stdClass();
-					$options->api_url 		= $api_url;
-					$options->ar_fields 	= $ar_fields;
-					$options->section_id 	= $section_id;
-					$options->lang 			= $lang;
+					$options->api_url		= $api_url;
+					$options->ar_fields		= $ar_fields;
+					$options->section_id	= $section_id;
+					$options->lang			= $lang;
 
 				$url = $entity::build_row_request_url($options);
 
@@ -103,7 +111,11 @@ class component_external extends component_common {
 
 		// check response
 			if (empty($response_obj)) {
-				debug_log(__METHOD__." ERROR. Empty response from external_data:" .PHP_EOL. to_string($request_response), logger::ERROR);
+				debug_log(__METHOD__
+					." ERROR. Unable to load data from_remote. Empty response from external_data:" .PHP_EOL
+					.' request_response: ' . to_string($request_response)
+					, logger::ERROR
+				);
 				return null;
 			}
 
@@ -208,13 +220,14 @@ class component_external extends component_common {
 	*  SET_DATO
 	* @param array $dato
 	* 	Dato now is multiple. For this expected type is array
-	*	but in some cases can be an array json encoded or some rare times a plain string
+	*	but in some cases can be an array JSON encoded or some rare times a plain string
+	* @return bool
 	*/
-	public function set_dato($dato) {
+	public function set_dato($dato) : bool {
 
 		if (is_string($dato)) { # Tool Time machine case, dato is string
 			if (strpos($dato, '[')!==false) {
-				# dato is json encoded
+				# dato is JSON encoded
 				$dato = json_handler::decode($dato);
 			}else{
 				# dato is string plain value
@@ -229,7 +242,7 @@ class component_external extends component_common {
 		}
 
 		$safe_dato=array();
-		foreach ((array)$dato as $key => $value) {
+		foreach ((array)$dato as $value) {
 			if (!is_string($value)) {
 				$safe_dato[] = to_string($value);
 			}else{
@@ -238,7 +251,7 @@ class component_external extends component_common {
 		}
 		$dato = $safe_dato;
 
-		parent::set_dato( (array)$dato );
+		return parent::set_dato( (array)$dato );
 	}//end set_dato
 
 
@@ -262,12 +275,12 @@ class component_external extends component_common {
 
 
 	/**
-	* LOAD TOOLS
+	* LOAD TOOLS (DEPRECATED)
 	*/
-	public function load_tools( bool $check_lang_tools=true ) : array {
+		// public function load_tools( bool $check_lang_tools=true ) : array {
 
-		return [];
-	}//end load_tools
+		// 	return [];
+		// }//end load_tools
 
 
 

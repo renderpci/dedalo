@@ -121,8 +121,7 @@ class activity_v5_to_v6 extends v5_to_v6 {
 				// if (!empty($activity_what_dato) && is_string($date_dato)) {
 				if ($date_dato!==null && is_string($date_dato)) {
 
-					$dd_date		= new dd_date();
-					$new_dd_date	= (object)$dd_date->get_date_from_timestamp( $date_dato );
+					$new_dd_date = dd_date::get_dd_date_from_timestamp( $date_dato );
 
 					$new_date = component_date::add_time($new_dd_date);
 
@@ -178,6 +177,11 @@ class activity_v5_to_v6 extends v5_to_v6 {
 					// overwrite old value
 					$dato->components->dd551->dato->{DEDALO_DATA_NOLAN}[0] = $new_value;
 				}
+
+
+			// date column
+
+
 		}//end if($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO)
 
 

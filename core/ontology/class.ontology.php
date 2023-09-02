@@ -27,13 +27,14 @@ class ontology {
 
 	/**
 	* EXPORT
-	* @return object $data
+	* @param string $tipo
+	* @return array $ar_data
 	*/
-	public static function export(string $tipo) {
+	public static function export(string $tipo) : array {
 
-		$data = ontology::parse($tipo);
+		$ar_data = ontology::parse($tipo);
 
-		return $data;
+		return $ar_data;
 	}//end export
 
 
@@ -41,6 +42,7 @@ class ontology {
 	/**
 	* PARSE
 	* Get and convert ontology term and children to JSON format
+	* @param string $tipo
 	* @return array $ar_data
 	*/
 	public static function parse(string $tipo) : array {
@@ -66,6 +68,7 @@ class ontology {
 	* TIPO_TO_JSON_ITEM
 	* Resolve full ontology item data from tipo
 	* @param string $tipo
+	* @param array $request_options = [....]
 	* @return object $item
 	*/
 	public static function tipo_to_json_item(string $tipo, array $request_options=[
@@ -296,6 +299,105 @@ class ontology {
 
 		return $ontology;
 	}//end renumerate_term_id
+
+
+
+	/**
+	* GET_CHILDREN_RECURSIVE_OLD . TS TREE FULL FROM PARENT
+	* You get the types of the sections / areas and hierarchically break down their section_group
+	* @param string $terminoID
+	* @return array $ar_tesauro
+	*	array recursive of thesaurus structure children
+	*/
+		// public static function get_children_recursive_OLD(string $tipo) : array {
+
+		// 	if(SHOW_DEBUG===true) {
+		// 		$start_time=microtime(1);
+		// 	}
+
+		// 	# STATIC CACHE
+		// 	static $childrens_recursive_data;
+		// 	if(isset($childrens_recursive_data[$tipo])) return $childrens_recursive_data[$tipo];
+
+		// 	$ar_elements = [];
+
+		// 	$source_model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		// 	switch ($source_model) {
+
+		// 		case 'section':
+
+		// 			$section_tipo				= $tipo;
+		// 			$ar_modelo_name_required	= array('section_group','section_tab','button_','relation_list','time_machine_list');
+
+		// 			# Real section
+		// 			//($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false)
+		// 			$ar_ts_childrens = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, true, true, false, false);
+
+		// 			# Virtual section too is neccesary (buttons specifics)
+		// 			$ar_ts_childrens_v	= section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, true, false, false, false);
+		// 			$ar_ts_childrens	= array_merge($ar_ts_childrens, $ar_ts_childrens_v);
+		// 			break;
+
+		// 		default:
+		// 			# Areas
+		// 			$RecordObj_dd		= new RecordObj_dd($tipo);
+		// 			$ar_ts_childrens	= $RecordObj_dd->get_ar_childrens_of_this();
+		// 			break;
+		// 	}
+
+
+		// 	$ar_exclude_modelo = array('component_security_administrator','section_list','search_list','component_semantic_node','box_elements','exclude_elements'); # ,'filter','tools'
+
+		// 	// ar_exclude_components
+		// 		$dedalo_version = explode(".", DEDALO_VERSION);
+		// 		if ( (int)$dedalo_version[0]>5 ) {
+		// 			$ar_exclude_components = defined('DEDALO_AR_EXCLUDE_COMPONENTS') ? DEDALO_AR_EXCLUDE_COMPONENTS : [];
+		// 		}else{
+		// 			$ar_exclude_components = defined('DEDALO_AR_EXCLUDE_COMPONENTS') ? unserialize(DEDALO_AR_EXCLUDE_COMPONENTS) : [];
+		// 		}
+
+		// 	foreach((array)$ar_ts_childrens as $element_tipo) {
+
+		// 		// Remove_exclude_models
+		// 			$component_model = RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
+		// 			if( in_array($component_model, $ar_exclude_modelo)) {
+		// 				continue ;
+		// 			}
+
+		// 		// remove_exclude_terms : config excludes. If instalation config value DEDALO_AR_EXCLUDE_COMPONENTS is defined, remove from ar_temp
+		// 			if (in_array($element_tipo, $ar_exclude_components)) {
+		// 				continue;
+		// 			}
+
+		// 		// get the ontology json format
+		// 			$ar_elements[]	= ontology::tipo_to_json_item($element_tipo, [
+		// 				'tipo'			=> true,
+		// 				'tld'			=> false,
+		// 				'is_model'		=> false,
+		// 				'model'			=> true,
+		// 				'model_tipo'	=> false,
+		// 				'parent'		=> true,
+		// 				'order'			=> true,
+		// 				'translatable'	=> false,
+		// 				'properties'	=> false,
+		// 				'relations'		=> false,
+		// 				'descriptors'	=> false,
+		// 				'label'			=> true
+		// 			]);
+
+		// 		$ar_elements = array_merge( $ar_elements, self::get_children_recursive($element_tipo));
+		// 	}
+
+		// 	# STORE CACHE DATA
+		// 	$childrens_recursive_data[$tipo] = $ar_elements;
+
+		// 	if(SHOW_DEBUG===true) {
+		// 		$total=round(microtime(1)-$start_time,3);
+		// 		#debug_log(__METHOD__." ar_tesauro ($total) ".to_string($ar_tesauro), logger::DEBUG);
+		// 	}
+
+		// 	return $ar_elements;
+		// }//end get_children_recursive_OLD
 
 
 

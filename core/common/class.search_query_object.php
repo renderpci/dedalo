@@ -358,7 +358,7 @@ class search_query_object {
 
 	/**
 	* SET_CHILDREN_RECURSIVE
-	* Allow / disallow the default sql query to get children of the main search
+	* Allow / disallow the default SQL query to get children of the main search
 	* @param bool $value
 	* @return bool true
 	*/

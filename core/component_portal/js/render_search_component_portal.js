@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, Promise, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -28,9 +29,9 @@ export const render_search_component_portal = function() {
 
 /**
 * SEARCH
-* Render node for use in search
+* Render node for use in search mode
 * @param object options
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 render_search_component_portal.prototype.search = async function(options) {
 
@@ -40,19 +41,23 @@ render_search_component_portal.prototype.search = async function(options) {
 		const render_level = options.render_level || 'full'
 
 	// columns_map
-		const columns_map = await rebuild_columns_map(self)
-		self.columns_map = columns_map
+		const columns_map	= await rebuild_columns_map(self)
+		self.columns_map	= columns_map
+
+	// view
+		const children_view	= self.context.children_view || self.context.view || 'default'
 
 	// ar_section_record
 		const ar_section_record = await get_section_records({
 			caller	: self,
-			mode	:'list'
+			mode	: self.mode, // 'search',
+			view	: children_view
 		})
 		// store to allow destroy later
 		self.ar_instances.push(...ar_section_record)
 
-	// content_data. Note that function build_content_data is imported from edit mode
-		const content_data = await build_content_data(self, ar_section_record)
+	// content_data
+		const content_data = await render_content_data(self, ar_section_record)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -66,7 +71,8 @@ render_search_component_portal.prototype.search = async function(options) {
 		wrapper.content_data = content_data
 
 	// autocomplete
-		wrapper.addEventListener('click', function() {
+		wrapper.addEventListener('click', function(e) {
+			e.stopPropagation()
 			activate_autocomplete(self, wrapper)
 		})
 
@@ -77,39 +83,48 @@ render_search_component_portal.prototype.search = async function(options) {
 
 
 /**
-* BUILD_CONTENT_DATA
-* Used too in search mode
+* RENDER_CONTENT_DATA
 * @param object self
 * @param array ar_section_record
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
-export const build_content_data = async function(self, ar_section_record) {
+const render_content_data = async function(self, ar_section_record) {
 
-	const fragment = new DocumentFragment()
+	// DocumentFragment
+		const fragment = new DocumentFragment()
 
 	// q operator (search only)
-		const q_operator = self.data.q_operator
-		const input_q_operator = ui.create_dom_element({
-			element_type	: 'input',
-			type			: 'text',
-			value			: q_operator,
-			class_name		: 'q_operator',
-			parent			: fragment
-		})
-		input_q_operator.addEventListener('change', function(){
-			// value
-				const value = (input_q_operator.value.length>0) ? input_q_operator.value : null
-			// q_operator. Fix the data in the instance previous to save
-				self.data.q_operator = value
-			// publish search. Event to update the DOM elements of the instance
-				event_manager.publish('change_search_element', self)
-		})
+		const non_q_operator_models = [
+			'component_relation_parent'
+		]
+		if (!non_q_operator_models.includes(self.model)) {
+			const q_operator = self.data.q_operator
+			const input_q_operator = ui.create_dom_element({
+				element_type	: 'input',
+				type			: 'text',
+				value			: q_operator,
+				class_name		: 'q_operator',
+				parent			: fragment
+			})
+			input_q_operator.addEventListener('click', function(e){
+				e.stopPropagation()
+			})
+			input_q_operator.addEventListener('change', function(){
+				// value
+					const value = (input_q_operator.value.length>0) ? input_q_operator.value : null
+				// q_operator. Fix the data in the instance previous to save
+					self.data.q_operator = value
+				// publish search. Event to update the DOM elements of the instance
+					event_manager.publish('change_search_element', self)
+			})
+		}
 
 	// ar_section_record
 		const ar_section_record_length = ar_section_record.length
 		for (let i = 0; i < ar_section_record_length; i++) {
 			// section_record
 			const section_record_node = await ar_section_record[i].render()
+			// console.log('>> section_record TO RENDER:', ar_section_record[i]);
 			fragment.appendChild(section_record_node)
 		}
 
@@ -119,30 +134,39 @@ export const build_content_data = async function(self, ar_section_record) {
 
 
 	return content_data
-}//end build_content_data
+}//end render_content_data
 
 
 
 /**
 * REBUILD_COLUMNS_MAP
 * Adding control columns to the columns_map that will processed by section_recods
+* @param object self
 * @return obj columns_map
 */
 const rebuild_columns_map = async function(self) {
 
+	// columns_map already rebuilt case
+		if (self.fixed_columns_map===true) {
+			return self.columns_map
+		}
+
+	// fixed_mode. To force section_record to preserve the search ddo_map items mode,
+	// add 'fixed_mode' to all if they don't already have it
+		const ddo_map_path = self.request_config_object.search && self.request_config_object.search.ddo_map
+			? 'search'
+			: 'show'
+		if (self.request_config_object[ddo_map_path] && self.request_config_object[ddo_map_path].ddo_map) {
+			self.request_config_object[ddo_map_path].ddo_map.map(el => {
+				el.fixed_mode = true
+			})
+		}
+
 	const columns_map = []
 
-	// column section_id check
-		// 	columns_map.push({
-		// 		id			: 'section_id',
-		// 		label		: 'Id',
-		// 		width 		: 'auto',
-		// 		callback	: render_edit_view_line.render_column_id
-		// 	})
-
-	const base_columns_map = await self.columns_map
-
-	columns_map.push(...base_columns_map)
+	// base_columns_map
+		const base_columns_map = await self.columns_map
+		columns_map.push(...base_columns_map)
 
 	// column component_info check
 		if (self.add_component_info===true) {
@@ -157,9 +181,12 @@ const rebuild_columns_map = async function(self) {
 		columns_map.push({
 			id			: 'remove',
 			label		: get_label.delete || 'Delete',
-			width 		: 'auto',
+			width		: 'auto',
 			callback	: render_column_remove // self.render_column_remove
 		})
+
+	// fixed as calculated
+		self.fixed_columns_map = true
 
 
 	return columns_map
@@ -172,9 +199,9 @@ const rebuild_columns_map = async function(self) {
 * Render column_remov node
 * Shared across views
 * @param object options
-* @return DOM DocumentFragment
+* @return HTMLElement button_remove
 */
-const render_column_remove = function(options) {
+export const render_column_remove = function(options) {
 
 	// options
 		const self				= options.caller
@@ -184,7 +211,8 @@ const render_column_remove = function(options) {
 		// const section_tipo	= options.section_tipo
 		// const locator		= options.locator
 
-	const fragment = new DocumentFragment()
+	// DocumentFragment
+		const fragment = new DocumentFragment()
 
 	// button_remove
 		const button_remove = ui.create_dom_element({
@@ -209,7 +237,9 @@ const render_column_remove = function(options) {
 				// publish search. Event to update the dom elements of the instance
 					event_manager.publish('change_search_element', self)
 
-					self.refresh()
+					self.refresh({
+						// build_autoload : true
+					})
 			}
 
 			unlink_record()
@@ -224,4 +254,8 @@ const render_column_remove = function(options) {
 
 
 	return fragment
-}//end render_column_remove()
+}//end render_column_remove
+
+
+
+// @license-end

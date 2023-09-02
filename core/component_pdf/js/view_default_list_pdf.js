@@ -1,4 +1,5 @@
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
+/*global DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
 
@@ -25,65 +26,73 @@ export const view_default_list_pdf = function() {
 /**
 * RENDER
 * Render node for use in list
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_default_list_pdf.render = async function(self, options) {
 
 	// short vars
-		const data		= self.data || {}
-		const datalist	= data.datalist || []
-		const value		= data.value
+		const data			= self.data || {}
+		const value			= data.value
+		// const datalist	= data.datalist || []
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {})
+		wrapper.classList.add('media','media_wrapper')
 
 	// image
-		const url = value
-			? DEDALO_CORE_URL + '/themes/default/pdf_icon.png'
-			: null // page_globals.fallback_image
+		const files_info = value && value[0] && value[0].files_info
+			? value[0].files_info
+			: null
+		if (files_info && files_info.length>0) {
+			const url = value
+				? DEDALO_CORE_URL + '/themes/default/pdf_icon.png'
+				: null // page_globals.fallback_image
+			const image = ui.create_dom_element({
+				element_type	: 'img',
+				class_name		: 'icon_pdf',
+				src				: url,
+				parent			: wrapper
+			})
+			image.addEventListener('error', function() {
+				console.log('pdf icon load error:', url);
+			})
+			// open viewer
+			image.addEventListener('mouseup', function (e) {
+				e.stopPropagation();
 
-		const image = ui.create_dom_element({
-			element_type	: 'img',
-			src				: url,
-			parent			: wrapper
-		})
-		image.addEventListener('error', function() {
-			console.log('pdf icon load error:', url);
-		})
+				// const file_does_not_exist = datalist.find(item =>  item.file_exist === false)
+				if(!url){
 
-	// open viewer
-		image.addEventListener('mouseup', function (e) {
-			e.stopPropagation();
+					// get the upload tool to be fired
+						const tool_upload = self.tools.find(el => el.model === 'tool_upload')
 
-			// const file_does_not_exist = datalist.find(item =>  item.file_exist === false)
-			if(!url){
+					// open_tool (tool_common)
+						open_tool({
+							tool_context	: tool_upload,
+							caller			: self
+						})
+				}else{
 
-				// get the upload tool to be fired
-					const tool_upload = self.tools.find(el => el.model === 'tool_upload')
-
-				// open_tool (tool_common)
-					open_tool({
-						tool_context	: tool_upload,
-						caller			: self
-					})
-			}else{
-
-				// open a new window
-					const url_vars = {
-						tipo			: self.tipo,
-						section_tipo	: self.section_tipo,
-						id				: self.section_id,
-						mode			: 'edit',
-						view			: 'viewer',
-						menu			: false
-					}
-					const url				= DEDALO_CORE_URL + '/page/?' + object_to_url_vars(url_vars)
-					const current_window	= window.open(url, 'pdf_viewer', 'width=1024,height=800')
-					current_window.focus()
-			}
-		})
-
+					// open a new window
+						const url_vars = {
+							tipo			: self.tipo,
+							section_tipo	: self.section_tipo,
+							id				: self.section_id,
+							mode			: 'edit',
+							view			: 'viewer',
+							menu			: false
+						}
+						const url				= DEDALO_CORE_URL + '/page/?' + object_to_url_vars(url_vars)
+						const current_window	= window.open(url, 'pdf_viewer', 'width=1024,height=800')
+						current_window.focus()
+				}
+			})
+		}
 
 
 	return wrapper
-}//end list
+}//end render
+
+
+
+// @license-end

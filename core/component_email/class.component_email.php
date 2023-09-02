@@ -1,5 +1,5 @@
 <?php
-/*
+/**
 * CLASS COMPONENT EMAIL
 *
 *
@@ -11,14 +11,12 @@ class component_email extends component_common {
 	/**
 	* __CONSTRUCT
 	*/
-	function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null) {
+	protected function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null, bool $cache=true) {
 
 		// fix lang (email always is DEDALO_DATA_NOLAN)
-		$lang = DEDALO_DATA_NOLAN;
+		$this->lang = DEDALO_DATA_NOLAN;
 
-		parent::__construct($tipo, $parent, $mode, $lang, $section_tipo);
-
-		return true;
+		parent::__construct($tipo, $parent, $mode, $this->lang, $section_tipo, $cache);
 	}//end __construct
 
 
@@ -37,18 +35,19 @@ class component_email extends component_common {
 
 	/**
 	* SET_DATO
+	* @return bool
 	*/
-	public function set_dato($dato) {
+	public function set_dato($dato) : bool {
 
 		$safe_dato=array();
-		foreach ((array)$dato as $key => $value) {
+		foreach ((array)$dato as $value) {
 			$safe_dato[] = empty($value)
 				? $value
 				: component_email::clean_email($value);
 		}
 		$dato = $safe_dato;
 
-		parent::set_dato( (array)$dato );
+		return parent::set_dato( (array)$dato );
 	}//end set_dato
 
 
@@ -62,9 +61,13 @@ class component_email extends component_common {
 
 		// Optionally, the data could be validated here... although it has already been done in javascript
 			$email = $this->get_dato();
-			foreach ((array)$email as $key => $value) {
+			foreach ((array)$email as $value) {
 				if (!empty($value) && false===component_email::is_valid_email($value)) {
-					debug_log(__METHOD__." No data is saved. Invalid email ".to_string($value), logger::ERROR);
+					debug_log(__METHOD__
+						. " No data is saved. Invalid email "
+						. ' value:' . to_string($value)
+						, logger::ERROR
+					);
 					return null;
 				}
 			}
@@ -290,14 +293,14 @@ class component_email extends component_common {
 	public function search_operators_info() : array {
 
 		$ar_operators = [
-			'*' 	 => 'no_vacio', // not null
-			'!*' 	 => 'campo_vacio', // null
-			'=' 	 => 'similar_a',
-			'!=' 	 => 'distinto_de',
-			'-' 	 => 'no_contiene',
-			'*text*' => 'contiene',
-			'text*'  => 'empieza_con',
-			'*text'  => 'acaba_con',
+			'*' 	 => 'no_empty', // not null
+			'!*' 	 => 'empty', // null
+			'=' 	 => 'similar_to',
+			'!=' 	 => 'different_from',
+			'-' 	 => 'does_not_contain',
+			'*text*' => 'contains',
+			'text*'  => 'begins_with',
+			'*text'  => 'end_with',
 			'\'text\'' => 'literal',
 		];
 

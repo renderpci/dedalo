@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
@@ -12,7 +13,7 @@
 * RENDER_TOOLBAR
 * Called from services to render generic toolbar
 * @para object options
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 	// export const render_toolbar = function() {
 
@@ -30,7 +31,7 @@
 * RENDER_BUTTON
 * @param object button_config
 * 	Defined in render_edit function 'get_custom_buttons'
-* @return DOM node button_node
+* @return HTMLElement button_node
 */
 export const render_button = function(button_config) {
 
@@ -53,7 +54,7 @@ export const render_button = function(button_config) {
 		const button_node = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'toolbar_button' + name_to_class + class_name,
-			inner_html 		: text
+			inner_html		: text
 		})
 
 	// icon svg
@@ -66,7 +67,6 @@ export const render_button = function(button_config) {
 			})
 	 	}
 
-
 	// events
 		if(manager_editor!==true && typeof onclick==='function'){
 			button_node.addEventListener("click", onclick)
@@ -78,12 +78,12 @@ export const render_button = function(button_config) {
 
 
 
-
 /**
 * RENDER_FIND_AND_REPLACE
-* @param object button_config
-* 	Defined in render_edit function 'get_custom_buttons'
-* @return DOM node button_node
+* Crates an modal with all find and replace options
+* @param object editor
+* 	Instance of editor
+* @return HTMLElement modal
 */
 export const render_find_and_replace = function(editor) {
 
@@ -91,34 +91,38 @@ export const render_find_and_replace = function(editor) {
 
 	const findAndReplaceEditing	= editor.plugins.get( 'FindAndReplaceEditing' );
 	const state					= findAndReplaceEditing.state;
-
-	const find_options = {
+	const find_options			= {
 		match_case	: false,
 		whole_words	: false
 	}
 
-	self.results 		= 0
+	self.results = 0
 
-	const title_contanier = ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'title_contanier',
-	})
+	// title (modal)
+		const title_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'title_container'
+		})
 		const title_label = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'title_label',
-			inner_html 		: get_label.find_and_replace || 'Find and replace',
-			parent 			: title_contanier,
+			inner_html		: get_label.find_and_replace || 'Find and replace',
+			parent			: title_container
 		})
 
-	const body_contanier = ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'body_contanier',
-	})
+	// body (modal)
+		const body_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'body content find_and_replace'
+		})
+
+		// search
 		const input_search = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'text',
 			class_name		: 'input_search',
-			parent 			: body_contanier,
+			placeholder		: get_label.search || 'Search',
+			parent			: body_container
 		})
 		input_search.addEventListener('keyup',function(){
 			state.clear( editor.model );
@@ -129,10 +133,9 @@ export const render_find_and_replace = function(editor) {
 			element_type	: 'button',
 			class_name		: 'warning button_search',
 			inner_html		: get_label.search || 'Search',
-			parent 			: body_contanier,
+			parent			: body_container
 		})
 		button_search.addEventListener('click',() => {
-
 			if(!input_search.value){
 				return
 			}
@@ -150,16 +153,17 @@ export const render_find_and_replace = function(editor) {
 			element_type	: 'button',
 			class_name		: 'light button_previous',
 			inner_html		: get_label.previous || 'Previous',
-			parent 			: body_contanier,
+			parent			: body_container
 		})
 		button_previous.addEventListener('click',() => {
 			editor.execute( 'findPrevious' );
 		})
+
 		const button_next = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'light button_next',
 			inner_html		: get_label.next || 'Next',
-			parent 			: body_contanier,
+			parent			: body_container
 		})
 		button_next.addEventListener('click',() => {
 			editor.execute( 'findNext' );
@@ -169,72 +173,75 @@ export const render_find_and_replace = function(editor) {
 			element_type	: 'span',
 			class_name		: 'result_label',
 			inner_html		: self.result,
-			parent 			: body_contanier,
+			parent			: body_container
 		})
 
-	const replace_contanier = ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'replace_contanier',
-		parent 			: body_contanier,
-	})
+	// replace
+		const replace_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'replace_container',
+			parent			: body_container
+		})
 		const input_replace = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'text',
 			class_name		: 'input_replace',
-			parent 			: replace_contanier,
+			placeholder		: get_label.replace || 'Replace',
+			parent			: replace_container
 		})
-			const button_replace = ui.create_dom_element({
-				element_type	: 'button',
-				class_name		: 'light button_replace',
-				inner_html		: get_label.replace || 'Replace',
-				parent 			: replace_contanier,
-			})
-			button_replace.addEventListener('click',() => {
-
-				const high_lighted_result = state.highlightedResult;
-				if ( high_lighted_result ) {
-					editor.execute( 'replace', input_replace.value, high_lighted_result );
-				}
-			})
-			const button_replace_all = ui.create_dom_element({
-				element_type	: 'button',
-				class_name		: 'light button_replace_all',
-				inner_html		: get_label.replace_all || 'Replace All',
-				parent 			: replace_contanier,
-			})
-			button_replace_all.addEventListener('click',() => {
-				editor.execute( 'replaceAll', input_replace.value, input_search.value );
-			})
-
-	const options_contanier = ui.create_dom_element({
-		element_type	: 'span',
-		class_name		: 'options_contanier',
-		parent 			: replace_contanier,
-	})
-
-		const label_match_case = ui.create_dom_element({
-			element_type	: 'label',
-			class_name		: 'label_match_case',
-			inner_html		: get_label.match_case  || 'Match case',
-			parent 			: options_contanier,
+		const button_replace = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'light button_replace',
+			inner_html		: get_label.replace || 'Replace',
+			parent			: replace_container
 		})
-		const match_case = ui.create_dom_element({
+		button_replace.addEventListener('click',() => {
+
+			const high_lighted_result = state.highlightedResult;
+			if ( high_lighted_result ) {
+				editor.execute( 'replace', input_replace.value, high_lighted_result );
+			}
+		})
+		const button_replace_all = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'light button_replace_all',
+			inner_html		: get_label.replace_all || 'Replace All',
+			parent			: replace_container
+		})
+		button_replace_all.addEventListener('click',() => {
+			editor.execute( 'replaceAll', input_replace.value, input_search.value );
+		})
+
+	// options_container
+		const options_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'options_container',
+			parent			: replace_container
+		})
+
+		// match_case
+			const label_match_case = ui.create_dom_element({
+				element_type	: 'label',
+				class_name		: 'label_match_case',
+				inner_html		: get_label.match_case  || 'Match case',
+				parent			: options_container
+			})
+			const match_case = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'check',
-				parent 			: options_contanier,
-		})
+				parent			: options_container
+			})
 			const button_match_case = ui.create_dom_element({
 				element_type	: 'input',
 				type			: 'checkbox',
 				class_name		: 'check_match_case',
 				name			: 'match_case',
-				parent 			: match_case,
+				parent			: match_case
 			})
-
 			const selector_match_case = ui.create_dom_element({
 				element_type	: 'label',
 				class_name		: 'check',
-				parent 			: match_case,
+				parent			: match_case
 			})
 			selector_match_case.addEventListener('click',function(){
 				button_match_case.checked = button_match_case.checked
@@ -246,28 +253,29 @@ export const render_find_and_replace = function(editor) {
 					: false
 			})
 
-		const label_whole_words = ui.create_dom_element({
-			element_type	: 'label',
-			class_name		: 'label_whole_words',
-			inner_html		: get_label.whole_words  || 'Whole words',
-			parent 			: options_contanier,
-		})
-		const whole_words = ui.create_dom_element({
+		// whole_words
+			const label_whole_words = ui.create_dom_element({
+				element_type	: 'label',
+				class_name		: 'label_whole_words',
+				inner_html		: get_label.whole_words  || 'Whole words',
+				parent			: options_container
+			})
+			const whole_words = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'check',
-				parent 			: options_contanier,
-		})
+				parent			: options_container
+			})
 			const button_whole_words = ui.create_dom_element({
 				element_type	: 'input',
 				type			: 'checkbox',
 				class_name		: 'check_whole_words',
 				name			: 'whole_words',
-				parent 			: whole_words,
+				parent			: whole_words
 			})
 			const selector_whole_words = ui.create_dom_element({
 				element_type	: 'label',
 				class_name		: 'check',
-				parent 			: whole_words,
+				parent			: whole_words
 			})
 			selector_whole_words.addEventListener('click',function(){
 
@@ -280,18 +288,23 @@ export const render_find_and_replace = function(editor) {
 					: false
 			})
 
+	// modal
+		const modal = ui.attach_to_modal({
+			header			: title_container,
+			body			: body_container,
+			size			: 'small',
+			remove_overlay	: true
+		})
+		modal.on_close = ()=>{
+			state.clear( editor.model );
+			findAndReplaceEditing.stop();
+		}
 
-	const modal = ui.attach_to_modal({
-		header			: title_contanier,
-		body			: body_contanier,
-		size			: 'small',
-		remove_overlay	: true
-	})
-	modal.on_close = ()=>{
-		state.clear( editor.model );
-		findAndReplaceEditing.stop();
-	}
 
-
-	return true
+	return modal
 }//end render_find_and_replace
+
+
+
+// @license-end
+

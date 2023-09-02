@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, tool_diffusion */
 /*eslint no-undef: "error"*/
 
@@ -25,7 +26,7 @@ export const render_tool_diffusion = function() {
 * Render tool DOM nodes
 * This function is called by render common attached in 'tool_diffusion.js'
 * @param object options
-* @return DOM node
+* @return HTMLElement wrapper
 */
 render_tool_diffusion.prototype.edit = async function(options) {
 
@@ -64,7 +65,7 @@ render_tool_diffusion.prototype.edit = async function(options) {
 * GET_CONTENT_DATA
 * Render tool body or 'content_data'
 * @param instance self
-* @return DOM node content_data
+* @return HTMLElement content_data
 */
 const get_content_data = async function(self) {
 
@@ -114,7 +115,7 @@ const get_content_data = async function(self) {
 		ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: '',
-			inner_html		: get_label.niveles || 'Levels',
+			inner_html		: get_label.levels || 'Levels',
 			parent			: resolve_levels_container
 		})
 		// resolve_levels_input
@@ -164,14 +165,17 @@ const get_content_data = async function(self) {
 		fragment.appendChild(publication_items)
 
 	// info_text
-		const total = self.caller.total
+		const total = self.caller.mode==='edit'
+			? 1
+			: await self.caller.get_total()
+		const locale		= 'es-ES' // (page_globals.locale ?? 'es-CL').replace('_', '-')
+		const total_label	= new Intl.NumberFormat(locale, {}).format(total);
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'info_text',
-			inner_html		: self.get_tool_label('publish_selected_records', total),
+			inner_html		: self.get_tool_label('publish_selected_records', total_label),
 			parent			: diffusion_info_container
 		})
-		diffusion_info_container
 
 	// buttons_container
 		// const buttons_container = ui.create_dom_element({
@@ -205,7 +209,7 @@ const get_content_data = async function(self) {
 
 /**
 * RENDER_PUBLICATION_ITEMS
-* @return DOM node publication_items
+* @return HTMLElement publication_items
 */
 export const render_publication_items = function(self) {
 
@@ -237,7 +241,7 @@ export const render_publication_items = function(self) {
 			// name
 				const name_label = ui.create_dom_element({
 					element_type	: 'span',
-					inner_html		: get_label.nombre || 'Name',
+					inner_html		: get_label.name || 'Name',
 					class_name		: 'label',
 					parent			: publication_items_grid
 				})
@@ -251,7 +255,7 @@ export const render_publication_items = function(self) {
 			// type
 				const type_label = ui.create_dom_element({
 					element_type	: 'span',
-					inner_html		: get_label.tipo || 'Type',
+					inner_html		: get_label.type || 'Type',
 					class_name		: 'label',
 					parent			: publication_items_grid
 				})
@@ -276,7 +280,6 @@ export const render_publication_items = function(self) {
 					parent			: publication_items_grid
 				})
 
-
 			// database
 				const database_label = ui.create_dom_element({
 					element_type	: 'span',
@@ -290,6 +293,25 @@ export const render_publication_items = function(self) {
 					class_name		: 'value',
 					parent			: publication_items_grid
 				})
+
+			// connection_status
+				if (item.connection_status) {
+					const connection_status_label = ui.create_dom_element({
+						element_type	: 'span',
+						inner_html		: get_label.connection_status || 'Connection status',
+						class_name		: 'label',
+						parent			: publication_items_grid
+					})
+					const class_status = item.connection_status.result===true
+						? 'success'
+						: 'fail'
+					const connection_status_value = ui.create_dom_element({
+						element_type	: 'div',
+						inner_html		: item.connection_status.msg,
+						class_name		: 'value ' + class_status,
+						parent			: publication_items_grid
+					})
+				}
 
 			// container_bottom
 				const container_bottom = ui.create_dom_element({
@@ -309,7 +331,7 @@ export const render_publication_items = function(self) {
 					const publication_button = ui.create_dom_element({
 						element_type	: 'button',
 						class_name		: 'warning publication_button',
-						inner_html		: get_label.publicar || 'Publish',
+						inner_html		: get_label.publish || 'Publish',
 						parent			: container_bottom
 					})
 					publication_button.addEventListener('click', function(e) {
@@ -339,7 +361,7 @@ export const render_publication_items = function(self) {
 								diffusion_element_tipo : current_diffusion_element_tipo
 							})
 							.then(function(api_response){
-								console.log('api_response:', api_response);
+								console.log('export api_response:', api_response);
 
 								response_message.innerHTML = api_response.msg || 'Unknown error'
 								if (api_response.result===false) {
@@ -350,9 +372,18 @@ export const render_publication_items = function(self) {
 								publication_button.classList.remove('hide')
 							})
 					})
+					if (item.connection_status) {
+						if (item.connection_status.result===false) {
+							publication_button.classList.add('not_ready')
+						}
+					}
 		}//end for (let i = 0; i < current_diffusion_map_length; i++)
 	}
 
 
 	return publication_items
 }//end render_publication_items
+
+
+
+// @license-end

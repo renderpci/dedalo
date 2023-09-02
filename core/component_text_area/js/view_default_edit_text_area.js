@@ -1,3 +1,4 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
@@ -7,6 +8,9 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import * as instances from '../../common/js/instances.js'
+	import {get_fallback_value} from '../../common/js/common.js'
+	import {pause, url_vars_to_object} from '../../common/js/utils/index.js'
+	import {LZString as lzstring} from '../../common/js/utils/lzstring.js'
 	// import {when_in_viewport} from '../../common/js/events.js'
 
 
@@ -25,7 +29,7 @@ export const view_default_edit_text_area = function() {
 /**
 * RENDER
 * Render node for use in modes: edit, edit_in_list
-* @return DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_default_edit_text_area.render = async function(self, options) {
 
@@ -35,9 +39,9 @@ view_default_edit_text_area.render = async function(self, options) {
 		self.render_level = render_level
 
 	// fix non value scenarios
-		self.data.value = (self.data && self.data.value.length>0)
-			? self.data.value
-			: [null]
+		// self.data.value = (self.data && self.data.value.length>0)
+		// 	? self.data.value
+		// 	: [null]
 
 	// content_data
 		const content_data = get_content_data_edit(self)
@@ -46,31 +50,37 @@ view_default_edit_text_area.render = async function(self, options) {
 		}
 
 	// buttons
-		const buttons = get_buttons(self)
+		const buttons = (self.permissions > 1)
+			? get_buttons(self)
+			: null
 
 	// wrapper. ui build_edit returns component wrapper
-		const wrapper = ui.component.build_wrapper_edit(self, {
+		const wrapper_options = {
 			content_data	: content_data,
 			buttons			: buttons
-		})
+		}
+		if (self.view==='line') {
+			wrapper_options.label = null // prevent to create label node
+		}
+		const wrapper = ui.component.build_wrapper_edit(self, wrapper_options)
 		// set pointers
 		wrapper.content_data = content_data
 
-	// label custom style based on activate/deactivate events
-		event_manager.subscribe('activate_component', fn_activate_component)
-		function fn_activate_component(component) {
-			if (component.id===self.id) {
-				wrapper.label.classList.add('move_top')
-			}
-		}
-		event_manager.subscribe('deactivate_component', fn_deactivate_component)
-		function fn_deactivate_component(component) {
-			if (component.id===self.id) {
-				if(wrapper.label.classList.contains('move_top')) {
-					wrapper.label.classList.remove('move_top')
-				}
-			}
-		}
+	// label custom style based on activate/deactivate events. (!) Deactivated 11-02-2023. Moved to inspector)
+		// event_manager.subscribe('activate_component', fn_activate_component)
+		// function fn_activate_component(component) {
+		// 	if (component.id===self.id) {
+		// 		wrapper.label.classList.add('move_top')
+		// 	}
+		// }
+		// event_manager.subscribe('deactivate_component', fn_deactivate_component)
+		// function fn_deactivate_component(component) {
+		// 	if (component.id===self.id) {
+		// 		if(wrapper.label.classList.contains('move_top')) {
+		// 			wrapper.label.classList.remove('move_top')
+		// 		}
+		// 	}
+		// }
 
 	// fix editor height. This guarantees that content_data grow to the maximum possible height
 		// when_in_viewport(wrapper, ()=> {
@@ -88,12 +98,14 @@ view_default_edit_text_area.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return DOM node content_data
+* @param object self
+* @return HTMLElement content_data
 */
 const get_content_data_edit = function(self) {
 
 	// short vars
-		const value				= self.data.value
+		const data				= self.data || {}
+		const value				= data.value || []
 		const is_inside_tool	= self.is_inside_tool
 
 	// content_data
@@ -101,9 +113,13 @@ const get_content_data_edit = function(self) {
 
 	// values (inputs)
 		const inputs_value	= value // is array
-		const value_length	= inputs_value.length
+		const value_length	= inputs_value.length || 1
 		for (let i = 0; i < value_length; i++) {
-			const content_value = get_input_element(i, inputs_value[i], self, is_inside_tool)
+			// get the content_value
+			const content_value = (self.permissions===1)
+				? get_content_value_read(i, inputs_value[i], self, is_inside_tool)
+				: get_content_value(i, inputs_value[i], self, is_inside_tool)
+			// add node to content_data
 			content_data.appendChild(content_value)
 			// set pointers
 			content_data[i] = content_value
@@ -115,62 +131,32 @@ const get_content_data_edit = function(self) {
 
 
 /**
-* GET_BUTTONS
-* @param object instance
-* @return DOM node buttons_container
+* GET_CONTENT_VALUE
+* @return HTMLElement content_value
 */
-const get_buttons = (self) => {
+const get_content_value = (i, current_value, self) => {
 
-	// short vars
-		const is_inside_tool	= self.is_inside_tool // (self.caller && self.caller.type==='tool')
-		const mode				= self.mode
-		const fragment			= new DocumentFragment()
+	// get fallback when current_value is empty
+	// clean fallback to only text
+		const data					= self.data || {}
+		const value					= data.value || []
+		const ar_fallback_value		= data.fallback_value || []
+		const fallback				= get_fallback_value(value, ar_fallback_value)
+		const dirty_fallback_value	= fallback[i]
 
-
-	if (!is_inside_tool && mode==='edit') {
-
-		// button_fullscreen
-			const button_fullscreen = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'button full_screen',
-				parent			: fragment
-			})
-			button_fullscreen.addEventListener('click', function() {
-				ui.enter_fullscreen(self.node)
-			})
-
-		// buttons tools
-			if( self.show_interface.tools === true){
-				ui.add_tools(self, fragment)
-			}
-	}
-
-	// buttons container
-		const buttons_container = ui.component.build_buttons_container(self)
-		// buttons_container.appendChild(fragment)
-
-	// buttons_fold (allow sticky position on large components)
-		const buttons_fold = ui.create_dom_element({
+	// clean fallback of any tag
+		const fallback_fragment = document.createDocumentFragment();
+		const fb_content_value = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'buttons_fold',
-			parent			: buttons_container
+			inner_html		: dirty_fallback_value,
+			parent			: fallback_fragment
 		})
-		buttons_fold.appendChild(fragment)
+		const fallback_value = fallback_fragment.firstChild.innerText;
 
-
-	return buttons_container
-}//end get_buttons
-
-
-
-/**
-* GET_INPUT_ELEMENT
-* @return DOM node content_value
-*/
-const get_input_element = (i, current_value, self) => {
-
-	// value is a raw html without parse into nodes (txt format)
-		const value = self.tags_to_html(current_value)
+	// value_string is a raw html without parse into nodes (txt format)
+		const value_string = current_value
+			? self.tags_to_html(current_value)
+			: null
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -189,12 +175,31 @@ const get_input_element = (i, current_value, self) => {
 		const value_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'value_container editor_container',
-			parent			: content_value,
-			inner_html 		: value
+			inner_html 		: value_string,
+			parent			: content_value
 		})
+		// placeholder_node. Create a Place placeholder if no value found
+		const placeholder_node = (!value_string)
+			? ui.create_dom_element({
+				element_type	: 'p',
+				class_name		: 'placeholder ck-placeholder',
+				inner_html		: fallback_value,
+				parent			: value_container
+			  })
+			: null
 
 	// init_current_service_text_editor
 		const init_current_service_text_editor = async function() {
+
+			// permissions check
+				if (!self.permissions || parseInt(self.permissions)<2) {
+					return
+				}
+
+			// placeholder_node. Remove it from value_container
+				if (placeholder_node) {
+					placeholder_node.remove()
+				}
 
 			// service_editor. Fixed on init
 				const current_service_text_editor = new self.service_text_editor()
@@ -209,7 +214,8 @@ const get_input_element = (i, current_value, self) => {
 						toolbar.push(...self.context.toolbar_buttons)
 					}
 				// toolbar add standard buttons
-					toolbar.push(...['button_lang','reference','|','button_save'])
+					// toolbar.push(...['button_lang','reference','|','button_save'])
+					toolbar.push(...['button_lang','reference'])
 
 			// editor_config
 				const editor_config = {
@@ -225,10 +231,10 @@ const get_input_element = (i, current_value, self) => {
 					caller				: self,
 					value_container		: value_container,
 					toolbar_container	: toolbar_container,
-					value				: value,
+					fallback_value		: fallback_value,
 					key					: i,
 					editor_config		: editor_config,
-					editor_class		: self.context.view === 'html_text'
+					editor_class		: self.context.view==='html_text'
 						? 'InlineEditor'
 						: 'ddEditor' // ddEditor | InlineEditor
 				})
@@ -236,18 +242,50 @@ const get_input_element = (i, current_value, self) => {
 			// fix current_service_text_editor when is ready
 				self.text_editor[i] = current_service_text_editor
 
+			// permissions <2 turn editor read only
+				// if (!self.permissions || parseInt(self.permissions)<2) {
+				// 	current_service_text_editor.editor.enableReadOnlyMode(
+				// 		current_service_text_editor.editor.id
+				// 	)
+				// }
+
 			// event ready
 				event_manager.publish(
 					'editor_ready_' + self.id,
 					current_service_text_editor
 				)
 
+			// tag selected case (URL) Normally from dd_grid indexation tag button
+				setTimeout(function() {
+					const url_vars = url_vars_to_object(window.location.search)
+					const raw_data = url_vars.raw_data ?? null
+					if(raw_data) {
+
+						const url_data_string	= lzstring.decompressFromEncodedURIComponent(raw_data)
+						const url_data_object	= JSON.parse(url_data_string)
+						const tag_id			= url_data_object.caller_options?.tag_id || null
+						if(tag_id) {
+
+							// tag. Get the tag object selecting the tag into the text_area editor (get the tag attributes)
+							// needed to get the tag state, to show the tag info inside the tool_indexation
+							const tag = current_service_text_editor.get_view_tag_attributes({
+								type	: 'indexIn',
+								tag_id	: tag_id
+							})
+
+							// fire the event to select tag
+							event_manager.publish('click_tag_index_'+ self.id_base, {tag: tag})
+						}
+					}
+				}, 1)
+
+
 			return current_service_text_editor
 		}//end init_current_service_text_editor
 
 
 	// user click in the wrapper and init the editor. When it's not read only
-		if (self.show_interface.read_only!==true) {
+		if (self.show_interface.read_only!==true && self.permissions >1) {
 
 			const auto_init_editor = self.auto_init_editor!==undefined
 				? self.auto_init_editor
@@ -264,11 +302,13 @@ const get_input_element = (i, current_value, self) => {
 					// .then(()=>{
 						value_container.classList.remove('loading')
 					// })
-				}, 75)
+				}, 35)
+
 			}else{
 
 				// activate on user click
 
+				// click event
 				content_value.addEventListener('click', fn_click_init)
 				function fn_click_init(e) {
 					e.stopPropagation()
@@ -288,13 +328,99 @@ const get_input_element = (i, current_value, self) => {
 					})
 					// once only. Remove event to prevent duplicates
 					content_value.removeEventListener('click', fn_click_init)
-				}
+				}//end fn_click_init
+				// mousedown event. Capture event propagation
+				content_value.addEventListener('mousedown', (e) => {
+					e.stopPropagation()
+				})
 			}
 		}//end if (self.show_interface.read_only!==true)
 
 
 	return content_value
-}//end get_input_element
+}//end get_content_value
+
+
+
+/**
+* GET_CONTENT_VALUE_READ
+* @return HTMLElement content_value
+*/
+const get_content_value_read = (i, current_value, self) => {
+
+	// value is a raw html without parse into nodes (txt format)
+		const value = self.tags_to_html(current_value)
+
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value editor_container read_only',
+			inner_html		: value
+		})
+
+	return content_value
+}//end get_content_value_read
+
+
+
+/**
+* GET_BUTTONS
+* @param object instance
+* @return HTMLElement buttons_container
+*/
+const get_buttons = (self) => {
+
+	// short vars
+		const is_inside_tool	= self.is_inside_tool // (self.caller && self.caller.type==='tool')
+		const mode				= self.mode
+		const fragment			= new DocumentFragment()
+
+	if (!is_inside_tool && mode==='edit') {
+
+		// button_fullscreen
+			const button_fullscreen = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button full_screen',
+				parent			: fragment
+			})
+			button_fullscreen.addEventListener('click', function(e) {
+				e.stopPropagation()
+				ui.enter_fullscreen(self.node)
+			})
+
+		// buttons tools
+			if( self.show_interface.tools === true){
+				ui.add_tools(self, fragment)
+			}
+	}
+
+	// save
+		const save = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button tool save',
+			parent			: fragment
+		})
+		save.addEventListener('click', fn_save)
+		function fn_save(e) {
+			e.stopPropagation()
+			self.text_editor[0].save()
+		}
+
+	// buttons container
+		const buttons_container = ui.component.build_buttons_container(self)
+		// buttons_container.appendChild(fragment)
+
+	// buttons_fold (allow sticky position on large components)
+		const buttons_fold = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'buttons_fold',
+			parent			: buttons_container
+		})
+		buttons_fold.appendChild(fragment)
+
+
+	return buttons_container
+}//end get_buttons
 
 
 
@@ -490,7 +616,7 @@ const get_custom_buttons = (self, text_editor, i) => {
 
 	// button_lang
 		custom_buttons.push({
-			name			: "button_lang",
+			name			: 'button_lang',
 			manager_editor	: false,
 			options	: {
 				tooltip	: 'Add lang',
@@ -507,20 +633,20 @@ const get_custom_buttons = (self, text_editor, i) => {
 		})
 
 	// button_save
-		const save_label = get_label.save.replace(/<\/?[^>]+(>|$)/g, "") || "Save"
-		custom_buttons.push({
-			name			: "button_save",
-			manager_editor	: false,
-			options	: {
-				text	: save_label,
-				tooltip	: save_label,
-				icon	: false,
-				onclick	: function() {
-					// save. text_editor save function calls current component save_value()
-					text_editor.save()
-				}
-			}
-		})
+		// const save_label = get_label.save.replace(/<\/?[^>]+(>|$)/g, "") || "Save"
+		// custom_buttons.push({
+		// 	name			: 'button_save',
+		// 	manager_editor	: false,
+		// 	options	: {
+		// 		text	: save_label,
+		// 		tooltip	: save_label,
+		// 		icon	: false,
+		// 		onclick	: function(e) {
+		// 			// save. text_editor save function calls current component save_value()
+		// 			text_editor.save()
+		// 		}
+		// 	}
+		// })
 
 
 	return custom_buttons
@@ -539,7 +665,8 @@ const get_custom_buttons = (self, text_editor, i) => {
 */
 const get_custom_events = (self, i, text_editor) => {
 
-	const custom_events = {}
+	const custom_events	= {}
+	const features		= self.context.features || {}
 
 	// focus
 		custom_events.focus = (evt, options) => {
@@ -575,8 +702,7 @@ const get_custom_events = (self, i, text_editor) => {
 						// (!) Note publish 2 events: using 'id_base' to allow properties definition and
 						// 'self.id' for specific uses like tool indexation
 						// console.log("PUBLISH self.id:",self.id, self.id_base);
-						event_manager.publish('click_tag_index_'+ self.id_base, {tag: tag_obj, caller: self, text_editor: text_editor})
-						text_editor.set_selection_from_tag(tag_obj)
+						event_manager.publish('click_tag_index_'+ self.id_base, {tag: tag_obj})
 						break;
 
 					case 'svg' :
@@ -682,12 +808,10 @@ const get_custom_events = (self, i, text_editor) => {
 							i			: i,
 							tag			: tag_obj
 						})
-
 						break;
 
 					default:
 						// nothing to do here
-
 						break;
 				}//end switch evt.target.className
 			}else{
@@ -698,11 +822,10 @@ const get_custom_events = (self, i, text_editor) => {
 
 	// mouseup
 		custom_events.MouseUp = (evt, options) => {
-			// console.log("MouseUp options:", options, evt);
 
 			// user text selection event
 				const selection = options.selection
-				event_manager.publish('text_selection_'+ self.id, {selection:selection, caller: self})
+				event_manager.publish('text_selection_'+ self.id, {selection: selection, caller: self})
 
 			// click_no_tag_ . Used by tool_indexation to de-select the active tag
 				if (!evt) {
@@ -717,13 +840,13 @@ const get_custom_events = (self, i, text_editor) => {
 			switch(true) {
 
 				// 'Escape'
-				case self.context.features.av_player && evt.code===self.context.features.av_player.av_play_pause_code:
-					event_manager.publish('key_up_esc' +'_'+ self.id_base, self.context.features.av_player.av_rewind_seconds)
+				case features.av_player && evt.code===features.av_player.av_play_pause_code:
+					event_manager.publish('key_up_esc' +'_'+ self.id_base, features.av_player.av_rewind_seconds)
 					break;
 
 				// 'F2'
-				case self.context.features.av_player && evt.code===self.context.features.av_player.av_insert_tc_code:
-					// publish event and receive susbscriptors responses
+				case features.av_player && evt.code===features.av_player.av_insert_tc_code:
+					// publish event and receive subscription responses
 					const susbscriptors_responses			= event_manager.publish('key_up_f2' +'_'+ self.id_base, evt.code)
 					const susbscriptors_responses_length	= susbscriptors_responses.length
 
@@ -735,7 +858,7 @@ const get_custom_events = (self, i, text_editor) => {
 					// text_editor. get editor and content data
 						// const editor_content_data = text_editor.get_editor_content_data()
 
-					// iterate susbscriptors responses
+					// iterate subscription responses
 						for (let i = 0; i < susbscriptors_responses_length; i++) {
 							const data_tag	= susbscriptors_responses[i]
 							const tag_id	= (!data_tag.tag_id)
@@ -772,7 +895,6 @@ const get_custom_events = (self, i, text_editor) => {
 					const node_tag_person	= self.build_view_tag_obj(person_tag, person_tag.tag_id)
 					// set the new tag at caret position in the text.
 					text_editor.set_content(node_tag_person)
-
 					break;
 
 				// ctrl + Shift + 0
@@ -797,8 +919,13 @@ const get_custom_events = (self, i, text_editor) => {
 					const node_tag_lang = self.build_view_tag_obj(lang_tag, lang_tag.tag_id)
 					// set the new tag at caret position in the text.
 					text_editor.set_content(node_tag_lang)
-
 					break;
+
+				// Tab
+				case evt.code==='Tab':
+					// prevent to jump cursor to another input
+					evt.preventDefault()
+				break;
 
 				// case evt.code==='Backspace' || evt.code==='Delete':
 				// 	console.log(options)
@@ -808,18 +935,18 @@ const get_custom_events = (self, i, text_editor) => {
 
 	// changeData
 		custom_events.changeData = (evt, options) => {
-			const ar_changes = options
-			const changes_len = ar_changes.length
 
-			for (var i = changes_len - 1; i >= 0; i--) {
+			const ar_changes	= options
+			const changes_len	= ar_changes.length
+			for (let i = changes_len - 1; i >= 0; i--) {
 				const change = ar_changes[i]
 				// create the event name as:
 				// editor_tag_geo_change_
 				// editor_tag_indexIn_change_
-				const event_name =  'editor_tag_'+ change.type + '_change_' + self.id_base
+				const event_name = 'editor_tag_'+ change.type + '_change_' + self.id_base
 				event_manager.publish(event_name, change)
 			}
-		}// end changeData event
+		}//end changeData event
 
 
 	return custom_events
@@ -831,8 +958,7 @@ const get_custom_events = (self, i, text_editor) => {
 * BUILD_NODE_TAG
 * Create a DOM node from tag info (type, state, label, data, id)
 * @param object view_data
-* @param int tag_id
-* @return DOM node node_tag
+* @return HTMLElement node_tag
 */
 export const build_node_tag = function(view_data) {
 
@@ -870,7 +996,7 @@ export const build_node_tag = function(view_data) {
 /**
 * RENDER_LAYER_SELECTOR
 * Used from component_image
-* @return DOM node layer_selector
+* @return HTMLElement layer_selector
 */
 const render_layer_selector = function(self, data_tag, tag_id, text_editor){
 
@@ -884,8 +1010,9 @@ const render_layer_selector = function(self, data_tag, tag_id, text_editor){
 			class_name		: 'button add',
 			parent			: fragment
 		})
-		add_layer.addEventListener("click", (e) =>{
+		add_layer.addEventListener('click', (e) =>{
 			e.preventDefault()
+			e.stopPropagation()
 
 			data_tag.data = '[' + data_tag.last_layer_id + ']'
 			const tag 	= self.build_view_tag_obj(data_tag, tag_id)
@@ -907,8 +1034,9 @@ const render_layer_selector = function(self, data_tag, tag_id, text_editor){
 			class_name		: 'button close',
 			parent			: fragment
 		})
-		close.addEventListener("click", (e) =>{
+		close.addEventListener('click', (e) =>{
 			e.preventDefault()
+			e.stopPropagation()
 			layer_selector.remove()
 		})
 
@@ -1034,14 +1162,14 @@ const render_page_selector = function(self, data_tag, tag_id, text_editor) {
 		const user_option_cancel = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'user_option ',
-			inner_html		: get_label.cancelar || 'Cancel',
+			inner_html		: get_label.cancel || 'Cancel',
 			parent			: footer
 		})
 
 		const user_option_ok = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'user_option',
-			inner_html		: get_label.insertar_etiqueta || 'Insert label',
+			inner_html		: get_label.insert_tag || 'Insert tag',
 			parent			: footer
 		})
 
@@ -1088,15 +1216,15 @@ const render_page_selector = function(self, data_tag, tag_id, text_editor) {
 * RENDER_NOTE
 * Creates a modal dialog with note options
 * @param object options
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const render_note = async function(options) {
 
 	// options
-		const self				= options.self
-		const text_editor		= options.text_editor
-		const i					= options.i
-		const view_tag 			= options.tag
+		const self			= options.self
+		const text_editor	= options.text_editor
+		const i				= options.i
+		const view_tag		= options.tag
 
 	// short vars
 		const data_string		= view_tag.data
@@ -1104,33 +1232,35 @@ const render_note = async function(options) {
 		// replace the ' to " stored in the html data to JSON "
 		const data				= data_string.replace(/\'/g, '"')
 		const locator			= JSON.parse(data)
-
 		const note_section_id	= locator.section_id
 		const note_section_tipo	= locator.section_tipo
+		const features			= self.context.features || {}
 
-	// section
-		// create the instance of the note section, it will render without inspector or filter and with edit mode
-		const instance_options = {
-			model			: 'section',
-			tipo			: note_section_tipo,
-			section_tipo	: note_section_tipo,
-			section_id		: note_section_id,
-			mode			: 'edit',
-			lang			: self.lang,
-			caller			: self,
-			inspector		: false,
-			filter			: false
-		}
-		// get the instance, built and render
-		const note_section		=	await instances.get_instance(instance_options)
+	// note section
+		const get_note_section = async function(){
+			// create the instance of the note section, it will render without inspector or filter and with edit mode
+			const instance_options = {
+				model			: 'section',
+				tipo			: note_section_tipo,
+				section_tipo	: note_section_tipo,
+				section_id		: note_section_id,
+				mode			: 'edit',
+				lang			: self.lang,
+				caller			: self,
+				inspector		: false,
+				filter			: false
+			}
+			// get the instance, built and render
+			const note_section	=	await instances.get_instance(instance_options)
 									await note_section.build(true)
-		const note_section_node	=	await note_section.render()
+
+			return note_section
+		}
 
 		// subscribe to the change publication of the component_publication of the section node
 		// when the component_publication change it will change the tag note state, showing if the note is private or public
-		const publication_id_base = note_section_tipo+'_'+note_section_id+'_'+self.context.features.notes_publication_tipo
+		const publication_id_base = note_section_tipo+'_'+note_section_id+'_'+features.notes_publication_tipo
 		event_manager.subscribe('change_publication_value_'+publication_id_base, fn_change_publication_state)
-
 		function fn_change_publication_state(changed_value) {
 			// change the state of the note with the data of the component_publication (section_id = 2 means no publishable)
 			const state = changed_value.section_id=='2' // no active value
@@ -1140,7 +1270,7 @@ const render_note = async function(options) {
 			// create new tag with the new state of the tag
 
 			if (current_tag_state !== state){
-				const note_tag		= {
+				const note_tag = {
 					type	: 'note',
 					label	: view_tag.label,
 					tag_id	: view_tag.tag_id,
@@ -1169,16 +1299,11 @@ const render_note = async function(options) {
 			element_type	: 'div',
 			class_name		: 'header'
 		})
-		// header_label. created label with Title case (first letter to uppercase)
-			// const created_label		= get_label.created.replace(/\b(\S)/, function(t) { return t.toUpperCase() }) || 'Create'
-			const created_label		= get_label.created || 'created'
-			const by_user_label		= get_label.by_user || 'by user'
-			const created_by_user	= note_section.data.value[0].created_by_user_name || 'undefined'
-			const header_label		= (get_label.note || 'Note') + ' ' + created_label+' '+ by_user_label + ': '+created_by_user
-			ui.create_dom_element({
+		// header_label_node
+			const header_label_node = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'label',
-				inner_html		: header_label,
+				inner_html		: (get_label.note || 'Note') + ' ' + note_section_id,
 				parent			: header
 			})
 
@@ -1187,26 +1312,33 @@ const render_note = async function(options) {
 			element_type	: 'div',
 			class_name		: 'body'
 		})
-		body.appendChild(note_section_node)
 
 	// footer
 		const footer = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'footer content'
+			class_name		: 'footer content distribute'
 		})
-
+		// section info
+			const section_info = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'section_info hide',
+				inner_html		: 'Loading',
+				parent			: footer
+			})
 		// button remove
 			const button_remove = ui.create_dom_element({
 				element_type	: 'button',
-				class_name		: 'danger remove',
+				class_name		: 'danger remove hide',
 				text_content	: get_label.delete || 'Delete',
 				parent			: footer
 			})
 			// When the user click on remove button, two actions happens:
 			// first, delete the section in the server
 			// second, remove the tag from the text_area
-			button_remove.addEventListener('click', function(e){
+			button_remove.addEventListener('click', fn_remove)
+			function fn_remove(e){
 				e.stopPropagation()
+
 				// ask to user if really want delete the note
 				const delete_label = get_label.are_you_sure_to_delete_note || 'Are you sure you want to delete this note?' +' '+ view_tag.tag_id
 				// if yes, delete the note section in the server
@@ -1241,19 +1373,7 @@ const render_note = async function(options) {
 							modal.remove()
 					})
 				}
-			})
-
-		// section info
-			const date_label			= get_label.date.toLowerCase() || 'date'
-			const created_date			= note_section.data.value[0].created_date || ''
-			const created_date_label	= created_label + ' ' + date_label + ': '+created_date
-			// section_info
-			ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'section_info',
-				inner_html		: created_date_label,
-				parent			: footer
-			})
+			}//end fn_remove
 
 	// save editor changes to prevent conflicts with modal components changes
 		// text_editor.save()
@@ -1262,13 +1382,57 @@ const render_note = async function(options) {
 		const modal = ui.attach_to_modal({
 			header	: header,
 			body	: body,
-			footer	: footer,
-			size	: 'normal' // string size big|normal
+			footer	: footer
+			// size	: 'normal' // string size big|normal|small
 		})
-		// when the modal is closed the section instance of the note need to be destroyed with all events and components
-		modal.on_close = () => {
-			note_section.destroy(true,true,true)
-		}
+		// resize modal content
+		const modal_content = modal.get_modal_content()
+				modal_content.style.width	= '600px'
+				modal_content.style.height	= '515px';
+
+	// load note section and render. On finish, add to body node and fill header and footer info
+		ui.load_item_with_spinner({
+			container : body,
+			callback : async function() {
+
+				const note_section = await get_note_section()
+
+				// permissions check
+				if (!note_section.permissions || parseInt(note_section.permissions)<1) {
+					body.classList.add('content')
+					body.innerHTML = (get_label.no_access || 'Not access here') + ' ' + note_section.tipo
+					return false
+				}
+
+				const note_section_node	= await note_section.render()
+				body.appendChild(note_section_node)
+
+				// on_close modal. when the modal is closed the section instance of the note need to be destroyed with all events and components
+					modal.on_close = () => {
+						note_section.destroy(true,true,true)
+					}
+
+				if (!note_section.data.value || !note_section.data.value[0]) {
+					section_info.remove()
+					button_remove.remove()
+					return false
+				}
+
+				// header_label. Created label with Title case (first letter to uppercase)
+					const created_label			= get_label.created || 'created'
+					const by_user_label			= get_label.by_user || 'by user'
+					const created_by_user		= note_section.data.value[0].created_by_user_name || 'undefined'
+					const header_label			= (get_label.note || 'Note') + ' ' + created_label +' '+ by_user_label + ': ' + created_by_user
+					header_label_node.innerHTML	= header_label
+
+				// section info (bottom)
+					const date_label			= get_label.date.toLowerCase() || 'date'
+					const created_date			= note_section.data.value[0].created_date || ''
+					section_info.innerHTML		= created_label + ' ' + date_label + ': '+ created_date
+					section_info.classList.remove('hide')
+					button_remove.classList.remove('hide')
+			}
+		})
 
 
 	return true
@@ -1279,7 +1443,7 @@ const render_note = async function(options) {
 /**
 * RENDER_PERSONS_LIST
 * Creates a modal dialog with persons_list options
-* @return DOM node fragment|null
+* @return HTMLElement fragment|null
 */
 const render_persons_list = function(self, text_editor, i) {
 
@@ -1337,7 +1501,7 @@ const render_persons_list = function(self, text_editor, i) {
 
 				const section_container = ui.create_dom_element({
 					element_type	: 'div',
-					class_name 		: 'section_container',
+					class_name		: 'section_container',
 					parent			: body
 				})
 				// get current_locator to be used in common and simple way
@@ -1439,7 +1603,7 @@ const render_persons_list = function(self, text_editor, i) {
 /**
 * RENDER_LANGS_LIST
 * Creates a modal dialog with langs_list options
-* @return DOM node fragment
+* @return HTMLElement fragment
 */
 const render_langs_list = function(self, text_editor, i) {
 
@@ -1462,10 +1626,10 @@ const render_langs_list = function(self, text_editor, i) {
 	// body
 		const body = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'content text_area_project_langs_container'
+			class_name		: 'content text_area_project_langs_container'
 		})
 		// sections loop
-			const value_length	= ar_project_langs.length
+			const value_length = ar_project_langs.length
 			let k = 0;
 			for (let i = 0; i < value_length; i++) {
 
@@ -1473,7 +1637,7 @@ const render_langs_list = function(self, text_editor, i) {
 
 				const lang_container = ui.create_dom_element({
 					element_type	: 'div',
-					class_name 		: 'lang_container',
+					class_name		: 'lang_container',
 					parent			: body
 				})
 				lang_container.addEventListener('click', function (evt) {
@@ -1540,3 +1704,76 @@ const render_langs_list = function(self, text_editor, i) {
 
 	return true
 }//end render_langs_list
+
+
+
+/**
+* SELECT_TAG (!) Not used
+* Selects programmatically a tag into the text editor and scroll to his position
+* @param string|int tag_id
+* 	like '7'
+* @return HTMLElement fragment
+*/
+	// export const select_tag = function(tag_id, editor, click=false) {
+
+	// 	// editor_element
+	// 		const iterator			= editor.editing.view.domRoots.entries()
+	// 		const editor_container	= iterator.next().value[1]
+	// 		if (!editor_container) {
+	// 			console.log('DOM node not found for editor_container:', editor);
+	// 			return
+	// 		}
+
+	// 	// element SPAN
+	// 		const element = editor_container.querySelector('.dd_tag[data-tag_id="'+tag_id+'"]')
+	// 		// const element = document.querySelector('.dd_tag[data-tag_id="'+tag_id+'"]')
+	// 		if (!element) {
+	// 			console.log('DOM node not found in editor:', tag_id);
+	// 			return
+	// 		}
+	// 		// const element_top = element.getBoundingClientRect().top
+	// 		// console.log('element_top:', element_top);
+
+	// 	// image inside
+	// 		const image = element.querySelector('img')
+	// 		// console.log('image:', image);
+
+	// 	// ck_content DIV
+	// 		const ck_content	= editor_container //  document.querySelector('.ck-content')
+	// 		// const ck_top		= ck_content.getBoundingClientRect().top
+
+	// 	// scroll
+	// 		// const top = Math.ceil(element_top - ck_top - 4)
+
+	// 		// ck_content.scroll({
+	// 		// 	top : top
+	// 		// })
+	// 		element.scrollIntoView({
+	// 			behavior	: "smooth",
+	// 			block		: "start",
+	// 			inline		: "nearest"
+	// 		});
+	// 		// window.scrollBy(0, -50);
+
+	// 	// test
+	// 		// const tag_obj =  {
+	// 		// 	node_name	: image,
+	// 		// 	// dataset
+	// 		// 	type		: element.getAttribute('data-type'),
+	// 		// 	tag_id		: element.getAttribute('data-tag_id'),
+	// 		// 	state		: element.getAttribute('data-state'),
+	// 		// 	label		: element.getAttribute('data-label'),
+	// 		// 	data		: element.getAttribute('data-data')
+	// 		// }
+	// 		// self.tag = tag_obj
+
+	// 	// click event
+	// 		if (click===true) {
+	// 			image.click()
+	// 		}
+
+	// }//end select_tag
+
+
+
+// @license-end
