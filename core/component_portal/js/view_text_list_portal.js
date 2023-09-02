@@ -6,7 +6,6 @@
 
 // imports
 	import {get_section_records} from '../../section/js/section.js'
-	// import {ui} from '../../common/js/ui.js'
 	import {
 		render_column_component_info
 	} from './render_edit_component_portal.js'
@@ -63,25 +62,28 @@ view_text_list_portal.render = async function(self, options) {
 		// store to allow destroy later
 		self.ar_instances.push(...ar_section_record)
 
-	// fragment
-		const fragment = new DocumentFragment()
+
+	// wrapper. Set as span
+		const wrapper = document.createElement('span')
 
 	// add all nodes
 		const ar_section_record_length = ar_section_record.length
+
+
 		for (let i = 0; i < ar_section_record_length; i++) {
 
 			// child
 				const child_item = await ar_section_record[i].render()
-				fragment.appendChild(child_item)
+				wrapper.append(...child_item.childNodes)
 
 			// records_separator
 				if(i < ar_section_record_length-1) {
 					const node_records_separator = document.createTextNode(self.context.records_separator)
-					fragment.appendChild(node_records_separator)
+					wrapper.appendChild(node_records_separator)
 				}
 		}
 
-	return fragment
+	return wrapper
 }//end render
 
 

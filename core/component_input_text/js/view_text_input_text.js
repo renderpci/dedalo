@@ -35,11 +35,10 @@ view_text_input_text.render = async function(self) {
 		const fallback			= get_fallback_value(value, fallback_value)
 		const value_string		= fallback.join(self.context.fields_separator)
 
-		const el = document.createElement('span')
-		el.insertAdjacentHTML('afterbegin', value_string)
-		const text_node = el
+		const wrapper = document.createElement('span')
+		wrapper.insertAdjacentHTML('afterbegin', value_string)
 
-	return text_node
+	return wrapper
 }//end get_text
 
 
