@@ -1147,16 +1147,28 @@ final class dd_core_api {
 						);
 						$component->Save();
 					// force recalculate dato
-						$component->get_dato();
+						$dato = $component->get_dato();
+
+						$total = count($dato)-1;
+
+						$limit = $component->pagination->limit ?? 10;
+
+						$page = (int)floor( $total/$limit );
+						$offset = $page * $limit;
+
+						$component->pagination->offset	= $offset;
+						$component->pagination->total	= $total;
+
+
+					// pagination. Update offset based on save request (portals)
+						// if (isset($data->pagination) && isset($data->pagination->offset)) {
+						// 	$component->pagination->offset = $data->pagination->offset;
+						// }
+						// if (isset($data->pagination) && isset($data->pagination->limit)) {
+						// 	$component->pagination->limit = $data->pagination->limit;
+						// }
 				}
 
-				// pagination. Update offset based on save request (portals)
-					if (isset($data->pagination) && isset($data->pagination->offset)) {
-						$component->pagination->offset = $data->pagination->offset;
-					}
-					if (isset($data->pagination) && isset($data->pagination->limit)) {
-						$component->pagination->limit = $data->pagination->limit;
-					}
 
 				// datalist. if is received, inject to the component for recycle
 					if (isset($data->datalist)) {
