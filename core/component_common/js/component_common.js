@@ -1080,15 +1080,10 @@ component_common.prototype.change_mode = async function(options) {
 				: self.mode
 
 	// check interface and permissions
-		// if (self.show_interface.read_only!==true) {
-		// 	console.error('Error. calling component change_mode from show_interface.read_only = true ');
-		// 	return false
-		// }
 		if (self.permissions<1) {
 			console.error('Error. calling component change_mode with permissions: ',self.permissions);
 			return false
 		}
-
 
 	// short vars
 		// set
@@ -1098,7 +1093,7 @@ component_common.prototype.change_mode = async function(options) {
 		const current_section_id	= self.section_id
 		const section_lang			= self.section_lang
 		const old_node				= self.node
-		const id_variant			= self.id_variant
+		const id_variant			= view+'_'+mode
 
 	// set the new view to context
 		current_context.view = view
@@ -1130,7 +1125,6 @@ component_common.prototype.change_mode = async function(options) {
 		})
 
 	// replace the node with the new render
-		// old_node.parentNode.replaceChild(new_node, old_node)
 		old_node.replaceWith(new_node);
 
 	// active component at end
