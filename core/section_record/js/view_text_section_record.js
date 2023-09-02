@@ -52,7 +52,7 @@ view_text_section_record.render = async function(self, options) {
 		wrapper.classList.add(...ar_css)
 
 	// last data
-		let last_data = null
+		// let last_data = null
 
 	// columns. Render the columns_map items
 		const columns_map_length = columns_map.length
@@ -110,17 +110,17 @@ view_text_section_record.render = async function(self, options) {
 				await Promise.all(ar_promises)// render work done safely
 
 			// text value of instance
-				const text_value = []
+				const ar_nodes = []
 
 			// create the column nodes (fields) and assign the instances nodes to it.
 				for (let j = 0; j < ar_instances_length; j++) {
 
 					const current_instance = ar_instances[j]
 
-					last_data = {
-						section_tipo	: current_instance.section_tipo,
-						section_id		: current_instance.section_id
-					}
+					// last_data = {
+					// 	section_tipo	: current_instance.section_tipo,
+					// 	section_id		: current_instance.section_id
+					// }
 
 					// check instance is valid
 						if (typeof current_instance==='undefined') {
@@ -136,56 +136,37 @@ view_text_section_record.render = async function(self, options) {
 					// add already rendered node
 						const current_instance_node	= current_instance.node
 
-						// check the view of the instance to get the correct content, if the instance has text convert to html else get the node
-						switch (current_instance.context.view) {
-							case 'text':
-								// (!) Do not use here 'innerHTML +=' because removes the edit button events
-								// extract text content from current_instance_node and add to the wrapper
-								// this allow to remove on-the-fly intermediate section_record non necessary containers
-								const temp_container		= document.createElement('span')
-								temp_container.innerHTML	= current_instance_node.textContent
-								const children				= temp_container.childNodes;
-								const children_length		= children.length
-								for (let c = 0; c < children_length; c++) {
-									const current_child = children[c];
-									wrapper.appendChild(current_child)
-
-									add_fields_separator()
-								}
-								// added the values into an array to be checked
-								text_value.push( current_instance_node.textContent )
-								break;
-							default:
-								wrapper.appendChild(current_instance_node)
-								add_fields_separator()
-								break;
+					// if the node is empty do not use it
+						const empty = current_instance_node.childNodes.length===0 || current_instance_node.textContent.trim()===''
+						if (empty) {
+							continue
 						}
 
-						// ADD_FIELDS_SEPARATOR
-						// check the node position and add fields separator
-						// add values separator between values of the same column
-						// sometimes the column could have more than 1 component (component_portal with 1 column that call more than 1 component)
-						// sometimes the column could have more than 1 value as component_input_tex with more than 1 value ["value1","value2"]
-						function add_fields_separator() {
-							if(j < ar_instances_length-1) {
-								const next_node_text = ar_instances[j+1].node
-								if(next_node_text.textContent.length > 1){
-									const value_separator = self.context.fields_separator || ' | '
-									const node_fields_separator = document.createTextNode(value_separator)
-									wrapper.appendChild(node_fields_separator)
-								}
-							}
-						}
-
+						ar_nodes.push( current_instance_node )
 				}//end for (let j = 0; j < ar_instances_length; j++)
 
-			// columns separator (between components inside the same column)
-				if(i < columns_map_length-1 && columns_map[i+1].id!=='remove' && columns_map[i+1].id!=='section_id') {
-					if(text_value.join('').length > 0){
-						const fields_separator		= self.context.fields_separator || ', '
-						const node_fields_separator	= document.createTextNode(fields_separator)
+			// join instances nodes with separator between them
+				const value_separator = self.context.fields_separator || ' | '
+				const ar_nodes_length = ar_nodes.length
+				for (let k = 0; k < ar_nodes_length; k++) {
+					wrapper.appendChild(ar_nodes[k])
+					if(k < ar_nodes_length -1) {
+						const node_fields_separator = ui.create_dom_element({
+							element_type	: 'span',
+							inner_html		: value_separator
+						})
 						wrapper.appendChild(node_fields_separator)
 					}
+				}
+
+			// columns separator (between components inside the same column)
+				if(ar_nodes_length > 0 && i < columns_map_length-1 && columns_map[i+1].id!=='remove' && columns_map[i+1].id!=='section_id') {
+					const fields_separator		= self.context.fields_separator || ', '
+					const node_fields_separator = ui.create_dom_element({
+						element_type	: 'span',
+						inner_html		: fields_separator
+					})
+					wrapper.appendChild(node_fields_separator)
 				}
 
 		}//end for (let i = 0; i < columns_map_length; i++)
@@ -194,10 +175,10 @@ view_text_section_record.render = async function(self, options) {
 		// Indexation case could not resolve references values. In that case, fallback value to
 		// section_tipo + section_id.
 		// Note that checked node length take into account the button edit node, because is < 2 and not < 1
-		const current_child_text_nodes = [...wrapper.childNodes].filter(el => el.nodeType === Node.TEXT_NODE)
-		if (current_child_text_nodes.length===0 && last_data) {
-			wrapper.insertAdjacentHTML('beforeend', ' ' + (last_data.section_tipo || '') +'_'+ (last_data.section_id || '') )
-		}
+		// const current_child_text_nodes = [...wrapper.childNodes].filter(el => el.nodeType === Node.TEXT_NODE)
+		// if (current_child_text_nodes.length===0 && last_data) {
+		// 	wrapper.insertAdjacentHTML('beforeend', ' ' + (last_data.section_tipo || '') +'_'+ (last_data.section_id || '') )
+		// }
 
 
 	// component_info add if exists. (!) Removed 22-11-202 because is already added by the component (portal)
