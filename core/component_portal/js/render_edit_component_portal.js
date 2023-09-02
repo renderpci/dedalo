@@ -741,7 +741,9 @@ export const get_buttons = (self) => {
 								ui.component.activate(component)
 
 								// focus the input node of the component
-								component.node.content_data[0].querySelector('input').focus()
+								if(node.content_data[0]){
+									component.node.content_data[0].querySelector('input').focus()
+								}
 							})
 						}
 
