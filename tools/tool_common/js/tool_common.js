@@ -724,83 +724,44 @@ const view_window = async function(options) {
 				return parsed_string
 			  })()
 
+	// main_window
+		const main_window = window
+
 	// tool_window
 		const window_name	= name +'_'+ (caller.id_base || '')
 		const tool_window	= window.open(url, window_name, parsed_windowFeatures)
 		tool_window.focus();
 
-	// close tab tool_window actions (pagehide)
-		// page lifecycle events: 'pageshow', 'focus', 'blur', 'visibilitychange', 'resume', 'pagehide'
-		// @see https://developer.mozilla.org/en-US/docs/Web/API/Document/visibilitychange_event
-		// tool_window.addEventListener('load', () => {
-		// 	console.log("attaching event tool_window pagehide");
+	// focus event trigger on current window. Used timeout to give time to focus tool_window
+		setTimeout(function(){
+			main_window.addEventListener('focus', fn_onfocus, true);
+			function fn_onfocus() {
+				// (!) remove listener after focus
+				main_window.removeEventListener('focus', fn_onfocus, true);
 
-		// 	// tool_window.sessionStorage.setItem('reloaded', 'yes');
-		// 	// console.log("tool_window.sessionStorage.getItem('reloaded') 1:",tool_window.sessionStorage.getItem('reloaded'));
+				// remove window.callers pointer
+				// delete window.callers[caller.id] /* (!) TEMPORAL DEACTIVATED ! */
 
-		// 	tool_window.addEventListener(
-		// 		'pagehide',
-		// 		(event) => {
-		// 			console.log("===== triggered pagehide event:",event);
-		// 			// console.log("tool_window.visibilityState:",tool_window.visibilityState);
-		// 			// console.log("tool_window.document:",tool_window.document);
-		// 			// console.log("tool_window.document.visibilityState:",tool_window.document.visibilityState);
-		// 			// console.log("event.persisted:",event.persisted);
+				// render_level
+					const render_level = (caller.mode==='list')
+						? 'full'
+						: 'content'
 
-		// 			// setTimeout(function(){
-		// 			// 	console.log("tool_window.sessionStorage.getItem('reloaded') 2:",tool_window.sessionStorage.getItem('reloaded'));
-		// 			// }, 1)
+				// refresh caller.
+				// Note that in some situations, caller is not an instance like in grid_dd indexation button
+				if (caller && typeof caller.refresh==='function') {
+					caller.refresh({
+						refresh_id_base_lang	: true,
+						render_level			: render_level
+					})
+				}
 
-
-		// 			// if (event.persisted) {
-		// 			// 	// If the event's persisted property is `true` the page is about
-		// 			// 	// to enter the Back-Forward Cache, which is also in the frozen state.
-		// 			// 	console.log("frozen");
-		// 			// }else{
-		// 			// 	// If the event's persisted property is not `true` the page is
-		// 			// 	// about to be unloaded.
-		// 			// 	// console.log("terminated");
-
-		// 			// 	// On tool_window.document.visibilityState change to 'hidden', trigger actions
-		// 			// 	if (tool_window.document.visibilityState==='hidden') {
-
-		// 			// 	}
-		// 			// }
-
-		// 			/*
-		// 			// remove window.callers pointer
-		// 			delete window.callers[caller.id]
-		// 			// refresh caller
-		// 			caller.refresh()
-		// 			*/
-
-		// 		},{capture: true}
-		// 	);//end pagehide event
-
-		// },{capture: true})//end load event
-
-	// focus event trigger on current window
-		window.addEventListener('focus', fn_onfocus, true);
-		function fn_onfocus() {
-			// (!) remove listener after focus
-			window.removeEventListener('focus', fn_onfocus, true);
-
-			// remove window.callers pointer
-			// delete window.callers[caller.id] /* (!) TEMPORAL DEACTIVATED ! */
-
-			// refresh caller.
-			// Note that in some situations, caller is not an instance like in grid_dd indexation button
-			if (caller && typeof caller.refresh==='function') {
-				caller.refresh({
-					refresh_id_base_lang : true
-				})
+				// close opened window if is open
+				// if (tool_window) {
+					// tool_window.close() /* (!) TEMPORAL DEACTIVATED ! */
+				// }
 			}
-
-			// close opened window if is open
-			// if (tool_window) {
-				// tool_window.close() /* (!) TEMPORAL DEACTIVATED ! */
-			// }
-		}
+		}, 300)
 
 	// close tool_window
 		// tool_window.addEventListener('close', fn_onclose, true);
