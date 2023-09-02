@@ -6,7 +6,7 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
-	import {get_instance} from '../../common/js/instances.js'
+	import {get_instance, get_all_instances} from '../../common/js/instances.js'
 	import {when_in_dom} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {create_source} from '../../common/js/common.js'
@@ -608,17 +608,17 @@ export const get_buttons = (self) => {
 			  // sort section by label ascendant
 			  target_section.sort((a, b) => (a.label > b.label) ? 1 : -1)
 
-		// buttons container
-			const buttons_container = ui.component.build_buttons_container(self)
+	// buttons container
+		const buttons_container = ui.component.build_buttons_container(self)
 
-		// buttons_fold (allow sticky position on large components)
-			const buttons_fold = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'buttons_fold',
-				parent			: buttons_container
-			})
+	// buttons_fold (allow sticky position on large components)
+		const buttons_fold = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'buttons_fold',
+			parent			: buttons_container
+		})
 
-		// button_update_data_external
+	// button_update_data_external
 			if(self.show_interface.button_external===true) {
 				// button_update data external
 					const button_update_data_external = ui.create_dom_element({
