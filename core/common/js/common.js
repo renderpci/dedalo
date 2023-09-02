@@ -488,6 +488,7 @@ common.prototype.refresh = async function(options={}) {
 		const render_level			= options.render_level ?? 'content' // string full|content
 		const destroy				= options.destroy ?? true
 		const refresh_id_base_lang	= options.refresh_id_base_lang ?? false
+		const tmp_api_response 		= options.tmp_api_response ?? null
 
 	// loading css add
 		// const nodes_lenght = self.node.length
@@ -516,6 +517,14 @@ common.prototype.refresh = async function(options={}) {
 			// var t1 = performance.now()
 		}
 
+	// tmp_api_response
+	// use a injected api_response instead re-call to API when autoload is set to true
+	// some cases the actions will get the datum of the component as save new data
+	// in those cases inject the api_response into the component to re-use it.
+		if(build_autoload && tmp_api_response){
+			self.tmp_api_response = tmp_api_response
+		}
+
 	// build. Update the instance with new data
 		//if (self.status==='destroyed') {
 		await self.build( build_autoload ) // default value is true
@@ -523,6 +532,12 @@ common.prototype.refresh = async function(options={}) {
 		//	console.warn("/// build fail with status:", self.model, self.status);
 		//	return false
 		//}
+
+	// tmp_api_response. Important!
+	// delete the tmp_api_response to return to normal build (calling to API)
+		if(self.tmp_api_response){
+			delete self.tmp_api_response
+		}
 
 	// debug
 		if(SHOW_DEBUG===true) {
@@ -2688,7 +2703,7 @@ export const push_browser_history = function(options) {
 export const build_autoload = async function(self) {
 
 	// load context and data
-		const api_response = await data_manager.request({
+		const api_response = self.tmp_api_response || await data_manager.request({
 			body : self.rqo
 		})
 
