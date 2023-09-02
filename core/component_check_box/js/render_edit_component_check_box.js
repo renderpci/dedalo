@@ -337,7 +337,7 @@ export const get_buttons = (self) => {
 						: item.label
 					const button_edit = ui.create_dom_element({
 						element_type	: 'span',
-						class_name		: 'button edit',
+						class_name		: 'button pen',
 						title			: label,
 						parent			: fragment
 					})
