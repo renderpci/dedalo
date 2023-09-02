@@ -1080,14 +1080,15 @@ component_common.prototype.change_mode = async function(options) {
 				: self.mode
 
 	// check interface and permissions
-		if (self.show_interface.read_only!==true) {
-			console.error('Error. calling component change_mode from show_interface.read_only = true ');
-			return false
-		}
+		// if (self.show_interface.read_only!==true) {
+		// 	console.error('Error. calling component change_mode from show_interface.read_only = true ');
+		// 	return false
+		// }
 		if (self.permissions<1) {
 			console.error('Error. calling component change_mode with permissions: ',self.permissions);
 			return false
 		}
+
 
 	// short vars
 		// set
