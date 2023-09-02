@@ -670,11 +670,11 @@ export const get_buttons = (self) => {
 
 				// data
 					const data = clone(self.data)
-					data.changed_data = {
+					data.changed_data = [{
 						action	: 'add_new_element',
 						key		: null,
 						value	: target_section_tipo
-					}
+					}]
 
 				// rqo
 					const rqo = {
