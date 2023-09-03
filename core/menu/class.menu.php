@@ -142,8 +142,11 @@ class menu extends common {
 
 							if ($tool_name!==false) {
 
-								$ar_tool_object	= tool_common::get_client_registered_tools([$tool_name]);
-								if (empty($ar_tool_object)) {
+								$client_registered_tools = tool_common::get_client_registered_tools();
+								$tool_info = array_find($client_registered_tools, function($el) use($tool_name) {
+									return $el->name===$tool_name;
+								});
+								if (empty($tool_info)) {
 									debug_log(__METHOD__
 										." WARNING. Ignored area '$current_area->tipo'. No tool found for tool name '$tool_name' in current_area: ".to_string($current_area)
 										, logger::WARNING
@@ -152,7 +155,7 @@ class menu extends common {
 								}else{
 
 									$tool_config	= $properties->tool_config->{$tool_name} ?? false;
-									$tool_context	= tool_common::create_tool_simple_context($ar_tool_object[0], $tool_config);
+									$tool_context	= tool_common::create_tool_simple_context($tool_info, $tool_config);
 
 									// overwrite current_area (!)
 									$datalist_item->model	= 'section';

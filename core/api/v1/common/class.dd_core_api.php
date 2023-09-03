@@ -249,15 +249,19 @@ final class dd_core_api {
 									? array_key_first(get_object_vars($properties->tool_config))
 									: false;
 								if ($tool_name) {
-									$ar_tool_object	= tool_common::get_client_registered_tools([$tool_name]);
-									if (empty($ar_tool_object)) {
+
+									$client_registered_tools = tool_common::get_client_registered_tools();
+									$tool_info = array_find($client_registered_tools, function($el) use($tool_name) {
+										return $el->name===$tool_name;
+									});
+									if (empty($tool_info)) {
 										debug_log(__METHOD__
 											." ERROR. No tool found for tool '$tool_name' in section_tool_tipo: ".to_string($section_tool_tipo)
 											, logger::ERROR
 										);
 									}else{
 										$tool_config	= $properties->tool_config->{$tool_name} ?? false;
-										$tool_context	= tool_common::create_tool_simple_context($ar_tool_object[0], $tool_config);
+										$tool_context	= tool_common::create_tool_simple_context($tool_info, $tool_config);
 										$config->tool_context = $tool_context;
 										// dump($current_area->config, ' ++++++++++++++++++++++++++++++++++++++ current_area->config ++ '.to_string($section_tool_tipo));
 									}

@@ -329,8 +329,12 @@ class tools_register {
 				}else{
 
 					// compare register.json file.
-					$ar_tool_info = tool_common::get_client_registered_tools([$tool_name]);
-					if(!isset($ar_tool_info[0])) {
+					$client_registered_tools = tool_common::get_client_registered_tools();
+					$tool_info = array_find($client_registered_tools, function($el) use($tool_name) {
+						return $el->name===$tool_name;
+					});
+
+					if(empty($tool_info)) {
 						debug_log(__METHOD__
 							." Tool '$tool_name' not found in client_registered_tools."
 							, logger::WARNING
@@ -358,8 +362,8 @@ class tools_register {
 						}
 
 					// installed_version
-						if (!empty($ar_tool_info[0])) {
-							$item->installed_version = $ar_tool_info[0]->version  ?? null;
+						if (!empty($tool_info)) {
+							$item->installed_version = $tool_info->version  ?? null;
 						}
 				}
 

@@ -152,9 +152,7 @@ final class tool_common_test extends TestCase {
 	*/
 	public function test_get_client_registered_tools() {
 
-		$client_registered_tools = tool_common::get_client_registered_tools(
-			$ar_tools=null
-		);
+		$client_registered_tools = tool_common::get_client_registered_tools();
 
 		$this->assertTrue(
 			gettype($client_registered_tools)==='array',
