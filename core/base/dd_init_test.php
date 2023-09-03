@@ -791,7 +791,7 @@
 
 			if ($user_id==DEDALO_SUPERUSER) {
 
-				// If user is 'root', auto create the necessary matrix_tools and redirect the browser to Development Area
+				// If user is 'root', auto create the necessary matrix_tools and redirect the browser to Maintenance Area
 				// to admin de Dédalo data updates
 
 				include_once DEDALO_CORE_PATH . '/base/update/class.update.php';
@@ -812,9 +812,9 @@
 					return $init_response;
 				}
 
-				// $init_response->msg = 'Warning. Redirect to Area Development to update Dédalo data';
+				// $init_response->msg = 'Warning. Redirect to Area Maintenance to update Dédalo data';
 				$init_response->result_options	= (object)[
-					'redirect'	=> DEDALO_CORE_URL.'/page/?t=dd770'
+					'redirect'	=> DEDALO_CORE_URL.'/page/?t=dd88'
 				];
 
 			}else{
