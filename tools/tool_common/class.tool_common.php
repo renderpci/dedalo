@@ -318,12 +318,9 @@ class tool_common {
 	/**
 	* GET_REGISTERED_TOOLS
 	* Get the full or filtered list data of current registered tools in database
-	*
-	* @param array|null $ar_tools = null
-	* 	If defined, is used as filter list for tool names
 	* @return array $registered_tools
 	*/
-	public static function get_client_registered_tools(array $ar_tools=null) : array {
+	public static function get_client_registered_tools() : array {
 
 		$registered_tools = [];
 

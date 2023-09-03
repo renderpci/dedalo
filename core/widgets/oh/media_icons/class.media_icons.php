@@ -178,14 +178,17 @@ class media_icons extends widget_common {
 									}
 									// build the tool_context
 										if ($tool_name) {
-											$ar_tool_object	= tool_common::get_client_registered_tools([$tool_name]);
-											if (empty($ar_tool_object)) {
+											$client_registered_tools = tool_common::get_client_registered_tools();
+											$tool_info = array_find($client_registered_tools, function($el) use($tool_name) {
+												return $el->name===$tool_name;
+											});
+											if (empty($tool_info)) {
 												debug_log(__METHOD__
 													." ERROR. No tool found for tool '$tool_name' in media_icons widget "
 													, logger::ERROR
 												);
 											}else{
-												$tool_context = tool_common::create_tool_simple_context($ar_tool_object[0], $tool_config);
+												$tool_context = tool_common::create_tool_simple_context($tool_info, $tool_config);
 											}
 										}
 									break;
