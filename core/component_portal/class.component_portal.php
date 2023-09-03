@@ -118,8 +118,23 @@ class component_portal extends component_relation_common {
 	*/
 	public function regenerate_component() : bool {
 
+		# External case (inverse portals with data dependency), calculate his data again.
+		$properties		= $this->get_properties() ?? new stdClass();
+		if(isset($properties->source->mode) && $properties->source->mode==='external'){
+			$options = new stdClass();
+				$options->save				= true; // $mode==='edit' ? true : false;
+				$options->changed			= false; // $mode==='edit' ? true : false;
+				$options->current_dato		= false; // $this->get_dato();
+				$options->references_limit	= 0; // (!) Set to zero to get all references to enable sort
+
+			$this->set_dato_external($options);	// Forces update dato with calculated external dato
+
+			return true;
+		}
+
 		# Force loads dato always !IMPORTANT
 		$this->get_dato();
+
 
 		debug_log(__METHOD__
 			." Ignored regenerate action in this component. USE generate_relations_table_data TO REGENERATE RELATIONS ". PHP_EOL
