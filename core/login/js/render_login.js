@@ -315,10 +315,10 @@ const get_content_data = function(self) {
 							class_name	= 'error'
 							value		= item.value.join('.') + ' - Outdated!'
 							// if version is outdated, jump to area development to update
-							const area_development_tipo = 'dd770'
-							if (window.location.search.indexOf(area_development_tipo)===-1) {
+							const area_maintenance_tipo = 'dd88'
+							if (window.location.search.indexOf(area_maintenance_tipo)===-1) {
 								const base_url = window.location.origin + window.location.pathname
-								const target_url = base_url + '?t=' + area_development_tipo
+								const target_url = base_url + '?t=' + area_maintenance_tipo
 								window.location.replace(target_url)
 							}
 						}
