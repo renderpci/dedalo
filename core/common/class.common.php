@@ -1538,22 +1538,25 @@ abstract class common {
 			// 	$el->tipo===$context_item->tipo &&
 			// 	$el->section_tipo===$context_item->section_tipo &&
 			// 	$el->mode===$context_item->mode;
-				$ddo_key = $tipo.'_'.$section_tipo.'_'.$mode;
-				if (isset(self::$structure_context_cache[$ddo_key])) {
-					if(SHOW_DEBUG===true) {
-						$len = !empty($this->tipo)
-							? strlen($this->tipo)
-							: 0;
-						$repeat = ($len < 14)
-							? (14 - $len)
-							: 0;
-						$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
-						debug_log(
-							"------------------- get_structure_context CACHED - $tipo_line ". exec_time_unit($start_time,'ms')." ms" . " ---- $model ". json_encode($add_request_config),
-							logger::DEBUG
-						);
+				$use_cache = true;
+				if ($use_cache===true) {
+					$ddo_key = $tipo.'_'.$section_tipo.'_'.$mode;
+					if (isset(self::$structure_context_cache[$ddo_key])) {
+						if(SHOW_DEBUG===true) {
+							$len = !empty($this->tipo)
+								? strlen($this->tipo)
+								: 0;
+							$repeat = ($len < 14)
+								? (14 - $len)
+								: 0;
+							$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
+							debug_log(
+								"------------------- get_structure_context CACHED - $tipo_line ". exec_time_unit($start_time,'ms')." ms" . " ---- $model ". json_encode($add_request_config),
+								logger::DEBUG
+							);
+						}
+						return self::$structure_context_cache[$ddo_key];
 					}
-					return self::$structure_context_cache[$ddo_key];
 				}
 
 		// properties
@@ -1815,7 +1818,9 @@ abstract class common {
 				$dd_object->children_view = $this->get_children_view();
 
 		// cache. fix context dd_object
-			self::$structure_context_cache[$ddo_key] = $dd_object;
+			if ($use_cache===true) {
+				self::$structure_context_cache[$ddo_key] = $dd_object;
+			}
 
 		// Debug
 			if(SHOW_DEBUG===true) {
