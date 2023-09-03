@@ -7,9 +7,14 @@ class request_config_presets {
 
 
 
+	// static $cache_user_preset_layout_map = [];
+
+
+
 	/**
 	* SEARCH_REQUEST_CONFIG
 	* Get user request config preset from DDBB section 'dd1244'
+	* Layout map (request config) presets
 	* @param string $tipo
 	* @param string $section_tipo
 	* @param int $user_id
@@ -20,10 +25,16 @@ class request_config_presets {
 	public static function search_request_config(string $tipo, string $section_tipo, int $user_id, string $mode, string $view=null) : array {
 
 		// cache
-			// $key_cache = implode('_', [$tipo, $section_tipo, $user_id, $mode, $view]);
-			// if (isset($_SESSION['dedalo']['config']['user_preset_layout_map'][$key_cache])) {
-			// 	return $_SESSION['dedalo']['config']['user_preset_layout_map'][$key_cache];
-			// }
+			$use_cache = true;
+			if ($use_cache===true) {
+				$key_cache = implode('_', [$tipo, $section_tipo, $user_id, $mode, $view]);
+				// if (isset(self::$cache_user_preset_layout_map[$key_cache])) {
+				// 	return self::$cache_user_preset_layout_map[$key_cache];
+				// }
+				if (isset($_SESSION['dedalo']['config']['user_preset_layout_map'][$key_cache])) {
+					return $_SESSION['dedalo']['config']['user_preset_layout_map'][$key_cache];
+				}
+			}
 
 		// preset const
 			// $user_locator = new locator();
@@ -190,7 +201,10 @@ class request_config_presets {
 		}
 
 		// cache
-			// $_SESSION['dedalo']['config']['user_preset_layout_map'][$key_cache] = $result;
+			if ($use_cache===true) {
+				// self::$cache_user_preset_layout_map[$key_cache] = $result;
+				$_SESSION['dedalo']['config']['user_preset_layout_map'][$key_cache] = $result;
+			}
 
 
 		return $result;
