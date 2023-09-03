@@ -209,7 +209,7 @@ const get_content_value = (i, current_value, self) => {
 
 			const button_edit = ui.create_dom_element({
 				element_type	: 'span',
-				class_name		: 'button edit show_on_active',
+				class_name		: 'button pen grey show_on_active',
 				parent			: content_value
 			})
 			// set pointers
