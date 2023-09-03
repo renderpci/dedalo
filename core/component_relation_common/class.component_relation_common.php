@@ -2196,8 +2196,18 @@ class component_relation_common extends component_common {
 	*/
 	public static function get_hierarchy_sections_from_types( array $hierarchy_types ) : array {
 
-		$hierarchy_section_tipo = DEDALO_HIERARCHY_SECTION_TIPO;
-		$hierarchy_name_tipo 	= DEDALO_HIERARCHY_TERM_TIPO;
+		$hierarchy_section_tipo	= DEDALO_HIERARCHY_SECTION_TIPO;
+		// $hierarchy_name_tipo	= DEDALO_HIERARCHY_TERM_TIPO;
+
+		// cache
+			static $cache_hierarchy_sections_from_types;
+			$use_cache = true;
+			if ($use_cache===true) {
+				$cache_key = implode('_', $hierarchy_types);
+				if (isset($cache_hierarchy_sections_from_types[$cache_key])) {
+					return $cache_hierarchy_sections_from_types[$cache_key];
+				}
+			}
 
 		// Active
 		$active_locator = new locator();
@@ -2291,8 +2301,13 @@ class component_relation_common extends component_common {
 				$hierarchy_sections_from_types[] = $target_section_tipo;
 			}
 
+		// cache
+			if ($use_cache===true) {
+				$cache_hierarchy_sections_from_types[$cache_key] = $hierarchy_sections_from_types;
+			}
 
-		return (array)$hierarchy_sections_from_types;
+
+		return $hierarchy_sections_from_types;
 	}//end get_hierarchy_sections_from_types
 
 

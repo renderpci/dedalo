@@ -327,9 +327,13 @@ class tool_common {
 
 		$registered_tools = [];
 
-		// if(isset($_SESSION['dedalo']['registered_tools'])) {
-		// 	return $_SESSION['dedalo']['registered_tools'];
-		// }
+		// cache
+			$use_cache = true;
+			if ($use_cache===true) {
+				if(isset($_SESSION['dedalo']['registered_tools'])) {
+					return $_SESSION['dedalo']['registered_tools'];
+				}
+			}
 
 		// client_registered_tools_records
 			static $client_registered_tools_records;
@@ -385,7 +389,11 @@ class tool_common {
 				);
 				$dato = $component->get_dato();
 				if (empty($dato)) {
-					debug_log(__METHOD__." Ignored empty dato of  $record->section_tipo - $component_tipo - $record->section_id ".to_string($model), logger::WARNING);
+					debug_log(__METHOD__
+						." Ignored empty dato of  $record->section_tipo - $component_tipo - $record->section_id " . PHP_EOL
+						.' model: ' . to_string($model)
+						, logger::WARNING
+					);
 					continue;
 				}
 
@@ -417,8 +425,10 @@ class tool_common {
 				$registered_tools[] = $current_value;
 			}//end foreach ($client_registered_tools_records as $record)
 
-		// $_SESSION['dedalo']['registered_tools'] = $registered_tools;
-		// write_session_value('registered_tools', $registered_tools);
+		// cache
+			if ($use_cache===true) {
+				$_SESSION['dedalo']['registered_tools'] = $registered_tools;
+			}
 
 
 		return $registered_tools;
@@ -684,6 +694,15 @@ class tool_common {
 				return $user_tools;
 			}
 
+		// cache
+			$use_cache = true;
+			static $cache_user_tools;
+			if ($use_cache===true) {
+				if (isset($cache_user_tools[$user_id])) {
+					return $cache_user_tools[$user_id];
+				}
+			}
+
 		// all unfiltered tools
 			$registered_tools = tool_common::get_client_registered_tools();
 
@@ -731,11 +750,16 @@ class tool_common {
 					}
 			}
 
+		// cache
+			if ($use_cache===true) {
+				$cache_user_tools[$user_id] = $user_tools;
+			}
+
 		// debug
 			// $names = array_map(function($el){
 			// 	return $el->name .' - '. $el->section_id;
 			// }, $user_tools);
-			// dump($names, '$names ++ '.to_string());
+			// dump($names, ')))))))))))) $names ++ '.to_string());
 
 
 		return $user_tools;
