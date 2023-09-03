@@ -431,6 +431,23 @@ class search {
 				// dd_core_api::$sql_query_search. Fulfill on API request
 					if (!empty(dd_core_api::$rqo)) {
 						dd_core_api::$sql_query_search[] = '-- TIME ms: '. $exec_time . PHP_EOL . $sql_query;
+
+						if(SHOW_DEBUG===true) {
+							// $dbt	= debug_backtrace();
+							// $list	= [];
+							// $list[]	= (object)[
+							// 	'sql_query' => $sql_query
+							// ];
+							// foreach ($dbt as $el) {
+
+							// 	$list[] = (object)[
+							// 		'file'		=> $el['file'],
+							// 		'function'	=> $el['function'],
+							// 		'class'		=> $el['class'] ?? null
+							// 	];
+							// }
+							// dump($list, '$list ++ '.to_string());
+						}
 					}
 
 				// warning on too much relations_cache (to prevent updates/import memory issues)
