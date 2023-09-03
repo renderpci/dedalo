@@ -6,6 +6,14 @@ global $updates;
 $updates = new stdClass();
 
 
+// provisional updates TO DO
+// $v=601; #####################################################################################
+
+	// Delete the matrix_dataframe table, now the dataframe use the standard tables, matrix_dd, matrix.
+	// $updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+	// 	DROP TABLE IF EXISTS \"matrix_dataframe\" CASCADE;
+	// ");
+
 /// UPDATE 6 PROVISIONAL WITH THE PARTIAL UPDATES THAT WILL BE REQUIRED
 
 $v=600; #####################################################################################
