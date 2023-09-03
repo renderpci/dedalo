@@ -684,6 +684,15 @@ class tool_common {
 				return $user_tools;
 			}
 
+		// cache
+			$use_cache = true;
+			static $cache_user_tools;
+			if ($use_cache===true) {
+				if (isset($cache_user_tools[$user_id])) {
+					return $cache_user_tools[$user_id];
+				}
+			}
+
 		// all unfiltered tools
 			$registered_tools = tool_common::get_client_registered_tools();
 
@@ -731,11 +740,16 @@ class tool_common {
 					}
 			}
 
+		// cache
+			if ($use_cache===true) {
+				$cache_user_tools[$user_id] = $user_tools;
+			}
+
 		// debug
 			// $names = array_map(function($el){
 			// 	return $el->name .' - '. $el->section_id;
 			// }, $user_tools);
-			// dump($names, '$names ++ '.to_string());
+			// dump($names, ')))))))))))) $names ++ '.to_string());
 
 
 		return $user_tools;
