@@ -77,6 +77,12 @@ class menu extends common {
 
 					$area_item = $ar_full_areas[$i];
 
+					// maintenance area is only accessible by root, global admin or developer,
+					if ($area_item->tipo===DEDALO_AREA_MAINTENANCE_TIPO && ($is_global_admin===false && $is_developer===false)) {
+						// skip menu maintenance to non maintenance user, even if they have permissions
+						continue;
+					}
+
 					if ($area_item->tipo===DEDALO_AREA_DEVELOPMENT_TIPO && $is_developer===false) {
 						// skip menu developer to non developers, even if they have permissions
 						continue;
@@ -183,7 +189,7 @@ class menu extends common {
 	* {
 	*	"tipo": "test1",
 	*	"model": "area",
-	*	"parent": "dd770",
+	*	"parent": "dd88",
 	*	"properties": {
 	*		"mykey2": 2
 	*	},
