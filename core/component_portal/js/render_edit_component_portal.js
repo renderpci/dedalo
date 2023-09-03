@@ -839,39 +839,45 @@ export const get_buttons = (self) => {
 	// button_open_section_list
 		if(self.show_interface.button_add===true) {
 
-			const first_section = target_section[0]
+			const first_section = target_section[0] || null
+			if (first_section) {
+				// Note that in some component_autocomplete_hi items, target_section_tipo
+				// resolution could result in zero sections. Check this value to prevent
+				// errors in this cases (example: oh126 in section oh1)
 
-			const label = (SHOW_DEBUG===true)
-				? `${first_section.label} [${first_section.tipo}]`
-				: first_section.label
-			const button_open_section_list = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'button pen',
-				title			: label,
-				parent			: buttons_fold
-			})
-			button_open_section_list.addEventListener('click', function(e){
-				e.stopPropagation()
+				const label = (SHOW_DEBUG===true)
+					? `${first_section.label} [${first_section.tipo}]`
+					: first_section.label
 
-				// open a new window
-					const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
-						tipo	: first_section.tipo,
-						mode	: 'list',
-						menu	: false
-					})
-					const new_window = open_window({
-						url		: url,
-						name	: 'section_view',
-						width	: 1280,
-						height	: 740
-					})
-					new_window.addEventListener('blur', function() {
-						// refresh current instance
-						self.refresh({
-							build_autoload : true
+				const button_open_section_list = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'button pen',
+					title			: label,
+					parent			: buttons_fold
+				})
+				button_open_section_list.addEventListener('click', function(e){
+					e.stopPropagation()
+
+					// open a new window
+						const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
+							tipo	: first_section.tipo,
+							mode	: 'list',
+							menu	: false
 						})
-					})
-			})
+						const new_window = open_window({
+							url		: url,
+							name	: 'section_view',
+							width	: 1280,
+							height	: 740
+						})
+						new_window.addEventListener('blur', function() {
+							// refresh current instance
+							self.refresh({
+								build_autoload : true
+							})
+						})
+				})
+			}
 		}
 
 	// button tree terms selector
