@@ -189,92 +189,6 @@ const build_widget = (item, self) => {
 		})
 		.catch((err) => {
 			console.error(err)
-
-			// old builder fallback
-				/*
-				// item info
-					if (item.info) {
-						const widget_info = ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'link',
-							inner_html		: item.info || '',
-							parent			: body
-						})
-						// action
-						widget_info.addEventListener('mouseup',  async function(e){
-							e.stopPropagation()
-
-							// confirm optional
-								if (item.confirm && !confirm(item.confirm)) {
-									return false
-								}
-
-							widget_info.classList.add('lock')
-
-							// spinner
-								const spinner = ui.create_dom_element({
-									element_type	: 'div',
-									class_name		: 'spinner'
-								})
-								body_response.prepend(spinner)
-
-							// data_manager
-								const api_response = await data_manager.request({
-									use_worker	: true,
-									body		: {
-										dd_api	: item.trigger.dd_api,
-										action	: item.trigger.action,
-										options	: item.trigger.options
-									}
-								})
-								print_response(body_response, api_response)
-								widget_info.classList.remove("lock")
-								spinner.remove()
-						})
-					}//end if (item.info) {
-
-				// body info
-					const body_info = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: "body_info",
-						inner_html		: item.body || '',
-						parent			: body
-					})
-
-				// body_response
-					const body_response = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'body_response',
-						parent			: body
-					})
-
-				// script (javascript code)
-					// if (item.script) {
-					// 	const script = ui.create_dom_element({
-					// 		element_type	: 'script',
-					// 		parent			: body,
-					// 		inner_html		: item.script
-					// 	})
-					// }
-
-				// run widget scripts
-					if(item.run) {
-						for (let i = 0; i < item.run.length; i++) {
-
-							const func			= item.run[i].fn
-							const func_options	= item.run[i].options
-
-							// promise
-							self[func].apply(self, [{
-								...item,
-								...func_options,
-								body_info		: body_info,
-								body_response	: body_response,
-								print_response	: print_response
-							}])
-						}
-					}
-				*/
 			});
 
 
@@ -410,27 +324,6 @@ export const build_form = function(widget_object) {
 						print_response(body_response, api_response)
 						form_container.classList.remove('lock')
 						spinner.remove()
-
-					// delegates get_children task to worker. When finish, create global radio for current area
-						// const current_worker = new Worker('../area_development/js/worker_area_development.js', {
-						// 	type : 'module'
-						// });
-						// current_worker.postMessage({
-						// 	url		: DEDALO_API_URL,
-						// 	dd_api	: widget_object.trigger.dd_api,
-						// 	action	: widget_object.trigger.action,
-						// 	options	: options
-						// });
-						// current_worker.onmessage = function(e) {
-						// 	const api_response = e.data.api_response
-
-						// 	print_response(body_response, api_response)
-
-						// 	form_container.classList.remove('lock')
-						// 	spinner.remove()
-
-						// 	current_worker.terminate()
-						// }
 			}
 		})
 
@@ -472,16 +365,6 @@ export const build_form = function(widget_object) {
 			parent			: form_container
 		})
 		button_submit.addEventListener('click', function(){
-
-			// if (confirm( (get_label["sure"] || "Sure?") )) {
-			// 	for (let i = 0; i < input_nodes.length; i++) {
-			// 		if(input_nodes[i].classList.contains("mandatory") && input_nodes[i].value.length<1) {
-			// 			input_nodes[i].focus()
-			// 			input_nodes[i].classList.add("empty")
-			// 			return
-			// 		}
-			// 	}
-			// }
 		})
 
 
