@@ -10,7 +10,7 @@ class component_input_text extends component_common {
 
 
 	/**
-	* GET DATO
+	* GET_DATO
 	* @return array|null $dato
 	*/
 	public function get_dato() : ?array {

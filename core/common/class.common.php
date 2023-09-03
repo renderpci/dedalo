@@ -1428,14 +1428,7 @@ abstract class common {
 			$get_data			= $options->get_data ?? true;
 			$get_request_config	= $options->get_request_config ?? false;
 
-		// options parse
-			// $options = new stdClass();
-			// 	$options->get_context			= true;
-			// 	$options->context_type			= 'default';
-			// 	$options->get_data				= true;
-			// 	$options->get_request_config	= false;
-			// 	if($request_options!==null) foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
+		// short vars
 			$called_model	= get_class($this); // get_called_class(); // static::class
 			$called_tipo	= $this->get_tipo();
 
@@ -1466,22 +1459,15 @@ abstract class common {
 					'get_context'			=> $get_context,
 					'context_type'			=> $context_type,
 					'get_data'				=> $get_data,
-					'get_request_config'	=> $get_request_config,
+					'get_request_config'	=> $get_request_config
 				];
+
 			// path. Class name is called class (ex. component_input_text), not this class (common)
 				$path = DEDALO_CORE_PATH .'/'. $called_model .'/'. $called_model .'_json.php';
 
 			// controller include
 				$json = include( $path );
 
-		// new way
-			// $json = new stdClass();
-			// 	if (true===get_context) {
-			// 		$json->context = $this->get_context($options);
-			// 	}
-			// 	if (true===get_data) {
-			// 		$json->data = $this->get_data($options);
-			// 	}
 
 		// Debug
 			if(SHOW_DEBUG===true) {
