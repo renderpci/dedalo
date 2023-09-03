@@ -620,7 +620,7 @@ class login extends common {
 
 		// root user case
 			if ($section_id==-1) {
-				return DEDALO_AREA_DEVELOPMENT_TIPO;
+				return DEDALO_AREA_MAINTENANCE_TIPO;
 			}
 
 		$component = component_common::get_instance(
