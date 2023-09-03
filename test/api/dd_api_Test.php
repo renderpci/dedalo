@@ -480,7 +480,7 @@ final class dd_api_Test extends TestCase {
 				'expected response result data type is array'
 			);
 
-		// get_data area_development
+		// get_data area_maintenance
 			$rqo = json_handler::decode('
 				{
 				    "action": "read",
@@ -488,16 +488,16 @@ final class dd_api_Test extends TestCase {
 				        "typo": "source",
 				        "type": "area",
 				        "action": "get_data",
-				        "model": "area_development",
-				        "tipo": "dd770",
-				        "section_tipo": "dd770",
+				        "model": "area_maintenance",
+				        "tipo": "dd88",
+				        "section_tipo": "dd88",
 				        "mode": "list",
 				        "view": null,
 				        "lang": "lg-eng"
 				    },
 				    "sqo": {
 				        "section_tipo": [
-				            "dd770"
+				            "dd88"
 				        ],
 				        "limit": null,
 				        "offset": 0
