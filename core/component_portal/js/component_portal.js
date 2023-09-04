@@ -414,9 +414,6 @@ component_portal.prototype.build = async function(autoload=false) {
 					return false
 				}
 
-			// reset errors
-				self.running_with_errors = null
-
 			// destroy dependencies
 				await self.destroy(
 					false, // bool delete_self

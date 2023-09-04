@@ -2705,6 +2705,9 @@ export const push_browser_history = function(options) {
 */
 export const build_autoload = async function(self) {
 
+	// reset errors
+		self.running_with_errors = null
+
 	// load context and data
 		const api_response = self.tmp_api_response || await data_manager.request({
 			body : self.rqo
