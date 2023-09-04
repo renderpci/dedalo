@@ -486,9 +486,25 @@ abstract class component_common extends common {
 
 		// pagination. Set defaults
 			if (!isset($this->pagination)) {
+
 				$this->pagination = new stdClass();
 					$this->pagination->offset	= 0;
 					$this->pagination->limit	= null;
+
+				// limit. From properties request_config sqo_config
+					if (isset($properties->source) && isset($properties->source->request_config)) {
+						$request_config_object = array_find($properties->source->request_config, function($el){
+							return !isset($el->api_engine) || $el->api_engine==='dedalo';
+						});
+						if (!empty($request_config_object) &&
+							isset($request_config_object->show) &&
+							isset($request_config_object->show->sqo_config) &&
+							isset($request_config_object->show->sqo_config->limit)
+							) {
+							// overwrite default limit
+							$this->pagination->limit = (int)$request_config_object->show->sqo_config->limit;
+						}
+					}
 			}
 
 			// DES
