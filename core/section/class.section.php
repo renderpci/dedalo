@@ -1322,6 +1322,21 @@ class section extends common {
 		}//end if ($this->id >= 1)
 
 
+		// reset caches
+			// DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO
+			if ($this->tipo===DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO) {
+				if (isset($_SESSION['dedalo']['config']['user_preset_layout_map'])) {
+					unset($_SESSION['dedalo']['config']['user_preset_layout_map']);
+				}
+			}
+			// DEDALO_REGISTER_TOOLS_SECTION_TIPO
+			if ($this->tipo===DEDALO_REGISTER_TOOLS_SECTION_TIPO) {
+				if (isset($_SESSION['dedalo']['registered_tools'])) {
+					unset($_SESSION['dedalo']['registered_tools']);
+				}
+			}
+
+
 		// debug
 			debug_log(__METHOD__
 				." Saved section finish: ($this->tipo - $this->section_id) in time: ".exec_time_unit($start_time, 'ms').' ms'
