@@ -433,6 +433,8 @@ class RecordObj_dd extends RecordDataBoundObject {
 				return 'component_number';
 			}elseif ($this->terminoID==='dd1067') { // tools component_security_tools
 				return 'component_check_box';
+			}elseif ($this->terminoID===DEDALO_AREA_MAINTENANCE_TIPO) { // dd88
+				return 'area_maintenance'; // temporal !
 			}
 
 		$modelo_tipo = $this->get_modelo();
