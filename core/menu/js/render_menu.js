@@ -243,6 +243,7 @@ const render_debug_info_bar = (self) => {
 		const php_version		= info_data.php_version || page_globals.php_version
 		const php_memory		= info_data.php_memory || page_globals.php_memory
 		const php_sapi_name		= info_data.php_sapi_name || page_globals.php_sapi_name
+		const ip_server			= info_data.ip_server
 
 	// debug_info_bar
 		const debug_info_bar = ui.create_dom_element({
@@ -297,6 +298,13 @@ const render_debug_info_bar = (self) => {
 			parent			: debug_info_bar
 		})
 
+	// ip_server
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'ip_server',
+			text_content	: ip_server,
+			parent			: debug_info_bar
+		})
 
 	return debug_info_bar
 }//end render_debug_info_bar
