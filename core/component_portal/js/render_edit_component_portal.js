@@ -619,31 +619,31 @@ export const get_buttons = (self) => {
 		})
 
 	// button_update_data_external
-			if(self.show_interface.button_external===true) {
-				// button_update data external
-					const button_update_data_external = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'button sync',
-						parent			: buttons_fold
-					})
-					button_update_data_external.addEventListener('click', fn_update_data_external)
-					async function fn_update_data_external(e){
-						e.stopPropagation()
-						// force server data to calculate external data
-						const source = self.rqo.source
-						source.build_options = {
-							get_dato_external : true
-						}
-						// const built = await self.build(true)
-						// if (built) {
-						// 	self.render({render_level : 'content'})
-						// }
-						self.refresh({
-							build_autoload	: true,
-							render_level	: 'content'
-						})
+		if(self.show_interface.button_external===true) {
+			// button_update data external
+				const button_update_data_external = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'button sync',
+					parent			: buttons_fold
+				})
+				button_update_data_external.addEventListener('click', fn_update_data_external)
+				async function fn_update_data_external(e){
+					e.stopPropagation()
+					// force server data to calculate external data
+					const source = self.rqo.source
+					source.build_options = {
+						get_dato_external : true
 					}
-			}//end button external
+					// const built = await self.build(true)
+					// if (built) {
+					// 	self.render({render_level : 'content'})
+					// }
+					self.refresh({
+						build_autoload	: true,
+						render_level	: 'content'
+					})
+				}
+		}//end button external
 
 	// button_add
 		if(self.show_interface.button_add===true) {
@@ -661,7 +661,7 @@ export const get_buttons = (self) => {
 						? false
 						: target_section[0].tipo
 					if (!target_section_tipo) {
-						alert('Error. Empty target_section');
+						alert('Error. Empty or invalid target_section');
 						return
 					}
 
@@ -836,7 +836,7 @@ export const get_buttons = (self) => {
 			}
 		}//end button_link
 
-	// button_open_section_list
+	// button_open_section_list (button_add)
 		if(self.show_interface.button_add===true) {
 
 			const first_section = target_section[0] || null
@@ -855,7 +855,8 @@ export const get_buttons = (self) => {
 					title			: label,
 					parent			: buttons_fold
 				})
-				button_open_section_list.addEventListener('click', function(e){
+				button_open_section_list.addEventListener('click', fn_click)
+				function fn_click(e){
 					e.stopPropagation()
 
 					// open a new window
@@ -876,7 +877,7 @@ export const get_buttons = (self) => {
 								build_autoload : true
 							})
 						})
-				})
+				}//end fn_click
 			}
 		}
 
@@ -888,7 +889,7 @@ export const get_buttons = (self) => {
 				parent			: buttons_fold
 			})
 			// add listener to the select
-			button_tree_selector.addEventListener('mouseup',function(){
+			button_tree_selector.addEventListener('mouseup', function(){
 
 			})
 		}//end button_external

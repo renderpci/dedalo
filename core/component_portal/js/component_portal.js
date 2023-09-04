@@ -177,7 +177,8 @@ component_portal.prototype.init = async function(options) {
 								// overwrite/set tag_id
 								locator.tag_id	= tag_id
 							}else{
-								if (!confirm(get_label.no_hay_etiqueta_seleccionada || 'No tag selected. If you continue, the entire record will be indexed.')) {
+								if (!confirm(get_label.no_hay_etiqueta_seleccionada ||
+									'No tag selected. If you continue, the entire record will be indexed.')) {
 									return
 								}
 							}
@@ -691,7 +692,9 @@ component_portal.prototype.add_value = async function(value) {
 		if(data_limit && current_value.length>=data_limit){
 			console.log("[add_value] Data limit is exceeded!");
 			// notify to user about the limit
-			const data_limit_label = (get_label.exceeded_limit || 'The maximum number of values for this field has been exceeded. Limit =') + ' ' + data_limit
+			const data_limit_label = (
+				get_label.exceeded_limit || 'The maximum number of values for this field has been exceeded. Limit ='
+			) + ' ' + data_limit
 			window.alert(data_limit_label)
 			// stop the process
 			return false
@@ -704,7 +707,7 @@ component_portal.prototype.add_value = async function(value) {
 			return false
 		}
 
-	// add himself into the new locator as from_component_tipo
+	// adds its own tipo as 'from_component_tipo' to the new locator
 		value.from_component_tipo = self.tipo
 
 	// changed_data
