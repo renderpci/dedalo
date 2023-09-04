@@ -723,7 +723,11 @@ export const get_buttons = (self) => {
 							self.refresh()
 						}
 						// get the first ddo in ddo_map to be focused
-						const first_ddo = self.request_config_object.show.ddo_map.find(el => el.model !== 'component_publication')
+						const first_ddo = self.request_config_object.show.ddo_map.find(el =>
+							el.model !== 'component_publication' &&
+							el.model !== 'component_radio_button' &&
+							!el.is_dataframe
+						)
 
 						// get the instance of the component that was created by the section in build-render process
 						const all_instances	= get_all_instances()
@@ -741,7 +745,7 @@ export const get_buttons = (self) => {
 								ui.component.activate(component)
 
 								// focus the input node of the component
-								if(node.content_data[0]){
+								if(component.node.content_data[0]){
 									component.node.content_data[0].querySelector('input').focus()
 								}
 							})
