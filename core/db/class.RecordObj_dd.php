@@ -433,12 +433,23 @@ class RecordObj_dd extends RecordDataBoundObject {
 				return 'component_number';
 			}elseif ($this->terminoID==='dd1067') { // tools component_security_tools
 				return 'component_check_box';
-			}elseif ($this->terminoID===DEDALO_AREA_MAINTENANCE_TIPO) { // dd88
-				return 'area_maintenance'; // temporal !
 			}
 
 		$modelo_tipo = $this->get_modelo();
 		if (empty($modelo_tipo)) {
+
+			// new model area_maintenance (term dd88, model dd72) not updated Ontology cases
+			if ($this->terminoID===DEDALO_AREA_MAINTENANCE_TIPO) {
+				debug_log(__METHOD__
+					. " WARNING. Model dd72 'area_maintenance' is not defined! Update your Ontology ASAP " . PHP_EOL
+					. ' Fixed resolution is returned to allow all works temporally' . PHP_EOL
+					.' tipo: ' . $this->terminoID . PHP_EOL
+					.' model expected: (dd72) area_maintenance'
+					, logger::ERROR
+				);
+				return 'area_maintenance'; // temporal !
+			}
+
 			return '';
 		}
 
