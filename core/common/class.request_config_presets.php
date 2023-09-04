@@ -43,7 +43,7 @@ class request_config_presets {
 			// 	$user_locator->set_from_component_tipo('dd654');
 
 		// preset section vars
-			$preset_section_tipo = 'dd1244';
+			$preset_section_tipo = DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO; // 'dd1244';
 			$component_json_tipo = 'dd625';
 
 		// filter
@@ -109,7 +109,7 @@ class request_config_presets {
 			$search_query_object = (object)[
 				'id'			=> 'search_request_config',
 				'mode'			=> 'list',
-				'section_tipo'	=> 'dd1244',
+				'section_tipo'	=> DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO, //'dd1244'
 				'limit'			=> 1,
 				'full_count'	=> false,
 				'filter'		=> (object)[
