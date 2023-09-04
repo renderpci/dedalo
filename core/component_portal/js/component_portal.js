@@ -824,10 +824,15 @@ component_portal.prototype.add_value = async function(value) {
 			render_level	: 'content'
 		})
 
+
 	// filter data. check if the caller has tag_id
 		if(self.active_tag){
+			self.node.classList.add('hide')
 			// filter component data by tag_id and re-render content
 			self.filter_data_by_tag_id(self.active_tag)
+			.then(()=>{
+				self.node.classList.remove('hide')
+			})
 		}
 
 	// mode specifics
@@ -1228,8 +1233,12 @@ component_portal.prototype.unlink_record = async function(options) {
 
 	// check if the caller has active a tag_id
 		if(self.active_tag){
+			self.node.classList.add('hide')
 			// filter component data by tag_id and re-render content
 			self.filter_data_by_tag_id(self.active_tag)
+			.then(()=>{
+				self.node.classList.remove('hide')
+			})
 		}
 
 	// event to update the DOM elements of the instance
