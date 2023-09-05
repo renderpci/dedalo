@@ -494,6 +494,18 @@ class component_pdf extends component_media_common {
 		// copy original to default quality (in the future, a quality conversion script will be placed here)
 			$default_quality		= $this->get_default_quality();
 			$default_quality_path	= $this->get_media_path_dir($default_quality);
+			// check directory exists before copy
+			if (!is_dir($default_quality_path)) {
+				if(!mkdir($default_quality_path, 0750, true)) {
+					debug_log(__METHOD__
+						.' Error. Unable to create default_quality_path directory' . PHP_EOL
+						.' default_quality_path: ' .$default_quality_path
+						, logger::ERROR
+					);
+					$response->msg .= ' : Unable to create default_quality_path directory';
+					return $response;
+				}
+			}
 			$target_file_path		= $default_quality_path . '/' . $full_file_name;
 			$copy_result			= copy(
 				$full_file_path, // from original quality directory
