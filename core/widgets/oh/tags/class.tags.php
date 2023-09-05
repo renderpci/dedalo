@@ -37,15 +37,19 @@ class tags extends widget_common {
 			$current_component_tipo = $transcription_source->component_tipo;
 
 			// raw_text. From the original lang always (!)
-				$original_lang	= component_text_area::force_change_lang($current_component_tipo, $section_id, $lang, $section_tipo);
-				$component		= component_common::get_instance(
+				$component = component_common::get_instance(
 					'component_text_area',
 					$current_component_tipo,
 					$section_id,
 					$mode,
-					$original_lang,
+					$lang,
 					$section_tipo
 				);
+				$original_lang = $component->get_original_lang();
+				if (!empty($original_lang) && $original_lang!==$lang) {
+					$component->set_lang($original_lang);
+				}
+
 				$dato = $component->get_dato();
 				$raw_text = isset($dato[0])
 					? $dato[0]

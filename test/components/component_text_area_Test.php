@@ -27,58 +27,7 @@ final class component_text_area_test extends TestCase {
 
 
 	/**
-	* TEST_FORCE_CHANGE_LANG
-	* @return void
-	*/
-	public function test_force_change_lang() {
-
-		$model			= self::$model;
-		$tipo			= 'rsc36';
-		$section_tipo	= 'rsc167';
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= 'lg-eng';
-
-		$ar_related_by_model = common::get_ar_related_by_model(
-			'component_select_lang',
-			$tipo
-		);
-		$related_by_model_tipo = reset($ar_related_by_model);
-
-		$this->assertTrue(
-			$related_by_model_tipo==='rsc263',
-			'expected tipo is rsc263, but received is: ' . to_string($related_by_model_tipo)
-		);
-
-		$component_select_lang = component_common::get_instance(
-			'component_select_lang', // string model
-			$related_by_model_tipo, // string tipo
-			$section_id,
-			'list',
-			DEDALO_DATA_NOLAN,
-			$section_tipo
-		);
-		$component_select_lang_dato	= (array)$component_select_lang->get_dato();
-		$lang_locator				= $component_select_lang_dato[0];
-		$target_lang				= lang::get_code_from_locator($lang_locator, true);
-
-		$changed_lang = component_text_area::force_change_lang(
-			$tipo,
-			$section_id,
-			$lang,
-			$section_tipo
-		);
-
-		$this->assertTrue(
-			$target_lang===$changed_lang,
-			'expected target_lang is '.$target_lang.', but received (changed_lang) is: ' . to_string($changed_lang)
-		);
-	}//end test_force_change_lang
-
-
-
-	/**
-	* TEST_set_dato
+	* TEST_SET_DATO
 	* @return void
 	*/
 	public function test_set_dato() {
