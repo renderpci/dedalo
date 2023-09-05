@@ -2124,6 +2124,14 @@ abstract class common {
 									$caller_dataframe // object|null
 								);
 
+								// component_text_area lang case. Change lang before get dato (!)
+									if ($model==='component_text_area') {
+										$original_lang = $related_element->get_original_lang();
+										if (!empty($original_lang) && $original_lang!==$current_lang) {
+											$related_element->set_lang($original_lang);
+										}
+									}
+
 								// pagination->limit. Get limit from component calculation or if it's defined from ddo
 									if(isset($dd_object->limit)){
 										$related_element->pagination->limit = $dd_object->limit;
