@@ -726,6 +726,7 @@ export const get_buttons = (self) => {
 							const first_ddo = self.request_config_object.show.ddo_map.find(el =>
 								el.model !== 'component_publication' &&
 								el.model !== 'component_radio_button' &&
+								el.model !== 'component_info' &&
 								!el.is_dataframe
 							)
 
