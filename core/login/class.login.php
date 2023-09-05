@@ -545,10 +545,10 @@ class login extends common {
 
 		$active_account = false; // Default false
 
-		$model					= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_CUENTA_ACTIVA_TIPO,true);
+		$model					= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_ACTIVE_ACCOUNT_TIPO,true);
 		$component_radio_button	= component_common::get_instance(
 			$model,
-			DEDALO_CUENTA_ACTIVA_TIPO,
+			DEDALO_ACTIVE_ACCOUNT_TIPO,
 			$section_id,
 			'edit',
 			DEDALO_DATA_NOLAN,
