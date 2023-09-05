@@ -38,7 +38,7 @@ class area_thesaurus extends area_common {
 
 		// }, $hierarchy_sections);
 
-		$section_tipo = DEDALO_TESAURO_TIPO; // 'dd100'
+		$section_tipo = DEDALO_THESAURUS_TIPO; // 'dd100'
 
 		return $section_tipo;
 	}//end get_section_tipo

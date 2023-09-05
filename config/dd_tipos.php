@@ -3,7 +3,7 @@
 
 // root tipo
 define('DEDALO_ROOT_TIPO'								, 'dd1');
-define('DEDALO_TESAURO_TIPO'							, 'dd100');
+define('DEDALO_THESAURUS_TIPO'							, 'dd100');
 define('DEDALO_MEDIA_AREA_TIPO'							, 'rsc1');
 define('DEDALO_AREA_ROOT_TIPO'							, 'dd242');
 define('DEDALO_AREA_MAINTENANCE_TIPO'					, 'dd88');
@@ -18,7 +18,7 @@ define('DEDALO_SECTION_USERS_TIPO'						, 'dd128');
 define('DEDALO_SECURITY_ADMINISTRATOR_TIPO'				, 'dd244');
 define('DEDALO_USER_NAME_TIPO'							, 'dd132');
 define('DEDALO_USER_PASSWORD_TIPO'						, 'dd133');
-define('DEDALO_CUENTA_ACTIVA_TIPO'						, 'dd131');
+define('DEDALO_ACTIVE_ACCOUNT_TIPO'						, 'dd131');
 define('DEDALO_FULL_USER_NAME_TIPO'						, 'dd452');
 define('DEDALO_USER_PROFILE_TIPO'						, 'dd1725');
 define('DEDALO_SUPERUSER'								, -1);
@@ -165,7 +165,7 @@ define('DEDALO_TS_REFERENCES_COMPONENT_TIPO'			, 'rsc426');
 // Section default components (information about section, created, modify, etc)
 define('DEDALO_SECTION_INFO_SECTION_GROUP'				, 'dd196');
 
-define('DEDALO_TEXTAREA_FIX_BROQUEN_TAGS_TIPOS'			, serialize([DEDALO_COMPONENT_RESOURCES_TR_TIPO]));
+define('DEDALO_TEXTAREA_FIX_BROKEN_TAGS_TIPOS'			, serialize([DEDALO_COMPONENT_RESOURCES_TR_TIPO]));
 
 // LANGS
 define('DEDALO_LANGS_SECTION_TIPO'						, 'lg1');

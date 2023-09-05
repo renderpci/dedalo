@@ -1636,7 +1636,7 @@ abstract class component_common extends common {
 
 		// 			# INDEXATION TOOL CASE : When current tool have 'indexation' name, test thesaurus permissions for avoid inconsistencies
 		// 			if (strpos($tool_name, 'indexation')!==false) {
-		// 				$ts_permissions = (int)common::get_permissions(DEDALO_TESAURO_TIPO, DEDALO_TESAURO_TIPO);
+		// 				$ts_permissions = (int)common::get_permissions(DEDALO_THESAURUS_TIPO, DEDALO_THESAURUS_TIPO);
 		// 				if ($ts_permissions<1) continue;	# Skip this tool
 		// 			}
 
