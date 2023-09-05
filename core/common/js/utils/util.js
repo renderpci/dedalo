@@ -28,6 +28,10 @@ export function clone(item) {
 */
 export function dd_console(msg, level='WARNING', items){
 
+	if ( level==='DEBUG' && (SHOW_DEBUG!==true && SHOW_DEVELOPER!==true) ) {
+		return
+	}
+
 	const type = level==='ERROR'
 		? 'error'
 		: (level==='WARNING'
