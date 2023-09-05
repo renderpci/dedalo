@@ -177,6 +177,13 @@ const get_content_data_edit = async function(self) {
 								// set new value and force dispatchEvent change
 								lang_selector.value = new_lang
 								lang_selector.dispatchEvent(new Event('change'));
+								// change selector option text
+								const lang_selector_options	= Array.from(lang_selector.options);
+								const option_to_select		= lang_selector_options.find(item => item.value===new_lang);
+								if (option_to_select) {
+									const label = get_label.original || 'Original'
+									option_to_select.text = option_to_select.text + ' ('+label+')'
+								}
 							}
 						}
 					}
