@@ -1808,6 +1808,9 @@ abstract class common {
 							$dd_object->config = new stdClass();
 						}
 						$dd_object->config->relation_list_tipo = $ar_children_tipo[0] ?? null;
+
+					// section matrix_table
+						$dd_object->matrix_table = common::get_matrix_table_from_tipo( $section_tipo );
 				}
 
 			// view, all components has view, used to change the render view.
