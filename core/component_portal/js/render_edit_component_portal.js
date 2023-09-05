@@ -713,9 +713,12 @@ export const get_buttons = (self) => {
 							await section.build(true)
 							const section_node = await section.render()
 
+						// header
+							const header = (get_label.new || 'New section') + ' ' + target_section[0].label
+
 						// modal. Create a modal to attach the section node
 							const modal = ui.attach_to_modal({
-								header		: get_label.new || 'New section',
+								header		: header,
 								body		: section_node
 							})
 							modal.on_close = function(){
@@ -729,28 +732,29 @@ export const get_buttons = (self) => {
 								el.model !== 'component_info' &&
 								!el.is_dataframe
 							)
+							if (first_ddo) {
+								// instance search. Get the instance of the component that was created by the section in build-render process
+									const all_instances	= get_all_instances()
+									const component		= all_instances.find( el =>
+										el.tipo === first_ddo.tipo &&
+										el.section_tipo === section_tipo &&
+										el.section_id === section_id &&
+										el.parent === section_tipo
+									)
 
-						// instance search. Get the instance of the component that was created by the section in build-render process
-							const all_instances	= get_all_instances()
-							const component		= all_instances.find( el =>
-								el.tipo === first_ddo.tipo &&
-								el.section_tipo === section_tipo &&
-								el.section_id === section_id &&
-								el.parent === section_tipo
-							)
+								// activate component
+								// If the component is ready and the section is in DOM, activate it and focus his input node.
+									if(component && component.node){
+										when_in_dom(component.node, function(){
+											// activate the component in DOM
+											ui.component.activate(component)
 
-						// activate component
-						// If the component is ready and the section is in DOM, activate it and focus his input node.
-							if(component && component.node){
-								when_in_dom(component.node, function(){
-									// activate the component in DOM
-									ui.component.activate(component)
-
-									// focus the input node of the component
-									if(component.node.content_data[0]){
-										component.node.content_data[0].querySelector('input').focus()
+											// focus the input node of the component
+											if(component.node.content_data[0]){
+												component.node.content_data[0].querySelector('input').focus()
+											}
+										})
 									}
-								})
 							}
 
 					}else{
