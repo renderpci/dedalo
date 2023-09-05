@@ -77,7 +77,7 @@ component_common.prototype.init = async function(options) {
 		// if the property is set to false, the component will use datum to get his data and is forced to update datum to share his data with others
 		// false option is used to reduce the calls to API server and database, section use to load all data with 1 call and components load his data from datum
 		// true options is used to call directly to API and manage his data, used by tools or services that need components standalone.
-		self.standalone = true
+		self.standalone		= options.standalone ?? true
 
 	// active. Active status (true|false) is set by ui.component.activate/deactivate
 		self.active = false

@@ -78,6 +78,10 @@ common.prototype.init = async function(options) {
 	// caller pointer
 		self.caller			= options.caller
 
+	// standalone
+		self.standalone		= options.standalone ?? true
+
+
 	// status update
 		self.status = 'initialized'
 
