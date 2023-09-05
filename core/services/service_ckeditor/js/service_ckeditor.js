@@ -1020,12 +1020,12 @@ export const service_ckeditor = function() {
 
 			const start = writer.createPositionAt(
 				tag_view_in,
-				"after"
+				'after'
 			);
 
 			const end = writer.createPositionAt(
 				tag_view_out,
-				"before"
+				'before'
 			);
 
 			// create the range of the new position

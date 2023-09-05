@@ -942,6 +942,14 @@ component_portal.prototype.update_pagination_values = function(action) {
 * @param object options
 * sample
 * {
+    "tag": {
+        "node_name": "img",
+        "type": "indexOut",
+        "tag_id": "4",
+        "state": "d",
+        "label": "",
+        "data": ""
+    }
 * }
 * @return promise self.render
 */
@@ -964,9 +972,9 @@ component_portal.prototype.filter_data_by_tag_id = function(options) {
 	// in the next tag selection by user the data doesn't have all locators and is necessary get the original data
 	// the full_data is clone to a new object because need to preserve the datum from these changes.
 		const full_data	= self.datum.data.find(el =>
-				el.tipo===self.tipo
-			 && el.section_tipo===self.section_tipo
-			 && el.section_id==self.section_id
+				el.tipo===self.tipo &&
+				el.section_tipo===self.section_tipo &&
+				el.section_id==self.section_id
 		) || {}
 		self.data = clone(full_data)
 

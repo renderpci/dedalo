@@ -1984,7 +1984,6 @@ abstract class common {
 			// remove duplicates, sometimes the portal point to other portal with two different bifurcations, and the portal pointed is duplicated in the request_config (dedalo, Zenon,...)
 			$full_ddo_map = array_unique($full_ddo_map, SORT_REGULAR);
 
-
 		// get the context and data for every locator
 			foreach($ar_locators as $current_locator) {
 
