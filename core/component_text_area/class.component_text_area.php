@@ -2879,29 +2879,10 @@ class component_text_area extends component_common {
 	public function get_list_value(object $options=null) : ?array {
 
 		// force change lang when is set in related component (rsc36 case)
-			// $original_lang = $this->lang;
-			$ar_related_by_model = common::get_ar_related_by_model('component_select_lang', $this->tipo);
-			if (!empty($ar_related_by_model[0])) {
-				$component_select_lang = component_common::get_instance(
-					'component_select_lang', // string model
-					$ar_related_by_model[0], // string tipo
-					$this->section_id,
-					'list',
-					DEDALO_DATA_NOLAN,
-					$this->section_tipo
-				);
-				$component_select_lang_dato = $component_select_lang->get_dato();
-				if (!empty($component_select_lang_dato) && !empty($component_select_lang_dato[0])) {
-					$lang_locator	= $component_select_lang_dato[0];
-					$target_lang	= lang::get_code_from_locator(
-						$lang_locator,
-						true // add_prefix
-					);
-					if (!empty($target_lang) && strpos($target_lang, 'lg-')!==false && $target_lang!==$this->lang) {
-						// overwrite lang
-						$this->lang	= $target_lang;
-					}
-				}
+			$original_lang = $this->get_original_lang();
+			if (!empty($original_lang) && $original_lang!==$this->lang) {
+				// overwrite lang
+				$this->lang	= $original_lang;
 			}
 
 		// dato from component
@@ -3171,6 +3152,47 @@ class component_text_area extends component_common {
 
 		return $response;
 	}//end conform_import_data
+
+
+
+	/**
+	* GET_ORIGINAL_LANG
+	* Check if a related component component_select_lang exists like rsc36 case
+	* If exists, return the lang value
+	* @return string|null
+	*/
+	public function get_original_lang() : ?string {
+
+		$ar_related_component_lang_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+			$this->tipo, // tipo
+			'component_select_lang', // model name
+			'termino_relacionado', // relation_type
+			true // search_exact
+		);
+		if (!empty($ar_related_component_lang_tipo)) {
+			$related_component_lang_tipo	= reset($ar_related_component_lang_tipo);
+			$related_component_lang_model	= RecordObj_dd::get_modelo_name_by_tipo($related_component_lang_tipo, true);
+			$related_component_lang			= component_common::get_instance(
+				$related_component_lang_model, // string model
+				$related_component_lang_tipo, // string tipo
+				$this->section_id, // string section_id
+				'list', // string mode
+				DEDALO_DATA_NOLAN, // string lang
+				$this->section_tipo // string section_tipo
+			);
+			$related_component_lang_dato = $related_component_lang->get_dato();
+			if (!empty($related_component_lang_dato[0])) {
+
+				$original_lang = lang::get_code_from_locator($related_component_lang_dato[0]);
+
+				// set original lang
+				return $original_lang;
+			}
+		}
+
+
+		return null;
+	}//end get_original_lang
 
 
 
