@@ -439,6 +439,9 @@ class RecordObj_dd extends RecordDataBoundObject {
 		if (empty($modelo_tipo)) {
 
 			// new model area_maintenance (term dd88, model dd72) not updated Ontology cases
+			if (!defined('DEDALO_AREA_MAINTENANCE_TIPO')) {
+				define('DEDALO_AREA_MAINTENANCE_TIPO', 'dd88');
+			}
 			if ($this->terminoID===DEDALO_AREA_MAINTENANCE_TIPO) {
 				debug_log(__METHOD__
 					. " WARNING. Model dd72 'area_maintenance' is not defined! Update your Ontology ASAP " . PHP_EOL

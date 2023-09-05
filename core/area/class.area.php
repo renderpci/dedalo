@@ -78,6 +78,9 @@ class area extends area_common  {
 					. ' Fixed resolution is returned to allow all works temporally'
 					, logger::ERROR
 				);
+				if (!defined('DEDALO_AREA_MAINTENANCE_TIPO')) {
+					define('DEDALO_AREA_MAINTENANCE_TIPO', 'dd88');
+				}
 				$ar_root_areas[] = DEDALO_AREA_MAINTENANCE_TIPO; // dd88
 			}
 
