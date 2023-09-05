@@ -70,6 +70,10 @@ view_default_list_av.render = async function(self, options) {
 				ui.set_background_image(this, this)
 			}
 			image.addEventListener('error', () => {
+				if ( image.src.indexOf(page_globals.fallback_image)===-1 ) {
+					image.src = page_globals.fallback_image
+					return
+				}
 				console.log('Image load error:', image);
 			}, false)
 
