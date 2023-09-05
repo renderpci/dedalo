@@ -334,6 +334,15 @@ const get_buttons = function(self) {
 			event_manager.publish('toggle_search_panel_'+self.id)
 		})
 
+	// non_editable_sections. Activity section 'dd542'
+		const non_editable_sections = [
+			'dd542', // activity
+			'dd1324' // registered tools
+		]
+		if (non_editable_sections.includes(self.tipo)) {
+			return fragment
+		}
+
 	// other_buttons_block
 		const other_buttons_block = ui.create_dom_element({
 			element_type	: 'div',
