@@ -109,7 +109,8 @@ const get_content_data_edit = async function(self) {
 				class_name		: 'transcription_component_container',
 				parent			: right_container
 			})
-			// lang selector
+
+			// lang_selector
 				const lang_selector = ui.build_select_lang({
 					selected	: self.lang,
 					class_name	: 'dd_input selector'
@@ -140,21 +141,47 @@ const get_content_data_edit = async function(self) {
 							// console.log("self.transcription_component.is_data_changed:",self.transcription_component.is_data_changed);
 						})
 				})
-
 				transcription_component_container.appendChild(lang_selector)
 
 			// transcription_component. render another node of component caller and append to container
 				const transcription_component = self.transcription_component || await self.get_component(self.lang)
-				// set auto_init_editor = true to force init edidor instead use user click to activate it
+				// set auto_init_editor = true to force init editor instead use user click to activate it
 				transcription_component.auto_init_editor = true
-				transcription_component.render()
-				.then(function(node){
-					transcription_component_container.appendChild(node)
-				})
-				// self.caller.render()
-				// .then(function(node){
-				// 	transcription_component_container.appendChild(node)
-				// })
+				const transcription_component_node = await transcription_component.render()
+				transcription_component_container.appendChild(transcription_component_node)
+
+			// original_lang_component. Only used to force change lang event when original lang is different from current
+				// Note that original_lang_component is loaded and built to get possible original_lang value
+				// When is set, force the lang_selector to change to the original_lang_component value instead
+				// current dedalo_data_lang value
+				const original_lang_component = self.original_lang_component || null; // status: built
+				if (original_lang_component) {
+					fn_update_lang()
+				}
+				function fn_update_lang() {
+					const data		= original_lang_component.data || {}
+					const datalist	= data.datalist || []
+					const value		= data.value || []
+					if (value.length && datalist.length) {
+						const parsed_value	= value[0]
+						const datalist_item	= datalist.find(el =>
+							el.value &&
+							el.value.section_id==parsed_value.section_id &&
+							el.value.section_tipo==parsed_value.section_tipo
+						)
+						if (datalist_item) {
+							const new_lang = datalist_item.section_id
+							if (new_lang!==lang_selector.value) {
+								// hide current node to prevent flicker
+								transcription_component_node.classList.add('hide')
+								// set new value and force dispatchEvent change
+								lang_selector.value = new_lang
+								lang_selector.dispatchEvent(new Event('change'));
+							}
+						}
+					}
+				}
+
 
 		// info container
 			const info_container = ui.create_dom_element({
