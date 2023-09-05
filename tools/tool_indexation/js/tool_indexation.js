@@ -236,15 +236,20 @@ tool_indexation.prototype.build = async function(autoload=false) {
 
 	try {
 
-		// original_lang_component. fix original_lang_component for convenience
-			const original_lang_component_ddo	= self.tool_config.ddo_map.find(el => el.role==='original_lang_component')
-			self.original_lang_component		= original_lang_component_ddo
-				? self.ar_instances.find(el => el.tipo===original_lang_component_ddo.tipo)
-				: null
-
 		// transcription_component. fix transcription_component for convenience
 			const transcription_component_ddo	= self.tool_config.ddo_map.find(el => el.role==='transcription_component')
 			self.transcription_component		= self.ar_instances.find(el => el.tipo===transcription_component_ddo.tipo)
+			// force change lang if related_component_lang is defined (original lang)
+			if (self.transcription_component.context.options && self.transcription_component.context.options.related_component_lang) {
+				if (self.transcription_component.lang !== self.transcription_component.context.options.related_component_lang) {
+					self.transcription_component.lang = self.transcription_component.context.options.related_component_lang
+					// build again to force download data
+					await self.transcription_component.build(true)
+					if(SHOW_DEBUG===true) {
+						console.log('Changed transcription_component lang to related_component_lang:', self.transcription_component.lang);
+					}
+				}
+			}
 
 		// indexing_component. fix indexing_component for convenience
 			const indexing_component_ddo	= self.tool_config.ddo_map.find(el => el.role==='indexing_component')
