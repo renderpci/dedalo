@@ -185,11 +185,6 @@ const get_content_value = (i, current_value, self) => {
 				) {
 
 				option_node.selected = true
-
-				// set_lang_value publish event
-				if (datalist_item && datalist_item.section_id) {
-					event_manager.publish('set_lang_value_' + self.id_base, datalist_item.section_id)
-				}
 			}
 
 			// developer_info
