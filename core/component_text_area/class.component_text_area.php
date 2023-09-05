@@ -16,7 +16,7 @@ class component_text_area extends component_common {
 	/**
 	* __CONSTRUCT
 	*/
-		// protected function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_LANG, string $section_tipo=null) {
+		// protected function __construct(string $tipo=null, $section_id=null, string $mode='list', string $lang=DEDALO_DATA_LANG, string $section_tipo=null) {
 
 		// 	// Overwrite lang when component_select_lang is present
 		// 	// Removed 22-05-2023 because is not used anymore
@@ -29,8 +29,33 @@ class component_text_area extends component_common {
 		// 		// 	}
 		// 		// }
 
+		// 	// force change lang when is set in related component (rsc36 case)
+		// 		// $ar_related_by_model = common::get_ar_related_by_model('component_select_lang', $tipo);
+		// 		// if (!empty($ar_related_by_model[0])) {
+		// 		// 	$component_select_lang = component_common::get_instance(
+		// 		// 		'component_select_lang', // string model
+		// 		// 		$ar_related_by_model[0], // string tipo
+		// 		// 		$section_id,
+		// 		// 		'list',
+		// 		// 		DEDALO_DATA_NOLAN,
+		// 		// 		$section_tipo
+		// 		// 	);
+		// 		// 	$component_select_lang_dato = $component_select_lang->get_dato();
+		// 		// 	if (!empty($component_select_lang_dato) && !empty($component_select_lang_dato[0])) {
+		// 		// 		$lang_locator	= $component_select_lang_dato[0];
+		// 		// 		$target_lang	= lang::get_code_from_locator(
+		// 		// 			$lang_locator,
+		// 		// 			true // add_prefix
+		// 		// 		);
+		// 		// 		if (!empty($target_lang) && strpos($target_lang, 'lg-')!==false && $target_lang!==$lang) {
+		// 		// 			// overwrite lang
+		// 		// 			$lang = $target_lang;
+		// 		// 		}
+		// 		// 	}
+		// 		// }
+
 		// 	// We build the component normally
-		// 	parent::__construct($tipo, $parent, $mode, $lang, $section_tipo);
+		// 	parent::__construct($tipo, $section_id, $mode, $lang, $section_tipo);
 		// }//end __construct
 
 
