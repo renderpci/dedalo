@@ -456,6 +456,7 @@ export const render_section_info = function(self) {
 		const publication_last_date		= section_data.publication_last_date
 		const publication_first_user	= section_data.publication_first_user
 		const publication_last_user		= section_data.publication_last_user
+		const matrix_table				= section.context.matrix_table
 
 
 	// DocumentFragment
@@ -560,7 +561,22 @@ export const render_section_info = function(self) {
 				inner_html		: section.model,
 				parent			: fragment
 			})
-			console.log('section:', section);
+
+	// matrix_table
+		// label
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'key',
+				inner_html		: 'table',
+				parent			: fragment
+			})
+		// value
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'value',
+				inner_html		: matrix_table,
+				parent			: fragment
+			})
 
 	// section_id
 		// label
