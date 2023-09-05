@@ -125,12 +125,12 @@
 	include(DEDALO_SHARED_PATH . '/core_functions.php');
 	// config_core. core definitions and status.
 	include(DEDALO_CONFIG_PATH . '/config_core.php');
-	// dd_tipos. List of main Dédalo resolved tipos
-	include(DEDALO_CONFIG_PATH . '/dd_tipos.php');
-	// version. Info about current version and build
-	include(DEDALO_CONFIG_PATH . '/version.inc');
 	// config_db. Dédalo PostgreSQL and MariaDB config file
 	include(DEDALO_CONFIG_PATH . '/config_db.php');
+	// dd_tipos. List of main Dédalo resolved tipos
+	include(DEDALO_CORE_PATH . '/base/dd_tipos.php');
+	// version. Info about current version and build
+	include(DEDALO_CORE_PATH . '/base/version.inc');
 
 
 
