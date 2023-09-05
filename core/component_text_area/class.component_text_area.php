@@ -2853,35 +2853,68 @@ class component_text_area extends component_common {
 	*/
 	public function get_list_value(object $options=null) : ?array {
 
-		$dato = $this->get_dato();
-		if (empty($dato)) {
-			return null;
-		}
+		// force change lang when is set in related component (rsc36 case)
+			// $original_lang = $this->lang;
+			$ar_related_by_model = common::get_ar_related_by_model('component_select_lang', $this->tipo);
+			if (!empty($ar_related_by_model[0])) {
+				$component_select_lang = component_common::get_instance(
+					'component_select_lang', // string model
+					$ar_related_by_model[0], // string tipo
+					$this->section_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$this->section_tipo
+				);
+				$component_select_lang_dato = $component_select_lang->get_dato();
+				if (!empty($component_select_lang_dato) && !empty($component_select_lang_dato[0])) {
+					$lang_locator	= $component_select_lang_dato[0];
+					$target_lang	= lang::get_code_from_locator(
+						$lang_locator,
+						true // add_prefix
+					);
+					if (!empty($target_lang) && strpos($target_lang, 'lg-')!==false && $target_lang!==$this->lang) {
+						// overwrite lang
+						$this->lang	= $target_lang;
+					}
+				}
+			}
+
+		// dato from component
+			$dato = $this->get_dato();
+			if (empty($dato)) {
+				return null;
+			}
 
 		// options
 			$max_chars = $options->max_chars ?? 130;
 
-		$list_value = [];
-		foreach ($dato as $current_value) {
+		// list_value
+			$list_value = [];
+			foreach ($dato as $current_value) {
 
-			// empty case
-				if ($this->is_empty($current_value)) {
-					$list_value[] = '';
-					continue;
-				}
+				// empty case
+					if ($this->is_empty($current_value)) {
+						$list_value[] = '';
+						continue;
+					}
 
-			// convert the dato to html
-			$html_value = TR::add_tag_img_on_the_fly($current_value);
+				// convert the dato to html
+				$html_value = TR::add_tag_img_on_the_fly($current_value);
 
-			// truncate the html to max_chars, ensure that the html is correct and tags will close in correct way
-			$list_value[] = !empty($html_value)
-				? common::truncate_html(
-					$max_chars,
-					$html_value,
-					true // isUtf8
-				  )
-				: '';
-		}
+				// truncate the html to max_chars, ensure that the html is correct and tags will close in correct way
+				$list_value[] = !empty($html_value)
+					? common::truncate_html(
+						$max_chars,
+						$html_value,
+						true // isUtf8
+					  )
+					: '';
+			}
+
+		// restore lang ?
+			// if ($this->lang!==$original_lang) {
+			// 	$this->lang = $original_lang;
+			// }
 
 
 		return $list_value;
