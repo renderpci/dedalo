@@ -236,8 +236,11 @@ tool_indexation.prototype.build = async function(autoload=false) {
 
 	try {
 
-		// console.log("self.tool_config.ddo_map:",self.tool_config.ddo_map);
-		// console.log("self.ar_instances:",self.ar_instances);
+		// original_lang_component. fix original_lang_component for convenience
+			const original_lang_component_ddo	= self.tool_config.ddo_map.find(el => el.role==='original_lang_component')
+			self.original_lang_component		= original_lang_component_ddo
+				? self.ar_instances.find(el => el.tipo===original_lang_component_ddo.tipo)
+				: null
 
 		// transcription_component. fix transcription_component for convenience
 			const transcription_component_ddo	= self.tool_config.ddo_map.find(el => el.role==='transcription_component')
@@ -266,7 +269,6 @@ tool_indexation.prototype.build = async function(autoload=false) {
 		// status_admin. control the tool status process for administrators
 			const status_admin_ddo		= self.tool_config.ddo_map.find(el => el.role==="status_admin_component")
 			self.status_admin_component	= self.ar_instances.find(el => el.tipo===status_admin_ddo.tipo)
-
 
 		// related_sections_list. load_related_sections_list. Get the relation list.
 		// This is used to build a select element to allow
