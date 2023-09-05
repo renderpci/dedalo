@@ -266,6 +266,19 @@ class area_maintenance extends area_common {
 			$ar_widgets[] = $widget;
 
 
+		// lock_components *
+			$item = new stdClass();
+				$item->id		= 'lock_components';
+				$item->typo		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->label	= 'Lock components status';
+				$item->value	= (object)[
+					'active_users' => lock_components::get_active_users()
+				];
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
+
+
 		// dedalo_version *
 			$item = new stdClass();
 				$item->id		= 'dedalo_version';
