@@ -125,18 +125,11 @@ component_portal.prototype.init = async function(options) {
 		self.autocomplete_active	= false
 
 	// columns
-		self.columns_map		= options.columns_map
-		self.add_component_info	= false
+		self.columns_map			= options.columns_map
+		self.add_component_info		= false
 
 	// request_config
-		self.request_config		= options.request_config || null
-
-	// Standalone
-	// Set the component to manage his data by itself, calling to the database and it doesn't share his data with other through datum
-	// if the property is set to false, the component will use datum to get his data and is forced to update datum to share his data with others
-	// false option is used to reduce the calls to API server and database, section use to load all data with 1 call and components load his data from datum
-	// true options is used to call directly to API and manage his data, used by tools or services that need components standalone.
-		self.standalone = true
+		self.request_config	= options.request_config || null
 
 	// events subscribe
 		// initiator_link. Observes user click over list record_
