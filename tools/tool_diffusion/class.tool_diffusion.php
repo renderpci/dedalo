@@ -39,28 +39,62 @@ class tool_diffusion extends tool_common {
 				true // bool connection_status
 			);
 
-			// groups
-				// $groups = [];
-				// foreach ($diffusion_map as $diffusion_group_tipo => $ar_diffusion_element) {
+		// ar_data. Get data about table and fields of current section diffusion target
+			$ar_data = [];
+			foreach ($diffusion_map as $diffusion_group => $diffusion_items) {
 
-				// 	$have_section_diffusion = diffusion::have_section_diffusion( $section_tipo, $ar_diffusion_element );
-				// 	if ($have_section_diffusion===false) {
-				// 		continue; # ignore
-				// 	}
+				$diffusion_element_tipo = $diffusion_items[0]->element_tipo; // like oh63 - Historia oral web
 
-				// 	foreach ($ar_diffusion_element as $obj_value) {
+				// section_tables_map
+					$diffusion_element_tables_map	= diffusion_sql::get_diffusion_element_tables_map( $diffusion_element_tipo );
+					$section_tables_map				= $diffusion_element_tables_map->{$section_tipo} ?? (object)[
+						'database_name'	=> null,
+						'name'			=> null
+					];
 
-				// 		$item = (object)[
-				// 			'section_tipo'				=> $section_tipo,
-				// 			'mode'						=> 'export_list',
-				// 			'diffusion_element_tipo'	=> $obj_value->element_tipo,
-				// 			'label'						=> RecordObj_dd::get_termino_by_tipo($obj_value->element_tipo, DEDALO_DATA_LANG, true, false),
-				// 			'database_name'				=> $obj_value->database_name ?? MYSQL_DEDALO_DATABASE_CONN,
-				// 			'levels'					=> $resolve_levels
-				// 		];
-				// 		$groups[] = $item;
-				// 	}
-				// }
+				// table_fields
+					if (empty($diffusion_element_tables_map)) {
+						$table_fields_info	= null;
+						$table_fields		= [];
+					}else{
+						$table_fields_info	= diffusion::get_table_fields($diffusion_element_tipo, $section_tipo);
+						$table_fields		= array_map(function($el){
+							return $el->label;
+						}, (array)$table_fields_info);
+					}
+
+				$data_item = (object)[
+					'database'				=> $section_tables_map->database_name,
+					'table'					=> $section_tables_map->name,
+					'fields'				=> $table_fields,
+					'section_tables_map'	=> $section_tables_map,
+					'table_fields_info'		=> $table_fields_info
+				];
+				$ar_data[] = $data_item;
+			}
+
+		// groups
+			// $groups = [];
+			// foreach ($diffusion_map as $diffusion_group_tipo => $ar_diffusion_element) {
+
+			// 	$have_section_diffusion = diffusion::have_section_diffusion( $section_tipo, $ar_diffusion_element );
+			// 	if ($have_section_diffusion===false) {
+			// 		continue; # ignore
+			// 	}
+
+			// 	foreach ($ar_diffusion_element as $obj_value) {
+
+			// 		$item = (object)[
+			// 			'section_tipo'				=> $section_tipo,
+			// 			'mode'						=> 'export_list',
+			// 			'diffusion_element_tipo'	=> $obj_value->element_tipo,
+			// 			'label'						=> RecordObj_dd::get_termino_by_tipo($obj_value->element_tipo, DEDALO_DATA_LANG, true, false),
+			// 			'database_name'				=> $obj_value->database_name ?? MYSQL_DEDALO_DATABASE_CONN,
+			// 			'levels'					=> $resolve_levels
+			// 		];
+			// 		$groups[] = $item;
+			// 	}
+			// }
 
 		// skip_publication_state_check
 			$skip_publication_state_check = $_SESSION['dedalo']['config']['skip_publication_state_check'] ?? 0;
@@ -68,9 +102,9 @@ class tool_diffusion extends tool_common {
 		// result info
 			$result = (object)[
 				'resolve_levels'				=> $resolve_levels,
+				'skip_publication_state_check'	=> $skip_publication_state_check,
 				'diffusion_map'					=> $diffusion_map,
-				// 'groups'						=> $groups,
-				'skip_publication_state_check'	=> $skip_publication_state_check
+				'ar_data'						=> $ar_data
 			];
 
 		// response

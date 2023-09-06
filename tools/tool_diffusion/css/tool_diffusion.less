@@ -80,6 +80,7 @@
 			    .publication_items_grid {
 					background-color: #f7f6f6;
 					display: grid;
+					align-content: space-between;
 					width: fit-content;
 					grid-template-columns: auto 1fr;
 					border-radius: 0.5rem;
@@ -89,7 +90,6 @@
 					padding: 1rem;
 					flex: 1 0;
 					margin-bottom: 0.75rem;
-
 
 					.label, .value {
 						padding: 1rem;
@@ -109,7 +109,14 @@
 						&.success {
 							color: green;
 						}
+
+						&.light {
+							font-weight: 100;
+							font-family: monospace;
+							color: #aaaaaa;
+						}
 					}
+
 
 					.container_bottom {
 						position: relative;

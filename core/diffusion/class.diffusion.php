@@ -720,7 +720,11 @@ abstract class diffusion  {
 	public static function get_table_fields(string $diffusion_element_tipo, string $section_tipo) : array {
 
 		$diffusion_element_tables_map = diffusion_sql::get_diffusion_element_tables_map( $diffusion_element_tipo );
-			#dump($diffusion_element_tables_map, ' diffusion_element_tables_map ++ '.to_string());
+			// dump($diffusion_element_tables_map, ' diffusion_element_tables_map ++ '.to_string($diffusion_element_tipo));
+
+		if (!isset($diffusion_element_tables_map->{$section_tipo})) {
+			return [];
+		}
 
 		$RecordObj_dd 	   = new RecordObj_dd($diffusion_element_tables_map->{$section_tipo}->table);
 		$ar_table_children = $RecordObj_dd->get_ar_childrens_of_this();
