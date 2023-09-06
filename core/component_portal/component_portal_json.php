@@ -88,7 +88,6 @@
 				case 'tm':
 					// data item (list mode result don't include self data, only subdata)
 					// (!) limit note that in list mode, limit is always 1
-					$limit	= 1;
 					$value	= $this->get_dato_paginated($limit);
 					break;
 
