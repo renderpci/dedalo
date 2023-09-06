@@ -150,7 +150,7 @@ const get_content_data = async function(self) {
 		const info_div = ui.create_dom_element({
 			element_type	: 'pre',
 			class_name		: 'info_div hide',
-			inner_html		: 'diffusion_map: ' + JSON.stringify(diffusion_info.diffusion_map, null, 2),
+			inner_html		: 'info: ' + JSON.stringify(diffusion_info, null, 2),
 			parent			: diffusion_info_container
 		})
 		ui.collapse_toggle_track({
@@ -213,13 +213,15 @@ const get_content_data = async function(self) {
 */
 export const render_publication_items = function(self) {
 
-	const diffusion_map = self.diffusion_info.diffusion_map
+	const diffusion_map	= self.diffusion_info.diffusion_map
+	const ar_data		= self.diffusion_info.ar_data
 
 	const publication_items = ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'publication_items'
 	})
 
+	let diffusion_group_key = 0;
 	for(const diffusion_group_tipo in diffusion_map) {
 
 		const current_diffusion_map = diffusion_map[diffusion_group_tipo] // array
@@ -228,6 +230,9 @@ export const render_publication_items = function(self) {
 		for (let i = 0; i < current_diffusion_map_length; i++) {
 
 			const item = current_diffusion_map[i]
+
+			const data_item = ar_data[diffusion_group_key]
+			console.log('data_item:', data_item);
 
 			const current_diffusion_element_tipo = item.element_tipo
 
@@ -294,21 +299,56 @@ export const render_publication_items = function(self) {
 					parent			: publication_items_grid
 				})
 
+			// table
+				const table_label = ui.create_dom_element({
+					element_type	: 'span',
+					inner_html		: get_label.table || 'Table',
+					class_name		: 'label',
+					parent			: publication_items_grid
+				})
+				const table_value = ui.create_dom_element({
+					element_type	: 'div',
+					inner_html		: data_item.table,
+					class_name		: 'value',
+					parent			: publication_items_grid
+				})
+
+			// fields
+				const fields_label = ui.create_dom_element({
+					element_type	: 'span',
+					inner_html		: get_label.fields || 'Fields',
+					class_name		: 'label',
+					parent			: publication_items_grid
+				})
+				const fields_value = ui.create_dom_element({
+					element_type	: 'div',
+					inner_html		: data_item.fields.join(', '),
+					class_name		: 'value light',
+					parent			: publication_items_grid
+				})
+
 			// connection_status
+				const connection_status_label = ui.create_dom_element({
+					element_type	: 'span',
+					inner_html		: get_label.connection_status || 'Connection status',
+					class_name		: 'label',
+					parent			: publication_items_grid
+				})
 				if (item.connection_status) {
-					const connection_status_label = ui.create_dom_element({
-						element_type	: 'span',
-						inner_html		: get_label.connection_status || 'Connection status',
-						class_name		: 'label',
-						parent			: publication_items_grid
-					})
 					const class_status = item.connection_status.result===true
 						? 'success'
 						: 'fail'
-					const connection_status_value = ui.create_dom_element({
+					ui.create_dom_element({
 						element_type	: 'div',
 						inner_html		: item.connection_status.msg,
 						class_name		: 'value ' + class_status,
+						parent			: publication_items_grid
+					})
+				}else{
+					ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'value',
+						inner_html		: 'not used',
 						parent			: publication_items_grid
 					})
 				}
@@ -378,6 +418,8 @@ export const render_publication_items = function(self) {
 						}
 					}
 		}//end for (let i = 0; i < current_diffusion_map_length; i++)
+
+		diffusion_group_key++
 	}
 
 
