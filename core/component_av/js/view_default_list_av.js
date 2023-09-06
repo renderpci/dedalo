@@ -51,7 +51,7 @@ view_default_list_av.render = async function(self, options) {
 
 	// url
 		const posterframe_url	= data.posterframe_url || page_globals.fallback_image
-		const url				= posterframe_url // (!posterframe_url || posterframe_url.length===0) ? DEDALO_LIB_URL + "/themes/default/0.jpg" : posterframe_url
+		const url				= posterframe_url + '?t=' + (new Date()).getTime()
 
 	// image
 		const image = ui.create_dom_element({
@@ -70,7 +70,7 @@ view_default_list_av.render = async function(self, options) {
 				ui.set_background_image(this, this)
 			}
 			image.addEventListener('error', () => {
-				if ( image.src.indexOf(page_globals.fallback_image)===-1 ) {
+				if ( image.src !== page_globals.fallback_image) {
 					image.src = page_globals.fallback_image
 					return
 				}
