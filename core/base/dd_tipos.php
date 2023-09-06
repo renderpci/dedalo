@@ -76,6 +76,10 @@ define('DEDALO_COMPONENT_RESOURCES_AV_TIPO'				, 'rsc35');
 define('DEDALO_COMPONENT_RESOURCES_AV_DURATION_TIPO'	, 'rsc54');
 define('DEDALO_COMPONENT_RESOURCES_TR_TIPO'				, 'rsc36');
 
+// image components resources
+define('DEDALO_SECTION_RESOURCES_IMAGE_TIPO'			, 'rsc170');
+define('DEDALO_COMPONENT_RESOURCES_IMAGE_TIPO'			, 'rsc29');
+
 // Hierarchy types
 define('DEDALO_HIERARCHY_TYPES_SECTION_TIPO'			, 'hierarchy13');
 define('DEDALO_HIERARCHY_TYPES_NAME_TIPO'				, 'hierarchy16');
