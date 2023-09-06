@@ -2295,6 +2295,7 @@ abstract class common {
 						logger::DEBUG
 					);
 				}//end foreach ($layout_map as $section_tipo => $ar_list_tipos) foreach ($ar_list_tipos as $current_tipo)
+
 			}//end foreach($ar_locators as $current_locator)
 
 
