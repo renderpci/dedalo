@@ -815,6 +815,10 @@ component_portal.prototype.add_value = async function(value) {
 				})
 		*/
 
+	// standalone. Force true to allow refresh children elements on add (text_areas, input_text, etc..)
+		self.standalone = true
+
+
 	// refresh self component
 		await self.refresh({
 			tmp_api_response : api_response
