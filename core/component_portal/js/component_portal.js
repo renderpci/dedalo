@@ -1143,7 +1143,7 @@ component_portal.prototype.delete_locator = function(locator, ar_properties) {
 * Create ad saves new sorted values
 * Used by on_drop method
 * @see on_drop
-*
+* @verified 07-09-2023 Paco
 * @param object options
 * @return object
 *  API request response
@@ -1165,14 +1165,29 @@ component_portal.prototype.sort_data = async function(options) {
 			value		: value
 		})]
 
-	// exec async change_value
-		const result = await self.change_value({
+	/* old
+		// exec async change_value
+			const api_response = await self.change_value({
+				changed_data	: changed_data,
+				refresh			: true
+			})
+			*/
+
+	// api_response : change_value (and save)
+		const api_response = await self.change_value({
 			changed_data	: changed_data,
-			refresh			: true
+			refresh			: false // not refresh here (!)
+		})
+
+	// refresh self component
+		await self.refresh({
+			build_autoload		: true,
+			tmp_api_response	: api_response // pass api_response before build to avoid call API again
 		})
 
 
-	return result
+
+	return api_response
 }//end sort_data
 
 
