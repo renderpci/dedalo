@@ -370,7 +370,7 @@ export const init_events_subscription = function(self) {
 * 	key : 0,
 * 	value : "XXX"
 * }]
-* @return promise save_promise
+* @return object|bool api_response
 */
 component_common.prototype.save = async function(new_changed_data) {
 
@@ -718,7 +718,7 @@ component_common.prototype.update_datum = function(new_data) {
 	// console.log("self.data:",self.datum.data.filter(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id));
 
 		// data of multiple components
-		// the data sent by the serve can be data of multiple components. The new_data is a array with the all response from server.
+		// the data sent by the server can be data of multiple components. The new_data is an array with the all response from server.
 		// When one component is observed by other and the observable component data is changed, the observer component also will change
 		// It's necessary update the data in all components (self, observers), not only the caller.
 			const ar_instances = instances.get_all_instances()
