@@ -1154,25 +1154,44 @@ final class dd_core_api {
 					// force recalculate dato
 						$dato = $component->get_dato();
 
-					// data->pagination->limit
+					// changed_data action: sort_data, add_new_element, insert, remove ..
+						$changed_data_action = isset($changed_data[0])
+							? $changed_data[0]->action
+							: null;
+
+					// pagination. Update offset based on save request (portals)
+						// data->pagination->limit
 						if (isset($data->pagination->limit)) {
+							// useful when user selects 'Show all' in portal pagination
 							$component->pagination->limit = $data->pagination->limit;
 						}
 
-					// pagination
-						$total	= count($dato);
-						$limit	= isset($component->pagination->limit)
-							? (int)$component->pagination->limit
-							: 10;
-						$pages	= (int)ceil($total / $limit);
-						$offset	= $limit * ($pages - 1);
+						switch ($changed_data_action) {
+							case 'add_new_element': // from button add
+							case 'insert': // from service_autocomplete choose selection
 
-						// overwrite values
-						$component->pagination->limit	= $limit;
-						$component->pagination->total	= $total;
-						$component->pagination->offset	= $offset;
-						if(SHOW_DEBUG===true) {
-							dump($component->pagination, ' ))))) component->pagination ++ pages: '.to_string($pages));
+								// pagination
+									$total	= count($dato);
+									$limit	= isset($component->pagination->limit)
+										? (int)$component->pagination->limit
+										: 10;
+									$pages	= (int)ceil($total / $limit);
+									$offset	= $limit>=$total
+										? 0
+										: $limit * ($pages - 1);
+
+									// overwrite values
+									$component->pagination->limit	= $limit;
+									$component->pagination->total	= $total;
+									$component->pagination->offset	= $offset;
+									if(SHOW_DEBUG===true) {
+										dump($component->pagination, ' ))))) component->pagination ++ pages: '.to_string($pages));
+									}
+								break;
+
+							default:
+								// Nothing to do
+								break;
 						}
 
 					// pagination. Update offset based on save request (portals)
