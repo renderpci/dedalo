@@ -32,10 +32,14 @@ async function fn_change_search_element(instance) {
 
 // vars
 	const pairs = [
-		// {
-		// 	mode : 'list',
-		// 	view : 'default'
-		// },
+		{
+			mode : 'edit',
+			view : 'default'
+		},
+		{
+			mode : 'list',
+			view : 'default'
+		},
 		// {
 		// 	mode : 'list',
 		// 	view : 'line'
@@ -44,14 +48,10 @@ async function fn_change_search_element(instance) {
 		// 	mode : 'list',
 		// 	view : 'mini'
 		// },
-		// {
-		// 	mode : 'list',
-		// 	view : 'text'
-		// },
-		// {
-		// 	mode : 'edit',
-		// 	view : 'default'
-		// },
+		{
+			mode : 'list',
+			view : 'text'
+		},
 		// {
 		// 	mode : 'edit',
 		// 	view : 'line'
@@ -163,6 +163,15 @@ async function rendering_test(options, container) {
 			// asserts
 				assert.equal(new_instance.status, 'rendered');
 				assert.notEqual(new_instance.node, null);
+
+				if (options.view==='text') {
+					const is_span = new_node.nodeName==='SPAN'
+					assert.equal(
+						new_node.nodeName,
+						'SPAN',
+						`node name must be SPAN. Received: ${new_node.nodeName}. > `
+					);
+				}
 		});
 	});//end describe(options.model, function()
 }//end rendering_test
