@@ -61,19 +61,20 @@ view_mosaic_list_image.render = function(self, options) {
 const get_content_data = function(self) {
 
 	// short vars
-		const data		= self.data || {}
-		const datalist	= data.datalist || []
+		const data			= self.data || {}
+		const value			= data.value || []
+		const files_info	= value[0]?.files_info || []
+
 
 	// content_data
 		const content_data = ui.component.build_content_data(self, {})
 
 	// url
-		// const value		= data.value
-		const quality		= page_globals.dedalo_image_quality_default // '1.5MB'
-		const url_object	= datalist.find(item => item.quality===quality)
-		const url			= (typeof url_object==="undefined")
+		const quality	= page_globals.dedalo_image_quality_default // '1.5MB'
+		const file_info	= files_info.find(item => item.quality===quality)
+		const url		= (typeof file_info==="undefined")
 			? DEDALO_CORE_URL + '/themes/default/0.jpg'
-			: url_object.file_url
+			: file_info.file_url
 
 	// image
 		const image = ui.create_dom_element({
@@ -108,8 +109,7 @@ const get_content_data = function(self) {
 
 			// if the datalist doesn't has any quality with file, fire the tool_upload, enable it, so it could be used
 			// else open the player to show the image
-			const file_does_not_exist = data.datalist.find(item => item.file_exist === false)
-			if(file_does_not_exist){
+			if(!file_info || file_info.file_exist !== true) {
 
 				// get the upload tool to be fired
 					const tool_upload = self.tools.find(el => el.model === 'tool_upload')
@@ -119,6 +119,7 @@ const get_content_data = function(self) {
 						tool_context	: tool_upload,
 						caller			: self
 					})
+
 			}else{
 
 				// open a new window
