@@ -680,15 +680,19 @@ component_common.prototype.update_datum = function(new_data) {
 		// remove the component old data in the datum (from down to top array items)
 			for (let i = new_data_length - 1; i >= 0; i--) {
 
-				const data_item = new_data[i]
-				const ar_data_elements = self.datum.data.filter(el => el.tipo===data_item.tipo && el.section_tipo===data_item.section_tipo && el.section_id==data_item.section_id)
+				const data_item			= new_data[i]
+				const ar_data_elements	= self.datum.data.filter(el =>
+					el.tipo===data_item.tipo &&
+					el.section_tipo===data_item.section_tipo &&
+					el.section_id==data_item.section_id
+				)
 
 				const ar_data_el_len = ar_data_elements.length
 
 				for (let j = ar_data_el_len - 1; j >= 0; j--) {
-					const current_data_element  = ar_data_elements[j]
-					current_data_element.value			= data_item.value
-					current_data_element.fallback_value	= data_item.fallback_value
+					const current_data_element = ar_data_elements[j]
+						  current_data_element.value			= data_item.value
+						  current_data_element.fallback_value	= data_item.fallback_value
 				}
 
 				//ATT ! removed because it get only 1 element in datum and it's necessary update the all items inside datum.
