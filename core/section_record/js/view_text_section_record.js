@@ -137,7 +137,12 @@ view_text_section_record.render = async function(self, options) {
 						const current_instance_node	= current_instance.node
 
 					// if the node is empty do not use it
-						const empty = current_instance_node.childNodes.length===0 || current_instance_node.textContent.trim()===''
+						const empty = current_instance_node.childNodes.length===0 ||
+							(
+								current_instance_node.textContent.trim()==='' &&
+								current_instance_node.firstChild.tagName !== 'IMG' &&
+								current_instance_node.firstChild.tagName !== 'SPAN'
+							)
 						if (empty) {
 							continue
 						}
@@ -153,6 +158,7 @@ view_text_section_record.render = async function(self, options) {
 					if(k < ar_nodes_length -1) {
 						const node_fields_separator = ui.create_dom_element({
 							element_type	: 'span',
+							class_name		: 'separator',
 							inner_html		: value_separator
 						})
 						wrapper.appendChild(node_fields_separator)
@@ -164,6 +170,7 @@ view_text_section_record.render = async function(self, options) {
 					const fields_separator		= self.context.fields_separator || ', '
 					const node_fields_separator = ui.create_dom_element({
 						element_type	: 'span',
+						class_name		: 'separator',
 						inner_html		: fields_separator
 					})
 					wrapper.appendChild(node_fields_separator)
