@@ -1154,21 +1154,26 @@ final class dd_core_api {
 					// force recalculate dato
 						$dato = $component->get_dato();
 
+					// data->pagination->limit
+						if (isset($data->pagination->limit)) {
+							$component->pagination->limit = $data->pagination->limit;
+						}
+
 					// pagination
-						$total	= count($dato)-1;
+						$total	= count($dato);
 						$limit	= isset($component->pagination->limit)
 							? (int)$component->pagination->limit
 							: 10;
-						$page	= ($total>$limit)
-							? (int)floor( $total / $limit )
-							: 1;
-						$offset	= ($total>$limit)
-							? ($page * $limit)
-							: 0;
+						$pages	= (int)ceil($total / $limit);
+						$offset	= $limit * ($pages - 1);
+
 						// overwrite values
 						$component->pagination->limit	= $limit;
 						$component->pagination->total	= $total;
 						$component->pagination->offset	= $offset;
+						if(SHOW_DEBUG===true) {
+							dump($component->pagination, ' ))))) component->pagination ++ pages: '.to_string($pages));
+						}
 
 					// pagination. Update offset based on save request (portals)
 						// if (isset($data->pagination) && isset($data->pagination->offset)) {
