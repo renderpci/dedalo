@@ -345,7 +345,6 @@ const render_drag_node = function(options) {
 						source_key	: paginated_key,
 						target_key	: target_key
 					}
-
 					self.sort_data(sort_data)
 
 					modal.close()

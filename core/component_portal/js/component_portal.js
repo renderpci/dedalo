@@ -735,7 +735,6 @@ component_portal.prototype.add_value = async function(value) {
 			changed_data	: changed_data,
 			refresh			: false // not refresh here (!)
 		})
-		console.log('api_response:', api_response);
 
 	// total check (after save)
 		const current_data	= api_response.result.data.find(el => el.tipo===self.tipo)
