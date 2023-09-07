@@ -249,4 +249,44 @@ const get_content_data = async function(self) {
 }//end get_content_data
 
 
+/**
+* CREATE_RESPONSE
+* Render a response node
+* @param object self
+* @param HTMLElement response_text
+* @param object response
+* @param string action
+* @return HTMLElement response_node
+*/
+const create_response = function(self, response_text, response, action) {
+
+	// clean the previous msg
+	while (response_text.firstChild) {
+		response_text.removeChild(response_text.firstChild)
+	}
+
+	const response_node = new DocumentFragment()
+
+	const successfully_node = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'successfully',
+		inner_html		: self.get_tool_label('successfully') || 'Successfully',
+		parent 			: response_node
+	})
+
+	const count_label	= self.get_tool_label('updated_records') || 'Updated records'
+	const count			= response.count ||  ''
+
+	const updated_records_node = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'updated_records',
+		inner_html		:  count_label+ ": " +count + ' ('+action+')',
+		parent 			: response_node
+	})
+
+	return response_node
+}// end create_response
+
+
+
 // @license-end
