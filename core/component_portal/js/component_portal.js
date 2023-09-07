@@ -120,6 +120,10 @@ component_portal.prototype.init = async function(options) {
 	// call the generic common tool init
 		const common_init = await component_common.prototype.init.call(self, options);
 
+	// standalone. (!) Important set always as true
+	// Portal must be always standalone = true because it needs to manage add values (save) API response properly
+		self.standalone = true
+
 	// autocomplete. set default values of service autocomplete
 		self.autocomplete			= null
 		self.autocomplete_active	= false
@@ -666,6 +670,7 @@ component_portal.prototype.build = async function(autoload=false) {
 /**
 * ADD_VALUE
 * Called from service autocomplete when the user selects a datalist option
+* @verified 07-09-2023 Paco
 * @param object value
 * 	(locator)
 * @return bool
@@ -713,34 +718,37 @@ component_portal.prototype.add_value = async function(value) {
 			console.log("[component_portal.add_value] value:", value, " - changed_data:", changed_data);
 		}
 
-	// data pagination offset. Check and update self data to allow save request return the proper paginated data
-	// (!) Removed 04-09-2023 because is already set in server (dd_core_api->save)
-		// if (self.data.pagination && self.data.pagination.total>0 && key===self.data.pagination.total) {
-		// 	const next_offset = (self.data.pagination.offset + self.data.pagination.limit)
-		// 	if (self.data.pagination.total >= next_offset) {
-		// 		self.data.pagination.offset = next_offset // set before exec API request on Save
-		// 	}
-		// }
-
 	// total_before
 		const total_before = clone(self.total)
+
+	// (!) fix pagination limit in data to force server to use it. Important
+	// This value is get from API save $data->pagination and set to the component->pagination->limit
+	// This is used frequently in component_relation_index like 'rsc860' in Oral History indexation terms
+		self.data.pagination = {
+			limit : self.paginator
+				? self.paginator.limit
+				: null
+		}
 
 	// api_response : change_value (and save)
 		const api_response = await self.change_value({
 			changed_data	: changed_data,
 			refresh			: false // not refresh here (!)
 		})
+		console.log('api_response:', api_response);
 
 	// total check (after save)
-		const current_data = api_response.result.data.find(el => el.tipo===self.tipo)
-		const total = current_data
+		const current_data	= api_response.result.data.find(el => el.tipo===self.tipo)
+		const total			= current_data
 			? current_data.pagination.total
 			: 0
+		// error on add value case
 		if (total===0) {
 			console.warn("// add_value api_response.result.data (unexpected total):", api_response.result.data);
+			return false
 		}
-
-	// check if value already exist. (!) Note that here, the whole portal data has been compared in server
+		// value already exists case. Check if value already exist.
+		// (!) Note that here, the whole portal data has been compared in server
 		if (parseInt(total) <= parseInt(total_before)) {
 			// self.update_pagination_values('remove') // remove added pagination value
 			console.log("[add_value] Value already exists (2) !");
@@ -815,14 +823,12 @@ component_portal.prototype.add_value = async function(value) {
 				})
 		*/
 
-	// standalone. Force true to allow refresh children elements on add (text_areas, input_text, etc..)
-		self.standalone = true
-
-
 	// refresh self component
 		await self.refresh({
-			tmp_api_response : api_response
+			build_autoload		: true,
+			tmp_api_response	: api_response // pass api_response before build to avoid call API again
 		})
+
 
 	// filter data. check if the caller has tag_id
 		if(self.active_tag){
