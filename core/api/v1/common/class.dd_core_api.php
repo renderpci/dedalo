@@ -1184,7 +1184,6 @@ final class dd_core_api {
 						// }
 				}
 
-
 				// datalist. if is received, inject to the component for recycle
 					if (isset($data->datalist)) {
 						$component->set_datalist($data->datalist);
