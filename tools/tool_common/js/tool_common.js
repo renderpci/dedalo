@@ -784,7 +784,10 @@ const view_window = async function(options) {
 * If the label is not defined, try with lang_default, not lang and received label_name if nothing is found
 *
 * @param string label_name like 'indexation_tool'
-* @param mixed ...rest (accept an indefinite number of arguments as an array)
+* @param string rest
+* 	Accept an undefined (infinite) number of arguments in the function parameters
+* 	rest is using to get any other string parameters into the functions, it iterate the parameters ...rest
+* 	Using as: get_tool_label(label_name, string_1, string_2)
 * @return string|null
 * 	like 'Indexation Tool'
 */
