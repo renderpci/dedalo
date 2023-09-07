@@ -5,9 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
-	import {ui} from '../../common/js/ui.js'
-
 
 
 /**
@@ -42,14 +39,15 @@ view_text_list_image.render = function(self, options) {
 			: default_image
 
 	// image
-		const image_node = ui.create_dom_element({
-			element_type	: 'img',
-			class_name		: 'component_image image view_' + self.view,
-			src				: url
-		})
+		const wrapper			= document.createElement('span')
+		const image_node		= document.createElement('img')
+			image_node.className	= 'component_image image view_' + self.view
+			image_node.src = url
+
+		wrapper.appendChild(image_node)
 
 
-	return image_node
+	return wrapper
 }//end render
 
 
