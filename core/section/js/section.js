@@ -315,6 +315,7 @@ section.prototype.init = async function(options) {
 			)
 			function fn_render() {
 				// menu label control
+					let n_try = 0
 					const update_menu = () => {
 						// ignore sections inside tool (tool_user_admin case)
 						if (self.caller && self.caller.type==='tool') {
@@ -406,7 +407,18 @@ section.prototype.init = async function(options) {
 									event_manager.publish('user_navigation', user_navigation_rqo)
 							}//end on_click
 						}else{
-							console.log('menu is not available. Try in 2 secs');
+
+							if (n_try>3) {
+								clearTimeout(retry_timeout);
+								if(SHOW_DEBUG===true) {
+									console.log('menu is not available. Stop to try');
+								}
+								return
+							}
+							n_try++
+							if(SHOW_DEBUG===true) {
+								console.log('menu is not available. Try in 2 secs');
+							}
 						}//end if (menu)
 					}
 					update_menu()
