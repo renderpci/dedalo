@@ -536,7 +536,7 @@ component_portal.prototype.build = async function(autoload=false) {
 								callback : async () => {
 									// rqo and request_config_object set offset and limit
 									self.rqo.sqo.offset	= self.request_config_object.sqo.offset = 0
-									self.rqo.sqo.limit	= self.request_config_object.sqo.limit 	= limit
+									self.rqo.sqo.limit	= self.request_config_object.sqo.limit 	= (limit + 1)
 								}
 							})
 						}//end fn_paginator_goto
