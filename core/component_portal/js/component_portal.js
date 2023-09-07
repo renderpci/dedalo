@@ -1210,6 +1210,8 @@ component_portal.prototype.get_total = async function() {
 
 /**
 * UNLINK_RECORD
+* Remove locator from component
+* @verified 07-09-2023 Paco
 * @param object options
 * {
 * 	paginated_key: paginated_key
@@ -1236,26 +1238,35 @@ component_portal.prototype.unlink_record = async function(options) {
 	// change_value (implies saves too)
 	// remove the remove_dialog it's controlled by the event of the button that call
 	// prevent the double confirmation
-		const response = await self.change_value({
+		const api_response = await self.change_value({
 			changed_data	: changed_data,
-			label			: section_id,
 			refresh			: false,
+			label			: section_id,
 			remove_dialog	: ()=>{
 				return true
 			}
 		})
 
 	// the user has selected cancel from delete dialog
-		if (response===false) {
+		if (api_response===false || api_response.result===false) {
+			console.warn("// unlink_record api_response error ", api_response);
 			return false
 		}
 
-	// update pagination offset
-		self.update_pagination_values('remove')
+	/* old
+		// update pagination offset
+			self.update_pagination_values('remove')
 
-	// refresh
+		// refresh
+			await self.refresh({
+				build_autoload : true // when true, force reset offset
+			})
+			*/
+
+	// refresh self component
 		await self.refresh({
-			build_autoload : true // when true, force reset offset
+			build_autoload		: true,
+			tmp_api_response	: api_response // pass api_response before build to avoid call API again
 		})
 
 	// check if the caller has active a tag_id
