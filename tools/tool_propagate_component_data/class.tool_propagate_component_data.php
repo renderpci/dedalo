@@ -155,8 +155,11 @@ class tool_propagate_component_data extends tool_common {
 			// RecordObj_time_machine::$save_time_machine_version = true;
 
 		// response
-			$response->result	= true;
-			$response->msg		= "Updated data (action: $action) of section $section_tipo successufully. Total records: ".count($rows_data->ar_records);
+			$response->result		= true;
+			$response->msg				= "Updated data (action: $action) of section $section_tipo successfully. Total records: ".count($rows_data->ar_records);
+			$response->action			= $action;
+			$response->section_label	= RecordObj_dd::get_termino_by_tipo($section_tipo);
+			$response->count			= count($rows_data->ar_records);
 
 
 		return $response;
