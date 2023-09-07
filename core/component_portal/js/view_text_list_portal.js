@@ -65,6 +65,7 @@ view_text_list_portal.render = async function(self, options) {
 
 	// wrapper. Set as span
 		const wrapper = document.createElement('span')
+		wrapper.className = 'portal'
 
 	// add all nodes
 		const ar_section_record_length = ar_section_record.length
