@@ -8,7 +8,7 @@
 	// import {ui} from '../../common/js/ui.js'
 	import {view_mini_section_id} from './view_mini_section_id.js'
 	import {view_default_list_section_id} from './view_default_list_section_id.js'
-
+	import {view_text_section_id} from './view_text_section_id.js'
 
 
 /**
@@ -35,6 +35,9 @@ render_list_component_section_id.prototype.list = function(options) {
 		const view	= self.context.view || 'default'
 
 	switch(view) {
+
+		case 'text':
+			return view_text_section_id.render(self, options)
 
 		case 'mini':
 			return view_mini_section_id.render(self, options)

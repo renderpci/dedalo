@@ -10,6 +10,7 @@
 	// import {get_tool_label} from '../../tool_common/js/tool_common.js'
 	// import {pause} from '../../../core/common/js/utils/util.js'
 
+	import {is_filter_empty} from '../../../core/search/js/search.js'
 
 
 /**
@@ -141,15 +142,27 @@ const get_content_data = async function(self) {
 			return content_data
 		}
 
+
 	// filter. Check the filter to know if the user has apply some filter or if will apply to all records
-		const filter = section.rqo && section.rqo.sqo && section.rqo.sqo.filter
-			? section.rqo.sqo.filter.$and.length > 0
-			: false
+		const sqo_filter = section.rqo && section.rqo.sqo && section.rqo.sqo.filter
+			? section.rqo.sqo.filter
+			: null
+
+		// check if the filter is empty
+		const filter_empty = is_filter_empty(sqo_filter)
 
 		const total = await section.get_total()
 
-		const text_string = self.get_tool_label('content_will_be_added_removed', total)
-			|| 'The content of the component in the current {0} records will be added or removed'
+		const tipo_label	= '<strong>'+self.caller.label+'</strong>'
+
+		const all_records_label = self.get_tool_label('all_records') || 'All'
+
+		const total_label = (filter_empty === false)
+			? '<strong>'+total+'</strong>'
+			: '<strong>'+all_records_label+' - '+total+'</strong>'
+
+		const text_string = self.get_tool_label('content_will_be_added_removed', tipo_label, total_label)
+			|| 'The content will be added or removed from the field: {0} s in the {1} current records'
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'info_text',
@@ -165,10 +178,11 @@ const get_content_data = async function(self) {
 		})
 
 	// button_replace
+		const replace_label = self.get_tool_label('do_replace') || 'Replace values'
 		const button_replace = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'warning add button_replace',
-			inner_html		: self.get_tool_label('tool_do_replace') || 'Replace values',
+			inner_html		: replace_label,
 			parent			: buttons_container
 		})
 		button_replace.addEventListener('click', fn_replace)
@@ -177,7 +191,7 @@ const get_content_data = async function(self) {
 
 			await ui.component.deactivate(self.component_to_propagate)
 
-			if(filter === false){
+			if(filter_empty === true){
 				const alert_replace_all = (self.get_tool_label('will_replaced_all_records') || 'All records will be replaced') + ' '+
 				(get_label.total || 'Total') + ': '  + total
 
@@ -191,51 +205,76 @@ const get_content_data = async function(self) {
 				self.propagate_component_data('replace')
 				.then(function(response){
 					content_data.classList.remove('loading')
-					response_text.innerHTML = response.msg
+					const response_node = create_response(self, response_text, response, replace_label)
+					response_text.appendChild(response_node)
 				})
 			}
 		}//end fn_replace
 
 	// button_add
+		const add_label = self.get_tool_label('tool_do_add') || 'Add'
 		const button_add = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'warning add button_add',
 			// inner_html	: get_label.tool_do_add || 'Add',
-			inner_html		: self.get_tool_label('tool_do_add') || 'Add',
+			inner_html		: add_label,
 			parent			: buttons_container
 		})
 		button_add.addEventListener('click', fn_add)
 		function fn_add(e){
 			e.preventDefault()
+
+			if(filter_empty === true){
+				const alert_replace_all = (self.get_tool_label('will_replaced_all_records') || 'All records will be replaced') + ' '+
+				(get_label.total || 'Total') + ': '  + total
+
+				if (!confirm(alert_replace_all)){
+					return false
+				}
+			}
+
 			// propagate_component_data
 			if (confirm(get_label.sure || 'Sure?')) {
 				content_data.classList.add('loading')
 				self.propagate_component_data('add')
 				.then(function(response){
 					content_data.classList.remove('loading')
-					response_text.innerHTML = response.msg
+					const response_node = create_response(self, response_text, response, add_label)
+					response_text.appendChild(response_node)
 				})
 			}
 		}//end fn_add
 
 	// button_delete
+		const delete_action_label = self.get_tool_label('tool_do_delete') || 'Delete'
 		const button_delete = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'warning remove button_delete',
 			// inner_html	: get_label.delete_content || 'Remove',
-			inner_html		: self.get_tool_label('tool_do_delete') || 'Delete',
+			inner_html		: delete_action_label,
 			parent			: buttons_container
 		})
 		button_delete.addEventListener('click', fn_delete)
 		function fn_delete(e){
 			e.preventDefault()
+
+			if(filter_empty === true){
+				const alert_replace_all = (self.get_tool_label('will_replaced_all_records') || 'All records will be replaced') + ' '+
+				(get_label.total || 'Total') + ': '  + total
+
+				if (!confirm(alert_replace_all)){
+					return false
+				}
+			}
+
 			// propagate_component_data
 			if (confirm(get_label.sure || 'Sure?')) {
 				content_data.classList.add('loading')
 				self.propagate_component_data('delete')
 				.then(function(response){
 					content_data.classList.remove('loading')
-					response_text.innerHTML = response.msg
+					const response_node = create_response(self, response_text, response, delete_action_label)
+					response_text.appendChild(response_node)
 				})
 			}
 		}//end fn_delete
@@ -247,6 +286,46 @@ const get_content_data = async function(self) {
 
 	return content_data
 }//end get_content_data
+
+
+/**
+* CREATE_RESPONSE
+* Render a response node
+* @param object self
+* @param HTMLElement response_text
+* @param object response
+* @param string action
+* @return HTMLElement response_node
+*/
+const create_response = function(self, response_text, response, action) {
+
+	// clean the previous msg
+	while (response_text.firstChild) {
+		response_text.removeChild(response_text.firstChild)
+	}
+
+	const response_node = new DocumentFragment()
+
+	const successfully_node = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'successfully',
+		inner_html		: self.get_tool_label('successfully') || 'Successfully',
+		parent 			: response_node
+	})
+
+	const count_label	= self.get_tool_label('updated_records') || 'Updated records'
+	const count			= response.count ||  ''
+
+	const updated_records_node = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'updated_records',
+		inner_html		:  count_label+ ": " +count + ' ('+action+')',
+		parent 			: response_node
+	})
+
+	return response_node
+}// end create_response
+
 
 
 // @license-end
