@@ -64,17 +64,19 @@ const get_content_data = function(self) {
 		const data			= self.data || {}
 		const value			= data.value || []
 		const files_info	= value[0]?.files_info || []
-
+		const datalist		= data.datalist || []
 
 	// content_data
 		const content_data = ui.component.build_content_data(self, {})
 
 	// url
 		const quality	= page_globals.dedalo_image_quality_default // '1.5MB'
-		const file_info	= files_info.find(item => item.quality===quality)
-		const url		= (typeof file_info==="undefined")
+		const file_info	= files_info.find(item => item.quality===quality) || {}
+
+		const datalist_item	= datalist.find(item => item.quality===quality)
+		const url = (typeof datalist_item==="undefined")
 			? DEDALO_CORE_URL + '/themes/default/0.jpg'
-			: file_info.file_url + '?t=' + (new Date()).getTime()
+			: datalist_item.file_url + '?t=' + (new Date()).getTime()
 
 	// image
 		const image = ui.create_dom_element({
@@ -88,7 +90,7 @@ const get_content_data = function(self) {
 		if(self.caller.caller.mode === 'edit'){
 			ui.component.add_image_fallback(image, load_error)
 			function load_error() {
-				url_object.file_exist = false
+				file_info.file_exist = false
 			}
 		}
 
@@ -109,7 +111,7 @@ const get_content_data = function(self) {
 
 			// if the datalist doesn't has any quality with file, fire the tool_upload, enable it, so it could be used
 			// else open the player to show the image
-			if(!file_info || file_info.file_exist !== true) {
+			if((!file_info || file_info.file_exist !== true) && datalist_item.external!==true) {
 
 				// get the upload tool to be fired
 					const tool_upload = self.tools.find(el => el.model === 'tool_upload')
