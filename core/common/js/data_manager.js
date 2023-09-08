@@ -270,7 +270,7 @@ data_manager.get_local_db = async function() {
 	return new Promise(function(resolve, reject){
 
 		// open db. Let us open our database (name, version)
-			const db_request = current_indexedDB.open('dedalo', 7);
+			const db_request = current_indexedDB.open('dedalo', 8);
 
 		// error case
 			db_request.onerror = function(event) {
