@@ -657,7 +657,7 @@ component_common.prototype.set_value = function(value) {
 *	new_data contains fresh calculated data of saved component
 * @return bool true
 */
-component_common.prototype.update_datum = function(new_data) {
+component_common.prototype.update_datum = async function(new_data) {
 
 	const self = this
 
@@ -688,33 +688,18 @@ component_common.prototype.update_datum = function(new_data) {
 				)
 
 				const ar_data_el_len = ar_data_elements.length
-
-				for (let j = ar_data_el_len - 1; j >= 0; j--) {
-					const current_data_element = ar_data_elements[j]
-						  current_data_element.value			= data_item.value
-						  current_data_element.fallback_value	= data_item.fallback_value
+				if (ar_data_el_len>0) {
+					// update already existing data item
+					for (let j = ar_data_el_len - 1; j >= 0; j--) {
+						const current_data_element = ar_data_elements[j]
+							  current_data_element.value			= data_item.value
+							  current_data_element.fallback_value	= data_item.fallback_value
+					}
+				}else{
+					// add new data item
+					self.datum.data.push(data_item)
 				}
-
-				//ATT ! removed because it get only 1 element in datum and it's necessary update the all items inside datum.
-
-				// const index_to_delete = self.datum.data.findIndex(el => el.tipo===data_item.tipo && el.section_tipo===data_item.section_tipo && el.section_id==data_item.section_id)
-				// if (index_to_delete!==-1) {
-				// 	// Ok, value already exists and will be deleted to prevent duplicates
-				// 	if(SHOW_DEBUG===true) {
-				// 		console.log(`:---- [update_datum] DELETED data_item i:${index_to_delete} `, clone(self.datum.data[index_to_delete]) );
-				// 	}
-				// 	self.datum.data.splice(index_to_delete, 1);
-				// }else{
-				// 	// Ops. data doesn't exists previously. Nothing to delete
-				// 	if (self.datum.data.length>0) {
-				// 		console.warn(`(!) [update_datum] NOT FOUND index_to_delete ${i} in component datum:`, self.model, data_item.tipo, data_item.section_tipo, data_item.section_id, clone(self.datum) )
-				// 	}
-				// }
 			}
-
-		// add the new data into the general datum
-			// self.datum.data = [...self.datum.data, ...new_data]
-				// console.log("update_datum --------------------------- final self.datum.data:", clone(self.datum.data) );
 
 	// data (specific component data)
 		// current element data (from current component only), removed!, we need update all data in all components.
@@ -725,40 +710,38 @@ component_common.prototype.update_datum = function(new_data) {
 		// the data sent by the server can be data of multiple components. The new_data is an array with the all response from server.
 		// When one component is observed by other and the observable component data is changed, the observer component also will change
 		// It's necessary update the data in all components (self, observers), not only the caller.
-			const ar_instances = instances.get_all_instances()
-
-			/* OLD WAY MONO
-				for (let i = new_data_length - 1; i >= 0; i--) {
-					const data_item = new_data[i]
-					const current_instance = ar_instances.find(inst => inst.tipo===data_item.tipo && inst.section_tipo===data_item.section_tipo && inst.section_id==data_item.section_id)
-					if (current_instance) {
-						// add
-						// current_instance.data = self.datum.data.find(el => el.tipo===data_item.tipo && el.section_tipo===data_item.section_tipo && el.section_id==data_item.section_id) || {}
-						current_instance.data = self.datum.data.find(el => el.tipo===current_instance.tipo && el.section_tipo===current_instance.section_tipo && el.section_id==current_instance.section_id) || {}
-					}else{
-						console.warn("(!) Not found current instance:", data_item.tipo, data_item.section_tipo, data_item.section_id)
-					}
-				}
-				*/
-			// new way multi. Iterate data and instances with equal data
+			/* COMMENTED 08-09-2023 BY Paco/Alex: Apparently is not necessary anymore (!)
+			const ar_instances = await instances.get_all_instances()
+			// Iterate data and instances with equal data
 			for (let i = new_data_length - 1; i >= 0; i--) {
 
 				const data_item = new_data[i]
 
-				const current_instances	= ar_instances.filter(el =>
-					el.tipo===data_item.tipo &&
-					el.section_tipo===data_item.section_tipo &&
-					el.section_id==data_item.section_id &&
-					el.lang===data_item.lang
-				)
-				const instances_length	= current_instances.length
+				// find current data_intem coincident in all instances
+					const current_instances	= ar_instances.filter(el =>
+						el.tipo===data_item.tipo &&
+						el.section_tipo===data_item.section_tipo &&
+						el.section_id==data_item.section_id &&
+						el.lang===data_item.lang
+					)
+					const instances_length = current_instances.length
+
+					console.log('current_instances:', current_instances);
+					console.log('new_data data_item:', data_item);
+
 				if (instances_length>0) {
-					// add
-					for (let j = 0; j < instances_length; j++) {
-						const inst		= current_instances[j]
-						if(inst.id === self.id) continue
-						// inst.data	= self.datum.data.find(el => el.tipo===data_item.tipo && el.section_tipo===data_item.section_tipo && el.section_id==data_item.section_id) || {}
-						inst.data		= self.datum.data.find(el =>
+
+					// update instance data (not for himself)
+					// for (let j = 0; j < instances_length; j++) {
+					for (let j = instances_length - 1; j >= 0; j--) {
+
+						const inst = current_instances[j]
+
+						if(inst.id === self.id) {
+							continue; // skip self
+						}
+
+						inst.data = self.datum.data.find(el =>
 							el.tipo===inst.tipo &&
 							el.section_tipo===inst.section_tipo &&
 							el.section_id==inst.section_id &&
@@ -766,8 +749,11 @@ component_common.prototype.update_datum = function(new_data) {
 						) || {}
 						// console.log("____ updated instance data:", inst);
 					}
+
 				}else{
-					console.warn(`(!) [update_datum] The instance to update was not found:
+
+					// if he can't even find himself, notify to user console
+					console.warn(`(!) [update_datum] The instance to update from new_data was not found:
 						tipo: ${data_item.tipo},
 						section_tipo: ${data_item.section_tipo},
 						section_id: ${data_item.section_id},
@@ -779,7 +765,7 @@ component_common.prototype.update_datum = function(new_data) {
 					)
 				}
 			}
-
+			*/
 
 		// check data
 			if (typeof self.data==="undefined") {
@@ -789,7 +775,6 @@ component_common.prototype.update_datum = function(new_data) {
 				}
 				alert("Error on read component data!");
 			}
-
 
 	// add as new data the most recent changed_data
 		//self.data.changed_data = changed_data
