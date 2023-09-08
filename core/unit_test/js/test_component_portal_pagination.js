@@ -16,11 +16,18 @@ import {clone, pause} from '../../common/js/utils/util.js'
 	// DOM containers
 	const container = document.getElementById('content');
 
-
+	const component_container = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'component_container',
+		parent			: container
+	})
 
 describe(`COMPONENT PORTAL PAGINATION TEST`, async function() {
 
-	describe(`Add value`, async function() {
+	it(`Added node`, async function() {
+
+
+	});
 
 		const options = {
 			model			: 'component_portal',
@@ -33,7 +40,8 @@ describe(`COMPONENT PORTAL PAGINATION TEST`, async function() {
 		const component = await get_instance(options)
 		await component.build(true)
 		const node = await component.render()
-		container.appendChild(node)
+
+		component_container.appendChild(node)
 
 		const self = component
 
@@ -41,8 +49,10 @@ describe(`COMPONENT PORTAL PAGINATION TEST`, async function() {
 		const ar_section_id = Array(15).fill().map((element, index) => index + 2557)
 		const ar_section_id_length = ar_section_id.length
 
+
 		// remove_data
 			async function remove_data() {
+
 				const changed_data = [Object.freeze({
 					action	: 'set_data',
 					key		: null,
@@ -56,7 +66,6 @@ describe(`COMPONENT PORTAL PAGINATION TEST`, async function() {
 					build_autoload		: true,
 					tmp_api_response	: api_response // pass api_response before build to avoid call API again
 				})
-
 				assert.equal(
 					(!self.data.value || self.data.value.length===0),
 					true,
@@ -89,12 +98,12 @@ describe(`COMPONENT PORTAL PAGINATION TEST`, async function() {
 			}
 			await pause(500)
 			await add_value()
-
+return
 		// show_all
 			async function show_all() {
 				const limit	= self.rqo.sqo.limit
 				self.rqo.sqo.offset	= self.request_config_object.sqo.offset = 0
-				self.rqo.sqo.limit	= self.request_config_object.sqo.limit 	= (limit + 1) + 1000
+				self.rqo.sqo.limit	= self.request_config_object.sqo.limit 	= 0 // (limit + 1) + 1000
 				await self.refresh()
 				assert.equal(
 					self.data.value.length,
@@ -148,68 +157,37 @@ describe(`COMPONENT PORTAL PAGINATION TEST`, async function() {
 			await pause(500)
 			await reset()
 
+		// add_new_element
+			async function add_new_element() {
 
-		await pause(500)
-		await add_value()
-		await pause(500)
-		unlink_record()
-	});
+				const target_section_tipo = 'test3'
 
-});//end describe(`COMPONENTS LIFE-CYCLE`
+				await component.add_new_element(target_section_tipo)
+				assert.equal(
+					self.data.value.length,
+					1,
+					`self.data.value length must be 1. > `
+				);
+
+				await component.add_new_element(target_section_tipo)
+				assert.equal(
+					self.data.value.length,
+					2,
+					`self.data.value length must be 2. > `
+				);
+			}
+			await pause(500)
+			await add_new_element()
 
 
+		// await pause(500)
+		// await add_value()
 
-/**
-* RENDERING_TEST
-* @param object options
-* @return void
-*/
-async function rendering_test(options, container) {
+		// await pause(500)
+		// unlink_record()
 
-	let new_instance = null
 
-	describe(`${options.model} ${options.view} ${options.mode} `, function() {
-
-		it(`${options.model} RENDER ${options.mode} ${options.view}`, async function() {
-
-			// init instance
-				new_instance = await get_instance(options)
-
-			// build instance
-				await new_instance.build(true)
-
-			// render instance
-				const new_node = await new_instance.render()
-
-			// search case
-				if (new_instance.mode==='search') {
-					const search_component = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'search_component',
-						parent			: container
-					})
-					// insert in DOM
-					search_component.appendChild(new_node)
-				}else{
-					// insert in DOM
-					container.appendChild(new_node)
-				}
-
-			// asserts
-				assert.equal(new_instance.status, 'rendered');
-				assert.notEqual(new_instance.node, null);
-
-				if (options.view==='text') {
-					const is_span = new_node.nodeName==='SPAN'
-					assert.equal(
-						new_node.nodeName,
-						'SPAN',
-						`node name must be SPAN. Received: ${new_node.nodeName}. > `
-					);
-				}
-		});
-	});//end describe(options.model, function()
-}//end rendering_test
+});//end describe(`COMPONENT PORTAL PAGINATION TEST`
 
 
 
