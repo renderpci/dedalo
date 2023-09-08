@@ -5,7 +5,7 @@
 
 
 // imports
-
+	import {get_fallback_value} from '../../common/js/common.js'
 
 
 /**
@@ -32,8 +32,12 @@ view_text_list_text_area.render = async function(self, options) {
 		const data	= self.data
 		const value	= data.value || []
 
+	// fallback
+		const fallback_value	= data.fallback_value || []
+		const fallback			= get_fallback_value(value, fallback_value)
+
 	// Value as string. Note that value already is parsed as resolved string (add_tag_img_on_the_fly is applied on server)
-		const value_string = value.join(self.context.fields_separator)
+		const value_string = fallback.join(self.context.fields_separator)
 
 	// wrapper. Set as span to preserve html tags like images, bold, italic, etc.
 		const wrapper = document.createElement('span')
