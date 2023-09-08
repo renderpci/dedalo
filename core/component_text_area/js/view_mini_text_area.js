@@ -7,7 +7,7 @@
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import {tr} from '../../common/js/tr.js'
-
+	import {get_fallback_value} from '../../common/js/common.js'
 
 
 /**
@@ -32,8 +32,14 @@ view_mini_text_area.render = async function(self, options) {
 		const data	= self.data
 		const value	= data.value || []
 
+
+	// fallback
+		const fallback_value	= data.fallback_value || []
+		const fallback			= get_fallback_value(value, fallback_value)
+
+
 	// Value as string
-		const value_string = tr.add_tag_img_on_the_fly( value.join(self.context.fields_separator) )
+		const value_string = tr.add_tag_img_on_the_fly( fallback.join(self.context.fields_separator) )
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self, {
