@@ -46,7 +46,7 @@ view_default_list_image.render = function(self, options) {
 		const url_object	= datalist.find(item => item.quality===quality)
 		const url			= (typeof url_object==='undefined')
 			? DEDALO_CORE_URL + '/themes/default/0.jpg'
-			: url_object.file_url
+			: url_object.file_url + '?t=' + (new Date()).getTime()
 
 	// image
 		const image = ui.create_dom_element({
@@ -63,7 +63,6 @@ view_default_list_image.render = function(self, options) {
 				url_object.file_exist = false
 			}
 		}
-
 
 	// image background color
 		image.addEventListener('load', set_bg_color, false)

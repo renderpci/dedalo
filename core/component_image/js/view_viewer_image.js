@@ -42,7 +42,7 @@ view_viewer_image.render = function(self, options) {
 		const quality		= page_globals.dedalo_image_quality_default // '1.5MB'
 		const url_object	= datalist.find(item => item.quality===quality)
 		const url			= url_object && url_object.file_url
-			? url_object.file_url
+			? url_object.file_url + '?t=' + (new Date()).getTime()
 			: page_globals.fallback_image
 
 	// image
