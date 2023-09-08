@@ -6,13 +6,14 @@
 // variables
 @import (once) '../../page/css/layout/vars';
 @import (once) '../../page/css/layout/buttons';
-@menu_heigth: 2rem;
 @menu_bg_color_active: #ffa43d;
 @menu_box_shadow: 5px 5px 15px rgba(0, 0, 0, 0.1);
 
 
 
 .menu {
+	--menu_heigth: 2rem;
+
 	// position: fixed;
 	position: -webkit-sticky;
 	position: sticky;
@@ -28,9 +29,11 @@
 	line-height: 1.2em;
 	z-index: 4;
 
+
 	// prevents menu don't scroll in mobile
 	@media screen and (max-width: @width_break_point_0) { // 1024px
 		position: relative;
+		--menu_heigth: 3rem
 	}
 
 	// left line
@@ -73,8 +76,8 @@
 
 	// top_item shared items
 		>.top_item {
-			min-height: @menu_heigth;
-			line-height: @menu_heigth;
+			min-height: var(--menu_heigth);
+			line-height: var(--menu_heigth);
 			font-size: 1.1em;
 			margin-left: 1em;
 		}
@@ -167,9 +170,9 @@
 
 				// main level link
 				>li >a {
-					height: @menu_heigth;
+					height: var(--menu_heigth);
 					padding: 0px;
-					line-height: @menu_heigth;
+					line-height: var(--menu_heigth);
 					padding-left: 6px;
 					padding-right: 6px;
 				}
@@ -186,14 +189,14 @@
 				padding: 0px;
 				min-width: 175px;
 				position: absolute;
-				top: @menu_heigth;
+				top: var(--menu_heigth);
 				// left: -1px;
 				box-shadow: @menu_box_shadow;
 				/*left: -2px;*/
 				border: 1px solid #B4B4B4;
 				border-radius: 4px;
 				border-top-left-radius: 0;
-				max-height: calc(100vh - @menu_heigth);
+				max-height: calc(100vh - var(--menu_heigth));
 				overflow: auto;
 
 				a {
@@ -398,10 +401,6 @@
 			margin-left: 0.5rem;
 			cursor: pointer;
 
-			@media screen and (max-width: @width_break_point_0) { // 1024px
-				line-height: 1.9rem;
-			}
-
 			&:hover {
 				color: #F9F9F9;
 			}
@@ -466,7 +465,7 @@
 
 			@media screen and (max-width: @width_break_point_0) { // 1024px
 				font-size: 1rem;
-				line-height: 1.6rem;
+				// line-height: 1.6rem;
 				text-align: right;
 				flex: 1;
 			}
@@ -515,8 +514,8 @@
 			display: flex;
 			flex-wrap: wrap;
 			flex-basis: 100%;
-			line-height: @menu_heigth;
-			min-height: @menu_heigth;
+			line-height: var(--menu_heigth);
+			min-height: var(--menu_heigth);
 			font-size: 1em;
 
 			>div {
