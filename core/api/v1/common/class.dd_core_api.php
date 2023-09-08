@@ -1175,7 +1175,9 @@ final class dd_core_api {
 									$limit	= isset($component->pagination->limit)
 										? (int)$component->pagination->limit
 										: 10;
-									$pages	= (int)ceil($total / $limit);
+									$pages	= $limit>0
+										? (int)ceil($total / $limit)
+										: 1;
 									$offset	= $limit>=$total
 										? 0
 										: $limit * ($pages - 1);
@@ -1654,10 +1656,12 @@ final class dd_core_api {
 			$model				= $ddo_source->model ?? RecordObj_dd::get_modelo_name_by_tipo($ddo_source->tipo,true);
 			$caller_dataframe	= $ddo_source->caller_dataframe ?? null;
 			$properties			= $ddo_source->properties ?? null;
+			$session_save		= $ddo_source->session_save ?? true;
+			$session_key		= $ddo_source->session_key ?? (($model==='section') ? implode('_', ['section', $tipo]) : 'undefined'); // cache key sqo_id;
 
 		// sqo (search_query_object)
 			// If empty, we look at the session, and if not exists, we will create a new one with default values
-			$sqo_id			= ($model==='section') ? implode('_', ['section', $tipo]) : 'undefined'; // cache key sqo_id
+			$sqo_id			= $session_key; // cache key sqo_id
 			$sqo_session	= $_SESSION['dedalo']['config']['sqo'][$sqo_id] ?? null;
 			if ( !empty($rqo->sqo) ) {
 
@@ -1754,7 +1758,7 @@ final class dd_core_api {
 					// store sqo section in session.
 					// It's not used to main navigation, but it's needed by some tools like tool_export
 					// in addition to section_tool navigation (like transcription, translation, etc.)
-						if ($model==='section' && ($mode==='edit' || $mode==='list')) {
+						if ($model==='section' && ($mode==='edit' || $mode==='list') && $session_save===true) {
 							$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $sqo;
 							debug_log(__METHOD__
 								. " -> saved in session sqo sqo_id: '$sqo_id'" . PHP_EOL
@@ -1791,7 +1795,7 @@ final class dd_core_api {
 						);
 
 					// store sqo section
-						if ($model==='section' && ($mode==='edit' || $mode==='list')) {
+						if ($model==='section' && ($mode==='edit' || $mode==='list') && $session_save===true) {
 							$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $sqo;
 						}
 					break;

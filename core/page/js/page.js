@@ -434,11 +434,14 @@ page.prototype.build = async function(autoload=false) {
 
 				// local DDBB SQO
 				// Try to get local DDB SQO value when URL tipo exists to preserve user navigation filter and pagination
-					if (rqo.options.search_obj.t) {
-						const section_tipo	= rqo.options.search_obj.t
-						const mode			= rqo.options.search_obj.m || 'list'
+					const url_tipo = rqo.options.search_obj.tipo ?? rqo.options.search_obj.t ?? null;
+					const url_mode = rqo.options.search_obj.mode ?? rqo.options.search_obj.m ?? null;
+					if (url_tipo) {
+						const section_tipo	= url_tipo
+						const mode			= url_mode || 'list'
+						const session_key	= rqo.options.search_obj.session_key || section_tipo
 						const local_db_sqo	= await data_manager.get_local_db_data(
-							section_tipo + '_' + mode, // id
+							session_key + '_' + mode, // id
 							'sqo', // table
 							true // cache
 						)
@@ -699,7 +702,6 @@ export const instantiate_page_element = function(self, source) {
 		const request_config	= source.request_config
 		const view				= source.view
 
-
 	// instance options
 		const instance_options = {
 			model			: model,
@@ -734,6 +736,12 @@ export const instantiate_page_element = function(self, source) {
 		// properties
 			if (properties) {
 				instance_options.properties = properties
+			}
+
+		// url_vars session_key
+			const url_vars = url_vars_to_object(location.search)
+			if (url_vars.session_key) {
+				instance_options.session_key = url_vars.session_key
 			}
 
 	// page_element instance (load file)

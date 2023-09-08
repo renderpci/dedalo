@@ -104,7 +104,7 @@ search.prototype.init = async function(options) {
 		self.source					= self.caller.rqo.source
 		self.sqo					= self.caller.rqo.sqo
 		self.target_section_tipo	= self.sqo.section_tipo // can be different to section_tipo like area_thesaurus
-		self.limit					= self.sqo.limit || (self.caller.mode==='edit' ? 1 : 10)
+		self.limit					= self.sqo.limit ?? (self.caller.mode==='edit' ? 1 : 10)
 		self.search_layout_state	= null
 		self.search_panel_is_open	= false
 

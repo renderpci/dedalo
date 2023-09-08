@@ -88,8 +88,8 @@ service_time_machine.prototype.init = async function(options) {
 	// columns_map
 	self.columns_map	= options.columns_map || []
 
-	self.limit			= options.limit || 10
-	self.offset			= options.offset || 0
+	self.limit			= options.limit ?? 10
+	self.offset			= options.offset ?? 0
 
 	self.request_config	= await self.build_request_config()
 

@@ -216,10 +216,10 @@ class search_query_object {
 
 	/**
 	* SET_LIMIT
-	* @param int|string $value like 10
+	* @param int|string|null $value like 10
 	* @return bool true
 	*/
-	public function set_limit($value) {
+	public function set_limit($value) : bool {
 
 		if( empty($value) ) {
 			$this->limit = 'ALL';

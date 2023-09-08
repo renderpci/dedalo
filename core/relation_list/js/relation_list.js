@@ -149,9 +149,9 @@ relation_list.prototype.init = function(options) {
 	self.mode			= 'edit'
 	self.node			= null
 	self.context 		= {}
-	self.limit			= options.limit || 10
-	self.offset			= options.offset || 0
-	self.total			= options.total || null
+	self.limit			= options.limit ?? 10
+	self.offset			= options.offset ?? 0
+	self.total			= options.total ?? null
 
 	// status update
 	self.status = 'initialized'

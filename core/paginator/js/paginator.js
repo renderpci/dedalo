@@ -406,28 +406,42 @@ paginator.prototype.navigate_to_previous_page = function() {
 
 /**
 * SHOW_ALL
-* Trigger event paginator_show_all_.. that caller is listen
-* to set total and refresh
+* Trigger event paginator_show_all_..
+* Caller is listen to set limit = 0 (all records) and refresh
 * @return bool
 */
-paginator.prototype.show_all = function(limit) {
+paginator.prototype.show_all = function() {
+
+	const self = this
+
+	// publish event (section is listen this event to refresh)
+		event_manager.publish('paginator_show_all_' + self.id)
+
+
+	return true
+}//end show_all
+
+
+
+/**
+* RESET_PAGINATOR
+* Set paginator limit to default value, previous to show_all
+* Caller is listen to set limit and refresh
+* @return bool
+*/
+paginator.prototype.reset_paginator = function(limit) {
 
 	const self = this
 
 	// publish event (section is listen this event to refresh)
 		event_manager.publish(
-			'paginator_show_all_' + self.id,
+			'reset_paginator_' + self.id,
 			limit
 		)
 
-	// paginator content data update
-		setTimeout(function(){
-			self.refresh()
-		}, 300)
-
 
 	return true
-}//end show_all
+}//end reset_paginator
 
 
 

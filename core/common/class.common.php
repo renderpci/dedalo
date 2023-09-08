@@ -2133,7 +2133,10 @@ abstract class common {
 									}
 
 								// pagination->limit. Get limit from component calculation or if it's defined from ddo
+								// Sample of use is request config: numisdata11 (ordered coins)
 									if(isset($dd_object->limit)){
+										// $dbt = debug_backtrace();
+										// dump($dbt, ' dbt ++ '.to_string());
 										$related_element->pagination->limit = $dd_object->limit;
 									}
 

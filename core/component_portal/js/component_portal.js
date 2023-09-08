@@ -19,7 +19,8 @@
 		common,
 		set_context_vars,
 		get_columns_map,
-		build_autoload
+		build_autoload,
+		create_source
 	} from '../../common/js/common.js'
 	import {component_common, init_events_subscription} from '../../component_common/js/component_common.js'
 	import {paginator} from '../../paginator/js/paginator.js'
@@ -119,10 +120,6 @@ component_portal.prototype.init = async function(options) {
 
 	// call the generic common tool init
 		const common_init = await component_common.prototype.init.call(self, options);
-
-	// standalone. (!) Important set always as true
-	// Portal must be always standalone = true because it needs to manage add values (save) API response properly
-		self.standalone = true
 
 	// autocomplete. set default values of service autocomplete
 		self.autocomplete			= null
@@ -469,10 +466,14 @@ component_portal.prototype.build = async function(autoload=false) {
 				const request_config_item = self.context.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
 				if (request_config_item) {
 					// Updated self.rqo.sqo.limit. Try sqo and show.sqo_config
-					if (request_config_item.sqo && request_config_item.sqo.limit) {
+					if (request_config_item.sqo &&
+						(request_config_item.sqo.limit || request_config_item.sqo.limit==0)) {
+
 						self.rqo.sqo.limit = request_config_item.sqo.limit
-					}else
-					if(request_config_item.show && request_config_item.show.sqo_config && request_config_item.show.sqo_config.limit) {
+					}
+					else if (request_config_item.show && request_config_item.show.sqo_config &&
+							(request_config_item.show.sqo_config.limit || request_config_item.show.sqo_config.limit==0)) {
+
 						self.rqo.sqo.limit = request_config_item.show.sqo_config.limit
 					}
 				}
@@ -530,16 +531,31 @@ component_portal.prototype.build = async function(autoload=false) {
 						self.events_tokens.push(
 							event_manager.subscribe('paginator_show_all_'+self.paginator.id, fn_paginator_show_all)
 						)//end events push
-						function fn_paginator_show_all(limit) {
+						function fn_paginator_show_all() {
 							// navigate
 							self.navigate({
 								callback : async () => {
 									// rqo and request_config_object set offset and limit
-									self.rqo.sqo.offset	= self.request_config_object.sqo.offset = 0
-									self.rqo.sqo.limit	= self.request_config_object.sqo.limit 	= (limit + 1)
+									self.rqo.sqo.offset	= self.request_config_object.sqo.offset	= 0
+									self.rqo.sqo.limit	= self.request_config_object.sqo.limit	= 0 // (limit + 1000)
 								}
 							})
-						}//end fn_paginator_goto
+						}//end fn_paginator_show_all
+
+					// reset_paginator_
+						self.events_tokens.push(
+							event_manager.subscribe('reset_paginator_'+self.paginator.id, fn_reset_paginator)
+						)//end events push
+						function fn_reset_paginator(limit) {
+							// navigate
+							self.navigate({
+								callback : async () => {
+									// rqo and request_config_object set offset and limit
+									self.rqo.sqo.offset	= self.request_config_object.sqo.offset	= 0
+									self.rqo.sqo.limit	= self.request_config_object.sqo.limit	= limit
+								}
+							})
+						}//end fn_reset_paginator
 
 				}else{
 					// refresh existing
@@ -670,6 +686,7 @@ component_portal.prototype.build = async function(autoload=false) {
 /**
 * ADD_VALUE
 * Called from service autocomplete when the user selects a datalist option
+* Uses component_common function change_value to call API
 * @verified 07-09-2023 Paco
 * @param object value
 * 	(locator)
@@ -824,6 +841,7 @@ component_portal.prototype.add_value = async function(value) {
 
 	// refresh self component
 		await self.refresh({
+			destroy				: false,
 			build_autoload		: true,
 			tmp_api_response	: api_response // pass api_response before build to avoid call API again
 		})
@@ -856,6 +874,66 @@ component_portal.prototype.add_value = async function(value) {
 
 	return true
 }//end add_value
+
+
+
+
+/**
+* ADD_NEW_ELEMENT
+* Called from button add
+* Create an new record in the target section and add the result locator as value to current component
+* (Set default project too based on current user privileges and assigned projects)
+* @verified 07-09-2023 Paco
+* @param string target_section_tipo
+* 	Like: rsc197
+* @return bool
+*/
+component_portal.prototype.add_new_element = async function(target_section_tipo) {
+
+	const self = this
+
+	// source
+		const source = create_source(self, null)
+
+	// data
+		const data = clone(self.data)
+		data.changed_data = [{
+			action	: 'add_new_element',
+			key		: null,
+			value	: target_section_tipo
+		}]
+
+	// rqo
+		const rqo = {
+			action	: 'save',
+			source	: source,
+			data	: data
+		}
+
+	// data_manager. create new record
+		const api_response = await data_manager.request({
+			body : rqo
+		})
+		// add value to current data
+		if (api_response.result) {
+
+			// save return the datum of the component
+			// to refresh the component, inject this api_response to use as "read" api_response
+			// the build process will use it and does not re-call to API.
+				await self.refresh({
+					destroy				: false,
+					build_autoload		: true,
+					tmp_api_response	: api_response
+				})
+
+		}else{
+			console.error('Error on api_response on try to create new row:', api_response);
+			return false
+		}
+
+
+	return true
+}//end add_new_element
 
 
 
@@ -1031,7 +1109,7 @@ component_portal.prototype.reset_filter_data = function() {
 		return self.render({
 			render_level : 'content'
 		})
-}// end reset_filter_data
+}//end reset_filter_data
 
 
 
@@ -1181,6 +1259,7 @@ component_portal.prototype.sort_data = async function(options) {
 
 	// refresh self component
 		await self.refresh({
+			destroy				: false,
 			build_autoload		: true,
 			tmp_api_response	: api_response // pass api_response before build to avoid call API again
 		})
@@ -1265,6 +1344,7 @@ component_portal.prototype.unlink_record = async function(options) {
 
 	// refresh self component
 		await self.refresh({
+			destroy				: false,
 			build_autoload		: true,
 			tmp_api_response	: api_response // pass api_response before build to avoid call API again
 		})
@@ -1454,7 +1534,8 @@ component_portal.prototype.edit_record_handler = async function(options) {
 				const edit_caller = get_edit_caller(self)
 				if (edit_caller) {
 					edit_caller.refresh({
-						build_autoload : true
+						destroy			: false,
+						build_autoload	: true
 					})
 					.then(function(response){
 						// fire window_bur event
