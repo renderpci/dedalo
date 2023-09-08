@@ -35,7 +35,7 @@ view_text_list_image.render = function(self, options) {
 		const url_object	= datalist.find(item => item.quality===quality)
 		const default_image	= DEDALO_CORE_URL + '/themes/default/0.jpg'
 		const url			= url_object && url_object.file_url
-			? url_object.file_url
+			? url_object.file_url + '?t=' + (new Date()).getTime()
 			: default_image
 
 	// image

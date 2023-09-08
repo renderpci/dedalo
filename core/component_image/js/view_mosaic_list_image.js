@@ -74,7 +74,7 @@ const get_content_data = function(self) {
 		const file_info	= files_info.find(item => item.quality===quality)
 		const url		= (typeof file_info==="undefined")
 			? DEDALO_CORE_URL + '/themes/default/0.jpg'
-			: file_info.file_url
+			: file_info.file_url + '?t=' + (new Date()).getTime()
 
 	// image
 		const image = ui.create_dom_element({
