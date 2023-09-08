@@ -773,11 +773,9 @@ component_portal.prototype.add_value = async function(value) {
 
 	// refresh self component
 		await self.refresh({
-			destroy				: false,
 			build_autoload		: true,
 			tmp_api_response	: api_response // pass api_response before build to avoid call API again
 		})
-
 
 	// filter data. check if the caller has tag_id
 		if(self.active_tag){
@@ -1276,7 +1274,6 @@ component_portal.prototype.unlink_record = async function(options) {
 
 	// refresh self component
 		await self.refresh({
-			destroy				: false,
 			build_autoload		: true,
 			tmp_api_response	: api_response // pass api_response before build to avoid call API again
 		})
