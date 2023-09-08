@@ -247,7 +247,7 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 					self.rqo.source.thesaurus_mode = self.context.thesaurus_mode
 				}
 				// limit
-				self.rqo.sqo.limit = self.rqo.sqo.limit || 30
+				self.rqo.sqo.limit = self.rqo.sqo.limit ?? 30
 
 			// rqo regenerate
 				await generate_rqo()

@@ -119,12 +119,13 @@ const get_content_data = async function(self) {
 		const fragment = new DocumentFragment()
 
 	// show_all_button. Don't show in mosaics of 1 item (limit 1)
-		if (self.limit>1) {
+		if (total_pages>1 && self.limit>1) {
+
 			if (!self.show_all_status && total_pages>1) {
 
 				const show_all_button = ui.create_dom_element({
 					element_type	: 'div',
-					class_name		: 'show_all',
+					class_name		: 'show_all_button',
 					inner_html		: get_label.show_all || 'Show all',
 					parent			: fragment
 				})
@@ -135,104 +136,119 @@ const get_content_data = async function(self) {
 						limit : self.limit
 					}
 					// trigger show_all (publish a event listened by the section)
-					self.show_all( self.total )
+					self.show_all()
 				})
+			}
 
-			}else if(self.show_all_status){
+		// navigation
+			const paginator_div_links = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'nav_buttons',
+				parent			: fragment
+			})
 
-				const reset_show_all_button = ui.create_dom_element({
+			// btn first
+				const paginator_first = ui.create_dom_element({
 					element_type	: 'div',
-					class_name		: 'show_all',
-					inner_html		: get_label.reset || 'Reset',
+					class_name		: 'btn paginator_first_icon',
+					parent			: paginator_div_links
+				})
+				if(page_number>1) {
+					paginator_first.addEventListener('mousedown',function(){
+						self.paginate(offset_first)
+					})
+				}else{
+					paginator_first.classList.add('inactive')
+				}
+
+			// btn previous
+				const paginator_prev = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'btn paginator_prev_icon',
+					parent			: paginator_div_links
+				})
+				if(prev_page_offset>=0) {
+					paginator_prev.addEventListener('mousedown',function(){
+						self.paginate(offset_prev)
+					})
+				}else{
+					paginator_prev.classList.add('inactive')
+				}
+
+			// btn next
+				const paginator_next = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'btn paginator_next_icon',
+					parent			: paginator_div_links
+				})
+				if(next_page_offset<total) {
+					paginator_next.addEventListener('mousedown',function(){
+						self.paginate(offset_next)
+					})
+				}else{
+					paginator_next.classList.add('inactive')
+				}
+
+			// btn last
+				const paginator_last = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'btn paginator_last_icon',
+					parent			: paginator_div_links
+				})
+				if(page_number<total_pages) {
+					paginator_last.addEventListener('mousedown',function(){
+						self.paginate(offset_last)
+					})
+				}else{
+					paginator_last.classList.add('inactive')
+				}
+
+			// paginator_info
+				const paginator_info = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'paginator_info',
 					parent			: fragment
 				})
-				reset_show_all_button.addEventListener('click', function(e) {
-					e.stopPropagation()
-					// trigger show_all (publish a event listened by the section)
-					self.show_all( self.show_all_status.limit )
-					// reset show_all_status
-					self.show_all_status = null
+				// page_info
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'page_info',
+					inner_html		: `${page_number}-${total_pages}`,
+					parent			: paginator_info
 				})
-			}
 		}
 
-
-	// nav_buttons
-		const paginator_div_links = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'nav_buttons',
-			parent			: fragment
-		})
-
-		// btn first
-			const paginator_first = ui.create_dom_element({
+	// reset paginator
+		 if(self.show_all_status) {
+			const reset_paginator_button = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'btn paginator_first_icon',
-				parent			: paginator_div_links
+				class_name		: 'reset_paginator_button',
+				inner_html		: get_label.reset || 'Reset',
+				parent			: fragment
 			})
-			if(page_number>1) {
-				paginator_first.addEventListener('mousedown',function(){
-					self.paginate(offset_first)
-				})
-			}else{
-				paginator_first.classList.add('inactive')
-			}
+			reset_paginator_button.addEventListener('click', function(e) {
+				e.stopPropagation()
+				// trigger show_all (publish a event listened by the section)
+				self.reset_paginator( self.show_all_status.limit )
+				// reset show_all_status
+				self.show_all_status = null
+			})
 
-		// btn previous
-			const paginator_prev = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'btn paginator_prev_icon',
-				parent			: paginator_div_links
-			})
-			if(prev_page_offset>=0) {
-				paginator_prev.addEventListener('mousedown',function(){
-					self.paginate(offset_prev)
+			// paginator_info
+				const paginator_info = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'paginator_info',
+					parent			: fragment
 				})
-			}else{
-				paginator_prev.classList.add('inactive')
-			}
-
-		// btn next
-			const paginator_next = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'btn paginator_next_icon',
-				parent			: paginator_div_links
-			})
-			if(next_page_offset<total) {
-				paginator_next.addEventListener('mousedown',function(){
-					self.paginate(offset_next)
+				// page_info
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'page_info',
+					inner_html		: `${total}`,
+					parent			: paginator_info
 				})
-			}else{
-				paginator_next.classList.add('inactive')
-			}
+		}
 
-		// btn last
-			const paginator_last = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'btn paginator_last_icon',
-				parent			: paginator_div_links
-			})
-			if(page_number<total_pages) {
-				paginator_last.addEventListener('mousedown',function(){
-					self.paginate(offset_last)
-				})
-			}else{
-				paginator_last.classList.add('inactive')
-			}
-
-	// paginator_info
-		const paginator_info = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'paginator_info',
-			parent			: fragment
-		})
-		// page_info
-			ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'page_info',
-				inner_html		: `${page_number}-${total_pages}`,
-				parent			: paginator_info
-			})
 		// displayed_records
 			// ui.create_dom_element({
 			// 	element_type	: 'span',

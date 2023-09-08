@@ -9,7 +9,7 @@
 	import {get_instance, get_all_instances} from '../../common/js/instances.js'
 	import {when_in_dom} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	import {create_source} from '../../common/js/common.js'
+	// import {create_source} from '../../common/js/common.js'
 	import {clone, object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
@@ -664,37 +664,10 @@ export const get_buttons = (self) => {
 						return
 					}
 
-				// source
-					const source = create_source(self, null)
+				// add_new_element
+					const result = await self.add_new_element(target_section_tipo)
+					if (result===true) {
 
-				// data
-					const data = clone(self.data)
-					data.changed_data = [{
-						action	: 'add_new_element',
-						key		: null,
-						value	: target_section_tipo
-					}]
-
-				// rqo
-					const rqo = {
-						action	: 'save',
-						source	: source,
-						data	: data
-					}
-
-				// data_manager. create new record
-					const api_response = await data_manager.request({
-						body : rqo
-					})
-					// add value to current data
-					if (api_response.result) {
-
-						// save return the datum of the component
-						// to refresh the component, inject this api_response to use as "read" api_response
-						// the build process will use it and does not re-call to API.
-							await self.refresh({
-								tmp_api_response : api_response
-							})
 						// last_value. Get the last value of the portal to open the new section
 							const last_value	= self.data.value[self.data.value.length-1]
 							const section_tipo	= last_value.section_tipo
@@ -707,7 +680,9 @@ export const get_buttons = (self) => {
 								tipo			: section_tipo,
 								section_tipo	: section_tipo,
 								section_id		: section_id,
-								inspector		: false
+								inspector		: false,
+								session_save	: false,
+								session_key		: 'section_' + section_tipo + '_' + self.tipo
 							})
 							await section.build(true)
 							const section_node = await section.render()
@@ -755,10 +730,7 @@ export const get_buttons = (self) => {
 										})
 									}
 							}
-
-					}else{
-						console.error('Error on api_response on try to create new row:', api_response);
-					}
+					}//end if (result===true)
 
 				// remove aux items
 					if (window.page_globals.service_autocomplete) {
@@ -780,31 +752,61 @@ export const get_buttons = (self) => {
 
 				// const section_tipo	= select_section.value
 				// const section_label	= select_section.options[select_section.selectedIndex].innerHTML;
-				const section_tipo	= target_section[0].tipo;
+				const section_tipo		= target_section[0].tipo;
 				// const section_label	= target_section[0].label;
 
 				// iframe
 					( () => {
 
-						const iframe_url = (tipo) => {
-							return DEDALO_CORE_URL + '/page/?tipo=' + tipo + '&mode=list&menu=false&initiator=' + self.id
+						const get_iframe_url = (tipo) => {
+
+							const session_key = 'section_' + tipo + '_' + self.tipo
+
+							const url_vars = object_to_url_vars({
+								tipo		: tipo,
+								mode		: 'list',
+								session_key	: session_key, // used to save server and local DDB custom SQO
+								menu		: false,
+								initiator	: self.id // initiator is the caller (self)
+							})
+
+							return DEDALO_CORE_URL + '/page/?' + url_vars
 						}
 
-						const iframe_container = ui.create_dom_element({element_type : 'div', class_name : 'iframe_container'})
-						const iframe = ui.create_dom_element({
-							element_type	: 'iframe',
-							class_name		: 'fixed',
-							src				: iframe_url(section_tipo),
-							parent			: iframe_container
-						})
+						// modal_body
+							const iframe_container = ui.create_dom_element({
+								element_type : 'div',
+								class_name : 'iframe_container'
+							})
+							const iframe = ui.create_dom_element({
+								element_type	: 'iframe',
+								class_name		: 'fixed',
+								src				: get_iframe_url(section_tipo),
+								parent			: iframe_container
+							})
+
+						// modal_header
+							// header_custom
+							const header_custom = ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'header_custom'
+							})
+							// header label
+							const header = ui.create_dom_element({
+								element_type	: 'span',
+								inner_html		: get_label.section,
+								class_name		: 'label',
+								parent			: header_custom
+							})
 
 						// select_section
 							const select_section = ui.create_dom_element({
 								element_type	: 'select',
-								class_name		: 'select_section' + (target_section_lenght===1 ? ' mono' : '')
+								class_name		: 'select_section' + (target_section_lenght===1 ? ' mono' : ''),
+								parent			: header_custom
 							})
 							select_section.addEventListener('change', function(){
-								iframe.src = iframe_url(this.value)
+								iframe.src = get_iframe_url(this.value)
 							})
 							// options for select_section
 								for (let i = 0; i < target_section_lenght; i++) {
@@ -816,21 +818,6 @@ export const get_buttons = (self) => {
 										parent			: select_section
 									})
 								}
-
-						// header label
-							const header = ui.create_dom_element({
-								element_type	: 'span',
-								inner_html		: get_label.section,
-								class_name		: 'label'
-							})
-
-						// header custom
-							const header_custom = ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'header_custom'
-							})
-							header_custom.appendChild(header)
-							header_custom.appendChild(select_section)
 
 						// fix modal to allow close later, on set value
 							self.modal = ui.attach_to_modal({

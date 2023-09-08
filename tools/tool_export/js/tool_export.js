@@ -103,7 +103,7 @@ tool_export.prototype.init = async function(options) {
 		self.source					= self.caller.rqo.source
 		self.sqo					= self.caller.rqo.sqo
 		self.target_section_tipo	= self.sqo.section_tipo // can be different to section_tipo
-		self.limit					= self.sqo.limit || 10
+		self.limit					= self.sqo.limit ?? 10
 		self.ar_ddo_to_export		= []
 
 		// const load_promise = import('../../../lib/sheetjs/dist/xlsx.full.min.js')

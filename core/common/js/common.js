@@ -639,6 +639,10 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 
 						// prevent destroy non destroyable instances (menu, etc.)
 							const current_instance = self.ar_instances[i]
+							if (!current_instance) {
+								console.log('Ignored non exiting instance:', i, current_instance);
+								continue;
+							}
 							if(typeof current_instance.destroyable!=='undefined' && current_instance.destroyable===false){
 								continue;
 							}
@@ -1621,11 +1625,11 @@ common.prototype.build_rqo_search = async function(request_config_object, action
 	// limit and offset
 	// check if limit and offset exist in choose, if not get from search.sqo_config, if not, get from show.sqo_config else fixed value
 		const choose_limit_default = 25
-		const limit	= request_config_object.choose && request_config_object.choose.sqo_config && request_config_object.choose.sqo_config.limit
+		const limit	= request_config_object.choose && request_config_object.choose.sqo_config && (request_config_object.choose.sqo_config.limit || request_config_object.choose.sqo_config.limit==0)
 			? request_config_object.choose.sqo_config.limit
-			: (sqo_config.limit)
+			: ((sqo_config.limit || sqo_config.limit==0)
 				? sqo_config.limit
-				: choose_limit_default
+				: choose_limit_default)
 		const offset = request_config_object.choose && request_config_object.choose.sqo_config && request_config_object.choose.sqo_config.offset
 			? request_config_object.choose.sqo_config.offset
 			: (sqo_config.offset)

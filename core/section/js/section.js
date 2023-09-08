@@ -163,6 +163,9 @@ section.prototype.init = async function(options) {
 		// buttons. bool to show / hide the buttons in list
 		self.buttons 				= options.buttons || true
 
+		// session_key
+		self.session_save			= options.session_save ?? true
+		self.session_key			= options.session_key ?? 'section_' + self.tipo
 
 	// event subscriptions
 		// new_section_ event
@@ -375,7 +378,7 @@ section.prototype.init = async function(options) {
 								// navigation section filter and pagination. It's recovered here when exists
 								// to pass values to API server
 								const saved_sqo	= await data_manager.get_local_db_data(
-									self.tipo +'_list',
+									self.session_key + '_list',
 									'sqo',
 									true
 								);
@@ -551,6 +554,10 @@ section.prototype.build = async function(autoload=false) {
 
 	// load from DDBB
 		if (autoload===true) {
+
+			// update rqo with session values
+				self.rqo.source.session_save	= self.session_save
+				self.rqo.source.session_key		= self.session_key
 
 			// build_autoload
 			// Use unified way to load context and data with
@@ -802,13 +809,15 @@ section.prototype.build = async function(autoload=false) {
 		self.columns_map = get_columns_map(self.context, self.datum.context)
 
 	// fix SQO to local DDBB. Used later to preserve section filter and pagination across pagination
-		data_manager.set_local_db_data(
-			{
-				id		: self.tipo + '_' + self.mode,
-				value	: self.rqo.sqo
-			},
-			'sqo'
-		)
+		if (self.session_save===true) {
+			data_manager.set_local_db_data(
+				{
+					id		: self.session_key + '_' + self.mode,
+					value	: self.rqo.sqo
+				},
+				'sqo'
+			)
+		}
 
 	// debug
 		if(SHOW_DEBUG===true) {
