@@ -444,7 +444,7 @@ component_portal.prototype.build = async function(autoload=false) {
 
 			// Update datum when the component is not standalone, it's dependent of section or others with common datum
 				if(!self.standalone){
-					await self.update_datum(api_response.result.data)
+					await self.update_datum(api_response.result)
 				}else{
 					self.datum.context	= api_response.result.context
 					self.datum.data		= api_response.result.data
