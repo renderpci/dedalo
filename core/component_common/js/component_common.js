@@ -657,115 +657,133 @@ component_common.prototype.set_value = function(value) {
 *	new_data contains fresh calculated data of saved component
 * @return bool true
 */
-component_common.prototype.update_datum = async function(new_data) {
+component_common.prototype.update_datum = async function(new_datum) {
 
 	const self = this
 
-	// console.log("____ new_data:",new_data);
-	// console.log("____ self:",clone(self));
-
 	// (!) Note that component datum is shared with section datum. BUT! Portals have specific datum
 
-	// new_data check
-		if (!new_data || !Array.isArray(new_data)) {
-			console.error(`component_common.update_datum received new_data is invalid! Expected array. Received:`, typeof new_data, new_data);
-			return false
-		}
-		const new_data_length = new_data.length
-			// console.log("update_datum --------------------------- new_data:", clone(new_data) );
-			// console.log("update_datum --------------------------- first self.datum.data:", clone(self.datum.data));
-			// console.trace();
+	const new_data		= new_datum.data
+	const new_context	= new_datum.context
 
-	// datum (global shared with section)
-		// remove the component old data in the datum (from down to top array items)
-			for (let i = new_data_length - 1; i >= 0; i--) {
-
-				const data_item			= new_data[i]
-				const ar_data_elements	= self.datum.data.filter(el =>
-					el.tipo===data_item.tipo &&
-					el.section_tipo===data_item.section_tipo &&
-					el.section_id==data_item.section_id
-				)
-
-				const ar_data_el_len = ar_data_elements.length
-				if (ar_data_el_len>0) {
-					// update already existing data item
-					for (let j = ar_data_el_len - 1; j >= 0; j--) {
-						const current_data_element = ar_data_elements[j]
-							  current_data_element.value			= data_item.value
-							  current_data_element.fallback_value	= data_item.fallback_value
-					}
-				}else{
-					// add new data item
-					self.datum.data.push(data_item)
-				}
+	// DATA -------------------
+		// new_data check
+			if (!new_data || !Array.isArray(new_data)) {
+				console.error(`component_common.update_datum received new_data is invalid! Expected array. Received:`, typeof new_data, new_data);
+				return false
 			}
+			const new_data_length = new_data.length
 
-	// data (specific component data)
-		// current element data (from current component only), removed!, we need update all data in all components.
-			// self.data = self.datum.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id) || {}
-	// console.log("self.data:",self.datum.data.filter(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id));
+		// datum (global shared with section)
+			// remove the component old data in the datum (from down to top array items)
+				for (let i = new_data_length - 1; i >= 0; i--) {
 
-		// data of multiple components
+					const data_item			= new_data[i]
+					const ar_data_elements	= self.datum.data.filter(el =>
+						el.tipo===data_item.tipo &&
+						el.section_tipo===data_item.section_tipo &&
+						el.section_id==data_item.section_id
+					)
+
+					const ar_data_el_len = ar_data_elements.length
+					if (ar_data_el_len>0) {
+						// update already existing data item
+						for (let j = ar_data_el_len - 1; j >= 0; j--) {
+							const current_data_element = ar_data_elements[j]
+								  current_data_element.value			= data_item.value
+								  current_data_element.fallback_value	= data_item.fallback_value
+						}
+					}else{
+						// add new data item
+						self.datum.data.push(data_item)
+					}
+				}
+
+	// CONTEXT -------------------
+		// new_context check
+			if (!new_context || !Array.isArray(new_context)) {
+				console.error(`component_common.update_datum received new_context is invalid! Expected array. Received:`, typeof new_context, new_context);
+				return false
+			}
+			const new_context_length = new_context.length
+
+		// datum (global shared with section)
+			// remove the component old data in the datum (from down to top array items)
+				for (let i = new_context_length - 1; i >= 0; i--) {
+
+					const context_item			= new_context[i]
+					const context_element	= self.datum.context.find(el =>
+						el.tipo===context_item.tipo &&
+						el.section_tipo===context_item.section_tipo &&
+						el.lang===context_item.lang
+					)
+
+					if (!context_element) {
+						// add new context item
+						self.datum.context.push(context_item)
+					}
+				}
+
+	// data of multiple components (TO DELETE)
 		// the data sent by the server can be data of multiple components. The new_data is an array with the all response from server.
 		// When one component is observed by other and the observable component data is changed, the observer component also will change
 		// It's necessary update the data in all components (self, observers), not only the caller.
-			/* COMMENTED 08-09-2023 BY Paco/Alex: Apparently is not necessary anymore (!)
-			const ar_instances = await instances.get_all_instances()
-			// Iterate data and instances with equal data
-			for (let i = new_data_length - 1; i >= 0; i--) {
+			// COMMENTED 08-09-2023 BY Paco/Alex: Apparently is not necessary anymore (!)
+			// const ar_instances = await instances.get_all_instances()
+			// // Iterate data and instances with equal data
+			// for (let i = new_data_length - 1; i >= 0; i--) {
 
-				const data_item = new_data[i]
+			// 	const data_item = new_data[i]
 
-				// find current data_intem coincident in all instances
-					const current_instances	= ar_instances.filter(el =>
-						el.tipo===data_item.tipo &&
-						el.section_tipo===data_item.section_tipo &&
-						el.section_id==data_item.section_id &&
-						el.lang===data_item.lang
-					)
-					const instances_length = current_instances.length
+			// 	// find current data_intem coincident in all instances
+			// 		const current_instances	= ar_instances.filter(el =>
+			// 			el.tipo===data_item.tipo &&
+			// 			el.section_tipo===data_item.section_tipo &&
+			// 			el.section_id==data_item.section_id &&
+			// 			el.lang===data_item.lang
+			// 		)
+			// 		const instances_length = current_instances.length
 
-					console.log('current_instances:', current_instances);
-					console.log('new_data data_item:', data_item);
+			// 		console.log('current_instances:', current_instances);
+			// 		console.log('new_data data_item:', data_item);
 
-				if (instances_length>0) {
+			// 	if (instances_length>0) {
 
-					// update instance data (not for himself)
-					// for (let j = 0; j < instances_length; j++) {
-					for (let j = instances_length - 1; j >= 0; j--) {
+			// 		// update instance data (not for himself)
+			// 		// for (let j = 0; j < instances_length; j++) {
+			// 		for (let j = instances_length - 1; j >= 0; j--) {
 
-						const inst = current_instances[j]
+			// 			const inst = current_instances[j]
 
-						if(inst.id === self.id) {
-							continue; // skip self
-						}
+			// 			if(inst.id === self.id) {
+			// 				continue; // skip self
+			// 			}
 
-						inst.data = self.datum.data.find(el =>
-							el.tipo===inst.tipo &&
-							el.section_tipo===inst.section_tipo &&
-							el.section_id==inst.section_id &&
-							el.lang===inst.lang
-						) || {}
-						// console.log("____ updated instance data:", inst);
-					}
+			// 			inst.data = self.datum.data.find(el =>
+			// 				el.tipo===inst.tipo &&
+			// 				el.section_tipo===inst.section_tipo &&
+			// 				el.section_id==inst.section_id &&
+			// 				el.lang===inst.lang
+			// 			) || {}
+			// 			// console.log("____ updated instance data:", inst);
+			// 		}
 
-				}else{
+			// 	}else{
 
-					// if he can't even find himself, notify to user console
-					console.warn(`(!) [update_datum] The instance to update from new_data was not found:
-						tipo: ${data_item.tipo},
-						section_tipo: ${data_item.section_tipo},
-						section_id: ${data_item.section_id},
-						lang: ${data_item.lang}
-						data_item:`,
-						data_item,
-						' in instances:',
-						clone(current_instances)
-					)
-				}
-			}
-			*/
+			// 		// if he can't even find himself, notify to user console
+			// 		console.warn(`(!) [update_datum] The instance to update from new_data was not found:
+			// 			tipo: ${data_item.tipo},
+			// 			section_tipo: ${data_item.section_tipo},
+			// 			section_id: ${data_item.section_id},
+			// 			lang: ${data_item.lang}
+			// 			data_item:`,
+			// 			data_item,
+			// 			' in instances:',
+			// 			clone(current_instances)
+			// 		)
+			// 	}
+			// }
+
 
 		// check data
 			if (typeof self.data==="undefined") {
@@ -776,20 +794,18 @@ component_common.prototype.update_datum = async function(new_data) {
 				alert("Error on read component data!");
 			}
 
-	// add as new data the most recent changed_data
-		//self.data.changed_data = changed_data
+		// add as new data the most recent changed_data
+			//self.data.changed_data = changed_data
 
-	// update element pagination vars when are used
-		/*
-		if (self.data.pagination && typeof self.pagination.total!=="undefined") {
-			self.pagination.total = self.data.pagination.total
-		}
-		*/
+		// update element pagination vars when are used
+			/*
+			if (self.data.pagination && typeof self.pagination.total!=="undefined") {
+				self.pagination.total = self.data.pagination.total
+			}
+			*/
 
-	// dispatch event
-		// event_manager.publish('update_data_'+ self.id_base, '')
-
-
+		// dispatch event
+			// event_manager.publish('update_data_'+ self.id_base, '')
 
 	return self.datum
 }//end update_datum
