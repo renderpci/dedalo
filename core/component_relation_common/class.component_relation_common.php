@@ -1860,7 +1860,24 @@ class component_relation_common extends component_common {
 					$component_to_update->set_dato($dato);
 					if ($save===true) {
 						$component_to_update->Save();
-						debug_log(__METHOD__." Saved modified dato to preserve the order - Total: $total_ar_result locators in section_id: $section_id ".to_string(), logger::DEBUG);
+						debug_log(__METHOD__
+							." Saved modified dato to preserve the order - Total: $total_ar_result locators in section_id: $section_id "
+							, logger::DEBUG
+						);
+					}
+
+				// current_locator check
+					if (!isset($current_locator)) {
+						debug_log(__METHOD__
+							. " Error. current_locator is not set " . PHP_EOL
+							. ' options: ' . to_string($options) . PHP_EOL
+							. ' section_tipo: ' . $this->section_tipo . PHP_EOL
+							. ' section_id: ' . $this->section_id . PHP_EOL
+							. ' model: ' .get_class($this) . PHP_EOL
+							. ' label: ' . RecordObj_dd::get_termino_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true) . PHP_EOL
+							. ' dato: ' . to_string($dato)
+							, logger::ERROR
+						);
 					}
 
 					// if the current section_id is the same of the current instance update the dato of the current
