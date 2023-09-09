@@ -15,9 +15,9 @@ export const data_manager = function() {
 
 /**
 * REQUEST
-* Make a fetch request to server api
+* Make a fetch request to server API
 * @param object options
-* @return promise api_response
+* @return api_response
 */
 data_manager.request = async function(options) {
 
@@ -69,16 +69,6 @@ data_manager.request = async function(options) {
 			})
 		}
 
-		// this.url			= options.url || DEDALO_API_URL
-		// this.method		= options.method || 'POST' // *GET, POST, PUT, DELETE, etc.
-		// this.mode		= options.mode || 'cors' // no-cors, cors, *same-origin
-		// this.cache		= options.cache || 'no-cache' // *default, no-cache, reload, force-cache, only-if-cached
-		// this.credentials	= options.credentials || 'include' // include, *same-origin, omit
-		// this.headers		= options.headers || {'Content-Type': 'application/json'}// 'Content-Type': 'application/x-www-form-urlencoded'
-		// this.redirect	= options.redirect || 'follow' // manual, *follow, error
-		// this.referrer	= options.referrer || 'no-referrer' // no-referrer, *client
-		// this.body		= options.body // body data type must match "Content-Type" header
-
 	// check url
 		if (!this.url || !this.url.length) {
 			const msg = 'Error: empty or invalid API URL'
@@ -124,40 +114,6 @@ data_manager.request = async function(options) {
 					// alert msg to user
 						const msg = result.msg || result.error
 						alert("An error occurred in the connection with the API (data_manager). \n" + msg);
-
-					// custom behaviors
-						// switch (result.error) {
-						// 	case 'not_logged':
-						// 		// Alert user that is lot logged
-						// 		if (typeof alert==='function') {
-						// 			alert('Warning! User not logged');
-						// 		}
-						// 		console.warn('Warning! User not logged');
-
-						// 		// main_container lock
-						// 			const main_container = document.querySelector('.wrapper.page')
-						// 			if (main_container) {
-						// 				main_container.classList.add('loading')
-						// 			}
-
-						// 		// render_relogin
-						// 			import('../../login/js/login.js')
-						// 			.then(function(login){
-						// 				login.render_relogin({
-						// 					on_success : function(){
-						// 						// main_container unlock
-						// 						if (main_container) {
-						// 							main_container.classList.remove('loading')
-						// 						}
-						// 					}
-						// 				})
-						// 			})
-						// 		break;
-
-						// 	default:
-						// 		// write message to the console
-						// 		break;
-						// }
 				}
 
 				return result
@@ -248,6 +204,8 @@ data_manager.prototype.get_page_element = async function(options) {
 
 /**
 * GET_LOCAL_DB
+* Get local indexedDB from browser
+* If browser version is lower than current try, onupgradeneeded event is launched and browser indexedDB will be upgraded
 * @return promise
 */
 data_manager.get_local_db = async function() {
@@ -263,7 +221,7 @@ data_manager.get_local_db = async function() {
 
 	// invalid local db case
 		if (!current_indexedDB) {
-			console.error("Your browser doesn't support a stable version of IndexedDB. Such and such feature will not be available.");
+			console.error("[get_local_db] Your browser doesn't support a stable version of IndexedDB. Such and such feature will not be available.");
 		}
 
 
@@ -275,9 +233,9 @@ data_manager.get_local_db = async function() {
 		// error case
 			db_request.onerror = function(event) {
 				if(SHOW_DEBUG){
-					console.log("-> get_local_db error:", event.target);
+					console.error("[get_local_db] error:", event.target);
 				}else{
-					console.log("-----> It's not possible get_local_db, IndexedDB is blocked, Dédalo will run slowly without cache.");
+					console.error("[get_local_db] It's not possible get_local_db, IndexedDB is blocked, Dédalo will run slowly without cache.");
 				}
 
 				reject(false)
@@ -292,10 +250,11 @@ data_manager.get_local_db = async function() {
 
 		// onupgradeneeded event
 			db_request.onupgradeneeded = function(event) {
-				console.log("-> get_local_db onupgradeneeded:", event.target);
+
+				console.log("[get_local_db] onupgradeneeded:", event.target);
 
 				const db = event.target.result;
-				console.log(`Upgrading to version ${db.version}`);
+				console.log(`[get_local_db] Upgrading indexedDB 'dedalo' to version ${db.version}`);
 
 				// objectStore
 
@@ -313,34 +272,18 @@ data_manager.get_local_db = async function() {
 					db.objectStoreNames.contains('ontology') || db.createObjectStore('ontology', { keyPath:'id' });
 				// sqo
 				// temporal user track of section sqo. Allow persistent section search and pagination parameters
-				// On upgrade local DB, its convenient to re-create this table
+				// On upgrade local DB, its convenient to re-create this table/ObjectStore
 					if (db.objectStoreNames.contains('sqo')) {
 						db.deleteObjectStore("sqo");
-						console.log(`Deleting ObjectStore (table) sqo`);
+						console.log(`[get_local_db] Deleting ObjectStore (table) sqo`);
 					}
 					db.createObjectStore('sqo', { keyPath:'id' });
-
-				// index
-				// Create an index to search customers by name. We may have duplicates
-				// so we can't use a unique index.
-					// objectStore.createIndex("name", "name", { unique: false });
-
-				// oncomplete. Use transaction oncomplete to make sure the objectStore creation is
-				// finished before adding data into it.
-					// objectStore.transaction.oncomplete = function(event) {
-						// Store values in the newly created objectStore.
-						// const customerObjectStore = db.transaction(table, "readwrite").objectStore(table);
-						// customerData.forEach(function(customer) {
-						//	customerObjectStore.add(customer);
-						// });
-					// };
 			};
 	})
 	.catch(err => {
 		console.error(err)
 	});
 }//end local_db
-
 
 
 
@@ -378,23 +321,25 @@ data_manager.set_local_db_data = async function(data, table) {
 
 		// transaction
 			const transaction = db.transaction(table, "readwrite");
-			// oncomplete. Do something when all the data is added to the database.
+
+			// complete. Do something when all the data is added to the database.
 				// transaction.oncomplete = function(event) {
 				// 	console.log("All done!");
 				// };
+
 			// error
 				transaction.onerror = function(event) {
 					if(SHOW_DEBUG){
-						console.log("-> get_local_db error:", event.target);
+						console.error("[set_local_db_data] error:", event.target);
 					}else{
-						console.log("-----> It's not possible get_local_db, IndexedDB is blocked, Dédalo will run slowly without cache.");
+						console.error("[set_local_db_data] It's not possible get_local_db, IndexedDB is blocked, Dédalo will run slowly without cache.");
 					}
 					reject(false)
 				};
 
 		// request
-			const objectStore	= transaction.objectStore(table);
-			// const request	= objectStore.add(data);
+			const objectStore = transaction.objectStore(table);
+
 			// Put this updated object back into the database.
 			const request = objectStore.put(data);
 
@@ -402,7 +347,7 @@ data_manager.set_local_db_data = async function(data, table) {
 				resolve(event.target.result)
 			};
 			request.onerror = function(event) {
-				// console.error("-> set_local_db_data error:", event.target);
+				console.error("[set_local_db_data] error:", event.target);
 				reject(event.target.error);
 			};
 	})
@@ -421,7 +366,6 @@ data_manager.set_local_db_data = async function(data, table) {
 */
 const db_table = {}
 data_manager.get_local_db_data = async function(id, table, cache=false) {
-	// const t0 = performance.now()
 
 	const self = this
 
@@ -439,25 +383,25 @@ data_manager.get_local_db_data = async function(id, table, cache=false) {
 		if(!db){
 			return false
 		}
-		// console.log(`__Time [data_manager.get_local_db_data] table:${table} id:${id} ms: `, performance.now()-t0);
 
 	return new Promise(function(resolve, reject){
 
 		// transaction
 			const transaction = db.transaction(table, 'readwrite');
-			// oncomplete. Do something when all the data is added to the database.
+
+			// complete. Do something when all the data is added to the database.
 				// transaction.oncomplete = function(event) {
 				// 	console.log("All done!");
 				// };
+
 			// error
 				transaction.onerror = function(event) {
 					if(SHOW_DEBUG){
-						console.log("-> get_local_db_data error:", event.target);
-						console.log('table:', table, 'db:',db);
+						console.error("[get_local_db_data] error:", event.target);
+						console.error('[get_local_db_data] table:', table, 'db:',db);
 					}else{
-						console.log("-----> It's not possible get_local_db, IndexedDB is blocked, Dédalo will run slowly without cache.");
+						console.error("[get_local_db_data] It's not possible get_local_db, IndexedDB is blocked, Dédalo will run slowly without cache.");
 					}
-
 					reject(false)
 				};
 
@@ -469,7 +413,7 @@ data_manager.get_local_db_data = async function(id, table, cache=false) {
 				resolve(event.target.result)
 			};
 			request.onerror = function(event) {
-				// console.error("-> get_local_db_data error:", event.target);
+				console.error("[get_local_db_data] error:", event.target);
 				reject(event.target.error);
 			};
 	})
@@ -500,16 +444,18 @@ data_manager.delete_local_db_data = async function(id, table) {
 
 		// transaction
 			const transaction = db.transaction(table, "readwrite");
-			// oncomplete. Do something when all the data is added to the database.
+
+			// complete. Do something when all the data is added to the database.
 				// transaction.oncomplete = function(event) {
 				// 	console.log("All done!");
 				// };
+
 			// error
 				transaction.onerror = function(event) {
 					if(SHOW_DEBUG){
-						console.log("-> get_local_db_data error:", event.target);
+						console.error("[delete_local_db_data] error:", event.target);
 					}else{
-						console.log("-----> It's not possible get_local_db, IndexedDB is blocked ");
+						console.error("[delete_local_db_data] It's not possible get_local_db, IndexedDB is blocked ");
 					}
 					reject(false)
 				};
@@ -523,11 +469,11 @@ data_manager.delete_local_db_data = async function(id, table) {
 				resolve(event.target.result)
 			};
 			request.onerror = function(event) {
-				// console.error("-> get_local_db_data error:", event.target);
+				console.error("[delete_local_db_data] delete_local_db_data error:", event.target);
 				reject(event.target.error);
 			};
 	})
-}//end get_local_db_data
+}//end delete_local_db_data
 
 
 
@@ -544,21 +490,19 @@ data_manager.delete_whole_local_db = async function() {
 	return new Promise(function(resolve, reject) {
 
 		const db = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
-		console.log('db:', db);
 
 		const request = db.deleteDatabase('dedalo');
-		console.log('request:', request);
 
 		request.onsuccess = function(event) {
-			console.log("Deleted database successfully");
+			console.log("[delete_whole_local_db] Deleted database successfully");
 			resolve(event.target.result)
 		};
 		request.onerror = function(event) {
-			console.log("Couldn't delete database");
+			console.log("[delete_whole_local_db] Couldn't delete database");
 			reject(event.target.error);
 		};
 		request.onblocked = function () {
-			console.log("Couldn't delete database due to the operation being blocked. Reload page to apply changes");
+			console.log("[delete_whole_local_db] Couldn't delete database due to the operation being blocked. Reload page to apply changes");
 		};
 	})
 }//end delete_whole_local_db
@@ -567,7 +511,7 @@ data_manager.delete_whole_local_db = async function() {
 
 /**
 * CLEAR_LOCAL_DB_TABLE
-* Clean whole local indexed DB.
+* Clean selected objectStore (table) from indexedDB.
 * Useful when important changes were made because an update
 * @param string table
 * @return promise
@@ -582,7 +526,7 @@ data_manager.clear_local_db_table = async function(table) {
 		const DBOpenRequest = window.indexedDB.open("dedalo");
 		DBOpenRequest.onsuccess = (event) => {
 
-			console.log("Database initialized");
+			console.log("[clear_local_db_table] Database initialized");
 
 			// store the result of opening the database in the db variable.
 			const db = DBOpenRequest.result;
@@ -590,16 +534,16 @@ data_manager.clear_local_db_table = async function(table) {
 			// clear previous data
 			const transaction = db.transaction([table], "readwrite");
 			transaction.oncomplete = (event) => {
-				console.log("Transaction done successful");
+				console.log('[clear_local_db_table] Transaction done successful');
 			};
 			transaction.onerror = (event) => {
-				console.error(`Transaction not opened due to error: ${transaction.error}`);
+				console.error(`[clear_local_db_table] Transaction not opened due to error: ${transaction.error}`);
 				reject(false)
 			};
 			const objectStore = transaction.objectStore("sqo");
 			const objectStoreRequest = objectStore.clear();
 			objectStoreRequest.onsuccess = (event) => {
-				console.log("Request clear successful");
+				console.log('[clear_local_db_table] Request clear successful');
 				resolve(true)
 			};
 		};
@@ -652,94 +596,6 @@ export function download_data(data, filename) {
 	return true
 }//end download_data
 
-
-
-/**
-* AREA_LOAD_DATA
-* Generic area data loader
-* @param object context
-* @return promise api_response
-*//*
-data_manager.prototype.area_load_data = async function(basic_context) {
-
-	// data_manager
-		const api_response = this.request({
-			body : {
-				context : basic_context,
-				action 	: 'read'
-			}
-		})
-
-	// debug
-		if(SHOW_DEBUG===true) {
-			console.log("[data_manager.area_load_data] api_response for dd_request:", api_response, dd_request);
-		}
-
-	return api_response
-}//end area_load_data
-*/
-
-
-
-/**
-* COMPONENT_LOAD_DATA
-* Generic component data loader from section_record
-* @param object component
-* @return promise data
-*//*
-data_manager.prototype.component_load_data = async function() {
-
-	const component = this
-
-	// section_record instance
-		const section_record = await instances.get_instance({
-			model			: 'section_record',
-			tipo			: component.section_tipo,
-			section_tipo	: component.section_tipo,
-			section_id		: component.section_id,
-			mode			: component.mode,
-			lang			: component.section_lang
-		})
-
-	// get data from section_record
-		const data = section_record.get_component_data(component.tipo)
-
-	// inject property
-		component.data = data
-
-	return data
-}//end component_load_data
-*/
-
-
-
-/**
-* COMPONENT_LOAD_CONTEXT
-* Generic component context loader from section_record
-* @param object component
-* @return promise context
-*//*
-data_manager.prototype.component_load_context = async function(component) {
-
-	// section_record instance
-		const section_record = await instances.get_instance({
-			model			: 'section_record',
-			tipo			: component.section_tipo,
-			section_tipo	: component.section_tipo,
-			section_id		: component.section_id,
-			mode			: component.mode,
-			lang			: component.section_lang
-		})
-
-	// get context from section_record
-		const context = section_record.get_component_context(component.tipo)
-
-	// inject property
-		component.context = context
-
-	return context
-}//end component_load_context
-*/
 
 
 // @license-end
