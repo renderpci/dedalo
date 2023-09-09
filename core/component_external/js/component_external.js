@@ -11,7 +11,7 @@
 	// import {render_edit_component_external} from '../../component_external/js/render_edit_component_external.js'
 	import {render_list_component_external} from '../../component_external/js/render_list_component_external.js'
 	// import {render_search_component_external} from '../../component_external/js/render_search_component_external.js'
-	import {render_mini_component_external} from '../../component_external/js/render_mini_component_external.js'
+	import {render_edit_component_external} from '../../component_external/js/render_edit_component_external.js'
 
 
 
@@ -62,13 +62,9 @@ export const component_external = function(){
 
 	// render
 	component_external.prototype.list				= render_list_component_external.prototype.list
-	component_external.prototype.tm					= render_mini_component_external.prototype.list
+	component_external.prototype.tm					= render_edit_component_external.prototype.edit
+	component_external.prototype.edit				= render_edit_component_external.prototype.edit
 	// component_external.prototype.search			= render_search_component_external.prototype.search
-	component_external.prototype.mini				= render_mini_component_external.prototype.mini
-	component_external.prototype.edit				= render_mini_component_external.prototype.mini
-
-	// component_external.prototype.change_mode		= component_common.prototype.change_mode
-
 
 
 // @license-end

@@ -11,39 +11,44 @@
 
 
 /**
-* RENDER_MINI_COMPONENT_EXTERNAL
+* VIEW_DEFAULT_LIST_COMPONENT_EXTERNAL
 * Manages the component's logic and appearance in client side
 */
-export const render_mini_component_external = function() {
+export const view_default_list_component_external = function() {
 
 	return true
-}//end render_mini_component_external
+}//end view_default_list_component_external
 
 
 
 /**
-* MINI
+* RENDER
 * Render node to be used in current mode
 * @return HTMLElement wrapper
 */
-render_mini_component_external.prototype.mini = async function() {
-
-	const self = this
+view_default_list_component_external.render = async function(self, options) {
 
 	// short vars
-		const data				= self.data
+		const data				= self.data || {}
 		const value				= data.value || []
-		const value_string		= value
+		const value_string		= value.join(' | ')
 
 	// wrapper
-		const wrapper = ui.component.build_wrapper_mini(self, {
+		const wrapper = ui.component.build_wrapper_list(self, {
 			value_string : value_string
+		})
+		wrapper.addEventListener('click', function(e){
+			e.stopPropagation()
+
+			self.change_mode({
+				mode : 'edit',
+				view : 'line'
+			})
 		})
 
 
 	return wrapper
-}//end mini
-
+}//end render
 
 
 // @license-end
