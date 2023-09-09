@@ -14,7 +14,7 @@
 	import {events_subscription} from './events_subscription.js'
 	import {ui} from '../../common/js/ui.js'
 	import {render_relogin} from '../../login/js/render_login.js'
-
+	import {set_element_css} from '../../page/js/css.js'
 
 
 export const component_common = function(){
@@ -1122,6 +1122,11 @@ component_common.prototype.change_mode = async function(options) {
 		const new_node = await new_instance.render({
 			render_level : 'full'
 		})
+
+		if (new_instance.context.css) {
+			const selector = `${new_instance.section_tipo}_${new_instance.tipo}.${new_instance.tipo}.${new_instance.mode}`
+			set_element_css(selector, new_instance.context.css)
+		}
 
 	// replace the node with the new render
 		old_node.replaceWith(new_node);
