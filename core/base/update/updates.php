@@ -89,6 +89,10 @@ $updates->$v = new stdClass();
 				REINDEX TABLE public.matrix_descriptors_dd;
 			");
 
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+				CREATE INDEX IF NOT EXISTS matrix_relations_gin ON public.matrix USING gin ((datos #> '{relations}'::text[]) jsonb_path_ops) TABLESPACE pg_default;
+			");
+
 		// vacuum table matrix_dd
 			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
 				VACUUM FULL VERBOSE ANALYZE public.matrix_dd;
