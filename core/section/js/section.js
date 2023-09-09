@@ -1242,7 +1242,7 @@ section.prototype.get_total = async function() {
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			console.warn('section get_total self.total:', self.total);
+			// console.warn('section get_total self.total:', self.total);
 		}
 
 	// already calculated case
