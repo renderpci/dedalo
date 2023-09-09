@@ -149,7 +149,9 @@ const get_content_data = async function(self) {
 			: null
 
 		// check if the filter is empty
-		const filter_empty = is_filter_empty(sqo_filter)
+		const filter_empty = sqo_filter
+			? is_filter_empty(sqo_filter)
+			: true
 
 		const total = await section.get_total()
 
