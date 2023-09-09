@@ -5,27 +5,27 @@
 
 
 // imports
-	import {view_default_list_component_external} from './view_default_list_component_external.js'
-	import {view_text_list_component_external} from './view_text_list_component_external.js'
+	import {view_default_edit_component_external} from './view_default_edit_component_external.js'
 
 
 /**
-* RENDER_LIST_COMPONENT_EXTERNAL
+* RENDER_EDIT_COMPONENT_EXTERNAL
 * Manages the component's logic and appearance in client side
 */
-export const render_list_component_external = function() {
+export const render_edit_component_external = function() {
 
 	return true
-}//end render_list_component_external
+}//end render_edit_component_external
+
 
 
 /**
-* LIST
-* Render node for use in list
+* EDIT
+* Render node for use in edit
 * @param object options
 * @return HTMLElement wrapper
 */
-render_list_component_external.prototype.list = async function(options) {
+render_edit_component_external.prototype.edit = async function(options) {
 
 	const self = this
 
@@ -34,16 +34,10 @@ render_list_component_external.prototype.list = async function(options) {
 
 	switch(view) {
 
+		case 'mini':
 		case 'line':
-		case 'text':
-			return view_text_list_component_external.render(self, options)
-
 		case 'default':
 		default:
 			return view_default_edit_component_external.render(self, options)
 	}
-}//end list
-
-
-
-// @license-end
+}//end edit
