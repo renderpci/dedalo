@@ -4068,14 +4068,7 @@ abstract class common {
 					if ($model==='component_portal') {
 						$ddo = reset($item_context);
 						$target_section_tipo = $element->get_ar_target_section_tipo();
-						// Check target section access here ?
-						$n_sections = count($target_section_tipo);
-						if ($n_sections===1) {
-							$ddo->target_section_tipo = $target_section_tipo;
-						}else{
-							#$ddo->target_section_tipo = reset($target_section_tipo);
-							debug_log(__METHOD__." (search section components list) Ignored $element_tipo - $model with section tipo: ".to_string($target_section_tipo).' only allowed 1 section_tipo' , logger::DEBUG);
-						}
+						$ddo->target_section_tipo = $target_section_tipo;
 					}
 
 				// context add
