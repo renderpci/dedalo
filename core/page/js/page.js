@@ -747,7 +747,7 @@ export const instantiate_page_element = function(self, source) {
 		// caller. Set only when instance model it is section
 		// Useful to prevent update menu section label from modal section
 			if (model==='section') {
-				caller : self
+				instance_options.caller = self
 			}
 
 	// page_element instance (load file)
