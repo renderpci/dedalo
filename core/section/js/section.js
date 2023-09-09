@@ -424,7 +424,10 @@ section.prototype.init = async function(options) {
 							}
 						}//end if (menu)
 					}
-					update_menu()
+					// only for direct page created sections
+					if (self.caller && self.caller.model==='page') {
+						update_menu()
+					}
 
 				// search control
 					if (!self.search_container || !self.filter) {
