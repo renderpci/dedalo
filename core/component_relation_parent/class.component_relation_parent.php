@@ -518,6 +518,7 @@ class component_relation_parent extends component_relation_common {
 	*	Array of stClass objects with properties: section_tipo, section_id, component_tipo
 	*/
 	public static function get_parents(int|string $section_id, string $section_tipo, ?string $from_component_tipo=null, ?array $ar_tables=null) : array {
+		$start_time=start_time();
 
 		$parents = [];
 
@@ -607,6 +608,15 @@ class component_relation_parent extends component_relation_common {
 					, logger::ERROR
 				);
 			}else{
+
+				if(SHOW_DEVELOPER===true) {
+					$exec_time = exec_time_unit($start_time,'ms');
+					if (!empty(dd_core_api::$rqo)) {
+						dd_core_api::$sql_query_search[] = '-- [get_parents] TIME ms: '. $exec_time . PHP_EOL . $strQuery;
+					}
+					dump(exec_time_unit($start_time,'ms'), ' total ++ '.to_string($strQuery));
+				}
+
 				while ($row = pg_fetch_object($result)) {
 
 					$current_section_id		= $row->section_id;
