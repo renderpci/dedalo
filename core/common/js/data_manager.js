@@ -248,6 +248,7 @@ data_manager.prototype.get_page_element = async function(options) {
 
 /**
 * GET_LOCAL_DB
+* @return promise
 */
 data_manager.get_local_db = async function() {
 
@@ -266,11 +267,10 @@ data_manager.get_local_db = async function() {
 		}
 
 
-
 	return new Promise(function(resolve, reject){
 
 		// open db. Let us open our database (name, version)
-			const db_request = current_indexedDB.open('dedalo', 8);
+			const db_request = current_indexedDB.open('dedalo', 9);
 
 		// error case
 			db_request.onerror = function(event) {
@@ -298,12 +298,27 @@ data_manager.get_local_db = async function() {
 				console.log(`Upgrading to version ${db.version}`);
 
 				// objectStore
-				db.objectStoreNames.contains('rqo') || db.createObjectStore('rqo', { keyPath:'id' });
-				db.objectStoreNames.contains('context') || db.createObjectStore('context', { keyPath:'id' });
-				db.objectStoreNames.contains('status') || db.createObjectStore('status', { keyPath:'id' });
-				db.objectStoreNames.contains('data') || db.createObjectStore('data', { keyPath:'id' });
-				db.objectStoreNames.contains('ontology') || db.createObjectStore('ontology', { keyPath:'id' });
-				db.objectStoreNames.contains('sqo') || db.createObjectStore('sqo', { keyPath:'id' });
+
+				// rqo
+					db.objectStoreNames.contains('rqo') || db.createObjectStore('rqo', { keyPath:'id' });
+				// context
+					db.objectStoreNames.contains('context') || db.createObjectStore('context', { keyPath:'id' });
+				// status
+				// Used to store elements status like section_group collapse display
+					db.objectStoreNames.contains('status') || db.createObjectStore('status', { keyPath:'id' });
+				// data
+				// Used to store temp data like menu datum resolution
+					db.objectStoreNames.contains('data') || db.createObjectStore('data', { keyPath:'id' });
+				// ontology
+					db.objectStoreNames.contains('ontology') || db.createObjectStore('ontology', { keyPath:'id' });
+				// sqo
+				// temporal user track of section sqo. Allow persistent section search and pagination parameters
+				// On upgrade local DB, its convenient to re-create this table
+					if (db.objectStoreNames.contains('sqo')) {
+						db.deleteObjectStore("sqo");
+						console.log(`Deleting ObjectStore (table) sqo`);
+					}
+					db.createObjectStore('sqo', { keyPath:'id' });
 
 				// index
 				// Create an index to search customers by name. We may have duplicates
@@ -325,6 +340,7 @@ data_manager.get_local_db = async function() {
 		console.error(err)
 	});
 }//end local_db
+
 
 
 
@@ -462,7 +478,11 @@ data_manager.get_local_db_data = async function(id, table, cache=false) {
 
 
 /**
-* GET_LOCAL_DB_DATA
+* DELETE_LOCAL_DB_DATA
+* Delete specified element form DB table by id
+* @param string id
+* @param string table
+* @return promise
 */
 data_manager.delete_local_db_data = async function(id, table) {
 
@@ -508,6 +528,83 @@ data_manager.delete_local_db_data = async function(id, table) {
 			};
 	})
 }//end get_local_db_data
+
+
+
+/**
+* DELETE_WHOLE_LOCAL_DB
+* Clean whole local indexed DB.
+* Useful when important changes were made because an update
+* @return promise
+*/
+data_manager.delete_whole_local_db = async function() {
+
+	const self = this
+
+	return new Promise(function(resolve, reject) {
+
+		const db = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
+		console.log('db:', db);
+
+		const request = db.deleteDatabase('dedalo');
+		console.log('request:', request);
+
+		request.onsuccess = function(event) {
+			console.log("Deleted database successfully");
+			resolve(event.target.result)
+		};
+		request.onerror = function(event) {
+			console.log("Couldn't delete database");
+			reject(event.target.error);
+		};
+		request.onblocked = function () {
+			console.log("Couldn't delete database due to the operation being blocked. Reload page to apply changes");
+		};
+	})
+}//end delete_whole_local_db
+
+
+
+/**
+* CLEAR_LOCAL_DB_TABLE
+* Clean whole local indexed DB.
+* Useful when important changes were made because an update
+* @param string table
+* @return promise
+*/
+data_manager.clear_local_db_table = async function(table) {
+
+	const self = this
+
+	return new Promise(function(resolve, reject) {
+
+		// Let us open our database
+		const DBOpenRequest = window.indexedDB.open("dedalo");
+		DBOpenRequest.onsuccess = (event) => {
+
+			console.log("Database initialized");
+
+			// store the result of opening the database in the db variable.
+			const db = DBOpenRequest.result;
+
+			// clear previous data
+			const transaction = db.transaction([table], "readwrite");
+			transaction.oncomplete = (event) => {
+				console.log("Transaction done successful");
+			};
+			transaction.onerror = (event) => {
+				console.error(`Transaction not opened due to error: ${transaction.error}`);
+				reject(false)
+			};
+			const objectStore = transaction.objectStore("sqo");
+			const objectStoreRequest = objectStore.clear();
+			objectStoreRequest.onsuccess = (event) => {
+				console.log("Request clear successful");
+				resolve(true)
+			};
+		};
+	})
+}//end clear_local_db_table
 
 
 
