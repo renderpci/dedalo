@@ -3052,7 +3052,7 @@ class section extends common {
 
 				debug_log(__METHOD__
 					.' Ignored add locator action: locator already exists: ' . PHP_EOL
-					.' locator: '. json_encode($locator)
+					.' locator: '. to_string($locator)
 					, logger::ERROR
 				);
 

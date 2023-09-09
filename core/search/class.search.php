@@ -436,7 +436,8 @@ class search {
 							// $dbt	= debug_backtrace();
 							// $list	= [];
 							// $list[]	= (object)[
-							// 	'sql_query' => $sql_query
+							// 	'sql_query'	=> $sql_query, //$sql_query,
+							// 	'time'		=> exec_time_unit($start_time,'ms')
 							// ];
 							// foreach ($dbt as $el) {
 
@@ -446,7 +447,7 @@ class search {
 							// 		'class'		=> $el['class'] ?? null
 							// 	];
 							// }
-							// dump($list, '$list ++ '.to_string());
+							// dump($list, '$list ++ '.to_string($sql_query));
 						}
 					}
 
