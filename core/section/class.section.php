@@ -1330,10 +1330,17 @@ class section extends common {
 				}
 			}
 			// DEDALO_REGISTER_TOOLS_SECTION_TIPO
-			if ($this->tipo===DEDALO_REGISTER_TOOLS_SECTION_TIPO) {
+			else if ($this->tipo===DEDALO_REGISTER_TOOLS_SECTION_TIPO) {
 				if (isset($_SESSION['dedalo']['registered_tools'])) {
 					unset($_SESSION['dedalo']['registered_tools']);
 				}
+			}
+			// DEDALO_SECTION_PROJECTS_TIPO
+			else if ($this->tipo===DEDALO_SECTION_PROJECTS_TIPO) {
+				filter::clean_caches(
+					get_user_id(), // user id. Current logged user id
+					DEDALO_FILTER_MASTER_TIPO // dd170
+				);
 			}
 
 
