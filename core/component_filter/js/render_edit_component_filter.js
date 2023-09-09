@@ -151,28 +151,14 @@ export const get_input_element = (element, self) => {
 			element_type	: 'li',
 			class_name		: 'item_li' + li_class_name
 		})
-		li.addEventListener('mousedown',function(e) {
-			e.stopPropagation()
-		})
-
-	// label
-		const label_string = (SHOW_DEBUG===true)
-			? label + ' [' + section_id + ']'
-			: label
-		const label_node = ui.create_dom_element({
-			element_type	: 'label',
-			class_name		: 'item_label',
-			inner_html		: label_string,
-			parent			: li
-		})
 
 	// input checkbox
 		const input_node = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'checkbox',
-			class_name		: 'item_input'
+			class_name		: 'item_input',
+			parent			: li
 		})
-		label_node.prepend(input_node)
 		input_node.addEventListener('change',function(e) {
 
 			// const action		= (input_node.checked===true) ? 'insert' : 'remove'
@@ -211,6 +197,23 @@ export const get_input_element = (element, self) => {
 			})
 		})//end change event
 
+		input_node.addEventListener('mousedown',function(e) {
+			e.stopPropagation()
+		})
+
+
+	// label
+		const label_string = (SHOW_DEBUG===true)
+			? label + ' [' + section_id + ']'
+			: label
+		const label_node = ui.create_dom_element({
+			element_type	: 'label',
+			class_name		: 'item_label',
+			inner_html		: label_string,
+			parent			: li
+		})
+
+	// children
 		if(element.has_children){
 
 			const key = section_tipo +'_'+ section_id
@@ -255,6 +258,7 @@ export const get_input_element = (element, self) => {
 						input_node.checked = 'checked'
 				}
 			}
+
 
 
 	return li
@@ -354,7 +358,7 @@ export const get_buttons = (self) => {
 
 				const button_edit = ui.create_dom_element({
 					element_type	: 'span',
-					class_name		: 'button edit',
+					class_name		: 'button pen',
 					title			: label,
 					parent			: fragment
 				})

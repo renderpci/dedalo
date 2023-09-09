@@ -16,6 +16,8 @@
 			padding: 0.5em;
 			padding-bottom: 1rem;
 			display: block;
+			overflow: auto;
+			max-height: 20rem;
 
 			// ul branch
 			.branch {
@@ -30,14 +32,15 @@
 					align-items: stretch;
 					line-height: 1.4rem;
 
-					>.item_label {
+					// checkbox option
+					.item_input {
+						margin-right: 0.33rem;
+						vertical-align: text-bottom;
 						cursor: pointer;
+					}
 
-						// checkbox option
-						.item_input {
-							margin-right: 0.33rem;
-							vertical-align: text-bottom;
-						}
+					>.item_label {
+
 					}
 				}
 			}
