@@ -50,15 +50,24 @@
 				case 'tm':
 					$value = $this->get_list_value();
 
+					// external source (link to image outside Dédalo media)
+						$external_source = $this->get_external_source();
+
 					// datalist
 						// files_info. For fast list we add directly the default image
 						$thumb_data_item = new stdClass();
-							$thumb_data_item->file_url		= $this->get_url(DEDALO_IMAGE_THUMB_DEFAULT);
+							$thumb_data_item->file_url		= (!empty($external_source))
+								? $external_source
+								: $this->get_url(DEDALO_IMAGE_THUMB_DEFAULT);
 							$thumb_data_item->quality		= DEDALO_IMAGE_THUMB_DEFAULT;
+							$thumb_data_item->external		= (!empty($external_source));
 
 						$default_data_item = new stdClass();
-							$default_data_item->file_url	= $this->get_url(DEDALO_IMAGE_QUALITY_DEFAULT);
+							$default_data_item->file_url	= (!empty($external_source))
+								? $external_source
+								: $this->get_url(DEDALO_IMAGE_QUALITY_DEFAULT);
 							$default_data_item->quality		= DEDALO_IMAGE_QUALITY_DEFAULT;
+							$default_data_item->external		= (!empty($external_source));
 
 						$datalist = [$thumb_data_item, $default_data_item ];
 					break;
