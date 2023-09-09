@@ -71,7 +71,7 @@ class component_image extends component_media_common {
 	/**
 	* GET_IMAGE ID
 	* By default it's built with the type of the current component_image and the order number, eg. 'dd20_rsc750_1'
-	* It can be overwritten in properties with json ex. {"id": "dd851"} and will be read from the content of the referenced component
+	* It can be overwritten in properties with JSON ex. {"id": "dd851"} and will be read from the content of the referenced component
 	* @return string|null $id
 	*/
 	public function get_id() : ?string {
@@ -300,7 +300,7 @@ class component_image extends component_media_common {
 
 		$ar_image_quality = DEDALO_IMAGE_AR_QUALITY;
 
-		return DEDALO_IMAGE_AR_QUALITY;
+		return $ar_image_quality;
 	}//end get_ar_quality
 
 

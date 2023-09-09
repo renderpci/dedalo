@@ -67,7 +67,7 @@
 								? $external_source
 								: $this->get_url(DEDALO_IMAGE_QUALITY_DEFAULT);
 							$default_data_item->quality		= DEDALO_IMAGE_QUALITY_DEFAULT;
-							$default_data_item->external		= (!empty($external_source));
+							$default_data_item->external	= (!empty($external_source));
 
 						$datalist = [$thumb_data_item, $default_data_item ];
 					break;
