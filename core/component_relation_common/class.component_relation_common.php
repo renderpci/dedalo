@@ -2348,8 +2348,8 @@ class component_relation_common extends component_common {
 					// }
 					if ($source_item==='self') {
 						debug_log(__METHOD__
-							." Exception ERROR Processing get_request_config_section_tipo (1) invalid section_tipo format. Use an object like \"section_tipo\": [{\"source\": \"self\"}] "
-							. to_string($source_item)
+							." Exception ERROR Processing get_request_config_section_tipo (1) invalid section_tipo format. Use an object like \"section_tipo\": [{\"source\": \"self\"}]" . PHP_EOL
+							.' source_item: ' . to_string($source_item)
 							, logger::ERROR
 						);
 						if(SHOW_DEBUG===true) {
@@ -2359,8 +2359,8 @@ class component_relation_common extends component_common {
 					}
 
 				$ar_section_tipo[] = $source_item;
-				debug_log(__METHOD__.
-					" ++++++++++++++++++++++++++++++++++++ Added string source item (but expected object). Format values as {'source':'section', 'value'='hierarchy1'} ". PHP_EOL
+				debug_log(__METHOD__
+					." ++++++++++++++++++++++++++++++++++++ Added string source item (but expected object). Format values as {'source':'section', 'value'='hierarchy1'} ". PHP_EOL
 					.' source_item: '.to_string($source_item) . PHP_EOL
 					.' ar_section_tipo_sources: '.to_string($ar_section_tipo_sources) . PHP_EOL
 					.' retrieved_section_tipo: '.to_string($retrieved_section_tipo)
@@ -2369,11 +2369,11 @@ class component_relation_common extends component_common {
 				continue;
 			}
 			if (empty($source_item->source)) {
-				debug_log(__METHOD__.
-					" ++++++++++++++++++++++++++++++++++++ Ignored item with empty source ".to_string($source_item),
-					logger::ERROR
+				debug_log(__METHOD__
+					. " ++++++++++++++++++++++++++++++++++++ Ignored item with empty source ". PHP_EOL
+					. ' source_item: ' . to_string($source_item)
+					, logger::ERROR
 				);
-				dump($source_item, '$source_item ////////////////+++++++++++++++++++++++++++++++++++++ '.to_string());
 				continue;
 			}
 
