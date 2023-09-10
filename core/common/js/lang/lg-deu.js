@@ -71,6 +71,7 @@
     "select_page_of_the_doc": "Wählen Sie eine Seite aus dem Dokument",
     "gestion_de_archivos": "Dateiverwaltung",
     "now": "Jetzt",
+    "check_config": "Überprüfen Sie die Konfiguration",
     "fichero": "Datei",
     "download": "Herunterladen",
     "registros_visualizados": "Visualisierte Einträge",

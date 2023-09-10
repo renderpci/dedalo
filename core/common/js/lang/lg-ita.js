@@ -71,6 +71,7 @@
     "select_page_of_the_doc": "Seleziona una pagina del documento:",
     "gestion_de_archivos": "Gestione degli archivi",
     "now": "Adesso",
+    "check_config": "Controlla la configurazione",
     "fichero": "File",
     "download": "Descrizione",
     "registros_visualizados": "Registri visualizzati",

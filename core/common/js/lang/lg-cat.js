@@ -71,6 +71,7 @@
     "select_page_of_the_doc": "Seleccioneu una pàgina de el document:",
     "gestion_de_archivos": "Gestió d'arxius",
     "now": "Ara",
+    "check_config": "Comprovar la configuració",
     "fichero": "Fitxer",
     "download": "Descarregar",
     "registros_visualizados": "Registres visualitzats",
