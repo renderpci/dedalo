@@ -200,9 +200,7 @@ const get_content_value = (i, current_value, self) => {
 					})
 					const new_window = open_window({
 						url		: url,
-						name	: 'record_view',
-						width	: 1280,
-						height	: 740
+						name	: 'record_view'
 					})
 					new_window.addEventListener('blur', function() {
 						// refresh current instance
