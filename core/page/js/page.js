@@ -23,7 +23,7 @@
 	import {get_instance} from '../../common/js/instances.js'
 	import {common, push_browser_history} from '../../common/js/common.js'
 	import {check_unsaved_data} from '../../component_common/js/component_common.js'
-
+	import {render_server_response_error} from '../../common/js/render_common.js'
 	// import {load_tool} from '../../../tools/tool_common/js/tool_common.js'
 	// import '../../common/js/components_list.js' // launch preload all components files in parallel
 	// import '../../../lib/tinymce/js/tinymce/tinymce.min.js'
@@ -227,8 +227,8 @@ page.prototype.init = async function(options) {
 
 								// url search. Append section_id if exists
 									const url_vars = url_vars_to_object(location.search)
-										  url_vars.t = current_tipo
-										  url_vars.m = source.mode
+										  url_vars.tipo = current_tipo
+										  url_vars.mode = source.mode
 									const url = '?' + object_to_url_vars(url_vars)
 
 							// browser navigation update
