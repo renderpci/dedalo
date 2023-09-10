@@ -93,8 +93,11 @@
 }//end .component_filter
 
 
+// inside inspector
 .wrapper_inspector {
+
 	.component_filter {
+
 		>.content_data {
 			font-size: 0.85rem;
 			padding-bottom: 0.5rem;
@@ -113,5 +116,22 @@
 				margin-left: 0px;
 			}
 		}
+
+		&.fullscreen {
+			padding: 1rem;
+
+			>.label {
+				display: block !important;
+			}
+			>.content_data {
+				font-size: 1rem;
+				padding: 1rem;
+
+				.branch .item_li {
+					line-height: 1.2rem;
+				}
+			}
+		}
 	}
+
 }

@@ -2953,6 +2953,10 @@ export const ui = {
 		// apply style fullscreen
 		node.classList.toggle('fullscreen')
 
+		// hide menu
+		const menu_wrapper = document.querySelector('.menu_wrapper')
+		menu_wrapper.classList.add('hide')
+
 		const exit_button = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'exit_button',
@@ -2962,6 +2966,7 @@ export const ui = {
 			e.stopPropagation()
 
 			node.classList.remove('fullscreen')
+			menu_wrapper.classList.remove('hide')
 			exit_button.remove()
 		})
 
@@ -2972,6 +2977,7 @@ export const ui = {
 				document.removeEventListener('keyup', exit_fullscreen, { passive : true })
 
 				node.classList.remove('fullscreen')
+				menu_wrapper.classList.remove('hide')
 				exit_button.remove()
 			}
 		}

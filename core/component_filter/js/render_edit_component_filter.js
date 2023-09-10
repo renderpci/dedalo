@@ -55,8 +55,6 @@ render_edit_component_filter.prototype.edit = async function(options) {
 		default:
 			return view_default_edit_filter.render(self, options)
 	}
-
-	return null
 }//end edit
 
 
@@ -342,6 +340,17 @@ export const get_buttons = (self) => {
 	const mode				= self.mode
 
 	const fragment = new DocumentFragment()
+
+	// button_fullscreen
+		const button_fullscreen = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button full_screen',
+			parent			: fragment
+		})
+		button_fullscreen.addEventListener('click', function(e) {
+			e.stopPropagation()
+			ui.enter_fullscreen(self.node)
+		})
 
 	// button edit (go to target section)
 		if((mode==='edit') && !is_inside_tool) {
