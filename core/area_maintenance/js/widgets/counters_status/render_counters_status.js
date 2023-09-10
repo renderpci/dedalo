@@ -160,9 +160,7 @@ const get_content_data_edit = async function(self) {
 							})
 							const new_window = open_window({
 								url		: url,
-								name	: 'section_view',
-								width	: 1280,
-								height	: 740
+								name	: 'section_view'
 							})
 						})
 					}
