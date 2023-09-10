@@ -2,6 +2,9 @@
 
 Version 6 is a complete rebuild version. Lot of code has been rebuilt from scratch and some data definitions has been changed.
 
+!!! warning "Upgrading from versions prior to v5"
+    V6 only can be update from v5, previous versions (v4, v3, v2, v1, v0) need to be update it to v5 prior to update to version 6.
+
 Before you start upgrading to update it is important to be aware of some of these changes in data and Dédalo definitions.
 
 ## Important changes from v5
