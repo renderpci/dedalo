@@ -367,7 +367,8 @@ const get_buttons = (self) => {
 		// 	const fullscreen_state = self.node.classList.contains('fullscreen') ? true : false
 		// 	event_manager.publish('full_screen_'+self.id, fullscreen_state)
 		// })
-		button_fullscreen.addEventListener('click', function() {
+		button_fullscreen.addEventListener('click', function(e) {
+			e.stopPropagation()
 			ui.enter_fullscreen(self.node)
 		})
 

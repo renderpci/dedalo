@@ -36,12 +36,12 @@
 			// moved to layout.less.media_wrapper.edit
 				// // Note that height is always the media min height (392px)
 				// // (!) Do not use max o min height here to prevent to affect canvas reference size
-				// height: @media_min_height;
+				// height: var(--media_min_height);
 				// display: table;
 
 				// justify-content: center;
-				// max-height: @media_max_height;
-				// min-height: @media_min_height;
+				// max-height: var(--media_max_height);
+				// min-height: var(--media_min_height);
 				// overflow: hidden;
 
 				// @media screen and (max-width: @width_break_point_1) {
@@ -59,7 +59,7 @@
 					// height: inherit;
 					// background-color: @color_grey_light;
 					// text-align: center;
-					// min-height: @media_min_height; // 404px;
+					// min-height: var(--media_min_height); // 404px;
 
 					// resize: vertical;
 					// overflow: hidden;
@@ -122,7 +122,7 @@
 
 	&.view_default {
 		&.list {
-			height: @view_line_height; // 5rem;
+			height: var(--view_line_height); // 5rem;
 		}
 	}
 
@@ -130,7 +130,7 @@
 		display: inline-block;
 
 		&.list {
-			height: @view_line_height; // 5rem;
+			height: var(--view_line_height); // 5rem;
 			// height: 4rem;
     		width: 6rem;
     		min-width: 6rem;
@@ -194,20 +194,18 @@
 	// with suffix _mini like 'component_date_mini'
 	&_mini {
 		display: inline-block;
-		height: @view_mini_height; // 2rem
 		vertical-align: middle;
-		margin-top: -0.4rem;
-		margin-bottom: -0.4rem;
+		// margin-top: -0.4rem;
+		// margin-bottom: -0.4rem;
 
-		>img {
-			height: 100%;
+		img {
+			// height: 100%;
+			height: 2rem;
 		}
 	}
 
 	&.view_text {
-		// height: 3rem; // @view_text_height; // 1.5rem;
-		// height: 2rem;
-		// vertical-align: text-bottom;
+
 	}
 
 }//end .component_image

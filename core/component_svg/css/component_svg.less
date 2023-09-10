@@ -6,19 +6,19 @@
 .component_svg {
 
 	&.edit {
-		// height: @media_min_height;
+		// height: var(--media_min_height);
 
 		>.content_data {
 
 			// moved to layout.less.media_wrapper.edit
 				// // Note that height is always the media min height (392px)
 				// // (!) Do not use max o min height here to prevent to affect canvas reference size
-				// height: @media_min_height;
+				// height: var(--media_min_height);
 				// display: table;
 
 				// justify-content: center;
-				// max-height: @media_max_height;
-				// min-height: @media_min_height;
+				// max-height: var(--media_max_height);
+				// min-height: var(--media_min_height);
 
 				// @media screen and (max-width: @width_break_point_1) {
 				// 	min-height: unset;
@@ -32,7 +32,7 @@
 					// justify-content: center;
 					// width: 100%;
 					// height: inherit;
-					// // min-height: @media_min_height; // 404px;
+					// // min-height: var(--media_min_height); // 404px;
 
 					// resize: vertical;
 					// overflow: hidden;
@@ -60,14 +60,13 @@
 	}
 
 	&.list {
-		height: @view_line_height;
+		height: var(--view_line_height);
 		width: 100%;
 		cursor: pointer;
 
 		>.content_data {
 
 			>img {
-				// height: @view_line_height;
 				// height: 100%;
 				padding: 0.33rem !important;
 			}
@@ -81,7 +80,7 @@
 	&.view_line {
 
 		&.list {
-			height: @view_text_height; // 1.5rem
+			height: var(--view_text_height); //	2rem;
 		}
 		&.edit {
 			max-height: 15rem;
@@ -98,20 +97,18 @@
 
 	// with suffix _mini like 'component_text_area_mini'
 	&_mini {
+		display: inline-block;
+		vertical-align: middle;
+		// margin-top: -0.4rem;
+		// margin-bottom: -0.4rem;
 		// prevent index images height exceed text height
 		img {
-			height: @view_text_height; // 1.5rem
+			height: var(--view_text_height); //	2rem;
 		}
 	}
 
 	&.view_text {
-		// height: @view_text_height; // 1.5rem
-		// height: 2rem;
-		// vertical-align: text-bottom;
+
 	}
 
-	// img .svg.view_text
-	.svg.view_text {
-		height: @view_text_height; // 1.5rem
-	}
 }//end .component_svg
