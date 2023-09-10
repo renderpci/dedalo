@@ -80,8 +80,8 @@ To change the Dédalo status to maintenance follow this steps:
     define('DEDALO_MAINTENANCE_MODE', true);
     ```
 
-    ??? note "Normal state"
-      To revert to normal state set the DEDALO_MAINTENANCE_MODE to `false`.
+    ??? note "Returning to normal state"
+        To revert to normal state set the DEDALO_MAINTENANCE_MODE to `false`.
 
     Save the config file and Dédalo will enter in maintenance mode.
 
