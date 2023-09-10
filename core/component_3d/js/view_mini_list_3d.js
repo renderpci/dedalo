@@ -33,6 +33,7 @@ view_mini_list_3d.render = async function(self, options) {
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self)
+		wrapper.classList.add('media')
 
 	// posterframe_url
 		const posterframe_url = data.posterframe_url || page_globals.fallback_image

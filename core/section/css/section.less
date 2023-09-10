@@ -39,7 +39,7 @@
 	}
 
 	&.edit {
-		width: calc(100vw - @inspector_width - 0.25rem);
+		width: calc(100vw - var(--inspector_width) - 0.25rem);
 		margin-bottom: 10rem;
 
 		&.no_inspector {
@@ -67,12 +67,12 @@
 			// @top_distance : 75px;
 			overflow: auto;
 			height: 100%;
-			width: @inspector_width;
+			width: var(--inspector_width);
 			// background-color: @color_grey_untralight;
 			// outline: 1px solid @color_grey_light;
 			position: fixed;
 			// top: @top_distance;
-			left: calc(100vw - @inspector_width - 0.75rem);
+			left: calc(100vw - var(--inspector_width) - 0.75rem);
 			z-index: 1;
 
 			// prevent content from shifting left when the vertical scrollbar appears

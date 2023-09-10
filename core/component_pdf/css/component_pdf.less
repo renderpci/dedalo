@@ -27,12 +27,12 @@
 			// moved to layout.less.media_wrapper.edit
 				// // Note that height is always the media min height (392px)
 				// // (!) Do not use max o min height here to prevent to affect canvas reference size
-				// height: @media_min_height;
+				// height: var(--media_min_height);
 				// display: table;
 
 				// justify-content: center;
-				// max-height: @media_max_height;
-				// min-height: @media_min_height;
+				// max-height: var(--media_max_height);
+				// min-height: var(--media_min_height);
 				// overflow: hidden;
 
 				// @media screen and (max-width: @width_break_point_1) {
@@ -49,7 +49,7 @@
 					// height: 100%;
 					// resize: vertical;
 					// overflow: auto;
-					// min-height: @media_min_height; // 404px;
+					// min-height: var(--media_min_height); // 404px;
 
 					// @media screen and (max-width: @width_break_point_1) {
 					// 	height: unset;
@@ -142,6 +142,17 @@
 	}
 
 	&.view_text {
-		// height: @view_text_height;
+
+	}
+
+	// with suffix _mini like 'component_av_mini'
+	&_mini {
+		display: inline-block;
+		vertical-align: middle;
+		// margin-top: -0.4rem;
+		// margin-bottom: -0.4rem;
+		img {
+			height: 2rem;
+		}
 	}
 }//end .component_pdf
