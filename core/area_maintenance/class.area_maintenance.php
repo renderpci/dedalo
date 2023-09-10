@@ -208,6 +208,18 @@ class area_maintenance extends area_common {
 			$ar_widgets[] = $widget;
 
 
+		// check_config *
+			$item = new stdClass();
+				$item->id		= 'check_config';
+				$item->typo		= 'widget';
+				$item->label	= label::get_label('check_config') ?? 'Check config';
+				$item->value	= (object)[
+					'info' => self::check_config()
+				];
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
+
+
 		// add_hierarchy *
 			$item = new stdClass();
 				$item->id		= 'add_hierarchy';
@@ -580,6 +592,46 @@ class area_maintenance extends area_common {
 
 		return $response;
 	}//end generate_relations_table_data
+
+
+
+	/**
+	* CHECK_CONFIG
+	* @return object $response
+	*/
+	public static function check_config() : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ';
+
+		// sample config file
+			$input_lines = file_get_contents(DEDALO_CONFIG_PATH . '/sample.config.php');
+			if(empty($sample_config_contents)) {
+				$response->msg .= 'Invalid sample config file';
+			}
+
+		// regex search
+		preg_match_all('/[^\/\/ ]define\(\'(\S*)\',.*/', $input_lines, $output_array);
+
+		// check every constant from config
+			$constants_list	= $output_array[1];
+			$ar_missing		= [];
+			foreach ($constants_list as $const_name) {
+				if (!defined($const_name)) {
+					$ar_missing[] = $const_name;
+				}
+			}
+
+		// response
+			$response->result			= true;
+			$response->msg				= 'OK. Request done successfully ';
+			$response->constants_list	= $constants_list;
+			$response->ar_missing		= $ar_missing;
+
+
+		return $response;
+	}//end check_config
 
 
 
