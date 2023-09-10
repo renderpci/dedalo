@@ -382,9 +382,7 @@ export const get_buttons = (self) => {
 						})
 						const new_window = open_window({
 							url		: url,
-							name	: 'section_view',
-							width	: 1280,
-							height	: 740
+							name	: 'section_view'
 						})
 						new_window.addEventListener('blur', function() {
 							// refresh current instance

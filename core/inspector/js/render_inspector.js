@@ -305,51 +305,18 @@ const get_content_data = function(self) {
 				e.stopPropagation()
 				e.preventDefault()
 
-				open_window({
-					url : DEDALO_API_URL + '?' +  object_to_url_vars({
-						action			: 'read_raw',
-						section_tipo	: self.caller.section_tipo,
-						section_id		: self.caller.section_id,
-						pretty_print	: true
-					}),
-					features : 'new_tab'
+				const url = DEDALO_API_URL + '?' + object_to_url_vars({
+					action			: 'read_raw',
+					section_tipo	: self.caller.section_tipo,
+					section_id		: self.caller.section_id,
+					pretty_print	: true
 				})
 
-				// OLD way
-					// // read from Dédalo API
-					// const rqo = {
-					// 	action	: 'read_raw',
-					// 	source	: create_source(self.caller)
-					// }
-					// data_manager.request({
-					// 	body : rqo
-					// })
-					// .then(function(api_response){
-
-					// 	// error case
-					// 		if (api_response.result===false || api_response.error) {
-					// 			// alert("An error occurred. " + api_response.error);
-					// 			return
-					// 		}
-
-					// 	// open window
-					// 		const target_window	= window.open('', '_blank', '');
-
-					// 	// raw_data_node
-					// 		const data_string = JSON.stringify(api_response.result, null, 2)
-					// 		const raw_data_node = ui.create_dom_element({
-					// 			element_type	: 'pre',
-					// 			inner_html		: data_string
-					// 		})
-
-					// 	// add data content to new window body
-					// 		const body = target_window.document.body
-					// 		if (body) {
-					// 			body.appendChild(raw_data_node)
-					// 			target_window.document.title = 'View record data ' + self.caller.section_id
-					// 		}
-					// })
-			}//end data_link.addEventListener("click"
+				open_window({
+					url : url,
+					features : 'new_tab'
+				})
+			}//end fn_data_link
 
 		// tool register files.	dd1340
 			if (self.section_tipo==='dd1340') {

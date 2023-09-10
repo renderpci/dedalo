@@ -470,18 +470,31 @@ export function is_equal(el1, el2) {
 * OPEN_WINDOW
 * Unified open window function
 * @param object options
+* {
+* 	url : /dedalo/core/page/?t=oh1,
+* 	target : My new window name,
+* 	width : 1280,
+* 	height : 900,
+* 	features : null
+* }
 * @return object new_window
 */
 export function open_window(options) {
 
 	// defaults
 		const default_width		= 1280
-		const default_height	= 740
+		const default_height	= 905
 
 	// options
 		const url		= options.url
 		const target	= options.target || options.name || 'New window'
 		const features	= options.features || null
+		const width	= options.width && (options.width < window.screen.width)
+			? options.width
+			: ((default_width < window.screen.width) ? default_width : window.screen.width)
+		const height = options.height && (options.height < window.screen.height)
+			? options.height
+			: ((default_height < window.screen.height) ? default_height : window.screen.height)
 
 	// window_features
 		const window_features = (()=>{
@@ -490,14 +503,9 @@ export function open_window(options) {
 				return  null
 			}
 
-			const width	= options.width && options.width < window.screen.width
-				? options.width
-				: (default_width < window.screen.width ? default_width : window.screen.width)
-			const height = options.height && options.height < window.screen.height
-				? options.height
-				: (default_height < window.screen.height ? default_height : window.screen.height)
+			const features_string = `width=${width},height=${height}` + (features ? (','+features) : '')
 
-			return `width=${width},height=${height}` + (features ? ','+features : '')
+			return features_string
 		})()
 
 	// window
@@ -506,6 +514,7 @@ export function open_window(options) {
 			target,
 			window_features
 		)
+		new_window.resizeTo(width, height); // needed for Firefox
 		new_window.focus()
 
 
