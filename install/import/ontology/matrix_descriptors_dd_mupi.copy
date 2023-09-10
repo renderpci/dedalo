@@ -1,0 +1,63 @@
+mupi1	MUPI	termino	lg-spa
+mupi2	Emisiones radiofónicas	termino	lg-spa
+mupi2	Radio broadcasts	termino	lg-eng
+mupi3	Identificación	termino	lg-spa
+mupi3	Identification	termino	lg-eng
+mupi4	Id	termino	lg-spa
+mupi4	Id	termino	lg-eng
+mupi5	Publicación	termino	lg-spa
+mupi5	Publication	termino	lg-eng
+mupi6	Código	termino	lg-spa
+mupi6	Code	termino	lg-eng
+mupi28	Listado	termino	lg-spa
+mupi28	List	termino	lg-eng
+mupi8	Código anterior	termino	lg-spa
+mupi8	Previous code	termino	lg-eng
+mupi9	Título	termino	lg-spa
+mupi9	Title	termino	lg-eng
+mupi10	Fecha de grabación	termino	lg-spa
+mupi10	Recording date	termino	lg-eng
+mupi11	Lugar de emisión	termino	lg-spa
+mupi11	Place of broadcast	termino	lg-eng
+mupi12	Resumen	termino	lg-spa
+mupi12	Abstract	termino	lg-eng
+mupi13	Notas	termino	lg-spa
+mupi13	Notes	termino	lg-eng
+mupi14	Descripción de la emisión	termino	lg-spa
+mupi14	Description of the emission	termino	lg-eng
+mupi15	Locutores	termino	lg-spa
+mupi15	Reporter	termino	lg-eng
+mupi16	Entrevistados	termino	lg-spa
+mupi16	Interviewed	termino	lg-eng
+mupi17	Audio	termino	lg-spa
+mupi17	Audio	termino	lg-eng
+mupi18	Fondo	termino	lg-spa
+mupi18	Colection	termino	lg-eng
+mupi19	Proyecto	termino	lg-spa
+mupi19	Project	termino	lg-eng
+mupi20	Información técnica	termino	lg-spa
+mupi20	Technical information	termino	lg-eng
+mupi21	Date of registration	termino	lg-eng
+mupi22	Responsable	termino	lg-spa
+mupi22	Responsable	termino	lg-eng
+mupi23	Autor de la ficha	termino	lg-spa
+mupi23	Author of the record	termino	lg-eng
+mupi21	Fecha de registro	termino	lg-spa
+mupi24	Fecha de modificación	termino	lg-spa
+mupi24	Modification date	termino	lg-eng
+mupi25	Nuevo	termino	lg-spa
+mupi25	New	termino	lg-eng
+mupi26	Borrar	termino	lg-spa
+mupi26	Delete	termino	lg-eng
+mupi29	Listado	termino	lg-spa
+mupi27	Búsqueda	termino	lg-spa
+mupi27	Search	termino	lg-eng
+mupi29	List	termino	lg-eng
+mupi7	Fecha de emisión	termino	lg-spa
+mupi7	Fecha en formato DD-MM-AAAA	def	lg-spa
+mupi30	Hora de emisión	termino	lg-spa
+mupi30	Broadcast hour	termino	lg-eng
+mupi30	hora en formato HH:MM:SS	def	lg-spa
+mupi7	Broadcast date	termino	lg-eng
+mupi31	Hora de grabación	termino	lg-spa
+mupi31	Recording hour	termino	lg-eng
