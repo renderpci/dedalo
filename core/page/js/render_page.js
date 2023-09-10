@@ -7,6 +7,7 @@
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {render_server_response_error} from '../../common/js/render_common.js'
 	import {instantiate_page_element} from './page.js'
 	// import {clone} from '../../common/js/utils/index.js'
 
@@ -98,7 +99,7 @@ const get_content_data = async function(self) {
 				self.running_with_errors
 			)
 
-			return response_error
+			return wrapper_page
 		}
 
 	// add all instance rendered nodes
