@@ -741,7 +741,7 @@ This parameter defines the main ontology backups directory path. Dédalo will us
 define('DEDALO_BACKUP_PATH_ONTOLOGY'  , DEDALO_BACKUP_PATH . '/ontology');
 ```
 
-### Logs and errors
+## Logs and errors
 
 Store application activity data info and errors into `activity` table in DDBB.
 
@@ -789,6 +789,26 @@ Logger wil save all user activity and the application errors and messages.
 logger::register('activity' , 'activity://auto:auto@auto:5432/log_data?table=matrix_activity');
 logger::$obj['activity'] = logger::get_instance('activity');
 ```
+
+---
+
+### Update log file
+
+./dedalo/config/config.php
+
+UPDATE_LOG_FILE `string`
+
+Defines the directory path to store the update log.
+
+The maintenance update process uses the update log to store the status of each update task. This log is useful to know what happens in the update process. If the update fails, you can consult the last status to restore the update process at this last point.
+
+Default directory for this file has set inside Dédalo config folder, take account that if you move to other location fix the permissions to be private as a directory outside httpdocs folder.
+
+```php
+define('UPDATE_LOG_FILE', DEDALO_CONFIG_PATH . '/update.log');
+```
+
+---
 
 ## Languages
 
@@ -2781,6 +2801,31 @@ This parameter defines the path to the local directory to save the new code down
 ```php
 define('DEDALO_SOURCE_VERSION_LOCAL_DIR', '/tmp/'.DEDALO_ENTITY);
 ```
+
+---
+
+### Defining ip api service
+
+./dedalo/config/config.php
+
+IP_API `array`
+
+Defines the service to be used in section Activity to resolve source Country from IP address.
+
+By default Dédalo use the ipapi.co service with free unsigned account. Is possible to configure other services with your specific account. If you want to use a http instead https you can use `ip-api.com`
+
+```php
+define('IP_API', [
+    'url'           => 'https://ipapi.co/$ip/json/', // https capable as free
+    'href'          => 'https://ipapi.co/?q=$ip', // page to jump on click
+    'country_code'  => 'country_code' // / property where look country code for flag
+]);
+```
+
+!!! note "IP variable"
+    `$ip` string will be replaced by the real IP value in resolution and 'country_code' value property is used to generate the icon flag.
+
+    The URL must be in the format that the provider requires.
 
 ---
 
