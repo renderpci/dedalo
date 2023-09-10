@@ -269,6 +269,7 @@ dd115	dd390	dd395	no	si	si	6	dd	si		{"name":"gestion_de_archivos"}	{"name": "ges
 dd542	dd207	dd6	no	si	si	5	dd	no	[{"dd626":"dd628"},{"dd638":"dd639"}]		\N
 dd145	dd540	dd395	no	si	si	2	dd	si		{"name":"ahora"}	{"name": "now"}
 dd567	dd137	dd6	no	si	si	20	dd	no	[{"dd626":"dd963"}]		\N
+dd1643	dd785	dd395	no	si	si	74	dd	si	\N	{"name":"check_config"}	{"name": "check_config"}
 dd357	dd117	null	si	si	si	7	dd	no			\N
 dd725	dd391	dd395	no	si	si	17	dd	si		{"name":"fichero"}	{"name": "fichero"}
 dd727	dd391	dd395	no	si	si	19	dd	si		{"name":"descargar"}	{"name": "download"}

@@ -8107,7 +8107,7 @@ dd922	Labor Category / Title	termino	lg-eng
 dd947	New Type of association / group	termino	lg-eng
 dd1132	Collection / archive	termino	lg-eng
 dd1711	Date o range with format DD/MM/YYYY ó DD/MM/YYYY-DD/MM/YYYY	termino	lg-eng
-dd1	Dédalo 2023-09-10T13:38:47+02:00 Benimamet	termino	lg-spa
+dd1	Dédalo 2023-09-10T21:10:56+02:00 Benimamet	termino	lg-spa
 dd1639	Remove filter	termino	lg-eng
 dd1639	Eliminar filtro	termino	lg-spa
 dd1639	Supprimer le filtre	termino	lg-fra
@@ -8153,3 +8153,11 @@ dd88	Maintenance	termino	lg-fra
 dd88	Wartung	termino	lg-deu
 dd88	Συντήρηση	termino	lg-ell
 dd88	Mantenimiento	termino	lg-spa
+dd1643	Comprobar configuración	termino	lg-spa
+dd1643	Check config	termino	lg-eng
+dd1643	Comprovar la configuració	termino	lg-cat
+dd1643	Überprüfen Sie die Konfiguration	termino	lg-deu
+dd1643	ελέγξτε τη διαμόρφωση	termino	lg-ell
+dd1643	Verifique a configuração	termino	lg-por
+dd1643	Controlla la configurazione	termino	lg-ita
+dd1643	Vérifier la configuration	termino	lg-fra
