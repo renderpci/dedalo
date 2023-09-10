@@ -129,15 +129,23 @@ export const get_av_column = function(data_item) {
 	// image
 		const image = ui.create_dom_element({
 			element_type	: 'img',
-			class_name		: class_list,
-			src 			: url
+			class_name		: class_list
+
+		})
+		image.addEventListener('error', function(e) {
+			if (image.src!==page_globals.fallback_image) {
+				image.src = page_globals.fallback_image
+			}
 		})
 
-	image.addEventListener('load', set_bg_color, false)
-	function set_bg_color() {
-		this.removeEventListener('load', set_bg_color, false)
-		ui.set_background_image(this, image)
-	}
+		image.src = url
+
+	// set_bg_color
+		// image.addEventListener('load', set_bg_color, false)
+		// function set_bg_color() {
+		// 	this.removeEventListener('load', set_bg_color, false)
+		// 	ui.set_background_image(this, image)
+		// }
 
 	return image
 }//end get_av_column
@@ -159,15 +167,22 @@ export const get_img_column = function(data_item) {
 	// image
 		const image = ui.create_dom_element({
 			element_type	: 'img',
-			class_name		: class_list,
-			src 			: url
+			class_name		: class_list
+		})
+		image.addEventListener('error', function(e) {
+			if (image.src!==page_globals.fallback_image) {
+				image.src = page_globals.fallback_image
+			}
 		})
 
-	image.addEventListener('load', set_bg_color, false)
-	function set_bg_color() {
-		this.removeEventListener('load', set_bg_color, false)
-		ui.set_background_image(this, image)
-	}
+		image.src = url
+
+	// set_bg_color
+		// image.addEventListener('load', set_bg_color, false)
+		// function set_bg_color() {
+		// 	this.removeEventListener('load', set_bg_color, false)
+		// 	ui.set_background_image(this, image)
+		// }
 
 	return image
 }//end get_img_column

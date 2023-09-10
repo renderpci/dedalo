@@ -420,12 +420,18 @@ const render_av_column = function(current_data) {
 		const url = posterframe_url
 		if (url) {
 			// image
-			ui.create_dom_element({
+			const image = ui.create_dom_element({
 				element_type	: 'img',
 				class_name		: class_list,
-				src				: url,
 				parent			: td_node
 			})
+			image.addEventListener('error', function(e) {
+				if (image.src!==page_globals.fallback_image) {
+					image.src = page_globals.fallback_image
+				}
+			})
+
+			image.src = url
 		}
 
 	return td_node
@@ -459,12 +465,18 @@ const render_img_column = function(current_data) {
 				: window.location.origin + url
 
 			// image
-				ui.create_dom_element({
+				const image = ui.create_dom_element({
 					element_type	: 'img',
 					class_name		: class_list,
-					src 			: full_url,
-					parent 			: td_node
+					parent			: td_node
 				})
+				image.addEventListener('error', function(e) {
+					if (image.src!==page_globals.fallback_image) {
+						image.src = page_globals.fallback_image
+					}
+				})
+
+				image.src = full_url
 		}
 
 
