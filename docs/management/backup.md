@@ -127,7 +127,7 @@ To create a full copy of Dédalo publishing system manually, follow this:
 1. Login as global administrator or root account
 2. Enter into Maintenance panel:
 
-   > System administration -> Maintenance
+    > System administration -> Maintenance
 
 3. Locate the "Make Backup" panel
 4. Press the "Make a publishing backup" button.
