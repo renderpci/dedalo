@@ -6,7 +6,7 @@ Media components are using to manage files as images, audiovisuals, pdf, svg, or
 
 ## Example
 
-This example show how use a Dédalo work API to upload a new image, store it to be re-used in other Dédalo parts or components.
+This example show how use a Dédalo work API to upload a new image, store it, and re-used the uploaded image in other Dédalo parts or components.
 
 Overview:
 
@@ -77,7 +77,7 @@ Let's go!
             section_tipo    : image_section_tipo,
             section_id      : section_id
         })
-        await component_image.build(true)// Note the await here to indicate that this process need to be complete before continue, you can create a promise or do it inside a async function... as you want
+        await component_image.build(true)// Note the 'await' here to indicate that this process need to be complete before continue, you can create a promise or do it inside a async function... as you want!
 
         // get the upload tool to be fired
         const tool_upload = component_image.tools.find(el => el.model === 'tool_upload')
@@ -94,7 +94,7 @@ Let's go!
 
 3. To load an image previously uploaded.
 
-    Get the data stored previously in the upload process. Before this process you will need to obtain an locator of the stored array in your data schema, in any way necessary; for loop, array.find...
+    Get the previously stored data in the upload process. Before this process you will need to obtain a locator of the stored array in your data schema, in any way necessary; for loop, array.find...
 
     ```javascript
     // NOTE: this variable is used to show the locator data and to understand the next code.
@@ -116,8 +116,8 @@ Let's go!
     await component_image.build(true)// Note the await here to indicate that this process need to be complete before continue, you can create a promise or do it inside a async function... as you want
 
     // Get the quality of the image, it could be default_quality, but maybe original_quality would be better here... ???
-    // Perhaps is possible add a quality selector to be decided by user.
-    const file_info_default_quality	= component_image.data.datalist.find(el => el.quality===component_image.context.features.default_quality && el.file_exist===true)
+    // Maybe is possible add a quality selector to be decided by user.
+    const file_info_default_quality = component_image.data.datalist.find(el => el.quality===component_image.context.features.default_quality && el.file_exist===true)
 
     // so the url of the image to use will be: (don't forget to check if the uri exist!)
     const url = file_info_default_quality
