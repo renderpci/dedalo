@@ -5,12 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
-	import {ui} from '../../common/js/ui.js'
-	// import {
-	// 	get_value_fragment
-	// }
-	// from './view_default_list_svg.js'
 
 
 
@@ -27,10 +21,10 @@ export const view_text_list_svg = function() {
 
 /**
 * RENDER
-* Render node to be used by this view
+* Render node as text. URL is return as text node
 * @param object self
 * @param object options
-* @return HTMLElement image_node
+* @return HTMLElement wrapper
 */
 view_text_list_svg.render = function(self, options) {
 
@@ -41,18 +35,25 @@ view_text_list_svg.render = function(self, options) {
 		const quality		= 'standard'
 		const url_object	= datalist.find(item => item.quality===quality)
 		const url			= url_object
-			? url_object.file_url
-			: DEDALO_CORE_URL + '/themes/default/0.jpg'
+			? url_object.file_url + '?t=' + (new Date()).getTime()
+			: page_globals.fallback_image
 
 	// image
-		const image_node = ui.create_dom_element({
-			element_type	: 'img',
-			class_name		: 'component_svg svg view_' + self.view,
-			src				: url
+		const image	= document.createElement('img')
+		image.className	= 'component_svg media view_' + self.view
+		image.addEventListener('error', function(e) {
+			if (image.src!==page_globals.fallback_image) {
+				image.src = page_globals.fallback_image
+			}
 		})
+		image.src = url
+
+	// wrapper
+		const wrapper = document.createElement('span')
+		wrapper.appendChild(image)
 
 
-	return image_node
+	return wrapper
 }//end render
 
 

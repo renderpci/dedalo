@@ -23,21 +23,27 @@ export const view_text_list_pdf = function() {
 
 /**
 * RENDER
-* Render node to be used by service autocomplete or any datalist
-* @return HTMLElement image_node
+* Render node as text. URL is return as text node
+* @param object self
+* @param object options
+* @return HTMLElement wrapper
 */
 view_text_list_pdf.render = async function(self, options) {
 
 	// image append to wrapper
-		const url = DEDALO_CORE_URL + "/themes/default/pdf_icon.png"
+		const url = DEDALO_CORE_URL + '/themes/default/pdf_icon.png'
 
-		const image_node = ui.create_dom_element({
-			element_type	: 'img',
-			class_name		: 'component_pdf view_' + self.view,
-			src				: url
-		})
+	// wrapper
+		const wrapper = document.createElement('span')
 
-	return image_node
+	// image
+		const image	= document.createElement('img')
+		image.className	= 'component_pdf media view_' + self.view
+		image.src = url
+		wrapper.appendChild(image)
+
+
+	return wrapper
 }//end render
 
 

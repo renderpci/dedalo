@@ -39,16 +39,20 @@ view_mini_image.render = function(self, options) {
 		const url_object	= datalist.find(item => item.quality===quality)
 		const url			= url_object
 			? url_object.file_url + '?t=' + (new Date()).getTime()
-			: DEDALO_CORE_URL + '/themes/default/0.jpg'
+			: page_globals.fallback_image
 
 	// image
-		ui.create_dom_element({
+		const image = ui.create_dom_element({
 			element_type	: 'img',
 			class_name		: 'view_' + self.view,
-			src				: url,
 			parent			: wrapper
 		})
-		// ui.component.add_image_fallback(image)
+		image.addEventListener('error', function(e) {
+			if (image.src!==page_globals.fallback_image) {
+				image.src = page_globals.fallback_image
+			}
+		})
+		image.src = url
 
 
 	return wrapper

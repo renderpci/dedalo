@@ -17,28 +17,26 @@ export const view_text_list_geolocation = function() {
 
 /**
 * RENDER
-* Render node to be used by service autocomplete or any datalist
+* Render node as text. URL is return as text node
 * @param object self
 * @param object options
-* @return HTMLElement text_node
+* @return HTMLElement wrapper
 */
-view_text_list_geolocation.render = async function(self) {
+view_text_list_geolocation.render = async function(self, options) {
 
 	// value fallback
-		const data	= self.data || {}
-		const value	= data.value || []
-
-	// value as string
-		const string_values = value.map(el => {
+		const data			= self.data || {}
+		const value			= data.value || []
+		const string_values	= value.map(el => {
 			return JSON.stringify(el)
 		})
-		const value_string = string_values.join(self.context.fields_separator)
+		const value_string	= string_values.join(self.context.fields_separator)
 
-	// text node
-		const text_node = document.createTextNode(value_string)
+	const wrapper = document.createElement('span')
+	wrapper.insertAdjacentHTML('afterbegin', value_string)
 
 
-	return text_node
+	return wrapper
 }//end render
 
 

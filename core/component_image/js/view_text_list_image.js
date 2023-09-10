@@ -23,7 +23,7 @@ export const view_text_list_image = function() {
 * Render node as text. URL is return as text node
 * @param object self
 * @param object options
-* @return HTMLElement image_node
+* @return HTMLElement wrapper
 */
 view_text_list_image.render = function(self, options) {
 
@@ -33,18 +33,23 @@ view_text_list_image.render = function(self, options) {
 	// url
 		const quality		= 'thumb'
 		const url_object	= datalist.find(item => item.quality===quality)
-		const default_image	= DEDALO_CORE_URL + '/themes/default/0.jpg'
 		const url			= url_object && url_object.file_url
 			? url_object.file_url + '?t=' + (new Date()).getTime()
-			: default_image
+			: page_globals.fallback_image
 
 	// image
-		const wrapper			= document.createElement('span')
-		const image_node		= document.createElement('img')
-			image_node.className	= 'component_image image view_' + self.view
-			image_node.src = url
+		const image	= document.createElement('img')
+		image.className	= 'component_image media view_' + self.view
+		image.addEventListener('error', function(e) {
+			if (image.src!==page_globals.fallback_image) {
+				image.src = page_globals.fallback_image
+			}
+		})
+		image.src = url
 
-		wrapper.appendChild(image_node)
+	// wrapper
+		const wrapper = document.createElement('span')
+		wrapper.appendChild(image)
 
 
 	return wrapper

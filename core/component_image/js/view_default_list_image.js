@@ -45,7 +45,7 @@ view_default_list_image.render = function(self, options) {
 		const quality		= page_globals.dedalo_image_thumb_default // '1.5MB'
 		const url_object	= datalist.find(item => item.quality===quality)
 		const url			= (typeof url_object==='undefined')
-			? DEDALO_CORE_URL + '/themes/default/0.jpg'
+			? page_globals.fallback_image
 			: url_object.file_url + '?t=' + (new Date()).getTime()
 
 	// image

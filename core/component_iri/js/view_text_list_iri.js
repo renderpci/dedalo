@@ -5,8 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
-	import {ui} from '../../common/js/ui.js'
 
 
 
@@ -23,9 +21,10 @@ export const view_text_list_iri = function() {
 
 /**
 * RENDER
-* Get raw string
-* Output component value to use as raw text
-* @return HTMLElement text_node
+* Render node as text. URL is return as text node
+* @param object self
+* @param object options
+* @return HTMLElement wrapper
 */
 view_text_list_iri.render = async function(self, options) {
 
@@ -55,11 +54,11 @@ view_text_list_iri.render = async function(self, options) {
 			? ar_value_string.join(' - ')
 			: ''
 
-	// text_node
-		const text_node = document.createTextNode(value_string)
+	const wrapper = document.createElement('span')
+	wrapper.insertAdjacentHTML('afterbegin', value_string)
 
 
-	return text_node
+	return wrapper
 }//end render
 
 

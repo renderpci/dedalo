@@ -17,20 +17,23 @@ export const view_text_list_filter = function() {
 
 /**
 * RENDER
-* Render node to be used by service autocomplete or any datalist
+* Render node as text. URL is return as text node
+* @param object self
+* @param object options
 * @return HTMLElement wrapper
 */
-view_text_list_filter.render = async function(self) {
+view_text_list_filter.render = async function(self, options) {
 
-	// Value as string
-		const data	= self.data || {}
-		const value	= data.value || []
+	// short vars
+		const data			= self.data || {}
+		const value			= data.value || []
+		const value_string	= value.join(self.context.fields_separator)
 
-	const value_string = value.join(self.context.fields_separator)
+	const wrapper = document.createElement('span')
+	wrapper.insertAdjacentHTML('afterbegin', value_string)
 
-	const text_node = document.createTextNode(value_string)
 
-	return text_node
+	return wrapper
 }//end render
 
 

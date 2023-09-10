@@ -11,6 +11,7 @@
 	// import {object_to_url_vars} from '../../common/js/utils/index.js'
 	import {view_column_list_3d} from './view_column_list_3d.js'
 	import {view_mini_list_3d} from './view_mini_list_3d.js'
+	import {view_text_list_3d} from './view_text_list_3d.js'
 
 
 
@@ -42,6 +43,9 @@ render_list_component_3d.prototype.list = async function(options) {
 
 		case 'mini':
 			return view_mini_list_3d.render(self, options)
+
+		case 'text':
+			return view_text_list_3d.render(self, options)
 
 		case 'column':
 		case 'default':
