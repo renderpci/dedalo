@@ -538,7 +538,7 @@
 
 // geonames
 	// geonames_account_username. Only to development
-	define('GEONAMES_ACCOUNT_USERNAME', 'my_account');
+	// define('GEONAMES_ACCOUNT_USERNAME', 'my_account');
 
 
 
