@@ -71,6 +71,7 @@
     "select_page_of_the_doc": "<mark>Seleccione una página del documento:<\/mark>",
     "gestion_de_archivos": "<mark>Gestión de archivos<\/mark>",
     "now": "<mark>Ahora<\/mark>",
+    "check_config": "Verifique a configuração",
     "fichero": "<mark>Fichero<\/mark>",
     "download": "<mark>Descargar<\/mark>",
     "registros_visualizados": "<mark>Registros visualizados<\/mark>",

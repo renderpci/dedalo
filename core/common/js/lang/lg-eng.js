@@ -71,6 +71,7 @@
     "select_page_of_the_doc": "Select a page of the document:",
     "gestion_de_archivos": "Files manager",
     "now": "Now",
+    "check_config": "Check config",
     "fichero": "File",
     "download": "Download",
     "registros_visualizados": "Records being browsed",

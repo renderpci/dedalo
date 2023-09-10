@@ -71,6 +71,7 @@
     "select_page_of_the_doc": "Επιλέξτε μια σελίδα του εγγράφου:",
     "gestion_de_archivos": "Διαχείριση αρχείων",
     "now": "τώρα",
+    "check_config": "ελέγξτε τη διαμόρφωση",
     "fichero": "αρχείο",
     "download": "κατεβάσετε",
     "registros_visualizados": "εμφανίζονται τα αρχεία",
