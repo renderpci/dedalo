@@ -2,8 +2,8 @@
 
 Last modification date:
 
-2023-08-29T21:41:19+02:00
+2023-09-10T20:25:23+02:00
 
 Dédalo version
 
-6.0.0_RC7
+6.0.0_RC8
