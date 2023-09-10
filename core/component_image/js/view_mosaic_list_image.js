@@ -95,12 +95,12 @@ const get_content_data = function(self) {
 		}
 
 	// image background color
-		// image.addEventListener('load', set_bg_color, false)
-		// function set_bg_color() {
-		// 	this.removeEventListener('load', set_bg_color, false)
-		// 	ui.set_background_image(this, content_data)
-		// 	image.classList.remove('hidden')
-		// }
+		image.addEventListener('load', set_bg_color, false)
+		function set_bg_color() {
+			this.removeEventListener('load', set_bg_color, false)
+			// ui.set_background_image(this, content_data)
+			image.classList.remove('hidden')
+		}
 
 	// set source url
 		image.src = url
