@@ -1,0 +1,278 @@
+mapit1	Registros de agentes culturales Europeos	def	lg-spa
+mapit1	Mapit	termino	lg-spa
+mapit1	Mapit	termino	lg-cat
+mapit10	Pagaments	termino	lg-cat
+mapit10	pagos	termino	lg-spa
+mapit100	Listado	termino	lg-spa
+mapit100	Llistat	termino	lg-cat
+mapit101	Nuevo	termino	lg-spa
+mapit101	Nou	termino	lg-cat
+mapit101	New	termino	lg-eng
+mapit102	General	termino	lg-cat
+mapit102	General	termino	lg-spa
+mapit103	Mapit	termino	lg-cat
+mapit103	MAPIT	termino	lg-spa
+mapit104	Idiomes UE	termino	lg-cat
+mapit104	Idiomas UE	termino	lg-spa
+mapit105	General	termino	lg-cat
+mapit105	General	termino	lg-spa
+mapit106	Idioma	termino	lg-spa
+mapit106	Idioma	termino	lg-cat
+mapit107	Filtro	termino	lg-spa
+mapit107	Filtre	termino	lg-cat
+mapit108	Listado	termino	lg-spa
+mapit108	Llistat	termino	lg-cat
+mapit109	Nuevo	termino	lg-spa
+mapit109	Nou	termino	lg-cat
+mapit11	Data de pagament	termino	lg-cat
+mapit11	fecha de pago	termino	lg-spa
+mapit110	Búsqueda	termino	lg-spa
+mapit110	Cerca	termino	lg-cat
+mapit111	The mapit	termino	lg-spa
+mapit112	Ámbitos	termino	lg-spa
+mapit113	Ciudad	termino	lg-spa
+mapit114	Idiomas	termino	lg-spa
+mapit115	Periodicitat del pagament	termino	lg-cat
+mapit115	Periodicidad del pago	termino	lg-spa
+mapit116	General	termino	lg-cat
+mapit116	General	termino	lg-spa
+mapit117	Periodicitat del pagament	termino	lg-cat
+mapit117	Periodicidad del pago	termino	lg-spa
+mapit118	Filtro	termino	lg-spa
+mapit118	Filtre	termino	lg-cat
+mapit119	Llistat	termino	lg-cat
+mapit119	Listado	termino	lg-spa
+mapit12	Periodicitat de pagament	termino	lg-cat
+mapit12	Periodicidad de pago	termino	lg-spa
+mapit12	Payment periodicity	termino	lg-eng
+mapit120	Nou	termino	lg-cat
+mapit120	Nuevo	termino	lg-spa
+mapit121	Tipus de suscripció	termino	lg-cat
+mapit121	Tipo de suscripción	termino	lg-spa
+mapit121	Subscription type	termino	lg-eng
+mapit122	Tipus de suscripció	termino	lg-cat
+mapit122	Tipo de suscripción	termino	lg-spa
+mapit123	General	termino	lg-cat
+mapit123	General	termino	lg-spa
+mapit124	Tipo de suscripción	termino	lg-spa
+mapit125	Filtre	termino	lg-cat
+mapit125	Filtro	termino	lg-spa
+mapit126	Llistat	termino	lg-cat
+mapit126	Listado	termino	lg-spa
+mapit127	Nou	termino	lg-cat
+mapit127	Nuevo	termino	lg-spa
+mapit128	Tipo de suscripción	termino	lg-spa
+mapit129	Observaciones	termino	lg-spa
+mapit13	A quina branca de la cultura pertanys?	termino	lg-cat
+mapit13	¿A qué rama de la cultura perteneces?	termino	lg-spa
+mapit13	What branch of culture you belong?	termino	lg-eng
+mapit14	Quin agent cultural ets?	termino	lg-cat
+mapit14	¿Qué agente cultural eres?	termino	lg-spa
+mapit14	What cultural agent are you?	termino	lg-eng
+mapit15	Tipus d'organització	termino	lg-cat
+mapit15	Tipo de organización	termino	lg-spa
+mapit15	Type of organization	termino	lg-eng
+mapit16	Nom de l'organització	termino	lg-cat
+mapit16	Nombre de la organización	termino	lg-spa
+mapit16	Name of organization	termino	lg-eng
+mapit17	Nom	termino	lg-cat
+mapit17	Nombre	termino	lg-spa
+mapit17	First name	termino	lg-eng
+mapit18	Cognoms	termino	lg-cat
+mapit18	Apellidos	termino	lg-spa
+mapit18	Last name	termino	lg-eng
+mapit19	Nom artístic	termino	lg-cat
+mapit19	Nombre artístico	termino	lg-spa
+mapit19	Artist name	termino	lg-eng
+mapit2	Registres d'agents culturals europeus	termino	lg-cat
+mapit2	Registros de agentes culturales europeos	termino	lg-spa
+mapit20	Presenta't, explica la teua activitat	termino	lg-cat
+mapit20	Preséntate, explica tu actividad	termino	lg-spa
+mapit20	Present yourself, explain your activity	termino	lg-eng
+mapit21	Què ofereixes a Europa?	termino	lg-cat
+mapit21	¿Qué ofreces a Europa?	termino	lg-spa
+mapit21	What you offer to Europe?	termino	lg-eng
+mapit22	Què busques a Europa?	termino	lg-cat
+mapit22	¿Qué buscas en Europa?	termino	lg-spa
+mapit22	What do you search in Europe?	termino	lg-eng
+mapit23	Etiqueta els continguts que t'interessen	termino	lg-cat
+mapit23	Etiqueta los contenidos que te interesan	termino	lg-spa
+mapit23	Label the contents that interest you	termino	lg-eng
+mapit24	Foto	termino	lg-cat
+mapit24	Foto	termino	lg-spa
+mapit24	Photo	termino	lg-eng
+mapit25	Data de naixement	termino	lg-cat
+mapit25	Fecha de nacimiento	termino	lg-spa
+mapit25	Date of birth	termino	lg-eng
+mapit26	Telèfon	termino	lg-cat
+mapit26	Teléfono	termino	lg-spa
+mapit26	Phone	termino	lg-eng
+mapit27	email	termino	lg-cat
+mapit27	email	termino	lg-spa
+mapit27	email	termino	lg-eng
+mapit28	web	termino	lg-cat
+mapit28	web	termino	lg-spa
+mapit28	web	termino	lg-eng
+mapit29	Adreça	termino	lg-cat
+mapit29	Street Address	termino	lg-eng
+mapit29	Dirección	termino	lg-spa
+mapit3	Registre	termino	lg-cat
+mapit3	Registro	termino	lg-spa
+mapit3	Registration	termino	lg-eng
+mapit30	Codi postal	termino	lg-cat
+mapit30	Zip code	termino	lg-eng
+mapit30	Código postal	termino	lg-spa
+mapit31	Ciutat	termino	lg-cat
+mapit31	Ciudad	termino	lg-spa
+mapit31	Town	termino	lg-eng
+mapit32	Geolocalització	termino	lg-cat
+mapit32	Geolocalización	termino	lg-spa
+mapit32	Geolocation	termino	lg-eng
+mapit33	Portals	termino	lg-cat
+mapit33	Portales	termino	lg-spa
+mapit34	Idiomes	termino	lg-cat
+mapit34	Idiomas	termino	lg-spa
+mapit34	Langs	termino	lg-eng
+mapit35	Filtre	termino	lg-cat
+mapit35	Filtro	termino	lg-spa
+mapit36	Pagament	termino	lg-cat
+mapit36	pago	termino	lg-spa
+mapit37	proyecto	termino	lg-spa
+mapit37	Projecte	termino	lg-cat
+mapit38	Llistat	termino	lg-cat
+mapit38	Listado	termino	lg-spa
+mapit39	Cerca	termino	lg-cat
+mapit39	Busqueda	termino	lg-spa
+mapit4	Llistat	termino	lg-cat
+mapit4	Listado	termino	lg-spa
+mapit40	Eliminar	termino	lg-spa
+mapit40	Eliminar	termino	lg-cat
+mapit41	Pagaments	termino	lg-cat
+mapit41	Pagos	termino	lg-spa
+mapit42	Pagaments realitzats	termino	lg-cat
+mapit42	Pagos realizados	termino	lg-spa
+mapit43	Manera de pagament	termino	lg-cat
+mapit43	Modo de pago	termino	lg-spa
+mapit44	Tipus d'organització	termino	lg-cat
+mapit44	Tipo de organización	termino	lg-spa
+mapit45	Organització	termino	lg-cat
+mapit45	Organización	termino	lg-spa
+mapit46	Organización	termino	lg-spa
+mapit46	Organització	termino	lg-cat
+mapit47	Filtro	termino	lg-spa
+mapit47	Filtre	termino	lg-cat
+mapit48	Listado	termino	lg-spa
+mapit48	Llistat	termino	lg-cat
+mapit49	Autentificació	termino	lg-cat
+mapit49	Autentificación	termino	lg-spa
+mapit5	Búsqueda	termino	lg-spa
+mapit5	Cerca	termino	lg-cat
+mapit50	Suscripción pagada	termino	lg-spa
+mapit50	Suscripció pagada	termino	lg-cat
+mapit51	Contrasenya	termino	lg-cat
+mapit51	Contraseña	termino	lg-spa
+mapit51	Password	termino	lg-eng
+mapit52	Data de registre	termino	lg-cat
+mapit52	Fecha de registro	termino	lg-spa
+mapit52	Date of registration	termino	lg-eng
+mapit53	web	termino	lg-spa
+mapit53	web	termino	lg-cat
+mapit54	Sobre nosaltres	termino	lg-cat
+mapit54	Sobre nosotros	termino	lg-spa
+mapit55	Premsa	termino	lg-cat
+mapit55	Prensa	termino	lg-spa
+mapit56	Ajuda	termino	lg-cat
+mapit56	Ayuda	termino	lg-spa
+mapit57	Termes condicions i privacitat	termino	lg-cat
+mapit57	Términos condiciones y privacidad	termino	lg-spa
+mapit58	Àrees de la web	termino	lg-cat
+mapit58	Áreas de la web	termino	lg-spa
+mapit59	Presentació	termino	lg-cat
+mapit59	Presentación	termino	lg-spa
+mapit6	Nou agent	termino	lg-cat
+mapit6	Nuevo agente	termino	lg-spa
+mapit60	notícia	termino	lg-cat
+mapit60	noticia	termino	lg-spa
+mapit61	Filtre	termino	lg-cat
+mapit61	Filtro	termino	lg-spa
+mapit62	Llistat	termino	lg-cat
+mapit62	Listado	termino	lg-spa
+mapit63	Projectes	termino	lg-cat
+mapit63	Proyectos	termino	lg-spa
+mapit64	Descripció	termino	lg-cat
+mapit64	Descripción	termino	lg-spa
+mapit65	Título	termino	lg-spa
+mapit65	Títol	termino	lg-cat
+mapit66	Tipo	termino	lg-spa
+mapit66	Tipus	termino	lg-cat
+mapit67	Resumen	termino	lg-spa
+mapit67	Resum	termino	lg-cat
+mapit68	Web	termino	lg-spa
+mapit68	Web	termino	lg-cat
+mapit69	Idioma	termino	lg-spa
+mapit69	Idioma	termino	lg-cat
+mapit7	Esborrar agent	termino	lg-cat
+mapit7	Borrar agente	termino	lg-spa
+mapit70	Socios	termino	lg-spa
+mapit70	Socis	termino	lg-cat
+mapit71	Socios	termino	lg-spa
+mapit71	Socis	termino	lg-cat
+mapit72	Fecha de inicio	termino	lg-spa
+mapit72	Data d'inici	termino	lg-cat
+mapit73	Fecha de finalización	termino	lg-spa
+mapit73	Data de finalització	termino	lg-cat
+mapit74	Financiación	termino	lg-spa
+mapit74	Financiació	termino	lg-cat
+mapit75	Presupuesto mínimo	termino	lg-spa
+mapit75	Pressupost mínim	termino	lg-cat
+mapit76	Presupuesto máximo	termino	lg-spa
+mapit76	Pressupost màxim	termino	lg-cat
+mapit77	Preu venda projecte mínim	termino	lg-cat
+mapit77	Precio venta proyecto mínimo	termino	lg-spa
+mapit78	Preu venda projecte màxim	termino	lg-cat
+mapit78	Precio venta proyecto máximo	termino	lg-spa
+mapit79	Fons	termino	lg-cat
+mapit79	Fondos	termino	lg-spa
+mapit8	Veure estadístiques	termino	lg-cat
+mapit8	Ver estadísticas	termino	lg-spa
+mapit80	proyecto	termino	lg-spa
+mapit80	Projecte	termino	lg-cat
+mapit81	Famílies culturals	termino	lg-cat
+mapit81	Familias culturales	termino	lg-spa
+mapit82	Familia cultural	termino	lg-spa
+mapit82	Família cultural	termino	lg-cat
+mapit83	Familia cultual	termino	lg-spa
+mapit84	proyecto	termino	lg-spa
+mapit84	Projecte	termino	lg-cat
+mapit85	Llistat	termino	lg-cat
+mapit85	Listado	termino	lg-spa
+mapit86	Branques culturals	termino	lg-cat
+mapit86	Ramas culturales	termino	lg-spa
+mapit87	Rama cultural	termino	lg-spa
+mapit87	Branca cultural	termino	lg-cat
+mapit88	Rama cultural	termino	lg-spa
+mapit88	Branca cultural	termino	lg-cat
+mapit89	proyecto	termino	lg-spa
+mapit89	Projecte	termino	lg-cat
+mapit9	Agent participatiu	termino	lg-cat
+mapit9	Agente participativo	termino	lg-spa
+mapit90	Listado	termino	lg-spa
+mapit90	Llistat	termino	lg-cat
+mapit91	Familia cultural	termino	lg-spa
+mapit91	Branca cultural	termino	lg-cat
+mapit92	Nueva rama cultual	termino	lg-spa
+mapit92	Nova branca cultual	termino	lg-cat
+mapit93	Projectes	termino	lg-cat
+mapit93	Proyectos	termino	lg-spa
+mapit94	Projectes	termino	lg-cat
+mapit94	Proyectos	termino	lg-spa
+mapit95	listado	termino	lg-spa
+mapit95	Llistat	termino	lg-cat
+mapit96	Tipos de financiación	termino	lg-spa
+mapit96	Tipus de financiació	termino	lg-cat
+mapit97	Tipo de financiación	termino	lg-spa
+mapit97	Tipus de financiació	termino	lg-cat
+mapit98	Proyecto	termino	lg-spa
+mapit98	Projecte	termino	lg-cat
+mapit99	Tipo de financiación	termino	lg-spa
+mapit99	Tipus de financiació	termino	lg-cat
