@@ -337,9 +337,7 @@ export const get_record_link_column = function(current_data) {
 			})
 			const new_window = open_window({
 				url		: url,
-				name	: 'record_view',
-				width	: 1280,
-				height	: 740
+				name	: 'record_view'
 			})
 	})
 

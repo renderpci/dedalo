@@ -360,6 +360,8 @@ const get_line_file_open = function(ar_quality, self) {
 					parent			: file_info_node
 				})
 				link.addEventListener('click', function(e) {
+					e.stopPropagation()
+
 					open_window({
 						url : file_url
 					})

@@ -196,14 +196,14 @@
 
 // backup : Automatic backups control
 	# DEDALO_BACKUP_ON_LOGIN : true / false
-	define('DEDALO_BACKUP_ON_LOGIN'	 , true);
+	define('DEDALO_BACKUP_ON_LOGIN', true);
 	# DEDALO_BACKUP_TIME_RANGE Minimum lapse of time (in hours) for run backup script again. Default: (int) 8
 	define('DEDALO_BACKUP_TIME_RANGE', 8);
 	// backups paths. Try to keep backups directory out of httpdocs scope for security
-	define('DEDALO_BACKUP_PATH' 	 		, dirname(dirname(DEDALO_ROOT_PATH)) . '/backups');
-	define('DEDALO_BACKUP_PATH_TEMP' 	 	, DEDALO_BACKUP_PATH . '/temp');
-	define('DEDALO_BACKUP_PATH_DB' 	 		, DEDALO_BACKUP_PATH . '/db');
-	define('DEDALO_BACKUP_PATH_ONTOLOGY' 	, DEDALO_BACKUP_PATH . '/ontology');
+	define('DEDALO_BACKUP_PATH',			dirname(dirname(DEDALO_ROOT_PATH)) . '/backups');
+	define('DEDALO_BACKUP_PATH_TEMP',		DEDALO_BACKUP_PATH . '/temp');
+	define('DEDALO_BACKUP_PATH_DB',			DEDALO_BACKUP_PATH . '/db');
+	define('DEDALO_BACKUP_PATH_ONTOLOGY',	DEDALO_BACKUP_PATH . '/ontology');
 
 
 // log and errors : Store application activity data info and errors to DDBB
@@ -296,175 +296,175 @@
 	// dedalo_default_project. Default section_id of target filter section. int default 1
 	define('DEDALO_DEFAULT_PROJECT', 1);
 	// dedalo_filter_section_tipo_default. Target filter section (current 'dd153' - Projects section). Do not change this
-	define('DEDALO_FILTER_SECTION_TIPO_DEFAULT'	, DEDALO_SECTION_PROJECTS_TIPO);
+	define('DEDALO_FILTER_SECTION_TIPO_DEFAULT', DEDALO_SECTION_PROJECTS_TIPO);
 
 
 
 // media config
 	// media_base paths
-	define('DEDALO_MEDIA_PATH'	, DEDALO_ROOT_PATH	. '/media');
-	define('DEDALO_MEDIA_URL'	, DEDALO_ROOT_WEB 	. '/media');
+	define('DEDALO_MEDIA_PATH',	DEDALO_ROOT_PATH	. '/media');
+	define('DEDALO_MEDIA_URL',	DEDALO_ROOT_WEB		. '/media');
 
 
 
 	// av media
 		// dedalo_av_folder. string default '/av'
-		define('DEDALO_AV_FOLDER'					, '/av');
+		define('DEDALO_AV_FOLDER',					'/av');
 		// dedalo_av_extension string default 'mp4'
-		define('DEDALO_AV_EXTENSION'				, 'mp4');
+		define('DEDALO_AV_EXTENSION',				'mp4');
 		// dedalo_av_extensions_supported. array default ['mp4','wave','wav','aiff','aif','mp3','mov','avi','mpg','mpeg','vob','zip','flv']
-		define('DEDALO_AV_EXTENSIONS_SUPPORTED'		, ['mp4','wave','wav','aiff','aif','mp3','mov','avi','mpg','mpeg','vob','zip','flv']);
+		define('DEDALO_AV_EXTENSIONS_SUPPORTED',	['mp4','wave','wav','aiff','aif','mp3','mov','avi','mpg','mpeg','vob','zip','flv']);
 		// dedalo_av_mime_type. string default 'video/mp4'
-		define('DEDALO_AV_MIME_TYPE'				, 'video/mp4');
+		define('DEDALO_AV_MIME_TYPE',				'video/mp4');
 		// dedalo_av_type. string default 'h264/AAC'
-		define('DEDALO_AV_TYPE'						, 'h264/AAC');
+		define('DEDALO_AV_TYPE',					'h264/AAC');
 		// dedalo_av_quality_original. string default 'original'
-		define('DEDALO_AV_QUALITY_ORIGINAL'			, 'original');
+		define('DEDALO_AV_QUALITY_ORIGINAL',		'original');
 		// quality default normally '404' (standard dedalo 72x404)
-		define('DEDALO_AV_QUALITY_DEFAULT'			, '404');
+		define('DEDALO_AV_QUALITY_DEFAULT',			'404');
 		// quality folders array normally '404','audio' (sort desc quality)
-		define('DEDALO_AV_AR_QUALITY'				, [DEDALO_AV_QUALITY_ORIGINAL,'1080','720','576','404','240','audio']);
+		define('DEDALO_AV_AR_QUALITY',				[DEDALO_AV_QUALITY_ORIGINAL,'1080','720','576','404','240','audio']);
 
 		// av_posterframe_extension normally 'jpg'
-		define('DEDALO_AV_POSTERFRAME_EXTENSION'	, 'jpg');
+		define('DEDALO_AV_POSTERFRAME_EXTENSION',	'jpg');
 		// ffmpeg path normally /usr/bin/ffmpeg
-		define('DEDALO_AV_FFMPEG_PATH'				, '/usr/bin/ffmpeg');
+		define('DEDALO_AV_FFMPEG_PATH',				'/usr/bin/ffmpeg');
 		// ffmpeg_settings (quality conversion and aspect ratio definitions)
-		define('DEDALO_AV_FFMPEG_SETTINGS'			, DEDALO_CORE_PATH . '/media_engine/lib/ffmpeg_settings');
+		define('DEDALO_AV_FFMPEG_SETTINGS',			DEDALO_CORE_PATH . '/media_engine/lib/ffmpeg_settings');
 		// av_faststart_path normally /usr/bin/qt-faststart
-		define('DEDALO_AV_FASTSTART_PATH'			, '/usr/bin/qt-faststart');
+		define('DEDALO_AV_FASTSTART_PATH',			'/usr/bin/qt-faststart');
 		// av_ffprobe_path normally /usr/bin/ffprobe
-		define('DEDALO_AV_FFPROBE_PATH'				, '/usr/bin/ffprobe');
+		define('DEDALO_AV_FFPROBE_PATH',			'/usr/bin/ffprobe');
 		// av_streamer. Optional media streamer. Default is null
-		define('DEDALO_AV_STREAMER'					, null);
+		define('DEDALO_AV_STREAMER',				null);
 		// av_watermark_file
-		define('DEDALO_AV_WATERMARK_FILE'			, DEDALO_MEDIA_PATH .'/'. DEDALO_AV_FOLDER . '/watermark/watermark.png');
+		define('DEDALO_AV_WATERMARK_FILE',			DEDALO_MEDIA_PATH .'/'. DEDALO_AV_FOLDER . '/watermark/watermark.png');
 		// dedalo_subtitles_folder (tool_subtitles)
-		define('DEDALO_SUBTITLES_FOLDER'			, '/subtitles');
+		define('DEDALO_SUBTITLES_FOLDER',			'/subtitles');
 		// dedalo_av_subtitles_extension . Default is 'vtt'
-		define('DEDALO_AV_SUBTITLES_EXTENSION'		, 'vtt');
+		define('DEDALO_AV_SUBTITLES_EXTENSION',		'vtt');
 		// dedalo_av_recompress_all. On 1, all video files are re-compressed to 960k/s variable bit rate and keyframe every 75 frames
-		define('DEDALO_AV_RECOMPRESS_ALL'			, 1); // 1 re-compress all av files uploaded, 0 to only copy av files uploaded (default 0)
+		define('DEDALO_AV_RECOMPRESS_ALL',			1); // 1 re-compress all av files uploaded, 0 to only copy av files uploaded (default 0)
 
 
 	// image media
 		// image_folder. Default: '/image'
-		define('DEDALO_IMAGE_FOLDER'				, '/image');
+		define('DEDALO_IMAGE_FOLDER',				'/image');
 		// image_extension.  Default: 'jpg'
-		define('DEDALO_IMAGE_EXTENSION'				, 'jpg');
+		define('DEDALO_IMAGE_EXTENSION',			'jpg');
 		// image_mime_type. Default: 'image/jpeg'
-		define('DEDALO_IMAGE_MIME_TYPE'				, 'image/jpeg');
+		define('DEDALO_IMAGE_MIME_TYPE',			'image/jpeg');
 		// image_type. Default: 'jpeg'
-		define('DEDALO_IMAGE_TYPE'					, 'jpeg');
+		define('DEDALO_IMAGE_TYPE',					'jpeg');
 		// image_extensions_supported. Array default: ['jpg','jpeg','png','tif','tiff','bmp','psd','raw','webp','heic']
-		define('DEDALO_IMAGE_EXTENSIONS_SUPPORTED'	, ['jpg','jpeg','png','tif','tiff','bmp','psd','raw','webp','heic']);
+		define('DEDALO_IMAGE_EXTENSIONS_SUPPORTED', ['jpg','jpeg','png','tif','tiff','bmp','psd','raw','webp','heic']);
 		// image_quality_original. Default: 'original'
-		define('DEDALO_IMAGE_QUALITY_ORIGINAL'		, 'original');
+		define('DEDALO_IMAGE_QUALITY_ORIGINAL',		'original');
 		// image_quality_retouched of original. Default: 'modified' ('modificada' in old versions)
-		define('DEDALO_IMAGE_QUALITY_RETOUCHED'		, 'modified');
+		define('DEDALO_IMAGE_QUALITY_RETOUCHED',	'modified');
 		// quality default. Default: '1.5MB'
-		define('DEDALO_IMAGE_QUALITY_DEFAULT'		, '1.5MB');
+		define('DEDALO_IMAGE_QUALITY_DEFAULT',		'1.5MB');
 		// dedalo_image_thumb_default. Default: 'thumb')
-		define('DEDALO_IMAGE_THUMB_DEFAULT'			, 'thumb');
+		define('DEDALO_IMAGE_THUMB_DEFAULT',		'thumb');
 		// image_ar_quality. Array of image quality specifications like [DEDALO_IMAGE_QUALITY_ORIGINAL,DEDALO_IMAGE_QUALITY_DEFAULT,'<1MB',DEDALO_IMAGE_THUMB_DEFAULT]
-		define('DEDALO_IMAGE_AR_QUALITY'			, [DEDALO_IMAGE_QUALITY_ORIGINAL,DEDALO_IMAGE_QUALITY_RETOUCHED,'25MB','6MB','1.5MB',DEDALO_IMAGE_THUMB_DEFAULT]);
+		define('DEDALO_IMAGE_AR_QUALITY',			[DEDALO_IMAGE_QUALITY_ORIGINAL,DEDALO_IMAGE_QUALITY_RETOUCHED,'25MB','6MB','1.5MB',DEDALO_IMAGE_THUMB_DEFAULT]);
 		// image_print_dpi (default int 150. Used to calculate print size of images -tool_image_versions-)
-		define('DEDALO_IMAGE_PRINT_DPI'				, 150);
+		define('DEDALO_IMAGE_PRINT_DPI',			150);
 		// image_file_url
-		define('DEDALO_IMAGE_FILE_URL'				, DEDALO_CORE_URL . '/media_engine/img.php');
+		define('DEDALO_IMAGE_FILE_URL',				DEDALO_CORE_URL . '/media_engine/img.php');
 		// lib ImageMagick magick_path
-		define('MAGICK_PATH'						, '/usr/bin/'); 	# Like '/usr/bin/';
+		define('MAGICK_PATH',						'/usr/bin/'); 	# Like '/usr/bin/';
 		// color_profiles_path
-		define('COLOR_PROFILES_PATH'				, DEDALO_CORE_PATH . '/media_engine/lib/color_profiles_icc/');
+		define('COLOR_PROFILES_PATH',				DEDALO_CORE_PATH . '/media_engine/lib/color_profiles_icc/');
 		// thumbs dedalo_image_thumb sizes. Integer as pixels
-		define('DEDALO_IMAGE_THUMB_WIDTH'			, 222);	// int Default 102 | 222
-		define('DEDALO_IMAGE_THUMB_HEIGHT'			, 148);	// int Default 57 | 148
+		define('DEDALO_IMAGE_THUMB_WIDTH',			222);	// int Default 102 | 222
+		define('DEDALO_IMAGE_THUMB_HEIGHT',			148);	// int Default 57 | 148
 		// image_web_folder normally '/web' Used to save uploaded files from component_html_text
-		define('DEDALO_IMAGE_WEB_FOLDER'			, '/web');
+		define('DEDALO_IMAGE_WEB_FOLDER',			'/web');
 
 
 
 	// pdf media
 		// pdf_folder. Default '/pdf'
-		define('DEDALO_PDF_FOLDER'					, '/pdf');
+		define('DEDALO_PDF_FOLDER',					'/pdf');
 		// pdf_extension normally 'pdf'
-		define('DEDALO_PDF_EXTENSION'				, 'pdf');
+		define('DEDALO_PDF_EXTENSION',				'pdf');
 		// pdf_extensions_supported. Array default: ['pdf']
-		define('DEDALO_PDF_EXTENSIONS_SUPPORTED'	, ['pdf']);
+		define('DEDALO_PDF_EXTENSIONS_SUPPORTED',	['pdf']);
 		// pdf_mime_type. Default: 'application/pdf'
-		define('DEDALO_PDF_MIME_TYPE'				, 'application/pdf');
+		define('DEDALO_PDF_MIME_TYPE',				'application/pdf');
 		# pdf_type. Default: 'pdf'
-		define('DEDALO_PDF_TYPE'					, 'pdf');
+		define('DEDALO_PDF_TYPE',					'pdf');
 		// dedalo_pdf_quality_original. string default 'original'
-		define('DEDALO_PDF_QUALITY_ORIGINAL'		, 'original');
+		define('DEDALO_PDF_QUALITY_ORIGINAL',		'original');
 		// pdf_quality_default. Default: 'web'
-		define('DEDALO_PDF_QUALITY_DEFAULT'			, 'web');
+		define('DEDALO_PDF_QUALITY_DEFAULT',		'web');
 		// pdf_ar_quality. Array of PDF quality definitions
-		define('DEDALO_PDF_AR_QUALITY'				, [DEDALO_PDF_QUALITY_ORIGINAL, DEDALO_PDF_QUALITY_DEFAULT]);
+		define('DEDALO_PDF_AR_QUALITY',				[DEDALO_PDF_QUALITY_ORIGINAL, DEDALO_PDF_QUALITY_DEFAULT]);
 		// pdf_thumb_default Default: 'thumb'
-		define('DEDALO_PDF_THUMB_DEFAULT'			, 'thumb');
+		define('DEDALO_PDF_THUMB_DEFAULT',			'thumb');
 		// pdf_renderer (path of daemon pdf generator from html) Normally wkhtmltopdf (https://wkhtmltopdf.org) lib is used
-		define('DEDALO_PDF_RENDERER'				, '/usr/bin/wkhtmltopdf');
+		define('DEDALO_PDF_RENDERER',				'/usr/bin/wkhtmltopdf');
 		// automatic_transcription_engine (path of daemon generator of text files from PDF) Using XPDF from http://www.foolabs.com/xpdf/ or https://pdftotext.com
-		define('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE'	, '/usr/bin/pdftotext');
+		define('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE','/usr/bin/pdftotext');
 
 
 
 	// 3d media
 		// dedalo_3d_foler. string default '/3d'
-		define('DEDALO_3D_FOLDER'					, '/3d');
+		define('DEDALO_3D_FOLDER',					'/3d');
 		// dedalo_3d_extension. string default 'glb'
-		define('DEDALO_3D_EXTENSION'				, 'glb');
+		define('DEDALO_3D_EXTENSION',				'glb');
 		// dedalo_3d_extensions_supported. array default ['glb', 'gltf', 'obj', 'fbx', 'dae', 'zip']
-		define('DEDALO_3D_EXTENSIONS_SUPPORTED'		, ['glb', 'gltf', 'obj', 'fbx', 'dae', 'zip']);
+		define('DEDALO_3D_EXTENSIONS_SUPPORTED',	['glb', 'gltf', 'obj', 'fbx', 'dae', 'zip']);
 		// dedalo_3d_mime_type. string default 'model/gltf+json'
-		define('DEDALO_3D_MIME_TYPE'				, 'model/gltf-binary');
+		define('DEDALO_3D_MIME_TYPE',				'model/gltf-binary');
 		// dedalo_3d_quality_original. string default 'original'
-		define('DEDALO_3D_QUALITY_ORIGINAL'			, 'original');
+		define('DEDALO_3D_QUALITY_ORIGINAL',		'original');
 		// quality default normally 'web'
-		define('DEDALO_3D_QUALITY_DEFAULT'			, 'web');
+		define('DEDALO_3D_QUALITY_DEFAULT',			'web');
 		// Thumbs folders to store 1 render of the 3d file, used in list
-		define('DEDALO_3D_THUMB_DEFAULT', 			' thumb');
+		define('DEDALO_3D_THUMB_DEFAULT',			'thumb');
 		// quality folders array (sort desc quality)
-		define('DEDALO_3D_AR_QUALITY'				, [DEDALO_3D_QUALITY_ORIGINAL, DEDALO_3D_QUALITY_DEFAULT]);
+		define('DEDALO_3D_AR_QUALITY',				[DEDALO_3D_QUALITY_ORIGINAL, DEDALO_3D_QUALITY_DEFAULT]);
 		// dedalo_3d_gltfpack_path normally /usr/local/bin/gltfpack or /opt/gltfpack (converts and compresses .obj/.gltf to .glb/.gltf)
-		define('DEDALO_3D_GLTFPACK_PATH'			, '/usr/local/bin/gltfpack');
+		define('DEDALO_3D_GLTFPACK_PATH',			'/usr/local/bin/gltfpack');
 		// dedalo_3d_fbx2gltf_path normally /usr/local/bin/FBX2glTF or /opt/FBX2glTF (converts .fbx to .glb/.gltf)
-		define('DEDALO_3D_FBX2GLTF_PATH'			, '/usr/local/bin/FBX2glTF');
+		define('DEDALO_3D_FBX2GLTF_PATH',			'/usr/local/bin/FBX2glTF');
 		// dedalo_3d_collada2gltf_path normally /usr/local/bin/COLLADA2GLTF-bin or /opt/COLLADA2GLTF-bin (converts .dae to .glb/.gltf)
-		define('DEDALO_3D_COLLADA2GLTF_PATH'		, '/usr/local/bin/COLLADA2GLTF-bin');
+		define('DEDALO_3D_COLLADA2GLTF_PATH',		'/usr/local/bin/COLLADA2GLTF-bin');
 
 
 
 	// html_files
-		define('DEDALO_HTML_FILES_FOLDER'			, '/html_files');
-		define('DEDALO_HTML_FILES_EXTENSION'		, 'html');
+		define('DEDALO_HTML_FILES_FOLDER',			'/html_files');
+		define('DEDALO_HTML_FILES_EXTENSION',		'html');
 
 
 
 	// svg media
 		// svg_folder. Default: '/svg'
-		define('DEDALO_SVG_FOLDER'					, '/svg');
+		define('DEDALO_SVG_FOLDER',					'/svg');
 		// svg_extension normally 'svg'
-		define('DEDALO_SVG_EXTENSION'				, 'svg');
+		define('DEDALO_SVG_EXTENSION',				'svg');
 		// svg_extensions_supported. Default ['svg']
-		define('DEDALO_SVG_EXTENSIONS_SUPPORTED'	, ['svg']);
+		define('DEDALO_SVG_EXTENSIONS_SUPPORTED',	['svg']);
 		// svg_mime_type. Default 'image/svg+xml'
-		define('DEDALO_SVG_MIME_TYPE'				, 'image/svg+xml');
+		define('DEDALO_SVG_MIME_TYPE',				'image/svg+xml');
 		// svg_quality_original. Default 'original'
-		define('DEDALO_SVG_QUALITY_ORIGINAL'		, 'original');
+		define('DEDALO_SVG_QUALITY_ORIGINAL',		'original');
 		// svg_quality_default. Default 'web'
-		define('DEDALO_SVG_QUALITY_DEFAULT'			, 'web');
+		define('DEDALO_SVG_QUALITY_DEFAULT',		'web');
 		// svg_ar_quality
-		define('DEDALO_SVG_AR_QUALITY'				, [DEDALO_SVG_QUALITY_ORIGINAL, DEDALO_SVG_QUALITY_DEFAULT]);
+		define('DEDALO_SVG_AR_QUALITY',				[DEDALO_SVG_QUALITY_ORIGINAL, DEDALO_SVG_QUALITY_DEFAULT]);
 
 
 
 // upload config
 	// DEDALO_UPLOAD_TMP_DIR
 	// it defines the temporary directory to use to store the files uploaded, moved from php/tmp upload directory
-	define('DEDALO_UPLOAD_TMP_DIR', DEDALO_MEDIA_PATH . '/upload/service_upload/tmp');
-	define('DEDALO_UPLOAD_TMP_URL', DEDALO_MEDIA_URL . '/upload/service_upload/tmp');
+	define('DEDALO_UPLOAD_TMP_DIR',	DEDALO_MEDIA_PATH . '/upload/service_upload/tmp');
+	define('DEDALO_UPLOAD_TMP_URL',	DEDALO_MEDIA_URL  . '/upload/service_upload/tmp');
 	// DEDALO_UPLOAD_SERVICE_CHUNK_FILES
 	// split files into chunks before upload at max size defined
 	// values supported:
@@ -558,7 +558,7 @@
 	// api (publication). This definition is used in administration panels to auto-fill main vars
 	// Note that in the public server config file, you need to define again this values because
 	// the public API files could be place in another location/server as independent files
-	define('API_WEB_USER_CODE_MULTIPLE' , [
+	define('API_WEB_USER_CODE_MULTIPLE', [
 		[
 			'db_name'	=> '', // like web_my_entity
 			'code'		=> ''  // like asd38kjlkasd6gadsg2fasdoijQks
@@ -567,12 +567,12 @@
 
 
 // remote_structure_server_code
-	define('STRUCTURE_FROM_SERVER'		, true);
-	define('STRUCTURE_SERVER_CODE'		, 'x3a0B4Y020Eg9w');
-	define('STRUCTURE_SERVER_URL'		, 'https://master.render.es/dedalo/lib/dedalo/extras/str_manager/');
-	define('ONTOLOGY_DOWNLOAD_DIR'		, DEDALO_BACKUP_PATH_ONTOLOGY . '/download');
+	define('STRUCTURE_FROM_SERVER',			true);
+	define('STRUCTURE_SERVER_CODE', 		'x3a0B4Y020Eg9w');
+	define('STRUCTURE_SERVER_URL',			'https://master.render.es/dedalo/lib/dedalo/extras/str_manager/');
+	define('ONTOLOGY_DOWNLOAD_DIR',			DEDALO_BACKUP_PATH_ONTOLOGY . '/download');
 	// structure_download. When ontology is updated, download files are saved here
-	define('STRUCTURE_DOWNLOAD_JSON_FILE', DEDALO_BACKUP_PATH_ONTOLOGY);
+	define('STRUCTURE_DOWNLOAD_JSON_FILE',	DEDALO_BACKUP_PATH_ONTOLOGY);
 	// SERVER_PROXY Optional IP and port like 'XXX.XXX.XXX.XXX:3128'. Do not remove comment if its not necessary
 	// define('SERVER_PROXY', 				'XXX.XXX.XXX.XXX:3128');
 
