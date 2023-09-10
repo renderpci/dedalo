@@ -9,13 +9,13 @@
 
 
 /**
-* VIEW_TEXT_LIST_AV
+* VIEW_TEXT_LIST_3D
 * Manages the component's logic and appearance in client side
 */
-export const view_text_list_av = function() {
+export const view_text_list_3d = function() {
 
 	return true
-}//end  view_text_list_av
+}//end view_text_list_3d
 
 
 
@@ -26,7 +26,7 @@ export const view_text_list_av = function() {
 * @param object options
 * @return HTMLElement wrapper
 */
-view_text_list_av.render = async function(self, options) {
+view_text_list_3d.render = async function(self, options) {
 
 	// short vars
 		const data = self.data || {}
@@ -41,7 +41,7 @@ view_text_list_av.render = async function(self, options) {
 
 	// image
 		const image	= document.createElement('img')
-		image.className	= 'component_av media view_' + self.view
+		image.className	= 'component_3d media view_' + self.view
 		image.addEventListener('error', function(e) {
 			if (image.src!==page_globals.fallback_image) {
 				image.src = page_globals.fallback_image

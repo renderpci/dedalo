@@ -5,8 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
-	import {ui} from '../../common/js/ui.js'
 
 
 
@@ -30,21 +28,16 @@ export const view_text_list_publication = function() {
 */
 view_text_list_publication.render = async function(self, options) {
 
-	// Value as string
-		const data	= self.data || {}
-		const value	= data.value || []
+	/// short vars
+		const data			= self.data || {}
+		const value			= data.value || []
+		const value_string	= value.join(self.context.fields_separator)
 
-		const value_string = value.join(self.context.fields_separator)
-
-	// const text_node = document.createTextNode(value_string)
-	// div . Create a div instead text node to allow untranslated mark tags
-	const text_node = ui.create_dom_element({
-		element_type	: 'div',
-		inner_html		: value_string
-	})
+	const wrapper = document.createElement('span')
+	wrapper.insertAdjacentHTML('afterbegin', value_string)
 
 
-	return text_node
+	return wrapper
 }//end render
 
 

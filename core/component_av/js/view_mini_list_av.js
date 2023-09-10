@@ -24,7 +24,7 @@ export const view_mini_list_av = function() {
 /**
 * RENDER
 * Render node to be used by service autocomplete or any datalist
-* @return HTMLElement
+* @return HTMLElement wrapper
 */
 view_mini_list_av.render = async function(self) {
 
@@ -36,15 +36,19 @@ view_mini_list_av.render = async function(self) {
 
 	// url
 		const posterframe_url	= data.posterframe_url
-		const url				= posterframe_url // (!posterframe_url || posterframe_url.length===0) ? DEDALO_LIB_URL + "/themes/default/0.jpg" : posterframe_url
+		const url				= posterframe_url + '?t=' + (new Date()).getTime()
 
 	// image
-		ui.create_dom_element({
+		const image = ui.create_dom_element({
 			element_type	: 'img',
-			src				: url,
 			parent			: wrapper
 		})
-		// ui.component.add_image_fallback(image)
+		image.addEventListener('error', function(e) {
+			if (image.src!==page_globals.fallback_image) {
+				image.src = page_globals.fallback_image
+			}
+		})
+		image.src = url
 
 
 	return wrapper

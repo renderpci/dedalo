@@ -90,8 +90,8 @@ export const get_quality_selector = (self) => {
 		for (let i = 0; i < quality_list_len; i++) {
 			// create the node with the all qualities sent by server
 			const value = (typeof quality_list[i].file_url==='undefined')
-				? DEDALO_CORE_URL + '/themes/default/0.jpg'
-				: quality_list[i].file_url
+				? page_globals.fallback_image
+				: quality_list[i].file_url + '?t=' + (new Date()).getTime()
 
 			const select_option = ui.create_dom_element({
 				element_type	: 'option',

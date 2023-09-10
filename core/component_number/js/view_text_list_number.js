@@ -5,7 +5,6 @@
 
 
 // imports
-	import {ui} from '../../common/js/ui.js'
 
 
 
@@ -22,22 +21,24 @@ export const view_text_list_number = function() {
 
 /**
 * RENDER
-* Render node to be used by service autocomplete or any datalist
-* @return HTMLElement text_node
+* Render node as text. URL is return as text node
+* @param object self
+* @param object options
+* @return HTMLElement wrapper
 */
 view_text_list_number.render = async function(self, options) {
 
 	// short vars
-		const data = self.data
-
-	// Value as string
-		const value_string = (data.value)
+		const data			= self.data || {}
+		const value_string	= (data.value)
 			? data.value.join(self.context.fields_separator)
 			: ''
 
-	const text_node = document.createTextNode(value_string)
+	const wrapper = document.createElement('span')
+	wrapper.insertAdjacentHTML('afterbegin', value_string)
 
-	return text_node
+
+	return wrapper
 }//end render
 
 

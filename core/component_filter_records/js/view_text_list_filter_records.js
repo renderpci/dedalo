@@ -5,7 +5,6 @@
 
 
 // imports
-	import {ui} from '../../common/js/ui.js'
 
 
 
@@ -22,29 +21,27 @@ export const view_text_list_filter_records = function() {
 
 /**
 * RENDER
-* Render node to be used in current mode
-* @return HTMLElement text_node
+* Render node as text. URL is return as text node
+* @param object self
+* @param object options
+* @return HTMLElement wrapper
 */
 view_text_list_filter_records.render = async function(self, options) {
 
 	// short vars
-		const data	= self.data
-		const value	= data.value || []
-
-	// string_values
+		const data			= self.data
+		const value			= data.value || []
 		const value_flat	= value.flat() // remove first level
 		const string_values	= value_flat.map((el)=>{
 			return JSON.stringify(el)
 		})
+		const value_string	= string_values.join('\n')
 
-	// Value as string
-		const value_string = string_values.join('\n')
-
-	// Set value
-		const text_node = document.createTextNode(value_string)
+	const wrapper = document.createElement('span')
+	wrapper.insertAdjacentHTML('afterbegin', value_string)
 
 
-	return text_node
+	return wrapper
 }//end render
 
 

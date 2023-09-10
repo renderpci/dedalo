@@ -26,9 +26,7 @@ export const view_mini_list_3d = function() {
 * Render node to be used in this view
 * @return HTMLElement wrapper
 */
-view_mini_list_3d.render = async function() {
-
-	const self = this
+view_mini_list_3d.render = async function(self, options) {
 
 	// short vars
 		const data = self.data || {}
@@ -36,21 +34,25 @@ view_mini_list_3d.render = async function() {
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self)
 
-	// url
-		const posterframe_url	= data.posterframe_url || ''
-		const url				= posterframe_url // (!posterframe_url || posterframe_url.length===0) ? DEDALO_LIB_URL + "/themes/default/0.jpg" : posterframe_url
+	// posterframe_url
+		const posterframe_url = data.posterframe_url || page_globals.fallback_image
 
 	// image
-		ui.create_dom_element({
+		const image = ui.create_dom_element({
 			element_type	: 'img',
-			src				: url,
 			parent			: wrapper
 		})
-		// ui.component.add_image_fallback(image)
+		image.addEventListener('error', function(e) {
+			if (image.src!==page_globals.fallback_image) {
+				image.src = page_globals.fallback_image
+			}
+		})
+		image.src = posterframe_url
 
 
 	return wrapper
 }//end render
+
 
 
 // @license-end

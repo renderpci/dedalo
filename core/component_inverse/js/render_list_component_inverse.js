@@ -7,6 +7,8 @@
 // imports
 	import {view_default_list_inverse} from './view_default_list_inverse.js'
 	import {view_mini_inverse} from './view_mini_inverse.js'
+	import {view_text_inverse} from './view_text_inverse.js'
+
 
 
 /**
@@ -37,13 +39,13 @@ render_list_component_inverse.prototype.list = async function(options) {
 		case 'mini':
 			return view_mini_inverse.render(self, options)
 
+		case 'text':
+			return view_text_inverse.render(self, options)
+
 		case 'default':
 		default:
 			return view_default_list_inverse.render(self, options)
 	}
-
-
-	return null
 }//end list
 
 

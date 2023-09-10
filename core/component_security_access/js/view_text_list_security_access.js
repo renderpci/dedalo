@@ -24,20 +24,21 @@ export const view_text_list_security_access = function() {
 
 /**
 * RENDER
-* Output component value to use as raw text
-* @return HTMLElement text_node
+* Render node as text. URL is return as text node
+* @param object self
+* @param object options
+* @return HTMLElement wrapper
 */
 view_text_list_security_access.render = async function(self, options) {
-
-	// short vars
-		// const data = self.data
 
 	// Value as string
 		const value_string = 'View text unavailable'
 
-	const text_node = document.createTextNode(value_string)
+	const wrapper = document.createElement('span')
+	wrapper.insertAdjacentHTML('afterbegin', value_string)
 
-	return text_node
+
+	return wrapper
 }//end render
 
 

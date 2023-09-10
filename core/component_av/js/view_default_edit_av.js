@@ -128,15 +128,22 @@ const get_content_value = (i, current_value, self) => {
 		const posterframe		= ui.create_dom_element({
 			element_type	: 'img',
 			class_name		: 'posterframe',
-			src				: posterframe_url,
+
 			parent			: content_value
 		})
+		posterframe.addEventListener('error', function(e) {
+			if (posterframe.src!==page_globals.fallback_image) {
+				posterframe.src = page_globals.fallback_image
+			}
+		})
+		posterframe.src = posterframe_url
+
 		// image background color
-		posterframe.addEventListener('load', set_bg_color, false)
-		function set_bg_color() {
-			this.removeEventListener('load', set_bg_color, false)
-			ui.set_background_image(this, content_value)
-		}
+			// posterframe.addEventListener('load', set_bg_color, false)
+			// function set_bg_color() {
+			// 	this.removeEventListener('load', set_bg_color, false)
+			// 	ui.set_background_image(this, content_value)
+			// }
 
 	// view_print case. No video is generated
 		if (self.view==='print') {
@@ -296,7 +303,9 @@ const get_quality_selector = (content_value, self) => {
 			// self.video.src = src
 			video.src = src
 			// event_manager.publish('image_quality_change_'+self.id, img_src)
-			console.log("src:",src);
+			if(SHOW_DEBUG===true) {
+				console.log("src:", src);
+			}
 		})
 
 		const quality_list		= datalist.filter(el => el.file_exist===true)

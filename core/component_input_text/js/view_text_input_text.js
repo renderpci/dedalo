@@ -22,11 +22,12 @@ export const view_text_input_text = function() {
 
 /**
 * RENDER
-* Creates a text node with the string value
-* Output component value to use as raw text
-* @return DOM text node text_node
+* Render node as text. URL is return as text node
+* @param object self
+* @param object options
+* @return HTMLElement wrapper
 */
-view_text_input_text.render = async function(self) {
+view_text_input_text.render = async function(self, options) {
 
 	// short vars
 		const data				= self.data
@@ -35,8 +36,9 @@ view_text_input_text.render = async function(self) {
 		const fallback			= get_fallback_value(value, fallback_value)
 		const value_string		= fallback.join(self.context.fields_separator)
 
-		const wrapper = document.createElement('span')
-		wrapper.insertAdjacentHTML('afterbegin', value_string)
+	const wrapper = document.createElement('span')
+	wrapper.insertAdjacentHTML('afterbegin', value_string)
+
 
 	return wrapper
 }//end get_text

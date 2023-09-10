@@ -47,22 +47,29 @@ view_viewer_edit_av.render = async function(self, options) {
 		const quality		= page_globals.dedalo_av_quality_default // '404'
 		const url_object	= datalist.filter(item => item.quality===quality)[0]
 		const url			= (typeof url_object==='undefined')
-			? DEDALO_CORE_URL + '/themes/default/0.jpg'
-			: url_object.file_url
+			? page_globals.fallback_image
+			: url_object.file_url + '?t=' + (new Date()).getTime()
 
 	// wrapper background color from posterframe image
 		const posterframe_url = self.data.posterframe_url
 			? self.data.posterframe_url + '?t=' + (new Date()).getTime()
 			: page_globals.fallback_image
 		const image = ui.create_dom_element({
-			element_type	: 'img',
-			src				: posterframe_url
+			element_type : 'img'
 		})
-		image.addEventListener('load', set_bg_color, false)
-		function set_bg_color() {
-			this.removeEventListener('load', set_bg_color, false)
-			ui.set_background_image(this, wrapper)
-		}
+		image.addEventListener('error', function(e) {
+			if (image.src!==page_globals.fallback_image) {
+				image.src = page_globals.fallback_image
+			}
+		})
+		image.src = posterframe_url
+
+		// background color
+			// image.addEventListener('load', set_bg_color, false)
+			// function set_bg_color() {
+			// 	this.removeEventListener('load', set_bg_color, false)
+			// 	ui.set_background_image(this, wrapper)
+			// }
 
 	// fragment. if url params contains tc_in, set a fragment
 		const url_vars = url_vars_to_object(window.location.search)

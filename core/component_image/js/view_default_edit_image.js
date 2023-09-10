@@ -282,14 +282,14 @@ const render_image_node = function(self, file_info, content_value) {
 
 	// render de image in Dédalo media
 		let url = file_info && file_info.file_url
-			? file_info.file_url
-			: null // DEDALO_CORE_URL + '/themes/default/0.jpg'
+			? file_info.file_url + '?t=' + (new Date()).getTime()
+			: null
 
 		// fallback to default (when not already in default)
 		if (!url && quality!==self.context.features.default_quality) {
 			const file_info_dq	= datalist.find(el => el.quality===self.context.features.default_quality && el.file_exist===true)
 			url = file_info_dq
-				? file_info_dq.file_url
+				? file_info_dq.file_url + '?t=' + (new Date()).getTime()
 				: null
 			if (url) {
 				// change the quality
@@ -298,24 +298,24 @@ const render_image_node = function(self, file_info, content_value) {
 		}
 
 	// image. (!) Only to get background color and apply to li node
-		const bg_reference_image_url = url || page_globals.fallback_image
-		if (bg_reference_image_url) {
-			const image = ui.create_dom_element({
-				element_type	: 'img',
-				class_name 		: 'hide'
-			})
-			// image background color
-			image.addEventListener('load', set_bg_color, false)
-			function set_bg_color() {
-				this.removeEventListener('load', set_bg_color, false)
-				ui.set_background_image(this, content_value)
-				image.classList.remove('hide')
-			}
-			// image.addEventListener('error', function(){
-			// 	console.warn('Error on load image:', bg_reference_image_url, image);
-			// }, false)
-			image.src = bg_reference_image_url
-		}
+		// const bg_reference_image_url = url || page_globals.fallback_image
+		// if (bg_reference_image_url) {
+		// 	const image = ui.create_dom_element({
+		// 		element_type	: 'img',
+		// 		class_name 		: 'hide'
+		// 	})
+		// 	// image background color
+		// 	image.addEventListener('load', set_bg_color, false)
+		// 	function set_bg_color() {
+		// 		this.removeEventListener('load', set_bg_color, false)
+		// 		ui.set_background_image(this, content_value)
+		// 		image.classList.remove('hide')
+		// 	}
+		// 	// image.addEventListener('error', function(){
+		// 	// 	console.warn('Error on load image:', bg_reference_image_url, image);
+		// 	// }, false)
+		// 	image.src = bg_reference_image_url
+		// }
 
 	// object_node <object type="image/svg+xml" data="image.svg"></object>
 		const object_node = ui.create_dom_element({

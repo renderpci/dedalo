@@ -5,8 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
-	import {ui} from '../../common/js/ui.js'
 
 
 
@@ -32,9 +30,11 @@ view_text_list_password.render = async function(self, options) {
 	// Value as string
 		const value_string = '****************'
 
-	const text_node = document.createTextNode(value_string)
+	const wrapper = document.createElement('span')
+	wrapper.insertAdjacentHTML('afterbegin', value_string)
 
-	return text_node
+
+	return wrapper
 }//end render
 
 

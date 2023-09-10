@@ -16,22 +16,24 @@ export const view_text_list_email = function() {
 
 
 /**
-* REDNER
-* Output component value to use as raw text
-* @return DOM textNode text_node
+* RENDER
+* Render node as text. URL is return as text node
+* @param object self
+* @param object options
+* @return HTMLElement wrapper
 */
 view_text_list_email.render = async function(self, options) {
 
 	// short vars
-		const data	= self.data || {}
-		const value	= data.value || []
+		const data			= self.data || {}
+		const value			= data.value || []
+		const value_string	= value.join(self.context.fields_separator)
 
-	// Value as string
-		const value_string = value.join(self.context.fields_separator)
+	const wrapper = document.createElement('span')
+	wrapper.insertAdjacentHTML('afterbegin', value_string)
 
-		const text_node = document.createTextNode(value_string)
 
-	return text_node
+	return wrapper
 }//end render
 
 

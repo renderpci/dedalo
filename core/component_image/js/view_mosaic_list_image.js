@@ -75,7 +75,7 @@ const get_content_data = function(self) {
 
 		const datalist_item	= datalist.find(item => item.quality===quality)
 		const url = (typeof datalist_item==="undefined")
-			? DEDALO_CORE_URL + '/themes/default/0.jpg'
+			? page_globals.fallback_image
 			: datalist_item.file_url + '?t=' + (new Date()).getTime()
 
 	// image
@@ -95,12 +95,12 @@ const get_content_data = function(self) {
 		}
 
 	// image background color
-		image.addEventListener('load', set_bg_color, false)
-		function set_bg_color() {
-			this.removeEventListener('load', set_bg_color, false)
-			ui.set_background_image(this, content_data)
-			image.classList.remove('hidden')
-		}
+		// image.addEventListener('load', set_bg_color, false)
+		// function set_bg_color() {
+		// 	this.removeEventListener('load', set_bg_color, false)
+		// 	ui.set_background_image(this, content_data)
+		// 	image.classList.remove('hidden')
+		// }
 
 	// set source url
 		image.src = url
