@@ -983,6 +983,8 @@ export const ts_object = new function() {
 						"edit_window",
 						'menubar=no,location=yes,resizable=yes,scrollbars=yes,status=yes'
 					);
+					ts_object.edit_window .resizeTo(1280, 905); // needed for Firefox
+					ts_object.edit_window .focus()
 
 				// refresh caller window on blur the opened window
 					ts_object.edit_window.addEventListener("blur", function(){
