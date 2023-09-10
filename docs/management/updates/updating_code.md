@@ -25,9 +25,9 @@ Update Dédalo code will need a control by IT team. The update is automatic but 
     Login as root user and go to Maintenance panel, it is located into:
     > System administration -> Maintenance
 
-   1. **Optional** make a backup of the database
+    1. **Optional** make a backup of the database
 
-         Is highly recommended to create a backup before update Dédalo code. You can follow [this guide](../backup.md#backup-the-work-system) to create a backup of the database
+        Is highly recommended to create a backup before update Dédalo code. You can follow [this guide](../backup.md#backup-the-work-system) to create a backup of the database
 
 3. Locate "Update code" control panel"
 
@@ -39,12 +39,12 @@ Update Dédalo code will need a control by IT team. The update is automatic but 
 
 4. Check the changes into sample.config files
 
-   Some code updates can change the config necessities and is necessary to add or remove manually. It will indicate into the "Check config" control panel.
+    Some code updates can change the config necessities and is necessary to add or remove manually. It will indicate into the "Check config" control panel.
 
-   If you config need to be updated, open the sample.config and your equivalent config file that was indicated and add the new variable/s.
+    If you config need to be updated, open the sample.config and your equivalent config file that was indicated and add the new variable/s.
 
 5. Open the access to work system.
 
-   Revert the maintenance status to `false`
+    Revert the maintenance status to `false`
 
 6. Logout and re-login with a normal user.

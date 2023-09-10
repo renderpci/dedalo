@@ -74,16 +74,16 @@ Before preform any critical maintenance task as a data update you will change DÃ
 Previous task is common in multiple scenarios.
 
 - [Backup](backup_best_practises.md)
-  - [backup and restore tasks](backup.md)
-  
+    - [backup and restore tasks](backup.md)
+
 - [Updates](updates/updates.md)
-  - [Updating ontology](updates/updating_ontology.md)
-  - [Updating code](updates/updating_code.md)
-  - [Updating data](updates/updating_data.md)
-  
+    - [Updating ontology](updates/updating_ontology.md)
+    - [Updating code](updates/updating_code.md)
+    - [Updating data](updates/updating_data.md)
+
 - Installing new hierarchies
-  
+
 - DDBB maintenance
-  - Vacuum
-  - reindexes
-  - counters
+    - Vacuum
+    - reindexes
+    - counters
