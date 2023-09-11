@@ -76,7 +76,7 @@ Previous task is common in multiple scenarios.
 - [Backup](backup_best_practises.md)
     - [backup and restore tasks](backup.md)
 
-- [Updates](updates/updates.md)
+- [Updates](updates/index.md)
     - [Updating ontology](updates/updating_ontology.md)
     - [Updating code](updates/updating_code.md)
     - [Updating data](updates/updating_data.md)

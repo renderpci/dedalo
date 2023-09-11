@@ -204,7 +204,7 @@ Then, install Dédalo manually, commands are for Ubuntu 22.04 (only as reference
       ```
 
 5. Configuration.
-   Before changing the config files you will need copy/rename the sample config files removing the word "sample", you can rename or copy this files. Please read the [configuration](../config/configuration.md) documentation for further explanation on this.
+   Before changing the config files you will need copy/rename the sample config files removing the word "sample", you can rename or copy this files. Please read the [configuration](../config/index.md) documentation for further explanation on this.
 
    1. Rename `sample.config.php` to `config.php`.
 
