@@ -40,22 +40,22 @@ async function fn_change_search_element(instance) {
 			mode : 'list',
 			view : 'default'
 		},
-		// {
-		// 	mode : 'list',
-		// 	view : 'line'
-		// },
-		// {
-		// 	mode : 'list',
-		// 	view : 'mini'
-		// },
+		{
+			mode : 'list',
+			view : 'line'
+		},
+		{
+			mode : 'list',
+			view : 'mini'
+		},
 		{
 			mode : 'list',
 			view : 'text'
 		},
-		// {
-		// 	mode : 'edit',
-		// 	view : 'line'
-		// },
+		{
+			mode : 'edit',
+			view : 'line'
+		},
 		{
 			mode : 'search',
 			view : 'default'
