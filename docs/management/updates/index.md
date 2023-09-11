@@ -18,7 +18,7 @@ Dédalo has services dependencies as PostgreSQL or FFmpeg, by default last Déda
 
 For example: Dédalo v6 in 2023 is compatible with PostgreSQL v15 and v14, PHP 8.2 and 8.1, etc. but it's not tested and could be not compatible with PostgreSQL v13 of PHP 8.0.
 
-Is highly recommended to update server services to last stable versions. You can see the version dependence compatibility in our [readme file](../../../Readme.md#4-dependencies).
+Is highly recommended to update server services to last stable versions. You can see the version dependence compatibility in our [readme file](https://github.com/renderpci/dedalo/blob/master/Readme.md#4-dependencies).
 
 ### Dédalo tasks
 
