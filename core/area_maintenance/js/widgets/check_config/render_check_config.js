@@ -83,7 +83,7 @@ const get_content_data_edit = async function(self) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: '',
-			inner_html		: 'Check your config file to find errors.',
+			inner_html		: 'Checks your configuration files for errors.',
 			parent			: content_data
 		})
 
@@ -92,7 +92,7 @@ const get_content_data_edit = async function(self) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'missing_total ' + missing_class,
-			inner_html		: 'Non defined config constants total: <b>' + ar_missing.length + '</b> of ' + constants_list.length,
+			inner_html		: `Non defined config constants total: <strong>${ar_missing.length}</strong> of ${constants_list.length}`,
 			parent			: content_data
 		})
 
