@@ -3,7 +3,7 @@
 	--md-primary-fg-color: #f78a1c;
 	--md-primary-bg-color: #ffffff;
 	--md-accent-fg-color: #e27d19;
-
+	--md-mermaid-node-bg-color: #dedede1a;
 }
 
 [data-md-toggle=search]:checked~.md-header .md-search__form {

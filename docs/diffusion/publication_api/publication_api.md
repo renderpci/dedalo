@@ -1438,8 +1438,6 @@ The accepted values of the parameter are: first_parent || last_parent. The defau
 flowchart TD
 
     %% Colors %%
-
-    classDef default fill:#eeeeee,stroke:#000,stroke-width:0;
     classDef orange fill:#FFAB70,stroke:#000,color:#000
 
     A(Thematic) --> B
@@ -1459,8 +1457,6 @@ But a search for the "Agriculture" with "first_parent" property, you will get on
 flowchart TD
 
     %% Colors %%
-
-    classDef default fill:#eeeeee,stroke:#000,stroke-width:0;
     classDef orange fill:#FFAB70,stroke:#000,color:#000
 
     A(Types of work) --> B(Agriculture):::orange
@@ -1761,8 +1757,6 @@ Example: Take account this hierarchy nodes.
 flowchart TD
 
     %% Colors %%
-
-    classDef default fill:#eeeeee,stroke:#000,stroke-width:0;
     classDef orange fill:#FFAB70,stroke:#000,color:#000
 
     A(Social anthropology : aa1_1) --> B(Works : aa1_4):::orange
@@ -1953,8 +1947,6 @@ Example: Take account this hierarchy nodes.
 flowchart TD
 
     %% Colors %%
-
-    classDef default fill:#eeeeee,stroke:#000,stroke-width:0;
     classDef orange fill:#FFAB70,stroke:#000,color:#000
 
     A(Social anthropology : aa1_1) --> B(Works : aa1_4)
