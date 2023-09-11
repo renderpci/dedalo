@@ -1,4 +1,4 @@
-<img src="https://dedalo.dev/tpl/assets/img/logos/logo_dedalo.svg" alt="Dédalo logo" />
+<img height="400" src="https://dedalo.dev/tpl/assets/img/logos/logo_dedalo.svg" alt="Dédalo logo" />
 
 **ATENTION! The `v6` is in release candidate state. Do NOT use it in production.**
 
