@@ -1578,6 +1578,7 @@ class component_relation_common extends component_common {
 	* the result will be the result of the search to the external section and component
 	* and the combination with the dato of the component (portal, autocomplete, select, etc) (that save the result for user manipulation, order, etc)
 	* @see used by component_autocomplete and component_portal
+	* @param object options
 	* @return bool
 	*/
 	public function set_dato_external(object $options) : bool {
@@ -1811,7 +1812,10 @@ class component_relation_common extends component_common {
 				if ($total_ar_dato!==$total_ar_result) {
 					$changed = false; // avoid expensive save
 					$this->set_dato($ar_result);
-					debug_log(__METHOD__." Saving big result with different data (dato:$total_ar_dato - result:$total_ar_result) ".to_string(), logger::DEBUG);
+					debug_log(__METHOD__
+						." Saving big result with different data (dato:$total_ar_dato - result:$total_ar_result) "
+						, logger::DEBUG
+					);
 				}
 			}else{
 				// preserve order
@@ -1869,20 +1873,20 @@ class component_relation_common extends component_common {
 				// current_locator check
 					if (!isset($current_locator)) {
 						debug_log(__METHOD__
-							. " Error. current_locator is not set " . PHP_EOL
+							. " Warning. current_locator is not exists. If you are deleting, is normal " . PHP_EOL
 							. ' options: ' . to_string($options) . PHP_EOL
 							. ' section_tipo: ' . $this->section_tipo . PHP_EOL
 							. ' section_id: ' . $this->section_id . PHP_EOL
 							. ' model: ' .get_class($this) . PHP_EOL
 							. ' label: ' . RecordObj_dd::get_termino_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true) . PHP_EOL
 							. ' dato: ' . to_string($dato)
-							, logger::ERROR
+							, logger::WARNING
 						);
 					}
 
 					// if the current section_id is the same of the current instance update the dato of the current
 					// else update the dato of the other instances (references with the same dato)
-					if($current_locator->section_id==$this->section_id){
+					if(isset($current_locator) && $current_locator->section_id==$this->section_id){
 						$this->set_dato($dato);
 					}
 				// }//end foreach ($new_relation_locators as $current_locator)
