@@ -2991,6 +2991,8 @@ abstract class component_common extends common {
 				foreach ($current_query_object as $operator => $ar_elements) {
 					foreach ($ar_elements as $c_query_object) {
 						// update all resolved query objects
+						// Note that object $c_query_object is changed by the component, it not new object,
+						// it's the same object but with the component additions
 						$c_query_object = $called_class::resolve_query_object_sql($c_query_object);
 					}
 				}

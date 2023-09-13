@@ -1186,8 +1186,16 @@ class component_image extends component_media_common {
 					 $this->quality===$this->get_default_quality()
 					 ) {
 
-					$svg_string_node		= $this->create_default_svg_string_node();
-					$create_svg_file_result	= $this->create_svg_file($svg_string_node);
+					$svg_string_node = $this->create_default_svg_string_node();
+					if (empty($svg_string_node)) {
+						debug_log(__METHOD__
+							." Unable to create svg string " . PHP_EOL
+							.' quality: '.to_string($this->quality)
+							, logger::ERROR
+						);
+					}else{
+						$create_svg_file_result	= $this->create_svg_file($svg_string_node);
+					}
 				}
 
 			// add data with the file uploaded, only for original and retouched images, other quality images don't has relevant info.
