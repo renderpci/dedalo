@@ -3128,8 +3128,9 @@ abstract class component_common extends common {
 			}else{
 
 				// all others
-
-				$operator_between = '$and'; // only when is string
+				$operator_between = ($model==='component_input_text' || $model==='component_text_area')
+					? '$and' // Like 'Pepe García'
+					: '$or'; // like '2008 2009'
 
 				// \S?"([^\"]+)"|\S?'([^\']+)'|[^\s]+
 				$pattern = '/\S?"([^\"]+)"|\S?\'([^\\\']+)\'|[^\s]+/iu';
