@@ -98,6 +98,15 @@ class security {
 				return 1;
 			}
 
+		// maintenance area is only accessible by root, global admin or developer,
+			if ($tipo===DEDALO_AREA_MAINTENANCE_TIPO) {
+				$is_global_admin	= security::is_global_admin($user_id);
+				$is_developer		= security::is_developer($user_id);
+				if ($is_global_admin===false && $is_developer===false) {
+					return 0;
+				}
+			}
+
 		// permissions_table
 			$permissions_table = security::get_permissions_table();
 
