@@ -1494,6 +1494,9 @@ class component_date extends component_common {
 				// WHERE rs167.section_tipo='rsc205'
 				// LIMIT 10;
 
+		// trim_section_tipo. Trim section name as search do to get safe name
+			$trim_section_tipo = search::trim_tipo($section_tipo);
+
 		// self path
 			$path = [
 				// self component path
@@ -1502,9 +1505,7 @@ class component_date extends component_common {
 					'model'				=> RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true),
 					'name'				=> RecordObj_dd::get_termino_by_tipo($component_tipo),
 					'section_tipo'		=> $section_tipo,
-					// 'column'			=> "jsonb_path_query(datos, 'strict $.components.{$component_tipo}.dato.\"lg-nolan\"[0].start.time', silent => true)"
-					// 'column'			=> "jsonb_path_query(datos, '$.components.{$component_tipo}.dato.\"lg-nolan\"[0].start.time')"
-					'column'			=> "jsonb_path_query_first({$section_tipo}.datos, 'strict $.components.{$component_tipo}.dato.\"lg-nolan\"[0].start.time', silent => true)"
+					'column'			=> "jsonb_path_query_first({$trim_section_tipo}.datos, 'strict $.components.{$component_tipo}.dato.\"lg-nolan\"[0].start.time', silent => true)"
 				]
 			];
 
