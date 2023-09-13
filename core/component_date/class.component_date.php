@@ -602,7 +602,7 @@ class component_date extends component_common {
 
 				// Note that here the order is inverse: YY-MM-DD (in component is DD-MM-YY)
 				#preg_match("/^(>=|<=|>|<)?([0-9]{1,10})(-(1[0-2]|[1-9]))?(-(3[01]|[12][0-9]|[1-9]))?$/", $query_object->q, $matches);
-				preg_match("/^(\W{1,2})?([0-9]{1,10})-?([0-9]{1,2})?-?([0-9]{1,2})?$/", $query_object->q, $matches);
+				preg_match("/^(\W{1,2})?([0-9]{1,10})-?([0-9]{1,2})?-?([0-9]{1,2})?$/", trim($query_object->q), $matches);
 				if (isset($matches[0])) {
 
 					$key_op		= 1;
