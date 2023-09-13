@@ -75,7 +75,7 @@ counters_status.prototype.modify_counter = async function(options) {
 		const api_response = await data_manager.request({
 			use_worker	: true,
 			body		: {
-				dd_api	: 'dd_utils_api',
+				dd_api	: 'dd_area_maintenance_api',
 				action	: 'modify_counter',
 				options	: {
 					section_tipo	: section_tipo,
