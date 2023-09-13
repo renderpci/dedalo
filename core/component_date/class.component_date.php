@@ -637,10 +637,10 @@ class component_date extends component_common {
 
 					$query_object->operator = '=';
 					$query_object->q_parsed	= "'INVALID VALUE!'";
+
 					return $query_object;
 				}
 			}
-
 		// short vars
 			$q_operator						= isset($query_object->q_operator) ? $query_object->q_operator : null;
 			$operator						= !empty($q_operator) ? trim($q_operator) : '=';
