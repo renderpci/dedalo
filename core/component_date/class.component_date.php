@@ -585,10 +585,7 @@ class component_date extends component_common {
 	* @param object $request_query_object
 	* @return object $query_object
 	*/
-	public static function resolve_query_object_sql(object $request_query_object) : object {
-
-		// query_object clone to prevent unwanted changes in the original object
-			$query_object = clone $request_query_object;
+	public static function resolve_query_object_sql(object $query_object) : object {
 
 		// q array safe. Note that $query_object->q v6 is array (before was string) but only one element is expected. So select the first one
 			$query_object->q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
