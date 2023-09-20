@@ -391,6 +391,7 @@ class tool_export extends tool_common {
 						$new_ddo->set_label($child_ddo->name);
 					// add ddo
 					$sub_ddo_map[] = $new_ddo;
+					$column_obj->id = $column_obj->id.'_'.$child_ddo->section_tipo.'_'.$child_ddo->component_tipo;
 				}
 
 				// if the component has sub_ddo, create the request_config to be injected to component
