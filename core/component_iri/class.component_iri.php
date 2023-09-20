@@ -216,15 +216,22 @@ class component_iri extends component_common {
 					? $properties->records_separator
 					: ' | ');
 
-		// dato
-			$dato		= $this->get_dato();
-			$ar_values	= empty($dato)
-				? null
-				: array_map(function($el){
+		// ar_values
+			$ar_values	= [];
+			$data		= $this->get_dato();
+			if (!empty($data)) {
+				foreach ($data as $current_value) {
+						dump($current_value, ' current_value ++ '.to_string());
 
-					$current_value = json_encode($el);
-					return $el;
-				  }, $dato);
+					$current_iri	= $current_value->iri ?? '';
+					$current_title	= $current_value->title ?? '';
+
+					$ar_values[] = $current_title . $fields_separator . $current_iri;
+				}
+			}
+
+		// flat_value (array of one value full resolved)
+			$flat_value = [implode($records_separator, $ar_values)];
 
 		// value
 			$value = new dd_grid_cell_object();
@@ -237,11 +244,36 @@ class component_iri extends component_common {
 				}
 				$value->set_fields_separator($fields_separator);
 				$value->set_records_separator($records_separator);
-				$value->set_value($ar_values);
+				$value->set_value($flat_value);
+				$value->set_data($data);
 
 
 		return $value;
 	}//end get_grid_value
+
+
+
+	/**
+	* GET_GRID_FLAT_VALUE
+	* Get the flat value of the components (text version of data).
+	* overwrite in every different specific component
+	* @return dd_grid_cell_object $flat_value
+	* 	dd_grid_cell_object
+	*/
+	public function get_grid_flat_value() : dd_grid_cell_object {
+
+		$flat_value = parent::get_grid_flat_value();
+
+		// overwrite cell_type (custom case)
+		$flat_value->set_cell_type('iri');
+
+		// add data (custom case)
+		$data = $this->get_dato();
+		$flat_value->set_data($data);
+
+
+		return $flat_value;
+	}//end get_grid_flat_value
 
 
 
@@ -628,8 +660,8 @@ class component_iri extends component_common {
 				$response->msg		= 'Error. Request failed';
 
 
-		// $normalize_value function to be used in any case, $import_value is an array of objects (IRI format) or array of strings or string
-		// values need to be begin with the protocol HTTP or https
+		// $normalize_value function to be used in any case, $import_value is an array of objects (IRI format)
+		// or array of strings or string values needed to begin with the protocol HTTP or HTTPS
 			$normalize_value = function(string $text_value) : bool {
 
 				$begins_http	= substr($text_value, 0, 7);
@@ -650,9 +682,9 @@ class component_iri extends component_common {
 			if(json_handler::is_json($import_value)){
 
 				// try to JSON decode (null on not decode)
-				$dato_from_json	= json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
+				$dato_from_json	= json_handler::decode($import_value);
 
-				// the import support array of objects (default, iri data) of array of strings as:
+				// the importer support array of objects (default, iri data) of array of strings as:
 				// [{"iri":"https://dedalo.dev","title":"Dedalo webpage"},{"iri":"https://dedalo.dev/docs","title":"Dedalo documentation"}]
 				// ["https://dedalo.dev","https://dedalo.dev/docs"]
 				if(is_array($dato_from_json)){
@@ -727,12 +759,19 @@ class component_iri extends component_common {
 							$value[] = $data_iri;
 						}
 					}
+
+					$response->result	= $value ?? null;
+					$response->msg		= 'OK';
+
+					return $response;
+
+				}else{
+
+					$response->result	= null;
+					$response->msg		= 'Error. Expected array and get: '.gettype($dato_from_json);
+
+					return $response;
 				}
-
-				$response->result	= $value ?? null;
-				$response->msg		= 'OK';
-
-				return $response;
 			}
 
 	// string case

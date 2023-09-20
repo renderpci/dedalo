@@ -135,6 +135,8 @@ class dd_grid_cell_object {
 	public $value;
 	// array fallback_value. array of strings - when a component doesn't has value in the current lang, use the fallback_value with one value in other languages
 	public $fallback_value;
+	// array data. component raw data in current lang. optional (!). See COMPONENT_IRI case
+	public $data;
 
 	// render_label
 	public $render_label;
@@ -165,22 +167,22 @@ class dd_grid_cell_object {
 
 	/**
 	* __CONSTRUCT
-	* @param object $data
+	* @param object $options
 	* optional . Default is null
 	*/
-	public function __construct( $data=null ) {
+	public function __construct( $options=null ) {
 
-		if (is_null($data)) {
+		if (is_null($options)) {
 			return;
 		}
 
 		# Nothing to do on construct (for now)
-		if (!is_object($data)) {
-			// trigger_error("wrong data format. Object expected. Given: ".gettype($data));
-			debug_log("ERROR: wrong data format. Object expected. Given: ".gettype($data), logger::ERROR);
+		if (!is_object($options)) {
+			// trigger_error("wrong data format. Object expected. Given: ".gettype($options));
+			debug_log("ERROR: wrong data format. Object expected. Given: ".gettype($options), logger::ERROR);
 		}else{
 			// set all properties
-			foreach ($data as $key => $value) {
+			foreach ($options as $key => $value) {
 				$method = 'set_'.$key;
 				$this->{$method}($value);
 			}
@@ -357,6 +359,18 @@ class dd_grid_cell_object {
 
 
 	/**
+	* SET_DATA
+	* Optional raw data used by component_iri
+	* @param array $value
+	* @return void
+	*/
+	public function set_data(?array $value) : void {
+		$this->data = $value;
+	}//end set_data
+
+
+
+	/**
 	* SET_RENDER_LABEL
 	* @param bool $value
 	* @return void
@@ -383,8 +397,8 @@ class dd_grid_cell_object {
 
 			$ar_row_values = $dd_grid->value;
 
-			$records_separator = $dd_grid->records_separator ?? ' | ';
-			$fields_separator = $dd_grid->fields_separator ?? ', ';
+			$records_separator	= $dd_grid->records_separator ?? ' | ';
+			$fields_separator	= $dd_grid->fields_separator ?? ', ';
 
 			$rows = [];
 			foreach ($ar_row_values as $row) {
@@ -408,10 +422,11 @@ class dd_grid_cell_object {
 		}else{
 
 			// case columns
+			
+			$ar_column_values	= (array)$dd_grid->value;
+			$ar_fallback_values	= (array)$dd_grid->fallback_value;
 
-			$ar_column_values = (array)$dd_grid->value;
-
-			$fields_separator = $dd_grid->fields_separator ?? ', ';
+			$fields_separator 	= $dd_grid->fields_separator ?? ', ';
 
 			$ar_column_value = [];
 			foreach ($ar_column_values as $key => $value) {
@@ -439,6 +454,10 @@ class dd_grid_cell_object {
 					? $fallback
 					: to_string($fallback);
 			}
+			// in the case of empty value, try to get information from fallback
+			$ar_column_value = empty($ar_column_value)
+				? $ar_fallback_values
+				: $ar_column_value;
 
 			$column_value = implode($fields_separator, $ar_column_value);
 

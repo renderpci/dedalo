@@ -346,7 +346,6 @@ class tool_export extends tool_common {
 		$ar_columns_obj	= [];
 
 		foreach ($ar_ddo as $current_ddo) {
-
 			// children_ddo. get only the ddo that are children of the section top_tipo
 			// the other ddo are sub components that will be injected to the portal as request_config->show
 			$first_path	= $current_ddo->path[0];

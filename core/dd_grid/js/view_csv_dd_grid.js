@@ -291,6 +291,7 @@ const get_table_columns = function(current_data) {
 						column_items.push(section_id_node)
 						break;
 
+					case 'iri':
 					case 'text':
 					default:
 						const column_node = get_text_column(current_data)
@@ -389,7 +390,6 @@ const get_text_column = function(current_data) {
 
 	return value
 }//end get_text_column
-
 
 
 
