@@ -237,6 +237,21 @@ class component_date extends component_common {
 			$properties	= $this->get_properties();
 			$date_mode	= $this->get_date_mode();
 
+
+		// records_separator
+			$records_separator = isset($records_separator)
+				? $records_separator
+				: (isset($properties->records_separator)
+					? $properties->records_separator
+					: ' | ');
+
+		// fields_separator
+			$fields_separator = isset($fields_separator)
+				? $fields_separator
+				: (isset($properties->fields_separator)
+					? $properties->fields_separator
+					: ' <> ');
+
 		// ar_values
 			$ar_values	= [];
 			$data		= $this->get_dato();
@@ -251,19 +266,9 @@ class component_date extends component_common {
 				$ar_values[$key] = self::data_item_to_value($current_dato, $date_mode);
 			}//end foreach ($data as $key => $current_dato)
 
-		// fields_separator
-			$fields_separator = isset($fields_separator)
-				? $fields_separator
-				: (isset($properties->fields_separator)
-					? $properties->fields_separator
-					: ' <> ');
+		// flat_value (array of one value full resolved)
+			$flat_value = [implode($records_separator, $ar_values)];
 
-		// records_separator
-			$records_separator = isset($records_separator)
-				? $records_separator
-				: (isset($properties->records_separator)
-					? $properties->records_separator
-					: ' | ');
 
 		// dd_grid_cell_object
 			$value = new dd_grid_cell_object();
@@ -276,7 +281,7 @@ class component_date extends component_common {
 				}
 				$value->set_fields_separator($fields_separator);
 				$value->set_records_separator($records_separator);
-				$value->set_value($ar_values);
+				$value->set_value($flat_value);
 
 
 		return $value;
