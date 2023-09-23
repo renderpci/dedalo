@@ -88,15 +88,21 @@ class component_input_text extends component_common {
 
 		// safe dato
 			$safe_dato = array();
+			$empty_check = true;
 			foreach ((array)$dato as $value) {
 				if($this->is_empty($value)){
 					$safe_dato[] = null;
 				}else{
+					$empty_check = false;
 					$safe_dato[] = (!is_string($value))
 						? to_string($value)
 						: $value;
 					}
 			}
+			if($empty_check=== true){
+				$safe_dato = [];
+			}
+
 			$dato = $safe_dato;
 
 
