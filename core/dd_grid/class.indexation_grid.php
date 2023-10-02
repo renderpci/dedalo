@@ -173,11 +173,11 @@ class indexation_grid {
 							// check tag_id
 								if (!isset($current_locator->tag_id)) {
 									debug_log(__METHOD__
-										. " Ignored locator without tag_id " . PHP_EOL
+										. " locator without tag_id " . PHP_EOL
 										. ' locator: ' . json_encode($current_locator, JSON_PRETTY_PRINT)
-										, logger::ERROR
+										, logger::WARNING
 									);
-									continue;
+									// continue;
 								}
 
 							$ar_row_value = $this->get_grid_value($row_ddo_map, $current_locator);
