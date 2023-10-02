@@ -111,7 +111,7 @@ test139	test158	dd43	no	si	si	18	test	no	\N	{"observers":[{"section_tipo":"test1
 test17	test45	dd10	no	si	si	32	test	si	null	\N	\N
 test187	test184	dd9	no	si	si	2	test	si	\N		null
 test20	test158	dd8	no	si	si	21	test	no	null	\N	{"css": {".content_data": {"style": {}}, ".wrap_component": {"mixin": [".vertical", ".width_33", ".line_top"], "style": {"clear": "left"}}}, "source_DES": {"mode_DES": "tree", "value_DES": "[2,3,7]"}}
-test83	ts11	dd440	no	si	si	10	test	si	\N	\N	\N
+test83	ts11	dd440	no	si	si	14	test	si	\N	\N	\N
 test147	test158	dd904	no	si	si	33	test	no	\N	\N	{"source": {"request_config": [{"sqo": {"section_tipo": [{"value": "lg1", "source": "section"}]}, "show": {"ddo_map": [{"mode": "list", "tipo": "hierarchy25", "view": null, "label": "Term", "model": "component_input_text", "parent": "self", "section_tipo": "lg1"}]}, "type": "main", "api_engine": "dedalo"}]}}
 test210	test209		no	si	si	1	test	si	\N	\N	{"a": 3}
 test188	test20	dd440	no	si	si	6	test	no	\N	\N	{"source": {"request_config": [{"show": {"ddo_map": ["test185"]}, "search": {"ddo_map": [{"f_path": ["test183", "test185", "test38", "test164"]}], "sqo_config": {"limit": 20}}, "section_tipo": [{"value": ["test183"], "source": "section"}]}]}, "observers": [{"info": "Coins. Property used for server side only", "section_tipo": "test183", "component_tipo": "test199"}]}

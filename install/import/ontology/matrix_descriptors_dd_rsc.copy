@@ -584,7 +584,6 @@ rsc225	Titolo uniforme	termino	lg-ita
 rsc225	Título uniforme	termino	lg-spa
 rsc1072	Τελευταίες αλλαγές	termino	lg-ell
 rsc225	ομοιόμορφο τίτλο	termino	lg-ell
-rsc226	Búsqueda	termino	lg-spa
 rsc226	Cerca	termino	lg-cat
 rsc226	Ricerca	termino	lg-ita
 rsc227	Importació Zotero	termino	lg-cat
@@ -6103,3 +6102,4 @@ rsc1128	γένος	termino	lg-ell
 rsc1128	Geschlecht	termino	lg-deu
 rsc1128	Gender	termino	lg-eng
 rsc1128	Genre	termino	lg-fra
+rsc226	RECYCLE RSC	termino	lg-spa
