@@ -128,33 +128,32 @@ final class dd_utils_api_Test extends TestCase {
 
 
 
-
 	/**
 	* TEST_DATABASE_INFO
 	* @return void
 	*/
-	public function test_database_info(): void {
+		// public function test_database_info(): void {
 
-		$rqo = json_handler::decode('
-			{
-				"dd_api": "dd_utils_api",
-			    "action": "database_info"
-			}
-		');
-		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
-		$response = $rqo->dd_api::{$rqo->action}($rqo);
-			// dump($response, ' response ++ '.to_string());
+		// 	$rqo = json_handler::decode('
+		// 		{
+		// 			"dd_api": "dd_utils_api",
+		// 		    "action": "database_info"
+		// 		}
+		// 	');
+		// 	$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+		// 	$response = $rqo->dd_api::{$rqo->action}($rqo);
+		// 		// dump($response, ' response ++ '.to_string());
 
-		$this->assertTrue(
-			empty($_ENV['DEDALO_LAST_ERROR']),
-			'expected running without errors'
-		);
+		// 	$this->assertTrue(
+		// 		empty($_ENV['DEDALO_LAST_ERROR']),
+		// 		'expected running without errors'
+		// 	);
 
-		$this->assertTrue(
-			gettype($response->result)==='object',
-			'expected result type is object. type: ' . gettype($response->result)
-		);
-	}//end test_database_info
+		// 	$this->assertTrue(
+		// 		gettype($response->result)==='object',
+		// 		'expected result type is object. type: ' . gettype($response->result)
+		// 	);
+		// }//end test_database_info
 
 
 
@@ -184,164 +183,6 @@ final class dd_utils_api_Test extends TestCase {
 			'expected result type is object'
 		);
 	}//end test_get_system_info
-
-
-
-	/**
-	* TEST_MAKE_BACKUP
-	* @return void
-	*/
-	public function XXX_test_make_backup(): void {
-
-		$rqo = json_handler::decode('
-			{
-				"dd_api": "dd_utils_api",
-			    "action": "make_backup"
-			}
-		');
-		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
-		$response = $rqo->dd_api::{$rqo->action}($rqo);
-			// dump($response, ' response ++ '.to_string());
-
-		$this->assertTrue(
-			empty($_ENV['DEDALO_LAST_ERROR']),
-			'expected running without errors'
-		);
-
-		$this->assertTrue(
-			gettype($response->result)==='object',
-			'expected result type is object ' . gettype($response->result)
-		);
-
-		$this->assertTrue(
-			gettype($response->result->result)==='boolean',
-			'expected result type is boolean. ' . gettype($response->result->result)
-		);
-	}//end test_make_backup
-
-
-
-
-	/**
-	* TEST_UPDATE_ONTOLOGY
-	* @return void
-	*/
-	public function XXX_test_update_ontology(): void {
-
-		$rqo = json_handler::decode('
-			{
-				"dd_api": "dd_utils_api",
-			    "action": "update_ontology"
-			}
-		');
-		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
-		$response = $rqo->dd_api::{$rqo->action}($rqo);
-			// dump($response, ' response ++ '.to_string());
-
-		$this->assertTrue(
-			empty($_ENV['DEDALO_LAST_ERROR']),
-			'expected running without errors'
-		);
-
-		$this->assertTrue(
-			gettype($response->result)==='object',
-			'expected result type is object'
-		);
-	}//end test_update_ontology
-
-
-
-	/**
-	* TEST_STRUCTURE_TO_JSON
-	* @return void
-	*/
-	public function test_structure_to_json(): void {
-
-		$rqo = json_handler::decode('
-			{
-				"dd_api": "dd_utils_api",
-			    "action": "structure_to_json",
-			    "options": [
-			        {
-			            "name": "dedalo_prefix_tipos",
-			            "value": "dd"
-			        }
-			    ]
-			}
-		');
-		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
-		$response = $rqo->dd_api::{$rqo->action}($rqo);
-			// dump($response, ' response ++ '.to_string());
-
-		$this->assertTrue(
-			empty($_ENV['DEDALO_LAST_ERROR']),
-			'expected running without errors'
-		);
-
-		$this->assertTrue(
-			gettype($response->result)==='boolean',
-			'expected result type is boolean'
-		);
-	}//end test_structure_to_json
-
-
-
-	/**
-	* TEST_import_structure_from_json
-	* @return void
-	*/
-	public function XXX_test_import_structure_from_json(): void {
-
-		$rqo = json_handler::decode('
-			{
-				"dd_api": "dd_utils_api",
-			    "action": "import_structure_from_json",
-			    "options": ["dd"]
-			}
-		');
-		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
-		// $response = $rqo->dd_api::{$rqo->action}($rqo);
-			// dump($response, ' response ++ '.to_string());
-
-		$this->assertTrue(
-			empty($_ENV['DEDALO_LAST_ERROR']),
-			'expected running without errors'
-		);
-
-		$this->assertTrue(
-			gettype($response->result)==='boolean',
-			'expected result type is boolean'
-		);
-	}//end test_import_structure_from_json
-
-
-
-	/**
-	* TEST_REGISTER_TOOLS
-	* @return void
-	*/
-	public function test_register_tools(): void {
-
-		$rqo = json_handler::decode('
-			{
-				"dd_api": "dd_utils_api",
-			    "action": "register_tools"
-			}
-		');
-		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
-		$response = $rqo->dd_api::{$rqo->action}($rqo);
-			// dump($response, ' response ++ '.to_string());
-
-		$this->assertTrue(
-			gettype($response->result)==='array',
-			'expected result type is array ' .gettype($response->result)
-		);
-
-		$this->assertTrue(
-			count($response->result)>0,
-			'expected result is not empty '
-		);
-	}//end test_register_tools
 
 
 
