@@ -38,7 +38,7 @@ view_default_list_input_text.render = async function(self, options) {
 
 	// transliterate components
 	// add the translation of the data
-		const transliterate_value = (with_lang_versions && self.data.transliterate_value)
+		const transliterate_value = (with_lang_versions && self.data.transliterate_value && value.length)
 			? ' (' + self.data.transliterate_value + ')'
 			: ''
 

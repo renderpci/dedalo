@@ -135,7 +135,7 @@ To create a full copy of Dédalo publishing system manually, follow this:
 
 The panel will indicate the directory of the copy, it will be storage into bk directory in the server and it will be named with the date, name of the database, as:
 
-> 2023-09-09_205044.my_dedalo_db.postgresql_1_forced_dbv6-0-0.backup
+> 2023-09-09_205044.mysql_dump_my_publishing_database.sql
 
 ### Making a manual backup in the server shell
 

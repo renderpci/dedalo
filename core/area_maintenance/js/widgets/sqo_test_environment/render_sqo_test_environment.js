@@ -122,7 +122,7 @@ const get_content_data_edit = async function(self) {
 						}
 
 						const rqo = {
-							dd_api	: 'dd_utils_api',
+							dd_api	: 'dd_area_maintenance_api',
 							action	: 'convert_search_object_to_sql_query',
 							options	: sqo
 						}

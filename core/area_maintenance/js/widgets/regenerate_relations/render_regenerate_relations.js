@@ -108,7 +108,7 @@ const get_content_data_edit = async function(self) {
 				mandatory	: true
 			}],
 			trigger : {
-				dd_api	: 'dd_utils_api',
+				dd_api	: 'dd_area_maintenance_api',
 				action	: 'regenerate_relations',
 				options	: null
 			}

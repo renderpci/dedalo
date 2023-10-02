@@ -87,6 +87,17 @@ final class dd_manager {
 					$response->action	= $rqo->action;
 			}else{
 				// success
+				if($dd_api==='dd_area_maintenance_api'){
+					// check access to maintenance area
+					$permissions = common::get_permissions(DEDALO_AREA_MAINTENANCE_TIPO, DEDALO_AREA_MAINTENANCE_TIPO);
+					if ($permissions<2) {
+						$response = new stdClass();
+							$response->result	= false;
+							$response->msg		= 'Error. user has not permissions ! [action:'.$rqo->action.']';
+							$response->error	= 'permissions error';
+						return $response;
+					}
+				}
 				$response			= $dd_api::{$rqo->action}( $rqo );
 				$response->action	= $rqo->action;
 			}

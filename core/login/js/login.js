@@ -335,11 +335,11 @@ login.prototype.action_dispatch = async function(api_response) {
 					// has_tipo in url
 						const queryString	= window.location.search
 						const urlParams		= new URLSearchParams(queryString);
-						const has_tipo		= urlParams.has('t')
+						const has_tipo		= urlParams.has('tipo')
 
 					if (api_response.default_section && !has_tipo) {
 						// user defined default_section case
-						window.location.replace( DEDALO_CORE_URL + '/page/?t=' + api_response.default_section );
+						window.location.replace( DEDALO_CORE_URL + '/page/?tipo=' + api_response.default_section );
 					}else{
 						window.location.reload(false);
 					}
