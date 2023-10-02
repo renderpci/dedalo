@@ -397,14 +397,15 @@ abstract class common {
 				return null;
 			}
 			// area model case
-			if (strpos($model_name, 'area')===0 || $model_name==='menu') {
+			if (strpos($model_name, 'area')===0 || $model_name==='menu' || $model_name==='section_tool') {
 				return null;
 			}
 			// non section model case
 			if ($model_name!=='section') {
 				debug_log(__METHOD__
 					. " Error. Don't use non section tipo to calculate matrix_table. Use always section_tipo". PHP_EOL
-					. " tipo: $tipo - model: $model_name"
+					. " tipo: $tipo " . PHP_EOL
+					. " model: $model_name"
 					, logger::ERROR
 				);
 				return null;
