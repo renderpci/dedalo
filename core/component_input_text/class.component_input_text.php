@@ -88,15 +88,21 @@ class component_input_text extends component_common {
 
 		// safe dato
 			$safe_dato = array();
+			$empty_check = true;
 			foreach ((array)$dato as $value) {
 				if($this->is_empty($value)){
 					$safe_dato[] = null;
 				}else{
+					$empty_check = false;
 					$safe_dato[] = (!is_string($value))
 						? to_string($value)
 						: $value;
 					}
 			}
+			if($empty_check=== true){
+				$safe_dato = [];
+			}
+
 			$dato = $safe_dato;
 
 
@@ -149,21 +155,30 @@ class component_input_text extends component_common {
 					$column_obj->id = $this->section_tipo.'_'.$this->tipo;
 			}
 
+		// records_separator
+			$properties			= $this->get_properties();
+			$records_separator	= isset($ddo->records_separator)
+			? $ddo->records_separator
+			: (isset($properties->records_separator)
+				? $properties->records_separator
+				: ' | ');
+
 		// dato
-			$dato			= $this->get_dato();
+			$dato			= $this->get_dato() ?? [];
 			$fallback_value	= component_common::extract_component_dato_fallback(
 				$this, // component instance this
 				$this->get_lang(), // string lang
 				DEDALO_DATA_LANG_DEFAULT // string main_lang
 			);
 
-		// records_separator
-				$properties			= $this->get_properties();
-				$records_separator	= isset($ddo->records_separator)
-				? $ddo->records_separator
-				: (isset($properties->records_separator)
-					? $properties->records_separator
-					: ' | ');
+		// flat_value (array of one value full resolved)
+			$flat_value = empty($dato)
+				? []
+				: [implode($records_separator, $dato)];
+
+		// flat_fallback_value (array of one value full resolved)
+			$flat_fallback_value = [implode($records_separator, $fallback_value)];
+
 
 		// class_list
 			$class_list = $ddo->class_list ?? null;
@@ -181,8 +196,8 @@ class component_input_text extends component_common {
 					$value->set_class_list($class_list);
 				}
 				$value->set_records_separator($records_separator);
-				$value->set_value($dato);
-				$value->set_fallback_value($fallback_value);
+				$value->set_value($flat_value);
+				$value->set_fallback_value($flat_fallback_value);
 
 
 		return $value;

@@ -51,7 +51,7 @@ view_text_list_iri.render = async function(self, options) {
 			}
 		}
 		const value_string = (ar_value_string && ar_value_string.length)
-			? ar_value_string.join(' - ')
+			? ar_value_string.join(', ')
 			: ''
 
 	const wrapper = document.createElement('span')

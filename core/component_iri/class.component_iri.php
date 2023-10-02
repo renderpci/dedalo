@@ -216,15 +216,22 @@ class component_iri extends component_common {
 					? $properties->records_separator
 					: ' | ');
 
-		// dato
-			$dato		= $this->get_dato();
-			$ar_values	= empty($dato)
-				? null
-				: array_map(function($el){
+		// ar_values
+			$ar_values	= [];
+			$data		= $this->get_dato();
+			if (!empty($data)) {
+				foreach ($data as $current_value) {
+						dump($current_value, ' current_value ++ '.to_string());
 
-					$current_value = json_encode($el);
-					return $el;
-				  }, $dato);
+					$current_iri	= $current_value->iri ?? '';
+					$current_title	= $current_value->title ?? '';
+
+					$ar_values[] = $current_title . $fields_separator . $current_iri;
+				}
+			}
+
+		// flat_value (array of one value full resolved)
+			$flat_value = [implode($records_separator, $ar_values)];
 
 		// value
 			$value = new dd_grid_cell_object();
@@ -237,11 +244,36 @@ class component_iri extends component_common {
 				}
 				$value->set_fields_separator($fields_separator);
 				$value->set_records_separator($records_separator);
-				$value->set_value($ar_values);
+				$value->set_value($flat_value);
+				$value->set_data($data);
 
 
 		return $value;
 	}//end get_grid_value
+
+
+
+	/**
+	* GET_GRID_FLAT_VALUE
+	* Get the flat value of the components (text version of data).
+	* overwrite in every different specific component
+	* @return dd_grid_cell_object $flat_value
+	* 	dd_grid_cell_object
+	*/
+	public function get_grid_flat_value() : dd_grid_cell_object {
+
+		$flat_value = parent::get_grid_flat_value();
+
+		// overwrite cell_type (custom case)
+		$flat_value->set_cell_type('iri');
+
+		// add data (custom case)
+		$data = $this->get_dato();
+		$flat_value->set_data($data);
+
+
+		return $flat_value;
+	}//end get_grid_flat_value
 
 
 
@@ -628,9 +660,9 @@ class component_iri extends component_common {
 				$response->msg		= 'Error. Request failed';
 
 
-		// $normalize_value function to be used in any case, $import_value is an array of objects (IRI format) or array of strings or string
-		// values need to be begin with the protocol HTTP or https
-			$normalize_value = function(string $text_value) : bool {
+		// $has_protocol function to be used in any case, $import_value is an array of objects (IRI format)
+		// or array of strings or string values needed to begin with the protocol HTTP or HTTPS
+			$has_protocol = function(string $text_value) : bool {
 
 				$begins_http	= substr($text_value, 0, 7);
 				$begins_https	= substr($text_value, 0, 8);
@@ -643,6 +675,25 @@ class component_iri extends component_common {
 				return false;
 			};
 
+		// valid_string
+		// check the begin and end of the value string, if it has a [] or other combination that seems array
+		// if the text has [" or "] it's not admitted, because it's a bad array of strings.
+			$is_valid_string = function(string $text_value) : bool {
+
+				$begins_one	= substr($text_value, 0, 1);
+				$ends_one	= substr($text_value, -1);
+				$begins_two	= substr($text_value, 0, 2);
+				$ends_two	= substr($text_value, -2);
+
+				if (($begins_two !== '["' && $ends_two !== '"]') ||
+					($begins_two !== '["' && $ends_one !== ']') ||
+					($begins_one !== '[' && $ends_two !== '"]')
+					){
+						return true;
+				}
+
+				return false;
+			};
 
 		// object | array case
 			// Check if is a JSON stringified. Is yes, decode
@@ -650,9 +701,158 @@ class component_iri extends component_common {
 			if(json_handler::is_json($import_value)){
 
 				// try to JSON decode (null on not decode)
-				$dato_from_json	= json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
+				$dato_from_json	= json_handler::decode($import_value);
 
-				// the import support array of objects (default, iri data) of array of strings as:
+				if(is_object($dato_from_json)){
+
+					$first_key = array_keys((array)$dato_from_json)[0];
+					if (strpos($first_key, 'lg-')===0) {
+
+						$conformed_value = new stdClass();
+
+						foreach ($dato_from_json as $lang => $current_value) {
+
+							$valid_langs = common::get_ar_all_langs();
+							$valid_langs[] = DEDALO_DATA_NOLAN;
+							if(!in_array($lang, $valid_langs)){
+
+								debug_log(__METHOD__
+									." invalid language, seems a syntax error: ". PHP_EOL
+									. to_string($import_value)
+									, logger::ERROR
+								);
+
+								$failed = new stdClass();
+									$failed->section_id		= $this->section_id;
+									$failed->data			= to_string($import_value);
+									$failed->component_tipo	= $this->get_tipo();
+									$failed->msg			= 'IGNORED: language is not define in the config '. to_string($lang);
+								$response->errors[] = $failed;
+
+								return $response;
+							}
+
+							$safe_ar_value = is_array($current_value)
+								? $current_value
+								: [$current_value];
+
+							$value = [];
+							foreach ($safe_ar_value as $key => $iri_object) {
+
+								$data_iri = new stdClass();
+
+								if(is_object($iri_object)){
+
+									if(isset($iri_object->iri)){
+
+										$result = $has_protocol($iri_object->iri);
+										if($result===false){
+
+											// import value seems to be a JSON malformed.
+											// it begin [" or end with "]
+											// log JSON conversion error
+											debug_log(__METHOD__
+												." invalid http uri value, seems a syntax error: ". PHP_EOL
+												. to_string($import_value)
+												, logger::ERROR
+											);
+
+											$failed = new stdClass();
+												$failed->section_id		= $this->section_id;
+												$failed->data			= to_string($import_value);
+												$failed->component_tipo	= $this->get_tipo();
+												$failed->msg			= 'IGNORED: malformed data '. to_string($import_value);
+											$response->errors[] = $failed;
+
+											return $response;
+										}
+
+										$data_iri->iri = $iri_object->iri;
+									}
+									if(isset($iri_object->title)){
+										$data_iri->title = $iri_object->title;
+									}
+								}else if(is_string($iri_object)){
+
+									$valid_string = $is_valid_string($iri_object);
+									$result = $has_protocol($current_value);
+
+									if($valid_string===false || $result===false){
+										// import value seems to be a JSON malformed.
+										// it begin [" or end with "]
+										// log JSON conversion error
+										debug_log(__METHOD__
+											." invalid http uri value, seems a syntax error: ". PHP_EOL
+											. to_string($iri_object)
+											, logger::ERROR
+										);
+
+										$failed = new stdClass();
+											$failed->section_id		= $this->section_id;
+											$failed->data			= to_string($iri_object);
+											$failed->component_tipo	= $this->get_tipo();
+											$failed->msg			= 'IGNORED: malformed data '. to_string($iri_object);
+										$response->errors[] = $failed;
+
+										return $response;
+									}
+									$data_iri->iri = $iri_object;
+								}
+
+								$value[] = $data_iri;
+							}
+
+							$conformed_value->$lang = $value;
+						}
+
+						$response->result	= $conformed_value ?? null;
+						$response->msg		= 'OK';
+
+						return $response;
+
+					}else{
+
+						$iri_object = new stdClass();
+						if(isset($dato_from_json->iri)){
+
+							$result = $has_protocol($dato_from_json->iri);
+							if($result===false){
+
+								// import value seems to be a JSON malformed.
+								// it begin [" or end with "]
+								// log JSON conversion error
+								debug_log(__METHOD__
+									." invalid http uri value, seems a syntax error: ". PHP_EOL
+									. to_string($dato_from_json)
+									, logger::ERROR
+								);
+
+								$failed = new stdClass();
+									$failed->section_id		= $this->section_id;
+									$failed->data			= to_string($dato_from_json);
+									$failed->component_tipo	= $this->get_tipo();
+									$failed->msg			= 'IGNORED: malformed data '. to_string($dato_from_json);
+								$response->errors[] = $failed;
+
+								return $response;
+							}
+
+							$iri_object->iri = $dato_from_json->iri;
+						}
+						if(isset($dato_from_json->title)){
+							$iri_object->title = $dato_from_json->title;
+						}
+
+						$value = [$iri_object];
+
+						$response->result	= $value;
+						$response->msg		= 'OK';
+
+						return $response;
+					}
+				}
+
+				// the importer support array of objects (default, iri data) of array of strings as:
 				// [{"iri":"https://dedalo.dev","title":"Dedalo webpage"},{"iri":"https://dedalo.dev/docs","title":"Dedalo documentation"}]
 				// ["https://dedalo.dev","https://dedalo.dev/docs"]
 				if(is_array($dato_from_json)){
@@ -661,7 +861,7 @@ class component_iri extends component_common {
 					foreach ($dato_from_json as $key => $current_value) {
 						// check if the value is a flat string with the uri
 						if(is_string($current_value)){
-							$result = $normalize_value($current_value);
+							$result = $has_protocol($current_value);
 
 							if ($result === false) {
 
@@ -684,19 +884,18 @@ class component_iri extends component_common {
 								return $response;
 							}
 
-							$data_iri = new stdClass();
-								$data_iri->iri = $current_value;
+							$iri_object = new stdClass();
+								$iri_object->iri = $current_value;
 
-							$value[] = $data_iri;
+							$value[] = $iri_object;
 						// check if the value is a object
 						}else if(is_object($current_value)){
 
-							$data_iri = new stdClass();
+							$iri_object = new stdClass();
 
 							if(isset($current_value->iri)){
 
-								$result = $normalize_value($current_value->iri);
-
+								$result = $has_protocol($current_value->iri);
 								if($result===false){
 
 									// import value seems to be a JSON malformed.
@@ -718,71 +917,34 @@ class component_iri extends component_common {
 									return $response;
 								}
 
-								$data_iri->iri = $current_value->iri;
+								$iri_object->iri = $current_value->iri;
+							}
+							if(isset($current_value->title)){
+								$iri_object->title = $current_value->title;
 							}
 
-							if(isset($current_value->title)){
-								$data_iri->title = $current_value->title;
-							}
-							$value[] = $data_iri;
+							$value[] = $iri_object;
 						}
 					}
-				}
 
-				$response->result	= $value ?? null;
-				$response->msg		= 'OK';
-
-				return $response;
-			}
-
-	// string case
-		// check the begin and end of the value string, if it has a [] or other combination that seems array
-		// if the text has [" or "] it's not admitted, because it's a bad array of strings.
-		$begins_one	= substr($import_value, 0, 1);
-		$ends_one	= substr($import_value, -1);
-		$begins_two	= substr($import_value, 0, 2);
-		$ends_two	= substr($import_value, -2);
-
-		if (($begins_two !== '["' && $ends_two !== '"]') ||
-			($begins_two !== '["' && $ends_one !== ']') ||
-			($begins_one !== '[' && $ends_two !== '"]')
-			){
-
-			$value = null;
-			if(!empty($import_value)){
-
-				$result = $normalize_value($import_value);
-
-				if ($result === false) {
-
-					// import value seems to be a JSON malformed.
-					// it begin [" or end with "]
-					// log JSON conversion error
-					debug_log(__METHOD__
-						." invalid http uri value, seems a syntax error: ". PHP_EOL
-						. to_string($import_value)
-						, logger::ERROR
-					);
-
-					$failed = new stdClass();
-						$failed->section_id		= $this->section_id;
-						$failed->data			= to_string($import_value);
-						$failed->component_tipo	= $this->get_tipo();
-						$failed->msg			= 'IGNORED: malformed data '. to_string($import_value);
-					$response->errors[] = $failed;
+					$response->result	= $value ?? null;
+					$response->msg		= 'OK';
 
 					return $response;
 
+				}else{
+
+					$response->result	= null;
+					$response->msg		= 'Error. Expected array and get: '.gettype($dato_from_json);
+
+					return $response;
 				}
-
-				$data_iri = new stdClass();
-					$data_iri->iri = $import_value;
-
-				$value[] = $data_iri;
 			}
 
+	// string case
+		$valid = $is_valid_string($import_value);
+		if ($valid===false) {
 
-		}else{
 			// import value seems to be a JSON malformed.
 			// it begin [" or end with "]
 			// log JSON conversion error
@@ -802,9 +964,67 @@ class component_iri extends component_common {
 			return $response;
 		}
 
+		$value = null;
+		if(!empty($import_value)) {
+
+			$iri_object = new stdClass();
+
+			$properties = $this->get_properties();
+
+			$records_separator = isset($properties->records_separator)
+				? $properties->records_separator
+				: ' | ';
+
+			$fields_separator = isset($properties->fields_separator)
+				? $properties->fields_separator
+				: ', ';
+
+			$has_records_separator	= strpos($import_value, $records_separator)!==false;
+			$has_field_separator	= strpos($import_value, $fields_separator.'http')!==false;
+			$with_protocol			= $has_protocol($import_value);
+			if ($has_records_separator===false && $has_field_separator===false && $with_protocol===false) {
+
+				// error
+				debug_log(__METHOD__
+					." invalid http uri value, seems a syntax error: ". PHP_EOL
+					. to_string($import_value)
+					, logger::ERROR
+				);
+
+				$failed = new stdClass();
+					$failed->section_id		= $this->section_id;
+					$failed->data			= to_string($import_value);
+					$failed->component_tipo	= $this->get_tipo();
+					$failed->msg			= 'IGNORED: malformed data '. to_string($import_value);
+				$response->errors[] = $failed;
+
+				return $response;
+			}else{
+
+				$value = [];
+				$records = explode($records_separator, $import_value);
+				foreach ($records as $record) {
+					$iri_object = new stdClass();
+
+					$fields = explode($fields_separator, $record);
+
+					if ( $has_protocol($fields[0])===true ) {
+						$iri_object->iri = $fields[0];
+					}else{
+						$iri_object->title = $fields[0];
+					}
+					if ( isset($fields[1]) && $has_protocol($fields[1])===true ) {
+						$iri_object->iri = $fields[1];
+					}
+					$value[] = $iri_object;
+				}
+			}
+		}//end if(!empty($import_value))
+
 
 		$response->result	= $value;
 		$response->msg		= 'OK';
+
 
 		return $response;
 	}//end conform_import_data

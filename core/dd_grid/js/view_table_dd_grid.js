@@ -381,16 +381,21 @@ const render_text_column = function(current_data) {
 
 	const value = current_data.value && Array.isArray(current_data.value)
 		? current_data.value.join(records_separator)
-		: (current_data.value || '')
+		: (current_data.value)
+
 
 	const fallback_value = current_data.fallback_value && Array.isArray(current_data.fallback_value)
 		? current_data.fallback_value.join(records_separator)
 		: (current_data.fallback_value || '')
 
+	const final_value = value && value.length>0
+		? value
+		: fallback_value
+
 	const td_node = ui.create_dom_element({
 		element_type	: 'td',
 		class_name		: class_list,
-		inner_html		: value || fallback_value
+		inner_html		: final_value
 	})
 
 	return td_node
@@ -576,7 +581,8 @@ const render_section_id_column = function(current_data) {
 */
 const render_iri_column = function(current_data) {
 
-	const class_list = current_data.class_list || ''
+	const class_list		= current_data.class_list || ''
+	const records_separator	= current_data.records_separator || ' | '
 
 	// td_node
 		const td_node = ui.create_dom_element({
@@ -585,19 +591,22 @@ const render_iri_column = function(current_data) {
 		})
 
 	//  links
-		const value			= current_data.value || []
-		const value_length	= value.length
-		for (let i = 0; i < value_length; i++) {
-			const item = value[i]
-			ui.create_dom_element({
+		const data			= current_data.data || []
+		const ar_final		= []
+		const data_length	= data.length
+		for (let i = 0; i < data_length; i++) {
+			const item = data[i]
+			const node = ui.create_dom_element({
 				element_type	: 'a',
 				href			: item.iri,
 				inner_html		: item.title || item.iri,
 				parent			: td_node
 			})
+			node.target = '_blank'
+
 			// space
-			if (i < value_length-1) {
-				td_node.appendChild( document.createTextNode( ' | ' ) );
+			if (i < data_length-1) {
+				td_node.appendChild( document.createTextNode( records_separator ) );
 			}
 		}
 

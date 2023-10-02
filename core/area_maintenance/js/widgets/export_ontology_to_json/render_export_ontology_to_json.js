@@ -106,7 +106,7 @@ const render_content_data = async function(self) {
 				value		: tipos.join(',')
 			}],
 			trigger			: {
-				dd_api	: 'dd_utils_api',
+				dd_api	: 'dd_area_maintenance_api',
 				action	: 'structure_to_json',
 				options	: null
 			}

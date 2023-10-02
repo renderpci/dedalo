@@ -116,7 +116,7 @@ const get_content_data_edit = async function(self) {
 			body_info		: content_data,
 			body_response	: body_response,
 			trigger : {
-				dd_api	: 'dd_utils_api',
+				dd_api	: 'dd_area_maintenance_api',
 				action	: 'create_test_record',
 				options	: null
 			}

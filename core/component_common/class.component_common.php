@@ -2991,6 +2991,8 @@ abstract class component_common extends common {
 				foreach ($current_query_object as $operator => $ar_elements) {
 					foreach ($ar_elements as $c_query_object) {
 						// update all resolved query objects
+						// Note that object $c_query_object is changed by the component, it not new object,
+						// it's the same object but with the component additions
 						$c_query_object = $called_class::resolve_query_object_sql($c_query_object);
 					}
 				}
@@ -3128,8 +3130,9 @@ abstract class component_common extends common {
 			}else{
 
 				// all others
-
-				$operator_between = '$and'; // only when is string
+				$operator_between = ($model==='component_input_text' || $model==='component_text_area')
+					? '$and' // Like 'Pepe García'
+					: '$or'; // like '2008 2009'
 
 				// \S?"([^\"]+)"|\S?'([^\']+)'|[^\s]+
 				$pattern = '/\S?"([^\"]+)"|\S?\'([^\\\']+)\'|[^\s]+/iu';
