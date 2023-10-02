@@ -80,7 +80,7 @@ emakumeak91	emakumeak46	dd1229	no	si	si	8	emakumeak	si	[{"dd6":"rsc106"}]	\N	\N
 emakumeak95	emakumeak46	dd347	no	si	si	9	emakumeak	si	[{"dd1229":"rsc444"}]		\N
 emakumeak114	emakumeak110	dd1235	no	si	si	4	emakumeak	si	[{"dd592":"emakumeak102"}]	{\r\n  "varchar": 4000\r\n}	{"varchar": 4000}
 emakumeak76	hierarchy56	dd440	no	si	si	13	emakumeak	si	\N	\N	\N
-emakumeak135	ts11	dd347	no	si	si	5	emakumeak	si	[{"dd6":"es1"},{"dd1229":"hierarchy65"}]	\N	\N
+emakumeak135	ts11	dd347	no	si	si	7	emakumeak	si	[{"dd6":"es1"},{"dd1229":"hierarchy65"}]	\N	\N
 emakumeak115	emakumeak110	dd1231	no	si	si	5	emakumeak	si	[{"dd500":"emakumeak109"}]	\N	\N
 emakumeak105	emakumeak98	dd247	no	si	si	8	emakumeak	no	\N	{"css":{".wrap_component":{"mixin":[".vertical",".line_top"],"style":{"width":"50%"}}}}	\N
 emakumeak104	emakumeak98	dd10	no	si	si	5	emakumeak	si	\N	{"css":{".wrap_component":{"mixin":[".vertical",".line_top"],"style":{"width":"50%","height":"240px"}}}}	{"css": {".wrapper_component": {"grid-column": "span 6"}}}

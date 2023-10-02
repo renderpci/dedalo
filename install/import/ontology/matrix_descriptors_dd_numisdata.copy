@@ -556,7 +556,6 @@ numisdata369	Listado	termino	lg-spa
 numisdata33	Denominations	termino	lg-eng
 numisdata37	Relaciones	termino	lg-spa
 numisdata37	Relazioni	termino	lg-ita
-numisdata370	Búsqueda	termino	lg-spa
 numisdata370	Ricerca	termino	lg-ita
 numisdata371	Elenco thesaurus	termino	lg-ita
 numisdata371	Listado tesauro	termino	lg-spa
@@ -3672,3 +3671,4 @@ numisdata1354	Code	termino	lg-fra
 numisdata1354	Code	termino	lg-deu
 numisdata1303	Autoría (Deprecada)	termino	lg-spa
 numisdata1303	Authorship (Deprecated)	termino	lg-eng
+numisdata370	RECYCLE NUMISDATA	termino	lg-spa
