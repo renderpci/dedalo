@@ -515,7 +515,14 @@ class tool_import_zotero extends tool_common {
 							$section_tipo_colecciones_series = ZOTERO_SECTION_TIPO_SERIES_COLECCIONES; # 'rsc212';  # Lista de valores Series / colecciones
 							$section_container_list = section::get_instance(null,$section_tipo_colecciones_series); 
 							$section_id_list 		= (int)$section_container_list->Save();
-							$component_container_list = component_common::get_instance('component_input_text',ZOTERO_COMPONENT_TIPO_SERIES_COLECCIONES, $section_id_list, 'edit', DEDALO_DATA_LANG, $section_tipo_colecciones_series); # Colección / Serie (component_input_text)
+							$component_container_list = component_common::get_instance(
+								'component_input_text',
+								ZOTERO_COMPONENT_TIPO_SERIES_COLECCIONES,
+								$section_id_list,
+								'edit',
+								DEDALO_DATA_LANG,
+								$section_tipo_colecciones_series
+							); # Colección / Serie (component_input_text)
 							
 							# Eliminamos comillas que no paran de dar problemas
 							$serie_name = str_replace(array("'",'"'), '', $zotero_obj->$name);
