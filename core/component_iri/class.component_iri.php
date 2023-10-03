@@ -382,19 +382,17 @@ class component_iri extends component_common {
 	* @return object $query_object
 	*	Edited/parsed version of received object
 	*/
-	public static function resolve_query_object_sql( object $query_object) : object {
+	public static function resolve_query_object_sql(object $query_object) : object|array {
 
+		// $q = $query_object->q;
 		$q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
 
-		#$q = $query_object->q;
-		#if (isset($query_object->type) && $query_object->type==='jsonb') {
-		#	$q = json_decode($q);
-		#}
-
-		# Always set fixed values
+		// Always set fixed values
 		$query_object->type = 'string';
 
-		$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
+		if (is_string($q)) {
+			$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
+		}
 
 		$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
 
@@ -405,36 +403,32 @@ class component_iri extends component_common {
 
 		switch (true) {
 			# EMPTY VALUE (in current lang data)
-			case ($q==='!*'):
+			case ($q==='!*' || $q_operator==='!*'):
 				$operator = 'IS NULL';
 				$q_clean  = '';
-				$query_object->operator = $operator;
+				$query_object->operator	= $operator;
 				$query_object->q_parsed	= $q_clean;
-				$query_object->unaccent = false;
-				$query_object->lang 	= 'all';
+				$query_object->unaccent	= false;
+				$query_object->lang		= 'all';
 
 				$logical_operator = '$or';
 				$new_query_json = new stdClass;
 					$new_query_json->$logical_operator = [$query_object];
 
 				// Search empty only in current lang
-				// Resolve lang based on if is translatable
-					$path_end 		= end($query_object->path);
-					$component_tipo = $path_end->component_tipo;
-					$RecordObj_dd   = new RecordObj_dd($component_tipo);
-					$lang 			= $RecordObj_dd->get_traducible()!=='si' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
-
-					#$clone = clone($query_object);
-					#	$clone->operator = '=';
-					#	$clone->q_parsed = '\'[]\'';
-					#	$clone->lang 	 = $lang;
-					#$new_query_json->$logical_operator[] = $clone;
+					$lang = DEDALO_DATA_LANG;
 
 					$clone = clone($query_object);
-						$clone->operator	= '=';
-						$clone->q_parsed	= '\'\'';
-						$clone->lang		= $lang;
+						$clone->operator = '=';
+						$clone->q_parsed = '\'[]\'';
+						$clone->lang 	 = $lang;
 					$new_query_json->$logical_operator[] = $clone;
+
+					// $clone = clone($query_object);
+					// 	$clone->operator	= '=';
+					// 	$clone->q_parsed	= '\'\'';
+					// 	$clone->lang		= $lang;
+					// $new_query_json->$logical_operator[] = $clone;
 
 					// legacy data (set as null instead '')
 					$clone = clone($query_object);
@@ -446,32 +440,29 @@ class component_iri extends component_common {
 				$query_object = $new_query_json ;
 				break;
 			# NOT EMPTY (in any project lang data)
-			case ($q==='*'):
+			case ($q==='*' || $q_operator==='*'):
 				$operator = 'IS NOT NULL';
 				$q_clean  = '';
 				$query_object->operator	= $operator;
 				$query_object->q_parsed	= $q_clean;
 				$query_object->unaccent	= false;
 
-				$logical_operator ='$and';
+				$logical_operator = '$and';
 				$new_query_json = new stdClass;
 					$new_query_json->$logical_operator = [$query_object];
 
 				// langs check
 					$ar_query_object = [];
-
-						#$clone = clone($query_object);
-						#	$clone->operator = '!=';
-						#	$clone->q_parsed = '\'[]\'';
-						#	$clone->lang 	 = DEDALO_DATA_NOLAN;
-						#$ar_query_object[] = $clone;
-
+					$ar_all_langs 	 = common::get_ar_all_langs();
+					$ar_all_langs[]  = DEDALO_DATA_NOLAN; // Added no lang also
+					foreach ($ar_all_langs as $current_lang) {
 						$clone = clone($query_object);
 							$clone->operator	= '!=';
-							$clone->q_parsed	= '\'\'';
-							$clone->lang		= DEDALO_DATA_NOLAN;
-						$ar_query_object[] = $clone;
+							$clone->q_parsed	= '\'[]\'';
+							$clone->lang		= $current_lang;
 
+						$ar_query_object[] = $clone;
+					}
 
 					$logical_operator ='$or';
 					$langs_query_json = new stdClass;
