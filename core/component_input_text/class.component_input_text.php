@@ -410,10 +410,10 @@ class component_input_text extends component_common {
 			case ($q==='!*'):
 				$operator = 'IS NULL';
 				$q_clean  = '';
-				$query_object->operator = $operator;
+				$query_object->operator	= $operator;
 				$query_object->q_parsed	= $q_clean;
-				$query_object->unaccent = false;
-				$query_object->lang 	= 'all';
+				$query_object->unaccent	= false;
+				$query_object->lang		= 'all';
 
 				$logical_operator = '$or';
 				$new_query_json = new stdClass;
@@ -436,7 +436,6 @@ class component_input_text extends component_common {
 					$clone = clone($query_object);
 						$clone->operator	= 'IS NULL';
 						$clone->lang		= $lang;
-
 					$new_query_json->$logical_operator[] = $clone;
 
 				// langs check all
@@ -485,7 +484,6 @@ class component_input_text extends component_common {
 							$clone->operator	= '!=';
 							$clone->q_parsed	= '\'[]\'';
 							$clone->lang		= $current_lang;
-
 						$ar_query_object[] = $clone;
 					}
 
@@ -586,9 +584,9 @@ class component_input_text extends component_common {
 				$query_object->unaccent		= false; // (!) always false
 				$query_object->duplicated	= true;
 				// Resolve lang based on if is translatable
-					$path_end		= end($query_object->path);
-					$component_tipo	= $path_end->component_tipo;
-				$query_object->lang 	= RecordObj_dd::get_translatable($component_tipo) ?  DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+					$path_end			= end($query_object->path);
+					$component_tipo		= $path_end->component_tipo;
+					$query_object->lang	= RecordObj_dd::get_translatable($component_tipo) ?  DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 				break;
 			# DEFAULT CONTAIN
 			default:
