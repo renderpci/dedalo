@@ -9,6 +9,14 @@ class component_iri extends component_common {
 
 
 	/**
+	* CLASS VARS
+	* @var
+	*/
+	public $with_lang_versions = true;
+
+
+
+	/**
 	* GET DATO
 	* Array with objects, every object have two properties:
 	* "iri" mandatory with string value and "title" optional with string value
