@@ -386,17 +386,12 @@ class component_input_text extends component_common {
 	* @return object $query_object
 	*	Edited/parsed version of received object
 	*/
-	public static function resolve_query_object_sql(object $query_object) : object | array {
-
-		// if (isset($query_object->type) && $query_object->type==='jsonb') {
-		// 	$q = json_decode($q);
-		// }
+	public static function resolve_query_object_sql(object $query_object) : object|array {
 
 		// $q = $query_object->q;
 		$q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
 
-
-		# Always set fixed values
+		// Always set fixed values
 		$query_object->type = 'string';
 
 		if (is_string($q)) {
@@ -435,7 +430,6 @@ class component_input_text extends component_common {
 						$clone->operator	= '=';
 						$clone->q_parsed	= '\'[]\'';
 						$clone->lang		= $lang;
-
 					$new_query_json->$logical_operator[] = $clone;
 
 					// legacy data (set as null instead [])
