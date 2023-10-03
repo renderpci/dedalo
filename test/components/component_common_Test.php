@@ -108,6 +108,9 @@ final class component_common_test extends TestCase {
 				$expected_component_lang = (RecordObj_dd::get_translatable($element->tipo)===true)
 					? DEDALO_DATA_LANG
 					: DEDALO_DATA_NOLAN;
+				if ($component3->with_lang_versions===true) {
+					$expected_component_lang = DEDALO_DATA_LANG; // component_iri case
+				}
 				$component_lang = $component3->get_lang();
 				if ($expected_component_lang!==$component_lang) {
 					error_log($element->model.' - expected_component_lang:'.$expected_component_lang . ' => component_lang:' . $component_lang);

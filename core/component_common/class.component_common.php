@@ -466,10 +466,16 @@ abstract class component_common extends common {
 			$properties = $this->get_properties();
 
 		// lang : Check lang again after structure data is loaded
-		// We establish the preliminary language from the load of the structure
+		// We establish the preliminary language from the load of the Ontology
+			// with_lang_versions
+			if (!isset($this->with_lang_versions)) {
+				$this->with_lang_versions = (isset($properties->with_lang_versions) && $properties->with_lang_versions===true);
+			}
+			// set default lang for non translatable and not with_lang_versions
 			if ($this->traducible==='no') {
-				if (isset($properties->with_lang_versions) && $properties->with_lang_versions===true) {
+				if ($this->with_lang_versions===true) {
 					// Allow tool lang on non translatable components
+					// like component_iri, component_input_text
 				}else{
 					// Force no lang
 					$this->lang = DEDALO_DATA_NOLAN;
@@ -3410,8 +3416,7 @@ abstract class component_common extends common {
 
 		$dato				= $this->get_dato() ?? [];
 		$lang				= $this->get_lang();
-		$properties			= $this->get_properties();
-		$with_lang_versions	= $properties->with_lang_versions ?? false;
+		$with_lang_versions	= $this->with_lang_versions;
 
 		// fix changed_data
 			$this->changed_data = $changed_data;

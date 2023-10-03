@@ -260,9 +260,8 @@ class component_input_text extends component_common {
 
 		}else{
 
-			# Add value of current lang to nolan data
-			$properties = $this->get_properties();
-			if (isset($properties->with_lang_versions) && $properties->with_lang_versions===true) {
+			// Add value of current lang to nolan data
+			if ($this->with_lang_versions===true) {
 
 				$component = $this;
 				$component->set_lang($lang);

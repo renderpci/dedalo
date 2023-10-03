@@ -104,6 +104,9 @@ abstract class common {
 		// uid. Unique id string
 		public $uid;
 
+		// with_lang_versions
+		public $with_lang_versions;
+
 		// required methods
 			// abstract protected function define_id($id);
 			// abstract protected function define_tipo();
@@ -4113,7 +4116,7 @@ abstract class common {
 			$is_component		= strpos($model, 'component_')===0;
 			$tranducible		= $this->traducible; // string si|no fixed on construct element
 			$properties			= $this->get_properties();
-			$with_lang_versions	= isset($properties->with_lang_versions) ? $properties->with_lang_versions : false;
+			$with_lang_versions	= $this->with_lang_versions;
 
 		// element tools
 			foreach ($user_tools as $tool) {
