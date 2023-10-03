@@ -12,6 +12,7 @@ class component_iri extends component_common {
 	* CLASS VARS
 	* @var
 	*/
+	// with_lang_versions. Always active for this component
 	public $with_lang_versions = true;
 
 
@@ -248,7 +249,7 @@ class component_iri extends component_common {
 		if ($index==='all') {
 			$valor = null;
 			$ar_val = [];
-			foreach ($dato as $key => $value) {
+			foreach ($dato as $value) {
 
 				$ar_line = [];
 
@@ -312,7 +313,7 @@ class component_iri extends component_common {
 		if (!empty($dato)) {
 
 			$ar_values = [];
-			foreach ($dato as $key => $value) {
+			foreach ($dato as $value) {
 				if(empty($value)) continue;
 
 				$ar_parts = [];
