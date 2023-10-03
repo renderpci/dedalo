@@ -118,7 +118,7 @@ class component_input_text extends component_common {
 	* spaces and '<p></p>' as empty values
 	* @return bool
 	*/
-	public function is_empty( ?string $value ) : bool {
+	public function is_empty(?string $value) : bool {
 
 		if(is_null($value)) {
 			return true;
@@ -145,7 +145,7 @@ class component_input_text extends component_common {
 	*
 	* @return dd_grid_cell_object $value
 	*/
-	public function get_grid_value( object $ddo=null) : dd_grid_cell_object {
+	public function get_grid_value(object $ddo=null) : dd_grid_cell_object {
 
 		// column_obj. Set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			if(isset($this->column_obj)){
@@ -209,9 +209,9 @@ class component_input_text extends component_common {
 	* GET_VALOR
 	* Return array dato as comma separated elements string by default
 	* If index var is received, return dato element corresponding to this index if exists
-	* @return string $valor
+	* @return string|null $valor
 	*/
-	public function get_valor( $lang=DEDALO_DATA_LANG, $index='all' ) : string {
+	public function get_valor($lang=DEDALO_DATA_LANG, $index='all') : ?string {
 
 		$valor ='';
 
@@ -242,24 +242,8 @@ class component_input_text extends component_common {
 		}
 
 
-		return (string)$valor;
+		return $valor;
 	}//end get_valor
-
-
-
-	/**
-	* LOAD TOOLS (DEPRECATED)
-	*/
-		// public function load_tools( bool $check_lang_tools=true ) : array {
-
-		// 	$properties = $this->get_properties();
-		// 	if (isset($properties->with_lang_versions) && $properties->with_lang_versions===true) {
-		// 		# Allow tool lang on non translatable components
-		// 		$check_lang_tools = false;
-		// 	}
-
-		// 	return parent::load_tools( $check_lang_tools );
-		// }//end load_tools
 
 
 
@@ -295,6 +279,37 @@ class component_input_text extends component_common {
 
 		return to_string($valor);
 	}//end get_valor_export
+
+
+
+	/**
+	* GET_DIFFUSION_VALUE
+	* Calculate current component diffusion value for target field (usually a MYSQL field)
+	* Used for diffusion_mysql to unify components diffusion value call
+	* @return string|null $diffusion_value
+	*
+	* @see class.diffusion_mysql.php
+	*/
+	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
+
+		# Default behavior is get value
+		$diffusion_value = $this->get_valor( $lang );
+
+		// Fallback to nolan dato
+		if (empty($diffusion_value) && $this->traducible==='no') {
+			# try no lang
+			$this->set_lang(DEDALO_DATA_NOLAN);
+			$diffusion_value = $this->get_valor( DEDALO_DATA_NOLAN );
+		}
+
+		# strip_tags all values (remove untranslated mark elements)
+		$diffusion_value = !empty($diffusion_value)
+			? preg_replace("/<\/?mark>/", '', $diffusion_value)
+			: null;
+
+
+		return $diffusion_value;
+	}//end get_diffusion_value
 
 
 
@@ -372,7 +387,7 @@ class component_input_text extends component_common {
 	* @return object $query_object
 	*	Edited/parsed version of received object
 	*/
-	public static function resolve_query_object_sql( object $query_object) : object | array {
+	public static function resolve_query_object_sql(object $query_object) : object | array {
 
 		// if (isset($query_object->type) && $query_object->type==='jsonb') {
 		// 	$q = json_decode($q);
@@ -623,37 +638,6 @@ class component_input_text extends component_common {
 
 
 	/**
-	* GET_DIFFUSION_VALUE
-	* Calculate current component diffusion value for target field (usually a MYSQL field)
-	* Used for diffusion_mysql to unify components diffusion value call
-	* @return string|null $diffusion_value
-	*
-	* @see class.diffusion_mysql.php
-	*/
-	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
-
-		# Default behavior is get value
-		$diffusion_value = $this->get_valor( $lang );
-
-		// Fallback to nolan dato
-		if (empty($diffusion_value) && $this->traducible==='no') {
-			# try no lang
-			$this->set_lang(DEDALO_DATA_NOLAN);
-			$diffusion_value = $this->get_valor( DEDALO_DATA_NOLAN );
-		}
-
-		# strip_tags all values (remove untranslated mark elements)
-		$diffusion_value = !empty($diffusion_value)
-			? preg_replace("/<\/?mark>/", '', $diffusion_value)
-			: null;
-
-
-		return $diffusion_value;
-	}//end get_diffusion_value
-
-
-
-	/**
 	* CONFORM_IMPORT_DATA
 	* @param string $import_value
 	* @param string $column_name
@@ -681,41 +665,40 @@ class component_input_text extends component_common {
 				return $response;
 			}
 
-	// string case
-		// check the begin and end of the value string, if it has a [] or other combination that seems array
-		// sometimes the value text could be [Ac], as numismatic legends, it's admit, but if the text has [" or "] it's not admitted.
-		$begins_one	= substr($import_value, 0, 1);
-		$ends_one	= substr($import_value, -1);
-		$begins_two	= substr($import_value, 0, 2);
-		$ends_two	= substr($import_value, -2);
+		// string case
+			// check the begin and end of the value string, if it has a [] or other combination that seems array
+			// sometimes the value text could be [Ac], as numismatic legends, it's admit, but if the text has [" or "] it's not admitted.
+			$begins_one	= substr($import_value, 0, 1);
+			$ends_one	= substr($import_value, -1);
+			$begins_two	= substr($import_value, 0, 2);
+			$ends_two	= substr($import_value, -2);
 
-		if (($begins_two !== '["' && $ends_two !== '"]') ||
-			($begins_two !== '["' && $ends_one !== ']') ||
-			($begins_one !== '[' && $ends_two !== '"]')
-			){
-			$value = !empty($import_value) || $import_value==='0'
-				? [$import_value]
-				: null;
-		}else{
-			// import value seems to be a JSON malformed.
-			// it begin [" or end with "]
-			// log JSON conversion error
-			debug_log(__METHOD__
-				." invalid JSON value, seems a syntax error: ". PHP_EOL
-				. to_string($import_value)
-				, logger::ERROR
-			);
+			if (($begins_two !== '["' && $ends_two !== '"]') ||
+				($begins_two !== '["' && $ends_one !== ']') ||
+				($begins_one !== '[' && $ends_two !== '"]')
+				){
+				$value = !empty($import_value) || $import_value==='0'
+					? [$import_value]
+					: null;
+			}else{
+				// import value seems to be a JSON malformed.
+				// it begin [" or end with "]
+				// log JSON conversion error
+				debug_log(__METHOD__
+					." invalid JSON value, seems a syntax error: ". PHP_EOL
+					. to_string($import_value)
+					, logger::ERROR
+				);
 
-			$failed = new stdClass();
-				$failed->section_id		= $this->section_id;
-				$failed->data			= stripslashes( $import_value );
-				$failed->component_tipo	= $this->get_tipo();
-				$failed->msg			= 'IGNORED: malformed data '. to_string($import_value);
-			$response->errors[] = $failed;
+				$failed = new stdClass();
+					$failed->section_id		= $this->section_id;
+					$failed->data			= stripslashes( $import_value );
+					$failed->component_tipo	= $this->get_tipo();
+					$failed->msg			= 'IGNORED: malformed data '. to_string($import_value);
+				$response->errors[] = $failed;
 
-			return $response;
-		}
-
+				return $response;
+			}
 
 		$response->result	= $value;
 		$response->msg		= 'OK';

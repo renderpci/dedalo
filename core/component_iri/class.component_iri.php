@@ -1,6 +1,6 @@
 <?php
 include dirname(__FILE__) . "/class.dd_iri.php";
-/*
+/**
 * CLASS COMPONENT_IRI
 *
 */
@@ -12,21 +12,22 @@ class component_iri extends component_common {
 	* GET DATO
 	* Array with objects, every object have two properties:
 	* "iri" mandatory with string value and "title" optional with string value
-	*[
+	* [
 	*	{
 	*    "iri": "http://www.render.es/dedalo",
 	*    "title": "dedalo"
 	* 	}
-	*]
+	* ]
+	* @return array|null $dato
 	*/
-	public function get_dato() {
+	public function get_dato() : ?array {
 
 		$dato = parent::get_dato();
 
 		// input_text. For accept values from component_input_text
 		// we need to change the string value of the input_text to object value of IRI
 			$input_text = false;
-			if(!empty($dato)){
+			if(!empty($dato)) {
 				foreach ($dato as $key => $value) {
 					if(!is_object($value)){
 						$input_text = true;
@@ -35,28 +36,34 @@ class component_iri extends component_common {
 						$dato[$key] = $object;
 					}
 				}
-				if($input_text===true){
+				if($input_text===true) {
 					$this->set_dato($dato);
 					$this->Save();
 				}
 			}
 
-
-		if(SHOW_DEBUG===true) {
-			if ( !is_null($dato) && !is_array($dato)  ) {
-				debug_log(__METHOD__
-					." WRONG TYPE of dato. tipo: $this->tipo - section_tipo: $this->section_tipo - section_id: $this->parent. Expected array. Given: ".gettype($dato)
-					, logger::ERROR);
+		// debug
+			if(SHOW_DEBUG===true) {
+				if ( !is_null($dato) && !is_array($dato)  ) {
+					debug_log(__METHOD__
+						. " WRONG TYPE of dato. Expected array or null. Given: ".gettype($dato) . PHP_EOL
+						. " tipo: $this->tipo" . PHP_EOL
+						. " section_tipo: $this->section_tipo" . PHP_EOL
+						. " section_id: $this->section_id"
+						, logger::ERROR
+					);
+				}
 			}
-		}
 
-		return (array)$dato;
+
+		return $dato;
 	}//end get_dato
 
 
 
 	/**
 	* SET_DATO
+	* @param array|null $dato
 	* @return bool
 	*/
 	public function set_dato($dato) : bool {
@@ -65,58 +72,21 @@ class component_iri extends component_common {
 			$dato = json_handler::decode($dato);
 		}
 
-		if(SHOW_DEBUG===true) {
-			if (!is_array($dato)) {
-				debug_log(__METHOD__." Warning in set dato [$this->tipo,$this->parent]. Received dato is NOT array. Type is '".gettype($dato)."' and dato: '".to_string($dato)."' will be converted to array", logger::DEBUG);
-			}
-			#debug_log(__METHOD__." dato [$this->tipo,$this->parent] Type is ".gettype($dato)." -> ".to_string($dato), logger::ERROR);
+		// check type
+		if (!is_array($dato)) {
+			debug_log(__METHOD__
+				. " Warning. Received dato is NOT array. Type is '".gettype($dato)."' and will be converted to array" . PHP_EOL
+				. " tipo: $this->tipo" . PHP_EOL
+				. " section_tipo: $this->section_tipo" . PHP_EOL
+				. " section_id: $this->section_id" . PHP_EOL
+				. " dato: " . to_string($dato)
+				, logger::DEBUG
+			);
 		}
+
 
 		return parent::set_dato( (array)$dato );
 	}//end set_dato
-
-
-
-	/**
-	* GET_VALOR
-	* Return array dato as comma separated elements string by default
-	* If index var is received, return dato element corresponding to this index if exists
-	* @return string $valor
-	*/
-	public function get_valor( $lang=DEDALO_DATA_LANG, $index='all' ) {
-
-		$dato = $this->get_dato();
-
-		if ($index==='all') {
-			$valor = null;
-			$ar_val = [];
-			foreach ($dato as $key => $value) {
-
-				$ar_line = [];
-
-				if (!empty($value->title)) {
-					$ar_line[] = $value->title;
-				}
-				if (!empty($value->iri)) {
-					$ar_line[] = $value->iri;
-				}
-
-				if (!empty($ar_line)) {
-
-					$ar_val[] = implode(' | ', $ar_line);
-				}
-			}
-
-			$valor = !empty($ar_val) ? implode(', ', $ar_val) : null;
-
-		}else{
-
-			$index = (int)$index;
-			$valor = isset($dato[$index]) ? $dato[$index] : null;
-		}
-
-		return $valor;
-	}//end get_valor
 
 
 
@@ -156,26 +126,6 @@ class component_iri extends component_common {
 
 
 	/**
-	* GET_VALOR_EXPORT
-	* Return component value sent to export data
-	* @return string $valor
-	*/
-	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
-
-		if (empty($valor)) {
-			$dato = $this->get_dato();				// Get dato from DB
-		}
-
-		$valor = $this->get_valor($lang);
-		$valor = strip_tags($valor); // Removes the span tag used in list mode
-
-
-		return (string)$valor;
-	}//end get_valor_export
-
-
-
-	/**
 	* GET_GRID_VALUE
 	* Get the value of the component.
 	* component filter return a array of values
@@ -183,7 +133,7 @@ class component_iri extends component_common {
 	*
 	* @return dd_grid_cell_object $value
 	*/
-	public function get_grid_value( object $ddo=null ) : dd_grid_cell_object {
+	public function get_grid_value(object $ddo=null) : dd_grid_cell_object {
 
 		// column_obj. Set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$fields_separator	= $ddo->fields_separator ?? null;
@@ -278,6 +228,106 @@ class component_iri extends component_common {
 
 
 	/**
+	* GET_VALOR
+	* Return array dato as comma separated elements string by default
+	* If index var is received, return dato element corresponding to this index if exists
+	* @return string|null $valor
+	*/
+	public function get_valor($lang=DEDALO_DATA_LANG, $index='all') : ?string {
+
+		$dato = $this->get_dato();
+
+		if ($index==='all') {
+			$valor = null;
+			$ar_val = [];
+			foreach ($dato as $key => $value) {
+
+				$ar_line = [];
+
+				if (!empty($value->title)) {
+					$ar_line[] = $value->title;
+				}
+				if (!empty($value->iri)) {
+					$ar_line[] = $value->iri;
+				}
+
+				if (!empty($ar_line)) {
+
+					$ar_val[] = implode(' | ', $ar_line);
+				}
+			}
+
+			$valor = !empty($ar_val) ? implode(', ', $ar_val) : null;
+
+		}else{
+
+			$index = (int)$index;
+			$valor = isset($dato[$index]) ? $dato[$index] : null;
+		}
+
+
+		return $valor;
+	}//end get_valor
+
+
+
+	/**
+	* GET_VALOR_EXPORT
+	* Return component value sent to export data
+	* @return string $valor
+	*/
+	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
+
+		if (empty($valor)) {
+			$dato = $this->get_dato();				// Get dato from DB
+		}
+
+		$valor = $this->get_valor($lang);
+		$valor = strip_tags($valor); // Removes the span tag used in list mode
+
+
+		return (string)$valor;
+	}//end get_valor_export
+
+
+
+	/**
+	* GET_DIFFUSION_VALUE
+	* If index var is received, return dato element corresponding to this index if exists
+	* @param string|null $lang = null
+	* @param object|null $option_obj = null
+	* @return string|null $diffusion_value
+	*/
+	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
+
+		$dato = $this->get_dato();
+		if (!empty($dato)) {
+
+			$ar_values = [];
+			foreach ($dato as $key => $value) {
+				if(empty($value)) continue;
+
+				$ar_parts = [];
+				if (!empty($value->title)) {
+					$ar_parts[] = $value->title;
+				}
+				if (!empty($value->iri)) {
+					$ar_parts[] = $value->iri;
+				}
+				$ar_values[] = implode(', ', $ar_parts);
+			}
+
+			$diffusion_value = implode(' | ', $ar_values);
+		}else{
+			$diffusion_value = null;
+		}
+
+		return $diffusion_value;
+	}//end get_diffusion_value
+
+
+
+	/**
 	* UPDATE_DATO_VERSION
 	* @param object $request_options
 	* @return object $response
@@ -314,83 +364,6 @@ class component_iri extends component_common {
 
 		return $response;
 	}//end update_dato_version
-
-
-
-	/**
-	* GET_SEARCH_QUERY_OLD
-	* Build search query for current component . Overwrite for different needs in other components
-	* (is static to enable direct call from section_records without construct component)
-	* Params
-	* @param string $json_field . JSON container column Like 'dato'
-	* @param string $search_tipo . Component tipo Like 'dd421'
-	* @param string $tipo_de_dato_search . Component dato container Like 'dato' or 'valor'
-	* @param string $current_lang . Component dato lang container Like 'lg-spa' or 'lg-nolan'
-	* @param string $search_value . Value received from search form request Like 'paco'
-	* @param string $comparison_operator . SQL comparison operator Like 'ILIKE'
-	*
-	* @see class.section_records.php get_rows_data filter_by_search
-	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
-	*/
-		// public static function get_search_query_old( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='ILIKE') {
-
-		// 	if (empty($search_value)) return false;
-
-		// 	#$tipo_de_dato_search = 'valor';
-
-		// 	$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
-
-		// 	$search_query='';
-		// 	switch (true) {
-		// 		case ($comparison_operator==='ILIKE' || $comparison_operator==='LIKE'):
-		// 			// Allow wildcards like "house*" or "*house"
-		// 			// dump($search_value[strlen($search_value) - 1], "$search_value[0] ".to_string());
-		// 			$separator 	   = '*';
-		// 			if ( $search_value[0] === $separator ) {
-		// 				// Begin with * like
-		// 				$search_value = str_replace($separator, '', $search_value);
-		// 				$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator '%$search_value' ";
-
-		// 			}else if ( $search_value[strlen($search_value) - 1] === $separator ) {
-		// 				// End with *
-		// 				$search_value = str_replace($separator, '', $search_value);
-		// 				$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator '$search_value%' ";
-
-		// 			}else{
-		// 				// Contain
-		// 				$search_value = str_replace($separator, '', $search_value);
-		// 				$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator '%$search_value%' ";
-		// 			}
-		// 			break;
-
-		// 		case ($comparison_operator==='=' || $comparison_operator==='!='):
-		// 			$comparison_operator = '@>';
-		// 			$search_query = " {$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' $comparison_operator '\"$search_value\"' ";
-		// 			break;
-
-		// 		case ($comparison_operator==='IS NULL' || $comparison_operator==='IS NOT NULL'):
-		// 			if($comparison_operator === 'IS NULL'){
-		// 				$comparison_operator2 = '=';
-		// 				$union_operator = 'OR';
-		// 			}else{
-		// 				$comparison_operator2 = '!=';
-		// 				$union_operator = 'AND';
-		// 			}
-		// 			$search_query  = " ({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator $union_operator ";
-		// 			$search_query .= " {$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator2 '' )";
-		// 			break;
-
-		// 		default:
-		// 			$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator '%$search_value%' ";
-		// 			break;
-		// 	}
-
-		// 	if(SHOW_DEBUG===true) {
-		// 		$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
-		// 	}
-
-		// 	return (string)$search_query;
-		// }//end get_search_query_old
 
 
 
@@ -570,42 +543,6 @@ class component_iri extends component_common {
 
 
 	/**
-	* GET_DIFFUSION_VALUE
-	* If index var is received, return dato element corresponding to this index if exists
-	* @param string|null $lang = null
-	* @param object|null $option_obj = null
-	* @return string|null $diffusion_value
-	*/
-	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
-
-		$dato = $this->get_dato();
-		if (!empty($dato)) {
-
-			$ar_values = [];
-			foreach ($dato as $key => $value) {
-				if(empty($value)) continue;
-
-				$ar_parts = [];
-				if (!empty($value->title)) {
-					$ar_parts[] = $value->title;
-				}
-				if (!empty($value->iri)) {
-					$ar_parts[] = $value->iri;
-				}
-				$ar_values[] = implode(', ', $ar_parts);
-			}
-
-			$diffusion_value = implode(' | ', $ar_values);
-		}else{
-			$diffusion_value = null;
-		}
-
-		return $diffusion_value;
-	}//end get_diffusion_value
-
-
-
-	/**
 	* SEARCH_OPERATORS_INFO
 	* Return valid operators for search in current component
 	* @return array $ar_operators
@@ -635,7 +572,7 @@ class component_iri extends component_common {
 	* @param string $url
 	* @return object $data_iri
 	*/
-	public function url_to_iri( string $url) : object {
+	public function url_to_iri(string $url) : object {
 
 		$data_iri = new stdClass();
 			$data_iri->iri = $url;
@@ -941,28 +878,28 @@ class component_iri extends component_common {
 				}
 			}
 
-	// string case
-		$valid = $is_valid_string($import_value);
-		if ($valid===false) {
+		// string case
+			$valid = $is_valid_string($import_value);
+			if ($valid===false) {
 
-			// import value seems to be a JSON malformed.
-			// it begin [" or end with "]
-			// log JSON conversion error
-			debug_log(__METHOD__
-				." invalid JSON value, seems a syntax error: ". PHP_EOL
-				. to_string($import_value)
-				, logger::ERROR
-			);
+				// import value seems to be a JSON malformed.
+				// it begin [" or end with "]
+				// log JSON conversion error
+				debug_log(__METHOD__
+					." invalid JSON value, seems a syntax error: ". PHP_EOL
+					. to_string($import_value)
+					, logger::ERROR
+				);
 
-			$failed = new stdClass();
-				$failed->section_id		= $this->section_id;
-				$failed->data			= stripslashes( $import_value );
-				$failed->component_tipo	= $this->get_tipo();
-				$failed->msg			= 'IGNORED: malformed data '. to_string($import_value);
-			$response->errors[] = $failed;
+				$failed = new stdClass();
+					$failed->section_id		= $this->section_id;
+					$failed->data			= stripslashes( $import_value );
+					$failed->component_tipo	= $this->get_tipo();
+					$failed->msg			= 'IGNORED: malformed data '. to_string($import_value);
+				$response->errors[] = $failed;
 
-			return $response;
-		}
+				return $response;
+			}
 
 		$value = null;
 		if(!empty($import_value)) {
@@ -1028,6 +965,7 @@ class component_iri extends component_common {
 
 		return $response;
 	}//end conform_import_data
+
 
 
 }//end class component_iri
