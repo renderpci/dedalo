@@ -495,6 +495,7 @@ mdcat1298	ref_lloc_defuncio	termino	lg-spa
 mdcat1299	ref_lloc_residencia	termino	lg-spa
 mdcat13	Entrevistas a expertos	termino	lg-spa
 mdcat13	Entrevistes a experts	termino	lg-cat
+mdcat1326	Exili	termino	lg-cat
 mdcat1300	ref_data_mort	termino	lg-spa
 mdcat1301	titol_uniforme	termino	lg-spa
 mdcat1302	doc_titol	termino	lg-spa
@@ -532,15 +533,9 @@ mdcat1324	Data de pas per la frontera	termino	lg-cat
 mdcat1324	Fecha de paso por la frontera	termino	lg-spa
 mdcat1325	Frontera	termino	lg-spa
 mdcat1325	Pas de frontera	termino	lg-cat
-mdcat1326	Campos franceses	termino	lg-spa
-mdcat1326	Camps francesos	termino	lg-cat
 mdcat130	Publicable	termino	lg-spa
 mdcat1317	Publicable	termino	lg-cat
 mdcat1317	Publicable	termino	lg-spa
-mdcat1327	Camp	termino	lg-cat
-mdcat1327	Campo	termino	lg-spa
-mdcat1328	Campos franceses	termino	lg-spa
-mdcat1328	Camps francesos	termino	lg-cat
 mdcat1329	Identificació	termino	lg-cat
 mdcat1329	Identificación	termino	lg-spa
 mdcat133	Listado	termino	lg-spa
@@ -645,6 +640,8 @@ mdcat1371	Identificació	termino	lg-cat
 mdcat1371	Identificación	termino	lg-spa
 mdcat1372	Projecte	termino	lg-cat
 mdcat1372	Proyecto	termino	lg-spa
+mdcat1327	Camps francesos	termino	lg-cat
+mdcat1327	Campos franceses	termino	lg-spa
 mdcat1373	Listado	termino	lg-spa
 mdcat1373	Llistat	termino	lg-cat
 mdcat1374	Nou	termino	lg-cat
@@ -1679,7 +1676,6 @@ mdcat1784	Identificació	termino	lg-cat
 mdcat1784	Identificación	termino	lg-spa
 mdcat1785	Id	termino	lg-cat
 mdcat1785	Id	termino	lg-spa
-mdcat1786	Indret	termino	lg-cat
 mdcat1786	Lugar	termino	lg-spa
 mdcat1787	Municipi	termino	lg-cat
 mdcat1787	Municipio	termino	lg-spa
@@ -8254,9 +8250,6 @@ mdcat1322	Unité militaire	termino	lg-fra
 mdcat1323	Destination	termino	lg-fra
 mdcat1324	Date du franchissement de la frontière	termino	lg-fra
 mdcat1325	Frontière	termino	lg-fra
-mdcat1326	Camps français	termino	lg-fra
-mdcat1327	Champ	termino	lg-fra
-mdcat1328	Camps français	termino	lg-fra
 mdcat1329	Identification	termino	lg-fra
 mdcat133	Liste	termino	lg-fra
 mdcat1330	Id	termino	lg-fra
@@ -8319,6 +8312,8 @@ mdcat1384	Nouveau	termino	lg-fra
 mdcat1385	Départ du train	termino	lg-fra
 mdcat1386	Déportation 	termino	lg-fra
 mdcat1387	Camps de concentration	termino	lg-fra
+mdcat1327	Champs français	termino	lg-fra
+mdcat1328	Champs français	termino	lg-fra
 mdcat1388	Camps de concentration	termino	lg-fra
 mdcat1389	Identification	termino	lg-fra
 mdcat139	Publication	termino	lg-fra
@@ -11176,9 +11171,6 @@ mdcat1322	Military unit	termino	lg-eng
 mdcat1323	Destination	termino	lg-eng
 mdcat1324	Date of crossing the border	termino	lg-eng
 mdcat1325	Border	termino	lg-eng
-mdcat1326	French fields	termino	lg-eng
-mdcat1327	Field	termino	lg-eng
-mdcat1328	French fields	termino	lg-eng
 mdcat1329	Identification	termino	lg-eng
 mdcat1330	Id	termino	lg-eng
 mdcat1331	Order of stay	termino	lg-eng
@@ -11266,6 +11258,7 @@ mdcat1414	Id	termino	lg-eng
 mdcat1415	Todt Organization	termino	lg-eng
 mdcat1416	Location	termino	lg-eng
 mdcat1538	List	termino	lg-eng
+mdcat1327	French fields	termino	lg-eng
 mdcat1417	Date of entry <> departure	termino	lg-eng
 mdcat1418	Project	termino	lg-eng
 mdcat1419	List	termino	lg-eng
@@ -14529,3 +14522,10 @@ mdcat998	Projet	termino	lg-fra
 mdcat999	Descriptions	termino	lg-fra
 mdcat4413	entities	termino	lg-spa
 mdcat4415	ref_stolpersteine_municipi_geojson	termino	lg-spa
+mdcat1786	Indret	termino	lg-cat
+mdcat1326	Exílio	termino	lg-spa
+mdcat1326	Exile	termino	lg-eng
+mdcat1326	Exilé	termino	lg-fra
+mdcat1328	Campos franceses	termino	lg-spa
+mdcat1328	French fields	termino	lg-eng
+mdcat1328	Camps francesos	termino	lg-cat
