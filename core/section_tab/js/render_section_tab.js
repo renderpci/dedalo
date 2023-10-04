@@ -26,6 +26,7 @@ export const render_section_tab = function() {
 /**
 * EDIT
 * Render node for use in edit
+* @param object options
 * @return HTMLElement wrapper
 */
 render_section_tab.prototype.edit = async function(options) {
@@ -58,7 +59,8 @@ render_section_tab.prototype.edit = async function(options) {
 					const status_id		= `section_tab_${self.section_tipo}_${self.tipo}`
 					const status_table	= 'status'
 
-				// children
+				// section_tab children, as tab
+				// children_object will store the tipo and the node in the object to be referenced and selected.
 					const children			= self.context.children
 					const children_length	= children.length
 					const children_object	= {}
@@ -71,7 +73,8 @@ render_section_tab.prototype.edit = async function(options) {
 							parent			: wrapper
 						})
 						child_node.tipo = child.tipo
-						child_node.addEventListener("click", function() {
+						child_node.addEventListener("click", function(e) {
+							e.stopPropagation()
 							active_tab(child_node)
 						})
 						children_object[child.tipo] = child_node
@@ -89,7 +92,7 @@ render_section_tab.prototype.edit = async function(options) {
 								}
 							})
 
-						// event publish
+						// publish the activate event
 							event_manager.publish('tab_active_'+tipo, child_node)
 
 						// status update
@@ -107,12 +110,19 @@ render_section_tab.prototype.edit = async function(options) {
 					}
 
 				// status
+				// get active tab stored by previous user selection and active the tab
 					const ui_status		= await data_manager.get_local_db_data(status_id, status_table)
 					const selected_tipo	= ui_status && ui_status.value
 						? ui_status.value
 						: children[0].tipo // first tab tipo fallback
-					active_tab( children_object[selected_tipo] )
 
+					// if the element is not available, for permissions or exclude it, use default node, first node.
+					const valid_tab_node = children_object[selected_tipo] || children_object[children[0]?.tipo] // first tab tipo fallback
+
+					// if the node is not available, don't active it (will create a error and block the access to the entire section)
+					if(valid_tab_node){
+						active_tab( valid_tab_node )
+					}
 				break;
 		}
 
@@ -135,30 +145,8 @@ const get_wrapper = function(self) {
 			element_type	: 'div',
 			class_name		: `${'wrapper_'+self.type} ${self.tipo} ${self.section_tipo+'_'+self.tipo} ${self.context.view} ${self.mode}`
 		})
-	// CSS
-		// const element_css = self.context.css || {}
-		// const wrapper_structure_css = typeof element_css.wrapper!=="undefined" ? element_css.wrapper : []
-		// const ar_css = ['wrapper_'+self.type, self.model, self.tipo, self.context.view, self.mode, ...wrapper_structure_css]
-		// wrapper.classList.add(...ar_css)
-	// legacy CSS
-		// const legacy_selector = '.wrap_section_tab_div'
-		// if (element_css[legacy_selector]) {
-		// 	// style
-		// 		if (element_css[legacy_selector].style) {
-		// 			// width from style
-		// 			if (element_css[legacy_selector].style.width) {
-		// 				// wrapper.style['flex-basis'] = element_css[legacy_selector].style.width;
-		// 				// wrapper.style['--width'] = element_css[legacy_selector].style.width
-		// 				wrapper.style.setProperty('width', element_css[legacy_selector].style.width);
-		// 			}
-		// 			// display none from style
-		// 			if (element_css[legacy_selector].style.display && element_css[legacy_selector].style.display==='none') {
-		// 				wrapper.classList.add('display_none')
-		// 			}
-		// 		}
-		// }
 
-	// css new way v6
+	// apply CSS from context
 		if (self.context.css) {
 			const selector = `${self.section_tipo}_${self.tipo}.edit`
 			set_element_css(selector, self.context.css)
@@ -167,22 +155,6 @@ const get_wrapper = function(self) {
 
 	return wrapper
 }//end get_wrapper
-
-
-
-/**
-* GET_CONTENT_DATA
-* @return HTMLElement content_data
-*/
-	// const get_content_data = function(self) {
-
-	// 	// content_data
-	// 		const content_data = document.createElement("div")
-	// 			  content_data.classList.add('content_data', self.type, 'hide')
-
-
-	// 	return content_data
-	// }//end get_content_data
 
 
 
